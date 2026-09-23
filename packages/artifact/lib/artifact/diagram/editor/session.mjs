@@ -95,6 +95,21 @@ export function createDiagramEditorSession({ bundle, acknowledged = false, trans
     if (gesture) return fail('gesture-active', 'Finish or cancel the gesture before another edit.');
     return accept(previewDiagramTransaction(current, transaction));
   }
+  /** Adopt one certified source copy only while the owner document is still an empty, uncommitted draft. */
+  function adoptInitialCopy(bundle) {
+    const blocked = guard(); if (blocked) return blocked;
+    if (saving || gesture || saved || !initialization || pending.length || current.presentation.elements.length) return fail('import-state', 'Import a copy into a new empty diagram before editing or saving it. Existing work is unchanged.');
+    const checked = validateAuthoringBundle(bundle);
+    if (!checked.ok) return checked;
+    if (bundle.diagramId !== current.diagramId) return fail('diagram-identity', 'The source copy belongs to a different diagram.');
+    const affectedIds = bundle.presentation.elements.map(item => item.elementId);
+    const updated = geometry.update(bundle, affectedIds);
+    if (!updated.ok) return updated;
+    current = clone(bundle); base = clone(bundle);
+    undo = []; redo = []; comparison = null; diagnostics = []; saveState = 'unsaved';
+    pruneView(); persist(); emit('refresh', affectedIds);
+    return { ok: true, bundle: clone(current) };
+  }
   function cancelGesture(reason = 'cancel') {
     if (!gesture) return { ok: true, cancelled: false };
     const affected = gesture.preview?.impact.affectedIds ?? [];
@@ -279,7 +294,7 @@ export function createDiagramEditorSession({ bundle, acknowledged = false, trans
         disposed,
       };
     },
-    submit, submitTransaction, beginGesture, previewGesture, previewLayout, completeGesture, cancelGesture,
+    submit, submitTransaction, adoptInitialCopy, beginGesture, previewGesture, previewLayout, completeGesture, cancelGesture,
     undo: (options = {}) => compensate(undo, redo, options.transactionId ?? nextTransactionId()),
     redo: (options = {}) => compensate(redo, undo, options.transactionId ?? nextTransactionId()),
     refresh, save, setView,

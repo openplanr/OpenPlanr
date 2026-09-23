@@ -124,3 +124,30 @@ body.planr-diagram-owner-page #diagram-owner-editor { height:100dvh;min-height:0
  .planr-diagram-editor .de-field :is(input,textarea,select) { font-size:16px;min-height:44px; }
 }
 @media (prefers-reduced-motion:reduce) { .planr-diagram-editor * { scroll-behavior:auto !important;transition:none !important;animation:none !important; } }
+.planr-diagram-editor .de-source-dialog { width:min(1050px,100%);max-height:calc(100dvh - 32px); }
+.planr-diagram-editor .de-source-panel { display:grid;gap:8px; }
+.planr-diagram-editor .de-source-panel > h3 { margin:16px 0 0;font-size:14px; }
+.planr-diagram-editor .de-source-editor { display:grid;grid-template-columns:auto minmax(0,1fr);min-width:0; }
+.planr-diagram-editor .de-source-lines { margin:0;min-width:3ch;max-height:150px;overflow:hidden;text-align:right;padding:8px 7px;font:12px/1.5 ui-monospace,SFMono-Regular,monospace;color:var(--de-muted);border:1px solid var(--de-rule);border-right:0;user-select:none; }
+.planr-diagram-editor .de-source-input { min-height:150px;font-family:ui-monospace,SFMono-Regular,monospace;font-size:12px;line-height:1.5;tab-size:2; }
+.planr-diagram-editor .de-source-status { margin:0;padding:8px 10px;border:1px solid var(--de-rule);border-radius:7px;background:var(--de-raised); }
+.planr-diagram-editor .de-source-result { min-width:0;display:grid;gap:10px; }
+.planr-diagram-editor .de-source-fidelity { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px; }
+.planr-diagram-editor .de-source-fidelity-row { display:grid;gap:3px;padding:9px;border:1px solid var(--de-rule);border-radius:7px; }
+.planr-diagram-editor .de-source-fidelity-row [data-fidelity=partial],.planr-diagram-editor .de-source-fidelity-row [data-fidelity=unsupported] { color:var(--de-danger); }
+.planr-diagram-editor .de-source-losses { grid-column:1/-1;margin:0;padding:8px 8px 8px 28px;border:1px solid var(--de-rule);border-radius:7px; }
+.planr-diagram-editor .de-source-diagnostics { display:grid;gap:6px;margin:0;padding-left:24px; }
+.planr-diagram-editor .de-source-diagnostics li { overflow-wrap:anywhere; }
+.planr-diagram-editor .de-source-diagnostics button { display:block;max-width:100%;white-space:normal;text-align:left; }
+.planr-diagram-editor .de-source-objects { max-height:180px;overflow:auto;margin:0;padding:0;list-style:none;display:grid;gap:4px; }
+.planr-diagram-editor .de-source-objects li { padding:6px 8px;border:1px solid var(--de-rule);border-radius:6px;overflow-wrap:anywhere; }
+.planr-diagram-editor .de-source-objects li[data-affected=true] { border-color:var(--de-primary); }
+.planr-diagram-editor .de-source-image { width:100%;max-height:280px;object-fit:contain;border:1px solid var(--de-rule);border-radius:7px;background:var(--de-chrome); }
+.planr-diagram-editor .de-source-ack { display:flex;align-items:flex-start;gap:8px;padding:10px;border:1px solid var(--de-rule);border-radius:7px; }
+.planr-diagram-editor .de-source-ack input { margin-top:3px; }
+.planr-diagram-editor .de-source-result pre { max-height:230px;overflow:auto; }
+@media (max-width:700px) {
+ .planr-diagram-editor .de-source-dialog { padding:14px; }
+ .planr-diagram-editor .de-source-fidelity { grid-template-columns:1fr; }
+ .planr-diagram-editor .de-source-input { font-size:16px; }
+}

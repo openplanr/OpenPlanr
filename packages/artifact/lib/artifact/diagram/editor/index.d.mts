@@ -49,6 +49,8 @@ export interface DiagramEditorSession {
   getState(): DiagramEditorState;
   submit(command: DiagramCommand, options?: { transactionId?: string }): DiagramCommandResult;
   submitTransaction(transaction: DiagramEditTransaction): DiagramCommandResult;
+  /** Import a certified complete copy into a new, empty, unsaved diagram only. */
+  adoptInitialCopy(bundle: DiagramAuthoringBundle): { ok: true; bundle: DiagramAuthoringBundle } | DiagramEditorFailure;
   beginGesture(options?: { transactionId?: string }): { ok: true } | DiagramEditorFailure;
   /** Delta commands are always relative to the gesture's original content. */
   previewGesture(command: DiagramCommand): DiagramCommandResult;

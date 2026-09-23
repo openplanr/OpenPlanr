@@ -3398,7 +3398,7 @@
   function sourceMapIssues(value, doc, text2, path, issues) {
     if (doc && (value.diagramId !== doc.diagramId || value.semanticDigest !== doc.documentDigest)) issues.push(error(path, "basis", "Source map does not reference the exact semantic document."));
     const elementIds = doc ? new Set(allElements(doc).map((entry2) => entry2.id)) : null;
-    const sourceIds = /* @__PURE__ */ new Set();
+    const sourceIds2 = /* @__PURE__ */ new Set();
     let boundaries = null;
     if (text2 !== void 0) {
       const byteLength = new TextEncoder().encode(text2).length;
@@ -3414,8 +3414,8 @@
     }
     value.entries.forEach((entry2, i) => {
       const location = `${path}.entries[${i}]`;
-      if (entry2.sourceId !== null && sourceIds.has(entry2.sourceId)) issues.push(error(`${location}.sourceId`, "ambiguous-source-id", "Duplicate explicit source IDs must be represented by one ambiguous entry."));
-      if (entry2.sourceId !== null) sourceIds.add(entry2.sourceId);
+      if (entry2.sourceId !== null && sourceIds2.has(entry2.sourceId)) issues.push(error(`${location}.sourceId`, "ambiguous-source-id", "Duplicate explicit source IDs must be represented by one ambiguous entry."));
+      if (entry2.sourceId !== null) sourceIds2.add(entry2.sourceId);
       if (entry2.confidence === "exact" && (entry2.sourceId === null && entry2.range === null || entry2.elementIds.length !== 1)) issues.push(error(location, "source-identity", "Exact correspondence requires a source ID or exact range and one semantic element."));
       const certification = mermaidConstructs.find((item) => item.construct === entry2.construct);
       if (!certification || certification.import === "unsupported" && (entry2.confidence === "exact" || entry2.losses.length === 0)) issues.push(error(`${location}.construct`, "source-certification", "Unsupported syntax requires the certified loss record and cannot claim exact correspondence."));
@@ -3667,12 +3667,12 @@
     const ancestors = /* @__PURE__ */ new Set();
     let values = 0;
     let text2 = 0;
-    let issue2;
+    let issue3;
     const reject = (path, rule, detail) => {
-      issue2 ??= diagnostic(path, rule, detail);
+      issue3 ??= diagnostic(path, rule, detail);
     };
     function visit(current, path, depth) {
-      if (issue2) return;
+      if (issue3) return;
       if (++values > DIAGRAM_AUTHORING_LIMITS.values || depth > DIAGRAM_AUTHORING_LIMITS.depth) return reject(path, "resource-limit", "Input exceeds portable data limits.");
       if (typeof current === "string") {
         text2 += current.length;
@@ -3715,7 +3715,7 @@
     } catch {
       reject("$", "plain-data", "Input could not be inspected as inert JSON data.");
     }
-    return issue2 ? [issue2] : [];
+    return issue3 ? [issue3] : [];
   }
   function validateAuthoringBundle(bundle) {
     let diagnostics = inspectPlainData(bundle);
@@ -3965,23 +3965,23 @@
     } else {
       const geometry = op.type === "set-geometry";
       for (const change of op.changes) {
-        const placement4 = placements.get(change.elementId);
-        if (!placement4) {
+        const placement5 = placements.get(change.elementId);
+        if (!placement5) {
           diagnostics.push(diagnostic(path, "reference", `Missing placement ${change.elementId}.`));
           return;
         }
-        if (!precondition(geometry ? geometryFields(placement4) : appearanceFields(placement4), change.before, `${path}.${change.elementId}`, diagnostics)) return;
+        if (!precondition(geometry ? geometryFields(placement5) : appearanceFields(placement5), change.before, `${path}.${change.elementId}`, diagnostics)) return;
         if (geometry) {
-          const oldBounds = placement4.bounds;
+          const oldBounds = placement5.bounds;
           const newBounds = change.after.bounds;
-          const positionChanged = !same2(oldBounds && { x: oldBounds.x, y: oldBounds.y }, newBounds && { x: newBounds.x, y: newBounds.y }) || !same2(placement4.label, change.after.label) || placement4.zIndex !== change.after.zIndex;
+          const positionChanged = !same2(oldBounds && { x: oldBounds.x, y: oldBounds.y }, newBounds && { x: newBounds.x, y: newBounds.y }) || !same2(placement5.label, change.after.label) || placement5.zIndex !== change.after.zIndex;
           const sizeChanged = !same2(oldBounds && { width: oldBounds.width, height: oldBounds.height }, newBounds && { width: newBounds.width, height: newBounds.height });
-          if (placement4.locks.position && positionChanged || placement4.locks.size && sizeChanged || placement4.locks.route && !same2(placement4.route, change.after.route)) {
+          if (placement5.locks.position && positionChanged || placement5.locks.size && sizeChanged || placement5.locks.route && !same2(placement5.route, change.after.route)) {
             diagnostics.push(diagnostic(`${path}.${change.elementId}`, "geometry-lock", `Geometry is locked for ${change.elementId}; explicitly unlock it first.`));
             return;
           }
         }
-        Object.assign(placement4, clone(change.after));
+        Object.assign(placement5, clone(change.after));
       }
     }
   }
@@ -4014,13 +4014,13 @@
     const changes = [];
     for (const relation2 of after.document.relations) {
       const old = oldEntries.get(relation2.id)?.value;
-      const placement4 = placements.get(relation2.id);
-      if (placement4?.route?.mode !== "manual") continue;
+      const placement5 = placements.get(relation2.id);
+      if (placement5?.route?.mode !== "manual") continue;
       const from = placements.get(relation2.from)?.bounds;
       const to = placements.get(relation2.to)?.bounds;
       if (!from || !to) continue;
-      if (old && old.from === relation2.from && old.to === relation2.to && same2(oldPlacements.get(old.from)?.bounds, from) && same2(oldPlacements.get(old.to)?.bounds, to) && same2(oldPlacements.get(relation2.id)?.route, placement4.route)) continue;
-      const geometry = geometryFields(placement4);
+      if (old && old.from === relation2.from && old.to === relation2.to && same2(oldPlacements.get(old.from)?.bounds, from) && same2(oldPlacements.get(old.to)?.bounds, to) && same2(oldPlacements.get(relation2.id)?.route, placement5.route)) continue;
+      const geometry = geometryFields(placement5);
       const route2 = geometry.route;
       const start = attachmentPoint(from, route2.from);
       const end = attachmentPoint(to, route2.to);
@@ -4040,7 +4040,7 @@
         }
         route2.points = resolved;
       }
-      if (!same2(geometry, geometryFields(placement4))) changes.push({ elementId: relation2.id, before: geometryFields(placement4), after: geometry });
+      if (!same2(geometry, geometryFields(placement5))) changes.push({ elementId: relation2.id, before: geometryFields(placement5), after: geometry });
     }
     return changes;
   }
@@ -4469,10 +4469,10 @@
     const oldEntries = elementIndex(current.document);
     const targetEntries = elementIndex(target.document);
     const targetPlacements = new Map(target.presentation.elements.map((value) => [value.elementId, value]));
-    const unlock = current.presentation.elements.flatMap((placement4) => {
-      const wanted = targetPlacements.get(placement4.elementId);
-      if (!wanted || same2(geometryFields(placement4), geometryFields(wanted)) || !Object.values(placement4.locks).some(Boolean)) return [];
-      return [{ elementId: placement4.elementId, before: appearanceFields(placement4), after: { appearance: clone(placement4.appearance), locks: { position: false, size: false, route: false } } }];
+    const unlock = current.presentation.elements.flatMap((placement5) => {
+      const wanted = targetPlacements.get(placement5.elementId);
+      if (!wanted || same2(geometryFields(placement5), geometryFields(wanted)) || !Object.values(placement5.locks).some(Boolean)) return [];
+      return [{ elementId: placement5.elementId, before: appearanceFields(placement5), after: { appearance: clone(placement5.appearance), locks: { position: false, size: false, route: false } } }];
     });
     if (unlock.length) add({ type: "set-appearance-locks", changes: unlock });
     const removed = [...oldEntries].filter(([id2]) => !targetEntries.has(id2));
@@ -4495,10 +4495,10 @@
     }
     const geometry = [];
     const appearance2 = [];
-    for (const placement4 of working.presentation.elements) {
-      const wanted = targetPlacements.get(placement4.elementId);
-      if (!same2(geometryFields(placement4), geometryFields(wanted))) geometry.push({ elementId: placement4.elementId, before: geometryFields(placement4), after: geometryFields(wanted) });
-      if (!same2(appearanceFields(placement4), appearanceFields(wanted))) appearance2.push({ elementId: placement4.elementId, before: appearanceFields(placement4), after: appearanceFields(wanted) });
+    for (const placement5 of working.presentation.elements) {
+      const wanted = targetPlacements.get(placement5.elementId);
+      if (!same2(geometryFields(placement5), geometryFields(wanted))) geometry.push({ elementId: placement5.elementId, before: geometryFields(placement5), after: geometryFields(wanted) });
+      if (!same2(appearanceFields(placement5), appearanceFields(wanted))) appearance2.push({ elementId: placement5.elementId, before: appearanceFields(placement5), after: appearanceFields(wanted) });
     }
     if (geometry.length) add({ type: "set-geometry", changes: geometry });
     if (appearance2.length) add({ type: "set-appearance-locks", changes: appearance2 });
@@ -4648,8 +4648,12 @@
   }
 
   // lib/artifact/diagram/authoring/scene.mjs
+  var AUTHORED_SCENE_ITEM_BUDGET = 256;
   var AUTHORED_MINIMUM_FONT_SIZE = 12;
+  var PADDING = 32;
+  var MAX_GEOMETRY_CHECKS = 1e5;
   var issue = (rule, detail, elementIds = [], severity = "error") => ({ path: "$.presentation", rule, detail, elementIds, severity });
+  var overlaps = (a, b) => a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
   var epsilon = 1e-7;
   function resolveShapeAttachment(bounds2, shape2, attachment2) {
     const { x, y, width, height } = bounds2;
@@ -4694,8 +4698,8 @@
     }
     return result;
   }
-  function routePoints(relation2, placement4, placements) {
-    const route2 = placement4.route;
+  function routePoints(relation2, placement5, placements) {
+    const route2 = placement5.route;
     const from = placements.get(relation2.from), to = placements.get(relation2.to);
     const start = resolveShapeAttachment(from.bounds, from.appearance.shape, route2.from);
     const end = resolveShapeAttachment(to.bounds, to.appearance.shape, route2.to);
@@ -4765,6 +4769,20 @@
     })) diagnostics.push(issue("label-overflow", `Label ${element2.id} crosses its saved shape outline; enlarge the shape or shorten the label.`, [element2.id]));
     return { lines, bounds: bounds2, fontSize: size2, lineHeight, align, x, baseline: bounds2.y + size2 };
   }
+  function segmentEntersBox(start, end, bounds2) {
+    let low = 0, high = 1;
+    for (const [origin, delta, minimum, maximum] of [[start.x, end.x - start.x, bounds2.x + 0.5, bounds2.x + bounds2.width - 0.5], [start.y, end.y - start.y, bounds2.y + 0.5, bounds2.y + bounds2.height - 0.5]]) {
+      if (delta === 0) {
+        if (origin < minimum || origin > maximum) return false;
+      } else {
+        const a = (minimum - origin) / delta, b = (maximum - origin) / delta;
+        low = Math.max(low, Math.min(a, b));
+        high = Math.min(high, Math.max(a, b));
+        if (low > high) return false;
+      }
+    }
+    return low <= high;
+  }
   function shapeInterior(point2, element2) {
     const { x, y, width, height } = element2.bounds;
     const dx = Math.abs(point2.x - x - width / 2), dy = Math.abs(point2.y - y - height / 2);
@@ -4782,11 +4800,65 @@
     }
     return Math.max(dx / (width / 2), dy / (height / 2)) - 1;
   }
-  function resolveDiagramSceneElement(entry2, placement4, placements, order, emphasisLevel = null, diagnostics = []) {
+  function segmentEntersShape(start, end, element2) {
+    if (!segmentEntersBox(start, end, element2.bounds)) return false;
+    const value = (t) => shapeInterior({ x: start.x + (end.x - start.x) * t, y: start.y + (end.y - start.y) * t }, element2);
+    let low = 0, high = 1;
+    for (let iteration = 0; iteration < 36; iteration++) {
+      const left = low + (high - low) / 3, right = high - (high - low) / 3;
+      if (value(left) < value(right)) high = right;
+      else low = left;
+    }
+    return Math.min(value(0), value(1), value((low + high) / 2)) < -1e-5;
+  }
+  function geometryWork(elements) {
+    let shapes = 0, labels = 0, relationLabels = 0, segments = 0, covers = 0;
+    for (const element2 of elements) {
+      if (element2.collection === "nodes" || element2.collection === "annotations") shapes++;
+      if (element2.text) labels++;
+      if (element2.collection === "relations") {
+        segments += Math.max(0, element2.points.length - 1);
+        if (element2.text) relationLabels++;
+      }
+      if (["groups", "lanes"].includes(element2.collection) && element2.appearance.fill !== "transparent" && element2.appearance.shape !== "text") covers++;
+    }
+    return segments * (shapes + covers) + labels * (labels - 1) / 2 + shapes * (shapes - 1) / 2 + relationLabels * shapes + covers * elements.length;
+  }
+  function inspectGeometry(elements, diagnostics) {
+    const shapes = elements.filter((element2) => element2.collection === "nodes" || element2.collection === "annotations");
+    for (const element2 of elements) if (element2.collection === "relations") {
+      if (element2.appearance.stroke === "none" || element2.appearance.strokeWidth === 0) diagnostics.push(issue("invisible-connector", `Connector ${element2.id} has no visible stroke; choose a stroke before export.`, [element2.id]));
+      if (element2.points.length < 2 || element2.points.every((point2) => same2(point2, element2.points[0]))) diagnostics.push(issue("route-impossible", `Connector ${element2.id} has no visible segment.`, [element2.id]));
+      for (const node2 of shapes) {
+        if (element2.points.slice(1).some((point2, index2) => segmentEntersShape(element2.points[index2], point2, node2))) diagnostics.push(issue("route-obstruction", `Connector ${element2.id} crosses ${node2.id}; revise its route.`, [element2.id, node2.id]));
+      }
+    }
+    for (let top = 0; top < elements.length; top++) {
+      const cover = elements[top];
+      if (!["groups", "lanes"].includes(cover.collection) || cover.appearance.fill === "transparent" || cover.appearance.shape === "text") continue;
+      for (let lower = 0; lower < top; lower++) {
+        const hidden = elements[lower];
+        if (["groups", "lanes"].includes(hidden.collection)) continue;
+        const bounds2 = hidden.appearance.shape === "text" ? hidden.text?.bounds : hidden.bounds;
+        const covered = bounds2 && [[bounds2.x, bounds2.y], [bounds2.x + bounds2.width, bounds2.y], [bounds2.x, bounds2.y + bounds2.height], [bounds2.x + bounds2.width, bounds2.y + bounds2.height]].every(([x, y]) => shapeInterior({ x, y }, cover) < -epsilon);
+        const routeCovered = hidden.points?.slice(1).some((point2, index2) => segmentEntersShape(hidden.points[index2], point2, cover));
+        if (covered || routeCovered) diagnostics.push(issue("stacking-obstruction", `Opaque container ${cover.id} covers ${hidden.id}; put the container behind its content or use a transparent fill.`, [hidden.id, cover.id]));
+      }
+    }
+    const labels = elements.filter((element2) => element2.text);
+    for (let a = 0; a < labels.length; a++) for (let b = a + 1; b < labels.length; b++) {
+      if (overlaps(labels[a].text.bounds, labels[b].text.bounds)) diagnostics.push(issue("label-collision", `Labels ${labels[a].id} and ${labels[b].id} overlap.`, [labels[a].id, labels[b].id]));
+    }
+    for (const label of labels) if (label.collection === "relations") {
+      for (const node2 of shapes) if (overlaps(label.text.bounds, node2.bounds)) diagnostics.push(issue("label-obstruction", `Connector label ${label.id} overlaps ${node2.id}.`, [label.id, node2.id]));
+    }
+    for (let a = 0; a < shapes.length; a++) for (let b = a + 1; b < shapes.length; b++) if (overlaps(shapes[a].bounds, shapes[b].bounds)) diagnostics.push(issue("shape-overlap", `Shapes ${shapes[a].id} and ${shapes[b].id} overlap.`, [shapes[a].id, shapes[b].id], "warning"));
+  }
+  function resolveDiagramSceneElement(entry2, placement5, placements, order, emphasisLevel = null, diagnostics = []) {
     const { collection, value } = entry2;
-    const element2 = { id: value.id, collection, semantic: clone(value), kind: value.kind ?? collection, label: value.label ?? value.text ?? "", description: value.description ?? "", bounds: clone(placement4.bounds), savedLabel: clone(placement4.label), zIndex: placement4.zIndex, order, appearance: clone(placement4.appearance), locks: clone(placement4.locks), emphasis: emphasisLevel };
-    if (placement4.bounds) Object.assign(element2, clone(placement4.bounds));
-    if (collection === "relations") Object.assign(element2, { from: value.from, to: value.to, direction: value.direction, route: clone(placement4.route), points: routePoints(value, placement4, placements) });
+    const element2 = { id: value.id, collection, semantic: clone(value), kind: value.kind ?? collection, label: value.label ?? value.text ?? "", description: value.description ?? "", bounds: clone(placement5.bounds), savedLabel: clone(placement5.label), zIndex: placement5.zIndex, order, appearance: clone(placement5.appearance), locks: clone(placement5.locks), emphasis: emphasisLevel };
+    if (placement5.bounds) Object.assign(element2, clone(placement5.bounds));
+    if (collection === "relations") Object.assign(element2, { from: value.from, to: value.to, direction: value.direction, route: clone(placement5.route), points: routePoints(value, placement5, placements) });
     element2.text = resolveText(element2, diagnostics);
     element2.lines = element2.text?.lines ?? [];
     if (element2.points) {
@@ -4799,6 +4871,163 @@
       element2.labelLines = element2.lines;
     }
     return element2;
+  }
+  function resolveDiagramScene(bundle) {
+    const checked = validateAuthoringBundle(bundle);
+    if (!checked.ok) return { ok: false, code: "invalid-bundle", diagnostics: checked.diagnostics };
+    const byId = elementIndex(bundle.document);
+    const placements = new Map(bundle.presentation.elements.map((value) => [value.elementId, value]));
+    const emphasis2 = new Map(bundle.document.emphasis.map((value) => [value.targetId, value.level]));
+    const diagnostics = [];
+    const elements = bundle.presentation.elements.map((placement5, order) => resolveDiagramSceneElement(byId.get(placement5.elementId), placement5, placements, order, emphasis2.get(placement5.elementId) ?? null, diagnostics)).sort((a, b) => a.zIndex - b.zIndex || a.order - b.order);
+    let minimumX = 0, minimumY = 0, maximumX = 0, maximumY = 0;
+    for (const element2 of elements) {
+      for (const rect of [element2.bounds, element2.text?.bounds]) if (rect) {
+        minimumX = Math.min(minimumX, rect.x);
+        minimumY = Math.min(minimumY, rect.y);
+        maximumX = Math.max(maximumX, rect.x + rect.width);
+        maximumY = Math.max(maximumY, rect.y + rect.height);
+      }
+      for (const point2 of element2.points ?? []) {
+        minimumX = Math.min(minimumX, point2.x);
+        minimumY = Math.min(minimumY, point2.y);
+        maximumX = Math.max(maximumX, point2.x);
+        maximumY = Math.max(maximumY, point2.y);
+      }
+    }
+    const viewBox = { x: Math.floor(minimumX - PADDING), y: Math.floor(minimumY - PADDING), width: Math.max(1, Math.ceil(maximumX - minimumX + 2 * PADDING)), height: Math.max(1, Math.ceil(maximumY - minimumY + 2 * PADDING)) };
+    let dense = elements.length > AUTHORED_SCENE_ITEM_BUDGET || Math.max(viewBox.width, viewBox.height) > MAX_DIAGRAM_SCENE_EXTENT;
+    if (dense) diagnostics.push(issue("focused-output-required", `This ${elements.length}-element diagram exceeds the single-view presentation budget; export a focused view or split it without shrinking labels.`, [], "warning"));
+    else if (geometryWork(elements) > MAX_GEOMETRY_CHECKS) {
+      dense = true;
+      diagnostics.push(issue("focused-output-required", "This scene exceeds the bounded geometry inspection budget; export a focused view or simplify its routes without discarding the saved draft.", [], "warning"));
+    } else inspectGeometry(elements, diagnostics);
+    const status = elements.length === 0 ? "no-visible-content" : dense ? "focused-output-required" : diagnostics.some((value) => value.severity === "error") ? "invalid" : diagnostics.length ? "warning" : "pass";
+    if (!elements.length) diagnostics.push(issue("no-visible-content", "This valid draft has no visible elements to export.", [], "warning"));
+    const scene = {
+      kind: "diagram-authored-scene",
+      schemaVersion: "1.0.0",
+      diagramId: bundle.diagramId,
+      basis: snapshot2(bundle),
+      viewBox,
+      width: viewBox.width,
+      height: viewBox.height,
+      elements,
+      boxes: elements.filter((element2) => element2.collection === "nodes"),
+      groups: elements.filter((element2) => element2.collection === "groups"),
+      lanes: elements.filter((element2) => element2.collection === "lanes"),
+      edges: elements.filter((element2) => element2.collection === "relations"),
+      notes: elements.filter((element2) => element2.collection === "annotations"),
+      labelBounds: elements.filter((element2) => element2.text).map((element2) => ({ id: element2.id, ...element2.text.bounds })),
+      quality: { status, diagnostics: diagnostics.slice(0, 128) }
+    };
+    return { ok: true, scene, diagnostics: [] };
+  }
+
+  // lib/artifact/internal/contrast.mjs
+  var clamp01 = (x) => x < 0 ? 0 : x > 1 ? 1 : x;
+  var srgbToLinear = (c) => c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  var linearToSrgb = (c) => {
+    c = clamp01(c);
+    return c <= 31308e-7 ? 12.92 * c : 1.055 * c ** (1 / 2.4) - 0.055;
+  };
+  function parseHex(s) {
+    let h = s.replace("#", "").trim();
+    if (h.length === 3 || h.length === 4) h = h.split("").map((d) => d + d).join("");
+    if (h.length !== 6 && h.length !== 8) return null;
+    const r = parseInt(h.slice(0, 2), 16) / 255;
+    const g = parseInt(h.slice(2, 4), 16) / 255;
+    const b = parseInt(h.slice(4, 6), 16) / 255;
+    return [r, g, b].some(Number.isNaN) ? null : { r, g, b };
+  }
+  function parseRgb(s) {
+    const m = /rgba?\(([^)]+)\)/i.exec(s);
+    if (!m) return null;
+    const parts = m[1].split(/[,\s/]+/).filter(Boolean).slice(0, 3);
+    if (parts.length < 3) return null;
+    const toUnit = (p) => p.endsWith("%") ? parseFloat(p) / 100 : parseFloat(p) / 255;
+    const [r, g, b] = parts.map(toUnit);
+    return [r, g, b].some((x) => !Number.isFinite(x)) ? null : { r: clamp01(r), g: clamp01(g), b: clamp01(b) };
+  }
+  function parseOklch(s) {
+    const m = /oklch\(([^)]+)\)/i.exec(s);
+    if (!m) return null;
+    const parts = m[1].split(/[\s/]+/).filter(Boolean);
+    if (parts.length < 3) return null;
+    let [L, C, H] = parts;
+    L = L.endsWith("%") ? parseFloat(L) / 100 : parseFloat(L);
+    C = parseFloat(C);
+    H = parseFloat(H);
+    if (![L, C, H].every(Number.isFinite)) return null;
+    const h = H * Math.PI / 180;
+    const a = C * Math.cos(h);
+    const b2 = C * Math.sin(h);
+    const l_ = L + 0.3963377774 * a + 0.2158037573 * b2;
+    const m_ = L - 0.1055613458 * a - 0.0638541728 * b2;
+    const s_ = L - 0.0894841775 * a - 1.291485548 * b2;
+    const l = l_ ** 3, mm = m_ ** 3, ss = s_ ** 3;
+    return {
+      r: linearToSrgb(4.0767416621 * l - 3.3077115913 * mm + 0.2309699292 * ss),
+      g: linearToSrgb(-1.2684380046 * l + 2.6097574011 * mm - 0.3413193965 * ss),
+      b: linearToSrgb(-0.0041960863 * l - 0.7034186147 * mm + 1.707614701 * ss)
+    };
+  }
+  var NAMED = { white: { r: 1, g: 1, b: 1 }, black: { r: 0, g: 0, b: 0 } };
+  function parseColor(input) {
+    if (!input || typeof input !== "string") return null;
+    const s = input.trim().toLowerCase();
+    if (s.includes("var(") || s.includes("gradient") || ["currentcolor", "transparent", "inherit", "none"].includes(s)) return null;
+    if (s in NAMED) return NAMED[s];
+    if (s.startsWith("#")) return parseHex(s);
+    if (s.startsWith("rgb")) return parseRgb(s);
+    if (s.startsWith("oklch")) return parseOklch(s);
+    return null;
+  }
+  function relativeLuminance(color) {
+    if (!color) return null;
+    const { r, g, b } = color;
+    return 0.2126 * srgbToLinear(r) + 0.7152 * srgbToLinear(g) + 0.0722 * srgbToLinear(b);
+  }
+  function contrastRatio(a, b) {
+    const la = relativeLuminance(typeof a === "string" ? parseColor(a) : a);
+    const lb = relativeLuminance(typeof b === "string" ? parseColor(b) : b);
+    if (la == null || lb == null) return null;
+    const hi = Math.max(la, lb), lo = Math.min(la, lb);
+    return (hi + 0.05) / (lo + 0.05);
+  }
+
+  // lib/artifact/diagram/accessibility.mjs
+  var attribute = (bytes, name) => bytes.match(new RegExp(`\\b${name}=["']([^"']+)["']`, "iu"))?.[1] ?? null;
+  function validateDiagramSvg(svg, {
+    foreground = "#111111",
+    background = "#ffffff",
+    clipped = false
+  } = {}) {
+    const bytes = String(svg);
+    const errors = [];
+    const svgOpen = bytes.match(/<svg\b[^>]*>/iu)?.[0] ?? "";
+    if (!svgOpen) errors.push("missing-svg-root");
+    if (attribute(svgOpen, "role") !== "img") errors.push("missing-role-img");
+    if (!attribute(svgOpen, "viewBox")) errors.push("missing-viewbox");
+    const labelledBy = attribute(svgOpen, "aria-labelledby")?.trim().split(/\s+/u) ?? [];
+    const title = bytes.match(/^\s*<svg\b[^>]*>\s*<title\s+id=["']([^"']+)["'][^>]*>([^<]+)<\/title>/iu);
+    const description = bytes.match(/<desc\s+id=["']([^"']+)["'][^>]*>([^<]+)<\/desc>/iu);
+    if (!title) errors.push("missing-first-child-title");
+    if (!description) errors.push("missing-description");
+    if (title && description && title[1] === description[1]) errors.push("duplicate-accessibility-id");
+    if (title && !labelledBy.includes(title[1])) errors.push("title-not-labelledby");
+    if (description && !labelledBy.includes(description[1])) errors.push("description-not-labelledby");
+    if (/<(?:script|foreignObject)\b|\son[a-z]+\s*=|(?:href|src)=["'](?:https?:|\/\/|data:)/iu.test(bytes)) errors.push("external-or-executable-resource");
+    const fontSizes = [...bytes.matchAll(/font-size\s*[:=]\s*["']?(\d+(?:\.\d+)?)/giu)].map((match) => Number(match[1]));
+    if (fontSizes.some((size2) => size2 < 12)) errors.push("text-below-12px");
+    const ratio = contrastRatio(foreground, background);
+    if (ratio !== null && ratio < 4.5) errors.push("contrast-below-aa");
+    if (clipped) errors.push("clipped-content");
+    return Object.freeze({
+      ok: errors.length === 0,
+      errors: Object.freeze(errors),
+      contrastRatio: ratio
+    });
   }
 
   // lib/artifact/diagram/rendering/svg.mjs
@@ -4862,10 +5091,33 @@
     const path = element2.points.map((point2, index2) => `${index2 === 0 ? "M" : "L"} ${svgNumber(point2.x)} ${svgNumber(point2.y)}`).join(" ");
     return `<g ${attributes2} data-direction="${element2.direction}">${markerDefinition}<path d="${path}" fill="none" stroke="${color}" stroke-width="${element2.appearance.strokeWidth}"${dash}${start}${end}/>${text(element2, theme)}</g>`;
   }
+  function renderAuthoredDiagramSvg(bundle, options = {}) {
+    const optionDiagnostics = inspectPlainData(options);
+    if (optionDiagnostics.length) return { ok: false, code: "invalid-options", diagnostics: optionDiagnostics };
+    if (!options || typeof options !== "object" || Array.isArray(options) || Object.keys(options).some((key) => key !== "theme") || options.theme !== void 0 && !Object.hasOwn(palettes, options.theme)) return { ok: false, code: "invalid-options", diagnostics: [{ path: "$.options", rule: "theme", detail: "Choose the paper, slate or midnight theme." }] };
+    const resolved = resolveDiagramScene(bundle);
+    if (!resolved.ok) return resolved;
+    const { scene } = resolved, quality = scene.quality;
+    if (["no-visible-content", "focused-output-required", "invalid"].includes(quality.status)) return { ok: false, code: quality.status === "invalid" ? "invalid-geometry" : quality.status, scene, quality, diagnostics: quality.diagnostics };
+    const theme = { ...palettes[options.theme ?? bundle.presentation.theme.themeId], fills: { ...palettes[options.theme ?? bundle.presentation.theme.themeId].fills } };
+    const titleId = `${bundle.diagramId}-title`, descriptionId = `${bundle.diagramId}-description`;
+    const viewBox = scene.viewBox;
+    const bytes = [
+      `<svg xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="${titleId} ${descriptionId}" viewBox="${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}" width="${scene.width}" height="${scene.height}">`,
+      `<title id="${titleId}">${escapeXml(bundle.document.accessibility.title || bundle.document.title || "Diagram")}</title>`,
+      `<desc id="${descriptionId}">${escapeXml(bundle.document.accessibility.description || bundle.document.summary || "An authored diagram.")}</desc>`,
+      `<rect x="${viewBox.x}" y="${viewBox.y}" width="${viewBox.width}" height="${viewBox.height}" fill="${theme.background}"/>`,
+      ...scene.elements.map((element2) => renderAuthoredSceneElement(element2, theme, bundle.diagramId)),
+      "</svg>\n"
+    ].join("");
+    const accessible = validateDiagramSvg(bytes, { foreground: theme.foreground, background: theme.background });
+    if (!accessible.ok) return { ok: false, code: "invalid-geometry", scene, quality, diagnostics: accessible.errors.map((rule) => ({ path: "$.svg", rule, detail: "Rendered SVG did not pass accessibility verification." })) };
+    return { ok: true, svg: bytes, scene, quality, renderer: { ...AUTHORED_DIAGRAM_RENDERER }, theme, diagnostics: [] };
+  }
 
   // lib/artifact/diagram/authoring/layout.mjs
   var inside = (bounds2, frame) => !frame || bounds2.x >= frame.x && bounds2.y >= frame.y && bounds2.x + bounds2.width <= frame.x + frame.width && bounds2.y + bounds2.height <= frame.y + frame.height;
-  var overlaps = (a, b, gap = 0) => a.x < b.x + b.width + gap && a.x + a.width + gap > b.x && a.y < b.y + b.height + gap && a.y + a.height + gap > b.y;
+  var overlaps2 = (a, b, gap = 0) => a.x < b.x + b.width + gap && a.x + a.width + gap > b.x && a.y < b.y + b.height + gap && a.y + a.height + gap > b.y;
   function check(bundle, options, keys) {
     const checked = validateAuthoringBundle(bundle);
     if (!checked.ok) return checked;
@@ -4965,7 +5217,7 @@
           if (frame && candidate.y + candidate.height > frame.y + frame.height) break;
           collisionChecks += obstacles.length + occupied.length;
           if (collisionChecks > 25e4) return failure("$.options.targetIds", "focused-region-required", "This layout exceeds the bounded obstacle-search budget; select a smaller region.");
-          if (!inside(candidate, frame) || [...obstacles, ...occupied].some((bounds2) => overlaps(candidate, bounds2, gap / 2))) continue;
+          if (!inside(candidate, frame) || [...obstacles, ...occupied].some((bounds2) => overlaps2(candidate, bounds2, gap / 2))) continue;
           proposed = candidate;
           break;
         }
@@ -4987,6 +5239,378 @@
     }
     const result = preview(bundle, changes, options.transactionId);
     return { ...result, layout: { targetIds: [...options.targetIds], movedIds: changes.map((change) => change.elementId).sort(), lockedIds: [...new Set(lockedIds)].sort() } };
+  }
+
+  // lib/artifact/diagram/source-map.mjs
+  var MAX_BYTES = 65536;
+  var ID = /^[A-Za-z][A-Za-z0-9_-]*$/u;
+  var SAFE_ID = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/u;
+  var HEADER = /^(?:flowchart|graph)\s+(TB|TD|BT|LR|RL)$/iu;
+  var DIRECTIONS = { TB: "top-down", TD: "top-down", BT: "bottom-up", LR: "left-right", RL: "right-left" };
+  var REVERSE_DIRECTIONS = { "top-down": "TB", "bottom-up": "BT", "left-right": "LR", "right-left": "RL" };
+  var UNSAFE_TEXT = /%%\{|<\s*(?:script|iframe|foreignObject)\b|javascript:|https?:\/\//iu;
+  var SEMANTIC_EDIT_LOSS = "Semantic content changed after this source correspondence was captured.";
+  var ENCODER = new TextEncoder();
+  var meta = (kind) => ({ kind, schemaVersion: "1.0.0", protocolVersion: "1.13.0" });
+  var digest2 = (text2) => `sha256:${sha256Hex(text2)}`;
+  var idFor = (sourceId) => sourceId.normalize("NFKD").toLowerCase().replace(/[^a-z0-9]+/gu, "-").replace(/^-|-+$/gu, "");
+  var issue2 = (code, severity, line, column, range2, message, repair, elementIds = []) => ({ code, severity, line, column, range: range2, message, repair, elementIds });
+  var failure2 = (diagnostic2) => ({ ok: false, sourceModified: false, diagnostics: [diagnostic2] });
+  var plain = (value, fallback) => value === void 0 ? fallback : value.startsWith('"') ? JSON.parse(value) : value;
+  function sourceLines(text2) {
+    const lines = [];
+    let cursor = 0, byte = 0, number = 1;
+    while (cursor < text2.length) {
+      let end = cursor;
+      while (end < text2.length && text2[end] !== "\r" && text2[end] !== "\n") end++;
+      const newline = text2.slice(end, end + (text2.slice(end, end + 2) === "\r\n" ? 2 : end < text2.length ? 1 : 0));
+      const raw = text2.slice(cursor, end);
+      const leading = raw.match(/^\s*/u)[0];
+      const trailing = raw.match(/\s*$/u)[0];
+      const range2 = { startByte: byte + ENCODER.encode(leading).length, endByte: byte + ENCODER.encode(raw.slice(0, raw.length - trailing.length)).length };
+      lines.push({ raw, text: raw.trim(), number, column: [...leading].length + 1, range: range2 });
+      byte += ENCODER.encode(raw + newline).length;
+      cursor = end + newline.length;
+      number++;
+    }
+    return lines;
+  }
+  function parseLabel(raw, fallback) {
+    if (raw === void 0) return fallback;
+    const value = raw.trim();
+    if (!value) return "";
+    if (value.startsWith('"')) {
+      if (!value.endsWith('"')) return null;
+      try {
+        return plain(value, fallback);
+      } catch {
+        return null;
+      }
+    }
+    return value;
+  }
+  function nodeExpression(raw) {
+    const match = raw.trim().match(/^([A-Za-z][A-Za-z0-9_-]*)(.*)$/u);
+    if (!match) return null;
+    const [, sourceId, rest] = match;
+    if (!rest.trim()) return { sourceId, label: sourceId, kind: "process", shape: "rectangle", declared: false };
+    const expression = rest.trim();
+    let shape2, label;
+    if (expression.startsWith("[(") && expression.endsWith(")]")) {
+      shape2 = "cylinder";
+      label = expression.slice(2, -2);
+    } else if (expression.startsWith("[") && expression.endsWith("]")) {
+      shape2 = "rectangle";
+      label = expression.slice(1, -1);
+    } else if (expression.startsWith("(") && expression.endsWith(")")) {
+      shape2 = "rounded-rectangle";
+      label = expression.slice(1, -1);
+    } else if (expression.startsWith("{") && expression.endsWith("}")) {
+      shape2 = "diamond";
+      label = expression.slice(1, -1);
+    } else return null;
+    label = parseLabel(label, sourceId);
+    if (label === null || label.length > 4096 || /[\u0000-\u001f]/u.test(label)) return null;
+    return { sourceId, label, kind: shape2 === "diamond" ? "decision" : shape2 === "cylinder" ? "data-store" : "process", shape: shape2, declared: true };
+  }
+  function parseEdge(line) {
+    const match = line.match(/^(.*?)\s*(<-->|-->|---)\s*(?:\|([^|]+)\|\s*)?(.*?)$/u);
+    if (!match) return null;
+    const from = nodeExpression(match[1]), to = nodeExpression(match[4]);
+    if (!from || !to) return null;
+    const label = match[3] === void 0 ? null : parseLabel(match[3], "");
+    if (match[3] !== void 0 && (label === null || label.length > 4096 || /[\u0000-\u001f]/u.test(label))) return null;
+    return { from, to, label, direction: match[2] === "<-->" ? "both" : match[2] === "-->" ? "forward" : "none" };
+  }
+  function placement3(elementId, shape2, bounds2, zIndex, previous) {
+    const old = previous?.presentation.elements.find((item) => item.elementId === elementId);
+    if (old && old.appearance.shape === shape2 && Boolean(old.bounds) === Boolean(bounds2)) return clone(old);
+    return {
+      elementId,
+      bounds: bounds2,
+      route: bounds2 ? null : { mode: "automatic", strategy: "straight", from: { side: "bottom", offset: 0.5 }, to: { side: "top", offset: 0.5 }, points: [] },
+      label: null,
+      zIndex,
+      appearance: { shape: shape2, fill: shape2 === "container" || shape2 === "connector" ? "transparent" : "surface", stroke: "default", strokeWidth: 2, strokeStyle: "solid", fontSize: shape2 === "connector" ? 14 : 16, textAlign: "center" },
+      locks: { position: false, size: false, route: false }
+    };
+  }
+  function previewMermaidCopy(source, options = {}) {
+    if (inspectPlainData(options).length || !options || Array.isArray(options) || Object.keys(options).some((key) => !["diagramId", "title", "previousBundle"].includes(key))) return failure2(issue2("invalid-options", "error", 1, 1, null, "Options must be inert, known data fields.", "Supply diagramId, title or previousBundle only."));
+    const { diagramId = "imported-flowchart", previousBundle = null } = options;
+    const title = options.title ?? previousBundle?.document?.title ?? "Imported flowchart";
+    if (typeof source !== "string" || !SAFE_ID.test(diagramId) || diagramId.length > 128 || typeof title !== "string" || title.length > 4096) return failure2(issue2("invalid-input", "error", 1, 1, null, "Provide bounded Mermaid text and a valid diagram ID.", "Correct the input."));
+    if (/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/u.test(source)) return failure2(issue2("invalid-utf8", "error", 1, 1, null, "Unpaired UTF-16 surrogates cannot be retained as exact UTF-8.", "Replace malformed characters."));
+    if (/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/u.test(source)) return failure2(issue2("invalid-control", "error", 1, 1, null, "Control characters are not certified Mermaid text.", "Remove binary control characters."));
+    const byteLength = ENCODER.encode(source).length;
+    if (byteLength > MAX_BYTES) return failure2(issue2("source-too-large", "error", 1, 1, null, `Mermaid source exceeds ${MAX_BYTES} UTF-8 bytes.`, "Use a smaller source."));
+    if (previousBundle) {
+      const checked2 = validateAuthoringBundle(previousBundle);
+      if (!checked2.ok || previousBundle.diagramId !== diagramId) return failure2(issue2("invalid-previous-bundle", "error", 1, 1, null, "Previous correspondence must belong to this valid diagram.", "Choose its current bundle."));
+    }
+    const lines = sourceLines(source), diagnostics = [], entries2 = [], nodes = /* @__PURE__ */ new Map(), groups = /* @__PURE__ */ new Map(), edges = /* @__PURE__ */ new Map(), stack = [];
+    const previous = previousBundle && previousBundle.diagramId === diagramId ? previousBundle : null;
+    const previousIds = new Map((previousBundle?.sourceMap?.entries ?? []).filter((entry2) => entry2.sourceId && entry2.elementIds.length === 1 && (entry2.confidence === "exact" || entry2.losses.length > 0 && entry2.losses.every((loss) => loss === SEMANTIC_EDIT_LOSS))).map((entry2) => [entry2.sourceId, entry2.elementIds[0]]));
+    const priorSemanticIds = new Set([...previous?.document.nodes ?? [], ...previous?.document.groups ?? []].map((item) => item.id));
+    const used = /* @__PURE__ */ new Map();
+    let header = null;
+    const reject = (code, line, message, repair, elementIds = []) => diagnostics.push(issue2(code, "error", line.number, line.column, line.range, message, repair, elementIds));
+    const partial = (line, construct, message) => {
+      diagnostics.push(issue2(construct, "warning", line.number, line.column, line.range, message, "Remove this construct or keep the original source in the bundle."));
+      entries2.push({ sourceId: null, elementIds: [], range: line.range, construct, confidence: "ambiguous", losses: [message] });
+    };
+    const identity = (raw, line, type) => {
+      if (!ID.test(raw) || raw.length > 128) {
+        reject("invalid-source-id", line, "Source ID is not a bounded explicit identifier.", "Use a letter followed by letters, numbers, underscores or hyphens.");
+        return null;
+      }
+      const id2 = previousIds.get(raw) ?? idFor(raw);
+      if (previousIds.has(raw) && previous && !(type === "node" ? previous.document.nodes : previous.document.groups).some((item) => item.id === id2)) {
+        reject("changed-source-role", line, `Source ID ${raw} changed from a node to a container or the reverse.`, "Resolve this role change explicitly in the editor.");
+        return null;
+      }
+      if (!previousIds.has(raw) && priorSemanticIds.has(id2)) {
+        reject("unverified-identity", line, `New source ID ${raw} would silently reuse an existing diagram identity.`, "Restore the original source ID or resolve the identity explicitly.");
+        return null;
+      }
+      if (!SAFE_ID.test(id2) || id2.length > 128 || used.has(id2) && used.get(id2) !== raw) {
+        reject("source-id-collision", line, `Source ID ${raw} collides with another semantic identity.`, "Rename one explicit source ID.");
+        return null;
+      }
+      used.set(id2, raw);
+      return id2;
+    };
+    const addMember = (id2, line) => {
+      if (!stack.length) return;
+      const parent = groups.get(stack.at(-1));
+      if (!parent.members.includes(id2)) parent.members.push(id2);
+      for (const group of groups.values()) if (group.id !== parent.id && group.members.includes(id2)) reject("multiple-parents", line, "One element occurs in multiple containers.", "Give the element one parent.", [id2]);
+    };
+    const addNode = (node2, line) => {
+      const id2 = identity(node2.sourceId, line, "node");
+      if (!id2) return null;
+      if (groups.has(id2)) {
+        reject("source-id-collision", line, "Node and subgraph share an identity.", "Rename one source ID.", [id2]);
+        return null;
+      }
+      const current = nodes.get(id2);
+      if (current && node2.declared && current.declared && (current.label !== node2.label || current.shape !== node2.shape)) reject("conflicting-node", line, "Repeated node declaration changes its shape or label.", "Use one declaration per explicit ID.", [id2]);
+      if (!current || node2.declared && !current.declared) nodes.set(id2, { ...node2, id: id2, line });
+      addMember(id2, line);
+      if (!current) entries2.push({ sourceId: node2.sourceId, elementIds: [id2], range: line.range, construct: node2.shape === "diamond" ? "decision-node" : node2.shape === "cylinder" ? "cylinder-node" : node2.shape === "rounded-rectangle" ? "rounded-node" : "rectangle-node", confidence: "exact", losses: [] });
+      else if (node2.declared && !current.declared) {
+        const entry2 = entries2.find((item) => item.sourceId === node2.sourceId);
+        entry2.range = line.range;
+        entry2.construct = node2.shape === "diamond" ? "decision-node" : node2.shape === "cylinder" ? "cylinder-node" : node2.shape === "rounded-rectangle" ? "rounded-node" : "rectangle-node";
+      }
+      return id2;
+    };
+    for (const line of lines) {
+      if (/%%\{|<\s*(?:script|iframe|foreignObject)\b|javascript:|https?:\/\/|(?:^|\s)(?:click|href)\s+/iu.test(line.text)) {
+        reject("unsafe-construct", line, "Executable directives or external resources are not accepted.", "Remove scripts, directives, callbacks and remote links.");
+        continue;
+      }
+      if (!line.text || line.text.startsWith("%%")) continue;
+      if (!header) {
+        const match = line.text.match(HEADER);
+        if (!match) {
+          reject("invalid-header", line, "A certified flowchart must start with a direction header.", "Start with flowchart TB, BT, LR or RL.");
+          continue;
+        }
+        header = DIRECTIONS[match[1].toUpperCase()];
+        continue;
+      }
+      if (/^subgraph\s+/iu.test(line.text)) {
+        const match = line.text.match(/^subgraph\s+([A-Za-z][A-Za-z0-9_-]*)(?:\s*\[(.*)\])?$/iu);
+        if (!match) {
+          reject("invalid-subgraph", line, "Subgraph needs an explicit bounded ID and plain label.", "Use subgraph ID[Label].");
+          continue;
+        }
+        const id2 = identity(match[1], line, "group");
+        if (!id2) continue;
+        if (nodes.has(id2) || groups.has(id2)) {
+          reject("source-id-collision", line, "Subgraph ID is already used.", "Choose a unique ID.", [id2]);
+          continue;
+        }
+        const label = parseLabel(match[2], match[1]);
+        if (label === null || label.length > 4096 || /[\u0000-\u001f]/u.test(label)) {
+          reject("invalid-label", line, "Subgraph label is invalid.", "Use a bounded plain-text label.");
+          continue;
+        }
+        groups.set(id2, { id: id2, label, members: [], line });
+        addMember(id2, line);
+        entries2.push({ sourceId: match[1], elementIds: [id2], range: line.range, construct: "subgraph", confidence: "exact", losses: [] });
+        stack.push(id2);
+        continue;
+      }
+      if (/^end$/iu.test(line.text)) {
+        if (!stack.length) reject("unmatched-end", line, "Unmatched subgraph end.", "Remove end or add a subgraph.");
+        else stack.pop();
+        continue;
+      }
+      const edge = parseEdge(line.text);
+      if (edge) {
+        const from = addNode(edge.from, line), to = addNode(edge.to, line);
+        if (!from || !to) continue;
+        const signature = JSON.stringify([from, to, edge.direction, edge.label]);
+        const continuing = previous?.document.relations.filter((item) => item.from === from && item.to === to && item.direction === edge.direction) ?? [];
+        const sameLabel = continuing.filter((item) => item.label === edge.label);
+        const matches = sameLabel.length ? sameLabel : continuing;
+        if (matches.length > 1) {
+          reject("ambiguous-edge", line, "Previous relations have indistinguishable endpoints and direction.", "Resolve the relation identity in the editor.", matches.map((item) => item.id));
+          continue;
+        }
+        const id2 = matches[0]?.id ?? `edge-${sha256Hex(signature).slice(0, 16)}`;
+        if (edges.has(id2) || used.has(id2)) {
+          reject("ambiguous-edge", line, "Repeated or colliding edge has no stable distinct identity.", "Remove the duplicate edge or model it explicitly in the editor.", [id2]);
+          continue;
+        }
+        used.set(id2, `edge:${signature}`);
+        edges.set(id2, { id: id2, from, to, label: edge.label, kind: edge.direction === "none" ? "association" : "flow", direction: edge.direction, weight: null });
+        entries2.push({ sourceId: null, elementIds: [id2], range: line.range, construct: edge.direction === "both" ? "bidirectional-edge" : edge.direction === "none" ? "undirected-edge" : "directed-edge", confidence: "exact", losses: [] });
+        continue;
+      }
+      const node2 = nodeExpression(line.text);
+      if (node2) {
+        addNode(node2, line);
+        continue;
+      }
+      if (/^(?:classDef|class|style|linkStyle|direction|%%\{|click|href)\b/iu.test(line.text)) partial(line, "styles-and-directives", "Unsupported Mermaid styling or directive.");
+      else reject("malformed-statement", line, "Statement is not valid certified Mermaid syntax.", "Correct its node, edge or subgraph syntax.");
+    }
+    if (!header) diagnostics.push(issue2("missing-header", "error", 1, 1, null, "No certified flowchart header was found.", "Start with flowchart TB."));
+    if (stack.length) diagnostics.push(issue2("unclosed-subgraph", "error", lines.at(-1)?.number ?? 1, 1, null, "A subgraph has no end.", "Close every subgraph with end."));
+    if (!nodes.size) diagnostics.push(issue2("empty-flowchart", "error", 1, 1, null, "No nodes can be adopted.", "Add at least one supported node."));
+    const semanticIds = /* @__PURE__ */ new Set([...nodes.keys(), ...groups.keys(), ...edges.keys()]);
+    for (const annotation2 of previous?.document.annotations ?? []) {
+      if (semanticIds.has(annotation2.id) || annotation2.targetId && !semanticIds.has(annotation2.targetId)) diagnostics.push(issue2("orphaned-authoring", "error", 1, 1, null, `Authored annotation ${annotation2.id} would be lost or collide with source.`, "Resolve the annotation before importing.", [annotation2.id]));
+      else semanticIds.add(annotation2.id);
+    }
+    for (const emphasis2 of previous?.document.emphasis ?? []) if (!semanticIds.has(emphasis2.targetId)) diagnostics.push(issue2("orphaned-authoring", "error", 1, 1, null, `Authored emphasis on ${emphasis2.targetId} would be lost.`, "Resolve the emphasis before importing.", [emphasis2.targetId]));
+    if (diagnostics.some((item) => item.severity === "error")) return { ok: false, sourceModified: false, diagnostics };
+    for (const group of groups.values()) {
+      const prior = previous?.document.groups.find((item) => item.id === group.id);
+      for (const member of prior?.members ?? []) if (previous.document.annotations.some((item) => item.id === member)) group.members.push(member);
+    }
+    const sourceDigest2 = digest2(source);
+    const document2 = {
+      ...meta("planr-diagram"),
+      diagramId,
+      title,
+      summary: previous?.document.summary ?? "",
+      audience: previous?.document.audience ?? "mixed",
+      grammar: { id: "flowchart", version: "1.0.0" },
+      nodes: [...nodes.values()].map(({ id: id2, label, kind }) => ({ id: id2, label, kind, description: previous?.document.nodes.find((item) => item.id === id2)?.description ?? null })),
+      relations: [...edges.values()],
+      groups: [...groups.values()].map(({ id: id2, label, members }) => ({ id: id2, label, members })),
+      lanes: [],
+      events: [],
+      series: [],
+      axes: [],
+      sets: [],
+      annotations: [],
+      emphasis: [],
+      laneOrder: [],
+      accessibility: { title, description: previous?.document.accessibility.description ?? "", readingOrder: [...nodes.keys()] },
+      documentDigest: ""
+    };
+    document2.annotations = clone(previous?.document.annotations ?? []);
+    document2.emphasis = clone(previous?.document.emphasis ?? []);
+    const groupElements = [...groups.keys()].map((id2, i) => placement3(id2, "container", { x: 24 + i * 24, y: 24 + i * 24, width: 720, height: 480 }, 0, previous));
+    const nodeElements = [...nodes.values()].map((node2, i) => placement3(node2.id, node2.shape, { x: 80 + i % 4 * 180, y: 80 + Math.floor(i / 4) * 120, width: 144, height: 72 }, 2, previous));
+    const edgeElements = [...edges.keys()].map((id2) => placement3(id2, "connector", null, 1, previous));
+    const noteElements = document2.annotations.map((annotation2, i) => previous.presentation.elements.find((item) => item.elementId === annotation2.id) ?? placement3(annotation2.id, "text", { x: 80 + i * 180, y: 560, width: 144, height: 72 }, 3));
+    const presentation = { ...meta("diagram-presentation"), diagramId, semanticDigest: "", coordinateSystem: "global-canvas", layout: { direction: header, detailTier: previous?.presentation.layout.detailTier ?? "balanced" }, theme: clone(previous?.presentation.theme ?? { themeId: "paper", mode: "light" }), elements: [...groupElements, ...edgeElements, ...nodeElements, ...noteElements], presentationDigest: "" };
+    const bundle = sealBundle({ ...meta("diagram-authoring-bundle"), diagramId, document: document2, presentation, originalSource: { format: "mermaid", text: source, sourceDigest: sourceDigest2 }, sourceMap: { ...meta("diagram-source-map"), diagramId, semanticDigest: "", sourceDigest: sourceDigest2, sourceByteLength: byteLength, encoding: "utf-8", parser: { id: "openplanr-mermaid-copy", version: "1.0.0" }, certificationVersion: "flowchart-copy-v1", entries: entries2 }, bundleDigest: "" });
+    const checked = validateAuthoringBundle(bundle);
+    if (!checked.ok) return { ok: false, sourceModified: false, diagnostics: checked.diagnostics.map((item) => issue2(item.rule, "error", 1, 1, null, item.detail, "Correct the source or previous bundle.")) };
+    const losses = diagnostics.filter((item) => item.severity === "warning").map((item) => ({ dimension: "semantic", code: item.code, elementIds: item.elementIds, message: item.message.slice(0, 512) }));
+    const layoutMessage = "Mermaid does not encode source coordinates; OpenPlanr generated or reused editable layout.";
+    losses.push({ dimension: "presentation", code: "generated-layout", elementIds: [], message: layoutMessage });
+    diagnostics.push(issue2("generated-layout", "warning", 1, 1, null, layoutMessage, "Review the proposed layout before saving."));
+    const fidelity2 = { ...meta("diagram-fidelity-report"), diagramId, basis: snapshot2(bundle), sourceDigest: sourceDigest2, sourceFormat: "mermaid", targetFormat: "planr-diagram-bundle", semantic: losses.some((item) => item.dimension === "semantic") ? "partial" : "lossless", presentation: "partial", sourceText: "lossless", losses };
+    const reportIssues = validateDiagramAuthoringArtifact("diagram-fidelity-report", fidelity2, { bundle });
+    if (reportIssues.length) return { ok: false, sourceModified: false, diagnostics: reportIssues.map((item) => issue2(item.rule, "error", 1, 1, null, item.detail, "Correct the source or previous bundle.")) };
+    const acknowledgement = losses.length ? digest2(JSON.stringify({ bundleDigest: bundle.bundleDigest, losses })) : null;
+    return { ok: true, bundle, fidelity: fidelity2, diagnostics, requiresAcknowledgement: Boolean(acknowledgement), acknowledgement, sourceModified: false };
+  }
+  function adoptMermaidCopy(preview2, acknowledgement = null) {
+    if (inspectPlainData(preview2).length) return failure2(issue2("invalid-preview", "error", 1, 1, null, "Preview must be inert data.", "Preview the source again."));
+    if (!preview2?.ok || !preview2.bundle || !validateAuthoringBundle(preview2.bundle).ok) return failure2(issue2("invalid-preview", "error", 1, 1, null, "A valid preview is required.", "Preview the source again."));
+    if (validateDiagramAuthoringArtifact("diagram-fidelity-report", preview2.fidelity, { bundle: preview2.bundle }).length) return failure2(issue2("invalid-fidelity", "error", 1, 1, null, "The preview fidelity report changed.", "Preview the source again."));
+    const expected = preview2.fidelity.losses.length ? digest2(JSON.stringify({ bundleDigest: preview2.bundle.bundleDigest, losses: preview2.fidelity.losses })) : null;
+    if (expected !== preview2.acknowledgement || expected !== acknowledgement) return failure2(issue2("acknowledgement-required", "error", 1, 1, null, "Acknowledge the exact losses in this preview.", "Review the fidelity report and confirm this preview."));
+    return { ok: true, bundle: clone(preview2.bundle), sourceModified: false };
+  }
+  function sourceIds(bundle) {
+    const ids2 = /* @__PURE__ */ new Map();
+    for (const entry2 of bundle.sourceMap?.entries ?? []) if (entry2.sourceId && entry2.elementIds.length === 1 && ID.test(entry2.sourceId)) ids2.set(entry2.elementIds[0], entry2.sourceId);
+    return ids2;
+  }
+  function exportMermaidCopy(bundle) {
+    const checked = validateAuthoringBundle(bundle);
+    if (!checked.ok) return { ok: false, diagnostics: checked.diagnostics.map((item) => issue2(item.rule, "error", 1, 1, null, item.detail, "Use a valid editable bundle.")) };
+    if (bundle.document.grammar.id !== "flowchart") return failure2(issue2("unsupported-grammar", "error", 1, 1, null, "Only flowchart copy export is certified.", "Export the editable bundle instead."));
+    const ids2 = sourceIds(bundle), diagnostics = [], losses = [];
+    const lost = (dimension, code, elementIds, message) => {
+      losses.push({ dimension, code, elementIds, message });
+      diagnostics.push(issue2(code, "warning", 1, 1, null, message, "Keep the editable bundle for complete fidelity.", elementIds));
+    };
+    const names = /* @__PURE__ */ new Map(), occupied = /* @__PURE__ */ new Set();
+    for (const entry2 of [...bundle.document.nodes, ...bundle.document.groups]) {
+      const name = ids2.get(entry2.id) ?? entry2.id.replace(/-/gu, "_");
+      if (!ID.test(name) || occupied.has(name)) return failure2(issue2("unrepresentable-id", "error", 1, 1, null, `Element ${entry2.id} has no unique Mermaid ID.`, "Rename the source ID or use the editable bundle.", [entry2.id]));
+      names.set(entry2.id, name);
+      occupied.add(name);
+    }
+    const byParent = /* @__PURE__ */ new Map();
+    for (const group of bundle.document.groups) for (const member of group.members) byParent.set(member, group.id);
+    const placements = new Map(bundle.presentation.elements.map((item) => [item.elementId, item]));
+    const safeLabel = (value, id2) => {
+      if (!UNSAFE_TEXT.test(value)) return JSON.stringify(value);
+      lost("semantic", "unsafe-label", [id2], `Element ${id2} has text that cannot safely be emitted as certified Mermaid.`);
+      return JSON.stringify("Label omitted in Mermaid copy");
+    };
+    const nodeText = (node2) => {
+      const shape2 = placements.get(node2.id)?.appearance.shape;
+      const label = safeLabel(node2.label, node2.id);
+      if (node2.kind === "process" && shape2 === "rectangle") return `${names.get(node2.id)}[${label}]`;
+      if (node2.kind === "process" && shape2 === "rounded-rectangle") return `${names.get(node2.id)}(${label})`;
+      if (node2.kind === "decision" && shape2 === "diamond") return `${names.get(node2.id)}{${label}}`;
+      if (node2.kind === "data-store" && shape2 === "cylinder") return `${names.get(node2.id)}[(${label})]`;
+      lost("semantic", "unsupported-node-shape", [node2.id], `Node ${node2.id} has a role or shape outside certified Mermaid flowchart copy.`);
+      return `${names.get(node2.id)}[${label}]`;
+    };
+    const lines = [`flowchart ${REVERSE_DIRECTIONS[bundle.presentation.layout.direction]}`];
+    const append = (parent, depth) => {
+      for (const group of bundle.document.groups.filter((item) => (byParent.get(item.id) ?? null) === parent)) {
+        lines.push(`${"  ".repeat(depth)}subgraph ${names.get(group.id)}[${safeLabel(group.label, group.id)}]`);
+        append(group.id, depth + 1);
+        lines.push(`${"  ".repeat(depth)}end`);
+      }
+      for (const node2 of bundle.document.nodes.filter((item) => (byParent.get(item.id) ?? null) === parent)) lines.push(`${"  ".repeat(depth)}${nodeText(node2)}`);
+    };
+    append(null, 1);
+    for (const edge of bundle.document.relations) {
+      const op = edge.kind === "flow" && edge.direction === "forward" ? "-->" : edge.kind === "flow" && edge.direction === "both" ? "<-->" : edge.kind === "association" && edge.direction === "none" ? "---" : null;
+      if (!op) {
+        lost("semantic", "unsupported-relation", [edge.id], `Relation ${edge.id} has a role or direction outside certified Mermaid flowchart copy.`);
+        continue;
+      }
+      if (edge.label?.includes("|") || edge.label && UNSAFE_TEXT.test(edge.label)) lost("semantic", "unsupported-edge-label", [edge.id], `Relation ${edge.id} has text that certified Mermaid edge labels cannot represent safely.`);
+      const label = edge.label === null || edge.label.includes("|") || UNSAFE_TEXT.test(edge.label) ? "" : `|${JSON.stringify(edge.label)}|`;
+      lines.push(`  ${names.get(edge.from)} ${op}${label} ${names.get(edge.to)}`);
+    }
+    if (bundle.document.lanes.length) lost("semantic", "lanes", bundle.document.lanes.map((item) => item.id), "Mermaid subgraphs do not preserve lane semantics or order.");
+    if (bundle.document.annotations.length) lost("semantic", "annotations", bundle.document.annotations.map((item) => item.id), "Mermaid flowcharts do not preserve OpenPlanr annotations.");
+    if (bundle.document.emphasis.length) lost("semantic", "emphasis", bundle.document.emphasis.map((item) => item.targetId), "Mermaid flowcharts do not preserve OpenPlanr emphasis.");
+    if (bundle.presentation.elements.length) lost("presentation", "manual-geometry", [], "Mermaid copy does not preserve coordinates, routes, attachment points, stacking or locks.");
+    lost("sourceText", "canonical-copy", [], "Canonical Mermaid formatting differs from the retained original source bytes.");
+    const fidelity2 = { ...meta("diagram-fidelity-report"), diagramId: bundle.diagramId, basis: snapshot2(bundle), sourceDigest: bundle.originalSource?.sourceDigest ?? null, sourceFormat: "planr-diagram-bundle", targetFormat: "mermaid", semantic: losses.some((item) => item.dimension === "semantic") ? "partial" : "lossless", presentation: "partial", sourceText: "partial", losses };
+    const reportIssues = validateDiagramAuthoringArtifact("diagram-fidelity-report", fidelity2, { bundle });
+    if (reportIssues.length) return { ok: false, diagnostics: reportIssues.map((item) => issue2(item.rule, "error", 1, 1, null, item.detail, "Use a valid editable bundle.")) };
+    return { ok: true, text: `${lines.join("\n")}
+`, fidelity: fidelity2, diagnostics, bundleUnchanged: true };
   }
 
   // lib/artifact/diagram/editor/geometry-index.mjs
@@ -5065,7 +5689,7 @@
     const checked = validateAuthoringBundle(bundle);
     if (!checked.ok) return checked;
     const diagramId = bundle.diagramId;
-    let digest2 = bundle.bundleDigest, data = metadata(bundle);
+    let digest3 = bundle.bundleDigest, data = metadata(bundle);
     const records2 = /* @__PURE__ */ new Map(), buckets = /* @__PURE__ */ new Map(), overflow = /* @__PURE__ */ new Set(), members = /* @__PURE__ */ new Map();
     const work = { fullBuilds: 1, updates: 0, validations: 1, validatedElements: bundle.presentation.elements.length, metadataEntriesScanned: data.byId.size, geometryResolved: 0, lastUpdateResolved: 0, lastUpdateRemoved: 0, lastMetadataEntriesScanned: data.byId.size, queries: 0, lastQueryCandidates: 0, lastQueryChecks: 0, lastQueryCells: 0, lastQueryOverflow: 0 };
     let primitiveCount = 0;
@@ -5116,8 +5740,8 @@
       if (diagnostics.length) return { ok: false, diagnostics };
       if (nextBundle.diagramId !== diagramId) return fail2("diagram-identity", "An index cannot replace its diagram identity.");
       if (!Array.isArray(affectedIds) || affectedIds.some((id2) => typeof id2 !== "string") || new Set(affectedIds).size !== affectedIds.length) return fail2("affected-ids", "Supply distinct stable IDs affected by the edit.");
-      if (nextBundle.bundleDigest === digest2 && affectedIds.some((id2) => !data.signatures.has(id2))) return fail2("affected-ids", "Affected IDs must exist in the current or next diagram.");
-      if (nextBundle.bundleDigest === digest2) {
+      if (nextBundle.bundleDigest === digest3 && affectedIds.some((id2) => !data.signatures.has(id2))) return fail2("affected-ids", "Affected IDs must exist in the current or next diagram.");
+      if (nextBundle.bundleDigest === digest3) {
         work.lastUpdateResolved = 0;
         work.lastUpdateRemoved = 0;
         work.lastMetadataEntriesScanned = 0;
@@ -5137,7 +5761,7 @@
       for (const record2 of nextRecords) insert(record2);
       for (const [id2, order] of nextData.order) records2.get(id2).order = order;
       data = { signatures: nextData.signatures, children: nextData.children, incident: nextData.incident };
-      digest2 = nextBundle.bundleDigest;
+      digest3 = nextBundle.bundleDigest;
       work.updates++;
       work.metadataEntriesScanned += nextData.byId.size;
       work.lastMetadataEntriesScanned = nextData.byId.size;
@@ -5291,6 +5915,28 @@
       if (blocked) return blocked;
       if (gesture) return fail3("gesture-active", "Finish or cancel the gesture before another edit.");
       return accept(previewDiagramTransaction(current, transaction2));
+    }
+    function adoptInitialCopy(bundle2) {
+      const blocked = guard();
+      if (blocked) return blocked;
+      if (saving || gesture || saved || !initialization || pending.length || current.presentation.elements.length) return fail3("import-state", "Import a copy into a new empty diagram before editing or saving it. Existing work is unchanged.");
+      const checked = validateAuthoringBundle(bundle2);
+      if (!checked.ok) return checked;
+      if (bundle2.diagramId !== current.diagramId) return fail3("diagram-identity", "The source copy belongs to a different diagram.");
+      const affectedIds = bundle2.presentation.elements.map((item) => item.elementId);
+      const updated = geometry.update(bundle2, affectedIds);
+      if (!updated.ok) return updated;
+      current = clone(bundle2);
+      base = clone(bundle2);
+      undo = [];
+      redo = [];
+      comparison = null;
+      diagnostics = [];
+      saveState = "unsaved";
+      pruneView();
+      persist();
+      emit("refresh", affectedIds);
+      return { ok: true, bundle: clone(current) };
     }
     function cancelGesture(reason = "cancel") {
       if (!gesture) return { ok: true, cancelled: false };
@@ -5536,6 +6182,7 @@
       },
       submit,
       submitTransaction,
+      adoptInitialCopy,
       beginGesture,
       previewGesture,
       previewLayout,
@@ -5604,7 +6251,7 @@
   }
 
   // lib/artifact/diagram/editor/draft.mjs
-  var meta = (kind) => ({ kind, schemaVersion: "1.0.0", protocolVersion: "1.13.0" });
+  var meta2 = (kind) => ({ kind, schemaVersion: "1.0.0", protocolVersion: "1.13.0" });
   function createDiagramEditorDraft({ diagramId, title, grammar = "flowchart", template = null }) {
     if (template) {
       const check3 = validateAuthoringBundle(template);
@@ -5622,7 +6269,7 @@
       return checked.ok ? { ok: true, bundle: bundle2 } : checked;
     }
     const document2 = {
-      ...meta("planr-diagram"),
+      ...meta2("planr-diagram"),
       diagramId,
       title,
       summary: "",
@@ -5643,7 +6290,7 @@
       documentDigest: ""
     };
     const presentation = {
-      ...meta("diagram-presentation"),
+      ...meta2("diagram-presentation"),
       diagramId,
       semanticDigest: "",
       coordinateSystem: "global-canvas",
@@ -5652,7 +6299,7 @@
       elements: [],
       presentationDigest: ""
     };
-    const bundle = sealBundle({ ...meta("diagram-authoring-bundle"), diagramId, document: document2, presentation, originalSource: null, sourceMap: null, bundleDigest: "" });
+    const bundle = sealBundle({ ...meta2("diagram-authoring-bundle"), diagramId, document: document2, presentation, originalSource: null, sourceMap: null, bundleDigest: "" });
     const check2 = validateAuthoringBundle(bundle);
     return check2.ok ? { ok: true, bundle } : check2;
   }
@@ -5809,7 +6456,7 @@
   }
 
   // lib/artifact/diagram/editor/clipboard.mjs
-  var MAX_BYTES = 1024 * 1024;
+  var MAX_BYTES2 = 1024 * 1024;
   var MAX_ELEMENTS = 1e3;
   var fail4 = (detail) => ({ ok: false, diagnostics: [{ path: "$clipboard", rule: "clipboard", detail }] });
   var size = (value) => new TextEncoder().encode(JSON.stringify(value)).length;
@@ -5847,19 +6494,19 @@
     const checked = validateAuthoringBundle(sourceBundle);
     if (!checked.ok) return checked;
     const value = { kind: "openplanr-diagram-selection", version: 1, sourceBundle, ids: [...selected2] };
-    if (size(value) > MAX_BYTES) return fail4("The copied fragment exceeds 1 MiB. Copy fewer objects.");
+    if (size(value) > MAX_BYTES2) return fail4("The copied fragment exceeds 1 MiB. Copy fewer objects.");
     return { ok: true, value };
   }
   function pasteDiagramSelection(bundle, input, { idMap, transactionId, dx = 24, dy = 24 }) {
     if (typeof input === "string") {
-      if (input.length > MAX_BYTES || new TextEncoder().encode(input).length > MAX_BYTES) return fail4("The clipboard exceeds 1 MiB.");
+      if (input.length > MAX_BYTES2 || new TextEncoder().encode(input).length > MAX_BYTES2) return fail4("The clipboard exceeds 1 MiB.");
       try {
         input = JSON.parse(input);
       } catch {
         return fail4("The clipboard does not contain an OpenPlanr selection.");
       }
     }
-    if (inspectPlainData(input).length || !input || input.kind !== "openplanr-diagram-selection" || input.version !== 1 || Object.keys(input).some((key) => !["kind", "version", "sourceBundle", "ids"].includes(key)) || !Array.isArray(input.ids) || input.ids.length > MAX_ELEMENTS || size(input) > MAX_BYTES) return fail4("Invalid or oversized clipboard fragment.");
+    if (inspectPlainData(input).length || !input || input.kind !== "openplanr-diagram-selection" || input.version !== 1 || Object.keys(input).some((key) => !["kind", "version", "sourceBundle", "ids"].includes(key)) || !Array.isArray(input.ids) || input.ids.length > MAX_ELEMENTS || size(input) > MAX_BYTES2) return fail4("Invalid or oversized clipboard fragment.");
     return compileDiagramCommand(bundle, { type: "paste", sourceBundle: input.sourceBundle, ids: input.ids, idMap, dx, dy }, { transactionId });
   }
 
@@ -5867,7 +6514,7 @@
   var freshId = (prefix = "edit") => `${prefix}-${globalThis.crypto.randomUUID()}`;
   var labelOf = (value) => value.label ?? value.text ?? value.id;
   var transaction = (bundle, operations) => ({ kind: "diagram-edit-transaction", schemaVersion: "1.0.0", protocolVersion: "1.13.0", transactionId: freshId(), diagramId: bundle.diagramId, base: snapshot2(bundle), operations, undoOf: null });
-  function placement3(id2, shape2, bounds2) {
+  function placement4(id2, shape2, bounds2) {
     return {
       elementId: id2,
       bounds: bounds2,
@@ -5898,11 +6545,11 @@
       shape2 = { start: "ellipse", end: "ellipse", decision: "diamond", "data-store": "cylinder", component: "rounded-rectangle" }[kind] ?? "rectangle";
       if (kind === "decision") bounds2.height = 100;
     }
-    return { type: "create", elements: [{ collection, value }], presentation: [placement3(id2, shape2, bounds2)] };
+    return { type: "create", elements: [{ collection, value }], presentation: [placement4(id2, shape2, bounds2)] };
   }
   function connector(from, to, label = "") {
     const id2 = freshId("connector");
-    const entry2 = placement3(id2, "connector", null);
+    const entry2 = placement4(id2, "connector", null);
     entry2.route = { mode: "automatic", strategy: "orthogonal", from: { side: "right", offset: 0.5 }, to: { side: "left", offset: 0.5 }, points: [] };
     return { type: "create", elements: [{ collection: "relations", value: { id: id2, from, to, label: label || null, kind: "flow", direction: "forward", weight: null } }], presentation: [entry2] };
   }
@@ -6274,8 +6921,8 @@
     if (!rows.size) panel.append(element(document2, "p", {}, "The content matches the saved revision. Retry Save to confirm the pending transaction."));
     if (rows.size > 200) panel.append(element(document2, "p", {}, `Showing 200 of ${rows.size} changes. Download your complete draft before resolving.`));
     const controls = element(document2, "div", { className: "de-actions" });
-    const keep = button(document2, "Keep my draft", "keep-draft"), download = button(document2, "Download my draft", "download-draft"), adopt = button(document2, "Use current revision…", "use-current");
-    controls.append(keep, download, adopt);
+    const keep = button(document2, "Keep my draft", "keep-draft"), download2 = button(document2, "Download my draft", "download-draft"), adopt = button(document2, "Use current revision…", "use-current");
+    controls.append(keep, download2, adopt);
     panel.append(controls);
     const confirmation = element(document2, "div", { className: "de-confirm", hidden: true });
     confirmation.append(element(document2, "p", {}, "Replace this local draft with the current saved revision? Pending edits and undo history will be removed. Download your draft first if you want to keep a copy."));
@@ -6284,7 +6931,7 @@
     panel.append(confirmation);
     root.replaceChildren(panel);
     keep.onclick = () => onClose();
-    download.onclick = () => downloadJson(document2, pending, `${pending.diagramId}.draft.planr-diagram-bundle.json`);
+    download2.onclick = () => downloadJson(document2, pending, `${pending.diagramId}.draft.planr-diagram-bundle.json`);
     adopt.onclick = () => {
       confirmation.hidden = false;
       cancel.focus();
@@ -6301,6 +6948,441 @@
     return { dispose() {
       panel.remove();
     } };
+  }
+
+  // lib/artifact/ui/diagram-source-panel.mjs
+  var MAX_SOURCE_BYTES = 65536;
+  var safeName = (name) => name.replace(/[^a-z0-9_-]/giu, "-").slice(0, 80) || "diagram";
+  var fidelityName = (value) => value === "lossless" ? "Preserved" : value === "partial" ? "Partial" : "Unsupported";
+  function download(document2, bytes, type, name) {
+    const window = document2.defaultView;
+    const url = window.URL.createObjectURL(new window.Blob([bytes], { type }));
+    const link = element(document2, "a", { href: url, download: name });
+    document2.body.append(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => window.URL.revokeObjectURL(url), 1e3);
+  }
+  function sourceOffset(source, byteOffset) {
+    const bytes = new TextEncoder().encode(source);
+    return new TextDecoder().decode(bytes.subarray(0, byteOffset)).length;
+  }
+  function fidelity(document2, report) {
+    const wrap = element(document2, "div", {
+      className: "de-source-fidelity",
+      "aria-label": "Copy fidelity"
+    });
+    for (const [name, key] of [
+      ["Meaning", "semantic"],
+      ["Authored layout", "presentation"],
+      ["Original source text", "sourceText"]
+    ]) {
+      const row = element(document2, "div", {
+        className: "de-source-fidelity-row"
+      });
+      row.append(
+        element(document2, "strong", {}, name),
+        element(
+          document2,
+          "span",
+          { "data-fidelity": report[key] },
+          fidelityName(report[key])
+        )
+      );
+      wrap.append(row);
+    }
+    if (report.losses.length) {
+      const list = element(document2, "ul", {
+        className: "de-source-losses",
+        "aria-label": "Conversion losses"
+      });
+      for (const loss of report.losses)
+        list.append(
+          element(document2, "li", {}, `${loss.dimension}: ${loss.message}`)
+        );
+      wrap.append(list);
+    }
+    return wrap;
+  }
+  function mountDiagramSourcePanel({
+    root,
+    session,
+    source = "",
+    onSourceChange = () => {
+    },
+    onAdopt = () => {
+    },
+    onClose = () => {
+    },
+    onReport = () => {
+    }
+  }) {
+    const document2 = root.ownerDocument;
+    const wrap = element(document2, "div", { className: "de-source-panel" });
+    root.replaceChildren(wrap);
+    let preview2 = null;
+    let acknowledgement = false;
+    let disposed = false;
+    const heading = element(document2, "h3", {}, "Import a Mermaid copy");
+    const explanation = element(
+      document2,
+      "p",
+      { className: "de-muted" },
+      "Paste or upload a flowchart copy. This does not link, watch, or overwrite a repository file. Review the proposed diagram before adopting it."
+    );
+    const label = element(document2, "label", { className: "de-field" });
+    const textarea = element(document2, "textarea", {
+      "aria-label": "Mermaid source",
+      spellcheck: "false",
+      rows: "10",
+      className: "de-source-input"
+    });
+    textarea.value = source;
+    const sourceLines2 = element(document2, "pre", {
+      className: "de-source-lines",
+      "aria-hidden": "true"
+    });
+    const sourceEditor = element(document2, "div", {
+      className: "de-source-editor"
+    });
+    const updateLines = () => {
+      sourceLines2.textContent = Array.from(
+        { length: Math.min(4096, textarea.value.split(/\r\n|\n|\r/u).length) },
+        (_, index2) => String(index2 + 1)
+      ).join("\n");
+    };
+    updateLines();
+    sourceEditor.append(sourceLines2, textarea);
+    label.append(element(document2, "span", {}, "Mermaid source"), sourceEditor);
+    const upload = element(document2, "input", {
+      type: "file",
+      accept: ".mmd,.mermaid,text/plain",
+      "aria-label": "Upload Mermaid copy"
+    });
+    const uploadLabel = element(document2, "label", { className: "de-field" });
+    uploadLabel.append(
+      element(document2, "span", {}, "Or choose a local Mermaid copy"),
+      upload
+    );
+    const status = element(
+      document2,
+      "p",
+      { role: "status", "aria-live": "polite", className: "de-source-status" },
+      "No source has been adopted."
+    );
+    const actions = element(document2, "div", { className: "de-actions" });
+    const previewButton = button(document2, "Preview copy", "source-preview", {
+      className: "de-primary"
+    });
+    const adoptButton = button(document2, "Adopt copy", "source-adopt", {
+      disabled: true
+    });
+    actions.append(
+      previewButton,
+      adoptButton,
+      button(document2, "Close", "source-close")
+    );
+    const result = element(document2, "div", { className: "de-source-result" });
+    const exportHeading = element(document2, "h3", {}, "Export a copy");
+    const exportDescription = element(
+      document2,
+      "p",
+      { className: "de-muted" },
+      "The editable OpenPlanr bundle preserves the complete diagram. Mermaid and SVG are separate copies; neither updates an external source."
+    );
+    const exports = element(document2, "div", { className: "de-actions" });
+    exports.append(
+      button(document2, "Download editable bundle", "source-export-bundle"),
+      button(document2, "Preview Mermaid export", "source-export-preview"),
+      button(document2, "Download SVG snapshot", "source-export-svg")
+    );
+    const exportResult = element(document2, "div", {
+      className: "de-source-result"
+    });
+    wrap.append(
+      heading,
+      explanation,
+      label,
+      uploadLabel,
+      status,
+      actions,
+      result,
+      exportHeading,
+      exportDescription,
+      exports,
+      exportResult
+    );
+    function invalidate() {
+      preview2 = null;
+      acknowledgement = false;
+      adoptButton.disabled = true;
+      result.replaceChildren();
+      status.textContent = "Source changed. Preview again before adoption.";
+      onSourceChange(textarea.value);
+    }
+    textarea.addEventListener("input", () => {
+      updateLines();
+      invalidate();
+    });
+    textarea.addEventListener("scroll", () => {
+      sourceLines2.scrollTop = textarea.scrollTop;
+    });
+    upload.addEventListener("change", async () => {
+      const file = upload.files?.[0];
+      if (!file) return;
+      if (file.size > MAX_SOURCE_BYTES) {
+        status.textContent = "This source exceeds the 64 KiB import limit.";
+        onReport(status.textContent);
+        upload.value = "";
+        return;
+      }
+      try {
+        const bytes = new Uint8Array(await file.arrayBuffer());
+        const content = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+        if (disposed) return;
+        textarea.value = content;
+        updateLines();
+        invalidate();
+        status.textContent = `Loaded ${file.name} as an unlinked local copy. Preview before adoption.`;
+      } catch {
+        status.textContent = "This file is not valid UTF-8.";
+        onReport(status.textContent);
+      }
+      upload.value = "";
+    });
+    function diagnosticList(items) {
+      const list = element(document2, "ol", {
+        className: "de-source-diagnostics",
+        "aria-label": "Source diagnostics"
+      });
+      items.forEach((item, index2) => {
+        const row = element(document2, "li");
+        row.append(
+          button(
+            document2,
+            `${item.severity === "error" ? "Error" : "Notice"} at line ${item.line}, column ${item.column}: ${item.message}`,
+            "source-diagnostic",
+            { "data-index": index2 }
+          )
+        );
+        if (item.repair)
+          row.append(
+            element(document2, "span", { className: "de-muted" }, item.repair)
+          );
+        list.append(row);
+      });
+      return list;
+    }
+    function showPreview() {
+      acknowledgement = false;
+      adoptButton.disabled = true;
+      const bundle = session.getState().bundle;
+      if (!bundle) {
+        status.textContent = "Diagram access has changed.";
+        return;
+      }
+      const options = { diagramId: bundle.diagramId };
+      if (bundle.presentation.elements.length) options.previousBundle = bundle;
+      preview2 = previewMermaidCopy(textarea.value, options);
+      result.replaceChildren();
+      const diagnostics = preview2.diagnostics ?? [];
+      if (!preview2.ok) {
+        status.textContent = `Import rejected. ${diagnostics.filter((item) => item.severity === "error").length} error(s); no diagram was changed.`;
+        result.append(diagnosticList(diagnostics));
+        onReport(status.textContent);
+        return;
+      }
+      const proposed = preview2.bundle;
+      status.textContent = `Preview ready: ${proposed.document.nodes.length} nodes, ${proposed.document.relations.length} connectors, ${proposed.document.groups.length} containers. No diagram was changed.`;
+      result.append(fidelity(document2, preview2.fidelity));
+      if (diagnostics.length) result.append(diagnosticList(diagnostics));
+      const objectList = element(document2, "ul", {
+        className: "de-source-objects",
+        "aria-label": "Proposed diagram objects"
+      });
+      for (const item of [
+        ...proposed.document.nodes.map((value) => ({ ...value, type: "Node" })),
+        ...proposed.document.relations.map((value) => ({
+          ...value,
+          type: "Connector"
+        })),
+        ...proposed.document.groups.map((value) => ({
+          ...value,
+          type: "Container"
+        }))
+      ]) {
+        objectList.append(
+          element(
+            document2,
+            "li",
+            { "data-object-id": item.id },
+            `${item.type}: ${item.label || item.id} · ${item.id}`
+          )
+        );
+      }
+      result.append(element(document2, "h4", {}, "Proposed objects"), objectList);
+      const rendered = renderAuthoredDiagramSvg(proposed);
+      if (rendered.ok) {
+        const image = element(document2, "img", {
+          alt: "Proposed diagram preview",
+          className: "de-source-image",
+          src: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(rendered.svg)}`
+        });
+        result.append(image);
+      } else
+        result.append(
+          element(
+            document2,
+            "p",
+            { className: "de-muted" },
+            "A visual snapshot is unavailable for this source; inspect the proposed objects above."
+          )
+        );
+      const state = session.getState();
+      const canAdopt = state.needsInitialization && state.pendingCount === 0 && state.bundle.presentation.elements.length === 0 && state.capabilities.write && state.saveState !== "saving";
+      if (!canAdopt)
+        result.append(
+          element(
+            document2,
+            "p",
+            { role: "note" },
+            "Import into a new, empty, unsaved diagram. This existing diagram stays unchanged; export it first if you need a copy."
+          )
+        );
+      if (preview2.requiresAcknowledgement) {
+        const confirm = element(document2, "label", {
+          className: "de-source-ack"
+        });
+        const checkbox = element(document2, "input", {
+          type: "checkbox",
+          "aria-label": "Acknowledge this preview’s listed losses"
+        });
+        checkbox.addEventListener("change", () => {
+          acknowledgement = checkbox.checked;
+          adoptButton.disabled = !canAdopt || !acknowledgement;
+        });
+        confirm.append(
+          checkbox,
+          element(
+            document2,
+            "span",
+            {},
+            "I reviewed the exact conversion losses shown above."
+          )
+        );
+        result.append(confirm);
+      } else adoptButton.disabled = !canAdopt;
+    }
+    function showExport() {
+      const bundle = session.getState().bundle;
+      exportResult.replaceChildren();
+      if (!bundle) {
+        onReport("Diagram access has changed.");
+        return;
+      }
+      const copy = exportMermaidCopy(bundle);
+      if (!copy.ok) {
+        exportResult.append(diagnosticList(copy.diagnostics));
+        return;
+      }
+      exportResult.append(fidelity(document2, copy.fidelity));
+      const snippet = element(
+        document2,
+        "pre",
+        { className: "de-source-view", "aria-label": "Mermaid export source" },
+        copy.text
+      );
+      exportResult.append(
+        snippet,
+        button(document2, "Download Mermaid copy", "source-download-mermaid")
+      );
+      exportResult.dataset.mermaidText = copy.text;
+    }
+    const click = (event) => {
+      const target = event.target.closest("[data-action]");
+      if (!target || !wrap.contains(target)) return;
+      const action = target.dataset.action;
+      if (action === "source-preview") showPreview();
+      else if (action === "source-adopt") {
+        if (!preview2?.ok || adoptButton.disabled) return;
+        const adopted = adoptMermaidCopy(
+          preview2,
+          acknowledgement ? preview2.acknowledgement : null
+        );
+        if (!adopted.ok) {
+          onReport(
+            adopted.diagnostics?.[0]?.message ?? "Preview acknowledgement failed."
+          );
+          return;
+        }
+        const applied = session.adoptInitialCopy(adopted.bundle);
+        if (!applied.ok) {
+          onReport(
+            applied.diagnostics?.[0]?.detail ?? "The diagram could not adopt this copy."
+          );
+          return;
+        }
+        onReport("Mermaid copy adopted as an unsaved diagram. Save to keep it.");
+        onAdopt(applied.bundle);
+      } else if (action === "source-close") onClose();
+      else if (action === "source-diagnostic") {
+        const item = preview2?.diagnostics?.[Number(target.dataset.index)];
+        if (!item) return;
+        const start = sourceOffset(textarea.value, item.range?.startByte ?? 0);
+        const end = sourceOffset(textarea.value, item.range?.endByte ?? 0);
+        textarea.focus();
+        textarea.setSelectionRange(start, Math.max(start, end));
+        for (const row of result.querySelectorAll("[data-object-id]"))
+          row.dataset.affected = String(
+            item.elementIds.includes(row.dataset.objectId)
+          );
+      } else if (action === "source-export-preview") showExport();
+      else if (action === "source-download-mermaid")
+        download(
+          document2,
+          exportResult.dataset.mermaidText ?? "",
+          "text/plain;charset=utf-8",
+          `${safeName(session.getState().bundle.diagramId)}.mmd`
+        );
+      else if (action === "source-export-bundle") {
+        const bundle = session.getState().bundle;
+        if (bundle)
+          download(
+            document2,
+            JSON.stringify(bundle, null, 2),
+            "application/json",
+            `${safeName(bundle.diagramId)}.planr-diagram-bundle.json`
+          );
+      } else if (action === "source-export-svg") {
+        const bundle = session.getState().bundle;
+        if (!bundle) return;
+        const rendered = renderAuthoredDiagramSvg(bundle);
+        if (!rendered.ok) {
+          const explanation2 = "Visual export needs a valid layout: " + (rendered.diagnostics?.[0]?.detail ?? "review the diagram geometry") + " Keep the editable bundle.";
+          exportResult.append(
+            element(document2, "p", { role: "alert" }, explanation2)
+          );
+          onReport(explanation2);
+          return;
+        }
+        download(
+          document2,
+          rendered.svg,
+          "image/svg+xml",
+          `${safeName(bundle.diagramId)}.svg`
+        );
+      }
+    };
+    wrap.addEventListener("click", click);
+    return {
+      focus: () => textarea.focus(),
+      dispose() {
+        disposed = true;
+        wrap.removeEventListener("click", click);
+        wrap.remove();
+      },
+      getSource: () => textarea.value
+    };
   }
 
   // lib/artifact/ui/diagram-editor.mjs
@@ -6335,6 +7417,7 @@
     const doc = root.ownerDocument, win = doc.defaultView;
     let disposed = false, raf = 0, drag = null, tempPan = false, tool = "select", tab = "outline", rightTab = "properties";
     let leftOpen = true, rightOpen = true, clipboard = null, dialog = null, conflictMount = null, reviewCleanup = null;
+    let sourceMount = null, sourceDraft = null, dialogReturnFocus = null;
     let elementNodes = /* @__PURE__ */ new Map(), renderSignatures = /* @__PURE__ */ new Map(), renderedDigest = "", lastCanvas = null, lastBreakpoint = null, mode = "edit", lastAnnouncement = "";
     const shell = element(doc, "div", { className: "planr-diagram-editor" });
     shell.innerHTML = '<header class="de-bar"><div class="de-brand"><span class="de-mark" aria-hidden="true">◈</span><div class="de-identity"><strong class="de-title"></strong><small>Local diagram studio</small></div></div><span class="de-save-state" role="status" aria-live="polite"></span><div class="de-bar-actions"></div></header><div class="de-work"><aside class="de-left" aria-label="Diagram outline and shapes"><div class="de-rail-tabs" role="tablist" aria-label="Left panel"></div><div class="de-left-content"></div></aside><section class="de-stage"><div class="de-canvas" aria-label="Diagram canvas" role="application" tabindex="0"><svg data-editor-svg aria-label="Diagram drawing" role="img"><g data-world></g><g data-overlays></g></svg><div class="de-empty"></div><div class="de-canvas-tools"></div><div class="de-mobile-message">Review on mobile. Open on desktop to edit.</div></div><div class="de-stage-footer"></div></section><aside class="de-right" aria-label="Diagram properties and review"><div class="de-right-tabs" role="tablist" aria-label="Right panel"></div><div class="de-right-content"></div></aside></div><div class="de-alert" role="alert" hidden></div><div class="de-announcer" aria-live="polite" aria-atomic="true"></div><div class="de-dialog-layer"></div>';
@@ -6355,6 +7438,7 @@
     createBar("Layout", "layout");
     createBar("Save diagram", "save", "Save diagram · Ctrl or Command S").classList.add("de-primary");
     createBar("Properties", "properties", "Show or hide properties");
+    createBar("Source", "source-panel", "Import or export a Mermaid copy");
     createBar("More", "more");
     const canvasButton = (label, action) => {
       const node2 = button(doc, label, action);
@@ -6546,7 +7630,8 @@
         save: !editable(state) || status === "saving" || status === "saved" && state.pendingCount === 0 && !state.needsInitialization,
         layout: !editable(state),
         properties: !state.capabilities.read,
-        outline: !state.capabilities.read
+        outline: !state.capabilities.read,
+        "source-panel": !state.capabilities.read
       })) {
         const control = bar.querySelector('[data-action="' + action + '"]');
         if (control) control.disabled = disabled;
@@ -6659,13 +7744,22 @@
     }
     function closeDialog() {
       if (!dialog) return;
+      if (sourceMount) {
+        sourceDraft = sourceMount.getSource();
+        sourceMount.dispose();
+        sourceMount = null;
+      }
       dialog.remove();
       dialog = null;
       dialogLayer.replaceChildren();
-      stage.focus();
+      const target = dialogReturnFocus?.isConnected ? dialogReturnFocus : stage;
+      dialogReturnFocus = null;
+      target.focus();
     }
     function openDialog(name, content) {
+      const returnTo = dialog ? dialogReturnFocus : doc.activeElement;
       closeDialog();
+      dialogReturnFocus = returnTo;
       const panel = element(doc, "section", { role: "dialog", "aria-modal": "true", "aria-label": name, className: "de-dialog" });
       panel.append(element(doc, "h2", {}, name));
       if (content) panel.append(content);
@@ -6716,8 +7810,8 @@
     }
     function moreDialog() {
       const state = current(), body = element(doc, "div");
-      body.append(element(doc, "p", {}, "Source and revision are read only. Export downloads this local bundle."));
-      body.append(button(doc, "Show source", "show-source"), button(doc, "Show revision", "show-revision"), button(doc, "Export JSON", "export-json"), button(doc, "Close", "cancel-dialog"));
+      body.append(element(doc, "p", {}, "Import a new Mermaid copy or export the complete editable bundle. Source links are not available in this release."));
+      body.append(button(doc, "Import or export", "source-panel"), button(doc, "Show source", "show-source"), button(doc, "Show revision", "show-revision"), button(doc, "Export JSON", "export-json"), button(doc, "Close", "cancel-dialog"));
       openDialog("Diagram options", body);
     }
     async function save() {
@@ -6822,6 +7916,27 @@
       }
       if (action === "more") {
         moreDialog();
+        return;
+      }
+      if (action === "source-panel") {
+        const slot = element(doc, "div");
+        openDialog("Mermaid copy and exports", slot).classList.add("de-source-dialog");
+        sourceMount = mountDiagramSourcePanel({
+          root: slot,
+          session,
+          source: sourceDraft ?? current().bundle?.originalSource?.text ?? "",
+          onSourceChange: (value2) => {
+            sourceDraft = value2;
+          },
+          onAdopt: () => {
+            closeDialog();
+            notice("Mermaid copy adopted. Save diagram to keep it.");
+            fit();
+          },
+          onClose: closeDialog,
+          onReport: report
+        });
+        sourceMount.focus();
         return;
       }
       if (action === "show-source" || action === "show-revision") {
@@ -6994,7 +8109,7 @@
         const x = Math.min(...selected2.map((item) => item.x)) - 20, y = Math.min(...selected2.map((item) => item.y)) - 40;
         const width = Math.max(...selected2.map((item) => item.x + item.width)) - x + 20, height = Math.max(...selected2.map((item) => item.y + item.height)) - y + 20;
         const id2 = freshId("group");
-        submit({ type: "group", group: { id: id2, label: "Group" }, ids: ids2, placement: placement3(id2, "container", { x, y, width, height }) }, [id2]);
+        submit({ type: "group", group: { id: id2, label: "Group" }, ids: ids2, placement: placement4(id2, "container", { x, y, width, height }) }, [id2]);
         return;
       }
       if (action === "ungroup") {
@@ -7339,6 +8454,7 @@
         win.cancelAnimationFrame(resizeFrame);
         reviewCleanup?.();
         conflictMount?.dispose();
+        sourceMount?.dispose();
         shell.removeEventListener("click", onClick);
         stage.removeEventListener("pointerdown", pointerDown);
         stage.removeEventListener("pointermove", pointerMove);

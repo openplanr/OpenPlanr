@@ -2,6 +2,7 @@ import { element, button, field, downloadJson } from './diagram-editor-dom.mjs';
 import { getDiagramAuthoringCapability } from '@openplanr/protocol/diagram-authoring-contracts';
 import { renderDiagramProperties } from './diagram-editor-properties.mjs';
 import { mountDiagramConflicts } from './diagram-conflicts.mjs';
+import { mountDiagramSourcePanel } from './diagram-source-panel.mjs';
 import { createObject, processTemplate, connector, freshId, placement, duplicateSelection, arrangementCommand, laneArrangementCommand, addOrthogonalDetour, moveOrthogonalBend, transaction, labelOf } from './diagram-editor-actions.mjs';
 import { elementIndex, geometryFields, appearanceFields, membershipState, clone, snapshot } from '../diagram/authoring/model.mjs';
 import { compileDiagramCommand } from '../diagram/authoring/index.mjs';
@@ -30,6 +31,7 @@ export function mountDiagramEditor({ root, session, host = {} }) {
   const doc = root.ownerDocument, win = doc.defaultView;
   let disposed = false, raf = 0, drag = null, tempPan = false, tool = 'select', tab = 'outline', rightTab = 'properties';
   let leftOpen = true, rightOpen = true, clipboard = null, dialog = null, conflictMount = null, reviewCleanup = null;
+  let sourceMount = null, sourceDraft = null, dialogReturnFocus = null;
   let elementNodes = new Map(), renderSignatures = new Map(), renderedDigest = '', lastCanvas = null, lastBreakpoint = null, mode = 'edit', lastAnnouncement = '';
   const shell = element(doc, 'div', { className: 'planr-diagram-editor' });
   shell.innerHTML = '<header class="de-bar"><div class="de-brand"><span class="de-mark" aria-hidden="true">◈</span><div class="de-identity"><strong class="de-title"></strong><small>Local diagram studio</small></div></div><span class="de-save-state" role="status" aria-live="polite"></span><div class="de-bar-actions"></div></header><div class="de-work"><aside class="de-left" aria-label="Diagram outline and shapes"><div class="de-rail-tabs" role="tablist" aria-label="Left panel"></div><div class="de-left-content"></div></aside><section class="de-stage"><div class="de-canvas" aria-label="Diagram canvas" role="application" tabindex="0"><svg data-editor-svg aria-label="Diagram drawing" role="img"><g data-world></g><g data-overlays></g></svg><div class="de-empty"></div><div class="de-canvas-tools"></div><div class="de-mobile-message">Review on mobile. Open on desktop to edit.</div></div><div class="de-stage-footer"></div></section><aside class="de-right" aria-label="Diagram properties and review"><div class="de-right-tabs" role="tablist" aria-label="Right panel"></div><div class="de-right-content"></div></aside></div><div class="de-alert" role="alert" hidden></div><div class="de-announcer" aria-live="polite" aria-atomic="true"></div><div class="de-dialog-layer"></div>';
@@ -46,6 +48,7 @@ export function mountDiagramEditor({ root, session, host = {} }) {
   createBar('Layout', 'layout');
   createBar('Save diagram', 'save', 'Save diagram · Ctrl or Command S').classList.add('de-primary');
   createBar('Properties', 'properties', 'Show or hide properties');
+  createBar('Source', 'source-panel', 'Import or export a Mermaid copy');
   createBar('More', 'more');
   const canvasButton = (label, action) => { const node = button(doc, label, action); $('.de-canvas-tools').append(node); return node; };
   canvasButton('Select', 'select-tool'); canvasButton('Pan', 'pan-tool'); canvasButton('Snap', 'snap');
@@ -164,7 +167,7 @@ export function mountDiagramEditor({ root, session, host = {} }) {
     shell.dataset.leftOpen = String(leftOpen); shell.dataset.rightOpen = String(rightOpen);
     for (const [action,disabled] of Object.entries({ undo: !state.canUndo || !editable(state), redo: !state.canRedo || !editable(state),
       save: !editable(state) || status === 'saving' || (status === 'saved' && state.pendingCount === 0 && !state.needsInitialization),
-      layout: !editable(state), properties: !state.capabilities.read, outline: !state.capabilities.read })) {
+      layout: !editable(state), properties: !state.capabilities.read, outline: !state.capabilities.read, 'source-panel': !state.capabilities.read })) {
       const control = bar.querySelector('[data-action="' + action + '"]'); if (control) control.disabled = disabled;
     }
     const stamp = [bundle?.bundleDigest, state.view.selection.join('|'), state.view.collapsedGroups.join('|'), state.pendingCount,
@@ -250,9 +253,17 @@ export function mountDiagramEditor({ root, session, host = {} }) {
     else if(!getDiagramAuthoringCapability(state.bundle.document.grammar.id))footer.append(element(doc,'span',{},'This diagram grammar is available for inspection only. Editing is not certified.'));
     else footer.append(element(doc,'span',{},state.view.selection.length + ' selected · ' + state.bundle.presentation.elements.length + ' objects'));
   }
-  function closeDialog() { if (!dialog)return;dialog.remove();dialog=null;dialogLayer.replaceChildren();stage.focus(); }
+  function closeDialog() {
+    if (!dialog) return;
+    if (sourceMount) { sourceDraft = sourceMount.getSource(); sourceMount.dispose(); sourceMount = null; }
+    dialog.remove(); dialog = null; dialogLayer.replaceChildren();
+    const target = dialogReturnFocus?.isConnected ? dialogReturnFocus : stage;
+    dialogReturnFocus = null; target.focus();
+  }
   function openDialog(name, content) {
-    closeDialog(); const panel=element(doc,'section',{role:'dialog','aria-modal':'true','aria-label':name,className:'de-dialog'});
+    const returnTo = dialog ? dialogReturnFocus : doc.activeElement;
+    closeDialog(); dialogReturnFocus = returnTo;
+    const panel=element(doc,'section',{role:'dialog','aria-modal':'true','aria-label':name,className:'de-dialog'});
     panel.append(element(doc,'h2',{},name)); if(content)panel.append(content);
     dialogLayer.append(panel);dialog=panel;panel.querySelector('button,input,select')?.focus();return panel;
   }
@@ -286,8 +297,8 @@ export function mountDiagramEditor({ root, session, host = {} }) {
   }
   function moreDialog() {
     const state=current(),body=element(doc,'div');
-    body.append(element(doc,'p',{},'Source and revision are read only. Export downloads this local bundle.'));
-    body.append(button(doc,'Show source','show-source'),button(doc,'Show revision','show-revision'),button(doc,'Export JSON','export-json'),button(doc,'Close','cancel-dialog'));
+    body.append(element(doc,'p',{},'Import a new Mermaid copy or export the complete editable bundle. Source links are not available in this release.'));
+    body.append(button(doc,'Import or export','source-panel'),button(doc,'Show source','show-source'),button(doc,'Show revision','show-revision'),button(doc,'Export JSON','export-json'),button(doc,'Close','cancel-dialog'));
     openDialog('Diagram options',body);
   }
   async function save() {
@@ -326,6 +337,15 @@ export function mountDiagramEditor({ root, session, host = {} }) {
     if(action==='fit'){fit();return;}
     if(action==='zoom-in'){zoom(1.2);return;}if(action==='zoom-out'){zoom(1/1.2);return;}
     if(action==='more'){moreDialog();return;}
+    if(action==='source-panel') {
+      const slot = element(doc, 'div');
+      openDialog('Mermaid copy and exports', slot).classList.add('de-source-dialog');
+      sourceMount = mountDiagramSourcePanel({ root: slot, session, source: sourceDraft ?? current().bundle?.originalSource?.text ?? '',
+        onSourceChange: value => { sourceDraft = value; },
+        onAdopt: () => { closeDialog(); notice('Mermaid copy adopted. Save diagram to keep it.'); fit(); },
+        onClose: closeDialog, onReport: report });
+      sourceMount.focus(); return;
+    }
     if(action==='show-source'||action==='show-revision'){
       dialog.replaceChildren(element(doc,'h2',{},action==='show-source'?'Source':'Current revision'));
       const pre=element(doc,'pre',{className:'de-source-view'},JSON.stringify(action==='show-source'?{originalSource:bundle.originalSource,sourceMap:bundle.sourceMap}:snapshot(bundle),null,2));
@@ -605,7 +625,7 @@ export function mountDiagramEditor({ root, session, host = {} }) {
   return {
     dispose(){
       if(disposed)return;disposed=true;unsubscribe();resize?.disconnect();win.cancelAnimationFrame(raf);win.cancelAnimationFrame(resizeFrame);
-      reviewCleanup?.();conflictMount?.dispose();
+      reviewCleanup?.();conflictMount?.dispose();sourceMount?.dispose();
       shell.removeEventListener('click',onClick);stage.removeEventListener('pointerdown',pointerDown);
       stage.removeEventListener('pointermove',pointerMove);stage.removeEventListener('pointerup',onPointerUp);
       stage.removeEventListener('pointercancel',onPointerCancel);stage.removeEventListener('lostpointercapture',onLostCapture);
