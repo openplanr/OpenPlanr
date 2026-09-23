@@ -92,6 +92,21 @@ test("a new local diagram previews and adopts an exact Mermaid copy only after l
 }, async (t) => {
 	const { page, store } = await fixture(t);
 	let panel = await open(page);
+	await panel.getByRole("tab", { name: "Import a copy" }).focus();
+	await page.keyboard.press("ArrowRight");
+	assert.equal(
+		await panel
+			.getByRole("tab", { name: "Export a copy" })
+			.getAttribute("aria-selected"),
+		"true",
+	);
+	await page.keyboard.press("ArrowLeft");
+	assert.equal(
+		await panel
+			.getByRole("tab", { name: "Import a copy" })
+			.getAttribute("aria-selected"),
+		"true",
+	);
 	await panel.getByLabel("Mermaid source").fill(supported);
 	await panel.getByRole("button", { name: "Preview copy" }).click();
 	assert.match(
@@ -177,6 +192,12 @@ test("unsafe and changed source leave the diagram untouched and diagnostics navi
 		true,
 	);
 	await panel.getByRole("button", { name: "Close", exact: true }).click();
+	assert.equal(
+		await page
+			.getByRole("button", { name: "Source", exact: true })
+			.evaluate((button) => document.activeElement === button),
+		true,
+	);
 	assert.equal((await store.read()).status, "absent");
 	await open(page);
 	assert.equal(
@@ -198,6 +219,7 @@ test("export discloses losses and offers the complete bundle, Mermaid copy and S
 		viewport: { width: 390, height: 844 },
 	});
 	const panel = await open(page);
+	await panel.getByRole("tab", { name: "Export a copy" }).click();
 	await panel.getByRole("button", { name: "Preview Mermaid export" }).click();
 	assert.match(
 		await panel.getByLabel("Conversion losses").innerText(),
@@ -254,6 +276,7 @@ test("uploaded copies stay unlinked and produce an inspectable visual snapshot",
 	assert.equal((await store.read()).status, "absent");
 	await page.getByRole("button", { name: "Source", exact: true }).click();
 	const reopened = dialog(page);
+	await reopened.getByRole("tab", { name: "Export a copy" }).click();
 	const visualDownload = page.waitForEvent("download");
 	await reopened.getByRole("button", { name: "Download SVG snapshot" }).click();
 	assert.match((await visualDownload).suggestedFilename(), /\.svg$/u);
@@ -276,6 +299,7 @@ test("visual export explains invalid geometry while the complete bundle remains 
 	const initial = adoptMermaidCopy(converted, converted.acknowledgement).bundle;
 	const { page } = await fixture(t, { initial });
 	const panel = await open(page);
+	await panel.getByRole("tab", { name: "Export a copy" }).click();
 	await panel.getByRole("button", { name: "Download SVG snapshot" }).click();
 	assert.match(
 		await panel.getByRole("alert").innerText(),

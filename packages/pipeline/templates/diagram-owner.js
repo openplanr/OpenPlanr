@@ -7129,19 +7129,50 @@
     const exportResult = element(document2, "div", {
       className: "de-source-result"
     });
-    wrap.append(
+    const tabs = element(document2, "div", {
+      className: "de-source-tabs",
+      role: "tablist",
+      "aria-label": "Mermaid copy options"
+    });
+    const importTab = button(document2, "Import a copy", "source-import-tab", {
+      role: "tab",
+      "aria-selected": "true"
+    });
+    const exportTab = button(document2, "Export a copy", "source-export-tab", {
+      role: "tab",
+      "aria-selected": "false"
+    });
+    tabs.append(importTab, exportTab);
+    const importSection = element(document2, "section", {
+      role: "tabpanel",
+      "aria-label": "Import a copy",
+      className: "de-source-section"
+    });
+    importSection.append(
       heading,
       explanation,
       label,
       uploadLabel,
       status,
       actions,
-      result,
-      exportHeading,
-      exportDescription,
-      exports,
-      exportResult
+      result
     );
+    const exportSection = element(document2, "section", {
+      role: "tabpanel",
+      "aria-label": "Export a copy",
+      className: "de-source-section",
+      hidden: true
+    });
+    exportSection.append(exportHeading, exportDescription, exports, exportResult);
+    wrap.append(tabs, importSection, exportSection);
+    tabs.addEventListener("keydown", (event) => {
+      if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+      event.preventDefault();
+      const selected2 = importTab.getAttribute("aria-selected") === "true" ? importTab : exportTab;
+      const next = event.key === "Home" ? importTab : event.key === "End" ? exportTab : selected2 === importTab ? exportTab : importTab;
+      next.click();
+      next.focus();
+    });
     function invalidate() {
       preview2 = null;
       acknowledgement = false;
@@ -7250,24 +7281,36 @@
           )
         );
       }
-      result.append(element(document2, "h4", {}, "Proposed objects"), objectList);
+      const proposal = element(document2, "div", {
+        className: "de-source-proposal"
+      });
+      const objectPane = element(document2, "div", {
+        className: "de-source-object-pane"
+      });
+      objectPane.append(
+        element(document2, "h4", {}, "Proposed objects"),
+        objectList
+      );
       const rendered = renderAuthoredDiagramSvg(proposed);
       if (rendered.ok) {
-        const image = element(document2, "img", {
-          alt: "Proposed diagram preview",
-          className: "de-source-image",
-          src: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(rendered.svg)}`
-        });
-        result.append(image);
+        proposal.append(
+          element(document2, "img", {
+            alt: "Proposed diagram preview",
+            className: "de-source-image",
+            src: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(rendered.svg)}`
+          })
+        );
       } else
-        result.append(
+        proposal.append(
           element(
             document2,
             "p",
             { className: "de-muted" },
-            "A visual snapshot is unavailable for this source; inspect the proposed objects above."
+            "A visual snapshot is unavailable for this source; inspect the proposed objects."
           )
         );
+      proposal.append(objectPane);
+      result.append(proposal);
       const state = session.getState();
       const canAdopt = state.needsInitialization && state.pendingCount === 0 && state.bundle.presentation.elements.length === 0 && state.capabilities.write && state.saveState !== "saving";
       if (!canAdopt)
@@ -7332,7 +7375,15 @@
       const target = event.target.closest("[data-action]");
       if (!target || !wrap.contains(target)) return;
       const action = target.dataset.action;
-      if (action === "source-preview") showPreview();
+      if (action === "source-import-tab" || action === "source-export-tab") {
+        const importing = action === "source-import-tab";
+        importSection.hidden = !importing;
+        exportSection.hidden = importing;
+        importTab.setAttribute("aria-selected", String(importing));
+        exportTab.setAttribute("aria-selected", String(!importing));
+        importTab.tabIndex = importing ? 0 : -1;
+        exportTab.tabIndex = importing ? -1 : 0;
+      } else if (action === "source-preview") showPreview();
       else if (action === "source-adopt") {
         if (!preview2?.ok || adoptButton.disabled) return;
         const adopted = adoptMermaidCopy(
@@ -8397,6 +8448,7 @@
       const target = event.target.closest("[data-action]");
       if (!target || target.onclick) return;
       const action = target.dataset.action;
+      if (action === "source-panel" || action === "more") target.focus();
       if (action === "create") act(action, target.dataset.kind);
       else if (action === "select-id") act(action, target.dataset.id, { additive: event.shiftKey || event.metaKey || event.ctrlKey, fromOutline: true });
       else if (action === "select-member") act(action, target.dataset.member);

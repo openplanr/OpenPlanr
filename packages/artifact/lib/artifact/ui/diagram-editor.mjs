@@ -571,6 +571,7 @@ export function mountDiagramEditor({ root, session, host = {} }) {
   const onClick=event=>{
     const target=event.target.closest('[data-action]');if(!target||target.onclick)return;
     const action=target.dataset.action;
+    if(action==='source-panel'||action==='more')target.focus();
     if(action==='create')act(action,target.dataset.kind);
     else if(action==='select-id')act(action,target.dataset.id,{additive:event.shiftKey||event.metaKey||event.ctrlKey,fromOutline:true});
     else if(action==='select-member')act(action,target.dataset.member);

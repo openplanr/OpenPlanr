@@ -413,7 +413,7 @@
   "generatedSurfaces": {
     "artifactShell": {
       "path": "packages/artifact/lib/artifact/ui/generated/artifact-shell-assets.json",
-      "digest": "sha256:936c129a50fd5c2b0eff08c935dfd763049d164166f52008e8e9c4944c402336",
+      "digest": "sha256:9f61265e554c7e37396a2942f3bfe97810398626cdd8e139037a5896f60dea27",
       "shellVersion": "1.2.1",
       "assetCount": 7
     },

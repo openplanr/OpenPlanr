@@ -161,7 +161,26 @@ export function mountDiagramSourcePanel({
 	const exportResult = element(document, "div", {
 		className: "de-source-result",
 	});
-	wrap.append(
+	const tabs = element(document, "div", {
+		className: "de-source-tabs",
+		role: "tablist",
+		"aria-label": "Mermaid copy options",
+	});
+	const importTab = button(document, "Import a copy", "source-import-tab", {
+		role: "tab",
+		"aria-selected": "true",
+	});
+	const exportTab = button(document, "Export a copy", "source-export-tab", {
+		role: "tab",
+		"aria-selected": "false",
+	});
+	tabs.append(importTab, exportTab);
+	const importSection = element(document, "section", {
+		role: "tabpanel",
+		"aria-label": "Import a copy",
+		className: "de-source-section",
+	});
+	importSection.append(
 		heading,
 		explanation,
 		label,
@@ -169,11 +188,33 @@ export function mountDiagramSourcePanel({
 		status,
 		actions,
 		result,
-		exportHeading,
-		exportDescription,
-		exports,
-		exportResult,
 	);
+	const exportSection = element(document, "section", {
+		role: "tabpanel",
+		"aria-label": "Export a copy",
+		className: "de-source-section",
+		hidden: true,
+	});
+	exportSection.append(exportHeading, exportDescription, exports, exportResult);
+	wrap.append(tabs, importSection, exportSection);
+	tabs.addEventListener("keydown", (event) => {
+		if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+		event.preventDefault();
+		const selected =
+			importTab.getAttribute("aria-selected") === "true"
+				? importTab
+				: exportTab;
+		const next =
+			event.key === "Home"
+				? importTab
+				: event.key === "End"
+					? exportTab
+					: selected === importTab
+						? exportTab
+						: importTab;
+		next.click();
+		next.focus();
+	});
 
 	function invalidate() {
 		preview = null;
@@ -283,24 +324,36 @@ export function mountDiagramSourcePanel({
 				),
 			);
 		}
-		result.append(element(document, "h4", {}, "Proposed objects"), objectList);
+		const proposal = element(document, "div", {
+			className: "de-source-proposal",
+		});
+		const objectPane = element(document, "div", {
+			className: "de-source-object-pane",
+		});
+		objectPane.append(
+			element(document, "h4", {}, "Proposed objects"),
+			objectList,
+		);
 		const rendered = renderAuthoredDiagramSvg(proposed);
 		if (rendered.ok) {
-			const image = element(document, "img", {
-				alt: "Proposed diagram preview",
-				className: "de-source-image",
-				src: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(rendered.svg)}`,
-			});
-			result.append(image);
+			proposal.append(
+				element(document, "img", {
+					alt: "Proposed diagram preview",
+					className: "de-source-image",
+					src: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(rendered.svg)}`,
+				}),
+			);
 		} else
-			result.append(
+			proposal.append(
 				element(
 					document,
 					"p",
 					{ className: "de-muted" },
-					"A visual snapshot is unavailable for this source; inspect the proposed objects above.",
+					"A visual snapshot is unavailable for this source; inspect the proposed objects.",
 				),
 			);
+		proposal.append(objectPane);
+		result.append(proposal);
 		const state = session.getState();
 		const canAdopt =
 			state.needsInitialization &&
@@ -370,7 +423,15 @@ export function mountDiagramSourcePanel({
 		const target = event.target.closest("[data-action]");
 		if (!target || !wrap.contains(target)) return;
 		const action = target.dataset.action;
-		if (action === "source-preview") showPreview();
+		if (action === "source-import-tab" || action === "source-export-tab") {
+			const importing = action === "source-import-tab";
+			importSection.hidden = !importing;
+			exportSection.hidden = importing;
+			importTab.setAttribute("aria-selected", String(importing));
+			exportTab.setAttribute("aria-selected", String(!importing));
+			importTab.tabIndex = importing ? 0 : -1;
+			exportTab.tabIndex = importing ? -1 : 0;
+		} else if (action === "source-preview") showPreview();
 		else if (action === "source-adopt") {
 			if (!preview?.ok || adoptButton.disabled) return;
 			const adopted = adoptMermaidCopy(
