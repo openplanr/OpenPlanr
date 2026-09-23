@@ -877,19 +877,19 @@
     {
       "source": "packages/artifact/lib/artifact/ui/diagram-editor-dom.mjs",
       "target": "lib/artifact/ui/diagram-editor-dom.mjs",
-      "sha256": "101a165624a6a553dc58bc13d6762ae278d3f1faa1780bb988c7c0a999b4fb4c",
+      "sha256": "f34957d9eb1f3cc94c136030c4ac50dc23c759f62f22439cce8c227067900dc4",
       "mode": "644"
     },
     {
       "source": "packages/artifact/lib/artifact/ui/diagram-editor-properties.mjs",
       "target": "lib/artifact/ui/diagram-editor-properties.mjs",
-      "sha256": "ef1c7e9378a93164ec267ae9c2e025a51525ad485c666b2f50b6b5aa3ab586d2",
+      "sha256": "52a663d9728e3a5d2ff725e2dc114ca3b04602f6fb57a20ace459aa1991c4c98",
       "mode": "644"
     },
     {
       "source": "packages/artifact/lib/artifact/ui/diagram-editor.css",
       "target": "lib/artifact/ui/diagram-editor.css",
-      "sha256": "4012ab80b3d9cbad25ed2303a0490dcb19df413e60570f54a38683b01e0190f4",
+      "sha256": "fa9b43549983acd3db6eb695a6a3dc7f520bd66c6d2531291b7149d00a4822b5",
       "mode": "644"
     },
     {
@@ -901,7 +901,7 @@
     {
       "source": "packages/artifact/lib/artifact/ui/diagram-editor.mjs",
       "target": "lib/artifact/ui/diagram-editor.mjs",
-      "sha256": "d437cabe944640779cb03fbacdea226b582dcb4dfb899ebdb1352bc76d470db8",
+      "sha256": "8d9c93edf38a118b49a96437cb34c7b4b4359ebe91f184de2f11b462576b2e64",
       "mode": "644"
     },
     {
@@ -937,7 +937,7 @@
     {
       "source": "packages/artifact/lib/artifact/ui/generated/artifact-shell-assets.json",
       "target": "lib/artifact/ui/generated/artifact-shell-assets.json",
-      "sha256": "69a660c7d70f564255cc253c0b07376a8d8fa650675c83e330f78ad76fc24df2",
+      "sha256": "8868f1a20c172a6a76dd61f32a5ac9352761cdf758b07883fa84981aedef8a66",
       "mode": "644"
     },
     {
@@ -1267,7 +1267,7 @@
     {
       "source": "packages/artifact/templates/diagram-owner.js",
       "target": "templates/diagram-owner.js",
-      "sha256": "c05a960359bdeef7d998d10f5d0b4d1d5a1bdd16e34c70128d9847135b237a7b",
+      "sha256": "15260cd3295874181ec2821c66c8fab41789f1c85abb35267e6d6a2b4d311787",
       "mode": "644"
     },
     {

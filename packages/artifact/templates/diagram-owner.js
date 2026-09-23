@@ -5774,43 +5774,6 @@
     };
   }
 
-  // lib/artifact/ui/diagram-editor-dom.mjs
-  function element(document2, tag, attributes2 = {}, text2) {
-    const node2 = document2.createElement(tag);
-    for (const [name, value] of Object.entries(attributes2)) {
-      if (value === void 0 || value === null || value === false) continue;
-      if (name === "className") node2.className = value;
-      else node2.setAttribute(name, value === true ? "" : String(value));
-    }
-    if (text2 !== void 0) node2.textContent = text2;
-    return node2;
-  }
-  function button(document2, text2, action, options = {}) {
-    return element(document2, "button", { type: "button", "data-action": action, ...options }, text2);
-  }
-  function field(document2, name, value, { type = "text", choices, multiline = false, ...attributes2 } = {}) {
-    const label = element(document2, "label", { className: "de-field" });
-    label.append(element(document2, "span", {}, name));
-    const input = element(document2, choices ? "select" : multiline ? "textarea" : "input", { "aria-label": name, ...!choices && !multiline ? { type } : {}, ...attributes2 });
-    if (choices) for (const choice of choices) {
-      const [id2, title] = Array.isArray(choice) ? choice : [choice, choice];
-      input.append(element(document2, "option", { value: id2 }, title));
-    }
-    if (type === "checkbox") input.checked = value === true;
-    else input.value = value ?? "";
-    label.append(input);
-    return { label, input };
-  }
-  function downloadJson(document2, value, filename) {
-    const window = document2.defaultView;
-    const url = window.URL.createObjectURL(new window.Blob([JSON.stringify(value, null, 2)], { type: "application/json" }));
-    const link = element(document2, "a", { href: url, download: filename });
-    document2.body.append(link);
-    link.click();
-    link.remove();
-    window.setTimeout(() => window.URL.revokeObjectURL(url), 1e3);
-  }
-
   // lib/artifact/diagram/editor/clipboard.mjs
   var MAX_BYTES = 1024 * 1024;
   var MAX_ELEMENTS = 1e3;
@@ -5864,6 +5827,308 @@
     }
     if (inspectPlainData(input).length || !input || input.kind !== "openplanr-diagram-selection" || input.version !== 1 || Object.keys(input).some((key) => !["kind", "version", "sourceBundle", "ids"].includes(key)) || !Array.isArray(input.ids) || input.ids.length > MAX_ELEMENTS || size(input) > MAX_BYTES) return fail4("Invalid or oversized clipboard fragment.");
     return compileDiagramCommand(bundle, { type: "paste", sourceBundle: input.sourceBundle, ids: input.ids, idMap, dx, dy }, { transactionId });
+  }
+
+  // lib/artifact/ui/diagram-editor-dom.mjs
+  var SVG = "http://www.w3.org/2000/svg";
+  var ICONS = Object.freeze({
+    panel: [["path", { d: "M4 4h16v16H4zM9 4v16" }]],
+    undo: [["path", { d: "M9 7H4v-5M4 7l4-4M4 7h9a7 7 0 1 1-6.1 10.4" }]],
+    redo: [["path", { d: "M15 7h5v-5M20 7l-4-4M20 7h-9a7 7 0 1 0 6.1 10.4" }]],
+    save: [["path", { d: "M5 3h12l3 3v15H4V3zM8 3v6h8V3M8 21v-7h8v7" }]],
+    more: [
+      ["circle", { cx: 5, cy: 12, r: 1.4 }],
+      ["circle", { cx: 12, cy: 12, r: 1.4 }],
+      ["circle", { cx: 19, cy: 12, r: 1.4 }]
+    ],
+    select: [["path", { d: "M5 3l13 9-6 1.5L9 20z" }]],
+    pan: [
+      [
+        "path",
+        {
+          d: "M8 11V6a2 2 0 0 1 4 0v4-6a2 2 0 0 1 4 0v6-4a2 2 0 0 1 4 0v7c0 5-3 8-8 8h-1c-3 0-5-1.5-7-4l-2-3a2 2 0 0 1 3-2z"
+        }
+      ]
+    ],
+    snap: [
+      [
+        "path",
+        { d: "M5 4v7a7 7 0 0 0 14 0V4M5 8h4M15 8h4M5 4h4v4H5zM15 4h4v4h-4z" }
+      ]
+    ],
+    fit: [["path", { d: "M9 4H4v5M15 4h5v5M20 15v5h-5M9 20H4v-5" }]],
+    search: [
+      ["circle", { cx: 10.5, cy: 10.5, r: 6.5 }],
+      ["path", { d: "M15.5 15.5L21 21" }]
+    ],
+    properties: [
+      ["path", { d: "M4 6h7M15 6h5M4 12h3M11 12h9M4 18h9M17 18h3" }],
+      ["circle", { cx: 13, cy: 6, r: 2 }],
+      ["circle", { cx: 9, cy: 12, r: 2 }],
+      ["circle", { cx: 15, cy: 18, r: 2 }]
+    ],
+    review: [["path", { d: "M4 5h16v12H9l-5 4z" }]],
+    copy: [
+      ["rect", { x: 8, y: 8, width: 11, height: 11, rx: 2 }],
+      ["path", { d: "M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3" }]
+    ],
+    duplicate: [
+      ["rect", { x: 8, y: 8, width: 11, height: 11, rx: 2 }],
+      ["rect", { x: 3, y: 3, width: 11, height: 11, rx: 2 }],
+      ["path", { d: "M11 6v5M8.5 8.5h5" }]
+    ],
+    lock: [
+      ["rect", { x: 5, y: 10, width: 14, height: 11, rx: 2 }],
+      ["path", { d: "M8 10V7a4 4 0 0 1 8 0v3" }]
+    ],
+    unlock: [
+      ["rect", { x: 5, y: 10, width: 14, height: 11, rx: 2 }],
+      ["path", { d: "M16 10V7a4 4 0 0 0-7.5-2" }]
+    ],
+    trash: [["path", { d: "M4 7h16M9 7V4h6v3M7 7l1 14h8l1-14M10 11v6M14 11v6" }]],
+    arrange: [
+      ["rect", { x: 3, y: 4, width: 7, height: 6, rx: 1 }],
+      ["rect", { x: 14, y: 4, width: 7, height: 6, rx: 1 }],
+      ["rect", { x: 8.5, y: 14, width: 7, height: 6, rx: 1 }]
+    ],
+    group: [
+      [
+        "rect",
+        { x: 3, y: 3, width: 18, height: 18, rx: 2, "stroke-dasharray": "3 2" }
+      ],
+      ["rect", { x: 6, y: 7, width: 5, height: 5, rx: 1 }],
+      ["rect", { x: 13, y: 12, width: 5, height: 5, rx: 1 }]
+    ],
+    ungroup: [
+      ["rect", { x: 3, y: 3, width: 8, height: 8, rx: 1 }],
+      ["rect", { x: 13, y: 13, width: 8, height: 8, rx: 1 }],
+      ["path", { d: "M13 7h4v4M11 17H7v-4" }]
+    ],
+    connect: [
+      ["circle", { cx: 6, cy: 12, r: 3 }],
+      ["circle", { cx: 18, cy: 12, r: 3 }],
+      ["path", { d: "M9 12h6" }]
+    ],
+    parent: [
+      ["rect", { x: 3, y: 3, width: 18, height: 18, rx: 2 }],
+      ["path", { d: "M7 8h10v8H7z" }]
+    ],
+    route: [
+      ["path", { d: "M4 5h6v6h4v8h6M4 5l3-3M4 5l3 3M20 19l-3-3M20 19l-3 3" }]
+    ],
+    content: [["path", { d: "M6 4h12M6 9h12M6 14h8M6 19h10" }]],
+    geometry: [
+      ["rect", { x: 4, y: 4, width: 16, height: 16, rx: 2 }],
+      ["path", { d: "M8 4v4H4M16 4v4h4M8 20v-4H4M16 20v-4h4" }]
+    ],
+    appearance: [
+      [
+        "path",
+        {
+          d: "M12 3a9 9 0 1 0 0 18h1.5a2.5 2.5 0 0 0 0-5H12a2 2 0 0 1 0-4h5a4 4 0 0 0 0-8z"
+        }
+      ],
+      ["circle", { cx: 7.5, cy: 9, r: 1 }],
+      ["circle", { cx: 10, cy: 6.5, r: 1 }]
+    ],
+    structure: [
+      ["path", { d: "M12 4v5M6 20v-5h12v5M6 15v-3h12v3" }],
+      ["rect", { x: 9, y: 2, width: 6, height: 4, rx: 1 }],
+      ["rect", { x: 3, y: 18, width: 6, height: 4, rx: 1 }],
+      ["rect", { x: 15, y: 18, width: 6, height: 4, rx: 1 }]
+    ],
+    constraints: [
+      ["path", { d: "M7 4H4v3M17 4h3v3M20 17v3h-3M7 20H4v-3" }],
+      ["rect", { x: 8, y: 9, width: 8, height: 7, rx: 1 }],
+      ["path", { d: "M10 9V7a2 2 0 0 1 4 0v2" }]
+    ],
+    advanced: [
+      ["circle", { cx: 12, cy: 12, r: 3 }],
+      [
+        "path",
+        {
+          d: "M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"
+        }
+      ]
+    ],
+    plus: [["path", { d: "M12 5v14M5 12h14" }]],
+    "arrow-up": [["path", { d: "M12 20V4M6 10l6-6 6 6" }]],
+    "arrow-down": [["path", { d: "M12 4v16M6 14l6 6 6-6" }]]
+  });
+  function element(document2, tag, attributes2 = {}, text2) {
+    const node2 = document2.createElement(tag);
+    for (const [name, value] of Object.entries(attributes2)) {
+      if (value === void 0 || value === null || value === false) continue;
+      if (name === "className") node2.className = value;
+      else node2.setAttribute(name, value === true ? "" : String(value));
+    }
+    if (text2 !== void 0) node2.textContent = text2;
+    return node2;
+  }
+  function button(document2, text2, action, options = {}) {
+    return element(
+      document2,
+      "button",
+      { type: "button", "data-action": action, ...options },
+      text2
+    );
+  }
+  function icon(document2, name, { size: size2 = 16, className = "de-icon", label } = {}) {
+    const definition = ICONS[name];
+    if (!definition) throw new Error(`Unknown editor icon: ${name}`);
+    const svg = document2.createElementNS(SVG, "svg");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("width", String(size2));
+    svg.setAttribute("height", String(size2));
+    svg.setAttribute("class", className);
+    svg.setAttribute("fill", "none");
+    svg.setAttribute("stroke", "currentColor");
+    svg.setAttribute("stroke-width", "1.8");
+    svg.setAttribute("stroke-linecap", "round");
+    svg.setAttribute("stroke-linejoin", "round");
+    svg.setAttribute("focusable", "false");
+    if (label) {
+      svg.setAttribute("role", "img");
+      svg.setAttribute("aria-label", label);
+    } else svg.setAttribute("aria-hidden", "true");
+    for (const [tag, attributes2] of definition) {
+      const primitive = document2.createElementNS(SVG, tag);
+      for (const [attribute, value] of Object.entries(attributes2))
+        primitive.setAttribute(attribute, String(value));
+      svg.append(primitive);
+    }
+    return svg;
+  }
+  function iconButton(document2, label, action, options = {}) {
+    const {
+      icon: iconName,
+      iconOnly = false,
+      labelClassName = "de-control-label",
+      ...attributes2
+    } = options;
+    const control = element(document2, "button", {
+      type: "button",
+      "data-action": action,
+      "aria-label": label,
+      ...attributes2
+    });
+    if (iconName) control.append(icon(document2, iconName));
+    if (!iconOnly)
+      control.append(
+        element(document2, "span", { className: labelClassName }, label)
+      );
+    return control;
+  }
+  function field(document2, name, value, { type = "text", choices, multiline = false, ...attributes2 } = {}) {
+    const label = element(document2, "label", { className: "de-field" });
+    label.append(element(document2, "span", {}, name));
+    const input = element(
+      document2,
+      choices ? "select" : multiline ? "textarea" : "input",
+      {
+        "aria-label": name,
+        ...!choices && !multiline ? { type } : {},
+        ...attributes2
+      }
+    );
+    if (choices)
+      for (const choice of choices) {
+        const [id2, title] = Array.isArray(choice) ? choice : [choice, choice];
+        input.append(element(document2, "option", { value: id2 }, title));
+      }
+    if (type === "checkbox") input.checked = value === true;
+    else input.value = value ?? "";
+    label.append(input);
+    return { label, input };
+  }
+  function downloadJson(document2, value, filename) {
+    const window = document2.defaultView;
+    const url = window.URL.createObjectURL(
+      new window.Blob([JSON.stringify(value, null, 2)], {
+        type: "application/json"
+      })
+    );
+    const link = element(document2, "a", { href: url, download: filename });
+    document2.body.append(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => window.URL.revokeObjectURL(url), 1e3);
+  }
+
+  // lib/artifact/ui/diagram-conflicts.mjs
+  function mountDiagramConflicts({ root, session, onClose = () => {
+  }, onError = () => {
+  } }) {
+    const document2 = root.ownerDocument;
+    const state = session.getState(), comparison = state.comparison;
+    if (!comparison || !state.bundle) return { dispose() {
+    } };
+    const { base, bundle: current } = comparison;
+    const pending = state.bundle;
+    const panel = element(document2, "section", { className: "de-conflict", "aria-label": "Compare conflicting changes" });
+    panel.append(element(document2, "h2", {}, "Review conflicting changes"), element(document2, "p", {}, "The saved diagram changed. Your draft is retained. Compare changes before choosing what to keep."));
+    const rows = /* @__PURE__ */ new Map();
+    for (const [side, value] of [["current", current], ["draft", pending]]) {
+      const diff = diffDiagramBundles(base, value);
+      if (!diff.ok) {
+        onError(diff);
+        return { dispose() {
+        } };
+      }
+      for (const dimension of ["semantic", "presentation"]) for (const change of diff[dimension]) {
+        const key = JSON.stringify([dimension, change.collection, change.elementId, change.path]);
+        if (!rows.has(key)) rows.set(key, { dimension, change, base: change.before, current: change.before, draft: change.before });
+        rows.get(key)[side] = change.after;
+      }
+    }
+    const table = element(document2, "table");
+    const header = element(document2, "tr");
+    for (const title of ["Change", "Base", "Current", "Your draft"]) header.append(element(document2, "th", { scope: "col" }, title));
+    const thead = element(document2, "thead");
+    thead.append(header);
+    table.append(thead);
+    const tbody = element(document2, "tbody");
+    const readable = (value) => value === null ? "Removed / absent" : typeof value === "object" ? JSON.stringify(value) : String(value);
+    for (const row of [...rows.values()].slice(0, 200)) {
+      const tr = element(document2, "tr");
+      tr.append(element(document2, "th", { scope: "row" }, `${row.dimension === "semantic" ? "Meaning" : "Layout"} · ${row.change.elementId ?? "Diagram"} · ${row.change.path.join(".") || row.change.collection}`));
+      for (const side of ["base", "current", "draft"]) tr.append(element(document2, "td", {}, readable(row[side])));
+      tbody.append(tr);
+    }
+    table.append(tbody);
+    const scroll = element(document2, "div", { className: "de-comparison-scroll", tabindex: "0", "aria-label": "Change comparison" });
+    scroll.append(table);
+    panel.append(scroll);
+    if (!rows.size) panel.append(element(document2, "p", {}, "The content matches the saved revision. Retry Save to confirm the pending transaction."));
+    if (rows.size > 200) panel.append(element(document2, "p", {}, `Showing 200 of ${rows.size} changes. Download your complete draft before resolving.`));
+    const controls = element(document2, "div", { className: "de-actions" });
+    const keep = button(document2, "Keep my draft", "keep-draft"), download = button(document2, "Download my draft", "download-draft"), adopt = button(document2, "Use current revision…", "use-current");
+    controls.append(keep, download, adopt);
+    panel.append(controls);
+    const confirmation = element(document2, "div", { className: "de-confirm", hidden: true });
+    confirmation.append(element(document2, "p", {}, "Replace this local draft with the current saved revision? Pending edits and undo history will be removed. Download your draft first if you want to keep a copy."));
+    const confirm = button(document2, "Replace local draft", "confirm-current"), cancel = button(document2, "Keep editing my draft", "cancel-current");
+    confirmation.append(confirm, cancel);
+    panel.append(confirmation);
+    root.replaceChildren(panel);
+    keep.onclick = () => onClose();
+    download.onclick = () => downloadJson(document2, pending, `${pending.diagramId}.draft.planr-diagram-bundle.json`);
+    adopt.onclick = () => {
+      confirmation.hidden = false;
+      cancel.focus();
+    };
+    cancel.onclick = () => {
+      confirmation.hidden = true;
+      adopt.focus();
+    };
+    confirm.onclick = () => {
+      const result = session.useAuthoritative();
+      if (result.ok) onClose();
+      else onError(result);
+    };
+    return { dispose() {
+      panel.remove();
+    } };
   }
 
   // lib/artifact/ui/diagram-editor-actions.mjs
@@ -6064,126 +6329,563 @@
   }
 
   // lib/artifact/ui/diagram-editor-properties.mjs
-  function renderDiagramProperties({ root, state, editable, act, submitTransaction }) {
-    const document2 = root.ownerDocument, bundle = state.bundle, ids2 = state.view.selection;
-    root.replaceChildren();
-    if (!bundle) {
-      root.append(element(document2, "p", {}, "Access changed. Reopen this diagram with a current owner session."));
-      return;
-    }
-    const byId = elementIndex(bundle.document), placements = new Map(bundle.presentation.elements.map((item) => [item.elementId, item]));
-    const heading = element(document2, "h2", {}, ids2.length === 0 ? "Diagram details" : ids2.length > 1 ? `${ids2.length} objects selected` : labelOf(byId.get(ids2[0]).value));
-    root.append(heading);
-    if (!ids2.length) {
-      root.append(element(document2, "p", { className: "de-muted" }, bundle.document.title), element(document2, "p", {}, editable ? "Select an object on the canvas or in the outline to edit its properties." : "Select an object to inspect its properties."), element(document2, "p", { className: "de-muted" }, `Profile: ${bundle.document.grammar.id}. Layout and meaning are saved together.`));
-      const title = field(document2, "Diagram title", bundle.document.title, { maxlength: 240, disabled: !editable });
-      root.append(title.label);
-      const changeTitle = button(document2, "Update title", "update-title", { disabled: !editable });
-      changeTitle.onclick = () => act("update-title", title.input.value);
-      root.append(changeTitle);
-      return;
-    }
-    const actionRow = (...items) => {
-      const row = element(document2, "div", { className: "de-actions" });
-      for (const [name, action] of items) row.append(button(document2, name, action, { disabled: !editable }));
-      root.append(row);
+  var COLLECTION_LABELS = Object.freeze({
+    nodes: "Node",
+    relations: "Connection",
+    annotations: "Annotation",
+    groups: "Group",
+    lanes: "Lane"
+  });
+  function cleanController(root) {
+    return {
+      get dirty() {
+        return false;
+      },
+      apply() {
+        return { ok: true, skipped: true };
+      },
+      revert() {
+        return { ok: true, skipped: true };
+      },
+      focus() {
+        root.querySelector(
+          "input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled])"
+        )?.focus();
+      }
     };
-    if (ids2.length > 1) {
-      root.append(element(document2, "p", { className: "de-muted" }, ids2.slice(0, 8).map((id3) => labelOf(byId.get(id3).value)).join(", ")));
-      actionRow(["Align left", "align-left"], ["Align top", "align-top"], ["Align centers", "align-center"]);
-      actionRow(["Distribute horizontally", "distribute-horizontal"], ["Distribute vertically", "distribute-vertical"]);
-      actionRow(["Group selection", "group"], ["Ungroup selection", "ungroup"], ["Connect selection", "connect"]);
-      actionRow(["Copy", "copy"], ["Paste", "paste"], ["Duplicate", "duplicate"]);
-      actionRow(["Lock selection", "lock"], ["Unlock selection", "unlock"], ["Delete selection…", "delete"]);
-      parentControl(ids2);
-      return;
+  }
+  function inspectorHeader(document2, { kicker, title, reference, description }) {
+    const header = element(document2, "header", {
+      className: "de-inspector-header"
+    });
+    const identity = element(document2, "div", {
+      className: "de-inspector-identity"
+    });
+    identity.append(
+      element(document2, "span", { className: "de-inspector-kicker" }, kicker)
+    );
+    identity.append(
+      element(document2, "h2", { className: "de-inspector-title" }, title)
+    );
+    if (description)
+      identity.append(
+        element(
+          document2,
+          "p",
+          { className: "de-inspector-description" },
+          description
+        )
+      );
+    header.append(identity);
+    if (reference)
+      header.append(
+        element(
+          document2,
+          "code",
+          { className: "de-inspector-reference", title: reference },
+          reference
+        )
+      );
+    return header;
+  }
+  function inspectorSection(document2, title, { iconName, open = false, className = "" } = {}) {
+    const details = element(document2, "details", {
+      className: ["de-inspector-section", className].filter(Boolean).join(" "),
+      ...open ? { open: true } : {}
+    });
+    const summary = element(document2, "summary", {
+      className: "de-inspector-section-summary"
+    });
+    if (iconName) summary.append(icon(document2, iconName, { size: 15 }));
+    summary.append(element(document2, "span", {}, title));
+    const body = element(document2, "div", {
+      className: "de-inspector-section-body"
+    });
+    details.append(summary, body);
+    return { details, body };
+  }
+  function actionRow(document2, target, items, { className = "" } = {}) {
+    const row = element(document2, "div", {
+      className: ["de-actions", "de-inspector-action-row", className].filter(Boolean).join(" ")
+    });
+    for (const [label, action, iconName, attributes2 = {}] of items) {
+      row.append(
+        iconName ? iconButton(document2, label, action, { icon: iconName, ...attributes2 }) : button(document2, label, action, attributes2)
+      );
     }
-    const id2 = ids2[0], entry2 = byId.get(id2), place = placements.get(id2), sem = semanticFields(entry2.collection, entry2.value), geom = geometryFields(place), look = appearanceFields(place);
-    const form = element(document2, "form", { className: "de-properties-form", "aria-label": "Object properties" });
+    target.append(row);
+    return row;
+  }
+  function renderDiagramProperties({
+    root,
+    state,
+    editable,
+    act,
+    submitTransaction,
+    onDirtyChange
+  }) {
+    const document2 = root.ownerDocument;
+    const bundle = state.bundle;
+    const ids2 = state.view.selection;
+    root.replaceChildren();
+    root.classList.add("de-inspector");
+    root.dataset.inspectorSelection = ids2.length > 1 ? "multiple" : ids2.length === 1 ? "single" : "none";
+    if (!bundle) {
+      root.append(
+        inspectorHeader(document2, {
+          kicker: "Unavailable",
+          title: "Diagram access changed"
+        })
+      );
+      root.append(
+        element(
+          document2,
+          "p",
+          { className: "de-inspector-empty" },
+          "Reopen this diagram with a current owner session."
+        )
+      );
+      onDirtyChange?.(false);
+      return cleanController(root);
+    }
+    const byId = elementIndex(bundle.document);
+    const placements = new Map(
+      bundle.presentation.elements.map((item) => [item.elementId, item])
+    );
+    if (!ids2.length) {
+      root.append(
+        inspectorHeader(document2, {
+          kicker: "Diagram",
+          title: "Diagram details",
+          reference: bundle.diagramId,
+          description: bundle.document.title
+        })
+      );
+      const overview = inspectorSection(document2, "Overview", {
+        iconName: "content",
+        open: true
+      });
+      overview.body.append(
+        element(
+          document2,
+          "p",
+          {},
+          editable ? "Select an object on the canvas or in the outline to edit its properties." : "Select an object to inspect its properties."
+        ),
+        element(
+          document2,
+          "p",
+          { className: "de-muted" },
+          `Profile: ${bundle.document.grammar.id}. Layout and meaning are saved together.`
+        )
+      );
+      const title = field(document2, "Diagram title", bundle.document.title, {
+        maxlength: 240,
+        disabled: !editable
+      });
+      overview.body.append(title.label);
+      const changeTitle = iconButton(document2, "Update title", "update-title", {
+        icon: "save",
+        disabled: !editable
+      });
+      changeTitle.onclick = () => act("update-title", title.input.value);
+      overview.body.append(changeTitle);
+      root.append(overview.details);
+      onDirtyChange?.(false);
+      return cleanController(root);
+    }
+    if (ids2.length > 1) {
+      renderMultiSelection({ document: document2, root, bundle, ids: ids2, byId, editable, act });
+      onDirtyChange?.(false);
+      return cleanController(root);
+    }
+    const id2 = ids2[0];
+    const entry2 = byId.get(id2);
+    const place = placements.get(id2);
+    const sem = semanticFields(entry2.collection, entry2.value);
+    const geom = geometryFields(place);
+    const look = appearanceFields(place);
+    root.append(
+      inspectorHeader(document2, {
+        kicker: `${COLLECTION_LABELS[entry2.collection] ?? "Object"} properties`,
+        title: labelOf(entry2.value),
+        reference: id2
+      })
+    );
+    const form = element(document2, "form", {
+      className: "de-properties-form de-inspector-form",
+      "aria-label": "Object properties"
+    });
     const inputs = /* @__PURE__ */ new Map();
-    const add = (name, value, options = {}) => {
-      const item = field(document2, name, value, { disabled: !editable, ...options });
+    const trackedInputs = /* @__PURE__ */ new Set();
+    const add = (target, name, value, options = {}) => {
+      const item = field(document2, name, value, {
+        disabled: !editable,
+        ...options
+      });
       inputs.set(name, item.input);
-      form.append(item.label);
+      trackedInputs.add(item.input);
+      target.append(item.label);
       return item.input;
     };
-    add("Label", labelOf(entry2.value), { maxlength: 500 });
+    const content = inspectorSection(document2, "Content", {
+      iconName: "content",
+      open: true
+    });
+    add(content.body, "Label", labelOf(entry2.value), { maxlength: 500 });
     if (entry2.collection === "nodes") {
-      add("Description", sem.description, { multiline: true, maxlength: 4e3 });
-      add("Semantic role", sem.kind, { choices: ["process", "start", "end", "decision", "data-store", "component"] });
+      add(content.body, "Description", sem.description, {
+        multiline: true,
+        maxlength: 4e3
+      });
+      add(content.body, "Semantic role", sem.kind, {
+        choices: [
+          "process",
+          "start",
+          "end",
+          "decision",
+          "data-store",
+          "component"
+        ]
+      });
     }
+    form.append(content.details);
+    const geometry = inspectorSection(document2, "Geometry", {
+      iconName: "geometry",
+      open: true
+    });
     if (geom.bounds) {
       const grid = element(document2, "div", { className: "de-field-grid" });
-      for (const [name, key] of [["X", "x"], ["Y", "y"], ["Width", "width"], ["Height", "height"]]) {
+      for (const [name, key] of [
+        ["X", "x"],
+        ["Y", "y"],
+        ["Width", "width"],
+        ["Height", "height"]
+      ]) {
         const lock = ["x", "y"].includes(key) ? place.locks.position : place.locks.size;
-        const item = field(document2, name, geom.bounds[key], { type: "number", step: "1", min: ["width", "height"].includes(key) ? 1 : -1e6, max: 1e6, disabled: !editable || lock });
-        inputs.set(name, item.input);
-        grid.append(item.label);
+        add(grid, name, geom.bounds[key], {
+          type: "number",
+          step: "1",
+          min: ["width", "height"].includes(key) ? 1 : -1e6,
+          max: 1e6,
+          disabled: !editable || lock
+        });
       }
-      form.append(grid);
-      if (place.locks.position || place.locks.size) form.append(element(document2, "p", { className: "de-muted" }, "Geometry is locked. Use Unlock selection to change it."));
-    }
+      geometry.body.append(grid);
+      if (place.locks.position || place.locks.size)
+        geometry.body.append(
+          element(
+            document2,
+            "p",
+            { className: "de-muted" },
+            "Geometry is locked. Use Unlock selection to change it."
+          )
+        );
+    } else
+      geometry.body.append(
+        element(
+          document2,
+          "p",
+          { className: "de-muted" },
+          "This object is positioned by its connected endpoints."
+        )
+      );
+    form.append(geometry.details);
     if (entry2.collection === "relations") {
+      const connection = inspectorSection(document2, "Connection", {
+        iconName: "route",
+        open: true
+      });
       const choices = bundle.document.nodes.map((node2) => [node2.id, node2.label]);
-      add("From", sem.from, { choices });
-      add("To", sem.to, { choices });
-      add("Direction", sem.direction, { choices: [["forward", "Forward"], ["both", "Both directions"], ["none", "No arrow"]] });
-      add("Relationship", sem.kind, { choices: ["association", "dependency", "flow", "message", "transition"] });
-      add("Routing", geom.route.strategy, { choices: ["straight", "orthogonal"], disabled: !editable || place.locks.route });
-      add("Start side", geom.route.from.side, { choices: ["top", "right", "bottom", "left"], disabled: !editable || place.locks.route });
-      add("End side", geom.route.to.side, { choices: ["top", "right", "bottom", "left"], disabled: !editable || place.locks.route });
-      const bends = element(document2, "fieldset");
+      add(connection.body, "From", sem.from, { choices });
+      add(connection.body, "To", sem.to, { choices });
+      add(connection.body, "Direction", sem.direction, {
+        choices: [
+          ["forward", "Forward"],
+          ["both", "Both directions"],
+          ["none", "No arrow"]
+        ]
+      });
+      add(connection.body, "Relationship", sem.kind, {
+        choices: ["association", "dependency", "flow", "message", "transition"]
+      });
+      add(connection.body, "Routing", geom.route.strategy, {
+        choices: ["straight", "orthogonal"],
+        disabled: !editable || place.locks.route
+      });
+      const endpointGrid = element(document2, "div", {
+        className: "de-field-grid"
+      });
+      add(endpointGrid, "Start side", geom.route.from.side, {
+        choices: ["top", "right", "bottom", "left"],
+        disabled: !editable || place.locks.route
+      });
+      add(endpointGrid, "End side", geom.route.to.side, {
+        choices: ["top", "right", "bottom", "left"],
+        disabled: !editable || place.locks.route
+      });
+      connection.body.append(endpointGrid);
+      const bends = element(document2, "fieldset", {
+        className: "de-inspector-bends"
+      });
       bends.append(element(document2, "legend", {}, "Bend points"));
       const points = geom.route.mode === "manual" ? geom.route.points.slice(1, -1) : [];
       points.forEach((point2, index2) => {
-        const row = element(document2, "div", { className: "de-field-grid" });
-        for (const key of ["x", "y"]) {
-          const item = field(document2, `Bend ${index2 + 1} ${key.toUpperCase()}`, point2[key], { type: "number", disabled: !editable || place.locks.route });
-          inputs.set(`bend-${index2}-${key}`, item.input);
-          row.append(item.label);
-        }
-        const remove = button(document2, `Remove bend ${index2 + 1}`, "remove-bend", { disabled: !editable || place.locks.route });
+        const row = element(document2, "div", {
+          className: "de-field-grid de-bend-row"
+        });
+        for (const key of ["x", "y"])
+          add(row, `Bend ${index2 + 1} ${key.toUpperCase()}`, point2[key], {
+            type: "number",
+            disabled: !editable || place.locks.route
+          });
+        const remove = iconButton(
+          document2,
+          `Remove bend ${index2 + 1}`,
+          "remove-bend",
+          { icon: "trash", disabled: !editable || place.locks.route }
+        );
         remove.onclick = () => act("remove-bend", index2);
         row.append(remove);
         bends.append(row);
       });
-      const addBend = button(document2, "Add bend", "add-bend", { disabled: !editable || place.locks.route });
-      bends.append(addBend);
-      form.append(bends);
-      const reset = button(document2, "Reset route", "reset-route", { disabled: !editable || place.locks.route });
-      form.append(reset);
+      bends.append(
+        iconButton(document2, "Add bend", "add-bend", {
+          icon: "plus",
+          disabled: !editable || place.locks.route
+        })
+      );
+      connection.body.append(bends);
+      actionRow(document2, connection.body, [
+        [
+          "Reset route",
+          "reset-route",
+          "route",
+          { disabled: !editable || place.locks.route }
+        ]
+      ]);
       if (geom.label) {
-        add("Label X", geom.label.x, { type: "number" });
-        add("Label Y", geom.label.y, { type: "number" });
-        add("Label width", geom.label.width, { type: "number", min: 1 });
-      } else form.append(button(document2, "Position label", "position-label", { disabled: !editable }));
+        const labelGrid = element(document2, "div", {
+          className: "de-field-grid"
+        });
+        add(labelGrid, "Label X", geom.label.x, { type: "number" });
+        add(labelGrid, "Label Y", geom.label.y, { type: "number" });
+        add(labelGrid, "Label width", geom.label.width, {
+          type: "number",
+          min: 1
+        });
+        connection.body.append(labelGrid);
+      } else
+        connection.body.append(
+          iconButton(document2, "Position label", "position-label", {
+            icon: "geometry",
+            disabled: !editable
+          })
+        );
+      form.append(connection.details);
     }
-    add("Fill", look.appearance.fill, { choices: ["surface", "accent", "success", "warning", "danger", "transparent"] });
-    add("Stroke", look.appearance.stroke, { choices: ["default", "accent", "muted", "danger", "none"] });
-    add("Line style", look.appearance.strokeStyle, { choices: ["solid", "dashed", "dotted"] });
-    add("Font size", look.appearance.fontSize, { type: "number", min: 12, max: 48 });
-    for (const [name, key] of [["Lock position", "position"], ["Lock size", "size"], ["Lock route", "route"]]) {
+    const appearance2 = inspectorSection(document2, "Appearance", {
+      iconName: "appearance"
+    });
+    add(appearance2.body, "Fill", look.appearance.fill, {
+      choices: [
+        "surface",
+        "accent",
+        "success",
+        "warning",
+        "danger",
+        "transparent"
+      ]
+    });
+    add(appearance2.body, "Stroke", look.appearance.stroke, {
+      choices: ["default", "accent", "muted", "danger", "none"]
+    });
+    add(appearance2.body, "Line style", look.appearance.strokeStyle, {
+      choices: ["solid", "dashed", "dotted"]
+    });
+    add(appearance2.body, "Font size", look.appearance.fontSize, {
+      type: "number",
+      min: 12,
+      max: 48
+    });
+    form.append(appearance2.details);
+    if (entry2.collection !== "relations" || ["groups", "lanes"].includes(entry2.collection)) {
+      const structure = inspectorSection(document2, "Structure", {
+        iconName: "structure"
+      });
+      if (entry2.collection !== "relations")
+        appendParentControl(structure.body, ids2);
+      if (["groups", "lanes"].includes(entry2.collection))
+        appendMembers(structure.body);
+      form.append(structure.details);
+    }
+    const constraints = inspectorSection(document2, "Constraints", {
+      iconName: "constraints"
+    });
+    for (const [name, key] of [
+      ["Lock position", "position"],
+      ["Lock size", "size"],
+      ["Lock route", "route"]
+    ]) {
       if (key === "route" && entry2.collection !== "relations") continue;
       if (key !== "route" && !geom.bounds) continue;
-      add(name, look.locks[key], { type: "checkbox" });
+      add(constraints.body, name, look.locks[key], { type: "checkbox" });
     }
-    const apply = element(document2, "button", { type: "submit", className: "de-primary", disabled: !editable }, "Apply properties");
-    form.append(apply);
+    actionRow(document2, constraints.body, [
+      ["Unlock selection", "unlock", "unlock", { disabled: !editable }]
+    ]);
+    form.append(constraints.details);
+    const objectActions = inspectorSection(document2, "Object actions", {
+      iconName: "advanced"
+    });
+    actionRow(document2, objectActions.body, [
+      ["Copy", "copy", "copy", { disabled: !editable }],
+      ["Duplicate", "duplicate", "duplicate", { disabled: !editable }]
+    ]);
+    form.append(objectActions.details);
+    const advanced = inspectorSection(document2, "Advanced", {
+      iconName: "advanced"
+    });
+    const metadata2 = element(document2, "dl", { className: "de-inspector-meta" });
+    metadata2.append(
+      element(document2, "dt", {}, "Reference"),
+      element(document2, "dd", {}, id2),
+      element(document2, "dt", {}, "Object type"),
+      element(
+        document2,
+        "dd",
+        {},
+        COLLECTION_LABELS[entry2.collection] ?? entry2.collection
+      ),
+      element(document2, "dt", {}, "Grammar"),
+      element(document2, "dd", {}, bundle.document.grammar.id)
+    );
+    advanced.body.append(metadata2);
+    form.append(advanced.details);
+    const danger = element(document2, "section", {
+      className: "de-inspector-danger",
+      "aria-labelledby": "de-danger-title"
+    });
+    danger.append(
+      element(document2, "h3", { id: "de-danger-title" }, "Danger zone")
+    );
+    danger.append(
+      iconButton(document2, "Delete selection…", "delete", {
+        icon: "trash",
+        className: "de-danger",
+        disabled: !editable
+      })
+    );
+    form.append(danger);
+    const footer = element(document2, "footer", {
+      className: "de-inspector-footer"
+    });
+    const revertButton = button(document2, "Revert", "revert-properties", {
+      disabled: true
+    });
+    const applyButton = element(
+      document2,
+      "button",
+      {
+        type: "submit",
+        className: "de-primary",
+        "aria-label": "Apply properties",
+        disabled: true
+      },
+      "Apply changes"
+    );
+    footer.append(revertButton, applyButton);
+    form.append(footer);
     root.append(form);
+    let dirty = false;
+    let initialValues = captureValues();
+    const setDirty = (value) => {
+      if (dirty === value) return;
+      dirty = value;
+      applyButton.disabled = !editable || !dirty;
+      revertButton.disabled = !editable || !dirty;
+      form.dataset.dirty = String(dirty);
+      onDirtyChange?.(dirty);
+    };
+    const refreshDirty = () => setDirty(
+      [...trackedInputs].some(
+        (input) => inputValue(input) !== initialValues.get(input)
+      )
+    );
+    const apply = () => {
+      if (!editable || !dirty) return { ok: true, skipped: true };
+      const result = submitTransaction(buildPropertyTransaction());
+      if (result?.ok) {
+        initialValues = captureValues();
+        setDirty(false);
+      }
+      return result;
+    };
+    const revert = () => {
+      for (const [input, value] of initialValues) {
+        if (input.type === "checkbox") input.checked = value;
+        else input.value = value;
+      }
+      setDirty(false);
+      return { ok: true };
+    };
+    const focus = () => [...trackedInputs].find((input) => !input.disabled)?.focus();
+    form.addEventListener("input", (event) => {
+      if (trackedInputs.has(event.target)) refreshDirty();
+    });
+    form.addEventListener("change", (event) => {
+      if (trackedInputs.has(event.target)) refreshDirty();
+    });
     form.addEventListener("submit", (event) => {
       event.preventDefault();
-      if (!editable) return;
+      apply();
+    });
+    revertButton.onclick = revert;
+    form.dataset.dirty = "false";
+    onDirtyChange?.(false);
+    return {
+      get dirty() {
+        return dirty;
+      },
+      apply,
+      revert,
+      focus
+    };
+    function inputValue(input) {
+      return input.type === "checkbox" ? input.checked : input.value;
+    }
+    function captureValues() {
+      return new Map(
+        [...trackedInputs].map((input) => [input, inputValue(input)])
+      );
+    }
+    function buildPropertyTransaction() {
       const nextSem = clone(sem), nextGeom = clone(geom), nextLook = clone(look);
       const value = (name) => inputs.get(name)?.value;
       const number = (name) => Number(value(name));
       if (entry2.collection === "annotations") nextSem.text = value("Label");
-      else nextSem.label = value("Label") || (entry2.collection === "relations" ? null : "");
+      else
+        nextSem.label = value("Label") || (entry2.collection === "relations" ? null : "");
       if (entry2.collection === "nodes") {
         nextSem.description = value("Description") || null;
         nextSem.kind = value("Semantic role");
-        nextLook.appearance.shape = { process: "rectangle", start: "ellipse", end: "ellipse", decision: "diamond", "data-store": "cylinder", component: "rounded-rectangle" }[nextSem.kind];
+        nextLook.appearance.shape = {
+          process: "rectangle",
+          start: "ellipse",
+          end: "ellipse",
+          decision: "diamond",
+          "data-store": "cylinder",
+          component: "rounded-rectangle"
+        }[nextSem.kind];
       }
-      if (nextGeom.bounds) for (const [name, key] of [["X", "x"], ["Y", "y"], ["Width", "width"], ["Height", "height"]]) nextGeom.bounds[key] = number(name);
+      if (nextGeom.bounds)
+        for (const [name, key] of [
+          ["X", "x"],
+          ["Y", "y"],
+          ["Width", "width"],
+          ["Height", "height"]
+        ])
+          nextGeom.bounds[key] = number(name);
       if (entry2.collection === "relations") {
         nextSem.from = value("From");
         nextSem.to = value("To");
@@ -6192,124 +6894,251 @@
         nextGeom.route.strategy = value("Routing");
         nextGeom.route.from.side = value("Start side");
         nextGeom.route.to.side = value("End side");
-        if (nextGeom.route.mode === "manual") nextGeom.route.points.slice(1, -1).forEach((_, index2) => {
-          const original = geom.route.points[index2 + 1], x = number(`bend-${index2}-x`), y = number(`bend-${index2}-y`);
-          if (x === original.x && y === original.y) return;
-          if (nextGeom.route.strategy === "orthogonal") nextGeom.route.points = moveOrthogonalBend(nextGeom.route.points, index2 + 1, x - nextGeom.route.points[index2 + 1].x, y - nextGeom.route.points[index2 + 1].y);
-          else nextGeom.route.points[index2 + 1] = { x, y };
-        });
-        if (nextGeom.label) nextGeom.label = { x: number("Label X"), y: number("Label Y"), width: number("Label width") };
+        if (nextGeom.route.mode === "manual")
+          nextGeom.route.points.slice(1, -1).forEach((_, index2) => {
+            const original = geom.route.points[index2 + 1], x = number(`Bend ${index2 + 1} X`), y = number(`Bend ${index2 + 1} Y`);
+            if (x === original.x && y === original.y) return;
+            if (nextGeom.route.strategy === "orthogonal")
+              nextGeom.route.points = moveOrthogonalBend(
+                nextGeom.route.points,
+                index2 + 1,
+                x - nextGeom.route.points[index2 + 1].x,
+                y - nextGeom.route.points[index2 + 1].y
+              );
+            else nextGeom.route.points[index2 + 1] = { x, y };
+          });
+        if (nextGeom.label)
+          nextGeom.label = {
+            x: number("Label X"),
+            y: number("Label Y"),
+            width: number("Label width")
+          };
       }
       nextLook.appearance.fill = value("Fill");
       nextLook.appearance.stroke = value("Stroke");
       nextLook.appearance.strokeStyle = value("Line style");
       nextLook.appearance.fontSize = number("Font size");
-      for (const [name, key] of [["Lock position", "position"], ["Lock size", "size"], ["Lock route", "route"]]) if (inputs.has(name)) nextLook.locks[key] = inputs.get(name).checked;
-      submitTransaction(propertyTransaction(bundle, id2, { semantic: nextSem, geometry: nextGeom, appearance: nextLook }));
-    });
-    if (entry2.collection !== "relations") parentControl(ids2);
-    if (["groups", "lanes"].includes(entry2.collection)) {
-      const heading2 = element(document2, "h3", {}, "Members");
-      root.append(heading2);
-      for (const member of entry2.value.members) root.append(button(document2, labelOf(byId.get(member).value), "select-member", { "data-member": member }));
-      if (!entry2.value.members.length) root.append(element(document2, "p", { className: "de-muted" }, "No members. Select objects and choose this parent to add them."));
-      actionRow(["Arrange horizontally…", "lane-horizontal"], ["Arrange vertically…", "lane-vertical"], ["Ungroup", "ungroup"]);
-      if (entry2.collection === "lanes") actionRow(["Move lane up", "lane-up"], ["Move lane down", "lane-down"]);
-      root.append(button(document2, state.view.collapsedGroups.includes(id2) ? "Expand contents" : "Collapse contents", "collapse"));
+      for (const [name, key] of [
+        ["Lock position", "position"],
+        ["Lock size", "size"],
+        ["Lock route", "route"]
+      ])
+        if (inputs.has(name)) nextLook.locks[key] = inputs.get(name).checked;
+      return propertyTransaction(bundle, id2, {
+        semantic: nextSem,
+        geometry: nextGeom,
+        appearance: nextLook
+      });
     }
-    actionRow(["Copy", "copy"], ["Duplicate", "duplicate"], ["Unlock selection", "unlock"], ["Delete selection…", "delete"]);
-    root.append(element(document2, "p", { className: "de-reference" }, `Reference: ${id2}`));
-    function parentControl(selectedIds) {
+    function appendParentControl(target, selectedIds) {
       const parents = parentIndex(bundle.document), current = parents.get(selectedIds[0]) ?? "";
-      const choices = [["", "Diagram root"], ...[...bundle.document.groups, ...bundle.document.lanes].filter((item) => !selectedIds.includes(item.id)).map((item) => [item.id, item.label])];
-      const parent = field(document2, "Parent", current, { choices, disabled: !editable });
-      root.append(parent.label);
-      const apply2 = button(document2, "Move to parent", "reparent", { disabled: !editable });
-      apply2.onclick = () => act("reparent", parent.input.value || null);
-      root.append(apply2);
+      const choices = [
+        ["", "Diagram root"],
+        ...[...bundle.document.groups, ...bundle.document.lanes].filter((item) => !selectedIds.includes(item.id)).map((item) => [item.id, item.label])
+      ];
+      const operation2 = element(document2, "div", {
+        className: "de-inspector-operation"
+      });
+      const parent = field(document2, "Parent", current, {
+        choices,
+        disabled: !editable
+      });
+      operation2.append(parent.label);
+      const move = iconButton(document2, "Move to parent", "reparent", {
+        icon: "parent",
+        disabled: !editable
+      });
+      move.onclick = () => act("reparent", parent.input.value || null);
+      operation2.append(move);
+      target.append(operation2);
+    }
+    function appendMembers(target) {
+      target.append(
+        element(
+          document2,
+          "h3",
+          { className: "de-inspector-subheading" },
+          "Members"
+        )
+      );
+      const members = element(document2, "ul", {
+        className: "de-inspector-member-list",
+        "aria-label": "Members"
+      });
+      for (const member of entry2.value.members) {
+        const item = element(document2, "li", {
+          className: "de-inspector-member"
+        });
+        item.append(
+          button(document2, labelOf(byId.get(member).value), "select-member", {
+            "data-member": member
+          })
+        );
+        members.append(item);
+      }
+      if (entry2.value.members.length) target.append(members);
+      else
+        target.append(
+          element(
+            document2,
+            "p",
+            { className: "de-muted" },
+            "No members. Select objects and choose this parent to add them."
+          )
+        );
+      actionRow(document2, target, [
+        [
+          "Arrange horizontally…",
+          "lane-horizontal",
+          "arrange",
+          { disabled: !editable }
+        ],
+        [
+          "Arrange vertically…",
+          "lane-vertical",
+          "arrange",
+          { disabled: !editable }
+        ],
+        ["Ungroup", "ungroup", "ungroup", { disabled: !editable }]
+      ]);
+      if (entry2.collection === "lanes")
+        actionRow(document2, target, [
+          ["Move lane up", "lane-up", "arrow-up", { disabled: !editable }],
+          ["Move lane down", "lane-down", "arrow-down", { disabled: !editable }]
+        ]);
+      target.append(
+        button(
+          document2,
+          state.view.collapsedGroups.includes(id2) ? "Expand contents" : "Collapse contents",
+          "collapse",
+          { disabled: !editable }
+        )
+      );
     }
   }
-
-  // lib/artifact/ui/diagram-conflicts.mjs
-  function mountDiagramConflicts({ root, session, onClose = () => {
-  }, onError = () => {
-  } }) {
-    const document2 = root.ownerDocument;
-    const state = session.getState(), comparison = state.comparison;
-    if (!comparison || !state.bundle) return { dispose() {
-    } };
-    const { base, bundle: current } = comparison;
-    const pending = state.bundle;
-    const panel = element(document2, "section", { className: "de-conflict", "aria-label": "Compare conflicting changes" });
-    panel.append(element(document2, "h2", {}, "Review conflicting changes"), element(document2, "p", {}, "The saved diagram changed. Your draft is retained. Compare changes before choosing what to keep."));
-    const rows = /* @__PURE__ */ new Map();
-    for (const [side, value] of [["current", current], ["draft", pending]]) {
-      const diff = diffDiagramBundles(base, value);
-      if (!diff.ok) {
-        onError(diff);
-        return { dispose() {
-        } };
-      }
-      for (const dimension of ["semantic", "presentation"]) for (const change of diff[dimension]) {
-        const key = JSON.stringify([dimension, change.collection, change.elementId, change.path]);
-        if (!rows.has(key)) rows.set(key, { dimension, change, base: change.before, current: change.before, draft: change.before });
-        rows.get(key)[side] = change.after;
-      }
+  function renderMultiSelection({
+    document: document2,
+    root,
+    bundle,
+    ids: ids2,
+    byId,
+    editable,
+    act
+  }) {
+    const selectedLabels = ids2.slice(0, 8).map((id2) => labelOf(byId.get(id2).value));
+    root.append(
+      inspectorHeader(document2, {
+        kicker: "Multiple selection",
+        title: `${ids2.length} objects selected`,
+        reference: `${ids2.length} references`,
+        description: selectedLabels.join(", ")
+      })
+    );
+    const arrange = inspectorSection(document2, "Arrange", {
+      iconName: "arrange",
+      open: true
+    });
+    actionRow(document2, arrange.body, [
+      ["Align left", "align-left", "arrange", { disabled: !editable }],
+      ["Align top", "align-top", "arrange", { disabled: !editable }],
+      ["Align centers", "align-center", "arrange", { disabled: !editable }],
+      [
+        "Distribute horizontally",
+        "distribute-horizontal",
+        "arrange",
+        { disabled: !editable }
+      ],
+      [
+        "Distribute vertically",
+        "distribute-vertical",
+        "arrange",
+        { disabled: !editable }
+      ]
+    ]);
+    root.append(arrange.details);
+    const structure = inspectorSection(document2, "Structure", {
+      iconName: "structure",
+      open: true
+    });
+    actionRow(document2, structure.body, [
+      ["Group selection", "group", "group", { disabled: !editable }],
+      ["Ungroup selection", "ungroup", "ungroup", { disabled: !editable }],
+      ["Connect selection", "connect", "connect", { disabled: !editable }]
+    ]);
+    appendMultiParentControl(structure.body);
+    root.append(structure.details);
+    const clipboard = inspectorSection(document2, "Clipboard", {
+      iconName: "copy"
+    });
+    actionRow(document2, clipboard.body, [
+      ["Copy", "copy", "copy", { disabled: !editable }],
+      ["Paste", "paste", "copy", { disabled: !editable }],
+      ["Duplicate", "duplicate", "duplicate", { disabled: !editable }]
+    ]);
+    root.append(clipboard.details);
+    const constraints = inspectorSection(document2, "Constraints", {
+      iconName: "constraints"
+    });
+    actionRow(document2, constraints.body, [
+      ["Lock selection", "lock", "lock", { disabled: !editable }],
+      ["Unlock selection", "unlock", "unlock", { disabled: !editable }]
+    ]);
+    root.append(constraints.details);
+    const advanced = inspectorSection(document2, "Advanced", {
+      iconName: "advanced"
+    });
+    advanced.body.append(
+      element(
+        document2,
+        "p",
+        { className: "de-reference" },
+        `References: ${ids2.join(", ")}`
+      )
+    );
+    root.append(advanced.details);
+    const danger = element(document2, "section", {
+      className: "de-inspector-danger",
+      "aria-labelledby": "de-multi-danger-title"
+    });
+    danger.append(
+      element(document2, "h3", { id: "de-multi-danger-title" }, "Danger zone")
+    );
+    danger.append(
+      iconButton(document2, "Delete selection…", "delete", {
+        icon: "trash",
+        className: "de-danger",
+        disabled: !editable
+      })
+    );
+    root.append(danger);
+    function appendMultiParentControl(target) {
+      const parents = parentIndex(bundle.document), current = parents.get(ids2[0]) ?? "";
+      const choices = [
+        ["", "Diagram root"],
+        ...[...bundle.document.groups, ...bundle.document.lanes].filter((item) => !ids2.includes(item.id)).map((item) => [item.id, item.label])
+      ];
+      const operation2 = element(document2, "div", {
+        className: "de-inspector-operation"
+      });
+      const parent = field(document2, "Parent", current, {
+        choices,
+        disabled: !editable
+      });
+      operation2.append(parent.label);
+      const move = iconButton(document2, "Move to parent", "reparent", {
+        icon: "parent",
+        disabled: !editable
+      });
+      move.onclick = () => act("reparent", parent.input.value || null);
+      operation2.append(move);
+      target.append(operation2);
     }
-    const table = element(document2, "table");
-    const header = element(document2, "tr");
-    for (const title of ["Change", "Base", "Current", "Your draft"]) header.append(element(document2, "th", { scope: "col" }, title));
-    const thead = element(document2, "thead");
-    thead.append(header);
-    table.append(thead);
-    const tbody = element(document2, "tbody");
-    const readable = (value) => value === null ? "Removed / absent" : typeof value === "object" ? JSON.stringify(value) : String(value);
-    for (const row of [...rows.values()].slice(0, 200)) {
-      const tr = element(document2, "tr");
-      tr.append(element(document2, "th", { scope: "row" }, `${row.dimension === "semantic" ? "Meaning" : "Layout"} · ${row.change.elementId ?? "Diagram"} · ${row.change.path.join(".") || row.change.collection}`));
-      for (const side of ["base", "current", "draft"]) tr.append(element(document2, "td", {}, readable(row[side])));
-      tbody.append(tr);
-    }
-    table.append(tbody);
-    const scroll = element(document2, "div", { className: "de-comparison-scroll", tabindex: "0", "aria-label": "Change comparison" });
-    scroll.append(table);
-    panel.append(scroll);
-    if (!rows.size) panel.append(element(document2, "p", {}, "The content matches the saved revision. Retry Save to confirm the pending transaction."));
-    if (rows.size > 200) panel.append(element(document2, "p", {}, `Showing 200 of ${rows.size} changes. Download your complete draft before resolving.`));
-    const controls = element(document2, "div", { className: "de-actions" });
-    const keep = button(document2, "Keep my draft", "keep-draft"), download = button(document2, "Download my draft", "download-draft"), adopt = button(document2, "Use current revision…", "use-current");
-    controls.append(keep, download, adopt);
-    panel.append(controls);
-    const confirmation = element(document2, "div", { className: "de-confirm", hidden: true });
-    confirmation.append(element(document2, "p", {}, "Replace this local draft with the current saved revision? Pending edits and undo history will be removed. Download your draft first if you want to keep a copy."));
-    const confirm = button(document2, "Replace local draft", "confirm-current"), cancel = button(document2, "Keep editing my draft", "cancel-current");
-    confirmation.append(confirm, cancel);
-    panel.append(confirmation);
-    root.replaceChildren(panel);
-    keep.onclick = () => onClose();
-    download.onclick = () => downloadJson(document2, pending, `${pending.diagramId}.draft.planr-diagram-bundle.json`);
-    adopt.onclick = () => {
-      confirmation.hidden = false;
-      cancel.focus();
-    };
-    cancel.onclick = () => {
-      confirmation.hidden = true;
-      adopt.focus();
-    };
-    confirm.onclick = () => {
-      const result = session.useAuthoritative();
-      if (result.ok) onClose();
-      else onError(result);
-    };
-    return { dispose() {
-      panel.remove();
-    } };
   }
 
   // lib/artifact/ui/diagram-editor.mjs
-  var SVG = "http://www.w3.org/2000/svg";
-  var MODELS = ["process", "start", "end", "decision", "data-store", "component", "annotation", "container", "horizontal-lane", "vertical-lane"];
+  var SVG2 = "http://www.w3.org/2000/svg";
   var ACTION_LABELS = { process: "process", start: "start", end: "end", decision: "decision", "data-store": "data store", component: "component", annotation: "annotation", container: "container", "horizontal-lane": "horizontal lane", "vertical-lane": "vertical lane" };
+  var PROPERTY_DRAFT_MESSAGE = "Apply or revert property changes before selecting another object.";
   var errText = (result) => result?.diagnostics?.map((item) => item.detail).filter(Boolean).join(" ") || result?.message || "The change could not be applied.";
   var boundsOf = (bundle) => {
     const rects = bundle.presentation.elements.map((item) => item.bounds).filter(Boolean);
@@ -6338,39 +7167,57 @@
     const doc = root.ownerDocument, win = doc.defaultView;
     const colorScheme = win.matchMedia?.("(prefers-color-scheme: dark)");
     let disposed = false, raf = 0, drag = null, tempPan = false, tool = "select", tab = "outline", rightTab = "properties";
-    let leftOpen = true, rightOpen = true, clipboard = null, dialog = null, conflictMount = null, reviewCleanup = null;
+    let leftOpen = win.innerWidth > 1100, rightOpen = win.innerWidth > 1100, clipboard = null, dialog = null, conflictMount = null, reviewCleanup = null;
     let elementNodes = /* @__PURE__ */ new Map(), renderSignatures = /* @__PURE__ */ new Map(), renderedDigest = "", lastCanvas = null, lastBreakpoint = null, mode = "edit", lastAnnouncement = "", announcementFrame = 0, dialogOpener = null;
+    let overflowOpen = false, overflowOpener = null, drawerOpener = null, propertyController = null, propertiesDirty = false, propertiesStamp = "", propertiesSelection = "", propertyRefreshQueued = false, reviewMounted = false, modalBackgroundInert = false;
     const shell = element(doc, "div", { className: "planr-diagram-editor" });
-    shell.innerHTML = '<header class="de-bar"><div class="de-brand"><span class="de-mark" aria-hidden="true">◈</span><div class="de-identity"><strong class="de-title"></strong><small>Local diagram studio</small></div></div><span class="de-save-state" role="status" aria-live="polite"></span><div class="de-bar-actions"></div></header><div class="de-work"><aside class="de-left" aria-label="Diagram outline and shapes"><div class="de-rail-tabs" role="tablist" aria-label="Left panel"></div><div class="de-left-content"></div></aside><section class="de-stage"><div class="de-canvas" aria-label="Diagram canvas" role="application" tabindex="0"><svg data-editor-svg aria-label="Diagram drawing" role="img"><g data-world></g><g data-overlays></g></svg><div class="de-empty"></div><div class="de-canvas-tools"></div><div class="de-mobile-message">Review on mobile. Open on desktop to edit.</div></div><div class="de-stage-footer"></div></section><aside class="de-right" aria-label="Diagram properties and review"><div class="de-right-tabs" role="tablist" aria-label="Right panel"></div><div class="de-right-content"></div></aside></div><div class="de-alert" role="alert" hidden></div><div class="de-announcer" aria-live="polite" aria-atomic="true"></div><div class="de-dialog-layer"></div>';
+    shell.innerHTML = '<header class="de-bar" role="toolbar" aria-label="Diagram commands"><div class="de-bar-start"><div class="de-command-group" role="group" aria-label="Document navigation"></div><div class="de-brand"><span class="de-mark" aria-hidden="true">◈</span><div class="de-identity"><strong class="de-title"></strong><small>Local diagram studio</small></div></div></div><div class="de-bar-center"><div class="de-command-group" role="group" aria-label="History and arrangement"></div></div><div class="de-bar-end"><span class="de-save-state" role="status" aria-live="polite"></span><div class="de-command-group" role="group" aria-label="Save and inspect"></div><div class="de-more-wrap"></div></div></header><div class="de-work"><button class="de-drawer-backdrop" type="button" data-action="close-drawers" aria-label="Close open panel" tabindex="-1" hidden></button><aside class="de-left" id="diagram-outline-panel" aria-label="Diagram outline and shapes"><div class="de-panel-header"><strong class="de-panel-title">Objects</strong><div class="de-rail-tabs de-panel-tabs" role="tablist" aria-label="Left panel"></div><button type="button" data-action="close-outline" class="de-panel-close" aria-label="Close outline">×</button></div><div class="de-left-content"><div class="de-outline-pane de-tabpanel" id="diagram-outline-pane" role="tabpanel" aria-labelledby="diagram-outline-tab"></div><div class="de-shapes-pane de-tabpanel" id="diagram-shapes-pane" role="tabpanel" aria-labelledby="diagram-shapes-tab" hidden></div></div></aside><section class="de-stage"><p id="diagram-canvas-instructions" class="de-canvas-instructions">Use Select to choose and move objects, Pan to move around the canvas, and the arrow keys to move a selected object.</p><div class="de-canvas" aria-label="Diagram canvas" aria-describedby="diagram-canvas-instructions" role="application" tabindex="0"><svg data-editor-svg aria-label="Diagram drawing" role="img"><g data-world></g><g data-overlays></g></svg><div class="de-empty"></div><div class="de-canvas-tools" role="toolbar" aria-label="Canvas tools"></div><div class="de-mobile-message">Review on mobile. Open on desktop to edit.</div></div><div class="de-stage-footer"></div></section><aside class="de-right" id="diagram-inspector-panel" aria-label="Diagram properties and review"><div class="de-panel-header"><strong class="de-panel-title">Inspector</strong><div class="de-right-tabs de-panel-tabs" role="tablist" aria-label="Right panel"></div><button type="button" data-action="close-properties" class="de-panel-close" aria-label="Close properties">×</button></div><div class="de-right-content"><div class="de-properties-pane de-tabpanel" id="diagram-properties-pane" role="tabpanel" aria-labelledby="diagram-properties-tab"></div><div class="de-review-pane de-tabpanel" id="diagram-review-pane" role="tabpanel" aria-labelledby="diagram-review-tab" hidden></div></div></aside></div><div class="de-alert" role="alert" hidden></div><div class="de-announcer" aria-live="polite" aria-atomic="true"></div><div class="de-dialog-layer"></div>';
     root.replaceChildren(shell);
     const $ = (selector) => shell.querySelector(selector);
-    const bar = $(".de-bar-actions"), saveState = $(".de-save-state"), leftTabs = $(".de-rail-tabs"), leftBody = $(".de-left-content");
-    const rightTabs = $(".de-right-tabs"), rightBody = $(".de-right-content"), stage = $(".de-canvas"), svg = $("[data-editor-svg]");
+    const bar = $(".de-bar"), barStart = $(".de-bar-start .de-command-group"), barCenter = $(".de-bar-center .de-command-group"), barEnd = $(".de-bar-end .de-command-group");
+    const saveState = $(".de-save-state"), leftTabs = $(".de-rail-tabs"), leftBody = $(".de-left-content");
+    const outlinePane = $(".de-outline-pane"), shapesPane = $(".de-shapes-pane"), stageRegion = $(".de-stage");
+    const rightTabs = $(".de-right-tabs"), propertiesPane = $(".de-properties-pane"), reviewPane = $(".de-review-pane"), stage = $(".de-canvas"), svg = $("[data-editor-svg]");
     const world = $("[data-world]"), overlays = $("[data-overlays]"), empty = $(".de-empty"), footer = $(".de-stage-footer");
-    const alert = $(".de-alert"), announcer = $(".de-announcer"), dialogLayer = $(".de-dialog-layer");
-    const createBar = (label, action, title = label) => {
-      const node2 = button(doc, label, action, { title });
-      bar.append(node2);
+    const alert = $(".de-alert"), announcer = $(".de-announcer"), dialogLayer = $(".de-dialog-layer"), drawerBackdrop = $(".de-drawer-backdrop");
+    const commandButton = (container2, label, visible, action, { title = label, icon: icon2, className = "" } = {}) => {
+      const node2 = iconButton(doc, label, action, { title, icon: icon2, iconOnly: !visible, labelClassName: "de-button-label", className: ["de-icon-button", className].filter(Boolean).join(" ") });
+      if (visible) node2.querySelector(".de-button-label").textContent = visible;
+      container2.append(node2);
       return node2;
     };
-    createBar("Outline", "outline", "Show or hide outline");
-    createBar("Undo", "undo", "Undo · Ctrl or Command Z");
-    createBar("Redo", "redo", "Redo · Ctrl or Command Shift Z");
-    createBar("Layout", "layout");
-    createBar("Save diagram", "save", "Save diagram · Ctrl or Command S").classList.add("de-primary");
-    createBar("Properties", "properties", "Show or hide properties");
-    createBar("More", "more");
-    const canvasButton = (label, action) => {
-      const node2 = button(doc, label, action);
-      $(".de-canvas-tools").append(node2);
+    commandButton(barStart, "Outline", "Outline", "outline", { title: "Show or hide outline", icon: "panel" });
+    commandButton(barCenter, "Undo", "", "undo", { title: "Undo · Ctrl or Command Z", icon: "undo" });
+    commandButton(barCenter, "Redo", "", "redo", { title: "Redo · Ctrl or Command Shift Z", icon: "redo" });
+    commandButton(barCenter, "Layout", "Arrange", "layout", { icon: "arrange" });
+    commandButton(barEnd, "Save diagram", "Save", "save", { title: "Save diagram · Ctrl or Command S", icon: "save", className: "de-primary" });
+    commandButton(barEnd, "Properties", "Inspector", "properties", { title: "Show or hide properties", icon: "properties" });
+    const moreWrap = $(".de-more-wrap");
+    const moreButton = commandButton(moreWrap, "More", "", "more", { icon: "more" });
+    moreButton.setAttribute("aria-haspopup", "menu");
+    moreButton.setAttribute("aria-expanded", "false");
+    moreButton.setAttribute("aria-controls", "diagram-more-menu");
+    const moreMenu = element(doc, "div", { id: "diagram-more-menu", className: "de-more-menu", role: "menu", "aria-label": "Diagram options", hidden: true });
+    for (const [name, action] of [["Show source", "show-source"], ["Show revision", "show-revision"], ["Export JSON", "export-json"]]) moreMenu.append(button(doc, name, action, { role: "menuitem", className: "de-menu-item", tabindex: "-1" }));
+    moreWrap.append(moreMenu);
+    const canvasTools = $(".de-canvas-tools");
+    const modes = element(doc, "div", { className: "de-canvas-tool-group", role: "group", "aria-label": "Interaction mode" });
+    const canvasButton = (container2, label, action, options = {}) => {
+      const node2 = options.icon ? iconButton(doc, label, action, { ...options, labelClassName: "de-control-label" }) : button(doc, label, action, options);
+      container2.append(node2);
       return node2;
     };
-    canvasButton("Select", "select-tool");
-    canvasButton("Pan", "pan-tool");
-    canvasButton("Snap", "snap");
-    canvasButton("−", "zoom-out").setAttribute("aria-label", "Zoom out");
-    canvasButton("+", "zoom-in").setAttribute("aria-label", "Zoom in");
-    canvasButton("Fit", "fit");
+    canvasButton(modes, "Select", "select-tool", { icon: "select", "aria-pressed": "true" });
+    canvasButton(modes, "Pan", "pan-tool", { icon: "pan", "aria-pressed": "false" });
+    const snapping = element(doc, "div", { className: "de-canvas-tool-group", role: "group", "aria-label": "Snapping" });
+    canvasButton(snapping, "Snap", "snap", { icon: "snap", "aria-pressed": "false" });
+    const zoomTools = element(doc, "div", { className: "de-canvas-tool-group", role: "group", "aria-label": "Zoom" });
+    canvasButton(zoomTools, "−", "zoom-out", { "aria-label": "Zoom out" });
+    const zoomValue = element(doc, "output", { className: "de-zoom-value", "aria-label": "Zoom level" }, "100%");
+    zoomTools.append(zoomValue);
+    canvasButton(zoomTools, "+", "zoom-in", { "aria-label": "Zoom in" });
+    canvasButton(zoomTools, "Fit", "fit", { icon: "fit" });
+    canvasTools.append(modes, snapping, zoomTools);
     const notice = (message) => {
       win.cancelAnimationFrame(announcementFrame);
       if (message === lastAnnouncement) {
@@ -6386,17 +7233,64 @@
       alert.textContent = message || "";
       if (message) notice(message);
     };
-    const editable = (state) => mode === "edit" && win.innerWidth >= 700 && state.capabilities.read && state.capabilities.write && state.saveState !== "access-changed" && !!getDiagramAuthoringCapability(state.bundle?.document.grammar.id);
+    const editable = (state) => mode === "edit" && win.innerWidth > 700 && state.capabilities.read && state.capabilities.write && state.saveState !== "access-changed" && !!getDiagramAuthoringCapability(state.bundle?.document.grammar.id);
     const current = () => session.getState();
     const displayed = (state) => state.gesture?.bundle ?? state.bundle;
     const editorTheme = (bundle) => colorScheme?.matches ? bundle.presentation.theme.themeId === "slate" ? "slate" : "midnight" : "paper";
-    const select = (ids2) => {
-      const result = session.setView({ selection: [...new Set(ids2)] });
+    const controllerIsDirty = () => {
+      if (!propertyController) return propertiesDirty;
+      const value = typeof propertyController.dirty === "function" ? propertyController.dirty() : propertyController.dirty;
+      return value === void 0 ? propertiesDirty : !!value;
+    };
+    const updateCommandState = (state = current(), dirty = controllerIsDirty()) => {
+      propertiesDirty = !!dirty;
+      shell.dataset.propertyDirty = String(propertiesDirty);
+      const status = state.saveState;
+      const saveControl = bar.querySelector('[data-action="save"]');
+      if (saveControl) saveControl.disabled = !editable(state) || status === "saving" || !propertiesDirty && status === "saved" && state.pendingCount === 0 && !state.needsInitialization;
+    };
+    function synchronizePropertiesAfterApply() {
+      if (propertyRefreshQueued) return;
+      propertyRefreshQueued = true;
+      win.queueMicrotask(() => {
+        propertyRefreshQueued = false;
+        if (disposed || controllerIsDirty()) return;
+        renderRight(current());
+      });
+    }
+    const handlePropertyDirty = (dirty) => {
+      const wasDirty = propertiesDirty;
+      updateCommandState(current(), dirty);
+      if (wasDirty && !dirty) {
+        if (alert.textContent === PROPERTY_DRAFT_MESSAGE) report("");
+        synchronizePropertiesAfterApply();
+      }
+    };
+    const guardPropertyDraft = () => {
+      if (!controllerIsDirty()) return true;
+      setRightTab("properties");
+      setRail("right", true, { restoreFocus: false });
+      report(PROPERTY_DRAFT_MESSAGE);
+      propertyController?.focus?.();
+      return false;
+    };
+    const select = (ids2, { force = false } = {}) => {
+      const next = [...new Set(ids2)], previous = current().view.selection;
+      const changed = next.length !== previous.length || next.some((id2, index2) => id2 !== previous[index2]);
+      if (changed && !force && !guardPropertyDraft()) return { ok: false, status: "property-draft" };
+      const result = session.setView({ selection: next });
       if (!result.ok) report(errText(result));
-      else notice(ids2.length ? ids2.length + " object" + (ids2.length === 1 ? "" : "s") + " selected." : "Selection cleared.");
+      else {
+        report("");
+        notice(next.length ? next.length + " object" + (next.length === 1 ? "" : "s") + " selected." : "Selection cleared.");
+      }
       return result;
     };
     const submit = (command, selectIds) => {
+      if (controllerIsDirty()) {
+        guardPropertyDraft();
+        return { ok: false, status: "property-draft" };
+      }
       const result = session.submit(command);
       if (!result.ok) {
         report(errText(result));
@@ -6406,7 +7300,11 @@
       if (selectIds?.length) select(selectIds);
       return result;
     };
-    const submitTransaction = (value) => {
+    const submitTransaction = (value, { allowDirty = false } = {}) => {
+      if (!allowDirty && controllerIsDirty()) {
+        guardPropertyDraft();
+        return { ok: false, status: "property-draft" };
+      }
       const result = session.submitTransaction(value);
       if (!result.ok) report(errText(result));
       else report("");
@@ -6430,6 +7328,122 @@
       const scale = Math.min(4, Math.max(0.04, camera.scale * factor)), anchor = worldPoint(point2, camera);
       cameraPatch({ x: point2.x - anchor.x * scale, y: point2.y - anchor.y * scale, scale, fit: null });
     }
+    function setOverflow(open, { focus = false, restoreFocus = true } = {}) {
+      if (overflowOpen === open) return;
+      overflowOpen = open;
+      moreMenu.hidden = !open;
+      moreButton.setAttribute("aria-expanded", String(open));
+      if (open) {
+        overflowOpener = doc.activeElement;
+        if (focus) moreMenu.querySelector('[role="menuitem"]')?.focus();
+      } else {
+        const target = restoreFocus && overflowOpener?.isConnected ? overflowOpener : null;
+        overflowOpener = null;
+        target?.focus({ preventScroll: true });
+      }
+    }
+    function toggleInert(node2, inert) {
+      if (inert) {
+        node2.setAttribute("inert", "");
+        node2.setAttribute("aria-hidden", "true");
+      } else {
+        node2.removeAttribute("inert");
+        node2.removeAttribute("aria-hidden");
+      }
+    }
+    function synchronizeBackgroundInteractivity() {
+      const drawer = win.innerWidth <= 1100;
+      const drawerOpen = drawer && (leftOpen || rightOpen);
+      toggleInert($(".de-work"), modalBackgroundInert);
+      toggleInert(bar, modalBackgroundInert || drawerOpen);
+      toggleInert(stageRegion, modalBackgroundInert || drawerOpen);
+    }
+    function setBackgroundInert(inert) {
+      modalBackgroundInert = inert;
+      synchronizeBackgroundInteractivity();
+    }
+    function syncPanelState({ focusPanel = false, focusTarget = null } = {}) {
+      const drawer = win.innerWidth <= 1100;
+      const left = $(".de-left"), right = $(".de-right");
+      left.querySelector('[data-action="close-outline"]').hidden = !drawer;
+      right.querySelector('[data-action="close-properties"]').hidden = !drawer;
+      shell.dataset.leftOpen = String(leftOpen);
+      shell.dataset.rightOpen = String(rightOpen);
+      for (const [node2, open] of [[left, leftOpen], [right, rightOpen]]) {
+        if (open) {
+          node2.setAttribute("aria-hidden", "false");
+          node2.removeAttribute("inert");
+        }
+      }
+      const outlineControl = bar.querySelector('[data-action="outline"]'), propertiesControl = bar.querySelector('[data-action="properties"]');
+      outlineControl?.setAttribute("aria-expanded", String(leftOpen));
+      outlineControl?.setAttribute("aria-controls", "diagram-outline-panel");
+      propertiesControl?.setAttribute("aria-expanded", String(rightOpen));
+      propertiesControl?.setAttribute("aria-controls", "diagram-inspector-panel");
+      drawerBackdrop.hidden = !drawer || !leftOpen && !rightOpen;
+      drawerBackdrop.setAttribute("aria-hidden", String(drawerBackdrop.hidden));
+      if (focusTarget?.isConnected) focusTarget.focus({ preventScroll: true });
+      else if (focusPanel) {
+        const target = leftOpen ? leftTabs.querySelector('[role="tab"][aria-selected="true"]') : rightOpen ? rightTabs.querySelector('[role="tab"][aria-selected="true"]') : null;
+        target?.focus({ preventScroll: true });
+      }
+      for (const [node2, open] of [[left, leftOpen], [right, rightOpen]]) {
+        if (!open) {
+          node2.setAttribute("aria-hidden", "true");
+          node2.setAttribute("inert", "");
+        }
+      }
+      synchronizeBackgroundInteractivity();
+    }
+    function setRail(side, open, { focusPanel = false, restoreFocus = true } = {}) {
+      const drawer = win.innerWidth <= 1100;
+      const control = bar.querySelector('[data-action="' + (side === "left" ? "outline" : "properties") + '"]');
+      if (open && drawer) {
+        if (side === "left") rightOpen = false;
+        else leftOpen = false;
+        drawerOpener = control;
+      }
+      if (side === "left") leftOpen = open;
+      else rightOpen = open;
+      const focusTarget = !open && restoreFocus ? drawerOpener?.isConnected ? drawerOpener : control : null;
+      if (!leftOpen && !rightOpen) synchronizeBackgroundInteractivity();
+      syncPanelState({ focusPanel: open && (focusPanel || drawer), focusTarget });
+      if (!leftOpen && !rightOpen) drawerOpener = null;
+    }
+    function closeDrawers({ restoreFocus = true } = {}) {
+      if (win.innerWidth > 1100) return;
+      const focusTarget = restoreFocus && drawerOpener?.isConnected ? drawerOpener : null;
+      leftOpen = false;
+      rightOpen = false;
+      synchronizeBackgroundInteractivity();
+      syncPanelState({ focusTarget });
+      drawerOpener = null;
+    }
+    function setRightTab(next, { focus = false } = {}) {
+      rightTab = next;
+      const propertiesSelected = next === "properties";
+      propertiesPane.hidden = !propertiesSelected;
+      reviewPane.hidden = propertiesSelected;
+      for (const tabNode of rightTabs.querySelectorAll('[role="tab"]')) {
+        const selected2 = tabNode.dataset.action === (propertiesSelected ? "properties-tab" : "review-tab");
+        tabNode.setAttribute("aria-selected", String(selected2));
+        tabNode.tabIndex = selected2 ? 0 : -1;
+        if (selected2 && focus) tabNode.focus({ preventScroll: true });
+      }
+      if (!propertiesSelected && !reviewMounted) mountReview();
+    }
+    function setLeftTab(next, { focus = false } = {}) {
+      tab = next;
+      const outlineSelected = next === "outline";
+      outlinePane.hidden = !outlineSelected;
+      shapesPane.hidden = outlineSelected;
+      for (const tabNode of leftTabs.querySelectorAll('[role="tab"]')) {
+        const selected2 = tabNode.dataset.action === (outlineSelected ? "outline-tab" : "shapes-tab");
+        tabNode.setAttribute("aria-selected", String(selected2));
+        tabNode.tabIndex = selected2 ? 0 : -1;
+        if (selected2 && focus) tabNode.focus({ preventScroll: true });
+      }
+    }
     function draw(event = { type: "initial", affectedIds: [] }) {
       if (disposed) return;
       const state = current(), bundle = displayed(state);
@@ -6440,6 +7454,7 @@
         return;
       }
       const camera = state.view.camera;
+      zoomValue.textContent = Math.round(camera.scale * 100) + "%";
       world.setAttribute("transform", "translate(" + camera.x + " " + camera.y + ") scale(" + camera.scale + ")");
       overlays.setAttribute("transform", world.getAttribute("transform"));
       const byId = elementIndex(bundle.document), placements = new Map(bundle.presentation.elements.map((entry2) => [entry2.elementId, entry2]));
@@ -6466,7 +7481,7 @@
         ]);
         if (!elementNodes.has(id2) || (affected.has(id2) || forceAll) && renderSignatures.get(id2) !== signature) {
           const scene = resolveDiagramSceneElement(byId.get(id2), entry2, placements, order, emphasis2.get(id2) ?? null);
-          const xml = parser.parseFromString('<svg xmlns="' + SVG + '">' + renderAuthoredSceneElement(scene, palette, bundle.diagramId) + "</svg>", "image/svg+xml");
+          const xml = parser.parseFromString('<svg xmlns="' + SVG2 + '">' + renderAuthoredSceneElement(scene, palette, bundle.diagramId) + "</svg>", "image/svg+xml");
           const replacement = doc.importNode(xml.documentElement.firstElementChild, true);
           replacement.setAttribute("tabindex", "-1");
           replacement.setAttribute("role", "img");
@@ -6496,14 +7511,14 @@
       for (const id2 of selection) {
         const geometry = session.geometry(id2), rect = geometry?.bounds ?? geometry?.labelBounds;
         if (rect) {
-          const box = doc.createElementNS(SVG, "rect");
+          const box = doc.createElementNS(SVG2, "rect");
           for (const [key, value] of Object.entries({ x: rect.x, y: rect.y, width: rect.width, height: rect.height })) box.setAttribute(key, String(value));
           box.setAttribute("class", "de-selection-box");
           box.setAttribute("stroke-width", String(1.5 / scale));
           box.setAttribute("pointer-events", "none");
           overlays.append(box);
           if (selection.size === 1 && editable(state) && byPlacement.get(id2)?.bounds && !byPlacement.get(id2).locks.size) {
-            const handle = doc.createElementNS(SVG, "rect");
+            const handle = doc.createElementNS(SVG2, "rect");
             const size2 = 10 / scale;
             handle.setAttribute("x", String(rect.x + rect.width - size2 / 2));
             handle.setAttribute("y", String(rect.y + rect.height - size2 / 2));
@@ -6517,7 +7532,7 @@
           }
         }
         if (geometry?.points?.length && editable(state)) for (let index2 = 1; index2 < geometry.points.length - 1; index2++) {
-          const point2 = geometry.points[index2], handle = doc.createElementNS(SVG, "circle");
+          const point2 = geometry.points[index2], handle = doc.createElementNS(SVG2, "circle");
           handle.setAttribute("cx", String(point2.x));
           handle.setAttribute("cy", String(point2.y));
           handle.setAttribute("r", String(5 / scale));
@@ -6529,7 +7544,7 @@
         }
       }
       if (drag?.type === "marquee") {
-        const a = worldPoint(drag.start), b = worldPoint(drag.last), rect = doc.createElementNS(SVG, "rect");
+        const a = worldPoint(drag.start), b = worldPoint(drag.last), rect = doc.createElementNS(SVG2, "rect");
         rect.setAttribute("x", String(Math.min(a.x, b.x)));
         rect.setAttribute("y", String(Math.min(a.y, b.y)));
         rect.setAttribute("width", String(Math.abs(a.x - b.x)));
@@ -6548,12 +7563,20 @@
       saveState.dataset.state = status;
       shell.dataset.editable = String(editable(state));
       shell.dataset.mode = mode;
-      shell.dataset.leftOpen = String(leftOpen);
-      shell.dataset.rightOpen = String(rightOpen);
+      syncPanelState();
+      for (const control of canvasTools.querySelectorAll('[data-action="select-tool"],[data-action="pan-tool"]')) {
+        const active = control.dataset.action === tool + "-tool";
+        control.setAttribute("aria-pressed", String(active));
+        control.dataset.active = String(active);
+      }
+      const snapControl = canvasTools.querySelector('[data-action="snap"]');
+      snapControl?.setAttribute("aria-pressed", String(state.view.snap));
+      if (snapControl) snapControl.dataset.active = String(state.view.snap);
+      zoomValue.textContent = Math.round(state.view.camera.scale * 100) + "%";
       for (const [action, disabled] of Object.entries({
         undo: !state.canUndo || !editable(state),
         redo: !state.canRedo || !editable(state),
-        save: !editable(state) || status === "saving" || status === "saved" && state.pendingCount === 0 && !state.needsInitialization,
+        save: !editable(state) || status === "saving" || !controllerIsDirty() && status === "saved" && state.pendingCount === 0 && !state.needsInitialization,
         layout: !editable(state),
         properties: !state.capabilities.read,
         outline: !state.capabilities.read
@@ -6573,13 +7596,14 @@
         mode,
         leftOpen,
         rightOpen,
-        win.innerWidth < 700
+        win.innerWidth <= 700
       ].join(":");
       if (stamp === controlsStamp) return;
       controlsStamp = stamp;
       renderLeft(state);
       renderRight(state);
       renderFooter(state);
+      updateCommandState(state);
       const hasContent = bundle && bundle.presentation.elements.length > 0;
       empty.hidden = hasContent || !editable(state);
       if (!empty.hidden) {
@@ -6592,35 +7616,44 @@
     }
     function renderLeft(state) {
       leftTabs.replaceChildren();
-      if (win.innerWidth <= 1100) leftTabs.append(button(doc, "Close outline", "close-outline", { className: "de-close-rail" }));
       for (const [name, action] of [["Outline", "outline-tab"], ["Shapes", "shapes-tab"]]) {
-        const item = button(doc, name, action, { role: "tab", "aria-selected": String(tab === name.toLowerCase()) });
+        const selected2 = tab === name.toLowerCase();
+        const item = button(doc, name, action, { id: "diagram-" + name.toLowerCase() + "-tab", role: "tab", "aria-selected": String(selected2), "aria-controls": "diagram-" + name.toLowerCase() + "-pane", tabindex: selected2 ? "0" : "-1" });
         leftTabs.append(item);
       }
-      leftBody.replaceChildren();
+      outlinePane.replaceChildren();
+      shapesPane.replaceChildren();
+      setLeftTab(tab);
       if (!state.bundle) return;
-      if (tab === "shapes") {
-        leftBody.append(element(doc, "h2", {}, "Shape library"), element(doc, "p", { className: "de-muted" }, "Choose a shape, then edit its meaning and position."));
-        const capability = getDiagramAuthoringCapability(state.bundle.document.grammar.id);
-        for (const kind of MODELS) {
+      shapesPane.append(element(doc, "p", { className: "de-muted" }, "Add a shape, then refine it in the inspector."));
+      const capability = getDiagramAuthoringCapability(state.bundle.document.grammar.id);
+      const groups = [["Flow", ["process", "start", "end", "decision", "data-store", "component"]], ["Structure", ["container", "horizontal-lane", "vertical-lane"]], ["Notes", ["annotation"]]];
+      for (const [title, kinds] of groups) {
+        const section = element(doc, "section", { className: "de-shape-section" }), grid = element(doc, "div", { className: "de-shape-grid" });
+        section.append(element(doc, "h3", {}, title), grid);
+        for (const kind of kinds) {
           const primitive = kind === "annotation" ? "annotation" : kind === "container" ? "group" : kind.endsWith("-lane") ? "lane" : "node";
           if (capability && !capability.primitives.includes(primitive)) continue;
           if (capability && primitive === "node" && !capability.nodeKinds.includes(kind)) continue;
-          leftBody.append(button(doc, "Create " + ACTION_LABELS[kind], "create", { "data-kind": kind, className: "de-shape-button", disabled: !editable(state) }));
+          const shape2 = button(doc, "", "create", { "data-kind": kind, className: "de-shape-button", "aria-label": "Create " + ACTION_LABELS[kind], disabled: !editable(state) });
+          shape2.append(element(doc, "span", { className: "de-shape-kind", "aria-hidden": "true" }, kind === "decision" ? "◇" : kind === "start" || kind === "end" ? "○" : kind.includes("lane") ? "▥" : kind === "annotation" ? "T" : kind === "data-store" ? "◫" : "□"), element(doc, "span", {}, ACTION_LABELS[kind].replace(/^./, (letter) => letter.toUpperCase())));
+          grid.append(shape2);
         }
-        return;
+        if (grid.childElementCount) shapesPane.append(section);
       }
       const search = field(doc, "Find in diagram", "", { type: "search", placeholder: "Search objects" });
-      leftBody.append(search.label);
+      outlinePane.append(search.label);
       const list = element(doc, "div", { className: "de-outline-list", role: "tree", "aria-label": "Diagram objects" });
-      leftBody.append(list);
+      outlinePane.append(list);
       const indexed = elementIndex(state.bundle.document), parents = new Set([...state.bundle.document.groups, ...state.bundle.document.lanes].flatMap((value) => value.members));
       const expanded = new Set(state.view.collapsedGroups);
       function itemFor(id2, depth = 0) {
         const entry2 = indexed.get(id2);
         if (!entry2) return;
         const wrapper = element(doc, "div", { className: "de-outline-item", "data-search-text": labelOf(entry2.value).toLowerCase() });
-        const choose = button(doc, labelOf(entry2.value), "select-id", { role: "treeitem", "data-id": id2, "aria-selected": String(state.view.selection.includes(id2)), style: "padding-inline-start:" + String(12 + depth * 14) + "px" });
+        const kind = entry2.collection === "relations" ? "Connector" : entry2.collection === "lanes" ? "Lane" : entry2.collection === "groups" ? "Group" : entry2.collection === "annotations" ? "Note" : entry2.value.kind ?? "Shape";
+        const choose = button(doc, "", "select-id", { role: "treeitem", "data-id": id2, "aria-label": labelOf(entry2.value), "aria-level": String(depth + 1), "aria-selected": String(state.view.selection.includes(id2)), style: "padding-inline-start:" + String(12 + depth * 14) + "px" });
+        choose.append(element(doc, "span", { className: "de-outline-kind", "aria-hidden": "true" }, entry2.collection === "relations" ? "→" : entry2.collection === "lanes" ? "▥" : entry2.collection === "groups" ? "▣" : entry2.collection === "annotations" ? "T" : "◇"), element(doc, "span", { className: "de-outline-label" }, labelOf(entry2.value)), element(doc, "span", { className: "de-outline-meta", "aria-hidden": "true" }, kind));
         wrapper.append(choose);
         list.append(wrapper);
         if (entry2.value.members?.length && !expanded.has(id2)) for (const child of entry2.value.members) itemFor(child, depth + 1);
@@ -6631,32 +7664,50 @@
         const query = search.input.value.toLowerCase().trim();
         for (const row of list.querySelectorAll(".de-outline-item")) row.hidden = !!query && !row.dataset.searchText.includes(query);
       });
-      if (!indexed.size) leftBody.append(element(doc, "p", { className: "de-muted" }, "No objects yet. Use Shapes to create one."));
+      if (!indexed.size) outlinePane.append(element(doc, "p", { className: "de-muted" }, "No objects yet. Use Shapes to create one."));
+    }
+    function mountReview() {
+      if (reviewMounted) return;
+      reviewMounted = true;
+      reviewPane.replaceChildren(element(doc, "h2", { className: "de-panel-section-title" }, "Review"));
+      if (typeof host.mountReview === "function") {
+        const slot = element(doc, "div", { className: "de-review-slot" });
+        reviewPane.append(slot);
+        reviewCleanup = host.mountReview({ root: slot, session, select }) ?? null;
+      } else reviewPane.append(element(doc, "p", { className: "de-muted" }, "Review comments are available after this diagram is published to a review workspace. Local editing does not publish it."));
     }
     function renderRight(state) {
       rightTabs.replaceChildren();
-      if (win.innerWidth <= 1100) rightTabs.append(button(doc, "Close properties", "close-properties", { className: "de-close-rail" }));
-      for (const [name, action] of [["Properties", "properties-tab"], ["Review", "review-tab"]]) rightTabs.append(button(doc, name, action, { role: "tab", "aria-selected": String(rightTab === name.toLowerCase()) }));
-      rightBody.replaceChildren();
+      for (const [name, action, panel] of [["Properties", "properties-tab", "diagram-properties-pane"], ["Review", "review-tab", "diagram-review-pane"]]) {
+        const selected2 = rightTab === name.toLowerCase();
+        rightTabs.append(button(doc, name, action, { id: "diagram-" + name.toLowerCase() + "-tab", role: "tab", "aria-controls": panel, "aria-selected": String(selected2), tabindex: selected2 ? "0" : "-1" }));
+      }
+      setRightTab(rightTab);
+      const selectionKey = state.view.selection.join("|"), nextStamp = [state.bundle?.bundleDigest ?? "none", selectionKey, editable(state)].join("::");
+      if (controllerIsDirty() && propertiesSelection === selectionKey) return;
+      if (propertiesStamp === nextStamp) return;
+      propertiesStamp = nextStamp;
+      propertiesSelection = selectionKey;
+      propertiesDirty = false;
       if (!state.bundle) {
-        rightBody.append(element(doc, "p", {}, "Access changed. Reopen this diagram."));
+        propertiesPane.replaceChildren(element(doc, "p", {}, "Access changed. Reopen this diagram."));
+        propertyController = null;
+        updateCommandState(state);
         return;
       }
-      if (rightTab === "review") {
-        rightBody.append(element(doc, "h2", {}, "Review"));
-        if (typeof host.mountReview === "function") {
-          const slot = element(doc, "div");
-          rightBody.append(slot);
-          reviewCleanup?.();
-          reviewCleanup = host.mountReview({ root: slot, session, select }) ?? null;
-        } else rightBody.append(element(doc, "p", { className: "de-muted" }, "Review comments are available after this diagram is published to a review workspace. Local editing does not publish it."));
-        return;
-      }
-      reviewCleanup?.();
-      reviewCleanup = null;
-      const focused = doc.activeElement?.getAttribute("aria-label");
-      renderDiagramProperties({ root: rightBody, state, editable: editable(state), act, submitTransaction });
-      if (focused && rightBody.contains(doc.activeElement) === false && ["Apply properties"].includes(focused)) rightBody.querySelector('[aria-label="' + focused + '"]')?.focus();
+      const focused = propertiesPane.contains(doc.activeElement) ? doc.activeElement?.getAttribute("aria-label") : null;
+      const submitPropertiesTransaction = (value) => {
+        const result = submitTransaction(value, { allowDirty: true });
+        if (result?.ok) {
+          propertiesStamp = "";
+          synchronizePropertiesAfterApply();
+        }
+        return result;
+      };
+      propertyController = renderDiagramProperties({ root: propertiesPane, state, editable: editable(state), act, submitTransaction: submitPropertiesTransaction, onDirtyChange: handlePropertyDirty }) ?? null;
+      propertiesDirty = controllerIsDirty();
+      updateCommandState(state);
+      if (focused && !propertiesPane.contains(doc.activeElement)) propertiesPane.querySelector('[aria-label="' + focused + '"]')?.focus();
     }
     function renderFooter(state) {
       footer.replaceChildren();
@@ -6674,16 +7725,20 @@
       dialog = null;
       dialogOpener = null;
       dialogLayer.replaceChildren();
+      setBackgroundInert(false);
       target.focus({ preventScroll: true });
     }
     function openDialog(name, content) {
       closeDialog({ restoreFocus: false });
-      dialogOpener = doc.activeElement;
+      const active = doc.activeElement;
+      setOverflow(false, { restoreFocus: false });
+      dialogOpener = active?.closest?.(".de-more-menu") ? moreButton : active;
       const panel = element(doc, "section", { role: "dialog", "aria-modal": "true", "aria-label": name, className: "de-dialog" });
       panel.append(element(doc, "h2", {}, name));
       if (content) panel.append(content);
       dialogLayer.append(panel);
       dialog = panel;
+      setBackgroundInert(true);
       panel.querySelector("button,input,select")?.focus();
       return panel;
     }
@@ -6716,7 +7771,7 @@
       openDialog("Connect objects", body);
     }
     function layoutDialog(lane = null) {
-      const state = current(), body = element(doc, "div");
+      const body = element(doc, "div");
       body.append(element(doc, "p", {}, "Preview the arrangement before applying. No changes are saved during preview."));
       if (!lane) {
         const scope = field(doc, "Arrange", "selection", { choices: [["selection", "Selection"], ["all", "Whole diagram"]] });
@@ -6727,11 +7782,29 @@
       const panel = openDialog("Layout preview", body);
       if (lane) panel.dataset.lane = lane;
     }
-    function moreDialog() {
-      const state = current(), body = element(doc, "div");
-      body.append(element(doc, "p", {}, "Source and revision are read only. Export downloads this local bundle."));
-      body.append(button(doc, "Show source", "show-source"), button(doc, "Show revision", "show-revision"), button(doc, "Export JSON", "export-json"), button(doc, "Close", "cancel-dialog"));
-      openDialog("Diagram options", body);
+    async function applyPropertiesDraft() {
+      if (!controllerIsDirty()) return true;
+      const controller = propertyController;
+      const form = propertiesPane.querySelector("form");
+      if (form && !form.checkValidity()) {
+        form.reportValidity();
+        form.querySelector(":invalid")?.focus();
+        return false;
+      }
+      if (!controller?.apply) {
+        report("Apply or revert property changes before saving.");
+        controller?.focus?.();
+        return false;
+      }
+      const result = await controller.apply();
+      if (result === false || result?.ok === false) {
+        controller.focus?.();
+        return false;
+      }
+      propertiesDirty = false;
+      updateCommandState(current(), false);
+      synchronizePropertiesAfterApply();
+      return true;
     }
     async function save() {
       const state = current();
@@ -6739,6 +7812,7 @@
         act("conflict");
         return;
       }
+      if (!await applyPropertiesDraft()) return;
       const result = await session.save();
       if (disposed) return;
       if (!result.ok) {
@@ -6774,45 +7848,43 @@
       if (!bundle && action !== "cancel-dialog") return;
       if (action === "save") return void save();
       if (action === "undo") {
+        if (!guardPropertyDraft()) return;
         const result = session.undo();
         if (!result.ok) report(errText(result));
         return;
       }
       if (action === "redo") {
+        if (!guardPropertyDraft()) return;
         const result = session.redo();
         if (!result.ok) report(errText(result));
         return;
       }
       if (action === "outline" || action === "close-outline") {
-        leftOpen = action === "outline" ? !leftOpen : false;
-        controlsStamp = "";
-        renderChrome(current());
-        if (leftOpen) leftTabs.querySelector("[data-action=outline-tab]")?.focus();
-        else bar.querySelector("[data-action=outline]")?.focus();
+        setRail("left", action === "outline" ? !leftOpen : false, { focusPanel: action === "outline" && !leftOpen });
         return;
       }
       if (action === "properties" || action === "close-properties") {
-        rightOpen = action === "properties" ? !rightOpen : false;
-        controlsStamp = "";
-        renderChrome(current());
-        if (rightOpen) rightTabs.querySelector("[data-action=properties-tab]")?.focus();
-        else bar.querySelector("[data-action=properties]")?.focus();
+        setRail("right", action === "properties" ? !rightOpen : false, { focusPanel: action === "properties" && !rightOpen });
+        return;
+      }
+      if (action === "close-drawers") {
+        closeDrawers();
         return;
       }
       if (action === "outline-tab" || action === "shapes-tab") {
-        tab = action === "outline-tab" ? "outline" : "shapes";
+        setLeftTab(action === "outline-tab" ? "outline" : "shapes");
         controlsStamp = "";
         renderChrome(state);
         return;
       }
       if (action === "properties-tab" || action === "review-tab") {
-        rightTab = action === "properties-tab" ? "properties" : "review";
-        controlsStamp = "";
-        renderChrome(state);
+        setRightTab(action === "properties-tab" ? "properties" : "review");
         return;
       }
       if (action === "select-tool" || action === "pan-tool") {
         tool = action === "select-tool" ? "select" : "pan";
+        controlsStamp = "";
+        renderChrome(state);
         notice(tool === "select" ? "Select mode" : "Pan mode");
         return;
       }
@@ -6834,17 +7906,20 @@
         return;
       }
       if (action === "more") {
-        moreDialog();
+        setOverflow(!overflowOpen, { focus: !overflowOpen });
         return;
       }
       if (action === "show-source" || action === "show-revision") {
-        dialog.replaceChildren(element(doc, "h2", {}, action === "show-source" ? "Source" : "Current revision"));
         const pre = element(doc, "pre", { className: "de-source-view" }, JSON.stringify(action === "show-source" ? { originalSource: bundle.originalSource, sourceMap: bundle.sourceMap } : snapshot2(bundle), null, 2));
-        dialog.append(pre, button(doc, "Close", "cancel-dialog"));
+        const body = element(doc, "div");
+        body.append(pre, button(doc, "Close", "cancel-dialog"));
+        openDialog(action === "show-source" ? "Source" : "Current revision", body);
         return;
       }
       if (action === "export-json") {
+        setOverflow(false, { restoreFocus: false });
         downloadJson(doc, bundle, bundle.diagramId + ".planr-diagram-bundle.json");
+        moreButton.focus({ preventScroll: true });
         return;
       }
       if (action === "cancel-dialog") {
@@ -6927,15 +8002,19 @@
         const y = existing.length ? Math.min(...existing.map((item) => item.y)) : Math.round(at.y - 36);
         const command = createObject(kind, { x: right === null ? Math.round(at.x - 80) : Math.round(right + 64), y: Math.round(y) });
         const result = submit(command, [command.elements[0].value.id]);
-        if (result.ok && state.view.camera.fit) fit();
-        stage.focus();
+        if (result.ok) {
+          if (state.view.camera.fit) fit();
+          stage.focus();
+        }
         return;
       }
       if (action === "select-id" || action === "select-member") {
         const selected2 = options.additive ? ids2.includes(value) ? ids2.filter((id2) => id2 !== value) : [...ids2, value] : [value];
-        select(selected2);
-        const outlineItem = options.fromOutline ? [...leftBody.querySelectorAll('[data-action="select-id"]')].find((item) => item.dataset.id === value) : null;
-        (outlineItem ?? stage).focus();
+        const result = select(selected2);
+        if (result.ok) {
+          const outlineItem = options.fromOutline ? [...outlinePane.querySelectorAll('[data-action="select-id"]')].find((item) => item.dataset.id === value) : null;
+          (outlineItem ?? stage).focus();
+        }
         return;
       }
       if (action === "connect") {
@@ -6957,7 +8036,7 @@
         const impact = JSON.parse(dialog.dataset.impact);
         const result = submit({ type: "delete", ids: ids2, confirmedImpact: impact });
         if (result.ok) {
-          select([]);
+          select([], { force: true });
           closeDialog();
         }
         return;
@@ -7083,15 +8162,20 @@
         if (id2) select([id2]);
         return;
       }
+      if (controllerIsDirty()) {
+        event.preventDefault();
+        guardPropertyDraft();
+        return;
+      }
       if (handle) {
-        if (!state.view.selection.includes(id2)) select([id2]);
+        if (!state.view.selection.includes(id2) && !select([id2]).ok) return;
         drag = { type: handle.dataset.handle, id: id2, index: Number(handle.dataset.index), start, last: start, origin: state.bundle, originPoints: session.geometry(id2)?.points ?? [], active: false };
       } else if (id2) {
         const ids2 = event.shiftKey ? state.view.selection.includes(id2) ? state.view.selection.filter((value) => value !== id2) : [...state.view.selection, id2] : state.view.selection.includes(id2) ? state.view.selection : [id2];
-        select(ids2);
+        if (!select(ids2).ok) return;
         drag = { type: "move", id: id2, ids: ids2, start, last: start, origin: state.bundle, active: false };
       } else {
-        if (!event.shiftKey) select([]);
+        if (!event.shiftKey && !select([]).ok) return;
         drag = { type: "marquee", start, last: start, additive: event.shiftKey, base: [...state.view.selection] };
       }
       stage.setPointerCapture(event.pointerId);
@@ -7192,10 +8276,79 @@
           }
         }
       }
+      if (!dialog && event.key === "Tab" && win.innerWidth <= 1100 && (leftOpen || rightOpen)) {
+        const panel = leftOpen ? $(".de-left") : $(".de-right");
+        const controls = [...panel.querySelectorAll('button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),summary,a[href],[tabindex]:not([tabindex="-1"])')].filter((control) => !control.closest('[hidden],[inert],[aria-hidden="true"]') && control.getClientRects().length);
+        if (controls.length) {
+          const first = controls[0], last = controls.at(-1), active = doc.activeElement;
+          if (!panel.contains(active)) {
+            event.preventDefault();
+            (event.shiftKey ? last : first).focus();
+            return;
+          }
+          if (event.shiftKey && active === first) {
+            event.preventDefault();
+            last.focus();
+            return;
+          }
+          if (!event.shiftKey && active === last) {
+            event.preventDefault();
+            first.focus();
+            return;
+          }
+        }
+      }
       if (!shell.contains(event.target) && !drag && !dialog) return;
       if (dialog && event.key === "Escape") {
         event.preventDefault();
         act("cancel-dialog");
+        return;
+      }
+      if (overflowOpen && event.key === "Escape") {
+        event.preventDefault();
+        setOverflow(false);
+        return;
+      }
+      if (overflowOpen && event.key === "Tab") {
+        setOverflow(false);
+        return;
+      }
+      if (event.target === moreButton && ["ArrowDown", "ArrowUp"].includes(event.key)) {
+        event.preventDefault();
+        setOverflow(true);
+        const items = [...moreMenu.querySelectorAll('[role="menuitem"]')];
+        (event.key === "ArrowUp" ? items.at(-1) : items[0])?.focus();
+        return;
+      }
+      if (overflowOpen && event.target.matches?.('[role="menuitem"]')) {
+        const items = [...moreMenu.querySelectorAll('[role="menuitem"]:not(:disabled)')], index2 = items.indexOf(event.target);
+        let next = -1;
+        if (event.key === "ArrowDown") next = (index2 + 1) % items.length;
+        if (event.key === "ArrowUp") next = (index2 - 1 + items.length) % items.length;
+        if (event.key === "Home") next = 0;
+        if (event.key === "End") next = items.length - 1;
+        if (next >= 0) {
+          event.preventDefault();
+          items[next]?.focus();
+          return;
+        }
+      }
+      if (event.target.matches?.('[role="tab"]') && ["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
+        const list = event.target.closest('[role="tablist"]'), tabs = [...list.querySelectorAll('[role="tab"]')], index2 = tabs.indexOf(event.target);
+        const next = event.key === "Home" ? 0 : event.key === "End" ? tabs.length - 1 : event.key === "ArrowRight" ? (index2 + 1) % tabs.length : (index2 - 1 + tabs.length) % tabs.length;
+        event.preventDefault();
+        const target = tabs[next], action = target.dataset.action;
+        if (list === leftTabs) {
+          setLeftTab(action === "outline-tab" ? "outline" : "shapes");
+          controlsStamp = "";
+          renderChrome(current());
+          target.isConnected ? target.focus() : leftTabs.querySelector('[aria-selected="true"]')?.focus();
+        } else setRightTab(action === "properties-tab" ? "properties" : "review", { focus: true });
+        return;
+      }
+      if (event.key === "Escape" && win.innerWidth <= 1100 && (leftOpen || rightOpen)) {
+        event.preventDefault();
+        closeDrawers();
         return;
       }
       if (event.key === "Escape" && drag) {
@@ -7219,11 +8372,15 @@
       }
       if (event.key.toLowerCase() === "v" && !event.metaKey && !event.ctrlKey) {
         tool = "select";
+        controlsStamp = "";
+        renderChrome(state);
         notice("Select mode");
         return;
       }
       if (event.key.toLowerCase() === "h" && !event.metaKey && !event.ctrlKey) {
         tool = "pan";
+        controlsStamp = "";
+        renderChrome(state);
         notice("Pan mode");
         return;
       }
@@ -7254,6 +8411,7 @@
       }
       if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.key) && ids2.length && editable(state)) {
         event.preventDefault();
+        if (!guardPropertyDraft()) return;
         const delta = event.shiftKey ? 10 : 1;
         const dx = event.key === "ArrowLeft" ? -delta : event.key === "ArrowRight" ? delta : 0;
         const dy = event.key === "ArrowUp" ? -delta : event.key === "ArrowDown" ? delta : 0;
@@ -7264,11 +8422,15 @@
     const onClick = (event) => {
       const target = event.target.closest("[data-action]");
       if (!target || target.onclick) return;
+      if (overflowOpen && !target.closest(".de-more-wrap")) setOverflow(false, { restoreFocus: false });
       const action = target.dataset.action;
       if (action === "create") act(action, target.dataset.kind);
       else if (action === "select-id") act(action, target.dataset.id, { additive: event.shiftKey || event.metaKey || event.ctrlKey, fromOutline: true });
       else if (action === "select-member") act(action, target.dataset.member);
       else act(action);
+    };
+    const onDocumentPointerDown = (event) => {
+      if (overflowOpen && !event.target.closest?.(".de-more-wrap")) setOverflow(false, { restoreFocus: false });
     };
     const onWheel = (event) => {
       if (!event.target.closest(".de-canvas")) return;
@@ -7283,15 +8445,27 @@
     let resizeFrame = 0;
     const onResize = () => {
       const breakpoint = win.innerWidth <= 1100 ? "drawer" : "desktop";
+      const breakpointChanged = !!lastBreakpoint && lastBreakpoint !== breakpoint;
+      let focusAfterRender = null;
+      if (breakpointChanged && breakpoint === "drawer") {
+        const active = doc.activeElement, left = $(".de-left"), right = $(".de-right");
+        const focusTarget = left.contains(active) ? bar.querySelector('[data-action="outline"]') : right.contains(active) ? bar.querySelector('[data-action="properties"]') : null;
+        focusTarget?.focus({ preventScroll: true });
+        leftOpen = false;
+        rightOpen = false;
+        drawerOpener = null;
+      }
+      if (breakpointChanged && breakpoint === "desktop" && doc.activeElement === drawerBackdrop) focusAfterRender = stage;
       const rect = stage.getBoundingClientRect();
       if (lastCanvas && lastBreakpoint === breakpoint && lastCanvas.width === rect.width && lastCanvas.height === rect.height) return;
-      if (lastBreakpoint && lastBreakpoint !== breakpoint && breakpoint === "drawer") {
+      if (!lastBreakpoint && breakpoint === "drawer") {
         leftOpen = false;
         rightOpen = false;
       }
-      if (lastBreakpoint && lastBreakpoint !== breakpoint && breakpoint === "desktop") {
+      if (breakpointChanged && breakpoint === "desktop") {
         leftOpen = true;
         rightOpen = true;
+        drawerOpener = null;
       }
       lastBreakpoint = breakpoint;
       if (lastCanvas) {
@@ -7302,6 +8476,7 @@
       lastCanvas = { width: rect.width, height: rect.height };
       controlsStamp = "";
       renderChrome(current());
+      focusAfterRender?.focus({ preventScroll: true });
     };
     const scheduleResize = () => {
       if (disposed || resizeFrame) return;
@@ -7340,6 +8515,7 @@
     doc.addEventListener("keyup", onKeyUp);
     win.addEventListener("blur", onBlur);
     colorScheme?.addEventListener?.("change", onColorScheme);
+    doc.addEventListener("pointerdown", onDocumentPointerDown);
     if (resize) resize.observe(stage);
     else win.addEventListener("resize", scheduleResize);
     draw();
@@ -7365,6 +8541,7 @@
         if (!resize) win.removeEventListener("resize", scheduleResize);
         doc.removeEventListener("keydown", handleKey);
         doc.removeEventListener("keyup", onKeyUp);
+        doc.removeEventListener("pointerdown", onDocumentPointerDown);
         win.removeEventListener("blur", onBlur);
         colorScheme?.removeEventListener?.("change", onColorScheme);
         shell.remove();

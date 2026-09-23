@@ -43,7 +43,13 @@ const settle = page => page.evaluate(() => new Promise(resolve => requestAnimati
 const drawing = (page, id) => page.locator(`[data-editor-svg] [data-element-id="${id}"]`);
 async function save(page) {
   await page.getByRole('button', { name: 'Save diagram', exact: true }).click();
-  await page.getByText('Saved', { exact: true }).waitFor();
+  try {
+    await page.locator('.de-save-state[data-state="saved"]').waitFor();
+  } catch (error) {
+    const state = await page.locator('.de-save-state').getAttribute('data-state');
+    const alert = await page.locator('.de-alert').textContent();
+    throw new Error(`Diagram did not reach saved state (state: ${state}; alert: ${alert || 'none'})`, { cause: error });
+  }
 }
 async function apply(page, fields) {
   for (const [name, value] of Object.entries(fields)) await page.getByLabel(name, { exact: true }).fill(String(value));
@@ -59,6 +65,13 @@ async function create(page, name) {
 async function select(page, id, additive = false) {
   await drawing(page, id).click({ modifiers: additive ? ['Shift'] : [] });
   await settle(page);
+}
+async function expandInspectorSection(page, name) {
+  const summary = page.locator('.de-properties-pane details.de-inspector-section > summary').filter({ hasText: new RegExp(`^${name}$`, 'u') });
+  assert.equal(await summary.count(), 1, `Expected one ${name} inspector section`);
+  const section = summary.locator('..');
+  if (!(await section.evaluate(node => node.open))) await summary.click();
+  return section;
 }
 
 // The shell and every read/save below are served by the actual scoped owner.
@@ -216,6 +229,7 @@ test('duplicate, container membership, lock feedback and deletion confirmation p
   const bundle = makeBundle('process');
   const { page, read } = await fixture(t, { bundle });
   await select(page, 'node-a'); await select(page, 'node-b', true);
+  await expandInspectorSection(page, 'Clipboard');
   await page.getByRole('button', { name: 'Duplicate', exact: true }).click();
   await save(page);
   const copied = await read();
@@ -224,6 +238,7 @@ test('duplicate, container membership, lock feedback and deletion confirmation p
   const copiedEdge = copied.document.relations.find(edge => edge.id !== 'edge-a');
   assert.ok(added.some(node => node.id === copiedEdge.from)); assert.ok(added.some(node => node.id === copiedEdge.to));
   await page.locator('[data-action=select-id][data-id=node-a]').click();
+  await expandInspectorSection(page, 'Constraints');
   await page.getByRole('checkbox', { name: 'Lock position', exact: true }).check();
   await page.getByRole('button', { name: 'Apply properties', exact: true }).click();
   await save(page); const locked = await read();
@@ -255,6 +270,7 @@ test('connector endpoints, manual bends, label placement and nested lanes persis
   let route = (await read()).presentation.elements.find(item => item.elementId === 'edge-a').route;
   assert.equal(route.points.length, 2, 'The new route remains pending until acknowledged');
   await page.getByLabel('Direction', { exact: true }).selectOption('both');
+  await expandInspectorSection(page, 'Appearance');
   await page.getByLabel('Line style', { exact: true }).selectOption('dashed');
   await page.getByLabel('Routing', { exact: true }).selectOption('orthogonal');
   await page.getByRole('button', { name: 'Apply properties', exact: true }).click();
@@ -267,6 +283,7 @@ test('connector endpoints, manual bends, label placement and nested lanes persis
   assert.ok(route.points.every((point,index,all)=>index===0||point.x===all[index-1].x||point.y===all[index-1].y));
   assert.equal(saved.presentation.elements.find(item => item.elementId === 'edge-a').label.y, 25);
   await page.locator('[data-action=select-id][data-id=lane-a]').click();
+  await expandInspectorSection(page, 'Structure');
   await page.getByRole('button', { name: 'Arrange vertically…', exact: true }).click();
   await page.getByRole('button', { name: 'Preview layout', exact: true }).click();
   await page.getByRole('button', { name: 'Apply layout', exact: true }).click();
@@ -362,22 +379,245 @@ test('failed save, refresh recovery and blocked storage report actual durability
   await save(blocked.page); assert.equal((await blocked.read()).document.nodes.find(node => node.id === 'node-b').label, 'In memory');
 });
 
+test('dirty property guard keeps keyboard focus on the draft field', options, async t => {
+  const { page } = await fixture(t, { bundle: makeBundle('process') });
+  await select(page, 'node-a');
+  const label = page.getByLabel('Label', { exact: true });
+  await label.fill('Unapplied checkout label');
+  assert.equal(await label.evaluate(node => node === document.activeElement), true);
+
+  await drawing(page, 'node-b').click();
+  await page.getByRole('alert').filter({ hasText: 'Apply or revert property changes before selecting another object.' }).waitFor();
+  assert.equal(await label.evaluate(node => node === document.activeElement), true, 'Blocked selection returns focus to the field containing the draft');
+  assert.equal(await drawing(page, 'node-a').getAttribute('data-selected'), 'true');
+  assert.notEqual(await drawing(page, 'node-b').getAttribute('data-selected'), 'true');
+
+  await page.getByRole('button', { name: 'Revert', exact: true }).click();
+  await page.waitForFunction(() => {
+    const alert = document.querySelector('.de-alert');
+    return alert?.hidden && alert.textContent.trim() === '';
+  });
+  await drawing(page, 'node-b').click();
+  assert.equal(await drawing(page, 'node-b').getAttribute('data-selected'), 'true', 'Selection proceeds after reverting the draft');
+  assert.equal(await page.locator('.de-alert').isHidden(), true, 'The resolved draft warning does not remain exposed');
+});
+
+test('responsive drawers contain keyboard focus while the backdrop is active', options, async t => {
+  const { page } = await fixture(t, { bundle: makeBundle('process'), viewport: { width: 1024, height: 768 } });
+  const assertFocusContained = async (panel, direction = 'Tab') => {
+    for (let index = 0; index < 24; index++) {
+      await page.keyboard.press(direction);
+      assert.equal(await panel.evaluate(node => node.contains(document.activeElement)), true, `Focus left the open drawer after ${direction}`);
+    }
+  };
+
+  const outline = page.locator('#diagram-outline-panel');
+  await page.getByRole('button', { name: 'Outline', exact: true }).click();
+  await page.locator('.de-drawer-backdrop').waitFor();
+  assert.equal(await outline.evaluate(node => node.contains(document.activeElement)), true);
+  await assertFocusContained(outline);
+  await assertFocusContained(outline, 'Shift+Tab');
+  await page.keyboard.press('Escape');
+
+  const inspector = page.locator('#diagram-inspector-panel');
+  await page.getByRole('button', { name: 'Properties', exact: true }).click();
+  await page.locator('.de-drawer-backdrop').waitFor();
+  assert.equal(await inspector.evaluate(node => node.contains(document.activeElement)), true);
+  await assertFocusContained(inspector);
+  await assertFocusContained(inspector, 'Shift+Tab');
+});
+
+test('crossing from desktop rails to responsive drawers moves focus out of hidden content', options, async t => {
+  const { page } = await fixture(t, { bundle: makeBundle('process'), viewport: { width: 1440, height: 900 } });
+  await select(page, 'node-a');
+  const label = page.getByLabel('Label', { exact: true });
+  await label.focus();
+  assert.equal(await label.evaluate(node => node === document.activeElement), true);
+
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await page.waitForFunction(() => document.querySelector('#diagram-inspector-panel')?.getAttribute('aria-hidden') === 'true');
+  await settle(page);
+  const focus = await page.evaluate(() => {
+    const active = document.activeElement;
+    return {
+      isBody: active === document.body,
+      hidden: Boolean(active?.closest('[inert], [aria-hidden="true"]')),
+      interactive: Boolean(active?.matches('button, input, textarea, select, [role="application"], [role="tab"]')),
+    };
+  });
+  assert.deepEqual(focus, { isBody: false, hidden: false, interactive: true }, 'Breakpoint transition leaves focus on an available editor control');
+});
+
+test('outline and shapes tabs always reference persistent labelled tabpanels', options, async t => {
+  const { page } = await fixture(t, { bundle: makeBundle('process') });
+  const assertRelationships = async () => {
+    const tabs = page.getByRole('tablist', { name: 'Left panel', exact: true }).getByRole('tab');
+    assert.equal(await tabs.count(), 2);
+    for (const tab of await tabs.all()) {
+      const [id, controls] = await Promise.all([tab.getAttribute('id'), tab.getAttribute('aria-controls')]);
+      assert.ok(id);
+      assert.ok(controls);
+      const panel = page.locator(`[id="${controls}"]`);
+      assert.equal(await panel.count(), 1, `${await tab.textContent()} controls one existing panel`);
+      assert.equal(await panel.getAttribute('role'), 'tabpanel');
+      assert.equal(await panel.getAttribute('aria-labelledby'), id);
+    }
+  };
+
+  await assertRelationships();
+  await page.getByRole('tab', { name: 'Shapes', exact: true }).click();
+  await assertRelationships();
+  await page.getByRole('tab', { name: 'Outline', exact: true }).click();
+  await assertRelationships();
+});
+
+test('command menu is anchored, keyboard navigable, and restores focus', options, async t => {
+  const { page } = await fixture(t, { bundle: makeBundle('process') });
+  const trigger = page.getByRole('button', { name: 'More', exact: true });
+  assert.equal(await trigger.getAttribute('aria-haspopup'), 'menu');
+  assert.equal(await trigger.getAttribute('aria-expanded'), 'false');
+  await trigger.focus();
+  await page.keyboard.press('ArrowDown');
+  const menu = page.getByRole('menu', { name: 'Diagram options', exact: true });
+  await menu.waitFor();
+  assert.equal(await trigger.getAttribute('aria-expanded'), 'true');
+  assert.deepEqual(await menu.getByRole('menuitem').allTextContents(), ['Show source', 'Show revision', 'Export JSON']);
+  assert.equal(await page.getByRole('menuitem', { name: 'Show source', exact: true }).evaluate(node => node === document.activeElement), true);
+  await page.keyboard.press('ArrowDown');
+  assert.equal(await page.getByRole('menuitem', { name: 'Show revision', exact: true }).evaluate(node => node === document.activeElement), true);
+  await page.keyboard.press('End');
+  assert.equal(await page.getByRole('menuitem', { name: 'Export JSON', exact: true }).evaluate(node => node === document.activeElement), true);
+  await page.keyboard.press('Home');
+  assert.equal(await page.getByRole('menuitem', { name: 'Show source', exact: true }).evaluate(node => node === document.activeElement), true);
+  const [triggerBox, menuBox] = await Promise.all([trigger.boundingBox(), menu.boundingBox()]);
+  assert.ok(menuBox.y >= triggerBox.y && menuBox.x + menuBox.width <= page.viewportSize().width, 'Menu remains anchored to the command bar inside the viewport');
+  assert.equal(await page.getByRole('dialog').count(), 0, 'Overflow choices do not open a modal');
+  await page.keyboard.press('Escape');
+  assert.equal(await trigger.getAttribute('aria-expanded'), 'false');
+  assert.equal(await menu.isHidden(), true);
+  assert.equal(await trigger.evaluate(node => node === document.activeElement), true);
+});
+
+test('inspector tabs preserve drafts, block selection loss, revert, and save through the command bar', options, async t => {
+  const { page, read } = await fixture(t, { bundle: makeBundle('process') });
+  await select(page, 'node-a');
+  const propertiesTab = page.getByRole('tab', { name: 'Properties', exact: true });
+  const reviewTab = page.getByRole('tab', { name: 'Review', exact: true });
+  assert.equal(await propertiesTab.getAttribute('aria-controls'), 'diagram-properties-pane');
+  assert.equal(await reviewTab.getAttribute('aria-controls'), 'diagram-review-pane');
+  assert.equal(await page.locator('#diagram-properties-pane').getAttribute('role'), 'tabpanel');
+  assert.equal(await page.locator('#diagram-review-pane').getAttribute('role'), 'tabpanel');
+
+  const label = page.getByLabel('Label', { exact: true });
+  await label.fill('Draft checkout step');
+  await propertiesTab.focus();
+  await page.keyboard.press('ArrowRight');
+  assert.equal(await reviewTab.getAttribute('aria-selected'), 'true');
+  assert.equal(await reviewTab.getAttribute('tabindex'), '0');
+  assert.equal(await propertiesTab.getAttribute('tabindex'), '-1');
+  assert.equal(await reviewTab.evaluate(node => node === document.activeElement), true);
+  assert.equal(await label.inputValue(), 'Draft checkout step', 'Switching tabs preserves an unsubmitted field');
+  await page.keyboard.press('ArrowLeft');
+  assert.equal(await propertiesTab.evaluate(node => node === document.activeElement), true);
+
+  const inspectorTrigger = page.getByRole('button', { name: 'Properties', exact: true });
+  await inspectorTrigger.click();
+  assert.equal(await inspectorTrigger.getAttribute('aria-expanded'), 'false');
+  assert.equal(await page.locator('#diagram-inspector-panel').getAttribute('aria-hidden'), 'true');
+  await inspectorTrigger.click();
+  assert.equal(await label.inputValue(), 'Draft checkout step', 'Closing and reopening the inspector preserves the draft');
+
+  await drawing(page, 'node-b').click();
+  await page.getByRole('alert').filter({ hasText: 'Apply or revert property changes before selecting another object.' }).waitFor();
+  assert.equal(await drawing(page, 'node-a').getAttribute('data-selected'), 'true');
+  assert.notEqual(await drawing(page, 'node-b').getAttribute('data-selected'), 'true');
+  assert.equal(await label.inputValue(), 'Draft checkout step');
+  await page.getByRole('button', { name: 'Revert', exact: true }).click();
+  assert.equal(await label.inputValue(), 'Café ☕');
+  await select(page, 'node-b');
+  assert.equal(await page.getByLabel('Label', { exact: true }).inputValue(), 'Done', 'Selection proceeds after reverting the draft');
+
+  await select(page, 'node-a');
+  await page.getByLabel('Label', { exact: true }).fill('Saved from command bar');
+  await save(page);
+  const saved = await read();
+  assert.equal(saved.document.nodes.find(node => node.id === 'node-a').label, 'Saved from command bar');
+  assert.equal(await page.getByRole('button', { name: 'Apply properties', exact: true }).isDisabled(), true);
+});
+
+test('canvas tools expose mode and snapping state with visible zoom feedback', options, async t => {
+  const { page } = await fixture(t, { bundle: makeBundle('process') });
+  const selectTool = page.getByRole('button', { name: 'Select', exact: true });
+  const panTool = page.getByRole('button', { name: 'Pan', exact: true });
+  const snapTool = page.getByRole('button', { name: 'Snap', exact: true });
+  assert.equal(await selectTool.getAttribute('aria-pressed'), 'true');
+  assert.equal(await panTool.getAttribute('aria-pressed'), 'false');
+  assert.equal(await snapTool.getAttribute('aria-pressed'), 'true');
+  await panTool.click();
+  assert.equal(await selectTool.getAttribute('aria-pressed'), 'false');
+  assert.equal(await panTool.getAttribute('aria-pressed'), 'true');
+  await snapTool.click();
+  assert.equal(await snapTool.getAttribute('aria-pressed'), 'false');
+  const zoomLevel = page.locator('output[aria-label="Zoom level"]');
+  await zoomLevel.waitFor();
+  const before = await zoomLevel.textContent();
+  assert.match(before, /^\d+%$/u);
+  await page.getByRole('button', { name: 'Zoom in', exact: true }).click();
+  await page.waitForFunction(previous => document.querySelector('output[aria-label="Zoom level"]')?.textContent !== previous, before);
+  assert.match(await zoomLevel.textContent(), /^\d+%$/u);
+});
+
 test('desktop chrome, tablet drawers and mobile review remain usable without page overflow', options, async t => {
   const { page, read } = await fixture(t, { bundle: makeBundle('process') });
   const original = await read();
   for (const colorScheme of ['light', 'dark']) {
     await page.emulateMedia({ colorScheme });
-    for (const viewport of [{ width: 1440, height: 900 }, { width: 1280, height: 800 }, { width: 1024, height: 768 }, { width: 390, height: 844 }, { width: 320, height: 640 }]) {
+    for (const viewport of [{ width: 1440, height: 900 }, { width: 1280, height: 800 }, { width: 1024, height: 768 }, { width: 701, height: 768 }, { width: 700, height: 768 }, { width: 390, height: 844 }, { width: 320, height: 640 }]) {
       await page.setViewportSize(viewport); await settle(page);
       const dimensions = await page.evaluate(() => ({ width: innerWidth, scrollWidth: document.documentElement.scrollWidth, canvas: document.querySelector('[aria-label="Diagram canvas"]').getBoundingClientRect().toJSON() }));
       assert.ok(dimensions.scrollWidth <= dimensions.width, `${colorScheme} ${viewport.width}px must not overflow`);
-      if (viewport.width === 1440) assert.ok(dimensions.canvas.top <= 112, `Top chrome is ${dimensions.canvas.top}px`);
-      if (viewport.width < 700) await page.getByText(/desktop.*edit|edit.*desktop/iu).first().waitFor();
+      if (viewport.width === 1440) {
+        assert.ok(dimensions.canvas.top <= 56, `Top chrome is ${dimensions.canvas.top}px`);
+        assert.ok(dimensions.canvas.width / dimensions.width >= .60, `1440px canvas occupies ${dimensions.canvas.width / dimensions.width}`);
+      }
+      if (viewport.width === 1280) assert.ok(dimensions.canvas.width / dimensions.width >= .55, `1280px canvas occupies ${dimensions.canvas.width / dimensions.width}`);
+      if (viewport.width <= 700) {
+        await page.getByText(/desktop.*edit|edit.*desktop/iu).first().waitFor();
+      }
     }
   }
-  await page.setViewportSize({ width: 1024, height: 768 }); await settle(page);
+
+  await page.setViewportSize({ width: 700, height: 768 }); await settle(page);
   await page.getByRole('button', { name: 'Outline', exact: true }).click();
+  await page.getByRole('tab', { name: 'Shapes', exact: true }).click();
+  assert.equal(await page.getByRole('button', { name: 'Create process', exact: true }).isDisabled(), true, 'Editing is disabled at the mobile breakpoint');
   await page.getByRole('button', { name: 'Close outline', exact: true }).click();
-  assert.equal(await page.getByRole('button', { name: 'Outline', exact: true }).evaluate(element => element === document.activeElement), true);
+
+  await page.setViewportSize({ width: 701, height: 768 }); await settle(page);
+  await page.getByRole('button', { name: 'Outline', exact: true }).click();
+  await page.getByRole('tab', { name: 'Shapes', exact: true }).click();
+  assert.equal(await page.getByRole('button', { name: 'Create process', exact: true }).isEnabled(), true, 'Editing starts immediately above the mobile breakpoint');
+  await page.getByRole('button', { name: 'Close outline', exact: true }).click();
+
+  await page.setViewportSize({ width: 1024, height: 768 }); await settle(page);
+  const outlineTrigger = page.locator('[data-action="outline"]');
+  const propertiesTrigger = page.locator('[data-action="properties"]');
+  await outlineTrigger.click();
+  assert.equal(await outlineTrigger.getAttribute('aria-expanded'), 'true');
+  assert.equal(await page.locator('#diagram-outline-panel').getAttribute('aria-hidden'), 'false');
+  assert.equal(await page.locator('.de-drawer-backdrop').isVisible(), true);
+  await page.getByRole('button', { name: 'Close outline', exact: true }).click();
+  assert.equal(await outlineTrigger.getAttribute('aria-expanded'), 'false');
+  await propertiesTrigger.click();
+  assert.equal(await propertiesTrigger.getAttribute('aria-expanded'), 'true');
+  assert.equal(await page.locator('#diagram-outline-panel').getAttribute('aria-hidden'), 'true');
+  assert.equal(await page.locator('#diagram-inspector-panel').getAttribute('aria-hidden'), 'false');
+  await page.keyboard.press('Escape');
+  assert.equal(await propertiesTrigger.getAttribute('aria-expanded'), 'false');
+  assert.equal(await propertiesTrigger.evaluate(element => element === document.activeElement), true, 'Escape restores focus to the drawer trigger');
+  await outlineTrigger.click();
+  await page.locator('.de-drawer-backdrop').click({ position: { x: 500, y: 300 } });
+  assert.equal(await outlineTrigger.getAttribute('aria-expanded'), 'false');
+  assert.equal(await outlineTrigger.evaluate(element => element === document.activeElement), true, 'Backdrop close restores focus to the drawer trigger');
   assert.deepEqual(await read(), original, 'View preferences do not create content revisions');
 });
