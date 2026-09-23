@@ -129,6 +129,66 @@ test('keyboard users can create, multi-select, connect, move, and undo without c
   assert.equal(await drawing(page, saved.document.nodes[0].id).getAttribute('transform'), before);
 });
 
+test('selection announcements refresh and dialogs return focus to their opener or canvas fallback', options, async t => {
+  const { page } = await fixture(t, { bundle: makeBundle('process') });
+  await page.evaluate(() => {
+    const announcer = document.querySelector('.de-announcer');
+    window.__diagramAnnouncements = [];
+    new MutationObserver(() => window.__diagramAnnouncements.push(announcer.textContent)).observe(announcer, {
+      childList: true,
+      characterData: true,
+      subtree: true,
+    });
+  });
+  await select(page, 'node-a');
+  await select(page, 'node-b');
+  await page.waitForFunction(() => window.__diagramAnnouncements.filter(value => value === '1 object selected.').length >= 2);
+  assert.ok((await page.evaluate(() => window.__diagramAnnouncements)).includes(''), 'An identical message is cleared before it is announced again');
+
+  const deleteButton = page.getByRole('button', { name: 'Delete selection…', exact: true });
+  await deleteButton.focus();
+  const opener = await deleteButton.elementHandle();
+  await deleteButton.click();
+  let dialog = page.getByRole('dialog', { name: 'Delete selection' });
+  await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+  assert.equal(await opener.evaluate(element => element === document.activeElement), true, 'Cancel returns focus to the invoking control');
+
+  await deleteButton.focus();
+  await page.keyboard.press('Enter');
+  dialog = page.getByRole('dialog', { name: 'Delete selection' });
+  await dialog.waitFor();
+  await page.keyboard.press('Escape');
+  assert.equal(await opener.evaluate(element => element === document.activeElement), true, 'Escape returns focus to the invoking control');
+
+  await deleteButton.click();
+  dialog = page.getByRole('dialog', { name: 'Delete selection' });
+  await dialog.getByRole('button', { name: 'Delete', exact: true }).click();
+  assert.equal(await page.getByLabel('Diagram canvas', { exact: true }).evaluate(element => element === document.activeElement), true,
+    'Successful deletion falls back to the canvas after its opener leaves the document');
+});
+
+test('canvas rendering follows the studio color scheme without changing diagram data', options, async t => {
+  const { page, read } = await fixture(t, { bundle: makeBundle('process') });
+  const original = await read();
+  const cases = [
+    { scheme: 'dark', theme: 'midnight', canvas: 'rgb(11, 16, 21)', fill: '#151e28', text: '#e5edf5', connector: '#94a3b8' },
+    { scheme: 'light', theme: 'paper', canvas: 'rgb(255, 255, 255)', fill: '#f8fafc', text: '#0f172a', connector: '#475569' },
+  ];
+  for (const expected of cases) {
+    await page.emulateMedia({ colorScheme: expected.scheme });
+    await page.waitForFunction(theme => document.querySelector('.planr-diagram-editor')?.dataset.diagramTheme === theme, expected.theme);
+    await settle(page);
+    const colors = await page.evaluate(() => ({
+      canvas: getComputedStyle(document.querySelector('.de-canvas')).backgroundColor,
+      fill: document.querySelector('[data-element-id="node-a"] rect')?.getAttribute('fill'),
+      text: document.querySelector('[data-element-id="node-a"] text')?.getAttribute('fill'),
+      connector: document.querySelector('[data-element-id="edge-a"] > path')?.getAttribute('stroke'),
+    }));
+    assert.deepEqual(colors, { canvas: expected.canvas, fill: expected.fill, text: expected.text, connector: expected.connector });
+  }
+  assert.deepEqual(await read(), original, 'Color-scheme rendering never mutates the authored bundle');
+});
+
 test('new containers and lanes sit directly on the themed canvas without an opaque page wrapper', options, async t => {
   const { page, browser, owner, read } = await fixture(t);
   const containerId = await create(page, 'container');
