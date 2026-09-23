@@ -228,19 +228,17 @@ test("export discloses losses and offers the complete bundle, Mermaid copy and S
 	);
 });
 
-test("uploaded copies are unlinked and an invalid visual snapshot gives a concrete explanation", {
+test("uploaded copies stay unlinked and produce an inspectable visual snapshot", {
 	skip: !enabled,
 	timeout: 90_000,
 }, async (t) => {
 	const { page, store } = await fixture(t);
 	const panel = await open(page);
-	await panel
-		.getByLabel("Upload Mermaid copy")
-		.setInputFiles({
-			name: "checkout.mmd",
-			mimeType: "text/plain",
-			buffer: Buffer.from(supported),
-		});
+	await panel.getByLabel("Upload Mermaid copy").setInputFiles({
+		name: "checkout.mmd",
+		mimeType: "text/plain",
+		buffer: Buffer.from(supported),
+	});
 	assert.equal(
 		await panel.getByLabel("Mermaid source").inputValue(),
 		supported,
@@ -256,15 +254,35 @@ test("uploaded copies are unlinked and an invalid visual snapshot gives a concre
 	assert.equal((await store.read()).status, "absent");
 	await page.getByRole("button", { name: "Source", exact: true }).click();
 	const reopened = dialog(page);
+	const visualDownload = page.waitForEvent("download");
 	await reopened.getByRole("button", { name: "Download SVG snapshot" }).click();
-	assert.match(
-		await reopened.getByRole("alert").innerText(),
-		/valid layout.*Label|valid layout.*Connector/u,
-	);
+	assert.match((await visualDownload).suggestedFilename(), /\.svg$/u);
 	const bundleDownload = page.waitForEvent("download");
 	await reopened
 		.getByRole("button", { name: "Download editable bundle" })
 		.click();
+	assert.match(
+		(await bundleDownload).suggestedFilename(),
+		/planr-diagram-bundle\.json$/u,
+	);
+});
+
+test("visual export explains invalid geometry while the complete bundle remains available", {
+	skip: !enabled,
+	timeout: 90_000,
+}, async (t) => {
+	const longSource = `flowchart LR\nA[${"long ".repeat(40)}]\n`;
+	const converted = previewMermaidCopy(longSource, { diagramId: "checkout" });
+	const initial = adoptMermaidCopy(converted, converted.acknowledgement).bundle;
+	const { page } = await fixture(t, { initial });
+	const panel = await open(page);
+	await panel.getByRole("button", { name: "Download SVG snapshot" }).click();
+	assert.match(
+		await panel.getByRole("alert").innerText(),
+		/valid layout.*Label/u,
+	);
+	const bundleDownload = page.waitForEvent("download");
+	await panel.getByRole("button", { name: "Download editable bundle" }).click();
 	assert.match(
 		(await bundleDownload).suggestedFilename(),
 		/planr-diagram-bundle\.json$/u,

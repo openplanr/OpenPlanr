@@ -5516,9 +5516,39 @@
     };
     document2.annotations = clone(previous?.document.annotations ?? []);
     document2.emphasis = clone(previous?.document.emphasis ?? []);
-    const groupElements = [...groups.keys()].map((id2, i) => placement3(id2, "container", { x: 24 + i * 24, y: 24 + i * 24, width: 720, height: 480 }, 0, previous));
-    const nodeElements = [...nodes.values()].map((node2, i) => placement3(node2.id, node2.shape, { x: 80 + i % 4 * 180, y: 80 + Math.floor(i / 4) * 120, width: 144, height: 72 }, 2, previous));
-    const edgeElements = [...edges.keys()].map((id2) => placement3(id2, "connector", null, 1, previous));
+    const orderedNodes = [...nodes.values()];
+    const nodesPerRun = Math.min(8, orderedNodes.length);
+    const vertical = header === "top-down" || header === "bottom-up";
+    const reverse = header === "right-left" || header === "bottom-up";
+    const nodeElements = orderedNodes.map((node2, index2) => {
+      const run = index2 % nodesPerRun;
+      const line = Math.floor(index2 / nodesPerRun);
+      const along = reverse ? nodesPerRun - run - 1 : run;
+      const bounds2 = vertical ? { x: 100 + line * 320, y: 100 + along * 320, width: node2.shape === "diamond" ? 200 : 180, height: node2.shape === "diamond" ? 104 : 80 } : { x: 100 + along * 420, y: 100 + line * 280, width: node2.shape === "diamond" ? 200 : 180, height: node2.shape === "diamond" ? 104 : 80 };
+      return placement3(node2.id, node2.shape, bounds2, 2, previous);
+    });
+    const boundsById = new Map(nodeElements.map((item) => [item.elementId, item.bounds]));
+    const groupElements = [];
+    for (const group of [...groups.values()].reverse()) {
+      const members = group.members.map((id2) => boundsById.get(id2)).filter(Boolean);
+      const bounds2 = members.length ? {
+        x: Math.min(...members.map((item2) => item2.x)) - 44,
+        y: Math.min(...members.map((item2) => item2.y)) - 60,
+        width: Math.max(...members.map((item2) => item2.x + item2.width)) - Math.min(...members.map((item2) => item2.x)) + 88,
+        height: Math.max(...members.map((item2) => item2.y + item2.height)) - Math.min(...members.map((item2) => item2.y)) + 104
+      } : { x: 24, y: 24, width: 240, height: 160 };
+      const item = placement3(group.id, "container", bounds2, 0, previous);
+      boundsById.set(group.id, item.bounds);
+      groupElements.unshift(item);
+    }
+    const edgeElements = [...edges.keys()].map((id2) => {
+      const item = placement3(id2, "connector", null, 1, previous);
+      if (!previous?.presentation.elements.some((value) => value.elementId === id2)) {
+        item.route.from.side = vertical ? header === "bottom-up" ? "top" : "bottom" : header === "right-left" ? "left" : "right";
+        item.route.to.side = vertical ? header === "bottom-up" ? "bottom" : "top" : header === "right-left" ? "right" : "left";
+      }
+      return item;
+    });
     const noteElements = document2.annotations.map((annotation2, i) => previous.presentation.elements.find((item) => item.elementId === annotation2.id) ?? placement3(annotation2.id, "text", { x: 80 + i * 180, y: 560, width: 144, height: 72 }, 3));
     const presentation = { ...meta("diagram-presentation"), diagramId, semanticDigest: "", coordinateSystem: "global-canvas", layout: { direction: header, detailTier: previous?.presentation.layout.detailTier ?? "balanced" }, theme: clone(previous?.presentation.theme ?? { themeId: "paper", mode: "light" }), elements: [...groupElements, ...edgeElements, ...nodeElements, ...noteElements], presentationDigest: "" };
     const bundle = sealBundle({ ...meta("diagram-authoring-bundle"), diagramId, document: document2, presentation, originalSource: { format: "mermaid", text: source, sourceDigest: sourceDigest2 }, sourceMap: { ...meta("diagram-source-map"), diagramId, semanticDigest: "", sourceDigest: sourceDigest2, sourceByteLength: byteLength, encoding: "utf-8", parser: { id: "openplanr-mermaid-copy", version: "1.0.0" }, certificationVersion: "flowchart-copy-v1", entries: entries2 }, bundleDigest: "" });

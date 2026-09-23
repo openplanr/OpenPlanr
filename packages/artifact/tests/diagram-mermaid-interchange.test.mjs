@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import test from 'node:test';
 import { build } from 'esbuild';
 
-import { previewMermaidCopy, adoptMermaidCopy, exportMermaidCopy } from '../lib/artifact/diagram/authoring/index.mjs';
+import { previewMermaidCopy, adoptMermaidCopy, exportMermaidCopy, renderAuthoredDiagramSvg } from '../lib/artifact/diagram/authoring/index.mjs';
 import { sealBundle, validateAuthoringBundle } from '../lib/artifact/diagram/authoring/model.mjs';
 
 const fixture = name => readFileSync(join(import.meta.dirname, '..', 'fixtures', 'diagram', 'interchange', name), 'utf8');
@@ -25,6 +25,7 @@ test('supported LF and CRLF copies retain exact UTF-8 source and nested correspo
     assert.equal(result.fidelity.semantic, 'lossless');
     assert.equal(result.fidelity.presentation, 'partial');
     assert.equal(result.fidelity.sourceText, 'lossless');
+    assert.equal(renderAuthoredDiagramSvg(result.bundle).ok, true, 'the proposed copy is exportable as a visual snapshot');
     assert.deepEqual(result.bundle.document.groups.map(group => [group.id, group.members]), [
       ['platform', ['a', 'data']], ['data', ['b']],
     ]);
@@ -35,6 +36,14 @@ test('supported LF and CRLF copies retain exact UTF-8 source and nested correspo
     }
     assert.equal(adoptMermaidCopy(result).ok, false);
     assert.equal(adoptMermaidCopy(result, result.acknowledgement).ok, true);
+  }
+});
+
+test('first-copy node spacing and connectors render in every certified flow direction', () => {
+  for (const direction of ['LR', 'RL', 'TB', 'BT']) {
+    const result = preview(`flowchart ${direction}\nA[Start]\nB[Done]\nA -->|next| B\n`);
+    assert.equal(result.ok, true, direction);
+    assert.equal(renderAuthoredDiagramSvg(result.bundle).ok, true, direction);
   }
 });
 
