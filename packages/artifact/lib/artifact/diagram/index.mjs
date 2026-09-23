@@ -24,6 +24,7 @@ export {
 } from './registry.mjs';
 export { MAX_DIAGRAM_PRIMITIVE_ITEMS, assertDiagramDocument, createDiagramDocument } from './model.mjs';
 export { importMermaid, MAX_MERMAID_BYTES } from './mermaid.mjs';
+export { previewMermaidCopy, adoptMermaidCopy, exportMermaidCopy } from './source-map.mjs';
 export { routeDiagramIntent } from './router.mjs';
 export { planDiagramQuality } from './readability.mjs';
 export { assertDiagramSvg, validateDiagramSvg } from './accessibility.mjs';
