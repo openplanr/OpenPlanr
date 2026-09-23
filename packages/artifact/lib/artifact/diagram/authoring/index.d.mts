@@ -7,6 +7,7 @@ import type {
   DiagramPlacement,
   DiagramBounds,
   DiagramAuthoringContainer,
+  DiagramFidelityReport,
 } from '@openplanr/protocol/diagram-authoring-contracts';
 
 export type {
@@ -107,3 +108,27 @@ export declare function createConditionalInverse(bundle: DiagramAuthoringBundle,
 export { resolveDiagramScene, type DiagramSceneDiagnostic, type DiagramSceneQuality, type DiagramSceneText, type AuthoredDiagramSceneElement, type AuthoredDiagramScene, type DiagramSceneFailure } from './scene.mjs';
 export { renderAuthoredDiagramSvg, type AuthoredDiagramTheme, type AuthoredDiagramSvgResult, type AuthoredDiagramRenderFailure } from './renderer.mjs';
 export * from './layout.mjs';
+
+export interface MermaidCopyDiagnostic {
+  code: string;
+  severity: 'error' | 'warning';
+  line: number;
+  column: number;
+  range: { startByte: number; endByte: number } | null;
+  message: string;
+  repair: string;
+  elementIds: string[];
+}
+export type MermaidCopyPreview =
+  | { ok: false; sourceModified: false; diagnostics: MermaidCopyDiagnostic[] }
+  | { ok: true; bundle: DiagramAuthoringBundle; fidelity: DiagramFidelityReport; diagnostics: MermaidCopyDiagnostic[]; requiresAcknowledgement: boolean; acknowledgement: string | null; sourceModified: false };
+/** Browser-safe, non-mutating certified flowchart copy preview. */
+export declare function previewMermaidCopy(source: string, options?: { diagramId?: string; title?: string; previousBundle?: DiagramAuthoringBundle | null }): MermaidCopyPreview;
+/** Returns a detached bundle only after the exact preview's losses are acknowledged. */
+export declare function adoptMermaidCopy(preview: MermaidCopyPreview, acknowledgement?: string | null):
+  | { ok: true; bundle: DiagramAuthoringBundle; sourceModified: false }
+  | { ok: false; sourceModified: false; diagnostics: MermaidCopyDiagnostic[] };
+/** Produces canonical Mermaid text with dimension-specific fidelity; never writes files. */
+export declare function exportMermaidCopy(bundle: DiagramAuthoringBundle):
+  | { ok: true; text: string; fidelity: DiagramFidelityReport; diagnostics: MermaidCopyDiagnostic[]; bundleUnchanged: true }
+  | { ok: false; diagnostics: MermaidCopyDiagnostic[] };
