@@ -1,6 +1,6 @@
 {
   "name": "openplanr",
-  "version": "2.6.2",
+  "version": "2.6.3",
   "description": "Deterministic OpenPlanr utilities for planning storage, validation, rendering, setup, diagnostics, and GitHub/Linear synchronization",
   "type": "module",
   "main": "./dist/cli/index.js",
@@ -115,7 +115,7 @@
     "zod": "^4.3.6"
   },
   "optionalDependencies": {
-    "planr-pipeline": "0.50.0"
+    "planr-pipeline": "0.51.0"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.9",
