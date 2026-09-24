@@ -47,17 +47,17 @@
   "components": {
     "cli": {
       "package": "openplanr",
-      "version": "2.2639.0",
+      "version": "2.2639.1",
       "path": "packages/cli",
       "publication": "public",
-      "manifestDigest": "sha256:2688275562767ab692bc91d7fffdfe329f6b724e419133dc061ed0aa0023d250"
+      "manifestDigest": "sha256:08d0f55e4514017cad603595d016ea603003d4152682dcab13a2a75b46b7e47d"
     },
     "pipeline": {
       "package": "planr-pipeline",
-      "version": "0.52.0",
+      "version": "0.52.1",
       "path": "packages/pipeline",
       "publication": "public",
-      "manifestDigest": "sha256:2c21ddd43488b42ce0b0700894dca5d97df6d5d8ab176d9608116836c9851dfa"
+      "manifestDigest": "sha256:8b94078b4aae7dcfb344f465c0af6e4600b670318857a4cc02105a6b617e70fa"
     },
     "protocol": {
       "package": "@openplanr/protocol",
@@ -75,17 +75,17 @@
     },
     "artifact": {
       "package": "@openplanr/artifact",
-      "version": "0.5.0",
+      "version": "0.5.1",
       "path": "packages/artifact",
       "publication": "private",
-      "manifestDigest": "sha256:8ff9a323e70b3fdc22c8e211d6b840143323d1c7e3e7b103788003c9d7716fd9"
+      "manifestDigest": "sha256:5e28c6575733410b93c472a4fab01bb05aa6b96d2ba9f53d4c2b36250ba1ddb2"
     },
     "design": {
       "package": "@openplanr/design",
-      "version": "0.2.6",
+      "version": "0.2.7",
       "path": "packages/design",
       "publication": "private",
-      "manifestDigest": "sha256:46d649a0811c4eec0f9c6b0442082e399b6d5bd6f3dce963e86a8e9a1a4b7d0a"
+      "manifestDigest": "sha256:c7d82d0583557743896f54676b19a17e71a3126d6b9df5c81a2d9407e094d7c0"
     },
     "skillRuntime": {
       "package": "@openplanr/skill-runtime",
@@ -112,7 +112,7 @@
   "compatibility": {
     "cliOptionalPipeline": {
       "package": "planr-pipeline",
-      "version": "0.52.0",
+      "version": "0.52.1",
       "exact": true
     },
     "publicArtifacts": {
@@ -321,23 +321,23 @@
     "hosts": [
       {
         "id": "claude-code",
-        "version": "0.52.0",
+        "version": "0.52.1",
         "capabilityLevel": "product"
       },
       {
         "id": "codex",
-        "version": "0.52.0",
+        "version": "0.52.1",
         "capabilityLevel": "workflow"
       },
       {
         "id": "cursor",
-        "version": "0.52.0",
+        "version": "0.52.1",
         "capabilityLevel": "workflow"
       }
     ],
     "generatedAssets": {
       "path": "adapters/manifests/generated-assets.json",
-      "digest": "sha256:d222bfcf8d3e33920fddd459e4a0d659fe8535ed7b242afa27be4be519cd2ac5",
+      "digest": "sha256:3f74b3ce9eb1f3798e6008818fad7d7efcf2507777c2aec9248e182be5495f32",
       "count": 1805
     }
   },
