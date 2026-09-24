@@ -1,6 +1,6 @@
 {
   "name": "@openplanr/design",
-  "version": "0.2.6",
+  "version": "0.2.7",
   "private": true,
   "type": "module",
   "description": "Canonical OpenPlanr design helpers and design-loop engine",
@@ -46,7 +46,7 @@
     "node": ">=20"
   },
   "dependencies": {
-    "@openplanr/artifact": "0.5.0",
+    "@openplanr/artifact": "0.5.1",
     "@openplanr/protocol": "0.6.0"
   },
   "scripts": {

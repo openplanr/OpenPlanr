@@ -1,5 +1,7 @@
 # Changelog
 
+## 2.2639.1
+
 ## 2.2639.0
 
 Releases are now numbered by release week. The middle number is the year and ISO week the release was prepared in (2026, week 39), and further releases in the same week raise the last number. The version still increases with every release, so existing `^2` ranges accept it.
