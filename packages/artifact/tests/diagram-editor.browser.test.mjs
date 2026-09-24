@@ -479,6 +479,60 @@ test('outline and shapes tabs always reference persistent labelled tabpanels', o
   await assertRelationships();
 });
 
+test('the outline shows nesting with guide lines, collapses containers and supports tree keys', options, async t => {
+  const { page } = await fixture(t, { bundle: makeBundle('process') });
+  const row = name => page.getByRole('treeitem', { name, exact: true });
+  const focused = name => row(name).evaluate(element => element === document.activeElement);
+  const rows = () => page.getByRole('treeitem').evaluateAll(items => items.map(item => ({
+    name: item.getAttribute('aria-label'), level: item.getAttribute('aria-level'), expanded: item.getAttribute('aria-expanded'), tabindex: item.getAttribute('tabindex'),
+    guides: [...item.querySelectorAll('.de-guide')].map(guide => guide.className.replace('de-guide', '').trim() || 'blank'), icon: !!item.querySelector('.de-outline-kind svg'),
+  })));
+  const initial = await rows();
+  assert.deepEqual(initial.slice(0, 4).map(({ name, level, expanded, guides }) => ({ name, level, expanded, guides })), [
+    { name: 'Operations', level: '1', expanded: 'true', guides: [] },
+    { name: 'Checkout service', level: '2', expanded: 'true', guides: ['de-guide-tee'] },
+    { name: 'Café ☕', level: '3', expanded: null, guides: ['de-guide-line', 'de-guide-elbow'] },
+    { name: 'Done', level: '2', expanded: null, guides: ['de-guide-elbow'] },
+  ]);
+  assert.ok(initial.every(item => item.icon), 'Every row shows a kind icon');
+  assert.deepEqual(initial.filter(item => item.tabindex === '0').map(item => item.name), ['Operations'], 'One row is in the tab order');
+  assert.ok(await page.locator('.de-shapes-pane .de-shape-kind svg').count() > 0, 'Shape buttons use drawn icons');
+
+  await row('Café ☕').click();
+  const marker = await row('Café ☕').evaluate(element => getComputedStyle(element, '::before').content);
+  assert.ok(['none', 'normal', ''].includes(marker), `Selection uses a fill, not a left bar; found ${marker}`);
+
+  await row('Operations').focus();
+  await page.keyboard.press('ArrowDown');
+  assert.equal(await focused('Checkout service'), true);
+  await page.keyboard.press('ArrowLeft');
+  assert.equal(await row('Checkout service').getAttribute('aria-expanded'), 'false');
+  assert.equal(await row('Café ☕').count(), 0, 'Collapsed members leave the outline');
+  assert.equal(await focused('Checkout service'), true, 'Focus stays on the collapsed row');
+  await page.keyboard.press('ArrowRight');
+  assert.equal(await row('Checkout service').getAttribute('aria-expanded'), 'true');
+  await page.keyboard.press('ArrowRight');
+  assert.equal(await focused('Café ☕'), true, 'Right on an open container moves to its first member');
+  await page.keyboard.press('ArrowLeft');
+  assert.equal(await focused('Checkout service'), true, 'Left on a member moves to its container');
+  await page.keyboard.press('End');
+  assert.equal(await page.getByRole('treeitem').last().evaluate(element => element === document.activeElement), true);
+  await page.keyboard.press('Home');
+  assert.equal(await focused('Operations'), true);
+
+  await row('Complete').click();
+  const selection = await page.getByRole('treeitem', { selected: true }).allTextContents();
+  await row('Operations').locator('[data-action="toggle-group"]').click();
+  assert.equal(await row('Operations').getAttribute('aria-expanded'), 'false');
+  assert.equal(await row('Done').count(), 0);
+  assert.deepEqual(await page.getByRole('treeitem', { selected: true }).allTextContents(), selection, 'The disclosure control does not change the selection');
+  await row('Operations').locator('[data-action="toggle-group"]').click();
+
+  await page.getByLabel('Find in diagram', { exact: true }).fill('café');
+  const visible = await page.locator('.de-outline-item:not([hidden]) > [role="treeitem"]').evaluateAll(items => items.map(item => item.getAttribute('aria-label')));
+  assert.deepEqual(visible, ['Operations', 'Checkout service', 'Café ☕'], 'A match keeps its containers visible');
+});
+
 test('command menu is anchored, keyboard navigable, and restores focus', options, async t => {
   const { page } = await fixture(t, { bundle: makeBundle('process') });
   const trigger = page.getByRole('button', { name: 'More', exact: true });

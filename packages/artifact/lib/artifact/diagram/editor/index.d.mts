@@ -18,6 +18,26 @@ export interface DiagramEditorSaveAcknowledgement {
   receipt: Pick<DiagramStoreReceipt, 'transactionId' | 'result'>;
   replayed?: boolean;
 }
+export interface DiagramEditorSaveBatch {
+  /** Identical when the same pending prefix is resent after an unconfirmed save. */
+  batchId: string;
+  initialization: { bundle: DiagramAuthoringBundle; transactionId: string } | null;
+  /** The last acknowledged bundle, or null while the diagram is being initialized. */
+  base: DiagramAuthoringBundle | null;
+  transactions: DiagramEditTransaction[];
+  /** The complete bundle expected after this batch. */
+  result: DiagramAuthoringBundle;
+}
+export interface DiagramEditorBatchAcknowledgement {
+  ok: true; status: 'saved'; bundle: DiagramAuthoringBundle;
+  receipt: { batchId: string; result: DiagramStoreBasis };
+  replayed?: boolean;
+}
+/** Hosted transport that acknowledges each save as one request. */
+export interface DiagramEditorBatchTransport {
+  read: DiagramEditorTransport['read'];
+  saveBatch(batch: DiagramEditorSaveBatch): Promise<DiagramEditorBatchAcknowledgement | DiagramEditorTransportFailure>;
+}
 export interface DiagramEditorView {
   camera: { x: number; y: number; scale: number; fit: 'all' | 'width' | null };
   selection: string[]; collapsedGroups: string[]; trace: string[]; snap: boolean;
@@ -75,13 +95,15 @@ export interface DiagramEditorOptions {
   bundle: DiagramAuthoringBundle;
   /** Set only after reading this bundle from the authoritative owner. Defaults to false. */
   acknowledged?: boolean;
-  transport?: DiagramEditorTransport | null;
+  transport?: DiagramEditorTransport | DiagramEditorBatchTransport | null;
   recovery?: DiagramEditorRecovery | null;
   nextTransactionId?: () => string;
   capabilities?: { read: boolean; write: boolean };
+  /** Keep this identity's recovery copy when access is lost; the host clears it on sign-out. Defaults to false. */
+  retainRecoveryOnAccessLoss?: boolean;
 }
 export declare function createDiagramEditorSession(options: DiagramEditorOptions): DiagramEditorSession;
-export declare function openDiagramEditorSession(options: Omit<DiagramEditorOptions, 'bundle' | 'acknowledged' | 'transport'> & { transport: DiagramEditorTransport; create?: DiagramAuthoringBundle }): Promise<DiagramEditorSession>;
+export declare function openDiagramEditorSession(options: Omit<DiagramEditorOptions, 'bundle' | 'acknowledged' | 'transport'> & { transport: DiagramEditorTransport | DiagramEditorBatchTransport; create?: DiagramAuthoringBundle }): Promise<DiagramEditorSession>;
 export declare function createDiagramEditorDraft(options: { diagramId: string; title: string; grammar?: 'flowchart' | 'process' | 'swimlane' | 'architecture'; template?: DiagramAuthoringBundle | null }): { ok: true; bundle: DiagramAuthoringBundle } | DiagramEditorFailure;
 export interface DiagramSelectionClipboard { kind: 'openplanr-diagram-selection'; version: 1; sourceBundle: DiagramAuthoringBundle; ids: string[] }
 export declare function copyDiagramSelection(bundle: DiagramAuthoringBundle, ids: string[]): { ok: true; value: DiagramSelectionClipboard } | DiagramEditorFailure;

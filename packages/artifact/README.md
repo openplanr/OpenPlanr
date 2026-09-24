@@ -27,7 +27,7 @@ source-text fidelity separately before a new unsaved diagram can adopt the copy.
 Exports keep the complete editable bundle, Mermaid copy and SVG snapshot distinct;
 uploads never grant repository link, watch or write authority.
 Direct company-shell mounts of `mountDiagramSourcePanel()` must also load
-`@openplanr/artifact/diagram-editor.css`. The controller applies an isolated
+`planr-pipeline/diagram-editor.css`, the published copy of this stylesheet. The controller applies an isolated
 `planr-diagram-source-panel` scope outside the full editor, so the shared controls
 and responsive light/dark theme do not change host-page typography or layout.
 

@@ -124,6 +124,37 @@ const ICONS = Object.freeze({
 	plus: [["path", { d: "M12 5v14M5 12h14" }]],
 	"arrow-up": [["path", { d: "M12 20V4M6 10l6-6 6 6" }]],
 	"arrow-down": [["path", { d: "M12 4v16M6 14l6 6 6-6" }]],
+	mark: [
+		["path", { d: "M18 5a9 9 0 1 0 3 7" }],
+		["circle", { cx: 20, cy: 5, r: 1.6 }],
+	],
+	chevron: [["path", { d: "m9 18 6-6-6-6" }]],
+	share: [["path", { d: "M4 12v7h16v-7M16 6l-4-4-4 4M12 2v13" }]],
+	history: [["path", { d: "M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5M12 7v5l3 2" }]],
+	"kind-container": [
+		[
+			"rect",
+			{ x: 3, y: 4, width: 18, height: 16, rx: 2, "stroke-dasharray": "3 2" },
+		],
+	],
+	"kind-lane": [
+		["rect", { x: 3, y: 5, width: 18, height: 14, rx: 2 }],
+		["path", { d: "M3 10h18" }],
+	],
+	"kind-lane-vertical": [
+		["rect", { x: 3, y: 5, width: 18, height: 14, rx: 2 }],
+		["path", { d: "M9 5v14" }],
+	],
+	"kind-terminal": [["rect", { x: 3, y: 8, width: 18, height: 8, rx: 4 }]],
+	"kind-process": [["rect", { x: 3, y: 7, width: 18, height: 10, rx: 2 }]],
+	"kind-decision": [["path", { d: "M12 3 21 12 12 21 3 12z" }]],
+	"kind-store": [["path", { d: "M7 7h14l-4 10H3z" }]],
+	"kind-component": [
+		["rect", { x: 6, y: 4, width: 14, height: 16, rx: 2 }],
+		["path", { d: "M3 8h6M3 16h6" }],
+	],
+	"kind-connector": [["path", { d: "M5 19 19 5M12 5h7v7" }]],
+	"kind-annotation": [["path", { d: "M5 6h14M12 6v12" }]],
 });
 
 export function element(document, tag, attributes = {}, text) {
@@ -144,6 +175,9 @@ export function button(document, text, action, options = {}) {
 		text,
 	);
 }
+
+/** Whether the editor icon set includes this name. */
+export const hasIcon = (name) => Object.hasOwn(ICONS, name);
 
 /** Render a dependency-free icon from static SVG primitives. */
 export function icon(
