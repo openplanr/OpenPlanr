@@ -668,7 +668,9 @@ try {
     if (!exported.ok || !(await verifyAuthoredDiagramExports(reopened.bundle, options)).ok) throw new Error('Packed authored export failed: ' + JSON.stringify(exported));
     if (fs.readFileSync(path.join(exported.directory, 'diagram.png')).byteLength < 32) throw new Error('Packed PNG was not rasterized');
     const editorApi = await import('planr-pipeline/diagram-editor');
+    if (typeof editorApi.mountDiagramSourcePanel !== 'function') throw new Error('Packed source-panel export is missing');
     const editor = await editorApi.openDiagramEditorSession({ transport: restarted });
+    if (typeof editor.adoptInitialCopy !== 'function') throw new Error('Packed initial-copy adoption is missing');
     const edited = editor.submit({ type: 'rename', id: 'step-one', label: 'Edited from installed package' });
     if (!edited.ok || !(await editor.save()).ok || editor.getState().saveState !== 'saved') throw new Error('Packed editor save failed');
     const editorRead = await editorApi.openDiagramEditorSession({ transport: restarted });
@@ -761,8 +763,9 @@ function runExportProof({
 } from 'planr-pipeline/diagram-authoring';
 import { createDiagramAuthoringStore, previewLegacyDiagramMigration } from 'planr-pipeline/diagram-authoring-store';
 import { exportAuthoredDiagram, verifyAuthoredDiagramExports } from 'planr-pipeline/diagram-authoring-export';
-import { createDiagramEditorSession, openDiagramEditorSession, createDiagramEditorDraft, createDiagramEditorRecovery, copyDiagramSelection, pasteDiagramSelection, createDiagramLocalOwnerTransport } from 'planr-pipeline/diagram-editor';
+import { createDiagramEditorSession, openDiagramEditorSession, createDiagramEditorDraft, createDiagramEditorRecovery, copyDiagramSelection, pasteDiagramSelection, createDiagramLocalOwnerTransport, mountDiagramSourcePanel, type DiagramSourcePanelController, type DiagramSourcePanelOptions } from 'planr-pipeline/diagram-editor';
 declare const bundle: DiagramAuthoringBundle;
+declare const root: HTMLElement;
 const move: DiagramCommand = { type: 'move', ids: ['step-one'], dx: 20, dy: 0 };
 const result = compileDiagramCommand(bundle, move, { transactionId: 'consumer-move' });
 if (result.ok && result.transaction) {
@@ -797,7 +800,14 @@ editor.setView({ camera: { x: 0, y: 0, scale: 1, fit: null }, selection: ['step-
 const hits = editor.query({ x: 40, y: 50 });
 if (hits.ok) hits.hits.map(hit => hit.id);
 const draft = createDiagramEditorDraft({ diagramId: 'new-diagram', title: 'Draft' });
-if (draft.ok) editor.refresh(draft.bundle);
+if (draft.ok) {
+  const initialEditor = createDiagramEditorSession({ bundle: draft.bundle });
+  initialEditor.adoptInitialCopy(draft.bundle);
+  const sourcePanelOptions: DiagramSourcePanelOptions = { root, session: initialEditor, initialTab: 'import' };
+  const sourcePanel: DiagramSourcePanelController = mountDiagramSourcePanel(sourcePanelOptions);
+  sourcePanel.selectTab('export');
+  editor.refresh(draft.bundle);
+}
 const clipboard = copyDiagramSelection(bundle, ['step-one']);
 if (clipboard.ok) pasteDiagramSelection(bundle, clipboard.value, { idMap: { 'step-one': 'step-two' }, transactionId: 'paste-copy' });
 createDiagramEditorRecovery({ scope: { sessionId: 'verified-owner', diagramId: bundle.diagramId } });
@@ -816,7 +826,7 @@ compileDiagramCommand(bundle, { type: 'move', ids: ['step-one'], dx: '20', dy: 0
 `);
   const typeConfig = path.join(project, 'diagram-authoring-tsconfig.json');
   writeJson(typeConfig, {
-    compilerOptions: { noEmit: true, strict: true, target: 'ES2022', lib: ['ES2022'], module: 'NodeNext', moduleResolution: 'NodeNext', types: [] },
+    compilerOptions: { noEmit: true, strict: true, target: 'ES2022', lib: ['ES2022', 'DOM'], module: 'NodeNext', moduleResolution: 'NodeNext', types: [] },
     files: [typesPath],
   });
   successfulCommand(nodeExecutable, [fileURLToPath(import.meta.resolve('typescript/bin/tsc')), '--project', typeConfig], {

@@ -49,6 +49,8 @@ export interface DiagramEditorSession {
   getState(): DiagramEditorState;
   submit(command: DiagramCommand, options?: { transactionId?: string }): DiagramCommandResult;
   submitTransaction(transaction: DiagramEditTransaction): DiagramCommandResult;
+  /** Adopt a certified complete copy only while this is a new, empty, unsaved diagram. */
+  adoptInitialCopy(bundle: DiagramAuthoringBundle): { ok: true; bundle: DiagramAuthoringBundle } | DiagramEditorFailure;
   beginGesture(options?: { transactionId?: string }): { ok: true } | DiagramEditorFailure;
   /** Delta commands are always relative to the gesture's original content. */
   previewGesture(command: DiagramCommand): DiagramCommandResult;
@@ -122,3 +124,5 @@ export declare function bindDiagramEditorCancellation(session: Pick<DiagramEdito
 }): () => void;
 
 export { mountDiagramEditor } from '../../ui/diagram-editor.mjs';
+export { mountDiagramSourcePanel } from '../../ui/diagram-source-panel.mjs';
+export type { DiagramSourcePanelController, DiagramSourcePanelOptions } from '../../ui/diagram-source-panel.mjs';
