@@ -42,7 +42,7 @@ export declare function mountDiagramEditor(options: {
     /** Show the Review tab. Defaults to true. */
     review?: boolean;
     /** Replace the local wording where the host changes what is true. */
-    labels?: { subtitle?: string; emptyHint?: string; reviewUnavailable?: string };
+    labels?: { subtitle?: string; emptyHint?: string; reviewUnavailable?: string; readOnly?: string };
     /** Show the OpenPlanr mark before the title. Defaults to true. */
     brand?: boolean;
     /** Follow the host's theme instead of the operating system. */

@@ -13,7 +13,7 @@ const editorStyles = readFileSync(new URL('../lib/artifact/ui/diagram-editor.css
 const options = { skip: !enabled, timeout: 90_000 };
 
 // A company-style host: one batch request per save, host wording, a Share action and a Revisions panel.
-async function hostedFixture(t, { colorScheme = 'light' } = {}) {
+async function hostedFixture(t, { colorScheme = 'light', capabilities } = {}) {
   const entry = join(import.meta.dirname, '..', 'lib', 'artifact', 'diagram', 'editor', 'index.mjs');
   const compiled = await build({
     stdin: {
@@ -29,12 +29,12 @@ async function hostedFixture(t, { colorScheme = 'light' } = {}) {
             return { ok: true, status: 'saved', bundle: batch.result, receipt: { batchId: batch.batchId, result: basis(batch.result) } };
           },
         };
-        const session = createDiagramEditorSession({ bundle: window.__bundle, acknowledged: true, transport, retainRecoveryOnAccessLoss: true });
+        const session = createDiagramEditorSession({ bundle: window.__bundle, acknowledged: true, transport, retainRecoveryOnAccessLoss: true, capabilities: window.__capabilities ?? undefined });
         window.__session = session;
         window.__mountEditor = mountDiagramEditor;
         window.__mount = mountDiagramEditor({ root: document.querySelector('#host-editor'), session, host: {
           brand: false, review: false, colorScheme: 'dark',
-          labels: { subtitle: 'Checkout platform · Company diagram', emptyHint: 'Nothing is shared until you save and share a revision.', reviewUnavailable: 'Review is not available for this diagram yet.' },
+          labels: { subtitle: 'Checkout platform · Company diagram', emptyHint: 'Nothing is shared until you save and share a revision.', reviewUnavailable: 'Review is not available for this diagram yet.', readOnly: 'Revision 8 · Read only' },
           actions: [{ id: 'share', label: 'Share', icon: 'share', disabled: state => state.saveState !== 'saved', onSelect: () => { window.__events.shared += 1; } }],
           panels: [{ id: 'revisions', label: 'Revisions', mount: ({ root }) => {
             window.__events.mounts += 1;
@@ -61,7 +61,7 @@ async function hostedFixture(t, { colorScheme = 'light' } = {}) {
   await page.route('https://company.example/diagram', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html><html lang="en"><title>Company diagram</title><body style="margin:0"><div id="host-editor" style="height:100vh"></div></body></html>' }));
   await page.goto('https://company.example/diagram');
   await page.addStyleTag({ content: editorStyles });
-  await page.evaluate(bundle => { window.__bundle = bundle; }, makeBundle());
+  await page.evaluate(([bundle, granted]) => { window.__bundle = bundle; window.__capabilities = granted; }, [makeBundle(), capabilities ?? null]);
   await page.addScriptTag({ content: compiled.outputFiles[0].text });
   await page.locator('[data-editor-svg]').waitFor();
   return page;
@@ -131,6 +131,21 @@ test('access lost during a hosted save shows Access changed instead of a stuck S
   await page.locator('.de-save-state[data-state="access-changed"]').waitFor();
   assert.equal(await saveState(page).textContent(), 'Access changed');
   assert.match(await page.locator('.de-stage-footer').textContent(), /Access changed/u);
+});
+
+test('a session without write access shows a read-only view named by the host', options, async t => {
+  const page = await hostedFixture(t, { capabilities: { read: true, write: false } });
+  assert.equal(await saveState(page).textContent(), 'Revision 8 · Read only');
+  for (const name of ['Undo', 'Redo', 'Layout', 'Save diagram']) {
+    assert.equal(await page.getByRole('button', { name, exact: true }).isVisible(), false, `${name} is not offered`);
+  }
+  assert.deepEqual(await page.getByRole('tab').allTextContents(), ['Outline', 'Properties', 'Revisions'], 'Shapes is not offered');
+  const node = page.getByRole('treeitem', { name: 'Café ☕', exact: true });
+  await node.click();
+  assert.equal(await node.getAttribute('aria-selected'), 'true', 'Objects can still be inspected');
+  await page.getByRole('button', { name: 'More', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Mermaid copies', exact: true }).click();
+  assert.equal(await page.getByRole('tab', { name: 'Export a copy', exact: true }).getAttribute('aria-selected'), 'true', 'Mermaid copies opens on export');
 });
 
 test('invalid host configuration fails with a specific error', options, async t => {
