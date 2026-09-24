@@ -7,7 +7,7 @@ import { copyDiagramSelection } from '../diagram/editor/clipboard.mjs';
 import { mountDiagramConflicts } from './diagram-conflicts.mjs';
 import { mountDiagramSourcePanel } from './diagram-source-panel.mjs';
 import { addOrthogonalDetour, arrangementCommand, connector, createObject, duplicateSelection, freshId, labelOf, laneArrangementCommand, moveOrthogonalBend, placement, processTemplate, transaction } from './diagram-editor-actions.mjs';
-import { button, downloadJson, element, field, iconButton } from './diagram-editor-dom.mjs';
+import { button, downloadJson, element, field, hasIcon, icon, iconButton } from './diagram-editor-dom.mjs';
 import { renderDiagramProperties } from './diagram-editor-properties.mjs';
 
 const SVG = 'http://www.w3.org/2000/svg';
@@ -25,10 +25,50 @@ const boundsOf = bundle => {
 const safeAction = (fn, report) => { try { return fn(); } catch (error) { report(error instanceof Error ? error.message : 'The edit is invalid.'); return null; } };
 const intersect = (a, b) => a && b && a.x <= b.x + b.width && a.x + a.width >= b.x && a.y <= b.y + b.height && a.y + a.height >= b.y;
 const focusable = element => element?.closest('input,textarea,select,button,[contenteditable="true"],[role="dialog"]');
+const DEFAULT_LABELS = Object.freeze({
+  subtitle: 'Local diagram studio',
+  emptyHint: 'Add a shape or start with a small process flow. Everything stays local until you save.',
+  reviewUnavailable: 'Review comments are available after this diagram is published to a review workspace. Local editing does not publish it.',
+});
+const HOST_ID = /^[a-z][a-z0-9-]{0,39}$/u;
+const KIND_ICONS = Object.freeze({ process: 'kind-process', start: 'kind-terminal', end: 'kind-terminal', decision: 'kind-decision', 'data-store': 'kind-store', component: 'kind-component', container: 'kind-container', 'horizontal-lane': 'kind-lane', 'vertical-lane': 'kind-lane-vertical', annotation: 'kind-annotation' });
+const outlineIcon = entry => entry.collection === 'relations' ? 'kind-connector' : entry.collection === 'lanes' ? 'kind-lane' : entry.collection === 'groups' ? 'kind-container' : entry.collection === 'annotations' ? 'kind-annotation' : KIND_ICONS[entry.value.kind] ?? 'kind-process';
+const RESERVED_PANELS = new Set(['properties', 'review']);
+function hostLabels(labels = {}) {
+  if (!labels || typeof labels !== 'object' || Array.isArray(labels)) throw new TypeError('Host labels must be an object.');
+  for (const [key, value] of Object.entries(labels)) {
+    if (!Object.hasOwn(DEFAULT_LABELS, key)) throw new TypeError(`Unknown host label: ${key}.`);
+    if (typeof value !== 'string' || !value.trim()) throw new TypeError(`Host label ${key} must be non-empty text.`);
+  }
+  return { ...DEFAULT_LABELS, ...labels };
+}
+function hostEntries(list, kind, callback) {
+  if (list === undefined) return [];
+  if (!Array.isArray(list)) throw new TypeError(`Host ${kind}s must be an array.`);
+  const seen = new Set();
+  return list.map(entry => {
+    const id = entry?.id;
+    if (!HOST_ID.test(id ?? '') || seen.has(id) || (kind === 'panel' && RESERVED_PANELS.has(id))) throw new TypeError(`Each host ${kind} needs a unique lowercase id; received ${JSON.stringify(id)}.`);
+    if (typeof entry.label !== 'string' || !entry.label.trim() || typeof entry[callback] !== 'function') throw new TypeError(`Host ${kind} ${id} needs a label and ${callback}().`);
+    if (entry.icon !== undefined && !hasIcon(entry.icon)) throw new TypeError(`Host ${kind} ${id} uses an unknown icon: ${entry.icon}.`);
+    for (const hook of ['disabled', 'hidden']) if (entry[hook] !== undefined && typeof entry[hook] !== 'function') throw new TypeError(`Host ${kind} ${id} ${hook} must be a function.`);
+    seen.add(id);
+    return { ...entry };
+  });
+}
+function colorSchemeOf(value) {
+  if (value === undefined || value === null) return null;
+  if (value !== 'light' && value !== 'dark') throw new TypeError(`Color scheme must be light, dark or null; received ${JSON.stringify(value)}.`);
+  return value;
+}
 
 /** Browser-safe, framework-neutral UI. The supplied session remains owned by its host. */
 export function mountDiagramEditor({ root, session, host = {} }) {
   if (!root || !session || typeof session.getState !== 'function') throw new TypeError('Mount needs one root and one editor session.');
+  if (host.review !== undefined && typeof host.review !== 'boolean') throw new TypeError('Host review must be true or false.');
+  const labels = hostLabels(host.labels), hostActions = hostEntries(host.actions, 'action', 'onSelect'), hostPanels = hostEntries(host.panels, 'panel', 'mount');
+  const reviewEnabled = host.review !== false;
+  let hostScheme = colorSchemeOf(host.colorScheme);
   const doc = root.ownerDocument, win = doc.defaultView;
   const colorScheme = win.matchMedia?.('(prefers-color-scheme: dark)');
   let disposed = false, raf = 0, drag = null, tempPan = false, tool = 'select', tab = 'outline', rightTab = 'properties';
@@ -36,7 +76,7 @@ export function mountDiagramEditor({ root, session, host = {} }) {
   let elementNodes = new Map(), renderSignatures = new Map(), renderedDigest = '', lastCanvas = null, lastBreakpoint = null, mode = 'edit', lastAnnouncement = '', announcementFrame = 0, dialogOpener = null, actionTrigger = null;
   let overflowOpen = false, overflowOpener = null, drawerOpener = null, propertyController = null, propertiesDirty = false, propertiesStamp = '', propertiesSelection = '', propertyRefreshQueued = false, reviewMounted = false, modalBackgroundInert = false;
   const shell = element(doc, 'div', { className: 'planr-diagram-editor' });
-  shell.innerHTML = '<header class="de-bar" role="toolbar" aria-label="Diagram commands"><div class="de-bar-start"><div class="de-command-group" role="group" aria-label="Document navigation"></div><div class="de-brand"><span class="de-mark" aria-hidden="true">◈</span><div class="de-identity"><strong class="de-title"></strong><small>Local diagram studio</small></div></div></div><div class="de-bar-center"><div class="de-command-group" role="group" aria-label="History and arrangement"></div></div><div class="de-bar-end"><span class="de-save-state" role="status" aria-live="polite"></span><div class="de-command-group" role="group" aria-label="Save and inspect"></div><div class="de-more-wrap"></div></div></header><div class="de-work"><button class="de-drawer-backdrop" type="button" data-action="close-drawers" aria-label="Close open panel" tabindex="-1" hidden></button><aside class="de-left" id="diagram-outline-panel" aria-label="Diagram outline and shapes"><div class="de-panel-header"><strong class="de-panel-title">Objects</strong><div class="de-rail-tabs de-panel-tabs" role="tablist" aria-label="Left panel"></div><button type="button" data-action="close-outline" class="de-panel-close" aria-label="Close outline">×</button></div><div class="de-left-content"><div class="de-outline-pane de-tabpanel" id="diagram-outline-pane" role="tabpanel" aria-labelledby="diagram-outline-tab"></div><div class="de-shapes-pane de-tabpanel" id="diagram-shapes-pane" role="tabpanel" aria-labelledby="diagram-shapes-tab" hidden></div></div></aside><section class="de-stage"><p id="diagram-canvas-instructions" class="de-canvas-instructions">Use Select to choose and move objects, Pan to move around the canvas, and the arrow keys to move a selected object.</p><div class="de-canvas" aria-label="Diagram canvas" aria-describedby="diagram-canvas-instructions" role="application" tabindex="0"><svg data-editor-svg aria-label="Diagram drawing" role="img"><g data-world></g><g data-overlays></g></svg><div class="de-empty"></div><div class="de-canvas-tools" role="toolbar" aria-label="Canvas tools"></div><div class="de-mobile-message">Review on mobile. Open on desktop to edit.</div></div><div class="de-stage-footer"></div></section><aside class="de-right" id="diagram-inspector-panel" aria-label="Diagram properties and review"><div class="de-panel-header"><strong class="de-panel-title">Inspector</strong><div class="de-right-tabs de-panel-tabs" role="tablist" aria-label="Right panel"></div><button type="button" data-action="close-properties" class="de-panel-close" aria-label="Close properties">×</button></div><div class="de-right-content"><div class="de-properties-pane de-tabpanel" id="diagram-properties-pane" role="tabpanel" aria-labelledby="diagram-properties-tab"></div><div class="de-review-pane de-tabpanel" id="diagram-review-pane" role="tabpanel" aria-labelledby="diagram-review-tab" hidden></div></div></aside></div><div class="de-alert" role="alert" hidden></div><div class="de-announcer" aria-live="polite" aria-atomic="true"></div><div class="de-dialog-layer"></div>';
+  shell.innerHTML = '<header class="de-bar" role="toolbar" aria-label="Diagram commands"><div class="de-bar-start"><div class="de-command-group" role="group" aria-label="Document navigation"></div><div class="de-brand"><span class="de-mark" aria-hidden="true"></span><div class="de-identity"><strong class="de-title"></strong><small class="de-subtitle"></small></div></div></div><div class="de-bar-center"><div class="de-command-group" role="group" aria-label="History and arrangement"></div></div><div class="de-bar-end"><span class="de-save-state" role="status" aria-live="polite"></span><div class="de-command-group" role="group" aria-label="Save and inspect"></div><div class="de-more-wrap"></div></div></header><div class="de-work"><button class="de-drawer-backdrop" type="button" data-action="close-drawers" aria-label="Close open panel" tabindex="-1" hidden></button><aside class="de-left" id="diagram-outline-panel" aria-label="Diagram outline and shapes"><div class="de-panel-header"><strong class="de-panel-title">Objects</strong><div class="de-rail-tabs de-panel-tabs" role="tablist" aria-label="Left panel"></div><button type="button" data-action="close-outline" class="de-panel-close" aria-label="Close outline">×</button></div><div class="de-left-content"><div class="de-outline-pane de-tabpanel" id="diagram-outline-pane" role="tabpanel" aria-labelledby="diagram-outline-tab"></div><div class="de-shapes-pane de-tabpanel" id="diagram-shapes-pane" role="tabpanel" aria-labelledby="diagram-shapes-tab" hidden></div></div></aside><section class="de-stage"><p id="diagram-canvas-instructions" class="de-canvas-instructions">Use Select to choose and move objects, Pan to move around the canvas, and the arrow keys to move a selected object.</p><div class="de-canvas" aria-label="Diagram canvas" aria-describedby="diagram-canvas-instructions" role="application" tabindex="0"><svg data-editor-svg aria-label="Diagram drawing" role="img"><g data-world></g><g data-overlays></g></svg><div class="de-empty"></div><div class="de-canvas-tools" role="toolbar" aria-label="Canvas tools"></div><div class="de-mobile-message">Review on mobile. Open on desktop to edit.</div></div><div class="de-stage-footer"></div></section><aside class="de-right" id="diagram-inspector-panel" aria-label="Diagram properties and review"><div class="de-panel-header"><strong class="de-panel-title">Inspector</strong><div class="de-right-tabs de-panel-tabs" role="tablist" aria-label="Right panel"></div><button type="button" data-action="close-properties" class="de-panel-close" aria-label="Close properties">×</button></div><div class="de-right-content"><div class="de-properties-pane de-tabpanel" id="diagram-properties-pane" role="tabpanel" aria-labelledby="diagram-properties-tab"></div><div class="de-review-pane de-tabpanel" id="diagram-review-pane" role="tabpanel" aria-labelledby="diagram-review-tab" hidden></div></div></aside></div><div class="de-alert" role="alert" hidden></div><div class="de-announcer" aria-live="polite" aria-atomic="true"></div><div class="de-dialog-layer"></div>';
   root.replaceChildren(shell);
   const $ = selector => shell.querySelector(selector);
   const bar = $('.de-bar'), barStart = $('.de-bar-start .de-command-group'), barCenter = $('.de-bar-center .de-command-group'), barEnd = $('.de-bar-end .de-command-group');
@@ -45,6 +85,16 @@ export function mountDiagramEditor({ root, session, host = {} }) {
   const rightTabs = $('.de-right-tabs'), propertiesPane = $('.de-properties-pane'), reviewPane = $('.de-review-pane'), stage = $('.de-canvas'), svg = $('[data-editor-svg]');
   const world = $('[data-world]'), overlays = $('[data-overlays]'), empty = $('.de-empty'), footer = $('.de-stage-footer');
   const alert = $('.de-alert'), announcer = $('.de-announcer'), dialogLayer = $('.de-dialog-layer'), drawerBackdrop = $('.de-drawer-backdrop');
+  $('.de-subtitle').textContent = labels.subtitle;
+  if (host.brand === false) $('.de-mark').remove(); else $('.de-mark').append(icon(doc, 'mark', { size: 18 }));
+  const applyColorScheme = () => { if (hostScheme) shell.dataset.colorScheme = hostScheme; else delete shell.dataset.colorScheme; };
+  applyColorScheme();
+  const hostPanes = new Map(hostPanels.map(panel => {
+    const pane = element(doc, 'div', { className: 'de-host-pane de-tabpanel', id: 'diagram-' + panel.id + '-pane', role: 'tabpanel', 'aria-labelledby': 'diagram-' + panel.id + '-tab', hidden: true });
+    $('.de-right-content').append(pane);
+    return [panel.id, pane];
+  }));
+  const hostPanelCleanups = new Map();
   const commandButton = (container, label, visible, action, { title = label, icon, className = '' } = {}) => {
     const node = iconButton(doc, label, action, { title, icon, iconOnly: !visible, labelClassName: 'de-button-label', className: ['de-icon-button', className].filter(Boolean).join(' ') });
     if (visible) node.querySelector('.de-button-label').textContent = visible;
@@ -55,6 +105,10 @@ export function mountDiagramEditor({ root, session, host = {} }) {
   commandButton(barCenter, 'Redo', '', 'redo', { title: 'Redo · Ctrl or Command Shift Z', icon: 'redo' });
   commandButton(barCenter, 'Layout', 'Arrange', 'layout', { icon: 'arrange' });
   commandButton(barEnd, 'Save diagram', 'Save', 'save', { title: 'Save diagram · Ctrl or Command S', icon: 'save', className: 'de-primary' });
+  for (const entry of hostActions) {
+    const control = commandButton(barEnd, entry.label, entry.label, 'host-action', { icon: entry.icon, className: entry.primary ? 'de-host-action de-primary' : 'de-host-action' });
+    control.dataset.hostAction = entry.id;
+  }
   commandButton(barEnd, 'Properties', 'Inspector', 'properties', { title: 'Show or hide properties', icon: 'properties' });
   const moreWrap = $('.de-more-wrap');
   const moreButton = commandButton(moreWrap, 'More', '', 'more', { icon: 'more' });
@@ -86,7 +140,8 @@ export function mountDiagramEditor({ root, session, host = {} }) {
   const editable = state => mode === 'edit' && win.innerWidth > 700 && state.capabilities.read && state.capabilities.write && state.saveState !== 'access-changed' && !!getDiagramAuthoringCapability(state.bundle?.document.grammar.id);
   const current = () => session.getState();
   const displayed = state => state.gesture?.bundle ?? state.bundle;
-  const editorTheme = bundle => colorScheme?.matches
+  const prefersDark = () => hostScheme ? hostScheme === 'dark' : !!colorScheme?.matches;
+  const editorTheme = bundle => prefersDark()
     ? (bundle.presentation.theme.themeId === 'slate' ? 'slate' : 'midnight')
     : 'paper';
   const controllerIsDirty = () => {
@@ -238,16 +293,39 @@ export function mountDiagramEditor({ root, session, host = {} }) {
     syncPanelState({ focusTarget });
     drawerOpener = null;
   }
+  function rightPanes() {
+    return new Map([['properties', propertiesPane], ...(reviewEnabled ? [['review', reviewPane]] : []), ...hostPanes]);
+  }
   function setRightTab(next, { focus = false } = {}) {
+    const panes = rightPanes(), shown = [...rightTabs.querySelectorAll('[role="tab"]')].map(node => node.dataset.tab);
+    if (!panes.has(next) || (shown.length && !shown.includes(next))) next = 'properties';
     rightTab = next;
-    const propertiesSelected = next === 'properties';
-    propertiesPane.hidden = !propertiesSelected; reviewPane.hidden = propertiesSelected;
+    for (const [id, pane] of panes) pane.hidden = id !== next;
+    if (!reviewEnabled) reviewPane.hidden = true;
     for (const tabNode of rightTabs.querySelectorAll('[role="tab"]')) {
-      const selected = tabNode.dataset.action === (propertiesSelected ? 'properties-tab' : 'review-tab');
+      const selected = tabNode.dataset.tab === next;
       tabNode.setAttribute('aria-selected', String(selected)); tabNode.tabIndex = selected ? 0 : -1;
       if (selected && focus) tabNode.focus({ preventScroll: true });
     }
-    if (!propertiesSelected && !reviewMounted) mountReview();
+    if (next === 'review' && !reviewMounted) mountReview();
+    if (hostPanes.has(next) && !hostPanelCleanups.has(next)) mountHostPanel(next);
+  }
+  function toggleGroup(id) {
+    const collapsed=new Set(current().view.collapsedGroups);
+    if(collapsed.has(id))collapsed.delete(id);else collapsed.add(id);
+    const result=session.setView({collapsedGroups:[...collapsed]});
+    if(!result.ok){report(errText(result));return;}
+    focusOutlineRow(outlinePane.querySelector('[role="treeitem"][data-id="'+id+'"]'));
+  }
+  function focusOutlineRow(row) {
+    if(!row)return;
+    for(const item of outlinePane.querySelectorAll('[role="treeitem"]'))item.tabIndex=-1;
+    row.tabIndex=0;row.focus();
+  }
+  function mountHostPanel(id) {
+    const panel = hostPanels.find(item => item.id === id);
+    const cleanup = panel.mount({ root: hostPanes.get(id), session, select: ids => select(ids), close: () => setRail('right', false) });
+    hostPanelCleanups.set(id, typeof cleanup === 'function' ? cleanup : null);
   }
   function setLeftTab(next, { focus = false } = {}) {
     tab = next;
@@ -349,8 +427,13 @@ export function mountDiagramEditor({ root, session, host = {} }) {
       layout: !editable(state), properties: !state.capabilities.read, outline: !state.capabilities.read })) {
       const control = bar.querySelector('[data-action="' + action + '"]'); if (control) control.disabled = disabled;
     }
+    for (const entry of hostActions) {
+      const control = bar.querySelector('[data-host-action="' + entry.id + '"]');
+      control.hidden = !!entry.hidden?.(state); control.disabled = !!entry.disabled?.(state);
+    }
     const stamp = [bundle?.bundleDigest, state.view.selection.join('|'), state.view.collapsedGroups.join('|'), state.pendingCount,
-      state.saveState, state.recovery.mode, tab, rightTab, mode, leftOpen, rightOpen, win.innerWidth <= 700].join(':');
+      state.saveState, state.recovery.mode, tab, rightTab, mode, leftOpen, rightOpen, win.innerWidth <= 700,
+      hostPanels.map(panel => panel.hidden?.(state) ? 0 : 1).join('')].join(':');
     if (stamp === controlsStamp) return;
     controlsStamp = stamp;
     renderLeft(state);
@@ -360,7 +443,7 @@ export function mountDiagramEditor({ root, session, host = {} }) {
     const hasContent = bundle && bundle.presentation.elements.length > 0;
     empty.hidden = hasContent || !editable(state);
     if (!empty.hidden) {
-      empty.replaceChildren(element(doc,'h2',{},'Create your diagram'),element(doc,'p',{},'Add a shape or start with a small process flow. Everything stays local until you save.'));
+      empty.replaceChildren(element(doc,'h2',{},'Create your diagram'),element(doc,'p',{},labels.emptyHint));
       empty.append(button(doc,'Start blank','blank',{className:'de-primary'}),button(doc,'Use process template','template'));
       const guide = element(doc,'ol'); for (const step of ['Add shapes and connectors','Edit labels and layout','Save the diagram']) guide.append(element(doc,'li',{},step)); empty.append(guide);
     }
@@ -385,7 +468,8 @@ export function mountDiagramEditor({ root, session, host = {} }) {
         if(capability&&!capability.primitives.includes(primitive))continue;
         if(capability&&primitive==='node'&&!capability.nodeKinds.includes(kind))continue;
         const shape=button(doc,'','create',{ 'data-kind':kind,className:'de-shape-button','aria-label':'Create ' + ACTION_LABELS[kind],disabled:!editable(state) });
-        shape.append(element(doc,'span',{className:'de-shape-kind','aria-hidden':'true'},kind==='decision'?'◇':kind==='start'||kind==='end'?'○':kind.includes('lane')?'▥':kind==='annotation'?'T':kind==='data-store'?'◫':'□'),element(doc,'span',{},ACTION_LABELS[kind].replace(/^./,letter=>letter.toUpperCase())));
+        const shapeKind=element(doc,'span',{className:'de-shape-kind','aria-hidden':'true'});shapeKind.append(icon(doc,KIND_ICONS[kind],{size:16}));
+        shape.append(shapeKind,element(doc,'span',{},ACTION_LABELS[kind].replace(/^./,letter=>letter.toUpperCase())));
         grid.append(shape);
       }
       if (grid.childElementCount) shapesPane.append(section);
@@ -394,21 +478,32 @@ export function mountDiagramEditor({ root, session, host = {} }) {
     const list = element(doc,'div',{className:'de-outline-list',role:'tree','aria-label':'Diagram objects'});
     outlinePane.append(list);
     const indexed = elementIndex(state.bundle.document), parents = new Set([...state.bundle.document.groups,...state.bundle.document.lanes].flatMap(value=>value.members));
-    const expanded = new Set(state.view.collapsedGroups);
-    function itemFor(id,depth=0) {
+    const collapsedGroups = new Set(state.view.collapsedGroups);
+    // Each row draws its own guide segments: a continuing rule per open ancestor branch, then a tee or an elbow.
+    function itemFor(id,depth=0,trail=[],last=true,parentId=null) {
       const entry=indexed.get(id);if(!entry)return;
-      const wrapper=element(doc,'div',{className:'de-outline-item','data-search-text':labelOf(entry.value).toLowerCase()});
+      const members=(entry.value.members??[]).filter(member=>indexed.has(member)), collapsed=members.length>0&&collapsedGroups.has(id);
+      const wrapper=element(doc,'div',{className:'de-outline-item','data-id':id,'data-parent-id':parentId,'data-search-text':labelOf(entry.value).toLowerCase()});
       const kind=entry.collection==='relations'?'Connector':entry.collection==='lanes'?'Lane':entry.collection==='groups'?'Group':entry.collection==='annotations'?'Note':entry.value.kind??'Shape';
-      const choose=button(doc,'','select-id',{role:'treeitem','data-id':id,'aria-label':labelOf(entry.value),'aria-level':String(depth+1),'aria-selected':String(state.view.selection.includes(id)),style:'padding-inline-start:'+String(12+depth*14)+'px'});
-      choose.append(element(doc,'span',{className:'de-outline-kind','aria-hidden':'true'},entry.collection==='relations'?'→':entry.collection==='lanes'?'▥':entry.collection==='groups'?'▣':entry.collection==='annotations'?'T':'◇'),element(doc,'span',{className:'de-outline-label'},labelOf(entry.value)),element(doc,'span',{className:'de-outline-meta','aria-hidden':'true'},kind));
+      const choose=button(doc,'','select-id',{role:'treeitem','data-id':id,'aria-label':labelOf(entry.value),'aria-level':String(depth+1),'aria-selected':String(state.view.selection.includes(id)),'aria-expanded':members.length?String(!collapsed):null,tabindex:'-1'});
+      const guides=element(doc,'span',{className:'de-outline-guides','aria-hidden':'true'});
+      for(const ancestorLast of trail.slice(1))guides.append(element(doc,'span',{className:ancestorLast?'de-guide':'de-guide de-guide-line'}));
+      if(depth>0)guides.append(element(doc,'span',{className:'de-guide '+(last?'de-guide-elbow':'de-guide-tee')}));
+      const twisty=element(doc,'span',{className:members.length?'de-outline-twisty':'de-outline-twisty de-outline-leaf','aria-hidden':'true','data-action':members.length?'toggle-group':null,'data-id':members.length?id:null});
+      if(members.length)twisty.append(icon(doc,'chevron',{size:12}));
+      const kindIcon=element(doc,'span',{className:'de-outline-kind','aria-hidden':'true'});kindIcon.append(icon(doc,outlineIcon(entry),{size:14}));
+      choose.append(guides,twisty,kindIcon,element(doc,'span',{className:'de-outline-label'},labelOf(entry.value)),element(doc,'span',{className:'de-outline-meta','aria-hidden':'true'},kind));
       wrapper.append(choose);list.append(wrapper);
-      if (entry.value.members?.length && !expanded.has(id)) for(const child of entry.value.members)itemFor(child,depth+1);
+      if(!collapsed)members.forEach((child,index)=>itemFor(child,depth+1,[...trail,last],index===members.length-1,id));
     }
     for (const id of state.bundle.document.accessibility.readingOrder) if (indexed.has(id)&&!parents.has(id)) itemFor(id);
     for (const [id] of indexed) if (!parents.has(id) && !list.querySelector('[data-id="' + id + '"]')) itemFor(id);
+    const rows=[...list.querySelectorAll('[role="treeitem"]')];
+    (rows.find(row=>row.getAttribute('aria-selected')==='true')??rows[0])?.setAttribute('tabindex','0');
     search.input.addEventListener('input',()=>{
-      const query=search.input.value.toLowerCase().trim();
-      for(const row of list.querySelectorAll('.de-outline-item')) row.hidden=!!query&&!row.dataset.searchText.includes(query);
+      const query=search.input.value.toLowerCase().trim(), items=[...list.querySelectorAll('.de-outline-item')], keep=new Set();
+      if(query)for(const item of items)if(item.dataset.searchText.includes(query))for(let node=item;node;node=node.dataset.parentId?list.querySelector('.de-outline-item[data-id="'+node.dataset.parentId+'"]'):null)keep.add(node);
+      for(const item of items)item.hidden=!!query&&!keep.has(item);
     });
     if (!indexed.size) outlinePane.append(element(doc,'p',{className:'de-muted'},'No objects yet. Use Shapes to create one.'));
   }
@@ -419,13 +514,14 @@ export function mountDiagramEditor({ root, session, host = {} }) {
     if (typeof host.mountReview === 'function') {
       const slot=element(doc,'div',{className:'de-review-slot'});reviewPane.append(slot);
       reviewCleanup=host.mountReview({root:slot,session,select}) ?? null;
-    } else reviewPane.append(element(doc,'p',{className:'de-muted'},'Review comments are available after this diagram is published to a review workspace. Local editing does not publish it.'));
+    } else reviewPane.append(element(doc,'p',{className:'de-muted'},labels.reviewUnavailable));
   }
   function renderRight(state) {
     rightTabs.replaceChildren();
-    for(const [name,action,panel] of [['Properties','properties-tab','diagram-properties-pane'],['Review','review-tab','diagram-review-pane']]) {
-      const selected=rightTab===name.toLowerCase();
-      rightTabs.append(button(doc,name,action,{id:'diagram-' + name.toLowerCase() + '-tab',role:'tab','aria-controls':panel,'aria-selected':String(selected),tabindex:selected?'0':'-1'}));
+    const tabs=[['Properties','properties','properties-tab'],...hostPanels.filter(panel=>!panel.hidden?.(state)).map(panel=>[panel.label,panel.id,'host-panel-tab']),...(reviewEnabled?[['Review','review','review-tab']]:[])];
+    for(const [name,id,action] of tabs) {
+      const selected=rightTab===id;
+      rightTabs.append(button(doc,name,action,{id:'diagram-' + id + '-tab',role:'tab','aria-controls':'diagram-' + id + '-pane','aria-selected':String(selected),tabindex:selected?'0':'-1','data-tab':id}));
     }
     setRightTab(rightTab);
     const selectionKey=state.view.selection.join('|'), nextStamp=[state.bundle?.bundleDigest ?? 'none',selectionKey,editable(state)].join('::');
@@ -448,6 +544,7 @@ export function mountDiagramEditor({ root, session, host = {} }) {
   }
   function renderFooter(state) {
     footer.replaceChildren();
+    if (!state.bundle) { footer.append(element(doc,'span',{},'Access changed. Reopen this diagram to continue.')); return; }
     if (state.saveState === 'conflict') footer.append(element(doc,'span',{},'A newer saved revision exists. Your draft remains in this tab.'),button(doc,'Compare revisions','conflict',{className:'de-primary'}));
     else if (state.saveState === 'offline') footer.append(element(doc,'span',{},'Save was not confirmed. Edits remain pending.'),button(doc,'Retry save','save'));
     else if (state.recovery.warning) footer.append(element(doc,'span',{},state.recovery.warning));
@@ -567,7 +664,13 @@ export function mountDiagramEditor({ root, session, host = {} }) {
   }
   function act(action,value,options={}) {
     const state=current(),bundle=state.bundle,ids=state.view.selection;
+    if(action==='host-action'){
+      const entry=hostActions.find(item=>item.id===actionTrigger?.dataset.hostAction);
+      if(entry&&!actionTrigger.disabled)entry.onSelect({session,state,trigger:actionTrigger});
+      return;
+    }
     if(!bundle && action!=='cancel-dialog')return;
+    if(action==='toggle-group'){if(actionTrigger?.dataset.id)toggleGroup(actionTrigger.dataset.id);return;}
     if(action==='save')return void save();
     if(action==='undo'){if(!guardPropertyDraft())return;const result=session.undo();if(!result.ok)report(errText(result));return;}
     if(action==='redo'){if(!guardPropertyDraft())return;const result=session.redo();if(!result.ok)report(errText(result));return;}
@@ -575,7 +678,7 @@ export function mountDiagramEditor({ root, session, host = {} }) {
     if(action==='properties'||action==='close-properties'){setRail('right',action==='properties'?!rightOpen:false,{focusPanel:action==='properties'&&!rightOpen});return;}
     if(action==='close-drawers'){closeDrawers();return;}
     if(action==='outline-tab'||action==='shapes-tab'){setLeftTab(action==='outline-tab'?'outline':'shapes');controlsStamp='';renderChrome(state);return;}
-    if(action==='properties-tab'||action==='review-tab'){setRightTab(action==='properties-tab'?'properties':'review');return;}
+    if(action==='properties-tab'||action==='review-tab'||action==='host-panel-tab'){setRightTab(actionTrigger?.dataset.tab??(action==='review-tab'?'review':'properties'));return;}
     if(action==='select-tool'||action==='pan-tool'){tool=action==='select-tool'?'select':'pan';controlsStamp='';renderChrome(state);notice(tool==='select'?'Select mode':'Pan mode');return;}
     if(action==='snap'){session.setView({snap:!state.view.snap});notice(state.view.snap?'Snap off':'Snap on');return;}
     if(action==='fit'){fit();return;}
@@ -817,11 +920,23 @@ export function mountDiagramEditor({ root, session, host = {} }) {
       event.preventDefault();
       const target=tabs[next],action=target.dataset.action;
       if(list===leftTabs){setLeftTab(action==='outline-tab'?'outline':'shapes');controlsStamp='';renderChrome(current());target.isConnected ? target.focus() : leftTabs.querySelector('[aria-selected="true"]')?.focus();}
-      else if(list===rightTabs)setRightTab(action==='properties-tab'?'properties':'review',{focus:true});
+      else if(list===rightTabs)setRightTab(target.dataset.tab,{focus:true});
       return;
     }
     if(event.key==='Escape'&&win.innerWidth<=1100&&(leftOpen||rightOpen)){event.preventDefault();closeDrawers();return;}
     if(event.key==='Escape'&&drag){event.preventDefault();finishPointer(null,true);return;}
+    if(event.target.matches?.('[role="treeitem"][data-action="select-id"]')&&['ArrowDown','ArrowUp','Home','End','ArrowRight','ArrowLeft'].includes(event.key)&&!event.altKey&&!event.metaKey&&!event.ctrlKey&&!event.shiftKey){
+      event.preventDefault();
+      const rows=[...outlinePane.querySelectorAll('[role="treeitem"]')].filter(row=>!row.closest('[hidden]')),row=event.target,index=rows.indexOf(row),expanded=row.getAttribute('aria-expanded');
+      if(event.key==='ArrowDown')focusOutlineRow(rows[index+1]);
+      else if(event.key==='ArrowUp')focusOutlineRow(rows[index-1]);
+      else if(event.key==='Home')focusOutlineRow(rows[0]);
+      else if(event.key==='End')focusOutlineRow(rows.at(-1));
+      else if(event.key==='ArrowRight'){if(expanded==='false')toggleGroup(row.dataset.id);else if(expanded==='true')focusOutlineRow(rows[index+1]);}
+      else if(expanded==='true')toggleGroup(row.dataset.id);
+      else{const parentId=row.closest('.de-outline-item')?.dataset.parentId;focusOutlineRow(parentId?outlinePane.querySelector('[role="treeitem"][data-id="'+parentId+'"]'):null);}
+      return;
+    }
     if(event.target.matches?.('[data-action="select-id"]')&&(event.shiftKey||event.metaKey||event.ctrlKey)&&(event.key==='Enter'||event.key===' ')){
       event.preventDefault();
       act('select-id',event.target.dataset.id,{additive:true,fromOutline:true});
@@ -915,7 +1030,7 @@ export function mountDiagramEditor({ root, session, host = {} }) {
   const onLostCapture=event=>{if(drag)finishPointer(event,true);};
   const onKeyUp=event=>{if(event.key===' ')tempPan=false;};
   const onBlur=()=>{tempPan=false;if(drag)finishPointer(null,true);};
-  const onColorScheme = () => draw({ type: 'refresh', affectedIds: [] });
+  const onColorScheme = () => { if (!hostScheme) draw({ type: 'refresh', affectedIds: [] }); };
   shell.addEventListener('click',onClick);
   stage.addEventListener('pointerdown',pointerDown);stage.addEventListener('pointermove',pointerMove);
   stage.addEventListener('pointerup',onPointerUp);
@@ -933,7 +1048,7 @@ export function mountDiagramEditor({ root, session, host = {} }) {
   return {
     dispose(){
       if(disposed)return;disposed=true;unsubscribe();resize?.disconnect();win.cancelAnimationFrame(raf);win.cancelAnimationFrame(resizeFrame);win.cancelAnimationFrame(announcementFrame);
-      reviewCleanup?.();conflictMount?.dispose();sourceMount?.dispose();
+      reviewCleanup?.();for(const cleanup of hostPanelCleanups.values())cleanup?.();conflictMount?.dispose();sourceMount?.dispose();
       shell.removeEventListener('click',onClick);stage.removeEventListener('pointerdown',pointerDown);
       stage.removeEventListener('pointermove',pointerMove);stage.removeEventListener('pointerup',onPointerUp);
       stage.removeEventListener('pointercancel',onPointerCancel);stage.removeEventListener('lostpointercapture',onLostCapture);
@@ -944,6 +1059,13 @@ export function mountDiagramEditor({ root, session, host = {} }) {
     },
     refresh(bundle){return session.refresh(bundle);},
     openSourcePanel,
+    setColorScheme(next){hostScheme=colorSchemeOf(next);applyColorScheme();draw({type:'refresh',affectedIds:[]});},
+    openPanel(id){
+      if(disposed||!rightPanes().has(id))return false;
+      setRail('right',true);controlsStamp='';renderChrome(current());setRightTab(id,{focus:true});
+      return rightTab===id;
+    },
+    refreshHost(){if(disposed)return;controlsStamp='';renderChrome(current());},
     getState(){return session.getState();}
   };
 }

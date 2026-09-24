@@ -34,6 +34,24 @@ from `planr-pipeline/diagram-editor.css`. The returned controller exposes
 `openSourcePanel({tab})` so a host can open the same Mermaid copy workflow without
 reimplementing conversion or fidelity decisions.
 
+A hosted shell adapts the same editor through `host` instead of forking it:
+
+- `labels` replaces the `subtitle`, `emptyHint` and `reviewUnavailable` wording
+  where the host changes what is true, such as where a diagram is shared.
+- `brand: false` removes the OpenPlanr mark for a host that shows its own.
+- `review: false` removes the Review tab when the host has no reviewer adapter.
+- `colorScheme` (`'light'`, `'dark'` or `null`) follows the host's theme toggle
+  instead of the operating system; `setColorScheme()` changes it later.
+- `actions` add command-bar buttons after Save. Each has a lowercase `id`, a
+  `label`, an optional editor icon, and `disabled(state)`/`hidden(state)` hooks.
+- `panels` add right-panel tabs. `mount({root, session, select, close})` runs the
+  first time a panel opens; the cleanup it returns runs on dispose. `properties`
+  and `review` are reserved ids.
+
+Invalid host options throw a `TypeError` that names the option. The controller's
+`openPanel(id)` opens a tab and `refreshHost()` re-runs the action and panel hooks
+after host data changes.
+
 `mountDiagramSourcePanel({root, session, ...callbacks})` is the smaller host-neutral
 boundary for a company shell that already owns its surrounding dialog. It accepts
 only `getState()` and `adoptInitialCopy()` from the editor session. Pasted and
@@ -41,8 +59,7 @@ uploaded Mermaid are unlinked snapshots: M1 provides no repository path, watch o
 write authority. A copy may initialize only a new, empty, unsaved diagram, and a
 partial conversion requires acknowledgement tied to that exact preview. Bundle,
 Mermaid and SVG downloads remain separate because they preserve different data.
-Load the public `@openplanr/artifact/diagram-editor.css` stylesheet with this direct
-mount. The controller adds the scoped `planr-diagram-source-panel` class when the
+Load `planr-pipeline/diagram-editor.css` with this direct mount. The controller adds the scoped `planr-diagram-source-panel` class when the
 root is outside the full editor, giving company shells the same responsive light,
 dark, forced-color and reduced-motion treatment without styling the surrounding
 page. The class is removed when the controller is disposed.
@@ -84,6 +101,21 @@ retain their IDs and canonical bytes after uncertain outcomes. A late response
 cannot clear later edits. Retrying an already committed transaction returns its
 original receipt. A historical receipt cannot replace a newer revision already
 observed by the session.
+
+A hosted transport may implement `saveBatch(batch)` in place of `initialize` and
+`commit`. Each Save then sends one request with the pending transactions, the
+expected base (or the initialization for a new diagram) and the resulting bundle.
+`batchId` is stable for the same transactions, so the owner can treat a repeated
+batch as already applied. After an uncertain outcome the session resends that exact
+batch, including after a reload through recovery, before any newer edits. A
+definitive 4xx rejection other than 408 or 429 ends the batch, so the next Save
+rebatches every pending edit. A 409 or stale base reports a conflict, and 401 or 403
+reports `access-changed`.
+
+When access is lost, recovery is cleared by default. A host whose owner read
+returns a scope bound to the signed-in identity can pass
+`retainRecoveryOnAccessLoss: true` so a user who signs back in to the same scope
+does not lose unsaved edits.
 
 Refresh with a new base while edits or a gesture are pending retains that draft and
 exposes a comparison. Undo/redo use expected-current-value compensation; they never

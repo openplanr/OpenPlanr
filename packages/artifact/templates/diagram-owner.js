@@ -5855,7 +5855,8 @@
     if (!result.ok) throw new TypeError(result.diagnostics[0].detail);
     return clone(value);
   };
-  function createDiagramEditorSession({ bundle, acknowledged = false, transport = null, recovery = null, nextTransactionId = defaultId, capabilities = { read: true, write: true } }) {
+  var batchIdFor = (initialization, transactions) => `batch-${transactions.length}-${transactions.at(-1)?.transactionId ?? initialization}`;
+  function createDiagramEditorSession({ bundle, acknowledged = false, transport = null, recovery = null, nextTransactionId = defaultId, capabilities = { read: true, write: true }, retainRecoveryOnAccessLoss = false }) {
     let current = validBundle(bundle);
     let base = clone(current);
     let saved = acknowledged ? clone(current) : null;
@@ -5872,6 +5873,7 @@
     let disposed = false;
     let epoch = 0;
     let saving = null;
+    let uncertain = null;
     const listeners = /* @__PURE__ */ new Set();
     const usedIds = new Set(initialization ? [initialization] : []);
     let view = { camera: { x: 0, y: 0, scale: 1, fit: "all" }, selection: [], collapsedGroups: [], trace: [], snap: true };
@@ -5892,7 +5894,7 @@
     function persist() {
       if (!recovery || disposed || !capability.read || recoveryWarning) return;
       if (!initialization && !pending.length) recovery.clear();
-      else recovery.save({ base, initialization, transactions: pending.map((item) => item.transaction) });
+      else recovery.save({ base, initialization, transactions: pending.map((item) => item.transaction), ...uncertain ? { uncertain: { ...uncertain } } : {} });
     }
     function guard() {
       if (disposed) return fail3("disposed", "This editor session is closed.");
@@ -6078,20 +6080,61 @@
     }
     async function failureState(result) {
       diagnostics = clone(result?.diagnostics ?? [{ path: "$save", rule: result?.status === "unknown" ? "save-unknown" : "save-failed", detail: "Save was not acknowledged. Pending work is retained for an exact retry." }]);
+      const status = result?.httpStatus;
+      if (Number.isInteger(status) && status >= 400 && status < 500 && status !== 408 && status !== 429) uncertain = null;
       if (result?.httpStatus === 401 || result?.httpStatus === 403) {
         capability = { read: false, write: false };
         saveState = "access-changed";
-        recovery?.clear();
+        if (!retainRecoveryOnAccessLoss) recovery?.clear();
         epoch++;
-      } else if (result?.httpStatus === 409 || result?.diagnostics?.some((item) => ["stale-base", "precondition"].includes(item.rule))) saveState = "conflict";
-      else saveState = "offline";
+        emit("save");
+      } else if (result?.httpStatus === 409 || result?.diagnostics?.some((item) => ["stale-base", "precondition"].includes(item.rule))) {
+        saveState = "conflict";
+        uncertain = null;
+      } else saveState = "offline";
       return { ok: false, status: saveState, diagnostics: clone(diagnostics) };
+    }
+    function acknowledgeBatch(result, expected, batchId) {
+      if (!result?.ok || result.status !== "saved" || !validateAuthoringBundle(result.bundle).ok || !same2(result.bundle, expected) || result.receipt?.batchId !== batchId || !same2(result.receipt.result, snapshot2(expected))) return false;
+      saved = clone(expected);
+      base = clone(expected);
+      if (comparison && idOf(comparison) === idOf(expected)) comparison = null;
+      return true;
+    }
+    async function performBatches(live, count) {
+      const sizes = uncertain && uncertain.count <= count ? [uncertain.count, count - uncertain.count] : [count];
+      for (const size2 of sizes) {
+        const items = pending.slice(0, size2);
+        if (!initialization && !items.length) continue;
+        const expected = clone(items.length ? items.at(-1).bundle : base);
+        const batch = {
+          batchId: batchIdFor(initialization, items.map((item) => item.transaction)),
+          initialization: initialization ? { bundle: clone(base), transactionId: initialization } : null,
+          base: initialization ? null : clone(base),
+          transactions: items.map((item) => clone(item.transaction)),
+          result: clone(expected)
+        };
+        uncertain = { count: items.length, batchId: batch.batchId };
+        persist();
+        const result = await transport.saveBatch(clone(batch));
+        if (!live()) return fail3("disposed", "The save completed after this session lost access or closed. Reopen to read its authoritative outcome.");
+        if (items.length && pending[0] !== items[0] || !acknowledgeBatch(result, expected, batch.batchId)) return await failureState(result);
+        uncertain = null;
+        initialization = null;
+        pending.splice(0, items.length);
+        persist();
+        emit("acknowledged", items.flatMap((item) => item.inverse.changes.semantic.map((change) => change.elementId)).filter(Boolean));
+      }
+      return null;
     }
     async function performSave(runEpoch, count) {
       const live = () => !disposed && epoch === runEpoch && capability.read && capability.write;
       if (!live()) return fail3("disposed", "This session is closed.");
       try {
-        if (initialization) {
+        if (typeof transport.saveBatch === "function") {
+          const failure3 = await performBatches(live, count);
+          if (failure3) return failure3;
+        } else if (initialization) {
           const requestId = initialization;
           const expected = clone(base);
           const result = await transport.initialize(clone(expected), { transactionId: requestId });
@@ -6101,7 +6144,7 @@
           persist();
           emit("acknowledged");
         }
-        for (let index2 = 0; index2 < count; index2++) {
+        if (typeof transport.saveBatch !== "function") for (let index2 = 0; index2 < count; index2++) {
           const item = pending[0];
           if (!item) break;
           const result = await transport.commit(clone(item.transaction));
@@ -6161,7 +6204,7 @@
       const record2 = recovery.load();
       if (!record2) return;
       try {
-        if (inspectPlainData(record2).length || Object.keys(record2).some((key) => !["base", "initialization", "transactions"].includes(key)) || !validateAuthoringBundle(record2.base).ok || record2.base.diagramId !== current.diagramId || !(record2.initialization === null || validId(record2.initialization)) || !Array.isArray(record2.transactions) || record2.transactions.length > MAX_PENDING) throw new Error("Invalid recovery.");
+        if (inspectPlainData(record2).length || Object.keys(record2).some((key) => !["base", "initialization", "transactions", "uncertain"].includes(key)) || !validateAuthoringBundle(record2.base).ok || record2.base.diagramId !== current.diagramId || !(record2.initialization === null || validId(record2.initialization)) || !Array.isArray(record2.transactions) || record2.transactions.length > MAX_PENDING || record2.uncertain !== void 0 && (!record2.uncertain || Object.keys(record2.uncertain).some((key) => !["count", "batchId"].includes(key)) || !Number.isInteger(record2.uncertain.count) || record2.uncertain.count < 0 || record2.uncertain.count > record2.transactions.length || record2.uncertain.batchId !== batchIdFor(record2.initialization, record2.transactions.slice(0, record2.uncertain.count)))) throw new Error("Invalid recovery.");
         let draft = clone(record2.base);
         const entries2 = [];
         const ids2 = new Set(record2.initialization ? [record2.initialization] : []);
@@ -6177,6 +6220,7 @@
         base = clone(record2.base);
         initialization = record2.initialization;
         pending = entries2;
+        uncertain = record2.uncertain ? { ...record2.uncertain } : null;
         undo = entries2.map((item) => clone(item.inverse)).slice(-MAX_HISTORY);
         usedIds.clear();
         ids2.forEach((id2) => usedIds.add(id2));
@@ -6242,7 +6286,7 @@
         if (!capability.read || !capability.write) {
           cancelGesture("access-changed");
           saveState = "access-changed";
-          if (!capability.read) recovery?.clear();
+          if (!capability.read && !retainRecoveryOnAccessLoss) recovery?.clear();
         } else saveState = comparison ? "conflict" : initialization || pending.length ? "unsaved" : "saved";
         emit("capabilities");
       },
@@ -6265,6 +6309,7 @@
         redo = [];
         comparison = null;
         diagnostics = [];
+        uncertain = null;
         saveState = "saved";
         pruneView();
         persist();
@@ -6629,7 +6674,38 @@
     ],
     plus: [["path", { d: "M12 5v14M5 12h14" }]],
     "arrow-up": [["path", { d: "M12 20V4M6 10l6-6 6 6" }]],
-    "arrow-down": [["path", { d: "M12 4v16M6 14l6 6 6-6" }]]
+    "arrow-down": [["path", { d: "M12 4v16M6 14l6 6 6-6" }]],
+    mark: [
+      ["path", { d: "M18 5a9 9 0 1 0 3 7" }],
+      ["circle", { cx: 20, cy: 5, r: 1.6 }]
+    ],
+    chevron: [["path", { d: "m9 18 6-6-6-6" }]],
+    share: [["path", { d: "M4 12v7h16v-7M16 6l-4-4-4 4M12 2v13" }]],
+    history: [["path", { d: "M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5M12 7v5l3 2" }]],
+    "kind-container": [
+      [
+        "rect",
+        { x: 3, y: 4, width: 18, height: 16, rx: 2, "stroke-dasharray": "3 2" }
+      ]
+    ],
+    "kind-lane": [
+      ["rect", { x: 3, y: 5, width: 18, height: 14, rx: 2 }],
+      ["path", { d: "M3 10h18" }]
+    ],
+    "kind-lane-vertical": [
+      ["rect", { x: 3, y: 5, width: 18, height: 14, rx: 2 }],
+      ["path", { d: "M9 5v14" }]
+    ],
+    "kind-terminal": [["rect", { x: 3, y: 8, width: 18, height: 8, rx: 4 }]],
+    "kind-process": [["rect", { x: 3, y: 7, width: 18, height: 10, rx: 2 }]],
+    "kind-decision": [["path", { d: "M12 3 21 12 12 21 3 12z" }]],
+    "kind-store": [["path", { d: "M7 7h14l-4 10H3z" }]],
+    "kind-component": [
+      ["rect", { x: 6, y: 4, width: 14, height: 16, rx: 2 }],
+      ["path", { d: "M3 8h6M3 16h6" }]
+    ],
+    "kind-connector": [["path", { d: "M5 19 19 5M12 5h7v7" }]],
+    "kind-annotation": [["path", { d: "M5 6h14M12 6v12" }]]
   });
   function element(document2, tag, attributes2 = {}, text2) {
     const node2 = document2.createElement(tag);
@@ -6649,6 +6725,7 @@
       text2
     );
   }
+  var hasIcon = (name) => Object.hasOwn(ICONS, name);
   function icon(document2, name, { size: size2 = 16, className = "de-icon", label } = {}) {
     const definition = ICONS[name];
     if (!definition) throw new Error(`Unknown editor icon: ${name}`);
@@ -8529,8 +8606,48 @@
   };
   var intersect = (a, b) => a && b && a.x <= b.x + b.width && a.x + a.width >= b.x && a.y <= b.y + b.height && a.y + a.height >= b.y;
   var focusable = (element2) => element2?.closest('input,textarea,select,button,[contenteditable="true"],[role="dialog"]');
+  var DEFAULT_LABELS = Object.freeze({
+    subtitle: "Local diagram studio",
+    emptyHint: "Add a shape or start with a small process flow. Everything stays local until you save.",
+    reviewUnavailable: "Review comments are available after this diagram is published to a review workspace. Local editing does not publish it."
+  });
+  var HOST_ID = /^[a-z][a-z0-9-]{0,39}$/u;
+  var KIND_ICONS = Object.freeze({ process: "kind-process", start: "kind-terminal", end: "kind-terminal", decision: "kind-decision", "data-store": "kind-store", component: "kind-component", container: "kind-container", "horizontal-lane": "kind-lane", "vertical-lane": "kind-lane-vertical", annotation: "kind-annotation" });
+  var outlineIcon = (entry2) => entry2.collection === "relations" ? "kind-connector" : entry2.collection === "lanes" ? "kind-lane" : entry2.collection === "groups" ? "kind-container" : entry2.collection === "annotations" ? "kind-annotation" : KIND_ICONS[entry2.value.kind] ?? "kind-process";
+  var RESERVED_PANELS = /* @__PURE__ */ new Set(["properties", "review"]);
+  function hostLabels(labels = {}) {
+    if (!labels || typeof labels !== "object" || Array.isArray(labels)) throw new TypeError("Host labels must be an object.");
+    for (const [key, value] of Object.entries(labels)) {
+      if (!Object.hasOwn(DEFAULT_LABELS, key)) throw new TypeError(`Unknown host label: ${key}.`);
+      if (typeof value !== "string" || !value.trim()) throw new TypeError(`Host label ${key} must be non-empty text.`);
+    }
+    return { ...DEFAULT_LABELS, ...labels };
+  }
+  function hostEntries(list, kind, callback) {
+    if (list === void 0) return [];
+    if (!Array.isArray(list)) throw new TypeError(`Host ${kind}s must be an array.`);
+    const seen = /* @__PURE__ */ new Set();
+    return list.map((entry2) => {
+      const id2 = entry2?.id;
+      if (!HOST_ID.test(id2 ?? "") || seen.has(id2) || kind === "panel" && RESERVED_PANELS.has(id2)) throw new TypeError(`Each host ${kind} needs a unique lowercase id; received ${JSON.stringify(id2)}.`);
+      if (typeof entry2.label !== "string" || !entry2.label.trim() || typeof entry2[callback] !== "function") throw new TypeError(`Host ${kind} ${id2} needs a label and ${callback}().`);
+      if (entry2.icon !== void 0 && !hasIcon(entry2.icon)) throw new TypeError(`Host ${kind} ${id2} uses an unknown icon: ${entry2.icon}.`);
+      for (const hook of ["disabled", "hidden"]) if (entry2[hook] !== void 0 && typeof entry2[hook] !== "function") throw new TypeError(`Host ${kind} ${id2} ${hook} must be a function.`);
+      seen.add(id2);
+      return { ...entry2 };
+    });
+  }
+  function colorSchemeOf(value) {
+    if (value === void 0 || value === null) return null;
+    if (value !== "light" && value !== "dark") throw new TypeError(`Color scheme must be light, dark or null; received ${JSON.stringify(value)}.`);
+    return value;
+  }
   function mountDiagramEditor({ root, session, host = {} }) {
     if (!root || !session || typeof session.getState !== "function") throw new TypeError("Mount needs one root and one editor session.");
+    if (host.review !== void 0 && typeof host.review !== "boolean") throw new TypeError("Host review must be true or false.");
+    const labels = hostLabels(host.labels), hostActions = hostEntries(host.actions, "action", "onSelect"), hostPanels = hostEntries(host.panels, "panel", "mount");
+    const reviewEnabled = host.review !== false;
+    let hostScheme = colorSchemeOf(host.colorScheme);
     const doc = root.ownerDocument, win = doc.defaultView;
     const colorScheme = win.matchMedia?.("(prefers-color-scheme: dark)");
     let disposed = false, raf = 0, drag = null, tempPan = false, tool = "select", tab = "outline", rightTab = "properties";
@@ -8538,7 +8655,7 @@
     let elementNodes = /* @__PURE__ */ new Map(), renderSignatures = /* @__PURE__ */ new Map(), renderedDigest = "", lastCanvas = null, lastBreakpoint = null, mode = "edit", lastAnnouncement = "", announcementFrame = 0, dialogOpener = null, actionTrigger = null;
     let overflowOpen = false, overflowOpener = null, drawerOpener = null, propertyController = null, propertiesDirty = false, propertiesStamp = "", propertiesSelection = "", propertyRefreshQueued = false, reviewMounted = false, modalBackgroundInert = false;
     const shell = element(doc, "div", { className: "planr-diagram-editor" });
-    shell.innerHTML = '<header class="de-bar" role="toolbar" aria-label="Diagram commands"><div class="de-bar-start"><div class="de-command-group" role="group" aria-label="Document navigation"></div><div class="de-brand"><span class="de-mark" aria-hidden="true">◈</span><div class="de-identity"><strong class="de-title"></strong><small>Local diagram studio</small></div></div></div><div class="de-bar-center"><div class="de-command-group" role="group" aria-label="History and arrangement"></div></div><div class="de-bar-end"><span class="de-save-state" role="status" aria-live="polite"></span><div class="de-command-group" role="group" aria-label="Save and inspect"></div><div class="de-more-wrap"></div></div></header><div class="de-work"><button class="de-drawer-backdrop" type="button" data-action="close-drawers" aria-label="Close open panel" tabindex="-1" hidden></button><aside class="de-left" id="diagram-outline-panel" aria-label="Diagram outline and shapes"><div class="de-panel-header"><strong class="de-panel-title">Objects</strong><div class="de-rail-tabs de-panel-tabs" role="tablist" aria-label="Left panel"></div><button type="button" data-action="close-outline" class="de-panel-close" aria-label="Close outline">×</button></div><div class="de-left-content"><div class="de-outline-pane de-tabpanel" id="diagram-outline-pane" role="tabpanel" aria-labelledby="diagram-outline-tab"></div><div class="de-shapes-pane de-tabpanel" id="diagram-shapes-pane" role="tabpanel" aria-labelledby="diagram-shapes-tab" hidden></div></div></aside><section class="de-stage"><p id="diagram-canvas-instructions" class="de-canvas-instructions">Use Select to choose and move objects, Pan to move around the canvas, and the arrow keys to move a selected object.</p><div class="de-canvas" aria-label="Diagram canvas" aria-describedby="diagram-canvas-instructions" role="application" tabindex="0"><svg data-editor-svg aria-label="Diagram drawing" role="img"><g data-world></g><g data-overlays></g></svg><div class="de-empty"></div><div class="de-canvas-tools" role="toolbar" aria-label="Canvas tools"></div><div class="de-mobile-message">Review on mobile. Open on desktop to edit.</div></div><div class="de-stage-footer"></div></section><aside class="de-right" id="diagram-inspector-panel" aria-label="Diagram properties and review"><div class="de-panel-header"><strong class="de-panel-title">Inspector</strong><div class="de-right-tabs de-panel-tabs" role="tablist" aria-label="Right panel"></div><button type="button" data-action="close-properties" class="de-panel-close" aria-label="Close properties">×</button></div><div class="de-right-content"><div class="de-properties-pane de-tabpanel" id="diagram-properties-pane" role="tabpanel" aria-labelledby="diagram-properties-tab"></div><div class="de-review-pane de-tabpanel" id="diagram-review-pane" role="tabpanel" aria-labelledby="diagram-review-tab" hidden></div></div></aside></div><div class="de-alert" role="alert" hidden></div><div class="de-announcer" aria-live="polite" aria-atomic="true"></div><div class="de-dialog-layer"></div>';
+    shell.innerHTML = '<header class="de-bar" role="toolbar" aria-label="Diagram commands"><div class="de-bar-start"><div class="de-command-group" role="group" aria-label="Document navigation"></div><div class="de-brand"><span class="de-mark" aria-hidden="true"></span><div class="de-identity"><strong class="de-title"></strong><small class="de-subtitle"></small></div></div></div><div class="de-bar-center"><div class="de-command-group" role="group" aria-label="History and arrangement"></div></div><div class="de-bar-end"><span class="de-save-state" role="status" aria-live="polite"></span><div class="de-command-group" role="group" aria-label="Save and inspect"></div><div class="de-more-wrap"></div></div></header><div class="de-work"><button class="de-drawer-backdrop" type="button" data-action="close-drawers" aria-label="Close open panel" tabindex="-1" hidden></button><aside class="de-left" id="diagram-outline-panel" aria-label="Diagram outline and shapes"><div class="de-panel-header"><strong class="de-panel-title">Objects</strong><div class="de-rail-tabs de-panel-tabs" role="tablist" aria-label="Left panel"></div><button type="button" data-action="close-outline" class="de-panel-close" aria-label="Close outline">×</button></div><div class="de-left-content"><div class="de-outline-pane de-tabpanel" id="diagram-outline-pane" role="tabpanel" aria-labelledby="diagram-outline-tab"></div><div class="de-shapes-pane de-tabpanel" id="diagram-shapes-pane" role="tabpanel" aria-labelledby="diagram-shapes-tab" hidden></div></div></aside><section class="de-stage"><p id="diagram-canvas-instructions" class="de-canvas-instructions">Use Select to choose and move objects, Pan to move around the canvas, and the arrow keys to move a selected object.</p><div class="de-canvas" aria-label="Diagram canvas" aria-describedby="diagram-canvas-instructions" role="application" tabindex="0"><svg data-editor-svg aria-label="Diagram drawing" role="img"><g data-world></g><g data-overlays></g></svg><div class="de-empty"></div><div class="de-canvas-tools" role="toolbar" aria-label="Canvas tools"></div><div class="de-mobile-message">Review on mobile. Open on desktop to edit.</div></div><div class="de-stage-footer"></div></section><aside class="de-right" id="diagram-inspector-panel" aria-label="Diagram properties and review"><div class="de-panel-header"><strong class="de-panel-title">Inspector</strong><div class="de-right-tabs de-panel-tabs" role="tablist" aria-label="Right panel"></div><button type="button" data-action="close-properties" class="de-panel-close" aria-label="Close properties">×</button></div><div class="de-right-content"><div class="de-properties-pane de-tabpanel" id="diagram-properties-pane" role="tabpanel" aria-labelledby="diagram-properties-tab"></div><div class="de-review-pane de-tabpanel" id="diagram-review-pane" role="tabpanel" aria-labelledby="diagram-review-tab" hidden></div></div></aside></div><div class="de-alert" role="alert" hidden></div><div class="de-announcer" aria-live="polite" aria-atomic="true"></div><div class="de-dialog-layer"></div>';
     root.replaceChildren(shell);
     const $ = (selector) => shell.querySelector(selector);
     const bar = $(".de-bar"), barStart = $(".de-bar-start .de-command-group"), barCenter = $(".de-bar-center .de-command-group"), barEnd = $(".de-bar-end .de-command-group");
@@ -8547,6 +8664,20 @@
     const rightTabs = $(".de-right-tabs"), propertiesPane = $(".de-properties-pane"), reviewPane = $(".de-review-pane"), stage = $(".de-canvas"), svg = $("[data-editor-svg]");
     const world = $("[data-world]"), overlays = $("[data-overlays]"), empty = $(".de-empty"), footer = $(".de-stage-footer");
     const alert = $(".de-alert"), announcer = $(".de-announcer"), dialogLayer = $(".de-dialog-layer"), drawerBackdrop = $(".de-drawer-backdrop");
+    $(".de-subtitle").textContent = labels.subtitle;
+    if (host.brand === false) $(".de-mark").remove();
+    else $(".de-mark").append(icon(doc, "mark", { size: 18 }));
+    const applyColorScheme = () => {
+      if (hostScheme) shell.dataset.colorScheme = hostScheme;
+      else delete shell.dataset.colorScheme;
+    };
+    applyColorScheme();
+    const hostPanes = new Map(hostPanels.map((panel) => {
+      const pane = element(doc, "div", { className: "de-host-pane de-tabpanel", id: "diagram-" + panel.id + "-pane", role: "tabpanel", "aria-labelledby": "diagram-" + panel.id + "-tab", hidden: true });
+      $(".de-right-content").append(pane);
+      return [panel.id, pane];
+    }));
+    const hostPanelCleanups = /* @__PURE__ */ new Map();
     const commandButton = (container2, label, visible, action, { title = label, icon: icon2, className = "" } = {}) => {
       const node2 = iconButton(doc, label, action, { title, icon: icon2, iconOnly: !visible, labelClassName: "de-button-label", className: ["de-icon-button", className].filter(Boolean).join(" ") });
       if (visible) node2.querySelector(".de-button-label").textContent = visible;
@@ -8558,6 +8689,10 @@
     commandButton(barCenter, "Redo", "", "redo", { title: "Redo · Ctrl or Command Shift Z", icon: "redo" });
     commandButton(barCenter, "Layout", "Arrange", "layout", { icon: "arrange" });
     commandButton(barEnd, "Save diagram", "Save", "save", { title: "Save diagram · Ctrl or Command S", icon: "save", className: "de-primary" });
+    for (const entry2 of hostActions) {
+      const control = commandButton(barEnd, entry2.label, entry2.label, "host-action", { icon: entry2.icon, className: entry2.primary ? "de-host-action de-primary" : "de-host-action" });
+      control.dataset.hostAction = entry2.id;
+    }
     commandButton(barEnd, "Properties", "Inspector", "properties", { title: "Show or hide properties", icon: "properties" });
     const moreWrap = $(".de-more-wrap");
     const moreButton = commandButton(moreWrap, "More", "", "more", { icon: "more" });
@@ -8603,7 +8738,8 @@
     const editable = (state) => mode === "edit" && win.innerWidth > 700 && state.capabilities.read && state.capabilities.write && state.saveState !== "access-changed" && !!getDiagramAuthoringCapability(state.bundle?.document.grammar.id);
     const current = () => session.getState();
     const displayed = (state) => state.gesture?.bundle ?? state.bundle;
-    const editorTheme = (bundle) => colorScheme?.matches ? bundle.presentation.theme.themeId === "slate" ? "slate" : "midnight" : "paper";
+    const prefersDark = () => hostScheme ? hostScheme === "dark" : !!colorScheme?.matches;
+    const editorTheme = (bundle) => prefersDark() ? bundle.presentation.theme.themeId === "slate" ? "slate" : "midnight" : "paper";
     const controllerIsDirty = () => {
       if (!propertyController) return propertiesDirty;
       const value = typeof propertyController.dirty === "function" ? propertyController.dirty() : propertyController.dirty;
@@ -8786,18 +8922,45 @@
       syncPanelState({ focusTarget });
       drawerOpener = null;
     }
+    function rightPanes() {
+      return new Map([["properties", propertiesPane], ...reviewEnabled ? [["review", reviewPane]] : [], ...hostPanes]);
+    }
     function setRightTab(next, { focus = false } = {}) {
+      const panes = rightPanes(), shown = [...rightTabs.querySelectorAll('[role="tab"]')].map((node2) => node2.dataset.tab);
+      if (!panes.has(next) || shown.length && !shown.includes(next)) next = "properties";
       rightTab = next;
-      const propertiesSelected = next === "properties";
-      propertiesPane.hidden = !propertiesSelected;
-      reviewPane.hidden = propertiesSelected;
+      for (const [id2, pane] of panes) pane.hidden = id2 !== next;
+      if (!reviewEnabled) reviewPane.hidden = true;
       for (const tabNode of rightTabs.querySelectorAll('[role="tab"]')) {
-        const selected2 = tabNode.dataset.action === (propertiesSelected ? "properties-tab" : "review-tab");
+        const selected2 = tabNode.dataset.tab === next;
         tabNode.setAttribute("aria-selected", String(selected2));
         tabNode.tabIndex = selected2 ? 0 : -1;
         if (selected2 && focus) tabNode.focus({ preventScroll: true });
       }
-      if (!propertiesSelected && !reviewMounted) mountReview();
+      if (next === "review" && !reviewMounted) mountReview();
+      if (hostPanes.has(next) && !hostPanelCleanups.has(next)) mountHostPanel(next);
+    }
+    function toggleGroup(id2) {
+      const collapsed = new Set(current().view.collapsedGroups);
+      if (collapsed.has(id2)) collapsed.delete(id2);
+      else collapsed.add(id2);
+      const result = session.setView({ collapsedGroups: [...collapsed] });
+      if (!result.ok) {
+        report(errText(result));
+        return;
+      }
+      focusOutlineRow(outlinePane.querySelector('[role="treeitem"][data-id="' + id2 + '"]'));
+    }
+    function focusOutlineRow(row) {
+      if (!row) return;
+      for (const item of outlinePane.querySelectorAll('[role="treeitem"]')) item.tabIndex = -1;
+      row.tabIndex = 0;
+      row.focus();
+    }
+    function mountHostPanel(id2) {
+      const panel = hostPanels.find((item) => item.id === id2);
+      const cleanup = panel.mount({ root: hostPanes.get(id2), session, select: (ids2) => select(ids2), close: () => setRail("right", false) });
+      hostPanelCleanups.set(id2, typeof cleanup === "function" ? cleanup : null);
     }
     function setLeftTab(next, { focus = false } = {}) {
       tab = next;
@@ -8951,6 +9114,11 @@
         const control = bar.querySelector('[data-action="' + action + '"]');
         if (control) control.disabled = disabled;
       }
+      for (const entry2 of hostActions) {
+        const control = bar.querySelector('[data-host-action="' + entry2.id + '"]');
+        control.hidden = !!entry2.hidden?.(state);
+        control.disabled = !!entry2.disabled?.(state);
+      }
       const stamp = [
         bundle?.bundleDigest,
         state.view.selection.join("|"),
@@ -8963,7 +9131,8 @@
         mode,
         leftOpen,
         rightOpen,
-        win.innerWidth <= 700
+        win.innerWidth <= 700,
+        hostPanels.map((panel) => panel.hidden?.(state) ? 0 : 1).join("")
       ].join(":");
       if (stamp === controlsStamp) return;
       controlsStamp = stamp;
@@ -8974,7 +9143,7 @@
       const hasContent = bundle && bundle.presentation.elements.length > 0;
       empty.hidden = hasContent || !editable(state);
       if (!empty.hidden) {
-        empty.replaceChildren(element(doc, "h2", {}, "Create your diagram"), element(doc, "p", {}, "Add a shape or start with a small process flow. Everything stays local until you save."));
+        empty.replaceChildren(element(doc, "h2", {}, "Create your diagram"), element(doc, "p", {}, labels.emptyHint));
         empty.append(button(doc, "Start blank", "blank", { className: "de-primary" }), button(doc, "Use process template", "template"));
         const guide = element(doc, "ol");
         for (const step of ["Add shapes and connectors", "Edit labels and layout", "Save the diagram"]) guide.append(element(doc, "li", {}, step));
@@ -9003,7 +9172,9 @@
           if (capability && !capability.primitives.includes(primitive)) continue;
           if (capability && primitive === "node" && !capability.nodeKinds.includes(kind)) continue;
           const shape2 = button(doc, "", "create", { "data-kind": kind, className: "de-shape-button", "aria-label": "Create " + ACTION_LABELS[kind], disabled: !editable(state) });
-          shape2.append(element(doc, "span", { className: "de-shape-kind", "aria-hidden": "true" }, kind === "decision" ? "◇" : kind === "start" || kind === "end" ? "○" : kind.includes("lane") ? "▥" : kind === "annotation" ? "T" : kind === "data-store" ? "◫" : "□"), element(doc, "span", {}, ACTION_LABELS[kind].replace(/^./, (letter) => letter.toUpperCase())));
+          const shapeKind = element(doc, "span", { className: "de-shape-kind", "aria-hidden": "true" });
+          shapeKind.append(icon(doc, KIND_ICONS[kind], { size: 16 }));
+          shape2.append(shapeKind, element(doc, "span", {}, ACTION_LABELS[kind].replace(/^./, (letter) => letter.toUpperCase())));
           grid.append(shape2);
         }
         if (grid.childElementCount) shapesPane.append(section);
@@ -9013,23 +9184,36 @@
       const list = element(doc, "div", { className: "de-outline-list", role: "tree", "aria-label": "Diagram objects" });
       outlinePane.append(list);
       const indexed = elementIndex(state.bundle.document), parents = new Set([...state.bundle.document.groups, ...state.bundle.document.lanes].flatMap((value) => value.members));
-      const expanded = new Set(state.view.collapsedGroups);
-      function itemFor(id2, depth = 0) {
+      const collapsedGroups = new Set(state.view.collapsedGroups);
+      function itemFor(id2, depth = 0, trail = [], last = true, parentId = null) {
         const entry2 = indexed.get(id2);
         if (!entry2) return;
-        const wrapper = element(doc, "div", { className: "de-outline-item", "data-search-text": labelOf(entry2.value).toLowerCase() });
+        const members = (entry2.value.members ?? []).filter((member) => indexed.has(member)), collapsed = members.length > 0 && collapsedGroups.has(id2);
+        const wrapper = element(doc, "div", { className: "de-outline-item", "data-id": id2, "data-parent-id": parentId, "data-search-text": labelOf(entry2.value).toLowerCase() });
         const kind = entry2.collection === "relations" ? "Connector" : entry2.collection === "lanes" ? "Lane" : entry2.collection === "groups" ? "Group" : entry2.collection === "annotations" ? "Note" : entry2.value.kind ?? "Shape";
-        const choose = button(doc, "", "select-id", { role: "treeitem", "data-id": id2, "aria-label": labelOf(entry2.value), "aria-level": String(depth + 1), "aria-selected": String(state.view.selection.includes(id2)), style: "padding-inline-start:" + String(12 + depth * 14) + "px" });
-        choose.append(element(doc, "span", { className: "de-outline-kind", "aria-hidden": "true" }, entry2.collection === "relations" ? "→" : entry2.collection === "lanes" ? "▥" : entry2.collection === "groups" ? "▣" : entry2.collection === "annotations" ? "T" : "◇"), element(doc, "span", { className: "de-outline-label" }, labelOf(entry2.value)), element(doc, "span", { className: "de-outline-meta", "aria-hidden": "true" }, kind));
+        const choose = button(doc, "", "select-id", { role: "treeitem", "data-id": id2, "aria-label": labelOf(entry2.value), "aria-level": String(depth + 1), "aria-selected": String(state.view.selection.includes(id2)), "aria-expanded": members.length ? String(!collapsed) : null, tabindex: "-1" });
+        const guides = element(doc, "span", { className: "de-outline-guides", "aria-hidden": "true" });
+        for (const ancestorLast of trail.slice(1)) guides.append(element(doc, "span", { className: ancestorLast ? "de-guide" : "de-guide de-guide-line" }));
+        if (depth > 0) guides.append(element(doc, "span", { className: "de-guide " + (last ? "de-guide-elbow" : "de-guide-tee") }));
+        const twisty = element(doc, "span", { className: members.length ? "de-outline-twisty" : "de-outline-twisty de-outline-leaf", "aria-hidden": "true", "data-action": members.length ? "toggle-group" : null, "data-id": members.length ? id2 : null });
+        if (members.length) twisty.append(icon(doc, "chevron", { size: 12 }));
+        const kindIcon = element(doc, "span", { className: "de-outline-kind", "aria-hidden": "true" });
+        kindIcon.append(icon(doc, outlineIcon(entry2), { size: 14 }));
+        choose.append(guides, twisty, kindIcon, element(doc, "span", { className: "de-outline-label" }, labelOf(entry2.value)), element(doc, "span", { className: "de-outline-meta", "aria-hidden": "true" }, kind));
         wrapper.append(choose);
         list.append(wrapper);
-        if (entry2.value.members?.length && !expanded.has(id2)) for (const child of entry2.value.members) itemFor(child, depth + 1);
+        if (!collapsed) members.forEach((child, index2) => itemFor(child, depth + 1, [...trail, last], index2 === members.length - 1, id2));
       }
       for (const id2 of state.bundle.document.accessibility.readingOrder) if (indexed.has(id2) && !parents.has(id2)) itemFor(id2);
       for (const [id2] of indexed) if (!parents.has(id2) && !list.querySelector('[data-id="' + id2 + '"]')) itemFor(id2);
+      const rows = [...list.querySelectorAll('[role="treeitem"]')];
+      (rows.find((row) => row.getAttribute("aria-selected") === "true") ?? rows[0])?.setAttribute("tabindex", "0");
       search.input.addEventListener("input", () => {
-        const query = search.input.value.toLowerCase().trim();
-        for (const row of list.querySelectorAll(".de-outline-item")) row.hidden = !!query && !row.dataset.searchText.includes(query);
+        const query = search.input.value.toLowerCase().trim(), items = [...list.querySelectorAll(".de-outline-item")], keep = /* @__PURE__ */ new Set();
+        if (query) {
+          for (const item of items) if (item.dataset.searchText.includes(query)) for (let node2 = item; node2; node2 = node2.dataset.parentId ? list.querySelector('.de-outline-item[data-id="' + node2.dataset.parentId + '"]') : null) keep.add(node2);
+        }
+        for (const item of items) item.hidden = !!query && !keep.has(item);
       });
       if (!indexed.size) outlinePane.append(element(doc, "p", { className: "de-muted" }, "No objects yet. Use Shapes to create one."));
     }
@@ -9041,13 +9225,14 @@
         const slot = element(doc, "div", { className: "de-review-slot" });
         reviewPane.append(slot);
         reviewCleanup = host.mountReview({ root: slot, session, select }) ?? null;
-      } else reviewPane.append(element(doc, "p", { className: "de-muted" }, "Review comments are available after this diagram is published to a review workspace. Local editing does not publish it."));
+      } else reviewPane.append(element(doc, "p", { className: "de-muted" }, labels.reviewUnavailable));
     }
     function renderRight(state) {
       rightTabs.replaceChildren();
-      for (const [name, action, panel] of [["Properties", "properties-tab", "diagram-properties-pane"], ["Review", "review-tab", "diagram-review-pane"]]) {
-        const selected2 = rightTab === name.toLowerCase();
-        rightTabs.append(button(doc, name, action, { id: "diagram-" + name.toLowerCase() + "-tab", role: "tab", "aria-controls": panel, "aria-selected": String(selected2), tabindex: selected2 ? "0" : "-1" }));
+      const tabs = [["Properties", "properties", "properties-tab"], ...hostPanels.filter((panel) => !panel.hidden?.(state)).map((panel) => [panel.label, panel.id, "host-panel-tab"]), ...reviewEnabled ? [["Review", "review", "review-tab"]] : []];
+      for (const [name, id2, action] of tabs) {
+        const selected2 = rightTab === id2;
+        rightTabs.append(button(doc, name, action, { id: "diagram-" + id2 + "-tab", role: "tab", "aria-controls": "diagram-" + id2 + "-pane", "aria-selected": String(selected2), tabindex: selected2 ? "0" : "-1", "data-tab": id2 }));
       }
       setRightTab(rightTab);
       const selectionKey = state.view.selection.join("|"), nextStamp = [state.bundle?.bundleDigest ?? "none", selectionKey, editable(state)].join("::");
@@ -9078,6 +9263,10 @@
     }
     function renderFooter(state) {
       footer.replaceChildren();
+      if (!state.bundle) {
+        footer.append(element(doc, "span", {}, "Access changed. Reopen this diagram to continue."));
+        return;
+      }
       if (state.saveState === "conflict") footer.append(element(doc, "span", {}, "A newer saved revision exists. Your draft remains in this tab."), button(doc, "Compare revisions", "conflict", { className: "de-primary" }));
       else if (state.saveState === "offline") footer.append(element(doc, "span", {}, "Save was not confirmed. Edits remain pending."), button(doc, "Retry save", "save"));
       else if (state.recovery.warning) footer.append(element(doc, "span", {}, state.recovery.warning));
@@ -9260,7 +9449,16 @@
     }
     function act(action, value, options = {}) {
       const state = current(), bundle = state.bundle, ids2 = state.view.selection;
+      if (action === "host-action") {
+        const entry2 = hostActions.find((item) => item.id === actionTrigger?.dataset.hostAction);
+        if (entry2 && !actionTrigger.disabled) entry2.onSelect({ session, state, trigger: actionTrigger });
+        return;
+      }
       if (!bundle && action !== "cancel-dialog") return;
+      if (action === "toggle-group") {
+        if (actionTrigger?.dataset.id) toggleGroup(actionTrigger.dataset.id);
+        return;
+      }
       if (action === "save") return void save();
       if (action === "undo") {
         if (!guardPropertyDraft()) return;
@@ -9292,8 +9490,8 @@
         renderChrome(state);
         return;
       }
-      if (action === "properties-tab" || action === "review-tab") {
-        setRightTab(action === "properties-tab" ? "properties" : "review");
+      if (action === "properties-tab" || action === "review-tab" || action === "host-panel-tab") {
+        setRightTab(actionTrigger?.dataset.tab ?? (action === "review-tab" ? "review" : "properties"));
         return;
       }
       if (action === "select-tool" || action === "pan-tool") {
@@ -9751,7 +9949,7 @@
           controlsStamp = "";
           renderChrome(current());
           target.isConnected ? target.focus() : leftTabs.querySelector('[aria-selected="true"]')?.focus();
-        } else if (list === rightTabs) setRightTab(action === "properties-tab" ? "properties" : "review", { focus: true });
+        } else if (list === rightTabs) setRightTab(target.dataset.tab, { focus: true });
         return;
       }
       if (event.key === "Escape" && win.innerWidth <= 1100 && (leftOpen || rightOpen)) {
@@ -9762,6 +9960,23 @@
       if (event.key === "Escape" && drag) {
         event.preventDefault();
         finishPointer(null, true);
+        return;
+      }
+      if (event.target.matches?.('[role="treeitem"][data-action="select-id"]') && ["ArrowDown", "ArrowUp", "Home", "End", "ArrowRight", "ArrowLeft"].includes(event.key) && !event.altKey && !event.metaKey && !event.ctrlKey && !event.shiftKey) {
+        event.preventDefault();
+        const rows = [...outlinePane.querySelectorAll('[role="treeitem"]')].filter((row2) => !row2.closest("[hidden]")), row = event.target, index2 = rows.indexOf(row), expanded = row.getAttribute("aria-expanded");
+        if (event.key === "ArrowDown") focusOutlineRow(rows[index2 + 1]);
+        else if (event.key === "ArrowUp") focusOutlineRow(rows[index2 - 1]);
+        else if (event.key === "Home") focusOutlineRow(rows[0]);
+        else if (event.key === "End") focusOutlineRow(rows.at(-1));
+        else if (event.key === "ArrowRight") {
+          if (expanded === "false") toggleGroup(row.dataset.id);
+          else if (expanded === "true") focusOutlineRow(rows[index2 + 1]);
+        } else if (expanded === "true") toggleGroup(row.dataset.id);
+        else {
+          const parentId = row.closest(".de-outline-item")?.dataset.parentId;
+          focusOutlineRow(parentId ? outlinePane.querySelector('[role="treeitem"][data-id="' + parentId + '"]') : null);
+        }
         return;
       }
       if (event.target.matches?.('[data-action="select-id"]') && (event.shiftKey || event.metaKey || event.ctrlKey) && (event.key === "Enter" || event.key === " ")) {
@@ -9923,7 +10138,9 @@
       tempPan = false;
       if (drag) finishPointer(null, true);
     };
-    const onColorScheme = () => draw({ type: "refresh", affectedIds: [] });
+    const onColorScheme = () => {
+      if (!hostScheme) draw({ type: "refresh", affectedIds: [] });
+    };
     shell.addEventListener("click", onClick);
     stage.addEventListener("pointerdown", pointerDown);
     stage.addEventListener("pointermove", pointerMove);
@@ -9951,6 +10168,7 @@
         win.cancelAnimationFrame(resizeFrame);
         win.cancelAnimationFrame(announcementFrame);
         reviewCleanup?.();
+        for (const cleanup of hostPanelCleanups.values()) cleanup?.();
         conflictMount?.dispose();
         sourceMount?.dispose();
         shell.removeEventListener("click", onClick);
@@ -9975,6 +10193,24 @@
         return session.refresh(bundle);
       },
       openSourcePanel,
+      setColorScheme(next) {
+        hostScheme = colorSchemeOf(next);
+        applyColorScheme();
+        draw({ type: "refresh", affectedIds: [] });
+      },
+      openPanel(id2) {
+        if (disposed || !rightPanes().has(id2)) return false;
+        setRail("right", true);
+        controlsStamp = "";
+        renderChrome(current());
+        setRightTab(id2, { focus: true });
+        return rightTab === id2;
+      },
+      refreshHost() {
+        if (disposed) return;
+        controlsStamp = "";
+        renderChrome(current());
+      },
       getState() {
         return session.getState();
       }
