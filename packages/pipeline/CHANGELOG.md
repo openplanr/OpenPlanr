@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.52.0
+### Minor Changes
+
+- 01f1cb5: Let hosted shells mount the shared diagram editor without forking it. A batch transport sends each save as one idempotent request that is resent exactly after an uncertain outcome, including after a reload, and hosts can supply their own wording, theme, command-bar actions and right-panel tabs. Losing access during a save now shows Access changed instead of a stuck Saving state. The outline draws nesting with guide lines, collapsible containers, tree keyboard navigation and drawn kind icons.
+- b2e302c: Add canonical diagram creation, local owner editing, exact-base typed transaction previews, and explicit company revision adoption. Complete authored bundles now travel through reviewed publication and proposal application while preserving remote revision identity and atomic local custody; generated host guidance and command catalog cover the new workflow.
+
 ## 0.51.0
 ### Minor Changes
 
