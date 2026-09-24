@@ -1,6 +1,9 @@
 # Changelog
 
-## 2.7.0
+## 2.2639.0
+
+Releases are now numbered by release week. The middle number is the year and ISO week the release was prepared in (2026, week 39), and further releases in the same week raise the last number. The version still increases with every release, so existing `^2` ranges accept it.
+
 ### Minor Changes
 
 - b2e302c: Add canonical diagram creation, local owner editing, exact-base typed transaction previews, and explicit company revision adoption. Complete authored bundles now travel through reviewed publication and proposal application while preserving remote revision identity and atomic local custody; generated host guidance and command catalog cover the new workflow.

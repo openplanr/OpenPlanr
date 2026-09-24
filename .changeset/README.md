@@ -5,7 +5,9 @@ OpenPlanr uses independent package versions. Public targets are `openplanr`,
 integration but cannot be published to npm. All local product source remains MIT.
 Package versions are separate from schema/document versions.
 
-Write one changeset for each independently understandable package-facing change.
+Write one changeset for each independently understandable package-facing change. Choose
+`patch` unless the change is a milestone the maintainers call out (`minor`) or breaks
+supported behavior (`major`); the CLI takes its middle number from the release week.
 Several changesets can ship from one branch or consolidation commit. Release notes
 must explain behavior and migration steps, not just file moves. Breaking supported
 commands or imports requires a breaking-change note and appropriate version.
