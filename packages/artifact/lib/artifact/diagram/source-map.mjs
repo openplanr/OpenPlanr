@@ -9,6 +9,7 @@ const HEADER = /^(?:flowchart|graph)\s+(TB|TD|BT|LR|RL)$/iu;
 const DIRECTIONS = { TB: 'top-down', TD: 'top-down', BT: 'bottom-up', LR: 'left-right', RL: 'right-left' };
 const REVERSE_DIRECTIONS = { 'top-down': 'TB', 'bottom-up': 'BT', 'left-right': 'LR', 'right-left': 'RL' };
 const UNSAFE_TEXT = /%%\{|<\s*(?:script|iframe|foreignObject)\b|javascript:|https?:\/\//iu;
+const UNSAFE_LABEL = /[\u0000-\u001f]/u;
 const SEMANTIC_EDIT_LOSS = 'Semantic content changed after this source correspondence was captured.';
 const ENCODER = new TextEncoder();
 const meta = kind => ({ kind, schemaVersion: '1.0.0', protocolVersion: '1.13.0' });
@@ -259,8 +260,9 @@ export function previewMermaidCopy(source, options = {}) {
   if (!checked.ok) return { ok: false, sourceModified: false, diagnostics: checked.diagnostics.map(item => issue(item.rule, 'error', 1, 1, null, item.detail, 'Correct the source or previous bundle.')) };
   const losses = diagnostics.filter(item => item.severity === 'warning').map(item => ({ dimension: 'semantic', code: item.code, elementIds: item.elementIds, message: item.message.slice(0, 512) }));
   const layoutMessage = 'Mermaid does not encode source coordinates; OpenPlanr generated or reused editable layout.';
-  losses.push({ dimension: 'presentation', code: 'generated-layout', elementIds: [], message: layoutMessage });
-  diagnostics.push(issue('generated-layout', 'warning', 1, 1, null, layoutMessage, 'Review the proposed layout before saving.'));
+  const proposedIds = presentation.elements.map(item => item.elementId);
+  losses.push({ dimension: 'presentation', code: 'generated-layout', elementIds: proposedIds, message: layoutMessage });
+  diagnostics.push(issue('generated-layout', 'warning', 1, 1, null, layoutMessage, 'Review the proposed layout before saving.', proposedIds));
   const fidelity = { ...meta('diagram-fidelity-report'), diagramId, basis: snapshot(bundle), sourceDigest, sourceFormat: 'mermaid', targetFormat: 'planr-diagram-bundle', semantic: losses.some(item => item.dimension === 'semantic') ? 'partial' : 'lossless', presentation: 'partial', sourceText: 'lossless', losses };
   const reportIssues = validateDiagramAuthoringArtifact('diagram-fidelity-report', fidelity, { bundle });
   if (reportIssues.length) return { ok: false, sourceModified: false, diagnostics: reportIssues.map(item => issue(item.rule, 'error', 1, 1, null, item.detail, 'Correct the source or previous bundle.')) };
@@ -300,8 +302,9 @@ export function exportMermaidCopy(bundle) {
   const byParent = new Map();
   for (const group of bundle.document.groups) for (const member of group.members) byParent.set(member, group.id);
   const placements = new Map(bundle.presentation.elements.map(item => [item.elementId, item]));
+  const unsafeLabel = value => UNSAFE_LABEL.test(value) || UNSAFE_TEXT.test(value);
   const safeLabel = (value, id) => {
-    if (!UNSAFE_TEXT.test(value)) return JSON.stringify(value);
+    if (!unsafeLabel(value)) return JSON.stringify(value);
     lost('semantic', 'unsafe-label', [id], `Element ${id} has text that cannot safely be emitted as certified Mermaid.`);
     return JSON.stringify('Label omitted in Mermaid copy');
   };
@@ -328,8 +331,8 @@ export function exportMermaidCopy(bundle) {
   for (const edge of bundle.document.relations) {
     const op = edge.kind === 'flow' && edge.direction === 'forward' ? '-->' : edge.kind === 'flow' && edge.direction === 'both' ? '<-->' : edge.kind === 'association' && edge.direction === 'none' ? '---' : null;
     if (!op) { lost('semantic', 'unsupported-relation', [edge.id], `Relation ${edge.id} has a role or direction outside certified Mermaid flowchart copy.`); continue; }
-    if (edge.label?.includes('|') || edge.label && UNSAFE_TEXT.test(edge.label)) lost('semantic', 'unsupported-edge-label', [edge.id], `Relation ${edge.id} has text that certified Mermaid edge labels cannot represent safely.`);
-    const label = edge.label === null || edge.label.includes('|') || UNSAFE_TEXT.test(edge.label) ? '' : `|${JSON.stringify(edge.label)}|`;
+    if (edge.label?.includes('|') || edge.label && unsafeLabel(edge.label)) lost('semantic', 'unsupported-edge-label', [edge.id], `Relation ${edge.id} has text that certified Mermaid edge labels cannot represent safely.`);
+    const label = edge.label === null || edge.label.includes('|') || unsafeLabel(edge.label) ? '' : `|${JSON.stringify(edge.label)}|`;
     lines.push(`  ${names.get(edge.from)} ${op}${label} ${names.get(edge.to)}`);
   }
   if (bundle.document.lanes.length) lost('semantic', 'lanes', bundle.document.lanes.map(item => item.id), 'Mermaid subgraphs do not preserve lane semantics or order.');

@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 import { mkdtemp, realpath, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { makeBundle, placement, sealBundle } from '../../../tests/protocol/fixtures/diagram-authoring.mjs';
+import { makeBundle, placement, sealBundle, SOURCE_TEXT } from '../../../tests/protocol/fixtures/diagram-authoring.mjs';
 import { createDiagramAuthoringStore } from '../lib/artifact/diagram/authoring/store.mjs';
-import { compileDiagramCommand } from '../lib/artifact/diagram/authoring/index.mjs';
+import { adoptMermaidCopy, compileDiagramCommand, previewMermaidCopy } from '../lib/artifact/diagram/authoring/index.mjs';
 import {
   createDiagramEditorSession, openDiagramEditorSession, createDiagramEditorDraft,
   createDiagramEditorRecovery, copyDiagramSelection, pasteDiagramSelection, bindDiagramEditorCancellation,
@@ -15,6 +15,13 @@ const ids = () => { let id = 0; return () => `editor-${++id}`; };
 const session = (bundle = makeBundle(), options = {}) => createDiagramEditorSession({ bundle, acknowledged: true, nextTransactionId: ids(), ...options });
 const rename = label => ({ type: 'rename', id: 'node-a', label });
 const storage = () => { const values = new Map(); return { values, getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, value), removeItem: key => values.delete(key) }; };
+function importedCopy({ diagramId = 'checkout', title = 'Checkout' } = {}) {
+  const preview = previewMermaidCopy(SOURCE_TEXT, { diagramId, title });
+  assert.equal(preview.ok, true, JSON.stringify(preview));
+  const adopted = adoptMermaidCopy(preview, preview.acknowledgement);
+  assert.equal(adopted.ok, true, JSON.stringify(adopted));
+  return adopted.bundle;
+}
 async function storeFor(t, slug) {
   const root = await mkdtemp(join(await realpath(tmpdir()), 'openplanr-editor-'));
   t.after(() => rm(root, { recursive: true, force: true }));
@@ -49,6 +56,50 @@ test('validated templates receive diagram identity without retaining linked sour
   assert.equal(source.diagramId, 'checkout');
   const invalid = structuredClone(source); invalid.document.nodes[0].label = '<script>alert(1)</script>';
   assert.equal(createDiagramEditorDraft({ diagramId: 'invalid', title: 'Invalid', template: invalid }).ok, false);
+});
+
+test('initial copy adoption rejects every non-initial session state without changing either bundle', async () => {
+  const blank = makeBundle('flowchart', { blank: true });
+  const candidate = importedCopy();
+  const editors = [];
+  const add = (name, editor) => { editors.push(editor); return { name, editor }; };
+
+  const pending = session(blank, { acknowledged: false });
+  assert.equal(pending.submit({ type: 'create', elements: [{ collection: 'nodes', value: { id: 'draft-node', label: 'Draft', kind: 'process', description: null } }], presentation: [placement('draft-node')] }).ok, true);
+  const gesturing = session(blank, { acknowledged: false });
+  assert.equal(gesturing.beginGesture({ transactionId: 'copy-gesture' }).ok, true);
+  const conflicted = session(blank, { acknowledged: false });
+  assert.equal(conflicted.refresh(makeBundle()).ok, false);
+  const offline = session(blank, { acknowledged: false });
+  assert.equal((await offline.save()).ok, false);
+
+  const cases = [
+    add('acknowledged', session(blank)),
+    add('populated', session(makeBundle(), { acknowledged: false })),
+    add('pending', pending),
+    add('gesture', gesturing),
+    add('conflict', conflicted),
+    add('offline', offline),
+  ];
+  for (const { name, editor } of cases) {
+    const before = editor.getState();
+    const input = structuredClone(candidate);
+    const result = editor.adoptInitialCopy(input);
+    assert.equal(result.ok, false, `${name} session unexpectedly adopted a copy`);
+    assert.equal(result.diagnostics[0].rule, 'initial-copy-state');
+    assert.deepEqual(editor.getState(), before, `${name} session changed after rejection`);
+    assert.deepEqual(input, candidate, `${name} adoption mutated the caller's bundle`);
+  }
+  editors.forEach(editor => editor.dispose());
+
+  const titled = session(blank, { acknowledged: false });
+  const before = titled.getState();
+  const mismatched = importedCopy({ title: 'Imported title' });
+  const result = titled.adoptInitialCopy(mismatched);
+  assert.equal(result.ok, false);
+  assert.equal(result.diagnostics[0].rule, 'diagram-title');
+  assert.deepEqual(titled.getState(), before);
+  titled.dispose();
 });
 
 test('one multi-object gesture commits one inverse; cancel events persist no partial edit', () => {

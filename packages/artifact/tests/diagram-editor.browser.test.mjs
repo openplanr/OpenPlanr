@@ -31,7 +31,7 @@ async function fixture(t, { bundle, viewport = { width: 1440, height: 900 }, sto
   if (storageBlocked) await page.addInitScript(() => {
     for (const method of ['getItem', 'setItem', 'removeItem']) Storage.prototype[method] = () => { throw new DOMException('Storage disabled', 'SecurityError'); };
   });
-  await page.goto(owner.baseUrl); await page.locator('[data-editor-svg]').waitFor();
+  await page.goto(owner.baseUrl, { timeout: 15_000 }); await page.locator('[data-editor-svg]').waitFor();
   const read = async () => {
     const response = await fetch(`${owner.apiBase}read`, { headers: owner.headers });
     assert.equal(response.status, 200);
@@ -164,7 +164,11 @@ test('selection announcements refresh and dialogs return focus to their opener o
   await deleteButton.click();
   let dialog = page.getByRole('dialog', { name: 'Delete selection' });
   await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
-  assert.equal(await opener.evaluate(element => element === document.activeElement), true, 'Cancel returns focus to the invoking control');
+  const cancelFocus = await opener.evaluate(element => ({
+    restored: element === document.activeElement,
+    active: document.activeElement?.outerHTML,
+  }));
+  assert.equal(cancelFocus.restored, true, `Cancel returns focus to the invoking control; active element: ${cancelFocus.active}`);
 
   await deleteButton.focus();
   await page.keyboard.press('Enter');
@@ -407,7 +411,11 @@ test('responsive drawers contain keyboard focus while the backdrop is active', o
   const assertFocusContained = async (panel, direction = 'Tab') => {
     for (let index = 0; index < 24; index++) {
       await page.keyboard.press(direction);
-      assert.equal(await panel.evaluate(node => node.contains(document.activeElement)), true, `Focus left the open drawer after ${direction}`);
+      const focus = await panel.evaluate(node => ({
+        contained: node.contains(document.activeElement),
+        active: document.activeElement?.outerHTML,
+      }));
+      assert.equal(focus.contained, true, `Focus left the open drawer after ${direction} at step ${index + 1}; active element: ${focus.active}`);
     }
   };
 
@@ -481,14 +489,14 @@ test('command menu is anchored, keyboard navigable, and restores focus', options
   const menu = page.getByRole('menu', { name: 'Diagram options', exact: true });
   await menu.waitFor();
   assert.equal(await trigger.getAttribute('aria-expanded'), 'true');
-  assert.deepEqual(await menu.getByRole('menuitem').allTextContents(), ['Show source', 'Show revision', 'Export JSON']);
-  assert.equal(await page.getByRole('menuitem', { name: 'Show source', exact: true }).evaluate(node => node === document.activeElement), true);
+  assert.deepEqual(await menu.getByRole('menuitem').allTextContents(), ['Mermaid copies', 'Show source', 'Show revision', 'Export JSON']);
+  assert.equal(await page.getByRole('menuitem', { name: 'Mermaid copies', exact: true }).evaluate(node => node === document.activeElement), true);
   await page.keyboard.press('ArrowDown');
-  assert.equal(await page.getByRole('menuitem', { name: 'Show revision', exact: true }).evaluate(node => node === document.activeElement), true);
+  assert.equal(await page.getByRole('menuitem', { name: 'Show source', exact: true }).evaluate(node => node === document.activeElement), true);
   await page.keyboard.press('End');
   assert.equal(await page.getByRole('menuitem', { name: 'Export JSON', exact: true }).evaluate(node => node === document.activeElement), true);
   await page.keyboard.press('Home');
-  assert.equal(await page.getByRole('menuitem', { name: 'Show source', exact: true }).evaluate(node => node === document.activeElement), true);
+  assert.equal(await page.getByRole('menuitem', { name: 'Mermaid copies', exact: true }).evaluate(node => node === document.activeElement), true);
   const [triggerBox, menuBox] = await Promise.all([trigger.boundingBox(), menu.boundingBox()]);
   assert.ok(menuBox.y >= triggerBox.y && menuBox.x + menuBox.width <= page.viewportSize().width, 'Menu remains anchored to the command bar inside the viewport');
   assert.equal(await page.getByRole('dialog').count(), 0, 'Overflow choices do not open a modal');

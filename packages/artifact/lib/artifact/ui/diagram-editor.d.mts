@@ -17,5 +17,6 @@ export declare function mountDiagramEditor(options: {
 }): {
   dispose(): void;
   refresh(bundle: DiagramAuthoringBundle): ReturnType<DiagramEditorSession['refresh']>;
+  openSourcePanel(options?: { tab?: 'import' | 'export' }): boolean;
   getState(): DiagramEditorState;
 };

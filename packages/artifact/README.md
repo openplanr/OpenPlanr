@@ -21,6 +21,16 @@ SVG accessibility. Canonical fixtures, progressive references, and searchable
 script-free galleries are generated under `fixtures/diagram/`,
 `references/diagram/`, and `gallery/diagram/`.
 
+`@openplanr/artifact/diagram-editor` exports the shared browser editor and its
+host-neutral Mermaid copy panel. Imports preview semantic, presentation and exact
+source-text fidelity separately before a new unsaved diagram can adopt the copy.
+Exports keep the complete editable bundle, Mermaid copy and SVG snapshot distinct;
+uploads never grant repository link, watch or write authority.
+Direct company-shell mounts of `mountDiagramSourcePanel()` must also load
+`@openplanr/artifact/diagram-editor.css`. The controller applies an isolated
+`planr-diagram-source-panel` scope outside the full editor, so the shared controls
+and responsive light/dark theme do not change host-page typography or layout.
+
 Layered graph layouts wrap long layer sequences, including large strongly
 connected components, into bands along the cross axis once the flow axis
 exceeds 4,096 units, balancing the scene toward a square. Any scene wider or

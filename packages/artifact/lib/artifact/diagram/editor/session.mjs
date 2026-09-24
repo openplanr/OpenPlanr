@@ -95,6 +95,23 @@ export function createDiagramEditorSession({ bundle, acknowledged = false, trans
     if (gesture) return fail('gesture-active', 'Finish or cancel the gesture before another edit.');
     return accept(previewDiagramTransaction(current, transaction));
   }
+  function adoptInitialCopy(bundle) {
+    const blocked = guard(); if (blocked) return blocked;
+    const isEmpty = current.presentation.elements.length === 0 && current.originalSource === null && current.sourceMap === null;
+    if (saveState !== 'unsaved' || saved !== null || initialization === null || pending.length || undo.length || redo.length
+      || gesture || saving || comparison || !isEmpty) return fail('initial-copy-state', 'A complete copy can only initialize a new, empty, unsaved diagram.');
+    const validation = validateAuthoringBundle(bundle);
+    if (!validation.ok) return validation;
+    if (bundle.diagramId !== current.diagramId) return fail('diagram-scope', 'An initial copy cannot switch the session to another diagram.');
+    if (bundle.document.title !== current.document.title || bundle.document.accessibility.title !== current.document.accessibility.title) {
+      return fail('diagram-title', 'Create the copy with this diagram\'s current title before adopting it.');
+    }
+    const affectedIds = bundle.presentation.elements.map(item => item.elementId);
+    updateGeometry(bundle, affectedIds);
+    current = clone(bundle); base = clone(bundle); diagnostics = [];
+    pruneView(); persist(); emit('refresh', affectedIds);
+    return { ok: true, bundle: clone(current) };
+  }
   function cancelGesture(reason = 'cancel') {
     if (!gesture) return { ok: true, cancelled: false };
     const affected = gesture.preview?.impact.affectedIds ?? [];
@@ -279,7 +296,7 @@ export function createDiagramEditorSession({ bundle, acknowledged = false, trans
         disposed,
       };
     },
-    submit, submitTransaction, beginGesture, previewGesture, previewLayout, completeGesture, cancelGesture,
+    submit, submitTransaction, adoptInitialCopy, beginGesture, previewGesture, previewLayout, completeGesture, cancelGesture,
     undo: (options = {}) => compensate(undo, redo, options.transactionId ?? nextTransactionId()),
     redo: (options = {}) => compensate(redo, undo, options.transactionId ?? nextTransactionId()),
     refresh, save, setView,

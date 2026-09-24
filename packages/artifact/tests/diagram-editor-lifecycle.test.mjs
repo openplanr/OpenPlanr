@@ -7,8 +7,8 @@ import test from 'node:test';
 import { createDiagramEditorSession } from '../lib/artifact/diagram/editor/session.mjs';
 import { createDiagramEditorRecovery } from '../lib/artifact/diagram/editor/recovery.mjs';
 import { createDiagramAuthoringStore } from '../lib/artifact/diagram/authoring/store.mjs';
-import { compileDiagramCommand } from '../lib/artifact/diagram/authoring/index.mjs';
-import { makeBundle } from '../../../tests/protocol/fixtures/diagram-authoring.mjs';
+import { adoptMermaidCopy, compileDiagramCommand, previewMermaidCopy } from '../lib/artifact/diagram/authoring/index.mjs';
+import { makeBundle, SOURCE_TEXT } from '../../../tests/protocol/fixtures/diagram-authoring.mjs';
 
 const good = result => { assert.equal(result.ok, true, JSON.stringify(result)); return result; };
 const deferred = () => { let resolve; const promise = new Promise(value => { resolve = value; }); return { promise, resolve }; };
@@ -50,6 +50,51 @@ function delayedCommit(store) {
     return result;
   } } };
 }
+
+test('an adopted initial copy retains exact source and initialization identity through recovery and first save', async t => {
+  const root = await realpath(await mkdtemp(join(tmpdir(), 'planr-editor-initial-copy-')));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const blank = makeBundle('flowchart', { blank: true });
+  const preview = good(previewMermaidCopy(SOURCE_TEXT, { diagramId: blank.diagramId, title: blank.document.title }));
+  const copy = good(adoptMermaidCopy(preview, preview.acknowledgement)).bundle;
+  const store = createDiagramAuthoringStore({ root, slug: blank.diagramId }), storage = memoryStorage();
+  let initialization = null;
+  const transport = { ...store, async initialize(bundle, identity) {
+    initialization = { bundle: structuredClone(bundle), identity: { ...identity } };
+    return store.initialize(bundle, identity);
+  } };
+
+  const original = session(t, blank, {
+    acknowledged: false, transport, recovery: recovery(storage), nextTransactionId: () => 'initial-copy',
+  });
+  const input = structuredClone(copy);
+  const adopted = good(original.adoptInitialCopy(input));
+  assert.deepEqual(input, copy, 'Adoption does not mutate the certified input bundle');
+  assert.deepEqual(adopted.bundle, copy);
+  let state = original.getState();
+  assert.equal(state.bundle.bundleDigest, copy.bundleDigest);
+  assert.equal(state.bundle.originalSource.sourceDigest, copy.originalSource.sourceDigest);
+  assert.deepEqual(Buffer.from(state.bundle.originalSource.text, 'utf8'), Buffer.from(SOURCE_TEXT, 'utf8'));
+  assert.equal(state.bundle.document.title, blank.document.title);
+  assert.equal(state.bundle.document.accessibility.title, blank.document.accessibility.title);
+  assert.equal(state.pendingCount, 0); assert.equal(state.needsInitialization, true);
+  assert.equal(state.canUndo, false); assert.equal(state.canRedo, false);
+  assert.equal((await store.read()).status, 'absent', 'Adoption remains an unsaved local initialization');
+
+  original.dispose();
+  const reopened = session(t, blank, {
+    acknowledged: false, transport, recovery: recovery(storage), nextTransactionId: () => 'replacement-copy',
+  });
+  state = reopened.getState();
+  assert.deepEqual(state.bundle, copy);
+  assert.equal(state.pendingCount, 0); assert.equal(state.needsInitialization, true);
+  good(await reopened.save());
+  assert.deepEqual(initialization, { bundle: copy, identity: { transactionId: 'initial-copy' } });
+  assert.deepEqual(good(await store.read()).bundle, copy);
+  assert.equal((await store.history()).length, 1, 'The adopted copy is the sole initial durable revision');
+  assert.equal(reopened.getState().saveState, 'saved');
+  assert.equal(storage.entries.size, 0);
+});
 
 test('an older save acknowledgement retains edits created while that save was in flight', async t => {
   const { store, bundle } = await persisted(t), delayed = delayedCommit(store), storage = memoryStorage();

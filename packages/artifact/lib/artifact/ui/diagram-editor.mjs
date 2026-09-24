@@ -5,6 +5,7 @@ import { authoredDiagramPalette, renderAuthoredSceneElement } from '../diagram/a
 import { resolveDiagramSceneElement } from '../diagram/authoring/scene.mjs';
 import { copyDiagramSelection } from '../diagram/editor/clipboard.mjs';
 import { mountDiagramConflicts } from './diagram-conflicts.mjs';
+import { mountDiagramSourcePanel } from './diagram-source-panel.mjs';
 import { addOrthogonalDetour, arrangementCommand, connector, createObject, duplicateSelection, freshId, labelOf, laneArrangementCommand, moveOrthogonalBend, placement, processTemplate, transaction } from './diagram-editor-actions.mjs';
 import { button, downloadJson, element, field, iconButton } from './diagram-editor-dom.mjs';
 import { renderDiagramProperties } from './diagram-editor-properties.mjs';
@@ -12,6 +13,7 @@ import { renderDiagramProperties } from './diagram-editor-properties.mjs';
 const SVG = 'http://www.w3.org/2000/svg';
 const ACTION_LABELS = { process: 'process', start: 'start', end: 'end', decision: 'decision', 'data-store': 'data store', component: 'component', annotation: 'annotation', container: 'container', 'horizontal-lane': 'horizontal lane', 'vertical-lane': 'vertical lane' };
 const PROPERTY_DRAFT_MESSAGE = 'Apply or revert property changes before selecting another object.';
+const EMPTY_CALLBACK = () => {};
 const errText = result => result?.diagnostics?.map(item => item.detail).filter(Boolean).join(' ') || result?.message || 'The change could not be applied.';
 const boundsOf = bundle => {
   const rects = bundle.presentation.elements.map(item => item.bounds).filter(Boolean);
@@ -30,8 +32,8 @@ export function mountDiagramEditor({ root, session, host = {} }) {
   const doc = root.ownerDocument, win = doc.defaultView;
   const colorScheme = win.matchMedia?.('(prefers-color-scheme: dark)');
   let disposed = false, raf = 0, drag = null, tempPan = false, tool = 'select', tab = 'outline', rightTab = 'properties';
-  let leftOpen = win.innerWidth > 1100, rightOpen = win.innerWidth > 1100, clipboard = null, dialog = null, conflictMount = null, reviewCleanup = null;
-  let elementNodes = new Map(), renderSignatures = new Map(), renderedDigest = '', lastCanvas = null, lastBreakpoint = null, mode = 'edit', lastAnnouncement = '', announcementFrame = 0, dialogOpener = null;
+  let leftOpen = win.innerWidth > 1100, rightOpen = win.innerWidth > 1100, clipboard = null, dialog = null, conflictMount = null, sourceMount = null, sourceDraft = null, reviewCleanup = null;
+  let elementNodes = new Map(), renderSignatures = new Map(), renderedDigest = '', lastCanvas = null, lastBreakpoint = null, mode = 'edit', lastAnnouncement = '', announcementFrame = 0, dialogOpener = null, actionTrigger = null;
   let overflowOpen = false, overflowOpener = null, drawerOpener = null, propertyController = null, propertiesDirty = false, propertiesStamp = '', propertiesSelection = '', propertyRefreshQueued = false, reviewMounted = false, modalBackgroundInert = false;
   const shell = element(doc, 'div', { className: 'planr-diagram-editor' });
   shell.innerHTML = '<header class="de-bar" role="toolbar" aria-label="Diagram commands"><div class="de-bar-start"><div class="de-command-group" role="group" aria-label="Document navigation"></div><div class="de-brand"><span class="de-mark" aria-hidden="true">◈</span><div class="de-identity"><strong class="de-title"></strong><small>Local diagram studio</small></div></div></div><div class="de-bar-center"><div class="de-command-group" role="group" aria-label="History and arrangement"></div></div><div class="de-bar-end"><span class="de-save-state" role="status" aria-live="polite"></span><div class="de-command-group" role="group" aria-label="Save and inspect"></div><div class="de-more-wrap"></div></div></header><div class="de-work"><button class="de-drawer-backdrop" type="button" data-action="close-drawers" aria-label="Close open panel" tabindex="-1" hidden></button><aside class="de-left" id="diagram-outline-panel" aria-label="Diagram outline and shapes"><div class="de-panel-header"><strong class="de-panel-title">Objects</strong><div class="de-rail-tabs de-panel-tabs" role="tablist" aria-label="Left panel"></div><button type="button" data-action="close-outline" class="de-panel-close" aria-label="Close outline">×</button></div><div class="de-left-content"><div class="de-outline-pane de-tabpanel" id="diagram-outline-pane" role="tabpanel" aria-labelledby="diagram-outline-tab"></div><div class="de-shapes-pane de-tabpanel" id="diagram-shapes-pane" role="tabpanel" aria-labelledby="diagram-shapes-tab" hidden></div></div></aside><section class="de-stage"><p id="diagram-canvas-instructions" class="de-canvas-instructions">Use Select to choose and move objects, Pan to move around the canvas, and the arrow keys to move a selected object.</p><div class="de-canvas" aria-label="Diagram canvas" aria-describedby="diagram-canvas-instructions" role="application" tabindex="0"><svg data-editor-svg aria-label="Diagram drawing" role="img"><g data-world></g><g data-overlays></g></svg><div class="de-empty"></div><div class="de-canvas-tools" role="toolbar" aria-label="Canvas tools"></div><div class="de-mobile-message">Review on mobile. Open on desktop to edit.</div></div><div class="de-stage-footer"></div></section><aside class="de-right" id="diagram-inspector-panel" aria-label="Diagram properties and review"><div class="de-panel-header"><strong class="de-panel-title">Inspector</strong><div class="de-right-tabs de-panel-tabs" role="tablist" aria-label="Right panel"></div><button type="button" data-action="close-properties" class="de-panel-close" aria-label="Close properties">×</button></div><div class="de-right-content"><div class="de-properties-pane de-tabpanel" id="diagram-properties-pane" role="tabpanel" aria-labelledby="diagram-properties-tab"></div><div class="de-review-pane de-tabpanel" id="diagram-review-pane" role="tabpanel" aria-labelledby="diagram-review-tab" hidden></div></div></aside></div><div class="de-alert" role="alert" hidden></div><div class="de-announcer" aria-live="polite" aria-atomic="true"></div><div class="de-dialog-layer"></div>';
@@ -58,7 +60,7 @@ export function mountDiagramEditor({ root, session, host = {} }) {
   const moreButton = commandButton(moreWrap, 'More', '', 'more', { icon: 'more' });
   moreButton.setAttribute('aria-haspopup', 'menu'); moreButton.setAttribute('aria-expanded', 'false'); moreButton.setAttribute('aria-controls', 'diagram-more-menu');
   const moreMenu = element(doc, 'div', { id: 'diagram-more-menu', className: 'de-more-menu', role: 'menu', 'aria-label': 'Diagram options', hidden: true });
-  for (const [name, action] of [['Show source', 'show-source'], ['Show revision', 'show-revision'], ['Export JSON', 'export-json']]) moreMenu.append(button(doc, name, action, { role: 'menuitem', className: 'de-menu-item', tabindex: '-1' }));
+  for (const [name, action] of [['Mermaid copies', 'source-panel'], ['Show source', 'show-source'], ['Show revision', 'show-revision'], ['Export JSON', 'export-json']]) moreMenu.append(button(doc, name, action, { role: 'menuitem', className: 'de-menu-item', tabindex: '-1' }));
   moreWrap.append(moreMenu);
   const canvasTools = $('.de-canvas-tools');
   const modes = element(doc, 'div', { className: 'de-canvas-tool-group', role: 'group', 'aria-label': 'Interaction mode' });
@@ -455,15 +457,51 @@ export function mountDiagramEditor({ root, session, host = {} }) {
   }
   function closeDialog({ restoreFocus = true } = {}) {
     if (!dialog) return;
-    const target = restoreFocus && dialogOpener?.isConnected && shell.contains(dialogOpener) ? dialogOpener : stage;
+    const target = restoreFocus ? (dialogOpener?.isConnected && shell.contains(dialogOpener) ? dialogOpener : stage) : null;
+    if (sourceMount) report('');
+    sourceMount?.dispose(); sourceMount = null;
     dialog.remove(); dialog = null; dialogOpener = null; dialogLayer.replaceChildren();
     setBackgroundInert(false);
-    target.focus({ preventScroll: true });
+    const restore = () => {
+      if (disposed || dialog || !target) return;
+      const destination = target?.isConnected && shell.contains(target) ? target : stage;
+      destination.focus({ preventScroll: true });
+    };
+    if (target) { restore(); win.queueMicrotask(restore); }
   }
   function openDialog(name, content) {
-    closeDialog({ restoreFocus: false }); const active=doc.activeElement; setOverflow(false,{restoreFocus:false}); dialogOpener = active?.closest?.('.de-more-menu') ? moreButton : active; const panel=element(doc,'section',{role:'dialog','aria-modal':'true','aria-label':name,className:'de-dialog'});
+    closeDialog({ restoreFocus: false }); const active=actionTrigger?.isConnected?actionTrigger:doc.activeElement; setOverflow(false,{restoreFocus:false}); dialogOpener = active?.closest?.('.de-more-menu') ? moreButton : active; const panel=element(doc,'section',{role:'dialog','aria-modal':'true','aria-label':name,className:'de-dialog'});
     panel.append(element(doc,'h2',{},name)); if(content)panel.append(content);
     dialogLayer.append(panel);dialog=panel;setBackgroundInert(true);panel.querySelector('button,input,select')?.focus();return panel;
+  }
+  function openSourcePanel({ tab: initialTab = 'import' } = {}) {
+    const state = current();
+    if (!state.bundle || !guardPropertyDraft()) return false;
+    report('');
+    const slot = element(doc, 'div', { className: 'de-source-slot' });
+    openDialog('Mermaid import and export', slot).classList.add('de-source-dialog');
+    sourceMount = mountDiagramSourcePanel({
+      root: slot,
+      session,
+      source: sourceDraft ?? state.bundle.originalSource?.text ?? '',
+      initialTab,
+      onSourceChange: value => { sourceDraft = value; },
+      onBeforeAdopt: guardPropertyDraft,
+      onNavigateElements: ids => {
+        const available = new Set(current().bundle?.presentation.elements.map(item => item.elementId) ?? []);
+        const selected = ids.filter(id => available.has(id));
+        if (selected.length) select(selected, { force: true });
+      },
+      onAdopt: bundle => {
+        sourceDraft = bundle.originalSource?.text ?? sourceDraft;
+        closeDialog(); report(''); notice('Mermaid copy adopted as an unsaved diagram. Save to keep it.'); fit();
+      },
+      onClose: () => { report(''); closeDialog(); },
+      onReport: EMPTY_CALLBACK,
+    });
+    if (initialTab === 'import') sourceMount.focus();
+    else sourceMount.selectTab('export', { focus: true });
+    return true;
   }
   function askDelete() {
     const state=current(), ids=state.view.selection;if(!ids.length)return;
@@ -543,6 +581,7 @@ export function mountDiagramEditor({ root, session, host = {} }) {
     if(action==='fit'){fit();return;}
     if(action==='zoom-in'){zoom(1.2);return;}if(action==='zoom-out'){zoom(1/1.2);return;}
     if(action==='more'){setOverflow(!overflowOpen,{focus:!overflowOpen});return;}
+    if(action==='source-panel'){openSourcePanel();return;}
     if(action==='show-source'||action==='show-revision'){
       const pre=element(doc,'pre',{className:'de-source-view'},JSON.stringify(action==='show-source'?{originalSource:bundle.originalSource,sourceMap:bundle.sourceMap}:snapshot(bundle),null,2));
       const body=element(doc,'div');body.append(pre,button(doc,'Close','cancel-dialog'));
@@ -737,7 +776,8 @@ export function mountDiagramEditor({ root, session, host = {} }) {
   }
   function handleKey(event) {
     if(dialog&&event.key==='Tab'){
-      const controls=[...dialog.querySelectorAll('button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),[tabindex="0"]')];
+      const controls=[...dialog.querySelectorAll('button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),[tabindex="0"]')]
+        .filter(control=>!control.closest('[hidden],[inert],[aria-hidden="true"]')&&control.getClientRects().length);
       if(controls.length){
         const first=controls[0],last=controls.at(-1);
         if(event.shiftKey&&doc.activeElement===first){event.preventDefault();last.focus();return;}
@@ -749,10 +789,9 @@ export function mountDiagramEditor({ root, session, host = {} }) {
       const controls=[...panel.querySelectorAll('button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),summary,a[href],[tabindex]:not([tabindex="-1"])')]
         .filter(control=>!control.closest('[hidden],[inert],[aria-hidden="true"]')&&control.getClientRects().length);
       if(controls.length){
-        const first=controls[0],last=controls.at(-1),active=doc.activeElement;
-        if(!panel.contains(active)){event.preventDefault();(event.shiftKey?last:first).focus();return;}
-        if(event.shiftKey&&active===first){event.preventDefault();last.focus();return;}
-        if(!event.shiftKey&&active===last){event.preventDefault();first.focus();return;}
+        const active=doc.activeElement,index=controls.indexOf(active),step=event.shiftKey?-1:1;
+        const next=index<0?(event.shiftKey?controls.length-1:0):(index+step+controls.length)%controls.length;
+        event.preventDefault();controls[next].focus({preventScroll:true});return;
       }
     }
     if(!shell.contains(event.target)&&!drag&&!dialog)return;
@@ -778,7 +817,7 @@ export function mountDiagramEditor({ root, session, host = {} }) {
       event.preventDefault();
       const target=tabs[next],action=target.dataset.action;
       if(list===leftTabs){setLeftTab(action==='outline-tab'?'outline':'shapes');controlsStamp='';renderChrome(current());target.isConnected ? target.focus() : leftTabs.querySelector('[aria-selected="true"]')?.focus();}
-      else setRightTab(action==='properties-tab'?'properties':'review',{focus:true});
+      else if(list===rightTabs)setRightTab(action==='properties-tab'?'properties':'review',{focus:true});
       return;
     }
     if(event.key==='Escape'&&win.innerWidth<=1100&&(leftOpen||rightOpen)){event.preventDefault();closeDrawers();return;}
@@ -807,14 +846,25 @@ export function mountDiagramEditor({ root, session, host = {} }) {
       const result=submit({type:'move',ids,dx,dy});if(result.ok)notice('Selection moved ' + delta + ' unit' +(delta===1?'':'s')+'.');
     }
   }
+  function containDrawerFocus(event) {
+    if (dialog || win.innerWidth > 1100 || drawerBackdrop.hidden || (!leftOpen && !rightOpen)) return;
+    const panel = leftOpen ? $('.de-left') : $('.de-right');
+    if (!panel || panel.contains(event.target)) return;
+    const controls = [...panel.querySelectorAll('button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),summary,a[href],[tabindex]:not([tabindex="-1"])')]
+      .filter(control => !control.closest('[hidden],[inert],[aria-hidden="true"]') && control.getClientRects().length);
+    (controls[0] ?? panel).focus({ preventScroll: true });
+  }
   const onClick=event=>{
     const target=event.target.closest('[data-action]');if(!target||target.onclick)return;
     if(overflowOpen&&!target.closest('.de-more-wrap'))setOverflow(false,{restoreFocus:false});
     const action=target.dataset.action;
-    if(action==='create')act(action,target.dataset.kind);
-    else if(action==='select-id')act(action,target.dataset.id,{additive:event.shiftKey||event.metaKey||event.ctrlKey,fromOutline:true});
-    else if(action==='select-member')act(action,target.dataset.member);
-    else act(action);
+    actionTrigger=target;
+    try {
+      if(action==='create')act(action,target.dataset.kind);
+      else if(action==='select-id')act(action,target.dataset.id,{additive:event.shiftKey||event.metaKey||event.ctrlKey,fromOutline:true});
+      else if(action==='select-member')act(action,target.dataset.member);
+      else act(action);
+    } finally { actionTrigger=null; }
   };
   const onDocumentPointerDown=event=>{if(overflowOpen&&!event.target.closest?.('.de-more-wrap'))setOverflow(false,{restoreFocus:false});};
   const onWheel=event=>{
@@ -873,6 +923,7 @@ export function mountDiagramEditor({ root, session, host = {} }) {
   stage.addEventListener('lostpointercapture',onLostCapture);
   stage.addEventListener('wheel',onWheel,{passive:false});
   doc.addEventListener('keydown',handleKey);
+  doc.addEventListener('focusin',containDrawerFocus);
   doc.addEventListener('keyup',onKeyUp);
   win.addEventListener('blur',onBlur);
   colorScheme?.addEventListener?.('change', onColorScheme);
@@ -882,16 +933,17 @@ export function mountDiagramEditor({ root, session, host = {} }) {
   return {
     dispose(){
       if(disposed)return;disposed=true;unsubscribe();resize?.disconnect();win.cancelAnimationFrame(raf);win.cancelAnimationFrame(resizeFrame);win.cancelAnimationFrame(announcementFrame);
-      reviewCleanup?.();conflictMount?.dispose();
+      reviewCleanup?.();conflictMount?.dispose();sourceMount?.dispose();
       shell.removeEventListener('click',onClick);stage.removeEventListener('pointerdown',pointerDown);
       stage.removeEventListener('pointermove',pointerMove);stage.removeEventListener('pointerup',onPointerUp);
       stage.removeEventListener('pointercancel',onPointerCancel);stage.removeEventListener('lostpointercapture',onLostCapture);
       stage.removeEventListener('wheel',onWheel);
       if(!resize)win.removeEventListener('resize',scheduleResize);
-      doc.removeEventListener('keydown',handleKey);doc.removeEventListener('keyup',onKeyUp);doc.removeEventListener('pointerdown',onDocumentPointerDown);win.removeEventListener('blur',onBlur);colorScheme?.removeEventListener?.('change',onColorScheme);
+      doc.removeEventListener('keydown',handleKey);doc.removeEventListener('focusin',containDrawerFocus);doc.removeEventListener('keyup',onKeyUp);doc.removeEventListener('pointerdown',onDocumentPointerDown);win.removeEventListener('blur',onBlur);colorScheme?.removeEventListener?.('change',onColorScheme);
       shell.remove();elementNodes.clear();renderSignatures.clear();
     },
     refresh(bundle){return session.refresh(bundle);},
+    openSourcePanel,
     getState(){return session.getState();}
   };
 }

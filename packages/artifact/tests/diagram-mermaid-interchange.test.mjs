@@ -25,6 +25,9 @@ test('supported LF and CRLF copies retain exact UTF-8 source and nested correspo
     assert.equal(result.fidelity.semantic, 'lossless');
     assert.equal(result.fidelity.presentation, 'partial');
     assert.equal(result.fidelity.sourceText, 'lossless');
+    const proposedIds = result.bundle.presentation.elements.map(item => item.elementId);
+    assert.deepEqual(result.diagnostics.find(item => item.code === 'generated-layout').elementIds, proposedIds);
+    assert.deepEqual(result.fidelity.losses.find(item => item.code === 'generated-layout').elementIds, proposedIds);
     assert.equal(renderAuthoredDiagramSvg(result.bundle).ok, true, 'the proposed copy is exportable as a visual snapshot');
     assert.deepEqual(result.bundle.document.groups.map(group => [group.id, group.members]), [
       ['platform', ['a', 'data']], ['data', ['b']],
@@ -155,6 +158,20 @@ test('copy export reports unrepresentable authored content while leaving bundle 
   assert.equal(safeCopy.ok, true);
   assert.equal(safeCopy.text.includes('<script>'), false);
   assert.equal(safeCopy.fidelity.losses.some(item => item.code === 'unsafe-label'), true);
+  const controlSource = preview('flowchart TB\nsubgraph G[Group]\nA[One]\nB[Two]\nend\nA -->|go| B\n');
+  const controls = structuredClone(controlSource.bundle);
+  controls.document.nodes.find(item => item.id === 'a').label = 'Line one\nLine two';
+  controls.document.groups[0].label = 'Group\tlabel';
+  controls.document.relations[0].label = 'Go\rnow';
+  const controlCopy = exportMermaidCopy(sealBundle(controls));
+  assert.equal(controlCopy.ok, true, JSON.stringify(controlCopy.diagnostics));
+  assert.equal(controlCopy.fidelity.semantic, 'partial');
+  assert.deepEqual(
+    new Set(controlCopy.fidelity.losses.filter(item => ['unsafe-label', 'unsupported-edge-label'].includes(item.code)).flatMap(item => item.elementIds)),
+    new Set(['a', 'g', controlSource.bundle.document.relations[0].id]),
+  );
+  const controlRoundTrip = preview(controlCopy.text);
+  assert.equal(controlRoundTrip.ok, true, JSON.stringify(controlRoundTrip.diagnostics));
   assert.deepEqual(first.bundle, original);
 });
 

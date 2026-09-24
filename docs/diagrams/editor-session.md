@@ -6,8 +6,9 @@ semantic/presentation bundle. It contains no filesystem, Design, company identit
 or model client. `planr-pipeline/diagram-owner` is its separate Node-only local
 transport. Both have TypeScript declarations.
 
-These APIs provide editing state and local persistence. Hosts supply the canvas
-controls; authoring CLI commands and the company editor are not yet exposed.
+These APIs provide editing state, shared browser controls and local persistence.
+Hosts supply transport, identity and optional review adapters; the editor never
+infers company authority from document content.
 
 ## Local use
 
@@ -24,6 +25,27 @@ const editor = await openDiagramEditorSession({ transport: store, create: draft.
 await editor.save();
 editor.dispose();
 ```
+
+## Shared browser controls
+
+`mountDiagramEditor({root, session, host})` mounts the framework-neutral canvas,
+outline and inspector used by local and hosted owner shells. Import its stylesheet
+from `planr-pipeline/diagram-editor.css`. The returned controller exposes
+`openSourcePanel({tab})` so a host can open the same Mermaid copy workflow without
+reimplementing conversion or fidelity decisions.
+
+`mountDiagramSourcePanel({root, session, ...callbacks})` is the smaller host-neutral
+boundary for a company shell that already owns its surrounding dialog. It accepts
+only `getState()` and `adoptInitialCopy()` from the editor session. Pasted and
+uploaded Mermaid are unlinked snapshots: M1 provides no repository path, watch or
+write authority. A copy may initialize only a new, empty, unsaved diagram, and a
+partial conversion requires acknowledgement tied to that exact preview. Bundle,
+Mermaid and SVG downloads remain separate because they preserve different data.
+Load the public `@openplanr/artifact/diagram-editor.css` stylesheet with this direct
+mount. The controller adds the scoped `planr-diagram-source-panel` class when the
+root is outside the full editor, giving company shells the same responsive light,
+dark, forced-color and reduced-motion treatment without styling the surrounding
+page. The class is removed when the controller is disposed.
 
 Templates are validated bundles copied with a new diagram identity. Their element
 IDs remain scoped to that new diagram; source-link custody is detached. Clipboard
