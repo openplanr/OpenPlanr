@@ -36,8 +36,8 @@ reimplementing conversion or fidelity decisions.
 
 A hosted shell adapts the same editor through `host` instead of forking it:
 
-- `labels` replaces the `subtitle`, `emptyHint` and `reviewUnavailable` wording
-  where the host changes what is true, such as where a diagram is shared.
+- `labels` replaces the `subtitle`, `emptyHint`, `reviewUnavailable` and `readOnly`
+  wording where the host changes what is true, such as where a diagram is shared.
 - `brand: false` removes the OpenPlanr mark for a host that shows its own.
 - `review: false` removes the Review tab when the host has no reviewer adapter.
 - `colorScheme` (`'light'`, `'dark'` or `null`) follows the host's theme toggle
@@ -47,6 +47,10 @@ A hosted shell adapts the same editor through `host` instead of forking it:
 - `panels` add right-panel tabs. `mount({root, session, select, close})` runs the
   first time a panel opens; the cleanup it returns runs on dispose. `properties`
   and `review` are reserved ids.
+
+A session that can read but not write opens as a read-only view: Undo, Redo, Arrange,
+Save and the Shapes tab are not offered, Mermaid copies open on export, and the save
+state shows `labels.readOnly`, for example the shared revision's name.
 
 Invalid host options throw a `TypeError` that names the option. The controller's
 `openPanel(id)` opens a tab and `refreshHost()` re-runs the action and panel hooks

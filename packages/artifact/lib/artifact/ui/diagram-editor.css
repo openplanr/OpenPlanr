@@ -264,6 +264,14 @@ body.planr-diagram-owner-page #diagram-owner-editor {
   gap:4px;
 }
 
+.planr-diagram-editor[data-read-only="true"] .de-bar-center {
+  visibility:hidden;
+}
+
+.planr-diagram-editor[data-read-only="true"] .de-bar-end [data-action="save"] {
+  display:none;
+}
+
 .planr-diagram-editor :is(.de-bar-end,.de-bar-actions) {
   justify-content:flex-end;
   gap:6px;

@@ -29,6 +29,7 @@ const DEFAULT_LABELS = Object.freeze({
   subtitle: 'Local diagram studio',
   emptyHint: 'Add a shape or start with a small process flow. Everything stays local until you save.',
   reviewUnavailable: 'Review comments are available after this diagram is published to a review workspace. Local editing does not publish it.',
+  readOnly: 'Read only',
 });
 const HOST_ID = /^[a-z][a-z0-9-]{0,39}$/u;
 const KIND_ICONS = Object.freeze({ process: 'kind-process', start: 'kind-terminal', end: 'kind-terminal', decision: 'kind-decision', 'data-store': 'kind-store', component: 'kind-component', container: 'kind-container', 'horizontal-lane': 'kind-lane', 'vertical-lane': 'kind-lane-vertical', annotation: 'kind-annotation' });
@@ -138,6 +139,7 @@ export function mountDiagramEditor({ root, session, host = {} }) {
   };
   const report = message => { alert.hidden = !message; alert.textContent = message || ''; if (message) notice(message); };
   const editable = state => mode === 'edit' && win.innerWidth > 700 && state.capabilities.read && state.capabilities.write && state.saveState !== 'access-changed' && !!getDiagramAuthoringCapability(state.bundle?.document.grammar.id);
+  const readOnly = state => state.capabilities.read && !state.capabilities.write;
   const current = () => session.getState();
   const displayed = state => state.gesture?.bundle ?? state.bundle;
   const prefersDark = () => hostScheme ? hostScheme === 'dark' : !!colorScheme?.matches;
@@ -412,9 +414,9 @@ export function mountDiagramEditor({ root, session, host = {} }) {
     const bundle = state.bundle;
     $('.de-title').textContent = bundle?.document.title ?? 'Diagram unavailable';
     const status = state.saveState;
-    saveState.textContent = ({ saved: 'Saved', saving: 'Saving…', unsaved: 'Unsaved', offline: 'Offline · Unsaved', conflict: 'Conflict · Unsaved', 'access-changed': 'Access changed' })[status] ?? 'Unsaved';
-    saveState.dataset.state = status;
-    shell.dataset.editable = String(editable(state)); shell.dataset.mode = mode;
+    saveState.textContent = readOnly(state) ? labels.readOnly : ({ saved: 'Saved', saving: 'Saving…', unsaved: 'Unsaved', offline: 'Offline · Unsaved', conflict: 'Conflict · Unsaved', 'access-changed': 'Access changed' })[status] ?? 'Unsaved';
+    saveState.dataset.state = readOnly(state) ? 'read-only' : status;
+    shell.dataset.editable = String(editable(state)); shell.dataset.readOnly = String(readOnly(state)); shell.dataset.mode = mode;
     syncPanelState();
     for (const control of canvasTools.querySelectorAll('[data-action="select-tool"],[data-action="pan-tool"]')) {
       const active = control.dataset.action === tool + '-tool'; control.setAttribute('aria-pressed', String(active)); control.dataset.active = String(active);
@@ -450,7 +452,8 @@ export function mountDiagramEditor({ root, session, host = {} }) {
   }
   function renderLeft(state) {
     leftTabs.replaceChildren();
-    for (const [name, action] of [['Outline','outline-tab'],['Shapes','shapes-tab']]) {
+    if (readOnly(state)) tab = 'outline';
+    for (const [name, action] of readOnly(state) ? [['Outline','outline-tab']] : [['Outline','outline-tab'],['Shapes','shapes-tab']]) {
       const selected = tab === name.toLowerCase();
       const item = button(doc,name,action,{id:'diagram-' + name.toLowerCase() + '-tab',role:'tab','aria-selected':String(selected),'aria-controls':'diagram-' + name.toLowerCase() + '-pane',tabindex:selected?'0':'-1'});
       leftTabs.append(item);
@@ -684,7 +687,7 @@ export function mountDiagramEditor({ root, session, host = {} }) {
     if(action==='fit'){fit();return;}
     if(action==='zoom-in'){zoom(1.2);return;}if(action==='zoom-out'){zoom(1/1.2);return;}
     if(action==='more'){setOverflow(!overflowOpen,{focus:!overflowOpen});return;}
-    if(action==='source-panel'){openSourcePanel();return;}
+    if(action==='source-panel'){openSourcePanel(readOnly(state)?{tab:'export'}:undefined);return;}
     if(action==='show-source'||action==='show-revision'){
       const pre=element(doc,'pre',{className:'de-source-view'},JSON.stringify(action==='show-source'?{originalSource:bundle.originalSource,sourceMap:bundle.sourceMap}:snapshot(bundle),null,2));
       const body=element(doc,'div');body.append(pre,button(doc,'Close','cancel-dialog'));
