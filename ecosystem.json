@@ -19,7 +19,7 @@
       "packages/integrations",
       "apps/dashboard"
     ],
-    "manifestDigest": "sha256:980d85bab14db461fc49e91f0d8344f358e7ec275f91d134bcf08b153429278e"
+    "manifestDigest": "sha256:14aa37b9780dc7252d15680cb208a70243a2845cad0c3c3bcd1f97ba2b3085d0"
   },
   "protocol": {
     "current": "1.8.0",
@@ -47,10 +47,10 @@
   "components": {
     "cli": {
       "package": "openplanr",
-      "version": "2.7.0",
+      "version": "2.2639.0",
       "path": "packages/cli",
       "publication": "public",
-      "manifestDigest": "sha256:08f3e63bb53660e8e63d37dc03e3b6e44e950728f3d42e71f190d5d6ecf377db"
+      "manifestDigest": "sha256:2688275562767ab692bc91d7fffdfe329f6b724e419133dc061ed0aa0023d250"
     },
     "pipeline": {
       "package": "planr-pipeline",
@@ -337,7 +337,7 @@
     ],
     "generatedAssets": {
       "path": "adapters/manifests/generated-assets.json",
-      "digest": "sha256:69fa5d3a14f2b26aa90f411f6a452b1a277310252604b52da750910c2ccd8ae3",
+      "digest": "sha256:d222bfcf8d3e33920fddd459e4a0d659fe8535ed7b242afa27be4be519cd2ac5",
       "count": 1805
     }
   },

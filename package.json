@@ -53,8 +53,8 @@
     "verify": "npm run check:generated && npm run check:boundaries && npm run check:docs && npm run check:diagrams && npm run test:focused && npm run verify:packed:strict",
     "verify:ci": "node scripts/run-ci-parity.mjs",
     "changeset": "changeset",
-    "version-packages": "changeset version",
-    "version-packages:ci": "changeset version && node scripts/release-train/sync-lockfile.mjs && npm run generate"
+    "version-packages": "changeset version && node scripts/release-train/cli-version.mjs",
+    "version-packages:ci": "changeset version && node scripts/release-train/cli-version.mjs && node scripts/release-train/sync-lockfile.mjs && npm run generate"
   },
   "devDependencies": {
     "@changesets/cli": "^2.30.0",
