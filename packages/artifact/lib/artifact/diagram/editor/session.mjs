@@ -274,7 +274,7 @@ export function createDiagramEditorSession({ bundle, acknowledged = false, trans
         saveState, capabilities: { ...capability }, view: clone(view),
         gesture: gesture ? { transactionId: gesture.transactionId, basis: gesture.basis, diagnostics: clone(gesture.diagnostics), bundle: capability.read && gesture.preview ? clone(gesture.preview.bundle) : null } : null,
         canUndo: undo.length > 0 && capability.write, canRedo: redo.length > 0 && capability.write,
-        comparison: capability.read && comparison ? { bundle: clone(comparison), diff: diffDiagramBundles(comparison, current) } : null,
+        comparison: capability.read && comparison ? { base: clone(base), bundle: clone(comparison), diff: diffDiagramBundles(comparison, current) } : null,
         diagnostics: clone(diagnostics), recovery: { ...(recovery?.status() ?? { mode: 'memory-only', warning: 'Refresh recovery is unavailable in this session.' }), ...(recoveryWarning ? { mode: 'memory-only', warning: recoveryWarning } : {}) },
         disposed,
       };

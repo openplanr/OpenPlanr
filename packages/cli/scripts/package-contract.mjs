@@ -71,6 +71,7 @@ function wildcardCapture(pattern, value) {
 
 function probeKind(entry, target) {
   if (entry.conditions.includes('types') || /\.d\.[cm]?ts$/u.test(target)) return 'type-only';
+  if (target.endsWith('.css')) return 'asset';
   if (target.endsWith('.json')) return 'json';
   if (entry.conditions.includes('require') || target.endsWith('.cjs')) return 'require';
   if (/\.(?:mjs|js)$/u.test(target)) return 'import';
@@ -129,6 +130,9 @@ try {
     if (!inside(target)) throw new Error('export target escaped installed package for ' + probe.specifier);
     if (probe.kind === 'type-only') {
       if (readFileSync(target).byteLength === 0) throw new Error('empty type export for ' + probe.specifier);
+    } else if (probe.kind === 'asset') {
+      const selected = realpathSync(fileURLToPath(import.meta.resolve(probe.specifier)));
+      if (selected !== target || !inside(selected) || readFileSync(selected).byteLength === 0) throw new Error('invalid asset export for ' + probe.specifier);
     } else if (probe.kind === 'json') {
       const resolved = realpathSync(require.resolve(probe.specifier));
       if (resolved !== target || !inside(resolved)) throw new Error('JSON export resolved outside installed bytes for ' + probe.specifier);
@@ -147,7 +151,7 @@ try {
       subpath: probe.subpath,
       conditions: probe.conditions,
       kind: probe.kind,
-      status: probe.kind === 'type-only' ? 'validated' : 'loaded',
+      status: probe.kind === 'type-only' || probe.kind === 'asset' ? 'validated' : 'loaded',
     });
   }
 } finally {

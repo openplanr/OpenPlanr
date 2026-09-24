@@ -185,6 +185,7 @@ function publicSpecifier(packageName, subpath) {
 function exportProbeKind(entry, target) {
   if (entry.conditions.includes('types') || /\.d\.[cm]?ts$/u.test(target)) return 'type-only';
   if (target.endsWith('.json')) return 'json';
+  if (target.endsWith('.css')) return 'css';
   if (entry.conditions.includes('require') || target.endsWith('.cjs')) return 'require';
   if (/\.(?:mjs|js)$/u.test(target)) return 'import';
   fail(`Runtime export ${entry.subpath} has unsupported installed target ${target}.`);
@@ -256,6 +257,10 @@ try {
       const resolved = realpathSync(require.resolve(probe.specifier));
       if (resolved !== target || !inside(resolved)) throw new Error('JSON export resolved outside installed bytes for ' + probe.specifier);
       JSON.parse(readFileSync(resolved, 'utf8'));
+    } else if (probe.kind === 'css') {
+      const resolved = realpathSync(require.resolve(probe.specifier));
+      if (resolved !== target || !inside(resolved)) throw new Error('CSS export resolved outside installed bytes for ' + probe.specifier);
+      if (readFileSync(resolved).byteLength === 0) throw new Error('empty CSS export for ' + probe.specifier);
     } else if (probe.kind === 'require') {
       const resolved = realpathSync(require.resolve(probe.specifier));
       if (resolved !== target || !inside(resolved)) throw new Error('require export resolved outside installed bytes for ' + probe.specifier);

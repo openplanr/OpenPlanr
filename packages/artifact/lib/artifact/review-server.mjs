@@ -585,6 +585,10 @@ export function createArtifactReviewServer({
           notFound(res, { head });
           return;
         }
+        if (segments.length === 3 && !trailingSlash && ['GET', 'HEAD'].includes(req.method)) {
+          send(res, 308, '', { location: `/o/${owner.id}/${owner.capability}/` }, { head });
+          return;
+        }
         const request = Promise.resolve().then(() => owner.handleRequest({
           req, segments: segments.slice(3), head,
           origin: `http://${LOOPBACK_HOST}:${port}`,
@@ -594,6 +598,17 @@ export function createArtifactReviewServer({
         let response;
         try { response = await request; } finally { owner.pending.delete(request); }
         if (!response) { notFound(res, { head }); return; }
+        if (response.kind === 'asset') {
+          // Trusted packaged assets only; JSON APIs cannot select executable MIME types.
+          const mediaTypes = { document: 'text/html', runtime: 'text/javascript', stylesheet: 'text/css' };
+          if (!Object.hasOwn(mediaTypes, response.asset) || typeof response.body !== 'string') throw new Error('Invalid owner asset response.');
+          send(res, response.status, response.body, {
+            ...parentHeaders(),
+            'content-type': `${mediaTypes[response.asset]}; charset=utf-8`,
+            'content-security-policy': "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data: blob:; font-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+          }, { head });
+          return;
+        }
         send(res, response.status, JSON.stringify(response.body), {
           // Rejections may precede body consumption (for example Content-Length
           // above the limit). Do not reuse a socket containing unread body bytes.

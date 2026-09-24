@@ -79,16 +79,18 @@ test('installed export probe plan expands wildcard JSON and separates type-only 
         default: './lib/index.mjs',
       },
       './schemas/*': './schemas/*',
+      './editor.css': './lib/editor.css',
     },
     archiveFiles: [
       'lib/index.d.mts',
       'lib/index.mjs',
+      'lib/editor.css',
       'schemas/v1/one.schema.json',
       'schemas/v2/two.schema.json',
     ],
   });
 
-  assert.equal(probes.length, 5);
+  assert.equal(probes.length, 6);
   assert.deepEqual(
     probes.filter(({ kind }) => kind === 'json').map(({ specifier }) => specifier),
     [
@@ -98,6 +100,7 @@ test('installed export probe plan expands wildcard JSON and separates type-only 
   );
   assert.equal(probes.filter(({ kind }) => kind === 'type-only').length, 1);
   assert.equal(probes.filter(({ kind }) => kind === 'import').length, 2);
+  assert.deepEqual(probes.filter(({ kind }) => kind === 'css').map(({ specifier }) => specifier), ['fixture-package/editor.css']);
 });
 
 test('packaged documentation accepts archive-local paths and stable HTTPS URLs only', () => {

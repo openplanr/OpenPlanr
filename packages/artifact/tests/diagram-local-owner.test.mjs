@@ -80,6 +80,55 @@ test('offline blank and template create/edit/save/reopen retain complete paired 
   assert.equal(committed.headers['cross-origin-resource-policy'], 'same-origin');
 });
 
+test('owner page and packaged assets are capability scoped with safe types and no draft disclosure', async t => {
+  const title = '</script><img src=x onerror=alert(1)>';
+  const { owner, root } = await ownerFor(t, { title });
+  await post(owner, 'initialize', { bundle: makeBundle(), transactionId: 'create-draft' });
+  const page = await request(owner.baseUrl);
+  assert.equal(page.status, 200);
+  assert.match(page.headers['content-type'], /^text\/html;/u);
+  assert.match(page.headers['content-security-policy'], /script-src 'self';/u);
+  assert.match(page.headers['content-security-policy'], /frame-ancestors 'none'/u);
+  assert.equal(page.headers['cross-origin-resource-policy'], 'same-origin');
+  assert.equal(page.headers['cross-origin-opener-policy'], 'same-origin');
+  assert.equal(page.headers['referrer-policy'], 'no-referrer');
+  assert.equal(page.headers['x-frame-options'], 'DENY');
+  assert.match(page.headers['cache-control'], /no-store/u);
+  assert.match(page.text, /id="diagram-owner-editor"/u);
+  assert.equal(page.text.includes('<img'), false);
+  assert.equal(page.text.includes(root), false);
+  assert.equal(page.text.includes(makeBundle().bundleDigest), false);
+  assert.equal(page.text.includes(owner.recoveryScope), false, 'recovery scope is delivered only by authenticated API read');
+  assert.equal((await request(owner.baseUrl, { method: 'HEAD' })).text, '');
+  const redirect = await request(owner.baseUrl.slice(0, -1));
+  assert.equal(redirect.status, 308);
+  assert.equal(redirect.headers.location, new URL(owner.baseUrl).pathname);
+  for (const [asset, mediaType] of [['runtime.js', 'text/javascript'], ['editor.css', 'text/css']]) {
+    const response = await request(`${owner.baseUrl}${asset}`);
+    assert.equal(response.status, 200);
+    assert.equal(response.headers['content-type'], `${mediaType}; charset=utf-8`);
+    assert.equal(response.headers['x-content-type-options'], 'nosniff');
+    assert.equal((await request(`${owner.baseUrl}${asset}`, { headers: { origin: 'https://attacker.example' } })).status, 403);
+    assert.equal((await request(`${owner.baseUrl}${asset}`, { headers: { host: 'attacker.example' } })).status, 403);
+  }
+  for (const path of ['other.js', 'editor.css/nested', 'api/runtime.js']) assert.equal((await request(`${owner.baseUrl}${path}`)).status, 404);
+  assert.equal((await request(owner.apiBase + 'read')).status, 403, 'page access never relaxes the explicit API header');
+  assert.equal((await request(owner.baseUrl, { headers: { 'sec-fetch-site': 'cross-site' } })).status, 403);
+});
+
+test('programmatic owner opens its scoped editor on request and tolerates browser launch failure', async t => {
+  const opened = [];
+  const { owner } = await ownerFor(t, { openUrl: url => opened.push(url) });
+  assert.deepEqual(opened, [owner.baseUrl]);
+  assert.equal(owner.url, owner.baseUrl);
+  const suppressed = (await ownerFor(t, { noOpen: true, openUrl: () => assert.fail('noOpen must suppress browser launch') })).owner;
+  assert.equal((await read(suppressed)).value.status, 'absent');
+  const failed = (await ownerFor(t, { openUrl: () => { throw new Error('browser unavailable'); } })).owner;
+  assert.match(failed.launchError, /manually/u);
+  assert.equal((await request(failed.baseUrl)).status, 200);
+  assert.equal((await read(failed)).value.status, 'absent', 'opening does not create a persisted blank');
+});
+
 test('review capability and HTTP registration cannot acquire owner read or write authority', async t => {
   const root = await workspace(t);
   const server = createArtifactReviewServer({ env: { ...process.env, PLANR_HOME: join(root, 'home') } });
@@ -96,6 +145,9 @@ test('review capability and HTTP registration cannot acquire owner read or write
   await post(owner, 'initialize', { bundle: makeBundle(), transactionId: 'create-draft' });
   for (const base of [origin + reviewer.path, `${origin}/o/${reviewer.sessionId}/${reviewer.capability}/`, `${origin}/o/${registration.sessionId}/${reviewer.capability}/`]) {
     assert.equal((await request(`${base}api/read`, { headers: owner.headers })).status, 404);
+    if (base.includes('/o/')) {
+      for (const asset of ['', 'runtime.js', 'editor.css']) assert.equal((await request(base + asset)).status, 404);
+    }
     assert.equal((await request(`${base}api/commit`, { method: 'POST', headers: { ...owner.headers, origin, 'content-type': 'application/json' }, body: JSON.stringify({ transaction: makeTransaction() }) })).status, 404);
   }
   assert.equal((await request(`${origin}/internal/v1/owner-sessions`, { method: 'POST', headers: { authorization: `Bearer ${server.controlToken}`, 'content-type': 'application/json' }, body: '{}' })).status, 404);
