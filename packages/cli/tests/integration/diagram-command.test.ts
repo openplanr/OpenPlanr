@@ -5,6 +5,8 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
+import { placement } from '../../../../tests/protocol/fixtures/diagram-authoring.mjs';
+import { compileDiagramCommand } from '../../../artifact/lib/artifact/diagram/authoring/commands.mjs';
 
 const CLI = fileURLToPath(new URL('../../src/cli/index.ts', import.meta.url));
 const TSX = createRequire(import.meta.url).resolve('tsx/cli');
@@ -41,11 +43,20 @@ afterEach(() => {
 });
 
 describe('planr diagram public machine surface', () => {
-  it('exposes all five operations and the complete searchable gallery', () => {
+  it('exposes rendering and scoped authoring operations with the complete searchable gallery', () => {
     const project = temporary();
     const help = run(project, ['diagram', '--help']);
     expect(help.status, help.stderr).toBe(0);
-    for (const command of ['render', 'inspect', 'check', 'gallery', 'rerender']) {
+    for (const command of [
+      'render',
+      'inspect',
+      'check',
+      'gallery',
+      'rerender',
+      'new',
+      'edit',
+      'apply',
+    ]) {
       expect(help.stdout).toMatch(new RegExp(`^  ${command}(?: |$)`, 'mu'));
     }
 
@@ -57,6 +68,68 @@ describe('planr diagram public machine surface', () => {
       status: 'passed',
       count: 39,
     });
+  });
+
+  it('creates and explicitly applies a typed edit through CLI JSON envelopes', () => {
+    const project = temporary();
+    const target = 'diagrams/checkout/checkout.planr-diagram-bundle.json';
+    const created = run(project, ['diagram', 'new', target, '--title', 'Checkout', '--json']);
+    expect(created.status, created.stderr).toBe(0);
+    expect(JSON.parse(created.stdout)).toMatchObject({
+      ok: true,
+      action: 'diagram.new',
+      diagramId: 'checkout',
+    });
+    const file = path.join(project, target);
+    const before = readFileSync(file, 'utf8');
+    const compiled = compileDiagramCommand(
+      JSON.parse(before),
+      {
+        type: 'create',
+        elements: [
+          {
+            collection: 'nodes',
+            value: { id: 'start', label: 'Start', kind: 'process', description: null },
+          },
+        ],
+        presentation: [placement('start')],
+      },
+      { transactionId: 'cli-add-start' },
+    );
+    expect(compiled.ok).toBe(true);
+    if (!compiled.ok || !compiled.transaction) return;
+    const transaction = path.join(project, 'change.json');
+    writeFileSync(transaction, JSON.stringify(compiled.transaction));
+    const previewed = run(project, [
+      'diagram',
+      'apply',
+      target,
+      '--transaction',
+      transaction,
+      '--dry-run',
+      '--json',
+    ]);
+    expect(previewed.status, previewed.stderr).toBe(0);
+    const preview = JSON.parse(previewed.stdout);
+    expect(preview).toMatchObject({ ok: true, action: 'diagram.apply', status: 'preview' });
+    expect(readFileSync(file, 'utf8')).toBe(before);
+    const applied = run(project, [
+      'diagram',
+      'apply',
+      target,
+      '--transaction',
+      transaction,
+      '--accept',
+      preview.previewToken,
+      '--json',
+    ]);
+    expect(applied.status, applied.stderr).toBe(0);
+    expect(JSON.parse(applied.stdout)).toMatchObject({
+      ok: true,
+      action: 'diagram.apply',
+      status: 'saved',
+    });
+    expect(JSON.parse(readFileSync(file, 'utf8')).document.nodes[0].id).toBe('start');
   });
 
   it('renders, inspects, and checks one offline set with exact paths', () => {

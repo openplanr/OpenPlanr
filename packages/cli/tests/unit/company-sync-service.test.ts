@@ -4,13 +4,18 @@ import { mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from 'node
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { makeBundle } from '../../../../tests/protocol/fixtures/diagram-authoring.mjs';
+import { compileDiagramCommand } from '../../../artifact/lib/artifact/diagram/authoring/commands.mjs';
+import { createDiagramAuthoringStore } from '../../../artifact/lib/artifact/diagram/authoring/store.mjs';
 import * as companyAuth from '../../src/services/company-auth-service.js';
 import {
+  adoptCompanyDiagramRevision,
   applyCompanyProposal,
   companyApi,
   companyBindingStatus,
   DEFAULT_COMPANY_API_ORIGIN,
   normalizeCompanyOrigin,
+  previewCompanyDiagramAdoption,
   previewCompanyProposal,
   previewCompanyPublication,
   previewCompanyPull,
@@ -77,6 +82,7 @@ async function installRuntimeFixture() {
   const runtime = path.join(root, '.local', 'runtime-fixture');
   await mkdir(path.join(runtime, 'lib/protocol'), { recursive: true });
   await mkdir(path.join(runtime, 'lib/artifact/diagram'), { recursive: true });
+  await mkdir(path.join(runtime, 'lib/artifact/diagram/authoring'), { recursive: true });
   for (const module of ['enterprise-contracts', 'canonical-json']) {
     const canonical = new URL(`../../../protocol/src/${module}.mjs`, import.meta.url);
     await writeFile(
@@ -88,6 +94,31 @@ async function installRuntimeFixture() {
   await writeFile(
     path.join(runtime, 'lib/artifact/diagram/index.mjs'),
     `export * from ${JSON.stringify(diagram.href)};`,
+  );
+  const authoring = new URL(
+    '../../../artifact/lib/artifact/diagram/authoring/index.mjs',
+    import.meta.url,
+  );
+  await writeFile(
+    path.join(runtime, 'lib/artifact/diagram/authoring/index.mjs'),
+    `export * from ${JSON.stringify(authoring.href)};`,
+  );
+  const store = new URL(
+    '../../../artifact/lib/artifact/diagram/authoring/store.mjs',
+    import.meta.url,
+  );
+  await writeFile(
+    path.join(runtime, 'lib/artifact/diagram/authoring/store.mjs'),
+    `export * from ${JSON.stringify(store.href)};`,
+  );
+  await mkdir(path.join(runtime, 'lib/artifact/diagram/editor'), { recursive: true });
+  const editor = new URL(
+    '../../../artifact/lib/artifact/diagram/editor/index.mjs',
+    import.meta.url,
+  );
+  await writeFile(
+    path.join(runtime, 'lib/artifact/diagram/editor/index.mjs'),
+    `export * from ${JSON.stringify(editor.href)};`,
   );
   vi.mocked(resolvePipelinePackage).mockReturnValue({
     root: runtime,
@@ -180,6 +211,74 @@ afterEach(async () => {
 });
 
 describe('selective company publication', () => {
+  it('publishes exact complete authoring bytes and applies a validated successor including presentation', async () => {
+    await installRuntimeFixture();
+    const relative = 'diagrams/checkout/checkout.planr-diagram-bundle.json';
+    const file = path.join(root, relative);
+    const bundle = makeBundle();
+    const store = createDiagramAuthoringStore({ root, slug: 'checkout' });
+    await store.initialize(bundle, { transactionId: 'test-initialize' });
+    const original = await readFile(file, 'utf8');
+    const initial = await previewCompanyPublication(root, {
+      filePath: relative,
+      apiUrl: 'https://api.example.com',
+      projectId: 'p1',
+      kind: 'diagram',
+    });
+    expect(initial.content).toBe(original);
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValueOnce(json({ artifact }))
+        .mockResolvedValueOnce(json({ revision: firstRevision(original) })),
+    );
+    await publishCompanyPreview(root, initial.preview.id);
+    const changed = compileDiagramCommand(
+      bundle,
+      { type: 'move', ids: ['node-b'], dx: 20, dy: 0 },
+      { transactionId: 'proposal-move' },
+    );
+    expect(changed.ok).toBe(true);
+    if (!changed.ok || !changed.bundle) return;
+    const offered = proposal([{ op: 'replace-document', content: changed.bundle }]);
+    mockProposal(offered);
+    const review = await previewCompanyProposal(root, initial.preview.id, 'proposal1');
+    expect(review.document).toEqual(changed.bundle);
+    expect(review.changes.presentation.length).toBeGreaterThan(0);
+    expect(review.changes.source).toEqual({
+      originalBytesChanged: false,
+      correspondenceChanged: false,
+    });
+    expect(await readFile(file, 'utf8')).toBe(original);
+    mockProposal(offered);
+    expect((await applyCompanyProposal(root, initial.preview.id, 'proposal1')).status).toBe(
+      'applied-locally',
+    );
+    expect(JSON.parse(await readFile(file, 'utf8'))).toEqual(changed.bundle);
+    expect((await store.read()).bundle).toEqual(changed.bundle);
+    expect(
+      (await store.history()).map((entry: { transactionId: string }) => entry.transactionId),
+    ).toContain('company-' + hash(`${initial.preview.id}:proposal1`).slice(0, 40));
+  });
+  it('rejects an invalid complete bundle before sending any publication request', async () => {
+    await installRuntimeFixture();
+    const relative = 'diagrams/checkout/checkout.planr-diagram-bundle.json';
+    const file = path.join(root, relative);
+    await mkdir(path.dirname(file), { recursive: true });
+    await writeFile(file, JSON.stringify({ ...makeBundle(), bundleDigest: 'invalid' }));
+    const fetcher = vi.fn();
+    vi.stubGlobal('fetch', fetcher);
+    await expect(
+      previewCompanyPublication(root, {
+        filePath: relative,
+        apiUrl: 'https://api.example.com',
+        projectId: 'p1',
+        kind: 'diagram',
+      }),
+    ).rejects.toMatchObject({ code: 'E_COMPANY_AUTHORING' });
+    expect(fetcher).not.toHaveBeenCalled();
+  });
   it('records exactly one selected file without a network request or credential persistence', async () => {
     const fetcher = vi.fn();
     vi.stubGlobal('fetch', fetcher);
@@ -953,6 +1052,131 @@ function mockPullPreview(
   vi.stubGlobal('fetch', fetcher);
   return fetcher;
 }
+describe('explicit company diagram adoption', () => {
+  const target = 'diagrams/checkout/checkout.planr-diagram-bundle.json';
+  const request = () => ({
+    apiUrl: 'https://api.example.com',
+    projectId: 'p1',
+    artifactId: 'a1',
+    revisionId: 'r1',
+    filePath: target,
+  });
+  function mockAdoption(content: string, revision = remoteRevision(content, 'r1')) {
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce(
+        json({ artifact: { ...artifact, kind: 'diagram' }, headRevisionId: 'r1' }),
+      )
+      .mockResolvedValueOnce(json({ revisions: [revision], nextCursor: null }))
+      .mockResolvedValueOnce(remoteBody(content));
+    vi.stubGlobal('fetch', fetcher);
+    return fetcher;
+  }
+  it('adopts an exact authorized revision with separate remote and canonical local byte identities', async () => {
+    await installRuntimeFixture();
+    const bundle = makeBundle();
+    const remoteContent = JSON.stringify(bundle);
+    mockAdoption(remoteContent);
+    const review = await previewCompanyDiagramAdoption(root, request());
+    expect(review).toMatchObject({
+      status: 'preview',
+      localCollision: false,
+      remoteContentDigest: hash(remoteContent),
+    });
+    expect(review.previewToken).toMatch(/^[a-f0-9]{64}$/u);
+    if (!review.previewToken) throw new Error('Expected a reviewable adoption token.');
+    mockAdoption(remoteContent);
+    const adopted = await adoptCompanyDiagramRevision(root, {
+      ...request(),
+      accept: review.previewToken,
+    });
+    expect(adopted).toMatchObject({
+      status: 'synchronized',
+      revisionId: 'r1',
+      filePath: target,
+      remoteContentDigest: hash(remoteContent),
+    });
+    const localContent = await readFile(path.join(root, target), 'utf8');
+    expect(JSON.parse(localContent)).toEqual(bundle);
+    expect(hash(localContent)).not.toBe(hash(remoteContent));
+    mockAdoption(remoteContent);
+    expect((await companyBindingStatus(root, adopted.bindingId)).status).toBe('synchronized');
+  });
+  it('treats a populated unowned directory and matching loose bytes as collisions', async () => {
+    await installRuntimeFixture();
+    const remoteContent = JSON.stringify(makeBundle());
+    const directory = path.join(root, 'diagrams/checkout');
+    await mkdir(directory, { recursive: true });
+    await writeFile(path.join(directory, 'notes.txt'), 'Keep this local note.');
+    mockAdoption(remoteContent);
+    expect((await previewCompanyDiagramAdoption(root, request())).localCollision).toBe(true);
+    await rm(path.join(directory, 'notes.txt'));
+    await writeFile(path.join(root, target), JSON.stringify(makeBundle(), null, 2) + '\n');
+    mockAdoption(remoteContent);
+    const preview = await previewCompanyDiagramAdoption(root, request());
+    expect(preview).toMatchObject({ localCollision: true, previewToken: null });
+    expect(await readFile(path.join(root, target), 'utf8')).toBe(
+      JSON.stringify(makeBundle(), null, 2) + '\n',
+    );
+  });
+  it('checks an existing adoption binding before writing a new local bundle', async () => {
+    await installRuntimeFixture();
+    const remoteContent = JSON.stringify(makeBundle());
+    mockAdoption(remoteContent);
+    const review = await previewCompanyDiagramAdoption(root, request());
+    if (!review.previewToken) throw new Error('Expected an adoption token.');
+    const bindingDir = path.join(root, '.local/company/bindings');
+    await mkdir(bindingDir, { recursive: true });
+    await writeFile(
+      path.join(bindingDir, review.previewToken + '.json'),
+      JSON.stringify({
+        schemaVersion: '1.0.0',
+        id: review.previewToken,
+        apiUrl: request().apiUrl,
+        organizationId: 'org1',
+        projectId: 'p1',
+        artifactId: 'a1',
+        revisionId: 'r1',
+        filePath: target,
+        title: 'Checkout',
+        kind: 'diagram',
+        contentType: 'application/json',
+        contentDigest: hash(remoteContent),
+        localContentDigest: '0'.repeat(64),
+        byteLength: Buffer.byteLength(remoteContent),
+        createdAt: new Date().toISOString(),
+      }),
+    );
+    mockAdoption(remoteContent);
+    await expect(
+      adoptCompanyDiagramRevision(root, { ...request(), accept: review.previewToken }),
+    ).rejects.toMatchObject({ code: 'E_COMPANY_STATE' });
+    await expect(readFile(path.join(root, target))).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+  it('shows collisions and denies a revision from another organization before local writes', async () => {
+    await installRuntimeFixture();
+    const remoteContent = JSON.stringify(makeBundle());
+    await mkdir(path.join(root, 'diagrams/checkout'), { recursive: true });
+    await writeFile(path.join(root, target), '{"other":true}');
+    mockAdoption(remoteContent);
+    const collision = await previewCompanyDiagramAdoption(root, request());
+    expect(collision).toMatchObject({
+      status: 'collision',
+      localCollision: true,
+      previewToken: null,
+    });
+    expect(await readFile(path.join(root, target), 'utf8')).toBe('{"other":true}');
+    await rm(path.join(root, target));
+    mockAdoption(remoteContent, {
+      ...remoteRevision(remoteContent, 'r1'),
+      organizationId: 'foreign',
+    });
+    await expect(previewCompanyDiagramAdoption(root, request())).rejects.toMatchObject({
+      code: 'E_COMPANY_SCOPE',
+    });
+    await expect(readFile(path.join(root, target))).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+});
 describe('read-only remote revision retrieval', () => {
   it('accepts an edge-weakened ETag when the transport and content digests remain exact', async () => {
     await installRuntimeFixture();

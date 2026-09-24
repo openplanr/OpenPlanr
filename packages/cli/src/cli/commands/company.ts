@@ -5,10 +5,12 @@ import {
   storeCompanyManualToken,
 } from '../../services/company-auth-service.js';
 import {
+  adoptCompanyDiagramRevision,
   applyCompanyProposal,
   type CompanyPreview,
   companyApi,
   companyBindingStatus,
+  previewCompanyDiagramAdoption,
   previewCompanyProposal,
   previewCompanyPublication,
   previewCompanyPull,
@@ -140,6 +142,46 @@ export function registerCompanyCommand(program: Command) {
     .option('--json', 'structured output')
     .action(async (options: { apiUrl?: string }) =>
       print(await companyApi(resolveCompanyOrigin(options.apiUrl), '/v1/projects')),
+    );
+  company
+    .command('adopt')
+    .argument('<artifact-id>', 'company diagram artifact ID')
+    .requiredOption('--project <id>', 'company project ID')
+    .requiredOption('--revision <id>', 'exact authorized revision ID')
+    .requiredOption(
+      '--path <file>',
+      'canonical local diagrams/{slug}/{slug}.planr-diagram-bundle.json',
+    )
+    .option('--api-url <origin>', 'company API HTTPS origin override')
+    .option('--accept <preview-token>', 'adopt the exact reviewed revision and local target')
+    .option('--json', 'structured output')
+    .description(
+      'Preview or explicitly adopt a company diagram revision into local authoring custody',
+    )
+    .action(
+      async (
+        artifactId: string,
+        options: {
+          project: string;
+          revision: string;
+          path: string;
+          apiUrl?: string;
+          accept?: string;
+        },
+      ) => {
+        const request = {
+          apiUrl: resolveCompanyOrigin(options.apiUrl),
+          projectId: options.project,
+          artifactId,
+          revisionId: options.revision,
+          filePath: options.path,
+        };
+        print(
+          options.accept
+            ? await adoptCompanyDiagramRevision(root(), { ...request, accept: options.accept })
+            : await previewCompanyDiagramAdoption(root(), request),
+        );
+      },
     );
   company
     .command('preview')

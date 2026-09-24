@@ -102,6 +102,10 @@
       "classification": "deterministic-preserved"
     },
     {
+      "path": "company adopt",
+      "classification": "deterministic-preserved"
+    },
+    {
       "path": "company preview",
       "classification": "deterministic-preserved"
     },
@@ -135,6 +139,18 @@
     },
     {
       "path": "diagram",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "diagram new",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "diagram edit",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "diagram apply",
       "classification": "deterministic-preserved"
     },
     {

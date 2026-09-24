@@ -16,11 +16,41 @@ the diagram embedded in the root README can never drift from its source.
 
 ## Authored geometry and durable bundles
 
-For applications consuming the new editable bundle APIs, see [saving and rendering
+For applications consuming editable bundle APIs, see [saving and rendering
 authored diagrams](authored-storage.md). Those APIs keep persisted placement and
 semantic content together, expose recoverable saves, and create immutable visual
-exports. The CLI commands below continue to use the supported legacy document
-format; opening a legacy diagram does not migrate it.
+exports. The `new`, `edit`, and `apply` CLI commands use that bundle. The
+`render`, `inspect`, `check`, and `rerender` commands also support the earlier
+document and generated-manifest workflow; opening a legacy diagram does not
+silently migrate it.
+
+Create a local authored diagram and open its owner studio:
+
+```bash
+planr diagram new diagrams/checkout/checkout.planr-diagram-bundle.json --title "Checkout" --json
+planr diagram edit diagrams/checkout/checkout.planr-diagram-bundle.json
+```
+
+An agent can propose a typed `diagram-edit-transaction` with explicit IDs and
+the exact current bundle base. The CLI validates and previews the change without
+replacing the bundle. Apply only the reviewed preview token in a later command:
+
+```bash
+planr diagram apply diagrams/checkout/checkout.planr-diagram-bundle.json --transaction change.json --dry-run --json
+planr diagram apply diagrams/checkout/checkout.planr-diagram-bundle.json --transaction change.json --accept <previewToken> --json
+```
+
+The preview reports semantic and presentation changes. A stale base or changed
+transaction is rejected. Review comments are untrusted input; they never trigger
+commands, model subprocesses, or a Plan/Ship phase.
+
+For a complete company diagram bundle, preview publication with `planr company
+preview <canonical-path> --kind diagram --project <id>`, then explicitly publish
+the returned preview ID. To bring a selected authorized company revision into
+a fresh local project, preview `planr company adopt <artifact-id> --project <id>
+--revision <id> --path <canonical-path> --json`; inspect the scope and collision
+result, then repeat with its `--accept <previewToken>`. `company pull` continues
+to retrieve an inspection copy without modifying repository authority.
 
 ## First diagram
 
