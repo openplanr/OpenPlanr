@@ -1,5 +1,12 @@
 # @openplanr/artifact
 
+## 0.4.0
+### Minor Changes
+
+- c7f869c: Add the shared canvas-first diagram editor and local owner studio. Authors can create and edit shapes, connectors, containers and lanes with keyboard and pointer controls, bounded undo, conflict review, recoverable saving and read-only mobile inspection.
+- cb8860e: Add certified, browser-safe Mermaid flowchart copy conversion with exact original source bytes, stable source correspondence, bounded diagnostics, explicit fidelity losses and acknowledgement before adoption. First-copy layouts now render valid visual snapshots for supported nested flowcharts and all certified directions; repository linking and watched synchronization are not part of this release.
+- 53abef0: Add shared Mermaid copy import preview and fidelity-aware export controls to the diagram editor. Authors can inspect source ranges, proposed objects and visual snapshots, acknowledge exact losses, and adopt into a new unsaved diagram; complete bundle, Mermaid copy and quality-gated SVG exports remain distinct. Import into an existing saved diagram is unavailable until atomic source replacement is supported.
+
 ## 0.3.0
 ### Minor Changes
 
