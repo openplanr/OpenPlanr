@@ -17,7 +17,9 @@ import { spliceManagedBlock } from '../utils/splice-managed-block.js';
 import {
   applyBundledClaudePluginIntegration,
   type ClaudeCommandRunner,
+  type ClaudePluginInspection,
   type ClaudePluginOperation,
+  claudePluginUninstallCommand,
   inspectBundledClaudePluginIntegration,
 } from './claude-plugin-service.js';
 import {
@@ -976,7 +978,7 @@ interface BundledHostAsset {
   content: Buffer;
 }
 
-function bundledHostRoot(host: 'openai' | 'claude' | 'cursor'): string {
+export function bundledHostRoot(host: 'openai' | 'claude' | 'cursor'): string {
   const cliRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
   const root = path.join(cliRoot, 'lib', 'host-packages', host);
   if (!existsSync(root) || lstatSync(root).isSymbolicLink() || !lstatSync(root).isDirectory()) {
@@ -987,6 +989,21 @@ function bundledHostRoot(host: 'openai' | 'claude' | 'cursor'): string {
     );
   }
   return root;
+}
+
+/** Setup and doctor word a second `planr` plugin identically; neither removes it. */
+function duplicateClaudePluginDiagnostic(inspection: ClaudePluginInspection): {
+  message: string;
+  fix: string;
+} {
+  const managed = inspection.plugins.map((plugin) => plugin.id).join(', ');
+  const duplicates = inspection.duplicatePluginIds;
+  return {
+    message: `Duplicate Claude plugin detected: ${duplicates.join(', ')} installed beside the setup-managed ${managed}; both expose the same /planr commands`,
+    fix: `Keep one plugin. To keep the setup-managed ${managed}, run: ${duplicates
+      .map(claudePluginUninstallCommand)
+      .join(' && ')}`,
+  };
 }
 
 function bundledSkillAssets(runtime: RuntimeId): BundledHostAsset[] {
@@ -1831,6 +1848,13 @@ export async function previewSetup(options: SetupOptions): Promise<SetupPreview>
         status: 'warn',
         message: `Legacy Claude plugin installation detected: ${claudeInspection.legacyPluginIds.join(', ')}`,
         fix: 'After verifying the official plugin, remove the legacy plugin from Claude Code.',
+      });
+    }
+    if (claudeInspection.duplicatePluginIds.length > 0) {
+      runtimeDiagnostics.push({
+        runtime: 'claude-code',
+        status: 'warn',
+        ...duplicateClaudePluginDiagnostic(claudeInspection),
       });
     }
   }
@@ -2821,6 +2845,13 @@ export async function runtimeDoctor(
           status: 'warn',
           message: `Legacy Claude plugin installation detected: ${inspection.legacyPluginIds.join(', ')}`,
           fix: 'Verify `planr@openplanr-local`, then remove the legacy plugin from Claude Code.',
+        });
+      }
+      if (inspection.duplicatePluginIds.length > 0) {
+        diagnostics.push({
+          code: 'runtime-claude-duplicate-plugin',
+          status: 'warn',
+          ...duplicateClaudePluginDiagnostic(inspection),
         });
       }
     }

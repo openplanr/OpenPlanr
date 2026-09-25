@@ -19,7 +19,7 @@ export async function runOperateReviewNoteValidator(argv = process.argv.slice(2)
     contractVersion: option(argv, '--contract-version', 'auto'),
   });
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
-  if (!result.valid) process.exitCode = 1;
+  if (!result.ok) process.exitCode = 1;
   return result;
 }
 

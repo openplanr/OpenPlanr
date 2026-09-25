@@ -66,15 +66,20 @@ Build the round brief from the feedback: `overall` + per-variant `comments` + **
 (quote each pin: `[fix] "thicker strokes" @ (x,y)` — pins are the user pointing at exact
 regions; address every `fix`/`improve` pin explicitly, answer `question` pins in chat).
 
+The openai commands below apply only to sessions opened with `--provider openai` (the
+session file records the provider); each one is billed to the user's OpenAI account.
+
 - **iterate** — per session chain, refine don't regenerate:
-  openai → `… iterate --variant X --feedback "<round brief>" --session-dir <…>`;
-  claude-svg → edit the SVG to satisfy each pin, `… check`, then `… record --feedback …`.
-- **more-like** — `preferred` variant becomes the anchor: openai → `iterate` on that
-  session asking for N sibling takes (or `evolve --from <its png>`); claude-svg → author N
-  new SVGs varying ONLY the non-anchored dimensions.
-- **remix** — `remixSpec {layoutFrom, colorsFrom, note}`: openai → `evolve --from <layout
-  variant's png>` with a brief importing the other's palette; claude-svg → compose a new
-  SVG taking layout geometry from one + palette from the other.
+  claude-svg → edit the SVG to satisfy each pin, `… check`, then `… record --feedback …`;
+  openai session → `… iterate --variant X --feedback "<round brief>" --session-dir <…>`
+  (chains `previous_response_id`, same models unless `--model` / `--image-model` are passed).
+- **more-like** — `preferred` variant becomes the anchor: claude-svg → author N new SVGs
+  varying ONLY the non-anchored dimensions; openai session → `iterate` on that session
+  asking for N sibling takes (or `evolve --provider openai --from <its png>`).
+- **remix** — `remixSpec {layoutFrom, colorsFrom, note}`: claude-svg → compose a new SVG
+  taking layout geometry from one + palette from the other; openai session →
+  `evolve --provider openai --from <layout variant's png>` with a brief importing the
+  other's palette.
 
 Then: update `progress.json` (`versions` gains each new file per variant — the board's
 versions rail + A/B diff feed off it), and

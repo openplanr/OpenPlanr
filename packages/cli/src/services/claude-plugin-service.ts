@@ -2,18 +2,7 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
-export const OPENPLANR_CLAUDE_MARKETPLACE = 'openplanr';
-export const OPENPLANR_CLAUDE_MARKETPLACE_SOURCE = 'openplanr/marketplace';
 export const OPENPLANR_CLAUDE_PLUGIN = 'planr';
-/**
- * The skills-plugin version this CLI targets. It had drifted three releases behind the
- * published bundle, and because the plugin-half prescription derives its skills target
- * from here, a genuinely stale skills plugin was silently omitted from the commands — a
- * user could run every prescribed command and still be on an old bundle believing they
- * were current. Bumping it with each skills release is the interim contract; deriving it
- * from the published manifest instead is tracked separately.
- */
-export const OPENPLANR_SKILLS_VERSION = '1.26.1';
 
 export type ClaudePluginOperationKind =
   | 'add-marketplace'
@@ -51,6 +40,8 @@ export interface ClaudePluginInspection {
   operations: ClaudePluginOperation[];
   plugins: ClaudePluginState[];
   legacyPluginIds: string[];
+  /** `planr` plugins installed from another marketplace; reported, never removed. */
+  duplicatePluginIds: string[];
   error?: string;
 }
 
@@ -124,49 +115,6 @@ function installedPlugins(value: InstalledPlugin[] | { installed?: InstalledPlug
   return Array.isArray(value) ? value : (value.installed ?? []);
 }
 
-function stableVersionParts(version: string): number[] | null {
-  if (!/^\d+\.\d+\.\d+$/.test(version)) return null;
-  return version.split('.').map(Number);
-}
-
-function newestCompatibleTarget(minimum: string, advertised?: string): string {
-  if (!advertised) return minimum;
-  const minimumParts = stableVersionParts(minimum);
-  const advertisedParts = stableVersionParts(advertised);
-  if (!minimumParts || !advertisedParts) return minimum;
-  if (
-    advertisedParts[0] !== minimumParts[0] ||
-    (minimumParts[0] === 0 && advertisedParts[1] !== minimumParts[1])
-  ) {
-    return minimum;
-  }
-  for (let index = 0; index < minimumParts.length; index += 1) {
-    if (advertisedParts[index] > minimumParts[index]) return advertised;
-    if (advertisedParts[index] < minimumParts[index]) return minimum;
-  }
-  return advertised;
-}
-
-function marketplaceTargets(marketplace: MarketplaceEntry | undefined): Map<string, string> {
-  if (!marketplace?.installLocation) return new Map();
-  const manifestPath = path.join(marketplace.installLocation, '.claude-plugin', 'marketplace.json');
-  if (!existsSync(manifestPath)) return new Map();
-  try {
-    const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as {
-      plugins?: Array<{ name?: string; version?: string }>;
-    };
-    return new Map(
-      (manifest.plugins ?? [])
-        .filter((plugin): plugin is { name: string; version: string } =>
-          Boolean(plugin.name && plugin.version),
-        )
-        .map((plugin) => [plugin.name, plugin.version]),
-    );
-  } catch {
-    return new Map();
-  }
-}
-
 function validManifest(
   installPath: string | undefined,
   expectedName: string,
@@ -184,26 +132,6 @@ function validManifest(
   } catch {
     return false;
   }
-}
-
-function pluginState(
-  installed: InstalledPlugin[],
-  name: string,
-  expectedVersion: string,
-): ClaudePluginState {
-  const id = `${name}@${OPENPLANR_CLAUDE_MARKETPLACE}`;
-  const selected = installed.find((plugin) => plugin.id === id && plugin.scope === 'user');
-  const installedVersion = selected?.version;
-  return {
-    id,
-    name,
-    expectedVersion,
-    ...(installedVersion ? { installedVersion } : {}),
-    enabled: selected?.enabled === true,
-    installed: Boolean(selected),
-    identityValid: validManifest(selected?.installPath, name, expectedVersion),
-    ...(selected?.installPath ? { installPath: selected.installPath } : {}),
-  };
 }
 
 function pluginOperations(plugin: ClaudePluginState): ClaudePluginOperation[] {
@@ -247,112 +175,6 @@ function pluginOperations(plugin: ClaudePluginState): ClaudePluginOperation[] {
   return operations;
 }
 
-export function inspectClaudePluginIntegration(
-  pipelineVersion: string,
-  runner: ClaudeCommandRunner = defaultRunner,
-): ClaudePluginInspection {
-  const versionCheck = runner(['--version']);
-  if (versionCheck.error || versionCheck.status !== 0) {
-    return {
-      available: false,
-      marketplaceConfigured: false,
-      ready: false,
-      operations: [],
-      plugins: [],
-      legacyPluginIds: [],
-      error: versionCheck.error?.message || versionCheck.stderr.trim() || 'Claude Code unavailable',
-    };
-  }
-
-  try {
-    const marketplaces = parseJson<MarketplaceEntry[]>(
-      runner(['plugin', 'marketplace', 'list', '--json']),
-    );
-    const listed = parseJson<InstalledPlugin[] | { installed?: InstalledPlugin[] }>(
-      runner(['plugin', 'list', '--json']),
-    );
-    const installed = installedPlugins(listed);
-    const configuredMarketplace = marketplaces.find(
-      (marketplace) => marketplace.name === OPENPLANR_CLAUDE_MARKETPLACE,
-    );
-    const marketplaceConfigured = Boolean(configuredMarketplace);
-    const targets = marketplaceTargets(configuredMarketplace);
-    const unifiedName = targets.has(OPENPLANR_CLAUDE_PLUGIN)
-      ? OPENPLANR_CLAUDE_PLUGIN
-      : targets.has('openplanr')
-        ? 'openplanr'
-        : undefined;
-    const unifiedTarget =
-      unifiedName && !targets.has('planr-pipeline') ? targets.get(unifiedName) : undefined;
-    const plugins = unifiedTarget
-      ? [pluginState(installed, unifiedName ?? OPENPLANR_CLAUDE_PLUGIN, unifiedTarget)]
-      : [
-          pluginState(
-            installed,
-            'openplanr',
-            newestCompatibleTarget(OPENPLANR_SKILLS_VERSION, targets.get('openplanr')),
-          ),
-          pluginState(
-            installed,
-            'planr-pipeline',
-            newestCompatibleTarget(pipelineVersion, targets.get('planr-pipeline')),
-          ),
-        ];
-    const operations: ClaudePluginOperation[] = [
-      {
-        runtime: 'claude-code',
-        kind: marketplaceConfigured ? 'refresh-marketplace' : 'add-marketplace',
-        id: OPENPLANR_CLAUDE_MARKETPLACE,
-        scope: 'user',
-        description: marketplaceConfigured
-          ? 'Refresh the configured OpenPlanr Claude marketplace'
-          : 'Add the OpenPlanr Claude marketplace',
-      },
-      ...plugins.flatMap(pluginOperations),
-    ];
-    const expectedPluginIds = new Set(plugins.map((plugin) => plugin.id));
-    const legacyPluginIds = installed
-      .filter(
-        (plugin) =>
-          plugin.scope === 'user' &&
-          Boolean(
-            plugin.id &&
-              !expectedPluginIds.has(plugin.id) &&
-              (plugin.id.startsWith('openplanr@') ||
-                plugin.id.startsWith(`${OPENPLANR_CLAUDE_PLUGIN}@`) ||
-                plugin.id === `planr-pipeline@${OPENPLANR_CLAUDE_MARKETPLACE}`),
-          ),
-      )
-      .map((plugin) => plugin.id as string);
-    return {
-      available: true,
-      marketplaceConfigured,
-      ready:
-        marketplaceConfigured &&
-        plugins.every(
-          (plugin) =>
-            plugin.installed &&
-            plugin.enabled &&
-            plugin.identityValid &&
-            plugin.installedVersion === plugin.expectedVersion,
-        ),
-      operations,
-      plugins,
-      legacyPluginIds,
-    };
-  } catch (cause) {
-    return {
-      available: true,
-      marketplaceConfigured: false,
-      ready: false,
-      operations: [],
-      plugins: [],
-      legacyPluginIds: [],
-      error: cause instanceof Error ? cause.message : String(cause),
-    };
-  }
-}
-
 function runOrThrow(
   runner: ClaudeCommandRunner,
   args: string[],
@@ -365,20 +187,28 @@ function runOrThrow(
   }
 }
 
+/** The uninstall command setup runs for a plugin it retires; the same text is given to users. */
+export function claudePluginUninstallCommand(id: string): string {
+  return `claude plugin uninstall ${id} --scope user --keep-data --yes`;
+}
+
 /**
  * Render the exact `claude` shell command a plugin operation maps to — the same
- * argv `applyClaudePluginIntegration`'s `runOrThrow` calls above already use,
- * only as a printable string. `planr upgrade apply` prescribes (never executes)
- * the plugin half from these, so the printed commands can never drift from what
- * an apply would actually run. A pure formatter: it derives a command, it never
- * touches the host — plugin installation is a host command the CLI cannot own.
+ * argv `applyBundledClaudePluginIntegration`'s `runOrThrow` calls use, only as a
+ * printable string. `planr upgrade apply` prescribes (never executes) the plugin
+ * half from these, so the printed commands can never drift from what an apply
+ * would actually run. `marketplaceRoot` is the bundled directory an
+ * `add-marketplace` registers. A pure formatter: it never touches the host.
  */
-export function formatClaudePluginOperationCommand(operation: ClaudePluginOperation): string {
+export function formatClaudePluginOperationCommand(
+  operation: ClaudePluginOperation,
+  marketplaceRoot: string,
+): string {
   switch (operation.kind) {
     case 'add-marketplace':
-      return `claude plugin marketplace add ${OPENPLANR_CLAUDE_MARKETPLACE_SOURCE} --scope user`;
+      return `claude plugin marketplace add ${marketplaceRoot}`;
     case 'refresh-marketplace':
-      return `claude plugin marketplace update ${OPENPLANR_CLAUDE_MARKETPLACE}`;
+      return `claude plugin marketplace update ${operation.id}`;
     case 'install':
       return `claude plugin install ${operation.id} --scope user`;
     case 'update':
@@ -386,80 +216,8 @@ export function formatClaudePluginOperationCommand(operation: ClaudePluginOperat
     case 'enable':
       return `claude plugin enable ${operation.id} --scope user`;
     case 'remove':
-      return `claude plugin uninstall ${operation.id} --scope user --keep-data --yes`;
+      return claudePluginUninstallCommand(operation.id);
   }
-}
-
-export function applyClaudePluginIntegration(
-  pipelineVersion: string,
-  inspection: ClaudePluginInspection,
-  runner: ClaudeCommandRunner = defaultRunner,
-): ClaudePluginApplyResult {
-  if (!inspection.available || inspection.error) {
-    throw new Error(inspection.error ?? 'Claude Code is unavailable');
-  }
-  const performed: ClaudePluginOperation[] = [];
-  const marketplaceOperation = inspection.operations.find((operation) =>
-    ['add-marketplace', 'refresh-marketplace'].includes(operation.kind),
-  );
-  if (marketplaceOperation) {
-    if (marketplaceOperation.kind === 'add-marketplace') {
-      runOrThrow(
-        runner,
-        ['plugin', 'marketplace', 'add', OPENPLANR_CLAUDE_MARKETPLACE_SOURCE, '--scope', 'user'],
-        marketplaceOperation,
-      );
-    } else {
-      runOrThrow(
-        runner,
-        ['plugin', 'marketplace', 'update', OPENPLANR_CLAUDE_MARKETPLACE],
-        marketplaceOperation,
-      );
-    }
-    performed.push(marketplaceOperation);
-  }
-
-  const refreshedInspection = inspectClaudePluginIntegration(pipelineVersion, runner);
-  if (refreshedInspection.error) throw new Error(refreshedInspection.error);
-  for (const operation of refreshedInspection.operations.filter(
-    (item) => !['add-marketplace', 'refresh-marketplace'].includes(item.kind),
-  )) {
-    if (operation.kind === 'install') {
-      runOrThrow(runner, ['plugin', 'install', operation.id, '--scope', 'user'], operation);
-    } else if (operation.kind === 'update') {
-      runOrThrow(runner, ['plugin', 'update', operation.id, '--scope', 'user'], operation);
-    } else if (operation.kind === 'enable') {
-      runOrThrow(runner, ['plugin', 'enable', operation.id, '--scope', 'user'], operation);
-    }
-    performed.push(operation);
-  }
-
-  const finalInspection = inspectClaudePluginIntegration(pipelineVersion, runner);
-  if (!finalInspection.ready) {
-    const drift = finalInspection.plugins
-      .filter(
-        (plugin) =>
-          !plugin.installed ||
-          !plugin.enabled ||
-          !plugin.identityValid ||
-          plugin.installedVersion !== plugin.expectedVersion,
-      )
-      .map(
-        (plugin) =>
-          `${plugin.id}=${plugin.installedVersion ?? 'missing'} (expected ${plugin.expectedVersion})`,
-      )
-      .join(', ');
-    throw new Error(
-      finalInspection.error || `Claude plugin verification failed${drift ? `: ${drift}` : ''}`,
-    );
-  }
-  return {
-    operations: performed,
-    restartRequired: performed.some((operation) =>
-      ['install', 'update', 'enable'].includes(operation.kind),
-    ),
-    inspection: finalInspection,
-  };
 }
 
 function bundledMarketplace(marketplaceRoot: string) {
@@ -529,6 +287,7 @@ export function inspectBundledClaudePluginIntegration(
       operations: [],
       plugins: [],
       legacyPluginIds: [],
+      duplicatePluginIds: [],
       error: versionCheck.error?.message || versionCheck.stderr.trim() || 'Claude Code unavailable',
     };
   }
@@ -556,6 +315,19 @@ export function inspectBundledClaudePluginIntegration(
           Boolean(candidate.id) &&
           candidate.id !== plugin.id &&
           (candidate.id?.startsWith('openplanr@') || candidate.id?.startsWith('planr-pipeline@')),
+      )
+      .map((candidate) => candidate.id as string)
+      .sort();
+    // A `planr` plugin from another marketplace (`/plugin install planr@openplanr`) exposes the
+    // same `/planr` commands as the bundled one. Removing it is the user's call, so it is only
+    // reported: it neither blocks `ready` nor becomes a remove operation like a legacy id.
+    const duplicatePluginIds = installed
+      .filter(
+        (candidate) =>
+          candidate.scope === 'user' &&
+          Boolean(candidate.id) &&
+          candidate.id !== plugin.id &&
+          candidate.id?.startsWith(`${OPENPLANR_CLAUDE_PLUGIN}@`),
       )
       .map((candidate) => candidate.id as string)
       .sort();
@@ -591,6 +363,7 @@ export function inspectBundledClaudePluginIntegration(
       ],
       plugins: [plugin],
       legacyPluginIds,
+      duplicatePluginIds,
     };
   } catch (cause) {
     return {
@@ -600,6 +373,7 @@ export function inspectBundledClaudePluginIntegration(
       operations: [],
       plugins: [],
       legacyPluginIds: [],
+      duplicatePluginIds: [],
       error: cause instanceof Error ? cause.message : String(cause),
     };
   }

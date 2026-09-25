@@ -2,9 +2,10 @@
 /**
  * planr-design — the design-loop engine CLI (vendored in the plugin, zero deps).
  *
- *   setup     store a provider key (0600) + REAL smoke test with printed proof
+ *   setup     store an OpenAI key (0600) + REAL smoke test with printed proof (billed)
  *   doctor    auth + daemon + a $0 dry-run (claude-svg contract validation)
- *   generate  one variant (openai: image → tmp → cp; claude-svg: prints the contract)
+ *   generate  one variant (claude-svg, the default: prints the contract;
+ *             --provider openai: image → tmp → cp, billed to the user's account)
  *   variants  N sequential variants (the agents run parallel `generate`s instead)
  *   evolve    variants FROM an existing image ("I don't like THIS")
  *   iterate   continue a session chain with feedback text (refine, not regenerate)
@@ -28,7 +29,7 @@ import { fileURLToPath } from 'node:url';
 
 import { resolveAuth } from './auth.mjs';
 import { credentialsPath, planrHome, projectDesignsDir, sessionDirName, tasteProfilePath, ARTIFACT_GITIGNORE } from './paths.mjs';
-import { resolveProvider } from './providers/index.mjs';
+import { DEFAULT_PROVIDER, resolveProvider } from './providers/index.mjs';
 import * as openai from './providers/openai.mjs';
 import { sheetContract, contractInstructions, validateSheet } from './providers/claudeSvg.mjs';
 import { createSession, loadSession, saveSession, appendRound } from './session.mjs';
@@ -98,6 +99,39 @@ function resolveSessionDir(args) {
   return ensureArtifactDir(join(projectDesignsDir(project), sessionDirName(target)));
 }
 
+/** A flag's value, or undefined when absent; a bare flag (no value) is an error, never a silent default. */
+function stringFlag(args, name) {
+  const value = args[name];
+  if (value === undefined) return undefined;
+  if (typeof value !== 'string' || !value.trim()) fail(`--${name} needs a value`);
+  return value.trim();
+}
+
+/** The openai provider's per-call options from the CLI flags; unset flags leave the provider defaults in place. */
+function openaiOptions(args, apiKey) {
+  return {
+    apiKey,
+    model: stringFlag(args, 'model'),
+    imageModel: stringFlag(args, 'image-model'),
+    size: stringFlag(args, 'size'),
+    quality: stringFlag(args, 'quality'),
+  };
+}
+
+// Billed vision calls (png check, taste extraction) run only behind the same explicit
+// opt-in as generation: a resolved key alone never selects openai.
+function requireOpenAIOptIn(args, what, alternative) {
+  if (args.provider !== 'openai') {
+    fail(`${what} calls OpenAI (billed to your OpenAI account) — pass --provider openai to opt in, or ${alternative}`);
+  }
+  const auth = resolveAuth({ cwd: process.cwd() });
+  for (const w of auth.warnings) errLine(`⚠ ${w}`);
+  if (!auth.apiKey) {
+    fail('--provider openai needs an API key: run `planr-design setup` (stores it with mode 0600) or export OPENAI_API_KEY');
+  }
+  return auth;
+}
+
 async function promptHidden(question) {
   return new Promise((resolveAns) => {
     const rl = createInterface({ input: process.stdin, output: process.stderr, terminal: true });
@@ -132,12 +166,12 @@ async function cmdSetup(args) {
 
   if (args['no-smoke']) { out({ ok: true, stored: true, smoke: 'skipped' }); return; }
 
-  errLine('Running a real smoke generation (one small image) so you see it work before any real spend…');
+  errLine('Running a real smoke generation (one 1024x1024 low-quality image, billed to your OpenAI account) so you see the key work before a full run…');
   const t0 = Date.now();
   const smokeDir = ensureArtifactDir(join(projectDesignsDir('_smoke'), sessionDirName('smoke')));
   const { imagePath, responseId, bytes } = await openai.generateVariant(
     'A tiny abstract geometric mark, two shapes, flat indigo on cream. Minimal.',
-    { apiKey: key, size: '1024x1024', quality: 'low' },
+    { ...openaiOptions(args, key), size: '1024x1024', quality: 'low' },
   );
   const outputPath = join(smokeDir, 'smoke.png');
   copyFileSync(imagePath, outputPath); // tmp → final (hard rule 5)
@@ -174,7 +208,13 @@ async function cmdDoctor(args) {
   const report = {
     ok: true,
     auth: { source: auth.source, hasKey: Boolean(auth.apiKey), warnings: auth.warnings },
-    providers: { openai: Boolean(auth.apiKey), 'claude-svg': true },
+    providers: { default: DEFAULT_PROVIDER, openai: Boolean(auth.apiKey), 'claude-svg': true },
+    openai: {
+      optIn: '--provider openai',
+      model: openai.DEFAULT_MODEL,
+      imageModel: openai.DEFAULT_IMAGE_MODEL,
+      cost: 'billed to your OpenAI account',
+    },
     daemon: daemon ? { running: true, port: daemon.port } : { running: false },
     dryRun: { provider: 'claude-svg', pass: dryRun.pass, issues: dryRun.issues, cost: '$0' },
     home: planrHome(),
@@ -191,6 +231,10 @@ async function cmdGenerate(args) {
   for (const w of auth.warnings) errLine(`⚠ ${w}`);
   const { name, provider, degraded, reason } = resolveProvider({ requested: args.provider || 'auto', auth });
   if (degraded) errLine(`provider: ${name} (${reason})`);
+  // claude-svg authors from the brief alone; a reference image would otherwise be dropped silently.
+  if (name === 'claude-svg' && args['from-image']) {
+    fail('a reference image (--from / --from-image) needs the openai provider — pass --provider openai (billed to your OpenAI account), or drop the image and let claude-svg author from the brief');
+  }
 
   if (name === 'claude-svg') {
     // The CLI defines the contract; the CALLING AGENT authors the SVG and then
@@ -211,9 +255,7 @@ async function cmdGenerate(args) {
 
   const t0 = Date.now();
   const { imagePath, responseId, bytes } = await provider.generateVariant(brief, {
-    apiKey: auth.apiKey,
-    size: args.size || '1024x1024',
-    quality: args.quality || 'high',
+    ...openaiOptions(args, auth.apiKey),
     imageInputPath: args['from-image'] || null,
   });
   const outputPath = join(sessionDir, `variant-${variant}.png`);
@@ -254,7 +296,6 @@ async function cmdIterate(args) {
   const feedback = args.feedback || fail('--feedback required');
   const sessionDir = resolveSessionDir(args);
   const session = loadSession(sessionDir, variant) ?? fail(`no session-${variant}.json in ${sessionDir}`);
-  const auth = resolveAuth({ cwd: process.cwd() });
 
   if (session.provider === 'claude-svg') {
     // The agent edits the SVG itself; the engine records the round for lineage.
@@ -271,8 +312,13 @@ async function cmdIterate(args) {
     return;
   }
 
-  if (!auth.apiKey) fail('iterate on an openai session needs the API key that created it');
-  const { imagePath, responseId, bytes } = await openai.iterate(session, feedback, { apiKey: auth.apiKey });
+  // The session was opened with --provider openai; that opt-in carries through its chain.
+  const auth = resolveAuth({ cwd: process.cwd() });
+  for (const w of auth.warnings) errLine(`⚠ ${w}`);
+  if (!auth.apiKey) {
+    fail('iterate on an openai session needs the API key that created it (billed to your OpenAI account): run `planr-design setup` or export OPENAI_API_KEY');
+  }
+  const { imagePath, responseId, bytes } = await openai.iterate(session, feedback, openaiOptions(args, auth.apiKey));
   const round = session.outputPaths.length + 1;
   const outputPath = join(sessionDir, `variant-${variant}-v${round}.png`);
   copyFileSync(imagePath, outputPath);
@@ -328,9 +374,8 @@ async function cmdCheck(args) {
     return;
   }
   const brief = args.brief || fail('--brief required for image checks');
-  const auth = resolveAuth({ cwd: process.cwd() });
-  if (!auth.apiKey) fail('image quality check needs an OpenAI key (svg checks are $0)');
-  const verdict = await openai.checkQuality(file, brief, { apiKey: auth.apiKey });
+  const auth = requireOpenAIOptIn(args, 'an image quality check', 'check an svg ($0)');
+  const verdict = await openai.checkQuality(file, brief, { apiKey: auth.apiKey, model: stringFlag(args, 'model') });
   out({ ok: true, provider: 'openai', ...verdict });
   process.exitCode = verdict.pass ? 0 : 2;
 }
@@ -551,13 +596,9 @@ async function cmdTaste(args) {
     };
     const flagged = Object.values(attributes).some((a) => a.length > 0);
     if (!flagged && artifact.endsWith('.png')) {
-      const auth = resolveAuth({ cwd: process.cwd() });
-      if (auth.apiKey) {
-        errLine('no attribute flags — vision-extracting from the PNG…');
-        attributes = await openai.extractAttributes(artifact, { apiKey: auth.apiKey });
-      } else {
-        fail('no attribute flags and no API key for vision extraction — pass --fonts/--colors/--layouts/--aesthetics');
-      }
+      const auth = requireOpenAIOptIn(args, 'vision attribute extraction', 'pass --fonts/--colors/--layouts/--aesthetics');
+      errLine('no attribute flags — vision-extracting from the PNG…');
+      attributes = await openai.extractAttributes(artifact, { apiKey: auth.apiKey, model: stringFlag(args, 'model') });
     }
     const profile = loadProfile(path);
     const next = updateTaste(profile, { verdict: sub, attributes, sessionId: args.session || basename(artifact), artifact });

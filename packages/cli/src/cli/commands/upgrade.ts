@@ -4,6 +4,7 @@ import { runPendingMigrations } from '../../services/migration-registry.js';
 import { promptConfirm } from '../../services/prompt-service.js';
 import {
   executeCliHalfUpgrade,
+  PLUGIN_HALF_INSTRUCTION,
   planCliUpgrade,
   pluginHalfPrescription,
   reconcileInstalledTuple,
@@ -37,8 +38,10 @@ export function registerUpgradeCommand(program: Command, _cliVersion: string) {
         display.keyValue('Manifest source', result.ecosystemSource);
         display.keyValue('Installed CLI', result.installed.cli);
         display.keyValue('Bundled pipeline', result.bundledPipeline ?? 'not resolved');
-        display.keyValue('Installed host plugin', result.installed.skills ?? 'not installed');
-        display.keyValue('Installed pipeline plugin', result.installed.pipeline ?? 'not installed');
+        display.keyValue(
+          'Installed host plugin (planr@openplanr-local)',
+          result.installed.skills ?? 'not installed',
+        );
         if (result.legacyPlugins && result.legacyPlugins.length > 0) {
           display.keyValue('Legacy plugins', result.legacyPlugins.join(', '));
         }
@@ -95,10 +98,8 @@ export function registerUpgradeCommand(program: Command, _cliVersion: string) {
           logger.info(plan.reason);
           if (pluginHalfCommands.length > 0) {
             display.blank();
-            display.heading('Plugin half — the CLI cannot install host plugins');
-            logger.info(
-              'Run these yourself, in order (the first refreshes the marketplace so the installer does not reinstall the stale version), or ask the agent to run planr-doctor’s upgrade skill:',
-            );
+            display.heading('Plugin half — the upgrade never changes Claude plugins itself');
+            logger.info(PLUGIN_HALF_INSTRUCTION);
             pluginHalfCommands.forEach((command, index) => {
               display.numbered(index + 1, command);
             });
@@ -155,17 +156,15 @@ export function registerUpgradeCommand(program: Command, _cliVersion: string) {
             logger.dim('No changelog entries were found for this range.');
           }
           display.blank();
-          display.heading('Plugin half — the CLI cannot install host plugins');
+          display.heading('Plugin half — the upgrade never changes Claude plugins itself');
           if (result.pluginHalfCommands.length > 0) {
-            logger.info(
-              'Run these yourself, in order (the first refreshes the marketplace so the installer does not reinstall the stale version), or ask the agent to run planr-doctor’s upgrade skill:',
-            );
+            logger.info(PLUGIN_HALF_INSTRUCTION);
             result.pluginHalfCommands.forEach((command, index) => {
               display.numbered(index + 1, command);
             });
           } else {
             logger.dim(
-              'The Claude host was not detected, so there is no plugin half to prescribe here.',
+              'No Claude plugin commands were prescribed; run `planr doctor` to confirm the host plugin state.',
             );
           }
         } else {

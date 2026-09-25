@@ -842,6 +842,99 @@ describe('runtime setup', () => {
     ]);
   });
 
+  it('warns about a marketplace-installed planr@openplanr beside planr@openplanr-local without removing it', async () => {
+    const skillsPath = join(root, 'claude-openplanr-current');
+    mkdirSync(join(skillsPath, '.claude-plugin'), { recursive: true });
+    writeFileSync(
+      join(skillsPath, '.claude-plugin', 'plugin.json'),
+      `${JSON.stringify({ name: 'planr', version: bundledAdapterRegistry.pluginVersion })}\n`,
+    );
+    copyFileSync(
+      join(bundledClaudePluginRoot, '.openplanr-content.json'),
+      join(skillsPath, '.openplanr-content.json'),
+    );
+    const calls: string[][] = [];
+    const runner: ClaudeCommandRunner = (args) => {
+      calls.push(args);
+      if (args[0] === '--version') return { status: 0, stdout: '2.1.0\n', stderr: '' };
+      if (args[1] === 'marketplace' && args[2] === 'list') {
+        return {
+          status: 0,
+          stdout: JSON.stringify([{ name: 'openplanr-local', path: 'generated-local-package' }]),
+          stderr: '',
+        };
+      }
+      if (args[1] === 'list') {
+        return {
+          status: 0,
+          stdout: JSON.stringify([
+            {
+              id: 'planr@openplanr-local',
+              version: bundledAdapterRegistry.pluginVersion,
+              scope: 'user',
+              enabled: true,
+              installPath: skillsPath,
+            },
+            {
+              id: 'planr@openplanr',
+              version: '2.6.1',
+              scope: 'user',
+              enabled: true,
+              installPath: join(root, 'marketplace-claude-planr'),
+            },
+          ]),
+          stderr: '',
+        };
+      }
+      if (args[1] === 'marketplace' && args[2] === 'update') {
+        return { status: 0, stdout: '', stderr: '' };
+      }
+      return {
+        status: 1,
+        stdout: '',
+        stderr: `Unexpected Claude command: ${args.join(' ')}`,
+      };
+    };
+    const uninstallCommand =
+      'claude plugin uninstall planr@openplanr --scope user --keep-data --yes';
+
+    const preview = await previewSetup({
+      projectDir,
+      cliVersion,
+      runtime: 'claude-code',
+      scope: 'user',
+      claudeCommandRunner: runner,
+    });
+    expect(preview.runtimeOperations.map(({ kind }) => kind)).toEqual(['refresh-marketplace']);
+    expect(preview.runtimeDiagnostics).toContainEqual(
+      expect.objectContaining({
+        status: 'warn',
+        message: expect.stringContaining(
+          'planr@openplanr installed beside the setup-managed planr@openplanr-local',
+        ),
+        fix: expect.stringContaining(uninstallCommand),
+      }),
+    );
+
+    // No replacement prompt and no `--replace-managed` requirement: the duplicate stays.
+    await applySetup({
+      projectDir,
+      cliVersion,
+      runtime: 'claude-code',
+      scope: 'user',
+      claudeCommandRunner: runner,
+    });
+    expect(calls.some((args) => args[1] === 'uninstall')).toBe(false);
+
+    const doctor = await runtimeDoctor(projectDir, { claudeCommandRunner: runner });
+    expect(doctor.diagnostics.find((item) => item.code === 'runtime-claude-plugins')).toMatchObject(
+      { status: 'pass' },
+    );
+    expect(
+      doctor.diagnostics.find((item) => item.code === 'runtime-claude-duplicate-plugin'),
+    ).toMatchObject({ status: 'warn', fix: expect.stringContaining(uninstallCommand) });
+  });
+
   it('treats an unselected missing runtime as informational and a configured one as a warning', async () => {
     const originalPath = process.env.PATH;
     process.env.PATH = '';

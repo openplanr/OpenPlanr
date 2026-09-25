@@ -34,7 +34,8 @@
 ## What it is
 
 - **Skills, not a second model.** Every skill runs inside the coding agent you already use.
-  OpenPlanr adds no model calls, API keys, or telemetry.
+  Skills and the planr CLI add no model calls or telemetry; the optional design engine calls
+  OpenAI only when you select its OpenAI provider and supply your own key.
 - **Plans are files.** Specifications, user stories, tasks, and provenance live under `.planr/`
   in your repository, reviewed and versioned like code.
 - **A deterministic CLI.** `planr` stores and validates planning files, renders diagrams and

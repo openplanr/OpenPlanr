@@ -59,8 +59,8 @@ function gitDirectory(): string | null {
 }
 
 /**
- * PATH deliberately omits `claude`, so `inspectClaudePluginIntegration` finds
- * no host and the skills/pipeline tuple is null — the real behaviour on a
+ * PATH deliberately omits `claude`, so `inspectBundledClaudePluginIntegration`
+ * finds no host and the installed plugin is null — the real behaviour on a
  * machine without the host installed. The ecosystem source is a local file, so
  * no network is touched.
  */
@@ -323,8 +323,8 @@ describe('packed planr upgrade apply', () => {
         '}',
         "const key = args.join(' ');",
         "if (key === '--version') { process.stdout.write('1.0.0'); process.exit(0); }",
-        "if (key === 'plugin marketplace list --json') { process.stdout.write(JSON.stringify([{ name: 'openplanr', repo: 'openplanr/marketplace' }])); process.exit(0); }",
-        "if (key === 'plugin list --json') { process.stdout.write(JSON.stringify([{ id: 'openplanr@openplanr', version: '1.0.0', scope: 'user', enabled: true }])); process.exit(0); }",
+        "if (key === 'plugin marketplace list --json') { process.stdout.write(JSON.stringify([{ name: 'openplanr-local', source: 'directory' }])); process.exit(0); }",
+        "if (key === 'plugin list --json') { process.stdout.write(JSON.stringify([{ id: 'planr@openplanr-local', version: '1.0.0', scope: 'user', enabled: true }])); process.exit(0); }",
         "process.stdout.write('[]');",
         'process.exit(0);',
         '',
@@ -384,11 +384,11 @@ describe('packed planr upgrade apply', () => {
     }
 
     // Where the host was reachable (the fake `claude` was invoked), the plugin
-    // half is prescribed with the marketplace refresh first — the exact commands
-    // a user or the companion skill would run.
+    // half is prescribed with the bundled marketplace refresh first — the exact
+    // commands a user or the companion skill would run.
     expect(Array.isArray(report.pluginHalfCommands)).toBe(true);
     if (report.pluginHalfCommands.length > 0) {
-      expect(report.pluginHalfCommands[0]).toBe('claude plugin marketplace update openplanr');
+      expect(report.pluginHalfCommands[0]).toBe('claude plugin marketplace update openplanr-local');
     }
   });
 

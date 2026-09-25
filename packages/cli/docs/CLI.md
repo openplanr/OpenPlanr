@@ -498,13 +498,17 @@ project. Setup previews mutations, backs up existing bytes, preserves content
 outside managed markers, writes `.planr/runtime-lock.json` only for project
 installations, and is idempotent. `--minimal` keeps only the dedicated planning CLI.
 
-For user-scoped Claude Code setup, the preview also lists external marketplace
-and plugin operations. After confirmation, setup refreshes
-`openplanr/marketplace` and installs or updates `planr@openplanr` to the
-version compatible with this CLI.
-`planr doctor` checks those versions and each plugin's stable manifest identity
-without mutating Claude Code. `doctor --fix` never changes plugin packages.
+For user-scoped Claude Code setup, the preview also lists the Claude plugin
+operations. After confirmation, setup registers the generated local marketplace
+(`openplanr-local`) that ships inside the installed `openplanr` package and
+installs or updates `planr@openplanr-local` from it, so the plugin always matches
+this CLI. Setup never reads `openplanr/marketplace` for versions.
+`planr doctor` checks the installed plugin's version and stable manifest identity
+without mutating Claude Code, and warns about older `openplanr@…` and
+`planr-pipeline@…` plugins. `doctor --fix` never changes plugin packages.
 Restart Claude Code when setup or `runtime update` reports a plugin change.
+Use one Claude Code channel per machine; see
+[installation channels](CROSS_RUNTIME_SETUP.md#installation-channels).
 
 Use the corresponding `planr:*` skills through the installed runtime adapter.
 Semantic workflows are not duplicated as utility CLI commands.

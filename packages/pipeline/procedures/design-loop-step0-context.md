@@ -8,9 +8,14 @@
   `node "$PLUG/lib/design-engine/cli.mjs"`. Use the **absolute** form everywhere.
 - `PROJECT` = `--project`, else the repo dir name. `TARGET` = first non-flag token
   (`logo` | `brand-sheet` | `screen` | `og-image` | a feature slug → `screen`).
-- Run `… doctor --json` → bind `HAS_KEY`, daemon state, and surface every auth warning
-  **verbatim** (the cwd-`.env` disclosure and the not-gitignored warning are blocking
+- Run `… doctor --json` → bind `HAS_KEY` (`auth.hasKey`), daemon state, and surface every auth
+  warning **verbatim** (the cwd-`.env` disclosure and the not-gitignored warning are blocking
   conversations, not log lines — hard rule 7).
+- **Provider is an explicit opt-in.** `PROVIDER=claude-svg` (the default, $0, no key) unless the
+  user asked for OpenAI or raster image generation in the request — only then `PROVIDER=openai`.
+  A key in the environment never selects openai; the engine's `auto` always resolves to
+  claude-svg, and every openai call is billed to the user's OpenAI account. `PROVIDER=openai`
+  with `HAS_KEY=false` is not a dead-end: the gate offers `planr-design setup` or claude-svg.
 - **Artifact placement (hard rule):** exploration lives in USER space —
   `~/.planr/designs/<PROJECT>/<TARGET>-<date>/` (the engine creates it + its scoped
   `.gitignore`). Only APPROVED outputs are copied into the repo in Phase E.
@@ -43,4 +48,4 @@ headlines unnoticed, one failed — regenerate it"* — at concept stage, that m
 the weaker twin before presenting. Fold in high-confidence taste entries unless the user
 overrode them in A.3.
 
-Output of Phase A: `{ PLUG, PROJECT, TARGET, SESSION_DIR, HAS_KEY, concepts[] }` → Phase B.
+Output of Phase A: `{ PLUG, PROJECT, TARGET, SESSION_DIR, HAS_KEY, PROVIDER, concepts[] }` → Phase B.

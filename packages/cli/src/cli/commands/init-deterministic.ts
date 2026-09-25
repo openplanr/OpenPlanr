@@ -2,6 +2,7 @@ import path from 'node:path';
 import { type Command, Option } from 'commander';
 import { createChecklist } from '../../services/checklist-service.js';
 import { createDefaultConfig, saveConfig } from '../../services/config-service.js';
+import { getSpecsRootDir } from '../../services/spec-service.js';
 import { renderTemplate } from '../../services/template-service.js';
 import { ARTIFACT_DIRS, CONFIG_FILENAME } from '../../utils/constants.js';
 import { ensureDir, fileExists, writeFile } from '../../utils/fs.js';
@@ -34,6 +35,7 @@ export function registerInitCommand(program: Command) {
       for (const directory of Object.values(ARTIFACT_DIRS))
         await ensureDir(path.join(agileDir, directory));
       await ensureDir(path.join(agileDir, 'diagrams'));
+      if (config.idPrefix.spec) await ensureDir(getSpecsRootDir(projectDir, config));
       await saveConfig(projectDir, config);
       await createChecklist(projectDir, config);
       const estimationPath = path.join(agileDir, 'ESTIMATION.md');

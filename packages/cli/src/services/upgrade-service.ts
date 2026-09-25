@@ -7,12 +7,23 @@ import {
   type ClaudeCommandRunner,
   type ClaudePluginOperation,
   formatClaudePluginOperationCommand,
-  inspectClaudePluginIntegration,
+  inspectBundledClaudePluginIntegration,
   OPENPLANR_CLAUDE_PLUGIN,
 } from './claude-plugin-service.js';
 import { resolvePipelinePackage } from './pipeline-package-service.js';
 import { readOpenPlanrVersion } from './provenance-service.js';
-import { classifyComponentDrift, runtimeRoot } from './runtime-manager-service.js';
+import { bundledHostRoot, classifyComponentDrift, runtimeRoot } from './runtime-manager-service.js';
+
+/**
+ * The command that registers the bundled `openplanr-local` marketplace and installs
+ * `planr@openplanr-local` from it. Prescribed instead of raw `claude plugin` commands when
+ * Claude Code has no such marketplace yet, because only setup records the installation.
+ */
+export const CLAUDE_PLUGIN_SETUP_COMMAND = 'planr setup --runtime claude --scope user';
+
+/** Shown above the prescribed plugin-half commands by `planr upgrade apply` and the inline offer. */
+export const PLUGIN_HALF_INSTRUCTION =
+  'Run these yourself, in order, or ask the agent to run planr-doctor’s upgrade skill. They bring the plugin `planr setup` installs, `planr@openplanr-local`, up to the version bundled with this CLI:';
 
 /**
  * One component of the published compatibility manifest (`ecosystem.json`'s
@@ -53,9 +64,9 @@ export interface UpgradeReconciliation {
   installed: { cli: string; skills: string | null; pipeline: string | null };
   published: EcosystemComponents | null;
   ecosystemSource: EcosystemSource;
-  /** The pipeline package this CLI bundles; the pipeline half when no pipeline plugin exists. */
+  /** The pipeline package this CLI bundles; `installed.pipeline` stays null since it ships inside the CLI. */
   bundledPipeline?: string | null;
-  /** Host plugins outside the marketplace's expected ids; informational, doctor warns about them. */
+  /** Retired host plugins (`openplanr@…`, `planr-pipeline@…`); informational, doctor warns about them. */
   legacyPlugins?: string[];
 }
 
@@ -267,9 +278,8 @@ function stableVersionParts(version: string): number[] | null {
 }
 
 /**
- * The same major/minor compatibility window `claude-plugin-service.ts`'s
- * `newestCompatibleTarget` already applies, expressed as range satisfaction so
- * no `semver` dependency is added: a caret range `^X.Y.Z` is satisfied by the
+ * A major/minor compatibility window expressed as range satisfaction so no
+ * `semver` dependency is added: a caret range `^X.Y.Z` is satisfied by the
  * same major (and, when the major is 0, the same minor) at or above the base.
  * Anything unparseable is treated as satisfied — an absent range must never be
  * reported as an incompatibility.
@@ -320,11 +330,20 @@ function isBehind(installed: string | null, published: string | undefined): bool
 }
 
 /**
+ * The host plugin `planr setup` manages, judged against the marketplace bundled with this
+ * CLI. Doctor and setup read the same inspection, so the three surfaces never disagree
+ * about which plugin is the OpenPlanr one.
+ */
+function inspectBundledHostPlugin(runner?: ClaudeCommandRunner) {
+  return inspectBundledClaudePluginIntegration(bundledHostRoot('claude'), runner);
+}
+
+/**
  * FR3: read the published compatibility manifest, compare it against the real
- * installed tuple (this CLI's version, plus both host-plugin versions), and
- * report whether the tuple is aligned, has an upgrade available, or is
- * genuinely incompatible. The warn-vs-fail call is delegated to
- * `classifyComponentDrift` so it is doctor's exact distinction, not a re-derivation.
+ * installed tuple (this CLI's version plus the host plugin), and report whether
+ * the tuple is aligned, has an upgrade available, or is genuinely incompatible.
+ * The warn-vs-fail call is delegated to `classifyComponentDrift` so it is
+ * doctor's exact distinction, not a re-derivation.
  */
 export async function reconcileInstalledTuple(
   _projectDir: string,
@@ -332,16 +351,12 @@ export async function reconcileInstalledTuple(
 ): Promise<UpgradeReconciliation> {
   const cliVersion = readOpenPlanrVersion();
   const bundledPipeline = resolvePipelinePackage(false)?.version ?? null;
-  const inspection = inspectClaudePluginIntegration(
-    bundledPipeline ?? cliVersion,
-    options.claudeCommandRunner,
-  );
-  const pluginVersion = (name: string): string | null =>
-    inspection.plugins.find((plugin) => plugin.name === name)?.installedVersion ?? null;
+  const inspection = inspectBundledHostPlugin(options.claudeCommandRunner);
+  const hostPlugin = inspection.plugins.find((plugin) => plugin.name === OPENPLANR_CLAUDE_PLUGIN);
   const installed = {
     cli: cliVersion,
-    skills: pluginVersion(OPENPLANR_CLAUDE_PLUGIN) ?? pluginVersion('openplanr'),
-    pipeline: pluginVersion('planr-pipeline'),
+    skills: hostPlugin?.installedVersion ?? null,
+    pipeline: null,
   };
   const legacyPlugins = inspection.legacyPluginIds;
 
@@ -364,10 +379,10 @@ export async function reconcileInstalledTuple(
   let componentDrift: boolean;
   let incompatibleDrift: boolean;
   if (published.shape === 'registry') {
-    // The host plugin is judged against the marketplace target the inspection already
-    // resolved, and the pipeline against the pin the published CLI bundles. A
-    // registry-described set declares no mutual ranges, so it cannot be incompatible;
-    // leftover legacy plugins are reported for doctor's warning, not judged here.
+    // The host plugin is judged against the version the bundled marketplace carries, and
+    // the pipeline against the pin the published CLI bundles. A registry-described set
+    // declares no mutual ranges, so it cannot be incompatible; leftover legacy plugins are
+    // reported for doctor's warning, not judged here.
     const pluginTrailing = inspection.plugins.some(
       (plugin) =>
         plugin.installed && isBehind(plugin.installedVersion ?? null, plugin.expectedVersion),
@@ -602,18 +617,34 @@ export function summarizeChangelogBetween(oldVersion: string, newVersion: string
 }
 
 /**
- * FR4's manifest-refresh guarantee: the marketplace add/refresh command is
- * printed FIRST — "without which the installer reinstalls the stale version." A
- * stable sort keeps every other operation in the order
- * `inspectClaudePluginIntegration` produced, and each is rendered by
- * `formatClaudePluginOperationCommand` (the same argv an apply would run), so
- * the prescription can never drift from what would actually execute. This is a
- * pure formatter — it prints the plugin half, it never runs it.
+ * FR4's manifest-refresh guarantee: the marketplace refresh is printed FIRST —
+ * "without which the installer reinstalls the stale version." A stable sort keeps
+ * every other operation in the order the bundled inspection produced, and each is
+ * rendered by `formatClaudePluginOperationCommand` (the same argv setup would run),
+ * so the prescription can never drift from what would actually execute. A missing
+ * `openplanr-local` marketplace means `planr setup` never ran on this machine, and
+ * setup is the one command that both registers it and records the installation.
+ * A retired plugin beside it needs `--replace-managed`: setup refuses the removal
+ * without the flag, and `--runtime` skips the guided prompt that would offer it.
+ * This is a pure formatter — it prints the plugin half, it never runs it.
  */
-export function prescribePluginHalfCommands(operations: ClaudePluginOperation[]): string[] {
+export function prescribePluginHalfCommands(
+  operations: ClaudePluginOperation[],
+  marketplaceRoot: string,
+): string[] {
+  if (operations.some((operation) => operation.kind === 'add-marketplace')) {
+    const retiresLegacyPlugin = operations.some((operation) => operation.kind === 'remove');
+    return [
+      retiresLegacyPlugin
+        ? `${CLAUDE_PLUGIN_SETUP_COMMAND} --replace-managed`
+        : CLAUDE_PLUGIN_SETUP_COMMAND,
+    ];
+  }
   const rank = (operation: ClaudePluginOperation): number =>
-    operation.kind === 'add-marketplace' || operation.kind === 'refresh-marketplace' ? 0 : 1;
-  return [...operations].sort((a, b) => rank(a) - rank(b)).map(formatClaudePluginOperationCommand);
+    operation.kind === 'refresh-marketplace' ? 0 : 1;
+  return [...operations]
+    .sort((a, b) => rank(a) - rank(b))
+    .map((operation) => formatClaudePluginOperationCommand(operation, marketplaceRoot));
 }
 
 /** One migration's outcome as the injected registry runner reports it (T-006). */
@@ -647,9 +678,11 @@ export type MigrationRunner = (
  * from one place and can never print different instructions for the same machine.
  */
 export function pluginHalfPrescription(claudeCommandRunner?: ClaudeCommandRunner): string[] {
-  const pipelineVersion = resolvePipelinePackage(false)?.version ?? readOpenPlanrVersion();
-  const inspection = inspectClaudePluginIntegration(pipelineVersion, claudeCommandRunner);
-  return prescribePluginHalfCommands(inspection.operations);
+  const marketplaceRoot = bundledHostRoot('claude');
+  return prescribePluginHalfCommands(
+    inspectBundledClaudePluginIntegration(marketplaceRoot, claudeCommandRunner).operations,
+    marketplaceRoot,
+  );
 }
 
 export interface ExecuteCliHalfUpgradeInput {

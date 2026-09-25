@@ -12,10 +12,12 @@ and deletion always require explicit confirmation.
 
 ## Driving an upgrade
 
-`planr` owns only half of an OpenPlanr upgrade — the npm CLI. The other half, the
-host plugins, cannot be installed by a CLI; it needs a tool with host shell
-access. That is this skill's job: drive the plugin half, then report what
-actually changed — never what was merely attempted.
+`planr upgrade` moves only half of an OpenPlanr upgrade — the npm CLI. The other
+half is the Claude Code plugin that `planr setup` installs from the bundled
+`openplanr-local` marketplace, and the upgrade never changes that plugin itself:
+it hands back the exact commands. Driving them with host shell access is this
+skill's job, then reporting what actually changed — never what was merely
+attempted.
 
 1. **Decide.** Run `planr upgrade status --json` and read `status`. If it is
    `aligned` or `unknown`, there is nothing to drive — report it and stop.
@@ -28,9 +30,11 @@ actually changed — never what was merely attempted.
    commands from there; never write a plugin command of your own.
 3. **Refresh first, then execute in order.** Run every entry of
    `pluginHalfCommands` verbatim, in the array's given order, with your shell.
-   The first entry is a marketplace refresh and must run first: skip it and the
-   installer reinstalls the cached, stale version while the user believes they
-   upgraded. Do not reorder, drop, or substitute an entry.
+   The first entry is either the `openplanr-local` marketplace refresh or a
+   single `planr setup …` command (when that marketplace was never registered);
+   it must run first: skip the refresh and the installer reinstalls the cached,
+   stale version while the user believes they upgraded. Do not reorder, drop, or
+   substitute an entry.
 4. **Verify and report the real diff.** Re-run `planr upgrade status --json` and
    compare its `installed` versions against the before state. Report only what
    actually moved and to what. If a component did not move, say so — never claim

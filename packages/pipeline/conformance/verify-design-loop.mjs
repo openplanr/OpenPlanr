@@ -47,6 +47,8 @@ const { readFeedback } = await import(moduleUrl('lib/design-engine/feedback.mjs'
 const { emptyProfile, updateTaste, saveProfile, loadProfile } = await import(
   moduleUrl('lib/design-engine/taste.mjs')
 );
+const { resolveProvider } = await import(moduleUrl('lib/design-engine/providers/index.mjs'));
+const { DEFAULT_MODEL, DEFAULT_IMAGE_MODEL } = await import(moduleUrl('lib/design-engine/providers/openai.mjs'));
 
 log('OpenPlanr design-loop conformance (mocked full loop, $0)\n');
 
@@ -76,6 +78,28 @@ assert(loopBoardProcedure.includes('never wrap') && loopBoardProcedure.includes(
   'board sharing stays explicit, immutable, non-nested, and separate from approval');
 assert(!loopBoardProcedure.includes('planr-pipeline artifact'),
   'board procedure uses the public artifact route');
+
+// openai is opt-in: a resolved key never selects it, and the guidance says so.
+log('\nprovider opt-in:');
+assert(resolveProvider({ requested: 'auto', auth: { apiKey: 'sk-present' } }).name === 'claude-svg',
+  'auto resolves to claude-svg even when a key resolves');
+let openaiWithoutKey = '';
+try { resolveProvider({ requested: 'openai', auth: { apiKey: null } }); } catch (e) { openaiWithoutKey = e.message; }
+assert(openaiWithoutKey.includes('planr-design setup'), 'openai without a key fails and names setup');
+const providerGuidance = [
+  'procedures/design-loop-step0-context.md',
+  'procedures/design-loop-step1-gate.md',
+  'procedures/design-loop-step2-variants.md',
+  'procedures/design-loop-step3-board.md',
+  'procedures/design-loop-step4-approve.md',
+  'docs/design-loop.md',
+].map((rel) => readFileSync(join(root, rel), 'utf8'));
+assert(providerGuidance.every((text) => !/HAS_KEY=true`?\s*→\s*`?openai|openai when a key resolves/u.test(text)),
+  'no design-loop guidance lets a key alone pick openai');
+const loopDoc = providerGuidance[providerGuidance.length - 1];
+assert(loopDoc.includes('--provider openai') && loopDoc.includes(DEFAULT_MODEL) && loopDoc.includes(DEFAULT_IMAGE_MODEL),
+  'design-loop.md documents the openai opt-in flag and the default models');
+assert(!/\$\d+\.\d{2}/u.test(providerGuidance.join('\n')), 'design-loop guidance states no unsourced prices');
 
 // 1 — contract + author + check
 log('\ngenerate (claude-svg):');

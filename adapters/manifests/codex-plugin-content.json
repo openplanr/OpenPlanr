@@ -81,7 +81,7 @@
         },
         {
           "path": "skills/ceo-review/scripts/validate-note.mjs",
-          "digest": "sha256:dcfcc371d94efef9b27456f692eca82afd8e079275044da8c6384253632bad75"
+          "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7"
         },
         {
           "path": "skills/ceo-review/scripts/operate-review-note.mjs",
@@ -118,7 +118,7 @@
         },
         {
           "path": "skills/chair-review/scripts/validate-note.mjs",
-          "digest": "sha256:dcfcc371d94efef9b27456f692eca82afd8e079275044da8c6384253632bad75"
+          "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7"
         },
         {
           "path": "skills/chair-review/scripts/operate-review-note.mjs",
@@ -155,7 +155,7 @@
         },
         {
           "path": "skills/challenger-review/scripts/validate-note.mjs",
-          "digest": "sha256:dcfcc371d94efef9b27456f692eca82afd8e079275044da8c6384253632bad75"
+          "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7"
         },
         {
           "path": "skills/challenger-review/scripts/operate-review-note.mjs",
@@ -196,7 +196,7 @@
         },
         {
           "path": "skills/cmo-review/scripts/validate-note.mjs",
-          "digest": "sha256:dcfcc371d94efef9b27456f692eca82afd8e079275044da8c6384253632bad75"
+          "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7"
         },
         {
           "path": "skills/cmo-review/scripts/operate-review-note.mjs",
@@ -237,7 +237,7 @@
         },
         {
           "path": "skills/coo-review/scripts/validate-note.mjs",
-          "digest": "sha256:dcfcc371d94efef9b27456f692eca82afd8e079275044da8c6384253632bad75"
+          "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7"
         },
         {
           "path": "skills/coo-review/scripts/operate-review-note.mjs",
@@ -278,7 +278,7 @@
         },
         {
           "path": "skills/cpo-review/scripts/validate-note.mjs",
-          "digest": "sha256:dcfcc371d94efef9b27456f692eca82afd8e079275044da8c6384253632bad75"
+          "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7"
         },
         {
           "path": "skills/cpo-review/scripts/operate-review-note.mjs",
@@ -319,7 +319,7 @@
         },
         {
           "path": "skills/cto-review/scripts/validate-note.mjs",
-          "digest": "sha256:dcfcc371d94efef9b27456f692eca82afd8e079275044da8c6384253632bad75"
+          "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7"
         },
         {
           "path": "skills/cto-review/scripts/operate-review-note.mjs",
@@ -1005,7 +1005,7 @@
       "assets": [
         {
           "path": "skills/doctor/SKILL.md",
-          "digest": "sha256:449f9c39b0c0a6e96ddf44e123bf6ad0bfc483746e75edba6d46b205ebd4dd98"
+          "digest": "sha256:bb6c1d09871630a724a2de806db1ceb78af7bc01b5db51149f3414e5e852b558"
         },
         {
           "path": "skills/doctor/openplanr.skill.json",
@@ -1017,7 +1017,7 @@
         },
         {
           "path": "skills/doctor/references/upgrade.md",
-          "digest": "sha256:268f5ac3374bb3a7bdfe1a70949fa49817eccf3f76e4f57d706acecec9eac1a1"
+          "digest": "sha256:b105aadfa437d8f9beb9c6fb4167c9f3275d85d96b1125fdb8e80fa7da284387"
         }
       ]
     },
@@ -1101,7 +1101,7 @@
         },
         {
           "path": "skills/operate/scripts/validate-note.mjs",
-          "digest": "sha256:dcfcc371d94efef9b27456f692eca82afd8e079275044da8c6384253632bad75"
+          "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7"
         },
         {
           "path": "skills/operate/scripts/operate-review-note.mjs",

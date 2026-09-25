@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join, resolve } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
@@ -516,6 +518,47 @@ test('inspection reports structural issues without throwing; strict validation r
     () => validateOperateReviewNote(malformed, { profile: 'advisor' }),
     (error) => error instanceof SkillRuntimeError && error.code === 'E_OPERATE_REVIEW_NOTE_INVALID',
   );
+});
+
+test('the note validator exits 0 on a clean note and 1 on a broken one in every copy', () => {
+  const validators = [
+    'packages/skill-runtime/src/operate-review-note-cli.mjs',
+    ...[
+      'planr-operate',
+      'planr-chair-review',
+      'planr-challenger-review',
+      'planr-ceo-review',
+      'planr-cmo-review',
+      'planr-coo-review',
+      'planr-cpo-review',
+      'planr-cto-review',
+    ].map((skillId) => `skills/${skillId}/scripts/validate-note.mjs`),
+  ];
+  const directory = mkdtempSync(join(tmpdir(), 'operate-review-note-cli-'));
+  try {
+    const clean = join(directory, 'clean.md');
+    const broken = join(directory, 'broken.md');
+    writeFileSync(clean, advisor);
+    writeFileSync(broken, advisor.replace(/^# .*\n/u, ''));
+    const run = (validator, note) =>
+      spawnSync(process.execPath, [resolve(root, validator), note, '--profile', 'advisor'], {
+        encoding: 'utf8',
+      });
+    for (const validator of validators) {
+      const passed = run(validator, clean);
+      assert.equal(passed.status, 0, `${validator} on a clean note: ${passed.stdout}${passed.stderr}`);
+      assert.equal(JSON.parse(passed.stdout).ok, true, validator);
+      const failed = run(validator, broken);
+      assert.equal(failed.status, 1, `${validator} on a broken note: ${failed.stdout}${failed.stderr}`);
+      assert.deepEqual(
+        JSON.parse(failed.stdout).diagnostics.map(({ code }) => code),
+        ['E_OPERATE_REVIEW_TITLE_MISSING'],
+        validator,
+      );
+    }
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
 });
 
 test('advisor profiles support the concise insufficient-context state', () => {
