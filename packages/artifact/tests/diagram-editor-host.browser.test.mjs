@@ -35,6 +35,7 @@ async function hostedFixture(t, { colorScheme = 'light', capabilities } = {}) {
         window.__mount = mountDiagramEditor({ root: document.querySelector('#host-editor'), session, host: {
           brand: false, review: false, colorScheme: 'dark',
           labels: { subtitle: 'Checkout platform · Company diagram', emptyHint: 'Nothing is shared until you save and share a revision.', reviewUnavailable: 'Review is not available for this diagram yet.', readOnly: 'Revision 8 · Read only' },
+          saveLabel: state => state.saveState === 'unsaved' ? state.pendingCount + ' unsaved edit' + (state.pendingCount === 1 ? '' : 's') : state.saveState === 'saved' ? 'Saved · revision 8' : null,
           actions: [{ id: 'share', label: 'Share', icon: 'share', disabled: state => state.saveState !== 'saved', onSelect: () => { window.__events.shared += 1; } }],
           panels: [{ id: 'revisions', label: 'Revisions', mount: ({ root }) => {
             window.__events.mounts += 1;
@@ -84,8 +85,10 @@ test('a hosted editor shows host wording, a host action and a host panel without
   assert.equal(await share.isEnabled(), true);
   await share.click();
   assert.equal(await page.evaluate(() => window.__events.shared), 1);
+  assert.equal(await saveState(page).textContent(), 'Saved · revision 8', 'The host names the saved state');
   assert.equal((await page.evaluate(() => window.__session.submit({ type: 'rename', id: 'node-a', label: 'Validate order' }))).ok, true);
   assert.equal(await share.isDisabled(), true, 'Share waits for a saved revision');
+  assert.equal(await saveState(page).textContent(), '1 unsaved edit');
   await page.getByRole('button', { name: 'Save diagram', exact: true }).click();
   await page.locator('.de-save-state[data-state="saved"]').waitFor();
   assert.equal(await page.evaluate(() => window.__calls.length), 1, 'One request per save');
@@ -140,12 +143,38 @@ test('a session without write access shows a read-only view named by the host', 
     assert.equal(await page.getByRole('button', { name, exact: true }).isVisible(), false, `${name} is not offered`);
   }
   assert.deepEqual(await page.getByRole('tab').allTextContents(), ['Outline', 'Properties', 'Revisions'], 'Shapes is not offered');
+  assert.doesNotMatch(await page.locator('.de-stage-footer').textContent(), /recovery/iu, 'Viewers have no edits to recover');
   const node = page.getByRole('treeitem', { name: 'Café ☕', exact: true });
   await node.click();
   assert.equal(await node.getAttribute('aria-selected'), 'true', 'Objects can still be inspected');
   await page.getByRole('button', { name: 'More', exact: true }).click();
   await page.getByRole('menuitem', { name: 'Mermaid copies', exact: true }).click();
   assert.equal(await page.getByRole('tab', { name: 'Export a copy', exact: true }).getAttribute('aria-selected'), 'true', 'Mermaid copies opens on export');
+});
+
+test('an open drawer keeps host controls outside the editor reachable', options, async t => {
+  const page = await hostedFixture(t);
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await page.evaluate(() => {
+    for (const label of ['Switch theme', 'Back to project']) {
+      const control = document.createElement('button');
+      control.textContent = label;
+      document.body.prepend(control);
+    }
+  });
+  await page.getByRole('button', { name: 'Outline', exact: true }).click();
+  const outline = page.locator('#diagram-outline-panel');
+  const focusIn = locator => locator.evaluate(node => node.contains(document.activeElement));
+  assert.equal(await focusIn(outline), true);
+
+  const back = page.getByRole('button', { name: 'Back to project', exact: true });
+  await back.focus();
+  assert.equal(await focusIn(back), true, 'Focus stays on a host control');
+  await page.keyboard.press('Tab');
+  assert.equal(await focusIn(page.getByRole('button', { name: 'Switch theme', exact: true })), true, 'Tab moves between host controls');
+  assert.equal(await outline.getAttribute('aria-hidden'), 'false', 'The drawer stays open');
+  await page.keyboard.press('Tab');
+  assert.equal(await focusIn(outline), true, 'Entering the editor lands in the open drawer');
 });
 
 test('invalid host configuration fails with a specific error', options, async t => {
@@ -158,6 +187,7 @@ test('invalid host configuration fails with a specific error', options, async t 
       attempt({ panels: [{ id: 'review', label: 'Review', mount() {} }] }),
       attempt({ labels: { title: 'Wrong' } }),
       attempt({ colorScheme: 'sepia' }),
+      attempt({ saveLabel: 'Saved · revision 8' }),
       attempt({ actions: [{ id: 'share', label: 'Share', icon: 'rocket', onSelect() {} }] }),
     ];
   });
@@ -165,5 +195,6 @@ test('invalid host configuration fails with a specific error', options, async t 
   assert.match(messages[1], /^TypeError: Each host panel needs a unique lowercase id/u);
   assert.match(messages[2], /^TypeError: Unknown host label: title/u);
   assert.match(messages[3], /^TypeError: Color scheme must be light, dark or null/u);
-  assert.match(messages[4], /^TypeError: Host action share uses an unknown icon: rocket/u);
+  assert.match(messages[4], /^TypeError: Host saveLabel must be a function/u);
+  assert.match(messages[5], /^TypeError: Host action share uses an unknown icon: rocket/u);
 });

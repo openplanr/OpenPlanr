@@ -67,6 +67,7 @@ function colorSchemeOf(value) {
 export function mountDiagramEditor({ root, session, host = {} }) {
   if (!root || !session || typeof session.getState !== 'function') throw new TypeError('Mount needs one root and one editor session.');
   if (host.review !== undefined && typeof host.review !== 'boolean') throw new TypeError('Host review must be true or false.');
+  if (host.saveLabel !== undefined && typeof host.saveLabel !== 'function') throw new TypeError('Host saveLabel must be a function.');
   const labels = hostLabels(host.labels), hostActions = hostEntries(host.actions, 'action', 'onSelect'), hostPanels = hostEntries(host.panels, 'panel', 'mount');
   const reviewEnabled = host.review !== false;
   let hostScheme = colorSchemeOf(host.colorScheme);
@@ -410,11 +411,16 @@ export function mountDiagramEditor({ root, session, host = {} }) {
     }
   }
   let controlsStamp = '';
+  function hostSaveLabel(state) {
+    const label = host.saveLabel?.(state) ?? null;
+    if (label !== null && (typeof label !== 'string' || !label.trim())) throw new TypeError(`Host saveLabel must return non-empty text or null; received ${JSON.stringify(label)}.`);
+    return label;
+  }
   function renderChrome(state) {
     const bundle = state.bundle;
     $('.de-title').textContent = bundle?.document.title ?? 'Diagram unavailable';
     const status = state.saveState;
-    saveState.textContent = readOnly(state) ? labels.readOnly : ({ saved: 'Saved', saving: 'Saving…', unsaved: 'Unsaved', offline: 'Offline · Unsaved', conflict: 'Conflict · Unsaved', 'access-changed': 'Access changed' })[status] ?? 'Unsaved';
+    saveState.textContent = readOnly(state) ? labels.readOnly : hostSaveLabel(state) ?? ({ saved: 'Saved', saving: 'Saving…', unsaved: 'Unsaved', offline: 'Offline · Unsaved', conflict: 'Conflict · Unsaved', 'access-changed': 'Access changed' })[status] ?? 'Unsaved';
     saveState.dataset.state = readOnly(state) ? 'read-only' : status;
     shell.dataset.editable = String(editable(state)); shell.dataset.readOnly = String(readOnly(state)); shell.dataset.mode = mode;
     syncPanelState();
@@ -550,7 +556,7 @@ export function mountDiagramEditor({ root, session, host = {} }) {
     if (!state.bundle) { footer.append(element(doc,'span',{},'Access changed. Reopen this diagram to continue.')); return; }
     if (state.saveState === 'conflict') footer.append(element(doc,'span',{},'A newer saved revision exists. Your draft remains in this tab.'),button(doc,'Compare revisions','conflict',{className:'de-primary'}));
     else if (state.saveState === 'offline') footer.append(element(doc,'span',{},'Save was not confirmed. Edits remain pending.'),button(doc,'Retry save','save'));
-    else if (state.recovery.warning) footer.append(element(doc,'span',{},state.recovery.warning));
+    else if (state.recovery.warning && !readOnly(state)) footer.append(element(doc,'span',{},state.recovery.warning));
     else if (state.pendingCount > 0 && state.acknowledged) footer.append(element(doc,'span',{},'Recovered or pending edits are in this session. Review before you save.'));
     else if(!getDiagramAuthoringCapability(state.bundle.document.grammar.id))footer.append(element(doc,'span',{},'This diagram grammar is available for inspection only. Editing is not certified.'));
     else footer.append(element(doc,'span',{},state.view.selection.length + ' selected · ' + state.bundle.presentation.elements.length + ' objects'));
@@ -890,7 +896,7 @@ export function mountDiagramEditor({ root, session, host = {} }) {
         if(!event.shiftKey&&doc.activeElement===last){event.preventDefault();first.focus();return;}
       }
     }
-    if(!dialog&&event.key==='Tab'&&win.innerWidth<=1100&&(leftOpen||rightOpen)){
+    if(!dialog&&event.key==='Tab'&&win.innerWidth<=1100&&(leftOpen||rightOpen)&&shell.contains(event.target)){
       const panel=leftOpen?$('.de-left'):$('.de-right');
       const controls=[...panel.querySelectorAll('button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),summary,a[href],[tabindex]:not([tabindex="-1"])')]
         .filter(control=>!control.closest('[hidden],[inert],[aria-hidden="true"]')&&control.getClientRects().length);
@@ -967,7 +973,8 @@ export function mountDiagramEditor({ root, session, host = {} }) {
   function containDrawerFocus(event) {
     if (dialog || win.innerWidth > 1100 || drawerBackdrop.hidden || (!leftOpen && !rightOpen)) return;
     const panel = leftOpen ? $('.de-left') : $('.de-right');
-    if (!panel || panel.contains(event.target)) return;
+    // Host controls outside the editor stay reachable while a drawer is open.
+    if (!panel || panel.contains(event.target) || !shell.contains(event.target)) return;
     const controls = [...panel.querySelectorAll('button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),summary,a[href],[tabindex]:not([tabindex="-1"])')]
       .filter(control => !control.closest('[hidden],[inert],[aria-hidden="true"]') && control.getClientRects().length);
     (controls[0] ?? panel).focus({ preventScroll: true });

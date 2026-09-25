@@ -6327,9 +6327,269 @@
     };
   }
 
+  // lib/artifact/diagram/editor/clipboard.mjs
+  var MAX_BYTES2 = 1024 * 1024;
+  var MAX_ELEMENTS = 1e3;
+  var fail4 = (detail) => ({ ok: false, diagnostics: [{ path: "$clipboard", rule: "clipboard", detail }] });
+  var size = (value) => new TextEncoder().encode(JSON.stringify(value)).length;
+  function copyDiagramSelection(bundle, ids2) {
+    const check2 = validateAuthoringBundle(bundle);
+    if (!check2.ok) return check2;
+    if (!Array.isArray(ids2) || !ids2.length || ids2.length > MAX_ELEMENTS || new Set(ids2).size !== ids2.length) return fail4("Select distinct objects within the clipboard limit.");
+    const known = new Set(bundle.presentation.elements.map((item) => item.elementId));
+    if (ids2.some((id2) => typeof id2 !== "string" || !known.has(id2))) return fail4("A selected object is missing.");
+    const selected2 = new Set(descendants(bundle.document, ids2));
+    for (const relation2 of bundle.document.relations) {
+      if (selected2.has(relation2.from) && selected2.has(relation2.to)) selected2.add(relation2.id);
+      else selected2.delete(relation2.id);
+    }
+    let added = true;
+    while (added) {
+      added = false;
+      for (const note of bundle.document.annotations) if (selected2.has(note.targetId) && !selected2.has(note.id)) {
+        selected2.add(note.id);
+        added = true;
+      }
+    }
+    if (!selected2.size || selected2.size > MAX_ELEMENTS) return fail4("The copied fragment must contain between 1 and 1,000 objects.");
+    const fragment = clone(bundle);
+    fragment.originalSource = null;
+    fragment.sourceMap = null;
+    for (const collection of COLLECTIONS) fragment.document[collection] = fragment.document[collection].filter((item) => selected2.has(item.id));
+    for (const parent of [...fragment.document.groups, ...fragment.document.lanes]) parent.members = parent.members.filter((id2) => selected2.has(id2));
+    for (const note of fragment.document.annotations) if (!selected2.has(note.targetId)) note.targetId = null;
+    fragment.document.laneOrder = fragment.document.laneOrder.filter((id2) => selected2.has(id2));
+    fragment.document.emphasis = fragment.document.emphasis.filter((item) => selected2.has(item.targetId));
+    fragment.document.accessibility.readingOrder = fragment.document.accessibility.readingOrder.filter((id2) => selected2.has(id2));
+    fragment.presentation.elements = fragment.presentation.elements.filter((item) => selected2.has(item.elementId));
+    const sourceBundle = sealBundle(fragment);
+    const checked = validateAuthoringBundle(sourceBundle);
+    if (!checked.ok) return checked;
+    const value = { kind: "openplanr-diagram-selection", version: 1, sourceBundle, ids: [...selected2] };
+    if (size(value) > MAX_BYTES2) return fail4("The copied fragment exceeds 1 MiB. Copy fewer objects.");
+    return { ok: true, value };
+  }
+  function pasteDiagramSelection(bundle, input, { idMap, transactionId, dx = 24, dy = 24 }) {
+    if (typeof input === "string") {
+      if (input.length > MAX_BYTES2 || new TextEncoder().encode(input).length > MAX_BYTES2) return fail4("The clipboard exceeds 1 MiB.");
+      try {
+        input = JSON.parse(input);
+      } catch {
+        return fail4("The clipboard does not contain an OpenPlanr selection.");
+      }
+    }
+    if (inspectPlainData(input).length || !input || input.kind !== "openplanr-diagram-selection" || input.version !== 1 || Object.keys(input).some((key) => !["kind", "version", "sourceBundle", "ids"].includes(key)) || !Array.isArray(input.ids) || input.ids.length > MAX_ELEMENTS || size(input) > MAX_BYTES2) return fail4("Invalid or oversized clipboard fragment.");
+    return compileDiagramCommand(bundle, { type: "paste", sourceBundle: input.sourceBundle, ids: input.ids, idMap, dx, dy }, { transactionId });
+  }
+
+  // lib/artifact/ui/diagram-editor-actions.mjs
+  var freshId = (prefix = "edit") => `${prefix}-${globalThis.crypto.randomUUID()}`;
+  var labelOf = (value) => value.label ?? value.text ?? value.id;
+  var transaction = (bundle, operations) => ({ kind: "diagram-edit-transaction", schemaVersion: "1.0.0", protocolVersion: "1.13.0", transactionId: freshId(), diagramId: bundle.diagramId, base: snapshot2(bundle), operations, undoOf: null });
+  function placement4(id2, shape2, bounds2) {
+    return {
+      elementId: id2,
+      bounds: bounds2,
+      route: null,
+      label: null,
+      zIndex: shape2 === "container" ? 0 : 1,
+      appearance: { shape: shape2, fill: shape2 === "text" || shape2 === "container" ? "transparent" : "surface", stroke: shape2 === "text" ? "none" : "default", strokeWidth: 1.5, strokeStyle: "solid", fontSize: 14, textAlign: shape2 === "container" || shape2 === "text" ? "left" : "center" },
+      locks: { position: false, size: false, route: false }
+    };
+  }
+  function createObject(kind, position) {
+    const id2 = freshId(kind === "horizontal-lane" || kind === "vertical-lane" ? "lane" : kind);
+    const { x, y } = position;
+    const bounds2 = { x, y, width: 160, height: 72 };
+    let collection = "nodes", value, shape2 = "rectangle";
+    if (kind === "annotation") {
+      collection = "annotations";
+      value = { id: id2, text: "Add a note", targetId: null };
+      shape2 = "text";
+    } else if (kind === "container" || kind.endsWith("-lane")) {
+      collection = kind === "container" ? "groups" : "lanes";
+      value = { id: id2, label: kind === "container" ? "Container" : "Lane", members: [] };
+      shape2 = "container";
+      Object.assign(bounds2, kind === "vertical-lane" ? { width: 240, height: 480 } : { width: 540, height: 240 });
+    } else {
+      const names = { process: "Process", start: "Start", end: "End", decision: "Decision", "data-store": "Data store", component: "Component" };
+      value = { id: id2, label: names[kind], kind, description: null };
+      shape2 = { start: "ellipse", end: "ellipse", decision: "diamond", "data-store": "cylinder", component: "rounded-rectangle" }[kind] ?? "rectangle";
+      if (kind === "decision") bounds2.height = 100;
+    }
+    return { type: "create", elements: [{ collection, value }], presentation: [placement4(id2, shape2, bounds2)] };
+  }
+  function connector(from, to, label = "") {
+    const id2 = freshId("connector");
+    const entry2 = placement4(id2, "connector", null);
+    entry2.route = { mode: "automatic", strategy: "orthogonal", from: { side: "right", offset: 0.5 }, to: { side: "left", offset: 0.5 }, points: [] };
+    return { type: "create", elements: [{ collection: "relations", value: { id: id2, from, to, label: label || null, kind: "flow", direction: "forward", weight: null } }], presentation: [entry2] };
+  }
+  function processTemplate(position) {
+    const start = createObject("start", position), process = createObject("process", { x: position.x + 240, y: position.y }), end = createObject("end", { x: position.x + 480, y: position.y });
+    const first = connector(start.elements[0].value.id, process.elements[0].value.id), second = connector(process.elements[0].value.id, end.elements[0].value.id);
+    const parts = [start, process, end, first, second];
+    return { type: "create", elements: parts.flatMap((part) => part.elements), presentation: parts.flatMap((part) => part.presentation) };
+  }
+  function duplicateSelection(bundle, ids2, copied = null) {
+    const result = copied ? { ok: true, value: copied } : copyDiagramSelection(bundle, ids2);
+    if (!result.ok) return result;
+    const idMap = Object.fromEntries(result.value.ids.map((id2) => [id2, freshId("copy")]));
+    const preview2 = pasteDiagramSelection(bundle, result.value, { idMap, transactionId: freshId(), dx: 24, dy: 24 });
+    return { ...preview2, selectedIds: ids2.filter((id2) => idMap[id2]).map((id2) => idMap[id2]) };
+  }
+  function propertyTransaction(bundle, id2, { semantic, geometry, appearance: appearance2 }) {
+    const entry2 = elementIndex(bundle.document).get(id2);
+    const current = bundle.presentation.elements.find((item) => item.elementId === id2);
+    const operations = [];
+    if (semantic) operations.push({ type: "update-semantics", collection: entry2.collection, elementId: id2, before: semanticFields(entry2.collection, entry2.value), after: semantic });
+    if (geometry) {
+      const before = geometryFields(current);
+      let changes = [{ elementId: id2, before, after: geometry }];
+      if (before.bounds && geometry.bounds && (before.bounds.x !== geometry.bounds.x || before.bounds.y !== geometry.bounds.y)) {
+        const moved = compileDiagramCommand(bundle, {
+          type: "move",
+          ids: [id2],
+          dx: geometry.bounds.x - before.bounds.x,
+          dy: geometry.bounds.y - before.bounds.y
+        }, { transactionId: freshId() });
+        if (moved.ok && moved.transaction) {
+          changes = moved.transaction.operations.flatMap((operation2) => operation2.changes ?? []);
+          const target = changes.find((change) => change.elementId === id2);
+          if (target) target.after = {
+            ...target.after,
+            bounds: geometry.bounds,
+            route: same2(geometry.route, before.route) ? target.after.route : geometry.route,
+            label: same2(geometry.label, before.label) ? target.after.label : geometry.label,
+            zIndex: geometry.zIndex
+          };
+        }
+      }
+      operations.push({ type: "set-geometry", changes });
+    }
+    if (appearance2) operations.push({ type: "set-appearance-locks", changes: [{ elementId: id2, before: appearanceFields(current), after: appearance2 }] });
+    return transaction(bundle, operations);
+  }
+  function arrangementCommand(bundle, ids2, mode) {
+    const parents = parentIndex(bundle.document), selected2 = new Set(ids2);
+    const roots2 = ids2.filter((id2) => {
+      let parent = parents.get(id2);
+      while (parent) {
+        if (selected2.has(parent)) return false;
+        parent = parents.get(parent);
+      }
+      return true;
+    });
+    const placements = new Map(bundle.presentation.elements.map((item) => [item.elementId, item]));
+    const boxes = roots2.map((id2) => placements.get(id2)).filter((item) => item?.bounds);
+    if (boxes.length < 2) throw new Error("Select at least two shapes or containers.");
+    const horizontal = mode.endsWith("horizontal");
+    if (mode.startsWith("distribute") && boxes.length < 3) throw new Error("Select at least three shapes to distribute.");
+    const ordered = [...boxes].sort((a, b) => a.bounds[horizontal ? "x" : "y"] - b.bounds[horizontal ? "x" : "y"]);
+    const first = ordered[0].bounds, last = ordered.at(-1).bounds;
+    const totalSize = ordered.reduce((sum, item) => sum + item.bounds[horizontal ? "width" : "height"], 0);
+    const gap = ((horizontal ? last.x + last.width - first.x : last.y + last.height - first.y) - totalSize) / (boxes.length - 1);
+    let offset = horizontal ? first.x : first.y;
+    const changes = /* @__PURE__ */ new Map();
+    for (const item of mode.startsWith("distribute") ? ordered : boxes) {
+      const bounds2 = item.bounds;
+      let dx = 0, dy = 0;
+      if (mode === "align-left") dx = Math.min(...boxes.map((p) => p.bounds.x)) - bounds2.x;
+      if (mode === "align-top") dy = Math.min(...boxes.map((p) => p.bounds.y)) - bounds2.y;
+      if (mode === "align-center") dx = boxes[0].bounds.x + boxes[0].bounds.width / 2 - bounds2.x - bounds2.width / 2;
+      if (mode.startsWith("distribute")) {
+        if (horizontal) dx = offset - bounds2.x;
+        else dy = offset - bounds2.y;
+        offset += bounds2[horizontal ? "width" : "height"] + gap;
+      }
+      const preview2 = compileDiagramCommand(bundle, { type: "move", ids: [item.elementId], dx, dy }, { transactionId: freshId() });
+      if (!preview2.ok) throw new Error(preview2.diagnostics[0].detail);
+      for (const op of preview2.transaction?.operations ?? []) for (const change of op.changes ?? []) changes.set(change.elementId, change);
+    }
+    return { type: "geometry", changes: [...changes.values()] };
+  }
+  function laneArrangementCommand(bundle, laneId, direction) {
+    const lane = [...bundle.document.lanes, ...bundle.document.groups].find((item) => item.id === laneId);
+    if (!lane) throw new Error("Select a lane or container.");
+    const byId = new Map(bundle.presentation.elements.map((item) => [item.elementId, item]));
+    const container2 = byId.get(laneId), before = geometryFields(container2), horizontal = direction === "horizontal";
+    let x = container2.bounds.x + 24, y = container2.bounds.y + 48, cross = 0;
+    const changes = /* @__PURE__ */ new Map();
+    for (const member of lane.members) {
+      const bounds2 = byId.get(member).bounds;
+      if (!bounds2) continue;
+      const preview2 = compileDiagramCommand(bundle, { type: "move", ids: [member], dx: x - bounds2.x, dy: y - bounds2.y }, { transactionId: freshId() });
+      if (preview2.ok) for (const op of preview2.transaction?.operations ?? []) for (const change of op.changes ?? []) changes.set(change.elementId, change);
+      else {
+        const moved = new Set(descendants(bundle.document, [member]));
+        for (const edge of bundle.document.relations) if (moved.has(edge.from) && moved.has(edge.to)) moved.add(edge.id);
+        for (const id2 of moved) {
+          const old = geometryFields(byId.get(id2)), next = clone(old), dx = x - bounds2.x, dy = y - bounds2.y;
+          if (next.bounds) {
+            next.bounds.x += dx;
+            next.bounds.y += dy;
+          }
+          if (next.label) {
+            next.label.x += dx;
+            next.label.y += dy;
+          }
+          if (next.route?.mode === "manual") next.route.points = next.route.points.map((p) => ({ x: p.x + dx, y: p.y + dy }));
+          changes.set(id2, { elementId: id2, before: old, after: next });
+        }
+      }
+      if (horizontal) x += bounds2.width + 40;
+      else y += bounds2.height + 40;
+      cross = Math.max(cross, bounds2[horizontal ? "height" : "width"]);
+    }
+    const after = clone(before);
+    after.bounds.width = Math.max(240, horizontal ? x - before.bounds.x - 16 : cross + 48);
+    after.bounds.height = Math.max(160, horizontal ? cross + 72 : y - before.bounds.y - 16);
+    changes.set(laneId, { elementId: laneId, before, after });
+    return { type: "geometry", changes: [...changes.values()] };
+  }
+  function addOrthogonalDetour(points) {
+    if (points.length < 2) throw new Error("The connector needs two attached endpoints.");
+    const lengths = points.slice(1).map((point2, index3) => Math.hypot(point2.x - points[index3].x, point2.y - points[index3].y));
+    const index2 = lengths.indexOf(Math.max(...lengths));
+    const start = points[index2], end = points[index2 + 1];
+    if (lengths[index2] < 24) throw new Error("The connector segment is too short for a bend.");
+    const horizontal = Math.abs(end.x - start.x) >= Math.abs(end.y - start.y);
+    const detour = horizontal ? [{ x: Math.round((start.x + end.x) / 2), y: start.y }, { x: Math.round((start.x + end.x) / 2), y: start.y + 40 }, { x: end.x, y: start.y + 40 }] : [{ x: start.x, y: Math.round((start.y + end.y) / 2) }, { x: start.x + 40, y: Math.round((start.y + end.y) / 2) }, { x: start.x + 40, y: end.y }];
+    return [...points.slice(0, index2 + 1), ...detour, ...points.slice(index2 + 1)];
+  }
+  function moveOrthogonalBend(points, index2, dx, dy) {
+    if (index2 <= 0 || index2 >= points.length - 1) throw new Error("Only an interior bend can move.");
+    const next = points.map((point2) => ({ ...point2 }));
+    const before = points[index2 - 1], corner = points[index2], after = points[index2 + 1];
+    const x = Math.round(corner.x + dx), y = Math.round(corner.y + dy);
+    if (before.x === corner.x) {
+      next[index2].x = index2 === 1 ? before.x : x;
+      if (index2 > 1) next[index2 - 1].x = x;
+    } else {
+      next[index2].y = index2 === 1 ? before.y : y;
+      if (index2 > 1) next[index2 - 1].y = y;
+    }
+    if (after.x === corner.x) {
+      next[index2].x = index2 === points.length - 2 ? after.x : x;
+      if (index2 < points.length - 2) next[index2 + 1].x = x;
+    } else {
+      next[index2].y = index2 === points.length - 2 ? after.y : y;
+      if (index2 < points.length - 2) next[index2 + 1].y = y;
+    }
+    return next;
+  }
+
   // lib/artifact/diagram/editor/draft.mjs
   var meta2 = (kind) => ({ kind, schemaVersion: "1.0.0", protocolVersion: "1.13.0" });
+  var NAMED_TEMPLATES = Object.freeze({ process: () => processTemplate({ x: 80, y: 160 }) });
   function createDiagramEditorDraft({ diagramId, title, grammar = "flowchart", template = null }) {
+    if (typeof template === "string") {
+      if (!Object.hasOwn(NAMED_TEMPLATES, template)) return failure("$.template", "template", `Unknown diagram template: ${template}.`);
+      const blank = createDiagramEditorDraft({ diagramId, title, grammar });
+      if (!blank.ok) return blank;
+      const started = compileDiagramCommand(blank.bundle, NAMED_TEMPLATES[template](), { transactionId: `template-${template}` });
+      return started.ok ? { ok: true, bundle: started.bundle } : started;
+    }
     if (template) {
       const check3 = validateAuthoringBundle(template);
       if (!check3.ok) return check3;
@@ -6493,61 +6753,6 @@
       commit: (transaction2) => call("commit", { transaction: transaction2 }),
       recover: (identity = {}) => call("recover", identity)
     };
-  }
-
-  // lib/artifact/diagram/editor/clipboard.mjs
-  var MAX_BYTES2 = 1024 * 1024;
-  var MAX_ELEMENTS = 1e3;
-  var fail4 = (detail) => ({ ok: false, diagnostics: [{ path: "$clipboard", rule: "clipboard", detail }] });
-  var size = (value) => new TextEncoder().encode(JSON.stringify(value)).length;
-  function copyDiagramSelection(bundle, ids2) {
-    const check2 = validateAuthoringBundle(bundle);
-    if (!check2.ok) return check2;
-    if (!Array.isArray(ids2) || !ids2.length || ids2.length > MAX_ELEMENTS || new Set(ids2).size !== ids2.length) return fail4("Select distinct objects within the clipboard limit.");
-    const known = new Set(bundle.presentation.elements.map((item) => item.elementId));
-    if (ids2.some((id2) => typeof id2 !== "string" || !known.has(id2))) return fail4("A selected object is missing.");
-    const selected2 = new Set(descendants(bundle.document, ids2));
-    for (const relation2 of bundle.document.relations) {
-      if (selected2.has(relation2.from) && selected2.has(relation2.to)) selected2.add(relation2.id);
-      else selected2.delete(relation2.id);
-    }
-    let added = true;
-    while (added) {
-      added = false;
-      for (const note of bundle.document.annotations) if (selected2.has(note.targetId) && !selected2.has(note.id)) {
-        selected2.add(note.id);
-        added = true;
-      }
-    }
-    if (!selected2.size || selected2.size > MAX_ELEMENTS) return fail4("The copied fragment must contain between 1 and 1,000 objects.");
-    const fragment = clone(bundle);
-    fragment.originalSource = null;
-    fragment.sourceMap = null;
-    for (const collection of COLLECTIONS) fragment.document[collection] = fragment.document[collection].filter((item) => selected2.has(item.id));
-    for (const parent of [...fragment.document.groups, ...fragment.document.lanes]) parent.members = parent.members.filter((id2) => selected2.has(id2));
-    for (const note of fragment.document.annotations) if (!selected2.has(note.targetId)) note.targetId = null;
-    fragment.document.laneOrder = fragment.document.laneOrder.filter((id2) => selected2.has(id2));
-    fragment.document.emphasis = fragment.document.emphasis.filter((item) => selected2.has(item.targetId));
-    fragment.document.accessibility.readingOrder = fragment.document.accessibility.readingOrder.filter((id2) => selected2.has(id2));
-    fragment.presentation.elements = fragment.presentation.elements.filter((item) => selected2.has(item.elementId));
-    const sourceBundle = sealBundle(fragment);
-    const checked = validateAuthoringBundle(sourceBundle);
-    if (!checked.ok) return checked;
-    const value = { kind: "openplanr-diagram-selection", version: 1, sourceBundle, ids: [...selected2] };
-    if (size(value) > MAX_BYTES2) return fail4("The copied fragment exceeds 1 MiB. Copy fewer objects.");
-    return { ok: true, value };
-  }
-  function pasteDiagramSelection(bundle, input, { idMap, transactionId, dx = 24, dy = 24 }) {
-    if (typeof input === "string") {
-      if (input.length > MAX_BYTES2 || new TextEncoder().encode(input).length > MAX_BYTES2) return fail4("The clipboard exceeds 1 MiB.");
-      try {
-        input = JSON.parse(input);
-      } catch {
-        return fail4("The clipboard does not contain an OpenPlanr selection.");
-      }
-    }
-    if (inspectPlainData(input).length || !input || input.kind !== "openplanr-diagram-selection" || input.version !== 1 || Object.keys(input).some((key) => !["kind", "version", "sourceBundle", "ids"].includes(key)) || !Array.isArray(input.ids) || input.ids.length > MAX_ELEMENTS || size(input) > MAX_BYTES2) return fail4("Invalid or oversized clipboard fragment.");
-    return compileDiagramCommand(bundle, { type: "paste", sourceBundle: input.sourceBundle, ids: input.ids, idMap, dx, dy }, { transactionId });
   }
 
   // lib/artifact/ui/diagram-editor-dom.mjs
@@ -7573,203 +7778,6 @@
     };
   }
 
-  // lib/artifact/ui/diagram-editor-actions.mjs
-  var freshId = (prefix = "edit") => `${prefix}-${globalThis.crypto.randomUUID()}`;
-  var labelOf = (value) => value.label ?? value.text ?? value.id;
-  var transaction = (bundle, operations) => ({ kind: "diagram-edit-transaction", schemaVersion: "1.0.0", protocolVersion: "1.13.0", transactionId: freshId(), diagramId: bundle.diagramId, base: snapshot2(bundle), operations, undoOf: null });
-  function placement4(id2, shape2, bounds2) {
-    return {
-      elementId: id2,
-      bounds: bounds2,
-      route: null,
-      label: null,
-      zIndex: shape2 === "container" ? 0 : 1,
-      appearance: { shape: shape2, fill: shape2 === "text" || shape2 === "container" ? "transparent" : "surface", stroke: shape2 === "text" ? "none" : "default", strokeWidth: 1.5, strokeStyle: "solid", fontSize: 14, textAlign: shape2 === "container" || shape2 === "text" ? "left" : "center" },
-      locks: { position: false, size: false, route: false }
-    };
-  }
-  function createObject(kind, position) {
-    const id2 = freshId(kind === "horizontal-lane" || kind === "vertical-lane" ? "lane" : kind);
-    const { x, y } = position;
-    const bounds2 = { x, y, width: 160, height: 72 };
-    let collection = "nodes", value, shape2 = "rectangle";
-    if (kind === "annotation") {
-      collection = "annotations";
-      value = { id: id2, text: "Add a note", targetId: null };
-      shape2 = "text";
-    } else if (kind === "container" || kind.endsWith("-lane")) {
-      collection = kind === "container" ? "groups" : "lanes";
-      value = { id: id2, label: kind === "container" ? "Container" : "Lane", members: [] };
-      shape2 = "container";
-      Object.assign(bounds2, kind === "vertical-lane" ? { width: 240, height: 480 } : { width: 540, height: 240 });
-    } else {
-      const names = { process: "Process", start: "Start", end: "End", decision: "Decision", "data-store": "Data store", component: "Component" };
-      value = { id: id2, label: names[kind], kind, description: null };
-      shape2 = { start: "ellipse", end: "ellipse", decision: "diamond", "data-store": "cylinder", component: "rounded-rectangle" }[kind] ?? "rectangle";
-      if (kind === "decision") bounds2.height = 100;
-    }
-    return { type: "create", elements: [{ collection, value }], presentation: [placement4(id2, shape2, bounds2)] };
-  }
-  function connector(from, to, label = "") {
-    const id2 = freshId("connector");
-    const entry2 = placement4(id2, "connector", null);
-    entry2.route = { mode: "automatic", strategy: "orthogonal", from: { side: "right", offset: 0.5 }, to: { side: "left", offset: 0.5 }, points: [] };
-    return { type: "create", elements: [{ collection: "relations", value: { id: id2, from, to, label: label || null, kind: "flow", direction: "forward", weight: null } }], presentation: [entry2] };
-  }
-  function processTemplate(position) {
-    const start = createObject("start", position), process = createObject("process", { x: position.x + 240, y: position.y }), end = createObject("end", { x: position.x + 480, y: position.y });
-    const first = connector(start.elements[0].value.id, process.elements[0].value.id), second = connector(process.elements[0].value.id, end.elements[0].value.id);
-    const parts = [start, process, end, first, second];
-    return { type: "create", elements: parts.flatMap((part) => part.elements), presentation: parts.flatMap((part) => part.presentation) };
-  }
-  function duplicateSelection(bundle, ids2, copied = null) {
-    const result = copied ? { ok: true, value: copied } : copyDiagramSelection(bundle, ids2);
-    if (!result.ok) return result;
-    const idMap = Object.fromEntries(result.value.ids.map((id2) => [id2, freshId("copy")]));
-    const preview2 = pasteDiagramSelection(bundle, result.value, { idMap, transactionId: freshId(), dx: 24, dy: 24 });
-    return { ...preview2, selectedIds: ids2.filter((id2) => idMap[id2]).map((id2) => idMap[id2]) };
-  }
-  function propertyTransaction(bundle, id2, { semantic, geometry, appearance: appearance2 }) {
-    const entry2 = elementIndex(bundle.document).get(id2);
-    const current = bundle.presentation.elements.find((item) => item.elementId === id2);
-    const operations = [];
-    if (semantic) operations.push({ type: "update-semantics", collection: entry2.collection, elementId: id2, before: semanticFields(entry2.collection, entry2.value), after: semantic });
-    if (geometry) {
-      const before = geometryFields(current);
-      let changes = [{ elementId: id2, before, after: geometry }];
-      if (before.bounds && geometry.bounds && (before.bounds.x !== geometry.bounds.x || before.bounds.y !== geometry.bounds.y)) {
-        const moved = compileDiagramCommand(bundle, {
-          type: "move",
-          ids: [id2],
-          dx: geometry.bounds.x - before.bounds.x,
-          dy: geometry.bounds.y - before.bounds.y
-        }, { transactionId: freshId() });
-        if (moved.ok && moved.transaction) {
-          changes = moved.transaction.operations.flatMap((operation2) => operation2.changes ?? []);
-          const target = changes.find((change) => change.elementId === id2);
-          if (target) target.after = {
-            ...target.after,
-            bounds: geometry.bounds,
-            route: same2(geometry.route, before.route) ? target.after.route : geometry.route,
-            label: same2(geometry.label, before.label) ? target.after.label : geometry.label,
-            zIndex: geometry.zIndex
-          };
-        }
-      }
-      operations.push({ type: "set-geometry", changes });
-    }
-    if (appearance2) operations.push({ type: "set-appearance-locks", changes: [{ elementId: id2, before: appearanceFields(current), after: appearance2 }] });
-    return transaction(bundle, operations);
-  }
-  function arrangementCommand(bundle, ids2, mode) {
-    const parents = parentIndex(bundle.document), selected2 = new Set(ids2);
-    const roots2 = ids2.filter((id2) => {
-      let parent = parents.get(id2);
-      while (parent) {
-        if (selected2.has(parent)) return false;
-        parent = parents.get(parent);
-      }
-      return true;
-    });
-    const placements = new Map(bundle.presentation.elements.map((item) => [item.elementId, item]));
-    const boxes = roots2.map((id2) => placements.get(id2)).filter((item) => item?.bounds);
-    if (boxes.length < 2) throw new Error("Select at least two shapes or containers.");
-    const horizontal = mode.endsWith("horizontal");
-    if (mode.startsWith("distribute") && boxes.length < 3) throw new Error("Select at least three shapes to distribute.");
-    const ordered = [...boxes].sort((a, b) => a.bounds[horizontal ? "x" : "y"] - b.bounds[horizontal ? "x" : "y"]);
-    const first = ordered[0].bounds, last = ordered.at(-1).bounds;
-    const totalSize = ordered.reduce((sum, item) => sum + item.bounds[horizontal ? "width" : "height"], 0);
-    const gap = ((horizontal ? last.x + last.width - first.x : last.y + last.height - first.y) - totalSize) / (boxes.length - 1);
-    let offset = horizontal ? first.x : first.y;
-    const changes = /* @__PURE__ */ new Map();
-    for (const item of mode.startsWith("distribute") ? ordered : boxes) {
-      const bounds2 = item.bounds;
-      let dx = 0, dy = 0;
-      if (mode === "align-left") dx = Math.min(...boxes.map((p) => p.bounds.x)) - bounds2.x;
-      if (mode === "align-top") dy = Math.min(...boxes.map((p) => p.bounds.y)) - bounds2.y;
-      if (mode === "align-center") dx = boxes[0].bounds.x + boxes[0].bounds.width / 2 - bounds2.x - bounds2.width / 2;
-      if (mode.startsWith("distribute")) {
-        if (horizontal) dx = offset - bounds2.x;
-        else dy = offset - bounds2.y;
-        offset += bounds2[horizontal ? "width" : "height"] + gap;
-      }
-      const preview2 = compileDiagramCommand(bundle, { type: "move", ids: [item.elementId], dx, dy }, { transactionId: freshId() });
-      if (!preview2.ok) throw new Error(preview2.diagnostics[0].detail);
-      for (const op of preview2.transaction?.operations ?? []) for (const change of op.changes ?? []) changes.set(change.elementId, change);
-    }
-    return { type: "geometry", changes: [...changes.values()] };
-  }
-  function laneArrangementCommand(bundle, laneId, direction) {
-    const lane = [...bundle.document.lanes, ...bundle.document.groups].find((item) => item.id === laneId);
-    if (!lane) throw new Error("Select a lane or container.");
-    const byId = new Map(bundle.presentation.elements.map((item) => [item.elementId, item]));
-    const container2 = byId.get(laneId), before = geometryFields(container2), horizontal = direction === "horizontal";
-    let x = container2.bounds.x + 24, y = container2.bounds.y + 48, cross = 0;
-    const changes = /* @__PURE__ */ new Map();
-    for (const member of lane.members) {
-      const bounds2 = byId.get(member).bounds;
-      if (!bounds2) continue;
-      const preview2 = compileDiagramCommand(bundle, { type: "move", ids: [member], dx: x - bounds2.x, dy: y - bounds2.y }, { transactionId: freshId() });
-      if (preview2.ok) for (const op of preview2.transaction?.operations ?? []) for (const change of op.changes ?? []) changes.set(change.elementId, change);
-      else {
-        const moved = new Set(descendants(bundle.document, [member]));
-        for (const edge of bundle.document.relations) if (moved.has(edge.from) && moved.has(edge.to)) moved.add(edge.id);
-        for (const id2 of moved) {
-          const old = geometryFields(byId.get(id2)), next = clone(old), dx = x - bounds2.x, dy = y - bounds2.y;
-          if (next.bounds) {
-            next.bounds.x += dx;
-            next.bounds.y += dy;
-          }
-          if (next.label) {
-            next.label.x += dx;
-            next.label.y += dy;
-          }
-          if (next.route?.mode === "manual") next.route.points = next.route.points.map((p) => ({ x: p.x + dx, y: p.y + dy }));
-          changes.set(id2, { elementId: id2, before: old, after: next });
-        }
-      }
-      if (horizontal) x += bounds2.width + 40;
-      else y += bounds2.height + 40;
-      cross = Math.max(cross, bounds2[horizontal ? "height" : "width"]);
-    }
-    const after = clone(before);
-    after.bounds.width = Math.max(240, horizontal ? x - before.bounds.x - 16 : cross + 48);
-    after.bounds.height = Math.max(160, horizontal ? cross + 72 : y - before.bounds.y - 16);
-    changes.set(laneId, { elementId: laneId, before, after });
-    return { type: "geometry", changes: [...changes.values()] };
-  }
-  function addOrthogonalDetour(points) {
-    if (points.length < 2) throw new Error("The connector needs two attached endpoints.");
-    const lengths = points.slice(1).map((point2, index3) => Math.hypot(point2.x - points[index3].x, point2.y - points[index3].y));
-    const index2 = lengths.indexOf(Math.max(...lengths));
-    const start = points[index2], end = points[index2 + 1];
-    if (lengths[index2] < 24) throw new Error("The connector segment is too short for a bend.");
-    const horizontal = Math.abs(end.x - start.x) >= Math.abs(end.y - start.y);
-    const detour = horizontal ? [{ x: Math.round((start.x + end.x) / 2), y: start.y }, { x: Math.round((start.x + end.x) / 2), y: start.y + 40 }, { x: end.x, y: start.y + 40 }] : [{ x: start.x, y: Math.round((start.y + end.y) / 2) }, { x: start.x + 40, y: Math.round((start.y + end.y) / 2) }, { x: start.x + 40, y: end.y }];
-    return [...points.slice(0, index2 + 1), ...detour, ...points.slice(index2 + 1)];
-  }
-  function moveOrthogonalBend(points, index2, dx, dy) {
-    if (index2 <= 0 || index2 >= points.length - 1) throw new Error("Only an interior bend can move.");
-    const next = points.map((point2) => ({ ...point2 }));
-    const before = points[index2 - 1], corner = points[index2], after = points[index2 + 1];
-    const x = Math.round(corner.x + dx), y = Math.round(corner.y + dy);
-    if (before.x === corner.x) {
-      next[index2].x = index2 === 1 ? before.x : x;
-      if (index2 > 1) next[index2 - 1].x = x;
-    } else {
-      next[index2].y = index2 === 1 ? before.y : y;
-      if (index2 > 1) next[index2 - 1].y = y;
-    }
-    if (after.x === corner.x) {
-      next[index2].x = index2 === points.length - 2 ? after.x : x;
-      if (index2 < points.length - 2) next[index2 + 1].x = x;
-    } else {
-      next[index2].y = index2 === points.length - 2 ? after.y : y;
-      if (index2 < points.length - 2) next[index2 + 1].y = y;
-    }
-    return next;
-  }
-
   // lib/artifact/ui/diagram-editor-properties.mjs
   var COLLECTION_LABELS = Object.freeze({
     nodes: "Node",
@@ -8646,6 +8654,7 @@
   function mountDiagramEditor({ root, session, host = {} }) {
     if (!root || !session || typeof session.getState !== "function") throw new TypeError("Mount needs one root and one editor session.");
     if (host.review !== void 0 && typeof host.review !== "boolean") throw new TypeError("Host review must be true or false.");
+    if (host.saveLabel !== void 0 && typeof host.saveLabel !== "function") throw new TypeError("Host saveLabel must be a function.");
     const labels = hostLabels(host.labels), hostActions = hostEntries(host.actions, "action", "onSelect"), hostPanels = hostEntries(host.panels, "panel", "mount");
     const reviewEnabled = host.review !== false;
     let hostScheme = colorSchemeOf(host.colorScheme);
@@ -9087,11 +9096,16 @@
       }
     }
     let controlsStamp = "";
+    function hostSaveLabel(state) {
+      const label = host.saveLabel?.(state) ?? null;
+      if (label !== null && (typeof label !== "string" || !label.trim())) throw new TypeError(`Host saveLabel must return non-empty text or null; received ${JSON.stringify(label)}.`);
+      return label;
+    }
     function renderChrome(state) {
       const bundle = state.bundle;
       $(".de-title").textContent = bundle?.document.title ?? "Diagram unavailable";
       const status = state.saveState;
-      saveState.textContent = readOnly(state) ? labels.readOnly : { saved: "Saved", saving: "Saving…", unsaved: "Unsaved", offline: "Offline · Unsaved", conflict: "Conflict · Unsaved", "access-changed": "Access changed" }[status] ?? "Unsaved";
+      saveState.textContent = readOnly(state) ? labels.readOnly : hostSaveLabel(state) ?? { saved: "Saved", saving: "Saving…", unsaved: "Unsaved", offline: "Offline · Unsaved", conflict: "Conflict · Unsaved", "access-changed": "Access changed" }[status] ?? "Unsaved";
       saveState.dataset.state = readOnly(state) ? "read-only" : status;
       shell.dataset.editable = String(editable(state));
       shell.dataset.readOnly = String(readOnly(state));
@@ -9273,7 +9287,7 @@
       }
       if (state.saveState === "conflict") footer.append(element(doc, "span", {}, "A newer saved revision exists. Your draft remains in this tab."), button(doc, "Compare revisions", "conflict", { className: "de-primary" }));
       else if (state.saveState === "offline") footer.append(element(doc, "span", {}, "Save was not confirmed. Edits remain pending."), button(doc, "Retry save", "save"));
-      else if (state.recovery.warning) footer.append(element(doc, "span", {}, state.recovery.warning));
+      else if (state.recovery.warning && !readOnly(state)) footer.append(element(doc, "span", {}, state.recovery.warning));
       else if (state.pendingCount > 0 && state.acknowledged) footer.append(element(doc, "span", {}, "Recovered or pending edits are in this session. Review before you save."));
       else if (!getDiagramAuthoringCapability(state.bundle.document.grammar.id)) footer.append(element(doc, "span", {}, "This diagram grammar is available for inspection only. Editing is not certified."));
       else footer.append(element(doc, "span", {}, state.view.selection.length + " selected · " + state.bundle.presentation.elements.length + " objects"));
@@ -9897,7 +9911,7 @@
           }
         }
       }
-      if (!dialog && event.key === "Tab" && win.innerWidth <= 1100 && (leftOpen || rightOpen)) {
+      if (!dialog && event.key === "Tab" && win.innerWidth <= 1100 && (leftOpen || rightOpen) && shell.contains(event.target)) {
         const panel = leftOpen ? $(".de-left") : $(".de-right");
         const controls = [...panel.querySelectorAll('button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),summary,a[href],[tabindex]:not([tabindex="-1"])')].filter((control) => !control.closest('[hidden],[inert],[aria-hidden="true"]') && control.getClientRects().length);
         if (controls.length) {
@@ -10049,7 +10063,7 @@
     function containDrawerFocus(event) {
       if (dialog || win.innerWidth > 1100 || drawerBackdrop.hidden || !leftOpen && !rightOpen) return;
       const panel = leftOpen ? $(".de-left") : $(".de-right");
-      if (!panel || panel.contains(event.target)) return;
+      if (!panel || panel.contains(event.target) || !shell.contains(event.target)) return;
       const controls = [...panel.querySelectorAll('button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),summary,a[href],[tabindex]:not([tabindex="-1"])')].filter((control) => !control.closest('[hidden],[inert],[aria-hidden="true"]') && control.getClientRects().length);
       (controls[0] ?? panel).focus({ preventScroll: true });
     }

@@ -48,8 +48,8 @@
     },
     {
       "path": "templates/diagram-owner.js",
-      "bytes": 507004,
-      "sha256": "44cc0b1d6035d0c25e344fb307709045448a494df8c20cee1b8837b57e39c873"
+      "bytes": 508140,
+      "sha256": "eba222d83f2754213c12b4d83032cd0857e969b6d224108b3e413d5bc82ab3f5"
     },
     {
       "path": "templates/diagram-studio.js",

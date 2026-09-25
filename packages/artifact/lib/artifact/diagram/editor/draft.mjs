@@ -1,9 +1,18 @@
-import { clone, sealBundle } from '../authoring/model.mjs';
-import { validateAuthoringBundle } from '../authoring/index.mjs';
+import { clone, failure, sealBundle } from '../authoring/model.mjs';
+import { compileDiagramCommand, validateAuthoringBundle } from '../authoring/index.mjs';
+import { processTemplate } from '../../ui/diagram-editor-actions.mjs';
 
 const meta = kind => ({ kind, schemaVersion: '1.0.0', protocolVersion: '1.13.0' });
-/** Create an unsaved blank diagram, or adopt a validated template as new identity. */
+const NAMED_TEMPLATES = Object.freeze({ process: () => processTemplate({ x: 80, y: 160 }) });
+/** Create an unsaved blank diagram, or adopt a named or validated template as new identity. */
 export function createDiagramEditorDraft({ diagramId, title, grammar = 'flowchart', template = null }) {
+  if (typeof template === 'string') {
+    if (!Object.hasOwn(NAMED_TEMPLATES, template)) return failure('$.template', 'template', `Unknown diagram template: ${template}.`);
+    const blank = createDiagramEditorDraft({ diagramId, title, grammar });
+    if (!blank.ok) return blank;
+    const started = compileDiagramCommand(blank.bundle, NAMED_TEMPLATES[template](), { transactionId: `template-${template}` });
+    return started.ok ? { ok: true, bundle: started.bundle } : started;
+  }
   if (template) {
     const check = validateAuthoringBundle(template);
     if (!check.ok) return check;
