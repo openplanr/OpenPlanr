@@ -6,7 +6,7 @@
   "assets": [
     {
       "path": "adapters/manifests/canonical-skills.json",
-      "digest": "sha256:0de69c244f8f500bb95408712a2d1a5c7d44e4c1f0f639f2cfb6ffb125e3502e",
+      "digest": "sha256:96ab9b5e51b1bd3d5bffcb6b486c7ea6b0dd8601d239e466a073825e48487f21",
       "generated": false
     },
     {
@@ -26,7 +26,7 @@
     },
     {
       "path": "dist/plugins/claude/openplanr/.openplanr-content.json",
-      "digest": "sha256:3b27aa7f189a623a2411575c7892edb02a4c076239617cd5819fcdc525011ced",
+      "digest": "sha256:cc9c9fc31950be620fe69831f414778e455fa50a09df60b654d82e1b7447e1e4",
       "generated": true
     },
     {
@@ -261,7 +261,7 @@
     },
     {
       "path": "dist/plugins/claude/openplanr/skills/ceo-review/scripts/validate-note.mjs",
-      "digest": "sha256:dcfcc371d94efef9b27456f692eca82afd8e079275044da8c6384253632bad75",
+      "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7",
       "generated": true
     },
     {
@@ -291,7 +291,7 @@
     },
     {
       "path": "dist/plugins/claude/openplanr/skills/chair-review/scripts/validate-note.mjs",
-      "digest": "sha256:dcfcc371d94efef9b27456f692eca82afd8e079275044da8c6384253632bad75",
+      "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7",
       "generated": true
     },
     {
@@ -321,7 +321,7 @@
     },
     {
       "path": "dist/plugins/claude/openplanr/skills/challenger-review/scripts/validate-note.mjs",
-      "digest": "sha256:dcfcc371d94efef9b27456f692eca82afd8e079275044da8c6384253632bad75",
+      "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7",
       "generated": true
     },
     {
@@ -356,7 +356,7 @@
     },
     {
       "path": "dist/plugins/claude/openplanr/skills/cmo-review/scripts/validate-note.mjs",
-      "digest": "sha256:dcfcc371d94efef9b27456f692eca82afd8e079275044da8c6384253632bad75",
+      "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7",
       "generated": true
     },
     {
@@ -391,7 +391,7 @@
     },
     {
       "path": "dist/plugins/claude/openplanr/skills/coo-review/scripts/validate-note.mjs",
-      "digest": "sha256:dcfcc371d94efef9b27456f692eca82afd8e079275044da8c6384253632bad75",
+      "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7",
       "generated": true
     },
     {
@@ -426,7 +426,7 @@
     },
     {
       "path": "dist/plugins/claude/openplanr/skills/cpo-review/scripts/validate-note.mjs",
-      "digest": "sha256:dcfcc371d94efef9b27456f692eca82afd8e079275044da8c6384253632bad75",
+      "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7",
       "generated": true
     },
     {
@@ -461,7 +461,7 @@
     },
     {
       "path": "dist/plugins/claude/openplanr/skills/cto-review/scripts/validate-note.mjs",
-      "digest": "sha256:dcfcc371d94efef9b27456f692eca82afd8e079275044da8c6384253632bad75",
+      "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7",
       "generated": true
     },
     {
@@ -1276,7 +1276,7 @@
     },
     {
       "path": "dist/plugins/claude/openplanr/skills/operate/scripts/validate-note.mjs",
-      "digest": "sha256:dcfcc371d94efef9b27456f692eca82afd8e079275044da8c6384253632bad75",
+      "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7",
       "generated": true
     },
     {
@@ -1631,7 +1631,7 @@
     },
     {
       "path": "dist/plugins/cursor/openplanr/.openplanr-content.json",
-      "digest": "sha256:30b82089af1fcdae8cd26cbdc54fe5803e439aab8d0a0af3413e8715d63bc0d9",
+      "digest": "sha256:de8f1cd8e12d7c56f80ded54eb2fd3924e392d7fea8aa5fdaae31dcc4839ba02",
       "generated": true
     },
     {
@@ -1686,7 +1686,7 @@
     },
     {
       "path": "dist/plugins/cursor/openplanr/rules/planr-ceo-review/scripts/validate-note.mjs",
-      "digest": "sha256:dcfcc371d94efef9b27456f692eca82afd8e079275044da8c6384253632bad75",
+      "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7",
       "generated": true
     },
     {
@@ -1711,7 +1711,7 @@
     },
     {
       "path": "dist/plugins/cursor/openplanr/rules/planr-chair-review/scripts/validate-note.mjs",
-      "digest": "sha256:dcfcc371d94efef9b27456f692eca82afd8e079275044da8c6384253632bad75",
+      "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7",
       "generated": true
     },
     {
@@ -1736,7 +1736,7 @@
     },
     {
       "path": "dist/plugins/cursor/openplanr/rules/planr-challenger-review/scripts/validate-note.mjs",
-      "digest": "sha256:dcfcc371d94efef9b27456f692eca82afd8e079275044da8c6384253632bad75",
+      "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7",
       "generated": true
     },
     {
@@ -1766,7 +1766,7 @@
     },
     {
       "path": "dist/plugins/cursor/openplanr/rules/planr-cmo-review/scripts/validate-note.mjs",
-      "digest": "sha256:dcfcc371d94efef9b27456f692eca82afd8e079275044da8c6384253632bad75",
+      "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7",
       "generated": true
     },
     {
@@ -1796,7 +1796,7 @@
     },
     {
       "path": "dist/plugins/cursor/openplanr/rules/planr-coo-review/scripts/validate-note.mjs",
-      "digest": "sha256:dcfcc371d94efef9b27456f692eca82afd8e079275044da8c6384253632bad75",
+      "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7",
       "generated": true
     },
     {
@@ -1826,7 +1826,7 @@
     },
     {
       "path": "dist/plugins/cursor/openplanr/rules/planr-cpo-review/scripts/validate-note.mjs",
-      "digest": "sha256:dcfcc371d94efef9b27456f692eca82afd8e079275044da8c6384253632bad75",
+      "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7",
       "generated": true
     },
     {
@@ -1856,7 +1856,7 @@
     },
     {
       "path": "dist/plugins/cursor/openplanr/rules/planr-cto-review/scripts/validate-note.mjs",
-      "digest": "sha256:dcfcc371d94efef9b27456f692eca82afd8e079275044da8c6384253632bad75",
+      "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7",
       "generated": true
     },
     {
@@ -2621,7 +2621,7 @@
     },
     {
       "path": "dist/plugins/cursor/openplanr/rules/planr-operate/scripts/validate-note.mjs",
-      "digest": "sha256:dcfcc371d94efef9b27456f692eca82afd8e079275044da8c6384253632bad75",
+      "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7",
       "generated": true
     },
     {
@@ -2941,7 +2941,7 @@
     },
     {
       "path": "dist/plugins/openai/openplanr/.openplanr-content.json",
-      "digest": "sha256:709a17502d83f7291d59c297abe25809c15473a5ae9e21317cf867144982f154",
+      "digest": "sha256:f56a55b1de9dee409148e37da5edcb78a588cedc494bbb68c628c162f4553e59",
       "generated": true
     },
     {
@@ -3016,7 +3016,7 @@
     },
     {
       "path": "dist/plugins/openai/openplanr/skills/ceo-review/scripts/validate-note.mjs",
-      "digest": "sha256:dcfcc371d94efef9b27456f692eca82afd8e079275044da8c6384253632bad75",
+      "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7",
       "generated": true
     },
     {
@@ -3051,7 +3051,7 @@
     },
     {
       "path": "dist/plugins/openai/openplanr/skills/chair-review/scripts/validate-note.mjs",
-      "digest": "sha256:dcfcc371d94efef9b27456f692eca82afd8e079275044da8c6384253632bad75",
+      "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7",
       "generated": true
     },
     {
@@ -3086,7 +3086,7 @@
     },
     {
       "path": "dist/plugins/openai/openplanr/skills/challenger-review/scripts/validate-note.mjs",
-      "digest": "sha256:dcfcc371d94efef9b27456f692eca82afd8e079275044da8c6384253632bad75",
+      "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7",
       "generated": true
     },
     {
@@ -3126,7 +3126,7 @@
     },
     {
       "path": "dist/plugins/openai/openplanr/skills/cmo-review/scripts/validate-note.mjs",
-      "digest": "sha256:dcfcc371d94efef9b27456f692eca82afd8e079275044da8c6384253632bad75",
+      "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7",
       "generated": true
     },
     {
@@ -3166,7 +3166,7 @@
     },
     {
       "path": "dist/plugins/openai/openplanr/skills/coo-review/scripts/validate-note.mjs",
-      "digest": "sha256:dcfcc371d94efef9b27456f692eca82afd8e079275044da8c6384253632bad75",
+      "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7",
       "generated": true
     },
     {
@@ -3206,7 +3206,7 @@
     },
     {
       "path": "dist/plugins/openai/openplanr/skills/cpo-review/scripts/validate-note.mjs",
-      "digest": "sha256:dcfcc371d94efef9b27456f692eca82afd8e079275044da8c6384253632bad75",
+      "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7",
       "generated": true
     },
     {
@@ -3246,7 +3246,7 @@
     },
     {
       "path": "dist/plugins/openai/openplanr/skills/cto-review/scripts/validate-note.mjs",
-      "digest": "sha256:dcfcc371d94efef9b27456f692eca82afd8e079275044da8c6384253632bad75",
+      "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7",
       "generated": true
     },
     {
@@ -4111,7 +4111,7 @@
     },
     {
       "path": "dist/plugins/openai/openplanr/skills/operate/scripts/validate-note.mjs",
-      "digest": "sha256:dcfcc371d94efef9b27456f692eca82afd8e079275044da8c6384253632bad75",
+      "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7",
       "generated": true
     },
     {
@@ -4526,7 +4526,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/claude/openplanr/.openplanr-content.json",
-      "digest": "sha256:3b27aa7f189a623a2411575c7892edb02a4c076239617cd5819fcdc525011ced",
+      "digest": "sha256:cc9c9fc31950be620fe69831f414778e455fa50a09df60b654d82e1b7447e1e4",
       "generated": true
     },
     {
@@ -4761,7 +4761,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/claude/openplanr/skills/ceo-review/scripts/validate-note.mjs",
-      "digest": "sha256:dcfcc371d94efef9b27456f692eca82afd8e079275044da8c6384253632bad75",
+      "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7",
       "generated": true
     },
     {
@@ -4791,7 +4791,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/claude/openplanr/skills/chair-review/scripts/validate-note.mjs",
-      "digest": "sha256:dcfcc371d94efef9b27456f692eca82afd8e079275044da8c6384253632bad75",
+      "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7",
       "generated": true
     },
     {
@@ -4821,7 +4821,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/claude/openplanr/skills/challenger-review/scripts/validate-note.mjs",
-      "digest": "sha256:dcfcc371d94efef9b27456f692eca82afd8e079275044da8c6384253632bad75",
+      "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7",
       "generated": true
     },
     {
@@ -4856,7 +4856,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/claude/openplanr/skills/cmo-review/scripts/validate-note.mjs",
-      "digest": "sha256:dcfcc371d94efef9b27456f692eca82afd8e079275044da8c6384253632bad75",
+      "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7",
       "generated": true
     },
     {
@@ -4891,7 +4891,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/claude/openplanr/skills/coo-review/scripts/validate-note.mjs",
-      "digest": "sha256:dcfcc371d94efef9b27456f692eca82afd8e079275044da8c6384253632bad75",
+      "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7",
       "generated": true
     },
     {
@@ -4926,7 +4926,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/claude/openplanr/skills/cpo-review/scripts/validate-note.mjs",
-      "digest": "sha256:dcfcc371d94efef9b27456f692eca82afd8e079275044da8c6384253632bad75",
+      "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7",
       "generated": true
     },
     {
@@ -4961,7 +4961,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/claude/openplanr/skills/cto-review/scripts/validate-note.mjs",
-      "digest": "sha256:dcfcc371d94efef9b27456f692eca82afd8e079275044da8c6384253632bad75",
+      "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7",
       "generated": true
     },
     {
@@ -5776,7 +5776,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/claude/openplanr/skills/operate/scripts/validate-note.mjs",
-      "digest": "sha256:dcfcc371d94efef9b27456f692eca82afd8e079275044da8c6384253632bad75",
+      "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7",
       "generated": true
     },
     {
@@ -6131,7 +6131,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/cursor/openplanr/.openplanr-content.json",
-      "digest": "sha256:30b82089af1fcdae8cd26cbdc54fe5803e439aab8d0a0af3413e8715d63bc0d9",
+      "digest": "sha256:de8f1cd8e12d7c56f80ded54eb2fd3924e392d7fea8aa5fdaae31dcc4839ba02",
       "generated": true
     },
     {
@@ -6186,7 +6186,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/cursor/openplanr/rules/planr-ceo-review/scripts/validate-note.mjs",
-      "digest": "sha256:dcfcc371d94efef9b27456f692eca82afd8e079275044da8c6384253632bad75",
+      "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7",
       "generated": true
     },
     {
@@ -6211,7 +6211,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/cursor/openplanr/rules/planr-chair-review/scripts/validate-note.mjs",
-      "digest": "sha256:dcfcc371d94efef9b27456f692eca82afd8e079275044da8c6384253632bad75",
+      "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7",
       "generated": true
     },
     {
@@ -6236,7 +6236,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/cursor/openplanr/rules/planr-challenger-review/scripts/validate-note.mjs",
-      "digest": "sha256:dcfcc371d94efef9b27456f692eca82afd8e079275044da8c6384253632bad75",
+      "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7",
       "generated": true
     },
     {
@@ -6266,7 +6266,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/cursor/openplanr/rules/planr-cmo-review/scripts/validate-note.mjs",
-      "digest": "sha256:dcfcc371d94efef9b27456f692eca82afd8e079275044da8c6384253632bad75",
+      "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7",
       "generated": true
     },
     {
@@ -6296,7 +6296,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/cursor/openplanr/rules/planr-coo-review/scripts/validate-note.mjs",
-      "digest": "sha256:dcfcc371d94efef9b27456f692eca82afd8e079275044da8c6384253632bad75",
+      "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7",
       "generated": true
     },
     {
@@ -6326,7 +6326,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/cursor/openplanr/rules/planr-cpo-review/scripts/validate-note.mjs",
-      "digest": "sha256:dcfcc371d94efef9b27456f692eca82afd8e079275044da8c6384253632bad75",
+      "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7",
       "generated": true
     },
     {
@@ -6356,7 +6356,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/cursor/openplanr/rules/planr-cto-review/scripts/validate-note.mjs",
-      "digest": "sha256:dcfcc371d94efef9b27456f692eca82afd8e079275044da8c6384253632bad75",
+      "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7",
       "generated": true
     },
     {
@@ -7121,7 +7121,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/cursor/openplanr/rules/planr-operate/scripts/validate-note.mjs",
-      "digest": "sha256:dcfcc371d94efef9b27456f692eca82afd8e079275044da8c6384253632bad75",
+      "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7",
       "generated": true
     },
     {
@@ -7441,7 +7441,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/openai/openplanr/.openplanr-content.json",
-      "digest": "sha256:709a17502d83f7291d59c297abe25809c15473a5ae9e21317cf867144982f154",
+      "digest": "sha256:f56a55b1de9dee409148e37da5edcb78a588cedc494bbb68c628c162f4553e59",
       "generated": true
     },
     {
@@ -7516,7 +7516,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/openai/openplanr/skills/ceo-review/scripts/validate-note.mjs",
-      "digest": "sha256:dcfcc371d94efef9b27456f692eca82afd8e079275044da8c6384253632bad75",
+      "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7",
       "generated": true
     },
     {
@@ -7551,7 +7551,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/openai/openplanr/skills/chair-review/scripts/validate-note.mjs",
-      "digest": "sha256:dcfcc371d94efef9b27456f692eca82afd8e079275044da8c6384253632bad75",
+      "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7",
       "generated": true
     },
     {
@@ -7586,7 +7586,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/openai/openplanr/skills/challenger-review/scripts/validate-note.mjs",
-      "digest": "sha256:dcfcc371d94efef9b27456f692eca82afd8e079275044da8c6384253632bad75",
+      "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7",
       "generated": true
     },
     {
@@ -7626,7 +7626,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/openai/openplanr/skills/cmo-review/scripts/validate-note.mjs",
-      "digest": "sha256:dcfcc371d94efef9b27456f692eca82afd8e079275044da8c6384253632bad75",
+      "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7",
       "generated": true
     },
     {
@@ -7666,7 +7666,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/openai/openplanr/skills/coo-review/scripts/validate-note.mjs",
-      "digest": "sha256:dcfcc371d94efef9b27456f692eca82afd8e079275044da8c6384253632bad75",
+      "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7",
       "generated": true
     },
     {
@@ -7706,7 +7706,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/openai/openplanr/skills/cpo-review/scripts/validate-note.mjs",
-      "digest": "sha256:dcfcc371d94efef9b27456f692eca82afd8e079275044da8c6384253632bad75",
+      "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7",
       "generated": true
     },
     {
@@ -7746,7 +7746,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/openai/openplanr/skills/cto-review/scripts/validate-note.mjs",
-      "digest": "sha256:dcfcc371d94efef9b27456f692eca82afd8e079275044da8c6384253632bad75",
+      "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7",
       "generated": true
     },
     {
@@ -8611,7 +8611,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/openai/openplanr/skills/operate/scripts/validate-note.mjs",
-      "digest": "sha256:dcfcc371d94efef9b27456f692eca82afd8e079275044da8c6384253632bad75",
+      "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7",
       "generated": true
     },
     {

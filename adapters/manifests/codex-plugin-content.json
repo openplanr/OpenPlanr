@@ -81,7 +81,7 @@
         },
         {
           "path": "skills/ceo-review/scripts/validate-note.mjs",
-          "digest": "sha256:dcfcc371d94efef9b27456f692eca82afd8e079275044da8c6384253632bad75"
+          "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7"
         },
         {
           "path": "skills/ceo-review/scripts/operate-review-note.mjs",
@@ -118,7 +118,7 @@
         },
         {
           "path": "skills/chair-review/scripts/validate-note.mjs",
-          "digest": "sha256:dcfcc371d94efef9b27456f692eca82afd8e079275044da8c6384253632bad75"
+          "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7"
         },
         {
           "path": "skills/chair-review/scripts/operate-review-note.mjs",
@@ -155,7 +155,7 @@
         },
         {
           "path": "skills/challenger-review/scripts/validate-note.mjs",
-          "digest": "sha256:dcfcc371d94efef9b27456f692eca82afd8e079275044da8c6384253632bad75"
+          "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7"
         },
         {
           "path": "skills/challenger-review/scripts/operate-review-note.mjs",
@@ -196,7 +196,7 @@
         },
         {
           "path": "skills/cmo-review/scripts/validate-note.mjs",
-          "digest": "sha256:dcfcc371d94efef9b27456f692eca82afd8e079275044da8c6384253632bad75"
+          "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7"
         },
         {
           "path": "skills/cmo-review/scripts/operate-review-note.mjs",
@@ -237,7 +237,7 @@
         },
         {
           "path": "skills/coo-review/scripts/validate-note.mjs",
-          "digest": "sha256:dcfcc371d94efef9b27456f692eca82afd8e079275044da8c6384253632bad75"
+          "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7"
         },
         {
           "path": "skills/coo-review/scripts/operate-review-note.mjs",
@@ -278,7 +278,7 @@
         },
         {
           "path": "skills/cpo-review/scripts/validate-note.mjs",
-          "digest": "sha256:dcfcc371d94efef9b27456f692eca82afd8e079275044da8c6384253632bad75"
+          "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7"
         },
         {
           "path": "skills/cpo-review/scripts/operate-review-note.mjs",
@@ -319,7 +319,7 @@
         },
         {
           "path": "skills/cto-review/scripts/validate-note.mjs",
-          "digest": "sha256:dcfcc371d94efef9b27456f692eca82afd8e079275044da8c6384253632bad75"
+          "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7"
         },
         {
           "path": "skills/cto-review/scripts/operate-review-note.mjs",
@@ -1101,7 +1101,7 @@
         },
         {
           "path": "skills/operate/scripts/validate-note.mjs",
-          "digest": "sha256:dcfcc371d94efef9b27456f692eca82afd8e079275044da8c6384253632bad75"
+          "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7"
         },
         {
           "path": "skills/operate/scripts/operate-review-note.mjs",
