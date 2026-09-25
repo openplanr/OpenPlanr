@@ -672,9 +672,18 @@ export function assertOperateIntelligencePlanContractV2(value) {
 const schemaCache = new Map();
 const canonicalSchemaPrefix = 'https://openplanr.dev/';
 
+function deepFreeze(value) {
+  if (value && typeof value === 'object' && !Object.isFrozen(value)) {
+    for (const nested of Object.values(value)) deepFreeze(nested);
+    Object.freeze(value);
+  }
+  return value;
+}
+
+// Validation reads the cached schema in place, so the cache must be immutable.
 function loadSchema(path) {
   if (!schemaCache.has(path)) {
-    schemaCache.set(path, JSON.parse(readFileSync(join(packageRoot, path), 'utf8')));
+    schemaCache.set(path, deepFreeze(JSON.parse(readFileSync(join(packageRoot, path), 'utf8'))));
   }
   return schemaCache.get(path);
 }
@@ -748,7 +757,7 @@ export function assertOperateRoleOutputContractV2(roleId, outputContract, { role
       );
     }
   }
-  const schema = resolveProtocolSchema(expected.schemaId, { protocolVersion: expected.schemaVersion });
+  const schema = sharedProtocolSchema(expected.schemaId, expected.schemaVersion);
   return {
     ...structuredClone(expected),
     path: schema.path,
@@ -831,7 +840,7 @@ export function listProtocolSchemas() {
   ));
 }
 
-export function resolveProtocolSchema(kind, { protocolVersion } = {}) {
+function sharedProtocolSchema(kind, protocolVersion) {
   const versions = PROTOCOL_SCHEMA_REGISTRY[kind];
   if (!versions) throw new PipelineError('E_SCHEMA_UNKNOWN', `Unknown protocol artifact kind: ${kind}`);
   const path = versions[protocolVersion];
@@ -842,11 +851,10 @@ export function resolveProtocolSchema(kind, { protocolVersion } = {}) {
       `Supported versions: ${Object.keys(versions).join(', ')}.`,
     );
   }
-  return { kind, protocolVersion, path, schema: structuredClone(loadSchema(path)) };
+  return { kind, protocolVersion, path, schema: loadSchema(path) };
 }
 
-/** Resolve a public experience schema without adding it to the 61-contract runtime kernel. */
-export function resolveOperateExperienceSchemaV2(kind, { protocolVersion } = {}) {
+function sharedOperateExperienceSchemaV2(kind, protocolVersion) {
   const versions = experiencePaths[kind];
   if (!versions) throw new PipelineError('E_SCHEMA_UNKNOWN', `Unknown Operate experience artifact kind: ${kind}`);
   if (protocolVersion !== '2.0.0') {
@@ -859,7 +867,19 @@ export function resolveOperateExperienceSchemaV2(kind, { protocolVersion } = {})
     );
   }
   const path = versions[protocolVersion];
-  return { kind, protocolVersion, path, schema: structuredClone(loadSchema(path)) };
+  return { kind, protocolVersion, path, schema: loadSchema(path) };
+}
+
+// Public resolvers hand out a mutable copy so callers can never reach the cache.
+const withSchemaCopy = (resolved) => ({ ...resolved, schema: structuredClone(resolved.schema) });
+
+export function resolveProtocolSchema(kind, { protocolVersion } = {}) {
+  return withSchemaCopy(sharedProtocolSchema(kind, protocolVersion));
+}
+
+/** Resolve a public experience schema without adding it to the 61-contract runtime kernel. */
+export function resolveOperateExperienceSchemaV2(kind, { protocolVersion } = {}) {
+  return withSchemaCopy(sharedOperateExperienceSchemaV2(kind, protocolVersion));
 }
 
 function validateResolvedArtifact(value, resolved) {
@@ -870,7 +890,7 @@ function validateResolvedArtifact(value, resolved) {
         typeof base === 'string' && !base.startsWith('https://') ? base : resolved.path,
         reference,
       );
-      const rootSchema = structuredClone(loadSchema(path));
+      const rootSchema = loadSchema(path);
       const schema = resolveSchemaFragment(rootSchema, reference);
       return { schema, rootSchema, base: path };
     },
@@ -916,7 +936,7 @@ export function validateProtocolArtifact(kind, value, { protocolVersion } = {}) 
   if (version === '1.13.0' && authoringKind) {
     return validateDiagramAuthoringArtifact(kind, value);
   }
-  const resolved = resolveProtocolSchema(kind, { protocolVersion: version });
+  const resolved = sharedProtocolSchema(kind, version);
   const errors = validateResolvedArtifact(value, resolved);
   if (kind === 'guided-questionnaire' && version === '1.2.0') {
     errors.push(...guidedQuestionnaireCompatibilityErrors(value));
@@ -979,7 +999,7 @@ export function assertDashboardBootstrapV1(value) {
 }
 
 export function validateOperateExperienceArtifactV2(kind, value) {
-  const resolved = resolveOperateExperienceSchemaV2(kind, { protocolVersion: '2.0.0' });
+  const resolved = sharedOperateExperienceSchemaV2(kind, '2.0.0');
   return validateResolvedArtifact(value, resolved);
 }
 
