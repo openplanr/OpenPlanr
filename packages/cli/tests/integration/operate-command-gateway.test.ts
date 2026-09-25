@@ -74,6 +74,35 @@ const actor = { actorId: 'owner-acme', kind: 'human' as const, runtime: 'openpla
 
 type RecordValue = Record<string, unknown>;
 type Assignment = { assignmentId: string; roleId: string };
+
+/**
+ * Returns a runner whose steps share one deadline, so an overrun names the step still in flight.
+ * The budget stays below the vitest timeout so the named failure wins.
+ */
+function createStepRunner(budgetMs: number) {
+  const deadline = performance.now() + budgetMs;
+  return async function step<T>(
+    name: string,
+    work: (signal: AbortSignal) => Promise<T>,
+  ): Promise<T> {
+    const signal = AbortSignal.timeout(Math.max(0, Math.floor(deadline - performance.now())));
+    let stopWatching = () => {};
+    const expired = new Promise<never>((_, reject) => {
+      const onAbort = () =>
+        reject(
+          new Error(`Step "${name}" was still running when the ${budgetMs} ms budget ran out`),
+        );
+      signal.addEventListener('abort', onAbort, { once: true });
+      stopWatching = () => signal.removeEventListener('abort', onAbort);
+    });
+    try {
+      return await Promise.race([work(signal), expired]);
+    } finally {
+      stopWatching();
+    }
+  };
+}
+
 async function claimAndSubmitReal(
   client: ReturnType<typeof createOperateClient>,
   assignment: Assignment,
@@ -892,12 +921,17 @@ function fakeClient(read: () => Record<string, unknown>): OperateClient {
 
 describe('OpenPlanr governed local command gateway', () => {
   it('is reachable through the production OpenPlanr dashboard entrypoint', async () => {
-    const fixture = await createTestProject('operate-dashboard');
+    const step = createStepRunner(170_000);
+    const fixture = await step('create test project', () => createTestProject('operate-dashboard'));
     let startedDashboard: Awaited<ReturnType<typeof startOperateDashboard>> | null = null;
     try {
       const client = createOperateClient(fixture.dir);
-      const cycleId = await prepareContainedCycle(client, fixture.dir);
-      const reviewed = await approveCurrentReview(client, cycleId);
+      const cycleId = await step('prepare contained cycle', () =>
+        prepareContainedCycle(client, fixture.dir),
+      );
+      const reviewed = await step('approve current Review', () =>
+        approveCurrentReview(client, cycleId),
+      );
       expect(reviewed.read.data).toMatchObject({
         kind: 'operating-review-read',
         decisions: [expect.objectContaining({ title: 'Run one contained operating change' })],
@@ -914,15 +948,19 @@ describe('OpenPlanr governed local command gateway', () => {
         actor: { actorId: 'owner-dashboard', kind: 'human' as const, runtime: 'openplanr' },
         scope: { scopeId: 'scope-dashboard', domainId: 'business', domainVersion: '1.0.0' },
       };
-      const committedReceipt = await client.readCommittedReviewReceipt(exactReviewRequest);
+      const committedReceipt = await step('read committed Review receipt', () =>
+        client.readCommittedReviewReceipt(exactReviewRequest),
+      );
       if (!committedReceipt.ok) throw new Error(JSON.stringify(committedReceipt));
-      const receiptView = await client.readExperienceAtEventHead(
-        {
-          cycleId,
-          actor: exactReviewRequest.actor,
-          actionBinding: { cycleId, actorId: 'owner-dashboard' },
-        },
-        (committedReceipt.data as RecordValue).eventHead as never,
+      const receiptView = await step('read experience at receipt head', () =>
+        client.readExperienceAtEventHead(
+          {
+            cycleId,
+            actor: exactReviewRequest.actor,
+            actionBinding: { cycleId, actorId: 'owner-dashboard' },
+          },
+          (committedReceipt.data as RecordValue).eventHead as never,
+        ),
       );
       if (!receiptView.ok) throw new Error(JSON.stringify(receiptView));
       const manualPayload = buildOperateReviewWorkspacePayloadV1(
@@ -931,44 +969,58 @@ describe('OpenPlanr governed local command gateway', () => {
       );
       expect(() => issueOperateReviewDisplayWorkspaceV1(manualPayload)).not.toThrow();
       await expect(
-        createOperatingReviewReadGatewayV1({ client })({
-          cycleId,
-          reviewId,
-          actorId: 'owner-dashboard',
-          scopeId: 'scope-dashboard',
-          domainId: 'business',
-          domainVersion: '1.0.0',
-        }),
+        step('read terminal Review through the gateway', () =>
+          createOperatingReviewReadGatewayV1({ client })({
+            cycleId,
+            reviewId,
+            actorId: 'owner-dashboard',
+            scopeId: 'scope-dashboard',
+            domainId: 'business',
+            domainVersion: '1.0.0',
+          }),
+        ),
       ).resolves.toMatchObject({
         kind: 'operate-review-display-workspace',
         payload: { status: 'terminal', reviewId },
       });
-      startedDashboard = await startOperateDashboard({
-        projectDir: fixture.dir,
-        cycleId,
-        actorId: 'owner-dashboard',
-        port: 0,
-        watch: false,
-        client,
-        env: { ...process.env, PLANR_HOME: `${fixture.dir}/.planr-home` },
-      });
+      startedDashboard = await step('start dashboard', () =>
+        startOperateDashboard({
+          projectDir: fixture.dir,
+          cycleId,
+          actorId: 'owner-dashboard',
+          port: 0,
+          watch: false,
+          client,
+          env: { ...process.env, PLANR_HOME: `${fixture.dir}/.planr-home` },
+        }),
+      );
       const base = `http://127.0.0.1:${startedDashboard.port}`;
-      const shellResponse = await fetch(base);
-      expect(shellResponse.status).toBe(200);
-      const shellHtml = await shellResponse.text();
+      const get = (name: string, path: string, headers: Record<string, string> = {}) =>
+        step(`GET ${name}`, async (signal) => {
+          const response = await fetch(`${base}${path}`, { headers, signal });
+          return { response, body: Buffer.from(await response.arrayBuffer()) };
+        });
+      const actorHeaders = { 'x-openplanr-actor': 'owner-dashboard' };
+      const shell = await get('dashboard shell', '/');
+      expect(shell.response.status).toBe(200);
+      const shellHtml = shell.body.toString('utf8');
       expect(shellHtml).toContain('<div id="root"></div>');
       const entryAsset = shellHtml.match(/src="\.\/(assets\/[^"]+\.js)"/u)?.[1];
       expect(entryAsset).toBeTruthy();
-      const entryResponse = await fetch(`${base}/${String(entryAsset)}`);
-      expect(entryResponse.status).toBe(200);
-      expect(entryResponse.headers.get('content-type')).toContain('text/javascript');
+      const entry = await get('dashboard entry asset', `/${String(entryAsset)}`);
+      expect(entry.response.status).toBe(200);
+      expect(entry.response.headers.get('content-type')).toContain('text/javascript');
+      expect(entry.body.byteLength).toBeGreaterThan(0);
       const commandQuery = 'scopeId=scope-dashboard&domainId=business&domainVersion=1.0.0';
-      const cycleResponse = await fetch(
-        `${base}/api/operate/cycles/${encodeURIComponent(cycleId)}?${commandQuery}`,
-        { headers: { 'x-openplanr-actor': 'owner-dashboard' } },
+      const cycleResponse = await get(
+        'cycle',
+        `/api/operate/cycles/${encodeURIComponent(cycleId)}?${commandQuery}`,
+        actorHeaders,
       );
-      expect(cycleResponse.status).toBe(200);
-      const cycleDisplay = assertOperateCycleDisplayWorkspaceV1(await cycleResponse.json());
+      expect(cycleResponse.response.status).toBe(200);
+      const cycleDisplay = assertOperateCycleDisplayWorkspaceV1(
+        JSON.parse(cycleResponse.body.toString('utf8')),
+      );
       expect(cycleDisplay).toMatchObject({
         kind: 'operate-cycle-display-workspace',
         payload: {
@@ -979,12 +1031,10 @@ describe('OpenPlanr governed local command gateway', () => {
           data: { cycle: { cycleId } },
         },
       });
-      const reviewResponse = await fetch(
-        `${base}/api/operate/cycles/${encodeURIComponent(cycleId)}/reviews/${encodeURIComponent(reviewId)}?${commandQuery}`,
-        { headers: { 'x-openplanr-actor': 'owner-dashboard' } },
-      );
-      const reviewJson = await reviewResponse.json();
-      expect(reviewResponse.status, JSON.stringify(reviewJson)).toBe(200);
+      const reviewPath = `/api/operate/cycles/${encodeURIComponent(cycleId)}/reviews/${encodeURIComponent(reviewId)}?${commandQuery}`;
+      const reviewResponse = await get('terminal Review', reviewPath, actorHeaders);
+      const reviewJson = JSON.parse(reviewResponse.body.toString('utf8'));
+      expect(reviewResponse.response.status, JSON.stringify(reviewJson)).toBe(200);
       const serializedReview = JSON.stringify(reviewJson);
       expect(serializedReview).not.toContain(fixture.dir);
       expect(serializedReview).not.toContain('.planr/operate');
@@ -1008,23 +1058,27 @@ describe('OpenPlanr governed local command gateway', () => {
           },
         },
       });
-      const post = async (path: string, body: Record<string, unknown>, capability?: string) => {
-        const response = await fetch(`${base}${path}?${commandQuery}`, {
-          method: 'POST',
-          headers: {
-            'content-type': 'application/json',
-            origin: base,
-            'x-openplanr-actor': 'owner-dashboard',
-            ...(capability ? { authorization: `Bearer ${capability}` } : {}),
-          },
-          body: JSON.stringify(body),
+      const post = (path: string, body: Record<string, unknown>, capability?: string) =>
+        step(`POST ${path}`, async (signal) => {
+          const response = await fetch(`${base}${path}?${commandQuery}`, {
+            method: 'POST',
+            headers: {
+              'content-type': 'application/json',
+              origin: base,
+              'x-openplanr-actor': 'owner-dashboard',
+              ...(capability ? { authorization: `Bearer ${capability}` } : {}),
+            },
+            body: JSON.stringify(body),
+            signal,
+          });
+          const json = (await response.json()) as Record<string, unknown>;
+          if (!response.ok) throw new Error(`${response.status} ${JSON.stringify(json)}`);
+          return json;
         });
-        const json = (await response.json()) as Record<string, unknown>;
-        if (!response.ok) throw new Error(`${response.status} ${JSON.stringify(json)}`);
-        return json;
-      };
       const confirm = async (label: RegExp) => {
-        const current = await currentRealExperience(client, cycleId);
+        const current = await step(`read experience before ${label}`, () =>
+          currentRealExperience(client, cycleId),
+        );
         const issuedAction = ((current.allowedActions as RecordValue[]) ?? []).find((entry) =>
           label.test(String((entry.action as RecordValue).label)),
         );
@@ -1084,11 +1138,11 @@ describe('OpenPlanr governed local command gateway', () => {
         expect(replayed).toEqual(confirmed);
         return confirmed;
       };
-      const viewResponse = await fetch(`${base}/api/operate/today?${commandQuery}`, {
-        headers: { 'x-openplanr-actor': 'owner-dashboard' },
-      });
-      expect(viewResponse.status).toBe(200);
-      const display = assertOperateExperienceDisplaySurfaceV1(await viewResponse.json());
+      const viewResponse = await get('today', `/api/operate/today?${commandQuery}`, actorHeaders);
+      expect(viewResponse.response.status).toBe(200);
+      const display = assertOperateExperienceDisplaySurfaceV1(
+        JSON.parse(viewResponse.body.toString('utf8')),
+      );
       expect(display).toMatchObject({
         kind: 'operate-experience-display-surface',
         schemaVersion: '1.0.0',
@@ -1107,56 +1161,67 @@ describe('OpenPlanr governed local command gateway', () => {
       });
       expect(display.integrity.sourceViewHash).toBe(display.payload.viewHash);
       await confirm(/Record Action approval/u);
-      const laterView = await currentRealExperience(client, cycleId);
+      const laterView = await step('read experience after approval', () =>
+        currentRealExperience(client, cycleId),
+      );
       const receiptHead = (reviewed.submitted.data as RecordValue).eventHead as RecordValue;
       expect(Number((laterView.eventHead as RecordValue).sequence)).toBeGreaterThan(
         Number(receiptHead.sequence),
       );
-      const compactedFixture = await createTestProject('operate-compacted-current-review');
+      const compactedFixture = await step('create compacted test project', () =>
+        createTestProject('operate-compacted-current-review'),
+      );
       try {
         await ensureOperateStorageLayout(compactedFixture.dir);
         const composition = await createOperateComposition();
-        const currentRuntime = await createOperateStore(fixture.dir).load(
-          async ({ baseState, events, artifacts }) =>
+        const currentRuntime = await step('replay current runtime', () =>
+          createOperateStore(fixture.dir).load(async ({ baseState, events, artifacts }) =>
             composition.replay(baseState, events, artifacts),
+          ),
         );
         if (!currentRuntime) throw new Error('missing current runtime for compaction proof');
-        const historical = await (
-          client as unknown as {
-            runtimeAtEventHead(
-              runtime: OperateStoredRuntime,
-              eventHead: RecordValue,
-            ): Promise<OperateStoredRuntime>;
-          }
-        ).runtimeAtEventHead(currentRuntime, receiptHead);
+        const historical = await step('replay runtime at receipt head', () =>
+          (
+            client as unknown as {
+              runtimeAtEventHead(
+                runtime: OperateStoredRuntime,
+                eventHead: RecordValue,
+              ): Promise<OperateStoredRuntime>;
+            }
+          ).runtimeAtEventHead(currentRuntime, receiptHead),
+        );
         const retainedEvents = currentRuntime.events.filter(
           (event) => Number(event.sequence) > Number(receiptHead.sequence),
         );
         expect(retainedEvents.length).toBeGreaterThan(0);
-        await createOperateStore(compactedFixture.dir).commit(
-          {
-            baseState: structuredClone(historical.state),
-            state: structuredClone(currentRuntime.state),
-            events: structuredClone(retainedEvents),
-            artifacts: new Map(
-              [...currentRuntime.artifacts].map(([artifactId, bytes]) => [
-                artifactId,
-                Uint8Array.from(bytes),
-              ]),
-            ),
-            preferences: structuredClone(currentRuntime.preferences),
-          },
-          null,
+        await step('commit compacted store', () =>
+          createOperateStore(compactedFixture.dir).commit(
+            {
+              baseState: structuredClone(historical.state),
+              state: structuredClone(currentRuntime.state),
+              events: structuredClone(retainedEvents),
+              artifacts: new Map(
+                [...currentRuntime.artifacts].map(([artifactId, bytes]) => [
+                  artifactId,
+                  Uint8Array.from(bytes),
+                ]),
+              ),
+              preferences: structuredClone(currentRuntime.preferences),
+            },
+            null,
+          ),
         );
         const compactedClient = createOperateClient(compactedFixture.dir);
-        const compactedExperience = await compactedClient.dispatch({
-          operation: 'operate.experience.get',
-          request: {
-            cycleId,
-            actor: { actorId: 'owner-dashboard', kind: 'human', runtime: 'openplanr' },
-            actionBinding: { cycleId, actorId: 'owner-dashboard' },
-          },
-        });
+        const compactedExperience = await step('read compacted experience', () =>
+          compactedClient.dispatch({
+            operation: 'operate.experience.get',
+            request: {
+              cycleId,
+              actor: { actorId: 'owner-dashboard', kind: 'human', runtime: 'openplanr' },
+              actionBinding: { cycleId, actorId: 'owner-dashboard' },
+            },
+          }),
+        );
         expect(compactedExperience, JSON.stringify(compactedExperience)).toMatchObject({
           ok: true,
           data: {
@@ -1168,14 +1233,16 @@ describe('OpenPlanr governed local command gateway', () => {
           },
         });
         await expect(
-          createOperatingReviewReadGatewayV1({ client: compactedClient })({
-            cycleId,
-            reviewId,
-            actorId: 'owner-dashboard',
-            scopeId: 'scope-dashboard',
-            domainId: 'business',
-            domainVersion: '1.0.0',
-          }),
+          step('read compacted Review through the gateway', () =>
+            createOperatingReviewReadGatewayV1({ client: compactedClient })({
+              cycleId,
+              reviewId,
+              actorId: 'owner-dashboard',
+              scopeId: 'scope-dashboard',
+              domainId: 'business',
+              domainVersion: '1.0.0',
+            }),
+          ),
         ).resolves.toMatchObject({
           kind: 'operate-review-display-workspace',
           payload: {
@@ -1187,28 +1254,27 @@ describe('OpenPlanr governed local command gateway', () => {
       } finally {
         compactedFixture.cleanup();
       }
-      const historicalReviewResponse = await fetch(
-        `${base}/api/operate/cycles/${encodeURIComponent(cycleId)}/reviews/${encodeURIComponent(reviewId)}?${commandQuery}`,
-        { headers: { 'x-openplanr-actor': 'owner-dashboard' } },
+      const historicalReviewResponse = await get('historical Review', reviewPath, actorHeaders);
+      const historicalReviewJson = JSON.parse(historicalReviewResponse.body.toString('utf8'));
+      expect(historicalReviewResponse.response.status, JSON.stringify(historicalReviewJson)).toBe(
+        200,
       );
-      const historicalReviewJson = await historicalReviewResponse.json();
-      expect(historicalReviewResponse.status, JSON.stringify(historicalReviewJson)).toBe(200);
       const historicalReview = assertOperateReviewDisplayWorkspaceV1(historicalReviewJson);
       expect(historicalReview.payload.sourceEventHead).toEqual(receiptHead);
       expect(historicalReview.payload.sourceViewHash).not.toBe(laterView.viewHash);
       expect(historicalReview.payload.data.terminalDisposition?.receiptId).toBe(
         (reviewed.submitted.data as RecordValue).receiptId,
       );
-      const executed = await performCurrentRealAction(
-        client,
-        cycleId,
-        /Execute this exact approved Action/u,
+      const executed = await step('execute approved Action', () =>
+        performCurrentRealAction(client, cycleId, /Execute this exact approved Action/u),
       );
       expect(executed, JSON.stringify(executed, null, 2)).toMatchObject({
         ok: true,
         data: { effectCount: 1 },
       });
-      const afterExecution = await currentRealExperience(client, cycleId);
+      const afterExecution = await step('read experience after execution', () =>
+        currentRealExperience(client, cycleId),
+      );
       expect(afterExecution).toMatchObject({
         outcomes: [],
         allowedActions: expect.arrayContaining([
@@ -1233,7 +1299,9 @@ describe('OpenPlanr governed local command gateway', () => {
       });
       const rollbackApproved = await confirm(/Approve this exact rollback plan/u);
       expect(rollbackApproved).toMatchObject({ ok: true });
-      const beforeRollback = await currentRealExperience(client, cycleId);
+      const beforeRollback = await step('read experience before rollback', () =>
+        currentRealExperience(client, cycleId),
+      );
       const directRollback = ((beforeRollback.allowedActions as RecordValue[]) ?? []).find(
         (entry) =>
           /Rollback this exact reversible Action/u.test(
@@ -1247,24 +1315,30 @@ describe('OpenPlanr governed local command gateway', () => {
         ...(((directRollback.action as RecordValue).arguments as RecordValue) ?? {}),
         actor: { actorId: 'owner-dashboard', kind: 'human' as const, runtime: 'openplanr' },
       };
-      const rolledBack = await client.dispatch({
-        operation: 'operate.action.rollback',
-        request: rollbackRequest as never,
-      });
+      const rolledBack = await step('roll back the Action', () =>
+        client.dispatch({
+          operation: 'operate.action.rollback',
+          request: rollbackRequest as never,
+        }),
+      );
       expect(rolledBack, JSON.stringify(rolledBack, null, 2)).toMatchObject({
         ok: true,
         data: { effectCount: 1 },
       });
-      const afterRollback = await currentRealExperience(client, cycleId);
+      const afterRollback = await step('read experience after rollback', () =>
+        currentRealExperience(client, cycleId),
+      );
       expect(JSON.stringify(afterRollback)).toContain('rollback.result-recorded');
       expect(JSON.stringify(afterRollback)).not.toContain('terminalReceipt');
       expect(JSON.stringify(afterRollback)).not.toContain('submissionId');
       const restarted = createOperateClient(fixture.dir);
       await expect(
-        restarted.dispatch({
-          operation: 'operate.action.rollback',
-          request: rollbackRequest as never,
-        }),
+        step('replay rollback after restart', () =>
+          restarted.dispatch({
+            operation: 'operate.action.rollback',
+            request: rollbackRequest as never,
+          }),
+        ),
       ).resolves.toMatchObject({
         ok: true,
         data: { replayed: true, effectCount: 0 },
