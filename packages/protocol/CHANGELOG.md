@@ -1,5 +1,11 @@
 # @openplanr/protocol
 
+## 0.6.1
+### Patch Changes
+
+- 3bcf955: Regenerate the command registry and its projection for the changed `planr init` command source.
+- 3bcf955: Protocol artifact validation no longer deep-clones the schema, and every `$ref` target, on each call. Each packaged schema is parsed and frozen once per process and validated in place. `resolveProtocolSchema` and `resolveOperateExperienceSchemaV2` still return a mutable copy, and validation results are unchanged.
+
 ## 0.6.0
 ### Minor Changes
 

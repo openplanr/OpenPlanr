@@ -1,5 +1,14 @@
 # @openplanr/artifact
 
+## 0.5.2
+### Patch Changes
+
+- f864a94: Keep host controls outside the editor reachable while a responsive drawer is open, and stop showing the refresh recovery warning to read-only viewers.
+- 2611ce1: Let hosts name the save state with `host.saveLabel(state)`, for example "Saved · revision 8", and start a new diagram from the process template with `createDiagramEditorDraft({ template: 'process' })`.
+- Updated dependencies [3bcf955]
+- Updated dependencies [3bcf955]
+  - @openplanr/protocol@0.6.1
+
 ## 0.5.1
 ### Patch Changes
 

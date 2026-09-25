@@ -1,6 +1,6 @@
 {
   "name": "@openplanr/operate",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "private": true,
   "type": "module",
   "description": "Canonical OpenPlanr Operate runtime",
@@ -23,7 +23,7 @@
     "node": ">=20"
   },
   "dependencies": {
-    "@openplanr/protocol": "0.6.0"
+    "@openplanr/protocol": "0.6.1"
   },
   "scripts": {
     "generate": "node scripts/generate-operate-contracts.mjs --write",

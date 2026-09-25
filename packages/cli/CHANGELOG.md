@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.2639.2
+### Patch Changes
+
+- 3bcf955: `planr init` now creates `.planr/specs/` when the new configuration turns on spec-driven mode, which the default configuration does. A first run no longer leaves the project in spec-driven mode without its specs folder.
+- 3bcf955: The Operate review-note validator (`scripts/validate-note.mjs` in `planr-operate` and the seven review skills) now exits 0 when a note passes and 1 only when it reports diagnostics. It previously exited 1 on every note, including clean ones.
+- 3bcf955: Correct the setup documentation: `planr setup` installs `planr@openplanr-local` from the marketplace bundled with the installed package and never reads `openplanr/marketplace`. `CROSS_RUNTIME_SETUP.md` now lists the four installation channels and their status, and advises using one Claude Code channel per machine.
+- 3bcf955: `planr upgrade status` and `planr upgrade apply` now judge and prescribe the plugin `planr setup` installs, `planr@openplanr-local` from the bundled `openplanr-local` marketplace, instead of the retired `openplanr@openplanr` and `planr-pipeline@openplanr` plugins. After a CLI upgrade the prescribed commands refresh `openplanr-local`, update `planr@openplanr-local`, and remove leftover legacy plugins; when the marketplace was never registered the advice is `planr setup --runtime claude --scope user`. `planr setup` and `planr doctor` also warn when a marketplace-installed `planr@openplanr` sits beside `planr@openplanr-local` and give the exact `claude plugin uninstall` command to keep one, without removing anything themselves.
+
 ## 2.2639.1
 
 ## 2.2639.0

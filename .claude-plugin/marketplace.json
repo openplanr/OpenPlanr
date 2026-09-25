@@ -5,14 +5,14 @@
     "name": "AsemDevs"
   },
   "metadata": {
-    "version": "2.2639.1",
+    "version": "2.2639.2",
     "description": "Local-only OpenPlanr integration marketplace. Generate host packages before installation."
   },
   "plugins": [
     {
       "name": "planr",
       "source": "./dist/plugins/claude/openplanr",
-      "version": "2.2639.1",
+      "version": "2.2639.2",
       "description": "Host-native OpenPlanr planning, delivery, review, design, and operating skills.",
       "strict": true
     }
