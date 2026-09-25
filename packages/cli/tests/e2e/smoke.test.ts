@@ -2,6 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { detectPipelineMode } from 'planr-pipeline';
 import { afterEach, describe, expect, it } from 'vitest';
 
 const CLI = resolve('src/cli/index.ts');
@@ -64,6 +65,18 @@ describe('CLI smoke tests', () => {
 
       expect(existsSync(join(dir, '.planr', 'config.json'))).toBe(true);
       expect(existsSync(join(dir, '.planr', 'epics'))).toBe(true);
+    },
+    SMOKE_TIMEOUT_MS,
+  );
+
+  it(
+    'creates the specs root when the first init turns on spec-driven mode',
+    () => {
+      const dir = makeTempDir();
+      run('init --name test-project', { cwd: dir });
+
+      expect(detectPipelineMode(dir)).toBe('spec-driven');
+      expect(existsSync(join(dir, '.planr', 'specs'))).toBe(true);
     },
     SMOKE_TIMEOUT_MS,
   );
