@@ -84,5 +84,5 @@ them.
 | Protocol | Restore the self-contained schema projection from `packages/protocol/schemas/`. Keep stack `schemaVersion` aligned with its schema and use `qa_gate_status` values `passed`, `failed`, `skipped`. |
 | Ecosystem | Regenerate workspace metadata after internal domain changes; point Doctor at the hosted-service checkout only when checking that service. |
 | Daemons | Run `planr doctor --fix`; it previews, confirms, rechecks, and removes only stale Planr-owned daemon state. |
-| Credentials | Keep project `.env` files with `OPENAI_API_KEY` ignored, or move the key to user-level credentials. |
+| Credentials | Keep project `.env` files with `OPENAI_API_KEY` ignored, or move the key to user-level credentials. A key is only used when the design engine runs with `--provider openai`, continues a session opened with it (`iterate`), or runs `planr-design setup`; its default `claude-svg` provider makes no model calls. |
 | Releases | Add the `## [<version>]` section to `CHANGELOG.md`, create the missing tag or GitHub release, then rerun `npm run doctor -- --release --strict`. |

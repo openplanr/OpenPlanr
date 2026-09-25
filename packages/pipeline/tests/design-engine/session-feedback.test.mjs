@@ -6,6 +6,7 @@ import { test, afterEach } from 'node:test';
 
 import { createSession, appendRound, recordRegionEdit, saveSession, loadSession } from '../../lib/design-engine/session.mjs';
 import { readFeedback, clampPin, assertValidFeedback, FEEDBACK_FILE, PENDING_FILE } from '../../lib/design-engine/feedback.mjs';
+import { DEFAULT_IMAGE_MODEL, DEFAULT_MODEL, iterate } from '../../lib/design-engine/providers/openai.mjs';
 
 const dirs = [];
 const tmp = () => { const d = mkdtempSync(join(tmpdir(), 'planr-sf-')); dirs.push(d); return d; };
@@ -24,6 +25,23 @@ test('session chaining: create → round (responseId) → iterate round → regi
   s = recordRegionEdit(s, { screen: 's-hero', pins: [{ variant: 'A' }], summary: 'kerned', now: fixedNow });
   assert.equal(s.regionEdits.length, 1);
   assert.equal(s.regionEdits[0].screen, 's-hero');
+});
+
+test('an openai session iterates on its own chain: previous_response_id + the default models', async () => {
+  let s = createSession({ id: 's1b', provider: 'openai', target: 'logo', brief: 'a mark', now: fixedNow });
+  s = appendRound(s, { outputPath: '/a/v1.png', responseId: 'resp_1', now: fixedNow });
+  const calls = [];
+  const fetchImpl = async (_url, init) => {
+    calls.push(JSON.parse(init.body));
+    return { ok: true, status: 200, json: async () => ({ id: 'resp_2', output: [{ type: 'image_generation_call', result: 'AA==' }] }) };
+  };
+  const round = await iterate(s, 'tighter', { apiKey: 'sk', fetchImpl, tmpDir: tmp() });
+  assert.equal(calls[0].previous_response_id, 'resp_1');
+  assert.equal(calls[0].input, 'tighter');
+  assert.equal(calls[0].model, DEFAULT_MODEL);
+  assert.equal(calls[0].tools[0].model, DEFAULT_IMAGE_MODEL);
+  s = appendRound(s, { outputPath: '/a/v2.png', responseId: round.responseId, feedback: 'tighter', now: fixedNow });
+  assert.equal(s.lastResponseId, 'resp_2', 'the next iterate chains from the new response');
 });
 
 test('brief revisions only append when they actually change', () => {

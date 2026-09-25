@@ -10,18 +10,23 @@
 Issue ONE mandatory `AskUserQuestion` that shows, in the question text:
 
 - the `COUNT` concepts (one line each, A/B/C/D);
-- the **provider + estimated cost**:
-  - `HAS_KEY=true` → `openai (gpt-image-2) — ~N images ≈ $X.XX` (size/quality dependent;
-    state the assumption);
-  - `HAS_KEY=false` → **offer claude-svg explicitly, never dead-end** (hard rule 9):
-    "no OpenAI key — I'll author precise SVG sheets myself ($0). For logos this is often
-    BETTER than diffusion: exact geometry, real type, production-ready vector.";
+- the **provider + cost** (`PROVIDER` from Phase A):
+  - `PROVIDER=claude-svg` (the default) → "claude-svg — I author precise SVG sheets myself
+    ($0, no key). For logos and UI this is often BETTER than diffusion: exact geometry, real
+    type, production-ready vector.";
+  - `PROVIDER=openai` (only because the user asked for it) →
+    `openai — gpt-5.5 with the gpt-image-2.5-sunburst image model (or the --model /
+    --image-model overrides), ~N images at <size>/<quality>, billed to your OpenAI account`.
+    Never quote a price. With `HAS_KEY=false`, say so and **offer both repairs, never
+    dead-end** (hard rule 9): `planr-design setup` (stores the key + one billed smoke image)
+    or claude-svg;
 - where artifacts will live (the user-space session dir).
 
 Options:
-> A) **Generate these {COUNT}** — provider {name}, est. {cost} *(recommended)*
+> A) **Generate these {COUNT}** — provider {name}, {cost} *(recommended)*
 > B) **Revise the concepts** — tell me what to change (loops back to A.4 once)
-> C) **Switch provider** — {the other provider + its tradeoff}
+> C) **Switch provider** — {the other provider + its tradeoff: claude-svg is $0 vector authored
+>    here; openai is raster generation billed to your OpenAI account and needs a key}
 > D) **Cancel**
 
 - **A** → Phase C. **B** → revise once, re-gate. **C** → flip provider, re-gate. **D** → STOP.

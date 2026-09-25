@@ -16,8 +16,9 @@ deliberately keeps `approved.json` tracked-eligible.
 - Approved variant:
   `node "$PLUG/lib/design-engine/cli.mjs" taste approved <approvedPath> --project <PROJECT> \
    --session <sessionId> --fonts … --colors … --layouts … --aesthetics …`
-  — claude-svg: pass the EXACT attributes you authored (better than vision); openai PNG
-  without flags: the engine vision-extracts (needs the key).
+  — claude-svg: pass the EXACT attributes you authored (better than vision). openai PNG:
+  pass the attributes from the concept you briefed; only with `--provider openai` and no
+  attribute flags does the engine vision-extract them (billed to the user's OpenAI account).
 - Every OTHER variant that reached the board: `taste rejected <path> …` the same way.
 - Surface what changed: "taste: +minimal (0.65→0.76), +mono-mark; playful rejected ×2".
 

@@ -81,21 +81,39 @@ drag = box). In review mode each pin auto-maps to the nearest `<section id>` /
 `generateVariant(brief, opts) → { imagePath(tmp), responseId }`,
 `iterate(session, feedback, opts)`, `checkQuality(artifact, brief, opts) → { pass, issues }`.
 
-| | `openai` | `claude-svg` |
+| | `claude-svg` (default) | `openai` (opt-in) |
 |---|---|---|
-| Needs | API key (`setup`) | nothing — always available |
-| Generation | Responses API: `gpt-4o` + `image_generation` (gpt-image-2) | the **agent authors SVG** to a validated sheet contract |
-| Iteration | `previous_response_id` chain — refines, never regenerates | the agent edits the SVG; `record` keeps lineage |
-| Quality gate | gpt-4o vision vs brief | structural contract validation ($0) |
-| Best at | photographic/moodboard, og-images | **logos + UI**: exact hex, real type, vector output |
+| Needs | nothing — always available | an explicit `--provider openai` **and** your own API key (`setup`) |
+| Generation | the **agent authors SVG** to a validated sheet contract | Responses API: `gpt-5.5` carrying the `image_generation` tool with `gpt-image-2.5-sunburst` |
+| Iteration | the agent edits the SVG; `record` keeps lineage | `previous_response_id` chain — refines, never regenerates |
+| Quality gate | structural contract validation ($0) | `gpt-5.5` vision vs brief (`check --provider openai`) |
+| Cost | $0 | billed to your OpenAI account |
+| Best at | **logos + UI**: exact hex, real type, vector output | photographic/moodboard, og-images |
 
-`resolveProvider({ requested, auth })`: `auto` → openai when a key resolves, else
-claude-svg (a first-class fallback, not an apology). Requesting `openai` without a key
-errors with **both** repairs.
+`resolveProvider({ requested, auth })`: `auto` (the default) → claude-svg, always. openai
+runs only when requested with `--provider openai`; a key in the environment never selects
+it, so nothing is billed unless you asked for openai. Requesting `openai` without a key
+errors and names the setup path (`planr-design setup` or `OPENAI_API_KEY`) plus the $0
+default. The same opt-in guards the billed vision calls: `check` on a PNG and `taste
+approved|rejected <png>` without attribute flags need `--provider openai` too.
+
+### openai flags
+
+| Flag | Default | Accepted values |
+|---|---|---|
+| `--model` | `gpt-5.5` | a mainline model that supports the `image_generation` tool (also answers the vision checks) |
+| `--image-model` | `gpt-image-2.5-sunburst` | `gpt-image-2.5-sunburst` (most capable, editing precision), `gpt-image-2.5-flare` (fast everyday generation), `gpt-image-2` |
+| `--size` | `1024x1024` | `auto`, `1024x1024`, `1024x1536`, `1536x1024`, or `WIDTHxHEIGHT` in multiples of 16 with an aspect between 1:3 and 3:1 and no edge over 3840 |
+| `--quality` | `high` | `low`, `medium`, `high`, `auto`, `xhigh`, `max` |
+
+`generate`, `variants`, `evolve` and `iterate` take all four; `check` and `taste` take
+`--model`. Invalid sizes and qualities are rejected before any request is sent.
+`doctor --json` reports the defaults under `openai`.
 
 Auth order: `~/.planr/credentials.json` → `OPENAI_API_KEY` env (with the **silent-billing
 disclosure** when that key also sits in the cwd's `.env`, + a warning if that `.env` isn't
-gitignored) → none. Keys are never echoed anywhere.
+gitignored) → none. Keys are never echoed anywhere, and a resolved key only reports
+`hasKey: true` in `doctor` — it never changes which provider runs.
 
 ## Sessions + taste
 
@@ -130,9 +148,13 @@ node $PLUG/lib/design-engine/cli.mjs board --dir <dir> --id demo-logo
 # (in a terminal the daemon `board` spawns survives on its own; inside a sandboxed agent,
 #  bring it up first as a background task — `cli.mjs daemon --serve` — then `board` reuses it.)
 
-# with a key instead: node $PLUG/lib/design-engine/cli.mjs setup
-# → stores the key (0600) + runs a real smoke generation and prints the proof:
+# opting in to openai instead (billed to your OpenAI account):
+node $PLUG/lib/design-engine/cli.mjs setup
+# → stores your key (0600) + runs one small low-quality smoke generation and prints the proof:
 #   { outputPath, sessionFile, responseId, elapsed, bytes } + "Smoke test PASSED"
+node $PLUG/lib/design-engine/cli.mjs generate --provider openai \
+  --brief "geometric W mark, indigo on cream" --target logo --project demo --variant A
+# → gpt-5.5 + gpt-image-2.5-sunburst by default; add --model / --image-model / --size / --quality to override
 ```
 
 Conformance proof without touching anything: `npm run conformance:design-loop` runs the

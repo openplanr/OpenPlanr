@@ -53,10 +53,12 @@ drop existing ratings, comments, replies, resolution state, or regeneration fiel
    - **claude-svg path (default, $0):** edit the actual HTML of that section to satisfy each
      `fix`/`improve` pin — through the design system's tokens (`var(--…)`), the craft rubric,
      and `design-principles.md`. This is surgical: untouched screens stay byte-identical.
-   - **openai path (only for moodboard-level "make it feel like…" pins, key present):**
-     `… evolve --from <screenshot-of-screen>` to produce a reference image, then STILL apply
-     the change as HTML edits (the artifact stays the source of truth — never replace markup
-     with a bitmap).
+   - **openai path (only for moodboard-level "make it feel like…" pins, and only when the user
+     explicitly asked for OpenAI — a resolvable key never selects it, and the engine rejects a
+     reference image on claude-svg):**
+     `… evolve --provider openai --from <screenshot-of-screen>` to produce a reference image,
+     then STILL apply the change as HTML edits (the artifact stays the source of truth — never
+     replace markup with a bitmap).
 3. **Lint gate (mandatory, the same C.4.5a bar):**
    `node "$PLUG/lib/design/lint.mjs" <ABS artifact>` → **0 errors required**
    (spacing-off-grid, contrast-below-aa, frame checks). Fix every error before reloading;

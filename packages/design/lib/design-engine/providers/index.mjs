@@ -1,11 +1,8 @@
 /**
- * Provider registry + graceful degradation (reference engines hard-fail
- * without an OpenAI key — fixed here, hard rule 9):
- *
- *   requested 'openai'      → needs a key; if absent, the error TELLS the user
- *                             both repairs (setup, or claude-svg) — never a dead-end.
- *   requested 'claude-svg'  → always available.
- *   requested 'auto'/empty  → openai when a key resolves, else claude-svg.
+ * Provider registry. claude-svg is the default and the only provider `auto`
+ * resolves to; openai runs only on an explicit request (`--provider openai`)
+ * and needs a key. A key in the environment never opts the user into billed
+ * calls (hard rule 9 still holds: a missing key is never a dead-end).
  *
  * One interface: generateVariant(brief, opts) / iterate(session, feedback, opts)
  * / checkQuality(artifact, brief, opts). Future providers slot in here.
@@ -15,6 +12,7 @@ import * as openai from './openai.mjs';
 import * as claudeSvg from './claudeSvg.mjs';
 
 export const PROVIDERS = ['openai', 'claude-svg'];
+export const DEFAULT_PROVIDER = 'claude-svg';
 
 /**
  * @param {{ requested?: string, auth: { apiKey: string|null } }} input
@@ -27,7 +25,8 @@ export function resolveProvider({ requested = 'auto', auth }) {
     if (!hasKey) {
       throw new Error(
         'provider "openai" requested but no API key resolves. ' +
-          'Repair: `planr-design setup` (stores a key + smoke test), or use `--provider claude-svg` (no key, agent-authored SVG — often better for logos/UI).',
+          'Setup: `planr-design setup` (stores your key with mode 0600 and runs one small smoke image, billed to your OpenAI account) ' +
+          'or export OPENAI_API_KEY for this run. Or drop the flag: claude-svg is the $0 default (agent-authored SVG — often better for logos/UI).',
       );
     }
     return { name: 'openai', provider: openai, degraded: false, reason: 'requested' };
@@ -37,11 +36,14 @@ export function resolveProvider({ requested = 'auto', auth }) {
     return { name: 'claude-svg', provider: claudeSvg, degraded: false, reason: 'requested' };
   }
 
-  if (hasKey) return { name: 'openai', provider: openai, degraded: false, reason: 'auto: key available' };
+  if (requested !== 'auto' && requested !== '') {
+    throw new Error(`unknown provider "${requested}" (expected: ${PROVIDERS.join(' | ')})`);
+  }
+
   return {
-    name: 'claude-svg',
+    name: DEFAULT_PROVIDER,
     provider: claudeSvg,
-    degraded: true,
-    reason: 'auto: no OpenAI key — claude-svg fallback (first-class: exact geometry + real type)',
+    degraded: false,
+    reason: 'default ($0); pass --provider openai to generate raster images with your own key',
   };
 }

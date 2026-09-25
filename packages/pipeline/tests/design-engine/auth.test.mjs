@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { test, afterEach } from 'node:test';
 
 import { resolveAuth } from '../../lib/design-engine/auth.mjs';
+import { resolveProvider } from '../../lib/design-engine/providers/index.mjs';
 
 const dirs = [];
 const tmp = () => { const d = mkdtempSync(join(tmpdir(), 'planr-auth-')); dirs.push(d); return d; };
@@ -59,6 +60,17 @@ test('a dormant key in cwd .env (not exported) → HINT, never auto-used, never 
   assert.equal(auth.source, 'none');
   assert.ok(auth.warnings.some((w) => w.startsWith('HINT') && w.includes('.env')), 'doctor can surface the dormant key');
   assert.ok(!auth.warnings.join(' ').includes('sk-dormant'), 'the key value is never echoed');
+});
+
+test('a resolved key (credentials or env) never selects openai on its own — only --provider openai does', () => {
+  const home = tmp();
+  writeFileSync(join(home, 'credentials.json'), JSON.stringify({ openai_api_key: 'sk-stored' }));
+  for (const env of [{ PLANR_HOME: home }, { PLANR_HOME: tmp(), OPENAI_API_KEY: 'sk-env' }]) {
+    const auth = resolveAuth({ cwd: tmp(), env });
+    assert.ok(auth.apiKey, 'a key resolved');
+    assert.equal(resolveProvider({ requested: 'auto', auth }).name, 'claude-svg');
+    assert.equal(resolveProvider({ requested: 'openai', auth }).name, 'openai');
+  }
 });
 
 test('corrupt credentials.json falls through to env with a warning', () => {
