@@ -9273,7 +9273,7 @@
       }
       if (state.saveState === "conflict") footer.append(element(doc, "span", {}, "A newer saved revision exists. Your draft remains in this tab."), button(doc, "Compare revisions", "conflict", { className: "de-primary" }));
       else if (state.saveState === "offline") footer.append(element(doc, "span", {}, "Save was not confirmed. Edits remain pending."), button(doc, "Retry save", "save"));
-      else if (state.recovery.warning) footer.append(element(doc, "span", {}, state.recovery.warning));
+      else if (state.recovery.warning && !readOnly(state)) footer.append(element(doc, "span", {}, state.recovery.warning));
       else if (state.pendingCount > 0 && state.acknowledged) footer.append(element(doc, "span", {}, "Recovered or pending edits are in this session. Review before you save."));
       else if (!getDiagramAuthoringCapability(state.bundle.document.grammar.id)) footer.append(element(doc, "span", {}, "This diagram grammar is available for inspection only. Editing is not certified."));
       else footer.append(element(doc, "span", {}, state.view.selection.length + " selected · " + state.bundle.presentation.elements.length + " objects"));
@@ -9897,7 +9897,7 @@
           }
         }
       }
-      if (!dialog && event.key === "Tab" && win.innerWidth <= 1100 && (leftOpen || rightOpen)) {
+      if (!dialog && event.key === "Tab" && win.innerWidth <= 1100 && (leftOpen || rightOpen) && shell.contains(event.target)) {
         const panel = leftOpen ? $(".de-left") : $(".de-right");
         const controls = [...panel.querySelectorAll('button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),summary,a[href],[tabindex]:not([tabindex="-1"])')].filter((control) => !control.closest('[hidden],[inert],[aria-hidden="true"]') && control.getClientRects().length);
         if (controls.length) {
@@ -10049,7 +10049,7 @@
     function containDrawerFocus(event) {
       if (dialog || win.innerWidth > 1100 || drawerBackdrop.hidden || !leftOpen && !rightOpen) return;
       const panel = leftOpen ? $(".de-left") : $(".de-right");
-      if (!panel || panel.contains(event.target)) return;
+      if (!panel || panel.contains(event.target) || !shell.contains(event.target)) return;
       const controls = [...panel.querySelectorAll('button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),summary,a[href],[tabindex]:not([tabindex="-1"])')].filter((control) => !control.closest('[hidden],[inert],[aria-hidden="true"]') && control.getClientRects().length);
       (controls[0] ?? panel).focus({ preventScroll: true });
     }
