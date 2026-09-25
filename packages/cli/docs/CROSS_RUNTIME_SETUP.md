@@ -43,9 +43,23 @@ blocks are replaced; content outside those blocks is preserved.
 When Claude Code is selected at user scope, the preview includes the marketplace
 and plugin operations. Confirmed setup writes a generated local marketplace
 (`openplanr-local`) from the installed package and installs or updates the unified
-`planr` plugin from it, so the plugin always matches the CLI version. The piped
-installer never does this on its own. Restart Claude Code when setup says a plugin
-changed.
+`planr` plugin from it, so the plugin always matches the CLI version. Setup never
+reads the remote `openplanr/marketplace` for versions. The piped installer never
+does this on its own. Restart Claude Code when setup says a plugin changed.
+
+### Installation channels
+
+| Channel | Purpose | Status |
+| --- | --- | --- |
+| `npm i -g openplanr`, then `planr setup` | Primary installation; the plugin is pinned to the CLI | Available |
+| `openplanr/marketplace` | Optional direct Claude Code installation | Available; can trail the npm release |
+| Anthropic marketplace listing | Vendor discovery and trust | Not yet listed |
+| OpenAI Plugins Directory | Vendor discovery for Codex and supported ChatGPT surfaces | Not yet listed |
+
+The release workflow projects each published `openplanr` Claude plugin into
+`openplanr/marketplace`; the source stays in this repository. Use one Claude Code
+channel per machine: either `planr setup` or
+`/plugin marketplace add openplanr/marketplace`, not both.
 
 For CI and provisioning, supply choices explicitly:
 
