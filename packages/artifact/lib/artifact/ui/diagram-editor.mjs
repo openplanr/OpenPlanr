@@ -67,6 +67,7 @@ function colorSchemeOf(value) {
 export function mountDiagramEditor({ root, session, host = {} }) {
   if (!root || !session || typeof session.getState !== 'function') throw new TypeError('Mount needs one root and one editor session.');
   if (host.review !== undefined && typeof host.review !== 'boolean') throw new TypeError('Host review must be true or false.');
+  if (host.saveLabel !== undefined && typeof host.saveLabel !== 'function') throw new TypeError('Host saveLabel must be a function.');
   const labels = hostLabels(host.labels), hostActions = hostEntries(host.actions, 'action', 'onSelect'), hostPanels = hostEntries(host.panels, 'panel', 'mount');
   const reviewEnabled = host.review !== false;
   let hostScheme = colorSchemeOf(host.colorScheme);
@@ -410,11 +411,16 @@ export function mountDiagramEditor({ root, session, host = {} }) {
     }
   }
   let controlsStamp = '';
+  function hostSaveLabel(state) {
+    const label = host.saveLabel?.(state) ?? null;
+    if (label !== null && (typeof label !== 'string' || !label.trim())) throw new TypeError(`Host saveLabel must return non-empty text or null; received ${JSON.stringify(label)}.`);
+    return label;
+  }
   function renderChrome(state) {
     const bundle = state.bundle;
     $('.de-title').textContent = bundle?.document.title ?? 'Diagram unavailable';
     const status = state.saveState;
-    saveState.textContent = readOnly(state) ? labels.readOnly : ({ saved: 'Saved', saving: 'Saving…', unsaved: 'Unsaved', offline: 'Offline · Unsaved', conflict: 'Conflict · Unsaved', 'access-changed': 'Access changed' })[status] ?? 'Unsaved';
+    saveState.textContent = readOnly(state) ? labels.readOnly : hostSaveLabel(state) ?? ({ saved: 'Saved', saving: 'Saving…', unsaved: 'Unsaved', offline: 'Offline · Unsaved', conflict: 'Conflict · Unsaved', 'access-changed': 'Access changed' })[status] ?? 'Unsaved';
     saveState.dataset.state = readOnly(state) ? 'read-only' : status;
     shell.dataset.editable = String(editable(state)); shell.dataset.readOnly = String(readOnly(state)); shell.dataset.mode = mode;
     syncPanelState();

@@ -58,6 +58,19 @@ test('validated templates receive diagram identity without retaining linked sour
   assert.equal(createDiagramEditorDraft({ diagramId: 'invalid', title: 'Invalid', template: invalid }).ok, false);
 });
 
+test('the named process template starts a new diagram with a connected start, step and end', () => {
+  const draft = createDiagramEditorDraft({ diagramId: 'onboarding', title: 'Onboarding', template: 'process' });
+  assert.equal(draft.ok, true, JSON.stringify(draft));
+  assert.deepEqual(draft.bundle.document.nodes.map(node => node.kind), ['start', 'process', 'end']);
+  assert.equal(draft.bundle.document.relations.length, 2);
+  assert.equal(draft.bundle.presentation.elements.length, 5);
+  assert.equal(draft.bundle.document.title, 'Onboarding');
+  assert.equal(createDiagramEditorSession({ bundle: draft.bundle }).getState().pendingCount, 0, 'The template belongs to the new diagram, not to its pending edits');
+  const unknown = createDiagramEditorDraft({ diagramId: 'kanban', title: 'Kanban', template: 'kanban' });
+  assert.equal(unknown.ok, false);
+  assert.equal(unknown.diagnostics[0].detail, 'Unknown diagram template: kanban.');
+});
+
 test('initial copy adoption rejects every non-initial session state without changing either bundle', async () => {
   const blank = makeBundle('flowchart', { blank: true });
   const candidate = importedCopy();

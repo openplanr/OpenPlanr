@@ -43,6 +43,8 @@ export declare function mountDiagramEditor(options: {
     review?: boolean;
     /** Replace the local wording where the host changes what is true. */
     labels?: { subtitle?: string; emptyHint?: string; reviewUnavailable?: string; readOnly?: string };
+    /** Name the save state in host terms, for example "Saved · revision 8"; null keeps the default. Not used for read-only views. */
+    saveLabel?: (state: DiagramEditorState) => string | null;
     /** Show the OpenPlanr mark before the title. Defaults to true. */
     brand?: boolean;
     /** Follow the host's theme instead of the operating system. */

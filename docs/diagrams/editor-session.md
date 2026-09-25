@@ -22,6 +22,7 @@ if (!draft.ok) throw new Error(draft.diagnostics[0].detail);
 const editor = await openDiagramEditorSession({ transport: store, create: draft.bundle });
 // Use editor.submit(command) with the typed authoring vocabulary.
 // An unsaved blank draft is valid; Save initializes the complete bundle.
+// template: 'process' starts from a connected start, step and end instead.
 await editor.save();
 editor.dispose();
 ```
@@ -38,6 +39,8 @@ A hosted shell adapts the same editor through `host` instead of forking it:
 
 - `labels` replaces the `subtitle`, `emptyHint`, `reviewUnavailable` and `readOnly`
   wording where the host changes what is true, such as where a diagram is shared.
+- `saveLabel(state)` names the save state in host terms, such as
+  `Saved · revision 8` or `2 unsaved edits`. Return `null` to keep the default.
 - `brand: false` removes the OpenPlanr mark for a host that shows its own.
 - `review: false` removes the Review tab when the host has no reviewer adapter.
 - `colorScheme` (`'light'`, `'dark'` or `null`) follows the host's theme toggle
