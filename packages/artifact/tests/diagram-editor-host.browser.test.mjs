@@ -140,12 +140,38 @@ test('a session without write access shows a read-only view named by the host', 
     assert.equal(await page.getByRole('button', { name, exact: true }).isVisible(), false, `${name} is not offered`);
   }
   assert.deepEqual(await page.getByRole('tab').allTextContents(), ['Outline', 'Properties', 'Revisions'], 'Shapes is not offered');
+  assert.doesNotMatch(await page.locator('.de-stage-footer').textContent(), /recovery/iu, 'Viewers have no edits to recover');
   const node = page.getByRole('treeitem', { name: 'Café ☕', exact: true });
   await node.click();
   assert.equal(await node.getAttribute('aria-selected'), 'true', 'Objects can still be inspected');
   await page.getByRole('button', { name: 'More', exact: true }).click();
   await page.getByRole('menuitem', { name: 'Mermaid copies', exact: true }).click();
   assert.equal(await page.getByRole('tab', { name: 'Export a copy', exact: true }).getAttribute('aria-selected'), 'true', 'Mermaid copies opens on export');
+});
+
+test('an open drawer keeps host controls outside the editor reachable', options, async t => {
+  const page = await hostedFixture(t);
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await page.evaluate(() => {
+    for (const label of ['Switch theme', 'Back to project']) {
+      const control = document.createElement('button');
+      control.textContent = label;
+      document.body.prepend(control);
+    }
+  });
+  await page.getByRole('button', { name: 'Outline', exact: true }).click();
+  const outline = page.locator('#diagram-outline-panel');
+  const focusIn = locator => locator.evaluate(node => node.contains(document.activeElement));
+  assert.equal(await focusIn(outline), true);
+
+  const back = page.getByRole('button', { name: 'Back to project', exact: true });
+  await back.focus();
+  assert.equal(await focusIn(back), true, 'Focus stays on a host control');
+  await page.keyboard.press('Tab');
+  assert.equal(await focusIn(page.getByRole('button', { name: 'Switch theme', exact: true })), true, 'Tab moves between host controls');
+  assert.equal(await outline.getAttribute('aria-hidden'), 'false', 'The drawer stays open');
+  await page.keyboard.press('Tab');
+  assert.equal(await focusIn(outline), true, 'Entering the editor lands in the open drawer');
 });
 
 test('invalid host configuration fails with a specific error', options, async t => {
