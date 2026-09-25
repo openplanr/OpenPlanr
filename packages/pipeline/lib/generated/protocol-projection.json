@@ -60,7 +60,7 @@
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/contracts.mjs",
       "target": "lib/protocol/contracts.mjs",
-      "sha256": "8ace5176682d0b6e9f83df62a5acf0803bb11166788154130a1272463238e7eb",
+      "sha256": "073d7affc82171520dac87077d6156c0a1dcde5ff5f0ba6b2f60f16400df1151",
       "mode": "644"
     },
     {
@@ -282,7 +282,7 @@
     {
       "source": "packages/protocol/registries/commands.json",
       "target": "registry/v1.5.0/commands.json",
-      "sha256": "ebaec51c1381e662c0a2da20f82ee70a1eec5f07f92d87fdabff363cd5480c98",
+      "sha256": "0808f8efe18c7a717788ef075af330ab95694799ec6a7b355fab65a268467fbf",
       "mode": "644"
     },
     {

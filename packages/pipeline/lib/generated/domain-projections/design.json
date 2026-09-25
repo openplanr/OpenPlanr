@@ -43,7 +43,7 @@
     {
       "source": "packages/design/lib/design-engine/cli.mjs",
       "target": "lib/design-engine/cli.mjs",
-      "sha256": "31bc9bcaaf92b1fe64ebfb577f09ca6883d6b16c60608575db4a57c8c0425848",
+      "sha256": "9874d4b5f577fdb2ad9882e98f910fd66283ee4dada50e876244b4e6669c24ad",
       "mode": "644"
     },
     {
@@ -73,13 +73,13 @@
     {
       "source": "packages/design/lib/design-engine/providers/index.mjs",
       "target": "lib/design-engine/providers/index.mjs",
-      "sha256": "1a0a449ed99b684247c51e8ad77ffe3b8eba655fdc4b10418d38263b6c0b4429",
+      "sha256": "83bd906447caac5f5936f64987b6c051ecfdb1c8bd6f49077a935f8f41b5539f",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design-engine/providers/openai.mjs",
       "target": "lib/design-engine/providers/openai.mjs",
-      "sha256": "faf2c94aaa728afd42bcc676e34b678b2cc2a1d35ea7e09dab8de42fc7340ab3",
+      "sha256": "ca49579b8d812847c5b7265db771ffd94c77433d84efabea6d177c0229228979",
       "mode": "644"
     },
     {

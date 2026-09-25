@@ -2693,7 +2693,7 @@
       "source": "skills/planr-doctor/openplanr.skill.json",
       "entrypoint": "skills/planr-doctor/SKILL.md",
       "description": "Diagnose OpenPlanr CLI, pipeline, runtime-adapter, installation, and lock health. Use when setup, discovery, versions, generated assets, or runtime behavior seems wrong.",
-      "sourceDigest": "sha256:aadebad1133caea05a16ab7e18e97a788c45be68da0965bec4c85bade3b95708",
+      "sourceDigest": "sha256:f18e014243412cfdda22555be2e09f5e28bf5a7ef543c8b016f6af4854683b1a",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -2715,7 +2715,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:268f5ac3374bb3a7bdfe1a70949fa49817eccf3f76e4f57d706acecec9eac1a1"
+          "digest": "sha256:b105aadfa437d8f9beb9c6fb4167c9f3275d85d96b1125fdb8e80fa7da284387"
         }
       ],
       "contracts": {
