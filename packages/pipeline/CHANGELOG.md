@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.53.0
+### Minor Changes
+
+- 3bcf955: The design-loop engine no longer picks OpenAI just because a key is present: `auto` always resolves to the $0 `claude-svg` provider, OpenAI runs only behind an explicit `--provider openai` (defaulting to `gpt-5.5` with the `gpt-image-2.5-sunburst` image model, overridable with `--model` and `--image-model`; `--size` and `--quality` validate the documented values), the billed PNG `check` and `taste` vision calls need the same flag, and requesting OpenAI without a key fails naming `planr-design setup`.
+
+### Patch Changes
+
+- f864a94: Keep host controls outside the editor reachable while a responsive drawer is open, and stop showing the refresh recovery warning to read-only viewers.
+- 2611ce1: Let hosts name the save state with `host.saveLabel(state)`, for example "Saved · revision 8", and start a new diagram from the process template with `createDiagramEditorDraft({ template: 'process' })`.
+- 3bcf955: Regenerate the command registry and its projection for the changed `planr init` command source.
+
 ## 0.52.1
 ### Patch Changes
 
