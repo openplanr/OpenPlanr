@@ -11,6 +11,7 @@ import {
   type ExecuteCliHalfUpgradeInput,
   type ExecuteCliHalfUpgradeResult,
   executeCliHalfUpgrade,
+  PLUGIN_HALF_INSTRUCTION,
   planCliUpgrade,
   type ReconcileOptions,
   reconcileInstalledTuple,
@@ -363,8 +364,8 @@ function renderUpgradeResult(result: ExecuteCliHalfUpgradeResult): void {
     }
     if (result.pluginHalfCommands.length > 0) {
       display.blank();
-      display.heading('Plugin half — the CLI cannot install host plugins');
-      logger.info('Run these yourself, in order (the first refreshes the marketplace):');
+      display.heading('Plugin half — the upgrade never changes Claude plugins itself');
+      logger.info(PLUGIN_HALF_INSTRUCTION);
       result.pluginHalfCommands.forEach((command, index) => {
         display.numbered(index + 1, command);
       });

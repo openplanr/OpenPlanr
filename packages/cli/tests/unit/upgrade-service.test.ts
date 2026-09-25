@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -9,6 +9,7 @@ import type {
   ClaudePluginOperation,
 } from '../../src/services/claude-plugin-service.js';
 import {
+  CLAUDE_PLUGIN_SETUP_COMMAND,
   DEFAULT_ECOSYSTEM_SOURCE,
   type EcosystemComponents,
   executeCliHalfUpgrade,
@@ -44,50 +45,54 @@ afterEach(() => {
 });
 
 /**
- * A `claude` runner that reports the given installed plugin versions, mirroring
- * `claude plugin list --json`. `available: false` models `claude` being absent
- * (offline / not installed), which yields a `null` skills/pipeline tuple.
+ * A `claude` runner with the bundled `openplanr-local` marketplace registered (what
+ * `planr setup` leaves behind) and the given user-scope plugins installed, mirroring
+ * `claude plugin marketplace list --json` and `claude plugin list --json`.
  */
-function makeRunner(versions: {
-  skills?: string | null;
-  pipeline?: string | null;
-  available?: boolean;
-}): ClaudeCommandRunner {
+function installedRunner(installed: Array<{ id: string; version: string }>): ClaudeCommandRunner {
   return (args) => {
-    if (versions.available === false) {
-      return { status: null, stdout: '', stderr: '', error: new Error('spawn claude ENOENT') };
-    }
     const key = args.join(' ');
     if (key === '--version') return { status: 0, stdout: '1.0.0', stderr: '' };
     if (key === 'plugin marketplace list --json') {
       return {
         status: 0,
-        stdout: JSON.stringify([{ name: 'openplanr', repo: 'openplanr/marketplace' }]),
+        stdout: JSON.stringify([{ name: 'openplanr-local', source: 'directory' }]),
         stderr: '',
       };
     }
     if (key === 'plugin list --json') {
-      const installed: Array<Record<string, unknown>> = [];
-      if (versions.skills != null) {
-        installed.push({
-          id: 'openplanr@openplanr',
-          version: versions.skills,
-          scope: 'user',
-          enabled: true,
-        });
-      }
-      if (versions.pipeline != null) {
-        installed.push({
-          id: 'planr-pipeline@openplanr',
-          version: versions.pipeline,
-          scope: 'user',
-          enabled: true,
-        });
-      }
-      return { status: 0, stdout: JSON.stringify(installed), stderr: '' };
+      return {
+        status: 0,
+        stdout: JSON.stringify(
+          installed.map((plugin) => ({ ...plugin, scope: 'user', enabled: true })),
+        ),
+        stderr: '',
+      };
     }
     return { status: 0, stdout: '[]', stderr: '' };
   };
+}
+
+/**
+ * A `claude` runner that reports `planr@openplanr-local` at the given version.
+ * `available: false` models `claude` being absent (offline / not installed), which
+ * yields a `null` host plugin.
+ */
+function makeRunner(versions: {
+  skills?: string | null;
+  available?: boolean;
+}): ClaudeCommandRunner {
+  if (versions.available === false) {
+    return () => ({
+      status: null,
+      stdout: '',
+      stderr: '',
+      error: new Error('spawn claude ENOENT'),
+    });
+  }
+  return installedRunner(
+    versions.skills != null ? [{ id: 'planr@openplanr-local', version: versions.skills }] : [],
+  );
 }
 
 function manifest(
@@ -121,11 +126,11 @@ describe('reconcileInstalledTuple', () => {
       pipelineVersion: '0.39.0',
     });
     const result = await reconcileInstalledTuple('/tmp/project', {
-      claudeCommandRunner: makeRunner({ skills: '1.24.0', pipeline: '0.39.0' }),
+      claudeCommandRunner: makeRunner({ skills: '1.24.0' }),
       fetchImpl: jsonFetch(published),
     });
     expect(result.status).toBe('aligned');
-    expect(result.installed).toEqual({ cli: cliVersion, skills: '1.24.0', pipeline: '0.39.0' });
+    expect(result.installed).toEqual({ cli: cliVersion, skills: '1.24.0', pipeline: null });
     expect(result.ecosystemSource).toBe('network');
   });
 
@@ -137,7 +142,7 @@ describe('reconcileInstalledTuple', () => {
       cliRange: `^${cliVersion}`,
     });
     const result = await reconcileInstalledTuple('/tmp/project', {
-      claudeCommandRunner: makeRunner({ skills: '1.24.0', pipeline: '0.39.0' }),
+      claudeCommandRunner: makeRunner({ skills: '1.24.0' }),
       fetchImpl: jsonFetch(published),
     });
     expect(result.status).toBe('upgrade-available');
@@ -152,7 +157,7 @@ describe('reconcileInstalledTuple', () => {
       cliRange: '^99.0.0',
     });
     const result = await reconcileInstalledTuple('/tmp/project', {
-      claudeCommandRunner: makeRunner({ skills: '1.24.0', pipeline: '0.39.0' }),
+      claudeCommandRunner: makeRunner({ skills: '1.24.0' }),
       fetchImpl: jsonFetch(published),
     });
     expect(result.status).toBe('incompatible');
@@ -164,7 +169,7 @@ describe('reconcileInstalledTuple', () => {
     };
     const started = Date.now();
     const result = await reconcileInstalledTuple('/tmp/project', {
-      claudeCommandRunner: makeRunner({ skills: '1.24.0', pipeline: '0.39.0' }),
+      claudeCommandRunner: makeRunner({ skills: '1.24.0' }),
       fetchImpl: offlineFetch,
     });
     const elapsed = Date.now() - started;
@@ -173,7 +178,7 @@ describe('reconcileInstalledTuple', () => {
     expect(result.ecosystemSource).toBe('unavailable');
     // The installed tuple is still read: an unreachable manifest degrades the
     // verdict, it does not blind the CLI to what is installed.
-    expect(result.installed).toEqual({ cli: cliVersion, skills: '1.24.0', pipeline: '0.39.0' });
+    expect(result.installed).toEqual({ cli: cliVersion, skills: '1.24.0', pipeline: null });
     expect(elapsed).toBeLessThan(2_000);
   });
 
@@ -183,7 +188,7 @@ describe('reconcileInstalledTuple', () => {
     const hungFetch: typeof fetch = () => new Promise<Response>(() => {});
     const started = Date.now();
     const result = await reconcileInstalledTuple('/tmp/project', {
-      claudeCommandRunner: makeRunner({ skills: '1.24.0', pipeline: '0.39.0' }),
+      claudeCommandRunner: makeRunner({ skills: '1.24.0' }),
       fetchImpl: hungFetch,
       timeoutMs: 50,
     });
@@ -204,7 +209,7 @@ describe('reconcileInstalledTuple', () => {
       calls += 1;
       return new Response(JSON.stringify({ components: published }), { status: 200 });
     }) as typeof fetch;
-    const runner = makeRunner({ skills: '1.24.0', pipeline: '0.39.0' });
+    const runner = makeRunner({ skills: '1.24.0' });
 
     const first = await reconcileInstalledTuple('/tmp/project', {
       claudeCommandRunner: runner,
@@ -234,7 +239,7 @@ describe('reconcileInstalledTuple', () => {
       skillsVersion: '1.24.0',
       pipelineVersion: '0.39.0',
     });
-    const runner = makeRunner({ skills: '1.24.0', pipeline: '0.39.0' });
+    const runner = makeRunner({ skills: '1.24.0' });
 
     const first = await reconcileInstalledTuple('/tmp/project', {
       claudeCommandRunner: runner,
@@ -271,7 +276,7 @@ describe('reconcileInstalledTuple', () => {
       throw new Error('a file source must not hit the network');
     };
     const result = await reconcileInstalledTuple('/tmp/project', {
-      claudeCommandRunner: makeRunner({ skills: '1.24.0', pipeline: '0.39.0' }),
+      claudeCommandRunner: makeRunner({ skills: '1.24.0' }),
       fetchImpl: boom,
     });
     expect(result.status).toBe('aligned');
@@ -304,7 +309,7 @@ describe('reconcileInstalledTuple', () => {
       cliRange: `^${lowerCli}`,
     });
     const result = await reconcileInstalledTuple('/tmp/project', {
-      claudeCommandRunner: makeRunner({ skills: '1.24.0', pipeline: '0.39.0' }),
+      claudeCommandRunner: makeRunner({ skills: '1.24.0' }),
       fetchImpl: jsonFetch(published),
     });
     expect(result.installed.cli).toBe(cliVersion);
@@ -323,7 +328,7 @@ describe('reconcileInstalledTuple', () => {
     });
     const result = await reconcileInstalledTuple('/tmp/project', {
       // Both plugins ahead of what the manifest publishes, CLI exactly at published.
-      claudeCommandRunner: makeRunner({ skills: '1.25.0', pipeline: '0.39.1' }),
+      claudeCommandRunner: makeRunner({ skills: '1.25.0' }),
       fetchImpl: jsonFetch(published),
     });
     // `aligned`, not merely "not upgrade-available": under plain inequality this tuple
@@ -343,7 +348,7 @@ describe('reconcileInstalledTuple', () => {
       cliRange: `^${cliVersion}`,
     });
     const result = await reconcileInstalledTuple('/tmp/project', {
-      claudeCommandRunner: makeRunner({ skills: '1.24.0', pipeline: '0.39.0' }),
+      claudeCommandRunner: makeRunner({ skills: '1.24.0' }),
       fetchImpl: jsonFetch(published),
     });
     expect(result.status).toBe('upgrade-available');
@@ -374,29 +379,16 @@ function recordingNpm(behavior: (args: string[], index: number) => NpmCommandRes
  * never mutates: the point is to prove `executeCliHalfUpgrade` reads host state
  * to build the prescription but never asks `claude` to install anything.
  */
-function recordingClaude(): { runner: ClaudeCommandRunner; calls: string[][] } {
+function recordingClaude(
+  installed: Array<{ id: string; version: string }> = [
+    { id: 'planr@openplanr-local', version: '1.0.0' },
+  ],
+): { runner: ClaudeCommandRunner; calls: string[][] } {
   const calls: string[][] = [];
+  const answer = installedRunner(installed);
   const runner: ClaudeCommandRunner = (args) => {
     calls.push(args);
-    const key = args.join(' ');
-    if (key === '--version') return { status: 0, stdout: '1.0.0', stderr: '' };
-    if (key === 'plugin marketplace list --json') {
-      return {
-        status: 0,
-        stdout: JSON.stringify([{ name: 'openplanr', repo: 'openplanr/marketplace' }]),
-        stderr: '',
-      };
-    }
-    if (key === 'plugin list --json') {
-      return {
-        status: 0,
-        stdout: JSON.stringify([
-          { id: 'openplanr@openplanr', version: '1.0.0', scope: 'user', enabled: true },
-        ]),
-        stderr: '',
-      };
-    }
-    return { status: 0, stdout: '[]', stderr: '' };
+    return answer(args);
   };
   return { runner, calls };
 }
@@ -410,13 +402,13 @@ function isMutatingClaudeCall(args: string[]): boolean {
 }
 
 describe('executeCliHalfUpgrade', () => {
-  it('never imports applyClaudePluginIntegration in the upgrade service or command (hard-constraint gate)', () => {
+  it('never imports applyBundledClaudePluginIntegration in the upgrade service or command (hard-constraint gate)', () => {
     // The literal "it upgrades the plugin too" reading (Trap E) can only pass by
     // wiring the plugin-install apply path — which this proves is absent.
     const service = readFileSync(resolve('src/services/upgrade-service.ts'), 'utf8');
     const command = readFileSync(resolve('src/cli/commands/upgrade.ts'), 'utf8');
-    expect(service).not.toContain('applyClaudePluginIntegration');
-    expect(command).not.toContain('applyClaudePluginIntegration');
+    expect(service).not.toContain('applyBundledClaudePluginIntegration');
+    expect(command).not.toContain('applyBundledClaudePluginIntegration');
   });
 
   it('upgrades the npm half, verifies the landed version, and prescribes the plugin half without mutating it', async () => {
@@ -442,8 +434,41 @@ describe('executeCliHalfUpgrade', () => {
     // command was ever run — the hard-constraint proof at the spawn boundary.
     expect(claude.calls.length).toBeGreaterThan(0);
     expect(claude.calls.some(isMutatingClaudeCall)).toBe(false);
-    // The refresh step is prescribed first (FR4).
-    expect(result.pluginHalfCommands[0]).toBe('claude plugin marketplace update openplanr');
+    // The refresh of the bundled marketplace is prescribed first (FR4), then the
+    // update of the plugin `planr setup` installed from it.
+    expect(result.pluginHalfCommands).toEqual([
+      'claude plugin marketplace update openplanr-local',
+      'claude plugin update planr@openplanr-local --scope user',
+    ]);
+  });
+
+  it('prescribes removing the retired remote plugins, never installing them (BL-006)', async () => {
+    // A machine that ran `planr setup` after once installing from `openplanr/marketplace`:
+    // the two retired plugins setup marks as legacy are still present beside the local one.
+    const npm = recordingNpm(() => ({ status: 0, stdout: '', stderr: '' }));
+    const claude = recordingClaude([
+      { id: 'planr@openplanr-local', version: '1.0.0' },
+      { id: 'openplanr@openplanr', version: '1.26.1' },
+      { id: 'planr-pipeline@openplanr', version: '0.39.0' },
+    ]);
+    const result = await executeCliHalfUpgrade({
+      projectDir: '/tmp/project',
+      targetCliVersion: cliVersion,
+      npmCommandRunner: npm.runner,
+      claudeCommandRunner: claude.runner,
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.pluginHalfCommands).toEqual([
+      'claude plugin marketplace update openplanr-local',
+      'claude plugin update planr@openplanr-local --scope user',
+      'claude plugin uninstall openplanr@openplanr --scope user --keep-data --yes',
+      'claude plugin uninstall planr-pipeline@openplanr --scope user --keep-data --yes',
+    ]);
+    // The decisive assertion: no command installs or updates a retired plugin.
+    for (const command of result.pluginHalfCommands) {
+      expect(command).not.toMatch(/^claude plugin (install|update) (openplanr|planr-pipeline)@/);
+    }
   });
 
   it('leaves the installed version unchanged and reports ok:false when npm install fails (no mutation)', async () => {
@@ -521,6 +546,7 @@ describe('executeCliHalfUpgrade', () => {
 });
 
 describe('prescribePluginHalfCommands (FR4 — refresh first)', () => {
+  const marketplaceRoot = '/bundled/host-packages/claude';
   const op = (kind: ClaudePluginOperation['kind'], id: string): ClaudePluginOperation => ({
     runtime: 'claude-code',
     kind,
@@ -530,30 +556,51 @@ describe('prescribePluginHalfCommands (FR4 — refresh first)', () => {
   });
 
   it('places the marketplace refresh first even when the operations arrive out of order', () => {
-    const commands = prescribePluginHalfCommands([
-      op('update', 'openplanr@openplanr'),
-      op('enable', 'planr-pipeline@openplanr'),
-      op('refresh-marketplace', 'openplanr'),
-      op('install', 'planr-pipeline@openplanr'),
-    ]);
+    const commands = prescribePluginHalfCommands(
+      [
+        op('update', 'planr@openplanr-local'),
+        op('remove', 'openplanr@openplanr'),
+        op('refresh-marketplace', 'openplanr-local'),
+        op('enable', 'planr@openplanr-local'),
+      ],
+      marketplaceRoot,
+    );
     // Revert the stable-sort in the source and commands[0] becomes the update —
     // this assertion is the non-vacuous guard for "without the refresh step the
     // installer reinstalls the stale version."
-    expect(commands[0]).toBe('claude plugin marketplace update openplanr');
+    expect(commands[0]).toBe('claude plugin marketplace update openplanr-local');
     expect(commands).toEqual([
-      'claude plugin marketplace update openplanr',
-      'claude plugin update openplanr@openplanr --scope user',
-      'claude plugin enable planr-pipeline@openplanr --scope user',
-      'claude plugin install planr-pipeline@openplanr --scope user',
+      'claude plugin marketplace update openplanr-local',
+      'claude plugin update planr@openplanr-local --scope user',
+      'claude plugin uninstall openplanr@openplanr --scope user --keep-data --yes',
+      'claude plugin enable planr@openplanr-local --scope user',
     ]);
   });
 
-  it('places the marketplace add first when the marketplace is not yet configured', () => {
-    const commands = prescribePluginHalfCommands([
-      op('install', 'openplanr@openplanr'),
-      op('add-marketplace', 'openplanr'),
-    ]);
-    expect(commands[0]).toBe('claude plugin marketplace add openplanr/marketplace --scope user');
+  it('prescribes planr setup when the bundled marketplace is not registered yet', () => {
+    // Only setup registers the directory marketplace and records the installation, so a
+    // raw `claude plugin marketplace add <path>` is never the advice.
+    const commands = prescribePluginHalfCommands(
+      [op('add-marketplace', 'openplanr-local'), op('install', 'planr@openplanr-local')],
+      marketplaceRoot,
+    );
+    expect(commands).toEqual([CLAUDE_PLUGIN_SETUP_COMMAND]);
+    expect(CLAUDE_PLUGIN_SETUP_COMMAND).toBe('planr setup --runtime claude --scope user');
+  });
+
+  it('adds --replace-managed when setup must also retire a legacy plugin', () => {
+    // applySetup throws E_INSTALL_MODE_CONFLICT on a claude-code remove without the flag, and
+    // --runtime disables the guided prompt that would otherwise offer it, so the plain command
+    // would fail for exactly the machines still carrying a retired remote plugin.
+    const commands = prescribePluginHalfCommands(
+      [
+        op('add-marketplace', 'openplanr-local'),
+        op('install', 'planr@openplanr-local'),
+        op('remove', 'openplanr@openplanr'),
+      ],
+      marketplaceRoot,
+    );
+    expect(commands).toEqual(['planr setup --runtime claude --scope user --replace-managed']);
   });
 });
 
@@ -635,26 +682,25 @@ describe('planCliUpgrade (FR4 — execute what it can)', () => {
 //
 // This drives the real CLI as a subprocess through the repo's tsx loader, so it
 // exercises the current wiring rather than a service call: a fabricated manifest
-// (OPENPLANR_ECOSYSTEM_SOURCE) publishes plugin versions ahead of what a stubbed
-// `claude` (OPENPLANR_CLAUDE_BIN) reports installed, with the CLI exactly at the
-// published version.
+// (OPENPLANR_ECOSYSTEM_SOURCE) publishes a plugin version ahead of what a stubbed
+// `claude` (OPENPLANR_CLAUDE_BIN) reports installed from the bundled marketplace,
+// with the CLI exactly at the published version.
 // ---------------------------------------------------------------------------
 describe('upgrade apply prescribes the plugin half when only the plugins trail', () => {
   const cliEntry = resolve('src/cli/index.ts');
 
-  function stubClaude(scriptPath: string, installed: { skills: string; pipeline: string }): void {
+  function stubClaude(scriptPath: string, installed: { skills: string }): void {
     writeFileSync(
       scriptPath,
       `const key = process.argv.slice(2).join(' ');
 if (key === '--version') { process.stdout.write('1.0.0'); process.exit(0); }
 if (key === 'plugin marketplace list --json') {
-  process.stdout.write(JSON.stringify([{ name: 'openplanr', repo: 'openplanr/marketplace' }]));
+  process.stdout.write(JSON.stringify([{ name: 'openplanr-local', source: 'directory' }]));
   process.exit(0);
 }
 if (key === 'plugin list --json') {
   process.stdout.write(JSON.stringify([
-    { id: 'openplanr@openplanr', version: ${JSON.stringify(installed.skills)}, scope: 'user', enabled: true },
-    { id: 'planr-pipeline@openplanr', version: ${JSON.stringify(installed.pipeline)}, scope: 'user', enabled: true },
+    { id: 'planr@openplanr-local', version: ${JSON.stringify(installed.skills)}, scope: 'user', enabled: true },
   ]));
   process.exit(0);
 }
@@ -664,7 +710,7 @@ process.exit(0);
     );
   }
 
-  it('prints the marketplace refresh first, then an update per trailing plugin', () => {
+  it('prints the bundled marketplace refresh first, then the update of planr@openplanr-local', () => {
     const manifestPath = join(root, 'ecosystem.json');
     writeFileSync(
       manifestPath,
@@ -673,13 +719,13 @@ process.exit(0);
           // The CLI is exactly at the published version — nothing for the npm half to do.
           cli: { version: cliVersion, pipelineRange: '^0.40.0' },
           pipeline: { version: '0.40.0', cliRange: `^${cliVersion}` },
-          skills: { version: '1.26.0', cliRange: `^${cliVersion}` },
+          skills: { version: cliVersion, cliRange: `^${cliVersion}` },
         },
       }),
     );
 
     const claudeStub = join(root, 'claude-stub.cjs');
-    stubClaude(claudeStub, { skills: '1.25.0', pipeline: '0.39.0' });
+    stubClaude(claudeStub, { skills: '1.25.0' });
 
     // `apply` sets exit code 1 on an incompatible tuple — correctly, since the tuple is
     // not resolved by this command. `execFileSync` throws on that, so the stdout it
@@ -707,19 +753,19 @@ process.exit(0);
 
     // The promise in the reason string must be kept by the same invocation.
     expect(output).toContain('the plugin half must move');
-    const refreshAt = output.indexOf('claude plugin marketplace update openplanr');
-    const pipelineAt = output.indexOf('claude plugin update planr-pipeline@openplanr');
-    const skillsAt = output.indexOf('claude plugin update openplanr@openplanr');
+    const refreshAt = output.indexOf('claude plugin marketplace update openplanr-local');
+    const skillsAt = output.indexOf('claude plugin update planr@openplanr-local --scope user');
 
     expect(refreshAt).toBeGreaterThanOrEqual(0);
-    // Both trailing plugins are named. Omitting one is the silent-stale-install
-    // failure FR4 exists to prevent: the user runs every command and is still behind.
-    expect(pipelineAt).toBeGreaterThanOrEqual(0);
     expect(skillsAt).toBeGreaterThanOrEqual(0);
     // Order is load-bearing: without the refresh first the installer reinstalls the
     // cached stale version and the user believes they upgraded.
-    expect(refreshAt).toBeLessThan(pipelineAt);
     expect(refreshAt).toBeLessThan(skillsAt);
+    // The advice names the plugin `planr setup` installs and never the retired
+    // remote plugins setup itself marks as legacy.
+    expect(output).toContain('planr setup');
+    expect(output).not.toContain('openplanr@openplanr');
+    expect(output).not.toContain('planr-pipeline@openplanr');
   }, 30_000);
 });
 
@@ -737,45 +783,6 @@ describe('reconcileInstalledTuple against the npm registry document (BL-026)', (
 
   function registryDocument(version: string, pin = pipelinePin): Record<string, unknown> {
     return { name: 'openplanr', version, optionalDependencies: { 'planr-pipeline': pin } };
-  }
-
-  /**
-   * A `claude` runner whose marketplace already targets the unified `planr` plugin,
-   * with the given plugins installed at user scope.
-   */
-  function makeUnifiedRunner(
-    installed: Array<{ id: string; version: string }>,
-    targetVersion: string,
-  ): ClaudeCommandRunner {
-    const marketplaceDir = join(root, 'marketplace');
-    mkdirSync(join(marketplaceDir, '.claude-plugin'), { recursive: true });
-    writeFileSync(
-      join(marketplaceDir, '.claude-plugin', 'marketplace.json'),
-      JSON.stringify({ plugins: [{ name: 'planr', version: targetVersion }] }),
-    );
-    return (args) => {
-      const key = args.join(' ');
-      if (key === '--version') return { status: 0, stdout: '1.0.0', stderr: '' };
-      if (key === 'plugin marketplace list --json') {
-        return {
-          status: 0,
-          stdout: JSON.stringify([
-            { name: 'openplanr', repo: 'openplanr/marketplace', installLocation: marketplaceDir },
-          ]),
-          stderr: '',
-        };
-      }
-      if (key === 'plugin list --json') {
-        return {
-          status: 0,
-          stdout: JSON.stringify(
-            installed.map((plugin) => ({ ...plugin, scope: 'user', enabled: true })),
-          ),
-          stderr: '',
-        };
-      }
-      return { status: 0, stdout: '[]', stderr: '' };
-    };
   }
 
   it('defaults to the registry document of the published CLI, not a repository manifest', () => {
@@ -805,14 +812,12 @@ describe('reconcileInstalledTuple against the npm registry document (BL-026)', (
     expect(result.published?.cli.version).toBe(higherCli);
   });
 
-  it('reports incompatible when the unified host plugin trails its marketplace target (the plugin half must move)', async () => {
+  it('reports incompatible when planr@openplanr-local trails the bundled marketplace (the plugin half must move)', async () => {
     const result = await reconcileInstalledTuple('/tmp/project', {
-      claudeCommandRunner: makeUnifiedRunner(
-        [{ id: 'planr@openplanr', version: '1.0.0' }],
-        cliVersion,
-      ),
+      claudeCommandRunner: installedRunner([{ id: 'planr@openplanr-local', version: '1.0.0' }]),
       fetchImpl: registryFetch(registryDocument(cliVersion)),
     });
+    // The plugin `planr setup` installs is the host plugin, never a legacy one.
     expect(result.installed.skills).toBe('1.0.0');
     expect(result.legacyPlugins).toEqual([]);
     // A current CLI cannot fix a trailing plugin; doctor's classification makes that a
@@ -821,15 +826,12 @@ describe('reconcileInstalledTuple against the npm registry document (BL-026)', (
     expect(planCliUpgrade(result).proceed).toBe(false);
   });
 
-  it('lists a plugin outside the expected marketplace ids without judging the tuple incompatible', async () => {
+  it('lists a retired remote plugin as legacy without judging the tuple incompatible', async () => {
     const result = await reconcileInstalledTuple('/tmp/project', {
-      claudeCommandRunner: makeUnifiedRunner(
-        [
-          { id: 'planr@openplanr', version: cliVersion },
-          { id: 'openplanr@openplanr', version: '1.26.2' },
-        ],
-        cliVersion,
-      ),
+      claudeCommandRunner: installedRunner([
+        { id: 'planr@openplanr-local', version: cliVersion },
+        { id: 'openplanr@openplanr', version: '1.26.2' },
+      ]),
       fetchImpl: registryFetch(registryDocument(cliVersion)),
     });
     expect(result.legacyPlugins).toEqual(['openplanr@openplanr']);
@@ -837,33 +839,17 @@ describe('reconcileInstalledTuple against the npm registry document (BL-026)', (
     expect(result.status).toBe('aligned');
   });
 
-  it('stays aligned when the plugin comes from a local marketplace and no openplanr marketplace exists', async () => {
-    const localOnlyRunner: ClaudeCommandRunner = (args) => {
-      const key = args.join(' ');
-      if (key === '--version') return { status: 0, stdout: '1.0.0', stderr: '' };
-      if (key === 'plugin marketplace list --json') {
-        return {
-          status: 0,
-          stdout: JSON.stringify([{ name: 'openplanr-local', source: 'directory' }]),
-          stderr: '',
-        };
-      }
-      if (key === 'plugin list --json') {
-        return {
-          status: 0,
-          stdout: JSON.stringify([
-            { id: 'planr@openplanr-local', version: '0.1.0', scope: 'user', enabled: true },
-          ]),
-          stderr: '',
-        };
-      }
-      return { status: 0, stdout: '[]', stderr: '' };
-    };
+  it('reads the host plugin from planr@openplanr-local when a marketplace-installed planr@openplanr sits beside it (BL-071)', async () => {
     const result = await reconcileInstalledTuple('/tmp/project', {
-      claudeCommandRunner: localOnlyRunner,
+      claudeCommandRunner: installedRunner([
+        { id: 'planr@openplanr-local', version: cliVersion },
+        { id: 'planr@openplanr', version: '2.6.1' },
+      ]),
       fetchImpl: registryFetch(registryDocument(cliVersion)),
     });
-    expect(result.legacyPlugins).toEqual(['planr@openplanr-local']);
+    expect(result.installed.skills).toBe(cliVersion);
+    // The duplicate is doctor's warning, not a legacy id and never an upgrade verdict.
+    expect(result.legacyPlugins).toEqual([]);
     expect(result.status).toBe('aligned');
   });
 
