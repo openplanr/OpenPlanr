@@ -104,7 +104,8 @@ export interface DiagramEditorOptions {
 }
 export declare function createDiagramEditorSession(options: DiagramEditorOptions): DiagramEditorSession;
 export declare function openDiagramEditorSession(options: Omit<DiagramEditorOptions, 'bundle' | 'acknowledged' | 'transport'> & { transport: DiagramEditorTransport | DiagramEditorBatchTransport; create?: DiagramAuthoringBundle }): Promise<DiagramEditorSession>;
-export declare function createDiagramEditorDraft(options: { diagramId: string; title: string; grammar?: 'flowchart' | 'process' | 'swimlane' | 'architecture'; template?: DiagramAuthoringBundle | null }): { ok: true; bundle: DiagramAuthoringBundle } | DiagramEditorFailure;
+/** A named template starts from the editor's own shapes; a bundle template is adopted under the new identity. */
+export declare function createDiagramEditorDraft(options: { diagramId: string; title: string; grammar?: 'flowchart' | 'process' | 'swimlane' | 'architecture'; template?: 'process' | DiagramAuthoringBundle | null }): { ok: true; bundle: DiagramAuthoringBundle } | DiagramEditorFailure;
 export interface DiagramSelectionClipboard { kind: 'openplanr-diagram-selection'; version: 1; sourceBundle: DiagramAuthoringBundle; ids: string[] }
 export declare function copyDiagramSelection(bundle: DiagramAuthoringBundle, ids: string[]): { ok: true; value: DiagramSelectionClipboard } | DiagramEditorFailure;
 export declare function pasteDiagramSelection(bundle: DiagramAuthoringBundle, input: unknown, options: { idMap: Record<string, string>; transactionId: string; dx?: number; dy?: number }): DiagramCommandResult;
