@@ -172,10 +172,10 @@ for (const area of ['planning', 'operate']) {
   );
 }
 
-const serverSource = readFileSync(join(root, 'lib/dashboard/server.mjs'), 'utf8');
+const serverSource = readFileSync(join(root, 'lib/dashboard/server/platform-routes.mjs'), 'utf8');
 assert.match(
   serverSource,
-  /queryRoots:\s*dashboardQueryRoots\(\)/,
+  /queryRoots:\s*dashboardQueryRoots\(dashboard\)/,
   'server bootstrap must publish owner-issued query roots',
 );
 

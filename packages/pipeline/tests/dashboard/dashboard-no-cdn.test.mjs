@@ -32,6 +32,8 @@ test('pipeline dashboard server sources contain no CDN or private dependency', a
   const violations = [];
   const serverSources = [
     resolve(PIPELINE_ROOT, 'lib/dashboard/server.mjs'),
+    ...(await regularFiles(resolve(PIPELINE_ROOT, 'lib/dashboard/server'))),
+    resolve(PIPELINE_ROOT, 'lib/dashboard/planning-envelopes.mjs'),
     resolve(PIPELINE_ROOT, 'lib/dashboard/resolve-packaged-dashboard-root.mjs'),
   ];
   for (const file of serverSources) {
