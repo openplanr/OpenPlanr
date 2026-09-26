@@ -8,9 +8,8 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const failures = [];
 const importCount = (source) => (source.match(/^import\b/gmu) ?? []).length;
 const read = (path) => readFileSync(resolve(root, path), 'utf8');
-const importSpecifiers = (source) => [...source.matchAll(
-  /^import(?:.|\n)*?\bfrom\s+['"]([^'"]+)['"];?/gmu,
-)].map((match) => match[1]);
+const importSpecifiers = (source) =>
+  [...source.matchAll(/^import(?:.|\n)*?\bfrom\s+['"]([^'"]+)['"];?/gmu)].map((match) => match[1]);
 
 function visitSourceFiles(relativeRoot, callback) {
   const directory = resolve(root, relativeRoot);
@@ -23,9 +22,9 @@ function visitSourceFiles(relativeRoot, callback) {
       if (entry.isDirectory()) {
         if (!['generated', 'vendor'].includes(entry.name)) stack.push(path);
       } else if (
-        entry.isFile()
-        && ['.js', '.mjs', '.ts', '.tsx'].includes(extname(entry.name))
-        && !/\.d\.(?:mts|ts)$/u.test(entry.name)
+        entry.isFile() &&
+        ['.js', '.mjs', '.ts', '.tsx'].includes(extname(entry.name)) &&
+        !/\.d\.(?:mts|ts)$/u.test(entry.name)
       ) {
         callback(relativePath, readFileSync(path, 'utf8'));
       }
@@ -64,30 +63,38 @@ for (const [relativePath, facadePrefix] of Object.entries(boundedCompositionRoot
   const source = read(relativePath);
   const count = importCount(source);
   if (count > 12) failures.push(`${relativePath} has ${count} imports (composition maximum 12).`);
-  const leafImports = importSpecifiers(source).filter((specifier) => (
-    !specifier.startsWith('node:')
-    && !specifier.startsWith(facadePrefix)
-    && ![
-      'commander',
-      'chalk',
-      './client-error.js',
-      './errors.mjs',
-    ].includes(specifier)
-  ));
+  const leafImports = importSpecifiers(source).filter(
+    (specifier) =>
+      !specifier.startsWith('node:') &&
+      !specifier.startsWith(facadePrefix) &&
+      !['commander', 'chalk', './client-error.js', './errors.mjs'].includes(specifier),
+  );
   if (leafImports.length > 0) {
     failures.push(`${relativePath} bypasses its ${facadePrefix} facade: ${leafImports.join(', ')}`);
   }
 }
 
 const cliEntry = read('packages/cli/src/cli/index.ts');
-if (importCount(cliEntry) > 12) failures.push(`CLI composition root has ${importCount(cliEntry)} imports (maximum 12).`);
-if (!cliEntry.includes("from './commands/index.js'")) failures.push('CLI composition root must use the command-domain facade.');
-if (/from ['"]\.\/commands\/(?!index\.js)[^'"]+['"]/u.test(cliEntry)) failures.push('CLI composition root imports a command leaf directly.');
+if (importCount(cliEntry) > 12)
+  failures.push(`CLI composition root has ${importCount(cliEntry)} imports (maximum 12).`);
+if (!cliEntry.includes("from './commands/index.js'"))
+  failures.push('CLI composition root must use the command-domain facade.');
+if (/from ['"]\.\/commands\/(?!index\.js)[^'"]+['"]/u.test(cliEntry))
+  failures.push('CLI composition root imports a command leaf directly.');
 
 const cliGroupRoot = resolve(root, 'packages/cli/src/cli/commands/groups');
-const cliGroups = readdirSync(cliGroupRoot).filter((name) => name.endsWith('.ts')).sort();
-const expectedGroups = ['delivery.ts', 'foundation.ts', 'intelligence.ts', 'operations.ts', 'planning.ts'];
-if (JSON.stringify(cliGroups) !== JSON.stringify(expectedGroups)) failures.push('CLI command groups differ from the explicit five-group composition contract.');
+const cliGroups = readdirSync(cliGroupRoot)
+  .filter((name) => name.endsWith('.ts'))
+  .sort();
+const expectedGroups = [
+  'delivery.ts',
+  'foundation.ts',
+  'intelligence.ts',
+  'operations.ts',
+  'planning.ts',
+];
+if (JSON.stringify(cliGroups) !== JSON.stringify(expectedGroups))
+  failures.push('CLI command groups differ from the explicit five-group composition contract.');
 for (const group of cliGroups) {
   const count = importCount(readFileSync(join(cliGroupRoot, group), 'utf8'));
   if (count > 12) failures.push(`CLI command group ${group} has ${count} imports (maximum 12).`);
@@ -104,7 +111,8 @@ function visit(directory) {
       dashboardFiles += 1;
       const count = importCount(readFileSync(path, 'utf8'));
       dashboardMaximum = Math.max(dashboardMaximum, count);
-      if (count > 12) failures.push(`${path.slice(root.length + 1)} has ${count} imports (maximum 12).`);
+      if (count > 12)
+        failures.push(`${path.slice(root.length + 1)} has ${count} imports (maximum 12).`);
     }
   }
 }
@@ -134,7 +142,8 @@ for (const relativeRoot of explicitFacadeRoots) {
         const path = join(current, entry.name);
         if (entry.isDirectory()) stack.push(path);
         else if (entry.isFile() && ['.js', '.mjs', '.ts', '.tsx'].includes(extname(entry.name))) {
-          if (/^export\s+\*/gmu.test(readFileSync(path, 'utf8'))) failures.push(`${path.slice(root.length + 1)} uses a wildcard barrel.`);
+          if (/^export\s+\*/gmu.test(readFileSync(path, 'utf8')))
+            failures.push(`${path.slice(root.length + 1)} uses a wildcard barrel.`);
         }
       }
     }
@@ -151,29 +160,40 @@ for (const entry of readdirSync(operateRegistrarRoot, { withFileTypes: true })) 
   const source = readFileSync(join(operateRegistrarRoot, entry.name), 'utf8');
   const imports = importCount(source);
   const commands = (source.match(/\.command\s*\(/gu) ?? []).length;
-  if (imports > 12) failures.push(`Operate registrar ${entry.name} has ${imports} imports (maximum 12).`);
-  if (commands > 10) failures.push(`Operate registrar ${entry.name} declares ${commands} commands (maximum 10).`);
+  if (imports > 12)
+    failures.push(`Operate registrar ${entry.name} has ${imports} imports (maximum 12).`);
+  if (commands > 10)
+    failures.push(`Operate registrar ${entry.name} declares ${commands} commands (maximum 10).`);
 }
 
 const pipelineDomains = ['po', 'dev', 'ship', 'roles', 'guided', 'investigate', 'release', 'state'];
 for (const domain of pipelineDomains) {
-  if (!existsSync(resolve(root, `packages/pipeline/lib/${domain}/index.mjs`))) failures.push(`Missing pipeline domain facade: ${domain}`);
+  if (!existsSync(resolve(root, `packages/pipeline/lib/${domain}/index.mjs`)))
+    failures.push(`Missing pipeline domain facade: ${domain}`);
 }
 
 if (failures.length > 0) {
   process.stderr.write(`${JSON.stringify({ ok: false, failures }, null, 2)}\n`);
   process.exitCode = 1;
 } else {
-  process.stdout.write(`${JSON.stringify({
-    ok: true,
-    cliEntrypointImports: importCount(cliEntry),
-    cliCommandGroups: cliGroups.length,
-    dashboardFiles,
-    dashboardMaximumImports: dashboardMaximum,
-    pipelineDomainFacades: pipelineDomains.length,
-    boundedCompositionRoots: Object.keys(boundedCompositionRoots).length,
-    operateRegistrarFiles: readdirSync(operateRegistrarRoot).filter((name) => name.endsWith('.ts')).length,
-    wildcardBarrels: 0,
-    productionSourceRoots: productionSourceRoots.length,
-  }, null, 2)}\n`);
+  process.stdout.write(
+    `${JSON.stringify(
+      {
+        ok: true,
+        cliEntrypointImports: importCount(cliEntry),
+        cliCommandGroups: cliGroups.length,
+        dashboardFiles,
+        dashboardMaximumImports: dashboardMaximum,
+        pipelineDomainFacades: pipelineDomains.length,
+        boundedCompositionRoots: Object.keys(boundedCompositionRoots).length,
+        operateRegistrarFiles: readdirSync(operateRegistrarRoot).filter((name) =>
+          name.endsWith('.ts'),
+        ).length,
+        wildcardBarrels: 0,
+        productionSourceRoots: productionSourceRoots.length,
+      },
+      null,
+      2,
+    )}\n`,
+  );
 }

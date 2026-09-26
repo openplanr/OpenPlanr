@@ -68,8 +68,8 @@ const PROTOCOL_TARGETS = Object.freeze({
 function usage(message = '') {
   if (message) process.stderr.write(`${message}\n\n`);
   process.stderr.write(
-    'Usage: node scripts/domains/project-domains.mjs (--write|--check) '
-      + '--target <pipeline-package-root> [--domain operate|artifact|design]\n',
+    'Usage: node scripts/domains/project-domains.mjs (--write|--check) ' +
+      '--target <pipeline-package-root> [--domain operate|artifact|design]\n',
   );
   process.exitCode = 2;
 }
@@ -108,12 +108,13 @@ function walkFiles(root) {
   if (!entry.isDirectory()) throw new Error(`Unsupported canonical source: ${root}`);
   const files = [];
   const visit = (directory, prefix = '') => {
-    for (const child of readdirSync(directory, { withFileTypes: true }).sort((a, b) => (
-      a.name < b.name ? -1 : a.name > b.name ? 1 : 0
-    ))) {
+    for (const child of readdirSync(directory, { withFileTypes: true }).sort((a, b) =>
+      a.name < b.name ? -1 : a.name > b.name ? 1 : 0,
+    )) {
       const childPath = join(directory, child.name);
       const childRelative = prefix ? join(prefix, child.name) : child.name;
-      if (child.isSymbolicLink()) throw new Error(`Canonical source must not contain symlinks: ${childPath}`);
+      if (child.isSymbolicLink())
+        throw new Error(`Canonical source must not contain symlinks: ${childPath}`);
       if (child.isDirectory()) visit(childPath, childRelative);
       else if (child.isFile()) files.push(childRelative);
       else throw new Error(`Unsupported canonical source entry: ${childPath}`);
@@ -131,10 +132,9 @@ function posixRelative(fromDirectory, toFile) {
 function projectedSpecifier(specifier, targetRelativeFile) {
   const targetDirectory = dirname(targetRelativeFile);
   if (specifier === '@openplanr/protocol') {
-    return targetRelativeFile.endsWith('.d.mts') ? 'planr-pipeline/protocol' : posixRelative(
-      targetDirectory,
-      'lib/protocol/loader.mjs',
-    );
+    return targetRelativeFile.endsWith('.d.mts')
+      ? 'planr-pipeline/protocol'
+      : posixRelative(targetDirectory, 'lib/protocol/loader.mjs');
   }
   if (specifier === '@openplanr/protocol/package.json') return 'planr-pipeline/package.json';
   if (specifier.startsWith('@openplanr/protocol/schemas/')) {
@@ -168,7 +168,8 @@ function projectBytes(bytes, targetRelativeFile) {
   const source = bytes.toString('utf8');
   const projected = source.replace(
     /(['"])(@openplanr\/(?:protocol|artifact)(?:\/[^'"\s]+)?)\1/gu,
-    (match, quote, specifier) => `${quote}${projectedSpecifier(specifier, targetRelativeFile)}${quote}`,
+    (match, quote, specifier) =>
+      `${quote}${projectedSpecifier(specifier, targetRelativeFile)}${quote}`,
   );
   if (/(['"])@openplanr\//u.test(projected)) {
     throw new Error(`Unprojected private workspace import remains in ${targetRelativeFile}`);
@@ -185,26 +186,32 @@ function manifestTarget(domain) {
 }
 
 function renderManifest(domain, entries) {
-  return Buffer.from(`${JSON.stringify({
-    schemaVersion: '1.0.0',
-    kind: 'openplanr-domain-projection',
-    domain,
-    generator: 'scripts/domains/project-domains.mjs',
-    entries: entries
-      .filter((entry) => entry.domain === domain)
-      .map(({ source, target, sha256: digest, mode }) => ({
-        source,
-        target,
-        sha256: digest,
-        mode: mode.toString(8),
-      })),
-  }, null, 2)}\n`);
+  return Buffer.from(
+    `${JSON.stringify(
+      {
+        schemaVersion: '1.0.0',
+        kind: 'openplanr-domain-projection',
+        domain,
+        generator: 'scripts/domains/project-domains.mjs',
+        entries: entries
+          .filter((entry) => entry.domain === domain)
+          .map(({ source, target, sha256: digest, mode }) => ({
+            source,
+            target,
+            sha256: digest,
+            mode: mode.toString(8),
+          })),
+      },
+      null,
+      2,
+    )}\n`,
+  );
 }
 
 function isOwnedTarget(domain, target) {
-  return DOMAIN_PROJECTIONS[domain].some((projection) => (
-    target === projection.target || target.startsWith(`${projection.target}/`)
-  ));
+  return DOMAIN_PROJECTIONS[domain].some(
+    (projection) => target === projection.target || target.startsWith(`${projection.target}/`),
+  );
 }
 
 function previousManifestTargets(targetRoot, domain) {
@@ -212,10 +219,13 @@ function previousManifestTargets(targetRoot, domain) {
   if (!existsSync(path) || lstatSync(path).isSymbolicLink()) return [];
   try {
     const manifest = JSON.parse(readFileSync(path, 'utf8'));
-    if (manifest?.schemaVersion !== '1.0.0'
-      || manifest?.kind !== 'openplanr-domain-projection'
-      || manifest?.domain !== domain
-      || !Array.isArray(manifest.entries)) return [];
+    if (
+      manifest?.schemaVersion !== '1.0.0' ||
+      manifest?.kind !== 'openplanr-domain-projection' ||
+      manifest?.domain !== domain ||
+      !Array.isArray(manifest.entries)
+    )
+      return [];
     return manifest.entries
       .map((entry) => entry?.target)
       .filter((target) => typeof target === 'string' && isOwnedTarget(domain, target));
@@ -237,7 +247,8 @@ function collectEntries(domains, targetRoot) {
   for (const domain of domains) {
     for (const projection of DOMAIN_PROJECTIONS[domain]) {
       const sourceRoot = resolve(workspaceRoot, projection.source);
-      if (!existsSync(sourceRoot)) throw new Error(`Missing canonical source: ${projection.source}`);
+      if (!existsSync(sourceRoot))
+        throw new Error(`Missing canonical source: ${projection.source}`);
       for (const child of walkFiles(sourceRoot)) {
         const sourcePath = child ? join(sourceRoot, child) : sourceRoot;
         const targetRelative = child ? join(projection.target, child) : projection.target;
@@ -308,9 +319,10 @@ function main() {
       }
     }
     for (const entry of entries) {
-      const actual = existsSync(entry.targetPath) && !lstatSync(entry.targetPath).isSymbolicLink()
-        ? readFileSync(entry.targetPath)
-        : null;
+      const actual =
+        existsSync(entry.targetPath) && !lstatSync(entry.targetPath).isSymbolicLink()
+          ? readFileSync(entry.targetPath)
+          : null;
       const actualMode = actual === null ? null : statSync(entry.targetPath).mode & 0o777;
       const matches = actual !== null && actual.equals(entry.bytes) && actualMode === entry.mode;
       if (matches) continue;
@@ -334,9 +346,10 @@ function main() {
       const target = manifestTarget(domain);
       const targetPath = resolve(options.target, target);
       const expected = renderManifest(domain, entries);
-      const actual = existsSync(targetPath) && !lstatSync(targetPath).isSymbolicLink()
-        ? readFileSync(targetPath)
-        : null;
+      const actual =
+        existsSync(targetPath) && !lstatSync(targetPath).isSymbolicLink()
+          ? readFileSync(targetPath)
+          : null;
       if (actual !== null && actual.equals(expected)) continue;
       drift.push({
         domain,

@@ -48,7 +48,8 @@ const DEPENDENCY_FIELDS = [
 ];
 const RUNTIME_TEXT_PATH = /^(?:bin|conformance|dist|lib|scripts|src)\//u;
 const RUNTIME_TEXT_EXTENSION = /\.(?:[cm]?js|[cm]?ts|json)$/u;
-const UNSAFE_DEPENDENCY_SPECIFIER = /^(?:file:|link:|workspace:|\/|\\|[A-Za-z]:[\\/]|\.\.?(?:[\\/]|$))/u;
+const UNSAFE_DEPENDENCY_SPECIFIER =
+  /^(?:file:|link:|workspace:|\/|\\|[A-Za-z]:[\\/]|\.\.?(?:[\\/]|$))/u;
 const NON_PROTOCOL_ROOT_REGISTRIES = new Set(['registry/generated-skill-assets.json']);
 const PIPELINE_OPTIONAL_DEPENDENCIES = Object.freeze({
   '@expo-google-fonts/inter': '0.4.2',
@@ -108,10 +109,12 @@ function normalizedPath(file) {
 
 function isInside(parent, candidate) {
   const relative = path.relative(fs.realpathSync(parent), fs.realpathSync(candidate));
-  return relative !== ''
-    && relative !== '..'
-    && !relative.startsWith(`..${path.sep}`)
-    && !path.isAbsolute(relative);
+  return (
+    relative !== '' &&
+    relative !== '..' &&
+    !relative.startsWith(`..${path.sep}`) &&
+    !path.isAbsolute(relative)
+  );
 }
 
 function sanitize(message, workspace) {
@@ -168,7 +171,8 @@ function inventoryTree(root) {
   const realRoot = fs.realpathSync(lexicalRoot);
   const entries = [];
   const visit = (directory) => {
-    for (const entry of fs.readdirSync(directory, { withFileTypes: true })
+    for (const entry of fs
+      .readdirSync(directory, { withFileTypes: true })
       .sort((left, right) => left.name.localeCompare(right.name))) {
       const absolute = path.join(directory, entry.name);
       const stat = fs.lstatSync(absolute);
@@ -181,7 +185,10 @@ function inventoryTree(root) {
         continue;
       }
       if (!entry.isFile()) {
-        throw new ProofFailure('E_PACK_ENTRY_UNSAFE', `Packed payload contains a special entry: ${relative}`);
+        throw new ProofFailure(
+          'E_PACK_ENTRY_UNSAFE',
+          `Packed payload contains a special entry: ${relative}`,
+        );
       }
       const bytes = fs.readFileSync(absolute);
       entries.push({
@@ -211,11 +218,11 @@ function safeRemoveWorkspace(workspace) {
   const temporaryRoot = fs.realpathSync(os.tmpdir());
   const resolved = path.resolve(workspace);
   const parent = fs.realpathSync(path.dirname(resolved));
-  if (
-    parent !== temporaryRoot
-    || !path.basename(resolved).startsWith('openplanr-packed-proof-')
-  ) {
-    throw new ProofFailure('E_PROOF_CLEANUP_REFUSED', 'Refused to clean an untrusted proof directory.');
+  if (parent !== temporaryRoot || !path.basename(resolved).startsWith('openplanr-packed-proof-')) {
+    throw new ProofFailure(
+      'E_PROOF_CLEANUP_REFUSED',
+      'Refused to clean an untrusted proof directory.',
+    );
   }
   fs.rmSync(resolved, { recursive: true, force: true });
 }
@@ -225,7 +232,9 @@ function cleanEnvironment(home) {
     ...process.env,
     CI: '1',
     // Keep only the test browser binary outside the otherwise isolated home.
-    OPENPLANR_PROOF_CHROMIUM_EXECUTABLE: createRequire(path.join(protocolSourceRoot, 'package.json'))('playwright').chromium.executablePath(),
+    OPENPLANR_PROOF_CHROMIUM_EXECUTABLE: createRequire(
+      path.join(protocolSourceRoot, 'package.json'),
+    )('playwright').chromium.executablePath(),
     FORCE_COLOR: '0',
     HOME: home,
     // Host-runtime deprecation warnings can embed a different process ID for
@@ -241,7 +250,11 @@ function cleanEnvironment(home) {
   };
   for (const key of SOURCE_FALLBACK_ENVIRONMENT_KEYS) delete environment[key];
   for (const key of Object.keys(environment)) {
-    if (/^(?:ANTHROPIC|AZURE_OPENAI|GEMINI|GOOGLE|OPENAI|OPENPLANR)_.*(?:KEY|SECRET|TOKEN)$/iu.test(key)) {
+    if (
+      /^(?:ANTHROPIC|AZURE_OPENAI|GEMINI|GOOGLE|OPENAI|OPENPLANR)_.*(?:KEY|SECRET|TOKEN)$/iu.test(
+        key,
+      )
+    ) {
       delete environment[key];
     }
   }
@@ -268,7 +281,10 @@ function packPackage({ npmExecutable, sourceRoot, destination, environment }) {
   }
   const tarball = path.join(destination, report.filename);
   if (!fs.existsSync(tarball) || !fs.lstatSync(tarball).isFile()) {
-    throw new ProofFailure('E_PACK_ARCHIVE_MISSING', 'npm pack did not create its reported archive.');
+    throw new ProofFailure(
+      'E_PACK_ARCHIVE_MISSING',
+      'npm pack did not create its reported archive.',
+    );
   }
   return { report, tarball };
 }
@@ -315,9 +331,10 @@ function runtimeSourceViolations(packageRoot, inventory) {
   const violations = [];
   for (const entry of inventory) {
     if (
-      entry.path !== 'package.json'
-      && (!RUNTIME_TEXT_PATH.test(entry.path) || !RUNTIME_TEXT_EXTENSION.test(entry.path))
-    ) continue;
+      entry.path !== 'package.json' &&
+      (!RUNTIME_TEXT_PATH.test(entry.path) || !RUNTIME_TEXT_EXTENSION.test(entry.path))
+    )
+      continue;
     if (entry.bytes > 8 * 1024 * 1024) continue;
     const source = fs.readFileSync(path.join(packageRoot, entry.path), 'utf8');
     if (source.includes(repositoryRoot)) violations.push(`${entry.path}:source-root`);
@@ -334,7 +351,11 @@ function generatedSkillPortability(packageRoot, inventory) {
   );
   const violations = [];
   for (const entry of inventory) {
-    if (!/^(?:skills|adapters|agents)\//u.test(entry.path) || !/\.(?:json|md|mdc)$/u.test(entry.path)) continue;
+    if (
+      !/^(?:skills|adapters|agents)\//u.test(entry.path) ||
+      !/\.(?:json|md|mdc)$/u.test(entry.path)
+    )
+      continue;
     const source = fs.readFileSync(path.join(packageRoot, entry.path), 'utf8');
     if (source.includes(repositoryRoot)) violations.push(`${entry.path}:source-root`);
     if (source.includes('workspace:')) violations.push(`${entry.path}:workspace-specifier`);
@@ -417,7 +438,10 @@ function installedPackageRoot(project, packageName) {
   }
   const stat = fs.lstatSync(lexical);
   if (!stat.isDirectory() || stat.isSymbolicLink() || !isInside(project, lexical)) {
-    throw new ProofFailure('E_INSTALLED_PACKAGE_UNSAFE', `${packageName} is not a consumer-owned directory.`);
+    throw new ProofFailure(
+      'E_INSTALLED_PACKAGE_UNSAFE',
+      `${packageName} is not a consumer-owned directory.`,
+    );
   }
   return fs.realpathSync(lexical);
 }
@@ -448,11 +472,7 @@ function commandDigest(result, redactedRoots = []) {
 }
 
 function runCli(nodeExecutable, cliRoot, args, options) {
-  return commandResult(
-    nodeExecutable,
-    [path.join(cliRoot, 'bin', 'planr.js'), ...args],
-    options,
-  );
+  return commandResult(nodeExecutable, [path.join(cliRoot, 'bin', 'planr.js'), ...args], options);
 }
 
 function installedAliasEntrypoint({ consumerRoot, cliRoot, manifest, alias }) {
@@ -463,7 +483,10 @@ function installedAliasEntrypoint({ consumerRoot, cliRoot, manifest, alias }) {
   const selected = fs.realpathSync(lexical);
   const expected = fs.realpathSync(path.join(cliRoot, manifest.bin[alias]));
   if (selected !== expected || !isInside(cliRoot, selected)) {
-    throw new ProofFailure('E_CLI_BIN_ALIAS_TARGET', `Installed ${alias} alias escaped CLI custody.`);
+    throw new ProofFailure(
+      'E_CLI_BIN_ALIAS_TARGET',
+      `Installed ${alias} alias escaped CLI custody.`,
+    );
   }
   return lexical;
 }
@@ -490,7 +513,10 @@ function verifyCliAliases({
     planr: './bin/planr.js',
   };
   if (JSON.stringify(stableJson(manifest.bin)) !== JSON.stringify(stableJson(expectedBins))) {
-    throw new ProofFailure('E_CLI_BIN_ALIAS_DRIFT', 'CLI aliases do not share the exact parser target.');
+    throw new ProofFailure(
+      'E_CLI_BIN_ALIAS_DRIFT',
+      'CLI aliases do not share the exact parser target.',
+    );
   }
   const cases = [
     { id: 'version', args: ['--version'], expectedExit: 0, output: 'text' },
@@ -531,9 +557,9 @@ function verifyCliAliases({
         timeout: testCase.id === 'diagnostics' ? 2 * 60 * 1000 : undefined,
       });
       if (
-        candidate.status !== baseline.status
-        || candidate.stdout !== baseline.stdout
-        || candidate.stderr !== baseline.stderr
+        candidate.status !== baseline.status ||
+        candidate.stdout !== baseline.stdout ||
+        candidate.stderr !== baseline.stderr
       ) {
         throw new ProofFailure(
           'E_CLI_ALIAS_PARITY',
@@ -756,7 +782,9 @@ function runExportProof({
     timeout: 4 * 60 * 1000,
   });
   const typesPath = path.join(project, 'diagram-authoring-types.mts');
-  fs.writeFileSync(typesPath, `import {
+  fs.writeFileSync(
+    typesPath,
+    `import {
   compileDiagramCommand, createConditionalInverse, previewDiagramTransaction, diffDiagramBundles,
   resolveDiagramScene, renderAuthoredDiagramSvg, previewAutomaticLayout, previewResetRoute,
   type DiagramAuthoringBundle, type DiagramCommand, type DiagramEditPreview,
@@ -823,15 +851,29 @@ editor.submit({ type: 'execute', script: 'arbitrary' });
 compileDiagramCommand(bundle, { type: 'evaluate', script: 'arbitrary' }, { transactionId: 'bad-command' });
 // @ts-expect-error Movement takes numeric world-coordinate deltas.
 compileDiagramCommand(bundle, { type: 'move', ids: ['step-one'], dx: '20', dy: 0 }, { transactionId: 'bad-delta' });
-`);
+`,
+  );
   const typeConfig = path.join(project, 'diagram-authoring-tsconfig.json');
   writeJson(typeConfig, {
-    compilerOptions: { noEmit: true, strict: true, target: 'ES2022', lib: ['ES2022', 'DOM'], module: 'NodeNext', moduleResolution: 'NodeNext', types: [] },
+    compilerOptions: {
+      noEmit: true,
+      strict: true,
+      target: 'ES2022',
+      lib: ['ES2022', 'DOM'],
+      module: 'NodeNext',
+      moduleResolution: 'NodeNext',
+      types: [],
+    },
     files: [typesPath],
   });
-  successfulCommand(nodeExecutable, [fileURLToPath(import.meta.resolve('typescript/bin/tsc')), '--project', typeConfig], {
-    cwd: project, env: environment,
-  });
+  successfulCommand(
+    nodeExecutable,
+    [fileURLToPath(import.meta.resolve('typescript/bin/tsc')), '--project', typeConfig],
+    {
+      cwd: project,
+      env: environment,
+    },
+  );
   return readJson(outputPath);
 }
 
@@ -839,29 +881,45 @@ compileDiagramCommand(bundle, { type: 'move', ids: ['step-one'], dx: '20', dy: 0
 // the compatibility floor from the implementation it is intended to verify.
 export function readPackedSurfaceBaseline() {
   const baseline = readJson(packedSurfaceBaselinePath);
-  const distinctStrings = (values, count) => Array.isArray(values)
-    && values.length === count
-    && values.every((value) => typeof value === 'string' && value.length > 0)
-    && new Set(values).size === count;
-  if (baseline.kind !== 'openplanr-packed-surface-baseline'
-    || baseline.schemaVersion !== '1.0.0'
-    || baseline.package !== 'planr-pipeline'
-    || !distinctStrings(baseline.baselineExportKeys, 37)
-    || !distinctStrings(baseline.baselineRootSymbols, 229)
-    || !distinctStrings(baseline.protocolAssets?.originalRegistryPaths, 12)
-    || !distinctStrings(baseline.protocolAssets?.successorRegistryPaths, 12)
-    || !distinctStrings(baseline.protocolAssets?.successorSchemaPaths, 48)) {
-    throw new ProofFailure('E_PACKED_SURFACE_BASELINE_INVALID', 'The reviewed public package compatibility baseline is invalid.');
+  const distinctStrings = (values, count) =>
+    Array.isArray(values) &&
+    values.length === count &&
+    values.every((value) => typeof value === 'string' && value.length > 0) &&
+    new Set(values).size === count;
+  if (
+    baseline.kind !== 'openplanr-packed-surface-baseline' ||
+    baseline.schemaVersion !== '1.0.0' ||
+    baseline.package !== 'planr-pipeline' ||
+    !distinctStrings(baseline.baselineExportKeys, 37) ||
+    !distinctStrings(baseline.baselineRootSymbols, 229) ||
+    !distinctStrings(baseline.protocolAssets?.originalRegistryPaths, 12) ||
+    !distinctStrings(baseline.protocolAssets?.successorRegistryPaths, 12) ||
+    !distinctStrings(baseline.protocolAssets?.successorSchemaPaths, 48)
+  ) {
+    throw new ProofFailure(
+      'E_PACKED_SURFACE_BASELINE_INVALID',
+      'The reviewed public package compatibility baseline is invalid.',
+    );
   }
   return baseline;
 }
 
 export function assertPackedSurfaceCompatibility(baseline, { exportKeys, rootSymbols }) {
   if (baseline.baselineExportKeys.some((key) => !exportKeys.includes(key))) {
-    throw new ProofFailure('E_PIPELINE_EXPORT_BASELINE_MISSING', 'Packed pipeline removed a supported export key.');
+    throw new ProofFailure(
+      'E_PIPELINE_EXPORT_BASELINE_MISSING',
+      'Packed pipeline removed a supported export key.',
+    );
   }
-  if (rootSymbols && JSON.stringify([...rootSymbols].sort()) !== JSON.stringify([...baseline.baselineRootSymbols].sort())) {
-    throw new ProofFailure('E_PIPELINE_ROOT_SYMBOL_DRIFT', 'Packed pipeline root symbols differ from the supported baseline.');
+  if (
+    rootSymbols &&
+    JSON.stringify([...rootSymbols].sort()) !==
+      JSON.stringify([...baseline.baselineRootSymbols].sort())
+  ) {
+    throw new ProofFailure(
+      'E_PIPELINE_ROOT_SYMBOL_DRIFT',
+      'Packed pipeline root symbols differ from the supported baseline.',
+    );
   }
 }
 
@@ -873,8 +931,7 @@ export function countProtocolAssets(inventory, baseline) {
   const unclassifiedRootRegistries = [...paths]
     .filter((entry) => /^registry\/[^/]+\.json$/u.test(entry))
     .filter(
-      (entry) =>
-        !originalRegistryPaths.has(entry) && !NON_PROTOCOL_ROOT_REGISTRIES.has(entry),
+      (entry) => !originalRegistryPaths.has(entry) && !NON_PROTOCOL_ROOT_REGISTRIES.has(entry),
     );
   if (unclassifiedRootRegistries.length > 0) {
     throw new ProofFailure(
@@ -885,15 +942,29 @@ export function countProtocolAssets(inventory, baseline) {
   }
   return {
     originalRegistries: [...originalRegistryPaths].filter((entry) => paths.has(entry)).length,
-    originalSchemas: inventory.filter((entry) => /^schemas\/v(?:1\.[0-4]\.0|2\.0\.0)\/[^/]+\.schema\.json$/u.test(entry.path)).length,
+    originalSchemas: inventory.filter((entry) =>
+      /^schemas\/v(?:1\.[0-4]\.0|2\.0\.0)\/[^/]+\.schema\.json$/u.test(entry.path),
+    ).length,
     successorRegistries: [...successorRegistryPaths].filter((entry) => paths.has(entry)).length,
-    successorRegistriesV15: [...successorRegistryPaths].filter((entry) => entry.startsWith('registry/v1.5.0/') && paths.has(entry)).length,
-    successorRegistriesV16: [...successorRegistryPaths].filter((entry) => entry.startsWith('registry/v1.6.0/') && paths.has(entry)).length,
-    successorRegistriesV17: [...successorRegistryPaths].filter((entry) => entry.startsWith('registry/v1.7.0/') && paths.has(entry)).length,
+    successorRegistriesV15: [...successorRegistryPaths].filter(
+      (entry) => entry.startsWith('registry/v1.5.0/') && paths.has(entry),
+    ).length,
+    successorRegistriesV16: [...successorRegistryPaths].filter(
+      (entry) => entry.startsWith('registry/v1.6.0/') && paths.has(entry),
+    ).length,
+    successorRegistriesV17: [...successorRegistryPaths].filter(
+      (entry) => entry.startsWith('registry/v1.7.0/') && paths.has(entry),
+    ).length,
     successorSchemas: [...successorSchemaPaths].filter((entry) => paths.has(entry)).length,
-    successorSchemasV15: [...successorSchemaPaths].filter((entry) => entry.startsWith('schemas/v1.5.0/') && paths.has(entry)).length,
-    successorSchemasV16: [...successorSchemaPaths].filter((entry) => entry.startsWith('schemas/v1.6.0/') && paths.has(entry)).length,
-    successorSchemasV17: [...successorSchemaPaths].filter((entry) => entry.startsWith('schemas/v1.7.0/') && paths.has(entry)).length,
+    successorSchemasV15: [...successorSchemaPaths].filter(
+      (entry) => entry.startsWith('schemas/v1.5.0/') && paths.has(entry),
+    ).length,
+    successorSchemasV16: [...successorSchemaPaths].filter(
+      (entry) => entry.startsWith('schemas/v1.6.0/') && paths.has(entry),
+    ).length,
+    successorSchemasV17: [...successorSchemaPaths].filter(
+      (entry) => entry.startsWith('schemas/v1.7.0/') && paths.has(entry),
+    ).length,
   };
 }
 
@@ -903,7 +974,10 @@ function verifyRetiredPipelineOperate({ nodeExecutable, pipelineRoot, project, e
     [path.join(pipelineRoot, 'bin', 'planr-pipeline.mjs'), 'operate', '--json'],
     { cwd: project, env: environment },
   );
-  const error = assertJsonOutput({ ...binary, stdout: binary.stderr || binary.stdout }, 'pipeline operate');
+  const error = assertJsonOutput(
+    { ...binary, stdout: binary.stderr || binary.stdout },
+    'pipeline operate',
+  );
   if (binary.status !== 1 || error.code !== 'E_COMMAND_UNKNOWN') {
     throw new ProofFailure(
       'E_RETIRED_PIPELINE_OPERATE_PRESENT',
@@ -924,7 +998,10 @@ function verifyRetiredPipelineOperate({ nodeExecutable, pipelineRoot, project, e
   }
   const absenceReport = assertJsonOutput(absence, 'pipeline Operate absence conformance');
   if (absenceReport.ok !== true || absenceReport.removedPaths !== 34) {
-    throw new ProofFailure('E_RETIRED_PIPELINE_ASSET_PRESENT', 'Packed pipeline absence report drifted.');
+    throw new ProofFailure(
+      'E_RETIRED_PIPELINE_ASSET_PRESENT',
+      'Packed pipeline absence report drifted.',
+    );
   }
   return {
     absenceContracts: absenceReport.contracts,
@@ -958,9 +1035,17 @@ function verifyFullInstall({
   assertEquivalentInventory(cliPack.inventory, inventoryTree(cliRoot), 'openplanr');
   assertEquivalentInventory(pipelinePack.inventory, inventoryTree(pipelineRoot), 'planr-pipeline');
   const protocolRoot = installedPackageRoot(project, '@openplanr/protocol');
-  assertEquivalentInventory(protocolPack.inventory, inventoryTree(protocolRoot), '@openplanr/protocol');
+  assertEquivalentInventory(
+    protocolPack.inventory,
+    inventoryTree(protocolRoot),
+    '@openplanr/protocol',
+  );
   const protocolReport = path.join(project, 'protocol-consumer-proof.json');
-  successfulCommand(nodeExecutable, [path.join(protocolSourceRoot, 'scripts/verify-packed-consumers.mjs'), project, protocolReport], { cwd: project, env: environment });
+  successfulCommand(
+    nodeExecutable,
+    [path.join(protocolSourceRoot, 'scripts/verify-packed-consumers.mjs'), project, protocolReport],
+    { cwd: project, env: environment },
+  );
   const protocolConsumers = readJson(protocolReport);
 
   const exportProof = runExportProof({
@@ -972,7 +1057,9 @@ function verifyFullInstall({
     pipelineProbes: pipelinePack.proof.probes,
     environment,
   });
-  const installedExportKeys = Object.keys(readJson(path.join(pipelineRoot, 'package.json')).exports).sort();
+  const installedExportKeys = Object.keys(
+    readJson(path.join(pipelineRoot, 'package.json')).exports,
+  ).sort();
   if (JSON.stringify(installedExportKeys) !== JSON.stringify(expectedExportKeys)) {
     throw new ProofFailure('E_PIPELINE_EXPORT_KEY_DRIFT', 'Packed pipeline export keys drifted.');
   }
@@ -981,9 +1068,9 @@ function verifyFullInstall({
     { exportKeys: installedExportKeys, rootSymbols: exportProof.rootSymbols },
   );
   if (
-    exportProof.dashboard.ok !== true
-    || exportProof.dashboard.kind !== 'openplanr-dashboard-build'
-    || typeof exportProof.dashboard.buildId !== 'string'
+    exportProof.dashboard.ok !== true ||
+    exportProof.dashboard.kind !== 'openplanr-dashboard-build' ||
+    typeof exportProof.dashboard.buildId !== 'string'
   ) {
     throw new ProofFailure('E_DASHBOARD_PACK_INVALID', 'Packed CLI dashboard did not verify.');
   }
@@ -995,20 +1082,18 @@ function verifyFullInstall({
     private: true,
     version: '0.0.0',
   });
-  const inspection = runCli(
-    nodeExecutable,
-    cliRoot,
-    ['operate', 'recovery', 'inspect', '--json'],
-    { cwd: operateProject, env: environment },
-  );
+  const inspection = runCli(nodeExecutable, cliRoot, ['operate', 'recovery', 'inspect', '--json'], {
+    cwd: operateProject,
+    env: environment,
+  });
   const inspectionReport = assertJsonOutput(inspection, 'planr operate recovery inspect');
   if (
-    inspection.status !== 0
-    || inspectionReport.ok !== true
-    || inspectionReport.operation !== 'operate.recovery.inspect'
-    || inspectionReport.data?.status !== 'empty'
-    || inspectionReport.data?.allowedRecovery !== 'none'
-    || inspectionReport.data?.integrityBoundary?.model !== 'project-local-integrity'
+    inspection.status !== 0 ||
+    inspectionReport.ok !== true ||
+    inspectionReport.operation !== 'operate.recovery.inspect' ||
+    inspectionReport.data?.status !== 'empty' ||
+    inspectionReport.data?.allowedRecovery !== 'none' ||
+    inspectionReport.data?.integrityBoundary?.model !== 'project-local-integrity'
   ) {
     throw new ProofFailure('E_CLI_OPERATE_FAILED', 'Packed planr operate is not functional.');
   }
@@ -1036,19 +1121,20 @@ function verifyFullInstall({
     'grammars',
     'flowchart.planr-diagram.json',
   );
-  const galleryResult = runCli(
-    nodeExecutable,
-    cliRoot,
-    ['diagram', 'gallery', '--json'],
-    { cwd: diagramProject, env: environment },
-  );
+  const galleryResult = runCli(nodeExecutable, cliRoot, ['diagram', 'gallery', '--json'], {
+    cwd: diagramProject,
+    env: environment,
+  });
   const gallery = assertJsonOutput(galleryResult, 'planr diagram gallery');
   if (
-    galleryResult.status !== 0
-    || gallery.ok !== true
-    || gallery.count !== PACKED_WORKSPACE_DIAGRAM_GRAMMAR_COUNT
+    galleryResult.status !== 0 ||
+    gallery.ok !== true ||
+    gallery.count !== PACKED_WORKSPACE_DIAGRAM_GRAMMAR_COUNT
   ) {
-    throw new ProofFailure('E_CLI_DIAGRAM_GALLERY_FAILED', 'Packed planr diagram gallery is incomplete.');
+    throw new ProofFailure(
+      'E_CLI_DIAGRAM_GALLERY_FAILED',
+      'Packed planr diagram gallery is incomplete.',
+    );
   }
   const renderResult = runCli(
     nodeExecutable,
@@ -1058,10 +1144,10 @@ function verifyFullInstall({
   );
   const rendered = assertJsonOutput(renderResult, 'planr diagram render');
   if (
-    renderResult.status !== 0
-    || rendered.ok !== true
-    || rendered.validation?.status !== 'passed'
-    || typeof rendered.manifest?.path !== 'string'
+    renderResult.status !== 0 ||
+    rendered.ok !== true ||
+    rendered.validation?.status !== 'passed' ||
+    typeof rendered.manifest?.path !== 'string'
   ) {
     throw new ProofFailure('E_CLI_DIAGRAM_RENDER_FAILED', 'Packed planr diagram render failed.');
   }
@@ -1072,11 +1158,7 @@ function verifyFullInstall({
     { cwd: diagramProject, env: environment },
   );
   const checked = assertJsonOutput(checkResult, 'planr diagram check');
-  if (
-    checkResult.status !== 0
-    || checked.ok !== true
-    || checked.validation?.status !== 'passed'
-  ) {
+  if (checkResult.status !== 0 || checked.ok !== true || checked.validation?.status !== 'passed') {
     throw new ProofFailure('E_CLI_DIAGRAM_CHECK_FAILED', 'Packed planr diagram check failed.');
   }
   return {
@@ -1119,7 +1201,10 @@ function verifyCliOnlyInstall({
   const cliRoot = installedPackageRoot(project, 'openplanr');
   assertEquivalentInventory(cliPack.inventory, inventoryTree(cliRoot), 'CLI-only openplanr');
   if (fs.existsSync(path.join(project, 'node_modules', 'planr-pipeline'))) {
-    throw new ProofFailure('E_OPTIONAL_PIPELINE_INSTALLED', 'CLI-only install unexpectedly contains planr-pipeline.');
+    throw new ProofFailure(
+      'E_OPTIONAL_PIPELINE_INSTALLED',
+      'CLI-only install unexpectedly contains planr-pipeline.',
+    );
   }
   const version = runCli(nodeExecutable, cliRoot, ['--version'], {
     cwd: project,
@@ -1159,11 +1244,11 @@ function verifyCliOnlyInstall({
   );
   const inspectionReport = assertJsonOutput(inspection, 'CLI-only Operate storage inspection');
   if (
-    inspection.status !== 0
-    || inspectionReport.kind !== 'operate-storage-status'
-    || inspectionReport.status !== 'empty'
-    || inspectionReport.pinnedVerifierRequired !== false
-    || inspectionReport.nextAction !== 'none'
+    inspection.status !== 0 ||
+    inspectionReport.kind !== 'operate-storage-status' ||
+    inspectionReport.status !== 'empty' ||
+    inspectionReport.pinnedVerifierRequired !== false ||
+    inspectionReport.nextAction !== 'none'
   ) {
     throw new ProofFailure(
       'E_CLI_ONLY_OPTIONAL_BOUNDARY',
@@ -1208,7 +1293,10 @@ function main() {
     const nodeVersion = successfulCommand(nodeExecutable, ['--version']).trim();
     const nodeMajor = Number.parseInt(nodeVersion.replace(/^v/u, '').split('.')[0], 10);
     if (!Number.isInteger(nodeMajor) || nodeMajor < 20) {
-      throw new ProofFailure('E_NODE_VERSION_UNSUPPORTED', 'Packed proof requires Node.js 20 or newer.');
+      throw new ProofFailure(
+        'E_NODE_VERSION_UNSUPPORTED',
+        'Packed proof requires Node.js 20 or newer.',
+      );
     }
     const npmVersion = successfulCommand(npmExecutable, ['--version']).trim();
     report.environment = {
@@ -1240,7 +1328,12 @@ function main() {
       destination: path.join(workspace, 'archives', 'pipeline'),
       environment,
     });
-    const protocolArchive = packPackage({ npmExecutable, sourceRoot: protocolSourceRoot, destination: path.join(workspace, 'archives', 'protocol'), environment });
+    const protocolArchive = packPackage({
+      npmExecutable,
+      sourceRoot: protocolSourceRoot,
+      destination: path.join(workspace, 'archives', 'protocol'),
+      environment,
+    });
     pass(report, 'pack.archives');
 
     const cliPackageRoot = extractPackage({
@@ -1253,9 +1346,17 @@ function main() {
       destination: path.join(workspace, 'payloads', 'pipeline'),
       environment,
     });
-    const protocolPackageRoot = extractPackage({ tarball: protocolArchive.tarball, destination: path.join(workspace, 'payloads', 'protocol'), environment });
+    const protocolPackageRoot = extractPackage({
+      tarball: protocolArchive.tarball,
+      destination: path.join(workspace, 'payloads', 'protocol'),
+      environment,
+    });
     const protocolInventory = inventoryTree(protocolPackageRoot);
-    const protocolProof = packageProof(protocolPackageRoot, protocolInventory, '@openplanr/protocol');
+    const protocolProof = packageProof(
+      protocolPackageRoot,
+      protocolInventory,
+      '@openplanr/protocol',
+    );
     const cliInventory = inventoryTree(cliPackageRoot);
     const pipelineInventory = inventoryTree(pipelinePackageRoot);
     const cliProof = packageProof(cliPackageRoot, cliInventory, 'openplanr');
@@ -1263,8 +1364,11 @@ function main() {
     const expectedExportKeys = Object.keys(pipelineProof.manifest.exports ?? {}).sort();
     assertPackedSurfaceCompatibility(packedSurfaceBaseline, { exportKeys: expectedExportKeys });
     const protocolAssets = countProtocolAssets(pipelineInventory, packedSurfaceBaseline);
-    if (Object.entries(PACKED_WORKSPACE_PROTOCOL_ASSET_COUNTS)
-      .some(([key, count]) => protocolAssets[key] !== count)) {
+    if (
+      Object.entries(PACKED_WORKSPACE_PROTOCOL_ASSET_COUNTS).some(
+        ([key, count]) => protocolAssets[key] !== count,
+      )
+    ) {
       throw new ProofFailure(
         'E_PACK_PROTOCOL_ASSET_DRIFT',
         'Packed schema or registry inventory drifted.',
@@ -1272,9 +1376,9 @@ function main() {
       );
     }
     if (
-      JSON.stringify(stableJson(pipelineProof.manifest.optionalDependencies ?? {}))
-        !== JSON.stringify(stableJson(PIPELINE_OPTIONAL_DEPENDENCIES))
-      || pipelineProof.manifest.peerDependencies
+      JSON.stringify(stableJson(pipelineProof.manifest.optionalDependencies ?? {})) !==
+        JSON.stringify(stableJson(PIPELINE_OPTIONAL_DEPENDENCIES)) ||
+      pipelineProof.manifest.peerDependencies
     ) {
       throw new ProofFailure(
         'E_PIPELINE_EXTERNAL_WORKSPACE_DEPENDENCY',
@@ -1282,15 +1386,22 @@ function main() {
       );
     }
     if (
-      cliProof.manifest.optionalDependencies?.['planr-pipeline'] !== pipelineProof.manifest.version
-      || !/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/u.test(
+      cliProof.manifest.optionalDependencies?.['planr-pipeline'] !==
+        pipelineProof.manifest.version ||
+      !/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/u.test(
         cliProof.manifest.optionalDependencies['planr-pipeline'],
       )
     ) {
-      throw new ProofFailure('E_CLI_PIPELINE_PIN_DRIFT', 'CLI pipeline dependency is not one exact captured version.');
+      throw new ProofFailure(
+        'E_CLI_PIPELINE_PIN_DRIFT',
+        'CLI pipeline dependency is not one exact captured version.',
+      );
     }
     if (cliProof.summary.declarations < 1 || pipelineProof.summary.declarations < 1) {
-      throw new ProofFailure('E_PACK_DECLARATIONS_MISSING', 'Public package declarations are missing.');
+      throw new ProofFailure(
+        'E_PACK_DECLARATIONS_MISSING',
+        'Public package declarations are missing.',
+      );
     }
     pass(report, 'pack.payload-purity');
     pass(report, 'pack.protocol-assets', protocolAssets);
@@ -1313,12 +1424,17 @@ function main() {
         packagedPromptPaths.join(', '),
       );
     }
-    const packedSkillCount = pipelineInventory.filter((entry) => /^skills\/[^/]+\/SKILL\.md$/u.test(entry.path)).length;
+    const packedSkillCount = pipelineInventory.filter((entry) =>
+      /^skills\/[^/]+\/SKILL\.md$/u.test(entry.path),
+    ).length;
     if (packedSkillCount !== PACKED_WORKSPACE_GENERATED_SKILL_COUNT) {
       throw new ProofFailure(
         'E_PACK_GENERATED_SKILL_INCOMPLETE',
         'Packed pipeline prompt inventory drifted.',
-        JSON.stringify({ expected: PACKED_WORKSPACE_GENERATED_SKILL_COUNT, actual: packedSkillCount }),
+        JSON.stringify({
+          expected: PACKED_WORKSPACE_GENERATED_SKILL_COUNT,
+          actual: packedSkillCount,
+        }),
       );
     }
     pass(report, 'pack.generated-skill-portability', {
@@ -1327,7 +1443,11 @@ function main() {
     });
 
     report.packages = {
-      protocol: { ...protocolProof.summary, archiveSha256: sha256(fs.readFileSync(protocolArchive.tarball)), name: protocolProof.manifest.name },
+      protocol: {
+        ...protocolProof.summary,
+        archiveSha256: sha256(fs.readFileSync(protocolArchive.tarball)),
+        name: protocolProof.manifest.name,
+      },
       cli: {
         ...cliProof.summary,
         archiveSha256: sha256(fs.readFileSync(cliArchive.tarball)),
@@ -1384,9 +1504,13 @@ function main() {
     report.ok = true;
     report.proofDigest = packedWorkspaceProofDigest(report);
   } catch (error) {
-    const failure = error instanceof ProofFailure
-      ? error
-      : new ProofFailure('E_PACKED_PROOF_UNEXPECTED', error instanceof Error ? error.message : String(error));
+    const failure =
+      error instanceof ProofFailure
+        ? error
+        : new ProofFailure(
+            'E_PACKED_PROOF_UNEXPECTED',
+            error instanceof Error ? error.message : String(error),
+          );
     fail(report, failure.code, failure.detail ? sanitize(failure.detail, workspace) : undefined);
     report.error = {
       code: failure.code,

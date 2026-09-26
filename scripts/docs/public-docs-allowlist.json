@@ -2,8 +2,5 @@
   "_notes": {
     "model-provider": "The pipeline design engine has an optional OpenAI image provider; these two pages document it accurately."
   },
-  "model-provider": [
-    "packages/pipeline/docs/design-loop.md",
-    "packages/pipeline/docs/doctor.md"
-  ]
+  "model-provider": ["packages/pipeline/docs/design-loop.md", "packages/pipeline/docs/doctor.md"]
 }

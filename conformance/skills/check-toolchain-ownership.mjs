@@ -18,20 +18,19 @@ const excludedDirectories = new Set([
   'vendor',
 ]);
 const mutationCall = /\b(?:appendFile|copyFile|rename|writeFile)(?:Sync)?\s*\(/u;
-const promptCompilerApi = /\b(?:buildCompiledManifests|compileComposedV1|compileHostProjections|flattenCompiledAssets|readStandardSkillPackage|renderSkillForHost|writeOutputTree)\b/u;
+const promptCompilerApi =
+  /\b(?:buildCompiledManifests|compileComposedV1|compileHostProjections|flattenCompiledAssets|readStandardSkillPackage|renderSkillForHost|writeOutputTree)\b/u;
 const roleSignatures = Object.freeze({
-  'prompt-writer': (bytes) => (
-    promptCompilerApi.test(bytes)
-    && (
-      /\bdist\/plugins\/(?:claude|openai|cursor)(?:\/|\b)/u.test(bytes)
-      || /\b(?:buildCompiledManifests|compileComposedV1|compileHostProjections|flattenCompiledAssets|writeOutputTree)\b/u.test(bytes)
-    )
-  ),
-  'runtime-installer': (bytes) => (
-    /['"]\.codex['"]/u.test(bytes)
-    && /['"]skills['"]/u.test(bytes)
-    && /\bcodexSkillsRoot\b/u.test(bytes)
-  ),
+  'prompt-writer': (bytes) =>
+    promptCompilerApi.test(bytes) &&
+    (/\bdist\/plugins\/(?:claude|openai|cursor)(?:\/|\b)/u.test(bytes) ||
+      /\b(?:buildCompiledManifests|compileComposedV1|compileHostProjections|flattenCompiledAssets|writeOutputTree)\b/u.test(
+        bytes,
+      )),
+  'runtime-installer': (bytes) =>
+    /['"]\.codex['"]/u.test(bytes) &&
+    /['"]skills['"]/u.test(bytes) &&
+    /\bcodexSkillsRoot\b/u.test(bytes),
 });
 
 function fail(code, message, details = {}) {
@@ -43,7 +42,9 @@ function fail(code, message, details = {}) {
 
 function safeRepositoryPath(path, label, repositoryRoot = root) {
   if (typeof path !== 'string' || path.length === 0 || isAbsolute(path) || path.includes('\\')) {
-    fail('E_SKILL_TOOLCHAIN_OWNER_PATH_INVALID', `${label} must be a repository-relative path.`, { path });
+    fail('E_SKILL_TOOLCHAIN_OWNER_PATH_INVALID', `${label} must be a repository-relative path.`, {
+      path,
+    });
   }
   const absolute = resolve(repositoryRoot, ...path.split('/'));
   const within = relative(repositoryRoot, absolute);
@@ -85,29 +86,39 @@ export function discoverToolchainImplementations(repositoryRoot = root) {
       }
     }
   }
-  return Object.freeze(Object.fromEntries(expectedRoles.map((role) => [
-    role,
-    Object.freeze(discovered[role]),
-  ])));
+  return Object.freeze(
+    Object.fromEntries(expectedRoles.map((role) => [role, Object.freeze(discovered[role])])),
+  );
 }
 
 export function validateToolchainOwners(document, { repositoryRoot = root } = {}) {
   if (
-    document?.kind !== 'openplanr-skill-toolchain-owners'
-    || document.schemaVersion !== '1.0.0'
-    || !Array.isArray(document.owners)
+    document?.kind !== 'openplanr-skill-toolchain-owners' ||
+    document.schemaVersion !== '1.0.0' ||
+    !Array.isArray(document.owners)
   ) {
-    fail('E_SKILL_TOOLCHAIN_OWNERS_INVALID', 'Skill toolchain ownership document has an invalid kind, version, or owners list.');
+    fail(
+      'E_SKILL_TOOLCHAIN_OWNERS_INVALID',
+      'Skill toolchain ownership document has an invalid kind, version, or owners list.',
+    );
   }
 
   const byRole = new Map();
   const ownerIds = new Set();
   for (const owner of document.owners) {
     if (!expectedRoles.includes(owner?.role)) {
-      fail('E_SKILL_TOOLCHAIN_ROLE_INVALID', `Unknown skill toolchain role ${String(owner?.role)}.`, { owner });
+      fail(
+        'E_SKILL_TOOLCHAIN_ROLE_INVALID',
+        `Unknown skill toolchain role ${String(owner?.role)}.`,
+        { owner },
+      );
     }
     if (!/^[a-z][a-z0-9-]*$/u.test(owner.ownerId ?? '') || ownerIds.has(owner.ownerId)) {
-      fail('E_SKILL_TOOLCHAIN_OWNER_ID_INVALID', `Owner id ${String(owner.ownerId)} is invalid or duplicated.`, { owner });
+      fail(
+        'E_SKILL_TOOLCHAIN_OWNER_ID_INVALID',
+        `Owner id ${String(owner.ownerId)} is invalid or duplicated.`,
+        { owner },
+      );
     }
     ownerIds.add(owner.ownerId);
     const roleOwners = byRole.get(owner.role) ?? [];
@@ -115,17 +126,33 @@ export function validateToolchainOwners(document, { repositoryRoot = root } = {}
     byRole.set(owner.role, roleOwners);
 
     const absolute = safeRepositoryPath(owner.path, `${owner.role} owner path`, repositoryRoot);
-    if (!existsSync(absolute) || lstatSync(absolute).isSymbolicLink() || !lstatSync(absolute).isFile()) {
-      fail('E_SKILL_TOOLCHAIN_OWNER_MISSING', `${owner.role} owner ${owner.ownerId} does not resolve to one regular repository file.`, { path: owner.path });
-    }
-    if (!Array.isArray(owner.controls) || owner.controls.length === 0 || new Set(owner.controls).size !== owner.controls.length) {
-      fail('E_SKILL_TOOLCHAIN_CONTROLS_INVALID', `${owner.role} owner ${owner.ownerId} must declare distinct controlled surfaces.`, { owner });
+    if (
+      !existsSync(absolute) ||
+      lstatSync(absolute).isSymbolicLink() ||
+      !lstatSync(absolute).isFile()
+    ) {
+      fail(
+        'E_SKILL_TOOLCHAIN_OWNER_MISSING',
+        `${owner.role} owner ${owner.ownerId} does not resolve to one regular repository file.`,
+        { path: owner.path },
+      );
     }
     if (
-      !Array.isArray(owner.implementationPaths)
-      || owner.implementationPaths.length === 0
-      || new Set(owner.implementationPaths).size !== owner.implementationPaths.length
-      || !owner.implementationPaths.includes(owner.path)
+      !Array.isArray(owner.controls) ||
+      owner.controls.length === 0 ||
+      new Set(owner.controls).size !== owner.controls.length
+    ) {
+      fail(
+        'E_SKILL_TOOLCHAIN_CONTROLS_INVALID',
+        `${owner.role} owner ${owner.ownerId} must declare distinct controlled surfaces.`,
+        { owner },
+      );
+    }
+    if (
+      !Array.isArray(owner.implementationPaths) ||
+      owner.implementationPaths.length === 0 ||
+      new Set(owner.implementationPaths).size !== owner.implementationPaths.length ||
+      !owner.implementationPaths.includes(owner.path)
     ) {
       fail(
         'E_SKILL_TOOLCHAIN_IMPLEMENTATIONS_INVALID',
@@ -134,9 +161,21 @@ export function validateToolchainOwners(document, { repositoryRoot = root } = {}
       );
     }
     for (const path of owner.implementationPaths) {
-      const implementation = safeRepositoryPath(path, `${owner.role} implementation path`, repositoryRoot);
-      if (!existsSync(implementation) || lstatSync(implementation).isSymbolicLink() || !lstatSync(implementation).isFile()) {
-        fail('E_SKILL_TOOLCHAIN_OWNER_MISSING', `${owner.role} implementation does not resolve to one regular repository file.`, { path });
+      const implementation = safeRepositoryPath(
+        path,
+        `${owner.role} implementation path`,
+        repositoryRoot,
+      );
+      if (
+        !existsSync(implementation) ||
+        lstatSync(implementation).isSymbolicLink() ||
+        !lstatSync(implementation).isFile()
+      ) {
+        fail(
+          'E_SKILL_TOOLCHAIN_OWNER_MISSING',
+          `${owner.role} implementation does not resolve to one regular repository file.`,
+          { path },
+        );
       }
     }
   }
@@ -164,36 +203,57 @@ export function validateToolchainOwners(document, { repositoryRoot = root } = {}
       );
     }
   }
-  return Object.freeze(Object.fromEntries(expectedRoles.map((role) => [role, Object.freeze({ ...byRole.get(role)[0] })])));
+  return Object.freeze(
+    Object.fromEntries(
+      expectedRoles.map((role) => [role, Object.freeze({ ...byRole.get(role)[0] })]),
+    ),
+  );
 }
 
 function registryPath(argv) {
   if (argv.length === 0) return 'conformance/skills/toolchain-owners.json';
   if (argv.length === 2 && argv[0] === '--registry') return argv[1];
-  fail('E_USAGE', 'Usage: node conformance/skills/check-toolchain-ownership.mjs [--registry <repository-relative-path>]');
+  fail(
+    'E_USAGE',
+    'Usage: node conformance/skills/check-toolchain-ownership.mjs [--registry <repository-relative-path>]',
+  );
 }
 
 function main() {
   const path = registryPath(process.argv.slice(2));
   const absolute = safeRepositoryPath(path, 'ownership registry', root);
-  const owners = validateToolchainOwners(JSON.parse(readFileSync(absolute, 'utf8')), { repositoryRoot: root });
-  process.stdout.write(`${JSON.stringify({
-    ok: true,
-    registry: path,
-    owners,
-  }, null, 2)}\n`);
+  const owners = validateToolchainOwners(JSON.parse(readFileSync(absolute, 'utf8')), {
+    repositoryRoot: root,
+  });
+  process.stdout.write(
+    `${JSON.stringify(
+      {
+        ok: true,
+        registry: path,
+        owners,
+      },
+      null,
+      2,
+    )}\n`,
+  );
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {
     main();
   } catch (error) {
-    process.stderr.write(`${JSON.stringify({
-      ok: false,
-      code: error.code ?? 'E_SKILL_TOOLCHAIN_OWNERS_UNEXPECTED',
-      message: error.message,
-      details: error.details ?? {},
-    }, null, 2)}\n`);
+    process.stderr.write(
+      `${JSON.stringify(
+        {
+          ok: false,
+          code: error.code ?? 'E_SKILL_TOOLCHAIN_OWNERS_UNEXPECTED',
+          message: error.message,
+          details: error.details ?? {},
+        },
+        null,
+        2,
+      )}\n`,
+    );
     process.exitCode = error.code === 'E_USAGE' ? 2 : 1;
   }
 }

@@ -18,7 +18,10 @@ const expectedOrder = [
 ];
 
 test('the consolidated generator graph has one deterministic bounded order', () => {
-  assert.deepEqual(GENERATOR_STEPS.map(({ id }) => id), expectedOrder);
+  assert.deepEqual(
+    GENERATOR_STEPS.map(({ id }) => id),
+    expectedOrder,
+  );
   for (const step of GENERATOR_STEPS) {
     assert.ok(step.candidates.length > 0, step.id);
     for (const candidate of step.candidates) {
@@ -33,9 +36,15 @@ test('the consolidated generator graph has one deterministic bounded order', () 
 
 test('check plan selects the isolated dashboard verifier, never the write-mode build script', () => {
   const plan = resolveGeneratorPlan('check');
-  assert.deepEqual(plan.map(({ id }) => id), expectedOrder);
+  assert.deepEqual(
+    plan.map(({ id }) => id),
+    expectedOrder,
+  );
   for (const step of plan.filter(({ status }) => status === 'run')) {
-    assert.ok(step.arguments.includes('--check'), `${step.id} must receive an explicit check contract`);
+    assert.ok(
+      step.arguments.includes('--check'),
+      `${step.id} must receive an explicit check contract`,
+    );
     assert.doesNotMatch(step.script, /build-dashboard-assets/u);
   }
   const dashboard = plan.find(({ id }) => id === 'dashboard-package-assets');
@@ -43,7 +52,9 @@ test('check plan selects the isolated dashboard verifier, never the write-mode b
 });
 
 test('write plan selects the canonical dashboard build-and-copy boundary', () => {
-  const dashboard = resolveGeneratorPlan('write').find(({ id }) => id === 'dashboard-package-assets');
+  const dashboard = resolveGeneratorPlan('write').find(
+    ({ id }) => id === 'dashboard-package-assets',
+  );
   assert.equal(dashboard.status, 'run');
   assert.equal(dashboard.script, 'scripts/dashboard/build-dashboard-assets.mjs');
 });

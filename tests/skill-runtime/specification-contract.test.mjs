@@ -40,7 +40,10 @@ test('mode guidance loads stack, design, and database context deterministically'
 
     assert.match(guidance, /ActiveStackFiles/u, path);
     assert.ok(packageIndex >= 0, `${path}: package stack lookup missing`);
-    assert.ok(projectIndex > packageIndex, `${path}: project override must load after package default`);
+    assert.ok(
+      projectIndex > packageIndex,
+      `${path}: project override must load after package default`,
+    );
     assert.match(guidance, /project file overrides\s+the installed file/iu, path);
     assert.match(guidance, /design-spec\.md/iu, path);
     assert.match(guidance, /\.png/iu, path);
@@ -56,7 +59,10 @@ test('R2 and output paths stay stable in both modes', () => {
 
   for (const guidance of [agent, defaultMode, specMode]) {
     assert.match(guidance, /one.*UI.*frontend-agent.*one.*Tech.*backend-agent/isu);
-    assert.match(guidance, /without design.*one Tech task.*backend-agent|has_design = false.*one.*Tech/isu);
+    assert.match(
+      guidance,
+      /without design.*one Tech task.*backend-agent|has_design = false.*one.*Tech/isu,
+    );
     assert.match(guidance, /never (?:emit|write) (?:more than two|a third) task/iu);
   }
 
@@ -95,7 +101,10 @@ test('host-native skill references and deterministic templates share one artifac
     assert.ok(specTemplate.includes(heading), `spec template missing ${heading}`);
     assert.ok(specContract.includes(`\`${heading}\``), `specification contract missing ${heading}`);
   }
-  assert.match(specSkill, /\[the specification contract\]\(references\/specification-contract\.md\)/u);
+  assert.match(
+    specSkill,
+    /\[the specification contract\]\(references\/specification-contract\.md\)/u,
+  );
 
   for (const heading of [
     '## User Story',
@@ -107,7 +116,10 @@ test('host-native skill references and deterministic templates share one artifac
   ]) {
     assert.match(storyTemplate, new RegExp(heading, 'u'));
     assert.match(guidance, new RegExp(heading.replace('## ', '`## ') + '`', 'u'));
-    assert.ok(artifactContract.includes(`\`${heading}\``), `plan artifact contract missing ${heading}`);
+    assert.ok(
+      artifactContract.includes(`\`${heading}\``),
+      `plan artifact contract missing ${heading}`,
+    );
   }
 
   for (const heading of [
@@ -122,12 +134,22 @@ test('host-native skill references and deterministic templates share one artifac
   ]) {
     assert.ok(taskTemplate.includes(heading), `task template missing ${heading}`);
     assert.ok(guidance.includes(`\`${heading}\``), `agent guidance missing ${heading}`);
-    assert.ok(artifactContract.includes(`\`${heading}\``), `plan artifact contract missing ${heading}`);
+    assert.ok(
+      artifactContract.includes(`\`${heading}\``),
+      `plan artifact contract missing ${heading}`,
+    );
   }
 
   assert.match(planSkill, /\[the artifact contract\]\(references\/artifact-contract\.md\)/u);
 
-  for (const field of ['rationale:', 'dependsOn:', 'preserve:', 'reviewRisks:', 'browserSurfaces:', 'acceptanceRefs:']) {
+  for (const field of [
+    'rationale:',
+    'dependsOn:',
+    'preserve:',
+    'reviewRisks:',
+    'browserSurfaces:',
+    'acceptanceRefs:',
+  ]) {
     assert.ok(taskTemplate.includes(field), `task template missing ${field}`);
   }
 });
@@ -136,8 +158,16 @@ test('task dependencies and diagnostics guide execution without workflow bookkee
   for (const path of [agentPath, defaultPath, specDrivenPath]) {
     const guidance = read(path);
     assert.match(guidance, /dependsOn/u, path);
-    assert.match(guidance, /only when a task consumes another task's output|only for real output dependencies/iu, path);
-    assert.match(guidance, /do not (?:derive|infer).*file overlap|never infer ordering from file overlap/isu, path);
+    assert.match(
+      guidance,
+      /only when a task consumes another task's output|only for real output dependencies/iu,
+      path,
+    );
+    assert.match(
+      guidance,
+      /do not (?:derive|infer).*file overlap|never infer ordering from file overlap/isu,
+      path,
+    );
     assert.match(guidance, /exact path|artifact path/iu, path);
     assert.doesNotMatch(
       guidance,

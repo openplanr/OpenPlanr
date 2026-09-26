@@ -7,10 +7,11 @@ import { fileURLToPath } from 'node:url';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
-const command = (script, writeArguments, checkArguments = [...writeArguments, '--check']) => Object.freeze({
-  write: Object.freeze({ script, arguments: Object.freeze(writeArguments) }),
-  check: Object.freeze({ script, arguments: Object.freeze(checkArguments) }),
-});
+const command = (script, writeArguments, checkArguments = [...writeArguments, '--check']) =>
+  Object.freeze({
+    write: Object.freeze({ script, arguments: Object.freeze(writeArguments) }),
+    check: Object.freeze({ script, arguments: Object.freeze(checkArguments) }),
+  });
 
 export const GENERATOR_STEPS = Object.freeze([
   Object.freeze({
@@ -31,15 +32,27 @@ export const GENERATOR_STEPS = Object.freeze([
     id: 'protocol-public-projection',
     required: true,
     candidates: Object.freeze([
-      command('scripts/protocol/project-protocol.mjs', ['--write', '--target', 'packages/pipeline'], ['--check', '--target', 'packages/pipeline']),
+      command(
+        'scripts/protocol/project-protocol.mjs',
+        ['--write', '--target', 'packages/pipeline'],
+        ['--check', '--target', 'packages/pipeline'],
+      ),
     ]),
   }),
   Object.freeze({
     id: 'dashboard-contracts',
     required: true,
     candidates: Object.freeze([
-      command('packages/protocol/scripts/generate-dashboard-surface-schema-data.mjs', [], ['--check']),
-      command('packages/pipeline/scripts/generate-dashboard-surface-schema-data.mjs', [], ['--check']),
+      command(
+        'packages/protocol/scripts/generate-dashboard-surface-schema-data.mjs',
+        [],
+        ['--check'],
+      ),
+      command(
+        'packages/pipeline/scripts/generate-dashboard-surface-schema-data.mjs',
+        [],
+        ['--check'],
+      ),
     ]),
   }),
   Object.freeze({
@@ -60,7 +73,11 @@ export const GENERATOR_STEPS = Object.freeze([
     id: 'operate-artifact-design-public-projections',
     required: true,
     candidates: Object.freeze([
-      command('scripts/domains/project-domains.mjs', ['--write', '--target', 'packages/pipeline'], ['--check', '--target', 'packages/pipeline']),
+      command(
+        'scripts/domains/project-domains.mjs',
+        ['--write', '--target', 'packages/pipeline'],
+        ['--check', '--target', 'packages/pipeline'],
+      ),
     ]),
   }),
   Object.freeze({
@@ -87,8 +104,14 @@ export const GENERATOR_STEPS = Object.freeze([
     activeWhen: Object.freeze(['apps/dashboard/package.json']),
     candidates: Object.freeze([
       Object.freeze({
-        write: Object.freeze({ script: 'scripts/dashboard/build-dashboard-assets.mjs', arguments: Object.freeze([]) }),
-        check: Object.freeze({ script: 'scripts/dashboard/check-dashboard-assets.mjs', arguments: Object.freeze(['--check']) }),
+        write: Object.freeze({
+          script: 'scripts/dashboard/build-dashboard-assets.mjs',
+          arguments: Object.freeze([]),
+        }),
+        check: Object.freeze({
+          script: 'scripts/dashboard/check-dashboard-assets.mjs',
+          arguments: Object.freeze(['--check']),
+        }),
       }),
     ]),
   }),
@@ -109,20 +132,45 @@ function availableScript(script) {
 export function resolveGeneratorPlan(mode, { exists = existsSync } = {}) {
   if (!['write', 'check'].includes(mode)) throw new Error(`Unsupported generation mode: ${mode}`);
   return GENERATOR_STEPS.map((step) => {
-    const active = !step.activeWhen || step.activeWhen.some((path) => exists(resolve(repoRoot, path)));
-    if (!active) return Object.freeze({ id: step.id, status: 'deferred', reason: `inactive until one of: ${step.activeWhen.join(', ')}` });
-    const selected = step.candidates.map((candidate) => candidate[mode]).find(({ script }) => availableScript(script));
+    const active =
+      !step.activeWhen || step.activeWhen.some((path) => exists(resolve(repoRoot, path)));
+    if (!active)
+      return Object.freeze({
+        id: step.id,
+        status: 'deferred',
+        reason: `inactive until one of: ${step.activeWhen.join(', ')}`,
+      });
+    const selected = step.candidates
+      .map((candidate) => candidate[mode])
+      .find(({ script }) => availableScript(script));
     if (!selected) {
       const candidates = step.candidates.map((candidate) => candidate[mode].script);
-      if (step.required) throw new Error(`Required generator ${step.id} is missing. Expected one of: ${candidates.join(', ')}`);
-      return Object.freeze({ id: step.id, status: 'deferred', reason: `no generator landed: ${candidates.join(', ')}` });
+      if (step.required)
+        throw new Error(
+          `Required generator ${step.id} is missing. Expected one of: ${candidates.join(', ')}`,
+        );
+      return Object.freeze({
+        id: step.id,
+        status: 'deferred',
+        reason: `no generator landed: ${candidates.join(', ')}`,
+      });
     }
-    return Object.freeze({ id: step.id, status: 'run', script: selected.script, arguments: selected.arguments });
+    return Object.freeze({
+      id: step.id,
+      status: 'run',
+      script: selected.script,
+      arguments: selected.arguments,
+    });
   });
 }
 
 function indent(bytes) {
-  return bytes.trimEnd().split('\n').filter(Boolean).map((line) => `    ${line}`).join('\n');
+  return bytes
+    .trimEnd()
+    .split('\n')
+    .filter(Boolean)
+    .map((line) => `    ${line}`)
+    .join('\n');
 }
 
 export function runGenerationGraph(mode) {
@@ -148,8 +196,12 @@ export function runGenerationGraph(mode) {
     if (stdout) process.stdout.write(`${stdout}\n`);
     if (result.error || result.signal || result.status !== 0) {
       if (stderr) process.stderr.write(`${stderr}\n`);
-      const reason = result.error?.message ?? (result.signal ? `signal ${result.signal}` : `exit ${result.status}`);
-      throw new Error(`Generator step ${step.id} failed (${reason}): ${process.execPath} ${[step.script, ...step.arguments].join(' ')}`);
+      const reason =
+        result.error?.message ??
+        (result.signal ? `signal ${result.signal}` : `exit ${result.status}`);
+      throw new Error(
+        `Generator step ${step.id} failed (${reason}): ${process.execPath} ${[step.script, ...step.arguments].join(' ')}`,
+      );
     }
     if (stderr) process.stderr.write(`${stderr}\n`);
     ran += 1;

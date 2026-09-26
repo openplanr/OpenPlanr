@@ -16,7 +16,10 @@ import {
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { DIAGRAM_V16_REGISTRIES, PROTOCOL_V17_REGISTRIES } from '../../packages/protocol/src/skill-source-contracts.mjs';
+import {
+  DIAGRAM_V16_REGISTRIES,
+  PROTOCOL_V17_REGISTRIES,
+} from '../../packages/protocol/src/skill-source-contracts.mjs';
 
 const workspaceRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const manifestRelative = 'lib/generated/protocol-projection.json';
@@ -49,7 +52,9 @@ const mappings = Object.freeze([
   Object.freeze({ source: 'packages/protocol/schemas', target: 'schemas', rejectExtras: true }),
   Object.freeze({ source: 'packages/protocol/registry', target: 'registry', rejectExtras: false }),
   Object.freeze({
-    source: 'packages/protocol/lib/dashboard', target: 'lib/dashboard', rejectExtras: false,
+    source: 'packages/protocol/lib/dashboard',
+    target: 'lib/dashboard',
+    rejectExtras: false,
     include: (path) => DASHBOARD_CONTRACT_FILES.has(path),
   }),
   Object.freeze({
@@ -62,7 +67,8 @@ const mappings = Object.freeze([
     source: 'packages/protocol/registries',
     target: 'registry/v1.5.0',
     rejectExtras: true,
-    include: (path) => !V16_REGISTRIES.has(path) && !V17_REGISTRIES.has(path) && !V113_REGISTRIES.has(path),
+    include: (path) =>
+      !V16_REGISTRIES.has(path) && !V17_REGISTRIES.has(path) && !V113_REGISTRIES.has(path),
   }),
   Object.freeze({
     source: 'packages/protocol/registries',
@@ -81,7 +87,12 @@ const mappings = Object.freeze([
 function parseArgs(argv) {
   const mode = argv.includes('--write') ? 'write' : argv.includes('--check') ? 'check' : null;
   const targetIndex = argv.indexOf('--target');
-  if (!mode || (argv.includes('--write') && argv.includes('--check')) || targetIndex < 0 || !argv[targetIndex + 1]) {
+  if (
+    !mode ||
+    (argv.includes('--write') && argv.includes('--check')) ||
+    targetIndex < 0 ||
+    !argv[targetIndex + 1]
+  ) {
     throw new Error('Usage: project-protocol.mjs (--write|--check) --target <pipeline-root>');
   }
   return { mode, target: resolve(argv[targetIndex + 1]) };
@@ -90,7 +101,9 @@ function parseArgs(argv) {
 function walk(root, prefix = '') {
   if (lstatSync(root).isSymbolicLink()) throw new Error(`Protocol source is a symlink: ${root}`);
   const files = [];
-  for (const entry of readdirSync(root, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+  for (const entry of readdirSync(root, { withFileTypes: true }).sort((a, b) =>
+    a.name.localeCompare(b.name),
+  )) {
     const absolute = join(root, entry.name);
     const path = prefix ? `${prefix}/${entry.name}` : entry.name;
     if (entry.isSymbolicLink()) throw new Error(`Protocol source is a symlink: ${absolute}`);
@@ -117,9 +130,11 @@ function atomicWrite(path, bytes, mode) {
 }
 
 const { mode, target } = parseArgs(process.argv.slice(2));
-if (!existsSync(join(target, 'package.json'))) throw new Error(`Pipeline package is missing: ${target}`);
+if (!existsSync(join(target, 'package.json')))
+  throw new Error(`Pipeline package is missing: ${target}`);
 const targetManifest = JSON.parse(readFileSync(join(target, 'package.json'), 'utf8'));
-if (targetManifest.name !== 'planr-pipeline') throw new Error('Protocol projection target is not planr-pipeline.');
+if (targetManifest.name !== 'planr-pipeline')
+  throw new Error('Protocol projection target is not planr-pipeline.');
 
 const entries = [];
 for (const mapping of mappings) {
@@ -128,7 +143,8 @@ for (const mapping of mappings) {
     if (mapping.include && !mapping.include(source.path)) continue;
     const targetRelative = `${mapping.target}/${source.path}`;
     const targetPath = resolve(target, targetRelative);
-    if (!contained(target, targetPath)) throw new Error(`Protocol projection escapes target: ${targetRelative}`);
+    if (!contained(target, targetPath))
+      throw new Error(`Protocol projection escapes target: ${targetRelative}`);
     const bytes = readFileSync(source.absolute);
     entries.push({
       source: `${mapping.source}/${source.path}`,
@@ -165,29 +181,46 @@ for (const mapping of mappings.filter((entry) => entry.rejectExtras)) {
 }
 
 const previousManifestPath = resolve(target, manifestRelative);
-const preservedV16SkillRegistries = new Set([...V17_REGISTRIES].map((path) => `registry/v1.6.0/${path}`));
+const preservedV16SkillRegistries = new Set(
+  [...V17_REGISTRIES].map((path) => `registry/v1.6.0/${path}`),
+);
 if (mode === 'write' && existsSync(previousManifestPath)) {
   const previous = JSON.parse(readFileSync(previousManifestPath, 'utf8'));
   for (const item of previous.entries ?? []) {
-    if (typeof item.target !== 'string' || expectedTargets.has(item.target) || preservedV16SkillRegistries.has(item.target)) continue;
+    if (
+      typeof item.target !== 'string' ||
+      expectedTargets.has(item.target) ||
+      preservedV16SkillRegistries.has(item.target)
+    )
+      continue;
     const stale = resolve(target, item.target);
-    if (contained(target, stale) && existsSync(stale) && !lstatSync(stale).isDirectory()) unlinkSync(stale);
+    if (contained(target, stale) && existsSync(stale) && !lstatSync(stale).isDirectory())
+      unlinkSync(stale);
   }
 }
 
-const renderedManifest = Buffer.from(`${JSON.stringify({
-  kind: 'openplanr-protocol-projection',
-  schemaVersion: '1.0.0',
-  generator: 'scripts/protocol/project-protocol.mjs',
-  entries: entries.map(({ source, target: targetPath, sha256: digest, mode: fileMode }) => ({
-    source,
-    target: targetPath,
-    sha256: digest,
-    mode: fileMode.toString(8),
-  })),
-}, null, 2)}\n`);
+const renderedManifest = Buffer.from(
+  `${JSON.stringify(
+    {
+      kind: 'openplanr-protocol-projection',
+      schemaVersion: '1.0.0',
+      generator: 'scripts/protocol/project-protocol.mjs',
+      entries: entries.map(({ source, target: targetPath, sha256: digest, mode: fileMode }) => ({
+        source,
+        target: targetPath,
+        sha256: digest,
+        mode: fileMode.toString(8),
+      })),
+    },
+    null,
+    2,
+  )}\n`,
+);
 
-if (!existsSync(previousManifestPath) || !readFileSync(previousManifestPath).equals(renderedManifest)) {
+if (
+  !existsSync(previousManifestPath) ||
+  !readFileSync(previousManifestPath).equals(renderedManifest)
+) {
   drift.push(`${manifestRelative}: bytes`);
 }
 
@@ -199,4 +232,6 @@ if (mode === 'write') {
   atomicWrite(previousManifestPath, renderedManifest, 0o644);
 }
 
-process.stdout.write(`${mode === 'check' ? 'Checked' : 'Projected'} ${entries.length} Protocol files into planr-pipeline.\n`);
+process.stdout.write(
+  `${mode === 'check' ? 'Checked' : 'Projected'} ${entries.length} Protocol files into planr-pipeline.\n`,
+);

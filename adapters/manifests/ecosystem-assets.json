@@ -98,11 +98,11 @@
     },
     {
       "path": "scripts/lib/workspace-release-policy.mjs",
-      "digest": "sha256:015fba5b22b21554d403565094bac09ffa9007856408344b2a36bf81362a3be9"
+      "digest": "sha256:a43438f46cbf7d2003c6b21c9c050ad02aed6be241294195450228b8c79c4f95"
     },
     {
       "path": "scripts/marketplace/generate-ecosystem.mjs",
-      "digest": "sha256:47b84cb5571976fa02a566e67a5843dbc10671aad143551912833b3ccae95259"
+      "digest": "sha256:64227295b5f31fe32e98d47b2b47a594bacb955feac801287559e1168867e3b9"
     }
   ],
   "outputs": [

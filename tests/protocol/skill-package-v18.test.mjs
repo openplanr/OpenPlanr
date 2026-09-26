@@ -56,12 +56,16 @@ test('Protocol 1.8 rejects unsafe resources and executable non-scripts', () => {
 });
 
 test('Protocol 1.8 validates the generated semantic/utility command boundary', () => {
-  const catalog = JSON.parse(readFileSync(
-    new URL('../../docs/generated/utility-command-catalog.json', import.meta.url),
-    'utf8',
-  ));
+  const catalog = JSON.parse(
+    readFileSync(
+      new URL('../../docs/generated/utility-command-catalog.json', import.meta.url),
+      'utf8',
+    ),
+  );
   assert.deepEqual(validateProtocolArtifact('utility-command-catalog', catalog), []);
   assert.ok(catalog.retired.some(({ path }) => path === 'plan'));
   assert.ok(catalog.retired.some(({ path }) => path === 'spec decompose'));
-  assert.ok(catalog.active.every(({ classification }) => classification === 'deterministic-preserved'));
+  assert.ok(
+    catalog.active.every(({ classification }) => classification === 'deterministic-preserved'),
+  );
 });

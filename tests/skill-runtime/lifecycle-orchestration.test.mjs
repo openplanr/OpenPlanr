@@ -1,12 +1,5 @@
 import assert from 'node:assert/strict';
-import {
-  existsSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  symlinkSync,
-  writeFileSync,
-} from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -29,53 +22,46 @@ import {
 } from '../../packages/skill-runtime/src/lifecycle/index.mjs';
 
 const root = resolve(import.meta.dirname, '..', '..');
-const fixture = JSON.parse(readFileSync(join(
-  root,
-  'packages',
-  'skill-runtime',
-  'fixtures',
-  'lifecycle',
-  'runtime-journeys.json',
-), 'utf8'));
+const fixture = JSON.parse(
+  readFileSync(
+    join(root, 'packages', 'skill-runtime', 'fixtures', 'lifecycle', 'runtime-journeys.json'),
+    'utf8',
+  ),
+);
 const consentConfirmation = {
-  ...JSON.parse(readFileSync(join(
-    root,
-    'tests',
-    'protocol',
-    'fixtures',
-    'skill-source',
-    'skill-consent-record.json',
-  ), 'utf8')).confirmation,
+  ...JSON.parse(
+    readFileSync(
+      join(root, 'tests', 'protocol', 'fixtures', 'skill-source', 'skill-consent-record.json'),
+      'utf8',
+    ),
+  ).confirmation,
   arguments: ['--skill', fixture.skillId, '--subject', 'learning', '--decision', 'granted'],
   projectIdentity: fixture.projectIdentity,
   createdAt: '2026-08-31T07:55:00.000Z',
   confirmedAt: '2026-08-31T07:56:00.000Z',
   expiresAt: '2026-08-31T08:05:00.000Z',
 };
-const hostProfiles = JSON.parse(readFileSync(join(
-  root,
-  'packages',
-  'protocol',
-  'registries',
-  'skill-host-profiles.json',
-), 'utf8'));
-const capabilityMatrix = JSON.parse(readFileSync(join(
-  root,
-  'packages',
-  'skill-runtime',
-  'fixtures',
-  'resolver',
-  'capability-matrix.json',
-), 'utf8'));
-const interactionQuestions = JSON.parse(readFileSync(join(
-  root,
-  'packages',
-  'skill-runtime',
-  'fixtures',
-  'resolver',
-  'question-fallbacks.json',
-), 'utf8'));
-const codexProfile = hostProfiles.profiles.find(({ hostProfileId }) => hostProfileId === 'codex-default');
+const hostProfiles = JSON.parse(
+  readFileSync(
+    join(root, 'packages', 'protocol', 'registries', 'skill-host-profiles.json'),
+    'utf8',
+  ),
+);
+const capabilityMatrix = JSON.parse(
+  readFileSync(
+    join(root, 'packages', 'skill-runtime', 'fixtures', 'resolver', 'capability-matrix.json'),
+    'utf8',
+  ),
+);
+const interactionQuestions = JSON.parse(
+  readFileSync(
+    join(root, 'packages', 'skill-runtime', 'fixtures', 'resolver', 'question-fallbacks.json'),
+    'utf8',
+  ),
+);
+const codexProfile = hostProfiles.profiles.find(
+  ({ hostProfileId }) => hostProfileId === 'codex-default',
+);
 
 function temporaryProject() {
   const projectRoot = mkdtempSync(join(tmpdir(), 'openplanr-skill-lifecycle-'));
@@ -270,7 +256,10 @@ test('compatibility and explicit close use concise fresh-state behavior', () => 
     });
     const closed = closeSessionProgress({ projectRoot, sessionId: fixture.sessionId });
     assert.equal(closed.removed, true);
-    assert.equal(closeSessionProgress({ projectRoot, sessionId: fixture.sessionId }).removed, false);
+    assert.equal(
+      closeSessionProgress({ projectRoot, sessionId: fixture.sessionId }).removed,
+      false,
+    );
   } finally {
     removeProject(projectRoot);
   }
@@ -327,7 +316,12 @@ test('external and destructive operations dispatch once to the host boundary', a
 
   const hostFailure = new Error('host stopped the effect');
   await assert.rejects(
-    executeAtEffectBoundary({ operationClass: 'destructive', hostExecutor: () => { throw hostFailure; } }),
+    executeAtEffectBoundary({
+      operationClass: 'destructive',
+      hostExecutor: () => {
+        throw hostFailure;
+      },
+    }),
     (error) => error === hostFailure,
   );
 });

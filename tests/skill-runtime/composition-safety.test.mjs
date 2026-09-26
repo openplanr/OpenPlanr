@@ -1,5 +1,13 @@
 import assert from 'node:assert/strict';
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import {
+  cpSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import test from 'node:test';
@@ -29,7 +37,16 @@ function caught(fn) {
 }
 
 test('assertSafeSourcePath rejects absolute, drive, backslash, and traversal paths at the compiler boundary', () => {
-  for (const bad of ['/etc/passwd', 'C:\\Windows\\system32', 'C:/Windows', 'C:secret.md', '\\\\server\\share', 'modules\\secret.md', 'a//b.md', 'a/./b.md']) {
+  for (const bad of [
+    '/etc/passwd',
+    'C:\\Windows\\system32',
+    'C:/Windows',
+    'C:secret.md',
+    '\\\\server\\share',
+    'modules\\secret.md',
+    'a//b.md',
+    'a/./b.md',
+  ]) {
     const error = caught(() => assertSafeSourcePath(bad));
     assert.ok(error instanceof SkillRuntimeError, bad);
     assert.equal(error.code, 'E_SKILL_SOURCE_PATH_INVALID', bad);
@@ -65,23 +82,39 @@ test('the authoring loader rejects a source beneath a symlinked parent directory
 
 test('composeIncludes guards untrusted include-marker paths before any readSource call', () => {
   const readSource = () => 'should never be read\n';
-  const withEscape = '---\nname: x\ndescription: y\n---\n\n<!-- openplanr:include:start ../evil.md -->\nx\n<!-- openplanr:include:end -->\n';
-  const error = caught(() => composeIncludes(withEscape, { sourcePath: 'skills/x/SKILL.md', readSource }));
+  const withEscape =
+    '---\nname: x\ndescription: y\n---\n\n<!-- openplanr:include:start ../evil.md -->\nx\n<!-- openplanr:include:end -->\n';
+  const error = caught(() =>
+    composeIncludes(withEscape, { sourcePath: 'skills/x/SKILL.md', readSource }),
+  );
   assert.ok(error instanceof SkillRuntimeError);
   assert.equal(error.code, 'E_SKILL_SOURCE_PATH_ESCAPE');
 });
 
 test('compileComposedV1 rejects an absolute template path handed to a permissive readSource', () => {
-  const { skillSource, skillSourceCustody, modules, hostProfilesByKey, readSource } = loadComposedSkill({ skillDir: example });
+  const { skillSource, skillSourceCustody, modules, hostProfilesByKey, readSource } =
+    loadComposedSkill({ skillDir: example });
   const hostProfile = hostProfilesByKey.get('minimal-claude-code@1.0.0');
-  const escaped = { ...skillSource, template: { path: '/etc/passwd', digest: skillSource.template.digest } };
-  const error = caught(() => compileComposedV1({ skillSource: escaped, skillSourceCustody, modules, hostProfile, readSource }));
+  const escaped = {
+    ...skillSource,
+    template: { path: '/etc/passwd', digest: skillSource.template.digest },
+  };
+  const error = caught(() =>
+    compileComposedV1({
+      skillSource: escaped,
+      skillSourceCustody,
+      modules,
+      hostProfile,
+      readSource,
+    }),
+  );
   assert.ok(error instanceof SkillRuntimeError);
   assert.equal(error.code, 'E_SKILL_SOURCE_PATH_INVALID');
 });
 
 test('two routed references to the same moduleId at different versions fail with a collision diagnostic', () => {
-  const { skillSource, skillSourceCustody, modules, hostProfilesByKey, readSource } = loadComposedSkill({ skillDir: example });
+  const { skillSource, skillSourceCustody, modules, hostProfilesByKey, readSource } =
+    loadComposedSkill({ skillDir: example });
   const hostProfile = hostProfilesByKey.get('minimal-claude-code@1.0.0');
   const reference = modules.find((module) => module.moduleId === 'hello-reference');
   const secondVersion = { ...reference, moduleVersion: '2.0.0' };
@@ -89,11 +122,33 @@ test('two routed references to the same moduleId at different versions fail with
   const collidingSkill = {
     ...skillSource,
     references: [
-      { module: { moduleId: 'hello-reference', moduleVersion: '1.0.0', digest: reference.source.digest }, routed: true },
-      { module: { moduleId: 'hello-reference', moduleVersion: '2.0.0', digest: reference.source.digest }, routed: true },
+      {
+        module: {
+          moduleId: 'hello-reference',
+          moduleVersion: '1.0.0',
+          digest: reference.source.digest,
+        },
+        routed: true,
+      },
+      {
+        module: {
+          moduleId: 'hello-reference',
+          moduleVersion: '2.0.0',
+          digest: reference.source.digest,
+        },
+        routed: true,
+      },
     ],
   };
-  const error = caught(() => compileComposedV1({ skillSource: collidingSkill, skillSourceCustody, modules: modulesWithTwo, hostProfile, readSource }));
+  const error = caught(() =>
+    compileComposedV1({
+      skillSource: collidingSkill,
+      skillSourceCustody,
+      modules: modulesWithTwo,
+      hostProfile,
+      readSource,
+    }),
+  );
   assert.ok(error instanceof SkillRuntimeError);
   assert.equal(error.code, 'E_SKILL_ROUTED_OUTPUT_COLLISION');
   assert.equal(error.details.path, 'references/hello-reference.md');
@@ -102,14 +157,20 @@ test('two routed references to the same moduleId at different versions fail with
 });
 
 test('an incompatible host profile fails immediately with a clear diagnostic, not deep in rendering', () => {
-  const { skillSource, skillSourceCustody, modules, readSource } = loadComposedSkill({ skillDir: example });
+  const { skillSource, skillSourceCustody, modules, readSource } = loadComposedSkill({
+    skillDir: example,
+  });
   const bogus = {
-    hostProfileId: 'bogus', hostProfileVersion: '1.0.0', host: 'jetbrains',
+    hostProfileId: 'bogus',
+    hostProfileVersion: '1.0.0',
+    host: 'jetbrains',
     authorityCeiling: skillSource.authorityCeiling,
     source: { path: 'profiles/claude-code.md', digest: sha256('x') },
     overlayModules: [],
   };
-  const error = caught(() => compileComposedV1({ skillSource, skillSourceCustody, modules, hostProfile: bogus, readSource }));
+  const error = caught(() =>
+    compileComposedV1({ skillSource, skillSourceCustody, modules, hostProfile: bogus, readSource }),
+  );
   assert.ok(error instanceof SkillRuntimeError);
   assert.equal(error.code, 'E_SKILL_HOST_PROFILE_INCOMPATIBLE');
   assert.equal(error.details.host, 'jetbrains');
@@ -117,32 +178,41 @@ test('an incompatible host profile fails immediately with a clear diagnostic, no
 });
 
 test('a non-portable composed-v1 asset is rejected by check and evaluate rather than silently passing', () => {
-  const { skillSource, skillSourceCustody, modules, hostProfilesByKey, readSource } = loadComposedSkill({ skillDir: example });
+  const { skillSource, skillSourceCustody, modules, hostProfilesByKey, readSource } =
+    loadComposedSkill({ skillDir: example });
   // Target codex, but a module body embeds a Claude plugin path the codex
   // projection must never carry.
   const codexProfile = {
     ...hostProfilesByKey.get('minimal-claude-code@1.0.0'),
-    hostProfileId: 'minimal-codex', host: 'codex',
+    hostProfileId: 'minimal-codex',
+    host: 'codex',
   };
   const nonPortable = '# Hello\n\nUse ${CLAUDE_PLUGIN_ROOT}/agents to begin.\n';
-  const poisonedReadSource = (path) => (
-    path.endsWith('hello-intro.md') ? nonPortable : readSource(path)
-  );
+  const poisonedReadSource = (path) =>
+    path.endsWith('hello-intro.md') ? nonPortable : readSource(path);
   // Re-digest the poisoned module so custody does not reject it first; the point is
   // to prove portability catches a byte-valid but non-portable projection.
-  const poisonedModules = modules.map((module) => (
+  const poisonedModules = modules.map((module) =>
     module.moduleId === 'hello-intro'
       ? { ...module, source: { path: module.source.path, digest: sha256(nonPortable) } }
-      : module
-  ));
+      : module,
+  );
   const poisonedSkill = {
     ...skillSource,
     hostProfiles: [{ id: 'minimal-codex', version: '1.0.0' }],
-    modules: skillSource.modules.map((ref) => (
-      ref.moduleId === 'hello-intro' ? { ...ref, digest: sha256(nonPortable) } : ref
-    )),
+    modules: skillSource.modules.map((ref) =>
+      ref.moduleId === 'hello-intro' ? { ...ref, digest: sha256(nonPortable) } : ref,
+    ),
   };
-  const error = caught(() => compileComposedV1({ skillSource: poisonedSkill, skillSourceCustody, modules: poisonedModules, hostProfile: codexProfile, readSource: poisonedReadSource }));
+  const error = caught(() =>
+    compileComposedV1({
+      skillSource: poisonedSkill,
+      skillSourceCustody,
+      modules: poisonedModules,
+      hostProfile: codexProfile,
+      readSource: poisonedReadSource,
+    }),
+  );
   assert.ok(error instanceof SkillRuntimeError);
   assert.equal(error.code, 'E_GENERATED_ASSET_NOT_PORTABLE');
 });
@@ -153,7 +223,9 @@ test('strict foreign-host checks apply to composed assets without changing markd
   const foreignCodex = 'Read .codex/stacks, then invoke $planr-secret.\n';
   // Frozen markdown-v1 may contain cross-host explanatory prose.
   assert.doesNotThrow(() => assertPortableAsset('skills/x/SKILL.md', foreignCodex, 'claude-code'));
-  const error = caught(() => assertPortableAsset('skills/x/SKILL.md', foreignCodex, 'claude-code', authority));
+  const error = caught(() =>
+    assertPortableAsset('skills/x/SKILL.md', foreignCodex, 'claude-code', authority),
+  );
   assert.equal(error.code, 'E_GENERATED_ASSET_NOT_PORTABLE');
   assert.match(error.details.violation, /Codex/u);
 
@@ -163,7 +235,10 @@ test('strict foreign-host checks apply to composed assets without changing markd
     ['pipeline', '.codex/stacks/backend.md'],
   ];
   for (const [host, bytes] of matrices) {
-    assert.equal(caught(() => assertPortableAsset('skills/x/SKILL.md', bytes, host, authority)).code, 'E_GENERATED_ASSET_NOT_PORTABLE');
+    assert.equal(
+      caught(() => assertPortableAsset('skills/x/SKILL.md', bytes, host, authority)).code,
+      'E_GENERATED_ASSET_NOT_PORTABLE',
+    );
   }
 });
 
@@ -171,46 +246,97 @@ test('composed portability rejects undeclared tools, runtime operations, and imp
   const { hostProfilesByKey } = loadComposedSkill({ skillDir: example });
   const authority = hostProfilesByKey.get('minimal-claude-code@1.0.0').authorityCeiling;
   assert.equal(
-    caught(() => assertPortableAsset('skills/x/SKILL.md', 'Call Write(config.json) now.\n', 'claude-code', authority)).code,
+    caught(() =>
+      assertPortableAsset(
+        'skills/x/SKILL.md',
+        'Call Write(config.json) now.\n',
+        'claude-code',
+        authority,
+      ),
+    ).code,
     'E_GENERATED_ASSET_TOOL_UNDECLARED',
   );
   assert.equal(
-    caught(() => assertPortableAsset('skills/x/SKILL.md', 'Run planr status --md.\n', 'claude-code', authority)).code,
+    caught(() =>
+      assertPortableAsset(
+        'skills/x/SKILL.md',
+        'Run planr status --md.\n',
+        'claude-code',
+        authority,
+      ),
+    ).code,
     'E_GENERATED_ASSET_OPERATION_UNDECLARED',
   );
   const artifactAuthority = { ...authority, allowedOperations: ['artifact'] };
-  assert.doesNotThrow(() => assertPortableAsset('skills/x/SKILL.md', 'Run planr artifact report.html.\n', 'claude-code', artifactAuthority));
+  assert.doesNotThrow(() =>
+    assertPortableAsset(
+      'skills/x/SKILL.md',
+      'Run planr artifact report.html.\n',
+      'claude-code',
+      artifactAuthority,
+    ),
+  );
   assert.equal(
-    caught(() => assertPortableAsset('skills/x/SKILL.md', 'Run openplanr doctor --json.\n', 'claude-code', artifactAuthority)).code,
+    caught(() =>
+      assertPortableAsset(
+        'skills/x/SKILL.md',
+        'Run openplanr doctor --json.\n',
+        'claude-code',
+        artifactAuthority,
+      ),
+    ).code,
     'E_GENERATED_ASSET_OPERATION_UNDECLARED',
   );
   const shellAuthority = { ...authority, allowedTools: [...authority.allowedTools, 'shell'] };
   assert.equal(
-    caught(() => assertPortableAsset('skills/x/SKILL.md', 'Run Bash(curl https://example.test).\n', 'claude-code', shellAuthority)).code,
+    caught(() =>
+      assertPortableAsset(
+        'skills/x/SKILL.md',
+        'Run Bash(curl https://example.test).\n',
+        'claude-code',
+        shellAuthority,
+      ),
+    ).code,
     'E_GENERATED_ASSET_NETWORK_UNDECLARED',
   );
-  const scopedShell = { ...authority, externalDataAccess: 'read-only', allowedTools: ['Bash(git:*)'] };
-  assert.doesNotThrow(() => assertPortableAsset('skills/x/SKILL.md', 'Run Bash(git status).\n', 'claude-code', scopedShell));
+  const scopedShell = {
+    ...authority,
+    externalDataAccess: 'read-only',
+    allowedTools: ['Bash(git:*)'],
+  };
+  assert.doesNotThrow(() =>
+    assertPortableAsset('skills/x/SKILL.md', 'Run Bash(git status).\n', 'claude-code', scopedShell),
+  );
   assert.equal(
-    caught(() => assertPortableAsset('skills/x/SKILL.md', 'Run Bash(github status).\n', 'claude-code', scopedShell)).code,
+    caught(() =>
+      assertPortableAsset(
+        'skills/x/SKILL.md',
+        'Run Bash(github status).\n',
+        'claude-code',
+        scopedShell,
+      ),
+    ).code,
     'E_GENERATED_ASSET_TOOL_UNDECLARED',
   );
 });
 
 test('a module cannot use authority available to the host but absent from its own ceiling', () => {
-  const { skillSource, skillSourceCustody, modules, hostProfilesByKey, readSource } = loadComposedSkill({ skillDir: example });
+  const { skillSource, skillSourceCustody, modules, hostProfilesByKey, readSource } =
+    loadComposedSkill({ skillDir: example });
   const original = modules.find((module) => module.moduleId === 'hello-intro');
   const bytes = '# Hello\n\nCall Write(config.json).\n';
-  const narrowedModules = modules.map((module) => (
+  const narrowedModules = modules.map((module) =>
     module.moduleId === original.moduleId
       ? { ...module, source: { ...module.source, digest: sha256(bytes) } }
-      : module
-  ));
+      : module,
+  );
   const selectedSkill = {
     ...skillSource,
-    modules: skillSource.modules.map((reference) => (
-      reference.moduleId === original.moduleId ? { ...reference, digest: sha256(bytes) } : reference
-    )),
+    modules: skillSource.modules.map((reference) =>
+      reference.moduleId === original.moduleId
+        ? { ...reference, digest: sha256(bytes) }
+        : reference,
+    ),
   };
   const hostProfile = {
     ...hostProfilesByKey.get('minimal-claude-code@1.0.0'),
@@ -219,13 +345,15 @@ test('a module cannot use authority available to the host but absent from its ow
       allowedTools: ['read', 'edit'],
     },
   };
-  const error = caught(() => compileComposedV1({
-    skillSource: selectedSkill,
-    skillSourceCustody,
-    modules: narrowedModules,
-    hostProfile,
-    readSource: (path) => (path === original.source.path ? bytes : readSource(path)),
-  }));
+  const error = caught(() =>
+    compileComposedV1({
+      skillSource: selectedSkill,
+      skillSourceCustody,
+      modules: narrowedModules,
+      hostProfile,
+      readSource: (path) => (path === original.source.path ? bytes : readSource(path)),
+    }),
+  );
   assert.equal(error.code, 'E_GENERATED_ASSET_TOOL_UNDECLARED');
   assert.match(error.details.path, /#module=hello-intro@1\.0\.0$/u);
 });
@@ -238,33 +366,63 @@ test('checkSkill and evaluateSkill surface a portability violation as a failing 
   const target = join(dir, 'skill');
   cpSync(example, target, { recursive: true });
   try {
-    writeFileSync(join(target, 'modules', 'hello-intro.md'), '# Hello\n\nRun /planr-pipeline:hello via ${CLAUDE_PLUGIN_ROOT}.\n');
-    writeFileSync(join(target, 'host-profiles.json'), JSON.stringify({
-      profiles: [{
-        hostProfileId: 'minimal-codex', hostProfileVersion: '1.0.0', host: 'codex',
-        description: 'Codex overlay for the portability test.',
-        source: 'profiles/claude-code.md', overlayModules: [],
-        authorityCeiling: {
-          repositoryAccess: 'read-only', externalDataAccess: 'none',
-          allowedCapabilities: ['read'], allowedTools: ['read'],
-          allowedOperations: ['render'], allowedOutputClasses: ['A'],
-          forbiddenEffects: ['network-write', 'external-publish'],
+    writeFileSync(
+      join(target, 'modules', 'hello-intro.md'),
+      '# Hello\n\nRun /planr-pipeline:hello via ${CLAUDE_PLUGIN_ROOT}.\n',
+    );
+    writeFileSync(
+      join(target, 'host-profiles.json'),
+      JSON.stringify(
+        {
+          profiles: [
+            {
+              hostProfileId: 'minimal-codex',
+              hostProfileVersion: '1.0.0',
+              host: 'codex',
+              description: 'Codex overlay for the portability test.',
+              source: 'profiles/claude-code.md',
+              overlayModules: [],
+              authorityCeiling: {
+                repositoryAccess: 'read-only',
+                externalDataAccess: 'none',
+                allowedCapabilities: ['read'],
+                allowedTools: ['read'],
+                allowedOperations: ['render'],
+                allowedOutputClasses: ['A'],
+                forbiddenEffects: ['network-write', 'external-publish'],
+              },
+            },
+          ],
         },
-      }],
-    }, null, 2));
-    writeFileSync(join(target, 'skill.json'), JSON.stringify({
-      skillId: 'planr-hello', skillVersion: '1.0.0', sourceFormat: 'composed-v1',
-      template: 'SKILL.md.tmpl',
-      authorityCeiling: {
-        repositoryAccess: 'declared-paths', externalDataAccess: 'read-only',
-        allowedCapabilities: ['read', 'write'], allowedTools: ['read', 'edit'],
-        allowedOperations: ['compile', 'render'], allowedOutputClasses: ['A', 'B'],
-        forbiddenEffects: ['network-write'],
-      },
-      modules: [{ moduleId: 'hello-intro', moduleVersion: '1.0.0' }],
-      references: [{ moduleId: 'hello-reference', moduleVersion: '1.0.0' }],
-      hostProfiles: [{ id: 'minimal-codex', version: '1.0.0' }],
-    }, null, 2));
+        null,
+        2,
+      ),
+    );
+    writeFileSync(
+      join(target, 'skill.json'),
+      JSON.stringify(
+        {
+          skillId: 'planr-hello',
+          skillVersion: '1.0.0',
+          sourceFormat: 'composed-v1',
+          template: 'SKILL.md.tmpl',
+          authorityCeiling: {
+            repositoryAccess: 'declared-paths',
+            externalDataAccess: 'read-only',
+            allowedCapabilities: ['read', 'write'],
+            allowedTools: ['read', 'edit'],
+            allowedOperations: ['compile', 'render'],
+            allowedOutputClasses: ['A', 'B'],
+            forbiddenEffects: ['network-write'],
+          },
+          modules: [{ moduleId: 'hello-intro', moduleVersion: '1.0.0' }],
+          references: [{ moduleId: 'hello-reference', moduleVersion: '1.0.0' }],
+          hostProfiles: [{ id: 'minimal-codex', version: '1.0.0' }],
+        },
+        null,
+        2,
+      ),
+    );
 
     const checked = checkSkill({ skillDir: target });
     assert.equal(checked.ok, false);

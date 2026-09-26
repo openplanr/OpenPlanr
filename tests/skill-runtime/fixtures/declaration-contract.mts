@@ -5,19 +5,13 @@ import type {
   SourceMapRange,
 } from '@openplanr/skill-runtime/compiler';
 import type { GenerateReport } from '@openplanr/skill-runtime/authoring';
-import type {
-  AssetCustody,
-  GeneratedAsset,
-} from '@openplanr/skill-runtime/manifests';
+import type { AssetCustody, GeneratedAsset } from '@openplanr/skill-runtime/manifests';
 import type {
   CompletionResult,
   SkillSessionDocument,
   SkillSessionRecoveryResult,
 } from '@openplanr/skill-runtime/lifecycle';
-import {
-  completionFromRuntimeResult,
-  createCompletion,
-} from '@openplanr/skill-runtime/lifecycle';
+import { completionFromRuntimeResult, createCompletion } from '@openplanr/skill-runtime/lifecycle';
 import type {
   HostInteractionBinding,
   HostInteractionBindings,
@@ -25,9 +19,7 @@ import type {
   InteractionSessionInput,
   QuestionnaireBindingInput,
 } from '@openplanr/skill-runtime/resolver';
-import {
-  resolveInteraction,
-} from '@openplanr/skill-runtime/resolver';
+import { resolveInteraction } from '@openplanr/skill-runtime/resolver';
 
 const digest = `sha256:${'a'.repeat(64)}` as Digest;
 const compilerOwner: SourceMapOwner = {
@@ -36,11 +28,13 @@ const compilerOwner: SourceMapOwner = {
   version: '1.0.0',
   digest,
 };
-const sourceMap: ReadonlyArray<SourceMapRange> = [{
-  startByte: 0,
-  endByte: 1,
-  owner: compilerOwner,
-}];
+const sourceMap: ReadonlyArray<SourceMapRange> = [
+  {
+    startByte: 0,
+    endByte: 1,
+    owner: compilerOwner,
+  },
+];
 const compiled: CompiledAsset = {
   host: 'codex',
   path: 'skills/planr-demo/SKILL.md',
@@ -81,21 +75,25 @@ const generation: GenerateReport = {
   },
   outputDir: 'dist',
   assetSetId: 'sas_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
-  assets: [{
-    host: generated.host ?? 'codex',
-    path: generated.path,
-    outputPath: `codex/${generated.path}`,
-    digest: generated.digest,
-    byteLength: generated.byteLength,
-  }],
-  content: [{
-    skillId: 'planr-demo',
-    host: 'codex',
-    entrypoint: generated.path,
-    assets: [generated.path],
-    links: [],
-    linkedSupport: [],
-  }],
+  assets: [
+    {
+      host: generated.host ?? 'codex',
+      path: generated.path,
+      outputPath: `codex/${generated.path}`,
+      digest: generated.digest,
+      byteLength: generated.byteLength,
+    },
+  ],
+  content: [
+    {
+      skillId: 'planr-demo',
+      host: 'codex',
+      entrypoint: generated.path,
+      assets: [generated.path],
+      links: [],
+      linkedSupport: [],
+    },
+  ],
   manifests: ['manifests/generated-assets.json', 'manifests/generated-custody.json'],
 };
 
@@ -122,7 +120,11 @@ const completedResult: CompletionResult = createCompletion({
 });
 
 // @ts-expect-error Native interaction is always backed by native-questions.
-const impossibleBinding: HostInteractionBinding = { surface: 'native', protocolInteraction: 'native', capabilityId: 'attached-terminal' };
+const impossibleBinding: HostInteractionBinding = {
+  surface: 'native',
+  protocolInteraction: 'native',
+  capabilityId: 'attached-terminal',
+};
 // @ts-expect-error Headless is a final fallback and cannot precede an interactive surface.
 const nonFinalHeadlessBindings: HostInteractionBindings = [
   { surface: 'headless', protocolInteraction: 'none' },
@@ -131,9 +133,19 @@ const nonFinalHeadlessBindings: HostInteractionBindings = [
 // @ts-expect-error A branded Protocol session must be the complete digest-bound document.
 const incompleteProtocolSession: InteractionSessionInput = { kind: 'skill-session' };
 // @ts-expect-error Completed inputs cannot contain failed checks.
-createCompletion({ status: 'completed', summary: 'Contradictory.', checks: [{ name: 'runtime', status: 'failed' }] });
+createCompletion({
+  status: 'completed',
+  summary: 'Contradictory.',
+  checks: [{ name: 'runtime', status: 'failed' }],
+});
 // @ts-expect-error Completed runtime results cannot be paired with unresolved issues.
-completionFromRuntimeResult({ status: 'completed' }, { summary: 'Contradictory.', issues: [{ problem: 'Open.', impact: 'Incomplete.', nextAction: 'Resolve it.' }] });
+completionFromRuntimeResult(
+  { status: 'completed' },
+  {
+    summary: 'Contradictory.',
+    issues: [{ problem: 'Open.', impact: 'Incomplete.', nextAction: 'Resolve it.' }],
+  },
+);
 
 resolveInteraction({
   hostProfile,

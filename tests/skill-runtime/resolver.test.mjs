@@ -20,14 +20,29 @@ import {
 } from '../../packages/skill-runtime/src/lifecycle/index.mjs';
 
 const readJson = (url) => JSON.parse(readFileSync(url, 'utf8'));
-const profiles = readJson(new URL('../../packages/protocol/registries/skill-host-profiles.json', import.meta.url));
-const legacyProfiles = readJson(new URL('../../packages/skill-runtime/fixtures/resolver/legacy-pipeline-profile-registry.json', import.meta.url));
-const capabilities = readJson(new URL('../../packages/skill-runtime/fixtures/resolver/capability-matrix.json', import.meta.url));
-const questions = readJson(new URL('../../packages/skill-runtime/fixtures/resolver/question-fallbacks.json', import.meta.url));
+const profiles = readJson(
+  new URL('../../packages/protocol/registries/skill-host-profiles.json', import.meta.url),
+);
+const legacyProfiles = readJson(
+  new URL(
+    '../../packages/skill-runtime/fixtures/resolver/legacy-pipeline-profile-registry.json',
+    import.meta.url,
+  ),
+);
+const capabilities = readJson(
+  new URL('../../packages/skill-runtime/fixtures/resolver/capability-matrix.json', import.meta.url),
+);
+const questions = readJson(
+  new URL(
+    '../../packages/skill-runtime/fixtures/resolver/question-fallbacks.json',
+    import.meta.url,
+  ),
+);
 const exactProfile = (id, version) => {
-  const matches = profiles.profiles.filter(({ hostProfileId, hostProfileVersion }) => (
-    hostProfileId === id && hostProfileVersion === version
-  ));
+  const matches = profiles.profiles.filter(
+    ({ hostProfileId, hostProfileVersion }) =>
+      hostProfileId === id && hostProfileVersion === version,
+  );
   assert.equal(matches.length, 1, `${id}@${version} must resolve exactly once`);
   return matches[0];
 };
@@ -47,7 +62,9 @@ const session = Object.freeze({
 
 test('Protocol 1.7 publishes a validated, ordered capability profile for every supported host', () => {
   assert.deepEqual(
-    profiles.profiles.map(({ hostProfileId, hostProfileVersion }) => `${hostProfileId}@${hostProfileVersion}`),
+    profiles.profiles.map(
+      ({ hostProfileId, hostProfileVersion }) => `${hostProfileId}@${hostProfileVersion}`,
+    ),
     [
       'claude-code-default@1.0.0',
       'codex-default@1.0.0',
@@ -75,7 +92,9 @@ test('Protocol 1.7 publishes a validated, ordered capability profile for every s
 test('legacy pipeline profile bytes remain readable while 1.1.0 adds capabilities distinctly', () => {
   assert.equal(verifyDocumentDigest(legacyProfiles), true);
   assert.deepEqual(
-    validateProtocolArtifact('skill-host-profile-registry', legacyProfiles, { protocolVersion: '1.6.0' }),
+    validateProtocolArtifact('skill-host-profile-registry', legacyProfiles, {
+      protocolVersion: '1.6.0',
+    }),
     [],
   );
   const legacy = exactProfile('pipeline-default', '1.0.0');
@@ -90,14 +109,19 @@ test('legacy pipeline profile bytes remain readable while 1.1.0 adds capabilitie
   assert.equal(pipelineProfile.hostProfileVersion, '1.1.0');
   assert.notEqual(pipelineProfile.source.path, legacy.source.path);
   assert.deepEqual(pipelineProfile.runtimeCapabilities, ['attached-terminal']);
-  assert.deepEqual(pipelineProfile.interactionBindings.map(({ surface }) => surface), ['terminal', 'headless']);
+  assert.deepEqual(
+    pipelineProfile.interactionBindings.map(({ surface }) => surface),
+    ['terminal', 'headless'],
+  );
 
   const widenedLegacy = withDocumentDigest({
     ...legacyProfiles,
     profiles: [{ ...legacyProfiles.profiles[0], runtimeCapabilities: [] }],
   });
   assert.ok(
-    validateProtocolArtifact('skill-host-profile-registry', widenedLegacy, { protocolVersion: '1.6.0' }).length > 0,
+    validateProtocolArtifact('skill-host-profile-registry', widenedLegacy, {
+      protocolVersion: '1.6.0',
+    }).length > 0,
     'schemaVersion 1.0.0 must retain the closed legacy profile shape',
   );
 });
@@ -118,8 +142,9 @@ test('Protocol rejects undeclared binding capabilities, duplicate surfaces, and 
   const { documentDigest: _documentDigest, ...unsigned } = profiles;
   const mutations = [
     (registry) => {
-      registry.profiles[0].runtimeCapabilities = registry.profiles[0].runtimeCapabilities
-        .filter((capabilityId) => capabilityId !== 'native-questions');
+      registry.profiles[0].runtimeCapabilities = registry.profiles[0].runtimeCapabilities.filter(
+        (capabilityId) => capabilityId !== 'native-questions',
+      );
     },
     (registry) => {
       registry.profiles[0].interactionBindings = [
@@ -138,11 +163,9 @@ test('Protocol rejects undeclared binding capabilities, duplicate surfaces, and 
     const forged = structuredClone(unsigned);
     mutate(forged);
     assert.ok(
-      validateProtocolArtifact(
-        'skill-host-profile-registry',
-        withDocumentDigest(forged),
-        { protocolVersion: '1.7.0' },
-      ).length > 0,
+      validateProtocolArtifact('skill-host-profile-registry', withDocumentDigest(forged), {
+        protocolVersion: '1.7.0',
+      }).length > 0,
     );
   }
 });
@@ -151,7 +174,9 @@ test('capability resolution applies the profile ceiling before runtime availabil
   const cursor = cursorProfile;
   const result = resolveCapabilities({
     hostProfile: cursor,
-    runtimeCapabilities: { 'native-questions': { state: 'available', source: 'invented-runtime-claim' } },
+    runtimeCapabilities: {
+      'native-questions': { state: 'available', source: 'invented-runtime-claim' },
+    },
     required: ['native-questions'],
   });
   assert.equal(result.status, 'unavailable');
@@ -181,7 +206,9 @@ test('native composer questions bind typed answers to the internal session', () 
   assert.equal(bound.sessionId, session.sessionId);
   assert.equal(bound.envelope.adapter.interaction, 'native');
   assert.deepEqual(
-    validateProtocolArtifact('guided-answer-envelope', bound.envelope, { protocolVersion: '1.2.0' }),
+    validateProtocolArtifact('guided-answer-envelope', bound.envelope, {
+      protocolVersion: '1.2.0',
+    }),
     [],
   );
 });
@@ -232,7 +259,9 @@ test('a recovered lifecycle session carries its question batch through answer bi
   assert.equal(bound.envelope.sessionId, recovered.session.sessionId);
   assert.equal(bound.envelope.questionnaireDigest, digest('e'));
   assert.deepEqual(
-    validateProtocolArtifact('guided-answer-envelope', bound.envelope, { protocolVersion: '1.2.0' }),
+    validateProtocolArtifact('guided-answer-envelope', bound.envelope, {
+      protocolVersion: '1.2.0',
+    }),
     [],
   );
 });
@@ -246,21 +275,22 @@ test('a schema-shaped lifecycle session with a tampered digest-bound field is re
   });
   const tampered = { ...created, skillId: 'planr-ship' };
   assert.throws(
-    () => resolveInteraction({
-      hostProfile: codexProfile,
-      runtimeCapabilities: capabilities['codex-native'],
-      session: tampered,
-      questionnaire: {
-        digest: digest('e'),
-        questionnaireVersion: '1.0.0',
-        command: 'planr-plan',
-        projectIdentity: digest('f'),
-        projectHead: digest('1'),
-        configHead: digest('2'),
-      },
-    }),
-    (error) => error.code === 'E_SKILL_INTERACTION_SESSION_INVALID'
-      && error.details.digestValid === false,
+    () =>
+      resolveInteraction({
+        hostProfile: codexProfile,
+        runtimeCapabilities: capabilities['codex-native'],
+        session: tampered,
+        questionnaire: {
+          digest: digest('e'),
+          questionnaireVersion: '1.0.0',
+          command: 'planr-plan',
+          projectIdentity: digest('f'),
+          projectHead: digest('1'),
+          configHead: digest('2'),
+        },
+      }),
+    (error) =>
+      error.code === 'E_SKILL_INTERACTION_SESSION_INVALID' && error.details.digestValid === false,
   );
 });
 
@@ -273,10 +303,13 @@ test('interaction resolution falls back deterministically to chat and then termi
     session,
   });
   assert.equal(chat.surface, 'chat');
-  assert.deepEqual(chat.attempts.map(({ surface, status }) => [surface, status]), [
-    ['native', 'unavailable'],
-    ['chat', 'completed'],
-  ]);
+  assert.deepEqual(
+    chat.attempts.map(({ surface, status }) => [surface, status]),
+    [
+      ['native', 'unavailable'],
+      ['chat', 'completed'],
+    ],
+  );
 
   const terminal = resolveInteraction({
     hostProfile: codex,
@@ -285,7 +318,10 @@ test('interaction resolution falls back deterministically to chat and then termi
     session,
   });
   assert.equal(terminal.surface, 'terminal');
-  assert.deepEqual(terminal.attempts.map(({ surface }) => surface), ['native', 'chat', 'terminal']);
+  assert.deepEqual(
+    terminal.attempts.map(({ surface }) => surface),
+    ['native', 'chat', 'terminal'],
+  );
 });
 
 test('Claude Code, Cursor, and pipeline profiles select only their verified host surfaces', () => {
@@ -384,13 +420,20 @@ test('exact repository context skips the question and reports its source', () =>
     runtimeCapabilities: capabilities['codex-headless'],
     questions: [questions.repositoryName],
     repositoryContext: {
-      'project-name': { value: 'openplanr', source: 'package.json#/name', confidence: 'exact', safe: true },
+      'project-name': {
+        value: 'openplanr',
+        source: 'package.json#/name',
+        confidence: 'exact',
+        safe: true,
+      },
     },
     session,
   });
   assert.equal(result.status, 'completed');
   assert.equal(result.phase, 'answered');
-  assert.deepEqual(result.inference, [{ questionId: 'project-name', source: 'package.json#/name' }]);
+  assert.deepEqual(result.inference, [
+    { questionId: 'project-name', source: 'package.json#/name' },
+  ]);
 });
 
 test('visibleWhen excludes inactive questions and requires only the active branch', () => {
@@ -405,12 +448,20 @@ test('visibleWhen excludes inactive questions and requires only the active branc
     runtimeCapabilities: capabilities['codex-headless'],
     questions: [questions.materialChoice, previewReason],
     repositoryContext: {
-      'release-channel': { value: 'stable', source: 'release.json#/channel', confidence: 'exact', safe: true },
+      'release-channel': {
+        value: 'stable',
+        source: 'release.json#/channel',
+        confidence: 'exact',
+        safe: true,
+      },
     },
     session,
   });
   assert.equal(inferredStable.status, 'completed');
-  assert.deepEqual(inferredStable.answers.map(({ questionId }) => questionId), ['release-channel']);
+  assert.deepEqual(
+    inferredStable.answers.map(({ questionId }) => questionId),
+    ['release-channel'],
+  );
 
   const pending = resolveInteraction({
     hostProfile: codexProfile,
@@ -418,10 +469,10 @@ test('visibleWhen excludes inactive questions and requires only the active branc
     questions: [questions.materialChoice, previewReason],
     session,
   });
-  assert.deepEqual(pending.questions.map(({ questionId }) => questionId), [
-    'release-channel',
-    'preview-reason',
-  ]);
+  assert.deepEqual(
+    pending.questions.map(({ questionId }) => questionId),
+    ['release-channel', 'preview-reason'],
+  );
 
   const headlessPending = resolveInteraction({
     hostProfile: codexProfile,
@@ -430,7 +481,10 @@ test('visibleWhen excludes inactive questions and requires only the active branc
     session,
   });
   assert.equal(headlessPending.status, 'blocked');
-  assert.deepEqual(headlessPending.questions.map(({ questionId }) => questionId), ['release-channel']);
+  assert.deepEqual(
+    headlessPending.questions.map(({ questionId }) => questionId),
+    ['release-channel'],
+  );
   assert.deepEqual(headlessPending.unresolvedRequired, ['release-channel']);
 
   const stable = bindInteractionAnswers({
@@ -439,14 +493,22 @@ test('visibleWhen excludes inactive questions and requires only the active branc
     submittedAt: '2026-08-31T00:00:00Z',
   });
   assert.equal(stable.status, 'completed');
-  assert.deepEqual(stable.answers.map(({ questionId }) => questionId), ['release-channel']);
+  assert.deepEqual(
+    stable.answers.map(({ questionId }) => questionId),
+    ['release-channel'],
+  );
 
   const inferredConditional = resolveInteraction({
     hostProfile: codexProfile,
     runtimeCapabilities: capabilities['codex-native'],
     questions: [questions.materialChoice, previewReason],
     repositoryContext: {
-      'preview-reason': { value: 'Early feedback.', source: 'release.json#/reason', confidence: 'exact', safe: true },
+      'preview-reason': {
+        value: 'Early feedback.',
+        source: 'release.json#/reason',
+        confidence: 'exact',
+        safe: true,
+      },
     },
     session,
   });
@@ -456,7 +518,10 @@ test('visibleWhen excludes inactive questions and requires only the active branc
     submittedAt: '2026-08-31T00:00:00Z',
   });
   assert.equal(stableWithHiddenInference.status, 'completed');
-  assert.deepEqual(stableWithHiddenInference.answers.map(({ questionId }) => questionId), ['release-channel']);
+  assert.deepEqual(
+    stableWithHiddenInference.answers.map(({ questionId }) => questionId),
+    ['release-channel'],
+  );
 
   const previewMissingReason = bindInteractionAnswers({
     resolution: pending,
@@ -482,7 +547,10 @@ test('visibleWhen excludes inactive questions and requires only the active branc
   });
   assert.equal(reverseOrdered.status, 'blocked');
   assert.deepEqual(reverseOrdered.unresolvedRequired, ['draft-reason']);
-  assert.deepEqual(reverseOrdered.answers.map(({ questionId }) => questionId), ['include-drafts']);
+  assert.deepEqual(
+    reverseOrdered.answers.map(({ questionId }) => questionId),
+    ['include-drafts'],
+  );
 
   const hiddenDraftReason = {
     ...draftReason,
@@ -493,7 +561,12 @@ test('visibleWhen excludes inactive questions and requires only the active branc
     runtimeCapabilities: capabilities['codex-headless'],
     questions: [hiddenDraftReason, questions.safeDefault],
     repositoryContext: {
-      'draft-reason': { value: 'For early review.', source: 'release.json#/draftReason', confidence: 'exact', safe: true },
+      'draft-reason': {
+        value: 'For early review.',
+        source: 'release.json#/draftReason',
+        confidence: 'exact',
+        safe: true,
+      },
     },
     session,
     headlessQuestionPolicy: {
@@ -501,7 +574,10 @@ test('visibleWhen excludes inactive questions and requires only the active branc
     },
   });
   assert.equal(inferredHiddenBranch.status, 'completed');
-  assert.deepEqual(inferredHiddenBranch.answers.map(({ questionId }) => questionId), ['include-drafts']);
+  assert.deepEqual(
+    inferredHiddenBranch.answers.map(({ questionId }) => questionId),
+    ['include-drafts'],
+  );
   assert.deepEqual(inferredHiddenBranch.inferredAnswers, []);
 });
 
@@ -582,12 +658,18 @@ test('stale answer IDs return a repairable typed result instead of throwing', ()
 
 test('interaction batches stay bounded to three validated Protocol questions', () => {
   assert.throws(
-    () => resolveInteraction({
-      hostProfile: codexProfile,
-      runtimeCapabilities: capabilities['codex-native'],
-      questions: [questions.repositoryName, questions.safeDefault, questions.materialChoice, questions.repositoryName],
-      session,
-    }),
+    () =>
+      resolveInteraction({
+        hostProfile: codexProfile,
+        runtimeCapabilities: capabilities['codex-native'],
+        questions: [
+          questions.repositoryName,
+          questions.safeDefault,
+          questions.materialChoice,
+          questions.repositoryName,
+        ],
+        session,
+      }),
     /one to three guided questions/u,
   );
 });
@@ -604,14 +686,16 @@ test('host interaction bindings cannot swap capabilities between surfaces', () =
   for (const binding of hostileBindings) {
     const hostile = { ...codex, interactionBindings: [binding] };
     assert.throws(
-      () => resolveInteraction({
-        hostProfile: hostile,
-        runtimeCapabilities: capabilities['codex-native'],
-        questions: [questions.materialChoice],
-        session,
-      }),
-      (error) => error.code === 'E_SKILL_INTERACTION_BINDINGS_INVALID'
-        && /invalid or duplicate interaction binding/u.test(error.message),
+      () =>
+        resolveInteraction({
+          hostProfile: hostile,
+          runtimeCapabilities: capabilities['codex-native'],
+          questions: [questions.materialChoice],
+          session,
+        }),
+      (error) =>
+        error.code === 'E_SKILL_INTERACTION_BINDINGS_INVALID' &&
+        /invalid or duplicate interaction binding/u.test(error.message),
     );
   }
 });
@@ -620,25 +704,34 @@ test('runtime binding validation enforces declared capabilities, unique surfaces
   const hostileProfiles = [
     {
       ...codexProfile,
-      runtimeCapabilities: codexProfile.runtimeCapabilities.filter((capabilityId) => capabilityId !== 'native-questions'),
+      runtimeCapabilities: codexProfile.runtimeCapabilities.filter(
+        (capabilityId) => capabilityId !== 'native-questions',
+      ),
     },
     {
       ...codexProfile,
-      interactionBindings: [codexProfile.interactionBindings[0], codexProfile.interactionBindings[0]],
+      interactionBindings: [
+        codexProfile.interactionBindings[0],
+        codexProfile.interactionBindings[0],
+      ],
     },
     {
       ...codexProfile,
-      interactionBindings: [codexProfile.interactionBindings.at(-1), codexProfile.interactionBindings[0]],
+      interactionBindings: [
+        codexProfile.interactionBindings.at(-1),
+        codexProfile.interactionBindings[0],
+      ],
     },
   ];
   for (const hostileProfile of hostileProfiles) {
     assert.throws(
-      () => resolveInteraction({
-        hostProfile: hostileProfile,
-        runtimeCapabilities: capabilities['codex-native'],
-        questions: [questions.materialChoice],
-        session,
-      }),
+      () =>
+        resolveInteraction({
+          hostProfile: hostileProfile,
+          runtimeCapabilities: capabilities['codex-native'],
+          questions: [questions.materialChoice],
+          session,
+        }),
       (error) => error.code === 'E_SKILL_INTERACTION_BINDINGS_INVALID',
     );
   }

@@ -351,14 +351,8 @@ None.
 `;
 
 const noDecisionBoardReport = boardReport
-  .replace(
-    /### D1[\s\S]*?(?=## Action plan)/u,
-    'No decision-ready proposal was established.\n\n',
-  )
-  .replace(
-    /\| ID \| Priority[\s\S]*?(?=## Risks and dissent)/u,
-    'No proposed actions.\n\n',
-  );
+  .replace(/### D1[\s\S]*?(?=## Action plan)/u, 'No decision-ready proposal was established.\n\n')
+  .replace(/\| ID \| Priority[\s\S]*?(?=## Risks and dissent)/u, 'No proposed actions.\n\n');
 
 test('guidance-first advisor, challenger, chair, and board examples satisfy their profiles', () => {
   for (const [profile, note] of [
@@ -384,22 +378,22 @@ test('quality v2 is current while the released v1 contract remains an additive r
   assert.deepEqual(Object.keys(OPERATE_REVIEW_CONTRACTS), ['1.0.0', '2.0.0']);
   assert.equal(Object.keys(OPERATE_ADVISOR_REVIEW_RUBRICS).length, 5);
   const serialized = JSON.stringify(OPERATE_REVIEW_NOTE_PROFILES);
-  assert.doesNotMatch(serialized, /Human gate|Cycle owner|Evidence index|Audit note|Proposed owner|"Owner"/u);
+  assert.doesNotMatch(
+    serialized,
+    /Human gate|Cycle owner|Evidence index|Audit note|Proposed owner|"Owner"/u,
+  );
   assert.match(serialized, /Suggested owner/u);
   assert.match(serialized, /Sources consulted/u);
   assert.match(serialized, /Issues/u);
 });
 
 test('legacy v1 notes are detected by structure and remain strictly readable', () => {
-  assert.deepEqual(
-    detectOperateReviewNoteContract(legacyAdvisor, { profile: 'advisor' }),
-    {
-      contractVersion: '1.0.0',
-      contractKind: 'operate-human-review-contract',
-      versionSource: 'structure',
-      declaredContractVersion: null,
-    },
-  );
+  assert.deepEqual(detectOperateReviewNoteContract(legacyAdvisor, { profile: 'advisor' }), {
+    contractVersion: '1.0.0',
+    contractKind: 'operate-human-review-contract',
+    versionSource: 'structure',
+    declaredContractVersion: null,
+  });
   const automatic = validateOperateReviewNote(legacyAdvisor, { profile: 'advisor' });
   assert.equal(automatic.contractVersion, '1.0.0');
   assert.equal(automatic.itemCount, 1);
@@ -445,14 +439,14 @@ test('contract declarations and explicit selectors expose version drift', () => 
   assert.equal(result.ok, false);
   assert.equal(result.diagnostics[0].code, 'E_OPERATE_REVIEW_CONTRACT_VERSION_MISMATCH');
   assert.throws(
-    () => inspectOperateReviewNote(advisor, {
-      profile: 'advisor',
-      contractVersion: '3.0.0',
-    }),
-    (error) => (
-      error instanceof SkillRuntimeError
-      && error.code === 'E_OPERATE_REVIEW_CONTRACT_VERSION_INVALID'
-    ),
+    () =>
+      inspectOperateReviewNote(advisor, {
+        profile: 'advisor',
+        contractVersion: '3.0.0',
+      }),
+    (error) =>
+      error instanceof SkillRuntimeError &&
+      error.code === 'E_OPERATE_REVIEW_CONTRACT_VERSION_INVALID',
   );
 });
 
@@ -468,14 +462,18 @@ test('canonical Operate guidance keeps context and seven lenses without workflow
     'skills/planr-challenger-review/SKILL.md',
     'skills/planr-chair-review/SKILL.md',
   ];
-  const forbidden = /human gate|named cycle owner|correction (?:pass|loop|attempt)|retry loop|authoritative|not deliverable|evidence index|audit note|receipt|sha-?256|digest-bound/iu;
+  const forbidden =
+    /human gate|named cycle owner|correction (?:pass|loop|attempt)|retry loop|authoritative|not deliverable|evidence index|audit note|receipt|sha-?256|digest-bound/iu;
   for (const path of paths) assert.doesNotMatch(read(path), forbidden, path);
 
   const operate = read('skills/planr-operate/SKILL.md');
   assert.match(operate, /native structured-question UI/iu);
   assert.match(operate, /one concise chat question at a time/iu);
   assert.match(operate, /Build shared context once/iu);
-  assert.match(operate, /`planr-ceo-review`[\s\S]*`planr-cto-review`[\s\S]*`planr-cpo-review`[\s\S]*`planr-cmo-review`[\s\S]*`planr-coo-review`/iu);
+  assert.match(
+    operate,
+    /`planr-ceo-review`[\s\S]*`planr-cto-review`[\s\S]*`planr-cpo-review`[\s\S]*`planr-cmo-review`[\s\S]*`planr-coo-review`/iu,
+  );
   assert.match(operate, /`planr-challenger-review`/iu);
   assert.match(operate, /`planr-chair-review`/iu);
   assert.match(operate, /## Issues/iu);
@@ -488,7 +486,10 @@ test('a suggested role or unassigned owner satisfies the decision shape', () => 
   assert.equal(inspectOperateReviewNote(boardReport, { profile: 'board-report' }).ok, true);
   assert.equal(
     inspectOperateReviewNote(
-      boardReport.replace('- **Suggested owner:** unassigned', '- **Suggested owner:** platform team'),
+      boardReport.replace(
+        '- **Suggested owner:** unassigned',
+        '- **Suggested owner:** platform team',
+      ),
       { profile: 'board-report' },
     ).ok,
     true,
@@ -546,10 +547,18 @@ test('the note validator exits 0 on a clean note and 1 on a broken one in every 
       });
     for (const validator of validators) {
       const passed = run(validator, clean);
-      assert.equal(passed.status, 0, `${validator} on a clean note: ${passed.stdout}${passed.stderr}`);
+      assert.equal(
+        passed.status,
+        0,
+        `${validator} on a clean note: ${passed.stdout}${passed.stderr}`,
+      );
       assert.equal(JSON.parse(passed.stdout).ok, true, validator);
       const failed = run(validator, broken);
-      assert.equal(failed.status, 1, `${validator} on a broken note: ${failed.stdout}${failed.stderr}`);
+      assert.equal(
+        failed.status,
+        1,
+        `${validator} on a broken note: ${failed.stdout}${failed.stderr}`,
+      );
       assert.deepEqual(
         JSON.parse(failed.stdout).diagnostics.map(({ code }) => code),
         ['E_OPERATE_REVIEW_TITLE_MISSING'],
@@ -577,8 +586,14 @@ test('advisor profiles support the concise insufficient-context state', () => {
 
 test('decision and action checks retain concise ordering and item limits', () => {
   const malformed = boardReport
-    .replace('### D1 — [P0] Rehearse rollback before release', '### D1 — Rehearse rollback before release')
-    .replace('- **Expected result:** The previous version and healthy service state are restored.\n', '')
+    .replace(
+      '### D1 — [P0] Rehearse rollback before release',
+      '### D1 — Rehearse rollback before release',
+    )
+    .replace(
+      '- **Expected result:** The previous version and healthy service state are restored.\n',
+      '',
+    )
     .replace('| A1 | P0 | Rehearse rollback | unassigned |', '| A1 | P0 | ... | unassigned |');
   const result = inspectOperateReviewNote(malformed, { profile: 'board-report' });
   assert.equal(result.ok, false);
@@ -591,21 +606,24 @@ test('decision and action checks retain concise ordering and item limits', () =>
     ]),
   );
 
-  const firstAction = '| A1 | P0 | Rehearse rollback | unassigned | Run staging rollback | Healthy prior version | Check health and data | D1 |';
-  const eightActions = Array.from({ length: 8 }, (_, index) => (
-    firstAction.replace('| A1 |', `| A${index + 1} |`)
-  )).join('\n');
-  const tooMany = inspectOperateReviewNote(
-    boardReport.replace(firstAction, eightActions),
-    { profile: 'board-report' },
-  );
+  const firstAction =
+    '| A1 | P0 | Rehearse rollback | unassigned | Run staging rollback | Healthy prior version | Check health and data | D1 |';
+  const eightActions = Array.from({ length: 8 }, (_, index) =>
+    firstAction.replace('| A1 |', `| A${index + 1} |`),
+  ).join('\n');
+  const tooMany = inspectOperateReviewNote(boardReport.replace(firstAction, eightActions), {
+    profile: 'board-report',
+  });
   assert.equal(tooMany.ok, false);
   assert.equal(tooMany.diagnostics[0].code, 'E_OPERATE_REVIEW_ACTION_LIMIT');
 });
 
 test('board reports require a concise executive summary and ordered sections', () => {
   const emptySummary = inspectOperateReviewNote(
-    boardReport.replace('Act now: rehearse rollback before accepting the next release candidate.', ''),
+    boardReport.replace(
+      'Act now: rehearse rollback before accepting the next release candidate.',
+      '',
+    ),
     { profile: 'board-report' },
   );
   assert.equal(emptySummary.ok, false);

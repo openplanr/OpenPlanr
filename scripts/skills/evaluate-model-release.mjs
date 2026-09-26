@@ -13,8 +13,8 @@ function parseArgs(argv) {
   let model = 'gpt-5.4-mini';
   let output = null;
   for (let index = 0; index < argv.length; index += 1) {
-    if (argv[index] === '--model' && argv[index + 1]) model = argv[index += 1];
-    else if (argv[index] === '--output' && argv[index + 1]) output = resolve(argv[index += 1]);
+    if (argv[index] === '--model' && argv[index + 1]) model = argv[(index += 1)];
+    else if (argv[index] === '--output' && argv[index + 1]) output = resolve(argv[(index += 1)]);
     else throw new Error('Usage: evaluate-model-release.mjs [--model <model>] [--output <file>]');
   }
   return { model, output };
@@ -36,9 +36,15 @@ function usageFromEvents(output) {
 
 const { model, output } = parseArgs(process.argv.slice(2));
 const registry = JSON.parse(readFileSync(join(repoRoot, 'skills/registry.json'), 'utf8'));
-const corpus = JSON.parse(readFileSync(join(repoRoot, 'evaluation/skills/routing-corpus.json'), 'utf8'));
+const corpus = JSON.parse(
+  readFileSync(join(repoRoot, 'evaluation/skills/routing-corpus.json'), 'utf8'),
+);
 const descriptions = registry.skills.map(({ skillId, description }) => ({ skillId, description }));
-const cases = corpus.cases.map(({ id, input, expectedSkillId = null }) => ({ id, input, expectedSkillId }));
+const cases = corpus.cases.map(({ id, input, expectedSkillId = null }) => ({
+  id,
+  input,
+  expectedSkillId,
+}));
 const prompt = [
   'You are evaluating metadata-only agent-skill discovery.',
   'Use only the supplied descriptions and aliases. Do not use tools or outside knowledge.',
@@ -53,47 +59,65 @@ const scratch = mkdtempSync(join(tmpdir(), 'openplanr-model-eval-'));
 try {
   const schemaPath = join(scratch, 'response.schema.json');
   const responsePath = join(scratch, 'response.json');
-  writeFileSync(schemaPath, `${JSON.stringify({
-    type: 'object',
-    additionalProperties: false,
-    required: ['results'],
-    properties: {
-      results: {
-        type: 'array',
-        minItems: cases.length,
-        maxItems: cases.length,
-        items: {
-          type: 'object',
-          additionalProperties: false,
-          required: ['id', 'skillId', 'reason'],
-          properties: {
-            id: { type: 'string' },
-            skillId: { anyOf: [{ type: 'string' }, { type: 'null' }] },
-            reason: { type: 'string' },
+  writeFileSync(
+    schemaPath,
+    `${JSON.stringify(
+      {
+        type: 'object',
+        additionalProperties: false,
+        required: ['results'],
+        properties: {
+          results: {
+            type: 'array',
+            minItems: cases.length,
+            maxItems: cases.length,
+            items: {
+              type: 'object',
+              additionalProperties: false,
+              required: ['id', 'skillId', 'reason'],
+              properties: {
+                id: { type: 'string' },
+                skillId: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+                reason: { type: 'string' },
+              },
+            },
           },
         },
       },
-    },
-  }, null, 2)}\n`);
+      null,
+      2,
+    )}\n`,
+  );
   const started = performance.now();
-  const run = spawnSync('codex', [
-    'exec',
-    '--model', model,
-    '--ephemeral',
-    '--ignore-user-config',
-    '--skip-git-repo-check',
-    '--sandbox', 'read-only',
-    '--cd', scratch,
-    '--output-schema', schemaPath,
-    '--output-last-message', responsePath,
-    '--json',
-    '-',
-  ], { input: prompt, encoding: 'utf8', env: { ...process.env, NO_COLOR: '1' } });
+  const run = spawnSync(
+    'codex',
+    [
+      'exec',
+      '--model',
+      model,
+      '--ephemeral',
+      '--ignore-user-config',
+      '--skip-git-repo-check',
+      '--sandbox',
+      'read-only',
+      '--cd',
+      scratch,
+      '--output-schema',
+      schemaPath,
+      '--output-last-message',
+      responsePath,
+      '--json',
+      '-',
+    ],
+    { input: prompt, encoding: 'utf8', env: { ...process.env, NO_COLOR: '1' } },
+  );
   const latencyMs = Number((performance.now() - started).toFixed(3));
-  if (run.status !== 0) throw new Error(`Codex model evaluation failed (${run.status})\n${run.stdout}${run.stderr}`);
+  if (run.status !== 0)
+    throw new Error(`Codex model evaluation failed (${run.status})\n${run.stdout}${run.stderr}`);
   const response = JSON.parse(readFileSync(responsePath, 'utf8'));
   const byId = new Map(response.results.map((result) => [result.id, result]));
-  if (byId.size !== cases.length) throw new Error(`Model response returned ${byId.size}/${cases.length} unique cases.`);
+  if (byId.size !== cases.length)
+    throw new Error(`Model response returned ${byId.size}/${cases.length} unique cases.`);
   const observations = cases.map((testCase) => {
     const actual = byId.get(testCase.id);
     if (!actual) throw new Error(`Model response omitted ${testCase.id}.`);
@@ -102,7 +126,9 @@ try {
   });
   const positives = observations.filter(({ expectedSkillId }) => expectedSkillId !== null);
   const negatives = observations.filter(({ expectedSkillId }) => expectedSkillId === null);
-  const falseNegatives = positives.filter(({ actualSkillId, expectedSkillId }) => actualSkillId !== expectedSkillId);
+  const falseNegatives = positives.filter(
+    ({ actualSkillId, expectedSkillId }) => actualSkillId !== expectedSkillId,
+  );
   const falsePositives = negatives.filter(({ actualSkillId }) => actualSkillId !== null);
   const passed = observations.filter((observation) => observation.passed).length;
   const report = {

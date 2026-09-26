@@ -30,7 +30,9 @@ if (order.length !== declared.size || order.some((workspace) => !declared.has(wo
 
 const npmExecPath = process.env.npm_execpath;
 for (const workspace of order) {
-  const packageManifest = JSON.parse(readFileSync(resolve(root, workspace, 'package.json'), 'utf8'));
+  const packageManifest = JSON.parse(
+    readFileSync(resolve(root, workspace, 'package.json'), 'utf8'),
+  );
   if (!packageManifest.scripts?.[command]) continue;
   process.stdout.write(`\n[${packageManifest.name}] ${command}\n`);
   const executable = npmExecPath ? process.execPath : 'npm';

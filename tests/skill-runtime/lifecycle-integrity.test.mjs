@@ -103,28 +103,31 @@ test('session creation, transitions, and recovery enforce the complete Protocol 
   });
 
   assert.throws(
-    () => createSkillSession({
-      skillId: 'not a skill id',
-      now: '2026-08-30T12:00:00.000Z',
-      createSessionId: () => 'GIS-sessioncontract02',
-    }),
+    () =>
+      createSkillSession({
+        skillId: 'not a skill id',
+        now: '2026-08-30T12:00:00.000Z',
+        createSessionId: () => 'GIS-sessioncontract02',
+      }),
     /complete Protocol 1\.6 skill-session contract/u,
   );
   assert.throws(
-    () => createSkillSession({
-      skillId: 'planr-plan',
-      questions: [{}],
-      now: '2026-08-30T12:00:00.000Z',
-      createSessionId: () => 'GIS-sessioncontract03',
-    }),
+    () =>
+      createSkillSession({
+        skillId: 'planr-plan',
+        questions: [{}],
+        now: '2026-08-30T12:00:00.000Z',
+        createSessionId: () => 'GIS-sessioncontract03',
+      }),
     /complete Protocol 1\.6 skill-session contract/u,
   );
   assert.throws(
-    () => createSkillSession({
-      skillId: 'planr-plan',
-      startedAt: '2026-08-30',
-      createSessionId: () => 'GIS-sessioncontract04',
-    }),
+    () =>
+      createSkillSession({
+        skillId: 'planr-plan',
+        startedAt: '2026-08-30',
+        createSessionId: () => 'GIS-sessioncontract04',
+      }),
     /complete Protocol 1\.6 skill-session contract/u,
   );
   assert.throws(
@@ -167,7 +170,10 @@ test('progress expiry cannot be extended without invalidating the persisted reco
     const path = join(projectRoot, persisted.path);
     const record = JSON.parse(readFileSync(path, 'utf8'));
     assert.match(record.documentDigest, /^sha256:[a-f0-9]{64}$/u);
-    writeFileSync(path, `${JSON.stringify({ ...record, expiresAt: '2099-01-01T00:00:00.000Z' })}\n`);
+    writeFileSync(
+      path,
+      `${JSON.stringify({ ...record, expiresAt: '2099-01-01T00:00:00.000Z' })}\n`,
+    );
 
     const loaded = loadLatestSessionProgress({
       projectRoot,

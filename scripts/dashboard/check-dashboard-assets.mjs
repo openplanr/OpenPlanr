@@ -17,14 +17,7 @@ const dashboardAppRoot = resolve(workspaceRoot, 'apps/dashboard');
 function buildTemporaryDashboard(output) {
   const result = spawnSync(
     'npm',
-    [
-      'run',
-      'build',
-      '--workspace=@openplanr/dashboard-app',
-      '--',
-      '--outDir',
-      output,
-    ],
+    ['run', 'build', '--workspace=@openplanr/dashboard-app', '--', '--outDir', output],
     {
       cwd: workspaceRoot,
       encoding: 'utf8',

@@ -11,12 +11,37 @@ const cliRoot = resolve(root, 'packages/cli');
 const cliRequire = createRequire(resolve(cliRoot, 'package.json'));
 const vitestManifestPath = cliRequire.resolve('vitest/package.json');
 const vitestManifest = JSON.parse(readFileSync(vitestManifestPath, 'utf8'));
-const vitestBin = typeof vitestManifest.bin === 'string' ? vitestManifest.bin : vitestManifest.bin.vitest;
+const vitestBin =
+  typeof vitestManifest.bin === 'string' ? vitestManifest.bin : vitestManifest.bin.vitest;
 
 const steps = Object.freeze([
-  { id: 'release-versioning-and-publication-boundaries', cwd: root, args: ['--test', 'tests/ecosystem-root/release-versioning.test.mjs', 'tests/ecosystem-root/diagram-onboarding.test.mjs', 'tests/ecosystem-root/plugin-manifest-versions.test.mjs', 'tests/release-train/plan.test.mjs', 'tests/release-train/notes.test.mjs', 'tests/release-train/marketplace.test.mjs', 'tests/release-train/lockfile.test.mjs', 'tests/release-train/cli-version.test.mjs', 'tests/ecosystem-root/publication-custody.test.mjs', 'tests/ecosystem-root/packed-surface-baseline.test.mjs'] },
-  { id: 'host-adapter-generation-check', cwd: root, args: ['scripts/skills/generate-v18.mjs', '--check'] },
-  { id: 'guided-host-package-tests', cwd: root, args: ['--test', 'tests/skill-runtime/generation.test.mjs'] },
+  {
+    id: 'release-versioning-and-publication-boundaries',
+    cwd: root,
+    args: [
+      '--test',
+      'tests/ecosystem-root/release-versioning.test.mjs',
+      'tests/ecosystem-root/diagram-onboarding.test.mjs',
+      'tests/ecosystem-root/plugin-manifest-versions.test.mjs',
+      'tests/release-train/plan.test.mjs',
+      'tests/release-train/notes.test.mjs',
+      'tests/release-train/marketplace.test.mjs',
+      'tests/release-train/lockfile.test.mjs',
+      'tests/release-train/cli-version.test.mjs',
+      'tests/ecosystem-root/publication-custody.test.mjs',
+      'tests/ecosystem-root/packed-surface-baseline.test.mjs',
+    ],
+  },
+  {
+    id: 'host-adapter-generation-check',
+    cwd: root,
+    args: ['scripts/skills/generate-v18.mjs', '--check'],
+  },
+  {
+    id: 'guided-host-package-tests',
+    cwd: root,
+    args: ['--test', 'tests/skill-runtime/generation.test.mjs'],
+  },
   { id: 'host-adapter-parity', cwd: root, args: ['scripts/skills/check-host-parity.mjs'] },
   { id: 'runtime-purity', cwd: root, args: ['scripts/skills/check-runtime-purity.mjs'] },
   {
@@ -50,13 +75,25 @@ const steps = Object.freeze([
       'tests/skill-runtime/design-installed-workflow.test.mjs',
     ],
   },
-  { id: 'protocol-1.8-skill-package-contracts', cwd: root, args: ['--test', 'tests/protocol/skill-package-v18.test.mjs'] },
+  {
+    id: 'protocol-1.8-skill-package-contracts',
+    cwd: root,
+    args: ['--test', 'tests/protocol/skill-package-v18.test.mjs'],
+  },
   {
     id: 'workspace-and-toolchain-boundaries',
     cwd: root,
-    args: ['--test', 'tests/skill-runtime/authoring-toolchain.test.mjs', 'tests/skill-runtime/packaging.test.mjs'],
+    args: [
+      '--test',
+      'tests/skill-runtime/authoring-toolchain.test.mjs',
+      'tests/skill-runtime/packaging.test.mjs',
+    ],
   },
-  { id: 'shared-integrations', cwd: root, args: ['--test', 'packages/integrations/tests/portable-sync.test.mjs'] },
+  {
+    id: 'shared-integrations',
+    cwd: root,
+    args: ['--test', 'packages/integrations/tests/portable-sync.test.mjs'],
+  },
   { id: 'utility-command-boundary', cwd: cliRoot, args: ['scripts/check-command-catalog.mjs'] },
   {
     id: 'host-native-cli-regression',
@@ -83,8 +120,16 @@ const steps = Object.freeze([
       'packages/artifact/tests/diagram-studio.browser.test.mjs',
     ],
   },
-  { id: 'diagram-skill-quality', cwd: root, args: ['scripts/skills/lint.mjs', 'skills/planr-diagram'] },
-  { id: 'diagram-skill-evaluation', cwd: root, args: ['scripts/skills/evaluate.mjs', 'skills/planr-diagram'] },
+  {
+    id: 'diagram-skill-quality',
+    cwd: root,
+    args: ['scripts/skills/lint.mjs', 'skills/planr-diagram'],
+  },
+  {
+    id: 'diagram-skill-evaluation',
+    cwd: root,
+    args: ['scripts/skills/evaluate.mjs', 'skills/planr-diagram'],
+  },
 ]);
 
 const results = [];
@@ -106,5 +151,7 @@ for (const [index, step] of steps.entries()) {
 }
 
 if (process.exitCode !== 1) {
-  process.stdout.write(`${JSON.stringify({ ok: true, focusedGates: results.map(({ id }) => id) }, null, 2)}\n`);
+  process.stdout.write(
+    `${JSON.stringify({ ok: true, focusedGates: results.map(({ id }) => id) }, null, 2)}\n`,
+  );
 }

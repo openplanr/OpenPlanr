@@ -22,8 +22,7 @@ const backendAndFrontendRoles = [
 const createModifyPreserveContract =
   'agents/shared/modes/shared/contract-create-modify-preserve.md';
 
-const taskContextResolution =
-  'agents/shared/modes/shared/task-context-resolution.md';
+const taskContextResolution = 'agents/shared/modes/shared/task-context-resolution.md';
 
 const recoveryGuidance = [
   'agents/shared/modes/shared/verification-and-recovery-backend.md',
@@ -72,7 +71,11 @@ test('ordinary QA is direct, read-only, and free of release bookkeeping', () => 
     const mode = read(path);
     assert.match(mode, /useful sources, not prerequisites/iu, path);
     assert.match(mode, /direct human-readable response/iu, path);
-    assert.doesNotMatch(mode, /candidate|digest|gate evidence|review event|closure read model/iu, path);
+    assert.doesNotMatch(
+      mode,
+      /candidate|digest|gate evidence|review event|closure read model/iu,
+      path,
+    );
   }
 });
 
@@ -123,7 +126,11 @@ test('implementation roles recover from observed results without retry budgets o
     assert.match(guidance, /dependsOn/iu, path);
     assert.match(guidance, /adaptive verification and recovery/iu, path);
     assert.match(guidance, /observed|report/iu, path);
-    assert.doesNotMatch(guidance, /human review|correction cap|three failed|STOP\. Write|Authorization and recovery/iu, path);
+    assert.doesNotMatch(
+      guidance,
+      /human review|correction cap|three failed|STOP\. Write|Authorization and recovery/iu,
+      path,
+    );
   }
 });
 
@@ -178,8 +185,14 @@ test('Ship implementation roles deterministically recover task and parent contex
 
   assert.match(read('agents/shared/modes/spec-driven/backend.md'), /output\/db\/schema\.json/u);
   assert.match(read('agents/shared/modes/default/backend.md'), /table and column names/iu);
-  assert.match(read('agents/shared/modes/spec-driven/frontend.md'), /<SPEC_DIR>\/design\/design-spec\.md/u);
-  assert.match(read('agents/shared/modes/default/frontend.md'), /output\/feats\/feat-\{name\}\/design-spec\.md/u);
+  assert.match(
+    read('agents/shared/modes/spec-driven/frontend.md'),
+    /<SPEC_DIR>\/design\/design-spec\.md/u,
+  );
+  assert.match(
+    read('agents/shared/modes/default/frontend.md'),
+    /output\/feats\/feat-\{name\}\/design-spec\.md/u,
+  );
 });
 
 test('specification preserves the planning contract without lifecycle gates', () => {
@@ -211,12 +224,19 @@ test('post-build roles use relevant context without QA artifact prerequisites', 
   for (const path of postBuildModes) {
     const guidance = read(path);
     assert.match(guidance, /request|requested outcome/iu, path);
-    assert.match(guidance, /When useful|useful inputs, not prerequisites|optional stack and database context/iu, path);
+    assert.match(
+      guidance,
+      /When useful|useful inputs, not prerequisites|optional stack and database context/iu,
+      path,
+    );
     assert.doesNotMatch(guidance, /qa-report|QA gate|Verdict: PASS|skip silently/iu, path);
   }
 
   const devops = read('agents/post-build/planr-devops/AGENT.md');
-  assert.match(devops, /never deploys, pushes an image, mutates a\s+remote environment, or calls a cloud API/iu);
+  assert.match(
+    devops,
+    /never deploys, pushes an image, mutates a\s+remote environment, or calls a cloud API/iu,
+  );
 
   const documentation = read('agents/post-build/planr-documentation/AGENT.md');
   assert.match(documentation, /Missing Planr or QA artifacts are not a reason to\s+skip/iu);

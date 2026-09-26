@@ -24,11 +24,12 @@ test('content linker resolves packaged Markdown references into one closed relea
 
 test('content linker reports the source line and repair for a missing reference', () => {
   assert.throws(
-    () => linkSkillProjection({
-      skillId: 'planr-example',
-      host: 'codex',
-      primary: primary('# Example\n\nRead [the guide](references/missing.md).\n'),
-    }),
+    () =>
+      linkSkillProjection({
+        skillId: 'planr-example',
+        host: 'codex',
+        primary: primary('# Example\n\nRead [the guide](references/missing.md).\n'),
+      }),
     (error) => {
       assert.equal(error.code, 'E_SKILL_CONTENT_LINK_MISSING');
       assert.equal(error.details.path, 'SKILL.md');
@@ -42,11 +43,12 @@ test('content linker reports the source line and repair for a missing reference'
 
 test('content linker rejects opaque inline-code dependencies', () => {
   assert.throws(
-    () => linkSkillProjection({
-      skillId: 'planr-dashboard',
-      host: 'codex',
-      primary: primary('Run `procedures/dashboard-preflight.md` before starting.\n'),
-    }),
+    () =>
+      linkSkillProjection({
+        skillId: 'planr-dashboard',
+        host: 'codex',
+        primary: primary('Run `procedures/dashboard-preflight.md` before starting.\n'),
+      }),
     (error) => {
       assert.equal(error.code, 'E_SKILL_CONTENT_REFERENCE_AMBIGUOUS');
       assert.equal(error.details.target, 'procedures/dashboard-preflight.md');
@@ -58,32 +60,35 @@ test('content linker rejects opaque inline-code dependencies', () => {
 
 test('content linker rejects orphaned, case-mismatched, and unsafe support content', () => {
   assert.throws(
-    () => linkSkillProjection({
-      skillId: 'planr-example',
-      host: 'claude-code',
-      primary: primary('# Example\n'),
-      references: [reference('references/unused.md')],
-    }),
+    () =>
+      linkSkillProjection({
+        skillId: 'planr-example',
+        host: 'claude-code',
+        primary: primary('# Example\n'),
+        references: [reference('references/unused.md')],
+      }),
     { code: 'E_SKILL_CONTENT_ASSET_ORPHANED' },
   );
 
   assert.throws(
-    () => linkSkillProjection({
-      skillId: 'planr-example',
-      host: 'cursor',
-      primary: primary('[Guide](references/Guide.md)\n'),
-      references: [reference('references/guide.md')],
-    }),
+    () =>
+      linkSkillProjection({
+        skillId: 'planr-example',
+        host: 'cursor',
+        primary: primary('[Guide](references/Guide.md)\n'),
+        references: [reference('references/guide.md')],
+      }),
     { code: 'E_SKILL_CONTENT_LINK_CASE' },
   );
 
   assert.throws(
-    () => parseSkillContentLinks({
-      skillId: 'planr-example',
-      host: 'codex',
-      path: 'SKILL.md',
-      bytes: '[Escape](../private.md)\n',
-    }),
+    () =>
+      parseSkillContentLinks({
+        skillId: 'planr-example',
+        host: 'codex',
+        path: 'SKILL.md',
+        bytes: '[Escape](../private.md)\n',
+      }),
     { code: 'E_SKILL_CONTENT_LINK_UNSAFE' },
   );
 });

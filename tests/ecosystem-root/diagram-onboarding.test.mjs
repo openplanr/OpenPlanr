@@ -31,15 +31,24 @@ test('diagram contributor onboarding names every authoring and drift operation',
     'npm run generate',
     'npm run check:generated',
     'npm run verify:packed:strict',
-  ]) assert.match(guide, new RegExp(command.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&'), 'u'), command);
+  ])
+    assert.match(guide, new RegExp(command.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&'), 'u'), command);
 
-  for (const script of ['skill:lint', 'skill:preview', 'skill:evaluate', 'generate', 'check:generated', 'verify:packed:strict']) {
+  for (const script of [
+    'skill:lint',
+    'skill:preview',
+    'skill:evaluate',
+    'generate',
+    'check:generated',
+    'verify:packed:strict',
+  ]) {
     assert.equal(typeof packageManifest.scripts[script], 'string', script);
   }
   for (const path of [
     'skills/planr-diagram/references/diagram-intent-to-ir.md',
     'skills/planr-diagram/references/diagram-fidelity.md',
-  ]) assert.equal(existsSync(resolve(root, path)), true, path);
+  ])
+    assert.equal(existsSync(resolve(root, path)), true, path);
 });
 
 test('the documented planr-diagram lint, preview, and evaluation journey passes', () => {
@@ -55,11 +64,16 @@ test('the documented planr-diagram lint, preview, and evaluation journey passes'
 });
 
 test('public onboarding states the supported Node.js line once and links the diagram guide', () => {
-  const statement = /OpenPlanr requires Node\.js 20 or later\. CI verifies Node\.js 20, 22, and 24;\s+contributors\s+use Node\.js 24 \(`\.nvmrc`\)\./u;
+  const statement =
+    /OpenPlanr requires Node\.js 20 or later\. CI verifies Node\.js 20, 22, and 24;\s+contributors\s+use Node\.js 24 \(`\.nvmrc`\)\./u;
   assert.match(read('README.md'), /OpenPlanr requires Node\.js 20 or later\./u);
   assert.match(read('README.md'), /docs\/diagrams\/authoring\.md/u);
   assert.match(read('README.md'), /docs\/diagrams\/planning-artifacts\/planning-artifacts\.svg/u);
-  for (const path of ['CONTRIBUTING.md', 'docs/contributing/dogfooding.md', 'docs/diagrams/authoring.md']) {
+  for (const path of [
+    'CONTRIBUTING.md',
+    'docs/contributing/dogfooding.md',
+    'docs/diagrams/authoring.md',
+  ]) {
     assert.match(read(path), statement, path);
   }
   assert.equal(read('.nvmrc').trim(), '24');

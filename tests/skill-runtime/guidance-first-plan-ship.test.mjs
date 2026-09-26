@@ -20,7 +20,10 @@ test('Plan defines Protocol 1.7 decomposition and an exact non-chaining Ship han
 test('Ship guides local completion without process machinery', () => {
   const ship = read('skills/planr-ship/SKILL.md');
   assert.match(ship, /^# Planr Ship\s+\n\s*Produce an implementation-complete local repository/mu);
-  assert.match(ship, /task Test Requirements.*repository instructions.*package and task-runner.*CI and pre-commit/isu);
+  assert.match(
+    ship,
+    /task Test Requirements.*repository instructions.*package and task-runner.*CI and pre-commit/isu,
+  );
   assert.match(ship, /discover-verification\.mjs/u);
   assert.match(ship, /never executes checks or writes files/u);
   assert.match(ship, /reviewRisks.*check/isu);
@@ -28,9 +31,18 @@ test('Ship guides local completion without process machinery', () => {
   assert.match(ship, /neither field\s+is a workflow gate/u);
   assert.match(ship, /retain unrelated working-tree changes/u);
   assert.match(ship, /dependency has not produced\s+the interface this task consumes/u);
-  assert.match(ship, /Isolate independent executions.*otherwise serialize only overlapping writes/isu);
-  assert.doesNotMatch(ship, /conflictsWith.*frontmatter|receipt|evidence ledger|correction loop|approval narration/iu);
-  assert.match(ship, /Return the existing five fields:[\s\S]*Outcome[\s\S]*Task[\s\S]*Changed[\s\S]*Checks[\s\S]*Issues/u);
+  assert.match(
+    ship,
+    /Isolate independent executions.*otherwise serialize only overlapping writes/isu,
+  );
+  assert.doesNotMatch(
+    ship,
+    /conflictsWith.*frontmatter|receipt|evidence ledger|correction loop|approval narration/iu,
+  );
+  assert.match(
+    ship,
+    /Return the existing five fields:[\s\S]*Outcome[\s\S]*Task[\s\S]*Changed[\s\S]*Checks[\s\S]*Issues/u,
+  );
   assert.match(ship, /Next: planr-land/u);
 });
 
