@@ -158,14 +158,6 @@ function assertExactBinding(actual, expected, subject) {
   }
 }
 
-function sameScopeBinding(left, right) {
-  return (
-    left.scopeId === right.scopeId &&
-    left.domainId === right.domainId &&
-    left.domainVersion === right.domainVersion
-  );
-}
-
 function roleIndex(domainDescriptor) {
   try {
     assertProtocolArtifact('operate-domain-registration', domainDescriptor, {

@@ -33,13 +33,6 @@ import * as workspace from './workspace-client.mjs';
 import { mergeWorkspaceFeedback } from './workspace-feedback.mjs';
 
 const FORMAT = 'openplanr-design-owner-custody';
-const pick = (value, keys) =>
-  Object.fromEntries(
-    keys
-      .filter((key) => value?.[key] !== undefined)
-      .map((key) => [key, structuredClone(value[key])]),
-  );
-
 /** Never upload source paths, local provenance, arbitrary state, or owner credentials. */
 export function prepareDesignShareBundle(file) {
   const current = currentDesign(file);

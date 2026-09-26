@@ -37,7 +37,7 @@
     {
       "source": "packages/design/lib/design-engine/canvas-wrap.mjs",
       "target": "lib/design-engine/canvas-wrap.mjs",
-      "sha256": "df1eb9410bb13ecb22fe7459748e39a20ac04b3a76ab35c14baf94f9cbac277b",
+      "sha256": "c511e32d5f23afca6b9b18fbf6364da9e2c087346ac51da07183f694871f20b5",
       "mode": "644"
     },
     {
@@ -49,7 +49,7 @@
     {
       "source": "packages/design/lib/design-engine/daemon.mjs",
       "target": "lib/design-engine/daemon.mjs",
-      "sha256": "02965007d9e67ebbf8a978380ed52216caf83cdbcb3bcda29707d9b33f6a3377",
+      "sha256": "e8bad8963bb7a8d61165e84f8f86e7e5331104c08d8fad7a346c5dc8e7f74455",
       "mode": "644"
     },
     {
@@ -97,7 +97,7 @@
     {
       "source": "packages/design/lib/design-engine/taste.mjs",
       "target": "lib/design-engine/taste.mjs",
-      "sha256": "e358d42173b7013870f4f9e9a6985669dd5db08150d818899b58e882c157839d",
+      "sha256": "551356f8f20860e8ac46d1c4e38ea3ea8123f62060d34e9c7e2ce13d6572d220",
       "mode": "644"
     },
     {
@@ -211,7 +211,7 @@
     {
       "source": "packages/design/lib/design/implementation-handoff-approval.mjs",
       "target": "lib/design/implementation-handoff-approval.mjs",
-      "sha256": "fc3ef47a8b75271dc8ecd0a6c757cf332b7bd72b988bd6449f9ec4c2c2d7566f",
+      "sha256": "60bb8863a38666288e8b32263bda439447b2d34c554ab65ad1c487211c2d2a54",
       "mode": "644"
     },
     {
@@ -301,7 +301,7 @@
     {
       "source": "packages/design/lib/design/share.mjs",
       "target": "lib/design/share.mjs",
-      "sha256": "7be306466441a86df5d20177e204dde41cc5b227a04d58ce8edea94dee72e1b0",
+      "sha256": "d23335cd1ea5ef987740023325a7cb14dd32b21342520e499b1c25c583438662",
       "mode": "644"
     },
     {
@@ -337,7 +337,7 @@
     {
       "source": "packages/design/lib/design/workspace-client.mjs",
       "target": "lib/design/workspace-client.mjs",
-      "sha256": "7f53d2146c8634e6f5911871cfb824252c57ac5fd05ea92337e36d4644524c3f",
+      "sha256": "1bf0aba04c524d5fd5ae58774c57f832e719829e27f8bd7ac5aaf10c40e970a7",
       "mode": "644"
     },
     {

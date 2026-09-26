@@ -38,7 +38,6 @@ const fixture = (name) => {
 };
 const business = () => fixture('business-domain-valid.json');
 const software = () => fixture('software-domain-valid.json');
-const clone = (value) => structuredClone(value);
 const businessDomain = (mutate) => {
   const source = registry();
   mutate(source.extensions.domains.find(({ domainId }) => domainId === 'business'));

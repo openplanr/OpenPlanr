@@ -181,7 +181,7 @@
     {
       "source": "packages/operate/lib/operate/executive-board-materialization-v2.d.mts",
       "target": "lib/operate/executive-board-materialization-v2.d.mts",
-      "sha256": "531dd0b78adc5993c98a9eb4eaaa6c8f906188288bb948eaf01c9d62b16b3bda",
+      "sha256": "8c9dccdd0346812cfc6a85be597846204b8272a53e321f4e775cc3fc5c942061",
       "mode": "644"
     },
     {
@@ -295,7 +295,7 @@
     {
       "source": "packages/operate/lib/operate/intelligence-router-v2.mjs",
       "target": "lib/operate/intelligence-router-v2.mjs",
-      "sha256": "0d9e8aa3e354fede7add382e06df6e36c15cc5c16f5e954e48d0ccc4c1458fb2",
+      "sha256": "73f8e6a1d73918ded6a04436e822e9143226ffa2b72b4ee4f4c08a3a589d0c2a",
       "mode": "644"
     },
     {
@@ -415,7 +415,7 @@
     {
       "source": "packages/operate/lib/operate/planning-bridge-v2.mjs",
       "target": "lib/operate/planning-bridge-v2.mjs",
-      "sha256": "3ee045da22c497fdddd327b487452d8d8a35d19f435c5e49fa03b8cd0440b6d8",
+      "sha256": "41f887619fa00742a2eaa153c038bb58415b69537f88bd4b11f755013b2e14bd",
       "mode": "644"
     },
     {
@@ -427,19 +427,19 @@
     {
       "source": "packages/operate/lib/operate/policy-v2.mjs",
       "target": "lib/operate/policy-v2.mjs",
-      "sha256": "3b6002d3f84574bdcda946efd8279fc0e8fe7216e07d25e1af100be4ad595bbb",
+      "sha256": "f6124fb8986c28477c0cf8d0204cd251233b11d05d8c050b6569e61cd01edc27",
       "mode": "644"
     },
     {
       "source": "packages/operate/lib/operate/reference-governed-executors-v2.d.mts",
       "target": "lib/operate/reference-governed-executors-v2.d.mts",
-      "sha256": "f0791c2210cac0bf7ef20fa73bf25d4a52e9c4fb4aae2a977ee57af013e588dd",
+      "sha256": "a89248648441106546dd9b72d2f8d056a1d9b5e4186348f3faceb16a95a2cf3f",
       "mode": "644"
     },
     {
       "source": "packages/operate/lib/operate/reference-governed-executors-v2.mjs",
       "target": "lib/operate/reference-governed-executors-v2.mjs",
-      "sha256": "e1a8744303a7297f3c79f2a936e02c4b095e9de5dead24209e4d93cad3891a2d",
+      "sha256": "d8b35ba4c73270acded0dc044f9b1b6f0e2fae13332f4e99dcae8f51cf5af308",
       "mode": "644"
     },
     {
@@ -481,7 +481,7 @@
     {
       "source": "packages/operate/lib/operate/runtime-foundation.mjs",
       "target": "lib/operate/runtime-foundation.mjs",
-      "sha256": "22027f34e58fe62b706cfa072e990b73b6c4e8585a9f843d1910e747a4f0c20f",
+      "sha256": "8cdf7a717f3fba2aad487d85ab1e6092b6b45c7d463411008c2df2a6c15f8139",
       "mode": "644"
     },
     {

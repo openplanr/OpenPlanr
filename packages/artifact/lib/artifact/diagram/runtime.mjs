@@ -1,4 +1,3 @@
-import { readFile } from 'node:fs/promises';
 import { basename } from 'node:path';
 
 import { sha256Jcs } from '@openplanr/protocol/canonical-json';

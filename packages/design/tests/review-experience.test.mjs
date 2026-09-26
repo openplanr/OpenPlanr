@@ -237,7 +237,7 @@ test('resolved comments remain explicit and legacy metadata normalizes on the ne
   assert.equal(result.resolution.items[0].outcome, 'accepted');
 });
 test('owner handoff groups dispositions, binds citations, rejects conflicting writers and invalidates approval on new feedback', async (t) => {
-  const { root, file, env } = fixture(t);
+  const { file, env } = fixture(t);
   const rendered = await renderDesignDocument(file);
   seedReview(file, env);
   const revision = rendered.revision;

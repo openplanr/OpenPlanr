@@ -78,7 +78,7 @@ function parseablePlanrConfig(root) {
           !Array.isArray(value.idPrefix) &&
           Object.keys(value.idPrefix).length > 0))
     );
-  } catch (error) {
+  } catch {
     return false;
   }
 }
@@ -103,7 +103,7 @@ function hasGitMarker(root) {
       existsSync(join(gitDir, 'HEAD')) &&
       lstatSync(join(gitDir, 'HEAD')).isFile()
     );
-  } catch (error) {
+  } catch {
     return false;
   }
 }

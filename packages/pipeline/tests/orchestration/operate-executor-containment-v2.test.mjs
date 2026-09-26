@@ -561,7 +561,7 @@ test('synthetic containment host is package-local, no-network, exact-bound, and 
     trustedHost: OPEN_REFERENCE_CONTAINMENT_EXECUTOR_HOST_V2,
   });
   assert.deepEqual(binding.connector, { id: 'synthetic-no-network-connector', version: '1.0.0' });
-  const target = createSyntheticNoNetworkTargetV2({
+  createSyntheticNoNetworkTargetV2({
     target: { kind: 'synthetic-target', id: 'synthetic-0001', revision: 'rev-0001' },
     initialValue: {},
   });

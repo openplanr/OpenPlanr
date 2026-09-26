@@ -3,7 +3,6 @@ import {
   assertOperateExperienceArtifactV2,
   assertProtocolArtifact,
 } from '@openplanr/protocol/contracts';
-import { PipelineError } from '@openplanr/protocol/errors';
 import {
   assertDeliveryClassification,
   assertNoSensitiveContext,

@@ -11,7 +11,7 @@
  */
 
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { test } from 'node:test';
@@ -812,7 +812,7 @@ test('the shared rail uses canonical Planr theme tokens', () => {
 });
 
 test('a reply the detail card POSTs is schema-valid and merges non-destructively', async () => {
-  const { base, id, boardDir, cleanup } = await startBoard();
+  const { base, id, cleanup } = await startBoard();
   try {
     // seed a durable pin (Dana), then submit the FULL item with a reply appended (the exact
     // single-item merge contribution submitReply builds) and assert the thread persists.

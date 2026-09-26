@@ -55,12 +55,6 @@ function freeze(value) {
   return value;
 }
 
-function without(record, field) {
-  const result = clone(record);
-  delete result[field];
-  return result;
-}
-
 function sameJson(left, right) {
   return JSON.stringify(left) === JSON.stringify(right);
 }

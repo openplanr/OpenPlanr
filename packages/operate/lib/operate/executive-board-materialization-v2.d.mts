@@ -6,7 +6,6 @@ import type {
   OperatingExecutiveBoardV2,
   OperatingReviewV2,
   OperatingRuntimeStateV2,
-  OperatingTraceMatrixV2,
 } from '@openplanr/protocol';
 
 export type {

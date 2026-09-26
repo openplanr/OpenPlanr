@@ -14,7 +14,6 @@
 
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { basename, dirname, join, relative, sep } from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 import { validate } from '../design/schema-loader.mjs';
 

@@ -10,7 +10,6 @@
  * Localhost HTTP only (the daemon under test) — zero external calls, $0.
  */
 
-import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';

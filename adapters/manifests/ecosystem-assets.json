@@ -6,7 +6,7 @@
   "inputs": [
     {
       "path": "adapters/manifests/generated-assets.json",
-      "digest": "sha256:a9b69fb25bfa392bb06d97d32b548a5a230b262921b500898f0d2b79072e43e7"
+      "digest": "sha256:c97fd66ba799c20a6dc2b72fb8c1031019ad9d43140cb2484b8095068e332b74"
     },
     {
       "path": "apps/dashboard/package.json",
@@ -116,7 +116,7 @@
     },
     {
       "path": "adapters/manifests/codex-plugin-content.json",
-      "digest": "sha256:22f2d44d763c6e626cb5c6c4fd93f634f0aef0ed63b6322df8bbb4bc8f248eda"
+      "digest": "sha256:a6403fc55a59ff63cd695226ec3a46a1838d2c6cf09296e29d2b13791f89d8d7"
     },
     {
       "path": "docs/generated/adapters.md",
@@ -132,7 +132,7 @@
     },
     {
       "path": "ecosystem.json",
-      "digest": "sha256:a0f9116d4485e2b9da4a9284ca9dc0060691ac3356072acb3ae84148d2f1fb32"
+      "digest": "sha256:cbfc78edc170f740803fb90233a6082127246ad62db0af1fc46563e828c4696c"
     },
     {
       "path": "packages/pipeline/.claude-plugin/plugin.json",

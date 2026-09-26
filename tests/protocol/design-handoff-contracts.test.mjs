@@ -11,7 +11,6 @@ import {
   validateProtocolArtifact,
 } from '../../packages/protocol/src/contracts.mjs';
 import {
-  assertDesignHandoffContract,
   assertDesignHandoffReadiness,
   assertDesignImplementationHandoff,
   assertDesignPlanningLineage,

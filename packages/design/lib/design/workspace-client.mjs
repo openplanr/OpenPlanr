@@ -5,7 +5,6 @@ import {
 } from '@openplanr/protocol/review-experience-contracts';
 import {
   assertWorkspaceContract,
-  DESIGN_REVIEW_BUNDLE_SCHEMA,
   DESIGN_WORKSPACE_API,
   DESIGN_WORKSPACE_CREATE_SCHEMA,
   DESIGN_WORKSPACE_EVENT_SCHEMA,

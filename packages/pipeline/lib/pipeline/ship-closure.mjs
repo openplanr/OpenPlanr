@@ -4,7 +4,7 @@ import { existsSync, lstatSync, readdirSync, readFileSync, unlinkSync } from 'no
 import { join, relative } from 'node:path';
 
 import { sha256Jcs } from '../protocol/jcs.mjs';
-import { assertBrowserQaGateRecord, assertBrowserQaRecordedEventAuthority } from './browser-qa.mjs';
+import { assertBrowserQaRecordedEventAuthority } from './browser-qa.mjs';
 import { PipelineError } from './errors.mjs';
 import { projectPipelineOperatingOriginCorrelation } from './operate-origin.mjs';
 import {
@@ -32,7 +32,6 @@ import {
 import {
   assertClosure,
   assertShipReceiptLineage,
-  blockingFindings,
   currentCandidate,
   phaseEvidence,
   recordShipGateEvidence,

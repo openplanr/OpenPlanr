@@ -56,7 +56,6 @@ const readyInput = () => ({
   },
 });
 
-const statusOf = (value, id) => value.checks.find((check) => check.id === id).status;
 const checkOf = (value, id) => value.checks.find((check) => check.id === id);
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 

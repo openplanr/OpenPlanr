@@ -52,7 +52,7 @@ export function imageDimensions(filePath) {
         return round(buf.readUInt32BE(16), buf.readUInt32BE(20));
       }
     }
-  } catch (e) {
+  } catch {
     /* unreadable — fall through to the default frame */
   }
   return { ...FALLBACK };

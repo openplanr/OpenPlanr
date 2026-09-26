@@ -9,7 +9,7 @@ import {
   statSync,
   writeFileSync,
 } from 'node:fs';
-import { dirname, join, relative, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { sha256Hex } from '../src/canonical-json.mjs';
@@ -29,10 +29,7 @@ import { buildDiagramRegistries, buildDiagramSchemas } from './diagram-definitio
 import { buildPlanningSchemas } from './planning-definitions.mjs';
 import { buildRegistries, buildSchemas } from './protocol-definitions.mjs';
 import { buildSkillPackageSchemasV18 } from './skill-package-definitions-v18.mjs';
-import {
-  buildSkillSourceRegistries,
-  buildSkillSourceSchemas,
-} from './skill-source-definitions.mjs';
+import { buildSkillSourceSchemas } from './skill-source-definitions.mjs';
 import {
   buildSkillSourceRegistriesV17,
   buildSkillSourceSchemasV17,

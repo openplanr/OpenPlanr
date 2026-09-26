@@ -90,7 +90,7 @@
       "path": "lib/operate/executive-board-materialization-v2.d.mts",
       "kind": "projection",
       "legacySha256": "d7dedd3a1a136d8457f4ab3dfa522f6c549a9e468a95ab345ba490aa7cde60c8",
-      "sha256": "531dd0b78adc5993c98a9eb4eaaa6c8f906188288bb948eaf01c9d62b16b3bda",
+      "sha256": "8c9dccdd0346812cfc6a85be597846204b8272a53e321f4e775cc3fc5c942061",
       "custody": "canonical-operate-domain-projection",
       "source": "packages/operate/lib/operate/executive-board-materialization-v2.d.mts"
     },
@@ -146,7 +146,7 @@
       "path": "lib/operate/planning-bridge-v2.mjs",
       "kind": "projection",
       "legacySha256": "218754a1ac2ad7dc8106728eeb778e2b41727a15417c1aa54a263ca251363487",
-      "sha256": "3ee045da22c497fdddd327b487452d8d8a35d19f435c5e49fa03b8cd0440b6d8",
+      "sha256": "41f887619fa00742a2eaa153c038bb58415b69537f88bd4b11f755013b2e14bd",
       "custody": "canonical-operate-domain-projection",
       "source": "packages/operate/lib/operate/planning-bridge-v2.mjs"
     },
@@ -178,7 +178,7 @@
       "path": "lib/operate/runtime-foundation.mjs",
       "kind": "projection",
       "legacySha256": "75d880b14d0304f71e7ba9ec33c20ca1ac0e48656d3492b62ff8f7dedd079f4e",
-      "sha256": "22027f34e58fe62b706cfa072e990b73b6c4e8585a9f843d1910e747a4f0c20f",
+      "sha256": "8cdf7a717f3fba2aad487d85ab1e6092b6b45c7d463411008c2df2a6c15f8139",
       "custody": "canonical-operate-domain-projection",
       "source": "packages/operate/lib/operate/runtime-foundation.mjs"
     },

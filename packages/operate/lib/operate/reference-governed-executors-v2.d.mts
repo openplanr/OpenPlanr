@@ -1,7 +1,5 @@
 import type {
-  OperateCapabilityProviderRegistrationV2,
   OperateExecutorRegistrationV2,
-  OperatePolicyProviderRegistrationV2,
   OperateTargetBindingV2,
   OperateTrustedExecutorBindingV2,
   OperatingActionPolicyV2,

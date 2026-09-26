@@ -6,7 +6,6 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 import { OPEN_REFERENCE_EVIDENCE_REGISTRY_V2 } from '../../lib/operate/evidence-v2.mjs';
 import {
-  buildOperatingEvidenceGraphV2,
   createEmptyOperatingRuntimeStateV2,
   createNoModelReplayHookV2,
   createOperatingArtifactByteStoreV2,
@@ -316,7 +315,7 @@ test('a validated candidate atomically materializes one immutable evidence-snaps
 });
 
 test('identical evidence resolution replays without effects; divergent candidate, identity, resolver output, or link input fails before mutation', () => {
-  const { state, sourceArtifact, targetArtifact, sourceCandidate, artifactStore } = sourceState({
+  const { state, sourceArtifact, sourceCandidate, artifactStore } = sourceState({
     links: [{ localClaimId: 'local-claim-001', relation: 'contradictedBy', confidence: 0.4 }],
   });
   const request = {

@@ -2,8 +2,6 @@ import { createHash } from 'node:crypto';
 
 import {
   appendOperatingApprovalRecordV2,
-  assertOperateAuthorityV2,
-  assertOperatingActionAuthorityTupleV2,
   assertOperatingActionPolicyV2,
   assertOperatingApprovalRecordV2,
   assertOperatingApprovalRequirementIntegrityV2,
@@ -17,7 +15,6 @@ import {
   consumeOperatingApprovalRecordsV2,
   createOperatingActionReviewV2,
   createOperatingApprovalRequirementV2,
-  deriveOperateAuthorityAllowedActionsV2,
   deriveOperatingApprovalRequirementInstanceIdV2,
   evaluateOperateAuthorityV2,
   evaluateOperatingApprovalSetV2,
@@ -27,7 +24,6 @@ import {
 } from './runtime-foundation/authority.mjs';
 import {
   assertOperatingDeltaV2,
-  assertOperatingModelStateV2,
   assertOperatingSnapshotV2,
   buildOperatingEvidenceMaterializationV2,
   buildOperatingSnapshotStateTransactionV2,
@@ -44,13 +40,9 @@ import {
   assertOperatingReviewBoundSubmissionV1,
   buildOperatingActionVerificationMaterializationV2,
   buildOperatingActionVerificationOutcomeV2,
-  buildOperatingExecutionLifecycleV2,
-  buildOperatingReviewBoundSubmissionV1,
-  buildOperatingRollbackVerificationV2,
   buildOperatingTerminalVerificationAssignmentV2,
   closeCycleWithCarriedWorkV2,
   closeVerifiedOperatingCycleV2,
-  computeOperatingReviewBoundSubmissionHashV1,
   deriveContainedExecutorRequestFingerprintFromBindingV2,
   deriveOperatingExecutionLifecycleIdentitiesV2,
   deriveOperatingExecutionVerificationStatusV2,
@@ -58,13 +50,10 @@ import {
   deriveOperatingVerificationFeedbackV2,
   findOpenReferenceExecutorHostDeclarationV2,
   OPEN_REFERENCE_OPERATE_GOVERNED_EXTENSIONS_V2,
-  OPERATE_REVIEW_BOUND_SUBMISSION_DOMAIN,
   selectOperateCapabilityProviderV2,
   selectOperateExecutorV2,
-  selectOperatingTerminalVerificationAssignmentV2,
 } from './runtime-foundation/execution.mjs';
 import {
-  assertOperatingAssignmentAvailabilityPayloadV2,
   assertOperatingExecutiveBoardV2,
   assertOperatingIntelligencePlanV2,
   assertOperatingValidatedDependencyProofV2,
@@ -13249,7 +13238,7 @@ function materializePreparedOperatingIntelligenceInputBundleV2(
     );
   }
   const index = indexRuntimeState(initialState);
-  const { snapshot, operatingState, cycle } = snapshotForRuntimeIntelligence(
+  const { snapshot, cycle } = snapshotForRuntimeIntelligence(
     index,
     built.bundle.cycleId,
     built.bundle.snapshotId,
@@ -13803,7 +13792,6 @@ export function planOperatingRuntimeIntelligenceBoardV2(
     request.snapshotId,
     request.stateId,
   );
-  const delta = index.deltas.get(request.deltaId);
   const creationEventIds = board.assignments.map(({ assignmentId }) =>
     intelligenceAssignmentCreationEventId(board.plan.planId, assignmentId),
   );

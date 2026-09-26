@@ -1,4 +1,4 @@
-import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, lstatSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -1320,7 +1320,7 @@ export async function startArtifactReview({
     try {
       await openUrl(url);
       opened = true;
-    } catch (error) {
+    } catch {
       launchError = Object.freeze({
         code: 'E_ARTIFACT_BROWSER_OPEN_FAILED',
         message:

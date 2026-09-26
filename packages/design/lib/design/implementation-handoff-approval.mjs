@@ -10,7 +10,6 @@ import {
 } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { canonicalizeJson } from '@openplanr/protocol/canonical-json';
-import { assertDesignImplementationHandoff } from '@openplanr/protocol/design-handoff-contracts';
 import {
   assertImplementationHandoffProjection,
   composeImplementationHandoff,

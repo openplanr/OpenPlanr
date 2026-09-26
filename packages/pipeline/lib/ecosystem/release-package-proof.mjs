@@ -2,7 +2,7 @@ import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { lstatSync, readdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { dirname, join, posix, relative, resolve } from 'node:path';
+import { join, posix, relative, resolve } from 'node:path';
 
 import { sha256Jcs } from '../protocol/jcs.mjs';
 

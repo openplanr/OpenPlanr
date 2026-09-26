@@ -40,7 +40,6 @@ import {
   assertOperateExperienceTransportView,
   assertOperateReviewDisplayWorkspaceV1,
   assertOperatingReviewReceiptV2,
-  assertProtocolArtifact,
   buildOperateExperienceLivePatchV2,
   buildOperateExperienceTransportView,
   decodeOperateExperienceCheckpoint,
@@ -1785,12 +1784,6 @@ function sameLiveHead(left, right) {
 
 function sameLiveCursor(left, right) {
   return sameLiveHead(left?.eventHead, right?.eventHead) && left?.viewHash === right?.viewHash;
-}
-
-function sameLiveBinding(left, right) {
-  return ['actorId', 'projectId', 'scopeId', 'domainId', 'domainVersion', 'generation'].every(
-    (field) => left?.[field] === right?.[field],
-  );
 }
 
 function planningRequestBinding(req, searchParams, projectId, expectedActorId) {

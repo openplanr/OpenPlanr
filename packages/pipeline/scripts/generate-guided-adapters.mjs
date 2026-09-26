@@ -12,10 +12,7 @@ import {
   renderCodexProjectGuidance,
   renderCursorProjectGuidance,
 } from '../lib/operate/contracts/operate-adapter-skills.mjs';
-import {
-  BUSINESS_EXECUTIVE_SKILL_BINDINGS,
-  renderOperateMandateAppendixModule,
-} from '../lib/operate/contracts/role-skills.mjs';
+import { renderOperateMandateAppendixModule } from '../lib/operate/contracts/role-skills.mjs';
 import { resolveGuidedInteraction } from '../lib/pipeline/guided-interaction.mjs';
 import {
   assertLandingWorkflowCatalog,

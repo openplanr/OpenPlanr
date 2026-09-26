@@ -8,7 +8,6 @@ import {
 } from '../../lib/operate/executive-board-compatibility-v2.mjs';
 import {
   assertOperatingExecutiveBoardV2,
-  buildOperatingExecutiveBoardRecordV2,
   createOperatingExecutiveBoardMaterializationV2,
 } from '../../lib/operate/executive-board-materialization-v2.mjs';
 import {

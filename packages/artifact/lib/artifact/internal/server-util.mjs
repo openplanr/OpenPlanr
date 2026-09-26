@@ -7,16 +7,13 @@
 
 import { randomBytes } from 'node:crypto';
 import {
-  closeSync,
   existsSync,
   lstatSync,
   mkdirSync,
-  openSync,
   readdirSync,
   readFileSync,
   renameSync,
   rmSync,
-  statSync,
   writeFileSync,
 } from 'node:fs';
 import { createConnection } from 'node:net';

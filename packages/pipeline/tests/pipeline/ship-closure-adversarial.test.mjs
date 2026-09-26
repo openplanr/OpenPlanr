@@ -1937,7 +1937,7 @@ test('terminal start replay is exact-only and ordinary overlap cannot mint a new
     humanReviewConfirmed: true,
   });
   const runId = `ship_${'a'.repeat(32)}`;
-  const started = createShipClosure({
+  createShipClosure({
     projectRoot: root,
     prepared: preview,
     runtime: 'codex',

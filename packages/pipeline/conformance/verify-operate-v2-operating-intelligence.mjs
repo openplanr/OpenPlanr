@@ -27,7 +27,6 @@ import {
   createNoModelReplayHookV2,
   createOperatingArtifactByteStoreV2,
   createOperatingRuntimeEventV2,
-  deriveOperatingChairLedgerIdV2,
   deriveOperatingRuntimeDeltaV2,
   deriveOperatingVerificationFeedbackV2,
   materializeOperatingActionVerificationV2,

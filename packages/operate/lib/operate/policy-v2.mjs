@@ -76,10 +76,6 @@ function sameIdentity(left, right) {
   return left?.id === right?.id && left?.version === right?.version;
 }
 
-function sameTarget(left, right) {
-  return left?.kind === right?.kind && left?.id === right?.id && left?.revision === right?.revision;
-}
-
 function assertTimestamp(value, field) {
   if (typeof value !== 'string' || Number.isNaN(Date.parse(value))) {
     fail('RESULT_CONTRACT_INVALID', `${field} must be an explicit RFC 3339 timestamp.`, { field });

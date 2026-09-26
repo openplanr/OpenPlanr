@@ -94,7 +94,7 @@ test('all active professional overlays use explicit canonical source prompts wit
 });
 
 test('canonical active sources deterministically render all three hosts and one digest-bound manifest', () => {
-  const catalog = readProfessionalSkillsCatalog(activeOptions);
+  readProfessionalSkillsCatalog(activeOptions);
   const legacy = readProfessionalSkillsCatalog({ projectRoot: root, view: 'legacy' });
   const first = renderProfessionalSkillsBundle(activeOptions);
   const second = renderProfessionalSkillsBundle(activeOptions);

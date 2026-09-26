@@ -16,12 +16,9 @@
 
 import { spawnSync } from 'node:child_process';
 import { dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 import { validate } from '../design/schema-loader.mjs';
 import { readGraph, readNode } from './graph-reader.mjs';
-
-const here = dirname(fileURLToPath(import.meta.url));
 
 /** Lowest planr CLI version that emits the graph/status --json the dashboard consumes. */
 export const CLI_GRAPH_MIN_VERSION = '1.7.2';

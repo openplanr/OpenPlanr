@@ -48,7 +48,6 @@ import {
 import { createServer } from 'node:http';
 import { createRequire } from 'node:module';
 import { basename, dirname, extname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import {
   createArtifactBridgeNonce,
   prepareArtifactDocument,
@@ -172,7 +171,6 @@ const readBody = (req) =>
     encoding: 'utf8',
   });
 
-const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const require = createRequire(import.meta.url);
 const artifactPackageRoot = dirname(require.resolve('@openplanr/artifact/package.json'));
 const artifactStageRuntimePath = join(artifactPackageRoot, 'templates', 'artifact-review-stage.js');
