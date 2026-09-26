@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path';
 
 const CONSOLIDATED_WORKSPACE_NAME = 'openplanr-workspace';
@@ -129,7 +129,10 @@ export function readRemoteUrls(repoRoot) {
 }
 
 function remoteRepositoryName(url) {
-  const normalized = String(url).trim().replace(/\\/g, '/').replace(/\.git$/i, '');
+  const normalized = String(url)
+    .trim()
+    .replace(/\\/g, '/')
+    .replace(/\.git$/i, '');
   const match = normalized.match(/(?:^|[/:])openplanr\/([^/]+)$/i);
   return match?.[1]?.toLowerCase() ?? null;
 }
@@ -152,9 +155,10 @@ function hasSignature(repoRoot, signature) {
 function resolveByAlias(workspaceRoot, definition) {
   const children = childDirectories(workspaceRoot);
   for (const alias of definition.aliases) {
-    const candidate = children.find((path) => basename(path) === alias)
-      ?? children.find((path) => basename(path).toLowerCase() === alias.toLowerCase())
-      ?? join(workspaceRoot, alias);
+    const candidate =
+      children.find((path) => basename(path) === alias) ??
+      children.find((path) => basename(path).toLowerCase() === alias.toLowerCase()) ??
+      join(workspaceRoot, alias);
     if (hasSignature(candidate, definition.signature)) {
       return { path: candidate, method: 'alias' };
     }
@@ -165,7 +169,9 @@ function resolveByAlias(workspaceRoot, definition) {
 function resolveByRemote(candidates, definition) {
   const expected = new Set(definition.remoteNames.map((name) => name.toLowerCase()));
   for (const candidate of candidates) {
-    const matches = readRemoteUrls(candidate).some((url) => expected.has(remoteRepositoryName(url)));
+    const matches = readRemoteUrls(candidate).some((url) =>
+      expected.has(remoteRepositoryName(url)),
+    );
     if (matches && hasSignature(candidate, definition.signature)) {
       return { path: candidate, method: 'git-remote' };
     }

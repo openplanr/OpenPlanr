@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { chooseWalkthroughNav, ANCHOR_MAX_SCREENS } from '../../lib/design/walkthroughNav.mjs';
+import { ANCHOR_MAX_SCREENS, chooseWalkthroughNav } from '../../lib/design/walkthrough-nav.mjs';
 
 test('≤8 screens use anchor-scroll, >8 use lazy switching', () => {
   assert.equal(chooseWalkthroughNav(1), 'anchor');

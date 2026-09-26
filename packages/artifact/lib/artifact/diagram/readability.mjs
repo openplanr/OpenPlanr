@@ -24,18 +24,29 @@ const MAX_SPLIT_PANEL_ITEMS = 256;
 
 function chunkPanels(document, allIds, limit) {
   if (allIds.length > MAX_SPLIT_PANELS * MAX_SPLIT_PANEL_ITEMS) {
-    diagramFail(DIAGRAM_ERROR_CODES.RESOURCE_BUDGET_EXCEEDED, 'Diagram exceeds the largest expressible split plan.', {
-      primaryItems: allIds.length,
-      maximum: MAX_SPLIT_PANELS * MAX_SPLIT_PANEL_ITEMS,
-      repair: 'Split the source into multiple named diagrams before rendering.',
-    });
+    diagramFail(
+      DIAGRAM_ERROR_CODES.RESOURCE_BUDGET_EXCEEDED,
+      'Diagram exceeds the largest expressible split plan.',
+      {
+        primaryItems: allIds.length,
+        maximum: MAX_SPLIT_PANELS * MAX_SPLIT_PANEL_ITEMS,
+        repair: 'Split the source into multiple named diagrams before rendering.',
+      },
+    );
   }
   // Panels grow past the detail budget only when the panel cap forces it.
-  const size = Math.min(MAX_SPLIT_PANEL_ITEMS, Math.max(limit, Math.ceil(allIds.length / MAX_SPLIT_PANELS)));
+  const size = Math.min(
+    MAX_SPLIT_PANEL_ITEMS,
+    Math.max(limit, Math.ceil(allIds.length / MAX_SPLIT_PANELS)),
+  );
   const panels = [];
   for (let index = 0; index < allIds.length; index += size) {
     const number = Math.floor(index / size) + 1;
-    panels.push({ id: `panel-${number}`, title: `${document.title} — panel ${number}`, itemIds: allIds.slice(index, index + size) });
+    panels.push({
+      id: `panel-${number}`,
+      title: `${document.title} — panel ${number}`,
+      itemIds: allIds.slice(index, index + size),
+    });
   }
   return panels;
 }
@@ -43,9 +54,12 @@ function chunkPanels(document, allIds, limit) {
 function buildSplitPlan(document, limit) {
   const [preferredStrategy, preferred] = splitStrategy(document);
   const allIds = primaryItems(document).map(({ id }) => id);
-  const containersFit = ['by-group', 'by-lane'].includes(preferredStrategy) && preferred.length <= MAX_SPLIT_PANELS
-    && preferred.every(({ members }) => members.length > 0 && members.length <= MAX_SPLIT_PANEL_ITEMS);
-  const strategy = containersFit || preferredStrategy === 'by-sequence' ? preferredStrategy : 'by-subgraph';
+  const containersFit =
+    ['by-group', 'by-lane'].includes(preferredStrategy) &&
+    preferred.length <= MAX_SPLIT_PANELS &&
+    preferred.every(({ members }) => members.length > 0 && members.length <= MAX_SPLIT_PANEL_ITEMS);
+  const strategy =
+    containersFit || preferredStrategy === 'by-sequence' ? preferredStrategy : 'by-subgraph';
   let groups = containersFit
     ? preferred.map(({ id, label, members }) => ({ id, title: label, itemIds: members }))
     : chunkPanels(document, allIds, limit);
@@ -61,23 +75,47 @@ function buildSplitPlan(document, limit) {
 
 function fanIn(document) {
   const incoming = new Map();
-  for (const relation of document.relations) incoming.set(relation.to, (incoming.get(relation.to) ?? 0) + 1);
+  for (const relation of document.relations)
+    incoming.set(relation.to, (incoming.get(relation.to) ?? 0) + 1);
   return Math.max(0, ...incoming.values());
 }
 
-export function planDiagramQuality(document, { crossings = 0, clipped = false, contrastRatio = 21 } = {}) {
+export function planDiagramQuality(
+  document,
+  { crossings = 0, clipped = false, contrastRatio = 21 } = {},
+) {
   assertDiagramDocument(document);
   const grammar = getGrammar(document.grammar.id);
   const items = primaryItems(document);
   const budget = grammar.detailLimits[document.layout.detailTier];
   const longestLabel = Math.max(0, ...items.map(({ label = '' }) => label.length));
   const checks = [
-    ['item-budget', items.length <= budget, `${items.length} primary items; ${budget} allowed for ${document.layout.detailTier}.`],
-    ['label-length', longestLabel <= grammar.readability.maxLabelCharacters, `Longest label is ${longestLabel} characters.`],
-    ['crossings', crossings <= grammar.readability.maxCrossings, `${crossings} estimated crossings; ${grammar.readability.maxCrossings} allowed.`],
-    ['fan-in', fanIn(document) <= grammar.readability.maxFanIn, `Maximum fan-in is ${fanIn(document)}; ${grammar.readability.maxFanIn} allowed.`],
+    [
+      'item-budget',
+      items.length <= budget,
+      `${items.length} primary items; ${budget} allowed for ${document.layout.detailTier}.`,
+    ],
+    [
+      'label-length',
+      longestLabel <= grammar.readability.maxLabelCharacters,
+      `Longest label is ${longestLabel} characters.`,
+    ],
+    [
+      'crossings',
+      crossings <= grammar.readability.maxCrossings,
+      `${crossings} estimated crossings; ${grammar.readability.maxCrossings} allowed.`,
+    ],
+    [
+      'fan-in',
+      fanIn(document) <= grammar.readability.maxFanIn,
+      `Maximum fan-in is ${fanIn(document)}; ${grammar.readability.maxFanIn} allowed.`,
+    ],
     ['contrast', contrastRatio >= 4.5, `Contrast ratio is ${contrastRatio.toFixed(2)}:1.`],
-    ['clipping', !clipped, clipped ? 'Destination would clip semantic content.' : 'No clipping reported.'],
+    [
+      'clipping',
+      !clipped,
+      clipped ? 'Destination would clip semantic content.' : 'No clipping reported.',
+    ],
   ].map(([id, passed, message]) => ({ id, status: passed ? 'pass' : 'warning', message }));
   const splitRequired = items.length > budget || items.length > grammar.detailLimits.hard;
   const warning = checks.some(({ status }) => status === 'warning');

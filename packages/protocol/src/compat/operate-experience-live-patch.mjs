@@ -6,13 +6,12 @@
  * rather than shared: the projection module has 111 `fail` and 46 `clone` call sites, and these
  * duplicates are meant to die with it.
  */
-import { PipelineError } from '../errors.mjs';
-import { assertOperateExperienceArtifactV2 } from '../contracts.mjs';
+
 import { sha256Jcs } from '../canonical-json.mjs';
+import { assertOperateExperienceArtifactV2 } from '../contracts.mjs';
+import { PipelineError } from '../errors.mjs';
 
 const PROTOCOL_VERSION = '2.0.0';
-
-
 
 function fail(code, message, context = {}) {
   throw new PipelineError(code, message, '', { retryable: false, context });
@@ -40,26 +39,79 @@ function stableId(prefix, value) {
 
 function assertCanonicalView(view) {
   assertOperateExperienceArtifactV2('operate-experience-view', view);
-  if (view.viewHash !== sha256Jcs(without(view, 'viewHash'))) fail('E_OPERATE_BINDING_MISMATCH', 'Experience viewHash does not equal its canonical content.');
+  if (view.viewHash !== sha256Jcs(without(view, 'viewHash')))
+    fail('E_OPERATE_BINDING_MISMATCH', 'Experience viewHash does not equal its canonical content.');
   return view;
 }
 
 function validInstant(value, field) {
-  if (typeof value !== 'string' || Number.isNaN(Date.parse(value))) fail('RESULT_CONTRACT_INVALID', `${field} must be an RFC 3339 instant.`);
+  if (typeof value !== 'string' || Number.isNaN(Date.parse(value)))
+    fail('RESULT_CONTRACT_INVALID', `${field} must be an RFC 3339 instant.`);
   return value;
 }
 
-export function buildOperateExperienceLivePatchV2(previous, next, { createdAt = next?.generatedAt } = {}) {
-  assertCanonicalView(previous); assertCanonicalView(next);
-  for (const field of ['scopeId', 'domainId', 'domainVersion', 'actorId', 'accessLevel']) if (previous[field] !== next[field]) fail('E_OPERATE_BINDING_MISMATCH', `Live patch binding changed at ${field}.`);
-  if (next.eventHead.sequence !== previous.eventHead.sequence + 1
-    || (previous.eventHead.sequence > 0 && next.eventHead.hash === previous.eventHead.hash)) {
-    fail('STATE_TRANSITION_INVALID', 'Live patch requires one exact contiguous, non-forking Event-head advance.');
+export function buildOperateExperienceLivePatchV2(
+  previous,
+  next,
+  { createdAt = next?.generatedAt } = {},
+) {
+  assertCanonicalView(previous);
+  assertCanonicalView(next);
+  for (const field of ['scopeId', 'domainId', 'domainVersion', 'actorId', 'accessLevel'])
+    if (previous[field] !== next[field])
+      fail('E_OPERATE_BINDING_MISMATCH', `Live patch binding changed at ${field}.`);
+  if (
+    next.eventHead.sequence !== previous.eventHead.sequence + 1 ||
+    (previous.eventHead.sequence > 0 && next.eventHead.hash === previous.eventHead.hash)
+  ) {
+    fail(
+      'STATE_TRANSITION_INVALID',
+      'Live patch requires one exact contiguous, non-forking Event-head advance.',
+    );
   }
   validInstant(createdAt, 'createdAt');
-  const paths = ['status', 'attention', 'domainMetrics', 'cycles', 'inbox', 'actions', 'evidence', 'claims', 'rationale', 'outcomes', 'learnings', 'history', 'replay', 'allowedActions', 'omissions', 'export'];
-  const operations = paths.filter((path) => sha256Jcs(previous[path]) !== sha256Jcs(next[path])).map((path) => ({ op: 'replace', path: `/${path}`, valueHash: sha256Jcs(next[path]), value: clone(next[path]) }));
-  const base = { kind: 'operate-experience-live-patch', schemaVersion: '1.0.0', protocolVersion: PROTOCOL_VERSION, patchId: stableId('xpatch', { from: previous.viewHash, to: next.viewHash }), scopeId: next.scopeId, domainId: next.domainId, domainVersion: next.domainVersion, actorId: next.actorId, fromEventHead: clone(previous.eventHead), toEventHead: clone(next.eventHead), fromViewHash: previous.viewHash, toViewHash: next.viewHash, operations, createdAt };
+  const paths = [
+    'status',
+    'attention',
+    'domainMetrics',
+    'cycles',
+    'inbox',
+    'actions',
+    'evidence',
+    'claims',
+    'rationale',
+    'outcomes',
+    'learnings',
+    'history',
+    'replay',
+    'allowedActions',
+    'omissions',
+    'export',
+  ];
+  const operations = paths
+    .filter((path) => sha256Jcs(previous[path]) !== sha256Jcs(next[path]))
+    .map((path) => ({
+      op: 'replace',
+      path: `/${path}`,
+      valueHash: sha256Jcs(next[path]),
+      value: clone(next[path]),
+    }));
+  const base = {
+    kind: 'operate-experience-live-patch',
+    schemaVersion: '1.0.0',
+    protocolVersion: PROTOCOL_VERSION,
+    patchId: stableId('xpatch', { from: previous.viewHash, to: next.viewHash }),
+    scopeId: next.scopeId,
+    domainId: next.domainId,
+    domainVersion: next.domainVersion,
+    actorId: next.actorId,
+    fromEventHead: clone(previous.eventHead),
+    toEventHead: clone(next.eventHead),
+    fromViewHash: previous.viewHash,
+    toViewHash: next.viewHash,
+    operations,
+    createdAt,
+  };
   const patch = { ...base, patchHash: sha256Jcs(base) };
   assertOperateExperienceArtifactV2('operate-experience-live-patch', patch);
   return freeze(patch);

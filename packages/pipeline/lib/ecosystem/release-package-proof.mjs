@@ -1,14 +1,8 @@
-import { createHash } from 'node:crypto';
-import {
-  lstatSync,
-  readFileSync,
-  readdirSync,
-  realpathSync,
-  writeFileSync,
-} from 'node:fs';
-import { homedir } from 'node:os';
-import { dirname, join, posix, relative, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
+import { lstatSync, readdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { join, posix, relative, resolve } from 'node:path';
 
 import { sha256Jcs } from '../protocol/jcs.mjs';
 
@@ -133,8 +127,10 @@ export function enumerateExportTargets(exportsField) {
     for (const entry of collected) targets.push({ subpath, ...entry });
   }
   return targets.sort((left, right) =>
-    `${left.subpath}\0${left.conditions.join('.')}\0${left.target}`
-      .localeCompare(`${right.subpath}\0${right.conditions.join('.')}\0${right.target}`));
+    `${left.subpath}\0${left.conditions.join('.')}\0${left.target}`.localeCompare(
+      `${right.subpath}\0${right.conditions.join('.')}\0${right.target}`,
+    ),
+  );
 }
 
 function wildcardMatches(pattern, files) {
@@ -161,7 +157,8 @@ export function verifyExportTargets({ exportsField, archiveFiles }) {
       if (matches.length === 0) fail(`Package export ${entry.subpath} has no archived targets.`);
       results.push({ ...entry, target, matches });
     } else {
-      if (!files.has(target)) fail(`Package export ${entry.subpath} is missing archived target ${target}.`);
+      if (!files.has(target))
+        fail(`Package export ${entry.subpath} is missing archived target ${target}.`);
       results.push({ ...entry, target, matches: [target] });
     }
   }
@@ -197,7 +194,10 @@ function exportProbeKind(entry, target) {
  * must be loaded by the isolated consumer.
  */
 export function createInstalledExportProbePlan({ packageName, exportsField, archiveFiles }) {
-  if (typeof packageName !== 'string' || !/^(?:@[a-z0-9._~-]+\/)?[a-z0-9._~-]+$/u.test(packageName)) {
+  if (
+    typeof packageName !== 'string' ||
+    !/^(?:@[a-z0-9._~-]+\/)?[a-z0-9._~-]+$/u.test(packageName)
+  ) {
     fail('Installed export proof requires a valid package name.');
   }
   const targets = verifyExportTargets({ exportsField, archiveFiles });
@@ -211,7 +211,8 @@ export function createInstalledExportProbePlan({ packageName, exportsField, arch
       const concreteSubpath = entry.subpath.includes('*')
         ? entry.subpath.replace('*', capture)
         : entry.subpath;
-      if (concreteSubpath.includes('*')) fail(`Export ${entry.subpath} has an unresolved public wildcard.`);
+      if (concreteSubpath.includes('*'))
+        fail(`Export ${entry.subpath} has an unresolved public wildcard.`);
       probes.push({
         subpath: concreteSubpath,
         specifier: publicSpecifier(packageName, concreteSubpath),
@@ -222,8 +223,10 @@ export function createInstalledExportProbePlan({ packageName, exportsField, arch
     }
   }
   return probes.sort((left, right) =>
-    `${left.subpath}\0${left.conditions.join('.')}\0${left.target}`
-      .localeCompare(`${right.subpath}\0${right.conditions.join('.')}\0${right.target}`));
+    `${left.subpath}\0${left.conditions.join('.')}\0${left.target}`.localeCompare(
+      `${right.subpath}\0${right.conditions.join('.')}\0${right.target}`,
+    ),
+  );
 }
 
 function installedProbeRunnerSource() {
@@ -317,7 +320,10 @@ export function runInstalledExportProbes({
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   if (result.status !== 0) {
-    const detail = (result.stderr || result.stdout || `exit ${result.status}`).trim().split(/\r?\n/u).at(-1);
+    const detail = (result.stderr || result.stdout || `exit ${result.status}`)
+      .trim()
+      .split(/\r?\n/u)
+      .at(-1);
     fail(`Installed ${packageName} export probe failed${detail ? `: ${detail}` : ''}.`);
   }
   let results;
@@ -326,8 +332,11 @@ export function runInstalledExportProbes({
   } catch {
     fail(`Installed ${packageName} export probe did not produce a valid report.`);
   }
-  if (!Array.isArray(results) || results.length !== probes.length
-    || results.some((entry) => !['loaded', 'validated'].includes(entry.status))) {
+  if (
+    !Array.isArray(results) ||
+    results.length !== probes.length ||
+    results.some((entry) => !['loaded', 'validated'].includes(entry.status))
+  ) {
     fail(`Installed ${packageName} export probe report is incomplete.`);
   }
   const counts = {
@@ -341,15 +350,17 @@ export function runInstalledExportProbes({
 function withoutFencedCode(markdown) {
   const lines = String(markdown).split(/\r?\n/u);
   let fence = null;
-  return lines.map((line) => {
-    const marker = line.match(/^\s*(```+|~~~+)/u)?.[1] ?? null;
-    if (marker) {
-      if (fence === null) fence = marker[0];
-      else if (marker[0] === fence) fence = null;
-      return '';
-    }
-    return fence === null ? line : '';
-  }).join('\n');
+  return lines
+    .map((line) => {
+      const marker = line.match(/^\s*(```+|~~~+)/u)?.[1] ?? null;
+      if (marker) {
+        if (fence === null) fence = marker[0];
+        else if (marker[0] === fence) fence = null;
+        return '';
+      }
+      return fence === null ? line : '';
+    })
+    .join('\n');
 }
 
 function markdownTargets(markdown) {
@@ -371,11 +382,15 @@ function resolveDocumentTarget(documentPath, rawTarget) {
   } catch {
     fail(`Packaged document ${documentPath} contains an invalid encoded link.`);
   }
-  if (/^https:\/\//iu.test(decoded) || /^mailto:/iu.test(decoded)) return { kind: 'remote', target: decoded };
+  if (/^https:\/\//iu.test(decoded) || /^mailto:/iu.test(decoded))
+    return { kind: 'remote', target: decoded };
   if (/^[A-Za-z][A-Za-z0-9+.-]*:/u.test(decoded) || decoded.startsWith('/')) {
     fail(`Packaged document ${documentPath} contains a non-stable or package-absolute link.`);
   }
-  const target = portablePath(posix.join(posix.dirname(documentPath), decoded), `link in ${documentPath}`);
+  const target = portablePath(
+    posix.join(posix.dirname(documentPath), decoded),
+    `link in ${documentPath}`,
+  );
   return { kind: 'local', target };
 }
 
@@ -386,7 +401,8 @@ export function verifyPackagedDocumentation({ packageRoot, archiveFiles }) {
     if (!fileSet.has(required)) fail(`Release package is missing required document ${required}.`);
   }
 
-  const documents = files.filter((path) => path === 'README.md' || path.startsWith('docs/'))
+  const documents = files
+    .filter((path) => path === 'README.md' || path.startsWith('docs/'))
     .filter((path) => path.endsWith('.md'));
   const results = [];
   for (const documentPath of documents) {
@@ -396,8 +412,13 @@ export function verifyPackagedDocumentation({ packageRoot, archiveFiles }) {
       if (resolved === null) continue;
       if (resolved.kind === 'local') {
         const directoryPrefix = `${resolved.target.replace(/\/$/u, '')}/`;
-        if (!fileSet.has(resolved.target) && !files.some((path) => path.startsWith(directoryPrefix))) {
-          fail(`Packaged document ${documentPath} links to missing archive path ${resolved.target}.`);
+        if (
+          !fileSet.has(resolved.target) &&
+          !files.some((path) => path.startsWith(directoryPrefix))
+        ) {
+          fail(
+            `Packaged document ${documentPath} links to missing archive path ${resolved.target}.`,
+          );
         }
       }
       results.push({ documentPath, ...resolved });
@@ -441,17 +462,21 @@ export function comparePackedPayloadToSource({
     if (!sourceStat.isFile()) fail(`Source package entry ${entry.path} is not a regular file.`);
     const sourceBytes = readFileSync(source);
     const payloadBytes = readFileSync(extracted);
-    if (!sourceBytes.equals(payloadBytes)) fail(`Archive bytes differ from source at ${entry.path}.`);
-    if (entry.size !== payloadBytes.byteLength) fail(`Archive size differs from npm pack report at ${entry.path}.`);
+    if (!sourceBytes.equals(payloadBytes))
+      fail(`Archive bytes differ from source at ${entry.path}.`);
+    if (entry.size !== payloadBytes.byteLength)
+      fail(`Archive size differs from npm pack report at ${entry.path}.`);
     if (forbiddenBytes.some((sequence) => payloadBytes.includes(sequence))) {
       fail(`Archive entry ${entry.path} contains a private source-machine path.`);
     }
-    const sourceMode = forcedExecutables.has(entry.path)
-      || indexedModes.get(entry.path) === 0o755
-      || normalizedArchiveMode(sourceStat) === 0o755
-      ? 0o755
-      : 0o644;
-    if (entry.mode !== sourceMode) fail(`Archive mode differs from source intent at ${entry.path}.`);
+    const sourceMode =
+      forcedExecutables.has(entry.path) ||
+      indexedModes.get(entry.path) === 0o755 ||
+      normalizedArchiveMode(sourceStat) === 0o755
+        ? 0o755
+        : 0o644;
+    if (entry.mode !== sourceMode)
+      fail(`Archive mode differs from source intent at ${entry.path}.`);
 
     sourceInventory.push({
       path: entry.path,
@@ -469,7 +494,8 @@ export function comparePackedPayloadToSource({
 
   const sourceDigest = sha256Jcs(sourceInventory);
   const payloadDigest = sha256Jcs(payloadInventory);
-  if (sourceDigest !== payloadDigest) fail('Archive payload digest does not match its source inventory digest.');
+  if (sourceDigest !== payloadDigest)
+    fail('Archive payload digest does not match its source inventory digest.');
   return { sourceInventory, payloadInventory, sourceDigest, payloadDigest };
 }
 
@@ -480,31 +506,39 @@ function runGit(root, args) {
 }
 
 function parseGitTreeRecords(raw, label) {
-  return raw.split('\0').filter(Boolean).map((record) => {
-    const match = record.match(/^(\d{6})\s+(\w+)\s+([a-f0-9]+)\t([\s\S]+)$/u);
-    if (!match) fail(`Repository ${label} returned an invalid baseline tree record.`);
-    return {
-      path: portablePath(match[4], `repository ${label} baseline path`),
-      mode: match[1],
-      type: match[2],
-      objectId: match[3],
-    };
-  }).sort((left, right) => left.path.localeCompare(right.path));
+  return raw
+    .split('\0')
+    .filter(Boolean)
+    .map((record) => {
+      const match = record.match(/^(\d{6})\s+(\w+)\s+([a-f0-9]+)\t([\s\S]+)$/u);
+      if (!match) fail(`Repository ${label} returned an invalid baseline tree record.`);
+      return {
+        path: portablePath(match[4], `repository ${label} baseline path`),
+        mode: match[1],
+        type: match[2],
+        objectId: match[3],
+      };
+    })
+    .sort((left, right) => left.path.localeCompare(right.path));
 }
 
 function parseGitIndexRecords(raw, label) {
-  return raw.split('\0').filter(Boolean).map((record) => {
-    const match = record.match(/^(\d{6})\s+([a-f0-9]+)\s+(\d+)\t([\s\S]+)$/u);
-    if (!match) fail(`Repository ${label} returned an invalid index record.`);
-    const stage = Number.parseInt(match[3], 10);
-    if (stage !== 0) fail(`Repository ${label} has an unresolved index conflict.`);
-    return {
-      path: portablePath(match[4], `repository ${label} index path`),
-      mode: match[1],
-      objectId: match[2],
-      stage,
-    };
-  }).sort((left, right) => left.path.localeCompare(right.path));
+  return raw
+    .split('\0')
+    .filter(Boolean)
+    .map((record) => {
+      const match = record.match(/^(\d{6})\s+([a-f0-9]+)\s+(\d+)\t([\s\S]+)$/u);
+      if (!match) fail(`Repository ${label} returned an invalid index record.`);
+      const stage = Number.parseInt(match[3], 10);
+      if (stage !== 0) fail(`Repository ${label} has an unresolved index conflict.`);
+      return {
+        path: portablePath(match[4], `repository ${label} index path`),
+        mode: match[1],
+        objectId: match[2],
+        stage,
+      };
+    })
+    .sort((left, right) => left.path.localeCompare(right.path));
 }
 
 function captureRepositoryGeneration(root, label) {
@@ -525,7 +559,9 @@ function captureRepositoryGeneration(root, label) {
     '-z',
     '--untracked-files=all',
     '--no-renames',
-  ]).split('\0').filter(Boolean);
+  ])
+    .split('\0')
+    .filter(Boolean);
   const generation = { baseline, baselineTree, index, untrackedPaths, statusRecords };
   return { ...generation, generationDigest: sha256Jcs(generation) };
 }
@@ -533,11 +569,9 @@ function captureRepositoryGeneration(root, label) {
 function workingInventory(root, label, generation) {
   const baselineByPath = new Map(generation.baselineTree.map((entry) => [entry.path, entry]));
   const indexByPath = new Map(generation.index.map((entry) => [entry.path, entry]));
-  const paths = [...new Set([
-    ...baselineByPath.keys(),
-    ...indexByPath.keys(),
-    ...generation.untrackedPaths,
-  ])].sort((left, right) => left.localeCompare(right));
+  const paths = [
+    ...new Set([...baselineByPath.keys(), ...indexByPath.keys(), ...generation.untrackedPaths]),
+  ].sort((left, right) => left.localeCompare(right));
 
   return paths.map((path) => {
     const baseline = baselineByPath.get(path) ?? null;
@@ -568,9 +602,10 @@ function workingInventory(root, label, generation) {
     } catch {
       fail(`Repository ${label} changed while reading ${path}.`);
     }
-    const executable = baseline?.mode === '100755'
-      || index?.mode === '100755'
-      || normalizedArchiveMode(stat) === 0o755;
+    const executable =
+      baseline?.mode === '100755' ||
+      index?.mode === '100755' ||
+      normalizedArchiveMode(stat) === 0o755;
     return {
       path,
       kind: index || baseline ? 'tracked-file' : 'untracked-file',
@@ -618,7 +653,8 @@ export function createEcosystemCandidateProof({
   requireClean = false,
 }) {
   const missing = RELEASE_REPOSITORY_KEYS.filter((key) => !repositories[key]?.path);
-  if (missing.length > 0) fail(`Coordinated candidate is missing repository custody: ${missing.join(', ')}.`);
+  if (missing.length > 0)
+    fail(`Coordinated candidate is missing repository custody: ${missing.join(', ')}.`);
 
   const realRoots = new Set();
   const resolvedRepositories = RELEASE_REPOSITORY_KEYS.map((key) => {
@@ -632,20 +668,24 @@ export function createEcosystemCandidateProof({
     realRoots.add(root);
     return { key, label: repository.label ?? key, root };
   });
-  const capturePass = () => resolvedRepositories.map(({ key, label, root }) =>
-    inventoryRepository({
-      key,
-      label,
-      root,
-      requireClean,
-    }));
+  const capturePass = () =>
+    resolvedRepositories.map(({ key, label, root }) =>
+      inventoryRepository({
+        key,
+        label,
+        root,
+        requireClean,
+      }),
+    );
   const firstPass = capturePass();
   const inventories = capturePass();
   for (let index = 0; index < inventories.length; index += 1) {
     const firstDigest = firstPass[index].snapshotDigest ?? sha256Jcs(firstPass[index]);
     const secondDigest = inventories[index].snapshotDigest ?? sha256Jcs(inventories[index]);
     if (firstDigest !== secondDigest) {
-      fail(`Coordinated repository ${RELEASE_REPOSITORY_KEYS[index]} changed between custody passes.`);
+      fail(
+        `Coordinated repository ${RELEASE_REPOSITORY_KEYS[index]} changed between custody passes.`,
+      );
     }
   }
   const identity = {
@@ -691,28 +731,35 @@ export function bindPackageProofToEcosystemCandidate({ packageProof, ecosystemPr
  * repository or archive bytes here.
  */
 export function releaseProofDigests({ ecosystemProof, packageProof = null }) {
-  const inventories = Array.isArray(ecosystemProof?.repositories) ? ecosystemProof.repositories : null;
+  const inventories = Array.isArray(ecosystemProof?.repositories)
+    ? ecosystemProof.repositories
+    : null;
   if (!inventories) fail('Coordinated candidate proof carries no repository inventories.');
   const repositories = RELEASE_REPOSITORY_KEYS.map((key) => {
     const inventory = inventories.find((entry) => entry?.key === key) ?? null;
-    return inventory === null ? { key, present: false } : {
-      key,
-      present: true,
-      baseline: inventory.baseline,
-      dirty: inventory.dirty,
-      fileCount: inventory.fileCount,
-      inventoryDigest: inventory.inventoryDigest,
-      snapshotDigest: inventory.snapshotDigest,
-    };
+    return inventory === null
+      ? { key, present: false }
+      : {
+          key,
+          present: true,
+          baseline: inventory.baseline,
+          dirty: inventory.dirty,
+          fileCount: inventory.fileCount,
+          inventoryDigest: inventory.inventoryDigest,
+          snapshotDigest: inventory.snapshotDigest,
+        };
   });
-  const payload = packageProof === null ? null : {
-    repositoryKey: 'pipeline',
-    packageName: packageProof.package.name,
-    declaredVersion: packageProof.package.version,
-    sourceDigest: packageProof.sourceDigest,
-    payloadDigest: packageProof.archive.digest,
-    exportSurfaceDigest: sha256Jcs(packageProof.exports),
-  };
+  const payload =
+    packageProof === null
+      ? null
+      : {
+          repositoryKey: 'pipeline',
+          packageName: packageProof.package.name,
+          declaredVersion: packageProof.package.version,
+          sourceDigest: packageProof.sourceDigest,
+          payloadDigest: packageProof.archive.digest,
+          exportSurfaceDigest: sha256Jcs(packageProof.exports),
+        };
   return { candidateDigest: ecosystemProof.candidateDigest ?? null, repositories, payload };
 }
 
@@ -731,18 +778,24 @@ export function createPackagePayloadProof({
   if (packageJson.name === 'planr-pipeline' && packageJson.version === '0.43.0') {
     fail('The cancelled planr-pipeline 0.43.0 identity cannot be reused.');
   }
-  if (firstPack.entryCount !== firstPack.files.length
-    || secondPack.entryCount !== secondPack.files.length) {
+  if (
+    firstPack.entryCount !== firstPack.files.length ||
+    secondPack.entryCount !== secondPack.files.length
+  ) {
     fail('npm pack entry count does not match its archive inventory.');
   }
-  if (firstPack.size !== firstArchiveBytes.byteLength
-    || secondPack.size !== secondArchiveBytes.byteLength) {
+  if (
+    firstPack.size !== firstArchiveBytes.byteLength ||
+    secondPack.size !== secondArchiveBytes.byteLength
+  ) {
     fail('npm pack archive size does not match the produced bytes.');
   }
   const firstUnpackedSize = firstPack.files.reduce((total, { size }) => total + size, 0);
   const secondUnpackedSize = secondPack.files.reduce((total, { size }) => total + size, 0);
-  if (firstPack.unpackedSize !== firstUnpackedSize
-    || secondPack.unpackedSize !== secondUnpackedSize) {
+  if (
+    firstPack.unpackedSize !== firstUnpackedSize ||
+    secondPack.unpackedSize !== secondUnpackedSize
+  ) {
     fail('npm pack unpacked size does not match its file inventory.');
   }
   if (firstPack.shasum !== secondPack.shasum || firstPack.integrity !== secondPack.integrity) {
@@ -752,13 +805,18 @@ export function createPackagePayloadProof({
   const secondShasum = createHash('sha1').update(secondArchiveBytes).digest('hex');
   const firstIntegrity = `sha512-${createHash('sha512').update(firstArchiveBytes).digest('base64')}`;
   const secondIntegrity = `sha512-${createHash('sha512').update(secondArchiveBytes).digest('base64')}`;
-  if (firstPack.shasum !== firstShasum || secondPack.shasum !== secondShasum
-    || firstPack.integrity !== firstIntegrity || secondPack.integrity !== secondIntegrity) {
+  if (
+    firstPack.shasum !== firstShasum ||
+    secondPack.shasum !== secondShasum ||
+    firstPack.integrity !== firstIntegrity ||
+    secondPack.integrity !== secondIntegrity
+  ) {
     fail('npm pack archive identity does not bind the produced bytes.');
   }
   const firstArchiveDigest = sha256Bytes(firstArchiveBytes);
   const secondArchiveDigest = sha256Bytes(secondArchiveBytes);
-  if (firstArchiveDigest !== secondArchiveDigest) fail('Deterministic repack changed archive bytes.');
+  if (firstArchiveDigest !== secondArchiveDigest)
+    fail('Deterministic repack changed archive bytes.');
   if (JSON.stringify(firstPack.files) !== JSON.stringify(secondPack.files)) {
     fail('Deterministic repack changed archive inventory or modes.');
   }
@@ -766,8 +824,11 @@ export function createPackagePayloadProof({
   const archiveFiles = firstPack.files.map(({ path }) => path);
   for (const path of archiveFiles) {
     const normalized = portablePath(path, 'archive path');
-    if (['.git', '.planr', 'node_modules', 'tests'].some((prefix) =>
-      normalized === prefix || normalized.startsWith(`${prefix}/`))) {
+    if (
+      ['.git', '.planr', 'node_modules', 'tests'].some(
+        (prefix) => normalized === prefix || normalized.startsWith(`${prefix}/`),
+      )
+    ) {
       fail(`Release archive contains forbidden source-only path ${normalized}.`);
     }
   }

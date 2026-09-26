@@ -1,13 +1,7 @@
 #!/usr/bin/env node
 
+import { existsSync, lstatSync, readdirSync, readFileSync, realpathSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import {
-  existsSync,
-  lstatSync,
-  readdirSync,
-  readFileSync,
-  realpathSync,
-} from 'node:fs';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -39,10 +33,14 @@ const installedPath = resolve(repositoryRoot, 'node_modules', 'planr-pipeline');
 if (!existsSync(installedPath) || !lstatSync(installedPath).isDirectory()) {
   fail('node_modules/planr-pipeline is not an installed directory');
 }
-if (lstatSync(installedPath).isSymbolicLink()) fail('installed candidate must not be a symbolic link');
+if (lstatSync(installedPath).isSymbolicLink())
+  fail('installed candidate must not be a symbolic link');
 
 const resolvedInstalledPath = realpathSync(installedPath);
-const expectedInstalledPath = join(realpathSync(join(repositoryRoot, 'node_modules')), 'planr-pipeline');
+const expectedInstalledPath = join(
+  realpathSync(join(repositoryRoot, 'node_modules')),
+  'planr-pipeline',
+);
 if (resolvedInstalledPath !== expectedInstalledPath) {
   fail(`resolved outside the exact installed package path: ${resolvedInstalledPath}`);
 }
@@ -68,13 +66,13 @@ if (realpathSync(require.resolve('planr-pipeline/package.json')) !== realpathSyn
 }
 
 const candidateRuntimePath = realpathSync(
-  require.resolve(
-    'planr-pipeline/schemas/v1.2.0/operate-experience-display-surface.mjs',
-  ),
+  require.resolve('planr-pipeline/schemas/v1.2.0/operate-experience-display-surface.mjs'),
 );
 const candidateRuntimeRelative = relative(resolvedInstalledPath, candidateRuntimePath);
 if (candidateRuntimeRelative.startsWith('..') || isAbsolute(candidateRuntimeRelative)) {
-  fail(`candidate-only v1.2 runtime resolved outside the installed package: ${candidateRuntimePath}`);
+  fail(
+    `candidate-only v1.2 runtime resolved outside the installed package: ${candidateRuntimePath}`,
+  );
 }
 const candidateRuntime = await import(pathToFileURL(candidateRuntimePath).href);
 if (typeof candidateRuntime.assertOperateExperienceDisplaySurfaceV1 !== 'function') {

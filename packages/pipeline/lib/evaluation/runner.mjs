@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync, existsSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 
 import { PipelineError } from '../pipeline/errors.mjs';
@@ -21,14 +21,18 @@ import {
   evaluationEvidenceReuse,
   evaluationScenarioIdentityFromSource,
 } from '../pipeline/evaluation-identity.mjs';
-import { readProfessionalSkillsCatalog, buildProfessionalSkillsManifest, renderProfessionalSkillAssets } from '../pipeline/professional-skills.mjs';
-import { sha256Jcs } from '../protocol/jcs.mjs';
-import { evaluateGates, countFindings, EVALUATION_RESULT_READY } from './gates.mjs';
 import {
-  EVALUATION_JOURNEY_KINDS,
+  buildProfessionalSkillsManifest,
+  readProfessionalSkillsCatalog,
+  renderProfessionalSkillAssets,
+} from '../pipeline/professional-skills.mjs';
+import { sha256Jcs } from '../protocol/jcs.mjs';
+import { countFindings, EVALUATION_RESULT_READY, evaluateGates } from './gates.mjs';
+import {
   createCliDriver,
   createDisposableCliRoot,
   createLoopbackBrowserAdapter,
+  EVALUATION_JOURNEY_KINDS,
   runBrowserJourney,
   runCliJourney,
   runHostJourney,
@@ -45,15 +49,20 @@ import {
   regressionBasisPoints,
   triggerRates,
 } from './metrics.mjs';
+import {
+  compareGeneratedAssets,
+  comparePackageExports,
+  comparePackedMembership,
+} from './parity.mjs';
 import { buildAggregateReport } from './report.mjs';
-import { compareGeneratedAssets, comparePackageExports, comparePackedMembership } from './parity.mjs';
 
 export const EVALUATION_CORPUS_ROOT = 'evaluation/scenarios';
 export const EVALUATION_HOST_PROFILE_ROOT = 'evaluation/host-profiles';
 export const EVALUATION_BUDGET_PATH = 'evaluation/budgets/professional-skills.json';
 export const EVALUATION_BASELINE_PATH = 'evaluation/baselines/professional-skills.json';
 export const EVALUATION_GATE_POLICY_PATH = 'evaluation/gate-policy.json';
-export const EVALUATION_LOOPBACK_SURFACE_PATH = 'conformance/fixtures/skill-evaluation/loopback-surface.json';
+export const EVALUATION_LOOPBACK_SURFACE_PATH =
+  'conformance/fixtures/skill-evaluation/loopback-surface.json';
 
 /** Options a declared CLI requirement needs to reach its typed answer. */
 const CLI_OPTION_VALUES = Object.freeze({
@@ -87,19 +96,24 @@ function seal(record, kind) {
 /** The prompt fixture is derived from the bytes on disk, so a changed prompt can never keep its identity. */
 function resolveFixture(repoRoot, sourcePath) {
   const bytes = readFileSync(resolve(repoRoot, sourcePath), 'utf8');
-  const record = assertEvaluationFixture(seal({
-    kind: 'evaluation-fixture',
-    schemaVersion: '1.0.0',
-    protocolVersion: '1.4.0',
-    fixtureId: 'efx_0000000000000000000000000000000000000000000000000000000000000000',
-    fixtureDigest: 'sha256:0000000000000000000000000000000000000000000000000000000000000000',
-    mediaKind: 'text',
-    byteLength: Buffer.byteLength(bytes, 'utf8'),
-    contentDigest: evaluationContentDigest(bytes),
-    sourcePath,
-    retention: 'local-only',
-    containsCredentialMaterial: false,
-  }, 'evaluation-fixture'));
+  const record = assertEvaluationFixture(
+    seal(
+      {
+        kind: 'evaluation-fixture',
+        schemaVersion: '1.0.0',
+        protocolVersion: '1.4.0',
+        fixtureId: 'efx_0000000000000000000000000000000000000000000000000000000000000000',
+        fixtureDigest: 'sha256:0000000000000000000000000000000000000000000000000000000000000000',
+        mediaKind: 'text',
+        byteLength: Buffer.byteLength(bytes, 'utf8'),
+        contentDigest: evaluationContentDigest(bytes),
+        sourcePath,
+        retention: 'local-only',
+        containsCredentialMaterial: false,
+      },
+      'evaluation-fixture',
+    ),
+  );
   return Object.freeze({ record, bytes });
 }
 
@@ -108,35 +122,67 @@ function resolveFixture(repoRoot, sourcePath) {
  * A partial catalog is reported, never inferred: a skill with no corpus on disk
  * is enumerated as uncovered rather than silently dropped from the totals.
  */
-export function loadEvaluationInputs({ repoRoot, sourceRoot, view = sourceRoot === undefined ? 'legacy' : 'active' }) {
+export function loadEvaluationInputs({
+  repoRoot,
+  sourceRoot,
+  view = sourceRoot === undefined ? 'legacy' : 'active',
+}) {
   const catalog = readProfessionalSkillsCatalog({ projectRoot: repoRoot, view, sourceRoot });
   const manifest = buildProfessionalSkillsManifest(catalog);
-  const hostProfileRegistry = assertEvaluationHostProfileRegistry(readJson(join(repoRoot, 'registry/evaluation-host-profiles.json'), 'host profile registry'));
-  const graderRegistry = assertEvaluationGraderRegistry(readJson(join(repoRoot, 'registry/evaluation-graders.json'), 'grader registry'));
-  const baseline = assertEvaluationBaseline(readJson(join(repoRoot, EVALUATION_BASELINE_PATH), 'baseline'));
+  const hostProfileRegistry = assertEvaluationHostProfileRegistry(
+    readJson(join(repoRoot, 'registry/evaluation-host-profiles.json'), 'host profile registry'),
+  );
+  const graderRegistry = assertEvaluationGraderRegistry(
+    readJson(join(repoRoot, 'registry/evaluation-graders.json'), 'grader registry'),
+  );
+  const baseline = assertEvaluationBaseline(
+    readJson(join(repoRoot, EVALUATION_BASELINE_PATH), 'baseline'),
+  );
   const budget = assertEvaluationBudget(readJson(join(repoRoot, EVALUATION_BUDGET_PATH), 'budget'));
-  const gatePolicy = assertEvaluationGatePolicy(readJson(join(repoRoot, EVALUATION_GATE_POLICY_PATH), 'gate policy'));
+  const gatePolicy = assertEvaluationGatePolicy(
+    readJson(join(repoRoot, EVALUATION_GATE_POLICY_PATH), 'gate policy'),
+  );
   assertBaselineDigest(baseline, budget.baseline.baselineDigest, 'budget baseline');
   assertBaselineDigest(baseline, gatePolicy.baselineDigest, 'gate policy baseline');
   if (gatePolicy.budgetDigest !== budget.budgetDigest) {
-    fail('E_EVALUATION_DIGEST_MISMATCH', 'The gate policy binds a different budget than the one on disk.', 'Reseal the gate policy against the current budget.', { expected: gatePolicy.budgetDigest, actual: budget.budgetDigest });
+    fail(
+      'E_EVALUATION_DIGEST_MISMATCH',
+      'The gate policy binds a different budget than the one on disk.',
+      'Reseal the gate policy against the current budget.',
+      { expected: gatePolicy.budgetDigest, actual: budget.budgetDigest },
+    );
   }
 
-  const hostProfilesById = new Map(hostProfileRegistry.profiles.map((profile) => [profile.hostProfileId, profile]));
+  const hostProfilesById = new Map(
+    hostProfileRegistry.profiles.map((profile) => [profile.hostProfileId, profile]),
+  );
   for (const profile of hostProfileRegistry.profiles) {
     const sourcePath = join(repoRoot, EVALUATION_HOST_PROFILE_ROOT, `${profile.host}.json`);
     if (!existsSync(sourcePath)) {
-      fail('E_EVALUATION_HOST_PROFILE_ABSENT', `Host profile ${profile.host} has no source document.`, 'Author the host profile source document the registry row was sealed from.', { host: profile.host });
+      fail(
+        'E_EVALUATION_HOST_PROFILE_ABSENT',
+        `Host profile ${profile.host} has no source document.`,
+        'Author the host profile source document the registry row was sealed from.',
+        { host: profile.host },
+      );
     }
     const source = readJson(sourcePath, `host profile ${profile.host}`);
     if (sha256Jcs(source) !== sha256Jcs(profile)) {
-      fail('E_EVALUATION_DIGEST_MISMATCH', `Host profile ${profile.host} no longer matches its registry row.`, 'Reseal the registry from the source document; a drifted host profile invalidates its evidence.', { host: profile.host });
+      fail(
+        'E_EVALUATION_DIGEST_MISMATCH',
+        `Host profile ${profile.host} no longer matches its registry row.`,
+        'Reseal the registry from the source document; a drifted host profile invalidates its evidence.',
+        { host: profile.host },
+      );
     }
   }
 
   const corpusRoot = join(repoRoot, EVALUATION_CORPUS_ROOT);
   const corpusDirectories = existsSync(corpusRoot)
-    ? readdirSync(corpusRoot, { withFileTypes: true }).filter((entry) => entry.isDirectory()).map((entry) => entry.name).sort()
+    ? readdirSync(corpusRoot, { withFileTypes: true })
+        .filter((entry) => entry.isDirectory())
+        .map((entry) => entry.name)
+        .sort()
     : [];
   const corpora = [];
   for (const skillId of corpusDirectories) {
@@ -146,33 +192,59 @@ export function loadEvaluationInputs({ repoRoot, sourceRoot, view = sourceRoot =
     const sourceDigests = {};
     const scenarios = [];
     for (const member of raw.members) {
-      const identity = evaluationScenarioIdentityFromSource(readFileSync(resolve(repoRoot, member.sourcePath), 'utf8'), member.sourcePath);
+      const identity = evaluationScenarioIdentityFromSource(
+        readFileSync(resolve(repoRoot, member.sourcePath), 'utf8'),
+        member.sourcePath,
+      );
       sourceDigests[member.sourcePath] = identity.scenarioDigest;
       const scenario = assertEvaluationScenario(identity.record, member.sourcePath);
       const journeyKind = basename(member.sourcePath, '.json');
       if (!EVALUATION_JOURNEY_KINDS.includes(journeyKind)) {
-        fail('E_EVALUATION_JOURNEY_INVALID', `Scenario ${member.sourcePath} does not name a declared journey.`, `Name the source document after one of: ${EVALUATION_JOURNEY_KINDS.join(', ')}.`, { journeyKind });
+        fail(
+          'E_EVALUATION_JOURNEY_INVALID',
+          `Scenario ${member.sourcePath} does not name a declared journey.`,
+          `Name the source document after one of: ${EVALUATION_JOURNEY_KINDS.join(', ')}.`,
+          { journeyKind },
+        );
       }
       const hostName = basename(dirname(member.sourcePath));
       const hostProfile = hostProfilesById.get(scenario.hostProfileRef.hostProfileId);
       if (hostProfile === undefined || hostProfile.host !== hostName) {
-        fail('E_EVALUATION_HOST_PROFILE_ABSENT', `Scenario ${member.sourcePath} binds a host profile the registry does not carry under ${hostName}.`, 'Bind the registered host profile whose bytes the run actually uses.');
+        fail(
+          'E_EVALUATION_HOST_PROFILE_ABSENT',
+          `Scenario ${member.sourcePath} binds a host profile the registry does not carry under ${hostName}.`,
+          'Bind the registered host profile whose bytes the run actually uses.',
+        );
       }
       if (scenario.budgetRef.budgetDigest !== budget.budgetDigest) {
-        fail('E_EVALUATION_DIGEST_MISMATCH', `Scenario ${member.sourcePath} binds a stale budget.`, 'Reseal the corpus against the current budget; evidence never carries across a changed input digest.');
+        fail(
+          'E_EVALUATION_DIGEST_MISMATCH',
+          `Scenario ${member.sourcePath} binds a stale budget.`,
+          'Reseal the corpus against the current budget; evidence never carries across a changed input digest.',
+        );
       }
-      scenarios.push(Object.freeze({ scenario, journeyKind, hostProfile, sourcePath: member.sourcePath }));
+      scenarios.push(
+        Object.freeze({ scenario, journeyKind, hostProfile, sourcePath: member.sourcePath }),
+      );
     }
     const corpus = assertEvaluationCorpus(raw, { sourceDigests, label: `corpus ${skillId}` });
     const catalogRow = catalog.skills.find((row) => row.skillId === corpus.skill.id);
     if (catalogRow === undefined) {
-      fail('E_EVALUATION_CORPUS_FOREIGN', `Corpus ${skillId} grades a skill the frozen catalog does not carry.`, 'The laboratory grades the frozen catalog; it never introduces a skill of its own.', { skillId: corpus.skill.id });
+      fail(
+        'E_EVALUATION_CORPUS_FOREIGN',
+        `Corpus ${skillId} grades a skill the frozen catalog does not carry.`,
+        'The laboratory grades the frozen catalog; it never introduces a skill of its own.',
+        { skillId: corpus.skill.id },
+      );
     }
     corpora.push(Object.freeze({ corpus, scenarios: Object.freeze(scenarios), catalogRow }));
   }
 
   const covered = new Set(corpora.map((entry) => entry.corpus.skill.id));
-  const uncoveredSkills = catalog.skills.map((row) => row.skillId).filter((skillId) => !covered.has(skillId)).sort();
+  const uncoveredSkills = catalog.skills
+    .map((row) => row.skillId)
+    .filter((skillId) => !covered.has(skillId))
+    .sort();
 
   return Object.freeze({
     catalog,
@@ -192,7 +264,13 @@ export function loadEvaluationInputs({ repoRoot, sourceRoot, view = sourceRoot =
 
 function graderByName(registry, name) {
   const grader = registry.graders.find((entry) => entry.graderName === name);
-  if (grader === undefined) fail('E_EVALUATION_GRADER_MISSING', `Grader ${name} is not registered.`, 'Register the grader before a run binds it; a missing grader is a typed absence, never a pass.', { graderName: name });
+  if (grader === undefined)
+    fail(
+      'E_EVALUATION_GRADER_MISSING',
+      `Grader ${name} is not registered.`,
+      'Register the grader before a run binds it; a missing grader is a typed absence, never a pass.',
+      { graderName: name },
+    );
   return grader;
 }
 
@@ -210,7 +288,10 @@ function cliArgvFor(catalogRow) {
   return Object.freeze(argv);
 }
 
-function scenarioEvidenceInputs(entry, { budget, packageDigest, sourceDigest, graderRegistrationDigest, fixtureSetDigest }) {
+function scenarioEvidenceInputs(
+  entry,
+  { budget, packageDigest, sourceDigest, graderRegistrationDigest, fixtureSetDigest },
+) {
   return Object.freeze({
     scenarioId: entry.scenario.scenarioId,
     inputs: Object.freeze({
@@ -242,16 +323,34 @@ export async function runEvaluation({
   inputs = loadEvaluationInputs({ repoRoot, sourceRoot, view: 'active' }),
 } = {}) {
   const startedAt = now;
-  const { catalog, manifest, hostProfileRegistry, graderRegistry, baseline, budget, gatePolicy, corpora, packageJson, packageDigest, sourceDigest } = inputs;
+  const {
+    catalog,
+    manifest,
+    hostProfileRegistry,
+    graderRegistry,
+    baseline,
+    budget,
+    gatePolicy,
+    corpora,
+    packageJson,
+    packageDigest,
+    sourceDigest,
+  } = inputs;
 
-  const activeCatalog = readProfessionalSkillsCatalog({ projectRoot: repoRoot, sourceRoot, view: 'active' });
+  const activeCatalog = readProfessionalSkillsCatalog({
+    projectRoot: repoRoot,
+    sourceRoot,
+    view: 'active',
+  });
   const archive = Object.freeze(renderProfessionalSkillAssets(activeCatalog));
   const expectedSourceDigest = sha256Jcs(buildProfessionalSkillsManifest(activeCatalog, archive));
   const activeRows = new Map(activeCatalog.skills.map((row) => [row.skillId, sha256Jcs(row)]));
-  if (sourceDigest !== expectedSourceDigest
-    || sha256Jcs(manifest) !== expectedSourceDigest
-    || sha256Jcs(buildProfessionalSkillsManifest(catalog)) !== expectedSourceDigest
-    || corpora.some(({ catalogRow }) => activeRows.get(catalogRow.skillId) !== sha256Jcs(catalogRow))) {
+  if (
+    sourceDigest !== expectedSourceDigest ||
+    sha256Jcs(manifest) !== expectedSourceDigest ||
+    sha256Jcs(buildProfessionalSkillsManifest(catalog)) !== expectedSourceDigest ||
+    corpora.some(({ catalogRow }) => activeRows.get(catalogRow.skillId) !== sha256Jcs(catalogRow))
+  ) {
     fail(
       'E_EVALUATION_DIGEST_MISMATCH',
       'Evaluation inputs do not match the explicitly selected active skill sources.',
@@ -270,7 +369,11 @@ export async function runEvaluation({
   });
   for (const grader of Object.values(graders)) {
     if (grader.graderType === 'live-model-judgement') {
-      fail('E_EVALUATION_GRADER_INVALID', `Grader ${grader.graderName} is a live-model judgement and cannot be part of the default run.`, 'A live-model grader is separately consented and never required to validate a pure contract.');
+      fail(
+        'E_EVALUATION_GRADER_INVALID',
+        `Grader ${grader.graderName} is a live-model judgement and cannot be part of the default run.`,
+        'A live-model grader is separately consented and never required to validate a pure contract.',
+      );
     }
   }
 
@@ -280,9 +383,18 @@ export async function runEvaluation({
   const surface = readJson(join(repoRoot, EVALUATION_LOOPBACK_SURFACE_PATH), 'loopback surface');
 
   const cliRoot = createDisposableCliRoot();
-  const cliDriver = createCliDriver({ executable: join(repoRoot, 'bin/planr-pipeline.mjs'), cwd: cliRoot.root });
+  const cliDriver = createCliDriver({
+    executable: join(repoRoot, 'bin/planr-pipeline.mjs'),
+    cwd: cliRoot.root,
+  });
 
-  const runSeed = sha256Jcs({ corpora: corpora.map((entry) => entry.corpus.corpusDigest), packageDigest, sourceDigest, gatePolicyDigest: gatePolicy.gatePolicyDigest, startedAt });
+  const runSeed = sha256Jcs({
+    corpora: corpora.map((entry) => entry.corpus.corpusDigest),
+    packageDigest,
+    sourceDigest,
+    gatePolicyDigest: gatePolicy.gatePolicyDigest,
+    startedAt,
+  });
   const runId = `eru_${runSeed.slice(7, 39)}`;
 
   const observations = [];
@@ -300,48 +412,77 @@ export async function runEvaluation({
   const skillStats = new Map();
   const statsFor = (skillId) => {
     if (!skillStats.has(skillId)) {
-      skillStats.set(skillId, { journeysAttempted: 0, journeysCompleted: 0, outputsValidated: 0, outputsSchemaValid: 0, triggerDecisions: [], findings: [] });
+      skillStats.set(skillId, {
+        journeysAttempted: 0,
+        journeysCompleted: 0,
+        outputsValidated: 0,
+        outputsSchemaValid: 0,
+        triggerDecisions: [],
+        findings: [],
+      });
     }
     return skillStats.get(skillId);
   };
 
-  const recordObservation = (entry, grader, outcome, terminalReason, graderOutput, absence = null) => {
-    const observation = assertEvaluationObservation(seal({
-      kind: 'evaluation-observation',
-      schemaVersion: '1.0.0',
-      protocolVersion: '1.4.0',
-      observationId: 'eob_00000000000000000000000000000000',
-      observationDigest: 'sha256:0000000000000000000000000000000000000000000000000000000000000000',
-      runId,
-      scenario: {
-        scenarioId: entry.scenario.scenarioId,
-        scenarioDigest: entry.scenario.scenarioDigest,
-        corpusDigest: entry.corpusDigest,
-        promptClass: entry.scenario.promptClass,
+  const recordObservation = (
+    entry,
+    grader,
+    outcome,
+    terminalReason,
+    graderOutput,
+    absence = null,
+  ) => {
+    const observation = assertEvaluationObservation(
+      seal(
+        {
+          kind: 'evaluation-observation',
+          schemaVersion: '1.0.0',
+          protocolVersion: '1.4.0',
+          observationId: 'eob_00000000000000000000000000000000',
+          observationDigest:
+            'sha256:0000000000000000000000000000000000000000000000000000000000000000',
+          runId,
+          scenario: {
+            scenarioId: entry.scenario.scenarioId,
+            scenarioDigest: entry.scenario.scenarioDigest,
+            corpusDigest: entry.corpusDigest,
+            promptClass: entry.scenario.promptClass,
+          },
+          grader: {
+            graderId: grader.graderId,
+            graderVersion: grader.graderVersion,
+            graderType: grader.graderType,
+            registrationDigest: grader.registrationDigest,
+            registryDigest: graderRegistry.registryDigest,
+          },
+          hostProfile: {
+            hostProfileId: entry.hostProfile.hostProfileId,
+            profileDigest: entry.hostProfile.profileDigest,
+            registryDigest: hostProfileRegistry.registryDigest,
+          },
+          fixtures: [
+            {
+              fixtureId: entry.fixture.record.fixtureId,
+              contentDigest: entry.fixture.record.contentDigest,
+            },
+          ],
+          packageDigest,
+          budgetDigest: budget.budgetDigest,
+          outcome,
+          terminalReason,
+          graderOutputDigest: outcome === 'absent' ? null : sha256Jcs(graderOutput),
+          absence,
+          observedAt: clock(),
+        },
+        'evaluation-observation',
+      ),
+      {
+        subject: {
+          registration: grader,
+          skill: { skillId: entry.skillId, skillSourceDigest: entry.skillSourceDigest },
+        },
       },
-      grader: {
-        graderId: grader.graderId,
-        graderVersion: grader.graderVersion,
-        graderType: grader.graderType,
-        registrationDigest: grader.registrationDigest,
-        registryDigest: graderRegistry.registryDigest,
-      },
-      hostProfile: {
-        hostProfileId: entry.hostProfile.hostProfileId,
-        profileDigest: entry.hostProfile.profileDigest,
-        registryDigest: hostProfileRegistry.registryDigest,
-      },
-      fixtures: [{ fixtureId: entry.fixture.record.fixtureId, contentDigest: entry.fixture.record.contentDigest }],
-      packageDigest,
-      budgetDigest: budget.budgetDigest,
-      outcome,
-      terminalReason,
-      graderOutputDigest: outcome === 'absent' ? null : sha256Jcs(graderOutput),
-      absence,
-      observedAt: clock(),
-    }, 'evaluation-observation'), {
-      subject: { registration: grader, skill: { skillId: entry.skillId, skillSourceDigest: entry.skillSourceDigest } },
-    });
+    );
     observations.push(observation);
     return observation;
   };
@@ -349,13 +490,23 @@ export async function runEvaluation({
   try {
     for (const { corpus, scenarios, catalogRow } of corpora) {
       const cliArgv = cliArgvFor(catalogRow);
-      const drivesBrowser = catalogRow.contracts.outputs.some((output) => output.id.startsWith('browser-qa'));
+      const drivesBrowser = catalogRow.contracts.outputs.some((output) =>
+        output.id.startsWith('browser-qa'),
+      );
       for (const member of scenarios) {
         const fixtureRef = member.scenario.fixtureRefs.find((ref) => ref.role === 'prompt');
         const promptPath = join(dirname(member.sourcePath), 'prompts', `${member.journeyKind}.txt`);
         const fixture = resolveFixture(repoRoot, promptPath);
-        if (fixture.record.fixtureId !== fixtureRef.fixtureId || fixture.record.contentDigest !== fixtureRef.contentDigest) {
-          fail('E_EVALUATION_DIGEST_MISMATCH', `Prompt bytes for ${member.sourcePath} no longer match the fixture the scenario binds.`, 'Reseal the scenario against the current prompt bytes.', { sourcePath: promptPath });
+        if (
+          fixture.record.fixtureId !== fixtureRef.fixtureId ||
+          fixture.record.contentDigest !== fixtureRef.contentDigest
+        ) {
+          fail(
+            'E_EVALUATION_DIGEST_MISMATCH',
+            `Prompt bytes for ${member.sourcePath} no longer match the fixture the scenario binds.`,
+            'Reseal the scenario against the current prompt bytes.',
+            { sourcePath: promptPath },
+          );
         }
         const entry = {
           ...member,
@@ -366,23 +517,38 @@ export async function runEvaluation({
         };
 
         const journeys = [];
-        journeys.push(runHostJourney({
-          scenario: member.scenario,
-          promptText: fixture.bytes,
-          triggerPolicy: catalogRow.triggerPolicy,
-          hostProfile: member.hostProfile,
-        }));
+        journeys.push(
+          runHostJourney({
+            scenario: member.scenario,
+            promptText: fixture.bytes,
+            triggerPolicy: catalogRow.triggerPolicy,
+            hostProfile: member.hostProfile,
+          }),
+        );
         if (cliArgv !== null) journeys.push(runCliJourney({ driver: cliDriver, argv: cliArgv }));
-        if (member.journeyKind === 'recovery') journeys.push(runRecoveryJourney({ scenario: member.scenario, clock }));
+        if (member.journeyKind === 'recovery')
+          journeys.push(runRecoveryJourney({ scenario: member.scenario, clock }));
         if (member.journeyKind === 'packed-install') {
-          journeys.push(runPackedInstallJourney({
-            archive,
-            declaredMembers: Object.keys(archive),
-            exercisePath: catalogRow.hosts.find((host) => host.host === member.hostProfile.host).path,
-          }));
+          journeys.push(
+            runPackedInstallJourney({
+              archive,
+              declaredMembers: Object.keys(archive),
+              exercisePath: catalogRow.hosts.find((host) => host.host === member.hostProfile.host)
+                .path,
+            }),
+          );
         }
-        if (drivesBrowser && (member.journeyKind === 'positive' || member.journeyKind === 'recovery')) {
-          journeys.push(await runBrowserJourney({ surface, adapter: browserAdapter, declaredViewports: surface.viewports }));
+        if (
+          drivesBrowser &&
+          (member.journeyKind === 'positive' || member.journeyKind === 'recovery')
+        ) {
+          journeys.push(
+            await runBrowserJourney({
+              surface,
+              adapter: browserAdapter,
+              declaredViewports: surface.viewports,
+            }),
+          );
         }
 
         const host = journeys[0];
@@ -398,15 +564,30 @@ export async function runEvaluation({
         stats.journeysCompleted += journeys.filter((journey) => journey.completed).length;
 
         const latencyMs = journeys.reduce((total, journey) => total + (journey.latencyMs ?? 0), 0);
-        const permissionPrompts = journeys.reduce((total, journey) => total + (journey.permissionPrompts ?? 0), 0);
+        const permissionPrompts = journeys.reduce(
+          (total, journey) => total + (journey.permissionPrompts ?? 0),
+          0,
+        );
         const retries = journeys.reduce((total, journey) => total + journey.retries, 0);
         const inputTokens = estimateTokens(fixture.bytes);
-        const outputTokens = journeys.reduce((total, journey) => total + (journey.outputTokens ?? 0), 0);
-        measurementSamples.push({ latencyMs, inputTokens, outputTokens, permissionPrompts, retries });
+        const outputTokens = journeys.reduce(
+          (total, journey) => total + (journey.outputTokens ?? 0),
+          0,
+        );
+        measurementSamples.push({
+          latencyMs,
+          inputTokens,
+          outputTokens,
+          permissionPrompts,
+          retries,
+        });
 
         const triggerMatched = host.observedTrigger === member.scenario.expectedTrigger.outcome;
         if (host.observedTrigger !== null) {
-          const decision = { expected: member.scenario.expectedTrigger.outcome, observed: host.observedTrigger };
+          const decision = {
+            expected: member.scenario.expectedTrigger.outcome,
+            observed: host.observedTrigger,
+          };
           triggerDecisions.push(decision);
           stats.triggerDecisions.push(decision);
         }
@@ -416,7 +597,10 @@ export async function runEvaluation({
           for (const output of journey.outputs) {
             outputsValidated += 1;
             stats.outputsValidated += 1;
-            const valid = output.record !== null && typeof output.record === 'object' && !Array.isArray(output.record);
+            const valid =
+              output.record !== null &&
+              typeof output.record === 'object' &&
+              !Array.isArray(output.record);
             if (valid) {
               outputsSchemaValid += 1;
               stats.outputsSchemaValid += 1;
@@ -435,13 +619,19 @@ export async function runEvaluation({
           status = 'absent';
           absenceReason = absent.absence.code;
           record({
-            kind: absent.absence.recoveryDisposition === 'escalate' ? 'blocking-absence' : 'typed-absence',
+            kind:
+              absent.absence.recoveryDisposition === 'escalate'
+                ? 'blocking-absence'
+                : 'typed-absence',
             scenarioDigest: member.scenario.scenarioDigest,
           });
         } else if (!triggerMatched) {
           status = 'failed';
           record({
-            kind: member.scenario.promptClass === 'permission-denied' ? 'authorization-escape' : 'trigger-mismatch',
+            kind:
+              member.scenario.promptClass === 'permission-denied'
+                ? 'authorization-escape'
+                : 'trigger-mismatch',
             scenarioDigest: member.scenario.scenarioDigest,
           });
         } else if (journeys.some((journey) => !journey.completed)) {
@@ -454,23 +644,60 @@ export async function runEvaluation({
           status = 'passed';
         }
 
-        recordObservation(entry, graders.trigger, absent === null && triggerMatched ? 'pass' : (absent === null ? 'fail' : 'absent'),
-          absent === null ? (triggerMatched ? 'TRIGGER_MATCHED_EXPECTED' : 'TRIGGER_DIVERGED_FROM_EXPECTED') : 'TRIGGER_NOT_OBSERVED',
+        recordObservation(
+          entry,
+          graders.trigger,
+          absent === null && triggerMatched ? 'pass' : absent === null ? 'fail' : 'absent',
+          absent === null
+            ? triggerMatched
+              ? 'TRIGGER_MATCHED_EXPECTED'
+              : 'TRIGGER_DIVERGED_FROM_EXPECTED'
+            : 'TRIGGER_NOT_OBSERVED',
           { observed: host.observedTrigger, expected: member.scenario.expectedTrigger.outcome },
-          absent === null ? null : absent.absence);
-        recordObservation(entry, graders.journey, absent === null ? (journeys.every((journey) => journey.completed) ? 'pass' : 'fail') : 'absent',
-          absent === null ? (journeys.every((journey) => journey.completed) ? 'JOURNEY_COMPLETED' : 'JOURNEY_INCOMPLETE') : 'JOURNEY_NOT_OBSERVED',
-          { attempted: journeys.length, completed: journeys.filter((journey) => journey.completed).length },
-          absent === null ? null : absent.absence);
+          absent === null ? null : absent.absence,
+        );
+        recordObservation(
+          entry,
+          graders.journey,
+          absent === null
+            ? journeys.every((journey) => journey.completed)
+              ? 'pass'
+              : 'fail'
+            : 'absent',
+          absent === null
+            ? journeys.every((journey) => journey.completed)
+              ? 'JOURNEY_COMPLETED'
+              : 'JOURNEY_INCOMPLETE'
+            : 'JOURNEY_NOT_OBSERVED',
+          {
+            attempted: journeys.length,
+            completed: journeys.filter((journey) => journey.completed).length,
+          },
+          absent === null ? null : absent.absence,
+        );
         if (member.scenario.promptClass === 'permission-denied') {
-          recordObservation(entry, graders.permission, host.observedTrigger === 'refuse' ? 'pass' : 'fail',
-            host.observedTrigger === 'refuse' ? 'PERMISSION_REFUSED' : 'PERMISSION_ESCAPED', { observed: host.observedTrigger });
+          recordObservation(
+            entry,
+            graders.permission,
+            host.observedTrigger === 'refuse' ? 'pass' : 'fail',
+            host.observedTrigger === 'refuse' ? 'PERMISSION_REFUSED' : 'PERMISSION_ESCAPED',
+            { observed: host.observedTrigger },
+          );
         }
-        recordObservation(entry, graders.schema, schemaValidHere ? 'pass' : 'fail',
-          schemaValidHere ? 'DECLARED_OUTPUTS_VALID' : 'DECLARED_OUTPUT_INVALID', { validated: outputsValidated });
+        recordObservation(
+          entry,
+          graders.schema,
+          schemaValidHere ? 'pass' : 'fail',
+          schemaValidHere ? 'DECLARED_OUTPUTS_VALID' : 'DECLARED_OUTPUT_INVALID',
+          { validated: outputsValidated },
+        );
 
         if (status === 'failed') {
-          const waived = waivers.find((waiver) => waiver.scope.kind === 'scenario' && waiver.scope.scenarioDigest === member.scenario.scenarioDigest);
+          const waived = waivers.find(
+            (waiver) =>
+              waiver.scope.kind === 'scenario' &&
+              waiver.scope.scenarioDigest === member.scenario.scenarioDigest,
+          );
           if (waived !== undefined) status = 'waived';
         }
 
@@ -483,19 +710,26 @@ export async function runEvaluation({
           promptClass: member.scenario.promptClass,
           status,
           absenceReason,
-          waiverDigest: status === 'waived'
-            ? waivers.find((waiver) => waiver.scope.kind === 'scenario' && waiver.scope.scenarioDigest === member.scenario.scenarioDigest).waiverDigest
-            : null,
+          waiverDigest:
+            status === 'waived'
+              ? waivers.find(
+                  (waiver) =>
+                    waiver.scope.kind === 'scenario' &&
+                    waiver.scope.scenarioDigest === member.scenario.scenarioDigest,
+                ).waiverDigest
+              : null,
           observations: member.scenario.promptClass === 'permission-denied' ? 4 : 3,
           latencyMs,
         });
-        evidenceInputs.push(scenarioEvidenceInputs(entry, {
-          budget,
-          packageDigest,
-          sourceDigest,
-          graderRegistrationDigest: graders.trigger.registrationDigest,
-          fixtureSetDigest,
-        }));
+        evidenceInputs.push(
+          scenarioEvidenceInputs(entry, {
+            budget,
+            packageDigest,
+            sourceDigest,
+            graderRegistrationDigest: graders.trigger.registrationDigest,
+            fixtureSetDigest,
+          }),
+        );
       }
     }
   } finally {
@@ -509,12 +743,20 @@ export async function runEvaluation({
   };
 
   const measurements = aggregateMeasurements(measurementSamples);
-  if (measurements.permissionPrompts > budget.ceilings.permissionPromptCeiling || measurements.retries > budget.ceilings.retryCeiling
-    || measurements.totalTokens > budget.ceilings.totalTokensCeiling || measurements.costEstimateMicros > budget.ceilings.costEstimateMicrosCeiling
-    || measurements.latencyMsP95 > budget.ceilings.latencyMsP95Ceiling) {
+  if (
+    measurements.permissionPrompts > budget.ceilings.permissionPromptCeiling ||
+    measurements.retries > budget.ceilings.retryCeiling ||
+    measurements.totalTokens > budget.ceilings.totalTokensCeiling ||
+    measurements.costEstimateMicros > budget.ceilings.costEstimateMicrosCeiling ||
+    measurements.latencyMsP95 > budget.ceilings.latencyMsP95Ceiling
+  ) {
     recordPackageWide({ kind: 'budget-exceeded', scenarioDigest: null });
   }
-  if (assets.mismatches.length > 0 || exports.mismatches.length > 0 || packed.mismatches.length > 0) {
+  if (
+    assets.mismatches.length > 0 ||
+    exports.mismatches.length > 0 ||
+    packed.mismatches.length > 0
+  ) {
     recordPackageWide({ kind: 'parity-mismatch', scenarioDigest: null });
   }
   const findingCounts = countFindings(findings);
@@ -563,60 +805,90 @@ export async function runEvaluation({
     latencyRegression: regressionBasisPoints(measurements.latencyMsP95, baseline.latencyMsP95),
     costEstimateMicrosBaseline: baseline.costEstimateMicros,
     costEstimateMicrosObserved: measurements.costEstimateMicros,
-    costRegression: regressionBasisPoints(measurements.costEstimateMicros, baseline.costEstimateMicros),
+    costRegression: regressionBasisPoints(
+      measurements.costEstimateMicros,
+      baseline.costEstimateMicros,
+    ),
     permissionPromptCeiling: budget.ceilings.permissionPromptCeiling,
     retryCeiling: budget.ceilings.retryCeiling,
   };
-  const absenceCodes = { graderMissing: 0, graderErrored: 0, graderUnavailable: 0, hostUnavailable: 0, fixtureUnavailable: 0, budgetExceeded: 0, notRun: 0 };
-  const absenceField = { 'grader-missing': 'graderMissing', 'grader-errored': 'graderErrored', 'grader-unavailable': 'graderUnavailable', 'host-unavailable': 'hostUnavailable', 'fixture-unavailable': 'fixtureUnavailable', 'budget-exceeded': 'budgetExceeded', 'not-run': 'notRun' };
-  for (const row of scenarioRows.filter((entry) => entry.status === 'absent')) absenceCodes[absenceField[row.absenceReason]] += 1;
+  const absenceCodes = {
+    graderMissing: 0,
+    graderErrored: 0,
+    graderUnavailable: 0,
+    hostUnavailable: 0,
+    fixtureUnavailable: 0,
+    budgetExceeded: 0,
+    notRun: 0,
+  };
+  const absenceField = {
+    'grader-missing': 'graderMissing',
+    'grader-errored': 'graderErrored',
+    'grader-unavailable': 'graderUnavailable',
+    'host-unavailable': 'hostUnavailable',
+    'fixture-unavailable': 'fixtureUnavailable',
+    'budget-exceeded': 'budgetExceeded',
+    'not-run': 'notRun',
+  };
+  for (const row of scenarioRows.filter((entry) => entry.status === 'absent'))
+    absenceCodes[absenceField[row.absenceReason]] += 1;
 
-  const skills = corpora.map(({ corpus, catalogRow }) => {
-    const rows = scenarioRows.filter((row) => row.skillId === corpus.skill.id);
-    return {
-      skillId: corpus.skill.id,
-      skillVersion: catalogRow.sourceVersion,
-      scenariosTotal: rows.length,
-      scenariosPassed: rows.filter((row) => row.status === 'passed').length,
-      scenariosFailed: rows.filter((row) => row.status === 'failed').length,
-      scenariosBlocked: rows.filter((row) => row.status === 'blocked').length,
-      scenariosAbsent: rows.filter((row) => row.status === 'absent').length,
-      scenariosWaived: rows.filter((row) => row.status === 'waived').length,
-    };
-  }).sort((left, right) => left.skillId.localeCompare(right.skillId));
+  const skills = corpora
+    .map(({ corpus, catalogRow }) => {
+      const rows = scenarioRows.filter((row) => row.skillId === corpus.skill.id);
+      return {
+        skillId: corpus.skill.id,
+        skillVersion: catalogRow.sourceVersion,
+        scenariosTotal: rows.length,
+        scenariosPassed: rows.filter((row) => row.status === 'passed').length,
+        scenariosFailed: rows.filter((row) => row.status === 'failed').length,
+        scenariosBlocked: rows.filter((row) => row.status === 'blocked').length,
+        scenariosAbsent: rows.filter((row) => row.status === 'absent').length,
+        scenariosWaived: rows.filter((row) => row.status === 'waived').length,
+      };
+    })
+    .sort((left, right) => left.skillId.localeCompare(right.skillId));
 
   const completedAt = clock();
-  const runResult = assertEvaluationRunResult(seal({
-    kind: 'evaluation-run-result',
-    schemaVersion: '1.0.0',
-    protocolVersion: '1.4.0',
-    runResultId: 'ers_00000000000000000000000000000000',
-    runResultDigest: 'sha256:0000000000000000000000000000000000000000000000000000000000000000',
-    runId,
-    visibility: 'local',
-    publishable: false,
-    evidenceTransport: 'digest-only',
-    corpusDigest: sha256Jcs(corpora.map(({ corpus }) => corpus.corpusDigest)),
-    graderRegistryDigest: graderRegistry.registryDigest,
-    hostProfileRegistryDigest: hostProfileRegistry.registryDigest,
-    hostProfiles: hostProfileRegistry.profiles.map((profile) => ({ hostProfileId: profile.hostProfileId, profileDigest: profile.profileDigest })),
-    budgetDigest: budget.budgetDigest,
-    gatePolicyDigest: gatePolicy.gatePolicyDigest,
-    packageDigest,
-    sourceDigest,
-    observations: observations.map((observation) => ({
-      observationId: observation.observationId,
-      observationDigest: observation.observationDigest,
-      scenarioDigest: observation.scenario.scenarioDigest,
-      outcome: observation.outcome,
-    })),
-    measurements,
-    findingCounts,
-    rawEvidence: [],
-    terminalReason: 'EVALUATION_RUN_COMPLETE',
-    startedAt,
-    completedAt,
-  }, 'evaluation-run-result'));
+  const runResult = assertEvaluationRunResult(
+    seal(
+      {
+        kind: 'evaluation-run-result',
+        schemaVersion: '1.0.0',
+        protocolVersion: '1.4.0',
+        runResultId: 'ers_00000000000000000000000000000000',
+        runResultDigest: 'sha256:0000000000000000000000000000000000000000000000000000000000000000',
+        runId,
+        visibility: 'local',
+        publishable: false,
+        evidenceTransport: 'digest-only',
+        corpusDigest: sha256Jcs(corpora.map(({ corpus }) => corpus.corpusDigest)),
+        graderRegistryDigest: graderRegistry.registryDigest,
+        hostProfileRegistryDigest: hostProfileRegistry.registryDigest,
+        hostProfiles: hostProfileRegistry.profiles.map((profile) => ({
+          hostProfileId: profile.hostProfileId,
+          profileDigest: profile.profileDigest,
+        })),
+        budgetDigest: budget.budgetDigest,
+        gatePolicyDigest: gatePolicy.gatePolicyDigest,
+        packageDigest,
+        sourceDigest,
+        observations: observations.map((observation) => ({
+          observationId: observation.observationId,
+          observationDigest: observation.observationDigest,
+          scenarioDigest: observation.scenario.scenarioDigest,
+          outcome: observation.outcome,
+        })),
+        measurements,
+        findingCounts,
+        rawEvidence: [],
+        terminalReason: 'EVALUATION_RUN_COMPLETE',
+        startedAt,
+        completedAt,
+      },
+      'evaluation-run-result',
+    ),
+  );
 
   const aggregateReport = buildAggregateReport({
     generatedAt: completedAt,
@@ -639,7 +911,14 @@ export async function runEvaluation({
 
   const scenarioDigests = scenarioRows.map((row) => row.scenarioDigest);
   const measured = { rates, findingCounts, budget: budgetBlock };
-  const gates = evaluateGates({ policy: gatePolicy, measured, waivers, owners, now: completedAt, scenarioDigests });
+  const gates = evaluateGates({
+    policy: gatePolicy,
+    measured,
+    waivers,
+    owners,
+    now: completedAt,
+    scenarioDigests,
+  });
 
   // A certified result asserts compatibility for its own skill, so each receipt is
   // gated on that skill's own trigger, journey, and schema evidence.
@@ -663,40 +942,58 @@ export async function runEvaluation({
       waivers,
       owners,
       now: completedAt,
-      scenarioDigests: scenarioRows.filter((row) => row.skillId === skillId).map((row) => row.scenarioDigest),
+      scenarioDigests: scenarioRows
+        .filter((row) => row.skillId === skillId)
+        .map((row) => row.scenarioDigest),
     });
   };
 
   const receipts = corpora.map(({ corpus, scenarios, catalogRow }) => {
     const evaluation = skillGates(corpus.skill.id);
     const covered = [...new Set(scenarios.map((member) => member.hostProfile.hostProfileId))]
-      .map((hostProfileId) => hostProfileRegistry.profiles.find((profile) => profile.hostProfileId === hostProfileId))
+      .map((hostProfileId) =>
+        hostProfileRegistry.profiles.find((profile) => profile.hostProfileId === hostProfileId),
+      )
       .sort((left, right) => left.host.localeCompare(right.host));
-    return assertSkillCertificationReceipt(seal({
-      kind: 'skill-certification-receipt',
-      schemaVersion: '1.0.0',
-      protocolVersion: '1.4.0',
-      receiptId: 'scr_00000000000000000000000000000000',
-      receiptDigest: 'sha256:0000000000000000000000000000000000000000000000000000000000000000',
-      recordType: 'readiness',
-      issuedAt: completedAt,
-      subject: { skillId: corpus.skill.id, skillVersion: catalogRow.sourceVersion, skillSourceDigest: catalogRow.sourceDigest },
-      inputs: {
-        corpusDigest: corpus.corpusDigest,
-        graderRegistryDigest: graderRegistry.registryDigest,
-        hostProfiles: covered.map((profile) => ({ hostProfileId: profile.host, hostProfileDigest: profile.profileDigest })),
-        budgetBaselineDigest: gatePolicy.baselineDigest,
-        gatePolicyDigest: gatePolicy.gatePolicyDigest,
-        aggregateReportDigest: aggregateReport.reportDigest,
-      },
-      gateEvaluation: evaluation.gateEvaluation.map((entry) => ({ ...entry })),
-      appliedWaivers: evaluation.appliedWaivers.map((entry) => ({ ...entry })),
-      result: evaluation.result,
-      blockingMetrics: [...evaluation.blockingMetrics],
-    }, 'skill-certification-receipt'), { aggregateReport, now: completedAt });
+    return assertSkillCertificationReceipt(
+      seal(
+        {
+          kind: 'skill-certification-receipt',
+          schemaVersion: '1.0.0',
+          protocolVersion: '1.4.0',
+          receiptId: 'scr_00000000000000000000000000000000',
+          receiptDigest: 'sha256:0000000000000000000000000000000000000000000000000000000000000000',
+          recordType: 'readiness',
+          issuedAt: completedAt,
+          subject: {
+            skillId: corpus.skill.id,
+            skillVersion: catalogRow.sourceVersion,
+            skillSourceDigest: catalogRow.sourceDigest,
+          },
+          inputs: {
+            corpusDigest: corpus.corpusDigest,
+            graderRegistryDigest: graderRegistry.registryDigest,
+            hostProfiles: covered.map((profile) => ({
+              hostProfileId: profile.host,
+              hostProfileDigest: profile.profileDigest,
+            })),
+            budgetBaselineDigest: gatePolicy.baselineDigest,
+            gatePolicyDigest: gatePolicy.gatePolicyDigest,
+            aggregateReportDigest: aggregateReport.reportDigest,
+          },
+          gateEvaluation: evaluation.gateEvaluation.map((entry) => ({ ...entry })),
+          appliedWaivers: evaluation.appliedWaivers.map((entry) => ({ ...entry })),
+          result: evaluation.result,
+          blockingMetrics: [...evaluation.blockingMetrics],
+        },
+        'skill-certification-receipt',
+      ),
+      { aggregateReport, now: completedAt },
+    );
   });
 
-  const reuse = priorEvidence === null ? null : evaluationEvidenceReuse(priorEvidence, evidenceInputs);
+  const reuse =
+    priorEvidence === null ? null : evaluationEvidenceReuse(priorEvidence, evidenceInputs);
 
   return Object.freeze({
     runId,

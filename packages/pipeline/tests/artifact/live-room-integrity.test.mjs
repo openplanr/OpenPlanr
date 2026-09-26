@@ -10,8 +10,8 @@ import {
   createLiveRoomEvent,
   createLiveRoomSigner,
   createSignedLiveRoomEvent,
-  encryptLiveRoomEvent,
   encryptArtifactPayload,
+  encryptLiveRoomEvent,
   exportLiveRoomSignerSecret,
   importLiveRoomSignerSecret,
   liveRoomSignedEventBytes,
@@ -42,19 +42,59 @@ test('owner signer stays opaque by default and round-trips only through explicit
   assert.equal(typeof secret.privateKey, 'string');
   const imported = await importLiveRoomSignerSecret(secret, { crypto: webcrypto });
   assert.equal(imported.keyId, signer.keyId);
-  const descriptor = createLiveRoomDescriptor({ roomId, reviewOf, ownerSigner: imported, createdAt: '2026-07-15T00:00:00.000Z' });
-  const event = createLiveRoomEvent({ roomId, reviewOf, kind: 'owner_decision', payload: { decision: 'approved' }, eventId: 'owner-imported', createdAt: '2026-07-15T00:00:01.000Z' });
+  const descriptor = createLiveRoomDescriptor({
+    roomId,
+    reviewOf,
+    ownerSigner: imported,
+    createdAt: '2026-07-15T00:00:00.000Z',
+  });
+  const event = createLiveRoomEvent({
+    roomId,
+    reviewOf,
+    kind: 'owner_decision',
+    payload: { decision: 'approved' },
+    eventId: 'owner-imported',
+    createdAt: '2026-07-15T00:00:01.000Z',
+  });
   const ciphertext = await encryptLiveRoomEvent(event, { key: roomKey, crypto: webcrypto });
-  const record = await createSignedLiveRoomEvent({ descriptor, event, ciphertext, sequence: 1, signer: imported, key: roomKey, crypto: webcrypto });
-  assert.equal((await verifySignedLiveRoomEvent({ descriptor, record, event, expectedSequence: 1, expectedPredecessor: ARTIFACT_ROOM_GENESIS_HASH, key: roomKey, crypto: webcrypto })).record.eventId, event.eventId);
+  const record = await createSignedLiveRoomEvent({
+    descriptor,
+    event,
+    ciphertext,
+    sequence: 1,
+    signer: imported,
+    key: roomKey,
+    crypto: webcrypto,
+  });
+  assert.equal(
+    (
+      await verifySignedLiveRoomEvent({
+        descriptor,
+        record,
+        event,
+        expectedSequence: 1,
+        expectedPredecessor: ARTIFACT_ROOM_GENESIS_HASH,
+        key: roomKey,
+        crypto: webcrypto,
+      })
+    ).record.eventId,
+    event.eventId,
+  );
 });
 
 function pin() {
   return {
-    id: 'pin-1', author: { name: 'Reviewer' }, artifactId: 'artifact',
-    region: { x: 0.1, y: 0.2, w: 0, h: 0 }, viewport: { width: 1440, height: 2400 },
-    intent: 'fix', status: 'open', comment: 'Bind this feedback', replies: [],
-    createdAt: '2026-08-23T10:00:01.000Z', updatedAt: '2026-08-23T10:00:01.000Z',
+    id: 'pin-1',
+    author: { name: 'Reviewer' },
+    artifactId: 'artifact',
+    region: { x: 0.1, y: 0.2, w: 0, h: 0 },
+    viewport: { width: 1440, height: 2400 },
+    intent: 'fix',
+    status: 'open',
+    comment: 'Bind this feedback',
+    replies: [],
+    createdAt: '2026-08-23T10:00:01.000Z',
+    updatedAt: '2026-08-23T10:00:01.000Z',
   };
 }
 
@@ -72,7 +112,10 @@ async function signedFixture() {
     createdAt: '2026-08-23T10:00:00.000Z',
   });
   const reviewerEvent = event('pin', pin(), 'event-reviewer', '2026-08-23T10:00:01.000Z');
-  const reviewerCiphertext = await encryptLiveRoomEvent(reviewerEvent, { key: roomKey, crypto: webcrypto });
+  const reviewerCiphertext = await encryptLiveRoomEvent(reviewerEvent, {
+    key: roomKey,
+    crypto: webcrypto,
+  });
   const reviewerRecord = await createSignedLiveRoomEvent({
     descriptor,
     event: reviewerEvent,
@@ -98,7 +141,10 @@ async function signedFixture() {
     'event-owner',
     '2026-08-23T10:00:02.000Z',
   );
-  const ownerCiphertext = await encryptLiveRoomEvent(ownerEvent, { key: roomKey, crypto: webcrypto });
+  const ownerCiphertext = await encryptLiveRoomEvent(ownerEvent, {
+    key: roomKey,
+    crypto: webcrypto,
+  });
   const ownerRecord = await createSignedLiveRoomEvent({
     descriptor,
     event: ownerEvent,
@@ -130,13 +176,35 @@ test('signed chain verifies reviewer feedback and owner verdict before reduction
     { record: fixture.reviewerRecord, event: fixture.reviewerEvent },
     { record: fixture.ownerRecord, event: fixture.ownerEvent },
   ];
-  const verified = await verifyLiveRoomEventChain({ descriptor: fixture.descriptor, entries, key: roomKey, crypto: webcrypto });
+  const verified = await verifyLiveRoomEventChain({
+    descriptor: fixture.descriptor,
+    entries,
+    key: roomKey,
+    crypto: webcrypto,
+  });
   assert.equal(verified.generation, 2);
   assert.match(verified.head, /^sha256:[a-f0-9]{64}$/);
-  assert.deepEqual(validateJson(fixture.reviewerEvent, loadSchema('artifact-room-event', 'v1.1.0')), []);
-  assert.deepEqual(validateJson(fixture.ownerRecord, loadSchema('artifact-room-signed-event', 'v1.1.0')), []);
-  assert.notDeepEqual(validateJson({ ...fixture.reviewerEvent, payload: { ...fixture.reviewerEvent.payload, injected: true } }, loadSchema('artifact-room-event', 'v1.1.0')), []);
-  const projection = await reduceSignedLiveRoomEvents({ descriptor: fixture.descriptor, entries, key: roomKey, crypto: webcrypto });
+  assert.deepEqual(
+    validateJson(fixture.reviewerEvent, loadSchema('artifact-room-event', 'v1.1.0')),
+    [],
+  );
+  assert.deepEqual(
+    validateJson(fixture.ownerRecord, loadSchema('artifact-room-signed-event', 'v1.1.0')),
+    [],
+  );
+  assert.notDeepEqual(
+    validateJson(
+      { ...fixture.reviewerEvent, payload: { ...fixture.reviewerEvent.payload, injected: true } },
+      loadSchema('artifact-room-event', 'v1.1.0'),
+    ),
+    [],
+  );
+  const projection = await reduceSignedLiveRoomEvents({
+    descriptor: fixture.descriptor,
+    entries,
+    key: roomKey,
+    crypto: webcrypto,
+  });
   assert.equal(projection.review.decision, 'changes_requested');
   assert.equal(projection.review.pins[0].comment, 'Bind this feedback');
   assert.equal(projection.integrity.generation, 2);
@@ -144,33 +212,40 @@ test('signed chain verifies reviewer feedback and owner verdict before reduction
 
 test('reviewer signer cannot author an owner verdict and another owner key cannot replace custody', async () => {
   const fixture = await signedFixture();
-  const forgedVerdict = event('owner_decision', { decision: 'approved' }, 'forged-owner', '2026-08-23T10:00:03.000Z');
+  const forgedVerdict = event(
+    'owner_decision',
+    { decision: 'approved' },
+    'forged-owner',
+    '2026-08-23T10:00:03.000Z',
+  );
   const ciphertext = await encryptLiveRoomEvent(forgedVerdict, { key: roomKey, crypto: webcrypto });
   await assert.rejects(
-    () => createSignedLiveRoomEvent({
-      descriptor: fixture.descriptor,
-      event: forgedVerdict,
-      ciphertext,
-      sequence: 3,
-      predecessor: 'sha256:'.concat('b'.repeat(64)),
-      signer: fixture.reviewer,
-      key: roomKey,
-      crypto: webcrypto,
-    }),
+    () =>
+      createSignedLiveRoomEvent({
+        descriptor: fixture.descriptor,
+        event: forgedVerdict,
+        ciphertext,
+        sequence: 3,
+        predecessor: 'sha256:'.concat('b'.repeat(64)),
+        signer: fixture.reviewer,
+        key: roomKey,
+        crypto: webcrypto,
+      }),
     (error) => error.code === 'E_ARTIFACT_ROOM_FORBIDDEN',
   );
   const foreignOwner = await createLiveRoomSigner({ role: 'owner', crypto: webcrypto });
   await assert.rejects(
-    () => createSignedLiveRoomEvent({
-      descriptor: fixture.descriptor,
-      event: forgedVerdict,
-      ciphertext,
-      sequence: 3,
-      predecessor: 'sha256:'.concat('b'.repeat(64)),
-      signer: foreignOwner,
-      key: roomKey,
-      crypto: webcrypto,
-    }),
+    () =>
+      createSignedLiveRoomEvent({
+        descriptor: fixture.descriptor,
+        event: forgedVerdict,
+        ciphertext,
+        sequence: 3,
+        predecessor: 'sha256:'.concat('b'.repeat(64)),
+        signer: foreignOwner,
+        key: roomKey,
+        crypto: webcrypto,
+      }),
     (error) => error.code === 'E_ARTIFACT_ROOM_FORBIDDEN',
   );
 });
@@ -189,36 +264,49 @@ test('signature binds room review role kind ordering and ciphertext bytes', asyn
   ];
   for (const record of mutations) {
     await assert.rejects(
-      () => verifySignedLiveRoomEvent({ descriptor: fixture.descriptor, record, event: fixture.ownerEvent, crypto: webcrypto }),
-      (error) => ['E_ARTIFACT_ROOM_EVENT_INVALID', 'E_ARTIFACT_DIGEST_MISMATCH'].includes(error.code),
+      () =>
+        verifySignedLiveRoomEvent({
+          descriptor: fixture.descriptor,
+          record,
+          event: fixture.ownerEvent,
+          crypto: webcrypto,
+        }),
+      (error) =>
+        ['E_ARTIFACT_ROOM_EVENT_INVALID', 'E_ARTIFACT_DIGEST_MISMATCH'].includes(error.code),
     );
   }
   await assert.rejects(
-    () => verifySignedLiveRoomEvent({
-      descriptor: fixture.descriptor,
-      record: fixture.ownerRecord,
-      authorizedCapability: 'reviewer-write',
-      crypto: webcrypto,
-    }),
+    () =>
+      verifySignedLiveRoomEvent({
+        descriptor: fixture.descriptor,
+        record: fixture.ownerRecord,
+        authorizedCapability: 'reviewer-write',
+        crypto: webcrypto,
+      }),
     (error) => error.code === 'E_ARTIFACT_ROOM_FORBIDDEN',
   );
   for (const record of [
     { ...fixture.ownerRecord, signature: 'A' },
-    { ...fixture.ownerRecord, authorKey: { ...fixture.ownerRecord.authorKey, value: 'A'.repeat(122) } },
+    {
+      ...fixture.ownerRecord,
+      authorKey: { ...fixture.ownerRecord.authorKey, value: 'A'.repeat(122) },
+    },
   ]) {
     await assert.rejects(
-      () => verifySignedLiveRoomEvent({ descriptor: fixture.descriptor, record, crypto: webcrypto }),
+      () =>
+        verifySignedLiveRoomEvent({ descriptor: fixture.descriptor, record, crypto: webcrypto }),
       (error) => error.code === 'E_ARTIFACT_ROOM_EVENT_INVALID',
     );
   }
   await assert.rejects(
-    () => verifySignedLiveRoomEvent({
-      descriptor: fixture.descriptor,
-      record: fixture.ownerRecord,
-      event: { ...fixture.ownerEvent, payload: { decision: 'approved' } },
-      key: roomKey,
-      crypto: webcrypto,
-    }),
+    () =>
+      verifySignedLiveRoomEvent({
+        descriptor: fixture.descriptor,
+        record: fixture.ownerRecord,
+        event: { ...fixture.ownerEvent, payload: { decision: 'approved' } },
+        key: roomKey,
+        crypto: webcrypto,
+      }),
     (error) => error.code === 'E_ARTIFACT_ROOM_EVENT_INVALID',
   );
 });
@@ -231,21 +319,28 @@ test('official signing rejects semantic/ciphertext drift and resilient hydration
     'event-foreign',
     '2099-01-01T00:00:00.000Z',
   );
-  const foreignCiphertext = await encryptLiveRoomEvent(foreignEvent, { key: roomKey, crypto: webcrypto });
+  const foreignCiphertext = await encryptLiveRoomEvent(foreignEvent, {
+    key: roomKey,
+    crypto: webcrypto,
+  });
   await assert.rejects(
-    () => createSignedLiveRoomEvent({
-      descriptor: fixture.descriptor,
-      event: fixture.reviewerEvent,
-      ciphertext: foreignCiphertext,
-      sequence: 1,
-      signer: fixture.reviewer,
-      key: roomKey,
-      crypto: webcrypto,
-    }),
+    () =>
+      createSignedLiveRoomEvent({
+        descriptor: fixture.descriptor,
+        event: fixture.reviewerEvent,
+        ciphertext: foreignCiphertext,
+        sequence: 1,
+        signer: fixture.reviewer,
+        key: roomKey,
+        crypto: webcrypto,
+      }),
     (error) => error.code === 'E_ARTIFACT_ROOM_EVENT_INVALID',
   );
 
-  const nonJsonCiphertext = await encryptArtifactPayload(new TextEncoder().encode('not-json'), { key: roomKey, crypto: webcrypto });
+  const nonJsonCiphertext = await encryptArtifactPayload(new TextEncoder().encode('not-json'), {
+    key: roomKey,
+    crypto: webcrypto,
+  });
   const unsignedPoison = {
     ...fixture.reviewerRecord,
     iv: nonJsonCiphertext.iv,
@@ -256,15 +351,25 @@ test('official signing rejects semantic/ciphertext drift and resilient hydration
     ...unsignedPoison,
     signature: await fixture.reviewer.sign(liveRoomSignedEventBytes(unsignedPoison)),
   };
-  const poisonHash = (await verifySignedLiveRoomEvent({
-    descriptor: fixture.descriptor,
-    record: poison,
-    expectedSequence: 1,
-    expectedPredecessor: ARTIFACT_ROOM_GENESIS_HASH,
+  const poisonHash = (
+    await verifySignedLiveRoomEvent({
+      descriptor: fixture.descriptor,
+      record: poison,
+      expectedSequence: 1,
+      expectedPredecessor: ARTIFACT_ROOM_GENESIS_HASH,
+      crypto: webcrypto,
+    })
+  ).recordHash;
+  const honestEvent = event(
+    'owner_decision',
+    { decision: 'approved' },
+    'event-honest-after-poison',
+    '2026-08-23T10:00:02.000Z',
+  );
+  const honestCiphertext = await encryptLiveRoomEvent(honestEvent, {
+    key: roomKey,
     crypto: webcrypto,
-  })).recordHash;
-  const honestEvent = event('owner_decision', { decision: 'approved' }, 'event-honest-after-poison', '2026-08-23T10:00:02.000Z');
-  const honestCiphertext = await encryptLiveRoomEvent(honestEvent, { key: roomKey, crypto: webcrypto });
+  });
   const honestRecord = await createSignedLiveRoomEvent({
     descriptor: fixture.descriptor,
     event: honestEvent,
@@ -306,31 +411,54 @@ test('exact replay is idempotent while divergent identity and reordered predeces
     event: fixture.reviewerEvent,
   };
   await assert.rejects(
-    () => verifyLiveRoomEventChain({ descriptor: fixture.descriptor, entries: [first, divergent], key: roomKey, crypto: webcrypto }),
+    () =>
+      verifyLiveRoomEventChain({
+        descriptor: fixture.descriptor,
+        entries: [first, divergent],
+        key: roomKey,
+        crypto: webcrypto,
+      }),
     (error) => error.code === 'E_ARTIFACT_ROOM_EVENT_REPLAY',
   );
   await assert.rejects(
-    () => verifyLiveRoomEventChain({
-      descriptor: fixture.descriptor,
-      entries: [first, { record: { ...fixture.ownerRecord, predecessor: ARTIFACT_ROOM_GENESIS_HASH }, event: fixture.ownerEvent }],
-      key: roomKey,
-      crypto: webcrypto,
-    }),
+    () =>
+      verifyLiveRoomEventChain({
+        descriptor: fixture.descriptor,
+        entries: [
+          first,
+          {
+            record: { ...fixture.ownerRecord, predecessor: ARTIFACT_ROOM_GENESIS_HASH },
+            event: fixture.ownerEvent,
+          },
+        ],
+        key: roomKey,
+        crypto: webcrypto,
+      }),
     (error) => error.code === 'E_ARTIFACT_ROOM_EVENT_REPLAY',
   );
 
-  const staleEvent = event('owner_decision', { decision: 'approved' }, 'event-stale', '2026-08-23T10:00:00.500Z');
-  const staleCiphertext = await encryptLiveRoomEvent(staleEvent, { key: roomKey, crypto: webcrypto });
+  const staleEvent = event(
+    'owner_decision',
+    { decision: 'approved' },
+    'event-stale',
+    '2026-08-23T10:00:00.500Z',
+  );
+  const staleCiphertext = await encryptLiveRoomEvent(staleEvent, {
+    key: roomKey,
+    crypto: webcrypto,
+  });
   const staleRecord = await createSignedLiveRoomEvent({
     descriptor: fixture.descriptor,
     event: staleEvent,
     ciphertext: staleCiphertext,
     sequence: 2,
-    predecessor: (await verifySignedLiveRoomEvent({
-      descriptor: fixture.descriptor,
-      record: fixture.reviewerRecord,
-      crypto: webcrypto,
-    })).recordHash,
+    predecessor: (
+      await verifySignedLiveRoomEvent({
+        descriptor: fixture.descriptor,
+        record: fixture.reviewerRecord,
+        crypto: webcrypto,
+      })
+    ).recordHash,
     signer: fixture.owner,
     key: roomKey,
     crypto: webcrypto,
@@ -341,5 +469,9 @@ test('exact replay is idempotent while divergent identity and reordered predeces
     key: roomKey,
     crypto: webcrypto,
   });
-  assert.equal(timestampIndependent.generation, 2, 'sequence and predecessor, not client wall-clock order, govern the chain');
+  assert.equal(
+    timestampIndependent.generation,
+    2,
+    'sequence and predecessor, not client wall-clock order, govern the chain',
+  );
 });

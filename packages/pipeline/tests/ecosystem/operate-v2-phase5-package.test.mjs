@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { after, test } from 'node:test';
@@ -34,13 +34,25 @@ const PHASE_5_STAGES = [
 after(() => rmSync(temporaryRoot, { recursive: true, force: true }));
 
 function run(command, args, options = {}) {
-  const result = spawnSync(command, args, { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, ...options });
-  assert.equal(result.status, 0, `${command} ${args.join(' ')} failed\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}`);
+  const result = spawnSync(command, args, {
+    encoding: 'utf8',
+    maxBuffer: 64 * 1024 * 1024,
+    ...options,
+  });
+  assert.equal(
+    result.status,
+    0,
+    `${command} ${args.join(' ')} failed\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}`,
+  );
   return result;
 }
 
-test('Phase 5 packs every declared public operating-loop surface without a private or execution boundary', { timeout: 120_000 }, () => {
-  const packed = packOperateV2DevelopmentSnapshot(join(temporaryRoot, 'package'), { sourceRoot: root });
+test('Phase 5 packs every declared public operating-loop surface without a private or execution boundary', {
+  timeout: 120_000,
+}, () => {
+  const packed = packOperateV2DevelopmentSnapshot(join(temporaryRoot, 'package'), {
+    sourceRoot: root,
+  });
   assert.equal(packed.ok, true);
   assert.match(packed.sha256, /^[a-f0-9]{64}$/);
   assert.equal(packed.sourcePurity.ok, true);
@@ -54,26 +66,40 @@ test('Phase 5 packs every declared public operating-loop surface without a priva
     'lib/operate/intelligence-output-identities-v2.mjs',
     'lib/operate/intelligence-result-validator-v2.mjs',
     'lib/operate/intelligence-replay-v2.mjs',
-    'lib/operate/result-packet-v2.mjs', 'lib/operate/result-packet-v2.d.mts',
+    'lib/operate/result-packet-v2.mjs',
+    'lib/operate/result-packet-v2.d.mts',
     'lib/operate/runtime-event-reducer-v2.mjs',
-    'lib/operate/operating-state-v2.mjs', 'lib/operate/operating-state-v2.d.mts',
-    'lib/operate/operating-snapshots-v2.mjs', 'lib/operate/operating-snapshots-v2.d.mts',
-    'lib/operate/operating-delta-v2.mjs', 'lib/operate/operating-delta-v2.d.mts',
-    'lib/operate/intelligence-router-v2.mjs', 'lib/operate/intelligence-router-v2.d.mts',
-    'lib/operate/operating-intelligence-state-v2.mjs', 'lib/operate/operating-intelligence-state-v2.d.mts',
-    'lib/operate/action-verification-v2.mjs', 'lib/operate/action-verification-v2.d.mts',
-    'lib/operate/authorization-v2.mjs', 'lib/operate/authorization-v2.d.mts',
-    'lib/operate/policy-v2.mjs', 'lib/operate/policy-v2.d.mts',
-    'lib/operate/approvals-v2.mjs', 'lib/operate/approvals-v2.d.mts',
-    'lib/operate/operating-triggers-v2.mjs', 'lib/operate/operating-triggers-v2.d.mts',
-    'lib/operate/operating-domains-v2.mjs', 'lib/operate/operating-domains-v2.d.mts',
-    'lib/operate/operating-signal-providers-v2.mjs', 'lib/operate/operating-signal-providers-v2.d.mts',
+    'lib/operate/operating-state-v2.mjs',
+    'lib/operate/operating-state-v2.d.mts',
+    'lib/operate/operating-snapshots-v2.mjs',
+    'lib/operate/operating-snapshots-v2.d.mts',
+    'lib/operate/operating-delta-v2.mjs',
+    'lib/operate/operating-delta-v2.d.mts',
+    'lib/operate/intelligence-router-v2.mjs',
+    'lib/operate/intelligence-router-v2.d.mts',
+    'lib/operate/operating-intelligence-state-v2.mjs',
+    'lib/operate/operating-intelligence-state-v2.d.mts',
+    'lib/operate/action-verification-v2.mjs',
+    'lib/operate/action-verification-v2.d.mts',
+    'lib/operate/authorization-v2.mjs',
+    'lib/operate/authorization-v2.d.mts',
+    'lib/operate/policy-v2.mjs',
+    'lib/operate/policy-v2.d.mts',
+    'lib/operate/approvals-v2.mjs',
+    'lib/operate/approvals-v2.d.mts',
+    'lib/operate/operating-triggers-v2.mjs',
+    'lib/operate/operating-triggers-v2.d.mts',
+    'lib/operate/operating-domains-v2.mjs',
+    'lib/operate/operating-domains-v2.d.mts',
+    'lib/operate/operating-signal-providers-v2.mjs',
+    'lib/operate/operating-signal-providers-v2.d.mts',
     'conformance/fixtures/operating-runtime-v2/business-domain-valid.json',
     'conformance/fixtures/operating-runtime-v2/software-domain-valid.json',
     'conformance/fixtures/operating-runtime-v2/operating-intelligence-contracts-valid.json',
     'conformance/fixtures/operating-runtime-v2/action-verification-valid.json',
     'conformance/fixtures/operating-runtime-v2/operating-trigger-scenario-valid.json',
-  ]) assert.equal(packedFiles.has(required), true, `missing Phase 5 package asset ${required}`);
+  ])
+    assert.equal(packedFiles.has(required), true, `missing Phase 5 package asset ${required}`);
   for (const path of packedFiles) {
     assert.doesNotMatch(path, /^(?:\.planr\/|tests\/|node_modules\/|\.env(?:\.|\/|$))/);
     assert.doesNotMatch(path, /(?:compatibility-v1_4|records-migration|operating-provider-kit)/iu);
@@ -90,31 +116,64 @@ test('Phase 5 packs every declared public operating-loop surface without a priva
   writeFileSync(join(consumer, 'package.json'), JSON.stringify({ type: 'module' }));
   const metadata = JSON.parse(readFileSync(join(installedPackage, 'package.json'), 'utf8'));
   for (const name of [
-    'runtime-v2', 'scheduler-v2', 'extensions-v2', 'evidence-v2',
+    'runtime-v2',
+    'scheduler-v2',
+    'extensions-v2',
+    'evidence-v2',
     'result-packet-v2',
-    'intelligence-router-v2', 'authorization-v2', 'policy-v2', 'approvals-v2',
+    'intelligence-router-v2',
+    'authorization-v2',
+    'policy-v2',
+    'approvals-v2',
     'operating-domains-v2',
     'operating-signal-providers-v2',
   ]) {
     const entry = metadata.exports[`./operate/${name}`];
     assert.equal(typeof entry?.import, 'string', `${name}: declared runtime export`);
     assert.equal(typeof entry?.types, 'string', `${name}: declared type export`);
-    assert.equal(existsSync(join(installedPackage, entry.import)), true, `${name}: packaged runtime`);
-    assert.equal(existsSync(join(installedPackage, entry.types)), true, `${name}: packaged declaration`);
+    assert.equal(
+      existsSync(join(installedPackage, entry.import)),
+      true,
+      `${name}: packaged runtime`,
+    );
+    assert.equal(
+      existsSync(join(installedPackage, entry.types)),
+      true,
+      `${name}: packaged declaration`,
+    );
   }
-  for (const forbidden of ['./operate/intelligence-ledger-v2', './operate/executor-v2', './operate/capability-v2']) {
-    assert.equal(metadata.exports[forbidden], undefined, `${forbidden}: no executor or effect package surface`);
+  for (const forbidden of [
+    './operate/intelligence-ledger-v2',
+    './operate/executor-v2',
+    './operate/capability-v2',
+  ]) {
+    assert.equal(
+      metadata.exports[forbidden],
+      undefined,
+      `${forbidden}: no executor or effect package surface`,
+    );
   }
   assert.equal(checkOperateRuntimePurity(installedPackage).ok, true);
 
-  const verifierPath = join(installedPackage, 'conformance', 'verify-operate-v2-operating-intelligence.mjs');
+  const verifierPath = join(
+    installedPackage,
+    'conformance',
+    'verify-operate-v2-operating-intelligence.mjs',
+  );
   const verifierSource = readFileSync(verifierPath, 'utf8');
-  assert.doesNotMatch(verifierSource, /(?:\.\.\/lib\/|file:|\/Users\/|\.planr\/operate-v2\/)/u,
-    'the package verifier has no source-checkout or private import path');
+  assert.doesNotMatch(
+    verifierSource,
+    /(?:\.\.\/lib\/|file:|\/Users\/|\.planr\/operate-v2\/)/u,
+    'the package verifier has no source-checkout or private import path',
+  );
   for (const [, specifier] of verifierSource.matchAll(/from '([^']+)'/gu)) {
     if (!specifier.startsWith('planr-pipeline/')) continue;
     const exportName = `./${specifier.slice('planr-pipeline/'.length)}`;
-    assert.notEqual(metadata.exports[exportName], undefined, `${specifier}: declared public package export`);
+    assert.notEqual(
+      metadata.exports[exportName],
+      undefined,
+      `${specifier}: declared public package export`,
+    );
   }
   const journey = run(process.execPath, [verifierPath], { cwd: consumer });
   const report = JSON.parse(journey.stdout);
@@ -123,7 +182,11 @@ test('Phase 5 packs every declared public operating-loop surface without a priva
   assert.equal(report.journeys.length, 2);
   for (const result of report.journeys) {
     assert.deepEqual(result.stageOrder, PHASE_5_STAGES, `${result.domainId}: complete stage order`);
-    assert.deepEqual(Object.keys(result.stages), PHASE_5_STAGES, `${result.domainId}: every stage is reported`);
+    assert.deepEqual(
+      Object.keys(result.stages),
+      PHASE_5_STAGES,
+      `${result.domainId}: every stage is reported`,
+    );
     for (const name of PHASE_5_STAGES) {
       assert.equal(result.stages[name].passed, true, `${result.domainId}/${name}`);
     }

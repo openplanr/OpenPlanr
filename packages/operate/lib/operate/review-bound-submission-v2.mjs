@@ -1,6 +1,6 @@
-import { PipelineError } from '@openplanr/protocol/errors';
-import { assertProtocolArtifact } from '@openplanr/protocol/contracts';
 import { sha256Jcs } from '@openplanr/protocol/canonical-json';
+import { assertProtocolArtifact } from '@openplanr/protocol/contracts';
+import { PipelineError } from '@openplanr/protocol/errors';
 
 export const OPERATE_REVIEW_BOUND_SUBMISSION_DOMAIN =
   'openplanr:operate-review-bound-submission:project-write:operating-review@2.0.0#/$defs/workDisposition:1.0.0';
@@ -9,8 +9,15 @@ const HASH = /^sha256:[a-f0-9]{64}$/u;
 const CHOICE_ID = /^rch_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$/u;
 const NOTE = /^\S(?:[\s\S]*\S)?$/u;
 const WRAPPER_KEYS = Object.freeze([
-  'boundSubmissionHash', 'choiceHash', 'choiceId', 'expectedReadEventHead', 'kind',
-  'note', 'protocolVersion', 'schemaVersion', 'submitArguments',
+  'boundSubmissionHash',
+  'choiceHash',
+  'choiceId',
+  'expectedReadEventHead',
+  'kind',
+  'note',
+  'protocolVersion',
+  'schemaVersion',
+  'submitArguments',
 ]);
 
 function fail(message, context = {}) {
@@ -35,20 +42,22 @@ function deepFreeze(value) {
 function exactKeys(value, expected) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   const actual = Object.keys(value).sort();
-  return actual.length === expected.length
-    && actual.every((field, index) => field === expected[index]);
+  return (
+    actual.length === expected.length && actual.every((field, index) => field === expected[index])
+  );
 }
 
 function validEventHead(value) {
-  return exactKeys(value, ['hash', 'sequence'])
-    && Number.isSafeInteger(value.sequence)
-    && value.sequence >= 0
-    && (value.sequence === 0 ? value.hash === null : HASH.test(value.hash));
+  return (
+    exactKeys(value, ['hash', 'sequence']) &&
+    Number.isSafeInteger(value.sequence) &&
+    value.sequence >= 0 &&
+    (value.sequence === 0 ? value.hash === null : HASH.test(value.hash))
+  );
 }
 
 function validNote(value) {
-  return value === null
-    || (typeof value === 'string' && value.length <= 2048 && NOTE.test(value));
+  return value === null || (typeof value === 'string' && value.length <= 2048 && NOTE.test(value));
 }
 
 function hashPayload(value) {
@@ -67,31 +76,37 @@ export function computeOperatingReviewBoundSubmissionHashV1(value) {
 }
 
 export function assertOperatingReviewBoundSubmissionV1(value) {
-  if (!exactKeys(value, WRAPPER_KEYS)
-    || value.kind !== 'operate-review-bound-submission'
-    || value.schemaVersion !== '1.0.0'
-    || value.protocolVersion !== '2.0.0'
-    || !validEventHead(value.expectedReadEventHead)
-    || !CHOICE_ID.test(value.choiceId)
-    || !HASH.test(value.choiceHash)
-    || !value.submitArguments
-    || typeof value.submitArguments !== 'object'
-    || Array.isArray(value.submitArguments)
-    || value.choiceHash !== sha256Jcs(value.submitArguments)
-    || !validNote(value.note)
-    || !HASH.test(value.boundSubmissionHash)
-    || value.boundSubmissionHash !== computeOperatingReviewBoundSubmissionHashV1(value)) {
+  if (
+    !exactKeys(value, WRAPPER_KEYS) ||
+    value.kind !== 'operate-review-bound-submission' ||
+    value.schemaVersion !== '1.0.0' ||
+    value.protocolVersion !== '2.0.0' ||
+    !validEventHead(value.expectedReadEventHead) ||
+    !CHOICE_ID.test(value.choiceId) ||
+    !HASH.test(value.choiceHash) ||
+    !value.submitArguments ||
+    typeof value.submitArguments !== 'object' ||
+    Array.isArray(value.submitArguments) ||
+    value.choiceHash !== sha256Jcs(value.submitArguments) ||
+    !validNote(value.note) ||
+    !HASH.test(value.boundSubmissionHash) ||
+    value.boundSubmissionHash !== computeOperatingReviewBoundSubmissionHashV1(value)
+  ) {
     fail('The bound Review submission wrapper is malformed or its canonical hash differs.');
   }
   try {
-    assertProtocolArtifact('operate-tool-call', {
-      kind: 'operate-tool-call',
-      schemaVersion: '1.0.0',
-      protocolVersion: '2.0.0',
-      direction: 'request',
-      operation: 'operate.review.submit',
-      request: clone(value.submitArguments),
-    }, { protocolVersion: '2.0.0' });
+    assertProtocolArtifact(
+      'operate-tool-call',
+      {
+        kind: 'operate-tool-call',
+        schemaVersion: '1.0.0',
+        protocolVersion: '2.0.0',
+        direction: 'request',
+        operation: 'operate.review.submit',
+        request: clone(value.submitArguments),
+      },
+      { protocolVersion: '2.0.0' },
+    );
   } catch {
     fail('The bound Review submission must retain one exact closed legacy Review submit request.');
   }

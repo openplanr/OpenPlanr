@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import test, { after } from 'node:test';
@@ -13,10 +13,9 @@ const temporaryRoot = mkdtempSync(join(tmpdir(), 'planr-operate-runtime-reader-'
 after(() => rmSync(temporaryRoot, { recursive: true, force: true }));
 
 function fixture(name) {
-  return JSON.parse(readFileSync(
-    join(root, 'conformance/fixtures/operating-runtime-v2', name),
-    'utf8',
-  ));
+  return JSON.parse(
+    readFileSync(join(root, 'conformance/fixtures/operating-runtime-v2', name), 'utf8'),
+  );
 }
 
 function writeProjection(directory, state, checkpoint) {
@@ -41,7 +40,10 @@ test('the dashboard reads only validated Operate Runtime 2.0 projection identiti
   assert.equal(projection.status, 'ready');
   assert.equal(projection.readOnly, true);
   assert.equal(projection.state.protocolVersion, '2.0.0');
-  assert.equal(projection.state.eventHead.sequence, contracts['operating-checkpoint'].eventHead.sequence);
+  assert.equal(
+    projection.state.eventHead.sequence,
+    contracts['operating-checkpoint'].eventHead.sequence,
+  );
 });
 
 test('a legacy state.json file is not probed or translated', () => {

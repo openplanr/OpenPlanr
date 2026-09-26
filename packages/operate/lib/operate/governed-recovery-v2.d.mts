@@ -7,20 +7,23 @@ import type {
   OperatingRollbackResultV2,
   OperatingRuntimeStateV2,
 } from '@openplanr/protocol';
-import type { OperateGovernedExtensionRegistryV2 } from './governed-extensions-v2.d.mts';
 import type { OperatingArtifactByteStoreV2 } from './evidence-materialization-v2.d.mts';
+import type {
+  OperatingGovernedExecutionCheckpointStoreV2,
+  OperatingGovernedExecutionPayloadV2,
+} from './governed-execution-v2.d.mts';
+import type { OperateGovernedExtensionRegistryV2 } from './governed-extensions-v2.d.mts';
 import type {
   ContainedEffectReceiptV2,
   ContainedTargetAdapterV2,
   ReferenceExecutorHostV2,
 } from './reference-governed-executors-v2.d.mts';
-import type {
-  OperatingGovernedExecutionCheckpointStoreV2,
-  OperatingGovernedExecutionPayloadV2,
-} from './governed-execution-v2.d.mts';
 
 export type OperatingGovernedRecoveryClassificationV2 =
-  | 'applied' | 'not-applied' | 'partial' | 'unknown';
+  | 'applied'
+  | 'not-applied'
+  | 'partial'
+  | 'unknown';
 
 export interface OperatingReconciliationProofV2 {
   kind: 'operating-reconciliation-proof';
@@ -48,7 +51,12 @@ export interface OperatingGovernedRollbackTerminalIdentityV2 {
   rollbackResultId: string;
   resultArtifactId: string;
   submissionId: string;
-  eventIds: { submitted: string; artifactCreated: string; validated: string; resultRecorded: string };
+  eventIds: {
+    submitted: string;
+    artifactCreated: string;
+    validated: string;
+    resultRecorded: string;
+  };
 }
 
 export interface OperatingGovernedRollbackDraftV2 {
@@ -65,9 +73,16 @@ export interface OperatingGovernedRollbackDraftV2 {
   availabilityExpiresAt: string;
   correlationId: string;
   eventIds: {
-    assignmentCreated: string; assignmentClaimed: string; assignmentStarted: string;
-    availabilityRecorded: string; capabilityGranted: string; intentRecorded: string;
-    submitted: string; artifactCreated: string; validated: string; resultRecorded: string;
+    assignmentCreated: string;
+    assignmentClaimed: string;
+    assignmentStarted: string;
+    availabilityRecorded: string;
+    capabilityGranted: string;
+    intentRecorded: string;
+    submitted: string;
+    artifactCreated: string;
+    validated: string;
+    resultRecorded: string;
   };
   uncertainty: OperatingGovernedRollbackTerminalIdentityV2;
 }
@@ -107,10 +122,17 @@ export function recordOperatingRollbackPlanV2(input: {
   plan: OperatingRollbackPlanV2;
   eventId: string;
   runtimeActorId?: string;
-}): Readonly<{ state: OperatingRuntimeStateV2; plan: OperatingRollbackPlanV2; event: OperatingEventV2; replayed: false }>;
+}): Readonly<{
+  state: OperatingRuntimeStateV2;
+  plan: OperatingRollbackPlanV2;
+  event: OperatingEventV2;
+  replayed: false;
+}>;
 
 export function classifyOperatingGovernedRecoveryV2(input: {
-  state: OperatingRuntimeStateV2; operationId: string; observedAt?: string;
+  state: OperatingRuntimeStateV2;
+  operationId: string;
+  observedAt?: string;
 }): Readonly<OperatingReconciliationProofV2>;
 
 export function classifyOperatingRollbackReconciliationReceiptV2(input: {
@@ -128,7 +150,10 @@ export function classifyOperatingRollbackReconciliationReceiptV2(input: {
 export function reconcileOperatingGovernedDispatchV2(input: {
   state: OperatingRuntimeStateV2;
   operationId: string;
-  request: { payload: OperatingGovernedExecutionPayloadV2; rollbackBaseline: OperatingGovernedExecutionPayloadV2 | null };
+  request: {
+    payload: OperatingGovernedExecutionPayloadV2;
+    rollbackBaseline: OperatingGovernedExecutionPayloadV2 | null;
+  };
   trustedHost?: ReferenceExecutorHostV2;
   targetAdapter?: ContainedTargetAdapterV2;
   registry?: OperateGovernedExtensionRegistryV2;
@@ -164,10 +189,14 @@ export function rollbackOperatingGovernedActionV2(
   request: OperatingGovernedRollbackRequestV2,
   draft: OperatingGovernedRollbackDraftV2,
   options: OperatingGovernedRecoveryRuntimeOptionsV2 & {
-    trustedHost: ReferenceExecutorHostV2; targetAdapter: ContainedTargetAdapterV2;
+    trustedHost: ReferenceExecutorHostV2;
+    targetAdapter: ContainedTargetAdapterV2;
   },
 ): Promise<Readonly<OperatingGovernedRollbackResultEnvelopeV2>>;
 
 export const OPERATING_GOVERNED_RECOVERY_CLASSIFICATIONS_V2: readonly [
-  'applied', 'not-applied', 'partial', 'unknown',
+  'applied',
+  'not-applied',
+  'partial',
+  'unknown',
 ];

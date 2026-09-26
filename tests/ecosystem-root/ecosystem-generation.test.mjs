@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
@@ -34,12 +34,27 @@ test('local ecosystem derives component versions and preserved public parity in-
   assert.equal(ecosystem.releaseState, 'local-candidate');
   assert.equal(ecosystem.remoteState, 'not-queried');
   assert.equal(ecosystem.components.cli.version, json('packages/cli/package.json').version);
-  assert.equal(ecosystem.components.pipeline.version, json('packages/pipeline/package.json').version);
-  assert.equal(ecosystem.components.protocol.version, json('packages/protocol/package.json').version);
-  assert.equal(ecosystem.components.skillRuntime.version, json('packages/skill-runtime/package.json').version);
-  assert.equal(ecosystem.compatibility.cliOptionalPipeline.version, json('packages/cli/package.json').optionalDependencies['planr-pipeline']);
+  assert.equal(
+    ecosystem.components.pipeline.version,
+    json('packages/pipeline/package.json').version,
+  );
+  assert.equal(
+    ecosystem.components.protocol.version,
+    json('packages/protocol/package.json').version,
+  );
+  assert.equal(
+    ecosystem.components.skillRuntime.version,
+    json('packages/skill-runtime/package.json').version,
+  );
+  assert.equal(
+    ecosystem.compatibility.cliOptionalPipeline.version,
+    json('packages/cli/package.json').optionalDependencies['planr-pipeline'],
+  );
   assert.equal(ecosystem.compatibility.cliOptionalPipeline.exact, true);
-  assert.equal(ecosystem.publicCompatibility.pipelineExportKeys, Object.keys(json('packages/pipeline/package.json').exports).length);
+  assert.equal(
+    ecosystem.publicCompatibility.pipelineExportKeys,
+    Object.keys(json('packages/pipeline/package.json').exports).length,
+  );
   assert.equal(ecosystem.publicCompatibility.pipelineRootSymbols, 229);
   assert.deepEqual(ecosystem.binaries.cli, {
     planr: './bin/planr.js',
@@ -69,8 +84,15 @@ test('catalog, schema, role, skill, and adapter membership is exact', () => {
   assert.equal(ecosystem.catalogs.roles.count, 9);
   assert.ok(ecosystem.catalogs.roles.ids.includes('planr-documentation'));
   assert.ok(!ecosystem.catalogs.roles.ids.includes('planr-docs'));
-  assert.deepEqual(ecosystem.adapters.hosts.map(({ id }) => id), ['claude-code', 'codex', 'cursor']);
-  assert.ok(ecosystem.adapters.hosts.every(({ version }) => version === json('packages/pipeline/package.json').version));
+  assert.deepEqual(
+    ecosystem.adapters.hosts.map(({ id }) => id),
+    ['claude-code', 'codex', 'cursor'],
+  );
+  assert.ok(
+    ecosystem.adapters.hosts.every(
+      ({ version }) => version === json('packages/pipeline/package.json').version,
+    ),
+  );
   assert.equal(ecosystem.registries.capturedEvaluationContracts.lifecycle, 'byte-preserved');
   assert.equal(ecosystem.registries.capturedEvaluationContracts.hostProfiles.count, 3);
   assert.equal(ecosystem.registries.capturedEvaluationContracts.graders.count, 6);
@@ -85,7 +107,10 @@ test('catalog, schema, role, skill, and adapter membership is exact', () => {
   });
   assert.equal(ecosystem.schemas.successors.protocolVersion, '1.8.0');
   assert.equal(ecosystem.schemas.successors.count, additiveByVersion['v1.8.0']);
-  assert.equal(ecosystem.schemas.additive.count, Object.values(additiveByVersion).reduce((sum, count) => sum + count, 0));
+  assert.equal(
+    ecosystem.schemas.additive.count,
+    Object.values(additiveByVersion).reduce((sum, count) => sum + count, 0),
+  );
   assert.deepEqual(ecosystem.schemas.additive.byVersion, additiveByVersion);
   assert.equal(ecosystem.registries.canonicalCatalogs.count, 13);
   assert.equal(ecosystem.registries.protocol15Catalogs.count, 7);
@@ -98,7 +123,10 @@ test('catalog, schema, role, skill, and adapter membership is exact', () => {
     json('packages/protocol/registries/outputs.json').documentDigest,
   );
   assert.equal(ecosystem.registries.preserved.count, 12);
-  assert.equal(ecosystem.catalogs.commands.negativeContracts[0].negativeContractId, 'retired-pipeline-operate');
+  assert.equal(
+    ecosystem.catalogs.commands.negativeContracts[0].negativeContractId,
+    'retired-pipeline-operate',
+  );
 });
 
 test('the local marketplace points at one registry-complete Claude package with nine agents', () => {
@@ -114,10 +142,17 @@ test('the local marketplace points at one registry-complete Claude package with 
   assert.equal('agents' in plugin, false);
   assert.equal(existsSync(resolve(root, 'dist/plugins/claude/openplanr/commands')), false);
   assert.equal(
-    readdirSync(resolve(root, 'dist/plugins/claude/openplanr/skills'), { withFileTypes: true }).filter((entry) => entry.isDirectory()).length,
+    readdirSync(resolve(root, 'dist/plugins/claude/openplanr/skills'), {
+      withFileTypes: true,
+    }).filter((entry) => entry.isDirectory()).length,
     json('skills/registry.json').skills.length,
   );
-  assert.equal(readdirSync(resolve(root, 'dist/plugins/claude/openplanr/agents'), { withFileTypes: true }).filter((entry) => entry.isFile() && entry.name.endsWith('.md')).length, 9);
+  assert.equal(
+    readdirSync(resolve(root, 'dist/plugins/claude/openplanr/agents'), {
+      withFileTypes: true,
+    }).filter((entry) => entry.isFile() && entry.name.endsWith('.md')).length,
+    9,
+  );
 });
 
 test('OpenAI plugin exposes readable content for every canonical skill and no aliases', () => {
@@ -131,22 +166,39 @@ test('OpenAI plugin exposes readable content for every canonical skill and no al
   assert.equal(content.canonicalSkillCount, canonical.skillIds.length);
   assert.equal(content.compatibilityAliasCount, 0);
   assert.equal(content.skillCount, canonical.skillIds.length);
-  assert.equal(content.assetCount, content.skills.reduce((count, skill) => count + skill.assets.length, 0));
-  assert.deepEqual(content.skills.map(({ skillId }) => skillId), canonical.skillIds);
+  assert.equal(
+    content.assetCount,
+    content.skills.reduce((count, skill) => count + skill.assets.length, 0),
+  );
+  assert.deepEqual(
+    content.skills.map(({ skillId }) => skillId),
+    canonical.skillIds,
+  );
   assert.deepEqual(canonical.aliases, []);
   for (const skill of content.skills) {
     assert.equal(skill.entrypoint, `skills/${skill.projectedName}/SKILL.md`);
     assert.ok(skill.description.length > 0, skill.skillId);
     assert.ok(skill.assets.length > 0, skill.skillId);
     for (const asset of skill.assets) {
-      assert.equal(digest(read(`dist/plugins/openai/openplanr/${asset.path}`)), asset.digest, asset.path);
+      assert.equal(
+        digest(read(`dist/plugins/openai/openplanr/${asset.path}`)),
+        asset.digest,
+        asset.path,
+      );
     }
     const metadataPath = `skills/${skill.projectedName}/agents/openai.yaml`;
     const metadata = read(`dist/plugins/openai/openplanr/${metadataPath}`).toString('utf8');
-    assert.ok(skill.assets.some(({ path }) => path === metadataPath), metadataPath);
+    assert.ok(
+      skill.assets.some(({ path }) => path === metadataPath),
+      metadataPath,
+    );
     assert.equal(skill.projectedName, skill.skillId.replace(/^planr-/u, ''));
     assert.equal(skill.invocation, `$planr:${skill.projectedName}`);
-    assert.match(metadata, new RegExp(`default_prompt: .*\\$planr:${skill.projectedName}`, 'u'), metadataPath);
+    assert.match(
+      metadata,
+      new RegExp(`default_prompt: .*\\$planr:${skill.projectedName}`, 'u'),
+      metadataPath,
+    );
     assert.match(metadata, /allow_implicit_invocation: true/u, metadataPath);
   }
 });
@@ -157,27 +209,34 @@ test('ecosystem output custody binds every generated byte', () => {
   assert.equal(new Set(custody.outputs.map(({ path }) => path)).size, custody.outputs.length);
   assert.ok(custody.inputs.some(({ path }) => path === 'adapters/manifests/generated-assets.json'));
   assert.ok(hostAssets.assets.some(({ path }) => path.endsWith('/agents/openai.yaml')));
-  for (const output of custody.outputs) assert.equal(digest(read(output.path)), output.digest, output.path);
-  for (const input of custody.inputs) assert.equal(digest(read(input.path)), input.digest, input.path);
+  for (const output of custody.outputs)
+    assert.equal(digest(read(output.path)), output.digest, output.path);
+  for (const input of custody.inputs)
+    assert.equal(digest(read(input.path)), input.digest, input.path);
 });
 
 test('check mode is deterministic and does not mutate generated metadata', () => {
   const before = outputPaths.map((path) => digest(read(path)));
-  const run = () => spawnSync(process.execPath, ['scripts/marketplace/generate-ecosystem.mjs', '--check'], {
-    cwd: root,
-    encoding: 'utf8',
-    env: { ...process.env, NO_COLOR: '1' },
-  });
+  const run = () =>
+    spawnSync(process.execPath, ['scripts/marketplace/generate-ecosystem.mjs', '--check'], {
+      cwd: root,
+      encoding: 'utf8',
+      env: { ...process.env, NO_COLOR: '1' },
+    });
   const first = run();
   const second = run();
   assert.equal(first.status, 0, `${first.stdout}\n${first.stderr}`);
   assert.equal(second.status, 0, `${second.stdout}\n${second.stderr}`);
   assert.equal(first.stdout, second.stdout);
-  assert.deepEqual(outputPaths.map((path) => digest(read(path))), before);
+  assert.deepEqual(
+    outputPaths.map((path) => digest(read(path))),
+    before,
+  );
 });
 
 test('marketplace generator has no sibling-checkout or machine-specific assumptions', () => {
   const source = read('scripts/marketplace/generate-ecosystem.mjs').toString('utf8');
   assert.doesNotMatch(source, /OPENPLANR_ECOSYSTEM_ROOT|\/Users\/|join\([^\n]+['"]\.\.['"]/u);
-  for (const component of Object.values(json('ecosystem.json').components)) assert.ok(!component.path.startsWith('../'));
+  for (const component of Object.values(json('ecosystem.json').components))
+    assert.ok(!component.path.startsWith('../'));
 });

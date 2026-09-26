@@ -1,14 +1,17 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync, writeFileSync, readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { tmpdir } from 'node:os';
-import { fileURLToPath } from 'node:url';
 import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
 import { test } from 'node:test';
-
-import { createDaemon, daemonControlHeaders, killRunningDaemon } from '../../lib/design-engine/daemon.mjs';
+import { fileURLToPath } from 'node:url';
+import { promisify } from 'node:util';
 import { publicBoardId } from '../../lib/design-engine/board-token.mjs';
+import {
+  createDaemon,
+  daemonControlHeaders,
+  killRunningDaemon,
+} from '../../lib/design-engine/daemon.mjs';
 
 const execFileP = promisify(execFile);
 const here = dirname(fileURLToPath(import.meta.url));
@@ -17,17 +20,28 @@ const CLI = join(here, '..', '..', 'lib', 'design-engine', 'cli.mjs');
 // Async (NOT execFileSync): the in-process daemon answers on this event loop, so a synchronous
 // child would deadlock its HTTP handlers.
 const runCli = async (args, env) =>
-  JSON.parse((await execFileP(process.execPath, [CLI, ...args], { env, encoding: 'utf-8' })).stdout);
+  JSON.parse(
+    (await execFileP(process.execPath, [CLI, ...args], { env, encoding: 'utf-8' })).stdout,
+  );
 
 const fb = (id, pins, authors) => ({
-  schema_version: '1.0.0', boardId: id, publishedAt: new Date().toISOString(),
-  regenerated: false, ratings: {}, comments: {}, authors, pins,
+  schema_version: '1.0.0',
+  boardId: id,
+  publishedAt: new Date().toISOString(),
+  regenerated: false,
+  ratings: {},
+  comments: {},
+  authors,
+  pins,
 });
-const postFeedback = (port, id, feedback) => fetch(
-  `http://127.0.0.1:${port}/boards/${encodeURIComponent(id)}/api/feedback`,
-  { method: 'POST', headers: { origin: `http://127.0.0.1:${port}`, 'content-type': 'application/json' }, body: JSON.stringify({ kind: 'submit', feedback }) },
-).then((r) => r.json());
-const durablePins = (boardDir) => JSON.parse(readFileSync(join(boardDir, 'feedback.json'), 'utf-8')).pins;
+const postFeedback = (port, id, feedback) =>
+  fetch(`http://127.0.0.1:${port}/boards/${encodeURIComponent(id)}/api/feedback`, {
+    method: 'POST',
+    headers: { origin: `http://127.0.0.1:${port}`, 'content-type': 'application/json' },
+    body: JSON.stringify({ kind: 'submit', feedback }),
+  }).then((r) => r.json());
+const durablePins = (boardDir) =>
+  JSON.parse(readFileSync(join(boardDir, 'feedback.json'), 'utf-8')).pins;
 
 // Spin an isolated in-process daemon + a registered board; returns handles + teardown.
 async function setup() {
@@ -40,7 +54,8 @@ async function setup() {
   const daemon = createDaemon({ env });
   const port = await daemon.listen();
   await fetch(`http://127.0.0.1:${port}/api/boards`, {
-    method: 'POST', headers: { 'content-type': 'application/json', ...daemonControlHeaders(env) },
+    method: 'POST',
+    headers: { 'content-type': 'application/json', ...daemonControlHeaders(env) },
     body: JSON.stringify({ id, dir: boardDir }),
   }).then((r) => r.json());
   const teardown = async () => {
@@ -54,57 +69,148 @@ async function setup() {
 test('feedback resolve --pins: flips the pin to resolved; preserves author, comment, replies', async () => {
   const s = await setup();
   try {
-    await postFeedback(s.port, s.id, fb(s.id, [{
-      id: 'a1b2c3d4e5f6', author: 'Reviewer', variant: 'artifact', x: 0.5, y: 0.5, w: 0, h: 0,
-      comment: 'tighten spacing', intent: 'fix', status: 'open', screen: 'hero',
-      replies: [{ author: 'Reviewer', comment: 'still off', createdAt: new Date().toISOString() }],
-    }], [{ name: 'Reviewer' }]));
+    await postFeedback(
+      s.port,
+      s.id,
+      fb(
+        s.id,
+        [
+          {
+            id: 'a1b2c3d4e5f6',
+            author: 'Reviewer',
+            variant: 'artifact',
+            x: 0.5,
+            y: 0.5,
+            w: 0,
+            h: 0,
+            comment: 'tighten spacing',
+            intent: 'fix',
+            status: 'open',
+            screen: 'hero',
+            replies: [
+              { author: 'Reviewer', comment: 'still off', createdAt: new Date().toISOString() },
+            ],
+          },
+        ],
+        [{ name: 'Reviewer' }],
+      ),
+    );
 
-    const res = await runCli(['feedback', 'resolve', '--dir', s.boardDir, '--id', s.slug, '--pins', 'a1b2c3d4e5f6'], s.env);
+    const res = await runCli(
+      ['feedback', 'resolve', '--dir', s.boardDir, '--id', s.slug, '--pins', 'a1b2c3d4e5f6'],
+      s.env,
+    );
     assert.equal(res.ok, true);
     assert.deepEqual(res.resolved, ['a1b2c3d4e5f6']);
 
     const pin = durablePins(s.boardDir).find((p) => p.id === 'a1b2c3d4e5f6');
     assert.equal(pin.status, 'resolved', 'status flipped in the durable record');
-    assert.equal(pin.author, 'Reviewer', 'author preserved — resolve is a team action, not author-scoped');
+    assert.equal(
+      pin.author,
+      'Reviewer',
+      'author preserved — resolve is a team action, not author-scoped',
+    );
     assert.equal(pin.comment, 'tighten spacing', 'comment preserved through the merge');
     assert.equal(pin.replies.length, 1, 'reply thread preserved (status flip never clobbers it)');
 
     // idempotent: a second resolve is a no-op
-    const again = await runCli(['feedback', 'resolve', '--dir', s.boardDir, '--id', s.slug, '--pins', 'a1b2c3d4e5f6'], s.env);
+    const again = await runCli(
+      ['feedback', 'resolve', '--dir', s.boardDir, '--id', s.slug, '--pins', 'a1b2c3d4e5f6'],
+      s.env,
+    );
     assert.deepEqual(again.resolved, [], 'second run resolves nothing');
     assert.deepEqual(again.alreadyResolved, ['a1b2c3d4e5f6']);
-  } finally { await s.teardown(); }
+  } finally {
+    await s.teardown();
+  }
 });
 
 test('feedback resolve --all-open: resolves only the not-yet-resolved pins', async () => {
   const s = await setup();
   try {
-    await postFeedback(s.port, s.id, fb(s.id, [
-      { id: 'open01', author: 'A', variant: 'artifact', x: 0.1, y: 0.1, w: 0, h: 0, comment: 'a', intent: 'fix', status: 'open' },
-      { id: 'done01', author: 'A', variant: 'artifact', x: 0.2, y: 0.2, w: 0, h: 0, comment: 'b', intent: 'improve', status: 'resolved' },
-    ], [{ name: 'A' }]));
+    await postFeedback(
+      s.port,
+      s.id,
+      fb(
+        s.id,
+        [
+          {
+            id: 'open01',
+            author: 'A',
+            variant: 'artifact',
+            x: 0.1,
+            y: 0.1,
+            w: 0,
+            h: 0,
+            comment: 'a',
+            intent: 'fix',
+            status: 'open',
+          },
+          {
+            id: 'done01',
+            author: 'A',
+            variant: 'artifact',
+            x: 0.2,
+            y: 0.2,
+            w: 0,
+            h: 0,
+            comment: 'b',
+            intent: 'improve',
+            status: 'resolved',
+          },
+        ],
+        [{ name: 'A' }],
+      ),
+    );
 
-    const res = await runCli(['feedback', 'resolve', '--dir', s.boardDir, '--id', s.slug, '--all-open'], s.env);
+    const res = await runCli(
+      ['feedback', 'resolve', '--dir', s.boardDir, '--id', s.slug, '--all-open'],
+      s.env,
+    );
     assert.deepEqual(res.resolved, ['open01']);
     assert.deepEqual(res.alreadyResolved, ['done01']);
     assert.equal(durablePins(s.boardDir).find((p) => p.id === 'open01').status, 'resolved');
-  } finally { await s.teardown(); }
+  } finally {
+    await s.teardown();
+  }
 });
 
 test('feedback resolve: unknown pin id is a non-fatal no-op (reported as missing)', async () => {
   const s = await setup();
   try {
-    await postFeedback(s.port, s.id, fb(s.id, [
-      { id: 'real01', author: 'A', variant: 'artifact', x: 0.1, y: 0.1, w: 0, h: 0, comment: 'a', intent: 'fix', status: 'open' },
-    ], [{ name: 'A' }]));
-    const res = await runCli(['feedback', 'resolve', '--dir', s.boardDir, '--id', s.slug, '--pins', 'ghost,real01'], s.env);
+    await postFeedback(
+      s.port,
+      s.id,
+      fb(
+        s.id,
+        [
+          {
+            id: 'real01',
+            author: 'A',
+            variant: 'artifact',
+            x: 0.1,
+            y: 0.1,
+            w: 0,
+            h: 0,
+            comment: 'a',
+            intent: 'fix',
+            status: 'open',
+          },
+        ],
+        [{ name: 'A' }],
+      ),
+    );
+    const res = await runCli(
+      ['feedback', 'resolve', '--dir', s.boardDir, '--id', s.slug, '--pins', 'ghost,real01'],
+      s.env,
+    );
     assert.equal(res.ok, true);
     assert.deepEqual(res.resolved, ['real01']);
     assert.deepEqual(res.missing, ['ghost']);
-  } finally { await s.teardown(); }
+  } finally {
+    await s.teardown();
+  }
 });
-
 
 test('daemon control and browser mutation boundaries reject unauthenticated and cross-origin calls', async () => {
   const s = await setup();
@@ -117,12 +223,20 @@ test('daemon control and browser mutation boundaries reject unauthenticated and 
       body: JSON.stringify({ id: s.id, dir: s.boardDir }),
     });
     assert.equal(registration.status, 403);
-    const hostile = await fetch(`http://127.0.0.1:${s.port}/boards/${encodeURIComponent(s.id)}/api/feedback`, {
-      method: 'POST',
-      headers: { origin: 'https://attacker.invalid', 'content-type': 'application/json' },
-      body: JSON.stringify({ kind: 'submit', feedback: fb(s.id, [], []) }),
-    });
+    const hostile = await fetch(
+      `http://127.0.0.1:${s.port}/boards/${encodeURIComponent(s.id)}/api/feedback`,
+      {
+        method: 'POST',
+        headers: { origin: 'https://attacker.invalid', 'content-type': 'application/json' },
+        body: JSON.stringify({ kind: 'submit', feedback: fb(s.id, [], []) }),
+      },
+    );
     assert.equal(hostile.status, 403);
-    assert.equal(await killRunningDaemon({ authenticated: true, kind: 'not-openplanr', pid: 2147483647 }), false);
-  } finally { await s.teardown(); }
+    assert.equal(
+      await killRunningDaemon({ authenticated: true, kind: 'not-openplanr', pid: 2147483647 }),
+      false,
+    );
+  } finally {
+    await s.teardown();
+  }
 });

@@ -1,11 +1,5 @@
 import assert from 'node:assert/strict';
-import {
-  mkdtempSync,
-  mkdirSync,
-  readdirSync,
-  rmSync,
-  writeFileSync,
-} from 'node:fs';
+import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { after, test } from 'node:test';
@@ -56,15 +50,26 @@ function expectCode(code) {
 
 test('loop discovery creates one ordered artifact per variant and never embeds board chrome', async () => {
   const root = fixture();
-  write(root, 'variant-A.svg', '<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="320" height="180"/></svg>');
+  write(
+    root,
+    'variant-A.svg',
+    '<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="320" height="180"/></svg>',
+  );
   write(root, 'variant-A.html', '<!doctype html><main data-planr-id="hero">A</main>');
-  write(root, 'variant-B.svg', '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600"><circle cx="20" cy="20" r="10"/></svg>');
+  write(
+    root,
+    'variant-B.svg',
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600"><circle cx="20" cy="20" r="10"/></svg>',
+  );
   write(root, 'variant-C.png', png(1024, 768));
   write(root, 'board.html', '<div class="legacy-board-shell">do not nest me</div>');
 
   const envelope = await createDesignBoardArtifactEnvelope({ sessionDir: root, mode: 'loop' });
 
-  assert.deepEqual(envelope.artifacts.map(({ id }) => id), ['A', 'B', 'C']);
+  assert.deepEqual(
+    envelope.artifacts.map(({ id }) => id),
+    ['A', 'B', 'C'],
+  );
   assert.equal(envelope.viewer.mode, 'variants');
   assert.equal(envelope.viewer.activeArtifactId, 'A');
   assert.equal(envelope.artifacts.length, 3);
@@ -74,9 +79,15 @@ test('loop discovery creates one ordered artifact per variant and never embeds b
   assert.deepEqual(envelope.artifacts[1].viewport, { width: 800, height: 600 });
   assert.deepEqual(envelope.artifacts[2].viewport, { width: 1024, height: 768 });
   assert.doesNotMatch(JSON.stringify(envelope), /legacy-board-shell|board\.html/);
-  assert.doesNotMatch(JSON.stringify(envelope), new RegExp(root.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  assert.doesNotMatch(
+    JSON.stringify(envelope),
+    new RegExp(root.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')),
+  );
   assert.equal(validateArtifactEnvelope(envelope), envelope);
-  assert.equal(readdirSync(root).some((name) => name.startsWith('.planr-artifact-entry-')), false);
+  assert.equal(
+    readdirSync(root).some((name) => name.startsWith('.planr-artifact-entry-')),
+    false,
+  );
 });
 
 test('explicit variant order, titles, viewports, and color schemes remain stable', async () => {
@@ -96,15 +107,24 @@ test('explicit variant order, titles, viewports, and color schemes remain stable
     activeArtifactId: 'A',
   });
 
-  assert.deepEqual(envelope.artifacts.map(({ id, title }) => [id, title]), [
-    ['B', 'Direction B'],
-    ['A', 'Direction A'],
-  ]);
-  assert.deepEqual(envelope.artifacts.map(({ viewport }) => viewport), [
-    { width: 1280, height: 720 },
-    { width: 390, height: 844 },
-  ]);
-  assert.deepEqual(envelope.artifacts.map(({ colorScheme }) => colorScheme), ['dark', 'light']);
+  assert.deepEqual(
+    envelope.artifacts.map(({ id, title }) => [id, title]),
+    [
+      ['B', 'Direction B'],
+      ['A', 'Direction A'],
+    ],
+  );
+  assert.deepEqual(
+    envelope.artifacts.map(({ viewport }) => viewport),
+    [
+      { width: 1280, height: 720 },
+      { width: 390, height: 844 },
+    ],
+  );
+  assert.deepEqual(
+    envelope.artifacts.map(({ colorScheme }) => colorScheme),
+    ['dark', 'light'],
+  );
   assert.equal(envelope.viewer.activeArtifactId, 'A');
 });
 
@@ -128,7 +148,9 @@ test('review mode selects one finalized artifact and uses the review title', asy
   assert.match(envelope.artifacts[0].html, /<h1>Final<\/h1>/);
   assert.doesNotMatch(envelope.artifacts[0].html, /Draft canvas|Old chrome/);
   assert.deepEqual(envelope.viewer, {
-    mode: 'single', activeArtifactId: 'artifact', presentation: 'canvas',
+    mode: 'single',
+    activeArtifactId: 'artifact',
+    presentation: 'canvas',
   });
 });
 
@@ -145,20 +167,22 @@ test('legacy feedback is translated after the ordered envelope digest is known',
     ratings: { A: 3, B: 5 },
     comments: { B: 'Best direction' },
     overall: 'Keep the stronger hierarchy.',
-    pins: [{
-      id: 'pin-b-001',
-      author: 'Asem',
-      variant: 'B',
-      x: 0.2,
-      y: 0.3,
-      w: 0.1,
-      h: 0.2,
-      comment: 'Increase contrast.',
-      intent: 'improve',
-      status: 'open',
-      createdAt: '2026-07-14T11:59:00.000Z',
-      replies: [],
-    }],
+    pins: [
+      {
+        id: 'pin-b-001',
+        author: 'Asem',
+        variant: 'B',
+        x: 0.2,
+        y: 0.3,
+        w: 0.1,
+        h: 0.2,
+        comment: 'Increase contrast.',
+        intent: 'improve',
+        status: 'open',
+        createdAt: '2026-07-14T11:59:00.000Z',
+        replies: [],
+      },
+    ],
   };
 
   const envelope = await createDesignBoardArtifactEnvelope({
@@ -194,13 +218,20 @@ test('board-wide file and decoded-byte limits are not reset per variant', async 
 
 test('SVG/PNG wrappers use the hardened bundler and are removed after failure', async () => {
   const root = fixture();
-  write(root, 'variant-A.svg', '<svg xmlns="http://www.w3.org/2000/svg"><image href="https://evil.test/pixel.png"/></svg>');
+  write(
+    root,
+    'variant-A.svg',
+    '<svg xmlns="http://www.w3.org/2000/svg"><image href="https://evil.test/pixel.png"/></svg>',
+  );
 
   await assert.rejects(
     createDesignBoardArtifactEnvelope({ sessionDir: root }),
     expectCode(ARTIFACT_ERROR_CODES.EXTERNAL_ASSET),
   );
-  assert.equal(readdirSync(root).some((name) => name.startsWith('.planr-artifact-entry-')), false);
+  assert.equal(
+    readdirSync(root).some((name) => name.startsWith('.planr-artifact-entry-')),
+    false,
+  );
 });
 
 test('invalid board sources and private metadata fail before an envelope is created', async () => {
@@ -216,7 +247,11 @@ test('invalid board sources and private metadata fail before an envelope is crea
     expectCode(ARTIFACT_ERROR_CODES.INPUT_INVALID),
   );
   await assert.rejects(
-    createDesignBoardArtifactEnvelope({ sessionDir: root, mode: 'review', title: '/Users/example/private/review' }),
+    createDesignBoardArtifactEnvelope({
+      sessionDir: root,
+      mode: 'review',
+      title: '/Users/example/private/review',
+    }),
     expectCode(ARTIFACT_ERROR_CODES.REDACTION),
   );
   await assert.rejects(
@@ -243,5 +278,8 @@ test('resolver returns portable descriptors only and bundle accounting is serial
   const bundled = await bundleDesignBoardVariants({ sessionDir: root });
   assert.deepEqual(Object.keys(bundled.totals), ['fileCount', 'inputBytes', 'outputBytes']);
   assert.equal(bundled.totals.fileCount, 1);
-  assert.doesNotMatch(JSON.stringify(bundled), new RegExp(root.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  assert.doesNotMatch(
+    JSON.stringify(bundled),
+    new RegExp(root.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')),
+  );
 });

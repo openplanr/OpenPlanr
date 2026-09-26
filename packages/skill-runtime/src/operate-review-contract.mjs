@@ -55,11 +55,7 @@ export const OPERATE_REVIEW_NOTE_PROFILES_V1 = deepFreeze({
         'Reversible / revisit when',
         'Evidence',
       ],
-      'Review coverage': [
-        'Questions answered',
-        'Questions not established',
-        'Evidence boundary',
-      ],
+      'Review coverage': ['Questions answered', 'Questions not established', 'Evidence boundary'],
     },
     sectionEmptyStates: {
       'Recommended next move': 'No recommendation from current evidence.',
@@ -181,7 +177,13 @@ export const OPERATE_REVIEW_NOTE_PROFILES_V1 = deepFreeze({
       ],
     },
     sectionFields: {
-      'Scope and custody': ['Subject', 'Evidence window', 'Pending decision', 'Cycle owner', 'Custody'],
+      'Scope and custody': [
+        'Subject',
+        'Evidence window',
+        'Pending decision',
+        'Cycle owner',
+        'Custody',
+      ],
     },
     sectionItemLimits: {
       'Decision-changing gaps': 5,
@@ -192,12 +194,7 @@ export const OPERATE_REVIEW_NOTE_PROFILES_V1 = deepFreeze({
 export const OPERATE_REVIEW_NOTE_PROFILES = deepFreeze({
   advisor: {
     maxBytes: 16 * 1024,
-    sections: [
-      'Findings',
-      'Recommended next move',
-      'Decision-changing gaps',
-      'Sources consulted',
-    ],
+    sections: ['Findings', 'Recommended next move', 'Decision-changing gaps', 'Sources consulted'],
     summaryFields: ['Signal', 'Bottom line'],
     summaryValues: {
       Signal: ['action', 'watch', 'insufficient context'],
@@ -207,14 +204,7 @@ export const OPERATE_REVIEW_NOTE_PROFILES = deepFreeze({
       idPrefix: 'F',
       maxItems: 5,
       emptyText: 'No decision-relevant finding was established.',
-      fields: [
-        'Priority',
-        'Status',
-        'Why it matters',
-        'Sources',
-        'Confidence',
-        'Decision impact',
-      ],
+      fields: ['Priority', 'Status', 'Why it matters', 'Sources', 'Confidence', 'Decision impact'],
       fieldValues: {
         Priority: ['P0', 'P1', 'P2', 'unranked'],
         Status: ['observed', 'inferred'],

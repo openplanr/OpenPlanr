@@ -6,7 +6,6 @@ import type {
   OperatingExecutiveBoardV2,
   OperatingReviewV2,
   OperatingRuntimeStateV2,
-  OperatingTraceMatrixV2,
 } from '@openplanr/protocol';
 
 export type {
@@ -15,7 +14,6 @@ export type {
   OperatingExecutiveBoardSeatBindingV2,
   OperatingExecutiveBoardV2,
 } from '@openplanr/protocol';
-
 
 type OperatingExecutiveBoardRecordOptionsV2 = {
   cycleId: string;
@@ -55,11 +53,12 @@ export function assertOperatingExecutiveBoardV2(
   options?: { materializedOnly?: false },
 ): OperatingExecutiveBoardV2;
 
-export type OperatingPendingCycleReviewV2 = OperatingReviewV2 & Readonly<{
-  state: 'pending';
-  disposition: null;
-  workDispositions: readonly [];
-}>;
+export type OperatingPendingCycleReviewV2 = OperatingReviewV2 &
+  Readonly<{
+    state: 'pending';
+    disposition: null;
+    workDispositions: readonly [];
+  }>;
 
 export function createOperatingExecutiveBoardMaterializationV2(
   request: {

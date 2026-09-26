@@ -9,10 +9,13 @@ import {
   resolveLocalFilesystemEvidenceV2,
 } from 'planr-pipeline/operate/evidence-v2';
 
-const fixture = (name) => JSON.parse(readFileSync(
-  new URL(`../../conformance/fixtures/operating-runtime-v2/${name}`, import.meta.url),
-  'utf8',
-));
+const fixture = (name) =>
+  JSON.parse(
+    readFileSync(
+      new URL(`../../conformance/fixtures/operating-runtime-v2/${name}`, import.meta.url),
+      'utf8',
+    ),
+  );
 
 function write(root, path, bytes = 'private bytes\n') {
   const target = join(root, ...path.split('/'));
@@ -28,19 +31,24 @@ function resolve(root, path) {
   const resolver = OPEN_REFERENCE_EVIDENCE_REGISTRY_V2.resolvers.find(
     ({ resolverId }) => resolverId === 'local-filesystem-evidence-resolver',
   );
-  return resolveLocalFilesystemEvidenceV2({
-    ...valid.candidate,
-    locator: { ...valid.candidate.locator, path },
-  }, {
-    provider,
-    resolver,
-    capabilities: ['evidence.filesystem.read'],
-    filesystemRoots: [{
-      ...valid.sourceRoot,
-      rootPath: root,
-      sourceContract: { id: 'repository-architecture', version: '1.0.0' },
-    }],
-  });
+  return resolveLocalFilesystemEvidenceV2(
+    {
+      ...valid.candidate,
+      locator: { ...valid.candidate.locator, path },
+    },
+    {
+      provider,
+      resolver,
+      capabilities: ['evidence.filesystem.read'],
+      filesystemRoots: [
+        {
+          ...valid.sourceRoot,
+          rootPath: root,
+          sourceContract: { id: 'repository-architecture', version: '1.0.0' },
+        },
+      ],
+    },
+  );
 }
 
 test('screened repository research refuses private runtime, VCS, dependency, and secret paths', () => {
@@ -73,7 +81,11 @@ test('screened repository research refuses private runtime, VCS, dependency, and
 test('screened repository research detects common token formats while public planning files remain readable', () => {
   const root = mkdtempSync(join(tmpdir(), 'operate-repository-privacy-'));
   try {
-    write(root, '.planr/specs/SPEC-024-operate-hardening/overview.md', '# Public planning context\n');
+    write(
+      root,
+      '.planr/specs/SPEC-024-operate-hardening/overview.md',
+      '# Public planning context\n',
+    );
     const planning = resolve(root, '.planr/specs/SPEC-024-operate-hardening/overview.md');
     assert.equal(planning.status, 'resolved');
     assert.equal(

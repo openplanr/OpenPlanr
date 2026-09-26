@@ -9,7 +9,9 @@ import { readContributionGraph } from '../../../skill-runtime/src/catalog.mjs';
 // The frozen Protocol registry remains a compatibility contract. Current
 // package-v1 distributions expose workflows as skills and have no command tree.
 const root = fileURLToPath(new URL('../../../..', import.meta.url));
-const registry = JSON.parse(readFileSync(join(root, 'packages/protocol/registry/frozen-commands.json'), 'utf8'));
+const registry = JSON.parse(
+  readFileSync(join(root, 'packages/protocol/registry/frozen-commands.json'), 'utf8'),
+);
 
 const FROZEN_ALIAS_SLUGS = ['plan', 'ship', 'design', 'sync', 'dashboard'];
 
@@ -59,7 +61,11 @@ test('frozen surface: registry is well-formed (8 entries, 5 skill aliases)', () 
 
   // No duplicate slugs — a duplicate would let the count checks pass while the set drifts.
   const slugs = registry.commands.map((entry) => entry.slug);
-  assert.equal(new Set(slugs).size, slugs.length, 'frozen registry must not declare duplicate slugs');
+  assert.equal(
+    new Set(slugs).size,
+    slugs.length,
+    'frozen registry must not declare duplicate slugs',
+  );
 });
 
 test('current packages expose the frozen workflows as skills without reviving commands', () => {
@@ -76,12 +82,20 @@ test('current packages expose the frozen workflows as skills without reviving co
   for (const host of ['openai', 'claude', 'cursor']) {
     const pluginRoot = join(root, 'dist/plugins', host, 'openplanr');
     assert.ok(existsSync(pluginRoot), `${host} distribution must have been generated`);
-    assert.equal(existsSync(join(pluginRoot, 'commands')), false, `${host} must not revive the retired command surface`);
+    assert.equal(
+      existsSync(join(pluginRoot, 'commands')),
+      false,
+      `${host} must not revive the retired command surface`,
+    );
     for (const { slug } of registry.commands) {
-      const entrypoint = host === 'cursor'
-        ? join(pluginRoot, 'rules', `planr-${slug}.mdc`)
-        : join(pluginRoot, 'skills', slug, 'SKILL.md');
-      assert.ok(readFileSync(entrypoint, 'utf8').length > 80, `${host} must ship the ${slug} workflow`);
+      const entrypoint =
+        host === 'cursor'
+          ? join(pluginRoot, 'rules', `planr-${slug}.mdc`)
+          : join(pluginRoot, 'skills', slug, 'SKILL.md');
+      assert.ok(
+        readFileSync(entrypoint, 'utf8').length > 80,
+        `${host} must ship the ${slug} workflow`,
+      );
     }
   }
 });

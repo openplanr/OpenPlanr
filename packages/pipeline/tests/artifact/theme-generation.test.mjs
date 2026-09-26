@@ -1,16 +1,9 @@
 import assert from 'node:assert/strict';
-import {
-  copyFileSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from 'node:fs';
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { afterEach, test } from 'node:test';
+import { fileURLToPath } from 'node:url';
 
 import { validateJson } from '../../conformance/json-schema-validate.mjs';
 import {
@@ -62,18 +55,20 @@ test('missing and unknown tokens return stable named errors', () => {
   delete missing.themes.dark.text;
   assert.throws(
     () => validateArtifactTheme(missing),
-    (error) => error instanceof ArtifactThemeError
-      && error.code === ARTIFACT_THEME_ERROR_CODES.TOKEN_MISSING
-      && error.details.issues[0].path === '$.themes.dark',
+    (error) =>
+      error instanceof ArtifactThemeError &&
+      error.code === ARTIFACT_THEME_ERROR_CODES.TOKEN_MISSING &&
+      error.details.issues[0].path === '$.themes.dark',
   );
 
   const unknown = clone();
   unknown.layout.sidebarWidth = 400;
   assert.throws(
     () => validateArtifactTheme(unknown),
-    (error) => error instanceof ArtifactThemeError
-      && error.code === ARTIFACT_THEME_ERROR_CODES.TOKEN_UNKNOWN
-      && error.details.issues[0].path === '$.layout',
+    (error) =>
+      error instanceof ArtifactThemeError &&
+      error.code === ARTIFACT_THEME_ERROR_CODES.TOKEN_UNKNOWN &&
+      error.details.issues[0].path === '$.layout',
   );
 });
 
@@ -112,10 +107,11 @@ test('every declared foreground/background pair must meet WCAG AA', () => {
   invalid.themes.dark.textMuted = invalid.themes.dark.background;
   assert.throws(
     () => validateArtifactTheme(invalid),
-    (error) => error instanceof ArtifactThemeError
-      && error.code === ARTIFACT_THEME_ERROR_CODES.CONTRAST
-      && error.details.theme === 'dark'
-      && error.details.ratio === 1,
+    (error) =>
+      error instanceof ArtifactThemeError &&
+      error.code === ARTIFACT_THEME_ERROR_CODES.CONTRAST &&
+      error.details.theme === 'dark' &&
+      error.details.ratio === 1,
   );
 });
 
@@ -158,12 +154,14 @@ test('--check is write-free and reports every exact stale target', () => {
 
   assert.throws(
     () => runArtifactThemeGenerator({ argv: ['--check'], projectRoot }),
-    (error) => error instanceof ArtifactThemeGenerationError
-      && error.code === 'E_ARTIFACT_THEME_DRIFT'
-      && assert.deepEqual(error.details.staleTargets, expectedTargets) === undefined
-      && expectedTargets.every((target) => error.message.includes(target)),
+    (error) =>
+      error instanceof ArtifactThemeGenerationError &&
+      error.code === 'E_ARTIFACT_THEME_DRIFT' &&
+      assert.deepEqual(error.details.staleTargets, expectedTargets) === undefined &&
+      expectedTargets.every((target) => error.message.includes(target)),
   );
-  for (const target of expectedTargets) assert.equal(readFileOrNull(join(projectRoot, target)), null);
+  for (const target of expectedTargets)
+    assert.equal(readFileOrNull(join(projectRoot, target)), null);
 });
 
 test('generation writes only changed targets and converges idempotently', () => {
@@ -185,10 +183,14 @@ test('generator rejects unsupported arguments without writing', () => {
   const projectRoot = temporaryProject();
   assert.throws(
     () => runArtifactThemeGenerator({ argv: ['--force'], projectRoot }),
-    (error) => error instanceof ArtifactThemeGenerationError
-      && error.code === 'E_ARTIFACT_THEME_GENERATOR_ARGUMENT',
+    (error) =>
+      error instanceof ArtifactThemeGenerationError &&
+      error.code === 'E_ARTIFACT_THEME_GENERATOR_ARGUMENT',
   );
-  assert.equal(readFileOrNull(join(projectRoot, 'lib/artifact/ui/generated/artifact-theme.css')), null);
+  assert.equal(
+    readFileOrNull(join(projectRoot, 'lib/artifact/ui/generated/artifact-theme.css')),
+    null,
+  );
 });
 
 function readFileOrNull(path) {

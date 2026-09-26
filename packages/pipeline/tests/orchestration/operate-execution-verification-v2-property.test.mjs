@@ -1,9 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import {
-  deriveOperatingExecutionLifecycleIdentitiesV2,
-} from '../../lib/operate/execution-verification-v2.mjs';
+import { deriveOperatingExecutionLifecycleIdentitiesV2 } from '../../lib/operate/execution-verification-v2.mjs';
 
 test('execution verification identities are deterministic, unique, and collision-resistant over bounded samples', () => {
   const seen = new Set();
@@ -23,9 +21,18 @@ test('execution verification identities are deterministic, unique, and collision
 });
 
 test('operation or result divergence changes every runtime-owned identity', () => {
-  const base = deriveOperatingExecutionLifecycleIdentitiesV2({ operationId: 'op_property_base01', resultId: 'xres_property_base01' });
-  const operationChanged = deriveOperatingExecutionLifecycleIdentitiesV2({ operationId: 'op_property_base02', resultId: 'xres_property_base01' });
-  const resultChanged = deriveOperatingExecutionLifecycleIdentitiesV2({ operationId: 'op_property_base01', resultId: 'xres_property_base02' });
+  const base = deriveOperatingExecutionLifecycleIdentitiesV2({
+    operationId: 'op_property_base01',
+    resultId: 'xres_property_base01',
+  });
+  const operationChanged = deriveOperatingExecutionLifecycleIdentitiesV2({
+    operationId: 'op_property_base02',
+    resultId: 'xres_property_base01',
+  });
+  const resultChanged = deriveOperatingExecutionLifecycleIdentitiesV2({
+    operationId: 'op_property_base01',
+    resultId: 'xres_property_base02',
+  });
   assert.notEqual(base.assignmentId, operationChanged.assignmentId);
   assert.notEqual(base.assignmentId, resultChanged.assignmentId);
   for (const key of Object.keys(base.eventIds)) {

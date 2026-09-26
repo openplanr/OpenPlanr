@@ -35,38 +35,91 @@ const POSITIONED_LOCAL_PREFIXES = new Set([
  */
 export const OPERATING_ROLE_LOCAL_IDENTITY_FORMULAS_V2 = Object.freeze({
   advisor: Object.freeze([
-    Object.freeze({ field: 'analysis insights `localAnalysisId`', formula: 'analysis:<assignmentId>:<1-based position>' }),
-    Object.freeze({ field: '`claims[*].localClaimId`', formula: 'claim:<assignmentId>:<1-based position>' }),
-    Object.freeze({ field: '`measurements[*].localMeasurementId`', formula: 'measurement:<assignmentId>:<1-based position>' }),
-    Object.freeze({ field: '`risks[*].localRiskId`', formula: 'risk:<assignmentId>:<1-based position>' }),
-    Object.freeze({ field: '`alternatives[*].localAlternativeId`', formula: 'alternative:<assignmentId>:<1-based position>' }),
-    Object.freeze({ field: '`gaps[*].localGapId`', formula: 'gap:<assignmentId>:<1-based position>' }),
-    Object.freeze({ field: '`recommendation.localRecommendationId`', formula: 'recommendation:<assignmentId>:1' }),
+    Object.freeze({
+      field: 'analysis insights `localAnalysisId`',
+      formula: 'analysis:<assignmentId>:<1-based position>',
+    }),
+    Object.freeze({
+      field: '`claims[*].localClaimId`',
+      formula: 'claim:<assignmentId>:<1-based position>',
+    }),
+    Object.freeze({
+      field: '`measurements[*].localMeasurementId`',
+      formula: 'measurement:<assignmentId>:<1-based position>',
+    }),
+    Object.freeze({
+      field: '`risks[*].localRiskId`',
+      formula: 'risk:<assignmentId>:<1-based position>',
+    }),
+    Object.freeze({
+      field: '`alternatives[*].localAlternativeId`',
+      formula: 'alternative:<assignmentId>:<1-based position>',
+    }),
+    Object.freeze({
+      field: '`gaps[*].localGapId`',
+      formula: 'gap:<assignmentId>:<1-based position>',
+    }),
+    Object.freeze({
+      field: '`recommendation.localRecommendationId`',
+      formula: 'recommendation:<assignmentId>:1',
+    }),
   ]),
   challenger: Object.freeze([
-    Object.freeze({ field: '`findings[*].localFindingId`', formula: 'finding:<assignmentId>:<1-based position>' }),
-    Object.freeze({ field: '`missingAlternatives[*].localAlternativeId`', formula: 'alternative:<assignmentId>:<1-based position>' }),
-    Object.freeze({ field: '`dissent[*].localDissentId`', formula: 'dissent:<assignmentId>:<1-based position>' }),
-    Object.freeze({ field: '`gaps[*].localGapId`', formula: 'gap:<assignmentId>:<1-based position>' }),
+    Object.freeze({
+      field: '`findings[*].localFindingId`',
+      formula: 'finding:<assignmentId>:<1-based position>',
+    }),
+    Object.freeze({
+      field: '`missingAlternatives[*].localAlternativeId`',
+      formula: 'alternative:<assignmentId>:<1-based position>',
+    }),
+    Object.freeze({
+      field: '`dissent[*].localDissentId`',
+      formula: 'dissent:<assignmentId>:<1-based position>',
+    }),
+    Object.freeze({
+      field: '`gaps[*].localGapId`',
+      formula: 'gap:<assignmentId>:<1-based position>',
+    }),
   ]),
   chair: Object.freeze([
     Object.freeze({ field: '`ledgerId`', formula: 'ldg_<assignmentId without the asg_ prefix>' }),
-    Object.freeze({ field: '`decisions[*].localDecisionId`', formula: 'decision:<assignmentId>:<1-based position>' }),
-    Object.freeze({ field: 'flattened `actionHypotheses[*].localActionHypothesisId`', formula: 'action-hypothesis:<assignmentId>:<1-based position>' }),
+    Object.freeze({
+      field: '`decisions[*].localDecisionId`',
+      formula: 'decision:<assignmentId>:<1-based position>',
+    }),
+    Object.freeze({
+      field: 'flattened `actionHypotheses[*].localActionHypothesisId`',
+      formula: 'action-hypothesis:<assignmentId>:<1-based position>',
+    }),
   ]),
 });
 
 function materializedIdentity(prefix, sourceArtifactId, localId) {
-  if (typeof sourceArtifactId !== 'string' || !/^art_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$/u.test(sourceArtifactId)) {
-    throw new TypeError('A materialized intelligence identity requires one valid source Artifact identity.');
+  if (
+    typeof sourceArtifactId !== 'string' ||
+    !/^art_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$/u.test(sourceArtifactId)
+  ) {
+    throw new TypeError(
+      'A materialized intelligence identity requires one valid source Artifact identity.',
+    );
   }
-  if (typeof localId !== 'string' || localId.length === 0 || localId.length > 256 || localId.trim() !== localId) {
-    throw new TypeError('A materialized intelligence identity requires one canonical role-local identity.');
+  if (
+    typeof localId !== 'string' ||
+    localId.length === 0 ||
+    localId.length > 256 ||
+    localId.trim() !== localId
+  ) {
+    throw new TypeError(
+      'A materialized intelligence identity requires one canonical role-local identity.',
+    );
   }
   // Artifact identity is the immutable byte-proven namespace. Local role IDs
   // are meaningful only inside those exact accepted bytes.
-  const digest = sha256Jcs({ sourceArtifactId, localId })
-    .slice('sha256:'.length, 'sha256:'.length + 32);
+  const digest = sha256Jcs({ sourceArtifactId, localId }).slice(
+    'sha256:'.length,
+    'sha256:'.length + 32,
+  );
   return `${prefix}_${digest}`;
 }
 
@@ -95,12 +148,16 @@ export function deriveOperatingChairLedgerIdV2(assignmentId) {
 
 /** Require an ordered local-claim array to be derived solely from its Assignment. */
 export function assertOperatingRoleLocalClaimIdsV2(assignmentId, claimIds) {
-  if (!Array.isArray(claimIds)
-    || claimIds.length === 0
-    || claimIds.some((claimId, index) => (
-      claimId !== deriveOperatingRoleLocalClaimIdV2(assignmentId, index + 1)
-    ))) {
-    throw new TypeError('Role-local claim identities must be the exact ordered Assignment-derived sequence.');
+  if (
+    !Array.isArray(claimIds) ||
+    claimIds.length === 0 ||
+    claimIds.some(
+      (claimId, index) => claimId !== deriveOperatingRoleLocalClaimIdV2(assignmentId, index + 1),
+    )
+  ) {
+    throw new TypeError(
+      'Role-local claim identities must be the exact ordered Assignment-derived sequence.',
+    );
   }
   return Object.freeze([...claimIds]);
 }

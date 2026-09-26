@@ -4,7 +4,7 @@
  * can be revisited days later. Every write is schema-validated.
  */
 
-import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { assertValid } from '../design/schema-loader.mjs';
@@ -22,7 +22,14 @@ export function assertValidSession(session) {
  * @param {{ id: string, provider: 'openai'|'claude-svg', target: string, project?: string,
  *           brief: string, now?: () => Date }} input
  */
-export function createSession({ id, provider, target, project = '', brief, now = () => new Date() }) {
+export function createSession({
+  id,
+  provider,
+  target,
+  project = '',
+  brief,
+  now = () => new Date(),
+}) {
   const ts = now().toISOString();
   return assertValidSession({
     schema_version: '1.0.0',
@@ -66,7 +73,10 @@ export function cloneSession(session) {
 }
 
 /** Append a generation round: the artifact it produced (+ optional chain id / feedback). */
-export function appendRound(session, { outputPath, responseId, feedback, brief, now = () => new Date() }) {
+export function appendRound(
+  session,
+  { outputPath, responseId, feedback, brief, now = () => new Date() },
+) {
   const next = cloneSession(session);
   next.outputPaths = [...session.outputPaths, outputPath];
   if (responseId !== undefined) next.lastResponseId = responseId;

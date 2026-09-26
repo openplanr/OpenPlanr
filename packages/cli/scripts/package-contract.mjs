@@ -1,6 +1,6 @@
-import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
-import { lstatSync, readFileSync, readdirSync, realpathSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { lstatSync, readdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import { isAbsolute, join, posix, relative, resolve, sep } from 'node:path';
 
 function sha256(bytes) {
@@ -13,7 +13,9 @@ function recurseExportTarget(value, subpath, conditions, targets) {
     return;
   }
   if (Array.isArray(value)) {
-    value.forEach((entry, index) => recurseExportTarget(entry, subpath, [...conditions, `[${index}]`], targets));
+    value.forEach((entry, index) =>
+      recurseExportTarget(entry, subpath, [...conditions, `[${index}]`], targets),
+    );
     return;
   }
   if (!value || typeof value !== 'object') return;
@@ -25,7 +27,8 @@ function recurseExportTarget(value, subpath, conditions, targets) {
 /** Enumerate every literal target under each public package export condition. */
 export function enumerateExportTargets(exportsField) {
   const targets = [];
-  if (!exportsField || typeof exportsField !== 'object' || Array.isArray(exportsField)) return targets;
+  if (!exportsField || typeof exportsField !== 'object' || Array.isArray(exportsField))
+    return targets;
   for (const [subpath, value] of Object.entries(exportsField)) {
     recurseExportTarget(value, subpath, [], targets);
   }
@@ -53,8 +56,11 @@ export function validateExportTargets(exportsField, packedPaths) {
     const target = entry.target.slice(2);
     const matches = target.includes('*')
       ? [...paths].filter((candidate) => wildcardPattern(target).test(candidate)).sort()
-      : paths.has(target) ? [target] : [];
-    if (matches.length === 0) violations.push(`missing export target: ${entry.subpath} ${entry.condition || 'default'}`);
+      : paths.has(target)
+        ? [target]
+        : [];
+    if (matches.length === 0)
+      violations.push(`missing export target: ${entry.subpath} ${entry.condition || 'default'}`);
     entry.matches = matches;
   }
   return { targets, violations };
@@ -79,29 +85,42 @@ function probeKind(entry, target) {
 }
 
 export function createInstalledExportProbePlan(packageName, exportsField, packedPaths) {
-  if (typeof packageName !== 'string' || !/^(?:@[a-z0-9._~-]+\/)?[a-z0-9._~-]+$/u.test(packageName)) {
+  if (
+    typeof packageName !== 'string' ||
+    !/^(?:@[a-z0-9._~-]+\/)?[a-z0-9._~-]+$/u.test(packageName)
+  ) {
     throw new Error('installed export proof requires a valid package name');
   }
   const report = validateExportTargets(exportsField, packedPaths);
   if (report.violations.length > 0) throw new Error(report.violations.join('; '));
-  return report.targets.flatMap((entry) => entry.matches.map((target) => {
-    const capture = entry.target.includes('*') ? wildcardCapture(entry.target.slice(2), target) : null;
-    if (entry.target.includes('*') && capture === null) {
-      throw new Error(`wildcard export did not bind archived target: ${entry.subpath}`);
-    }
-    const subpath = entry.subpath.includes('*') ? entry.subpath.replace('*', capture) : entry.subpath;
-    if (subpath.includes('*')) throw new Error(`unresolved public export wildcard: ${entry.subpath}`);
-    return {
-      subpath,
-      specifier: subpath === '.' ? packageName : `${packageName}/${subpath.slice(2)}`,
-      conditions: [...entry.conditions],
-      target,
-      kind: probeKind(entry, target),
-    };
-  })).sort((left, right) =>
-    `${left.subpath}:${left.conditions.join('.')}:${left.target}`.localeCompare(
-      `${right.subpath}:${right.conditions.join('.')}:${right.target}`,
-    ));
+  return report.targets
+    .flatMap((entry) =>
+      entry.matches.map((target) => {
+        const capture = entry.target.includes('*')
+          ? wildcardCapture(entry.target.slice(2), target)
+          : null;
+        if (entry.target.includes('*') && capture === null) {
+          throw new Error(`wildcard export did not bind archived target: ${entry.subpath}`);
+        }
+        const subpath = entry.subpath.includes('*')
+          ? entry.subpath.replace('*', capture)
+          : entry.subpath;
+        if (subpath.includes('*'))
+          throw new Error(`unresolved public export wildcard: ${entry.subpath}`);
+        return {
+          subpath,
+          specifier: subpath === '.' ? packageName : `${packageName}/${subpath.slice(2)}`,
+          conditions: [...entry.conditions],
+          target,
+          kind: probeKind(entry, target),
+        };
+      }),
+    )
+    .sort((left, right) =>
+      `${left.subpath}:${left.conditions.join('.')}:${left.target}`.localeCompare(
+        `${right.subpath}:${right.conditions.join('.')}:${right.target}`,
+      ),
+    );
 }
 
 function exportProbeRunnerSource() {
@@ -193,12 +212,18 @@ export function runInstalledExportProbes({
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   if (result.status !== 0) {
-    const detail = (result.stderr || result.stdout || `exit ${result.status}`).trim().split(/\r?\n/u).at(-1);
+    const detail = (result.stderr || result.stdout || `exit ${result.status}`)
+      .trim()
+      .split(/\r?\n/u)
+      .at(-1);
     throw new Error(`installed ${packageName} export probe failed${detail ? `: ${detail}` : ''}`);
   }
   const results = JSON.parse(readFileSync(reportPath, 'utf8'));
-  if (!Array.isArray(results) || results.length !== probes.length
-    || results.some((entry) => !['loaded', 'validated'].includes(entry.status))) {
+  if (
+    !Array.isArray(results) ||
+    results.length !== probes.length ||
+    results.some((entry) => !['loaded', 'validated'].includes(entry.status))
+  ) {
     throw new Error(`installed ${packageName} export probe report is incomplete`);
   }
   return {
@@ -234,7 +259,8 @@ export function verifyPackedSourceParity(sourceRoot, packageRoot, packedPaths) {
     const payloadTarget = assertRealSourcePath(payload, path);
     const sourceBytes = readFileSync(sourceTarget);
     const payloadBytes = readFileSync(payloadTarget);
-    if (!sourceBytes.equals(payloadBytes)) throw new Error(`packed bytes differ from source candidate: ${path}`);
+    if (!sourceBytes.equals(payloadBytes))
+      throw new Error(`packed bytes differ from source candidate: ${path}`);
     return { path, bytes: sourceBytes.byteLength, sha256: sha256(sourceBytes) };
   });
   return { count: entries.length, digest: payloadDigest(entries), entries };
@@ -250,19 +276,26 @@ function markdownBodyWithoutCode(text) {
 export function validatePackagedMarkdownLinks(packageRoot, packedPaths) {
   const paths = new Set(packedPaths);
   const documents = [...paths]
-    .filter((path) => path === 'README.md' || path === 'CONTRIBUTING.md' || path.startsWith('docs/'))
+    .filter(
+      (path) => path === 'README.md' || path === 'CONTRIBUTING.md' || path.startsWith('docs/'),
+    )
     .filter((path) => path.endsWith('.md'))
     .sort();
   const violations = [];
   for (const document of documents) {
     const text = markdownBodyWithoutCode(readFileSync(join(packageRoot, document), 'utf8'));
     for (const match of text.matchAll(/!?\[[^\]]*\]\(([^)]+)\)/gu)) {
-      let target = match[1].trim().replace(/^<|>$/gu, '').split(/\s+["']/u, 1)[0];
+      let target = match[1]
+        .trim()
+        .replace(/^<|>$/gu, '')
+        .split(/\s+["']/u, 1)[0];
       if (!target || /^(?:https?:|mailto:|#)/u.test(target)) continue;
       target = target.split('#', 1)[0].split('?', 1)[0];
       const resolved = posix.normalize(posix.join(posix.dirname(document), target));
-      const exists = paths.has(resolved) || [...paths].some((path) => path.startsWith(`${resolved}/`));
-      if (resolved.startsWith('../') || !exists) violations.push(`${document}: unresolved local link ${target}`);
+      const exists =
+        paths.has(resolved) || [...paths].some((path) => path.startsWith(`${resolved}/`));
+      if (resolved.startsWith('../') || !exists)
+        violations.push(`${document}: unresolved local link ${target}`);
     }
   }
   return { documents, violations };
@@ -271,7 +304,9 @@ export function validatePackagedMarkdownLinks(packageRoot, packedPaths) {
 export function inventoryTree(root) {
   const inventory = [];
   const walk = (directory) => {
-    for (const entry of readdirSync(directory, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+    for (const entry of readdirSync(directory, { withFileTypes: true }).sort((a, b) =>
+      a.name.localeCompare(b.name),
+    )) {
       const absolute = join(directory, entry.name);
       const stat = lstatSync(absolute);
       const path = relative(root, absolute).split(sep).join('/');
@@ -281,7 +316,12 @@ export function inventoryTree(root) {
       if (entry.isDirectory()) walk(absolute);
       else if (entry.isFile()) {
         const bytes = readFileSync(absolute);
-        inventory.push({ path, mode: stat.mode & 0o777, bytes: bytes.length, sha256: sha256(bytes) });
+        inventory.push({
+          path,
+          mode: stat.mode & 0o777,
+          bytes: bytes.length,
+          sha256: sha256(bytes),
+        });
       }
     }
   };
@@ -294,6 +334,8 @@ export function payloadDigest(inventory) {
 }
 
 export function payloadBytesEqual(left, right) {
-  return JSON.stringify(left.map(({ mode: _mode, ...entry }) => entry))
-    === JSON.stringify(right.map(({ mode: _mode, ...entry }) => entry));
+  return (
+    JSON.stringify(left.map(({ mode: _mode, ...entry }) => entry)) ===
+    JSON.stringify(right.map(({ mode: _mode, ...entry }) => entry))
+  );
 }

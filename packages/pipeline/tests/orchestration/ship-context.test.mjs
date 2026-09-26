@@ -1,21 +1,20 @@
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, test } from 'node:test';
 
 import { assertContextEnvelope } from '../../lib/pipeline/context-envelope.mjs';
-import { materializeLegacyPlanningFixture } from '../helpers/legacy-planning-fixture.mjs';
-import { designImplementationHandoffDigest } from '../../lib/protocol/design-handoff-contracts.mjs';
-
 import {
   buildPlanContext,
   buildShipContext,
   renderPlanContext,
   renderShipContext,
 } from '../../lib/pipeline/ship-context.mjs';
+import { designImplementationHandoffDigest } from '../../lib/protocol/design-handoff-contracts.mjs';
+import { materializeLegacyPlanningFixture } from '../helpers/legacy-planning-fixture.mjs';
 
 // SHIP requires the project root to be a Git top-level, so the fixture is staged into
 // a disposable repository. Both context builders then read byte-identical input.
@@ -24,7 +23,15 @@ execFileSync('git', ['init', '-q'], { cwd: projectRoot });
 execFileSync('git', ['add', '-A'], { cwd: projectRoot });
 execFileSync(
   'git',
-  ['-c', 'user.email=fixture@example.invalid', '-c', 'user.name=Fixture', 'commit', '-qm', 'fixture'],
+  [
+    '-c',
+    'user.email=fixture@example.invalid',
+    '-c',
+    'user.name=Fixture',
+    'commit',
+    '-qm',
+    'fixture',
+  ],
   { cwd: projectRoot },
 );
 after(() => rmSync(projectRoot, { recursive: true, force: true }));
@@ -34,7 +41,10 @@ const request = { projectRoot, feature: 'legacy-plan' };
 test('a planned feature builds a valid envelope from its own artifacts', () => {
   const envelope = assertContextEnvelope(buildShipContext(request));
   assert.match(envelope.objective.summary, /Legacy Plan/u);
-  assert.ok(envelope.requirements.some((entry) => entry.startsWith('FR-')), 'requirements come from the spec');
+  assert.ok(
+    envelope.requirements.some((entry) => entry.startsWith('FR-')),
+    'requirements come from the spec',
+  );
   assert.ok(envelope.acceptanceCriteria.length > 1, 'acceptance criteria come from the spec');
 });
 
@@ -49,12 +59,22 @@ test('ordinary context does not initialize release gates or require a stack defi
   execFileSync('git', ['add', '-A'], { cwd: contextRoot });
   execFileSync(
     'git',
-    ['-c', 'user.email=fixture@example.invalid', '-c', 'user.name=Fixture', 'commit', '-qm', 'fixture'],
+    [
+      '-c',
+      'user.email=fixture@example.invalid',
+      '-c',
+      'user.name=Fixture',
+      'commit',
+      '-qm',
+      'fixture',
+    ],
     { cwd: contextRoot },
   );
 
   try {
-    const envelope = assertContextEnvelope(buildShipContext({ projectRoot: contextRoot, feature: 'legacy-plan' }));
+    const envelope = assertContextEnvelope(
+      buildShipContext({ projectRoot: contextRoot, feature: 'legacy-plan' }),
+    );
     assert.doesNotMatch(envelope.architecture.join('\n'), /Technical stack/u);
     assert.match(envelope.objective.summary, /Legacy Plan/u);
   } finally {
@@ -69,15 +89,27 @@ test('the coding context carries the active task, parent acceptance, stack, desi
   const architecture = envelope.architecture.join('\n');
   const startingPoints = envelope.startingPoints.join('\n');
 
-  assert.match(requirements, /T-002 objective: Expose the active task's concrete implementation context/u);
-  assert.match(requirements, /T-002 rationale: The runtime needs the selected task's concrete requirements/u);
+  assert.match(
+    requirements,
+    /T-002 objective: Expose the active task's concrete implementation context/u,
+  );
+  assert.match(
+    requirements,
+    /T-002 rationale: The runtime needs the selected task's concrete requirements/u,
+  );
   assert.match(requirements, /T-002 create: `src\/context-reader\.mjs`/u);
   assert.match(requirements, /T-002 modify: `src\/index\.mjs`/u);
-  assert.match(requirements, /T-002 implementation: Read the task objective, file lists, and parent acceptance context/u);
+  assert.match(
+    requirements,
+    /T-002 implementation: Read the task objective, file lists, and parent acceptance context/u,
+  );
   assert.match(acceptance, /T-002: The context names both files assigned to this task/u);
   assert.match(acceptance, /US-001: The coding runtime receives each active task's objective/u);
   assert.match(acceptance, /Scenario Carry the selected task into Ship/u);
-  assert.match(requirements, /US-001: As a release owner, I want an older plan to remain readable/u);
+  assert.match(
+    requirements,
+    /US-001: As a release owner, I want an older plan to remain readable/u,
+  );
   assert.doesNotMatch(requirements, /US-001: Compatibility background/u);
 
   assert.match(architecture, /Technical stack \(input\/tech\/stack\.md\)/u);
@@ -92,12 +124,27 @@ test('the coding context carries the active task, parent acceptance, stack, desi
   assert.match(startingPoints, /Task T-002 \(Tech\): .*\/tasks\/T-002-minimal\.md/u);
   assert.match(startingPoints, /Parent story US-001:/u);
   assert.match(startingPoints, /Project stack override: \.codex\/stacks\/backend\/nestjs\.md/u);
-  assert.match(startingPoints, /Installed stack conventions: planr-pipeline\/stacks\/backend\/nestjs\.md/u);
+  assert.match(
+    startingPoints,
+    /Installed stack conventions: planr-pipeline\/stacks\/backend\/nestjs\.md/u,
+  );
   assert.doesNotMatch(startingPoints, /\/Users\/|\/home\//u);
-  assert.deepEqual(envelope.externalActions, [], 'external effects are not inferred from generic spec sections');
-  for (const collection of [envelope.requirements, envelope.acceptanceCriteria, envelope.architecture, envelope.startingPoints]) {
+  assert.deepEqual(
+    envelope.externalActions,
+    [],
+    'external effects are not inferred from generic spec sections',
+  );
+  for (const collection of [
+    envelope.requirements,
+    envelope.acceptanceCriteria,
+    envelope.architecture,
+    envelope.startingPoints,
+  ]) {
     assert.ok(collection.length <= 200, 'context collections remain bounded');
-    assert.ok(collection.every((entry) => entry.length <= 4_000), 'each context entry remains bounded');
+    assert.ok(
+      collection.every((entry) => entry.length <= 4_000),
+      'each context entry remains bounded',
+    );
   }
 });
 
@@ -107,13 +154,27 @@ test('stack context loads only the selected runtime host override', () => {
   const cursorStack = join(contextRoot, '.cursor', 'stacks', 'backend');
   mkdirSync(claudeStack, { recursive: true });
   mkdirSync(cursorStack, { recursive: true });
-  writeFileSync(join(claudeStack, 'nestjs.md'), '# Claude conventions\n\n- Use Claude-only service boundaries.\n');
-  writeFileSync(join(cursorStack, 'nestjs.md'), '# Cursor conventions\n\n- Use Cursor-only service boundaries.\n');
+  writeFileSync(
+    join(claudeStack, 'nestjs.md'),
+    '# Claude conventions\n\n- Use Claude-only service boundaries.\n',
+  );
+  writeFileSync(
+    join(cursorStack, 'nestjs.md'),
+    '# Cursor conventions\n\n- Use Cursor-only service boundaries.\n',
+  );
   execFileSync('git', ['init', '-q'], { cwd: contextRoot });
   execFileSync('git', ['add', '-A'], { cwd: contextRoot });
   execFileSync(
     'git',
-    ['-c', 'user.email=fixture@example.invalid', '-c', 'user.name=Fixture', 'commit', '-qm', 'fixture'],
+    [
+      '-c',
+      'user.email=fixture@example.invalid',
+      '-c',
+      'user.name=Fixture',
+      'commit',
+      '-qm',
+      'fixture',
+    ],
     { cwd: contextRoot },
   );
 
@@ -161,10 +222,23 @@ test('the rendered context carries no execution supervision', () => {
   // content the runtime should know. What must never appear is Planr's own scaffolding
   // being handed over as instructions to follow.
   const rendered = renderShipContext(request);
-  for (const machinery of ['sealed candidate', 'reviewerIds', 'finalize-ship', '--run-id', 'advance-ship', 'evidenceDigest']) {
-    assert.ok(!rendered.toLowerCase().includes(machinery.toLowerCase()), `must not carry ${machinery}`);
+  for (const machinery of [
+    'sealed candidate',
+    'reviewerIds',
+    'finalize-ship',
+    '--run-id',
+    'advance-ship',
+    'evidenceDigest',
+  ]) {
+    assert.ok(
+      !rendered.toLowerCase().includes(machinery.toLowerCase()),
+      `must not carry ${machinery}`,
+    );
   }
-  assert.match(rendered, /Use the specification, active task details, repository context, and conventions above/u);
+  assert.match(
+    rendered,
+    /Use the specification, active task details, repository context, and conventions above/u,
+  );
   assert.ok(!/^\s*\d+\.\s+Run `planr pipeline/mu.test(rendered), 'must not script CLI steps');
   assert.doesNotMatch(rendered, /approval|authorization|stopping point/iu);
 });
@@ -188,7 +262,11 @@ test('PLAN and SHIP derive the same feature context', () => {
   const plan = buildPlanContext(request);
   const ship = buildShipContext(request);
   assert.deepEqual(plan.dependencies, ship.dependencies, 'dependency graph must survive the gate');
-  assert.deepEqual(plan.boundaries.doNotChange, ship.boundaries.doNotChange, 'preserve boundaries must survive');
+  assert.deepEqual(
+    plan.boundaries.doNotChange,
+    ship.boundaries.doNotChange,
+    'preserve boundaries must survive',
+  );
   assert.deepEqual(plan.acceptanceCriteria, ship.acceptanceCriteria);
   assert.deepEqual(plan.requirements, ship.requirements);
   assert.equal(plan.objective.summary, ship.objective.summary);
@@ -205,27 +283,66 @@ test('SHIP adds only selected current design lineage while ordinary Plan remains
   const featureRoot = join(root, '.planr', 'specs', 'SPEC-001-legacy-plan');
   const fixed = (value) => `sha256:${value.repeat(64)}`;
   const handoff = {
-    kind: 'openplanr-design-implementation-handoff', schemaVersion: '1.0.0', id: 'legacy-design', version: 1,
-    status: 'approved', authority: 'prepare-plan', title: 'Legacy design',
-    basis: { designId: 'legacy-design', sourceRevision: fixed('a'), selectedVariant: 'one', readiness: { status: 'ready', digest: fixed('b') }, reviewHandoff: { version: 1, contentDigest: fixed('c') } },
+    kind: 'openplanr-design-implementation-handoff',
+    schemaVersion: '1.0.0',
+    id: 'legacy-design',
+    version: 1,
+    status: 'approved',
+    authority: 'prepare-plan',
+    title: 'Legacy design',
+    basis: {
+      designId: 'legacy-design',
+      sourceRevision: fixed('a'),
+      selectedVariant: 'one',
+      readiness: { status: 'ready', digest: fixed('b') },
+      reviewHandoff: { version: 1, contentDigest: fixed('c') },
+    },
     sources: [
       { id: 'selected-screen', kind: 'screen', path: 'design/selected.json', digest: fixed('d') },
       { id: 'other-screen', kind: 'screen', path: 'design/other.json', digest: fixed('e') },
     ],
     requirements: [
-      { id: 'REQ-001', kind: 'behavior', statement: 'Render the selected context.', sourceRefs: ['selected-screen'], verification: ['Selected context is visible.'] },
-      { id: 'REQ-002', kind: 'behavior', statement: 'Render unrelated context.', sourceRefs: ['other-screen'], verification: ['Other context is visible.'] },
+      {
+        id: 'REQ-001',
+        kind: 'behavior',
+        statement: 'Render the selected context.',
+        sourceRefs: ['selected-screen'],
+        verification: ['Selected context is visible.'],
+      },
+      {
+        id: 'REQ-002',
+        kind: 'behavior',
+        statement: 'Render unrelated context.',
+        sourceRefs: ['other-screen'],
+        verification: ['Other context is visible.'],
+      },
     ],
-    contentDigest: fixed('0'), markdown: '# Legacy design\n',
+    contentDigest: fixed('0'),
+    markdown: '# Legacy design\n',
   };
   handoff.contentDigest = designImplementationHandoffDigest(handoff);
-  handoff.approval = { actorId: 'owner', approvedAt: '2026-09-21T12:00:00.000Z', contentDigest: handoff.contentDigest, authority: 'prepare-plan' };
+  handoff.approval = {
+    actorId: 'owner',
+    approvedAt: '2026-09-21T12:00:00.000Z',
+    contentDigest: handoff.contentDigest,
+    authority: 'prepare-plan',
+  };
   const lineage = {
-    kind: 'openplanr-design-planning-lineage', schemaVersion: '1.0.0',
-    handoff: { id: handoff.id, version: handoff.version, contentDigest: handoff.contentDigest }, specId: 'SPEC-014',
+    kind: 'openplanr-design-planning-lineage',
+    schemaVersion: '1.0.0',
+    handoff: { id: handoff.id, version: handoff.version, contentDigest: handoff.contentDigest },
+    specId: 'SPEC-014',
     mappings: [
-      { requirementId: 'REQ-001', acceptanceRefs: [{ storyId: 'US-001', acceptanceId: 'AC-001' }], taskIds: ['T-001'] },
-      { requirementId: 'REQ-002', acceptanceRefs: [{ storyId: 'US-001', acceptanceId: 'AC-002' }], taskIds: ['T-003'] },
+      {
+        requirementId: 'REQ-001',
+        acceptanceRefs: [{ storyId: 'US-001', acceptanceId: 'AC-001' }],
+        taskIds: ['T-001'],
+      },
+      {
+        requirementId: 'REQ-002',
+        acceptanceRefs: [{ storyId: 'US-001', acceptanceId: 'AC-002' }],
+        taskIds: ['T-003'],
+      },
     ],
   };
   writeFileSync(join(featureRoot, 'design-lineage.json'), JSON.stringify(lineage));
@@ -234,12 +351,30 @@ test('SHIP adds only selected current design lineage while ordinary Plan remains
   mkdirSync(versionRoot, { recursive: true });
   writeFileSync(join(versionRoot, 'handoff.json'), JSON.stringify(handoff));
   mkdirSync(join(featureRoot, 'design/implementation-handoff'), { recursive: true });
-  writeFileSync(join(featureRoot, 'design/implementation-handoff/current.json'), JSON.stringify({
-    id: handoff.id, version: 1, contentDigest: handoff.contentDigest, status: 'approved',
-  }));
+  writeFileSync(
+    join(featureRoot, 'design/implementation-handoff/current.json'),
+    JSON.stringify({
+      id: handoff.id,
+      version: 1,
+      contentDigest: handoff.contentDigest,
+      status: 'approved',
+    }),
+  );
   execFileSync('git', ['init', '-q'], { cwd: root });
   execFileSync('git', ['add', '-A'], { cwd: root });
-  execFileSync('git', ['-c', 'user.email=fixture@example.invalid', '-c', 'user.name=Fixture', 'commit', '-qm', 'fixture'], { cwd: root });
+  execFileSync(
+    'git',
+    [
+      '-c',
+      'user.email=fixture@example.invalid',
+      '-c',
+      'user.name=Fixture',
+      'commit',
+      '-qm',
+      'fixture',
+    ],
+    { cwd: root },
+  );
   try {
     const ship = buildShipContext({ projectRoot: root, feature: 'legacy-plan', taskId: 'T-001' });
     assert.match(ship.requirements.join('\n'), /Design REQ-001: Render the selected context/u);
@@ -249,7 +384,11 @@ test('SHIP adds only selected current design lineage while ordinary Plan remains
     assert.match(ship.startingPoints.join('\n'), /Design lineage .* current/u);
 
     rmSync(join(featureRoot, 'design-lineage.json'));
-    const withoutLineage = buildShipContext({ projectRoot: root, feature: 'legacy-plan', taskId: 'T-001' });
+    const withoutLineage = buildShipContext({
+      projectRoot: root,
+      feature: 'legacy-plan',
+      taskId: 'T-001',
+    });
     assert.doesNotMatch(JSON.stringify(withoutLineage), /Design lineage|Design REQ-/u);
   } finally {
     rmSync(root, { recursive: true, force: true });
@@ -261,7 +400,10 @@ test('the plan context carries dependencies without schedule boilerplate', () =>
   assert.match(rendered, /## Dependencies/u);
   assert.doesNotMatch(rendered, /choose the schedule|how much runs at once|stopping point/iu);
   for (const machinery of ['sealed candidate', 'reviewerIds', 'finalize-ship', 'advance-ship']) {
-    assert.ok(!rendered.toLowerCase().includes(machinery.toLowerCase()), `must not carry ${machinery}`);
+    assert.ok(
+      !rendered.toLowerCase().includes(machinery.toLowerCase()),
+      `must not carry ${machinery}`,
+    );
   }
 });
 
@@ -283,35 +425,77 @@ test('a qualified default selector loads only the matching duplicate task contex
   mkdirSync(join(root, '.planr'), { recursive: true });
   mkdirSync(join(root, 'input', 'specs'), { recursive: true });
   writeFileSync(join(root, '.planr', 'config.json'), '{}');
-  writeFileSync(join(root, 'input', 'specs', 'spec-auth.md'), [
-    '# Auth', '', '## Context & Goal', '', 'Implement auth.', '',
-    '## Acceptance Criteria', '', '- The selected task is delivered.',
-  ].join('\n'));
+  writeFileSync(
+    join(root, 'input', 'specs', 'spec-auth.md'),
+    [
+      '# Auth',
+      '',
+      '## Context & Goal',
+      '',
+      'Implement auth.',
+      '',
+      '## Acceptance Criteria',
+      '',
+      '- The selected task is delivered.',
+    ].join('\n'),
+  );
   for (const [index, storyId] of ['US-001', 'US-002'].entries()) {
     const storyDir = `us-${index + 1}`;
     const storyRoot = join(root, 'output', 'feats', 'feat-auth', storyDir);
     mkdirSync(join(storyRoot, 'tasks'), { recursive: true });
-    writeFileSync(join(storyRoot, `${storyDir}.md`), `---\nid: "${storyId}"\nstatus: "pending"\n---\n`);
-    writeFileSync(join(storyRoot, 'tasks', 'task-1.md'), [
-      '---', 'id: "T-001"', `storyId: "${storyId}"`, 'status: "pending"',
-      'dependsOn: []', '---', '', '## Technical Spec', '', `- Implement ${storyId} marker.`,
-    ].join('\n'));
+    writeFileSync(
+      join(storyRoot, `${storyDir}.md`),
+      `---\nid: "${storyId}"\nstatus: "pending"\n---\n`,
+    );
+    writeFileSync(
+      join(storyRoot, 'tasks', 'task-1.md'),
+      [
+        '---',
+        'id: "T-001"',
+        `storyId: "${storyId}"`,
+        'status: "pending"',
+        'dependsOn: []',
+        '---',
+        '',
+        '## Technical Spec',
+        '',
+        `- Implement ${storyId} marker.`,
+      ].join('\n'),
+    );
   }
   execFileSync('git', ['init', '-q'], { cwd: root });
   execFileSync('git', ['add', '-A'], { cwd: root });
   execFileSync(
     'git',
-    ['-c', 'user.email=fixture@example.invalid', '-c', 'user.name=Fixture', 'commit', '-qm', 'fixture'],
+    [
+      '-c',
+      'user.email=fixture@example.invalid',
+      '-c',
+      'user.name=Fixture',
+      'commit',
+      '-qm',
+      'fixture',
+    ],
     { cwd: root },
   );
 
   try {
     const plan = buildPlanContext({ projectRoot: root, feature: 'auth' });
     assert.match(plan.startingPoints.join('\n'), /Tasks in scope: US-001\/T-001, US-002\/T-001/u);
-    assert.match(plan.requirements.join('\n'), /US-001\/T-001 implementation: Implement US-001 marker/u);
-    assert.match(plan.requirements.join('\n'), /US-002\/T-001 implementation: Implement US-002 marker/u);
+    assert.match(
+      plan.requirements.join('\n'),
+      /US-001\/T-001 implementation: Implement US-001 marker/u,
+    );
+    assert.match(
+      plan.requirements.join('\n'),
+      /US-002\/T-001 implementation: Implement US-002 marker/u,
+    );
 
-    const envelope = buildShipContext({ projectRoot: root, feature: 'auth', taskId: 'US-002/T-001' });
+    const envelope = buildShipContext({
+      projectRoot: root,
+      feature: 'auth',
+      taskId: 'US-002/T-001',
+    });
     const requirements = envelope.requirements.join('\n');
     assert.match(requirements, /US-002\/T-001 implementation: Implement US-002 marker/u);
     assert.doesNotMatch(requirements, /US-001\/T-001|Implement US-001 marker/u);

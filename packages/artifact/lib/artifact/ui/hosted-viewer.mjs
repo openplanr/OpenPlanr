@@ -54,7 +54,8 @@ export const HOSTED_ARTIFACT_STATE_COPY = Object.freeze({
   }),
   'decryption-failed': Object.freeze({
     title: 'This key cannot decrypt the review',
-    detail: 'Use the complete link, including its private fragment key. The payload may also have been changed.',
+    detail:
+      'Use the complete link, including its private fragment key. The payload may also have been changed.',
     action: '',
   }),
   'unsupported-browser': Object.freeze({
@@ -110,9 +111,10 @@ function malformed(status, details = {}) {
 }
 
 /** Parse only the public URL shape; decoding, decryption, and I/O are injected. */
-export function parseHostedArtifactLocation(location, {
-  fragmentLimit = ARTIFACT_SHARE_FRAGMENT_LIMIT,
-} = {}) {
+export function parseHostedArtifactLocation(
+  location,
+  { fragmentLimit = ARTIFACT_SHARE_FRAGMENT_LIMIT } = {},
+) {
   const { pathname, hash } = locationParts(location);
   const shortMatch = pathname.match(/^\/p\/([A-Za-z0-9_-]{1,128})\/?$/);
   if (shortMatch) {
@@ -137,13 +139,25 @@ export function parseHostedArtifactLocation(location, {
     const owner = params.get('o');
     const manage = params.get('m');
     const authority = [write, owner, manage].filter(Boolean);
-    if (!key || !/^[A-Za-z0-9_-]{43}$/.test(key) || authority.length > 1
-      || (write && !/^[A-Za-z0-9_-]{43}$/.test(write))
-      || (owner && !/^[A-Za-z0-9_-]{43}$/.test(owner))
-      || (manage && !/^[A-Za-z0-9_-]{43}$/.test(manage))) {
+    if (
+      !key ||
+      !/^[A-Za-z0-9_-]{43}$/.test(key) ||
+      authority.length > 1 ||
+      (write && !/^[A-Za-z0-9_-]{43}$/.test(write)) ||
+      (owner && !/^[A-Za-z0-9_-]{43}$/.test(owner)) ||
+      (manage && !/^[A-Za-z0-9_-]{43}$/.test(manage))
+    ) {
       return malformed('malformed-payload', { transport: 'room' });
     }
-    return Object.freeze({ ok: true, transport: 'room', id: roomMatch[1], key, ...(write ? { write } : {}), ...(owner ? { owner } : {}), ...(manage ? { manage } : {}) });
+    return Object.freeze({
+      ok: true,
+      transport: 'room',
+      id: roomMatch[1],
+      key,
+      ...(write ? { write } : {}),
+      ...(owner ? { owner } : {}),
+      ...(manage ? { manage } : {}),
+    });
   }
 
   if (!hash || hash === '#') return malformed('empty-hash');
@@ -164,23 +178,50 @@ export function hostedArtifactStateForError(error) {
   if (['E_ARTIFACT_BROWSER_UNSUPPORTED', 'E_ARTIFACT_CODEC_UNSUPPORTED'].includes(code)) {
     return 'unsupported-browser';
   }
-  if (['E_ARTIFACT_FRAGMENT_TOO_LARGE', 'E_ARTIFACT_PAYLOAD_TOO_LARGE', 'E_ARTIFACT_DECOMPRESSION_LIMIT'].includes(code)) {
+  if (
+    [
+      'E_ARTIFACT_FRAGMENT_TOO_LARGE',
+      'E_ARTIFACT_PAYLOAD_TOO_LARGE',
+      'E_ARTIFACT_DECOMPRESSION_LIMIT',
+    ].includes(code)
+  ) {
     return 'too-large';
   }
-  if (['E_ARTIFACT_PASTE_NOT_FOUND', 'E_ARTIFACT_SHARE_NOT_FOUND', 'E_ARTIFACT_PASTE_UNAVAILABLE'].includes(code)) {
+  if (
+    [
+      'E_ARTIFACT_PASTE_NOT_FOUND',
+      'E_ARTIFACT_SHARE_NOT_FOUND',
+      'E_ARTIFACT_PASTE_UNAVAILABLE',
+    ].includes(code)
+  ) {
     return 'paste-missing';
   }
   if (['E_ARTIFACT_PASTE_EXPIRED', 'E_ARTIFACT_SHARE_EXPIRED'].includes(code)) {
     return 'expired';
   }
-  if (['E_ARTIFACT_DECRYPTION_FAILED', 'E_ARTIFACT_AUTH_FAILED', 'E_ARTIFACT_PAYLOAD_TAMPERED', 'OperationError'].includes(code)) {
+  if (
+    [
+      'E_ARTIFACT_DECRYPTION_FAILED',
+      'E_ARTIFACT_AUTH_FAILED',
+      'E_ARTIFACT_PAYLOAD_TAMPERED',
+      'OperationError',
+    ].includes(code)
+  ) {
     return 'decryption-failed';
   }
-  if (['E_ARTIFACT_SHARE_NETWORK', 'E_ARTIFACT_NETWORK', 'E_ARTIFACT_FETCH_FAILED'].includes(code)
-    || error?.name === 'TypeError') {
+  if (
+    ['E_ARTIFACT_SHARE_NETWORK', 'E_ARTIFACT_NETWORK', 'E_ARTIFACT_FETCH_FAILED'].includes(code) ||
+    error?.name === 'TypeError'
+  ) {
     return 'network-error';
   }
-  if (['E_ARTIFACT_VERSION_UNSUPPORTED', 'E_ARTIFACT_FRAGMENT_VERSION', 'E_ARTIFACT_FRAGMENT_VERSION_UNSUPPORTED'].includes(code)) {
+  if (
+    [
+      'E_ARTIFACT_VERSION_UNSUPPORTED',
+      'E_ARTIFACT_FRAGMENT_VERSION',
+      'E_ARTIFACT_FRAGMENT_VERSION_UNSUPPORTED',
+    ].includes(code)
+  ) {
     return 'invalid-version';
   }
   if (code === 'E_ARTIFACT_PASTE_INVALID') return 'malformed-payload';
@@ -236,36 +277,69 @@ export function mountHostedArtifactViewer({
   async function load() {
     const parsed = parseHostedArtifactLocation(location, { fragmentLimit });
     if (!parsed.ok) return setState({ status: parsed.status });
-    const request = parsed.transport === 'fragment'
-      ? { transport: 'fragment', version: parsed.version, payload: parsed.payload }
-      : { transport: parsed.transport, id: parsed.id, key: parsed.key, ...(parsed.write ? { write: parsed.write } : {}), ...(parsed.owner ? { owner: parsed.owner } : {}), ...(parsed.manage ? { manage: parsed.manage } : {}) };
+    const request =
+      parsed.transport === 'fragment'
+        ? { transport: 'fragment', version: parsed.version, payload: parsed.payload }
+        : {
+            transport: parsed.transport,
+            id: parsed.id,
+            key: parsed.key,
+            ...(parsed.write ? { write: parsed.write } : {}),
+            ...(parsed.owner ? { owner: parsed.owner } : {}),
+            ...(parsed.manage ? { manage: parsed.manage } : {}),
+          };
     if (!supportsTransport(parsed.transport)) {
       return setState({ status: 'unsupported-browser', transport: parsed.transport, request });
     }
     const sequence = ++generation;
     setState({ status: 'loading', transport: parsed.transport, request });
     try {
-      const envelope = parsed.transport === 'fragment'
-        ? await (typeof decodeFragment === 'function'
-          ? decodeFragment(Object.freeze({ version: parsed.version, payload: parsed.payload }))
-          : Promise.reject(new HostedArtifactViewerError(
-            'E_ARTIFACT_CODEC_UNSUPPORTED',
-            'No private-fragment decoder is installed.',
-          )))
-        : parsed.transport === 'short' ? await (typeof loadShort === 'function'
-          ? loadShort(Object.freeze({ id: parsed.id, key: parsed.key }))
-          : Promise.reject(new HostedArtifactViewerError(
-            'E_ARTIFACT_BROWSER_UNSUPPORTED',
-            'No encrypted short-link loader is installed.',
-          ))) : await (typeof loadRoom === 'function'
-            ? loadRoom(Object.freeze({ id: parsed.id, key: parsed.key, ...(parsed.write ? { write: parsed.write } : {}), ...(parsed.owner ? { owner: parsed.owner } : {}), ...(parsed.manage ? { manage: parsed.manage } : {}) }))
-            : Promise.reject(new HostedArtifactViewerError('E_ARTIFACT_BROWSER_UNSUPPORTED', 'No live review room loader is installed.')));
+      const envelope =
+        parsed.transport === 'fragment'
+          ? await (typeof decodeFragment === 'function'
+              ? decodeFragment(Object.freeze({ version: parsed.version, payload: parsed.payload }))
+              : Promise.reject(
+                  new HostedArtifactViewerError(
+                    'E_ARTIFACT_CODEC_UNSUPPORTED',
+                    'No private-fragment decoder is installed.',
+                  ),
+                ))
+          : parsed.transport === 'short'
+            ? await (typeof loadShort === 'function'
+                ? loadShort(Object.freeze({ id: parsed.id, key: parsed.key }))
+                : Promise.reject(
+                    new HostedArtifactViewerError(
+                      'E_ARTIFACT_BROWSER_UNSUPPORTED',
+                      'No encrypted short-link loader is installed.',
+                    ),
+                  ))
+            : await (typeof loadRoom === 'function'
+                ? loadRoom(
+                    Object.freeze({
+                      id: parsed.id,
+                      key: parsed.key,
+                      ...(parsed.write ? { write: parsed.write } : {}),
+                      ...(parsed.owner ? { owner: parsed.owner } : {}),
+                      ...(parsed.manage ? { manage: parsed.manage } : {}),
+                    }),
+                  )
+                : Promise.reject(
+                    new HostedArtifactViewerError(
+                      'E_ARTIFACT_BROWSER_UNSUPPORTED',
+                      'No live review room loader is installed.',
+                    ),
+                  ));
       if (sequence !== generation) return state;
       setState({ status: 'ready', transport: parsed.transport, request, envelope });
-      if (typeof onEnvelope === 'function') await onEnvelope(envelope, Object.freeze({ transport: parsed.transport }));
+      if (typeof onEnvelope === 'function')
+        await onEnvelope(envelope, Object.freeze({ transport: parsed.transport }));
     } catch (error) {
       if (sequence !== generation) return state;
-      setState({ status: hostedArtifactStateForError(error), transport: parsed.transport, request });
+      setState({
+        status: hostedArtifactStateForError(error),
+        transport: parsed.transport,
+        request,
+      });
     }
     return state;
   }

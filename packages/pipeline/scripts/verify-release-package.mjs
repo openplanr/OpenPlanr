@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 
+import { spawnSync } from 'node:child_process';
 import {
   existsSync,
   lstatSync,
-  readFileSync,
   mkdirSync,
   mkdtempSync,
+  readFileSync,
   realpathSync,
   rmSync,
   writeFileSync,
@@ -13,16 +14,14 @@ import {
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, join, parse, resolve } from 'node:path';
-import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-
+import { releaseLedgerRowsFromProofs } from '../lib/ecosystem/release-ledger.mjs';
 import {
   bindPackageProofToEcosystemCandidate,
   createEcosystemCandidateProof,
   createPackagePayloadProof,
   runInstalledExportProbes,
 } from '../lib/ecosystem/release-package-proof.mjs';
-import { releaseLedgerRowsFromProofs } from '../lib/ecosystem/release-ledger.mjs';
 import { discoverEcosystemRepositories } from '../lib/ecosystem/workspace-discovery.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -33,10 +32,16 @@ const unknown = [...args].filter((arg) => !supported.has(arg));
 
 function reportFailure(message) {
   if (args.has('--json')) {
-    process.stdout.write(`${JSON.stringify({
-      ok: false,
-      error: { code: 'E_RELEASE_PACKAGE_PROOF', message },
-    }, null, 2)}\n`);
+    process.stdout.write(
+      `${JSON.stringify(
+        {
+          ok: false,
+          error: { code: 'E_RELEASE_PACKAGE_PROOF', message },
+        },
+        null,
+        2,
+      )}\n`,
+    );
   } else {
     process.stderr.write(`Release package proof failed: ${message}\n`);
   }
@@ -57,7 +62,10 @@ function run(command, commandArgs, options = {}) {
     ...options,
   });
   if (result.status !== 0) {
-    const detail = (result.stderr || result.stdout || `exit ${result.status}`).trim().split(/\r?\n/u).at(-1);
+    const detail = (result.stderr || result.stdout || `exit ${result.status}`)
+      .trim()
+      .split(/\r?\n/u)
+      .at(-1);
     throw new Error(`required package command failed${detail ? `: ${detail}` : ''}`);
   }
   return result.stdout;
@@ -72,23 +80,21 @@ function npmCommand() {
 
 function pack(destination, cache) {
   const npm = npmCommand();
-  const stdout = run(npm.command, [
-    ...npm.prefix,
-    'pack',
-    '--json',
-    '--ignore-scripts',
-    '--pack-destination',
-    destination,
-  ], {
-    env: {
-      ...process.env,
-      npm_config_audit: 'false',
-      npm_config_fund: 'false',
-      npm_config_cache: cache,
+  const stdout = run(
+    npm.command,
+    [...npm.prefix, 'pack', '--json', '--ignore-scripts', '--pack-destination', destination],
+    {
+      env: {
+        ...process.env,
+        npm_config_audit: 'false',
+        npm_config_fund: 'false',
+        npm_config_cache: cache,
+      },
     },
-  });
+  );
   const reports = JSON.parse(stdout);
-  if (!Array.isArray(reports) || reports.length !== 1) throw new Error('npm pack returned an invalid report.');
+  if (!Array.isArray(reports) || reports.length !== 1)
+    throw new Error('npm pack returned an invalid report.');
   return reports[0];
 }
 
@@ -113,24 +119,25 @@ function packRuntimeDependencies(packageJson, destination, cache) {
     const dependency = pending.shift();
     if (localDependencies[dependency]) continue;
     const dependencyRoot = installedPackageRoot(dependency);
-    const dependencyManifest = JSON.parse(readFileSync(join(dependencyRoot, 'package.json'), 'utf8'));
+    const dependencyManifest = JSON.parse(
+      readFileSync(join(dependencyRoot, 'package.json'), 'utf8'),
+    );
     const npm = npmCommand();
-    const reports = JSON.parse(run(npm.command, [
-      ...npm.prefix,
-      'pack',
-      '--json',
-      '--ignore-scripts',
-      '--pack-destination',
-      destination,
-    ], {
-      cwd: dependencyRoot,
-      env: {
-        ...process.env,
-        npm_config_audit: 'false',
-        npm_config_fund: 'false',
-        npm_config_cache: cache,
-      },
-    }));
+    const reports = JSON.parse(
+      run(
+        npm.command,
+        [...npm.prefix, 'pack', '--json', '--ignore-scripts', '--pack-destination', destination],
+        {
+          cwd: dependencyRoot,
+          env: {
+            ...process.env,
+            npm_config_audit: 'false',
+            npm_config_fund: 'false',
+            npm_config_cache: cache,
+          },
+        },
+      ),
+    );
     if (!Array.isArray(reports) || reports.length !== 1) {
       throw new Error(`npm pack returned an invalid dependency report for ${dependency}.`);
     }
@@ -156,7 +163,8 @@ function cleanInstallEnvironment(home, cache) {
     'OPENPLANR_VERIFIER_SOURCE_ROOT',
     'PLANR_PIPELINE_ROOT',
     'PLANR_PIPELINE_VERIFIER_SOURCE_ROOT',
-  ]) delete environment[key];
+  ])
+    delete environment[key];
   return environment;
 }
 
@@ -197,29 +205,44 @@ function verifyReleasePackage() {
       dependencyRoot,
       join(temp, 'npm-cache'),
     );
-    writeFileSync(join(consumerRoot, 'package.json'), `${JSON.stringify({
-      name: 'pipeline-release-proof',
-      private: true,
-      dependencies: localDependencies,
-    }, null, 2)}\n`);
+    writeFileSync(
+      join(consumerRoot, 'package.json'),
+      `${JSON.stringify(
+        {
+          name: 'pipeline-release-proof',
+          private: true,
+          dependencies: localDependencies,
+        },
+        null,
+        2,
+      )}\n`,
+    );
     const installEnvironment = cleanInstallEnvironment(consumerHome, join(temp, 'npm-cache'));
     const npm = npmCommand();
-    run(npm.command, [
-      ...npm.prefix,
-      'install',
-      '--ignore-scripts',
-      '--no-audit',
-      '--no-fund',
-      '--no-save',
-      '--no-package-lock',
-      '--omit=optional',
-      '--offline',
-      firstArchive,
-    ], { cwd: consumerRoot, env: installEnvironment });
+    run(
+      npm.command,
+      [
+        ...npm.prefix,
+        'install',
+        '--ignore-scripts',
+        '--no-audit',
+        '--no-fund',
+        '--no-save',
+        '--no-package-lock',
+        '--omit=optional',
+        '--offline',
+        firstArchive,
+      ],
+      { cwd: consumerRoot, env: installEnvironment },
+    );
     const installedRoot = join(consumerRoot, 'node_modules', packageJson.name);
     const installedStat = lstatSync(installedRoot);
-    if (!installedStat.isDirectory() || installedStat.isSymbolicLink()
-      || realpathSync(installedRoot) !== realpathSync(join(consumerRoot, 'node_modules', packageJson.name))) {
+    if (
+      !installedStat.isDirectory() ||
+      installedStat.isSymbolicLink() ||
+      realpathSync(installedRoot) !==
+        realpathSync(join(consumerRoot, 'node_modules', packageJson.name))
+    ) {
       throw new Error('installed pipeline candidate is not a real consumer-owned directory');
     }
     packageProof.installedExports = runInstalledExportProbes({
@@ -244,13 +267,14 @@ function verifyReleasePackage() {
           key,
           repository && {
             ...repository,
-            label: key === 'pipeline'
-              ? 'planr-pipeline'
-              : key === 'cli'
-                ? 'OpenPlanr'
-                : key === 'web'
-                  ? 'openplanr-web'
-                  : key,
+            label:
+              key === 'pipeline'
+                ? 'planr-pipeline'
+                : key === 'cli'
+                  ? 'OpenPlanr'
+                  : key === 'web'
+                    ? 'openplanr-web'
+                    : key,
           },
         ]),
       );
@@ -292,11 +316,11 @@ function verifyReleasePackage() {
       process.stdout.write(`${JSON.stringify(proof, null, 2)}\n`);
     } else {
       process.stdout.write(
-        `Release package proof: PASS (${packageProof.archive.entryCount} files, `
-        + `${packageProof.exports.length} export targets, `
-        + `${packageProof.installedExports.runtime} runtime exports loaded, `
-        + `${packageProof.documentation.length} documentation links, `
-        + `${packageProof.archive.digest})\n`,
+        `Release package proof: PASS (${packageProof.archive.entryCount} files, ` +
+          `${packageProof.exports.length} export targets, ` +
+          `${packageProof.installedExports.runtime} runtime exports loaded, ` +
+          `${packageProof.documentation.length} documentation links, ` +
+          `${packageProof.archive.digest})\n`,
       );
       if (ecosystemProof) {
         process.stdout.write(
@@ -305,8 +329,8 @@ function verifyReleasePackage() {
       }
       if (ledgerBinding) {
         process.stdout.write(
-          `Release ledger binding: ${ledgerBinding.rows.length} digest-bound row(s), `
-          + `${ledgerBinding.absences.length} unproven input(s)\n`,
+          `Release ledger binding: ${ledgerBinding.rows.length} digest-bound row(s), ` +
+            `${ledgerBinding.absences.length} unproven input(s)\n`,
         );
       }
     }

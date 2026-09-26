@@ -1,4 +1,97 @@
 var OpenPlanrDesignBoardAdapter = (() => {
+  // ../protocol/src/errors.mjs
+  var ARTIFACT_ERROR_CODES = Object.freeze({
+    INPUT_INVALID: "E_ARTIFACT_INPUT_INVALID",
+    FILE_MISSING: "E_ARTIFACT_FILE_MISSING",
+    ROOT_MISSING: "E_ARTIFACT_ROOT_MISSING",
+    PATH_TRAVERSAL: "E_ARTIFACT_PATH_TRAVERSAL",
+    SYMLINK_ESCAPE: "E_ARTIFACT_SYMLINK_ESCAPE",
+    EXTERNAL_ASSET: "E_ARTIFACT_EXTERNAL_ASSET",
+    UNRESOLVED_ASSET: "E_ARTIFACT_UNRESOLVED_ASSET",
+    UNSUPPORTED_MODULE: "E_ARTIFACT_UNSUPPORTED_MODULE",
+    UNSAFE_HTML: "E_ARTIFACT_UNSAFE_HTML",
+    FILE_LIMIT: "E_ARTIFACT_FILE_LIMIT",
+    BYTE_LIMIT: "E_ARTIFACT_BYTE_LIMIT",
+    OUTPUT_LIMIT: "E_ARTIFACT_OUTPUT_LIMIT",
+    REDACTION: "E_ARTIFACT_REDACTION",
+    ENVELOPE_INVALID: "E_ARTIFACT_ENVELOPE_INVALID",
+    SCHEMA_UNSUPPORTED: "E_ARTIFACT_SCHEMA_UNSUPPORTED",
+    LOOPBACK_BIND: "E_ARTIFACT_LOOPBACK_BIND",
+    LOOPBACK_STATE: "E_ARTIFACT_LOOPBACK_STATE",
+    PORT_IN_USE: "E_ARTIFACT_PORT_IN_USE",
+    SESSION_TOKEN: "E_ARTIFACT_SESSION_TOKEN",
+    SESSION_NOT_FOUND: "E_ARTIFACT_SESSION_NOT_FOUND",
+    REQUEST_INVALID: "E_ARTIFACT_REQUEST_INVALID",
+    REQUEST_LIMIT: "E_ARTIFACT_REQUEST_LIMIT",
+    SANDBOX_POLICY: "E_ARTIFACT_SANDBOX_POLICY",
+    BRIDGE_INVALID: "E_ARTIFACT_BRIDGE_INVALID",
+    REVIEW_INVALID: "E_ARTIFACT_REVIEW_INVALID",
+    REVIEW_WRITE: "E_ARTIFACT_REVIEW_WRITE",
+    REVIEW_IMPORT: "E_ARTIFACT_REVIEW_IMPORT",
+    REVIEW_DECODER_REQUIRED: "E_ARTIFACT_REVIEW_DECODER_REQUIRED",
+    REVIEW_EXPORT: "E_ARTIFACT_REVIEW_EXPORT",
+    DIGEST_MISMATCH: "E_ARTIFACT_DIGEST_MISMATCH",
+    STALE_REVIEW: "E_ARTIFACT_STALE_REVIEW",
+    MERGE_CONFLICT: "E_ARTIFACT_MERGE_CONFLICT",
+    CODEC_INVALID: "E_ARTIFACT_CODEC_INVALID",
+    CODEC_UNAVAILABLE: "E_ARTIFACT_CODEC_UNAVAILABLE",
+    CODEC_FAILED: "E_ARTIFACT_CODEC_FAILED",
+    FRAGMENT_INVALID: "E_ARTIFACT_FRAGMENT_INVALID",
+    FRAGMENT_VERSION_UNSUPPORTED: "E_ARTIFACT_FRAGMENT_VERSION_UNSUPPORTED",
+    FRAGMENT_TOO_LARGE: "E_ARTIFACT_FRAGMENT_TOO_LARGE",
+    DECOMPRESSION_LIMIT: "E_ARTIFACT_DECOMPRESSION_LIMIT",
+    BROWSER_UNSUPPORTED: "E_ARTIFACT_BROWSER_UNSUPPORTED",
+    ENCRYPTION_FAILED: "E_ARTIFACT_ENCRYPTION_FAILED",
+    DECRYPTION_FAILED: "E_ARTIFACT_DECRYPTION_FAILED",
+    CONFIRMATION_REQUIRED: "E_ARTIFACT_CONFIRMATION_REQUIRED",
+    SHORT_CONFIRMATION_REQUIRED: "E_ARTIFACT_SHORT_CONFIRMATION_REQUIRED",
+    PASTE_INVALID: "E_ARTIFACT_PASTE_INVALID",
+    PASTE_UNAVAILABLE: "E_ARTIFACT_PASTE_UNAVAILABLE",
+    PASTE_EXPIRED: "E_ARTIFACT_PASTE_EXPIRED",
+    PASTE_LIMIT: "E_ARTIFACT_PASTE_LIMIT",
+    SHARE_NETWORK: "E_ARTIFACT_SHARE_NETWORK",
+    ROOM_CREATE_AMBIGUOUS: "E_ARTIFACT_ROOM_CREATE_AMBIGUOUS",
+    ROOM_INVALID: "E_ARTIFACT_ROOM_INVALID",
+    ROOM_UNAVAILABLE: "E_ARTIFACT_ROOM_UNAVAILABLE",
+    ROOM_EXPIRED: "E_ARTIFACT_ROOM_EXPIRED",
+    ROOM_CLOSED: "E_ARTIFACT_ROOM_CLOSED",
+    ROOM_LEGACY_READ_ONLY: "E_ARTIFACT_ROOM_LEGACY_READ_ONLY",
+    ROOM_FORBIDDEN: "E_ARTIFACT_ROOM_FORBIDDEN",
+    ROOM_EVENT_INVALID: "E_ARTIFACT_ROOM_EVENT_INVALID",
+    ROOM_EVENT_REPLAY: "E_ARTIFACT_ROOM_EVENT_REPLAY"
+  });
+  var PROTOCOL_ERROR_CODES = Object.freeze({
+    ASSET_NOT_FOUND: "E_PROTOCOL_ASSET_NOT_FOUND",
+    DIGEST_MISMATCH: "E_PROTOCOL_DIGEST_MISMATCH",
+    DOCUMENT_INVALID: "E_PROTOCOL_DOCUMENT_INVALID",
+    DOCUMENT_VERSION_UNSUPPORTED: "E_PROTOCOL_DOCUMENT_VERSION_UNSUPPORTED",
+    DUPLICATE_ID: "E_PROTOCOL_DUPLICATE_ID",
+    REFERENCE_INVALID: "E_PROTOCOL_REFERENCE_INVALID",
+    REGISTRY_INVALID: "E_PROTOCOL_REGISTRY_INVALID",
+    SCHEMA_INVALID: "E_PROTOCOL_SCHEMA_INVALID",
+    SCHEMA_UNKNOWN: "E_SCHEMA_UNKNOWN",
+    SCHEMA_VERSION_UNSUPPORTED: "E_SCHEMA_VERSION_UNSUPPORTED",
+    SORT_ORDER_INVALID: "E_PROTOCOL_SORT_ORDER_INVALID"
+  });
+  var PipelineError = class extends Error {
+    constructor(code, message, fix = "", details = void 0) {
+      super(message);
+      this.name = "PipelineError";
+      this.code = code;
+      this.fix = fix;
+      if (details !== void 0) this.details = details;
+    }
+    toJSON() {
+      return {
+        ok: false,
+        code: this.code,
+        problem: this.message,
+        ...this.fix ? { fix: this.fix } : {},
+        ...this.details === void 0 ? {} : { details: this.details }
+      };
+    }
+  };
+
   // ../../node_modules/pako/dist/pako.esm.mjs
   var Z_FIXED$1 = 4;
   var Z_BINARY = 0;
@@ -4173,99 +4266,6 @@ var OpenPlanrDesignBoardAdapter = (() => {
   var { Inflate, inflate, inflateRaw, ungzip } = inflate_1$1;
   var Deflate_1 = Deflate;
 
-  // ../protocol/src/errors.mjs
-  var ARTIFACT_ERROR_CODES = Object.freeze({
-    INPUT_INVALID: "E_ARTIFACT_INPUT_INVALID",
-    FILE_MISSING: "E_ARTIFACT_FILE_MISSING",
-    ROOT_MISSING: "E_ARTIFACT_ROOT_MISSING",
-    PATH_TRAVERSAL: "E_ARTIFACT_PATH_TRAVERSAL",
-    SYMLINK_ESCAPE: "E_ARTIFACT_SYMLINK_ESCAPE",
-    EXTERNAL_ASSET: "E_ARTIFACT_EXTERNAL_ASSET",
-    UNRESOLVED_ASSET: "E_ARTIFACT_UNRESOLVED_ASSET",
-    UNSUPPORTED_MODULE: "E_ARTIFACT_UNSUPPORTED_MODULE",
-    UNSAFE_HTML: "E_ARTIFACT_UNSAFE_HTML",
-    FILE_LIMIT: "E_ARTIFACT_FILE_LIMIT",
-    BYTE_LIMIT: "E_ARTIFACT_BYTE_LIMIT",
-    OUTPUT_LIMIT: "E_ARTIFACT_OUTPUT_LIMIT",
-    REDACTION: "E_ARTIFACT_REDACTION",
-    ENVELOPE_INVALID: "E_ARTIFACT_ENVELOPE_INVALID",
-    SCHEMA_UNSUPPORTED: "E_ARTIFACT_SCHEMA_UNSUPPORTED",
-    LOOPBACK_BIND: "E_ARTIFACT_LOOPBACK_BIND",
-    LOOPBACK_STATE: "E_ARTIFACT_LOOPBACK_STATE",
-    PORT_IN_USE: "E_ARTIFACT_PORT_IN_USE",
-    SESSION_TOKEN: "E_ARTIFACT_SESSION_TOKEN",
-    SESSION_NOT_FOUND: "E_ARTIFACT_SESSION_NOT_FOUND",
-    REQUEST_INVALID: "E_ARTIFACT_REQUEST_INVALID",
-    REQUEST_LIMIT: "E_ARTIFACT_REQUEST_LIMIT",
-    SANDBOX_POLICY: "E_ARTIFACT_SANDBOX_POLICY",
-    BRIDGE_INVALID: "E_ARTIFACT_BRIDGE_INVALID",
-    REVIEW_INVALID: "E_ARTIFACT_REVIEW_INVALID",
-    REVIEW_WRITE: "E_ARTIFACT_REVIEW_WRITE",
-    REVIEW_IMPORT: "E_ARTIFACT_REVIEW_IMPORT",
-    REVIEW_DECODER_REQUIRED: "E_ARTIFACT_REVIEW_DECODER_REQUIRED",
-    REVIEW_EXPORT: "E_ARTIFACT_REVIEW_EXPORT",
-    DIGEST_MISMATCH: "E_ARTIFACT_DIGEST_MISMATCH",
-    STALE_REVIEW: "E_ARTIFACT_STALE_REVIEW",
-    MERGE_CONFLICT: "E_ARTIFACT_MERGE_CONFLICT",
-    CODEC_INVALID: "E_ARTIFACT_CODEC_INVALID",
-    CODEC_UNAVAILABLE: "E_ARTIFACT_CODEC_UNAVAILABLE",
-    CODEC_FAILED: "E_ARTIFACT_CODEC_FAILED",
-    FRAGMENT_INVALID: "E_ARTIFACT_FRAGMENT_INVALID",
-    FRAGMENT_VERSION_UNSUPPORTED: "E_ARTIFACT_FRAGMENT_VERSION_UNSUPPORTED",
-    FRAGMENT_TOO_LARGE: "E_ARTIFACT_FRAGMENT_TOO_LARGE",
-    DECOMPRESSION_LIMIT: "E_ARTIFACT_DECOMPRESSION_LIMIT",
-    BROWSER_UNSUPPORTED: "E_ARTIFACT_BROWSER_UNSUPPORTED",
-    ENCRYPTION_FAILED: "E_ARTIFACT_ENCRYPTION_FAILED",
-    DECRYPTION_FAILED: "E_ARTIFACT_DECRYPTION_FAILED",
-    CONFIRMATION_REQUIRED: "E_ARTIFACT_CONFIRMATION_REQUIRED",
-    SHORT_CONFIRMATION_REQUIRED: "E_ARTIFACT_SHORT_CONFIRMATION_REQUIRED",
-    PASTE_INVALID: "E_ARTIFACT_PASTE_INVALID",
-    PASTE_UNAVAILABLE: "E_ARTIFACT_PASTE_UNAVAILABLE",
-    PASTE_EXPIRED: "E_ARTIFACT_PASTE_EXPIRED",
-    PASTE_LIMIT: "E_ARTIFACT_PASTE_LIMIT",
-    SHARE_NETWORK: "E_ARTIFACT_SHARE_NETWORK",
-    ROOM_CREATE_AMBIGUOUS: "E_ARTIFACT_ROOM_CREATE_AMBIGUOUS",
-    ROOM_INVALID: "E_ARTIFACT_ROOM_INVALID",
-    ROOM_UNAVAILABLE: "E_ARTIFACT_ROOM_UNAVAILABLE",
-    ROOM_EXPIRED: "E_ARTIFACT_ROOM_EXPIRED",
-    ROOM_CLOSED: "E_ARTIFACT_ROOM_CLOSED",
-    ROOM_LEGACY_READ_ONLY: "E_ARTIFACT_ROOM_LEGACY_READ_ONLY",
-    ROOM_FORBIDDEN: "E_ARTIFACT_ROOM_FORBIDDEN",
-    ROOM_EVENT_INVALID: "E_ARTIFACT_ROOM_EVENT_INVALID",
-    ROOM_EVENT_REPLAY: "E_ARTIFACT_ROOM_EVENT_REPLAY"
-  });
-  var PROTOCOL_ERROR_CODES = Object.freeze({
-    ASSET_NOT_FOUND: "E_PROTOCOL_ASSET_NOT_FOUND",
-    DIGEST_MISMATCH: "E_PROTOCOL_DIGEST_MISMATCH",
-    DOCUMENT_INVALID: "E_PROTOCOL_DOCUMENT_INVALID",
-    DOCUMENT_VERSION_UNSUPPORTED: "E_PROTOCOL_DOCUMENT_VERSION_UNSUPPORTED",
-    DUPLICATE_ID: "E_PROTOCOL_DUPLICATE_ID",
-    REFERENCE_INVALID: "E_PROTOCOL_REFERENCE_INVALID",
-    REGISTRY_INVALID: "E_PROTOCOL_REGISTRY_INVALID",
-    SCHEMA_INVALID: "E_PROTOCOL_SCHEMA_INVALID",
-    SCHEMA_UNKNOWN: "E_SCHEMA_UNKNOWN",
-    SCHEMA_VERSION_UNSUPPORTED: "E_SCHEMA_VERSION_UNSUPPORTED",
-    SORT_ORDER_INVALID: "E_PROTOCOL_SORT_ORDER_INVALID"
-  });
-  var PipelineError = class extends Error {
-    constructor(code, message, fix = "", details = void 0) {
-      super(message);
-      this.name = "PipelineError";
-      this.code = code;
-      this.fix = fix;
-      if (details !== void 0) this.details = details;
-    }
-    toJSON() {
-      return {
-        ok: false,
-        code: this.code,
-        problem: this.message,
-        ...this.fix ? { fix: this.fix } : {},
-        ...this.details === void 0 ? {} : { details: this.details }
-      };
-    }
-  };
-
   // lib/artifact/codec.mjs
   var ARTIFACT_FRAGMENT_VERSION = "v1";
   var ARTIFACT_FRAGMENT_PREFIX = `${ARTIFACT_FRAGMENT_VERSION}.`;
@@ -4286,7 +4286,8 @@ var OpenPlanrDesignBoardAdapter = (() => {
   function byteArray(value, label = "payload") {
     if (value instanceof Uint8Array) return value;
     if (value instanceof ArrayBuffer) return new Uint8Array(value);
-    if (ArrayBuffer.isView(value)) return new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
+    if (ArrayBuffer.isView(value))
+      return new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
     throw codecError(ARTIFACT_ERROR_CODES.CODEC_INVALID, `Artifact ${label} must be binary bytes.`);
   }
   function textEncoder() {
@@ -4301,14 +4302,16 @@ var OpenPlanrDesignBoardAdapter = (() => {
   }
   function canonicalValue(value, ancestors) {
     if (Array.isArray(value)) {
-      if (ancestors.has(value)) throw codecError(ARTIFACT_ERROR_CODES.CODEC_INVALID, "Artifact payload is cyclic.");
+      if (ancestors.has(value))
+        throw codecError(ARTIFACT_ERROR_CODES.CODEC_INVALID, "Artifact payload is cyclic.");
       ancestors.add(value);
       const output2 = value.map((item) => canonicalValue(item, ancestors));
       ancestors.delete(value);
       return output2;
     }
     if (!value || typeof value !== "object") return value;
-    if (ancestors.has(value)) throw codecError(ARTIFACT_ERROR_CODES.CODEC_INVALID, "Artifact payload is cyclic.");
+    if (ancestors.has(value))
+      throw codecError(ARTIFACT_ERROR_CODES.CODEC_INVALID, "Artifact payload is cyclic.");
     ancestors.add(value);
     const output = {};
     for (const key of Object.keys(value).sort()) {
@@ -4322,17 +4325,26 @@ var OpenPlanrDesignBoardAdapter = (() => {
   }
   function canonicalArtifactJson(value) {
     if (!value || typeof value !== "object" || Array.isArray(value)) {
-      throw codecError(ARTIFACT_ERROR_CODES.CODEC_INVALID, "Artifact payload must be a non-array JSON object.");
+      throw codecError(
+        ARTIFACT_ERROR_CODES.CODEC_INVALID,
+        "Artifact payload must be a non-array JSON object."
+      );
     }
     let serialized;
     try {
       serialized = JSON.stringify(canonicalValue(value, /* @__PURE__ */ new Set()));
     } catch (error) {
       if (error instanceof PipelineError) throw error;
-      throw codecError(ARTIFACT_ERROR_CODES.CODEC_INVALID, "Artifact payload cannot be serialized as canonical JSON.");
+      throw codecError(
+        ARTIFACT_ERROR_CODES.CODEC_INVALID,
+        "Artifact payload cannot be serialized as canonical JSON."
+      );
     }
     if (typeof serialized !== "string") {
-      throw codecError(ARTIFACT_ERROR_CODES.CODEC_INVALID, "Artifact payload must serialize to a JSON value.");
+      throw codecError(
+        ARTIFACT_ERROR_CODES.CODEC_INVALID,
+        "Artifact payload must serialize to a JSON value."
+      );
     }
     return serialized;
   }
@@ -4352,17 +4364,20 @@ var OpenPlanrDesignBoardAdapter = (() => {
     }
     return output;
   }
-  function base64UrlToBytes(value, {
-    label = "base64url value",
-    maxBytes = ARTIFACT_COMPRESSED_LIMIT
-  } = {}) {
+  function base64UrlToBytes(value, { label = "base64url value", maxBytes = ARTIFACT_COMPRESSED_LIMIT } = {}) {
     if (typeof value !== "string" || value.length === 0 || !BASE64URL_RE.test(value) || value.includes("=") || value.length % 4 === 1) {
-      throw codecError(ARTIFACT_ERROR_CODES.FRAGMENT_INVALID, `Artifact ${label} is not strict unpadded base64url.`);
+      throw codecError(
+        ARTIFACT_ERROR_CODES.FRAGMENT_INVALID,
+        `Artifact ${label} is not strict unpadded base64url.`
+      );
     }
     const remainder = value.length % 4;
     const finalValue = BASE64URL_ALPHABET.indexOf(value.at(-1));
     if (remainder === 2 && (finalValue & 15) !== 0 || remainder === 3 && (finalValue & 3) !== 0) {
-      throw codecError(ARTIFACT_ERROR_CODES.FRAGMENT_INVALID, `Artifact ${label} has non-canonical trailing bits.`);
+      throw codecError(
+        ARTIFACT_ERROR_CODES.FRAGMENT_INVALID,
+        `Artifact ${label} has non-canonical trailing bits.`
+      );
     }
     const length = Math.floor(value.length * 6 / 8);
     if (!Number.isInteger(maxBytes) || maxBytes < 0 || length > maxBytes) {
@@ -4440,7 +4455,10 @@ var OpenPlanrDesignBoardAdapter = (() => {
   }
   function encryptedLimit(value) {
     if (!Number.isInteger(value) || value < ARTIFACT_ENCRYPTION_TAG_BYTES) {
-      throw cryptoError(ARTIFACT_ERROR_CODES.PASTE_LIMIT, "Encrypted artifact byte limit is invalid.");
+      throw cryptoError(
+        ARTIFACT_ERROR_CODES.PASTE_LIMIT,
+        "Encrypted artifact byte limit is invalid."
+      );
     }
     return Math.min(value, ARTIFACT_COMPRESSED_LIMIT);
   }
@@ -4458,13 +4476,18 @@ var OpenPlanrDesignBoardAdapter = (() => {
     if (value instanceof Uint8Array) return new Uint8Array(value);
     if (value instanceof ArrayBuffer) return new Uint8Array(value.slice(0));
     if (ArrayBuffer.isView(value)) {
-      return new Uint8Array(value.buffer.slice(value.byteOffset, value.byteOffset + value.byteLength));
+      return new Uint8Array(
+        value.buffer.slice(value.byteOffset, value.byteOffset + value.byteLength)
+      );
     }
     throw new TypeError("binary value required");
   }
   function utf8(value) {
     if (typeof globalThis.TextEncoder !== "function") {
-      throw cryptoError(ARTIFACT_ERROR_CODES.BROWSER_UNSUPPORTED, "This runtime does not provide UTF-8 support.");
+      throw cryptoError(
+        ARTIFACT_ERROR_CODES.BROWSER_UNSUPPORTED,
+        "This runtime does not provide UTF-8 support."
+      );
     }
     return new globalThis.TextEncoder().encode(value);
   }
@@ -4505,11 +4528,24 @@ var OpenPlanrDesignBoardAdapter = (() => {
     let ivBytes;
     try {
       plaintext = bytes(value);
-      keyBytes = key === void 0 ? generateArtifactEncryptionKey({ cryptoImpl: provider }) : decodeSized(key, ARTIFACT_ENCRYPTION_KEY_BYTES, "encryption key", ARTIFACT_ERROR_CODES.ENCRYPTION_FAILED);
-      ivBytes = iv === void 0 ? generateArtifactEncryptionIv({ cryptoImpl: provider }) : decodeSized(iv, ARTIFACT_ENCRYPTION_IV_BYTES, "encryption IV", ARTIFACT_ERROR_CODES.ENCRYPTION_FAILED);
+      keyBytes = key === void 0 ? generateArtifactEncryptionKey({ cryptoImpl: provider }) : decodeSized(
+        key,
+        ARTIFACT_ENCRYPTION_KEY_BYTES,
+        "encryption key",
+        ARTIFACT_ERROR_CODES.ENCRYPTION_FAILED
+      );
+      ivBytes = iv === void 0 ? generateArtifactEncryptionIv({ cryptoImpl: provider }) : decodeSized(
+        iv,
+        ARTIFACT_ENCRYPTION_IV_BYTES,
+        "encryption IV",
+        ARTIFACT_ERROR_CODES.ENCRYPTION_FAILED
+      );
     } catch (error) {
       if (error instanceof PipelineError) throw error;
-      throw cryptoError(ARTIFACT_ERROR_CODES.ENCRYPTION_FAILED, "Artifact payload encryption failed.");
+      throw cryptoError(
+        ARTIFACT_ERROR_CODES.ENCRYPTION_FAILED,
+        "Artifact payload encryption failed."
+      );
     }
     if (plaintext.byteLength < 1 || plaintext.byteLength + ARTIFACT_ENCRYPTION_TAG_BYTES > encryptedByteLimit) {
       throw cryptoError(
@@ -4518,16 +4554,25 @@ var OpenPlanrDesignBoardAdapter = (() => {
       );
     }
     try {
-      const imported = await provider.subtle.importKey("raw", keyBytes, { name: "AES-GCM" }, false, ["encrypt"]);
-      const encrypted = await provider.subtle.encrypt({
-        name: "AES-GCM",
-        iv: ivBytes,
-        additionalData: utf8(ARTIFACT_CRYPTO_AAD),
-        tagLength: 128
-      }, imported, plaintext);
+      const imported = await provider.subtle.importKey("raw", keyBytes, { name: "AES-GCM" }, false, [
+        "encrypt"
+      ]);
+      const encrypted = await provider.subtle.encrypt(
+        {
+          name: "AES-GCM",
+          iv: ivBytes,
+          additionalData: utf8(ARTIFACT_CRYPTO_AAD),
+          tagLength: 128
+        },
+        imported,
+        plaintext
+      );
       const ciphertextBytes2 = new Uint8Array(encrypted);
       if (ciphertextBytes2.byteLength > encryptedByteLimit) {
-        throw cryptoError(ARTIFACT_ERROR_CODES.PASTE_LIMIT, "Encrypted artifact payload exceeds its byte limit.");
+        throw cryptoError(
+          ARTIFACT_ERROR_CODES.PASTE_LIMIT,
+          "Encrypted artifact payload exceeds its byte limit."
+        );
       }
       return Object.freeze({
         version: "v1",
@@ -4539,7 +4584,10 @@ var OpenPlanrDesignBoardAdapter = (() => {
       });
     } catch (error) {
       if (error instanceof PipelineError) throw error;
-      throw cryptoError(ARTIFACT_ERROR_CODES.ENCRYPTION_FAILED, "Artifact payload encryption failed.");
+      throw cryptoError(
+        ARTIFACT_ERROR_CODES.ENCRYPTION_FAILED,
+        "Artifact payload encryption failed."
+      );
     }
   }
 
@@ -4564,7 +4612,10 @@ var OpenPlanrDesignBoardAdapter = (() => {
       throw shareError(ARTIFACT_ERROR_CODES.PASTE_INVALID, "Artifact share service URL is invalid.");
     }
     if (url.username || url.password || url.search || url.hash || url.pathname !== "/" && url.pathname !== "" || url.protocol !== "https:" && !(url.protocol === "http:" && loopback(url.hostname))) {
-      throw shareError(ARTIFACT_ERROR_CODES.PASTE_INVALID, "Artifact share service URL is not a secure origin.");
+      throw shareError(
+        ARTIFACT_ERROR_CODES.PASTE_INVALID,
+        "Artifact share service URL is not a secure origin."
+      );
     }
     return url;
   }
@@ -4591,13 +4642,19 @@ var OpenPlanrDesignBoardAdapter = (() => {
     }
     const decoded = ciphertextBytes(value);
     if (decoded.byteLength < 16 || decoded.byteLength > ARTIFACT_COMPRESSED_LIMIT || declaredSize !== void 0 && declaredSize !== decoded.byteLength) {
-      throw shareError(ARTIFACT_ERROR_CODES.PASTE_INVALID, "Artifact paste ciphertext size is invalid.");
+      throw shareError(
+        ARTIFACT_ERROR_CODES.PASTE_INVALID,
+        "Artifact paste ciphertext size is invalid."
+      );
     }
     return decoded.byteLength;
   }
   function validateCreateRequest(value) {
     if (!value || typeof value !== "object" || Array.isArray(value) || value.schemaVersion !== "1.0.0" || value.operation !== "create" || !ARTIFACT_SHARE_TTLS.includes(value.ttl)) {
-      throw shareError(ARTIFACT_ERROR_CODES.PASTE_INVALID, "Artifact paste creation request is invalid.");
+      throw shareError(
+        ARTIFACT_ERROR_CODES.PASTE_INVALID,
+        "Artifact paste creation request is invalid."
+      );
     }
     validateIv(value.iv);
     validateCiphertext(value.ciphertext);
@@ -4611,7 +4668,10 @@ var OpenPlanrDesignBoardAdapter = (() => {
   }
   function validateCreated(value) {
     if (!value || typeof value !== "object" || Array.isArray(value) || value.schemaVersion !== "1.0.0" || value.operation !== "created" || !ID_RE.test(value.id ?? "") || !TOKEN_RE.test(value.deletionToken ?? "") || typeof value.expiresAt !== "string" || !Number.isFinite(Date.parse(value.expiresAt))) {
-      throw shareError(ARTIFACT_ERROR_CODES.PASTE_INVALID, "Artifact paste service returned an invalid creation response.");
+      throw shareError(
+        ARTIFACT_ERROR_CODES.PASTE_INVALID,
+        "Artifact paste service returned an invalid creation response."
+      );
     }
     return Object.freeze({
       schemaVersion: "1.0.0",
@@ -4623,7 +4683,10 @@ var OpenPlanrDesignBoardAdapter = (() => {
   }
   function validateRead(value) {
     if (!value || typeof value !== "object" || Array.isArray(value) || value.schemaVersion !== "1.0.0" || value.operation !== "read" || typeof value.expiresAt !== "string" || !Number.isFinite(Date.parse(value.expiresAt)) || !Number.isInteger(value.size) || value.size < 16 || value.size > ARTIFACT_COMPRESSED_LIMIT) {
-      throw shareError(ARTIFACT_ERROR_CODES.PASTE_INVALID, "Artifact paste service returned an invalid read response.");
+      throw shareError(
+        ARTIFACT_ERROR_CODES.PASTE_INVALID,
+        "Artifact paste service returned an invalid read response."
+      );
     }
     validateIv(value.iv);
     validateCiphertext(value.ciphertext, value.size);
@@ -4646,7 +4709,10 @@ var OpenPlanrDesignBoardAdapter = (() => {
     try {
       return await response.json();
     } catch {
-      throw shareError(ARTIFACT_ERROR_CODES.PASTE_INVALID, "Artifact paste service returned malformed JSON.");
+      throw shareError(
+        ARTIFACT_ERROR_CODES.PASTE_INVALID,
+        "Artifact paste service returned malformed JSON."
+      );
     }
   }
   function createPasteClient({
@@ -4657,7 +4723,10 @@ var OpenPlanrDesignBoardAdapter = (() => {
   } = {}) {
     const base = normalizeBaseUrl(baseUrl);
     if (typeof fetchImpl !== "function") {
-      throw shareError(ARTIFACT_ERROR_CODES.BROWSER_UNSUPPORTED, "This runtime does not provide fetch support.");
+      throw shareError(
+        ARTIFACT_ERROR_CODES.BROWSER_UNSUPPORTED,
+        "This runtime does not provide fetch support."
+      );
     }
     const request = async (path, options, meta) => {
       try {
@@ -4683,22 +4752,33 @@ var OpenPlanrDesignBoardAdapter = (() => {
       async create(value) {
         const body = validateCreateRequest(value);
         const size = validateCiphertext(body.ciphertext);
-        const response = await request("/api/v1/pastes", {
-          method: "POST",
-          headers: Object.freeze({ "content-type": "application/json" }),
-          body: JSON.stringify(body)
-        }, { operation: "create", ciphertextBytes: size, ttl: body.ttl });
+        const response = await request(
+          "/api/v1/pastes",
+          {
+            method: "POST",
+            headers: Object.freeze({ "content-type": "application/json" }),
+            body: JSON.stringify(body)
+          },
+          { operation: "create", ciphertextBytes: size, ttl: body.ttl }
+        );
         if (!response?.ok) {
-          throw shareError(ARTIFACT_ERROR_CODES.PASTE_UNAVAILABLE, "Artifact paste could not be created.");
+          throw shareError(
+            ARTIFACT_ERROR_CODES.PASTE_UNAVAILABLE,
+            "Artifact paste could not be created."
+          );
         }
         return validateCreated(await responseJson(response));
       },
       async get(id) {
         const pasteId = safeId(id);
-        const response = await request(`/api/v1/pastes/${encodeURIComponent(pasteId)}`, {
-          method: "GET",
-          headers: Object.freeze({ accept: "application/json" })
-        }, { operation: "read" });
+        const response = await request(
+          `/api/v1/pastes/${encodeURIComponent(pasteId)}`,
+          {
+            method: "GET",
+            headers: Object.freeze({ accept: "application/json" })
+          },
+          { operation: "read" }
+        );
         if (response?.status === 410) {
           throw shareError(ARTIFACT_ERROR_CODES.PASTE_EXPIRED, "Artifact paste has expired.");
         }
@@ -4724,14 +4804,24 @@ var OpenPlanrDesignBoardAdapter = (() => {
       async delete(id, deletionToken) {
         const pasteId = safeId(id);
         if (typeof deletionToken !== "string" || !TOKEN_RE.test(deletionToken)) {
-          throw shareError(ARTIFACT_ERROR_CODES.PASTE_INVALID, "Artifact paste deletion token is invalid.");
+          throw shareError(
+            ARTIFACT_ERROR_CODES.PASTE_INVALID,
+            "Artifact paste deletion token is invalid."
+          );
         }
-        const response = await request(`/api/v1/pastes/${encodeURIComponent(pasteId)}`, {
-          method: "DELETE",
-          headers: Object.freeze({ authorization: `Bearer ${deletionToken}` })
-        }, { operation: "delete" });
+        const response = await request(
+          `/api/v1/pastes/${encodeURIComponent(pasteId)}`,
+          {
+            method: "DELETE",
+            headers: Object.freeze({ authorization: `Bearer ${deletionToken}` })
+          },
+          { operation: "delete" }
+        );
         if (!response?.ok) {
-          throw shareError(ARTIFACT_ERROR_CODES.PASTE_UNAVAILABLE, "Artifact paste could not be deleted.");
+          throw shareError(
+            ARTIFACT_ERROR_CODES.PASTE_UNAVAILABLE,
+            "Artifact paste could not be deleted."
+          );
         }
         return Object.freeze({ ok: true });
       }
@@ -4746,7 +4836,10 @@ var OpenPlanrDesignBoardAdapter = (() => {
   function prepareReviewLink(value, { encodeImpl = encodeArtifactFragmentDetails, ...codecOptions } = {}) {
     const encoded = encodeImpl(value, codecOptions);
     if (!encoded || typeof encoded.fragment !== "string" || !(encoded.compressed instanceof Uint8Array) || encoded.fragmentLength !== encoded.fragment.length) {
-      throw shareError(ARTIFACT_ERROR_CODES.CODEC_INVALID, "Artifact fragment encoder returned an invalid result.");
+      throw shareError(
+        ARTIFACT_ERROR_CODES.CODEC_INVALID,
+        "Artifact fragment encoder returned an invalid result."
+      );
     }
     return Object.freeze({
       fragment: encoded.fragment,
@@ -4783,7 +4876,10 @@ var OpenPlanrDesignBoardAdapter = (() => {
     ...codecOptions
   } = {}) {
     if (!["auto", "short"].includes(transport)) {
-      throw shareError(ARTIFACT_ERROR_CODES.PASTE_INVALID, "Artifact share transport must be auto or short.");
+      throw shareError(
+        ARTIFACT_ERROR_CODES.PASTE_INVALID,
+        "Artifact share transport must be auto or short."
+      );
     }
     const base = normalizeBaseUrl(baseUrl);
     const prepared = prepareReviewLink(value, { encodeImpl, ...codecOptions });
@@ -4809,17 +4905,24 @@ var OpenPlanrDesignBoardAdapter = (() => {
       });
     }
     if (!ARTIFACT_SHARE_TTLS.includes(ttl)) {
-      throw shareError(ARTIFACT_ERROR_CODES.PASTE_INVALID, "Artifact paste TTL must be 1d, 7d, or 30d.");
+      throw shareError(
+        ARTIFACT_ERROR_CODES.PASTE_INVALID,
+        "Artifact paste TTL must be 1d, 7d, or 30d."
+      );
     }
     let consent = Boolean(confirmed || yes || shortConsent);
     if (!consent && typeof confirmShort === "function") {
-      consent = Boolean(await confirmShort(Object.freeze({
-        fragmentLength: prepared.fragmentLength,
-        compressedBytes: prepared.compressedBytes,
-        ciphertextBytes: prepared.ciphertextBytes,
-        ttl,
-        forced: prepared.fragmentLength > ARTIFACT_FRAGMENT_LIMIT
-      })));
+      consent = Boolean(
+        await confirmShort(
+          Object.freeze({
+            fragmentLength: prepared.fragmentLength,
+            compressedBytes: prepared.compressedBytes,
+            ciphertextBytes: prepared.ciphertextBytes,
+            ttl,
+            forced: prepared.fragmentLength > ARTIFACT_FRAGMENT_LIMIT
+          })
+        )
+      );
     }
     if (!consent) {
       throw shareError(
@@ -4843,7 +4946,10 @@ var OpenPlanrDesignBoardAdapter = (() => {
     const url = new globalThis.URL(`/p/${encodeURIComponent(created.id)}`, base);
     url.hash = `k=${encrypted.keyFragment}`;
     if (url.toString().includes(created.deletionToken)) {
-      throw shareError(ARTIFACT_ERROR_CODES.PASTE_INVALID, "Artifact deletion token isolation failed.");
+      throw shareError(
+        ARTIFACT_ERROR_CODES.PASTE_INVALID,
+        "Artifact deletion token isolation failed."
+      );
     }
     return Object.freeze({
       ok: true,
@@ -5046,7 +5152,8 @@ var OpenPlanrDesignBoardAdapter = (() => {
     return screen === void 0 ? { planrId } : { planrId, screen };
   }
   function normalizeReply(reply, label = "reply") {
-    if (!reply || typeof reply !== "object" || Array.isArray(reply)) invalid(`${label} must be an object.`);
+    if (!reply || typeof reply !== "object" || Array.isArray(reply))
+      invalid(`${label} must be an object.`);
     return {
       id: boundedString(reply.id, `${label}.id`, {
         min: 1,
@@ -5071,7 +5178,9 @@ var OpenPlanrDesignBoardAdapter = (() => {
     if (!Array.isArray(pin.replies) || pin.replies.length > ARTIFACT_REVIEW_LIMITS.replies) {
       invalid(`${label}.replies must contain no more than ${ARTIFACT_REVIEW_LIMITS.replies} items.`);
     }
-    const replies = pin.replies.map((reply, index) => normalizeReply(reply, `${label}.replies[${index}]`));
+    const replies = pin.replies.map(
+      (reply, index) => normalizeReply(reply, `${label}.replies[${index}]`)
+    );
     const replyIds = new Set(replies.map(({ id }) => id));
     if (replyIds.size !== replies.length) invalid(`${label}.replies must have unique ids.`);
     const normalized = {
@@ -5137,8 +5246,10 @@ var OpenPlanrDesignBoardAdapter = (() => {
       }),
       pins: pins.sort(compareTimestampThenId)
     };
-    if (review.createdAt !== void 0) normalized.createdAt = isoTimestamp(review.createdAt, "review.createdAt");
-    if (review.updatedAt !== void 0) normalized.updatedAt = isoTimestamp(review.updatedAt, "review.updatedAt");
+    if (review.createdAt !== void 0)
+      normalized.createdAt = isoTimestamp(review.createdAt, "review.createdAt");
+    if (review.updatedAt !== void 0)
+      normalized.updatedAt = isoTimestamp(review.updatedAt, "review.updatedAt");
     return deepFreezeArtifactReview(normalized);
   }
   function createArtifactReview({ reviewId, reviewOf, createId = defaultCreateId } = {}) {
@@ -5171,7 +5282,10 @@ var OpenPlanrDesignBoardAdapter = (() => {
     });
     const pin = review.pins.find(({ id }) => id === normalizedId);
     if (!pin) {
-      throw new ArtifactReviewStateError("E_ARTIFACT_REVIEW_PIN_NOT_FOUND", `Unknown feedback pin: ${normalizedId}`);
+      throw new ArtifactReviewStateError(
+        "E_ARTIFACT_REVIEW_PIN_NOT_FOUND",
+        `Unknown feedback pin: ${normalizedId}`
+      );
     }
     return pin;
   }
@@ -5180,12 +5294,10 @@ var OpenPlanrDesignBoardAdapter = (() => {
     if (review.updatedAt !== void 0) next.updatedAt = timestamp;
     return next;
   }
-  function reduceArtifactReview(review, action, {
-    createId = defaultCreateId,
-    now = defaultNow
-  } = {}) {
+  function reduceArtifactReview(review, action, { createId = defaultCreateId, now = defaultNow } = {}) {
     const current = normalizeArtifactReview(review);
-    if (!action || typeof action !== "object" || Array.isArray(action)) invalid("Review action must be an object.");
+    if (!action || typeof action !== "object" || Array.isArray(action))
+      invalid("Review action must be an object.");
     const timestamp = dependencyTimestamp(now);
     let next;
     switch (action.type) {
@@ -5201,7 +5313,10 @@ var OpenPlanrDesignBoardAdapter = (() => {
           trim: true
         });
         if (current.pins.some(({ id }) => id === pinId)) {
-          throw new ArtifactReviewStateError("E_ARTIFACT_REVIEW_ID_COLLISION", `Duplicate pin id: ${pinId}`);
+          throw new ArtifactReviewStateError(
+            "E_ARTIFACT_REVIEW_ID_COLLISION",
+            `Duplicate pin id: ${pinId}`
+          );
         }
         const pin = normalizePin({
           ...pinInput,
@@ -5212,10 +5327,14 @@ var OpenPlanrDesignBoardAdapter = (() => {
           createdAt: pinInput.createdAt ?? timestamp,
           updatedAt: pinInput.updatedAt ?? timestamp
         });
-        next = preserveOptionalReviewTimestamps(current, {
-          ...current,
-          pins: [...current.pins, pin]
-        }, timestamp);
+        next = preserveOptionalReviewTimestamps(
+          current,
+          {
+            ...current,
+            pins: [...current.pins, pin]
+          },
+          timestamp
+        );
         break;
       }
       case "add-reply": {
@@ -5229,7 +5348,10 @@ var OpenPlanrDesignBoardAdapter = (() => {
           trim: true
         });
         if (pin.replies.some(({ id }) => id === replyId)) {
-          throw new ArtifactReviewStateError("E_ARTIFACT_REVIEW_ID_COLLISION", `Duplicate reply id: ${replyId}`);
+          throw new ArtifactReviewStateError(
+            "E_ARTIFACT_REVIEW_ID_COLLISION",
+            `Duplicate reply id: ${replyId}`
+          );
         }
         const reply = normalizeReply({
           id: replyId,
@@ -5242,10 +5364,14 @@ var OpenPlanrDesignBoardAdapter = (() => {
           replies: [...pin.replies, reply],
           updatedAt: timestamp
         });
-        next = preserveOptionalReviewTimestamps(current, {
-          ...current,
-          pins: replacePin(current, updatedPin)
-        }, timestamp);
+        next = preserveOptionalReviewTimestamps(
+          current,
+          {
+            ...current,
+            pins: replacePin(current, updatedPin)
+          },
+          timestamp
+        );
         break;
       }
       case "set-status": {
@@ -5255,23 +5381,35 @@ var OpenPlanrDesignBoardAdapter = (() => {
           status: enumValue(action.status, ARTIFACT_REVIEW_STATUSES, "status"),
           updatedAt: timestamp
         });
-        next = preserveOptionalReviewTimestamps(current, {
-          ...current,
-          pins: replacePin(current, updatedPin)
-        }, timestamp);
+        next = preserveOptionalReviewTimestamps(
+          current,
+          {
+            ...current,
+            pins: replacePin(current, updatedPin)
+          },
+          timestamp
+        );
         break;
       }
       case "set-overall":
-        next = preserveOptionalReviewTimestamps(current, {
-          ...current,
-          overall: boundedString(action.overall, "overall", { max: ARTIFACT_REVIEW_LIMITS.text })
-        }, timestamp);
+        next = preserveOptionalReviewTimestamps(
+          current,
+          {
+            ...current,
+            overall: boundedString(action.overall, "overall", { max: ARTIFACT_REVIEW_LIMITS.text })
+          },
+          timestamp
+        );
         break;
       case "set-decision":
-        next = preserveOptionalReviewTimestamps(current, {
-          ...current,
-          decision: enumValue(action.decision, ARTIFACT_REVIEW_DECISIONS, "decision")
-        }, timestamp);
+        next = preserveOptionalReviewTimestamps(
+          current,
+          {
+            ...current,
+            decision: enumValue(action.decision, ARTIFACT_REVIEW_DECISIONS, "decision")
+          },
+          timestamp
+        );
         break;
       default:
         throw new ArtifactReviewStateError(
@@ -5302,7 +5440,10 @@ var OpenPlanrDesignBoardAdapter = (() => {
     const listeners = /* @__PURE__ */ new Set();
     const assertAlive = () => {
       if (destroyed) {
-        throw new ArtifactReviewStateError("E_ARTIFACT_REVIEW_DESTROYED", "Artifact review controller is destroyed.");
+        throw new ArtifactReviewStateError(
+          "E_ARTIFACT_REVIEW_DESTROYED",
+          "Artifact review controller is destroyed."
+        );
       }
     };
     const ensureReview = () => {
@@ -5396,7 +5537,10 @@ var OpenPlanrDesignBoardAdapter = (() => {
     }
   }
   var payload = readJson("planr-artifact-stage-payload", { artifacts: [], viewer: {} });
-  var embedded = readJson("planr-artifact-review-state", { reviewOf: "0".repeat(64), review: null });
+  var embedded = readJson("planr-artifact-review-state", {
+    reviewOf: "0".repeat(64),
+    review: null
+  });
   var reviewController = createArtifactReviewController({
     reviewOf: embedded.reviewOf,
     initialReview: embedded.review
@@ -5416,7 +5560,8 @@ var OpenPlanrDesignBoardAdapter = (() => {
       ...options
     });
     const body = await response.json().catch(() => ({}));
-    if (!response.ok || body?.error) throw new Error(body?.error ?? `Request failed (${response.status})`);
+    if (!response.ok || body?.error)
+      throw new Error(body?.error ?? `Request failed (${response.status})`);
     return body;
   }
   async function loadEnvelope(review = reviewController.getReview()) {
@@ -5433,11 +5578,13 @@ var OpenPlanrDesignBoardAdapter = (() => {
     return body.review;
   }
   function persistReview(review) {
-    persistQueue = persistQueue.then(() => requestJson("api/artifact-review", {
-      method: "PUT",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ review })
-    })).catch((error) => announce(`Could not save review: ${error.message}`, true));
+    persistQueue = persistQueue.then(
+      () => requestJson("api/artifact-review", {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ review })
+      })
+    ).catch((error) => announce(`Could not save review: ${error.message}`, true));
     return persistQueue;
   }
   function announce(message, error = false) {
@@ -5496,7 +5643,10 @@ var OpenPlanrDesignBoardAdapter = (() => {
     const node = document2.createElement("button");
     node.type = "button";
     node.textContent = label;
-    node.addEventListener("click", () => Promise.resolve(action()).catch((error) => announce(error.message, true)));
+    node.addEventListener(
+      "click",
+      () => Promise.resolve(action()).catch((error) => announce(error.message, true))
+    );
     return node;
   }
   function activeArtifactId() {
@@ -5525,7 +5675,9 @@ var OpenPlanrDesignBoardAdapter = (() => {
   }
   async function exportArtifactPng(target) {
     const artifact = activeArtifact();
-    const frame = [...document.querySelectorAll("[data-planr-artifact-frame]")].find((candidate) => candidate.dataset.planrArtifactFrame === artifact?.id);
+    const frame = [...document.querySelectorAll("[data-planr-artifact-frame]")].find(
+      (candidate) => candidate.dataset.planrArtifactFrame === artifact?.id
+    );
     const result = await frame?.__openPlanrBridge?.exportPng?.(target);
     if (!result) throw new Error("The artifact is still loading or could not be rendered as PNG.");
     download(result.dataUrl, `${artifact.id}-${result.label}.png`);
@@ -5566,7 +5718,8 @@ var OpenPlanrDesignBoardAdapter = (() => {
       const rating = document.createElement("select");
       rating.dataset.planrVariantRating = artifact.id;
       rating.append(option(document, "", "Not rated"));
-      for (let value = 1; value <= 5; value += 1) rating.append(option(document, String(value), `${value} / 5`));
+      for (let value = 1; value <= 5; value += 1)
+        rating.append(option(document, String(value), `${value} / 5`));
       rating.value = current.ratings?.[artifact.id] ? String(current.ratings[artifact.id]) : "";
       rating.addEventListener("change", () => {
         const ratings = { ...designFeedback?.ratings ?? {} };
@@ -5606,7 +5759,8 @@ var OpenPlanrDesignBoardAdapter = (() => {
       const preferredLabel = document.createElement("label");
       preferredLabel.textContent = "Preferred variant";
       const preferred = document.createElement("select");
-      for (const artifact of payload.artifacts) preferred.append(option(document, artifact.id, artifact.title));
+      for (const artifact of payload.artifacts)
+        preferred.append(option(document, artifact.id, artifact.title));
       preferred.value = current.preferred ?? payload.viewer?.activeArtifactId ?? payload.artifacts[0]?.id ?? "";
       preferred.dataset.planrPreferred = "";
       preferredLabel.append(preferred);
@@ -5648,22 +5802,34 @@ var OpenPlanrDesignBoardAdapter = (() => {
       roundSection.body.append(remixGrid);
       const roundActions = document.createElement("div");
       roundActions.className = "planr-domain-actions";
-      const iterate = button(document, "Regenerate", () => postDomain("pending", {
-        regenerated: true,
-        regenerateAction: "iterate"
-      }));
+      const iterate = button(
+        document,
+        "Regenerate",
+        () => postDomain("pending", {
+          regenerated: true,
+          regenerateAction: "iterate"
+        })
+      );
       iterate.dataset.planrRegenerate = "";
-      const more = button(document, "More like selected", () => postDomain("pending", {
-        regenerated: true,
-        regenerateAction: "more-like",
-        preferred: slot.querySelector("[data-planr-preferred]")?.value || payload.viewer?.activeArtifactId
-      }));
+      const more = button(
+        document,
+        "More like selected",
+        () => postDomain("pending", {
+          regenerated: true,
+          regenerateAction: "more-like",
+          preferred: slot.querySelector("[data-planr-preferred]")?.value || payload.viewer?.activeArtifactId
+        })
+      );
       more.dataset.planrMoreLike = "";
-      const remix = button(document, "Remix", () => postDomain("pending", {
-        regenerated: true,
-        regenerateAction: "remix",
-        remixSpec: { ...remixDraft }
-      }));
+      const remix = button(
+        document,
+        "Remix",
+        () => postDomain("pending", {
+          regenerated: true,
+          regenerateAction: "remix",
+          remixSpec: { ...remixDraft }
+        })
+      );
       remix.dataset.planrRemix = "";
       roundActions.append(iterate, more, remix);
       roundSection.body.append(roundActions);
@@ -5671,9 +5837,13 @@ var OpenPlanrDesignBoardAdapter = (() => {
     }
     const actions = document.createElement("div");
     actions.className = "planr-domain-actions";
-    const save = button(document, "Save design review", () => postDomain("submit", {
-      preferred: slot.querySelector("[data-planr-preferred]")?.value || current.preferred
-    }));
+    const save = button(
+      document,
+      "Save design review",
+      () => postDomain("submit", {
+        preferred: slot.querySelector("[data-planr-preferred]")?.value || current.preferred
+      })
+    );
     save.dataset.planrSaveDesign = "";
     actions.append(save);
     slot.append(actions);
@@ -5688,9 +5858,13 @@ var OpenPlanrDesignBoardAdapter = (() => {
     html.dataset.planrExport = "html";
     exportActions.append(pngScreen, pngFull, html);
     for (const source of designSources) {
-      const sourceButton = button(document, `Download ${source.artifactId} source ${source.kind.toUpperCase()}`, () => {
-        download(source.url, `openplanr-${source.artifactId}.${source.kind}`);
-      });
+      const sourceButton = button(
+        document,
+        `Download ${source.artifactId} source ${source.kind.toUpperCase()}`,
+        () => {
+          download(source.url, `openplanr-${source.artifactId}.${source.kind}`);
+        }
+      );
       sourceButton.dataset.planrExport = `source-${source.kind}`;
       sourceButton.dataset.planrArtifactId = source.artifactId;
       exportActions.append(sourceButton);
@@ -5707,7 +5881,8 @@ var OpenPlanrDesignBoardAdapter = (() => {
     presence.textContent = "1 reviewer";
     const pinToggle = button(document, pinsVisible ? "Pins" : "Pins hidden", () => {
       pinsVisible = !pinsVisible;
-      for (const layer of document.querySelectorAll("[data-planr-annotation-layer]")) layer.hidden = !pinsVisible;
+      for (const layer of document.querySelectorAll("[data-planr-annotation-layer]"))
+        layer.hidden = !pinsVisible;
       pinToggle.textContent = pinsVisible ? "Pins" : "Pins hidden";
       pinToggle.setAttribute("aria-checked", String(pinsVisible));
     });
@@ -5742,7 +5917,9 @@ var OpenPlanrDesignBoardAdapter = (() => {
       persistReview(state.review);
       if (change.action === "set-decision" && state.review.decision === "approved") {
         const preferred = document.querySelector("[data-planr-preferred]")?.value ?? payload.viewer?.activeArtifactId;
-        postDomain("submit", preferred ? { preferred } : {}).catch((error) => announce(error.message, true));
+        postDomain("submit", preferred ? { preferred } : {}).catch(
+          (error) => announce(error.message, true)
+        );
       }
     }
     if (change.type === "identity") connectPresence();
@@ -5777,13 +5954,20 @@ var OpenPlanrDesignBoardAdapter = (() => {
   connectPresence();
   hydrateReview().catch((error) => announce(error.message, true));
   hydrateSources().catch((error) => announce(`Source exports unavailable: ${error.message}`, true));
-  var progressTimer = setInterval(() => requestJson("api/progress").then((progress) => {
-    if (latestReloadGeneration === null) latestReloadGeneration = progress.reloadGen;
-    else if (progress.reloadGen !== latestReloadGeneration) location.reload();
-  }).catch(() => {
-  }), 1200);
-  addEventListener("pagehide", () => {
-    clearInterval(progressTimer);
-    eventSource?.close();
-  }, { once: true });
+  var progressTimer = setInterval(
+    () => requestJson("api/progress").then((progress) => {
+      if (latestReloadGeneration === null) latestReloadGeneration = progress.reloadGen;
+      else if (progress.reloadGen !== latestReloadGeneration) location.reload();
+    }).catch(() => {
+    }),
+    1200
+  );
+  addEventListener(
+    "pagehide",
+    () => {
+      clearInterval(progressTimer);
+      eventSource?.close();
+    },
+    { once: true }
+  );
 })();

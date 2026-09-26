@@ -1,10 +1,8 @@
 import assert from 'node:assert/strict';
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { get } from 'node:http';
-import {
-  mkdtempSync, mkdirSync, realpathSync, rmSync, symlinkSync, writeFileSync,
-} from 'node:fs';
-import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { test } from 'node:test';
 
 import {
@@ -23,11 +21,13 @@ function request(port, pathname) {
     const req = get({ host: '127.0.0.1', port, path: pathname }, (res) => {
       const chunks = [];
       res.on('data', (chunk) => chunks.push(chunk));
-      res.on('end', () => resolveRequest({
-        status: res.statusCode,
-        contentType: res.headers['content-type'],
-        body: Buffer.concat(chunks).toString('utf8'),
-      }));
+      res.on('end', () =>
+        resolveRequest({
+          status: res.statusCode,
+          contentType: res.headers['content-type'],
+          body: Buffer.concat(chunks).toString('utf8'),
+        }),
+      );
     });
     req.on('error', rejectRequest);
   });

@@ -7,13 +7,13 @@
     {
       "source": "packages/design/lib/design-engine/artifact-adapter.mjs",
       "target": "lib/design-engine/artifact-adapter.mjs",
-      "sha256": "b057a25b1059c784ee49ef5c70d590c511d382713a8f59f796b20f68f1e234c4",
+      "sha256": "403fdb1f1bdcfc6a8d7b148729f08d42cc6967315318882c73e918a81c2759dd",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design-engine/auth.mjs",
       "target": "lib/design-engine/auth.mjs",
-      "sha256": "dbe9bc032bbc9ce34e7ba8fe9b7147cac0faccb25d5deb0c5268d4ba9d184596",
+      "sha256": "ecd38e086179e23cb43ad1bc175c6cb06fba44fa1874398249791036ed71a8f0",
       "mode": "644"
     },
     {
@@ -31,25 +31,25 @@
     {
       "source": "packages/design/lib/design-engine/board.mjs",
       "target": "lib/design-engine/board.mjs",
-      "sha256": "3b4807a0c2e0dbd65cc282a7f9ccc7d4dd4eb1cc56aaa494838c30b33b7bf6b7",
+      "sha256": "7b39abffa46a749fa4b2fa578403725de9707ec812cfe1b5433885060e24ba18",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design-engine/canvas-wrap.mjs",
       "target": "lib/design-engine/canvas-wrap.mjs",
-      "sha256": "a7beba5dc47b1455a1f06b3baae1e0cc1a50fce529d9253833b1fe4fa441eadb",
+      "sha256": "c511e32d5f23afca6b9b18fbf6364da9e2c087346ac51da07183f694871f20b5",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design-engine/cli.mjs",
       "target": "lib/design-engine/cli.mjs",
-      "sha256": "9874d4b5f577fdb2ad9882e98f910fd66283ee4dada50e876244b4e6669c24ad",
+      "sha256": "f32896d6b2abeaebc63ebda8c98f8fd2f2caa192bb0e1f8933fcb4c7a4dd2b3e",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design-engine/daemon.mjs",
       "target": "lib/design-engine/daemon.mjs",
-      "sha256": "be41e86fe5fe5b211357724e06c975ace5a3183f03c04c014db6e85d871f9c35",
+      "sha256": "e8bad8963bb7a8d61165e84f8f86e7e5331104c08d8fad7a346c5dc8e7f74455",
       "mode": "644"
     },
     {
@@ -65,21 +65,21 @@
       "mode": "644"
     },
     {
-      "source": "packages/design/lib/design-engine/providers/claudeSvg.mjs",
-      "target": "lib/design-engine/providers/claudeSvg.mjs",
-      "sha256": "ade6f77d6d55bc63e4673bee3d2a9c2fffb67cc4ee10f1b368bcf5acc0ddc053",
+      "source": "packages/design/lib/design-engine/providers/claude-svg.mjs",
+      "target": "lib/design-engine/providers/claude-svg.mjs",
+      "sha256": "93180de3faeb6e00ded1681cefb9c2c7c3c0d4cc1d82964eb4057cbe6905307f",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design-engine/providers/index.mjs",
       "target": "lib/design-engine/providers/index.mjs",
-      "sha256": "83bd906447caac5f5936f64987b6c051ecfdb1c8bd6f49077a935f8f41b5539f",
+      "sha256": "bdde751a7dc39cadd0b50fdc02137b768a7c3f81b2d7137a6d8691b674125ca8",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design-engine/providers/openai.mjs",
       "target": "lib/design-engine/providers/openai.mjs",
-      "sha256": "ca49579b8d812847c5b7265db771ffd94c77433d84efabea6d177c0229228979",
+      "sha256": "e0a488d05683383517f48ed80ceb65413fdb26f2c2f82af43846d48d1ab29891",
       "mode": "644"
     },
     {
@@ -91,19 +91,19 @@
     {
       "source": "packages/design/lib/design-engine/session.mjs",
       "target": "lib/design-engine/session.mjs",
-      "sha256": "cfb161c35580c61485f642bc04d2d7d6020de37b6588aaf93798d53277d54bca",
+      "sha256": "7f5c50f13f72edf1c00b4774d4cbde481b0aff0b61ee13475032085952d6e470",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design-engine/taste.mjs",
       "target": "lib/design-engine/taste.mjs",
-      "sha256": "04f19d416ba75da0ef014280b17fad56516089e5b4015856f2a7a4f5db19d406",
+      "sha256": "551356f8f20860e8ac46d1c4e38ea3ea8123f62060d34e9c7e2ce13d6572d220",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design/browser-audit.mjs",
       "target": "lib/design/browser-audit.mjs",
-      "sha256": "bdf7a7514cc330dfce1fab0f3f2187c2716d0ef076b6defe3671fffa24c8740d",
+      "sha256": "770aedc03d68de21c4dd06376d4828163ddda175d42748847beabe5a583c3a31",
       "mode": "644"
     },
     {
@@ -115,13 +115,13 @@
     {
       "source": "packages/design/lib/design/company-publication.mjs",
       "target": "lib/design/company-publication.mjs",
-      "sha256": "7142e104c9390eae767090ed37bb3b94331a9f618c7988ad2f6051e1274ebdb1",
+      "sha256": "36d0f6d4152ff5c50f037e0f7845e3a7f168108d2684ea07b541a70932908d83",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design/context.mjs",
       "target": "lib/design/context.mjs",
-      "sha256": "e4c4a0c41f87e753783a107d13396964c5eaaf8af3e10e7386007606b6e6e9a0",
+      "sha256": "942c9cd1b6361d34d9c4c78e18ec00d103e4aa0fbb3b66bba5b273a72260ab32",
       "mode": "644"
     },
     {
@@ -133,37 +133,37 @@
     {
       "source": "packages/design/lib/design/delivery-status.d.mts",
       "target": "lib/design/delivery-status.d.mts",
-      "sha256": "ac2bdb97ebe80b3e83aea2bcdd1f779e3a6761da8023b01e56129d589b4029d1",
+      "sha256": "e4fd6b707bf6a10f11d3e8a8bcf9478c6489310fc6693fbf01383eeb888e45d9",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design/delivery-status.mjs",
       "target": "lib/design/delivery-status.mjs",
-      "sha256": "7a75e91868fbd673a60e9331795fcdeac8a46bdcd0f76baba112d3bd74558756",
+      "sha256": "9be461f6bde5d8a55fe6f2f425dc7855cffd7c0df7f83bf65f9aec312e31533e",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design/design-plan-handoff.d.mts",
       "target": "lib/design/design-plan-handoff.d.mts",
-      "sha256": "4018bed7e6ed8175b514c7879bcd8e7d8f5750dda9ca3af2cb85a6cd95f88afc",
+      "sha256": "784fd3745dfeba7528cf7914e58eadbc123ab615423b28287dd7a92d627314a5",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design/design-plan-handoff.mjs",
       "target": "lib/design/design-plan-handoff.mjs",
-      "sha256": "10cc1ef46818f51844bd6ad4e2c4dc935696213084faa9bb49c583ea3d1c3752",
+      "sha256": "0f7d42e3a9789b7fe84fb437ed410faf54e585129dd8ced6c218923df6784e1c",
       "mode": "644"
     },
     {
-      "source": "packages/design/lib/design/designSystem.mjs",
-      "target": "lib/design/designSystem.mjs",
-      "sha256": "fa14389d297755c2164c63e07c4e195f7cf043677af18a7e887c30e338e5f722",
+      "source": "packages/design/lib/design/design-system.mjs",
+      "target": "lib/design/design-system.mjs",
+      "sha256": "0fa52d087484bdd125fe1da445aad2b5f2819220b5498abb83d8140e871949e2",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design/document.mjs",
       "target": "lib/design/document.mjs",
-      "sha256": "d89a5c020d1dc2b3a65afb1e5cc670e86930a7da316471736b5f7de19476621e",
+      "sha256": "b113a76a385eb442daae91a82a6165fa6e349e304ec0d9ea10b6a33034df407d",
       "mode": "644"
     },
     {
@@ -175,85 +175,85 @@
     {
       "source": "packages/design/lib/design/handoff-readiness.d.mts",
       "target": "lib/design/handoff-readiness.d.mts",
-      "sha256": "1156326fca79b8bba2ca440e4be8eff1e0df8917f2523b7f99fbb5c7c5f192f4",
+      "sha256": "61085a5867c9fba1366df3c436638d87255513a8e2423cae759babcdd7e0c2fc",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design/handoff-readiness.mjs",
       "target": "lib/design/handoff-readiness.mjs",
-      "sha256": "322553ab860c21c5327fc898ca3b9f6dc1757dab9b059301f6480ef673f7cc5b",
+      "sha256": "9cc4c6021ce4427c022fcb37e94f8ecdb7c703bb07066dbb1ac47e3f06bd94f6",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design/handoff-resolution.d.mts",
       "target": "lib/design/handoff-resolution.d.mts",
-      "sha256": "ffd6a8df53888f6133da9f77b7280618a9da79971eded151b0e85425d9f3986d",
+      "sha256": "ccb4c9aa4af889ca68c670f7387a35dfb0df73a0b8696bdc58a80a600bf79c78",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design/handoff-resolution.mjs",
       "target": "lib/design/handoff-resolution.mjs",
-      "sha256": "23bdd853e8d8c554666302219867dc582f11d81d5ac59ee4c21fc7cfe30d9c23",
+      "sha256": "6e9798093a847e8009f78bbcce4c7bb84e71b509bf6c7c8c9e20ec74e1e02b72",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design/handoff.mjs",
       "target": "lib/design/handoff.mjs",
-      "sha256": "612510b64dca00188d0678eb85e7fc5b07877dc6c3ff9de76c443de7f59e3f68",
+      "sha256": "c67a08e49bc0ce94e3b19fc9be3f600bfd427d558d1726e4d9e85f0f6082912c",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design/implementation-handoff-approval.d.mts",
       "target": "lib/design/implementation-handoff-approval.d.mts",
-      "sha256": "cb16cf6604e7453181872fc46c7728fa40bcb65bcced365a7bb53a188d6b8c7b",
+      "sha256": "9f628fd7ecadae22d746fa362114ff60b87961aa43fa956fb6d8c62fc7e25b4a",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design/implementation-handoff-approval.mjs",
       "target": "lib/design/implementation-handoff-approval.mjs",
-      "sha256": "1c529b5541b440d07ca46e30b14eda5518736d6daa9503711a107301e41d57a2",
+      "sha256": "60bb8863a38666288e8b32263bda439447b2d34c554ab65ad1c487211c2d2a54",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design/implementation-handoff-markdown.mjs",
       "target": "lib/design/implementation-handoff-markdown.mjs",
-      "sha256": "3e41afba7c80faf5e5436f9992b5026d2b5c03109b6ce473964551180eed5a5b",
+      "sha256": "c1f63fd5e672b2570586daf26d93f3a45e29bc9cf6c70d0e532261a98099b869",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design/implementation-handoff.d.mts",
       "target": "lib/design/implementation-handoff.d.mts",
-      "sha256": "b7b815deef1880c330439a35bde7a786794ddb8c8072cddbae82a27259a97eeb",
+      "sha256": "fdb794b5854bc6678e65bd1a08e76ea83b4869f92a7f0ba78b1b8467fd78816e",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design/implementation-handoff.mjs",
       "target": "lib/design/implementation-handoff.mjs",
-      "sha256": "8ad67f8d7c81a0515e4f86499d39e9c4b19d732337f1316f6bf354db6a90ee56",
+      "sha256": "bbae1c03fc4a8773b48ff88aaf870b199d7df311289aaebcd303c9a2bb2d5b62",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design/index.mjs",
       "target": "lib/design/index.mjs",
-      "sha256": "f875e042b0e623fd4190bd0a14fc9fc4c2bde417d0a4bb586c24eae496b83dc6",
+      "sha256": "12d57d444889885ac64406ce03843b1f9cbd0248899fa56f4750bf915e2e0ebd",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design/interactivity.mjs",
       "target": "lib/design/interactivity.mjs",
-      "sha256": "45966c4224d52c4a80b3732cf863640acb88bd0edcf44834b09749f290e97c96",
+      "sha256": "5dc1536efeec16ead46c4060bb21f623ec3f1a2c9cf648737e0d109529b5402d",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design/lint.mjs",
       "target": "lib/design/lint.mjs",
-      "sha256": "a9ee5452068d1845074adfec6fcf63f67d41f95fd4623ad9ed842cc6968c8465",
+      "sha256": "07e3905d8012686d0f2cc515975b58b0a155ead0aa1c1f2c4fae49ff5471ab76",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design/manifest.mjs",
       "target": "lib/design/manifest.mjs",
-      "sha256": "bfb41e0dcd38304f63af70627a336b15f758b0cea4d0d6b6f0d78727714120f1",
+      "sha256": "a79a495cf1ae269f14055472b60d76a2852a6611365725fd1aef035199c72cb6",
       "mode": "644"
     },
     {
@@ -269,81 +269,81 @@
       "mode": "644"
     },
     {
-      "source": "packages/design/lib/design/recommendFormat.mjs",
-      "target": "lib/design/recommendFormat.mjs",
-      "sha256": "109fa39686e13998bd7ec1f2bafca8a0440f94fb0789f16f4f9a9eb434ac1277",
+      "source": "packages/design/lib/design/recommend-format.mjs",
+      "target": "lib/design/recommend-format.mjs",
+      "sha256": "2e5f7e5c0c6fc3ef6d392c6ea9a5c66057bd0934026798654d1b69059cf54fac",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design/review-export.mjs",
       "target": "lib/design/review-export.mjs",
-      "sha256": "8a7dd97d5295b63dc04c4a2805037e2b1dd27ab12cadc0a7dff3ef1912780c86",
+      "sha256": "35de3f0cccf58c0bac2c13bb7998b5179cbb855336e97beb2c601c733336e01d",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design/review.mjs",
       "target": "lib/design/review.mjs",
-      "sha256": "f757b6e38221503924d9fec594caf9eb7df481217da4fe682d97c85890cebec5",
+      "sha256": "1ad03dabd01b04e09ef6869db2214b855f5dd7bb3a819bacce02a88cb4f7eab1",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design/schema-loader.mjs",
       "target": "lib/design/schema-loader.mjs",
-      "sha256": "8f0b47d7ba9f31fdce80eb852b32445d6b82c4711d2d3109be8300e84e1e9775",
+      "sha256": "1b1674a20715c582db8e4e388d1f95a61bf3659002f3a369d58279842d774049",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design/screens.mjs",
       "target": "lib/design/screens.mjs",
-      "sha256": "aad4b77a9ef8f22b37f7317b68959badca2bf14264ece8af0fe4a029066908cf",
+      "sha256": "57abd5270f51c3cde1cdbfc9736a4078eb5c7c59a395fe0c3a088f67cea5f3af",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design/share.mjs",
       "target": "lib/design/share.mjs",
-      "sha256": "0a280b18a95f8cd2ab2ee36336d86a8aae85a85d81450c80d503e94281d97871",
+      "sha256": "d23335cd1ea5ef987740023325a7cb14dd32b21342520e499b1c25c583438662",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design/studio-render.mjs",
       "target": "lib/design/studio-render.mjs",
-      "sha256": "17a4819228dd85a0e338fbbd56922b5abcbf12bf26d4f2fc9856ca01f2519fd7",
+      "sha256": "698250b99c2761a65bad8e0f1e73085e5445f082dda87f56186ab42ae163daf4",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design/studio.mjs",
       "target": "lib/design/studio.mjs",
-      "sha256": "fbb65a79fe7265021c88763b2413c9bbede8372acf7cbd1c01186cddc628603a",
+      "sha256": "ae1a890447b26d203ba0053729372f7a3a85970b586f44a7b4b53eea75c875f0",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design/tokens.mjs",
       "target": "lib/design/tokens.mjs",
-      "sha256": "888a98cfcf19fea4243925c50621ab168730485fe8dfbc04a4118575131db105",
+      "sha256": "cb0bbfdb4db8350c052e6a07501973fef7e38dc5fa23c5e8444423e1eaaa0903",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design/utility.mjs",
       "target": "lib/design/utility.mjs",
-      "sha256": "46ed6bb4a129fa4a007a584ec404cce449399ffe45e0928fcc3d6cbdef4cc58d",
+      "sha256": "dced57f485f30d3f0b2661525fd1e2009766da99cbc3883bd6ea065121c8b006",
       "mode": "644"
     },
     {
-      "source": "packages/design/lib/design/walkthroughNav.mjs",
-      "target": "lib/design/walkthroughNav.mjs",
+      "source": "packages/design/lib/design/walkthrough-nav.mjs",
+      "target": "lib/design/walkthrough-nav.mjs",
       "sha256": "2dd8c4ba25f2850cf50fbd04c4d8e9e901dbc3f96e2e2da07909369427ff31a3",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design/workspace-client.mjs",
       "target": "lib/design/workspace-client.mjs",
-      "sha256": "bdd9d88504eaafe68ba6bd1ee86fe6aa3f47e290e936dbbaff7e63bda42c01bd",
+      "sha256": "1bf0aba04c524d5fd5ae58774c57f832e719829e27f8bd7ac5aaf10c40e970a7",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design/workspace-feedback.mjs",
       "target": "lib/design/workspace-feedback.mjs",
-      "sha256": "b1728a0153698906936aaae9f74ad533c36bbe4a54c99226e1a8b0b1b11c20d5",
+      "sha256": "495c78ea28cfc25d6be51ae915c963ef19b0a7f9690dffcd1cd940eff135f5d2",
       "mode": "644"
     },
     {
@@ -367,7 +367,7 @@
     {
       "source": "packages/design/templates/design/README.md",
       "target": "templates/design/README.md",
-      "sha256": "35190739f080dd4c950d72cdf98ddb06a4ff4ef993ea2f3facd45cbc64771588",
+      "sha256": "9dfdcda4bf4d97d3dce787cf783e10cb988e27cc18809c592bcc06508232b800",
       "mode": "644"
     },
     {
@@ -403,7 +403,7 @@
     {
       "source": "packages/design/templates/design/walkthrough-shell.html",
       "target": "templates/design/walkthrough-shell.html",
-      "sha256": "bccf59f399e317e16f10431897fad95e883f3b1156afaf0b91e667a923c76175",
+      "sha256": "7630f80e73c6dc147b44bca6695caed94afe5c8a537c5b7bb04c13b1fb4583a4",
       "mode": "644"
     },
     {

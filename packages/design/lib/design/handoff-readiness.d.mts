@@ -47,7 +47,15 @@ export interface DesignHandoffReadinessInput {
   };
 }
 
-export declare function compileDesignHandoffReadiness(input?: DesignHandoffReadinessInput | null): DesignHandoffReadiness | DesignHandoffReadinessAbsence;
-export declare function designHandoffReadinessAbsence(reason?: 'not-computed' | 'not-applicable' | 'unavailable'): DesignHandoffReadinessAbsence;
-export declare function designHandoffReadinessDigest(value: DesignHandoffReadiness | DesignHandoffReadinessAbsence): DesignHandoffDigest;
-export declare function canContinueDesignHandoff(value: DesignHandoffReadiness | DesignHandoffReadinessAbsence | null | undefined): boolean;
+export declare function compileDesignHandoffReadiness(
+  input?: DesignHandoffReadinessInput | null,
+): DesignHandoffReadiness | DesignHandoffReadinessAbsence;
+export declare function designHandoffReadinessAbsence(
+  reason?: 'not-computed' | 'not-applicable' | 'unavailable',
+): DesignHandoffReadinessAbsence;
+export declare function designHandoffReadinessDigest(
+  value: DesignHandoffReadiness | DesignHandoffReadinessAbsence,
+): DesignHandoffDigest;
+export declare function canContinueDesignHandoff(
+  value: DesignHandoffReadiness | DesignHandoffReadinessAbsence | null | undefined,
+): boolean;

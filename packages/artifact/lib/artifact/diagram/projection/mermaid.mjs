@@ -18,15 +18,21 @@ function mermaidLabel(value) {
     .replaceAll('\n', '<br/>');
 }
 
-export const MERMAID_EXPORT_CAPABILITIES = Object.freeze(Object.fromEntries(
-  ['flowchart', 'sequence'].map((grammarId) => [grammarId, Object.freeze({
-    grammarId,
-    status: 'editable',
-    reason: grammarId === 'sequence'
-      ? 'The bounded sequence projection preserves participants, ordered messages, phases, and notes.'
-      : 'The bounded flowchart projection preserves nodes, directed relations, labels, and direction.',
-  })]),
-));
+export const MERMAID_EXPORT_CAPABILITIES = Object.freeze(
+  Object.fromEntries(
+    ['flowchart', 'sequence'].map((grammarId) => [
+      grammarId,
+      Object.freeze({
+        grammarId,
+        status: 'editable',
+        reason:
+          grammarId === 'sequence'
+            ? 'The bounded sequence projection preserves participants, ordered messages, phases, and notes.'
+            : 'The bounded flowchart projection preserves nodes, directed relations, labels, and direction.',
+      }),
+    ]),
+  ),
+);
 
 export function mermaidCapability(grammarId) {
   const supported = MERMAID_EXPORT_CAPABILITIES[grammarId];
@@ -66,8 +72,16 @@ export function exportDiagramMermaid(document) {
       targetFormat: 'mermaid',
       status: 'editable',
       interpreted: [
-        ...document.nodes.map((node) => ({ source: `node:${node.id}`, targetId: node.id, construct: 'node' })),
-        ...document.relations.map((relation) => ({ source: `relation:${relation.id}`, targetId: relation.id, construct: 'relation' })),
+        ...document.nodes.map((node) => ({
+          source: `node:${node.id}`,
+          targetId: node.id,
+          construct: 'node',
+        })),
+        ...document.relations.map((relation) => ({
+          source: `relation:${relation.id}`,
+          targetId: relation.id,
+          construct: 'relation',
+        })),
       ],
       notes: [capability.reason],
     }),
@@ -77,7 +91,9 @@ export function exportDiagramMermaid(document) {
 function sequenceTimeline(document) {
   const events = new Map(document.events.map((event) => [event.id, event]));
   const relations = new Map(document.relations.map((relation) => [relation.id, relation]));
-  const ordered = document.accessibility.readingOrder.filter((id) => events.has(id) || relations.has(id));
+  const ordered = document.accessibility.readingOrder.filter(
+    (id) => events.has(id) || relations.has(id),
+  );
   const seen = new Set();
   const timeline = [];
   for (const id of ordered) {
@@ -98,30 +114,54 @@ function sequenceTimeline(document) {
 function exportSequenceMermaid(document, capability) {
   const reversed = ['right-left', 'bottom-up'].includes(document.layout.direction);
   const participants = reversed ? [...document.nodes].reverse() : [...document.nodes];
-  const aliases = new Map(participants.map((participant, index) => [participant.id, `p${index + 1}`]));
+  const aliases = new Map(
+    participants.map((participant, index) => [participant.id, `p${index + 1}`]),
+  );
   const first = aliases.get(participants[0].id);
   const last = aliases.get(participants.at(-1).id);
   const lines = ['sequenceDiagram'];
   for (const participant of participants) {
-    lines.push(`  participant ${aliases.get(participant.id)} as ${mermaidLabel(participant.label)}`);
+    lines.push(
+      `  participant ${aliases.get(participant.id)} as ${mermaidLabel(participant.label)}`,
+    );
   }
-  const interpreted = participants.map((participant) => ({ source: `node:${participant.id}`, targetId: participant.id, construct: 'participant' }));
+  const interpreted = participants.map((participant) => ({
+    source: `node:${participant.id}`,
+    targetId: participant.id,
+    construct: 'participant',
+  }));
   const emittedAnnotations = new Set();
   for (const entry of sequenceTimeline(document)) {
     if (entry.type === 'phase') {
       lines.push(`  Note over ${first},${last}: Phase: ${mermaidLabel(entry.value.label)}`);
-      interpreted.push({ source: `event:${entry.value.id}`, targetId: entry.value.id, construct: 'phase-note' });
+      interpreted.push({
+        source: `event:${entry.value.id}`,
+        targetId: entry.value.id,
+        construct: 'phase-note',
+      });
       continue;
     }
     const relation = entry.value;
     const from = aliases.get(relation.from);
     const to = aliases.get(relation.to);
     if (!from || !to) continue;
-    lines.push(`  ${from}${relation.kind === 'flow' ? '-->>' : '->>'}${to}: ${mermaidLabel(relation.label ?? relation.kind)}`);
-    interpreted.push({ source: `relation:${relation.id}`, targetId: relation.id, construct: 'message' });
-    for (const annotation of document.annotations.filter(({ targetId }) => targetId === relation.id)) {
+    lines.push(
+      `  ${from}${relation.kind === 'flow' ? '-->>' : '->>'}${to}: ${mermaidLabel(relation.label ?? relation.kind)}`,
+    );
+    interpreted.push({
+      source: `relation:${relation.id}`,
+      targetId: relation.id,
+      construct: 'message',
+    });
+    for (const annotation of document.annotations.filter(
+      ({ targetId }) => targetId === relation.id,
+    )) {
       lines.push(`  Note over ${from},${to}: Note: ${mermaidLabel(annotation.text)}`);
-      interpreted.push({ source: `annotation:${annotation.id}`, targetId: annotation.id, construct: 'message-note' });
+      interpreted.push({
+        source: `annotation:${annotation.id}`,
+        targetId: annotation.id,
+        construct: 'message-note',
+      });
       emittedAnnotations.add(annotation.id);
     }
   }
@@ -129,7 +169,11 @@ function exportSequenceMermaid(document, capability) {
     const participant = aliases.get(annotation.targetId);
     if (!participant) continue;
     lines.push(`  Note right of ${participant}: Note: ${mermaidLabel(annotation.text)}`);
-    interpreted.push({ source: `annotation:${annotation.id}`, targetId: annotation.id, construct: 'participant-note' });
+    interpreted.push({
+      source: `annotation:${annotation.id}`,
+      targetId: annotation.id,
+      construct: 'participant-note',
+    });
     emittedAnnotations.add(annotation.id);
   }
   const omitted = document.emphasis.map(({ targetId }) => ({

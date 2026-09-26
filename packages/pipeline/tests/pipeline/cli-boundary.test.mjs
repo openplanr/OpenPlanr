@@ -3,8 +3,8 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 
 const repositoryRoot = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const cli = join(repositoryRoot, 'bin', 'planr-pipeline.mjs');
@@ -29,7 +29,9 @@ function machineFailure(root, args) {
   assert.equal(value.ok, false);
   assert.deepEqual(
     Object.keys(value).sort(),
-    Object.keys(value).filter((key) => ['ok', 'code', 'problem', 'fix'].includes(key)).sort(),
+    Object.keys(value)
+      .filter((key) => ['ok', 'code', 'problem', 'fix'].includes(key))
+      .sort(),
   );
   return value;
 }
@@ -69,7 +71,10 @@ test('closed parsing accepts options on either side of the positional feature', 
 test('closed parsing rejects unknown, duplicate, missing-value, separator, and extra tokens', () => {
   const cases = [
     { args: ['plan', 'safe-feature', '--unknown', '--json'], code: 'E_CLI_ARGUMENT_INVALID' },
-    { args: ['plan', 'safe-feature', '--runtime', 'codex', '--runtime', 'cursor', '--json'], code: 'E_CLI_ARGUMENT_INVALID' },
+    {
+      args: ['plan', 'safe-feature', '--runtime', 'codex', '--runtime', 'cursor', '--json'],
+      code: 'E_CLI_ARGUMENT_INVALID',
+    },
     { args: ['plan', 'safe-feature', '--runtime', '--json'], code: 'E_CLI_ARGUMENT_INVALID' },
     { args: ['plan', '--', '--json'], code: 'E_FEATURE_INVALID' },
     { args: ['plan', 'safe-feature', '--', 'extra', '--json'], code: 'E_CLI_ARGUMENT_INVALID' },
@@ -138,13 +143,65 @@ test('portable CLI refuses trusted-host operations before effects and returns ex
     writeFileSync(fixPath, `${JSON.stringify({ mode: 'fix' })}\n`);
     writeFileSync(experimentPath, `${JSON.stringify({ type: 'experiment.ran' })}\n`);
     const cases = [
-      { args: ['investigate', 'start', 'safe-feature', '--request-file', diagnosePath, '--json'], code: 'E_INVESTIGATION_COMMAND_HOST_REQUIRED', recovery: /registered runtime adapter/u },
-      { args: ['investigate', 'start', 'safe-feature', '--request-file', fixPath, '--json'], code: 'E_INVESTIGATION_OWNER_INTERACTIVE_REQUIRED', recovery: /directly in a terminal/u },
-      { args: ['investigate', 'advance', 'safe-feature', '--run-id', `inv_${'a'.repeat(32)}`, '--event-file', experimentPath, '--json'], code: 'E_INVESTIGATION_COMMAND_HOST_REQUIRED', recovery: /registered runtime adapter/u },
-      { args: ['investigate', 'verify', 'safe-feature', '--run-id', `inv_${'a'.repeat(32)}`, '--json'], code: 'E_INVESTIGATION_COMMAND_HOST_REQUIRED', recovery: /registered runtime adapter/u },
-      { args: ['prepare-browser-qa', 'safe-feature', '--run-id', `ship_${'a'.repeat(32)}`, '--json'], code: 'E_BROWSER_QA_TRUSTED_HOST_REQUIRED', recovery: /registered browser runtime adapter/u },
       {
-        args: ['record-browser-qa', 'safe-feature', '--run-id', `ship_${'a'.repeat(32)}`, '--generation', '0', '--result-file', join(root, 'must-not-be-read.json'), '--json'],
+        args: ['investigate', 'start', 'safe-feature', '--request-file', diagnosePath, '--json'],
+        code: 'E_INVESTIGATION_COMMAND_HOST_REQUIRED',
+        recovery: /registered runtime adapter/u,
+      },
+      {
+        args: ['investigate', 'start', 'safe-feature', '--request-file', fixPath, '--json'],
+        code: 'E_INVESTIGATION_OWNER_INTERACTIVE_REQUIRED',
+        recovery: /directly in a terminal/u,
+      },
+      {
+        args: [
+          'investigate',
+          'advance',
+          'safe-feature',
+          '--run-id',
+          `inv_${'a'.repeat(32)}`,
+          '--event-file',
+          experimentPath,
+          '--json',
+        ],
+        code: 'E_INVESTIGATION_COMMAND_HOST_REQUIRED',
+        recovery: /registered runtime adapter/u,
+      },
+      {
+        args: [
+          'investigate',
+          'verify',
+          'safe-feature',
+          '--run-id',
+          `inv_${'a'.repeat(32)}`,
+          '--json',
+        ],
+        code: 'E_INVESTIGATION_COMMAND_HOST_REQUIRED',
+        recovery: /registered runtime adapter/u,
+      },
+      {
+        args: [
+          'prepare-browser-qa',
+          'safe-feature',
+          '--run-id',
+          `ship_${'a'.repeat(32)}`,
+          '--json',
+        ],
+        code: 'E_BROWSER_QA_TRUSTED_HOST_REQUIRED',
+        recovery: /registered browser runtime adapter/u,
+      },
+      {
+        args: [
+          'record-browser-qa',
+          'safe-feature',
+          '--run-id',
+          `ship_${'a'.repeat(32)}`,
+          '--generation',
+          '0',
+          '--result-file',
+          join(root, 'must-not-be-read.json'),
+          '--json',
+        ],
         code: 'E_BROWSER_QA_TRUSTED_HOST_REQUIRED',
         recovery: /registered browser runtime adapter/u,
       },

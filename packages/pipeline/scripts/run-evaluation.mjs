@@ -14,12 +14,11 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-
-import { PipelineError } from '../lib/pipeline/errors.mjs';
-import { assertEvaluationWaiver } from '../lib/pipeline/evaluation-contract.mjs';
 import { createLoopbackBrowserAdapter } from '../lib/evaluation/journeys.mjs';
 import { writeCiReports, writeLocalRun } from '../lib/evaluation/report.mjs';
 import { runEvaluation } from '../lib/evaluation/runner.mjs';
+import { PipelineError } from '../lib/pipeline/errors.mjs';
+import { assertEvaluationWaiver } from '../lib/pipeline/evaluation-contract.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const argv = process.argv.slice(2);
@@ -40,14 +39,22 @@ function parseArguments(tokens) {
     if (KNOWN_OPTIONS.has(token)) {
       const value = tokens[index + 1];
       if (value === undefined || value.startsWith('--')) {
-        throw new PipelineError('E_EVALUATION_ARGUMENT_INVALID', `${token} requires a value.`, 'Supply the value immediately after the option.');
+        throw new PipelineError(
+          'E_EVALUATION_ARGUMENT_INVALID',
+          `${token} requires a value.`,
+          'Supply the value immediately after the option.',
+        );
       }
       if (token === '--owner') owners.push(value);
       else options.set(token, value);
       index += 1;
       continue;
     }
-    throw new PipelineError('E_EVALUATION_ARGUMENT_INVALID', `Unknown argument ${token}.`, `Use only: ${[...KNOWN_FLAGS, ...KNOWN_OPTIONS].join(', ')}.`);
+    throw new PipelineError(
+      'E_EVALUATION_ARGUMENT_INVALID',
+      `Unknown argument ${token}.`,
+      `Use only: ${[...KNOWN_FLAGS, ...KNOWN_OPTIONS].join(', ')}.`,
+    );
   }
   return { flags, options, owners };
 }
@@ -56,7 +63,11 @@ function loadWaivers(path) {
   if (path === undefined) return [];
   const parsed = JSON.parse(readFileSync(resolve(repoRoot, path), 'utf8'));
   if (!Array.isArray(parsed)) {
-    throw new PipelineError('E_EVALUATION_ARGUMENT_INVALID', 'A waiver file holds an array of waiver records.', 'Wrap the waivers in a JSON array.');
+    throw new PipelineError(
+      'E_EVALUATION_ARGUMENT_INVALID',
+      'A waiver file holds an array of waiver records.',
+      'Wrap the waivers in a JSON array.',
+    );
   }
   return parsed.map((waiver, index) => assertEvaluationWaiver(waiver, `waiver[${index}]`));
 }
@@ -75,10 +86,14 @@ function renderHuman(outcome, artifacts) {
     `regression         latency ${budget.latencyRegression} bp · cost ${budget.costRegression} bp`,
   ];
   for (const receipt of outcome.receipts) {
-    lines.push(`  ${receipt.subject.skillId.padEnd(20)} ${receipt.result}${receipt.blockingMetrics.length > 0 ? ` — blocked by ${receipt.blockingMetrics.join(', ')}` : ''}`);
+    lines.push(
+      `  ${receipt.subject.skillId.padEnd(20)} ${receipt.result}${receipt.blockingMetrics.length > 0 ? ` — blocked by ${receipt.blockingMetrics.join(', ')}` : ''}`,
+    );
   }
   for (const waiver of outcome.gates.appliedWaivers) {
-    lines.push(`  waiver applied      ${waiver.metric} · ${waiver.scopeKind} · ${waiver.reasonCode} · ${waiver.ownerSignatureIdentity} · expires ${waiver.expiresAt}`);
+    lines.push(
+      `  waiver applied      ${waiver.metric} · ${waiver.scopeKind} · ${waiver.reasonCode} · ${waiver.ownerSignatureIdentity} · expires ${waiver.expiresAt}`,
+    );
   }
   for (const waiver of outcome.gates.refusedWaivers) {
     lines.push(`  waiver refused      ${waiver.metric} · ${waiver.code}`);
@@ -101,35 +116,53 @@ try {
     browserAdapter: flags.has('--no-browser-adapter') ? null : createLoopbackBrowserAdapter(),
   });
 
-  const localDirectory = resolve(repoRoot, options.get('--out') ?? join('evaluation', '.runs', outcome.runId));
+  const localDirectory = resolve(
+    repoRoot,
+    options.get('--out') ?? join('evaluation', '.runs', outcome.runId),
+  );
   writeLocalRun(localDirectory, {
     runResult: outcome.runResult,
     aggregateReport: outcome.aggregateReport,
     receipts: outcome.receipts,
     rawEvidence: outcome.evidenceInputs,
   });
-  const artifacts = ['run-result.json', 'evaluation-aggregate.json', 'certification-receipts.json', 'raw-evidence.json'];
-  if (flags.has('--ci')) artifacts.push(...writeCiReports(join(localDirectory, 'ci'), outcome.aggregateReport));
+  const artifacts = [
+    'run-result.json',
+    'evaluation-aggregate.json',
+    'certification-receipts.json',
+    'raw-evidence.json',
+  ];
+  if (flags.has('--ci'))
+    artifacts.push(...writeCiReports(join(localDirectory, 'ci'), outcome.aggregateReport));
 
   if (flags.has('--json')) {
-    process.stdout.write(`${JSON.stringify({
-      ok: outcome.verdict === 'PASS',
-      verdict: outcome.verdict,
-      runId: outcome.runId,
-      blockingMetrics: outcome.gates.blockingMetrics,
-      appliedWaivers: outcome.gates.appliedWaivers,
-      refusedWaivers: outcome.gates.refusedWaivers,
-      report: outcome.aggregateReport,
-      receipts: outcome.receipts,
-      uncoveredSkills: outcome.uncoveredSkills,
-    })}\n`);
+    process.stdout.write(
+      `${JSON.stringify({
+        ok: outcome.verdict === 'PASS',
+        verdict: outcome.verdict,
+        runId: outcome.runId,
+        blockingMetrics: outcome.gates.blockingMetrics,
+        appliedWaivers: outcome.gates.appliedWaivers,
+        refusedWaivers: outcome.gates.refusedWaivers,
+        report: outcome.aggregateReport,
+        receipts: outcome.receipts,
+        uncoveredSkills: outcome.uncoveredSkills,
+      })}\n`,
+    );
   } else {
     process.stdout.write(renderHuman(outcome, artifacts));
   }
   process.exitCode = outcome.verdict === 'PASS' ? 0 : 1;
 } catch (error) {
   const typed = error instanceof PipelineError ? error.toJSON() : null;
-  const value = { ok: false, code: typed?.code ?? 'E_EVALUATION_RUN_FAILED', problem: typed?.problem ?? error.message, ...(typed?.fix ? { fix: typed.fix } : {}) };
-  process.stderr.write(`${argv.includes('--json') ? JSON.stringify(value) : `${value.code}: ${value.problem}`}\n`);
+  const value = {
+    ok: false,
+    code: typed?.code ?? 'E_EVALUATION_RUN_FAILED',
+    problem: typed?.problem ?? error.message,
+    ...(typed?.fix ? { fix: typed.fix } : {}),
+  };
+  process.stderr.write(
+    `${argv.includes('--json') ? JSON.stringify(value) : `${value.code}: ${value.problem}`}\n`,
+  );
   process.exitCode = 1;
 }

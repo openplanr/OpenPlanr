@@ -12,10 +12,12 @@ import { sha256Jcs } from '../../lib/protocol/jcs.mjs';
 import { resolveWorkspaceDependencyRoot } from '../helpers/workspace-dependency.mjs';
 
 const root = fileURLToPath(new URL('../..', import.meta.url));
-const fixture = JSON.parse(readFileSync(join(
-  root,
-  'conformance/fixtures/operating-runtime-v2/experience-bridge-valid.json',
-), 'utf8'))['operate-experience-view'];
+const fixture = JSON.parse(
+  readFileSync(
+    join(root, 'conformance/fixtures/operating-runtime-v2/experience-bridge-valid.json'),
+    'utf8',
+  ),
+)['operate-experience-view'];
 
 function cycle(cycleId, updatedAt) {
   return {
@@ -25,8 +27,8 @@ function cycle(cycleId, updatedAt) {
     focus: [`Focus ${cycleId}`],
     createdAt: '2026-08-11T07:00:00Z',
     updatedAt,
-    stages: ['observe', 'understand', 'decide', 'govern', 'act', 'verify', 'learn']
-      .map((id, index) => ({
+    stages: ['observe', 'understand', 'decide', 'govern', 'act', 'verify', 'learn'].map(
+      (id, index) => ({
         id,
         state: index === 4 ? 'current' : index < 4 ? 'complete' : 'waiting',
         reason: null,
@@ -36,7 +38,8 @@ function cycle(cycleId, updatedAt) {
         evidenceGapIds: [],
         uncertaintyIds: [],
         persistentActionIds: [],
-      })),
+      }),
+    ),
     assignments: [],
     lensAbsences: [],
     executiveBoard: null,

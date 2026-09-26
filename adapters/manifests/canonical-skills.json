@@ -171,7 +171,7 @@
             "cursor"
           ],
           "executable": true,
-          "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7"
+          "digest": "sha256:ca58b77b782f78404f0fc65a42afa25b03d782e8b3f5ae89f42262c9dc21db51"
         },
         {
           "path": "scripts/operate-review-note.mjs",
@@ -183,7 +183,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:9479eacfa12887fabd0b5681734cb7ec66b0ff45bef1fc765fcc026f2d4211d4"
+          "digest": "sha256:10fd0d90e5ec8674a9df0b4dabcb44c0c90ca63a72ea42194d69d365034c94aa"
         },
         {
           "path": "scripts/operate-review-contract.mjs",
@@ -195,7 +195,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:33ba9b87c5543ee05ce290e24aa0be05f6dc9e5d41e85f3b1597d48c45f8b7ca"
+          "digest": "sha256:76de44f9fda5444ad5b4805ae16b21221cde19a99669140ea7a6f032f383edcd"
         },
         {
           "path": "scripts/errors.mjs",
@@ -256,7 +256,7 @@
             "cursor"
           ],
           "executable": true,
-          "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7"
+          "digest": "sha256:ca58b77b782f78404f0fc65a42afa25b03d782e8b3f5ae89f42262c9dc21db51"
         },
         {
           "path": "scripts/operate-review-note.mjs",
@@ -268,7 +268,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:9479eacfa12887fabd0b5681734cb7ec66b0ff45bef1fc765fcc026f2d4211d4"
+          "digest": "sha256:10fd0d90e5ec8674a9df0b4dabcb44c0c90ca63a72ea42194d69d365034c94aa"
         },
         {
           "path": "scripts/operate-review-contract.mjs",
@@ -280,7 +280,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:33ba9b87c5543ee05ce290e24aa0be05f6dc9e5d41e85f3b1597d48c45f8b7ca"
+          "digest": "sha256:76de44f9fda5444ad5b4805ae16b21221cde19a99669140ea7a6f032f383edcd"
         },
         {
           "path": "scripts/errors.mjs",
@@ -341,7 +341,7 @@
             "cursor"
           ],
           "executable": true,
-          "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7"
+          "digest": "sha256:ca58b77b782f78404f0fc65a42afa25b03d782e8b3f5ae89f42262c9dc21db51"
         },
         {
           "path": "scripts/operate-review-note.mjs",
@@ -353,7 +353,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:9479eacfa12887fabd0b5681734cb7ec66b0ff45bef1fc765fcc026f2d4211d4"
+          "digest": "sha256:10fd0d90e5ec8674a9df0b4dabcb44c0c90ca63a72ea42194d69d365034c94aa"
         },
         {
           "path": "scripts/operate-review-contract.mjs",
@@ -365,7 +365,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:33ba9b87c5543ee05ce290e24aa0be05f6dc9e5d41e85f3b1597d48c45f8b7ca"
+          "digest": "sha256:76de44f9fda5444ad5b4805ae16b21221cde19a99669140ea7a6f032f383edcd"
         },
         {
           "path": "scripts/errors.mjs",
@@ -438,7 +438,7 @@
             "cursor"
           ],
           "executable": true,
-          "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7"
+          "digest": "sha256:ca58b77b782f78404f0fc65a42afa25b03d782e8b3f5ae89f42262c9dc21db51"
         },
         {
           "path": "scripts/operate-review-note.mjs",
@@ -450,7 +450,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:9479eacfa12887fabd0b5681734cb7ec66b0ff45bef1fc765fcc026f2d4211d4"
+          "digest": "sha256:10fd0d90e5ec8674a9df0b4dabcb44c0c90ca63a72ea42194d69d365034c94aa"
         },
         {
           "path": "scripts/operate-review-contract.mjs",
@@ -462,7 +462,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:33ba9b87c5543ee05ce290e24aa0be05f6dc9e5d41e85f3b1597d48c45f8b7ca"
+          "digest": "sha256:76de44f9fda5444ad5b4805ae16b21221cde19a99669140ea7a6f032f383edcd"
         },
         {
           "path": "scripts/errors.mjs",
@@ -535,7 +535,7 @@
             "cursor"
           ],
           "executable": true,
-          "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7"
+          "digest": "sha256:ca58b77b782f78404f0fc65a42afa25b03d782e8b3f5ae89f42262c9dc21db51"
         },
         {
           "path": "scripts/operate-review-note.mjs",
@@ -547,7 +547,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:9479eacfa12887fabd0b5681734cb7ec66b0ff45bef1fc765fcc026f2d4211d4"
+          "digest": "sha256:10fd0d90e5ec8674a9df0b4dabcb44c0c90ca63a72ea42194d69d365034c94aa"
         },
         {
           "path": "scripts/operate-review-contract.mjs",
@@ -559,7 +559,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:33ba9b87c5543ee05ce290e24aa0be05f6dc9e5d41e85f3b1597d48c45f8b7ca"
+          "digest": "sha256:76de44f9fda5444ad5b4805ae16b21221cde19a99669140ea7a6f032f383edcd"
         },
         {
           "path": "scripts/errors.mjs",
@@ -632,7 +632,7 @@
             "cursor"
           ],
           "executable": true,
-          "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7"
+          "digest": "sha256:ca58b77b782f78404f0fc65a42afa25b03d782e8b3f5ae89f42262c9dc21db51"
         },
         {
           "path": "scripts/operate-review-note.mjs",
@@ -644,7 +644,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:9479eacfa12887fabd0b5681734cb7ec66b0ff45bef1fc765fcc026f2d4211d4"
+          "digest": "sha256:10fd0d90e5ec8674a9df0b4dabcb44c0c90ca63a72ea42194d69d365034c94aa"
         },
         {
           "path": "scripts/operate-review-contract.mjs",
@@ -656,7 +656,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:33ba9b87c5543ee05ce290e24aa0be05f6dc9e5d41e85f3b1597d48c45f8b7ca"
+          "digest": "sha256:76de44f9fda5444ad5b4805ae16b21221cde19a99669140ea7a6f032f383edcd"
         },
         {
           "path": "scripts/errors.mjs",
@@ -729,7 +729,7 @@
             "cursor"
           ],
           "executable": true,
-          "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7"
+          "digest": "sha256:ca58b77b782f78404f0fc65a42afa25b03d782e8b3f5ae89f42262c9dc21db51"
         },
         {
           "path": "scripts/operate-review-note.mjs",
@@ -741,7 +741,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:9479eacfa12887fabd0b5681734cb7ec66b0ff45bef1fc765fcc026f2d4211d4"
+          "digest": "sha256:10fd0d90e5ec8674a9df0b4dabcb44c0c90ca63a72ea42194d69d365034c94aa"
         },
         {
           "path": "scripts/operate-review-contract.mjs",
@@ -753,7 +753,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:33ba9b87c5543ee05ce290e24aa0be05f6dc9e5d41e85f3b1597d48c45f8b7ca"
+          "digest": "sha256:76de44f9fda5444ad5b4805ae16b21221cde19a99669140ea7a6f032f383edcd"
         },
         {
           "path": "scripts/errors.mjs",
@@ -978,7 +978,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:7a554ec4a32ea6caa6f3bb9f9e9059d586527afd73e33feb708739b0bb75c627"
+          "digest": "sha256:4815704faea80f74133e435070bda6f3113a5bc5acc2a3d6dbd77fa742d3c008"
         },
         {
           "path": "schemas/design-document.schema.json",
@@ -1026,7 +1026,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:c9c0c6ae5421a30a75a0f351060a4ac9422edf824d704d55ad491402f33418a5"
+          "digest": "sha256:e09b186170ca1d1e06734114aef26331f9736338e8e2f877e43e3d48ece25027"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/enhancements.css",
@@ -1564,7 +1564,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:7a554ec4a32ea6caa6f3bb9f9e9059d586527afd73e33feb708739b0bb75c627"
+          "digest": "sha256:4815704faea80f74133e435070bda6f3113a5bc5acc2a3d6dbd77fa742d3c008"
         },
         {
           "path": "schemas/design-document.schema.json",
@@ -1612,7 +1612,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:c9c0c6ae5421a30a75a0f351060a4ac9422edf824d704d55ad491402f33418a5"
+          "digest": "sha256:e09b186170ca1d1e06734114aef26331f9736338e8e2f877e43e3d48ece25027"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/enhancements.css",
@@ -2150,7 +2150,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:7a554ec4a32ea6caa6f3bb9f9e9059d586527afd73e33feb708739b0bb75c627"
+          "digest": "sha256:4815704faea80f74133e435070bda6f3113a5bc5acc2a3d6dbd77fa742d3c008"
         },
         {
           "path": "schemas/design-document.schema.json",
@@ -2198,7 +2198,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:c9c0c6ae5421a30a75a0f351060a4ac9422edf824d704d55ad491402f33418a5"
+          "digest": "sha256:e09b186170ca1d1e06734114aef26331f9736338e8e2f877e43e3d48ece25027"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/enhancements.css",
@@ -2891,7 +2891,7 @@
             "cursor"
           ],
           "executable": true,
-          "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7"
+          "digest": "sha256:ca58b77b782f78404f0fc65a42afa25b03d782e8b3f5ae89f42262c9dc21db51"
         },
         {
           "path": "scripts/operate-review-note.mjs",
@@ -2903,7 +2903,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:9479eacfa12887fabd0b5681734cb7ec66b0ff45bef1fc765fcc026f2d4211d4"
+          "digest": "sha256:10fd0d90e5ec8674a9df0b4dabcb44c0c90ca63a72ea42194d69d365034c94aa"
         },
         {
           "path": "scripts/operate-review-contract.mjs",
@@ -2915,7 +2915,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:33ba9b87c5543ee05ce290e24aa0be05f6dc9e5d41e85f3b1597d48c45f8b7ca"
+          "digest": "sha256:76de44f9fda5444ad5b4805ae16b21221cde19a99669140ea7a6f032f383edcd"
         },
         {
           "path": "scripts/errors.mjs",
@@ -3031,7 +3031,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:7a554ec4a32ea6caa6f3bb9f9e9059d586527afd73e33feb708739b0bb75c627"
+          "digest": "sha256:4815704faea80f74133e435070bda6f3113a5bc5acc2a3d6dbd77fa742d3c008"
         },
         {
           "path": "schemas/design-document.schema.json",
@@ -3079,7 +3079,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:c9c0c6ae5421a30a75a0f351060a4ac9422edf824d704d55ad491402f33418a5"
+          "digest": "sha256:e09b186170ca1d1e06734114aef26331f9736338e8e2f877e43e3d48ece25027"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/enhancements.css",
@@ -3879,7 +3879,7 @@
             "cursor"
           ],
           "executable": true,
-          "digest": "sha256:6378ad3477e4be8b7e916c4249404c50cafecac1c70ffbf5a1a2fce195dfea16"
+          "digest": "sha256:42fb430add6e96c73a8d1c5ea5df7a6ce0bdffc20b9c375eff9333c6c741b308"
         },
         {
           "path": "agents/openai.yaml",

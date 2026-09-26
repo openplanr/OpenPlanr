@@ -34,26 +34,30 @@ function reviewOf(reviewOfDigest) {
     overall: 'Clarify timing.',
     createdAt: '2026-07-14T10:00:00Z',
     updatedAt: '2026-07-14T10:01:00Z',
-    pins: [{
-      id: 'pin-001',
-      author: { id: 'reviewer-1', name: 'Asem' },
-      artifactId: 'checkout-light',
-      variant: 'light',
-      region: { x: 0.1, y: 0.2, w: 0.3, h: 0.1 },
-      viewport: { width: 1440, height: 900 },
-      anchor: { planrId: 'delivery-promise', screen: 'checkout' },
-      intent: 'fix',
-      status: 'open',
-      comment: 'Show the delivery promise first.',
-      replies: [{
-        id: 'reply-001',
-        author: { name: 'Maya' },
-        comment: 'Agreed.',
-        createdAt: '2026-07-14T10:00:30Z',
-      }],
-      createdAt: '2026-07-14T10:00:00Z',
-      updatedAt: '2026-07-14T10:00:30Z',
-    }],
+    pins: [
+      {
+        id: 'pin-001',
+        author: { id: 'reviewer-1', name: 'Asem' },
+        artifactId: 'checkout-light',
+        variant: 'light',
+        region: { x: 0.1, y: 0.2, w: 0.3, h: 0.1 },
+        viewport: { width: 1440, height: 900 },
+        anchor: { planrId: 'delivery-promise', screen: 'checkout' },
+        intent: 'fix',
+        status: 'open',
+        comment: 'Show the delivery promise first.',
+        replies: [
+          {
+            id: 'reply-001',
+            author: { name: 'Maya' },
+            comment: 'Agreed.',
+            createdAt: '2026-07-14T10:00:30Z',
+          },
+        ],
+        createdAt: '2026-07-14T10:00:00Z',
+        updatedAt: '2026-07-14T10:00:30Z',
+      },
+    ],
   };
 }
 
@@ -79,7 +83,9 @@ test('canonical JSON and digest bytes are stable and browser Web Crypto compatib
   assert.equal(canonicalSerialize({ z: 1, a: { y: 2, x: 3 } }), '{"a":{"x":3,"y":2},"z":1}');
   const envelope = createArtifactEnvelope({ artifacts: [artifact] });
   const bytes = canonicalEnvelopeBytes(envelope);
-  const browserDigest = Buffer.from(await webcrypto.subtle.digest('SHA-256', bytes)).toString('hex');
+  const browserDigest = Buffer.from(await webcrypto.subtle.digest('SHA-256', bytes)).toString(
+    'hex',
+  );
   assert.equal(browserDigest, digestArtifactEnvelope(envelope));
   assert.equal(digestArtifactEnvelope(envelope), digestArtifactEnvelope(structuredClone(envelope)));
 });
@@ -98,7 +104,12 @@ test('review state is validated and excluded from the reviewed envelope digest',
 });
 
 test('canonical variants envelope supports transient split shell state without digest mutation', () => {
-  const comparison = { ...artifact, id: 'checkout-dark', title: 'Checkout dark', colorScheme: 'dark' };
+  const comparison = {
+    ...artifact,
+    id: 'checkout-dark',
+    title: 'Checkout dark',
+    colorScheme: 'dark',
+  };
   const envelope = createArtifactEnvelope({
     artifacts: [artifact, comparison],
     viewer: { mode: 'variants', activeArtifactId: 'checkout-light' },
@@ -106,7 +117,11 @@ test('canonical variants envelope supports transient split shell state without d
   const digest = digestArtifactEnvelope(envelope);
   const model = normalizeArtifactShellModel({
     envelope,
-    viewer: { mode: 'split', activeArtifactId: 'checkout-light', comparisonArtifactId: 'checkout-dark' },
+    viewer: {
+      mode: 'split',
+      activeArtifactId: 'checkout-light',
+      comparisonArtifactId: 'checkout-dark',
+    },
   });
   assert.equal(model.viewMode, 'split');
   assert.equal(model.comparisonArtifact.id, 'checkout-dark');
@@ -133,10 +148,11 @@ test('optional presentation preserves old digests and validates only serialized 
   assert.notEqual(digestArtifactEnvelope(document), legacyDigest);
   assert.notEqual(digestArtifactEnvelope(canvas), legacyDigest);
   assert.throws(
-    () => createArtifactEnvelope({
-      artifacts: [artifact],
-      viewer: { mode: 'single', activeArtifactId: artifact.id, presentation: 'auto' },
-    }),
+    () =>
+      createArtifactEnvelope({
+        artifacts: [artifact],
+        viewer: { mode: 'single', activeArtifactId: artifact.id, presentation: 'auto' },
+      }),
     /presentation must be document or canvas/,
   );
 });
@@ -152,7 +168,11 @@ test('envelope and review negative fixtures fail with named errors', () => {
     (error) => error.code === ARTIFACT_ERROR_CODES.ENVELOPE_INVALID,
   );
   assert.throws(
-    () => createArtifactEnvelope({ artifacts: [artifact], viewer: { mode: 'single', activeArtifactId: 'missing' } }),
+    () =>
+      createArtifactEnvelope({
+        artifacts: [artifact],
+        viewer: { mode: 'single', activeArtifactId: 'missing' },
+      }),
     (error) => error.code === ARTIFACT_ERROR_CODES.ENVELOPE_INVALID,
   );
   assert.throws(
@@ -164,32 +184,55 @@ test('envelope and review negative fixtures fail with named errors', () => {
     (error) => error.code === ARTIFACT_ERROR_CODES.ENVELOPE_INVALID,
   );
   assert.throws(
-    () => validateArtifactReview({ ...reviewOf(digestArtifactEnvelope(base)), overall: 'x'.repeat(65_537) }),
+    () =>
+      validateArtifactReview({
+        ...reviewOf(digestArtifactEnvelope(base)),
+        overall: 'x'.repeat(65_537),
+      }),
     (error) => error.code === ARTIFACT_ERROR_CODES.ENVELOPE_INVALID,
   );
   assert.throws(
-    () => validateArtifactEnvelope({
-      ...base,
-      artifacts: [{ ...base.artifacts[0], viewport: { width: 20_000, height: 900 } }],
-    }),
+    () =>
+      validateArtifactEnvelope({
+        ...base,
+        artifacts: [{ ...base.artifacts[0], viewport: { width: 20_000, height: 900 } }],
+      }),
     (error) => error.code === ARTIFACT_ERROR_CODES.ENVELOPE_INVALID,
   );
-  const invalidEmbeddedReview = { ...base, review: { ...reviewOf(digestArtifactEnvelope(base)), pins: [42] } };
-  assert.notEqual(validateJson(invalidEmbeddedReview, loadSchema('artifact-envelope', 'v1.1.0')).length, 0);
+  const invalidEmbeddedReview = {
+    ...base,
+    review: { ...reviewOf(digestArtifactEnvelope(base)), pins: [42] },
+  };
+  assert.notEqual(
+    validateJson(invalidEmbeddedReview, loadSchema('artifact-envelope', 'v1.1.0')).length,
+    0,
+  );
 });
 
 test('paste schema validates request, response, and ciphertext-only storage boundaries', () => {
   const schema = loadSchema('artifact-paste', 'v1.1.0');
   const request = {
-    schemaVersion: '1.0.0', operation: 'create', iv: 'abcdefghijklmnop', ciphertext: 'cipher_text-1', ttl: '7d',
+    schemaVersion: '1.0.0',
+    operation: 'create',
+    iv: 'abcdefghijklmnop',
+    ciphertext: 'cipher_text-1',
+    ttl: '7d',
   };
   const response = {
-    schemaVersion: '1.0.0', operation: 'created', id: 'abcdefghijklmnop',
-    expiresAt: '2026-07-21T10:00:00Z', deletionToken: 'abcdefghijklmnopqrstuvwxyzABCDEF',
+    schemaVersion: '1.0.0',
+    operation: 'created',
+    id: 'abcdefghijklmnop',
+    expiresAt: '2026-07-21T10:00:00Z',
+    deletionToken: 'abcdefghijklmnopqrstuvwxyzABCDEF',
   };
   const stored = {
-    schemaVersion: '1.0.0', operation: 'stored', id: 'abcdefghijklmnop', iv: 'abcdefghijklmnop',
-    ciphertext: 'cipher_text-1', expiresAt: '2026-07-21T10:00:00Z', size: 13,
+    schemaVersion: '1.0.0',
+    operation: 'stored',
+    id: 'abcdefghijklmnop',
+    iv: 'abcdefghijklmnop',
+    ciphertext: 'cipher_text-1',
+    expiresAt: '2026-07-21T10:00:00Z',
+    size: 13,
     deletionTokenHash: 'a'.repeat(64),
   };
   assert.deepEqual(validateJson(request, schema), []);
@@ -209,8 +252,12 @@ test('paste schema validates request, response, and ciphertext-only storage boun
 test('live room event schema validates digest-bound encrypted review operations', () => {
   const schema = loadSchema('artifact-room-event', 'v1.1.0');
   const event = {
-    schemaVersion: '1.0.0', eventId: 'evt-1', roomId: 'room_0123456789abcd',
-    reviewOf: 'a'.repeat(64), kind: 'pin', createdAt: '2026-07-16T00:00:00.000Z',
+    schemaVersion: '1.0.0',
+    eventId: 'evt-1',
+    roomId: 'room_0123456789abcd',
+    reviewOf: 'a'.repeat(64),
+    kind: 'pin',
+    createdAt: '2026-07-16T00:00:00.000Z',
     payload: {
       id: 'pin-1',
       author: { name: 'Reviewer' },
@@ -226,7 +273,10 @@ test('live room event schema validates digest-bound encrypted review operations'
     },
   };
   assert.deepEqual(validateJson(event, schema), []);
-  assert.notEqual(validateJson({ ...event, payload: { ...event.payload, injected: true } }, schema).length, 0);
+  assert.notEqual(
+    validateJson({ ...event, payload: { ...event.payload, injected: true } }, schema).length,
+    0,
+  );
   assert.notEqual(validateJson({ ...event, kind: 'plaintext' }, schema).length, 0);
   assert.notEqual(validateJson({ ...event, reviewOf: 'not-a-digest' }, schema).length, 0);
 });

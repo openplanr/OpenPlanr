@@ -1,16 +1,16 @@
 #!/usr/bin/env node
 
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import {
-  OPERATE_RUNTIME_CONTRACT_KINDS,
   assertProtocolArtifact,
   listProtocolSchemas,
   loadOperateRuntimeContract,
   loadProtocolContract,
+  OPERATE_RUNTIME_CONTRACT_KINDS,
 } from 'planr-pipeline/protocol';
 
 const root = dirname(fileURLToPath(new URL('../package.json', import.meta.url)));
@@ -50,14 +50,16 @@ const removedPaths = [
   'adapters/cursor/rules/openplanr-operate-ceo.mdc',
   'adapters/cursor/rules/openplanr-operate-chair.mdc',
 ];
-const OPERATE_VALIDATE_NOTE_LINE = /^planr operate validate-note "(<absolute-(?:advisor-output|challenger-output|chair-output|board-report-path)>)" --profile (advisor|challenger|chair|board-report) --contract-version 2\.0\.0 --json$/u;
+const OPERATE_VALIDATE_NOTE_LINE =
+  /^planr operate validate-note "(<absolute-(?:advisor-output|challenger-output|chair-output|board-report-path)>)" --profile (advisor|challenger|chair|board-report) --contract-version 2\.0\.0 --json$/u;
 const VALIDATION_PROFILE_PLACEHOLDERS = new Map([
   ['advisor', '<absolute-advisor-output>'],
   ['challenger', '<absolute-challenger-output>'],
   ['chair', '<absolute-chair-output>'],
   ['board-report', '<absolute-board-report-path>'],
 ]);
-const RETIRED_OPERATE_WIRE_SEMANTICS = /(?:data\.continuation|allowedActions|packetId|assignmentId|resultPath|templatePath|evidence-digest|content-base64|idempotenc(?:y|e)|\b(?:start|resume)\s*\/\s*(?:resume|start)\b|\bgoverned choice\b|\bPlanning (?:lifecycle|machine|wire|state|command|phase)\b)/iu;
+const RETIRED_OPERATE_WIRE_SEMANTICS =
+  /(?:data\.continuation|allowedActions|packetId|assignmentId|resultPath|templatePath|evidence-digest|content-base64|idempotenc(?:y|e)|\b(?:start|resume)\s*\/\s*(?:resume|start)\b|\bgoverned choice\b|\bPlanning (?:lifecycle|machine|wire|state|command|phase)\b)/iu;
 function assertClosedOperateCliBoundary(source, label) {
   const commandLines = source
     .split('\n')
@@ -95,8 +97,11 @@ function assertClosedOperateCliBoundary(source, label) {
     /\bplanr-pipeline\s+|\/planr-pipeline:planr-operate\b|commands\/operate\.md|skills\/operate(?:-|\/)/u,
     `${label}: retired pipeline and plugin Operate commands are forbidden`,
   );
-  assert.doesNotMatch(source, RETIRED_OPERATE_WIRE_SEMANTICS,
-    `${label}: retired start/resume, choice, Planning, and wire semantics are forbidden`);
+  assert.doesNotMatch(
+    source,
+    RETIRED_OPERATE_WIRE_SEMANTICS,
+    `${label}: retired start/resume, choice, Planning, and wire semantics are forbidden`,
+  );
   assert.deepEqual(
     profiles,
     ['advisor', 'challenger', 'chair', 'board-report'],
@@ -105,7 +110,11 @@ function assertClosedOperateCliBoundary(source, label) {
 }
 
 for (const relativePath of removedPaths) {
-  assert.equal(existsSync(join(root, relativePath)), false, `removed path remains: ${relativePath}`);
+  assert.equal(
+    existsSync(join(root, relativePath)),
+    false,
+    `removed path remains: ${relativePath}`,
+  );
 }
 
 for (const hostile of [
@@ -126,8 +135,9 @@ for (const hostile of [
 
 for (const version of ['v1.2.0', 'v1.3.0', 'v1.4.0']) {
   const directory = join(root, 'schemas', version);
-  const residual = readdirSync(directory)
-    .filter((name) => /^operating-.+\.schema\.json$/.test(name));
+  const residual = readdirSync(directory).filter((name) =>
+    /^operating-.+\.schema\.json$/.test(name),
+  );
   assert.deepEqual(residual, [], `${version} still publishes an Operate v1 schema`);
 }
 
@@ -233,31 +243,38 @@ assert.equal(
 );
 const registered = listProtocolSchemas();
 assert.deepEqual(
-  registered.filter(({ kind, protocolVersion }) => kind.startsWith('operating-') && protocolVersion !== '2.0.0'),
+  registered.filter(
+    ({ kind, protocolVersion }) => kind.startsWith('operating-') && protocolVersion !== '2.0.0',
+  ),
   [],
   'the protocol registry must not retain v1 Operate schemas',
 );
 assert.deepEqual(
-  registered.filter(({ protocolVersion }) => protocolVersion === '2.0.0').map(({ kind }) => kind).sort(),
+  registered
+    .filter(({ protocolVersion }) => protocolVersion === '2.0.0')
+    .map(({ kind }) => kind)
+    .sort(),
   [...OPERATE_RUNTIME_CONTRACT_KINDS].sort(),
 );
 
-assert.throws(
-  () => loadProtocolContract('operating-state', { protocolVersion: '1.4.0' }),
-  { code: 'E_SCHEMA_UNKNOWN' },
-);
+assert.throws(() => loadProtocolContract('operating-state', { protocolVersion: '1.4.0' }), {
+  code: 'E_SCHEMA_UNKNOWN',
+});
 for (const kind of OPERATE_RUNTIME_CONTRACT_KINDS) {
   assert.equal(loadOperateRuntimeContract(kind, { protocolVersion: '2.0.0' }).kind, kind);
 }
 
-const fixtures = JSON.parse(readFileSync(
-  join(root, 'conformance/fixtures/operating-runtime-v2/all-contracts-valid.json'),
-  'utf8',
-));
+const fixtures = JSON.parse(
+  readFileSync(
+    join(root, 'conformance/fixtures/operating-runtime-v2/all-contracts-valid.json'),
+    'utf8',
+  ),
+);
 const mixedCheckpoint = structuredClone(fixtures['operating-checkpoint']);
 mixedCheckpoint.eventHead.protocolVersions = ['1.4.0', '2.0.0'];
 assert.throws(
-  () => assertProtocolArtifact('operating-checkpoint', mixedCheckpoint, { protocolVersion: '2.0.0' }),
+  () =>
+    assertProtocolArtifact('operating-checkpoint', mixedCheckpoint, { protocolVersion: '2.0.0' }),
   { code: 'E_PROTOCOL_ARTIFACT_INVALID' },
   'a v2 checkpoint must reject a mixed legacy event history',
 );
@@ -267,8 +284,10 @@ assert.equal(manifest.exports['./operate/compatibility-v1_4'], undefined);
 assert.equal(manifest.scripts['generate:operating-assets'], undefined);
 assert.equal(manifest.scripts['canary:operate-release'], undefined);
 
-process.stdout.write(`${JSON.stringify({
-  ok: true,
-  contracts: OPERATE_RUNTIME_CONTRACT_KINDS.length,
-  removedPaths: removedPaths.length,
-})}\n`);
+process.stdout.write(
+  `${JSON.stringify({
+    ok: true,
+    contracts: OPERATE_RUNTIME_CONTRACT_KINDS.length,
+    removedPaths: removedPaths.length,
+  })}\n`,
+);

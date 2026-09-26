@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
+import { mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
+import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../../../..', import.meta.url));
 const read = (path) => readFileSync(join(root, path), 'utf8');
@@ -26,9 +26,21 @@ test('the retained legacy procedure keeps its branch and outward-action guardrai
 
 const surfaces = [
   ['canonical', 'skills/planr-sync/SKILL.md', 'skills/planr-sync/scripts/sync.mjs'],
-  ['openai', 'dist/plugins/openai/openplanr/skills/sync/SKILL.md', 'dist/plugins/openai/openplanr/skills/sync/scripts/sync.mjs'],
-  ['claude', 'dist/plugins/claude/openplanr/skills/sync/SKILL.md', 'dist/plugins/claude/openplanr/skills/sync/scripts/sync.mjs'],
-  ['cursor', 'dist/plugins/cursor/openplanr/rules/planr-sync.mdc', 'dist/plugins/cursor/openplanr/rules/planr-sync/scripts/sync.mjs'],
+  [
+    'openai',
+    'dist/plugins/openai/openplanr/skills/sync/SKILL.md',
+    'dist/plugins/openai/openplanr/skills/sync/scripts/sync.mjs',
+  ],
+  [
+    'claude',
+    'dist/plugins/claude/openplanr/skills/sync/SKILL.md',
+    'dist/plugins/claude/openplanr/skills/sync/scripts/sync.mjs',
+  ],
+  [
+    'cursor',
+    'dist/plugins/cursor/openplanr/rules/planr-sync.mdc',
+    'dist/plugins/cursor/openplanr/rules/planr-sync/scripts/sync.mjs',
+  ],
 ];
 
 for (const [surface, entrypoint, helper] of surfaces) {
@@ -36,8 +48,14 @@ for (const [surface, entrypoint, helper] of surfaces) {
     const guidance = read(entrypoint);
     assert.match(guidance, /Audit is read-only by default/);
     assert.match(guidance, /Apply local changes only when the request asks for\s+reconciliation/);
-    assert.match(guidance, /push remote changes only when the request asks for external\s+synchronization/);
-    assert.match(guidance, /If credentials are unavailable, complete local reconciliation\s+and report only the external step that could not run/);
+    assert.match(
+      guidance,
+      /push remote changes only when the request asks for external\s+synchronization/,
+    );
+    assert.match(
+      guidance,
+      /If credentials are unavailable, complete local reconciliation\s+and report only the external step that could not run/,
+    );
     assert.match(guidance, /Return aligned, locally repairable, conflict, and unavailable counts/);
     assert.match(guidance, /OpenPlanr CLI is never required/);
     assert.doesNotMatch(guidance, /procedures\/sync-workflow\.md|commands\/sync\.md/);

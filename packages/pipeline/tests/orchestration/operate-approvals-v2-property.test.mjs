@@ -15,7 +15,10 @@ test('approval quorum property: 384 record order/replay vectors authorize only e
     if (seed % 2 === 1) selected.reverse();
     const before = sha256Jcs({ state, selected });
     const result = evaluateOperatingApprovalSetV2({
-      evaluation: state.evaluation, action: state.action, requirements: [state.requirement], approvals: selected,
+      evaluation: state.evaluation,
+      action: state.action,
+      requirements: [state.requirement],
+      approvals: selected,
       now: '2026-08-10T08:02:00Z',
     });
     assert.equal(result.complete, selected.length >= 2, `seed ${seed}`);
@@ -25,29 +28,55 @@ test('approval quorum property: 384 record order/replay vectors authorize only e
 
 test('exact scope property: copied Action, target, policy, evaluation, and party approval never authorizes', () => {
   const mutations = [
-    (recordValue) => { recordValue.action.revision += 1; },
-    (recordValue) => { recordValue.action.actionHash = `sha256:${'f'.repeat(64)}`; },
-    (recordValue) => { recordValue.target.revision = 'another-revision'; },
-    (recordValue) => { recordValue.capability.id = 'broader-write'; },
-    (recordValue) => { recordValue.policy.policyVersion = '2.0.0'; },
-    (recordValue) => { recordValue.evaluationId = 'pevl_other001'; },
-    (recordValue) => { recordValue.partyId = 'another-party'; },
-    (recordValue) => { recordValue.scopeId = 'another-scope'; },
+    (recordValue) => {
+      recordValue.action.revision += 1;
+    },
+    (recordValue) => {
+      recordValue.action.actionHash = `sha256:${'f'.repeat(64)}`;
+    },
+    (recordValue) => {
+      recordValue.target.revision = 'another-revision';
+    },
+    (recordValue) => {
+      recordValue.capability.id = 'broader-write';
+    },
+    (recordValue) => {
+      recordValue.policy.policyVersion = '2.0.0';
+    },
+    (recordValue) => {
+      recordValue.evaluationId = 'pevl_other001';
+    },
+    (recordValue) => {
+      recordValue.partyId = 'another-party';
+    },
+    (recordValue) => {
+      recordValue.scopeId = 'another-scope';
+    },
   ];
   for (let seed = 0; seed < 256; seed += 1) {
     const state = authority();
     const approval = structuredClone(record(state));
     mutations[seed % mutations.length](approval);
-    assert.throws(() => evaluateOperatingApprovalSetV2({
-      evaluation: state.evaluation, action: state.action, requirements: [state.requirement], approvals: [approval],
-      now: '2026-08-10T08:02:00Z',
-    }), ({ code }) => code === 'APPROVAL_INVALID', `seed ${seed}`);
+    assert.throws(
+      () =>
+        evaluateOperatingApprovalSetV2({
+          evaluation: state.evaluation,
+          action: state.action,
+          requirements: [state.requirement],
+          approvals: [approval],
+          now: '2026-08-10T08:02:00Z',
+        }),
+      ({ code }) => code === 'APPROVAL_INVALID',
+      `seed ${seed}`,
+    );
   }
 });
 
 test('requirement integrity property: schema-valid party/cardinality forgeries always fail closed', () => {
   for (let seed = 0; seed < 256; seed += 1) {
-    const state = authority(seed % 6 === 5 ? 'named-multi-party' : seed % 6 === 0 ? 'named-single-party' : 'threshold');
+    const state = authority(
+      seed % 6 === 5 ? 'named-multi-party' : seed % 6 === 0 ? 'named-single-party' : 'threshold',
+    );
     const requirement = structuredClone(state.requirement);
     switch (seed % 6) {
       case 0:
@@ -76,15 +105,24 @@ test('requirement integrity property: schema-valid party/cardinality forgeries a
     }
     delete requirement.scopeHash;
     requirement.scopeHash = sha256Jcs(requirement);
-    assert.doesNotThrow(() => assertProtocolArtifact('operating-approval-requirement', requirement, {
-      protocolVersion: '2.0.0',
-    }), `seed ${seed}: forged requirement remains schema-valid`);
-    assert.throws(() => evaluateOperatingApprovalSetV2({
-      evaluation: state.evaluation,
-      action: state.action,
-      requirements: [requirement],
-      approvals: [],
-      now: '2026-08-10T08:02:00Z',
-    }), ({ code }) => code === 'APPROVAL_INVALID', `seed ${seed}`);
+    assert.doesNotThrow(
+      () =>
+        assertProtocolArtifact('operating-approval-requirement', requirement, {
+          protocolVersion: '2.0.0',
+        }),
+      `seed ${seed}: forged requirement remains schema-valid`,
+    );
+    assert.throws(
+      () =>
+        evaluateOperatingApprovalSetV2({
+          evaluation: state.evaluation,
+          action: state.action,
+          requirements: [requirement],
+          approvals: [],
+          now: '2026-08-10T08:02:00Z',
+        }),
+      ({ code }) => code === 'APPROVAL_INVALID',
+      `seed ${seed}`,
+    );
   }
 });

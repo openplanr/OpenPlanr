@@ -1,18 +1,19 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
-import { spawnSync } from 'node:child_process';
 import { test } from 'node:test';
-
-import { renderNamespacedSkill } from '../../../../scripts/skills/host-invocations.mjs';
 import { fileURLToPath } from 'node:url';
+import { renderNamespacedSkill } from '../../../../scripts/skills/host-invocations.mjs';
 
 const PIPELINE_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const WORKSPACE_ROOT = resolve(PIPELINE_ROOT, '../..');
 const readWorkspace = (path) => readFileSync(join(WORKSPACE_ROOT, path), 'utf8');
-const FORBIDDEN_DELEGATION = /\b(?:planr-pipeline|planr plan|planr spec decompose|ANTHROPIC_API_KEY|OPENAI_API_KEY|OLLAMA_HOST)\b/iu;
-const RETIRED_GOVERNANCE = /receipt|sha-?256|digest-bound|correction (?:counter|loop|attempt)|one task per invocation|one-subtask approval|snapshot-pending/iu;
+const FORBIDDEN_DELEGATION =
+  /\b(?:planr-pipeline|planr plan|planr spec decompose|ANTHROPIC_API_KEY|OPENAI_API_KEY|OLLAMA_HOST)\b/iu;
+const RETIRED_GOVERNANCE =
+  /receipt|sha-?256|digest-bound|correction (?:counter|loop|attempt)|one task per invocation|one-subtask approval|snapshot-pending/iu;
 
 test('Ship is an in-session implementation workflow with a clear Land boundary', () => {
   const skill = readWorkspace('skills/planr-ship/SKILL.md');
@@ -54,27 +55,31 @@ test('the packaged discovery helper is read-only and returns ordered command can
   try {
     mkdirSync(join(fixture, '.github/workflows'), { recursive: true });
     mkdirSync(join(fixture, '.planr/specs/SPEC-001/us-001/tasks'), { recursive: true });
-    writeFileSync(join(fixture, 'package.json'), JSON.stringify({
-      scripts: { test: 'node --test', lint: 'biome check .', dev: 'vite' },
-    }));
+    writeFileSync(
+      join(fixture, 'package.json'),
+      JSON.stringify({
+        scripts: { test: 'node --test', lint: 'biome check .', dev: 'vite' },
+      }),
+    );
     writeFileSync(join(fixture, 'AGENTS.md'), 'Run `npm run lint` before completion.\n');
     writeFileSync(
       join(fixture, '.planr/specs/SPEC-001/us-001/tasks/T-001-example.md'),
       '## Test Requirements\n\n```sh\nnpm run test -- --example\n```\n',
     );
-    writeFileSync(
-      join(fixture, '.github/workflows/ci.yml'),
-      'steps:\n  - run: npm run test\n',
-    );
+    writeFileSync(join(fixture, '.github/workflows/ci.yml'), 'steps:\n  - run: npm run test\n');
 
     const helper = join(WORKSPACE_ROOT, 'skills/planr-ship/scripts/discover-verification.mjs');
-    const result = spawnSync(process.execPath, [
-      helper,
-      '--project',
-      fixture,
-      '--task',
-      '.planr/specs/SPEC-001/us-001/tasks/T-001-example.md',
-    ], { encoding: 'utf8' });
+    const result = spawnSync(
+      process.execPath,
+      [
+        helper,
+        '--project',
+        fixture,
+        '--task',
+        '.planr/specs/SPEC-001/us-001/tasks/T-001-example.md',
+      ],
+      { encoding: 'utf8' },
+    );
     assert.equal(result.status, 0, result.stderr);
     const output = JSON.parse(result.stdout);
     assert.deepEqual(output.checks.slice(0, 3), [
@@ -97,7 +102,10 @@ test('Ship keeps the five-field result contract concise and non-governing', () =
   for (const field of ['outcome', 'task', 'changed', 'checks', 'issues']) {
     assert.match(contract, new RegExp(`\\b${field}\\b`, 'u'), field);
   }
-  assert.match(contract, /Do not add receipts, digests, proof ledgers, fixed review loops, or approval\s+narration/u);
+  assert.match(
+    contract,
+    /Do not add receipts, digests, proof ledgers, fixed review loops, or approval\s+narration/u,
+  );
 });
 
 test('every host receives the canonical Ship package without compatibility commands', () => {

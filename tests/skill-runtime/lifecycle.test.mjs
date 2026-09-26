@@ -15,13 +15,13 @@ import test from 'node:test';
 import { withDocumentDigest } from '../../packages/protocol/src/canonical-json.mjs';
 import { validateProtocolArtifact } from '../../packages/protocol/src/contracts.mjs';
 import {
-  LOCAL_LEARNING_PATH,
   checkpointSession,
   classifyOperation,
   completionFromRuntimeResult,
   createCompletion,
   createConsentRecord,
   createSkillSession,
+  LOCAL_LEARNING_PATH,
   persistLearningRecord,
   prepareLearningRecord,
   recoverSession,
@@ -30,30 +30,24 @@ import {
 } from '../../packages/skill-runtime/src/lifecycle/index.mjs';
 
 const root = resolve(import.meta.dirname, '..', '..');
-const fixture = JSON.parse(readFileSync(join(
-  root,
-  'packages',
-  'skill-runtime',
-  'fixtures',
-  'lifecycle',
-  'journeys.json',
-), 'utf8'));
-const guidedFixture = JSON.parse(readFileSync(join(
-  root,
-  'tests',
-  'protocol',
-  'fixtures',
-  'skill-source',
-  'skill-consent-record.json',
-), 'utf8')).confirmation;
-const questions = JSON.parse(readFileSync(join(
-  root,
-  'packages',
-  'skill-runtime',
-  'fixtures',
-  'resolver',
-  'question-fallbacks.json',
-), 'utf8'));
+const fixture = JSON.parse(
+  readFileSync(
+    join(root, 'packages', 'skill-runtime', 'fixtures', 'lifecycle', 'journeys.json'),
+    'utf8',
+  ),
+);
+const guidedFixture = JSON.parse(
+  readFileSync(
+    join(root, 'tests', 'protocol', 'fixtures', 'skill-source', 'skill-consent-record.json'),
+    'utf8',
+  ),
+).confirmation;
+const questions = JSON.parse(
+  readFileSync(
+    join(root, 'packages', 'skill-runtime', 'fixtures', 'resolver', 'question-fallbacks.json'),
+    'utf8',
+  ),
+);
 const guided = {
   ...guidedFixture,
   arguments: ['--skill', fixture.skillId, '--subject', 'learning', '--decision', 'granted'],
@@ -98,11 +92,10 @@ test('configuration and explicit data-feature consent remain separate', () => {
   assert.equal(configuredOnly.settings.learning, false);
   assert.equal(configuredOnly.settings.telemetry, false);
   assert.equal(configuredOnly.settings.externalData, false);
-  assert.deepEqual(configuredOnly.diagnostics.map(({ status }) => status), [
-    'unavailable',
-    'unavailable',
-    'unavailable',
-  ]);
+  assert.deepEqual(
+    configuredOnly.diagnostics.map(({ status }) => status),
+    ['unavailable', 'unavailable', 'unavailable'],
+  );
 
   const optedIn = resolveLifecycleSettings({
     skillId: fixture.skillId,
@@ -125,7 +118,10 @@ test('explicit data-feature decisions reuse the existing guided interaction cont
     projectIdentity,
     confirmation: guided,
   });
-  assert.deepEqual(validateProtocolArtifact('skill-consent-record', record, { protocolVersion: '1.6.0' }), []);
+  assert.deepEqual(
+    validateProtocolArtifact('skill-consent-record', record, { protocolVersion: '1.6.0' }),
+    [],
+  );
 });
 
 test('data-feature consent rejects forged, mismatched, stale, and cross-project confirmations', () => {
@@ -138,48 +134,54 @@ test('data-feature consent rejects forged, mismatched, stale, and cross-project 
     projectIdentity,
   };
   assert.throws(
-    () => createConsentRecord({
-      ...base,
-      confirmation: { kind: 'guided-confirmation', state: 'confirmed' },
-    }),
+    () =>
+      createConsentRecord({
+        ...base,
+        confirmation: { kind: 'guided-confirmation', state: 'confirmed' },
+      }),
     /Protocol guided-confirmation contract/u,
   );
   assert.throws(
-    () => createConsentRecord({
-      ...base,
-      confirmation: { ...guided, actionId: 'consent.telemetry' },
-    }),
+    () =>
+      createConsentRecord({
+        ...base,
+        confirmation: { ...guided, actionId: 'consent.telemetry' },
+      }),
     /confirmation\.actionId must be consent\.learning/u,
   );
   assert.throws(
-    () => createConsentRecord({
-      ...base,
-      confirmation: { ...guided, expiresAt: '2026-08-30T11:59:00.000Z' },
-    }),
+    () =>
+      createConsentRecord({
+        ...base,
+        confirmation: { ...guided, expiresAt: '2026-08-30T11:59:00.000Z' },
+      }),
     /before its Protocol expiry/u,
   );
   assert.throws(
-    () => createConsentRecord({
-      ...base,
-      projectIdentity: `sha256:${'4'.repeat(64)}`,
-      confirmation: guided,
-    }),
+    () =>
+      createConsentRecord({
+        ...base,
+        projectIdentity: `sha256:${'4'.repeat(64)}`,
+        confirmation: guided,
+      }),
     /active project identity/u,
   );
   assert.throws(
-    () => createConsentRecord({
-      ...base,
-      skillId: 'planr-ship',
-      confirmation: guided,
-    }),
+    () =>
+      createConsentRecord({
+        ...base,
+        skillId: 'planr-ship',
+        confirmation: guided,
+      }),
     /exact skill, subject, and decision/u,
   );
   assert.throws(
-    () => createConsentRecord({
-      ...base,
-      decision: 'declined',
-      confirmation: guided,
-    }),
+    () =>
+      createConsentRecord({
+        ...base,
+        decision: 'declined',
+        confirmation: guided,
+      }),
     /exact skill, subject, and decision/u,
   );
 
@@ -238,7 +240,10 @@ test('compatible checkpoints restore safe state without exposing binding digests
     now: fixture.now,
     createSessionId: () => fixture.sessionId,
   });
-  assert.deepEqual(validateProtocolArtifact('skill-session', session, { protocolVersion: '1.6.0' }), []);
+  assert.deepEqual(
+    validateProtocolArtifact('skill-session', session, { protocolVersion: '1.6.0' }),
+    [],
+  );
 
   const saved = checkpointSession({
     session,
@@ -367,13 +372,19 @@ test('recovery starts fresh for closed, expired, or stale-question sessions', ()
 
 test('effect classification delegates execution boundaries to the host', () => {
   assert.deepEqual(classifyOperation('planning'), {
-    operationClass: 'planning', effect: 'none', execution: 'local',
+    operationClass: 'planning',
+    effect: 'none',
+    execution: 'local',
   });
   assert.deepEqual(classifyOperation('external-effect'), {
-    operationClass: 'external-effect', effect: 'external', execution: 'host',
+    operationClass: 'external-effect',
+    effect: 'external',
+    execution: 'host',
   });
   assert.deepEqual(classifyOperation('destructive'), {
-    operationClass: 'destructive', effect: 'destructive', execution: 'host',
+    operationClass: 'destructive',
+    effect: 'destructive',
+    execution: 'host',
   });
 });
 
@@ -413,7 +424,12 @@ test('learning is local, redacted, explicitly enabled, and cannot target source 
   assert.equal(redacted.status, 'completed');
   assert.equal(redacted.redactions, 4);
   assert.doesNotMatch(redacted.record.note, /private-value|ghp_|AKIA|sk-proj-/u);
-  assert.deepEqual(validateProtocolArtifact('skill-learning-record', redacted.record, { protocolVersion: '1.6.0' }), []);
+  assert.deepEqual(
+    validateProtocolArtifact('skill-learning-record', redacted.record, {
+      protocolVersion: '1.6.0',
+    }),
+    [],
+  );
 
   const project = mkdtempSync(join(tmpdir(), 'openplanr-lifecycle-'));
   try {
@@ -428,7 +444,9 @@ test('learning is local, redacted, explicitly enabled, and cannot target source 
       },
     });
     assert.deepEqual(arbitrary, {
-      status: 'blocked', path: null, reason: 'learning-record-invalid',
+      status: 'blocked',
+      path: null,
+      reason: 'learning-record-invalid',
     });
     assert.equal(existsSync(join(project, LOCAL_LEARNING_PATH)), false);
 
@@ -441,7 +459,9 @@ test('learning is local, redacted, explicitly enabled, and cannot target source 
 
     const persisted = persistLearningRecord({ projectRoot: project, prepared: redacted });
     assert.deepEqual(persisted, {
-      status: 'completed', path: LOCAL_LEARNING_PATH, reason: 'learning-stored-locally',
+      status: 'completed',
+      path: LOCAL_LEARNING_PATH,
+      reason: 'learning-stored-locally',
     });
     const stored = JSON.parse(readFileSync(join(project, LOCAL_LEARNING_PATH), 'utf8'));
     assert.equal(stored.documentDigest, redacted.record.documentDigest);
@@ -458,7 +478,9 @@ test('learning is local, redacted, explicitly enabled, and cannot target source 
     symlinkSync(outsideFile, join(linkedFileProject, LOCAL_LEARNING_PATH), 'file');
     const escaped = persistLearningRecord({ projectRoot: linkedFileProject, prepared: redacted });
     assert.deepEqual(escaped, {
-      status: 'blocked', path: null, reason: 'learning-destination-denied',
+      status: 'blocked',
+      path: null,
+      reason: 'learning-destination-denied',
     });
     assert.equal(readFileSync(outsideFile, 'utf8'), 'unchanged\n');
   } finally {
@@ -498,11 +520,13 @@ test('completion results are concise, typed, immutable, and resolver-compatible'
     { status: 'denied', capability: 'external-data' },
     {
       summary: 'External data is unavailable.',
-      issues: [{
-        problem: 'The host denied external data.',
-        impact: 'The external lookup was skipped.',
-        nextAction: 'Continue with local context or enable the host capability.',
-      }],
+      issues: [
+        {
+          problem: 'The host denied external data.',
+          impact: 'The external lookup was skipped.',
+          nextAction: 'Continue with local context or enable the host capability.',
+        },
+      ],
     },
   );
   assert.equal(denied.status, 'unavailable');
@@ -512,34 +536,39 @@ test('completion results are concise, typed, immutable, and resolver-compatible'
 test('completed results reject unresolved checks and issues without constraining non-completed outcomes', () => {
   for (const status of ['failed', 'not-run']) {
     assert.throws(
-      () => createCompletion({
-        status: 'completed',
-        summary: 'The result contradicts its checks.',
-        checks: [{ name: 'runtime', status }],
-      }),
+      () =>
+        createCompletion({
+          status: 'completed',
+          summary: 'The result contradicts its checks.',
+          checks: [{ name: 'runtime', status }],
+        }),
       /completed results require every reported check to pass/u,
     );
   }
   assert.throws(
-    () => createCompletion({
-      status: 'completed',
-      summary: 'The result contradicts its issues.',
-      issues: [{
-        problem: 'One issue remains.',
-        impact: 'The outcome is not complete.',
-        nextAction: 'Resolve the issue.',
-      }],
-    }),
+    () =>
+      createCompletion({
+        status: 'completed',
+        summary: 'The result contradicts its issues.',
+        issues: [
+          {
+            problem: 'One issue remains.',
+            impact: 'The outcome is not complete.',
+            nextAction: 'Resolve the issue.',
+          },
+        ],
+      }),
     /completed results cannot contain unresolved issues/u,
   );
   assert.throws(
-    () => completionFromRuntimeResult(
-      { status: 'completed' },
-      {
-        summary: 'The runtime result contradicts its checks.',
-        checks: [{ name: 'runtime', status: 'failed' }],
-      },
-    ),
+    () =>
+      completionFromRuntimeResult(
+        { status: 'completed' },
+        {
+          summary: 'The runtime result contradicts its checks.',
+          checks: [{ name: 'runtime', status: 'failed' }],
+        },
+      ),
     /completed results require every reported check to pass/u,
   );
 
@@ -548,11 +577,13 @@ test('completed results reject unresolved checks and issues without constraining
       status,
       summary: `The outcome is ${status}.`,
       checks: [{ name: 'runtime', status: 'not-run' }],
-      issues: [{
-        problem: 'Work remains.',
-        impact: 'The requested outcome is not complete.',
-        nextAction: 'Use the typed result to continue.',
-      }],
+      issues: [
+        {
+          problem: 'Work remains.',
+          impact: 'The requested outcome is not complete.',
+          nextAction: 'Use the typed result to continue.',
+        },
+      ],
     });
     assert.equal(result.status, status);
     assert.equal(result.checks[0].status, 'not-run');

@@ -1,4 +1,4 @@
-import { jcsHash, serializeJcs } from "./closed-json-contract.mjs";
+import { jcsHash, serializeJcs } from './closed-json-contract.mjs';
 
 /** Browser-safe RFC 8785 serialization for already-parsed closed JSON data. */
 export const canonicalizeJson = serializeJcs;

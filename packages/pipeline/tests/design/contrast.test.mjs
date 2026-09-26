@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { contrastRatio, isReadable, parseColor, AA_NORMAL } from '../../lib/design/contrast.mjs';
+import { AA_NORMAL, contrastRatio, isReadable, parseColor } from '../../lib/design/contrast.mjs';
 
 test('black/white is ~21:1 (hex, both orders + shorthand)', () => {
   assert.ok(Math.abs(contrastRatio('#ffffff', '#000000') - 21) < 0.2);

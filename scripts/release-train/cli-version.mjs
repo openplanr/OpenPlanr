@@ -16,7 +16,9 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const { name, version } = JSON.parse(readFileSync(join(root, 'packages/cli/package.json'), 'utf8'));
 if (name !== 'openplanr') throw new Error(`packages/cli declares ${name}, expected openplanr`);
 
-const listed = JSON.parse(execFileSync('npm', ['view', name, 'versions', '--json'], { encoding: 'utf8' }));
+const listed = JSON.parse(
+  execFileSync('npm', ['view', name, 'versions', '--json'], { encoding: 'utf8' }),
+);
 const next = cliReleaseVersion({ current: version, published: [listed].flat(), date: new Date() });
 
 if (next === null) {

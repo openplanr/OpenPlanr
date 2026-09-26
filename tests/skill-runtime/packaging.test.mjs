@@ -9,14 +9,23 @@ import {
 } from '../../packages/skill-runtime/src/packaging/index.mjs';
 
 const skill = (id, body = '# Example\n') => [
-  { path: 'SKILL.md', bytes: Buffer.from(`---\nname: ${id}\ndescription: Review an example. Use when an example needs review.\n---\n\n${body}`) },
-  { path: 'agents/openai.yaml', bytes: Buffer.from(`interface:\n  default_prompt: "Use $${id} to review this example"\n`) },
+  {
+    path: 'SKILL.md',
+    bytes: Buffer.from(
+      `---\nname: ${id}\ndescription: Review an example. Use when an example needs review.\n---\n\n${body}`,
+    ),
+  },
+  {
+    path: 'agents/openai.yaml',
+    bytes: Buffer.from(`interface:\n  default_prompt: "Use $${id} to review this example"\n`),
+  },
 ];
 
 test('Codex metadata is concise, quoted, implicitly discoverable, and explicitly invokable', () => {
   const metadata = renderOpenAiSkillMetadata({
     skillId: 'planr-example',
-    description: 'Review an example workflow with precise, actionable recommendations. Use when the user asks for an example review.',
+    description:
+      'Review an example workflow with precise, actionable recommendations. Use when the user asks for an example review.',
   });
   assert.match(metadata, /display_name: "Planr Example"/u);
   assert.match(metadata, /short_description: ".{25,64}"/u);
@@ -37,7 +46,10 @@ test('Codex metadata accepts a short namespaced plugin invocation', () => {
 test('deterministic ZIPs are byte-stable, sorted, readable, and corruption-aware', () => {
   const input = [
     { path: 'planr-example/references/guide.md', bytes: '# Guide\n' },
-    { path: 'planr-example/SKILL.md', bytes: '---\nname: planr-example\ndescription: Example\n---\n\n# Example\n' },
+    {
+      path: 'planr-example/SKILL.md',
+      bytes: '---\nname: planr-example\ndescription: Example\n---\n\n# Example\n',
+    },
   ];
   const first = createDeterministicZip(input);
   const second = createDeterministicZip([...input].reverse());
@@ -54,21 +66,30 @@ test('deterministic ZIPs are byte-stable, sorted, readable, and corruption-aware
 });
 
 test('deterministic ZIPs reject traversal and duplicate paths', () => {
-  assert.throws(() => createDeterministicZip([{ path: '../secret', bytes: '' }]), { code: 'E_SKILL_ARCHIVE_PATH_INVALID' });
-  assert.throws(() => createDeterministicZip([
-    { path: 'skill/SKILL.md', bytes: 'first' },
-    { path: 'skill/SKILL.md', bytes: 'second' },
-  ]), { code: 'E_SKILL_ARCHIVE_PATH_DUPLICATE' });
+  assert.throws(() => createDeterministicZip([{ path: '../secret', bytes: '' }]), {
+    code: 'E_SKILL_ARCHIVE_PATH_INVALID',
+  });
+  assert.throws(
+    () =>
+      createDeterministicZip([
+        { path: 'skill/SKILL.md', bytes: 'first' },
+        { path: 'skill/SKILL.md', bytes: 'second' },
+      ]),
+    { code: 'E_SKILL_ARCHIVE_PATH_DUPLICATE' },
+  );
 });
 
 test('one typed release packager owns canonical skill and suite units without aliases', () => {
   const canonical = skill('planr-example');
   const products = new Map([
     ['dist/plugins/openai/openplanr/skills/planr-example', canonical],
-    ['dist/plugins/openai/openplanr', [
-      { path: '.codex-plugin/plugin.json', bytes: Buffer.from('{"name":"openplanr"}\n') },
-      ...canonical.map(({ path, bytes }) => ({ path: `skills/planr-example/${path}`, bytes })),
-    ]],
+    [
+      'dist/plugins/openai/openplanr',
+      [
+        { path: '.codex-plugin/plugin.json', bytes: Buffer.from('{"name":"openplanr"}\n') },
+        ...canonical.map(({ path, bytes }) => ({ path: `skills/planr-example/${path}`, bytes })),
+      ],
+    ],
   ]);
   const input = {
     workspaceVersion: '0.1.0',
@@ -79,11 +100,10 @@ test('one typed release packager owns canonical skill and suite units without al
     contentManifest: {
       pluginRoot: 'dist/plugins/openai/openplanr',
       skillRoot: './skills/',
-      skills: [
-        { skillId: 'planr-example', classification: 'canonical' },
-      ],
+      skills: [{ skillId: 'planr-example', classification: 'canonical' }],
     },
-    readProductEntries: (source) => products.get(source).map(({ path, bytes }) => ({ path, bytes: Buffer.from(bytes) })),
+    readProductEntries: (source) =>
+      products.get(source).map(({ path, bytes }) => ({ path, bytes: Buffer.from(bytes) })),
     licenseBytes: Buffer.from('MIT\n'),
     hostProducts: [],
   };

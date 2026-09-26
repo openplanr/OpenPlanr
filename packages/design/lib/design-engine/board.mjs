@@ -21,14 +21,19 @@ function fallbackEnvelope(variants = []) {
     colorScheme: 'light',
   }));
   return createArtifactEnvelope({
-    artifacts: artifacts.length > 0 ? artifacts : [{
-      id: 'artifact',
-      kind: 'html',
-      title: 'Design artifact',
-      html: '<!doctype html><html><head></head><body><p>No design artifact is available.</p></body></html>',
-      viewport: { width: 1440, height: 1024 },
-      colorScheme: 'light',
-    }],
+    artifacts:
+      artifacts.length > 0
+        ? artifacts
+        : [
+            {
+              id: 'artifact',
+              kind: 'html',
+              title: 'Design artifact',
+              html: '<!doctype html><html><head></head><body><p>No design artifact is available.</p></body></html>',
+              viewport: { width: 1440, height: 1024 },
+              colorScheme: 'light',
+            },
+          ],
     viewer: {
       mode: artifacts.length > 1 ? 'variants' : 'single',
       activeArtifactId: artifacts[0]?.id ?? 'artifact',
@@ -44,17 +49,20 @@ export function renderBoardHtml({
   envelope,
 } = {}) {
   const source = envelope ?? fallbackEnvelope(variants);
-  return renderArtifactShellDocument({
-    envelope: source,
-    viewer: source.viewer,
-    shell: {
-      title,
-      privacy: 'local',
-      theme: 'auto',
-      railOpen: true,
-      feedbackCount: source.review?.pins?.length ?? 0,
-      zoom: 72,
-      mode,
+  return renderArtifactShellDocument(
+    {
+      envelope: source,
+      viewer: source.viewer,
+      shell: {
+        title,
+        privacy: 'local',
+        theme: 'auto',
+        railOpen: true,
+        feedbackCount: source.review?.pins?.length ?? 0,
+        zoom: 72,
+        mode,
+      },
     },
-  }, { stageRuntimeUrl: './runtime.js' });
+    { stageRuntimeUrl: './runtime.js' },
+  );
 }

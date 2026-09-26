@@ -45,7 +45,10 @@ function packageContext(skillDir) {
     throw new SkillAuthoringError(
       'E_SKILL_PACKAGE_UNREGISTERED',
       `${basename(directory)} is not declared in skills/registry.json.`,
-      { path: 'skills/registry.json', repair: 'Add one canonical, sorted registry row for the package.' },
+      {
+        path: 'skills/registry.json',
+        repair: 'Add one canonical, sorted registry row for the package.',
+      },
     );
   }
   return { directory, repoRoot, row };
@@ -63,7 +66,10 @@ function inspectPackage(skillDir) {
     throw new SkillAuthoringError(
       'E_SKILL_PACKAGE_TEMPLATE_TOKEN',
       `${context.row.skillId} contains an unresolved custom template token.`,
-      { path: 'SKILL.md', repair: 'Replace custom variables with direct host-readable instructions.' },
+      {
+        path: 'SKILL.md',
+        repair: 'Replace custom variables with direct host-readable instructions.',
+      },
     );
   }
   const declared = new Set([
@@ -119,7 +125,10 @@ export function inspectStandardSkill({ skillDir, command }) {
       throw new SkillAuthoringError(
         'E_SKILL_PACKAGE_MANIFEST_MISSING',
         `openplanr.skill.json is required in ${resolve(skillDir)}.`,
-        { path: 'openplanr.skill.json', repair: 'Add a Protocol 1.8 standard skill-package manifest.' },
+        {
+          path: 'openplanr.skill.json',
+          repair: 'Add a Protocol 1.8 standard skill-package manifest.',
+        },
       );
     }
     return {
@@ -127,9 +136,10 @@ export function inspectStandardSkill({ skillDir, command }) {
       outputs: inspected.hosts.map((host) => ({
         host,
         root: HOST_OUTPUT_ROOTS[host],
-        entrypoint: host === 'cursor'
-          ? `${HOST_OUTPUT_ROOTS.cursor}/${inspected.skillId}.mdc`
-          : `${HOST_OUTPUT_ROOTS[host]}/${inspected.skillId}/SKILL.md`,
+        entrypoint:
+          host === 'cursor'
+            ? `${HOST_OUTPUT_ROOTS.cursor}/${inspected.skillId}.mdc`
+            : `${HOST_OUTPUT_ROOTS[host]}/${inspected.skillId}/SKILL.md`,
       })),
     };
   });

@@ -1,22 +1,15 @@
 import { validateJson } from '../protocol/json-schema.mjs';
+import { exactEventHead, exactJson, jcsHash, safeDataClone } from './closed-json-contract.mjs';
 import {
-  exactEventHead,
-  exactJson,
-  jcsHash,
-  safeDataClone,
-} from './closed-json-contract.mjs';
-import {
-  OPERATE_REVIEW_BOUND_SUBMISSION_SCHEMA_REVIEW_SLICE as boundSubmissionSchema,
   OPERATING_ASSIGNMENT_SCHEMA_REVIEW_SLICE as assignmentSchema,
+  OPERATE_REVIEW_BOUND_SUBMISSION_SCHEMA_REVIEW_SLICE as boundSubmissionSchema,
   OPERATING_REVIEW_READ_SCHEMA_REVIEW_SLICE as reviewReadSchema,
   OPERATING_REVIEW_RECEIPT_SCHEMA_REVIEW_SLICE as reviewReceiptSchema,
   OPERATING_REVIEW_SCHEMA_REVIEW_SLICE as reviewSchema,
 } from './generated/operate-review-schema-data.mjs';
 import { assertOperateReviewWorkspacePayloadSafeV1 } from './operate-review-payload-safety.mjs';
 
-export {
-  assertOperateReviewDisplayWorkspaceV1,
-} from './operate-review-display-workspace-contract.mjs';
+export { assertOperateReviewDisplayWorkspaceV1 } from './operate-review-display-workspace-contract.mjs';
 
 export const OPERATE_REVIEW_BOUND_SUBMISSION_DOMAIN =
   'openplanr:operate-review-bound-submission:project-write:operating-review@2.0.0#/$defs/workDisposition:1.0.0';
@@ -93,8 +86,10 @@ export function assertOperatingReviewBoundSubmissionV1(value) {
     'RESULT_CONTRACT_INVALID',
     'The bound Review submission does not satisfy its closed integrity contract.',
   );
-  if (candidate.choiceHash !== jcsHash(candidate.submitArguments)
-    || candidate.boundSubmissionHash !== computeOperatingReviewBoundSubmissionHashV1(candidate)) {
+  if (
+    candidate.choiceHash !== jcsHash(candidate.submitArguments) ||
+    candidate.boundSubmissionHash !== computeOperatingReviewBoundSubmissionHashV1(candidate)
+  ) {
     fail(
       'RESULT_CONTRACT_INVALID',
       'The bound Review submission does not satisfy its closed integrity contract.',
@@ -104,43 +99,50 @@ export function assertOperatingReviewBoundSubmissionV1(value) {
 }
 
 function exactChoiceBinding(choice, receipt) {
-  return choice.choiceHash === jcsHash(choice.submitArguments)
-    && choice.submitArguments.reviewId === receipt.review.reviewId
-    && choice.submitArguments.cycleId === receipt.cycleId
-    && exactJson(choice.submitArguments.actor, receipt.actor)
-    && exactJson(choice.submitArguments.scope, receipt.scope);
+  return (
+    choice.choiceHash === jcsHash(choice.submitArguments) &&
+    choice.submitArguments.reviewId === receipt.review.reviewId &&
+    choice.submitArguments.cycleId === receipt.cycleId &&
+    exactJson(choice.submitArguments.actor, receipt.actor) &&
+    exactJson(choice.submitArguments.scope, receipt.scope)
+  );
 }
 
 function exactReceiptSemantics(receipt) {
   const choices = receipt.dispositionChoices;
   const choiceIds = new Set(choices.map(({ choiceId }) => choiceId));
   const choiceHashes = new Set(choices.map(({ choiceHash }) => choiceHash));
-  if (choiceIds.size !== choices.length
-    || choiceHashes.size !== choices.length
-    || choices.some((choice) => !exactChoiceBinding(choice, receipt))
-    || receipt.review.reviewId.length === 0
-    || receipt.review.cycleId !== receipt.cycleId
-    || receipt.review.ownerActorId !== receipt.actor.actorId
-    || receipt.review.state !== receipt.decision
-    || receipt.review.disposition !== receipt.decision
-    || !exactJson(receipt.review.workDispositions, receipt.appliedWorkDispositions)
-    || receipt.eventHead.sequence !== receipt.readEventHead.sequence + 1) {
+  if (
+    choiceIds.size !== choices.length ||
+    choiceHashes.size !== choices.length ||
+    choices.some((choice) => !exactChoiceBinding(choice, receipt)) ||
+    receipt.review.reviewId.length === 0 ||
+    receipt.review.cycleId !== receipt.cycleId ||
+    receipt.review.ownerActorId !== receipt.actor.actorId ||
+    receipt.review.state !== receipt.decision ||
+    receipt.review.disposition !== receipt.decision ||
+    !exactJson(receipt.review.workDispositions, receipt.appliedWorkDispositions) ||
+    receipt.eventHead.sequence !== receipt.readEventHead.sequence + 1
+  ) {
     return false;
   }
 
-  const applied = choices.filter((choice) => (
-    choice.choiceId === receipt.appliedChoiceId
-    && choice.choiceHash === receipt.appliedChoiceHash
-  ));
+  const applied = choices.filter(
+    (choice) =>
+      choice.choiceId === receipt.appliedChoiceId &&
+      choice.choiceHash === receipt.appliedChoiceHash,
+  );
   if (applied.length !== 1) return false;
   const [choice] = applied;
-  if (choice.submitArguments.disposition !== receipt.decision
-    || !exactJson(choice.submitArguments.workDispositions, receipt.appliedWorkDispositions)
-    || receipt.summary.decisionCount !== receipt.decisions.length
-    || receipt.summary.actionCount !== receipt.actions.length
-    || receipt.summary.findingCount !== receipt.findings.length
-    || receipt.summary.dissentCount !== receipt.dissent.length
-    || receipt.summary.gapCount !== receipt.gaps.length) {
+  if (
+    choice.submitArguments.disposition !== receipt.decision ||
+    !exactJson(choice.submitArguments.workDispositions, receipt.appliedWorkDispositions) ||
+    receipt.summary.decisionCount !== receipt.decisions.length ||
+    receipt.summary.actionCount !== receipt.actions.length ||
+    receipt.summary.findingCount !== receipt.findings.length ||
+    receipt.summary.dissentCount !== receipt.dissent.length ||
+    receipt.summary.gapCount !== receipt.gaps.length
+  ) {
     return false;
   }
 
@@ -150,10 +152,12 @@ function exactReceiptSemantics(receipt) {
   } catch {
     return false;
   }
-  return exactEventHead(receipt.boundSubmission.expectedReadEventHead, receipt.readEventHead)
-    && receipt.boundSubmission.choiceId === choice.choiceId
-    && receipt.boundSubmission.choiceHash === choice.choiceHash
-    && exactJson(receipt.boundSubmission.submitArguments, choice.submitArguments);
+  return (
+    exactEventHead(receipt.boundSubmission.expectedReadEventHead, receipt.readEventHead) &&
+    receipt.boundSubmission.choiceId === choice.choiceId &&
+    receipt.boundSubmission.choiceHash === choice.choiceHash &&
+    exactJson(receipt.boundSubmission.submitArguments, choice.submitArguments)
+  );
 }
 
 export function assertOperatingReviewReceiptV2(value) {

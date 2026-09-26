@@ -14,9 +14,8 @@ import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve, sep } from 'node:path';
 import { performance } from 'node:perf_hooks';
-import { pathToFileURL } from 'node:url';
-import { fileURLToPath } from 'node:url';
 import { after, before, test } from 'node:test';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 assert.equal(
@@ -36,25 +35,25 @@ function runNpm(args, cwd, npmCache) {
   const npmCli = process.env.npm_execpath;
   const result = npmCli
     ? spawnSync(process.execPath, [npmCli, ...args], {
-      cwd,
-      encoding: 'utf8',
-      env: {
-        ...process.env,
-        npm_config_audit: 'false',
-        npm_config_fund: 'false',
-        npm_config_cache: npmCache,
-      },
-    })
+        cwd,
+        encoding: 'utf8',
+        env: {
+          ...process.env,
+          npm_config_audit: 'false',
+          npm_config_fund: 'false',
+          npm_config_cache: npmCache,
+        },
+      })
     : spawnSync('npm', args, {
-      cwd,
-      encoding: 'utf8',
-      env: {
-        ...process.env,
-        npm_config_audit: 'false',
-        npm_config_fund: 'false',
-        npm_config_cache: npmCache,
-      },
-    });
+        cwd,
+        encoding: 'utf8',
+        env: {
+          ...process.env,
+          npm_config_audit: 'false',
+          npm_config_fund: 'false',
+          npm_config_cache: npmCache,
+        },
+      });
   assert.equal(result.status, 0, `${args.join(' ')}\n${result.stdout}\n${result.stderr}`);
   return result.stdout;
 }
@@ -128,18 +127,17 @@ after(() => {
 
 function httpGet(port, path, headers = {}) {
   return new Promise((resolveRequest, rejectRequest) => {
-    const req = request(
-      { hostname: '127.0.0.1', port, path, method: 'GET', headers },
-      (res) => {
-        const chunks = [];
-        res.on('data', (chunk) => chunks.push(chunk));
-        res.on('end', () => resolveRequest({
+    const req = request({ hostname: '127.0.0.1', port, path, method: 'GET', headers }, (res) => {
+      const chunks = [];
+      res.on('data', (chunk) => chunks.push(chunk));
+      res.on('end', () =>
+        resolveRequest({
           status: res.statusCode,
           headers: res.headers,
           body: Buffer.concat(chunks).toString('utf8'),
-        }));
-      },
-    );
+        }),
+      );
+    });
     req.on('error', rejectRequest);
     req.end();
   });
@@ -156,7 +154,10 @@ test('unified dashboard package serves every packed asset with a compatible boot
   const temporaryRoot = mkdtempSync(join(tmpdir(), 'planr-unified-dashboard-package-'));
   const planrDir = join(temporaryRoot, 'project', '.planr');
   mkdirSync(planrDir, { recursive: true });
-  writeFileSync(join(planrDir, 'config.json'), JSON.stringify({ projectName: 'Unified dashboard dogfood' }));
+  writeFileSync(
+    join(planrDir, 'config.json'),
+    JSON.stringify({ projectName: 'Unified dashboard dogfood' }),
+  );
 
   const { createDashboardServer } = await import(
     pathToFileURL(join(installedPipelineRoot, 'lib/dashboard/server.mjs')).href
@@ -200,7 +201,10 @@ test('unified dashboard bootstrap and asset reads stay within product budgets', 
   const temporaryRoot = mkdtempSync(join(tmpdir(), 'planr-unified-dashboard-performance-'));
   const planrDir = join(temporaryRoot, 'project', '.planr');
   mkdirSync(planrDir, { recursive: true });
-  writeFileSync(join(planrDir, 'config.json'), JSON.stringify({ projectName: 'Unified dashboard performance' }));
+  writeFileSync(
+    join(planrDir, 'config.json'),
+    JSON.stringify({ projectName: 'Unified dashboard performance' }),
+  );
 
   const { createDashboardServer } = await import(
     pathToFileURL(join(installedPipelineRoot, 'lib/dashboard/server.mjs')).href
@@ -226,7 +230,10 @@ test('unified dashboard bootstrap and asset reads stay within product budgets', 
     }
     bootstrapSamples.sort((left, right) => left - right);
     const bootstrapMedian = bootstrapSamples[Math.floor(bootstrapSamples.length / 2)];
-    assert.ok(bootstrapMedian <= 200, `bootstrap median ${bootstrapMedian.toFixed(1)}ms exceeds 200ms`);
+    assert.ok(
+      bootstrapMedian <= 200,
+      `bootstrap median ${bootstrapMedian.toFixed(1)}ms exceeds 200ms`,
+    );
 
     const assetSamples = [];
     for (const asset of manifest.assets) {

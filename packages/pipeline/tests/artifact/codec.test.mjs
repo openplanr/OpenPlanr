@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
+import { fileURLToPath } from 'node:url';
 
 import { deflateRaw } from 'pako';
 
@@ -41,7 +41,10 @@ test('canonical JSON sorts object keys while preserving array order and Unicode'
     canonicalArtifactJson({ z: '🌍', nested: { b: 2, a: 1 }, list: [{ d: 4, c: 3 }] }),
     '{"list":[{"c":3,"d":4}],"nested":{"a":1,"b":2},"z":"🌍"}',
   );
-  const large = { html: `<!doctype html><p>${'مرحبا🌍'.repeat(32_768)}</p>`, schemaVersion: '1.0.0' };
+  const large = {
+    html: `<!doctype html><p>${'مرحبا🌍'.repeat(32_768)}</p>`,
+    schemaVersion: '1.0.0',
+  };
   assert.deepEqual(decodeArtifactFragment(encodeArtifactFragment(large)), large);
   assert.throws(() => canonicalArtifactJson([]), errorCode('E_ARTIFACT_CODEC_INVALID'));
   assert.throws(() => canonicalArtifactJson('scalar'), errorCode('E_ARTIFACT_CODEC_INVALID'));
@@ -67,11 +70,23 @@ test('strict unpadded base64url is byte-identical and rejects unsafe allocations
 });
 
 test('decoder rejects malformed, noncanonical, unsupported, and insecure fragments', () => {
-  assert.throws(() => decodeArtifactFragment('v2.AAAA'), errorCode('E_ARTIFACT_FRAGMENT_VERSION_UNSUPPORTED'));
+  assert.throws(
+    () => decodeArtifactFragment('v2.AAAA'),
+    errorCode('E_ARTIFACT_FRAGMENT_VERSION_UNSUPPORTED'),
+  );
   assert.throws(() => decodeArtifactFragment('v1.A'), errorCode('E_ARTIFACT_FRAGMENT_INVALID'));
-  assert.throws(() => decodeArtifactFragment('https://example.test/?leak=yes#v1.AAAA'), errorCode('E_ARTIFACT_FRAGMENT_INVALID'));
-  assert.throws(() => decodeArtifactFragment('http://example.test/#v1.AAAA'), errorCode('E_ARTIFACT_FRAGMENT_INVALID'));
-  assert.throws(() => decodeArtifactFragment('https://user:pass@example.test/#v1.AAAA'), errorCode('E_ARTIFACT_FRAGMENT_INVALID'));
+  assert.throws(
+    () => decodeArtifactFragment('https://example.test/?leak=yes#v1.AAAA'),
+    errorCode('E_ARTIFACT_FRAGMENT_INVALID'),
+  );
+  assert.throws(
+    () => decodeArtifactFragment('http://example.test/#v1.AAAA'),
+    errorCode('E_ARTIFACT_FRAGMENT_INVALID'),
+  );
+  assert.throws(
+    () => decodeArtifactFragment('https://user:pass@example.test/#v1.AAAA'),
+    errorCode('E_ARTIFACT_FRAGMENT_INVALID'),
+  );
 
   const noncanonicalJson = '{ "a": 1 }';
   const noncanonical = `v1.${bytesToBase64Url(deflateRaw(new TextEncoder().encode(noncanonicalJson), { level: 9 }))}`;
@@ -83,11 +98,13 @@ test('decoder rejects malformed, noncanonical, unsupported, and insecure fragmen
 test('fragment and expansion limits are enforced at their exact boundaries', () => {
   const encoded = encodeArtifactFragmentDetails({ message: 'boundary' });
   assert.deepEqual(
-    decodeArtifactFragmentDetails(encoded.fragment, { maxFragmentChars: encoded.fragment.length }).value,
+    decodeArtifactFragmentDetails(encoded.fragment, { maxFragmentChars: encoded.fragment.length })
+      .value,
     { message: 'boundary' },
   );
   assert.throws(
-    () => decodeArtifactFragment(encoded.fragment, { maxFragmentChars: encoded.fragment.length - 1 }),
+    () =>
+      decodeArtifactFragment(encoded.fragment, { maxFragmentChars: encoded.fragment.length - 1 }),
     errorCode('E_ARTIFACT_FRAGMENT_TOO_LARGE'),
   );
   assert.throws(
@@ -107,7 +124,10 @@ test('fragment and expansion limits are enforced at their exact boundaries', () 
 });
 
 test('fragment URLs allow HTTPS and loopback HTTP with optional origin pinning', () => {
-  assert.deepEqual(decodeArtifactFragment(`http://127.0.0.1:8787/#${golden.fragment}`), golden.value);
+  assert.deepEqual(
+    decodeArtifactFragment(`http://127.0.0.1:8787/#${golden.fragment}`),
+    golden.value,
+  );
   assert.deepEqual(
     decodeArtifactFragment(`https://share.openplanr.dev/#${golden.fragment}`, {
       allowedOrigins: ['https://share.openplanr.dev'],
@@ -115,9 +135,10 @@ test('fragment URLs allow HTTPS and loopback HTTP with optional origin pinning',
     golden.value,
   );
   assert.throws(
-    () => decodeArtifactFragment(`https://other.example/#${golden.fragment}`, {
-      allowedOrigins: ['https://share.openplanr.dev'],
-    }),
+    () =>
+      decodeArtifactFragment(`https://other.example/#${golden.fragment}`, {
+        allowedOrigins: ['https://share.openplanr.dev'],
+      }),
     errorCode('E_ARTIFACT_FRAGMENT_INVALID'),
   );
 });

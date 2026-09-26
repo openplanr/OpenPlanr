@@ -39,9 +39,14 @@ export function cliReleaseVersion({ current, published, date }) {
     .filter(([otherMajor, minor]) => otherMajor === major && minor === week)
     .map(([, , patch]) => patch);
   const next = `${major}.${week}.${patches.length ? Math.max(...patches) + 1 : 0}`;
-  const newest = stable.reduce((best, version) => (compare(version, best) > 0 ? version : best), '0.0.0');
+  const newest = stable.reduce(
+    (best, version) => (compare(version, best) > 0 ? version : best),
+    '0.0.0',
+  );
   if (compare(next, newest) <= 0) {
-    throw new Error(`openplanr ${next} would not be newer than the published ${newest}; release week ${week} is behind the registry.`);
+    throw new Error(
+      `openplanr ${next} would not be newer than the published ${newest}; release week ${week} is behind the registry.`,
+    );
   }
   return next;
 }
@@ -54,9 +59,14 @@ export function applyCliVersion({ root, from, to }) {
   const changelog = readFileSync(changelogPath, 'utf8');
   const versionLine = `"version": "${from}"`;
   const heading = `\n## ${from}\n`;
-  if (manifest.split(versionLine).length !== 2) throw new Error(`packages/cli/package.json does not declare version ${from} exactly once`);
-  if (changelog.split(heading).length !== 2) throw new Error(`packages/cli/CHANGELOG.md does not have exactly one "## ${from}" section`);
-  if (changelog.includes(`\n## ${to}\n`)) throw new Error(`packages/cli/CHANGELOG.md already has an unpublished ${to} section; publish that release before versioning again`);
+  if (manifest.split(versionLine).length !== 2)
+    throw new Error(`packages/cli/package.json does not declare version ${from} exactly once`);
+  if (changelog.split(heading).length !== 2)
+    throw new Error(`packages/cli/CHANGELOG.md does not have exactly one "## ${from}" section`);
+  if (changelog.includes(`\n## ${to}\n`))
+    throw new Error(
+      `packages/cli/CHANGELOG.md already has an unpublished ${to} section; publish that release before versioning again`,
+    );
   writeFileSync(manifestPath, manifest.replace(versionLine, `"version": "${to}"`));
   writeFileSync(changelogPath, changelog.replace(heading, `\n## ${to}\n`));
 }

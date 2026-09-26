@@ -94,7 +94,7 @@ Bind `source ∈ {spec, png, describe}`. If `source == describe`, gather a short
 ## B.3 — Format (with a pre-selected recommendation)
 
 If `FORMAT` is unset, **issue an `AskUserQuestion` tool call** — compute the recommendation
-with `${CLAUDE_PLUGIN_ROOT}/lib/design/recommendFormat.mjs` (`{ screenCount: SCREEN_COUNT,
+with `${CLAUDE_PLUGIN_ROOT}/lib/design/recommend-format.mjs` (`{ screenCount: SCREEN_COUNT,
 intentText }`) and present it as the **pre-selected default**, labeled by outcome (not
 jargon). The recommendation is the default, **not** a reason to skip the call:
 

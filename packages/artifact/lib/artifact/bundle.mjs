@@ -3,13 +3,11 @@ import { lookup as lookupDns } from 'node:dns/promises';
 import { createReadStream, existsSync, realpathSync, statSync } from 'node:fs';
 import { isIP } from 'node:net';
 import { dirname, extname, isAbsolute, relative, resolve } from 'node:path';
-
+import { ARTIFACT_ERROR_CODES, PipelineError } from '@openplanr/protocol/errors';
 import { build, transform } from 'esbuild';
 import { parse, parseFragment, serialize } from 'parse5';
-
-import { isPathContained } from './internal/path-util.mjs';
-import { ARTIFACT_ERROR_CODES, PipelineError } from '@openplanr/protocol/errors';
 import { digestArtifact, normalizeUtf8Text } from './envelope.mjs';
+import { isPathContained } from './internal/path-util.mjs';
 
 const DEFAULT_MAX_FILES = 1_000;
 const DEFAULT_MAX_BYTES = 10 * 1024 * 1024;
@@ -69,12 +67,31 @@ const MIME_TYPES = Object.freeze({
 });
 
 const ESBUILD_LOADERS = Object.freeze({
-  '.avif': 'file', '.eot': 'file', '.gif': 'file', '.ico': 'file',
-  '.jpeg': 'file', '.jpg': 'file', '.mp3': 'file', '.mp4': 'file',
-  '.otf': 'file', '.png': 'file', '.svg': 'file', '.ttf': 'file',
-  '.wav': 'file', '.webm': 'file', '.webp': 'file', '.woff': 'file',
-  '.woff2': 'file', '.css': 'css', '.cjs': 'js', '.js': 'js', '.jsx': 'jsx',
-  '.json': 'json', '.mjs': 'js', '.ts': 'ts', '.tsx': 'tsx',
+  '.avif': 'file',
+  '.eot': 'file',
+  '.gif': 'file',
+  '.ico': 'file',
+  '.jpeg': 'file',
+  '.jpg': 'file',
+  '.mp3': 'file',
+  '.mp4': 'file',
+  '.otf': 'file',
+  '.png': 'file',
+  '.svg': 'file',
+  '.ttf': 'file',
+  '.wav': 'file',
+  '.webm': 'file',
+  '.webp': 'file',
+  '.woff': 'file',
+  '.woff2': 'file',
+  '.css': 'css',
+  '.cjs': 'js',
+  '.js': 'js',
+  '.jsx': 'jsx',
+  '.json': 'json',
+  '.mjs': 'js',
+  '.ts': 'ts',
+  '.tsx': 'tsx',
 });
 
 const REMOTE_CONTENT_TYPES = Object.freeze({
@@ -127,7 +144,7 @@ class GeneratedOutputBudget {
 
   accountGeneratedReplacementBytes(previous, nextBytes, label, count = 1) {
     const previousBytes = Buffer.byteLength(previous ?? '', 'utf8');
-    this.bytes = Math.max(0, this.bytes + ((nextBytes - previousBytes) * count));
+    this.bytes = Math.max(0, this.bytes + (nextBytes - previousBytes) * count);
     this.assertWithinLimit(label);
   }
 
@@ -160,20 +177,45 @@ function countOccurrences(value, needle) {
 function escapedUtf8Bytes(value, { attribute = false, raw = false } = {}) {
   let bytes = Buffer.byteLength(value, 'utf8');
   if (raw) return bytes;
-  for (let index = value.indexOf('&'); index >= 0; index = value.indexOf('&', index + 1)) bytes += 4;
-  for (let index = value.indexOf('<'); index >= 0; index = value.indexOf('<', index + 1)) bytes += 3;
+  for (let index = value.indexOf('&'); index >= 0; index = value.indexOf('&', index + 1))
+    bytes += 4;
+  for (let index = value.indexOf('<'); index >= 0; index = value.indexOf('<', index + 1))
+    bytes += 3;
   if (attribute) {
-    for (let index = value.indexOf('"'); index >= 0; index = value.indexOf('"', index + 1)) bytes += 5;
+    for (let index = value.indexOf('"'); index >= 0; index = value.indexOf('"', index + 1))
+      bytes += 5;
   }
   return bytes;
 }
 
 const HTML_NAMESPACE = 'http://www.w3.org/1999/xhtml';
 const HTML_VOID_ELEMENTS = new Set([
-  'area', 'base', 'basefont', 'bgsound', 'br', 'col', 'embed', 'hr', 'img',
-  'input', 'link', 'meta', 'param', 'source', 'track', 'wbr',
+  'area',
+  'base',
+  'basefont',
+  'bgsound',
+  'br',
+  'col',
+  'embed',
+  'hr',
+  'img',
+  'input',
+  'link',
+  'meta',
+  'param',
+  'source',
+  'track',
+  'wbr',
 ]);
-const HTML_RAW_TEXT_ELEMENTS = new Set(['script', 'style', 'xmp', 'iframe', 'noembed', 'noframes', 'plaintext']);
+const HTML_RAW_TEXT_ELEMENTS = new Set([
+  'script',
+  'style',
+  'xmp',
+  'iframe',
+  'noembed',
+  'noframes',
+  'plaintext',
+]);
 
 function assertBoundedSerialization(root, label) {
   let bytes = 0;
@@ -191,9 +233,13 @@ function assertBoundedSerialization(root, label) {
     const node = stack.pop();
     if (node.nodeName === '#text') {
       const parentTag = node.parentNode?.tagName?.toLowerCase();
-      add(escapedUtf8Bytes(node.value ?? '', {
-        raw: node.parentNode?.namespaceURI === HTML_NAMESPACE && HTML_RAW_TEXT_ELEMENTS.has(parentTag),
-      }));
+      add(
+        escapedUtf8Bytes(node.value ?? '', {
+          raw:
+            node.parentNode?.namespaceURI === HTML_NAMESPACE &&
+            HTML_RAW_TEXT_ELEMENTS.has(parentTag),
+        }),
+      );
       continue;
     }
     if (node.nodeName === '#comment') {
@@ -201,9 +247,12 @@ function assertBoundedSerialization(root, label) {
       continue;
     }
     if (node.nodeName === '#documentType') {
-      add(16 + Buffer.byteLength(node.name ?? 'html', 'utf8')
-        + (2 * Buffer.byteLength(node.publicId ?? '', 'utf8'))
-        + (2 * Buffer.byteLength(node.systemId ?? '', 'utf8')));
+      add(
+        16 +
+          Buffer.byteLength(node.name ?? 'html', 'utf8') +
+          2 * Buffer.byteLength(node.publicId ?? '', 'utf8') +
+          2 * Buffer.byteLength(node.systemId ?? '', 'utf8'),
+      );
       continue;
     }
     if (!node.tagName) {
@@ -214,7 +263,9 @@ function assertBoundedSerialization(root, label) {
     add(2 + Buffer.byteLength(tag, 'utf8'));
     for (const attr of node.attrs ?? []) {
       const attrName = attr.prefix ? `${attr.prefix}:${attr.name}` : attr.name;
-      add(4 + Buffer.byteLength(attrName, 'utf8') + escapedUtf8Bytes(attr.value, { attribute: true }));
+      add(
+        4 + Buffer.byteLength(attrName, 'utf8') + escapedUtf8Bytes(attr.value, { attribute: true }),
+      );
     }
     const isVoid = node.namespaceURI === HTML_NAMESPACE && HTML_VOID_ELEMENTS.has(tag);
     if (!isVoid) {
@@ -227,8 +278,10 @@ function assertBoundedSerialization(root, label) {
 }
 
 function encodedDataUrlBytes(mediaType, buffer, fragment = '') {
-  return Buffer.byteLength(`data:${mediaType};base64,${fragment}`, 'utf8')
-    + (4 * Math.ceil(buffer.byteLength / 3));
+  return (
+    Buffer.byteLength(`data:${mediaType};base64,${fragment}`, 'utf8') +
+    4 * Math.ceil(buffer.byteLength / 3)
+  );
 }
 
 function encodeDataUrl(mediaType, buffer, fragment = '') {
@@ -241,7 +294,10 @@ function cleanReference(value) {
   try {
     decoded = decodeURIComponent(value.trim());
   } catch {
-    throw artifactError(ARTIFACT_ERROR_CODES.INPUT_INVALID, `Invalid percent-encoding in asset reference: ${value}`);
+    throw artifactError(
+      ARTIFACT_ERROR_CODES.INPUT_INVALID,
+      `Invalid percent-encoding in asset reference: ${value}`,
+    );
   }
   return decoded.split('#', 1)[0].split('?', 1)[0];
 }
@@ -251,10 +307,14 @@ function classifyReference(value) {
   if (!cleaned || value.trim().startsWith('#')) return { kind: 'internal', value: cleaned };
   if (/^data:/i.test(cleaned)) return { kind: 'data', value: cleaned };
   if (/^blob:/i.test(cleaned)) return { kind: 'external', value: cleaned };
-  if (REMOTE_RE.test(cleaned) || (URI_SCHEME_RE.test(cleaned) && !WINDOWS_ABSOLUTE_RE.test(cleaned))) {
+  if (
+    REMOTE_RE.test(cleaned) ||
+    (URI_SCHEME_RE.test(cleaned) && !WINDOWS_ABSOLUTE_RE.test(cleaned))
+  ) {
     return { kind: 'external', value: cleaned };
   }
-  if (isAbsolute(cleaned) || WINDOWS_ABSOLUTE_RE.test(cleaned)) return { kind: 'absolute', value: cleaned };
+  if (isAbsolute(cleaned) || WINDOWS_ABSOLUTE_RE.test(cleaned))
+    return { kind: 'absolute', value: cleaned };
   return { kind: 'local', value: cleaned };
 }
 
@@ -263,7 +323,10 @@ function remoteUrlFor(reference, baseUrl = undefined) {
   try {
     url = baseUrl === undefined ? new URL(reference) : new URL(reference, baseUrl);
   } catch {
-    throw artifactError(ARTIFACT_ERROR_CODES.EXTERNAL_ASSET, `Remote asset URL is invalid: ${reference}`);
+    throw artifactError(
+      ARTIFACT_ERROR_CODES.EXTERNAL_ASSET,
+      `Remote asset URL is invalid: ${reference}`,
+    );
   }
   if (url.protocol !== 'https:') {
     throw artifactError(
@@ -284,7 +347,11 @@ function remoteUrlFor(reference, baseUrl = undefined) {
 
 function isPublicIpv4(address) {
   const values = address.split('.').map(Number);
-  if (values.length !== 4 || values.some((value) => !Number.isInteger(value) || value < 0 || value > 255)) return false;
+  if (
+    values.length !== 4 ||
+    values.some((value) => !Number.isInteger(value) || value < 0 || value > 255)
+  )
+    return false;
   const [first, second] = values;
   if (first === 0 || first === 10 || first === 127 || first >= 224) return false;
   if (first === 100 && second >= 64 && second <= 127) return false;
@@ -302,15 +369,23 @@ function isPublicIpAddress(address) {
   if (type !== 6) return false;
   const normalized = address.toLowerCase();
   if (normalized === '::' || normalized === '::1' || normalized.startsWith('::ffff:')) return false;
-  if (normalized.startsWith('fc') || normalized.startsWith('fd') || normalized.startsWith('fe8')
-    || normalized.startsWith('fe9') || normalized.startsWith('fea') || normalized.startsWith('feb')
-    || normalized.startsWith('ff')) return false;
+  if (
+    normalized.startsWith('fc') ||
+    normalized.startsWith('fd') ||
+    normalized.startsWith('fe8') ||
+    normalized.startsWith('fe9') ||
+    normalized.startsWith('fea') ||
+    normalized.startsWith('feb') ||
+    normalized.startsWith('ff')
+  )
+    return false;
   return true;
 }
 
 function remoteContentType(response, url) {
   const header = response.headers?.get?.('content-type')?.split(';', 1)[0]?.trim().toLowerCase();
-  if (header && REMOTE_CONTENT_TYPES[header]) return { mediaType: header, loader: REMOTE_CONTENT_TYPES[header] };
+  if (header && REMOTE_CONTENT_TYPES[header])
+    return { mediaType: header, loader: REMOTE_CONTENT_TYPES[header] };
   const extension = extname(url.pathname).toLowerCase();
   const mediaType = MIME_TYPES[extension];
   const loader = ESBUILD_LOADERS[extension];
@@ -324,7 +399,11 @@ function remoteContentType(response, url) {
 
 function isBaseUrlAttribute(attr) {
   const name = attr?.name?.toLowerCase() ?? '';
-  return name === 'base' || name.endsWith(':base') || attr?.prefix?.toLowerCase() === 'xml' && name === 'base';
+  return (
+    name === 'base' ||
+    name.endsWith(':base') ||
+    (attr?.prefix?.toLowerCase() === 'xml' && name === 'base')
+  );
 }
 
 function decodeSvgDataUri(reference, label) {
@@ -337,18 +416,27 @@ function decodeSvgDataUri(reference, label) {
       : Buffer.from(decodeURIComponent(match[2]), 'utf8');
     return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
   } catch {
-    throw artifactError(ARTIFACT_ERROR_CODES.INPUT_INVALID, `Invalid embedded SVG data URI in ${label}.`);
+    throw artifactError(
+      ARTIFACT_ERROR_CODES.INPUT_INVALID,
+      `Invalid embedded SVG data URI in ${label}.`,
+    );
   }
 }
 
 function assertSafeSvgMarkup(markup, label, depth = 0) {
   if (depth > 16) {
-    throw artifactError(ARTIFACT_ERROR_CODES.UNSAFE_HTML, `Embedded SVG nesting is too deep in ${label}.`);
+    throw artifactError(
+      ARTIFACT_ERROR_CODES.UNSAFE_HTML,
+      `Embedded SVG nesting is too deep in ${label}.`,
+    );
   }
   let inspected = markup;
   for (const allowed of SAFE_XML_URLS) inspected = inspected.split(allowed).join('');
   if (/https?:\/\/|(?:^|[^A-Za-z0-9._-])\/(?:Users|home|private|Volumes)\//i.test(inspected)) {
-    throw artifactError(ARTIFACT_ERROR_CODES.EXTERNAL_ASSET, `Private or remote content exists in embedded SVG ${label}.`);
+    throw artifactError(
+      ARTIFACT_ERROR_CODES.EXTERNAL_ASSET,
+      `Private or remote content exists in embedded SVG ${label}.`,
+    );
   }
   const fragment = parseFragment(markup);
   const queue = descendants(fragment);
@@ -359,22 +447,54 @@ function assertSafeSvgMarkup(markup, label, depth = 0) {
       continue;
     }
     const tag = node.tagName.toLowerCase();
-    if (SVG_SMIL_ELEMENTS.has(tag)
-      || ['a', 'base', 'embed', 'foreignobject', 'form', 'frame', 'frameset', 'iframe', 'noembed', 'noframes', 'noscript', 'object', 'script'].includes(tag)) {
-      throw artifactError(ARTIFACT_ERROR_CODES.UNSAFE_HTML, `Unsafe <${tag}> in embedded SVG ${label}.`);
+    if (
+      SVG_SMIL_ELEMENTS.has(tag) ||
+      [
+        'a',
+        'base',
+        'embed',
+        'foreignobject',
+        'form',
+        'frame',
+        'frameset',
+        'iframe',
+        'noembed',
+        'noframes',
+        'noscript',
+        'object',
+        'script',
+      ].includes(tag)
+    ) {
+      throw artifactError(
+        ARTIFACT_ERROR_CODES.UNSAFE_HTML,
+        `Unsafe <${tag}> in embedded SVG ${label}.`,
+      );
     }
     for (const attr of node.attrs ?? []) {
       const name = attr.name.toLowerCase();
       if (isBaseUrlAttribute(attr)) {
-        throw artifactError(ARTIFACT_ERROR_CODES.UNSAFE_HTML, `SVG base-URL attributes are not supported in ${label}.`);
+        throw artifactError(
+          ARTIFACT_ERROR_CODES.UNSAFE_HTML,
+          `SVG base-URL attributes are not supported in ${label}.`,
+        );
       }
-      if (name.startsWith('on') || name === 'srcdoc' || ['action', 'formaction', 'ping', 'target'].includes(name)) {
-        throw artifactError(ARTIFACT_ERROR_CODES.UNSAFE_HTML, `Unsafe ${name} in embedded SVG ${label}.`);
+      if (
+        name.startsWith('on') ||
+        name === 'srcdoc' ||
+        ['action', 'formaction', 'ping', 'target'].includes(name)
+      ) {
+        throw artifactError(
+          ARTIFACT_ERROR_CODES.UNSAFE_HTML,
+          `Unsafe ${name} in embedded SVG ${label}.`,
+        );
       }
       if (['href', 'src'].includes(name) && attr.value) {
         const reference = classifyReference(attr.value);
         if (!['internal', 'data'].includes(reference.kind)) {
-          throw artifactError(ARTIFACT_ERROR_CODES.EXTERNAL_ASSET, `Unpackaged URI in embedded SVG ${label}.`);
+          throw artifactError(
+            ARTIFACT_ERROR_CODES.EXTERNAL_ASSET,
+            `Unpackaged URI in embedded SVG ${label}.`,
+          );
         }
         const nested = decodeSvgDataUri(attr.value, label);
         if (nested !== null) assertSafeSvgMarkup(nested, label, depth + 1);
@@ -382,18 +502,26 @@ function assertSafeSvgMarkup(markup, label, depth = 0) {
       for (const match of attr.value.matchAll(/url\(\s*(['"]?)(.*?)\1\s*\)/gi)) {
         const reference = classifyReference(match[2]);
         if (!['internal', 'data'].includes(reference.kind)) {
-          throw artifactError(ARTIFACT_ERROR_CODES.EXTERNAL_ASSET, `Unpackaged CSS URI in embedded SVG ${label}.`);
+          throw artifactError(
+            ARTIFACT_ERROR_CODES.EXTERNAL_ASSET,
+            `Unpackaged CSS URI in embedded SVG ${label}.`,
+          );
         }
         const nested = decodeSvgDataUri(match[2], label);
         if (nested !== null) assertSafeSvgMarkup(nested, label, depth + 1);
       }
     }
     if (tag === 'style') {
-      for (const match of textContent(node).matchAll(/(?:url\(\s*(['"]?)(.*?)\1\s*\)|@import\s+(?:url\()?\s*(['"])(.*?)\3)/gi)) {
+      for (const match of textContent(node).matchAll(
+        /(?:url\(\s*(['"]?)(.*?)\1\s*\)|@import\s+(?:url\()?\s*(['"])(.*?)\3)/gi,
+      )) {
         const value = match[2] ?? match[4];
         const reference = classifyReference(value);
         if (!['internal', 'data'].includes(reference.kind)) {
-          throw artifactError(ARTIFACT_ERROR_CODES.EXTERNAL_ASSET, `Unpackaged stylesheet URI in embedded SVG ${label}.`);
+          throw artifactError(
+            ARTIFACT_ERROR_CODES.EXTERNAL_ASSET,
+            `Unpackaged stylesheet URI in embedded SVG ${label}.`,
+          );
         }
         const nested = decodeSvgDataUri(value, label);
         if (nested !== null) assertSafeSvgMarkup(nested, label, depth + 1);
@@ -413,26 +541,46 @@ function assertSafeEmbeddedSvgDataUris(text, label) {
 
 class BundleContext {
   constructor({ root, maxFiles, maxBytes, sensitiveValues, remoteAssets, fetchImpl, lookupImpl }) {
-    if (!existsSync(root)) throw artifactError(ARTIFACT_ERROR_CODES.ROOT_MISSING, `Artifact root does not exist: ${root}`);
+    if (!existsSync(root))
+      throw artifactError(
+        ARTIFACT_ERROR_CODES.ROOT_MISSING,
+        `Artifact root does not exist: ${root}`,
+      );
     if (sensitiveValues !== undefined && !Array.isArray(sensitiveValues)) {
-      throw artifactError(ARTIFACT_ERROR_CODES.INPUT_INVALID, 'sensitiveValues must be an array of strings.');
+      throw artifactError(
+        ARTIFACT_ERROR_CODES.INPUT_INVALID,
+        'sensitiveValues must be an array of strings.',
+      );
     }
     this.root = realpathSync(root);
     if (!statSync(this.root).isDirectory()) {
-      throw artifactError(ARTIFACT_ERROR_CODES.ROOT_MISSING, `Artifact root is not a directory: ${root}`);
+      throw artifactError(
+        ARTIFACT_ERROR_CODES.ROOT_MISSING,
+        `Artifact root is not a directory: ${root}`,
+      );
     }
     this.maxFiles = maxFiles;
     this.maxBytes = maxBytes;
     if (!['bundle', 'reject'].includes(remoteAssets)) {
-      throw artifactError(ARTIFACT_ERROR_CODES.INPUT_INVALID, 'remoteAssets must be bundle or reject.');
+      throw artifactError(
+        ARTIFACT_ERROR_CODES.INPUT_INVALID,
+        'remoteAssets must be bundle or reject.',
+      );
     }
     if (typeof fetchImpl !== 'function' || typeof lookupImpl !== 'function') {
-      throw artifactError(ARTIFACT_ERROR_CODES.INPUT_INVALID, 'Remote asset fetch and DNS lookup implementations must be functions.');
+      throw artifactError(
+        ARTIFACT_ERROR_CODES.INPUT_INVALID,
+        'Remote asset fetch and DNS lookup implementations must be functions.',
+      );
     }
     this.remoteAssets = remoteAssets;
     this.fetchImpl = fetchImpl;
     this.lookupImpl = lookupImpl;
-    this.sensitiveValues = [...new Set((sensitiveValues ?? []).filter((value) => typeof value === 'string' && value.length >= 4))];
+    this.sensitiveValues = [
+      ...new Set(
+        (sensitiveValues ?? []).filter((value) => typeof value === 'string' && value.length >= 4),
+      ),
+    ];
     this.buffers = new Map();
     this.pendingReads = new Map();
     this.remoteBuffers = new Map();
@@ -458,7 +606,7 @@ class BundleContext {
     const previousBytes = Buffer.byteLength(previous ?? '', 'utf8');
     this.generatedOutputBytes = Math.max(
       0,
-      this.generatedOutputBytes + ((nextBytes - previousBytes) * count),
+      this.generatedOutputBytes + (nextBytes - previousBytes) * count,
     );
     this.assertGeneratedOutputLimit(label);
   }
@@ -504,25 +652,43 @@ class BundleContext {
   resolveLocal(reference, fromDir, purpose = 'asset') {
     const classified = classifyReference(reference);
     if (classified.kind === 'external') {
-      throw artifactError(ARTIFACT_ERROR_CODES.EXTERNAL_ASSET, `External ${purpose} is not allowed: ${reference}`);
+      throw artifactError(
+        ARTIFACT_ERROR_CODES.EXTERNAL_ASSET,
+        `External ${purpose} is not allowed: ${reference}`,
+      );
     }
     if (classified.kind === 'absolute') {
-      throw artifactError(ARTIFACT_ERROR_CODES.REDACTION, `Absolute ${purpose} path is not shareable: ${reference}`);
+      throw artifactError(
+        ARTIFACT_ERROR_CODES.REDACTION,
+        `Absolute ${purpose} path is not shareable: ${reference}`,
+      );
     }
     if (classified.kind !== 'local') return classified;
     const candidate = resolve(fromDir, classified.value);
     if (!isPathContained(this.root, candidate)) {
-      throw artifactError(ARTIFACT_ERROR_CODES.PATH_TRAVERSAL, `Artifact ${purpose} escapes the configured root: ${reference}`);
+      throw artifactError(
+        ARTIFACT_ERROR_CODES.PATH_TRAVERSAL,
+        `Artifact ${purpose} escapes the configured root: ${reference}`,
+      );
     }
     if (!existsSync(candidate)) {
-      throw artifactError(ARTIFACT_ERROR_CODES.UNRESOLVED_ASSET, `Artifact ${purpose} does not exist: ${reference}`);
+      throw artifactError(
+        ARTIFACT_ERROR_CODES.UNRESOLVED_ASSET,
+        `Artifact ${purpose} does not exist: ${reference}`,
+      );
     }
     const realPath = realpathSync(candidate);
     if (!isPathContained(this.root, realPath)) {
-      throw artifactError(ARTIFACT_ERROR_CODES.SYMLINK_ESCAPE, `Artifact ${purpose} resolves through a symlink outside the root: ${reference}`);
+      throw artifactError(
+        ARTIFACT_ERROR_CODES.SYMLINK_ESCAPE,
+        `Artifact ${purpose} resolves through a symlink outside the root: ${reference}`,
+      );
     }
     if (!statSync(realPath).isFile()) {
-      throw artifactError(ARTIFACT_ERROR_CODES.UNRESOLVED_ASSET, `Artifact ${purpose} is not a regular file: ${reference}`);
+      throw artifactError(
+        ARTIFACT_ERROR_CODES.UNRESOLVED_ASSET,
+        `Artifact ${purpose} is not a regular file: ${reference}`,
+      );
     }
     return { kind: 'local', value: classified.value, path: realPath };
   }
@@ -537,13 +703,24 @@ class BundleContext {
     }
     const url = remoteUrlFor(reference, baseUrl);
     const hostname = url.hostname.toLowerCase();
-    if (hostname === 'localhost' || hostname.endsWith('.localhost') || hostname.endsWith('.local')
-      || hostname.endsWith('.internal') || hostname.endsWith('.home')) {
-      throw artifactError(ARTIFACT_ERROR_CODES.EXTERNAL_ASSET, `Remote asset host is not public: ${url.toString()}`);
+    if (
+      hostname === 'localhost' ||
+      hostname.endsWith('.localhost') ||
+      hostname.endsWith('.local') ||
+      hostname.endsWith('.internal') ||
+      hostname.endsWith('.home')
+    ) {
+      throw artifactError(
+        ARTIFACT_ERROR_CODES.EXTERNAL_ASSET,
+        `Remote asset host is not public: ${url.toString()}`,
+      );
     }
     if (isIP(hostname)) {
       if (!isPublicIpAddress(hostname)) {
-        throw artifactError(ARTIFACT_ERROR_CODES.EXTERNAL_ASSET, `Remote asset host is not public: ${url.toString()}`);
+        throw artifactError(
+          ARTIFACT_ERROR_CODES.EXTERNAL_ASSET,
+          `Remote asset host is not public: ${url.toString()}`,
+        );
       }
       return url;
     }
@@ -559,7 +736,10 @@ class BundleContext {
     }
     const values = Array.isArray(addresses) ? addresses : [addresses];
     if (values.length === 0 || values.some((entry) => !isPublicIpAddress(entry?.address ?? ''))) {
-      throw artifactError(ARTIFACT_ERROR_CODES.EXTERNAL_ASSET, `Remote asset host is not public: ${url.toString()}`);
+      throw artifactError(
+        ARTIFACT_ERROR_CODES.EXTERNAL_ASSET,
+        `Remote asset host is not public: ${url.toString()}`,
+      );
     }
     return url;
   }
@@ -571,8 +751,18 @@ class BundleContext {
     if (alias && this.remoteBuffers.has(alias)) return this.remoteBuffers.get(alias);
     if (this.remoteBuffers.has(initialKey)) return this.remoteBuffers.get(initialKey);
     if (this.pendingRemoteReads.has(initialKey)) return this.pendingRemoteReads.get(initialKey);
-    if (this.buffers.size + this.pendingReads.size + this.remoteBuffers.size + this.pendingRemoteReads.size + 1 > this.maxFiles) {
-      throw artifactError(ARTIFACT_ERROR_CODES.FILE_LIMIT, `Artifact graph exceeds ${this.maxFiles} files.`);
+    if (
+      this.buffers.size +
+        this.pendingReads.size +
+        this.remoteBuffers.size +
+        this.pendingRemoteReads.size +
+        1 >
+      this.maxFiles
+    ) {
+      throw artifactError(
+        ARTIFACT_ERROR_CODES.FILE_LIMIT,
+        `Artifact graph exceeds ${this.maxFiles} files.`,
+      );
     }
     const pending = this.readRemoteUncached(initial, purpose);
     this.pendingRemoteReads.set(initialKey, pending);
@@ -591,8 +781,14 @@ class BundleContext {
       try {
         response = await this.fetchImpl(url, {
           redirect: 'manual',
-          signal: typeof AbortSignal?.timeout === 'function' ? AbortSignal.timeout(REMOTE_FETCH_TIMEOUT_MS) : undefined,
-          headers: { accept: 'text/css, text/javascript, application/javascript, image/*, font/*, audio/*, video/*;q=0.8, */*;q=0.1' },
+          signal:
+            typeof AbortSignal?.timeout === 'function'
+              ? AbortSignal.timeout(REMOTE_FETCH_TIMEOUT_MS)
+              : undefined,
+          headers: {
+            accept:
+              'text/css, text/javascript, application/javascript, image/*, font/*, audio/*, video/*;q=0.8, */*;q=0.1',
+          },
         });
       } catch {
         throw artifactError(
@@ -604,7 +800,10 @@ class BundleContext {
       if (response.status >= 300 && response.status < 400) {
         const location = response.headers?.get?.('location');
         if (!location || redirect === MAX_REMOTE_REDIRECTS) {
-          throw artifactError(ARTIFACT_ERROR_CODES.EXTERNAL_ASSET, `Remote ${purpose} has an unsafe redirect: ${url.toString()}`);
+          throw artifactError(
+            ARTIFACT_ERROR_CODES.EXTERNAL_ASSET,
+            `Remote ${purpose} has an unsafe redirect: ${url.toString()}`,
+          );
         }
         url = await this.resolveRemote(location, purpose, url);
         continue;
@@ -618,7 +817,10 @@ class BundleContext {
       }
       const contentLength = Number(response.headers?.get?.('content-length'));
       if (Number.isFinite(contentLength) && contentLength > this.maxBytes - this.totalBytes) {
-        throw artifactError(ARTIFACT_ERROR_CODES.BYTE_LIMIT, `Artifact graph exceeds ${this.maxBytes} decoded bytes.`);
+        throw artifactError(
+          ARTIFACT_ERROR_CODES.BYTE_LIMIT,
+          `Artifact graph exceeds ${this.maxBytes} decoded bytes.`,
+        );
       }
       const chunks = [];
       let bytes = 0;
@@ -628,13 +830,19 @@ class BundleContext {
           bytes += buffer.byteLength;
           this.totalBytes += buffer.byteLength;
           if (this.totalBytes > this.maxBytes) {
-            throw artifactError(ARTIFACT_ERROR_CODES.BYTE_LIMIT, `Artifact graph exceeds ${this.maxBytes} decoded bytes.`);
+            throw artifactError(
+              ARTIFACT_ERROR_CODES.BYTE_LIMIT,
+              `Artifact graph exceeds ${this.maxBytes} decoded bytes.`,
+            );
           }
           chunks.push(buffer);
         }
       } catch (error) {
         if (error instanceof PipelineError) throw error;
-        throw artifactError(ARTIFACT_ERROR_CODES.EXTERNAL_ASSET, `Unable to read remote ${purpose}: ${url.toString()}`);
+        throw artifactError(
+          ARTIFACT_ERROR_CODES.EXTERNAL_ASSET,
+          `Unable to read remote ${purpose}: ${url.toString()}`,
+        );
       }
       const buffer = Buffer.concat(chunks, bytes);
       const type = remoteContentType(response, url);
@@ -644,18 +852,27 @@ class BundleContext {
       this.registerAsset(buffer, url.pathname, type.mediaType);
       return record;
     }
-    throw artifactError(ARTIFACT_ERROR_CODES.EXTERNAL_ASSET, `Remote ${purpose} redirect limit exceeded: ${initial.toString()}`);
+    throw artifactError(
+      ARTIFACT_ERROR_CODES.EXTERNAL_ASSET,
+      `Remote ${purpose} redirect limit exceeded: ${initial.toString()}`,
+    );
   }
 
   resolveImport(reference, fromDir) {
     const classified = classifyReference(reference);
     if (classified.kind === 'external' || classified.kind === 'absolute') {
-      throw artifactError(ARTIFACT_ERROR_CODES.EXTERNAL_ASSET, `External import is not allowed: ${reference}`);
+      throw artifactError(
+        ARTIFACT_ERROR_CODES.EXTERNAL_ASSET,
+        `External import is not allowed: ${reference}`,
+      );
     }
     if (classified.kind !== 'local') return classified;
     const base = resolve(fromDir, classified.value);
     if (!isPathContained(this.root, base)) {
-      throw artifactError(ARTIFACT_ERROR_CODES.PATH_TRAVERSAL, `Artifact import escapes the configured root: ${reference}`);
+      throw artifactError(
+        ARTIFACT_ERROR_CODES.PATH_TRAVERSAL,
+        `Artifact import escapes the configured root: ${reference}`,
+      );
     }
     const candidates = [
       base,
@@ -664,11 +881,17 @@ class BundleContext {
     ];
     const candidate = candidates.find((value) => existsSync(value) && statSync(value).isFile());
     if (!candidate) {
-      throw artifactError(ARTIFACT_ERROR_CODES.UNRESOLVED_ASSET, `Artifact import does not exist: ${reference}`);
+      throw artifactError(
+        ARTIFACT_ERROR_CODES.UNRESOLVED_ASSET,
+        `Artifact import does not exist: ${reference}`,
+      );
     }
     const realPath = realpathSync(candidate);
     if (!isPathContained(this.root, realPath)) {
-      throw artifactError(ARTIFACT_ERROR_CODES.SYMLINK_ESCAPE, `Artifact import resolves through a symlink outside the root: ${reference}`);
+      throw artifactError(
+        ARTIFACT_ERROR_CODES.SYMLINK_ESCAPE,
+        `Artifact import resolves through a symlink outside the root: ${reference}`,
+      );
     }
     return { kind: 'local', value: classified.value, path: realPath };
   }
@@ -677,7 +900,10 @@ class BundleContext {
     if (this.buffers.has(path)) return this.buffers.get(path);
     if (this.pendingReads.has(path)) return this.pendingReads.get(path);
     if (this.buffers.size + this.pendingReads.size + 1 > this.maxFiles) {
-      throw artifactError(ARTIFACT_ERROR_CODES.FILE_LIMIT, `Artifact graph exceeds ${this.maxFiles} files.`);
+      throw artifactError(
+        ARTIFACT_ERROR_CODES.FILE_LIMIT,
+        `Artifact graph exceeds ${this.maxFiles} files.`,
+      );
     }
     const pending = this.readUncached(path);
     this.pendingReads.set(path, pending);
@@ -693,7 +919,10 @@ class BundleContext {
     for await (const chunk of createReadStream(path)) {
       this.totalBytes += chunk.byteLength;
       if (this.totalBytes > this.maxBytes) {
-        throw artifactError(ARTIFACT_ERROR_CODES.BYTE_LIMIT, `Artifact graph exceeds ${this.maxBytes} decoded bytes.`);
+        throw artifactError(
+          ARTIFACT_ERROR_CODES.BYTE_LIMIT,
+          `Artifact graph exceeds ${this.maxBytes} decoded bytes.`,
+        );
       }
       chunks.push(chunk);
     }
@@ -709,13 +938,20 @@ class BundleContext {
     try {
       text = new TextDecoder('utf-8', { fatal: true }).decode(buffer);
     } catch {
-      throw artifactError(ARTIFACT_ERROR_CODES.INPUT_INVALID, `Artifact text file is not valid UTF-8: ${this.logicalPath(path)}`);
+      throw artifactError(
+        ARTIFACT_ERROR_CODES.INPUT_INVALID,
+        `Artifact text file is not valid UTF-8: ${this.logicalPath(path)}`,
+      );
     }
     this.assertPrivacySafe(text, this.logicalPath(path), { allowRemoteUrls });
     return normalizeUtf8Text(text);
   }
 
-  registerAsset(buffer, path, mediaType = MIME_TYPES[extname(path).toLowerCase()] ?? 'application/octet-stream') {
+  registerAsset(
+    buffer,
+    path,
+    mediaType = MIME_TYPES[extname(path).toLowerCase()] ?? 'application/octet-stream',
+  ) {
     const sha256 = createHash('sha256').update(buffer).digest('hex');
     if (!this.assets.has(sha256)) {
       this.assets.set(sha256, {
@@ -731,13 +967,40 @@ class BundleContext {
     let inspected = text;
     for (const allowed of SAFE_XML_URLS) inspected = inspected.split(allowed).join('');
     const forbidden = [
-      { pattern: /(?:^|[^A-Za-z0-9._-])\/(?:Users|home|private|Volumes)\/[A-Za-z0-9._-]+\//, reason: 'absolute machine path' },
-      { pattern: /[A-Za-z]:\\(?:Users|Documents and Settings)\\/i, reason: 'absolute Windows path' },
-      { pattern: /(?:git@|ssh:\/\/|git(?:\+ssh)?:\/\/)[^\s"']+|https?:\/\/[^\s"']+\.git(?:\b|$)/i, reason: 'repository remote' },
-      ...(allowRemoteUrls ? [] : [{ pattern: /(?:https?|ftp|file|wss?):\/\/[^\s"')<>]+/i, reason: 'remote URL', code: ARTIFACT_ERROR_CODES.EXTERNAL_ASSET }]),
-      { pattern: /planr-asset:\//i, reason: 'reserved bundler placeholder', code: ARTIFACT_ERROR_CODES.EXTERNAL_ASSET },
-      { pattern: /(?:process\.env|import\.meta\.env|__dirname|__filename)\b/, reason: 'machine/environment metadata reference' },
-      { pattern: /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/, reason: 'private key material' },
+      {
+        pattern: /(?:^|[^A-Za-z0-9._-])\/(?:Users|home|private|Volumes)\/[A-Za-z0-9._-]+\//,
+        reason: 'absolute machine path',
+      },
+      {
+        pattern: /[A-Za-z]:\\(?:Users|Documents and Settings)\\/i,
+        reason: 'absolute Windows path',
+      },
+      {
+        pattern: /(?:git@|ssh:\/\/|git(?:\+ssh)?:\/\/)[^\s"']+|https?:\/\/[^\s"']+\.git(?:\b|$)/i,
+        reason: 'repository remote',
+      },
+      ...(allowRemoteUrls
+        ? []
+        : [
+            {
+              pattern: /(?:https?|ftp|file|wss?):\/\/[^\s"')<>]+/i,
+              reason: 'remote URL',
+              code: ARTIFACT_ERROR_CODES.EXTERNAL_ASSET,
+            },
+          ]),
+      {
+        pattern: /planr-asset:\//i,
+        reason: 'reserved bundler placeholder',
+        code: ARTIFACT_ERROR_CODES.EXTERNAL_ASSET,
+      },
+      {
+        pattern: /(?:process\.env|import\.meta\.env|__dirname|__filename)\b/,
+        reason: 'machine/environment metadata reference',
+      },
+      {
+        pattern: /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/,
+        reason: 'private key material',
+      },
       { pattern: /\bAKIA[0-9A-Z]{16}\b/, reason: 'access key material' },
     ];
     for (const { pattern, reason, code = ARTIFACT_ERROR_CODES.REDACTION } of forbidden) {
@@ -747,7 +1010,10 @@ class BundleContext {
     }
     for (const value of this.sensitiveValues) {
       if (inspected.includes(value)) {
-        throw artifactError(ARTIFACT_ERROR_CODES.REDACTION, `Artifact ${label} contains a configured sensitive value.`);
+        throw artifactError(
+          ARTIFACT_ERROR_CODES.REDACTION,
+          `Artifact ${label} contains a configured sensitive value.`,
+        );
       }
     }
     assertSafeEmbeddedSvgDataUris(inspected, label);
@@ -775,7 +1041,9 @@ function removeAttr(node, name) {
 }
 
 function textContent(node) {
-  return (node.childNodes ?? []).map((child) => child.nodeName === '#text' ? child.value : textContent(child)).join('');
+  return (node.childNodes ?? [])
+    .map((child) => (child.nodeName === '#text' ? child.value : textContent(child)))
+    .join('');
 }
 
 function setTextContent(node, value) {
@@ -790,16 +1058,17 @@ function setGeneratedText(context, node, value, label) {
 }
 
 function descendants(node) {
-  return [
-    ...(node?.childNodes ?? []),
-    ...(node?.content?.childNodes ?? []),
-  ];
+  return [...(node?.childNodes ?? []), ...(node?.content?.childNodes ?? [])];
 }
 
 function replaceNode(node, replacement) {
   const parent = node.parentNode;
   const index = parent?.childNodes?.indexOf(node) ?? -1;
-  if (index < 0) throw artifactError(ARTIFACT_ERROR_CODES.INPUT_INVALID, 'Unable to rewrite artifact HTML node.');
+  if (index < 0)
+    throw artifactError(
+      ARTIFACT_ERROR_CODES.INPUT_INVALID,
+      'Unable to rewrite artifact HTML node.',
+    );
   replacement.parentNode = parent;
   parent.childNodes[index] = replacement;
 }
@@ -811,7 +1080,10 @@ function createElement(tagName) {
 function esbuildLoader(path) {
   const loader = ESBUILD_LOADERS[extname(path).toLowerCase()];
   if (!loader) {
-    throw artifactError(ARTIFACT_ERROR_CODES.UNSUPPORTED_MODULE, `Unsupported bundled dependency type: ${extname(path) || '(none)'}`);
+    throw artifactError(
+      ARTIFACT_ERROR_CODES.UNSUPPORTED_MODULE,
+      `Unsupported bundled dependency type: ${extname(path) || '(none)'}`,
+    );
   }
   return loader;
 }
@@ -820,7 +1092,10 @@ function unwrapBuildError(error) {
   const detail = error?.errors?.find(({ detail }) => detail instanceof PipelineError)?.detail;
   if (detail) throw detail;
   if (error instanceof PipelineError) throw error;
-  throw artifactError(ARTIFACT_ERROR_CODES.UNSUPPORTED_MODULE, `Unable to bundle local dependency graph: ${error.message}`);
+  throw artifactError(
+    ARTIFACT_ERROR_CODES.UNSUPPORTED_MODULE,
+    `Unable to bundle local dependency graph: ${error.message}`,
+  );
 }
 
 function artifactDependencyPlugin(context) {
@@ -832,7 +1107,10 @@ function artifactDependencyPlugin(context) {
           if (args.kind === 'entry-point' && isAbsolute(args.path)) {
             const realPath = realpathSync(args.path);
             if (!isPathContained(context.root, realPath)) {
-              throw artifactError(ARTIFACT_ERROR_CODES.PATH_TRAVERSAL, 'Bundler entry point escapes the artifact root.');
+              throw artifactError(
+                ARTIFACT_ERROR_CODES.PATH_TRAVERSAL,
+                'Bundler entry point escapes the artifact root.',
+              );
             }
             return { path: realPath };
           }
@@ -854,10 +1132,16 @@ function artifactDependencyPlugin(context) {
             return { path: remote.toString(), namespace: 'openplanr-remote' };
           }
           if (classified.kind === 'absolute') {
-            throw artifactError(ARTIFACT_ERROR_CODES.EXTERNAL_ASSET, `External import is not allowed: ${args.path}`);
+            throw artifactError(
+              ARTIFACT_ERROR_CODES.EXTERNAL_ASSET,
+              `External import is not allowed: ${args.path}`,
+            );
           }
           if (!args.path.startsWith('.') && !args.path.startsWith('/')) {
-            throw artifactError(ARTIFACT_ERROR_CODES.UNSUPPORTED_MODULE, `Bare module import is not supported: ${args.path}`);
+            throw artifactError(
+              ARTIFACT_ERROR_CODES.UNSUPPORTED_MODULE,
+              `Bare module import is not supported: ${args.path}`,
+            );
           }
           const resolved = context.resolveImport(args.path, args.resolveDir);
           return { path: resolved.path };
@@ -874,7 +1158,10 @@ function artifactDependencyPlugin(context) {
             try {
               markup = new TextDecoder('utf-8', { fatal: true }).decode(contents);
             } catch {
-              throw artifactError(ARTIFACT_ERROR_CODES.INPUT_INVALID, `Remote SVG is not valid UTF-8: ${remote.url}`);
+              throw artifactError(
+                ARTIFACT_ERROR_CODES.INPUT_INVALID,
+                `Remote SVG is not valid UTF-8: ${remote.url}`,
+              );
             }
             assertSafeSvgMarkup(markup, remote.url);
           }
@@ -900,10 +1187,14 @@ function artifactDependencyPlugin(context) {
             contents = await bundleSvg(context, args.path, contents);
           }
           if (['js', 'jsx', 'ts', 'tsx', 'css', 'json'].includes(esbuildLoader(args.path))) {
-            context.assertPrivacySafe(contents.toString('utf8'), context.logicalPath(args.path), { allowRemoteUrls: true });
+            context.assertPrivacySafe(contents.toString('utf8'), context.logicalPath(args.path), {
+              allowRemoteUrls: true,
+            });
           }
-          if (['js', 'jsx', 'ts', 'tsx'].includes(esbuildLoader(args.path))
-            && /new\s+URL\s*\([\s\S]*?import\.meta\.url/.test(contents.toString('utf8'))) {
+          if (
+            ['js', 'jsx', 'ts', 'tsx'].includes(esbuildLoader(args.path)) &&
+            /new\s+URL\s*\([\s\S]*?import\.meta\.url/.test(contents.toString('utf8'))
+          ) {
             throw artifactError(
               ARTIFACT_ERROR_CODES.UNSUPPORTED_MODULE,
               `new URL(..., import.meta.url) assets are not supported: ${context.logicalPath(args.path)}`,
@@ -929,7 +1220,9 @@ async function bundleWithEsbuild(context, { entryPath, source, resolveDir, loade
     const outputDir = resolve(context.root, '.planr-artifact-esbuild');
     const publicPath = 'planr-asset:/';
     const result = await build({
-      ...(entryPath ? { entryPoints: [entryPath] } : { stdin: { contents: source, resolveDir, loader, sourcefile: `inline.${loader}` } }),
+      ...(entryPath
+        ? { entryPoints: [entryPath] }
+        : { stdin: { contents: source, resolveDir, loader, sourcefile: `inline.${loader}` } }),
       bundle: true,
       write: false,
       platform: 'browser',
@@ -966,16 +1259,23 @@ async function bundleWithEsbuild(context, { entryPath, source, resolveDir, loade
       );
     }
     const codeLogicalOutputPath = relative(outputDir, codeFiles[0].path).split('\\').join('/');
-    const codeMetadata = Object.entries(result.metafile?.outputs ?? {})
-      .find(([path]) => {
-        const normalized = path.split('\\').join('/');
-        return normalized === codeLogicalOutputPath || normalized.endsWith(`/${codeLogicalOutputPath}`);
-      })?.[1];
+    const codeMetadata = Object.entries(result.metafile?.outputs ?? {}).find(([path]) => {
+      const normalized = path.split('\\').join('/');
+      return (
+        normalized === codeLogicalOutputPath || normalized.endsWith(`/${codeLogicalOutputPath}`)
+      );
+    })?.[1];
     if (!codeMetadata) {
-      throw artifactError(ARTIFACT_ERROR_CODES.UNSUPPORTED_MODULE, 'Esbuild output metadata is missing.');
+      throw artifactError(
+        ARTIFACT_ERROR_CODES.UNSUPPORTED_MODULE,
+        'Esbuild output metadata is missing.',
+      );
     }
     let output = codeFiles[0].text;
-    const outputBudget = new GeneratedOutputBudget(Buffer.byteLength(output, 'utf8'), `bundled ${kind}`);
+    const outputBudget = new GeneratedOutputBudget(
+      Buffer.byteLength(output, 'utf8'),
+      `bundled ${kind}`,
+    );
     const replacements = [];
     for (const assetFile of assetFiles) {
       const logicalOutputPath = relative(outputDir, assetFile.path).split('\\').join('/');
@@ -999,24 +1299,36 @@ async function bundleWithEsbuild(context, { entryPath, source, resolveDir, loade
       }
       const mediaType = MIME_TYPES[extname(assetFile.path).toLowerCase()];
       if (!mediaType) {
-        throw artifactError(ARTIFACT_ERROR_CODES.UNRESOLVED_ASSET, `Unsupported bundled asset: ${logicalOutputPath}`);
+        throw artifactError(
+          ARTIFACT_ERROR_CODES.UNRESOLVED_ASSET,
+          `Unsupported bundled asset: ${logicalOutputPath}`,
+        );
       }
       const contents = assetFile.contents;
       const dataUrlBytes = encodedDataUrlBytes(mediaType, contents);
-      outputBudget.accountGeneratedReplacementBytes(placeholder, dataUrlBytes, logicalOutputPath, count);
+      outputBudget.accountGeneratedReplacementBytes(
+        placeholder,
+        dataUrlBytes,
+        logicalOutputPath,
+        count,
+      );
       replacements.push({
         placeholder,
-        dataUrl: () => encodeDataUrl(
-          mediaType,
-          Buffer.from(contents.buffer, contents.byteOffset, contents.byteLength),
-        ),
+        dataUrl: () =>
+          encodeDataUrl(
+            mediaType,
+            Buffer.from(contents.buffer, contents.byteOffset, contents.byteLength),
+          ),
       });
     }
     for (const replacement of replacements) {
       output = output.split(replacement.placeholder).join(replacement.dataUrl());
     }
     if (kind !== 'css' && /\bimport\s*\(/.test(output)) {
-      throw artifactError(ARTIFACT_ERROR_CODES.UNSUPPORTED_MODULE, 'Nonliteral or unresolved dynamic import is not supported.');
+      throw artifactError(
+        ARTIFACT_ERROR_CODES.UNSUPPORTED_MODULE,
+        'Nonliteral or unresolved dynamic import is not supported.',
+      );
     }
     context.assertGeneratedFragment(output, `bundled ${kind}`);
     context.assertPrivacySafe(output, `bundled ${kind}`);
@@ -1027,18 +1339,33 @@ async function bundleWithEsbuild(context, { entryPath, source, resolveDir, loade
 }
 
 async function transformClassicScript(context, source, label) {
-  if (/\bimport\s*\(/.test(source) || /^\s*import\s/m.test(source)
-    || /new\s+URL\s*\([\s\S]*?import\.meta\.url/.test(source)) {
-    throw artifactError(ARTIFACT_ERROR_CODES.UNSUPPORTED_MODULE, `Classic script ${label} contains an unsupported import.`);
+  if (
+    /\bimport\s*\(/.test(source) ||
+    /^\s*import\s/m.test(source) ||
+    /new\s+URL\s*\([\s\S]*?import\.meta\.url/.test(source)
+  ) {
+    throw artifactError(
+      ARTIFACT_ERROR_CODES.UNSUPPORTED_MODULE,
+      `Classic script ${label} contains an unsupported import.`,
+    );
   }
   try {
-    const result = await transform(source, { loader: 'js', target: 'es2022', charset: 'utf8', legalComments: 'none', sourcemap: false });
+    const result = await transform(source, {
+      loader: 'js',
+      target: 'es2022',
+      charset: 'utf8',
+      legalComments: 'none',
+      sourcemap: false,
+    });
     context.assertGeneratedFragment(result.code, label);
     context.assertPrivacySafe(result.code, label);
     return normalizeUtf8Text(result.code).trimEnd();
   } catch (error) {
     if (error instanceof PipelineError) throw error;
-    throw artifactError(ARTIFACT_ERROR_CODES.UNSUPPORTED_MODULE, `Invalid classic script ${label}: ${error.message}`);
+    throw artifactError(
+      ARTIFACT_ERROR_CODES.UNSUPPORTED_MODULE,
+      `Invalid classic script ${label}: ${error.message}`,
+    );
   }
 }
 
@@ -1050,7 +1377,8 @@ async function rewriteStyleDeclaration(context, value, resolveDir, label = 'inli
     kind: 'css',
   });
   const match = css.match(/\.planr-inline\s*\{([\s\S]*)\}\s*$/);
-  if (!match) throw artifactError(ARTIFACT_ERROR_CODES.INPUT_INVALID, `Unable to normalize ${label}.`);
+  if (!match)
+    throw artifactError(ARTIFACT_ERROR_CODES.INPUT_INVALID, `Unable to normalize ${label}.`);
   return match[1].trim();
 }
 
@@ -1079,7 +1407,10 @@ async function bundleSvg(context, path, sourceBuffer) {
     const fragment = parseFragment(source);
     const roots = (fragment.childNodes ?? []).filter((node) => node.tagName);
     if (roots.length !== 1 || roots[0].tagName?.toLowerCase() !== 'svg') {
-      throw artifactError(ARTIFACT_ERROR_CODES.UNSAFE_HTML, 'Packaged SVG must contain one <svg> root.');
+      throw artifactError(
+        ARTIFACT_ERROR_CODES.UNSAFE_HTML,
+        'Packaged SVG must contain one <svg> root.',
+      );
     }
     const queue = [...(fragment.childNodes ?? [])];
     while (queue.length > 0) {
@@ -1089,17 +1420,40 @@ async function bundleSvg(context, path, sourceBuffer) {
         continue;
       }
       const tag = node.tagName.toLowerCase();
-      if (SVG_SMIL_ELEMENTS.has(tag)
-        || ['a', 'base', 'embed', 'foreignobject', 'form', 'iframe', 'noembed', 'noframes', 'noscript', 'object', 'script'].includes(tag)) {
-        throw artifactError(ARTIFACT_ERROR_CODES.UNSAFE_HTML, `Unsafe <${tag}> is not supported in packaged SVG.`);
+      if (
+        SVG_SMIL_ELEMENTS.has(tag) ||
+        [
+          'a',
+          'base',
+          'embed',
+          'foreignobject',
+          'form',
+          'iframe',
+          'noembed',
+          'noframes',
+          'noscript',
+          'object',
+          'script',
+        ].includes(tag)
+      ) {
+        throw artifactError(
+          ARTIFACT_ERROR_CODES.UNSAFE_HTML,
+          `Unsafe <${tag}> is not supported in packaged SVG.`,
+        );
       }
       for (const attr of node.attrs ?? []) {
         const name = attr.name.toLowerCase();
         if (isBaseUrlAttribute(attr)) {
-          throw artifactError(ARTIFACT_ERROR_CODES.UNSAFE_HTML, 'SVG base-URL attributes are not supported.');
+          throw artifactError(
+            ARTIFACT_ERROR_CODES.UNSAFE_HTML,
+            'SVG base-URL attributes are not supported.',
+          );
         }
         if (name.startsWith('on') || ['action', 'formaction', 'ping', 'target'].includes(name)) {
-          throw artifactError(ARTIFACT_ERROR_CODES.UNSAFE_HTML, `Unsafe SVG attribute is not supported: ${name}`);
+          throw artifactError(
+            ARTIFACT_ERROR_CODES.UNSAFE_HTML,
+            `Unsafe SVG attribute is not supported: ${name}`,
+          );
         }
       }
       if (tag === 'style') {
@@ -1121,9 +1475,17 @@ async function bundleSvg(context, path, sourceBuffer) {
             `SVG ${tag} ${name}`,
             svgBudget,
           );
-        } else if ((name === 'style' || /url\s*\(/i.test(attr.value)) && /(?:url\s*\(|@import)/i.test(attr.value)) {
+        } else if (
+          (name === 'style' || /url\s*\(/i.test(attr.value)) &&
+          /(?:url\s*\(|@import)/i.test(attr.value)
+        ) {
           if (name === 'style') {
-            const rewritten = await rewriteStyleDeclaration(context, attr.value, dirname(path), 'SVG style');
+            const rewritten = await rewriteStyleDeclaration(
+              context,
+              attr.value,
+              dirname(path),
+              'SVG style',
+            );
             svgBudget.accountGeneratedReplacement(attr.value, rewritten, 'SVG style');
             attr.value = rewritten;
           } else {
@@ -1134,8 +1496,13 @@ async function bundleSvg(context, path, sourceBuffer) {
               'SVG presentation attribute',
             );
             const separator = declaration.indexOf(':');
-            const rewritten = separator >= 0 ? declaration.slice(separator + 1).trim() : declaration;
-            svgBudget.accountGeneratedReplacement(attr.value, rewritten, 'SVG presentation attribute');
+            const rewritten =
+              separator >= 0 ? declaration.slice(separator + 1).trim() : declaration;
+            svgBudget.accountGeneratedReplacement(
+              attr.value,
+              rewritten,
+              'SVG presentation attribute',
+            );
             attr.value = rewritten;
           }
         }
@@ -1167,7 +1534,10 @@ async function dataUrlFor(context, reference, fromDir, purpose, outputBudget = u
       try {
         markup = new TextDecoder('utf-8', { fatal: true }).decode(buffer);
       } catch {
-        throw artifactError(ARTIFACT_ERROR_CODES.INPUT_INVALID, `Remote SVG is not valid UTF-8: ${remote.url}`);
+        throw artifactError(
+          ARTIFACT_ERROR_CODES.INPUT_INVALID,
+          `Remote SVG is not valid UTF-8: ${remote.url}`,
+        );
       }
       assertSafeSvgMarkup(markup, remote.url);
     }
@@ -1178,13 +1548,20 @@ async function dataUrlFor(context, reference, fromDir, purpose, outputBudget = u
     mediaType = MIME_TYPES[extname(classified.path).toLowerCase()];
     if (mediaType === 'image/svg+xml') buffer = await bundleSvg(context, classified.path, buffer);
   }
-  if (!mediaType) throw artifactError(ARTIFACT_ERROR_CODES.UNRESOLVED_ASSET, `Unsupported ${purpose} type: ${reference}`);
+  if (!mediaType)
+    throw artifactError(
+      ARTIFACT_ERROR_CODES.UNRESOLVED_ASSET,
+      `Unsupported ${purpose} type: ${reference}`,
+    );
   const fragment = reference.includes('#') ? `#${reference.split('#').slice(1).join('#')}` : '';
   const outputBytes = encodedDataUrlBytes(mediaType, buffer, fragment);
   if (outputBudget) {
     outputBudget.accountGeneratedReplacementBytes(reference, outputBytes, purpose);
   } else if (outputBytes > MAX_GENERATED_OUTPUT_BYTES) {
-    throw artifactError(ARTIFACT_ERROR_CODES.OUTPUT_LIMIT, `Generated ${purpose} exceeds ${MAX_GENERATED_OUTPUT_BYTES} bytes.`);
+    throw artifactError(
+      ARTIFACT_ERROR_CODES.OUTPUT_LIMIT,
+      `Generated ${purpose} exceeds ${MAX_GENERATED_OUTPUT_BYTES} bytes.`,
+    );
   }
   return encodeDataUrl(mediaType, buffer, fragment);
 }
@@ -1197,7 +1574,8 @@ function parseSrcset(value) {
     if (index >= value.length) break;
     const start = index;
     const isData = value.slice(index, index + 5).toLowerCase() === 'data:';
-    while (index < value.length && !/\s/.test(value[index]) && (isData || value[index] !== ',')) index++;
+    while (index < value.length && !/\s/.test(value[index]) && (isData || value[index] !== ','))
+      index++;
     const url = value.slice(start, index);
     if (isData) {
       const separator = url.indexOf(',');
@@ -1240,41 +1618,95 @@ async function rewriteHtml(context, entryPath, input) {
     }
     const tag = node.tagName.toLowerCase();
     const fromDir = dirname(entryPath);
-    if ((node.namespaceURI === 'http://www.w3.org/2000/svg' && SVG_SMIL_ELEMENTS.has(tag))
-      || ['applet', 'base', 'embed', 'fencedframe', 'form', 'frame', 'frameset', 'iframe', 'noembed', 'noframes', 'noscript', 'object', 'portal'].includes(tag)) {
-      throw artifactError(ARTIFACT_ERROR_CODES.UNSAFE_HTML, `Unsafe <${tag}> is not supported in artifacts.`);
+    if (
+      (node.namespaceURI === 'http://www.w3.org/2000/svg' && SVG_SMIL_ELEMENTS.has(tag)) ||
+      [
+        'applet',
+        'base',
+        'embed',
+        'fencedframe',
+        'form',
+        'frame',
+        'frameset',
+        'iframe',
+        'noembed',
+        'noframes',
+        'noscript',
+        'object',
+        'portal',
+      ].includes(tag)
+    ) {
+      throw artifactError(
+        ARTIFACT_ERROR_CODES.UNSAFE_HTML,
+        `Unsafe <${tag}> is not supported in artifacts.`,
+      );
     }
     for (const attr of node.attrs ?? []) {
       const name = attr.name.toLowerCase();
       if (node.namespaceURI === 'http://www.w3.org/2000/svg' && isBaseUrlAttribute(attr)) {
-        throw artifactError(ARTIFACT_ERROR_CODES.UNSAFE_HTML, 'SVG base-URL attributes are not supported.');
+        throw artifactError(
+          ARTIFACT_ERROR_CODES.UNSAFE_HTML,
+          'SVG base-URL attributes are not supported.',
+        );
       }
-      if (['action', 'archive', 'background', 'classid', 'codebase', 'formaction', 'longdesc', 'manifest', 'ping', 'profile', 'srcdoc', 'target'].includes(name)) {
-        throw artifactError(ARTIFACT_ERROR_CODES.UNSAFE_HTML, `Navigation/form attribute ${name} is not supported.`);
+      if (
+        [
+          'action',
+          'archive',
+          'background',
+          'classid',
+          'codebase',
+          'formaction',
+          'longdesc',
+          'manifest',
+          'ping',
+          'profile',
+          'srcdoc',
+          'target',
+        ].includes(name)
+      ) {
+        throw artifactError(
+          ARTIFACT_ERROR_CODES.UNSAFE_HTML,
+          `Navigation/form attribute ${name} is not supported.`,
+        );
       }
       if (name.startsWith('on')) context.assertPrivacySafe(attr.value, `inline ${name}`);
     }
     if (tag === 'meta' && getAttr(node, 'http-equiv')?.toLowerCase() === 'refresh') {
-      throw artifactError(ARTIFACT_ERROR_CODES.UNSAFE_HTML, 'Meta refresh navigation is not supported.');
+      throw artifactError(
+        ARTIFACT_ERROR_CODES.UNSAFE_HTML,
+        'Meta refresh navigation is not supported.',
+      );
     }
     if (['a', 'area'].includes(tag)) {
       const href = getAttr(node, 'href');
       if (href && !href.trim().startsWith('#')) {
-        throw artifactError(ARTIFACT_ERROR_CODES.UNSAFE_HTML, `Navigation target is not supported: ${href}`);
+        throw artifactError(
+          ARTIFACT_ERROR_CODES.UNSAFE_HTML,
+          `Navigation target is not supported: ${href}`,
+        );
       }
     }
     if (tag === 'link') {
       const href = getAttr(node, 'href');
       const rel = (getAttr(node, 'rel') ?? '').toLowerCase().split(/\s+/);
       if (rel.includes('stylesheet')) {
-        if (!href) throw artifactError(ARTIFACT_ERROR_CODES.UNRESOLVED_ASSET, 'Stylesheet link requires href.');
+        if (!href)
+          throw artifactError(
+            ARTIFACT_ERROR_CODES.UNRESOLVED_ASSET,
+            'Stylesheet link requires href.',
+          );
         const classification = classifyReference(href);
         let entryPath;
         if (classification.kind === 'external') {
           entryPath = (await context.resolveRemote(href, 'stylesheet')).toString();
         } else {
           const resolved = context.resolveLocal(href, fromDir, 'stylesheet');
-          if (resolved.kind !== 'local') throw artifactError(ARTIFACT_ERROR_CODES.EXTERNAL_ASSET, `Stylesheet must be local: ${href}`);
+          if (resolved.kind !== 'local')
+            throw artifactError(
+              ARTIFACT_ERROR_CODES.EXTERNAL_ASSET,
+              `Stylesheet must be local: ${href}`,
+            );
           entryPath = resolved.path;
         }
         const css = await bundleWithEsbuild(context, { entryPath, loader: 'css', kind: 'css' });
@@ -1289,11 +1721,19 @@ async function rewriteHtml(context, entryPath, input) {
       if (href && rel.some((value) => ['icon', 'apple-touch-icon', 'mask-icon'].includes(value))) {
         setAttr(node, 'href', await dataUrlFor(context, href, fromDir, 'link asset', context));
       } else if (href) {
-        throw artifactError(ARTIFACT_ERROR_CODES.UNSAFE_HTML, `Unsupported link relation: ${rel.join(' ') || '(none)'}`);
+        throw artifactError(
+          ARTIFACT_ERROR_CODES.UNSAFE_HTML,
+          `Unsupported link relation: ${rel.join(' ') || '(none)'}`,
+        );
       }
     }
     if (tag === 'style') {
-      const css = await bundleWithEsbuild(context, { source: textContent(node), resolveDir: fromDir, loader: 'css', kind: 'css' });
+      const css = await bundleWithEsbuild(context, {
+        source: textContent(node),
+        resolveDir: fromDir,
+        loader: 'css',
+        kind: 'css',
+      });
       setGeneratedText(context, node, css, 'inline stylesheet');
     }
     if (tag === 'script') {
@@ -1331,14 +1771,21 @@ async function rewriteHtml(context, entryPath, input) {
         if (classification.kind === 'external') {
           const remote = await context.readRemote(src, 'script');
           if (remote.loader !== 'js') {
-            throw artifactError(ARTIFACT_ERROR_CODES.EXTERNAL_ASSET, `Remote script is not JavaScript: ${src}`);
+            throw artifactError(
+              ARTIFACT_ERROR_CODES.EXTERNAL_ASSET,
+              `Remote script is not JavaScript: ${src}`,
+            );
           }
           sourcePath = remote.url;
           source = new TextDecoder('utf-8', { fatal: true }).decode(remote.buffer);
           context.assertPrivacySafe(source, remote.url, { allowRemoteUrls: true });
         } else {
           const resolved = context.resolveLocal(src, fromDir, 'script');
-          if (resolved.kind !== 'local') throw artifactError(ARTIFACT_ERROR_CODES.EXTERNAL_ASSET, `Script must be local: ${src}`);
+          if (resolved.kind !== 'local')
+            throw artifactError(
+              ARTIFACT_ERROR_CODES.EXTERNAL_ASSET,
+              `Script must be local: ${src}`,
+            );
           sourcePath = resolved.path;
           source = await context.readText(sourcePath, { allowRemoteUrls: true });
         }
@@ -1349,14 +1796,18 @@ async function rewriteHtml(context, entryPath, input) {
         context.assertPrivacySafe(source, 'inline script');
       }
       const code = isModule
-        ? await bundleWithEsbuild(context, sourcePath
-          ? { entryPath: sourcePath, loader: 'js', kind: 'module' }
-          : { source, resolveDir: fromDir, loader: 'js', kind: 'module' })
+        ? await bundleWithEsbuild(
+            context,
+            sourcePath
+              ? { entryPath: sourcePath, loader: 'js', kind: 'module' }
+              : { source, resolveDir: fromDir, loader: 'js', kind: 'module' },
+          )
         : await transformClassicScript(context, source, src ?? 'inline script');
       setGeneratedText(context, node, code, 'script');
     }
     const sourceAttrs = [];
-    if (['img', 'source', 'video', 'audio', 'track', 'input'].includes(tag)) sourceAttrs.push('src');
+    if (['img', 'source', 'video', 'audio', 'track', 'input'].includes(tag))
+      sourceAttrs.push('src');
     if (tag === 'video') sourceAttrs.push('poster');
     if (node.namespaceURI === 'http://www.w3.org/2000/svg' && !['a', 'style'].includes(tag)) {
       sourceAttrs.push('href', 'xlink:href');
@@ -1403,15 +1854,26 @@ async function rewriteHtml(context, entryPath, input) {
       if (attr.name.toLowerCase() === 'srcset') {
         for (const candidate of parseSrcset(attr.value)) {
           if (!['data', 'internal'].includes(classifyReference(candidate.url).kind)) {
-            throw artifactError(ARTIFACT_ERROR_CODES.EXTERNAL_ASSET, `Unpackaged srcset URI remains: ${candidate.url}`);
+            throw artifactError(
+              ARTIFACT_ERROR_CODES.EXTERNAL_ASSET,
+              `Unpackaged srcset URI remains: ${candidate.url}`,
+            );
           }
         }
         continue;
       }
-      if (!['src', 'href', 'xlink:href', 'poster', 'data', 'action', 'formaction', 'ping'].includes(attr.name.toLowerCase())) continue;
+      if (
+        !['src', 'href', 'xlink:href', 'poster', 'data', 'action', 'formaction', 'ping'].includes(
+          attr.name.toLowerCase(),
+        )
+      )
+        continue;
       const reference = classifyReference(attr.value);
       if (!['data', 'internal'].includes(reference.kind)) {
-        throw artifactError(ARTIFACT_ERROR_CODES.EXTERNAL_ASSET, `Unpackaged URI remains in bundled HTML: ${attr.value}`);
+        throw artifactError(
+          ARTIFACT_ERROR_CODES.EXTERNAL_ASSET,
+          `Unpackaged URI remains in bundled HTML: ${attr.value}`,
+        );
       }
     }
     remaining.push(...descendants(node));
@@ -1424,12 +1886,16 @@ async function rewriteHtml(context, entryPath, input) {
  * Paths in the result are root-relative logical identifiers only.
  */
 export async function bundleArtifact(entryOrOptions, maybeOptions = {}) {
-  const provided = typeof entryOrOptions === 'object' && entryOrOptions !== null
-    ? entryOrOptions
-    : { ...maybeOptions, entry: entryOrOptions };
+  const provided =
+    typeof entryOrOptions === 'object' && entryOrOptions !== null
+      ? entryOrOptions
+      : { ...maybeOptions, entry: entryOrOptions };
   const entry = provided.entry ?? provided.file;
   if (typeof entry !== 'string' || entry.trim() === '') {
-    throw artifactError(ARTIFACT_ERROR_CODES.INPUT_INVALID, 'bundleArtifact requires a non-empty HTML entry path.');
+    throw artifactError(
+      ARTIFACT_ERROR_CODES.INPUT_INVALID,
+      'bundleArtifact requires a non-empty HTML entry path.',
+    );
   }
   const root = resolve(provided.root ?? process.cwd());
   const context = new BundleContext({
@@ -1444,10 +1910,16 @@ export async function bundleArtifact(entryOrOptions, maybeOptions = {}) {
   const absoluteEntry = isAbsolute(entry);
   const entryCandidate = absoluteEntry ? resolve(entry) : resolve(context.root, entry);
   if (!absoluteEntry && !isPathContained(context.root, entryCandidate)) {
-    throw artifactError(ARTIFACT_ERROR_CODES.PATH_TRAVERSAL, 'Artifact entry escapes the configured root.');
+    throw artifactError(
+      ARTIFACT_ERROR_CODES.PATH_TRAVERSAL,
+      'Artifact entry escapes the configured root.',
+    );
   }
   if (!existsSync(entryCandidate)) {
-    throw artifactError(ARTIFACT_ERROR_CODES.FILE_MISSING, `Artifact entry does not exist: ${entry}`);
+    throw artifactError(
+      ARTIFACT_ERROR_CODES.FILE_MISSING,
+      `Artifact entry does not exist: ${entry}`,
+    );
   }
   const entryPath = realpathSync(entryCandidate);
   if (!isPathContained(context.root, entryPath)) {
@@ -1457,12 +1929,17 @@ export async function bundleArtifact(entryOrOptions, maybeOptions = {}) {
     throw artifactError(code, 'Artifact entry resolves outside the configured root.');
   }
   if (!statSync(entryPath).isFile()) {
-    throw artifactError(ARTIFACT_ERROR_CODES.INPUT_INVALID, 'Artifact entry must be a regular HTML file.');
+    throw artifactError(
+      ARTIFACT_ERROR_CODES.INPUT_INVALID,
+      'Artifact entry must be a regular HTML file.',
+    );
   }
   if (!['.html', '.htm'].includes(extname(entryPath).toLowerCase())) {
     throw artifactError(ARTIFACT_ERROR_CODES.INPUT_INVALID, 'Artifact entry must be an HTML file.');
   }
-  const input = await context.readText(entryPath, { allowRemoteUrls: context.remoteAssets === 'bundle' });
+  const input = await context.readText(entryPath, {
+    allowRemoteUrls: context.remoteAssets === 'bundle',
+  });
   const html = await rewriteHtml(context, entryPath, input);
   const bytes = Buffer.byteLength(html, 'utf8');
   return {
@@ -1474,6 +1951,8 @@ export async function bundleArtifact(entryOrOptions, maybeOptions = {}) {
     fileCount: context.buffers.size + context.remoteBuffers.size,
     remoteAssetCount: context.remoteBuffers.size,
     files: [...context.buffers.keys()].map((path) => context.logicalPath(path)).sort(),
-    assets: [...context.assets.values()].sort((left, right) => left.sha256.localeCompare(right.sha256)),
+    assets: [...context.assets.values()].sort((left, right) =>
+      left.sha256.localeCompare(right.sha256),
+    ),
   };
 }

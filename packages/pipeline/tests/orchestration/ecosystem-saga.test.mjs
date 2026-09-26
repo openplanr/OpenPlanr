@@ -52,7 +52,10 @@ test('ecosystem saga reveals only dependency-safe deterministic work', () => {
     createdAt: at,
   });
   assert.equal(saga.state, 'in-progress');
-  assert.deepEqual(nextEcosystemSagaSteps(saga).map(({ id }) => id), ['pipeline-contract']);
+  assert.deepEqual(
+    nextEcosystemSagaSteps(saga).map(({ id }) => id),
+    ['pipeline-contract'],
+  );
 
   saga = recordEcosystemSagaStep(saga, {
     stepId: 'pipeline-contract',
@@ -60,7 +63,10 @@ test('ecosystem saga reveals only dependency-safe deterministic work', () => {
     evidence: ['commit:abcdef1'],
     completedAt: '2026-07-28T10:00:00Z',
   });
-  assert.deepEqual(nextEcosystemSagaSteps(saga).map(({ id }) => id), ['cli-behavior']);
+  assert.deepEqual(
+    nextEcosystemSagaSteps(saga).map(({ id }) => id),
+    ['cli-behavior'],
+  );
   saga = recordEcosystemSagaStep(saga, {
     stepId: 'cli-behavior',
     status: 'in-progress',
@@ -69,27 +75,32 @@ test('ecosystem saga reveals only dependency-safe deterministic work', () => {
 });
 
 test('ecosystem saga rejects ambiguous IDs, idempotency reuse, and dependency cycles', () => {
-  assert.throws(() => createEcosystemSaga({
-    id: 'SAGA-duplicate-key',
-    subject: 'Invalid',
-    participants,
-    steps: [
-      { ...steps[0] },
-      { ...steps[1], idempotencyKey: steps[0].idempotencyKey },
-    ],
-    createdAt: at,
-  }), /idempotency keys must be unique/);
+  assert.throws(
+    () =>
+      createEcosystemSaga({
+        id: 'SAGA-duplicate-key',
+        subject: 'Invalid',
+        participants,
+        steps: [{ ...steps[0] }, { ...steps[1], idempotencyKey: steps[0].idempotencyKey }],
+        createdAt: at,
+      }),
+    /idempotency keys must be unique/,
+  );
 
-  assert.throws(() => createEcosystemSaga({
-    id: 'SAGA-cycle',
-    subject: 'Invalid',
-    participants,
-    steps: [
-      { ...steps[0], dependsOn: ['cli-behavior'] },
-      { ...steps[1], dependsOn: ['pipeline-contract'] },
-    ],
-    createdAt: at,
-  }), /dependency cycle/);
+  assert.throws(
+    () =>
+      createEcosystemSaga({
+        id: 'SAGA-cycle',
+        subject: 'Invalid',
+        participants,
+        steps: [
+          { ...steps[0], dependsOn: ['cli-behavior'] },
+          { ...steps[1], dependsOn: ['pipeline-contract'] },
+        ],
+        createdAt: at,
+      }),
+    /dependency cycle/,
+  );
 });
 
 test('failed or compensated prerequisites never unblock dependent saga steps', () => {
@@ -120,9 +131,9 @@ test('failed or compensated prerequisites never unblock dependent saga steps', (
 
   const invalidReady = {
     ...saga,
-    steps: saga.steps.map((step) => (
-      step.id === 'cli-behavior' ? { ...step, status: 'ready' } : step
-    )),
+    steps: saga.steps.map((step) =>
+      step.id === 'cli-behavior' ? { ...step, status: 'ready' } : step,
+    ),
   };
   const repaired = reconcileEcosystemSaga(invalidReady);
   assert.equal(repaired.steps.find(({ id }) => id === 'cli-behavior').status, 'pending');
@@ -145,15 +156,15 @@ test('recording an already-observed saga step is idempotent', () => {
   saga = recordEcosystemSagaStep(saga, update);
   const replayed = recordEcosystemSagaStep(saga, update);
   assert.deepEqual(replayed, saga);
-  assert.deepEqual(
-    replayed.steps.find(({ id }) => id === 'pipeline-contract').evidence,
-    ['commit:abcdef1'],
-  );
+  assert.deepEqual(replayed.steps.find(({ id }) => id === 'pipeline-contract').evidence, [
+    'commit:abcdef1',
+  ]);
   assert.throws(
-    () => recordEcosystemSagaStep(saga, {
-      ...update,
-      completedAt: '2026-07-28T10:00:01Z',
-    }),
+    () =>
+      recordEcosystemSagaStep(saga, {
+        ...update,
+        completedAt: '2026-07-28T10:00:01Z',
+      }),
     /Conflicting replay/,
   );
 });
@@ -182,10 +193,18 @@ function releaseParticipant(id, repository, repoLocalSpecId, targetVersion, pack
   };
 }
 
-function releaseOperationInput(participantList = [
-  releaseParticipant('pipeline', 'openplanr/planr-pipeline', 'SPEC-002', '0.30.0', 'planr-pipeline'),
-  releaseParticipant('cli', 'openplanr/OpenPlanr', 'SPEC-002', '1.14.0', 'openplanr'),
-]) {
+function releaseOperationInput(
+  participantList = [
+    releaseParticipant(
+      'pipeline',
+      'openplanr/planr-pipeline',
+      'SPEC-002',
+      '0.30.0',
+      'planr-pipeline',
+    ),
+    releaseParticipant('cli', 'openplanr/OpenPlanr', 'SPEC-002', '1.14.0', 'openplanr'),
+  ],
+) {
   return {
     operationId: 'OPERATE-SPEC-002',
     specId: 'SPEC-002',
@@ -211,44 +230,66 @@ test('release operation digest binds the immutable cross-repository release plan
     'participant discovery order must not alter the operation identity',
   );
 
-  assert.throws(() => createEcosystemReleaseOperation({
-    ...input,
-    operationDigest: digest('f'),
-  }), /digest does not match/);
+  assert.throws(
+    () =>
+      createEcosystemReleaseOperation({
+        ...input,
+        operationDigest: digest('f'),
+      }),
+    /digest does not match/,
+  );
 });
 
 test('release reconciliation switches to forward-fix once any package is published', () => {
   const operation = createEcosystemReleaseOperation(releaseOperationInput());
-  const prepared = reconcileEcosystemReleaseOperation(operation, [
-    { id: 'pipeline', state: 'prepared', nextSafeAction: 'Promote the pipeline package.' },
-    { id: 'cli', state: 'prepared', nextSafeAction: 'Wait for the pipeline package.' },
-  ], { updatedAt: '2026-07-28T10:00:00Z' });
+  const prepared = reconcileEcosystemReleaseOperation(
+    operation,
+    [
+      { id: 'pipeline', state: 'prepared', nextSafeAction: 'Promote the pipeline package.' },
+      { id: 'cli', state: 'prepared', nextSafeAction: 'Wait for the pipeline package.' },
+    ],
+    { updatedAt: '2026-07-28T10:00:00Z' },
+  );
   assert.equal(prepared.state, 'prepared');
   assert.equal(prepared.recoveryMode, 'compensation-available');
   assert.equal(prepared.nextSafeAction, 'Wait for the pipeline package.');
 
-  const published = reconcileEcosystemReleaseOperation(prepared, [{
-    id: 'pipeline',
-    state: 'forward-fix',
-    package: { ...prepared.participants[0].package, published: true, tarballDigest: digest('b') },
-    nextSafeAction: 'Publish a correcting pipeline patch.',
-  }], { updatedAt: '2026-07-28T11:00:00Z' });
+  const published = reconcileEcosystemReleaseOperation(
+    prepared,
+    [
+      {
+        id: 'pipeline',
+        state: 'forward-fix',
+        package: {
+          ...prepared.participants[0].package,
+          published: true,
+          tarballDigest: digest('b'),
+        },
+        nextSafeAction: 'Publish a correcting pipeline patch.',
+      },
+    ],
+    { updatedAt: '2026-07-28T11:00:00Z' },
+  );
   assert.equal(published.state, 'forward-fix');
   assert.equal(published.recoveryMode, 'forward-fix-only');
   assert.equal(published.nextSafeAction, 'Publish a correcting pipeline patch.');
 
-  const staleObservation = reconcileEcosystemReleaseOperation(published, [{
-    id: 'pipeline',
-    package: { published: false, tarballDigest: null },
-  }]);
+  const staleObservation = reconcileEcosystemReleaseOperation(published, [
+    {
+      id: 'pipeline',
+      package: { published: false, tarballDigest: null },
+    },
+  ]);
   assert.equal(staleObservation.recoveryMode, 'forward-fix-only');
   assert.equal(staleObservation.participants[0].package.published, true);
   assert.equal(staleObservation.participants[0].package.tarballDigest, digest('b'));
   assert.deepEqual(
-    reconcileEcosystemReleaseOperation(staleObservation, [{
-      id: 'pipeline',
-      package: { published: false, tarballDigest: null },
-    }]),
+    reconcileEcosystemReleaseOperation(staleObservation, [
+      {
+        id: 'pipeline',
+        package: { published: false, tarballDigest: null },
+      },
+    ]),
     staleObservation,
     'replaying a stale observation must be idempotent',
   );
@@ -260,21 +301,26 @@ test('release reconciliation switches to forward-fix once any package is publish
 
 test('release reconciliation maps compensation and completion to coherent operation states', () => {
   const operation = createEcosystemReleaseOperation(releaseOperationInput());
-  const compensating = reconcileEcosystemReleaseOperation(operation, [{
-    id: 'pipeline',
-    state: 'compensated',
-    nextSafeAction: 'Verify the pipeline revert before closing prepared work.',
-  }]);
+  const compensating = reconcileEcosystemReleaseOperation(operation, [
+    {
+      id: 'pipeline',
+      state: 'compensated',
+      nextSafeAction: 'Verify the pipeline revert before closing prepared work.',
+    },
+  ]);
   assert.equal(compensating.state, 'compensating');
   assert.equal(
     compensating.nextSafeAction,
     'Verify the pipeline revert before closing prepared work.',
   );
   assert.throws(
-    () => reconcileEcosystemReleaseOperation(compensating, [{
-      id: 'pipeline',
-      state: 'prepared',
-    }]),
+    () =>
+      reconcileEcosystemReleaseOperation(compensating, [
+        {
+          id: 'pipeline',
+          state: 'prepared',
+        },
+      ]),
     /compensated release participant is terminal/,
   );
 
@@ -297,15 +343,25 @@ test('release operations reject duplicate participants and incoherent aggregate 
     '0.30.0',
     'planr-pipeline',
   );
-  assert.throws(() => createEcosystemReleaseOperation(releaseOperationInput([
-    pipeline,
-    { ...pipeline, repository: 'openplanr/different-repository' },
-  ])), /Release participant IDs must be unique/);
+  assert.throws(
+    () =>
+      createEcosystemReleaseOperation(
+        releaseOperationInput([
+          pipeline,
+          { ...pipeline, repository: 'openplanr/different-repository' },
+        ]),
+      ),
+    /Release participant IDs must be unique/,
+  );
 
-  assert.throws(() => createEcosystemReleaseOperation({
-    ...releaseOperationInput(),
-    state: 'completed',
-  }), /state completed conflicts with participant state preparing/);
+  assert.throws(
+    () =>
+      createEcosystemReleaseOperation({
+        ...releaseOperationInput(),
+        state: 'completed',
+      }),
+    /state completed conflicts with participant state preparing/,
+  );
 
   const operation = createEcosystemReleaseOperation(releaseOperationInput());
   const duplicateLoadedParticipant = {
@@ -320,18 +376,24 @@ test('release operations reject duplicate participants and incoherent aggregate 
     /Release participant IDs must be unique/,
   );
   assert.throws(
-    () => reconcileEcosystemReleaseOperation(operation, [{
-      id: 'pipeline',
-      targetVersion: '0.31.0',
-    }]),
+    () =>
+      reconcileEcosystemReleaseOperation(operation, [
+        {
+          id: 'pipeline',
+          targetVersion: '0.31.0',
+        },
+      ]),
     /changed the digest-bound release plan/,
   );
   assert.throws(
-    () => reconcileEcosystemReleaseOperation(operation, [{
-      id: 'pipeline',
-      state: 'compensated',
-      package: { published: true, tarballDigest: digest('c') },
-    }]),
+    () =>
+      reconcileEcosystemReleaseOperation(operation, [
+        {
+          id: 'pipeline',
+          state: 'compensated',
+          package: { published: true, tarballDigest: digest('c') },
+        },
+      ]),
     /cannot be compensated/,
   );
 });

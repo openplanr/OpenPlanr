@@ -3,13 +3,38 @@
   "kind": "pipeline-domain-ownership",
   "compatibilityPolicy": "additive-facades-over-preserved-public-modules",
   "domains": {
-    "po": ["planning-review", "planning-review-identity", "planning-review-reducer", "context-envelope"],
+    "po": [
+      "planning-review",
+      "planning-review-identity",
+      "planning-review-reducer",
+      "context-envelope"
+    ],
     "dev": ["runtime", "professional-skills", "browser-qa", "browser-qa-custody"],
-    "ship": ["ship-closure", "ship-closure-identity", "ship-closure-persistence", "ship-closure-projections", "ship-closure-reducer", "ship-context", "ship-risk"],
+    "ship": [
+      "ship-closure",
+      "ship-closure-identity",
+      "ship-closure-persistence",
+      "ship-closure-projections",
+      "ship-closure-reducer",
+      "ship-context",
+      "ship-risk"
+    ],
     "roles": ["professional-skills", "operate-origin"],
     "guided": ["guided-interaction"],
-    "investigate": ["investigation-contracts", "investigation-identity", "investigation-reducer", "investigation-runtime"],
-    "release": ["landing", "landing-contract", "ecosystem-saga", "evaluation-contract", "evaluation-identity", "evaluation-redaction"],
+    "investigate": [
+      "investigation-contracts",
+      "investigation-identity",
+      "investigation-reducer",
+      "investigation-runtime"
+    ],
+    "release": [
+      "landing",
+      "landing-contract",
+      "ecosystem-saga",
+      "evaluation-contract",
+      "evaluation-identity",
+      "evaluation-redaction"
+    ],
     "state": ["engine", "provenance", "errors", "context-envelope"]
   }
 }

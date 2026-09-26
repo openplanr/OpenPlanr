@@ -21,11 +21,11 @@ const UIFILES_KEY_RE = /^\s*(?:ui_files|uifiles)\s*:/i;
 /** Strip markdown decoration and a trailing " — description" from a label. */
 function cleanScreenName(raw) {
   return String(raw)
-    .replace(/`([^`]*)`/g, '$1')                 // `code`
-    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')      // [text](url)
+    .replace(/`([^`]*)`/g, '$1') // `code`
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1') // [text](url)
     .replace(/[*_]{1,3}([^*_]+)[*_]{1,3}/g, '$1') // **bold** / _em_
-    .split(/\s+[—–:]\s+/)[0]                       // "Login — the sign-in page"
-    .replace(/\.(png|jpe?g|webp|svg)$/i, '')      // file stems → names
+    .split(/\s+[—–:]\s+/)[0] // "Login — the sign-in page"
+    .replace(/\.(png|jpe?g|webp|svg)$/i, '') // file stems → names
     .replace(/[.\s]+$/, '')
     .trim();
 }
@@ -50,14 +50,20 @@ function screensFromFrontmatter(frontmatter, out, seen) {
       // inline form: `ui_files: [a.png, b.png]`
       const inline = line.slice(line.indexOf(':') + 1).trim();
       if (inline.startsWith('[')) {
-        inline.replace(/^\[|\]$/g, '').split(',').forEach((s) => addScreen(out, seen, s.replace(/['"]/g, '')));
+        inline
+          .replace(/^\[|\]$/g, '')
+          .split(',')
+          .forEach((s) => addScreen(out, seen, s.replace(/['"]/g, '')));
         inList = false;
       }
       continue;
     }
     if (inList) {
       const m = line.match(/^\s*-\s+(.+?)\s*$/);
-      if (m) { addScreen(out, seen, m[1].replace(/['"]/g, '')); continue; }
+      if (m) {
+        addScreen(out, seen, m[1].replace(/['"]/g, ''));
+        continue;
+      }
       if (line.trim() && !/^\s/.test(line)) inList = false; // next top-level key
     }
   }

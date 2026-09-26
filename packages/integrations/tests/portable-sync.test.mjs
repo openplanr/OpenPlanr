@@ -24,7 +24,9 @@ test('Linear identifiers accept API UUIDs and human identifiers', () => {
 test('portable helper previews GitHub synchronization without credentials or network', async () => {
   const stdout = new PassThrough();
   let rendered = '';
-  stdout.on('data', (chunk) => { rendered += chunk; });
+  stdout.on('data', (chunk) => {
+    rendered += chunk;
+  });
   const stdin = PassThrough.from([JSON.stringify([{ action: 'create', title: 'Example' }])]);
   const result = await runPortableSync(['github', 'sync'], { stdin, stdout });
   assert.equal(result.applied, false);

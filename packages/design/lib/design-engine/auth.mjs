@@ -12,9 +12,9 @@
  * presence. Pure file reads; no network.
  */
 
+import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { execFileSync } from 'node:child_process';
 
 import { credentialsPath } from './paths.mjs';
 

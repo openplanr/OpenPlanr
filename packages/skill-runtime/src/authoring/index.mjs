@@ -9,12 +9,12 @@ export {
 } from './command-contract.mjs';
 export {
   AUTHORING_EXIT,
-  SkillAuthoringError,
   formatDiagnostic,
   formatDiagnostics,
+  SkillAuthoringError,
   toDiagnostic,
 } from './diagnostics.mjs';
-export { loadComposedSkill } from './loader.mjs';
 export { generateSkill } from './generate.mjs';
+export { loadComposedSkill } from './loader.mjs';
 export { checkSkill, evaluateSkill, lintSkill, previewSkill } from './operations.mjs';
 export { inspectStandardSkill, isStandardSkillPackage } from './standard-package.mjs';

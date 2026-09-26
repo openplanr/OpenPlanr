@@ -5,9 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { classifyPublicationIntegrity } from './publication-integrity.mjs';
 
-const packageJson = JSON.parse(
-  readFileSync(new URL('../package.json', import.meta.url), 'utf8'),
-);
+const packageJson = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 const spec = `${packageJson.name}@${packageJson.version}`;
 
 function npmView(field) {
@@ -49,9 +47,7 @@ function prepareCandidate() {
     return Object.freeze({
       archive,
       destination,
-      integrity: `sha512-${createHash('sha512')
-        .update(readFileSync(archive))
-        .digest('base64')}`,
+      integrity: `sha512-${createHash('sha512').update(readFileSync(archive)).digest('base64')}`,
     });
   } catch (error) {
     rmSync(destination, { recursive: true, force: true });

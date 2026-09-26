@@ -3,18 +3,21 @@ import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 
 import {
+  loadOperateEvidenceContract,
   OPERATE_EVIDENCE_CONTRACT_KINDS_V2,
   OPERATE_EVIDENCE_EDGE_RELATIONS_V2,
   OPERATE_EVIDENCE_KINDS_V2,
   OPERATE_EVIDENCE_RESOLVER_ERROR_CODES_V2,
-  loadOperateEvidenceContract,
   validateProtocolArtifact,
 } from '../../lib/protocol/loader.mjs';
 
-const fixture = (name) => JSON.parse(readFileSync(
-  new URL(`../../conformance/fixtures/operating-runtime-v2/${name}`, import.meta.url),
-  'utf8',
-));
+const fixture = (name) =>
+  JSON.parse(
+    readFileSync(
+      new URL(`../../conformance/fixtures/operating-runtime-v2/${name}`, import.meta.url),
+      'utf8',
+    ),
+  );
 const clone = (value) => structuredClone(value);
 
 function invalidFromDescriptor(base, descriptor) {
@@ -57,52 +60,119 @@ test('evidence fixtures validate only their exact contracts and reject unsafe fu
   assert.deepEqual(Object.keys(invalid).sort(), [...OPERATE_EVIDENCE_CONTRACT_KINDS_V2].sort());
 
   for (const kind of OPERATE_EVIDENCE_CONTRACT_KINDS_V2) {
-    assert.deepEqual(validateProtocolArtifact(kind, valid[kind], { protocolVersion: '2.0.0' }), [], kind);
-    assert.ok(validateProtocolArtifact(kind, invalidFromDescriptor(valid[kind], invalid[kind]), {
-      protocolVersion: '2.0.0',
-    }).length > 0, `${kind} invalid descriptor`);
+    assert.deepEqual(
+      validateProtocolArtifact(kind, valid[kind], { protocolVersion: '2.0.0' }),
+      [],
+      kind,
+    );
+    assert.ok(
+      validateProtocolArtifact(kind, invalidFromDescriptor(valid[kind], invalid[kind]), {
+        protocolVersion: '2.0.0',
+      }).length > 0,
+      `${kind} invalid descriptor`,
+    );
   }
 
   const candidate = valid['operating-evidence-candidate'];
   for (const [evidenceKind, locator] of Object.entries({
     filesystem: { sourceRootId: 'workspace-root', path: 'notes/plan.md' },
-    planr: { projectId: 'project-default', artifactId: 'SPEC-016', artifactType: 'specification', path: '.planr/specs/SPEC-016.md', contentHash: `sha256:${'a'.repeat(64)}` },
-    'operate-artifact': { artifactId: 'art_00000002', expectedArtifactType: 'advisor-result', expectedSchemaId: 'operating-artifact', expectedSchemaVersion: '2.0.0' },
+    planr: {
+      projectId: 'project-default',
+      artifactId: 'SPEC-016',
+      artifactType: 'specification',
+      path: '.planr/specs/SPEC-016.md',
+      contentHash: `sha256:${'a'.repeat(64)}`,
+    },
+    'operate-artifact': {
+      artifactId: 'art_00000002',
+      expectedArtifactType: 'advisor-result',
+      expectedSchemaId: 'operating-artifact',
+      expectedSchemaVersion: '2.0.0',
+    },
   })) {
-    assert.deepEqual(validateProtocolArtifact('operating-evidence-candidate', {
-      ...candidate, evidenceKind, locator,
-    }, { protocolVersion: '2.0.0' }), [], evidenceKind);
+    assert.deepEqual(
+      validateProtocolArtifact(
+        'operating-evidence-candidate',
+        {
+          ...candidate,
+          evidenceKind,
+          locator,
+        },
+        { protocolVersion: '2.0.0' },
+      ),
+      [],
+      evidenceKind,
+    );
   }
   for (const malformed of [
-    { evidenceKind: 'filesystem', locator: { sourceRootId: 'workspace-root', path: '/private/secret' } },
+    {
+      evidenceKind: 'filesystem',
+      locator: { sourceRootId: 'workspace-root', path: '/private/secret' },
+    },
     { evidenceKind: 'filesystem', locator: { sourceRootId: 'workspace-root', path: '../escape' } },
     { evidenceKind: 'planr', locator: { projectId: 'project-default', artifactId: 'SPEC-016' } },
-    { evidenceKind: 'git', locator: { repositoryId: 'repo-control', revision: '852aea6', lines: { start: 1, end: 2 } } },
+    {
+      evidenceKind: 'git',
+      locator: { repositoryId: 'repo-control', revision: '852aea6', lines: { start: 1, end: 2 } },
+    },
   ]) {
-    assert.ok(validateProtocolArtifact('operating-evidence-candidate', {
-      ...candidate, ...malformed,
-    }, { protocolVersion: '2.0.0' }).length > 0);
+    assert.ok(
+      validateProtocolArtifact(
+        'operating-evidence-candidate',
+        {
+          ...candidate,
+          ...malformed,
+        },
+        { protocolVersion: '2.0.0' },
+      ).length > 0,
+    );
   }
 
   const rejected = {
     ...valid['operating-evidence-resolution'],
-    outcome: 'rejected', sourceContract: null, evidenceRefId: null, evidenceArtifactId: null,
-    error: { code: 'SOURCE_UNTRACKED', retryable: false, context: { evidenceKind: 'git', repositoryId: 'repo-control' } },
+    outcome: 'rejected',
+    sourceContract: null,
+    evidenceRefId: null,
+    evidenceArtifactId: null,
+    error: {
+      code: 'SOURCE_UNTRACKED',
+      retryable: false,
+      context: { evidenceKind: 'git', repositoryId: 'repo-control' },
+    },
   };
-  assert.deepEqual(validateProtocolArtifact('operating-evidence-resolution', rejected, {
-    protocolVersion: '2.0.0',
-  }), []);
-  assert.ok(validateProtocolArtifact('operating-evidence-candidate', {
-    ...candidate,
-    sourceContract: { id: 'finance-metrics', version: '1.0.0' },
-  }, { protocolVersion: '2.0.0' }).length > 0, 'an untrusted candidate cannot assert its own source contract');
+  assert.deepEqual(
+    validateProtocolArtifact('operating-evidence-resolution', rejected, {
+      protocolVersion: '2.0.0',
+    }),
+    [],
+  );
+  assert.ok(
+    validateProtocolArtifact(
+      'operating-evidence-candidate',
+      {
+        ...candidate,
+        sourceContract: { id: 'finance-metrics', version: '1.0.0' },
+      },
+      { protocolVersion: '2.0.0' },
+    ).length > 0,
+    'an untrusted candidate cannot assert its own source contract',
+  );
   const withoutRuntimeSourceContract = structuredClone(valid['operating-evidence-ref']);
   delete withoutRuntimeSourceContract.sourceContract;
-  assert.ok(validateProtocolArtifact('operating-evidence-ref', withoutRuntimeSourceContract, {
-    protocolVersion: '2.0.0',
-  }).length > 0, 'a resolved EvidenceRef requires the runtime-owned source contract');
-  assert.ok(validateProtocolArtifact('operating-evidence-edge', {
-    ...valid['operating-evidence-edge'],
-    claimId: 'durable-claim-is-future',
-  }, { protocolVersion: '2.0.0' }).length > 0);
+  assert.ok(
+    validateProtocolArtifact('operating-evidence-ref', withoutRuntimeSourceContract, {
+      protocolVersion: '2.0.0',
+    }).length > 0,
+    'a resolved EvidenceRef requires the runtime-owned source contract',
+  );
+  assert.ok(
+    validateProtocolArtifact(
+      'operating-evidence-edge',
+      {
+        ...valid['operating-evidence-edge'],
+        claimId: 'durable-claim-is-future',
+      },
+      { protocolVersion: '2.0.0' },
+    ).length > 0,
+  );
 });

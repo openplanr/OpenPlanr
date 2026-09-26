@@ -1,9 +1,13 @@
 #!/usr/bin/env node
 
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, extname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { PUBLIC_PACKAGE_PATHS, WORKSPACE_IDENTITIES, validateWorkspaceManifests } from './lib/workspace-release-policy.mjs';
+import {
+  PUBLIC_PACKAGE_PATHS,
+  validateWorkspaceManifests,
+  WORKSPACE_IDENTITIES,
+} from './lib/workspace-release-policy.mjs';
 
 const workspaceRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const expectedWorkspaces = Object.freeze(Object.keys(WORKSPACE_IDENTITIES));
@@ -24,7 +28,8 @@ function listFiles(root) {
   const files = [];
   const visit = (directory) => {
     for (const entry of readdirSync(directory, { withFileTypes: true })) {
-      if (entry.name === 'node_modules' || entry.name === 'dist' || entry.name === 'coverage') continue;
+      if (entry.name === 'node_modules' || entry.name === 'dist' || entry.name === 'coverage')
+        continue;
       const path = join(directory, entry.name);
       if (entry.isDirectory()) visit(path);
       else if (entry.isFile() && sourceExtensions.has(extname(entry.name))) files.push(path);
@@ -57,7 +62,10 @@ for (const workspacePath of expectedWorkspaces) {
   const manifestPath = join(workspaceRoot, workspacePath, 'package.json');
   invariant(existsSync(manifestPath), `${workspacePath} must contain package.json`);
   if (existsSync(manifestPath)) manifestByPath.set(workspacePath, readJson(manifestPath));
-  invariant(!existsSync(join(workspaceRoot, workspacePath, 'package-lock.json')), `${workspacePath} must not own an active package lockfile`);
+  invariant(
+    !existsSync(join(workspaceRoot, workspacePath, 'package-lock.json')),
+    `${workspacePath} must not own an active package lockfile`,
+  );
 }
 
 failures.push(...validateWorkspaceManifests(rootManifest, manifestByPath));
@@ -94,10 +102,16 @@ for (const [workspacePath, roots] of Object.entries(runtimeRoots)) {
       const displayPath = relative(workspaceRoot, path).split(sep).join('/');
       for (const specifier of importedSpecifiers(readFileSync(path, 'utf8'))) {
         scannedImports += 1;
-        invariant(!specifier.includes('conformance/'), `${displayPath} imports conformance runtime code: ${specifier}`);
+        invariant(
+          !specifier.includes('conformance/'),
+          `${displayPath} imports conformance runtime code: ${specifier}`,
+        );
         const name = packageName(specifier);
         if (name.startsWith('@openplanr/')) {
-          invariant(allowedInternalImports[workspacePath].has(name), `${displayPath} has forbidden internal import ${specifier}`);
+          invariant(
+            allowedInternalImports[workspacePath].has(name),
+            `${displayPath} has forbidden internal import ${specifier}`,
+          );
         }
         invariant(name !== 'openplanr', `${displayPath} imports the CLI package`);
       }
@@ -109,21 +123,27 @@ if (failures.length > 0) {
   process.stderr.write(`${JSON.stringify({ ok: false, failures }, null, 2)}\n`);
   process.exitCode = 1;
 } else {
-  process.stdout.write(`${JSON.stringify({
-    ok: true,
-    workspaces: expectedWorkspaces.length,
-    publicPackages: PUBLIC_PACKAGE_PATHS.length,
-    privatePackages: expectedWorkspaces.length - PUBLIC_PACKAGE_PATHS.length,
-    scannedFiles,
-    scannedImports,
-    policies: [
-      'explicit-workspace-list',
-      'single-active-lockfile',
-      'exact-cli-pipeline-pin',
-      'public-package-self-containment',
-      'no-runtime-conformance-imports',
-      'no-internal-cli-dependencies',
-      'artifact-does-not-depend-on-design',
-    ],
-  }, null, 2)}\n`);
+  process.stdout.write(
+    `${JSON.stringify(
+      {
+        ok: true,
+        workspaces: expectedWorkspaces.length,
+        publicPackages: PUBLIC_PACKAGE_PATHS.length,
+        privatePackages: expectedWorkspaces.length - PUBLIC_PACKAGE_PATHS.length,
+        scannedFiles,
+        scannedImports,
+        policies: [
+          'explicit-workspace-list',
+          'single-active-lockfile',
+          'exact-cli-pipeline-pin',
+          'public-package-self-containment',
+          'no-runtime-conformance-imports',
+          'no-internal-cli-dependencies',
+          'artifact-does-not-depend-on-design',
+        ],
+      },
+      null,
+      2,
+    )}\n`,
+  );
 }

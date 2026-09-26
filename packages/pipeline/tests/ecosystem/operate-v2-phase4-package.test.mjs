@@ -1,16 +1,15 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { after, test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-
+import { OPERATE_RUNTIME_CONTRACT_KINDS } from '../../lib/protocol/loader.mjs';
 import {
   checkOperateRuntimePurity,
   packOperateV2DevelopmentSnapshot,
 } from '../../scripts/check-operate-runtime-purity.mjs';
-import { OPERATE_RUNTIME_CONTRACT_KINDS } from '../../lib/protocol/loader.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const temporaryRoot = mkdtempSync(join(tmpdir(), 'planr-operate-v2-phase4-package-'));
@@ -31,7 +30,9 @@ function run(command, args, options = {}) {
   return result;
 }
 
-test('Phase 4 packed consumer imports only the declared local evidence facade', { timeout: 120_000 }, () => {
+test('Phase 4 packed consumer imports only the declared local evidence facade', {
+  timeout: 120_000,
+}, () => {
   const packageDestination = join(temporaryRoot, 'package');
   const packed = packOperateV2DevelopmentSnapshot(packageDestination, { sourceRoot: root });
   assert.equal(packed.ok, true);
@@ -71,11 +72,15 @@ test('Phase 4 packed consumer imports only the declared local evidence facade', 
     'schemas/v2.0.0/operate-evidence-resolver-registration.schema.json',
     'schemas/v2.0.0/operating-evidence-edge.schema.json',
     'schemas/v2.0.0/operating-evidence-graph.schema.json',
-  ]) assert.equal(packedFiles.has(required), true, `missing Phase 4 package asset ${required}`);
+  ])
+    assert.equal(packedFiles.has(required), true, `missing Phase 4 package asset ${required}`);
 
   for (const path of packedFiles) {
     assert.doesNotMatch(path, /^(?:\.planr\/|tests\/|node_modules\/|\.env(?:\.|\/|$))/);
-    assert.doesNotMatch(path, /(?:citation|compatibility-v1_4|records-migration|operating-provider-kit)/iu);
+    assert.doesNotMatch(
+      path,
+      /(?:citation|compatibility-v1_4|records-migration|operating-provider-kit)/iu,
+    );
   }
 
   const consumer = join(temporaryRoot, 'consumer');
@@ -100,8 +105,16 @@ test('Phase 4 packed consumer imports only the declared local evidence facade', 
     },
   })) {
     assert.deepEqual(metadata.exports[subpath], target, `${subpath}: declared public export`);
-    assert.equal(existsSync(join(installedPackage, target.import)), true, `${subpath}: runtime file`);
-    assert.equal(existsSync(join(installedPackage, target.types)), true, `${subpath}: declaration file`);
+    assert.equal(
+      existsSync(join(installedPackage, target.import)),
+      true,
+      `${subpath}: runtime file`,
+    );
+    assert.equal(
+      existsSync(join(installedPackage, target.types)),
+      true,
+      `${subpath}: declaration file`,
+    );
   }
   assert.equal(metadata.exports['./operate/citation'], undefined);
   assert.equal(existsSync(join(installedPackage, 'lib/operate/citation.mjs')), false);
@@ -145,9 +158,11 @@ test('Phase 4 packed consumer imports only the declared local evidence facade', 
   writeFileSync(smokePath, smoke);
   run(process.execPath, [smokePath], { cwd: consumer });
 
-  const conformance = run(process.execPath, [
-    join(installedPackage, 'conformance', 'verify-operate-v2-evidence.mjs'),
-  ], { cwd: consumer });
+  const conformance = run(
+    process.execPath,
+    [join(installedPackage, 'conformance', 'verify-operate-v2-evidence.mjs')],
+    { cwd: consumer },
+  );
   const report = JSON.parse(conformance.stdout);
   assert.equal(report.ok, true);
   assert.equal(report.contracts, OPERATE_RUNTIME_CONTRACT_KINDS.length);

@@ -11,16 +11,19 @@ const COMMANDS = [
   ['evaluate', false, 'Run the local deterministic skill evaluation suite.'],
 ];
 
-export const AUTHORING_COMMANDS = Object.freeze(Object.fromEntries(COMMANDS.map(([
-  command,
-  writesOutput,
-  description,
-]) => [command, Object.freeze({
-  command,
-  description,
-  writesOutput,
-  npmScript: `skill:${command}`,
-})])));
+export const AUTHORING_COMMANDS = Object.freeze(
+  Object.fromEntries(
+    COMMANDS.map(([command, writesOutput, description]) => [
+      command,
+      Object.freeze({
+        command,
+        description,
+        writesOutput,
+        npmScript: `skill:${command}`,
+      }),
+    ]),
+  ),
+);
 
 function freeze(value) {
   if (value && typeof value === 'object' && !Object.isFrozen(value)) {
@@ -60,7 +63,8 @@ export function parseAuthoringArgs(command, argv) {
   const positionals = [];
   for (const argument of argv) {
     if (argument === '--json') json = true;
-    else if (argument === '--help' || argument === '-h') return Object.freeze({ help: true, json: false });
+    else if (argument === '--help' || argument === '-h')
+      return Object.freeze({ help: true, json: false });
     else if (argument.startsWith('-')) {
       return Object.freeze({ error: `Unknown option ${argument}.`, json: false });
     } else positionals.push(argument);
@@ -79,8 +83,16 @@ function moduleSummary(module) {
     source: module.source.path,
     appliesWhen: module.appliesWhen,
     authority: immutable(module.authorityCeiling),
-    dependsOn: Object.freeze((module.dependsOn ?? []).map(({ moduleId, moduleVersion }) => Object.freeze({ moduleId, moduleVersion }))),
-    references: Object.freeze((module.references ?? []).map(({ moduleId, moduleVersion }) => Object.freeze({ moduleId, moduleVersion }))),
+    dependsOn: Object.freeze(
+      (module.dependsOn ?? []).map(({ moduleId, moduleVersion }) =>
+        Object.freeze({ moduleId, moduleVersion }),
+      ),
+    ),
+    references: Object.freeze(
+      (module.references ?? []).map(({ moduleId, moduleVersion }) =>
+        Object.freeze({ moduleId, moduleVersion }),
+      ),
+    ),
   });
 }
 
@@ -91,7 +103,11 @@ function profileSummary(profile) {
     host: profile.host,
     source: profile.source.path,
     authority: immutable(profile.authorityCeiling),
-    overlayModules: Object.freeze((profile.overlayModules ?? []).map(({ moduleId, moduleVersion }) => Object.freeze({ moduleId, moduleVersion }))),
+    overlayModules: Object.freeze(
+      (profile.overlayModules ?? []).map(({ moduleId, moduleVersion }) =>
+        Object.freeze({ moduleId, moduleVersion }),
+      ),
+    ),
     runtimeCapabilities: Object.freeze([...(profile.runtimeCapabilities ?? [])]),
     interactionBindings: immutable(profile.interactionBindings ?? []),
   });
@@ -113,11 +129,21 @@ export function describeAuthoringGraph(loaded) {
       hostProfiles: 'host-profiles.json',
       template: loaded.skillSource.template.path,
     }),
-    modules: Object.freeze(loaded.modules.map(moduleSummary).sort((left, right) => (
-      `${left.moduleId}@${left.moduleVersion}`.localeCompare(`${right.moduleId}@${right.moduleVersion}`)
-    ))),
-    hostProfiles: Object.freeze(loaded.declaredProfiles.map(profileSummary).sort((left, right) => (
-      `${left.id}@${left.version}`.localeCompare(`${right.id}@${right.version}`)
-    ))),
+    modules: Object.freeze(
+      loaded.modules
+        .map(moduleSummary)
+        .sort((left, right) =>
+          `${left.moduleId}@${left.moduleVersion}`.localeCompare(
+            `${right.moduleId}@${right.moduleVersion}`,
+          ),
+        ),
+    ),
+    hostProfiles: Object.freeze(
+      loaded.declaredProfiles
+        .map(profileSummary)
+        .sort((left, right) =>
+          `${left.id}@${left.version}`.localeCompare(`${right.id}@${right.version}`),
+        ),
+    ),
   });
 }

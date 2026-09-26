@@ -9,12 +9,16 @@ import {
   packOperateV2DevelopmentSnapshot,
 } from '../../scripts/check-operate-runtime-purity.mjs';
 
-const packageVersion = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8')).version;
+const packageVersion = JSON.parse(
+  readFileSync(new URL('../../package.json', import.meta.url), 'utf8'),
+).version;
 const temporaryRoot = mkdtempSync(join(tmpdir(), 'planr-operate-v2-product-package-'));
 
 after(() => rmSync(temporaryRoot, { recursive: true, force: true }));
 
-test('product package has complete public assets and no private or workspace custody', { timeout: 180_000 }, () => {
+test('product package has complete public assets and no private or workspace custody', {
+  timeout: 180_000,
+}, () => {
   const purity = checkOperateRuntimePurity();
   assert.equal(purity.ok, true);
   const packed = packOperateV2DevelopmentSnapshot(join(temporaryRoot, 'package'));
@@ -28,7 +32,8 @@ test('product package has complete public assets and no private or workspace cus
     'docs/unified-dashboard-migration.md',
     'lib/dashboard/resolve-packaged-dashboard-root.mjs',
     'lib/dashboard/server.mjs',
-  ]) assert.equal(files.has(path), true, `missing installed product asset: ${path}`);
+  ])
+    assert.equal(files.has(path), true, `missing installed product asset: ${path}`);
   for (const entry of packed.files) {
     assert.equal(entry.path.startsWith('.planr/products/'), false, entry.path);
     assert.equal(entry.path.includes('/private/'), false, entry.path);

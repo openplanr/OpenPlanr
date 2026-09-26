@@ -1,7 +1,7 @@
 import {
   closeSync,
-  constants as fsConstants,
   existsSync,
+  constants as fsConstants,
   fstatSync,
   lstatSync,
   mkdirSync,
@@ -54,12 +54,14 @@ function redactNote(note) {
 }
 
 function grantedLearningConsent(consent, skillId, projectIdentity) {
-  return resolveDataFeatureConsent({
-    skillId,
-    subject: 'learning',
-    projectIdentity,
-    consents: consent ? [consent] : [],
-  }).decision === 'granted';
+  return (
+    resolveDataFeatureConsent({
+      skillId,
+      subject: 'learning',
+      projectIdentity,
+      consents: consent ? [consent] : [],
+    }).decision === 'granted'
+  );
 }
 
 /**
@@ -121,7 +123,10 @@ export function prepareLearningRecord(input = {}) {
     consentGranted: true,
     consentRef: consent.consentId,
   });
-  if (validateProtocolArtifact('skill-learning-record', record, { protocolVersion: '1.6.0' }).length > 0) {
+  if (
+    validateProtocolArtifact('skill-learning-record', record, { protocolVersion: '1.6.0' }).length >
+    0
+  ) {
     throw new TypeError('learning record must match the Protocol skill-learning-record contract.');
   }
   return preparedResult({
@@ -135,30 +140,32 @@ export function prepareLearningRecord(input = {}) {
 
 function validPreparedLearning(prepared) {
   if (
-    !prepared
-    || typeof prepared !== 'object'
-    || Array.isArray(prepared)
-    || !PREPARED_LEARNING_RESULTS.has(prepared)
-    || prepared.status !== 'completed'
-    || prepared.reason === undefined
-    || !Number.isInteger(prepared.redactions)
-    || prepared.redactions < 0
-    || !Array.isArray(prepared.disallowed)
-    || prepared.disallowed.length !== 0
-    || !prepared.record
-    || typeof prepared.record !== 'object'
-    || Array.isArray(prepared.record)
-  ) return false;
+    !prepared ||
+    typeof prepared !== 'object' ||
+    Array.isArray(prepared) ||
+    !PREPARED_LEARNING_RESULTS.has(prepared) ||
+    prepared.status !== 'completed' ||
+    prepared.reason === undefined ||
+    !Number.isInteger(prepared.redactions) ||
+    prepared.redactions < 0 ||
+    !Array.isArray(prepared.disallowed) ||
+    prepared.disallowed.length !== 0 ||
+    !prepared.record ||
+    typeof prepared.record !== 'object' ||
+    Array.isArray(prepared.record)
+  )
+    return false;
 
   const errors = validateProtocolArtifact('skill-learning-record', prepared.record, {
     protocolVersion: '1.6.0',
   });
   if (
-    errors.length > 0
-    || !verifyDocumentDigest(prepared.record)
-    || prepared.record.consentGranted !== true
-    || typeof prepared.record.consentRef !== 'string'
-  ) return false;
+    errors.length > 0 ||
+    !verifyDocumentDigest(prepared.record) ||
+    prepared.record.consentGranted !== true ||
+    typeof prepared.record.consentRef !== 'string'
+  )
+    return false;
 
   const rescanned = redactNote(prepared.record.note);
   return rescanned.redactions === 0 && rescanned.note === prepared.record.note;
@@ -166,9 +173,7 @@ function validPreparedLearning(prepared) {
 
 function containedPath(root, target) {
   const relativePath = relative(root, target);
-  return relativePath !== '..'
-    && !relativePath.startsWith(`..${sep}`)
-    && !isAbsolute(relativePath);
+  return relativePath !== '..' && !relativePath.startsWith(`..${sep}`) && !isAbsolute(relativePath);
 }
 
 function prepareLocalDirectory(root, relativeDirectory) {

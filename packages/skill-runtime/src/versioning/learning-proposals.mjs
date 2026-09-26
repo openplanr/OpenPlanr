@@ -6,7 +6,8 @@ const SECRET_PATTERNS = Object.freeze([
 ]);
 
 function text(value, label) {
-  if (typeof value !== 'string' || value.trim().length === 0) throw new TypeError(`${label} must be non-empty text.`);
+  if (typeof value !== 'string' || value.trim().length === 0)
+    throw new TypeError(`${label} must be non-empty text.`);
   return value.trim();
 }
 
@@ -57,9 +58,10 @@ export function assessLearningPromotion({ proposal, review, evaluation } = {}) {
       ...(reviewed ? [] : ['review-not-accepted']),
       ...(evaluated ? [] : ['evaluation-not-passed']),
     ],
-    nextAction: reviewed && evaluated
-      ? 'Edit the canonical source explicitly, apply the required version change, and regenerate affected projections.'
-      : 'Keep the proposal separate from canonical source.',
+    nextAction:
+      reviewed && evaluated
+        ? 'Edit the canonical source explicitly, apply the required version change, and regenerate affected projections.'
+        : 'Keep the proposal separate from canonical source.',
     sourceMutation: false,
   });
 }

@@ -15,12 +15,14 @@ export interface AssetCustody {
   readonly host: string | null;
   readonly digest: Digest;
   readonly byteLength: number;
-  readonly contributors: ReadonlyArray<SourceMapOwner & {
-    readonly ranges: ReadonlyArray<{
-      readonly startByte: number;
-      readonly endByte: number;
-    }>;
-  }>;
+  readonly contributors: ReadonlyArray<
+    SourceMapOwner & {
+      readonly ranges: ReadonlyArray<{
+        readonly startByte: number;
+        readonly endByte: number;
+      }>;
+    }
+  >;
 }
 
 export interface CustodyManifest {
@@ -52,11 +54,13 @@ export declare function buildCustodyManifest(options: {
   sourceFormat: string;
   assetSetId: string;
 }): CustodyManifest;
-export declare function deriveAssetSetId(assets: ReadonlyArray<{
-  path: string;
-  host?: string | null;
-  digest: Digest;
-}>): string;
+export declare function deriveAssetSetId(
+  assets: ReadonlyArray<{
+    path: string;
+    host?: string | null;
+    digest: Digest;
+  }>,
+): string;
 export declare function buildGeneratedAssetManifest(options: {
   assets: ReadonlyArray<GeneratedAsset>;
   sourceFormat: string;

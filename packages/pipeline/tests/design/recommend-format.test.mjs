@@ -2,8 +2,10 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import {
-  recommendFormat, isExploratory, DESIGN_FORMATS,
-} from '../../lib/design/recommendFormat.mjs';
+  DESIGN_FORMATS,
+  isExploratory,
+  recommendFormat,
+} from '../../lib/design/recommend-format.mjs';
 
 test('0–2 screens always recommend prototype', () => {
   for (const n of [0, 1, 2]) {
@@ -18,11 +20,17 @@ test('3+ screens in a linear flow recommend walkthrough', () => {
 
 test('3+ screens with exploratory intent recommend canvas', () => {
   assert.equal(recommendFormat({ screenCount: 6, intentText: 'show me options' }).format, 'canvas');
-  assert.equal(recommendFormat({ screenCount: 5, intentText: 'concept exploration board' }).format, 'canvas');
+  assert.equal(
+    recommendFormat({ screenCount: 5, intentText: 'concept exploration board' }).format,
+    'canvas',
+  );
 });
 
 test('exploratory intent does NOT override the ≤2-screen prototype floor', () => {
-  assert.equal(recommendFormat({ screenCount: 1, intentText: 'explore options' }).format, 'prototype');
+  assert.equal(
+    recommendFormat({ screenCount: 1, intentText: 'explore options' }).format,
+    'prototype',
+  );
 });
 
 test('every recommendation is a known format and carries a reason', () => {

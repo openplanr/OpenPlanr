@@ -40,8 +40,10 @@ function confirmationError(
   const errors = validateProtocolArtifact('guided-confirmation', confirmation, {
     protocolVersion: '1.2.0',
   });
-  if (errors.length > 0) return 'confirmation must match the Protocol guided-confirmation contract.';
-  if (confirmation.state !== 'confirmed') return 'confirmation must be a completed guided confirmation.';
+  if (errors.length > 0)
+    return 'confirmation must match the Protocol guided-confirmation contract.';
+  if (confirmation.state !== 'confirmed')
+    return 'confirmation must be a completed guided confirmation.';
   if (confirmation.actionId !== CONSENT_ACTIONS[subject]) {
     return `confirmation.actionId must be ${CONSENT_ACTIONS[subject]} for ${subject} consent.`;
   }
@@ -50,8 +52,8 @@ function confirmationError(
   }
   const expectedArguments = consentConfirmationArguments(skillId, subject, decision);
   if (
-    confirmation.arguments.length !== expectedArguments.length
-    || confirmation.arguments.some((value, index) => value !== expectedArguments[index])
+    confirmation.arguments.length !== expectedArguments.length ||
+    confirmation.arguments.some((value, index) => value !== expectedArguments[index])
   ) {
     return 'confirmation arguments must be bound to the exact skill, subject, and decision.';
   }
@@ -68,29 +70,37 @@ function confirmationError(
 
 function validConsentRecord(record, subject, skillId, projectIdentity) {
   if (!record || typeof record !== 'object' || Array.isArray(record)) return false;
-  if (validateProtocolArtifact('skill-consent-record', record, { protocolVersion: '1.6.0' }).length > 0) {
+  if (
+    validateProtocolArtifact('skill-consent-record', record, { protocolVersion: '1.6.0' }).length >
+    0
+  ) {
     return false;
   }
-  return record.subject === subject
-    && record.skillId === skillId
-    && CONSENT_DECISIONS.has(record.decision)
-    && verifyDocumentDigest(record)
-    && confirmationError(record.confirmation, {
+  return (
+    record.subject === subject &&
+    record.skillId === skillId &&
+    CONSENT_DECISIONS.has(record.decision) &&
+    verifyDocumentDigest(record) &&
+    confirmationError(record.confirmation, {
       skillId,
       subject,
       decision: record.decision,
       recordedAt: record.recordedAt,
       projectIdentity,
-    }) === null;
+    }) === null
+  );
 }
 
 function latestConsent(consents, subject, skillId, projectIdentity) {
-  return consents
-    .filter((record) => validConsentRecord(record, subject, skillId, projectIdentity))
-    .sort((left, right) => (
-      Date.parse(right.recordedAt) - Date.parse(left.recordedAt)
-      || String(right.consentId).localeCompare(String(left.consentId))
-    ))[0] ?? null;
+  return (
+    consents
+      .filter((record) => validConsentRecord(record, subject, skillId, projectIdentity))
+      .sort(
+        (left, right) =>
+          Date.parse(right.recordedAt) - Date.parse(left.recordedAt) ||
+          String(right.consentId).localeCompare(String(left.consentId)),
+      )[0] ?? null
+  );
 }
 
 function configuredBoolean(configured, key) {
@@ -112,8 +122,10 @@ export function createConsentRecord({
 } = {}) {
   assertNonBlank(consentId, 'consentId');
   assertNonBlank(skillId, 'skillId');
-  if (!DATA_FEATURE_SET.has(subject)) throw new TypeError(`Unknown data-feature consent subject: ${subject}.`);
-  if (!CONSENT_DECISIONS.has(decision)) throw new TypeError(`Unknown consent decision: ${decision}.`);
+  if (!DATA_FEATURE_SET.has(subject))
+    throw new TypeError(`Unknown data-feature consent subject: ${subject}.`);
+  if (!CONSENT_DECISIONS.has(decision))
+    throw new TypeError(`Unknown consent decision: ${decision}.`);
   if (!confirmation || typeof confirmation !== 'object' || Array.isArray(confirmation)) {
     throw new TypeError('confirmation must be an existing guided confirmation.');
   }
@@ -141,16 +153,25 @@ export function createConsentRecord({
     recordedAt: capturedAt,
     confirmation,
   });
-  if (validateProtocolArtifact('skill-consent-record', record, { protocolVersion: '1.6.0' }).length > 0) {
+  if (
+    validateProtocolArtifact('skill-consent-record', record, { protocolVersion: '1.6.0' }).length >
+    0
+  ) {
     throw new TypeError('consent record must match the Protocol skill-consent-record contract.');
   }
   return freezeJson(record);
 }
 
 /** Resolve one explicit data-feature decision without changing runtime behavior. */
-export function resolveDataFeatureConsent({ skillId, subject, projectIdentity, consents = [] } = {}) {
+export function resolveDataFeatureConsent({
+  skillId,
+  subject,
+  projectIdentity,
+  consents = [],
+} = {}) {
   assertNonBlank(skillId, 'skillId');
-  if (!DATA_FEATURE_SET.has(subject)) throw new TypeError(`Unknown data-feature consent subject: ${subject}.`);
+  if (!DATA_FEATURE_SET.has(subject))
+    throw new TypeError(`Unknown data-feature consent subject: ${subject}.`);
   if (!Array.isArray(consents)) throw new TypeError('consents must be an array.');
   const record = latestConsent(consents, subject, skillId, projectIdentity);
   return freezeJson({
@@ -178,10 +199,12 @@ export function resolveLifecycleSettings({
   if (!Array.isArray(consents)) throw new TypeError('consents must be an array.');
   if (typeof headless !== 'boolean') throw new TypeError('headless must be a boolean.');
 
-  const decisions = Object.fromEntries(DATA_FEATURES.map((subject) => [
-    subject,
-    resolveDataFeatureConsent({ skillId, subject, projectIdentity, consents }).decision,
-  ]));
+  const decisions = Object.fromEntries(
+    DATA_FEATURES.map((subject) => [
+      subject,
+      resolveDataFeatureConsent({ skillId, subject, projectIdentity, consents }).decision,
+    ]),
+  );
   const wantsLearning = configuredBoolean(configured, 'learning');
   const wantsTelemetry = configuredBoolean(configured, 'telemetry');
   const wantsExternalData = configuredBoolean(configured, 'externalData');
@@ -205,7 +228,10 @@ export function resolveLifecycleSettings({
       diagnostics.push({
         feature: key,
         status: headless && decisions[subject] === 'unset' ? 'unavailable' : 'disabled',
-        reason: decisions[subject] === 'unset' ? 'explicit-opt-in-required' : `consent-${decisions[subject]}`,
+        reason:
+          decisions[subject] === 'unset'
+            ? 'explicit-opt-in-required'
+            : `consent-${decisions[subject]}`,
       });
     }
   }

@@ -5,11 +5,18 @@ import { createArtifactReviewController } from '../ui/feedback-rail.mjs';
 const baseOptions = globalThis.__OPENPLANR_ARTIFACT_STAGE_OPTIONS__ ?? {};
 
 function readJson(id, fallback = null) {
-  try { return JSON.parse(document.getElementById(id)?.textContent ?? 'null') ?? fallback; } catch { return fallback; }
+  try {
+    return JSON.parse(document.getElementById(id)?.textContent ?? 'null') ?? fallback;
+  } catch {
+    return fallback;
+  }
 }
 
 const payload = readJson('planr-artifact-stage-payload', { artifacts: [], viewer: {} });
-const embedded = readJson('planr-artifact-review-state', { reviewOf: '0'.repeat(64), review: null });
+const embedded = readJson('planr-artifact-review-state', {
+  reviewOf: '0'.repeat(64),
+  review: null,
+});
 const reviewController = createArtifactReviewController({
   reviewOf: embedded.reviewOf,
   initialReview: embedded.review,
@@ -30,7 +37,8 @@ async function requestJson(path, options = {}) {
     ...options,
   });
   const body = await response.json().catch(() => ({}));
-  if (!response.ok || body?.error) throw new Error(body?.error ?? `Request failed (${response.status})`);
+  if (!response.ok || body?.error)
+    throw new Error(body?.error ?? `Request failed (${response.status})`);
   return body;
 }
 
@@ -50,11 +58,15 @@ async function hydrateReview() {
 }
 
 function persistReview(review) {
-  persistQueue = persistQueue.then(() => requestJson('api/artifact-review', {
-    method: 'PUT',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ review }),
-  })).catch((error) => announce(`Could not save review: ${error.message}`, true));
+  persistQueue = persistQueue
+    .then(() =>
+      requestJson('api/artifact-review', {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ review }),
+      }),
+    )
+    .catch((error) => announce(`Could not save review: ${error.message}`, true));
   return persistQueue;
 }
 
@@ -119,14 +131,18 @@ function button(document, label, action) {
   const node = document.createElement('button');
   node.type = 'button';
   node.textContent = label;
-  node.addEventListener('click', () => Promise.resolve(action()).catch((error) => announce(error.message, true)));
+  node.addEventListener('click', () =>
+    Promise.resolve(action()).catch((error) => announce(error.message, true)),
+  );
   return node;
 }
 
 function activeArtifactId() {
-  return globalThis.__openPlanrArtifactStage?.getState?.().activeArtifactId
-    ?? payload.viewer?.activeArtifactId
-    ?? payload.artifacts[0]?.id;
+  return (
+    globalThis.__openPlanrArtifactStage?.getState?.().activeArtifactId ??
+    payload.viewer?.activeArtifactId ??
+    payload.artifacts[0]?.id
+  );
 }
 
 function activeArtifact() {
@@ -144,15 +160,21 @@ function download(href, name) {
 
 async function downloadArtifactHtml() {
   const envelope = await loadEnvelope();
-  const artifact = envelope.artifacts.find(({ id }) => id === activeArtifactId()) ?? envelope.artifacts[0];
+  const artifact =
+    envelope.artifacts.find(({ id }) => id === activeArtifactId()) ?? envelope.artifacts[0];
   const url = URL.createObjectURL(new Blob([artifact.html], { type: 'text/html' }));
-  try { download(url, `${artifact.id}.html`); } finally { setTimeout(() => URL.revokeObjectURL(url), 1_000); }
+  try {
+    download(url, `${artifact.id}.html`);
+  } finally {
+    setTimeout(() => URL.revokeObjectURL(url), 1_000);
+  }
 }
 
 async function exportArtifactPng(target) {
   const artifact = activeArtifact();
-  const frame = [...document.querySelectorAll('[data-planr-artifact-frame]')]
-    .find((candidate) => candidate.dataset.planrArtifactFrame === artifact?.id);
+  const frame = [...document.querySelectorAll('[data-planr-artifact-frame]')].find(
+    (candidate) => candidate.dataset.planrArtifactFrame === artifact?.id,
+  );
   const result = await frame?.__openPlanrBridge?.exportPng?.(target);
   if (!result) throw new Error('The artifact is still loading or could not be rendered as PNG.');
   download(result.dataUrl, `${artifact.id}-${result.label}.png`);
@@ -197,11 +219,13 @@ function renderDomainControls() {
     const rating = document.createElement('select');
     rating.dataset.planrVariantRating = artifact.id;
     rating.append(option(document, '', 'Not rated'));
-    for (let value = 1; value <= 5; value += 1) rating.append(option(document, String(value), `${value} / 5`));
+    for (let value = 1; value <= 5; value += 1)
+      rating.append(option(document, String(value), `${value} / 5`));
     rating.value = current.ratings?.[artifact.id] ? String(current.ratings[artifact.id]) : '';
     rating.addEventListener('change', () => {
       const ratings = { ...(designFeedback?.ratings ?? {}) };
-      if (rating.value) ratings[artifact.id] = Number(rating.value); else delete ratings[artifact.id];
+      if (rating.value) ratings[artifact.id] = Number(rating.value);
+      else delete ratings[artifact.id];
       designFeedback = { ...(designFeedback ?? emptyFeedback()), ratings };
     });
     group.append(labeledControl('Rating', rating));
@@ -213,7 +237,8 @@ function renderDomainControls() {
     comment.dataset.planrVariantComment = artifact.id;
     comment.addEventListener('input', () => {
       const comments = { ...(designFeedback?.comments ?? {}) };
-      if (comment.value) comments[artifact.id] = comment.value; else delete comments[artifact.id];
+      if (comment.value) comments[artifact.id] = comment.value;
+      else delete comments[artifact.id];
       designFeedback = { ...(designFeedback ?? emptyFeedback()), comments };
     });
     group.append(labeledControl('Comment', comment));
@@ -237,8 +262,10 @@ function renderDomainControls() {
     const preferredLabel = document.createElement('label');
     preferredLabel.textContent = 'Preferred variant';
     const preferred = document.createElement('select');
-    for (const artifact of payload.artifacts) preferred.append(option(document, artifact.id, artifact.title));
-    preferred.value = current.preferred ?? payload.viewer?.activeArtifactId ?? payload.artifacts[0]?.id ?? '';
+    for (const artifact of payload.artifacts)
+      preferred.append(option(document, artifact.id, artifact.title));
+    preferred.value =
+      current.preferred ?? payload.viewer?.activeArtifactId ?? payload.artifacts[0]?.id ?? '';
     preferred.dataset.planrPreferred = '';
     preferredLabel.append(preferred);
     roundSection.body.append(preferredLabel);
@@ -260,8 +287,12 @@ function renderDomainControls() {
     colors.value = remixDraft.colorsFrom;
     layout.dataset.planrRemixLayout = '';
     colors.dataset.planrRemixColors = '';
-    layout.addEventListener('change', () => { remixDraft.layoutFrom = layout.value; });
-    colors.addEventListener('change', () => { remixDraft.colorsFrom = colors.value; });
+    layout.addEventListener('change', () => {
+      remixDraft.layoutFrom = layout.value;
+    });
+    colors.addEventListener('change', () => {
+      remixDraft.colorsFrom = colors.value;
+    });
     remixGrid.append(labeledControl('Layout from', layout), labeledControl('Colors from', colors));
     const note = document.createElement('input');
     note.type = 'text';
@@ -269,27 +300,37 @@ function renderDomainControls() {
     note.placeholder = 'Remix note (optional)';
     note.value = remixDraft.note;
     note.dataset.planrRemixNote = '';
-    note.addEventListener('input', () => { remixDraft.note = note.value; });
+    note.addEventListener('input', () => {
+      remixDraft.note = note.value;
+    });
     remixGrid.append(labeledControl('Remix note', note));
     roundSection.body.append(remixGrid);
 
     const roundActions = document.createElement('div');
     roundActions.className = 'planr-domain-actions';
-    const iterate = button(document, 'Regenerate', () => postDomain('pending', {
-      regenerated: true, regenerateAction: 'iterate',
-    }));
+    const iterate = button(document, 'Regenerate', () =>
+      postDomain('pending', {
+        regenerated: true,
+        regenerateAction: 'iterate',
+      }),
+    );
     iterate.dataset.planrRegenerate = '';
-    const more = button(document, 'More like selected', () => postDomain('pending', {
+    const more = button(document, 'More like selected', () =>
+      postDomain('pending', {
         regenerated: true,
         regenerateAction: 'more-like',
-        preferred: slot.querySelector('[data-planr-preferred]')?.value || payload.viewer?.activeArtifactId,
-    }));
+        preferred:
+          slot.querySelector('[data-planr-preferred]')?.value || payload.viewer?.activeArtifactId,
+      }),
+    );
     more.dataset.planrMoreLike = '';
-    const remix = button(document, 'Remix', () => postDomain('pending', {
-      regenerated: true,
-      regenerateAction: 'remix',
-      remixSpec: { ...remixDraft },
-    }));
+    const remix = button(document, 'Remix', () =>
+      postDomain('pending', {
+        regenerated: true,
+        regenerateAction: 'remix',
+        remixSpec: { ...remixDraft },
+      }),
+    );
     remix.dataset.planrRemix = '';
     roundActions.append(iterate, more, remix);
     roundSection.body.append(roundActions);
@@ -298,9 +339,11 @@ function renderDomainControls() {
 
   const actions = document.createElement('div');
   actions.className = 'planr-domain-actions';
-  const save = button(document, 'Save design review', () => postDomain('submit', {
-    preferred: slot.querySelector('[data-planr-preferred]')?.value || current.preferred,
-  }));
+  const save = button(document, 'Save design review', () =>
+    postDomain('submit', {
+      preferred: slot.querySelector('[data-planr-preferred]')?.value || current.preferred,
+    }),
+  );
   save.dataset.planrSaveDesign = '';
   actions.append(save);
   slot.append(actions);
@@ -316,16 +359,21 @@ function renderDomainControls() {
   html.dataset.planrExport = 'html';
   exportActions.append(pngScreen, pngFull, html);
   for (const source of designSources) {
-    const sourceButton = button(document, `Download ${source.artifactId} source ${source.kind.toUpperCase()}`, () => {
-      download(source.url, `openplanr-${source.artifactId}.${source.kind}`);
-    });
+    const sourceButton = button(
+      document,
+      `Download ${source.artifactId} source ${source.kind.toUpperCase()}`,
+      () => {
+        download(source.url, `openplanr-${source.artifactId}.${source.kind}`);
+      },
+    );
     sourceButton.dataset.planrExport = `source-${source.kind}`;
     sourceButton.dataset.planrArtifactId = source.artifactId;
     exportActions.append(sourceButton);
   }
   exportSection.body.append(exportActions);
   const exportHint = document.createElement('p');
-  exportHint.textContent = 'PNG is a reference image. HTML and design-spec.md remain the implementation handoff.';
+  exportHint.textContent =
+    'PNG is a reference image. HTML and design-spec.md remain the implementation handoff.';
   exportSection.body.append(exportHint);
   slot.append(exportSection.details);
 
@@ -336,7 +384,8 @@ function renderDomainControls() {
   presence.textContent = '1 reviewer';
   const pinToggle = button(document, pinsVisible ? 'Pins' : 'Pins hidden', () => {
     pinsVisible = !pinsVisible;
-    for (const layer of document.querySelectorAll('[data-planr-annotation-layer]')) layer.hidden = !pinsVisible;
+    for (const layer of document.querySelectorAll('[data-planr-annotation-layer]'))
+      layer.hidden = !pinsVisible;
     pinToggle.textContent = pinsVisible ? 'Pins' : 'Pins hidden';
     pinToggle.setAttribute('aria-checked', String(pinsVisible));
   });
@@ -372,9 +421,11 @@ reviewController.subscribe((state, change) => {
   if (change.type === 'review' && state.review) {
     persistReview(state.review);
     if (change.action === 'set-decision' && state.review.decision === 'approved') {
-      const preferred = document.querySelector('[data-planr-preferred]')?.value
-        ?? payload.viewer?.activeArtifactId;
-      postDomain('submit', preferred ? { preferred } : {}).catch((error) => announce(error.message, true));
+      const preferred =
+        document.querySelector('[data-planr-preferred]')?.value ?? payload.viewer?.activeArtifactId;
+      postDomain('submit', preferred ? { preferred } : {}).catch((error) =>
+        announce(error.message, true),
+      );
     }
   }
   if (change.type === 'identity') connectPresence();
@@ -412,11 +463,21 @@ renderDomainControls();
 connectPresence();
 hydrateReview().catch((error) => announce(error.message, true));
 hydrateSources().catch((error) => announce(`Source exports unavailable: ${error.message}`, true));
-const progressTimer = setInterval(() => requestJson('api/progress').then((progress) => {
-  if (latestReloadGeneration === null) latestReloadGeneration = progress.reloadGen;
-  else if (progress.reloadGen !== latestReloadGeneration) location.reload();
-}).catch(() => {}), 1_200);
-addEventListener('pagehide', () => {
-  clearInterval(progressTimer);
-  eventSource?.close();
-}, { once: true });
+const progressTimer = setInterval(
+  () =>
+    requestJson('api/progress')
+      .then((progress) => {
+        if (latestReloadGeneration === null) latestReloadGeneration = progress.reloadGen;
+        else if (progress.reloadGen !== latestReloadGeneration) location.reload();
+      })
+      .catch(() => {}),
+  1_200,
+);
+addEventListener(
+  'pagehide',
+  () => {
+    clearInterval(progressTimer);
+    eventSource?.close();
+  },
+  { once: true },
+);

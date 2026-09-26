@@ -80,7 +80,9 @@ export function nearestSpacing(px) {
   const sign = v < 0 ? -1 : 1;
   // Candidates ascending, deduped; `<=` lets the larger step win a tie (snap a
   // 1px nudge up to the 2px hairline, not down to 0).
-  const candidates = [...new Set([0, 2, Math.round(n / SPACING_STEP) * SPACING_STEP])].sort((a, b) => a - b);
+  const candidates = [...new Set([0, 2, Math.round(n / SPACING_STEP) * SPACING_STEP])].sort(
+    (a, b) => a - b,
+  );
   const best = candidates.reduce(
     (b, c) => (Math.abs(c - n) <= Math.abs(b - n) ? c : b),
     candidates[0],

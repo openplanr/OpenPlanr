@@ -37,8 +37,15 @@
  */
 
 import { execSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
-import { mkdtempSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -126,12 +133,18 @@ const parseScalar = (raw) => {
   if (s === 'true') return true;
   if (s === 'false') return false;
   // Quoted string
-  if ((s.startsWith('"') && s.endsWith('"') && s.length >= 2) ||
-      (s.startsWith("'") && s.endsWith("'") && s.length >= 2)) {
+  if (
+    (s.startsWith('"') && s.endsWith('"') && s.length >= 2) ||
+    (s.startsWith("'") && s.endsWith("'") && s.length >= 2)
+  ) {
     const inner = s.slice(1, -1);
     if (s[0] === '"') {
       // Handle simple escapes
-      return inner.replace(/\\"/g, '"').replace(/\\\\/g, '\\').replace(/\\n/g, '\n').replace(/\\t/g, '\t');
+      return inner
+        .replace(/\\"/g, '"')
+        .replace(/\\\\/g, '\\')
+        .replace(/\\n/g, '\n')
+        .replace(/\\t/g, '\t');
     }
     return inner.replace(/''/g, "'");
   }
@@ -142,7 +155,8 @@ const parseScalar = (raw) => {
     // Split top-level commas (no nested arrays/maps in our schema set)
     const parts = [];
     let buf = '';
-    let inDouble = false, inSingle = false;
+    let inDouble = false,
+      inSingle = false;
     for (const ch of body) {
       if (ch === '"' && !inSingle) inDouble = !inDouble;
       else if (ch === "'" && !inDouble) inSingle = !inSingle;
@@ -180,7 +194,10 @@ const parseBlock = (lines, start, baseIndent) => {
   while (i < lines.length) {
     const line = lines[i];
     const trimmed = line.trim();
-    if (trimmed === '' || trimmed.startsWith('#')) { i++; continue; }
+    if (trimmed === '' || trimmed.startsWith('#')) {
+      i++;
+      continue;
+    }
     const ind = indentOf(line);
     if (ind < baseIndent) {
       // Empty block
@@ -198,7 +215,10 @@ const parseBlock = (lines, start, baseIndent) => {
     while (i < lines.length) {
       const line = lines[i];
       const trimmed = line.trim();
-      if (trimmed === '' || trimmed.startsWith('#')) { i++; continue; }
+      if (trimmed === '' || trimmed.startsWith('#')) {
+        i++;
+        continue;
+      }
       const ind = indentOf(line);
       if (ind < baseIndent) break;
       if (ind > baseIndent) {
@@ -215,7 +235,12 @@ const parseBlock = (lines, start, baseIndent) => {
         const [val, nxt] = parseBlock(lines, i + 1, baseIndent + 2);
         arr.push(val);
         i = nxt;
-      } else if (kvMatch && !after.startsWith('"') && !after.startsWith("'") && !after.startsWith('[')) {
+      } else if (
+        kvMatch &&
+        !after.startsWith('"') &&
+        !after.startsWith("'") &&
+        !after.startsWith('[')
+      ) {
         // List item is a map. Build it out of the rest of the lines indented
         // beyond baseIndent + 2.
         const itemMap = {};
@@ -233,7 +258,10 @@ const parseBlock = (lines, start, baseIndent) => {
         while (i < lines.length) {
           const ln = lines[i];
           const t = ln.trim();
-          if (t === '' || t.startsWith('#')) { i++; continue; }
+          if (t === '' || t.startsWith('#')) {
+            i++;
+            continue;
+          }
           const ind2 = indentOf(ln);
           if (ind2 !== baseIndent + 2) break;
           const km = t.match(/^([^:#\s][^:]*?):\s*(.*)$/);
@@ -263,13 +291,25 @@ const parseBlock = (lines, start, baseIndent) => {
   while (i < lines.length) {
     const line = lines[i];
     const trimmed = line.trim();
-    if (trimmed === '' || trimmed.startsWith('#')) { i++; continue; }
+    if (trimmed === '' || trimmed.startsWith('#')) {
+      i++;
+      continue;
+    }
     const ind = indentOf(line);
     if (ind < baseIndent) break;
-    if (ind > baseIndent) { i++; continue; }
+    if (ind > baseIndent) {
+      i++;
+      continue;
+    }
     const kvMatch = trimmed.match(/^([^:#\s][^:]*?):\s*(.*)$/);
-    if (!kvMatch) { i++; continue; }
-    const key = kvMatch[1].trim().replace(/^"(.*)"$/, '$1').replace(/^'(.*)'$/, '$1');
+    if (!kvMatch) {
+      i++;
+      continue;
+    }
+    const key = kvMatch[1]
+      .trim()
+      .replace(/^"(.*)"$/, '$1')
+      .replace(/^'(.*)'$/, '$1');
     let valRaw = kvMatch[2];
     // Strip trailing inline comment (only outside quotes)
     if (valRaw && valRaw[0] !== '"' && valRaw[0] !== "'") {
@@ -286,7 +326,11 @@ const parseBlock = (lines, start, baseIndent) => {
       let blockIndent = -1;
       while (i < lines.length) {
         const ln = lines[i];
-        if (ln.trim() === '') { parts.push(''); i++; continue; }
+        if (ln.trim() === '') {
+          parts.push('');
+          i++;
+          continue;
+        }
         const ind2 = indentOf(ln);
         if (ind2 <= baseIndent) break;
         if (blockIndent === -1) blockIndent = ind2;
@@ -307,7 +351,10 @@ const parseBlock = (lines, start, baseIndent) => {
       let nextIndent = -1;
       while (j < lines.length) {
         const nt = lines[j].trim();
-        if (nt === '' || nt.startsWith('#')) { j++; continue; }
+        if (nt === '' || nt.startsWith('#')) {
+          j++;
+          continue;
+        }
         nextIndent = indentOf(lines[j]);
         break;
       }
@@ -400,7 +447,11 @@ const validateNode = (value, schema, path, errs) => {
   if (schema.type !== undefined) {
     const types = Array.isArray(schema.type) ? schema.type : [schema.type];
     if (!types.some((t) => matchesType(value, t))) {
-      errs.push({ path, rule: 'type', detail: `expected ${types.join('|')}, got ${typeOf(value)}` });
+      errs.push({
+        path,
+        rule: 'type',
+        detail: `expected ${types.join('|')}, got ${typeOf(value)}`,
+      });
       return;
     }
   }
@@ -408,36 +459,64 @@ const validateNode = (value, schema, path, errs) => {
   // const
   if (schema.const !== undefined) {
     if (value !== schema.const) {
-      errs.push({ path, rule: 'const', detail: `expected ${JSON.stringify(schema.const)}, got ${JSON.stringify(value)}` });
+      errs.push({
+        path,
+        rule: 'const',
+        detail: `expected ${JSON.stringify(schema.const)}, got ${JSON.stringify(value)}`,
+      });
     }
   }
 
   // enum
   if (Array.isArray(schema.enum)) {
     if (!schema.enum.includes(value)) {
-      errs.push({ path, rule: 'enum', detail: `value ${JSON.stringify(value)} not in enum [${schema.enum.map((x) => JSON.stringify(x)).join(', ')}]` });
+      errs.push({
+        path,
+        rule: 'enum',
+        detail: `value ${JSON.stringify(value)} not in enum [${schema.enum.map((x) => JSON.stringify(x)).join(', ')}]`,
+      });
     }
   }
 
   // string-specific
   if (typeof value === 'string') {
     if (typeof schema.minLength === 'number' && value.length < schema.minLength) {
-      errs.push({ path, rule: 'minLength', detail: `length ${value.length} < ${schema.minLength}` });
+      errs.push({
+        path,
+        rule: 'minLength',
+        detail: `length ${value.length} < ${schema.minLength}`,
+      });
     }
     if (typeof schema.pattern === 'string') {
       try {
         if (!new RegExp(schema.pattern).test(value)) {
-          errs.push({ path, rule: 'pattern', detail: `value ${JSON.stringify(value)} does not match /${schema.pattern}/` });
+          errs.push({
+            path,
+            rule: 'pattern',
+            detail: `value ${JSON.stringify(value)} does not match /${schema.pattern}/`,
+          });
         }
       } catch (e) {
-        errs.push({ path, rule: 'pattern', detail: `invalid regex /${schema.pattern}/: ${e.message}` });
+        errs.push({
+          path,
+          rule: 'pattern',
+          detail: `invalid regex /${schema.pattern}/: ${e.message}`,
+        });
       }
     }
     if (typeof schema.format === 'string') {
       if (schema.format === 'date' && !FORMAT_DATE.test(value)) {
-        errs.push({ path, rule: 'format:date', detail: `value ${JSON.stringify(value)} is not YYYY-MM-DD` });
+        errs.push({
+          path,
+          rule: 'format:date',
+          detail: `value ${JSON.stringify(value)} is not YYYY-MM-DD`,
+        });
       } else if (schema.format === 'date-time' && !FORMAT_DATETIME.test(value)) {
-        errs.push({ path, rule: 'format:date-time', detail: `value ${JSON.stringify(value)} is not ISO 8601 date-time` });
+        errs.push({
+          path,
+          rule: 'format:date-time',
+          detail: `value ${JSON.stringify(value)} is not ISO 8601 date-time`,
+        });
       }
     }
   }
@@ -574,8 +653,7 @@ const isTaskFailureHandoffFile = (basename) =>
 // Determinism (NFR3): within a turn, ready tasks are dispatched id-sorted.
 
 /** True iff `dir` is a SPEC-014 native-dispatch fixture (has the sentinel). */
-const isNativeDispatchFixture = (dir) =>
-  existsSync(join(dir, '.native-dispatch-fixture.json'));
+const isNativeDispatchFixture = (dir) => existsSync(join(dir, '.native-dispatch-fixture.json'));
 
 // High-contention lock-list (gitignore-style globs). SURFACED AS ADVISORY ONLY
 // (FR9/FR9a) — it never serializes dispatch. Kept in lockstep with the advisory
@@ -686,7 +764,9 @@ const verifyND1Parallel = (fixtureDir) => {
     fail(label, detail);
     f++;
   };
-  log(`\n[ND1] native parallel emission — all ready tasks dispatch in one turn, no isolation: ${fixtureDir}\n`);
+  log(
+    `\n[ND1] native parallel emission — all ready tasks dispatch in one turn, no isolation: ${fixtureDir}\n`,
+  );
 
   const expEnd = JSON.parse(readFileSync(join(fixtureDir, 'expected', 'end-state.json'), 'utf-8'));
   const tasks = ndLoadFixtureTasks(fixtureDir);
@@ -735,7 +815,8 @@ const verifyND1Parallel = (fixtureDir) => {
   const anyIsolation = globMatch(tasksDir, 'T-.*\\.md')
     .filter((x) => !isTaskFailureHandoffFile(x))
     .some((tf) => /\bisolation\b/.test(readFileSync(join(tasksDir, tf), 'utf-8')));
-  if (anyIsolation === expEnd.any_isolation_field) pass(`any_isolation_field = ${anyIsolation} (no worktree isolation)`);
+  if (anyIsolation === expEnd.any_isolation_field)
+    pass(`any_isolation_field = ${anyIsolation} (no worktree isolation)`);
   else fl(`any_isolation_field ${anyIsolation} ≠ expected ${expEnd.any_isolation_field}`);
 
   log(`\n${f === 0 ? '✓ ND1 native parallel emission holds.' : `✗ ${f} ND1 assertion(s) failed.`}`);
@@ -757,7 +838,8 @@ const verifyND2AdvisoryLockList = (fixtureDir) => {
   const expEnd = JSON.parse(readFileSync(join(fixtureDir, 'expected', 'end-state.json'), 'utf-8'));
   const tasks = ndLoadFixtureTasks(fixtureDir);
 
-  if (tasks.length === expEnd.task_count) pass(`seeded spec has exactly ${tasks.length} tasks (${tasks.map((t) => t.id).join(', ')})`);
+  if (tasks.length === expEnd.task_count)
+    pass(`seeded spec has exactly ${tasks.length} tasks (${tasks.map((t) => t.id).join(', ')})`);
   else fl(`expected ${expEnd.task_count} seeded tasks, got ${tasks.length}`);
 
   // Both tasks share the lock-listed path.
@@ -787,19 +869,23 @@ const verifyND2AdvisoryLockList = (fixtureDir) => {
 
   // Not serialized: exactly one turn, both tasks co-dispatched.
   const serialized = turns.length > 1;
-  if (serialized === expEnd.serialized) pass(`serialized = ${serialized} (advisory note is NON-enforcing, FR9a)`);
+  if (serialized === expEnd.serialized)
+    pass(`serialized = ${serialized} (advisory note is NON-enforcing, FR9a)`);
   else fl(`serialized ${serialized} ≠ expected ${expEnd.serialized}`);
 
   // The dispatch contract is advisory-only: assert there is no enforcement
   // mechanism in the runner (no serialization helper, no overlap-based wave
   // selection). We assert this positively via the simulated single-turn result
   // above; here we record the advisory flags from the fixture's contract.
-  if (expEnd.advisory_note_present === true) pass('advisory note is present in the dispatch prompt (FR9)');
+  if (expEnd.advisory_note_present === true)
+    pass('advisory note is present in the dispatch prompt (FR9)');
   else fl('fixture must declare advisory_note_present = true');
   if (expEnd.advisory_note_enforcing === false) pass('advisory note is non-enforcing (FR9a)');
   else fl('fixture must declare advisory_note_enforcing = false');
 
-  log(`\n${f === 0 ? '✓ ND2 advisory lock-list holds (no serialization).' : `✗ ${f} ND2 assertion(s) failed.`}`);
+  log(
+    `\n${f === 0 ? '✓ ND2 advisory lock-list holds (no serialization).' : `✗ ${f} ND2 assertion(s) failed.`}`,
+  );
   return f;
 };
 
@@ -819,7 +905,8 @@ const verifyND3DependsOn = (fixtureDir) => {
   const tasks = ndLoadFixtureTasks(fixtureDir);
   const byId = new Map(tasks.map((t) => [t.id, t]));
 
-  if (tasks.length === expEnd.task_count) pass(`seeded spec has exactly ${tasks.length} tasks (${tasks.map((t) => t.id).join(', ')})`);
+  if (tasks.length === expEnd.task_count)
+    pass(`seeded spec has exactly ${tasks.length} tasks (${tasks.map((t) => t.id).join(', ')})`);
   else fl(`expected ${expEnd.task_count} seeded tasks, got ${tasks.length}`);
 
   // T-002 declares dependsOn = [T-001].
@@ -836,7 +923,9 @@ const verifyND3DependsOn = (fixtureDir) => {
   if (t002ReadyAtStart === expEnd.t002_ready_before_t001_done) {
     pass(`T-002 ready before T-001 done = ${t002ReadyAtStart} (blocked by dependsOn)`);
   } else {
-    fl(`T-002 ready-before-dep ${t002ReadyAtStart} ≠ expected ${expEnd.t002_ready_before_t001_done}`);
+    fl(
+      `T-002 ready-before-dep ${t002ReadyAtStart} ≠ expected ${expEnd.t002_ready_before_t001_done}`,
+    );
   }
 
   const { turns, dispatchOrder } = ndSimulateDispatch(tasks);
@@ -851,7 +940,9 @@ const verifyND3DependsOn = (fixtureDir) => {
   if ((turns[0] || []).length === expEnd.agent_calls_first_turn) {
     pass(`${(turns[0] || []).length} Agent call in the first turn`);
   } else {
-    fl(`expected ${expEnd.agent_calls_first_turn} first-turn Agent call(s), got ${(turns[0] || []).length}`);
+    fl(
+      `expected ${expEnd.agent_calls_first_turn} first-turn Agent call(s), got ${(turns[0] || []).length}`,
+    );
   }
 
   // Second turn: T-002, only after T-001 is done.
@@ -861,7 +952,8 @@ const verifyND3DependsOn = (fixtureDir) => {
     fl('second-turn ready set diverged', `got ${JSON.stringify(turns[1] || [])}`);
   }
 
-  if (turns.length === expEnd.turns) pass(`dispatch completes in ${turns.length} turns (T-001 → T-002)`);
+  if (turns.length === expEnd.turns)
+    pass(`dispatch completes in ${turns.length} turns (T-001 → T-002)`);
   else fl(`expected ${expEnd.turns} turns, got ${turns.length}`);
 
   if (JSON.stringify(dispatchOrder) === JSON.stringify(expEnd.dispatch_order)) {
@@ -885,14 +977,17 @@ const verifyND4Coherent = (fixtureDir) => {
   };
   log(`\n[ND4] coherent invocation — all ready work drains before return: ${fixtureDir}\n`);
 
-  const sentinel = JSON.parse(readFileSync(join(fixtureDir, '.native-dispatch-fixture.json'), 'utf-8'));
+  const sentinel = JSON.parse(
+    readFileSync(join(fixtureDir, '.native-dispatch-fixture.json'), 'utf-8'),
+  );
   const expEnd = JSON.parse(readFileSync(join(fixtureDir, 'expected', 'end-state.json'), 'utf-8'));
   const tasks = ndLoadFixtureTasks(fixtureDir);
   const invocations = JSON.parse(
     readFileSync(join(fixtureDir, sentinel.invocations || 'invocations.json'), 'utf-8'),
   );
 
-  if (tasks.length === expEnd.task_count) pass(`seeded spec has exactly ${tasks.length} tasks (${tasks.map((t) => t.id).join(', ')})`);
+  if (tasks.length === expEnd.task_count)
+    pass(`seeded spec has exactly ${tasks.length} tasks (${tasks.map((t) => t.id).join(', ')})`);
   else fl(`expected ${expEnd.task_count} seeded tasks, got ${tasks.length}`);
 
   const ready = ndReadyTasks(tasks, new Set()).map((t) => t.id);
@@ -903,9 +998,8 @@ const verifyND4Coherent = (fixtureDir) => {
   }
 
   const resultFor = (inv) => {
-    const completed = inv.mode === 'single-task'
-      ? ready.filter((id) => id === inv.selected_task)
-      : [...ready];
+    const completed =
+      inv.mode === 'single-task' ? ready.filter((id) => id === inv.selected_task) : [...ready];
     return {
       invocations: completed.length > 0 ? 1 : 0,
       agentCalls: completed.length,
@@ -915,28 +1009,39 @@ const verifyND4Coherent = (fixtureDir) => {
 
   for (const inv of invocations) {
     const result = resultFor(inv);
-    const matches = result.invocations === inv.expected_invocations
-      && result.agentCalls === inv.expected_agent_calls
-      && JSON.stringify(result.completed) === JSON.stringify(inv.expected_completed_tasks);
-    if (matches) pass(`[${inv.name}] drains [${result.completed.join(', ')}] in one user invocation`);
+    const matches =
+      result.invocations === inv.expected_invocations &&
+      result.agentCalls === inv.expected_agent_calls &&
+      JSON.stringify(result.completed) === JSON.stringify(inv.expected_completed_tasks);
+    if (matches)
+      pass(`[${inv.name}] drains [${result.completed.join(', ')}] in one user invocation`);
     else fl(`[${inv.name}] coherent result diverged`, JSON.stringify(result));
   }
 
   const coherent = invocations.filter(({ mode }) => mode !== 'single-task');
-  if (coherent.every((inv) => resultFor(inv).invocations === expEnd.coherent_invocations
-    && JSON.stringify(resultFor(inv).completed) === JSON.stringify(expEnd.coherent_completed_tasks))) {
+  if (
+    coherent.every(
+      (inv) =>
+        resultFor(inv).invocations === expEnd.coherent_invocations &&
+        JSON.stringify(resultFor(inv).completed) ===
+          JSON.stringify(expEnd.coherent_completed_tasks),
+    )
+  ) {
     pass('native and sequential fallback complete the same coherent scope once');
   } else fl('a runtime split the coherent scope across user invocations');
 
   const selected = invocations.find(({ mode }) => mode === 'single-task');
-  if (selected && JSON.stringify(resultFor(selected).completed) === JSON.stringify(expEnd.selected_completed_tasks)) {
+  if (
+    selected &&
+    JSON.stringify(resultFor(selected).completed) ===
+      JSON.stringify(expEnd.selected_completed_tasks)
+  ) {
     pass('explicit --task remains the only bounded selector');
   } else fl('explicit task selector did not preserve bounded scope');
 
   log(`\n${f === 0 ? '✓ ND4 coherent invocation holds.' : `✗ ${f} ND4 assertion(s) failed.`}`);
   return f;
 };
-
 
 // ── fixture mode detection ──────────────────────────────────────────────
 //
@@ -1197,7 +1302,9 @@ if (wantValidateSchema) {
     // Tasks: <specDir>/tasks/T-*.md
     if (schemas.task) {
       const tasksDir = join(specDirArg, 'tasks');
-      const taskFiles = globMatch(tasksDir, 'T-.*\\.md').filter((f) => !isTaskFailureHandoffFile(f));
+      const taskFiles = globMatch(tasksDir, 'T-.*\\.md').filter(
+        (f) => !isTaskFailureHandoffFile(f),
+      );
       for (const f of taskFiles) {
         const fm = readFrontmatter(join(tasksDir, f));
         if (!fm) {
@@ -1380,7 +1487,9 @@ if (wantValidateSchema) {
     }
   }
 
-  log(`\n${failures === 0 ? '✓ All schema validations passed.' : `✗ ${failures} validation issue(s).`}`);
+  log(
+    `\n${failures === 0 ? '✓ All schema validations passed.' : `✗ ${failures} validation issue(s).`}`,
+  );
   process.exit(failures === 0 ? 0 : 1);
 }
 
@@ -1452,7 +1561,9 @@ if (wantVerifyPO || wantVerifyShip) {
       assertExists('tasks/ subdir', join(specDir, 'tasks'));
 
       const stories = globMatch(join(specDir, 'stories'), 'US-.*\\.md');
-      const tasks = globMatch(join(specDir, 'tasks'), 'T-.*\\.md').filter((f) => !isTaskFailureHandoffFile(f));
+      const tasks = globMatch(join(specDir, 'tasks'), 'T-.*\\.md').filter(
+        (f) => !isTaskFailureHandoffFile(f),
+      );
 
       if (stories.length === 1) {
         pass(`exactly 1 story (got ${stories.length}: ${stories[0]})`);
@@ -1483,7 +1594,10 @@ if (wantVerifyPO || wantVerifyShip) {
 
       assertNotExists('no design-spec.md (no PNGs)', join(specDir, 'design', 'design-spec.md'));
       assertPoTasksDirClean(join(specDir, 'tasks'));
-      assertNotExists('no .pipeline-shipped marker after PO (R1)', join(specDir, '.pipeline-shipped'));
+      assertNotExists(
+        'no .pipeline-shipped marker after PO (R1)',
+        join(specDir, '.pipeline-shipped'),
+      );
     } else {
       assertExists('output/feats/<feature>/ exists', defaultFeatDir);
       const usDirs = globMatch(defaultFeatDir, 'us-.*');
@@ -1495,7 +1609,9 @@ if (wantVerifyPO || wantVerifyShip) {
       }
       const usPath = join(defaultFeatDir, usDirs[0] || 'us-1');
       const storiesDm = globMatch(usPath, 'us-.*\\.md');
-      const tasksDm = globMatch(join(usPath, 'tasks'), 'task-.*\\.md').filter((f) => !isTaskFailureHandoffFile(f));
+      const tasksDm = globMatch(join(usPath, 'tasks'), 'task-.*\\.md').filter(
+        (f) => !isTaskFailureHandoffFile(f),
+      );
 
       if (storiesDm.length === 1) pass(`exactly 1 story file (${storiesDm[0]})`);
       else {
@@ -1515,9 +1631,15 @@ if (wantVerifyPO || wantVerifyShip) {
         failures++;
       }
 
-      assertNotExists('no design-spec.md (default)', join(defaultFeatDir, 'design', 'design-spec.md'));
+      assertNotExists(
+        'no design-spec.md (default)',
+        join(defaultFeatDir, 'design', 'design-spec.md'),
+      );
       assertPoTasksDirClean(join(usPath, 'tasks'));
-      assertNotExists('no .pipeline-shipped after PO (R1)', join(defaultFeatDir, '.pipeline-shipped'));
+      assertNotExists(
+        'no .pipeline-shipped after PO (R1)',
+        join(defaultFeatDir, '.pipeline-shipped'),
+      );
     }
 
     log(`\n${failures === 0 ? '✓ PO state conforms.' : `✗ ${failures} PO assertion(s) failed.`}`);
@@ -1554,9 +1676,13 @@ if (wantVerifyPO || wantVerifyShip) {
     }
 
     const markerPath =
-      modeForVerify === 'spec-driven' ? join(specDirDyn, '.pipeline-shipped') : join(defaultFeatDir, '.pipeline-shipped');
+      modeForVerify === 'spec-driven'
+        ? join(specDirDyn, '.pipeline-shipped')
+        : join(defaultFeatDir, '.pipeline-shipped');
     const qaPath =
-      modeForVerify === 'spec-driven' ? join(specDirDyn, 'qa-report.md') : join(defaultFeatDir, 'qa-report.md');
+      modeForVerify === 'spec-driven'
+        ? join(specDirDyn, 'qa-report.md')
+        : join(defaultFeatDir, 'qa-report.md');
 
     assertExists('.pipeline-shipped marker', markerPath);
 
@@ -1590,11 +1716,17 @@ if (wantVerifyPO || wantVerifyShip) {
 
     assertExists('qa-report.md', qaPath);
     if (modeForVerify === 'spec-driven') {
-      assertNotExists('no singleton error-report.md (happy path)', join(specDirDyn, 'tasks', 'error-report.md'));
+      assertNotExists(
+        'no singleton error-report.md (happy path)',
+        join(specDirDyn, 'tasks', 'error-report.md'),
+      );
     } else {
       const usDirs = globMatch(defaultFeatDir, 'us-.*');
       const usPath = join(defaultFeatDir, usDirs[0] || 'us-1');
-      assertNotExists('no singleton error-report.md (happy path)', join(usPath, 'tasks', 'error-report.md'));
+      assertNotExists(
+        'no singleton error-report.md (happy path)',
+        join(usPath, 'tasks', 'error-report.md'),
+      );
     }
 
     try {
@@ -1657,7 +1789,9 @@ if (wantVerifyPO || wantVerifyShip) {
       if (!leak) pass('no ${CLAUDE_PLUGIN_ROOT} leak in generated rule files');
     }
 
-    log(`\n${failures === 0 ? '✓ SHIP state conforms.' : `✗ ${failures} SHIP assertion(s) failed.`}`);
+    log(
+      `\n${failures === 0 ? '✓ SHIP state conforms.' : `✗ ${failures} SHIP assertion(s) failed.`}`,
+    );
     process.exit(failures === 0 ? 0 : 1);
   }
 }

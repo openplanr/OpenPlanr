@@ -1,4 +1,5 @@
 export { assertAuthorityNarrows } from './authority.mjs';
+export { compileComposedV1, compileMarkdownV1 } from './compile.mjs';
 export {
   composeIncludes,
   isSkillAssetPath,
@@ -6,22 +7,14 @@ export {
   skillPrimaryPath,
   skillSupportPath,
 } from './composition.mjs';
-export { compileComposedV1, compileMarkdownV1 } from './compile.mjs';
-export { resolveModuleGraph } from './graph.mjs';
-export { HOST_OVERLAY_POLICY, assertHostOverlayIsPresentational } from './host-overlay.mjs';
 export { readFrontmatter, renderFrontmatterBlock } from './frontmatter.mjs';
+export { resolveModuleGraph } from './graph.mjs';
+export { assertHostOverlayIsPresentational, HOST_OVERLAY_POLICY } from './host-overlay.mjs';
 export {
-  SourceMapBuilder,
-  byteLength,
-  owner,
-  sha256Bytes,
-  validateSourceMap,
-} from './source-map.mjs';
-export {
-  HOST_SUBSTITUTIONS,
   assertPortableAsset,
   assertSafeSourcePath,
   canonicalText,
+  HOST_SUBSTITUTIONS,
   parseMarkdownAsset,
   renderCodexSkill,
   renderCursorSkill,
@@ -31,3 +24,10 @@ export {
   serializeYamlScalar,
   sha256,
 } from './render-primitives.mjs';
+export {
+  byteLength,
+  owner,
+  SourceMapBuilder,
+  sha256Bytes,
+  validateSourceMap,
+} from './source-map.mjs';

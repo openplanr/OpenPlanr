@@ -1,15 +1,15 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 
 import {
+  assertSafeRelativePath,
   EXPECTED_ROLE_IDS,
   EXPECTED_SKILL_IDS,
-  SkillRuntimeError,
-  assertSafeRelativePath,
   readContributionGraph,
+  SkillRuntimeError,
   validateContributionGraph,
 } from '../../packages/skill-runtime/src/index.mjs';
 
@@ -17,8 +17,14 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
 test('contribution graph matches the canonical packages, zero aliases or commands, and nine roles', () => {
   const graph = readContributionGraph({ repoRoot: root });
-  assert.deepEqual(graph.skills.map(({ id }) => id), EXPECTED_SKILL_IDS);
-  assert.deepEqual(graph.roles.map(({ id }) => id), EXPECTED_ROLE_IDS);
+  assert.deepEqual(
+    graph.skills.map(({ id }) => id),
+    EXPECTED_SKILL_IDS,
+  );
+  assert.deepEqual(
+    graph.roles.map(({ id }) => id),
+    EXPECTED_ROLE_IDS,
+  );
   assert.equal(graph.skills.length, EXPECTED_SKILL_IDS.length);
   assert.ok(graph.skills.some(({ id }) => id === 'planr-release'));
   assert.deepEqual(graph.aliases.aliases, []);
@@ -31,8 +37,18 @@ test('duplicate skill ownership and unsafe contribution paths fail closed', () =
     schemaVersion: '1.0.0',
     id: 'fixture',
     skills: [
-      { id: 'planr-fixture', source: 'skills/fixture/SKILL.md', authorityClass: 'fixture', commands: [] },
-      { id: 'planr-fixture', source: 'skills/fixture/SKILL.md', authorityClass: 'fixture', commands: [] },
+      {
+        id: 'planr-fixture',
+        source: 'skills/fixture/SKILL.md',
+        authorityClass: 'fixture',
+        commands: [],
+      },
+      {
+        id: 'planr-fixture',
+        source: 'skills/fixture/SKILL.md',
+        authorityClass: 'fixture',
+        commands: [],
+      },
     ],
   };
   assert.throws(
@@ -60,9 +76,16 @@ test('skill runtime is declarative and does not import workflow implementations'
     assert.doesNotMatch(source, /packages\/(?:cli|pipeline|operate|artifact|design)/u, file);
     assert.doesNotMatch(source, /@openplanr\/(?:operate|artifact|design)/u, file);
   }
-  const manifest = JSON.parse(readFileSync(resolve(root, 'packages/skill-runtime/package.json'), 'utf8'));
-  const protocol = JSON.parse(readFileSync(resolve(root, 'packages/protocol/package.json'), 'utf8'));
+  const manifest = JSON.parse(
+    readFileSync(resolve(root, 'packages/skill-runtime/package.json'), 'utf8'),
+  );
+  const protocol = JSON.parse(
+    readFileSync(resolve(root, 'packages/protocol/package.json'), 'utf8'),
+  );
   assert.deepEqual(manifest.dependencies, { '@openplanr/protocol': protocol.version });
-  const protocolSource = readFileSync(resolve(root, 'packages/skill-runtime/src/protocol.mjs'), 'utf8');
+  const protocolSource = readFileSync(
+    resolve(root, 'packages/skill-runtime/src/protocol.mjs'),
+    'utf8',
+  );
   assert.match(protocolSource, /from '@openplanr\/protocol\/registries'/u);
 });

@@ -1,21 +1,20 @@
 #!/usr/bin/env node
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildSync } from 'esbuild';
-
-import {
-  loadArtifactTheme,
-  renderArtifactThemeCss,
-  renderArtifactThemeJson,
-} from '../lib/artifact/ui/tokens.mjs';
 import {
   ARTIFACT_SHELL_ASSET_PATHS,
   ARTIFACT_SHELL_VERSION,
   renderArtifactShellTemplate,
 } from '../lib/artifact/ui/shell.mjs';
+import {
+  loadArtifactTheme,
+  renderArtifactThemeCss,
+  renderArtifactThemeJson,
+} from '../lib/artifact/ui/tokens.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -59,30 +58,34 @@ export function renderArtifactShellAssetManifest(assets) {
       bytes: Buffer.byteLength(bytes, 'utf8'),
       sha256: sha256(bytes),
     }));
-  return `${JSON.stringify({
-    schemaVersion: '1.0.0',
-    name: 'OpenPlanr Artifact Review Shell',
-    shellVersion: ARTIFACT_SHELL_VERSION,
-    entrypoint: ARTIFACT_SHELL_ASSET_PATHS.template,
-    sync: 'byte-for-byte',
-    browserApi: {
-      stage: '__openPlanrArtifactStage',
-      share: '__openPlanrArtifactShare',
-      hostedViewer: '__openPlanrHostedArtifactViewer',
-      injectedHandlers: [
-        'share.prepareShare',
-        'share.prepareOwnerCustody',
-        'share.saveOwnerCustody',
-        'share.createShare',
-        'share.copyText',
-        'hosted.decodeFragment',
-        'hosted.loadShort',
-        'hosted.loadRoom',
-        'hosted.onEnvelope',
-      ],
+  return `${JSON.stringify(
+    {
+      schemaVersion: '1.0.0',
+      name: 'OpenPlanr Artifact Review Shell',
+      shellVersion: ARTIFACT_SHELL_VERSION,
+      entrypoint: ARTIFACT_SHELL_ASSET_PATHS.template,
+      sync: 'byte-for-byte',
+      browserApi: {
+        stage: '__openPlanrArtifactStage',
+        share: '__openPlanrArtifactShare',
+        hostedViewer: '__openPlanrHostedArtifactViewer',
+        injectedHandlers: [
+          'share.prepareShare',
+          'share.prepareOwnerCustody',
+          'share.saveOwnerCustody',
+          'share.createShare',
+          'share.copyText',
+          'hosted.decodeFragment',
+          'hosted.loadShort',
+          'hosted.loadRoom',
+          'hosted.onEnvelope',
+        ],
+      },
+      assets: records,
     },
-    assets: records,
-  }, null, 2)}\n`;
+    null,
+    2,
+  )}\n`;
 }
 
 /** Bundle the browser-neutral stage controller into one deterministic asset. */
@@ -141,11 +144,33 @@ export function renderDesignBoardAdapterAsset({ projectRoot = root } = {}) {
 }
 
 export function renderDiagramStudioRuntimeAsset({ projectRoot = root } = {}) {
-  return buildSync({ absWorkingDir: projectRoot, entryPoints: ['lib/artifact/ui/diagram-studio.mjs'], bundle: true, charset: 'utf8', format: 'iife', legalComments: 'none', logLevel: 'silent', platform: 'browser', target: ['es2022'], write: false }).outputFiles[0].text;
+  return buildSync({
+    absWorkingDir: projectRoot,
+    entryPoints: ['lib/artifact/ui/diagram-studio.mjs'],
+    bundle: true,
+    charset: 'utf8',
+    format: 'iife',
+    legalComments: 'none',
+    logLevel: 'silent',
+    platform: 'browser',
+    target: ['es2022'],
+    write: false,
+  }).outputFiles[0].text;
 }
 
 export function renderDiagramOwnerRuntimeAsset({ projectRoot = root } = {}) {
-  return buildSync({ absWorkingDir: projectRoot, entryPoints: ['lib/artifact/ui/diagram-owner-studio.mjs'], bundle: true, charset: 'utf8', format: 'iife', legalComments: 'none', logLevel: 'silent', platform: 'browser', target: ['es2022'], write: false }).outputFiles[0].text;
+  return buildSync({
+    absWorkingDir: projectRoot,
+    entryPoints: ['lib/artifact/ui/diagram-owner-studio.mjs'],
+    bundle: true,
+    charset: 'utf8',
+    format: 'iife',
+    legalComments: 'none',
+    logLevel: 'silent',
+    platform: 'browser',
+    target: ['es2022'],
+    write: false,
+  }).outputFiles[0].text;
 }
 
 /** Render every byte that local and hosted shell consumers synchronize. */
@@ -178,7 +203,9 @@ function staleTargets(projectRoot, expected) {
 
 function writeAssets(projectRoot, expected) {
   const written = [];
-  for (const [target, bytes] of Object.entries(expected).sort(([left], [right]) => left.localeCompare(right))) {
+  for (const [target, bytes] of Object.entries(expected).sort(([left], [right]) =>
+    left.localeCompare(right),
+  )) {
     const path = resolve(projectRoot, target);
     mkdirSync(dirname(path), { recursive: true });
     if (!existsSync(path) || readFileSync(path, 'utf8') !== bytes) {
@@ -221,7 +248,10 @@ function parseArgs(argv) {
   return { check: argv.includes('--check') };
 }
 
-export function runArtifactThemeGenerator({ argv = process.argv.slice(2), projectRoot = root } = {}) {
+export function runArtifactThemeGenerator({
+  argv = process.argv.slice(2),
+  projectRoot = root,
+} = {}) {
   const { check } = parseArgs(argv);
   const assets = renderArtifactThemeAssets();
   const stale = staleArtifactThemeTargets({ projectRoot, assets });
@@ -241,7 +271,10 @@ export function runArtifactThemeGenerator({ argv = process.argv.slice(2), projec
   return { ok: true, mode: 'write', written };
 }
 
-export function runArtifactShellGenerator({ argv = process.argv.slice(2), projectRoot = root } = {}) {
+export function runArtifactShellGenerator({
+  argv = process.argv.slice(2),
+  projectRoot = root,
+} = {}) {
   const { check } = parseArgs(argv);
   const assets = renderArtifactShellAssets({ projectRoot });
   const stale = staleArtifactShellTargets({ projectRoot, assets });
@@ -269,7 +302,9 @@ function main() {
     } else if (result.written.length === 0) {
       process.stdout.write('Artifact shell assets already current.\n');
     } else {
-      process.stdout.write(`Generated artifact shell assets:\n${result.written.map((target) => `  - ${target}`).join('\n')}\n`);
+      process.stdout.write(
+        `Generated artifact shell assets:\n${result.written.map((target) => `  - ${target}`).join('\n')}\n`,
+      );
     }
   } catch (error) {
     const code = error?.code ?? 'E_ARTIFACT_THEME_GENERATION';

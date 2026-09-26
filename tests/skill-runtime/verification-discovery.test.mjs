@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
@@ -11,16 +11,42 @@ function fixture() {
   mkdirSync(join(root, '.github', 'workflows'), { recursive: true });
   mkdirSync(join(root, '.planr', 'specs', 'SPEC-001-x', 'tasks'), { recursive: true });
   const taskPath = join(root, '.planr', 'specs', 'SPEC-001-x', 'tasks', 'T-001-x.md');
-  writeFileSync(taskPath, [
-    '# T-001', '', '## Test Requirements', '',
-    'Run `npm run test:focused` and then:', '', '```bash', 'npm run typecheck', '```', '',
-    '## Definition of Done', '', '`npm run unrelated`', '',
-  ].join('\n'));
+  writeFileSync(
+    taskPath,
+    [
+      '# T-001',
+      '',
+      '## Test Requirements',
+      '',
+      'Run `npm run test:focused` and then:',
+      '',
+      '```bash',
+      'npm run typecheck',
+      '```',
+      '',
+      '## Definition of Done',
+      '',
+      '`npm run unrelated`',
+      '',
+    ].join('\n'),
+  );
   writeFileSync(join(root, 'AGENTS.md'), 'Use `npm run lint` before completion.\n');
   writeFileSync(join(root, 'package-lock.json'), '{}\n');
-  writeFileSync(join(root, 'package.json'), `${JSON.stringify({
-    scripts: { test: 'node --test', 'test:focused': 'node --test focused', lint: 'eslint .', build: 'build' },
-  }, null, 2)}\n`);
+  writeFileSync(
+    join(root, 'package.json'),
+    `${JSON.stringify(
+      {
+        scripts: {
+          test: 'node --test',
+          'test:focused': 'node --test focused',
+          lint: 'eslint .',
+          build: 'build',
+        },
+      },
+      null,
+      2,
+    )}\n`,
+  );
   writeFileSync(join(root, '.github', 'workflows', 'ci.yml'), 'steps:\n  - run: npm run build\n');
   return { root, taskPath };
 }

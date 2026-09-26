@@ -1,7 +1,7 @@
 import type {
   OperatingArtifactV2,
-  OperatingAssignmentV2,
   OperatingAssignmentInputAbsenceV2,
+  OperatingAssignmentV2,
   OperatingCycleV2,
   OperatingIntelligencePlanV2,
   OperatingSnapshotV2,

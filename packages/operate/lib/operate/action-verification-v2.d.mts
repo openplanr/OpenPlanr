@@ -31,7 +31,11 @@ export function buildOperatingActionVerificationOutcomeV2(input: {
   action: OperatingActionV2;
   verificationPlan: OperatingActionVerificationPlanV2;
   observation: OperatingMetricObservationV2;
-  learning: { statement: string; assumptionIds?: readonly string[]; decisionIds?: readonly string[] };
+  learning: {
+    statement: string;
+    assumptionIds?: readonly string[];
+    decisionIds?: readonly string[];
+  };
   timestamp: string;
   sourceDecision: OperatingDecisionV2;
 }): { readonly outcome: OperatingOutcomeV2; readonly learning: OperatingLearningV2 };

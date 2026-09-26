@@ -107,7 +107,7 @@ sizing context generation needs — gather it now, concretely:
   top bar + content"). If none exists (greenfield / standalone / marketing page) bind
   `APP_SHELL = none` and say so — a free-floating card is then legitimate.
 - **`DESIGN_SYSTEM`** — resolve the project's design **system** with `resolveDesignSystem({ dir:
-  DS_DIR })` (`$PLUG/lib/design/designSystem.mjs`; `DS_DIR` from `mode-detection.md` —
+  DS_DIR })` (`$PLUG/lib/design/design-system.mjs`; `DS_DIR` from `mode-detection.md` —
   `.planr/design-system/` spec-driven, `input/design-system/` default). It reads the package, else
   falls back to a root `DESIGN.md` / CSS-Tailwind theme / the stack's ComponentLibrary. Bind the
   real **brand color, font family, type scale, spacing, radii** from it. **If `found: false`, do
@@ -170,7 +170,7 @@ The lock is released in Step D (and on any fatal abort). It is git-ignored — s
 
 ## A.5 — Dry-run exit
 
-If `DRY_RUN`: compute the recommended format via `lib/design/recommendFormat.mjs`
+If `DRY_RUN`: compute the recommended format via `lib/design/recommend-format.mjs`
 (`{ screenCount: SCREEN_COUNT, intentText: <spec title/summary> }`), then print:
 
 ```

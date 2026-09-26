@@ -5,7 +5,7 @@ export {
 } from './capabilities.mjs';
 
 export {
-  INTERACTION_SURFACES,
   bindInteractionAnswers,
+  INTERACTION_SURFACES,
   resolveInteraction,
 } from './interactions.mjs';

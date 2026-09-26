@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import test from 'node:test';
 import { projectedSkillName } from '../../../../scripts/skills/host-invocations.mjs';
@@ -7,14 +7,17 @@ import { projectedSkillName } from '../../../../scripts/skills/host-invocations.
 const workspace = resolve(import.meta.dirname, '..', '..', '..', '..');
 
 const json = (path) => JSON.parse(readFileSync(join(workspace, path), 'utf8'));
-const directories = (path) => readdirSync(join(workspace, path), { withFileTypes: true })
-  .filter((entry) => entry.isDirectory())
-  .map((entry) => entry.name)
-  .sort();
+const directories = (path) =>
+  readdirSync(join(workspace, path), { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .sort();
 
 test('host packages contain every canonical Protocol 1.8 skill without extra registrations', () => {
   const catalog = json('adapters/manifests/canonical-skills.json');
-  const expected = json('skills/registry.json').skills.map(({ skillId }) => skillId).sort();
+  const expected = json('skills/registry.json')
+    .skills.map(({ skillId }) => skillId)
+    .sort();
   assert.equal(catalog.protocolVersion, '1.8.0');
   assert.equal(catalog.sourceFormat, 'package-v1');
   assert.equal(new Set(expected).size, expected.length);
@@ -31,8 +34,9 @@ test('host packages contain every canonical Protocol 1.8 skill without extra reg
 });
 
 test('Claude package has nine native agents and pipeline-owned prompt copies never ship', () => {
-  const agents = readdirSync(join(workspace, 'dist/plugins/claude/openplanr/agents'), { withFileTypes: true })
-    .filter((entry) => entry.isFile() && entry.name.endsWith('.md'));
+  const agents = readdirSync(join(workspace, 'dist/plugins/claude/openplanr/agents'), {
+    withFileTypes: true,
+  }).filter((entry) => entry.isFile() && entry.name.endsWith('.md'));
   assert.equal(agents.length, 9);
   const packageManifest = json('packages/pipeline/package.json');
   for (const obsolete of ['adapters', 'commands', 'plugins', 'skills']) {

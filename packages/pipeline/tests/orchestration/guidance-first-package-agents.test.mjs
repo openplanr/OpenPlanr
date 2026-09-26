@@ -7,15 +7,20 @@ import { fileURLToPath } from 'node:url';
 import { readContributionGraph } from '../../../skill-runtime/src/catalog.mjs';
 
 const root = fileURLToPath(new URL('../../../..', import.meta.url));
-const roleIds = new Map(readContributionGraph({ repoRoot: root }).roles.map(({ source, id }) => [source, id]));
+const roleIds = new Map(
+  readContributionGraph({ repoRoot: root }).roles.map(({ source, id }) => [source, id]),
+);
 
 // Check both the role owner and its active installed projection. Shared mode
 // guidance is shipped below references/agents; it is not a pipeline install tree.
 for (const surface of ['canonical', 'claude']) {
   const read = (path) => {
-    const target = surface === 'canonical' ? path
-      : roleIds.has(path) ? `dist/plugins/claude/openplanr/agents/${roleIds.get(path)}.md`
-        : `dist/plugins/claude/openplanr/references/${path}`;
+    const target =
+      surface === 'canonical'
+        ? path
+        : roleIds.has(path)
+          ? `dist/plugins/claude/openplanr/agents/${roleIds.get(path)}.md`
+          : `dist/plugins/claude/openplanr/references/${path}`;
     return readFileSync(join(root, target), 'utf8');
   };
 
@@ -61,13 +66,34 @@ for (const surface of ['canonical', 'claude']) {
       );
     }
 
-    assert.match(read('agents/shared/modes/shared/verification-and-recovery-backend.md'), /observed results suggest a useful next step/iu);
-    assert.match(read('agents/shared/modes/shared/task-context-resolution.md'), /load that exact task before implementation/iu);
-    assert.match(read('agents/shared/modes/shared/task-context-resolution.md'), /project-local stack file overrides the installed default/iu);
-    assert.match(read('agents/dev/planr-frontend/AGENT.md'), /Resolve and load the active task through the selected mode/iu);
-    assert.match(read('agents/dev/planr-backend/AGENT.md'), /Create\/Modify lists as expected scope/iu);
-    assert.match(read('agents/shared/modes/shared/contract-create-modify-preserve.md'), /expected change surface/iu);
-    assert.match(read('agents/shared/modes/shared/contract-create-modify-preserve.md'), /Preserve.*safety boundary/isu);
+    assert.match(
+      read('agents/shared/modes/shared/verification-and-recovery-backend.md'),
+      /observed results suggest a useful next step/iu,
+    );
+    assert.match(
+      read('agents/shared/modes/shared/task-context-resolution.md'),
+      /load that exact task before implementation/iu,
+    );
+    assert.match(
+      read('agents/shared/modes/shared/task-context-resolution.md'),
+      /project-local stack file overrides the installed default/iu,
+    );
+    assert.match(
+      read('agents/dev/planr-frontend/AGENT.md'),
+      /Resolve and load the active task through the selected mode/iu,
+    );
+    assert.match(
+      read('agents/dev/planr-backend/AGENT.md'),
+      /Create\/Modify lists as expected scope/iu,
+    );
+    assert.match(
+      read('agents/shared/modes/shared/contract-create-modify-preserve.md'),
+      /expected change surface/iu,
+    );
+    assert.match(
+      read('agents/shared/modes/shared/contract-create-modify-preserve.md'),
+      /Preserve.*safety boundary/isu,
+    );
   });
 
   test(`${surface}: shipped specification guidance preserves R2 and schema semantics without phase gates`, () => {
@@ -98,11 +124,24 @@ for (const surface of ['canonical', 'claude']) {
       'agents/shared/modes/spec-driven/devops.md',
     ]) {
       const guidance = read(path);
-      assert.doesNotMatch(guidance, /QA gate|verdict is PASS|must show PASS|skip silently.*QA/iu, path);
+      assert.doesNotMatch(
+        guidance,
+        /QA gate|verdict is PASS|must show PASS|skip silently.*QA/iu,
+        path,
+      );
     }
 
-    assert.match(read('agents/post-build/planr-documentation/AGENT.md'), /Missing Planr or QA artifacts are not a reason to\s+skip/iu);
-    assert.match(read('agents/shared/modes/spec-driven/devops.md'), /optional stack and database context/iu);
-    assert.match(read('agents/post-build/planr-devops/AGENT.md'), /never deploys, pushes an image, mutates a\s+remote environment, or calls a cloud API/iu);
+    assert.match(
+      read('agents/post-build/planr-documentation/AGENT.md'),
+      /Missing Planr or QA artifacts are not a reason to\s+skip/iu,
+    );
+    assert.match(
+      read('agents/shared/modes/spec-driven/devops.md'),
+      /optional stack and database context/iu,
+    );
+    assert.match(
+      read('agents/post-build/planr-devops/AGENT.md'),
+      /never deploys, pushes an image, mutates a\s+remote environment, or calls a cloud API/iu,
+    );
   });
 }

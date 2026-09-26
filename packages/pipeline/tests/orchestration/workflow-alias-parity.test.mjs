@@ -1,10 +1,13 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
+import { fileURLToPath } from 'node:url';
 
-import { projectedSkillName, renderNamespacedSkill } from '../../../../scripts/skills/host-invocations.mjs';
+import {
+  projectedSkillName,
+  renderNamespacedSkill,
+} from '../../../../scripts/skills/host-invocations.mjs';
 
 const pipelineRoot = fileURLToPath(new URL('../../', import.meta.url));
 const workspaceRoot = resolve(pipelineRoot, '..', '..');
@@ -21,7 +24,13 @@ test('canonical workflows project to all hosts without aliases or generated comm
   assert.equal(manifest.protocolVersion, '1.8.0');
   assert.deepEqual(manifest.aliases, []);
 
-  for (const skillId of ['planr-plan', 'planr-design', 'planr-ship', 'planr-sync', 'planr-dashboard']) {
+  for (const skillId of [
+    'planr-plan',
+    'planr-design',
+    'planr-ship',
+    'planr-sync',
+    'planr-dashboard',
+  ]) {
     const canonical = read(`skills/${skillId}/SKILL.md`);
     const projected = renderNamespacedSkill(canonical, skillId);
     const hostSkillName = projectedSkillName(skillId);
@@ -48,8 +57,14 @@ test('host plugin manifests expose the canonical package shape only', () => {
   const canonical = JSON.parse(read('adapters/manifests/canonical-skills.json'));
   const generated = JSON.parse(read('adapters/manifests/generated-assets.json'));
   assert.deepEqual(canonical.aliases, []);
-  assert.equal(generated.assets.some(({ path }) => path.includes('/commands/')), false);
-  assert.equal(generated.assets.some(({ path }) => path.includes('/codex-skills/')), false);
+  assert.equal(
+    generated.assets.some(({ path }) => path.includes('/commands/')),
+    false,
+  );
+  assert.equal(
+    generated.assets.some(({ path }) => path.includes('/codex-skills/')),
+    false,
+  );
 });
 
 test('retired pipeline command aliases are not included in the published package', () => {

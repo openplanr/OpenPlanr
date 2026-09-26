@@ -6,10 +6,10 @@ import { join } from 'node:path';
 import { afterEach, test } from 'node:test';
 
 import {
-  DASHBOARD_SAFE_CONTEXT_FIELDS,
-  DASHBOARD_SAFE_ERROR_CODES,
   assertDashboardSafeError,
   createDashboardServer,
+  DASHBOARD_SAFE_CONTEXT_FIELDS,
+  DASHBOARD_SAFE_ERROR_CODES,
   mapDashboardSafeError,
 } from '../../lib/dashboard/server.mjs';
 
@@ -34,13 +34,17 @@ function fixture() {
   writeFileSync(join(staticRoot, 'index.html'), '<main id="root"></main>\n');
   writeFileSync(
     join(staticRoot, 'dashboard-manifest.json'),
-    `${JSON.stringify({
-      kind: 'openplanr-dashboard-build',
-      schemaVersion: '1.0.0',
-      buildId: 'dashboard-state-contract-test',
-      entry: 'index.html',
-      assets: [],
-    }, null, 2)}\n`,
+    `${JSON.stringify(
+      {
+        kind: 'openplanr-dashboard-build',
+        schemaVersion: '1.0.0',
+        buildId: 'dashboard-state-contract-test',
+        entry: 'index.html',
+        assets: [],
+      },
+      null,
+      2,
+    )}\n`,
   );
   writeFileSync(join(planrDir, 'config.json'), JSON.stringify({ projectName: 'State contract' }));
   return { root, staticRoot, planrDir };
@@ -48,18 +52,17 @@ function fixture() {
 
 function get(port, path, headers = {}) {
   return new Promise((resolveRequest, rejectRequest) => {
-    const req = request(
-      { hostname: '127.0.0.1', port, path, method: 'GET', headers },
-      (res) => {
-        const chunks = [];
-        res.on('data', (chunk) => chunks.push(chunk));
-        res.on('end', () => resolveRequest({
+    const req = request({ hostname: '127.0.0.1', port, path, method: 'GET', headers }, (res) => {
+      const chunks = [];
+      res.on('data', (chunk) => chunks.push(chunk));
+      res.on('end', () =>
+        resolveRequest({
           status: res.statusCode,
           headers: res.headers,
           body: Buffer.concat(chunks).toString('utf8'),
-        }));
-      },
-    );
+        }),
+      );
+    });
     req.on('error', rejectRequest);
     req.end();
   });
@@ -132,11 +135,18 @@ test('dashboard safe-error vocabulary is finite and field-identical for installe
     'state',
     'maxBytes',
   ]);
-  assert.deepEqual(mapDashboardSafeError({
-    code: 'UNKNOWN_BUT_WELL_FORMED', retryable: true, context: {},
-  }), {
-    code: 'DASHBOARD_ERROR_UNAVAILABLE', retryable: false, context: {},
-  });
+  assert.deepEqual(
+    mapDashboardSafeError({
+      code: 'UNKNOWN_BUT_WELL_FORMED',
+      retryable: true,
+      context: {},
+    }),
+    {
+      code: 'DASHBOARD_ERROR_UNAVAILABLE',
+      retryable: false,
+      context: {},
+    },
+  );
   for (const operation of CERTIFIED_HYPHENATED_OPERATIONS) {
     const candidate = {
       code: 'DASHBOARD_RESPONSE_INVALID',
@@ -153,10 +163,14 @@ test('dashboard safe-error strings are exactly bounded and never echo oversized 
   const state160 = 'a'.repeat(160);
   assert.equal(operation160.length, 160);
   assert.equal(state160.length, 160);
-  assert.deepEqual(mapDashboardSafeError({
-    code: 'DASHBOARD_RESPONSE_INVALID', retryable: false,
-    context: { operation: operation160, state: state160 },
-  }).context, { operation: operation160, state: state160 });
+  assert.deepEqual(
+    mapDashboardSafeError({
+      code: 'DASHBOARD_RESPONSE_INVALID',
+      retryable: false,
+      context: { operation: operation160, state: state160 },
+    }).context,
+    { operation: operation160, state: state160 },
+  );
 
   for (const [field, value] of [
     ['operation', `operate.${'a'.repeat(153)}`],
@@ -164,11 +178,15 @@ test('dashboard safe-error strings are exactly bounded and never echo oversized 
     ['submissionState', 'a'.repeat(161)],
   ]) {
     const candidate = {
-      code: 'DASHBOARD_RESPONSE_INVALID', retryable: false, context: { [field]: value },
+      code: 'DASHBOARD_RESPONSE_INVALID',
+      retryable: false,
+      context: { [field]: value },
     };
     assert.throws(() => assertDashboardSafeError(candidate), /Invalid dashboard safe error/u);
     assert.deepEqual(mapDashboardSafeError(candidate), {
-      code: 'DASHBOARD_ERROR_UNAVAILABLE', retryable: false, context: {},
+      code: 'DASHBOARD_ERROR_UNAVAILABLE',
+      retryable: false,
+      context: {},
     });
   }
 
@@ -176,12 +194,15 @@ test('dashboard safe-error strings are exactly bounded and never echo oversized 
   for (const field of DASHBOARD_SAFE_CONTEXT_FIELDS) {
     if (field === 'maxBytes') continue;
     const candidate = {
-      code: 'DASHBOARD_RESPONSE_INVALID', retryable: false,
+      code: 'DASHBOARD_RESPONSE_INVALID',
+      retryable: false,
       context: { [field]: field === 'operation' ? `operate.${oversizedMarker}` : oversizedMarker },
     };
     const mapped = mapDashboardSafeError(candidate);
     assert.deepEqual(mapped, {
-      code: 'DASHBOARD_ERROR_UNAVAILABLE', retryable: false, context: {},
+      code: 'DASHBOARD_ERROR_UNAVAILABLE',
+      retryable: false,
+      context: {},
     });
     assert.equal(JSON.stringify(mapped).includes('private-marker'), false);
   }
@@ -189,7 +210,8 @@ test('dashboard safe-error strings are exactly bounded and never echo oversized 
 
 test('dashboard safe-error output is canonical and public assertion rejects custom prototypes', () => {
   const forward = {
-    code: 'DASHBOARD_RESPONSE_INVALID', retryable: false,
+    code: 'DASHBOARD_RESPONSE_INVALID',
+    retryable: false,
     context: { operation: 'operate.review.submit', cycleId: 'cycle-current', state: 'ready' },
   };
   const reordered = {
@@ -208,7 +230,9 @@ test('dashboard safe-error output is canonical and public assertion rejects cust
   assert.throws(() => assertDashboardSafeError(internalError), /Invalid dashboard safe error/u);
   const mappedInternal = mapDashboardSafeError(internalError);
   assert.deepEqual(mappedInternal, {
-    code: 'DASHBOARD_ERROR_UNAVAILABLE', retryable: false, context: {},
+    code: 'DASHBOARD_ERROR_UNAVAILABLE',
+    retryable: false,
+    context: {},
   });
   assert.equal(Object.getPrototypeOf(mappedInternal), Object.prototype);
   assert.doesNotThrow(() => assertDashboardSafeError(mappedInternal));
@@ -227,17 +251,22 @@ test('dashboard safe-error context rejects public-field path, URL, and private v
     assert.throws(() => assertDashboardSafeError(candidate), /Invalid dashboard safe error/u);
     const mapped = mapDashboardSafeError(candidate);
     assert.deepEqual(mapped, {
-      code: 'DASHBOARD_ERROR_UNAVAILABLE', retryable: false, context: {},
+      code: 'DASHBOARD_ERROR_UNAVAILABLE',
+      retryable: false,
+      context: {},
     });
     assert.equal(JSON.stringify(mapped).includes('private-marker'), false);
   }
   const oversized = {
-    code: 'DASHBOARD_RESPONSE_INVALID', retryable: false,
+    code: 'DASHBOARD_RESPONSE_INVALID',
+    retryable: false,
     context: { maxBytes: 16 * 1024 * 1024 + 1 },
   };
   assert.throws(() => assertDashboardSafeError(oversized), /Invalid dashboard safe error/u);
   assert.deepEqual(mapDashboardSafeError(oversized), {
-    code: 'DASHBOARD_ERROR_UNAVAILABLE', retryable: false, context: {},
+    code: 'DASHBOARD_ERROR_UNAVAILABLE',
+    retryable: false,
+    context: {},
   });
   for (const operation of [
     '/Users/private-marker',
@@ -256,7 +285,9 @@ test('dashboard safe-error context rejects public-field path, URL, and private v
     assert.throws(() => assertDashboardSafeError(candidate), /Invalid dashboard safe error/u);
     const mapped = mapDashboardSafeError(candidate);
     assert.deepEqual(mapped, {
-      code: 'DASHBOARD_ERROR_UNAVAILABLE', retryable: false, context: {},
+      code: 'DASHBOARD_ERROR_UNAVAILABLE',
+      retryable: false,
+      context: {},
     });
     assert.equal(JSON.stringify(mapped).includes('private-marker'), false);
   }
@@ -274,28 +305,55 @@ test('dashboard safe-error validator rejects expanded, nested, accessor, and pro
   }
 
   let getterCalls = 0;
-  const accessor = Object.defineProperties({}, {
-    code: { enumerable: true, get: () => { getterCalls += 1; return 'OPERATION_UNCERTAIN'; } },
-    retryable: { enumerable: true, value: false },
-    context: { enumerable: true, value: {} },
-  });
+  const accessor = Object.defineProperties(
+    {},
+    {
+      code: {
+        enumerable: true,
+        get: () => {
+          getterCalls += 1;
+          return 'OPERATION_UNCERTAIN';
+        },
+      },
+      retryable: { enumerable: true, value: false },
+      context: { enumerable: true, value: {} },
+    },
+  );
   assert.deepEqual(mapDashboardSafeError(accessor), {
-    code: 'DASHBOARD_ERROR_UNAVAILABLE', retryable: false, context: {},
+    code: 'DASHBOARD_ERROR_UNAVAILABLE',
+    retryable: false,
+    context: {},
   });
   assert.equal(getterCalls, 0);
 
-  const proxy = new Proxy({}, { ownKeys: () => { throw new Error('private proxy'); } });
+  const proxy = new Proxy(
+    {},
+    {
+      ownKeys: () => {
+        throw new Error('private proxy');
+      },
+    },
+  );
   assert.deepEqual(mapDashboardSafeError(proxy), {
-    code: 'DASHBOARD_ERROR_UNAVAILABLE', retryable: false, context: {},
+    code: 'DASHBOARD_ERROR_UNAVAILABLE',
+    retryable: false,
+    context: {},
   });
 
   let getCalls = 0;
   const descriptorSafeProxy = new Proxy(
     { code: 'OPERATION_UNCERTAIN', retryable: false, context: {} },
-    { get: () => { getCalls += 1; throw new Error('private-marker-from-get-trap'); } },
+    {
+      get: () => {
+        getCalls += 1;
+        throw new Error('private-marker-from-get-trap');
+      },
+    },
   );
   assert.deepEqual(mapDashboardSafeError(descriptorSafeProxy), {
-    code: 'DASHBOARD_ERROR_UNAVAILABLE', retryable: false, context: {},
+    code: 'DASHBOARD_ERROR_UNAVAILABLE',
+    retryable: false,
+    context: {},
   });
   assert.equal(getCalls, 0);
 });
@@ -314,7 +372,9 @@ test('dashboard safe-error mapper fails closed without converting retryability i
     });
   }
   const retryable = mapDashboardSafeError({
-    code: 'CONCURRENT_MODIFICATION', retryable: true, context: {},
+    code: 'CONCURRENT_MODIFICATION',
+    retryable: true,
+    context: {},
   });
   assert.equal(retryable.retryable, true);
   assert.equal(Object.hasOwn(retryable, 'retry'), false);
@@ -350,7 +410,9 @@ test('bootstrap owner-boundary failures use the new error contract without rewri
     assert.equal(legacyBody.error.reasonCode, 'OPERATE_BINDING_REQUIRED');
     assert.equal(JSON.stringify(legacyBody).includes(planrDir), false);
     assert.deepEqual(mapDashboardSafeError(legacyBody.error), {
-      code: 'DASHBOARD_ERROR_UNAVAILABLE', retryable: false, context: {},
+      code: 'DASHBOARD_ERROR_UNAVAILABLE',
+      retryable: false,
+      context: {},
     });
   } finally {
     await dashboard.close();

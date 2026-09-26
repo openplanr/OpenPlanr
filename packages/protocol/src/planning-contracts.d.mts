@@ -1,5 +1,11 @@
-export interface PlanningIssue { path: string; rule: string; detail: string }
-export declare function normalizePlanningTask<T extends Record<string, unknown>>(value: T): T & {
+export interface PlanningIssue {
+  path: string;
+  rule: string;
+  detail: string;
+}
+export declare function normalizePlanningTask<T extends Record<string, unknown>>(
+  value: T,
+): T & {
   reviewRisks: string[];
   browserSurfaces: string[];
   acceptanceRefs: string[];

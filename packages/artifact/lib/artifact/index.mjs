@@ -1,47 +1,4 @@
-export {
-  canonicalArtifactBytes,
-  canonicalBytes,
-  canonicalEnvelopeBytes,
-  canonicalSerialize,
-  createArtifactEnvelope,
-  digestArtifact,
-  digestArtifactEnvelope,
-  normalizeUtf8Text,
-  sha256Hex,
-  validateArtifactEnvelope,
-  validateArtifactPaste,
-  validateArtifactReview,
-} from './envelope.mjs';
 export { bundleArtifact } from './bundle.mjs';
-export {
-  createArtifactReview,
-  createArtifactReviewEnvelope,
-  createEmptyArtifactReviewState,
-  createReviewEnvelope,
-  exportArtifactReview,
-  normalizeArtifactReview,
-  persistArtifactReview,
-  readArtifactReviewState,
-  serializeReviewState,
-  writeArtifactReviewState,
-} from './review.mjs';
-export {
-  ARTIFACT_REVIEW_STATE_KIND,
-  ARTIFACT_REVIEW_STATE_VERSION,
-  createReviewLedger,
-  effectiveReviewDecision,
-  mergeArtifactFeedback,
-  mergeArtifactReviews,
-  mergeReviewLedger,
-  validateReviewLedger,
-} from './merge.mjs';
-export * from './diagram/index.mjs';
-export {
-  decodeArtifactReviewSources,
-  findArtifactProjectRoot,
-  importArtifactReview,
-  resolveArtifactReviewDestination,
-} from './import.mjs';
 export {
   ARTIFACT_COMPRESSED_LIMIT,
   ARTIFACT_EXPANDED_LIMIT,
@@ -75,16 +32,27 @@ export {
   generateArtifactEncryptionIv,
   generateArtifactEncryptionKey,
 } from './crypto.mjs';
+export * from './diagram/index.mjs';
 export {
-  ARTIFACT_SHARE_BASE_URL,
-  ARTIFACT_SHARE_TTLS,
-  createPasteClient,
-  createReviewLink,
-  createReviewLinkPreview,
-  decodeReviewLink,
-  prepareReviewLink,
-  selectReviewLinkTransport,
-} from './share-client.mjs';
+  canonicalArtifactBytes,
+  canonicalBytes,
+  canonicalEnvelopeBytes,
+  canonicalSerialize,
+  createArtifactEnvelope,
+  digestArtifact,
+  digestArtifactEnvelope,
+  normalizeUtf8Text,
+  sha256Hex,
+  validateArtifactEnvelope,
+  validateArtifactPaste,
+  validateArtifactReview,
+} from './envelope.mjs';
+export {
+  decodeArtifactReviewSources,
+  findArtifactProjectRoot,
+  importArtifactReview,
+  resolveArtifactReviewDestination,
+} from './import.mjs';
 export {
   ARTIFACT_ROOM_EVENT_KINDS,
   ARTIFACT_ROOM_TTLS,
@@ -98,6 +66,7 @@ export {
   createLiveRoomLinks,
   decryptLiveRoomEvent,
   encryptLiveRoomEvent,
+  exportLiveRoomRecoveryBundle,
   hydrateLiveReviewRoom,
   importLiveRoomRecoveryBundle,
   parseLiveRoomLink,
@@ -106,7 +75,6 @@ export {
   reduceLiveRoomEvents,
   reduceResilientSignedLiveRoomEvents,
   reduceSignedLiveRoomEvents,
-  exportLiveRoomRecoveryBundle,
 } from './live-room.mjs';
 export {
   ARTIFACT_ROOM_CAPABILITIES,
@@ -126,3 +94,35 @@ export {
   verifyLiveRoomEventChain,
   verifySignedLiveRoomEvent,
 } from './live-room-integrity.mjs';
+export {
+  ARTIFACT_REVIEW_STATE_KIND,
+  ARTIFACT_REVIEW_STATE_VERSION,
+  createReviewLedger,
+  effectiveReviewDecision,
+  mergeArtifactFeedback,
+  mergeArtifactReviews,
+  mergeReviewLedger,
+  validateReviewLedger,
+} from './merge.mjs';
+export {
+  createArtifactReview,
+  createArtifactReviewEnvelope,
+  createEmptyArtifactReviewState,
+  createReviewEnvelope,
+  exportArtifactReview,
+  normalizeArtifactReview,
+  persistArtifactReview,
+  readArtifactReviewState,
+  serializeReviewState,
+  writeArtifactReviewState,
+} from './review.mjs';
+export {
+  ARTIFACT_SHARE_BASE_URL,
+  ARTIFACT_SHARE_TTLS,
+  createPasteClient,
+  createReviewLink,
+  createReviewLinkPreview,
+  decodeReviewLink,
+  prepareReviewLink,
+  selectReviewLinkTransport,
+} from './share-client.mjs';

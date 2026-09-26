@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process';
-import { createServer } from 'node:http';
 import { lstatSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import { dirname, isAbsolute, join, normalize, relative, resolve } from 'node:path';
 
@@ -11,7 +11,14 @@ import { evaluationContentDigest } from '../pipeline/evaluation-identity.mjs';
 import { sha256Jcs } from '../protocol/jcs.mjs';
 import { estimateTokens, frictionCount } from './metrics.mjs';
 
-export const EVALUATION_JOURNEY_KINDS = Object.freeze(['positive', 'negative', 'ambiguity', 'permission-denied', 'recovery', 'packed-install']);
+export const EVALUATION_JOURNEY_KINDS = Object.freeze([
+  'positive',
+  'negative',
+  'ambiguity',
+  'permission-denied',
+  'recovery',
+  'packed-install',
+]);
 
 /** Prompt class every journey kind is authored under. Recovery and packed install exercise the invoking path. */
 export const EVALUATION_JOURNEY_PROMPT_CLASS = Object.freeze({
@@ -23,10 +30,54 @@ export const EVALUATION_JOURNEY_PROMPT_CLASS = Object.freeze({
   'packed-install': 'positive',
 });
 
-export const EVALUATION_BROWSER_EVIDENCE_CLASSES = Object.freeze(['route', 'form', 'viewport', 'accessibility', 'console', 'network']);
+export const EVALUATION_BROWSER_EVIDENCE_CLASSES = Object.freeze([
+  'route',
+  'form',
+  'viewport',
+  'accessibility',
+  'console',
+  'network',
+]);
 
 /** Words that carry no routing signal. Kept small so a phrase never collapses to nothing. */
-const STOPWORDS = new Set(['a', 'an', 'the', 'this', 'that', 'these', 'those', 'and', 'or', 'of', 'to', 'in', 'into', 'on', 'at', 'for', 'from', 'with', 'by', 'is', 'are', 'be', 'it', 'its', 'as', 'my', 'our', 'your', 'me', 'we', 'i', 'you', 'please', 'before', 'after', 'then']);
+const STOPWORDS = new Set([
+  'a',
+  'an',
+  'the',
+  'this',
+  'that',
+  'these',
+  'those',
+  'and',
+  'or',
+  'of',
+  'to',
+  'in',
+  'into',
+  'on',
+  'at',
+  'for',
+  'from',
+  'with',
+  'by',
+  'is',
+  'are',
+  'be',
+  'it',
+  'its',
+  'as',
+  'my',
+  'our',
+  'your',
+  'me',
+  'we',
+  'i',
+  'you',
+  'please',
+  'before',
+  'after',
+  'then',
+]);
 
 /** Surface words that name a capability a host can grant or deny. */
 const CAPABILITY_WORDS = Object.freeze({
@@ -50,7 +101,14 @@ const LOOPBACK_HOST = '127.0.0.1';
 const CLI_TIMEOUT_MS = 30_000;
 
 /** Variables a child process needs to start at all. Everything else, credentials included, is withheld. */
-const CLI_ENVIRONMENT_PASSTHROUGH = Object.freeze(['PATH', 'PATHEXT', 'SystemRoot', 'ComSpec', 'TEMP', 'TMP']);
+const CLI_ENVIRONMENT_PASSTHROUGH = Object.freeze([
+  'PATH',
+  'PATHEXT',
+  'SystemRoot',
+  'ComSpec',
+  'TEMP',
+  'TMP',
+]);
 
 /** A journey never inherits the operator's credentials or the caller's project state. */
 function journeyEnvironment(cwd) {
@@ -66,8 +124,16 @@ function fail(code, message, fix = '', details = undefined) {
 }
 
 export function evaluationPromptTokens(text) {
-  if (typeof text !== 'string') fail('E_EVALUATION_JOURNEY_INVALID', 'Routing needs decoded prompt text.', 'Read the prompt fixture bytes as UTF-8.');
-  const tokens = text.toLowerCase().split(/[^a-z0-9]+/u).filter((token) => token.length > 0 && !STOPWORDS.has(token));
+  if (typeof text !== 'string')
+    fail(
+      'E_EVALUATION_JOURNEY_INVALID',
+      'Routing needs decoded prompt text.',
+      'Read the prompt fixture bytes as UTF-8.',
+    );
+  const tokens = text
+    .toLowerCase()
+    .split(/[^a-z0-9]+/u)
+    .filter((token) => token.length > 0 && !STOPWORDS.has(token));
   return Object.freeze([...new Set(tokens)]);
 }
 
@@ -90,10 +156,22 @@ function bestCoverage(phrases, promptTokens) {
  */
 export function routeTrigger({ promptText, triggerPolicy, declaredPermissions = [] }) {
   const promptTokens = evaluationPromptTokens(promptText);
-  if (!triggerPolicy || !Array.isArray(triggerPolicy.include) || !Array.isArray(triggerPolicy.exclude)) {
-    fail('E_EVALUATION_JOURNEY_INVALID', 'Trigger routing needs the catalog trigger policy.', 'Pass the include and exclude phrases the skill declares.');
+  if (
+    !triggerPolicy ||
+    !Array.isArray(triggerPolicy.include) ||
+    !Array.isArray(triggerPolicy.exclude)
+  ) {
+    fail(
+      'E_EVALUATION_JOURNEY_INVALID',
+      'Trigger routing needs the catalog trigger policy.',
+      'Pass the include and exclude phrases the skill declares.',
+    );
   }
-  const denied = new Set(declaredPermissions.filter((entry) => entry.decision === 'denied').map((entry) => entry.capability));
+  const denied = new Set(
+    declaredPermissions
+      .filter((entry) => entry.decision === 'denied')
+      .map((entry) => entry.capability),
+  );
   const requested = Object.entries(CAPABILITY_WORDS)
     .filter(([, words]) => words.some((word) => promptTokens.includes(word)))
     .map(([capability]) => capability);
@@ -120,14 +198,31 @@ export function routeTrigger({ promptText, triggerPolicy, declaredPermissions = 
     outcome = 'decline';
     reason = 'NO_TRIGGER_SIGNAL';
   }
-  return Object.freeze({ outcome, reason, includeScore, excludeScore, refusedCapabilities: Object.freeze(refusedCapabilities) });
+  return Object.freeze({
+    outcome,
+    reason,
+    includeScore,
+    excludeScore,
+    refusedCapabilities: Object.freeze(refusedCapabilities),
+  });
 }
 
 /** One permission prompt per effectful grant, on a host whose permission model prompts. */
 export function countPermissionPrompts(hostProfile, declaredPermissions) {
   if (hostProfile.permissionModel.mode !== 'prompted') return 0;
-  const effectful = new Set(['file-write', 'command-execute', 'network', 'browser', 'credential', 'git', 'publish', 'deploy']);
-  return declaredPermissions.filter((entry) => entry.decision === 'granted' && effectful.has(entry.capability)).length;
+  const effectful = new Set([
+    'file-write',
+    'command-execute',
+    'network',
+    'browser',
+    'credential',
+    'git',
+    'publish',
+    'deploy',
+  ]);
+  return declaredPermissions.filter(
+    (entry) => entry.decision === 'granted' && effectful.has(entry.capability),
+  ).length;
 }
 
 function journeyResult(fields) {
@@ -164,11 +259,19 @@ export function runHostJourney({ scenario, promptText, triggerPolicy, hostProfil
       driver: 'host',
       observedTrigger: null,
       permissionPrompts: 0,
-      absence: absence('host-unavailable', 'The host profile declares no skill host support, so no trigger decision exists to grade.', 'escalate'),
+      absence: absence(
+        'host-unavailable',
+        'The host profile declares no skill host support, so no trigger decision exists to grade.',
+        'escalate',
+      ),
       terminalReason: 'HOST_WITHOUT_SKILL_SUPPORT',
     });
   }
-  const routed = routeTrigger({ promptText, triggerPolicy, declaredPermissions: scenario.declaredPermissions });
+  const routed = routeTrigger({
+    promptText,
+    triggerPolicy,
+    declaredPermissions: scenario.declaredPermissions,
+  });
   return journeyResult({
     driver: 'host',
     observedTrigger: routed.outcome,
@@ -176,10 +279,16 @@ export function runHostJourney({ scenario, promptText, triggerPolicy, hostProfil
     clarifications: routed.outcome === 'clarify' ? 1 : 0,
     completed: true,
     terminalReason: routed.reason,
-    outputs: [Object.freeze({
-      contractId: 'evaluation-trigger-decision',
-      record: Object.freeze({ outcome: routed.outcome, includeScore: routed.includeScore, excludeScore: routed.excludeScore }),
-    })],
+    outputs: [
+      Object.freeze({
+        contractId: 'evaluation-trigger-decision',
+        record: Object.freeze({
+          outcome: routed.outcome,
+          includeScore: routed.includeScore,
+          excludeScore: routed.excludeScore,
+        }),
+      }),
+    ],
   });
 }
 
@@ -190,13 +299,33 @@ const CLI_ENVELOPE_KEYS = Object.freeze(['ok', 'code', 'problem', 'fix']);
 /** The closed envelope every typed CLI answer has to satisfy in both output modes. */
 export function assertCliEnvelope(value, label = 'cli envelope') {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    fail('E_EVALUATION_CLI_ENVELOPE_INVALID', `${label} must be one JSON object.`, 'A typed CLI answer is an object, never a bare string.');
+    fail(
+      'E_EVALUATION_CLI_ENVELOPE_INVALID',
+      `${label} must be one JSON object.`,
+      'A typed CLI answer is an object, never a bare string.',
+    );
   }
   const unknown = Object.keys(value).filter((key) => !CLI_ENVELOPE_KEYS.includes(key));
-  if (unknown.length > 0) fail('E_EVALUATION_CLI_ENVELOPE_INVALID', `${label} carries unknown fields.`, `Declare only: ${CLI_ENVELOPE_KEYS.join(', ')}.`, { unknown });
-  if (typeof value.ok !== 'boolean') fail('E_EVALUATION_CLI_ENVELOPE_INVALID', `${label}.ok must be an explicit boolean.`, 'A typed answer states its outcome.');
+  if (unknown.length > 0)
+    fail(
+      'E_EVALUATION_CLI_ENVELOPE_INVALID',
+      `${label} carries unknown fields.`,
+      `Declare only: ${CLI_ENVELOPE_KEYS.join(', ')}.`,
+      { unknown },
+    );
+  if (typeof value.ok !== 'boolean')
+    fail(
+      'E_EVALUATION_CLI_ENVELOPE_INVALID',
+      `${label}.ok must be an explicit boolean.`,
+      'A typed answer states its outcome.',
+    );
   if (value.ok === false && !/^E_[A-Z0-9_]{3,63}$/u.test(String(value.code))) {
-    fail('E_EVALUATION_CLI_ENVELOPE_INVALID', `${label}.code is not a typed refusal code.`, 'A refusal is typed; an exit status alone is not a result.', { code: value.code ?? null });
+    fail(
+      'E_EVALUATION_CLI_ENVELOPE_INVALID',
+      `${label}.code is not a typed refusal code.`,
+      'A refusal is typed; an exit status alone is not a result.',
+      { code: value.code ?? null },
+    );
   }
   return value;
 }
@@ -208,19 +337,27 @@ export function assertCliEnvelope(value, label = 'cli envelope') {
  */
 export function createCliDriver({ executable, cwd, cache = new Map() } = {}) {
   if (typeof executable !== 'string' || !isAbsolute(executable)) {
-    fail('E_EVALUATION_JOURNEY_INVALID', 'The CLI driver needs the absolute path of the command entrypoint.', 'Resolve bin/planr-pipeline.mjs from the repository root.');
+    fail(
+      'E_EVALUATION_JOURNEY_INVALID',
+      'The CLI driver needs the absolute path of the command entrypoint.',
+      'Resolve bin/planr-pipeline.mjs from the repository root.',
+    );
   }
   const invoke = (argv, mode) => {
     const key = sha256Jcs({ argv, mode });
     if (cache.has(key)) return cache.get(key);
     const started = Date.now();
-    const spawned = spawnSync(process.execPath, [executable, ...argv, ...(mode === 'json' ? ['--json'] : [])], {
-      cwd,
-      encoding: 'utf8',
-      timeout: CLI_TIMEOUT_MS,
-      input: '',
-      env: journeyEnvironment(cwd),
-    });
+    const spawned = spawnSync(
+      process.execPath,
+      [executable, ...argv, ...(mode === 'json' ? ['--json'] : [])],
+      {
+        cwd,
+        encoding: 'utf8',
+        timeout: CLI_TIMEOUT_MS,
+        input: '',
+        env: journeyEnvironment(cwd),
+      },
+    );
     const text = `${spawned.stdout ?? ''}${spawned.stderr ?? ''}`.trim();
     let envelope = null;
     try {
@@ -256,7 +393,11 @@ export function runCliJourney({ driver, argv, expectTypedUnavailable = true }) {
       permissionPrompts: 0,
       latencyMs: human.latencyMs + strict.latencyMs,
       outputTokens: human.outputTokens + strict.outputTokens,
-      absence: absence('fixture-unavailable', 'The command surface answered with untyped output, so no typed result could be graded.', 'escalate'),
+      absence: absence(
+        'fixture-unavailable',
+        'The command surface answered with untyped output, so no typed result could be graded.',
+        'escalate',
+      ),
       terminalReason: 'CLI_OUTPUT_UNTYPED',
     });
   }
@@ -296,25 +437,58 @@ export function runCliJourney({ driver, argv, expectTypedUnavailable = true }) {
 
 // ── Browser journey ─────────────────────────────────────────────────────────
 
-const LOOPBACK_SURFACE_KEYS = Object.freeze(['kind', 'schemaVersion', 'routes', 'viewports', 'forms']);
+const LOOPBACK_SURFACE_KEYS = Object.freeze([
+  'kind',
+  'schemaVersion',
+  'routes',
+  'viewports',
+  'forms',
+]);
 
 export function assertLoopbackSurface(value, label = 'loopback surface') {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) fail('E_EVALUATION_LOOPBACK_INVALID', `${label} must be one JSON object.`, 'Pass the parsed loopback surface fixture.');
+  if (!value || typeof value !== 'object' || Array.isArray(value))
+    fail(
+      'E_EVALUATION_LOOPBACK_INVALID',
+      `${label} must be one JSON object.`,
+      'Pass the parsed loopback surface fixture.',
+    );
   const actual = Object.keys(value).sort();
   if (JSON.stringify(actual) !== JSON.stringify([...LOOPBACK_SURFACE_KEYS].sort())) {
-    fail('E_EVALUATION_LOOPBACK_INVALID', `${label} has missing or unknown fields.`, `Declare exactly: ${LOOPBACK_SURFACE_KEYS.join(', ')}.`);
+    fail(
+      'E_EVALUATION_LOOPBACK_INVALID',
+      `${label} has missing or unknown fields.`,
+      `Declare exactly: ${LOOPBACK_SURFACE_KEYS.join(', ')}.`,
+    );
   }
   if (value.kind !== 'evaluation-loopback-surface' || value.schemaVersion !== '1.0.0') {
-    fail('E_EVALUATION_LOOPBACK_INVALID', `${label} carries an implicit or foreign surface version.`, 'Declare kind "evaluation-loopback-surface" and schemaVersion "1.0.0".');
+    fail(
+      'E_EVALUATION_LOOPBACK_INVALID',
+      `${label} carries an implicit or foreign surface version.`,
+      'Declare kind "evaluation-loopback-surface" and schemaVersion "1.0.0".',
+    );
   }
-  if (!Array.isArray(value.routes) || value.routes.length === 0) fail('E_EVALUATION_LOOPBACK_INVALID', `${label}.routes must declare at least one route.`, 'A surface with no route exercises nothing.');
+  if (!Array.isArray(value.routes) || value.routes.length === 0)
+    fail(
+      'E_EVALUATION_LOOPBACK_INVALID',
+      `${label}.routes must declare at least one route.`,
+      'A surface with no route exercises nothing.',
+    );
   for (const [index, route] of value.routes.entries()) {
     const cursor = `${label}.routes[${index}]`;
     const keys = Object.keys(route).sort();
     if (JSON.stringify(keys) !== JSON.stringify(['contentType', 'document', 'path', 'status'])) {
-      fail('E_EVALUATION_LOOPBACK_INVALID', `${cursor} has missing or unknown fields.`, 'Declare exactly: contentType, document, path, status.');
+      fail(
+        'E_EVALUATION_LOOPBACK_INVALID',
+        `${cursor} has missing or unknown fields.`,
+        'Declare exactly: contentType, document, path, status.',
+      );
     }
-    if (!route.path.startsWith('/') || route.path.includes('..')) fail('E_EVALUATION_LOOPBACK_INVALID', `${cursor}.path must be one rooted loopback path.`, 'Declare a rooted path with no traversal.');
+    if (!route.path.startsWith('/') || route.path.includes('..'))
+      fail(
+        'E_EVALUATION_LOOPBACK_INVALID',
+        `${cursor}.path must be one rooted loopback path.`,
+        'Declare a rooted path with no traversal.',
+      );
   }
   return value;
 }
@@ -389,12 +563,18 @@ export function createLoopbackBrowserAdapter() {
         walkHtml(document, (node) => {
           if (node.nodeName === 'script') scripts += 1;
           if (node.nodeName === 'html') language = attribute(node, 'lang');
-          if (node.nodeName === 'meta' && attribute(node, 'name') === 'viewport') viewportMeta = attribute(node, 'content');
+          if (node.nodeName === 'meta' && attribute(node, 'name') === 'viewport')
+            viewportMeta = attribute(node, 'content');
           if (/^h[1-6]$/u.test(node.nodeName)) headings += 1;
-          if (node.nodeName === 'form') forms.push({ action: attribute(node, 'action'), method: (attribute(node, 'method') ?? 'get').toLowerCase() });
+          if (node.nodeName === 'form')
+            forms.push({
+              action: attribute(node, 'action'),
+              method: (attribute(node, 'method') ?? 'get').toLowerCase(),
+            });
           if (node.nodeName === 'input') {
             labelled.inputs += 1;
-            if (attribute(node, 'aria-label') !== null || attribute(node, 'id') !== null) labelled.labelled += 1;
+            if (attribute(node, 'aria-label') !== null || attribute(node, 'id') !== null)
+              labelled.labelled += 1;
           }
           if (node.attrs?.some((attr) => attr.name.startsWith('on'))) scripts += 1;
         });
@@ -412,9 +592,13 @@ export function createLoopbackBrowserAdapter() {
         });
         if (scripts > 0) unattested.push('console');
         if (viewportMeta === null) unattested.push('viewport');
-        if (language === null || labelled.labelled !== labelled.inputs) unattested.push('accessibility');
+        if (language === null || labelled.labelled !== labelled.inputs)
+          unattested.push('accessibility');
       }
-      return Object.freeze({ evidence, unattested: Object.freeze([...new Set(unattested)].sort()) });
+      return Object.freeze({
+        evidence,
+        unattested: Object.freeze([...new Set(unattested)].sort()),
+      });
     },
   });
 }
@@ -430,17 +614,27 @@ export async function runBrowserJourney({ surface, adapter, declaredViewports })
       driver: 'browser',
       permissionPrompts: 0,
       latencyMs: 0,
-      absence: absence('host-unavailable', 'No registered trusted browser runtime adapter was available for this run.', 'escalate'),
+      absence: absence(
+        'host-unavailable',
+        'No registered trusted browser runtime adapter was available for this run.',
+        'escalate',
+      ),
       terminalReason: 'BROWSER_TRUSTED_HOST_REQUIRED',
     });
   }
-  const missing = EVALUATION_BROWSER_EVIDENCE_CLASSES.filter((entry) => !adapter.attests.includes(entry));
+  const missing = EVALUATION_BROWSER_EVIDENCE_CLASSES.filter(
+    (entry) => !adapter.attests.includes(entry),
+  );
   if (missing.length > 0) {
     return journeyResult({
       driver: 'browser',
       permissionPrompts: 0,
       latencyMs: 0,
-      absence: absence('host-unavailable', 'The registered adapter cannot attest every declared browser evidence class.', 'escalate'),
+      absence: absence(
+        'host-unavailable',
+        'The registered adapter cannot attest every declared browser evidence class.',
+        'escalate',
+      ),
       terminalReason: 'BROWSER_EVIDENCE_UNATTESTED',
     });
   }
@@ -454,18 +648,26 @@ export async function runBrowserJourney({ surface, adapter, declaredViewports })
         driver: 'browser',
         permissionPrompts: 0,
         latencyMs,
-        absence: absence('host-unavailable', 'The loopback surface left a declared evidence class unattested.', 'rerun'),
+        absence: absence(
+          'host-unavailable',
+          'The loopback surface left a declared evidence class unattested.',
+          'rerun',
+        ),
         terminalReason: 'BROWSER_EVIDENCE_UNATTESTED',
       });
     }
     const declaredForms = surface.forms.map((form) => `${form.method}:${form.action}`).sort();
-    const observedForms = probed.evidence.flatMap((entry) => entry.forms.map((form) => `${form.method}:${form.action}`)).sort();
+    const observedForms = probed.evidence
+      .flatMap((entry) => entry.forms.map((form) => `${form.method}:${form.action}`))
+      .sort();
     const formsMatch = JSON.stringify(declaredForms) === JSON.stringify(observedForms);
     const record = {
       routes: probed.evidence.map((entry) => ({ path: entry.path, status: entry.status })),
       forms: observedForms.length,
       viewports: declaredViewports.length,
-      accessibleDocuments: probed.evidence.filter((entry) => entry.language !== null && entry.labelledInputs === entry.inputs).length,
+      accessibleDocuments: probed.evidence.filter(
+        (entry) => entry.language !== null && entry.labelledInputs === entry.inputs,
+      ).length,
       consoleChannel: 'no-console-channel',
       networkRequests: session.requests.length,
     };
@@ -475,7 +677,9 @@ export async function runBrowserJourney({ surface, adapter, declaredViewports })
       latencyMs,
       completed: formsMatch,
       terminalReason: formsMatch ? 'BROWSER_EVIDENCE_RECORDED' : 'BROWSER_FORM_INVENTORY_MISMATCH',
-      outputs: [Object.freeze({ contractId: 'evaluation-browser-evidence', record: Object.freeze(record) })],
+      outputs: [
+        Object.freeze({ contractId: 'evaluation-browser-evidence', record: Object.freeze(record) }),
+      ],
       evidence: [Object.freeze({ class: 'trace', contentDigest: sha256Jcs(probed.evidence) })],
     });
   } finally {
@@ -493,21 +697,41 @@ function disposableRoot(prefix) {
 export function installPackedMember(root, path, bytes) {
   const normalized = normalize(path);
   if (isAbsolute(normalized) || normalized.split(/[\\/]/u).includes('..')) {
-    fail('E_EVALUATION_PACKED_MEMBER_REFUSED', `Packed member ${path} escapes the installation root.`, 'A packed archive never reaches outside the root it is installed into.', { path });
+    fail(
+      'E_EVALUATION_PACKED_MEMBER_REFUSED',
+      `Packed member ${path} escapes the installation root.`,
+      'A packed archive never reaches outside the root it is installed into.',
+      { path },
+    );
   }
   const target = resolve(root, normalized);
   const inside = relative(root, target);
   if (inside.startsWith('..') || isAbsolute(inside)) {
-    fail('E_EVALUATION_PACKED_MEMBER_REFUSED', `Packed member ${path} resolves outside the installation root.`, 'Refuse the archive; a member that leaves the root is never installed.', { path });
+    fail(
+      'E_EVALUATION_PACKED_MEMBER_REFUSED',
+      `Packed member ${path} resolves outside the installation root.`,
+      'Refuse the archive; a member that leaves the root is never installed.',
+      { path },
+    );
   }
   // A path that already exists may be a symlink pointing anywhere, so it is refused rather than followed.
   if (lstatSyncSafe(target) !== null) {
-    fail('E_EVALUATION_PACKED_MEMBER_REFUSED', `Packed member ${path} would overwrite an existing path.`, 'Install into a fresh disposable root; a pre-existing path may be a symlink to somewhere else.', { path });
+    fail(
+      'E_EVALUATION_PACKED_MEMBER_REFUSED',
+      `Packed member ${path} would overwrite an existing path.`,
+      'Install into a fresh disposable root; a pre-existing path may be a symlink to somewhere else.',
+      { path },
+    );
   }
   mkdirSync(dirname(target), { recursive: true });
   writeFileSync(target, bytes, { flag: 'wx' });
   if (!lstatSync(target).isFile()) {
-    fail('E_EVALUATION_PACKED_MEMBER_REFUSED', `Packed member ${path} is not a regular file.`, 'Symlinked members are refused; the installed bytes must be the archive bytes.', { path });
+    fail(
+      'E_EVALUATION_PACKED_MEMBER_REFUSED',
+      `Packed member ${path} is not a regular file.`,
+      'Symlinked members are refused; the installed bytes must be the archive bytes.',
+      { path },
+    );
   }
   return target;
 }
@@ -524,11 +748,18 @@ function lstatSyncSafe(target) {
  * Installs the exact declared archive into a disposable root and exercises the
  * skill from the installed bytes. The working tree is never read back.
  */
-export function runPackedInstallJourney({ archive, declaredMembers, exercisePath, installRoot = null }) {
+export function runPackedInstallJourney({
+  archive,
+  declaredMembers,
+  exercisePath,
+  installRoot = null,
+}) {
   const root = installRoot ?? disposableRoot('planr-evaluation-packed');
   try {
     const installed = new Map();
-    for (const [path, bytes] of Object.entries(archive).sort(([left], [right]) => left.localeCompare(right))) {
+    for (const [path, bytes] of Object.entries(archive).sort(([left], [right]) =>
+      left.localeCompare(right),
+    )) {
       installed.set(path, installPackedMember(root, path, bytes));
     }
     const declared = [...declaredMembers].sort();
@@ -548,7 +779,11 @@ export function runPackedInstallJourney({ archive, declaredMembers, exercisePath
         driver: 'packed-install',
         permissionPrompts: 0,
         latencyMs: 0,
-        absence: absence('fixture-unavailable', 'The declared skill asset is absent from the installed archive.', 'refresh-fixture'),
+        absence: absence(
+          'fixture-unavailable',
+          'The declared skill asset is absent from the installed archive.',
+          'refresh-fixture',
+        ),
         terminalReason: 'PACKED_ASSET_ABSENT',
       });
     }
@@ -558,11 +793,19 @@ export function runPackedInstallJourney({ archive, declaredMembers, exercisePath
       permissionPrompts: 0,
       latencyMs: 0,
       completed: installedBytes === archive[exercisePath],
-      terminalReason: installedBytes === archive[exercisePath] ? 'PACKED_BYTES_EXERCISED' : 'PACKED_BYTES_DIVERGED',
-      outputs: [Object.freeze({
-        contractId: 'evaluation-packed-install',
-        record: Object.freeze({ members: present.length, exercisedDigest: evaluationContentDigest(installedBytes) }),
-      })],
+      terminalReason:
+        installedBytes === archive[exercisePath]
+          ? 'PACKED_BYTES_EXERCISED'
+          : 'PACKED_BYTES_DIVERGED',
+      outputs: [
+        Object.freeze({
+          contractId: 'evaluation-packed-install',
+          record: Object.freeze({
+            members: present.length,
+            exercisedDigest: evaluationContentDigest(installedBytes),
+          }),
+        }),
+      ],
     });
   } finally {
     if (installRoot === null) rmSync(root, { recursive: true, force: true });
@@ -593,7 +836,12 @@ export function createDisposableStore({ root, clock }) {
       const payloadDigest = sha256Jcs(payload);
       if (existing) {
         if (existing.payloadDigest !== payloadDigest) {
-          fail('E_EVALUATION_JOURNEY_CONFLICT', `Identity ${identity} already carries different input.`, 'Replay the exact input or use a new identity; a changed payload under one identity is a conflict.', { identity });
+          fail(
+            'E_EVALUATION_JOURNEY_CONFLICT',
+            `Identity ${identity} already carries different input.`,
+            'Replay the exact input or use a new identity; a changed payload under one identity is a conflict.',
+            { identity },
+          );
         }
         return Object.freeze({ applied: false, payloadDigest });
       }
@@ -609,7 +857,8 @@ export function createDisposableStore({ root, clock }) {
     },
     snapshot: () => load().records.length,
     reopen: () => load().records.length,
-    boundInput: (identity) => load().records.find((record) => record.identity === identity)?.payloadDigest ?? null,
+    boundInput: (identity) =>
+      load().records.find((record) => record.identity === identity)?.payloadDigest ?? null,
   });
 }
 
@@ -622,7 +871,10 @@ export function runRecoveryJourney({ scenario, clock }) {
   try {
     const store = createDisposableStore({ root, clock });
     const identity = scenario.scenarioId;
-    const payload = { scenarioDigest: scenario.scenarioDigest, hostProfileDigest: scenario.hostProfileRef.hostProfileDigest };
+    const payload = {
+      scenarioDigest: scenario.scenarioDigest,
+      hostProfileDigest: scenario.hostProfileRef.hostProfileDigest,
+    };
     const steps = [];
 
     steps.push({ step: 'append', applied: store.append(identity, payload).applied });
@@ -640,14 +892,21 @@ export function runRecoveryJourney({ scenario, clock }) {
     const reopened = createDisposableStore({ root, clock }).reopen();
     steps.push({ step: 'crash-restart', survived: reopened === before });
 
-    const stale = store.boundInput(identity) !== sha256Jcs({ ...payload, hostProfileDigest: scenario.budgetRef.budgetDigest });
+    const stale =
+      store.boundInput(identity) !==
+      sha256Jcs({ ...payload, hostProfileDigest: scenario.budgetRef.budgetDigest });
     steps.push({ step: 'stale-rejected', stale });
 
     const rolledBack = store.rollbackTo(0);
     steps.push({ step: 'rollback', remaining: rolledBack });
 
     const idempotent = steps[0].applied === true && steps[1].applied === false;
-    const completed = idempotent && conflict === 'E_EVALUATION_JOURNEY_CONFLICT' && reopened === before && stale && rolledBack === 0;
+    const completed =
+      idempotent &&
+      conflict === 'E_EVALUATION_JOURNEY_CONFLICT' &&
+      reopened === before &&
+      stale &&
+      rolledBack === 0;
     return journeyResult({
       driver: 'recovery',
       permissionPrompts: 0,
@@ -655,7 +914,12 @@ export function runRecoveryJourney({ scenario, clock }) {
       retries: 1,
       completed,
       terminalReason: completed ? 'RECOVERY_SEQUENCE_PROVEN' : 'RECOVERY_SEQUENCE_INCOMPLETE',
-      outputs: [Object.freeze({ contractId: 'evaluation-recovery-trace', record: Object.freeze({ steps: steps.length, conflictCode: conflict }) })],
+      outputs: [
+        Object.freeze({
+          contractId: 'evaluation-recovery-trace',
+          record: Object.freeze({ steps: steps.length, conflictCode: conflict }),
+        }),
+      ],
     });
   } finally {
     rmSync(root, { recursive: true, force: true });

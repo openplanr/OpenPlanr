@@ -1,7 +1,6 @@
 import { randomUUID } from 'node:crypto';
-
-import { validateProtocolArtifact } from '@openplanr/protocol/contracts';
 import { verifyDocumentDigest } from '@openplanr/protocol/canonical-json';
+import { validateProtocolArtifact } from '@openplanr/protocol/contracts';
 
 import { SkillRuntimeError } from '../errors.mjs';
 import { resolveCapabilities } from './capabilities.mjs';
@@ -44,19 +43,31 @@ function fail(code, message, details = {}) {
 
 function validateQuestions(questions) {
   if (!Array.isArray(questions) || questions.length < 1 || questions.length > 3) {
-    fail('E_SKILL_QUESTION_BATCH_INVALID', 'An interaction batch must contain one to three guided questions.');
+    fail(
+      'E_SKILL_QUESTION_BATCH_INVALID',
+      'An interaction batch must contain one to three guided questions.',
+    );
   }
   const ids = new Set();
   for (const question of questions) {
-    const errors = validateProtocolArtifact('guided-question', question, { protocolVersion: '1.2.0' });
+    const errors = validateProtocolArtifact('guided-question', question, {
+      protocolVersion: '1.2.0',
+    });
     if (errors.length) {
-      fail('E_SKILL_QUESTION_INVALID', `Guided question ${question?.questionId ?? '<unknown>'} is invalid.`, {
-        questionId: question?.questionId ?? null,
-        errors,
-      });
+      fail(
+        'E_SKILL_QUESTION_INVALID',
+        `Guided question ${question?.questionId ?? '<unknown>'} is invalid.`,
+        {
+          questionId: question?.questionId ?? null,
+          errors,
+        },
+      );
     }
     if (ids.has(question.questionId)) {
-      fail('E_SKILL_QUESTION_BATCH_INVALID', `Question ${question.questionId} is duplicated in the interaction batch.`);
+      fail(
+        'E_SKILL_QUESTION_BATCH_INVALID',
+        `Question ${question.questionId} is duplicated in the interaction batch.`,
+      );
     }
     ids.add(question.questionId);
   }
@@ -66,29 +77,37 @@ function validateQuestions(questions) {
 function validateBindings(hostProfile) {
   const bindings = hostProfile?.interactionBindings;
   if (!Array.isArray(bindings) || bindings.length < 1) {
-    fail('E_SKILL_INTERACTION_BINDINGS_INVALID', 'The host profile has no ordered interaction bindings.', {
-      hostProfileId: hostProfile?.hostProfileId ?? null,
-    });
+    fail(
+      'E_SKILL_INTERACTION_BINDINGS_INVALID',
+      'The host profile has no ordered interaction bindings.',
+      {
+        hostProfileId: hostProfile?.hostProfileId ?? null,
+      },
+    );
   }
   const declaredCapabilities = new Set(hostProfile.runtimeCapabilities ?? []);
   const seen = new Set();
   for (const [index, binding] of bindings.entries()) {
     const expectedCapability = SURFACE_CAPABILITY[binding?.surface];
     if (
-      !binding
-      || !INTERACTION_SURFACES.includes(binding.surface)
-      || binding.protocolInteraction !== SURFACE_PROTOCOL_INTERACTION[binding.surface]
-      || (expectedCapability === null
+      !binding ||
+      !INTERACTION_SURFACES.includes(binding.surface) ||
+      binding.protocolInteraction !== SURFACE_PROTOCOL_INTERACTION[binding.surface] ||
+      (expectedCapability === null
         ? binding.capabilityId !== undefined
-        : binding.capabilityId !== expectedCapability)
-      || (expectedCapability !== null && !declaredCapabilities.has(expectedCapability))
-      || (binding.surface === 'headless' && index !== bindings.length - 1)
-      || seen.has(binding.surface)
+        : binding.capabilityId !== expectedCapability) ||
+      (expectedCapability !== null && !declaredCapabilities.has(expectedCapability)) ||
+      (binding.surface === 'headless' && index !== bindings.length - 1) ||
+      seen.has(binding.surface)
     ) {
-      fail('E_SKILL_INTERACTION_BINDINGS_INVALID', 'The host profile contains an invalid or duplicate interaction binding.', {
-        hostProfileId: hostProfile?.hostProfileId ?? null,
-        binding,
-      });
+      fail(
+        'E_SKILL_INTERACTION_BINDINGS_INVALID',
+        'The host profile contains an invalid or duplicate interaction binding.',
+        {
+          hostProfileId: hostProfile?.hostProfileId ?? null,
+          binding,
+        },
+      );
     }
     seen.add(binding.surface);
   }
@@ -128,23 +147,23 @@ function conditionState(condition, values, unresolvedQuestionIds) {
 function questionVisibilityState(question, answers, unresolvedQuestionIds = new Set()) {
   const values = new Map(answers.map(({ questionId, value }) => [questionId, value]));
   if (!question.visibleWhen) return 'matched';
-  const states = question.visibleWhen.map((condition) => (
-    conditionState(condition, values, unresolvedQuestionIds)
-  ));
+  const states = question.visibleWhen.map((condition) =>
+    conditionState(condition, values, unresolvedQuestionIds),
+  );
   if (states.includes('unmatched')) return 'unmatched';
   return states.includes('unknown') ? 'unknown' : 'matched';
 }
 
 function visibleQuestions(questions, answers, unresolvedQuestionIds = new Set()) {
-  return questions.filter((question) => (
-    questionVisibilityState(question, answers, unresolvedQuestionIds) !== 'unmatched'
-  ));
+  return questions.filter(
+    (question) => questionVisibilityState(question, answers, unresolvedQuestionIds) !== 'unmatched',
+  );
 }
 
 function matchedQuestions(questions, answers, unresolvedQuestionIds = new Set()) {
-  return questions.filter((question) => (
-    questionVisibilityState(question, answers, unresolvedQuestionIds) === 'matched'
-  ));
+  return questions.filter(
+    (question) => questionVisibilityState(question, answers, unresolvedQuestionIds) === 'matched',
+  );
 }
 
 function validAnswer(question, value) {
@@ -152,18 +171,37 @@ function validAnswer(question, value) {
   if (!expected) return false;
   if (expected === 'string' && typeof value !== 'string') return false;
   if (expected === 'boolean' && typeof value !== 'boolean') return false;
-  if (expected === 'string-array' && (!Array.isArray(value) || value.some((item) => typeof item !== 'string'))) return false;
+  if (
+    expected === 'string-array' &&
+    (!Array.isArray(value) || value.some((item) => typeof item !== 'string'))
+  )
+    return false;
   if (typeof value === 'string') {
-    if (question.validation?.minLength !== undefined && value.length < question.validation.minLength) return false;
-    if (question.validation?.maxLength !== undefined && value.length > question.validation.maxLength) return false;
+    if (
+      question.validation?.minLength !== undefined &&
+      value.length < question.validation.minLength
+    )
+      return false;
+    if (
+      question.validation?.maxLength !== undefined &&
+      value.length > question.validation.maxLength
+    )
+      return false;
   }
   if (Array.isArray(value)) {
-    if (question.validation?.minItems !== undefined && value.length < question.validation.minItems) return false;
-    if (question.validation?.maxItems !== undefined && value.length > question.validation.maxItems) return false;
+    if (question.validation?.minItems !== undefined && value.length < question.validation.minItems)
+      return false;
+    if (question.validation?.maxItems !== undefined && value.length > question.validation.maxItems)
+      return false;
     if (new Set(value).size !== value.length) return false;
   }
-  if (question.type === 'single-select' && !question.choices.some(({ id }) => id === value)) return false;
-  if (question.type === 'multi-select' && value.some((item) => !question.choices.some(({ id }) => id === item))) return false;
+  if (question.type === 'single-select' && !question.choices.some(({ id }) => id === value))
+    return false;
+  if (
+    question.type === 'multi-select' &&
+    value.some((item) => !question.choices.some(({ id }) => id === item))
+  )
+    return false;
   return true;
 }
 
@@ -179,8 +217,15 @@ function answerRecord(question, value, source, inferred) {
 }
 
 function inferAnswers(questions, repositoryContext) {
-  if (!repositoryContext || typeof repositoryContext !== 'object' || Array.isArray(repositoryContext)) {
-    fail('E_SKILL_REPOSITORY_CONTEXT_INVALID', 'repositoryContext must be keyed by guided question ID.');
+  if (
+    !repositoryContext ||
+    typeof repositoryContext !== 'object' ||
+    Array.isArray(repositoryContext)
+  ) {
+    fail(
+      'E_SKILL_REPOSITORY_CONTEXT_INVALID',
+      'repositoryContext must be keyed by guided question ID.',
+    );
   }
   const answers = [];
   const pending = [];
@@ -188,12 +233,12 @@ function inferAnswers(questions, repositoryContext) {
     if (question.type === 'informational') continue;
     const candidate = repositoryContext[question.questionId];
     if (
-      question.sensitivity !== 'sensitive'
-      && candidate?.confidence === 'exact'
-      && candidate.safe === true
-      && typeof candidate.source === 'string'
-      && candidate.source.length > 0
-      && validAnswer(question, candidate.value)
+      question.sensitivity !== 'sensitive' &&
+      candidate?.confidence === 'exact' &&
+      candidate.safe === true &&
+      typeof candidate.source === 'string' &&
+      candidate.source.length > 0 &&
+      validAnswer(question, candidate.value)
     ) {
       answers.push(answerRecord(question, candidate.value, candidate.source, true));
     } else {
@@ -205,37 +250,46 @@ function inferAnswers(questions, repositoryContext) {
 
 function validateHeadlessQuestionPolicy(policy) {
   if (!policy || typeof policy !== 'object' || Array.isArray(policy)) {
-    fail('E_SKILL_QUESTION_POLICY_INVALID', 'headlessQuestionPolicy must be keyed by guided question ID.');
+    fail(
+      'E_SKILL_QUESTION_POLICY_INVALID',
+      'headlessQuestionPolicy must be keyed by guided question ID.',
+    );
   }
   for (const [questionId, declaration] of Object.entries(policy)) {
     if (
-      !declaration
-      || typeof declaration !== 'object'
-      || Array.isArray(declaration)
-      || !['non-material', 'material'].includes(declaration.materiality)
-      || !['safe', 'unsafe'].includes(declaration.defaultSafety)
+      !declaration ||
+      typeof declaration !== 'object' ||
+      Array.isArray(declaration) ||
+      !['non-material', 'material'].includes(declaration.materiality) ||
+      !['safe', 'unsafe'].includes(declaration.defaultSafety)
     ) {
-      fail('E_SKILL_QUESTION_POLICY_INVALID', `Headless policy for ${questionId} is invalid.`, { questionId });
+      fail('E_SKILL_QUESTION_POLICY_INVALID', `Headless policy for ${questionId} is invalid.`, {
+        questionId,
+      });
     }
   }
   return policy;
 }
 
 function hasSafeHeadlessDefault(question, policy) {
-  return question.sensitivity !== 'sensitive'
-    && question.valueSemantics === 'default'
-    && validAnswer(question, question.defaultValue)
-    && policy?.materiality === 'non-material'
-    && policy?.defaultSafety === 'safe';
+  return (
+    question.sensitivity !== 'sensitive' &&
+    question.valueSemantics === 'default' &&
+    validAnswer(question, question.defaultValue) &&
+    policy?.materiality === 'non-material' &&
+    policy?.defaultSafety === 'safe'
+  );
 }
 
 function resolveHeadlessQuestions(questions, inferredAnswers, policy) {
   const answerable = questions.filter(({ type }) => type !== 'informational');
   const answers = [...inferredAnswers];
   const answeredIds = new Set(answers.map(({ questionId }) => questionId));
-  const unresolvedIds = new Set(answerable
-    .filter(({ questionId }) => !answeredIds.has(questionId))
-    .map(({ questionId }) => questionId));
+  const unresolvedIds = new Set(
+    answerable
+      .filter(({ questionId }) => !answeredIds.has(questionId))
+      .map(({ questionId }) => questionId),
+  );
   const omittedOptional = new Set();
 
   let changed = true;
@@ -251,12 +305,14 @@ function resolveHeadlessQuestions(questions, inferredAnswers, policy) {
       }
       if (visibility === 'unknown') continue;
       if (hasSafeHeadlessDefault(question, policy[question.questionId])) {
-        answers.push(answerRecord(
-          question,
-          question.defaultValue,
-          `question:${question.questionId}:default`,
-          true,
-        ));
+        answers.push(
+          answerRecord(
+            question,
+            question.defaultValue,
+            `question:${question.questionId}:default`,
+            true,
+          ),
+        );
         unresolvedIds.delete(question.questionId);
         changed = true;
       } else if (!question.required) {
@@ -267,9 +323,9 @@ function resolveHeadlessQuestions(questions, inferredAnswers, policy) {
     }
 
     if (!changed) {
-      const unresolvedOptional = answerable.filter((question) => (
-        !question.required && unresolvedIds.has(question.questionId)
-      ));
+      const unresolvedOptional = answerable.filter(
+        (question) => !question.required && unresolvedIds.has(question.questionId),
+      );
       for (const question of unresolvedOptional) {
         unresolvedIds.delete(question.questionId);
         omittedOptional.add(question.questionId);
@@ -282,11 +338,12 @@ function resolveHeadlessQuestions(questions, inferredAnswers, policy) {
   const activeIds = new Set(activeQuestions.map(({ questionId }) => questionId));
   const activeAnswers = answers.filter(({ questionId }) => activeIds.has(questionId));
   const unresolvedRequired = answerable
-    .filter((question) => (
-      question.required
-      && unresolvedIds.has(question.questionId)
-      && activeIds.has(question.questionId)
-    ))
+    .filter(
+      (question) =>
+        question.required &&
+        unresolvedIds.has(question.questionId) &&
+        activeIds.has(question.questionId),
+    )
     .map(({ questionId }) => questionId);
 
   return {
@@ -309,22 +366,35 @@ function sessionMetadata(session = {}, questionnaire = {}) {
     const errors = validateProtocolArtifact('skill-session', session, { protocolVersion: '1.6.0' });
     const digestValid = verifyDocumentDigest(session);
     if (errors.length || !digestValid) {
-      fail('E_SKILL_INTERACTION_SESSION_INVALID', 'The lifecycle session is not a valid Protocol 1.6 skill session.', {
-        errors,
-        digestValid,
-      });
+      fail(
+        'E_SKILL_INTERACTION_SESSION_INVALID',
+        'The lifecycle session is not a valid Protocol 1.6 skill session.',
+        {
+          errors,
+          digestValid,
+        },
+      );
     }
   }
   if (questionnaire.sessionId && questionnaire.sessionId !== session.sessionId) {
-    fail('E_SKILL_INTERACTION_SESSION_MISMATCH', 'The questionnaire belongs to a different lifecycle session.', {
-      questionnaireSessionId: questionnaire.sessionId,
-      sessionId: session.sessionId ?? null,
-    });
+    fail(
+      'E_SKILL_INTERACTION_SESSION_MISMATCH',
+      'The questionnaire belongs to a different lifecycle session.',
+      {
+        questionnaireSessionId: questionnaire.sessionId,
+        sessionId: session.sessionId ?? null,
+      },
+    );
   }
   return {
     sessionId: session.sessionId ?? `GIS-${randomUUID().replaceAll('-', '')}`,
-    questionnaireDigest: questionnaire.digest ?? questionnaire.questionnaireDigest ?? session.questionnaireDigest ?? null,
-    questionnaireVersion: questionnaire.questionnaireVersion ?? session.questionnaireVersion ?? '1.0.0',
+    questionnaireDigest:
+      questionnaire.digest ??
+      questionnaire.questionnaireDigest ??
+      session.questionnaireDigest ??
+      null,
+    questionnaireVersion:
+      questionnaire.questionnaireVersion ?? session.questionnaireVersion ?? '1.0.0',
     command: questionnaire.command ?? session.command ?? null,
     projectIdentity: questionnaire.projectIdentity ?? session.projectIdentity ?? null,
     projectHead: questionnaire.projectHead ?? session.projectHead ?? null,
@@ -367,7 +437,9 @@ export function resolveInteraction({
   const validatedQuestions = validateQuestions(questions ?? session?.questions);
   const bindings = validateBindings(hostProfile);
   const candidateInference = inferAnswers(validatedQuestions, repositoryContext);
-  const candidatePendingIds = new Set(candidateInference.pending.map(({ questionId }) => questionId));
+  const candidatePendingIds = new Set(
+    candidateInference.pending.map(({ questionId }) => questionId),
+  );
   const activeQuestions = visibleQuestions(
     validatedQuestions,
     candidateInference.answers,
@@ -394,10 +466,12 @@ export function resolveInteraction({
       answers: inferred.answers,
       ...baseResult({ hostProfile, metadata, inferred, attempts }),
       diagnostic: {
-        code: informational.length > 0 ? 'I_SKILL_INFORMATION_PRESENTED' : 'I_SKILL_QUESTIONS_INFERRED',
-        message: informational.length > 0
-          ? 'The active batch contains information only; no answer is required.'
-          : 'All answers came from exact repository context.',
+        code:
+          informational.length > 0 ? 'I_SKILL_INFORMATION_PRESENTED' : 'I_SKILL_QUESTIONS_INFERRED',
+        message:
+          informational.length > 0
+            ? 'The active batch contains information only; no answer is required.'
+            : 'All answers came from exact repository context.',
         repair: null,
       },
     });
@@ -417,10 +491,13 @@ export function resolveInteraction({
         phase: 'awaiting-input',
         surface: binding.surface,
         protocolInteraction: binding.protocolInteraction,
-        questions: structuredClone(activeQuestions.filter(({ type, questionId }) => (
-          type === 'informational'
-          || inferred.pending.some((question) => question.questionId === questionId)
-        ))),
+        questions: structuredClone(
+          activeQuestions.filter(
+            ({ type, questionId }) =>
+              type === 'informational' ||
+              inferred.pending.some((question) => question.questionId === questionId),
+          ),
+        ),
         informational: structuredClone(informational),
         answers: inferred.answers,
         ...baseResult({ hostProfile, metadata, inferred, attempts }),
@@ -435,9 +512,9 @@ export function resolveInteraction({
     attempts.push(attempt(binding));
     const headless = resolveHeadlessQuestions(activeQuestions, inferred.answers, headlessPolicy);
     const finalInference = {
-      answers: inferred.answers.filter(({ questionId }) => (
-        headless.answers.some((answer) => answer.questionId === questionId)
-      )),
+      answers: inferred.answers.filter(({ questionId }) =>
+        headless.answers.some((answer) => answer.questionId === questionId),
+      ),
       pending: [],
     };
     if (headless.unresolvedRequired.length === 0) {
@@ -453,7 +530,8 @@ export function resolveInteraction({
         ...baseResult({ hostProfile, metadata, inferred: finalInference, attempts }),
         diagnostic: {
           code: 'I_SKILL_HEADLESS_DEFAULTS_APPLIED',
-          message: 'Headless execution used only exact context, declared safe defaults, and optional omissions.',
+          message:
+            'Headless execution used only exact context, declared safe defaults, and optional omissions.',
           repair: null,
         },
       });
@@ -499,18 +577,26 @@ function boundAnswers(resolution, supplied) {
   if (!values || typeof values !== 'object' || Array.isArray(values)) {
     fail('E_SKILL_INTERACTION_ANSWERS_INVALID', 'answers must be keyed by guided question ID.');
   }
-  const suppliedRecords = Object.entries(values).map(([questionId, value]) => ({ questionId, value }));
-  const activeQuestions = visibleQuestions(
-    resolution.questions,
-    [...resolution.inferredAnswers, ...suppliedRecords],
-  );
+  const suppliedRecords = Object.entries(values).map(([questionId, value]) => ({
+    questionId,
+    value,
+  }));
+  const activeQuestions = visibleQuestions(resolution.questions, [
+    ...resolution.inferredAnswers,
+    ...suppliedRecords,
+  ]);
   const activeQuestionIds = new Set(activeQuestions.map(({ questionId }) => questionId));
-  const questions = new Map(activeQuestions
-    .filter(({ type }) => type !== 'informational')
-    .map((question) => [question.questionId, question]));
-  const unknown = Object.keys(values).filter((questionId) => !questions.has(questionId)).sort();
-  const answers = resolution.inferredAnswers
-    .filter(({ questionId }) => activeQuestionIds.has(questionId));
+  const questions = new Map(
+    activeQuestions
+      .filter(({ type }) => type !== 'informational')
+      .map((question) => [question.questionId, question]),
+  );
+  const unknown = Object.keys(values)
+    .filter((questionId) => !questions.has(questionId))
+    .sort();
+  const answers = resolution.inferredAnswers.filter(({ questionId }) =>
+    activeQuestionIds.has(questionId),
+  );
   const invalid = [];
   const missing = [];
   for (const question of questions.values()) {
@@ -522,7 +608,14 @@ function boundAnswers(resolution, supplied) {
       invalid.push(question.questionId);
       continue;
     }
-    answers.push(answerRecord(question, values[question.questionId], `interaction:${resolution.surface}`, false));
+    answers.push(
+      answerRecord(
+        question,
+        values[question.questionId],
+        `interaction:${resolution.surface}`,
+        false,
+      ),
+    );
   }
   return { answers, invalid, missing, unknown };
 }
@@ -536,7 +629,10 @@ export function bindInteractionAnswers({
   cancellationReason = 'The interaction was cancelled.',
 } = {}) {
   if (!resolution || typeof resolution !== 'object' || resolution.phase !== 'awaiting-input') {
-    fail('E_SKILL_INTERACTION_RESOLUTION_INVALID', 'An awaiting-input interaction resolution is required.');
+    fail(
+      'E_SKILL_INTERACTION_RESOLUTION_INVALID',
+      'An awaiting-input interaction resolution is required.',
+    );
   }
   if (cancelled) {
     return freeze({
@@ -620,7 +716,12 @@ export function bindInteractionAnswers({
     projectHead: session.projectHead,
     configHead: session.configHead,
     answers: bound.answers
-      .map(({ questionId, questionVersion, sensitivity, value }) => ({ questionId, questionVersion, sensitivity, value }))
+      .map(({ questionId, questionVersion, sensitivity, value }) => ({
+        questionId,
+        questionVersion,
+        sensitivity,
+        value,
+      }))
       .sort((left, right) => left.questionId.localeCompare(right.questionId)),
     adapter: {
       runtime: resolution.host,
@@ -629,7 +730,9 @@ export function bindInteractionAnswers({
     },
     submittedAt,
   };
-  const errors = validateProtocolArtifact('guided-answer-envelope', envelope, { protocolVersion: '1.2.0' });
+  const errors = validateProtocolArtifact('guided-answer-envelope', envelope, {
+    protocolVersion: '1.2.0',
+  });
   if (errors.length) {
     return freeze({
       status: 'blocked',

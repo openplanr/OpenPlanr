@@ -88,12 +88,14 @@ const answerEnvelope = {
   projectIdentity: questionnaire.projectIdentity,
   projectHead: questionnaire.projectHead,
   configHead: questionnaire.configHead,
-  answers: [{
-    questionId: question.questionId,
-    questionVersion: question.questionVersion,
-    sensitivity: question.sensitivity,
-    value: 'Asem',
-  }],
+  answers: [
+    {
+      questionId: question.questionId,
+      questionVersion: question.questionVersion,
+      sensitivity: question.sensitivity,
+      value: 'Asem',
+    },
+  ],
   adapter,
   submittedAt: createdAt,
 };
@@ -114,9 +116,11 @@ const action = {
 };
 
 test('guided interaction schemas are registered through the stable Protocol API', () => {
-  const kinds = new Set(listProtocolSchemas()
-    .filter(({ protocolVersion }) => protocolVersion === '1.2.0')
-    .map(({ kind }) => kind));
+  const kinds = new Set(
+    listProtocolSchemas()
+      .filter(({ protocolVersion }) => protocolVersion === '1.2.0')
+      .map(({ kind }) => kind),
+  );
   for (const kind of [
     'guided-question',
     'guided-questionnaire',
@@ -133,61 +137,76 @@ test('guided interaction schemas are registered through the stable Protocol API'
 test('questions and questionnaires reject executable conditions and duplicate identifiers', () => {
   assert.deepEqual(validateGuidedQuestion(question), []);
   assert.deepEqual(validateGuidedQuestionnaire(questionnaire), []);
-  assert.ok(validateGuidedQuestion({
-    ...question,
-    visibleWhen: { questionId: 'profile', operator: 'javascript', value: 'run()' },
-  }).length);
-  assert.ok(validateGuidedQuestionnaire({
-    ...questionnaire,
-    questions: [question, { ...question, label: 'Duplicate identifier' }],
-  }).some(({ rule }) => rule === 'uniqueQuestionId'));
-  assert.ok(validateGuidedQuestionnaire({
-    ...questionnaire,
-    step: 4,
-  }).some(({ rule }) => rule === 'stepRange'));
+  assert.ok(
+    validateGuidedQuestion({
+      ...question,
+      visibleWhen: { questionId: 'profile', operator: 'javascript', value: 'run()' },
+    }).length,
+  );
+  assert.ok(
+    validateGuidedQuestionnaire({
+      ...questionnaire,
+      questions: [question, { ...question, label: 'Duplicate identifier' }],
+    }).some(({ rule }) => rule === 'uniqueQuestionId'),
+  );
+  assert.ok(
+    validateGuidedQuestionnaire({
+      ...questionnaire,
+      step: 4,
+    }).some(({ rule }) => rule === 'stepRange'),
+  );
 });
 
 test('self-describing questionnaires preserve v1.0 compatibility and bind exact stdin metadata', () => {
   const current = selfDescribingQuestionnaire();
   assert.deepEqual(validateGuidedQuestionnaire(questionnaire), []);
   assert.deepEqual(validateGuidedQuestionnaire(current), []);
-  assert.ok(validateGuidedQuestionnaire({
-    ...questionnaire,
-    submission: current.submission,
-  }).length, 'schema 1.0 cannot claim the new submission contract');
+  assert.ok(
+    validateGuidedQuestionnaire({
+      ...questionnaire,
+      submission: current.submission,
+    }).length,
+    'schema 1.0 cannot claim the new submission contract',
+  );
   const { submission: _submission, ...missingSubmission } = current;
   assert.ok(validateGuidedQuestionnaire(missingSubmission).length);
-  assert.ok(validateGuidedQuestionnaire({
-    ...current,
-    submission: {
-      ...current.submission,
-      transport: {
-        ...current.submission.transport,
-        argv: current.submission.transport.argv.map((part) =>
-          part === current.sessionId ? 'GIS-different-session' : part),
+  assert.ok(
+    validateGuidedQuestionnaire({
+      ...current,
+      submission: {
+        ...current.submission,
+        transport: {
+          ...current.submission.transport,
+          argv: current.submission.transport.argv.map((part) =>
+            part === current.sessionId ? 'GIS-different-session' : part,
+          ),
+        },
       },
-    },
-  }).some(({ rule }) => rule === 'exactSubmissionCommand'));
-  assert.deepEqual(
-    current.submission.envelope.dynamicFields.answers.copyFields,
-    ['questionId', 'questionVersion', 'sensitivity'],
+    }).some(({ rule }) => rule === 'exactSubmissionCommand'),
   );
-  assert.ok(validateGuidedQuestionnaire({
-    ...current,
-    submission: {
-      ...current.submission,
-      envelope: {
-        ...current.submission.envelope,
-        dynamicFields: {
-          ...current.submission.envelope.dynamicFields,
-          answers: {
-            ...current.submission.envelope.dynamicFields.answers,
-            copyFields: ['questionId', 'required', 'valueType'],
+  assert.deepEqual(current.submission.envelope.dynamicFields.answers.copyFields, [
+    'questionId',
+    'questionVersion',
+    'sensitivity',
+  ]);
+  assert.ok(
+    validateGuidedQuestionnaire({
+      ...current,
+      submission: {
+        ...current.submission,
+        envelope: {
+          ...current.submission.envelope,
+          dynamicFields: {
+            ...current.submission.envelope.dynamicFields,
+            answers: {
+              ...current.submission.envelope.dynamicFields.answers,
+              copyFields: ['questionId', 'required', 'valueType'],
+            },
           },
         },
       },
-    },
-  }).some(({ rule }) => rule === 'exactAnswerCopyFields'));
+    }).some(({ rule }) => rule === 'exactAnswerCopyFields'),
+  );
   assert.equal(
     current.digest,
     sha256Jcs(Object.fromEntries(Object.entries(current).filter(([key]) => key !== 'digest'))),
@@ -230,18 +249,24 @@ test('a literal runtime can materialize a valid envelope from declared copy fiel
 
   const invalidEnvelope = {
     ...envelope,
-    answers: [{
-      ...structuredClone(descriptor),
-      value: 'Asem',
-    }],
+    answers: [
+      {
+        ...structuredClone(descriptor),
+        value: 'Asem',
+      },
+    ],
   };
   const invalidErrors = validateGuidedAnswerEnvelope(invalidEnvelope);
-  assert.ok(invalidErrors.some(
-    ({ path, detail }) => path === '$.answers[0]' && detail.includes("'required'"),
-  ));
-  assert.ok(invalidErrors.some(
-    ({ path, detail }) => path === '$.answers[0]' && detail.includes("'valueType'"),
-  ));
+  assert.ok(
+    invalidErrors.some(
+      ({ path, detail }) => path === '$.answers[0]' && detail.includes("'required'"),
+    ),
+  );
+  assert.ok(
+    invalidErrors.some(
+      ({ path, detail }) => path === '$.answers[0]' && detail.includes("'valueType'"),
+    ),
+  );
 });
 
 test('a runtime can materialize a valid envelope from only the questionnaire and chosen values', () => {
@@ -255,12 +280,14 @@ test('a runtime can materialize a valid envelope from only the questionnaire and
   assert.deepEqual(envelope, {
     ...current.submission.envelope.fixedFields,
     questionnaireDigest: current.digest,
-    answers: [{
-      questionId: question.questionId,
-      questionVersion: question.questionVersion,
-      sensitivity: question.sensitivity,
-      value: 'Asem',
-    }],
+    answers: [
+      {
+        questionId: question.questionId,
+        questionVersion: question.questionVersion,
+        sensitivity: question.sensitivity,
+        value: 'Asem',
+      },
+    ],
     submittedAt: createdAt,
   });
   assert.equal(envelope.adapter.interaction, 'none');
@@ -268,10 +295,12 @@ test('a runtime can materialize a valid envelope from only the questionnaire and
 
 test('answer and session contracts are identity-bound and never persist sensitive answers', () => {
   assert.deepEqual(validateGuidedAnswerEnvelope(answerEnvelope), []);
-  assert.ok(validateGuidedAnswerEnvelope({
-    ...answerEnvelope,
-    answers: [answerEnvelope.answers[0], { ...answerEnvelope.answers[0], value: 'Different' }],
-  }).some(({ rule }) => rule === 'uniqueQuestionId'));
+  assert.ok(
+    validateGuidedAnswerEnvelope({
+      ...answerEnvelope,
+      answers: [answerEnvelope.answers[0], { ...answerEnvelope.answers[0], value: 'Different' }],
+    }).some(({ rule }) => rule === 'uniqueQuestionId'),
+  );
 
   const session = {
     kind: 'guided-session',
@@ -292,33 +321,42 @@ test('answer and session contracts are identity-bound and never persist sensitiv
     expiresAt,
   };
   assert.deepEqual(validateGuidedSession(session), []);
-  assert.ok(validateGuidedSession({
-    ...session,
-    persistedAnswers: [{ ...answerEnvelope.answers[0], sensitivity: 'sensitive' }],
-  }).length);
+  assert.ok(
+    validateGuidedSession({
+      ...session,
+      persistedAnswers: [{ ...answerEnvelope.answers[0], sensitivity: 'sensitive' }],
+    }).length,
+  );
 });
 
 test('structured actions separate presentation capability from mutation authority', () => {
   assert.deepEqual(validateStructuredAction(action), []);
-  assert.deepEqual(validateStructuredAction({
-    ...action,
-    id: 'show-status',
-    command: 'planr status --json',
-    effect: 'read-only',
-    requiresConfirmation: false,
-    confirmationScope: null,
-    confirmationDigest: null,
-  }), []);
-  assert.ok(validateStructuredAction({
-    ...action,
-    confirmationScope: null,
-    confirmationDigest: null,
-  }).length);
-  assert.ok(validateStructuredAction({
-    ...action,
-    effect: 'provider-call',
-    providerUse: false,
-  }).length);
+  assert.deepEqual(
+    validateStructuredAction({
+      ...action,
+      id: 'show-status',
+      command: 'planr status --json',
+      effect: 'read-only',
+      requiresConfirmation: false,
+      confirmationScope: null,
+      confirmationDigest: null,
+    }),
+    [],
+  );
+  assert.ok(
+    validateStructuredAction({
+      ...action,
+      confirmationScope: null,
+      confirmationDigest: null,
+    }).length,
+  );
+  assert.ok(
+    validateStructuredAction({
+      ...action,
+      effect: 'provider-call',
+      providerUse: false,
+    }).length,
+  );
 });
 
 test('confirmations and evidence classifications are exact-digest-bound', () => {
@@ -373,10 +411,12 @@ test('confirmations and evidence classifications are exact-digest-bound', () => 
     },
   };
   assert.deepEqual(validateEvidenceDiagnostic(diagnostic), []);
-  assert.ok(validateEvidenceDiagnostic({
-    ...diagnostic,
-    classification: { ...diagnostic.classification, contentDigest: digest('0') },
-  }).some(({ rule }) => rule === 'exactEvidenceBinding'));
+  assert.ok(
+    validateEvidenceDiagnostic({
+      ...diagnostic,
+      classification: { ...diagnostic.classification, contentDigest: digest('0') },
+    }).some(({ rule }) => rule === 'exactEvidenceBinding'),
+  );
   assert.ok(validateEvidenceDiagnostic({ ...diagnostic, value: 'must never be present' }).length);
 });
 

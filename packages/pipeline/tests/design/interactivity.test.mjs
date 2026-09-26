@@ -12,7 +12,10 @@ test('a run is headless only when BOTH flags are supplied', () => {
 
 test('screens resolved → proceed', () => {
   assert.equal(decideThinSpec({ screenCount: 5 }).action, 'proceed');
-  assert.equal(decideThinSpec({ screenCount: 1, format: 'prototype', from: 'spec' }).action, 'proceed');
+  assert.equal(
+    decideThinSpec({ screenCount: 1, format: 'prototype', from: 'spec' }).action,
+    'proceed',
+  );
 });
 
 test('0 screens, interactive (no flags) → CLARIFY (ask, not dead-end)', () => {
@@ -22,16 +25,26 @@ test('0 screens, interactive (no flags) → CLARIFY (ask, not dead-end)', () => 
 });
 
 test('0 screens, headless (both flags), non-describe source → ABORT (cannot prompt)', () => {
-  assert.equal(decideThinSpec({ screenCount: 0, format: 'walkthrough', from: 'spec' }).action, 'abort');
+  assert.equal(
+    decideThinSpec({ screenCount: 0, format: 'walkthrough', from: 'spec' }).action,
+    'abort',
+  );
 });
 
 test('--from describe always proceeds (derives screens from the brief)', () => {
   assert.equal(decideThinSpec({ screenCount: 0, from: 'describe' }).action, 'proceed');
-  assert.equal(decideThinSpec({ screenCount: 0, from: 'describe', format: 'prototype' }).action, 'proceed');
+  assert.equal(
+    decideThinSpec({ screenCount: 0, from: 'describe', format: 'prototype' }).action,
+    'proceed',
+  );
 });
 
 test('every decision carries a reason', () => {
-  for (const input of [{ screenCount: 3 }, { screenCount: 0 }, { screenCount: 0, format: 'x', from: 'spec' }]) {
+  for (const input of [
+    { screenCount: 3 },
+    { screenCount: 0 },
+    { screenCount: 0, format: 'x', from: 'spec' },
+  ]) {
     assert.ok(decideThinSpec(input).reason.length > 0);
   }
 });

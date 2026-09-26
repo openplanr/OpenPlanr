@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { existsSync, lstatSync, readFileSync, realpathSync, readdirSync } from 'node:fs';
+import { existsSync, lstatSync, readdirSync, readFileSync, realpathSync } from 'node:fs';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -40,9 +40,10 @@ function declaredAssetPaths(manifest, violations) {
   const entryIsValid = typeof manifest.entry === 'string' && manifest.entry === 'index.html';
   if (!entryIsValid) violations.push('dashboard manifest entry must be index.html');
 
-  const assetsAreValid = Array.isArray(manifest.assets)
-    && manifest.assets.length > 0
-    && manifest.assets.every((asset) => typeof asset === 'string' && asset.length > 0);
+  const assetsAreValid =
+    Array.isArray(manifest.assets) &&
+    manifest.assets.length > 0 &&
+    manifest.assets.every((asset) => typeof asset === 'string' && asset.length > 0);
   if (!assetsAreValid) {
     violations.push('dashboard manifest assets must be a non-empty array of paths');
   }
@@ -82,14 +83,14 @@ function expectedAssetDigests(manifest, declared, violations) {
   for (const asset of declared) {
     const digest = manifest.assetDigests[asset];
     if (
-      !isRecord(digest)
-      || Object.keys(digest).length !== 2
-      || !Object.hasOwn(digest, 'bytes')
-      || !Object.hasOwn(digest, 'sha256')
-      || !Number.isSafeInteger(digest.bytes)
-      || digest.bytes < 0
-      || typeof digest.sha256 !== 'string'
-      || !SHA256.test(digest.sha256)
+      !isRecord(digest) ||
+      Object.keys(digest).length !== 2 ||
+      !Object.hasOwn(digest, 'bytes') ||
+      !Object.hasOwn(digest, 'sha256') ||
+      !Number.isSafeInteger(digest.bytes) ||
+      digest.bytes < 0 ||
+      typeof digest.sha256 !== 'string' ||
+      !SHA256.test(digest.sha256)
     ) {
       violations.push(`dashboard manifest asset digest is invalid: ${safeAssetPath(asset)}`);
       continue;

@@ -3,14 +3,36 @@ export type DesignHandoffStatus = 'ready' | 'attention' | 'blocked' | 'stale';
 export type DesignHandoffCheckStatus = 'pass' | 'attention' | 'blocked' | 'stale';
 export type DesignHandoffSchema = Readonly<Record<string, unknown>>;
 
-export interface DesignHandoffAction { id: string; label: string }
+export interface DesignHandoffAction {
+  id: string;
+  label: string;
+}
 export interface DesignHandoffEvidenceReference {
   id: string;
-  kind: 'design-revision' | 'selected-direction' | 'design-specification' | 'rendered-verification' | 'review-context' | 'review-feedback' | 'review-metadata' | 'review-handoff' | 'screen' | 'frame' | 'component' | 'state' | 'flow' | 'token' | 'review-decision' | 'element-anchor';
+  kind:
+    | 'design-revision'
+    | 'selected-direction'
+    | 'design-specification'
+    | 'rendered-verification'
+    | 'review-context'
+    | 'review-feedback'
+    | 'review-metadata'
+    | 'review-handoff'
+    | 'screen'
+    | 'frame'
+    | 'component'
+    | 'state'
+    | 'flow'
+    | 'token'
+    | 'review-decision'
+    | 'element-anchor';
   path: string;
   revision?: DesignHandoffDigest;
   digest?: DesignHandoffDigest;
-  anchor?: { section: string } | { screenId: string; elementId?: string } | { reviewId: string; pinId: string };
+  anchor?:
+    | { section: string }
+    | { screenId: string; elementId?: string }
+    | { reviewId: string; pinId: string };
 }
 export interface DesignHandoffReadinessCheck {
   id: string;
@@ -58,10 +80,28 @@ export interface DesignImplementationHandoff {
     reviewHandoff: { version: number; contentDigest: DesignHandoffDigest };
   };
   sources: DesignHandoffEvidenceReference[];
-  requirements: Array<{ id: string; kind: 'behavior' | 'visual-state' | 'responsive' | 'accessibility' | 'content-data-assumption' | 'constraint' | 'verification-intent'; statement: string; sourceRefs: string[]; verification: string[] }>;
+  requirements: Array<{
+    id: string;
+    kind:
+      | 'behavior'
+      | 'visual-state'
+      | 'responsive'
+      | 'accessibility'
+      | 'content-data-assumption'
+      | 'constraint'
+      | 'verification-intent';
+    statement: string;
+    sourceRefs: string[];
+    verification: string[];
+  }>;
   contentDigest: DesignHandoffDigest;
   markdown: string;
-  approval?: { actorId: string; approvedAt: string; contentDigest: DesignHandoffDigest; authority: 'prepare-plan' };
+  approval?: {
+    actorId: string;
+    approvedAt: string;
+    contentDigest: DesignHandoffDigest;
+    authority: 'prepare-plan';
+  };
   supersededBy?: { id: string; version: number; contentDigest: DesignHandoffDigest };
   revocation?: { actorId: string; revokedAt: string; reason: string };
 }
@@ -70,7 +110,11 @@ export interface DesignPlanningLineage {
   schemaVersion: '1.0.0';
   handoff: { id: string; version: number; contentDigest: DesignHandoffDigest };
   specId: string;
-  mappings: Array<{ requirementId: string; acceptanceRefs: Array<{ storyId: string; acceptanceId: string }>; taskIds: string[] }>;
+  mappings: Array<{
+    requirementId: string;
+    acceptanceRefs: Array<{ storyId: string; acceptanceId: string }>;
+    taskIds: string[];
+  }>;
 }
 
 export declare const DESIGN_HANDOFF_PROTOCOL_VERSION: '1.11.0';
@@ -85,8 +129,20 @@ export declare const DESIGN_IMPLEMENTATION_HANDOFF_SCHEMA: DesignHandoffSchema;
 export declare const DESIGN_PLANNING_LINEAGE_SCHEMA: DesignHandoffSchema;
 export declare const DESIGN_HANDOFF_SCHEMAS: Readonly<Record<string, DesignHandoffSchema>>;
 export declare function isDesignHandoffRelativePath(value: unknown): value is string;
-export declare function assertDesignHandoffContract<T>(value: T, schemaOrName: DesignHandoffSchema | keyof typeof DESIGN_HANDOFF_SCHEMAS): T;
-export declare function assertDesignHandoffReadiness<T extends DesignHandoffReadiness | DesignHandoffReadinessAbsence>(value: T): T;
-export declare function designImplementationHandoffDigest(value: DesignImplementationHandoff): DesignHandoffDigest;
-export declare function assertDesignImplementationHandoff<T extends DesignImplementationHandoff>(value: T): T;
-export declare function assertDesignPlanningLineage<T extends DesignPlanningLineage>(value: T, handoff?: DesignImplementationHandoff): T;
+export declare function assertDesignHandoffContract<T>(
+  value: T,
+  schemaOrName: DesignHandoffSchema | keyof typeof DESIGN_HANDOFF_SCHEMAS,
+): T;
+export declare function assertDesignHandoffReadiness<
+  T extends DesignHandoffReadiness | DesignHandoffReadinessAbsence,
+>(value: T): T;
+export declare function designImplementationHandoffDigest(
+  value: DesignImplementationHandoff,
+): DesignHandoffDigest;
+export declare function assertDesignImplementationHandoff<T extends DesignImplementationHandoff>(
+  value: T,
+): T;
+export declare function assertDesignPlanningLineage<T extends DesignPlanningLineage>(
+  value: T,
+  handoff?: DesignImplementationHandoff,
+): T;

@@ -21,7 +21,6 @@
   ],
   "scripts": {
     "build": "node --check src/index.mjs && node --check src/portable-sync.mjs",
-    "lint": "node --check src/index.mjs && node --check src/portable-sync.mjs",
     "test": "node --test tests/*.test.mjs"
   },
   "engines": {

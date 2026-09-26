@@ -3,26 +3,28 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-
-import { validateProtocolArtifact } from '../lib/protocol/contracts.mjs';
 import {
-  RELEASE_MANIFEST_CLAIM_EDGES,
-  RELEASE_REPOSITORY_KEYS,
+  assertPackedWorkspaceProof,
+  readPackedWorkspaceProof,
+} from '../lib/ecosystem/packed-workspace-proof.mjs';
+import {
   assertEcosystemManifestProjection,
   assertPipelineCompatibilityDeclaration,
   buildManifestClaimSet,
   buildReleaseLedger,
   buildReleaseLedgerReceipt,
+  RELEASE_MANIFEST_CLAIM_EDGES,
+  RELEASE_REPOSITORY_KEYS,
   releaseLedgerAbsence,
   releaseLedgerRowsFromProofs,
   renderCompatibilityDisplay,
   renderLedgerVersionProjection,
 } from '../lib/ecosystem/release-ledger.mjs';
 import {
-  assertPackedWorkspaceProof,
-  readPackedWorkspaceProof,
-} from '../lib/ecosystem/packed-workspace-proof.mjs';
-import { discoverEcosystemRepositories, resolveWorkspaceRoot } from '../lib/ecosystem/workspace-discovery.mjs';
+  discoverEcosystemRepositories,
+  resolveWorkspaceRoot,
+} from '../lib/ecosystem/workspace-discovery.mjs';
+import { validateProtocolArtifact } from '../lib/protocol/contracts.mjs';
 import { sha256Jcs } from '../lib/protocol/jcs.mjs';
 
 const CONTRACT_VERSION = '1.3.0';
@@ -31,11 +33,12 @@ const rawArgs = process.argv.slice(2);
 const args = new Set(rawArgs);
 const supported = new Set(['--json', '--strict']);
 const valued = ['--proof', '--workspace-root'];
-const unknown = rawArgs.filter((arg, index) => (
-  !supported.has(arg)
-  && !valued.some((name) => arg === name || arg.startsWith(`${name}=`))
-  && !valued.includes(rawArgs[index - 1])
-));
+const unknown = rawArgs.filter(
+  (arg, index) =>
+    !supported.has(arg) &&
+    !valued.some((name) => arg === name || arg.startsWith(`${name}=`)) &&
+    !valued.includes(rawArgs[index - 1]),
+);
 
 const refusals = [];
 const absences = [];
@@ -54,7 +57,7 @@ function optionValue(name) {
   const inline = rawArgs.find((arg) => arg.startsWith(prefix));
   if (inline) return inline.slice(prefix.length);
   const index = rawArgs.indexOf(name);
-  return index === -1 ? null : rawArgs[index + 1] ?? null;
+  return index === -1 ? null : (rawArgs[index + 1] ?? null);
 }
 
 function readJson(path) {
@@ -71,7 +74,10 @@ if (unknown.length > 0) {
 }
 
 const workspace = resolveWorkspaceRoot({ pipelineRoot: root, argv: rawArgs });
-const discovered = discoverEcosystemRepositories({ pipelineRoot: root, workspaceRoot: workspace.path });
+const discovered = discoverEcosystemRepositories({
+  pipelineRoot: root,
+  workspaceRoot: workspace.path,
+});
 const consolidated = discovered.layout === 'consolidated-monorepo';
 const releasePackageKeys = consolidated ? ['pipeline', 'cli'] : RELEASE_REPOSITORY_KEYS;
 const catalogDomains = consolidated ? ['skills', 'marketplace'] : [];
@@ -93,10 +99,19 @@ for (const repositoryKey of releasePackageKeys) {
   const manifestPath = join(repository.path, 'package.json');
   const declared = existsSync(manifestPath) ? readJson(manifestPath) : null;
   if (!declared) {
-    absent(`package.${repositoryKey}`, existsSync(manifestPath) ? 'input-unreadable' : 'input-missing', repositoryKey);
+    absent(
+      `package.${repositoryKey}`,
+      existsSync(manifestPath) ? 'input-unreadable' : 'input-missing',
+      repositoryKey,
+    );
     continue;
   }
-  packages[repositoryKey] = { name: declared.name, version: declared.version, root: repository.path, raw: declared };
+  packages[repositoryKey] = {
+    name: declared.name,
+    version: declared.version,
+    root: repository.path,
+    raw: declared,
+  };
 }
 
 const marketplaceRoot = discovered.repositories.marketplace?.path ?? null;
@@ -108,19 +123,38 @@ const manifestShape = Array.isArray(manifest?.adapters)
     ? 'consolidated'
     : 'unknown';
 if (manifest === null) {
-  absent('manifest.ecosystem', manifestPath === null ? 'repository-not-discovered' : 'input-unreadable', 'marketplace');
+  absent(
+    'manifest.ecosystem',
+    manifestPath === null ? 'repository-not-discovered' : 'input-unreadable',
+    'marketplace',
+  );
 } else if (manifestShape === 'release') {
-  const schemaErrors = validateProtocolArtifact('ecosystem-manifest', manifest, { protocolVersion: CONTRACT_VERSION });
+  const schemaErrors = validateProtocolArtifact('ecosystem-manifest', manifest, {
+    protocolVersion: CONTRACT_VERSION,
+  });
   if (schemaErrors.length > 0) {
-    refuse('E_RELEASE_LEDGER_MANIFEST_DRIFT', `the emitted manifest does not satisfy its published contract: ${schemaErrors[0].path} ${schemaErrors[0].detail}`, 'marketplace');
+    refuse(
+      'E_RELEASE_LEDGER_MANIFEST_DRIFT',
+      `the emitted manifest does not satisfy its published contract: ${schemaErrors[0].path} ${schemaErrors[0].detail}`,
+      'marketplace',
+    );
   }
 
-  for (const [component, repositoryKey] of [['cli', 'cli'], ['pipeline', 'pipeline'], ['skills', 'skills'], ['marketplace', 'marketplace']]) {
+  for (const [component, repositoryKey] of [
+    ['cli', 'cli'],
+    ['pipeline', 'pipeline'],
+    ['skills', 'skills'],
+    ['marketplace', 'marketplace'],
+  ]) {
     const declared = packages[repositoryKey];
     if (!declared) continue;
     const stated = manifest.components?.[component]?.version ?? null;
     if (stated !== declared.version) {
-      refuse('E_RELEASE_LEDGER_MANIFEST_DRIFT', `the manifest states ${component} ${stated} while that repository declares ${declared.version}`, repositoryKey);
+      refuse(
+        'E_RELEASE_LEDGER_MANIFEST_DRIFT',
+        `the manifest states ${component} ${stated} while that repository declares ${declared.version}`,
+        repositoryKey,
+      );
     }
   }
 
@@ -130,28 +164,47 @@ if (manifest === null) {
   for (const edge of RELEASE_MANIFEST_CLAIM_EDGES) {
     const producer = packages[edge.producer];
     if (!producer) continue;
-    const expected = renderCompatibilityDisplay({ derivation: edge.derivation, declaredVersion: producer.version });
+    const expected = renderCompatibilityDisplay({
+      derivation: edge.derivation,
+      declaredVersion: producer.version,
+    });
     const rendered = edge.path.endsWith('[].pipelineRange')
       ? (manifest.adapters ?? []).map((adapter) => adapter?.pipelineRange ?? null)
       : [edge.path.split('.').reduce((value, part) => value?.[part], manifest) ?? null];
     for (const value of rendered) {
       if (value !== expected) {
-        refuse('E_RELEASE_LEDGER_MANIFEST_DRIFT', `${edge.path} renders ${String(value)} where the bound ${edge.producer} row derives ${expected}`, edge.consumer);
+        refuse(
+          'E_RELEASE_LEDGER_MANIFEST_DRIFT',
+          `${edge.path} renders ${String(value)} where the bound ${edge.producer} row derives ${expected}`,
+          edge.consumer,
+        );
       }
     }
-    derived.push({ path: edge.path, consumer: edge.consumer, producer: edge.producer, display: expected });
+    derived.push({
+      path: edge.path,
+      consumer: edge.consumer,
+      producer: edge.producer,
+      display: expected,
+    });
   }
 } else if (manifestShape === 'consolidated') {
   // The consolidated workspace manifest is an integration/preservation
   // manifest, not the frozen marketplace release-manifest contract. Verify
   // the compatibility statements it actually publishes without pretending it
   // carries the removed skills/marketplace release rows.
-  for (const [component, repositoryKey] of [['cli', 'cli'], ['pipeline', 'pipeline']]) {
+  for (const [component, repositoryKey] of [
+    ['cli', 'cli'],
+    ['pipeline', 'pipeline'],
+  ]) {
     const declared = packages[repositoryKey];
     if (!declared) continue;
     const stated = manifest.components?.[component]?.version ?? null;
     if (stated !== declared.version) {
-      refuse('E_RELEASE_LEDGER_MANIFEST_DRIFT', `the consolidated manifest states ${component} ${stated} while that package declares ${declared.version}`, repositoryKey);
+      refuse(
+        'E_RELEASE_LEDGER_MANIFEST_DRIFT',
+        `the consolidated manifest states ${component} ${stated} while that package declares ${declared.version}`,
+        repositoryKey,
+      );
     }
   }
 
@@ -159,11 +212,19 @@ if (manifest === null) {
   if (pipeline) {
     const optionalPipeline = manifest.compatibility?.cliOptionalPipeline?.version ?? null;
     if (optionalPipeline !== pipeline.version) {
-      refuse('E_RELEASE_LEDGER_MANIFEST_DRIFT', `the consolidated manifest states optional pipeline ${optionalPipeline} while that package declares ${pipeline.version}`, 'cli');
+      refuse(
+        'E_RELEASE_LEDGER_MANIFEST_DRIFT',
+        `the consolidated manifest states optional pipeline ${optionalPipeline} while that package declares ${pipeline.version}`,
+        'cli',
+      );
     }
     for (const host of manifest.adapters.hosts) {
       if (host?.version !== pipeline.version) {
-        refuse('E_RELEASE_LEDGER_MANIFEST_DRIFT', `adapter host ${String(host?.id)} states ${String(host?.version)} while the pipeline package declares ${pipeline.version}`, 'marketplace');
+        refuse(
+          'E_RELEASE_LEDGER_MANIFEST_DRIFT',
+          `adapter host ${String(host?.id)} states ${String(host?.version)} while the pipeline package declares ${pipeline.version}`,
+          'marketplace',
+        );
       }
     }
     derived.push({
@@ -180,21 +241,31 @@ if (manifest === null) {
     });
   }
 } else {
-  refuse('E_RELEASE_LEDGER_MANIFEST_DRIFT', 'the ecosystem manifest has neither the published release shape nor the consolidated integration shape', 'marketplace');
+  refuse(
+    'E_RELEASE_LEDGER_MANIFEST_DRIFT',
+    'the ecosystem manifest has neither the published release shape nor the consolidated integration shape',
+    'marketplace',
+  );
 }
 
 // The legacy skills repository keeps its declared compatibility string, but
 // that string is resolved against the pipeline row rather than trusted. In the
 // consolidated workspace skills are a generated catalog domain, not another
 // published package row.
-const skillsDeclaration = consolidated ? null : packages.skills?.raw?.pipelineCompatibility ?? null;
+const skillsDeclaration = consolidated
+  ? null
+  : (packages.skills?.raw?.pipelineCompatibility ?? null);
 if (!consolidated) {
   if (skillsDeclaration === null) {
     absent('declaration.skills.pipelineCompatibility', 'input-missing', 'skills');
   } else if (packages.pipeline) {
     const expected = `planr-pipeline@${packages.pipeline.version}`;
     if (skillsDeclaration !== expected) {
-      refuse('E_RELEASE_LEDGER_CLAIM_DRIFT', `skills declares ${skillsDeclaration} where the pipeline row carries ${packages.pipeline.version}`, 'skills');
+      refuse(
+        'E_RELEASE_LEDGER_CLAIM_DRIFT',
+        `skills declares ${skillsDeclaration} where the pipeline row carries ${packages.pipeline.version}`,
+        'skills',
+      );
     }
   }
 }
@@ -234,7 +305,12 @@ if (proofPath === null) {
       ecosystemProof: proof.ecosystem,
       packageProof: proof.package ?? null,
       payloads: proof.payloads ?? {},
-      packages: Object.fromEntries(Object.entries(packages).map(([key, value]) => [key, { name: value.name, version: value.version }])),
+      packages: Object.fromEntries(
+        Object.entries(packages).map(([key, value]) => [
+          key,
+          { name: value.name, version: value.version },
+        ]),
+      ),
       terminalReceipts: proof.terminalReceipts ?? {},
     });
     absences.push(...assembled.absences);
@@ -249,7 +325,9 @@ if (proofPath === null) {
         assertEcosystemManifestProjection({ ledger, claims, manifest });
         assertPipelineCompatibilityDeclaration(skillsDeclaration, {
           ledger,
-          pipelinePayloadDigest: ledger.rows.find(({ repositoryKey }) => repositoryKey === 'pipeline').payloadDigest,
+          pipelinePayloadDigest: ledger.rows.find(
+            ({ repositoryKey }) => repositoryKey === 'pipeline',
+          ).payloadDigest,
         });
       } catch (error) {
         refuse(error.code ?? 'E_RELEASE_LEDGER_CONTRACT_INVALID', error.message);
@@ -282,7 +360,10 @@ const report = {
   projections: derived.map(({ path, display }) => ({ path, display })),
   versionProjections: Object.entries(packages).map(([repositoryKey, value]) => ({
     repositoryKey,
-    projection: renderLedgerVersionProjection({ packageName: value.name, declaredVersion: value.version }),
+    projection: renderLedgerVersionProjection({
+      packageName: value.name,
+      declaredVersion: value.version,
+    }),
   })),
   refusals,
   unproven: absences.map(({ input, reason, repositoryKey }) => ({ input, reason, repositoryKey })),
@@ -291,9 +372,13 @@ const report = {
 if (args.has('--json')) {
   process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
 } else {
-  process.stdout.write(`Release ledger derivation: ${ok ? 'PASS' : 'FAIL'} (${derived.length} rendered claims derived, ${refusals.length} drift refusal(s), ${absences.length} unproven input(s))\n`);
-  for (const refusal of refusals) process.stdout.write(`  refused ${refusal.code}: ${refusal.reason}\n`);
-  for (const absence of absences) process.stdout.write(`  unproven ${absence.input}: ${absence.reason}\n`);
+  process.stdout.write(
+    `Release ledger derivation: ${ok ? 'PASS' : 'FAIL'} (${derived.length} rendered claims derived, ${refusals.length} drift refusal(s), ${absences.length} unproven input(s))\n`,
+  );
+  for (const refusal of refusals)
+    process.stdout.write(`  refused ${refusal.code}: ${refusal.reason}\n`);
+  for (const absence of absences)
+    process.stdout.write(`  unproven ${absence.input}: ${absence.reason}\n`);
 }
 
 process.exit(ok ? 0 : 1);

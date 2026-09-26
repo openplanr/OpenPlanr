@@ -10,11 +10,10 @@
   ],
   "scripts": {
     "build": "vite build --config vite.config.ts",
-    "lint": "biome check src/ tests/",
     "typecheck": "tsc -p tsconfig.json",
     "test": "npm run test:architecture",
     "test:architecture": "node --test tests/architecture/*.test.mjs",
-    "check": "npm run test:architecture && npm run typecheck && npm run lint && npm run build"
+    "check": "npm run test:architecture && npm run typecheck && npm run build"
   },
   "dependencies": {
     "@fontsource-variable/geist": "5.3.0",

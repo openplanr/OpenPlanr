@@ -20,17 +20,38 @@ const WINDOWS_DRIVE = /^[A-Za-z]:/u;
  */
 export function assertSafeSourcePath(path, label = 'source path') {
   if (typeof path !== 'string' || path.length === 0) {
-    throw new SkillRuntimeError('E_SKILL_SOURCE_PATH_INVALID', `${label} must be a non-empty repository-relative path.`, { path });
+    throw new SkillRuntimeError(
+      'E_SKILL_SOURCE_PATH_INVALID',
+      `${label} must be a non-empty repository-relative path.`,
+      { path },
+    );
   }
-  if (path.includes('\0') || path.includes('\\') || path.startsWith('/') || WINDOWS_DRIVE.test(path)) {
-    throw new SkillRuntimeError('E_SKILL_SOURCE_PATH_INVALID', `${label} ${path} must be repository-relative, not absolute.`, { path });
+  if (
+    path.includes('\0') ||
+    path.includes('\\') ||
+    path.startsWith('/') ||
+    WINDOWS_DRIVE.test(path)
+  ) {
+    throw new SkillRuntimeError(
+      'E_SKILL_SOURCE_PATH_INVALID',
+      `${label} ${path} must be repository-relative, not absolute.`,
+      { path },
+    );
   }
   const segments = path.split('/');
   if (segments.includes('..')) {
-    throw new SkillRuntimeError('E_SKILL_SOURCE_PATH_ESCAPE', `${label} ${path} may not traverse out of the skill directory with '..'.`, { path });
+    throw new SkillRuntimeError(
+      'E_SKILL_SOURCE_PATH_ESCAPE',
+      `${label} ${path} may not traverse out of the skill directory with '..'.`,
+      { path },
+    );
   }
   if (segments.some((segment) => segment.length === 0 || segment === '.')) {
-    throw new SkillRuntimeError('E_SKILL_SOURCE_PATH_INVALID', `${label} ${path} must use canonical repository-relative segments.`, { path });
+    throw new SkillRuntimeError(
+      'E_SKILL_SOURCE_PATH_INVALID',
+      `${label} ${path} must use canonical repository-relative segments.`,
+      { path },
+    );
   }
   return path;
 }
@@ -41,7 +62,11 @@ export { sha256Bytes as sha256 };
 function unquote(value) {
   const trimmed = value.trim();
   if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
-    try { return JSON.parse(trimmed); } catch { return trimmed.slice(1, -1); }
+    try {
+      return JSON.parse(trimmed);
+    } catch {
+      return trimmed.slice(1, -1);
+    }
   }
   return trimmed;
 }
@@ -49,7 +74,11 @@ function unquote(value) {
 export function parseMarkdownAsset(bytes, { expectedName } = {}) {
   const source = canonicalText(bytes);
   const match = source.match(FRONTMATTER);
-  if (!match) throw new SkillRuntimeError('E_MARKDOWN_FRONTMATTER_INVALID', 'Markdown asset requires one closed YAML frontmatter block.');
+  if (!match)
+    throw new SkillRuntimeError(
+      'E_MARKDOWN_FRONTMATTER_INVALID',
+      'Markdown asset requires one closed YAML frontmatter block.',
+    );
   const fields = {};
   const lines = match[1].split('\n');
   for (const line of lines) {
@@ -58,23 +87,45 @@ export function parseMarkdownAsset(bytes, { expectedName } = {}) {
     fields[line.slice(0, separator).trim()] = unquote(line.slice(separator + 1));
   }
   if (!fields.name || !fields.description || (expectedName && fields.name !== expectedName)) {
-    throw new SkillRuntimeError('E_MARKDOWN_IDENTITY_INVALID', `Markdown identity must match ${expectedName ?? 'its declared name'}.`, { expectedName, actualName: fields.name });
+    throw new SkillRuntimeError(
+      'E_MARKDOWN_IDENTITY_INVALID',
+      `Markdown identity must match ${expectedName ?? 'its declared name'}.`,
+      { expectedName, actualName: fields.name },
+    );
   }
-  if (!match[2].endsWith('\n')) throw new SkillRuntimeError('E_MARKDOWN_NEWLINE_INVALID', `Markdown asset ${fields.name} must end with a newline.`);
+  if (!match[2].endsWith('\n'))
+    throw new SkillRuntimeError(
+      'E_MARKDOWN_NEWLINE_INVALID',
+      `Markdown asset ${fields.name} must end with a newline.`,
+    );
   return Object.freeze({ source, frontmatter: match[1], lines, fields, body: match[2] });
 }
 
 export function renderTemplate(template, values) {
   const used = new Set();
   const rendered = canonicalText(template).replace(TOKEN, (token, key) => {
-    if (!Object.hasOwn(values, key)) throw new SkillRuntimeError('E_TEMPLATE_VALUE_MISSING', `No value was supplied for ${token}.`);
+    if (!Object.hasOwn(values, key))
+      throw new SkillRuntimeError(
+        'E_TEMPLATE_VALUE_MISSING',
+        `No value was supplied for ${token}.`,
+      );
     used.add(key);
     return String(values[key]);
   });
   const unresolved = [...rendered.matchAll(TOKEN)].map((match) => match[0]);
-  if (unresolved.length > 0) throw new SkillRuntimeError('E_TEMPLATE_TOKEN_UNRESOLVED', 'Rendered asset has unresolved template tokens.', { unresolved });
+  if (unresolved.length > 0)
+    throw new SkillRuntimeError(
+      'E_TEMPLATE_TOKEN_UNRESOLVED',
+      'Rendered asset has unresolved template tokens.',
+      { unresolved },
+    );
   const unused = Object.keys(values).filter((key) => !used.has(key));
-  if (unused.length > 0) throw new SkillRuntimeError('E_TEMPLATE_VALUE_UNUSED', 'Template values were supplied but not consumed.', { unused });
+  if (unused.length > 0)
+    throw new SkillRuntimeError(
+      'E_TEMPLATE_VALUE_UNUSED',
+      'Template values were supplied but not consumed.',
+      { unused },
+    );
   return rendered;
 }
 
@@ -111,7 +162,9 @@ export function serializeYamlScalarFragments(value) {
 }
 
 export function serializeYamlScalar(value) {
-  return serializeYamlScalarFragments(value).map((fragment) => fragment.text).join('');
+  return serializeYamlScalarFragments(value)
+    .map((fragment) => fragment.text)
+    .join('');
 }
 
 export function renderCursorSkill(bytes, id, template, { quoteDescription = false } = {}) {
@@ -157,10 +210,16 @@ export function renderHostTokens(bytes, host) {
   const values = HOST_SUBSTITUTIONS[host];
   if (!values) throw new SkillRuntimeError('E_HOST_INVALID', `Unknown adapter host ${host}.`);
   const requested = [...canonicalText(bytes).matchAll(TOKEN)].map((match) => match[1]);
-  const selected = Object.fromEntries([...new Set(requested)].map((key) => {
-    if (!Object.hasOwn(values, key)) throw new SkillRuntimeError('E_TEMPLATE_VALUE_MISSING', `No host value was supplied for {{${key}}}.`);
-    return [key, values[key]];
-  }));
+  const selected = Object.fromEntries(
+    [...new Set(requested)].map((key) => {
+      if (!Object.hasOwn(values, key))
+        throw new SkillRuntimeError(
+          'E_TEMPLATE_VALUE_MISSING',
+          `No host value was supplied for {{${key}}}.`,
+        );
+      return [key, values[key]];
+    }),
+  );
   return requested.length === 0 ? canonicalText(bytes) : renderTemplate(bytes, selected);
 }
 
@@ -177,7 +236,8 @@ export function renderRoleAsset(bytes, role, host, { aliasTemplate, cursorTempla
       TOOLS_LINE: toolsLine,
     });
   }
-  if (host === 'cursor') return `---\nname: ${role.id}\ndescription: ${parsed.fields.description}\n---\n\n<!-- Generated from ${role.source}. Legacy alias: ${role.alias}. -->\n\n${body}\n`;
+  if (host === 'cursor')
+    return `---\nname: ${role.id}\ndescription: ${parsed.fields.description}\n---\n\n<!-- Generated from ${role.source}. Legacy alias: ${role.alias}. -->\n\n${body}\n`;
   return `---\nname: ${role.id}\ndescription: ${parsed.fields.description}\n---\n\n<!-- Generated from ${role.source}. Legacy alias: ${role.alias}. -->\n\n${body}\n`;
 }
 
@@ -208,7 +268,8 @@ const HOST_MARKERS = Object.freeze({
 });
 
 const TOOL_INVOCATION = /\b(Bash|Read|Write|Edit|Glob|Grep)\(([^)\n]*)\)/gu;
-const NETWORK_COMMAND = /(?:\bBash\([^\n)]*\b(?:curl|wget|ssh|scp|sftp|nc)\b[^\n)]*\)|`(?:curl|wget|ssh|scp|sftp|nc)\b[^`]*`|^\s*\$?\s*(?:curl|wget|ssh|scp|sftp|nc)\b)/imu;
+const NETWORK_COMMAND =
+  /(?:\bBash\([^\n)]*\b(?:curl|wget|ssh|scp|sftp|nc)\b[^\n)]*\)|`(?:curl|wget|ssh|scp|sftp|nc)\b[^`]*`|^\s*\$?\s*(?:curl|wget|ssh|scp|sftp|nc)\b)/imu;
 const PLANR_OPERATION = /\b(?:planr|openplanr|opr)\s+([a-z][a-z0-9-]*)\b/gu;
 
 function normalizeToolName(tool) {
@@ -236,7 +297,10 @@ function declaredFrontmatterTools(bytes) {
   const line = String(bytes).match(/^allowed-tools:\s*(.+)$/mu)?.[1];
   if (!line) return [];
   const value = unquote(line);
-  return value.split(/,\s*/u).map((entry) => entry.trim()).filter(Boolean);
+  return value
+    .split(/,\s*/u)
+    .map((entry) => entry.trim())
+    .filter(Boolean);
 }
 
 /**
@@ -258,7 +322,12 @@ export function assertPortableAsset(path, bytes, host, authority) {
   }
   if (authority) rules.push(...(HOST_MARKERS[host] ?? []));
   const hit = rules.find(([, pattern]) => pattern.test(bytes));
-  if (hit) throw new SkillRuntimeError('E_GENERATED_ASSET_NOT_PORTABLE', `${path} contains ${hit[0]}.`, { path, host, violation: hit[0] });
+  if (hit)
+    throw new SkillRuntimeError('E_GENERATED_ASSET_NOT_PORTABLE', `${path} contains ${hit[0]}.`, {
+      path,
+      host,
+      violation: hit[0],
+    });
 
   if (authority) {
     const allowedTools = authority.allowedTools ?? [];
@@ -271,7 +340,13 @@ export function assertPortableAsset(path, bytes, host, authority) {
         throw new SkillRuntimeError(
           'E_GENERATED_ASSET_TOOL_UNDECLARED',
           `${path} invokes ${invocation}, which is outside the selected host profile's tool ceiling.`,
-          { path, host, tool: invocation, allowedTools, repair: `Remove ${invocation} or declare an authority-compatible tool in the selected host profile.` },
+          {
+            path,
+            host,
+            tool: invocation,
+            allowedTools,
+            repair: `Remove ${invocation} or declare an authority-compatible tool in the selected host profile.`,
+          },
         );
       }
     }
@@ -280,7 +355,12 @@ export function assertPortableAsset(path, bytes, host, authority) {
       throw new SkillRuntimeError(
         'E_GENERATED_ASSET_NETWORK_UNDECLARED',
         `${path} requires network access but the selected host profile allows none.`,
-        { path, host, repair: 'Remove the network requirement or select a profile whose authority permits read-only external access.' },
+        {
+          path,
+          host,
+          repair:
+            'Remove the network requirement or select a profile whose authority permits read-only external access.',
+        },
       );
     }
 
@@ -290,7 +370,13 @@ export function assertPortableAsset(path, bytes, host, authority) {
         throw new SkillRuntimeError(
           'E_GENERATED_ASSET_OPERATION_UNDECLARED',
           `${path} invokes runtime operation ${operation}, which the selected host profile does not declare.`,
-          { path, host, operation, allowedOperations: authority.allowedOperations ?? [], repair: `Remove the ${operation} invocation or declare it in the selected host profile's allowedOperations.` },
+          {
+            path,
+            host,
+            operation,
+            allowedOperations: authority.allowedOperations ?? [],
+            repair: `Remove the ${operation} invocation or declare it in the selected host profile's allowedOperations.`,
+          },
         );
       }
     }

@@ -23,12 +23,17 @@ export function packedPipelineVitePlugin() {
     throw new Error('Vite resolved planr-pipeline back to sibling source.');
   }
   const exportedPath = (specifier) => {
-    const subpath = specifier === 'planr-pipeline' ? '.' : `./${specifier.slice('planr-pipeline/'.length)}`;
+    const subpath =
+      specifier === 'planr-pipeline' ? '.' : `./${specifier.slice('planr-pipeline/'.length)}`;
     let target = manifest.exports?.[subpath];
     if (target === undefined) {
       const pattern = Object.entries(manifest.exports ?? {}).find(([key]) => {
         const star = key.indexOf('*');
-        return star >= 0 && subpath.startsWith(key.slice(0, star)) && subpath.endsWith(key.slice(star + 1));
+        return (
+          star >= 0 &&
+          subpath.startsWith(key.slice(0, star)) &&
+          subpath.endsWith(key.slice(star + 1))
+        );
       });
       if (pattern) {
         const [key, value] = pattern;
@@ -37,7 +42,7 @@ export function packedPipelineVitePlugin() {
         target = typeof value === 'string' ? value.replace('*', match) : value;
       }
     }
-    const selected = typeof target === 'string' ? target : target?.import ?? target?.default;
+    const selected = typeof target === 'string' ? target : (target?.import ?? target?.default);
     if (typeof selected !== 'string' || !selected.startsWith('./')) {
       throw new Error(`Packed pipeline does not export ${specifier} for import.`);
     }

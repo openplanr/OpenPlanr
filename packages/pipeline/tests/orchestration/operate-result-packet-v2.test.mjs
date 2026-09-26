@@ -1,21 +1,45 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-
-import { OPERATE_CONTRACT_CATALOG_V2 } from '../../lib/protocol/generated/contract-catalog-v2.mjs';
 import {
   createOperatingResultTemplateV2,
   operatingResultSchemaDependenciesV2,
 } from '../../lib/operate/result-packet-v2.mjs';
 import { preflightOperatingIntelligenceResultV2 } from '../../lib/operate/runtime-foundation.mjs';
 import { assertProtocolArtifact } from '../../lib/protocol/contracts.mjs';
+import { OPERATE_CONTRACT_CATALOG_V2 } from '../../lib/protocol/generated/contract-catalog-v2.mjs';
 
 const PROFILE_FIELDS = Object.freeze({
-  'strategy-finance': ['directionChanges', 'capitalAllocations', 'financialScenarios', 'costOfDelay'],
-  'technology-risk': ['objectiveConstraints', 'riskPortfolio', 'implicitArchitectureDecisions', 'riskiestChange'],
-  'product-activation': ['activationGaps', 'unvalidatedBets', 'orderedCuts', 'acceptanceCriteriaFindings'],
+  'strategy-finance': [
+    'directionChanges',
+    'capitalAllocations',
+    'financialScenarios',
+    'costOfDelay',
+  ],
+  'technology-risk': [
+    'objectiveConstraints',
+    'riskPortfolio',
+    'implicitArchitectureDecisions',
+    'riskiestChange',
+  ],
+  'product-activation': [
+    'activationGaps',
+    'unvalidatedBets',
+    'orderedCuts',
+    'acceptanceCriteriaFindings',
+  ],
   'growth-market': ['demandChanges', 'channelEconomics', 'positioningClaims', 'growthLoops'],
-  'operations-customer': ['deliveryCapacity', 'customerHealth', 'singlePointsOfFailure', 'renegotiations'],
-  'software-delivery': ['changeSurface', 'implementationRisks', 'implementationAlternatives', 'verificationGaps'],
+  'operations-customer': [
+    'deliveryCapacity',
+    'customerHealth',
+    'singlePointsOfFailure',
+    'renegotiations',
+  ],
+  'software-delivery': [
+    'changeSurface',
+    'implementationRisks',
+    'implementationAlternatives',
+    'verificationGaps',
+  ],
 });
 
 function role(roleId) {
@@ -52,7 +76,12 @@ function assignmentFor(roleId, assignmentKind, outputSchemaId, suffix = roleId) 
     capabilityGrantId: 'grt_packet_template_001',
     governedOperationId: null,
     attemptPolicy: { maxAttempts: 3, attempt: 1, timeoutMs: 300000 },
-    claim: { actorId: 'agent-packet', actorKind: 'agent', runtime: 'codex', claimId: 'clm_packet_001' },
+    claim: {
+      actorId: 'agent-packet',
+      actorKind: 'agent',
+      runtime: 'codex',
+      claimId: 'clm_packet_001',
+    },
     terminalOutcome: null,
     createdAt: '2026-08-20T08:00:00.000Z',
     availableAt: '2026-08-20T08:00:00.000Z',
@@ -99,7 +128,8 @@ test('all six Advisor profiles receive complete deterministic but unauthored tem
       first.analysis.executiveQuestionAnswers.map(({ questionId }) => questionId),
       assignment.analysisProfile.questionIds,
     );
-    for (const field of PROFILE_FIELDS[profileId]) assert.ok(field in first.analysis, `${profileId}:${field}`);
+    for (const field of PROFILE_FIELDS[profileId])
+      assert.ok(field in first.analysis, `${profileId}:${field}`);
     assert.throws(
       () => assertProtocolArtifact('operating-advisor-result', first, { protocolVersion: '2.0.0' }),
       (error) => error.code === 'E_PROTOCOL_ARTIFACT_INVALID',
@@ -109,20 +139,36 @@ test('all six Advisor profiles receive complete deterministic but unauthored tem
 });
 
 test('prepared-result preflight reports all bounded schema failures with JSON pointers before semantic validation', () => {
-  const assignment = assignmentFor('strategy-finance', 'advisor', 'operating-advisor-result', 'multi_error');
+  const assignment = assignmentFor(
+    'strategy-finance',
+    'advisor',
+    'operating-advisor-result',
+    'multi_error',
+  );
   const template = createOperatingResultTemplateV2({ assignment });
   const result = preflightOperatingIntelligenceResultV2({ value: template, assignment });
   assert.equal(result.valid, false);
-  assert.ok(result.issues.length > 1, 'one validation reports multiple independently actionable schema issues');
+  assert.ok(
+    result.issues.length > 1,
+    'one validation reports multiple independently actionable schema issues',
+  );
   assert.ok(result.issues.length <= 64, 'validation output remains deterministically bounded');
-  assert.ok(result.issues.every(({ path }) => path.startsWith('/')), 'every issue has a JSON pointer');
+  assert.ok(
+    result.issues.every(({ path }) => path.startsWith('/')),
+    'every issue has a JSON pointer',
+  );
   assert.ok(result.issues.some(({ path }) => path === '/summary'));
   assert.ok(result.issues.some(({ path }) => path === '/analysisMarkdown'));
   assert.ok(result.issues.every(({ code }) => code === 'RESULT_CONTRACT_INVALID'));
 });
 
 test('Challenger and Chair templates preserve exact predecessor-local references', () => {
-  const advisorAssignment = assignmentFor('strategy-finance', 'advisor', 'operating-advisor-result', 'advisor');
+  const advisorAssignment = assignmentFor(
+    'strategy-finance',
+    'advisor',
+    'operating-advisor-result',
+    'advisor',
+  );
   const advisorValue = {
     ...createOperatingResultTemplateV2({ assignment: advisorAssignment }),
     assignmentId: advisorAssignment.assignmentId,
@@ -146,15 +192,19 @@ test('Challenger and Chair templates preserve exact predecessor-local references
     inputArtifacts: [advisorDescriptor],
   });
   assert.deepEqual(challenger.advisorArtifactIds, [advisorDescriptor.artifactId]);
-  assert.deepEqual(challenger.reviewedClaims, [{
-    advisorArtifactId: advisorDescriptor.artifactId,
-    localClaimId: advisorValue.claims[0].localClaimId,
-  }]);
+  assert.deepEqual(challenger.reviewedClaims, [
+    {
+      advisorArtifactId: advisorDescriptor.artifactId,
+      localClaimId: advisorValue.claims[0].localClaimId,
+    },
+  ]);
   assert.deepEqual(
     challenger.questionCoverage.map(({ questionId }) => questionId),
     challengerAssignment.analysisProfile.questionIds,
   );
-  assert.ok(challenger.questionCoverage.every(({ disposition }) => disposition === 'not-applicable'));
+  assert.ok(
+    challenger.questionCoverage.every(({ disposition }) => disposition === 'not-applicable'),
+  );
 
   const finding = {
     localFindingId: `finding:${challengerAssignment.assignmentId}:1`,
@@ -187,11 +237,19 @@ test('Challenger and Chair templates preserve exact predecessor-local references
     chairAssignment.analysisProfile.questionIds,
   );
   assert.ok(chair.questionCoverage.every(({ disposition }) => disposition === 'not-applicable'));
-  assert.deepEqual(chair.dissent, [{ sourceArtifactId: challengerDescriptor.artifactId, ...dissent }]);
+  assert.deepEqual(chair.dissent, [
+    { sourceArtifactId: challengerDescriptor.artifactId, ...dissent },
+  ]);
   assert.deepEqual(
-    chair.sourceDispositions.map(({ sourceKind, localSourceId }) => ({ sourceKind, localSourceId })),
+    chair.sourceDispositions.map(({ sourceKind, localSourceId }) => ({
+      sourceKind,
+      localSourceId,
+    })),
     [
-      { sourceKind: 'advisor-outcome', localSourceId: `outcome:${advisorAssignment.assignmentId}:1` },
+      {
+        sourceKind: 'advisor-outcome',
+        localSourceId: `outcome:${advisorAssignment.assignmentId}:1`,
+      },
       { sourceKind: 'challenger-finding', localSourceId: finding.localFindingId },
       { sourceKind: 'challenger-dissent', localSourceId: dissent.localDissentId },
     ],
@@ -214,18 +272,20 @@ test('Challenger template preserves a missing Advisor as the exact typed role ga
     'operating-challenger-review',
     'missing_advisor',
   );
-  assignment.inputAbsences = [{
-    absenceId: 'abs_packet_missing_advisor_001',
-    kind: 'role',
-    roleId: 'growth-market',
-    roleKind: 'advisor',
-    roleVersion: '2.0.0',
-    absenceCode: 'dependency-failed',
-    reason: 'The selected Advisor reached a terminal failed state without a validated Artifact.',
-    recoveryDisposition: 'retry-or-record-role-gap',
-    sourceAssignmentId: 'asg_packet_missing_source_001',
-    sourceEventId: 'evt_packet_missing_source_001',
-  }];
+  assignment.inputAbsences = [
+    {
+      absenceId: 'abs_packet_missing_advisor_001',
+      kind: 'role',
+      roleId: 'growth-market',
+      roleKind: 'advisor',
+      roleVersion: '2.0.0',
+      absenceCode: 'dependency-failed',
+      reason: 'The selected Advisor reached a terminal failed state without a validated Artifact.',
+      recoveryDisposition: 'retry-or-record-role-gap',
+      sourceAssignmentId: 'asg_packet_missing_source_001',
+      sourceEventId: 'evt_packet_missing_source_001',
+    },
+  ];
   const [gap] = createOperatingResultTemplateV2({ assignment }).gaps;
   assert.deepEqual(gap, {
     localGapId: `gap:${assignment.assignmentId}:1`,
@@ -238,19 +298,26 @@ test('Challenger template preserves a missing Advisor as the exact typed role ga
     impact: '',
     recoveryPath: '',
   });
-  assert.equal(Object.hasOwn(gap, 'requirementId'), false, 'a role gap never fabricates an Evidence requirement');
+  assert.equal(
+    Object.hasOwn(gap, 'requirementId'),
+    false,
+    'a role gap never fabricates an Evidence requirement',
+  );
 });
 
 test('standalone result schema inventories are host-path-free and transitively complete', () => {
   assert.deepEqual(
-    operatingResultSchemaDependenciesV2('operating-advisor-result').map(({ kind, fileName }) => ({ kind, fileName })),
+    operatingResultSchemaDependenciesV2('operating-advisor-result').map(({ kind, fileName }) => ({
+      kind,
+      fileName,
+    })),
     [{ kind: 'operating-advisor-result', fileName: 'operating-advisor-result.schema.json' }],
   );
   const chair = operatingResultSchemaDependenciesV2('operating-decision-ledger');
-  assert.deepEqual(chair.map(({ fileName }) => fileName), [
-    'operating-decision-ledger.schema.json',
-    'operating-assignment.schema.json',
-  ]);
+  assert.deepEqual(
+    chair.map(({ fileName }) => fileName),
+    ['operating-decision-ledger.schema.json', 'operating-assignment.schema.json'],
+  );
   for (const dependency of chair) {
     assert.ok(Object.isFrozen(dependency));
     assert.ok(Object.isFrozen(dependency.schema));

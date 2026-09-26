@@ -52,7 +52,9 @@ export function imageDimensions(filePath) {
         return round(buf.readUInt32BE(16), buf.readUInt32BE(20));
       }
     }
-  } catch (e) { /* unreadable — fall through to the default frame */ }
+  } catch {
+    /* unreadable — fall through to the default frame */
+  }
   return { ...FALLBACK };
 }
 
@@ -72,14 +74,17 @@ function round(w, h) {
  */
 export function buildImageCanvasData({ variantId, label, src, width, height }) {
   const name = label || `Variant ${variantId}`;
-  const img = `<img src="${escapeHtml(src)}" alt="${escapeHtml(name)}" `
-    + `style="display:block;width:100%;height:auto" draggable="false" />`;
+  const img =
+    `<img src="${escapeHtml(src)}" alt="${escapeHtml(name)}" ` +
+    `style="display:block;width:100%;height:auto" draggable="false" />`;
   return {
-    sections: [{
-      id: `s-${variantId}`,
-      title: name,
-      artboards: [{ id: variantId, label: name, width, height, html: img }],
-    }],
+    sections: [
+      {
+        id: `s-${variantId}`,
+        title: name,
+        artboards: [{ id: variantId, label: name, width, height, html: img }],
+      },
+    ],
   };
 }
 

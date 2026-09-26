@@ -22,12 +22,7 @@ export const CLI_DASHBOARD_OUTPUT = resolve(workspaceRoot, 'packages/cli/dist/da
 
 function safeRelativePath(root, candidate) {
   const value = relative(root, candidate);
-  if (
-    value === ''
-    || value === '..'
-    || value.startsWith(`..${sep}`)
-    || isAbsolute(value)
-  ) {
+  if (value === '' || value === '..' || value.startsWith(`..${sep}`) || isAbsolute(value)) {
     throw new Error(`Dashboard asset path escapes custody root: ${candidate}`);
   }
   return value;
@@ -56,14 +51,17 @@ function assertRealDirectory(directory, label) {
 
 function inventory(directory, current = directory) {
   const files = [];
-  for (const entry of readdirSync(current, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name, 'en'))) {
+  for (const entry of readdirSync(current, { withFileTypes: true }).sort((a, b) =>
+    a.name.localeCompare(b.name, 'en'),
+  )) {
     const absolute = join(current, entry.name);
     const metadata = lstatSync(absolute);
     const path = safeRelativePath(directory, absolute).split(sep).join('/');
     if (entry.isSymbolicLink() || metadata.isSymbolicLink()) {
       throw new Error(`Dashboard asset custody refuses symbolic links: ${path}`);
     }
-    if (entry.isDirectory() && metadata.isDirectory()) files.push(...inventory(directory, absolute));
+    if (entry.isDirectory() && metadata.isDirectory())
+      files.push(...inventory(directory, absolute));
     else if (entry.isFile() && metadata.isFile()) files.push(Object.freeze({ path, absolute }));
     else throw new Error(`Dashboard asset custody accepts regular files only: ${path}`);
   }
@@ -73,7 +71,9 @@ function inventory(directory, current = directory) {
 export function dashboardAssetInventory(directory) {
   const root = resolve(directory);
   assertRealDirectory(root, 'Dashboard asset root');
-  return Object.freeze(inventory(root).map(({ path, absolute }) => Object.freeze({ path, absolute })));
+  return Object.freeze(
+    inventory(root).map(({ path, absolute }) => Object.freeze({ path, absolute })),
+  );
 }
 
 function digest(bytes) {
@@ -84,7 +84,13 @@ function inventoryDigest(files) {
   const hash = createHash('sha256');
   for (const file of files) {
     const bytes = readFileSync(file.absolute);
-    hash.update(file.path).update('\0').update(String(bytes.length)).update('\0').update(bytes).update('\0');
+    hash
+      .update(file.path)
+      .update('\0')
+      .update(String(bytes.length))
+      .update('\0')
+      .update(bytes)
+      .update('\0');
   }
   return `sha256:${hash.digest('hex')}`;
 }
@@ -126,13 +132,16 @@ function assertEqualCustody(source, destination) {
   for (let index = 0; index < source.files.length; index += 1) {
     const left = source.files[index];
     const right = destination.files[index];
-    if (left.path !== right.path || digest(readFileSync(left.absolute)) !== digest(readFileSync(right.absolute))) {
+    if (
+      left.path !== right.path ||
+      digest(readFileSync(left.absolute)) !== digest(readFileSync(right.absolute))
+    ) {
       throw new Error(`CLI dashboard copy drifted at ${left.path}.`);
     }
   }
   if (
-    source.assetManifestHash !== destination.assetManifestHash
-    || source.digest !== destination.digest
+    source.assetManifestHash !== destination.assetManifestHash ||
+    source.digest !== destination.digest
   ) {
     throw new Error('Dashboard custody metadata does not match.');
   }
@@ -175,7 +184,10 @@ export function copyDashboardAssets({
   assertRealDirectory(cliDist, 'CLI dist output');
   safeRelativePath(cliDist, destination);
 
-  const staging = resolve(cliDist, `.dashboard-copy-${process.pid}-${randomBytes(6).toString('hex')}`);
+  const staging = resolve(
+    cliDist,
+    `.dashboard-copy-${process.pid}-${randomBytes(6).toString('hex')}`,
+  );
   safeRelativePath(cliDist, staging);
   mkdirSync(staging);
   try {
@@ -202,6 +214,8 @@ export function copyDashboardAssets({
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const report = process.argv.includes('--check') ? checkDashboardAssetCopy() : copyDashboardAssets();
+  const report = process.argv.includes('--check')
+    ? checkDashboardAssetCopy()
+    : copyDashboardAssets();
   process.stdout.write(`${JSON.stringify(report)}\n`);
 }

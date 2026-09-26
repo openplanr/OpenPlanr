@@ -49,7 +49,7 @@ instead of degrading to a Tech-only ship. Two ways intent arrives:
 ```
 
 The format is chosen by a clarification prompt with a **recommended default** computed from
-the screen count (`lib/design/recommendFormat.mjs`); supplying `--format … --from …` skips
+the screen count (`lib/design/recommend-format.mjs`); supplying `--format … --from …` skips
 the prompt for CI. `design-spec.md` has **one writer per run** (PNGs → `designer-agent`,
 otherwise the generator). `/design` is a standalone command whose output `/plan`
 can consume; `/plan` prints a one-line nudge when UI intent is detected but no

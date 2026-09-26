@@ -16,33 +16,60 @@ const registry = JSON.parse(readFileSync(path.join(repoRoot, 'skills/registry.js
 const skillCount = registry.skills.length;
 
 // Changelogs are release history; CLAUDE.md and AGENTS.md are generated host guidance.
-const HOST_AND_CHANGELOG = (root) => [`${root}/CHANGELOG.md`, `${root}/CLAUDE.md`, `${root}/AGENTS.md`];
+const HOST_AND_CHANGELOG = (root) => [
+  `${root}/CHANGELOG.md`,
+  `${root}/CLAUDE.md`,
+  `${root}/AGENTS.md`,
+];
 
 const ROOTS = [
   { path: '.', recursive: false, extensions: ['.md'] },
   { path: 'docs', recursive: true, extensions: ['.md'], exclude: ['docs/generated'] },
   { path: '.github', recursive: true, extensions: ['.md', '.yml'], exclude: ['.github/workflows'] },
-  { path: 'packages/cli', recursive: false, extensions: ['.md'], exclude: HOST_AND_CHANGELOG('packages/cli') },
+  {
+    path: 'packages/cli',
+    recursive: false,
+    extensions: ['.md'],
+    exclude: HOST_AND_CHANGELOG('packages/cli'),
+  },
   { path: 'packages/cli/docs', recursive: true, extensions: ['.md'] },
-  { path: 'packages/pipeline', recursive: false, extensions: ['.md'], exclude: HOST_AND_CHANGELOG('packages/pipeline') },
-  { path: 'packages/pipeline/docs', recursive: true, extensions: ['.md'], exclude: ['packages/pipeline/docs/generated'] },
-  { path: 'packages/protocol', recursive: false, extensions: ['.md'], exclude: HOST_AND_CHANGELOG('packages/protocol') },
+  {
+    path: 'packages/pipeline',
+    recursive: false,
+    extensions: ['.md'],
+    exclude: HOST_AND_CHANGELOG('packages/pipeline'),
+  },
+  {
+    path: 'packages/pipeline/docs',
+    recursive: true,
+    extensions: ['.md'],
+    exclude: ['packages/pipeline/docs/generated'],
+  },
+  {
+    path: 'packages/protocol',
+    recursive: false,
+    extensions: ['.md'],
+    exclude: HOST_AND_CHANGELOG('packages/protocol'),
+  },
 ];
 
 const RULES = [
   {
     id: 'retired-command',
     message: 'retired CLI command; skills reason in the host and call only deterministic utilities',
-    pattern: /`planr (?:plan|spec decompose)(?:\s|`)|planr pipeline plan|\/planr-pipeline:|\$planr-pipeline:/gu,
+    pattern:
+      /`planr (?:plan|spec decompose)(?:\s|`)|planr pipeline plan|\/planr-pipeline:|\$planr-pipeline:/gu,
   },
   {
     id: 'retired-repository',
     message: 'retired or private repository; link into openplanr/OpenPlanr instead',
-    pattern: /github\.com\/openplanr\/(?:planr-pipeline|skills)\b|openplanr-web\b|openplanr-company(?![\w-])/gu,
+    pattern:
+      /github\.com\/openplanr\/(?:planr-pipeline|skills)\b|openplanr-web\b|openplanr-company(?![\w-])/gu,
   },
   {
     id: 'model-provider',
-    message: 'the planr CLI and the skills have no model provider; remove provider keys and provider language',
+    message:
+      'the planr CLI and the skills have no model provider; remove provider keys and provider language',
     pattern: /OPENAI_API_KEY|ANTHROPIC_API_KEY|OLLAMA_HOST|\bAI provider\b|--provider\b/gu,
   },
   {
@@ -60,7 +87,8 @@ const RULES = [
   },
   {
     id: 'node-version',
-    message: 'only the supported Node.js statement (20 or later; CI on 20, 22, 24) belongs in public docs',
+    message:
+      'only the supported Node.js statement (20 or later; CI on 20, 22, 24) belongs in public docs',
     pattern: /\bNode(?:\.js)? (?:1\d|2[13]|2[5-9]|[3-9]\d)\b/gu,
   },
   {
@@ -77,7 +105,8 @@ const RULES = [
   {
     id: 'hedging-boilerplate',
     message: 'roadmap or hedging language; state what ships today',
-    pattern: /\b(?:under development|deferred initiative|does not establish enterprise general availability|no release claim)\b/gu,
+    pattern:
+      /\b(?:under development|deferred initiative|does not establish enterprise general availability|no release claim)\b/gu,
   },
 ];
 
@@ -88,7 +117,8 @@ function listFiles(root) {
     for (const entry of readdirSync(directory, { withFileTypes: true })) {
       const full = path.join(directory, entry.name);
       const relative = path.relative(repoRoot, full).split(path.sep).join('/');
-      if (root.exclude?.some((prefix) => relative === prefix || relative.startsWith(`${prefix}/`))) continue;
+      if (root.exclude?.some((prefix) => relative === prefix || relative.startsWith(`${prefix}/`)))
+        continue;
       if (entry.isDirectory()) {
         if (root.recursive && entry.name !== 'node_modules') visit(full);
         continue;
@@ -133,14 +163,18 @@ for (const file of files) {
 
 const readme = readFileSync(path.join(repoRoot, 'README.md'), 'utf8');
 if (!new RegExp(`\\b${skillCount} skills\\b`, 'u').test(readme)) {
-  findings.push(`README.md: [skill-count] the README must state the current skill count (${skillCount} skills)`);
+  findings.push(
+    `README.md: [skill-count] the README must state the current skill count (${skillCount} skills)`,
+  );
 }
 
 for (const [ruleId, entries] of Object.entries(allowlist)) {
   if (ruleId.startsWith('_')) continue;
-  if (!RULES.some((rule) => rule.id === ruleId)) findings.push(`public-docs-allowlist.json: unknown rule ${ruleId}`);
+  if (!RULES.some((rule) => rule.id === ruleId))
+    findings.push(`public-docs-allowlist.json: unknown rule ${ruleId}`);
   for (const entry of entries) {
-    if (!files.includes(entry)) findings.push(`public-docs-allowlist.json: ${entry} is not a linted file (rule ${ruleId})`);
+    if (!files.includes(entry))
+      findings.push(`public-docs-allowlist.json: ${entry} is not a linted file (rule ${ruleId})`);
   }
 }
 
@@ -149,4 +183,6 @@ if (findings.length > 0) {
   console.error(`\n${findings.length} public documentation finding(s) in ${files.length} files.`);
   process.exit(1);
 }
-console.log(`Public documentation clean: ${files.length} files, ${RULES.length} rules, ${skillCount} skills.`);
+console.log(
+  `Public documentation clean: ${files.length} files, ${RULES.length} rules, ${skillCount} skills.`,
+);

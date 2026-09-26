@@ -28,5 +28,8 @@ export function createOperatingResultTemplateV2(input: {
 }): Readonly<OperatingResultTemplateV2>;
 
 export function operatingResultSchemaDependenciesV2(
-  schemaId: 'operating-advisor-result' | 'operating-challenger-review' | 'operating-decision-ledger',
+  schemaId:
+    | 'operating-advisor-result'
+    | 'operating-challenger-review'
+    | 'operating-decision-ledger',
 ): readonly OperatingResultSchemaDependencyV2[];

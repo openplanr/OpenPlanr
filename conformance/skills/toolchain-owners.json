@@ -10,22 +10,14 @@
         "scripts/skills/generate-v18.mjs",
         "packages/skill-runtime/src/authoring/generate.mjs"
       ],
-      "controls": [
-        "standard-skill-packages",
-        "host-plugin-distributions"
-      ]
+      "controls": ["standard-skill-packages", "host-plugin-distributions"]
     },
     {
       "role": "runtime-installer",
       "ownerId": "cli-runtime-manager",
       "path": "packages/cli/src/services/runtime-manager-service.ts",
-      "implementationPaths": [
-        "packages/cli/src/services/runtime-manager-service.ts"
-      ],
-      "controls": [
-        "project-runtime-adapters",
-        "user-runtime-adapters"
-      ]
+      "implementationPaths": ["packages/cli/src/services/runtime-manager-service.ts"],
+      "controls": ["project-runtime-adapters", "user-runtime-adapters"]
     }
   ]
 }

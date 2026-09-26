@@ -12,7 +12,7 @@
  * (`run-manifest` records, `finalized.json`). Pure, stdlib-only.
  */
 
-import { DESIGN_FORMATS } from './recommendFormat.mjs';
+import { DESIGN_FORMATS } from './recommend-format.mjs';
 
 /** How the design was sourced — mirrors the `--from` flag values. */
 export const DESIGN_SOURCES = Object.freeze(['spec', 'png', 'describe']);

@@ -24,11 +24,14 @@ import {
 } from '../../lib/artifact/review-server.mjs';
 import { ARTIFACT_ERROR_CODES } from '../../lib/pipeline/errors.mjs';
 
-const runBrowser = process.env.PLANR_BROWSER_TESTS === '1'
-  || process.env.npm_lifecycle_event === 'test:artifact:browser';
+const runBrowser =
+  process.env.PLANR_BROWSER_TESTS === '1' ||
+  process.env.npm_lifecycle_event === 'test:artifact:browser';
 const browserEngine = process.env.PLANR_BROWSER_ENGINE || 'chromium';
 if (!['chromium', 'firefox', 'webkit'].includes(browserEngine)) {
-  throw new Error(`PLANR_BROWSER_ENGINE must be chromium, firefox, or webkit; received ${browserEngine}.`);
+  throw new Error(
+    `PLANR_BROWSER_ENGINE must be chromium, firefox, or webkit; received ${browserEngine}.`,
+  );
 }
 if (process.env.PLANR_REQUIRE_BROWSER === '1' && !runBrowser) {
   throw new Error('PLANR_REQUIRE_BROWSER requires the hostile artifact browser test to run.');
@@ -86,7 +89,10 @@ test('artifact execution copy injects the earliest CSP and rejects bypass markup
   );
   assert.match(prepared.html, /injectedScript\?\.remove\(\)/);
   assert.match(prepared.html, /nonce="A{24}"/);
-  assert.match(prepared.html, /name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/);
+  assert.match(
+    prepared.html,
+    /name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/,
+  );
 
   const authoredViewport = prepareArtifactDocument({
     html: '<!doctype html><html><head><meta name="viewport" content="width=720"></head><body></body></html>',
@@ -104,12 +110,13 @@ test('artifact execution copy injects the earliest CSP and rejects bypass markup
     '<!doctype html><html><head><style>@import "https://evil.test/x.css"</style></head><body></body></html>',
   ]) {
     assert.throws(
-      () => prepareArtifactDocument({
-        html,
-        artifactId: 'main',
-        nonce,
-        parentOrigin: 'http://127.0.0.1:41000',
-      }),
+      () =>
+        prepareArtifactDocument({
+          html,
+          artifactId: 'main',
+          nonce,
+          parentOrigin: 'http://127.0.0.1:41000',
+        }),
       (error) => error.code === ARTIFACT_ERROR_CODES.SANDBOX_POLICY,
     );
   }
@@ -133,18 +140,21 @@ test('bridge validator requires exact source nonce schema artifact request and b
   assert.deepEqual(valid.value.anchor.rect, { x: 10, y: 20, width: 100, height: 40 });
   assert.equal(Object.isFrozen(valid.value.anchor), true);
 
-  const challenge = validateArtifactBridgeMessage({
-    source,
-    origin: 'null',
-    data: {
-      channel: ARTIFACT_BRIDGE_CHANNEL,
-      schemaVersion: ARTIFACT_BRIDGE_VERSION,
-      type: 'bridge.challenge-ack',
-      nonce,
-      artifactId: 'main',
-      requestId,
+  const challenge = validateArtifactBridgeMessage(
+    {
+      source,
+      origin: 'null',
+      data: {
+        channel: ARTIFACT_BRIDGE_CHANNEL,
+        schemaVersion: ARTIFACT_BRIDGE_VERSION,
+        type: 'bridge.challenge-ack',
+        nonce,
+        artifactId: 'main',
+        requestId,
+      },
     },
-  }, contract);
+    contract,
+  );
   assert.equal(challenge.ok, true);
   assert.equal(challenge.value.authenticated, true);
 
@@ -154,17 +164,48 @@ test('bridge validator requires exact source nonce schema artifact request and b
     [{ ...validEvent, data: bridgeMessage('B'.repeat(43)) }, contract, 'nonce'],
     [{ ...validEvent, data: bridgeMessage(nonce, { artifactId: 'other' }) }, contract, 'artifact'],
     [{ ...validEvent, data: { ...bridgeMessage(nonce), extra: true } }, contract, 'schema'],
-    [{ ...validEvent, data: bridgeMessage(nonce, { requestId: 'request-missing' }) }, contract, 'request'],
+    [
+      { ...validEvent, data: bridgeMessage(nonce, { requestId: 'request-missing' }) },
+      contract,
+      'request',
+    ],
     [validEvent, { ...contract, pendingRequestIds: undefined }, 'request'],
-    [{ ...validEvent, data: bridgeMessage(nonce, {
-      anchor: { ...bridgeMessage(nonce).anchor, viewport: { width: 801, height: 600 } },
-    }) }, contract, 'viewport'],
-    [{ ...validEvent, data: bridgeMessage(nonce, {
-      anchor: { ...bridgeMessage(nonce).anchor, rect: { x: 750, y: 20, width: 100, height: 40 } },
-    }) }, contract, 'geometry'],
-    [{ ...validEvent, data: bridgeMessage(nonce, {
-      anchor: { ...bridgeMessage(nonce).anchor, rect: { x: Number.NaN, y: 20, width: 100, height: 40 } },
-    }) }, contract, 'geometry'],
+    [
+      {
+        ...validEvent,
+        data: bridgeMessage(nonce, {
+          anchor: { ...bridgeMessage(nonce).anchor, viewport: { width: 801, height: 600 } },
+        }),
+      },
+      contract,
+      'viewport',
+    ],
+    [
+      {
+        ...validEvent,
+        data: bridgeMessage(nonce, {
+          anchor: {
+            ...bridgeMessage(nonce).anchor,
+            rect: { x: 750, y: 20, width: 100, height: 40 },
+          },
+        }),
+      },
+      contract,
+      'geometry',
+    ],
+    [
+      {
+        ...validEvent,
+        data: bridgeMessage(nonce, {
+          anchor: {
+            ...bridgeMessage(nonce).anchor,
+            rect: { x: Number.NaN, y: 20, width: 100, height: 40 },
+          },
+        }),
+      },
+      contract,
+      'geometry',
+    ],
   ];
   for (const [event, options, reason] of failures) {
     const result = validateArtifactBridgeMessage(event, options);
@@ -174,18 +215,21 @@ test('bridge validator requires exact source nonce schema artifact request and b
     );
   }
 
-  const noChallengeSet = validateArtifactBridgeMessage({
-    source,
-    origin: 'null',
-    data: challenge.value && {
-      channel: ARTIFACT_BRIDGE_CHANNEL,
-      schemaVersion: ARTIFACT_BRIDGE_VERSION,
-      type: 'bridge.challenge-ack',
-      nonce,
-      artifactId: 'main',
-      requestId,
+  const noChallengeSet = validateArtifactBridgeMessage(
+    {
+      source,
+      origin: 'null',
+      data: challenge.value && {
+        channel: ARTIFACT_BRIDGE_CHANNEL,
+        schemaVersion: ARTIFACT_BRIDGE_VERSION,
+        type: 'bridge.challenge-ack',
+        nonce,
+        artifactId: 'main',
+        requestId,
+      },
     },
-  }, { ...contract, pendingChallengeIds: undefined });
+    { ...contract, pendingChallengeIds: undefined },
+  );
   assert.equal(noChallengeSet.ok, false);
   assert.equal(noChallengeSet.reason, 'request');
 });
@@ -225,9 +269,14 @@ test('bridge validator bounds authenticated PNG export responses', () => {
     [{ requestId: 'request-other' }, 'request'],
     [{ extra: true }, 'schema'],
   ]) {
-    const result = validateArtifactBridgeMessage({
-      source, origin: 'null', data: { ...data, ...change },
-    }, options);
+    const result = validateArtifactBridgeMessage(
+      {
+        source,
+        origin: 'null',
+        data: { ...data, ...change },
+      },
+      options,
+    );
     assert.equal(result.ok, false);
     assert.equal(result.reason, reason);
   }
@@ -264,7 +313,10 @@ test('bridge validator accepts only nonce-bound document layout measurements wit
     { ...data, layout: { width: 100, height: Number.NaN } },
     { ...data, layout: { width: 100, height: 200 }, extra: true },
   ]) {
-    assert.equal(validateArtifactBridgeMessage({ source, origin: 'null', data: malformed }, options).ok, false);
+    assert.equal(
+      validateArtifactBridgeMessage({ source, origin: 'null', data: malformed }, options).ok,
+      false,
+    );
   }
 });
 
@@ -359,9 +411,10 @@ async function startProbe() {
   return {
     url: `http://127.0.0.1:${server.address().port}/probe`,
     hits: () => hits,
-    close: () => new Promise((resolveClose, reject) => server.close((error) => (
-      error ? reject(error) : resolveClose()
-    ))),
+    close: () =>
+      new Promise((resolveClose, reject) =>
+        server.close((error) => (error ? reject(error) : resolveClose())),
+      ),
   };
 }
 
@@ -372,7 +425,12 @@ test('real browser keeps dynamic artifacts useful while hostile capabilities fai
   const playwright = await import('playwright');
   const browserType = playwright[browserEngine];
   const probe = await startProbe();
-  const browser = await browserType.launch({ headless: true, ...(browserEngine === 'chromium' && process.env.PLANR_BROWSER_CHANNEL ? { channel: process.env.PLANR_BROWSER_CHANNEL } : {}) });
+  const browser = await browserType.launch({
+    headless: true,
+    ...(browserEngine === 'chromium' && process.env.PLANR_BROWSER_CHANNEL
+      ? { channel: process.env.PLANR_BROWSER_CHANNEL }
+      : {}),
+  });
   const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
   const envelope = createArtifactEnvelope({
     artifacts: [
@@ -408,8 +466,14 @@ test('real browser keeps dynamic artifacts useful while hostile capabilities fai
   const page = await context.newPage();
   page.setDefaultTimeout(10_000);
   await page.goto(review.url);
-  await page.waitForFunction(() => globalThis.__openPlanrArtifactStage?.getState().status === 'ready');
-  await page.waitForFunction(() => document.querySelector('[data-planr-artifact-frame="main"]')?.dataset.planrBridgeTrusted === 'true');
+  await page.waitForFunction(
+    () => globalThis.__openPlanrArtifactStage?.getState().status === 'ready',
+  );
+  await page.waitForFunction(
+    () =>
+      document.querySelector('[data-planr-artifact-frame="main"]')?.dataset.planrBridgeTrusted ===
+      'true',
+  );
 
   const mainFrameElement = page.locator('[data-planr-artifact-frame="main"]');
   assert.equal(await mainFrameElement.getAttribute('sandbox'), 'allow-scripts');
@@ -421,12 +485,24 @@ test('real browser keeps dynamic artifacts useful while hostile capabilities fai
 
   const main = page.frameLocator('[data-planr-artifact-frame="main"]');
   await main.locator('#dynamic').click();
-  assert.equal(await main.locator('#count').textContent(), '1', 'packaged main-thread JavaScript remains interactive');
+  assert.equal(
+    await main.locator('#count').textContent(),
+    '1',
+    'packaged main-thread JavaScript remains interactive',
+  );
   await main.locator('body[data-done="true"]').waitFor({ timeout: 10_000 });
   const results = await main.locator('body').evaluate((body) => ({ ...body.dataset }));
-  assert.equal(results.challengeNonce, 'false', 'parent-to-child challenge never contains the bridge nonce');
+  assert.equal(
+    results.challengeNonce,
+    'false',
+    'parent-to-child challenge never contains the bridge nonce',
+  );
   assert.doesNotMatch(results.challengeKeys, /nonce/);
-  assert.equal(results.bridgeSourceVisible, 'false', 'self-removing bridge keeps its nonce out of artifact-readable DOM');
+  assert.equal(
+    results.bridgeSourceVisible,
+    'false',
+    'self-removing bridge keeps its nonce out of artifact-readable DOM',
+  );
   assert.equal(results.parent, 'SecurityError');
   assert.equal(results.localStorage, 'SecurityError');
   assert.equal(results.sessionStorage, 'SecurityError');
@@ -456,7 +532,11 @@ test('real browser keeps dynamic artifacts useful while hostile capabilities fai
   assert.equal(results.moduleInstance, 'false');
   assert.equal(results.workerCompute, '42');
   assert.equal(results.workerNetwork, 'SecurityError');
-  assert.equal(results.moduleWorker, 'SecurityError', 'opaque-origin module Workers fail deterministically');
+  assert.equal(
+    results.moduleWorker,
+    'SecurityError',
+    'opaque-origin module Workers fail deterministically',
+  );
   assert.equal(results.workerName, 'Worker');
   assert.equal(results.workerLimit, 'SecurityError');
   assert.equal(results.workerReuse, 'allowed', 'terminate releases the bounded worker slot');
@@ -467,10 +547,16 @@ test('real browser keeps dynamic artifacts useful while hostile capabilities fai
   await page.keyboard.press('Enter');
   await main.locator('#download').focus();
   await page.keyboard.press('Enter');
-  assert.equal(await main.locator('#dynamic').isVisible(), true, 'blocked external self-navigation keeps the artifact loaded');
+  assert.equal(
+    await main.locator('#dynamic').isVisible(),
+    true,
+    'blocked external self-navigation keeps the artifact loaded',
+  );
   assert.equal(await main.locator('body').getAttribute('data-download'), 'attempted');
 
-  const anchor = await mainFrameElement.evaluate((frame) => frame.__openPlanrBridge.resolve('main-anchor'));
+  const anchor = await mainFrameElement.evaluate((frame) =>
+    frame.__openPlanrBridge.resolve('main-anchor'),
+  );
   assert.equal(anchor.artifactId, 'main');
   assert.equal(anchor.planrId, 'main-anchor');
   assert.deepEqual(anchor.viewport, { width: 800, height: 600 });
@@ -478,8 +564,15 @@ test('real browser keeps dynamic artifacts useful while hostile capabilities fai
   const artifactPath = `${new URL(review.url).pathname}artifacts/main`;
   const direct = await context.newPage();
   const directResponse = await direct.goto(`http://127.0.0.1:${review.port}${artifactPath}`);
-  assert.equal(directResponse.status(), 404, 'artifact byte endpoint cannot execute as a direct document navigation');
-  assert.doesNotMatch(await direct.content(), /Hostile capability fixture|main-anchor|workerCompute/);
+  assert.equal(
+    directResponse.status(),
+    404,
+    'artifact byte endpoint cannot execute as a direct document navigation',
+  );
+  assert.doesNotMatch(
+    await direct.content(),
+    /Hostile capability fixture|main-anchor|workerCompute/,
+  );
   await direct.close();
 
   await page.locator('[role="tab"][data-artifact-id="navigator"]').click();
@@ -494,7 +587,11 @@ test('real browser keeps dynamic artifacts useful while hostile capabilities fai
   await navigator.locator('#document-open').focus();
   await page.keyboard.press('Enter');
   assert.equal(await navigator.locator('html').getAttribute('data-document-open'), 'SecurityError');
-  assert.equal(await navigator.locator('#document-open').isVisible(), true, 'document replacement is blocked');
+  assert.equal(
+    await navigator.locator('#document-open').isVisible(),
+    true,
+    'document replacement is blocked',
+  );
   for (const selector of ['#navigate-blob', '#navigate-about']) {
     const before = await page.evaluate(() => globalThis.__planrNavigationEvents.length);
     await navigator.locator(selector).focus();
@@ -502,37 +599,57 @@ test('real browser keeps dynamic artifacts useful while hostile capabilities fai
     await new Promise((resolve) => setTimeout(resolve, 1_000));
     const after = await page.evaluate(() => globalThis.__planrNavigationEvents.length);
     if (after > before) {
-      assert.equal((await page.evaluate(() => globalThis.__planrNavigationEvents.at(-1))).recovered, true);
-      await page.waitForFunction(() => document.querySelector('[data-planr-artifact-frame="navigator"]')?.dataset.planrBridgeTrusted === 'true');
+      assert.equal(
+        (await page.evaluate(() => globalThis.__planrNavigationEvents.at(-1))).recovered,
+        true,
+      );
+      await page.waitForFunction(
+        () =>
+          document.querySelector('[data-planr-artifact-frame="navigator"]')?.dataset
+            .planrBridgeTrusted === 'true',
+      );
     }
     await navigator.locator('#document-open').waitFor();
   }
-  const watchdogUrl = await page.evaluate(({ csp, probeUrl }) => {
-    const escaped = csp.replaceAll('&', '&amp;').replaceAll('"', '&quot;');
-    const html = `<!doctype html><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${escaped}"><img src="${probeUrl}?watchdog"><script>fetch(${JSON.stringify(probeUrl)}).catch(()=>{})<\/script>`;
-    const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
-    globalThis.__planrWatchdogUrl = url;
-    return url;
-  }, { csp: await navigationFrame.getAttribute('csp'), probeUrl: probe.url });
-  let attempts = (await page.evaluate(() => globalThis.__planrNavigationEvents.at(-1)?.attempts)) ?? 0;
+  const watchdogUrl = await page.evaluate(
+    ({ csp, probeUrl }) => {
+      const escaped = csp.replaceAll('&', '&amp;').replaceAll('"', '&quot;');
+      const html = `<!doctype html><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${escaped}"><img src="${probeUrl}?watchdog"><script>fetch(${JSON.stringify(probeUrl)}).catch(()=>{})<\/script>`;
+      const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
+      globalThis.__planrWatchdogUrl = url;
+      return url;
+    },
+    { csp: await navigationFrame.getAttribute('csp'), probeUrl: probe.url },
+  );
+  let attempts =
+    (await page.evaluate(() => globalThis.__planrNavigationEvents.at(-1)?.attempts)) ?? 0;
   while (attempts < 2) {
     const before = await page.evaluate(() => globalThis.__planrNavigationEvents.length);
     await navigationFrame.evaluate((frame, url) => {
       frame.removeAttribute('srcdoc');
       frame.src = url;
     }, watchdogUrl);
-    await page.waitForFunction((count) => globalThis.__planrNavigationEvents.length > count, before);
+    await page.waitForFunction(
+      (count) => globalThis.__planrNavigationEvents.length > count,
+      before,
+    );
     const event = await page.evaluate(() => globalThis.__planrNavigationEvents.at(-1));
     assert.equal(event.recovered, true);
     attempts = event.attempts;
-    await page.waitForFunction(() => document.querySelector('[data-planr-artifact-frame="navigator"]')?.dataset.planrBridgeTrusted === 'true');
+    await page.waitForFunction(
+      () =>
+        document.querySelector('[data-planr-artifact-frame="navigator"]')?.dataset
+          .planrBridgeTrusted === 'true',
+    );
     await navigator.locator('#document-open').waitFor();
   }
   await navigationFrame.evaluate((frame, url) => {
     frame.removeAttribute('srcdoc');
     frame.src = url;
   }, watchdogUrl);
-  await page.waitForFunction(() => globalThis.__planrNavigationEvents?.some((event) => event.failedClosed));
+  await page.waitForFunction(() =>
+    globalThis.__planrNavigationEvents?.some((event) => event.failedClosed),
+  );
   const finalNavigation = await page.evaluate(() => globalThis.__planrNavigationEvents.at(-1));
   assert.equal(finalNavigation.failedClosed, true);
   assert.equal(finalNavigation.attempts, 3);
@@ -541,5 +658,9 @@ test('real browser keeps dynamic artifacts useful while hostile capabilities fai
   await page.evaluate(() => URL.revokeObjectURL(globalThis.__planrWatchdogUrl));
 
   await new Promise((resolve) => setTimeout(resolve, 200));
-  assert.equal(probe.hits(), 0, 'main thread, workers, forms, and navigated documents never reach the network');
+  assert.equal(
+    probe.hits(),
+    0,
+    'main thread, workers, forms, and navigated documents never reach the network',
+  );
 });

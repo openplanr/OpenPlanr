@@ -6,16 +6,16 @@ import {
   resolveModuleGraph,
   validateSourceMap,
 } from '../compiler/index.mjs';
-import { buildGeneratedAssetManifest } from '../manifests/index.mjs';
 import { linkSkillProjections } from '../linker/index.mjs';
+import { buildGeneratedAssetManifest } from '../manifests/index.mjs';
+import { describeAuthoringGraph } from './command-contract.mjs';
 import {
   compileHostProjections,
   flattenCompiledAssets,
   inspectGeneratedOutput,
 } from './compiled-assets.mjs';
-import { describeAuthoringGraph } from './command-contract.mjs';
-import { loadComposedSkill } from './loader.mjs';
 import { SkillAuthoringError } from './diagnostics.mjs';
+import { loadComposedSkill } from './loader.mjs';
 import { runOperation } from './operation-result.mjs';
 
 function profileLabel(profile) {
@@ -27,14 +27,19 @@ function distinctOwners(sourceMap) {
   for (const range of sourceMap) {
     const key = `${range.owner.ownerKind}:${range.owner.pointer}@${range.owner.version}`;
     if (!seen.has(key)) {
-      seen.set(key, { ownerKind: range.owner.ownerKind, pointer: range.owner.pointer, version: range.owner.version });
+      seen.set(key, {
+        ownerKind: range.owner.ownerKind,
+        pointer: range.owner.pointer,
+        version: range.owner.version,
+      });
     }
   }
   return [...seen.values()];
 }
 
 function declaredCapabilityDecision(profile) {
-  if (!Array.isArray(profile.interactionBindings) || profile.interactionBindings.length === 0) return null;
+  if (!Array.isArray(profile.interactionBindings) || profile.interactionBindings.length === 0)
+    return null;
   const [preferred, ...fallbacks] = profile.interactionBindings;
   return Object.freeze({
     status: 'declared',
@@ -42,10 +47,14 @@ function declaredCapabilityDecision(profile) {
       surface: preferred.surface,
       capabilityId: preferred.capabilityId ?? null,
     }),
-    fallbacks: Object.freeze(fallbacks.map((binding) => Object.freeze({
-      surface: binding.surface,
-      capabilityId: binding.capabilityId ?? null,
-    }))),
+    fallbacks: Object.freeze(
+      fallbacks.map((binding) =>
+        Object.freeze({
+          surface: binding.surface,
+          capabilityId: binding.capabilityId ?? null,
+        }),
+      ),
+    ),
     declaredCapabilities: Object.freeze([...(profile.runtimeCapabilities ?? [])]),
     repair: null,
   });
@@ -64,13 +73,15 @@ export function lintSkill({ skillDir }) {
     const skillNode = `skill:${skillSource.skillId}@${skillSource.skillVersion}`;
     for (const profile of declaredProfiles) {
       const hostGraph = resolveModuleGraph({ skillSource, modules, hostProfile: profile });
-      assertHostOverlayIsPresentational(
-        profile,
-        hostGraph.overlayModules,
-        ({ entry }) => loaded.readSource(entry.source.path),
+      assertHostOverlayIsPresentational(profile, hostGraph.overlayModules, ({ entry }) =>
+        loaded.readSource(entry.source.path),
       );
       assertAuthorityNarrows(skillSource.authorityCeiling, profile.authorityCeiling, {
-        edge: { from: skillNode, to: `host-profile:${profileLabel(profile)}`, field: 'authorityCeiling' },
+        edge: {
+          from: skillNode,
+          to: `host-profile:${profileLabel(profile)}`,
+          field: 'authorityCeiling',
+        },
       });
     }
     const content = linkSkillProjections(compileHostProjections(loaded));
@@ -80,7 +91,11 @@ export function lintSkill({ skillDir }) {
       sourceFormat: skillSource.sourceFormat,
       graph: describeAuthoringGraph(loaded),
       modules: graph.selectedIds,
-      hostProfiles: declaredProfiles.map((profile) => ({ id: profile.hostProfileId, version: profile.hostProfileVersion, host: profile.host })),
+      hostProfiles: declaredProfiles.map((profile) => ({
+        id: profile.hostProfileId,
+        version: profile.hostProfileVersion,
+        host: profile.host,
+      })),
       content,
     };
   });
@@ -96,15 +111,35 @@ export function previewSkill({ skillDir }) {
     const content = linkSkillProjections(projections);
     const hosts = declaredProfiles.map((hostProfile, index) => {
       const result = projections[index];
-      const narrowed = assertAuthorityNarrows(skillSource.authorityCeiling, hostProfile.authorityCeiling, {
-        edge: { from: skillNode, to: `host-profile:${profileLabel(hostProfile)}`, field: 'authorityCeiling' },
-      });
+      const narrowed = assertAuthorityNarrows(
+        skillSource.authorityCeiling,
+        hostProfile.authorityCeiling,
+        {
+          edge: {
+            from: skillNode,
+            to: `host-profile:${profileLabel(hostProfile)}`,
+            field: 'authorityCeiling',
+          },
+        },
+      );
       return {
         host: result.host,
         hostProfile: profileLabel(hostProfile),
-        inline: result.preview.inline.map(({ moduleId, moduleVersion, source }) => ({ moduleId, moduleVersion, source })),
-        overlayModules: result.preview.overlay.map(({ moduleId, moduleVersion, source }) => ({ moduleId, moduleVersion, source })),
-        routed: result.preview.routed.map(({ moduleId, moduleVersion, path }) => ({ moduleId, moduleVersion, path })),
+        inline: result.preview.inline.map(({ moduleId, moduleVersion, source }) => ({
+          moduleId,
+          moduleVersion,
+          source,
+        })),
+        overlayModules: result.preview.overlay.map(({ moduleId, moduleVersion, source }) => ({
+          moduleId,
+          moduleVersion,
+          source,
+        })),
+        routed: result.preview.routed.map(({ moduleId, moduleVersion, path }) => ({
+          moduleId,
+          moduleVersion,
+          path,
+        })),
         overlay: { hostProfile: profileLabel(hostProfile), authority: narrowed },
         capabilityDecision: declaredCapabilityDecision(hostProfile),
         owners: distinctOwners(result.primary.sourceMap),
@@ -137,13 +172,16 @@ export function checkSkill({ skillDir }) {
     const first = flattenCompiledAssets(firstProjections);
     const secondProjections = compileHostProjections(loaded);
     const second = flattenCompiledAssets(secondProjections);
-    const mismatch = first.find((asset, index) => {
-      const candidate = second[index];
-      return !candidate
-        || candidate.host !== asset.host
-        || candidate.path !== asset.path
-        || candidate.digest !== asset.digest;
-    }) ?? (first.length === second.length ? null : first.at(-1));
+    const mismatch =
+      first.find((asset, index) => {
+        const candidate = second[index];
+        return (
+          !candidate ||
+          candidate.host !== asset.host ||
+          candidate.path !== asset.path ||
+          candidate.digest !== asset.digest
+        );
+      }) ?? (first.length === second.length ? null : first.at(-1));
     if (mismatch) {
       throw new SkillAuthoringError(
         'E_SKILL_CHECK_NONDETERMINISTIC',
@@ -185,19 +223,40 @@ export function evaluateSkill({ skillDir }) {
       let sourceMapComplete = true;
       try {
         validateSourceMap(first.primary.sourceMap, first.primary.byteLength);
-        for (const reference of first.references) validateSourceMap(reference.sourceMap, reference.byteLength);
+        for (const reference of first.references)
+          validateSourceMap(reference.sourceMap, reference.byteLength);
       } catch (error) {
         sourceMapComplete = false;
         reasons.push(`source map incomplete: ${error.message}`);
       }
 
       const manifestAssets = [
-        { path: first.primary.path, host: first.host, byteLength: first.primary.byteLength, digest: first.primary.digest, sourceMap: first.primary.sourceMap },
-        ...first.references.map((reference) => ({ path: reference.path, host: first.host, byteLength: reference.byteLength, digest: reference.digest, sourceMap: reference.sourceMap })),
+        {
+          path: first.primary.path,
+          host: first.host,
+          byteLength: first.primary.byteLength,
+          digest: first.primary.digest,
+          sourceMap: first.primary.sourceMap,
+        },
+        ...first.references.map((reference) => ({
+          path: reference.path,
+          host: first.host,
+          byteLength: reference.byteLength,
+          digest: reference.digest,
+          sourceMap: reference.sourceMap,
+        })),
       ];
-      const manifest = buildGeneratedAssetManifest({ assets: manifestAssets, sourceFormat: 'composed-v1' });
-      const manifestValid = validateProtocolArtifact('generated-asset-manifest', manifest, { protocolVersion: '1.6.0' }).length === 0;
-      if (!manifestValid) reasons.push('generated-asset-manifest did not round-trip through the Protocol 1.6 contract');
+      const manifest = buildGeneratedAssetManifest({
+        assets: manifestAssets,
+        sourceFormat: 'composed-v1',
+      });
+      const manifestValid =
+        validateProtocolArtifact('generated-asset-manifest', manifest, { protocolVersion: '1.6.0' })
+          .length === 0;
+      if (!manifestValid)
+        reasons.push(
+          'generated-asset-manifest did not round-trip through the Protocol 1.6 contract',
+        );
 
       const pass = idempotent && sourceMapComplete && manifestValid;
       return {
@@ -214,7 +273,11 @@ export function evaluateSkill({ skillDir }) {
     });
     const failing = hosts.filter((host) => !host.pass);
     if (failing.length > 0) {
-      throw new SkillAuthoringError('E_SKILL_EVALUATION_FAILED', `${skillSource.skillId} failed evaluation for ${failing.map((host) => host.host).join(', ')}.`, { hosts: failing });
+      throw new SkillAuthoringError(
+        'E_SKILL_EVALUATION_FAILED',
+        `${skillSource.skillId} failed evaluation for ${failing.map((host) => host.host).join(', ')}.`,
+        { hosts: failing },
+      );
     }
     return { skillId: skillSource.skillId, graph: describeAuthoringGraph(loaded), hosts, content };
   });

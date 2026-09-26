@@ -1,149 +1,8 @@
 export {
-  EXPECTED_ROLE_IDS,
-  EXPECTED_SKILL_IDS,
-  SkillRuntimeError,
-  assertSafeRelativePath,
-  listRegularFiles,
-  readContributionGraph,
-  readSkillSourceRegistry,
-  resolveRegularFile,
-  validateContributionGraph,
-  validateRoleContributions,
-} from './catalog.mjs';
-
-export {
-  assertPortableAsset,
-  assertSafeSourcePath,
-  canonicalText,
-  parseMarkdownAsset,
-  renderCodexSkill,
-  renderCursorSkill,
-  renderHostTokens,
-  renderRoleAsset,
-  renderTemplate,
-  sha256,
-} from './render.mjs';
-
-export {
-  SourceMapBuilder,
-  HOST_OVERLAY_POLICY,
-  assertAuthorityNarrows,
-  assertHostOverlayIsPresentational,
-  byteLength,
-  compileComposedV1,
-  compileMarkdownV1,
-  composeIncludes,
-  isSkillAssetPath,
-  owner,
-  renderSkillForHost,
-  resolveModuleGraph,
-  sha256Bytes,
-  skillPrimaryPath,
-  skillSupportPath,
-  validateSourceMap,
-} from './compiler/index.mjs';
-
-export {
-  buildAssetCustody,
-  buildCustodyManifest,
-  buildGeneratedAssetManifest,
-  deriveAssetSetId,
-} from './manifests/index.mjs';
-
-export {
-  buildSkillMatchIndex,
-  buildRegistryRoutingCases,
-  evaluateResilienceJourneys,
-  evaluateRoutingCorpus,
-  matchSkillRequest,
-  runResilienceJourney,
-  tokenizeRoutingText,
-  ROUTING_CASE_KINDS,
-} from './matching/index.mjs';
-
-export {
-  linkSkillProjection,
-  linkSkillProjections,
-  parseSkillContentLinks,
-} from './linker/index.mjs';
-
-export {
-  buildSkillReleaseTree,
-  createDeterministicZip,
-  readDeterministicZip,
-  renderOpenAiSkillMetadata,
-} from './packaging/index.mjs';
-
-export {
-  CAPABILITY_STATES,
-  INTERACTION_SURFACES,
-  RESOLUTION_STATUSES,
-  bindInteractionAnswers,
-  resolveCapabilities,
-  resolveInteraction,
-} from './resolver/index.mjs';
-
-export {
-  CHANGE_KINDS,
-  VERSION_DIMENSIONS,
-  analyzeSkillGraphImpact,
-  assessLearningPromotion,
-  assessVersionChange,
-  assessVersionSet,
-  classifyVersionBump,
-  createLearningProposal,
-  planSkillGraphRollback,
-  requiredVersionBump,
-} from './versioning/index.mjs';
-
-export {
-  COMPLETION_STATUSES,
-  DEFAULT_PROGRESS_TTL_MS,
-  DATA_FEATURES,
-  DEFAULT_LIFECYCLE_SETTINGS,
-  LIFECYCLE_CONFIGURATION_PATH,
-  LIFECYCLE_IGNORE_RULE,
-  LIFECYCLE_PROTOCOL_VERSION,
-  LIFECYCLE_RUNTIME_DIRECTORY,
-  LIFECYCLE_RUNTIME_VERSION,
-  LIFECYCLE_SESSION_DIRECTORY,
-  LIFECYCLE_STATE_VERSION,
-  LOCAL_LEARNING_PATH,
-  OPERATION_CLASSES,
-  assessLifecycleCompatibility,
-  checkpointSession,
-  classifyOperation,
-  cleanupLifecycleProgress,
-  closeSessionProgress,
-  completionFromRuntimeResult,
-  createCompletion,
-  createConsentRecord,
-  createSkillSession,
-  detectLifecycleEnvironment,
-  executeAtEffectBoundary,
-  firstRunGuidance,
-  loadLatestSessionProgress,
-  loadLifecycleConfiguration,
-  normalizeLifecycleConfiguration,
-  persistLearningRecord,
-  persistSessionProgress,
-  prepareLifecycleEnvironment,
-  prepareLearningRecord,
-  recoverSession,
-  resolveDataFeatureConsent,
-  resolveLifecycleSettings,
-  saveLifecycleConfiguration,
-  startSkillInteraction,
-  startSkillLifecycle,
-  updateSkillSession,
-} from './lifecycle/index.mjs';
-
-export {
   AUTHORING_COMMANDS,
   AUTHORING_EXIT,
   AUTHORING_RESULT_KIND,
   AUTHORING_RESULT_VERSION,
-  SkillAuthoringError,
   authoringUsage,
   checkSkill,
   describeAuthoringGraph,
@@ -156,9 +15,102 @@ export {
   loadComposedSkill,
   parseAuthoringArgs,
   previewSkill,
+  SkillAuthoringError,
   toDiagnostic,
 } from './authoring/index.mjs';
+export {
+  assertSafeRelativePath,
+  EXPECTED_ROLE_IDS,
+  EXPECTED_SKILL_IDS,
+  listRegularFiles,
+  readContributionGraph,
+  readSkillSourceRegistry,
+  resolveRegularFile,
+  SkillRuntimeError,
+  validateContributionGraph,
+  validateRoleContributions,
+} from './catalog.mjs';
 
+export {
+  assertAuthorityNarrows,
+  assertHostOverlayIsPresentational,
+  byteLength,
+  compileComposedV1,
+  compileMarkdownV1,
+  composeIncludes,
+  HOST_OVERLAY_POLICY,
+  isSkillAssetPath,
+  owner,
+  renderSkillForHost,
+  resolveModuleGraph,
+  SourceMapBuilder,
+  sha256Bytes,
+  skillPrimaryPath,
+  skillSupportPath,
+  validateSourceMap,
+} from './compiler/index.mjs';
+export {
+  assessLifecycleCompatibility,
+  COMPLETION_STATUSES,
+  checkpointSession,
+  classifyOperation,
+  cleanupLifecycleProgress,
+  closeSessionProgress,
+  completionFromRuntimeResult,
+  createCompletion,
+  createConsentRecord,
+  createSkillSession,
+  DATA_FEATURES,
+  DEFAULT_LIFECYCLE_SETTINGS,
+  DEFAULT_PROGRESS_TTL_MS,
+  detectLifecycleEnvironment,
+  executeAtEffectBoundary,
+  firstRunGuidance,
+  LIFECYCLE_CONFIGURATION_PATH,
+  LIFECYCLE_IGNORE_RULE,
+  LIFECYCLE_PROTOCOL_VERSION,
+  LIFECYCLE_RUNTIME_DIRECTORY,
+  LIFECYCLE_RUNTIME_VERSION,
+  LIFECYCLE_SESSION_DIRECTORY,
+  LIFECYCLE_STATE_VERSION,
+  LOCAL_LEARNING_PATH,
+  loadLatestSessionProgress,
+  loadLifecycleConfiguration,
+  normalizeLifecycleConfiguration,
+  OPERATION_CLASSES,
+  persistLearningRecord,
+  persistSessionProgress,
+  prepareLearningRecord,
+  prepareLifecycleEnvironment,
+  recoverSession,
+  resolveDataFeatureConsent,
+  resolveLifecycleSettings,
+  saveLifecycleConfiguration,
+  startSkillInteraction,
+  startSkillLifecycle,
+  updateSkillSession,
+} from './lifecycle/index.mjs';
+export {
+  linkSkillProjection,
+  linkSkillProjections,
+  parseSkillContentLinks,
+} from './linker/index.mjs';
+export {
+  buildAssetCustody,
+  buildCustodyManifest,
+  buildGeneratedAssetManifest,
+  deriveAssetSetId,
+} from './manifests/index.mjs';
+export {
+  buildRegistryRoutingCases,
+  buildSkillMatchIndex,
+  evaluateResilienceJourneys,
+  evaluateRoutingCorpus,
+  matchSkillRequest,
+  ROUTING_CASE_KINDS,
+  runResilienceJourney,
+  tokenizeRoutingText,
+} from './matching/index.mjs';
 export {
   OPERATE_ADVISOR_REVIEW_RUBRICS,
   OPERATE_REVIEW_CONTRACT,
@@ -171,11 +123,47 @@ export {
   OPERATE_REVIEW_NOTE_PROFILES_V1,
   OPERATE_REVIEW_NOTE_PROFILES_V2,
 } from './operate-review-contract.mjs';
-
 export {
   detectOperateReviewNoteContract,
   inspectOperateReviewNote,
   validateOperateReviewNote,
 } from './operate-review-note.mjs';
-
+export {
+  buildSkillReleaseTree,
+  createDeterministicZip,
+  readDeterministicZip,
+  renderOpenAiSkillMetadata,
+} from './packaging/index.mjs';
+export {
+  assertPortableAsset,
+  assertSafeSourcePath,
+  canonicalText,
+  parseMarkdownAsset,
+  renderCodexSkill,
+  renderCursorSkill,
+  renderHostTokens,
+  renderRoleAsset,
+  renderTemplate,
+  sha256,
+} from './render.mjs';
+export {
+  bindInteractionAnswers,
+  CAPABILITY_STATES,
+  INTERACTION_SURFACES,
+  RESOLUTION_STATUSES,
+  resolveCapabilities,
+  resolveInteraction,
+} from './resolver/index.mjs';
 export { discoverVerificationChecks } from './verification/discover-checks.mjs';
+export {
+  analyzeSkillGraphImpact,
+  assessLearningPromotion,
+  assessVersionChange,
+  assessVersionSet,
+  CHANGE_KINDS,
+  classifyVersionBump,
+  createLearningProposal,
+  planSkillGraphRollback,
+  requiredVersionBump,
+  VERSION_DIMENSIONS,
+} from './versioning/index.mjs';

@@ -11,7 +11,9 @@ const root = join(here, '../..');
 
 const schema = JSON.parse(readFileSync(join(root, 'schemas/v1.0.0/stack.schema.json'), 'utf-8'));
 const valid = JSON.parse(readFileSync(join(root, 'tests/fixtures/valid-stack.json'), 'utf-8'));
-const invalid = JSON.parse(readFileSync(join(root, 'tests/fixtures/invalid-stack-missing-fields.json'), 'utf-8'));
+const invalid = JSON.parse(
+  readFileSync(join(root, 'tests/fixtures/invalid-stack-missing-fields.json'), 'utf-8'),
+);
 
 test('stack frontmatter validates when all required keys are present', () => {
   assert.equal(validate(valid, schema).length, 0);

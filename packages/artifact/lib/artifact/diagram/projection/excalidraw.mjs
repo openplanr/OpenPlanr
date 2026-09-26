@@ -47,55 +47,96 @@ export const EXCALIDRAW_EXPORT_CAPABILITIES = Object.freeze({
   flowchart: Object.freeze({
     grammarId: 'flowchart',
     status: 'editable',
-    reason: 'The native scene projection preserves flowchart boxes, labels, arrows, and generated layout geometry.',
+    reason:
+      'The native scene projection preserves flowchart boxes, labels, arrows, and generated layout geometry.',
   }),
   sequence: Object.freeze({
     grammarId: 'sequence',
     status: 'editable',
-    reason: 'The native scene projection preserves participants, lifelines, phases, ordered messages, notes, and generated chronology geometry.',
+    reason:
+      'The native scene projection preserves participants, lifelines, phases, ordered messages, notes, and generated chronology geometry.',
   }),
 });
 
 export function excalidrawCapability(grammarId) {
-  return EXCALIDRAW_EXPORT_CAPABILITIES[grammarId] ?? Object.freeze({
-    grammarId,
-    status: 'unsupported',
-    reason: `No production editable-scene projection is certified for the ${grammarId} grammar.`,
-  });
+  return (
+    EXCALIDRAW_EXPORT_CAPABILITIES[grammarId] ??
+    Object.freeze({
+      grammarId,
+      status: 'unsupported',
+      reason: `No production editable-scene projection is certified for the ${grammarId} grammar.`,
+    })
+  );
 }
 
 export function assertExcalidrawScene(scene) {
-  if (!scene || scene.type !== 'excalidraw' || scene.version !== 2 || !Array.isArray(scene.elements)) {
-    diagramFail(DIAGRAM_ERROR_CODES.SCENE_INVALID, 'Editable scene does not satisfy the Excalidraw file envelope.');
+  if (
+    !scene ||
+    scene.type !== 'excalidraw' ||
+    scene.version !== 2 ||
+    !Array.isArray(scene.elements)
+  ) {
+    diagramFail(
+      DIAGRAM_ERROR_CODES.SCENE_INVALID,
+      'Editable scene does not satisfy the Excalidraw file envelope.',
+    );
   }
   const byteLength = Buffer.byteLength(JSON.stringify(scene));
   if (scene.elements.length > MAX_SCENE_ELEMENTS || byteLength > MAX_SCENE_BYTES) {
-    diagramFail(DIAGRAM_ERROR_CODES.RESOURCE_BUDGET_EXCEEDED, 'Editable scene exceeds its resource budget.', {
-      elements: scene.elements.length,
-      maximumElements: MAX_SCENE_ELEMENTS,
-      bytes: byteLength,
-      maximumBytes: MAX_SCENE_BYTES,
-    });
+    diagramFail(
+      DIAGRAM_ERROR_CODES.RESOURCE_BUDGET_EXCEEDED,
+      'Editable scene exceeds its resource budget.',
+      {
+        elements: scene.elements.length,
+        maximumElements: MAX_SCENE_ELEMENTS,
+        bytes: byteLength,
+        maximumBytes: MAX_SCENE_BYTES,
+      },
+    );
   }
   const ids = new Set();
   for (const element of scene.elements) {
-    if (!element || !ELEMENT_TYPES.has(element.type) || typeof element.id !== 'string' || ids.has(element.id)) {
-      diagramFail(DIAGRAM_ERROR_CODES.SCENE_INVALID, 'Editable scene contains an unsupported or duplicate element.', {
-        elementId: element?.id ?? null,
-        elementType: element?.type ?? null,
-      });
+    if (
+      !element ||
+      !ELEMENT_TYPES.has(element.type) ||
+      typeof element.id !== 'string' ||
+      ids.has(element.id)
+    ) {
+      diagramFail(
+        DIAGRAM_ERROR_CODES.SCENE_INVALID,
+        'Editable scene contains an unsupported or duplicate element.',
+        {
+          elementId: element?.id ?? null,
+          elementType: element?.type ?? null,
+        },
+      );
     }
     ids.add(element.id);
     for (const field of ['x', 'y', 'width', 'height']) {
       if (!Number.isFinite(element[field]) || Math.abs(element[field]) > 1_000_000) {
-        diagramFail(DIAGRAM_ERROR_CODES.SCENE_INVALID, `Editable scene has invalid ${field} geometry.`, { elementId: element.id });
+        diagramFail(
+          DIAGRAM_ERROR_CODES.SCENE_INVALID,
+          `Editable scene has invalid ${field} geometry.`,
+          { elementId: element.id },
+        );
       }
     }
     if (element.link !== null || element.fileId || element.type === 'image') {
-      diagramFail(DIAGRAM_ERROR_CODES.SCENE_INVALID, 'Editable scenes may not contain links or external assets.', { elementId: element.id });
+      diagramFail(
+        DIAGRAM_ERROR_CODES.SCENE_INVALID,
+        'Editable scenes may not contain links or external assets.',
+        { elementId: element.id },
+      );
     }
-    if (element.type === 'text' && (typeof element.text !== 'string' || element.text.length > 2_048)) {
-      diagramFail(DIAGRAM_ERROR_CODES.SCENE_INVALID, 'Editable scene text is missing or exceeds the renderer limit.', { elementId: element.id });
+    if (
+      element.type === 'text' &&
+      (typeof element.text !== 'string' || element.text.length > 2_048)
+    ) {
+      diagramFail(
+        DIAGRAM_ERROR_CODES.SCENE_INVALID,
+        'Editable scene text is missing or exceeds the renderer limit.',
+        { elementId: element.id },
+      );
     }
   }
   return scene;
@@ -144,7 +185,10 @@ export function exportDiagramExcalidraw(document) {
     autoResize: true,
   }));
   const arrows = layout.edges.map((edge) => {
-    const points = edge.routePoints ?? [[edge.x1, edge.y1], [edge.x2, edge.y2]];
+    const points = edge.routePoints ?? [
+      [edge.x1, edge.y1],
+      [edge.x2, edge.y2],
+    ];
     const left = Math.min(...points.map(([x]) => x));
     const top = Math.min(...points.map(([, y]) => y));
     const width = Math.max(...points.map(([x]) => x)) - left;
@@ -172,23 +216,25 @@ export function exportDiagramExcalidraw(document) {
     if (!label) return [];
     const width = bounds?.width ?? Math.max(120, Math.abs(edge.x2 - edge.x1) - 32);
     const height = bounds?.height ?? 28;
-    return [{
-      ...baseElement(`label-${edge.id}`, 'text', {
-        x: bounds?.x ?? (edge.x1 + edge.x2) / 2 - width / 2,
-        y: bounds?.y ?? (edge.y1 + edge.y2) / 2 - height - 8,
-        width,
-        height,
-      }),
-      text: label,
-      originalText: label,
-      fontSize: 14,
-      fontFamily: 1,
-      textAlign: 'center',
-      verticalAlign: 'middle',
-      containerId: null,
-      lineHeight: 1.25,
-      autoResize: true,
-    }];
+    return [
+      {
+        ...baseElement(`label-${edge.id}`, 'text', {
+          x: bounds?.x ?? (edge.x1 + edge.x2) / 2 - width / 2,
+          y: bounds?.y ?? (edge.y1 + edge.y2) / 2 - height - 8,
+          width,
+          height,
+        }),
+        text: label,
+        originalText: label,
+        fontSize: 14,
+        fontFamily: 1,
+        textAlign: 'center',
+        verticalAlign: 'middle',
+        containerId: null,
+        lineHeight: 1.25,
+        autoResize: true,
+      },
+    ];
   });
   const lifelines = layout.lifelines.map((lifeline) => ({
     ...baseElement(`lifeline-${lifeline.id}`, 'arrow', {
@@ -196,7 +242,10 @@ export function exportDiagramExcalidraw(document) {
       y: lifeline.y1,
       width: 0,
       height: lifeline.y2 - lifeline.y1,
-      points: [[0, 0], [0, lifeline.y2 - lifeline.y1]],
+      points: [
+        [0, 0],
+        [0, lifeline.y2 - lifeline.y1],
+      ],
       startBinding: null,
       endBinding: null,
       startArrowhead: null,
@@ -212,7 +261,10 @@ export function exportDiagramExcalidraw(document) {
       y: phase.y,
       width: phase.x2 - phase.x1,
       height: 0,
-      points: [[0, 0], [phase.x2 - phase.x1, 0]],
+      points: [
+        [0, 0],
+        [phase.x2 - phase.x1, 0],
+      ],
       startBinding: null,
       endBinding: null,
       startArrowhead: null,
@@ -293,43 +345,83 @@ export function exportDiagramExcalidraw(document) {
       targetFormat: 'excalidraw',
       status: 'editable',
       interpreted: [
-        ...document.nodes.map((node) => ({ source: `node:${node.id}`, targetId: node.id, construct: 'node' })),
-        ...document.relations.map((relation) => ({ source: `relation:${relation.id}`, targetId: relation.id, construct: 'relation' })),
-        ...document.events.map((event) => ({ source: `event:${event.id}`, targetId: event.id, construct: 'phase' })),
-        ...document.annotations.map((annotation) => ({ source: `annotation:${annotation.id}`, targetId: annotation.id, construct: 'note' })),
-        ...document.emphasis.map((emphasis) => ({ source: `emphasis:${emphasis.targetId}`, targetId: emphasis.targetId, construct: 'emphasis' })),
+        ...document.nodes.map((node) => ({
+          source: `node:${node.id}`,
+          targetId: node.id,
+          construct: 'node',
+        })),
+        ...document.relations.map((relation) => ({
+          source: `relation:${relation.id}`,
+          targetId: relation.id,
+          construct: 'relation',
+        })),
+        ...document.events.map((event) => ({
+          source: `event:${event.id}`,
+          targetId: event.id,
+          construct: 'phase',
+        })),
+        ...document.annotations.map((annotation) => ({
+          source: `annotation:${annotation.id}`,
+          targetId: annotation.id,
+          construct: 'note',
+        })),
+        ...document.emphasis.map((emphasis) => ({
+          source: `emphasis:${emphasis.targetId}`,
+          targetId: emphasis.targetId,
+          construct: 'emphasis',
+        })),
       ],
-      notes: [capability.reason, 'Free-form scene edits become scene-owned and do not claim semantic round-trip equivalence.'],
+      notes: [
+        capability.reason,
+        'Free-form scene edits become scene-owned and do not claim semantic round-trip equivalence.',
+      ],
     }),
   });
 }
 
 function sceneBounds(elements) {
-  const maximumX = Math.max(640, ...elements.map((element) => element.x + Math.max(0, element.width)));
-  const maximumY = Math.max(360, ...elements.map((element) => element.y + Math.max(0, element.height)));
+  const maximumX = Math.max(
+    640,
+    ...elements.map((element) => element.x + Math.max(0, element.width)),
+  );
+  const maximumY = Math.max(
+    360,
+    ...elements.map((element) => element.y + Math.max(0, element.height)),
+  );
   return { width: Math.ceil(maximumX + 64), height: Math.ceil(maximumY + 64) };
 }
 
-export function renderExcalidrawSceneSvg(scene, {
-  title = 'Edited diagram',
-  description = 'An edited Excalidraw scene rendered by OpenPlanr.',
-} = {}) {
+export function renderExcalidrawSceneSvg(
+  scene,
+  {
+    title = 'Edited diagram',
+    description = 'An edited Excalidraw scene rendered by OpenPlanr.',
+  } = {},
+) {
   assertExcalidrawScene(scene);
   const bounds = sceneBounds(scene.elements);
-  const elements = scene.elements.map((element) => {
-    if (element.type === 'rectangle') return `<rect data-scene-id="${escapeXml(element.id)}" x="${element.x}" y="${element.y}" width="${element.width}" height="${element.height}" rx="14" fill="${escapeXml(element.backgroundColor)}" stroke="${escapeXml(element.strokeColor)}" stroke-width="${element.strokeWidth}"/>`;
-    if (element.type === 'arrow') {
-      const points = element.points.map(([x, y], index) => `${index === 0 ? 'M' : 'L'} ${element.x + x} ${element.y + y}`).join(' ');
-      const dash = element.strokeStyle === 'dashed' ? ' stroke-dasharray="6 6"' : '';
-      const marker = element.endArrowhead ? ' marker-end="url(#diagram-arrow)"' : '';
-      return `<path data-scene-id="${escapeXml(element.id)}" d="${points}" fill="none" stroke="${escapeXml(element.strokeColor)}" stroke-width="${element.strokeWidth}" opacity="${element.opacity / 100}"${dash}${marker}/>`;
-    }
-    const lines = element.text.split('\n');
-    const x = element.textAlign === 'left' ? element.x : element.x + element.width / 2;
-    const anchor = element.textAlign === 'left' ? 'start' : 'middle';
-    const firstY = element.y + element.height / 2 - ((lines.length - 1) * element.fontSize * (element.lineHeight ?? 1.25)) / 2;
-    return `<text data-scene-id="${escapeXml(element.id)}" x="${x}" y="${firstY}" text-anchor="${anchor}" dominant-baseline="middle" font-family="${DIAGRAM_THEME.fontFamily}" font-size="${element.fontSize}" fill="${escapeXml(element.strokeColor === 'transparent' ? DIAGRAM_THEME.foreground : element.strokeColor)}">${lines.map((line, index) => `<tspan x="${x}" y="${firstY + index * element.fontSize * (element.lineHeight ?? 1.25)}">${escapeXml(line)}</tspan>`).join('')}</text>`;
-  }).join('');
+  const elements = scene.elements
+    .map((element) => {
+      if (element.type === 'rectangle')
+        return `<rect data-scene-id="${escapeXml(element.id)}" x="${element.x}" y="${element.y}" width="${element.width}" height="${element.height}" rx="14" fill="${escapeXml(element.backgroundColor)}" stroke="${escapeXml(element.strokeColor)}" stroke-width="${element.strokeWidth}"/>`;
+      if (element.type === 'arrow') {
+        const points = element.points
+          .map(([x, y], index) => `${index === 0 ? 'M' : 'L'} ${element.x + x} ${element.y + y}`)
+          .join(' ');
+        const dash = element.strokeStyle === 'dashed' ? ' stroke-dasharray="6 6"' : '';
+        const marker = element.endArrowhead ? ' marker-end="url(#diagram-arrow)"' : '';
+        return `<path data-scene-id="${escapeXml(element.id)}" d="${points}" fill="none" stroke="${escapeXml(element.strokeColor)}" stroke-width="${element.strokeWidth}" opacity="${element.opacity / 100}"${dash}${marker}/>`;
+      }
+      const lines = element.text.split('\n');
+      const x = element.textAlign === 'left' ? element.x : element.x + element.width / 2;
+      const anchor = element.textAlign === 'left' ? 'start' : 'middle';
+      const firstY =
+        element.y +
+        element.height / 2 -
+        ((lines.length - 1) * element.fontSize * (element.lineHeight ?? 1.25)) / 2;
+      return `<text data-scene-id="${escapeXml(element.id)}" x="${x}" y="${firstY}" text-anchor="${anchor}" dominant-baseline="middle" font-family="${DIAGRAM_THEME.fontFamily}" font-size="${element.fontSize}" fill="${escapeXml(element.strokeColor === 'transparent' ? DIAGRAM_THEME.foreground : element.strokeColor)}">${lines.map((line, index) => `<tspan x="${x}" y="${firstY + index * element.fontSize * (element.lineHeight ?? 1.25)}">${escapeXml(line)}</tspan>`).join('')}</text>`;
+    })
+    .join('');
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="scene-title scene-description" viewBox="0 0 ${bounds.width} ${bounds.height}" width="${bounds.width}" height="${bounds.height}"><title id="scene-title">${escapeXml(title)}</title><desc id="scene-description">${escapeXml(description)}</desc><defs><marker id="diagram-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="${DIAGRAM_THEME.border}"/></marker></defs><rect width="${bounds.width}" height="${bounds.height}" fill="${DIAGRAM_THEME.background}"/>${elements}</svg>\n`;
   assertDiagramSvg(svg);
   return Object.freeze({

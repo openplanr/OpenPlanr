@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, existsSync, readdirSync, rmSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, mkdtempSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { test } from 'node:test';
 
 import { ensureBoardToken, publicBoardId } from '../../lib/design-engine/board-token.mjs';
@@ -22,8 +22,14 @@ test('board token: unguessable, stable per dir, unique across dirs, off the repo
     assert.notEqual(ensureBoardToken(dirB, { env }), tA, 'different dirs get different tokens');
 
     // persisted under planrHome's daemon dir, NOT inside the board dir (no repo leak)
-    assert.ok(existsSync(join(home, 'design-daemon', 'tokens.json')), 'token store lives under planrHome');
-    assert.ok(!readdirSync(dirA).includes('.board-token'), 'no token file is written into the board dir');
+    assert.ok(
+      existsSync(join(home, 'design-daemon', 'tokens.json')),
+      'token store lives under planrHome',
+    );
+    assert.ok(
+      !readdirSync(dirA).includes('.board-token'),
+      'no token file is written into the board dir',
+    );
   } finally {
     for (const d of [home, dirA, dirB]) rmSync(d, { recursive: true, force: true });
   }

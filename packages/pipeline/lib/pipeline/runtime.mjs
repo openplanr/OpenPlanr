@@ -1,18 +1,21 @@
-import { existsSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
-import { dirname } from 'node:path';
 import { createHash } from 'node:crypto';
+import { existsSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { PipelineError } from './errors.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const registry = JSON.parse(readFileSync(join(root, 'registry/adapters.json'), 'utf8'));
 
-const NORMALIZE = { claude: 'claude-code', 'claude-code': 'claude-code', codex: 'codex', cursor: 'cursor' };
+const NORMALIZE = {
+  claude: 'claude-code',
+  'claude-code': 'claude-code',
+  codex: 'codex',
+  cursor: 'cursor',
+};
 const EXECUTABLE = { 'claude-code': 'claude', codex: 'codex', cursor: 'cursor' };
 
 export function listRuntimeAdapters() {
@@ -20,7 +23,7 @@ export function listRuntimeAdapters() {
 }
 
 export function normalizeRuntime(value) {
-  return value ? NORMALIZE[String(value).toLowerCase()] ?? String(value).toLowerCase() : null;
+  return value ? (NORMALIZE[String(value).toLowerCase()] ?? String(value).toLowerCase()) : null;
 }
 
 export function commandExists(command, run = spawnSync) {
@@ -80,11 +83,13 @@ function resolvedAdapter(id, source, available, projectRoot, { strictRuntimeLock
     validateRuntimeLock(projectRoot, id);
   } catch (error) {
     if (strictRuntimeLock || !(error instanceof PipelineError)) throw error;
-    diagnostics = [{
-      code: error.code,
-      problem: error.message,
-      ...(error.fix ? { fix: error.fix } : {}),
-    }];
+    diagnostics = [
+      {
+        code: error.code,
+        problem: error.message,
+        ...(error.fix ? { fix: error.fix } : {}),
+      },
+    ];
   }
   return {
     adapter: structuredClone(registry.adapters.find((entry) => entry.id === id)),
@@ -95,13 +100,20 @@ function resolvedAdapter(id, source, available, projectRoot, { strictRuntimeLock
 }
 
 function readActiveRuntime(projectRoot) {
-  const statePath = join(process.env.OPENPLANR_HOME ?? homedir(), '.planr', 'runtime', 'state.json');
+  const statePath = join(
+    process.env.OPENPLANR_HOME ?? homedir(),
+    '.planr',
+    'runtime',
+    'state.json',
+  );
   if (!existsSync(statePath)) return null;
   try {
     const state = JSON.parse(readFileSync(statePath, 'utf8'));
     const key = createHash('sha256').update(resolve(projectRoot)).digest('hex').slice(0, 16);
     const project = state?.projects?.[key];
-    return normalizeRuntime(project?.activeRuntime ?? (project?.runtimes?.length === 1 ? project.runtimes[0] : null));
+    return normalizeRuntime(
+      project?.activeRuntime ?? (project?.runtimes?.length === 1 ? project.runtimes[0] : null),
+    );
   } catch {
     return null;
   }
@@ -127,13 +139,19 @@ export function resolveRuntimeAdapter({
     if (!id) continue;
     const adapter = registry.adapters.find((entry) => entry.id === id);
     if (!adapter) {
-      throw new PipelineError('E_RUNTIME_UNSUPPORTED', `Runtime "${id}" is not supported.`, 'Choose claude, codex, or cursor.');
+      throw new PipelineError(
+        'E_RUNTIME_UNSUPPORTED',
+        `Runtime "${id}" is not supported.`,
+        'Choose claude, codex, or cursor.',
+      );
     }
     return resolvedAdapter(id, source, available, projectRoot, { strictRuntimeLock });
   }
 
   if (available.length === 1) {
-    return resolvedAdapter(available[0], 'installed', available, projectRoot, { strictRuntimeLock });
+    return resolvedAdapter(available[0], 'installed', available, projectRoot, {
+      strictRuntimeLock,
+    });
   }
   if (available.length === 0) {
     throw new PipelineError(
@@ -159,9 +177,7 @@ function runtimeEntrypoint(adapter, phase, feature) {
 /** Composes host-native skill guidance with the concrete working context. */
 export function composeRuntimePrompt(adapter, phase, feature, context) {
   const entrypoint = runtimeEntrypoint(adapter, phase, feature);
-  return typeof context === 'string' && context.length
-    ? `${entrypoint}\n\n${context}`
-    : entrypoint;
+  return typeof context === 'string' && context.length ? `${entrypoint}\n\n${context}` : entrypoint;
 }
 
 export function runtimeHandoff(adapter, phase, feature, context) {

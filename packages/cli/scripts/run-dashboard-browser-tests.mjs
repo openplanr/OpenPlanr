@@ -90,7 +90,11 @@ function installPackedPipeline(temporaryRoot) {
   );
 
   const packReport = JSON.parse(
-    runNpm(['pack', '--json', '--ignore-scripts', '--pack-destination', archives], sourceRoot, cache),
+    runNpm(
+      ['pack', '--json', '--ignore-scripts', '--pack-destination', archives],
+      sourceRoot,
+      cache,
+    ),
   );
   const filename = packReport[0]?.filename;
   if (typeof filename !== 'string' || filename.length === 0) {
@@ -211,7 +215,7 @@ function writePackageResolver(temporaryRoot, consumer, playwrightCliPath) {
       '  }',
       "  const selected = typeof target === 'string' ? target : target?.import ?? target?.default;",
       "  if (typeof selected !== 'string' || !selected.startsWith('./')) throw new Error(`Packed pipeline does not export ${specifier} for import.`);",
-      "  return new URL(selected, pathToFileURL(`${pipelineRoot}/`)).href;",
+      '  return new URL(selected, pathToFileURL(`${pipelineRoot}/`)).href;',
       '}',
       'export async function resolve(specifier, context, nextResolve) {',
       "  if (specifier === 'planr-pipeline' || specifier.startsWith('planr-pipeline/')) {",
@@ -251,7 +255,9 @@ function reserveFixturePort() {
     server.listen({ host: '127.0.0.1', port: 0, exclusive: true }, () => {
       const address = server.address();
       if (!address || typeof address === 'string' || address.port === 4173) {
-        server.close(() => reject(new Error('Could not reserve an isolated dashboard fixture port.')));
+        server.close(() =>
+          reject(new Error('Could not reserve an isolated dashboard fixture port.')),
+        );
         return;
       }
       server.close((error) => {
@@ -268,7 +274,9 @@ function reserveFixturePort() {
 let temporaryRoot;
 try {
   const compileOnly = process.argv.includes('--compile-only');
-  const playwrightArguments = process.argv.slice(2).filter((argument) => argument !== '--compile-only');
+  const playwrightArguments = process.argv
+    .slice(2)
+    .filter((argument) => argument !== '--compile-only');
   temporaryRoot = mkdtempSync(join(tmpdir(), 'openplanr-dashboard-browser-custody-'));
   const packed = installPackedPipeline(temporaryRoot);
   preservePackedPipelineArchive(packed.archivePath);
@@ -308,7 +316,9 @@ try {
     runChecked(process.execPath, args, environment, 'Packed-candidate Playwright');
   }
 } catch (error) {
-  console.error(`Dashboard browser QA could not run: ${error instanceof Error ? error.message : error}`);
+  console.error(
+    `Dashboard browser QA could not run: ${error instanceof Error ? error.message : error}`,
+  );
   process.exitCode = 2;
 } finally {
   if (temporaryRoot) rmSync(temporaryRoot, { recursive: true, force: true });

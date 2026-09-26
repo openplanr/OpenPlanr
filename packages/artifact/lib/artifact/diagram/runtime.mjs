@@ -1,16 +1,15 @@
-import { readFile } from 'node:fs/promises';
 import { basename } from 'node:path';
 
 import { sha256Jcs } from '@openplanr/protocol/canonical-json';
 import { DIAGRAM_GRAMMAR_REGISTRY } from '@openplanr/protocol/diagram-contracts';
-
+import { validateDiagramSvg } from './accessibility.mjs';
 import {
+  assertDiagramSlug,
   cleanupAbandonedDiagramStages,
   createDiagramRenderManifest,
-  digestBytes,
   diagramRelativeDirectory,
+  digestBytes,
   jsonBytes,
-  assertDiagramSlug,
   promoteDiagramSet,
   readDiagramSet,
   recoverInterruptedDiagramPromotion,
@@ -26,14 +25,13 @@ import {
   exportDiagramMermaid,
   renderExcalidrawSceneSvg,
 } from './projection/index.mjs';
-import { validateDiagramSvg } from './accessibility.mjs';
 import {
+  createFidelityReport,
+  createRenderQualityReport,
   DIAGRAM_FONT,
   DIAGRAM_RASTERIZER,
   DIAGRAM_RENDERER,
   DIAGRAM_THEME,
-  createFidelityReport,
-  createRenderQualityReport,
   renderDiagramHtml,
   renderDiagramOutputs,
   renderDiagramPng,
@@ -95,7 +93,9 @@ function finalizeBundle(document, slug, outputs, sourceName) {
   const relativeDirectory = diagramRelativeDirectory(slug);
   const sourceOutput = outputs.get(sourceName);
   if (!sourceOutput) throw new Error(`Missing active diagram source: ${sourceName}`);
-  const descriptors = [...outputs].map(([name, output]) => descriptor(relativeDirectory, name, output));
+  const descriptors = [...outputs].map(([name, output]) =>
+    descriptor(relativeDirectory, name, output),
+  );
   const manifest = createDiagramRenderManifest(document, {
     source: {
       path: `${relativeDirectory}/${sourceName}`,
@@ -106,32 +106,85 @@ function finalizeBundle(document, slug, outputs, sourceName) {
   const manifestName = outputName(slug, 'manifest.json');
   const files = new Map([...outputs].map(([name, output]) => [name, output.bytes]));
   files.set(manifestName, jsonBytes(manifest));
-  return Object.freeze({ contentId: manifest.documentDigest.slice('sha256:'.length), files, manifest });
+  return Object.freeze({
+    contentId: manifest.documentDigest.slice('sha256:'.length),
+    files,
+    manifest,
+  });
 }
 
 function buildIrBundle(document, slug) {
   assertDiagramDocument(document);
   if (document.diagramId !== slug) {
-    diagramFail(DIAGRAM_ERROR_CODES.SCHEMA_INVALID, 'Diagram slug and canonical document identity must match.', {
-      slug,
-      diagramId: document.diagramId,
-      repair: 'Use the diagramId as the slug or create a new canonical document with the requested identity.',
-    });
+    diagramFail(
+      DIAGRAM_ERROR_CODES.SCHEMA_INVALID,
+      'Diagram slug and canonical document identity must match.',
+      {
+        slug,
+        diagramId: document.diagramId,
+        repair:
+          'Use the diagramId as the slug or create a new canonical document with the requested identity.',
+      },
+    );
   }
   const rendered = renderDiagramOutputs(document);
   const mermaid = exportDiagramMermaid(document);
   const excalidraw = exportDiagramExcalidraw(document);
   const outputs = new Map();
-  addOutput(outputs, outputName(slug, 'planr-diagram.json'), jsonBytes(document), MEDIA.ir, 'editable');
+  addOutput(
+    outputs,
+    outputName(slug, 'planr-diagram.json'),
+    jsonBytes(document),
+    MEDIA.ir,
+    'editable',
+  );
   addOutput(outputs, outputName(slug, 'svg'), rendered.svg, MEDIA.svg, 'render-only');
   addOutput(outputs, outputName(slug, 'png'), rendered.png.bytes, MEDIA.png, 'render-only');
   addOutput(outputs, outputName(slug, 'html'), rendered.html, MEDIA.html, 'render-only');
-  addOutput(outputs, outputName(slug, 'quality.json'), jsonBytes(rendered.quality), MEDIA.quality, 'render-only');
-  addOutput(outputs, outputName(slug, 'assets.json'), jsonBytes(assetReceipt()), MEDIA.assets, 'render-only');
-  addOutput(outputs, outputName(slug, 'fidelity.mermaid.json'), jsonBytes(mermaid.report), MEDIA.fidelity, mermaid.report.status);
-  addOutput(outputs, outputName(slug, 'fidelity.excalidraw.json'), jsonBytes(excalidraw.report), MEDIA.fidelity, excalidraw.report.status);
-  if (mermaid.source) addOutput(outputs, outputName(slug, 'mmd'), mermaid.source, MEDIA.mermaid, mermaid.report.status);
-  if (excalidraw.scene) addOutput(outputs, outputName(slug, 'excalidraw'), jsonBytes(excalidraw.scene), MEDIA.excalidraw, excalidraw.report.status);
+  addOutput(
+    outputs,
+    outputName(slug, 'quality.json'),
+    jsonBytes(rendered.quality),
+    MEDIA.quality,
+    'render-only',
+  );
+  addOutput(
+    outputs,
+    outputName(slug, 'assets.json'),
+    jsonBytes(assetReceipt()),
+    MEDIA.assets,
+    'render-only',
+  );
+  addOutput(
+    outputs,
+    outputName(slug, 'fidelity.mermaid.json'),
+    jsonBytes(mermaid.report),
+    MEDIA.fidelity,
+    mermaid.report.status,
+  );
+  addOutput(
+    outputs,
+    outputName(slug, 'fidelity.excalidraw.json'),
+    jsonBytes(excalidraw.report),
+    MEDIA.fidelity,
+    excalidraw.report.status,
+  );
+  if (mermaid.source)
+    addOutput(
+      outputs,
+      outputName(slug, 'mmd'),
+      mermaid.source,
+      MEDIA.mermaid,
+      mermaid.report.status,
+    );
+  if (excalidraw.scene)
+    addOutput(
+      outputs,
+      outputName(slug, 'excalidraw'),
+      jsonBytes(excalidraw.scene),
+      MEDIA.excalidraw,
+      excalidraw.report.status,
+    );
   return finalizeBundle(document, slug, outputs, outputName(slug, 'planr-diagram.json'));
 }
 
@@ -150,9 +203,13 @@ function preserveSourceOutputs(current, outputs) {
 
 function buildSceneBundle(document, slug, sceneBytes, current) {
   let scene;
-  try { scene = assertExcalidrawScene(JSON.parse(sceneBytes.toString('utf8'))); } catch (error) {
+  try {
+    scene = assertExcalidrawScene(JSON.parse(sceneBytes.toString('utf8')));
+  } catch (error) {
     if (error?.name === 'DiagramError') throw error;
-    diagramFail(DIAGRAM_ERROR_CODES.SCENE_INVALID, 'Edited scene is not valid JSON.', { cause: error.message });
+    diagramFail(DIAGRAM_ERROR_CODES.SCENE_INVALID, 'Edited scene is not valid JSON.', {
+      cause: error.message,
+    });
   }
   const renderedScene = renderExcalidrawSceneSvg(scene, {
     title: document.accessibility.title,
@@ -179,24 +236,47 @@ function buildSceneBundle(document, slug, sceneBytes, current) {
   addOutput(outputs, outputName(slug, 'svg'), renderedScene.svg, MEDIA.svg, 'render-only');
   addOutput(outputs, outputName(slug, 'png'), png.bytes, MEDIA.png, 'render-only');
   addOutput(outputs, outputName(slug, 'html'), html, MEDIA.html, 'render-only');
-  addOutput(outputs, outputName(slug, 'quality.json'), jsonBytes(quality), MEDIA.quality, 'render-only');
-  addOutput(outputs, outputName(slug, 'assets.json'), jsonBytes(assetReceipt()), MEDIA.assets, 'render-only');
-  addOutput(outputs, outputName(slug, 'fidelity.scene.json'), jsonBytes(fidelity), MEDIA.fidelity, 'render-only');
+  addOutput(
+    outputs,
+    outputName(slug, 'quality.json'),
+    jsonBytes(quality),
+    MEDIA.quality,
+    'render-only',
+  );
+  addOutput(
+    outputs,
+    outputName(slug, 'assets.json'),
+    jsonBytes(assetReceipt()),
+    MEDIA.assets,
+    'render-only',
+  );
+  addOutput(
+    outputs,
+    outputName(slug, 'fidelity.scene.json'),
+    jsonBytes(fidelity),
+    MEDIA.fidelity,
+    'render-only',
+  );
   return finalizeBundle(document, slug, outputs, outputName(slug, 'excalidraw'));
 }
 
 function assertGeneratedOutputsCurrent(current) {
   if (current.generatedChanges.length === 0) return;
-  diagramFail(DIAGRAM_ERROR_CODES.OUTPUT_CONFLICT, 'Generated diagram output was modified or an unowned file is present.', {
-    changes: current.generatedChanges,
-    repair: 'Choose a new slug or restore/remove the conflicting output explicitly.',
-  });
+  diagramFail(
+    DIAGRAM_ERROR_CODES.OUTPUT_CONFLICT,
+    'Generated diagram output was modified or an unowned file is present.',
+    {
+      changes: current.generatedChanges,
+      repair: 'Choose a new slug or restore/remove the conflicting output explicitly.',
+    },
+  );
 }
 
 function inspection(current) {
-  const validation = current.sourceChanges.length === 0 && current.generatedChanges.length === 0
-    ? 'passed'
-    : 'changed';
+  const validation =
+    current.sourceChanges.length === 0 && current.generatedChanges.length === 0
+      ? 'passed'
+      : 'changed';
   return Object.freeze({
     directory: current.directory,
     manifest: current.manifest,
@@ -221,15 +301,21 @@ function selectedSource(current, acceptedSource) {
   const changed = [...new Set(current.sourceChanges.map(({ branch }) => branch).filter(Boolean))];
   const accepted = normalizeAcceptedSource(acceptedSource);
   if (changed.length > 1 && !accepted) {
-    diagramFail(DIAGRAM_ERROR_CODES.SOURCE_CONFLICT, 'More than one diagram source branch changed after the last manifest.', {
-      branches: changed,
-      choices: ['accept-ir', 'accept-mermaid', 'accept-excalidraw', 'new-slug'],
-    });
+    diagramFail(
+      DIAGRAM_ERROR_CODES.SOURCE_CONFLICT,
+      'More than one diagram source branch changed after the last manifest.',
+      {
+        branches: changed,
+        choices: ['accept-ir', 'accept-mermaid', 'accept-excalidraw', 'new-slug'],
+      },
+    );
   }
   if (accepted) return accepted;
   if (changed.length === 1) return changed[0];
   const activePath = current.manifest.source.path;
-  return Object.entries(SOURCE_SUFFIX).find(([, suffix]) => activePath.endsWith(suffix))?.[0] ?? 'ir';
+  return (
+    Object.entries(SOURCE_SUFFIX).find(([, suffix]) => activePath.endsWith(suffix))?.[0] ?? 'ir'
+  );
 }
 
 async function promote(root, slug, bundle, current) {
@@ -242,7 +328,10 @@ async function promote(root, slug, bundle, current) {
   });
 }
 
-export async function renderDiagram(document, { outputRoot = process.cwd(), slug = document?.diagramId } = {}) {
+export async function renderDiagram(
+  document,
+  { outputRoot = process.cwd(), slug = document?.diagramId } = {},
+) {
   slug = assertDiagramSlug(slug);
   const root = resolveDiagramOutputRoot(outputRoot);
   return withDiagramLock(root, slug, async () => {
@@ -252,40 +341,64 @@ export async function renderDiagram(document, { outputRoot = process.cwd(), slug
     if (current) {
       assertGeneratedOutputsCurrent(current);
       if (current.sourceChanges.length > 0) {
-        diagramFail(DIAGRAM_ERROR_CODES.SOURCE_CONFLICT, 'An existing diagram source changed; use rerenderDiagram so its owner is explicit.', {
-          branches: [...new Set(current.sourceChanges.map(({ branch }) => branch))],
-        });
+        diagramFail(
+          DIAGRAM_ERROR_CODES.SOURCE_CONFLICT,
+          'An existing diagram source changed; use rerenderDiagram so its owner is explicit.',
+          {
+            branches: [...new Set(current.sourceChanges.map(({ branch }) => branch))],
+          },
+        );
       }
     }
     return promote(root, slug, buildIrBundle(document, slug), current);
   });
 }
 
-export async function rerenderDiagram({ outputRoot = process.cwd(), slug, acceptSource = null } = {}) {
+export async function rerenderDiagram({
+  outputRoot = process.cwd(),
+  slug,
+  acceptSource = null,
+} = {}) {
   slug = assertDiagramSlug(slug);
   const root = resolveDiagramOutputRoot(outputRoot);
   return withDiagramLock(root, slug, async () => {
     await cleanupAbandonedDiagramStages(root);
     await recoverInterruptedDiagramPromotion(root, slug);
     const current = await readDiagramSet(root, slug);
-    if (!current) diagramFail(DIAGRAM_ERROR_CODES.OUTPUT_CONFLICT, `No generated diagram exists for ${slug}.`);
+    if (!current)
+      diagramFail(DIAGRAM_ERROR_CODES.OUTPUT_CONFLICT, `No generated diagram exists for ${slug}.`);
     assertGeneratedOutputsCurrent(current);
     const source = selectedSource(current, acceptSource);
     const ir = findOutput(current, SOURCE_SUFFIX.ir);
-    if (!ir) diagramFail(DIAGRAM_ERROR_CODES.SOURCE_CONFLICT, 'Canonical IR is absent from the generated diagram set.');
+    if (!ir)
+      diagramFail(
+        DIAGRAM_ERROR_CODES.SOURCE_CONFLICT,
+        'Canonical IR is absent from the generated diagram set.',
+      );
     let document;
-    try { document = assertDiagramDocument(JSON.parse(ir.bytes.toString('utf8'))); } catch (error) {
+    try {
+      document = assertDiagramDocument(JSON.parse(ir.bytes.toString('utf8')));
+    } catch (error) {
       if (source === 'ir') throw error;
-      diagramFail(DIAGRAM_ERROR_CODES.SOURCE_CONFLICT, 'Canonical IR is unreadable while rerendering another source branch.', { cause: error.message });
+      diagramFail(
+        DIAGRAM_ERROR_CODES.SOURCE_CONFLICT,
+        'Canonical IR is unreadable while rerendering another source branch.',
+        { cause: error.message },
+      );
     }
     if (source === 'excalidraw') {
       const scene = findOutput(current, SOURCE_SUFFIX.excalidraw);
-      if (!scene) diagramFail(DIAGRAM_ERROR_CODES.SOURCE_CONFLICT, 'The accepted Excalidraw source is absent.');
+      if (!scene)
+        diagramFail(
+          DIAGRAM_ERROR_CODES.SOURCE_CONFLICT,
+          'The accepted Excalidraw source is absent.',
+        );
       return promote(root, slug, buildSceneBundle(document, slug, scene.bytes, current), current);
     }
     if (source === 'mermaid') {
       const mermaid = findOutput(current, SOURCE_SUFFIX.mermaid);
-      if (!mermaid) diagramFail(DIAGRAM_ERROR_CODES.SOURCE_CONFLICT, 'The accepted Mermaid source is absent.');
+      if (!mermaid)
+        diagramFail(DIAGRAM_ERROR_CODES.SOURCE_CONFLICT, 'The accepted Mermaid source is absent.');
       const imported = importMermaid(mermaid.bytes.toString('utf8'), {
         diagramId: slug,
         title: document.title,
@@ -306,7 +419,8 @@ export async function inspectDiagram({ outputRoot = process.cwd(), slug } = {}) 
   const root = resolveDiagramOutputRoot(outputRoot);
   await recoverInterruptedDiagramPromotion(root, slug);
   const current = await readDiagramSet(root, slug);
-  if (!current) diagramFail(DIAGRAM_ERROR_CODES.OUTPUT_CONFLICT, `No generated diagram exists for ${slug}.`);
+  if (!current)
+    diagramFail(DIAGRAM_ERROR_CODES.OUTPUT_CONFLICT, `No generated diagram exists for ${slug}.`);
   return inspection(current);
 }
 
@@ -316,9 +430,10 @@ export async function checkDiagram(options = {}) {
     diagramFail(DIAGRAM_ERROR_CODES.OUTPUT_CONFLICT, 'Diagram files differ from their manifest.', {
       sourceChanges: result.sourceChanges,
       generatedChanges: result.generatedChanges,
-      repair: result.sourceChanges.length > 0
-        ? 'Run planr diagram rerender and choose the intended source branch when required.'
-        : 'Restore the generated bytes or render to a new slug.',
+      repair:
+        result.sourceChanges.length > 0
+          ? 'Run planr diagram rerender and choose the intended source branch when required.'
+          : 'Restore the generated bytes or render to a new slug.',
     });
   }
   return result;

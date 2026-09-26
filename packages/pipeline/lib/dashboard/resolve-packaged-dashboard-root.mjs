@@ -19,11 +19,13 @@ function isUnifiedDashboardRoot(candidate) {
     const manifestPath = join(candidate, 'dashboard-manifest.json');
     if (!existsSync(manifestPath)) return false;
     const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
-    return manifest.kind === 'openplanr-dashboard-build'
-      && manifest.schemaVersion === '1.0.0'
-      && manifest.entry === 'index.html'
-      && typeof manifest.buildId === 'string'
-      && manifest.buildId.length > 0;
+    return (
+      manifest.kind === 'openplanr-dashboard-build' &&
+      manifest.schemaVersion === '1.0.0' &&
+      manifest.entry === 'index.html' &&
+      typeof manifest.buildId === 'string' &&
+      manifest.buildId.length > 0
+    );
   } catch {
     return false;
   }
@@ -66,8 +68,8 @@ export function resolvePackagedDashboardRoot(env = process.env) {
   }
 
   throw new Error(
-    'Unified dashboard assets are missing. Install OpenPlanr with its packaged dashboard '
-    + 'or set OPENPLANR_DASHBOARD_ROOT to an absolute dist/dashboard directory.',
+    'Unified dashboard assets are missing. Install OpenPlanr with its packaged dashboard ' +
+      'or set OPENPLANR_DASHBOARD_ROOT to an absolute dist/dashboard directory.',
   );
 }
 

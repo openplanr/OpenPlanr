@@ -1,20 +1,47 @@
 import type {
-  DiagramAuthoringBundle, DiagramEditTransaction, DiagramAuthoringValidationError,
+  DiagramAuthoringBundle,
+  DiagramAuthoringValidationError,
+  DiagramEditTransaction,
 } from '@openplanr/protocol/diagram-authoring-contracts';
-import type { DiagramCommand, DiagramCommandResult, DiagramPreviewResult, DiagramBundleDiff } from '../authoring/index.mjs';
+import type {
+  DiagramBundleDiff,
+  DiagramCommand,
+  DiagramCommandResult,
+  DiagramPreviewResult,
+} from '../authoring/index.mjs';
 import type { DiagramStoreBasis, DiagramStoreReceipt } from '../authoring/store.mjs';
 import type { DiagramGeometryIndex } from './geometry-index.mjs';
+
 export * from './geometry-index.mjs';
 
-export interface DiagramEditorFailure { ok: false; diagnostics: DiagramAuthoringValidationError[] }
-export interface DiagramEditorTransportFailure { ok: false; status?: string; httpStatus?: number; diagnostics?: DiagramAuthoringValidationError[] }
+export interface DiagramEditorFailure {
+  ok: false;
+  diagnostics: DiagramAuthoringValidationError[];
+}
+export interface DiagramEditorTransportFailure {
+  ok: false;
+  status?: string;
+  httpStatus?: number;
+  diagnostics?: DiagramAuthoringValidationError[];
+}
 export interface DiagramEditorTransport {
-  read(): Promise<({ ok: true; status: 'ready'; bundle: DiagramAuthoringBundle } | { ok: true; status: 'absent' } | DiagramEditorTransportFailure)>;
-  initialize(bundle: DiagramAuthoringBundle, identity: { transactionId: string }): Promise<DiagramEditorSaveAcknowledgement | DiagramEditorTransportFailure>;
-  commit(transaction: DiagramEditTransaction): Promise<DiagramEditorSaveAcknowledgement | DiagramEditorTransportFailure>;
+  read(): Promise<
+    | { ok: true; status: 'ready'; bundle: DiagramAuthoringBundle }
+    | { ok: true; status: 'absent' }
+    | DiagramEditorTransportFailure
+  >;
+  initialize(
+    bundle: DiagramAuthoringBundle,
+    identity: { transactionId: string },
+  ): Promise<DiagramEditorSaveAcknowledgement | DiagramEditorTransportFailure>;
+  commit(
+    transaction: DiagramEditTransaction,
+  ): Promise<DiagramEditorSaveAcknowledgement | DiagramEditorTransportFailure>;
 }
 export interface DiagramEditorSaveAcknowledgement {
-  ok: true; status: 'saved'; bundle: DiagramAuthoringBundle;
+  ok: true;
+  status: 'saved';
+  bundle: DiagramAuthoringBundle;
   receipt: Pick<DiagramStoreReceipt, 'transactionId' | 'result'>;
   replayed?: boolean;
 }
@@ -29,21 +56,37 @@ export interface DiagramEditorSaveBatch {
   result: DiagramAuthoringBundle;
 }
 export interface DiagramEditorBatchAcknowledgement {
-  ok: true; status: 'saved'; bundle: DiagramAuthoringBundle;
+  ok: true;
+  status: 'saved';
+  bundle: DiagramAuthoringBundle;
   receipt: { batchId: string; result: DiagramStoreBasis };
   replayed?: boolean;
 }
 /** Hosted transport that acknowledges each save as one request. */
 export interface DiagramEditorBatchTransport {
   read: DiagramEditorTransport['read'];
-  saveBatch(batch: DiagramEditorSaveBatch): Promise<DiagramEditorBatchAcknowledgement | DiagramEditorTransportFailure>;
+  saveBatch(
+    batch: DiagramEditorSaveBatch,
+  ): Promise<DiagramEditorBatchAcknowledgement | DiagramEditorTransportFailure>;
 }
 export interface DiagramEditorView {
   camera: { x: number; y: number; scale: number; fit: 'all' | 'width' | null };
-  selection: string[]; collapsedGroups: string[]; trace: string[]; snap: boolean;
+  selection: string[];
+  collapsedGroups: string[];
+  trace: string[];
+  snap: boolean;
 }
-export type DiagramEditorSaveState = 'saved' | 'unsaved' | 'saving' | 'offline' | 'conflict' | 'access-changed';
-export interface DiagramEditorRecoveryStatus { mode: 'available' | 'memory-only'; warning: string | null }
+export type DiagramEditorSaveState =
+  | 'saved'
+  | 'unsaved'
+  | 'saving'
+  | 'offline'
+  | 'conflict'
+  | 'access-changed';
+export interface DiagramEditorRecoveryStatus {
+  mode: 'available' | 'memory-only';
+  warning: string | null;
+}
 export interface DiagramEditorRecovery {
   load(): unknown | null;
   save(draft: unknown): { ok: boolean } & DiagramEditorRecoveryStatus;
@@ -53,36 +96,65 @@ export interface DiagramEditorRecovery {
 export interface DiagramEditorState {
   bundle: DiagramAuthoringBundle | null;
   acknowledged: DiagramStoreBasis | null;
-  pendingCount: number; needsInitialization: boolean;
+  pendingCount: number;
+  needsInitialization: boolean;
   saveState: DiagramEditorSaveState;
   capabilities: { read: boolean; write: boolean };
   view: DiagramEditorView;
-  gesture: { transactionId: string; basis: string; diagnostics: DiagramAuthoringValidationError[]; bundle: DiagramAuthoringBundle | null } | null;
-  canUndo: boolean; canRedo: boolean;
-  comparison: { base: DiagramAuthoringBundle; bundle: DiagramAuthoringBundle; diff: DiagramBundleDiff | DiagramEditorFailure } | null;
+  gesture: {
+    transactionId: string;
+    basis: string;
+    diagnostics: DiagramAuthoringValidationError[];
+    bundle: DiagramAuthoringBundle | null;
+  } | null;
+  canUndo: boolean;
+  canRedo: boolean;
+  comparison: {
+    base: DiagramAuthoringBundle;
+    bundle: DiagramAuthoringBundle;
+    diff: DiagramBundleDiff | DiagramEditorFailure;
+  } | null;
   diagnostics: DiagramAuthoringValidationError[];
   recovery: DiagramEditorRecoveryStatus;
   disposed: boolean;
 }
-export interface DiagramEditorEvent { type: string; affectedIds: string[]; revision: string; saveState: DiagramEditorSaveState }
+export interface DiagramEditorEvent {
+  type: string;
+  affectedIds: string[];
+  revision: string;
+  saveState: DiagramEditorSaveState;
+}
 export interface DiagramEditorSession {
   getState(): DiagramEditorState;
   submit(command: DiagramCommand, options?: { transactionId?: string }): DiagramCommandResult;
   submitTransaction(transaction: DiagramEditTransaction): DiagramCommandResult;
   /** Adopt a certified complete copy only while this is a new, empty, unsaved diagram. */
-  adoptInitialCopy(bundle: DiagramAuthoringBundle): { ok: true; bundle: DiagramAuthoringBundle } | DiagramEditorFailure;
+  adoptInitialCopy(
+    bundle: DiagramAuthoringBundle,
+  ): { ok: true; bundle: DiagramAuthoringBundle } | DiagramEditorFailure;
   beginGesture(options?: { transactionId?: string }): { ok: true } | DiagramEditorFailure;
   /** Delta commands are always relative to the gesture's original content. */
   previewGesture(command: DiagramCommand): DiagramCommandResult;
-  previewLayout(options: { targetIds: string[]; columns?: number; gap?: number }): DiagramPreviewResult;
+  previewLayout(options: {
+    targetIds: string[];
+    columns?: number;
+    gap?: number;
+  }): DiagramPreviewResult;
   completeGesture(): DiagramCommandResult;
   cancelGesture(reason?: string): { ok: true; cancelled: boolean; reason?: string };
   undo(options?: { transactionId?: string }): DiagramCommandResult;
   redo(options?: { transactionId?: string }): DiagramCommandResult;
   refresh(bundle: DiagramAuthoringBundle): { ok: true; changed: boolean } | DiagramEditorFailure;
-  save(): Promise<({ ok: true; status: DiagramEditorSaveState; bundle?: DiagramAuthoringBundle | null } | DiagramEditorFailure)>;
+  save(): Promise<
+    | { ok: true; status: DiagramEditorSaveState; bundle?: DiagramAuthoringBundle | null }
+    | DiagramEditorFailure
+  >;
   setView(patch: Partial<DiagramEditorView>): { ok: true } | DiagramEditorFailure;
-  query(input: { x: number; y: number; tolerance?: number }): ReturnType<DiagramGeometryIndex['query']>;
+  query(input: {
+    x: number;
+    y: number;
+    tolerance?: number;
+  }): ReturnType<DiagramGeometryIndex['query']>;
   geometry(id: string): ReturnType<DiagramGeometryIndex['get']>;
   geometryStats(): ReturnType<DiagramGeometryIndex['stats']>;
   subscribe(listener: (event: DiagramEditorEvent) => void): () => void;
@@ -102,25 +174,59 @@ export interface DiagramEditorOptions {
   /** Keep this identity's recovery copy when access is lost; the host clears it on sign-out. Defaults to false. */
   retainRecoveryOnAccessLoss?: boolean;
 }
-export declare function createDiagramEditorSession(options: DiagramEditorOptions): DiagramEditorSession;
-export declare function openDiagramEditorSession(options: Omit<DiagramEditorOptions, 'bundle' | 'acknowledged' | 'transport'> & { transport: DiagramEditorTransport | DiagramEditorBatchTransport; create?: DiagramAuthoringBundle }): Promise<DiagramEditorSession>;
+export declare function createDiagramEditorSession(
+  options: DiagramEditorOptions,
+): DiagramEditorSession;
+export declare function openDiagramEditorSession(
+  options: Omit<DiagramEditorOptions, 'bundle' | 'acknowledged' | 'transport'> & {
+    transport: DiagramEditorTransport | DiagramEditorBatchTransport;
+    create?: DiagramAuthoringBundle;
+  },
+): Promise<DiagramEditorSession>;
 /** A named template starts from the editor's own shapes; a bundle template is adopted under the new identity. */
-export declare function createDiagramEditorDraft(options: { diagramId: string; title: string; grammar?: 'flowchart' | 'process' | 'swimlane' | 'architecture'; template?: 'process' | DiagramAuthoringBundle | null }): { ok: true; bundle: DiagramAuthoringBundle } | DiagramEditorFailure;
-export interface DiagramSelectionClipboard { kind: 'openplanr-diagram-selection'; version: 1; sourceBundle: DiagramAuthoringBundle; ids: string[] }
-export declare function copyDiagramSelection(bundle: DiagramAuthoringBundle, ids: string[]): { ok: true; value: DiagramSelectionClipboard } | DiagramEditorFailure;
-export declare function pasteDiagramSelection(bundle: DiagramAuthoringBundle, input: unknown, options: { idMap: Record<string, string>; transactionId: string; dx?: number; dy?: number }): DiagramCommandResult;
+export declare function createDiagramEditorDraft(options: {
+  diagramId: string;
+  title: string;
+  grammar?: 'flowchart' | 'process' | 'swimlane' | 'architecture';
+  template?: 'process' | DiagramAuthoringBundle | null;
+}): { ok: true; bundle: DiagramAuthoringBundle } | DiagramEditorFailure;
+export interface DiagramSelectionClipboard {
+  kind: 'openplanr-diagram-selection';
+  version: 1;
+  sourceBundle: DiagramAuthoringBundle;
+  ids: string[];
+}
+export declare function copyDiagramSelection(
+  bundle: DiagramAuthoringBundle,
+  ids: string[],
+): { ok: true; value: DiagramSelectionClipboard } | DiagramEditorFailure;
+export declare function pasteDiagramSelection(
+  bundle: DiagramAuthoringBundle,
+  input: unknown,
+  options: { idMap: Record<string, string>; transactionId: string; dx?: number; dy?: number },
+): DiagramCommandResult;
 export declare function createDiagramEditorRecovery(options: {
   /** Supply sessionStorage or a storage adapter; do not store owner URLs/tokens. */
-  storage?: { getItem(key: string): string | null; setItem(key: string, value: string): unknown; removeItem(key: string): unknown } | null;
+  storage?: {
+    getItem(key: string): string | null;
+    setItem(key: string, value: string): unknown;
+    removeItem(key: string): unknown;
+  } | null;
   /** Use the scope returned by the authenticated local owner, never unverified document input. */
-  scope: { sessionId: string; diagramId: string }; maxBytes?: number;
+  scope: { sessionId: string; diagramId: string };
+  maxBytes?: number;
 }): DiagramEditorRecovery;
 export interface DiagramOwnerHttpResponse {
-  ok: boolean; status: number; headers: { get(name: string): string | null };
-  body: { getReader(): {
-    read(): Promise<{ done: boolean; value?: Uint8Array }>;
-    cancel(): Promise<void>; releaseLock(): void;
-  } } | null;
+  ok: boolean;
+  status: number;
+  headers: { get(name: string): string | null };
+  body: {
+    getReader(): {
+      read(): Promise<{ done: boolean; value?: Uint8Array }>;
+      cancel(): Promise<void>;
+      releaseLock(): void;
+    };
+  } | null;
 }
 export interface DiagramLocalOwnerReadMetadata {
   diagramId: string;
@@ -130,7 +236,11 @@ export interface DiagramLocalOwnerReadMetadata {
 }
 export interface DiagramLocalOwnerTransport extends DiagramEditorTransport {
   read(): Promise<
-    ({ ok: true; status: 'ready'; bundle: DiagramAuthoringBundle } & DiagramLocalOwnerReadMetadata)
+    | ({
+        ok: true;
+        status: 'ready';
+        bundle: DiagramAuthoringBundle;
+      } & DiagramLocalOwnerReadMetadata)
     | ({ ok: true; status: 'absent' } & DiagramLocalOwnerReadMetadata)
     | DiagramEditorTransportFailure
   >;
@@ -138,14 +248,39 @@ export interface DiagramLocalOwnerTransport extends DiagramEditorTransport {
 }
 export declare function createDiagramLocalOwnerTransport(options: {
   apiBase: string;
-  fetch?: (url: string, options: { method: string; credentials: 'omit'; redirect: 'error'; cache: 'no-store'; headers: Record<string, string>; body?: string }) => Promise<DiagramOwnerHttpResponse>;
-  origin?: string; maxResponseBytes?: number;
+  fetch?: (
+    url: string,
+    options: {
+      method: string;
+      credentials: 'omit';
+      redirect: 'error';
+      cache: 'no-store';
+      headers: Record<string, string>;
+      body?: string;
+    },
+  ) => Promise<DiagramOwnerHttpResponse>;
+  origin?: string;
+  maxResponseBytes?: number;
 }): DiagramLocalOwnerTransport;
-export declare function bindDiagramEditorCancellation(session: Pick<DiagramEditorSession, 'cancelGesture'>, target: {
-  addEventListener(type: string, listener: (event: { type: string; key?: string }) => void, capture: boolean): void;
-  removeEventListener(type: string, listener: (event: { type: string; key?: string }) => void, capture: boolean): void;
-}): () => void;
+export declare function bindDiagramEditorCancellation(
+  session: Pick<DiagramEditorSession, 'cancelGesture'>,
+  target: {
+    addEventListener(
+      type: string,
+      listener: (event: { type: string; key?: string }) => void,
+      capture: boolean,
+    ): void;
+    removeEventListener(
+      type: string,
+      listener: (event: { type: string; key?: string }) => void,
+      capture: boolean,
+    ): void;
+  },
+): () => void;
 
 export { mountDiagramEditor } from '../../ui/diagram-editor.mjs';
+export type {
+  DiagramSourcePanelController,
+  DiagramSourcePanelOptions,
+} from '../../ui/diagram-source-panel.mjs';
 export { mountDiagramSourcePanel } from '../../ui/diagram-source-panel.mjs';
-export type { DiagramSourcePanelController, DiagramSourcePanelOptions } from '../../ui/diagram-source-panel.mjs';

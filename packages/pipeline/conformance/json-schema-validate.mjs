@@ -80,14 +80,22 @@ const validateNode = (value, schema, path, errs, context) => {
   if (schema.type !== undefined) {
     const types = Array.isArray(schema.type) ? schema.type : [schema.type];
     if (!types.some((t) => matchesType(value, t))) {
-      errs.push({ path, rule: 'type', detail: `expected ${types.join('|')}, got ${typeOf(value)}` });
+      errs.push({
+        path,
+        rule: 'type',
+        detail: `expected ${types.join('|')}, got ${typeOf(value)}`,
+      });
       return;
     }
   }
 
   if (schema.const !== undefined) {
     if (value !== schema.const) {
-      errs.push({ path, rule: 'const', detail: `expected ${JSON.stringify(schema.const)}, got ${JSON.stringify(value)}` });
+      errs.push({
+        path,
+        rule: 'const',
+        detail: `expected ${JSON.stringify(schema.const)}, got ${JSON.stringify(value)}`,
+      });
     }
   }
 
@@ -103,25 +111,49 @@ const validateNode = (value, schema, path, errs, context) => {
 
   if (typeof value === 'string') {
     if (typeof schema.minLength === 'number' && value.length < schema.minLength) {
-      errs.push({ path, rule: 'minLength', detail: `length ${value.length} < ${schema.minLength}` });
+      errs.push({
+        path,
+        rule: 'minLength',
+        detail: `length ${value.length} < ${schema.minLength}`,
+      });
     }
     if (typeof schema.maxLength === 'number' && value.length > schema.maxLength) {
-      errs.push({ path, rule: 'maxLength', detail: `length ${value.length} > ${schema.maxLength}` });
+      errs.push({
+        path,
+        rule: 'maxLength',
+        detail: `length ${value.length} > ${schema.maxLength}`,
+      });
     }
     if (typeof schema.pattern === 'string') {
       try {
         if (!new RegExp(schema.pattern).test(value)) {
-          errs.push({ path, rule: 'pattern', detail: `value ${JSON.stringify(value)} does not match /${schema.pattern}/` });
+          errs.push({
+            path,
+            rule: 'pattern',
+            detail: `value ${JSON.stringify(value)} does not match /${schema.pattern}/`,
+          });
         }
       } catch (e) {
-        errs.push({ path, rule: 'pattern', detail: `invalid regex /${schema.pattern}/: ${e.message}` });
+        errs.push({
+          path,
+          rule: 'pattern',
+          detail: `invalid regex /${schema.pattern}/: ${e.message}`,
+        });
       }
     }
     if (typeof schema.format === 'string') {
       if (schema.format === 'date' && !FORMAT_DATE.test(value)) {
-        errs.push({ path, rule: 'format:date', detail: `value ${JSON.stringify(value)} is not YYYY-MM-DD` });
+        errs.push({
+          path,
+          rule: 'format:date',
+          detail: `value ${JSON.stringify(value)} is not YYYY-MM-DD`,
+        });
       } else if (schema.format === 'date-time' && !FORMAT_DATETIME.test(value)) {
-        errs.push({ path, rule: 'format:date-time', detail: `value ${JSON.stringify(value)} is not ISO 8601 date-time` });
+        errs.push({
+          path,
+          rule: 'format:date-time',
+          detail: `value ${JSON.stringify(value)} is not ISO 8601 date-time`,
+        });
       }
     }
   }
@@ -168,10 +200,18 @@ const validateNode = (value, schema, path, errs, context) => {
       const minimum = Number.isSafeInteger(schema.minContains) ? schema.minContains : 1;
       const maximum = Number.isSafeInteger(schema.maxContains) ? schema.maxContains : null;
       if (matches < minimum) {
-        errs.push({ path, rule: 'contains', detail: `matched ${matches} contained items; expected at least ${minimum}` });
+        errs.push({
+          path,
+          rule: 'contains',
+          detail: `matched ${matches} contained items; expected at least ${minimum}`,
+        });
       }
       if (maximum !== null && matches > maximum) {
-        errs.push({ path, rule: 'contains', detail: `matched ${matches} contained items; expected at most ${maximum}` });
+        errs.push({
+          path,
+          rule: 'contains',
+          detail: `matched ${matches} contained items; expected at most ${maximum}`,
+        });
       }
     }
   }
@@ -190,8 +230,8 @@ const validateNode = (value, schema, path, errs, context) => {
         if (schema.additionalProperties === false) {
           errs.push({ path, rule: 'additionalProperties', detail: `unknown property '${k}'` });
         } else if (
-          schema.additionalProperties === true
-          || (schema.additionalProperties !== null && typeof schema.additionalProperties === 'object')
+          schema.additionalProperties === true ||
+          (schema.additionalProperties !== null && typeof schema.additionalProperties === 'object')
         ) {
           validateNode(v, schema.additionalProperties, `${path}.${k}`, errs, context);
         }
@@ -259,10 +299,11 @@ const validateNode = (value, schema, path, errs, context) => {
 };
 
 /** @returns {{ path: string, rule: string, detail: string }[]} */
-export const validateJson = (value, schema, {
-  resolveRef = null,
-  base = schema?.$id ?? null,
-} = {}) => {
+export const validateJson = (
+  value,
+  schema,
+  { resolveRef = null, base = schema?.$id ?? null } = {},
+) => {
   const errs = [];
   validateNode(value, schema, '$', errs, {
     rootSchema: schema,

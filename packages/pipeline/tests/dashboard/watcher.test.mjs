@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { mkdtempSync, rmSync } from 'node:fs';
-import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { setTimeout as delay } from 'node:timers/promises';
+import { join } from 'node:path';
 import { test } from 'node:test';
+import { setTimeout as delay } from 'node:timers/promises';
 
 import { createWatcher } from '../../lib/dashboard/watcher.mjs';
 
@@ -77,7 +77,11 @@ test('watcher debounces a burst of writes into exactly one patch', async () => {
     // The engine was asked to recompute exactly once, scoped to the changed id —
     // not a blanket full-graph recompute (the scope must be the node id).
     assert.equal(scopes.length, 1, `expected one scoped recompute, got ${scopes.length}`);
-    assert.equal(scopes[0], 'T-001', `scope should be the changed node id, got ${JSON.stringify(scopes[0])}`);
+    assert.equal(
+      scopes[0],
+      'T-001',
+      `scope should be the changed node id, got ${JSON.stringify(scopes[0])}`,
+    );
   } finally {
     watcher.stop();
     rmSync(home, { recursive: true, force: true });

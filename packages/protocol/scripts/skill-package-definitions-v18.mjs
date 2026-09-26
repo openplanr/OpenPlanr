@@ -105,7 +105,15 @@ export function buildSkillPackageSchemasV18() {
     $id: `${BASE}utility-command-catalog.schema.json`,
     'x-openplanr-contract': { id: 'utility-command-catalog', version: '1.8.0' },
     ...closed(
-      ['kind', 'schemaVersion', 'protocolVersion', 'semanticBoundary', 'utilityBoundary', 'active', 'retired'],
+      [
+        'kind',
+        'schemaVersion',
+        'protocolVersion',
+        'semanticBoundary',
+        'utilityBoundary',
+        'active',
+        'retired',
+      ],
       {
         kind: { const: 'openplanr-utility-command-catalog' },
         schemaVersion: { const: '1.0.0' },
@@ -125,7 +133,11 @@ export function buildSkillPackageSchemasV18() {
           items: closed(['path', 'classification'], {
             path: { type: 'string', pattern: '^[a-z][a-z0-9-]*(?: [a-z][a-z0-9-]*)*$' },
             classification: {
-              enum: ['semantic-moved-to-skill', 'obsolete-governance-retired', 'obsolete-facade-retired'],
+              enum: [
+                'semantic-moved-to-skill',
+                'obsolete-governance-retired',
+                'obsolete-facade-retired',
+              ],
             },
           }),
           minItems: 1,

@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join, resolve } from 'node:path';
-import { spawnSync } from 'node:child_process';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
@@ -15,7 +15,9 @@ const workspaceRoot = resolve(root, '../..');
 const openPlanrRoot = join(workspaceRoot, 'packages/cli');
 const fixtureRoot = join(root, 'conformance/fixtures/dashboard-graph');
 const planrDir = join(fixtureRoot, '.planr');
-const graphSchema = JSON.parse(readFileSync(join(root, 'schemas/v1.0.0/graph.schema.json'), 'utf-8'));
+const graphSchema = JSON.parse(
+  readFileSync(join(root, 'schemas/v1.0.0/graph.schema.json'), 'utf-8'),
+);
 
 function normalize(graph) {
   return {

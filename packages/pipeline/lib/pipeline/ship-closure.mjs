@@ -1,22 +1,12 @@
 import { spawnSync } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
-import {
-  existsSync,
-  lstatSync,
-  readFileSync,
-  readdirSync,
-  unlinkSync,
-} from 'node:fs';
+import { existsSync, lstatSync, readdirSync, readFileSync, unlinkSync } from 'node:fs';
 import { join, relative } from 'node:path';
 
 import { sha256Jcs } from '../protocol/jcs.mjs';
-import {
-  assertBrowserQaGateRecord,
-  assertBrowserQaRecordedEventAuthority,
-} from './browser-qa.mjs';
+import { assertBrowserQaRecordedEventAuthority } from './browser-qa.mjs';
 import { PipelineError } from './errors.mjs';
 import { projectPipelineOperatingOriginCorrelation } from './operate-origin.mjs';
-import { assertShipRiskClassification, classifyShipRisk } from './ship-risk.mjs';
 import {
   assertPreserve,
   captureCandidate,
@@ -28,18 +18,20 @@ import {
   taskRepositoryPath,
 } from './ship-closure-identity.mjs';
 import {
-  assertRegularCustodyFile,
   assertPathCustody,
+  assertRegularCustodyFile,
   closurePaths,
   ensureClosureDirs,
   withLock,
   writeJson,
 } from './ship-closure-persistence.mjs';
-import { projectShipCompatibility, verifyShipCompatibilityProjection } from './ship-closure-projections.mjs';
+import {
+  projectShipCompatibility,
+  verifyShipCompatibilityProjection,
+} from './ship-closure-projections.mjs';
 import {
   assertClosure,
   assertShipReceiptLineage,
-  blockingFindings,
   currentCandidate,
   phaseEvidence,
   recordShipGateEvidence,
@@ -47,6 +39,7 @@ import {
   terminalizeShipClosure,
   validateEvent,
 } from './ship-closure-reducer.mjs';
+import { assertShipRiskClassification, classifyShipRisk } from './ship-risk.mjs';
 
 const REVIEW_PHASE_STATE = Object.freeze({
   initial: 'reviewing_initial',
@@ -80,31 +73,44 @@ function posix(value) {
 }
 
 function exactKeys(value, expected, subject) {
-  if (value === null || typeof value !== 'object' || Array.isArray(value)) fail('E_SHIP_GATE_INVALID', `${subject} must be a closed JSON object.`);
+  if (value === null || typeof value !== 'object' || Array.isArray(value))
+    fail('E_SHIP_GATE_INVALID', `${subject} must be a closed JSON object.`);
   const actual = Object.keys(value).sort();
   const wanted = [...expected].sort();
-  if (JSON.stringify(actual) !== JSON.stringify(wanted)) fail('E_SHIP_GATE_INVALID', `${subject} fields must be exactly: ${wanted.join(', ')}.`);
+  if (JSON.stringify(actual) !== JSON.stringify(wanted))
+    fail('E_SHIP_GATE_INVALID', `${subject} fields must be exactly: ${wanted.join(', ')}.`);
 }
 
 function addFrozenBrowserGate(gates, repositories, riskClassification) {
   if (!riskClassification?.browserQa.required) return gates;
-  if (gates.some(({ id }) => id === 'browser-qa')) fail('E_SHIP_GATE_INVALID', 'The classifier-owned browser-qa gate ID is already declared.');
+  if (gates.some(({ id }) => id === 'browser-qa'))
+    fail('E_SHIP_GATE_INVALID', 'The classifier-owned browser-qa gate ID is already declared.');
   const finalIndex = gates.findIndex(({ finalRelevantSuite }) => finalRelevantSuite);
   if (finalIndex < 0 || !repositories.some(({ repositoryKey }) => repositoryKey === 'project')) {
-    fail('E_SHIP_GATE_INVALID', 'Mandatory browser QA requires the project repository and one final relevant suite.');
+    fail(
+      'E_SHIP_GATE_INVALID',
+      'Mandatory browser QA requires the project repository and one final relevant suite.',
+    );
   }
   const next = clone(gates);
   const previousDependencies = [...next[finalIndex].dependsOn];
   next[finalIndex] = { ...next[finalIndex], dependsOn: ['browser-qa'] };
   next.push({
-    id: 'browser-qa', repositoryKey: 'project', argv: ['@planr/browser-qa'],
-    inputs: [{ repositoryKey: 'project', path: '.' }], dependsOn: previousDependencies,
-    finalRelevantSuite: false, gateType: 'browser-qa',
+    id: 'browser-qa',
+    repositoryKey: 'project',
+    argv: ['@planr/browser-qa'],
+    inputs: [{ repositoryKey: 'project', path: '.' }],
+    dependsOn: previousDependencies,
+    finalRelevantSuite: false,
+    gateType: 'browser-qa',
   });
   return normalizeGates(next, repositories);
 }
 
-function readClosure(path, { prepared = undefined, expectedRunId = undefined, expectedRecordType = undefined } = {}) {
+function readClosure(
+  path,
+  { prepared = undefined, expectedRunId = undefined, expectedRecordType = undefined } = {},
+) {
   let value;
   try {
     assertRegularCustodyFile(path);
@@ -113,20 +119,47 @@ function readClosure(path, { prepared = undefined, expectedRunId = undefined, ex
     fail('E_SHIP_CLOSURE_INVALID', `Could not read closure ${path}: ${error.message}`);
   }
   const closure = assertClosure(value);
-  const filenameRunId = path.split(/[\\/]/).at(-1)?.replace(/\.json$/, '');
+  const filenameRunId = path
+    .split(/[\\/]/)
+    .at(-1)
+    ?.replace(/\.json$/, '');
   const runId = expectedRunId ?? filenameRunId;
-  if (closure.runId !== runId) fail('E_SHIP_STORAGE_CONTEXT_INVALID', `Closure ${path} contains run ${closure.runId}, expected ${runId}.`);
-  if (expectedRecordType && closure.recordType !== expectedRecordType) fail('E_SHIP_STORAGE_CONTEXT_INVALID', `Closure ${path} has record type ${closure.recordType}, expected ${expectedRecordType}.`);
+  if (closure.runId !== runId)
+    fail(
+      'E_SHIP_STORAGE_CONTEXT_INVALID',
+      `Closure ${path} contains run ${closure.runId}, expected ${runId}.`,
+    );
+  if (expectedRecordType && closure.recordType !== expectedRecordType)
+    fail(
+      'E_SHIP_STORAGE_CONTEXT_INVALID',
+      `Closure ${path} has record type ${closure.recordType}, expected ${expectedRecordType}.`,
+    );
   if (prepared) {
     const expectedFeatureRoot = posix(relative(prepared.projectRoot, prepared.root));
-    if (closure.feature !== prepared.slug || closure.mode !== prepared.mode || closure.approvedScope.featureRoot !== expectedFeatureRoot) {
-      fail('E_SHIP_STORAGE_CONTEXT_INVALID', `Closure ${path} does not belong to prepared feature ${prepared.slug}.`);
+    if (
+      closure.feature !== prepared.slug ||
+      closure.mode !== prepared.mode ||
+      closure.approvedScope.featureRoot !== expectedFeatureRoot
+    ) {
+      fail(
+        'E_SHIP_STORAGE_CONTEXT_INVALID',
+        `Closure ${path} does not belong to prepared feature ${prepared.slug}.`,
+      );
     }
     if (closure.recordType === 'active' && prepared.closureRepositories) {
-      const trustedRoots = new Map(prepared.closureRepositories.map(({ repositoryKey, root }) => [repositoryKey, root]));
-      if (closure.repositories.length !== trustedRoots.size
-        || closure.repositories.some(({ repositoryKey, root }) => trustedRoots.get(repositoryKey) !== root)) {
-        fail('E_SHIP_STORAGE_CONTEXT_INVALID', `Active closure ${path} substituted repository root custody.`);
+      const trustedRoots = new Map(
+        prepared.closureRepositories.map(({ repositoryKey, root }) => [repositoryKey, root]),
+      );
+      if (
+        closure.repositories.length !== trustedRoots.size ||
+        closure.repositories.some(
+          ({ repositoryKey, root }) => trustedRoots.get(repositoryKey) !== root,
+        )
+      ) {
+        fail(
+          'E_SHIP_STORAGE_CONTEXT_INVALID',
+          `Active closure ${path} substituted repository root custody.`,
+        );
       }
     }
   }
@@ -136,17 +169,27 @@ function readClosure(path, { prepared = undefined, expectedRunId = undefined, ex
 function activeRuns(featureRoot) {
   const dir = join(featureRoot, '.ship', 'active');
   if (!existsSync(dir)) return [];
-  return readdirSync(dir).filter((name) => name.endsWith('.json')).sort().flatMap((name) => {
-    const activePath = join(dir, name);
-    const receiptPath = join(featureRoot, '.ship', 'receipts', name);
-    if (!existsSync(receiptPath)) return [name];
-    const runId = name.replace(/\.json$/, '');
-    const active = readClosure(activePath, { expectedRunId: runId, expectedRecordType: 'active' });
-    const receipt = readClosure(receiptPath, { expectedRunId: runId, expectedRecordType: 'receipt' });
-    if (!receiptExtendsActive(receipt, active)) fail('E_SHIP_CLOSURE_DIVERGED', `Active and terminal custody diverge for ${name}.`);
-    unlinkSync(activePath);
-    return [];
-  });
+  return readdirSync(dir)
+    .filter((name) => name.endsWith('.json'))
+    .sort()
+    .flatMap((name) => {
+      const activePath = join(dir, name);
+      const receiptPath = join(featureRoot, '.ship', 'receipts', name);
+      if (!existsSync(receiptPath)) return [name];
+      const runId = name.replace(/\.json$/, '');
+      const active = readClosure(activePath, {
+        expectedRunId: runId,
+        expectedRecordType: 'active',
+      });
+      const receipt = readClosure(receiptPath, {
+        expectedRunId: runId,
+        expectedRecordType: 'receipt',
+      });
+      if (!receiptExtendsActive(receipt, active))
+        fail('E_SHIP_CLOSURE_DIVERGED', `Active and terminal custody diverge for ${name}.`);
+      unlinkSync(activePath);
+      return [];
+    });
 }
 
 function terminalReceipts(prepared) {
@@ -155,11 +198,13 @@ function terminalReceipts(prepared) {
   const receipts = readdirSync(dir)
     .filter((name) => name.endsWith('.json'))
     .sort()
-    .map((name) => readClosure(join(dir, name), {
-      prepared,
-      expectedRunId: name.replace(/\.json$/, ''),
-      expectedRecordType: 'receipt',
-    }));
+    .map((name) =>
+      readClosure(join(dir, name), {
+        prepared,
+        expectedRunId: name.replace(/\.json$/, ''),
+        expectedRecordType: 'receipt',
+      }),
+    );
   return assertShipReceiptLineage(receipts);
 }
 
@@ -170,7 +215,13 @@ function startCustodyIdentity(state) {
     mode: state.mode,
     runtime: state.runtime,
     approvedScope: state.approvedScope,
-    tasks: state.tasks.map(({ id, storyId, path, dependsOn, preserve }) => ({ id, storyId, path, dependsOn, preserve })),
+    tasks: state.tasks.map(({ id, storyId, path, dependsOn, preserve }) => ({
+      id,
+      storyId,
+      path,
+      dependsOn,
+      preserve,
+    })),
     repositories: state.repositories.map(({ root: _root, ...repository }) => repository),
     reviewerRoster: state.reviewerRoster,
     rosterDigest: state.rosterDigest,
@@ -190,30 +241,69 @@ function sameStartCustody(existing, requested) {
 
 function assertReopenGateInputExpansion(priorGates, successorGates) {
   if (successorGates.length !== priorGates.length) {
-    fail('E_SHIP_REOPEN_CUSTODY_INVALID', 'Reopen must preserve the exact prior gate set; only bounded input expansion is allowed.');
+    fail(
+      'E_SHIP_REOPEN_CUSTODY_INVALID',
+      'Reopen must preserve the exact prior gate set; only bounded input expansion is allowed.',
+    );
   }
   for (let index = 0; index < priorGates.length; index += 1) {
     const { inputs: priorInputs, ...priorAuthority } = priorGates[index];
     const { inputs: successorInputs, ...successorAuthority } = successorGates[index];
     if (sha256Jcs(successorAuthority) !== sha256Jcs(priorAuthority)) {
-      fail('E_SHIP_REOPEN_CUSTODY_INVALID', `Reopen changed frozen authority for gate ${priorGates[index].id}; only bounded input expansion is allowed.`);
+      fail(
+        'E_SHIP_REOPEN_CUSTODY_INVALID',
+        `Reopen changed frozen authority for gate ${priorGates[index].id}; only bounded input expansion is allowed.`,
+      );
     }
     const successorInputKeys = new Set(successorInputs.map((input) => sha256Jcs(input)));
     if (priorInputs.some((input) => !successorInputKeys.has(sha256Jcs(input)))) {
-      fail('E_SHIP_REOPEN_CUSTODY_INVALID', `Reopen narrowed bounded inputs for gate ${priorGates[index].id}.`);
+      fail(
+        'E_SHIP_REOPEN_CUSTODY_INVALID',
+        `Reopen narrowed bounded inputs for gate ${priorGates[index].id}.`,
+      );
     }
   }
 }
 
 function receiptExtendsActive(receipt, active) {
-  if (receipt.recordType !== 'receipt' || active.recordType !== 'active' || receipt.runId !== active.runId) return false;
+  if (
+    receipt.recordType !== 'receipt' ||
+    active.recordType !== 'active' ||
+    receipt.runId !== active.runId
+  )
+    return false;
   const fields = [
-    'kind', 'schemaVersion', 'protocolVersion', 'runId', 'feature', 'mode', 'runtime', 'createdAt',
-    'approvedScope', 'tasks', 'reviewerRoster', 'rosterDigest', 'gates', 'gateSetDigest',
-    'candidateRevisions', 'reviews', 'gateEvidence', 'correctionImpact', 'startedFromReceiptHash', 'reopenReason', 'planningReview', 'riskClassification', 'browserQaRecords', 'operatingOriginCorrelation',
+    'kind',
+    'schemaVersion',
+    'protocolVersion',
+    'runId',
+    'feature',
+    'mode',
+    'runtime',
+    'createdAt',
+    'approvedScope',
+    'tasks',
+    'reviewerRoster',
+    'rosterDigest',
+    'gates',
+    'gateSetDigest',
+    'candidateRevisions',
+    'reviews',
+    'gateEvidence',
+    'correctionImpact',
+    'startedFromReceiptHash',
+    'reopenReason',
+    'planningReview',
+    'riskClassification',
+    'browserQaRecords',
+    'operatingOriginCorrelation',
   ];
-  if (fields.some((field) => sha256Jcs(receipt[field] ?? null) !== sha256Jcs(active[field] ?? null))) return false;
-  if (receipt.generation <= active.generation || receipt.events.length <= active.events.length) return false;
+  if (
+    fields.some((field) => sha256Jcs(receipt[field] ?? null) !== sha256Jcs(active[field] ?? null))
+  )
+    return false;
+  if (receipt.generation <= active.generation || receipt.events.length <= active.events.length)
+    return false;
   return sha256Jcs(receipt.events.slice(0, active.events.length)) === sha256Jcs(active.events);
 }
 
@@ -222,7 +312,12 @@ function parseArgvChain(command, field) {
   let argv = [];
   let token = '';
   let quote = null;
-  const pushToken = () => { if (token) { argv.push(token); token = ''; } };
+  const pushToken = () => {
+    if (token) {
+      argv.push(token);
+      token = '';
+    }
+  };
   const pushCommand = () => {
     pushToken();
     if (!argv.length) fail('E_SHIP_GATE_INVALID', `${field} contains an empty command segment.`);
@@ -233,15 +328,29 @@ function parseArgvChain(command, field) {
     const char = command[index];
     if (quote) {
       if (char === quote) quote = null;
-      else if (char === '\\' && quote === '"' && index + 1 < command.length) token += command[++index];
+      else if (char === '\\' && quote === '"' && index + 1 < command.length)
+        token += command[++index];
       else token += char;
       continue;
     }
-    if (char === '"' || char === "'") { quote = char; continue; }
-    if (char === '&' && command[index + 1] === '&') { pushCommand(); index += 1; continue; }
-    if (/\s/.test(char)) { pushToken(); continue; }
+    if (char === '"' || char === "'") {
+      quote = char;
+      continue;
+    }
+    if (char === '&' && command[index + 1] === '&') {
+      pushCommand();
+      index += 1;
+      continue;
+    }
+    if (/\s/.test(char)) {
+      pushToken();
+      continue;
+    }
     if (';|<>`'.includes(char) || (char === '$' && command[index + 1] === '(')) {
-      fail('E_SHIP_GATE_INVALID', `${field} contains shell-only syntax; frozen gates execute argv without a shell.`);
+      fail(
+        'E_SHIP_GATE_INVALID',
+        `${field} contains shell-only syntax; frozen gates execute argv without a shell.`,
+      );
     }
     token += char;
   }
@@ -252,15 +361,27 @@ function parseArgvChain(command, field) {
 
 function stackCommands(projectRoot) {
   const path = containedPath(projectRoot, 'input/tech/stack.md');
-  if (!existsSync(path)) fail('E_SHIP_STACK_MISSING', 'New SHIP closure requires input/tech/stack.md as the authoritative gate source.');
+  if (!existsSync(path))
+    fail(
+      'E_SHIP_STACK_MISSING',
+      'New SHIP closure requires input/tech/stack.md as the authoritative gate source.',
+    );
   const stat = lstatSync(path);
-  if (stat.isSymbolicLink() || !stat.isFile()) fail('E_SHIP_STACK_UNSAFE', 'input/tech/stack.md must be a regular repository-owned file with no symlink traversal.');
+  if (stat.isSymbolicLink() || !stat.isFile())
+    fail(
+      'E_SHIP_STACK_UNSAFE',
+      'input/tech/stack.md must be a regular repository-owned file with no symlink traversal.',
+    );
   const text = readFileSync(path, 'utf8');
   const read = (field) => {
     const raw = text.match(new RegExp(`^${field}:\\s*(.*)$`, 'm'))?.[1]?.trim();
     if (raw === undefined) return undefined;
     if (raw.startsWith('"')) {
-      try { return JSON.parse(raw); } catch { fail('E_SHIP_GATE_INVALID', `${field} is not a valid quoted command.`); }
+      try {
+        return JSON.parse(raw);
+      } catch {
+        fail('E_SHIP_GATE_INVALID', `${field} is not a valid quoted command.`);
+      }
     }
     return raw;
   };
@@ -273,16 +394,26 @@ function stackCommands(projectRoot) {
   const records = [];
   for (const [name, field, required] of fields) {
     const command = read(field);
-    if (required && (!command || command === 'TODO')) fail('E_SHIP_GATE_INVALID', `${field} must be defined for a new closure run.`);
+    if (required && (!command || command === 'TODO'))
+      fail('E_SHIP_GATE_INVALID', `${field} must be defined for a new closure run.`);
     if (!command) continue;
-    parseArgvChain(command, field).forEach((argv, index) => records.push({ name, index: index + 1, argv }));
+    parseArgvChain(command, field).forEach((argv, index) =>
+      records.push({ name, index: index + 1, argv }),
+    );
   }
   return records;
 }
 
 function defaultGates(repositories) {
-  const commands = repositories.flatMap((repository) => stackCommands(repository.root).map((command) => ({ ...command, repositoryKey: repository.repositoryKey })));
-  const finalRelevantIndex = commands.findLastIndex(({ repositoryKey, name }) => repositoryKey === 'project' && name === 'test');
+  const commands = repositories.flatMap((repository) =>
+    stackCommands(repository.root).map((command) => ({
+      ...command,
+      repositoryKey: repository.repositoryKey,
+    })),
+  );
+  const finalRelevantIndex = commands.findLastIndex(
+    ({ repositoryKey, name }) => repositoryKey === 'project' && name === 'test',
+  );
   let previous = null;
   return commands.map((command, index) => {
     const id = `${command.repositoryKey === 'project' ? '' : `${command.repositoryKey}-`}${command.name}-${command.index}`;
@@ -303,45 +434,86 @@ function defaultGates(repositories) {
 
 function normalizeGates(gates, repositories) {
   const map = repositoryMap(repositories);
-  if (!Array.isArray(gates) || gates.length === 0 || gates.length > 32) fail('E_SHIP_GATE_INVALID', 'Frozen gate set must contain 1-32 records.');
+  if (!Array.isArray(gates) || gates.length === 0 || gates.length > 32)
+    fail('E_SHIP_GATE_INVALID', 'Frozen gate set must contain 1-32 records.');
   const normalized = gates.map((gate) => {
     const fields = ['id', 'repositoryKey', 'argv', 'inputs', 'dependsOn', 'finalRelevantSuite'];
     if (Object.hasOwn(gate ?? {}, 'gateType')) fields.push('gateType');
     exactKeys(gate, fields, `gate ${gate?.id ?? '<unknown>'}`);
-    if (!/^[a-z][a-z0-9-]{0,127}$/.test(gate.id) || !map.has(gate.repositoryKey)) fail('E_SHIP_GATE_INVALID', `Invalid gate identity ${gate.id}.`);
-    if (!Array.isArray(gate.argv) || gate.argv.length === 0 || gate.argv.length > 128
-      || gate.argv.some((part) => typeof part !== 'string' || !part || part.length > 4096)) fail('E_SHIP_GATE_INVALID', `Gate ${gate.id} requires a bounded non-shell argv.`);
-    if (!Array.isArray(gate.inputs) || gate.inputs.length === 0 || gate.inputs.length > 512) fail('E_SHIP_GATE_INVALID', `Gate ${gate.id} requires 1-512 bounded inputs.`);
-    if (!Array.isArray(gate.dependsOn) || gate.dependsOn.length > 32
-      || gate.dependsOn.some((id) => typeof id !== 'string' || id.length === 0 || id.length > 128)
-      || typeof gate.finalRelevantSuite !== 'boolean'
-      || (gate.gateType !== undefined && !['command', 'browser-qa'].includes(gate.gateType))) fail('E_SHIP_GATE_INVALID', `Gate ${gate.id} has invalid dependencies or final-suite authority.`);
-    if (gate.gateType === 'browser-qa' && (gate.id !== 'browser-qa' || JSON.stringify(gate.argv) !== JSON.stringify(['@planr/browser-qa']))) {
-      fail('E_SHIP_GATE_INVALID', 'The browser QA gate has fixed classifier-owned identity and argv custody.');
+    if (!/^[a-z][a-z0-9-]{0,127}$/.test(gate.id) || !map.has(gate.repositoryKey))
+      fail('E_SHIP_GATE_INVALID', `Invalid gate identity ${gate.id}.`);
+    if (
+      !Array.isArray(gate.argv) ||
+      gate.argv.length === 0 ||
+      gate.argv.length > 128 ||
+      gate.argv.some((part) => typeof part !== 'string' || !part || part.length > 4096)
+    )
+      fail('E_SHIP_GATE_INVALID', `Gate ${gate.id} requires a bounded non-shell argv.`);
+    if (!Array.isArray(gate.inputs) || gate.inputs.length === 0 || gate.inputs.length > 512)
+      fail('E_SHIP_GATE_INVALID', `Gate ${gate.id} requires 1-512 bounded inputs.`);
+    if (
+      !Array.isArray(gate.dependsOn) ||
+      gate.dependsOn.length > 32 ||
+      gate.dependsOn.some((id) => typeof id !== 'string' || id.length === 0 || id.length > 128) ||
+      typeof gate.finalRelevantSuite !== 'boolean' ||
+      (gate.gateType !== undefined && !['command', 'browser-qa'].includes(gate.gateType))
+    )
+      fail(
+        'E_SHIP_GATE_INVALID',
+        `Gate ${gate.id} has invalid dependencies or final-suite authority.`,
+      );
+    if (
+      gate.gateType === 'browser-qa' &&
+      (gate.id !== 'browser-qa' ||
+        JSON.stringify(gate.argv) !== JSON.stringify(['@planr/browser-qa']))
+    ) {
+      fail(
+        'E_SHIP_GATE_INVALID',
+        'The browser QA gate has fixed classifier-owned identity and argv custody.',
+      );
     }
-    const inputs = gate.inputs.map((input) => normalizeRepositoryPath(input, `gate ${gate.id} input`, { allowRoot: true }));
-    if (inputs.some(({ path }) => path.length > 1024)) fail('E_SHIP_GATE_INVALID', `Gate ${gate.id} input paths exceed the protocol bound.`);
-    if (inputs.some(({ repositoryKey }) => !map.has(repositoryKey))) fail('E_SHIP_GATE_INVALID', `Gate ${gate.id} inputs must belong to declared repositories.`);
+    const inputs = gate.inputs.map((input) =>
+      normalizeRepositoryPath(input, `gate ${gate.id} input`, { allowRoot: true }),
+    );
+    if (inputs.some(({ path }) => path.length > 1024))
+      fail('E_SHIP_GATE_INVALID', `Gate ${gate.id} input paths exceed the protocol bound.`);
+    if (inputs.some(({ repositoryKey }) => !map.has(repositoryKey)))
+      fail('E_SHIP_GATE_INVALID', `Gate ${gate.id} inputs must belong to declared repositories.`);
     return { ...clone(gate), inputs };
   });
-  if (new Set(normalized.map(({ id }) => id)).size !== normalized.length) fail('E_SHIP_GATE_INVALID', 'Gate IDs must be unique.');
+  if (new Set(normalized.map(({ id }) => id)).size !== normalized.length)
+    fail('E_SHIP_GATE_INVALID', 'Gate IDs must be unique.');
   if (normalized.filter(({ finalRelevantSuite }) => finalRelevantSuite).length !== 1) {
-    fail('E_SHIP_GATE_INVALID', 'Exactly one frozen gate must be the mandatory final relevant suite.');
+    fail(
+      'E_SHIP_GATE_INVALID',
+      'Exactly one frozen gate must be the mandatory final relevant suite.',
+    );
   }
   for (const gate of normalized) {
-    if (gate.dependsOn.some((id) => id === gate.id || !normalized.some((candidate) => candidate.id === id))) fail('E_SHIP_GATE_INVALID', `Gate ${gate.id} has an invalid dependency.`);
+    if (
+      gate.dependsOn.some(
+        (id) => id === gate.id || !normalized.some((candidate) => candidate.id === id),
+      )
+    )
+      fail('E_SHIP_GATE_INVALID', `Gate ${gate.id} has an invalid dependency.`);
   }
   // Deterministically prove acyclicity.
   const completed = new Set();
   while (completed.size < normalized.length) {
-    const ready = normalized.filter((gate) => !completed.has(gate.id) && gate.dependsOn.every((id) => completed.has(id)));
+    const ready = normalized.filter(
+      (gate) => !completed.has(gate.id) && gate.dependsOn.every((id) => completed.has(id)),
+    );
     if (!ready.length) fail('E_SHIP_GATE_INVALID', 'Gate dependency graph is cyclic.');
     ready.forEach(({ id }) => completed.add(id));
   }
   return normalized;
 }
 
-export function resolveShipClosureConfiguration({ projectRoot, repositories: suppliedRepositories, gates: suppliedGates } = {}) {
+export function resolveShipClosureConfiguration({
+  projectRoot,
+  repositories: suppliedRepositories,
+  gates: suppliedGates,
+} = {}) {
   const repositories = normalizeRepositories(projectRoot, suppliedRepositories);
   const gates = normalizeGates(suppliedGates ?? defaultGates(repositories), repositories);
   return { repositories, gates };
@@ -356,21 +528,34 @@ function structuredPreserve(task, repositories) {
       { taskId: task.id, legacyBodyEntries: task.legacyPreserve ?? [] },
     );
   }
-  if (!Array.isArray(task.structuredPreserve)) fail('E_SHIP_PRESERVE_INVALID', `Task ${task.id} frontmatter preserve must be an array.`);
+  if (!Array.isArray(task.structuredPreserve))
+    fail('E_SHIP_PRESERVE_INVALID', `Task ${task.id} frontmatter preserve must be an array.`);
   const map = repositoryMap(repositories);
   return (task.structuredPreserve ?? []).map((entry) => {
     const path = normalizeRepositoryPath(entry, `task ${task.id} Preserve`);
     const repository = map.get(path.repositoryKey);
-    if (!repository) fail('E_SHIP_REPOSITORY_INVALID', `Task ${task.id} references unknown repository ${path.repositoryKey}.`);
+    if (!repository)
+      fail(
+        'E_SHIP_REPOSITORY_INVALID',
+        `Task ${task.id} references unknown repository ${path.repositoryKey}.`,
+      );
     return { ...path, identity: filesystemIdentity(repository.root, path.path) };
   });
 }
 
 export function shipClosureSummary(state, { replayed = false } = {}) {
-  const completed = new Set(state.tasks.filter(({ status }) => status === 'completed').map(({ id }) => id));
-  const readyTaskIds = state.state === 'implementing'
-    ? state.tasks.filter(({ status, dependsOn }) => status === 'pending' && dependsOn.every((id) => completed.has(id))).map(({ id }) => id)
-    : [];
+  const completed = new Set(
+    state.tasks.filter(({ status }) => status === 'completed').map(({ id }) => id),
+  );
+  const readyTaskIds =
+    state.state === 'implementing'
+      ? state.tasks
+          .filter(
+            ({ status, dependsOn }) =>
+              status === 'pending' && dependsOn.every((id) => completed.has(id)),
+          )
+          .map(({ id }) => id)
+      : [];
   return {
     ok: true,
     runId: state.runId,
@@ -381,8 +566,18 @@ export function shipClosureSummary(state, { replayed = false } = {}) {
     candidateDigest: currentCandidate(state)?.digest ?? null,
     readyTaskIds,
     approvedScope: clone(state.approvedScope),
-    tasks: state.tasks.map(({ id, storyId, status, dependsOn, blockedReason }) => ({ id, storyId, status, dependsOn: clone(dependsOn), blockedReason })),
-    repositories: state.repositories.map(({ repositoryKey, head, baselineDigest }) => ({ repositoryKey, head, baselineDigest })),
+    tasks: state.tasks.map(({ id, storyId, status, dependsOn, blockedReason }) => ({
+      id,
+      storyId,
+      status,
+      dependsOn: clone(dependsOn),
+      blockedReason,
+    })),
+    repositories: state.repositories.map(({ repositoryKey, head, baselineDigest }) => ({
+      repositoryKey,
+      head,
+      baselineDigest,
+    })),
     reviewerRoster: clone(state.reviewerRoster),
     gates: clone(state.gates),
     candidate: clone(currentCandidate(state)),
@@ -415,23 +610,42 @@ export function createShipClosure({
   riskClassification = null,
   operatingOriginCorrelation = undefined,
 } = {}) {
-  if (!/^ship_[a-f0-9]{32}$/.test(runId)) fail('E_SHIP_RUN_ID_INVALID', 'runId must use ship_<32 lowercase hex>.');
-  if (!['claude-code', 'cursor', 'codex', 'unknown'].includes(runtime)) fail('E_RUNTIME_INVALID', `Unsupported SHIP runtime ${runtime}.`);
-  if (!Array.isArray(reviewerRoster) || reviewerRoster.length === 0 || reviewerRoster[0] !== 'qa-agent' || new Set(reviewerRoster).size !== reviewerRoster.length) {
-    fail('E_SHIP_REVIEWER_INVALID', 'The frozen reviewer roster must start with exactly one qa-agent; optional declared specialists may follow once each.');
+  if (!/^ship_[a-f0-9]{32}$/.test(runId))
+    fail('E_SHIP_RUN_ID_INVALID', 'runId must use ship_<32 lowercase hex>.');
+  if (!['claude-code', 'cursor', 'codex', 'unknown'].includes(runtime))
+    fail('E_RUNTIME_INVALID', `Unsupported SHIP runtime ${runtime}.`);
+  if (
+    !Array.isArray(reviewerRoster) ||
+    reviewerRoster.length === 0 ||
+    reviewerRoster[0] !== 'qa-agent' ||
+    new Set(reviewerRoster).size !== reviewerRoster.length
+  ) {
+    fail(
+      'E_SHIP_REVIEWER_INVALID',
+      'The frozen reviewer roster must start with exactly one qa-agent; optional declared specialists may follow once each.',
+    );
   }
-  if (reviewerRoster.some((id) => !/^[a-z][a-z0-9-]*$/.test(id))) fail('E_SHIP_REVIEWER_INVALID', 'Reviewer IDs must be lowercase slugs.');
+  if (reviewerRoster.some((id) => !/^[a-z][a-z0-9-]*$/.test(id)))
+    fail('E_SHIP_REVIEWER_INVALID', 'Reviewer IDs must be lowercase slugs.');
   if (riskClassification !== null) assertShipRiskClassification(riskClassification);
-  const resolved = resolveShipClosureConfiguration({ projectRoot, repositories: suppliedRepositories, gates: suppliedGates });
+  const resolved = resolveShipClosureConfiguration({
+    projectRoot,
+    repositories: suppliedRepositories,
+    gates: suppliedGates,
+  });
   const repositories = resolved.repositories;
   const gates = addFrozenBrowserGate(resolved.gates, repositories, riskClassification);
   const taskIds = new Set(prepared.tasks.map(({ id }) => id));
   for (const task of prepared.tasks) {
-    if (task.dependsOn.some((id) => !taskIds.has(id) || id === task.id)) fail('E_SHIP_TASK_DEPENDENCY', `Task ${task.id} has an invalid dependency.`);
+    if (task.dependsOn.some((id) => !taskIds.has(id) || id === task.id))
+      fail('E_SHIP_TASK_DEPENDENCY', `Task ${task.id} has an invalid dependency.`);
   }
   const resolvedTasks = new Set();
   while (resolvedTasks.size < prepared.tasks.length) {
-    const ready = prepared.tasks.filter(({ id, dependsOn }) => !resolvedTasks.has(id) && dependsOn.every((dependency) => resolvedTasks.has(dependency)));
+    const ready = prepared.tasks.filter(
+      ({ id, dependsOn }) =>
+        !resolvedTasks.has(id) && dependsOn.every((dependency) => resolvedTasks.has(dependency)),
+    );
     if (!ready.length) fail('E_SHIP_TASK_DEPENDENCY', 'The approved task graph is cyclic.');
     ready.forEach(({ id }) => resolvedTasks.add(id));
   }
@@ -451,11 +665,18 @@ export function createShipClosure({
   }));
   const approvedScopeIdentity = {
     featureRoot: posix(relative(projectRoot, prepared.root)),
-    tasks: tasks.map(({ id, storyId, path, dependsOn, preserve }) => ({ id, storyId, path, dependsOn, preserve: preserve.map(({ identity, ...entry }) => entry) })),
+    tasks: tasks.map(({ id, storyId, path, dependsOn, preserve }) => ({
+      id,
+      storyId,
+      path,
+      dependsOn,
+      preserve: preserve.map(({ identity, ...entry }) => entry),
+    })),
   };
   const state = {
     kind: 'ship-closure',
-    schemaVersion: riskClassification !== null ? '1.2.0' : planningReview === null ? '1.0.0' : '1.1.0',
+    schemaVersion:
+      riskClassification !== null ? '1.2.0' : planningReview === null ? '1.0.0' : '1.1.0',
     protocolVersion: '1.1.0',
     recordType: 'active',
     runId,
@@ -487,51 +708,98 @@ export function createShipClosure({
     startedFromReceiptHash,
     reopenReason,
     ...(planningReview === null ? {} : { planningReview: clone(planningReview) }),
-    ...(riskClassification === null ? {} : {
-      riskClassification: clone(riskClassification),
-      browserQaRecords: [],
-    }),
-    operatingOriginCorrelation: operatingOriginCorrelation ?? projectPipelineOperatingOriginCorrelation(prepared.operatingOrigin ?? null),
+    ...(riskClassification === null
+      ? {}
+      : {
+          riskClassification: clone(riskClassification),
+          browserQaRecords: [],
+        }),
+    operatingOriginCorrelation:
+      operatingOriginCorrelation ??
+      projectPipelineOperatingOriginCorrelation(prepared.operatingOrigin ?? null),
   };
   assertClosure(state);
   const paths = closurePaths(prepared.root, runId, prepared.projectRoot ?? projectRoot);
   ensureClosureDirs(paths);
   try {
-    return withLock(paths.featureLock, () => withLock(paths.lock, () => {
-    if (existsSync(paths.receipt)) {
-      const prior = readClosure(paths.receipt, { prepared, expectedRunId: runId, expectedRecordType: 'receipt' });
-      if (sameStartCustody(prior, state)) return shipClosureSummary(prior, { replayed: true });
-      fail('E_SHIP_RUN_ID_CONFLICT', `Terminal run ${runId} has different start custody.`);
-    }
-    if (existsSync(paths.active)) {
-      const prior = readClosure(paths.active, { prepared, expectedRunId: runId, expectedRecordType: 'active' });
-      if (sameStartCustody(prior, state)) return shipClosureSummary(prior, { replayed: true });
-      fail('E_SHIP_RUN_ID_CONFLICT', `Run ${runId} already exists with different custody.`);
-    }
-    const other = activeRuns(prepared.root);
-    if (other.length) fail('E_SHIP_ACTIVE', `Feature ${prepared.slug} already has active SHIP run ${other[0].replace(/\.json$/, '')}.`);
-    const receipts = terminalReceipts(prepared);
-    if (startedFromReceiptHash === null) {
-      const requestedTasks = new Set(state.approvedScope.taskIds);
-      const overlap = receipts.find((receipt) => receipt.approvedScope.taskIds.some((id) => requestedTasks.has(id)));
-      if (overlap) fail('E_SHIP_REOPEN_REQUIRED', `Task scope overlaps terminal receipt ${overlap.receiptHash}; use the owner-only reopen command.`);
-    } else {
-      const prior = receipts.find(({ receiptHash }) => receiptHash === startedFromReceiptHash);
-      if (!prior) fail('E_SHIP_RECEIPT_NOT_FOUND', `No terminal receipt matches ${startedFromReceiptHash}.`);
-      if (JSON.stringify(state.repositories.map(({ repositoryKey }) => repositoryKey)) !== JSON.stringify(prior.repositories.map(({ repositoryKey }) => repositoryKey))) {
-        fail('E_SHIP_REOPEN_SCOPE_INVALID', 'Reopen must preserve the exact prior repository membership.');
-      }
-      if (state.approvedScope.digest !== prior.approvedScope.digest) fail('E_SHIP_REOPEN_SCOPE_INVALID', 'Reopen must preserve the exact prior approved task DAG and structured Preserve boundary.');
-      assertReopenGateInputExpansion(prior.gates, state.gates);
-      const successor = receipts.find(({ startedFromReceiptHash: parentHash }) => parentHash === startedFromReceiptHash);
-      if (successor) fail('E_SHIP_REOPENED', `Receipt ${startedFromReceiptHash} already has successor ${successor.runId}.`);
-    }
-    writeJson(paths.active, state);
-    return shipClosureSummary(state);
-    }));
+    return withLock(paths.featureLock, () =>
+      withLock(paths.lock, () => {
+        if (existsSync(paths.receipt)) {
+          const prior = readClosure(paths.receipt, {
+            prepared,
+            expectedRunId: runId,
+            expectedRecordType: 'receipt',
+          });
+          if (sameStartCustody(prior, state)) return shipClosureSummary(prior, { replayed: true });
+          fail('E_SHIP_RUN_ID_CONFLICT', `Terminal run ${runId} has different start custody.`);
+        }
+        if (existsSync(paths.active)) {
+          const prior = readClosure(paths.active, {
+            prepared,
+            expectedRunId: runId,
+            expectedRecordType: 'active',
+          });
+          if (sameStartCustody(prior, state)) return shipClosureSummary(prior, { replayed: true });
+          fail('E_SHIP_RUN_ID_CONFLICT', `Run ${runId} already exists with different custody.`);
+        }
+        const other = activeRuns(prepared.root);
+        if (other.length)
+          fail(
+            'E_SHIP_ACTIVE',
+            `Feature ${prepared.slug} already has active SHIP run ${other[0].replace(/\.json$/, '')}.`,
+          );
+        const receipts = terminalReceipts(prepared);
+        if (startedFromReceiptHash === null) {
+          const requestedTasks = new Set(state.approvedScope.taskIds);
+          const overlap = receipts.find((receipt) =>
+            receipt.approvedScope.taskIds.some((id) => requestedTasks.has(id)),
+          );
+          if (overlap)
+            fail(
+              'E_SHIP_REOPEN_REQUIRED',
+              `Task scope overlaps terminal receipt ${overlap.receiptHash}; use the owner-only reopen command.`,
+            );
+        } else {
+          const prior = receipts.find(({ receiptHash }) => receiptHash === startedFromReceiptHash);
+          if (!prior)
+            fail(
+              'E_SHIP_RECEIPT_NOT_FOUND',
+              `No terminal receipt matches ${startedFromReceiptHash}.`,
+            );
+          if (
+            JSON.stringify(state.repositories.map(({ repositoryKey }) => repositoryKey)) !==
+            JSON.stringify(prior.repositories.map(({ repositoryKey }) => repositoryKey))
+          ) {
+            fail(
+              'E_SHIP_REOPEN_SCOPE_INVALID',
+              'Reopen must preserve the exact prior repository membership.',
+            );
+          }
+          if (state.approvedScope.digest !== prior.approvedScope.digest)
+            fail(
+              'E_SHIP_REOPEN_SCOPE_INVALID',
+              'Reopen must preserve the exact prior approved task DAG and structured Preserve boundary.',
+            );
+          assertReopenGateInputExpansion(prior.gates, state.gates);
+          const successor = receipts.find(
+            ({ startedFromReceiptHash: parentHash }) => parentHash === startedFromReceiptHash,
+          );
+          if (successor)
+            fail(
+              'E_SHIP_REOPENED',
+              `Receipt ${startedFromReceiptHash} already has successor ${successor.runId}.`,
+            );
+        }
+        writeJson(paths.active, state);
+        return shipClosureSummary(state);
+      }),
+    );
   } catch (error) {
     if (error?.code === 'E_SHIP_LOCKED') {
-      fail('E_SHIP_ACTIVE', `Feature ${prepared.slug} already has a SHIP start or active run in progress.`);
+      fail(
+        'E_SHIP_ACTIVE',
+        `Feature ${prepared.slug} already has a SHIP start or active run in progress.`,
+      );
     }
     throw error;
   }
@@ -546,15 +814,32 @@ function loadRun(prepared, runId) {
     assertPathCustody(prepared.projectRoot, paths.receiptDir, { expectedKind: 'directory' });
   }
   if (existsSync(paths.receipt)) {
-    const receipt = readClosure(paths.receipt, { prepared, expectedRunId: runId, expectedRecordType: 'receipt' });
+    const receipt = readClosure(paths.receipt, {
+      prepared,
+      expectedRunId: runId,
+      expectedRecordType: 'receipt',
+    });
     if (existsSync(paths.active)) {
-      const active = readClosure(paths.active, { prepared, expectedRunId: runId, expectedRecordType: 'active' });
-      if (!receiptExtendsActive(receipt, active)) fail('E_SHIP_CLOSURE_DIVERGED', `Active and terminal custody diverge for ${runId}.`);
+      const active = readClosure(paths.active, {
+        prepared,
+        expectedRunId: runId,
+        expectedRecordType: 'active',
+      });
+      if (!receiptExtendsActive(receipt, active))
+        fail('E_SHIP_CLOSURE_DIVERGED', `Active and terminal custody diverge for ${runId}.`);
       unlinkSync(paths.active);
     }
     return { paths, state: receipt };
   }
-  if (existsSync(paths.active)) return { paths, state: readClosure(paths.active, { prepared, expectedRunId: runId, expectedRecordType: 'active' }) };
+  if (existsSync(paths.active))
+    return {
+      paths,
+      state: readClosure(paths.active, {
+        prepared,
+        expectedRunId: runId,
+        expectedRecordType: 'active',
+      }),
+    };
   fail('E_SHIP_RUN_NOT_FOUND', `SHIP run ${runId} was not found for ${prepared.slug}.`);
 }
 
@@ -576,7 +861,11 @@ export function advanceStoredShipClosure({
     const { state } = loadRun(prepared, runId);
     const prior = state.events.find(({ eventId }) => eventId === normalizedEvent.eventId);
     if (prior) {
-      if (prior.inputDigest !== inputDigest) fail('E_SHIP_EVENT_REPLAY_DIVERGED', `Event ${normalizedEvent.eventId} was replayed with different bytes.`);
+      if (prior.inputDigest !== inputDigest)
+        fail(
+          'E_SHIP_EVENT_REPLAY_DIVERGED',
+          `Event ${normalizedEvent.eventId} was replayed with different bytes.`,
+        );
       return shipClosureSummary(state, { replayed: true });
     }
     if (state.recordType === 'receipt') fail('E_SHIP_TERMINAL', `SHIP run ${runId} is terminal.`);
@@ -585,8 +874,13 @@ export function advanceStoredShipClosure({
     if (event.type === 'review.opened' && state.state === 'implementing') {
       runtime.candidate = captureCandidate(state, now);
       if (state.riskClassification) {
-        const paths = [...new Map(state.tasks.flatMap(({ filesWritten, filesModified }) => [...filesWritten, ...filesModified])
-          .map((entry) => [`${entry.repositoryKey}\0${entry.path}`, entry])).values()];
+        const paths = [
+          ...new Map(
+            state.tasks
+              .flatMap(({ filesWritten, filesModified }) => [...filesWritten, ...filesModified])
+              .map((entry) => [`${entry.repositoryKey}\0${entry.path}`, entry]),
+          ).values(),
+        ];
         const frozen = state.riskClassification.input;
         runtime.riskClassification = classifyShipRisk({
           subjectDigest: runtime.candidate.digest,
@@ -604,16 +898,27 @@ export function advanceStoredShipClosure({
     if (event.type === 'correction.registered') {
       runtime.candidate = captureCandidate(state, now);
       if (state.riskClassification) {
-        const paths = [...new Map([
-          ...state.tasks.flatMap(({ filesWritten, filesModified }) => [...filesWritten, ...filesModified]),
-          ...(event.impact?.paths ?? []),
-        ].map((entry) => [`${entry.repositoryKey}\0${entry.path}`, entry])).values()];
+        const paths = [
+          ...new Map(
+            [
+              ...state.tasks.flatMap(({ filesWritten, filesModified }) => [
+                ...filesWritten,
+                ...filesModified,
+              ]),
+              ...(event.impact?.paths ?? []),
+            ].map((entry) => [`${entry.repositoryKey}\0${entry.path}`, entry]),
+          ).values(),
+        ];
         const frozen = state.riskClassification.input;
         runtime.riskClassification = classifyShipRisk({
-          subjectDigest: runtime.candidate.digest, changedPaths: paths,
-          browserSurfaces: frozen.browserSurfaces, contractChanges: frozen.contractChanges,
-          migrationChanges: frozen.migrationChanges, permissionEffects: frozen.permissionEffects,
-          dataWrites: frozen.dataWrites, performanceBudgets: frozen.performanceBudgets,
+          subjectDigest: runtime.candidate.digest,
+          changedPaths: paths,
+          browserSurfaces: frozen.browserSurfaces,
+          contractChanges: frozen.contractChanges,
+          migrationChanges: frozen.migrationChanges,
+          permissionEffects: frozen.permissionEffects,
+          dataWrites: frozen.dataWrites,
+          performanceBudgets: frozen.performanceBudgets,
           explicitRisks: frozen.explicitRisks,
         });
       }
@@ -621,7 +926,11 @@ export function advanceStoredShipClosure({
     const next = reduceShipClosure(state, normalizedEvent, runtime);
     if (next.recordType === 'receipt') {
       writeJson(paths.receipt, next);
-      try { unlinkSync(paths.active); } catch (error) { if (error.code !== 'ENOENT') throw error; }
+      try {
+        unlinkSync(paths.active);
+      } catch (error) {
+        if (error.code !== 'ENOENT') throw error;
+      }
     } else {
       writeJson(paths.active, next);
     }
@@ -639,7 +948,8 @@ function gateInputDigest(state, gate, results) {
   });
   const dependencies = gate.dependsOn.map((gateId) => {
     const evidence = results.get(gateId);
-    if (!evidence) fail('E_SHIP_GATE_INVALID', `Gate ${gate.id} has no evidence for dependency ${gateId}.`);
+    if (!evidence)
+      fail('E_SHIP_GATE_INVALID', `Gate ${gate.id} has no evidence for dependency ${gateId}.`);
     return {
       gateId,
       status: evidence.status,
@@ -660,9 +970,12 @@ function gateInputDigest(state, gate, results) {
     candidateDigest: candidate.digest,
     inputs,
     dependencies,
-    browserQaRecordDigest: gate.gateType === 'browser-qa'
-      ? state.browserQaRecords?.find(({ candidateDigest }) => candidateDigest === candidate.digest)?.recordDigest ?? null
-      : null,
+    browserQaRecordDigest:
+      gate.gateType === 'browser-qa'
+        ? (state.browserQaRecords?.find(
+            ({ candidateDigest }) => candidateDigest === candidate.digest,
+          )?.recordDigest ?? null)
+        : null,
   });
 }
 
@@ -688,13 +1001,18 @@ function gateEnvironment(state, gate) {
   // already checked these roots against the project configuration. A gate gets
   // only roots named by its own inputs/cwd or by its transitive gate dependency
   // closure, which keeps cross-repository reads explicit and bounded.
-  const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => (
-    !key.startsWith(SHIP_REPOSITORY_ROOT_ENV_PREFIX)
-    && key !== 'PLANR_SHIP_CANDIDATE_DIGEST'
-    && key !== 'PLANR_SHIP_GATE_ID'
-  )));
+  const env = Object.fromEntries(
+    Object.entries(process.env).filter(
+      ([key]) =>
+        !key.startsWith(SHIP_REPOSITORY_ROOT_ENV_PREFIX) &&
+        key !== 'PLANR_SHIP_CANDIDATE_DIGEST' &&
+        key !== 'PLANR_SHIP_GATE_ID',
+    ),
+  );
   const readable = gateReadableRepositoryKeys(state, gate);
-  for (const repository of state.repositories.filter(({ repositoryKey }) => readable.has(repositoryKey))) {
+  for (const repository of state.repositories.filter(({ repositoryKey }) =>
+    readable.has(repositoryKey),
+  )) {
     const key = `${SHIP_REPOSITORY_ROOT_ENV_PREFIX}${repository.repositoryKey.toUpperCase().replaceAll('-', '_')}_ROOT`;
     env[key] = repository.root;
   }
@@ -707,9 +1025,14 @@ function gateOrder(gates) {
   const ordered = [];
   const done = new Set();
   while (ordered.length < gates.length) {
-    const ready = gates.filter((gate) => !done.has(gate.id) && gate.dependsOn.every((id) => done.has(id))).sort((a, b) => a.id.localeCompare(b.id));
+    const ready = gates
+      .filter((gate) => !done.has(gate.id) && gate.dependsOn.every((id) => done.has(id)))
+      .sort((a, b) => a.id.localeCompare(b.id));
     if (!ready.length) fail('E_SHIP_GATE_INVALID', 'Gate dependency graph is cyclic.');
-    for (const gate of ready) { ordered.push(gate); done.add(gate.id); }
+    for (const gate of ready) {
+      ordered.push(gate);
+      done.add(gate.id);
+    }
   }
   return ordered;
 }
@@ -717,33 +1040,77 @@ function gateOrder(gates) {
 function executeGate(state, gate, phase, results, now) {
   const inputDigest = gateInputDigest(state, gate, results);
   const candidate = currentCandidate(state);
-  const dependencyFailed = gate.dependsOn.some((id) => !['passed', 'reused'].includes(results.get(id)?.status));
+  const dependencyFailed = gate.dependsOn.some(
+    (id) => !['passed', 'reused'].includes(results.get(id)?.status),
+  );
   if (dependencyFailed && !(phase === 'final' && gate.finalRelevantSuite)) {
     return {
-      gateId: gate.id, phase, candidateDigest: candidate.digest, inputDigest, status: 'skipped',
-      startedAt: now, endedAt: now, exitCode: null, stdoutDigest: digestBytes(Buffer.alloc(0)),
-      stderrDigest: digestBytes(Buffer.alloc(0)), stdoutExcerpt: '', stderrExcerpt: '', reusedFromPhase: null,
+      gateId: gate.id,
+      phase,
+      candidateDigest: candidate.digest,
+      inputDigest,
+      status: 'skipped',
+      startedAt: now,
+      endedAt: now,
+      exitCode: null,
+      stdoutDigest: digestBytes(Buffer.alloc(0)),
+      stderrDigest: digestBytes(Buffer.alloc(0)),
+      stdoutExcerpt: '',
+      stderrExcerpt: '',
+      reusedFromPhase: null,
     };
   }
-  const reusable = phase !== 'final' || !gate.finalRelevantSuite
-    ? [...state.gateEvidence].reverse().find((entry) => entry.gateId === gate.id && entry.inputDigest === inputDigest && ['passed', 'reused'].includes(entry.status))
-    : null;
+  const reusable =
+    phase !== 'final' || !gate.finalRelevantSuite
+      ? [...state.gateEvidence]
+          .reverse()
+          .find(
+            (entry) =>
+              entry.gateId === gate.id &&
+              entry.inputDigest === inputDigest &&
+              ['passed', 'reused'].includes(entry.status),
+          )
+      : null;
   if (reusable) {
     return {
-      ...clone(reusable), phase, candidateDigest: candidate.digest, status: 'reused',
-      startedAt: now, endedAt: now, reusedFromPhase: reusable.phase,
+      ...clone(reusable),
+      phase,
+      candidateDigest: candidate.digest,
+      status: 'reused',
+      startedAt: now,
+      endedAt: now,
+      reusedFromPhase: reusable.phase,
     };
   }
   if (gate.gateType === 'browser-qa') {
-    const record = state.browserQaRecords?.find(({ candidateDigest }) => candidateDigest === candidate.digest) ?? null;
+    const record =
+      state.browserQaRecords?.find(({ candidateDigest }) => candidateDigest === candidate.digest) ??
+      null;
     const passed = record?.status === 'passed' && record?.custodyVersion === '1.0.0';
-    const stdout = Buffer.from(JSON.stringify({ status: record?.status ?? 'unavailable', recordDigest: record?.recordDigest ?? null }), 'utf8');
-    const stderr = passed ? Buffer.alloc(0) : Buffer.from('Mandatory browser QA did not produce a passing bound record.', 'utf8');
+    const stdout = Buffer.from(
+      JSON.stringify({
+        status: record?.status ?? 'unavailable',
+        recordDigest: record?.recordDigest ?? null,
+      }),
+      'utf8',
+    );
+    const stderr = passed
+      ? Buffer.alloc(0)
+      : Buffer.from('Mandatory browser QA did not produce a passing bound record.', 'utf8');
     return {
-      gateId: gate.id, phase, candidateDigest: candidate.digest, inputDigest,
-      status: passed ? 'passed' : 'failed', startedAt: now, endedAt: now,
-      exitCode: passed ? 0 : 1, stdoutDigest: digestBytes(stdout), stderrDigest: digestBytes(stderr),
-      stdoutExcerpt: stdout.toString('utf8'), stderrExcerpt: stderr.toString('utf8'), reusedFromPhase: null,
+      gateId: gate.id,
+      phase,
+      candidateDigest: candidate.digest,
+      inputDigest,
+      status: passed ? 'passed' : 'failed',
+      startedAt: now,
+      endedAt: now,
+      exitCode: passed ? 0 : 1,
+      stdoutDigest: digestBytes(stdout),
+      stderrDigest: digestBytes(stderr),
+      stdoutExcerpt: stdout.toString('utf8'),
+      stderrExcerpt: stderr.toString('utf8'),
+      reusedFromPhase: null,
     };
   }
   const repository = repositoryMap(state.repositories).get(gate.repositoryKey);
@@ -762,7 +1129,8 @@ function executeGate(state, gate, phase, results, now) {
   const stderr = Buffer.from(result.stderr ?? result.error?.message ?? '');
   const sanitizeExcerpt = (bytes) => {
     let text = bytes.toString('utf8');
-    for (const repository of state.repositories) text = text.replaceAll(repository.root, `<repo:${repository.repositoryKey}>`);
+    for (const repository of state.repositories)
+      text = text.replaceAll(repository.root, `<repo:${repository.repositoryKey}>`);
     return text.slice(0, 4096);
   };
   return {
@@ -782,24 +1150,40 @@ function executeGate(state, gate, phase, results, now) {
   };
 }
 
-export function runStoredShipGates({ prepared, runId, phase, expectedGeneration, now = new Date().toISOString() } = {}) {
-  if (!['initial', 'targeted', 'final'].includes(phase)) fail('E_SHIP_GATE_PHASE_INVALID', `Invalid gate phase ${phase}.`);
+export function runStoredShipGates({
+  prepared,
+  runId,
+  phase,
+  expectedGeneration,
+  now = new Date().toISOString(),
+} = {}) {
+  if (!['initial', 'targeted', 'final'].includes(phase))
+    fail('E_SHIP_GATE_PHASE_INVALID', `Invalid gate phase ${phase}.`);
   const paths = closurePaths(prepared.root, runId, prepared.projectRoot);
   ensureClosureDirs(paths);
   return withLock(paths.lock, () => {
     const { state } = loadRun(prepared, runId);
     if (state.recordType === 'receipt') fail('E_SHIP_TERMINAL', `SHIP run ${runId} is terminal.`);
     if (expectedGeneration !== undefined && Number(expectedGeneration) !== state.generation) {
-      fail('E_SHIP_GENERATION_CONFLICT', `Expected generation ${expectedGeneration}, current generation is ${state.generation}.`);
+      fail(
+        'E_SHIP_GENERATION_CONFLICT',
+        `Expected generation ${expectedGeneration}, current generation is ${state.generation}.`,
+      );
     }
-    if (state.state !== REVIEW_PHASE_STATE[phase]) fail('E_SHIP_STATE_TRANSITION_INVALID', `${phase} gates are not valid from ${state.state}.`);
+    if (state.state !== REVIEW_PHASE_STATE[phase])
+      fail('E_SHIP_STATE_TRANSITION_INVALID', `${phase} gates are not valid from ${state.state}.`);
     assertPreserve(state);
     const candidate = currentCandidate(state);
     if (!candidate) fail('E_SHIP_CANDIDATE_INVALID', 'Gates require a sealed candidate.');
-    const current = captureCandidate({ ...state, candidateRevisions: state.candidateRevisions.slice(0, -1) }, candidate.sealedAt);
-    if (current.digest !== candidate.digest) fail('E_SHIP_CANDIDATE_STALE', 'Repository bytes no longer match the sealed candidate.');
+    const current = captureCandidate(
+      { ...state, candidateRevisions: state.candidateRevisions.slice(0, -1) },
+      candidate.sealedAt,
+    );
+    if (current.digest !== candidate.digest)
+      fail('E_SHIP_CANDIDATE_STALE', 'Repository bytes no longer match the sealed candidate.');
     const already = phaseEvidence(state, phase);
-    if (already.length === state.gates.length) return { ...shipClosureSummary(state, { replayed: true }), phase, evidence: clone(already) };
+    if (already.length === state.gates.length)
+      return { ...shipClosureSummary(state, { replayed: true }), phase, evidence: clone(already) };
     const evidence = [];
     const results = new Map();
     for (const gate of gateOrder(state.gates)) {
@@ -807,15 +1191,28 @@ export function runStoredShipGates({ prepared, runId, phase, expectedGeneration,
       evidence.push(entry);
       results.set(gate.id, entry);
     }
-    const after = captureCandidate({ ...state, candidateRevisions: state.candidateRevisions.slice(0, -1) }, candidate.sealedAt);
-    if (after.digest !== candidate.digest) fail('E_SHIP_CANDIDATE_STALE', 'Gate execution changed candidate bytes; seal a new authorized candidate before continuing.');
+    const after = captureCandidate(
+      { ...state, candidateRevisions: state.candidateRevisions.slice(0, -1) },
+      candidate.sealedAt,
+    );
+    if (after.digest !== candidate.digest)
+      fail(
+        'E_SHIP_CANDIDATE_STALE',
+        'Gate execution changed candidate bytes; seal a new authorized candidate before continuing.',
+      );
     const next = recordShipGateEvidence(state, { phase, evidence, expectedGeneration, now });
     writeJson(paths.active, next);
     return { ...shipClosureSummary(next), phase, evidence };
   });
 }
 
-export function finalizeStoredShipClosure({ projectRoot, prepared, runId, repositories: suppliedRepositories, now = new Date().toISOString() } = {}) {
+export function finalizeStoredShipClosure({
+  projectRoot,
+  prepared,
+  runId,
+  repositories: suppliedRepositories,
+  now = new Date().toISOString(),
+} = {}) {
   const paths = closurePaths(prepared.root, runId, prepared.projectRoot ?? projectRoot);
   ensureClosureDirs(paths);
   let receipt;
@@ -823,33 +1220,67 @@ export function finalizeStoredShipClosure({ projectRoot, prepared, runId, reposi
   withLock(paths.lock, () => {
     if (existsSync(paths.receipt)) {
       ({ state: receipt } = loadRun(prepared, runId));
-      const superseded = terminalReceipts(prepared).some(({ startedFromReceiptHash }) => startedFromReceiptHash === receipt.receiptHash);
+      const superseded = terminalReceipts(prepared).some(
+        ({ startedFromReceiptHash }) => startedFromReceiptHash === receipt.receiptHash,
+      );
       if (!superseded) {
         const live = normalizeRepositories(projectRoot, suppliedRepositories);
-        if (JSON.stringify(live.map(({ repositoryKey }) => repositoryKey)) !== JSON.stringify(receipt.repositories.map(({ repositoryKey }) => repositoryKey))) {
-          fail('E_SHIP_REPOSITORY_INVALID', 'Current repository configuration does not match terminal receipt custody.');
+        if (
+          JSON.stringify(live.map(({ repositoryKey }) => repositoryKey)) !==
+          JSON.stringify(receipt.repositories.map(({ repositoryKey }) => repositoryKey))
+        ) {
+          fail(
+            'E_SHIP_REPOSITORY_INVALID',
+            'Current repository configuration does not match terminal receipt custody.',
+          );
         }
         const byKey = new Map(live.map((repository) => [repository.repositoryKey, repository]));
-        const rehydrated = receipt.repositories.map((repository) => ({ ...repository, root: byKey.get(repository.repositoryKey).root }));
+        const rehydrated = receipt.repositories.map((repository) => ({
+          ...repository,
+          root: byKey.get(repository.repositoryKey).root,
+        }));
         const candidate = currentCandidate(receipt);
-        const current = captureCandidate({ ...receipt, repositories: rehydrated, candidateRevisions: receipt.candidateRevisions.slice(0, -1) }, candidate.sealedAt);
-        if (current.digest !== candidate.digest) fail('E_SHIP_CANDIDATE_STALE', 'Terminal receipt no longer matches the current repository bytes.');
+        const current = captureCandidate(
+          {
+            ...receipt,
+            repositories: rehydrated,
+            candidateRevisions: receipt.candidateRevisions.slice(0, -1),
+          },
+          candidate.sealedAt,
+        );
+        if (current.digest !== candidate.digest)
+          fail(
+            'E_SHIP_CANDIDATE_STALE',
+            'Terminal receipt no longer matches the current repository bytes.',
+          );
       }
       replayed = true;
       return;
     }
     if (!existsSync(paths.active)) fail('E_SHIP_RUN_NOT_FOUND', `SHIP run ${runId} was not found.`);
-    const active = readClosure(paths.active, { prepared, expectedRunId: runId, expectedRecordType: 'active' });
+    const active = readClosure(paths.active, {
+      prepared,
+      expectedRunId: runId,
+      expectedRecordType: 'active',
+    });
     assertPreserve(active);
     const candidate = currentCandidate(active);
     if (candidate) {
-      const current = captureCandidate({ ...active, candidateRevisions: active.candidateRevisions.slice(0, -1) }, candidate.sealedAt);
-      if (current.digest !== candidate.digest) fail('E_SHIP_CANDIDATE_STALE', 'Repository bytes no longer match the sealed candidate.');
+      const current = captureCandidate(
+        { ...active, candidateRevisions: active.candidateRevisions.slice(0, -1) },
+        candidate.sealedAt,
+      );
+      if (current.digest !== candidate.digest)
+        fail('E_SHIP_CANDIDATE_STALE', 'Repository bytes no longer match the sealed candidate.');
     }
     const suppliedCandidate = candidate === null ? captureCandidate(active, now) : null;
     receipt = terminalizeShipClosure(active, { now, candidate: suppliedCandidate });
     writeJson(paths.receipt, receipt);
-    try { unlinkSync(paths.active); } catch (error) { if (error.code !== 'ENOENT') throw error; }
+    try {
+      unlinkSync(paths.active);
+    } catch (error) {
+      if (error.code !== 'ENOENT') throw error;
+    }
   });
   const projections = projectShipCompatibility(receipt, { projectRoot, prepared });
   return { ...shipClosureSummary(receipt, { replayed }), receiptPath: paths.receipt, projections };
@@ -871,22 +1302,44 @@ export function reopenStoredShipClosure({
   gates,
   now = new Date().toISOString(),
 } = {}) {
-  if (!ownerConfirmed) fail('E_SHIP_OWNER_REQUIRED', 'Only an explicit owner action may reopen terminal SHIP custody.');
-  if (!/^sha256:[a-f0-9]{64}$/.test(receiptHash ?? '')) fail('E_SHIP_RECEIPT_HASH_INVALID', 'reopen-ship requires an exact receipt hash.');
-  if (typeof reason !== 'string' || !reason.trim()) fail('E_SHIP_REOPEN_REASON_REQUIRED', 'reopen-ship requires a non-empty reason.');
-  ensureClosureDirs(closurePaths(prepared.root, 'ship_00000000000000000000000000000000', prepared.projectRoot ?? projectRoot));
+  if (!ownerConfirmed)
+    fail(
+      'E_SHIP_OWNER_REQUIRED',
+      'Only an explicit owner action may reopen terminal SHIP custody.',
+    );
+  if (!/^sha256:[a-f0-9]{64}$/.test(receiptHash ?? ''))
+    fail('E_SHIP_RECEIPT_HASH_INVALID', 'reopen-ship requires an exact receipt hash.');
+  if (typeof reason !== 'string' || !reason.trim())
+    fail('E_SHIP_REOPEN_REASON_REQUIRED', 'reopen-ship requires a non-empty reason.');
+  ensureClosureDirs(
+    closurePaths(
+      prepared.root,
+      'ship_00000000000000000000000000000000',
+      prepared.projectRoot ?? projectRoot,
+    ),
+  );
   const prior = receiptByHash(prepared, receiptHash);
   if (!prior) fail('E_SHIP_RECEIPT_NOT_FOUND', `No terminal receipt matches ${receiptHash}.`);
   const currentTasks = new Map(prepared.tasks.map((task) => [task.id, task]));
   const reopenedTasks = prior.tasks.map((priorTask) => {
     const current = currentTasks.get(priorTask.id);
-    if (!current) fail('E_SHIP_REOPEN_SCOPE_INVALID', `Prior task ${priorTask.id} is no longer available.`);
+    if (!current)
+      fail('E_SHIP_REOPEN_SCOPE_INVALID', `Prior task ${priorTask.id} is no longer available.`);
     if (current.storyId !== priorTask.storyId || current.structuredPreserveDeclared !== true) {
-      fail('E_SHIP_REOPEN_SCOPE_INVALID', `Prior task ${priorTask.id} changed story or structured Preserve custody.`);
+      fail(
+        'E_SHIP_REOPEN_SCOPE_INVALID',
+        `Prior task ${priorTask.id} changed story or structured Preserve custody.`,
+      );
     }
-    const currentPreserve = current.structuredPreserve.map((entry) => normalizeRepositoryPath(entry, `task ${priorTask.id} Preserve`));
+    const currentPreserve = current.structuredPreserve.map((entry) =>
+      normalizeRepositoryPath(entry, `task ${priorTask.id} Preserve`),
+    );
     const priorPreserve = priorTask.preserve.map(({ identity: _identity, ...entry }) => entry);
-    if (sha256Jcs(currentPreserve) !== sha256Jcs(priorPreserve)) fail('E_SHIP_REOPEN_SCOPE_INVALID', `Prior task ${priorTask.id} changed its structured Preserve declaration.`);
+    if (sha256Jcs(currentPreserve) !== sha256Jcs(priorPreserve))
+      fail(
+        'E_SHIP_REOPEN_SCOPE_INVALID',
+        `Prior task ${priorTask.id} changed its structured Preserve declaration.`,
+      );
     return {
       ...current,
       storyId: priorTask.storyId,
@@ -896,7 +1349,9 @@ export function reopenStoredShipClosure({
     };
   });
   const reopenedPrepared = { ...prepared, tasks: reopenedTasks };
-  const successorRunId = runId ?? `ship_${sha256Jcs({ receiptHash, reason: reason.trim() }).slice('sha256:'.length, 'sha256:'.length + 32)}`;
+  const successorRunId =
+    runId ??
+    `ship_${sha256Jcs({ receiptHash, reason: reason.trim() }).slice('sha256:'.length, 'sha256:'.length + 32)}`;
   return createShipClosure({
     projectRoot,
     prepared: reopenedPrepared,
@@ -925,13 +1380,12 @@ export function readShipClosure({ prepared, runId } = {}) {
  * cannot replace the verified receipt or its filesystem projection context
  * with portable JSON.
  */
-export function inspectStoredShipClosureForLanding({
-  projectRoot,
-  prepared,
-  receiptHash,
-} = {}) {
+export function inspectStoredShipClosureForLanding({ projectRoot, prepared, receiptHash } = {}) {
   if (!/^sha256:[a-f0-9]{64}$/.test(receiptHash ?? '')) {
-    fail('E_SHIP_LANDING_RECEIPT_HASH_INVALID', 'Landing requires one exact terminal SHIP receipt hash.');
+    fail(
+      'E_SHIP_LANDING_RECEIPT_HASH_INVALID',
+      'Landing requires one exact terminal SHIP receipt hash.',
+    );
   }
   const summaries = listShipClosureSummaries({
     featureRoot: prepared.root,
@@ -945,18 +1399,25 @@ export function inspectStoredShipClosureForLanding({
   if (!receipt) {
     fail('E_SHIP_LANDING_RECEIPT_NOT_FOUND', `No terminal SHIP receipt matches ${receiptHash}.`);
   }
-  if (receipt.recordType !== 'receipt' || receipt.state !== 'passed'
-    || receipt.terminal?.status !== 'passed' || receipt.protocolVersion !== '1.1.0') {
-    fail('E_SHIP_LANDING_RECEIPT_NOT_PASS', 'Landing requires an immutable terminal PASS SHIP receipt.');
+  if (
+    receipt.recordType !== 'receipt' ||
+    receipt.state !== 'passed' ||
+    receipt.terminal?.status !== 'passed' ||
+    receipt.protocolVersion !== '1.1.0'
+  ) {
+    fail(
+      'E_SHIP_LANDING_RECEIPT_NOT_PASS',
+      'Landing requires an immutable terminal PASS SHIP receipt.',
+    );
   }
 
-  const terminalSuccessors = receipts.filter(({ startedFromReceiptHash }) => (
-    startedFromReceiptHash === receiptHash
-  ));
+  const terminalSuccessors = receipts.filter(
+    ({ startedFromReceiptHash }) => startedFromReceiptHash === receiptHash,
+  );
   const activeRecords = summaries.active.map(({ runId }) => readShipClosure({ prepared, runId }));
-  const activeSuccessors = activeRecords.filter(({ startedFromReceiptHash }) => (
-    startedFromReceiptHash === receiptHash
-  ));
+  const activeSuccessors = activeRecords.filter(
+    ({ startedFromReceiptHash }) => startedFromReceiptHash === receiptHash,
+  );
   if (terminalSuccessors.length || activeSuccessors.length) {
     fail(
       'E_SHIP_LANDING_RECEIPT_SUPERSEDED',
@@ -964,7 +1425,9 @@ export function inspectStoredShipClosureForLanding({
       '',
       {
         receiptHash,
-        successorRunIds: [...terminalSuccessors, ...activeSuccessors].map(({ runId }) => runId).sort(),
+        successorRunIds: [...terminalSuccessors, ...activeSuccessors]
+          .map(({ runId }) => runId)
+          .sort(),
       },
     );
   }
@@ -974,9 +1437,10 @@ export function inspectStoredShipClosureForLanding({
   );
   const leaves = receipts.filter(({ receiptHash: hash }) => !superseded.has(hash));
   const projectionOwner = [...leaves]
-    .sort((left, right) => (
-      left.terminal.at.localeCompare(right.terminal.at) || left.runId.localeCompare(right.runId)
-    ))
+    .sort(
+      (left, right) =>
+        left.terminal.at.localeCompare(right.terminal.at) || left.runId.localeCompare(right.runId),
+    )
     .at(-1);
   if (projectionOwner?.receiptHash !== receiptHash) {
     fail(
@@ -1005,9 +1469,11 @@ export function inspectStoredShipClosureForLanding({
     }
   }
   const currentTaskIds = (prepared.tasks ?? []).map(({ id }) => id).sort();
-  if (currentTaskIds.length === 0
-    || currentTaskIds.some((taskId) => terminalTasks.get(taskId) !== 'completed')
-    || [...terminalTasks.keys()].some((taskId) => !currentTaskIds.includes(taskId))) {
+  if (
+    currentTaskIds.length === 0 ||
+    currentTaskIds.some((taskId) => terminalTasks.get(taskId) !== 'completed') ||
+    [...terminalTasks.keys()].some((taskId) => !currentTaskIds.includes(taskId))
+  ) {
     fail(
       'E_SHIP_LANDING_SCOPE_INCOMPLETE',
       'Landing requires terminal PASS custody for the exact current task set.',
@@ -1072,9 +1538,8 @@ export function inspectStoredShipClosureForLanding({
 
 /** Re-run the read-only receipt, successor, candidate, and projection proof. */
 export function assertCurrentShipClosureForLanding(inspection) {
-  const binding = inspection && typeof inspection === 'object'
-    ? LANDING_INSPECTIONS.get(inspection)
-    : undefined;
+  const binding =
+    inspection && typeof inspection === 'object' ? LANDING_INSPECTIONS.get(inspection) : undefined;
   if (!binding) {
     fail(
       'E_SHIP_LANDING_INSPECTION_REQUIRED',
@@ -1084,16 +1549,29 @@ export function assertCurrentShipClosureForLanding(inspection) {
   return inspectStoredShipClosureForLanding(binding);
 }
 
-export function listShipClosureSummaries({ featureRoot, projectRoot, feature, mode, closureRepositories } = {}) {
+export function listShipClosureSummaries({
+  featureRoot,
+  projectRoot,
+  feature,
+  mode,
+  closureRepositories,
+} = {}) {
   const shipRoot = join(featureRoot, '.ship');
   const assertDirectory = (path) => {
     let stat;
-    try { stat = lstatSync(path); } catch (error) { if (error?.code === 'ENOENT') return false; throw error; }
-    if (stat.isSymbolicLink() || !stat.isDirectory()) fail('E_SHIP_STORAGE_UNSAFE', `SHIP preview storage component is unsafe: ${path}`);
+    try {
+      stat = lstatSync(path);
+    } catch (error) {
+      if (error?.code === 'ENOENT') return false;
+      throw error;
+    }
+    if (stat.isSymbolicLink() || !stat.isDirectory())
+      fail('E_SHIP_STORAGE_UNSAFE', `SHIP preview storage component is unsafe: ${path}`);
     return true;
   };
   if (projectRoot) assertPathCustody(projectRoot, featureRoot, { expectedKind: 'directory' });
-  if (!assertDirectory(featureRoot) || !assertDirectory(shipRoot)) return { active: [], terminal: [] };
+  if (!assertDirectory(featureRoot) || !assertDirectory(shipRoot))
+    return { active: [], terminal: [] };
   const readKind = (kind) => {
     const dir = join(shipRoot, kind);
     if (!assertDirectory(dir)) return [];
@@ -1102,43 +1580,63 @@ export function listShipClosureSummaries({ featureRoot, projectRoot, feature, mo
       .sort()
       .map((name) => {
         const record = readClosure(join(dir, name), {
-          prepared: projectRoot ? {
-            root: featureRoot,
-            projectRoot,
-            slug: feature,
-            mode,
-            closureRepositories,
-          } : undefined,
+          prepared: projectRoot
+            ? {
+                root: featureRoot,
+                projectRoot,
+                slug: feature,
+                mode,
+                closureRepositories,
+              }
+            : undefined,
           expectedRunId: name.replace(/\.json$/, ''),
           expectedRecordType: kind === 'active' ? 'active' : 'receipt',
         });
         const expectedFeatureRoot = projectRoot ? posix(relative(projectRoot, featureRoot)) : null;
-        if ((feature && record.feature !== feature) || (mode && record.mode !== mode)
-          || (expectedFeatureRoot && record.approvedScope.featureRoot !== expectedFeatureRoot)) {
-          fail('E_SHIP_STORAGE_CONTEXT_INVALID', `Closure ${name} does not belong to the requested feature context.`);
+        if (
+          (feature && record.feature !== feature) ||
+          (mode && record.mode !== mode) ||
+          (expectedFeatureRoot && record.approvedScope.featureRoot !== expectedFeatureRoot)
+        ) {
+          fail(
+            'E_SHIP_STORAGE_CONTEXT_INVALID',
+            `Closure ${name} does not belong to the requested feature context.`,
+          );
         }
         return record;
       });
   };
   const receipts = readKind('receipts');
   assertShipReceiptLineage(receipts);
-  const supersededReceiptHashes = new Set(receipts.map(({ startedFromReceiptHash }) => startedFromReceiptHash).filter(Boolean));
+  const supersededReceiptHashes = new Set(
+    receipts.map(({ startedFromReceiptHash }) => startedFromReceiptHash).filter(Boolean),
+  );
   const projectionOwner = receipts
     .filter(({ receiptHash }) => !supersededReceiptHashes.has(receiptHash))
-    .sort((left, right) => left.terminal.at.localeCompare(right.terminal.at) || left.runId.localeCompare(right.runId))
+    .sort(
+      (left, right) =>
+        left.terminal.at.localeCompare(right.terminal.at) || left.runId.localeCompare(right.runId),
+    )
     .at(-1);
-  const projectionVerified = projectRoot && projectionOwner ? verifyShipCompatibilityProjection(projectionOwner, {
-      projectRoot,
-      prepared: { root: featureRoot, closureRepositories },
-    }) : false;
+  const projectionVerified =
+    projectRoot && projectionOwner
+      ? verifyShipCompatibilityProjection(projectionOwner, {
+          projectRoot,
+          prepared: { root: featureRoot, closureRepositories },
+        })
+      : false;
   const receiptByRun = new Map(receipts.map((receipt) => [receipt.runId, receipt]));
   const active = readKind('active').flatMap((record) => {
     const receipt = receiptByRun.get(record.runId);
     if (!receipt) return [shipClosureSummary(record)];
-    if (!receiptExtendsActive(receipt, record)) fail('E_SHIP_CLOSURE_DIVERGED', `Active and terminal custody diverge for ${record.runId}.`);
+    if (!receiptExtendsActive(receipt, record))
+      fail('E_SHIP_CLOSURE_DIVERGED', `Active and terminal custody diverge for ${record.runId}.`);
     return [];
   });
-  return { active, terminal: receipts.map((receipt) => ({ ...shipClosureSummary(receipt), projectionVerified })) };
+  return {
+    active,
+    terminal: receipts.map((receipt) => ({ ...shipClosureSummary(receipt), projectionVerified })),
+  };
 }
 
 export function assertShipClosure(value) {

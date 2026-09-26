@@ -20,7 +20,7 @@
  * not depend on the engine honouring `scope`.
  */
 
-import { watch, readdirSync, statSync } from 'node:fs';
+import { readdirSync, statSync, watch } from 'node:fs';
 import { basename, join } from 'node:path';
 
 import { buildGraph as defaultBuildGraph } from './graph-engine.mjs';
@@ -136,11 +136,11 @@ export function diffGraphs(prev, next) {
 export function isEmptyPatch(patch) {
   if (!patch) return true;
   return (
-    patch.updated.length === 0
-    && patch.added.length === 0
-    && patch.removed.length === 0
-    && patch.edges.added.length === 0
-    && patch.edges.removed.length === 0
+    patch.updated.length === 0 &&
+    patch.added.length === 0 &&
+    patch.removed.length === 0 &&
+    patch.edges.added.length === 0 &&
+    patch.edges.removed.length === 0
   );
 }
 
@@ -169,7 +169,8 @@ export function createWatcher(planrDir, options = {}) {
   const debounceMs = Number.isFinite(options.debounceMs) ? options.debounceMs : DEFAULT_DEBOUNCE_MS;
   const pollMs = Number.isFinite(options.pollMs) ? options.pollMs : DEFAULT_POLL_MS;
   const onPatch = typeof options.onPatch === 'function' ? options.onPatch : () => {};
-  const buildGraph = typeof options.buildGraph === 'function' ? options.buildGraph : defaultBuildGraph;
+  const buildGraph =
+    typeof options.buildGraph === 'function' ? options.buildGraph : defaultBuildGraph;
   const getExperience = typeof options.getExperience === 'function' ? options.getExperience : null;
   const onExperience = typeof options.onExperience === 'function' ? options.onExperience : () => {};
   const watchImpl = typeof options.watchImpl === 'function' ? options.watchImpl : watch;
@@ -300,7 +301,11 @@ export function createWatcher(planrDir, options = {}) {
 
   function stopFsWatch() {
     if (watcher) {
-      try { watcher.close(); } catch { /* already closed */ }
+      try {
+        watcher.close();
+      } catch {
+        /* already closed */
+      }
       watcher = null;
     }
   }
@@ -342,7 +347,9 @@ function scanMtimes(dir, base = dir, acc = new Map()) {
     } else if (ent.isFile() && (ent.name.endsWith('.md') || ent.name.endsWith('.json'))) {
       try {
         acc.set(full.slice(base.length + 1), statSync(full).mtimeMs);
-      } catch { /* vanished between readdir and stat */ }
+      } catch {
+        /* vanished between readdir and stat */
+      }
     }
   }
   return acc;

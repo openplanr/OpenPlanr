@@ -22,39 +22,51 @@ function lineNumber(bytes, offset) {
 
 function withoutCodeFences(bytes) {
   let fenced = false;
-  return String(bytes).split('\n').map((line) => {
-    if (FENCE.test(line)) {
-      fenced = !fenced;
-      return '';
-    }
-    return fenced ? '' : line;
-  }).join('\n');
+  return String(bytes)
+    .split('\n')
+    .map((line) => {
+      if (FENCE.test(line)) {
+        fenced = !fenced;
+        return '';
+      }
+      return fenced ? '' : line;
+    })
+    .join('\n');
 }
 
 function normalizedTarget(rawTarget, context) {
   const target = rawTarget.trim();
   if (target.length === 0 || target.startsWith('#') || EXTERNAL_TARGET.test(target)) return null;
   if (
-    target.startsWith('/')
-    || target.includes('\\')
-    || /^[A-Za-z]:/u.test(target)
-    || target.includes('\0')
-    || target.startsWith('file:')
+    target.startsWith('/') ||
+    target.includes('\\') ||
+    /^[A-Za-z]:/u.test(target) ||
+    target.includes('\0') ||
+    target.startsWith('file:')
   ) {
-    fail('E_SKILL_CONTENT_LINK_UNSAFE', `Skill content link ${target} is not a safe package-relative target.`, {
-      ...context,
-      target,
-      repair: 'Use a package-relative Markdown link or describe the path as a user-project example.',
-    });
+    fail(
+      'E_SKILL_CONTENT_LINK_UNSAFE',
+      `Skill content link ${target} is not a safe package-relative target.`,
+      {
+        ...context,
+        target,
+        repair:
+          'Use a package-relative Markdown link or describe the path as a user-project example.',
+      },
+    );
   }
   const [path] = target.split(/[?#]/u, 1);
   const segments = path.split('/');
   if (segments.some((segment) => segment === '..' || segment === '.' || segment.length === 0)) {
-    fail('E_SKILL_CONTENT_LINK_UNSAFE', `Skill content link ${target} contains a non-canonical path segment.`, {
-      ...context,
-      target,
-      repair: 'Link directly to a file inside the skill release unit without traversal segments.',
-    });
+    fail(
+      'E_SKILL_CONTENT_LINK_UNSAFE',
+      `Skill content link ${target} contains a non-canonical path segment.`,
+      {
+        ...context,
+        target,
+        repair: 'Link directly to a file inside the skill release unit without traversal segments.',
+      },
+    );
   }
   return path;
 }
@@ -75,7 +87,9 @@ export function parseSkillContentLinks({ bytes, path, skillId, host }) {
   for (const match of visible.matchAll(INLINE_CODE)) {
     const target = match[1].trim();
     if (!PACKAGED_PREFIX.test(target)) continue;
-    ambiguous.push(Object.freeze({ target, line: lineNumber(visible, match.index), syntax: 'inline-code' }));
+    ambiguous.push(
+      Object.freeze({ target, line: lineNumber(visible, match.index), syntax: 'inline-code' }),
+    );
   }
   return Object.freeze({ links: Object.freeze(links), ambiguous: Object.freeze(ambiguous) });
 }
@@ -89,19 +103,27 @@ export function linkSkillProjection({ skillId, host, primary, references = [], a
   const byPath = new Map();
   for (const asset of assets) {
     if (!asset || typeof asset.path !== 'string' || typeof asset.bytes !== 'string') {
-      fail('E_SKILL_CONTENT_ASSET_INVALID', `Skill ${skillId} has an invalid ${host} content asset.`, {
-        skillId,
-        host,
-        repair: 'Compile regular text assets before linking the release unit.',
-      });
+      fail(
+        'E_SKILL_CONTENT_ASSET_INVALID',
+        `Skill ${skillId} has an invalid ${host} content asset.`,
+        {
+          skillId,
+          host,
+          repair: 'Compile regular text assets before linking the release unit.',
+        },
+      );
     }
     if (byPath.has(asset.path)) {
-      fail('E_SKILL_CONTENT_ASSET_DUPLICATE', `Skill ${skillId} emits ${asset.path} more than once.`, {
-        skillId,
-        host,
-        path: asset.path,
-        repair: 'Assign one canonical owner to the generated path.',
-      });
+      fail(
+        'E_SKILL_CONTENT_ASSET_DUPLICATE',
+        `Skill ${skillId} emits ${asset.path} more than once.`,
+        {
+          skillId,
+          host,
+          path: asset.path,
+          repair: 'Assign one canonical owner to the generated path.',
+        },
+      );
     }
     byPath.set(asset.path, asset);
   }
@@ -110,7 +132,9 @@ export function linkSkillProjection({ skillId, host, primary, references = [], a
   const links = [];
   for (const asset of assets.filter(({ path }) => /\.(?:md|mdc)$/u.test(path))) {
     const parsed = parseSkillContentLinks({ bytes: asset.bytes, path: asset.path, skillId, host });
-    const localMarkdownTargets = new Set(parsed.links.filter(({ localPath }) => localPath).map(({ localPath }) => localPath));
+    const localMarkdownTargets = new Set(
+      parsed.links.filter(({ localPath }) => localPath).map(({ localPath }) => localPath),
+    );
     for (const dependency of parsed.ambiguous) {
       if (localMarkdownTargets.has(dependency.target)) continue;
       fail(
@@ -130,7 +154,9 @@ export function linkSkillProjection({ skillId, host, primary, references = [], a
       if (!dependency.localPath) continue;
       const resolved = posix.normalize(posix.join(posix.dirname(asset.path), dependency.localPath));
       if (!byPath.has(resolved)) {
-        const caseMatch = [...byPath.keys()].find((candidate) => candidate.toLowerCase() === resolved.toLowerCase());
+        const caseMatch = [...byPath.keys()].find(
+          (candidate) => candidate.toLowerCase() === resolved.toLowerCase(),
+        );
         fail(
           caseMatch ? 'E_SKILL_CONTENT_LINK_CASE' : 'E_SKILL_CONTENT_LINK_MISSING',
           `${skillId} links ${dependency.target} from ${asset.path}, but ${resolved} is not in the ${host} release unit.`,
@@ -155,12 +181,17 @@ export function linkSkillProjection({ skillId, host, primary, references = [], a
 
   const orphaned = references.map(({ path }) => path).filter((path) => !linked.has(path));
   if (orphaned.length > 0) {
-    fail('E_SKILL_CONTENT_ASSET_ORPHANED', `${skillId} packages support content that no instruction links.`, {
-      skillId,
-      host,
-      orphaned,
-      repair: 'Link each routed reference from SKILL.md at the point where it should be read, or stop packaging it.',
-    });
+    fail(
+      'E_SKILL_CONTENT_ASSET_ORPHANED',
+      `${skillId} packages support content that no instruction links.`,
+      {
+        skillId,
+        host,
+        orphaned,
+        repair:
+          'Link each routed reference from SKILL.md at the point where it should be read, or stop packaging it.',
+      },
+    );
   }
   return Object.freeze({
     skillId,
@@ -174,10 +205,14 @@ export function linkSkillProjection({ skillId, host, primary, references = [], a
 
 /** Link every host result emitted by one canonical skill compilation. */
 export function linkSkillProjections(projections) {
-  return Object.freeze(projections.map((projection) => linkSkillProjection({
-    skillId: projection.skillId,
-    host: projection.host,
-    primary: projection.primary,
-    references: projection.references,
-  })));
+  return Object.freeze(
+    projections.map((projection) =>
+      linkSkillProjection({
+        skillId: projection.skillId,
+        host: projection.host,
+        primary: projection.primary,
+        references: projection.references,
+      }),
+    ),
+  );
 }

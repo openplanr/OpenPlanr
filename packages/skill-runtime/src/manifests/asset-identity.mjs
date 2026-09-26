@@ -11,9 +11,13 @@ export function assetIdentityKey(asset) {
 }
 
 export function compareAssetIdentity(left, right) {
-  return left.path.localeCompare(right.path)
-    || String(normalizedAssetHost(left) ?? '').localeCompare(String(normalizedAssetHost(right) ?? ''))
-    || left.digest.localeCompare(right.digest);
+  return (
+    left.path.localeCompare(right.path) ||
+    String(normalizedAssetHost(left) ?? '').localeCompare(
+      String(normalizedAssetHost(right) ?? ''),
+    ) ||
+    left.digest.localeCompare(right.digest)
+  );
 }
 
 export function assertUniqueAssetIdentities(assets) {

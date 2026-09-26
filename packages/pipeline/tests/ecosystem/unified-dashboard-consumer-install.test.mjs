@@ -3,8 +3,8 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
+import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 assert.equal(
@@ -19,26 +19,24 @@ function runNpm(args, cwd, env = {}) {
   const npmCli = process.env.npm_execpath;
   const result = npmCli
     ? spawnSync(process.execPath, [npmCli, ...args], {
-      cwd,
-      encoding: 'utf8',
-      env: { ...process.env, npm_config_audit: 'false', npm_config_fund: 'false', ...env },
-    })
+        cwd,
+        encoding: 'utf8',
+        env: { ...process.env, npm_config_audit: 'false', npm_config_fund: 'false', ...env },
+      })
     : spawnSync('npm', args, {
-      cwd,
-      encoding: 'utf8',
-      env: { ...process.env, npm_config_audit: 'false', npm_config_fund: 'false', ...env },
-    });
+        cwd,
+        encoding: 'utf8',
+        env: { ...process.env, npm_config_audit: 'false', npm_config_fund: 'false', ...env },
+      });
   assert.equal(result.status, 0, `${args.join(' ')}\n${result.stdout}\n${result.stderr}`);
   return result;
 }
 
 function packTo(sourceRoot, packDir, npmCache) {
   const report = JSON.parse(
-    runNpm(
-      ['pack', '--json', '--ignore-scripts', '--pack-destination', packDir],
-      sourceRoot,
-      { npm_config_cache: npmCache },
-    ).stdout,
+    runNpm(['pack', '--json', '--ignore-scripts', '--pack-destination', packDir], sourceRoot, {
+      npm_config_cache: npmCache,
+    }).stdout,
   );
   const filename = report[0]?.filename;
   assert.equal(typeof filename, 'string', `npm pack did not report an archive for ${sourceRoot}`);
@@ -62,20 +60,25 @@ test('resolvePackagedDashboardRoot finds an installed OpenPlanr dashboard withou
   try {
     const openPlanrTarball = packTo(openPlanrRoot, packDir, npmCache);
     const pipelineTarball = packTo(root, packDir, npmCache);
-    writeFileSync(join(consumerDir, 'package.json'), JSON.stringify({
-      name: 'dashboard-consumer-fixture',
-      private: true,
-      type: 'module',
-      dependencies: {
-        openplanr: `file:${openPlanrTarball}`,
-        'planr-pipeline': `file:${pipelineTarball}`,
-      },
-    }, null, 2));
-    runNpm(
-      ['install', '--ignore-scripts', '--no-package-lock', '--prefer-offline'],
-      consumerDir,
-      { npm_config_cache: npmCache },
+    writeFileSync(
+      join(consumerDir, 'package.json'),
+      JSON.stringify(
+        {
+          name: 'dashboard-consumer-fixture',
+          private: true,
+          type: 'module',
+          dependencies: {
+            openplanr: `file:${openPlanrTarball}`,
+            'planr-pipeline': `file:${pipelineTarball}`,
+          },
+        },
+        null,
+        2,
+      ),
     );
+    runNpm(['install', '--ignore-scripts', '--no-package-lock', '--prefer-offline'], consumerDir, {
+      npm_config_cache: npmCache,
+    });
     assert.notEqual(
       realpathSync(join(consumerDir, 'node_modules', 'openplanr')),
       realpathSync(openPlanrRoot),
@@ -84,14 +87,22 @@ test('resolvePackagedDashboardRoot finds an installed OpenPlanr dashboard withou
       realpathSync(join(consumerDir, 'node_modules', 'planr-pipeline')),
       realpathSync(root),
     );
-    const probe = spawnSync(process.execPath, ['--input-type=module', '-e', `
+    const probe = spawnSync(
+      process.execPath,
+      [
+        '--input-type=module',
+        '-e',
+        `
       import { resolvePackagedDashboardRoot } from 'planr-pipeline/dashboard/resolve-packaged-dashboard-root';
       console.log(resolvePackagedDashboardRoot({ OPENPLANR_DASHBOARD_ROOT: '' }));
-    `], {
-      cwd: consumerDir,
-      encoding: 'utf8',
-      env: { ...process.env, OPENPLANR_DASHBOARD_ROOT: '' },
-    });
+    `,
+      ],
+      {
+        cwd: consumerDir,
+        encoding: 'utf8',
+        env: { ...process.env, OPENPLANR_DASHBOARD_ROOT: '' },
+      },
+    );
     assert.equal(probe.status, 0, probe.stderr);
     const resolved = probe.stdout.trim();
     assert.match(resolved, /node_modules[\\/]+openplanr[\\/]+dist[\\/]+dashboard$/u);

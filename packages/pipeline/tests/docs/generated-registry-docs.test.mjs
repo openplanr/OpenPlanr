@@ -14,7 +14,10 @@ test('generated adapter documentation describes the Protocol 1.8 host packages',
   const document = readWorkspace('docs/generated/adapters.md');
 
   const source = JSON.parse(readWorkspace('skills/registry.json'));
-  assert.deepEqual(catalog.skillIds, source.skills.map(({ skillId }) => skillId));
+  assert.deepEqual(
+    catalog.skillIds,
+    source.skills.map(({ skillId }) => skillId),
+  );
   assert.equal(roles.roles.length, 9);
   assert.match(document, /Protocol 1\.8\.0 standard skill packages/u);
   assert.match(document, /\| `claude-code` \|/u);
@@ -49,7 +52,11 @@ test('generated skill documentation covers every canonical skill and its referen
       );
     }
     if (resources.length === 0) {
-      assert.match(section, /Packaged support: none; the skill is intentionally single-file/u, skill.id);
+      assert.match(
+        section,
+        /Packaged support: none; the skill is intentionally single-file/u,
+        skill.id,
+      );
     }
   }
   assert.match(document, /Aliases: none/u);

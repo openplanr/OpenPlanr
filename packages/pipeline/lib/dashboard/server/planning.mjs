@@ -3,6 +3,6 @@ export {
   assertPlanningGraph,
   assertPlanningNode,
   buildGraph,
-  getNode as engineGetNode,
   detectMode,
+  getNode as engineGetNode,
 } from '../graph-engine.mjs';

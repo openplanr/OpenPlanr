@@ -17,7 +17,10 @@ test('run-test-group excludes explicit cross-repository tests from a collected d
   const standalone = join(tests, 'standalone.test.mjs');
   const paired = join(tests, 'paired.test.mjs');
   writeFileSync(standalone, "import test from 'node:test'; test('standalone', () => {});\n");
-  writeFileSync(paired, "import test from 'node:test'; test('paired must not run', () => { throw new Error('paired'); });\n");
+  writeFileSync(
+    paired,
+    "import test from 'node:test'; test('paired must not run', () => { throw new Error('paired'); });\n",
+  );
 
   try {
     const result = spawnSync(process.execPath, [runner, tests, '--exclude', paired], {
@@ -47,25 +50,26 @@ test('run-test-group keeps ordinary files concurrent and runs opted-in archive p
   const readyB = join(temporaryRoot, 'ready-b');
   const doneA = join(temporaryRoot, 'done-a');
   const doneB = join(temporaryRoot, 'done-b');
-  const parallelFixture = ({ name, ready, peerReady, done }) => [
-    "import assert from 'node:assert/strict';",
-    "import { existsSync, writeFileSync } from 'node:fs';",
-    "import test from 'node:test';",
-    `const ready = ${JSON.stringify(ready)};`,
-    `const peerReady = ${JSON.stringify(peerReady)};`,
-    `const done = ${JSON.stringify(done)};`,
-    "writeFileSync(ready, 'ready\\n');",
-    `test(${JSON.stringify(name)}, async () => {`,
-    '  const deadline = Date.now() + 2_000;',
-    '  while (!existsSync(peerReady) && Date.now() < deadline) {',
-    '    await new Promise((resolve) => setTimeout(resolve, 10));',
-    '  }',
-    "  assert.equal(existsSync(peerReady), true, 'ordinary files did not execute concurrently');",
-    '  await new Promise((resolve) => setTimeout(resolve, 1_000));',
-    "  writeFileSync(done, 'done\\n');",
-    '});',
-    '',
-  ].join('\n');
+  const parallelFixture = ({ name, ready, peerReady, done }) =>
+    [
+      "import assert from 'node:assert/strict';",
+      "import { existsSync, writeFileSync } from 'node:fs';",
+      "import test from 'node:test';",
+      `const ready = ${JSON.stringify(ready)};`,
+      `const peerReady = ${JSON.stringify(peerReady)};`,
+      `const done = ${JSON.stringify(done)};`,
+      "writeFileSync(ready, 'ready\\n');",
+      `test(${JSON.stringify(name)}, async () => {`,
+      '  const deadline = Date.now() + 2_000;',
+      '  while (!existsSync(peerReady) && Date.now() < deadline) {',
+      '    await new Promise((resolve) => setTimeout(resolve, 10));',
+      '  }',
+      "  assert.equal(existsSync(peerReady), true, 'ordinary files did not execute concurrently');",
+      '  await new Promise((resolve) => setTimeout(resolve, 1_000));',
+      "  writeFileSync(done, 'done\\n');",
+      '});',
+      '',
+    ].join('\n');
   writeFileSync(
     join(tests, 'a-parallel.test.mjs'),
     parallelFixture({ name: 'parallel a', ready: readyA, peerReady: readyB, done: doneA }),
@@ -74,17 +78,20 @@ test('run-test-group keeps ordinary files concurrent and runs opted-in archive p
     join(tests, 'b-parallel.test.mjs'),
     parallelFixture({ name: 'parallel b', ready: readyB, peerReady: readyA, done: doneB }),
   );
-  writeFileSync(join(tests, 'z-archive-proof.test.mjs'), [
-    '// @planr-test-group serial',
-    "import assert from 'node:assert/strict';",
-    "import { existsSync } from 'node:fs';",
-    "import test from 'node:test';",
-    `test('archive proof', () => {`,
-    `  assert.equal(existsSync(${JSON.stringify(doneA)}), true);`,
-    `  assert.equal(existsSync(${JSON.stringify(doneB)}), true);`,
-    '});',
-    '',
-  ].join('\n'));
+  writeFileSync(
+    join(tests, 'z-archive-proof.test.mjs'),
+    [
+      '// @planr-test-group serial',
+      "import assert from 'node:assert/strict';",
+      "import { existsSync } from 'node:fs';",
+      "import test from 'node:test';",
+      `test('archive proof', () => {`,
+      `  assert.equal(existsSync(${JSON.stringify(doneA)}), true);`,
+      `  assert.equal(existsSync(${JSON.stringify(doneB)}), true);`,
+      '});',
+      '',
+    ].join('\n'),
+  );
 
   try {
     const result = spawnSync(process.execPath, [runner, tests], {

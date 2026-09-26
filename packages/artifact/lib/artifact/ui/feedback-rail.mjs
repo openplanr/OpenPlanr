@@ -93,9 +93,11 @@ function enumValue(value, values, label) {
 
 function isoTimestamp(value, label) {
   const timestamp = value instanceof Date ? value.toISOString() : value;
-  if (typeof timestamp !== 'string'
-    || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(timestamp)
-    || !Number.isFinite(Date.parse(timestamp))) {
+  if (
+    typeof timestamp !== 'string' ||
+    !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(timestamp) ||
+    !Number.isFinite(Date.parse(timestamp))
+  ) {
     invalid(`${label} must be an ISO-8601 date-time.`);
   }
   return timestamp;
@@ -217,7 +219,8 @@ function normalizeAnchor(anchor) {
 }
 
 function normalizeReply(reply, label = 'reply') {
-  if (!reply || typeof reply !== 'object' || Array.isArray(reply)) invalid(`${label} must be an object.`);
+  if (!reply || typeof reply !== 'object' || Array.isArray(reply))
+    invalid(`${label} must be an object.`);
   return {
     id: boundedString(reply.id, `${label}.id`, {
       min: 1,
@@ -244,7 +247,9 @@ function normalizePin(pin, label = 'pin') {
   if (!Array.isArray(pin.replies) || pin.replies.length > ARTIFACT_REVIEW_LIMITS.replies) {
     invalid(`${label}.replies must contain no more than ${ARTIFACT_REVIEW_LIMITS.replies} items.`);
   }
-  const replies = pin.replies.map((reply, index) => normalizeReply(reply, `${label}.replies[${index}]`));
+  const replies = pin.replies.map((reply, index) =>
+    normalizeReply(reply, `${label}.replies[${index}]`),
+  );
   const replyIds = new Set(replies.map(({ id }) => id));
   if (replyIds.size !== replies.length) invalid(`${label}.replies must have unique ids.`);
 
@@ -313,19 +318,22 @@ export function normalizeArtifactReview(review) {
     }),
     pins: pins.sort(compareTimestampThenId),
   };
-  if (review.createdAt !== undefined) normalized.createdAt = isoTimestamp(review.createdAt, 'review.createdAt');
-  if (review.updatedAt !== undefined) normalized.updatedAt = isoTimestamp(review.updatedAt, 'review.updatedAt');
+  if (review.createdAt !== undefined)
+    normalized.createdAt = isoTimestamp(review.createdAt, 'review.createdAt');
+  if (review.updatedAt !== undefined)
+    normalized.updatedAt = isoTimestamp(review.updatedAt, 'review.updatedAt');
   return deepFreezeArtifactReview(normalized);
 }
 
 export function createArtifactReview({ reviewId, reviewOf, createId = defaultCreateId } = {}) {
-  const normalizedReviewId = reviewId === undefined
-    ? dependencyId(createId, 'review')
-    : boundedString(reviewId, 'reviewId', {
-      min: 1,
-      max: ARTIFACT_REVIEW_LIMITS.id,
-      trim: true,
-    });
+  const normalizedReviewId =
+    reviewId === undefined
+      ? dependencyId(createId, 'review')
+      : boundedString(reviewId, 'reviewId', {
+          min: 1,
+          max: ARTIFACT_REVIEW_LIMITS.id,
+          trim: true,
+        });
   return normalizeArtifactReview({
     schemaVersion: '1.0.0',
     reviewId: normalizedReviewId,
@@ -341,7 +349,7 @@ export function createArtifactReview({ reviewId, reviewOf, createId = defaultCre
 }
 
 function replacePin(review, pin) {
-  return review.pins.map((candidate) => candidate.id === pin.id ? pin : candidate);
+  return review.pins.map((candidate) => (candidate.id === pin.id ? pin : candidate));
 }
 
 function findPin(review, pinId) {
@@ -352,7 +360,10 @@ function findPin(review, pinId) {
   });
   const pin = review.pins.find(({ id }) => id === normalizedId);
   if (!pin) {
-    throw new ArtifactReviewStateError('E_ARTIFACT_REVIEW_PIN_NOT_FOUND', `Unknown feedback pin: ${normalizedId}`);
+    throw new ArtifactReviewStateError(
+      'E_ARTIFACT_REVIEW_PIN_NOT_FOUND',
+      `Unknown feedback pin: ${normalizedId}`,
+    );
   }
   return pin;
 }
@@ -368,12 +379,14 @@ function preserveOptionalReviewTimestamps(review, next, timestamp) {
  * here; createArtifactReviewController injects the current local identity for
  * authored actions so identity never becomes a top-level protocol field.
  */
-export function reduceArtifactReview(review, action, {
-  createId = defaultCreateId,
-  now = defaultNow,
-} = {}) {
+export function reduceArtifactReview(
+  review,
+  action,
+  { createId = defaultCreateId, now = defaultNow } = {},
+) {
   const current = normalizeArtifactReview(review);
-  if (!action || typeof action !== 'object' || Array.isArray(action)) invalid('Review action must be an object.');
+  if (!action || typeof action !== 'object' || Array.isArray(action))
+    invalid('Review action must be an object.');
   const timestamp = dependencyTimestamp(now);
   let next;
 
@@ -384,15 +397,19 @@ export function reduceArtifactReview(review, action, {
       }
       const author = normalizeArtifactReviewIdentity(action.author);
       const pinInput = action.pin && typeof action.pin === 'object' ? action.pin : {};
-      const pinId = pinInput.id === undefined
-        ? uniqueDependencyId(createId, 'pin', new Set(current.pins.map(({ id }) => id)))
-        : boundedString(pinInput.id, 'pin.id', {
-          min: 1,
-          max: ARTIFACT_REVIEW_LIMITS.id,
-          trim: true,
-        });
+      const pinId =
+        pinInput.id === undefined
+          ? uniqueDependencyId(createId, 'pin', new Set(current.pins.map(({ id }) => id)))
+          : boundedString(pinInput.id, 'pin.id', {
+              min: 1,
+              max: ARTIFACT_REVIEW_LIMITS.id,
+              trim: true,
+            });
       if (current.pins.some(({ id }) => id === pinId)) {
-        throw new ArtifactReviewStateError('E_ARTIFACT_REVIEW_ID_COLLISION', `Duplicate pin id: ${pinId}`);
+        throw new ArtifactReviewStateError(
+          'E_ARTIFACT_REVIEW_ID_COLLISION',
+          `Duplicate pin id: ${pinId}`,
+        );
       }
       const pin = normalizePin({
         ...pinInput,
@@ -403,10 +420,14 @@ export function reduceArtifactReview(review, action, {
         createdAt: pinInput.createdAt ?? timestamp,
         updatedAt: pinInput.updatedAt ?? timestamp,
       });
-      next = preserveOptionalReviewTimestamps(current, {
-        ...current,
-        pins: [...current.pins, pin],
-      }, timestamp);
+      next = preserveOptionalReviewTimestamps(
+        current,
+        {
+          ...current,
+          pins: [...current.pins, pin],
+        },
+        timestamp,
+      );
       break;
     }
     case 'add-reply': {
@@ -414,15 +435,19 @@ export function reduceArtifactReview(review, action, {
       if (pin.replies.length >= ARTIFACT_REVIEW_LIMITS.replies) {
         invalid(`A feedback thread can contain at most ${ARTIFACT_REVIEW_LIMITS.replies} replies.`);
       }
-      const replyId = action.id === undefined
-        ? uniqueDependencyId(createId, 'reply', new Set(pin.replies.map(({ id }) => id)))
-        : boundedString(action.id, 'reply.id', {
-          min: 1,
-          max: ARTIFACT_REVIEW_LIMITS.id,
-          trim: true,
-        });
+      const replyId =
+        action.id === undefined
+          ? uniqueDependencyId(createId, 'reply', new Set(pin.replies.map(({ id }) => id)))
+          : boundedString(action.id, 'reply.id', {
+              min: 1,
+              max: ARTIFACT_REVIEW_LIMITS.id,
+              trim: true,
+            });
       if (pin.replies.some(({ id }) => id === replyId)) {
-        throw new ArtifactReviewStateError('E_ARTIFACT_REVIEW_ID_COLLISION', `Duplicate reply id: ${replyId}`);
+        throw new ArtifactReviewStateError(
+          'E_ARTIFACT_REVIEW_ID_COLLISION',
+          `Duplicate reply id: ${replyId}`,
+        );
       }
       const reply = normalizeReply({
         id: replyId,
@@ -435,10 +460,14 @@ export function reduceArtifactReview(review, action, {
         replies: [...pin.replies, reply],
         updatedAt: timestamp,
       });
-      next = preserveOptionalReviewTimestamps(current, {
-        ...current,
-        pins: replacePin(current, updatedPin),
-      }, timestamp);
+      next = preserveOptionalReviewTimestamps(
+        current,
+        {
+          ...current,
+          pins: replacePin(current, updatedPin),
+        },
+        timestamp,
+      );
       break;
     }
     case 'set-status': {
@@ -448,23 +477,35 @@ export function reduceArtifactReview(review, action, {
         status: enumValue(action.status, ARTIFACT_REVIEW_STATUSES, 'status'),
         updatedAt: timestamp,
       });
-      next = preserveOptionalReviewTimestamps(current, {
-        ...current,
-        pins: replacePin(current, updatedPin),
-      }, timestamp);
+      next = preserveOptionalReviewTimestamps(
+        current,
+        {
+          ...current,
+          pins: replacePin(current, updatedPin),
+        },
+        timestamp,
+      );
       break;
     }
     case 'set-overall':
-      next = preserveOptionalReviewTimestamps(current, {
-        ...current,
-        overall: boundedString(action.overall, 'overall', { max: ARTIFACT_REVIEW_LIMITS.text }),
-      }, timestamp);
+      next = preserveOptionalReviewTimestamps(
+        current,
+        {
+          ...current,
+          overall: boundedString(action.overall, 'overall', { max: ARTIFACT_REVIEW_LIMITS.text }),
+        },
+        timestamp,
+      );
       break;
     case 'set-decision':
-      next = preserveOptionalReviewTimestamps(current, {
-        ...current,
-        decision: enumValue(action.decision, ARTIFACT_REVIEW_DECISIONS, 'decision'),
-      }, timestamp);
+      next = preserveOptionalReviewTimestamps(
+        current,
+        {
+          ...current,
+          decision: enumValue(action.decision, ARTIFACT_REVIEW_DECISIONS, 'decision'),
+        },
+        timestamp,
+      );
       break;
     default:
       throw new ArtifactReviewStateError(
@@ -484,9 +525,10 @@ export function createArtifactReviewController({
   createId = defaultCreateId,
   now = defaultNow,
 } = {}) {
-  let review = initialReview === null || initialReview === undefined
-    ? null
-    : normalizeArtifactReview(initialReview);
+  let review =
+    initialReview === null || initialReview === undefined
+      ? null
+      : normalizeArtifactReview(initialReview);
   if (review && reviewOf !== undefined && review.reviewOf !== reviewOf) {
     throw new ArtifactReviewStateError(
       'E_ARTIFACT_REVIEW_DIGEST_MISMATCH',
@@ -500,7 +542,10 @@ export function createArtifactReviewController({
 
   const assertAlive = () => {
     if (destroyed) {
-      throw new ArtifactReviewStateError('E_ARTIFACT_REVIEW_DESTROYED', 'Artifact review controller is destroyed.');
+      throw new ArtifactReviewStateError(
+        'E_ARTIFACT_REVIEW_DESTROYED',
+        'Artifact review controller is destroyed.',
+      );
     }
   };
 
@@ -509,11 +554,12 @@ export function createArtifactReviewController({
     return review;
   };
 
-  const getState = () => deepFreezeArtifactReview({
-    review,
-    identity: localIdentity,
-    activePinId,
-  });
+  const getState = () =>
+    deepFreezeArtifactReview({
+      review,
+      identity: localIdentity,
+      activePinId,
+    });
 
   const notify = (change) => {
     const state = getState();
@@ -537,12 +583,12 @@ export function createArtifactReviewController({
     dispatch(action) {
       assertAlive();
       const authored = action?.type === 'add-pin' || action?.type === 'add-reply';
-      const nextAction = authored && action.author === undefined
-        ? { ...action, author: localIdentity ?? identityRequired() }
-        : action;
-      const previousPinIds = nextAction?.type === 'add-pin'
-        ? new Set(review?.pins.map(({ id }) => id) ?? [])
-        : null;
+      const nextAction =
+        authored && action.author === undefined
+          ? { ...action, author: localIdentity ?? identityRequired() }
+          : action;
+      const previousPinIds =
+        nextAction?.type === 'add-pin' ? new Set(review?.pins.map(({ id }) => id) ?? []) : null;
       review = reduceArtifactReview(ensureReview(), nextAction, { createId, now });
       if (previousPinIds) {
         activePinId = review.pins.find(({ id }) => !previousPinIds.has(id))?.id ?? activePinId;
@@ -613,7 +659,10 @@ function displayTimestamp(timestamp) {
 }
 
 function renderReply(document, reply) {
-  const item = createElement(document, 'li', { className: 'planr-reply', attributes: { 'data-planr-reply-id': reply.id } });
+  const item = createElement(document, 'li', {
+    className: 'planr-reply',
+    attributes: { 'data-planr-reply-id': reply.id },
+  });
   const heading = createElement(document, 'header');
   heading.append(createElement(document, 'strong', { text: reply.author.name }));
   const time = createElement(document, 'time', {
@@ -629,37 +678,84 @@ function renderReplyForm(document, pin, expanded = false) {
   const fieldId = `${annotationDomIds(pin.id).thread}-reply`;
   const wrapper = createElement(document, 'div', { className: 'planr-reply-editor' });
   const toggle = createElement(document, 'button', {
-    className: 'planr-reply-toggle', text: expanded ? '− Reply' : '+ Reply',
-    attributes: { type: 'button', id: `${fieldId}-toggle`, 'data-planr-reply-toggle': pin.id,
-      'aria-expanded': String(expanded), 'aria-controls': `${fieldId}-form`, title: expanded ? 'Collapse reply' : 'Reply to this comment' },
+    className: 'planr-reply-toggle',
+    text: expanded ? '− Reply' : '+ Reply',
+    attributes: {
+      type: 'button',
+      id: `${fieldId}-toggle`,
+      'data-planr-reply-toggle': pin.id,
+      'aria-expanded': String(expanded),
+      'aria-controls': `${fieldId}-form`,
+      title: expanded ? 'Collapse reply' : 'Reply to this comment',
+    },
   });
   const form = createElement(document, 'form', {
     className: 'planr-reply-form',
-    attributes: { 'data-planr-reply-form': pin.id, id: `${fieldId}-form`, ...(expanded ? {} : { hidden: '' }) },
+    attributes: {
+      'data-planr-reply-form': pin.id,
+      id: `${fieldId}-form`,
+      ...(expanded ? {} : { hidden: '' }),
+    },
   });
   const label = createElement(document, 'label', {
-    className: 'planr-reply-label', text: 'Reply to thread', attributes: { for: fieldId },
+    className: 'planr-reply-label',
+    text: 'Reply to thread',
+    attributes: { for: fieldId },
   });
   const textarea = createElement(document, 'textarea', {
-    attributes: { id: fieldId, name: 'reply', maxlength: ARTIFACT_REVIEW_LIMITS.text, rows: 2,
-      placeholder: 'Write a reply…', required: '', 'aria-describedby': 'planr-review-error' },
+    attributes: {
+      id: fieldId,
+      name: 'reply',
+      maxlength: ARTIFACT_REVIEW_LIMITS.text,
+      rows: 2,
+      placeholder: 'Write a reply…',
+      required: '',
+      'aria-describedby': 'planr-review-error',
+    },
   });
   const controls = createElement(document, 'div', { className: 'planr-reply-controls' });
-  const hint = createElement(document, 'span', { className: 'planr-reply-hint', text: 'Ctrl/⌘ + Enter to send' });
+  const hint = createElement(document, 'span', {
+    className: 'planr-reply-hint',
+    text: 'Ctrl/⌘ + Enter to send',
+  });
   const submit = createElement(document, 'button', {
     className: 'planr-reply-send',
-    attributes: { type: 'submit', disabled: '', 'aria-label': 'Send reply', title: 'Send reply (Ctrl/⌘ + Enter)' },
+    attributes: {
+      type: 'submit',
+      disabled: '',
+      'aria-label': 'Send reply',
+      title: 'Send reply (Ctrl/⌘ + Enter)',
+    },
   });
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  for (const [name, value] of Object.entries({ viewBox: '0 0 24 24', width: '16', height: '16', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.8', 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'aria-hidden': 'true', focusable: 'false' })) svg.setAttribute(name, value);
+  for (const [name, value] of Object.entries({
+    viewBox: '0 0 24 24',
+    width: '16',
+    height: '16',
+    fill: 'none',
+    stroke: 'currentColor',
+    'stroke-width': '1.8',
+    'stroke-linecap': 'round',
+    'stroke-linejoin': 'round',
+    'aria-hidden': 'true',
+    focusable: 'false',
+  }))
+    svg.setAttribute(name, value);
   const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-  path.setAttribute('d', 'M12 19V5m-6 6 6-6 6 6'); svg.append(path); submit.append(svg);
-  controls.append(hint, submit); form.append(label, textarea, controls); wrapper.append(toggle, form);
+  path.setAttribute('d', 'M12 19V5m-6 6 6-6 6 6');
+  svg.append(path);
+  submit.append(svg);
+  controls.append(hint, submit);
+  form.append(label, textarea, controls);
+  wrapper.append(toggle, form);
   return wrapper;
 }
 
 function renderThread(document, pin, active, description = {}) {
-  const intentLabel = typeof description.intentLabel === 'string' ? description.intentLabel.slice(0, 128) : pin.intent;
+  const intentLabel =
+    typeof description.intentLabel === 'string'
+      ? description.intentLabel.slice(0, 128)
+      : pin.intent;
   const article = createElement(document, 'article', {
     className: `planr-thread${active ? ' is-active' : ''}`,
     attributes: {
@@ -681,7 +777,9 @@ function renderThread(document, pin, active, description = {}) {
     createElement(document, 'span', { className: 'planr-intent', text: intentLabel }),
   );
   const time = createElement(document, 'time', {
-    text: description.compact ? `${new Date(pin.createdAt).toISOString().slice(11,16)} UTC` : displayTimestamp(pin.createdAt),
+    text: description.compact
+      ? `${new Date(pin.createdAt).toISOString().slice(11, 16)} UTC`
+      : displayTimestamp(pin.createdAt),
     attributes: { datetime: pin.createdAt, title: displayTimestamp(pin.createdAt) },
   });
   header.append(byline, time);
@@ -692,7 +790,11 @@ function renderThread(document, pin, active, description = {}) {
   });
   const lifecycle = createElement(document, 'div', { className: 'planr-thread-actions' });
   lifecycle.append(
-    createElement(document, 'span', { className: 'planr-thread-status', text: pin.status, attributes: { title: `Status: ${pin.status}` } }),
+    createElement(document, 'span', {
+      className: 'planr-thread-status',
+      text: pin.status,
+      attributes: { title: `Status: ${pin.status}` },
+    }),
     createElement(document, 'button', {
       text: pin.status === 'resolved' ? 'Reopen' : 'Resolve',
       attributes: {
@@ -714,15 +816,41 @@ function renderThread(document, pin, active, description = {}) {
     className: 'planr-replies',
     attributes: { 'aria-label': 'Replies' },
   });
-  const earlierReplies = description.compact ? Math.max(0, pin.replies.length - (description.replyLimit || 2)) : 0;
-  for (const reply of pin.replies.slice(earlierReplies)) replies.append(renderReply(document, reply));
+  const earlierReplies = description.compact
+    ? Math.max(0, pin.replies.length - (description.replyLimit || 2))
+    : 0;
+  for (const reply of pin.replies.slice(earlierReplies))
+    replies.append(renderReply(document, reply));
   const editor = renderReplyForm(document, pin, description.replyExpanded);
   article.append(header, comment);
   if (description.compact && pin.comment.length > 240) {
     comment.dataset.planrCommentCollapsed = String(!description.commentExpanded);
-    article.append(createElement(document, 'button', { className: 'planr-comment-expand', text: description.commentExpanded ? 'Show less' : 'Read full comment', attributes: { type:'button', id:`${annotationDomIds(pin.id).thread}-expand`, 'data-planr-comment-expand':pin.id, 'aria-expanded':String(Boolean(description.commentExpanded)) } }));
+    article.append(
+      createElement(document, 'button', {
+        className: 'planr-comment-expand',
+        text: description.commentExpanded ? 'Show less' : 'Read full comment',
+        attributes: {
+          type: 'button',
+          id: `${annotationDomIds(pin.id).thread}-expand`,
+          'data-planr-comment-expand': pin.id,
+          'aria-expanded': String(Boolean(description.commentExpanded)),
+        },
+      }),
+    );
   }
-  if (earlierReplies) article.append(createElement(document, 'button', { className:'planr-history-expand', text:`Show ${earlierReplies} earlier ${earlierReplies === 1 ? 'reply' : 'replies'}`, attributes:{ type:'button', id:`${annotationDomIds(pin.id).thread}-history`, 'data-planr-history-expand':pin.id, 'aria-expanded':'false' } }));
+  if (earlierReplies)
+    article.append(
+      createElement(document, 'button', {
+        className: 'planr-history-expand',
+        text: `Show ${earlierReplies} earlier ${earlierReplies === 1 ? 'reply' : 'replies'}`,
+        attributes: {
+          type: 'button',
+          id: `${annotationDomIds(pin.id).thread}-history`,
+          'data-planr-history-expand': pin.id,
+          'aria-expanded': 'false',
+        },
+      }),
+    );
   if (pin.replies.length) article.append(replies);
   if (description.compact) {
     lifecycle.append(editor.querySelector('[data-planr-reply-toggle]'));
@@ -768,20 +896,25 @@ export function mountArtifactFeedbackRail({
   }
 
   const ownsController = !providedController;
-  const controller = providedController ?? createArtifactReviewController({
-    initialReview,
-    reviewOf,
-    reviewId,
-    identity,
-    createId,
-    now,
-  });
+  const controller =
+    providedController ??
+    createArtifactReviewController({
+      initialReview,
+      reviewOf,
+      reviewId,
+      identity,
+      createId,
+      now,
+    });
   let destroyed = false;
   let presentation = { ...initialPresentation };
   const replyDrafts = new Map();
   const expandedReplies = new Set();
-  const expandedHistory = new Map(), expandedComments = new Set();
-  let visibleLimit = Number.isInteger(initialPresentation.pageSize) ? initialPresentation.pageSize : Infinity;
+  const expandedHistory = new Map(),
+    expandedComments = new Set();
+  let visibleLimit = Number.isInteger(initialPresentation.pageSize)
+    ? initialPresentation.pageSize
+    : Infinity;
   const extraDrafts = new Map();
   let overallDirty = false;
   let composing = false;
@@ -792,36 +925,66 @@ export function mountArtifactFeedbackRail({
       if (field) replyDrafts.set(form.dataset.planrReplyForm, field.value);
     }
     for (const field of slot.querySelectorAll('[data-planr-draft-key]')) {
-      if (typeof field.value === 'string') extraDrafts.set(field.dataset.planrDraftKey, field.value);
+      if (typeof field.value === 'string')
+        extraDrafts.set(field.dataset.planrDraftKey, field.value);
     }
   };
   const snapshotDrafts = () => {
     captureDrafts();
-    return cloneFrozenArtifactReview({ reviewOf: controller.getReview()?.reviewOf ?? reviewOf,
-      replies: Object.fromEntries(replyDrafts), expandedReplies: [...expandedReplies], fields: Object.fromEntries(extraDrafts),
-      overall: { value: overall.value, dirty: overallDirty }, identity: identityInput.value });
+    return cloneFrozenArtifactReview({
+      reviewOf: controller.getReview()?.reviewOf ?? reviewOf,
+      replies: Object.fromEntries(replyDrafts),
+      expandedReplies: [...expandedReplies],
+      fields: Object.fromEntries(extraDrafts),
+      overall: { value: overall.value, dirty: overallDirty },
+      identity: identityInput.value,
+    });
   };
-  const emitDraftChange = () => root.dispatchEvent(new window.CustomEvent(ARTIFACT_REVIEW_DRAFT_CHANGE_EVENT, { bubbles: true, detail: snapshotDrafts() }));
+  const emitDraftChange = () =>
+    root.dispatchEvent(
+      new window.CustomEvent(ARTIFACT_REVIEW_DRAFT_CHANGE_EVENT, {
+        bubbles: true,
+        detail: snapshotDrafts(),
+      }),
+    );
   const focusDescriptor = () => {
     const element = document.activeElement;
     if (!element || !slot.contains(element)) return null;
     const thread = element.closest('[data-planr-pin-id]');
-    return { id: element.id, pinId: thread?.dataset.planrPinId,
+    return {
+      id: element.id,
+      pinId: thread?.dataset.planrPinId,
       draftKey: element.dataset.planrDraftKey,
-      action: element.dataset.planrThreadAction, showPin: element.dataset.planrThreadFocus,
-      tag: element.tagName, name: element.name,
-      start: element.selectionStart, end: element.selectionEnd, direction: element.selectionDirection };
+      action: element.dataset.planrThreadAction,
+      showPin: element.dataset.planrThreadFocus,
+      tag: element.tagName,
+      name: element.name,
+      start: element.selectionStart,
+      end: element.selectionEnd,
+      direction: element.selectionDirection,
+    };
   };
   const restoreFocus = (descriptor) => {
     if (!descriptor) return;
-    const thread = descriptor.pinId && document.getElementById(artifactReviewThreadDomId(descriptor.pinId));
-    const target = (descriptor.id && document.getElementById(descriptor.id))
-      || (descriptor.draftKey && [...slot.querySelectorAll('[data-planr-draft-key]')].find((field) => field.dataset.planrDraftKey === descriptor.draftKey))
-      || (descriptor.action && [...(thread?.querySelectorAll('[data-planr-thread-action]') ?? [])].find((button) => button.dataset.planrThreadAction === descriptor.action))
-      || (descriptor.showPin && thread?.querySelector('[data-planr-thread-focus]'))
-      || [...(thread?.querySelectorAll('button,input,select,textarea') ?? [])].find((field) => field.tagName === descriptor.tag && field.name === descriptor.name);
+    const thread =
+      descriptor.pinId && document.getElementById(artifactReviewThreadDomId(descriptor.pinId));
+    const target =
+      (descriptor.id && document.getElementById(descriptor.id)) ||
+      (descriptor.draftKey &&
+        [...slot.querySelectorAll('[data-planr-draft-key]')].find(
+          (field) => field.dataset.planrDraftKey === descriptor.draftKey,
+        )) ||
+      (descriptor.action &&
+        [...(thread?.querySelectorAll('[data-planr-thread-action]') ?? [])].find(
+          (button) => button.dataset.planrThreadAction === descriptor.action,
+        )) ||
+      (descriptor.showPin && thread?.querySelector('[data-planr-thread-focus]')) ||
+      [...(thread?.querySelectorAll('button,input,select,textarea') ?? [])].find(
+        (field) => field.tagName === descriptor.tag && field.name === descriptor.name,
+      );
     target?.focus?.({ preventScroll: true });
-    if (Number.isInteger(descriptor.start)) target?.setSelectionRange?.(descriptor.start, descriptor.end, descriptor.direction);
+    if (Number.isInteger(descriptor.start))
+      target?.setSelectionRange?.(descriptor.start, descriptor.end, descriptor.direction);
   };
 
   const showError = (error) => {
@@ -840,32 +1003,44 @@ export function mountArtifactFeedbackRail({
 
   const announce = (message) => {
     decisionStatus.textContent = message;
-    const live = root.parentElement?.querySelector('[data-planr-slot="review-announcer"]')
-      ?? document.querySelector('[data-planr-slot="review-announcer"]');
+    const live =
+      root.parentElement?.querySelector('[data-planr-slot="review-announcer"]') ??
+      document.querySelector('[data-planr-slot="review-announcer"]');
     if (live) live.textContent = message;
   };
 
   const updateCounts = (pins) => {
     const label = `${pins.length} ${pins.length === 1 ? 'comment' : 'comments'}`;
-    for (const count of root.querySelectorAll('[data-planr-action="feedback"] .planr-count, .planr-review-rail > header .planr-count')) {
+    for (const count of root.querySelectorAll(
+      '[data-planr-action="feedback"] .planr-count, .planr-review-rail > header .planr-count',
+    )) {
       count.textContent = String(pins.length);
       count.setAttribute('aria-label', label);
     }
     const commentsButton = root.querySelector('[data-planr-action="feedback"]');
     commentsButton?.setAttribute('aria-label', commentsButton.dataset.planrReviewLabel || label);
-    if (commentsButton?.dataset.planrReviewLabel) commentsButton.setAttribute('aria-description', label);
+    if (commentsButton?.dataset.planrReviewLabel)
+      commentsButton.setAttribute('aria-description', label);
   };
 
   const render = ({ capture = true } = {}) => {
-    if (composing) { renderQueued = true; return; }
+    if (composing) {
+      renderQueued = true;
+      return;
+    }
     if (capture) captureDrafts();
     const focus = focusDescriptor();
-    const scroll = []; for (let node = slot; node && root.contains(node); node = node.parentElement) scroll.push([node, node.scrollTop, node.scrollLeft]);
+    const scroll = [];
+    for (let node = slot; node && root.contains(node); node = node.parentElement)
+      scroll.push([node, node.scrollTop, node.scrollLeft]);
     const state = controller.getState();
     const { review, activePinId } = state;
     const allPins = review?.pins ?? [];
-    const pins = typeof presentation.filterPin === 'function' ? allPins.filter((pin) => presentation.filterPin(pin, state)) : allPins;
-    const activeIndex = pins.findIndex(pin => pin.id === activePinId);
+    const pins =
+      typeof presentation.filterPin === 'function'
+        ? allPins.filter((pin) => presentation.filterPin(pin, state))
+        : allPins;
+    const activeIndex = pins.findIndex((pin) => pin.id === activePinId);
     // A selected pin beyond the loaded page is one extra card, never thousands.
     const visiblePins = pins.slice(0, visibleLimit);
     if (activeIndex >= visibleLimit) visiblePins.push(pins[activeIndex]);
@@ -875,43 +1050,73 @@ export function mountArtifactFeedbackRail({
       attributes: { 'aria-label': 'Comment threads' },
     });
     if (pins.length === 0) {
-      list.append(createElement(document, 'p', {
-        className: 'planr-review-empty',
-        text: typeof presentation.emptyMessage === 'string' ? presentation.emptyMessage : allPins.length ? 'No comments match these filters.' : 'No comments yet. Choose Add comment, then select a point or region in the artifact.',
-      }));
+      list.append(
+        createElement(document, 'p', {
+          className: 'planr-review-empty',
+          text:
+            typeof presentation.emptyMessage === 'string'
+              ? presentation.emptyMessage
+              : allPins.length
+                ? 'No comments match these filters.'
+                : 'No comments yet. Choose Add comment, then select a point or region in the artifact.',
+        }),
+      );
     } else {
       for (const pin of visiblePins) {
-        const thread = renderThread(document, pin, pin.id === activePinId, { ...presentation.describePin?.(pin, state), compact:presentation.compact === true, replyLimit:expandedHistory.get(pin.id) || 2, commentExpanded:expandedComments.has(pin.id), replyExpanded: expandedReplies.has(pin.id) });
+        const thread = renderThread(document, pin, pin.id === activePinId, {
+          ...presentation.describePin?.(pin, state),
+          compact: presentation.compact === true,
+          replyLimit: expandedHistory.get(pin.id) || 2,
+          commentExpanded: expandedComments.has(pin.id),
+          replyExpanded: expandedReplies.has(pin.id),
+        });
         presentation.decorateThread?.({ element: thread, pin, state, document });
         const reply = thread.querySelector('[name="reply"]');
         if (replyDrafts.has(pin.id)) reply.value = replyDrafts.get(pin.id);
         thread.querySelector('.planr-reply-send').disabled = !reply.value.trim();
         for (const field of thread.querySelectorAll('[data-planr-draft-key]')) {
-          if (extraDrafts.has(field.dataset.planrDraftKey)) field.value = extraDrafts.get(field.dataset.planrDraftKey);
+          if (extraDrafts.has(field.dataset.planrDraftKey))
+            field.value = extraDrafts.get(field.dataset.planrDraftKey);
         }
         list.append(thread);
       }
     }
-    if (pins.length > visibleLimit) list.append(createElement(document, 'button', { className:'planr-threads-more', text:`Show more comments · ${Math.min(visibleLimit,pins.length)} of ${pins.length}`, attributes:{ type:'button','data-planr-threads-more':'' } }));
+    if (pins.length > visibleLimit)
+      list.append(
+        createElement(document, 'button', {
+          className: 'planr-threads-more',
+          text: `Show more comments · ${Math.min(visibleLimit, pins.length)} of ${pins.length}`,
+          attributes: { type: 'button', 'data-planr-threads-more': '' },
+        }),
+      );
     fragment.append(list);
     slot.replaceChildren(fragment);
     const identityName = controller.getIdentity()?.name ?? '';
     if (document.activeElement !== identityInput) identityInput.value = identityName;
     if (identityStatus) {
       identityStatus.dataset.planrIdentityReady = String(Boolean(identityName));
-      identityStatus.textContent = identityName ? `Comments will appear as ${identityName}.` : 'Used to sign your comments.';
+      identityStatus.textContent = identityName
+        ? `Comments will appear as ${identityName}.`
+        : 'Used to sign your comments.';
     }
     overall.maxLength = ARTIFACT_REVIEW_LIMITS.text;
     if (!overallDirty && document.activeElement !== overall) overall.value = review?.overall ?? '';
     for (const button of decisionButtons) {
-      button.setAttribute('aria-pressed', String(button.dataset.planrDecision === (review?.decision ?? 'pending')));
+      button.setAttribute(
+        'aria-pressed',
+        String(button.dataset.planrDecision === (review?.decision ?? 'pending')),
+      );
     }
     decisionStatus.textContent = decisionCopy(review?.decision ?? 'pending');
     updateCounts(allPins);
     restoreFocus(focus);
-    for (const [node, top, left] of scroll) { node.scrollTop = top; node.scrollLeft = left; }
+    for (const [node, top, left] of scroll) {
+      node.scrollTop = top;
+      node.scrollLeft = left;
+    }
     const openMetric = root.querySelector('[data-planr-metric="open"]');
-    if (openMetric) openMetric.textContent = `${allPins.filter(({ status }) => status !== 'resolved').length} open`;
+    if (openMetric)
+      openMetric.textContent = `${allPins.filter(({ status }) => status !== 'resolved').length} open`;
   };
 
   const focusThread = (pinId) => {
@@ -922,16 +1127,19 @@ export function mountArtifactFeedbackRail({
 
   const emitReview = (review) => {
     const detail = cloneFrozenArtifactReview(review);
-    root.dispatchEvent(new window.CustomEvent(ARTIFACT_REVIEW_CHANGE_EVENT, {
-      detail,
-      bubbles: true,
-    }));
+    root.dispatchEvent(
+      new window.CustomEvent(ARTIFACT_REVIEW_CHANGE_EVENT, {
+        detail,
+        bubbles: true,
+      }),
+    );
   };
 
   const unsubscribe = controller.subscribe((state, change) => {
     if (destroyed) return;
     if (['review', 'review-replaced', 'selection'].includes(change.type)) render();
-    if (['review', 'review-replaced'].includes(change.type) && state.review) emitReview(state.review);
+    if (['review', 'review-replaced'].includes(change.type) && state.review)
+      emitReview(state.review);
   });
 
   const onInput = (event) => {
@@ -941,7 +1149,9 @@ export function mountArtifactFeedbackRail({
       const name = controller.getIdentity()?.name ?? '';
       if (identityStatus) {
         identityStatus.dataset.planrIdentityReady = String(Boolean(name));
-        identityStatus.textContent = name ? `Comments will appear as ${name}.` : 'Used to sign your comments.';
+        identityStatus.textContent = name
+          ? `Comments will appear as ${name}.`
+          : 'Used to sign your comments.';
       }
       clearError();
     } catch (error) {
@@ -954,19 +1164,22 @@ export function mountArtifactFeedbackRail({
     const form = thread?.querySelector('[data-planr-reply-form]');
     const toggle = thread?.querySelector('[data-planr-reply-toggle]');
     if (!form || !toggle) return;
-    if (expanded) expandedReplies.add(pinId); else expandedReplies.delete(pinId);
+    if (expanded) expandedReplies.add(pinId);
+    else expandedReplies.delete(pinId);
     form.hidden = !expanded;
     toggle.setAttribute('aria-expanded', String(expanded));
     toggle.textContent = expanded ? '− Reply' : '+ Reply';
     toggle.title = expanded ? 'Collapse reply' : 'Reply to this comment';
-    if (focus) (expanded ? form.elements.namedItem('reply') : toggle).focus({ preventScroll: true });
+    if (focus)
+      (expanded ? form.elements.namedItem('reply') : toggle).focus({ preventScroll: true });
     emitDraftChange();
   };
   const onKeyDown = (event) => {
     const form = event.target?.closest?.('[data-planr-reply-form]');
     if (!form || event.isComposing) return;
     if (event.key === 'Escape') {
-      event.preventDefault(); event.stopPropagation();
+      event.preventDefault();
+      event.stopPropagation();
       setReplyExpanded(form.dataset.planrReplyForm, false, { focus: true });
     } else if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
       event.preventDefault();
@@ -976,21 +1189,45 @@ export function mountArtifactFeedbackRail({
 
   const emitSelection = (pinId) => {
     controller.selectPin(pinId);
-    root.dispatchEvent(new window.CustomEvent(ARTIFACT_REVIEW_SELECT_EVENT, {
-      detail: deepFreezeArtifactReview({ pinId, source: 'thread' }),
-      bubbles: true,
-    }));
+    root.dispatchEvent(
+      new window.CustomEvent(ARTIFACT_REVIEW_SELECT_EVENT, {
+        detail: deepFreezeArtifactReview({ pinId, source: 'thread' }),
+        bubbles: true,
+      }),
+    );
     onSelectPin?.(pinId);
   };
 
   const onClick = (event) => {
-    if (event.target.closest?.('[data-planr-threads-more]')) { visibleLimit += presentation.pageSize || 40; render(); return; }
+    if (event.target.closest?.('[data-planr-threads-more]')) {
+      visibleLimit += presentation.pageSize || 40;
+      render();
+      return;
+    }
     const historyToggle = event.target.closest?.('[data-planr-history-expand]');
-    if (historyToggle) { const id=historyToggle.dataset.planrHistoryExpand; expandedHistory.set(id, (expandedHistory.get(id) || 2) + 20); render(); return; }
+    if (historyToggle) {
+      const id = historyToggle.dataset.planrHistoryExpand;
+      expandedHistory.set(id, (expandedHistory.get(id) || 2) + 20);
+      render();
+      return;
+    }
     const commentToggle = event.target.closest?.('[data-planr-comment-expand]');
-    if (commentToggle) { const id=commentToggle.dataset.planrCommentExpand; if (expandedComments.has(id)) expandedComments.delete(id); else expandedComments.add(id); render(); return; }
+    if (commentToggle) {
+      const id = commentToggle.dataset.planrCommentExpand;
+      if (expandedComments.has(id)) expandedComments.delete(id);
+      else expandedComments.add(id);
+      render();
+      return;
+    }
     const replyToggle = event.target?.closest?.('[data-planr-reply-toggle]');
-    if (replyToggle) { setReplyExpanded(replyToggle.dataset.planrReplyToggle, replyToggle.getAttribute('aria-expanded') !== 'true', { focus: true }); return; }
+    if (replyToggle) {
+      setReplyExpanded(
+        replyToggle.dataset.planrReplyToggle,
+        replyToggle.getAttribute('aria-expanded') !== 'true',
+        { focus: true },
+      );
+      return;
+    }
     const action = event.target?.closest?.('[data-planr-thread-action]');
     const focus = event.target?.closest?.('[data-planr-thread-focus]');
     if (action) {
@@ -1001,7 +1238,9 @@ export function mountArtifactFeedbackRail({
           pinId,
           status: action.dataset.planrThreadAction === 'resolve' ? 'resolved' : 'open',
         });
-        announce(action.dataset.planrThreadAction === 'resolve' ? 'Comment resolved' : 'Comment reopened');
+        announce(
+          action.dataset.planrThreadAction === 'resolve' ? 'Comment resolved' : 'Comment reopened',
+        );
         focusThread(pinId);
         clearError();
       } catch (error) {
@@ -1082,21 +1321,42 @@ export function mountArtifactFeedbackRail({
   const onThreadOpen = (event) => {
     const thread = event.target.closest?.('.planr-thread[data-planr-pin-id]');
     if (!thread || !slot.contains(thread)) return;
-    const pin = controller.getReview()?.pins.find((entry) => entry.id === thread.dataset.planrPinId);
+    const pin = controller
+      .getReview()
+      ?.pins.find((entry) => entry.id === thread.dataset.planrPinId);
     const key = pin && `${pin.id}:${pin.replies.map((reply) => reply.id).join(',')}`;
     if (!key || lastOpened === key) return;
     lastOpened = key;
     presentation.onThreadOpen?.(pin.id, controller.getState());
-    root.dispatchEvent(new window.CustomEvent('planr:artifact-thread-open', { bubbles: true, detail: Object.freeze({ pinId: pin.id }) }));
+    root.dispatchEvent(
+      new window.CustomEvent('planr:artifact-thread-open', {
+        bubbles: true,
+        detail: Object.freeze({ pinId: pin.id }),
+      }),
+    );
   };
   const onDraftInput = (event) => {
     const form = event.target.closest?.('[data-planr-reply-form]');
-    if (form) form.querySelector('.planr-reply-send').disabled = !form.elements.namedItem('reply').value.trim();
+    if (form)
+      form.querySelector('.planr-reply-send').disabled = !form.elements
+        .namedItem('reply')
+        .value.trim();
     emitDraftChange();
   };
-  const onOverallInput = () => { overallDirty = true; emitDraftChange(); };
-  const onCompositionStart = () => { composing = true; };
-  const onCompositionEnd = () => { composing = false; if (renderQueued) { renderQueued = false; render(); } };
+  const onOverallInput = () => {
+    overallDirty = true;
+    emitDraftChange();
+  };
+  const onCompositionStart = () => {
+    composing = true;
+  };
+  const onCompositionEnd = () => {
+    composing = false;
+    if (renderQueued) {
+      renderQueued = false;
+      render();
+    }
+  };
   slot.addEventListener('input', onDraftInput);
   slot.addEventListener('focusin', onThreadOpen);
   slot.addEventListener('click', onThreadOpen);
@@ -1123,8 +1383,13 @@ export function mountArtifactFeedbackRail({
     selectPin: (pinId) => controller.selectPin(pinId),
     render,
     setPresentation(options = {}) {
-      if (options.filterKey !== presentation.filterKey || options.pageSize !== undefined && options.pageSize !== presentation.pageSize) visibleLimit = options.pageSize || presentation.pageSize || Infinity;
-      presentation = { ...presentation, ...options }; render();
+      if (
+        options.filterKey !== presentation.filterKey ||
+        (options.pageSize !== undefined && options.pageSize !== presentation.pageSize)
+      )
+        visibleLimit = options.pageSize || presentation.pageSize || Infinity;
+      presentation = { ...presentation, ...options };
+      render();
     },
     snapshotDrafts,
     getReviewOf: () => controller.getReview()?.reviewOf ?? reviewOf,
@@ -1138,18 +1403,32 @@ export function mountArtifactFeedbackRail({
         const name = snapshot.identity.slice(0, ARTIFACT_REVIEW_LIMITS.authorName);
         controller.setIdentity(name.trim() ? { ...controller.getIdentity(), name } : null);
       }
-      for (const [id, value] of Object.entries(snapshot.replies ?? {}).slice(0, ARTIFACT_REVIEW_LIMITS.pins)) {
-        if (id.length <= ARTIFACT_REVIEW_LIMITS.id && typeof value === 'string') replyDrafts.set(id, value.slice(0, ARTIFACT_REVIEW_LIMITS.text));
+      for (const [id, value] of Object.entries(snapshot.replies ?? {}).slice(
+        0,
+        ARTIFACT_REVIEW_LIMITS.pins,
+      )) {
+        if (id.length <= ARTIFACT_REVIEW_LIMITS.id && typeof value === 'string')
+          replyDrafts.set(id, value.slice(0, ARTIFACT_REVIEW_LIMITS.text));
       }
       expandedReplies.clear();
-      const expanded = Array.isArray(snapshot.expandedReplies) ? snapshot.expandedReplies : [...replyDrafts.keys()];
-      for (const id of expanded.slice(0, ARTIFACT_REVIEW_LIMITS.pins)) if (typeof id === 'string' && id.length <= ARTIFACT_REVIEW_LIMITS.id) expandedReplies.add(id);
-      for (const [key, value] of Object.entries(snapshot.fields ?? {}).slice(0, ARTIFACT_REVIEW_LIMITS.pins)) {
-        if (key.length <= 512 && typeof value === 'string') extraDrafts.set(key, value.slice(0, ARTIFACT_REVIEW_LIMITS.text));
+      const expanded = Array.isArray(snapshot.expandedReplies)
+        ? snapshot.expandedReplies
+        : [...replyDrafts.keys()];
+      for (const id of expanded.slice(0, ARTIFACT_REVIEW_LIMITS.pins))
+        if (typeof id === 'string' && id.length <= ARTIFACT_REVIEW_LIMITS.id)
+          expandedReplies.add(id);
+      for (const [key, value] of Object.entries(snapshot.fields ?? {}).slice(
+        0,
+        ARTIFACT_REVIEW_LIMITS.pins,
+      )) {
+        if (key.length <= 512 && typeof value === 'string')
+          extraDrafts.set(key, value.slice(0, ARTIFACT_REVIEW_LIMITS.text));
       }
       overallDirty = snapshot.overall?.dirty === true;
-      if (overallDirty && typeof snapshot.overall?.value === 'string') overall.value = snapshot.overall.value.slice(0, ARTIFACT_REVIEW_LIMITS.text);
-      render({ capture: false }); return true;
+      if (overallDirty && typeof snapshot.overall?.value === 'string')
+        overall.value = snapshot.overall.value.slice(0, ARTIFACT_REVIEW_LIMITS.text);
+      render({ capture: false });
+      return true;
     },
     focusThread,
     destroy() {

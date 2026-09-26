@@ -1,45 +1,44 @@
+import { existsSync, lstatSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { createServer } from 'node:http';
-import { existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-
+import { ARTIFACT_ERROR_CODES, PipelineError } from '@openplanr/protocol/errors';
 import {
-  acquireStartLock,
-  assertLoopbackRequest,
-  closeHttpServer,
-  listenLoopback,
-  LOOPBACK_HOST,
-  probeLoopbackJson,
-  readJsonState,
-  readRequestBody,
-  writePrivateJsonState,
-} from './internal/server-util.mjs';
+  createArtifactBridgeNonce,
+  prepareArtifactDocument,
+  renderArtifactParentRuntime,
+} from './bridge.mjs';
+import {
+  digestArtifactEnvelope,
+  validateArtifactEnvelope,
+  validateArtifactReview,
+} from './envelope.mjs';
+import { resolveArtifactReviewDestination } from './import.mjs';
 import {
   isCapabilityToken,
   mintCapabilityToken,
   timingSafeTokenEqual,
 } from './internal/board-token.mjs';
 import { planrHome } from './internal/paths.mjs';
-import { ARTIFACT_ERROR_CODES, PipelineError } from '@openplanr/protocol/errors';
-import { digestArtifactEnvelope, validateArtifactEnvelope, validateArtifactReview } from './envelope.mjs';
-import { resolveArtifactReviewDestination } from './import.mjs';
 import {
-  createReviewLedger,
-  effectiveReviewDecision,
-  mergeReviewLedger,
-} from './merge.mjs';
+  acquireStartLock,
+  assertLoopbackRequest,
+  closeHttpServer,
+  LOOPBACK_HOST,
+  listenLoopback,
+  probeLoopbackJson,
+  readJsonState,
+  readRequestBody,
+  writePrivateJsonState,
+} from './internal/server-util.mjs';
+import { createReviewLedger, effectiveReviewDecision, mergeReviewLedger } from './merge.mjs';
 import {
-  ARTIFACT_REVIEW_MAX_STATE_BYTES as REVIEW_STATE_MAX_BYTES,
   exportArtifactReview,
+  ARTIFACT_REVIEW_MAX_STATE_BYTES as REVIEW_STATE_MAX_BYTES,
   readArtifactReviewState,
   withArtifactReviewLock,
   writeArtifactReviewState,
 } from './review.mjs';
-import {
-  createArtifactBridgeNonce,
-  prepareArtifactDocument,
-  renderArtifactParentRuntime,
-} from './bridge.mjs';
 import { renderArtifactShellDocument } from './ui/shell.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -79,13 +78,30 @@ const PARENT_CSP = [
 ].join('; ');
 
 const PERMISSIONS_POLICY = [
-  'accelerometer=()', 'ambient-light-sensor=()', 'autoplay=()', 'camera=()',
-  'clipboard-read=()', 'clipboard-write=(self)', 'display-capture=()',
-  'encrypted-media=()', 'fullscreen=(self)', 'geolocation=()',
-  'gyroscope=()', 'hid=()', 'identity-credentials-get=()', 'magnetometer=()',
-  'microphone=()', 'midi=()', 'payment=()', 'publickey-credentials-get=()',
-  'picture-in-picture=()', 'screen-wake-lock=()', 'serial=()', 'usb=()',
-  'web-share=()', 'xr-spatial-tracking=()',
+  'accelerometer=()',
+  'ambient-light-sensor=()',
+  'autoplay=()',
+  'camera=()',
+  'clipboard-read=()',
+  'clipboard-write=(self)',
+  'display-capture=()',
+  'encrypted-media=()',
+  'fullscreen=(self)',
+  'geolocation=()',
+  'gyroscope=()',
+  'hid=()',
+  'identity-credentials-get=()',
+  'magnetometer=()',
+  'microphone=()',
+  'midi=()',
+  'payment=()',
+  'publickey-credentials-get=()',
+  'picture-in-picture=()',
+  'screen-wake-lock=()',
+  'serial=()',
+  'usb=()',
+  'web-share=()',
+  'xr-spatial-tracking=()',
 ].join(', ');
 
 function artifactError(code, message, fix = '', details) {
@@ -102,13 +118,15 @@ export function artifactReviewStatePath(port = 0, env = process.env) {
 }
 
 /** Export a live review by public session ID without exposing daemon credentials. */
-export async function exportArtifactReviewSession(sessionId, {
-  format = 'json',
-  env = process.env,
-  fetchImpl = fetch,
-} = {}) {
+export async function exportArtifactReviewSession(
+  sessionId,
+  { format = 'json', env = process.env, fetchImpl = fetch } = {},
+) {
   if (!safeSessionId(sessionId)) {
-    throw artifactError(ARTIFACT_ERROR_CODES.SESSION_NOT_FOUND, 'Artifact review session was not found.');
+    throw artifactError(
+      ARTIFACT_ERROR_CODES.SESSION_NOT_FOUND,
+      'Artifact review session was not found.',
+    );
   }
   if (!['json', 'markdown'].includes(format)) {
     throw artifactError(
@@ -124,13 +142,20 @@ export async function exportArtifactReviewSession(sessionId, {
       .sort();
   } catch (error) {
     if (error?.code !== 'ENOENT') {
-      throw artifactError(ARTIFACT_ERROR_CODES.REVIEW_EXPORT, 'Artifact review daemon state is unavailable.');
+      throw artifactError(
+        ARTIFACT_ERROR_CODES.REVIEW_EXPORT,
+        'Artifact review daemon state is unavailable.',
+      );
     }
   }
   for (const name of names) {
     const statePath = join(directory, name);
     let entry;
-    try { entry = lstatSync(statePath); } catch { continue; }
+    try {
+      entry = lstatSync(statePath);
+    } catch {
+      continue;
+    }
     if (!entry.isFile() || entry.isSymbolicLink()) continue;
     const state = readJsonState(statePath);
     if (!validState(state, 0) || !(await stateIsHealthy(state, fetchImpl))) continue;
@@ -144,7 +169,9 @@ export async function exportArtifactReviewSession(sessionId, {
           signal: AbortSignal.timeout(15_000),
         },
       );
-    } catch { continue; }
+    } catch {
+      continue;
+    }
     if (response.status === 404) continue;
     const content = await response.text();
     if (!response.ok) {
@@ -174,8 +201,10 @@ function stateLockPath(port, env) {
 }
 
 function statusForError(error) {
-  if (error?.code === 'E_REQUEST_BODY_LIMIT' || error?.code === ARTIFACT_ERROR_CODES.REQUEST_LIMIT) return 413;
-  if (['E_LOOPBACK_HOST', 'E_LOOPBACK_ORIGIN', 'E_LOOPBACK_FETCH_SITE'].includes(error?.code)) return 403;
+  if (error?.code === 'E_REQUEST_BODY_LIMIT' || error?.code === ARTIFACT_ERROR_CODES.REQUEST_LIMIT)
+    return 413;
+  if (['E_LOOPBACK_HOST', 'E_LOOPBACK_ORIGIN', 'E_LOOPBACK_FETCH_SITE'].includes(error?.code))
+    return 403;
   if (error?.code === ARTIFACT_ERROR_CODES.LOOPBACK_STATE) return 503;
   if (error?.code === ARTIFACT_ERROR_CODES.REVIEW_WRITE) return 500;
   if (error instanceof SyntaxError || error instanceof PipelineError) return 400;
@@ -215,7 +244,13 @@ function send(res, status, body = '', headers = {}, { head = false } = {}) {
 }
 
 function sendJson(res, status, value, options) {
-  send(res, status, JSON.stringify(value), { 'content-type': 'application/json; charset=utf-8' }, options);
+  send(
+    res,
+    status,
+    JSON.stringify(value),
+    { 'content-type': 'application/json; charset=utf-8' },
+    options,
+  );
 }
 
 function notFound(res, options) {
@@ -223,22 +258,42 @@ function notFound(res, options) {
 }
 
 function parseRequestPath(rawUrl) {
-  if (typeof rawUrl !== 'string' || Buffer.byteLength(rawUrl, 'utf8') > MAX_URL_BYTES
-    || !rawUrl.startsWith('/') || rawUrl.includes('//')
-    || rawUrl.includes('?') || rawUrl.includes('#') || rawUrl.includes('\\')
-    || /%(?:00|2f|5c)/i.test(rawUrl)) {
+  if (
+    typeof rawUrl !== 'string' ||
+    Buffer.byteLength(rawUrl, 'utf8') > MAX_URL_BYTES ||
+    !rawUrl.startsWith('/') ||
+    rawUrl.includes('//') ||
+    rawUrl.includes('?') ||
+    rawUrl.includes('#') ||
+    rawUrl.includes('\\') ||
+    /%(?:00|2f|5c)/i.test(rawUrl)
+  ) {
     throw artifactError(ARTIFACT_ERROR_CODES.REQUEST_INVALID, 'Artifact review path rejected.');
   }
   const trailingSlash = rawUrl.endsWith('/');
   const rawSegments = rawUrl.split('/').filter(Boolean);
   const segments = rawSegments.map((segment) => {
     let decoded;
-    try { decoded = decodeURIComponent(segment); } catch {
-      throw artifactError(ARTIFACT_ERROR_CODES.REQUEST_INVALID, 'Artifact review path encoding rejected.');
+    try {
+      decoded = decodeURIComponent(segment);
+    } catch {
+      throw artifactError(
+        ARTIFACT_ERROR_CODES.REQUEST_INVALID,
+        'Artifact review path encoding rejected.',
+      );
     }
-    if (!decoded || decoded === '.' || decoded === '..' || decoded.includes('/')
-      || decoded.includes('\\') || decoded.includes('\0')) {
-      throw artifactError(ARTIFACT_ERROR_CODES.REQUEST_INVALID, 'Artifact review path segment rejected.');
+    if (
+      !decoded ||
+      decoded === '.' ||
+      decoded === '..' ||
+      decoded.includes('/') ||
+      decoded.includes('\\') ||
+      decoded.includes('\0')
+    ) {
+      throw artifactError(
+        ARTIFACT_ERROR_CODES.REQUEST_INVALID,
+        'Artifact review path segment rejected.',
+      );
     }
     return decoded;
   });
@@ -252,8 +307,13 @@ function bearerToken(req) {
 
 function cloneAndValidateEnvelope(envelope) {
   let cloned;
-  try { cloned = structuredClone(envelope); } catch {
-    throw artifactError(ARTIFACT_ERROR_CODES.ENVELOPE_INVALID, 'Artifact envelope is not cloneable.');
+  try {
+    cloned = structuredClone(envelope);
+  } catch {
+    throw artifactError(
+      ARTIFACT_ERROR_CODES.ENVELOPE_INVALID,
+      'Artifact envelope is not cloneable.',
+    );
   }
   validateArtifactEnvelope(cloned);
   const freeze = (value) => {
@@ -266,24 +326,42 @@ function cloneAndValidateEnvelope(envelope) {
 
 function normalizeRegistration(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    throw artifactError(ARTIFACT_ERROR_CODES.REQUEST_INVALID, 'Artifact session registration must be an object.');
+    throw artifactError(
+      ARTIFACT_ERROR_CODES.REQUEST_INVALID,
+      'Artifact session registration must be an object.',
+    );
   }
   const envelope = cloneAndValidateEnvelope(value.envelope);
   const title = value.title ?? envelope.artifacts[0]?.title ?? 'Artifact review';
   const theme = value.theme ?? 'auto';
   if (typeof title !== 'string' || title.length < 1 || title.length > TITLE_LIMIT) {
-    throw artifactError(ARTIFACT_ERROR_CODES.REQUEST_INVALID, `Artifact title must be 1 through ${TITLE_LIMIT} characters.`);
+    throw artifactError(
+      ARTIFACT_ERROR_CODES.REQUEST_INVALID,
+      `Artifact title must be 1 through ${TITLE_LIMIT} characters.`,
+    );
   }
   if (!THEME_VALUES.has(theme)) {
-    throw artifactError(ARTIFACT_ERROR_CODES.REQUEST_INVALID, 'Artifact shell theme must be auto, light, or dark.');
+    throw artifactError(
+      ARTIFACT_ERROR_CODES.REQUEST_INVALID,
+      'Artifact shell theme must be auto, light, or dark.',
+    );
   }
   const cwd = value.cwd ?? process.cwd();
   if (typeof cwd !== 'string' || cwd.length < 1 || cwd.length > 4_096) {
-    throw artifactError(ARTIFACT_ERROR_CODES.REQUEST_INVALID, 'Artifact session working directory is invalid.');
+    throw artifactError(
+      ARTIFACT_ERROR_CODES.REQUEST_INVALID,
+      'Artifact session working directory is invalid.',
+    );
   }
   const reviewKey = value.reviewKey;
-  if (reviewKey !== undefined && (typeof reviewKey !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/u.test(reviewKey))) {
-    throw artifactError(ARTIFACT_ERROR_CODES.REQUEST_INVALID, 'Artifact review storage key is invalid.');
+  if (
+    reviewKey !== undefined &&
+    (typeof reviewKey !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/u.test(reviewKey))
+  ) {
+    throw artifactError(
+      ARTIFACT_ERROR_CODES.REQUEST_INVALID,
+      'Artifact review storage key is invalid.',
+    );
   }
   return { envelope, title, theme, cwd, ...(reviewKey ? { reviewKey } : {}) };
 }
@@ -307,10 +385,14 @@ async function initializeSessionReview(registration, env) {
     artifactId,
   });
   return withArtifactReviewLock(destination.path, () => {
-    let ledger = readArtifactReviewState(destination.path, { allowMissing: true })
-      ?? createReviewLedger({ artifactId, currentReviewOf });
+    let ledger =
+      readArtifactReviewState(destination.path, { allowMissing: true }) ??
+      createReviewLedger({ artifactId, currentReviewOf });
     if (ledger.artifactId !== artifactId) {
-      throw artifactError(ARTIFACT_ERROR_CODES.REVIEW_INVALID, 'Stored review state belongs to another artifact.');
+      throw artifactError(
+        ARTIFACT_ERROR_CODES.REVIEW_INVALID,
+        'Stored review state belongs to another artifact.',
+      );
     }
     if (ledger.currentReviewOf !== currentReviewOf) {
       ledger = createReviewLedger({
@@ -343,8 +425,8 @@ function queueSessionReviewWrite(session, review) {
   }
   const commit = () => {
     return withArtifactReviewLock(session.reviewPath, () => {
-      const durable = readArtifactReviewState(session.reviewPath, { allowMissing: true })
-        ?? session.reviewState;
+      const durable =
+        readArtifactReviewState(session.reviewPath, { allowMissing: true }) ?? session.reviewState;
       const next = mergeReviewLedger(durable, review, { stale: false });
       assertReviewStateSize(next);
       writeArtifactReviewState(session.reviewPath, next);
@@ -353,22 +435,30 @@ function queueSessionReviewWrite(session, review) {
     });
   };
   const operation = session.writeQueue.then(commit, commit);
-  session.writeQueue = operation.then(() => undefined, () => undefined);
+  session.writeQueue = operation.then(
+    () => undefined,
+    () => undefined,
+  );
   return operation;
 }
 
 async function refreshSessionReview(session) {
   await session.writeQueue;
-  const durable = await withArtifactReviewLock(session.reviewPath, () => (
-    readArtifactReviewState(session.reviewPath, { allowMissing: true }) ?? session.reviewState
-  ));
+  const durable = await withArtifactReviewLock(
+    session.reviewPath,
+    () =>
+      readArtifactReviewState(session.reviewPath, { allowMissing: true }) ?? session.reviewState,
+  );
   session.reviewState = durable;
   return durable;
 }
 
 function sessionMatches(session, capability) {
-  return session && isCapabilityToken(capability, { bytes: SESSION_TOKEN_BYTES })
-    && timingSafeTokenEqual(session.capability, capability);
+  return (
+    session &&
+    isCapabilityToken(capability, { bytes: SESSION_TOKEN_BYTES }) &&
+    timingSafeTokenEqual(session.capability, capability)
+  );
 }
 
 function safeSessionId(value) {
@@ -385,12 +475,16 @@ function publicBase(session) {
 
 function shellEnvelope(session) {
   const candidates = session.reviewState.reviews
-    .filter((entry) => !entry.stale
-      && entry.review.reviewOf === session.reviewState.currentReviewOf)
+    .filter(
+      (entry) => !entry.stale && entry.review.reviewOf === session.reviewState.currentReviewOf,
+    )
     .map((entry) => entry.review)
-    .sort((a, b) => String(a.updatedAt ?? a.createdAt ?? '').localeCompare(
-      String(b.updatedAt ?? b.createdAt ?? ''),
-    ) || a.reviewId.localeCompare(b.reviewId));
+    .sort(
+      (a, b) =>
+        String(a.updatedAt ?? a.createdAt ?? '').localeCompare(
+          String(b.updatedAt ?? b.createdAt ?? ''),
+        ) || a.reviewId.localeCompare(b.reviewId),
+    );
   const review = candidates.at(-1);
   return {
     schemaVersion: session.envelope.schemaVersion,
@@ -423,10 +517,16 @@ export function createArtifactReviewServer({
   prepareSource,
 } = {}) {
   if (!isCapabilityToken(controlToken, { bytes: CONTROL_TOKEN_BYTES })) {
-    throw artifactError(ARTIFACT_ERROR_CODES.LOOPBACK_STATE, 'Artifact review control token is invalid.');
+    throw artifactError(
+      ARTIFACT_ERROR_CODES.LOOPBACK_STATE,
+      'Artifact review control token is invalid.',
+    );
   }
   if (!isCapabilityToken(instanceId, { bytes: SESSION_ID_BYTES })) {
-    throw artifactError(ARTIFACT_ERROR_CODES.LOOPBACK_STATE, 'Artifact review instance id is invalid.');
+    throw artifactError(
+      ARTIFACT_ERROR_CODES.LOOPBACK_STATE,
+      'Artifact review instance id is invalid.',
+    );
   }
   const sessions = new Map();
   const ownerSessions = new Map();
@@ -437,13 +537,19 @@ export function createArtifactReviewServer({
   let draining = false;
   let emptyTimer = null;
   const stageRuntime = () => readFileSync(STAGE_RUNTIME_PATH, 'utf8');
-  const idle = () => sessions.size === 0 && ownerSessions.size === 0 && pendingRegistrations === 0 && activeRequests === 0;
+  const idle = () =>
+    sessions.size === 0 &&
+    ownerSessions.size === 0 &&
+    pendingRegistrations === 0 &&
+    activeRequests === 0;
   const scheduleEmpty = () => {
     if (emptyTimer || draining || typeof onEmpty !== 'function') return;
     emptyTimer = setTimeout(async () => {
       emptyTimer = null;
       if (idle() && !draining) {
-        try { await onEmpty(); } catch {
+        try {
+          await onEmpty();
+        } catch {
           // The next session start revalidates state and recovers stale ownership.
         }
       }
@@ -464,7 +570,8 @@ export function createArtifactReviewServer({
     res.once('close', finishRequest);
     const head = req.method === 'HEAD';
     try {
-      if (port === null) throw artifactError(ARTIFACT_ERROR_CODES.LOOPBACK_STATE, 'Artifact server is not ready.');
+      if (port === null)
+        throw artifactError(ARTIFACT_ERROR_CODES.LOOPBACK_STATE, 'Artifact server is not ready.');
       const { segments, trailingSlash } = parseRequestPath(req.url);
       const internal = segments[0] === 'internal';
       const mutating = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method);
@@ -482,16 +589,29 @@ export function createArtifactReviewServer({
         }
         if (req.method === 'POST' && segments.join('/') === 'internal/v1/sessions') {
           if (draining) {
-            throw artifactError(ARTIFACT_ERROR_CODES.LOOPBACK_STATE, 'Artifact review server is restarting.');
+            throw artifactError(
+              ARTIFACT_ERROR_CODES.LOOPBACK_STATE,
+              'Artifact review server is restarting.',
+            );
           }
-          if (!String(req.headers['content-type'] ?? '').toLowerCase().startsWith('application/json')) {
-            throw artifactError(ARTIFACT_ERROR_CODES.REQUEST_INVALID, 'Artifact registration requires application/json.');
+          if (
+            !String(req.headers['content-type'] ?? '')
+              .toLowerCase()
+              .startsWith('application/json')
+          ) {
+            throw artifactError(
+              ARTIFACT_ERROR_CODES.REQUEST_INVALID,
+              'Artifact registration requires application/json.',
+            );
           }
           pendingRegistrations += 1;
           try {
             let body;
             try {
-              body = await readRequestBody(req, { maxBytes: ARTIFACT_REVIEW_MAX_CONTROL_BYTES, encoding: 'utf8' });
+              body = await readRequestBody(req, {
+                maxBytes: ARTIFACT_REVIEW_MAX_CONTROL_BYTES,
+                encoding: 'utf8',
+              });
             } catch (error) {
               if (error?.code === 'E_REQUEST_BODY_LIMIT') {
                 throw artifactError(ARTIFACT_ERROR_CODES.REQUEST_LIMIT, error.message);
@@ -500,7 +620,10 @@ export function createArtifactReviewServer({
             }
             const registration = normalizeRegistration(JSON.parse(body || '{}'));
             if (draining) {
-              throw artifactError(ARTIFACT_ERROR_CODES.LOOPBACK_STATE, 'Artifact review server is restarting.');
+              throw artifactError(
+                ARTIFACT_ERROR_CODES.LOOPBACK_STATE,
+                'Artifact review server is restarting.',
+              );
             }
             const id = mintCapabilityToken({ bytes: SESSION_ID_BYTES });
             const reviewState = await initializeSessionReview(registration, env);
@@ -526,39 +649,62 @@ export function createArtifactReviewServer({
           }
           return;
         }
-        if (req.method === 'DELETE' && segments.length === 4
-          && segments[0] === 'internal' && segments[1] === 'v1'
-          && segments[2] === 'sessions' && safeSessionId(segments[3])) {
+        if (
+          req.method === 'DELETE' &&
+          segments.length === 4 &&
+          segments[0] === 'internal' &&
+          segments[1] === 'v1' &&
+          segments[2] === 'sessions' &&
+          safeSessionId(segments[3])
+        ) {
           const target = sessions.get(segments[3]);
           if (target) await target.writeQueue;
           const removed = sessions.delete(segments[3]);
           const remaining = sessions.size;
-          sendJson(res, removed ? 200 : 404, removed
-            ? { ok: true, remaining }
-            : { ok: false, error: 'not found' });
+          sendJson(
+            res,
+            removed ? 200 : 404,
+            removed ? { ok: true, remaining } : { ok: false, error: 'not found' },
+          );
           return;
         }
-        if (req.method === 'GET' && segments.length === 5
-          && segments[0] === 'internal' && segments[1] === 'v1'
-          && segments[2] === 'sessions' && safeSessionId(segments[3])
-          && segments[4] === 'review') {
+        if (
+          req.method === 'GET' &&
+          segments.length === 5 &&
+          segments[0] === 'internal' &&
+          segments[1] === 'v1' &&
+          segments[2] === 'sessions' &&
+          safeSessionId(segments[3]) &&
+          segments[4] === 'review'
+        ) {
           const target = sessions.get(segments[3]);
           if (!target) {
             notFound(res, { head });
             return;
           }
           await refreshSessionReview(target);
-          sendJson(res, 200, {
-            ok: true,
-            reviewState: target.reviewState,
-            effectiveDecision: effectiveReviewDecision(target.reviewState),
-          }, { head });
+          sendJson(
+            res,
+            200,
+            {
+              ok: true,
+              reviewState: target.reviewState,
+              effectiveDecision: effectiveReviewDecision(target.reviewState),
+            },
+            { head },
+          );
           return;
         }
-        if (req.method === 'GET' && segments.length === 6
-          && segments[0] === 'internal' && segments[1] === 'v1'
-          && segments[2] === 'sessions' && safeSessionId(segments[3])
-          && segments[4] === 'export' && ['json', 'markdown'].includes(segments[5])) {
+        if (
+          req.method === 'GET' &&
+          segments.length === 6 &&
+          segments[0] === 'internal' &&
+          segments[1] === 'v1' &&
+          segments[2] === 'sessions' &&
+          safeSessionId(segments[3]) &&
+          segments[4] === 'export' &&
+          ['json', 'markdown'].includes(segments[5])
+        ) {
           const target = sessions.get(segments[3]);
           if (!target) {
             notFound(res, { head });
@@ -566,11 +712,18 @@ export function createArtifactReviewServer({
           }
           await refreshSessionReview(target);
           const format = segments[5];
-          send(res, 200, exportArtifactReview(target.reviewState, { format }), {
-            'content-type': format === 'json'
-              ? 'application/json; charset=utf-8'
-              : 'text/markdown; charset=utf-8',
-          }, { head });
+          send(
+            res,
+            200,
+            exportArtifactReview(target.reviewState, { format }),
+            {
+              'content-type':
+                format === 'json'
+                  ? 'application/json; charset=utf-8'
+                  : 'text/markdown; charset=utf-8',
+            },
+            { head },
+          );
           return;
         }
         notFound(res, { head });
@@ -589,35 +742,64 @@ export function createArtifactReviewServer({
           send(res, 308, '', { location: `/o/${owner.id}/${owner.capability}/` }, { head });
           return;
         }
-        const request = Promise.resolve().then(() => owner.handleRequest({
-          req, segments: segments.slice(3), head,
-          origin: `http://${LOOPBACK_HOST}:${port}`,
-          recoveryScope: owner.recoveryScope,
-        }));
+        const request = Promise.resolve().then(() =>
+          owner.handleRequest({
+            req,
+            segments: segments.slice(3),
+            head,
+            origin: `http://${LOOPBACK_HOST}:${port}`,
+            recoveryScope: owner.recoveryScope,
+          }),
+        );
         owner.pending.add(request);
         let response;
-        try { response = await request; } finally { owner.pending.delete(request); }
-        if (!response) { notFound(res, { head }); return; }
-        if (response.kind === 'asset') {
-          // Trusted packaged assets only; JSON APIs cannot select executable MIME types.
-          const mediaTypes = { document: 'text/html', runtime: 'text/javascript', stylesheet: 'text/css' };
-          if (!Object.hasOwn(mediaTypes, response.asset) || typeof response.body !== 'string') throw new Error('Invalid owner asset response.');
-          send(res, response.status, response.body, {
-            ...parentHeaders(),
-            'content-type': `${mediaTypes[response.asset]}; charset=utf-8`,
-            'content-security-policy': "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data: blob:; font-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
-          }, { head });
+        try {
+          response = await request;
+        } finally {
+          owner.pending.delete(request);
+        }
+        if (!response) {
+          notFound(res, { head });
           return;
         }
-        send(res, response.status, JSON.stringify(response.body), {
-          // Rejections may precede body consumption (for example Content-Length
-          // above the limit). Do not reuse a socket containing unread body bytes.
-          ...(response.status >= 400 ? { connection: 'close' } : {}),
-          'content-type': 'application/json; charset=utf-8',
-          'cross-origin-resource-policy': 'same-origin',
-          'content-security-policy': "default-src 'none'; frame-ancestors 'none'",
-          'x-frame-options': 'DENY',
-        }, { head });
+        if (response.kind === 'asset') {
+          // Trusted packaged assets only; JSON APIs cannot select executable MIME types.
+          const mediaTypes = {
+            document: 'text/html',
+            runtime: 'text/javascript',
+            stylesheet: 'text/css',
+          };
+          if (!Object.hasOwn(mediaTypes, response.asset) || typeof response.body !== 'string')
+            throw new Error('Invalid owner asset response.');
+          send(
+            res,
+            response.status,
+            response.body,
+            {
+              ...parentHeaders(),
+              'content-type': `${mediaTypes[response.asset]}; charset=utf-8`,
+              'content-security-policy':
+                "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data: blob:; font-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+            },
+            { head },
+          );
+          return;
+        }
+        send(
+          res,
+          response.status,
+          JSON.stringify(response.body),
+          {
+            // Rejections may precede body consumption (for example Content-Length
+            // above the limit). Do not reuse a socket containing unread body bytes.
+            ...(response.status >= 400 ? { connection: 'close' } : {}),
+            'content-type': 'application/json; charset=utf-8',
+            'cross-origin-resource-policy': 'same-origin',
+            'content-security-policy': "default-src 'none'; frame-ancestors 'none'",
+            'x-frame-options': 'DENY',
+          },
+          { head },
+        );
         return;
       }
 
@@ -640,16 +822,28 @@ export function createArtifactReviewServer({
       if (segments.length === 5 && segments[3] === 'api' && segments[4] === 'review') {
         if (['GET', 'HEAD'].includes(req.method)) {
           await refreshSessionReview(session);
-          sendJson(res, 200, {
-            ok: true,
-            reviewState: session.reviewState,
-            effectiveDecision: effectiveReviewDecision(session.reviewState),
-          }, { head });
+          sendJson(
+            res,
+            200,
+            {
+              ok: true,
+              reviewState: session.reviewState,
+              effectiveDecision: effectiveReviewDecision(session.reviewState),
+            },
+            { head },
+          );
           return;
         }
         if (req.method === 'PUT') {
-          if (!String(req.headers['content-type'] ?? '').toLowerCase().startsWith('application/json')) {
-            throw artifactError(ARTIFACT_ERROR_CODES.REQUEST_INVALID, 'Artifact review persistence requires application/json.');
+          if (
+            !String(req.headers['content-type'] ?? '')
+              .toLowerCase()
+              .startsWith('application/json')
+          ) {
+            throw artifactError(
+              ARTIFACT_ERROR_CODES.REQUEST_INVALID,
+              'Artifact review persistence requires application/json.',
+            );
           }
           let body;
           try {
@@ -677,15 +871,27 @@ export function createArtifactReviewServer({
         return;
       }
 
-      if (segments.length === 6 && segments[3] === 'api' && segments[4] === 'export'
-        && ['json', 'markdown'].includes(segments[5]) && ['GET', 'HEAD'].includes(req.method)) {
+      if (
+        segments.length === 6 &&
+        segments[3] === 'api' &&
+        segments[4] === 'export' &&
+        ['json', 'markdown'].includes(segments[5]) &&
+        ['GET', 'HEAD'].includes(req.method)
+      ) {
         await refreshSessionReview(session);
         const format = segments[5];
-        send(res, 200, exportArtifactReview(session.reviewState, { format }), {
-          'content-type': format === 'json'
-            ? 'application/json; charset=utf-8'
-            : 'text/markdown; charset=utf-8',
-        }, { head });
+        send(
+          res,
+          200,
+          exportArtifactReview(session.reviewState, { format }),
+          {
+            'content-type':
+              format === 'json'
+                ? 'application/json; charset=utf-8'
+                : 'text/markdown; charset=utf-8',
+          },
+          { head },
+        );
         return;
       }
 
@@ -714,10 +920,16 @@ export function createArtifactReviewServer({
         const document = renderDocument
           ? await renderDocument({ model, session, base })
           : renderArtifactShellDocument(model, { stageRuntimeUrl: `${base}runtime.js` });
-        send(res, 200, document, {
-          ...parentHeaders(),
-          'content-type': 'text/html; charset=utf-8',
-        }, { head });
+        send(
+          res,
+          200,
+          document,
+          {
+            ...parentHeaders(),
+            'content-type': 'text/html; charset=utf-8',
+          },
+          { head },
+        );
         return;
       }
 
@@ -730,19 +942,31 @@ export function createArtifactReviewServer({
         const runtime = renderRuntime
           ? await renderRuntime({ options, session, base })
           : renderArtifactParentRuntime(options);
-        send(res, 200, runtime, {
-          ...parentHeaders(),
-          'content-type': 'text/javascript; charset=utf-8',
-          'x-frame-options': 'DENY',
-        }, { head });
+        send(
+          res,
+          200,
+          runtime,
+          {
+            ...parentHeaders(),
+            'content-type': 'text/javascript; charset=utf-8',
+            'x-frame-options': 'DENY',
+          },
+          { head },
+        );
         return;
       }
       if (segments.length === 4 && segments[3] === 'stage.js') {
-        send(res, 200, stageRuntime(), {
-          ...parentHeaders(),
-          'content-type': 'text/javascript; charset=utf-8',
-          'x-frame-options': 'DENY',
-        }, { head });
+        send(
+          res,
+          200,
+          stageRuntime(),
+          {
+            ...parentHeaders(),
+            'content-type': 'text/javascript; charset=utf-8',
+            'x-frame-options': 'DENY',
+          },
+          { head },
+        );
         return;
       }
       if (segments.length === 5 && segments[3] === 'artifacts') {
@@ -762,15 +986,23 @@ export function createArtifactReviewServer({
           nonce: session.bridgeNonce,
           parentOrigin,
         };
-        const prepared = prepareSource ? prepareSource(sourceOptions) : prepareArtifactDocument(sourceOptions);
-        send(res, 200, prepared.html, {
-          'content-security-policy': `${prepared.csp}; sandbox allow-scripts; frame-ancestors 'none'`,
-          'content-disposition': 'attachment; filename="openplanr-artifact.html"',
-          'content-type': 'application/octet-stream',
-          'cross-origin-resource-policy': 'same-origin',
-          'permissions-policy': PERMISSIONS_POLICY,
-          'x-frame-options': 'DENY',
-        }, { head });
+        const prepared = prepareSource
+          ? prepareSource(sourceOptions)
+          : prepareArtifactDocument(sourceOptions);
+        send(
+          res,
+          200,
+          prepared.html,
+          {
+            'content-security-policy': `${prepared.csp}; sandbox allow-scripts; frame-ancestors 'none'`,
+            'content-disposition': 'attachment; filename="openplanr-artifact.html"',
+            'content-type': 'application/octet-stream',
+            'cross-origin-resource-policy': 'same-origin',
+            'permissions-policy': PERMISSIONS_POLICY,
+            'x-frame-options': 'DENY',
+          },
+          { head },
+        );
         return;
       }
       notFound(res, { head });
@@ -780,9 +1012,10 @@ export function createArtifactReviewServer({
         return;
       }
       const status = statusForError(error);
-      const value = error instanceof PipelineError
-        ? error.toJSON()
-        : { ok: false, error: status === 500 ? 'internal error' : error.message };
+      const value =
+        error instanceof PipelineError
+          ? error.toJSON()
+          : { ok: false, error: status === 500 ? 'internal error' : error.message };
       sendJson(res, status, value, { head });
     }
   });
@@ -799,16 +1032,23 @@ export function createArtifactReviewServer({
     /** Trusted local authority only; this operation has no HTTP control route. */
     registerOwnerSession({ handleRequest } = {}) {
       if (draining || closePromise || typeof handleRequest !== 'function') {
-        throw artifactError(ARTIFACT_ERROR_CODES.LOOPBACK_STATE, 'Local owner session cannot be registered.');
+        throw artifactError(
+          ARTIFACT_ERROR_CODES.LOOPBACK_STATE,
+          'Local owner session cannot be registered.',
+        );
       }
       const id = mintCapabilityToken({ bytes: SESSION_ID_BYTES });
       const owner = {
-        id, capability: mintCapabilityToken({ bytes: SESSION_TOKEN_BYTES }),
-        recoveryScope: `diagram-owner_${id}`, handleRequest, pending: new Set(),
+        id,
+        capability: mintCapabilityToken({ bytes: SESSION_TOKEN_BYTES }),
+        recoveryScope: `diagram-owner_${id}`,
+        handleRequest,
+        pending: new Set(),
       };
       ownerSessions.set(id, owner);
       return Object.freeze({
-        sessionId: id, capability: owner.capability,
+        sessionId: id,
+        capability: owner.capability,
         recoveryScope: owner.recoveryScope,
         path: `/o/${id}/${owner.capability}/`,
         async close() {
@@ -827,7 +1067,9 @@ export function createArtifactReviewServer({
       emptyTimer = null;
       return true;
     },
-    get port() { return port; },
+    get port() {
+      return port;
+    },
     async listen(requestedPort = 0) {
       if (port !== null) return port;
       port = await listenLoopback(server, requestedPort);
@@ -840,7 +1082,7 @@ export function createArtifactReviewServer({
       emptyTimer = null;
       closePromise = (async () => {
         sessions.clear();
-        const pendingOwners = [...ownerSessions.values()].flatMap(owner => [...owner.pending]);
+        const pendingOwners = [...ownerSessions.values()].flatMap((owner) => [...owner.pending]);
         ownerSessions.clear();
         await Promise.allSettled(pendingOwners);
         await closeHttpServer(server);
@@ -851,34 +1093,45 @@ export function createArtifactReviewServer({
 }
 
 function validState(value, requestedPort) {
-  return value?.schemaVersion === '1.0.0'
-    && value.kind === ARTIFACT_REVIEW_SERVER_KIND
-    && value.serverVersion === ARTIFACT_REVIEW_SERVER_VERSION
-    && Number.isInteger(value.pid) && value.pid > 0
-    && Number.isInteger(value.port) && value.port > 0 && value.port <= 65_535
-    && (requestedPort === 0 || value.port === requestedPort)
-    && isCapabilityToken(value.instanceId, { bytes: SESSION_ID_BYTES })
-    && isCapabilityToken(value.controlToken, { bytes: CONTROL_TOKEN_BYTES });
+  return (
+    value?.schemaVersion === '1.0.0' &&
+    value.kind === ARTIFACT_REVIEW_SERVER_KIND &&
+    value.serverVersion === ARTIFACT_REVIEW_SERVER_VERSION &&
+    Number.isInteger(value.pid) &&
+    value.pid > 0 &&
+    Number.isInteger(value.port) &&
+    value.port > 0 &&
+    value.port <= 65_535 &&
+    (requestedPort === 0 || value.port === requestedPort) &&
+    isCapabilityToken(value.instanceId, { bytes: SESSION_ID_BYTES }) &&
+    isCapabilityToken(value.controlToken, { bytes: CONTROL_TOKEN_BYTES })
+  );
 }
 
 async function stateIsHealthy(state, fetchImpl) {
   if (!validState(state, 0)) return false;
   const health = await probeLoopbackJson(state.port, '/health', { fetchImpl });
-  return health?.ok === true
-    && health.kind === ARTIFACT_REVIEW_SERVER_KIND
-    && health.version === ARTIFACT_REVIEW_SERVER_VERSION
-    && health.pid === state.pid
-    && health.instanceId === state.instanceId;
+  return (
+    health?.ok === true &&
+    health.kind === ARTIFACT_REVIEW_SERVER_KIND &&
+    health.version === ARTIFACT_REVIEW_SERVER_VERSION &&
+    health.pid === state.pid &&
+    health.instanceId === state.instanceId
+  );
 }
 
 async function cleanupOwnedDescriptor(descriptor, { force = false } = {}) {
   if (!descriptor?.local) return;
   if (!force && !descriptor.reviewServer.beginCloseIfIdle()) return false;
-  try { await descriptor.reviewServer.close(); } finally {
+  try {
+    await descriptor.reviewServer.close();
+  } finally {
     const current = readJsonState(descriptor.statePath);
-    if (current?.pid === process.pid
-      && timingSafeTokenEqual(current.controlToken, descriptor.state.controlToken)
-      && current.instanceId === descriptor.state.instanceId) {
+    if (
+      current?.pid === process.pid &&
+      timingSafeTokenEqual(current.controlToken, descriptor.state.controlToken) &&
+      current.instanceId === descriptor.state.instanceId
+    ) {
       rmSync(descriptor.statePath, { force: true });
     }
     if (localServers.get(descriptor.statePath) === descriptor) {
@@ -891,7 +1144,10 @@ async function cleanupOwnedDescriptor(descriptor, { force = false } = {}) {
 
 async function ensureArtifactReviewServer({ port = 0, env = process.env, fetchImpl = fetch } = {}) {
   if (!Number.isInteger(port) || port < 0 || port > 65_535) {
-    throw artifactError(ARTIFACT_ERROR_CODES.LOOPBACK_BIND, 'Artifact review port must be 0 through 65535.');
+    throw artifactError(
+      ARTIFACT_ERROR_CODES.LOOPBACK_BIND,
+      'Artifact review port must be 0 through 65535.',
+    );
   }
   const statePath = artifactReviewStatePath(port, env);
   const cached = localServers.get(statePath);
@@ -901,7 +1157,7 @@ async function ensureArtifactReviewServer({ port = 0, env = process.env, fetchIm
   const release = await acquireStartLock(stateLockPath(port, env));
   try {
     const existing = readJsonState(statePath);
-    if (validState(existing, port) && await stateIsHealthy(existing, fetchImpl)) {
+    if (validState(existing, port) && (await stateIsHealthy(existing, fetchImpl))) {
       return Object.freeze({ statePath, state: existing, local: false });
     }
     rmSync(statePath, { force: true });
@@ -909,7 +1165,9 @@ async function ensureArtifactReviewServer({ port = 0, env = process.env, fetchIm
     const instanceId = mintCapabilityToken({ bytes: SESSION_ID_BYTES });
     let descriptor;
     let resolveClosed;
-    const closed = new Promise((resolveClose) => { resolveClosed = resolveClose; });
+    const closed = new Promise((resolveClose) => {
+      resolveClosed = resolveClose;
+    });
     const reviewServer = createArtifactReviewServer({
       controlToken,
       instanceId,
@@ -922,12 +1180,16 @@ async function ensureArtifactReviewServer({ port = 0, env = process.env, fetchIm
     try {
       actualPort = await reviewServer.listen(port);
     } catch (error) {
-      const code = error?.code === 'EADDRINUSE'
-        ? ARTIFACT_ERROR_CODES.PORT_IN_USE
-        : ARTIFACT_ERROR_CODES.LOOPBACK_BIND;
-      throw artifactError(code, error?.code === 'EADDRINUSE'
-        ? `Artifact review port ${port} is already in use.`
-        : `Unable to bind artifact review server: ${error.message}`);
+      const code =
+        error?.code === 'EADDRINUSE'
+          ? ARTIFACT_ERROR_CODES.PORT_IN_USE
+          : ARTIFACT_ERROR_CODES.LOOPBACK_BIND;
+      throw artifactError(
+        code,
+        error?.code === 'EADDRINUSE'
+          ? `Artifact review port ${port} is already in use.`
+          : `Unable to bind artifact review server: ${error.message}`,
+      );
     }
     const state = Object.freeze({
       schemaVersion: '1.0.0',
@@ -941,7 +1203,12 @@ async function ensureArtifactReviewServer({ port = 0, env = process.env, fetchIm
     });
     writePrivateJsonState(statePath, state);
     descriptor = Object.freeze({
-      statePath, state, local: true, reviewServer, closed, resolveClosed,
+      statePath,
+      state,
+      local: true,
+      reviewServer,
+      closed,
+      resolveClosed,
     });
     localServers.set(statePath, descriptor);
     reviewServer.server.once('close', () => resolveClosed());
@@ -951,11 +1218,7 @@ async function ensureArtifactReviewServer({ port = 0, env = process.env, fetchIm
   }
 }
 
-async function controlRequest(descriptor, path, {
-  method,
-  body,
-  fetchImpl,
-} = {}) {
+async function controlRequest(descriptor, path, { method, body, fetchImpl } = {}) {
   const response = await fetchImpl(`http://${LOOPBACK_HOST}:${descriptor.state.port}${path}`, {
     method,
     headers: {
@@ -969,7 +1232,9 @@ async function controlRequest(descriptor, path, {
   if (!response.ok) {
     throw artifactError(
       value.code ?? ARTIFACT_ERROR_CODES.LOOPBACK_STATE,
-      value.problem ?? value.error ?? `Artifact review control request failed with HTTP ${response.status}.`,
+      value.problem ??
+        value.error ??
+        `Artifact review control request failed with HTTP ${response.status}.`,
     );
   }
   return value;
@@ -1020,8 +1285,9 @@ export async function startArtifactReview({
       });
       break;
     } catch (error) {
-      const restarting = error?.code === ARTIFACT_ERROR_CODES.LOOPBACK_STATE
-        || (descriptor.local && !descriptor.reviewServer.accepting());
+      const restarting =
+        error?.code === ARTIFACT_ERROR_CODES.LOOPBACK_STATE ||
+        (descriptor.local && !descriptor.reviewServer.accepting());
       if (restarting && attempt === 0) {
         if (descriptor.local) {
           await Promise.race([
@@ -1039,7 +1305,11 @@ export async function startArtifactReview({
       throw error;
     }
   }
-  if (!registration) throw artifactError(ARTIFACT_ERROR_CODES.LOOPBACK_STATE, 'Artifact review session could not start.');
+  if (!registration)
+    throw artifactError(
+      ARTIFACT_ERROR_CODES.LOOPBACK_STATE,
+      'Artifact review session could not start.',
+    );
   const url = `http://${LOOPBACK_HOST}:${descriptor.state.port}${registration.path}`;
   const sshDetected = Boolean(env.SSH_CONNECTION || env.SSH_TTY);
   const forwardingCommand = `ssh -N -L ${descriptor.state.port}:${LOOPBACK_HOST}:${descriptor.state.port} <ssh-host>`;
@@ -1050,10 +1320,11 @@ export async function startArtifactReview({
     try {
       await openUrl(url);
       opened = true;
-    } catch (error) {
+    } catch {
       launchError = Object.freeze({
         code: 'E_ARTIFACT_BROWSER_OPEN_FAILED',
-        message: 'The browser could not be opened automatically. Open the returned loopback URL manually.',
+        message:
+          'The browser could not be opened automatically. Open the returned loopback URL manually.',
       });
     }
   }
@@ -1092,10 +1363,12 @@ export async function startArtifactReview({
     },
     exportReview(format = 'json') {
       if (!['json', 'markdown'].includes(format)) {
-        return Promise.reject(artifactError(
-          ARTIFACT_ERROR_CODES.REVIEW_EXPORT,
-          'Artifact review export format must be json or markdown.',
-        ));
+        return Promise.reject(
+          artifactError(
+            ARTIFACT_ERROR_CODES.REVIEW_EXPORT,
+            'Artifact review export format must be json or markdown.',
+          ),
+        );
       }
       return controlTextRequest(
         descriptor,

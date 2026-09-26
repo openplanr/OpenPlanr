@@ -124,7 +124,9 @@ function assertLayout(layout) {
   }
 
   const radii = ['radiusSmall', 'radiusMedium', 'radiusLarge'].map((key) => [key, layout[key]]);
-  const invalidRadius = radii.find(([, value]) => !Number.isInteger(value) || value < 0 || value > 32);
+  const invalidRadius = radii.find(
+    ([, value]) => !Number.isInteger(value) || value < 0 || value > 32,
+  );
   if (invalidRadius) {
     throw new ArtifactThemeError(
       ARTIFACT_THEME_ERROR_CODES.LAYOUT,

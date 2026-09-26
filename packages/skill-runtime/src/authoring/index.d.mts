@@ -46,10 +46,15 @@ export interface AuthoringCommandContract {
   readonly writesOutput: boolean;
   readonly npmScript: `skill:${AuthoringCommand}`;
 }
-export declare const AUTHORING_COMMANDS: Readonly<Record<AuthoringCommand, AuthoringCommandContract>>;
+export declare const AUTHORING_COMMANDS: Readonly<
+  Record<AuthoringCommand, AuthoringCommandContract>
+>;
 export declare function getAuthoringCommand(command: string): AuthoringCommandContract;
 export declare function authoringUsage(command: string): string;
-export declare function parseAuthoringArgs(command: string, argv: readonly string[]): Readonly<{
+export declare function parseAuthoringArgs(
+  command: string,
+  argv: readonly string[],
+): Readonly<{
   help?: true;
   error?: string;
   json: boolean;
@@ -181,12 +186,22 @@ export interface PreviewHost {
   overlay: { hostProfile: string; authority: AuthorityCeiling };
   capabilityDecision: null | {
     status: 'declared';
-    preferred: { surface: 'native' | 'chat' | 'terminal' | 'headless'; capabilityId: string | null };
-    fallbacks: Array<{ surface: 'native' | 'chat' | 'terminal' | 'headless'; capabilityId: string | null }>;
+    preferred: {
+      surface: 'native' | 'chat' | 'terminal' | 'headless';
+      capabilityId: string | null;
+    };
+    fallbacks: Array<{
+      surface: 'native' | 'chat' | 'terminal' | 'headless';
+      capabilityId: string | null;
+    }>;
     declaredCapabilities: string[];
     repair: null;
   };
-  owners: Array<{ ownerKind: 'template' | 'source' | 'host-profile' | 'compiler'; pointer: string; version: string }>;
+  owners: Array<{
+    ownerKind: 'template' | 'source' | 'host-profile' | 'compiler';
+    pointer: string;
+    version: string;
+  }>;
   outputs: Array<{ kind: 'primary' | 'reference'; path: string; byteLength: number }>;
   repairs: string[];
 }
@@ -249,9 +264,13 @@ export interface EvaluateReport {
 
 export declare function lintSkill(options: { skillDir: string }): OperationResult<LintReport>;
 export declare function previewSkill(options: { skillDir: string }): OperationResult<PreviewReport>;
-export declare function generateSkill(options: { skillDir: string }): OperationResult<GenerateReport>;
+export declare function generateSkill(options: {
+  skillDir: string;
+}): OperationResult<GenerateReport>;
 export declare function checkSkill(options: { skillDir: string }): OperationResult<CheckReport>;
-export declare function evaluateSkill(options: { skillDir: string }): OperationResult<EvaluateReport>;
+export declare function evaluateSkill(options: {
+  skillDir: string;
+}): OperationResult<EvaluateReport>;
 
 export interface StandardSkillReport {
   skillId: string;

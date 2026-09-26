@@ -1,5 +1,5 @@
-import { assertProtocolArtifact } from '@openplanr/protocol/contracts';
 import { withDocumentDigest } from '@openplanr/protocol/canonical-json';
+import { assertProtocolArtifact } from '@openplanr/protocol/contracts';
 import { DIAGRAM_GRAMMAR_REGISTRY } from '@openplanr/protocol/diagram-contracts';
 
 import { DIAGRAM_RENDERER, DIAGRAM_THEME } from '../rendering/theme.mjs';
@@ -31,7 +31,9 @@ export function createDiagramRenderManifest(document, { source, outputs }) {
 export function assertDiagramRenderManifest(manifest, { slug = null } = {}) {
   assertProtocolArtifact('diagram-manifest', manifest, { protocolVersion: '1.6.0' });
   if (slug && manifest.diagramId !== slug) {
-    throw new TypeError(`Diagram manifest identity mismatch: expected ${slug}, received ${manifest.diagramId}.`);
+    throw new TypeError(
+      `Diagram manifest identity mismatch: expected ${slug}, received ${manifest.diagramId}.`,
+    );
   }
   return manifest;
 }

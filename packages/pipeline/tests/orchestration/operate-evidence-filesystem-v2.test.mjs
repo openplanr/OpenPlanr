@@ -1,20 +1,23 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 
 import {
-  OPEN_REFERENCE_EVIDENCE_REGISTRY_V2,
   dispatchOperateEvidenceResolverV2,
+  OPEN_REFERENCE_EVIDENCE_REGISTRY_V2,
   resolveLocalFilesystemEvidenceV2,
 } from 'planr-pipeline/operate/evidence-v2';
 
-const fixture = (name) => JSON.parse(readFileSync(
-  new URL(`../../conformance/fixtures/operating-runtime-v2/${name}`, import.meta.url),
-  'utf8',
-));
+const fixture = (name) =>
+  JSON.parse(
+    readFileSync(
+      new URL(`../../conformance/fixtures/operating-runtime-v2/${name}`, import.meta.url),
+      'utf8',
+    ),
+  );
 const digest = (bytes) => `sha256:${createHash('sha256').update(bytes).digest('hex')}`;
 const clone = (value) => structuredClone(value);
 const SOURCE_CONTRACT = { id: 'context-manifest', version: '1.0.0' };
@@ -37,7 +40,9 @@ function resolve(candidate, roots, extra = {}) {
   return dispatchOperateEvidenceResolverV2(OPEN_REFERENCE_EVIDENCE_REGISTRY_V2, candidate, {
     scope: valid.scope,
     capabilities: ['evidence.filesystem.read'],
-    filesystemRoots: [{ ...valid.sourceRoot, rootPath: roots.root, sourceContract: SOURCE_CONTRACT }],
+    filesystemRoots: [
+      { ...valid.sourceRoot, rootPath: roots.root, sourceContract: SOURCE_CONTRACT },
+    ],
     ...extra,
   });
 }
@@ -45,10 +50,16 @@ function resolve(candidate, roots, extra = {}) {
 function resolveDirect(candidate, roots, extra = {}) {
   const valid = fixture('evidence-filesystem-valid.json');
   return resolveLocalFilesystemEvidenceV2(candidate, {
-    provider: OPEN_REFERENCE_EVIDENCE_REGISTRY_V2.providers.find(({ providerId }) => providerId === 'local-filesystem-evidence-provider'),
-    resolver: OPEN_REFERENCE_EVIDENCE_REGISTRY_V2.resolvers.find(({ resolverId }) => resolverId === 'local-filesystem-evidence-resolver'),
+    provider: OPEN_REFERENCE_EVIDENCE_REGISTRY_V2.providers.find(
+      ({ providerId }) => providerId === 'local-filesystem-evidence-provider',
+    ),
+    resolver: OPEN_REFERENCE_EVIDENCE_REGISTRY_V2.resolvers.find(
+      ({ resolverId }) => resolverId === 'local-filesystem-evidence-resolver',
+    ),
     capabilities: ['evidence.filesystem.read'],
-    filesystemRoots: [{ ...valid.sourceRoot, rootPath: roots.root, sourceContract: SOURCE_CONTRACT }],
+    filesystemRoots: [
+      { ...valid.sourceRoot, rootPath: roots.root, sourceContract: SOURCE_CONTRACT },
+    ],
     ...extra,
   });
 }
@@ -63,8 +74,14 @@ test('filesystem evidence is registered-root-relative and exact-byte read-only',
     assert.equal(bytes.toString('utf8'), 'exact evidence\n');
     assert.equal(resolved.capture.rawHash, digest(bytes));
     assert.deepEqual(resolved.capture.sourceContract, SOURCE_CONTRACT);
-    assert.deepEqual(resolved.capture.locator, { sourceRootId: 'workspace-root', path: 'notes/evidence.txt' });
-    assert.deepEqual(resolved.capture.provenance, { sourceRootId: 'workspace-root', path: 'notes/evidence.txt' });
+    assert.deepEqual(resolved.capture.locator, {
+      sourceRootId: 'workspace-root',
+      path: 'notes/evidence.txt',
+    });
+    assert.deepEqual(resolved.capture.provenance, {
+      sourceRootId: 'workspace-root',
+      path: 'notes/evidence.txt',
+    });
   } finally {
     rmSync(roots.parent, { recursive: true, force: true });
   }
@@ -104,7 +121,10 @@ test('filesystem evidence rejects capability gaps, root/path escapes, symlinks, 
     ]) {
       const candidate = clone(base);
       candidate.locator.path = path;
-      const result = path.startsWith('/') || path.includes('..') ? resolveDirect(candidate, roots) : resolve(candidate, roots);
+      const result =
+        path.startsWith('/') || path.includes('..')
+          ? resolveDirect(candidate, roots)
+          : resolve(candidate, roots);
       assert.equal(result.error.code, code, path);
     }
   } finally {

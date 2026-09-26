@@ -1,16 +1,15 @@
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import test from 'node:test';
-
+import { fileURLToPath } from 'node:url';
+import { PACKED_WORKSPACE_PROTOCOL_ASSET_COUNTS } from '../../packages/pipeline/lib/ecosystem/packed-workspace-proof.mjs';
+import { GENERATOR_STEPS } from '../../scripts/generate-all.mjs';
 import {
   assertPackedSurfaceCompatibility,
   countProtocolAssets,
   readPackedSurfaceBaseline,
 } from '../../scripts/verify-packed-workspace.mjs';
-import { GENERATOR_STEPS } from '../../scripts/generate-all.mjs';
-import { PACKED_WORKSPACE_PROTOCOL_ASSET_COUNTS } from '../../packages/pipeline/lib/ecosystem/packed-workspace-proof.mjs';
 
 const baseline = readPackedSurfaceBaseline();
 const pipeline = new URL('../../packages/pipeline/', import.meta.url);
@@ -29,12 +28,25 @@ test('the static packed compatibility floor retains actual export names and symb
 });
 
 test('same-size substitutions cannot conceal removal of a supported export or root symbol', () => {
-  const accepted = { exportKeys: [...baseline.baselineExportKeys], rootSymbols: [...baseline.baselineRootSymbols] };
+  const accepted = {
+    exportKeys: [...baseline.baselineExportKeys],
+    rootSymbols: [...baseline.baselineRootSymbols],
+  };
   assert.doesNotThrow(() => assertPackedSurfaceCompatibility(baseline, accepted));
-  const changedExport = { ...accepted, exportKeys: ['replaced-export', ...accepted.exportKeys.slice(1)] };
-  assert.throws(() => assertPackedSurfaceCompatibility(baseline, changedExport), { code: 'E_PIPELINE_EXPORT_BASELINE_MISSING' });
-  const changedSymbol = { ...accepted, rootSymbols: ['replacedSymbol', ...accepted.rootSymbols.slice(1)] };
-  assert.throws(() => assertPackedSurfaceCompatibility(baseline, changedSymbol), { code: 'E_PIPELINE_ROOT_SYMBOL_DRIFT' });
+  const changedExport = {
+    ...accepted,
+    exportKeys: ['replaced-export', ...accepted.exportKeys.slice(1)],
+  };
+  assert.throws(() => assertPackedSurfaceCompatibility(baseline, changedExport), {
+    code: 'E_PIPELINE_EXPORT_BASELINE_MISSING',
+  });
+  const changedSymbol = {
+    ...accepted,
+    rootSymbols: ['replacedSymbol', ...accepted.rootSymbols.slice(1)],
+  };
+  assert.throws(() => assertPackedSurfaceCompatibility(baseline, changedSymbol), {
+    code: 'E_PIPELINE_ROOT_SYMBOL_DRIFT',
+  });
 });
 
 function protocolInventory() {
@@ -46,23 +58,41 @@ function protocolInventory() {
       else if (entry.isFile()) files.push({ path: relative });
     }
   };
-  for (const name of ['schemas', 'registry']) visit(fileURLToPath(new URL(`${name}/`, pipeline)), name);
+  for (const name of ['schemas', 'registry'])
+    visit(fileURLToPath(new URL(`${name}/`, pipeline)), name);
   return files;
 }
 
 test('the packed asset floor identifies required paths without a repository-wide digest catalog', () => {
   const inventory = protocolInventory();
-  assert.deepEqual(countProtocolAssets(inventory, baseline), PACKED_WORKSPACE_PROTOCOL_ASSET_COUNTS);
-  for (const required of [baseline.protocolAssets.originalRegistryPaths[0], baseline.protocolAssets.successorRegistryPaths[0], baseline.protocolAssets.successorSchemaPaths[0]]) {
-    const substituted = inventory.map(entry => entry.path === required ? { path: `${required}.replacement` } : entry);
-    assert.notDeepEqual(countProtocolAssets(substituted, baseline), PACKED_WORKSPACE_PROTOCOL_ASSET_COUNTS, required);
+  assert.deepEqual(
+    countProtocolAssets(inventory, baseline),
+    PACKED_WORKSPACE_PROTOCOL_ASSET_COUNTS,
+  );
+  for (const required of [
+    baseline.protocolAssets.originalRegistryPaths[0],
+    baseline.protocolAssets.successorRegistryPaths[0],
+    baseline.protocolAssets.successorSchemaPaths[0],
+  ]) {
+    const substituted = inventory.map((entry) =>
+      entry.path === required ? { path: `${required}.replacement` } : entry,
+    );
+    assert.notDeepEqual(
+      countProtocolAssets(substituted, baseline),
+      PACKED_WORKSPACE_PROTOCOL_ASSET_COUNTS,
+      required,
+    );
   }
-  assert.throws(() => countProtocolAssets([...inventory, { path: 'registry/unknown.json' }], baseline), { code: 'E_PACK_PROTOCOL_ASSET_DRIFT' });
+  assert.throws(
+    () => countProtocolAssets([...inventory, { path: 'registry/unknown.json' }], baseline),
+    { code: 'E_PACK_PROTOCOL_ASSET_DRIFT' },
+  );
 });
 
 test('normal generation never rewrites the reviewed compatibility baseline', () => {
-  assert.ok(GENERATOR_STEPS.every(step => step.id !== 'preservation-catalog'));
-  for (const step of GENERATOR_STEPS) for (const candidate of step.candidates) {
-    assert.doesNotMatch(candidate.write.script, /preservation-catalog|packed-surface-baseline/u);
-  }
+  assert.ok(GENERATOR_STEPS.every((step) => step.id !== 'preservation-catalog'));
+  for (const step of GENERATOR_STEPS)
+    for (const candidate of step.candidates) {
+      assert.doesNotMatch(candidate.write.script, /preservation-catalog|packed-surface-baseline/u);
+    }
 });

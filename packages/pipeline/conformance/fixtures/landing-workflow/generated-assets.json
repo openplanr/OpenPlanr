@@ -7,11 +7,11 @@
   "assets": [
     {
       "path": "lib/pipeline/landing.mjs",
-      "digest": "sha256:fe4ec4a33968ec39d7e803deb97bf70ee0138b68fe247f0dd2632af0abaff9b2"
+      "digest": "sha256:9b377ede1f923247e6ceb85bd48db2eeba4dc3e12497fa70a69526fd58f72713"
     },
     {
       "path": "lib/pipeline/landing.d.mts",
-      "digest": "sha256:b297ab06f6bd5651aad7df6c7ba6b09947baadd9371888b8f1e18411e2db12cf"
+      "digest": "sha256:26679de4efc837395c826545b18839852dc5f0c400a387b1fac3338a07d8f01e"
     },
     {
       "path": "schemas/v1.2.0/landing-workflow-catalog.schema.json",

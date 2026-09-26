@@ -1,6 +1,6 @@
-import { PipelineError } from '@openplanr/protocol/errors';
-import { assertProtocolArtifact } from '@openplanr/protocol/contracts';
 import { sha256Jcs } from '@openplanr/protocol/canonical-json';
+import { assertProtocolArtifact } from '@openplanr/protocol/contracts';
+import { PipelineError } from '@openplanr/protocol/errors';
 import { assertOperatingActionAuthorityTupleV2 } from './authorization-v2.mjs';
 import {
   deriveOperatingExecutionVerificationStatusV2,
@@ -11,7 +11,10 @@ import {
 const PROTOCOL_VERSION = '2.0.0';
 
 function persistentWorkError(code, message, context = {}) {
-  return new PipelineError(code, message, '', { retryable: false, context: structuredClone(context) });
+  return new PipelineError(code, message, '', {
+    retryable: false,
+    context: structuredClone(context),
+  });
 }
 
 function clone(value) {
@@ -37,22 +40,40 @@ export function assertPersistentOperatingActionAuthorityV2(action) {
     revision: checked.revision,
     actionHash: expectedHash,
   }).slice('sha256:'.length)}`;
-  if (checked.actionHash !== expectedHash || checked.revisionId !== expectedRevisionId
-    || (checked.revision === 1) !== (checked.predecessorRevisionId === null)) {
-    throw persistentWorkError('ACTION_REVISION_MISMATCH', 'Action revision identity does not equal its immutable canonical content.', {
-      actionId: checked.actionId,
-      revision: checked.revision,
-    });
+  if (
+    checked.actionHash !== expectedHash ||
+    checked.revisionId !== expectedRevisionId ||
+    (checked.revision === 1) !== (checked.predecessorRevisionId === null)
+  ) {
+    throw persistentWorkError(
+      'ACTION_REVISION_MISMATCH',
+      'Action revision identity does not equal its immutable canonical content.',
+      {
+        actionId: checked.actionId,
+        revision: checked.revision,
+      },
+    );
   }
   return checked;
 }
 
 /** Safe rebuild projection for governed failure, recovery, and rollback history. */
-export function derivePersistentOperatingRecoveryProjectionV2({ operation, result = null, rollbackPlan = null } = {}) {
-  if (!operation || !['execute', 'rollback'].includes(operation.operationKind)
-    || (result !== null && !['operating-execution-result', 'operating-rollback-result'].includes(result.kind))
-    || (rollbackPlan !== null && rollbackPlan.kind !== 'operating-rollback-plan')) {
-    throw persistentWorkError('RESULT_CONTRACT_INVALID', 'Recovery projection requires exact governed-operation history.');
+export function derivePersistentOperatingRecoveryProjectionV2({
+  operation,
+  result = null,
+  rollbackPlan = null,
+} = {}) {
+  if (
+    !operation ||
+    !['execute', 'rollback'].includes(operation.operationKind) ||
+    (result !== null &&
+      !['operating-execution-result', 'operating-rollback-result'].includes(result.kind)) ||
+    (rollbackPlan !== null && rollbackPlan.kind !== 'operating-rollback-plan')
+  ) {
+    throw persistentWorkError(
+      'RESULT_CONTRACT_INVALID',
+      'Recovery projection requires exact governed-operation history.',
+    );
   }
   return Object.freeze({
     operationId: operation.operationId,
@@ -89,52 +110,71 @@ function runtimeIssuedId(prefix, artifactId, canonicalHash, draftRef) {
 
 function requireTrimmedTitle(title, draftRef) {
   if (typeof title !== 'string' || title.length === 0 || title !== title.trim()) {
-    throw persistentWorkError('RESULT_CONTRACT_INVALID',
-      'Persistent-work titles must be trimmed nonblank display names.', { draftRef });
+    throw persistentWorkError(
+      'RESULT_CONTRACT_INVALID',
+      'Persistent-work titles must be trimmed nonblank display names.',
+      { draftRef },
+    );
   }
 }
 
 function assertArtifactAndChangeSet({ artifact, changeSet, timestamp }) {
   try {
     assertProtocolArtifact('operating-artifact', artifact, { protocolVersion: PROTOCOL_VERSION });
-    assertProtocolArtifact('operating-work-change-set', changeSet, { protocolVersion: PROTOCOL_VERSION });
+    assertProtocolArtifact('operating-work-change-set', changeSet, {
+      protocolVersion: PROTOCOL_VERSION,
+    });
   } catch (error) {
-    throw persistentWorkError('RESULT_CONTRACT_INVALID',
-      'Persistent work requires a valid v2 Artifact and work-change-set.', { cause: error.code ?? null });
+    throw persistentWorkError(
+      'RESULT_CONTRACT_INVALID',
+      'Persistent work requires a valid v2 Artifact and work-change-set.',
+      { cause: error.code ?? null },
+    );
   }
   if (typeof timestamp !== 'string' || Number.isNaN(Date.parse(timestamp))) {
-    throw persistentWorkError('STATE_TRANSITION_INVALID',
-      'Persistent-work materialization requires an explicit Event timestamp.');
+    throw persistentWorkError(
+      'STATE_TRANSITION_INVALID',
+      'Persistent-work materialization requires an explicit Event timestamp.',
+    );
   }
   if (
-    artifact.schemaId !== 'operating-work-change-set'
-    || artifact.artifactSchemaVersion !== PROTOCOL_VERSION
-    || artifact.mediaType !== 'application/json'
-    || artifact.encoding !== 'utf-8'
-    || artifact.canonicalHash === null
+    artifact.schemaId !== 'operating-work-change-set' ||
+    artifact.artifactSchemaVersion !== PROTOCOL_VERSION ||
+    artifact.mediaType !== 'application/json' ||
+    artifact.encoding !== 'utf-8' ||
+    artifact.canonicalHash === null
   ) {
-    throw persistentWorkError('RESULT_CONTRACT_INVALID',
-      'The source Artifact is not a canonical UTF-8 v2 operating-work-change-set.', {
+    throw persistentWorkError(
+      'RESULT_CONTRACT_INVALID',
+      'The source Artifact is not a canonical UTF-8 v2 operating-work-change-set.',
+      {
         artifactId: artifact.artifactId,
-      });
+      },
+    );
   }
   if (sha256Jcs(changeSet) !== artifact.canonicalHash) {
-    throw persistentWorkError('RESULT_CONTRACT_INVALID',
-      'The supplied work-change-set does not match the accepted Artifact canonical bytes.', {
+    throw persistentWorkError(
+      'RESULT_CONTRACT_INVALID',
+      'The supplied work-change-set does not match the accepted Artifact canonical bytes.',
+      {
         artifactId: artifact.artifactId,
-      });
+      },
+    );
   }
   if (
-    changeSet.cycleId !== artifact.cycleId
-    || changeSet.scopeId !== artifact.scopeId
-    || changeSet.domainId !== artifact.domainId
-    || changeSet.domainVersion !== artifact.domainVersion
+    changeSet.cycleId !== artifact.cycleId ||
+    changeSet.scopeId !== artifact.scopeId ||
+    changeSet.domainId !== artifact.domainId ||
+    changeSet.domainVersion !== artifact.domainVersion
   ) {
-    throw persistentWorkError('OPERATING_SCOPE_INVALID',
-      'The work-change-set does not match the immutable Artifact provenance.', {
+    throw persistentWorkError(
+      'OPERATING_SCOPE_INVALID',
+      'The work-change-set does not match the immutable Artifact provenance.',
+      {
         artifactId: artifact.artifactId,
         cycleId: artifact.cycleId,
-      });
+      },
+    );
   }
 }
 
@@ -142,9 +182,13 @@ function assertUniqueDraftRefs(changeSet) {
   const refs = new Set();
   for (const draft of [...changeSet.findings, ...changeSet.decisions, ...changeSet.actions]) {
     if (refs.has(draft.draftRef)) {
-      throw persistentWorkError('RESULT_CONTRACT_INVALID', 'Work-change-set draft references must be globally unique.', {
-        draftRef: draft.draftRef,
-      });
+      throw persistentWorkError(
+        'RESULT_CONTRACT_INVALID',
+        'Work-change-set draft references must be globally unique.',
+        {
+          draftRef: draft.draftRef,
+        },
+      );
     }
     refs.add(draft.draftRef);
   }
@@ -152,15 +196,20 @@ function assertUniqueDraftRefs(changeSet) {
 
 function assertActionGraph(actions) {
   const actionRefs = new Set(actions.map(({ draftRef }) => draftRef));
-  const pending = new Map(actions.map((draft) => [draft.draftRef, new Set(draft.dependsOnActionDraftRefs)]));
+  const pending = new Map(
+    actions.map((draft) => [draft.draftRef, new Set(draft.dependsOnActionDraftRefs)]),
+  );
   for (const draft of actions) {
     for (const dependencyRef of draft.dependsOnActionDraftRefs) {
       if (dependencyRef === draft.draftRef || !actionRefs.has(dependencyRef)) {
-        throw persistentWorkError('STATE_TRANSITION_INVALID',
-          'Action dependency references must name another local Action draft.', {
+        throw persistentWorkError(
+          'STATE_TRANSITION_INVALID',
+          'Action dependency references must name another local Action draft.',
+          {
             actionDraftRef: draft.draftRef,
             dependencyDraftRef: dependencyRef,
-          });
+          },
+        );
       }
     }
   }
@@ -175,9 +224,13 @@ function assertActionGraph(actions) {
     }
   }
   if (pending.size !== 0) {
-    throw persistentWorkError('STATE_TRANSITION_INVALID', 'Persistent Action dependencies must form a local DAG.', {
-      actionDraftRefs: [...pending.keys()].sort(),
-    });
+    throw persistentWorkError(
+      'STATE_TRANSITION_INVALID',
+      'Persistent Action dependencies must form a local DAG.',
+      {
+        actionDraftRefs: [...pending.keys()].sort(),
+      },
+    );
   }
 }
 
@@ -208,34 +261,49 @@ export function buildPersistentWorkMaterializationPayloadV2({ artifact, changeSe
     createdAt: timestamp,
     updatedAt: timestamp,
   };
-  const findingIdByRef = new Map(changeSet.findings.map((draft) => [
-    draft.draftRef,
-    runtimeIssuedId('fnd', artifact.artifactId, artifact.canonicalHash, draft.draftRef),
-  ]));
-  const decisionIdByRef = new Map(changeSet.decisions.map((draft) => [
-    draft.draftRef,
-    runtimeIssuedId('dec', artifact.artifactId, artifact.canonicalHash, draft.draftRef),
-  ]));
-  const actionIdByRef = new Map(changeSet.actions.map((draft) => [
-    draft.draftRef,
-    runtimeIssuedId('act', artifact.artifactId, artifact.canonicalHash, draft.draftRef),
-  ]));
+  const findingIdByRef = new Map(
+    changeSet.findings.map((draft) => [
+      draft.draftRef,
+      runtimeIssuedId('fnd', artifact.artifactId, artifact.canonicalHash, draft.draftRef),
+    ]),
+  );
+  const decisionIdByRef = new Map(
+    changeSet.decisions.map((draft) => [
+      draft.draftRef,
+      runtimeIssuedId('dec', artifact.artifactId, artifact.canonicalHash, draft.draftRef),
+    ]),
+  );
+  const actionIdByRef = new Map(
+    changeSet.actions.map((draft) => [
+      draft.draftRef,
+      runtimeIssuedId('act', artifact.artifactId, artifact.canonicalHash, draft.draftRef),
+    ]),
+  );
 
   for (const draft of changeSet.actions) {
-    if (draft.sourceDecisionDraftRef !== null && !decisionDrafts.has(draft.sourceDecisionDraftRef)) {
-      throw persistentWorkError('STATE_TRANSITION_INVALID',
-        'Action sourceDecisionDraftRef must name a local Decision draft.', {
+    if (
+      draft.sourceDecisionDraftRef !== null &&
+      !decisionDrafts.has(draft.sourceDecisionDraftRef)
+    ) {
+      throw persistentWorkError(
+        'STATE_TRANSITION_INVALID',
+        'Action sourceDecisionDraftRef must name a local Decision draft.',
+        {
           actionDraftRef: draft.draftRef,
           decisionDraftRef: draft.sourceDecisionDraftRef,
-        });
+        },
+      );
     }
     for (const findingRef of draft.sourceFindingDraftRefs) {
       if (!findingDrafts.has(findingRef)) {
-        throw persistentWorkError('STATE_TRANSITION_INVALID',
-          'Action sourceFindingDraftRefs must name local Finding drafts.', {
+        throw persistentWorkError(
+          'STATE_TRANSITION_INVALID',
+          'Action sourceFindingDraftRefs must name local Finding drafts.',
+          {
             actionDraftRef: draft.draftRef,
             findingDraftRef: findingRef,
-          });
+          },
+        );
       }
     }
   }
@@ -284,9 +352,16 @@ export function buildPersistentWorkMaterializationPayloadV2({ artifact, changeSe
     state: 'proposed',
     ownerActorId: draft.ownerActorId,
     accountabilityDisposition: draft.accountabilityDisposition,
-    sourceDecisionId: draft.sourceDecisionDraftRef === null ? null : decisionIdByRef.get(draft.sourceDecisionDraftRef),
-    sourceFindingIds: draft.sourceFindingDraftRefs.map((reference) => findingIdByRef.get(reference)),
-    dependsOnActionIds: draft.dependsOnActionDraftRefs.map((reference) => actionIdByRef.get(reference)),
+    sourceDecisionId:
+      draft.sourceDecisionDraftRef === null
+        ? null
+        : decisionIdByRef.get(draft.sourceDecisionDraftRef),
+    sourceFindingIds: draft.sourceFindingDraftRefs.map((reference) =>
+      findingIdByRef.get(reference),
+    ),
+    dependsOnActionIds: draft.dependsOnActionDraftRefs.map((reference) =>
+      actionIdByRef.get(reference),
+    ),
     objectiveId: draft.objectiveId,
     expectedResult: draft.expectedResult,
     metricId: draft.metricId,
@@ -305,11 +380,14 @@ export function buildPersistentWorkMaterializationPayloadV2({ artifact, changeSe
       try {
         assertProtocolArtifact(kind, record, { protocolVersion: PROTOCOL_VERSION });
       } catch (error) {
-        throw persistentWorkError('RESULT_CONTRACT_INVALID',
-          'The runtime-generated persistent-work record is not contract-valid.', {
+        throw persistentWorkError(
+          'RESULT_CONTRACT_INVALID',
+          'The runtime-generated persistent-work record is not contract-valid.',
+          {
             kind,
             cause: error.code ?? null,
-          });
+          },
+        );
       }
     }
   }
@@ -326,10 +404,13 @@ export function buildPersistentWorkMaterializationPayloadV2({ artifact, changeSe
 export function assertPersistentWorkMaterializationPayloadV2(payload, options) {
   const expected = buildPersistentWorkMaterializationPayloadV2(options);
   if (sha256Jcs(payload) !== sha256Jcs(expected)) {
-    throw persistentWorkError('STATE_TRANSITION_INVALID',
-      'Persistent-work materialization payload does not match runtime-issued identities and provenance.', {
+    throw persistentWorkError(
+      'STATE_TRANSITION_INVALID',
+      'Persistent-work materialization payload does not match runtime-issued identities and provenance.',
+      {
         artifactId: options.artifact?.artifactId ?? null,
-      });
+      },
+    );
   }
   return expected;
 }
@@ -339,39 +420,61 @@ export function assertPersistentWorkMaterializationPayloadV2(payload, options) {
  * The caller supplies policy/capability data, never an Action hash or revision
  * identity; both are derived from the complete immutable record.
  */
-export function promotePersistentOperatingActionAuthorityV2(action, {
-  actionKind,
-  requestedCapability,
-  targetBinding,
-  effectClass,
-  preconditionArtifactIds,
-  executionBinding,
-  updatedAt,
-} = {}) {
+export function promotePersistentOperatingActionAuthorityV2(
+  action,
+  {
+    actionKind,
+    requestedCapability,
+    targetBinding,
+    effectClass,
+    preconditionArtifactIds,
+    executionBinding,
+    updatedAt,
+  } = {},
+) {
   try {
     assertProtocolArtifact('operating-action', action, { protocolVersion: PROTOCOL_VERSION });
   } catch (error) {
-    throw persistentWorkError('RESULT_CONTRACT_INVALID', 'Action promotion requires one valid persistent Action.', {
-      cause: error.code ?? null,
-    });
+    throw persistentWorkError(
+      'RESULT_CONTRACT_INVALID',
+      'Action promotion requires one valid persistent Action.',
+      {
+        cause: error.code ?? null,
+      },
+    );
   }
   if (action.state !== 'proposed') {
-    throw persistentWorkError('STATE_TRANSITION_INVALID', 'Only a proposed Action may receive its initial governed authority tuple.', {
-      actionId: action.actionId,
-      state: action.state,
-    });
+    throw persistentWorkError(
+      'STATE_TRANSITION_INVALID',
+      'Only a proposed Action may receive its initial governed authority tuple.',
+      {
+        actionId: action.actionId,
+        state: action.state,
+      },
+    );
   }
   if (Object.hasOwn(action, 'revisionId')) {
-    throw persistentWorkError('CONCURRENT_MODIFICATION', 'A governed Action revision cannot be promoted a second time.', {
-      actionId: action.actionId,
-      revisionId: action.revisionId,
-    });
+    throw persistentWorkError(
+      'CONCURRENT_MODIFICATION',
+      'A governed Action revision cannot be promoted a second time.',
+      {
+        actionId: action.actionId,
+        revisionId: action.revisionId,
+      },
+    );
   }
-  if (typeof updatedAt !== 'string' || Number.isNaN(Date.parse(updatedAt))
-    || Date.parse(updatedAt) < Date.parse(action.createdAt)) {
-    throw persistentWorkError('STATE_TRANSITION_INVALID', 'Action promotion requires one causal explicit timestamp.', {
-      actionId: action.actionId,
-    });
+  if (
+    typeof updatedAt !== 'string' ||
+    Number.isNaN(Date.parse(updatedAt)) ||
+    Date.parse(updatedAt) < Date.parse(action.createdAt)
+  ) {
+    throw persistentWorkError(
+      'STATE_TRANSITION_INVALID',
+      'Action promotion requires one causal explicit timestamp.',
+      {
+        actionId: action.actionId,
+      },
+    );
   }
   const governed = {
     ...clone(action),
@@ -395,10 +498,14 @@ export function promotePersistentOperatingActionAuthorityV2(action, {
     assertProtocolArtifact('operating-action', governed, { protocolVersion: PROTOCOL_VERSION });
     assertPersistentOperatingActionAuthorityV2(governed);
   } catch (error) {
-    throw persistentWorkError('RESULT_CONTRACT_INVALID', 'Promoted Action authority tuple is not contract-valid.', {
-      actionId: action.actionId,
-      cause: error.code ?? null,
-    });
+    throw persistentWorkError(
+      'RESULT_CONTRACT_INVALID',
+      'Promoted Action authority tuple is not contract-valid.',
+      {
+        actionId: action.actionId,
+        cause: error.code ?? null,
+      },
+    );
   }
   return assertPersistentOperatingActionAuthorityV2(governed);
 }
@@ -424,125 +531,188 @@ export function derivePersistentOperatingExecutionVerificationProjectionV2({
 } = {}) {
   assertPersistentOperatingActionAuthorityV2(action);
   try {
-    assertProtocolArtifact('operating-action-verification-plan', verificationPlan, { protocolVersion: PROTOCOL_VERSION });
+    assertProtocolArtifact('operating-action-verification-plan', verificationPlan, {
+      protocolVersion: PROTOCOL_VERSION,
+    });
   } catch (error) {
-    throw persistentWorkError('RESULT_CONTRACT_INVALID', 'Persistent execution projection requires the Action verification plan.', {
-      actionId: action.actionId,
-      cause: error.code ?? null,
-    });
+    throw persistentWorkError(
+      'RESULT_CONTRACT_INVALID',
+      'Persistent execution projection requires the Action verification plan.',
+      {
+        actionId: action.actionId,
+        cause: error.code ?? null,
+      },
+    );
   }
-  if (verificationPlan.actionId !== action.actionId
-    || verificationPlan.verificationPlanId !== action.verificationPlanId
-    || verificationPlan.scopeId !== action.scopeId
-    || verificationPlan.domainId !== action.domainId
-    || verificationPlan.domainVersion !== action.domainVersion) {
-    throw persistentWorkError('ACTION_REVISION_MISMATCH', 'Persistent execution projection plan does not own the exact Action.');
+  if (
+    verificationPlan.actionId !== action.actionId ||
+    verificationPlan.verificationPlanId !== action.verificationPlanId ||
+    verificationPlan.scopeId !== action.scopeId ||
+    verificationPlan.domainId !== action.domainId ||
+    verificationPlan.domainVersion !== action.domainVersion
+  ) {
+    throw persistentWorkError(
+      'ACTION_REVISION_MISMATCH',
+      'Persistent execution projection plan does not own the exact Action.',
+    );
   }
-  const exactScope = (record) => record?.scopeId === action.scopeId
-    && record.domainId === action.domainId
-    && record.domainVersion === action.domainVersion;
-  const ownedOperations = operations.filter(({ action: tuple }) => (
-    tuple?.actionId === action.actionId
-    && tuple.revision === action.revision
-    && tuple.actionHash === action.actionHash
-  )).sort((left, right) => left.updatedAt.localeCompare(right.updatedAt)
-    || left.operationId.localeCompare(right.operationId));
+  const exactScope = (record) =>
+    record?.scopeId === action.scopeId &&
+    record.domainId === action.domainId &&
+    record.domainVersion === action.domainVersion;
+  const ownedOperations = operations
+    .filter(
+      ({ action: tuple }) =>
+        tuple?.actionId === action.actionId &&
+        tuple.revision === action.revision &&
+        tuple.actionHash === action.actionHash,
+    )
+    .sort(
+      (left, right) =>
+        left.updatedAt.localeCompare(right.updatedAt) ||
+        left.operationId.localeCompare(right.operationId),
+    );
   const operation = ownedOperations.at(-1) ?? null;
-  const executionResultMatches = operation?.operationKind === 'execute'
-    ? executionResults.filter(({ resultId }) => resultId === operation.resultId)
-    : [];
-  const rollbackResultMatches = operation?.operationKind === 'rollback'
-    ? rollbackResults.filter(({ rollbackResultId }) => rollbackResultId === operation.resultId)
-    : [];
+  const executionResultMatches =
+    operation?.operationKind === 'execute'
+      ? executionResults.filter(({ resultId }) => resultId === operation.resultId)
+      : [];
+  const rollbackResultMatches =
+    operation?.operationKind === 'rollback'
+      ? rollbackResults.filter(({ rollbackResultId }) => rollbackResultId === operation.resultId)
+      : [];
   if (executionResultMatches.length > 1 || rollbackResultMatches.length > 1) {
-    throw persistentWorkError('RESULT_CONTRACT_INVALID', 'Persistent execution projection rejects ambiguous terminal result ownership.', {
-      actionId: action.actionId,
-      operationId: operation?.operationId ?? null,
-    });
+    throw persistentWorkError(
+      'RESULT_CONTRACT_INVALID',
+      'Persistent execution projection rejects ambiguous terminal result ownership.',
+      {
+        actionId: action.actionId,
+        operationId: operation?.operationId ?? null,
+      },
+    );
   }
   const executionResult = executionResultMatches[0] ?? null;
   const rollbackResult = rollbackResultMatches[0] ?? null;
   const result = executionResult ?? rollbackResult;
   const resultOperationId = result?.operationId ?? result?.rollbackOperationId ?? null;
-  if (result && (resultOperationId !== operation.operationId
-    || result.verificationPlanId !== verificationPlan.verificationPlanId
-    || result.action.actionId !== action.actionId
-    || result.action.revision !== action.revision
-    || result.action.actionHash !== action.actionHash)) {
-    throw persistentWorkError('ACTION_REVISION_MISMATCH', 'Persistent execution result does not retain the exact Action, operation, and verification plan.', {
-      actionId: action.actionId,
-      operationId: operation.operationId,
-      resultId: operation.resultId,
-    });
+  if (
+    result &&
+    (resultOperationId !== operation.operationId ||
+      result.verificationPlanId !== verificationPlan.verificationPlanId ||
+      result.action.actionId !== action.actionId ||
+      result.action.revision !== action.revision ||
+      result.action.actionHash !== action.actionHash)
+  ) {
+    throw persistentWorkError(
+      'ACTION_REVISION_MISMATCH',
+      'Persistent execution result does not retain the exact Action, operation, and verification plan.',
+      {
+        actionId: action.actionId,
+        operationId: operation.operationId,
+        resultId: operation.resultId,
+      },
+    );
   }
   const executionStatus = rollbackResult
     ? deriveOperatingExecutionVerificationStatusV2({ rollbackResult })
     : executionResult
       ? deriveOperatingExecutionVerificationStatusV2({ result: executionResult })
-      : action.state === 'cancelled' ? 'cancelled' : null;
-  if (operation && result && (!sourceCycle
-    || sourceCycle.cycleId !== action.sourceCycleId
-    || !exactScope(sourceCycle))) {
-    throw persistentWorkError('OPERATING_SCOPE_INVALID', 'Persistent execution projection requires the exact source Cycle scope and domain version.', {
-      actionId: action.actionId,
-      sourceCycleId: action.sourceCycleId,
-    });
+      : action.state === 'cancelled'
+        ? 'cancelled'
+        : null;
+  if (
+    operation &&
+    result &&
+    (!sourceCycle || sourceCycle.cycleId !== action.sourceCycleId || !exactScope(sourceCycle))
+  ) {
+    throw persistentWorkError(
+      'OPERATING_SCOPE_INVALID',
+      'Persistent execution projection requires the exact source Cycle scope and domain version.',
+      {
+        actionId: action.actionId,
+        sourceCycleId: action.sourceCycleId,
+      },
+    );
   }
-  const assignment = operation && result
-    ? selectOperatingTerminalVerificationAssignmentV2({
-      assignments: verificationAssignments,
-      action,
-      cycle: sourceCycle,
-      operation,
-      result,
-      verificationPlan,
-      timestamp: result.completedAt,
-    })
-    : null;
-  const outcome = outcomes.filter((candidate) => (
-    exactScope(candidate)
-    && candidate.actionId === action.actionId
-    && candidate.verificationPlanId === verificationPlan.verificationPlanId
-  )).sort((left, right) => left.observedAt.localeCompare(right.observedAt)
-    || left.outcomeId.localeCompare(right.outcomeId)).at(-1) ?? null;
+  const assignment =
+    operation && result
+      ? selectOperatingTerminalVerificationAssignmentV2({
+          assignments: verificationAssignments,
+          action,
+          cycle: sourceCycle,
+          operation,
+          result,
+          verificationPlan,
+          timestamp: result.completedAt,
+        })
+      : null;
+  const outcome =
+    outcomes
+      .filter(
+        (candidate) =>
+          exactScope(candidate) &&
+          candidate.actionId === action.actionId &&
+          candidate.verificationPlanId === verificationPlan.verificationPlanId,
+      )
+      .sort(
+        (left, right) =>
+          left.observedAt.localeCompare(right.observedAt) ||
+          left.outcomeId.localeCompare(right.outcomeId),
+      )
+      .at(-1) ?? null;
   const learning = outcome
-    ? learnings.filter((candidate) => (
-      exactScope(candidate) && candidate.outcomeId === outcome.outcomeId
-    )).sort((left, right) => left.createdAt.localeCompare(right.createdAt)
-      || left.learningId.localeCompare(right.learningId)).at(-1) ?? null
+    ? (learnings
+        .filter((candidate) => exactScope(candidate) && candidate.outcomeId === outcome.outcomeId)
+        .sort(
+          (left, right) =>
+            left.createdAt.localeCompare(right.createdAt) ||
+            left.learningId.localeCompare(right.learningId),
+        )
+        .at(-1) ?? null)
     : null;
-  const scopedDeltas = deltas.filter(exactScope).sort((left, right) => (
-    left.derivedAt.localeCompare(right.derivedAt) || left.deltaId.localeCompare(right.deltaId)
-  ));
-  const scopedSnapshots = snapshots.filter(exactScope).sort((left, right) => (
-    left.createdAt.localeCompare(right.createdAt) || left.snapshotId.localeCompare(right.snapshotId)
-  ));
+  const scopedDeltas = deltas
+    .filter(exactScope)
+    .sort(
+      (left, right) =>
+        left.derivedAt.localeCompare(right.derivedAt) || left.deltaId.localeCompare(right.deltaId),
+    );
+  const scopedSnapshots = snapshots
+    .filter(exactScope)
+    .sort(
+      (left, right) =>
+        left.createdAt.localeCompare(right.createdAt) ||
+        left.snapshotId.localeCompare(right.snapshotId),
+    );
   const delta = scopedDeltas.at(-1) ?? null;
   const snapshot = delta
-    ? scopedSnapshots.find(({ snapshotId }) => snapshotId === delta.currentSnapshotId) ?? null
-    : scopedSnapshots.at(-1) ?? null;
+    ? (scopedSnapshots.find(({ snapshotId }) => snapshotId === delta.currentSnapshotId) ?? null)
+    : (scopedSnapshots.at(-1) ?? null);
   if (delta && !snapshot) {
-    throw persistentWorkError('STATE_TRANSITION_INVALID', 'Persistent verification Delta is missing its exact current Snapshot.', {
-      actionId: action.actionId,
-      deltaId: delta.deltaId,
-      currentSnapshotId: delta.currentSnapshotId,
-    });
+    throw persistentWorkError(
+      'STATE_TRANSITION_INVALID',
+      'Persistent verification Delta is missing its exact current Snapshot.',
+      {
+        actionId: action.actionId,
+        deltaId: delta.deltaId,
+        currentSnapshotId: delta.currentSnapshotId,
+      },
+    );
   }
   const feedback = executionStatus
     ? deriveOperatingVerificationFeedbackV2({
-      action,
-      verificationPlan,
-      executionStatus,
-      sourceCycle: operation && result ? sourceCycle : null,
-      operation,
-      result,
-      verificationAssignments: operation && result ? verificationAssignments : null,
-      outcome,
-      learning,
-      delta,
-      snapshot,
-      cycle,
-    })
+        action,
+        verificationPlan,
+        executionStatus,
+        sourceCycle: operation && result ? sourceCycle : null,
+        operation,
+        result,
+        verificationAssignments: operation && result ? verificationAssignments : null,
+        outcome,
+        learning,
+        delta,
+        snapshot,
+        cycle,
+      })
     : null;
   const projection = {
     actionId: action.actionId,

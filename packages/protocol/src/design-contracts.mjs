@@ -23,8 +23,17 @@ export const DESIGN_DOCUMENT_SCHEMA = freeze({
   type: 'object',
   additionalProperties: false,
   required: [
-    'kind', 'schemaVersion', 'id', 'title', 'brief', 'frames', 'screens',
-    'screenOrder', 'variants', 'selectedVariant', 'defaultView',
+    'kind',
+    'schemaVersion',
+    'id',
+    'title',
+    'brief',
+    'frames',
+    'screens',
+    'screenOrder',
+    'variants',
+    'selectedVariant',
+    'defaultView',
   ],
   properties: {
     kind: { const: 'openplanr-design-document' },
@@ -49,16 +58,20 @@ export const DESIGN_DOCUMENT_SCHEMA = freeze({
         path: { $ref: '#/$defs/localPath' },
         tokens: { $ref: '#/$defs/localPath' },
         spacing: {
-          type: 'array', minItems: 1, uniqueItems: true,
+          type: 'array',
+          minItems: 1,
+          uniqueItems: true,
           items: { type: 'number', minimum: 0, maximum: 16384 },
         },
       },
     },
     assets: { $ref: '#/$defs/paths' },
     frames: {
-      type: 'array', minItems: 1,
+      type: 'array',
+      minItems: 1,
       items: {
-        type: 'object', additionalProperties: false,
+        type: 'object',
+        additionalProperties: false,
         required: ['id', 'label', 'width', 'height'],
         properties: {
           id: { $ref: '#/$defs/id' },
@@ -69,9 +82,11 @@ export const DESIGN_DOCUMENT_SCHEMA = freeze({
       },
     },
     screens: {
-      type: 'array', minItems: 1,
+      type: 'array',
+      minItems: 1,
       items: {
-        type: 'object', additionalProperties: false,
+        type: 'object',
+        additionalProperties: false,
         required: ['id', 'title', 'source'],
         properties: {
           id: { $ref: '#/$defs/id' },
@@ -86,7 +101,8 @@ export const DESIGN_DOCUMENT_SCHEMA = freeze({
     flows: {
       type: 'array',
       items: {
-        type: 'object', additionalProperties: false,
+        type: 'object',
+        additionalProperties: false,
         required: ['id', 'title', 'screens'],
         properties: {
           id: { $ref: '#/$defs/id' },
@@ -96,9 +112,11 @@ export const DESIGN_DOCUMENT_SCHEMA = freeze({
       },
     },
     variants: {
-      type: 'array', minItems: 1,
+      type: 'array',
+      minItems: 1,
       items: {
-        type: 'object', additionalProperties: false,
+        type: 'object',
+        additionalProperties: false,
         required: ['id', 'label', 'status'],
         properties: {
           id: { $ref: '#/$defs/id' },
@@ -120,13 +138,17 @@ export const DESIGN_DOCUMENT_SCHEMA = freeze({
     text: { type: 'string', minLength: 1, pattern: '\\S' },
     ids: { type: 'array', items: { $ref: '#/$defs/id' }, uniqueItems: true },
     localPath: {
-      type: 'string', minLength: 1,
-      description: 'Path relative to the authored document directory. No URL, traversal, encoded path, query or fragment.',
+      type: 'string',
+      minLength: 1,
+      description:
+        'Path relative to the authored document directory. No URL, traversal, encoded path, query or fragment.',
       pattern: '^(?!/)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*//)(?!.*[/ ]$)[^\\\\:\\u0000-\\u001F%?#]+$',
     },
     paths: { type: 'array', items: { $ref: '#/$defs/localPath' }, uniqueItems: true },
     source: {
-      type: 'object', additionalProperties: false, required: ['html'],
+      type: 'object',
+      additionalProperties: false,
+      required: ['html'],
       properties: {
         html: { $ref: '#/$defs/localPath' },
         styles: { $ref: '#/$defs/paths' },
@@ -138,14 +160,16 @@ export const DESIGN_DOCUMENT_SCHEMA = freeze({
 
 /** Validate structure plus stable identity and cross-reference constraints. */
 export function validateDesignDocument(value) {
-  const errors = validateJson(value, DESIGN_DOCUMENT_SCHEMA)
-    .map(({ path, detail }) => `${path}: ${detail}`);
+  const errors = validateJson(value, DESIGN_DOCUMENT_SCHEMA).map(
+    ({ path, detail }) => `${path}: ${detail}`,
+  );
   if (errors.length > 0) return { ok: false, errors };
 
   for (const field of ['frames', 'screens', 'flows', 'variants']) {
     const seen = new Set();
     for (const [index, item] of (value[field] ?? []).entries()) {
-      if (seen.has(item.id)) errors.push(`$.${field}[${index}].id: duplicate identity '${item.id}'`);
+      if (seen.has(item.id))
+        errors.push(`$.${field}[${index}].id: duplicate identity '${item.id}'`);
       seen.add(item.id);
     }
   }
@@ -170,10 +194,12 @@ export function validateDesignDocument(value) {
   }
   const selected = value.variants.find(({ id }) => id === value.selectedVariant);
   if (!selected) errors.push(`$.selectedVariant: unknown variant '${value.selectedVariant}'`);
-  else if (selected.status !== 'ready') errors.push('$.selectedVariant: selected variant must be ready');
+  else if (selected.status !== 'ready')
+    errors.push('$.selectedVariant: selected variant must be ready');
 
   for (const [index, spacing] of (value.designSystem?.spacing ?? []).entries()) {
-    if (!Number.isFinite(spacing)) errors.push(`$.designSystem.spacing[${index}]: expected a finite spacing value`);
+    if (!Number.isFinite(spacing))
+      errors.push(`$.designSystem.spacing[${index}]: expected a finite spacing value`);
   }
   return { ok: errors.length === 0, errors };
 }

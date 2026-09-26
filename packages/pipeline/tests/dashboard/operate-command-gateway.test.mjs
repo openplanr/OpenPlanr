@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
-import { request as httpRequest } from 'node:http';
 import { mkdtempSync, rmSync } from 'node:fs';
+import { request as httpRequest } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
@@ -21,17 +21,23 @@ const allowedAction = Object.freeze({
     reviewId: subjectId,
     cycleId,
     actor: Object.freeze({
-      actorId: 'owner-acme', kind: 'human', runtime: 'openplanr',
+      actorId: 'owner-acme',
+      kind: 'human',
+      runtime: 'openplanr',
     }),
     scope: Object.freeze({
-      scopeId: 'scope-acme', domainId: 'business', domainVersion: '1.0.0',
+      scopeId: 'scope-acme',
+      domainId: 'business',
+      domainVersion: '1.0.0',
     }),
     disposition: 'approved',
-    workDispositions: Object.freeze([Object.freeze({
-      entityType: 'operating-decision',
-      entityId: 'dec_1234567890abcdef',
-      disposition: 'approved',
-    })]),
+    workDispositions: Object.freeze([
+      Object.freeze({
+        entityType: 'operating-decision',
+        entityId: 'dec_1234567890abcdef',
+        disposition: 'approved',
+      }),
+    ]),
   }),
   label: 'Approve the exact Decision review',
   effect: 'project-write',
@@ -51,70 +57,107 @@ function exactSessionBody(overrides = {}) {
 
 function exactSessionBinding(actorId = 'owner-acme') {
   return {
-    actorId, scopeId: 'scope-acme', domainId: 'business', domainVersion: '1.0.0',
+    actorId,
+    scopeId: 'scope-acme',
+    domainId: 'business',
+    domainVersion: '1.0.0',
     ...exactSessionBody(),
   };
 }
 
 function sessionEnvelope(sessionId, binding) {
   return {
-    kind: 'operate-command-session', schemaVersion: '1.0.0', protocolVersion: '2.0.0',
-    sessionId, sessionCapability: capability,
-    issuedAt: '2026-08-11T08:00:00.000Z', expiresAt: '2026-08-11T08:10:00.000Z',
-    binding, readOnly: false,
+    kind: 'operate-command-session',
+    schemaVersion: '1.0.0',
+    protocolVersion: '2.0.0',
+    sessionId,
+    sessionCapability: capability,
+    issuedAt: '2026-08-11T08:00:00.000Z',
+    expiresAt: '2026-08-11T08:10:00.000Z',
+    binding,
+    readOnly: false,
     allowedActions: [{ actionReference: 'opact_1234567890abcdef', subjectId, actionDigest }],
   };
 }
 
 function previewFixture() {
   const base = {
-    kind: 'operate-experience-preview', schemaVersion: '1.0.0', protocolVersion: '2.0.0',
+    kind: 'operate-experience-preview',
+    schemaVersion: '1.0.0',
+    protocolVersion: '2.0.0',
     previewId: 'xprv_1234567890abcdef',
-    scopeId: 'scope-acme', domainId: 'business', domainVersion: '1.0.0', actorId: 'owner-acme',
+    scopeId: 'scope-acme',
+    domainId: 'business',
+    domainVersion: '1.0.0',
+    actorId: 'owner-acme',
     subject: { kind: 'review', id: subjectId, revision: null, hash: `sha256:${'d'.repeat(64)}` },
-    eventHead: structuredClone(eventHead), sourceViewHash, actionDigest,
-    allowedAction: structuredClone(allowedAction), authority: 'allowed',
-    consequence: 'Approve the exact reviewed Decision without executing an Action.', reasonCodes: [],
+    eventHead: structuredClone(eventHead),
+    sourceViewHash,
+    actionDigest,
+    allowedAction: structuredClone(allowedAction),
+    authority: 'allowed',
+    consequence: 'Approve the exact reviewed Decision without executing an Action.',
+    reasonCodes: [],
     transition: {
       kind: 'review',
-      targets: [{
-        kind: 'operating-decision', id: 'dec_1234567890abcdef', revision: 3,
-        hash: `sha256:${'e'.repeat(64)}`, disposition: 'approved',
-      }],
-      reversible: false, nextState: 'approved', threshold: null,
+      targets: [
+        {
+          kind: 'operating-decision',
+          id: 'dec_1234567890abcdef',
+          revision: 3,
+          hash: `sha256:${'e'.repeat(64)}`,
+          disposition: 'approved',
+        },
+      ],
+      reversible: false,
+      nextState: 'approved',
+      threshold: null,
     },
-    issuedAt: '2026-08-11T08:00:00Z', expiresAt: '2026-08-11T08:02:00Z',
+    issuedAt: '2026-08-11T08:00:00Z',
+    expiresAt: '2026-08-11T08:02:00Z',
   };
   return { ...base, previewHash: sha256Jcs(base) };
 }
 
-function post(port, path, body, { origin, actor = 'owner-acme', authorization, headers = {} } = {}) {
+function post(
+  port,
+  path,
+  body,
+  { origin, actor = 'owner-acme', authorization, headers = {} } = {},
+) {
   const content = typeof body === 'string' ? body : JSON.stringify(body);
   return new Promise((resolveResponse, rejectResponse) => {
-    const req = httpRequest({
-      host: '127.0.0.1',
-      port,
-      path,
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(content),
-        ...(origin ? { Origin: origin } : {}),
-        ...(actor ? { 'X-OpenPlanr-Actor': actor } : {}),
-        ...(authorization ? { Authorization: authorization } : {}),
-        ...headers,
+    const req = httpRequest(
+      {
+        host: '127.0.0.1',
+        port,
+        path,
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(content),
+          ...(origin ? { Origin: origin } : {}),
+          ...(actor ? { 'X-OpenPlanr-Actor': actor } : {}),
+          ...(authorization ? { Authorization: authorization } : {}),
+          ...headers,
+        },
       },
-    }, (res) => {
-      let responseBody = '';
-      res.setEncoding('utf8');
-      res.on('data', (chunk) => { responseBody += chunk; });
-      res.on('end', () => resolveResponse({
-        status: res.statusCode,
-        headers: res.headers,
-        body: responseBody,
-        json: JSON.parse(responseBody),
-      }));
-    });
+      (res) => {
+        let responseBody = '';
+        res.setEncoding('utf8');
+        res.on('data', (chunk) => {
+          responseBody += chunk;
+        });
+        res.on('end', () =>
+          resolveResponse({
+            status: res.statusCode,
+            headers: res.headers,
+            body: responseBody,
+            json: JSON.parse(responseBody),
+          }),
+        );
+      },
+    );
     req.on('error', rejectResponse);
     req.end(content);
   });
@@ -122,20 +165,30 @@ function post(port, path, body, { origin, actor = 'owner-acme', authorization, h
 
 function get(port, path, { origin, actor = 'owner-acme', authorization, headers = {} } = {}) {
   return new Promise((resolveResponse, rejectResponse) => {
-    const req = httpRequest({
-      host: '127.0.0.1', port, path, method: 'GET',
-      headers: {
-        ...(origin ? { Origin: origin } : {}),
-        ...(actor ? { 'X-OpenPlanr-Actor': actor } : {}),
-        ...(authorization ? { Authorization: authorization } : {}),
-        ...headers,
+    const req = httpRequest(
+      {
+        host: '127.0.0.1',
+        port,
+        path,
+        method: 'GET',
+        headers: {
+          ...(origin ? { Origin: origin } : {}),
+          ...(actor ? { 'X-OpenPlanr-Actor': actor } : {}),
+          ...(authorization ? { Authorization: authorization } : {}),
+          ...headers,
+        },
       },
-    }, (res) => {
-      let body = '';
-      res.setEncoding('utf8');
-      res.on('data', (chunk) => { body += chunk; });
-      res.on('end', () => resolveResponse({ status: res.statusCode, body, json: JSON.parse(body) }));
-    });
+      (res) => {
+        let body = '';
+        res.setEncoding('utf8');
+        res.on('data', (chunk) => {
+          body += chunk;
+        });
+        res.on('end', () =>
+          resolveResponse({ status: res.statusCode, body, json: JSON.parse(body) }),
+        );
+      },
+    );
     req.on('error', rejectResponse);
     req.end();
   });
@@ -176,7 +229,10 @@ test('governed command routes require exact local authority and accept only opaq
         ok: false,
         operation: 'operate.review.submit',
         error: {
-          code: 'OPERATION_CONFLICT', message: 'Refused.', retryable: false, context: {},
+          code: 'OPERATION_CONFLICT',
+          message: 'Refused.',
+          retryable: false,
+          context: {},
         },
         allowedActions: [],
       };
@@ -190,20 +246,20 @@ test('governed command routes require exact local authority and accept only opaq
   try {
     const port = await dash.listen(0, { env: { ...process.env, PLANR_HOME: home } });
     const origin = `http://127.0.0.1:${port}`;
-    const session = await post(
-      port,
-      `/api/operate/session?${bindingQuery}`,
-      exactSessionBody(),
-      { origin },
-    );
+    const session = await post(port, `/api/operate/session?${bindingQuery}`, exactSessionBody(), {
+      origin,
+    });
     assert.equal(session.status, 200);
     assert.match(session.headers['cache-control'] ?? '', /no-store/);
     assert.equal(session.json.sessionCapability, capability);
-    assert.deepEqual(calls[0], ['session', {
-      ...exactSessionBody(),
-      actor: { actorId: 'owner-acme', kind: 'human', runtime: 'openplanr' },
-      origin,
-    }]);
+    assert.deepEqual(calls[0], [
+      'session',
+      {
+        ...exactSessionBody(),
+        actor: { actorId: 'owner-acme', kind: 'human', runtime: 'openplanr' },
+        origin,
+      },
+    ]);
 
     const preview = await post(
       port,
@@ -212,14 +268,19 @@ test('governed command routes require exact local authority and accept only opaq
       { origin, authorization: `Bearer ${capability}` },
     );
     assert.equal(preview.status, 200);
-    assert.deepEqual(calls[1], ['preview', {
+    assert.deepEqual(calls[1], [
+      'preview',
+      {
+        sessionId: 'opsess_1234567890abcdef',
+        actionReference: 'opact_1234567890abcdef',
+        capability,
+        origin,
+      },
+    ]);
+    assert.deepEqual(assertions[0], {
       sessionId: 'opsess_1234567890abcdef',
-      actionReference: 'opact_1234567890abcdef',
       capability,
       origin,
-    }]);
-    assert.deepEqual(assertions[0], {
-      sessionId: 'opsess_1234567890abcdef', capability, origin,
     });
 
     const confirmed = await post(
@@ -235,15 +296,20 @@ test('governed command routes require exact local authority and accept only opaq
     assert.equal(confirmed.status, 200);
     assert.equal(confirmed.json.ok, false);
     assert.equal(confirmed.json.error.code, 'OPERATION_CONFLICT');
-    assert.deepEqual(calls[2], ['confirm', {
+    assert.deepEqual(calls[2], [
+      'confirm',
+      {
+        sessionId: 'opsess_1234567890abcdef',
+        previewId: 'xprv_1234567890abcdef',
+        previewHash: preview.json.previewHash,
+        capability,
+        origin,
+      },
+    ]);
+    assert.deepEqual(assertions[1], {
       sessionId: 'opsess_1234567890abcdef',
-      previewId: 'xprv_1234567890abcdef',
-      previewHash: preview.json.previewHash,
       capability,
       origin,
-    }]);
-    assert.deepEqual(assertions[1], {
-      sessionId: 'opsess_1234567890abcdef', capability, origin,
     });
 
     const hostileBody = await post(
@@ -288,7 +354,11 @@ test('governed command routes require exact local authority and accept only opaq
     assert.equal(substitutedActor.status, 403);
     assert.equal(substitutedActor.json.error.reasonCode, 'OPERATE_BINDING_MISMATCH');
     assert.equal(substitutedActor.body.includes(capability), false);
-    assert.equal(calls.length, 4, 'the returned canonical binding must be checked before disclosure');
+    assert.equal(
+      calls.length,
+      4,
+      'the returned canonical binding must be checked before disclosure',
+    );
 
     const crossOrigin = await post(
       port,
@@ -353,15 +423,22 @@ test('planning routes reuse the authenticated session and keep Planning authorit
   const commandGateway = {
     async issueSession() {
       return {
-        kind: 'operate-command-session', schemaVersion: '1.0.0', protocolVersion: '2.0.0',
-        sessionId: 'opsess_planning_12345678', sessionCapability: capability,
-        issuedAt: '2026-08-11T08:00:00.000Z', expiresAt: '2026-08-11T08:10:00.000Z',
-        binding: sessionBinding, readOnly: false,
-        allowedActions: [{
-          actionReference: 'opact_1234567890abcdef',
-          subjectId: planningActionId,
-          actionDigest: planningActionDigest,
-        }],
+        kind: 'operate-command-session',
+        schemaVersion: '1.0.0',
+        protocolVersion: '2.0.0',
+        sessionId: 'opsess_planning_12345678',
+        sessionCapability: capability,
+        issuedAt: '2026-08-11T08:00:00.000Z',
+        expiresAt: '2026-08-11T08:10:00.000Z',
+        binding: sessionBinding,
+        readOnly: false,
+        allowedActions: [
+          {
+            actionReference: 'opact_1234567890abcdef',
+            subjectId: planningActionId,
+            actionDigest: planningActionDigest,
+          },
+        ],
       };
     },
     assertSessionBinding(input) {
@@ -418,9 +495,16 @@ test('planning routes reuse the authenticated session and keep Planning authorit
     );
     assert.equal(session.status, 200);
     const framing = {
-      title: 'Reviewed title', slug: 'reviewed-title', problem: 'Problem',
-      objective: 'Objective', users: ['Operators'], scope: ['One change'], nonScope: [],
-      risks: [], constraints: [], requirements: ['Requirement'],
+      title: 'Reviewed title',
+      slug: 'reviewed-title',
+      problem: 'Problem',
+      objective: 'Objective',
+      users: ['Operators'],
+      scope: ['One change'],
+      nonScope: [],
+      risks: [],
+      constraints: [],
+      requirements: ['Requirement'],
       acceptanceOutcomes: ['Accepted outcome'],
     };
     const preview = await post(
@@ -440,12 +524,15 @@ test('planning routes reuse the authenticated session and keep Planning authorit
     assert.equal(foreignPreview.status, 403);
     assert.equal(foreignPreview.json.error.reasonCode, 'OPERATE_BINDING_MISMATCH');
     assert.equal(planningCalls.length, 1);
-    assert.deepEqual(planningCalls[0], ['preview', {
-      actionId: planningActionId,
-      framing,
-      actor: { actorId: 'owner-acme', kind: 'human', runtime: 'openplanr' },
-      binding: sessionBinding,
-    }]);
+    assert.deepEqual(planningCalls[0], [
+      'preview',
+      {
+        actionId: planningActionId,
+        framing,
+        actor: { actorId: 'owner-acme', kind: 'human', runtime: 'openplanr' },
+        binding: sessionBinding,
+      },
+    ]);
     const created = await post(
       port,
       `/api/operate/planning/create-spec?${bindingQuery}`,
@@ -460,35 +547,40 @@ test('planning routes reuse the authenticated session and keep Planning authorit
     assert.equal(created.json.receipt.specId, 'SPEC-001');
     assert.equal(planningCalls.length, 2);
     const traceQuery = bindingQuery;
-    const trace = await get(
-      port,
-      `/api/operate/planning/trace/SPEC-001?${traceQuery}`,
-      {},
-    );
+    const trace = await get(port, `/api/operate/planning/trace/SPEC-001?${traceQuery}`, {});
     assert.equal(trace.status, 200);
     assert.equal(trace.json.receipt.specId, 'SPEC-001');
-    assert.deepEqual(planningCalls[2], ['trace', {
-      specId: 'SPEC-001',
-      actor: { actorId: 'owner-acme', kind: 'human', runtime: 'openplanr' },
-      binding: {
-        actorId: sessionBinding.actorId,
-        scopeId: sessionBinding.scopeId,
-        domainId: sessionBinding.domainId,
-        domainVersion: sessionBinding.domainVersion,
+    assert.deepEqual(planningCalls[2], [
+      'trace',
+      {
+        specId: 'SPEC-001',
+        actor: { actorId: 'owner-acme', kind: 'human', runtime: 'openplanr' },
+        binding: {
+          actorId: sessionBinding.actorId,
+          scopeId: sessionBinding.scopeId,
+          domainId: sessionBinding.domainId,
+          domainVersion: sessionBinding.domainVersion,
+        },
       },
-    }]);
+    ]);
 
     for (const hostile of [
-      { sessionId: session.json.sessionId, actionId: 'act_1234567890abcdef', framing: { ...framing, privateBody: 'no' } },
-      { sessionId: session.json.sessionId, actionId: 'act_1234567890abcdef', framing: { ...framing, scope: ['safe', 1] } },
+      {
+        sessionId: session.json.sessionId,
+        actionId: 'act_1234567890abcdef',
+        framing: { ...framing, privateBody: 'no' },
+      },
+      {
+        sessionId: session.json.sessionId,
+        actionId: 'act_1234567890abcdef',
+        framing: { ...framing, scope: ['safe', 1] },
+      },
       { sessionId: session.json.sessionId, actionId: 'act_1234567890abcdef', actor: 'foreign' },
     ]) {
-      const refused = await post(
-        port,
-        `/api/operate/planning/preview?${bindingQuery}`,
-        hostile,
-        { origin, authorization: `Bearer ${capability}` },
-      );
+      const refused = await post(port, `/api/operate/planning/preview?${bindingQuery}`, hostile, {
+        origin,
+        authorization: `Bearer ${capability}`,
+      });
       assert.equal(refused.status, 400);
     }
     assert.equal(planningCalls.length, 3, 'invalid bodies stop before Planning gateway access');
@@ -511,11 +603,9 @@ test('planning routes reuse the authenticated session and keep Planning authorit
       assert.notEqual(refused.status, 200, hostilePath);
     }
     assert.equal(planningCalls.length, 3, 'invalid trace inputs stop before Planning access');
-    const hostileHost = await get(
-      port,
-      `/api/operate/planning/trace/SPEC-001?${traceQuery}`,
-      { headers: { Host: 'example.com' } },
-    );
+    const hostileHost = await get(port, `/api/operate/planning/trace/SPEC-001?${traceQuery}`, {
+      headers: { Host: 'example.com' },
+    });
     assert.equal(hostileHost.status, 403);
     assert.equal(planningCalls.length, 3);
     assert.equal(assertionCalls.length, 4);
@@ -579,24 +669,47 @@ test('transport rejects every session-binding substitution before preview, confi
     };
     const hostileBindings = [
       ['actor', bindingQuery, { actor: 'foreign-owner' }, 403, 'OPERATE_BINDING_MISMATCH'],
-      ['duplicate actor header', bindingQuery, {
-        headers: { 'X-OpenPlanr-Actor': ['owner-acme', 'foreign-owner'] },
-      }, 400, 'OPERATE_BINDING_REQUIRED'],
-      ['scope', 'scopeId=foreign-scope&domainId=business&domainVersion=1.0.0', {}, 403, 'OPERATE_BINDING_MISMATCH'],
-      ['domain', 'scopeId=scope-acme&domainId=software&domainVersion=1.0.0', {}, 403, 'OPERATE_BINDING_MISMATCH'],
-      ['version', 'scopeId=scope-acme&domainId=business&domainVersion=9.9.9', {}, 403, 'OPERATE_BINDING_MISMATCH'],
+      [
+        'duplicate actor header',
+        bindingQuery,
+        {
+          headers: { 'X-OpenPlanr-Actor': ['owner-acme', 'foreign-owner'] },
+        },
+        400,
+        'OPERATE_BINDING_REQUIRED',
+      ],
+      [
+        'scope',
+        'scopeId=foreign-scope&domainId=business&domainVersion=1.0.0',
+        {},
+        403,
+        'OPERATE_BINDING_MISMATCH',
+      ],
+      [
+        'domain',
+        'scopeId=scope-acme&domainId=software&domainVersion=1.0.0',
+        {},
+        403,
+        'OPERATE_BINDING_MISMATCH',
+      ],
+      [
+        'version',
+        'scopeId=scope-acme&domainId=business&domainVersion=9.9.9',
+        {},
+        403,
+        'OPERATE_BINDING_MISMATCH',
+      ],
     ];
     for (const [name, query, options, expectedStatus, expectedCode] of hostileBindings) {
       for (const [route, body] of [
         ['preview', previewBody],
         ['confirm', confirmBody],
       ]) {
-        const response = await post(
-          port,
-          `/api/operate/commands/${route}?${query}`,
-          body,
-          { origin, authorization: `Bearer ${capability}`, ...options },
-        );
+        const response = await post(port, `/api/operate/commands/${route}?${query}`, body, {
+          origin,
+          authorization: `Bearer ${capability}`,
+          ...options,
+        });
         assert.equal(response.status, expectedStatus, `${name} ${route}`);
         assert.equal(response.json.error.reasonCode, expectedCode);
         assert.equal(response.body.includes('foreign'), false);
@@ -610,16 +723,18 @@ test('transport rejects every session-binding substitution before preview, confi
       `${bindingQuery}&scopeId=scope-acme`,
       `${bindingQuery}&ACTORID=owner-acme`,
     ]) {
-      const response = await post(
-        port,
-        `/api/operate/commands/preview?${query}`,
-        previewBody,
-        { origin, authorization: `Bearer ${capability}` },
-      );
+      const response = await post(port, `/api/operate/commands/preview?${query}`, previewBody, {
+        origin,
+        authorization: `Bearer ${capability}`,
+      });
       assert.equal(response.status, 400, query);
       assert.equal(response.json.error.reasonCode, 'OPERATE_BINDING_REQUIRED');
     }
-    assert.equal(assertionCalls.length, assertionCount, 'malformed binding keys stop before session access');
+    assert.equal(
+      assertionCalls.length,
+      assertionCount,
+      'malformed binding keys stop before session access',
+    );
 
     const duplicateAuthorization = await post(
       port,
@@ -632,7 +747,11 @@ test('transport rejects every session-binding substitution before preview, confi
     );
     assert.equal(duplicateAuthorization.status, 401);
     assert.equal(duplicateAuthorization.json.error.reasonCode, 'OPERATE_SESSION_DENIED');
-    assert.equal(assertionCalls.length, assertionCount, 'duplicate bearer stops before session access');
+    assert.equal(
+      assertionCalls.length,
+      assertionCount,
+      'duplicate bearer stops before session access',
+    );
 
     for (const [sessionId, suppliedCapability, expectedCode] of [
       ['opsess_unknown_12345678', capability, 'OPERATE_SESSION_DENIED'],
@@ -675,12 +794,9 @@ test('command routes fail read-only when OpenPlanr did not install a gateway', a
   const dash = createDashboardServer({ planrDir, watch: false });
   try {
     const port = await dash.listen(0, { env: { ...process.env, PLANR_HOME: home } });
-    const response = await post(
-      port,
-      `/api/operate/session?${bindingQuery}`,
-      exactSessionBody(),
-      { origin: `http://127.0.0.1:${port}` },
-    );
+    const response = await post(port, `/api/operate/session?${bindingQuery}`, exactSessionBody(), {
+      origin: `http://127.0.0.1:${port}`,
+    });
     assert.equal(response.status, 409);
     assert.equal(response.json.error.reasonCode, 'OPERATE_READ_ONLY');
     assert.match(response.headers['cache-control'] ?? '', /no-store/);

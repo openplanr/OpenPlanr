@@ -54,12 +54,14 @@ test('normalization cannot manufacture authority from adapter capabilities', () 
     () => normalizeGuidedInteractionArtifact('structured-action', action),
     /Confirmation-free read | Digest-bound confirmed action/,
   );
-  assert.ok(validateStructuredAction({
-    kind: 'structured-action',
-    schemaVersion: '1.0.0',
-    protocolVersion: '1.2.0',
-    ...action,
-  }).length);
+  assert.ok(
+    validateStructuredAction({
+      kind: 'structured-action',
+      schemaVersion: '1.0.0',
+      protocolVersion: '1.2.0',
+      ...action,
+    }).length,
+  );
 });
 
 test('unknown security-sensitive question fields and unbounded input are rejected', () => {
@@ -80,8 +82,10 @@ test('unknown security-sensitive question fields and unbounded input are rejecte
   };
   assert.deepEqual(validateGuidedQuestion(question), []);
   assert.ok(validateGuidedQuestion({ ...question, persistRawValue: true }).length);
-  assert.ok(validateGuidedQuestion({
-    ...question,
-    validation: { maxLength: 1000000000 },
-  }).length);
+  assert.ok(
+    validateGuidedQuestion({
+      ...question,
+      validation: { maxLength: 1000000000 },
+    }).length,
+  );
 });

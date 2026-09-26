@@ -7,13 +7,13 @@ import { fileURLToPath } from 'node:url';
 
 import { loadReleaseLedgerContract, validateProtocolArtifact } from 'planr-pipeline/protocol';
 import {
-  RELEASE_MANIFEST_CLAIM_EDGES,
-  RELEASE_REPOSITORY_KEYS,
   assertEcosystemManifestProjection,
   assertPipelineCompatibilityDeclaration,
   assertReleaseCompatibilityClaim,
   assertReleaseLedger,
   assertReleaseLedgerReceipt,
+  RELEASE_MANIFEST_CLAIM_EDGES,
+  RELEASE_REPOSITORY_KEYS,
   releaseClaimSetDigest,
   releaseLedgerAbsence,
   releaseLedgerIdentity,
@@ -36,7 +36,8 @@ function fixture(name) {
 
 function locate(container, segments) {
   let target = container;
-  for (const segment of segments) target = target?.[Array.isArray(target) ? Number(segment) : segment];
+  for (const segment of segments)
+    target = target?.[Array.isArray(target) ? Number(segment) : segment];
   return target;
 }
 
@@ -107,17 +108,29 @@ let custodyRefusals = 0;
 for (const [kind, record] of Object.entries(records)) {
   const resolved = loadReleaseLedgerContract(kind, { protocolVersion: VERSION });
   pass(
-    resolved.kind === kind
-      && resolved.protocolVersion === VERSION
-      && resolved.path === `schemas/v${VERSION}/${kind}.schema.json`
-      && resolved.schema.$id === `https://openplanr.dev/schemas/v${VERSION}/${kind}.schema.json`,
+    resolved.kind === kind &&
+      resolved.protocolVersion === VERSION &&
+      resolved.path === `schemas/v${VERSION}/${kind}.schema.json` &&
+      resolved.schema.$id === `https://openplanr.dev/schemas/v${VERSION}/${kind}.schema.json`,
     `${kind} resolves at the explicit contract version`,
   );
-  pass(throws(() => loadReleaseLedgerContract(kind)), `${kind} refuses an implicit contract version`);
-  pass(throws(() => loadReleaseLedgerContract(kind, { protocolVersion: '1.2.0' })), `${kind} refuses an unsupported contract version`);
+  pass(
+    throws(() => loadReleaseLedgerContract(kind)),
+    `${kind} refuses an implicit contract version`,
+  );
+  pass(
+    throws(() => loadReleaseLedgerContract(kind, { protocolVersion: '1.2.0' })),
+    `${kind} refuses an unsupported contract version`,
+  );
 
-  pass(validateProtocolArtifact(kind, record, { protocolVersion: VERSION }).length === 0, `the reference ${kind} satisfies its published schema`);
-  pass(refusalCode(validators[kind], record) === null, `the reference ${kind} satisfies its published validator`);
+  pass(
+    validateProtocolArtifact(kind, record, { protocolVersion: VERSION }).length === 0,
+    `the reference ${kind} satisfies its published schema`,
+  );
+  pass(
+    refusalCode(validators[kind], record) === null,
+    `the reference ${kind} satisfies its published validator`,
+  );
 
   const identity = releaseLedgerIdentity(record, kind);
   pass(
@@ -133,12 +146,16 @@ for (const [kind, record] of Object.entries(records)) {
       refusalCode(validators[kind], candidate) === refusal.code,
       `${kind} refuses ${refusal.name} with ${refusal.code}`,
     );
-    const schemaRefused = validateProtocolArtifact(kind, candidate, { protocolVersion: VERSION }).length > 0;
+    const schemaRefused =
+      validateProtocolArtifact(kind, candidate, { protocolVersion: VERSION }).length > 0;
     if (refusal.refusedBy === 'schema') {
       pass(schemaRefused, `${kind} refuses at the schema: ${refusal.name}`);
       refusedShapes += 1;
     } else {
-      pass(refusal.refusedBy === 'contract', `${kind} declares the layer that owns: ${refusal.name}`);
+      pass(
+        refusal.refusedBy === 'contract',
+        `${kind} declares the layer that owns: ${refusal.name}`,
+      );
       custodyRefusals += 1;
     }
   }
@@ -146,26 +163,47 @@ for (const [kind, record] of Object.entries(records)) {
 
 // The published claim set is exactly the edges the manifest renders, and every
 // rendered range equals the deterministic render of its bound rows.
-pass(claims.length === RELEASE_MANIFEST_CLAIM_EDGES.length, 'every manifest compatibility edge carries a bound claim');
+pass(
+  claims.length === RELEASE_MANIFEST_CLAIM_EDGES.length,
+  'every manifest compatibility edge carries a bound claim',
+);
 for (const claim of claims) {
-  pass(refusalCode((record) => assertReleaseCompatibilityClaim(record, { ledger }), claim) === null, `claim ${claim.claimId} binds the ledger it names`);
-  const producerRow = ledger.rows.find(({ repositoryKey }) => repositoryKey === claim.producer.repositoryKey);
   pass(
-    claim.producer.payloadDigest === producerRow.payloadDigest
-      && claim.producer.terminalReceiptDigest === producerRow.terminalReceipt.digest
-      && claim.display === renderCompatibilityDisplay({ derivation: claim.derivation, declaredVersion: producerRow.declaredVersion }),
+    refusalCode((record) => assertReleaseCompatibilityClaim(record, { ledger }), claim) === null,
+    `claim ${claim.claimId} binds the ledger it names`,
+  );
+  const producerRow = ledger.rows.find(
+    ({ repositoryKey }) => repositoryKey === claim.producer.repositoryKey,
+  );
+  pass(
+    claim.producer.payloadDigest === producerRow.payloadDigest &&
+      claim.producer.terminalReceiptDigest === producerRow.terminalReceipt.digest &&
+      claim.display ===
+        renderCompatibilityDisplay({
+          derivation: claim.derivation,
+          declaredVersion: producerRow.declaredVersion,
+        }),
     `claim ${claim.claimId} resolves to an exact payload digest and terminal receipt digest`,
   );
 }
 
 const projection = assertEcosystemManifestProjection({ ledger, claims, manifest });
-pass(projection.claimSetDigest === releaseClaimSetDigest(claims), 'the manifest projection binds the exact claim set');
-pass(projection.projected.length === RELEASE_MANIFEST_CLAIM_EDGES.length, 'the manifest projection covers every published edge');
 pass(
-  refusalCode(
-    (record) => assertEcosystemManifestProjection({ ledger, claims, manifest: record }),
-    { ...manifest, components: { ...manifest.components, cli: { ...manifest.components.cli, pipelineRange: '^9.9.9' } } },
-  ) === 'E_RELEASE_LEDGER_MANIFEST_DRIFT',
+  projection.claimSetDigest === releaseClaimSetDigest(claims),
+  'the manifest projection binds the exact claim set',
+);
+pass(
+  projection.projected.length === RELEASE_MANIFEST_CLAIM_EDGES.length,
+  'the manifest projection covers every published edge',
+);
+pass(
+  refusalCode((record) => assertEcosystemManifestProjection({ ledger, claims, manifest: record }), {
+    ...manifest,
+    components: {
+      ...manifest.components,
+      cli: { ...manifest.components.cli, pipelineRange: '^9.9.9' },
+    },
+  }) === 'E_RELEASE_LEDGER_MANIFEST_DRIFT',
   'a hand-edited manifest range is a typed drift refusal, never a re-render',
 );
 
@@ -177,10 +215,16 @@ const selfIdentity = releaseLedgerIdentity(selfCertifying, 'release-ledger');
 selfCertifying.ledgerId = selfIdentity.id;
 selfCertifying.ledgerDigest = selfIdentity.digest;
 pass(
-  refusalCode((record) => assertReleaseLedgerReceipt(record, { ledger: selfCertifying, claims }), receipt) === 'E_RELEASE_LEDGER_SELF_CERTIFIED',
+  refusalCode(
+    (record) => assertReleaseLedgerReceipt(record, { ledger: selfCertifying, claims }),
+    receipt,
+  ) === 'E_RELEASE_LEDGER_SELF_CERTIFIED',
   'a ledger can never supply its own certifying receipt',
 );
-pass(receipt.authority === 'none' && receipt.recordType === 'verification', 'a ledger receipt records a verification outcome and no authority');
+pass(
+  receipt.authority === 'none' && receipt.recordType === 'verification',
+  'a ledger receipt records a verification outcome and no authority',
+);
 
 // The skills compatibility declaration is a label resolved against bound bytes.
 const pipelineRow = ledger.rows.find(({ repositoryKey }) => repositoryKey === 'pipeline');
@@ -193,24 +237,45 @@ pass(
 );
 pass(
   refusalCode(
-    (record) => assertPipelineCompatibilityDeclaration(record, { ledger, pipelinePayloadDigest: pipelineRow.payloadDigest }),
+    (record) =>
+      assertPipelineCompatibilityDeclaration(record, {
+        ledger,
+        pipelinePayloadDigest: pipelineRow.payloadDigest,
+      }),
     'planr-pipeline@9.9.9',
   ) === 'E_RELEASE_LEDGER_CLAIM_DRIFT',
   'a compatibility declaration that disagrees with the bound payload bytes is refused',
 );
 pass(
   refusalCode(
-    (record) => assertPipelineCompatibilityDeclaration(record, { ledger, pipelinePayloadDigest: receipt.receiptDigest }),
+    (record) =>
+      assertPipelineCompatibilityDeclaration(record, {
+        ledger,
+        pipelinePayloadDigest: receipt.receiptDigest,
+      }),
     `planr-pipeline@${pipelineRow.declaredVersion}`,
   ) === 'E_RELEASE_LEDGER_CLAIM_UNBOUND',
   'a compatibility declaration resolved against foreign payload bytes is refused',
 );
 
 // An absent input is named. It never resolves to a permissive default or a passing claim.
-const absence = releaseLedgerAbsence({ input: 'payload.skills', reason: 'payload-proof-not-supplied', repositoryKey: 'skills' });
-pass(absence.resolved === false && absence.reason === 'payload-proof-not-supplied', 'a missing ledger input is a typed absence with an explicit reason');
-pass(throws(() => releaseLedgerAbsence({ input: 'payload.skills', reason: 'probably-fine' })), 'an unnamed absence reason is refused');
-pass(RELEASE_REPOSITORY_KEYS.length === ledger.rows.length, 'the ledger carries one row per frozen release repository key');
+const absence = releaseLedgerAbsence({
+  input: 'payload.skills',
+  reason: 'payload-proof-not-supplied',
+  repositoryKey: 'skills',
+});
+pass(
+  absence.resolved === false && absence.reason === 'payload-proof-not-supplied',
+  'a missing ledger input is a typed absence with an explicit reason',
+);
+pass(
+  throws(() => releaseLedgerAbsence({ input: 'payload.skills', reason: 'probably-fine' })),
+  'an unnamed absence reason is refused',
+);
+pass(
+  RELEASE_REPOSITORY_KEYS.length === ledger.rows.length,
+  'the ledger carries one row per frozen release repository key',
+);
 
 // The emitted marketplace manifest is the artifact this contract closes over, so
 // it is validated as emitted rather than through a synthetic stand-in.
@@ -219,7 +284,8 @@ let emittedManifestChecked = false;
 if (existsSync(emittedManifestPath)) {
   const emitted = JSON.parse(readFileSync(emittedManifestPath, 'utf8'));
   pass(
-    validateProtocolArtifact('ecosystem-manifest', emitted, { protocolVersion: VERSION }).length === 0,
+    validateProtocolArtifact('ecosystem-manifest', emitted, { protocolVersion: VERSION }).length ===
+      0,
     'the emitted marketplace ecosystem manifest satisfies the manifest contract it is published under',
   );
   emittedManifestChecked = true;
@@ -228,25 +294,41 @@ if (existsSync(emittedManifestPath)) {
 // Derivation is the deterministic path, so it may reach nothing that could make a
 // network call, spawn a process, write a file, or read ambient configuration.
 const derivationSource = readFileSync(join(root, 'lib', 'ecosystem', 'release-ledger.mjs'), 'utf8');
-for (const reach of ['fetch(', 'process.env', 'child_process', 'node:fs', 'node:http', 'node:net', 'spawnSync', 'writeFileSync']) {
+for (const reach of [
+  'fetch(',
+  'process.env',
+  'child_process',
+  'node:fs',
+  'node:http',
+  'node:net',
+  'spawnSync',
+  'writeFileSync',
+]) {
   pass(!derivationSource.includes(reach), `the derivation library makes no ${reach} reach`);
 }
 
-for (const name of ['ledger-valid.json', 'ledger-invalid.json', 'compatibility-claims-valid.json', 'compatibility-claims-invalid.json']) {
+for (const name of [
+  'ledger-valid.json',
+  'ledger-invalid.json',
+  'compatibility-claims-valid.json',
+  'compatibility-claims-invalid.json',
+]) {
   const serialized = readFileSync(join(fixtureRoot, name), 'utf8');
   for (const forbidden of ['BEGIN RSA', 'BEGIN PRIVATE KEY', 'AKIA', 'ghp_', 'xoxb-']) {
     pass(!serialized.includes(forbidden), `${name} carries no ${forbidden} credential material`);
   }
 }
 
-process.stdout.write(`${JSON.stringify({
-  ok: true,
-  protocolVersion: VERSION,
-  suite: 'release-ledger',
-  contracts: Object.keys(records).length,
-  claims: claims.length,
-  refusedShapes,
-  custodyRefusals,
-  emittedManifestChecked,
-  checks,
-})}\n`);
+process.stdout.write(
+  `${JSON.stringify({
+    ok: true,
+    protocolVersion: VERSION,
+    suite: 'release-ledger',
+    contracts: Object.keys(records).length,
+    claims: claims.length,
+    refusedShapes,
+    custodyRefusals,
+    emittedManifestChecked,
+    checks,
+  })}\n`,
+);

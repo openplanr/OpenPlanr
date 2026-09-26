@@ -11,7 +11,9 @@ const root = join(here, '../..');
 
 const schema = JSON.parse(readFileSync(join(root, 'schemas/v1.0.0/spec.schema.json'), 'utf-8'));
 const valid = JSON.parse(readFileSync(join(root, 'tests/fixtures/valid-spec.json'), 'utf-8'));
-const invalid = JSON.parse(readFileSync(join(root, 'tests/fixtures/invalid-spec-missing-fields.json'), 'utf-8'));
+const invalid = JSON.parse(
+  readFileSync(join(root, 'tests/fixtures/invalid-spec-missing-fields.json'), 'utf-8'),
+);
 
 test('SPEC frontmatter validates when complete', () => {
   assert.equal(validate(valid, schema).length, 0);

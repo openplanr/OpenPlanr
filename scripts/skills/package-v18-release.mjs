@@ -7,8 +7,8 @@ import {
   lstatSync,
   mkdirSync,
   mkdtempSync,
-  readFileSync,
   readdirSync,
+  readFileSync,
   renameSync,
   rmSync,
   writeFileSync,
@@ -35,9 +35,12 @@ const registry = JSON.parse(readFileSync(resolve(root, 'skills/registry.json'), 
 function files(directory) {
   const result = [];
   const visit = (current) => {
-    for (const entry of readdirSync(current, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+    for (const entry of readdirSync(current, { withFileTypes: true }).sort((a, b) =>
+      a.name.localeCompare(b.name),
+    )) {
       const absolute = join(current, entry.name);
-      if (entry.isSymbolicLink()) throw new Error(`Release inputs may not contain symlinks: ${absolute}`);
+      if (entry.isSymbolicLink())
+        throw new Error(`Release inputs may not contain symlinks: ${absolute}`);
       if (entry.isDirectory()) visit(absolute);
       else if (entry.isFile()) result.push(absolute);
     }
@@ -63,10 +66,12 @@ function add(path, bytes, fileMode = 0o644) {
 function addProduct({ id, kind, host, source, destination }) {
   const sourceEntries = entries(resolve(root, source));
   for (const entry of sourceEntries) add(`${destination}/${entry.path}`, entry.bytes, entry.mode);
-  const archive = createDeterministicZip(sourceEntries.map((entry) => ({
-    ...entry,
-    path: `${id}/${entry.path}`,
-  })));
+  const archive = createDeterministicZip(
+    sourceEntries.map((entry) => ({
+      ...entry,
+      path: `${id}/${entry.path}`,
+    })),
+  );
   const archivePath = `archives/${id}-${workspaceVersion}.zip`;
   add(archivePath, archive);
   return {
@@ -84,19 +89,37 @@ function addProduct({ id, kind, host, source, destination }) {
 const products = [];
 for (const row of registry.skills) {
   const source = `dist/plugins/openai/openplanr/skills/${projectedSkillName(row.skillId)}`;
-  products.push(addProduct({
-    id: row.skillId,
-    kind: 'individual-skill',
-    host: 'openai',
-    source,
-    destination: `skills/${row.skillId}`,
-  }));
+  products.push(
+    addProduct({
+      id: row.skillId,
+      kind: 'individual-skill',
+      host: 'openai',
+      source,
+      destination: `skills/${row.skillId}`,
+    }),
+  );
 }
 for (const product of [
-  { id: 'openplanr-openai', host: 'openai', source: 'dist/plugins/openai/openplanr', destination: 'plugins/openai/openplanr' },
-  { id: 'openplanr-claude', host: 'claude-code', source: 'dist/plugins/claude/openplanr', destination: 'plugins/claude/openplanr' },
-  { id: 'openplanr-cursor', host: 'cursor', source: 'dist/plugins/cursor/openplanr', destination: 'plugins/cursor/openplanr' },
-]) products.push(addProduct({ ...product, kind: 'host-plugin' }));
+  {
+    id: 'openplanr-openai',
+    host: 'openai',
+    source: 'dist/plugins/openai/openplanr',
+    destination: 'plugins/openai/openplanr',
+  },
+  {
+    id: 'openplanr-claude',
+    host: 'claude-code',
+    source: 'dist/plugins/claude/openplanr',
+    destination: 'plugins/claude/openplanr',
+  },
+  {
+    id: 'openplanr-cursor',
+    host: 'cursor',
+    source: 'dist/plugins/cursor/openplanr',
+    destination: 'plugins/cursor/openplanr',
+  },
+])
+  products.push(addProduct({ ...product, kind: 'host-plugin' }));
 
 const index = {
   kind: 'openplanr-skill-release-index',
@@ -111,12 +134,15 @@ const index = {
   publication: { state: 'local-only', publicActionOwner: 'maintainer-release-approval' },
 };
 add('release-index.json', json(index));
-add('.openplanr-release.json', json({
-  kind: 'openplanr-generated-release-root',
-  schemaVersion: '2.0.0',
-  releaseVersion: workspaceVersion,
-  indexDigest: digest(json(index)),
-}));
+add(
+  '.openplanr-release.json',
+  json({
+    kind: 'openplanr-generated-release-root',
+    schemaVersion: '2.0.0',
+    releaseVersion: workspaceVersion,
+    indexDigest: digest(json(index)),
+  }),
+);
 
 function writeTree(directory) {
   for (const [path, entry] of tree) {
@@ -130,15 +156,19 @@ function writeTree(directory) {
 function compare() {
   const expected = [...tree.keys()].sort();
   const actual = existsSync(releaseRoot)
-    ? files(releaseRoot).map((path) => relative(releaseRoot, path).split(sep).join('/')).sort()
+    ? files(releaseRoot)
+        .map((path) => relative(releaseRoot, path).split(sep).join('/'))
+        .sort()
     : [];
   const drift = [];
   for (const path of expected) {
     const absolute = resolve(releaseRoot, path);
     const entry = tree.get(path);
     if (!existsSync(absolute)) drift.push({ path, reason: 'missing' });
-    else if (digest(readFileSync(absolute)) !== digest(entry.bytes)) drift.push({ path, reason: 'content' });
-    else if (((lstatSync(absolute).mode & 0o111) !== 0) !== ((entry.mode & 0o111) !== 0)) drift.push({ path, reason: 'mode' });
+    else if (digest(readFileSync(absolute)) !== digest(entry.bytes))
+      drift.push({ path, reason: 'content' });
+    else if (((lstatSync(absolute).mode & 0o111) !== 0) !== ((entry.mode & 0o111) !== 0))
+      drift.push({ path, reason: 'mode' });
   }
   for (const path of actual) if (!tree.has(path)) drift.push({ path, reason: 'extra' });
   return drift;
@@ -151,11 +181,14 @@ if (mode === '--check') {
 } else {
   if (existsSync(releaseRoot)) {
     const marker = resolve(releaseRoot, '.openplanr-release.json');
-    if (!existsSync(marker)) throw new Error(`Refusing to replace unowned release directory: ${releaseRoot}`);
+    if (!existsSync(marker))
+      throw new Error(`Refusing to replace unowned release directory: ${releaseRoot}`);
   }
   const staging = mkdtempSync(join(tmpdir(), 'openplanr-release-v18-'));
   writeTree(staging);
   if (existsSync(releaseRoot)) rmSync(releaseRoot, { recursive: true });
   renameSync(staging, releaseRoot);
-  process.stdout.write(`Packaged ${registry.skills.length} skills, three host plugins, and nine Claude agents.\n`);
+  process.stdout.write(
+    `Packaged ${registry.skills.length} skills, three host plugins, and nine Claude agents.\n`,
+  );
 }

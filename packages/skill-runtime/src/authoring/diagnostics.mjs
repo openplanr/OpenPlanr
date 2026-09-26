@@ -34,10 +34,18 @@ function pointerOwner(pointer) {
   const [, fragment = ''] = pointer.split('#', 2);
   const exact = /\/([^/@]+)@([^/]+)$/u.exec(fragment);
   if (pointer.startsWith('modules.json')) {
-    return Object.freeze({ kind: 'module-registry', id: exact?.[1] ?? 'modules', version: exact?.[2] ?? '1.0.0' });
+    return Object.freeze({
+      kind: 'module-registry',
+      id: exact?.[1] ?? 'modules',
+      version: exact?.[2] ?? '1.0.0',
+    });
   }
   if (pointer.startsWith('host-profiles.json')) {
-    return Object.freeze({ kind: 'host-profile-registry', id: exact?.[1] ?? 'host-profiles', version: exact?.[2] ?? '1.0.0' });
+    return Object.freeze({
+      kind: 'host-profile-registry',
+      id: exact?.[1] ?? 'host-profiles',
+      version: exact?.[2] ?? '1.0.0',
+    });
   }
   if (pointer.startsWith('skill.json')) {
     return Object.freeze({ kind: 'skill-source', id: 'skill', version: '1.0.0' });
@@ -46,7 +54,8 @@ function pointerOwner(pointer) {
 }
 
 function diagnosticOwner(details, pointer) {
-  if (details.owner && typeof details.owner === 'object') return Object.freeze({ ...details.owner });
+  if (details.owner && typeof details.owner === 'object')
+    return Object.freeze({ ...details.owner });
   const edgeOwner = nodeOwner(details.edge?.to);
   if (edgeOwner) return edgeOwner;
   const fromPointer = pointerOwner(pointer);
@@ -64,10 +73,12 @@ function diagnosticPath(details, pointer, owner) {
   if (details.path ?? details.sourcePath ?? details.templatePath) {
     return details.path ?? details.sourcePath ?? details.templatePath;
   }
-  if (typeof pointer === 'string' && pointer.includes('#')) return pointer.slice(0, pointer.indexOf('#'));
+  if (typeof pointer === 'string' && pointer.includes('#'))
+    return pointer.slice(0, pointer.indexOf('#'));
   if (details.kind && DOCUMENT_PATHS[details.kind]) return DOCUMENT_PATHS[details.kind];
   if (owner.kind === 'module' || owner.kind === 'module-registry') return 'modules.json';
-  if (owner.kind === 'host-profile' || owner.kind === 'host-profile-registry') return 'host-profiles.json';
+  if (owner.kind === 'host-profile' || owner.kind === 'host-profile-registry')
+    return 'host-profiles.json';
   if (owner.kind === 'skill' || owner.kind === 'skill-source') return 'skill.json';
   return 'packages/skill-runtime/src/authoring';
 }
@@ -98,7 +109,8 @@ export function toDiagnostic(error) {
     path: 'packages/skill-runtime/src/authoring',
     pointer: null,
     edge: null,
-    repair: 'Inspect the named runtime path and report the unexpected failure with its original message.',
+    repair:
+      'Inspect the named runtime path and report the unexpected failure with its original message.',
     details: {},
   });
 }
@@ -106,7 +118,9 @@ export function toDiagnostic(error) {
 /** Render one diagnostic as stable, human-readable text. */
 export function formatDiagnostic(diagnostic) {
   const lines = [`${diagnostic.code}: ${diagnostic.message}`];
-  lines.push(`  owner: ${diagnostic.owner.kind} ${diagnostic.owner.id}@${diagnostic.owner.version}`);
+  lines.push(
+    `  owner: ${diagnostic.owner.kind} ${diagnostic.owner.id}@${diagnostic.owner.version}`,
+  );
   if (diagnostic.path) lines.push(`  path: ${diagnostic.path}`);
   if (diagnostic.pointer) lines.push(`  pointer: ${diagnostic.pointer}`);
   if (diagnostic.edge) {

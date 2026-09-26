@@ -1,6 +1,6 @@
-import { PipelineError } from '@openplanr/protocol/errors';
-import { assertProtocolArtifact } from '@openplanr/protocol/contracts';
 import { sha256Jcs } from '@openplanr/protocol/canonical-json';
+import { assertProtocolArtifact } from '@openplanr/protocol/contracts';
+import { PipelineError } from '@openplanr/protocol/errors';
 
 const PROTOCOL_VERSION = '2.0.0';
 
@@ -24,7 +24,10 @@ export const OPERATING_HYPOTHESIS_VERIFICATION_STATUSES_V2 = Object.freeze([
 ]);
 
 function fail(code, message, context = {}) {
-  throw new PipelineError(code, message, '', { retryable: false, context: structuredClone(context) });
+  throw new PipelineError(code, message, '', {
+    retryable: false,
+    context: structuredClone(context),
+  });
 }
 
 function clone(value) {
@@ -52,37 +55,51 @@ function typed(kind, value, subject) {
 
 function exactActionTuple(action, operation, result) {
   const tuple = operation?.action;
-  if (!tuple
-    || tuple.actionId !== action.actionId
-    || tuple.revision !== action.revision
-    || tuple.actionHash !== action.actionHash
-    || result?.action?.actionId !== tuple.actionId
-    || result?.action?.revision !== tuple.revision
-    || result?.action?.actionHash !== tuple.actionHash) {
-    fail('ACTION_REVISION_MISMATCH', 'Execution verification must retain one exact Action authority tuple.', {
-      actionId: action?.actionId ?? null,
-      operationId: operation?.operationId ?? operation?.rollbackOperationId ?? null,
-    });
+  if (
+    !tuple ||
+    tuple.actionId !== action.actionId ||
+    tuple.revision !== action.revision ||
+    tuple.actionHash !== action.actionHash ||
+    result?.action?.actionId !== tuple.actionId ||
+    result?.action?.revision !== tuple.revision ||
+    result?.action?.actionHash !== tuple.actionHash
+  ) {
+    fail(
+      'ACTION_REVISION_MISMATCH',
+      'Execution verification must retain one exact Action authority tuple.',
+      {
+        actionId: action?.actionId ?? null,
+        operationId: operation?.operationId ?? operation?.rollbackOperationId ?? null,
+      },
+    );
   }
 }
 
 function exactOperatingScope(action, record, subject) {
-  if (record.scopeId !== action.scopeId
-    || record.domainId !== action.domainId
-    || record.domainVersion !== action.domainVersion) {
-    fail('OPERATING_SCOPE_INVALID', `${subject} must retain the exact Action scope and domain version.`, {
-      actionId: action.actionId,
-      scopeId: action.scopeId,
-      domainId: action.domainId,
-      domainVersion: action.domainVersion,
-    });
+  if (
+    record.scopeId !== action.scopeId ||
+    record.domainId !== action.domainId ||
+    record.domainVersion !== action.domainVersion
+  ) {
+    fail(
+      'OPERATING_SCOPE_INVALID',
+      `${subject} must retain the exact Action scope and domain version.`,
+      {
+        actionId: action.actionId,
+        scopeId: action.scopeId,
+        domainId: action.domainId,
+        domainVersion: action.domainVersion,
+      },
+    );
   }
 }
 
 function exactVerificationPlanOwnership(action, verificationPlan) {
   exactOperatingScope(action, verificationPlan, 'Action verification plan');
-  if (action.verificationPlanId !== verificationPlan.verificationPlanId
-    || verificationPlan.actionId !== action.actionId) {
+  if (
+    action.verificationPlanId !== verificationPlan.verificationPlanId ||
+    verificationPlan.actionId !== action.actionId
+  ) {
     fail('ACTION_REVISION_MISMATCH', 'Verification plan must retain the exact Action identity.', {
       actionId: action.actionId,
       verificationPlanId: verificationPlan.verificationPlanId,
@@ -105,15 +122,17 @@ function operationIdFor(result) {
 function mapTerminalStatus(status, { rollback = false, cancelled = false } = {}) {
   if (cancelled) return 'cancelled';
   if (rollback && status === 'succeeded') return 'rolled-back';
-  return ({
-    succeeded: 'success',
-    failed: 'failure',
-    blocked: 'blocked',
-    uncertain: 'uncertain',
-    partial: 'partial',
-    cancelled: 'cancelled',
-    'rolled-back': 'rolled-back',
-  })[status] ?? null;
+  return (
+    {
+      succeeded: 'success',
+      failed: 'failure',
+      blocked: 'blocked',
+      uncertain: 'uncertain',
+      partial: 'partial',
+      cancelled: 'cancelled',
+      'rolled-back': 'rolled-back',
+    }[status] ?? null
+  );
 }
 
 export function deriveOperatingExecutionVerificationStatusV2({
@@ -130,13 +149,23 @@ export function deriveOperatingExecutionVerificationStatusV2({
     typed('operating-execution-result', result, 'Execution verification result');
     return mapTerminalStatus(result.status);
   }
-  fail('RESULT_CONTRACT_INVALID', 'Execution verification requires a terminal execution or rollback result.');
+  fail(
+    'RESULT_CONTRACT_INVALID',
+    'Execution verification requires a terminal execution or rollback result.',
+  );
 }
 
 export function deriveOperatingExecutionLifecycleIdentitiesV2({ operationId, resultId }) {
-  if (typeof operationId !== 'string' || operationId.length === 0
-    || typeof resultId !== 'string' || resultId.length === 0) {
-    fail('RESULT_CONTRACT_INVALID', 'Lifecycle identities require exact operation and result identities.');
+  if (
+    typeof operationId !== 'string' ||
+    operationId.length === 0 ||
+    typeof resultId !== 'string' ||
+    resultId.length === 0
+  ) {
+    fail(
+      'RESULT_CONTRACT_INVALID',
+      'Lifecycle identities require exact operation and result identities.',
+    );
   }
   const seed = { protocolVersion: PROTOCOL_VERSION, operationId, resultId };
   return freeze({
@@ -163,9 +192,10 @@ export function buildOperatingTerminalVerificationAssignmentV2({
   typed('operating-action', action, 'Verification-owned Action');
   typed('operating-cycle', cycle, 'Verification-owned Cycle');
   typed('operating-governed-operation', operation, 'Verification-owned operation');
-  const resultKind = result?.kind === 'operating-rollback-result'
-    ? 'operating-rollback-result'
-    : 'operating-execution-result';
+  const resultKind =
+    result?.kind === 'operating-rollback-result'
+      ? 'operating-rollback-result'
+      : 'operating-execution-result';
   typed(resultKind, result, 'Verification-owned terminal result');
   typed('operating-action-verification-plan', verificationPlan, 'Execution verification plan');
   exactActionTuple(action, operation, result);
@@ -173,21 +203,27 @@ export function buildOperatingTerminalVerificationAssignmentV2({
   exactVerificationPlanOwnership(action, verificationPlan);
   const resultId = operationResultId(result);
   const operationId = operationIdFor(result);
-  if (operation.operationId !== operationId
-    || operation.resultId !== resultId
-    || action.sourceCycleId !== cycle.cycleId
-    || action.verificationPlanId !== verificationPlan.verificationPlanId
-    || verificationPlan.actionId !== action.actionId
-    || result.verificationPlanId !== verificationPlan.verificationPlanId
-    || result.assignmentId !== operation.assignmentId
-    || typeof timestamp !== 'string'
-    || Number.isNaN(Date.parse(timestamp))) {
-    fail('STATE_TRANSITION_INVALID', 'Terminal verification ownership must bind one Action, Cycle, plan, operation, and result.', {
-      actionId: action.actionId,
-      operationId: operation.operationId,
-      resultId,
-      verificationPlanId: verificationPlan.verificationPlanId,
-    });
+  if (
+    operation.operationId !== operationId ||
+    operation.resultId !== resultId ||
+    action.sourceCycleId !== cycle.cycleId ||
+    action.verificationPlanId !== verificationPlan.verificationPlanId ||
+    verificationPlan.actionId !== action.actionId ||
+    result.verificationPlanId !== verificationPlan.verificationPlanId ||
+    result.assignmentId !== operation.assignmentId ||
+    typeof timestamp !== 'string' ||
+    Number.isNaN(Date.parse(timestamp))
+  ) {
+    fail(
+      'STATE_TRANSITION_INVALID',
+      'Terminal verification ownership must bind one Action, Cycle, plan, operation, and result.',
+      {
+        actionId: action.actionId,
+        operationId: operation.operationId,
+        resultId,
+        verificationPlanId: verificationPlan.verificationPlanId,
+      },
+    );
   }
   const identities = deriveOperatingExecutionLifecycleIdentitiesV2({ operationId, resultId });
   const assignment = {
@@ -202,10 +238,9 @@ export function buildOperatingTerminalVerificationAssignmentV2({
     state: 'pending',
     dependsOn: [],
     dependencyPolicy: { kind: 'none' },
-    inputArtifactIds: [...new Set([
-      verificationPlan.sourceArtifactId,
-      result.resultArtifactId,
-    ])].sort(),
+    inputArtifactIds: [
+      ...new Set([verificationPlan.sourceArtifactId, result.resultArtifactId]),
+    ].sort(),
     inputAbsences: [],
     outputContract: {
       schemaId: 'operating-outcome',
@@ -242,27 +277,40 @@ export function selectOperatingTerminalVerificationAssignmentV2({
   timestamp = result?.completedAt,
 } = {}) {
   if (!Array.isArray(assignments)) {
-    fail('RESULT_CONTRACT_INVALID', 'Verification Assignment selection requires one explicit candidate collection.');
+    fail(
+      'RESULT_CONTRACT_INVALID',
+      'Verification Assignment selection requires one explicit candidate collection.',
+    );
   }
   const expected = buildOperatingTerminalVerificationAssignmentV2({
-    action, cycle, operation, result, verificationPlan, timestamp,
+    action,
+    cycle,
+    operation,
+    result,
+    verificationPlan,
+    timestamp,
   });
-  const candidates = assignments.filter((candidate) => (
-    candidate?.assignmentId === expected.assignmentId
-    || (candidate?.assignmentKind === 'verification'
-      && candidate?.governedOperationId === operation.operationId)
-  ));
+  const candidates = assignments.filter(
+    (candidate) =>
+      candidate?.assignmentId === expected.assignmentId ||
+      (candidate?.assignmentKind === 'verification' &&
+        candidate?.governedOperationId === operation.operationId),
+  );
   for (const candidate of candidates) {
     typed('operating-assignment', candidate, 'Terminal verification Assignment candidate');
   }
   if (candidates.length !== 1 || sha256Jcs(candidates[0]) !== sha256Jcs(expected)) {
-    fail('RESULT_CONTRACT_INVALID', 'Terminal result requires exactly one canonical verification Assignment owner.', {
-      actionId: action.actionId,
-      operationId: operation.operationId,
-      resultId: operationResultId(result),
-      expectedAssignmentId: expected.assignmentId,
-      candidateAssignmentIds: candidates.map(({ assignmentId }) => assignmentId).sort(),
-    });
+    fail(
+      'RESULT_CONTRACT_INVALID',
+      'Terminal result requires exactly one canonical verification Assignment owner.',
+      {
+        actionId: action.actionId,
+        operationId: operation.operationId,
+        resultId: operationResultId(result),
+        expectedAssignmentId: expected.assignmentId,
+        candidateAssignmentIds: candidates.map(({ assignmentId }) => assignmentId).sort(),
+      },
+    );
   }
   return freeze(clone(candidates[0]));
 }
@@ -300,29 +348,46 @@ export function buildOperatingExecutionLifecycleV2({
   typed('operating-governed-operation', operation, 'Execution lifecycle operation');
   typed('operating-execution-result', result, 'Execution lifecycle result');
   exactActionTuple(action, operation, result);
-  if (operation.operationKind !== 'execute'
-    || operation.operationId !== result.operationId
-    || operation.resultId !== result.resultId
-    || cycle.cycleId !== action.sourceCycleId
-    || cycle.state !== 'approved'
-    || !['approved', 'blocked'].includes(action.state)) {
-    fail('STATE_TRANSITION_INVALID', 'Execution lifecycle starts only from one approved Cycle and approved or explicitly recoverable Action.', {
-      actionState: action.state,
-      cycleState: cycle.state,
-      operationId: operation.operationId,
-    });
+  if (
+    operation.operationKind !== 'execute' ||
+    operation.operationId !== result.operationId ||
+    operation.resultId !== result.resultId ||
+    cycle.cycleId !== action.sourceCycleId ||
+    cycle.state !== 'approved' ||
+    !['approved', 'blocked'].includes(action.state)
+  ) {
+    fail(
+      'STATE_TRANSITION_INVALID',
+      'Execution lifecycle starts only from one approved Cycle and approved or explicitly recoverable Action.',
+      {
+        actionState: action.state,
+        cycleState: cycle.state,
+        operationId: operation.operationId,
+      },
+    );
   }
   const recovered = action.state === 'blocked';
-  if (recovered && (!recovery
-    || typeof recovery.priorResultId !== 'string'
-    || typeof recovery.reasonCode !== 'string')) {
-    fail('STATE_TRANSITION_INVALID', 'A blocked Action requires explicit prior-result recovery provenance.');
+  if (
+    recovered &&
+    (!recovery ||
+      typeof recovery.priorResultId !== 'string' ||
+      typeof recovery.reasonCode !== 'string')
+  ) {
+    fail(
+      'STATE_TRANSITION_INVALID',
+      'A blocked Action requires explicit prior-result recovery provenance.',
+    );
   }
   const executionStatus = deriveOperatingExecutionVerificationStatusV2({ result });
   const terminalSucceeded = executionStatus === 'success';
   const terminalReason = terminalSucceeded ? null : `execution-${executionStatus}`;
   const assignment = buildOperatingTerminalVerificationAssignmentV2({
-    action, cycle, operation, result, verificationPlan, timestamp,
+    action,
+    cycle,
+    operation,
+    result,
+    verificationPlan,
+    timestamp,
   });
   const identities = deriveOperatingExecutionLifecycleIdentitiesV2({
     operationId: operation.operationId,
@@ -342,8 +407,23 @@ export function buildOperatingExecutionLifecycleV2({
         recovered ? recovery.priorResultId : null,
         recovered ? recovery.reasonCode : null,
       ),
-      actionStarted: actionTransition(action, 'queued', 'in_progress', operation.operationId, null, null),
-      cycleExecuting: cycleTransition(cycle, 'approved', 'executing', action.actionId, operation.operationId, null, null),
+      actionStarted: actionTransition(
+        action,
+        'queued',
+        'in_progress',
+        operation.operationId,
+        null,
+        null,
+      ),
+      cycleExecuting: cycleTransition(
+        cycle,
+        'approved',
+        'executing',
+        action.actionId,
+        operation.operationId,
+        null,
+        null,
+      ),
       actionTerminal: actionTransition(
         action,
         'in_progress',
@@ -378,14 +458,20 @@ export function buildOperatingRollbackVerificationV2({
   typed('operating-governed-operation', operation, 'Rollback verification operation');
   typed('operating-rollback-result', result, 'Rollback verification result');
   exactActionTuple(action, operation, result);
-  if (operation.operationKind !== 'rollback'
-    || operation.operationId !== result.rollbackOperationId
-    || operation.resultId !== result.rollbackResultId
-    || !['approved', 'executing', 'verifying'].includes(cycle.state)) {
-    fail('STATE_TRANSITION_INVALID', 'Rollback verification requires one terminal rollback in its active Action Cycle.', {
-      operationId: operation.operationId,
-      cycleState: cycle.state,
-    });
+  if (
+    operation.operationKind !== 'rollback' ||
+    operation.operationId !== result.rollbackOperationId ||
+    operation.resultId !== result.rollbackResultId ||
+    !['approved', 'executing', 'verifying'].includes(cycle.state)
+  ) {
+    fail(
+      'STATE_TRANSITION_INVALID',
+      'Rollback verification requires one terminal rollback in its active Action Cycle.',
+      {
+        operationId: operation.operationId,
+        cycleState: cycle.state,
+      },
+    );
   }
   const executionStatus = deriveOperatingExecutionVerificationStatusV2({ rollbackResult: result });
   return freeze({
@@ -396,7 +482,12 @@ export function buildOperatingRollbackVerificationV2({
       resultId: result.rollbackResultId,
     }),
     verificationAssignment: buildOperatingTerminalVerificationAssignmentV2({
-      action, cycle, operation, result, verificationPlan, timestamp,
+      action,
+      cycle,
+      operation,
+      result,
+      verificationPlan,
+      timestamp,
     }),
   });
 }
@@ -418,29 +509,42 @@ export function deriveOperatingVerificationFeedbackV2({
   typed('operating-action', action, 'Verification feedback Action');
   typed('operating-action-verification-plan', verificationPlan, 'Verification feedback plan');
   exactVerificationPlanOwnership(action, verificationPlan);
-  if (!OPERATING_EXECUTION_VERIFICATION_STATUSES_V2.includes(executionStatus)
-  ) {
-    fail('RESULT_CONTRACT_INVALID', 'Verification feedback requires one exact Action plan and execution status.', {
-      actionId: action.actionId,
-      executionStatus,
-    });
+  if (!OPERATING_EXECUTION_VERIFICATION_STATUSES_V2.includes(executionStatus)) {
+    fail(
+      'RESULT_CONTRACT_INVALID',
+      'Verification feedback requires one exact Action plan and execution status.',
+      {
+        actionId: action.actionId,
+        executionStatus,
+      },
+    );
   }
   if (outcome !== null) {
     typed('operating-outcome', outcome, 'Verification feedback Outcome');
     exactOperatingScope(action, outcome, 'Verification Outcome');
-    if (outcome.actionId !== action.actionId
-      || outcome.verificationPlanId !== verificationPlan.verificationPlanId) {
-      fail('OPERATING_SCOPE_INVALID', 'Verification Outcome must retain the exact Action and plan.');
+    if (
+      outcome.actionId !== action.actionId ||
+      outcome.verificationPlanId !== verificationPlan.verificationPlanId
+    ) {
+      fail(
+        'OPERATING_SCOPE_INVALID',
+        'Verification Outcome must retain the exact Action and plan.',
+      );
     }
   }
   if (learning !== null) {
     typed('operating-learning', learning, 'Verification feedback Learning');
     exactOperatingScope(action, learning, 'Verification Learning');
-    if (!outcome
-      || learning.outcomeId !== outcome.outcomeId
-      || learning.sourceArtifactId !== outcome.sourceArtifactId
-      || sha256Jcs(learning.evidenceRefIds) !== sha256Jcs(outcome.evidenceRefIds)) {
-      fail('STATE_TRANSITION_INVALID', 'Verification Learning must be atomically owned by its exact Outcome.');
+    if (
+      !outcome ||
+      learning.outcomeId !== outcome.outcomeId ||
+      learning.sourceArtifactId !== outcome.sourceArtifactId ||
+      sha256Jcs(learning.evidenceRefIds) !== sha256Jcs(outcome.evidenceRefIds)
+    ) {
+      fail(
+        'STATE_TRANSITION_INVALID',
+        'Verification Learning must be atomically owned by its exact Outcome.',
+      );
     }
   }
   if (delta !== null) {
@@ -452,11 +556,15 @@ export function deriveOperatingVerificationFeedbackV2({
     exactOperatingScope(action, snapshot, 'Verification Snapshot');
   }
   if (delta !== null && snapshot !== null && delta.currentSnapshotId !== snapshot.snapshotId) {
-    fail('STATE_TRANSITION_INVALID', 'Verification Delta must bind the exact supplied later Snapshot.', {
-      deltaId: delta.deltaId,
-      currentSnapshotId: delta.currentSnapshotId,
-      snapshotId: snapshot.snapshotId,
-    });
+    fail(
+      'STATE_TRANSITION_INVALID',
+      'Verification Delta must bind the exact supplied later Snapshot.',
+      {
+        deltaId: delta.deltaId,
+        currentSnapshotId: delta.currentSnapshotId,
+        snapshotId: snapshot.snapshotId,
+      },
+    );
   }
   if (cycle !== null) {
     typed('operating-cycle', cycle, 'Verification feedback Cycle');
@@ -467,7 +575,10 @@ export function deriveOperatingVerificationFeedbackV2({
   let verificationAssignment = null;
   if (hasOwnership) {
     if (!sourceCycle || !operation || !result || !Array.isArray(verificationAssignments)) {
-      fail('RESULT_CONTRACT_INVALID', 'Verification feedback ownership requires the complete source Cycle, operation, result, and Assignment set.');
+      fail(
+        'RESULT_CONTRACT_INVALID',
+        'Verification feedback ownership requires the complete source Cycle, operation, result, and Assignment set.',
+      );
     }
     verificationAssignment = selectOperatingTerminalVerificationAssignmentV2({
       assignments: verificationAssignments,
@@ -485,17 +596,20 @@ export function deriveOperatingVerificationFeedbackV2({
     ...(delta?.metricChanges?.map(({ subjectId }) => subjectId) ?? []),
     ...(delta?.decisionRevisitIds ?? []),
   ]);
-  const revisit = changedSubjects.has(action.actionId)
-    || changedSubjects.has(verificationPlan.metricId)
-    || verificationPlan.revisitDecisionIds.some((id) => changedSubjects.has(id));
+  const revisit =
+    changedSubjects.has(action.actionId) ||
+    changedSubjects.has(verificationPlan.metricId) ||
+    verificationPlan.revisitDecisionIds.some((id) => changedSubjects.has(id));
   let hypothesisStatus = 'pending';
   if (executionStatus === 'cancelled') hypothesisStatus = 'cancelled';
   else if (executionStatus === 'rolled-back') hypothesisStatus = 'revisit';
-  else if (['failure', 'blocked', 'uncertain', 'partial'].includes(executionStatus)) hypothesisStatus = 'blocked';
+  else if (['failure', 'blocked', 'uncertain', 'partial'].includes(executionStatus))
+    hypothesisStatus = 'blocked';
   if (outcome?.status === 'succeeded') hypothesisStatus = 'confirmed';
   else if (outcome?.status === 'failed') hypothesisStatus = 'failed';
   else if (outcome?.status === 'cancelled') hypothesisStatus = 'cancelled';
-  else if (outcome && ['blocked', 'insufficient-evidence'].includes(outcome.status)) hypothesisStatus = 'blocked';
+  else if (outcome && ['blocked', 'insufficient-evidence'].includes(outcome.status))
+    hypothesisStatus = 'blocked';
   if (revisit && !['cancelled', 'failed'].includes(hypothesisStatus)) hypothesisStatus = 'revisit';
 
   return freeze({

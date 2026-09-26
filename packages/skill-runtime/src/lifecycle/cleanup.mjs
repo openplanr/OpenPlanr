@@ -25,9 +25,10 @@ export function cleanupLifecycleProgress({ projectRoot, now } = {}) {
     removed,
     retained,
     unreadable: unreadable.length,
-    notice: removed.length > 0
-      ? `Removed ${removed.length} expired local progress ${removed.length === 1 ? 'file' : 'files'}.`
-      : 'No expired local progress needed cleanup.',
+    notice:
+      removed.length > 0
+        ? `Removed ${removed.length} expired local progress ${removed.length === 1 ? 'file' : 'files'}.`
+        : 'No expired local progress needed cleanup.',
   });
 }
 
@@ -42,6 +43,8 @@ export function closeSessionProgress({ projectRoot, sessionId } = {}) {
   return freezeJson({
     status: 'completed',
     removed,
-    notice: removed ? 'Removed closed-session progress.' : 'No closed-session progress was present.',
+    notice: removed
+      ? 'Removed closed-session progress.'
+      : 'No closed-session progress was present.',
   });
 }

@@ -39,7 +39,8 @@ export const CONTRACTS = {
     height: 1024,
     sections: ['shell', 'content'],
     tiles: ['light'],
-    notes: 'A real desktop screen on the 4-point grid; AA contrast; tokens not raw hex where a system exists.',
+    notes:
+      'A real desktop screen on the 4-point grid; AA contrast; tokens not raw hex where a system exists.',
   },
   'og-image': {
     target: 'og-image',
@@ -84,25 +85,32 @@ export function validateSheet(svgText, contract) {
   const width = text.match(/<svg[^>]*\bwidth="(\d+)/)?.[1];
   const height = text.match(/<svg[^>]*\bheight="(\d+)/)?.[1];
   if (width !== String(contract.width) || height !== String(contract.height)) {
-    issues.push(`dimensions must be ${contract.width}×${contract.height} (got ${width ?? '?'}×${height ?? '?'})`);
+    issues.push(
+      `dimensions must be ${contract.width}×${contract.height} (got ${width ?? '?'}×${height ?? '?'})`,
+    );
   }
   const viewBox = text.match(/<svg[^>]*\bviewBox="([^"]+)"/)?.[1];
   if (viewBox !== `0 0 ${contract.width} ${contract.height}`) {
-    issues.push(`viewBox must be "0 0 ${contract.width} ${contract.height}" (got "${viewBox ?? 'missing'}")`);
+    issues.push(
+      `viewBox must be "0 0 ${contract.width} ${contract.height}" (got "${viewBox ?? 'missing'}")`,
+    );
   }
 
   for (const s of contract.sections) {
-    if (!new RegExp(`id="section-${s}"`).test(text)) issues.push(`missing required <g id="section-${s}">`);
+    if (!new RegExp(`id="section-${s}"`).test(text))
+      issues.push(`missing required <g id="section-${s}">`);
   }
   for (const t of contract.tiles) {
-    if (!new RegExp(`id="tile-${t}"`).test(text)) issues.push(`missing required <g id="tile-${t}">`);
+    if (!new RegExp(`id="tile-${t}"`).test(text))
+      issues.push(`missing required <g id="tile-${t}">`);
   }
 
   if (/<script[\s>]/i.test(text)) issues.push('contains <script> — sheets must be inert');
   if (/\bhref="https?:/i.test(text) || /url\(https?:/i.test(text)) {
     issues.push('references an external URL — must be self-contained/offline');
   }
-  if (!/<text[\s>]/.test(text)) issues.push('no <text> elements — type must stay real/editable, not outlined');
+  if (!/<text[\s>]/.test(text))
+    issues.push('no <text> elements — type must stay real/editable, not outlined');
 
   return { pass: issues.length === 0, issues };
 }

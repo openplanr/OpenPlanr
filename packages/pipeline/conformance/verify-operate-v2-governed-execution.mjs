@@ -4,60 +4,51 @@ import assert from 'node:assert/strict';
 import { readFileSync, realpathSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-
-import {
-  OPERATE_RUNTIME_CONTRACT_KINDS,
-  sha256Jcs,
-  validateProtocolArtifact,
-} from 'planr-pipeline/protocol';
-import {
-  deriveOperatingRuntimeDeltaV2,
-  materializeOperatingStateSnapshotV2,
-  recordOperatingActionVerificationOutcomeV2,
-  recordOperatingIntelligenceStateV2,
-  createOperatingRuntimeEventV2,
-  reduceOperatingRuntimeEventsV2,
-  transitionOperatingActionLifecycleV2,
-} from 'planr-pipeline/operate/runtime-v2';
 import {
   createOperatingApprovalRecordV2,
   createOperatingApprovalRequirementV2,
 } from 'planr-pipeline/operate/approvals-v2';
+import { evaluateOperateAuthorityV2 } from 'planr-pipeline/operate/authorization-v2';
 import {
-  evaluateOperateAuthorityV2,
-} from 'planr-pipeline/operate/authorization-v2';
-import {
-  createOperatingGovernedExecutionRuntimeV2,
-} from 'planr-pipeline/operate/governed-execution-v2';
-import {
-  OPEN_REFERENCE_OPERATE_GOVERNED_EXTENSIONS_V2,
-} from 'planr-pipeline/operate/governed-extensions-v2';
+  buildOperatingExecutionLifecycleV2,
+  deriveOperatingExecutionVerificationStatusV2,
+  deriveOperatingVerificationFeedbackV2,
+  selectOperatingTerminalVerificationAssignmentV2,
+} from 'planr-pipeline/operate/execution-verification-v2';
+import { createOperatingGovernedExecutionRuntimeV2 } from 'planr-pipeline/operate/governed-execution-v2';
+import { OPEN_REFERENCE_OPERATE_GOVERNED_EXTENSIONS_V2 } from 'planr-pipeline/operate/governed-extensions-v2';
 import {
   buildOperatingRollbackPlanV2,
   classifyOperatingGovernedRecoveryV2,
   createOperatingGovernedRecoveryRuntimeV2,
   recordOperatingRollbackPlanV2,
 } from 'planr-pipeline/operate/governed-recovery-v2';
-import {
-  deriveOperatingExecutionVerificationStatusV2,
-  deriveOperatingVerificationFeedbackV2,
-  buildOperatingExecutionLifecycleV2,
-  selectOperatingTerminalVerificationAssignmentV2,
-} from 'planr-pipeline/operate/execution-verification-v2';
+import { derivePersistentOperatingActionRevisionHashV2 } from 'planr-pipeline/operate/persistent-work-v2';
 import {
   createOperatingActionPolicyV2,
   evaluateOperatingActionPolicyV2,
 } from 'planr-pipeline/operate/policy-v2';
 import {
-  derivePersistentOperatingActionRevisionHashV2,
-} from 'planr-pipeline/operate/persistent-work-v2';
-import {
-  OPEN_REFERENCE_CONTAINMENT_EXECUTOR_HOST_V2,
-  OPEN_REFERENCE_PROJECT_EXECUTOR_HOST_V2,
   createDisposableLocalProjectTargetV2,
   createSyntheticNoNetworkTargetV2,
   evaluateOpenReferencePolicyProviderV2,
+  OPEN_REFERENCE_CONTAINMENT_EXECUTOR_HOST_V2,
+  OPEN_REFERENCE_PROJECT_EXECUTOR_HOST_V2,
 } from 'planr-pipeline/operate/reference-governed-executors-v2';
+import {
+  createOperatingRuntimeEventV2,
+  deriveOperatingRuntimeDeltaV2,
+  materializeOperatingStateSnapshotV2,
+  recordOperatingActionVerificationOutcomeV2,
+  recordOperatingIntelligenceStateV2,
+  reduceOperatingRuntimeEventsV2,
+  transitionOperatingActionLifecycleV2,
+} from 'planr-pipeline/operate/runtime-v2';
+import {
+  OPERATE_RUNTIME_CONTRACT_KINDS,
+  sha256Jcs,
+  validateProtocolArtifact,
+} from 'planr-pipeline/protocol';
 import { runOperatingIntelligenceJourneyV2 } from './verify-operate-v2-operating-intelligence.mjs';
 
 const VERSION = '2.0.0';
@@ -92,8 +83,9 @@ function checkpointStore(initialState) {
   return {
     readSnapshot: () => clone(state),
     compareAndSwap(input) {
-      const committed = input.expectedEventHead.sequence === state.eventHead.sequence
-        && input.expectedEventHead.hash === state.eventHead.hash;
+      const committed =
+        input.expectedEventHead.sequence === state.eventHead.sequence &&
+        input.expectedEventHead.hash === state.eventHead.hash;
       if (committed) {
         state = clone(input.nextState);
         commits.push({ phase: input.phase, state: clone(state) });
@@ -107,8 +99,13 @@ function checkpointStore(initialState) {
 
 const TERMINAL_EVENT_FIELDS = ['submitted', 'artifactCreated', 'validated', 'resultRecorded'];
 const EXECUTION_EVENT_FIELDS = [
-  'assignmentCreated', 'assignmentClaimed', 'assignmentStarted', 'availabilityRecorded',
-  'capabilityGranted', 'intentRecorded', ...TERMINAL_EVENT_FIELDS,
+  'assignmentCreated',
+  'assignmentClaimed',
+  'assignmentStarted',
+  'availabilityRecorded',
+  'capabilityGranted',
+  'intentRecorded',
+  ...TERMINAL_EVENT_FIELDS,
 ];
 
 function executionDraft(suffix) {
@@ -125,16 +122,22 @@ function executionDraft(suffix) {
     grantExpiresAt: '2026-08-10T12:05:00Z',
     availabilityExpiresAt: '2026-08-10T12:06:00Z',
     correlationId: `corr-${suffix}`,
-    eventIds: Object.fromEntries(EXECUTION_EVENT_FIELDS.map((field, index) => (
-      [field, `evt_${suffix}_${String(index + 1).padStart(2, '0')}`]
-    ))),
+    eventIds: Object.fromEntries(
+      EXECUTION_EVENT_FIELDS.map((field, index) => [
+        field,
+        `evt_${suffix}_${String(index + 1).padStart(2, '0')}`,
+      ]),
+    ),
     uncertainty: {
       resultId: `xres_uncertain${suffix}`,
       resultArtifactId: `art_uncertain${suffix}`,
       submissionId: `sub_uncertain${suffix}`,
-      eventIds: Object.fromEntries(TERMINAL_EVENT_FIELDS.map((field, index) => (
-        [field, `evt_${suffix}_uncertain_${String(index + 1).padStart(2, '0')}`]
-      ))),
+      eventIds: Object.fromEntries(
+        TERMINAL_EVENT_FIELDS.map((field, index) => [
+          field,
+          `evt_${suffix}_uncertain_${String(index + 1).padStart(2, '0')}`,
+        ]),
+      ),
     },
   };
 }
@@ -153,30 +156,46 @@ function rollbackDraft(suffix) {
     grantExpiresAt: '2026-08-10T12:05:00Z',
     availabilityExpiresAt: '2026-08-10T12:06:00Z',
     correlationId: `corr-${suffix}`,
-    eventIds: Object.fromEntries(EXECUTION_EVENT_FIELDS.map((field, index) => (
-      [field, `evt_${suffix}_${String(index + 1).padStart(2, '0')}`]
-    ))),
+    eventIds: Object.fromEntries(
+      EXECUTION_EVENT_FIELDS.map((field, index) => [
+        field,
+        `evt_${suffix}_${String(index + 1).padStart(2, '0')}`,
+      ]),
+    ),
     uncertainty: {
       rollbackResultId: `rbres_uncertain${suffix}`,
       resultArtifactId: `art_rbuncertain${suffix}`,
       submissionId: `sub_rbuncertain${suffix}`,
-      eventIds: Object.fromEntries(TERMINAL_EVENT_FIELDS.map((field, index) => (
-        [field, `evt_${suffix}_uncertain_${String(index + 1).padStart(2, '0')}`]
-      ))),
+      eventIds: Object.fromEntries(
+        TERMINAL_EVENT_FIELDS.map((field, index) => [
+          field,
+          `evt_${suffix}_uncertain_${String(index + 1).padStart(2, '0')}`,
+        ]),
+      ),
     },
   };
 }
 
 function hostileEnvironment(label, accessCounts = null) {
   return {
-    trustedHost: new Proxy({}, { get() {
-      if (accessCounts) accessCounts.host += 1;
-      throw new Error(`${label}: host was accessed`);
-    } }),
-    targetAdapter: new Proxy({}, { get() {
-      if (accessCounts) accessCounts.target += 1;
-      throw new Error(`${label}: target was accessed`);
-    } }),
+    trustedHost: new Proxy(
+      {},
+      {
+        get() {
+          if (accessCounts) accessCounts.host += 1;
+          throw new Error(`${label}: host was accessed`);
+        },
+      },
+    ),
+    targetAdapter: new Proxy(
+      {},
+      {
+        get() {
+          if (accessCounts) accessCounts.target += 1;
+          throw new Error(`${label}: target was accessed`);
+        },
+      },
+    ),
   };
 }
 
@@ -204,21 +223,21 @@ function governedActionFromPhase5(domainId, phase5Action, baselineArtifactId) {
     title: phase5Action.title,
     state: 'approved',
     actionKind: { id: `${domainId}-operating-hypothesis`, version: '1.0.0' },
-    requestedCapability: domainId === 'business'
-      ? { id: 'bounded-project-write', version: '1.0.0' }
-      : { id: 'synthetic-contained-write', version: '1.0.0' },
-    targetBinding: domainId === 'business'
-      ? { kind: 'project-record', id: 'phase6-business-record', revision: 'rev-before' }
-      : { kind: 'synthetic-target', id: 'phase6-software-target', revision: 'rev-before' },
+    requestedCapability:
+      domainId === 'business'
+        ? { id: 'bounded-project-write', version: '1.0.0' }
+        : { id: 'synthetic-contained-write', version: '1.0.0' },
+    targetBinding:
+      domainId === 'business'
+        ? { kind: 'project-record', id: 'phase6-business-record', revision: 'rev-before' }
+        : { kind: 'synthetic-target', id: 'phase6-software-target', revision: 'rev-before' },
     effectClass: domainId === 'business' ? 'project-write' : 'machine-local-write',
-    preconditionArtifactIds: [...new Set([
-      phase5Action.sourceArtifactId,
-      baselineArtifactId,
-    ])].sort(),
+    preconditionArtifactIds: [
+      ...new Set([phase5Action.sourceArtifactId, baselineArtifactId]),
+    ].sort(),
     executionBinding: {
-      policyId: domainId === 'business'
-        ? 'bounded-project-write-policy'
-        : 'synthetic-containment-policy',
+      policyId:
+        domainId === 'business' ? 'bounded-project-write-policy' : 'synthetic-containment-policy',
       policyVersion: '1.0.0',
       rollbackRequired: true,
       verificationRequired: true,
@@ -277,7 +296,10 @@ function policiesFor(action) {
     provenance: {
       providerId: 'open-reference-policy-provider',
       providerVersion: '1.0.0',
-      sourceHash: `sha256:${action.domainId === 'business' ? 'b' : 'd'}`.padEnd(71, action.domainId === 'business' ? 'b' : 'd'),
+      sourceHash: `sha256:${action.domainId === 'business' ? 'b' : 'd'}`.padEnd(
+        71,
+        action.domainId === 'business' ? 'b' : 'd',
+      ),
     },
   });
   return [core, domain];
@@ -338,14 +360,14 @@ function prepareScenario(domainId) {
     suffix: `phase6_${domainId}_execute_001`,
   });
   const initial = clone(context.state);
-  initial.cycles = initial.cycles.map((cycle) => (
+  initial.cycles = initial.cycles.map((cycle) =>
     cycle.cycleId === action.sourceCycleId
       ? { ...cycle, state: 'approved', updatedAt: '2026-08-10T11:59:00Z' }
-      : cycle
-  ));
-  initial.actions = initial.actions.map((candidate) => (
-    candidate.actionId === action.actionId ? action : candidate
-  ));
+      : cycle,
+  );
+  initial.actions = initial.actions.map((candidate) =>
+    candidate.actionId === action.actionId ? action : candidate,
+  );
   Object.assign(initial, {
     actionPolicies: policies,
     policyEvaluations: [evaluation],
@@ -382,15 +404,27 @@ function prepareScenario(domainId) {
     },
   };
   const suffix = domainId === 'business' ? '86000001' : '86000011';
-  const targetAdapter = domainId === 'business'
-    ? createDisposableLocalProjectTargetV2({ target: action.targetBinding, initialValue })
-    : createSyntheticNoNetworkTargetV2({ target: action.targetBinding, initialValue });
-  const trustedHost = domainId === 'business'
-    ? OPEN_REFERENCE_PROJECT_EXECUTOR_HOST_V2
-    : OPEN_REFERENCE_CONTAINMENT_EXECUTOR_HOST_V2;
+  const targetAdapter =
+    domainId === 'business'
+      ? createDisposableLocalProjectTargetV2({ target: action.targetBinding, initialValue })
+      : createSyntheticNoNetworkTargetV2({ target: action.targetBinding, initialValue });
+  const trustedHost =
+    domainId === 'business'
+      ? OPEN_REFERENCE_PROJECT_EXECUTOR_HOST_V2
+      : OPEN_REFERENCE_CONTAINMENT_EXECUTOR_HOST_V2;
   return {
-    phase5, context, action, policies, evaluation, requirement, approval,
-    initial: validated, request, draft: executionDraft(suffix), targetAdapter, trustedHost,
+    phase5,
+    context,
+    action,
+    policies,
+    evaluation,
+    requirement,
+    approval,
+    initial: validated,
+    request,
+    draft: executionDraft(suffix),
+    targetAdapter,
+    trustedHost,
   };
 }
 
@@ -401,29 +435,41 @@ async function assertPreEffectRejections(scenario) {
     initialState: withoutApproval,
     checkpointStore: checkpointStore(withoutApproval),
   });
-  const noApprovalCode = await rejectionCode(noApprovalRuntime.execute(
-    scenario.request,
-    executionDraft(scenario.action.domainId === 'business' ? '86000101' : '86000111'),
-    hostileEnvironment(`${scenario.action.domainId}/approval-negative`),
-  ));
-  pass(noApprovalCode !== null, `${scenario.action.domainId}: missing approval rejects before target access`);
+  const noApprovalCode = await rejectionCode(
+    noApprovalRuntime.execute(
+      scenario.request,
+      executionDraft(scenario.action.domainId === 'business' ? '86000101' : '86000111'),
+      hostileEnvironment(`${scenario.action.domainId}/approval-negative`),
+    ),
+  );
+  pass(
+    noApprovalCode !== null,
+    `${scenario.action.domainId}: missing approval rejects before target access`,
+  );
 
   const widened = clone(scenario.initial);
-  const widenedAction = widened.actions.find(({ actionId }) => actionId === scenario.action.actionId);
+  const widenedAction = widened.actions.find(
+    ({ actionId }) => actionId === scenario.action.actionId,
+  );
   widenedAction.effectClass = 'external-effect';
   refreshActionRevision(widenedAction);
-  const widenedCode = await rejectionCode((async () => {
-    const widenedRuntime = createOperatingGovernedExecutionRuntimeV2({
-      initialState: widened,
-      checkpointStore: checkpointStore(widened),
-    });
-    return widenedRuntime.execute(
-      scenario.request,
-      executionDraft(scenario.action.domainId === 'business' ? '86000201' : '86000211'),
-      hostileEnvironment(`${scenario.action.domainId}/effect-negative`),
-    );
-  })());
-  pass(widenedCode !== null, `${scenario.action.domainId}: effect widening rejects before target access`);
+  const widenedCode = await rejectionCode(
+    (async () => {
+      const widenedRuntime = createOperatingGovernedExecutionRuntimeV2({
+        initialState: widened,
+        checkpointStore: checkpointStore(widened),
+      });
+      return widenedRuntime.execute(
+        scenario.request,
+        executionDraft(scenario.action.domainId === 'business' ? '86000201' : '86000211'),
+        hostileEnvironment(`${scenario.action.domainId}/effect-negative`),
+      );
+    })(),
+  );
+  pass(
+    widenedCode !== null,
+    `${scenario.action.domainId}: effect widening rejects before target access`,
+  );
 
   const registrationOnly = evaluateOperateAuthorityV2('operate.action.execute', {
     action: scenario.action,
@@ -434,8 +480,10 @@ async function assertPreEffectRejections(scenario) {
     },
     governedExtensions: OPEN_REFERENCE_OPERATE_GOVERNED_EXTENSIONS_V2,
   });
-  pass(registrationOnly.allowed === false,
-    `${scenario.action.domainId}: extension registration alone confers no execution authority`);
+  pass(
+    registrationOnly.allowed === false,
+    `${scenario.action.domainId}: extension registration alone confers no execution authority`,
+  );
   return { noApprovalCode, widenedCode, registrationOnlyCode: registrationOnly.error.code };
 }
 
@@ -476,25 +524,32 @@ function appendRequiredRollbackLifecycle(state, scenario, executed) {
   // Required rollback keeps the Action approval reusable for its separately
   // authorized restorative operation. The Cycle still advances durably into
   // execution; the rollback terminal then owns the verifying transition.
-  const inputs = [{
-    eventId: lifecycle.identities.eventIds.cycleExecuting,
-    type: 'cycle.executing',
-    entityId: cycle.cycleId,
-    payload: lifecycle.transitions.cycleExecuting,
-  }];
+  const inputs = [
+    {
+      eventId: lifecycle.identities.eventIds.cycleExecuting,
+      type: 'cycle.executing',
+      entityId: cycle.cycleId,
+      payload: lifecycle.transitions.cycleExecuting,
+    },
+  ];
   for (const input of inputs) {
     const previousEvent = {
       sequence: next.eventHead.sequence,
       eventHash: next.eventHead.hash,
     };
-    const event = createOperatingRuntimeEventV2({
-      ...input,
-      timestamp: executed.result.completedAt,
-      cycleId: cycle.cycleId,
-      actor: { kind: 'engine', id: 'operate-runtime-v2' },
-      causationId: next.eventReplayIndex.find(({ sequence }) => sequence === next.eventHead.sequence)?.eventId ?? null,
-      correlationId: scenario.draft.correlationId,
-    }, { previousEvent });
+    const event = createOperatingRuntimeEventV2(
+      {
+        ...input,
+        timestamp: executed.result.completedAt,
+        cycleId: cycle.cycleId,
+        actor: { kind: 'engine', id: 'operate-runtime-v2' },
+        causationId:
+          next.eventReplayIndex.find(({ sequence }) => sequence === next.eventHead.sequence)
+            ?.eventId ?? null,
+        correlationId: scenario.draft.correlationId,
+      },
+      { previousEvent },
+    );
     next = reduceOperatingRuntimeEventsV2([event], { initialState: next });
   }
   return next;
@@ -527,95 +582,135 @@ function continueWithVerification(scenario, terminal) {
     evidenceRefIds: [context.evidenceRefId],
     sourceArtifactId: context.sourceArtifactId,
   };
-  const observed = recordOperatingIntelligenceStateV2({
-    cycleId: action.sourceCycleId,
-    snapshotId: context.snapshot.snapshotId,
-    stateId: context.operatingState.stateId,
-    claims: [],
-    metricObservations: [observation],
-    risks: [],
-    assumptions: [],
-    decisionRevisions: [],
-  }, {
-    timestamp: '2026-08-10T12:04:00Z',
-    correlationId: `corr_phase6_${action.domainId}_observation_001`,
-    eventIds: {
+  const observed = recordOperatingIntelligenceStateV2(
+    {
+      cycleId: action.sourceCycleId,
+      snapshotId: context.snapshot.snapshotId,
+      stateId: context.operatingState.stateId,
       claims: [],
-      metricObservations: [`evt_phase6_${action.domainId}_observation_001`],
+      metricObservations: [observation],
       risks: [],
       assumptions: [],
       decisionRevisions: [],
     },
-  }, { initialState: terminal.state, replayHook: context.replayHook });
-  const actionSourceDecision = observed.state.decisions.find(({ decisionId }) => (
-    decisionId === action.sourceDecisionId
-  ));
+    {
+      timestamp: '2026-08-10T12:04:00Z',
+      correlationId: `corr_phase6_${action.domainId}_observation_001`,
+      eventIds: {
+        claims: [],
+        metricObservations: [`evt_phase6_${action.domainId}_observation_001`],
+        risks: [],
+        assumptions: [],
+        decisionRevisions: [],
+      },
+    },
+    { initialState: terminal.state, replayHook: context.replayHook },
+  );
+  const actionSourceDecision = observed.state.decisions.find(
+    ({ decisionId }) => decisionId === action.sourceDecisionId,
+  );
   assert.ok(actionSourceDecision, 'governed Action retains its exact source Decision');
-  const outcome = recordOperatingActionVerificationOutcomeV2({
-    cycleId: action.sourceCycleId,
-    snapshotId: context.snapshot.snapshotId,
-    stateId: context.operatingState.stateId,
-    actionId: action.actionId,
-    verificationPlanId: context.verificationPlan.verificationPlanId,
-    observationId: observation.observationId,
-    learning: {
-      statement: `The governed ${action.domainId} effect and accepted observation preserve separate execution and hypothesis truth.`,
-      assumptionIds: [...actionSourceDecision.assumptionIds],
-      decisionIds: [action.sourceDecisionId],
+  const outcome = recordOperatingActionVerificationOutcomeV2(
+    {
+      cycleId: action.sourceCycleId,
+      snapshotId: context.snapshot.snapshotId,
+      stateId: context.operatingState.stateId,
+      actionId: action.actionId,
+      verificationPlanId: context.verificationPlan.verificationPlanId,
+      observationId: observation.observationId,
+      learning: {
+        statement: `The governed ${action.domainId} effect and accepted observation preserve separate execution and hypothesis truth.`,
+        assumptionIds: [...actionSourceDecision.assumptionIds],
+        decisionIds: [action.sourceDecisionId],
+      },
     },
-  }, {
-    timestamp: '2026-08-10T12:05:00Z',
-    correlationId: `corr_phase6_${action.domainId}_outcome_001`,
-    eventIds: {
-      outcome: `evt_phase6_${action.domainId}_outcome_001`,
-      learning: `evt_phase6_${action.domainId}_learning_001`,
+    {
+      timestamp: '2026-08-10T12:05:00Z',
+      correlationId: `corr_phase6_${action.domainId}_outcome_001`,
+      eventIds: {
+        outcome: `evt_phase6_${action.domainId}_outcome_001`,
+        learning: `evt_phase6_${action.domainId}_learning_001`,
+      },
     },
-  }, { initialState: observed.state, replayHook: context.replayHook });
+    { initialState: observed.state, replayHook: context.replayHook },
+  );
   const laterMetric = {
     ...clone(context.metric),
     observationIds: [observation.observationId],
     updatedAt: '2026-08-10T12:06:00Z',
   };
-  const laterSnapshot = materializeOperatingStateSnapshotV2({
-    cycleId: action.sourceCycleId,
-    scope: { scopeId: action.scopeId, domainId: action.domainId, domainVersion: action.domainVersion },
-    domainContract: context.domain.domainContract,
-    sourceArtifactIds: [context.sourceArtifactId, context.challengerArtifactId, context.chairArtifactId],
-    evidenceRefIds: [context.evidenceRefId],
-    sourceRevisions: [
-      { sourceArtifactId: context.sourceArtifactId, revision: 'r2', evidenceRefIds: [context.evidenceRefId] },
-      { sourceArtifactId: context.challengerArtifactId, revision: context.challengerArtifact.rawHash, evidenceRefIds: [] },
-      { sourceArtifactId: context.chairArtifactId, revision: context.chairArtifact.rawHash, evidenceRefIds: [] },
-    ],
-    collections: {
-      objectives: [context.objective],
-      metrics: [laterMetric],
-      findings: [context.finding, ...context.materializedFindings],
-      decisions: [actionSourceDecision],
-      actions: [stateAction],
-      risks: [context.risk],
-      assumptions: [context.assumption],
+  const laterSnapshot = materializeOperatingStateSnapshotV2(
+    {
+      cycleId: action.sourceCycleId,
+      scope: {
+        scopeId: action.scopeId,
+        domainId: action.domainId,
+        domainVersion: action.domainVersion,
+      },
+      domainContract: context.domain.domainContract,
+      sourceArtifactIds: [
+        context.sourceArtifactId,
+        context.challengerArtifactId,
+        context.chairArtifactId,
+      ],
+      evidenceRefIds: [context.evidenceRefId],
+      sourceRevisions: [
+        {
+          sourceArtifactId: context.sourceArtifactId,
+          revision: 'r2',
+          evidenceRefIds: [context.evidenceRefId],
+        },
+        {
+          sourceArtifactId: context.challengerArtifactId,
+          revision: context.challengerArtifact.rawHash,
+          evidenceRefIds: [],
+        },
+        {
+          sourceArtifactId: context.chairArtifactId,
+          revision: context.chairArtifact.rawHash,
+          evidenceRefIds: [],
+        },
+      ],
+      collections: {
+        objectives: [context.objective],
+        metrics: [laterMetric],
+        findings: [context.finding, ...context.materializedFindings],
+        decisions: [actionSourceDecision],
+        actions: [stateAction],
+        risks: [context.risk],
+        assumptions: [context.assumption],
+      },
     },
-  }, {
-    snapshotId: `snp_phase6_${action.domainId}_002`,
-    stateId: `oms_phase6_${action.domainId}_002`,
-    timestamp: '2026-08-10T12:06:00Z',
-    correlationId: `corr_phase6_${action.domainId}_snapshot_002`,
-    eventIds: {
-      snapshot: `evt_phase6_${action.domainId}_snapshot_002`,
-      state: `evt_phase6_${action.domainId}_state_002`,
+    {
+      snapshotId: `snp_phase6_${action.domainId}_002`,
+      stateId: `oms_phase6_${action.domainId}_002`,
+      timestamp: '2026-08-10T12:06:00Z',
+      correlationId: `corr_phase6_${action.domainId}_snapshot_002`,
+      eventIds: {
+        snapshot: `evt_phase6_${action.domainId}_snapshot_002`,
+        state: `evt_phase6_${action.domainId}_state_002`,
+      },
     },
-  }, { initialState: outcome.state, artifactStore: context.artifactStore, replayHook: context.replayHook });
-  const delta = deriveOperatingRuntimeDeltaV2({
-    cycleId: action.sourceCycleId,
-    snapshotId: laterSnapshot.snapshot.snapshotId,
-    stateId: laterSnapshot.operatingState.stateId,
-  }, {
-    deltaId: `dlt_phase6_${action.domainId}_002`,
-    eventId: `evt_phase6_${action.domainId}_delta_002`,
-    timestamp: '2026-08-10T12:07:00Z',
-    correlationId: `corr_phase6_${action.domainId}_delta_002`,
-  }, { initialState: laterSnapshot.state, replayHook: context.replayHook });
+    {
+      initialState: outcome.state,
+      artifactStore: context.artifactStore,
+      replayHook: context.replayHook,
+    },
+  );
+  const delta = deriveOperatingRuntimeDeltaV2(
+    {
+      cycleId: action.sourceCycleId,
+      snapshotId: laterSnapshot.snapshot.snapshotId,
+      stateId: laterSnapshot.operatingState.stateId,
+    },
+    {
+      deltaId: `dlt_phase6_${action.domainId}_002`,
+      eventId: `evt_phase6_${action.domainId}_delta_002`,
+      timestamp: '2026-08-10T12:07:00Z',
+      correlationId: `corr_phase6_${action.domainId}_delta_002`,
+    },
+    { initialState: laterSnapshot.state, replayHook: context.replayHook },
+  );
   const executionStatus = deriveOperatingExecutionVerificationStatusV2(
     terminal.result.kind === 'operating-rollback-result'
       ? { rollbackResult: terminal.result }
@@ -635,19 +730,30 @@ function continueWithVerification(scenario, terminal) {
     snapshot: laterSnapshot.snapshot,
     cycle: stateCycle,
   });
-  pass(Number.isInteger(phase5.finalEventSequence) && phase5.finalEventSequence > 0
-    && phase5.stageOrder.length === 10,
-    `${action.domainId}: governed continuation starts at the certified Phase-5 Action checkpoint`);
-  pass(observed.events.length === 1 && observed.events[0].type === 'metric.observed',
-    `${action.domainId}: one accepted verification observation is durable`);
-  pass(outcome.events.map(({ type }) => type).join(',') === 'outcome.recorded,learning.recorded',
-    `${action.domainId}: Outcome and Learning commit atomically after observation`);
-  pass(laterSnapshot.snapshot.previousSnapshotId === context.snapshot.snapshotId
-      && delta.delta.priorSnapshotId === context.snapshot.snapshotId
-      && delta.delta.decisionRevisitIds.includes(context.decision.decisionId),
-  `${action.domainId}: later Snapshot and Delta preserve the governed revisit path`);
-  pass(assignment.governedOperationId === terminal.operation.operationId,
-    `${action.domainId}: terminal verification has exactly one runtime-owned Assignment`);
+  pass(
+    Number.isInteger(phase5.finalEventSequence) &&
+      phase5.finalEventSequence > 0 &&
+      phase5.stageOrder.length === 10,
+    `${action.domainId}: governed continuation starts at the certified Phase-5 Action checkpoint`,
+  );
+  pass(
+    observed.events.length === 1 && observed.events[0].type === 'metric.observed',
+    `${action.domainId}: one accepted verification observation is durable`,
+  );
+  pass(
+    outcome.events.map(({ type }) => type).join(',') === 'outcome.recorded,learning.recorded',
+    `${action.domainId}: Outcome and Learning commit atomically after observation`,
+  );
+  pass(
+    laterSnapshot.snapshot.previousSnapshotId === context.snapshot.snapshotId &&
+      delta.delta.priorSnapshotId === context.snapshot.snapshotId &&
+      delta.delta.decisionRevisitIds.includes(context.decision.decisionId),
+    `${action.domainId}: later Snapshot and Delta preserve the governed revisit path`,
+  );
+  pass(
+    assignment.governedOperationId === terminal.operation.operationId,
+    `${action.domainId}: terminal verification has exactly one runtime-owned Assignment`,
+  );
   return { observed, outcome, laterSnapshot, delta, feedback, assignment };
 }
 
@@ -664,22 +770,30 @@ async function runGovernedJourney(domainId) {
     trustedHost: scenario.trustedHost,
     targetAdapter: scenario.targetAdapter,
   });
-  pass(executed.replayed === false && executed.dispatchCount === 1,
-    `${domainId}: one durable dispatch produces the contained execution result`);
-  pass(executed.state.governedOperations.length === 1
-      && executed.state.executionResults.length === 1
-      && scenario.targetAdapter.describe().effectCount === 1,
-  `${domainId}: execution records exactly one operation, result, and target effect`);
-  pass(store.commits.map(({ phase }) => phase).join(',') === 'dispatch-intent,terminal-result',
-    `${domainId}: durable intent commits before the terminal result`);
+  pass(
+    executed.replayed === false && executed.dispatchCount === 1,
+    `${domainId}: one durable dispatch produces the contained execution result`,
+  );
+  pass(
+    executed.state.governedOperations.length === 1 &&
+      executed.state.executionResults.length === 1 &&
+      scenario.targetAdapter.describe().effectCount === 1,
+    `${domainId}: execution records exactly one operation, result, and target effect`,
+  );
+  pass(
+    store.commits.map(({ phase }) => phase).join(',') === 'dispatch-intent,terminal-result',
+    `${domainId}: durable intent commits before the terminal result`,
+  );
 
   const replay = await runtime.execute(
     scenario.request,
     scenario.draft,
     hostileEnvironment(`${domainId}/exact-replay`),
   );
-  pass(replay.replayed === true && replay.dispatchCount === 0 && replay.events.length === 0,
-    `${domainId}: exact retry replays immutable history without target access`);
+  pass(
+    replay.replayed === true && replay.dispatchCount === 0 && replay.events.length === 0,
+    `${domainId}: exact retry replays immutable history without target access`,
+  );
   const divergentBefore = {
     eventHead: clone(store.snapshot().eventHead),
     dispatches: runtime.dispatchCount,
@@ -694,11 +808,13 @@ async function runGovernedJourney(domainId) {
   divergentRequest.payload.value = divergentValue;
   divergentRequest.payload.contentHash = sha256Jcs(divergentValue);
   const divergentAccesses = { host: 0, target: 0 };
-  const divergentCode = await rejectionCode(runtime.execute(
-    divergentRequest,
-    scenario.draft,
-    hostileEnvironment(`${domainId}/divergent-retry`, divergentAccesses),
-  ));
+  const divergentCode = await rejectionCode(
+    runtime.execute(
+      divergentRequest,
+      scenario.draft,
+      hostileEnvironment(`${domainId}/divergent-retry`, divergentAccesses),
+    ),
+  );
   const divergentAfter = {
     eventHead: clone(store.snapshot().eventHead),
     dispatches: runtime.dispatchCount,
@@ -712,14 +828,16 @@ async function runGovernedJourney(domainId) {
     hostAccesses: divergentAccesses.host,
     targetAccesses: divergentAccesses.target,
   });
-  pass(divergentRetry.code === 'OPERATION_CONFLICT'
-      && divergentRetry.events === 0
-      && divergentRetry.dispatches === 0
-      && divergentRetry.effects === 0
-      && divergentRetry.hostAccesses === 0
-      && divergentRetry.targetAccesses === 0
-      && divergentAfter.eventHead.hash === divergentBefore.eventHead.hash,
-  `${domainId}: divergent completed retry conflicts before Event, dispatch, host, target, or effect access`);
+  pass(
+    divergentRetry.code === 'OPERATION_CONFLICT' &&
+      divergentRetry.events === 0 &&
+      divergentRetry.dispatches === 0 &&
+      divergentRetry.effects === 0 &&
+      divergentRetry.hostAccesses === 0 &&
+      divergentRetry.targetAccesses === 0 &&
+      divergentAfter.eventHead.hash === divergentBefore.eventHead.hash,
+    `${domainId}: divergent completed retry conflicts before Event, dispatch, host, target, or effect access`,
+  );
   // Treat the successful terminal response as lost: restart exclusively from
   // the checkpoint that was durably committed before the caller could observe
   // an acknowledgement. Replay must not touch either host or target.
@@ -734,17 +852,21 @@ async function runGovernedJourney(domainId) {
     scenario.draft,
     hostileEnvironment(`${domainId}/restart-replay`),
   );
-  pass(restartReplay.replayed === true
-      && restarted.dispatchCount === 0
-      && scenario.targetAdapter.describe().effectCount === 1,
-  `${domainId}: lost acknowledgement restarts from durable history without a second effect`);
+  pass(
+    restartReplay.replayed === true &&
+      restarted.dispatchCount === 0 &&
+      scenario.targetAdapter.describe().effectCount === 1,
+    `${domainId}: lost acknowledgement restarts from durable history without a second effect`,
+  );
   const recovery = classifyOperatingGovernedRecoveryV2({
     state: executed.state,
     operationId: executed.operation.operationId,
     observedAt: '2026-08-10T12:01:30Z',
   });
-  pass(recovery.classification === 'applied' && recovery.source === 'durable-history',
-    `${domainId}: terminal recovery classifies from durable history without a blind retry`);
+  pass(
+    recovery.classification === 'applied' && recovery.source === 'durable-history',
+    `${domainId}: terminal recovery classifies from durable history without a blind retry`,
+  );
 
   let terminal = executed;
   let rollback = null;
@@ -781,32 +903,40 @@ async function runGovernedJourney(domainId) {
       trustedHost: scenario.trustedHost,
       targetAdapter: scenario.targetAdapter,
     });
-    pass(rollback.state.governedOperations.length === 2
-        && rollback.state.executionResults.length === 1
-        && rollback.state.rollbackResults.length === 1
-        && scenario.targetAdapter.describe().effectCount === 2,
-    'business: rollback is one separately authorized operation and one contained restorative effect');
-    pass(rollback.result.targetAfterHash === scenario.request.rollbackBaseline.contentHash,
-      'business: rollback restores the exact declared baseline');
+    pass(
+      rollback.state.governedOperations.length === 2 &&
+        rollback.state.executionResults.length === 1 &&
+        rollback.state.rollbackResults.length === 1 &&
+        scenario.targetAdapter.describe().effectCount === 2,
+      'business: rollback is one separately authorized operation and one contained restorative effect',
+    );
+    pass(
+      rollback.result.targetAfterHash === scenario.request.rollbackBaseline.contentHash,
+      'business: rollback restores the exact declared baseline',
+    );
     const rollbackReplay = await rollbackRuntime.rollback(
       request,
       draft,
       hostileEnvironment('business/rollback-replay'),
     );
-    pass(rollbackReplay.replayed === true && rollbackReplay.dispatchCount === 0,
-      'business: exact rollback retry replays history without a second effect');
+    pass(
+      rollbackReplay.replayed === true && rollbackReplay.dispatchCount === 0,
+      'business: exact rollback retry replays history without a second effect',
+    );
     terminal = rollback;
   }
 
   const verification = continueWithVerification(scenario, terminal);
-  const stateAction = terminal.state.actions.find(({ actionId }) => actionId === scenario.action.actionId);
+  const stateAction = terminal.state.actions.find(
+    ({ actionId }) => actionId === scenario.action.actionId,
+  );
   const lifecycleNegativeCode = (() => {
     try {
       transitionOperatingActionLifecycleV2(
         stateAction,
         stateAction.state === 'approved' ? 'completed' : 'in_progress',
         {
-        updatedAt: '2026-08-10T12:08:00Z',
+          updatedAt: '2026-08-10T12:08:00Z',
         },
       );
     } catch (error) {
@@ -814,30 +944,47 @@ async function runGovernedJourney(domainId) {
     }
     return null;
   })();
-  pass(lifecycleNegativeCode === 'STATE_TRANSITION_INVALID',
-    `${domainId}: an illegal terminal Action transition is rejected without an effect`);
+  pass(
+    lifecycleNegativeCode === 'STATE_TRANSITION_INVALID',
+    `${domainId}: an illegal terminal Action transition is rejected without an effect`,
+  );
 
   const operationCounts = {
-    execute: terminal.state.governedOperations.filter(({ operationKind }) => operationKind === 'execute').length,
-    rollback: terminal.state.governedOperations.filter(({ operationKind }) => operationKind === 'rollback').length,
+    execute: terminal.state.governedOperations.filter(
+      ({ operationKind }) => operationKind === 'execute',
+    ).length,
+    rollback: terminal.state.governedOperations.filter(
+      ({ operationKind }) => operationKind === 'rollback',
+    ).length,
   };
   const resultCounts = {
     execute: terminal.state.executionResults.length,
     rollback: terminal.state.rollbackResults.length,
   };
-  const expected = domainId === 'business'
-    ? { operations: 2, rollback: 1, effects: 2, finalSequence: 150 }
-    : { operations: 1, rollback: 0, effects: 1, finalSequence: 85 };
-  pass(operationCounts.execute === 1 && operationCounts.rollback === expected.rollback,
-    `${domainId}: exact execute and rollback operation counts are certified`);
-  pass(resultCounts.execute === 1 && resultCounts.rollback === expected.rollback,
-    `${domainId}: exact immutable result counts are certified`);
-  pass(scenario.targetAdapter.describe().effectCount === expected.effects,
-    `${domainId}: exact contained effect count is certified`);
-  pass(verification.delta.state.eventHead.sequence === expected.finalSequence,
-    `${domainId}: exact governed-loop Event count is certified (${verification.delta.state.eventHead.sequence})`);
-  pass(scenario.context.replayHook.dispatchCount === 0,
-    `${domainId}: the governed continuation dispatches no model`);
+  const expected =
+    domainId === 'business'
+      ? { operations: 2, rollback: 1, effects: 2, finalSequence: 150 }
+      : { operations: 1, rollback: 0, effects: 1, finalSequence: 85 };
+  pass(
+    operationCounts.execute === 1 && operationCounts.rollback === expected.rollback,
+    `${domainId}: exact execute and rollback operation counts are certified`,
+  );
+  pass(
+    resultCounts.execute === 1 && resultCounts.rollback === expected.rollback,
+    `${domainId}: exact immutable result counts are certified`,
+  );
+  pass(
+    scenario.targetAdapter.describe().effectCount === expected.effects,
+    `${domainId}: exact contained effect count is certified`,
+  );
+  pass(
+    verification.delta.state.eventHead.sequence === expected.finalSequence,
+    `${domainId}: exact governed-loop Event count is certified (${verification.delta.state.eventHead.sequence})`,
+  );
+  pass(
+    scenario.context.replayHook.dispatchCount === 0,
+    `${domainId}: the governed continuation dispatches no model`,
+  );
 
   const stageOrder = [
     ...scenario.phase5.stageOrder,
@@ -870,8 +1017,9 @@ async function runGovernedJourney(domainId) {
     approval: {
       requirementId: scenario.requirement.requirementId,
       approvalId: scenario.approval.approvalId,
-      consumedByOperationId: executed.state.approvalRecords
-        .find(({ approvalId }) => approvalId === scenario.approval.approvalId)?.consumedByOperationId,
+      consumedByOperationId: executed.state.approvalRecords.find(
+        ({ approvalId }) => approvalId === scenario.approval.approvalId,
+      )?.consumedByOperationId,
     },
     capabilityGrantId: executed.operation.grantId,
     execution: {
@@ -881,17 +1029,20 @@ async function runGovernedJourney(domainId) {
       dispatchCount: executed.dispatchCount,
       replayDispatchCount: replay.dispatchCount,
       restartDispatchCount: restarted.dispatchCount,
-      acknowledgementLossRecovered: restartReplay.replayed === true
-        && restarted.dispatchCount === 0
-        && scenario.targetAdapter.describe().effectCount >= 1,
+      acknowledgementLossRecovered:
+        restartReplay.replayed === true &&
+        restarted.dispatchCount === 0 &&
+        scenario.targetAdapter.describe().effectCount >= 1,
       divergentRetry,
       recoveryClassification: recovery.classification,
     },
-    rollback: rollback ? {
-      operationId: rollback.operation.operationId,
-      resultId: rollback.result.rollbackResultId,
-      status: rollback.result.status,
-    } : null,
+    rollback: rollback
+      ? {
+          operationId: rollback.operation.operationId,
+          resultId: rollback.result.rollbackResultId,
+          status: rollback.result.status,
+        }
+      : null,
     verification: {
       assignmentId: verification.assignment.assignmentId,
       outcomeId: verification.outcome.outcome.outcomeId,
@@ -904,7 +1055,8 @@ async function runGovernedJourney(domainId) {
     },
     counts: {
       phase5Events: scenario.phase5.finalEventSequence,
-      phase6Events: verification.delta.state.eventHead.sequence - scenario.phase5.finalEventSequence,
+      phase6Events:
+        verification.delta.state.eventHead.sequence - scenario.phase5.finalEventSequence,
       finalEvents: verification.delta.state.eventHead.sequence,
       operations: terminal.state.governedOperations.length,
       executeOperations: operationCounts.execute,
@@ -924,11 +1076,15 @@ async function runGovernedJourney(domainId) {
 
 export async function verifyOperateV2GovernedExecution() {
   checks = 0;
-  pass(new Set(OPERATE_RUNTIME_CONTRACT_KINDS).size === OPERATE_RUNTIME_CONTRACT_KINDS.length,
-    'the governed verifier sees unique registry-derived public Protocol v2 contracts');
+  pass(
+    new Set(OPERATE_RUNTIME_CONTRACT_KINDS).size === OPERATE_RUNTIME_CONTRACT_KINDS.length,
+    'the governed verifier sees unique registry-derived public Protocol v2 contracts',
+  );
   for (const artifact of Object.values(governedFixture)) {
-    pass(validateProtocolArtifact(artifact.kind, artifact, { protocolVersion: VERSION }).length === 0,
-      `${artifact.kind}: governed fixture is valid`);
+    pass(
+      validateProtocolArtifact(artifact.kind, artifact, { protocolVersion: VERSION }).length === 0,
+      `${artifact.kind}: governed fixture is valid`,
+    );
   }
   let networkAttempts = 0;
   const originalFetch = globalThis.fetch;
@@ -938,10 +1094,13 @@ export async function verifyOperateV2GovernedExecution() {
   };
   try {
     const journeys = [];
-    for (const domainId of ['business', 'software']) journeys.push(await runGovernedJourney(domainId));
+    for (const domainId of ['business', 'software'])
+      journeys.push(await runGovernedJourney(domainId));
     pass(networkAttempts === 0, 'both governed journeys perform zero network requests');
-    pass(journeys.reduce((total, journey) => total + journey.counts.effects, 0) === 3,
-      'the complete certification performs exactly three disposable contained effects');
+    pass(
+      journeys.reduce((total, journey) => total + journey.counts.effects, 0) === 3,
+      'the complete certification performs exactly three disposable contained effects',
+    );
     return Object.freeze({
       ok: true,
       protocolVersion: VERSION,
@@ -958,7 +1117,9 @@ export async function verifyOperateV2GovernedExecution() {
   }
 }
 
-if (process.argv[1]
-  && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))) {
+if (
+  process.argv[1] &&
+  realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))
+) {
   process.stdout.write(`${JSON.stringify(await verifyOperateV2GovernedExecution())}\n`);
 }

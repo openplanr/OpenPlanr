@@ -11,7 +11,9 @@ const root = join(here, '../..');
 
 const schema = JSON.parse(readFileSync(join(root, 'schemas/v1.0.0/task.schema.json'), 'utf-8'));
 const valid = JSON.parse(readFileSync(join(root, 'tests/fixtures/valid-task.json'), 'utf-8'));
-const invalid = JSON.parse(readFileSync(join(root, 'tests/fixtures/invalid-task-structure.json'), 'utf-8'));
+const invalid = JSON.parse(
+  readFileSync(join(root, 'tests/fixtures/invalid-task-structure.json'), 'utf-8'),
+);
 
 test('Task frontmatter validates with correlated type/agent + spec-driven specId', () => {
   assert.equal(validate(valid, schema).length, 0);
@@ -30,6 +32,10 @@ test('Task status MUST be in the enum — a hallucinated "ready" (and synonyms) 
   }
   // sanity: every real enum value still passes
   for (const ok of ['pending', 'in-progress', 'done', 'blocked']) {
-    assert.equal(validate({ ...valid, status: ok }, schema).length, 0, `status "${ok}" should pass`);
+    assert.equal(
+      validate({ ...valid, status: ok }, schema).length,
+      0,
+      `status "${ok}" should pass`,
+    );
   }
 });

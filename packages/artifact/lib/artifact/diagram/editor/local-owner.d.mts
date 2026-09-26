@@ -21,7 +21,11 @@ export interface DiagramLocalOwnerAdapter {
     origin: string;
     recoveryScope: string;
     head?: boolean;
-  }): Promise<false | { status: number; body: Record<string, unknown> } | { status: number; kind: 'asset'; asset: 'document' | 'runtime' | 'stylesheet'; body: string }>;
+  }): Promise<
+    | false
+    | { status: number; body: Record<string, unknown> }
+    | { status: number; kind: 'asset'; asset: 'document' | 'runtime' | 'stylesheet'; body: string }
+  >;
 }
 export interface DiagramOwnerHandle {
   readonly ok: true;
@@ -40,6 +44,15 @@ export interface DiagramOwnerHandle {
   close(): Promise<void>;
 }
 /** Bind one document before registering an owner capability in the loopback server. */
-export declare function createDiagramLocalOwnerAdapter(options: DiagramLocalOwnerOptions): DiagramLocalOwnerAdapter;
+export declare function createDiagramLocalOwnerAdapter(
+  options: DiagramLocalOwnerOptions,
+): DiagramLocalOwnerAdapter;
 /** Start the local editor and owner API, with no company account or network. */
-export declare function startDiagramOwner(options: DiagramLocalOwnerOptions & { port?: number; env?: Record<string, string | undefined>; noOpen?: boolean; openUrl?: (url: string) => void | Promise<void> }): Promise<DiagramOwnerHandle>;
+export declare function startDiagramOwner(
+  options: DiagramLocalOwnerOptions & {
+    port?: number;
+    env?: Record<string, string | undefined>;
+    noOpen?: boolean;
+    openUrl?: (url: string) => void | Promise<void>;
+  },
+): Promise<DiagramOwnerHandle>;

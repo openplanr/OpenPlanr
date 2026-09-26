@@ -19,7 +19,7 @@
       "packages/integrations",
       "apps/dashboard"
     ],
-    "manifestDigest": "sha256:14aa37b9780dc7252d15680cb208a70243a2845cad0c3c3bcd1f97ba2b3085d0"
+    "manifestDigest": "sha256:bac548f0620f1d655015f852281d746427f278ff4534031cd5f7e644238b9531"
   },
   "protocol": {
     "current": "1.8.0",
@@ -50,7 +50,7 @@
       "version": "2.2639.2",
       "path": "packages/cli",
       "publication": "public",
-      "manifestDigest": "sha256:89808659cd386c0aa72134d6034c9b7fcd78cc8b0a342ab46944470cc56b7e9e"
+      "manifestDigest": "sha256:688cd546476ce483a2074f6941d78ade7062188f195c19f1bb932259cfe43012"
     },
     "pipeline": {
       "package": "planr-pipeline",
@@ -99,14 +99,14 @@
       "version": "0.1.0",
       "path": "packages/integrations",
       "publication": "private",
-      "manifestDigest": "sha256:4ffd8249731ab6f6f668fa2d145d6298807af3ee29ebfc0c7cda46c32b9c3397"
+      "manifestDigest": "sha256:c09ec2ac09e307abca9cd89efd7c7885df42a0ac63cd5fb83ff3d23793be5460"
     },
     "dashboard": {
       "package": "@openplanr/dashboard-app",
       "version": "0.1.6",
       "path": "apps/dashboard",
       "publication": "private",
-      "manifestDigest": "sha256:c12c3e205074016d29693b3fecd3111c616ca98bcb0c162dafea1bb439a5f509"
+      "manifestDigest": "sha256:b2974be49067975f537b5ef1f029cacbdf21ca899906433810f64bea2044bd43"
     }
   },
   "compatibility": {
@@ -337,7 +337,7 @@
     ],
     "generatedAssets": {
       "path": "adapters/manifests/generated-assets.json",
-      "digest": "sha256:29e826c4883bf5d4963bb0b2bfc121a17dd1212770d68302df1b339b4108c260",
+      "digest": "sha256:1ee85424a5fe2811fc4db65a5dc62b2460356d0f141e3c6f3ee0f5c485e10c8a",
       "count": 1805
     }
   },
@@ -413,7 +413,7 @@
   "generatedSurfaces": {
     "artifactShell": {
       "path": "packages/artifact/lib/artifact/ui/generated/artifact-shell-assets.json",
-      "digest": "sha256:01159ca70278204e93991c619274bca530f4a424f78f62e5321e0c1948cfe79d",
+      "digest": "sha256:58cce9c6694b47945f49cf624bbb70a4b96e541d912ab75b52d26a9c11db5fc3",
       "shellVersion": "1.2.1",
       "assetCount": 7
     },
@@ -428,7 +428,7 @@
       },
       "generatedAssets": {
         "path": "packages/pipeline/conformance/fixtures/landing-workflow/generated-assets.json",
-        "digest": "sha256:a79dfa600b923b436b64ae277af068402e589416c580a7798f0d19110df8249f",
+        "digest": "sha256:e6ae9363886e4dd1cb328889dba35d0472682c3f15629b69407496d674fa7306",
         "assetCount": 4,
         "workflowCatalogDigest": "sha256:7bff6d6150b6cef7d46603216d4225bc9000f9f286a203c65e668a077b3ead80"
       }

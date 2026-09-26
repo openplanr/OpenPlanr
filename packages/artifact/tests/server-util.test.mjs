@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import test from 'node:test';
 
 import { acquireStartLock } from '../lib/artifact/internal/server-util.mjs';
@@ -19,7 +19,13 @@ test('startup lock serializes simultaneous writers without shared-path unlink ra
       entered.push('second');
       unlock();
     })();
-    await new Promise((resolve) => { releaseFirst = () => { firstUnlock(); resolve(); }; setTimeout(releaseFirst, 40); });
+    await new Promise((resolve) => {
+      releaseFirst = () => {
+        firstUnlock();
+        resolve();
+      };
+      setTimeout(releaseFirst, 40);
+    });
     await second;
     assert.deepEqual(entered, ['first', 'second']);
   } finally {

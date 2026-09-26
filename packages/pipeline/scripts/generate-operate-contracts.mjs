@@ -1,14 +1,7 @@
 #!/usr/bin/env node
 
-import {
-  createHash,
-} from 'node:crypto';
-import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  writeFileSync,
-} from 'node:fs';
+import { createHash } from 'node:crypto';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -20,7 +13,6 @@ import {
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const REGISTRY_PATH = 'registry/operate-v2-contracts.json';
 const CUSTODY_PATH = 'lib/generated/operate-contract-custody-v1.5.json';
-
 
 export class OperateContractGenerationError extends Error {
   constructor(code, message, details = {}) {
@@ -54,7 +46,11 @@ function targetPath(projectRoot, registry) {
   }
   const resolved = resolve(projectRoot, target);
   const relativeTarget = relative(projectRoot, resolved).split(sep).join('/');
-  if (relativeTarget.startsWith('../') || relativeTarget === '..' || !relativeTarget.startsWith('lib/protocol/generated/')) {
+  if (
+    relativeTarget.startsWith('../') ||
+    relativeTarget === '..' ||
+    !relativeTarget.startsWith('lib/protocol/generated/')
+  ) {
     throw new OperateContractGenerationError(
       'E_OPERATE_CONTRACT_TARGET',
       'The canonical Operate catalog target must remain below lib/protocol/generated/.',
@@ -75,16 +71,22 @@ function renderContractPackageInventory(catalog) {
     ...catalog.experience.contracts.map(({ schemaPath }) => schemaPath),
     ...catalog.generation.verifiedTargets.map(({ path }) => path),
   ]);
-  return `${JSON.stringify({
-    kind: 'operate-contract-package-inventory',
-    schemaVersion: '1.0.0',
-    protocolVersion: catalog.protocol.version,
-    files: [...files].sort((left, right) => left.localeCompare(right)),
-  }, null, 2)}\n`;
+  return `${JSON.stringify(
+    {
+      kind: 'operate-contract-package-inventory',
+      schemaVersion: '1.0.0',
+      protocolVersion: catalog.protocol.version,
+      files: [...files].sort((left, right) => left.localeCompare(right)),
+    },
+    null,
+    2,
+  )}\n`;
 }
 
 function verifiedTargetDigests(projectRoot, registry) {
-  const expected = new Map(registry.generation.verifiedTargets.map(({ path, sha256 }) => [path, sha256]));
+  const expected = new Map(
+    registry.generation.verifiedTargets.map(({ path, sha256 }) => [path, sha256]),
+  );
   const custodyPath = resolve(projectRoot, CUSTODY_PATH);
   if (!existsSync(custodyPath)) return expected;
 
@@ -100,11 +102,11 @@ function verifiedTargetDigests(projectRoot, registry) {
   }
   const registryDigest = sha256Text(readFileSync(resolve(projectRoot, REGISTRY_PATH), 'utf8'));
   if (
-    custody?.kind !== 'operate-contract-generated-custody'
-    || custody?.schemaVersion !== '1.0.0'
-    || custody?.protocolVersion !== '1.5.0'
-    || custody?.legacyRegistrySha256 !== registryDigest
-    || !Array.isArray(custody.overrides)
+    custody?.kind !== 'operate-contract-generated-custody' ||
+    custody?.schemaVersion !== '1.0.0' ||
+    custody?.protocolVersion !== '1.5.0' ||
+    custody?.legacyRegistrySha256 !== registryDigest ||
+    !Array.isArray(custody.overrides)
   ) {
     throw new OperateContractGenerationError(
       'E_OPERATE_CONTRACT_CUSTODY',
@@ -115,12 +117,12 @@ function verifiedTargetDigests(projectRoot, registry) {
   for (const override of custody.overrides) {
     const legacy = registry.generation.verifiedTargets.find(({ path }) => path === override?.path);
     if (
-      !legacy
-      || seen.has(override.path)
-      || override.legacySha256 !== legacy.sha256
-      || !/^[0-9a-f]{64}$/u.test(override.sha256 ?? '')
-      || typeof override.custody !== 'string'
-      || override.custody.length === 0
+      !legacy ||
+      seen.has(override.path) ||
+      override.legacySha256 !== legacy.sha256 ||
+      !/^[0-9a-f]{64}$/u.test(override.sha256 ?? '') ||
+      typeof override.custody !== 'string' ||
+      override.custody.length === 0
     ) {
       throw new OperateContractGenerationError(
         'E_OPERATE_CONTRACT_CUSTODY',
@@ -143,7 +145,10 @@ function sha256Text(bytes) {
 
 function parseArgs(argv) {
   const flags = new Set(argv);
-  if (argv.length !== flags.size || [...flags].some((flag) => !['--write', '--check'].includes(flag))) {
+  if (
+    argv.length !== flags.size ||
+    [...flags].some((flag) => !['--write', '--check'].includes(flag))
+  ) {
     throw new OperateContractGenerationError(
       'E_OPERATE_CONTRACT_ARGUMENT',
       'Use exactly one of --write or --check.',
@@ -185,7 +190,9 @@ export function runOperateContractGenerator({
   const staleGeneratedTargets = Object.entries(assets)
     .filter(([target, expected]) => {
       const path = resolve(projectRoot, target);
-      return !existsSync(path) || canonicalText(readFileSync(path, 'utf8')) !== canonicalText(expected);
+      return (
+        !existsSync(path) || canonicalText(readFileSync(path, 'utf8')) !== canonicalText(expected)
+      );
     })
     .map(([target]) => target)
     .sort();
@@ -220,9 +227,14 @@ export function runOperateContractGenerator({
   }
 
   const written = [];
-  for (const [target, expected] of Object.entries(assets).sort(([left], [right]) => left.localeCompare(right))) {
+  for (const [target, expected] of Object.entries(assets).sort(([left], [right]) =>
+    left.localeCompare(right),
+  )) {
     const path = resolve(projectRoot, target);
-    if (!existsSync(path) || canonicalText(readFileSync(path, 'utf8')) !== canonicalText(expected)) {
+    if (
+      !existsSync(path) ||
+      canonicalText(readFileSync(path, 'utf8')) !== canonicalText(expected)
+    ) {
       mkdirSync(dirname(path), { recursive: true });
       writeFileSync(path, expected, 'utf8');
       written.push(target);

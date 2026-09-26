@@ -19,10 +19,7 @@ export function namespacedInvocation(skillId, host) {
 export function renderNamespacedSkill(markdown, skillId) {
   const projectedName = projectedSkillName(skillId);
   return String(markdown)
-    .replace(
-      new RegExp(`^name:\\s*[\"']?${skillId}[\"']?\\s*$`, 'mu'),
-      `name: ${projectedName}`,
-    )
+    .replace(new RegExp(`^name:\\s*[\"']?${skillId}[\"']?\\s*$`, 'mu'), `name: ${projectedName}`)
     .replace(/\/openplanr:planr-([a-z0-9-]+)/gu, '/planr:$1')
     .replace(/\/planr-([a-z0-9-]+)/gu, '/planr:$1')
     .replace(/\$openplanr:planr-([a-z0-9-]+)/gu, '$planr:$1')

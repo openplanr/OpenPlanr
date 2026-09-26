@@ -23,20 +23,32 @@ const canonicalBoard = (board) => ({
     rawBytesBase64: Buffer.from(rawBytes).toString('base64'),
   })),
 });
-const domain = JSON.parse(readFileSync(
-  new URL('../../conformance/fixtures/operating-runtime-v2/business-domain-valid.json', import.meta.url), 'utf8',
-));
+const domain = JSON.parse(
+  readFileSync(
+    new URL(
+      '../../conformance/fixtures/operating-runtime-v2/business-domain-valid.json',
+      import.meta.url,
+    ),
+    'utf8',
+  ),
+);
 
 function inputs() {
   const seed = checkpoint();
-  const delta = deriveOperatingRuntimeDeltaV2({
-    cycleId: seed.result.state.cycles[0].cycleId,
-    snapshotId: seed.result.snapshot.snapshotId,
-    stateId: seed.result.operatingState.stateId,
-  }, {
-    deltaId: 'dlt_router_property_001', eventId: 'evt_router_delta_property_001',
-    timestamp: '2026-08-09T12:01:00.000Z', correlationId: 'corr_router_delta_property_001',
-  }, { initialState: seed.result.state }).delta;
+  const delta = deriveOperatingRuntimeDeltaV2(
+    {
+      cycleId: seed.result.state.cycles[0].cycleId,
+      snapshotId: seed.result.snapshot.snapshotId,
+      stateId: seed.result.operatingState.stateId,
+    },
+    {
+      deltaId: 'dlt_router_property_001',
+      eventId: 'evt_router_delta_property_001',
+      timestamp: '2026-08-09T12:01:00.000Z',
+      correlationId: 'corr_router_delta_property_001',
+    },
+    { initialState: seed.result.state },
+  ).delta;
   return { seed, delta };
 }
 
@@ -70,8 +82,14 @@ test('routing is stable across canonical focus and descriptor order permutations
 test('every material Delta field independently selects challenge and only scenario-relevant fields request scenarios', () => {
   const { seed, delta } = inputs();
   const empty = {
-    ...clone(delta), sourceRevisionChanges: [], metricChanges: [], staleEvidenceRefIds: [], conflictingEvidenceRefIds: [],
-    invalidatedAssumptionIds: [], exposedRiskIds: [], decisionRevisitIds: [],
+    ...clone(delta),
+    sourceRevisionChanges: [],
+    metricChanges: [],
+    staleEvidenceRefIds: [],
+    conflictingEvidenceRefIds: [],
+    invalidatedAssumptionIds: [],
+    exposedRiskIds: [],
+    decisionRevisitIds: [],
   };
   const cases = [
     ['sourceRevisionChanges', [{ subjectId: 'source-001', kind: 'changed' }], false],
@@ -97,6 +115,10 @@ test('every material Delta field independently selects challenge and only scenar
     });
     assert.equal(board.plan.challengerRequired, true, field);
     assert.equal(board.plan.scenarioRequest.requested, scenario, field);
-    assert.deepEqual(board.plan.selectedRoles.map(({ roleId }) => roleId), BUSINESS_BOARD_ROLE_IDS, field);
+    assert.deepEqual(
+      board.plan.selectedRoles.map(({ roleId }) => roleId),
+      BUSINESS_BOARD_ROLE_IDS,
+      field,
+    );
   }
 });

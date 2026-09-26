@@ -1,19 +1,14 @@
-import { PipelineError } from './errors.mjs';
+import { assertProtocolArtifact } from '../protocol/contracts.mjs';
+import { sha256Jcs } from '../protocol/jcs.mjs';
 import {
   validateGuidedAnswerEnvelope,
   validateGuidedQuestion,
   validateGuidedQuestionnaire,
   validateStructuredAction,
 } from './engine.mjs';
-import { sha256Jcs } from '../protocol/jcs.mjs';
-import { assertProtocolArtifact } from '../protocol/contracts.mjs';
+import { PipelineError } from './errors.mjs';
 
-export const GUIDED_INTERACTION_MODES = Object.freeze([
-  'native',
-  'chat',
-  'terminal',
-  'none',
-]);
+export const GUIDED_INTERACTION_MODES = Object.freeze(['native', 'chat', 'terminal', 'none']);
 
 const MODE_AVAILABILITY_KEYS = Object.freeze({
   native: 'nativeQuestions',
@@ -37,22 +32,17 @@ const ANSWER_VALUE_TYPES = Object.freeze({
   'multi-select': 'string-array',
   'repeated-text': 'string-array',
 });
-const ANSWER_COPY_FIELDS = Object.freeze([
-  'questionId',
-  'questionVersion',
-  'sensitivity',
-]);
+const ANSWER_COPY_FIELDS = Object.freeze(['questionId', 'questionVersion', 'sensitivity']);
 
 function fail(code, message, details = {}) {
   throw new PipelineError(code, message, undefined, details);
 }
 
 function validationFailure(kind, errors) {
-  fail(
-    'E_GUIDED_ADAPTER_INPUT_INVALID',
-    `${kind}: ${errors[0].path} ${errors[0].detail}`,
-    { kind, errors },
-  );
+  fail('E_GUIDED_ADAPTER_INPUT_INVALID', `${kind}: ${errors[0].path} ${errors[0].detail}`, {
+    kind,
+    errors,
+  });
 }
 
 function adapterFromRegistry(registry, runtime) {
@@ -72,23 +62,21 @@ function adapterFromRegistry(registry, runtime) {
  * Resolve presentation only. The result cannot confer mutation or provider
  * authority; it describes how a validated CLI artifact can be shown.
  */
-export function resolveGuidedInteraction({
-  registry,
-  runtime,
-  runtimeReport = {},
-} = {}) {
+export function resolveGuidedInteraction({ registry, runtime, runtimeReport = {} } = {}) {
   const adapter = adapterFromRegistry(registry, runtime);
   const declared = adapter.capabilities.interactiveQuestions;
   const attempted = FALLBACKS[declared];
-  const selected = attempted.find((mode) => (
-    mode === 'none' || runtimeReport[MODE_AVAILABILITY_KEYS[mode]] === true
-  )) ?? 'none';
+  const selected =
+    attempted.find(
+      (mode) => mode === 'none' || runtimeReport[MODE_AVAILABILITY_KEYS[mode]] === true,
+    ) ?? 'none';
   const fallback = selected !== declared;
-  const reason = selected === 'none'
-    ? 'No verified native, structured-chat, or attached-terminal interaction surface is available.'
-    : fallback
-      ? `${declared} interaction was not verified by the active runtime; using ${selected}.`
-      : `${selected} interaction was verified by the active runtime.`;
+  const reason =
+    selected === 'none'
+      ? 'No verified native, structured-chat, or attached-terminal interaction surface is available.'
+      : fallback
+        ? `${declared} interaction was not verified by the active runtime; using ${selected}.`
+        : `${selected} interaction was verified by the active runtime.`;
   return Object.freeze({
     runtime,
     adapterVersion: adapter.version,
@@ -97,15 +85,17 @@ export function resolveGuidedInteraction({
     fallback,
     attempted: [...attempted],
     diagnostic: Object.freeze({
-      code: selected === 'none'
-        ? 'E_GUIDED_INTERACTION_UNAVAILABLE'
-        : fallback
-          ? 'W_GUIDED_INTERACTION_DOWNGRADED'
-          : 'I_GUIDED_INTERACTION_VERIFIED',
+      code:
+        selected === 'none'
+          ? 'E_GUIDED_INTERACTION_UNAVAILABLE'
+          : fallback
+            ? 'W_GUIDED_INTERACTION_DOWNGRADED'
+            : 'I_GUIDED_INTERACTION_VERIFIED',
       reason,
-      recovery: selected === 'none'
-        ? 'Attach an interactive terminal or use a certified runtime with structured questions/chat.'
-        : null,
+      recovery:
+        selected === 'none'
+          ? 'Attach an interactive terminal or use a certified runtime with structured questions/chat.'
+          : null,
     }),
   });
 }
@@ -133,7 +123,9 @@ function normalizedAnswers(questionnaire, answers) {
   if (!values || typeof values !== 'object' || Array.isArray(values)) {
     fail('E_GUIDED_ADAPTER_ANSWERS_INVALID', 'Answers must be keyed by canonical question ID.');
   }
-  const questions = new Map(questionnaire.questions.map((question) => [question.questionId, question]));
+  const questions = new Map(
+    questionnaire.questions.map((question) => [question.questionId, question]),
+  );
   const unknown = Object.keys(values).filter((questionId) => !questions.has(questionId));
   if (unknown.length) {
     fail(
@@ -275,7 +267,10 @@ export function createGuidedAnswerEnvelope({
   const questionErrors = validateGuidedQuestionnaire(questionnaire);
   if (questionErrors.length) validationFailure('guided-questionnaire', questionErrors);
   if (!GUIDED_INTERACTION_MODES.includes(interaction) || interaction === 'none') {
-    fail('E_GUIDED_ADAPTER_INTERACTION_INVALID', 'Answers require native, chat, or terminal interaction.');
+    fail(
+      'E_GUIDED_ADAPTER_INTERACTION_INVALID',
+      'Answers require native, chat, or terminal interaction.',
+    );
   }
   if (questionnaire.submission) {
     fail(
@@ -339,8 +334,8 @@ export function reduceGuidedAnswerEnvelope(envelope) {
     projectIdentity: envelope.projectIdentity,
     projectHead: envelope.projectHead,
     configHead: envelope.configHead,
-    answers: structuredClone(envelope.answers).sort(
-      (left, right) => left.questionId.localeCompare(right.questionId),
+    answers: structuredClone(envelope.answers).sort((left, right) =>
+      left.questionId.localeCompare(right.questionId),
     ),
   };
 }
@@ -369,10 +364,7 @@ export function selectGuidedAction({ actions, actionId, confirmationDigest } = {
       { actionId },
     );
   }
-  if (
-    action.requiresConfirmation
-    && confirmationDigest !== action.confirmationDigest
-  ) {
+  if (action.requiresConfirmation && confirmationDigest !== action.confirmationDigest) {
     fail(
       'E_GUIDED_ADAPTER_CONFIRMATION_MISMATCH',
       `Action "${actionId}" requires its exact CLI confirmation digest.`,

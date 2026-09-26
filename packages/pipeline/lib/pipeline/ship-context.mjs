@@ -1,11 +1,11 @@
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { buildContextEnvelope, renderContextEnvelope } from './context-envelope.mjs';
 import { resolveDesignPlanningLineage } from './design-lineage.mjs';
-import { PipelineError } from './errors.mjs';
 import { preparePlan, prepareShipContext } from './engine.mjs';
+import { PipelineError } from './errors.mjs';
 
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const TASK_FILE = /^(?:T-|task-).*\.md$/iu;
@@ -77,7 +77,10 @@ function headingSection(markdown, names) {
       if (next && next[1].length <= level) break;
       end += 1;
     }
-    return lines.slice(start + 1, end).join('\n').trim();
+    return lines
+      .slice(start + 1, end)
+      .join('\n')
+      .trim();
   }
   return '';
 }
@@ -97,7 +100,9 @@ function unique(values, limit = 200) {
 
 function walkRegularFiles(root, output = []) {
   if (!root || !existsSync(root) || output.length >= MAX_CONTEXT_FILES) return output;
-  const entries = readdirSync(root, { withFileTypes: true }).sort((left, right) => left.name.localeCompare(right.name));
+  const entries = readdirSync(root, { withFileTypes: true }).sort((left, right) =>
+    left.name.localeCompare(right.name),
+  );
   for (const entry of entries) {
     if (output.length >= MAX_CONTEXT_FILES) break;
     const path = join(root, entry.name);
@@ -109,7 +114,11 @@ function walkRegularFiles(root, output = []) {
 
 function readOptional(path, readFile) {
   if (!path || !existsSync(path)) return null;
-  try { return readFile(path, 'utf8'); } catch { return null; }
+  try {
+    return readFile(path, 'utf8');
+  } catch {
+    return null;
+  }
 }
 
 function displayPath(projectRoot, path) {
@@ -121,7 +130,10 @@ function displayPath(projectRoot, path) {
 function frontmatterList(frontmatter, key) {
   const inline = new RegExp(`^${key}:\\s*\\[([^\\]]*)\\]\\s*$`, 'mu').exec(frontmatter)?.[1];
   if (inline !== undefined) {
-    return inline.split(',').map((entry) => entry.trim().replace(/^['"]|['"]$/gu, '')).filter(Boolean);
+    return inline
+      .split(',')
+      .map((entry) => entry.trim().replace(/^['"]|['"]$/gu, ''))
+      .filter(Boolean);
   }
   const lines = frontmatter.split('\n');
   const start = lines.findIndex((line) => line.trimEnd() === `${key}:`);
@@ -160,11 +172,13 @@ function frontmatterPreserve(frontmatter) {
 }
 
 function bodyPreserve(markdown) {
-  return sectionEntries(markdown, ['Preserve'], 60).map((entry) => {
-    const quoted = /^`([^`]+)`/u.exec(entry)?.[1];
-    const path = quoted ?? entry.split(/\s+(?:—|-)\s+/u)[0].trim();
-    return { repositoryKey: 'project', path };
-  }).filter(({ path }) => path && !/^_?(?:none|n\/a)_?$/iu.test(path));
+  return sectionEntries(markdown, ['Preserve'], 60)
+    .map((entry) => {
+      const quoted = /^`([^`]+)`/u.exec(entry)?.[1];
+      const path = quoted ?? entry.split(/\s+(?:—|-)\s+/u)[0].trim();
+      return { repositoryKey: 'project', path };
+    })
+    .filter(({ path }) => path && !/^_?(?:none|n\/a)_?$/iu.test(path));
 }
 
 function frontmatterTitle(markdown) {
@@ -174,15 +188,18 @@ function frontmatterTitle(markdown) {
 function taskArtifact({ path, record = {}, projectRoot, readFile }) {
   const markdown = readFile(path, 'utf8');
   const frontmatter = markdown.split('---')[1] ?? '';
-  const id = record.id ?? (frontmatterScalar(markdown, 'id') || path.split('/').at(-1).replace(/\.md$/u, ''));
+  const id =
+    record.id ??
+    (frontmatterScalar(markdown, 'id') || path.split('/').at(-1).replace(/\.md$/u, ''));
   const dependsOn = record.dependsOn ?? frontmatterList(frontmatter, 'dependsOn');
   const structuredPreserve = record.structuredPreserve ?? frontmatterPreserve(frontmatter);
-  const legacySource = Array.isArray(record.legacyPreserve) && record.legacyPreserve.length
-    ? record.legacyPreserve
-    : bodyPreserve(markdown);
-  const legacyPreserve = legacySource.map((entry) => (
-    typeof entry === 'string' ? { repositoryKey: 'project', path: entry } : entry
-  ));
+  const legacySource =
+    Array.isArray(record.legacyPreserve) && record.legacyPreserve.length
+      ? record.legacyPreserve
+      : bodyPreserve(markdown);
+  const legacyPreserve = legacySource.map((entry) =>
+    typeof entry === 'string' ? { repositoryKey: 'project', path: entry } : entry,
+  );
   return {
     id,
     selector: record.selector ?? id,
@@ -196,9 +213,10 @@ function taskArtifact({ path, record = {}, projectRoot, readFile }) {
     reviewRisks: record.reviewRisks ?? [],
     browserSurfaces: record.browserSurfaces ?? [],
     acceptanceRefs: record.acceptanceRefs ?? [],
-    preserve: record.structuredPreserveDeclared === true || structuredPreserve.length
-      ? structuredPreserve
-      : legacyPreserve,
+    preserve:
+      record.structuredPreserveDeclared === true || structuredPreserve.length
+        ? structuredPreserve
+        : legacyPreserve,
     markdown,
   };
 }
@@ -215,9 +233,9 @@ function scopeTaskArtifacts(tasks, mode) {
   const selectors = new Set(scoped.map(({ selector }) => selector));
   return scoped.map((task) => ({
     ...task,
-    dependencySelectors: task.dependsOn.map((dependency) => (
-      selectors.has(dependency) || !task.scope ? dependency : `${task.scope}/${dependency}`
-    )),
+    dependencySelectors: task.dependsOn.map((dependency) =>
+      selectors.has(dependency) || !task.scope ? dependency : `${task.scope}/${dependency}`,
+    ),
   }));
 }
 
@@ -227,7 +245,9 @@ function specDocument({ projectRoot, root, mode, slug, readFile, allowMissing = 
     const markdown = readOptional(path, readFile);
     if (markdown !== null) return { path, markdown };
   } else if (typeof root === 'string' && existsSync(root)) {
-    const entry = readdirSync(root).filter((name) => /^SPEC-\d+.*\.md$/u.test(name)).sort()[0];
+    const entry = readdirSync(root)
+      .filter((name) => /^SPEC-\d+.*\.md$/u.test(name))
+      .sort()[0];
     if (entry) {
       const path = join(root, entry);
       return { path, markdown: readFile(path, 'utf8') };
@@ -241,9 +261,10 @@ function specDocument({ projectRoot, root, mode, slug, readFile, allowMissing = 
       : 'Confirm the spec directory contains its SPEC markdown.',
   );
   if (!allowMissing) throw error;
-  const path = mode === 'default'
-    ? join(projectRoot, 'input', 'specs', `spec-${slug}.md`)
-    : join(root, `SPEC-NNN-${slug}.md`);
+  const path =
+    mode === 'default'
+      ? join(projectRoot, 'input', 'specs', `spec-${slug}.md`)
+      : join(root, `SPEC-NNN-${slug}.md`);
   return {
     path,
     markdown: `# ${slug}\n\n## Context & Goal\n\nNo Planr specification document was available.`,
@@ -261,18 +282,23 @@ function storyContext({ root, tasks, projectRoot, readFile }) {
   const acceptanceCriteria = [];
   const startingPoints = [];
   for (const storyId of unique(tasks.map(({ storyId }) => storyId))) {
-    const storyPath = files.find((path) => (
-      path.endsWith('.md')
-      && !/-gherkin\.feature$/iu.test(path)
-      && frontmatterScalar(readFile(path, 'utf8'), 'id') === storyId
-    ));
+    const storyPath = files.find(
+      (path) =>
+        path.endsWith('.md') &&
+        !/-gherkin\.feature$/iu.test(path) &&
+        frontmatterScalar(readFile(path, 'utf8'), 'id') === storyId,
+    );
     if (storyPath) {
       const markdown = readFile(storyPath, 'utf8');
-      const statement = firstParagraph(headingSection(markdown, ['User Story']))
-        || firstParagraph(markdown.replace(/^---[\s\S]*?---\s*/u, '').replace(/^#.*$/mu, ''));
+      const statement =
+        firstParagraph(headingSection(markdown, ['User Story'])) ||
+        firstParagraph(markdown.replace(/^---[\s\S]*?---\s*/u, '').replace(/^#.*$/mu, ''));
       if (statement) requirements.push(`${storyId}: ${compact(statement, 1_200)}`);
-      acceptanceCriteria.push(...sectionEntries(markdown, ['Acceptance Criteria', 'Done When'], 30)
-        .map((entry) => `${storyId}: ${entry}`));
+      acceptanceCriteria.push(
+        ...sectionEntries(markdown, ['Acceptance Criteria', 'Done When'], 30).map(
+          (entry) => `${storyId}: ${entry}`,
+        ),
+      );
       startingPoints.push(`Parent story ${storyId}: ${displayPath(projectRoot, storyPath)}`);
     }
     const gherkinPath = files.find((path) => path.endsWith(`/${storyId}-gherkin.feature`));
@@ -288,8 +314,12 @@ function storyContext({ root, tasks, projectRoot, readFile }) {
         } else if (clause && current) current += `; ${clause[1]} ${clause[2].trim()}`;
       }
       if (current) scenarios.push(current);
-      acceptanceCriteria.push(...scenarios.slice(0, 30).map((entry) => `${storyId}: ${compact(entry, 1_600)}`));
-      startingPoints.push(`Acceptance scenarios for ${storyId}: ${displayPath(projectRoot, gherkinPath)}`);
+      acceptanceCriteria.push(
+        ...scenarios.slice(0, 30).map((entry) => `${storyId}: ${compact(entry, 1_600)}`),
+      );
+      startingPoints.push(
+        `Acceptance scenarios for ${storyId}: ${displayPath(projectRoot, gherkinPath)}`,
+      );
     }
   }
   return { requirements, acceptanceCriteria, startingPoints };
@@ -306,7 +336,12 @@ function activeStackFiles(markdown) {
       if (paths.length || /^\s*\w[^:]*:/u.test(line)) break;
       continue;
     }
-    paths.push(match[1].replace(/\s+#.*$/u, '').trim().replace(/^['"]|['"]$/gu, ''));
+    paths.push(
+      match[1]
+        .replace(/\s+#.*$/u, '')
+        .trim()
+        .replace(/^['"]|['"]$/gu, ''),
+    );
   }
   return paths;
 }
@@ -314,21 +349,24 @@ function activeStackFiles(markdown) {
 function logicalStackPath(path) {
   const normalized = String(path).split('\\').join('/').replace(/^\.\//u, '');
   const marker = normalized.indexOf('/stacks/');
-  const logical = marker >= 0
-    ? normalized.slice(marker + '/stacks/'.length)
-    : normalized.replace(/^(?:stacks\/|\.?(?:claude|codex|cursor)\/stacks\/)/u, '');
+  const logical =
+    marker >= 0
+      ? normalized.slice(marker + '/stacks/'.length)
+      : normalized.replace(/^(?:stacks\/|\.?(?:claude|codex|cursor)\/stacks\/)/u, '');
   if (!logical || logical.startsWith('/') || logical.split('/').includes('..')) return null;
   return logical;
 }
 
 function stackHostRoot(runtime) {
   const normalized = String(runtime ?? '').toLowerCase();
-  return {
-    claude: '.claude',
-    'claude-code': '.claude',
-    codex: '.codex',
-    cursor: '.cursor',
-  }[normalized] ?? null;
+  return (
+    {
+      claude: '.claude',
+      'claude-code': '.claude',
+      codex: '.codex',
+      cursor: '.cursor',
+    }[normalized] ?? null
+  );
 }
 
 function declaredStackHostRoot(path) {
@@ -356,9 +394,9 @@ function selectStackHostRoot({ projectRoot, declared, runtime, readFile }) {
   if (declaredHosts.length > 1) return null;
 
   const logicalPaths = declared.map(logicalStackPath).filter(Boolean);
-  const hostsWithOverrides = STACK_HOST_ROOTS.filter((hostRoot) => logicalPaths.some((logical) => (
-    existsSync(join(projectRoot, hostRoot, 'stacks', logical))
-  )));
+  const hostsWithOverrides = STACK_HOST_ROOTS.filter((hostRoot) =>
+    logicalPaths.some((logical) => existsSync(join(projectRoot, hostRoot, 'stacks', logical))),
+  );
   return hostsWithOverrides.length === 1 ? hostsWithOverrides[0] : null;
 }
 
@@ -366,7 +404,9 @@ function stackContext({ projectRoot, readFile, runtime }) {
   const stackPath = join(projectRoot, 'input', 'tech', 'stack.md');
   const markdown = readOptional(stackPath, readFile);
   if (markdown === null) return { architecture: [], startingPoints: [] };
-  const architecture = [`Technical stack (${displayPath(projectRoot, stackPath)}): ${compact(markdown)}`];
+  const architecture = [
+    `Technical stack (${displayPath(projectRoot, stackPath)}): ${compact(markdown)}`,
+  ];
   const startingPoints = [`Technical stack: ${displayPath(projectRoot, stackPath)}`];
   const declaredFiles = activeStackFiles(markdown).slice(0, 24);
   const hostRoot = selectStackHostRoot({ projectRoot, declared: declaredFiles, runtime, readFile });
@@ -384,7 +424,9 @@ function stackContext({ projectRoot, readFile, runtime }) {
     const override = join(projectRoot, hostRoot, 'stacks', logical);
     const overrideBytes = readOptional(override, readFile);
     if (overrideBytes === null) continue;
-    architecture.push(`Project stack override (${logical}, takes precedence): ${compact(overrideBytes)}`);
+    architecture.push(
+      `Project stack override (${logical}, takes precedence): ${compact(overrideBytes)}`,
+    );
     startingPoints.push(`Project stack override: ${displayPath(projectRoot, override)}`);
   }
   return { architecture, startingPoints };
@@ -393,18 +435,21 @@ function stackContext({ projectRoot, readFile, runtime }) {
 function supplementalContext({ projectRoot, root, mode, readFile }) {
   const architecture = [];
   const startingPoints = [];
-  const designPath = mode === 'spec-driven'
-    ? join(root, 'design', 'design-spec.md')
-    : join(root, 'design-spec.md');
+  const designPath =
+    mode === 'spec-driven' ? join(root, 'design', 'design-spec.md') : join(root, 'design-spec.md');
   const design = readOptional(designPath, readFile);
   if (design !== null) {
-    architecture.push(`Design context (${displayPath(projectRoot, designPath)}): ${compact(design)}`);
+    architecture.push(
+      `Design context (${displayPath(projectRoot, designPath)}): ${compact(design)}`,
+    );
     startingPoints.push(`Design context: ${displayPath(projectRoot, designPath)}`);
   }
   const schemaPath = join(projectRoot, 'output', 'db', 'schema.json');
   const schema = readOptional(schemaPath, readFile);
   if (schema !== null) {
-    architecture.push(`Database schema (${displayPath(projectRoot, schemaPath)}): ${compact(schema, 3_600)}`);
+    architecture.push(
+      `Database schema (${displayPath(projectRoot, schemaPath)}): ${compact(schema, 3_600)}`,
+    );
     startingPoints.push(`Database schema: ${displayPath(projectRoot, schemaPath)}`);
   }
   return { architecture, startingPoints };
@@ -460,17 +505,20 @@ function buildFromArtifacts({
     firstParagraph(section(markdown, 'Audience')) ||
     'Recorded in the specification.';
 
-  const specificationRequirements = [...markdown.matchAll(/^###\s+(FR-[\w.-]+\s+—\s+.+)$/gmu)].map((match) =>
-    match[1].trim(),
+  const specificationRequirements = [...markdown.matchAll(/^###\s+(FR-[\w.-]+\s+—\s+.+)$/gmu)].map(
+    (match) => match[1].trim(),
   );
 
   const requirements = [...specificationRequirements];
   const acceptanceCriteria = bullets(section(markdown, 'Acceptance Criteria'));
   const architecture = bullets(section(markdown, 'Constraints'));
   const startingPoints = [`Specification: ${displayPath(projectRoot, specPath)}`];
-  startingPoints.push(...diagnostics.map(({ code, message, recovery }) => (
-    `Context diagnostic ${code}: ${message}${recovery ? ` ${recovery}` : ''}`
-  )));
+  startingPoints.push(
+    ...diagnostics.map(
+      ({ code, message, recovery }) =>
+        `Context diagnostic ${code}: ${message}${recovery ? ` ${recovery}` : ''}`,
+    ),
+  );
 
   for (const task of tasks) {
     const taskLabel = task.selector ?? task.id;
@@ -482,8 +530,10 @@ function buildFromArtifacts({
     for (const entry of sectionEntries(task.markdown, ['Implementation', 'Technical Spec'], 30)) {
       requirements.push(`${taskLabel} implementation: ${entry}`);
     }
-    for (const entry of sectionEntries(task.markdown, ['Create'], 30)) requirements.push(`${taskLabel} create: ${entry}`);
-    for (const entry of sectionEntries(task.markdown, ['Modify'], 30)) requirements.push(`${taskLabel} modify: ${entry}`);
+    for (const entry of sectionEntries(task.markdown, ['Create'], 30))
+      requirements.push(`${taskLabel} create: ${entry}`);
+    for (const entry of sectionEntries(task.markdown, ['Modify'], 30))
+      requirements.push(`${taskLabel} modify: ${entry}`);
     for (const entry of sectionEntries(task.markdown, ['Verification', 'Test Requirements'], 30)) {
       acceptanceCriteria.push(`${taskLabel}: ${entry}`);
     }
@@ -510,35 +560,48 @@ function buildFromArtifacts({
     if (lineageContext.status === 'current') {
       for (const requirement of lineageContext.requirements) {
         requirements.push(`Design ${requirement.id}: ${requirement.statement}`);
-        acceptanceCriteria.push(...requirement.verification.map((entry) => `Design ${requirement.id}: ${entry}`));
+        acceptanceCriteria.push(
+          ...requirement.verification.map((entry) => `Design ${requirement.id}: ${entry}`),
+        );
       }
       for (const source of lineageContext.sources) {
         architecture.push(`Design source ${source.id} (${source.kind}): ${source.path}`);
       }
     } else {
-      architecture.push(`Design lineage is ${lineageContext.status}: ${lineageContext.reason}. Treat it as evidence, not current approved scope.`);
+      architecture.push(
+        `Design lineage is ${lineageContext.status}: ${lineageContext.reason}. Treat it as evidence, not current approved scope.`,
+      );
     }
   }
 
   const doNotChange = [
     ...new Set(
       tasks.flatMap((task) =>
-        (task.preserve ?? []).map(({ repositoryKey, path }) => (
-          `${repositoryKey}: ${path.length > 1 ? path.replace(/\/+$/u, '') : path}`
-        )),
+        (task.preserve ?? []).map(
+          ({ repositoryKey, path }) =>
+            `${repositoryKey}: ${path.length > 1 ? path.replace(/\/+$/u, '') : path}`,
+        ),
       ),
     ),
   ];
 
   const dependencies = tasks
     .filter((task) => (task.dependsOn ?? []).length)
-    .map((task) => ({ task: task.selector ?? task.id, requires: [...(task.dependencySelectors ?? task.dependsOn)] }));
+    .map((task) => ({
+      task: task.selector ?? task.id,
+      requires: [...(task.dependencySelectors ?? task.dependsOn)],
+    }));
 
-  if (tasks.length) startingPoints.unshift(`Tasks in scope: ${tasks.map((task) => task.selector ?? task.id).join(', ')}.`);
+  if (tasks.length)
+    startingPoints.unshift(
+      `Tasks in scope: ${tasks.map((task) => task.selector ?? task.id).join(', ')}.`,
+    );
 
   return buildContextEnvelope({
     objective: { summary: summary.slice(0, 400), userValue },
-    requirements: unique(requirements).length ? unique(requirements) : [`Implement the requested scope for ${summary}.`],
+    requirements: unique(requirements).length
+      ? unique(requirements)
+      : [`Implement the requested scope for ${summary}.`],
     acceptanceCriteria: unique(acceptanceCriteria).length
       ? unique(acceptanceCriteria)
       : ['Satisfy the acceptance criteria recorded in the specification.'],
@@ -552,11 +615,23 @@ function buildFromArtifacts({
 }
 
 /** Builds the working context for one feature from its SHIP preparation. */
-export function buildShipContext({ projectRoot, feature, taskId, runtime, readFile = readFileSync } = {}) {
+export function buildShipContext({
+  projectRoot,
+  feature,
+  taskId,
+  runtime,
+  readFile = readFileSync,
+} = {}) {
   const prepared = prepareShipContext({ projectRoot, feature, taskId });
-  const selected = new Set((prepared.unresolvedTasks ?? []).map(({ id, selector }) => selector ?? id));
-  const records = (prepared.allTasks ?? []).filter(({ id, selector }) => selected.has(selector ?? id));
-  const tasks = records.map((record) => taskArtifact({ path: record.path, record, projectRoot, readFile }));
+  const selected = new Set(
+    (prepared.unresolvedTasks ?? []).map(({ id, selector }) => selector ?? id),
+  );
+  const records = (prepared.allTasks ?? []).filter(({ id, selector }) =>
+    selected.has(selector ?? id),
+  );
+  const tasks = records.map((record) =>
+    taskArtifact({ path: record.path, record, projectRoot, readFile }),
+  );
   const spec = specDocument({
     projectRoot,
     root: prepared.root,
@@ -569,7 +644,12 @@ export function buildShipContext({ projectRoot, feature, taskId, runtime, readFi
     ...(prepared.diagnostics ?? []),
     ...(spec.diagnostic ? [spec.diagnostic] : []),
   ];
-  const lineageContext = designLineageContext({ projectRoot, root: prepared.root, tasks, readFile });
+  const lineageContext = designLineageContext({
+    projectRoot,
+    root: prepared.root,
+    tasks,
+    readFile,
+  });
   return buildFromArtifacts({
     markdown: spec.markdown,
     specPath: spec.path,
@@ -596,15 +676,26 @@ export function buildShipContext({ projectRoot, feature, taskId, runtime, readFi
  * shows exactly what a runtime would later receive.
  */
 export function buildPlanContext({ projectRoot, feature, runtime, readFile = readFileSync } = {}) {
-  const prepared = preparePlan({ projectRoot, feature, scaffold: false, createStackTemplate: false });
+  const prepared = preparePlan({
+    projectRoot,
+    feature,
+    scaffold: false,
+    createStackTemplate: false,
+  });
   const root = prepared.mode === 'spec-driven' ? prepared.specDir : prepared.featureDir;
-  const taskPaths = walkRegularFiles(root).filter((path) => TASK_FILE.test(path.split('/').at(-1)) && !/error-report/iu.test(path));
+  const taskPaths = walkRegularFiles(root).filter(
+    (path) => TASK_FILE.test(path.split('/').at(-1)) && !/error-report/iu.test(path),
+  );
   const tasks = scopeTaskArtifacts(
     taskPaths.map((path) => taskArtifact({ path, projectRoot, readFile })),
     prepared.mode,
   );
   const spec = specDocument({
-    projectRoot, root, mode: prepared.mode, slug: prepared.slug ?? feature, readFile,
+    projectRoot,
+    root,
+    mode: prepared.mode,
+    slug: prepared.slug ?? feature,
+    readFile,
   });
 
   // Ownership comes from the project's declared repositories, the same source SHIP uses.
@@ -618,9 +709,14 @@ export function buildPlanContext({ projectRoot, feature, runtime, readFile = rea
     declared = [];
   }
   const repositories = declared.length
-    ? declared.map(({ repositoryKey, path }) => ({ name: repositoryKey, role: `checked out at ${path}` }))
+    ? declared.map(({ repositoryKey, path }) => ({
+        name: repositoryKey,
+        role: `checked out at ${path}`,
+      }))
     : [
-        ...new Set(tasks.flatMap((task) => task.preserve.map(({ repositoryKey }) => repositoryKey))),
+        ...new Set(
+          tasks.flatMap((task) => task.preserve.map(({ repositoryKey }) => repositoryKey)),
+        ),
       ].map((name) => ({ name, role: 'in scope for this plan' }));
 
   return buildFromArtifacts({

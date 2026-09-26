@@ -29,12 +29,17 @@ const removedPrefixes = [
 ];
 
 for (const relativePath of removedExactPaths) {
-  assert.equal(existsSync(join(root, relativePath)), false, `legacy dashboard path remains: ${relativePath}`);
+  assert.equal(
+    existsSync(join(root, relativePath)),
+    false,
+    `legacy dashboard path remains: ${relativePath}`,
+  );
 }
 
 const residualAppPaths = existsSync(join(root, 'lib/dashboard/app'))
-  ? readdirSync(join(root, 'lib/dashboard/app'), { recursive: true })
-    .map((entry) => `lib/dashboard/app/${String(entry).replaceAll('\\', '/')}`)
+  ? readdirSync(join(root, 'lib/dashboard/app'), { recursive: true }).map(
+      (entry) => `lib/dashboard/app/${String(entry).replaceAll('\\', '/')}`,
+    )
   : [];
 
 for (const relativePath of residualAppPaths) {
@@ -47,8 +52,10 @@ for (const relativePath of residualAppPaths) {
 
 assert.equal(existsSync(join(root, 'lib/dashboard/resolve-packaged-dashboard-root.mjs')), true);
 
-process.stdout.write(`${JSON.stringify({
-  ok: true,
-  removedExactPaths: removedExactPaths.length,
-  residualAppPaths: residualAppPaths.length,
-})}\n`);
+process.stdout.write(
+  `${JSON.stringify({
+    ok: true,
+    removedExactPaths: removedExactPaths.length,
+    residualAppPaths: residualAppPaths.length,
+  })}\n`,
+);

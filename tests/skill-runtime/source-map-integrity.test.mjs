@@ -4,11 +4,11 @@ import { join, resolve } from 'node:path';
 import test from 'node:test';
 
 import {
-  SourceMapBuilder,
   compileComposedV1,
   compileMarkdownV1,
   loadComposedSkill,
   owner,
+  SourceMapBuilder,
   sha256Bytes,
   validateSourceMap,
 } from '../../packages/skill-runtime/src/index.mjs';
@@ -21,8 +21,12 @@ function assertFrozenRange(range) {
   assert.equal(Object.isFrozen(range), true, 'range object must be frozen');
   assert.equal(Object.isFrozen(range.owner), true, 'range.owner must be frozen');
   // Object.isFrozen alone does not prove a write throws; ESM strict semantics do.
-  assert.throws(() => { range.startByte = 999; }, TypeError);
-  assert.throws(() => { range.owner.ownerKind = 'tampered'; }, TypeError);
+  assert.throws(() => {
+    range.startByte = 999;
+  }, TypeError);
+  assert.throws(() => {
+    range.owner.ownerKind = 'tampered';
+  }, TypeError);
 }
 
 test('SourceMapBuilder.build returns a frozen array of frozen ranges independent of the builder', () => {
@@ -61,8 +65,15 @@ test('SourceMapBuilder clones caller-owned owner data before retaining it', () =
 });
 
 test('compileComposedV1 returns genuinely frozen source-map ranges and owners', () => {
-  const { skillSource, skillSourceCustody, modules, hostProfilesByKey, readSource } = loadComposedSkill({ skillDir: example });
-  const result = compileComposedV1({ skillSource, skillSourceCustody, modules, hostProfile: hostProfilesByKey.get('minimal-claude-code@1.0.0'), readSource });
+  const { skillSource, skillSourceCustody, modules, hostProfilesByKey, readSource } =
+    loadComposedSkill({ skillDir: example });
+  const result = compileComposedV1({
+    skillSource,
+    skillSourceCustody,
+    modules,
+    hostProfile: hostProfilesByKey.get('minimal-claude-code@1.0.0'),
+    readSource,
+  });
   assert.equal(Object.isFrozen(result.primary.sourceMap), true);
   assert.equal(Object.isFrozen(result.references), true);
   for (const range of result.primary.sourceMap) assertFrozenRange(range);
@@ -83,14 +94,23 @@ test('markdown-v1 host tokens are attributed to the compiler, not a host-profile
     sourcePath: 'fixtures/legacy/planr-legacy-map/SKILL.md',
   });
   const kinds = new Set(compiled.sourceMap.map((range) => range.owner.ownerKind));
-  assert.equal(kinds.has('compiler'), true, 'HOST_SUBSTITUTIONS-derived bytes must be ownerKind compiler');
-  assert.equal(kinds.has('host-profile'), false, 'markdown-v1 has no authored host-profile document');
+  assert.equal(
+    kinds.has('compiler'),
+    true,
+    'HOST_SUBSTITUTIONS-derived bytes must be ownerKind compiler',
+  );
+  assert.equal(
+    kinds.has('host-profile'),
+    false,
+    'markdown-v1 has no authored host-profile document',
+  );
   const compilerOwned = compiled.sourceMap.find((range) => range.owner.ownerKind === 'compiler');
   assert.match(compilerOwned.owner.pointer, /render-primitives\.mjs#\/HOST_SUBSTITUTIONS\//u);
 });
 
 test('markdown-v1 include sources and CRLF transforms retain exact owners on every host', () => {
-  const canonical = '---\r\nname: planr-map\r\ndescription: Include source-map fixture.\r\nallowed-tools: "Read"\r\n---\r\n\r\n<!-- openplanr:include:start references/context.md -->\r\nold\r\n<!-- openplanr:include:end -->\r\n';
+  const canonical =
+    '---\r\nname: planr-map\r\ndescription: Include source-map fixture.\r\nallowed-tools: "Read"\r\n---\r\n\r\n<!-- openplanr:include:start references/context.md -->\r\nold\r\n<!-- openplanr:include:end -->\r\n';
   const included = '# Included context\r\n\r\nRead the exact source.\r\n';
   const cursorTemplate = read('packages/skill-runtime/templates/cursor-rule.md');
   for (const host of ['claude-code', 'codex', 'cursor', 'pipeline']) {
@@ -108,24 +128,24 @@ test('markdown-v1 include sources and CRLF transforms retain exact owners on eve
     });
     assert.equal(compiled.bytes.includes('\r'), false, host);
     assert.doesNotThrow(() => validateSourceMap(compiled.sourceMap, compiled.byteLength), host);
-    assert.ok(compiled.sourceMap.some((range) => range.owner.pointer === 'references/context.md'), `${host} include source`);
-    assert.ok(compiled.sourceMap.some((range) => range.owner.pointer.includes('crlf-to-lf')), `${host} LF transform`);
-    assert.ok(compiled.sourceMap.some((range) => range.owner.pointer.includes('INCLUDE_COMMENT')), `${host} include comment`);
+    assert.ok(
+      compiled.sourceMap.some((range) => range.owner.pointer === 'references/context.md'),
+      `${host} include source`,
+    );
+    assert.ok(
+      compiled.sourceMap.some((range) => range.owner.pointer.includes('crlf-to-lf')),
+      `${host} LF transform`,
+    );
+    assert.ok(
+      compiled.sourceMap.some((range) => range.owner.pointer.includes('INCLUDE_COMMENT')),
+      `${host} include comment`,
+    );
   }
 });
 
 test('composed-v1 hardcoded host substitutions report compiler ownership', () => {
-  const { skillSource, skillSourceCustody, modules, hostProfilesByKey, readSource } = loadComposedSkill({ skillDir: example });
-  const result = compileComposedV1({ skillSource, skillSourceCustody, modules, hostProfile: hostProfilesByKey.get('minimal-claude-code@1.0.0'), readSource });
-  const kinds = new Set(result.primary.sourceMap.map((range) => range.owner.ownerKind));
-  assert.equal(kinds.has('host-profile'), false);
-  assert.equal(kinds.has('compiler'), true);
-  const compilerOwned = result.primary.sourceMap.find((range) => range.owner.pointer.includes('HOST_SUBSTITUTIONS'));
-  assert.ok(compilerOwned);
-});
-
-test('composed skill identity bytes point to the exact authored skill.json bytes', () => {
-  const { skillSource, skillSourceCustody, modules, hostProfilesByKey, readSource } = loadComposedSkill({ skillDir: example });
+  const { skillSource, skillSourceCustody, modules, hostProfilesByKey, readSource } =
+    loadComposedSkill({ skillDir: example });
   const result = compileComposedV1({
     skillSource,
     skillSourceCustody,
@@ -133,9 +153,37 @@ test('composed skill identity bytes point to the exact authored skill.json bytes
     hostProfile: hostProfilesByKey.get('minimal-claude-code@1.0.0'),
     readSource,
   });
-  const identityRange = result.primary.sourceMap.find((range) => range.owner.pointer === 'skill.json#/skillId');
+  const kinds = new Set(result.primary.sourceMap.map((range) => range.owner.ownerKind));
+  assert.equal(kinds.has('host-profile'), false);
+  assert.equal(kinds.has('compiler'), true);
+  const compilerOwned = result.primary.sourceMap.find((range) =>
+    range.owner.pointer.includes('HOST_SUBSTITUTIONS'),
+  );
+  assert.ok(compilerOwned);
+});
+
+test('composed skill identity bytes point to the exact authored skill.json bytes', () => {
+  const { skillSource, skillSourceCustody, modules, hostProfilesByKey, readSource } =
+    loadComposedSkill({ skillDir: example });
+  const result = compileComposedV1({
+    skillSource,
+    skillSourceCustody,
+    modules,
+    hostProfile: hostProfilesByKey.get('minimal-claude-code@1.0.0'),
+    readSource,
+  });
+  const identityRange = result.primary.sourceMap.find(
+    (range) => range.owner.pointer === 'skill.json#/skillId',
+  );
   assert.ok(identityRange, 'rendered skill id must retain its authored source owner');
   assert.equal(identityRange.owner.digest, skillSourceCustody.digest);
-  assert.equal(identityRange.owner.digest, sha256Bytes(readFileSync(join(example, 'skill.json'), 'utf8')));
-  assert.notEqual(identityRange.owner.digest, skillSource.documentDigest, 'authored bytes and canonical Protocol document are distinct custody domains');
+  assert.equal(
+    identityRange.owner.digest,
+    sha256Bytes(readFileSync(join(example, 'skill.json'), 'utf8')),
+  );
+  assert.notEqual(
+    identityRange.owner.digest,
+    skillSource.documentDigest,
+    'authored bytes and canonical Protocol document are distinct custody domains',
+  );
 });

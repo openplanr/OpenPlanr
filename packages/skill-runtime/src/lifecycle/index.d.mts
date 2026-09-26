@@ -15,7 +15,12 @@ export type DataFeature = 'learning' | 'telemetry' | 'external-data';
 export type ConsentDecision = 'granted' | 'declined' | 'withdrawn';
 export type ConsentResolutionDecision = ConsentDecision | 'unset';
 export type LearningCategory = 'context' | 'review' | 'implementation' | 'diagnostic';
-export type OperationClass = 'planning' | 'read-only' | 'implementation' | 'external-effect' | 'destructive';
+export type OperationClass =
+  | 'planning'
+  | 'read-only'
+  | 'implementation'
+  | 'external-effect'
+  | 'destructive';
 
 declare const preparedLearningBrand: unique symbol;
 
@@ -102,7 +107,12 @@ export interface GuidedConfirmation {
   readonly actionId: string;
   readonly sessionId: string;
   readonly command: `planr ${string}`;
-  readonly effect: 'read-only' | 'machine-local-write' | 'project-write' | 'provider-call' | 'external-effect';
+  readonly effect:
+    | 'read-only'
+    | 'machine-local-write'
+    | 'project-write'
+    | 'provider-call'
+    | 'external-effect';
   readonly providerUse: boolean;
   readonly confirmationScope: string;
   readonly confirmationDigest: `sha256:${string}`;
@@ -177,11 +187,16 @@ export interface PreparedLearningUnavailableResult {
   readonly [preparedLearningBrand]: true;
   readonly status: 'blocked' | 'unavailable';
   readonly record: null;
-  readonly reason: 'disallowed-learning-data' | 'learning-disabled' | 'learning-empty-after-redaction';
+  readonly reason:
+    | 'disallowed-learning-data'
+    | 'learning-disabled'
+    | 'learning-empty-after-redaction';
   readonly disallowed: readonly string[];
 }
 
-export type PreparedLearningResult = PreparedLearningCompletedResult | PreparedLearningUnavailableResult;
+export type PreparedLearningResult =
+  | PreparedLearningCompletedResult
+  | PreparedLearningUnavailableResult;
 
 export interface LearningPersistenceResult {
   readonly status: 'completed' | 'blocked' | 'unavailable';
@@ -288,7 +303,9 @@ export declare function completionFromRuntimeResult(
 ): CompletedCompletionResult;
 
 export declare function completionFromRuntimeResult(
-  result: Readonly<Record<string, unknown>> & { status: Exclude<CompletionStatus, 'completed'> | 'denied' },
+  result: Readonly<Record<string, unknown>> & {
+    status: Exclude<CompletionStatus, 'completed'> | 'denied';
+  },
   input: NonCompletedCompletionDetails,
 ): NonCompletedCompletionResult;
 
@@ -333,7 +350,10 @@ export declare function createSkillSession(input: {
 
 export declare function updateSkillSession(
   session: SkillSessionDocument,
-  input: { state: 'open' | 'answered' | 'closed' | 'expired'; questions?: readonly GuidedQuestion[] },
+  input: {
+    state: 'open' | 'answered' | 'closed' | 'expired';
+    questions?: readonly GuidedQuestion[];
+  },
 ): SkillSessionDocument;
 
 export declare function checkpointSession(input: {
@@ -371,18 +391,28 @@ export declare function persistLearningRecord(input: {
   relativePath?: typeof LOCAL_LEARNING_PATH;
 }): LearningPersistenceResult;
 
-export declare function detectLifecycleEnvironment(input: { projectRoot: string }): Readonly<Omit<LifecycleEnvironment, 'status' | 'stateAvailable' | 'firstRun' | 'notice' | 'issue'>>;
+export declare function detectLifecycleEnvironment(input: {
+  projectRoot: string;
+}): Readonly<
+  Omit<LifecycleEnvironment, 'status' | 'stateAvailable' | 'firstRun' | 'notice' | 'issue'>
+>;
 
-export declare function prepareLifecycleEnvironment(input: { projectRoot: string }): Readonly<LifecycleEnvironment>;
+export declare function prepareLifecycleEnvironment(input: {
+  projectRoot: string;
+}): Readonly<LifecycleEnvironment>;
 
 export declare function firstRunGuidance(input: {
   environment: LifecycleEnvironment;
   settings: LifecycleSettings;
 }): Readonly<{ status: 'completed'; firstRun: boolean; messages: readonly string[] }>;
 
-export declare function normalizeLifecycleConfiguration(configured?: Partial<LifecycleSettings>): Readonly<LifecycleSettings>;
+export declare function normalizeLifecycleConfiguration(
+  configured?: Partial<LifecycleSettings>,
+): Readonly<LifecycleSettings>;
 
-export declare function loadLifecycleConfiguration(input: { projectRoot: string }): Readonly<LifecycleConfigurationResult>;
+export declare function loadLifecycleConfiguration(input: {
+  projectRoot: string;
+}): Readonly<LifecycleConfigurationResult>;
 
 export declare function saveLifecycleConfiguration(input: {
   projectRoot: string;
@@ -487,6 +517,10 @@ export declare function startSkillInteraction(input: {
 
 export declare function executeAtEffectBoundary(input: {
   operationClass: OperationClass;
-  localExecutor?: (request: Readonly<{ operationClass: OperationClass; effect: string }>) => unknown | Promise<unknown>;
-  hostExecutor?: (request: Readonly<{ operationClass: OperationClass; effect: string }>) => unknown | Promise<unknown>;
+  localExecutor?: (
+    request: Readonly<{ operationClass: OperationClass; effect: string }>,
+  ) => unknown | Promise<unknown>;
+  hostExecutor?: (
+    request: Readonly<{ operationClass: OperationClass; effect: string }>,
+  ) => unknown | Promise<unknown>;
 }): Promise<CompletionResult>;

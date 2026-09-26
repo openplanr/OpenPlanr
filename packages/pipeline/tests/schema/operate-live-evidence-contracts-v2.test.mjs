@@ -4,14 +4,17 @@ import { test } from 'node:test';
 
 import { validateProtocolArtifact } from '../../lib/protocol/loader.mjs';
 
-const fixture = (name) => JSON.parse(readFileSync(
-  new URL(`../../conformance/fixtures/operating-runtime-v2/${name}`, import.meta.url),
-  'utf8',
-));
-const schema = (kind) => JSON.parse(readFileSync(
-  new URL(`../../schemas/v2.0.0/${kind}.schema.json`, import.meta.url),
-  'utf8',
-));
+const fixture = (name) =>
+  JSON.parse(
+    readFileSync(
+      new URL(`../../conformance/fixtures/operating-runtime-v2/${name}`, import.meta.url),
+      'utf8',
+    ),
+  );
+const schema = (kind) =>
+  JSON.parse(
+    readFileSync(new URL(`../../schemas/v2.0.0/${kind}.schema.json`, import.meta.url), 'utf8'),
+  );
 
 const valid = fixture('live-evidence-contracts-valid.json');
 const invalid = fixture('live-evidence-contracts-invalid.json');
@@ -40,7 +43,10 @@ function applyDescriptor(base, descriptor) {
   const key = tokens.pop();
   let parent = candidate;
   for (const token of tokens) {
-    assert.ok(parent !== null && typeof parent === 'object' && token in parent, `${descriptor.name}: ${descriptor.path}`);
+    assert.ok(
+      parent !== null && typeof parent === 'object' && token in parent,
+      `${descriptor.name}: ${descriptor.path}`,
+    );
     parent = parent[token];
   }
   if (descriptor.operation === 'remove') {
@@ -58,7 +64,11 @@ test('live-evidence fixtures cover the exact closed companion contract family', 
   assert.deepEqual(Object.keys(valid).sort(), [...LIVE_EVIDENCE_CONTRACT_KINDS].sort());
   assert.deepEqual(Object.keys(invalid).sort(), [...LIVE_EVIDENCE_CONTRACT_KINDS].sort());
   for (const kind of LIVE_EVIDENCE_CONTRACT_KINDS) {
-    assert.deepEqual(validateProtocolArtifact(kind, valid[kind], { protocolVersion: '2.0.0' }), [], kind);
+    assert.deepEqual(
+      validateProtocolArtifact(kind, valid[kind], { protocolVersion: '2.0.0' }),
+      [],
+      kind,
+    );
     assert.equal(valid[kind].kind, kind);
     assert.equal(valid[kind].schemaVersion, '1.0.0');
     assert.equal(valid[kind].protocolVersion, '2.0.0');
@@ -69,7 +79,10 @@ test('live-evidence fixtures cover the exact closed companion contract family', 
 test('schema hostiles reject unknown fields, authority widening, missing custody, and parallel truth bridges', () => {
   for (const kind of LIVE_EVIDENCE_CONTRACT_KINDS) {
     const schemaCases = invalid[kind].filter(({ expectedLayer }) => expectedLayer === 'schema');
-    assert.ok(schemaCases.some(({ name }) => name === 'unknown field'), `${kind}: unknown-field hostile`);
+    assert.ok(
+      schemaCases.some(({ name }) => name === 'unknown field'),
+      `${kind}: unknown-field hostile`,
+    );
     for (const descriptor of schemaCases) {
       const candidate = applyDescriptor(valid[kind], descriptor);
       const errors = validateProtocolArtifact(kind, candidate, { protocolVersion: '2.0.0' });
@@ -77,13 +90,39 @@ test('schema hostiles reject unknown fields, authority widening, missing custody
     }
   }
 
-  assert.ok(invalid['operate-live-evidence-provider-registration'].some(({ name }) => name === 'provider-call authority widening'));
-  assert.ok(invalid['operating-connector-checkpoint'].some(({ name }) => name === 'requesting checkpoint missing current consent'));
-  assert.ok(invalid['operating-connector-checkpoint'].some(({ name }) => name === 'requesting checkpoint missing runtime capability'));
-  assert.ok(invalid['operating-live-evidence-ingestion'].some(({ name }) => name === 'direct Artifact bridge'));
-  assert.ok(invalid['operating-live-evidence-ingestion'].some(({ name }) => name === 'direct Event bridge'));
-  assert.ok(invalid['operating-outcome-evaluation'].some(({ name }) => name === 'false PASS over typed absence'));
-  assert.ok(invalid['operating-measurement-schedule'].some(({ name }) => name === 'schedule custody substitution'));
+  assert.ok(
+    invalid['operate-live-evidence-provider-registration'].some(
+      ({ name }) => name === 'provider-call authority widening',
+    ),
+  );
+  assert.ok(
+    invalid['operating-connector-checkpoint'].some(
+      ({ name }) => name === 'requesting checkpoint missing current consent',
+    ),
+  );
+  assert.ok(
+    invalid['operating-connector-checkpoint'].some(
+      ({ name }) => name === 'requesting checkpoint missing runtime capability',
+    ),
+  );
+  assert.ok(
+    invalid['operating-live-evidence-ingestion'].some(
+      ({ name }) => name === 'direct Artifact bridge',
+    ),
+  );
+  assert.ok(
+    invalid['operating-live-evidence-ingestion'].some(({ name }) => name === 'direct Event bridge'),
+  );
+  assert.ok(
+    invalid['operating-outcome-evaluation'].some(
+      ({ name }) => name === 'false PASS over typed absence',
+    ),
+  );
+  assert.ok(
+    invalid['operating-measurement-schedule'].some(
+      ({ name }) => name === 'schedule custody substitution',
+    ),
+  );
 });
 
 test('every required field fails closed for every live-evidence companion contract', () => {
@@ -91,7 +130,10 @@ test('every required field fails closed for every live-evidence companion contra
     for (const field of schema(kind).required) {
       const candidate = structuredClone(valid[kind]);
       delete candidate[field];
-      assert.ok(validateProtocolArtifact(kind, candidate, { protocolVersion: '2.0.0' }).length > 0, `${kind}:${field}`);
+      assert.ok(
+        validateProtocolArtifact(kind, candidate, { protocolVersion: '2.0.0' }).length > 0,
+        `${kind}:${field}`,
+      );
     }
   }
 });
@@ -104,7 +146,10 @@ test('provider registration and consent describe bounded calls but never portabl
   assert.deepEqual(registration.consent.credentialRefKinds, ['environment-name', 'os-custody-key']);
   assert.equal(registration.sensitivity.rawRestrictedPortable, false);
   assert.equal(registration.fallback.kind, 'unavailable');
-  assert.doesNotMatch(JSON.stringify(registration), /credential(?:Value|Secret)|bearer|privateKey/ui);
+  assert.doesNotMatch(
+    JSON.stringify(registration),
+    /credential(?:Value|Secret)|bearer|privateKey/iu,
+  );
 
   const consent = valid['operating-live-evidence-consent-record'];
   assert.equal(consent.authority, 'none');
@@ -120,8 +165,14 @@ test('the registry composes the live host profile with the frozen evidence provi
     ...valid['operate-live-evidence-provider-registry'],
     providers: [registration],
   };
-  assert.deepEqual(validateProtocolArtifact(populated.kind, populated, { protocolVersion: '2.0.0' }), []);
-  assert.equal(registration.baseEvidenceProvider.contractId, 'operate-evidence-provider-registration');
+  assert.deepEqual(
+    validateProtocolArtifact(populated.kind, populated, { protocolVersion: '2.0.0' }),
+    [],
+  );
+  assert.equal(
+    registration.baseEvidenceProvider.contractId,
+    'operate-evidence-provider-registration',
+  );
   assert.equal(registration.baseResolver.contractId, 'operate-evidence-resolver-registration');
   assert.equal(registration.baseEvidenceProvider.protocolVersion, '2.0.0');
   assert.equal(registration.baseResolver.protocolVersion, '2.0.0');
@@ -140,15 +191,26 @@ test('ingestion uses the issued Assignment submission and existing Artifact/Evid
   });
   assert.equal(ingestion.submission.operation, 'operate.assignment.submit');
   assert.equal(ingestion.submission.artifactId, ingestion.materialization.artifactId);
-  assert.equal(ingestion.submission.artifactCreatedEventId, ingestion.materialization.artifactCreatedEventId);
+  assert.equal(
+    ingestion.submission.artifactCreatedEventId,
+    ingestion.materialization.artifactCreatedEventId,
+  );
   assert.equal(ingestion.submission.evidenceRefId, ingestion.materialization.evidenceRefId);
   assert.ok(ingestion.submission.evidenceRefId.startsWith('evr_'));
-  assert.ok(ingestion.records.every((record) => Object.keys(record).sort().join(',') === 'classification,contentDigest,recordIdentityHash'));
+  assert.ok(
+    ingestion.records.every(
+      (record) =>
+        Object.keys(record).sort().join(',') === 'classification,contentDigest,recordIdentityHash',
+    ),
+  );
   assert.equal(ingestion.health.status, 'available');
   assert.equal(ingestion.sourceContract.version, '1.0.0');
   assert.equal(ingestion.evidenceCandidates[0].sourceArtifactId, ingestion.submission.artifactId);
   assert.equal(ingestion.evidenceCandidates[0].locator.artifactId, ingestion.submission.artifactId);
-  assert.equal(ingestion.evidenceClaimLinks[0].candidateId, ingestion.evidenceCandidates[0].candidateId);
+  assert.equal(
+    ingestion.evidenceClaimLinks[0].candidateId,
+    ingestion.evidenceCandidates[0].candidateId,
+  );
   assert.equal(ingestion.evidenceClaimLinks[0].sourceArtifactId, ingestion.submission.artifactId);
 });
 
@@ -202,12 +264,16 @@ test('schema-valid changed bridge and metric identities remain semantic binding 
 });
 
 test('schema validity does not turn an exact-identity divergent replay into authority', () => {
-  const descriptor = invalid['operate-live-evidence-provider-registration']
-    .find(({ expectedLayer }) => expectedLayer === 'replay-conflict');
+  const descriptor = invalid['operate-live-evidence-provider-registration'].find(
+    ({ expectedLayer }) => expectedLayer === 'replay-conflict',
+  );
   assert.ok(descriptor, 'divergent replay fixture');
   const base = valid['operate-live-evidence-provider-registration'];
   const divergent = applyDescriptor(base, descriptor);
-  assert.deepEqual(validateProtocolArtifact(base.kind, divergent, { protocolVersion: '2.0.0' }), []);
+  assert.deepEqual(
+    validateProtocolArtifact(base.kind, divergent, { protocolVersion: '2.0.0' }),
+    [],
+  );
   assert.equal(divergent.providerId, base.providerId);
   assert.equal(divergent.providerVersion, base.providerVersion);
   assert.equal(divergent.registrationHash, base.registrationHash);

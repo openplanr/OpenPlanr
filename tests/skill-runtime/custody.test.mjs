@@ -6,10 +6,10 @@ import { join, resolve } from 'node:path';
 import test from 'node:test';
 
 import {
-  SkillRuntimeError,
   compileComposedV1,
   loadComposedSkill,
   resolveModuleGraph,
+  SkillRuntimeError,
   sha256Bytes,
 } from '../../packages/skill-runtime/src/index.mjs';
 
@@ -60,14 +60,24 @@ test('custody hashes exact on-disk bytes, including CRLF, never an LF-normalized
 });
 
 test('tampered source bytes fail compilation with a stale-digest diagnostic', () => {
-  const { skillSource, skillSourceCustody, modules, hostProfilesByKey, readSource } = loadComposedSkill({ skillDir: example });
+  const { skillSource, skillSourceCustody, modules, hostProfilesByKey, readSource } =
+    loadComposedSkill({ skillDir: example });
   const hostProfile = hostProfilesByKey.get('minimal-claude-code@1.0.0');
-  assert.doesNotThrow(() => compileComposedV1({ skillSource, skillSourceCustody, modules, hostProfile, readSource }));
-
-  const tamperingReadSource = (path) => (
-    path.endsWith('hello-intro.md') ? `${readSource(path)}\nInjected line.\n` : readSource(path)
+  assert.doesNotThrow(() =>
+    compileComposedV1({ skillSource, skillSourceCustody, modules, hostProfile, readSource }),
   );
-  const error = caught(() => compileComposedV1({ skillSource, skillSourceCustody, modules, hostProfile, readSource: tamperingReadSource }));
+
+  const tamperingReadSource = (path) =>
+    path.endsWith('hello-intro.md') ? `${readSource(path)}\nInjected line.\n` : readSource(path);
+  const error = caught(() =>
+    compileComposedV1({
+      skillSource,
+      skillSourceCustody,
+      modules,
+      hostProfile,
+      readSource: tamperingReadSource,
+    }),
+  );
   assert.ok(error instanceof SkillRuntimeError);
   assert.equal(error.code, 'E_SKILL_SOURCE_DIGEST_STALE');
   assert.equal(error.details.path, 'modules/hello-intro.md');
@@ -75,85 +85,130 @@ test('tampered source bytes fail compilation with a stale-digest diagnostic', ()
 });
 
 test('a substituted readSource at render time is caught after custody is established (TOCTOU)', () => {
-  const { skillSource, skillSourceCustody, modules, hostProfilesByKey, readSource } = loadComposedSkill({ skillDir: example });
+  const { skillSource, skillSourceCustody, modules, hostProfilesByKey, readSource } =
+    loadComposedSkill({ skillDir: example });
   const hostProfile = hostProfilesByKey.get('minimal-claude-code@1.0.0');
   // Custody is established once (legitimate digests), then a different readSource
   // returns substituted bytes for the same template path at render time.
-  const substituteTemplate = (path) => (
-    path === skillSource.template.path ? `${readSource(path)}\nUnowned trailer.\n` : readSource(path)
+  const substituteTemplate = (path) =>
+    path === skillSource.template.path
+      ? `${readSource(path)}\nUnowned trailer.\n`
+      : readSource(path);
+  const error = caught(() =>
+    compileComposedV1({
+      skillSource,
+      skillSourceCustody,
+      modules,
+      hostProfile,
+      readSource: substituteTemplate,
+    }),
   );
-  const error = caught(() => compileComposedV1({ skillSource, skillSourceCustody, modules, hostProfile, readSource: substituteTemplate }));
   assert.ok(error instanceof SkillRuntimeError);
   assert.equal(error.code, 'E_SKILL_SOURCE_DIGEST_STALE');
   assert.equal(error.details.path, skillSource.template.path);
 });
 
 test('a supported but unselected host profile is rejected before any source read', () => {
-  const { skillSource, skillSourceCustody, modules, hostProfilesByKey, readSource } = loadComposedSkill({ skillDir: example });
-  const forged = { ...hostProfilesByKey.get('minimal-claude-code@1.0.0'), hostProfileId: 'forged-codex', host: 'codex' };
+  const { skillSource, skillSourceCustody, modules, hostProfilesByKey, readSource } =
+    loadComposedSkill({ skillDir: example });
+  const forged = {
+    ...hostProfilesByKey.get('minimal-claude-code@1.0.0'),
+    hostProfileId: 'forged-codex',
+    host: 'codex',
+  };
   let reads = 0;
-  const error = caught(() => compileComposedV1({
-    skillSource,
-    skillSourceCustody,
-    modules,
-    hostProfile: forged,
-    readSource: (path) => { reads += 1; return readSource(path); },
-  }));
+  const error = caught(() =>
+    compileComposedV1({
+      skillSource,
+      skillSourceCustody,
+      modules,
+      hostProfile: forged,
+      readSource: (path) => {
+        reads += 1;
+        return readSource(path);
+      },
+    }),
+  );
   assert.ok(error instanceof SkillRuntimeError);
   assert.equal(error.code, 'E_SKILL_HOST_PROFILE_UNDECLARED');
   assert.equal(reads, 0);
 });
 
 test('the selected host-profile source is verified even though its prose is not emitted', () => {
-  const { skillSource, skillSourceCustody, modules, hostProfilesByKey, readSource } = loadComposedSkill({ skillDir: example });
+  const { skillSource, skillSourceCustody, modules, hostProfilesByKey, readSource } =
+    loadComposedSkill({ skillDir: example });
   const hostProfile = hostProfilesByKey.get('minimal-claude-code@1.0.0');
-  const error = caught(() => compileComposedV1({
-    skillSource,
-    skillSourceCustody,
-    modules,
-    hostProfile,
-    readSource: (path) => (path === hostProfile.source.path ? `${readSource(path)}\nTampered.\n` : readSource(path)),
-  }));
+  const error = caught(() =>
+    compileComposedV1({
+      skillSource,
+      skillSourceCustody,
+      modules,
+      hostProfile,
+      readSource: (path) =>
+        path === hostProfile.source.path ? `${readSource(path)}\nTampered.\n` : readSource(path),
+    }),
+  );
   assert.ok(error instanceof SkillRuntimeError);
   assert.equal(error.code, 'E_SKILL_SOURCE_DIGEST_STALE');
   assert.equal(error.details.path, hostProfile.source.path);
 });
 
 test('a tampered routed source fails even though it is outside the primary body', () => {
-  const { skillSource, skillSourceCustody, modules, hostProfilesByKey, readSource } = loadComposedSkill({ skillDir: example });
+  const { skillSource, skillSourceCustody, modules, hostProfilesByKey, readSource } =
+    loadComposedSkill({ skillDir: example });
   const routed = modules.find((module) => module.moduleId === 'hello-reference');
-  const error = caught(() => compileComposedV1({
-    skillSource,
-    skillSourceCustody,
-    modules,
-    hostProfile: hostProfilesByKey.get('minimal-claude-code@1.0.0'),
-    readSource: (path) => (path === routed.source.path ? `${readSource(path)}\nTampered routed source.\n` : readSource(path)),
-  }));
+  const error = caught(() =>
+    compileComposedV1({
+      skillSource,
+      skillSourceCustody,
+      modules,
+      hostProfile: hostProfilesByKey.get('minimal-claude-code@1.0.0'),
+      readSource: (path) =>
+        path === routed.source.path
+          ? `${readSource(path)}\nTampered routed source.\n`
+          : readSource(path),
+    }),
+  );
   assert.ok(error instanceof SkillRuntimeError);
   assert.equal(error.code, 'E_SKILL_SOURCE_DIGEST_STALE');
   assert.equal(error.details.path, routed.source.path);
 });
 
 test('compilation snapshots every selected source exactly once', () => {
-  const { skillSource, skillSourceCustody, modules, hostProfilesByKey, readSource } = loadComposedSkill({ skillDir: example });
+  const { skillSource, skillSourceCustody, modules, hostProfilesByKey, readSource } =
+    loadComposedSkill({ skillDir: example });
   const counts = new Map();
   const countedRead = (path) => {
     counts.set(path, (counts.get(path) ?? 0) + 1);
     return readSource(path);
   };
-  compileComposedV1({ skillSource, skillSourceCustody, modules, hostProfile: hostProfilesByKey.get('minimal-claude-code@1.0.0'), readSource: countedRead });
+  compileComposedV1({
+    skillSource,
+    skillSourceCustody,
+    modules,
+    hostProfile: hostProfilesByKey.get('minimal-claude-code@1.0.0'),
+    readSource: countedRead,
+  });
   assert.ok([...counts.values()].every((count) => count === 1));
-  assert.deepEqual(
-    [...counts.keys()].sort(),
-    ['SKILL.md.tmpl', 'modules/hello-intro.md', 'modules/hello-reference.md', 'profiles/claude-code.md', 'skill.json'],
-  );
+  assert.deepEqual([...counts.keys()].sort(), [
+    'SKILL.md.tmpl',
+    'modules/hello-intro.md',
+    'modules/hello-reference.md',
+    'profiles/claude-code.md',
+    'skill.json',
+  ]);
 });
 
 test('graph resolution enforces standards-compliant exact SemVer at the module edge', () => {
   const { skillSource, modules } = loadComposedSkill({ skillDir: example });
   assert.doesNotThrow(() => resolveModuleGraph({ skillSource, modules }));
   for (const malformed of ['1.0.0-alpha..1', '01.0.0', '1.0.0-', '1.0.0+', '1.0.0-01']) {
-    const floated = { ...skillSource, modules: [{ moduleId: 'hello-intro', moduleVersion: malformed, digest: `sha256:${'a'.repeat(64)}` }] };
+    const floated = {
+      ...skillSource,
+      modules: [
+        { moduleId: 'hello-intro', moduleVersion: malformed, digest: `sha256:${'a'.repeat(64)}` },
+      ],
+    };
     const error = caught(() => resolveModuleGraph({ skillSource: floated, modules }));
     assert.ok(error instanceof SkillRuntimeError, malformed);
     assert.equal(error.code, 'E_SKILL_MODULE_VERSION_FLOATING', malformed);

@@ -30,7 +30,8 @@ function sleep(milliseconds) {
 function readOwner(lockPath) {
   try {
     const value = JSON.parse(readFileSync(join(lockPath, OWNER_FILE), 'utf8'));
-    if (Number.isInteger(value.pid) && value.pid > 0 && typeof value.token === 'string') return value;
+    if (Number.isInteger(value.pid) && value.pid > 0 && typeof value.token === 'string')
+      return value;
   } catch {
     // A legacy or externally damaged lock may be missing valid ownership data.
     // Its directory age determines whether it is safe to reclaim below.
@@ -59,11 +60,12 @@ function readReclaimOwner(claimPath) {
   try {
     const value = JSON.parse(readFileSync(join(claimPath, OWNER_FILE), 'utf8'));
     if (
-      Number.isInteger(value.pid)
-      && value.pid > 0
-      && typeof value.token === 'string'
-      && typeof value.lockIdentity === 'string'
-    ) return value;
+      Number.isInteger(value.pid) &&
+      value.pid > 0 &&
+      typeof value.token === 'string' &&
+      typeof value.lockIdentity === 'string'
+    )
+      return value;
   } catch {
     // A claimant may crash between mkdir and writing its owner record. A later
     // claimant nests an exclusive recovery claim after the directory ages out.
@@ -93,10 +95,8 @@ function observeStaleLock(lockPath) {
     if (error?.code === 'ENOENT') return null;
     throw error;
   }
-  if (
-    fileIdentity(current) !== fileIdentity(before)
-    || current.mtimeMs !== before.mtimeMs
-  ) return null;
+  if (fileIdentity(current) !== fileIdentity(before) || current.mtimeMs !== before.mtimeMs)
+    return null;
 
   const currentOwner = readOwner(lockPath);
   if (owner ? !sameOwner(currentOwner, owner) : currentOwner !== null) return null;
@@ -138,10 +138,14 @@ function createReclaimClaim(claimPath, claimant, observation) {
   }
 
   try {
-    writeFileSync(join(claimPath, OWNER_FILE), `${JSON.stringify({
-      ...claimant,
-      lockIdentity: observation.lockIdentity,
-    })}\n`, 'utf8');
+    writeFileSync(
+      join(claimPath, OWNER_FILE),
+      `${JSON.stringify({
+        ...claimant,
+        lockIdentity: observation.lockIdentity,
+      })}\n`,
+      'utf8',
+    );
   } catch (error) {
     if (error?.code === 'ENOENT') return null;
     // Do not remove a claim through the well-known lock path. If the process
@@ -165,16 +169,10 @@ function acquireReclaimClaim(lockPath, observation, claimant) {
     const stat = assertReclaimPath(claimPath);
     if (!stat) return null;
     const owner = readReclaimOwner(claimPath);
-    if (
-      owner
-      && owner.lockIdentity === observation.lockIdentity
-      && sameOwner(owner, claimant)
-    ) return claimPath;
-    if (
-      owner
-      && owner.lockIdentity === observation.lockIdentity
-      && processIsAlive(owner.pid)
-    ) return null;
+    if (owner && owner.lockIdentity === observation.lockIdentity && sameOwner(owner, claimant))
+      return claimPath;
+    if (owner && owner.lockIdentity === observation.lockIdentity && processIsAlive(owner.pid))
+      return null;
     if (!owner && Date.now() - stat.mtimeMs < MALFORMED_LOCK_STALE_MS) return null;
 
     // A dead, malformed, or wrong-inode claimant is never removed in place.
@@ -196,10 +194,11 @@ function observationStillStale(lockPath, observation, claimPath, claimant) {
 
   const claimOwner = readReclaimOwner(claimPath);
   if (
-    !claimOwner
-    || claimOwner.lockIdentity !== observation.lockIdentity
-    || !sameOwner(claimOwner, claimant)
-  ) return false;
+    !claimOwner ||
+    claimOwner.lockIdentity !== observation.lockIdentity ||
+    !sameOwner(claimOwner, claimant)
+  )
+    return false;
 
   const currentOwner = readOwner(lockPath);
   if (observation.owner) {
@@ -210,7 +209,8 @@ function observationStillStale(lockPath, observation, claimPath, claimant) {
 
 function reclaimStaleLock(skillDir, lockPath, observation, claimant) {
   const claimPath = acquireReclaimClaim(lockPath, observation, claimant);
-  if (!claimPath || !observationStillStale(lockPath, observation, claimPath, claimant)) return false;
+  if (!claimPath || !observationStillStale(lockPath, observation, claimPath, claimant))
+    return false;
 
   const quarantinePath = join(skillDir, `${RECLAIMED_PREFIX}${claimant.token}`);
   try {
@@ -248,7 +248,10 @@ function assertLockPath(lockPath) {
       throw new SkillAuthoringError(
         'E_SKILL_GENERATION_LOCK_INVALID',
         `${lockPath} is not a valid OpenPlanr generation lock.`,
-        { path: lockPath, repair: `Move the existing ${LOCK_DIR} path, then run generation again.` },
+        {
+          path: lockPath,
+          repair: `Move the existing ${LOCK_DIR} path, then run generation again.`,
+        },
       );
     }
   } catch (error) {
@@ -288,7 +291,10 @@ export function acquireGenerationLock(skillDir, { beforeReclaimClaim } = {}) {
             throw new SkillAuthoringError(
               'E_SKILL_GENERATION_LOCK_LOST',
               `Generation lock ownership changed before ${skillDir} finished writing.`,
-              { path: lockPath, repair: 'Inspect the temporary lock path, then run generation again.' },
+              {
+                path: lockPath,
+                repair: 'Inspect the temporary lock path, then run generation again.',
+              },
             );
           }
           rmSync(lockPath, { recursive: true, force: true });
@@ -308,7 +314,10 @@ export function acquireGenerationLock(skillDir, { beforeReclaimClaim } = {}) {
       throw new SkillAuthoringError(
         'E_SKILL_GENERATION_BUSY',
         `Another process is still generating ${skillDir}.`,
-        { path: lockPath, repair: 'Wait for the active generation to finish, then run the command again.' },
+        {
+          path: lockPath,
+          repair: 'Wait for the active generation to finish, then run the command again.',
+        },
       );
     }
     sleep(WAIT_INTERVAL_MS);

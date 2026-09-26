@@ -7,8 +7,6 @@ import { fileURLToPath } from 'node:url';
 
 import { loadEvaluationContract, validateProtocolArtifact } from 'planr-pipeline/protocol';
 import {
-  EVALUATION_METRICS,
-  EVALUATION_UNWAIVABLE_METRICS,
   assertEvaluationAggregateReport,
   assertEvaluationBudget,
   assertEvaluationCorpus,
@@ -25,10 +23,12 @@ import {
   assertEvaluationWaiver,
   assertEvaluationWaiverApplicable,
   assertSkillCertificationReceipt,
+  EVALUATION_METRICS,
+  EVALUATION_UNWAIVABLE_METRICS,
 } from '../lib/pipeline/evaluation-contract.mjs';
 import {
-  EVALUATION_EVIDENCE_INPUTS,
   deriveEvaluationIdentity,
+  EVALUATION_EVIDENCE_INPUTS,
   evaluationEvidenceReuse,
 } from '../lib/pipeline/evaluation-identity.mjs';
 import { assertEvaluationAggregatePublishable } from '../lib/pipeline/evaluation-redaction.mjs';
@@ -50,7 +50,8 @@ function fixture(name) {
 
 function resolve(container, segments) {
   let target = container;
-  for (const segment of segments) target = target?.[Array.isArray(target) ? Number(segment) : segment];
+  for (const segment of segments)
+    target = target?.[Array.isArray(target) ? Number(segment) : segment];
   return target;
 }
 
@@ -124,7 +125,8 @@ const validators = {
   'evaluation-run-result': (record) => assertEvaluationRunResult(record),
   'evaluation-aggregate-report': (record) => assertEvaluationAggregateReport(record),
   'evaluation-waiver': (record) => assertEvaluationWaiver(record),
-  'skill-certification-receipt': (record) => assertSkillCertificationReceipt(record, { aggregateReport, now: NOW }),
+  'skill-certification-receipt': (record) =>
+    assertSkillCertificationReceipt(record, { aggregateReport, now: NOW }),
 };
 
 let refusedShapes = 0;
@@ -135,17 +137,29 @@ for (const [kind, record] of Object.entries(valid)) {
 
   const resolved = loadEvaluationContract(kind, { protocolVersion: VERSION });
   pass(
-    resolved.kind === kind
-      && resolved.protocolVersion === VERSION
-      && resolved.path === `schemas/v${VERSION}/${kind}.schema.json`
-      && resolved.schema.$id === `https://openplanr.dev/schemas/v${VERSION}/${kind}.schema.json`,
+    resolved.kind === kind &&
+      resolved.protocolVersion === VERSION &&
+      resolved.path === `schemas/v${VERSION}/${kind}.schema.json` &&
+      resolved.schema.$id === `https://openplanr.dev/schemas/v${VERSION}/${kind}.schema.json`,
     `${kind} resolves at the explicit contract version`,
   );
-  pass(throws(() => loadEvaluationContract(kind)), `${kind} refuses an implicit contract version`);
-  pass(throws(() => loadEvaluationContract(kind, { protocolVersion: '1.3.0' })), `${kind} refuses an unsupported contract version`);
+  pass(
+    throws(() => loadEvaluationContract(kind)),
+    `${kind} refuses an implicit contract version`,
+  );
+  pass(
+    throws(() => loadEvaluationContract(kind, { protocolVersion: '1.3.0' })),
+    `${kind} refuses an unsupported contract version`,
+  );
 
-  pass(validateProtocolArtifact(kind, record, { protocolVersion: VERSION }).length === 0, `the reference ${kind} satisfies its published schema`);
-  pass(refusalCode(validators[kind], record) === null, `the reference ${kind} satisfies its published validator`);
+  pass(
+    validateProtocolArtifact(kind, record, { protocolVersion: VERSION }).length === 0,
+    `the reference ${kind} satisfies its published schema`,
+  );
+  pass(
+    refusalCode(validators[kind], record) === null,
+    `the reference ${kind} satisfies its published validator`,
+  );
 
   const identity = deriveEvaluationIdentity(record, kind);
   pass(
@@ -168,12 +182,16 @@ for (const [kind, record] of Object.entries(valid)) {
     // told a refused record is acceptable. A custody case is a binding the schema cannot
     // see — a digest that no longer matches its source, canonical member order, waiver
     // horizon — and is owned by the validator alone.
-    const schemaRefused = validateProtocolArtifact(kind, candidate, { protocolVersion: VERSION }).length > 0;
+    const schemaRefused =
+      validateProtocolArtifact(kind, candidate, { protocolVersion: VERSION }).length > 0;
     if (refusal.refusedBy === 'schema') {
       pass(schemaRefused, `${kind} refuses at the schema: ${refusal.name}`);
       refusedShapes += 1;
     } else {
-      pass(refusal.refusedBy === 'contract', `${kind} declares the layer that owns: ${refusal.name}`);
+      pass(
+        refusal.refusedBy === 'contract',
+        `${kind} declares the layer that owns: ${refusal.name}`,
+      );
       custodyRefusals += 1;
     }
   }
@@ -181,25 +199,47 @@ for (const [kind, record] of Object.entries(valid)) {
 
 // The packaged registries are what a run actually binds, so they are checked as shipped.
 for (const [file, kind, validate] of [
-  ['registry/evaluation-graders.json', 'evaluation-grader-registry', assertEvaluationGraderRegistry],
-  ['registry/evaluation-host-profiles.json', 'evaluation-host-profile-registry', assertEvaluationHostProfileRegistry],
+  [
+    'registry/evaluation-graders.json',
+    'evaluation-grader-registry',
+    assertEvaluationGraderRegistry,
+  ],
+  [
+    'registry/evaluation-host-profiles.json',
+    'evaluation-host-profile-registry',
+    assertEvaluationHostProfileRegistry,
+  ],
 ]) {
   const record = JSON.parse(readFileSync(join(root, file), 'utf8'));
-  pass(validateProtocolArtifact(kind, record, { protocolVersion: VERSION }).length === 0, `${file} satisfies its published schema`);
+  pass(
+    validateProtocolArtifact(kind, record, { protocolVersion: VERSION }).length === 0,
+    `${file} satisfies its published schema`,
+  );
   const refusal = refusalCode(validate, record);
   pass(refusal === null, `${file} satisfies its published validator (refused with ${refusal})`);
 }
 
 // Validation is the deterministic path, so its modules may reach nothing that could make a
 // network call, spawn a process, read an ambient credential, or contact a model.
-for (const module of ['evaluation-contract.mjs', 'evaluation-identity.mjs', 'evaluation-redaction.mjs']) {
+for (const module of [
+  'evaluation-contract.mjs',
+  'evaluation-identity.mjs',
+  'evaluation-redaction.mjs',
+]) {
   const source = readFileSync(join(root, 'lib', 'pipeline', module), 'utf8');
   const specifiers = [...source.matchAll(/from\s+'([^']+)'/gu)].map(([, specifier]) => specifier);
   pass(
     specifiers.every((specifier) => specifier === 'node:crypto' || specifier.startsWith('.')),
     `${module} imports nothing beyond hashing and local contract modules`,
   );
-  for (const reach of ['fetch(', 'process.env', 'child_process', 'node:http', 'node:net', 'XMLHttpRequest']) {
+  for (const reach of [
+    'fetch(',
+    'process.env',
+    'child_process',
+    'node:http',
+    'node:net',
+    'XMLHttpRequest',
+  ]) {
     pass(!source.includes(reach), `${module} makes no ${reach} reach`);
   }
 }
@@ -208,35 +248,49 @@ for (const module of ['evaluation-contract.mjs', 'evaluation-identity.mjs', 'eva
 // no model call, no network, and no credential use.
 for (const registration of valid['evaluation-grader-registry'].graders) {
   pass(
-    registration.graderType !== 'live-model-judgement'
-      && registration.determinism.deterministic
-      && !registration.determinism.modelCall
-      && !registration.determinism.network
-      && !registration.determinism.credentialUse
-      && registration.consent === null
-      && registration.credentialReference === null
-      && registration.telemetry === false,
+    registration.graderType !== 'live-model-judgement' &&
+      registration.determinism.deterministic &&
+      !registration.determinism.modelCall &&
+      !registration.determinism.network &&
+      !registration.determinism.credentialUse &&
+      registration.consent === null &&
+      registration.credentialReference === null &&
+      registration.telemetry === false,
     `the built-in grader ${registration.graderName} makes no model, network, or credential call`,
   );
-  pass(registration.unavailableBehavior === 'typed-absence', `the built-in grader ${registration.graderName} reports absence as absence`);
-  pass(!registration.blocksContractValidation, `the built-in grader ${registration.graderName} is not a precondition for validating contracts`);
+  pass(
+    registration.unavailableBehavior === 'typed-absence',
+    `the built-in grader ${registration.graderName} reports absence as absence`,
+  );
+  pass(
+    !registration.blocksContractValidation,
+    `the built-in grader ${registration.graderName} is not a precondition for validating contracts`,
+  );
 }
 
-const subject = { skillId: receipt.subject.skillId, skillSourceDigest: receipt.subject.skillSourceDigest };
+const subject = {
+  skillId: receipt.subject.skillId,
+  skillSourceDigest: receipt.subject.skillSourceDigest,
+};
 pass(
   refusalCode((entry) => assertEvaluationGraderIndependence(entry, subject), grader) === null,
   'a grader outside the skill under evaluation may grade it',
 );
 pass(
   refusalCode(
-    (entry) => assertEvaluationGraderIndependence(entry, { ...subject, skillSourceDigest: grader.provenance.sourceDigest }),
+    (entry) =>
+      assertEvaluationGraderIndependence(entry, {
+        ...subject,
+        skillSourceDigest: grader.provenance.sourceDigest,
+      }),
     grader,
   ) === 'E_EVALUATION_GRADER_NOT_INDEPENDENT',
   'a grader sharing the source bytes of the skill under evaluation may not grade it',
 );
 pass(
   refusalCode(
-    (entry) => assertEvaluationGraderIndependence(entry, { ...subject, skillId: grader.graderName }),
+    (entry) =>
+      assertEvaluationGraderIndependence(entry, { ...subject, skillId: grader.graderName }),
     grader,
   ) === 'E_EVALUATION_GRADER_NOT_INDEPENDENT',
   'a grader sharing the identity of the skill under evaluation may not grade it',
@@ -245,16 +299,21 @@ pass(
 const observation = valid['evaluation-observation'];
 pass(
   refusalCode(
-    (record) => assertEvaluationObservation(record, { subject: { registration: grader, skill: subject } }),
+    (record) =>
+      assertEvaluationObservation(record, { subject: { registration: grader, skill: subject } }),
     observation,
   ) === null,
   'an observation bound to the grader that produced it is accepted',
 );
 pass(
   refusalCode(
-    (record) => assertEvaluationObservation(record, {
-      subject: { registration: grader, skill: { ...subject, skillSourceDigest: grader.provenance.sourceDigest } },
-    }),
+    (record) =>
+      assertEvaluationObservation(record, {
+        subject: {
+          registration: grader,
+          skill: { ...subject, skillSourceDigest: grader.provenance.sourceDigest },
+        },
+      }),
     observation,
   ) === 'E_EVALUATION_GRADER_NOT_INDEPENDENT',
   'an observation produced by a grader that is part of the skill is refused',
@@ -262,29 +321,48 @@ pass(
 
 pass(
   refusalCode(
-    (record) => assertEvaluationWaiverApplicable(record, { now: NOW, gatePolicyDigest: waiver.gatePolicyDigest, scenarioDigest: scenario.scenarioDigest }),
+    (record) =>
+      assertEvaluationWaiverApplicable(record, {
+        now: NOW,
+        gatePolicyDigest: waiver.gatePolicyDigest,
+        scenarioDigest: scenario.scenarioDigest,
+      }),
     waiver,
   ) === null,
   'a live, in-policy, in-scope waiver applies',
 );
 pass(
-  refusalCode((record) => assertEvaluationWaiverApplicable(record, { now: '2026-10-01T00:00:00.000Z' }), waiver) === 'E_EVALUATION_WAIVER_REFUSED',
+  refusalCode(
+    (record) => assertEvaluationWaiverApplicable(record, { now: '2026-10-01T00:00:00.000Z' }),
+    waiver,
+  ) === 'E_EVALUATION_WAIVER_REFUSED',
   'an expired waiver never applies',
 );
 pass(
-  refusalCode((record) => assertEvaluationWaiverApplicable(record, { now: '2026-07-01T00:00:00.000Z' }), waiver) === 'E_EVALUATION_WAIVER_REFUSED',
+  refusalCode(
+    (record) => assertEvaluationWaiverApplicable(record, { now: '2026-07-01T00:00:00.000Z' }),
+    waiver,
+  ) === 'E_EVALUATION_WAIVER_REFUSED',
   'a waiver never applies before it is issued',
 );
 pass(
   refusalCode(
-    (record) => assertEvaluationWaiverApplicable(record, { now: NOW, gatePolicyDigest: aggregateReport.reportDigest }),
+    (record) =>
+      assertEvaluationWaiverApplicable(record, {
+        now: NOW,
+        gatePolicyDigest: aggregateReport.reportDigest,
+      }),
     waiver,
   ) === 'E_EVALUATION_WAIVER_REFUSED',
   'a waiver issued under a different gate policy never applies',
 );
 pass(
   refusalCode(
-    (record) => assertEvaluationWaiverApplicable(record, { now: NOW, scenarioDigest: aggregateReport.scenarios[1].scenarioDigest }),
+    (record) =>
+      assertEvaluationWaiverApplicable(record, {
+        now: NOW,
+        scenarioDigest: aggregateReport.scenarios[1].scenarioDigest,
+      }),
     waiver,
   ) === 'E_EVALUATION_WAIVER_REFUSED',
   'a scenario waiver never carries to a scenario whose bytes differ',
@@ -292,10 +370,19 @@ pass(
 
 for (const metric of EVALUATION_UNWAIVABLE_METRICS) {
   const gate = receipt.gateEvaluation.find((entry) => entry.metric === metric);
-  pass(gate.waivable === false && gate.status !== 'waived', `the ${metric} gate is evaluated as unwaivable`);
-  pass(valid['evaluation-gate-policy'].gates[metric].waivable === false, `the ${metric} gate is stated as unwaivable in policy`);
+  pass(
+    gate.waivable === false && gate.status !== 'waived',
+    `the ${metric} gate is evaluated as unwaivable`,
+  );
+  pass(
+    valid['evaluation-gate-policy'].gates[metric].waivable === false,
+    `the ${metric} gate is stated as unwaivable in policy`,
+  );
 }
-pass(receipt.gateEvaluation.length === EVALUATION_METRICS.length, 'every mandatory gate is evaluated in the receipt');
+pass(
+  receipt.gateEvaluation.length === EVALUATION_METRICS.length,
+  'every mandatory gate is evaluated in the receipt',
+);
 pass(
   receipt.recordType === 'readiness' && ['release-ready', 'blocked'].includes(receipt.result),
   'a certification receipt reports readiness and nothing else',
@@ -311,20 +398,26 @@ const evidenceInputs = {
   sourceDigest: valid['evaluation-run-result'].sourceDigest,
 };
 const prior = [{ scenarioId: scenario.scenarioId, inputs: evidenceInputs }];
-const unchanged = evaluationEvidenceReuse(prior, [{ scenarioId: scenario.scenarioId, inputs: { ...evidenceInputs } }]);
+const unchanged = evaluationEvidenceReuse(prior, [
+  { scenarioId: scenario.scenarioId, inputs: { ...evidenceInputs } },
+]);
 pass(
-  unchanged.reusable.length === 1 && unchanged.invalidated.length === 0 && unchanged.unevaluated.length === 0,
+  unchanged.reusable.length === 1 &&
+    unchanged.invalidated.length === 0 &&
+    unchanged.unevaluated.length === 0,
   'evidence carries forward only where every bound input digest is identical',
 );
-const changed = evaluationEvidenceReuse(prior, [{
-  scenarioId: scenario.scenarioId,
-  inputs: { ...evidenceInputs, packageDigest: aggregateReport.reportDigest },
-}]);
+const changed = evaluationEvidenceReuse(prior, [
+  {
+    scenarioId: scenario.scenarioId,
+    inputs: { ...evidenceInputs, packageDigest: aggregateReport.reportDigest },
+  },
+]);
 pass(
-  changed.reusable.length === 0
-    && changed.invalidated.length === 1
-    && changed.invalidated[0].reason === 'input-digest-changed'
-    && changed.invalidated[0].changedInputs.join() === 'packageDigest',
+  changed.reusable.length === 0 &&
+    changed.invalidated.length === 1 &&
+    changed.invalidated[0].reason === 'input-digest-changed' &&
+    changed.invalidated[0].changedInputs.join() === 'packageDigest',
   'a changed package digest invalidates exactly the evidence bound to it',
 );
 const dropped = evaluationEvidenceReuse(prior, []);
@@ -332,7 +425,10 @@ pass(
   dropped.invalidated.length === 1 && dropped.invalidated[0].reason === 'scenario-absent',
   'evidence for a scenario that no longer exists is invalidated, never inferred',
 );
-pass(EVALUATION_EVIDENCE_INPUTS.length === Object.keys(evidenceInputs).length, 'every declared evidence input is bound by digest');
+pass(
+  EVALUATION_EVIDENCE_INPUTS.length === Object.keys(evidenceInputs).length,
+  'every declared evidence input is bound by digest',
+);
 
 let redactionRefusals = 0;
 pass(
@@ -340,7 +436,8 @@ pass(
   'a fully redacted aggregate report is publishable',
 );
 pass(
-  refusalCode(assertEvaluationAggregatePublishable, redaction.unsafeReport) === 'E_EVALUATION_PUBLISH_UNSAFE',
+  refusalCode(assertEvaluationAggregatePublishable, redaction.unsafeReport) ===
+    'E_EVALUATION_PUBLISH_UNSAFE',
   'an aggregate report carrying raw prompt, path, and credential material is refused',
 );
 for (const injection of redaction.injections) {
@@ -352,7 +449,8 @@ for (const injection of redaction.injections) {
   redactionRefusals += 1;
 }
 pass(
-  refusalCode(assertEvaluationAggregatePublishable, valid['evaluation-run-result']) === 'E_EVALUATION_PUBLISH_UNSAFE',
+  refusalCode(assertEvaluationAggregatePublishable, valid['evaluation-run-result']) ===
+    'E_EVALUATION_PUBLISH_UNSAFE',
   'a local run result is never publishable',
 );
 
@@ -364,13 +462,15 @@ for (const name of ['contracts-valid.json', 'contracts-invalid.json', 'aggregate
   }
 }
 
-process.stdout.write(`${JSON.stringify({
-  ok: true,
-  protocolVersion: VERSION,
-  suite: 'skill-evaluation',
-  contracts: Object.keys(valid).length,
-  refusedShapes,
-  custodyRefusals,
-  redactionRefusals,
-  checks,
-})}\n`);
+process.stdout.write(
+  `${JSON.stringify({
+    ok: true,
+    protocolVersion: VERSION,
+    suite: 'skill-evaluation',
+    contracts: Object.keys(valid).length,
+    refusedShapes,
+    custodyRefusals,
+    redactionRefusals,
+    checks,
+  })}\n`,
+);

@@ -23,9 +23,21 @@ export const RELEASE_LEDGER_ABSENCE_REASONS = Object.freeze([
 
 /** Self-digest field pair per ledger contract kind; both fields are omitted before hashing. */
 export const RELEASE_LEDGER_IDENTITY_BINDINGS = Object.freeze({
-  'release-ledger': Object.freeze({ prefix: 'rlg', idField: 'ledgerId', digestField: 'ledgerDigest' }),
-  'release-compatibility-claim': Object.freeze({ prefix: 'rcc', idField: 'claimId', digestField: 'claimDigest' }),
-  'release-ledger-receipt': Object.freeze({ prefix: 'rlr', idField: 'receiptId', digestField: 'receiptDigest' }),
+  'release-ledger': Object.freeze({
+    prefix: 'rlg',
+    idField: 'ledgerId',
+    digestField: 'ledgerDigest',
+  }),
+  'release-compatibility-claim': Object.freeze({
+    prefix: 'rcc',
+    idField: 'claimId',
+    digestField: 'claimDigest',
+  }),
+  'release-ledger-receipt': Object.freeze({
+    prefix: 'rlr',
+    idField: 'receiptId',
+    digestField: 'receiptDigest',
+  }),
 });
 
 /**
@@ -34,10 +46,30 @@ export const RELEASE_LEDGER_IDENTITY_BINDINGS = Object.freeze({
  * derivation used, so a rendered range is checkable rather than authored.
  */
 export const RELEASE_MANIFEST_CLAIM_EDGES = Object.freeze([
-  Object.freeze({ path: 'components.cli.pipelineRange', consumer: 'cli', producer: 'pipeline', derivation: 'caret-range-from-producer-declared-version' }),
-  Object.freeze({ path: 'components.pipeline.cliRange', consumer: 'pipeline', producer: 'cli', derivation: 'caret-range-from-producer-declared-version' }),
-  Object.freeze({ path: 'components.skills.cliRange', consumer: 'skills', producer: 'cli', derivation: 'caret-range-from-producer-declared-version' }),
-  Object.freeze({ path: 'adapters[].pipelineRange', consumer: 'marketplace', producer: 'pipeline', derivation: 'caret-range-from-producer-declared-version' }),
+  Object.freeze({
+    path: 'components.cli.pipelineRange',
+    consumer: 'cli',
+    producer: 'pipeline',
+    derivation: 'caret-range-from-producer-declared-version',
+  }),
+  Object.freeze({
+    path: 'components.pipeline.cliRange',
+    consumer: 'pipeline',
+    producer: 'cli',
+    derivation: 'caret-range-from-producer-declared-version',
+  }),
+  Object.freeze({
+    path: 'components.skills.cliRange',
+    consumer: 'skills',
+    producer: 'cli',
+    derivation: 'caret-range-from-producer-declared-version',
+  }),
+  Object.freeze({
+    path: 'adapters[].pipelineRange',
+    consumer: 'marketplace',
+    producer: 'pipeline',
+    derivation: 'caret-range-from-producer-declared-version',
+  }),
 ]);
 
 const MANIFEST_COMPONENT_KEYS = Object.freeze(['cli', 'pipeline', 'skills', 'marketplace']);
@@ -91,7 +123,11 @@ function digest(value, label, code = 'E_RELEASE_LEDGER_CONTRACT_INVALID') {
 }
 
 function timestamp(value, label) {
-  if (typeof value !== 'string' || !Number.isFinite(Date.parse(value)) || new Date(value).toISOString() !== value) {
+  if (
+    typeof value !== 'string' ||
+    !Number.isFinite(Date.parse(value)) ||
+    new Date(value).toISOString() !== value
+  ) {
     fail('E_RELEASE_LEDGER_CONTRACT_INVALID', `${label} must be one canonical RFC 3339 timestamp.`);
   }
   return value;
@@ -99,7 +135,10 @@ function timestamp(value, label) {
 
 function bindingFor(kind) {
   if (!Object.prototype.hasOwnProperty.call(RELEASE_LEDGER_IDENTITY_BINDINGS, kind)) {
-    fail('E_RELEASE_LEDGER_CONTRACT_INVALID', `Contract kind "${String(kind)}" has no release-ledger identity binding.`);
+    fail(
+      'E_RELEASE_LEDGER_CONTRACT_INVALID',
+      `Contract kind "${String(kind)}" has no release-ledger identity binding.`,
+    );
   }
   return RELEASE_LEDGER_IDENTITY_BINDINGS[kind];
 }
@@ -123,16 +162,24 @@ export function releaseLedgerIdentity(value, kind) {
 export function assertReleaseLedgerIdentity(value, kind) {
   const derived = releaseLedgerIdentity(value, kind);
   if (value[derived.digestField] !== derived.digest) {
-    fail('E_RELEASE_LEDGER_DIGEST_MISMATCH', `${kind}.${derived.digestField} does not bind this record's canonical bytes.`, {
-      expected: derived.digest,
-      actual: value[derived.digestField] ?? null,
-    });
+    fail(
+      'E_RELEASE_LEDGER_DIGEST_MISMATCH',
+      `${kind}.${derived.digestField} does not bind this record's canonical bytes.`,
+      {
+        expected: derived.digest,
+        actual: value[derived.digestField] ?? null,
+      },
+    );
   }
   if (value[derived.idField] !== derived.id) {
-    fail('E_RELEASE_LEDGER_IDENTITY_FOREIGN', `${kind}.${derived.idField} is a foreign identity for these bytes.`, {
-      expected: derived.id,
-      actual: value[derived.idField] ?? null,
-    });
+    fail(
+      'E_RELEASE_LEDGER_IDENTITY_FOREIGN',
+      `${kind}.${derived.idField} is a foreign identity for these bytes.`,
+      {
+        expected: derived.id,
+        actual: value[derived.idField] ?? null,
+      },
+    );
   }
   return value;
 }
@@ -140,21 +187,33 @@ export function assertReleaseLedgerIdentity(value, kind) {
 /** The only rendering a compatibility claim may display for a bound producer row. */
 export function renderCompatibilityDisplay({ derivation, declaredVersion }) {
   if (!RELEASE_LEDGER_DERIVATIONS.includes(derivation)) {
-    fail('E_RELEASE_LEDGER_CONTRACT_INVALID', `Derivation "${String(derivation)}" is not a published compatibility derivation.`);
+    fail(
+      'E_RELEASE_LEDGER_CONTRACT_INVALID',
+      `Derivation "${String(derivation)}" is not a published compatibility derivation.`,
+    );
   }
   if (typeof declaredVersion !== 'string' || !VERSION.test(declaredVersion)) {
-    fail('E_RELEASE_LEDGER_CONTRACT_INVALID', 'A compatibility rendering requires the producer row declared version.');
+    fail(
+      'E_RELEASE_LEDGER_CONTRACT_INVALID',
+      'A compatibility rendering requires the producer row declared version.',
+    );
   }
-  return derivation === 'caret-range-from-producer-declared-version' ? `^${declaredVersion}` : declaredVersion;
+  return derivation === 'caret-range-from-producer-declared-version'
+    ? `^${declaredVersion}`
+    : declaredVersion;
 }
 
 function assertRow(value, label) {
   exact(value, ROW_FIELDS, label, 'E_RELEASE_LEDGER_ROW_INVALID');
   if (!RELEASE_REPOSITORY_KEYS.includes(value.repositoryKey)) {
-    fail('E_RELEASE_LEDGER_FOREIGN_REPOSITORY', `${label}.repositoryKey is not a frozen release repository key.`, {
-      expected: [...RELEASE_REPOSITORY_KEYS],
-      actual: value.repositoryKey ?? null,
-    });
+    fail(
+      'E_RELEASE_LEDGER_FOREIGN_REPOSITORY',
+      `${label}.repositoryKey is not a frozen release repository key.`,
+      {
+        expected: [...RELEASE_REPOSITORY_KEYS],
+        actual: value.repositoryKey ?? null,
+      },
+    );
   }
   if (typeof value.packageName !== 'string' || !PACKAGE_NAME.test(value.packageName)) {
     fail('E_RELEASE_LEDGER_ROW_INVALID', `${label}.packageName is not a package identity.`);
@@ -166,53 +225,107 @@ function assertRow(value, label) {
     fail('E_RELEASE_LEDGER_ROW_INVALID', `${label}.baselineCommit is not a full commit identity.`);
   }
   if (value.clean !== true) {
-    fail('E_RELEASE_LEDGER_ROW_INVALID', `${label}.clean must record a clean baseline; a dirty tree is a typed absence, never a row.`);
+    fail(
+      'E_RELEASE_LEDGER_ROW_INVALID',
+      `${label}.clean must record a clean baseline; a dirty tree is a typed absence, never a row.`,
+    );
   }
   for (const field of ['sourceInventoryDigest', 'payloadDigest', 'exportSurfaceDigest']) {
     digest(value[field], `${label}.${field}`, 'E_RELEASE_LEDGER_ROW_INVALID');
   }
-  exact(value.terminalReceipt, ['digest', 'state', 'boundPayloadDigest'], `${label}.terminalReceipt`, 'E_RELEASE_LEDGER_ROW_INVALID');
-  digest(value.terminalReceipt.digest, `${label}.terminalReceipt.digest`, 'E_RELEASE_LEDGER_ROW_INVALID');
-  digest(value.terminalReceipt.boundPayloadDigest, `${label}.terminalReceipt.boundPayloadDigest`, 'E_RELEASE_LEDGER_ROW_INVALID');
+  exact(
+    value.terminalReceipt,
+    ['digest', 'state', 'boundPayloadDigest'],
+    `${label}.terminalReceipt`,
+    'E_RELEASE_LEDGER_ROW_INVALID',
+  );
+  digest(
+    value.terminalReceipt.digest,
+    `${label}.terminalReceipt.digest`,
+    'E_RELEASE_LEDGER_ROW_INVALID',
+  );
+  digest(
+    value.terminalReceipt.boundPayloadDigest,
+    `${label}.terminalReceipt.boundPayloadDigest`,
+    'E_RELEASE_LEDGER_ROW_INVALID',
+  );
   if (value.terminalReceipt.state !== 'closed') {
-    fail('E_RELEASE_LEDGER_RECEIPT_FOREIGN', `${label}.terminalReceipt is not terminal.`, { state: value.terminalReceipt.state ?? null });
+    fail('E_RELEASE_LEDGER_RECEIPT_FOREIGN', `${label}.terminalReceipt is not terminal.`, {
+      state: value.terminalReceipt.state ?? null,
+    });
   }
   if (value.terminalReceipt.boundPayloadDigest !== value.payloadDigest) {
-    fail('E_RELEASE_LEDGER_RECEIPT_FOREIGN', `${label}.terminalReceipt certifies a different payload than this row.`, {
-      expected: value.payloadDigest,
-      actual: value.terminalReceipt.boundPayloadDigest,
-    });
+    fail(
+      'E_RELEASE_LEDGER_RECEIPT_FOREIGN',
+      `${label}.terminalReceipt certifies a different payload than this row.`,
+      {
+        expected: value.payloadDigest,
+        actual: value.terminalReceipt.boundPayloadDigest,
+      },
+    );
   }
   return value;
 }
 
 export function assertReleaseLedger(value) {
-  exact(value, ['kind', 'schemaVersion', 'generatedAt', 'repositoryKeys', 'rows', 'manifestBinding', 'ledgerId', 'ledgerDigest'], 'release ledger');
+  exact(
+    value,
+    [
+      'kind',
+      'schemaVersion',
+      'generatedAt',
+      'repositoryKeys',
+      'rows',
+      'manifestBinding',
+      'ledgerId',
+      'ledgerDigest',
+    ],
+    'release ledger',
+  );
   if (value.kind !== 'release-ledger' || value.schemaVersion !== RELEASE_LEDGER_SCHEMA_VERSION) {
     fail('E_RELEASE_LEDGER_CONTRACT_INVALID', 'Release ledger identity is unsupported.');
   }
   timestamp(value.generatedAt, 'release ledger generatedAt');
   if (JSON.stringify(value.repositoryKeys) !== JSON.stringify([...RELEASE_REPOSITORY_KEYS])) {
-    fail('E_RELEASE_LEDGER_FOREIGN_REPOSITORY', 'Release ledger does not declare the frozen repository key order.');
+    fail(
+      'E_RELEASE_LEDGER_FOREIGN_REPOSITORY',
+      'Release ledger does not declare the frozen repository key order.',
+    );
   }
   if (!Array.isArray(value.rows) || value.rows.length !== RELEASE_REPOSITORY_KEYS.length) {
-    fail('E_RELEASE_LEDGER_CONTRACT_INVALID', 'Release ledger must carry exactly one row per frozen repository key.');
+    fail(
+      'E_RELEASE_LEDGER_CONTRACT_INVALID',
+      'Release ledger must carry exactly one row per frozen repository key.',
+    );
   }
   const seen = new Set();
   value.rows.forEach((row, index) => {
     assertRow(row, `release ledger rows[${index}]`);
     if (seen.has(row.repositoryKey)) {
-      fail('E_RELEASE_LEDGER_DUPLICATE_ROW', `Release ledger repeats repository ${row.repositoryKey}.`);
+      fail(
+        'E_RELEASE_LEDGER_DUPLICATE_ROW',
+        `Release ledger repeats repository ${row.repositoryKey}.`,
+      );
     }
     seen.add(row.repositoryKey);
     if (row.repositoryKey !== RELEASE_REPOSITORY_KEYS[index]) {
-      fail('E_RELEASE_LEDGER_CONTRACT_INVALID', 'Release ledger rows must use the frozen repository key order.');
+      fail(
+        'E_RELEASE_LEDGER_CONTRACT_INVALID',
+        'Release ledger rows must use the frozen repository key order.',
+      );
     }
   });
-  exact(value.manifestBinding, ['manifestDigest', 'manifestSchemaVersion'], 'release ledger manifestBinding');
+  exact(
+    value.manifestBinding,
+    ['manifestDigest', 'manifestSchemaVersion'],
+    'release ledger manifestBinding',
+  );
   digest(value.manifestBinding.manifestDigest, 'release ledger manifestBinding.manifestDigest');
   if (value.manifestBinding.manifestSchemaVersion !== RELEASE_LEDGER_MANIFEST_SCHEMA_VERSION) {
-    fail('E_RELEASE_LEDGER_MANIFEST_DRIFT', 'Release ledger binds a manifest revision this contract does not close over.');
+    fail(
+      'E_RELEASE_LEDGER_MANIFEST_DRIFT',
+      'Release ledger binds a manifest revision this contract does not close over.',
+    );
   }
   return assertReleaseLedgerIdentity(value, 'release-ledger');
 }
@@ -220,7 +333,10 @@ export function assertReleaseLedger(value) {
 function ledgerRow(ledger, repositoryKey, label) {
   const row = ledger.rows.find((entry) => entry.repositoryKey === repositoryKey);
   if (!row) {
-    fail('E_RELEASE_LEDGER_CLAIM_UNBOUND', `${label} names repository ${repositoryKey}, which the bound ledger has no row for.`);
+    fail(
+      'E_RELEASE_LEDGER_CLAIM_UNBOUND',
+      `${label} names repository ${repositoryKey}, which the bound ledger has no row for.`,
+    );
   }
   return row;
 }
@@ -228,37 +344,76 @@ function ledgerRow(ledger, repositoryKey, label) {
 function assertSideBinding(side, ledger, label) {
   const row = ledgerRow(ledger, side.repositoryKey, label);
   if (side.payloadDigest !== row.payloadDigest) {
-    fail('E_RELEASE_LEDGER_CLAIM_UNBOUND', `${label} does not bind the ledger payload digest for ${side.repositoryKey}.`, {
-      expected: row.payloadDigest,
-      actual: side.payloadDigest,
-    });
+    fail(
+      'E_RELEASE_LEDGER_CLAIM_UNBOUND',
+      `${label} does not bind the ledger payload digest for ${side.repositoryKey}.`,
+      {
+        expected: row.payloadDigest,
+        actual: side.payloadDigest,
+      },
+    );
   }
   if (side.terminalReceiptDigest !== row.terminalReceipt.digest) {
-    fail('E_RELEASE_LEDGER_RECEIPT_FOREIGN', `${label} binds a receipt that did not certify the ${side.repositoryKey} payload.`, {
-      expected: row.terminalReceipt.digest,
-      actual: side.terminalReceiptDigest,
-    });
+    fail(
+      'E_RELEASE_LEDGER_RECEIPT_FOREIGN',
+      `${label} binds a receipt that did not certify the ${side.repositoryKey} payload.`,
+      {
+        expected: row.terminalReceipt.digest,
+        actual: side.terminalReceiptDigest,
+      },
+    );
   }
   return row;
 }
 
 export function assertReleaseCompatibilityClaim(value, { ledger } = {}) {
-  exact(value, ['kind', 'schemaVersion', 'ledgerDigest', 'consumer', 'producer', 'derivation', 'display', 'claimId', 'claimDigest'], 'compatibility claim');
-  if (value.kind !== 'release-compatibility-claim' || value.schemaVersion !== RELEASE_LEDGER_SCHEMA_VERSION) {
+  exact(
+    value,
+    [
+      'kind',
+      'schemaVersion',
+      'ledgerDigest',
+      'consumer',
+      'producer',
+      'derivation',
+      'display',
+      'claimId',
+      'claimDigest',
+    ],
+    'compatibility claim',
+  );
+  if (
+    value.kind !== 'release-compatibility-claim' ||
+    value.schemaVersion !== RELEASE_LEDGER_SCHEMA_VERSION
+  ) {
     fail('E_RELEASE_LEDGER_CONTRACT_INVALID', 'Compatibility claim identity is unsupported.');
   }
   digest(value.ledgerDigest, 'compatibility claim ledgerDigest');
-  exact(value.consumer, ['repositoryKey', 'payloadDigest', 'terminalReceiptDigest'], 'compatibility claim consumer');
-  exact(value.producer, ['repositoryKey', 'payloadDigest', 'terminalReceiptDigest', 'declaredVersion'], 'compatibility claim producer');
+  exact(
+    value.consumer,
+    ['repositoryKey', 'payloadDigest', 'terminalReceiptDigest'],
+    'compatibility claim consumer',
+  );
+  exact(
+    value.producer,
+    ['repositoryKey', 'payloadDigest', 'terminalReceiptDigest', 'declaredVersion'],
+    'compatibility claim producer',
+  );
   for (const side of ['consumer', 'producer']) {
     if (!RELEASE_REPOSITORY_KEYS.includes(value[side].repositoryKey)) {
-      fail('E_RELEASE_LEDGER_FOREIGN_REPOSITORY', `compatibility claim ${side}.repositoryKey is not a frozen release repository key.`);
+      fail(
+        'E_RELEASE_LEDGER_FOREIGN_REPOSITORY',
+        `compatibility claim ${side}.repositoryKey is not a frozen release repository key.`,
+      );
     }
     digest(value[side].payloadDigest, `compatibility claim ${side}.payloadDigest`);
     digest(value[side].terminalReceiptDigest, `compatibility claim ${side}.terminalReceiptDigest`);
   }
   if (value.consumer.repositoryKey === value.producer.repositoryKey) {
-    fail('E_RELEASE_LEDGER_CONTRACT_INVALID', 'A repository cannot state its own compatibility with itself.');
+    fail(
+      'E_RELEASE_LEDGER_CONTRACT_INVALID',
+      'A repository cannot state its own compatibility with itself.',
+    );
   }
 
   const bound = plainObject(ledger, 'bound ledger', 'E_RELEASE_LEDGER_INPUT_ABSENT');
@@ -272,20 +427,28 @@ export function assertReleaseCompatibilityClaim(value, { ledger } = {}) {
   assertSideBinding(value.consumer, bound, 'compatibility claim consumer');
   const producerRow = assertSideBinding(value.producer, bound, 'compatibility claim producer');
   if (value.producer.declaredVersion !== producerRow.declaredVersion) {
-    fail('E_RELEASE_LEDGER_CLAIM_DRIFT', 'Compatibility claim carries a version label the bound producer row does not.', {
-      expected: producerRow.declaredVersion,
-      actual: value.producer.declaredVersion,
-    });
+    fail(
+      'E_RELEASE_LEDGER_CLAIM_DRIFT',
+      'Compatibility claim carries a version label the bound producer row does not.',
+      {
+        expected: producerRow.declaredVersion,
+        actual: value.producer.declaredVersion,
+      },
+    );
   }
   const rendered = renderCompatibilityDisplay({
     derivation: value.derivation,
     declaredVersion: producerRow.declaredVersion,
   });
   if (value.display !== rendered) {
-    fail('E_RELEASE_LEDGER_CLAIM_DRIFT', 'Compatibility claim display does not equal the deterministic render of its bound rows.', {
-      expected: rendered,
-      actual: value.display,
-    });
+    fail(
+      'E_RELEASE_LEDGER_CLAIM_DRIFT',
+      'Compatibility claim display does not equal the deterministic render of its bound rows.',
+      {
+        expected: rendered,
+        actual: value.display,
+      },
+    );
   }
   // Identity is asserted last so an edited version label or rendered range is
   // reported as the drift it is, rather than as an unrecomputed digest.
@@ -295,18 +458,37 @@ export function assertReleaseCompatibilityClaim(value, { ledger } = {}) {
 /** Canonical digest over an ordered claim set; ordering is part of the identity. */
 export function releaseClaimSetDigest(claims) {
   if (!Array.isArray(claims)) {
-    fail('E_RELEASE_LEDGER_CONTRACT_INVALID', 'A claim set must be an array of compatibility claims.');
+    fail(
+      'E_RELEASE_LEDGER_CONTRACT_INVALID',
+      'A claim set must be an array of compatibility claims.',
+    );
   }
   return sha256Jcs(claims.map((claim) => claim.claimDigest ?? null));
 }
 
 export function assertReleaseLedgerReceipt(value, { ledger, claims } = {}) {
-  exact(value, ['kind', 'schemaVersion', 'recordType', 'authority', 'issuedAt', 'ledgerDigest', 'claimSetDigest', 'result', 'refusals', 'receiptId', 'receiptDigest'], 'ledger receipt');
+  exact(
+    value,
+    [
+      'kind',
+      'schemaVersion',
+      'recordType',
+      'authority',
+      'issuedAt',
+      'ledgerDigest',
+      'claimSetDigest',
+      'result',
+      'refusals',
+      'receiptId',
+      'receiptDigest',
+    ],
+    'ledger receipt',
+  );
   if (
-    value.kind !== 'release-ledger-receipt'
-    || value.schemaVersion !== RELEASE_LEDGER_SCHEMA_VERSION
-    || value.recordType !== 'verification'
-    || value.authority !== 'none'
+    value.kind !== 'release-ledger-receipt' ||
+    value.schemaVersion !== RELEASE_LEDGER_SCHEMA_VERSION ||
+    value.recordType !== 'verification' ||
+    value.authority !== 'none'
   ) {
     fail('E_RELEASE_LEDGER_CONTRACT_INVALID', 'Ledger receipt identity is unsupported.');
   }
@@ -316,19 +498,37 @@ export function assertReleaseLedgerReceipt(value, { ledger, claims } = {}) {
   if (!['verified', 'refused'].includes(value.result)) {
     fail('E_RELEASE_LEDGER_CONTRACT_INVALID', 'Ledger receipt result is unsupported.');
   }
-  if (!Array.isArray(value.refusals) || (value.result === 'verified') !== (value.refusals.length === 0)) {
-    fail('E_RELEASE_LEDGER_CONTRACT_INVALID', 'Ledger receipt refusals do not match its stated result.');
+  if (
+    !Array.isArray(value.refusals) ||
+    (value.result === 'verified') !== (value.refusals.length === 0)
+  ) {
+    fail(
+      'E_RELEASE_LEDGER_CONTRACT_INVALID',
+      'Ledger receipt refusals do not match its stated result.',
+    );
   }
   value.refusals.forEach((refusal, index) => {
     exact(refusal, ['code', 'repositoryKey', 'reason'], `ledger receipt refusals[${index}]`);
     if (typeof refusal.code !== 'string' || !refusal.code.startsWith('E_RELEASE_LEDGER_')) {
-      fail('E_RELEASE_LEDGER_CONTRACT_INVALID', `ledger receipt refusals[${index}].code is outside the ledger error family.`);
+      fail(
+        'E_RELEASE_LEDGER_CONTRACT_INVALID',
+        `ledger receipt refusals[${index}].code is outside the ledger error family.`,
+      );
     }
-    if (refusal.repositoryKey !== null && !RELEASE_REPOSITORY_KEYS.includes(refusal.repositoryKey)) {
-      fail('E_RELEASE_LEDGER_FOREIGN_REPOSITORY', `ledger receipt refusals[${index}].repositoryKey is not a frozen release repository key.`);
+    if (
+      refusal.repositoryKey !== null &&
+      !RELEASE_REPOSITORY_KEYS.includes(refusal.repositoryKey)
+    ) {
+      fail(
+        'E_RELEASE_LEDGER_FOREIGN_REPOSITORY',
+        `ledger receipt refusals[${index}].repositoryKey is not a frozen release repository key.`,
+      );
     }
     if (typeof refusal.reason !== 'string' || refusal.reason.length === 0) {
-      fail('E_RELEASE_LEDGER_CONTRACT_INVALID', `ledger receipt refusals[${index}].reason must name the refusal.`);
+      fail(
+        'E_RELEASE_LEDGER_CONTRACT_INVALID',
+        `ledger receipt refusals[${index}].reason must name the refusal.`,
+      );
     }
   });
   const bound = plainObject(ledger, 'bound ledger', 'E_RELEASE_LEDGER_INPUT_ABSENT');
@@ -336,15 +536,23 @@ export function assertReleaseLedgerReceipt(value, { ledger, claims } = {}) {
   // A verification outcome carries no authority, so it is refused before any
   // other binding is considered when a row cites it as the receipt that
   // certified that repository's bytes.
-  const selfCertified = bound.rows.find((row) => row.terminalReceipt.digest === value.receiptDigest);
+  const selfCertified = bound.rows.find(
+    (row) => row.terminalReceipt.digest === value.receiptDigest,
+  );
   if (selfCertified) {
-    fail('E_RELEASE_LEDGER_SELF_CERTIFIED', `Repository ${selfCertified.repositoryKey} cites this verification receipt as its terminal receipt.`);
+    fail(
+      'E_RELEASE_LEDGER_SELF_CERTIFIED',
+      `Repository ${selfCertified.repositoryKey} cites this verification receipt as its terminal receipt.`,
+    );
   }
   if (value.ledgerDigest !== bound.ledgerDigest) {
     fail('E_RELEASE_LEDGER_CLAIM_UNBOUND', 'Ledger receipt is bound to a different ledger.');
   }
   if (value.claimSetDigest !== releaseClaimSetDigest(claims ?? [])) {
-    fail('E_RELEASE_LEDGER_CLAIM_UNBOUND', 'Ledger receipt does not bind the exact claim set it reports on.');
+    fail(
+      'E_RELEASE_LEDGER_CLAIM_UNBOUND',
+      'Ledger receipt does not bind the exact claim set it reports on.',
+    );
   }
   return assertReleaseLedgerIdentity(value, 'release-ledger-receipt');
 }
@@ -363,21 +571,31 @@ export function assertEcosystemManifestProjection({ ledger, claims, manifest } =
   assertReleaseLedger(bound);
   plainObject(manifest, 'ecosystem manifest', 'E_RELEASE_LEDGER_INPUT_ABSENT');
   if (!Array.isArray(claims)) {
-    fail('E_RELEASE_LEDGER_INPUT_ABSENT', 'A manifest projection requires the claim set it is derived from.');
+    fail(
+      'E_RELEASE_LEDGER_INPUT_ABSENT',
+      'A manifest projection requires the claim set it is derived from.',
+    );
   }
   if (sha256Jcs(manifest) !== bound.manifestBinding.manifestDigest) {
-    fail('E_RELEASE_LEDGER_MANIFEST_DRIFT', 'The ecosystem manifest bytes are not the bytes this ledger binds.');
+    fail(
+      'E_RELEASE_LEDGER_MANIFEST_DRIFT',
+      'The ecosystem manifest bytes are not the bytes this ledger binds.',
+    );
   }
 
   const projected = [];
   for (const edge of RELEASE_MANIFEST_CLAIM_EDGES) {
-    const claim = claims.find((entry) => (
-      entry?.consumer?.repositoryKey === edge.consumer
-      && entry?.producer?.repositoryKey === edge.producer
-      && entry?.derivation === edge.derivation
-    ));
+    const claim = claims.find(
+      (entry) =>
+        entry?.consumer?.repositoryKey === edge.consumer &&
+        entry?.producer?.repositoryKey === edge.producer &&
+        entry?.derivation === edge.derivation,
+    );
     if (!claim) {
-      fail('E_RELEASE_LEDGER_CLAIM_UNBOUND', `The manifest renders ${edge.path} with no digest-bound claim behind it.`);
+      fail(
+        'E_RELEASE_LEDGER_CLAIM_UNBOUND',
+        `The manifest renders ${edge.path} with no digest-bound claim behind it.`,
+      );
     }
     assertReleaseCompatibilityClaim(claim, { ledger: bound });
     const rendered = edge.path.endsWith('[].pipelineRange')
@@ -388,10 +606,14 @@ export function assertEcosystemManifestProjection({ ledger, claims, manifest } =
     }
     for (const value of rendered) {
       if (value !== claim.display) {
-        fail('E_RELEASE_LEDGER_MANIFEST_DRIFT', `The manifest renders ${edge.path} as text the bound claim does not derive.`, {
-          expected: claim.display,
-          actual: value ?? null,
-        });
+        fail(
+          'E_RELEASE_LEDGER_MANIFEST_DRIFT',
+          `The manifest renders ${edge.path} as text the bound claim does not derive.`,
+          {
+            expected: claim.display,
+            actual: value ?? null,
+          },
+        );
       }
     }
     projected.push({ path: edge.path, claimDigest: claim.claimDigest, display: claim.display });
@@ -400,10 +622,14 @@ export function assertEcosystemManifestProjection({ ledger, claims, manifest } =
   for (const key of MANIFEST_COMPONENT_KEYS) {
     const row = ledgerRow(bound, key, `ecosystem manifest components.${key}`);
     if (manifest.components?.[key]?.version !== row.declaredVersion) {
-      fail('E_RELEASE_LEDGER_MANIFEST_DRIFT', `The manifest states a ${key} version the bound ledger row does not carry.`, {
-        expected: row.declaredVersion,
-        actual: manifest.components?.[key]?.version ?? null,
-      });
+      fail(
+        'E_RELEASE_LEDGER_MANIFEST_DRIFT',
+        `The manifest states a ${key} version the bound ledger row does not carry.`,
+        {
+          expected: row.declaredVersion,
+          actual: manifest.components?.[key]?.version ?? null,
+        },
+      );
     }
   }
   return Object.freeze({
@@ -419,28 +645,43 @@ export function assertEcosystemManifestProjection({ ledger, claims, manifest } =
  * exact pipeline payload bytes the ledger binds. The string is a label; the
  * digest is the identity.
  */
-export function assertPipelineCompatibilityDeclaration(declaration, { ledger, pipelinePayloadDigest } = {}) {
+export function assertPipelineCompatibilityDeclaration(
+  declaration,
+  { ledger, pipelinePayloadDigest } = {},
+) {
   const bound = plainObject(ledger, 'bound ledger', 'E_RELEASE_LEDGER_INPUT_ABSENT');
   assertReleaseLedger(bound);
   digest(pipelinePayloadDigest, 'pipeline payload digest', 'E_RELEASE_LEDGER_INPUT_ABSENT');
   const match = PIPELINE_COMPATIBILITY.exec(typeof declaration === 'string' ? declaration : '');
   if (!match) {
-    fail('E_RELEASE_LEDGER_CONTRACT_INVALID', 'A compatibility declaration must read planr-pipeline@<version>.', {
-      actual: declaration ?? null,
-    });
+    fail(
+      'E_RELEASE_LEDGER_CONTRACT_INVALID',
+      'A compatibility declaration must read planr-pipeline@<version>.',
+      {
+        actual: declaration ?? null,
+      },
+    );
   }
   const row = ledgerRow(bound, 'pipeline', 'pipeline compatibility declaration');
   if (row.payloadDigest !== pipelinePayloadDigest) {
-    fail('E_RELEASE_LEDGER_CLAIM_UNBOUND', 'The ledger pipeline row does not bind the payload bytes this declaration is resolved against.', {
-      expected: row.payloadDigest,
-      actual: pipelinePayloadDigest,
-    });
+    fail(
+      'E_RELEASE_LEDGER_CLAIM_UNBOUND',
+      'The ledger pipeline row does not bind the payload bytes this declaration is resolved against.',
+      {
+        expected: row.payloadDigest,
+        actual: pipelinePayloadDigest,
+      },
+    );
   }
   if (match[1] !== row.declaredVersion) {
-    fail('E_RELEASE_LEDGER_CLAIM_DRIFT', 'The declared pipeline compatibility does not correspond to the bound payload bytes.', {
-      expected: row.declaredVersion,
-      actual: match[1],
-    });
+    fail(
+      'E_RELEASE_LEDGER_CLAIM_DRIFT',
+      'The declared pipeline compatibility does not correspond to the bound payload bytes.',
+      {
+        expected: row.declaredVersion,
+        actual: match[1],
+      },
+    );
   }
   return Object.freeze({
     declaredVersion: row.declaredVersion,
@@ -455,12 +696,24 @@ export function releaseLedgerAbsence({ input, reason, repositoryKey = null }) {
     fail('E_RELEASE_LEDGER_INPUT_ABSENT', 'A typed absence must name the input it is about.');
   }
   if (!RELEASE_LEDGER_ABSENCE_REASONS.includes(reason)) {
-    fail('E_RELEASE_LEDGER_INPUT_ABSENT', `Absence reason "${String(reason)}" is not a published ledger absence reason.`);
+    fail(
+      'E_RELEASE_LEDGER_INPUT_ABSENT',
+      `Absence reason "${String(reason)}" is not a published ledger absence reason.`,
+    );
   }
   if (repositoryKey !== null && !RELEASE_REPOSITORY_KEYS.includes(repositoryKey)) {
-    fail('E_RELEASE_LEDGER_FOREIGN_REPOSITORY', 'A typed absence may only name a frozen release repository key.');
+    fail(
+      'E_RELEASE_LEDGER_FOREIGN_REPOSITORY',
+      'A typed absence may only name a frozen release repository key.',
+    );
   }
-  return Object.freeze({ kind: 'release-ledger-absence', input, reason, repositoryKey, resolved: false });
+  return Object.freeze({
+    kind: 'release-ledger-absence',
+    input,
+    reason,
+    repositoryKey,
+    resolved: false,
+  });
 }
 
 /**
@@ -478,17 +731,20 @@ export function releaseLedgerRow({
   exportSurfaceDigest,
   terminalReceipt,
 }) {
-  return assertRow({
-    repositoryKey,
-    packageName,
-    declaredVersion,
-    baselineCommit,
-    clean,
-    sourceInventoryDigest,
-    payloadDigest,
-    exportSurfaceDigest,
-    terminalReceipt: terminalReceipt && { ...terminalReceipt },
-  }, `release ledger row ${String(repositoryKey)}`);
+  return assertRow(
+    {
+      repositoryKey,
+      packageName,
+      declaredVersion,
+      baselineCommit,
+      clean,
+      sourceInventoryDigest,
+      payloadDigest,
+      exportSurfaceDigest,
+      terminalReceipt: terminalReceipt && { ...terminalReceipt },
+    },
+    `release ledger row ${String(repositoryKey)}`,
+  );
 }
 
 export function buildReleaseLedger({ generatedAt, rows, manifestBinding }) {
@@ -543,12 +799,14 @@ export function buildCompatibilityClaim({ ledger, consumerKey, producerKey, deri
 
 /** Every claim the published manifest renders, in the frozen edge order. */
 export function buildManifestClaimSet(ledger) {
-  return RELEASE_MANIFEST_CLAIM_EDGES.map((edge) => buildCompatibilityClaim({
-    ledger,
-    consumerKey: edge.consumer,
-    producerKey: edge.producer,
-    derivation: edge.derivation,
-  }));
+  return RELEASE_MANIFEST_CLAIM_EDGES.map((edge) =>
+    buildCompatibilityClaim({
+      ledger,
+      consumerKey: edge.consumer,
+      producerKey: edge.producer,
+      derivation: edge.derivation,
+    }),
+  );
 }
 
 export function buildReleaseLedgerReceipt({ ledger, claims, issuedAt, refusals = [] }) {
@@ -561,7 +819,11 @@ export function buildReleaseLedgerReceipt({ ledger, claims, issuedAt, refusals =
     ledgerDigest: ledger?.ledgerDigest,
     claimSetDigest: releaseClaimSetDigest(claims ?? []),
     result: refusals.length === 0 ? 'verified' : 'refused',
-    refusals: refusals.map(({ code, repositoryKey = null, reason }) => ({ code, repositoryKey, reason })),
+    refusals: refusals.map(({ code, repositoryKey = null, reason }) => ({
+      code,
+      repositoryKey,
+      reason,
+    })),
   };
   const identity = releaseLedgerIdentity(record, 'release-ledger-receipt');
   return assertReleaseLedgerReceipt(
@@ -577,10 +839,16 @@ export function buildReleaseLedgerReceipt({ ledger, claims, issuedAt, refusals =
  */
 export function renderLedgerVersionProjection({ packageName, declaredVersion }) {
   if (typeof packageName !== 'string' || !PACKAGE_NAME.test(packageName)) {
-    fail('E_RELEASE_LEDGER_CONTRACT_INVALID', 'A version projection requires the row package name.');
+    fail(
+      'E_RELEASE_LEDGER_CONTRACT_INVALID',
+      'A version projection requires the row package name.',
+    );
   }
   if (typeof declaredVersion !== 'string' || !VERSION.test(declaredVersion)) {
-    fail('E_RELEASE_LEDGER_CONTRACT_INVALID', 'A version projection requires the row declared version.');
+    fail(
+      'E_RELEASE_LEDGER_CONTRACT_INVALID',
+      'A version projection requires the row declared version.',
+    );
   }
   return `${packageName} v${declaredVersion}`;
 }
@@ -607,41 +875,74 @@ export function releaseLedgerRowsFromProofs({
   for (const repositoryKey of RELEASE_REPOSITORY_KEYS) {
     const inventory = surface.repositories.find((entry) => entry.key === repositoryKey);
     if (!inventory?.present) {
-      absences.push(releaseLedgerAbsence({ input: `candidate.${repositoryKey}`, reason: 'repository-not-discovered', repositoryKey }));
+      absences.push(
+        releaseLedgerAbsence({
+          input: `candidate.${repositoryKey}`,
+          reason: 'repository-not-discovered',
+          repositoryKey,
+        }),
+      );
       continue;
     }
     if (inventory.dirty) {
-      absences.push(releaseLedgerAbsence({ input: `candidate.${repositoryKey}`, reason: 'repository-dirty', repositoryKey }));
+      absences.push(
+        releaseLedgerAbsence({
+          input: `candidate.${repositoryKey}`,
+          reason: 'repository-dirty',
+          repositoryKey,
+        }),
+      );
       continue;
     }
-    const payload = surface.payload?.repositoryKey === repositoryKey
-      ? surface.payload
-      : payloads[repositoryKey] ?? null;
+    const payload =
+      surface.payload?.repositoryKey === repositoryKey
+        ? surface.payload
+        : (payloads[repositoryKey] ?? null);
     if (!payload?.payloadDigest || !payload?.exportSurfaceDigest) {
-      absences.push(releaseLedgerAbsence({ input: `payload.${repositoryKey}`, reason: 'payload-proof-not-supplied', repositoryKey }));
+      absences.push(
+        releaseLedgerAbsence({
+          input: `payload.${repositoryKey}`,
+          reason: 'payload-proof-not-supplied',
+          repositoryKey,
+        }),
+      );
       continue;
     }
     const receipt = terminalReceipts[repositoryKey] ?? null;
     if (!receipt) {
-      absences.push(releaseLedgerAbsence({ input: `receipt.${repositoryKey}`, reason: 'terminal-receipt-absent', repositoryKey }));
+      absences.push(
+        releaseLedgerAbsence({
+          input: `receipt.${repositoryKey}`,
+          reason: 'terminal-receipt-absent',
+          repositoryKey,
+        }),
+      );
       continue;
     }
     const declared = packages[repositoryKey] ?? null;
     if (!declared?.name || !declared?.version) {
-      absences.push(releaseLedgerAbsence({ input: `package.${repositoryKey}`, reason: 'input-missing', repositoryKey }));
+      absences.push(
+        releaseLedgerAbsence({
+          input: `package.${repositoryKey}`,
+          reason: 'input-missing',
+          repositoryKey,
+        }),
+      );
       continue;
     }
-    rows.push(releaseLedgerRow({
-      repositoryKey,
-      packageName: declared.name,
-      declaredVersion: declared.version,
-      baselineCommit: inventory.baseline,
-      clean: !inventory.dirty,
-      sourceInventoryDigest: inventory.inventoryDigest,
-      payloadDigest: payload.payloadDigest,
-      exportSurfaceDigest: payload.exportSurfaceDigest,
-      terminalReceipt: receipt,
-    }));
+    rows.push(
+      releaseLedgerRow({
+        repositoryKey,
+        packageName: declared.name,
+        declaredVersion: declared.version,
+        baselineCommit: inventory.baseline,
+        clean: !inventory.dirty,
+        sourceInventoryDigest: inventory.inventoryDigest,
+        payloadDigest: payload.payloadDigest,
+        exportSurfaceDigest: payload.exportSurfaceDigest,
+        terminalReceipt: receipt,
+      }),
+    );
   }
   return Object.freeze({ rows: Object.freeze(rows), absences: Object.freeze(absences) });
 }

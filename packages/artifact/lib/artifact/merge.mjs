@@ -1,5 +1,5 @@
-import { canonicalSerialize, validateArtifactReview } from './envelope.mjs';
 import { ARTIFACT_ERROR_CODES, PipelineError } from '@openplanr/protocol/errors';
+import { canonicalSerialize, validateArtifactReview } from './envelope.mjs';
 
 export const ARTIFACT_REVIEW_STATE_VERSION = '1.0.0';
 export const ARTIFACT_REVIEW_STATE_KIND = 'artifact-review-state';
@@ -103,7 +103,9 @@ const mutablePin = (pin) => ({
 
 function mergePin(stored, incoming) {
   if (!same(immutablePin(stored), immutablePin(incoming))) {
-    conflict('A pin ID refers to different immutable geometry, author, or artifact content.', { entity: 'pin' });
+    conflict('A pin ID refers to different immutable geometry, author, or artifact content.', {
+      entity: 'pin',
+    });
   }
   const replies = mergeReplies(stored.replies, incoming.replies);
   const storedTime = timeValue(stored.updatedAt);
@@ -170,12 +172,16 @@ export function mergeArtifactReviews(stored, incoming) {
 }
 
 export function validateReviewLedger(ledger) {
-  if (!ledger || typeof ledger !== 'object' || Array.isArray(ledger)
-    || ledger.schemaVersion !== ARTIFACT_REVIEW_STATE_VERSION
-    || ledger.kind !== ARTIFACT_REVIEW_STATE_KIND
-    || !ARTIFACT_ID_RE.test(ledger.artifactId ?? '')
-    || !SHA256_RE.test(ledger.currentReviewOf ?? '')
-    || !Array.isArray(ledger.reviews)) {
+  if (
+    !ledger ||
+    typeof ledger !== 'object' ||
+    Array.isArray(ledger) ||
+    ledger.schemaVersion !== ARTIFACT_REVIEW_STATE_VERSION ||
+    ledger.kind !== ARTIFACT_REVIEW_STATE_KIND ||
+    !ARTIFACT_ID_RE.test(ledger.artifactId ?? '') ||
+    !SHA256_RE.test(ledger.currentReviewOf ?? '') ||
+    !Array.isArray(ledger.reviews)
+  ) {
     throw new PipelineError(
       ARTIFACT_ERROR_CODES.REVIEW_INVALID,
       'Artifact review state is not a valid versioned review ledger.',
@@ -183,14 +189,25 @@ export function validateReviewLedger(ledger) {
   }
   const ids = new Set();
   for (const entry of ledger.reviews) {
-    if (!entry || typeof entry !== 'object' || Array.isArray(entry)
-      || typeof entry.stale !== 'boolean' || !entry.review) {
-      throw new PipelineError(ARTIFACT_ERROR_CODES.REVIEW_INVALID, 'Artifact review ledger entry is invalid.');
+    if (
+      !entry ||
+      typeof entry !== 'object' ||
+      Array.isArray(entry) ||
+      typeof entry.stale !== 'boolean' ||
+      !entry.review
+    ) {
+      throw new PipelineError(
+        ARTIFACT_ERROR_CODES.REVIEW_INVALID,
+        'Artifact review ledger entry is invalid.',
+      );
     }
     validateArtifactReview(entry.review);
     assertUniqueReviewItemIds(entry.review);
     if (ids.has(entry.review.reviewId)) {
-      throw new PipelineError(ARTIFACT_ERROR_CODES.REVIEW_INVALID, 'Artifact review ledger IDs must be unique.');
+      throw new PipelineError(
+        ARTIFACT_ERROR_CODES.REVIEW_INVALID,
+        'Artifact review ledger IDs must be unique.',
+      );
     }
     ids.add(entry.review.reviewId);
   }
@@ -213,9 +230,15 @@ export function createReviewLedger({ artifactId, currentReviewOf, reviews = [] }
 export function mergeReviewLedger(ledger, incoming, { stale = false } = {}) {
   validateReviewLedger(ledger);
   const reviews = Array.isArray(incoming) ? incoming : [incoming];
-  const byId = new Map(ledger.reviews.map((entry) => [entry.review.reviewId, {
-    review: clone(entry.review), stale: entry.stale,
-  }]));
+  const byId = new Map(
+    ledger.reviews.map((entry) => [
+      entry.review.reviewId,
+      {
+        review: clone(entry.review),
+        stale: entry.stale,
+      },
+    ]),
+  );
   for (const review of reviews) {
     validateArtifactReview(review);
     const previous = byId.get(review.reviewId);
@@ -237,7 +260,7 @@ export function mergeReviewLedger(ledger, incoming, { stale = false } = {}) {
 }
 
 export function effectiveReviewDecision(value) {
-  const entries = Array.isArray(value) ? value : value?.reviews ?? [];
+  const entries = Array.isArray(value) ? value : (value?.reviews ?? []);
   const decisions = entries.map((entry) => entry.review?.decision ?? entry.decision);
   if (decisions.includes('changes_requested')) return 'changes_requested';
   if (decisions.includes('pending')) return 'pending';

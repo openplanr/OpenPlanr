@@ -1,9 +1,9 @@
 import type {
   OperatingArtifactV2,
+  OperatingEventTriggerV2,
   OperatingEvidenceRefV2,
   OperatingModelStateV2,
   OperatingScenarioV2,
-  OperatingEventTriggerV2,
   OperatingSnapshotV2,
 } from '@openplanr/protocol';
 

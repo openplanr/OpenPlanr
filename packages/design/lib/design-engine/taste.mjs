@@ -6,7 +6,7 @@
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname } from 'node:path';
 
 import { assertValid } from '../design/schema-loader.mjs';
 
@@ -67,7 +67,10 @@ export function saveProfile(path, profile) {
  * For claude-svg sessions the attributes are EXACT (the agent authored them) — better
  * than vision extraction; for openai they come from the vision pass or flags.
  */
-export function updateTaste(profile, { verdict, attributes = {}, sessionId, artifact, now = new Date() }) {
+export function updateTaste(
+  profile,
+  { verdict, attributes = {}, sessionId, artifact, now = new Date() },
+) {
   if (verdict !== 'approved' && verdict !== 'rejected') {
     throw new Error(`updateTaste: verdict must be approved|rejected, got "${verdict}"`);
   }
@@ -105,7 +108,11 @@ export function updateTaste(profile, { verdict, attributes = {}, sessionId, arti
  * new brief contradicts. Returns human sentences; the loop SHOWS them and asks —
  * it never silently overrides either side.
  */
-export function detectConflicts(profile, briefAttributes = {}, { threshold = 0.55, now = new Date() } = {}) {
+export function detectConflicts(
+  profile,
+  briefAttributes = {},
+  { threshold = 0.55, now = new Date() } = {},
+) {
   const conflicts = [];
   for (const dim of DIMENSIONS) {
     const asked = (briefAttributes[dim] ?? []).map((v) => String(v).toLowerCase());

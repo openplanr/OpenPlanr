@@ -1,6 +1,6 @@
-import { PipelineError } from './errors.mjs';
 import { assertProtocolArtifact } from '../protocol/contracts.mjs';
 import { sha256Jcs } from '../protocol/jcs.mjs';
+import { PipelineError } from './errors.mjs';
 
 function sagaError(message) {
   return new PipelineError('E_ECOSYSTEM_SAGA_INVALID', message);
@@ -19,7 +19,8 @@ const RELEASE_PARTICIPANT_PROGRESS = new Map([
 function assertUniqueIds(records, label) {
   const ids = new Set();
   for (const record of records) {
-    if (ids.has(record.id)) throw sagaError(`${label} IDs must be unique; duplicate "${record.id}".`);
+    if (ids.has(record.id))
+      throw sagaError(`${label} IDs must be unique; duplicate "${record.id}".`);
     ids.add(record.id);
   }
 }
@@ -41,9 +42,11 @@ function assertSagaTopology(participants, steps) {
   const participantIds = new Set(participants.map((participant) => participant.id));
   const stepIds = new Set(steps.map((step) => step.id));
   const idempotencyKeys = new Set(steps.map((step) => step.idempotencyKey));
-  if (idempotencyKeys.size !== steps.length) throw sagaError('Saga step idempotency keys must be unique.');
+  if (idempotencyKeys.size !== steps.length)
+    throw sagaError('Saga step idempotency keys must be unique.');
   for (const step of steps) {
-    if (!participantIds.has(step.participantId)) throw sagaError(`Unknown saga participant ${step.participantId}.`);
+    if (!participantIds.has(step.participantId))
+      throw sagaError(`Unknown saga participant ${step.participantId}.`);
     for (const dependency of step.dependsOn ?? []) {
       if (!stepIds.has(dependency)) throw sagaError(`Unknown saga dependency ${dependency}.`);
       if (dependency === step.id) throw sagaError(`Saga step ${step.id} cannot depend on itself.`);
@@ -64,18 +67,12 @@ function assertSagaTopology(participants, steps) {
 }
 
 function dependenciesSucceeded(step, stepsById) {
-  return step.dependsOn.every((dependency) => (
-    SUCCESSFUL_SAGA_STEP_STATUSES.has(stepsById.get(dependency)?.status)
-  ));
+  return step.dependsOn.every((dependency) =>
+    SUCCESSFUL_SAGA_STEP_STATUSES.has(stepsById.get(dependency)?.status),
+  );
 }
 
-export function createEcosystemSaga({
-  id,
-  subject,
-  participants,
-  steps,
-  createdAt,
-}) {
+export function createEcosystemSaga({ id, subject, participants, steps, createdAt }) {
   assertSagaTopology(participants, steps);
   const saga = {
     kind: 'ecosystem-saga',
@@ -119,7 +116,9 @@ export function reconcileEcosystemSaga(saga, { updatedAt = saga.updatedAt } = {}
     : statuses.has('in-progress')
       ? 'in-progress'
       : steps.every((step) => ['completed', 'skipped', 'compensated'].includes(step.status))
-        ? statuses.has('compensated') ? 'compensated' : 'completed'
+        ? statuses.has('compensated')
+          ? 'compensated'
+          : 'completed'
         : steps.some((step) => step.status === 'ready')
           ? 'in-progress'
           : 'blocked';
@@ -128,13 +127,10 @@ export function reconcileEcosystemSaga(saga, { updatedAt = saga.updatedAt } = {}
   return next;
 }
 
-export function recordEcosystemSagaStep(saga, {
-  stepId,
-  status,
-  evidence = [],
-  error,
-  completedAt,
-}) {
+export function recordEcosystemSagaStep(
+  saga,
+  { stepId, status, evidence = [], error, completedAt },
+) {
   assertProtocolArtifact('ecosystem-saga', saga);
   assertSagaTopology(saga.participants, saga.steps);
   const allowed = {
@@ -155,14 +151,18 @@ export function recordEcosystemSagaStep(saga, {
     if (completedAt && step.completedAt && completedAt !== step.completedAt) {
       throw sagaError(`Conflicting replay for saga step ${stepId}.`);
     }
-    const steps = saga.steps.map((entry) => entry.id === stepId ? {
-      ...entry,
-      evidence: [...new Set([...entry.evidence, ...evidence])],
-      ...(error && !entry.error ? { error } : {}),
-      ...(completedAt && !entry.completedAt && ['completed', 'compensated'].includes(status)
-        ? { completedAt }
-        : {}),
-    } : entry);
+    const steps = saga.steps.map((entry) =>
+      entry.id === stepId
+        ? {
+            ...entry,
+            evidence: [...new Set([...entry.evidence, ...evidence])],
+            ...(error && !entry.error ? { error } : {}),
+            ...(completedAt && !entry.completedAt && ['completed', 'compensated'].includes(status)
+              ? { completedAt }
+              : {}),
+          }
+        : entry,
+    );
     return reconcileEcosystemSaga({ ...saga, steps }, { updatedAt: completedAt ?? saga.updatedAt });
   }
   if (!(allowed[step.status] ?? []).includes(status)) {
@@ -243,7 +243,11 @@ function assertReleaseParticipantTransition(previous, next) {
   if (['blocked', 'compensated', 'forward-fix'].includes(next)) return;
   const previousProgress = RELEASE_PARTICIPANT_PROGRESS.get(previous);
   const nextProgress = RELEASE_PARTICIPANT_PROGRESS.get(next);
-  if (previousProgress === undefined || nextProgress === undefined || nextProgress < previousProgress) {
+  if (
+    previousProgress === undefined ||
+    nextProgress === undefined ||
+    nextProgress < previousProgress
+  ) {
     throw sagaError(`Invalid release participant transition ${previous} → ${next}.`);
   }
 }
@@ -253,9 +257,9 @@ function mergeObservedReleaseParticipant(participant, observation) {
   assertReleaseParticipantTransition(participant.state, nextState);
   const observedPackage = observation.package ?? {};
   if (
-    participant.package.tarballDigest
-    && observedPackage.tarballDigest
-    && participant.package.tarballDigest !== observedPackage.tarballDigest
+    participant.package.tarballDigest &&
+    observedPackage.tarballDigest &&
+    participant.package.tarballDigest !== observedPackage.tarballDigest
   ) {
     throw sagaError(`Published tarball digest changed for release participant ${participant.id}.`);
   }
@@ -278,10 +282,10 @@ function mergeObservedReleaseParticipant(participant, observation) {
 }
 
 function effectiveRecoveryMode(operation, participants) {
-  return operation.recoveryMode === 'forward-fix-only'
-    || participants.some((participant) => (
-      participant.package.published || participant.state === 'forward-fix'
-    ))
+  return operation.recoveryMode === 'forward-fix-only' ||
+    participants.some(
+      (participant) => participant.package.published || participant.state === 'forward-fix',
+    )
     ? 'forward-fix-only'
     : 'compensation-available';
 }
@@ -295,12 +299,18 @@ function deriveReleaseOperationState(participants) {
   if (participants.every((participant) => ['verified', 'completed'].includes(participant.state))) {
     return 'verified';
   }
-  if (participants.every((participant) => ['promoting', 'verified', 'completed'].includes(participant.state))) {
+  if (
+    participants.every((participant) =>
+      ['promoting', 'verified', 'completed'].includes(participant.state),
+    )
+  ) {
     return 'promoting';
   }
-  if (participants.every((participant) => (
-    ['prepared', 'promoting', 'verified', 'completed'].includes(participant.state)
-  ))) {
+  if (
+    participants.every((participant) =>
+      ['prepared', 'promoting', 'verified', 'completed'].includes(participant.state),
+    )
+  ) {
     return 'prepared';
   }
   return 'preparing';
@@ -310,44 +320,56 @@ function deriveReleaseNextSafeAction(participants, state) {
   if (state === 'completed') {
     return 'No further action; the ecosystem release operation is complete.';
   }
-  const candidateStates = {
-    preparing: ['pending', 'preparing'],
-    prepared: ['prepared'],
-    promoting: ['promoting'],
-    verified: ['verified'],
-    blocked: ['blocked'],
-    compensating: ['compensated'],
-    'forward-fix': ['forward-fix'],
-  }[state] ?? [];
+  const candidateStates =
+    {
+      preparing: ['pending', 'preparing'],
+      prepared: ['prepared'],
+      promoting: ['promoting'],
+      verified: ['verified'],
+      blocked: ['blocked'],
+      compensating: ['compensated'],
+      'forward-fix': ['forward-fix'],
+    }[state] ?? [];
   const candidate = [...participants]
     .sort((a, b) => a.id.localeCompare(b.id))
     .find((participant) => candidateStates.includes(participant.state));
-  if (!candidate) throw sagaError(`Cannot derive the next safe action for operation state ${state}.`);
+  if (!candidate)
+    throw sagaError(`Cannot derive the next safe action for operation state ${state}.`);
   return candidate.nextSafeAction;
 }
 
 function assertReleaseParticipantCoherence(participant, recoveryMode) {
   if (participant.package.published) {
-    if (!participant.package.name || !participant.package.version || !participant.package.tarballDigest) {
-      throw sagaError(`Published release participant ${participant.id} requires package identity and tarball digest.`);
+    if (
+      !participant.package.name ||
+      !participant.package.version ||
+      !participant.package.tarballDigest
+    ) {
+      throw sagaError(
+        `Published release participant ${participant.id} requires package identity and tarball digest.`,
+      );
     }
     if (participant.state === 'compensated') {
       throw sagaError(`Published release participant ${participant.id} cannot be compensated.`);
     }
   }
   if (participant.state === 'forward-fix' && recoveryMode !== 'forward-fix-only') {
-    throw sagaError(`Forward-fix participant ${participant.id} requires forward-fix-only recovery.`);
+    throw sagaError(
+      `Forward-fix participant ${participant.id} requires forward-fix-only recovery.`,
+    );
   }
 }
 
-function assertReleaseOperationCoherence(operation, {
-  allowDrafted = false,
-  requireDerivedAction = false,
-} = {}) {
+function assertReleaseOperationCoherence(
+  operation,
+  { allowDrafted = false, requireDerivedAction = false } = {},
+) {
   assertUniqueIds(operation.participants, 'Release participant');
   const recoveryMode = effectiveRecoveryMode(operation, operation.participants);
   if (operation.recoveryMode !== recoveryMode) {
-    throw sagaError('Release recovery mode conflicts with observed publication or forward-fix state.');
+    throw sagaError(
+      'Release recovery mode conflicts with observed publication or forward-fix state.',
+    );
   }
   for (const participant of operation.participants) {
     assertReleaseParticipantCoherence(participant, recoveryMode);
@@ -363,36 +385,49 @@ function assertReleaseOperationCoherence(operation, {
   }
   const expectedState = deriveReleaseOperationState(operation.participants);
   if (operation.state !== expectedState) {
-    throw sagaError(`Release operation state ${operation.state} conflicts with participant state ${expectedState}.`);
+    throw sagaError(
+      `Release operation state ${operation.state} conflicts with participant state ${expectedState}.`,
+    );
   }
   if (
-    requireDerivedAction
-    && operation.nextSafeAction !== deriveReleaseNextSafeAction(operation.participants, operation.state)
+    requireDerivedAction &&
+    operation.nextSafeAction !==
+      deriveReleaseNextSafeAction(operation.participants, operation.state)
   ) {
-    throw sagaError('Release operation next safe action is not derived from its current participant state.');
+    throw sagaError(
+      'Release operation next safe action is not derived from its current participant state.',
+    );
   }
 }
 
-export function reconcileEcosystemReleaseOperation(operation, observedParticipants, {
-  updatedAt = operation.updatedAt,
-} = {}) {
+export function reconcileEcosystemReleaseOperation(
+  operation,
+  observedParticipants,
+  { updatedAt = operation.updatedAt } = {},
+) {
   assertProtocolArtifact('ecosystem-release-operation', operation);
   assertUniqueIds(operation.participants, 'Release participant');
   const observedIds = new Set();
   for (const participant of observedParticipants) {
-    if (observedIds.has(participant.id)) throw sagaError(`Duplicate observed release participant ${participant.id}.`);
+    if (observedIds.has(participant.id))
+      throw sagaError(`Duplicate observed release participant ${participant.id}.`);
     observedIds.add(participant.id);
     if (!operation.participants.some((entry) => entry.id === participant.id)) {
       throw sagaError(`Unknown observed release participant ${participant.id}.`);
     }
   }
-  const observed = new Map(observedParticipants.map((participant) => [participant.id, participant]));
-  const participants = operation.participants.map((participant) => (
+  const observed = new Map(
+    observedParticipants.map((participant) => [participant.id, participant]),
+  );
+  const participants = operation.participants.map((participant) =>
     observed.has(participant.id)
       ? mergeObservedReleaseParticipant(participant, observed.get(participant.id))
-      : structuredClone(participant)
-  ));
-  if (computeEcosystemReleaseOperationDigest({ ...operation, participants }) !== operation.operationDigest) {
+      : structuredClone(participant),
+  );
+  if (
+    computeEcosystemReleaseOperationDigest({ ...operation, participants }) !==
+    operation.operationDigest
+  ) {
     throw sagaError('Observed release state changed the digest-bound release plan.');
   }
   const recoveryMode = effectiveRecoveryMode(operation, participants);
@@ -401,10 +436,7 @@ export function reconcileEcosystemReleaseOperation(operation, observedParticipan
   }
   const state = deriveReleaseOperationState(participants);
   const nextSafeAction = deriveReleaseNextSafeAction(participants, state);
-  const {
-    blockedReason,
-    ...operationWithoutBlockedReason
-  } = structuredClone(operation);
+  const { blockedReason, ...operationWithoutBlockedReason } = structuredClone(operation);
   const next = {
     ...operationWithoutBlockedReason,
     participants,

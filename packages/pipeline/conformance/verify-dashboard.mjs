@@ -12,7 +12,7 @@
 
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -29,12 +29,13 @@ function assertExactMembers(actual, expected, label) {
 function resolvePackageTarget(target) {
   assert.equal(typeof target, 'string', 'package export target must be a string');
   assert.equal(isAbsolute(target), false, `package export must be relative: ${target}`);
-  const filesystemTarget = target.includes('*')
-    ? target.slice(0, target.indexOf('*'))
-    : target;
+  const filesystemTarget = target.includes('*') ? target.slice(0, target.indexOf('*')) : target;
   const absolute = resolve(root, filesystemTarget);
   const fromRoot = relative(root, absolute);
-  assert.ok(fromRoot !== '' && !fromRoot.startsWith('..'), `package export escapes package root: ${target}`);
+  assert.ok(
+    fromRoot !== '' && !fromRoot.startsWith('..'),
+    `package export escapes package root: ${target}`,
+  );
   assert.equal(existsSync(absolute), true, `package export target is missing: ${target}`);
 }
 
@@ -73,7 +74,11 @@ const requiredFiles = [
 ];
 
 for (const relativePath of requiredFiles) {
-  assert.equal(existsSync(join(root, relativePath)), true, `required dashboard contract is missing: ${relativePath}`);
+  assert.equal(
+    existsSync(join(root, relativePath)),
+    true,
+    `required dashboard contract is missing: ${relativePath}`,
+  );
 }
 
 const packageJson = readJson('package.json');
@@ -99,16 +104,29 @@ for (const key of requiredExports) {
 }
 
 const packageRootExport = packageJson.exports['.'];
-const packageRootImport = typeof packageRootExport === 'string'
-  ? packageRootExport
-  : packageRootExport.import ?? packageRootExport.default;
+const packageRootImport =
+  typeof packageRootExport === 'string'
+    ? packageRootExport
+    : (packageRootExport.import ?? packageRootExport.default);
 assert.equal(typeof packageRootImport, 'string', 'package root must expose an import target');
 const publicModule = await import(pathToFileURL(join(root, packageRootImport)).href);
-assert.equal(typeof publicModule.startDashboard, 'function', 'public package root must export startDashboard');
+assert.equal(
+  typeof publicModule.startDashboard,
+  'function',
+  'public package root must export startDashboard',
+);
 
 const verifiedJson = await import('planr-pipeline/dashboard/verified-json');
-assert.equal(typeof verifiedJson.canonicalizeJson, 'function', 'verified JSON export must expose canonicalizeJson');
-assert.equal(typeof verifiedJson.sha256Jcs, 'function', 'verified JSON export must expose sha256Jcs');
+assert.equal(
+  typeof verifiedJson.canonicalizeJson,
+  'function',
+  'verified JSON export must expose canonicalizeJson',
+);
+assert.equal(
+  typeof verifiedJson.sha256Jcs,
+  'function',
+  'verified JSON export must expose sha256Jcs',
+);
 assert.match(verifiedJson.sha256Jcs({ openplanr: true }), /^sha256:[a-f0-9]{64}$/u);
 let accessorEvaluated = false;
 const hostileJson = {};
@@ -131,7 +149,10 @@ assert.equal(typeof graphSchema.$id, 'string', 'graph schema must declare an id'
 
 const bootstrapSchema = readJson('schemas/v1.2.0/dashboard-bootstrap.schema.json');
 assert.equal(bootstrapSchema.properties?.kind?.const, 'dashboard-bootstrap');
-assert.ok(bootstrapSchema.required.includes('queryRoots'), 'dashboard bootstrap must require queryRoots');
+assert.ok(
+  bootstrapSchema.required.includes('queryRoots'),
+  'dashboard bootstrap must require queryRoots',
+);
 assert.equal(bootstrapSchema.properties?.queryRoots?.additionalProperties, false);
 assertExactMembers(
   bootstrapSchema.properties?.queryRoots?.required ?? [],
@@ -152,7 +173,11 @@ for (const area of ['planning', 'operate']) {
 }
 
 const serverSource = readFileSync(join(root, 'lib/dashboard/server.mjs'), 'utf8');
-assert.match(serverSource, /queryRoots:\s*dashboardQueryRoots\(\)/, 'server bootstrap must publish owner-issued query roots');
+assert.match(
+  serverSource,
+  /queryRoots:\s*dashboardQueryRoots\(\)/,
+  'server bootstrap must publish owner-issued query roots',
+);
 
 const generation = spawnSync(
   process.execPath,
@@ -166,14 +191,19 @@ assert.equal(
 );
 
 const retiredClientRoot = join(root, 'lib/dashboard/app');
-const retiredFiles = existsSync(retiredClientRoot)
-  ? [...walkFiles('lib/dashboard/app')]
-  : [];
-assert.deepEqual(retiredFiles, [], `retired package-owned dashboard client remains: ${retiredFiles.join(', ')}`);
+const retiredFiles = existsSync(retiredClientRoot) ? [...walkFiles('lib/dashboard/app')] : [];
+assert.deepEqual(
+  retiredFiles,
+  [],
+  `retired package-owned dashboard client remains: ${retiredFiles.join(', ')}`,
+);
 
 const scannedFiles = [...walkFiles('lib/dashboard')];
 const forbiddenSourcePatterns = [
-  { pattern: /(?:^|[/'"])(?:\.\.\/)+OpenPlanr(?:[/'"]|$)/m, label: 'sibling OpenPlanr source dependency' },
+  {
+    pattern: /(?:^|[/'"])(?:\.\.\/)+OpenPlanr(?:[/'"]|$)/m,
+    label: 'sibling OpenPlanr source dependency',
+  },
   { pattern: /\/Users\//, label: 'machine-specific absolute path' },
   { pattern: /about:blank/, label: 'synthetic blank-page browser proof' },
 ];
@@ -184,11 +214,13 @@ for (const relativePath of scannedFiles) {
   }
 }
 
-process.stdout.write(`${JSON.stringify({
-  ok: true,
-  scope: 'planr-pipeline-owned dashboard structure',
-  requiredFiles: requiredFiles.length,
-  checkedExports: requiredExports.length,
-  checkedSourceFiles: scannedFiles.length,
-  usabilityCertified: false,
-})}\n`);
+process.stdout.write(
+  `${JSON.stringify({
+    ok: true,
+    scope: 'planr-pipeline-owned dashboard structure',
+    requiredFiles: requiredFiles.length,
+    checkedExports: requiredExports.length,
+    checkedSourceFiles: scannedFiles.length,
+    usabilityCertified: false,
+  })}\n`,
+);

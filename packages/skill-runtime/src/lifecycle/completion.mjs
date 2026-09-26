@@ -22,7 +22,9 @@ function normalizeCheck(check, index) {
   return {
     name: check.name,
     status: check.status,
-    ...(check.detail === undefined ? {} : { detail: assertNonBlank(check.detail, `checks[${index}].detail`) }),
+    ...(check.detail === undefined
+      ? {}
+      : { detail: assertNonBlank(check.detail, `checks[${index}].detail`) }),
   };
 }
 
@@ -38,13 +40,7 @@ function normalizeIssue(issue, index) {
 }
 
 /** Build the concise runtime result shared by lifecycle-enabled skills. */
-export function createCompletion({
-  status,
-  summary,
-  checks = [],
-  issues = [],
-  output,
-} = {}) {
+export function createCompletion({ status, summary, checks = [], issues = [], output } = {}) {
   if (!STATUS_SET.has(status)) throw new TypeError(`Unknown completion status: ${status}.`);
   assertNonBlank(summary, 'summary');
   if (!Array.isArray(checks)) throw new TypeError('checks must be an array.');
@@ -75,16 +71,13 @@ export function createCompletion({
  * one host adapter. Denial remains a resolver diagnostic and becomes an
  * unavailable completion, never an invented execution result.
  */
-export function completionFromRuntimeResult(result, {
-  summary,
-  checks = [],
-  issues = [],
-} = {}) {
+export function completionFromRuntimeResult(result, { summary, checks = [], issues = [] } = {}) {
   if (!result || typeof result !== 'object' || Array.isArray(result)) {
     throw new TypeError('result must be a runtime result object.');
   }
   const status = result.status === 'denied' ? 'unavailable' : result.status;
-  if (!STATUS_SET.has(status)) throw new TypeError(`Unsupported runtime result status: ${result.status}.`);
+  if (!STATUS_SET.has(status))
+    throw new TypeError(`Unsupported runtime result status: ${result.status}.`);
   return createCompletion({
     status,
     summary,

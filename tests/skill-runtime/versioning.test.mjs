@@ -16,10 +16,25 @@ const root = new URL('../..', import.meta.url).pathname;
 test('source, module, host, skill, and asset versions follow independent policies', () => {
   const report = assessVersionSet([
     { dimension: 'source', changeKind: 'none', previousVersion: '1.0.0', nextVersion: '1.0.0' },
-    { dimension: 'module', changeKind: 'editorial', previousVersion: '2.0.0', nextVersion: '2.0.1' },
-    { dimension: 'host-profile', changeKind: 'compatible', previousVersion: '1.0.0', nextVersion: '1.1.0' },
+    {
+      dimension: 'module',
+      changeKind: 'editorial',
+      previousVersion: '2.0.0',
+      nextVersion: '2.0.1',
+    },
+    {
+      dimension: 'host-profile',
+      changeKind: 'compatible',
+      previousVersion: '1.0.0',
+      nextVersion: '1.1.0',
+    },
     { dimension: 'skill', changeKind: 'behavior', previousVersion: '2.0.0', nextVersion: '2.1.0' },
-    { dimension: 'asset', changeKind: 'compatible', previousVersion: '1.0.0', nextVersion: '1.0.1' },
+    {
+      dimension: 'asset',
+      changeKind: 'compatible',
+      previousVersion: '1.0.0',
+      nextVersion: '1.0.1',
+    },
   ]);
   assert.equal(report.complete, true);
   assert.equal(report.passed, true);
@@ -51,8 +66,12 @@ test('impact analysis closes over standard-package resources and generated asset
   ]);
   assert.deepEqual(report.changes[1].affectedSkills, []);
   assert.deepEqual(report.affectedSkills, advisor.affectedSkills);
-  assert.ok(advisor.generatedAssets.includes('dist/plugins/claude/openplanr/skills/ceo-review/SKILL.md'));
-  assert.ok(advisor.generatedAssets.includes('dist/plugins/openai/openplanr/skills/ceo-review/SKILL.md'));
+  assert.ok(
+    advisor.generatedAssets.includes('dist/plugins/claude/openplanr/skills/ceo-review/SKILL.md'),
+  );
+  assert.ok(
+    advisor.generatedAssets.includes('dist/plugins/openai/openplanr/skills/ceo-review/SKILL.md'),
+  );
   assert.ok(advisor.generatedAssets.includes('adapters/manifests/generated-assets.json'));
 });
 

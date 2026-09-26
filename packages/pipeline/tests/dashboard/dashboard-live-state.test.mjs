@@ -1,13 +1,12 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
-
+import { issueOperateExperienceDisplaySurfaceV1 } from '../../lib/dashboard/operate-experience-display-contract.mjs';
+import { deriveOperateSharedTruthSummaryV1 } from '../../lib/dashboard/operate-review-workspace-projection-v2.mjs';
 import {
   assertDashboardLiveEventEnvelope,
   createDashboardLiveEventEnvelope,
 } from '../../lib/dashboard/server.mjs';
-import { issueOperateExperienceDisplaySurfaceV1 } from '../../lib/dashboard/operate-experience-display-contract.mjs';
-import { deriveOperateSharedTruthSummaryV1 } from '../../lib/dashboard/operate-review-workspace-projection-v2.mjs';
 
 const hash = (character) => `sha256:${character.repeat(64)}`;
 const binding = Object.freeze({
@@ -22,10 +21,15 @@ const cursor = Object.freeze({
   eventHead: Object.freeze({ sequence: 1, hash: hash('a') }),
   viewHash: hash('b'),
 });
-const truthView = JSON.parse(readFileSync(new URL(
-  '../../conformance/fixtures/operating-runtime-v2/experience-bridge-valid.json',
-  import.meta.url,
-), 'utf8'))['operate-experience-view'];
+const truthView = JSON.parse(
+  readFileSync(
+    new URL(
+      '../../conformance/fixtures/operating-runtime-v2/experience-bridge-valid.json',
+      import.meta.url,
+    ),
+    'utf8',
+  ),
+)['operate-experience-view'];
 const truthSummary = Object.freeze({
   ...deriveOperateSharedTruthSummaryV1(truthView),
   sourceEventHead: cursor.eventHead,
@@ -51,32 +55,54 @@ const today = issueOperateExperienceDisplaySurfaceV1({
   status: 'ready',
   reasonCodes: [],
   data: {
-    attention: [], domainMetrics: [], activeCycle: null, inbox: [], actions: [],
-    outcomes: [], allowedActions: [],
+    attention: [],
+    domainMetrics: [],
+    activeCycle: null,
+    inbox: [],
+    actions: [],
+    outcomes: [],
+    allowedActions: [],
   },
 });
 
 test('dashboard live owner emits closed, generation-bound public envelopes', () => {
   const snapshot = createDashboardLiveEventEnvelope({
-    event: 'snapshot', binding, cursor, payload: today,
+    event: 'snapshot',
+    binding,
+    cursor,
+    payload: today,
   });
   assert.equal(assertDashboardLiveEventEnvelope(snapshot), snapshot);
   assert.deepEqual(Object.keys(snapshot).sort(), [
-    'binding', 'cursor', 'event', 'kind', 'payload', 'schemaVersion',
+    'binding',
+    'cursor',
+    'event',
+    'kind',
+    'payload',
+    'schemaVersion',
   ]);
   assert.deepEqual(Object.keys(snapshot.binding).sort(), [
-    'actorId', 'domainId', 'domainVersion', 'generation', 'projectId', 'scopeId',
+    'actorId',
+    'domainId',
+    'domainVersion',
+    'generation',
+    'projectId',
+    'scopeId',
   ]);
   assert.equal(JSON.stringify(snapshot).includes('/Users/'), false);
   assert.equal(JSON.stringify(snapshot).includes('privateBody'), false);
 
   const ready = createDashboardLiveEventEnvelope({
-    event: 'ready', binding, cursor,
+    event: 'ready',
+    binding,
+    cursor,
     payload: { mutationEnabled: true, reasonCodes: [] },
   });
   assert.equal(ready.event, 'ready');
   const stale = createDashboardLiveEventEnvelope({
-    event: 'stale', binding, cursor,
+    event: 'stale',
+    binding,
+    cursor,
     payload: {
       mutationEnabled: false,
       reasonCodes: ['OPERATE_EVENT_GAP'],
@@ -85,46 +111,81 @@ test('dashboard live owner emits closed, generation-bound public envelopes', () 
   });
   assert.equal(stale.event, 'stale');
   const patchSignal = {
-    patchId: 'xpatch_12345678', patchHash: hash('c'), from: cursor,
+    patchId: 'xpatch_12345678',
+    patchHash: hash('c'),
+    from: cursor,
     to: { eventHead: { sequence: 2, hash: hash('d') }, viewHash: hash('e') },
     changedPaths: ['/status'],
   };
   const patchEnvelope = assertDashboardLiveEventEnvelope({
-    kind: 'dashboard-live-event', schemaVersion: '1.0.0', event: 'patch', binding,
-    cursor: patchSignal.to, payload: patchSignal,
+    kind: 'dashboard-live-event',
+    schemaVersion: '1.0.0',
+    event: 'patch',
+    binding,
+    cursor: patchSignal.to,
+    payload: patchSignal,
   });
   assert.equal(Object.hasOwn(patchEnvelope.payload, 'operations'), false);
 });
 
 test('dashboard live owner rejects unknown, contradictory, and cross-binding state', () => {
-  assert.throws(() => assertDashboardLiveEventEnvelope({
-    ...createDashboardLiveEventEnvelope({
-      event: 'ready', binding, cursor,
-      payload: { mutationEnabled: true, reasonCodes: [] },
+  assert.throws(
+    () =>
+      assertDashboardLiveEventEnvelope({
+        ...createDashboardLiveEventEnvelope({
+          event: 'ready',
+          binding,
+          cursor,
+          payload: { mutationEnabled: true, reasonCodes: [] },
+        }),
+        privateBody: '/private/provider/body',
+      }),
+    /Invalid dashboard live event envelope/u,
+  );
+
+  assert.throws(
+    () =>
+      createDashboardLiveEventEnvelope({
+        event: 'ready',
+        binding,
+        cursor,
+        payload: { mutationEnabled: true, reasonCodes: ['OPERATE_OFFLINE'] },
+      }),
+    /ready payload/u,
+  );
+
+  assert.throws(
+    () =>
+      createDashboardLiveEventEnvelope({
+        event: 'snapshot',
+        binding: { ...binding, scopeId: 'foreign' },
+        cursor,
+        payload: today,
+      }),
+    /display surface|snapshot binding/u,
+  );
+
+  assert.throws(() =>
+    createDashboardLiveEventEnvelope({
+      event: 'snapshot',
+      binding,
+      cursor,
+      payload: { ...today, ok: false },
     }),
-    privateBody: '/private/provider/body',
-  }), /Invalid dashboard live event envelope/u);
+  );
 
-  assert.throws(() => createDashboardLiveEventEnvelope({
-    event: 'ready', binding, cursor,
-    payload: { mutationEnabled: true, reasonCodes: ['OPERATE_OFFLINE'] },
-  }), /ready payload/u);
-
-  assert.throws(() => createDashboardLiveEventEnvelope({
-    event: 'snapshot', binding: { ...binding, scopeId: 'foreign' }, cursor, payload: today,
-  }), /display surface|snapshot binding/u);
-
-  assert.throws(() => createDashboardLiveEventEnvelope({
-    event: 'snapshot', binding, cursor,
-    payload: { ...today, ok: false },
-  }));
-
-  assert.throws(() => createDashboardLiveEventEnvelope({
-    event: 'stale', binding: { ...binding, generation: -1 }, cursor,
-    payload: {
-      mutationEnabled: false,
-      reasonCodes: ['OPERATE_EVENT_GAP'],
-      recovery: 'Refresh.',
-    },
-  }), /Invalid dashboard live event envelope/u);
+  assert.throws(
+    () =>
+      createDashboardLiveEventEnvelope({
+        event: 'stale',
+        binding: { ...binding, generation: -1 },
+        cursor,
+        payload: {
+          mutationEnabled: false,
+          reasonCodes: ['OPERATE_EVENT_GAP'],
+          recovery: 'Refresh.',
+        },
+      }),
+    /Invalid dashboard live event envelope/u,
+  );
 });

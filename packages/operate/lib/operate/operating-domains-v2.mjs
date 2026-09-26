@@ -1,10 +1,10 @@
-import { PipelineError } from '@openplanr/protocol/errors';
-import { assertProtocolArtifact } from '@openplanr/protocol/contracts';
 import { sha256Jcs } from '@openplanr/protocol/canonical-json';
+import { assertProtocolArtifact } from '@openplanr/protocol/contracts';
+import { PipelineError } from '@openplanr/protocol/errors';
 import {
-  OPEN_REFERENCE_OPERATE_EXTENSIONS_V2,
   canonicalizeOperateExtensionRegistryV2,
   findOperateDomainRegistrationV2,
+  OPEN_REFERENCE_OPERATE_EXTENSIONS_V2,
 } from './extensions-v2.mjs';
 import { assertOperatingSnapshotV2 } from './operating-snapshots-v2.mjs';
 import { assertOperatingModelStateV2 } from './operating-state-v2.mjs';
@@ -62,60 +62,91 @@ function sameValue(left, right) {
 }
 
 function assertExactBinding(actual, expected, subject) {
-  if (!actual || !sameValue(actual, {
-    apiDomainId: expected.apiDomainId,
-    id: expected.id,
-    version: expected.version,
-  })) {
-    fail('OPERATING_DOMAIN_BINDING_INVALID', `${subject} must use one explicit public API-domain contract binding.`, {
-      apiDomainId: actual?.apiDomainId ?? null,
-    });
+  if (
+    !actual ||
+    !sameValue(actual, {
+      apiDomainId: expected.apiDomainId,
+      id: expected.id,
+      version: expected.version,
+    })
+  ) {
+    fail(
+      'OPERATING_DOMAIN_BINDING_INVALID',
+      `${subject} must use one explicit public API-domain contract binding.`,
+      {
+        apiDomainId: actual?.apiDomainId ?? null,
+      },
+    );
   }
 }
 
 function assertSnapshotStateBinding(snapshot, state) {
   const verifiedState = assertOperatingModelStateV2(state);
   const verifiedSnapshot = assertOperatingSnapshotV2(snapshot, { state: verifiedState });
-  if (verifiedState.domainId !== verifiedSnapshot.domainId
-    || verifiedState.domainVersion !== verifiedSnapshot.domainVersion
-    || verifiedState.scopeId !== verifiedSnapshot.scopeId) {
-    fail('OPERATING_DOMAIN_INPUT_INVALID', 'Projection state and snapshot must have one matching scope and domain.', {
-      snapshotId: verifiedSnapshot.snapshotId,
-    });
+  if (
+    verifiedState.domainId !== verifiedSnapshot.domainId ||
+    verifiedState.domainVersion !== verifiedSnapshot.domainVersion ||
+    verifiedState.scopeId !== verifiedSnapshot.scopeId
+  ) {
+    fail(
+      'OPERATING_DOMAIN_INPUT_INVALID',
+      'Projection state and snapshot must have one matching scope and domain.',
+      {
+        snapshotId: verifiedSnapshot.snapshotId,
+      },
+    );
   }
   return { snapshot: verifiedSnapshot, state: verifiedState };
 }
 
 function exactSourceArtifacts(snapshot, referencedArtifacts) {
   if (!Array.isArray(referencedArtifacts)) {
-    fail('OPERATING_DOMAIN_INPUT_INVALID', 'A projection requires the exact referenced Artifact descriptors.', {});
+    fail(
+      'OPERATING_DOMAIN_INPUT_INVALID',
+      'A projection requires the exact referenced Artifact descriptors.',
+      {},
+    );
   }
   const indexed = new Map();
   for (const artifact of referencedArtifacts) {
     try {
       assertProtocolArtifact('operating-artifact', artifact, { protocolVersion: VERSION });
     } catch (cause) {
-      fail('OPERATING_DOMAIN_INPUT_INVALID', 'A projection may use only valid accepted Artifact descriptors.', {
-        cause: cause.code ?? null,
-      });
+      fail(
+        'OPERATING_DOMAIN_INPUT_INVALID',
+        'A projection may use only valid accepted Artifact descriptors.',
+        {
+          cause: cause.code ?? null,
+        },
+      );
     }
-    if (artifact.scopeId !== snapshot.scopeId
-      || artifact.domainId !== snapshot.domainId
-      || artifact.domainVersion !== snapshot.domainVersion
-      || indexed.has(artifact.artifactId)) {
-      fail('OPERATING_DOMAIN_INPUT_INVALID', 'Referenced Artifacts must be unique and match the snapshot scope.', {
-        artifactId: artifact?.artifactId ?? null,
-      });
+    if (
+      artifact.scopeId !== snapshot.scopeId ||
+      artifact.domainId !== snapshot.domainId ||
+      artifact.domainVersion !== snapshot.domainVersion ||
+      indexed.has(artifact.artifactId)
+    ) {
+      fail(
+        'OPERATING_DOMAIN_INPUT_INVALID',
+        'Referenced Artifacts must be unique and match the snapshot scope.',
+        {
+          artifactId: artifact?.artifactId ?? null,
+        },
+      );
     }
     indexed.set(artifact.artifactId, artifact);
   }
   const ids = [...indexed.keys()].sort();
   const expected = [...snapshot.sourceArtifactIds].sort();
   if (!sameValue(ids, expected)) {
-    fail('OPERATING_DOMAIN_INPUT_INVALID', 'Referenced Artifacts must exactly match the immutable snapshot sources.', {
-      expectedSourceArtifactIds: expected,
-      suppliedSourceArtifactIds: ids,
-    });
+    fail(
+      'OPERATING_DOMAIN_INPUT_INVALID',
+      'Referenced Artifacts must exactly match the immutable snapshot sources.',
+      {
+        expectedSourceArtifactIds: expected,
+        suppliedSourceArtifactIds: ids,
+      },
+    );
   }
   return ids;
 }
@@ -124,9 +155,13 @@ function canonicalRegistry(registry) {
   try {
     return canonicalizeOperateExtensionRegistryV2(registry);
   } catch (cause) {
-    fail('OPERATING_DOMAIN_INPUT_INVALID', 'Public domain resolution requires one complete validated Operate extension registry.', {
-      cause: cause.code ?? null,
-    });
+    fail(
+      'OPERATING_DOMAIN_INPUT_INVALID',
+      'Public domain resolution requires one complete validated Operate extension registry.',
+      {
+        cause: cause.code ?? null,
+      },
+    );
   }
 }
 
@@ -138,32 +173,50 @@ function resolveCanonicalPublicOperatingDomain(registry, domainId, domainVersion
   const registration = findOperateDomainRegistrationV2(registry, domainId, { domainVersion });
   if (registration === null) return null;
   assertExactBinding(registration.domainContract, expected, 'Registered domain');
-  if (!Array.isArray(registration.projectionContracts)
-    || registration.projectionContracts.length !== 1
-    || !sameValue(registration.projectionContracts[0], expected.projection)) {
-    fail('OPERATING_DOMAIN_REGISTRATION_INVALID', 'A public domain registration must declare its exact public projection contract.', {
-      domainId,
-    });
+  if (
+    !Array.isArray(registration.projectionContracts) ||
+    registration.projectionContracts.length !== 1 ||
+    !sameValue(registration.projectionContracts[0], expected.projection)
+  ) {
+    fail(
+      'OPERATING_DOMAIN_REGISTRATION_INVALID',
+      'A public domain registration must declare its exact public projection contract.',
+      {
+        domainId,
+      },
+    );
   }
   const byKind = { advisor: [], challenger: [], chair: [] };
   for (const role of registration.roles) {
     if (!Object.hasOwn(byKind, role.roleKind)) {
-      fail('OPERATING_DOMAIN_REGISTRATION_INVALID', 'A public operating domain role must declare one kernel scheduling kind.', {
-        domainId, roleId: role.roleId, roleKind: role.roleKind,
-      });
+      fail(
+        'OPERATING_DOMAIN_REGISTRATION_INVALID',
+        'A public operating domain role must declare one kernel scheduling kind.',
+        {
+          domainId,
+          roleId: role.roleId,
+          roleKind: role.roleKind,
+        },
+      );
     }
     byKind[role.roleKind].push(role);
   }
-  if (new Set(registration.roles.map((role) => role.roleId)).size !== registration.roles.length
-    || byKind.advisor.length < 1
-    || byKind.challenger.length !== 1
-    || byKind.chair.length !== 1
-    || byKind.advisor.some((role) => role.dependencyPolicy.id !== 'none')
-    || byKind.challenger[0].dependencyPolicy.id === 'none'
-    || byKind.chair[0].dependencyPolicy.id === 'none') {
-    fail('OPERATING_DOMAIN_REGISTRATION_INVALID', 'A public operating domain must declare the complete dependency-aware intelligence role choreography.', {
-      domainId,
-    });
+  if (
+    new Set(registration.roles.map((role) => role.roleId)).size !== registration.roles.length ||
+    byKind.advisor.length < 1 ||
+    byKind.challenger.length !== 1 ||
+    byKind.chair.length !== 1 ||
+    byKind.advisor.some((role) => role.dependencyPolicy.id !== 'none') ||
+    byKind.challenger[0].dependencyPolicy.id === 'none' ||
+    byKind.chair[0].dependencyPolicy.id === 'none'
+  ) {
+    fail(
+      'OPERATING_DOMAIN_REGISTRATION_INVALID',
+      'A public operating domain must declare the complete dependency-aware intelligence role choreography.',
+      {
+        domainId,
+      },
+    );
   }
   return freeze(clone(registration));
 }
@@ -171,9 +224,17 @@ function resolveCanonicalPublicOperatingDomain(registry, domainId, domainVersion
 /** Resolve one public domain only through an explicit API ID and version. */
 export function resolvePublicOperatingDomainV2(registry, domainId, { domainVersion } = {}) {
   if (typeof domainVersion !== 'string' || domainVersion.length === 0) {
-    fail('OPERATING_DOMAIN_VERSION_REQUIRED', 'A public operating domain requires an explicit domain version.', { domainId });
+    fail(
+      'OPERATING_DOMAIN_VERSION_REQUIRED',
+      'A public operating domain requires an explicit domain version.',
+      { domainId },
+    );
   }
-  return resolveCanonicalPublicOperatingDomain(canonicalRegistry(registry), domainId, domainVersion);
+  return resolveCanonicalPublicOperatingDomain(
+    canonicalRegistry(registry),
+    domainId,
+    domainVersion,
+  );
 }
 
 /**
@@ -187,12 +248,20 @@ export function listPublicOperatingDomainsV2(registry = OPEN_REFERENCE_OPERATE_E
   const domains = canonical.domains
     .filter(({ domainId }) => Object.hasOwn(PUBLIC_OPERATING_DOMAIN_CONTRACTS_V2, domainId))
     .map(({ domainId, domainVersion }) => {
-      const registration = resolveCanonicalPublicOperatingDomain(canonical, domainId, domainVersion);
+      const registration = resolveCanonicalPublicOperatingDomain(
+        canonical,
+        domainId,
+        domainVersion,
+      );
       if (registration === null) {
-        fail('OPERATING_DOMAIN_REGISTRATION_INVALID', 'A registered public domain must use its exact public identity.', {
-          domainId,
-          domainVersion,
-        });
+        fail(
+          'OPERATING_DOMAIN_REGISTRATION_INVALID',
+          'A registered public domain must use its exact public identity.',
+          {
+            domainId,
+            domainVersion,
+          },
+        );
       }
       return {
         domainId: registration.domainId,
@@ -238,13 +307,21 @@ export function projectPublicOperatingDomainV2({
   const verified = assertSnapshotStateBinding(snapshot, state);
   const expected = PUBLIC_OPERATING_DOMAIN_CONTRACTS_V2[verified.snapshot.domainId];
   if (!expected || verified.snapshot.domainVersion !== expected.version) {
-    fail('OPERATING_DOMAIN_UNAVAILABLE', 'No public projection is registered for this API domain and version.', {
-      domainId: verified.snapshot.domainId,
-      domainVersion: verified.snapshot.domainVersion,
-    });
+    fail(
+      'OPERATING_DOMAIN_UNAVAILABLE',
+      'No public projection is registered for this API domain and version.',
+      {
+        domainId: verified.snapshot.domainId,
+        domainVersion: verified.snapshot.domainVersion,
+      },
+    );
   }
   assertExactBinding(verified.snapshot.domainContract, expected, 'Operating snapshot');
-  const registration = resolveCanonicalPublicOperatingDomain(canonical, verified.snapshot.domainId, verified.snapshot.domainVersion);
+  const registration = resolveCanonicalPublicOperatingDomain(
+    canonical,
+    verified.snapshot.domainId,
+    verified.snapshot.domainVersion,
+  );
   if (registration === null) {
     fail('OPERATING_DOMAIN_UNAVAILABLE', 'The requested public domain is not registered.', {
       domainId: verified.snapshot.domainId,
@@ -256,7 +333,10 @@ export function projectPublicOperatingDomainV2({
     kind: expected.projection.schemaId,
     schemaVersion: expected.projection.schemaVersion,
     protocolVersion: VERSION,
-    projectionId: deriveProjectionId({ snapshot: verified.snapshot, projection: expected.projection }),
+    projectionId: deriveProjectionId({
+      snapshot: verified.snapshot,
+      projection: expected.projection,
+    }),
     scopeId: verified.snapshot.scopeId,
     domainId: verified.snapshot.domainId,
     domainVersion: verified.snapshot.domainVersion,
@@ -273,10 +353,15 @@ export function projectPublicOperatingDomainV2({
   try {
     assertProtocolArtifact(projection.kind, projection, { protocolVersion: VERSION });
   } catch (cause) {
-    throw new PipelineError('RESULT_CONTRACT_INVALID', 'The public operating projection did not satisfy its declared contract.', '', {
-      retryable: false,
-      context: { cause: cause.code ?? null, domainId: projection.domainId },
-    });
+    throw new PipelineError(
+      'RESULT_CONTRACT_INVALID',
+      'The public operating projection did not satisfy its declared contract.',
+      '',
+      {
+        retryable: false,
+        context: { cause: cause.code ?? null, domainId: projection.domainId },
+      },
+    );
   }
   return freeze(projection);
 }

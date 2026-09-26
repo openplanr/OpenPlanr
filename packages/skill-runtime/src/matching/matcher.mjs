@@ -1,7 +1,32 @@
 const STOP_WORDS = new Set([
-  'a', 'an', 'and', 'are', 'as', 'at', 'be', 'before', 'for', 'from', 'in', 'into',
-  'is', 'it', 'of', 'on', 'only', 'or', 'our', 'the', 'this', 'to', 'use', 'using',
-  'we', 'when', 'with', 'without',
+  'a',
+  'an',
+  'and',
+  'are',
+  'as',
+  'at',
+  'be',
+  'before',
+  'for',
+  'from',
+  'in',
+  'into',
+  'is',
+  'it',
+  'of',
+  'on',
+  'only',
+  'or',
+  'our',
+  'the',
+  'this',
+  'to',
+  'use',
+  'using',
+  'we',
+  'when',
+  'with',
+  'without',
 ]);
 
 const TOKEN_EXPANSIONS = Object.freeze({
@@ -61,10 +86,7 @@ function overlapScore(inputTokens, cueTokens, weights) {
   const input = new Set(inputTokens);
   const weight = (token) => weights.get(token) ?? 1;
   const total = cueTokens.reduce((sum, token) => sum + weight(token), 0);
-  const matched = cueTokens.reduce(
-    (sum, token) => sum + (input.has(token) ? weight(token) : 0),
-    0,
-  );
+  const matched = cueTokens.reduce((sum, token) => sum + (input.has(token) ? weight(token) : 0), 0);
   return total === 0 ? 0 : matched / total;
 }
 
@@ -79,10 +101,11 @@ function hasExplicitName(input, skillId, aliases) {
   if (new RegExp(`(?:^|[\\s$/])${canonical}(?=$|[\\s.,:;!?])`, 'u').test(raw)) return true;
   if (new RegExp(`(?:^|\\s)${spoken}(?=$|[\\s.,:;!?])`, 'u').test(raw)) return true;
   const trimmed = raw.trim();
-  return aliases.some((alias) => (
-    trimmed === alias
-    || new RegExp(`(?:^|\\s)[$/]${escapeRegExp(alias)}(?=$|[\\s.,:;!?])`, 'u').test(raw)
-  ));
+  return aliases.some(
+    (alias) =>
+      trimmed === alias ||
+      new RegExp(`(?:^|\\s)[$/]${escapeRegExp(alias)}(?=$|[\\s.,:;!?])`, 'u').test(raw),
+  );
 }
 
 export function buildSkillMatchIndex(registry) {
@@ -114,25 +137,28 @@ export function buildSkillMatchIndex(registry) {
       frequencies.set(token, (frequencies.get(token) ?? 0) + 1);
     }
   }
-  const weights = new Map([...frequencies].map(([token, frequency]) => [
-    token,
-    1 + Math.log((documents.length + 1) / (frequency + 1)),
-  ]));
+  const weights = new Map(
+    [...frequencies].map(([token, frequency]) => [
+      token,
+      1 + Math.log((documents.length + 1) / (frequency + 1)),
+    ]),
+  );
   return Object.freeze({ registry, documents, weights });
 }
 
 function scoreDocument(input, inputTokens, document, weights) {
-  const include = Math.max(0, ...document.include.map((tokens) => (
-    overlapScore(inputTokens, tokens, weights)
-  )));
+  const include = Math.max(
+    0,
+    ...document.include.map((tokens) => overlapScore(inputTokens, tokens, weights)),
+  );
   const description = overlapScore(inputTokens, document.description, weights);
-  const exclusion = Math.max(0, ...document.exclude.map((tokens) => (
-    overlapScore(inputTokens, tokens, weights)
-  )));
+  const exclusion = Math.max(
+    0,
+    ...document.exclude.map((tokens) => overlapScore(inputTokens, tokens, weights)),
+  );
   const explicit = hasExplicitName(input, document.skill.skillId, document.aliases) ? 1 : 0;
-  const raw = explicit > 0
-    ? 1
-    : Math.max(include, description * 0.72) * (exclusion >= 0.72 ? 0.15 : 1);
+  const raw =
+    explicit > 0 ? 1 : Math.max(include, description * 0.72) * (exclusion >= 0.72 ? 0.15 : 1);
   return {
     skillId: document.skill.skillId,
     family: document.skill.family,
@@ -144,7 +170,13 @@ function scoreDocument(input, inputTokens, document, weights) {
   };
 }
 
-export function matchSkillRequest({ registry, index, input, threshold = 0.34, ambiguityDelta = 0.06 } = {}) {
+export function matchSkillRequest({
+  registry,
+  index,
+  input,
+  threshold = 0.34,
+  ambiguityDelta = 0.06,
+} = {}) {
   if (typeof input !== 'string' || input.trim().length === 0) {
     throw new TypeError('input must be non-empty routing text.');
   }
@@ -156,7 +188,13 @@ export function matchSkillRequest({ registry, index, input, threshold = 0.34, am
     .sort((left, right) => right.score - left.score || left.skillId.localeCompare(right.skillId));
   const top = candidates[0];
   if (!top || top.score < threshold) {
-    return Object.freeze({ status: 'deferred', skillId: null, family: null, reason: 'no-confident-match', candidates });
+    return Object.freeze({
+      status: 'deferred',
+      skillId: null,
+      family: null,
+      reason: 'no-confident-match',
+      candidates,
+    });
   }
 
   for (const deferredSkillId of top.deferTo) {
@@ -173,12 +211,7 @@ export function matchSkillRequest({ registry, index, input, threshold = 0.34, am
   }
 
   const second = candidates[1];
-  if (
-    second
-    && !top.explicit
-    && !second.explicit
-    && top.score - second.score <= ambiguityDelta
-  ) {
+  if (second && !top.explicit && !second.explicit && top.score - second.score <= ambiguityDelta) {
     return Object.freeze({
       status: 'deferred',
       skillId: null,

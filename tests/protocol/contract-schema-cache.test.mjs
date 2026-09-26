@@ -15,11 +15,14 @@ test('public schema resolvers return independent mutable copies', () => {
   assert.equal(Object.isFrozen(first.schema), false);
   assert.equal(Object.isFrozen(first.schema.properties), false);
 
-  const view = resolveOperateExperienceSchemaV2('operate-experience-view', { protocolVersion: '2.0.0' });
+  const view = resolveOperateExperienceSchemaV2('operate-experience-view', {
+    protocolVersion: '2.0.0',
+  });
   assert.equal(Object.isFrozen(view.schema), false);
   assert.notEqual(
     view.schema,
-    resolveOperateExperienceSchemaV2('operate-experience-view', { protocolVersion: '2.0.0' }).schema,
+    resolveOperateExperienceSchemaV2('operate-experience-view', { protocolVersion: '2.0.0' })
+      .schema,
   );
 });
 
@@ -33,17 +36,28 @@ test('validation reads a shared schema that caller copies cannot alter', () => {
   delete copy.schema.additionalProperties;
 
   assert.deepEqual(validateProtocolArtifact('story', {}, { protocolVersion: '1.0.0' }), before);
-  assert.ok(validateProtocolArtifact('story', { id: 1, zz: true }, { protocolVersion: '1.0.0' })
-    .some(({ rule }) => rule === 'additionalProperties'));
+  assert.ok(
+    validateProtocolArtifact('story', { id: 1, zz: true }, { protocolVersion: '1.0.0' }).some(
+      ({ rule }) => rule === 'additionalProperties',
+    ),
+  );
 });
 
 test('external $ref validation is stable across repeated runs of the cached schema', () => {
   const value = { questions: [{}] };
-  const first = validateProtocolArtifact('guided-questionnaire', value, { protocolVersion: '1.2.0' });
-  assert.ok(first.some(({ path, rule, detail }) => (
-    path === '$.questions[0]' && rule === 'required' && detail.includes('questionId')
-  )));
+  const first = validateProtocolArtifact('guided-questionnaire', value, {
+    protocolVersion: '1.2.0',
+  });
+  assert.ok(
+    first.some(
+      ({ path, rule, detail }) =>
+        path === '$.questions[0]' && rule === 'required' && detail.includes('questionId'),
+    ),
+  );
   for (let run = 0; run < 3; run += 1) {
-    assert.deepEqual(validateProtocolArtifact('guided-questionnaire', value, { protocolVersion: '1.2.0' }), first);
+    assert.deepEqual(
+      validateProtocolArtifact('guided-questionnaire', value, { protocolVersion: '1.2.0' }),
+      first,
+    );
   }
 });

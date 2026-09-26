@@ -25,7 +25,8 @@ function normalizeChange(change) {
   if (!change || !['module', 'host-profile'].includes(change.kind)) {
     throw new TypeError('Each impact change must have kind module or host-profile.');
   }
-  if (!change.id && !change.source) throw new TypeError('Each impact change must select an id or source.');
+  if (!change.id && !change.source)
+    throw new TypeError('Each impact change must select an id or source.');
   return {
     kind: change.kind,
     id: change.id ?? null,
@@ -37,10 +38,11 @@ function normalizeChange(change) {
 
 function matchesChange(change, graph) {
   const nodes = change.kind === 'module' ? graph.modules : graph.hostProfiles;
-  return nodes.some((node) => (
-    (change.id && (node.moduleId === change.id || node.id === change.id))
-    || (change.source && node.source === change.source)
-  ));
+  return nodes.some(
+    (node) =>
+      (change.id && (node.moduleId === change.id || node.id === change.id)) ||
+      (change.source && node.source === change.source),
+  );
 }
 
 function resourceId(path) {
@@ -51,10 +53,14 @@ function resourceId(path) {
 function describeStandardPackage(repoRoot, registration) {
   const packageInfo = readStandardSkillPackage({ repoRoot, registryRow: registration });
   return Object.freeze({
-    modules: Object.freeze(packageInfo.resources.map((resource) => Object.freeze({
-      moduleId: resourceId(resource.path),
-      source: resource.path,
-    }))),
+    modules: Object.freeze(
+      packageInfo.resources.map((resource) =>
+        Object.freeze({
+          moduleId: resourceId(resource.path),
+          source: resource.path,
+        }),
+      ),
+    ),
     // Protocol 1.8 packages are host-neutral sources. Host-specific metadata is
     // declared as an ordinary resource instead of an authored prompt overlay.
     hostProfiles: Object.freeze([]),
@@ -63,12 +69,7 @@ function describeStandardPackage(repoRoot, registration) {
 
 function skillAssetPaths(assetManifest, skillId) {
   const slug = skillId.replace(/^planr-/u, '');
-  const pathMarkers = [
-    `/${skillId}/`,
-    `/${skillId}.`,
-    `/skills/${slug}/`,
-    `/openplanr-${slug}.`,
-  ];
+  const pathMarkers = [`/${skillId}/`, `/${skillId}.`, `/skills/${slug}/`, `/openplanr-${slug}.`];
   return assetManifest.assets
     .map(({ path }) => path)
     .filter((path) => pathMarkers.some((marker) => `/${path}`.includes(marker)));
@@ -78,12 +79,16 @@ export function analyzeSkillGraphImpact({ repoRoot, changes } = {}) {
   const root = resolve(repoRoot ?? '.');
   const registry = readJson(join(root, 'skills/registry.json'));
   const assetManifest = readJson(join(root, 'adapters/manifests/generated-assets.json'));
-  if (!Array.isArray(changes) || changes.length === 0) throw new TypeError('changes must be a non-empty array.');
+  if (!Array.isArray(changes) || changes.length === 0)
+    throw new TypeError('changes must be a non-empty array.');
   const normalizedChanges = changes.map(normalizeChange);
   const skills = registry.skills.map((registration) => {
-    const graph = registry.sourceFormat === 'package-v1'
-      ? describeStandardPackage(root, registration)
-      : describeAuthoringGraph(loadComposedSkill({ skillDir: dirname(join(root, registration.source)) }));
+    const graph =
+      registry.sourceFormat === 'package-v1'
+        ? describeStandardPackage(root, registration)
+        : describeAuthoringGraph(
+            loadComposedSkill({ skillDir: dirname(join(root, registration.source)) }),
+          );
     return { registration, graph };
   });
   const changeResults = normalizedChanges.map((change) => {
@@ -91,10 +96,12 @@ export function analyzeSkillGraphImpact({ repoRoot, changes } = {}) {
       .filter(({ graph }) => matchesChange(change, graph))
       .map(({ registration }) => registration.skillId)
       .sort();
-    const generatedAssets = [...new Set([
-      ...GLOBAL_GENERATED_ASSETS,
-      ...affectedSkills.flatMap((skillId) => skillAssetPaths(assetManifest, skillId)),
-    ])].sort();
+    const generatedAssets = [
+      ...new Set([
+        ...GLOBAL_GENERATED_ASSETS,
+        ...affectedSkills.flatMap((skillId) => skillAssetPaths(assetManifest, skillId)),
+      ]),
+    ].sort();
     return { ...change, affectedSkills, generatedAssets };
   });
   return Object.freeze({
@@ -102,20 +109,30 @@ export function analyzeSkillGraphImpact({ repoRoot, changes } = {}) {
     schemaVersion: '1.0.0',
     changes: changeResults,
     allSkills: skills.map(({ registration }) => registration.skillId).sort(),
-    affectedSkills: [...new Set(changeResults.flatMap(({ affectedSkills }) => affectedSkills))].sort(),
-    generatedAssets: [...new Set(changeResults.flatMap(({ generatedAssets }) => generatedAssets))].sort(),
+    affectedSkills: [
+      ...new Set(changeResults.flatMap(({ affectedSkills }) => affectedSkills)),
+    ].sort(),
+    generatedAssets: [
+      ...new Set(changeResults.flatMap(({ generatedAssets }) => generatedAssets)),
+    ].sort(),
   });
 }
 
 export function planSkillGraphRollback({ impactReport, previousVersions } = {}) {
-  if (impactReport?.kind !== 'skill-source-impact-report') throw new TypeError('impactReport must be a skill-source impact report.');
-  if (!previousVersions || typeof previousVersions !== 'object' || Array.isArray(previousVersions)) {
+  if (impactReport?.kind !== 'skill-source-impact-report')
+    throw new TypeError('impactReport must be a skill-source impact report.');
+  if (
+    !previousVersions ||
+    typeof previousVersions !== 'object' ||
+    Array.isArray(previousVersions)
+  ) {
     throw new TypeError('previousVersions must be keyed by change selector.');
   }
   const changes = impactReport.changes.map((change) => {
     const key = `${change.kind}:${change.id ?? change.source}`;
     const targetVersion = previousVersions[key];
-    if (typeof targetVersion !== 'string') throw new TypeError(`Missing previous version for ${key}.`);
+    if (typeof targetVersion !== 'string')
+      throw new TypeError(`Missing previous version for ${key}.`);
     return {
       selector: key,
       targetVersion,

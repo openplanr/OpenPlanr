@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { test } from 'node:test';
 
 const previewPath = new URL('../../templates/artifact-review-preview.html', import.meta.url);
@@ -48,7 +48,8 @@ test('artifact preview contains the required review-shell controls and responsiv
     '@media (max-width:900px)',
     '@media (max-width:390px)',
     '@media (prefers-reduced-motion:reduce)',
-  ]) assert.ok(html.includes(required), `preview includes ${required}`);
+  ])
+    assert.ok(html.includes(required), `preview includes ${required}`);
 });
 
 test('artifact preview keeps dynamic HTML in an opaque, network-blocked sandbox', () => {
@@ -65,7 +66,9 @@ test('artifact preview keeps dynamic HTML in an opaque, network-blocked sandbox'
 
 test('artifact preview inline controller parses as JavaScript', () => {
   const normalizedHtml = html.replace(/\r\n?/g, '\n');
-  const scripts = [...normalizedHtml.matchAll(/^  <script>\n([\s\S]*?)^  <\/script>$/gm)].map((match) => match[1]);
+  const scripts = [...normalizedHtml.matchAll(/^  <script>\n([\s\S]*?)^  <\/script>$/gm)].map(
+    (match) => match[1],
+  );
   assert.equal(scripts.length, 1, 'single complete-preview controller found');
   for (const [index, script] of scripts.entries()) {
     const path = join(tmpdir(), `planr-artifact-preview-${process.pid}-${index}.mjs`);

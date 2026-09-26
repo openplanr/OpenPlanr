@@ -16,10 +16,19 @@ export function readFrontmatter(bytes, { expectedName } = {}) {
 export function renderFrontmatterBlock(pairs) {
   const lines = pairs.map(([key, value]) => {
     if (typeof key !== 'string' || key.length === 0 || key.includes(':') || key.includes('\n')) {
-      throw new SkillRuntimeError('E_FRONTMATTER_KEY_INVALID', `Frontmatter key ${String(key)} is invalid.`, { key });
+      throw new SkillRuntimeError(
+        'E_FRONTMATTER_KEY_INVALID',
+        `Frontmatter key ${String(key)} is invalid.`,
+        { key },
+      );
     }
     const text = canonicalText(value);
-    if (text.includes('\n')) throw new SkillRuntimeError('E_FRONTMATTER_VALUE_INVALID', `Frontmatter value for ${key} may not contain a newline.`, { key });
+    if (text.includes('\n'))
+      throw new SkillRuntimeError(
+        'E_FRONTMATTER_VALUE_INVALID',
+        `Frontmatter value for ${key} may not contain a newline.`,
+        { key },
+      );
     return `${key}: ${text}`;
   });
   return `---\n${lines.join('\n')}\n---\n`;

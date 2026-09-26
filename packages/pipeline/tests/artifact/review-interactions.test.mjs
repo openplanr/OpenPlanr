@@ -2,13 +2,10 @@ import assert from 'node:assert/strict';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
+import { fileURLToPath } from 'node:url';
 
-import {
-  createArtifactEnvelope,
-  validateArtifactReview,
-} from '../../lib/artifact/envelope.mjs';
+import { createArtifactEnvelope, validateArtifactReview } from '../../lib/artifact/envelope.mjs';
 import {
   anchorRegionToViewportRegion,
   annotationDomIds,
@@ -30,8 +27,9 @@ import { renderArtifactStageRuntimeAsset } from '../../scripts/generate-artifact
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const snapshotDir = join(root, 'tests/artifact/__snapshots__');
-const runBrowser = process.env.PLANR_BROWSER_TESTS === '1'
-  || process.env.npm_lifecycle_event === 'test:artifact:browser';
+const runBrowser =
+  process.env.PLANR_BROWSER_TESTS === '1' ||
+  process.env.npm_lifecycle_event === 'test:artifact:browser';
 const updateSnapshots = process.env.PLANR_UPDATE_SNAPSHOTS === '1';
 if (process.env.PLANR_REQUIRE_BROWSER === '1' && !runBrowser) {
   throw new Error('PLANR_REQUIRE_BROWSER requires the real artifact browser test to run.');
@@ -142,11 +140,15 @@ test('review reducer is deeply immutable and preserves addressed imported feedba
   assert.equal(Object.isFrozen(normalized.pins[0].region), true);
 
   const previous = structuredClone(normalized);
-  const resolved = reduceArtifactReview(normalized, {
-    type: 'set-status',
-    pinId: 'pin-fixture',
-    status: 'resolved',
-  }, { now: () => '2026-07-14T18:01:00.000Z' });
+  const resolved = reduceArtifactReview(
+    normalized,
+    {
+      type: 'set-status',
+      pinId: 'pin-fixture',
+      status: 'resolved',
+    },
+    { now: () => '2026-07-14T18:01:00.000Z' },
+  );
   assert.deepEqual(normalized, previous, 'the prior review remains byte-for-byte equivalent');
   assert.notEqual(resolved, normalized);
   assert.equal(resolved.pins[0].status, 'resolved');
@@ -215,14 +217,22 @@ test('controller authors pins and replies locally without serializing reviewer i
 });
 
 test('controller atomically hydrates a compatible review and clears stale selection', () => {
-  const initial = normalizeArtifactReview(baseReview({
-    reviewId: 'review-initial', pins: [pinFixture()],
-    createdAt: timestamp, updatedAt: timestamp,
-  }));
-  const replacement = normalizeArtifactReview(baseReview({
-    reviewId: 'review-hydrated', pins: [],
-    createdAt: timestamp, updatedAt: timestamp,
-  }));
+  const initial = normalizeArtifactReview(
+    baseReview({
+      reviewId: 'review-initial',
+      pins: [pinFixture()],
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    }),
+  );
+  const replacement = normalizeArtifactReview(
+    baseReview({
+      reviewId: 'review-hydrated',
+      pins: [],
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    }),
+  );
   const changes = [];
   const controller = createArtifactReviewController({ initialReview: initial, reviewOf });
   controller.subscribe((_state, change) => changes.push(change));
@@ -232,10 +242,17 @@ test('controller atomically hydrates a compatible review and clears stale select
   assert.equal(controller.getState().activePinId, null);
   assert.ok(changes.some(({ type }) => type === 'review-replaced'));
   assert.throws(
-    () => controller.replaceReview(normalizeArtifactReview(baseReview({
-      reviewId: 'review-stale', reviewOf: 'b'.repeat(64),
-      createdAt: timestamp, updatedAt: timestamp,
-    }))),
+    () =>
+      controller.replaceReview(
+        normalizeArtifactReview(
+          baseReview({
+            reviewId: 'review-stale',
+            reviewOf: 'b'.repeat(64),
+            createdAt: timestamp,
+            updatedAt: timestamp,
+          }),
+        ),
+      ),
     (error) => error.code === 'E_ARTIFACT_REVIEW_DIGEST_MISMATCH',
   );
   controller.destroy();
@@ -264,46 +281,64 @@ test('review actions reject absent identity, invalid timestamps, unknown actions
   const review = createArtifactReview({ reviewId: 'review-limits', reviewOf });
   const controller = createArtifactReviewController({ initialReview: review, reviewOf });
   assert.throws(
-    () => controller.dispatch({
-      type: 'add-pin',
-      pin: {
-        artifactId: 'checkout',
-        region: { x: 0, y: 0, w: 0, h: 0 },
-        viewport: { width: 1440, height: 900 },
-        intent: 'fix',
-        comment: 'Identity is required.',
-      },
-    }),
-    (error) => error instanceof ArtifactReviewStateError
-      && error.code === 'E_ARTIFACT_REVIEW_IDENTITY_REQUIRED',
+    () =>
+      controller.dispatch({
+        type: 'add-pin',
+        pin: {
+          artifactId: 'checkout',
+          region: { x: 0, y: 0, w: 0, h: 0 },
+          viewport: { width: 1440, height: 900 },
+          intent: 'fix',
+          comment: 'Identity is required.',
+        },
+      }),
+    (error) =>
+      error instanceof ArtifactReviewStateError &&
+      error.code === 'E_ARTIFACT_REVIEW_IDENTITY_REQUIRED',
   );
   assert.throws(
     () => reduceArtifactReview(review, { type: 'not-a-real-action' }),
     (error) => error.code === 'E_ARTIFACT_REVIEW_ACTION_UNKNOWN',
   );
   assert.throws(
-    () => reduceArtifactReview(review, { type: 'set-overall', overall: '' }, {
-      now: () => '2026-07-14 18:00:00',
-    }),
+    () =>
+      reduceArtifactReview(
+        review,
+        { type: 'set-overall', overall: '' },
+        {
+          now: () => '2026-07-14 18:00:00',
+        },
+      ),
     /ISO-8601/,
   );
   assert.throws(
-    () => normalizeArtifactReview(baseReview({
-      pins: [pinFixture({ createdAt: '2026-07-14T18:00:00' })],
-    })),
+    () =>
+      normalizeArtifactReview(
+        baseReview({
+          pins: [pinFixture({ createdAt: '2026-07-14T18:00:00' })],
+        }),
+      ),
     /ISO-8601/,
   );
   assert.throws(
-    () => reduceArtifactReview(review, {
-      type: 'set-overall',
-      overall: 'x'.repeat(ARTIFACT_REVIEW_LIMITS.text + 1),
-    }, { now: () => timestamp }),
+    () =>
+      reduceArtifactReview(
+        review,
+        {
+          type: 'set-overall',
+          overall: 'x'.repeat(ARTIFACT_REVIEW_LIMITS.text + 1),
+        },
+        { now: () => timestamp },
+      ),
     /65536/,
   );
   assert.throws(
-    () => normalizeArtifactReview(baseReview({
-      pins: Array.from({ length: ARTIFACT_REVIEW_LIMITS.pins + 1 }),
-    })),
+    () =>
+      normalizeArtifactReview(
+        baseReview({
+          pins: Array.from({ length: ARTIFACT_REVIEW_LIMITS.pins + 1 }),
+        }),
+      ),
     /no more than 10000/,
   );
   assert.throws(
@@ -337,10 +372,9 @@ function fixtureEnvelope() {
 }
 
 async function serve(document, runtime, artifacts) {
-  const artifactByPath = new Map(artifacts.map((artifact) => [
-    `/artifact/${encodeURIComponent(artifact.id)}`,
-    artifact.html,
-  ]));
+  const artifactByPath = new Map(
+    artifacts.map((artifact) => [`/artifact/${encodeURIComponent(artifact.id)}`, artifact.html]),
+  );
   const server = createServer((request, response) => {
     response.setHeader('Cache-Control', 'no-store');
     if (request.url === '/artifact-review-stage.js') {
@@ -363,9 +397,10 @@ async function serve(document, runtime, artifacts) {
   const address = server.address();
   return {
     url: `http://127.0.0.1:${address.port}/`,
-    close: () => new Promise((resolveClose, reject) => server.close((error) => (
-      error ? reject(error) : resolveClose()
-    ))),
+    close: () =>
+      new Promise((resolveClose, reject) =>
+        server.close((error) => (error ? reject(error) : resolveClose())),
+      ),
   };
 }
 
@@ -430,62 +465,72 @@ test('real browser review supports dynamic artifacts, comments, threads, decisio
     reducedMotion: 'reduce',
     viewport: { width: 1440, height: 900 },
   });
-  await context.addInitScript(({ sources }) => {
-    let id = 0;
-    let minute = 0;
-    globalThis.__planrReviewEvents = [];
-    globalThis.__planrSelections = [];
-    globalThis.__planrAnchorMode = 'normal';
-    addEventListener('planr:artifact-review-change', (event) => {
-      globalThis.__planrReviewEvents.push(event.detail);
-    });
-    addEventListener('planr:artifact-review-select', (event) => {
-      globalThis.__planrSelections.push(event.detail);
-    });
-    globalThis.__OPENPLANR_ARTIFACT_STAGE_OPTIONS__ = {
-      async resolveArtifactSource(artifact) {
-        const response = await fetch(sources[artifact.id], { cache: 'no-store' });
-        if (!response.ok) throw new Error(`Artifact source failed: ${response.status}`);
-        return response.blob();
-      },
-      bridgeClient: {
-        attach({ artifact, frame }) {
-          frame.__openPlanrBridge = {
-            async hitTest() {
-              if (globalThis.__planrAnchorMode === 'null') return null;
-              if (globalThis.__planrAnchorMode === 'error') throw new Error('bridge unavailable');
-              if (globalThis.__planrAnchorMode === 'timeout') {
-                return new Promise((resolve) => setTimeout(() => resolve({
-                  planrId: 'late-anchor',
-                  screen: artifact.id,
-                }), 1_200));
-              }
-              return { planrId: `${artifact.id}-screen`, screen: artifact.id };
-            },
-          };
+  await context.addInitScript(
+    ({ sources }) => {
+      let id = 0;
+      let minute = 0;
+      globalThis.__planrReviewEvents = [];
+      globalThis.__planrSelections = [];
+      globalThis.__planrAnchorMode = 'normal';
+      addEventListener('planr:artifact-review-change', (event) => {
+        globalThis.__planrReviewEvents.push(event.detail);
+      });
+      addEventListener('planr:artifact-review-select', (event) => {
+        globalThis.__planrSelections.push(event.detail);
+      });
+      globalThis.__OPENPLANR_ARTIFACT_STAGE_OPTIONS__ = {
+        async resolveArtifactSource(artifact) {
+          const response = await fetch(sources[artifact.id], { cache: 'no-store' });
+          if (!response.ok) throw new Error(`Artifact source failed: ${response.status}`);
+          return response.blob();
         },
-      },
-      review: {
-        createId(kind) {
-          id += 1;
-          return `${kind}-${String(id).padStart(3, '0')}`;
+        bridgeClient: {
+          attach({ artifact, frame }) {
+            frame.__openPlanrBridge = {
+              async hitTest() {
+                if (globalThis.__planrAnchorMode === 'null') return null;
+                if (globalThis.__planrAnchorMode === 'error') throw new Error('bridge unavailable');
+                if (globalThis.__planrAnchorMode === 'timeout') {
+                  return new Promise((resolve) =>
+                    setTimeout(
+                      () =>
+                        resolve({
+                          planrId: 'late-anchor',
+                          screen: artifact.id,
+                        }),
+                      1_200,
+                    ),
+                  );
+                }
+                return { planrId: `${artifact.id}-screen`, screen: artifact.id };
+              },
+            };
+          },
         },
-        now() {
-          minute += 1;
-          return `2026-07-14T18:${String(minute).padStart(2, '0')}:00.000Z`;
+        review: {
+          createId(kind) {
+            id += 1;
+            return `${kind}-${String(id).padStart(3, '0')}`;
+          },
+          now() {
+            minute += 1;
+            return `2026-07-14T18:${String(minute).padStart(2, '0')}:00.000Z`;
+          },
         },
-      },
-    };
-  }, {
-    sources: Object.fromEntries(envelope.artifacts.map(({ id }) => [
-      id,
-      `${host.url}artifact/${encodeURIComponent(id)}`,
-    ])),
-  });
+      };
+    },
+    {
+      sources: Object.fromEntries(
+        envelope.artifacts.map(({ id }) => [id, `${host.url}artifact/${encodeURIComponent(id)}`]),
+      ),
+    },
+  );
 
   const page = await context.newPage();
   await page.goto(host.url);
-  await page.waitForFunction(() => globalThis.__openPlanrArtifactStage?.getState().status === 'ready');
+  await page.waitForFunction(
+    () => globalThis.__openPlanrArtifactStage?.getState().status === 'ready',
+  );
 
   const checkoutFrame = page.frameLocator('[data-planr-artifact-frame="checkout"]');
   await checkoutFrame.locator('#dynamic').click();
@@ -502,7 +547,9 @@ test('real browser review supports dynamic artifacts, comments, threads, decisio
   const composer = page.locator('[data-planr-annotation-composer]');
   await composer.waitFor();
   assert.equal(
-    await composer.locator('[data-planr-composer-comment]').evaluate((element) => document.activeElement === element),
+    await composer
+      .locator('[data-planr-composer-comment]')
+      .evaluate((element) => document.activeElement === element),
     true,
   );
   await composer.locator('[data-planr-composer-identity]').fill('Asem <admin>');
@@ -518,10 +565,17 @@ test('real browser review supports dynamic artifacts, comments, threads, decisio
     { PNG, pixelmatch },
   );
   await comment.press('Meta+Enter');
-  await page.waitForFunction(() => globalThis.__openPlanrArtifactStage.review?.getReview()?.pins.length === 1);
-  assert.equal(await page.locator('[data-planr-slot="review-announcer"]').textContent(), 'improve comment added.');
+  await page.waitForFunction(
+    () => globalThis.__openPlanrArtifactStage.review?.getReview()?.pins.length === 1,
+  );
+  assert.equal(
+    await page.locator('[data-planr-slot="review-announcer"]').textContent(),
+    'improve comment added.',
+  );
 
-  const firstReview = await page.evaluate(() => globalThis.__openPlanrArtifactStage.review.getReview());
+  const firstReview = await page.evaluate(() =>
+    globalThis.__openPlanrArtifactStage.review.getReview(),
+  );
   assert.equal(firstReview.pins[0].intent, 'improve');
   assert.equal(firstReview.pins[0].variant, 'checkout');
   assert.deepEqual(firstReview.pins[0].anchor, { planrId: 'checkout-screen', screen: 'checkout' });
@@ -529,10 +583,15 @@ test('real browser review supports dynamic artifacts, comments, threads, decisio
   assert.equal(Object.hasOwn(firstReview, 'identity'), false);
   assert.equal(await page.evaluate(() => globalThis.__planrXss ?? false), false);
   assert.equal(await page.locator('.planr-thread-comment img').count(), 0);
-  assert.equal(await page.locator('.planr-thread-comment').textContent(), firstReview.pins[0].comment);
+  assert.equal(
+    await page.locator('.planr-thread-comment').textContent(),
+    firstReview.pins[0].comment,
+  );
 
   const firstPinId = firstReview.pins[0].id;
-  const firstPin = page.locator(`[data-planr-annotation-layer="checkout"] [data-planr-pin-id="${firstPinId}"]`);
+  const firstPin = page.locator(
+    `[data-planr-annotation-layer="checkout"] [data-planr-pin-id="${firstPinId}"]`,
+  );
   const firstThread = page.locator(`#${annotationDomIds(firstPinId).thread}`);
   await firstPin.click();
   assert.equal(await firstThread.evaluate((element) => document.activeElement === element), true);
@@ -543,29 +602,54 @@ test('real browser review supports dynamic artifacts, comments, threads, decisio
   assert.ok(await page.evaluate(() => globalThis.__planrSelections.length >= 1));
 
   const replyForm = firstThread.locator('[data-planr-reply-form]');
-  const hostileReply = '<svg onload="globalThis.__replyXss=true"> Confirmed in the responsive state.';
+  const hostileReply =
+    '<svg onload="globalThis.__replyXss=true"> Confirmed in the responsive state.';
   await replyForm.locator('textarea').fill(hostileReply);
-  assert.match(await page.locator('[data-planr-identity-status]').textContent(), /Comments will appear as Asem <admin>\./);
+  assert.match(
+    await page.locator('[data-planr-identity-status]').textContent(),
+    /Comments will appear as Asem <admin>\./,
+  );
   await replyForm.locator('textarea').press('Control+Enter');
-  await page.waitForFunction(() => globalThis.__openPlanrArtifactStage.review.getReview().pins[0].replies.length === 1);
+  await page.waitForFunction(
+    () => globalThis.__openPlanrArtifactStage.review.getReview().pins[0].replies.length === 1,
+  );
   assert.equal(await firstThread.locator('.planr-reply').count(), 1);
-  assert.equal(await firstThread.locator('.planr-reply').textContent().then((value) => value.includes(hostileReply)), true);
+  assert.equal(
+    await firstThread
+      .locator('.planr-reply')
+      .textContent()
+      .then((value) => value.includes(hostileReply)),
+    true,
+  );
   assert.equal(await firstThread.locator('.planr-reply svg').count(), 0);
   assert.equal(await page.evaluate(() => globalThis.__replyXss ?? false), false);
-  assert.equal(await page.locator('[data-planr-slot="review-announcer"]').textContent(), 'Reply added');
+  assert.equal(
+    await page.locator('[data-planr-slot="review-announcer"]').textContent(),
+    'Reply added',
+  );
 
   await firstThread.locator('[data-planr-thread-action="resolve"]').click();
   assert.equal(
-    await page.evaluate(() => globalThis.__openPlanrArtifactStage.review.getReview().pins[0].status),
+    await page.evaluate(
+      () => globalThis.__openPlanrArtifactStage.review.getReview().pins[0].status,
+    ),
     'resolved',
   );
-  assert.equal(await page.locator('[data-planr-slot="review-announcer"]').textContent(), 'Comment resolved');
+  assert.equal(
+    await page.locator('[data-planr-slot="review-announcer"]').textContent(),
+    'Comment resolved',
+  );
   await firstThread.locator('[data-planr-thread-action="reopen"]').click();
   assert.equal(
-    await page.evaluate(() => globalThis.__openPlanrArtifactStage.review.getReview().pins[0].status),
+    await page.evaluate(
+      () => globalThis.__openPlanrArtifactStage.review.getReview().pins[0].status,
+    ),
     'open',
   );
-  assert.equal(await page.locator('[data-planr-slot="review-announcer"]').textContent(), 'Comment reopened');
+  assert.equal(
+    await page.locator('[data-planr-slot="review-announcer"]').textContent(),
+    'Comment reopened',
+  );
 
   await page.locator('[data-planr-action="theme"]').click();
   assert.equal(await page.locator('html').getAttribute('data-planr-theme'), 'dark');
@@ -573,12 +657,15 @@ test('real browser review supports dynamic artifacts, comments, threads, decisio
   assert.equal(await firstPin.isVisible(), true);
   assert.equal(await firstThread.isVisible(), true);
   assert.match(
-    await page.locator('.planr-review-rail').evaluate((element) => getComputedStyle(element).backgroundColor),
+    await page
+      .locator('.planr-review-rail')
+      .evaluate((element) => getComputedStyle(element).backgroundColor),
     /^rgb\(/,
   );
 
   const overall = page.locator('[data-planr-overall]');
-  const hostileOverall = '<script>globalThis.__overallXss=true</script> Preserve the summary and clarify payment hierarchy.';
+  const hostileOverall =
+    '<script>globalThis.__overallXss=true</script> Preserve the summary and clarify payment hierarchy.';
   await overall.fill(hostileOverall);
   await overall.blur();
   assert.equal(
@@ -589,8 +676,14 @@ test('real browser review supports dynamic artifacts, comments, threads, decisio
   const requestChanges = page.locator('[data-planr-decision="changes_requested"]');
   await requestChanges.click();
   assert.equal(await requestChanges.getAttribute('aria-pressed'), 'true');
-  assert.equal(await page.locator('[data-planr-slot="review-announcer"]').textContent(), 'Changes requested');
-  assert.equal(await page.locator('[data-planr-slot="decision-status"]').textContent(), 'Changes requested');
+  assert.equal(
+    await page.locator('[data-planr-slot="review-announcer"]').textContent(),
+    'Changes requested',
+  );
+  assert.equal(
+    await page.locator('[data-planr-slot="decision-status"]').textContent(),
+    'Changes requested',
+  );
   await requestChanges.click();
   assert.equal(
     await page.evaluate(() => globalThis.__openPlanrArtifactStage.review.getReview().decision),
@@ -603,7 +696,9 @@ test('real browser review supports dynamic artifacts, comments, threads, decisio
   );
 
   await page.locator('[data-artifact-id="insights"][role="tab"]').click();
-  await page.evaluate(() => { globalThis.__planrAnchorMode = 'null'; });
+  await page.evaluate(() => {
+    globalThis.__planrAnchorMode = 'null';
+  });
   const insightsLayer = page.locator('[data-planr-annotation-layer="insights"]');
   const insightsBounds = await insightsLayer.boundingBox();
   assert.ok(insightsBounds);
@@ -618,59 +713,108 @@ test('real browser review supports dynamic artifacts, comments, threads, decisio
     { steps: 4 },
   );
   await page.mouse.up();
-  const regionComposer = page.locator('[data-planr-annotation-layer="insights"] [data-planr-annotation-composer]');
+  const regionComposer = page.locator(
+    '[data-planr-annotation-layer="insights"] [data-planr-annotation-composer]',
+  );
   await regionComposer.waitFor();
   await regionComposer.locator('[data-planr-intent="question"]').click();
-  await regionComposer.locator('[data-planr-composer-comment]').fill('Should this chart use the same comparison period?');
+  await regionComposer
+    .locator('[data-planr-composer-comment]')
+    .fill('Should this chart use the same comparison period?');
   await regionComposer.locator('[data-planr-composer-submit]').click();
-  await page.waitForFunction(() => globalThis.__openPlanrArtifactStage.review.getReview().pins.length === 2);
-  const retained = await page.evaluate(() => globalThis.__openPlanrArtifactStage.review.getReview());
+  await page.waitForFunction(
+    () => globalThis.__openPlanrArtifactStage.review.getReview().pins.length === 2,
+  );
+  const retained = await page.evaluate(() =>
+    globalThis.__openPlanrArtifactStage.review.getReview(),
+  );
   assert.equal(retained.pins[0].id, firstPinId);
   assert.equal(retained.pins[1].artifactId, 'insights');
-  assert.equal(Object.hasOwn(retained.pins[1], 'anchor'), false, 'null anchors keep coordinate fallback');
+  assert.equal(
+    Object.hasOwn(retained.pins[1], 'anchor'),
+    false,
+    'null anchors keep coordinate fallback',
+  );
   assert.ok(retained.pins[1].region.w > 0.25);
   assert.ok(retained.pins[1].region.h > 0.2);
   const invariantRegion = structuredClone(retained.pins[1].region);
 
-  await page.evaluate(() => globalThis.__openPlanrArtifactStage.dispatch({ type: 'set-zoom', zoom: 25 }));
-  await page.evaluate(() => globalThis.__openPlanrArtifactStage.dispatch({ type: 'set-zoom', zoom: 200 }));
-  await page.evaluate(() => globalThis.__openPlanrArtifactStage.dispatch({ type: 'set-zoom', zoom: 72 }));
-  await page.evaluate(() => globalThis.__openPlanrArtifactStage.dispatch({ type: 'set-view-mode', viewMode: 'split' }));
-  await page.evaluate(() => globalThis.__openPlanrArtifactStage.dispatch({ type: 'set-view-mode', viewMode: 'variants' }));
-  await page.evaluate(() => globalThis.__openPlanrArtifactStage.dispatch({ type: 'set-rail-open', railOpen: false }));
-  await page.evaluate(() => globalThis.__openPlanrArtifactStage.dispatch({ type: 'set-rail-open', railOpen: true }));
+  await page.evaluate(() =>
+    globalThis.__openPlanrArtifactStage.dispatch({ type: 'set-zoom', zoom: 25 }),
+  );
+  await page.evaluate(() =>
+    globalThis.__openPlanrArtifactStage.dispatch({ type: 'set-zoom', zoom: 200 }),
+  );
+  await page.evaluate(() =>
+    globalThis.__openPlanrArtifactStage.dispatch({ type: 'set-zoom', zoom: 72 }),
+  );
+  await page.evaluate(() =>
+    globalThis.__openPlanrArtifactStage.dispatch({ type: 'set-view-mode', viewMode: 'split' }),
+  );
+  await page.evaluate(() =>
+    globalThis.__openPlanrArtifactStage.dispatch({ type: 'set-view-mode', viewMode: 'variants' }),
+  );
+  await page.evaluate(() =>
+    globalThis.__openPlanrArtifactStage.dispatch({ type: 'set-rail-open', railOpen: false }),
+  );
+  await page.evaluate(() =>
+    globalThis.__openPlanrArtifactStage.dispatch({ type: 'set-rail-open', railOpen: true }),
+  );
   assert.deepEqual(
-    await page.evaluate(() => globalThis.__openPlanrArtifactStage.review.getReview().pins[1].region),
+    await page.evaluate(
+      () => globalThis.__openPlanrArtifactStage.review.getReview().pins[1].region,
+    ),
     invariantRegion,
   );
 
   // A late bridge result is ignored after the draft's artifact is hidden.
   await page.locator('[data-artifact-id="checkout"][role="tab"]').click();
-  await page.evaluate(() => { globalThis.__planrAnchorMode = 'timeout'; });
+  await page.evaluate(() => {
+    globalThis.__planrAnchorMode = 'timeout';
+  });
   const checkoutAgain = await checkoutLayer.boundingBox();
   assert.ok(checkoutAgain);
-  await page.mouse.click(checkoutAgain.x + checkoutAgain.width * 0.52, checkoutAgain.y + checkoutAgain.height * 0.52);
+  await page.mouse.click(
+    checkoutAgain.x + checkoutAgain.width * 0.52,
+    checkoutAgain.y + checkoutAgain.height * 0.52,
+  );
   await page.locator('[data-planr-annotation-composer]').waitFor();
   await page.locator('[data-artifact-id="insights"][role="tab"]').click();
   await page.waitForTimeout(900);
   assert.equal(await page.locator('[data-planr-annotation-composer]').count(), 0);
-  assert.equal(await page.evaluate(() => globalThis.__openPlanrArtifactStage.review.getReview().pins.length), 2);
+  assert.equal(
+    await page.evaluate(() => globalThis.__openPlanrArtifactStage.review.getReview().pins.length),
+    2,
+  );
 
   // Rejected anchor lookups also keep valid coordinate-only review state.
   await page.locator('[data-artifact-id="checkout"][role="tab"]').click();
-  await page.evaluate(() => { globalThis.__planrAnchorMode = 'error'; });
+  await page.evaluate(() => {
+    globalThis.__planrAnchorMode = 'error';
+  });
   const errorFallbackBounds = await checkoutLayer.boundingBox();
   assert.ok(errorFallbackBounds);
-  await page.mouse.click(errorFallbackBounds.x + errorFallbackBounds.width * 0.62, errorFallbackBounds.y + errorFallbackBounds.height * 0.32);
+  await page.mouse.click(
+    errorFallbackBounds.x + errorFallbackBounds.width * 0.62,
+    errorFallbackBounds.y + errorFallbackBounds.height * 0.32,
+  );
   const fallbackComposer = page.locator('[data-planr-annotation-composer]');
-  await fallbackComposer.locator('[data-planr-composer-comment]').fill('Coordinate fallback remains actionable.');
+  await fallbackComposer
+    .locator('[data-planr-composer-comment]')
+    .fill('Coordinate fallback remains actionable.');
   await fallbackComposer.locator('[data-planr-composer-submit]').click();
-  await page.waitForFunction(() => globalThis.__openPlanrArtifactStage.review.getReview().pins.length === 3);
+  await page.waitForFunction(
+    () => globalThis.__openPlanrArtifactStage.review.getReview().pins.length === 3,
+  );
   assert.equal(
-    await page.evaluate(() => Object.hasOwn(globalThis.__openPlanrArtifactStage.review.getReview().pins[2], 'anchor')),
+    await page.evaluate(() =>
+      Object.hasOwn(globalThis.__openPlanrArtifactStage.review.getReview().pins[2], 'anchor'),
+    ),
     false,
   );
-  await page.evaluate(() => { globalThis.__planrAnchorMode = 'normal'; });
+  await page.evaluate(() => {
+    globalThis.__planrAnchorMode = 'normal';
+  });
 
   await firstThread.locator('[data-planr-thread-focus]').click();
   assert.equal(
@@ -683,7 +827,10 @@ test('real browser review supports dynamic artifacts, comments, threads, decisio
   await page.keyboard.press('Escape');
   const feedbackToggle = page.locator('[data-planr-action="feedback"]');
   assert.equal(await feedbackToggle.getAttribute('aria-expanded'), 'false');
-  assert.equal(await feedbackToggle.evaluate((element) => document.activeElement === element), true);
+  assert.equal(
+    await feedbackToggle.evaluate((element) => document.activeElement === element),
+    true,
+  );
   await feedbackToggle.click();
   assert.equal(await feedbackToggle.getAttribute('aria-expanded'), 'true');
   const mobileRail = await page.locator('#planr-review-rail').evaluate((element) => {
@@ -696,14 +843,21 @@ test('real browser review supports dynamic artifacts, comments, threads, decisio
   assert.equal(await page.locator('[data-planr-mode="interact"]').textContent(), 'Interact');
   assert.equal(await page.locator('[data-planr-mode="comment"]').textContent(), 'Comment');
   assert.deepEqual(
-    await page.evaluate(() => globalThis.__openPlanrArtifactStage.review.getReview().pins[1].region),
+    await page.evaluate(
+      () => globalThis.__openPlanrArtifactStage.review.getReview().pins[1].region,
+    ),
     invariantRegion,
   );
-  const reducedMotion = await feedbackToggle.evaluate((element) => getComputedStyle(element).transitionDuration);
+  const reducedMotion = await feedbackToggle.evaluate(
+    (element) => getComputedStyle(element).transitionDuration,
+  );
   assert.ok(reducedMotion.split(',').every((value) => Number.parseFloat(value) === 0));
   const emitted = await page.evaluate(() => globalThis.__planrReviewEvents.at(-1));
   assert.equal(Object.hasOwn(emitted, 'identity'), false);
   assert.doesNotThrow(() => validateArtifactReview(emitted));
-  assert.deepEqual(emitted, await page.evaluate(() => globalThis.__openPlanrArtifactStage.review.getReview()));
+  assert.deepEqual(
+    emitted,
+    await page.evaluate(() => globalThis.__openPlanrArtifactStage.review.getReview()),
+  );
   await context.close();
 });

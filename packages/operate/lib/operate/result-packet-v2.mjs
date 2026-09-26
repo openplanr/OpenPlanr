@@ -10,12 +10,8 @@ import {
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
 const RESULT_SCHEMA_FILES = Object.freeze({
-  'operating-advisor-result': Object.freeze([
-    'operating-advisor-result.schema.json',
-  ]),
-  'operating-challenger-review': Object.freeze([
-    'operating-challenger-review.schema.json',
-  ]),
+  'operating-advisor-result': Object.freeze(['operating-advisor-result.schema.json']),
+  'operating-challenger-review': Object.freeze(['operating-challenger-review.schema.json']),
   'operating-decision-ledger': Object.freeze([
     'operating-decision-ledger.schema.json',
     'operating-assignment.schema.json',
@@ -32,7 +28,12 @@ const PROFILE_FIELDS = Object.freeze({
     nullable: Object.freeze(['riskiestChange']),
   }),
   'product-activation': Object.freeze({
-    list: Object.freeze(['activationGaps', 'unvalidatedBets', 'orderedCuts', 'acceptanceCriteriaFindings']),
+    list: Object.freeze([
+      'activationGaps',
+      'unvalidatedBets',
+      'orderedCuts',
+      'acceptanceCriteriaFindings',
+    ]),
     nullable: Object.freeze([]),
   }),
   'growth-market': Object.freeze({
@@ -40,11 +41,21 @@ const PROFILE_FIELDS = Object.freeze({
     nullable: Object.freeze([]),
   }),
   'operations-customer': Object.freeze({
-    list: Object.freeze(['deliveryCapacity', 'customerHealth', 'singlePointsOfFailure', 'renegotiations']),
+    list: Object.freeze([
+      'deliveryCapacity',
+      'customerHealth',
+      'singlePointsOfFailure',
+      'renegotiations',
+    ]),
     nullable: Object.freeze([]),
   }),
   'software-delivery': Object.freeze({
-    list: Object.freeze(['changeSurface', 'implementationRisks', 'implementationAlternatives', 'verificationGaps']),
+    list: Object.freeze([
+      'changeSurface',
+      'implementationRisks',
+      'implementationAlternatives',
+      'verificationGaps',
+    ]),
     nullable: Object.freeze([]),
   }),
 });
@@ -62,11 +73,14 @@ function deepFreeze(value) {
 }
 
 function assertIntelligenceAssignment(assignment) {
-  if (!assignment || assignment.kind !== 'operating-assignment'
-    || !['advisor', 'challenger', 'chair'].includes(assignment.assignmentKind)
-    || !assignment.analysisProfile
-    || !assignment.intelligenceContext
-    || assignment.outputContract?.schemaVersion !== '2.0.0') {
+  if (
+    !assignment ||
+    assignment.kind !== 'operating-assignment' ||
+    !['advisor', 'challenger', 'chair'].includes(assignment.assignmentKind) ||
+    !assignment.analysisProfile ||
+    !assignment.intelligenceContext ||
+    assignment.outputContract?.schemaVersion !== '2.0.0'
+  ) {
     throw new TypeError('An exact Advisor, Challenger, or Chair Assignment is required.');
   }
   const expectedSchemaId = {
@@ -75,7 +89,9 @@ function assertIntelligenceAssignment(assignment) {
     chair: 'operating-decision-ledger',
   }[assignment.assignmentKind];
   if (assignment.outputContract.schemaId !== expectedSchemaId) {
-    throw new TypeError(`Assignment ${assignment.assignmentId} does not bind ${expectedSchemaId}@2.0.0.`);
+    throw new TypeError(
+      `Assignment ${assignment.assignmentId} does not bind ${expectedSchemaId}@2.0.0.`,
+    );
   }
 }
 
@@ -83,12 +99,19 @@ function normalizedInputArtifacts(inputArtifacts) {
   if (!Array.isArray(inputArtifacts)) throw new TypeError('inputArtifacts must be an array.');
   const seen = new Set();
   return inputArtifacts.map((descriptor) => {
-    if (!descriptor || typeof descriptor.artifactId !== 'string'
-      || typeof descriptor.schemaId !== 'string'
-      || descriptor.value === null || typeof descriptor.value !== 'object') {
-      throw new TypeError('Each input Artifact descriptor requires artifactId, schemaId, and decoded value.');
+    if (
+      !descriptor ||
+      typeof descriptor.artifactId !== 'string' ||
+      typeof descriptor.schemaId !== 'string' ||
+      descriptor.value === null ||
+      typeof descriptor.value !== 'object'
+    ) {
+      throw new TypeError(
+        'Each input Artifact descriptor requires artifactId, schemaId, and decoded value.',
+      );
     }
-    if (seen.has(descriptor.artifactId)) throw new TypeError(`Duplicate input Artifact ${descriptor.artifactId}.`);
+    if (seen.has(descriptor.artifactId))
+      throw new TypeError(`Duplicate input Artifact ${descriptor.artifactId}.`);
     seen.add(descriptor.artifactId);
     return descriptor;
   });
@@ -215,15 +238,19 @@ function advisorTemplate(assignment) {
 }
 
 function advisorDescriptors(inputArtifacts) {
-  return inputArtifacts.filter(({ schemaId, value }) => (
-    schemaId === 'operating-advisor-result' && value.kind === 'operating-advisor-result'
-  ));
+  return inputArtifacts.filter(
+    ({ schemaId, value }) =>
+      schemaId === 'operating-advisor-result' && value.kind === 'operating-advisor-result',
+  );
 }
 
 function challengerDescriptor(inputArtifacts) {
-  return inputArtifacts.find(({ schemaId, value }) => (
-    schemaId === 'operating-challenger-review' && value.kind === 'operating-challenger-review'
-  )) ?? null;
+  return (
+    inputArtifacts.find(
+      ({ schemaId, value }) =>
+        schemaId === 'operating-challenger-review' && value.kind === 'operating-challenger-review',
+    ) ?? null
+  );
 }
 
 function challengerTemplate(assignment, inputArtifacts) {
@@ -235,9 +262,12 @@ function challengerTemplate(assignment, inputArtifacts) {
     analysisMarkdown: '',
     inputAbsenceIds: absenceIds(assignment),
     advisorArtifactIds: advisors.map(({ artifactId }) => artifactId),
-    reviewedClaims: advisors.flatMap(({ artifactId, value }) => (
-      (value.claims ?? []).map(({ localClaimId }) => ({ advisorArtifactId: artifactId, localClaimId }))
-    )),
+    reviewedClaims: advisors.flatMap(({ artifactId, value }) =>
+      (value.claims ?? []).map(({ localClaimId }) => ({
+        advisorArtifactId: artifactId,
+        localClaimId,
+      })),
+    ),
     questionCoverage: challengerQuestionCoverageTemplate(assignment),
     findings: [],
     missingAlternatives: [],
@@ -301,7 +331,9 @@ function chairSourceDispositions(advisors, challenger) {
 function chairTemplate(assignment, inputArtifacts) {
   const context = assignment.intelligenceContext;
   if (!context.inputBundle.sourceArtifactIds.includes(context.sourceArtifactId)) {
-    throw new TypeError('Chair sourceArtifactId is not present in the exact input-bundle provenance.');
+    throw new TypeError(
+      'Chair sourceArtifactId is not present in the exact input-bundle provenance.',
+    );
   }
   const advisors = advisorDescriptors(inputArtifacts);
   const challenger = challengerDescriptor(inputArtifacts);
@@ -319,13 +351,13 @@ function chairTemplate(assignment, inputArtifacts) {
     sourceDispositions: chairSourceDispositions(advisors, challenger),
     dissent: challenger
       ? (challenger.value.dissent ?? []).map((entry) => ({
-        sourceArtifactId: challenger.artifactId,
-        localDissentId: entry.localDissentId,
-        findingIds: clone(entry.findingIds),
-        statement: entry.statement,
-        evidenceRefIds: clone(entry.evidenceRefIds),
-        resolutionCondition: entry.resolutionCondition,
-      }))
+          sourceArtifactId: challenger.artifactId,
+          localDissentId: entry.localDissentId,
+          findingIds: clone(entry.findingIds),
+          statement: entry.statement,
+          evidenceRefIds: clone(entry.evidenceRefIds),
+          resolutionCondition: entry.resolutionCondition,
+        }))
       : [],
     sourceArtifactId: context.sourceArtifactId,
   };
@@ -338,11 +370,12 @@ function chairTemplate(assignment, inputArtifacts) {
 export function createOperatingResultTemplateV2({ assignment, inputArtifacts = [] }) {
   assertIntelligenceAssignment(assignment);
   const inputs = normalizedInputArtifacts(inputArtifacts);
-  const value = assignment.assignmentKind === 'advisor'
-    ? advisorTemplate(assignment)
-    : assignment.assignmentKind === 'challenger'
-      ? challengerTemplate(assignment, inputs)
-      : chairTemplate(assignment, inputs);
+  const value =
+    assignment.assignmentKind === 'advisor'
+      ? advisorTemplate(assignment)
+      : assignment.assignmentKind === 'challenger'
+        ? challengerTemplate(assignment, inputs)
+        : chairTemplate(assignment, inputs);
   return deepFreeze(value);
 }
 
@@ -350,8 +383,12 @@ export function createOperatingResultTemplateV2({ assignment, inputArtifacts = [
 export function operatingResultSchemaDependenciesV2(schemaId) {
   const files = RESULT_SCHEMA_FILES[schemaId];
   if (!files) throw new TypeError(`Unsupported operating result schema ${schemaId}.`);
-  return deepFreeze(files.map((fileName) => {
-    const schema = JSON.parse(readFileSync(resolve(packageRoot, 'schemas', 'v2.0.0', fileName), 'utf8'));
-    return { kind: basename(fileName, '.schema.json'), fileName, schema };
-  }));
+  return deepFreeze(
+    files.map((fileName) => {
+      const schema = JSON.parse(
+        readFileSync(resolve(packageRoot, 'schemas', 'v2.0.0', fileName), 'utf8'),
+      );
+      return { kind: basename(fileName, '.schema.json'), fileName, schema };
+    }),
+  );
 }

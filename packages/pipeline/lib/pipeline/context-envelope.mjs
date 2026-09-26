@@ -34,14 +34,53 @@ const OPTIONAL_FIELDS = Object.freeze([
  * reintroducing supervision one field at a time.
  */
 export const GOVERNANCE_FIELDS = Object.freeze([
-  'agent', 'agents', 'subagents', 'roster', 'personas', 'reviewers', 'reviewer',
-  'model', 'models', 'effort', 'reasoning', 'thinking',
-  'tools', 'toolChoice', 'dispatch', 'dispatchStyle', 'concurrency', 'waves',
-  'sequence', 'order', 'implementationOrder', 'steps', 'procedure', 'workflow',
-  'retries', 'retry', 'corrections', 'correctionBudget', 'passes', 'attempts',
-  'gates', 'gate', 'lifecycle', 'stateMachine', 'terminalState',
-  'proof', 'evidence', 'receipts', 'digest', 'digests', 'fingerprint', 'fingerprints',
-  'testStrategy', 'testCommand', 'reviewStrategy', 'stoppingPoint', 'completion',
+  'agent',
+  'agents',
+  'subagents',
+  'roster',
+  'personas',
+  'reviewers',
+  'reviewer',
+  'model',
+  'models',
+  'effort',
+  'reasoning',
+  'thinking',
+  'tools',
+  'toolChoice',
+  'dispatch',
+  'dispatchStyle',
+  'concurrency',
+  'waves',
+  'sequence',
+  'order',
+  'implementationOrder',
+  'steps',
+  'procedure',
+  'workflow',
+  'retries',
+  'retry',
+  'corrections',
+  'correctionBudget',
+  'passes',
+  'attempts',
+  'gates',
+  'gate',
+  'lifecycle',
+  'stateMachine',
+  'terminalState',
+  'proof',
+  'evidence',
+  'receipts',
+  'digest',
+  'digests',
+  'fingerprint',
+  'fingerprints',
+  'testStrategy',
+  'testCommand',
+  'reviewStrategy',
+  'stoppingPoint',
+  'completion',
 ]);
 
 const GOVERNANCE_LOOKUP = new Set(GOVERNANCE_FIELDS.map((key) => key.toLowerCase()));
@@ -51,7 +90,12 @@ function fail(message, fix = '', details = undefined) {
 }
 
 function text(value, label, max = 4_000) {
-  if (typeof value !== 'string' || value.trim() !== value || value.length < 1 || value.length > max) {
+  if (
+    typeof value !== 'string' ||
+    value.trim() !== value ||
+    value.length < 1 ||
+    value.length > max
+  ) {
     fail(`${label} must be trimmed text between 1 and ${max} characters.`);
   }
   return value;
@@ -85,7 +129,8 @@ function assertNoGovernance(value, path = 'envelope') {
 }
 
 function assertObjective(value) {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) fail('objective must be one object.');
+  if (!value || typeof value !== 'object' || Array.isArray(value))
+    fail('objective must be one object.');
   const keys = Object.keys(value).sort();
   if (JSON.stringify(keys) !== JSON.stringify(['summary', 'userValue'])) {
     fail('objective must carry exactly summary and userValue.');
@@ -99,7 +144,8 @@ function assertDecisions(value) {
   if (!Array.isArray(value)) fail('decisions must be an array.');
   if (value.length > 100) fail('decisions allows at most 100 entries.');
   value.forEach((entry, index) => {
-    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) fail(`decisions[${index}] must be one object.`);
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry))
+      fail(`decisions[${index}] must be one object.`);
     const keys = Object.keys(entry).sort();
     const allowed = ['decision', 'rationale'];
     if (keys.some((key) => !allowed.includes(key))) fail(`decisions[${index}] has unknown fields.`);
@@ -122,10 +168,12 @@ function assertDependencies(value) {
   if (value.length > 500) fail('dependencies allows at most 500 entries.');
   const requiredBy = new Map();
   value.forEach((entry, index) => {
-    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) fail(`dependencies[${index}] must be one object.`);
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry))
+      fail(`dependencies[${index}] must be one object.`);
     const keys = Object.keys(entry).sort();
     const allowed = ['reason', 'requires', 'task'];
-    if (keys.some((key) => !allowed.includes(key))) fail(`dependencies[${index}] has unknown fields.`);
+    if (keys.some((key) => !allowed.includes(key)))
+      fail(`dependencies[${index}] has unknown fields.`);
     text(entry.task, `dependencies[${index}].task`, 120);
     textList(entry.requires, `dependencies[${index}].requires`, { min: 1, max: 100 });
     if (entry.reason !== undefined) text(entry.reason, `dependencies[${index}].reason`);
@@ -151,14 +199,16 @@ function assertDependencies(value) {
 }
 
 function assertBoundaries(value) {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) fail('boundaries must be one object.');
+  if (!value || typeof value !== 'object' || Array.isArray(value))
+    fail('boundaries must be one object.');
   const keys = Object.keys(value).sort();
   if (JSON.stringify(keys) !== JSON.stringify(['doNotChange', 'repositories'])) {
     fail('boundaries must carry exactly repositories and doNotChange.');
   }
   if (!Array.isArray(value.repositories)) fail('boundaries.repositories must be an array.');
   value.repositories.forEach((entry, index) => {
-    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) fail(`boundaries.repositories[${index}] must be one object.`);
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry))
+      fail(`boundaries.repositories[${index}] must be one object.`);
     const repoKeys = Object.keys(entry).sort();
     if (JSON.stringify(repoKeys) !== JSON.stringify(['name', 'role'])) {
       fail(`boundaries.repositories[${index}] must carry exactly name and role.`);
@@ -172,7 +222,8 @@ function assertBoundaries(value) {
 
 /** Validates an envelope and returns it unchanged. Throws on the first problem. */
 export function assertContextEnvelope(envelope) {
-  if (!envelope || typeof envelope !== 'object' || Array.isArray(envelope)) fail('A context envelope must be one object.');
+  if (!envelope || typeof envelope !== 'object' || Array.isArray(envelope))
+    fail('A context envelope must be one object.');
 
   const present = Object.keys(envelope);
   const unknown = present.filter((key) => !ENVELOPE_FIELDS.includes(key));
@@ -181,7 +232,9 @@ export function assertContextEnvelope(envelope) {
     if (governance.length) assertNoGovernance(envelope);
     fail(`A context envelope has unknown fields: ${unknown.join(', ')}.`);
   }
-  const missing = ENVELOPE_FIELDS.filter((key) => !OPTIONAL_FIELDS.includes(key) && !present.includes(key));
+  const missing = ENVELOPE_FIELDS.filter(
+    (key) => !OPTIONAL_FIELDS.includes(key) && !present.includes(key),
+  );
   if (missing.length) fail(`A context envelope is missing: ${missing.join(', ')}.`);
 
   assertNoGovernance(envelope);
@@ -239,7 +292,16 @@ const SECTIONS = Object.freeze([
  */
 export function renderContextEnvelope(envelope) {
   assertContextEnvelope(envelope);
-  const lines = ['# Working context', '', `## Objective`, '', envelope.objective.summary, '', `**User value.** ${envelope.objective.userValue}`, ''];
+  const lines = [
+    '# Working context',
+    '',
+    `## Objective`,
+    '',
+    envelope.objective.summary,
+    '',
+    `**User value.** ${envelope.objective.userValue}`,
+    '',
+  ];
 
   for (const [field, heading] of SECTIONS) {
     const entries = envelope[field] ?? [];
@@ -253,7 +315,9 @@ export function renderContextEnvelope(envelope) {
   if (decisions.length) {
     lines.push('## Decisions already made', '');
     decisions.forEach((entry) => {
-      lines.push(entry.rationale ? `- ${entry.decision} — ${entry.rationale}` : `- ${entry.decision}`);
+      lines.push(
+        entry.rationale ? `- ${entry.decision} — ${entry.rationale}` : `- ${entry.decision}`,
+      );
     });
     lines.push('');
   }

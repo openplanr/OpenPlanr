@@ -16,11 +16,13 @@ function parse(argv) {
       const value = argv[index + 1];
       if (!value || value.startsWith('--')) throw new TypeError(`${token} requires a value.`);
       index += 1;
-      changes.push(token === '--module'
-        ? { kind: 'module', id: value }
-        : token === '--host-profile'
-          ? { kind: 'host-profile', id: value }
-          : { kind: 'host-profile', source: value });
+      changes.push(
+        token === '--module'
+          ? { kind: 'module', id: value }
+          : token === '--host-profile'
+            ? { kind: 'host-profile', id: value }
+            : { kind: 'host-profile', source: value },
+      );
     } else if (token === '--help' || token === '-h') return { help: true, changes: [], json };
     else throw new TypeError(`Unknown option: ${token}.`);
   }
@@ -37,9 +39,13 @@ try {
   const report = analyzeSkillGraphImpact({ repoRoot: process.cwd(), changes: options.changes });
   if (options.json) process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
   else {
-    process.stdout.write(`Impact: ${report.affectedSkills.length} skills, ${report.generatedAssets.length} generated assets\n`);
+    process.stdout.write(
+      `Impact: ${report.affectedSkills.length} skills, ${report.generatedAssets.length} generated assets\n`,
+    );
     for (const change of report.changes) {
-      process.stdout.write(`  ${change.kind} ${change.id ?? change.source}: ${change.affectedSkills.join(', ')}\n`);
+      process.stdout.write(
+        `  ${change.kind} ${change.id ?? change.source}: ${change.affectedSkills.join(', ')}\n`,
+      );
     }
   }
 } catch (error) {

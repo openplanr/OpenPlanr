@@ -7,37 +7,43 @@ import {
   sha256,
 } from './render-primitives.mjs';
 
-const INCLUDE_BLOCK = /<!-- openplanr:include:start ([^\s<>]+) -->[\s\S]*?<!-- openplanr:include:end -->/gu;
+const INCLUDE_BLOCK =
+  /<!-- openplanr:include:start ([^\s<>]+) -->[\s\S]*?<!-- openplanr:include:end -->/gu;
 const INCLUDE_START = /<!-- openplanr:include:start ([^\s<>]+) -->/gu;
 const INCLUDE_END = /<!-- openplanr:include:end -->/gu;
 const CRLF = /\r\n/gu;
 const INCLUDE_COMMENT_HEAD = '<!-- Composed from ';
 const INCLUDE_COMMENT_TAIL = '. Do not edit generated projection. -->\n';
 
-const compilerFragment = (text, pointer, digestSeed) => Object.freeze({
-  text,
-  ownerKind: 'compiler',
-  pointer,
-  digest: sha256(digestSeed),
-});
+const compilerFragment = (text, pointer, digestSeed) =>
+  Object.freeze({
+    text,
+    ownerKind: 'compiler',
+    pointer,
+    digest: sha256(digestSeed),
+  });
 
-const sourceFragment = (text, path, digest) => Object.freeze({
-  text,
-  ownerKind: 'source',
-  pointer: path,
-  digest,
-});
+const sourceFragment = (text, path, digest) =>
+  Object.freeze({
+    text,
+    ownerKind: 'source',
+    pointer: path,
+    digest,
+  });
 
 function pushFragment(target, fragment) {
   if (fragment.text.length === 0) return;
   const previous = target.at(-1);
   if (
-    previous
-    && previous.ownerKind === fragment.ownerKind
-    && previous.pointer === fragment.pointer
-    && previous.digest === fragment.digest
+    previous &&
+    previous.ownerKind === fragment.ownerKind &&
+    previous.pointer === fragment.pointer &&
+    previous.digest === fragment.digest
   ) {
-    target[target.length - 1] = Object.freeze({ ...previous, text: `${previous.text}${fragment.text}` });
+    target[target.length - 1] = Object.freeze({
+      ...previous,
+      text: `${previous.text}${fragment.text}`,
+    });
   } else {
     target.push(fragment);
   }
@@ -49,11 +55,14 @@ function normalizeSourceFragments(bytes, path, digest) {
   let last = 0;
   for (const match of raw.matchAll(CRLF)) {
     pushFragment(fragments, sourceFragment(raw.slice(last, match.index), path, digest));
-    pushFragment(fragments, compilerFragment(
-      '\n',
-      'packages/skill-runtime/src/compiler/render-primitives.mjs#/canonicalText/crlf-to-lf',
-      'openplanr-canonical-text@1.0.0:CRLF->LF',
-    ));
+    pushFragment(
+      fragments,
+      compilerFragment(
+        '\n',
+        'packages/skill-runtime/src/compiler/render-primitives.mjs#/canonicalText/crlf-to-lf',
+        'openplanr-canonical-text@1.0.0:CRLF->LF',
+      ),
+    );
     last = match.index + match[0].length;
   }
   pushFragment(fragments, sourceFragment(raw.slice(last), path, digest));
@@ -68,7 +77,10 @@ function sliceFragments(fragments, start, end) {
     if (next > start && cursor < end) {
       const localStart = Math.max(0, start - cursor);
       const localEnd = Math.min(fragment.text.length, end - cursor);
-      pushFragment(selected, Object.freeze({ ...fragment, text: fragment.text.slice(localStart, localEnd) }));
+      pushFragment(
+        selected,
+        Object.freeze({ ...fragment, text: fragment.text.slice(localStart, localEnd) }),
+      );
     }
     cursor = next;
     if (cursor >= end) break;
@@ -105,7 +117,8 @@ export function composeIncludes(bytes, { sourcePath, readSource, stack = [source
   const fragments = [];
   let last = 0;
   for (const match of blocks) {
-    for (const fragment of sliceFragments(normalized, last, match.index)) pushFragment(fragments, fragment);
+    for (const fragment of sliceFragments(normalized, last, match.index))
+      pushFragment(fragments, fragment);
     const includePath = match[1];
     // Include paths are extracted live from untrusted markdown include markers, so
     // guard them at the compiler boundary before any readSource sees them.
@@ -126,31 +139,50 @@ export function composeIncludes(bytes, { sourcePath, readSource, stack = [source
     const includeDigest = sha256(includeBytes);
     const prior = compositionSources.get(includePath);
     if (prior && prior.digest !== includeDigest) {
-      throw new SkillRuntimeError('E_SKILL_INCLUDE_SOURCE_CHANGED', `Included source ${includePath} changed during composition.`, { path: includePath, first: prior.digest, second: includeDigest });
+      throw new SkillRuntimeError(
+        'E_SKILL_INCLUDE_SOURCE_CHANGED',
+        `Included source ${includePath} changed during composition.`,
+        { path: includePath, first: prior.digest, second: includeDigest },
+      );
     }
-    compositionSources.set(includePath, Object.freeze({ path: includePath, digest: includeDigest }));
+    compositionSources.set(
+      includePath,
+      Object.freeze({ path: includePath, digest: includeDigest }),
+    );
     for (const row of nested.compositionSources) {
       const priorNested = compositionSources.get(row.path);
       if (priorNested && priorNested.digest !== row.digest) {
-        throw new SkillRuntimeError('E_SKILL_INCLUDE_SOURCE_CHANGED', `Included source ${row.path} changed during composition.`, { path: row.path, first: priorNested.digest, second: row.digest });
+        throw new SkillRuntimeError(
+          'E_SKILL_INCLUDE_SOURCE_CHANGED',
+          `Included source ${row.path} changed during composition.`,
+          { path: row.path, first: priorNested.digest, second: row.digest },
+        );
       }
       compositionSources.set(row.path, row);
     }
-    pushFragment(fragments, compilerFragment(
-      INCLUDE_COMMENT_HEAD,
-      'packages/skill-runtime/src/compiler/composition.mjs#/INCLUDE_COMMENT_HEAD',
-      INCLUDE_COMMENT_HEAD,
-    ));
+    pushFragment(
+      fragments,
+      compilerFragment(
+        INCLUDE_COMMENT_HEAD,
+        'packages/skill-runtime/src/compiler/composition.mjs#/INCLUDE_COMMENT_HEAD',
+        INCLUDE_COMMENT_HEAD,
+      ),
+    );
     pushFragment(fragments, sourceFragment(includePath, sourcePath, sourceDigest));
-    pushFragment(fragments, compilerFragment(
-      INCLUDE_COMMENT_TAIL,
-      'packages/skill-runtime/src/compiler/composition.mjs#/INCLUDE_COMMENT_TAIL',
-      INCLUDE_COMMENT_TAIL,
-    ));
-    for (const fragment of trimEndFragments(nested.compositionFragments)) pushFragment(fragments, fragment);
+    pushFragment(
+      fragments,
+      compilerFragment(
+        INCLUDE_COMMENT_TAIL,
+        'packages/skill-runtime/src/compiler/composition.mjs#/INCLUDE_COMMENT_TAIL',
+        INCLUDE_COMMENT_TAIL,
+      ),
+    );
+    for (const fragment of trimEndFragments(nested.compositionFragments))
+      pushFragment(fragments, fragment);
     last = match.index + match[0].length;
   }
-  for (const fragment of sliceFragments(normalized, last, source.length)) pushFragment(fragments, fragment);
+  for (const fragment of sliceFragments(normalized, last, source.length))
+    pushFragment(fragments, fragment);
   const composed = fragments.map((fragment) => fragment.text).join('');
   return Object.freeze({
     bytes: composed,
@@ -181,7 +213,10 @@ export function renderSkillForHost(
       quoteDescription: quoteCursorDescription,
     });
     for (const supportPath of supportPaths) {
-      rendered = rendered.replaceAll(`references/${supportPath}`, `references/${id}/${supportPath}`);
+      rendered = rendered.replaceAll(
+        `references/${supportPath}`,
+        `references/${id}/${supportPath}`,
+      );
     }
     return rendered;
   }
@@ -191,7 +226,8 @@ export function renderSkillForHost(
 /** Logical asset path below one host's generated-output root. */
 export function skillPrimaryPath(host, id) {
   if (host === 'cursor') return `rules/${id}.mdc`;
-  if (host === 'pipeline' || host === 'claude-code' || host === 'codex') return `skills/${id}/SKILL.md`;
+  if (host === 'pipeline' || host === 'claude-code' || host === 'codex')
+    return `skills/${id}/SKILL.md`;
   throw new SkillRuntimeError('E_SKILL_HOST_INVALID', `Unsupported skill projection host ${host}.`);
 }
 
@@ -206,7 +242,8 @@ export function skillSupportPath(host, id, supportPath) {
     );
   }
   if (host === 'cursor') return `rules/references/${id}/${supportPath.slice('references/'.length)}`;
-  if (host === 'pipeline' || host === 'claude-code' || host === 'codex') return `skills/${id}/${supportPath}`;
+  if (host === 'pipeline' || host === 'claude-code' || host === 'codex')
+    return `skills/${id}/${supportPath}`;
   throw new SkillRuntimeError('E_SKILL_HOST_INVALID', `Unsupported skill projection host ${host}.`);
 }
 
@@ -216,9 +253,8 @@ export function isSkillAssetPath(host, id, path) {
   try {
     assertSafeSourcePath(path, 'generated asset path');
     if (path === skillPrimaryPath(host, id)) return true;
-    const referencePrefix = host === 'cursor'
-      ? `rules/references/${id}/`
-      : `skills/${id}/references/`;
+    const referencePrefix =
+      host === 'cursor' ? `rules/references/${id}/` : `skills/${id}/references/`;
     return path.startsWith(referencePrefix) && path.length > referencePrefix.length;
   } catch {
     return false;

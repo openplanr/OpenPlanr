@@ -3,8 +3,8 @@ import {
   existsSync,
   lstatSync,
   mkdirSync,
-  readFileSync,
   readdirSync,
+  readFileSync,
   realpathSync,
   renameSync,
   unlinkSync,
@@ -36,7 +36,8 @@ function relativeStatePath(path, label) {
 export function resolveProjectRoot(projectRoot) {
   assertNonBlank(projectRoot, 'projectRoot');
   const root = realpathSync(resolve(projectRoot));
-  if (!lstatSync(root).isDirectory()) throw new TypeError('projectRoot must resolve to a directory.');
+  if (!lstatSync(root).isDirectory())
+    throw new TypeError('projectRoot must resolve to a directory.');
   return root;
 }
 
@@ -77,18 +78,23 @@ export function readStateJson(projectRoot, path) {
   const { target } = resolveStatePath(projectRoot, path);
   if (!existsSync(target)) return null;
   const stat = lstatSync(target);
-  if (stat.isSymbolicLink() || !stat.isFile()) throw new TypeError(`${path} must be a regular state file.`);
-  if (stat.size > MAX_STATE_BYTES) throw new RangeError(`${path} exceeds the 64 KiB lifecycle-state limit.`);
+  if (stat.isSymbolicLink() || !stat.isFile())
+    throw new TypeError(`${path} must be a regular state file.`);
+  if (stat.size > MAX_STATE_BYTES)
+    throw new RangeError(`${path} exceeds the 64 KiB lifecycle-state limit.`);
   return JSON.parse(readFileSync(target, 'utf8'));
 }
 
 export function writeStateJson(projectRoot, path, value) {
   const { target } = resolveStatePath(projectRoot, path);
-  const parentPath = relative(resolveProjectRoot(projectRoot), dirname(target)).split(sep).join('/');
+  const parentPath = relative(resolveProjectRoot(projectRoot), dirname(target))
+    .split(sep)
+    .join('/');
   const parent = ensureStateDirectory(projectRoot, parentPath);
   if (existsSync(target)) {
     const stat = lstatSync(target);
-    if (stat.isSymbolicLink() || !stat.isFile()) throw new TypeError(`${path} must be a regular state file.`);
+    if (stat.isSymbolicLink() || !stat.isFile())
+      throw new TypeError(`${path} must be a regular state file.`);
   }
 
   const bytes = `${JSON.stringify(value, null, 2)}\n`;
@@ -110,7 +116,8 @@ export function listStateJson(projectRoot, directory) {
   const { target } = resolveStatePath(projectRoot, directory, 'state directory');
   if (!existsSync(target)) return [];
   const stat = lstatSync(target);
-  if (stat.isSymbolicLink() || !stat.isDirectory()) throw new TypeError(`${directory} must be a real state directory.`);
+  if (stat.isSymbolicLink() || !stat.isDirectory())
+    throw new TypeError(`${directory} must be a real state directory.`);
   return readdirSync(target, { withFileTypes: true })
     .filter((entry) => entry.isFile() && !entry.isSymbolicLink() && entry.name.endsWith('.json'))
     .map((entry) => `${directory}/${entry.name}`)

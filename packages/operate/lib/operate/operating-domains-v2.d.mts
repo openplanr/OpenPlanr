@@ -1,8 +1,8 @@
 import type {
+  OperateDomainRegistrationV2,
   OperatingArtifactV2,
   OperatingModelStateV2,
   OperatingSnapshotV2,
-  OperateDomainRegistrationV2,
 } from '@openplanr/protocol';
 import type { OperateExtensionRegistryV2 } from './extensions-v2.d.mts';
 
@@ -16,7 +16,9 @@ export interface PublicOperatingDomainContractV2 {
   };
 }
 
-export const PUBLIC_OPERATING_DOMAIN_CONTRACTS_V2: Readonly<Record<'business' | 'software', PublicOperatingDomainContractV2>>;
+export const PUBLIC_OPERATING_DOMAIN_CONTRACTS_V2: Readonly<
+  Record<'business' | 'software', PublicOperatingDomainContractV2>
+>;
 
 export interface PublicOperatingDomainSummaryV2 {
   readonly domainId: 'business' | 'software';

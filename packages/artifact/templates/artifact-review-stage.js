@@ -60,8 +60,16 @@ var OpenPlanrArtifactStage = (() => {
   }
   function clientSelectionToNormalized(rect, start, end = start, { dragThreshold = ARTIFACT_ANNOTATION_LIMITS.dragThreshold } = {}) {
     assertRect(rect);
-    const startX = clamp(finite(start?.x ?? start?.clientX, rect.left), rect.left, rect.left + rect.width);
-    const startY = clamp(finite(start?.y ?? start?.clientY, rect.top), rect.top, rect.top + rect.height);
+    const startX = clamp(
+      finite(start?.x ?? start?.clientX, rect.left),
+      rect.left,
+      rect.left + rect.width
+    );
+    const startY = clamp(
+      finite(start?.y ?? start?.clientY, rect.top),
+      rect.top,
+      rect.top + rect.height
+    );
     const endX = clamp(finite(end?.x ?? end?.clientX, startX), rect.left, rect.left + rect.width);
     const endY = clamp(finite(end?.y ?? end?.clientY, startY), rect.top, rect.top + rect.height);
     const dragged = Math.hypot(endX - startX, endY - startY) >= Math.max(0, finite(dragThreshold, 4));
@@ -164,7 +172,10 @@ var OpenPlanrArtifactStage = (() => {
     if (node) node.textContent = value;
   }
   function identityName(reviewController) {
-    return text(reviewController?.getIdentity?.()?.name, ARTIFACT_ANNOTATION_LIMITS.maxIdentityLength);
+    return text(
+      reviewController?.getIdentity?.()?.name,
+      ARTIFACT_ANNOTATION_LIMITS.maxIdentityLength
+    );
   }
   function createIntentPicker(document2) {
     const group = make(document2, "div", {
@@ -213,10 +224,14 @@ var OpenPlanrArtifactStage = (() => {
       return reviewController.getReview?.() ?? reviewController.getState?.()?.review ?? reviewController.getState?.();
     }
     function layerFor(artifactId) {
-      return [...document2.querySelectorAll("[data-planr-annotation-layer]")].find((node) => node.dataset.planrAnnotationLayer === artifactId) ?? null;
+      return [...document2.querySelectorAll("[data-planr-annotation-layer]")].find(
+        (node) => node.dataset.planrAnnotationLayer === artifactId
+      ) ?? null;
     }
     function frameFor(artifactId) {
-      return [...document2.querySelectorAll("[data-planr-artifact-frame]")].find((node) => node.dataset.planrArtifactFrame === artifactId) ?? null;
+      return [...document2.querySelectorAll("[data-planr-artifact-frame]")].find(
+        (node) => node.dataset.planrArtifactFrame === artifactId
+      ) ?? null;
     }
     function focusThread(pinId) {
       const pin = review()?.pins?.find((item) => item.id === pinId);
@@ -240,7 +255,10 @@ var OpenPlanrArtifactStage = (() => {
       queueMicrotask(() => {
         const marker = document2.getElementById(annotationDomIds(pinId).pin);
         if (marker?.hidden) {
-          announce(document2, "This pin’s element is not currently visible. The original comment remains in Review.");
+          announce(
+            document2,
+            "This pin’s element is not currently visible. The original comment remains in Review."
+          );
           return;
         }
         if (onFocusPin) onFocusPin(pin);
@@ -278,27 +296,40 @@ var OpenPlanrArtifactStage = (() => {
     function refreshAnchors() {
       if (destroyed) return;
       const now = window.performance.now();
-      const frames = new Map([...document2.querySelectorAll("[data-planr-artifact-frame]")].map((frame) => [frame.dataset.planrArtifactFrame, frame]));
+      const frames = new Map(
+        [...document2.querySelectorAll("[data-planr-artifact-frame]")].map((frame) => [
+          frame.dataset.planrArtifactFrame,
+          frame
+        ])
+      );
       const records = [...pinRecords.values()].flatMap((records2) => [...records2.values()]).filter((record2) => record2.pin.anchor?.planrId).sort((a, b) => a.requestedAt - b.requestedAt);
       for (const record2 of records) {
         if (record2.pending || now - record2.requestedAt < 200 || !record2.button.isConnected) continue;
         const frame = frames.get(record2.pin.artifactId);
         const bridge = frame?.__openPlanrBridge;
-        if (!bridge?.resolve || frame.closest("[hidden]") || frame.dataset.planrBridgeTrusted === "false" || (anchorRequests.get(frame) ?? 0) >= 8) continue;
+        if (!bridge?.resolve || frame.closest("[hidden]") || frame.dataset.planrBridgeTrusted === "false" || (anchorRequests.get(frame) ?? 0) >= 8)
+          continue;
         const request = {}, key = record2.geometryKey, pin = record2.pin;
         record2.pending = request;
         record2.requestedAt = now;
         anchorRequests.set(frame, (anchorRequests.get(frame) ?? 0) + 1);
         Promise.resolve().then(() => bridge.resolve(pin.anchor.planrId, pin.anchor.screen)).then((anchor) => {
-          if (destroyed || record2.pending !== request || record2.geometryKey !== key || !record2.button.isConnected || frame.__openPlanrBridge !== bridge) return;
+          if (destroyed || record2.pending !== request || record2.geometryKey !== key || !record2.button.isConnected || frame.__openPlanrBridge !== bridge)
+            return;
           if (!anchor || anchor.rect.width <= 0 || anchor.rect.height <= 0) {
             hidePin(record2);
-            if (record2.button.dataset.planrAnchorStatus !== "unavailable") record2.button.dataset.planrAnchorStatus = "unavailable";
+            if (record2.button.dataset.planrAnchorStatus !== "unavailable")
+              record2.button.dataset.planrAnchorStatus = "unavailable";
             return;
           }
-          const projected = anchorRegionToViewportRegion(pin.region, anchor.viewport ?? pin.viewport, anchor.rect);
+          const projected = anchorRegionToViewportRegion(
+            pin.region,
+            anchor.viewport ?? pin.viewport,
+            anchor.rect
+          );
           setPinPosition(record2, projected);
-          if (record2.button.dataset.planrAnchorStatus !== "resolved") record2.button.dataset.planrAnchorStatus = "resolved";
+          if (record2.button.dataset.planrAnchorStatus !== "resolved")
+            record2.button.dataset.planrAnchorStatus = "resolved";
         }).catch(() => {
         }).finally(() => {
           const remaining = (anchorRequests.get(frame) ?? 1) - 1;
@@ -331,20 +362,31 @@ var OpenPlanrArtifactStage = (() => {
           const hasRegion = pin.region.w > 0 || pin.region.h > 0;
           let record2 = records.get(pin.id);
           if (!record2) {
-            const button = make(document2, "button", { attributes: {
-              type: "button",
-              id: ids.pin,
-              "data-planr-pin-id": pin.id,
-              "aria-controls": ids.thread
-            } });
+            const button = make(document2, "button", {
+              attributes: {
+                type: "button",
+                id: ids.pin,
+                "data-planr-pin-id": pin.id,
+                "aria-controls": ids.thread
+              }
+            });
             button.addEventListener("click", () => focusThread(pin.id));
             layer.append(button);
-            record2 = { button, region: null, pin, geometryKey: null, pending: null, requestedAt: -Infinity };
+            record2 = {
+              button,
+              region: null,
+              pin,
+              geometryKey: null,
+              pending: null,
+              requestedAt: -Infinity
+            };
             records.set(pin.id, record2);
           }
           record2.pin = pin;
           if (hasRegion && !record2.region) {
-            record2.region = make(document2, "span", { attributes: { "data-planr-pin-region-id": pin.id, "aria-hidden": "true" } });
+            record2.region = make(document2, "span", {
+              attributes: { "data-planr-pin-region-id": pin.id, "aria-hidden": "true" }
+            });
             layer.insertBefore(record2.region, record2.button);
           } else if (!hasRegion && record2.region) {
             record2.region.remove();
@@ -352,7 +394,8 @@ var OpenPlanrArtifactStage = (() => {
           }
           const buttonClass = `planr-pin planr-pin-${pin.intent} planr-pin-${pin.status}${hasRegion ? " planr-pin-region-handle" : ""}${record2.button.classList.contains("planr-pin-highlight") ? " planr-pin-highlight" : ""}`;
           if (record2.button.className !== buttonClass) record2.button.className = buttonClass;
-          if (record2.button.textContent !== String(ordinal)) record2.button.textContent = String(ordinal);
+          if (record2.button.textContent !== String(ordinal))
+            record2.button.textContent = String(ordinal);
           for (const [name, value] of Object.entries({
             "data-planr-intent": pin.intent,
             "data-planr-status": pin.status,
@@ -439,7 +482,12 @@ var OpenPlanrArtifactStage = (() => {
       const layer = draft && layerFor(draft.artifactId);
       if (!composer || !layer) return;
       const visual = window.visualViewport;
-      const viewport = { x: finite(visual?.offsetLeft), y: finite(visual?.offsetTop), width: finite(visual?.width, window.innerWidth), height: finite(visual?.height, window.innerHeight) };
+      const viewport = {
+        x: finite(visual?.offsetLeft),
+        y: finite(visual?.offsetTop),
+        width: finite(visual?.width, window.innerWidth),
+        height: finite(visual?.height, window.innerHeight)
+      };
       const margin = Math.min(12, viewport.width / 8, viewport.height / 8);
       const availableWidth = Math.max(1, viewport.width - margin * 2), availableHeight = Math.max(1, viewport.height - margin * 2);
       composer.style.width = `${Math.min(360, availableWidth)}px`;
@@ -482,7 +530,15 @@ var OpenPlanrArtifactStage = (() => {
       });
       const header = make(document2, "header", { className: "planr-composer-header" });
       const heading = make(document2, "strong", { textContent: "New comment" });
-      const close = make(document2, "button", { textContent: "×", attributes: { type: "button", "data-planr-composer-close": "", "aria-label": "Close new comment", title: "Close new comment (Escape)" } });
+      const close = make(document2, "button", {
+        textContent: "×",
+        attributes: {
+          type: "button",
+          "data-planr-composer-close": "",
+          "aria-label": "Close new comment",
+          title: "Close new comment (Escape)"
+        }
+      });
       header.append(heading, close);
       const identityLabel = make(document2, "label", { textContent: "Your name" });
       const identity = make(document2, "input", {
@@ -546,7 +602,8 @@ var OpenPlanrArtifactStage = (() => {
         }
       });
       listen(intentPicker, "keydown", (event) => {
-        if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) return;
+        if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"].includes(event.key))
+          return;
         const options = [...intentPicker.querySelectorAll("[data-planr-intent]")];
         const current = options.findIndex((option) => option.getAttribute("aria-checked") === "true");
         const delta = ["ArrowRight", "ArrowDown"].includes(event.key) ? 1 : -1;
@@ -556,9 +613,14 @@ var OpenPlanrArtifactStage = (() => {
         options[nextIndex].focus();
       });
       listen(close, "click", () => closeComposer({ restoreFocus: true }));
-      listen(composer.querySelector("[data-planr-composer-cancel]"), "click", () => {
-        closeComposer({ restoreFocus: true });
-      }, { once: true });
+      listen(
+        composer.querySelector("[data-planr-composer-cancel]"),
+        "click",
+        () => {
+          closeComposer({ restoreFocus: true });
+        },
+        { once: true }
+      );
       listen(composer, "keydown", (event) => {
         if (event.key === "Escape") {
           event.preventDefault();
@@ -604,10 +666,12 @@ var OpenPlanrArtifactStage = (() => {
         if (created?.id) queueMicrotask(() => focusThread(created.id));
       });
       comment.focus();
-      root.dispatchEvent(new window.CustomEvent(ARTIFACT_ANNOTATION_EVENTS.draft, {
-        bubbles: true,
-        detail: Object.freeze({ ...draft })
-      }));
+      root.dispatchEvent(
+        new window.CustomEvent(ARTIFACT_ANNOTATION_EVENTS.draft, {
+          bubbles: true,
+          detail: Object.freeze({ ...draft })
+        })
+      );
       if (restoredDraft) {
         identity.value = restoredDraft.identity;
         comment.value = restoredDraft.comment;
@@ -617,8 +681,17 @@ var OpenPlanrArtifactStage = (() => {
           option.setAttribute("aria-checked", String(selected));
           option.tabIndex = selected ? 0 : -1;
         }
-        if (Number.isInteger(restoredDraft.selectionStart)) comment.setSelectionRange(restoredDraft.selectionStart, restoredDraft.selectionEnd, restoredDraft.selectionDirection);
-        const fields = new Map(Object.entries(restoredDraft.fields ?? {}).slice(0, 32).filter(([key, value]) => key.length <= 128 && typeof value === "string" && value.length <= ARTIFACT_ANNOTATION_LIMITS.maxCommentLength));
+        if (Number.isInteger(restoredDraft.selectionStart))
+          comment.setSelectionRange(
+            restoredDraft.selectionStart,
+            restoredDraft.selectionEnd,
+            restoredDraft.selectionDirection
+          );
+        const fields = new Map(
+          Object.entries(restoredDraft.fields ?? {}).slice(0, 32).filter(
+            ([key, value]) => key.length <= 128 && typeof value === "string" && value.length <= ARTIFACT_ANNOTATION_LIMITS.maxCommentLength
+          )
+        );
         if (fields.size) {
           let restoreFields = function() {
             if (token !== draftToken || !composer.isConnected) {
@@ -655,7 +728,14 @@ var OpenPlanrArtifactStage = (() => {
         ...draft,
         reviewOf: reviewController.getReviewOf?.() ?? review()?.reviewOf ?? null,
         identity: composer.querySelector("[data-planr-composer-identity]").value,
-        fields: Object.fromEntries([...composer.querySelectorAll("[data-planr-draft-key]")].slice(0, 32).filter((field) => field.dataset.planrDraftKey.length <= 128 && typeof field.value === "string").map((field) => [field.dataset.planrDraftKey, field.value.slice(0, ARTIFACT_ANNOTATION_LIMITS.maxCommentLength)])),
+        fields: Object.fromEntries(
+          [...composer.querySelectorAll("[data-planr-draft-key]")].slice(0, 32).filter(
+            (field) => field.dataset.planrDraftKey.length <= 128 && typeof field.value === "string"
+          ).map((field) => [
+            field.dataset.planrDraftKey,
+            field.value.slice(0, ARTIFACT_ANNOTATION_LIMITS.maxCommentLength)
+          ])
+        ),
         comment: comment.value,
         intent: composer.querySelector('[data-planr-intent][aria-checked="true"]')?.dataset.planrIntent ?? "fix",
         selectionStart: comment.selectionStart,
@@ -664,9 +744,15 @@ var OpenPlanrArtifactStage = (() => {
       });
     }
     function restoreDraft(snapshot) {
-      if (!snapshot || snapshot.reviewOf !== (reviewController.getReviewOf?.() ?? review()?.reviewOf ?? null)) return false;
+      if (!snapshot || snapshot.reviewOf !== (reviewController.getReviewOf?.() ?? review()?.reviewOf ?? null))
+        return false;
       const artifact = stageController.getState().artifacts.find((entry) => entry.id === snapshot.artifactId);
-      if (!artifact || artifact.viewport.width !== snapshot.viewport?.width || artifact.viewport.height !== snapshot.viewport?.height || !["x", "y", "w", "h"].every((key) => Number.isFinite(snapshot.region?.[key]) && snapshot.region[key] >= 0 && snapshot.region[key] <= 1) || !["x", "y", "w", "h"].every((key) => Number.isFinite(snapshot.displayRegion?.[key]) && snapshot.displayRegion[key] >= 0 && snapshot.displayRegion[key] <= 1) || typeof snapshot.comment !== "string" || snapshot.comment.length > ARTIFACT_ANNOTATION_LIMITS.maxCommentLength || typeof snapshot.identity !== "string" || snapshot.identity.length > ARTIFACT_ANNOTATION_LIMITS.maxIdentityLength || !INTENTS.includes(snapshot.intent) || snapshot.anchor && (typeof snapshot.anchor.planrId !== "string" || snapshot.anchor.planrId.length > 512)) return false;
+      if (!artifact || artifact.viewport.width !== snapshot.viewport?.width || artifact.viewport.height !== snapshot.viewport?.height || !["x", "y", "w", "h"].every(
+        (key) => Number.isFinite(snapshot.region?.[key]) && snapshot.region[key] >= 0 && snapshot.region[key] <= 1
+      ) || !["x", "y", "w", "h"].every(
+        (key) => Number.isFinite(snapshot.displayRegion?.[key]) && snapshot.displayRegion[key] >= 0 && snapshot.displayRegion[key] <= 1
+      ) || typeof snapshot.comment !== "string" || snapshot.comment.length > ARTIFACT_ANNOTATION_LIMITS.maxCommentLength || typeof snapshot.identity !== "string" || snapshot.identity.length > ARTIFACT_ANNOTATION_LIMITS.maxIdentityLength || !INTENTS.includes(snapshot.intent) || snapshot.anchor && (typeof snapshot.anchor.planrId !== "string" || snapshot.anchor.planrId.length > 512))
+        return false;
       openComposer(snapshot, { restoredDraft: snapshot });
       return Boolean(draft);
     }
@@ -680,7 +766,8 @@ var OpenPlanrArtifactStage = (() => {
       const state = stageController.getState();
       const visible = state.viewMode === "split" ? [state.activeArtifactId, state.comparisonArtifactId] : [state.activeArtifactId];
       if (!draft) {
-        if (suspendedDraft && state.status === "ready" && state.reviewMode === "comment" && visible.includes(suspendedDraft.artifactId)) restoreDraft(suspendedDraft);
+        if (suspendedDraft && state.status === "ready" && state.reviewMode === "comment" && visible.includes(suspendedDraft.artifactId))
+          restoreDraft(suspendedDraft);
         return;
       }
       if (state.status !== "ready" || state.presentation !== "document" && state.reviewMode !== "comment") {
@@ -718,7 +805,8 @@ var OpenPlanrArtifactStage = (() => {
         destroyed = true;
         closeComposer();
         for (const remove of cleanup.splice(0)) remove();
-        for (const records of pinRecords.values()) for (const record2 of records.values()) removePin(record2);
+        for (const records of pinRecords.values())
+          for (const record2 of records.values()) removePin(record2);
         pinRecords.clear();
         anchorRequests.clear();
       }
@@ -912,7 +1000,8 @@ var OpenPlanrArtifactStage = (() => {
     return screen === void 0 ? { planrId } : { planrId, screen };
   }
   function normalizeReply(reply, label = "reply") {
-    if (!reply || typeof reply !== "object" || Array.isArray(reply)) invalid(`${label} must be an object.`);
+    if (!reply || typeof reply !== "object" || Array.isArray(reply))
+      invalid(`${label} must be an object.`);
     return {
       id: boundedString(reply.id, `${label}.id`, {
         min: 1,
@@ -937,7 +1026,9 @@ var OpenPlanrArtifactStage = (() => {
     if (!Array.isArray(pin.replies) || pin.replies.length > ARTIFACT_REVIEW_LIMITS.replies) {
       invalid(`${label}.replies must contain no more than ${ARTIFACT_REVIEW_LIMITS.replies} items.`);
     }
-    const replies = pin.replies.map((reply, index) => normalizeReply(reply, `${label}.replies[${index}]`));
+    const replies = pin.replies.map(
+      (reply, index) => normalizeReply(reply, `${label}.replies[${index}]`)
+    );
     const replyIds = new Set(replies.map(({ id }) => id));
     if (replyIds.size !== replies.length) invalid(`${label}.replies must have unique ids.`);
     const normalized3 = {
@@ -1003,8 +1094,10 @@ var OpenPlanrArtifactStage = (() => {
       }),
       pins: pins.sort(compareTimestampThenId)
     };
-    if (review.createdAt !== void 0) normalized3.createdAt = isoTimestamp(review.createdAt, "review.createdAt");
-    if (review.updatedAt !== void 0) normalized3.updatedAt = isoTimestamp(review.updatedAt, "review.updatedAt");
+    if (review.createdAt !== void 0)
+      normalized3.createdAt = isoTimestamp(review.createdAt, "review.createdAt");
+    if (review.updatedAt !== void 0)
+      normalized3.updatedAt = isoTimestamp(review.updatedAt, "review.updatedAt");
     return deepFreezeArtifactReview(normalized3);
   }
   function createArtifactReview({ reviewId, reviewOf, createId = defaultCreateId } = {}) {
@@ -1037,7 +1130,10 @@ var OpenPlanrArtifactStage = (() => {
     });
     const pin = review.pins.find(({ id }) => id === normalizedId);
     if (!pin) {
-      throw new ArtifactReviewStateError("E_ARTIFACT_REVIEW_PIN_NOT_FOUND", `Unknown feedback pin: ${normalizedId}`);
+      throw new ArtifactReviewStateError(
+        "E_ARTIFACT_REVIEW_PIN_NOT_FOUND",
+        `Unknown feedback pin: ${normalizedId}`
+      );
     }
     return pin;
   }
@@ -1046,12 +1142,10 @@ var OpenPlanrArtifactStage = (() => {
     if (review.updatedAt !== void 0) next.updatedAt = timestamp;
     return next;
   }
-  function reduceArtifactReview(review, action, {
-    createId = defaultCreateId,
-    now = defaultNow
-  } = {}) {
+  function reduceArtifactReview(review, action, { createId = defaultCreateId, now = defaultNow } = {}) {
     const current = normalizeArtifactReview(review);
-    if (!action || typeof action !== "object" || Array.isArray(action)) invalid("Review action must be an object.");
+    if (!action || typeof action !== "object" || Array.isArray(action))
+      invalid("Review action must be an object.");
     const timestamp = dependencyTimestamp(now);
     let next;
     switch (action.type) {
@@ -1067,7 +1161,10 @@ var OpenPlanrArtifactStage = (() => {
           trim: true
         });
         if (current.pins.some(({ id }) => id === pinId)) {
-          throw new ArtifactReviewStateError("E_ARTIFACT_REVIEW_ID_COLLISION", `Duplicate pin id: ${pinId}`);
+          throw new ArtifactReviewStateError(
+            "E_ARTIFACT_REVIEW_ID_COLLISION",
+            `Duplicate pin id: ${pinId}`
+          );
         }
         const pin = normalizePin({
           ...pinInput,
@@ -1078,10 +1175,14 @@ var OpenPlanrArtifactStage = (() => {
           createdAt: pinInput.createdAt ?? timestamp,
           updatedAt: pinInput.updatedAt ?? timestamp
         });
-        next = preserveOptionalReviewTimestamps(current, {
-          ...current,
-          pins: [...current.pins, pin]
-        }, timestamp);
+        next = preserveOptionalReviewTimestamps(
+          current,
+          {
+            ...current,
+            pins: [...current.pins, pin]
+          },
+          timestamp
+        );
         break;
       }
       case "add-reply": {
@@ -1095,7 +1196,10 @@ var OpenPlanrArtifactStage = (() => {
           trim: true
         });
         if (pin.replies.some(({ id }) => id === replyId)) {
-          throw new ArtifactReviewStateError("E_ARTIFACT_REVIEW_ID_COLLISION", `Duplicate reply id: ${replyId}`);
+          throw new ArtifactReviewStateError(
+            "E_ARTIFACT_REVIEW_ID_COLLISION",
+            `Duplicate reply id: ${replyId}`
+          );
         }
         const reply = normalizeReply({
           id: replyId,
@@ -1108,10 +1212,14 @@ var OpenPlanrArtifactStage = (() => {
           replies: [...pin.replies, reply],
           updatedAt: timestamp
         });
-        next = preserveOptionalReviewTimestamps(current, {
-          ...current,
-          pins: replacePin(current, updatedPin)
-        }, timestamp);
+        next = preserveOptionalReviewTimestamps(
+          current,
+          {
+            ...current,
+            pins: replacePin(current, updatedPin)
+          },
+          timestamp
+        );
         break;
       }
       case "set-status": {
@@ -1121,23 +1229,35 @@ var OpenPlanrArtifactStage = (() => {
           status: enumValue(action.status, ARTIFACT_REVIEW_STATUSES, "status"),
           updatedAt: timestamp
         });
-        next = preserveOptionalReviewTimestamps(current, {
-          ...current,
-          pins: replacePin(current, updatedPin)
-        }, timestamp);
+        next = preserveOptionalReviewTimestamps(
+          current,
+          {
+            ...current,
+            pins: replacePin(current, updatedPin)
+          },
+          timestamp
+        );
         break;
       }
       case "set-overall":
-        next = preserveOptionalReviewTimestamps(current, {
-          ...current,
-          overall: boundedString(action.overall, "overall", { max: ARTIFACT_REVIEW_LIMITS.text })
-        }, timestamp);
+        next = preserveOptionalReviewTimestamps(
+          current,
+          {
+            ...current,
+            overall: boundedString(action.overall, "overall", { max: ARTIFACT_REVIEW_LIMITS.text })
+          },
+          timestamp
+        );
         break;
       case "set-decision":
-        next = preserveOptionalReviewTimestamps(current, {
-          ...current,
-          decision: enumValue(action.decision, ARTIFACT_REVIEW_DECISIONS, "decision")
-        }, timestamp);
+        next = preserveOptionalReviewTimestamps(
+          current,
+          {
+            ...current,
+            decision: enumValue(action.decision, ARTIFACT_REVIEW_DECISIONS, "decision")
+          },
+          timestamp
+        );
         break;
       default:
         throw new ArtifactReviewStateError(
@@ -1168,7 +1288,10 @@ var OpenPlanrArtifactStage = (() => {
     const listeners = /* @__PURE__ */ new Set();
     const assertAlive = () => {
       if (destroyed) {
-        throw new ArtifactReviewStateError("E_ARTIFACT_REVIEW_DESTROYED", "Artifact review controller is destroyed.");
+        throw new ArtifactReviewStateError(
+          "E_ARTIFACT_REVIEW_DESTROYED",
+          "Artifact review controller is destroyed."
+        );
       }
     };
     const ensureReview = () => {
@@ -1268,7 +1391,10 @@ var OpenPlanrArtifactStage = (() => {
     return `${canonical.slice(0, 10)} ${canonical.slice(11, 16)} UTC`;
   }
   function renderReply(document2, reply) {
-    const item = createElement(document2, "li", { className: "planr-reply", attributes: { "data-planr-reply-id": reply.id } });
+    const item = createElement(document2, "li", {
+      className: "planr-reply",
+      attributes: { "data-planr-reply-id": reply.id }
+    });
     const heading = createElement(document2, "header");
     heading.append(createElement(document2, "strong", { text: reply.author.name }));
     const time = createElement(document2, "time", {
@@ -1296,7 +1422,11 @@ var OpenPlanrArtifactStage = (() => {
     });
     const form = createElement(document2, "form", {
       className: "planr-reply-form",
-      attributes: { "data-planr-reply-form": pin.id, id: `${fieldId}-form`, ...expanded ? {} : { hidden: "" } }
+      attributes: {
+        "data-planr-reply-form": pin.id,
+        id: `${fieldId}-form`,
+        ...expanded ? {} : { hidden: "" }
+      }
     });
     const label = createElement(document2, "label", {
       className: "planr-reply-label",
@@ -1315,13 +1445,33 @@ var OpenPlanrArtifactStage = (() => {
       }
     });
     const controls = createElement(document2, "div", { className: "planr-reply-controls" });
-    const hint = createElement(document2, "span", { className: "planr-reply-hint", text: "Ctrl/⌘ + Enter to send" });
+    const hint = createElement(document2, "span", {
+      className: "planr-reply-hint",
+      text: "Ctrl/⌘ + Enter to send"
+    });
     const submit = createElement(document2, "button", {
       className: "planr-reply-send",
-      attributes: { type: "submit", disabled: "", "aria-label": "Send reply", title: "Send reply (Ctrl/⌘ + Enter)" }
+      attributes: {
+        type: "submit",
+        disabled: "",
+        "aria-label": "Send reply",
+        title: "Send reply (Ctrl/⌘ + Enter)"
+      }
     });
     const svg = document2.createElementNS("http://www.w3.org/2000/svg", "svg");
-    for (const [name, value] of Object.entries({ viewBox: "0 0 24 24", width: "16", height: "16", fill: "none", stroke: "currentColor", "stroke-width": "1.8", "stroke-linecap": "round", "stroke-linejoin": "round", "aria-hidden": "true", focusable: "false" })) svg.setAttribute(name, value);
+    for (const [name, value] of Object.entries({
+      viewBox: "0 0 24 24",
+      width: "16",
+      height: "16",
+      fill: "none",
+      stroke: "currentColor",
+      "stroke-width": "1.8",
+      "stroke-linecap": "round",
+      "stroke-linejoin": "round",
+      "aria-hidden": "true",
+      focusable: "false"
+    }))
+      svg.setAttribute(name, value);
     const path = document2.createElementNS("http://www.w3.org/2000/svg", "path");
     path.setAttribute("d", "M12 19V5m-6 6 6-6 6 6");
     svg.append(path);
@@ -1364,7 +1514,11 @@ var OpenPlanrArtifactStage = (() => {
     });
     const lifecycle = createElement(document2, "div", { className: "planr-thread-actions" });
     lifecycle.append(
-      createElement(document2, "span", { className: "planr-thread-status", text: pin.status, attributes: { title: `Status: ${pin.status}` } }),
+      createElement(document2, "span", {
+        className: "planr-thread-status",
+        text: pin.status,
+        attributes: { title: `Status: ${pin.status}` }
+      }),
       createElement(document2, "button", {
         text: pin.status === "resolved" ? "Reopen" : "Resolve",
         attributes: {
@@ -1387,14 +1541,38 @@ var OpenPlanrArtifactStage = (() => {
       attributes: { "aria-label": "Replies" }
     });
     const earlierReplies = description.compact ? Math.max(0, pin.replies.length - (description.replyLimit || 2)) : 0;
-    for (const reply of pin.replies.slice(earlierReplies)) replies.append(renderReply(document2, reply));
+    for (const reply of pin.replies.slice(earlierReplies))
+      replies.append(renderReply(document2, reply));
     const editor = renderReplyForm(document2, pin, description.replyExpanded);
     article.append(header, comment);
     if (description.compact && pin.comment.length > 240) {
       comment.dataset.planrCommentCollapsed = String(!description.commentExpanded);
-      article.append(createElement(document2, "button", { className: "planr-comment-expand", text: description.commentExpanded ? "Show less" : "Read full comment", attributes: { type: "button", id: `${annotationDomIds(pin.id).thread}-expand`, "data-planr-comment-expand": pin.id, "aria-expanded": String(Boolean(description.commentExpanded)) } }));
+      article.append(
+        createElement(document2, "button", {
+          className: "planr-comment-expand",
+          text: description.commentExpanded ? "Show less" : "Read full comment",
+          attributes: {
+            type: "button",
+            id: `${annotationDomIds(pin.id).thread}-expand`,
+            "data-planr-comment-expand": pin.id,
+            "aria-expanded": String(Boolean(description.commentExpanded))
+          }
+        })
+      );
     }
-    if (earlierReplies) article.append(createElement(document2, "button", { className: "planr-history-expand", text: `Show ${earlierReplies} earlier ${earlierReplies === 1 ? "reply" : "replies"}`, attributes: { type: "button", id: `${annotationDomIds(pin.id).thread}-history`, "data-planr-history-expand": pin.id, "aria-expanded": "false" } }));
+    if (earlierReplies)
+      article.append(
+        createElement(document2, "button", {
+          className: "planr-history-expand",
+          text: `Show ${earlierReplies} earlier ${earlierReplies === 1 ? "reply" : "replies"}`,
+          attributes: {
+            type: "button",
+            id: `${annotationDomIds(pin.id).thread}-history`,
+            "data-planr-history-expand": pin.id,
+            "aria-expanded": "false"
+          }
+        })
+      );
     if (pin.replies.length) article.append(replies);
     if (description.compact) {
       lifecycle.append(editor.querySelector("[data-planr-reply-toggle]"));
@@ -1456,7 +1634,8 @@ var OpenPlanrArtifactStage = (() => {
         if (field) replyDrafts.set(form.dataset.planrReplyForm, field.value);
       }
       for (const field of slot.querySelectorAll("[data-planr-draft-key]")) {
-        if (typeof field.value === "string") extraDrafts.set(field.dataset.planrDraftKey, field.value);
+        if (typeof field.value === "string")
+          extraDrafts.set(field.dataset.planrDraftKey, field.value);
       }
     };
     const snapshotDrafts = () => {
@@ -1470,7 +1649,12 @@ var OpenPlanrArtifactStage = (() => {
         identity: identityInput.value
       });
     };
-    const emitDraftChange = () => root.dispatchEvent(new window.CustomEvent(ARTIFACT_REVIEW_DRAFT_CHANGE_EVENT, { bubbles: true, detail: snapshotDrafts() }));
+    const emitDraftChange = () => root.dispatchEvent(
+      new window.CustomEvent(ARTIFACT_REVIEW_DRAFT_CHANGE_EVENT, {
+        bubbles: true,
+        detail: snapshotDrafts()
+      })
+    );
     const focusDescriptor = () => {
       const element = document2.activeElement;
       if (!element || !slot.contains(element)) return null;
@@ -1491,9 +1675,16 @@ var OpenPlanrArtifactStage = (() => {
     const restoreFocus = (descriptor) => {
       if (!descriptor) return;
       const thread = descriptor.pinId && document2.getElementById(artifactReviewThreadDomId(descriptor.pinId));
-      const target = descriptor.id && document2.getElementById(descriptor.id) || descriptor.draftKey && [...slot.querySelectorAll("[data-planr-draft-key]")].find((field) => field.dataset.planrDraftKey === descriptor.draftKey) || descriptor.action && [...thread?.querySelectorAll("[data-planr-thread-action]") ?? []].find((button) => button.dataset.planrThreadAction === descriptor.action) || descriptor.showPin && thread?.querySelector("[data-planr-thread-focus]") || [...thread?.querySelectorAll("button,input,select,textarea") ?? []].find((field) => field.tagName === descriptor.tag && field.name === descriptor.name);
+      const target = descriptor.id && document2.getElementById(descriptor.id) || descriptor.draftKey && [...slot.querySelectorAll("[data-planr-draft-key]")].find(
+        (field) => field.dataset.planrDraftKey === descriptor.draftKey
+      ) || descriptor.action && [...thread?.querySelectorAll("[data-planr-thread-action]") ?? []].find(
+        (button) => button.dataset.planrThreadAction === descriptor.action
+      ) || descriptor.showPin && thread?.querySelector("[data-planr-thread-focus]") || [...thread?.querySelectorAll("button,input,select,textarea") ?? []].find(
+        (field) => field.tagName === descriptor.tag && field.name === descriptor.name
+      );
       target?.focus?.({ preventScroll: true });
-      if (Number.isInteger(descriptor.start)) target?.setSelectionRange?.(descriptor.start, descriptor.end, descriptor.direction);
+      if (Number.isInteger(descriptor.start))
+        target?.setSelectionRange?.(descriptor.start, descriptor.end, descriptor.direction);
     };
     const showError = (error) => {
       const target = root.querySelector("#planr-review-error");
@@ -1514,13 +1705,16 @@ var OpenPlanrArtifactStage = (() => {
     };
     const updateCounts = (pins) => {
       const label = `${pins.length} ${pins.length === 1 ? "comment" : "comments"}`;
-      for (const count2 of root.querySelectorAll('[data-planr-action="feedback"] .planr-count, .planr-review-rail > header .planr-count')) {
+      for (const count2 of root.querySelectorAll(
+        '[data-planr-action="feedback"] .planr-count, .planr-review-rail > header .planr-count'
+      )) {
         count2.textContent = String(pins.length);
         count2.setAttribute("aria-label", label);
       }
       const commentsButton = root.querySelector('[data-planr-action="feedback"]');
       commentsButton?.setAttribute("aria-label", commentsButton.dataset.planrReviewLabel || label);
-      if (commentsButton?.dataset.planrReviewLabel) commentsButton.setAttribute("aria-description", label);
+      if (commentsButton?.dataset.planrReviewLabel)
+        commentsButton.setAttribute("aria-description", label);
     };
     const render = ({ capture = true } = {}) => {
       if (composing) {
@@ -1530,7 +1724,8 @@ var OpenPlanrArtifactStage = (() => {
       if (capture) captureDrafts();
       const focus = focusDescriptor();
       const scroll = [];
-      for (let node = slot; node && root.contains(node); node = node.parentElement) scroll.push([node, node.scrollTop, node.scrollLeft]);
+      for (let node = slot; node && root.contains(node); node = node.parentElement)
+        scroll.push([node, node.scrollTop, node.scrollLeft]);
       const state = controller.getState();
       const { review, activePinId } = state;
       const allPins = review?.pins ?? [];
@@ -1544,24 +1739,40 @@ var OpenPlanrArtifactStage = (() => {
         attributes: { "aria-label": "Comment threads" }
       });
       if (pins.length === 0) {
-        list.append(createElement(document2, "p", {
-          className: "planr-review-empty",
-          text: typeof presentation.emptyMessage === "string" ? presentation.emptyMessage : allPins.length ? "No comments match these filters." : "No comments yet. Choose Add comment, then select a point or region in the artifact."
-        }));
+        list.append(
+          createElement(document2, "p", {
+            className: "planr-review-empty",
+            text: typeof presentation.emptyMessage === "string" ? presentation.emptyMessage : allPins.length ? "No comments match these filters." : "No comments yet. Choose Add comment, then select a point or region in the artifact."
+          })
+        );
       } else {
         for (const pin of visiblePins) {
-          const thread = renderThread(document2, pin, pin.id === activePinId, { ...presentation.describePin?.(pin, state), compact: presentation.compact === true, replyLimit: expandedHistory.get(pin.id) || 2, commentExpanded: expandedComments.has(pin.id), replyExpanded: expandedReplies.has(pin.id) });
+          const thread = renderThread(document2, pin, pin.id === activePinId, {
+            ...presentation.describePin?.(pin, state),
+            compact: presentation.compact === true,
+            replyLimit: expandedHistory.get(pin.id) || 2,
+            commentExpanded: expandedComments.has(pin.id),
+            replyExpanded: expandedReplies.has(pin.id)
+          });
           presentation.decorateThread?.({ element: thread, pin, state, document: document2 });
           const reply = thread.querySelector('[name="reply"]');
           if (replyDrafts.has(pin.id)) reply.value = replyDrafts.get(pin.id);
           thread.querySelector(".planr-reply-send").disabled = !reply.value.trim();
           for (const field of thread.querySelectorAll("[data-planr-draft-key]")) {
-            if (extraDrafts.has(field.dataset.planrDraftKey)) field.value = extraDrafts.get(field.dataset.planrDraftKey);
+            if (extraDrafts.has(field.dataset.planrDraftKey))
+              field.value = extraDrafts.get(field.dataset.planrDraftKey);
           }
           list.append(thread);
         }
       }
-      if (pins.length > visibleLimit) list.append(createElement(document2, "button", { className: "planr-threads-more", text: `Show more comments · ${Math.min(visibleLimit, pins.length)} of ${pins.length}`, attributes: { type: "button", "data-planr-threads-more": "" } }));
+      if (pins.length > visibleLimit)
+        list.append(
+          createElement(document2, "button", {
+            className: "planr-threads-more",
+            text: `Show more comments · ${Math.min(visibleLimit, pins.length)} of ${pins.length}`,
+            attributes: { type: "button", "data-planr-threads-more": "" }
+          })
+        );
       fragment.append(list);
       slot.replaceChildren(fragment);
       const identityName2 = controller.getIdentity()?.name ?? "";
@@ -1573,7 +1784,10 @@ var OpenPlanrArtifactStage = (() => {
       overall.maxLength = ARTIFACT_REVIEW_LIMITS.text;
       if (!overallDirty && document2.activeElement !== overall) overall.value = review?.overall ?? "";
       for (const button of decisionButtons) {
-        button.setAttribute("aria-pressed", String(button.dataset.planrDecision === (review?.decision ?? "pending")));
+        button.setAttribute(
+          "aria-pressed",
+          String(button.dataset.planrDecision === (review?.decision ?? "pending"))
+        );
       }
       decisionStatus.textContent = decisionCopy(review?.decision ?? "pending");
       updateCounts(allPins);
@@ -1583,7 +1797,8 @@ var OpenPlanrArtifactStage = (() => {
         node.scrollLeft = left;
       }
       const openMetric = root.querySelector('[data-planr-metric="open"]');
-      if (openMetric) openMetric.textContent = `${allPins.filter(({ status }) => status !== "resolved").length} open`;
+      if (openMetric)
+        openMetric.textContent = `${allPins.filter(({ status }) => status !== "resolved").length} open`;
     };
     const focusThread = (pinId) => {
       const thread = document2.getElementById(artifactReviewThreadDomId(pinId));
@@ -1592,15 +1807,18 @@ var OpenPlanrArtifactStage = (() => {
     };
     const emitReview = (review) => {
       const detail = cloneFrozenArtifactReview(review);
-      root.dispatchEvent(new window.CustomEvent(ARTIFACT_REVIEW_CHANGE_EVENT, {
-        detail,
-        bubbles: true
-      }));
+      root.dispatchEvent(
+        new window.CustomEvent(ARTIFACT_REVIEW_CHANGE_EVENT, {
+          detail,
+          bubbles: true
+        })
+      );
     };
     const unsubscribe = controller.subscribe((state, change) => {
       if (destroyed) return;
       if (["review", "review-replaced", "selection"].includes(change.type)) render();
-      if (["review", "review-replaced"].includes(change.type) && state.review) emitReview(state.review);
+      if (["review", "review-replaced"].includes(change.type) && state.review)
+        emitReview(state.review);
     });
     const onInput = (event) => {
       if (event.target !== identityInput) return;
@@ -1627,7 +1845,8 @@ var OpenPlanrArtifactStage = (() => {
       toggle.setAttribute("aria-expanded", String(expanded));
       toggle.textContent = expanded ? "− Reply" : "+ Reply";
       toggle.title = expanded ? "Collapse reply" : "Reply to this comment";
-      if (focus) (expanded ? form.elements.namedItem("reply") : toggle).focus({ preventScroll: true });
+      if (focus)
+        (expanded ? form.elements.namedItem("reply") : toggle).focus({ preventScroll: true });
       emitDraftChange();
     };
     const onKeyDown = (event) => {
@@ -1644,10 +1863,12 @@ var OpenPlanrArtifactStage = (() => {
     };
     const emitSelection = (pinId) => {
       controller.selectPin(pinId);
-      root.dispatchEvent(new window.CustomEvent(ARTIFACT_REVIEW_SELECT_EVENT, {
-        detail: deepFreezeArtifactReview({ pinId, source: "thread" }),
-        bubbles: true
-      }));
+      root.dispatchEvent(
+        new window.CustomEvent(ARTIFACT_REVIEW_SELECT_EVENT, {
+          detail: deepFreezeArtifactReview({ pinId, source: "thread" }),
+          bubbles: true
+        })
+      );
       onSelectPin?.(pinId);
     };
     const onClick = (event) => {
@@ -1673,7 +1894,11 @@ var OpenPlanrArtifactStage = (() => {
       }
       const replyToggle = event.target?.closest?.("[data-planr-reply-toggle]");
       if (replyToggle) {
-        setReplyExpanded(replyToggle.dataset.planrReplyToggle, replyToggle.getAttribute("aria-expanded") !== "true", { focus: true });
+        setReplyExpanded(
+          replyToggle.dataset.planrReplyToggle,
+          replyToggle.getAttribute("aria-expanded") !== "true",
+          { focus: true }
+        );
         return;
       }
       const action = event.target?.closest?.("[data-planr-thread-action]");
@@ -1686,7 +1911,9 @@ var OpenPlanrArtifactStage = (() => {
             pinId,
             status: action.dataset.planrThreadAction === "resolve" ? "resolved" : "open"
           });
-          announce2(action.dataset.planrThreadAction === "resolve" ? "Comment resolved" : "Comment reopened");
+          announce2(
+            action.dataset.planrThreadAction === "resolve" ? "Comment resolved" : "Comment reopened"
+          );
           focusThread(pinId);
           clearError();
         } catch (error) {
@@ -1767,11 +1994,17 @@ var OpenPlanrArtifactStage = (() => {
       if (!key || lastOpened === key) return;
       lastOpened = key;
       presentation.onThreadOpen?.(pin.id, controller.getState());
-      root.dispatchEvent(new window.CustomEvent("planr:artifact-thread-open", { bubbles: true, detail: Object.freeze({ pinId: pin.id }) }));
+      root.dispatchEvent(
+        new window.CustomEvent("planr:artifact-thread-open", {
+          bubbles: true,
+          detail: Object.freeze({ pinId: pin.id })
+        })
+      );
     };
     const onDraftInput = (event) => {
       const form = event.target.closest?.("[data-planr-reply-form]");
-      if (form) form.querySelector(".planr-reply-send").disabled = !form.elements.namedItem("reply").value.trim();
+      if (form)
+        form.querySelector(".planr-reply-send").disabled = !form.elements.namedItem("reply").value.trim();
       emitDraftChange();
     };
     const onOverallInput = () => {
@@ -1813,7 +2046,8 @@ var OpenPlanrArtifactStage = (() => {
       selectPin: (pinId) => controller.selectPin(pinId),
       render,
       setPresentation(options = {}) {
-        if (options.filterKey !== presentation.filterKey || options.pageSize !== void 0 && options.pageSize !== presentation.pageSize) visibleLimit = options.pageSize || presentation.pageSize || Infinity;
+        if (options.filterKey !== presentation.filterKey || options.pageSize !== void 0 && options.pageSize !== presentation.pageSize)
+          visibleLimit = options.pageSize || presentation.pageSize || Infinity;
         presentation = { ...presentation, ...options };
         render();
       },
@@ -1826,17 +2060,28 @@ var OpenPlanrArtifactStage = (() => {
           const name = snapshot.identity.slice(0, ARTIFACT_REVIEW_LIMITS.authorName);
           controller.setIdentity(name.trim() ? { ...controller.getIdentity(), name } : null);
         }
-        for (const [id, value] of Object.entries(snapshot.replies ?? {}).slice(0, ARTIFACT_REVIEW_LIMITS.pins)) {
-          if (id.length <= ARTIFACT_REVIEW_LIMITS.id && typeof value === "string") replyDrafts.set(id, value.slice(0, ARTIFACT_REVIEW_LIMITS.text));
+        for (const [id, value] of Object.entries(snapshot.replies ?? {}).slice(
+          0,
+          ARTIFACT_REVIEW_LIMITS.pins
+        )) {
+          if (id.length <= ARTIFACT_REVIEW_LIMITS.id && typeof value === "string")
+            replyDrafts.set(id, value.slice(0, ARTIFACT_REVIEW_LIMITS.text));
         }
         expandedReplies.clear();
         const expanded = Array.isArray(snapshot.expandedReplies) ? snapshot.expandedReplies : [...replyDrafts.keys()];
-        for (const id of expanded.slice(0, ARTIFACT_REVIEW_LIMITS.pins)) if (typeof id === "string" && id.length <= ARTIFACT_REVIEW_LIMITS.id) expandedReplies.add(id);
-        for (const [key, value] of Object.entries(snapshot.fields ?? {}).slice(0, ARTIFACT_REVIEW_LIMITS.pins)) {
-          if (key.length <= 512 && typeof value === "string") extraDrafts.set(key, value.slice(0, ARTIFACT_REVIEW_LIMITS.text));
+        for (const id of expanded.slice(0, ARTIFACT_REVIEW_LIMITS.pins))
+          if (typeof id === "string" && id.length <= ARTIFACT_REVIEW_LIMITS.id)
+            expandedReplies.add(id);
+        for (const [key, value] of Object.entries(snapshot.fields ?? {}).slice(
+          0,
+          ARTIFACT_REVIEW_LIMITS.pins
+        )) {
+          if (key.length <= 512 && typeof value === "string")
+            extraDrafts.set(key, value.slice(0, ARTIFACT_REVIEW_LIMITS.text));
         }
         overallDirty = snapshot.overall?.dirty === true;
-        if (overallDirty && typeof snapshot.overall?.value === "string") overall.value = snapshot.overall.value.slice(0, ARTIFACT_REVIEW_LIMITS.text);
+        if (overallDirty && typeof snapshot.overall?.value === "string")
+          overall.value = snapshot.overall.value.slice(0, ARTIFACT_REVIEW_LIMITS.text);
         render({ capture: false });
         return true;
       },
@@ -2066,10 +2311,9 @@ var OpenPlanrArtifactStage = (() => {
         "This browser cannot save the private owner key. No room was created."
       );
     }
-    const blobUrl = window.URL.createObjectURL(new window.Blob(
-      [serialized],
-      { type: "application/json;charset=utf-8" }
-    ));
+    const blobUrl = window.URL.createObjectURL(
+      new window.Blob([serialized], { type: "application/json;charset=utf-8" })
+    );
     try {
       const anchor = document2.createElement("a");
       anchor.hidden = true;
@@ -2090,7 +2334,10 @@ var OpenPlanrArtifactStage = (() => {
     }
     return true;
   }
-  async function establishArtifactOwnerCustody({ prepareOwnerCustody, saveOwnerCustody } = {}) {
+  async function establishArtifactOwnerCustody({
+    prepareOwnerCustody,
+    saveOwnerCustody
+  } = {}) {
     if (typeof prepareOwnerCustody !== "function" || typeof saveOwnerCustody !== "function") {
       throw new ArtifactShareUiError(
         "E_ARTIFACT_SHARE_OWNER_CUSTODY_REQUIRED",
@@ -2098,10 +2345,12 @@ var OpenPlanrArtifactStage = (() => {
       );
     }
     const custody = normalizeOwnerCustody(await prepareOwnerCustody());
-    const saved = await saveOwnerCustody(Object.freeze({
-      filename: custody.filename,
-      serialized: custody.serialized
-    }));
+    const saved = await saveOwnerCustody(
+      Object.freeze({
+        filename: custody.filename,
+        serialized: custody.serialized
+      })
+    );
     if (saved !== true && saved?.saved !== true) {
       throw new ArtifactShareUiError(
         "E_ARTIFACT_SHARE_OWNER_CUSTODY_UNAVAILABLE",
@@ -2188,15 +2437,37 @@ var OpenPlanrArtifactStage = (() => {
   function reduceArtifactShareDialog(state, action = {}) {
     const current = state ?? createArtifactShareDialogState();
     if (current.phase === "created" && action.type !== "close") return current;
-    if (current.phase === "ambiguous" && !["create-start", "create-success", "failure"].includes(action.type)) return current;
-    if (current.phase === "custody-ready" && ["select-transport", "set-ttl"].includes(action.type)) return current;
+    if (current.phase === "ambiguous" && !["create-start", "create-success", "failure"].includes(action.type))
+      return current;
+    if (current.phase === "custody-ready" && ["select-transport", "set-ttl"].includes(action.type))
+      return current;
     switch (action.type) {
       case "open":
-        return freezeState({ ...current, open: true, ownerCustodyEstablished: false, result: null, error: "" });
+        return freezeState({
+          ...current,
+          open: true,
+          ownerCustodyEstablished: false,
+          result: null,
+          error: ""
+        });
       case "close":
-        return freezeState({ ...current, open: false, phase: current.preview ? "ready" : "idle", ownerCustodyEstablished: false, error: "" });
+        return freezeState({
+          ...current,
+          open: false,
+          phase: current.preview ? "ready" : "idle",
+          ownerCustodyEstablished: false,
+          error: ""
+        });
       case "preview-start":
-        return freezeState({ ...current, open: true, phase: "previewing", preview: null, ownerCustodyEstablished: false, result: null, error: "" });
+        return freezeState({
+          ...current,
+          open: true,
+          phase: "previewing",
+          preview: null,
+          ownerCustodyEstablished: false,
+          result: null,
+          error: ""
+        });
       case "preview-ready": {
         const preview = normalizeArtifactSharePreview(action.preview);
         return freezeState({
@@ -2226,9 +2497,21 @@ var OpenPlanrArtifactStage = (() => {
         return ttl === current.ttl ? current : freezeState({ ...current, ttl, result: null, error: "" });
       }
       case "custody-start":
-        return freezeState({ ...current, phase: "custody-preparing", ownerCustodyEstablished: false, result: null, error: "" });
+        return freezeState({
+          ...current,
+          phase: "custody-preparing",
+          ownerCustodyEstablished: false,
+          result: null,
+          error: ""
+        });
       case "custody-ready":
-        return freezeState({ ...current, phase: "custody-ready", ownerCustodyEstablished: true, result: null, error: "" });
+        return freezeState({
+          ...current,
+          phase: "custody-ready",
+          ownerCustodyEstablished: true,
+          result: null,
+          error: ""
+        });
       case "create-start":
         return freezeState({ ...current, phase: "creating", result: null, error: "" });
       case "create-success":
@@ -2258,9 +2541,11 @@ var OpenPlanrArtifactStage = (() => {
     return `${(bytes / 1e6).toFixed(1)} MB`;
   }
   function focusableElements(dialog) {
-    return [...dialog.querySelectorAll(
-      'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'
-    )].filter((element) => !element.hidden && !element.closest("[hidden]"));
+    return [
+      ...dialog.querySelectorAll(
+        'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'
+      )
+    ].filter((element) => !element.hidden && !element.closest("[hidden]"));
   }
   function defaultCopy(window, value) {
     if (typeof window?.navigator?.clipboard?.writeText !== "function") {
@@ -2274,9 +2559,18 @@ var OpenPlanrArtifactStage = (() => {
   function reviewForShare(stageController) {
     return stageController?.review?.getReview?.() ?? null;
   }
-  function artifactShareCapabilities({ prepareShare, prepareOwnerCustody, createShare, supportedTransports } = {}) {
+  function artifactShareCapabilities({
+    prepareShare,
+    prepareOwnerCustody,
+    createShare,
+    supportedTransports
+  } = {}) {
     const canCreate = typeof prepareShare === "function" && typeof createShare === "function";
-    return Object.freeze(ARTIFACT_SHARE_TRANSPORTS.filter((transport) => canCreate && (transport !== "live" || typeof prepareOwnerCustody === "function") && (supportedTransports === void 0 || Array.isArray(supportedTransports) && supportedTransports.includes(transport))));
+    return Object.freeze(
+      ARTIFACT_SHARE_TRANSPORTS.filter(
+        (transport) => canCreate && (transport !== "live" || typeof prepareOwnerCustody === "function") && (supportedTransports === void 0 || Array.isArray(supportedTransports) && supportedTransports.includes(transport))
+      )
+    );
   }
   function mountArtifactShareDialog({
     document: document2 = globalThis.document,
@@ -2300,7 +2594,12 @@ var OpenPlanrArtifactStage = (() => {
     const trigger = root.querySelector('[data-planr-action="share"]');
     if (!backdrop || !dialog || !trigger) return null;
     let state = createArtifactShareDialogState();
-    const capabilities = artifactShareCapabilities({ prepareShare, prepareOwnerCustody, createShare, supportedTransports });
+    const capabilities = artifactShareCapabilities({
+      prepareShare,
+      prepareOwnerCustody,
+      createShare,
+      supportedTransports
+    });
     const unavailable = text2(unavailableReason) || "Sharing is not configured in this viewer. Open the review with an updated OpenPlanr installation that supports sharing.";
     let returnFocus = null;
     let generation = 0;
@@ -2321,7 +2620,8 @@ var OpenPlanrArtifactStage = (() => {
     function selectSupportedTransport() {
       if (!supports(state.transport)) {
         const transport = capabilities.find(supports);
-        if (transport) state = reduceArtifactShareDialog(state, { type: "select-transport", transport });
+        if (transport)
+          state = reduceArtifactShareDialog(state, { type: "select-transport", transport });
       }
     }
     function listen(target, type, handler, options) {
@@ -2352,10 +2652,14 @@ var OpenPlanrArtifactStage = (() => {
       button.dataset.planrCopyState = stateValue;
       if (label) label.textContent = stateValue === "copied" ? "Copied" : "Try again";
       else button.textContent = stateValue === "copied" ? "Copied" : "Try again";
-      copyResetTimers.set(button, window.setTimeout(() => resetCopyButton(button), 1800));
+      copyResetTimers.set(
+        button,
+        window.setTimeout(() => resetCopyButton(button), 1800)
+      );
     }
     function resetCopyButtons() {
-      for (const button of dialog.querySelectorAll("[data-planr-copy-state]")) resetCopyButton(button);
+      for (const button of dialog.querySelectorAll("[data-planr-copy-state]"))
+        resetCopyButton(button);
     }
     function clearPendingOwnerSigner() {
       pendingOwnerCustody = null;
@@ -2390,26 +2694,45 @@ var OpenPlanrArtifactStage = (() => {
         button.hidden = state.phase === "created";
         button.setAttribute("aria-pressed", String(selected));
         button.classList.toggle("is-selected", selected);
-        button.disabled = ["previewing", "custody-preparing", "custody-ready", "creating", "ambiguous", "created"].includes(state.phase) || !supports(transport);
+        button.disabled = [
+          "previewing",
+          "custody-preparing",
+          "custody-ready",
+          "creating",
+          "ambiguous",
+          "created"
+        ].includes(state.phase) || !supports(transport);
         button.setAttribute("aria-disabled", String(button.disabled));
         button.title = capabilities.includes(transport) ? "" : transport === "live" && capabilities.length ? "Live review requires this host to provide private owner-key custody. Choose an available snapshot option." : unavailable;
-        if (transport === "live") button.querySelector(".planr-share-receipt-size").textContent = capabilities.includes("live") ? "Default" : "Unavailable";
+        if (transport === "live")
+          button.querySelector(".planr-share-receipt-size").textContent = capabilities.includes(
+            "live"
+          ) ? "Default" : "Unavailable";
       }
       const fragmentSize = dialog.querySelector("[data-planr-share-fragment-size]");
-      if (fragmentSize) fragmentSize.textContent = !capabilities.includes("fragment") ? "Unavailable" : preview ? `${preview.fragmentLength.toLocaleString("en-US")} chars · ${formatArtifactShareBytes(preview.compressedBytes)}` : state.phase === "previewing" ? "Calculating…" : "Size unavailable";
+      if (fragmentSize)
+        fragmentSize.textContent = !capabilities.includes("fragment") ? "Unavailable" : preview ? `${preview.fragmentLength.toLocaleString("en-US")} chars · ${formatArtifactShareBytes(preview.compressedBytes)}` : state.phase === "previewing" ? "Calculating…" : "Size unavailable";
       const shortSize = dialog.querySelector("[data-planr-share-short-size]");
-      if (shortSize) shortSize.textContent = !capabilities.includes("short") ? "Unavailable" : preview ? formatArtifactShareBytes(preview.ciphertextBytes) : state.phase === "previewing" ? "Calculating…" : "Size unavailable";
+      if (shortSize)
+        shortSize.textContent = !capabilities.includes("short") ? "Unavailable" : preview ? formatArtifactShareBytes(preview.ciphertextBytes) : state.phase === "previewing" ? "Calculating…" : "Size unavailable";
       const threshold = dialog.querySelector("[data-planr-share-threshold]");
       if (threshold) {
         threshold.hidden = !capabilities.includes("fragment");
         threshold.textContent = preview?.fragmentEligible === false ? `Private fragment snapshot unavailable (${preview.fragmentLength.toLocaleString("en-US")} characters; 8,000 limit). Choose an available sharing option.` : preview ? "Private fragment snapshot available for links up to 8,000 characters." : "Preparing the snapshot size before sharing.";
       }
       const ttlRow = dialog.querySelector("[data-planr-share-ttl-row]");
-      if (ttlRow) ttlRow.hidden = state.phase === "created" || !supports(state.transport) || !["live", "short"].includes(state.transport);
+      if (ttlRow)
+        ttlRow.hidden = state.phase === "created" || !supports(state.transport) || !["live", "short"].includes(state.transport);
       const ttlSelect2 = dialog.querySelector("[data-planr-share-ttl]");
       if (ttlSelect2) {
         ttlSelect2.value = state.ttl;
-        ttlSelect2.disabled = ["custody-preparing", "custody-ready", "creating", "ambiguous", "created"].includes(state.phase);
+        ttlSelect2.disabled = [
+          "custody-preparing",
+          "custody-ready",
+          "creating",
+          "ambiguous",
+          "created"
+        ].includes(state.phase);
       }
       const expiry = artifactShareExpiry(state.ttl, now());
       const expiryNode = dialog.querySelector("[data-planr-share-expiry]");
@@ -2428,15 +2751,19 @@ var OpenPlanrArtifactStage = (() => {
         primary.disabled = !supports(state.transport) || !preview && state.phase !== "error" || state.phase === "previewing" || state.phase === "custody-preparing" || state.phase === "creating" || state.phase === "created";
         primary.textContent = !supports(state.transport) ? "Sharing unavailable" : state.phase === "error" && !preview ? "Retry preparation" : state.phase === "custody-preparing" ? "Preparing owner key…" : state.phase === "creating" ? "Creating…" : state.phase === "ambiguous" ? "Retry exact room creation" : state.transport === "live" ? state.ownerCustodyEstablished ? state.phase === "error" ? "Retry live review room" : "I saved it — create live room" : "Download recovery bundle" : state.transport === "short" ? "Create encrypted link" : "Copy private link";
       }
-      for (const closeControl of dialog.querySelectorAll("[data-planr-share-close], [data-planr-share-cancel]")) {
+      for (const closeControl of dialog.querySelectorAll(
+        "[data-planr-share-close], [data-planr-share-cancel]"
+      )) {
         const closeBlocked = state.phase === "creating" || state.phase === "ambiguous";
         closeControl.disabled = closeBlocked;
         closeControl.setAttribute("aria-disabled", String(closeBlocked));
       }
       const custody = dialog.querySelector("[data-planr-share-owner-custody]");
-      if (custody) custody.hidden = state.transport !== "live" || !supports("live") || state.phase === "created";
+      if (custody)
+        custody.hidden = state.transport !== "live" || !supports("live") || state.phase === "created";
       const custodyStatus = dialog.querySelector("[data-planr-share-owner-custody-status]");
-      if (custodyStatus) custodyStatus.textContent = state.ownerCustodyEstablished ? "Full recovery bundle handed to the browser. It contains the three scoped URLs and owner key; no room exists until you confirm creation." : "No room will be created until the full private recovery bundle is downloaded successfully.";
+      if (custodyStatus)
+        custodyStatus.textContent = state.ownerCustodyEstablished ? "Full recovery bundle handed to the browser. It contains the three scoped URLs and owner key; no room exists until you confirm creation." : "No room will be created until the full private recovery bundle is downloaded successfully.";
       const receipt = dialog.querySelector("[data-planr-share-result]");
       if (receipt) receipt.hidden = state.phase !== "created" || !state.result;
       const resultUrl = dialog.querySelector("[data-planr-share-url]");
@@ -2462,7 +2789,8 @@ var OpenPlanrArtifactStage = (() => {
     async function open() {
       clearPendingOwnerSigner();
       resetCopyButtons();
-      if (!state.open) returnFocus = document2.activeElement instanceof window.HTMLElement ? document2.activeElement : trigger;
+      if (!state.open)
+        returnFocus = document2.activeElement instanceof window.HTMLElement ? document2.activeElement : trigger;
       state = reduceArtifactShareDialog(state, { type: "open" });
       state = reduceArtifactShareDialog(state, { type: "preview-start" });
       selectSupportedTransport();
@@ -2471,17 +2799,26 @@ var OpenPlanrArtifactStage = (() => {
       dialog.querySelector("[data-planr-share-close]")?.focus();
       const request = ++generation;
       try {
-        if (!capabilities.length) throw new ArtifactShareUiError("E_ARTIFACT_SHARE_HANDLER_REQUIRED", unavailable);
-        const preview = await handlers.prepareShare(Object.freeze({
-          review: reviewForShare(stageController),
-          fragmentLimit: ARTIFACT_SHARE_FRAGMENT_LIMIT
-        }));
+        if (!capabilities.length)
+          throw new ArtifactShareUiError("E_ARTIFACT_SHARE_HANDLER_REQUIRED", unavailable);
+        const preview = await handlers.prepareShare(
+          Object.freeze({
+            review: reviewForShare(stageController),
+            fragmentLimit: ARTIFACT_SHARE_FRAGMENT_LIMIT
+          })
+        );
         if (request !== generation || !state.open) return state;
         state = reduceArtifactShareDialog(state, { type: "preview-ready", preview });
         selectSupportedTransport();
-        if (!supports(state.transport)) throw new ArtifactShareUiError("E_ARTIFACT_SHARE_TRANSPORT_UNAVAILABLE", "This review is too large for the sharing options supported by this viewer. Open it with an updated OpenPlanr installation or export the review.");
+        if (!supports(state.transport))
+          throw new ArtifactShareUiError(
+            "E_ARTIFACT_SHARE_TRANSPORT_UNAVAILABLE",
+            "This review is too large for the sharing options supported by this viewer. Open it with an updated OpenPlanr installation or export the review."
+          );
         render();
-        announce2(capabilities.includes("fragment") && state.preview.fragmentEligible ? "Private fragment is available. Nothing will be uploaded." : "Review prepared. Choose an available sharing option.");
+        announce2(
+          capabilities.includes("fragment") && state.preview.fragmentEligible ? "Private fragment is available. Nothing will be uploaded." : "Review prepared. Choose an available sharing option."
+        );
       } catch (error) {
         if (request !== generation || !state.open) return state;
         state = reduceArtifactShareDialog(state, { type: "failure", error: error?.message });
@@ -2492,7 +2829,9 @@ var OpenPlanrArtifactStage = (() => {
     }
     function close() {
       if (state.phase === "creating" || state.phase === "ambiguous") {
-        announce2(state.phase === "ambiguous" ? "Room creation may have completed. Retry the exact attempt until its receipt is shown." : "Room creation is in progress. Keep this dialog open until its receipt is shown.");
+        announce2(
+          state.phase === "ambiguous" ? "Room creation may have completed. Retry the exact attempt until its receipt is shown." : "Room creation is in progress. Keep this dialog open until its receipt is shown."
+        );
         return state;
       }
       generation += 1;
@@ -2507,7 +2846,8 @@ var OpenPlanrArtifactStage = (() => {
     async function confirm() {
       if (!state.open || !supports(state.transport)) return state;
       if (!state.preview && state.phase === "error") return open();
-      if (!state.preview || ["custody-preparing", "creating", "created"].includes(state.phase)) return state;
+      if (!state.preview || ["custody-preparing", "creating", "created"].includes(state.phase))
+        return state;
       const transport = state.transport;
       const request = generation;
       if (transport === "live" && !state.ownerCustodyEstablished) {
@@ -2515,17 +2855,21 @@ var OpenPlanrArtifactStage = (() => {
         render();
         try {
           const custody = await establishArtifactOwnerCustody({
-            prepareOwnerCustody: () => handlers.prepareOwnerCustody(Object.freeze({
-              review: reviewForShare(stageController),
-              ttl: state.ttl
-            })),
+            prepareOwnerCustody: () => handlers.prepareOwnerCustody(
+              Object.freeze({
+                review: reviewForShare(stageController),
+                ttl: state.ttl
+              })
+            ),
             saveOwnerCustody: handlers.saveOwnerCustody
           });
           if (request !== generation || !state.open) return state;
           pendingOwnerCustody = custody;
           state = reduceArtifactShareDialog(state, { type: "custody-ready" });
           render();
-          announce2("Private recovery-bundle download started. Verify the file is saved, then confirm room creation.");
+          announce2(
+            "Private recovery-bundle download started. Verify the file is saved, then confirm room creation."
+          );
         } catch (error) {
           if (request !== generation || !state.open) return state;
           clearPendingOwnerSigner();
@@ -2561,9 +2905,15 @@ var OpenPlanrArtifactStage = (() => {
         };
         if (transport === "live") {
           if (pendingOwnerCustody?.kind === "openplanr-live-room-preparation") {
-            Object.defineProperty(input, "prepared", { enumerable: false, value: pendingOwnerCustody });
+            Object.defineProperty(input, "prepared", {
+              enumerable: false,
+              value: pendingOwnerCustody
+            });
           } else {
-            Object.defineProperty(input, "ownerSigner", { enumerable: false, value: pendingOwnerCustody });
+            Object.defineProperty(input, "ownerSigner", {
+              enumerable: false,
+              value: pendingOwnerCustody
+            });
           }
         }
         const result = await handlers.createShare(Object.freeze(input));
@@ -2581,12 +2931,18 @@ var OpenPlanrArtifactStage = (() => {
         });
         clearPendingOwnerSigner();
         render();
-        announce2(transport === "live" ? "Live room created. Keep the downloaded owner key with the separate owner-verdict URL; management cannot set a verdict." : transport === "short" ? "Encrypted short link copied. Store the one-time deletion token now." : "Private fragment copied. Nothing was uploaded.");
+        announce2(
+          transport === "live" ? "Live room created. Keep the downloaded owner key with the separate owner-verdict URL; management cannot set a verdict." : transport === "short" ? "Encrypted short link copied. Store the one-time deletion token now." : "Private fragment copied. Nothing was uploaded."
+        );
         try {
           await handlers.copyText(state.result.url);
-          announce2(transport === "live" ? "Live review URL copied. Keep the downloaded owner key with the separate owner-verdict URL." : transport === "short" ? "Encrypted short link copied. Store the one-time deletion token now." : "Private fragment copied. Nothing was uploaded.");
+          announce2(
+            transport === "live" ? "Live review URL copied. Keep the downloaded owner key with the separate owner-verdict URL." : transport === "short" ? "Encrypted short link copied. Store the one-time deletion token now." : "Private fragment copied. Nothing was uploaded."
+          );
         } catch {
-          announce2(transport === "live" ? "Live room created. Copy the review and owner-verdict URLs manually; the room receipt remains visible." : "Share created. Copy the URL manually; the receipt remains visible.");
+          announce2(
+            transport === "live" ? "Live room created. Copy the review and owner-verdict URLs manually; the room receipt remains visible." : "Share created. Copy the URL manually; the receipt remains visible."
+          );
         }
       } catch (error) {
         if (request !== generation || !state.open) return state;
@@ -2611,7 +2967,9 @@ var OpenPlanrArtifactStage = (() => {
         announce2(successMessage);
       } catch (error) {
         showCopyState(button, "error");
-        announce2(error?.message ?? "The value could not be copied. The share receipt remains visible.");
+        announce2(
+          error?.message ?? "The value could not be copied. The share receipt remains visible."
+        );
       }
     }
     if (existingRoom) {
@@ -2649,7 +3007,9 @@ var OpenPlanrArtifactStage = (() => {
           transport: button.dataset.planrShareTransport
         });
         render();
-        announce2(state.transport === "live" ? "Live encrypted review selected. Anyone with this link can comment." : state.transport === "short" ? "Encrypted short link selected. Creation requires confirmation." : "Private fragment selected. Nothing will be uploaded.");
+        announce2(
+          state.transport === "live" ? "Live encrypted review selected. Anyone with this link can comment." : state.transport === "short" ? "Encrypted short link selected. Creation requires confirmation." : "Private fragment selected. Nothing will be uploaded."
+        );
         return;
       }
       if (button.dataset.planrShareConfirm !== void 0) {
@@ -2681,35 +3041,41 @@ var OpenPlanrArtifactStage = (() => {
       }
     });
     const ttlSelect = dialog.querySelector("[data-planr-share-ttl]");
-    if (ttlSelect) listen(ttlSelect, "change", () => {
-      if (["custody-ready", "creating", "ambiguous", "created"].includes(state.phase)) {
-        ttlSelect.value = state.ttl;
-        return;
-      }
-      state = reduceArtifactShareDialog(state, { type: "set-ttl", ttl: ttlSelect.value });
-      render();
-      announce2(`Expiry set to ${ARTIFACT_SHARE_TTLS[state.ttl].label}.`);
-    });
-    listen(document2, "keydown", (event) => {
-      if (!state.open) return;
-      if (event.key === "Escape") {
-        event.preventDefault();
-        close();
-        return;
-      }
-      if (event.key !== "Tab") return;
-      const focusable = focusableElements(dialog);
-      if (focusable.length === 0) return;
-      const first = focusable[0];
-      const last = focusable.at(-1);
-      if (event.shiftKey && document2.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document2.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    }, true);
+    if (ttlSelect)
+      listen(ttlSelect, "change", () => {
+        if (["custody-ready", "creating", "ambiguous", "created"].includes(state.phase)) {
+          ttlSelect.value = state.ttl;
+          return;
+        }
+        state = reduceArtifactShareDialog(state, { type: "set-ttl", ttl: ttlSelect.value });
+        render();
+        announce2(`Expiry set to ${ARTIFACT_SHARE_TTLS[state.ttl].label}.`);
+      });
+    listen(
+      document2,
+      "keydown",
+      (event) => {
+        if (!state.open) return;
+        if (event.key === "Escape") {
+          event.preventDefault();
+          close();
+          return;
+        }
+        if (event.key !== "Tab") return;
+        const focusable = focusableElements(dialog);
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable.at(-1);
+        if (event.shiftKey && document2.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document2.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
+      },
+      true
+    );
     render();
     const controller = Object.freeze({
       getState: () => state,
@@ -2724,7 +3090,9 @@ var OpenPlanrArtifactStage = (() => {
       },
       destroy() {
         if (state.phase === "creating" || state.phase === "ambiguous") {
-          announce2(state.phase === "ambiguous" ? "Room creation may have completed. Retry the exact attempt until its receipt is shown." : "Room creation is in progress. Keep this review open until its receipt is shown.");
+          announce2(
+            state.phase === "ambiguous" ? "Room creation may have completed. Retry the exact attempt until its receipt is shown." : "Room creation is in progress. Keep this review open until its receipt is shown."
+          );
           return false;
         }
         generation += 1;
@@ -2847,9 +3215,7 @@ var OpenPlanrArtifactStage = (() => {
   function malformed(status, details = {}) {
     return Object.freeze({ ok: false, status, details: Object.freeze(details) });
   }
-  function parseHostedArtifactLocation(location, {
-    fragmentLimit = ARTIFACT_SHARE_FRAGMENT_LIMIT
-  } = {}) {
+  function parseHostedArtifactLocation(location, { fragmentLimit = ARTIFACT_SHARE_FRAGMENT_LIMIT } = {}) {
     const { pathname, hash } = locationParts(location);
     const shortMatch = pathname.match(/^\/p\/([A-Za-z0-9_-]{1,128})\/?$/);
     if (shortMatch) {
@@ -2876,7 +3242,15 @@ var OpenPlanrArtifactStage = (() => {
       if (!key || !/^[A-Za-z0-9_-]{43}$/.test(key) || authority.length > 1 || write && !/^[A-Za-z0-9_-]{43}$/.test(write) || owner && !/^[A-Za-z0-9_-]{43}$/.test(owner) || manage && !/^[A-Za-z0-9_-]{43}$/.test(manage)) {
         return malformed("malformed-payload", { transport: "room" });
       }
-      return Object.freeze({ ok: true, transport: "room", id: roomMatch[1], key, ...write ? { write } : {}, ...owner ? { owner } : {}, ...manage ? { manage } : {} });
+      return Object.freeze({
+        ok: true,
+        transport: "room",
+        id: roomMatch[1],
+        key,
+        ...write ? { write } : {},
+        ...owner ? { owner } : {},
+        ...manage ? { manage } : {}
+      });
     }
     if (!hash || hash === "#") return malformed("empty-hash");
     const fragment = hash.slice(1);
@@ -2895,22 +3269,39 @@ var OpenPlanrArtifactStage = (() => {
     if (["E_ARTIFACT_BROWSER_UNSUPPORTED", "E_ARTIFACT_CODEC_UNSUPPORTED"].includes(code)) {
       return "unsupported-browser";
     }
-    if (["E_ARTIFACT_FRAGMENT_TOO_LARGE", "E_ARTIFACT_PAYLOAD_TOO_LARGE", "E_ARTIFACT_DECOMPRESSION_LIMIT"].includes(code)) {
+    if ([
+      "E_ARTIFACT_FRAGMENT_TOO_LARGE",
+      "E_ARTIFACT_PAYLOAD_TOO_LARGE",
+      "E_ARTIFACT_DECOMPRESSION_LIMIT"
+    ].includes(code)) {
       return "too-large";
     }
-    if (["E_ARTIFACT_PASTE_NOT_FOUND", "E_ARTIFACT_SHARE_NOT_FOUND", "E_ARTIFACT_PASTE_UNAVAILABLE"].includes(code)) {
+    if ([
+      "E_ARTIFACT_PASTE_NOT_FOUND",
+      "E_ARTIFACT_SHARE_NOT_FOUND",
+      "E_ARTIFACT_PASTE_UNAVAILABLE"
+    ].includes(code)) {
       return "paste-missing";
     }
     if (["E_ARTIFACT_PASTE_EXPIRED", "E_ARTIFACT_SHARE_EXPIRED"].includes(code)) {
       return "expired";
     }
-    if (["E_ARTIFACT_DECRYPTION_FAILED", "E_ARTIFACT_AUTH_FAILED", "E_ARTIFACT_PAYLOAD_TAMPERED", "OperationError"].includes(code)) {
+    if ([
+      "E_ARTIFACT_DECRYPTION_FAILED",
+      "E_ARTIFACT_AUTH_FAILED",
+      "E_ARTIFACT_PAYLOAD_TAMPERED",
+      "OperationError"
+    ].includes(code)) {
       return "decryption-failed";
     }
     if (["E_ARTIFACT_SHARE_NETWORK", "E_ARTIFACT_NETWORK", "E_ARTIFACT_FETCH_FAILED"].includes(code) || error?.name === "TypeError") {
       return "network-error";
     }
-    if (["E_ARTIFACT_VERSION_UNSUPPORTED", "E_ARTIFACT_FRAGMENT_VERSION", "E_ARTIFACT_FRAGMENT_VERSION_UNSUPPORTED"].includes(code)) {
+    if ([
+      "E_ARTIFACT_VERSION_UNSUPPORTED",
+      "E_ARTIFACT_FRAGMENT_VERSION",
+      "E_ARTIFACT_FRAGMENT_VERSION_UNSUPPORTED"
+    ].includes(code)) {
       return "invalid-version";
     }
     if (code === "E_ARTIFACT_PASTE_INVALID") return "malformed-payload";
@@ -2961,26 +3352,55 @@ var OpenPlanrArtifactStage = (() => {
     async function load() {
       const parsed = parseHostedArtifactLocation(location, { fragmentLimit });
       if (!parsed.ok) return setState({ status: parsed.status });
-      const request = parsed.transport === "fragment" ? { transport: "fragment", version: parsed.version, payload: parsed.payload } : { transport: parsed.transport, id: parsed.id, key: parsed.key, ...parsed.write ? { write: parsed.write } : {}, ...parsed.owner ? { owner: parsed.owner } : {}, ...parsed.manage ? { manage: parsed.manage } : {} };
+      const request = parsed.transport === "fragment" ? { transport: "fragment", version: parsed.version, payload: parsed.payload } : {
+        transport: parsed.transport,
+        id: parsed.id,
+        key: parsed.key,
+        ...parsed.write ? { write: parsed.write } : {},
+        ...parsed.owner ? { owner: parsed.owner } : {},
+        ...parsed.manage ? { manage: parsed.manage } : {}
+      };
       if (!supportsTransport(parsed.transport)) {
         return setState({ status: "unsupported-browser", transport: parsed.transport, request });
       }
       const sequence = ++generation;
       setState({ status: "loading", transport: parsed.transport, request });
       try {
-        const envelope = parsed.transport === "fragment" ? await (typeof decodeFragment === "function" ? decodeFragment(Object.freeze({ version: parsed.version, payload: parsed.payload })) : Promise.reject(new HostedArtifactViewerError(
-          "E_ARTIFACT_CODEC_UNSUPPORTED",
-          "No private-fragment decoder is installed."
-        ))) : parsed.transport === "short" ? await (typeof loadShort === "function" ? loadShort(Object.freeze({ id: parsed.id, key: parsed.key })) : Promise.reject(new HostedArtifactViewerError(
-          "E_ARTIFACT_BROWSER_UNSUPPORTED",
-          "No encrypted short-link loader is installed."
-        ))) : await (typeof loadRoom === "function" ? loadRoom(Object.freeze({ id: parsed.id, key: parsed.key, ...parsed.write ? { write: parsed.write } : {}, ...parsed.owner ? { owner: parsed.owner } : {}, ...parsed.manage ? { manage: parsed.manage } : {} })) : Promise.reject(new HostedArtifactViewerError("E_ARTIFACT_BROWSER_UNSUPPORTED", "No live review room loader is installed.")));
+        const envelope = parsed.transport === "fragment" ? await (typeof decodeFragment === "function" ? decodeFragment(Object.freeze({ version: parsed.version, payload: parsed.payload })) : Promise.reject(
+          new HostedArtifactViewerError(
+            "E_ARTIFACT_CODEC_UNSUPPORTED",
+            "No private-fragment decoder is installed."
+          )
+        )) : parsed.transport === "short" ? await (typeof loadShort === "function" ? loadShort(Object.freeze({ id: parsed.id, key: parsed.key })) : Promise.reject(
+          new HostedArtifactViewerError(
+            "E_ARTIFACT_BROWSER_UNSUPPORTED",
+            "No encrypted short-link loader is installed."
+          )
+        )) : await (typeof loadRoom === "function" ? loadRoom(
+          Object.freeze({
+            id: parsed.id,
+            key: parsed.key,
+            ...parsed.write ? { write: parsed.write } : {},
+            ...parsed.owner ? { owner: parsed.owner } : {},
+            ...parsed.manage ? { manage: parsed.manage } : {}
+          })
+        ) : Promise.reject(
+          new HostedArtifactViewerError(
+            "E_ARTIFACT_BROWSER_UNSUPPORTED",
+            "No live review room loader is installed."
+          )
+        ));
         if (sequence !== generation) return state;
         setState({ status: "ready", transport: parsed.transport, request, envelope });
-        if (typeof onEnvelope === "function") await onEnvelope(envelope, Object.freeze({ transport: parsed.transport }));
+        if (typeof onEnvelope === "function")
+          await onEnvelope(envelope, Object.freeze({ transport: parsed.transport }));
       } catch (error) {
         if (sequence !== generation) return state;
-        setState({ status: hostedArtifactStateForError(error), transport: parsed.transport, request });
+        setState({
+          status: hostedArtifactStateForError(error),
+          transport: parsed.transport,
+          request
+        });
       }
       return state;
     }
@@ -3153,7 +3573,8 @@ var OpenPlanrArtifactStage = (() => {
     return artifacts.some(({ id }) => id === requested) ? requested : fallback;
   }
   function comparisonIdFor(artifacts, activeArtifactId, requested = "") {
-    if (requested !== activeArtifactId && artifacts.some(({ id }) => id === requested)) return requested;
+    if (requested !== activeArtifactId && artifacts.some(({ id }) => id === requested))
+      return requested;
     return artifacts.find(({ id }) => id !== activeArtifactId)?.id ?? "";
   }
   function normalizeViewMode2(value, artifactCount) {
@@ -3299,7 +3720,9 @@ var OpenPlanrArtifactStage = (() => {
   }
   function isEditableTarget(target) {
     const HTMLElement = target?.ownerDocument?.defaultView?.HTMLElement;
-    return Boolean(HTMLElement && target instanceof HTMLElement && (target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName)));
+    return Boolean(
+      HTMLElement && target instanceof HTMLElement && (target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName))
+    );
   }
   function stageArtifactById(state, id) {
     return state.artifacts.find((artifact) => artifact.id === id) ?? null;
@@ -3372,10 +3795,16 @@ var OpenPlanrArtifactStage = (() => {
       state = createArtifactStageState({}, { status: "invalid" });
     }
     const frames = new Map(
-      [...document2.querySelectorAll("[data-planr-artifact-frame]")].map((frame) => [frame.dataset.planrArtifactFrame, frame])
+      [...document2.querySelectorAll("[data-planr-artifact-frame]")].map((frame) => [
+        frame.dataset.planrArtifactFrame,
+        frame
+      ])
     );
     const panels = new Map(
-      [...document2.querySelectorAll(".planr-artifact-panel[data-artifact-id]")].map((panel) => [panel.dataset.artifactId, panel])
+      [...document2.querySelectorAll(".planr-artifact-panel[data-artifact-id]")].map((panel) => [
+        panel.dataset.artifactId,
+        panel
+      ])
     );
     const documentLayouts = /* @__PURE__ */ new Map();
     const cleanup = [];
@@ -3433,11 +3862,13 @@ var OpenPlanrArtifactStage = (() => {
         themeButton.textContent = state.theme;
         themeButton.setAttribute("aria-label", `Shell theme ${state.theme}`);
       }
-      if (statusSlot) statusSlot.textContent = state.reviewMode === "comment" ? "Comment mode" : "Interactions enabled";
+      if (statusSlot)
+        statusSlot.textContent = state.reviewMode === "comment" ? "Comment mode" : "Interactions enabled";
       if (metadata && activeArtifact) {
         metadata.textContent = `HTML · ${activeArtifact.viewport.width}×${activeArtifact.viewport.height}`;
       }
-      if (breadcrumb) breadcrumb.textContent = `ARTIFACT / ${(activeArtifact?.title ?? "Artifact").toUpperCase()}`;
+      if (breadcrumb)
+        breadcrumb.textContent = `ARTIFACT / ${(activeArtifact?.title ?? "Artifact").toUpperCase()}`;
       for (const button of document2.querySelectorAll("[data-planr-view]")) {
         const mode = button.dataset.planrView;
         button.setAttribute("aria-pressed", String(mode === state.viewMode));
@@ -3460,7 +3891,10 @@ var OpenPlanrArtifactStage = (() => {
         panel.hidden = !isVisible;
         panel.style.order = String(visualOrder.indexOf(id));
         const artifact = stageArtifactById(state, id);
-        panel.setAttribute("aria-label", `${isPrimary ? "Primary" : "Comparison"} artifact: ${artifact?.title ?? id}`);
+        panel.setAttribute(
+          "aria-label",
+          `${isPrimary ? "Primary" : "Comparison"} artifact: ${artifact?.title ?? id}`
+        );
         const frame = frames.get(id);
         const frameReady = frameBudget === null || frame?.dataset.planrFrameState === "ready";
         const annotationLayer = panel.querySelector("[data-planr-annotation-layer]");
@@ -3476,7 +3910,9 @@ var OpenPlanrArtifactStage = (() => {
         }
         if (annotationLayer) {
           const enabled = isVisible && frameReady && state.status === "ready" && state.reviewMode === "comment";
-          const hasComposer = Boolean(annotationLayer.querySelector("[data-planr-annotation-composer]"));
+          const hasComposer = Boolean(
+            annotationLayer.querySelector("[data-planr-annotation-composer]")
+          );
           annotationLayer.tabIndex = enabled ? 0 : -1;
           annotationLayer.setAttribute("aria-disabled", String(!enabled && !hasComposer));
         }
@@ -3642,11 +4078,10 @@ var OpenPlanrArtifactStage = (() => {
       });
       listen(layer, "pointermove", (event) => {
         if (!selection || selection.pointerId !== event.pointerId || !selectionPreview) return;
-        const region = clientSelectionToNormalized(
-          layer.getBoundingClientRect(),
-          selection.start,
-          { x: event.clientX, y: event.clientY }
-        );
+        const region = clientSelectionToNormalized(layer.getBoundingClientRect(), selection.start, {
+          x: event.clientX,
+          y: event.clientY
+        });
         selectionPreview.style.left = `${region.x * 100}%`;
         selectionPreview.style.top = `${region.y * 100}%`;
         selectionPreview.style.width = `${region.w * 100}%`;
@@ -3673,7 +4108,10 @@ var OpenPlanrArtifactStage = (() => {
         if (event.target !== layer) return;
         event.preventDefault();
         const bounds = layer.getBoundingClientRect();
-        emitSelection(layer, { x: bounds.left + bounds.width / 2, y: bounds.top + bounds.height / 2 });
+        emitSelection(layer, {
+          x: bounds.left + bounds.width / 2,
+          y: bounds.top + bounds.height / 2
+        });
       });
     }
     for (const [artifactId, frame] of frames) {
@@ -3681,7 +4119,8 @@ var OpenPlanrArtifactStage = (() => {
         if (state.presentation !== "document") return;
         const width = event.detail?.width;
         const height = event.detail?.height;
-        if (!Number.isInteger(width) || !Number.isInteger(height) || width < 1 || width > ARTIFACT_STAGE_LIMITS.maxDocumentWidth || height < 1 || height > ARTIFACT_STAGE_LIMITS.maxDocumentHeight) return;
+        if (!Number.isInteger(width) || !Number.isInteger(height) || width < 1 || width > ARTIFACT_STAGE_LIMITS.maxDocumentWidth || height < 1 || height > ARTIFACT_STAGE_LIMITS.maxDocumentHeight)
+          return;
         const layout = Object.freeze({ width, height });
         documentLayouts.set(artifactId, layout);
         const panel = panels.get(artifactId);
@@ -3852,10 +4291,14 @@ var OpenPlanrArtifactStage = (() => {
       const fail = (error) => {
         if (current()) releaseFrame(artifact.id, { status: "error", error });
       };
-      const timer = frameBudget === null ? null : window.setTimeout(() => fail(new Error(`Artifact frame did not finish loading: ${artifact.id}`)), 15e3);
+      const timer = frameBudget === null ? null : window.setTimeout(
+        () => fail(new Error(`Artifact frame did not finish loading: ${artifact.id}`)),
+        15e3
+      );
       let loaded = false;
       const ready = () => {
-        if (!current() || !loaded || record2.requireTrust && frame.dataset.planrBridgeTrusted !== "true") return;
+        if (!current() || !loaded || record2.requireTrust && frame.dataset.planrBridgeTrusted !== "true")
+          return;
         record2.status = "ready";
         record2.unlisten();
         frameStatus(artifact.id, "ready");
@@ -3915,9 +4358,11 @@ var OpenPlanrArtifactStage = (() => {
             error.code = "E_ARTIFACT_BROWSER_UNSUPPORTED";
             throw error;
           }
-          const sourceUrl = window.URL.createObjectURL(new window.Blob([html], {
-            type: "text/html;charset=utf-8"
-          }));
+          const sourceUrl = window.URL.createObjectURL(
+            new window.Blob([html], {
+              type: "text/html;charset=utf-8"
+            })
+          );
           record2.sourceUrl = sourceUrl;
           frame.removeAttribute("srcdoc");
           frame.src = sourceUrl;
@@ -3932,9 +4377,12 @@ var OpenPlanrArtifactStage = (() => {
       }
       const requested = [...new Set(artifactIds)];
       if (frameBudget !== null && requested.length > frameBudget) {
-        return Promise.reject(new RangeError(`At most ${frameBudget} artifact frames may be requested together.`));
+        return Promise.reject(
+          new RangeError(`At most ${frameBudget} artifact frames may be requested together.`)
+        );
       }
-      if (frameBudget === null) return Promise.all(requested.map((id) => assignArtifactSource(stageArtifactById(state, id))));
+      if (frameBudget === null)
+        return Promise.all(requested.map((id) => assignArtifactSource(stageArtifactById(state, id))));
       const run = async () => {
         if (disposed) throw cancelledFrame();
         for (const id of requested) {
@@ -3985,7 +4433,9 @@ var OpenPlanrArtifactStage = (() => {
   if (typeof document !== "undefined") {
     const options = globalThis.__OPENPLANR_ARTIFACT_STAGE_OPTIONS__ ?? {};
     if (document.readyState === "loading") {
-      document.addEventListener("DOMContentLoaded", () => bootstrapArtifactStage(document, options), { once: true });
+      document.addEventListener("DOMContentLoaded", () => bootstrapArtifactStage(document, options), {
+        once: true
+      });
     } else {
       queueMicrotask(() => bootstrapArtifactStage(document, options));
     }

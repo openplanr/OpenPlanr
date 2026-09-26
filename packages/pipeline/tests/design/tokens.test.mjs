@@ -2,8 +2,14 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import {
-  isOnSpacingScale, nearestSpacing, isCanonicalFrame, FRAMES, DEFAULT_FRAME, SPACING_STEP,
-  BREAKPOINTS, RESPONSIVE_FRAMES,
+  BREAKPOINTS,
+  DEFAULT_FRAME,
+  FRAMES,
+  isCanonicalFrame,
+  isOnSpacingScale,
+  nearestSpacing,
+  RESPONSIVE_FRAMES,
+  SPACING_STEP,
 } from '../../lib/design/tokens.mjs';
 
 test('on the 4-point grid: 0, 2, and multiples of 4 pass', () => {
@@ -43,8 +49,14 @@ test('canonical frames: desktop 1440 + tablet 834 + mobile 390 (v0.17.0)', () =>
 });
 
 test('responsive frame set: desktop → tablet → mobile, widest first', () => {
-  assert.deepEqual(RESPONSIVE_FRAMES.map((f) => f.name), ['desktop', 'tablet', 'mobile']);
-  assert.deepEqual(RESPONSIVE_FRAMES.map((f) => f.w), [1440, 834, 390]);
+  assert.deepEqual(
+    RESPONSIVE_FRAMES.map((f) => f.name),
+    ['desktop', 'tablet', 'mobile'],
+  );
+  assert.deepEqual(
+    RESPONSIVE_FRAMES.map((f) => f.w),
+    [1440, 834, 390],
+  );
   // breakpoint frame widths fall in their container-query ranges
   assert.ok(1440 >= BREAKPOINTS.desktop, 'desktop frame ≥ desktop breakpoint');
   assert.ok(834 >= BREAKPOINTS.tablet && 834 < BREAKPOINTS.desktop, 'tablet frame in tablet range');

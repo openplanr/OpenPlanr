@@ -2,19 +2,21 @@
 
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import { readdir, readFile, realpath, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
-import { readFile, writeFile, readdir, realpath } from 'node:fs/promises';
 import { join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
-import { Miniflare, Log, LogLevel } from 'miniflare';
+import { Log, LogLevel, Miniflare } from 'miniflare';
 import { chromium } from 'playwright';
 
 // The harness uses development tools from this workspace; every subject module
 // is resolved from the supplied, independently installed consumer package.
 const [projectArgument, outputArgument] = process.argv.slice(2);
-assert.ok(projectArgument && outputArgument && process.argv.length === 4,
-  'Usage: verify-packed-consumers.mjs <installed-consumer> <report.json>');
+assert.ok(
+  projectArgument && outputArgument && process.argv.length === 4,
+  'Usage: verify-packed-consumers.mjs <installed-consumer> <report.json>',
+);
 const project = await realpath(projectArgument);
 const packageRoot = await realpath(join(project, 'node_modules/@openplanr/protocol'));
 assert.ok(packageRoot.startsWith(`${project}${sep}`), 'Protocol installation escaped consumer');
@@ -25,26 +27,34 @@ assert.deepEqual(manifest.dependencies ?? {}, {});
 
 async function files(directory, prefix = '') {
   const entries = await readdir(directory, { withFileTypes: true });
-  const results = await Promise.all(entries.map(async (entry) => {
-    const path = prefix ? `${prefix}/${entry.name}` : entry.name;
-    assert.ok(!entry.isSymbolicLink(), `Unexpected package symlink: ${path}`);
-    return entry.isDirectory() ? files(join(directory, entry.name), path) : [path];
-  }));
+  const results = await Promise.all(
+    entries.map(async (entry) => {
+      const path = prefix ? `${prefix}/${entry.name}` : entry.name;
+      assert.ok(!entry.isSymbolicLink(), `Unexpected package symlink: ${path}`);
+      return entry.isDirectory() ? files(join(directory, entry.name), path) : [path];
+    }),
+  );
   return results.flat().sort();
 }
 const inventory = await files(packageRoot);
-assert.ok(!inventory.some((path) => /^(?:projections|preservation|conformance|node_modules|scripts)\//u.test(path)),
-  'Protocol tarball contains workspace-only material');
+assert.ok(
+  !inventory.some((path) =>
+    /^(?:projections|preservation|conformance|node_modules|scripts)\//u.test(path),
+  ),
+  'Protocol tarball contains workspace-only material',
+);
 
 const exports = [];
 const types = [];
 for (const [key, target] of Object.entries(manifest.exports)) {
-  const runtime = typeof target === 'string' ? target : target.import ?? target.default;
+  const runtime = typeof target === 'string' ? target : (target.import ?? target.default);
   const name = key === '.' ? manifest.name : `${manifest.name}${key.slice(1)}`;
   if (target.types) types.push(name);
   if (key.includes('*')) {
     const [prefix, suffix] = runtime.slice(2).split('*');
-    for (const file of inventory.filter((file) => file.startsWith(prefix) && file.endsWith(suffix))) {
+    for (const file of inventory.filter(
+      (file) => file.startsWith(prefix) && file.endsWith(suffix),
+    )) {
       const captured = file.slice(prefix.length, suffix ? -suffix.length : undefined);
       if (file.endsWith('.mjs')) exports.push({ name: name.replace('*', captured), path: file });
     }
@@ -55,8 +65,14 @@ for (const [key, target] of Object.entries(manifest.exports)) {
 }
 
 // Compatibility adapters intentionally use the explicit Node schema loader.
-const nodeOnly = new Set(['./contracts', './operate-experience-live-patch', './live-evidence-v2', './operating-planning-contracts']
-  .map((key) => `${manifest.name}${key.slice(1)}`));
+const nodeOnly = new Set(
+  [
+    './contracts',
+    './operate-experience-live-patch',
+    './live-evidence-v2',
+    './operating-planning-contracts',
+  ].map((key) => `${manifest.name}${key.slice(1)}`),
+);
 const portable = exports.filter(({ name }) => !nodeOnly.has(name));
 const sharedChecks = `
 let checks = 0;
@@ -128,16 +144,41 @@ for (const version of ['1.5.0','1.6.0','1.7.0','1.8.0','1.11.0','1.13.0']) {
 }
 console.log(JSON.stringify({ ...summary, schemas, assets, status: 'passed' }));`;
   await writeFile(runner, code);
-  const result = spawnSync(process.execPath, [runner], { cwd: project, encoding: 'utf8', timeout: 120000 });
+  const result = spawnSync(process.execPath, [runner], {
+    cwd: project,
+    encoding: 'utf8',
+    timeout: 120000,
+  });
   assert.equal(result.status, 0, result.stderr || result.stdout);
 
   const source = join(project, 'protocol-types.mts');
-  await writeFile(source, types.map((name, index) => `import type * as Export${index} from ${JSON.stringify(name)};`).join('\n'));
+  await writeFile(
+    source,
+    types
+      .map((name, index) => `import type * as Export${index} from ${JSON.stringify(name)};`)
+      .join('\n'),
+  );
   const compiler = fileURLToPath(import.meta.resolve('typescript/bin/tsc'));
   const config = join(project, 'protocol-tsconfig.json');
-  await writeFile(config, JSON.stringify({ compilerOptions: { noEmit: true, strict: true, target: 'ES2022', lib: ['ES2022','DOM'], module: 'NodeNext', moduleResolution: 'NodeNext', types: [] }, files: [source] }));
+  await writeFile(
+    config,
+    JSON.stringify({
+      compilerOptions: {
+        noEmit: true,
+        strict: true,
+        target: 'ES2022',
+        lib: ['ES2022', 'DOM'],
+        module: 'NodeNext',
+        moduleResolution: 'NodeNext',
+        types: [],
+      },
+      files: [source],
+    }),
+  );
   const compiled = spawnSync(process.execPath, [compiler, '--project', config], {
-    cwd: project, encoding: 'utf8', timeout: 120000,
+    cwd: project,
+    encoding: 'utf8',
+    timeout: 120000,
   });
   assert.equal(compiled.status, 0, compiled.stderr || compiled.stdout);
   return { ...JSON.parse(result.stdout), typedExports: types.length };
@@ -160,22 +201,50 @@ globalThis.protocolResult = { ...summary, assets, status: 'passed' };`;
   const server = createServer(async (req, res) => {
     try {
       const url = new URL(req.url, 'http://127.0.0.1');
-      if (url.pathname === '/') { res.setHeader('Content-Type', 'text/html'); res.end(pageHtml); return; }
-      if (!url.pathname.startsWith('/protocol/')) { res.writeHead(404).end(); return; }
-      const file = resolve(packageRoot, decodeURIComponent(url.pathname.slice('/protocol/'.length)));
-      if (!file.startsWith(`${packageRoot}${sep}`)) { res.writeHead(403).end(); return; }
-      res.setHeader('Content-Type', file.endsWith('.json') ? 'application/json' : 'text/javascript');
+      if (url.pathname === '/') {
+        res.setHeader('Content-Type', 'text/html');
+        res.end(pageHtml);
+        return;
+      }
+      if (!url.pathname.startsWith('/protocol/')) {
+        res.writeHead(404).end();
+        return;
+      }
+      const file = resolve(
+        packageRoot,
+        decodeURIComponent(url.pathname.slice('/protocol/'.length)),
+      );
+      if (!file.startsWith(`${packageRoot}${sep}`)) {
+        res.writeHead(403).end();
+        return;
+      }
+      res.setHeader(
+        'Content-Type',
+        file.endsWith('.json') ? 'application/json' : 'text/javascript',
+      );
       res.end(await readFile(file));
-    } catch { res.writeHead(404).end(); }
+    } catch {
+      res.writeHead(404).end();
+    }
   });
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   let browser;
   try {
-    browser = await chromium.launch({ headless: true, ...(process.env.OPENPLANR_PROOF_CHROMIUM_EXECUTABLE ? { executablePath: process.env.OPENPLANR_PROOF_CHROMIUM_EXECUTABLE } : {}) });
+    browser = await chromium.launch({
+      headless: true,
+      ...(process.env.OPENPLANR_PROOF_CHROMIUM_EXECUTABLE
+        ? { executablePath: process.env.OPENPLANR_PROOF_CHROMIUM_EXECUTABLE }
+        : {}),
+    });
     const page = await browser.newPage();
     await page.goto(`http://127.0.0.1:${server.address().port}/`);
-    await page.waitForFunction(() => globalThis.protocolResult || globalThis.protocolError, { timeout: 30000 });
-    const result = await page.evaluate(() => ({ report: globalThis.protocolResult, error: globalThis.protocolError }));
+    await page.waitForFunction(() => globalThis.protocolResult || globalThis.protocolError, {
+      timeout: 30000,
+    });
+    const result = await page.evaluate(() => ({
+      report: globalThis.protocolResult,
+      error: globalThis.protocolError,
+    }));
     assert.equal(result.error, undefined, result.error);
     return result.report;
   } finally {
@@ -187,18 +256,42 @@ globalThis.protocolResult = { ...summary, assets, status: 'passed' };`;
 async function runWorkers() {
   const entry = join(project, 'protocol-worker-entry.mjs');
   const output = join(project, 'protocol-worker.mjs');
-  const imports = portable.map(({ name }, index) => `import * as module${index} from ${JSON.stringify(name)};`).join('\n');
-  await writeFile(entry, `${imports}\nexport default { fetch() { const modules = [${portable.map((_, i) => `module${i}`).join(',')}]; ${sharedChecks} return Response.json({ ...summary, status: 'passed' }); } };`);
-  await build({ entryPoints: [entry], outfile: output, bundle: true, platform: 'neutral', format: 'esm', target: 'es2022', logLevel: 'silent' });
-  const runtime = new Miniflare({ modules: true, modulesRoot: project, scriptPath: output, compatibilityDate: '2026-07-08', log: new Log(LogLevel.ERROR) });
+  const imports = portable
+    .map(({ name }, index) => `import * as module${index} from ${JSON.stringify(name)};`)
+    .join('\n');
+  await writeFile(
+    entry,
+    `${imports}\nexport default { fetch() { const modules = [${portable.map((_, i) => `module${i}`).join(',')}]; ${sharedChecks} return Response.json({ ...summary, status: 'passed' }); } };`,
+  );
+  await build({
+    entryPoints: [entry],
+    outfile: output,
+    bundle: true,
+    platform: 'neutral',
+    format: 'esm',
+    target: 'es2022',
+    logLevel: 'silent',
+  });
+  const runtime = new Miniflare({
+    modules: true,
+    modulesRoot: project,
+    scriptPath: output,
+    compatibilityDate: '2026-07-08',
+    log: new Log(LogLevel.ERROR),
+  });
   try {
     const response = await runtime.dispatchFetch('https://protocol.test/');
     assert.equal(response.status, 200, await response.clone().text());
     return await response.json();
-  } finally { await runtime.dispose(); }
+  } finally {
+    await runtime.dispose();
+  }
 }
 
 const node = await runNode();
 const browser = await runBrowser();
 const workers = await runWorkers();
-await writeFile(outputArgument, `${JSON.stringify({ name: manifest.name, version: manifest.version, node, browser, workers }, null, 2)}\n`);
+await writeFile(
+  outputArgument,
+  `${JSON.stringify({ name: manifest.name, version: manifest.version, node, browser, workers }, null, 2)}\n`,
+);

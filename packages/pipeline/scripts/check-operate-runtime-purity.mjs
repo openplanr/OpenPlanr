@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 
-import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import {
   copyFileSync,
   existsSync,
   lstatSync,
   mkdirSync,
   mkdtempSync,
-  readFileSync,
   readdirSync,
+  readFileSync,
   realpathSync,
   rmSync,
 } from 'node:fs';
@@ -368,8 +368,23 @@ export const USER_OWNED_EXCLUDED_PATHS = Object.freeze([
 ]);
 
 const textExtensions = new Set([
-  '.css', '.d.mts', '.d.ts', '.feature', '.html', '.js', '.json', '.jsonl',
-  '.md', '.mdc', '.mjs', '.sh', '.svg', '.ts', '.txt', '.yaml', '.yml',
+  '.css',
+  '.d.mts',
+  '.d.ts',
+  '.feature',
+  '.html',
+  '.js',
+  '.json',
+  '.jsonl',
+  '.md',
+  '.mdc',
+  '.mjs',
+  '.sh',
+  '.svg',
+  '.ts',
+  '.txt',
+  '.yaml',
+  '.yml',
 ]);
 const privatePathFragments = [
   ['.planr', 'products', 'operate-2.0'].join('/'),
@@ -389,12 +404,15 @@ const absoluteMachinePatterns = [
   new RegExp('/' + 'home' + '/[^/\\s]+/'),
   new RegExp('[A-Za-z]:' + '\\\\' + 'Users' + '\\\\', 'i'),
 ];
-const modelChoicePattern = new RegExp([
-  'claude-(?:opus|sonnet|haiku)',
-  '(?:opus|sonnet|haiku)[ -]?[0-9]',
-  'gpt-[0-9]',
-  'o[134]-mini',
-].join('|'), 'i');
+const modelChoicePattern = new RegExp(
+  [
+    'claude-(?:opus|sonnet|haiku)',
+    '(?:opus|sonnet|haiku)[ -]?[0-9]',
+    'gpt-[0-9]',
+    'o[134]-mini',
+  ].join('|'),
+  'i',
+);
 
 function fail(message, details = {}) {
   const error = new Error(message);
@@ -420,9 +438,7 @@ function run(command, args, options = {}) {
 
 function runNpm(args, options = {}) {
   const npmCli = process.env.npm_execpath;
-  return npmCli
-    ? run(process.execPath, [npmCli, ...args], options)
-    : run('npm', args, options);
+  return npmCli ? run(process.execPath, [npmCli, ...args], options) : run('npm', args, options);
 }
 
 function sha256File(path) {
@@ -454,7 +470,11 @@ function assertOverlayParents(root, path) {
   for (const component of path.split('/')) {
     current = join(current, component);
     let stat;
-    try { stat = lstatSync(current); } catch (error) { if (error.code !== 'ENOENT') throw error; }
+    try {
+      stat = lstatSync(current);
+    } catch (error) {
+      if (error.code !== 'ENOENT') throw error;
+    }
     if (stat?.isSymbolicLink()) fail(`Development projection contains a symlink: ${path}`);
   }
 }
@@ -470,9 +490,14 @@ function developmentProjectionEntries(source) {
     }
     entries.set(path, createHash('sha256').update(bytes).digest('hex'));
     for (const { target, sha256 } of manifest.entries) {
-      if (typeof target !== 'string' || target.includes('\\') || target.includes(':')
-          || target.split('/').some((part) => !part || part === '.' || part === '..')
-          || USER_OWNED_EXCLUDED_PATHS.includes(target) || !/^[a-f0-9]{64}$/.test(sha256)) {
+      if (
+        typeof target !== 'string' ||
+        target.includes('\\') ||
+        target.includes(':') ||
+        target.split('/').some((part) => !part || part === '.' || part === '..') ||
+        USER_OWNED_EXCLUDED_PATHS.includes(target) ||
+        !/^[a-f0-9]{64}$/.test(sha256)
+      ) {
         fail(`Invalid development projection entry in ${path}: ${target}`);
       }
       if (entries.has(target)) fail(`Duplicate development projection target: ${target}`);
@@ -520,7 +545,10 @@ function removeLegacySnapshotPaths(destination, paths) {
   }
 }
 
-export function createOperateV2DevelopmentSnapshot(destinationRoot, { sourceRoot = repositoryRoot } = {}) {
+export function createOperateV2DevelopmentSnapshot(
+  destinationRoot,
+  { sourceRoot = repositoryRoot } = {},
+) {
   const source = realpathSync(sourceRoot);
   const sourceGit = gitLocation(source);
   const projectionEntries = developmentProjectionEntries(source);
@@ -530,10 +558,10 @@ export function createOperateV2DevelopmentSnapshot(destinationRoot, { sourceRoot
   const archiveRoot = mkdtempSync(join(tmpdir(), 'planr-operate-v2-archive-'));
   const archivePath = join(archiveRoot, 'head.tar');
   try {
-    const archiveTree = sourceGit.prefix
-      ? `HEAD:${sourceGit.prefix.replace(/\/$/, '')}`
-      : 'HEAD';
-    run('git', ['archive', '--format=tar', '--output', archivePath, archiveTree], { cwd: sourceGit.topLevel });
+    const archiveTree = sourceGit.prefix ? `HEAD:${sourceGit.prefix.replace(/\/$/, '')}` : 'HEAD';
+    run('git', ['archive', '--format=tar', '--output', archivePath, archiveTree], {
+      cwd: sourceGit.topLevel,
+    });
     run('tar', ['-xf', archivePath, '-C', destination]);
   } finally {
     rmSync(archiveRoot, { recursive: true, force: true });
@@ -544,9 +572,10 @@ export function createOperateV2DevelopmentSnapshot(destinationRoot, { sourceRoot
 
   for (const path of OPERATE_V2_DEVELOPMENT_OVERLAYS) {
     const packagePath = join(source, path);
-    const sourcePath = path === 'package-lock.json' && !existsSync(packagePath)
-      ? join(sourceGit.topLevel, path)
-      : packagePath;
+    const sourcePath =
+      path === 'package-lock.json' && !existsSync(packagePath)
+        ? join(sourceGit.topLevel, path)
+        : packagePath;
     copyWithoutSymlinks(sourcePath, join(destination, path));
   }
 
@@ -556,18 +585,23 @@ export function createOperateV2DevelopmentSnapshot(destinationRoot, { sourceRoot
     assertOverlayParents(source, path);
     assertOverlayParents(destination, path);
     const sourcePath = join(source, path);
-    if (!lstatSync(sourcePath).isFile()) fail(`Development projection is not a regular file: ${path}`);
+    if (!lstatSync(sourcePath).isFile())
+      fail(`Development projection is not a regular file: ${path}`);
     const destinationPath = join(destination, path);
     copyWithoutSymlinks(sourcePath, destinationPath);
     if (sha256File(destinationPath) !== sha256) {
-      fail(`Development projection digest mismatch: ${path}. Run npm run generate at the repository root.`);
+      fail(
+        `Development projection digest mismatch: ${path}. Run npm run generate at the repository root.`,
+      );
     }
   }
 
   const excludedProof = USER_OWNED_EXCLUDED_PATHS.map((path) => {
     const snapshotPath = join(destination, path);
     const worktreePath = join(source, path);
-    const headBytes = run('git', ['show', `HEAD:${sourceGit.prefix}${path}`], { cwd: sourceGit.topLevel });
+    const headBytes = run('git', ['show', `HEAD:${sourceGit.prefix}${path}`], {
+      cwd: sourceGit.topLevel,
+    });
     const headSha256 = createHash('sha256').update(headBytes).digest('hex');
     const snapshotSha256 = sha256File(snapshotPath);
     if (snapshotSha256 !== headSha256) {
@@ -595,9 +629,7 @@ export function createOperateV2DevelopmentSnapshot(destinationRoot, { sourceRoot
 function packageManifest(root) {
   const cacheRoot = mkdtempSync(join(tmpdir(), 'planr-operate-v2-npm-cache-'));
   try {
-    const output = runNpm([
-      'pack', '--dry-run', '--ignore-scripts', '--json',
-    ], {
+    const output = runNpm(['pack', '--dry-run', '--ignore-scripts', '--json'], {
       cwd: root,
       env: {
         ...process.env,
@@ -638,7 +670,11 @@ function assertDependencyPurity(packageJson, lockJson) {
   ];
   for (const declaration of declarations) {
     for (const [name, value] of Object.entries(declaration ?? {})) {
-      if (/^(?:file|link|workspace):/i.test(value) || isAbsolute(value) || value.startsWith('../')) {
+      if (
+        /^(?:file|link|workspace):/i.test(value) ||
+        isAbsolute(value) ||
+        value.startsWith('../')
+      ) {
         fail(`Forbidden non-registry dependency edge ${name}: ${value}`);
       }
     }
@@ -666,58 +702,59 @@ function assertImportPurity(root, relativePath, text) {
 }
 
 function assertPortableRuntimePurity(relativePath, text) {
-  const portableV2 = (
-    relativePath.startsWith('schemas/v2.0.0/')
-    || relativePath.startsWith('conformance/fixtures/operating-runtime-v2/')
-    || relativePath === 'conformance/verify-operate-v2-contract-compilation.mjs'
-    || relativePath === 'conformance/verify-operate-v2-evidence.mjs'
-    || relativePath === 'conformance/verify-operate-v2-governed-execution.mjs'
-    || relativePath === 'conformance/verify-operate-v2-operating-intelligence.mjs'
-    || relativePath === 'conformance/verify-operate-v2-persistent-work.mjs'
-    || relativePath === 'conformance/verify-operating-runtime-v2.mjs'
-    || relativePath === 'lib/operate/evidence-filesystem-v2.mjs'
-    || relativePath === 'lib/operate/evidence-git-v2.mjs'
-    || relativePath === 'lib/operate/evidence-planr-v2.mjs'
-    || relativePath === 'lib/operate/evidence-artifact-v2.mjs'
-    || relativePath === 'lib/operate/evidence-materialization-v2.mjs'
-    || relativePath === 'lib/operate/evidence-projections-v2.mjs'
-    || relativePath === 'lib/operate/evidence-registry-v2.mjs'
-    || relativePath === 'lib/operate/evidence-v2.mjs'
-    || relativePath === 'lib/operate/extensions-v2.mjs'
-    || relativePath === 'lib/operate/governed-extensions-v2.mjs'
-    || relativePath === 'lib/operate/governed-recovery-v2.mjs'
-    || relativePath === 'lib/operate/reference-governed-executors-v2.mjs'
-    || relativePath === 'lib/operate/operating-domains-v2.mjs'
-    || relativePath === 'lib/operate/operating-state-v2.mjs'
-    || relativePath === 'lib/operate/operating-snapshots-v2.mjs'
-    || relativePath === 'lib/operate/operating-delta-v2.mjs'
-    || relativePath === 'lib/operate/operating-intelligence-state-v2.mjs'
-    || relativePath === 'lib/operate/intelligence-router-v2.mjs'
-    || relativePath === 'lib/operate/intelligence-ledger-v2.mjs'
-    || relativePath === 'lib/operate/intelligence-input-bundle-v2.mjs'
-    || relativePath === 'lib/operate/intelligence-output-identities-v2.mjs'
-    || relativePath === 'lib/operate/intelligence-result-validator-v2.mjs'
-    || relativePath === 'lib/operate/intelligence-replay-v2.mjs'
-    || relativePath === 'lib/operate/live-evidence-v2.mjs'
-    || relativePath === 'lib/operate/result-packet-v2.mjs'
-    || relativePath === 'lib/operate/assignment-contract-v2.mjs'
-    || relativePath === 'lib/operate/action-verification-v2.mjs'
-    || relativePath === 'lib/operate/execution-verification-v2.mjs'
-    || relativePath === 'lib/operate/authorization-v2.mjs'
-    || relativePath === 'lib/operate/operating-triggers-v2.mjs'
-    || relativePath === 'lib/operate/operating-signal-providers-v2.mjs'
-    || relativePath === 'lib/operate/persistent-work-v2.mjs'
-    || relativePath === 'lib/operate/cycle-closure-v2.mjs'
-    || relativePath === 'lib/operate/persistent-work-projections-v2.mjs'
-    || relativePath === 'lib/operate/runtime-foundation.mjs'
-    || /^lib\/operate\/runtime-foundation\/(?:authority|evidence-state|execution|intelligence|protocol)\.mjs$/.test(relativePath)
-    || relativePath === 'lib/operate/runtime-event-reducer-v2.mjs'
-    || relativePath === 'lib/operate/scheduler-v2.mjs'
-    || relativePath === 'lib/pipeline/landing-contract.mjs'
-    || relativePath === 'docs/protocol/operate-runtime-v2.md'
-  );
-  const portableAdapter = relativePath.startsWith('adapters/codex/')
-    || relativePath.startsWith('adapters/cursor/');
+  const portableV2 =
+    relativePath.startsWith('schemas/v2.0.0/') ||
+    relativePath.startsWith('conformance/fixtures/operating-runtime-v2/') ||
+    relativePath === 'conformance/verify-operate-v2-contract-compilation.mjs' ||
+    relativePath === 'conformance/verify-operate-v2-evidence.mjs' ||
+    relativePath === 'conformance/verify-operate-v2-governed-execution.mjs' ||
+    relativePath === 'conformance/verify-operate-v2-operating-intelligence.mjs' ||
+    relativePath === 'conformance/verify-operate-v2-persistent-work.mjs' ||
+    relativePath === 'conformance/verify-operating-runtime-v2.mjs' ||
+    relativePath === 'lib/operate/evidence-filesystem-v2.mjs' ||
+    relativePath === 'lib/operate/evidence-git-v2.mjs' ||
+    relativePath === 'lib/operate/evidence-planr-v2.mjs' ||
+    relativePath === 'lib/operate/evidence-artifact-v2.mjs' ||
+    relativePath === 'lib/operate/evidence-materialization-v2.mjs' ||
+    relativePath === 'lib/operate/evidence-projections-v2.mjs' ||
+    relativePath === 'lib/operate/evidence-registry-v2.mjs' ||
+    relativePath === 'lib/operate/evidence-v2.mjs' ||
+    relativePath === 'lib/operate/extensions-v2.mjs' ||
+    relativePath === 'lib/operate/governed-extensions-v2.mjs' ||
+    relativePath === 'lib/operate/governed-recovery-v2.mjs' ||
+    relativePath === 'lib/operate/reference-governed-executors-v2.mjs' ||
+    relativePath === 'lib/operate/operating-domains-v2.mjs' ||
+    relativePath === 'lib/operate/operating-state-v2.mjs' ||
+    relativePath === 'lib/operate/operating-snapshots-v2.mjs' ||
+    relativePath === 'lib/operate/operating-delta-v2.mjs' ||
+    relativePath === 'lib/operate/operating-intelligence-state-v2.mjs' ||
+    relativePath === 'lib/operate/intelligence-router-v2.mjs' ||
+    relativePath === 'lib/operate/intelligence-ledger-v2.mjs' ||
+    relativePath === 'lib/operate/intelligence-input-bundle-v2.mjs' ||
+    relativePath === 'lib/operate/intelligence-output-identities-v2.mjs' ||
+    relativePath === 'lib/operate/intelligence-result-validator-v2.mjs' ||
+    relativePath === 'lib/operate/intelligence-replay-v2.mjs' ||
+    relativePath === 'lib/operate/live-evidence-v2.mjs' ||
+    relativePath === 'lib/operate/result-packet-v2.mjs' ||
+    relativePath === 'lib/operate/assignment-contract-v2.mjs' ||
+    relativePath === 'lib/operate/action-verification-v2.mjs' ||
+    relativePath === 'lib/operate/execution-verification-v2.mjs' ||
+    relativePath === 'lib/operate/authorization-v2.mjs' ||
+    relativePath === 'lib/operate/operating-triggers-v2.mjs' ||
+    relativePath === 'lib/operate/operating-signal-providers-v2.mjs' ||
+    relativePath === 'lib/operate/persistent-work-v2.mjs' ||
+    relativePath === 'lib/operate/cycle-closure-v2.mjs' ||
+    relativePath === 'lib/operate/persistent-work-projections-v2.mjs' ||
+    relativePath === 'lib/operate/runtime-foundation.mjs' ||
+    /^lib\/operate\/runtime-foundation\/(?:authority|evidence-state|execution|intelligence|protocol)\.mjs$/.test(
+      relativePath,
+    ) ||
+    relativePath === 'lib/operate/runtime-event-reducer-v2.mjs' ||
+    relativePath === 'lib/operate/scheduler-v2.mjs' ||
+    relativePath === 'lib/pipeline/landing-contract.mjs' ||
+    relativePath === 'docs/protocol/operate-runtime-v2.md';
+  const portableAdapter =
+    relativePath.startsWith('adapters/codex/') || relativePath.startsWith('adapters/cursor/');
   if ((portableV2 || portableAdapter) && modelChoicePattern.test(text)) {
     fail(`Vendor model choice leaked into portable asset ${relativePath}.`);
   }
@@ -748,28 +785,32 @@ export function checkOperateRuntimePurity(root = repositoryRoot) {
     const relativePath = entry.path.replaceAll('\\', '/');
     try {
       if (
-        relativePath.startsWith('.planr/')
-        || relativePath.startsWith('tests/')
-        || relativePath.startsWith('node_modules/')
-        || relativePath.startsWith('.env')
-        || privatePathFragments.some((fragment) => relativePath.includes(fragment))
-      ) fail(`Forbidden package path: ${relativePath}`);
+        relativePath.startsWith('.planr/') ||
+        relativePath.startsWith('tests/') ||
+        relativePath.startsWith('node_modules/') ||
+        relativePath.startsWith('.env') ||
+        privatePathFragments.some((fragment) => relativePath.includes(fragment))
+      )
+        fail(`Forbidden package path: ${relativePath}`);
 
       const absolutePath = join(packageRoot, relativePath);
       const stat = lstatSync(absolutePath);
       if (stat.isSymbolicLink()) fail(`Packed development path is a symlink: ${relativePath}`);
       if (!stat.isFile()) fail(`Packed development path is not a regular file: ${relativePath}`);
-      if (!isContained(packageRoot, absolutePath)) fail(`Packed development path escapes package root: ${relativePath}`);
+      if (!isContained(packageRoot, absolutePath))
+        fail(`Packed development path escapes package root: ${relativePath}`);
       const text = readText(absolutePath);
       if (text === null) continue;
       const machinePathInput = text
         .replaceAll('/' + 'Users' + '/user/', '/portable-user/')
         .replaceAll('/' + 'home' + '/user/', '/portable-user/');
       for (const pattern of absoluteMachinePatterns) {
-        if (pattern.test(machinePathInput)) fail(`Absolute machine path leaked into ${relativePath}.`);
+        if (pattern.test(machinePathInput))
+          fail(`Absolute machine path leaked into ${relativePath}.`);
       }
       for (const pattern of privateContentPatterns) {
-        if (pattern.test(text)) fail(`Private Operate planning material leaked into ${relativePath}.`);
+        if (pattern.test(text))
+          fail(`Private Operate planning material leaked into ${relativePath}.`);
       }
       assertImportPurity(packageRoot, relativePath, text);
       assertPortableRuntimePurity(relativePath, text);
@@ -792,7 +833,10 @@ export function checkOperateRuntimePurity(root = repositoryRoot) {
   };
 }
 
-export function packOperateV2DevelopmentSnapshot(destinationRoot, { sourceRoot = repositoryRoot } = {}) {
+export function packOperateV2DevelopmentSnapshot(
+  destinationRoot,
+  { sourceRoot = repositoryRoot } = {},
+) {
   mkdirSync(destinationRoot, { recursive: true });
   const temporaryRoot = mkdtempSync(join(tmpdir(), 'planr-operate-v2-snapshot-'));
   const snapshotRoot = join(temporaryRoot, 'snapshot');
@@ -800,17 +844,18 @@ export function packOperateV2DevelopmentSnapshot(destinationRoot, { sourceRoot =
   try {
     const snapshot = createOperateV2DevelopmentSnapshot(snapshotRoot, { sourceRoot });
     const sourcePurity = checkOperateRuntimePurity(snapshotRoot);
-    const packedOutput = runNpm([
-      'pack', '--ignore-scripts', '--json', '--pack-destination', resolve(destinationRoot),
-    ], {
-      cwd: snapshotRoot,
-      env: {
-        ...process.env,
-        npm_config_audit: 'false',
-        npm_config_fund: 'false',
-        npm_config_cache: join(temporaryRoot, 'npm-cache'),
+    const packedOutput = runNpm(
+      ['pack', '--ignore-scripts', '--json', '--pack-destination', resolve(destinationRoot)],
+      {
+        cwd: snapshotRoot,
+        env: {
+          ...process.env,
+          npm_config_audit: 'false',
+          npm_config_fund: 'false',
+          npm_config_cache: join(temporaryRoot, 'npm-cache'),
+        },
       },
-    });
+    );
     const [packed] = JSON.parse(packedOutput);
     const tarballPath = resolve(destinationRoot, packed.filename);
     const extractedRoot = join(temporaryRoot, 'extracted');
@@ -843,7 +888,10 @@ function optionValue(name) {
   return index === -1 ? null : process.argv[index + 1];
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))) {
+if (
+  process.argv[1] &&
+  realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))
+) {
   try {
     const packDestination = optionValue('--pack-clean');
     const root = optionValue('--root');
@@ -852,11 +900,17 @@ if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToP
       : checkOperateRuntimePurity(root ?? repositoryRoot);
     process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
   } catch (error) {
-    process.stderr.write(`${JSON.stringify({
-      ok: false,
-      error: error.message,
-      details: error.details ?? null,
-    }, null, 2)}\n`);
+    process.stderr.write(
+      `${JSON.stringify(
+        {
+          ok: false,
+          error: error.message,
+          details: error.details ?? null,
+        },
+        null,
+        2,
+      )}\n`,
+    );
     process.exitCode = 1;
   }
 }

@@ -15,7 +15,11 @@ export interface SkillContentLinkResult {
   readonly host: string;
   readonly entrypoint: string;
   readonly assets: ReadonlyArray<string>;
-  readonly links: ReadonlyArray<{ readonly from: string; readonly to: string; readonly line: number }>;
+  readonly links: ReadonlyArray<{
+    readonly from: string;
+    readonly to: string;
+    readonly line: number;
+  }>;
   readonly linkedSupport: ReadonlyArray<string>;
 }
 
@@ -26,7 +30,11 @@ export declare function parseSkillContentLinks(input: {
   host: string;
 }): {
   readonly links: ReadonlyArray<SkillContentLink>;
-  readonly ambiguous: ReadonlyArray<{ readonly target: string; readonly line: number; readonly syntax: 'inline-code' }>;
+  readonly ambiguous: ReadonlyArray<{
+    readonly target: string;
+    readonly line: number;
+    readonly syntax: 'inline-code';
+  }>;
 };
 
 export declare function linkSkillProjection(input: {
@@ -37,9 +45,11 @@ export declare function linkSkillProjection(input: {
   auxiliary?: ReadonlyArray<SkillContentAsset>;
 }): SkillContentLinkResult;
 
-export declare function linkSkillProjections(projections: ReadonlyArray<{
-  readonly skillId: string;
-  readonly host: string;
-  readonly primary: SkillContentAsset;
-  readonly references: ReadonlyArray<SkillContentAsset>;
-}>): ReadonlyArray<SkillContentLinkResult>;
+export declare function linkSkillProjections(
+  projections: ReadonlyArray<{
+    readonly skillId: string;
+    readonly host: string;
+    readonly primary: SkillContentAsset;
+    readonly references: ReadonlyArray<SkillContentAsset>;
+  }>,
+): ReadonlyArray<SkillContentLinkResult>;

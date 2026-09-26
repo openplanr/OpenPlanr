@@ -8,7 +8,7 @@ visual design artifacts. Paired with the tested helpers in [`lib/design/`](../..
 | File | Format | Substrate | Notes |
 |------|--------|-----------|-------|
 | `prototype-shell.html` | prototype | vanilla + Pretext | one interactive screen |
-| `walkthrough-shell.html` | walkthrough | vanilla + Pretext | grouped sidebar gallery; **both nav modes** — anchor-scroll (≤8 screens) and lazy screen-switching (>8), auto-selected by [`chooseWalkthroughNav`](../../lib/design/walkthroughNav.mjs) |
+| `walkthrough-shell.html` | walkthrough | vanilla + Pretext | grouped sidebar gallery; **both nav modes** — anchor-scroll (≤8 screens) and lazy screen-switching (>8), auto-selected by [`chooseWalkthroughNav`](../../lib/design/walkthrough-nav.mjs) |
 | `canvas-shell.html` | canvas | React (vendored) | Figma-like pan/zoom board; **export + view-only** when opened without a host bridge |
 
 Each shell has `<!-- GENERATOR:* -->` markers (title, fonts, tokens, screens/data,

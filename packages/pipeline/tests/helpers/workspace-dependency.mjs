@@ -4,7 +4,10 @@ import { dirname, join, parse } from 'node:path';
 
 const pipelinePackageManifest = new URL('../../package.json', import.meta.url);
 
-export function resolveWorkspaceDependencyRoot(packageName, { from = pipelinePackageManifest } = {}) {
+export function resolveWorkspaceDependencyRoot(
+  packageName,
+  { from = pipelinePackageManifest } = {},
+) {
   const packageRequire = createRequire(from);
   let currentDirectory = dirname(packageRequire.resolve(packageName));
   const filesystemRoot = parse(currentDirectory).root;

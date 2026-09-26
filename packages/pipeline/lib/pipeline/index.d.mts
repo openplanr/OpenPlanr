@@ -17,7 +17,12 @@ export interface ShipClosureRecord {
   state: ShipClosureState;
   receiptHash: `sha256:${string}` | null;
   approvedScope: { featureRoot: string; taskIds: string[]; digest: `sha256:${string}` };
-  repositories: Array<{ repositoryKey: string; root: string | null; head: string; baselineDigest: `sha256:${string}` }>;
+  repositories: Array<{
+    repositoryKey: string;
+    root: string | null;
+    head: string;
+    baselineDigest: `sha256:${string}`;
+  }>;
   reviewerRoster: string[];
   rosterDigest: `sha256:${string}`;
   gates: unknown[];
@@ -43,24 +48,48 @@ export class PipelineError extends Error {
 }
 
 export function assertShipClosure(value: unknown): ShipClosureRecord;
-export function reduceShipClosure(value: ShipClosureRecord, event: unknown, runtime?: unknown): ShipClosureRecord;
-export function buildShipClosureManifestRow(receipt: ShipClosureRecord, projectRoot: string, featureRoot: string): unknown;
-export function buildShipClosureMarker(receipt: ShipClosureRecord, options: {
-  manifestBytes: string | Uint8Array;
-  rowIndex: number;
-  aggregate?: {
-    status: 'passed' | 'blocked';
-    allDone: boolean;
-    receiptCount: number;
-    tasksExecuted: number;
-    tasksFailed: number;
-  };
-}): unknown;
-export function buildShipClosureRunEvidence(receipt: ShipClosureRecord, marker: unknown, markerBytes: string | Uint8Array): unknown;
-export function buildShipClosureProvenanceEvent(receipt: ShipClosureRecord, options: Record<string, unknown>): unknown;
+export function reduceShipClosure(
+  value: ShipClosureRecord,
+  event: unknown,
+  runtime?: unknown,
+): ShipClosureRecord;
+export function buildShipClosureManifestRow(
+  receipt: ShipClosureRecord,
+  projectRoot: string,
+  featureRoot: string,
+): unknown;
+export function buildShipClosureMarker(
+  receipt: ShipClosureRecord,
+  options: {
+    manifestBytes: string | Uint8Array;
+    rowIndex: number;
+    aggregate?: {
+      status: 'passed' | 'blocked';
+      allDone: boolean;
+      receiptCount: number;
+      tasksExecuted: number;
+      tasksFailed: number;
+    };
+  },
+): unknown;
+export function buildShipClosureRunEvidence(
+  receipt: ShipClosureRecord,
+  marker: unknown,
+  markerBytes: string | Uint8Array,
+): unknown;
+export function buildShipClosureProvenanceEvent(
+  receipt: ShipClosureRecord,
+  options: Record<string, unknown>,
+): unknown;
 export function renderShipClosureMarker(marker: unknown): string;
-export function renderShipClosureQaReport(receipt: ShipClosureRecord, options?: Record<string, unknown>): string;
-export function verifyShipCompatibilityProjection(receipt: ShipClosureRecord, options: Record<string, unknown>): boolean;
+export function renderShipClosureQaReport(
+  receipt: ShipClosureRecord,
+  options?: Record<string, unknown>,
+): string;
+export function verifyShipCompatibilityProjection(
+  receipt: ShipClosureRecord,
+  options: Record<string, unknown>,
+): boolean;
 export function prepareShip(options?: Record<string, unknown>): unknown;
 export function startShip(options?: Record<string, unknown>): unknown;
 export function advanceShip(options?: Record<string, unknown>): unknown;
@@ -72,7 +101,9 @@ export function finalizeShipClosure(options?: Record<string, unknown>): unknown;
 export function recordTaskResult(options?: Record<string, unknown>): never;
 export function reopenShip(options?: Record<string, unknown>): unknown;
 export function getShipClosure(options?: Record<string, unknown>): ShipClosureRecord;
-export function inspectShipClosureForLanding(options?: Record<string, unknown>): import('./landing.mjs').ShipClosureLandingInspection;
+export function inspectShipClosureForLanding(
+  options?: Record<string, unknown>,
+): import('./landing.mjs').ShipClosureLandingInspection;
 export function preparePlan(options?: Record<string, unknown>): unknown;
 export function preparePlanReview(options?: Record<string, unknown>): unknown;
 export function prepareBrowserQa(options?: Record<string, unknown>): unknown;
@@ -89,33 +120,23 @@ export function assertPlanningReview(value: unknown): unknown;
 export function planningReviewerRoster(specialists?: string[]): string[];
 export function reducePlanningReview(value: unknown, event: unknown, runtime?: unknown): unknown;
 export function validatePlanningReviewEvent(event: unknown): unknown;
-export * from './ship-risk.d.mts';
+export * from '../protocol/live-evidence-v2.d.mts';
 export * from './browser-qa.d.mts';
-export * from './professional-skills.d.mts';
 export * from './investigation-contracts.d.mts';
 export * from './investigation-identity.d.mts';
 export * from './investigation-reducer.d.mts';
 export * from './investigation-runtime.d.mts';
-export * from '../protocol/live-evidence-v2.d.mts';
-export * from './landing-contract.d.mts';
 export {
-  LANDING_OPERATION_REGISTRY_PATH,
-  LANDING_WORKFLOW_ASSET_PATHS,
-  LANDING_WORKFLOW_CATALOG_PATH,
-  LANDING_WORKFLOW_ID,
-  LANDING_WORKFLOW_MANIFEST_PATH,
   advanceLanding,
   assertLandingWorkflowCatalog,
   assertLandingWorkflowManifest,
   bindLandingPlan,
   createLandingOwnerRuntimeHost,
-  landingStatus,
-  prepareLanding,
-  previewLandingDocket,
-  readLandingOperationRegistry,
-  readLandingWorkflowCatalog,
-  readLandingWorkflowManifest,
-  showLanding,
+  LANDING_OPERATION_REGISTRY_PATH,
+  LANDING_WORKFLOW_ASSET_PATHS,
+  LANDING_WORKFLOW_CATALOG_PATH,
+  LANDING_WORKFLOW_ID,
+  LANDING_WORKFLOW_MANIFEST_PATH,
   type LandingConfirmation,
   type LandingEvent,
   type LandingHash,
@@ -125,8 +146,18 @@ export {
   type LandingPlan,
   type LandingRunId,
   type LandingState,
+  landingStatus,
+  prepareLanding,
+  previewLandingDocket,
+  readLandingOperationRegistry,
+  readLandingWorkflowCatalog,
+  readLandingWorkflowManifest,
   type ShipClosureLandingInspection,
+  showLanding,
 } from './landing.d.mts';
+export * from './landing-contract.d.mts';
+export * from './professional-skills.d.mts';
+export * from './ship-risk.d.mts';
 export function completePlan(options?: Record<string, unknown>): unknown;
 export function nextShipBatch(tasks: unknown[]): unknown;
 export function runSyncAudit(options?: Record<string, unknown>): unknown;

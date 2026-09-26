@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { access } from 'node:fs/promises';
 import { join } from 'node:path';
-import { pathToFileURL } from 'node:url';
 import { test } from 'node:test';
+import { pathToFileURL } from 'node:url';
 
 assert.equal(
   typeof process.env.PLANR_OPENPLANR_ROOT,

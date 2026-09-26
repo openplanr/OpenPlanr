@@ -1,6 +1,14 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync, mkdirSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import test from 'node:test';
@@ -16,7 +24,8 @@ const root = resolve(import.meta.dirname, '..', '..');
 const read = (path) => readFileSync(resolve(root, path), 'utf8');
 const registry = readSkillSourceRegistry({ repoRoot: root });
 const skillIds = registry.skills.map(({ skillId }) => skillId);
-const forbiddenSemanticCli = /`planr\s+(?:plan|spec\s+decompose)(?:\s|`)|`planr-pipeline(?:\s|`)|PIPELINE_PACKAGE_ROOT|ANTHROPIC_API_KEY|OPENAI_API_KEY|OLLAMA/u;
+const forbiddenSemanticCli =
+  /`planr\s+(?:plan|spec\s+decompose)(?:\s|`)|`planr-pipeline(?:\s|`)|PIPELINE_PACKAGE_ROOT|ANTHROPIC_API_KEY|OPENAI_API_KEY|OLLAMA/u;
 
 function directories(path) {
   return readdirSync(resolve(root, path), { withFileTypes: true })
@@ -37,10 +46,18 @@ test('canonical source exposes registry-owned directly readable Protocol 1.8 pac
     assert.equal(packageInfo.manifest.execution, 'host-agent');
     assert.ok(packageInfo.markdown.startsWith('---\nname: '));
     for (const legacy of ['SKILL.md.tmpl', 'skill.json', 'contribution.json']) {
-      assert.equal(existsSync(resolve(packageInfo.skillDir, legacy)), false, row.skillId + '/' + legacy);
+      assert.equal(
+        existsSync(resolve(packageInfo.skillDir, legacy)),
+        false,
+        row.skillId + '/' + legacy,
+      );
     }
     const moduleRoot = resolve(packageInfo.skillDir, 'modules');
-    assert.equal(existsSync(moduleRoot) ? readdirSync(moduleRoot).length : 0, 0, row.skillId + '/modules');
+    assert.equal(
+      existsSync(moduleRoot) ? readdirSync(moduleRoot).length : 0,
+      0,
+      row.skillId + '/modules',
+    );
     for (const resource of packageInfo.resources) {
       assert.ok(resource.absolute.startsWith(packageInfo.skillDir + '/'));
     }
@@ -55,7 +72,12 @@ test('generated host distributions contain every canonical skill and nine Claude
   const expected = skillIds.map(projectedSkillName).sort();
   assert.deepEqual(directories('dist/plugins/openai/openplanr/skills'), expected);
   assert.deepEqual(directories('dist/plugins/claude/openplanr/skills'), expected);
-  assert.equal(readdirSync(resolve(root, 'dist/plugins/cursor/openplanr/rules')).filter((name) => name.endsWith('.mdc')).length, skillIds.length);
+  assert.equal(
+    readdirSync(resolve(root, 'dist/plugins/cursor/openplanr/rules')).filter((name) =>
+      name.endsWith('.mdc'),
+    ).length,
+    skillIds.length,
+  );
   assert.deepEqual(
     readdirSync(resolve(root, 'dist/plugins/claude/openplanr/agents'))
       .filter((name) => name.endsWith('.md'))
@@ -73,7 +95,11 @@ test('generated host distributions contain every canonical skill and nine Claude
       const projected = readFileSync(resolve(plugin, 'skills', hostSkillName, 'SKILL.md'), 'utf8');
       assert.ok(projected.length > 80);
       assert.match(projected, new RegExp(`^name: ${hostSkillName}$`, 'mu'));
-      assert.ok(JSON.parse(readFileSync(resolve(plugin, 'skills', hostSkillName, 'openplanr.skill.json'), 'utf8')));
+      assert.ok(
+        JSON.parse(
+          readFileSync(resolve(plugin, 'skills', hostSkillName, 'openplanr.skill.json'), 'utf8'),
+        ),
+      );
     }
   }
 });
@@ -85,7 +111,10 @@ test('Plan, Spec, and Ship are host-native and independent of CLI or provider cr
     assert.doesNotMatch(source, forbiddenSemanticCli);
   }
   assert.match(read('skills/planr-plan/SKILL.md'), /write stories and tasks directly/iu);
-  assert.match(read('skills/planr-ship/SKILL.md'), /read, edit, shell, browser, and test capabilities/iu);
+  assert.match(
+    read('skills/planr-ship/SKILL.md'),
+    /read, edit, shell, browser, and test capabilities/iu,
+  );
   assert.match(read('skills/planr-plan/SKILL.md'), /acceptanceRefs/iu);
   assert.match(read('skills/planr-plan/SKILL.md'), /reviewRisks/iu);
   assert.match(read('skills/planr-plan/SKILL.md'), /browserSurfaces/iu);
@@ -103,25 +132,51 @@ test('packaged Plan and Ship helpers run offline with no planr executable or mod
       OLLAMA_HOST: '',
     };
     const missingRoot = resolve(project, 'missing-plan');
-    const ids = spawnSync(process.execPath, [
-      resolve(root, 'dist/plugins/openai/openplanr/skills/plan/scripts/planning-ids.mjs'),
-      '--root', missingRoot,
-      '--stories', '2',
-      '--tasks', '2',
-      '--preview',
-    ], { cwd: project, encoding: 'utf8', env });
+    const ids = spawnSync(
+      process.execPath,
+      [
+        resolve(root, 'dist/plugins/openai/openplanr/skills/plan/scripts/planning-ids.mjs'),
+        '--root',
+        missingRoot,
+        '--stories',
+        '2',
+        '--tasks',
+        '2',
+        '--preview',
+      ],
+      { cwd: project, encoding: 'utf8', env },
+    );
     assert.equal(ids.status, 0, ids.stderr);
-    assert.deepEqual(JSON.parse(ids.stdout).ids, { SPEC: [], US: ['US-001', 'US-002'], T: ['T-001', 'T-002'] });
+    assert.deepEqual(JSON.parse(ids.stdout).ids, {
+      SPEC: [],
+      US: ['US-001', 'US-002'],
+      T: ['T-001', 'T-002'],
+    });
     assert.equal(existsSync(missingRoot), false, 'preview must perform zero writes');
 
     mkdirSync(resolve(project, '.planr/specs/SPEC-001-demo/tasks'), { recursive: true });
-    writeFileSync(resolve(project, 'package.json'), JSON.stringify({ scripts: { test: 'node --test', lint: 'node lint.mjs' } }));
-    writeFileSync(resolve(project, '.planr/specs/SPEC-001-demo/tasks/T-001-demo.md'), '## Test Requirements\n\n- AC-001: npm test\n');
-    const checks = spawnSync(process.execPath, [
-      resolve(root, 'dist/plugins/openai/openplanr/skills/ship/scripts/discover-verification.mjs'),
-      '--project', project,
-      '--task', '.planr/specs/SPEC-001-demo/tasks/T-001-demo.md',
-    ], { cwd: project, encoding: 'utf8', env });
+    writeFileSync(
+      resolve(project, 'package.json'),
+      JSON.stringify({ scripts: { test: 'node --test', lint: 'node lint.mjs' } }),
+    );
+    writeFileSync(
+      resolve(project, '.planr/specs/SPEC-001-demo/tasks/T-001-demo.md'),
+      '## Test Requirements\n\n- AC-001: npm test\n',
+    );
+    const checks = spawnSync(
+      process.execPath,
+      [
+        resolve(
+          root,
+          'dist/plugins/openai/openplanr/skills/ship/scripts/discover-verification.mjs',
+        ),
+        '--project',
+        project,
+        '--task',
+        '.planr/specs/SPEC-001-demo/tasks/T-001-demo.md',
+      ],
+      { cwd: project, encoding: 'utf8', env },
+    );
     assert.equal(checks.status, 0, checks.stderr);
     const report = JSON.parse(checks.stdout);
     assert.deepEqual(report.checks.slice(0, 1), [
@@ -135,10 +190,12 @@ test('packaged Plan and Ship helpers run offline with no planr executable or mod
 test('optional CLI is provider-free and exposes only the classified deterministic roots', () => {
   const cli = JSON.parse(read('packages/cli/package.json'));
   const dependencies = { ...cli.dependencies, ...cli.optionalDependencies };
-  for (const provider of ['@anthropic-ai/sdk', 'openai', 'ollama']) assert.equal(dependencies[provider], undefined);
+  for (const provider of ['@anthropic-ai/sdk', 'openai', 'ollama'])
+    assert.equal(dependencies[provider], undefined);
   const commandCatalog = JSON.parse(read('docs/generated/utility-command-catalog.json'));
   const roots = new Set(commandCatalog.active.map(({ path }) => path.split(' ')[0]));
-  for (const retired of ['plan', 'pipeline', 'estimate', 'refine', 'revise', 'evidence']) assert.equal(roots.has(retired), false);
+  for (const retired of ['plan', 'pipeline', 'estimate', 'refine', 'revise', 'evidence'])
+    assert.equal(roots.has(retired), false);
   assert.ok(commandCatalog.retired.some(({ path }) => path === 'spec decompose'));
 
   const providerSourceHits = [];
@@ -148,7 +205,10 @@ test('optional CLI is provider-free and exposes only the classified deterministi
       if (entry.isDirectory()) visit(path);
       else if (entry.isFile() && /\.(?:ts|js|mjs)$/u.test(entry.name)) {
         const bytes = readFileSync(path, 'utf8');
-        if (/getAIProvider|generateStreamingJSON|@anthropic-ai\/sdk|from ['"]openai['"]/u.test(bytes)) providerSourceHits.push(path);
+        if (
+          /getAIProvider|generateStreamingJSON|@anthropic-ai\/sdk|from ['"]openai['"]/u.test(bytes)
+        )
+          providerSourceHits.push(path);
       }
     }
   };

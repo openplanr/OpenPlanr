@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { after, test } from 'node:test';
+import { fileURLToPath } from 'node:url';
 
 import { resolveWorkspaceDependencyRoot } from '../helpers/workspace-dependency.mjs';
 
@@ -19,7 +19,9 @@ function resvgPlatformPackage() {
     const libc = process.report?.getReport()?.header?.glibcVersionRuntime ? 'gnu' : 'musl';
     return `@resvg/resvg-js-linux-${process.arch}-${libc}`;
   }
-  throw new Error(`Unsupported packed diagram-renderer test platform: ${process.platform}-${process.arch}`);
+  throw new Error(
+    `Unsupported packed diagram-renderer test platform: ${process.platform}-${process.arch}`,
+  );
 }
 
 after(() => rmSync(temp, { recursive: true, force: true }));
@@ -46,9 +48,9 @@ function runNpm(args, options = {}) {
 }
 
 test(`packed ${packageVersion} package contains the portable artifact release boundary`, () => {
-  const packed = JSON.parse(runNpm([
-    'pack', '--json', '--ignore-scripts', '--pack-destination', temp,
-  ]).stdout)[0];
+  const packed = JSON.parse(
+    runNpm(['pack', '--json', '--ignore-scripts', '--pack-destination', temp]).stdout,
+  )[0];
   const files = new Set(packed.files.map(({ path }) => path));
   const required = [
     'conformance/verify-artifact-review.mjs',
@@ -100,40 +102,59 @@ test(`packed ${packageVersion} package contains the portable artifact release bo
     'pako',
     'parse5',
   ]) {
-    const [dependencyPack] = JSON.parse(runNpm([
-      'pack', '--ignore-scripts', '--json', '--pack-destination', dependencyRoot,
-    ], { cwd: resolveWorkspaceDependencyRoot(dependency) }).stdout);
+    const [dependencyPack] = JSON.parse(
+      runNpm(['pack', '--ignore-scripts', '--json', '--pack-destination', dependencyRoot], {
+        cwd: resolveWorkspaceDependencyRoot(dependency),
+      }).stdout,
+    );
     localDependencies[dependency] = `file:${join(dependencyRoot, dependencyPack.filename)}`;
   }
-  writeFileSync(join(installRoot, 'package.json'), JSON.stringify({
-    name: 'artifact-packed-install-consumer',
-    private: true,
-    type: 'module',
-    dependencies: localDependencies,
-  }));
+  writeFileSync(
+    join(installRoot, 'package.json'),
+    JSON.stringify({
+      name: 'artifact-packed-install-consumer',
+      private: true,
+      type: 'module',
+      dependencies: localDependencies,
+    }),
+  );
   const tarball = join(temp, packed.filename);
-  runNpm([
-    'install', '--ignore-scripts', '--no-audit', '--no-fund', '--omit=dev',
-    '--omit=optional', '--no-package-lock', '--offline', tarball,
-  ], { cwd: installRoot });
+  runNpm(
+    [
+      'install',
+      '--ignore-scripts',
+      '--no-audit',
+      '--no-fund',
+      '--omit=dev',
+      '--omit=optional',
+      '--no-package-lock',
+      '--offline',
+      tarball,
+    ],
+    { cwd: installRoot },
+  );
 
   const packageRoot = join(installRoot, 'node_modules', 'planr-pipeline');
   const installedBin = join(packageRoot, 'bin', 'planr-pipeline.mjs');
   const binSmoke = run(process.execPath, [installedBin, '--help'], { cwd: installRoot });
   assert.match(binSmoke.stdout, /planr-pipeline/);
-  const importSmoke = run(process.execPath, [
-    '--input-type=module',
-    '--eval',
-    "import fs from 'node:fs'; import * as p from 'planr-pipeline'; const root=new URL('./node_modules/planr-pipeline/', import.meta.url); const diagram=await import(new URL('lib/artifact/diagram/index.mjs', root)); const names=['bundleArtifact','createArtifactEnvelope','encodeArtifactFragment','decodeArtifactFragment','encryptArtifactPayload','decryptArtifactPayload','startArtifactReview','exportArtifactReviewSession','createReviewLink','createReviewLinkPreview','decodeReviewLink','importArtifactReview','mergeArtifactFeedback','createLiveReviewRoom','appendLiveRoomEvent','hydrateLiveReviewRoom','reduceLiveRoomEvents']; if(names.some((name)=>typeof p[name]!=='function') || typeof diagram.renderDiagramOutputs!=='function') process.exit(2); const document=JSON.parse(fs.readFileSync(new URL('fixtures/diagram/grammars/flowchart.planr-diagram.json', root))); const output=diagram.renderDiagramOutputs(document); const png=diagram.inspectDiagramPng(output.png.bytes); if(!output.svg.startsWith('<svg') || png.width<320 || png.height<320) process.exit(3);",
-  ], {
-    cwd: installRoot,
-    env: {
-      ...process.env,
-      HOME: join(temp, 'home'),
-      USERPROFILE: join(temp, 'home'),
-      npm_config_cache: join(temp, 'npm-cache'),
+  const importSmoke = run(
+    process.execPath,
+    [
+      '--input-type=module',
+      '--eval',
+      "import fs from 'node:fs'; import * as p from 'planr-pipeline'; const root=new URL('./node_modules/planr-pipeline/', import.meta.url); const diagram=await import(new URL('lib/artifact/diagram/index.mjs', root)); const names=['bundleArtifact','createArtifactEnvelope','encodeArtifactFragment','decodeArtifactFragment','encryptArtifactPayload','decryptArtifactPayload','startArtifactReview','exportArtifactReviewSession','createReviewLink','createReviewLinkPreview','decodeReviewLink','importArtifactReview','mergeArtifactFeedback','createLiveReviewRoom','appendLiveRoomEvent','hydrateLiveReviewRoom','reduceLiveRoomEvents']; if(names.some((name)=>typeof p[name]!=='function') || typeof diagram.renderDiagramOutputs!=='function') process.exit(2); const document=JSON.parse(fs.readFileSync(new URL('fixtures/diagram/grammars/flowchart.planr-diagram.json', root))); const output=diagram.renderDiagramOutputs(document); const png=diagram.inspectDiagramPng(output.png.bytes); if(!output.svg.startsWith('<svg') || png.width<320 || png.height<320) process.exit(3);",
+    ],
+    {
+      cwd: installRoot,
+      env: {
+        ...process.env,
+        HOME: join(temp, 'home'),
+        USERPROFILE: join(temp, 'home'),
+        npm_config_cache: join(temp, 'npm-cache'),
+      },
     },
-  });
+  );
   assert.equal(importSmoke.status, 0);
 
   const doctor = run(process.execPath, [join(packageRoot, 'scripts', 'doctor.mjs'), '--json'], {
@@ -151,7 +172,14 @@ test(`packed ${packageVersion} package contains the portable artifact release bo
   assert.ok(report.checks.some(({ id }) => id === 'artifact.assets-present'));
   assert.ok(report.checks.some(({ id }) => id === 'artifact.public-exports'));
 
-  for (const promptRoot of ['.claude-plugin', 'adapters', 'agents', 'commands', 'plugins', 'skills']) {
+  for (const promptRoot of [
+    '.claude-plugin',
+    'adapters',
+    'agents',
+    'commands',
+    'plugins',
+    'skills',
+  ]) {
     assert.equal(
       existsSync(join(packageRoot, promptRoot)),
       false,

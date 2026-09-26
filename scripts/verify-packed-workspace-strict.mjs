@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
+import { spawnSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
-import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -21,11 +21,12 @@ function optionValue(name) {
 }
 
 function unsupportedArgument() {
-  return rawArgs.find((argument, index) => (
-    argument !== '--proof'
-    && !argument.startsWith('--proof=')
-    && rawArgs[index - 1] !== '--proof'
-  ));
+  return rawArgs.find(
+    (argument, index) =>
+      argument !== '--proof' &&
+      !argument.startsWith('--proof=') &&
+      rawArgs[index - 1] !== '--proof',
+  );
 }
 
 function run(script, args = []) {
@@ -51,19 +52,28 @@ function safeCleanup(directory) {
   if (!directory) return;
   const selected = realpathSync(directory);
   const temporaryRoot = realpathSync(tmpdir());
-  if (dirname(selected) !== temporaryRoot || !selected.startsWith(join(temporaryRoot, 'openplanr-packed-strict-'))) {
+  if (
+    dirname(selected) !== temporaryRoot ||
+    !selected.startsWith(join(temporaryRoot, 'openplanr-packed-strict-'))
+  ) {
     throw new Error('Refused to clean an unsafe strict-proof workspace.');
   }
   rmSync(selected, { recursive: true, force: true });
 }
 
 function reportFailure(code, message, detail = undefined) {
-  process.stdout.write(`${JSON.stringify({
-    kind: STRICT_KIND,
-    schemaVersion: STRICT_SCHEMA_VERSION,
-    ok: false,
-    error: { code, message, ...(detail === undefined ? {} : { detail }) },
-  }, null, 2)}\n`);
+  process.stdout.write(
+    `${JSON.stringify(
+      {
+        kind: STRICT_KIND,
+        schemaVersion: STRICT_SCHEMA_VERSION,
+        ok: false,
+        error: { code, message, ...(detail === undefined ? {} : { detail }) },
+      },
+      null,
+      2,
+    )}\n`,
+  );
   process.exitCode = 1;
 }
 
@@ -86,7 +96,8 @@ if (unknown) {
         reportFailure(
           'E_PACKED_STRICT_PRODUCER_FAILED',
           'Packed-workspace proof generation failed.',
-          proof ?? (produced.stderr || produced.error?.message || `exit ${String(produced.status)}`),
+          proof ??
+            (produced.stderr || produced.error?.message || `exit ${String(produced.status)}`),
         );
       } else {
         proofPath = join(temporaryWorkspace, 'packed-workspace-proof.json');
@@ -109,24 +120,31 @@ if (unknown) {
         reportFailure(
           'E_PACKED_STRICT_CONSUMER_FAILED',
           'Strict ecosystem conformance rejected the packed-workspace proof.',
-          conformance ?? (consumed.stderr || consumed.error?.message || `exit ${String(consumed.status)}`),
+          conformance ??
+            (consumed.stderr || consumed.error?.message || `exit ${String(consumed.status)}`),
         );
       } else {
-        process.stdout.write(`${JSON.stringify({
-          kind: STRICT_KIND,
-          schemaVersion: STRICT_SCHEMA_VERSION,
-          ok: true,
-          proof: {
-            kind: proof?.kind ?? null,
-            schemaVersion: proof?.schemaVersion ?? null,
-            digest: proof?.proofDigest ?? null,
-          },
-          conformance: {
-            failures: conformance.failures,
-            warnings: conformance.warnings,
-            checks: conformance.checks,
-          },
-        }, null, 2)}\n`);
+        process.stdout.write(
+          `${JSON.stringify(
+            {
+              kind: STRICT_KIND,
+              schemaVersion: STRICT_SCHEMA_VERSION,
+              ok: true,
+              proof: {
+                kind: proof?.kind ?? null,
+                schemaVersion: proof?.schemaVersion ?? null,
+                digest: proof?.proofDigest ?? null,
+              },
+              conformance: {
+                failures: conformance.failures,
+                warnings: conformance.warnings,
+                checks: conformance.checks,
+              },
+            },
+            null,
+            2,
+          )}\n`,
+        );
       }
     }
   } catch (error) {

@@ -3,22 +3,22 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 import { validateJson } from '../../conformance/json-schema-validate.mjs';
+import { contentHash } from '../../lib/dashboard/closed-json-contract.mjs';
 import * as slicedReviewSchemaData from '../../lib/dashboard/generated/operate-review-schema-data.mjs';
-import {
-  issueOperateReviewDisplayWorkspaceV1,
-  OPERATE_REVIEW_DISPLAY_WORKSPACE_DOMAIN,
-  validateOperateReviewDisplayWorkspaceV1,
-} from '../../lib/dashboard/operate-review-display-workspace-contract.mjs';
-import {
-  assertOperateReviewDisplayWorkspaceV1 as assertBrowserSafeReviewDisplayWorkspaceV1,
-  assertOperatingReviewReceiptV2,
-} from '../../lib/dashboard/operate-review-contract.mjs';
 import {
   selectOperateExperienceSurface,
   selectOperateReviewDisplayWorkspace,
   selectOperateReviewWorkspace,
 } from '../../lib/dashboard/operate-experience-reader.mjs';
-import { contentHash } from '../../lib/dashboard/closed-json-contract.mjs';
+import {
+  assertOperateReviewDisplayWorkspaceV1 as assertBrowserSafeReviewDisplayWorkspaceV1,
+  assertOperatingReviewReceiptV2,
+} from '../../lib/dashboard/operate-review-contract.mjs';
+import {
+  issueOperateReviewDisplayWorkspaceV1,
+  OPERATE_REVIEW_DISPLAY_WORKSPACE_DOMAIN,
+  validateOperateReviewDisplayWorkspaceV1,
+} from '../../lib/dashboard/operate-review-display-workspace-contract.mjs';
 import {
   buildOperateReviewWorkspacePayloadV1,
   deriveOperateSharedTruthSummaryV1,
@@ -31,14 +31,24 @@ const TIME = '2026-08-23T08:00:00.000Z';
 const NEXT_TIME = '2026-08-23T08:01:00.000Z';
 const HASH_A = `sha256:${'a'.repeat(64)}`;
 const HASH_B = `sha256:${'b'.repeat(64)}`;
-const fixture = JSON.parse(readFileSync(new URL(
-  '../../conformance/fixtures/operating-runtime-v2/experience-bridge-valid.json',
-  import.meta.url,
-), 'utf8'))['operate-experience-view'];
-const allContractsFixture = JSON.parse(readFileSync(new URL(
-  '../../conformance/fixtures/operating-runtime-v2/all-contracts-valid.json',
-  import.meta.url,
-), 'utf8'));
+const fixture = JSON.parse(
+  readFileSync(
+    new URL(
+      '../../conformance/fixtures/operating-runtime-v2/experience-bridge-valid.json',
+      import.meta.url,
+    ),
+    'utf8',
+  ),
+)['operate-experience-view'];
+const allContractsFixture = JSON.parse(
+  readFileSync(
+    new URL(
+      '../../conformance/fixtures/operating-runtime-v2/all-contracts-valid.json',
+      import.meta.url,
+    ),
+    'utf8',
+  ),
+);
 const REVIEW_SCHEMA_INPUTS = Object.freeze([
   ['OPERATE_ALLOWED_ACTION_SCHEMA', 'operate-allowed-action.schema.json'],
   ['OPERATE_EXPERIENCE_VIEW_SCHEMA', 'operate-experience-view.schema.json'],
@@ -51,14 +61,18 @@ const REVIEW_SCHEMA_INPUTS = Object.freeze([
   ['OPERATING_REVIEW_SCHEMA', 'operating-review.schema.json'],
   ['OPERATING_TRACE_MATRIX_SCHEMA', 'operating-trace-matrix.schema.json'],
 ]);
-const fullReviewSchemas = new Map(REVIEW_SCHEMA_INPUTS.map(([, filename]) => [
-  filename,
-  JSON.parse(readFileSync(new URL(`../../schemas/v2.0.0/${filename}`, import.meta.url), 'utf8')),
-]));
-const slicedReviewSchemas = new Map(REVIEW_SCHEMA_INPUTS.map(([exportName, filename]) => [
-  filename,
-  slicedReviewSchemaData[`${exportName}_REVIEW_SLICE`],
-]));
+const fullReviewSchemas = new Map(
+  REVIEW_SCHEMA_INPUTS.map(([, filename]) => [
+    filename,
+    JSON.parse(readFileSync(new URL(`../../schemas/v2.0.0/${filename}`, import.meta.url), 'utf8')),
+  ]),
+);
+const slicedReviewSchemas = new Map(
+  REVIEW_SCHEMA_INPUTS.map(([exportName, filename]) => [
+    filename,
+    slicedReviewSchemaData[`${exportName}_REVIEW_SLICE`],
+  ]),
+);
 
 function schemaPointer(root, fragment) {
   if (!fragment || fragment === '#') return root;
@@ -83,10 +97,12 @@ function schemaResolver(schemas, reference) {
 }
 
 function schemaAccepts(value, filename, schemas) {
-  return validateJson(structuredClone(value), schemas.get(filename), {
-    base: `schemas/v2.0.0/${filename}`,
-    resolveRef: (reference) => schemaResolver(schemas, reference),
-  }).length === 0;
+  return (
+    validateJson(structuredClone(value), schemas.get(filename), {
+      base: `schemas/v2.0.0/${filename}`,
+      resolveRef: (reference) => schemaResolver(schemas, reference),
+    }).length === 0
+  );
 }
 
 function valueAtPath(value, path) {
@@ -101,57 +117,64 @@ function deterministicPropertyMutations(value, limit = 160) {
     if (Array.isArray(nested)) {
       nested.slice(0, 3).forEach((entry, index) => visit(entry, [...path, index]));
     } else if (nested && typeof nested === 'object') {
-      Object.keys(nested).sort().slice(0, 8)
+      Object.keys(nested)
+        .sort()
+        .slice(0, 8)
         .forEach((field) => visit(nested[field], [...path, field]));
     }
   };
   visit(value, []);
-  return paths.flatMap((path) => {
-    const nested = valueAtPath(value, path);
-    const mutations = [];
-    if (nested && typeof nested === 'object' && !Array.isArray(nested)) {
-      const extra = structuredClone(value);
-      valueAtPath(extra, path).__sliceProbe = true;
-      mutations.push(extra);
-      const [firstField] = Object.keys(nested).sort();
-      if (firstField !== undefined) {
-        const missing = structuredClone(value);
-        delete valueAtPath(missing, path)[firstField];
-        mutations.push(missing);
+  return paths
+    .flatMap((path) => {
+      const nested = valueAtPath(value, path);
+      const mutations = [];
+      if (nested && typeof nested === 'object' && !Array.isArray(nested)) {
+        const extra = structuredClone(value);
+        valueAtPath(extra, path).__sliceProbe = true;
+        mutations.push(extra);
+        const [firstField] = Object.keys(nested).sort();
+        if (firstField !== undefined) {
+          const missing = structuredClone(value);
+          delete valueAtPath(missing, path)[firstField];
+          mutations.push(missing);
+        }
+      } else if (Array.isArray(nested)) {
+        const appended = structuredClone(value);
+        valueAtPath(appended, path).push({ __sliceProbe: true });
+        mutations.push(appended);
+      } else if (path.length > 0) {
+        const replaced = structuredClone(value);
+        const parent = valueAtPath(replaced, path.slice(0, -1));
+        const key = path.at(-1);
+        parent[key] =
+          typeof nested === 'string'
+            ? 7
+            : typeof nested === 'number'
+              ? 'invalid'
+              : typeof nested === 'boolean'
+                ? 'invalid'
+                : { __sliceProbe: true };
+        mutations.push(replaced);
       }
-    } else if (Array.isArray(nested)) {
-      const appended = structuredClone(value);
-      valueAtPath(appended, path).push({ __sliceProbe: true });
-      mutations.push(appended);
-    } else if (path.length > 0) {
-      const replaced = structuredClone(value);
-      const parent = valueAtPath(replaced, path.slice(0, -1));
-      const key = path.at(-1);
-      parent[key] = typeof nested === 'string'
-        ? 7
-        : typeof nested === 'number'
-          ? 'invalid'
-          : typeof nested === 'boolean'
-            ? 'invalid'
-            : { __sliceProbe: true };
-      mutations.push(replaced);
-    }
-    return mutations;
-  }).slice(0, limit);
+      return mutations;
+    })
+    .slice(0, limit);
 }
 
 function stages({ verificationState = 'waiting' } = {}) {
-  return ['observe', 'understand', 'decide', 'govern', 'act', 'verify', 'learn'].map((id, index) => ({
-    id,
-    state: id === 'verify' ? verificationState : index < 4 ? 'complete' : 'waiting',
-    reason: verificationState === 'skipped' && id === 'verify' ? 'Cycle is cancelled.' : null,
-    inputArtifactIds: [],
-    outputArtifactIds: [],
-    gates: [],
-    evidenceGapIds: [],
-    uncertaintyIds: [],
-    persistentActionIds: [],
-  }));
+  return ['observe', 'understand', 'decide', 'govern', 'act', 'verify', 'learn'].map(
+    (id, index) => ({
+      id,
+      state: id === 'verify' ? verificationState : index < 4 ? 'complete' : 'waiting',
+      reason: verificationState === 'skipped' && id === 'verify' ? 'Cycle is cancelled.' : null,
+      inputArtifactIds: [],
+      outputArtifactIds: [],
+      gates: [],
+      evidenceGapIds: [],
+      uncertaintyIds: [],
+      persistentActionIds: [],
+    }),
+  );
 }
 
 function evidenceRecord({
@@ -274,12 +297,14 @@ function pendingSource({ decisions = [decisionSummary()] } = {}) {
     findings: [],
     dissent: [],
     gaps: [],
-    dispositionChoices: [{
-      choiceId: 'rch_00000001',
-      choiceHash: sha256Jcs(submitArguments),
-      label: 'Approve exact proposed work',
-      submitArguments,
-    }],
+    dispositionChoices: [
+      {
+        choiceId: 'rch_00000001',
+        choiceHash: sha256Jcs(submitArguments),
+        label: 'Approve exact proposed work',
+        submitArguments,
+      },
+    ],
     readAt: NEXT_TIME,
   };
 }
@@ -325,46 +350,52 @@ function terminalSource(read = pendingSource()) {
   };
 }
 
-function reviewView(source, {
-  status = 'ready',
-  restricted = false,
-  evidence = [evidenceRecord({ restricted })],
-  claims = [claimRecord({ restricted })],
-  omissions = restricted
-    ? [{ classification: 'restricted', count: 1, reason: 'access-denied' }]
-    : [],
-  assignments,
-  verificationState = 'waiting',
-} = {}) {
+function reviewView(
+  source,
+  {
+    status = 'ready',
+    restricted = false,
+    evidence = [evidenceRecord({ restricted })],
+    claims = [claimRecord({ restricted })],
+    omissions = restricted
+      ? [{ classification: 'restricted', count: 1, reason: 'access-denied' }]
+      : [],
+    assignments,
+    verificationState = 'waiting',
+  } = {},
+) {
   const sourceActor = source.kind === 'operating-review-read' ? source.reader : source.actor;
   const sourceTime = source.kind === 'operating-review-read' ? source.readAt : source.committedAt;
   const eventCount = source.eventHead.sequence;
-  const cycleAssignments = assignments ?? [{
-    assignmentId: 'asg_review_0001',
-    title: 'Synthesize the owner Review',
-    role: 'chair',
-    ownerLabel: 'Chair',
-    state: 'validated',
-    absence: null,
-    dueAt: null,
-    next: null,
-    deepLink: `#/operate/cycles/${source.cycleId}`,
-    dependencies: [],
-    blockers: [],
-    inputArtifactIds: [],
-    outputArtifactIds: [],
-  }];
-  const allowedActions = source.kind === 'operating-review-read'
-    ? source.dispositionChoices.map((choice) => ({
-        subjectId: source.review.reviewId,
-        action: {
-          tool: 'operate.review.submit',
-          arguments: structuredClone(choice.submitArguments),
-          label: choice.label,
-          effect: 'project-write',
-        },
-      }))
-    : [];
+  const cycleAssignments = assignments ?? [
+    {
+      assignmentId: 'asg_review_0001',
+      title: 'Synthesize the owner Review',
+      role: 'chair',
+      ownerLabel: 'Chair',
+      state: 'validated',
+      absence: null,
+      dueAt: null,
+      next: null,
+      deepLink: `#/operate/cycles/${source.cycleId}`,
+      dependencies: [],
+      blockers: [],
+      inputArtifactIds: [],
+      outputArtifactIds: [],
+    },
+  ];
+  const allowedActions =
+    source.kind === 'operating-review-read'
+      ? source.dispositionChoices.map((choice) => ({
+          subjectId: source.review.reviewId,
+          action: {
+            tool: 'operate.review.submit',
+            arguments: structuredClone(choice.submitArguments),
+            label: choice.label,
+            effect: 'project-write',
+          },
+        }))
+      : [];
   return rehashExperienceView({
     ...structuredClone(fixture),
     actorId: sourceActor.actorId,
@@ -374,23 +405,25 @@ function reviewView(source, {
     generatedAt: sourceTime,
     eventHead: structuredClone(source.eventHead),
     status,
-    cycles: [{
-      cycleId: source.cycleId,
-      state: source.kind === 'operating-review-read' ? 'awaiting_review' : 'closed',
-      health: 'normal',
-      focus: ['Review the bounded operating recommendation'],
-      createdAt: TIME,
-      updatedAt: sourceTime,
-      stages: stages({ verificationState }),
-      assignments: cycleAssignments,
-      lensAbsences: [],
-      executiveBoard: null,
-      dependencies: [],
-      blockers: [],
-      persistentActionIds: [],
-      replayCheckpoint: null,
-      deepLink: `#/operate/cycles/${source.cycleId}`,
-    }],
+    cycles: [
+      {
+        cycleId: source.cycleId,
+        state: source.kind === 'operating-review-read' ? 'awaiting_review' : 'closed',
+        health: 'normal',
+        focus: ['Review the bounded operating recommendation'],
+        createdAt: TIME,
+        updatedAt: sourceTime,
+        stages: stages({ verificationState }),
+        assignments: cycleAssignments,
+        lensAbsences: [],
+        executiveBoard: null,
+        dependencies: [],
+        blockers: [],
+        persistentActionIds: [],
+        replayCheckpoint: null,
+        deepLink: `#/operate/cycles/${source.cycleId}`,
+      },
+    ],
     attention: [],
     inbox: [],
     actions: [],
@@ -416,12 +449,25 @@ function reviewView(source, {
         finalEventHashMatches: true,
         stateParityVerified: false,
       },
-      filterDimensions: ['cycle', 'action', 'decision', 'actor', 'operation', 'result', 'event-type', 'date'],
+      filterDimensions: [
+        'cycle',
+        'action',
+        'decision',
+        'actor',
+        'operation',
+        'result',
+        'event-type',
+        'date',
+      ],
       redactions: structuredClone(omissions),
     },
     allowedActions,
     omissions,
-    export: { formats: ['json', 'html'], accessSafe: true, redactionCount: omissions.reduce((sum, item) => sum + item.count, 0) },
+    export: {
+      formats: ['json', 'html'],
+      accessSafe: true,
+      redactionCount: omissions.reduce((sum, item) => sum + item.count, 0),
+    },
   });
 }
 
@@ -437,16 +483,29 @@ function bindingFor(source, view) {
     sourceArtifactKind: source.kind,
     sourceArtifactHash: sha256Jcs(source),
     sourceEventHead: structuredClone(source.eventHead),
-    sourceReadEventHead: structuredClone(source.kind === 'operating-review-read' ? source.eventHead : source.readEventHead),
+    sourceReadEventHead: structuredClone(
+      source.kind === 'operating-review-read' ? source.eventHead : source.readEventHead,
+    ),
     sourceViewHash: view.viewHash,
   };
 }
 
 function expectedBinding(payload) {
-  return Object.fromEntries([
-    'actorId', 'scopeId', 'domainId', 'domainVersion', 'cycleId', 'reviewId',
-    'sourceArtifactKind', 'sourceArtifactHash', 'sourceEventHead', 'sourceReadEventHead', 'sourceViewHash',
-  ].map((field) => [field, structuredClone(payload[field])]));
+  return Object.fromEntries(
+    [
+      'actorId',
+      'scopeId',
+      'domainId',
+      'domainVersion',
+      'cycleId',
+      'reviewId',
+      'sourceArtifactKind',
+      'sourceArtifactHash',
+      'sourceEventHead',
+      'sourceReadEventHead',
+      'sourceViewHash',
+    ].map((field) => [field, structuredClone(payload[field])]),
+  );
 }
 
 test('pending Review workspace preserves exact choices and only exposes exact verified owner submit capability', () => {
@@ -462,7 +521,10 @@ test('pending Review workspace preserves exact choices and only exposes exact ve
   assert.deepEqual(selected, payload);
   assert.equal(payload.status, 'ready');
   assert.equal(payload.mutationEnabled, true);
-  assert.deepEqual(payload.data.choices[0].submitArguments, source.dispositionChoices[0].submitArguments);
+  assert.deepEqual(
+    payload.data.choices[0].submitArguments,
+    source.dispositionChoices[0].submitArguments,
+  );
   assert.equal(payload.data.choices[0].choiceId, source.dispositionChoices[0].choiceId);
   assert.equal(payload.data.choices[0].choiceHash, source.dispositionChoices[0].choiceHash);
   assert.equal(payload.data.choices[0].consequence.includes('does not execute Actions'), true);
@@ -473,7 +535,10 @@ test('pending Review workspace preserves exact choices and only exposes exact ve
 
   const display = issueOperateReviewDisplayWorkspaceV1(payload);
   assert.equal(assertBrowserSafeReviewDisplayWorkspaceV1(display), display);
-  assert.equal(display.integrity.contentHash, contentHash(payload, OPERATE_REVIEW_DISPLAY_WORKSPACE_DOMAIN));
+  assert.equal(
+    display.integrity.contentHash,
+    contentHash(payload, OPERATE_REVIEW_DISPLAY_WORKSPACE_DOMAIN),
+  );
   assert.deepEqual(validateOperateReviewDisplayWorkspaceV1(display, expectedBinding(payload)), []);
 });
 
@@ -512,14 +577,16 @@ test('terminal Review workspace derives exact receipt disposition and exposes no
 
 test('terminal Review workspace validates the exact real evidence-gap summary branch', () => {
   const pending = pendingSource({ decisions: [] });
-  pending.gaps = [{
-    absenceId: 'abs_evidence_review_terminal_0001',
-    kind: 'evidence',
-    requirementId: 'operations-customer-evidence-1',
-    sourceContracts: [{ id: 'operations-customer-health', version: '1.0.0' }],
-    reason: 'No materialized in-scope Evidence matched this role requirement.',
-    recoveryDisposition: 'refresh-or-issue-evidence',
-  }];
+  pending.gaps = [
+    {
+      absenceId: 'abs_evidence_review_terminal_0001',
+      kind: 'evidence',
+      requirementId: 'operations-customer-evidence-1',
+      sourceContracts: [{ id: 'operations-customer-health', version: '1.0.0' }],
+      reason: 'No materialized in-scope Evidence matched this role requirement.',
+      recoveryDisposition: 'refresh-or-issue-evidence',
+    },
+  ];
   const source = terminalSource(pending);
   const view = reviewView(source);
   const payload = buildOperateReviewWorkspacePayloadV1(source, view);
@@ -536,7 +603,10 @@ test('partial, restricted, stale, offline, and read-only pending workspaces rema
     assert.equal(payload.status, status);
     assert.equal(payload.mutationEnabled, false);
     assert.equal(payload.data.capability.available, false);
-    assert.deepEqual(validateOperateReviewDisplayWorkspaceV1(issueOperateReviewDisplayWorkspaceV1(payload)), []);
+    assert.deepEqual(
+      validateOperateReviewDisplayWorkspaceV1(issueOperateReviewDisplayWorkspaceV1(payload)),
+      [],
+    );
   }
 
   const source = pendingSource();
@@ -547,9 +617,14 @@ test('partial, restricted, stale, offline, and read-only pending workspaces rema
   assert.equal(payload.data.truthSummary.evidence.linked, 1);
   assert.equal(payload.data.truthSummary.proof.linkedEvidence, 1);
   assert.equal(payload.data.truthSummary.proof.status, 'unverified');
-  assert.ok(payload.data.omissions.some((entry) => entry.kind === 'restricted'
-    && entry.subject === 'evidence'
-    && entry.subjectIds.includes('evr_review_0001')));
+  assert.ok(
+    payload.data.omissions.some(
+      (entry) =>
+        entry.kind === 'restricted' &&
+        entry.subject === 'evidence' &&
+        entry.subjectIds.includes('evr_review_0001'),
+    ),
+  );
 });
 
 test('typed proof absences cannot collapse to not-required and seat truth forms an exact partition', () => {
@@ -575,12 +650,18 @@ test('typed proof absences cannot collapse to not-required and seat truth forms 
     outputArtifactIds: [],
   };
   const view = reviewView(source, {
-    evidence: [], claims: [], assignments: [assignment], verificationState: 'skipped',
+    evidence: [],
+    claims: [],
+    assignments: [assignment],
+    verificationState: 'skipped',
   });
   const summary = deriveOperateSharedTruthSummaryV1(view);
   assert.equal(summary.proof.status, 'unverified');
   assert.ok(summary.proof.reasonCodes.includes('OPERATE_PROOF_ABSENCE'));
-  assert.equal(summary.seats.total, summary.seats.terminal + summary.seats.active + summary.seats.pending);
+  assert.equal(
+    summary.seats.total,
+    summary.seats.terminal + summary.seats.active + summary.seats.pending,
+  );
   assert.equal(summary.seats.failed, 1);
   assert.equal(summary.seats.typedAbsences, 1);
 });
@@ -653,15 +734,16 @@ test('foreign bindings, divergent source identities, graph drift, and contradict
 
   const divergentHead = structuredClone(source);
   divergentHead.eventHead = { sequence: 1, hash: HASH_B };
-  assert.throws(
-    () => buildOperateReviewWorkspacePayloadV1(divergentHead, view),
-    { code: 'E_OPERATE_BINDING_MISMATCH' },
-  );
+  assert.throws(() => buildOperateReviewWorkspacePayloadV1(divergentHead, view), {
+    code: 'E_OPERATE_BINDING_MISMATCH',
+  });
 
   const broken = structuredClone(view);
   broken.evidence[0].supportClaimIds = ['clm_missing_0001'];
   rehashExperienceView(broken);
-  assert.throws(() => buildOperateReviewWorkspacePayloadV1(source, broken), { code: 'E_OPERATE_REVIEW_WORKSPACE_GRAPH_INVALID' });
+  assert.throws(() => buildOperateReviewWorkspacePayloadV1(source, broken), {
+    code: 'E_OPERATE_REVIEW_WORKSPACE_GRAPH_INVALID',
+  });
 
   const duplicate = structuredClone(view);
   duplicate.evidence[0].supportClaimIds.push(duplicate.evidence[0].supportClaimIds[0]);
@@ -670,34 +752,48 @@ test('foreign bindings, divergent source identities, graph drift, and contradict
 
   const payload = structuredClone(buildOperateReviewWorkspacePayloadV1(source, view));
   payload.data.truthSummary.evidence.total += 1;
-  assert.throws(() => issueOperateReviewDisplayWorkspaceV1(payload), { code: 'E_OPERATE_REVIEW_DISPLAY_INVALID' });
+  assert.throws(() => issueOperateReviewDisplayWorkspaceV1(payload), {
+    code: 'E_OPERATE_REVIEW_DISPLAY_INVALID',
+  });
 
-  const display = structuredClone(issueOperateReviewDisplayWorkspaceV1(
-    buildOperateReviewWorkspacePayloadV1(source, view),
-  ));
+  const display = structuredClone(
+    issueOperateReviewDisplayWorkspaceV1(buildOperateReviewWorkspacePayloadV1(source, view)),
+  );
   display.payload.data.executiveSummary.text = 'Divergent unhashed summary.';
   assert.notDeepEqual(validateOperateReviewDisplayWorkspaceV1(display), []);
 });
 
 test('narrative redaction happens before payload hashing and unsafe post-projection bytes are rejected', () => {
   const source = pendingSource({
-    decisions: [decisionSummary({ rationale: 'Inspect /Users/private-owner/secret.txt before deciding.' })],
+    decisions: [
+      decisionSummary({ rationale: 'Inspect /Users/private-owner/secret.txt before deciding.' }),
+    ],
   });
   const view = reviewView(source);
   const payload = buildOperateReviewWorkspacePayloadV1(source, view);
   assert.equal(JSON.stringify(payload).includes('/Users/private-owner'), false);
-  assert.ok(payload.data.omissions.some(({ reasonCode }) => reasonCode === 'DISPLAY_SOURCE_REDACTED'));
+  assert.ok(
+    payload.data.omissions.some(({ reasonCode }) => reasonCode === 'DISPLAY_SOURCE_REDACTED'),
+  );
   const display = issueOperateReviewDisplayWorkspaceV1(payload);
-  assert.equal(display.integrity.contentHash, contentHash(payload, OPERATE_REVIEW_DISPLAY_WORKSPACE_DOMAIN));
+  assert.equal(
+    display.integrity.contentHash,
+    contentHash(payload, OPERATE_REVIEW_DISPLAY_WORKSPACE_DOMAIN),
+  );
 
   const unsafe = structuredClone(payload);
   unsafe.data.executiveSummary.text = 'Bearer abcdefghijklmnopqrstuvwxyz';
-  assert.throws(() => issueOperateReviewDisplayWorkspaceV1(unsafe), { code: 'E_OPERATE_REVIEW_WORKSPACE_UNSAFE' });
+  assert.throws(() => issueOperateReviewDisplayWorkspaceV1(unsafe), {
+    code: 'E_OPERATE_REVIEW_WORKSPACE_UNSAFE',
+  });
 });
 
 test('equivalent randomized source collection order preserves normalized semantic records without mutation', () => {
   const firstDecision = decisionSummary();
-  const secondDecision = decisionSummary({ decisionId: 'dec_review_0002', evidenceRefId: 'evr_review_0002' });
+  const secondDecision = decisionSummary({
+    decisionId: 'dec_review_0002',
+    evidenceRefId: 'evr_review_0002',
+  });
   const firstSource = pendingSource({ decisions: [firstDecision, secondDecision] });
   const secondSource = structuredClone(firstSource);
   secondSource.decisions.reverse();
@@ -710,11 +806,16 @@ test('equivalent randomized source collection order preserves normalized semanti
     claimRecord({ claimId: 'clm_review_0002', evidenceRefId: 'evr_review_0002' }),
   ];
   const firstView = reviewView(firstSource, { evidence, claims });
-  const secondView = reviewView(secondSource, { evidence: [...evidence].reverse(), claims: [...claims].reverse() });
+  const secondView = reviewView(secondSource, {
+    evidence: [...evidence].reverse(),
+    claims: [...claims].reverse(),
+  });
   const firstBefore = structuredClone(firstView);
   const secondBefore = structuredClone(secondView);
   const first = structuredClone(buildOperateReviewWorkspacePayloadV1(firstSource, firstView).data);
-  const second = structuredClone(buildOperateReviewWorkspacePayloadV1(secondSource, secondView).data);
+  const second = structuredClone(
+    buildOperateReviewWorkspacePayloadV1(secondSource, secondView).data,
+  );
   delete first.truthSummary.sourceViewHash;
   delete second.truthSummary.sourceViewHash;
   assert.deepEqual(first, second);
@@ -765,9 +866,9 @@ test('generated Review schema slices are acceptance-equivalent to canonical sche
     buildOperateReviewWorkspacePayloadV1(multiChoice, reviewView(multiChoice)),
   );
   assert.equal(
-    multiChoiceDisplay.payload.data.capability.actions.every(({ action }) => (
-      action.tool === 'operate.review.submit' && action.effect === 'project-write'
-    )),
+    multiChoiceDisplay.payload.data.capability.actions.every(
+      ({ action }) => action.tool === 'operate.review.submit' && action.effect === 'project-write',
+    ),
     true,
   );
 
@@ -819,20 +920,25 @@ test('generated Review schema slices are acceptance-equivalent to canonical sche
     readOnlyReviewAction.payload,
     OPERATE_REVIEW_DISPLAY_WORKSPACE_DOMAIN,
   );
-  assert.equal(schemaAccepts(
-    readOnlyReviewAction,
-    'operate-review-display-workspace.schema.json',
-    fullReviewSchemas,
-  ), true);
-  assert.equal(schemaAccepts(
-    readOnlyReviewAction,
-    'operate-review-display-workspace.schema.json',
-    slicedReviewSchemas,
-  ), true);
-  assert.throws(
-    () => assertBrowserSafeReviewDisplayWorkspaceV1(readOnlyReviewAction),
-    { code: 'E_OPERATE_REVIEW_DISPLAY_INVALID' },
+  assert.equal(
+    schemaAccepts(
+      readOnlyReviewAction,
+      'operate-review-display-workspace.schema.json',
+      fullReviewSchemas,
+    ),
+    true,
   );
+  assert.equal(
+    schemaAccepts(
+      readOnlyReviewAction,
+      'operate-review-display-workspace.schema.json',
+      slicedReviewSchemas,
+    ),
+    true,
+  );
+  assert.throws(() => assertBrowserSafeReviewDisplayWorkspaceV1(readOnlyReviewAction), {
+    code: 'E_OPERATE_REVIEW_DISPLAY_INVALID',
+  });
 
   const wrongSubmitEffect = structuredClone(multiChoiceDisplay);
   wrongSubmitEffect.payload.data.capability.actions[0].action.effect = 'external-effect';
@@ -840,14 +946,20 @@ test('generated Review schema slices are acceptance-equivalent to canonical sche
     wrongSubmitEffect.payload,
     OPERATE_REVIEW_DISPLAY_WORKSPACE_DOMAIN,
   );
-  assert.equal(schemaAccepts(
-    wrongSubmitEffect,
-    'operate-review-display-workspace.schema.json',
-    fullReviewSchemas,
-  ), false);
-  assert.equal(schemaAccepts(
-    wrongSubmitEffect,
-    'operate-review-display-workspace.schema.json',
-    slicedReviewSchemas,
-  ), false);
+  assert.equal(
+    schemaAccepts(
+      wrongSubmitEffect,
+      'operate-review-display-workspace.schema.json',
+      fullReviewSchemas,
+    ),
+    false,
+  );
+  assert.equal(
+    schemaAccepts(
+      wrongSubmitEffect,
+      'operate-review-display-workspace.schema.json',
+      slicedReviewSchemas,
+    ),
+    false,
+  );
 });

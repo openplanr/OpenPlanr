@@ -20,9 +20,10 @@ function freeze(value) {
 }
 
 function businessRoleCatalog(scope) {
-  const domain = OPERATE_CONTRACT_CATALOG_V2.extensions.domains.find(({ domainId, domainVersion }) => (
-    domainId === scope.domainId && domainVersion === scope.domainVersion
-  ));
+  const domain = OPERATE_CONTRACT_CATALOG_V2.extensions.domains.find(
+    ({ domainId, domainVersion }) =>
+      domainId === scope.domainId && domainVersion === scope.domainVersion,
+  );
   if (!domain) return new Map();
   return new Map(domain.roles.map((role) => [role.roleId, role]));
 }
@@ -70,10 +71,11 @@ function projectStructuredDissent(screen, entries, fallbackArtifactId) {
       });
     })
     .filter(Boolean)
-    .sort((left, right) => (
-      left.sourceArtifactId.localeCompare(right.sourceArtifactId)
-      || left.localDissentId.localeCompare(right.localDissentId)
-    ));
+    .sort(
+      (left, right) =>
+        left.sourceArtifactId.localeCompare(right.sourceArtifactId) ||
+        left.localDissentId.localeCompare(right.localDissentId),
+    );
 }
 
 function projectFinding(screen, finding) {
@@ -187,10 +189,9 @@ function projectEvidenceGap(absence) {
 function projectChairSynthesis(ledger, chairArtifactId, screen, lensAbsences) {
   if (!ledger || !chairArtifactId) return null;
   const source = [chairArtifactId];
-  const gapByIdentity = new Map(lensAbsences.map((absence) => [
-    `role:${absence.roleId}`,
-    projectRoleGap(absence),
-  ]));
+  const gapByIdentity = new Map(
+    lensAbsences.map((absence) => [`role:${absence.roleId}`, projectRoleGap(absence)]),
+  );
   for (const gap of ledger.advisorAbsenceGaps ?? []) {
     gapByIdentity.set(`role:${gap.roleId}`, projectRoleGap(gap));
   }
@@ -204,38 +205,42 @@ function projectChairSynthesis(ledger, chairArtifactId, screen, lensAbsences) {
       advisorArtifactIds: [...ledger.advisorArtifactIds].sort(),
       challengerArtifactId: ledger.challengerArtifactId,
     }),
-    decisions: ledger.decisions.map((decision) => Object.freeze({
-      localDecisionId: decision.localDecisionId,
-      title: projectText(screen, decision.title, source),
-      question: projectText(screen, decision.question, source),
-      outcome: projectText(screen, decision.outcome, source),
-      rationale: projectText(screen, decision.rationale, source),
-      sourceClaimRefs: structuredClone(decision.sourceClaimRefs),
-      sourceRecommendationRefs: structuredClone(decision.sourceRecommendationRefs),
-      challengerFindingIds: [...decision.challengerFindingIds],
-      evidenceRefIds: [...decision.evidenceRefIds],
-      confidence: decision.confidence,
-      assumptionIds: [...decision.assumptionIds],
-      expectedUpside: projectText(screen, decision.upside, source),
-      expectedDownside: projectText(screen, decision.downside, source),
-      uncertainty: projectText(screen, decision.uncertainty, source),
-      reversibility: projectText(screen, decision.reversibility, source),
-      ownerActorId: decision.ownerActorId,
-      revisitConditions: decision.revisitConditions.map((entry) => projectText(screen, entry, source)).filter(Boolean),
-      dissentIds: [...decision.dissentIds],
-      alternativeDispositions: decision.alternativeDispositions.map((entry) => (
-        projectAlternativeDisposition(screen, entry, source)
-      )),
-      actionHypotheses: decision.actionHypotheses.map((hypothesis) => (
-        projectActionHypothesis(screen, hypothesis, source)
-      )),
-    })),
+    decisions: ledger.decisions.map((decision) =>
+      Object.freeze({
+        localDecisionId: decision.localDecisionId,
+        title: projectText(screen, decision.title, source),
+        question: projectText(screen, decision.question, source),
+        outcome: projectText(screen, decision.outcome, source),
+        rationale: projectText(screen, decision.rationale, source),
+        sourceClaimRefs: structuredClone(decision.sourceClaimRefs),
+        sourceRecommendationRefs: structuredClone(decision.sourceRecommendationRefs),
+        challengerFindingIds: [...decision.challengerFindingIds],
+        evidenceRefIds: [...decision.evidenceRefIds],
+        confidence: decision.confidence,
+        assumptionIds: [...decision.assumptionIds],
+        expectedUpside: projectText(screen, decision.upside, source),
+        expectedDownside: projectText(screen, decision.downside, source),
+        uncertainty: projectText(screen, decision.uncertainty, source),
+        reversibility: projectText(screen, decision.reversibility, source),
+        ownerActorId: decision.ownerActorId,
+        revisitConditions: decision.revisitConditions
+          .map((entry) => projectText(screen, entry, source))
+          .filter(Boolean),
+        dissentIds: [...decision.dissentIds],
+        alternativeDispositions: decision.alternativeDispositions.map((entry) =>
+          projectAlternativeDisposition(screen, entry, source),
+        ),
+        actionHypotheses: decision.actionHypotheses.map((hypothesis) =>
+          projectActionHypothesis(screen, hypothesis, source),
+        ),
+      }),
+    ),
     dissent: projectStructuredDissent(screen, ledger.dissent, chairArtifactId),
-    unresolvedGaps: [...gapByIdentity.values()].sort((left, right) => (
+    unresolvedGaps: [...gapByIdentity.values()].sort((left, right) =>
       `${left.kind}:${left.absenceId ?? left.roleId}`.localeCompare(
         `${right.kind}:${right.absenceId ?? right.roleId}`,
-      )
-    )),
+      ),
+    ),
   });
 }
 
@@ -253,12 +258,15 @@ export function buildExecutiveBoardForCycle({
   if (scope.domainId !== 'business' || !intelligencePlan) return null;
 
   const catalog = businessRoleCatalog(scope);
-  const selectedByRoleId = new Map(intelligencePlan.selectedRoles.map((role) => [role.roleId, role]));
+  const selectedByRoleId = new Map(
+    intelligencePlan.selectedRoles.map((role) => [role.roleId, role]),
+  );
   const omittedByRoleId = new Map(intelligencePlan.omittedRoles.map((role) => [role.roleId, role]));
   const lensByRoleId = new Map(lensAbsences.map((absence) => [absence.roleId, absence]));
-  const ledger = [...indexes.decisionLedgers.values()].find(({ intelligencePlanId }) => (
-    intelligencePlanId === intelligencePlan.planId
-  )) ?? null;
+  const ledger =
+    [...indexes.decisionLedgers.values()].find(
+      ({ intelligencePlanId }) => intelligencePlanId === intelligencePlan.planId,
+    ) ?? null;
 
   const seats = BUSINESS_BOARD_ROLE_ORDER.flatMap((roleId) => {
     const catalogRole = catalog.get(roleId);
@@ -268,16 +276,21 @@ export function buildExecutiveBoardForCycle({
     if (!selected && !omitted) return [];
 
     if (omitted) {
-      return [Object.freeze({
-        roleId,
-        label: catalogRole.label,
-        roleKind: catalogRole.roleKind,
-        roleVersion: omitted.roleVersion,
-        assignmentId: null,
-        assignmentState: null,
-        artifact: null,
-        absence: seatAbsence({ lensAbsence: lensByRoleId.get(roleId), omittedReason: omitted.reason }),
-      })];
+      return [
+        Object.freeze({
+          roleId,
+          label: catalogRole.label,
+          roleKind: catalogRole.roleKind,
+          roleVersion: omitted.roleVersion,
+          assignmentId: null,
+          assignmentState: null,
+          artifact: null,
+          absence: seatAbsence({
+            lensAbsence: lensByRoleId.get(roleId),
+            omittedReason: omitted.reason,
+          }),
+        }),
+      ];
     }
 
     const assignmentId = deriveOperatingIntelligenceAssignmentIdV2(
@@ -286,30 +299,35 @@ export function buildExecutiveBoardForCycle({
       selected.roleVersion,
     );
     const assignment = indexes.assignments.get(assignmentId);
-    const artifactId = [...indexes.artifacts.values()]
-      .filter((entry) => entry.assignmentId === assignmentId)
-      .map(({ artifactId: id }) => id)
-      .sort()[0] ?? null;
+    const artifactId =
+      [...indexes.artifacts.values()]
+        .filter((entry) => entry.assignmentId === assignmentId)
+        .map(({ artifactId: id }) => id)
+        .sort()[0] ?? null;
 
-    return [Object.freeze({
-      roleId,
-      label: catalogRole.label,
-      roleKind: catalogRole.roleKind,
-      roleVersion: selected.roleVersion,
-      assignmentId,
-      assignmentState: assignment?.state ?? null,
-      artifact: projectArtifact(indexes, artifactId, screen),
-      absence: seatAbsence({
-        assignmentAbsence: assignment ? assignmentAbsence(assignment) : null,
-        lensAbsence: lensByRoleId.get(roleId),
+    return [
+      Object.freeze({
+        roleId,
+        label: catalogRole.label,
+        roleKind: catalogRole.roleKind,
+        roleVersion: selected.roleVersion,
+        assignmentId,
+        assignmentState: assignment?.state ?? null,
+        artifact: projectArtifact(indexes, artifactId, screen),
+        absence: seatAbsence({
+          assignmentAbsence: assignment ? assignmentAbsence(assignment) : null,
+          lensAbsence: lensByRoleId.get(roleId),
+        }),
       }),
-    })];
+    ];
   });
 
-  const challengerArtifactId = seats.find(({ roleId }) => roleId === 'independent-challenge')?.artifact?.artifactId
-    ?? ledger?.challengerArtifactId
-    ?? null;
-  const chairArtifactId = seats.find(({ roleId }) => roleId === 'chair')?.artifact?.artifactId ?? null;
+  const challengerArtifactId =
+    seats.find(({ roleId }) => roleId === 'independent-challenge')?.artifact?.artifactId ??
+    ledger?.challengerArtifactId ??
+    null;
+  const chairArtifactId =
+    seats.find(({ roleId }) => roleId === 'chair')?.artifact?.artifactId ?? null;
 
   const projection = {
     cycleId: cycle.cycleId,
@@ -325,20 +343,26 @@ export function buildExecutiveBoardForCycle({
   };
   if (boardRecord !== null) {
     const seatByRoleId = new Map(seats.map((seat) => [seat.roleId, seat]));
-    if (boardRecord.cycleId !== cycle.cycleId
-      || boardRecord.planId !== intelligencePlan.planId
-      || boardRecord.ledgerId !== ledger?.ledgerId
-      || boardRecord.traceMatrix?.matrixHash === undefined
-      || traceMatrix?.cycleId !== cycle.cycleId
-      || boardRecord.seatBindings.length !== seats.length
-      || boardRecord.seatBindings.some((binding) => {
+    if (
+      boardRecord.cycleId !== cycle.cycleId ||
+      boardRecord.planId !== intelligencePlan.planId ||
+      boardRecord.ledgerId !== ledger?.ledgerId ||
+      boardRecord.traceMatrix?.matrixHash === undefined ||
+      traceMatrix?.cycleId !== cycle.cycleId ||
+      boardRecord.seatBindings.length !== seats.length ||
+      boardRecord.seatBindings.some((binding) => {
         const seat = seatByRoleId.get(binding.roleId);
-        return !seat
-          || seat.roleKind !== binding.roleKind
-          || seat.roleVersion !== binding.roleVersion
-          || seat.assignmentId !== binding.assignmentId;
-      })) {
-      throw new Error('Executive Board materialization does not match its current role, ledger, Cycle, or trace source.');
+        return (
+          !seat ||
+          seat.roleKind !== binding.roleKind ||
+          seat.roleVersion !== binding.roleVersion ||
+          seat.assignmentId !== binding.assignmentId
+        );
+      })
+    ) {
+      throw new Error(
+        'Executive Board materialization does not match its current role, ledger, Cycle, or trace source.',
+      );
     }
     Object.assign(projection, {
       boardId: boardRecord.boardId,

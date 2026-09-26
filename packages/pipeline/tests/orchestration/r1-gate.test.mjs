@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import { assertShipStoriesReady } from '../../lib/shipPrecheck.mjs';
+import { assertShipStoriesReady } from '../../lib/ship-precheck.mjs';
 
 const root = join(fileURLToPath(new URL('.', import.meta.url)), '../..');
 const emptyFixture = join(root, 'tests/fixtures/empty-spec-dir');

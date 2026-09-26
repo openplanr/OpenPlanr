@@ -4,10 +4,13 @@ import { test } from 'node:test';
 
 import { validateProtocolArtifact } from '../../lib/protocol/contracts.mjs';
 
-const fixture = (name) => JSON.parse(readFileSync(
-  new URL(`../../conformance/fixtures/operating-runtime-v2/${name}`, import.meta.url),
-  'utf8',
-));
+const fixture = (name) =>
+  JSON.parse(
+    readFileSync(
+      new URL(`../../conformance/fixtures/operating-runtime-v2/${name}`, import.meta.url),
+      'utf8',
+    ),
+  );
 
 test('persistent-work contracts keep v2 identities, local references, and Phase 3 vocabulary closed', () => {
   const valid = fixture('persistent-work-valid.json');
@@ -21,10 +24,17 @@ test('persistent-work contracts keep v2 identities, local references, and Phase 
   };
 
   for (const [key, contract] of Object.entries(contracts)) {
-    assert.deepEqual(validateProtocolArtifact(contract, valid[key], { protocolVersion: '2.0.0' }), [], `${key} valid`);
+    assert.deepEqual(
+      validateProtocolArtifact(contract, valid[key], { protocolVersion: '2.0.0' }),
+      [],
+      `${key} valid`,
+    );
     const candidate = structuredClone(valid[key]);
     Object.assign(candidate, invalid[key].patch);
-    assert.ok(validateProtocolArtifact(contract, candidate, { protocolVersion: '2.0.0' }).length > 0, `${key} invalid`);
+    assert.ok(
+      validateProtocolArtifact(contract, candidate, { protocolVersion: '2.0.0' }).length > 0,
+      `${key} invalid`,
+    );
   }
 });
 
@@ -44,29 +54,54 @@ test('persistent records discriminate generic work from operating-intelligence p
     ['operating-finding', { ...intelligence['operating-finding'], origin: 'persistent-work' }],
     ['operating-decision', { ...intelligence['operating-decision'], origin: 'persistent-work' }],
   ]) {
-    assert.ok(validateProtocolArtifact(contract, value, {
-      protocolVersion: '2.0.0',
-    }).length > 0, `${contract} rejects provenance fields from the other origin`);
+    assert.ok(
+      validateProtocolArtifact(contract, value, {
+        protocolVersion: '2.0.0',
+      }).length > 0,
+      `${contract} rejects provenance fields from the other origin`,
+    );
   }
 
   const genericRisk = structuredClone(intelligence['operating-risk']);
   genericRisk.origin = 'generic';
   for (const field of [
-    'sourceCycleId', 'sourceAssignmentId', 'sourceLocalRiskId', 'sourceClaimIds', 'sourceImpact',
-    'exposureStatement', 'exposedSurfaces', 'mitigation', 'reversibility',
-  ]) delete genericRisk[field];
-  assert.deepEqual(validateProtocolArtifact('operating-risk', genericRisk, {
-    protocolVersion: '2.0.0',
-  }), [], 'generic durable Risk preserves the pre-intelligence contract');
-  assert.ok(validateProtocolArtifact('operating-risk', {
-    ...genericRisk,
-    sourceAssignmentId: intelligence['operating-risk'].sourceAssignmentId,
-  }, { protocolVersion: '2.0.0' }).length > 0, 'generic Risk rejects Advisor-only provenance');
+    'sourceCycleId',
+    'sourceAssignmentId',
+    'sourceLocalRiskId',
+    'sourceClaimIds',
+    'sourceImpact',
+    'exposureStatement',
+    'exposedSurfaces',
+    'mitigation',
+    'reversibility',
+  ])
+    delete genericRisk[field];
+  assert.deepEqual(
+    validateProtocolArtifact('operating-risk', genericRisk, {
+      protocolVersion: '2.0.0',
+    }),
+    [],
+    'generic durable Risk preserves the pre-intelligence contract',
+  );
+  assert.ok(
+    validateProtocolArtifact(
+      'operating-risk',
+      {
+        ...genericRisk,
+        sourceAssignmentId: intelligence['operating-risk'].sourceAssignmentId,
+      },
+      { protocolVersion: '2.0.0' },
+    ).length > 0,
+    'generic Risk rejects Advisor-only provenance',
+  );
   const incompleteIntelligenceRisk = structuredClone(intelligence['operating-risk']);
   delete incompleteIntelligenceRisk.sourceLocalRiskId;
-  assert.ok(validateProtocolArtifact('operating-risk', incompleteIntelligenceRisk, {
-    protocolVersion: '2.0.0',
-  }).length > 0, 'operating-intelligence Risk requires exact Advisor provenance');
+  assert.ok(
+    validateProtocolArtifact('operating-risk', incompleteIntelligenceRisk, {
+      protocolVersion: '2.0.0',
+    }).length > 0,
+    'operating-intelligence Risk requires exact Advisor provenance',
+  );
 });
 
 test('Review read and receipt summaries preserve each durable record origin without invented fields', () => {
@@ -136,26 +171,45 @@ test('Review read and receipt summaries preserve each durable record origin with
     ['operating-intelligence', [intelligenceDecisionSummary], [intelligenceFindingSummary]],
   ]) {
     const read = { ...structuredClone(intelligence['operating-review-read']), decisions, findings };
-    assert.deepEqual(validateProtocolArtifact('operating-review-read', read, {
-      protocolVersion: '2.0.0',
-    }), [], `${label} Review read summary validates`);
-    const receipt = { ...structuredClone(intelligence['operating-review-receipt']), decisions, findings };
-    assert.deepEqual(validateProtocolArtifact('operating-review-receipt', receipt, {
-      protocolVersion: '2.0.0',
-    }), [], `${label} Review receipt summary validates`);
+    assert.deepEqual(
+      validateProtocolArtifact('operating-review-read', read, {
+        protocolVersion: '2.0.0',
+      }),
+      [],
+      `${label} Review read summary validates`,
+    );
+    const receipt = {
+      ...structuredClone(intelligence['operating-review-receipt']),
+      decisions,
+      findings,
+    };
+    assert.deepEqual(
+      validateProtocolArtifact('operating-review-receipt', receipt, {
+        protocolVersion: '2.0.0',
+      }),
+      [],
+      `${label} Review receipt summary validates`,
+    );
   }
 
   for (const [label, decisions, findings] of [
-    ['lean summaries cannot claim intelligence provenance',
+    [
+      'lean summaries cannot claim intelligence provenance',
       [{ ...persistentDecisionSummary, origin: 'operating-intelligence' }],
-      [{ ...persistentFindingSummary, origin: 'operating-intelligence' }]],
-    ['rich summaries cannot claim persistent-work provenance',
+      [{ ...persistentFindingSummary, origin: 'operating-intelligence' }],
+    ],
+    [
+      'rich summaries cannot claim persistent-work provenance',
       [{ ...intelligenceDecisionSummary, origin: 'persistent-work' }],
-      [{ ...intelligenceFindingSummary, origin: 'persistent-work' }]],
+      [{ ...intelligenceFindingSummary, origin: 'persistent-work' }],
+    ],
   ]) {
     const read = { ...structuredClone(intelligence['operating-review-read']), decisions, findings };
-    assert.ok(validateProtocolArtifact('operating-review-read', read, {
-      protocolVersion: '2.0.0',
-    }).length > 0, label);
+    assert.ok(
+      validateProtocolArtifact('operating-review-read', read, {
+        protocolVersion: '2.0.0',
+      }).length > 0,
+      label,
+    );
   }
 });

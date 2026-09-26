@@ -55,10 +55,9 @@
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
-
-import { assertValid } from './schema-loader.mjs';
-import { validateArtifactReview } from '../envelope.mjs';
 import { ARTIFACT_ERROR_CODES, PipelineError } from '@openplanr/protocol/errors';
+import { validateArtifactReview } from '../envelope.mjs';
+import { assertValid } from './schema-loader.mjs';
 
 export const FEEDBACK_FILE = 'feedback.json';
 export const PENDING_FILE = 'feedback-pending.json';
@@ -324,24 +323,28 @@ function reviewAuthor(author) {
  * store. Existing legacy-only fields are deliberately used as the merge base, so
  * ratings, comments, preferred, regeneration state, and remix data survive.
  */
-export function artifactReviewToDesignFeedback(review, {
-  storedFeedback,
-  boardId,
-  publishedAt = review?.updatedAt ?? review?.createdAt ?? new Date().toISOString(),
-} = {}) {
+export function artifactReviewToDesignFeedback(
+  review,
+  {
+    storedFeedback,
+    boardId,
+    publishedAt = review?.updatedAt ?? review?.createdAt ?? new Date().toISOString(),
+  } = {},
+) {
   validateArtifactReview(review);
-  const base = storedFeedback && typeof storedFeedback === 'object'
-    ? normalizeLegacy(storedFeedback)
-    : {
-      schema_version: '1.0.0',
-      boardId: boardId ?? review.reviewId,
-      publishedAt,
-      regenerated: false,
-      ratings: {},
-      comments: {},
-      pins: [],
-      authors: [],
-    };
+  const base =
+    storedFeedback && typeof storedFeedback === 'object'
+      ? normalizeLegacy(storedFeedback)
+      : {
+          schema_version: '1.0.0',
+          boardId: boardId ?? review.reviewId,
+          publishedAt,
+          regenerated: false,
+          ratings: {},
+          comments: {},
+          pins: [],
+          authors: [],
+        };
   const contribution = {
     boardId: base.boardId ?? boardId ?? review.reviewId,
     publishedAt,
@@ -372,7 +375,8 @@ export function artifactReviewToDesignFeedback(review, {
   for (const pin of review.pins) {
     if (!roster.has(pin.author.name)) roster.set(pin.author.name, { name: pin.author.name });
     for (const reply of pin.replies) {
-      if (!roster.has(reply.author.name)) roster.set(reply.author.name, { name: reply.author.name });
+      if (!roster.has(reply.author.name))
+        roster.set(reply.author.name, { name: reply.author.name });
     }
   }
   contribution.authors = [...roster.values()];
@@ -384,24 +388,28 @@ export function artifactReviewToDesignFeedback(review, {
  * pure and never migrates or deletes the source file. Missing legacy reply IDs
  * receive deterministic content-derived IDs.
  */
-export function designFeedbackToArtifactReview(feedback, {
-  reviewId,
-  reviewOf,
-  artifactId = 'artifact',
-  artifactIdByVariant = {},
-  viewport = { width: 1440, height: 900 },
-  viewportByArtifact = {},
-  now,
-} = {}) {
+export function designFeedbackToArtifactReview(
+  feedback,
+  {
+    reviewId,
+    reviewOf,
+    artifactId = 'artifact',
+    artifactIdByVariant = {},
+    viewport = { width: 1440, height: 900 },
+    viewportByArtifact = {},
+    now,
+  } = {},
+) {
   const normalized = normalizeLegacy(feedback);
   assertValidFeedback(normalized);
   let fallbackTime = '1970-01-01T00:00:00.000Z';
   if (typeof now === 'function') {
     try {
       const fallbackTimeValue = now();
-      fallbackTime = fallbackTimeValue instanceof Date
-        ? fallbackTimeValue.toISOString()
-        : new Date(fallbackTimeValue).toISOString();
+      fallbackTime =
+        fallbackTimeValue instanceof Date
+          ? fallbackTimeValue.toISOString()
+          : new Date(fallbackTimeValue).toISOString();
     } catch {
       throw new PipelineError(
         ARTIFACT_ERROR_CODES.REVIEW_INVALID,
@@ -445,11 +453,13 @@ export function designFeedbackToArtifactReview(feedback, {
   });
   const result = {
     schemaVersion: '1.0.0',
-    reviewId: reviewId ?? `design-${generateStableId({
-      author: normalized.boardId,
-      createdAt: publishedAt,
-      comment: reviewOf,
-    })}`,
+    reviewId:
+      reviewId ??
+      `design-${generateStableId({
+        author: normalized.boardId,
+        createdAt: publishedAt,
+        comment: reviewOf,
+      })}`,
     reviewOf,
     decision: normalized.preferred ? 'approved' : 'pending',
     overall: normalized.overall ?? '',

@@ -1,16 +1,15 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 import { test } from 'node:test';
-
-import {
-  OperateContractCompileError,
-  compileOperateContractRegistry,
-} from '../../lib/operate/contracts/compiler.mjs';
-import { OPERATE_CONTRACT_CATALOG_V2 } from '../../lib/protocol/generated/contract-catalog-v2.mjs';
+import { fileURLToPath } from 'node:url';
 import { createOperateExtensionRegistryV2 } from 'planr-pipeline/operate/extensions-v2';
 import { resolvePublicOperatingDomainV2 } from 'planr-pipeline/operate/operating-domains-v2';
+import {
+  compileOperateContractRegistry,
+  OperateContractCompileError,
+} from '../../lib/operate/contracts/compiler.mjs';
+import { OPERATE_CONTRACT_CATALOG_V2 } from '../../lib/protocol/generated/contract-catalog-v2.mjs';
 
 const EXECUTIVE_ADVISOR_IDS = [
   'growth-market',
@@ -20,12 +19,15 @@ const EXECUTIVE_ADVISOR_IDS = [
   'technology-risk',
 ];
 const root = fileURLToPath(new URL('../..', import.meta.url));
-const registry = () => JSON.parse(readFileSync(join(root, 'registry/operate-v2-contracts.json'), 'utf8'));
+const registry = () =>
+  JSON.parse(readFileSync(join(root, 'registry/operate-v2-contracts.json'), 'utf8'));
 const fixture = (name) => {
-  const registration = JSON.parse(readFileSync(
-    new URL(`../../conformance/fixtures/operating-runtime-v2/${name}`, import.meta.url),
-    'utf8',
-  ));
+  const registration = JSON.parse(
+    readFileSync(
+      new URL(`../../conformance/fixtures/operating-runtime-v2/${name}`, import.meta.url),
+      'utf8',
+    ),
+  );
   registration.policyRequirements = [];
   return registration;
 };
@@ -40,14 +42,16 @@ const businessDomain = (mutate) => {
 };
 
 test('the unreleased business catalog registers the five executive advisors plus challenge and chair', () => {
-  const domain = OPERATE_CONTRACT_CATALOG_V2.extensions.domains.find(({ domainId }) => domainId === 'business');
+  const domain = OPERATE_CONTRACT_CATALOG_V2.extensions.domains.find(
+    ({ domainId }) => domainId === 'business',
+  );
   const advisors = domain.roles.filter(({ roleKind }) => roleKind === 'advisor');
   assert.deepEqual(advisors.map(({ roleId }) => roleId).sort(), [...EXECUTIVE_ADVISOR_IDS].sort());
-  assert.deepEqual(
-    advisors.map(({ label }) => label).sort(),
-    ['CEO', 'CMO', 'COO', 'CPO', 'CTO'],
+  assert.deepEqual(advisors.map(({ label }) => label).sort(), ['CEO', 'CMO', 'COO', 'CPO', 'CTO']);
+  assert.equal(
+    domain.roles.find(({ roleKind }) => roleKind === 'challenger').roleId,
+    'independent-challenge',
   );
-  assert.equal(domain.roles.find(({ roleKind }) => roleKind === 'challenger').roleId, 'independent-challenge');
   assert.equal(domain.roles.find(({ roleKind }) => roleKind === 'chair').roleId, 'chair');
 
   const mandate = OPERATE_CONTRACT_CATALOG_V2.roles.find(({ id }) => id === 'advisor');
@@ -59,50 +63,87 @@ test('the unreleased business catalog registers the five executive advisors plus
 });
 
 test('the software catalog stays software-native and does not copy business executive identities', () => {
-  const domain = OPERATE_CONTRACT_CATALOG_V2.extensions.domains.find(({ domainId }) => domainId === 'software');
-  assert.deepEqual(domain.roles.map(({ roleId }) => roleId).sort(), ['advisor', 'chair', 'challenger']);
-  assert.equal(domain.roles.some(({ roleId }) => EXECUTIVE_ADVISOR_IDS.includes(roleId)), false);
+  const domain = OPERATE_CONTRACT_CATALOG_V2.extensions.domains.find(
+    ({ domainId }) => domainId === 'software',
+  );
+  assert.deepEqual(domain.roles.map(({ roleId }) => roleId).sort(), [
+    'advisor',
+    'chair',
+    'challenger',
+  ]);
+  assert.equal(
+    domain.roles.some(({ roleId }) => EXECUTIVE_ADVISOR_IDS.includes(roleId)),
+    false,
+  );
 });
 
 test('the compiler refuses a label or a domain identity standing in for a scheduling kind', () => {
   const cases = [
-    ['label reused as identity', (domain) => {
-      const seat = domain.roles.find(({ roleKind }) => roleKind === 'advisor');
-      seat.label = seat.roleId;
-    }, 'E_OPERATE_CONTRACT_MALFORMED'],
-    ['domain identity used as a kind', (domain) => {
-      domain.roles.find(({ roleKind }) => roleKind === 'advisor').roleKind = 'strategy-finance';
-    }, 'E_OPERATE_CONTRACT_MALFORMED'],
-    ['no chair seat', (domain) => {
-      domain.roles = domain.roles.filter(({ roleKind }) => roleKind !== 'chair');
-    }, 'E_OPERATE_CONTRACT_MALFORMED'],
-    ['a second challenge seat', (domain) => {
-      domain.roles.push({
-        ...clone(domain.roles.find(({ roleKind }) => roleKind === 'challenger')),
-        roleId: 'second-challenge',
-        label: 'Second Challenger',
-      });
-    }, 'E_OPERATE_CONTRACT_UNKNOWN_REFERENCE'],
-    ['a repeated seat identity', (domain) => {
-      domain.roles.push({
-        ...clone(domain.roles.find(({ roleKind }) => roleKind === 'advisor')),
-        label: 'Second Advisor',
-      });
-    }, 'E_OPERATE_CONTRACT_DUPLICATE'],
-    ['a forbidden CFO seat', (domain) => {
-      domain.roles.push({
-        ...clone(domain.roles.find(({ roleKind }) => roleKind === 'advisor')),
-        roleId: 'finance-cfo',
-        label: 'CFO',
-      });
-    }, 'E_OPERATE_CONTRACT_MALFORMED'],
-    ['a forbidden product-owner seat', (domain) => {
-      domain.roles.push({
-        ...clone(domain.roles.find(({ roleKind }) => roleKind === 'advisor')),
-        roleId: 'product-owner',
-        label: 'Product Owner',
-      });
-    }, 'E_OPERATE_CONTRACT_MALFORMED'],
+    [
+      'label reused as identity',
+      (domain) => {
+        const seat = domain.roles.find(({ roleKind }) => roleKind === 'advisor');
+        seat.label = seat.roleId;
+      },
+      'E_OPERATE_CONTRACT_MALFORMED',
+    ],
+    [
+      'domain identity used as a kind',
+      (domain) => {
+        domain.roles.find(({ roleKind }) => roleKind === 'advisor').roleKind = 'strategy-finance';
+      },
+      'E_OPERATE_CONTRACT_MALFORMED',
+    ],
+    [
+      'no chair seat',
+      (domain) => {
+        domain.roles = domain.roles.filter(({ roleKind }) => roleKind !== 'chair');
+      },
+      'E_OPERATE_CONTRACT_MALFORMED',
+    ],
+    [
+      'a second challenge seat',
+      (domain) => {
+        domain.roles.push({
+          ...clone(domain.roles.find(({ roleKind }) => roleKind === 'challenger')),
+          roleId: 'second-challenge',
+          label: 'Second Challenger',
+        });
+      },
+      'E_OPERATE_CONTRACT_UNKNOWN_REFERENCE',
+    ],
+    [
+      'a repeated seat identity',
+      (domain) => {
+        domain.roles.push({
+          ...clone(domain.roles.find(({ roleKind }) => roleKind === 'advisor')),
+          label: 'Second Advisor',
+        });
+      },
+      'E_OPERATE_CONTRACT_DUPLICATE',
+    ],
+    [
+      'a forbidden CFO seat',
+      (domain) => {
+        domain.roles.push({
+          ...clone(domain.roles.find(({ roleKind }) => roleKind === 'advisor')),
+          roleId: 'finance-cfo',
+          label: 'CFO',
+        });
+      },
+      'E_OPERATE_CONTRACT_MALFORMED',
+    ],
+    [
+      'a forbidden product-owner seat',
+      (domain) => {
+        domain.roles.push({
+          ...clone(domain.roles.find(({ roleKind }) => roleKind === 'advisor')),
+          roleId: 'product-owner',
+          label: 'Product Owner',
+        });
+      },
+      'E_OPERATE_CONTRACT_MALFORMED',
+    ],
   ];
 
   for (const [label, mutate, code] of cases) {
@@ -118,10 +159,16 @@ test('the registration boundary seats five advisors and keeps one challenge and 
   const created = createOperateExtensionRegistryV2({ domains: [business(), software()] });
   const resolved = resolvePublicOperatingDomainV2(created, 'business', { domainVersion: '1.0.0' });
   assert.deepEqual(
-    resolved.roles.filter(({ roleKind }) => roleKind === 'advisor').map(({ roleId }) => roleId).sort(),
+    resolved.roles
+      .filter(({ roleKind }) => roleKind === 'advisor')
+      .map(({ roleId }) => roleId)
+      .sort(),
     [...EXECUTIVE_ADVISOR_IDS].sort(),
   );
-  assert.equal(resolved.roles.find(({ roleKind }) => roleKind === 'challenger').roleId, 'independent-challenge');
+  assert.equal(
+    resolved.roles.find(({ roleKind }) => roleKind === 'challenger').roleId,
+    'independent-challenge',
+  );
 
   const labelled = business();
   const seat = labelled.roles.find(({ roleKind }) => roleKind === 'advisor');
@@ -151,9 +198,12 @@ test('the registration boundary seats five advisors and keeps one challenge and 
     roleId: 'strategy-finance',
     label: 'CEO',
   });
-  assert.throws(() => createOperateExtensionRegistryV2({ domains: [business(), executiveOnSoftware] }), {
-    code: 'E_EXTENSION_REGISTRATION_INVALID',
-  });
+  assert.throws(
+    () => createOperateExtensionRegistryV2({ domains: [business(), executiveOnSoftware] }),
+    {
+      code: 'E_EXTENSION_REGISTRATION_INVALID',
+    },
+  );
 });
 
 test('an advisor seat carries no dependency and the challenge and chair seats always do', () => {
@@ -168,14 +218,16 @@ test('an advisor seat carries no dependency and the challenge and chair seats al
 
   const dependent = business();
   dependent.roles.find(({ roleKind }) => roleKind === 'advisor').dependencyPolicy = {
-    id: 'all-required', version: '1.0.0',
+    id: 'all-required',
+    version: '1.0.0',
   };
   assert.throws(
-    () => resolvePublicOperatingDomainV2(
-      createOperateExtensionRegistryV2({ domains: [dependent, software()] }),
-      'business',
-      { domainVersion: '1.0.0' },
-    ),
+    () =>
+      resolvePublicOperatingDomainV2(
+        createOperateExtensionRegistryV2({ domains: [dependent, software()] }),
+        'business',
+        { domainVersion: '1.0.0' },
+      ),
     { code: 'OPERATING_DOMAIN_REGISTRATION_INVALID' },
   );
 });
@@ -187,7 +239,11 @@ test('roleId uniqueness is per domain', () => {
     resolvePublicOperatingDomainV2(created, 'software', { domainVersion: '1.0.0' });
   });
   assert.equal(
-    resolvePublicOperatingDomainV2(created, 'business', { domainVersion: '1.0.0' }).roles.find(({ roleKind }) => roleKind === 'chair').roleId,
-    resolvePublicOperatingDomainV2(created, 'software', { domainVersion: '1.0.0' }).roles.find(({ roleKind }) => roleKind === 'chair').roleId,
+    resolvePublicOperatingDomainV2(created, 'business', { domainVersion: '1.0.0' }).roles.find(
+      ({ roleKind }) => roleKind === 'chair',
+    ).roleId,
+    resolvePublicOperatingDomainV2(created, 'software', { domainVersion: '1.0.0' }).roles.find(
+      ({ roleKind }) => roleKind === 'chair',
+    ).roleId,
   );
 });

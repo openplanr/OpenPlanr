@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { existsSync, lstatSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, lstatSync, readdirSync, readFileSync } from 'node:fs';
 import { extname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -32,14 +32,16 @@ const dependencyNames = Object.keys({
   ...cliManifest.optionalDependencies,
   ...cliManifest.devDependencies,
 });
-const providerPackages = dependencyNames.filter((name) => (
-  name === 'openai' || name === '@anthropic-ai/sdk' || /ollama/iu.test(name)
-));
+const providerPackages = dependencyNames.filter(
+  (name) => name === 'openai' || name === '@anthropic-ai/sdk' || /ollama/iu.test(name),
+);
 if (providerPackages.length > 0) {
   throw new Error(`CLI still depends on model providers: ${providerPackages.join(', ')}`);
 }
 
-const cliSources = filesBelow('packages/cli/src').filter((path) => ['.ts', '.mts', '.js', '.mjs'].includes(extname(path)));
+const cliSources = filesBelow('packages/cli/src').filter((path) =>
+  ['.ts', '.mts', '.js', '.mjs'].includes(extname(path)),
+);
 const providerPatterns = [
   /from\s+['"](?:openai|@anthropic-ai\/sdk|[^'"]*ollama[^'"]*)['"]/iu,
   /\b(?:getAIProvider|generateStreamingJSON|AnthropicProvider|OpenAIProvider|OllamaProvider)\b/u,
@@ -48,7 +50,10 @@ const providerPatterns = [
 for (const path of cliSources) {
   const bytes = readFileSync(path, 'utf8');
   const match = providerPatterns.find((pattern) => pattern.test(bytes));
-  if (match) throw new Error(`CLI provider purity failed in ${relative(root, path).split(sep).join('/')}: ${match}`);
+  if (match)
+    throw new Error(
+      `CLI provider purity failed in ${relative(root, path).split(sep).join('/')}: ${match}`,
+    );
 }
 
 const semanticPatterns = [
@@ -59,7 +64,14 @@ const semanticPatterns = [
   /\b(?:anthropic|openai|ollama)\s+(?:client|provider|model)\b/iu,
 ];
 let semanticFiles = 0;
-for (const skillId of ['planr-plan', 'planr-spec', 'planr-ship', 'planr-design', 'planr-design-loop', 'planr-design-review']) {
+for (const skillId of [
+  'planr-plan',
+  'planr-spec',
+  'planr-ship',
+  'planr-design',
+  'planr-design-loop',
+  'planr-design-review',
+]) {
   const hostSkillName = projectedSkillName(skillId);
   for (const skillRoot of [
     `skills/${skillId}`,
@@ -68,29 +80,44 @@ for (const skillId of ['planr-plan', 'planr-spec', 'planr-ship', 'planr-design',
     `dist/plugins/cursor/openplanr/rules/${skillId}`,
   ]) {
     for (const path of filesBelow(skillRoot)) {
-      if (!['.md', '.mdc', '.mjs', '.js', '.json', '.yaml', '.css', '.html'].includes(extname(path))) continue;
+      if (
+        !['.md', '.mdc', '.mjs', '.js', '.json', '.yaml', '.css', '.html'].includes(extname(path))
+      )
+        continue;
       semanticFiles += 1;
       const bytes = readFileSync(path, 'utf8');
       const match = semanticPatterns.find((pattern) => pattern.test(bytes));
-      if (match) throw new Error(`Semantic runtime purity failed in ${relative(root, path).split(sep).join('/')}: ${match}`);
+      if (match)
+        throw new Error(
+          `Semantic runtime purity failed in ${relative(root, path).split(sep).join('/')}: ${match}`,
+        );
     }
   }
 }
 
 for (const host of ['openai', 'claude']) {
   for (const skillId of ['planr-plan', 'planr-spec', 'planr-ship']) {
-    const bytes = readFileSync(join(root, `dist/plugins/${host}/openplanr/skills/${projectedSkillName(skillId)}/SKILL.md`), 'utf8');
+    const bytes = readFileSync(
+      join(root, `dist/plugins/${host}/openplanr/skills/${projectedSkillName(skillId)}/SKILL.md`),
+      'utf8',
+    );
     if (/\bopenplanr:planr-|(?:\/|\$)planr-[a-z]/u.test(bytes)) {
       throw new Error(`${host}/${skillId} contains a legacy long invocation.`);
     }
   }
 }
 
-process.stdout.write(`${JSON.stringify({
-  ok: true,
-  cliSourceFiles: cliSources.length,
-  providerDependencies: 0,
-  providerCalls: 0,
-  semanticSkillFiles: semanticFiles,
-  semanticSubprocesses: 0,
-}, null, 2)}\n`);
+process.stdout.write(
+  `${JSON.stringify(
+    {
+      ok: true,
+      cliSourceFiles: cliSources.length,
+      providerDependencies: 0,
+      providerCalls: 0,
+      semanticSkillFiles: semanticFiles,
+      semanticSubprocesses: 0,
+    },
+    null,
+    2,
+  )}\n`,
+);

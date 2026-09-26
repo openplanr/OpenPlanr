@@ -3,6 +3,9 @@
 // source-map-aware compile entry points so existing `@openplanr/skill-runtime/render`
 // consumers keep working without a second renderer.
 
+export { compileComposedV1, compileMarkdownV1 } from './compiler/compile.mjs';
+
+export { composeIncludes, renderSkillForHost } from './compiler/composition.mjs';
 export {
   assertPortableAsset,
   assertSafeSourcePath,
@@ -15,7 +18,4 @@ export {
   renderTemplate,
   sha256,
 } from './compiler/render-primitives.mjs';
-
-export { composeIncludes, renderSkillForHost } from './compiler/composition.mjs';
-export { compileComposedV1, compileMarkdownV1 } from './compiler/compile.mjs';
 export { SourceMapBuilder, validateSourceMap } from './compiler/source-map.mjs';

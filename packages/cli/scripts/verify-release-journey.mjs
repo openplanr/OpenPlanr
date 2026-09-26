@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 import { execFileSync, spawn } from 'node:child_process';
 import {
-  mkdtempSync,
   mkdirSync,
-  readFileSync,
+  mkdtempSync,
   readdirSync,
+  readFileSync,
   realpathSync,
   rmSync,
   writeFileSync,
@@ -56,11 +56,9 @@ function run(command, args, options = {}) {
 
 function packArchive(sourceRoot, destination) {
   const report = JSON.parse(
-    run(
-      'npm',
-      ['pack', '--json', '--ignore-scripts', '--pack-destination', destination],
-      { cwd: sourceRoot },
-    ),
+    run('npm', ['pack', '--json', '--ignore-scripts', '--pack-destination', destination], {
+      cwd: sourceRoot,
+    }),
   );
   const filename = report[0]?.filename;
   if (typeof filename !== 'string' || filename.length === 0) {
@@ -84,7 +82,9 @@ function writeJsonFile(target, value) {
 function issuedEvidenceRefIds(assignment) {
   const bundle = record(record(assignment.intelligenceContext).inputBundle);
   return Array.isArray(bundle.issuedEvidence)
-    ? bundle.issuedEvidence.map((entry) => String(record(entry).evidenceRefId ?? '')).filter(Boolean)
+    ? bundle.issuedEvidence
+        .map((entry) => String(record(entry).evidenceRefId ?? ''))
+        .filter(Boolean)
     : [];
 }
 
@@ -391,16 +391,7 @@ function loadPreparedClaim(prepared) {
 async function probeDashboard(cli, project, environment, cycleId, ownerActorId) {
   const child = spawn(
     cli,
-    [
-      'operate',
-      'dashboard',
-      cycleId,
-      '--actor',
-      ownerActorId,
-      '--port',
-      '0',
-      '--no-watch',
-    ],
+    ['operate', 'dashboard', cycleId, '--actor', ownerActorId, '--port', '0', '--no-watch'],
     { cwd: project, env: environment, stdio: ['ignore', 'pipe', 'pipe'] },
   );
   let stdout = '';
@@ -421,12 +412,15 @@ async function probeDashboard(cli, project, environment, cycleId, ownerActorId) 
       if (match) url = match[1];
       else {
         if (child.exitCode !== null) {
-          throw new Error(`dashboard exited ${child.exitCode}: ${(stderr || stdout).slice(0, 500)}`);
+          throw new Error(
+            `dashboard exited ${child.exitCode}: ${(stderr || stdout).slice(0, 500)}`,
+          );
         }
         await new Promise((resolveWait) => setTimeout(resolveWait, 50));
       }
     }
-    if (!url) throw new Error(`dashboard did not report a URL: ${(stderr || stdout).slice(0, 500)}`);
+    if (!url)
+      throw new Error(`dashboard did not report a URL: ${(stderr || stdout).slice(0, 500)}`);
     const response = await fetch(url);
     const html = await response.text();
     return { url, status: response.status, html };
@@ -529,13 +523,12 @@ try {
     .map(({ skillId }) => String(skillId))
     .sort();
   const { BUSINESS_EXECUTIVE_SKILL_BINDINGS } = await import(
-    pathToFileURL(
-      join(installedPipelineRoot, 'lib', 'operate', 'contracts', 'role-skills.mjs'),
-    ).href
+    pathToFileURL(join(installedPipelineRoot, 'lib', 'operate', 'contracts', 'role-skills.mjs'))
+      .href
   );
-  const expectedBusinessExecutorSkills = BUSINESS_EXECUTIVE_SKILL_BINDINGS
-    .map(({ skillName }) => String(skillName))
-    .sort();
+  const expectedBusinessExecutorSkills = BUSINESS_EXECUTIVE_SKILL_BINDINGS.map(({ skillName }) =>
+    String(skillName),
+  ).sort();
   must(
     'setup installs the exact generated Codex skill distribution',
     JSON.stringify(skills) === JSON.stringify(expectedSkills),
@@ -549,7 +542,11 @@ try {
     expectedBusinessExecutorSkills.join(', '),
   );
   const doctor = json(['doctor', '--json']);
-  check('doctor verifies the clean global skill bundle', doctor.ok === true, JSON.stringify(doctor));
+  check(
+    'doctor verifies the clean global skill bundle',
+    doctor.ok === true,
+    JSON.stringify(doctor),
+  );
 
   const domainCatalog = json(['operate', 'domains', '--json']);
   must(
@@ -690,7 +687,9 @@ try {
   check('Challenger preserves a 615-character dissent statement', longDissent.length === 615);
 
   current = json(['operate', 'get', cycleId, '--json']);
-  const chair = current.data.availableAssignments.find((assignment) => assignment.roleId === 'chair');
+  const chair = current.data.availableAssignments.find(
+    (assignment) => assignment.roleId === 'chair',
+  );
   must('Chair becomes available after the Challenger', Boolean(chair));
   prepareAndSubmit(chair, authorChair);
 

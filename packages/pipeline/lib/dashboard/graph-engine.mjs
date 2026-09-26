@@ -16,12 +16,9 @@
 
 import { spawnSync } from 'node:child_process';
 import { dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 import { validate } from '../design/schema-loader.mjs';
 import { readGraph, readNode } from './graph-reader.mjs';
-
-const here = dirname(fileURLToPath(import.meta.url));
 
 /** Lowest planr CLI version that emits the graph/status --json the dashboard consumes. */
 export const CLI_GRAPH_MIN_VERSION = '1.7.2';
@@ -89,7 +86,10 @@ export function tryDelegate(planrDir, run = defaultRun) {
   if (!version) return null;
 
   // Prefer `planr graph --json`; fall back to `planr status --json`.
-  for (const args of [['graph', '--json'], ['status', '--json']]) {
+  for (const args of [
+    ['graph', '--json'],
+    ['status', '--json'],
+  ]) {
     let res;
     try {
       // The dashboard may be launched by an installed OpenPlanr command whose
@@ -185,7 +185,8 @@ function clonePlainJson(value, path = '$') {
     }
     if (entry === null || typeof entry === 'string' || typeof entry === 'boolean') return entry;
     if (typeof entry === 'number') {
-      if (!Number.isFinite(entry)) throw new TypeError(`Planning graph has a non-finite number at ${currentPath}.`);
+      if (!Number.isFinite(entry))
+        throw new TypeError(`Planning graph has a non-finite number at ${currentPath}.`);
       return entry;
     }
     if (typeof entry !== 'object') {
@@ -200,11 +201,14 @@ function clonePlainJson(value, path = '$') {
         throw new TypeError(`Planning graph has a non-plain object at ${currentPath}.`);
       }
       const descriptors = Object.getOwnPropertyDescriptors(entry);
-      if (Reflect.ownKeys(descriptors).some((key) => (
-        typeof key !== 'string'
-        || descriptors[key]?.get !== undefined
-        || descriptors[key]?.set !== undefined
-      ))) {
+      if (
+        Reflect.ownKeys(descriptors).some(
+          (key) =>
+            typeof key !== 'string' ||
+            descriptors[key]?.get !== undefined ||
+            descriptors[key]?.set !== undefined,
+        )
+      ) {
         throw new TypeError(`Planning graph has an accessor or symbol at ${currentPath}.`);
       }
       if (Array.isArray(entry)) {
@@ -233,7 +237,8 @@ function clonePlainJson(value, path = '$') {
 
   const result = clone(value, path, 0);
   const bytes = Buffer.byteLength(JSON.stringify(result), 'utf8');
-  if (bytes > MAX_GRAPH_BYTES) throw new TypeError('Planning graph exceeds the public response limit.');
+  if (bytes > MAX_GRAPH_BYTES)
+    throw new TypeError('Planning graph exceeds the public response limit.');
   return result;
 }
 
@@ -244,15 +249,16 @@ function deepFreeze(value) {
 }
 
 function validNodeId(value) {
-  if (typeof value !== 'string' || value.length < 1 || value.length > MAX_NODE_ID_LENGTH) return false;
+  if (typeof value !== 'string' || value.length < 1 || value.length > MAX_NODE_ID_LENGTH)
+    return false;
   if (value === '.' || value === '..' || value.includes('\\')) return false;
   for (let index = 0; index < value.length; index += 1) {
     const codeUnit = value.charCodeAt(index);
-    if (codeUnit >= 0xD800 && codeUnit <= 0xDBFF) {
+    if (codeUnit >= 0xd800 && codeUnit <= 0xdbff) {
       const next = value.charCodeAt(index + 1);
-      if (!(next >= 0xDC00 && next <= 0xDFFF)) return false;
+      if (!(next >= 0xdc00 && next <= 0xdfff)) return false;
       index += 1;
-    } else if (codeUnit >= 0xDC00 && codeUnit <= 0xDFFF) {
+    } else if (codeUnit >= 0xdc00 && codeUnit <= 0xdfff) {
       return false;
     }
   }
@@ -316,7 +322,7 @@ export function assertPlanningNode(value, expectedId = undefined) {
  * @returns {"agile" | "spec" | "mixed" | "empty"}
  */
 export function detectMode(graph) {
-  const nodes = (graph && Array.isArray(graph.nodes)) ? graph.nodes : [];
+  const nodes = graph && Array.isArray(graph.nodes) ? graph.nodes : [];
   let hasAgile = false;
   let hasSpec = false;
   for (const n of nodes) {

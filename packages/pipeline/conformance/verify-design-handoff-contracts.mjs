@@ -15,7 +15,7 @@ import {
 } from '../lib/protocol/design-handoff-contracts.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const digest = character => `sha256:${character.repeat(64)}`;
+const digest = (character) => `sha256:${character.repeat(64)}`;
 const requireCondition = (condition, message) => {
   if (!condition) throw new Error(message);
 };
@@ -57,7 +57,10 @@ const readiness = compileDesignHandoffReadiness(readinessInput);
 requireCondition(readiness.status === 'ready', 'Current complete design evidence is not ready.');
 requireCondition(canContinueDesignHandoff(readiness), 'A ready design cannot continue to Plan.');
 requireCondition(readiness.authority === 'none', 'Readiness granted execution authority.');
-requireCondition(readiness.continuation.action === 'prepare-plan', 'Readiness permits an unexpected continuation.');
+requireCondition(
+  readiness.continuation.action === 'prepare-plan',
+  'Readiness permits an unexpected continuation.',
+);
 
 const hostile = structuredClone(readinessInput);
 hostile.documentPath = '../outside.json';
@@ -84,20 +87,24 @@ const handoff = {
     readiness: { status: 'ready', digest: digest('c') },
     reviewHandoff: { version: 1, contentDigest: digest('b') },
   },
-  sources: [{
-    id: 'design-revision',
-    kind: 'design-revision',
-    path: 'design-document.json',
-    revision,
-    digest: digest('d'),
-  }],
-  requirements: [{
-    id: 'REQ-001',
-    kind: 'behavior',
-    statement: 'Keep dispatch confirmation explicit.',
-    sourceRefs: ['design-revision'],
-    verification: ['The confirmation remains keyboard reachable.'],
-  }],
+  sources: [
+    {
+      id: 'design-revision',
+      kind: 'design-revision',
+      path: 'design-document.json',
+      revision,
+      digest: digest('d'),
+    },
+  ],
+  requirements: [
+    {
+      id: 'REQ-001',
+      kind: 'behavior',
+      statement: 'Keep dispatch confirmation explicit.',
+      sourceRefs: ['design-revision'],
+      verification: ['The confirmation remains keyboard reachable.'],
+    },
+  ],
   contentDigest: digest('0'),
   markdown: '# Fieldwork implementation package\n',
 };
@@ -113,16 +120,21 @@ approved.approval = {
   authority: 'prepare-plan',
 };
 assertDesignImplementationHandoff(approved);
-assertDesignPlanningLineage({
-  kind: 'openplanr-design-planning-lineage',
-  schemaVersion: '1.0.0',
-  handoff: { id: approved.id, version: approved.version, contentDigest: approved.contentDigest },
-  specId: 'SPEC-014',
-  mappings: [{
-    requirementId: 'REQ-001',
-    acceptanceRefs: [{ storyId: 'US-041', acceptanceId: 'AC-001' }],
-    taskIds: ['T-041'],
-  }],
-}, approved);
+assertDesignPlanningLineage(
+  {
+    kind: 'openplanr-design-planning-lineage',
+    schemaVersion: '1.0.0',
+    handoff: { id: approved.id, version: approved.version, contentDigest: approved.contentDigest },
+    specId: 'SPEC-014',
+    mappings: [
+      {
+        requirementId: 'REQ-001',
+        acceptanceRefs: [{ storyId: 'US-041', acceptanceId: 'AC-001' }],
+        taskIds: ['T-041'],
+      },
+    ],
+  },
+  approved,
+);
 
 console.log('Design handoff contract conformance: PASS');

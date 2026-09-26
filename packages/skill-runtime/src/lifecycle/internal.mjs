@@ -11,7 +11,8 @@ export function assertNonBlank(value, label) {
 
 export function assertIsoDate(value, label) {
   assertNonBlank(value, label);
-  if (Number.isNaN(Date.parse(value))) throw new TypeError(`${label} must be an ISO date-time string.`);
+  if (Number.isNaN(Date.parse(value)))
+    throw new TypeError(`${label} must be an ISO date-time string.`);
   return value;
 }
 
