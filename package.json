@@ -49,7 +49,7 @@
     "test:focused": "node scripts/run-focused-tests.mjs",
     "test": "node scripts/workspace-command.mjs test",
     "lint": "biome ci . --diagnostic-level=error",
-    "typecheck:declarations": "tsc -p tsconfig.declarations.json",
+    "typecheck:declarations": "tsc -p tsconfig.declarations.json && node scripts/typescript/check-declared-exports.mjs",
     "lint:fix": "biome check --write .",
     "format": "biome format --write .",
     "prepare": "node .husky/install.mjs",
