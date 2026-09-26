@@ -1,17 +1,13 @@
 import assert from 'node:assert/strict';
-import { existsSync, mkdirSync } from 'node:fs';
+import { mkdirSync } from 'node:fs';
 import { mkdtemp, rm } from 'node:fs/promises';
-import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
+import { launchBrowser } from '../../../tests/support/browser-launcher.mjs';
 import { renderDesignDocument } from '../lib/design/document.mjs';
 import { startDesignReview } from '../lib/design/review.mjs';
 import { designFixture } from './design-fixture.mjs';
-
-const { chromium } = createRequire(new URL('../../pipeline/package.json', import.meta.url))(
-  'playwright',
-);
 
 test('camera movement preserves artboard geometry and quiet personal saves while review edits retain save status', {
   timeout: 45000,
@@ -25,12 +21,7 @@ test('camera movement preserves artboard geometry and quiet personal saves while
       env: { ...process.env, PLANR_HOME: join(root, 'home') },
       port: 0,
     });
-    browser = await chromium.launch({
-      headless: true,
-      ...(existsSync('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome')
-        ? { channel: 'chrome' }
-        : {}),
-    });
+    browser = await launchBrowser({ engine: 'chromium' });
     const page = await browser.newPage({ viewport: { width: 1600, height: 1050 } });
     page.setDefaultTimeout(8000);
     page.setDefaultNavigationTimeout(30000);

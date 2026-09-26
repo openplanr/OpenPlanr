@@ -1,19 +1,20 @@
 import assert from 'node:assert/strict';
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { mkdtemp, rm } from 'node:fs/promises';
-import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import { pathToFileURL } from 'node:url';
+import {
+  browserEngine,
+  launchBrowser,
+  playwright,
+} from '../../../tests/support/browser-launcher.mjs';
 import { renderDesignDocument } from '../lib/design/document.mjs';
 import { startDesignReview } from '../lib/design/review.mjs';
 import { designFixture } from './design-fixture.mjs';
 
-const engines = createRequire(new URL('../../pipeline/package.json', import.meta.url))(
-  'playwright',
-);
-const engine = process.env.PLANR_BROWSER_ENGINE || 'chromium';
+const engine = browserEngine();
 const loadedSelector = '.planr-artifact-panel iframe[src], .planr-artifact-panel iframe[srcdoc]';
 
 async function settled(page, screenId, frameId = 'desktop') {
@@ -130,19 +131,13 @@ test(`mobile reviews demand-load bounded product documents and remain usable (${
       env: { ...process.env, PLANR_HOME: join(root, 'home') },
       port: 0,
     });
-    browser = await engines[engine].launch({
-      headless: true,
-      ...(engine === 'chromium' &&
-      existsSync('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome')
-        ? { channel: 'chrome' }
-        : {}),
-    });
+    browser = await launchBrowser({ engine });
     for (const [host, url] of [
       ['portable', pathToFileURL(rendered.views.walkthrough).href],
       ['local', review.url],
     ]) {
       const context = await browser.newContext({
-        ...engines.devices['iPhone 13'],
+        ...playwright.devices['iPhone 13'],
         reducedMotion: 'no-preference',
       });
       await context.addInitScript(() => {
