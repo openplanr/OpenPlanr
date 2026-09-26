@@ -1,5 +1,5 @@
 /**
- * Ship-equivalent prechecks (pure Node, stdlib-only) for SPEC-007 orchestration tests.
+ * Ship-equivalent prechecks (pure Node, stdlib-only) for the orchestration tests.
  * Mirrors `.cursor/rules/planr-pipeline-ship.mdc` §1b stories/tasks requirements in spec-driven mode.
  */
 

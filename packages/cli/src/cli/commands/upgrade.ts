@@ -14,8 +14,7 @@ import { display, logger } from '../../utils/logger.js';
 /**
  * `planr upgrade` — reconcile the installed tuple against the published
  * compatible set (`status`) and, for the half the CLI owns, perform the npm
- * upgrade while prescribing the plugin half (`apply`). The `status` region is
- * T-002's; the `apply` region is T-003's.
+ * upgrade while prescribing the plugin half (`apply`).
  */
 export function registerUpgradeCommand(program: Command, _cliVersion: string) {
   const upgrade = program
@@ -66,7 +65,7 @@ export function registerUpgradeCommand(program: Command, _cliVersion: string) {
       if (result.status === 'incompatible') process.exitCode = 1;
     });
 
-  // ---- T-003: apply -------------------------------------------------------
+  // ---- apply --------------------------------------------------------------
   upgrade
     .command('apply')
     .description('Upgrade the npm CLI half and prescribe the exact plugin-half commands to run')
@@ -80,7 +79,7 @@ export function registerUpgradeCommand(program: Command, _cliVersion: string) {
       // Nothing for the CLI half to execute: aligned, unknown, or an incompatibility the
       // CLI cannot resolve. The last case is not "nothing to do" — it is the plugin half
       // trailing, and the reason string promises the commands, so they must actually be
-      // printed here. FR4 is unmet if this branch reports a promise and no prescription.
+      // printed here. The contract is unmet if this branch reports a promise and no prescription.
       if (!plan.proceed || !plan.targetCliVersion) {
         const pluginHalfCommands =
           reconciliation.status === 'incompatible' ? pluginHalfPrescription() : [];
@@ -137,7 +136,7 @@ export function registerUpgradeCommand(program: Command, _cliVersion: string) {
       const result = await executeCliHalfUpgrade({
         projectDir,
         targetCliVersion: plan.targetCliVersion,
-        // FR7: after the CLI half verifies, run the migrations this upgrade
+        // After the CLI half verifies, run the migrations this upgrade
         // crosses. This is the seam that makes the registry reachable end to end.
         migrationRunner: runPendingMigrations,
       });

@@ -5585,7 +5585,7 @@ function assertCheckpointTerminalVerificationAssignmentsV2(index) {
         (candidate.assignmentKind === 'verification' &&
           candidate.governedOperationId === operation.operationId),
     );
-    // Pre-T-007 checkpoints have neither lifecycle Event nor verification
+    // Checkpoints older than lifecycle Events have neither lifecycle Event nor verification
     // Assignment. Once either appears, their complete canonical pair is atomic.
     if (!created && candidates.length === 0) continue;
     const action = index.actions.get(operation.action.actionId);

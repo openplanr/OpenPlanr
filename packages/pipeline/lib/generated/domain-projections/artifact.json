@@ -763,7 +763,7 @@
     {
       "source": "packages/artifact/lib/artifact/internal/board-token.mjs",
       "target": "lib/artifact/internal/board-token.mjs",
-      "sha256": "ec72d0963ef884748f25d3a72964c555772c0b468c26f88840466d0baa7c85d6",
+      "sha256": "7ebe32bb25565fb4c82e8c73ef86981886900973f23781de0c10cc10200fe27c",
       "mode": "644"
     },
     {
@@ -775,13 +775,13 @@
     {
       "source": "packages/artifact/lib/artifact/internal/escape.mjs",
       "target": "lib/artifact/internal/escape.mjs",
-      "sha256": "42cd713d2c25054589f07943425b144a69184afd98416344e7608f1c306d6fef",
+      "sha256": "9983d578a23485fd2230ba09086c603ce22366fb2aec9c45b659c2e8195f54e3",
       "mode": "644"
     },
     {
       "source": "packages/artifact/lib/artifact/internal/feedback.mjs",
       "target": "lib/artifact/internal/feedback.mjs",
-      "sha256": "68f282314996914772f4c71e982110001167db97da0b26c7d601cded30e2894a",
+      "sha256": "c6ed22edae673c2b708b1f57d69f4f9003874045c4da9a3ff405a2144be213b2",
       "mode": "644"
     },
     {
@@ -793,7 +793,7 @@
     {
       "source": "packages/artifact/lib/artifact/internal/paths.mjs",
       "target": "lib/artifact/internal/paths.mjs",
-      "sha256": "ed6f6d4ebee5761b6ac4d8c2c9fc5b14956b10d2d1dd29485660ae15bd1d9f41",
+      "sha256": "bb8c3b66818e829262aa6165d7444667e9d84e469a57dfff6d9a337e46343f5e",
       "mode": "644"
     },
     {
@@ -847,7 +847,7 @@
     {
       "source": "packages/artifact/lib/artifact/share-client.mjs",
       "target": "lib/artifact/share-client.mjs",
-      "sha256": "eabe81921e16e26be67ba67b4546ec03258970f50e2adda00e58710f09a8ca09",
+      "sha256": "5ff653b5dc3b5f27a2cf46ce8a583317b7191dbeaa23b1fbef8cc774dad6b94c",
       "mode": "644"
     },
     {

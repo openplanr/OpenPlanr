@@ -2164,7 +2164,7 @@ assert.throws(
 );
 checks += 1;
 
-// OP-12/13: creation is pending-only; the scheduler atomically appends the
+// Creation is pending-only; the scheduler atomically appends the
 // exact zero-dependency availability Event and replay cannot append another.
 const zeroDependencyCreation = baseAssignment();
 const creationOnly = events.slice(0, 2);

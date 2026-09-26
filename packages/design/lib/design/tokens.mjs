@@ -1,7 +1,6 @@
 /**
  * Design tokens — the FIXED vocabulary the `/planr-pipeline:design` generator
- * authors with, and the scale `lib/design/lint.mjs` validates against
- * (SPEC-015 follow-up, v0.16.0).
+ * authors with, and the scale `lib/design/lint.mjs` validates against.
  *
  * This is the engineering answer to "how do designers keep sizing/spacing
  * pixel-consistent?": a real design system constrains layout to a small, fixed

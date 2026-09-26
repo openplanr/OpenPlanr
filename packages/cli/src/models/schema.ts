@@ -37,7 +37,7 @@ export const distributionConfigSchema = z.object({
 });
 
 /**
- * FR6 upgrade-offer policy. Both fields are optional and additive: neither may
+ * Upgrade-offer policy. Both fields are optional and additive: neither may
  * be inferred from a bare invocation — an absent block means "prompt as usual".
  */
 export const upgradeConfigSchema = z.object({

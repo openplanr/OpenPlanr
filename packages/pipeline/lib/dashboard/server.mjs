@@ -1,12 +1,12 @@
 /**
- * Dashboard HTTP server (SPEC-016 / T-001).
+ * Dashboard HTTP server.
  *
  * A persistent localhost server for the planr dashboard, following the same
- * agent-independent daemon pattern as lib/design-engine/daemon.mjs (hard rule
- * 14): the dashboard keeps serving if the launching agent dies, and a second
- * launch on the same port reuses the running server instead of double-binding.
+ * agent-independent daemon pattern as lib/design-engine/daemon.mjs: the dashboard
+ * keeps serving if the launching agent dies, and a second launch on the same port
+ * reuses the running server instead of double-binding.
  *
- * Routes (real graph data wired in T-002 via lib/dashboard/graph-engine.mjs):
+ * Routes (graph data comes from lib/dashboard/graph-engine.mjs):
  *   GET /api/graph      → typed project graph { nodes, edges }   (application/json)
  *   GET /api/node/:id   → a single node with body                (application/json)
  *   GET /api/meta       → { version, planrDir, views, defaultView } (application/json)
@@ -19,7 +19,7 @@
  * State: <planrHome>/dashboard-daemon/{port} PID file (reuse detection) +
  * <planrHome>/dashboard-daemon/port (last bound port, discovery).
  *
- * Stdlib only — no npm runtime dependency. Live sync (T-004): when watching is
+ * Stdlib only — no npm runtime dependency. Live sync: when watching is
  * enabled the server starts lib/dashboard/watcher.mjs, keeps an in-memory
  * `currentGraph` cache that the watcher's diff events patch, and broadcasts each
  * patch to every open /api/events SSE client. `--no-watch` suppresses startup.
@@ -2170,8 +2170,8 @@ function applyPlanningPatch(graph, patch) {
 
 /**
  * Create the dashboard HTTP server. `getGraph` / `getNode` remain injectable so the
- * T-004 watcher can supply cached/patched readers without editing this module; the
- * defaults serve the in-memory `currentGraph` cache (T-004), which the watcher
+ * watcher can supply cached/patched readers without editing this module; the
+ * defaults serve the in-memory `currentGraph` cache, which the watcher
  * patches in place. `watch` (default true) starts the filesystem watcher; pass
  * `watch: false` (the `--no-watch` flag) to suppress it.
  */
@@ -3635,7 +3635,7 @@ export function createDashboardServer({
   /**
    * Receive a watcher patch: update the in-memory cache, then push the patch to
    * every open SSE client as a default `message` event (the client merges it in
-   * place, preserving selection / view / zoom / filters — AC6).
+   * place, preserving selection / view / zoom / filters).
    */
   const onWatcherPatch = (patch) => {
     let accepted;

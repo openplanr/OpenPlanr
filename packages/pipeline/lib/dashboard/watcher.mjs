@@ -1,21 +1,21 @@
 /**
- * Filesystem watcher for live dashboard sync (SPEC-016 / US-004, T-004).
+ * Filesystem watcher for live dashboard sync.
  *
  * Observes `.planr/` with `node:fs.watch` (recursive where the platform supports
  * it, polling fallback otherwise), debounces a burst of saves into a single
  * recompute, asks the graph engine to rebuild the changed node's subgraph, diffs
  * the result against the last in-memory snapshot, and hands a minimal patch
  * `{ updated, added, removed }` to an `onPatch` callback so the server can push
- * it over SSE. Closes FR6 (live sync ≤1s) and AC6 (view-state preservation: the
- * patch is incremental so the client never resets selection / zoom / filters).
+ * it over SSE. Live sync lands within a second and view state is preserved: the
+ * patch is incremental so the client never resets selection / zoom / filters.
  *
- * Strictly READ-ONLY (BR1): this module never writes, unlinks, or mkdirs under
+ * Strictly READ-ONLY: this module never writes, unlinks, or mkdirs under
  * `.planr/`. It only reads (via the graph engine) and watches. Zero third-party
  * dependencies — `node:fs` watch + `setTimeout` debounce are stdlib.
  *
  * graph-engine.mjs is a Preserve file: the watcher calls `buildGraph(planrDir,
  * { scope })` but does not modify the engine. The `scope` carries the changed
- * node id so the engine can narrow its recompute (and so AC2 is inspectable);
+ * node id so the engine can narrow its recompute (and so the scope is inspectable);
  * the watcher itself always diffs against its own snapshot, so correctness does
  * not depend on the engine honouring `scope`.
  */
@@ -195,7 +195,7 @@ export function createWatcher(planrDir, options = {}) {
   function recompute(changedId = null) {
     let next;
     try {
-      // Pass `scope` so the engine can narrow its recompute (AC2 inspectable).
+      // Pass `scope` so the engine can narrow its recompute (and stays inspectable).
       next = buildGraph(planrDir, { scope: changedId });
     } catch {
       // A transient half-written file: keep the old snapshot, emit nothing.

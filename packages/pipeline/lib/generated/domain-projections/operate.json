@@ -481,7 +481,7 @@
     {
       "source": "packages/operate/lib/operate/runtime-foundation.mjs",
       "target": "lib/operate/runtime-foundation.mjs",
-      "sha256": "8cdf7a717f3fba2aad487d85ab1e6092b6b45c7d463411008c2df2a6c15f8139",
+      "sha256": "46fb6fd75c76a2dffbd5559016dde4eb9ec3fb1e1d574d7fab38787580c9434e",
       "mode": "644"
     },
     {

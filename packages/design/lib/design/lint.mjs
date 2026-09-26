@@ -1,6 +1,5 @@
 /**
- * Deterministic design linter for `/planr-pipeline:design` output (SPEC-015
- * follow-up, v0.16.0).
+ * Deterministic design linter for `/planr-pipeline:design` output.
  *
  * The engineering guarantee behind "consistent, accurate sizing/spacing":
  * instead of trusting the model's self-review, we PARSE the generated HTML/CSS

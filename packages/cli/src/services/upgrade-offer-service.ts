@@ -19,7 +19,7 @@ import {
 } from './upgrade-service.js';
 
 /**
- * FR5/FR6 — offer an available upgrade at a natural moment (wherever the user
+ * Offer an available upgrade at a natural moment (wherever the user
  * already is) rather than making them run a diagnostic to discover they are
  * stale. This service owns three surfaces:
  *
@@ -31,12 +31,12 @@ import {
  *  - the escalating "not now" backoff (24h → 48h → one week) that keeps the
  *    offer from ever nagging.
  *
- * The hard constraint T-002 established is preserved and outranks the feature:
+ * The reconcile path's hard constraint is preserved and outranks the feature:
  * a durable snooze/never-ask short-circuits before any reconcile call, so an
  * ordinary command that already declined pays no network cost and no delay.
  */
 
-/** The four choices FR5 names. */
+/** The four choices the offer presents. */
 export type UpgradeOfferChoice = 'upgrade-now' | 'always' | 'not-now' | 'never';
 
 /**
@@ -57,7 +57,7 @@ const DEFAULT_SNOOZE_STATE: UpgradeSnoozeState = {
 };
 
 /**
- * FR5 escalating backoff, keyed by the stage the user is snoozing *at*. The
+ * Escalating backoff, keyed by the stage the user is snoozing *at*. The
  * first "not now" (stage 0) waits a day; the next (stage 1) two days; every one
  * after that (stage 2) a full week — so a prompt that was dismissed never
  * reappears frequently enough to train a reflexive dismissal.
@@ -69,14 +69,14 @@ const BACKOFF_MS: Record<0 | 1 | 2, number> = {
 };
 
 /**
- * FR6's "exact re-enable command" — stated verbatim both when the user chooses
+ * The exact re-enable command — stated verbatim both when the user chooses
  * "never ask again" in the offer and when they set it via
  * `planr config set-upgrade-policy --never-ask`, so a permanent opt-out is never
  * a trap the user cannot find how to undo.
  */
 export const UPGRADE_REENABLE_COMMAND = 'planr config set-upgrade-policy --ask-again';
 
-/** Where the machine-local snooze/never-ask state lives (reuses T-002's root). */
+/** Where the machine-local snooze/never-ask state lives (under the runtime root). */
 export function upgradeStatePath(): string {
   return path.join(runtimeRoot(), 'upgrade-state.json');
 }
@@ -111,8 +111,8 @@ export async function writeSnoozeState(state: UpgradeSnoozeState): Promise<void>
 }
 
 /**
- * A test seam of the same shape as T-002's `OPENPLANR_ECOSYSTEM_SOURCE` and
- * T-003's `OPENPLANR_NPM_BIN`: unset in production, it lets a hermetic
+ * A test seam of the same shape as `OPENPLANR_ECOSYSTEM_SOURCE` and
+ * `OPENPLANR_NPM_BIN`: unset in production, it lets a hermetic
  * subprocess integration test drive the offer path — which has no TTY — with a
  * pre-selected choice instead of a live prompt.
  */
@@ -241,7 +241,7 @@ async function runOffer(
   }
 
   // Only now do we consult reconcile — bounded, cache-first, and offline-safe by
-  // T-002's construction. `unknown`/`aligned`/`incompatible` never offer here.
+  // construction. `unknown`/`aligned`/`incompatible` never offer here.
   const reconciliation = await reconcile(projectDir, { now });
   if (reconciliation.status !== 'upgrade-available') {
     return { surfaced: false, choice: null, reason: 'not-upgrade-available' };
@@ -299,7 +299,7 @@ async function applyChoice(input: ApplyChoiceInput): Promise<void> {
   }
 }
 
-/** FR5 escalating snooze: wait `BACKOFF_MS[stage]`, then advance the stage (capped at 2). */
+/** Escalating snooze: wait `BACKOFF_MS[stage]`, then advance the stage (capped at 2). */
 async function recordSnooze(state: UpgradeSnoozeState, now: number): Promise<void> {
   const stage = state.snoozeStage;
   const snoozeUntil = new Date(now + BACKOFF_MS[stage]).toISOString();
@@ -308,7 +308,7 @@ async function recordSnooze(state: UpgradeSnoozeState, now: number): Promise<voi
   logger.info(`Snoozed — I'll check for an upgrade again ${describeBackoff(stage)}.`);
 }
 
-/** FR6 permanent, reversible opt-out. States the exact re-enable command. */
+/** Permanent, reversible opt-out. States the exact re-enable command. */
 async function recordNeverAsk(state: UpgradeSnoozeState): Promise<void> {
   await writeSnoozeState({ ...state, neverAsk: true, snoozeUntil: null });
   logger.info('You will not be asked about upgrades again on this machine.');
@@ -335,7 +335,7 @@ async function enableAutoUpgrade(
 }
 
 /**
- * Delegate the CLI-owned half to T-003's executor and render its result. This
+ * Delegate the CLI-owned half to the upgrade executor and render its result. This
  * re-uses `executeCliHalfUpgrade` verbatim: the offer never re-implements the
  * npm install, the verify-after-write, or the plugin-half prescription.
  */

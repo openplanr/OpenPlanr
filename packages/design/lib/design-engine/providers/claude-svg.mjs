@@ -1,5 +1,5 @@
 /**
- * claude-svg provider — ALWAYS available, no key (hard rule 9).
+ * claude-svg provider — ALWAYS available, no key.
  *
  * The calling Claude session authors precise SVG/HTML sheets itself; for logos
  * and UI this often BEATS diffusion: exact hex, real fonts, production-ready
@@ -115,7 +115,7 @@ export function validateSheet(svgText, contract) {
   return { pass: issues.length === 0, issues };
 }
 
-/** Provider-interface alias so the registry exposes one shape (hard rule 10). */
+/** Provider-interface alias so the registry exposes one shape. */
 export function checkQuality(svgText, _brief, { contract }) {
   return validateSheet(svgText, contract);
 }

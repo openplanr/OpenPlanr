@@ -6,7 +6,7 @@
  * between them cold. This rule pre-selects the right default from the spec's
  * screen count + intent, so the clarification prompt shows ONE recommended
  * option with a plain-language "why" (the user can still override via
- * `--format`). (SPEC-015 findings Design-F2 / DX-F2.)
+ * `--format`).
  *
  *   0–2 screens               → prototype   (a gallery for one screen is absurd)
  *   3+ screens, exploratory   → canvas      ("options" / "concept" / "explore")

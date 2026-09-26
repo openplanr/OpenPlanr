@@ -392,7 +392,7 @@ describe('packed planr upgrade apply', () => {
     }
   });
 
-  // FR7 / T-006: the versioned migration registry must be reachable through the
+  // The versioned migration registry must be reachable through the
   // real `apply` command, not only a direct `runPendingMigrations` unit call. The
   // Operate reset intentionally retired the product-specific profile migration,
   // so crossing its former version must leave the registry and profile untouched.

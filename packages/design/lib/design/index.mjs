@@ -1,8 +1,8 @@
 /**
  * Design helpers for `/planr-pipeline:design` — the dependency-free, tested
- * core shared by all three format renderers (SPEC-015 finding H2: the genuine
- * "shared core" is the screen resolver, the escaping pass, and the manifest
- * writer — everything else is per-format).
+ * core shared by all three format renderers (the genuine "shared core" is the
+ * screen resolver, the escaping pass, and the manifest writer — everything else
+ * is per-format).
  *
  * Barrel re-export; import named helpers from here or from the leaf modules.
  */

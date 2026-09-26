@@ -9,7 +9,7 @@
  *
  * Best-effort and forgiving: an unparseable or screenless spec yields `[]`, and
  * the orchestrator then treats it as a thin spec and clarifies rather than
- * fabricating screens (SPEC-015 finding F8/E3). Pure, stdlib-only.
+ * fabricating screens. Pure, stdlib-only.
  */
 
 const FRONTMATTER_RE = /^---\n([\s\S]*?)\n---/;

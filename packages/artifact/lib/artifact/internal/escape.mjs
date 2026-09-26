@@ -13,7 +13,7 @@
  *   - text or attribute value inside HTML   → escapeHtml()
  *   - object embedded in a <script> block    → embedJson()
  *
- * Pure, stdlib-only, no dependencies. (SPEC-015 finding S1.)
+ * Pure, stdlib-only, no dependencies.
  */
 
 /** @type {Readonly<Record<string, string>>} */

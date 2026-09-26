@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Design-asset conformance for /planr-pipeline:design (SPEC-015).
+ * Design-asset conformance for /planr-pipeline:design.
  *
  * Self-contained and deterministic — no runtime/operator needed (unlike
  * runner.mjs, which drives feat-todo through a live agent). This asserts the

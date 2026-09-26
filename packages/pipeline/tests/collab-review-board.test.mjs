@@ -1252,7 +1252,7 @@ test('when a client disconnects, the remaining client receives presence:leave', 
 
 // ── Show / Hide pins overlay toggle (board render) ────────────────────
 //
-// US-004 primary AC: a single, always-discoverable Show/Hide toggle hides or shows the
+// A single, always-discoverable Show/Hide toggle hides or shows the
 // entire pin overlay, is keyboard-accessible, and the state is preserved for the session.
 // This closes the one render-level coverage gap (the persistence + lifecycle paths are
 // already covered by the pin-drop and delete round-trips). The toggle is a role=switch button
@@ -1276,7 +1276,7 @@ test('the board ships a keyboard-accessible Show/Hide pins toggle (role=switch +
 
 // ── premium designed states + accessibility (board render) ────────────
 //
-// US-007 primary AC: every state — empty (no comments), loading, save failure, stream
+// Every state — empty (no comments), loading, save failure, stream
 // down, all-resolved — shows a designed, actionable surface (never a blank screen, silent
 // loss, or dead end), and the board respects prefers-reduced-motion. These are render-level
 // assertions against the static board HTML so they stay deterministic and $0.

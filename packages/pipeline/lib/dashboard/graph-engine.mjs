@@ -1,8 +1,8 @@
 /**
- * Graph data engine — delegate-or-fallback orchestrator (SPEC-016 / US-002, T-002).
+ * Graph data engine — delegate-or-fallback orchestrator.
  *
  * Mirrors the /planr-pipeline:status A.1/A.2 contract so the dashboard and the CLI can
- * never drift ("one engine, one truth", BR2):
+ * never drift ("one engine, one truth"):
  *
  *   A.1 delegate — when the planr CLI is installed AND new enough, shell out to
  *       `planr graph --json` (preferred) or `planr status --json`, parse stdout,

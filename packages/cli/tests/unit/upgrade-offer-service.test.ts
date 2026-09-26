@@ -23,7 +23,7 @@ let root: string;
 beforeEach(() => {
   root = mkdtempSync(join(tmpdir(), 'openplanr-offer-'));
   // `runtimeRoot()` (and therefore `upgradeStatePath()`) is anchored on
-  // OPENPLANR_HOME, the same isolation seam T-002's tests use.
+  // OPENPLANR_HOME, the same isolation seam the upgrade-service tests use.
   process.env.OPENPLANR_HOME = join(root, 'home');
   delete process.env.OPENPLANR_UPGRADE_OFFER_CHOICE;
   delete process.env.OPENPLANR_UPGRADE_NOW;
@@ -151,7 +151,7 @@ describe('maybeOfferUpgrade — never-ask (FR6)', () => {
 
     expect(result.choice).toBe('never');
     expect(readSnoozeState().neverAsk).toBe(true);
-    // The FR6 contract: the opt-out is reversible AND names the exact command.
+    // The opt-out is reversible AND names the exact command.
     expect(messages.join('\n')).toContain(UPGRADE_REENABLE_COMMAND);
 
     // Persisted: a later invocation short-circuits before any reconcile is called.

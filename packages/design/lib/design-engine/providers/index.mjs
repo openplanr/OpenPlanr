@@ -2,7 +2,7 @@
  * Provider registry. claude-svg is the default and the only provider `auto`
  * resolves to; openai runs only on an explicit request (`--provider openai`)
  * and needs a key. A key in the environment never opts the user into billed
- * calls (hard rule 9 still holds: a missing key is never a dead-end).
+ * calls (a missing key is never a dead-end).
  *
  * One interface: generateVariant(brief, opts) / iterate(session, feedback, opts)
  * / checkQuality(artifact, brief, opts). Future providers slot in here.

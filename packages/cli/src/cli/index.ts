@@ -48,7 +48,7 @@ program.hook('preAction', async () => {
   if (!program.opts().interactive || program.opts().yes || process.argv.includes('--json')) {
     setNonInteractive(true);
   }
-  // FR5/FR6 — offer an available upgrade where the user already is. This is the
+  // Offer an available upgrade where the user already is. This is the
   // one seam every invocation already passes through. It is deliberately skipped
   // for the `upgrade` command (which owns its own flow), and for any
   // non-interactive invocation (`upgradeOfferReachable()` reduces to

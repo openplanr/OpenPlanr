@@ -294,12 +294,12 @@ const head = await fetch(`${base}/boards/conf-loop/variant-A.svg`, { method: 'HE
 assert(head.status === 200, 'HEAD on a board asset answers 200');
 
 // the root index must NOT enumerate boards — a registered board name must never
-// leak into the shared index (cross-project confidentiality, SPEC-017 scoping).
+// leak into the shared index (cross-project confidentiality, board scoping).
 const indexHtml = await (await fetch(`${base}/`)).text();
 assert(!indexHtml.includes('conf-loop'), 'root index does not enumerate registered board names');
 
 // the daemon reports its behaviour version, so a client can detect a daemon
-// running stale code and restart it instead of reusing it (SPEC-017).
+// running stale code and restart it instead of reusing it.
 const health = await (await fetch(`${base}/health`, { headers: controlHeaders })).json();
 assert(
   health.version === DAEMON_VERSION,

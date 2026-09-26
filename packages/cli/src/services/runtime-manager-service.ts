@@ -2907,7 +2907,7 @@ export async function runtimeDoctor(
           current.capabilityLevel !== locked.capabilityLevel
         );
       });
-      // FR11: an OpenPlanr upgrade advances the CLI version the lock recorded.
+      // An OpenPlanr upgrade advances the CLI version the lock recorded.
       // When the CLI component trails the installed build and nothing that
       // governs runtime dispatch (runtime adapters, manifest digest)
       // diverged, the lock is simply behind an expected upgrade — surface it as
@@ -2915,8 +2915,8 @@ export async function runtimeDoctor(
       // digest/adapter drift, or a component drift that does not include the CLI
       // (for example a pinned obsolete skill bundle), remains a genuine `fail`.
       // The warn/fail derivation lives in the single `classifyComponentDrift`
-      // helper so `planr upgrade status` reuses this exact distinction (SPEC-006
-      // FR3) rather than re-deriving it; a digest/adapter drift is doctor's
+      // helper so `planr upgrade status` reuses this exact distinction rather
+      // than re-deriving it; a digest/adapter drift is doctor's
       // flavour of an incompatible tuple.
       const { drift, genuineDrift, upgradeOnlyDrift, status } = classifyRuntimeComponentDrift({
         cliDrift,

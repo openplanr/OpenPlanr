@@ -9,7 +9,7 @@ import { readGraph } from '../../lib/dashboard/graph-reader.mjs';
 const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, '../..');
 
-// The shared fixture authored by T-002: a `.planr/` tree with a spec, story,
+// The shared fixture: a `.planr/` tree with a spec, story,
 // tasks (with depends_on + cross-refs), a promoted backlog item, and an ADR.
 const planrDir = join(root, 'conformance/fixtures/dashboard-graph/.planr');
 
@@ -25,7 +25,7 @@ const sortedEdges = (graph) => graph.edges.map((e) => `${e.kind} ${e.from} ${e.t
  * A CLI `run` stub that emulates `planr` for the delegate path: `--version`
  * answers a sufficiently-new version, and `graph --json` returns the exact
  * native graph (the contract is that both paths yield the same data). This is
- * the spine of AC8: if the engine's two paths ever drift, the assertions below
+ * the spine of the equivalence proof: if the engine's two paths ever drift, the assertions below
  * fail.
  */
 function makeDelegateRun() {

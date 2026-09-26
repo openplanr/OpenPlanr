@@ -1,5 +1,5 @@
 /**
- * Native frontmatter reader for the dashboard project graph (SPEC-016 / US-002, T-002).
+ * Native frontmatter reader for the dashboard project graph.
  *
  * This is the FALLBACK path of the delegate-or-fallback data engine (the A.2 side of
  * the /planr-pipeline:status pattern). It walks `.planr/` with `node:fs`, parses each
