@@ -88,6 +88,7 @@ export function createObject(kind, position) {
     presentation: [placement(id, shape, bounds)],
   };
 }
+/** @returns {Extract<import('../diagram/authoring/index.d.mts').DiagramCommand, { type: 'create' }>} */
 export function connector(from, to, label = '') {
   const id = freshId('connector');
   const entry = placement(id, 'connector', null);

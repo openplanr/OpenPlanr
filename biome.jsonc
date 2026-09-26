@@ -135,7 +135,6 @@
         "packages/artifact/lib/artifact/diagram/rendering/layout.mjs",
         "packages/artifact/lib/artifact/diagram/router.mjs",
         "packages/artifact/lib/artifact/review.mjs",
-        "packages/artifact/lib/artifact/ui/diagram-editor.mjs",
         "packages/artifact/lib/artifact/ui/diagram-studio.mjs",
         "packages/artifact/tests/diagram-editor.test.mjs",
         "packages/cli/scripts/package-contract.mjs",

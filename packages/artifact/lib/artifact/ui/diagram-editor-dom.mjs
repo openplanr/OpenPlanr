@@ -168,6 +168,10 @@ export function button(document, text, action, options = {}) {
 /** Whether the editor icon set includes this name. */
 export const hasIcon = (name) => Object.hasOwn(ICONS, name);
 
+/** The form control, button, editable region or dialog containing an element, if any. */
+export const focusable = (element) =>
+  element?.closest('input,textarea,select,button,[contenteditable="true"],[role="dialog"]');
+
 /**
  * Render a dependency-free icon from static SVG primitives.
  * @param {Document} document
