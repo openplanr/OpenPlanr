@@ -22,6 +22,8 @@
       "!**/dist",
       "!**/vendor",
       "!packages/cli/lib/host-packages",
+      "!packages/cli/lib/integrations.mjs",
+      "!packages/cli/lib/integrations.d.mts",
       "!packages/pipeline/lib/artifact",
       "!packages/pipeline/lib/design",
       "!packages/pipeline/lib/design-engine",
