@@ -36,6 +36,14 @@ jobs:
         run: |
           npm run build
           git diff --exit-code HEAD --
+      - name: Require every output to be committed or git-ignored
+        run: |
+          untracked="$(git ls-files --others --exclude-standard)"
+          if [ -n "$untracked" ]; then
+            echo "::error::Generated or built outputs are neither committed nor git-ignored, so build-outputs.tgz would omit them:"
+            echo "$untracked"
+            exit 1
+          fi
       # A tarball keeps the executable bits that upload-artifact drops from generated skill scripts.
       - name: Pack the generated and built outputs for the test jobs
         run: |
@@ -43,6 +51,15 @@ jobs:
           git ls-files -z --others --ignored --exclude-standard --directory \
             | grep -zEv '(^|/)node_modules/$' \
             | tar --null -T - -czf "$RUNNER_TEMP/build-outputs.tgz"
+          # The archive is a downloadable run artifact. --directory collapses fully ignored
+          # folders, so check every member rather than the listing; grep exits 1 on no match.
+          tar -tzf "$RUNNER_TEMP/build-outputs.tgz" > "$RUNNER_TEMP/build-outputs.members"
+          sensitive="$(grep -E '(^|/)(\.env[^/]*|\.ci|\.planr|\.claude|\.git|logs)(/|$)|\.log$' "$RUNNER_TEMP/build-outputs.members")" || [ $? -eq 1 ]
+          if [ -n "$sensitive" ]; then
+            echo "::error::build-outputs.tgz would publish environment files, logs, or private state as a run artifact:"
+            echo "$sensitive"
+            exit 1
+          fi
       - uses: actions/upload-artifact@v4
         with:
           name: build-outputs
