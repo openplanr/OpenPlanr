@@ -410,8 +410,11 @@ export function createEditorCanvas(ctx) {
     drag = null;
     if (finished.active) {
       const result = cancel ? session.cancelGesture('cancelled') : session.completeGesture();
-      if (!result.ok) report(errText(result));
-      else if (!cancel) ctx.notice('One edit applied. Save diagram to keep it.');
+      if (!result.ok) {
+        // The session keeps a refused gesture open; a released pointer can no longer retain it.
+        session.cancelGesture('rejected');
+        report(errText(result));
+      } else if (!cancel) ctx.notice('One edit applied. Save diagram to keep it.');
     } else if (finished.type === 'marquee' && !cancel) {
       const a = worldPoint(finished.start),
         b = worldPoint(finished.last),
