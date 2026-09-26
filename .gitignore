@@ -144,6 +144,7 @@ CLAUDE.md
 /packages/pipeline/templates/design/vendor/react-dom.production.min.js
 /packages/pipeline/templates/design/vendor/react.production.min.js
 /packages/pipeline/templates/design/walkthrough-shell.html
+/packages/pipeline/templates/diagram-owner.js
 /packages/pipeline/templates/diagram-studio.js
 /packages/pipeline/templates/studio/enhancements.css
 /packages/pipeline/templates/studio/enhancements.js

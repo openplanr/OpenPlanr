@@ -1291,7 +1291,7 @@
     {
       "source": "packages/artifact/THIRD_PARTY_NOTICES.md",
       "target": "THIRD_PARTY-DIAGRAM-NOTICES.md",
-      "sha256": "17352f9868f5992aae8e3663d148eb697a0795e13c82eb535725a15e5d5f516d",
+      "sha256": "6c938e45f68d1081a7dd4608432817b560b9b85796c7906c5143ca0f6a47306f",
       "mode": "644"
     }
   ]
