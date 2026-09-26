@@ -949,7 +949,7 @@
     {
       "source": "packages/artifact/lib/artifact/ui/generated/artifact-shell-assets.json",
       "target": "lib/artifact/ui/generated/artifact-shell-assets.json",
-      "sha256": "58cce9c6694b47945f49cf624bbb70a4b96e541d912ab75b52d26a9c11db5fc3",
+      "sha256": "4f0d3dd7cfddcab16fb2aed4008c22b1018ede065fd5c68bb2754940e91be540",
       "mode": "644"
     },
     {
@@ -1249,7 +1249,7 @@
     {
       "source": "packages/artifact/scripts/generate-artifact-shell.mjs",
       "target": "scripts/generate-artifact-shell.mjs",
-      "sha256": "c8855e6cebb2248bd2bbf00c1da86322b483b9f8d8bd52617c23f6086d17db4d",
+      "sha256": "680636cf047e217c716a4c0c03c36e7c4e401340ebf47011e116fd7208677b9f",
       "mode": "644"
     },
     {
@@ -1267,31 +1267,31 @@
     {
       "source": "packages/artifact/templates/artifact-review-stage.js",
       "target": "templates/artifact-review-stage.js",
-      "sha256": "e09b186170ca1d1e06734114aef26331f9736338e8e2f877e43e3d48ece25027",
+      "sha256": "3a7c4a43d9102a399e596e8b6349eb8d7436470139492935f00496168810eed0",
       "mode": "644"
     },
     {
       "source": "packages/artifact/templates/design/design-board-adapter.js",
       "target": "templates/design/design-board-adapter.js",
-      "sha256": "ec4864304c4e67b2e1518799109e68691327d468539cf900ad1c496e524d87e9",
+      "sha256": "e3361d6bf915937f37f67d2a93ecc8910bea33dd118512c3817be3e35e1234e7",
       "mode": "644"
     },
     {
       "source": "packages/artifact/templates/diagram-owner.js",
       "target": "templates/diagram-owner.js",
-      "sha256": "775e1f0e4760b12c5b1fac39b22969570230a0a20d268421978dacd974e5505f",
+      "sha256": "287d35536ec9550c999e574f3990597c665cdadd2c4d16de835edaa64150fec3",
       "mode": "644"
     },
     {
       "source": "packages/artifact/templates/diagram-studio.js",
       "target": "templates/diagram-studio.js",
-      "sha256": "e231a9f79a63e0865f2dfae5721adc8e14cde86a6079c3a03d3037dcf1b3f368",
+      "sha256": "6b56c8168e82efc5a6a24f1ea20fd122406c108d5aa87b1e403d77446cb21ab5",
       "mode": "644"
     },
     {
       "source": "packages/artifact/THIRD_PARTY_NOTICES.md",
       "target": "THIRD_PARTY-DIAGRAM-NOTICES.md",
-      "sha256": "6c938e45f68d1081a7dd4608432817b560b9b85796c7906c5143ca0f6a47306f",
+      "sha256": "f17d5cb243b573453b2d8060d410726660ed8d398dbaf7f03161f0b859234f62",
       "mode": "644"
     }
   ]
