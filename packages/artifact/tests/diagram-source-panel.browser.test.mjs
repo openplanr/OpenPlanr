@@ -5,7 +5,10 @@ import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { launchBrowser } from '../../../tests/support/browser-launcher.mjs';
+import {
+  FIREFOX_COOP_PAGE_PREFS,
+  launchBrowser,
+} from '../../../tests/support/browser-launcher.mjs';
 import { adoptMermaidCopy, previewMermaidCopy } from '../lib/artifact/diagram/authoring/index.mjs';
 import { createDiagramAuthoringStore } from '../lib/artifact/diagram/authoring/store.mjs';
 import { startDiagramOwner } from '../lib/artifact/diagram/editor/local-owner.mjs';
@@ -37,7 +40,7 @@ async function fixture(t, { initial = null, viewport = { width: 1280, height: 80
     noOpen: true,
     env: { ...process.env, PLANR_HOME: join(root, 'home') },
   });
-  const browser = await launchBrowser();
+  const browser = await launchBrowser({ firefoxUserPrefs: FIREFOX_COOP_PAGE_PREFS });
   const page = await browser.newPage({ viewport, acceptDownloads: true });
   const errors = [],
     remote = [];

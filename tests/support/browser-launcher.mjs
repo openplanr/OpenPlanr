@@ -35,6 +35,15 @@ export function browserExecutable(engine = browserEngine()) {
 }
 
 /**
+ * Firefox prefs for suites that load pages served with Cross-Origin-Opener-Policy.
+ * Through Playwright 1.63, Firefox can drop a protocol event when COOP replaces the browsing
+ * context, so the page's next main-world call never returns; remove once an upgrade fixes it.
+ */
+export const FIREFOX_COOP_PAGE_PREFS = Object.freeze({
+  'browser.tabs.remote.useCrossOriginOpenerPolicy': false,
+});
+
+/**
  * Launch options for a headless loopback test in the selected engine.
  * Chromium always runs with --no-proxy-server so 127.0.0.1 fixtures never wait on proxy
  * auto-discovery; a pinned executable takes precedence over PLANR_BROWSER_CHANNEL.

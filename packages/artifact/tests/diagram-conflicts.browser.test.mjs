@@ -4,7 +4,10 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import { makeBundle } from '../../../tests/protocol/fixtures/diagram-authoring.mjs';
-import { launchBrowser } from '../../../tests/support/browser-launcher.mjs';
+import {
+  FIREFOX_COOP_PAGE_PREFS,
+  launchBrowser,
+} from '../../../tests/support/browser-launcher.mjs';
 import { createDiagramAuthoringStore } from '../lib/artifact/diagram/authoring/store.mjs';
 import { startDiagramOwner } from '../lib/artifact/diagram/editor/local-owner.mjs';
 
@@ -31,7 +34,7 @@ test('two real owner pages compare base, current and pending edits without overw
     await rm(root, { recursive: true, force: true });
     assert.deepEqual(errors, []);
   });
-  browser = await launchBrowser();
+  browser = await launchBrowser({ firefoxUserPrefs: FIREFOX_COOP_PAGE_PREFS });
   const pages = await Promise.all([
     browser.newPage({ viewport: { width: 1440, height: 900 } }),
     browser.newPage({ viewport: { width: 1440, height: 900 } }),
