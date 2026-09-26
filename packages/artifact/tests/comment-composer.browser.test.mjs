@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
-import { createRequire } from 'node:module';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
+import { launchBrowser } from '../../../tests/support/browser-launcher.mjs';
 import { ARTIFACT_SHELL_CSS } from '../lib/artifact/ui/shell.mjs';
 
 const enabled = process.env.PLANR_BROWSER_TESTS === '1';
@@ -26,15 +26,7 @@ window.fixture={rail,annotations,stage};
 `;
 
 async function browserFixture(t) {
-  const requirePipeline = createRequire(new URL('../../pipeline/package.json', import.meta.url));
-  const { chromium, webkit } = requirePipeline('playwright');
-  const browser = await (process.env.PLANR_BROWSER_ENGINE === 'webkit' ? webkit : chromium).launch({
-    headless: true,
-    ...(process.env.PLANR_BROWSER_CHANNEL ? { channel: process.env.PLANR_BROWSER_CHANNEL } : {}),
-    ...(process.env.PLANR_BROWSER_EXECUTABLE
-      ? { executablePath: process.env.PLANR_BROWSER_EXECUTABLE }
-      : {}),
-  });
+  const browser = await launchBrowser();
   const bundle = await build({
     stdin: { contents: fixtureSource, resolveDir: rootPath },
     bundle: true,

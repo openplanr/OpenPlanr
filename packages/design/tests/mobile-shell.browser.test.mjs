@@ -1,20 +1,21 @@
 import assert from 'node:assert/strict';
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { mkdtemp, rm } from 'node:fs/promises';
-import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import { pathToFileURL } from 'node:url';
+import {
+  browserEngine,
+  launchBrowser,
+  playwright,
+} from '../../../tests/support/browser-launcher.mjs';
 import { emptyReviewContext } from '../lib/design/context.mjs';
 import { renderDesignDocument } from '../lib/design/document.mjs';
 import { startDesignReview } from '../lib/design/review.mjs';
 import { designFixture } from './design-fixture.mjs';
 
-const engines = createRequire(new URL('../../pipeline/package.json', import.meta.url))(
-  'playwright',
-);
-const engine = process.env.PLANR_BROWSER_ENGINE || 'chromium';
+const engine = browserEngine();
 const settle = (page) =>
   page.evaluate(async () => {
     await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
@@ -222,18 +223,12 @@ test(`mobile shell fields, touch controls and welcome remain usable without chan
       env: { ...process.env, PLANR_HOME: join(root, 'home') },
       port: 0,
     });
-    browser = await engines[engine].launch({
-      headless: true,
-      ...(engine === 'chromium' &&
-      existsSync('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome')
-        ? { channel: 'chrome' }
-        : {}),
-    });
+    browser = await launchBrowser({ engine });
     for (const [host, url] of [
       ['portable', pathToFileURL(rendered.views.prototype).href],
       ['local', review.url],
     ]) {
-      const browserContext = await browser.newContext({ ...engines.devices['iPhone 13'] });
+      const browserContext = await browser.newContext({ ...playwright.devices['iPhone 13'] });
       const page = await browserContext.newPage();
       page.setDefaultTimeout(10000);
       const errors = [];

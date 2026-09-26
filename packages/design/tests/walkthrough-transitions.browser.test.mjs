@@ -1,19 +1,16 @@
 import assert from 'node:assert/strict';
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { mkdtemp, rm } from 'node:fs/promises';
-import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { pathToFileURL } from 'node:url';
+import { browserEngine, launchBrowser } from '../../../tests/support/browser-launcher.mjs';
 import { renderDesignDocument } from '../lib/design/document.mjs';
 import { startDesignReview } from '../lib/design/review.mjs';
 import { designFixture } from './design-fixture.mjs';
 
-const engines = createRequire(new URL('../../pipeline/package.json', import.meta.url))(
-  'playwright',
-);
-const engine = process.env.PLANR_BROWSER_ENGINE || 'chromium';
+const engine = browserEngine();
 
 async function settled(page, screenId) {
   await page.waitForFunction((id) => {
@@ -194,13 +191,7 @@ test(`walkthrough navigation stays painted, preserves product state and handles 
       env: { ...process.env, PLANR_HOME: join(root, 'home') },
       port: 0,
     });
-    browser = await engines[engine].launch({
-      headless: true,
-      ...(engine === 'chromium' &&
-      existsSync('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome')
-        ? { channel: 'chrome' }
-        : {}),
-    });
+    browser = await launchBrowser({ engine });
     const errors = [];
     for (const [host, url] of [
       ['portable', pathToFileURL(rendered.views.canvas).href],

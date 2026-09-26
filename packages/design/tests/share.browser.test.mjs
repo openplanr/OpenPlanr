@@ -1,16 +1,10 @@
 import assert from 'node:assert/strict';
-import {
-  existsSync,
-  mkdtempSync,
-  readFileSync,
-  realpathSync,
-  rmSync,
-  writeFileSync,
-} from 'node:fs';
+import { mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
+import { launchBrowser } from '../../../tests/support/browser-launcher.mjs';
 import { currentDesign, renderDesignDocument } from '../lib/design/document.mjs';
 import { readDesignFeedback, startDesignReview } from '../lib/design/review.mjs';
 import { manageDesignShare, syncDesignShare } from '../lib/design/share.mjs';
@@ -27,9 +21,6 @@ test('local Share UI publishes a permanent review usable by another browser afte
   const webRequire = createRequire(join(webRoot, 'package.json'));
   const { Miniflare } = webRequire('miniflare');
   const { build } = webRequire('esbuild');
-  const { chromium } = createRequire(new URL('../../pipeline/package.json', import.meta.url))(
-    'playwright',
-  );
   const temporary = realpathSync(mkdtempSync(join(tmpdir(), 'design-company-review-')));
   let shared = false;
   t.after(async () => {
@@ -100,12 +91,7 @@ test('local Share UI publishes a permanent review usable by another browser afte
   t.after(async () => {
     if (local) await local.close();
   });
-  const browser = await chromium.launch({
-    headless: true,
-    ...(existsSync('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome')
-      ? { channel: 'chrome' }
-      : {}),
-  });
+  const browser = await launchBrowser({ engine: 'chromium' });
   t.after(() => browser.close());
   const ownerContext = await browser.newContext({
     viewport: { width: 1600, height: 1000 },

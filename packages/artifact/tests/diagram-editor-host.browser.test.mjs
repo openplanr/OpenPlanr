@@ -4,10 +4,10 @@ import { createRequire } from 'node:module';
 import { join } from 'node:path';
 import test from 'node:test';
 import { makeBundle } from '../../../tests/protocol/fixtures/diagram-authoring.mjs';
+import { launchBrowser } from '../../../tests/support/browser-launcher.mjs';
 
 const enabled = process.env.PLANR_BROWSER_TESTS === '1';
 const requireProtocol = createRequire(new URL('../../protocol/package.json', import.meta.url));
-const playwright = requireProtocol('playwright');
 const { build } = requireProtocol('esbuild');
 const editorStyles = readFileSync(
   new URL('../lib/artifact/ui/diagram-editor.css', import.meta.url),
@@ -65,14 +65,7 @@ async function hostedFixture(t, { colorScheme = 'light', capabilities } = {}) {
     write: false,
     logLevel: 'silent',
   });
-  const engine = process.env.PLANR_BROWSER_ENGINE ?? 'chromium';
-  assert.ok(['chromium', 'firefox', 'webkit'].includes(engine), `Unsupported browser: ${engine}`);
-  const browser = await playwright[engine].launch({
-    headless: true,
-    ...(process.env.PLANR_BROWSER_EXECUTABLE
-      ? { executablePath: process.env.PLANR_BROWSER_EXECUTABLE }
-      : {}),
-  });
+  const browser = await launchBrowser();
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
   page.setDefaultTimeout(7000);
   await page.emulateMedia({ colorScheme });

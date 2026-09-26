@@ -535,8 +535,8 @@ test('real browser share receipt is explicit, focus-safe, upload-safe, and visua
   skip: !runBrowser,
   timeout: 60_000,
 }, async (t) => {
-  const [{ chromium }, pngModule, pixelmatchModule] = await Promise.all([
-    import('playwright'),
+  const [{ launchBrowser }, pngModule, pixelmatchModule] = await Promise.all([
+    import('../../../../tests/support/browser-launcher.mjs'),
     import('pngjs'),
     import('pixelmatch'),
   ]);
@@ -550,7 +550,7 @@ test('real browser share receipt is explicit, focus-safe, upload-safe, and visua
     shell: { title: 'Checkout confidence pass', theme: 'light', privacy: 'local', status: 'ready' },
   });
   const host = await serve(document, renderArtifactStageRuntimeAsset(), artifact);
-  const browser = await chromium.launch({ headless: true });
+  const browser = await launchBrowser({ engine: 'chromium' });
   t.after(async () => {
     await browser.close();
     await host.close();

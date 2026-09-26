@@ -11,10 +11,10 @@ import {
   symlinkSync,
   writeFileSync,
 } from 'node:fs';
-import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
+import { launchBrowser } from '../../../tests/support/browser-launcher.mjs';
 import { renderDesignDocument } from '../lib/design/document.mjs';
 import { readDesignFeedback, startDesignReview } from '../lib/design/review.mjs';
 import {
@@ -415,14 +415,7 @@ test('Share design completes in the real browser without generic missing-handler
       new URL(url).origin === options.baseUrl ? options.fetchImpl(url, init) : fetch(url, init),
   });
   t.after(() => session.close());
-  const require = createRequire(new URL('../../pipeline/package.json', import.meta.url));
-  const { chromium } = require('playwright');
-  const browser = await chromium.launch({
-    headless: true,
-    ...(existsSync('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome')
-      ? { channel: 'chrome' }
-      : {}),
-  });
+  const browser = await launchBrowser({ engine: 'chromium' });
   t.after(() => browser.close());
   const page = await browser.newPage();
   const errors = [];

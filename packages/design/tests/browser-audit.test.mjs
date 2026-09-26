@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
-import { createRequire } from 'node:module';
 import test from 'node:test';
 
+import { browserExecutable, launchBrowser } from '../../../tests/support/browser-launcher.mjs';
 import { auditDesignPage, auditRenderedScreen } from '../lib/design/browser-audit.mjs';
 
 const entry = {
@@ -103,26 +103,12 @@ test('computed findings retain artifact identity and browser script failures rem
 });
 
 async function browser(t) {
-  let chromium;
-  try {
-    ({ chromium } = createRequire(new URL('../../cli/package.json', import.meta.url))(
-      'playwright',
-    ));
-  } catch {
-    t.skip('Browser fixture requires the workspace Playwright development dependency.');
+  const executablePath = browserExecutable('chromium');
+  if (!existsSync(executablePath)) {
+    t.skip(`No Chromium executable at ${executablePath}; no runtime download is attempted.`);
     return null;
   }
-  const systemChrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
-  const executablePath = existsSync(chromium.executablePath())
-    ? chromium.executablePath()
-    : existsSync(systemChrome)
-      ? systemChrome
-      : null;
-  if (!executablePath) {
-    t.skip('No existing Chromium executable is available; no runtime download is attempted.');
-    return null;
-  }
-  const instance = await chromium.launch({ executablePath, headless: true });
+  const instance = await launchBrowser({ engine: 'chromium' });
   t.after(() => instance.close());
   return instance;
 }

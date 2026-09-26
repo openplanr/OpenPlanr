@@ -8,7 +8,7 @@ import { join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
 import { Log, LogLevel, Miniflare } from 'miniflare';
-import { chromium } from 'playwright';
+import { launchBrowser } from '../../../tests/support/browser-launcher.mjs';
 
 // The harness uses development tools from this workspace; every subject module
 // is resolved from the supplied, independently installed consumer package.
@@ -230,12 +230,7 @@ globalThis.protocolResult = { ...summary, assets, status: 'passed' };`;
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   let browser;
   try {
-    browser = await chromium.launch({
-      headless: true,
-      ...(process.env.OPENPLANR_PROOF_CHROMIUM_EXECUTABLE
-        ? { executablePath: process.env.OPENPLANR_PROOF_CHROMIUM_EXECUTABLE }
-        : {}),
-    });
+    browser = await launchBrowser({ engine: 'chromium' });
     const page = await browser.newPage();
     await page.goto(`http://127.0.0.1:${server.address().port}/`);
     await page.waitForFunction(() => globalThis.protocolResult || globalThis.protocolError, {

@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { mkdtemp, rm } from 'node:fs/promises';
-import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
@@ -9,6 +8,7 @@ import { pathToFileURL } from 'node:url';
 import { renderArtifactParentRuntime } from '@openplanr/artifact/bridge.mjs';
 import { createArtifactEnvelope } from '@openplanr/artifact/envelope.mjs';
 import { createArtifactReviewServer } from '@openplanr/artifact/review-server.mjs';
+import { launchBrowser } from '../../../tests/support/browser-launcher.mjs';
 import { currentDesign, renderDesignDocument } from '../lib/design/document.mjs';
 import { readDesignFeedback, startDesignReview } from '../lib/design/review.mjs';
 import {
@@ -18,18 +18,10 @@ import {
 } from '../lib/design/studio.mjs';
 import { designFixture as writeDesignFixture } from './design-fixture.mjs';
 
-const require = createRequire(new URL('../../pipeline/package.json', import.meta.url));
-const { chromium } = require('playwright');
-
 test('native local submit requires allow-forms even when form navigation is denied by CSP', {
   timeout: 15000,
 }, async () => {
-  const browser = await chromium.launch({
-    headless: true,
-    ...(existsSync('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome')
-      ? { channel: 'chrome' }
-      : {}),
-  });
+  const browser = await launchBrowser({ engine: 'chromium' });
   try {
     const page = await browser.newPage();
     const source = `<!doctype html><meta http-equiv="Content-Security-Policy" content="form-action 'none'"><form><label>Crew name<input name="crew" required></label><button type="submit">Check availability</button><p id="result">Unchecked</p></form><script>document.querySelector('form').addEventListener('submit',function(event){event.preventDefault();document.getElementById('result').textContent=this.elements.crew.value})</script>`;
@@ -181,12 +173,7 @@ test('browser studio boots through the protected artifact server and supports a 
     });
     assert.equal(response.status, 201);
     const session = await response.json();
-    browser = await chromium.launch({
-      headless: true,
-      ...(existsSync('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome')
-        ? { channel: 'chrome' }
-        : {}),
-    });
+    browser = await launchBrowser({ engine: 'chromium' });
     const page = await browser.newPage({
       viewport: { width: 1600, height: 1050 },
       deviceScaleFactor: 1,
@@ -745,12 +732,7 @@ test('browser studio boots through the protected artifact server and supports a 
 test('journey-start thumbnails capture later screens when they become visible without retrying on camera motion', {
   timeout: 30000,
 }, async () => {
-  const browser = await chromium.launch({
-    headless: true,
-    ...(existsSync('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome')
-      ? { channel: 'chrome' }
-      : {}),
-  });
+  const browser = await launchBrowser({ engine: 'chromium' });
   try {
     for (const view of ['walkthrough', 'prototype']) {
       const temporary = await mkdtemp(join(tmpdir(), 'openplanr-journey-thumbnails-'));
@@ -884,12 +866,7 @@ test('generated portable HTML and the public design review composition preserve 
   let browser;
   let review;
   try {
-    browser = await chromium.launch({
-      headless: true,
-      ...(existsSync('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome')
-        ? { channel: 'chrome' }
-        : {}),
-    });
+    browser = await launchBrowser({ engine: 'chromium' });
     const page = await browser.newPage({
       viewport: { width: 1600, height: 1050 },
     });

@@ -6,12 +6,12 @@ import { dirname, join, resolve } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
+import { launchBrowser } from '../../../tests/support/browser-launcher.mjs';
 import { runKernelWithoutAmbientEffects } from './fixtures/diagram-authoring-runtime.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 const requireProtocol = createRequire(new URL('../../protocol/package.json', import.meta.url));
 const { build } = requireProtocol('esbuild');
-const { chromium } = requireProtocol('playwright');
 const { Miniflare, Log, LogLevel } = requireProtocol('miniflare');
 const fixture = fileURLToPath(new URL('./fixtures/diagram-authoring-runtime.mjs', import.meta.url));
 
@@ -139,12 +139,7 @@ test('the same edit, diff, inverse and rejection fixtures agree in Node, Chromiu
     'browser',
     'iife',
   );
-  const browser = await chromium.launch({
-    headless: true,
-    ...(process.env.OPENPLANR_PROOF_CHROMIUM_EXECUTABLE
-      ? { executablePath: process.env.OPENPLANR_PROOF_CHROMIUM_EXECUTABLE }
-      : {}),
-  });
+  const browser = await launchBrowser({ engine: 'chromium' });
   try {
     const page = await browser.newPage();
     await page.setContent(

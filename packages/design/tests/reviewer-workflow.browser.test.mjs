@@ -1,21 +1,17 @@
 import assert from 'node:assert/strict';
-import { existsSync } from 'node:fs';
 import { mkdir, mkdtemp, rm } from 'node:fs/promises';
-import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import { digestArtifactEnvelope } from '@openplanr/artifact/envelope.mjs';
 import { createReviewLedger } from '@openplanr/artifact/merge.mjs';
 import { writeArtifactReviewState } from '@openplanr/artifact/review.mjs';
+import { browserEngine, launchBrowser } from '../../../tests/support/browser-launcher.mjs';
 import { atomicJson, currentDesign, renderDesignDocument } from '../lib/design/document.mjs';
 import { designReviewKey, designReviewPath, startDesignReview } from '../lib/design/review.mjs';
 import { designFixture } from './design-fixture.mjs';
 
-const engines = createRequire(new URL('../../pipeline/package.json', import.meta.url))(
-  'playwright',
-);
-const engine = process.env.PLANR_BROWSER_ENGINE || 'chromium';
+const engine = browserEngine();
 const thread = (page, id) => page.locator(`.planr-thread[data-planr-pin-id="${id}"]`);
 const settle = (page) =>
   page.evaluate(
@@ -102,13 +98,7 @@ test(`reviewer workflow stays focused, compact and usable with large discussions
       byRevision: { 'local-review': metadata },
     });
     review = await startDesignReview(file, { env, port: 0 });
-    browser = await engines[engine].launch({
-      headless: true,
-      ...(engine === 'chromium' &&
-      existsSync('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome')
-        ? { channel: 'chrome' }
-        : {}),
-    });
+    browser = await launchBrowser({ engine });
     for (const audience of ['owner', 'reviewer']) {
       const evidence = process.env.OPENPLANR_REVIEW_EVIDENCE_DIR;
       if (evidence) await mkdir(evidence, { recursive: true });
