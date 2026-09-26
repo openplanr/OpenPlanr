@@ -1,0 +1,28 @@
+{
+  "_notes": {
+    "planning-id": "Comments that show an id format the code parses or names the ids of a fixture the test reads. Each entry lists the exact ids allowed in that file."
+  },
+  "planning-id": {
+    "packages/cli/src/services/linear/scope-loaders.ts": ["QT-015"],
+    "packages/cli/src/services/spec-service.ts": ["SPEC-001"],
+    "packages/cli/src/services/sprint-refinement-service.ts": ["BL-012"],
+    "packages/cli/tests/integration/sync-command.test.ts": ["US-001", "US-002"],
+    "packages/cli/tests/linear-push-epic-linked-qt-bl.test.ts": ["QT-100", "QT-200"],
+    "packages/cli/tests/linear-push-granular.test.ts": ["US-001", "US-002"],
+    "packages/cli/tests/linear-push-standalone.test.ts": ["QT-007"],
+    "packages/cli/tests/linear-status-sync.test.ts": ["QT-200"],
+    "packages/pipeline/conformance/runner.mjs": ["T-001", "T-002", "T-007"],
+    "packages/pipeline/lib/dashboard/graph-engine.mjs": ["T-002"],
+    "packages/pipeline/lib/dashboard/graph-reader.mjs": [
+      "AC-001",
+      "US-001",
+      "US-003",
+      "T-001",
+      "T-002"
+    ],
+    "packages/pipeline/lib/dashboard/watcher.mjs": ["SPEC-016", "T-004"],
+    "packages/pipeline/lib/dev-loop-sim.mjs": ["T-001"],
+    "packages/pipeline/tests/dashboard/graph-equivalence.test.mjs": ["SPEC-002", "US-001", "T-001"],
+    "packages/pipeline/tests/orchestration/planning-compatibility.test.mjs": ["T-001", "T-002"]
+  }
+}
