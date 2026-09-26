@@ -8,6 +8,7 @@ import {
   OPEN_REFERENCE_PROJECT_EXECUTOR_HOST_V2,
 } from '../../lib/operate/reference-governed-executors-v2.mjs';
 import {
+  createOperatingRuntimeEventV2,
   reduceOperatingRuntimeEventsV2,
   scheduleOperatingRuntimeEventsV2,
   transitionOperatingActionLifecycleV2,
@@ -122,7 +123,7 @@ test('fresh execution rejects a foreign present verification relationship before
     activeReviewId: null,
   };
   scenario.initial.verificationPlans = [verificationPlanFor(scenario.action)];
-  let durable = structuredClone(scenario.initial);
+  const durable = structuredClone(scenario.initial);
   const commits = [];
   const checkpointStore = {
     readSnapshot: () => structuredClone(durable),
@@ -254,6 +255,142 @@ test('governed execution atomically records the lifecycle around one result and 
   assert.deepEqual(replay.events, []);
   assert.deepEqual(replay.state, completed.state);
   assert.equal(targetAdapter.describe().effectCount, 1);
+});
+
+test('an uncertain execution blocks the Action and the verifying Cycle closes only on its exact result', async () => {
+  const scenario = governedExecutionScenario({ suffix: '97000006' });
+  scenario.initial.cycles[0] = {
+    ...scenario.initial.cycles[0],
+    state: 'approved',
+    activeReviewId: null,
+  };
+  scenario.initial.verificationPlans = [verificationPlanFor(scenario.action)];
+  const targetAdapter = createDisposableLocalProjectTargetV2({
+    target: scenario.action.targetBinding,
+    initialValue: scenario.initialValue,
+  });
+  const checkpointStore = createGovernedExecutionCheckpointStore(scenario.initial, {
+    afterCommit({ phase }) {
+      if (phase !== 'dispatch-intent') return;
+      targetAdapter.apply({
+        operationId: 'op_external97000006',
+        requestFingerprint: `sha256:${'e'.repeat(64)}`,
+        expectedRevision: scenario.action.targetBinding.revision,
+        nextValue: { raced: true },
+      });
+    },
+  });
+  const runtime = createOperatingGovernedExecutionRuntimeV2({
+    initialState: scenario.initial,
+    checkpointStore,
+  });
+  await assert.rejects(
+    runtime.execute(scenario.request, scenario.draft, {
+      trustedHost: OPEN_REFERENCE_PROJECT_EXECUTOR_HOST_V2,
+      targetAdapter,
+    }),
+    { code: 'OPERATION_UNCERTAIN' },
+  );
+  const state = checkpointStore.snapshot();
+  const [operation] = state.governedOperations;
+  const [result] = state.executionResults;
+  const [grant] = state.capabilityGrants;
+  const action = state.actions.find(({ actionId }) => actionId === scenario.action.actionId);
+  const cycle = state.cycles.find(({ cycleId }) => cycleId === scenario.action.sourceCycleId);
+  assert.equal(result.status, 'uncertain');
+  assert.equal(operation.resultId, result.resultId);
+  assert.equal(action.state, 'blocked');
+  assert.equal(action.updatedAt, result.completedAt);
+  assert.equal(cycle.state, 'verifying');
+  const identities = deriveOperatingExecutionLifecycleIdentitiesV2({
+    operationId: operation.operationId,
+    resultId: result.resultId,
+  });
+  assert.deepEqual(
+    state.eventReplayIndex
+      .filter(({ eventId }) => Object.values(identities.eventIds).includes(eventId))
+      .map(({ type }) => type),
+    [
+      'action.queued',
+      'action.started',
+      'cycle.executing',
+      'action.blocked',
+      'assignment.created',
+      'cycle.verifying',
+    ],
+  );
+
+  const engine = { kind: 'engine', id: grant.issuer.id };
+  const after = (type, entityId, payload, actor = engine) =>
+    createOperatingRuntimeEventV2(
+      {
+        eventId: `evt-${type}-97000006`,
+        timestamp: result.completedAt,
+        cycleId: cycle.cycleId,
+        type,
+        entityId,
+        actor,
+        causationId: null,
+        correlationId: scenario.draft.correlationId,
+        payload,
+      },
+      { previousEvent: { sequence: state.eventHead.sequence, eventHash: state.eventHead.hash } },
+    );
+  assert.throws(
+    () =>
+      reduceOperatingRuntimeEventsV2(
+        [
+          after('action.blocked', action.actionId, {
+            action: {
+              actionId: action.actionId,
+              revision: action.revision,
+              actionHash: action.actionHash,
+            },
+            from: 'in_progress',
+            to: 'blocked',
+            operationId: operation.operationId,
+            resultId: result.resultId,
+            reasonCode: 'execution-uncertain',
+          }),
+        ],
+        { initialState: state },
+      ),
+    { code: 'ACTION_REVISION_MISMATCH', message: /^Action execution transition must bind/ },
+  );
+
+  const closure = {
+    cycleId: cycle.cycleId,
+    from: 'verifying',
+    to: 'closed',
+    actionId: action.actionId,
+    operationId: operation.operationId,
+    resultId: result.resultId,
+    reasonCode: 'verification-blocked',
+  };
+  assert.throws(
+    () =>
+      reduceOperatingRuntimeEventsV2(
+        [after('cycle.closed', cycle.cycleId, { ...closure, resultId: scenario.draft.resultId })],
+        { initialState: state },
+      ),
+    { code: 'RESULT_CONTRACT_INVALID', message: /^Cycle closure must retain/ },
+  );
+  assert.throws(
+    () =>
+      reduceOperatingRuntimeEventsV2(
+        [after('cycle.closed', cycle.cycleId, closure, { kind: 'engine', id: 'openplanr' })],
+        { initialState: state },
+      ),
+    { code: 'STATE_TRANSITION_INVALID', message: /^Cycle lifecycle transition must bind/ },
+  );
+  const closed = reduceOperatingRuntimeEventsV2([after('cycle.closed', cycle.cycleId, closure)], {
+    initialState: state,
+  });
+  assert.deepEqual(
+    closed.cycles.find(({ cycleId }) => cycleId === cycle.cycleId),
+    { ...cycle, state: 'closed', updatedAt: result.completedAt, closedAt: result.completedAt },
+  );
+  assert.deepEqual(closed.actions, state.actions);
 });
 
 test('terminal verification Assignment scheduling is durable and rejects non-Event-backed lifecycle changes', async () => {
@@ -417,7 +554,7 @@ test('Event reduction, checkpoint loading, and replay reject foreign or ambiguou
     );
   }
 
-  let durable = structuredClone(completed.state);
+  const durable = structuredClone(completed.state);
   const replayStore = {
     readSnapshot: () => structuredClone(durable),
     compareAndSwap: async () => {

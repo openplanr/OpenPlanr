@@ -1,9 +1,13 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
+import { sha256Jcs } from '@openplanr/protocol/canonical-json';
+
+import { buildPersistentWorkMaterializationPayloadV2 } from '../lib/operate/persistent-work-v2.mjs';
 import { createWorkflowRuntimeEventHandlerV2 } from '../lib/operate/runtime-foundation/workflow-events.mjs';
 import {
   assertHandlesExactly,
+  clone,
   handlerDependencies,
   RUNTIME_EVENT_TYPES,
   runtimeError,
@@ -84,6 +88,106 @@ function reopenedEvent(event = {}) {
   };
 }
 
+function workChangeSet() {
+  return {
+    kind: 'operating-work-change-set',
+    schemaVersion: '1.0.0',
+    protocolVersion: '2.0.0',
+    cycleId: 'cyc_00000001',
+    scopeId: 'scope-acme',
+    domainId: 'business',
+    domainVersion: '1.0.0',
+    findings: [
+      {
+        draftRef: 'draft_find_0001',
+        title: 'Revenue risk',
+        statement: 'Revenue is below plan.',
+        state: 'open',
+        ownerActorId: 'owner-001',
+        revisitAt: null,
+      },
+    ],
+    decisions: [
+      {
+        draftRef: 'draft_decision_01',
+        title: 'Prioritize retention',
+        question: 'What should we prioritize?',
+        rationale: 'Retention is the largest current risk.',
+        evidenceRefIds: ['evr_00000001'],
+        alternatives: ['Prioritize acquisition'],
+        confidence: 0.8,
+        assumptionIds: [],
+        expectedUpside: 'Retention improves.',
+        expectedDownside: 'Acquisition learning slows.',
+        dissent: [],
+        reopenConditions: ['Retention evidence changes materially.'],
+        revisitConditions: ['Metric changes.'],
+        ownerActorId: 'owner-001',
+        revisitAt: null,
+      },
+    ],
+    actions: [
+      {
+        draftRef: 'draft_action_001',
+        title: 'Interview customers',
+        ownerActorId: 'owner-001',
+        accountabilityDisposition: null,
+        sourceDecisionDraftRef: 'draft_decision_01',
+        sourceFindingDraftRefs: ['draft_find_0001'],
+        dependsOnActionDraftRefs: [],
+        objectiveId: 'obj_retention_001',
+        expectedResult: 'Customer interviews reveal retention friction.',
+        metricId: 'met_retention_001',
+        baseline: 0.4,
+        target: 0.6,
+        verificationWindow: 'next 30-day window',
+        verificationPlanId: 'vfy_retention_001',
+      },
+    ],
+  };
+}
+
+// The current Chair contract emits a decision ledger, so only a historical Artifact carries a
+// work-change-set; the reducer reaches this case through requireValidatedWorkChangeSetArtifact.
+function legacyWorkChangeSetArtifact(work) {
+  const canonicalHash = sha256Jcs(work);
+  return {
+    kind: 'operating-artifact',
+    schemaVersion: '1.0.0',
+    protocolVersion: '2.0.0',
+    artifactId: 'art_workset_001',
+    artifactType: 'work-change-set',
+    assignmentId: 'asg_legacy_chair_0001',
+    cycleId: 'cyc_00000001',
+    scopeId: 'scope-acme',
+    domainId: 'business',
+    domainVersion: '1.0.0',
+    schemaId: 'operating-work-change-set',
+    artifactSchemaVersion: '2.0.0',
+    mediaType: 'application/json',
+    encoding: 'utf-8',
+    rawHash: canonicalHash,
+    canonicalHash,
+    sizeBytes: Buffer.byteLength(JSON.stringify(work)),
+    storageClass: 'machine-local',
+    sensitivity: 'internal',
+    retentionClass: 'project',
+    producer: { actorId: 'chair-001', roleId: 'chair', runtime: 'codex' },
+    inputArtifactIds: [],
+    createdAt: TIME,
+  };
+}
+
+function workIndex(artifact) {
+  return {
+    artifacts: new Map([[artifact.artifactId, artifact]]),
+    findings: new Map(),
+    decisions: new Map(),
+    actions: new Map(),
+    workReplay: new Map(),
+  };
+}
+
 test('workflow handler applies exactly the Cycle, Review, board, work and Action Events', () => {
   assertHandlesExactly(
     createWorkflowRuntimeEventHandlerV2(handlerDependencies({ runtimeError })),
@@ -136,4 +240,76 @@ test('action.reopened returns the exact deferred Action to proposed through its 
     code: 'ACTION_REVISION_MISMATCH',
   });
   assert.equal(transitions.length, 1);
+});
+
+test('work-change-set.materialized records the runtime-issued work of one Artifact once', () => {
+  const work = workChangeSet();
+  const artifact = legacyWorkChangeSetArtifact(work);
+  const payload = buildPersistentWorkMaterializationPayloadV2({
+    artifact,
+    changeSet: work,
+    timestamp: TIME,
+  });
+  const apply = createWorkflowRuntimeEventHandlerV2(
+    handlerDependencies({
+      clone,
+      runtimeError,
+      requireValidatedWorkChangeSetArtifact: (index, event) =>
+        index.artifacts.get(event.payload.artifactId),
+    }),
+  );
+  const event = {
+    type: 'work-change-set.materialized',
+    eventId: 'evt_work_00000001',
+    cycleId: 'cyc_00000001',
+    entityId: artifact.artifactId,
+    timestamp: TIME,
+    actor: { kind: 'runtime', id: 'openplanr' },
+    payload,
+  };
+
+  const index = workIndex(artifact);
+  apply(index, event);
+  const [finding] = payload.findings;
+  const [decision] = payload.decisions;
+  const [action] = payload.actions;
+  assert.deepEqual([...index.findings.entries()], [[finding.findingId, finding]]);
+  assert.deepEqual([...index.decisions.entries()], [[decision.decisionId, decision]]);
+  assert.deepEqual([...index.actions.entries()], [[action.actionId, action]]);
+  assert.deepEqual(
+    [...index.workReplay.entries()],
+    [
+      [
+        artifact.artifactId,
+        {
+          artifactId: artifact.artifactId,
+          canonicalHash: artifact.canonicalHash,
+          eventId: event.eventId,
+          findingIds: [finding.findingId],
+          decisionIds: [decision.decisionId],
+          actionIds: [action.actionId],
+        },
+      ],
+    ],
+  );
+
+  assert.throws(() => apply(index, event), {
+    code: 'STATE_TRANSITION_INVALID',
+    message: /materialized only once/,
+  });
+  assert.throws(
+    () => apply(workIndex(artifact), { ...event, actor: { kind: 'human', id: 'owner-001' } }),
+    { code: 'CAPABILITY_DENIED' },
+  );
+  const forged = structuredClone(payload);
+  forged.actions[0].actionId = 'act_forged_00000001';
+  assert.throws(() => apply(workIndex(artifact), { ...event, payload: forged }), {
+    code: 'STATE_TRANSITION_INVALID',
+    message: /runtime-issued identities/,
+  });
+  const taken = workIndex(artifact);
+  taken.decisions.set(decision.decisionId, decision);
+  assert.throws(() => apply(taken, event), { code: 'CONCURRENT_MODIFICATION' });
+  assert.deepEqual([...taken.findings.keys()], []);
+  assert.deepEqual([...taken.workReplay.keys()], []);
 });
