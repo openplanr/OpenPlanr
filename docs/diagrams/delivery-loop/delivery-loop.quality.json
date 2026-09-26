@@ -84,6 +84,11 @@
       "message": "Relation labels keep clear of group and lane titles."
     },
     {
+      "id": "label-frame-overlap",
+      "status": "pass",
+      "message": "Relation labels lie inside or outside each group and lane frame, never across its border."
+    },
+    {
       "id": "edge-node-overlap",
       "status": "pass",
       "message": "Connection paths remain outside semantic node interiors."
@@ -101,7 +106,7 @@
     {
       "id": "png-decoded",
       "status": "pass",
-      "message": "PNG decoded at 1175×1268 (95511 bytes)."
+      "message": "PNG decoded at 1175×1268 (95484 bytes)."
     },
     {
       "id": "offline-runtime",
@@ -110,5 +115,5 @@
     }
   ],
   "splitPlan": null,
-  "documentDigest": "sha256:d389066a76e403dae6ca78fe2b52328c7fc928ab0132e78fc0bff01df530b4b8"
+  "documentDigest": "sha256:3ed2c85e52beaa96540f47677ade430d767f4c512a8e2589c85333721f39ff33"
 }

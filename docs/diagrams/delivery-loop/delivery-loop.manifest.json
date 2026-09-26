@@ -46,7 +46,7 @@
     {
       "path": "diagrams/delivery-loop/delivery-loop.html",
       "mediaType": "text/html; charset=utf-8",
-      "digest": "sha256:00e7becf36b73ac3fa55d0917c7495fdccb6634b2c974309fd5019b23457668e",
+      "digest": "sha256:47e5ea6075088883d0f1210d891aed5b73e09a4c5c5101e16085bc0ee609d3d8",
       "fidelity": "render-only"
     },
     {
@@ -58,21 +58,21 @@
     {
       "path": "diagrams/delivery-loop/delivery-loop.png",
       "mediaType": "image/png",
-      "digest": "sha256:4790c56c041202cf03551294af348d19153b753042f0719a70bcdfa630c247be",
+      "digest": "sha256:b0caf21727a457c34fef7313674f6572687f4b00ab0c9b766dd705725975c4b6",
       "fidelity": "render-only"
     },
     {
       "path": "diagrams/delivery-loop/delivery-loop.quality.json",
       "mediaType": "application/vnd.openplanr.diagram-quality+json",
-      "digest": "sha256:83ad6028fbf041071c9530ac4bed149c26366dc612a7bdf487ca02325b0416d4",
+      "digest": "sha256:5d544de635a06aae321ec1b51fed1d09531cfc3b96f85354522bfcffbdb83050",
       "fidelity": "render-only"
     },
     {
       "path": "diagrams/delivery-loop/delivery-loop.svg",
       "mediaType": "image/svg+xml; charset=utf-8",
-      "digest": "sha256:cc75fbb0bb25098ed68773b7f2f585c942c58ee926cc695c8e93d2e19a20fb57",
+      "digest": "sha256:9bcc288ee63d89e3de29d1c4f975f11cba0eb1dfde68ee1cd62f15b79d5b226e",
       "fidelity": "render-only"
     }
   ],
-  "documentDigest": "sha256:4f8884fcae35261c41de878c0a8bdef8ceb9b267ded2d10f386bec3947570851"
+  "documentDigest": "sha256:be6b5030d388f7faa0309020ac3e354ef123860367b2d016693fb0c9a61313a3"
 }

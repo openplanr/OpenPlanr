@@ -76,7 +76,7 @@
     {
       "path": "diagrams/one-feature/one-feature.quality.json",
       "mediaType": "application/vnd.openplanr.diagram-quality+json",
-      "digest": "sha256:a1d8d759d1046a2b6f2d60e186fdffb3491bf0e6cef3a43fad95bafc414a9e31",
+      "digest": "sha256:7f1fb9a03d4357f32fb62ad0b2fc3854e794759d556d82d1d45acbc697f41229",
       "fidelity": "render-only"
     },
     {
@@ -86,5 +86,5 @@
       "fidelity": "render-only"
     }
   ],
-  "documentDigest": "sha256:6b19f9e690c0f291a2af6c883b60c3ec494a608457f373e99dad922c253ccffa"
+  "documentDigest": "sha256:484ae2d27e08262a29009fe67964d43564e000e218dbc5e086050904c7b2f9e2"
 }
