@@ -20,7 +20,7 @@ If a design already exists, or the feature shows no UI intent, print nothing (si
 ## What to print
 
 Compute the recommended format from the screen count with
-`lib/design/recommendFormat.mjs`, then print ONE plain-language line naming the **single**
+`lib/design/recommend-format.mjs`, then print ONE plain-language line naming the **single**
 command (not a multi-option menu):
 
 ```

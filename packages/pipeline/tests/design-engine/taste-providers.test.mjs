@@ -3,7 +3,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, test } from 'node:test';
-import { sheetContract, validateSheet } from '../../lib/design-engine/providers/claudeSvg.mjs';
+import { sheetContract, validateSheet } from '../../lib/design-engine/providers/claude-svg.mjs';
 import { resolveProvider } from '../../lib/design-engine/providers/index.mjs';
 import {
   assertImageSize,

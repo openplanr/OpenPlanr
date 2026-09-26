@@ -145,7 +145,7 @@ artifact (SPEC-015 F6).
 ## C.3 — walkthrough
 
 - Base: `templates/design/walkthrough-shell.html`.
-- `NAV_MODE = chooseWalkthroughNav(SCREEN_COUNT)` (`lib/design/walkthroughNav.mjs`:
+- `NAV_MODE = chooseWalkthroughNav(SCREEN_COUNT)` (`lib/design/walkthrough-nav.mjs`:
   ≤8 → `anchor`, >8 → `lazy`). Set `<html data-nav-mode="<NAV_MODE>">`.
 - For each screen emit
   `<section class="screen" id="s-<slug>" data-group="<group>" aria-label="<escaped name>"><h2>…</h2><div class="frame">…</div></section>`.

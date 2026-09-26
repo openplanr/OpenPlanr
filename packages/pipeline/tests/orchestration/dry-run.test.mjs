@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { planDryRunReadOnlyInspect } from '../../lib/shipPrecheck.mjs';
+import { planDryRunReadOnlyInspect } from '../../lib/ship-precheck.mjs';
 import { snapshotRelativePaths } from '../helpers/fsSnapshot.mjs';
 
 const root = join(fileURLToPath(new URL('.', import.meta.url)), '../..');

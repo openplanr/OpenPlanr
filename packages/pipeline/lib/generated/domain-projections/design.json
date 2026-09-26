@@ -43,7 +43,7 @@
     {
       "source": "packages/design/lib/design-engine/cli.mjs",
       "target": "lib/design-engine/cli.mjs",
-      "sha256": "b141710025c8631a859c8f701027bac84aa635adda151b8fb60f0efc0b5184db",
+      "sha256": "f32896d6b2abeaebc63ebda8c98f8fd2f2caa192bb0e1f8933fcb4c7a4dd2b3e",
       "mode": "644"
     },
     {
@@ -65,15 +65,15 @@
       "mode": "644"
     },
     {
-      "source": "packages/design/lib/design-engine/providers/claudeSvg.mjs",
-      "target": "lib/design-engine/providers/claudeSvg.mjs",
+      "source": "packages/design/lib/design-engine/providers/claude-svg.mjs",
+      "target": "lib/design-engine/providers/claude-svg.mjs",
       "sha256": "93180de3faeb6e00ded1681cefb9c2c7c3c0d4cc1d82964eb4057cbe6905307f",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design-engine/providers/index.mjs",
       "target": "lib/design-engine/providers/index.mjs",
-      "sha256": "31868183f39c529a21eee620d582c0e42f1e6db54f1dc55c66ac9ba1d32dec08",
+      "sha256": "bdde751a7dc39cadd0b50fdc02137b768a7c3f81b2d7137a6d8691b674125ca8",
       "mode": "644"
     },
     {
@@ -155,8 +155,8 @@
       "mode": "644"
     },
     {
-      "source": "packages/design/lib/design/designSystem.mjs",
-      "target": "lib/design/designSystem.mjs",
+      "source": "packages/design/lib/design/design-system.mjs",
+      "target": "lib/design/design-system.mjs",
       "sha256": "0fa52d087484bdd125fe1da445aad2b5f2819220b5498abb83d8140e871949e2",
       "mode": "644"
     },
@@ -235,7 +235,7 @@
     {
       "source": "packages/design/lib/design/index.mjs",
       "target": "lib/design/index.mjs",
-      "sha256": "5607b05012c11cd7f094d8f6baa9c928f290c0e17011fe70ba4a192ac1ccb26e",
+      "sha256": "12d57d444889885ac64406ce03843b1f9cbd0248899fa56f4750bf915e2e0ebd",
       "mode": "644"
     },
     {
@@ -253,7 +253,7 @@
     {
       "source": "packages/design/lib/design/manifest.mjs",
       "target": "lib/design/manifest.mjs",
-      "sha256": "bfb41e0dcd38304f63af70627a336b15f758b0cea4d0d6b6f0d78727714120f1",
+      "sha256": "a79a495cf1ae269f14055472b60d76a2852a6611365725fd1aef035199c72cb6",
       "mode": "644"
     },
     {
@@ -269,8 +269,8 @@
       "mode": "644"
     },
     {
-      "source": "packages/design/lib/design/recommendFormat.mjs",
-      "target": "lib/design/recommendFormat.mjs",
+      "source": "packages/design/lib/design/recommend-format.mjs",
+      "target": "lib/design/recommend-format.mjs",
       "sha256": "2e5f7e5c0c6fc3ef6d392c6ea9a5c66057bd0934026798654d1b69059cf54fac",
       "mode": "644"
     },
@@ -329,8 +329,8 @@
       "mode": "644"
     },
     {
-      "source": "packages/design/lib/design/walkthroughNav.mjs",
-      "target": "lib/design/walkthroughNav.mjs",
+      "source": "packages/design/lib/design/walkthrough-nav.mjs",
+      "target": "lib/design/walkthrough-nav.mjs",
       "sha256": "2dd8c4ba25f2850cf50fbd04c4d8e9e901dbc3f96e2e2da07909369427ff31a3",
       "mode": "644"
     },
@@ -367,7 +367,7 @@
     {
       "source": "packages/design/templates/design/README.md",
       "target": "templates/design/README.md",
-      "sha256": "35190739f080dd4c950d72cdf98ddb06a4ff4ef993ea2f3facd45cbc64771588",
+      "sha256": "9dfdcda4bf4d97d3dce787cf783e10cb988e27cc18809c592bcc06508232b800",
       "mode": "644"
     },
     {
@@ -403,7 +403,7 @@
     {
       "source": "packages/design/templates/design/walkthrough-shell.html",
       "target": "templates/design/walkthrough-shell.html",
-      "sha256": "bccf59f399e317e16f10431897fad95e883f3b1156afaf0b91e667a923c76175",
+      "sha256": "7630f80e73c6dc147b44bca6695caed94afe5c8a537c5b7bb04c13b1fb4583a4",
       "mode": "644"
     },
     {

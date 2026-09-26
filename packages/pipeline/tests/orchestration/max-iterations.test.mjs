@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import { simulateDevLoopWithRetries } from '../../lib/devLoopSim.mjs';
+import { simulateDevLoopWithRetries } from '../../lib/dev-loop-sim.mjs';
 
 const root = join(fileURLToPath(new URL('.', import.meta.url)), '../..');
 const fixtureRoot = join(root, 'tests/fixtures/failing-task-scenario');

@@ -34,7 +34,7 @@ process.env.PLANR_HOME = HOME;
 const moduleUrl = (relativePath) => pathToFileURL(join(root, relativePath)).href;
 const { validate } = await import(moduleUrl('conformance/json-schema-validate.mjs'));
 const { sheetContract, contractInstructions, validateSheet } = await import(
-  moduleUrl('lib/design-engine/providers/claudeSvg.mjs')
+  moduleUrl('lib/design-engine/providers/claude-svg.mjs')
 );
 const { createSession, appendRound, saveSession, loadSession } = await import(
   moduleUrl('lib/design-engine/session.mjs')

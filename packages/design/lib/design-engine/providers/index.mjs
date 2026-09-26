@@ -8,7 +8,7 @@
  * / checkQuality(artifact, brief, opts). Future providers slot in here.
  */
 
-import * as claudeSvg from './claudeSvg.mjs';
+import * as claudeSvg from './claude-svg.mjs';
 import * as openai from './openai.mjs';
 
 export const PROVIDERS = ['openai', 'claude-svg'];

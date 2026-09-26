@@ -417,7 +417,7 @@
         },
         {
           "path": "skills/design/scripts/design.mjs",
-          "digest": "sha256:f007e2aed8cbdbf0e59e3c80c7fd0ca5519ef8146b89ad766e040e74d912cf27"
+          "digest": "sha256:4815704faea80f74133e435070bda6f3113a5bc5acc2a3d6dbd77fa742d3c008"
         },
         {
           "path": "skills/design/schemas/design-document.schema.json",
@@ -618,7 +618,7 @@
         },
         {
           "path": "skills/design-loop/scripts/design.mjs",
-          "digest": "sha256:f007e2aed8cbdbf0e59e3c80c7fd0ca5519ef8146b89ad766e040e74d912cf27"
+          "digest": "sha256:4815704faea80f74133e435070bda6f3113a5bc5acc2a3d6dbd77fa742d3c008"
         },
         {
           "path": "skills/design-loop/schemas/design-document.schema.json",
@@ -819,7 +819,7 @@
         },
         {
           "path": "skills/design-review/scripts/design.mjs",
-          "digest": "sha256:f007e2aed8cbdbf0e59e3c80c7fd0ca5519ef8146b89ad766e040e74d912cf27"
+          "digest": "sha256:4815704faea80f74133e435070bda6f3113a5bc5acc2a3d6dbd77fa742d3c008"
         },
         {
           "path": "skills/design-review/schemas/design-document.schema.json",
@@ -1154,7 +1154,7 @@
         },
         {
           "path": "skills/plan/scripts/design.mjs",
-          "digest": "sha256:f007e2aed8cbdbf0e59e3c80c7fd0ca5519ef8146b89ad766e040e74d912cf27"
+          "digest": "sha256:4815704faea80f74133e435070bda6f3113a5bc5acc2a3d6dbd77fa742d3c008"
         },
         {
           "path": "skills/plan/schemas/design-document.schema.json",

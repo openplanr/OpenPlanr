@@ -23,7 +23,7 @@ export {
   designSystemStatus,
   resolveDesignSystem,
   summarizeDesignSystem,
-} from './designSystem.mjs';
+} from './design-system.mjs';
 export { embedJson, escapeHtml, hasUnsafeHtml } from './escape.mjs';
 export {
   canContinueDesignHandoff,
@@ -80,7 +80,7 @@ export {
   EXPLORATORY_KEYWORDS,
   isExploratory,
   recommendFormat,
-} from './recommendFormat.mjs';
+} from './recommend-format.mjs';
 export { countScreens, resolveScreens } from './screens.mjs';
 export {
   BREAKPOINTS,
@@ -94,4 +94,4 @@ export {
   resolveTokens,
   SPACING_STEP,
 } from './tokens.mjs';
-export { ANCHOR_MAX_SCREENS, chooseWalkthroughNav } from './walkthroughNav.mjs';
+export { ANCHOR_MAX_SCREENS, chooseWalkthroughNav } from './walkthrough-nav.mjs';

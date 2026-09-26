@@ -1,5 +1,5 @@
 {
-  "$comment": "Machine-readable design-system manifest (planr v0.18.0). Written by /planr-pipeline:design alongside tokens.css; read by lib/design/designSystem.mjs. The generator replaces values with the project's real brand and keeps this in sync with tokens.css. kind ∈ color|font|spacing|radius|shadow|motion.",
+  "$comment": "Machine-readable design-system manifest (planr v0.18.0). Written by /planr-pipeline:design alongside tokens.css; read by lib/design/design-system.mjs. The generator replaces values with the project's real brand and keeps this in sync with tokens.css. kind ∈ color|font|spacing|radius|shadow|motion.",
   "name": "GENERATOR:name",
   "tokens": [
     { "name": "--background", "value": "#ffffff", "kind": "color" },

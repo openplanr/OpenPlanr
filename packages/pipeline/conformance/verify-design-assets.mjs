@@ -68,7 +68,7 @@ for (const rel of [
   'lib/design/index.mjs',
   'lib/design/tokens.mjs',
   'lib/design/lint.mjs',
-  'lib/design/designSystem.mjs',
+  'lib/design/design-system.mjs',
   'lib/design/contrast.mjs',
   'procedures/design-system-generate.md',
   'templates/design-system/tokens.css.tpl',

@@ -63,7 +63,7 @@ import {
   sessionDirName,
   tasteProfilePath,
 } from './paths.mjs';
-import { contractInstructions, sheetContract, validateSheet } from './providers/claudeSvg.mjs';
+import { contractInstructions, sheetContract, validateSheet } from './providers/claude-svg.mjs';
 import { DEFAULT_PROVIDER, resolveProvider } from './providers/index.mjs';
 import * as openai from './providers/openai.mjs';
 import { appendRound, createSession, loadSession, saveSession } from './session.mjs';

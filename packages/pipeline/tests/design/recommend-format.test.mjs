@@ -5,7 +5,7 @@ import {
   DESIGN_FORMATS,
   isExploratory,
   recommendFormat,
-} from '../../lib/design/recommendFormat.mjs';
+} from '../../lib/design/recommend-format.mjs';
 
 test('0–2 screens always recommend prototype', () => {
   for (const n of [0, 1, 2]) {

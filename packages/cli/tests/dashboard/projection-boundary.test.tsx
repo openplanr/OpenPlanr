@@ -12,7 +12,7 @@ import {
   ProjectionBoundary,
   resolveProjectionBoundary,
 } from '../../../../apps/dashboard/src/features/shell/ProjectionBoundary.js';
-import { projectValidatedOperateTodaySurface } from '../../../../apps/dashboard/src/features/shell/TodaySurface.js';
+import { projectValidatedOperateTodaySurface } from '../../../../apps/dashboard/src/features/shell/today-surface.js';
 import {
   type DashboardProductState,
   dashboardProductStatePolicy,

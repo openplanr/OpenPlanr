@@ -7,7 +7,7 @@ import {
   designSystemStatus,
   resolveDesignSystem,
   summarizeDesignSystem,
-} from '../../lib/design/designSystem.mjs';
+} from '../../lib/design/design-system.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const fixtures = join(here, '..', 'fixtures');
