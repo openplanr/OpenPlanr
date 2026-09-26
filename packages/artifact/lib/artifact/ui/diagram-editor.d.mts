@@ -74,6 +74,7 @@ export interface DiagramEditorHostPanel {
   icon?: DiagramEditorIconName;
   hidden?: (state: DiagramEditorState) => boolean;
   mount(options: {
+    /** Clicks inside this element never reach the editor's action dispatcher, so host controls may carry `data-action`. */
     root: HTMLElement;
     session: DiagramEditorSession;
     select: (ids: string[]) => unknown;
@@ -81,7 +82,11 @@ export interface DiagramEditorHostPanel {
   }): (() => void) | null | void;
 }
 
-/** Mount the same browser-safe editor in local and company owner shells. */
+/**
+ * Mount the same browser-safe editor in local and company owner shells.
+ * The editor sizes its chrome from its own root, not the window, and prefixes every element id
+ * per mount so several editors can share one document; hosts must not depend on those ids.
+ */
 export declare function mountDiagramEditor(options: {
   root: HTMLElement;
   session: DiagramEditorSession;
@@ -90,6 +95,7 @@ export declare function mountDiagramEditor(options: {
     readCurrent?: () => Promise<DiagramAuthoringBundle>;
     /** Optional real reviewer adapter. Local-only pages show a truthful unavailable state. */
     mountReview?: (options: {
+      /** Clicks inside this element never reach the editor's action dispatcher. */
       root: HTMLElement;
       session: DiagramEditorSession;
       select: (ids: string[]) => unknown;

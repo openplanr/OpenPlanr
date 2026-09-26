@@ -315,6 +315,174 @@ test('an open drawer keeps host controls outside the editor reachable', options,
   assert.equal(await focusIn(outline), true, 'Entering the editor lands in the open drawer');
 });
 
+test('two editors in one document keep unique ids and independent drawers', options, async (t) => {
+  const page = await hostedFixture(t);
+  await page.evaluate(() => {
+    const root = document.createElement('div');
+    root.id = 'second-editor';
+    root.style.height = '600px';
+    document.body.append(root);
+    window.__second = window.__mountEditor({
+      root,
+      session: window.__session,
+      host: {
+        brand: false,
+        review: false,
+        panels: [{ id: 'revisions', label: 'Revisions', mount: () => null }],
+      },
+    });
+  });
+  // Marker ids inside the drawing come from the shared renderer and repeat when one diagram is
+  // drawn twice; the chrome ids are the editor's own.
+  const ids = await page.evaluate(() =>
+    [...document.querySelectorAll('[id]')]
+      .filter((node) => !node.closest('[data-editor-svg]'))
+      .map((node) => node.id),
+  );
+  assert.equal(
+    new Set(ids).size,
+    ids.length,
+    `Every chrome id is unique; duplicates: ${ids.filter((id, index) => ids.indexOf(id) !== index).join(', ')}`,
+  );
+  assert.equal(await page.locator('#host-editor #diagram-outline-panel').count(), 1);
+  assert.equal(await page.locator('#second-editor #diagram-2-outline-panel').count(), 1);
+  assert.equal(await page.locator('#second-editor #diagram-2-revisions-pane').count(), 1);
+  const crossReferences = await page.evaluate(() =>
+    [...document.querySelectorAll('.planr-diagram-editor')].flatMap((shell) =>
+      [...shell.querySelectorAll('[aria-controls],[aria-labelledby],[aria-describedby]')].flatMap(
+        (node) =>
+          ['aria-controls', 'aria-labelledby', 'aria-describedby']
+            .map((name) => node.getAttribute(name))
+            .filter((id) => {
+              const target = id && document.getElementById(id);
+              return target && !shell.contains(target);
+            }),
+      ),
+    ),
+  );
+  assert.deepEqual(crossReferences, [], 'ARIA relationships stay inside their own editor');
+
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await page.waitForFunction(
+    () => document.querySelectorAll('.planr-diagram-editor[data-layout~="drawer"]').length === 2,
+  );
+  const first = page.locator('#diagram-outline-panel'),
+    second = page.locator('#diagram-2-outline-panel');
+  const firstTrigger = page.locator('#host-editor .de-bar [data-action="outline"]'),
+    secondTrigger = page.locator('#second-editor .de-bar [data-action="outline"]');
+  await firstTrigger.click();
+  assert.equal(await first.getAttribute('aria-hidden'), 'false');
+  assert.equal(await second.getAttribute('aria-hidden'), 'true', 'The other editor stays closed');
+  await page.keyboard.press('Escape');
+  assert.equal(await first.getAttribute('aria-hidden'), 'true');
+  assert.equal(
+    await firstTrigger.evaluate((node) => node === document.activeElement),
+    true,
+    'Escape returns focus to the trigger of the editor that owned the drawer',
+  );
+  await secondTrigger.click();
+  assert.equal(await second.getAttribute('aria-hidden'), 'false');
+  assert.equal(await first.getAttribute('aria-hidden'), 'true');
+  await page.evaluate(() => window.__second.dispose());
+  assert.equal(await page.locator('.planr-diagram-editor').count(), 1);
+});
+
+test(
+  'an editor inside a 900px-wide host on a 1440px window lays out as drawers',
+  options,
+  async (t) => {
+    const page = await hostedFixture(t);
+    const editor = page.locator('.planr-diagram-editor');
+    const outline = page.locator('#diagram-outline-panel');
+    const host = (width) =>
+      page.evaluate((value) => {
+        document.querySelector('#host-editor').style.width = value;
+      }, width);
+    assert.equal(await editor.getAttribute('data-layout'), 'desktop');
+    assert.equal(await outline.getAttribute('aria-hidden'), 'false');
+
+    await host('900px');
+    await page.locator('.planr-diagram-editor[data-layout~="drawer"]').waitFor();
+    assert.equal(await page.evaluate(() => innerWidth), 1440, 'The window did not change');
+    assert.equal(await outline.getAttribute('aria-hidden'), 'true', 'Rails close in a narrow host');
+    await page.getByRole('button', { name: 'Outline', exact: true }).click();
+    assert.equal(await outline.getAttribute('aria-hidden'), 'false');
+    assert.equal(await page.locator('.de-drawer-backdrop').isVisible(), true);
+    assert.equal(
+      await outline.evaluate((node) => getComputedStyle(node).position),
+      'absolute',
+      'The outline overlays the canvas as a drawer',
+    );
+    const canvas = await page
+      .locator('.de-canvas')
+      .evaluate((node) => node.getBoundingClientRect().width);
+    assert.ok(canvas > 850 && canvas <= 900, `The canvas fills the 900px host (${canvas}px)`);
+    await page.keyboard.press('Escape');
+    assert.equal(await outline.getAttribute('aria-hidden'), 'true');
+
+    await host('700px');
+    await page.locator('.planr-diagram-editor[data-layout~="compact"]').waitFor();
+    assert.equal(await editor.getAttribute('data-editable'), 'false', 'Editing ends at 700px');
+    assert.equal(await page.locator('.de-mobile-message').isVisible(), true);
+
+    await host('');
+    await page.locator('.planr-diagram-editor[data-layout="desktop"]').waitFor();
+    assert.equal(await editor.getAttribute('data-editable'), 'true');
+    assert.equal(await outline.getAttribute('aria-hidden'), 'false', 'Rails reopen on desktop');
+    assert.equal(await page.locator('.de-drawer-backdrop').isVisible(), false);
+  },
+);
+
+test('host controls inside a host panel never reach the editor dispatcher', options, async (t) => {
+  const page = await hostedFixture(t);
+  await page.getByRole('tab', { name: 'Revisions', exact: true }).click();
+  await page.getByText('Revision 8 · Latest save').waitFor();
+  const actions = ['save', 'outline', 'close-properties'];
+  await page.evaluate((names) => {
+    window.__events.hostClicks = 0;
+    const pane = document.querySelector('#diagram-revisions-pane');
+    for (const action of names) {
+      const control = document.createElement('button');
+      control.type = 'button';
+      control.dataset.action = action;
+      control.textContent = `Host ${action}`;
+      control.addEventListener('click', () => {
+        window.__events.hostClicks += 1;
+      });
+      pane.append(control);
+    }
+  }, actions);
+  assert.equal(
+    (
+      await page.evaluate(() =>
+        window.__session.submit({ type: 'rename', id: 'node-a', label: 'Host click check' }),
+      )
+    ).ok,
+    true,
+  );
+  const outlineTrigger = page.locator('.de-bar [data-action="outline"]');
+  assert.equal(await outlineTrigger.getAttribute('aria-expanded'), 'true');
+  for (const action of actions)
+    await page.getByRole('button', { name: `Host ${action}`, exact: true }).click();
+  assert.equal(
+    await page.evaluate(() => window.__events.hostClicks),
+    3,
+    'The host handles its clicks',
+  );
+  assert.equal(await page.evaluate(() => window.__calls.length), 0, 'No save was requested');
+  assert.equal(await saveState(page).textContent(), '1 unsaved edit');
+  assert.equal(
+    await outlineTrigger.getAttribute('aria-expanded'),
+    'true',
+    'The rail did not toggle',
+  );
+  assert.equal(
+    await page.locator('#diagram-inspector-panel').getAttribute('aria-hidden'),
+    'false',
+    'The inspector did not close',
+  );
+});
+
 test('invalid host configuration fails with a specific error', options, async (t) => {
   const page = await hostedFixture(t);
   const messages = await page.evaluate(() => {
