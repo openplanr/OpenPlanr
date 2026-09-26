@@ -160,6 +160,7 @@ export function element(document, tag, attributes = {}, text) {
   if (text !== undefined) node.textContent = text;
   return node;
 }
+/** Editor-dispatched control; a null action leaves the button to its own click handler. */
 export function button(document, text, action, options = {}) {
   return element(document, 'button', { type: 'button', 'data-action': action, ...options }, text);
 }

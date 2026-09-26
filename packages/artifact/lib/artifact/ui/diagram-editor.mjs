@@ -152,6 +152,13 @@ const outlineIcon = (entry) =>
           ? 'kind-annotation'
           : (KIND_ICONS[entry.value.kind] ?? 'kind-process');
 const RESERVED_PANELS = new Set(['properties', 'review']);
+const DRAWER_MAX_WIDTH = 1100;
+const COMPACT_MAX_WIDTH = 700;
+const NARROW_MAX_WIDTH = 420;
+const ID_PREFIX = 'diagram';
+/** Surfaces that dispatch their own clicks; actions inside them never reach the editor. */
+const FOREIGN_ACTION_SCOPE = '.de-host-pane,.de-review-slot,.de-conflict,.de-source-panel';
+let mountCount = 0;
 function hostLabels(labels = {}) {
   if (!labels || typeof labels !== 'object' || Array.isArray(labels))
     throw new TypeError('Host labels must be an object.');
@@ -215,6 +222,10 @@ export function mountDiagramEditor({ root, session, host = {} }) {
   const doc = root.ownerDocument,
     win = windowOf(doc);
   const colorScheme = win.matchMedia?.('(prefers-color-scheme: dark)');
+  // The first editor keeps the historical ids; later mounts take a suffix so two can share a document.
+  mountCount += 1;
+  const idPrefix = mountCount === 1 ? ID_PREFIX : `${ID_PREFIX}-${mountCount}`;
+  const scopedId = (name) => `${idPrefix}-${name}`;
   let disposed = false,
     raf = 0,
     drag = null,
@@ -222,9 +233,7 @@ export function mountDiagramEditor({ root, session, host = {} }) {
     tool = 'select',
     tab = 'outline',
     rightTab = 'properties';
-  let leftOpen = win.innerWidth > 1100,
-    rightOpen = win.innerWidth > 1100,
-    clipboard = null,
+  let clipboard = null,
     dialog = null,
     conflictMount = null,
     sourceMount = null,
@@ -251,9 +260,29 @@ export function mountDiagramEditor({ root, session, host = {} }) {
     reviewMounted = false,
     modalBackgroundInert = false;
   const shell = element(doc, 'div', { className: 'planr-diagram-editor' });
-  shell.innerHTML =
-    '<header class="de-bar" role="toolbar" aria-label="Diagram commands"><div class="de-bar-start"><div class="de-command-group" role="group" aria-label="Document navigation"></div><div class="de-brand"><span class="de-mark" aria-hidden="true"></span><div class="de-identity"><strong class="de-title"></strong><small class="de-subtitle"></small></div></div></div><div class="de-bar-center"><div class="de-command-group" role="group" aria-label="History and arrangement"></div></div><div class="de-bar-end"><span class="de-save-state" role="status" aria-live="polite"></span><div class="de-command-group" role="group" aria-label="Save and inspect"></div><div class="de-more-wrap"></div></div></header><div class="de-work"><button class="de-drawer-backdrop" type="button" data-action="close-drawers" aria-label="Close open panel" tabindex="-1" hidden></button><aside class="de-left" id="diagram-outline-panel" aria-label="Diagram outline and shapes"><div class="de-panel-header"><strong class="de-panel-title">Objects</strong><div class="de-rail-tabs de-panel-tabs" role="tablist" aria-label="Left panel"></div><button type="button" data-action="close-outline" class="de-panel-close" aria-label="Close outline">×</button></div><div class="de-left-content"><div class="de-outline-pane de-tabpanel" id="diagram-outline-pane" role="tabpanel" aria-labelledby="diagram-outline-tab"></div><div class="de-shapes-pane de-tabpanel" id="diagram-shapes-pane" role="tabpanel" aria-labelledby="diagram-shapes-tab" hidden></div></div></aside><section class="de-stage"><p id="diagram-canvas-instructions" class="de-canvas-instructions">Use Select to choose and move objects, Pan to move around the canvas, and the arrow keys to move a selected object.</p><div class="de-canvas" aria-label="Diagram canvas" aria-describedby="diagram-canvas-instructions" role="application" tabindex="0"><svg data-editor-svg aria-label="Diagram drawing" role="img"><g data-world></g><g data-overlays></g></svg><div class="de-empty"></div><div class="de-canvas-tools" role="toolbar" aria-label="Canvas tools"></div><div class="de-mobile-message">Review on mobile. Open on desktop to edit.</div></div><div class="de-stage-footer"></div></section><aside class="de-right" id="diagram-inspector-panel" aria-label="Diagram properties and review"><div class="de-panel-header"><strong class="de-panel-title">Inspector</strong><div class="de-right-tabs de-panel-tabs" role="tablist" aria-label="Right panel"></div><button type="button" data-action="close-properties" class="de-panel-close" aria-label="Close properties">×</button></div><div class="de-right-content"><div class="de-properties-pane de-tabpanel" id="diagram-properties-pane" role="tabpanel" aria-labelledby="diagram-properties-tab"></div><div class="de-review-pane de-tabpanel" id="diagram-review-pane" role="tabpanel" aria-labelledby="diagram-review-tab" hidden></div></div></aside></div><div class="de-alert" role="alert" hidden></div><div class="de-announcer" aria-live="polite" aria-atomic="true"></div><div class="de-dialog-layer"></div>';
+  shell.innerHTML = `<header class="de-bar" role="toolbar" aria-label="Diagram commands"><div class="de-bar-start"><div class="de-command-group" role="group" aria-label="Document navigation"></div><div class="de-brand"><span class="de-mark" aria-hidden="true"></span><div class="de-identity"><strong class="de-title"></strong><small class="de-subtitle"></small></div></div></div><div class="de-bar-center"><div class="de-command-group" role="group" aria-label="History and arrangement"></div></div><div class="de-bar-end"><span class="de-save-state" role="status" aria-live="polite"></span><div class="de-command-group" role="group" aria-label="Save and inspect"></div><div class="de-more-wrap"></div></div></header><div class="de-work"><button class="de-drawer-backdrop" type="button" data-action="close-drawers" aria-label="Close open panel" tabindex="-1" hidden></button><aside class="de-left" id="${scopedId('outline-panel')}" aria-label="Diagram outline and shapes"><div class="de-panel-header"><strong class="de-panel-title">Objects</strong><div class="de-rail-tabs de-panel-tabs" role="tablist" aria-label="Left panel"></div><button type="button" data-action="close-outline" class="de-panel-close" aria-label="Close outline">×</button></div><div class="de-left-content"><div class="de-outline-pane de-tabpanel" id="${scopedId('outline-pane')}" role="tabpanel" aria-labelledby="${scopedId('outline-tab')}"></div><div class="de-shapes-pane de-tabpanel" id="${scopedId('shapes-pane')}" role="tabpanel" aria-labelledby="${scopedId('shapes-tab')}" hidden></div></div></aside><section class="de-stage"><p id="${scopedId('canvas-instructions')}" class="de-canvas-instructions">Use Select to choose and move objects, Pan to move around the canvas, and the arrow keys to move a selected object.</p><div class="de-canvas" aria-label="Diagram canvas" aria-describedby="${scopedId('canvas-instructions')}" role="application" tabindex="0"><svg data-editor-svg aria-label="Diagram drawing" role="img"><g data-world></g><g data-overlays></g></svg><div class="de-empty"></div><div class="de-canvas-tools" role="toolbar" aria-label="Canvas tools"></div><div class="de-mobile-message">Review on mobile. Open on desktop to edit.</div></div><div class="de-stage-footer"></div></section><aside class="de-right" id="${scopedId('inspector-panel')}" aria-label="Diagram properties and review"><div class="de-panel-header"><strong class="de-panel-title">Inspector</strong><div class="de-right-tabs de-panel-tabs" role="tablist" aria-label="Right panel"></div><button type="button" data-action="close-properties" class="de-panel-close" aria-label="Close properties">×</button></div><div class="de-right-content"><div class="de-properties-pane de-tabpanel" id="${scopedId('properties-pane')}" role="tabpanel" aria-labelledby="${scopedId('properties-tab')}"></div><div class="de-review-pane de-tabpanel" id="${scopedId('review-pane')}" role="tabpanel" aria-labelledby="${scopedId('review-tab')}" hidden></div></div></aside></div><div class="de-alert" role="alert" hidden></div><div class="de-announcer" aria-live="polite" aria-atomic="true"></div><div class="de-dialog-layer"></div>`;
   root.replaceChildren(shell);
+  // Breakpoints follow the shell's own width, so a host sidebar or a narrow embed gets the
+  // matching chrome; the window is only a stand-in until the shell has a measurable width.
+  let shellWidth = null;
+  const layoutWidth = () => shellWidth ?? win.innerWidth;
+  const drawerLayout = () => layoutWidth() <= DRAWER_MAX_WIDTH;
+  const compactLayout = () => layoutWidth() <= COMPACT_MAX_WIDTH;
+  const measureShell = () => {
+    const width = shell.getBoundingClientRect().width;
+    if (width > 0) shellWidth = width;
+    const tiers = [];
+    if (drawerLayout()) tiers.push('drawer');
+    if (compactLayout()) tiers.push('compact');
+    if (layoutWidth() <= NARROW_MAX_WIDTH) tiers.push('narrow');
+    const layout = tiers.join(' ') || 'desktop';
+    const changed = shell.dataset.layout !== layout;
+    shell.dataset.layout = layout;
+    return changed;
+  };
+  measureShell();
+  let leftOpen = !drawerLayout(),
+    rightOpen = !drawerLayout();
   const $ = (selector) => shell.querySelector(selector);
   const bar = $('.de-bar'),
     barStart = $('.de-bar-start .de-command-group'),
@@ -289,9 +318,9 @@ export function mountDiagramEditor({ root, session, host = {} }) {
     hostPanels.map((panel) => {
       const pane = element(doc, 'div', {
         className: 'de-host-pane de-tabpanel',
-        id: 'diagram-' + panel.id + '-pane',
+        id: scopedId(panel.id + '-pane'),
         role: 'tabpanel',
-        'aria-labelledby': 'diagram-' + panel.id + '-tab',
+        'aria-labelledby': scopedId(panel.id + '-tab'),
         hidden: true,
       });
       $('.de-right-content').append(pane);
@@ -354,9 +383,9 @@ export function mountDiagramEditor({ root, session, host = {} }) {
   const moreButton = commandButton(moreWrap, 'More', '', 'more', { icon: 'more' });
   moreButton.setAttribute('aria-haspopup', 'menu');
   moreButton.setAttribute('aria-expanded', 'false');
-  moreButton.setAttribute('aria-controls', 'diagram-more-menu');
+  moreButton.setAttribute('aria-controls', scopedId('more-menu'));
   const moreMenu = element(doc, 'div', {
-    id: 'diagram-more-menu',
+    id: scopedId('more-menu'),
     className: 'de-more-menu',
     role: 'menu',
     'aria-label': 'Diagram options',
@@ -426,7 +455,7 @@ export function mountDiagramEditor({ root, session, host = {} }) {
   };
   const editable = (state) =>
     mode === 'edit' &&
-    win.innerWidth > 700 &&
+    !compactLayout() &&
     state.capabilities.read &&
     state.capabilities.write &&
     state.saveState !== 'access-changed' &&
@@ -590,7 +619,7 @@ export function mountDiagramEditor({ root, session, host = {} }) {
     }
   }
   function synchronizeBackgroundInteractivity() {
-    const drawer = win.innerWidth <= 1100;
+    const drawer = drawerLayout();
     const drawerOpen = drawer && (leftOpen || rightOpen);
     toggleInert($('.de-work'), modalBackgroundInert);
     toggleInert(bar, modalBackgroundInert || drawerOpen);
@@ -602,7 +631,7 @@ export function mountDiagramEditor({ root, session, host = {} }) {
   }
   /** @param {{ focusPanel?: boolean; focusTarget?: HTMLElement | null }} [options] */
   function syncPanelState({ focusPanel = false, focusTarget = null } = {}) {
-    const drawer = win.innerWidth <= 1100;
+    const drawer = drawerLayout();
     const left = $('.de-left'),
       right = $('.de-right');
     left.querySelector('[data-action="close-outline"]').hidden = !drawer;
@@ -623,9 +652,9 @@ export function mountDiagramEditor({ root, session, host = {} }) {
     const outlineControl = bar.querySelector('[data-action="outline"]'),
       propertiesControl = bar.querySelector('[data-action="properties"]');
     outlineControl?.setAttribute('aria-expanded', String(leftOpen));
-    outlineControl?.setAttribute('aria-controls', 'diagram-outline-panel');
+    outlineControl?.setAttribute('aria-controls', scopedId('outline-panel'));
     propertiesControl?.setAttribute('aria-expanded', String(rightOpen));
-    propertiesControl?.setAttribute('aria-controls', 'diagram-inspector-panel');
+    propertiesControl?.setAttribute('aria-controls', scopedId('inspector-panel'));
     drawerBackdrop.hidden = !drawer || (!leftOpen && !rightOpen);
     drawerBackdrop.setAttribute('aria-hidden', String(drawerBackdrop.hidden));
     if (focusTarget?.isConnected) focusTarget.focus({ preventScroll: true });
@@ -649,7 +678,7 @@ export function mountDiagramEditor({ root, session, host = {} }) {
     synchronizeBackgroundInteractivity();
   }
   function setRail(side, open, { focusPanel = false, restoreFocus = true } = {}) {
-    const drawer = win.innerWidth <= 1100;
+    const drawer = drawerLayout();
     const control = bar.querySelector(
       '[data-action="' + (side === 'left' ? 'outline' : 'properties') + '"]',
     );
@@ -667,7 +696,7 @@ export function mountDiagramEditor({ root, session, host = {} }) {
     if (!leftOpen && !rightOpen) drawerOpener = null;
   }
   function closeDrawers({ restoreFocus = true } = {}) {
-    if (win.innerWidth > 1100) return;
+    if (!drawerLayout()) return;
     const focusTarget = restoreFocus && drawerOpener?.isConnected ? drawerOpener : null;
     leftOpen = false;
     rightOpen = false;
@@ -978,7 +1007,7 @@ export function mountDiagramEditor({ root, session, host = {} }) {
       mode,
       leftOpen,
       rightOpen,
-      win.innerWidth <= 700,
+      compactLayout(),
       hostPanels.map((panel) => (panel.hidden?.(state) ? 0 : 1)).join(''),
     ].join(':');
     if (stamp === controlsStamp) return;
@@ -1019,10 +1048,10 @@ export function mountDiagramEditor({ root, session, host = {} }) {
         ]) {
       const selected = tab === name.toLowerCase();
       const item = button(doc, name, action, {
-        id: 'diagram-' + name.toLowerCase() + '-tab',
+        id: scopedId(name.toLowerCase() + '-tab'),
         role: 'tab',
         'aria-selected': String(selected),
-        'aria-controls': 'diagram-' + name.toLowerCase() + '-pane',
+        'aria-controls': scopedId(name.toLowerCase() + '-pane'),
         tabindex: selected ? '0' : '-1',
       });
       leftTabs.append(item);
@@ -1230,9 +1259,9 @@ export function mountDiagramEditor({ root, session, host = {} }) {
       const selected = rightTab === id;
       rightTabs.append(
         button(doc, name, action, {
-          id: 'diagram-' + id + '-tab',
+          id: scopedId(id + '-tab'),
           role: 'tab',
-          'aria-controls': 'diagram-' + id + '-pane',
+          'aria-controls': scopedId(id + '-pane'),
           'aria-selected': String(selected),
           tabindex: selected ? '0' : '-1',
           'data-tab': id,
@@ -2201,7 +2230,7 @@ export function mountDiagramEditor({ root, session, host = {} }) {
     if (
       !dialog &&
       event.key === 'Tab' &&
-      win.innerWidth <= 1100 &&
+      drawerLayout() &&
       (leftOpen || rightOpen) &&
       shell.contains(event.target)
     ) {
@@ -2294,7 +2323,7 @@ export function mountDiagramEditor({ root, session, host = {} }) {
       } else if (list === rightTabs) setRightTab(target.dataset.tab, { focus: true });
       return;
     }
-    if (event.key === 'Escape' && win.innerWidth <= 1100 && (leftOpen || rightOpen)) {
+    if (event.key === 'Escape' && drawerLayout() && (leftOpen || rightOpen)) {
       event.preventDefault();
       closeDrawers();
       return;
@@ -2410,8 +2439,7 @@ export function mountDiagramEditor({ root, session, host = {} }) {
     }
   }
   function containDrawerFocus(event) {
-    if (dialog || win.innerWidth > 1100 || drawerBackdrop.hidden || (!leftOpen && !rightOpen))
-      return;
+    if (dialog || !drawerLayout() || drawerBackdrop.hidden || (!leftOpen && !rightOpen)) return;
     const panel = leftOpen ? $('.de-left') : $('.de-right');
     // Host controls outside the editor stay reachable while a drawer is open.
     if (!panel || panel.contains(event.target) || !shell.contains(event.target)) return;
@@ -2428,7 +2456,7 @@ export function mountDiagramEditor({ root, session, host = {} }) {
   }
   const onClick = (event) => {
     const target = event.target.closest('[data-action]');
-    if (!target || target.onclick) return;
+    if (!target || target.closest(FOREIGN_ACTION_SCOPE)) return;
     if (overflowOpen && !target.closest('.de-more-wrap'))
       setOverflow(false, { restoreFocus: false });
     const action = target.dataset.action;
@@ -2462,7 +2490,8 @@ export function mountDiagramEditor({ root, session, host = {} }) {
   };
   let resizeFrame = 0;
   const onResize = () => {
-    const breakpoint = win.innerWidth <= 1100 ? 'drawer' : 'desktop';
+    const layoutChanged = measureShell();
+    const breakpoint = drawerLayout() ? 'drawer' : 'desktop';
     const breakpointChanged = !!lastBreakpoint && lastBreakpoint !== breakpoint;
     let focusAfterRender = null;
     if (breakpointChanged && breakpoint === 'drawer') {
@@ -2486,7 +2515,7 @@ export function mountDiagramEditor({ root, session, host = {} }) {
     const rect = stage.getBoundingClientRect();
     if (
       lastCanvas &&
-      lastBreakpoint === breakpoint &&
+      !layoutChanged &&
       lastCanvas.width === rect.width &&
       lastCanvas.height === rect.height
     )
@@ -2558,8 +2587,10 @@ export function mountDiagramEditor({ root, session, host = {} }) {
   win.addEventListener('blur', onBlur);
   colorScheme?.addEventListener?.('change', onColorScheme);
   doc.addEventListener('pointerdown', onDocumentPointerDown);
-  if (resize) resize.observe(stage);
-  else win.addEventListener('resize', scheduleResize);
+  if (resize) {
+    resize.observe(shell);
+    resize.observe(stage);
+  } else win.addEventListener('resize', scheduleResize);
   draw();
   scheduleResize();
   return {

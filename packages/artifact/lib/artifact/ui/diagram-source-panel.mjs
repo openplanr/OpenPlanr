@@ -10,6 +10,8 @@ import { button, element } from './diagram-editor-dom.mjs';
 const MAX_SOURCE_BYTES = 65_536;
 const SOURCE_LIMIT_MESSAGE = 'This source exceeds the 64 KiB import limit.';
 const EMPTY_CALLBACK = () => {};
+const ID_PREFIX = 'diagram-source';
+let mountCount = 0;
 const safeName = (name) => name.replace(/[^a-z0-9_-]/giu, '-').slice(0, 80) || 'diagram';
 const fidelityName = (value) =>
   value === 'lossless' ? 'Preserved' : value === 'partial' ? 'Partial' : 'Unsupported';
@@ -121,6 +123,10 @@ export function mountDiagramSourcePanel({
   const document = root.ownerDocument;
   const standalone = !root.closest('.planr-diagram-editor');
   if (standalone) root.classList.add('planr-diagram-source-panel');
+  // The first panel keeps the historical ids; later mounts take a suffix so two can share a document.
+  mountCount += 1;
+  const idPrefix = mountCount === 1 ? ID_PREFIX : `${ID_PREFIX}-${mountCount}`;
+  const scopedId = (name) => `${idPrefix}-${name}`;
   const wrap = element(document, 'div', { className: 'de-source-panel' });
   root.replaceChildren(wrap);
   let preview = null;
@@ -236,31 +242,31 @@ export function mountDiagramSourcePanel({
     'aria-label': 'Mermaid copy options',
   });
   const importTab = button(document, 'Import a copy', 'source-import-tab', {
-    id: 'diagram-source-import-tab',
+    id: scopedId('import-tab'),
     role: 'tab',
     'aria-selected': 'false',
-    'aria-controls': 'diagram-source-import-panel',
+    'aria-controls': scopedId('import-panel'),
     tabindex: '-1',
   });
   const exportTab = button(document, 'Export a copy', 'source-export-tab', {
-    id: 'diagram-source-export-tab',
+    id: scopedId('export-tab'),
     role: 'tab',
     'aria-selected': 'false',
-    'aria-controls': 'diagram-source-export-panel',
+    'aria-controls': scopedId('export-panel'),
     tabindex: '-1',
   });
   tabs.append(importTab, exportTab);
   const importSection = element(document, 'section', {
-    id: 'diagram-source-import-panel',
+    id: scopedId('import-panel'),
     role: 'tabpanel',
-    'aria-labelledby': 'diagram-source-import-tab',
+    'aria-labelledby': scopedId('import-tab'),
     className: 'de-source-section',
   });
   importSection.append(heading, explanation, label, uploadLabel, status, actions, result);
   const exportSection = element(document, 'section', {
-    id: 'diagram-source-export-panel',
+    id: scopedId('export-panel'),
     role: 'tabpanel',
-    'aria-labelledby': 'diagram-source-export-tab',
+    'aria-labelledby': scopedId('export-tab'),
     className: 'de-source-section',
   });
   exportSection.append(exportHeading, exportDescription, exportFormats, exports, exportResult);
@@ -574,7 +580,6 @@ export function mountDiagramSourcePanel({
   const click = (event) => {
     const target = event.target.closest('[data-action]');
     if (!target || !wrap.contains(target)) return;
-    event.stopPropagation();
     const action = target.dataset.action;
     if (action === 'source-import-tab' || action === 'source-export-tab') {
       selectTab(action === 'source-import-tab' ? 'import' : 'export');

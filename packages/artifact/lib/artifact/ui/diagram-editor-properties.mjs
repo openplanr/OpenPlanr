@@ -166,7 +166,7 @@ export function renderDiagramProperties({
       disabled: !editable,
     });
     overview.body.append(title.label);
-    const changeTitle = iconButton(document, 'Update title', 'update-title', {
+    const changeTitle = iconButton(document, 'Update title', null, {
       icon: 'save',
       disabled: !editable,
     });
@@ -320,7 +320,7 @@ export function renderDiagramProperties({
           type: 'number',
           disabled: !editable || place.locks.route,
         });
-      const remove = iconButton(document, `Remove bend ${index + 1}`, 'remove-bend', {
+      const remove = iconButton(document, `Remove bend ${index + 1}`, null, {
         icon: 'trash',
         disabled: !editable || place.locks.route,
       });
@@ -445,7 +445,7 @@ export function renderDiagramProperties({
   const footer = element(document, 'footer', {
     className: 'de-inspector-footer',
   });
-  const revertButton = button(document, 'Revert', 'revert-properties', {
+  const revertButton = button(document, 'Revert', null, {
     disabled: true,
   });
   const applyButton = element(
@@ -615,7 +615,7 @@ export function renderDiagramProperties({
       disabled: !editable,
     });
     operation.append(parent.label);
-    const move = iconButton(document, 'Move to parent', 'reparent', {
+    const move = iconButton(document, 'Move to parent', null, {
       icon: 'parent',
       disabled: !editable,
     });
@@ -760,7 +760,7 @@ function renderMultiSelection({ document, root, bundle, ids, byId, editable, act
       disabled: !editable,
     });
     operation.append(parent.label);
-    const move = iconButton(document, 'Move to parent', 'reparent', {
+    const move = iconButton(document, 'Move to parent', null, {
       icon: 'parent',
       disabled: !editable,
     });

@@ -120,24 +120,29 @@ export function mountDiagramConflicts({ root, session, onClose = () => {}, onErr
   confirmation.append(confirm, cancel);
   panel.append(confirmation);
   root.replaceChildren(panel);
-  keep.onclick = () => onClose();
-  download.onclick = () =>
-    downloadJson(document, pending, `${pending.diagramId}.draft.planr-diagram-bundle.json`);
-  adopt.onclick = () => {
-    confirmation.hidden = false;
-    cancel.focus();
+  const click = (event) => {
+    const target = event.target.closest('[data-action]');
+    if (!target || !panel.contains(target)) return;
+    const action = target.dataset.action;
+    if (action === 'keep-draft') onClose();
+    else if (action === 'download-draft')
+      downloadJson(document, pending, `${pending.diagramId}.draft.planr-diagram-bundle.json`);
+    else if (action === 'use-current') {
+      confirmation.hidden = false;
+      cancel.focus();
+    } else if (action === 'cancel-current') {
+      confirmation.hidden = true;
+      adopt.focus();
+    } else if (action === 'confirm-current') {
+      const result = session.useAuthoritative();
+      if (result.ok) onClose();
+      else onError(result);
+    }
   };
-  cancel.onclick = () => {
-    confirmation.hidden = true;
-    adopt.focus();
-  };
-  confirm.onclick = () => {
-    const result = session.useAuthoritative();
-    if (result.ok) onClose();
-    else onError(result);
-  };
+  panel.addEventListener('click', click);
   return {
     dispose() {
+      panel.removeEventListener('click', click);
       panel.remove();
     },
   };
