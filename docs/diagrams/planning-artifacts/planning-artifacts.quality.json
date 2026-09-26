@@ -101,7 +101,7 @@
     {
       "id": "png-decoded",
       "status": "pass",
-      "message": "PNG decoded at 1068×1058 (55814 bytes)."
+      "message": "PNG decoded at 868×1042 (57986 bytes)."
     },
     {
       "id": "offline-runtime",
@@ -110,5 +110,5 @@
     }
   ],
   "splitPlan": null,
-  "documentDigest": "sha256:78d235bda229be26a63f9a9aa97154db8dc73c545bc06bb182ca7d30e25ac231"
+  "documentDigest": "sha256:4cd7cceacbdc1caa9100f5221c1d89fcaae7d6e17af1036b935c1aaabfb007bc"
 }

@@ -16,7 +16,7 @@
     {
       "id": "label-length",
       "status": "pass",
-      "message": "Longest label is 21 characters."
+      "message": "Longest label is 19 characters."
     },
     {
       "id": "crossings",
@@ -101,7 +101,7 @@
     {
       "id": "png-decoded",
       "status": "pass",
-      "message": "PNG decoded at 1788×2002 (107173 bytes)."
+      "message": "PNG decoded at 1208×1832 (105263 bytes)."
     },
     {
       "id": "offline-runtime",
@@ -110,5 +110,5 @@
     }
   ],
   "splitPlan": null,
-  "documentDigest": "sha256:1b63bd1d915dcaa555fa9f427fc4e13d5408bc693ee1f0303fd3f5850f51d38b"
+  "documentDigest": "sha256:50cd4e0be4df5757464df404c14af4cb94486391b4589de5308ae5405f6fc5ce"
 }

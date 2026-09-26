@@ -7,7 +7,7 @@
   "canonicalization": "rfc8785",
   "diagramId": "one-feature",
   "title": "One feature, end to end",
-  "summary": "Passwordless sign-in from request to readout: who acts at each step when you, your coding agent, the planr CLI, and GitHub share one delivery loop. The specification id and the story and task counts are illustrative.",
+  "summary": "Passwordless sign-in from request to readout: who acts at each step when you, your coding agent, the planr CLI, and GitHub share one delivery loop.",
   "audience": "engineer",
   "grammar": {
     "id": "sequence",
@@ -85,7 +85,7 @@
       "from": "agent",
       "to": "repo",
       "kind": "message",
-      "label": "writes SPEC-004 under .planr/specs/",
+      "label": "writes SPEC-001 under .planr/specs/",
       "weight": null
     },
     {
@@ -101,7 +101,7 @@
       "from": "agent",
       "to": "repo",
       "kind": "message",
-      "label": "writes 3 user stories and 6 tasks: acceptance criteria and file-level change lists",
+      "label": "writes the user stories and tasks: acceptance criteria and file-level change lists",
       "weight": null
     },
     {
@@ -216,7 +216,7 @@
     },
     {
       "id": "e-ship",
-      "label": "Ship, one task per PR",
+      "label": "Ship",
       "order": 2,
       "at": null
     },
@@ -278,5 +278,5 @@
   "axes": [],
   "sets": [],
   "annotations": [],
-  "documentDigest": "sha256:6d92fb17337e4476f564323407e668dac07c38edc14d57ab201b3615db747a5a"
+  "documentDigest": "sha256:4e201a99b1d3a1c55d07a79c4e8c6801b284ca4aa7593d03f99604ccce6a6901"
 }

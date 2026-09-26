@@ -46,7 +46,7 @@
     {
       "id": "geometry-present",
       "status": "pass",
-      "message": "11 semantic boxes and 12 relations rendered."
+      "message": "11 semantic boxes and 13 relations rendered."
     },
     {
       "id": "node-overlap",
@@ -101,7 +101,7 @@
     {
       "id": "png-decoded",
       "status": "pass",
-      "message": "PNG decoded at 1532×1290 (91180 bytes)."
+      "message": "PNG decoded at 1175×1268 (95511 bytes)."
     },
     {
       "id": "offline-runtime",
@@ -110,5 +110,5 @@
     }
   ],
   "splitPlan": null,
-  "documentDigest": "sha256:ce0741a28c5d8da1f8b071bcbf5e7039109be7b28a89d3348c66813aea6d6d2e"
+  "documentDigest": "sha256:d389066a76e403dae6ca78fe2b52328c7fc928ab0132e78fc0bff01df530b4b8"
 }

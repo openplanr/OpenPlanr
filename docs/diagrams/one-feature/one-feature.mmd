@@ -7,13 +7,13 @@ sequenceDiagram
   Note over p1,p5: Phase: Specify
   p1->>p2: /planr:spec \"Add passwordless sign-in for existing accounts\"
   p2->>p1: asks only the questions that change the outcome
-  p2->>p3: writes SPEC-004 under .planr/specs/
+  p2->>p3: writes SPEC-001 under .planr/specs/
   Note over p1,p5: Phase: Plan
   p1->>p2: /planr:plan
-  p2->>p3: writes 3 user stories and 6 tasks: acceptance criteria and file-level change lists
+  p2->>p3: writes the user stories and tasks: acceptance criteria and file-level change lists
   p1->>p4: planr sync
   p4->>p3: validates and repairs cross-references, offline, never by a model
-  Note over p1,p5: Phase: Ship, one task per PR
+  Note over p1,p5: Phase: Ship
   p1->>p2: /planr:ship, one task
   p2->>p3: reads the plan first, implements and verifies the task, records provenance
   p1->>p5: opens one PR per task

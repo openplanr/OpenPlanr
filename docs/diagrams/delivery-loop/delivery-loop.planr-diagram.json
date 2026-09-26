@@ -43,7 +43,7 @@
     },
     {
       "id": "plan",
-      "label": "plan\nstories, tasks, change lists",
+      "label": "plan\nstories and tasks",
       "kind": "secondary-item",
       "description": "Decomposes the specification into user stories and tasks with acceptance criteria and file-level change lists. Plan ends with a Ship handoff; it never starts implementation.",
       "semanticPosition": null
@@ -85,7 +85,7 @@
     },
     {
       "id": "review",
-      "label": "Review skills\nartifact · design · browser-qa",
+      "label": "Review skills\nartifact · design-review · browser-qa",
       "kind": "secondary-item",
       "description": "Artifact review boards, design review, and browser-backed QA against real routes, forms, and viewports.",
       "semanticPosition": null
@@ -99,7 +99,7 @@
     },
     {
       "id": "operate",
-      "label": "Operate readouts\nevidence for the next request",
+      "label": "Operate readouts\ndecision and action brief",
       "kind": "secondary-item",
       "description": "A decision and action brief across seven executive lenses, built from what actually shipped.",
       "semanticPosition": null
@@ -201,6 +201,14 @@
       "kind": "flow",
       "label": "evidence",
       "weight": null
+    },
+    {
+      "id": "operate-you",
+      "from": "operate",
+      "to": "you",
+      "kind": "flow",
+      "label": "evidence for the next request",
+      "weight": null
     }
   ],
   "groups": [
@@ -239,7 +247,7 @@
   ],
   "accessibility": {
     "title": "The OpenPlanr delivery loop",
-    "description": "You invoke the spec, plan, ship, and land skills inside your coding agent. Spec and plan write the plans under .planr/ in your repository; ship reads the plan first and implements one task in the source code; land assesses release readiness before you merge. The planr CLI validates the planning files offline, never by a model, and keeps GitHub Issues or Linear in step. Review skills check the change, and operate readouts return the evidence for the next request.",
+    "description": "You invoke the spec, plan, ship, and land skills inside your coding agent. Spec and plan write the plans under .planr/ in your repository; ship reads the plan first and implements one task in the source code; land assesses release readiness before you merge. The planr CLI validates the planning files offline, never by a model, and keeps GitHub Issues or Linear in step. Review skills check the change, and operate readouts return to you as evidence for the next request, which closes the loop.",
     "readingOrder": [
       "you",
       "spec",
@@ -260,5 +268,5 @@
   "axes": [],
   "sets": [],
   "annotations": [],
-  "documentDigest": "sha256:7d525e1d94b103cb00392afa066d07a5e648ea847ab7203b0eb1d434ed0fe200"
+  "documentDigest": "sha256:c940e0e3cc1d104af49f8c8da0ed8f8b8d8a1f0ac75296dd3a6eb47154975d41"
 }
