@@ -93,11 +93,10 @@ function sha256File(path) {
 function packCandidate(destination, environment, sourceRoot = repositoryRoot) {
   mkdirSync(destination, { recursive: true });
   const output = JSON.parse(
-    run(
-      'npm',
-      ['pack', '--json', '--ignore-scripts', '--pack-destination', destination],
-      { cwd: sourceRoot, env: environment },
-    ),
+    run('npm', ['pack', '--json', '--ignore-scripts', '--pack-destination', destination], {
+      cwd: sourceRoot,
+      env: environment,
+    }),
   );
   const report = Array.isArray(output) ? output[0] : undefined;
   const filename = report?.filename;
@@ -116,9 +115,9 @@ function extractPackage(tarball, destination) {
   run('tar', ['-xzf', tarball, '-C', destination]);
   const packageRoot = join(destination, 'package');
   if (
-    !existsSync(packageRoot)
-    || !lstatSync(packageRoot).isDirectory()
-    || lstatSync(packageRoot).isSymbolicLink()
+    !existsSync(packageRoot) ||
+    !lstatSync(packageRoot).isDirectory() ||
+    lstatSync(packageRoot).isSymbolicLink()
   ) {
     throw new Error('packed archive does not contain one real package root');
   }
@@ -148,7 +147,9 @@ function cleanEnvironment(home) {
   // Strip provider credentials so the deterministic install probe observes the
   // same clean-machine environment locally and in CI.
   for (const key of Object.keys(environment)) {
-    if (/^(ANTHROPIC|OPENAI|GEMINI|GOOGLE|AZURE_OPENAI|OPENPLANR)_.*(KEY|TOKEN|SECRET)$/i.test(key)) {
+    if (
+      /^(ANTHROPIC|OPENAI|GEMINI|GOOGLE|AZURE_OPENAI|OPENPLANR)_.*(KEY|TOKEN|SECRET)$/i.test(key)
+    ) {
       delete environment[key];
     }
   }
@@ -159,9 +160,9 @@ function installedPackageRoot(prefix, name) {
   const lexicalRoot = join(prefix, 'node_modules', name);
   must(
     `${name} is installed as a real directory`,
-    existsSync(lexicalRoot)
-      && lstatSync(lexicalRoot).isDirectory()
-      && !lstatSync(lexicalRoot).isSymbolicLink(),
+    existsSync(lexicalRoot) &&
+      lstatSync(lexicalRoot).isDirectory() &&
+      !lstatSync(lexicalRoot).isSymbolicLink(),
   );
   const installedRoot = realpathSync(lexicalRoot);
   const expectedRoot = join(realpathSync(join(prefix, 'node_modules')), name);
@@ -185,12 +186,12 @@ try {
   const environment = cleanEnvironment(home);
   must(
     'source-checkout fallback environment is absent',
-    environment.OPENPLANR_PIPELINE_ROOT === undefined
-      && environment.OPENPLANR_ECOSYSTEM_SOURCE === undefined
-      && environment.OPENPLANR_PIPELINE_TARBALL === undefined
-      && environment.OPENPLANR_VERIFIER_SOURCE_ROOT === undefined
-      && environment.PLANR_PIPELINE_ROOT === undefined
-      && environment.PLANR_PIPELINE_VERIFIER_SOURCE_ROOT === undefined,
+    environment.OPENPLANR_PIPELINE_ROOT === undefined &&
+      environment.OPENPLANR_ECOSYSTEM_SOURCE === undefined &&
+      environment.OPENPLANR_PIPELINE_TARBALL === undefined &&
+      environment.OPENPLANR_VERIFIER_SOURCE_ROOT === undefined &&
+      environment.PLANR_PIPELINE_ROOT === undefined &&
+      environment.PLANR_PIPELINE_VERIFIER_SOURCE_ROOT === undefined,
   );
 
   console.log('Building the complete OpenPlanr candidate…');
@@ -213,8 +214,8 @@ try {
   const secondDigest = payloadDigest(secondInventory);
   must(
     'two packs from one frozen build have an exact payload inventory and digest',
-    JSON.stringify(firstInventory) === JSON.stringify(secondInventory)
-      && firstDigest === secondDigest,
+    JSON.stringify(firstInventory) === JSON.stringify(secondInventory) &&
+      firstDigest === secondDigest,
     `${firstDigest} != ${secondDigest}`,
   );
   must(
@@ -251,8 +252,8 @@ try {
   );
   must(
     'repository-bound pipeline packs have an exact payload inventory and digest',
-    JSON.stringify(pipelineInventory) === JSON.stringify(pipelineSecondInventory)
-      && payloadDigest(pipelineInventory) === payloadDigest(pipelineSecondInventory),
+    JSON.stringify(pipelineInventory) === JSON.stringify(pipelineSecondInventory) &&
+      payloadDigest(pipelineInventory) === payloadDigest(pipelineSecondInventory),
   );
   must(
     'repository-bound pipeline packs are byte-for-byte deterministic archives',
@@ -270,9 +271,7 @@ try {
     pipelineSourceProof.digest,
   );
 
-  const packedManifest = JSON.parse(
-    readFileSync(join(firstPackageRoot, 'package.json'), 'utf8'),
-  );
+  const packedManifest = JSON.parse(readFileSync(join(firstPackageRoot, 'package.json'), 'utf8'));
   const packedPaths = firstInventory.map((entry) => entry.path);
   const exportReport = validateExportTargets(packedManifest.exports, packedPaths);
   must('packed artifact declares at least one public export', exportReport.targets.length > 0);
@@ -284,9 +283,9 @@ try {
   const documentationReport = validatePackagedMarkdownLinks(firstPackageRoot, packedPaths);
   must(
     'packaged Markdown inventory includes README, contribution, and reference documentation',
-    documentationReport.documents.includes('README.md')
-      && documentationReport.documents.includes('CONTRIBUTING.md')
-      && documentationReport.documents.some((path) => path.startsWith('docs/')),
+    documentationReport.documents.includes('README.md') &&
+      documentationReport.documents.includes('CONTRIBUTING.md') &&
+      documentationReport.documents.some((path) => path.startsWith('docs/')),
     documentationReport.documents.join(', '),
   );
   must(
@@ -298,7 +297,10 @@ try {
   const pipelineManifest = JSON.parse(
     readFileSync(join(pipelinePackageRoot, 'package.json'), 'utf8'),
   );
-  must('repository-bound pipeline candidate is planr-pipeline', pipelineManifest.name === 'planr-pipeline');
+  must(
+    'repository-bound pipeline candidate is planr-pipeline',
+    pipelineManifest.name === 'planr-pipeline',
+  );
   must(
     'packed pipeline identity matches the selected repository candidate',
     pipelineManifest.version === pipelineCandidate.manifest.version,
@@ -346,20 +348,28 @@ try {
   must('installed OpenPlanr manifest names openplanr', installedOpenPlanr.name === 'openplanr');
   must(
     'installed OpenPlanr bytes exactly match the packed candidate',
-    payloadBytesEqual(firstInventory, inventoryOrStop(
-      installedOpenPlanrRoot,
-      'installed OpenPlanr payload contains no symbolic links',
-    )),
+    payloadBytesEqual(
+      firstInventory,
+      inventoryOrStop(
+        installedOpenPlanrRoot,
+        'installed OpenPlanr payload contains no symbolic links',
+      ),
+    ),
   );
   must(
     'installed pipeline bytes exactly match the explicit packed candidate',
-    payloadBytesEqual(pipelineInventory, inventoryOrStop(
-      installedPipelineRoot,
-      'installed pipeline payload contains no symbolic links',
-    )),
+    payloadBytesEqual(
+      pipelineInventory,
+      inventoryOrStop(
+        installedPipelineRoot,
+        'installed pipeline payload contains no symbolic links',
+      ),
+    ),
   );
   console.log(`  · installed pipeline ${installedPipeline.version}`);
-  console.log(`  · OPENPLANR_PIPELINE_ROOT cleared: ${environment.OPENPLANR_PIPELINE_ROOT === undefined}`);
+  console.log(
+    `  · OPENPLANR_PIPELINE_ROOT cleared: ${environment.OPENPLANR_PIPELINE_ROOT === undefined}`,
+  );
 
   const installedOpenPlanrExports = runInstalledExportProbes({
     packageName: installedOpenPlanr.name,
@@ -371,8 +381,8 @@ try {
   });
   must(
     'every installed OpenPlanr runtime export and condition loads from consumer-owned bytes',
-    installedOpenPlanrExports.runtime > 0
-      && installedOpenPlanrExports.count === installedOpenPlanrExports.results.length,
+    installedOpenPlanrExports.runtime > 0 &&
+      installedOpenPlanrExports.count === installedOpenPlanrExports.results.length,
     installedOpenPlanrExports.digest,
   );
   const installedPipelineExports = runInstalledExportProbes({
@@ -385,10 +395,10 @@ try {
   });
   must(
     'every installed pipeline runtime export and condition loads from consumer-owned bytes',
-    installedPipelineExports.runtime > 0
-      && installedPipelineExports.typeOnly > 0
-      && installedPipelineExports.json > 0
-      && installedPipelineExports.count === installedPipelineExports.results.length,
+    installedPipelineExports.runtime > 0 &&
+      installedPipelineExports.typeOnly > 0 &&
+      installedPipelineExports.json > 0 &&
+      installedPipelineExports.count === installedPipelineExports.results.length,
     installedPipelineExports.digest,
   );
 
@@ -416,24 +426,24 @@ try {
   );
   must(
     'clean consumer resolves ./dashboard from installed OpenPlanr bytes',
-    isPathInside(installedOpenPlanrRoot, consumerResult.dashboardPath)
-      && !lstatSync(consumerResult.dashboardPath).isSymbolicLink()
-      && consumerResult.manifest?.kind === 'openplanr-dashboard-build',
+    isPathInside(installedOpenPlanrRoot, consumerResult.dashboardPath) &&
+      !lstatSync(consumerResult.dashboardPath).isSymbolicLink() &&
+      consumerResult.manifest?.kind === 'openplanr-dashboard-build',
   );
   must(
     'clean consumer resolves ./dashboard-verifier from installed OpenPlanr bytes',
-    isPathInside(installedOpenPlanrRoot, consumerResult.verifierPath)
-      && !lstatSync(consumerResult.verifierPath).isSymbolicLink(),
+    isPathInside(installedOpenPlanrRoot, consumerResult.verifierPath) &&
+      !lstatSync(consumerResult.verifierPath).isSymbolicLink(),
   );
   must(
     'installed OpenPlanr resolves the exact installed pipeline candidate',
-    realpathSync(consumerResult.pipelinePath)
-      === realpathSync(join(installedPipelineRoot, 'package.json')),
+    realpathSync(consumerResult.pipelinePath) ===
+      realpathSync(join(installedPipelineRoot, 'package.json')),
   );
   must(
     'installed dashboard manifest and assets pass installed-byte verification',
-    consumerResult.report?.ok === true
-      && consumerResult.report?.buildId === consumerResult.manifest?.buildId,
+    consumerResult.report?.ok === true &&
+      consumerResult.report?.buildId === consumerResult.manifest?.buildId,
     JSON.stringify(consumerResult.report),
   );
 
@@ -444,7 +454,15 @@ try {
   run('git', ['add', '-A'], { cwd: project });
   run(
     'git',
-    ['-c', 'user.email=gate@example.invalid', '-c', 'user.name=Release Gate', 'commit', '-qm', 'fixture'],
+    [
+      '-c',
+      'user.email=gate@example.invalid',
+      '-c',
+      'user.name=Release Gate',
+      'commit',
+      '-qm',
+      'fixture',
+    ],
     { cwd: project },
   );
 
@@ -478,7 +496,11 @@ try {
       return [];
     }
   })();
-  check('setup installed the runtime skills it reported', skills.length > 0, `found ${skills.length}`);
+  check(
+    'setup installed the runtime skills it reported',
+    skills.length > 0,
+    `found ${skills.length}`,
+  );
   console.log('');
 } catch (error) {
   if (!(error instanceof JourneyStop)) {

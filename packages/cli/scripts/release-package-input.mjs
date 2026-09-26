@@ -8,9 +8,7 @@ function candidateFailure(message) {
 }
 
 function defaultCandidateLocations(openPlanrRoot) {
-  return [
-    { kind: 'workspace-package', path: resolve(openPlanrRoot, '..', 'pipeline') },
-  ];
+  return [{ kind: 'workspace-package', path: resolve(openPlanrRoot, '..', 'pipeline') }];
 }
 
 /**
@@ -18,13 +16,13 @@ function defaultCandidateLocations(openPlanrRoot) {
  * no environment or caller-provided tarball authority: local and CI release
  * gates both use the exact pipeline package in the consolidated workspace.
  */
-export function resolvePipelineCandidateSourceRoot({
-  openPlanrRoot,
-  candidateLocations,
-} = {}) {
+export function resolvePipelineCandidateSourceRoot({ openPlanrRoot, candidateLocations } = {}) {
   const presentedRoot = resolve(openPlanrRoot ?? process.cwd());
-  if (!existsSync(presentedRoot) || !lstatSync(presentedRoot).isDirectory()
-    || lstatSync(presentedRoot).isSymbolicLink()) {
+  if (
+    !existsSync(presentedRoot) ||
+    !lstatSync(presentedRoot).isDirectory() ||
+    lstatSync(presentedRoot).isSymbolicLink()
+  ) {
     candidateFailure('The OpenPlanr release root is not a real directory.');
   }
   const root = realpathSync(presentedRoot);
@@ -68,7 +66,9 @@ export function resolvePipelineCandidateSourceRoot({
     );
   }
   if (resolved.length !== 1) {
-    candidateFailure('More than one bounded planr-pipeline candidate exists; candidate custody is ambiguous.');
+    candidateFailure(
+      'More than one bounded planr-pipeline candidate exists; candidate custody is ambiguous.',
+    );
   }
   return resolved[0];
 }

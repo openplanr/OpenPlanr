@@ -158,8 +158,8 @@ describe('root release proof and public package artifacts', () => {
     );
     expect(releaseArtifactVerifier).toContain('validateExportTargets');
     expect(releaseArtifactVerifier).toContain('validatePackagedMarkdownLinks');
-    expect(releaseArtifactVerifier).toContain('payloadBytesEqual(firstInventory');
-    expect(releaseArtifactVerifier).toContain('payloadBytesEqual(pipelineInventory');
+    expect(releaseArtifactVerifier).toMatch(/payloadBytesEqual\(\s*firstInventory/u);
+    expect(releaseArtifactVerifier).toMatch(/payloadBytesEqual\(\s*pipelineInventory/u);
   });
 
   it('packages one repository-bound pipeline candidate and resolves all exports as an installed consumer', () => {
