@@ -60,12 +60,7 @@ export interface DiagramGeometryIndex {
     | { ok: true; updatedIds: string[]; removedIds: string[]; diagnostics: [] }
     | DiagramGeometryFailure;
   /** x/y and optional tolerance (default 6) are screen pixels; screen = world * scale + camera offset. */
-  query(input: {
-    x: number;
-    y: number;
-    tolerance?: number;
-    camera: DiagramGeometryCamera;
-  }):
+  query(input: { x: number; y: number; tolerance?: number; camera: DiagramGeometryCamera }):
     | {
         ok: true;
         hits: DiagramGeometryHit[];

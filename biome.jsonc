@@ -113,7 +113,10 @@
     },
     {
       // Hand-written declarations still use `any`; BL-110 (after BL-078) removes this entry.
-      "includes": ["packages/pipeline/lib/pipeline/index.d.mts", "packages/protocol/src/task-contracts.d.mts"],
+      "includes": [
+        "packages/pipeline/lib/pipeline/index.d.mts",
+        "packages/protocol/src/task-contracts.d.mts"
+      ],
       "linter": {
         "rules": {
           "suspicious": {

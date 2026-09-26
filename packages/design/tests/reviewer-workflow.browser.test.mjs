@@ -434,16 +434,14 @@ test(`reviewer workflow stays focused, compact and usable with large discussions
           rect.width >= 300 && rect.width <= 360 && rect.left >= -1 && rect.right <= innerWidth + 1
         );
       });
-      const narrow = await page
-        .locator('.planr-review-rail')
-        .evaluate((value) => ({
-          width: value.getBoundingClientRect().width,
-          left: value.getBoundingClientRect().left,
-          right: value.getBoundingClientRect().right,
-          viewport: innerWidth,
-          client: value.clientWidth,
-          scroll: value.scrollWidth,
-        }));
+      const narrow = await page.locator('.planr-review-rail').evaluate((value) => ({
+        width: value.getBoundingClientRect().width,
+        left: value.getBoundingClientRect().left,
+        right: value.getBoundingClientRect().right,
+        viewport: innerWidth,
+        client: value.clientWidth,
+        scroll: value.scrollWidth,
+      }));
       assert.ok(
         narrow.width >= 300 &&
           narrow.width <= 360 &&

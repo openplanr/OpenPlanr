@@ -42,16 +42,12 @@ export declare function readImplementationHandoffVersion(
 export declare function listImplementationHandoffHistory(
   root: string,
 ): DesignImplementationHandoff[];
-export declare function readImplementationHandoffLifecycle(
-  root: string,
-): Readonly<{
+export declare function readImplementationHandoffLifecycle(root: string): Readonly<{
   current: ImplementationHandoffPointer | null;
   history: DesignImplementationHandoff[];
   events: unknown[];
 }>;
-export declare function previewImplementationHandoffApproval(
-  root: string,
-): Readonly<{
+export declare function previewImplementationHandoffApproval(root: string): Readonly<{
   available: boolean;
   summary: null | {
     title: string;

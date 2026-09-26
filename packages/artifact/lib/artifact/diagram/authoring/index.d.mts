@@ -212,9 +212,7 @@ export declare function adoptMermaidCopy(
   | { ok: true; bundle: DiagramAuthoringBundle; sourceModified: false }
   | { ok: false; sourceModified: false; diagnostics: MermaidCopyDiagnostic[] };
 /** Produces canonical Mermaid text with dimension-specific fidelity; never writes files. */
-export declare function exportMermaidCopy(
-  bundle: DiagramAuthoringBundle,
-):
+export declare function exportMermaidCopy(bundle: DiagramAuthoringBundle):
   | {
       ok: true;
       text: string;

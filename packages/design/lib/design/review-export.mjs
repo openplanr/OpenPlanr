@@ -241,14 +241,12 @@ function reviewExportTools() {
               updatedAt: timestamp(decision.updatedAt),
             }
           : null,
-        replies: [...replies]
-          .sort(order)
-          .map((reply) => ({
-            id: field(reply.id),
-            author: identity(reply.author),
-            createdAt: timestamp(reply.createdAt),
-            comment: quote(reply.comment),
-          })),
+        replies: [...replies].sort(order).map((reply) => ({
+          id: field(reply.id),
+          author: identity(reply.author),
+          createdAt: timestamp(reply.createdAt),
+          comment: quote(reply.comment),
+        })),
       };
       const groupKey = JSON.stringify([
         sourceRevisionId,

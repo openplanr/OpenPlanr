@@ -404,12 +404,10 @@ test(`mobile shell fields, touch controls and welcome remain usable without chan
       await page.locator('textarea[name=reply]').first().fill('Mobile test reply draft.');
       await assertMobileFields(page, '.planr-review-rail');
       assert.deepEqual(
-        await frame
-          .getByRole('textbox', { name: 'Product field' })
-          .evaluate((value) => ({
-            font: getComputedStyle(value).fontSize,
-            height: value.getBoundingClientRect().height,
-          })),
+        await frame.getByRole('textbox', { name: 'Product field' }).evaluate((value) => ({
+          font: getComputedStyle(value).fontSize,
+          height: value.getBoundingClientRect().height,
+        })),
         authoredBefore,
         'Touch typography and layout rules apply only to the board shell',
       );
@@ -424,12 +422,10 @@ test(`mobile shell fields, touch controls and welcome remain usable without chan
     const desktop = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
     await desktop.goto(pathToFileURL(rendered.views.prototype).href);
     await desktop.locator('[data-design-ready=true]').waitFor();
-    const framePicker = await desktop
-      .locator('[data-design-frame]')
-      .evaluate((value) => ({
-        font: getComputedStyle(value).fontSize,
-        height: value.getBoundingClientRect().height,
-      }));
+    const framePicker = await desktop.locator('[data-design-frame]').evaluate((value) => ({
+      font: getComputedStyle(value).fontSize,
+      height: value.getBoundingClientRect().height,
+    }));
     assert.equal(framePicker.font, '13px', 'Desktop keeps its compact field typography');
     assert.ok(
       framePicker.height < 44,
