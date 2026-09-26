@@ -49,7 +49,7 @@ jobs:
           path: ${{ runner.temp }}/build-outputs.tgz
           if-no-files-found: error
           compression-level: 0
-          retention-days: 7
+          retention-days: 30
           overwrite: true
 
   quality:
