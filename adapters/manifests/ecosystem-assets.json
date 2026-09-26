@@ -6,7 +6,7 @@
   "inputs": [
     {
       "path": "adapters/manifests/generated-assets.json",
-      "digest": "sha256:476514d8055cac2e53d3dc6dcb06ac397aa548c2b917b184b2fc9ce7325fc036"
+      "digest": "sha256:39319989ed075e951a4f06585c2f07833499d5b37d929608f81e05f1f92b98cc"
     },
     {
       "path": "apps/dashboard/package.json",
@@ -18,7 +18,7 @@
     },
     {
       "path": "package.json",
-      "digest": "sha256:e61e2d6bdaa4f9d0a4e6e7d8a147b7006beee126e3636c3f5ef509794c5bbc3f"
+      "digest": "sha256:a9b8e81b52c0b0af6216dd86a2550f7eaca1c5b0b173b9be8c66aa5af88adc75"
     },
     {
       "path": "packages/artifact/package.json",
@@ -26,7 +26,7 @@
     },
     {
       "path": "packages/cli/package.json",
-      "digest": "sha256:688cd546476ce483a2074f6941d78ade7062188f195c19f1bb932259cfe43012"
+      "digest": "sha256:455aef97399ae1e8deb52b000ddac822473ceb9562d583d46961ff3ca7c33509"
     },
     {
       "path": "packages/design/package.json",
@@ -116,7 +116,7 @@
     },
     {
       "path": "adapters/manifests/codex-plugin-content.json",
-      "digest": "sha256:f0db8061c0b605382a2350edd51a76b57a273760d7a194fde1b2bf31afdb7706"
+      "digest": "sha256:cdb29da7bfa1f542ca446d565afa720b02705df4122c3f70013b0118ab3bb78b"
     },
     {
       "path": "docs/generated/adapters.md",
@@ -132,7 +132,7 @@
     },
     {
       "path": "ecosystem.json",
-      "digest": "sha256:497fd5d4f574fdff7af704f01a4862c1e23e8a4baba9be8b49baaef9c47479cd"
+      "digest": "sha256:8b16294dfdf23a0e1344cffdaec486574fcb52d865c5528edabaf8d27c2e43ff"
     },
     {
       "path": "packages/pipeline/.claude-plugin/plugin.json",

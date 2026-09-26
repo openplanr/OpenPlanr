@@ -1,3 +1,0 @@
-{
-  "*.{ts,tsx}": ["biome check --write --no-errors-on-unmatched", "vitest related --run"]
-}

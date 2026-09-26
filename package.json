@@ -52,6 +52,7 @@
     "typecheck:declarations": "tsc -p tsconfig.declarations.json",
     "lint:fix": "biome check --write .",
     "format": "biome format --write .",
+    "prepare": "node .husky/install.mjs",
     "verify:packed": "node scripts/verify-packed-workspace.mjs",
     "verify:packed:strict": "node scripts/verify-packed-workspace-strict.mjs",
     "verify": "npm run check:generated && npm run check:boundaries && npm run check:docs && npm run check:comments && npm run check:diagrams && npm run typecheck:declarations && npm run test:focused && npm run verify:packed:strict",
@@ -64,7 +65,9 @@
     "@changesets/cli": "^2.30.0",
     "@types/node": "25.9.8",
     "@vitest/coverage-v8": "4.1.11",
+    "husky": "^9.1.7",
     "jsdom": "26.1.0",
+    "lint-staged": "^16.4.0",
     "vitest": "4.1.11"
   },
   "overrides": {
