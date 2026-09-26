@@ -3,15 +3,23 @@ export {
   claimOperateAssignment,
   stageRuntimeAssignmentSubmission,
 } from '../assignment-lifecycle-service.js';
+export {
+  acceptOperateLiveEvidenceSubmission,
+  liveEvidenceSubmissionPreparation,
+  submitOperateAssignment,
+} from '../assignment-submission-service.js';
 export type { JsonRecord, OperateComposition } from '../composition.js';
 export { createOperateComposition } from '../composition.js';
 export { startOperateCycle } from '../cycle-lifecycle-service.js';
 export { ingestPlanningDeliveryEvidence } from '../delivery-evidence.js';
 export {
+  createOperateExperiencePreview,
   loadOperateExperienceReaderOwner,
   readOperateActionWorkspace,
+  readOperateAuditDisplay,
   readOperateCycleWorkspace,
   readOperateExecutiveBoardDisplay,
+  readOperateExperience,
   readOperateRecoveryDisplay,
 } from '../experience-read-service.js';
 export { isOperatePublicId } from '../identity-contract.js';

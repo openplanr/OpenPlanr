@@ -1,8 +1,13 @@
 /** Explicit governed-action construction surface consumed by the public Operate client. */
 
-export type { ExactRollbackApprovalTemplate } from '../governed-action-service.js';
+export type {
+  ContainedActionTargets,
+  ExactRollbackApprovalTemplate,
+  GovernedActionDependencies,
+} from '../governed-action-service.js';
 export {
   actionIdentity,
+  approveOperateAction,
   artifactValue,
   configureContainedActionAuthority,
   containedActionAuthorityInput,
@@ -11,11 +16,13 @@ export {
   exactRollbackApprovalRecord,
   exactRollbackApprovalTemplate,
   exactRollbackPlanContext,
+  executeOperateAction,
   GOVERNED_APPROVAL_TEMPLATE_ID,
   governedArtifactStore,
   governedDraft,
   later,
   mergeRecordsBy,
+  rollbackOperateAction,
   sameActionIdentity,
   sameCanonicalValue,
   withVerificationArtifactReservations,
