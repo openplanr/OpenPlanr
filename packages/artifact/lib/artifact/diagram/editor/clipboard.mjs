@@ -8,6 +8,8 @@ import {
   sealBundle,
 } from '../authoring/model.mjs';
 
+/** @typedef {import('@openplanr/protocol/diagram-authoring-contracts').DiagramAuthoringBundle} DiagramAuthoringBundle */
+
 const MAX_BYTES = 1024 * 1024;
 const MAX_ELEMENTS = 1000;
 /** @type {(detail: string) => import('./index.d.mts').DiagramEditorFailure} */
@@ -117,10 +119,7 @@ export function pasteDiagramSelection(bundle, input, { idMap, transactionId, dx 
   )
     return fail('Invalid or oversized clipboard fragment.');
   // The kernel validates the fragment's bundle along with the rest of the paste.
-  const sourceBundle =
-    /** @type {import('@openplanr/protocol/diagram-authoring-contracts').DiagramAuthoringBundle} */ (
-      fragment.sourceBundle
-    );
+  const sourceBundle = /** @type {DiagramAuthoringBundle} */ (fragment.sourceBundle);
   return compileDiagramCommand(
     bundle,
     { type: 'paste', sourceBundle, ids: fragment.ids, idMap, dx, dy },
