@@ -205,7 +205,7 @@
     {
       "source": "packages/operate/lib/operate/experience-projection-v2.mjs",
       "target": "lib/operate/experience-projection-v2.mjs",
-      "sha256": "7b60ebd53012b2af0eacad386e5645e6f328e77b4e794429afdeec35a7adcbc8",
+      "sha256": "c58d66512778fae73a4fdb534133e8cfe07169d33754e8b76714a474da751983",
       "mode": "644"
     },
     {
@@ -469,7 +469,7 @@
     {
       "source": "packages/operate/lib/operate/runtime-event-reducer-v2.mjs",
       "target": "lib/operate/runtime-event-reducer-v2.mjs",
-      "sha256": "4af9a6ad3322a66f8c662490d73262832744fd7e80fdc0514fd14123cde2e4fe",
+      "sha256": "e666bf6334ecec5d52dc866109b8eed1a08b3d1e837db1a7b693cf6fdde88751",
       "mode": "644"
     },
     {
@@ -481,7 +481,7 @@
     {
       "source": "packages/operate/lib/operate/runtime-foundation.mjs",
       "target": "lib/operate/runtime-foundation.mjs",
-      "sha256": "775168f0abbc1f8797a02fbcd852cdbb1d327224e63024874a72bec816fdc099",
+      "sha256": "012eef8708e38aaf9b78f7a99e57c98866ec2afcb7c64763d397fd3aea2b5604",
       "mode": "644"
     },
     {
@@ -494,6 +494,12 @@
       "source": "packages/operate/lib/operate/runtime-foundation/authority.mjs",
       "target": "lib/operate/runtime-foundation/authority.mjs",
       "sha256": "fb42410a2db04f862b1eac279ceb991428fe7f04ef746009800961782e40bfb4",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/runtime-foundation/event-registry.mjs",
+      "target": "lib/operate/runtime-foundation/event-registry.mjs",
+      "sha256": "38a42e1b0080b1fb54cd593c3f42d503f0a40fe444585d4072c24219f7ac20f0",
       "mode": "644"
     },
     {
