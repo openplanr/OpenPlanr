@@ -36,7 +36,13 @@ test('local release proof installs the exact root lock and never publishes', () 
 
 test('hostile sandbox certification covers Chromium Firefox and WebKit', () => {
   const workflow = readWorkspace('.github/workflows/artifact-browser.yml');
-  assert.match(workflow, /browser:\s*\[chromium, firefox, webkit\]/);
+  assert.match(workflow, /'\["chromium", "firefox", "webkit"\]'/);
+  assert.match(workflow, /schedule:\s*\n\s*- cron:/);
+  assert.match(workflow, /types: \[opened, synchronize, reopened, labeled\]/);
+  assert.match(
+    workflow,
+    /github\.event_name == 'pull_request'\s*&& !contains\(github\.event\.pull_request\.labels\.\*\.name, 'browser-certification'\)\s*&& '\["chromium"\]'/,
+  );
   assert.match(workflow, /PLANR_BROWSER_ENGINE:\s*\$\{\{ matrix\.browser \}\}/);
   assert.match(workflow, /playwright install --with-deps \$\{\{ matrix\.browser \}\}/);
   assert.match(

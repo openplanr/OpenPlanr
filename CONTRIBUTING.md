@@ -110,7 +110,10 @@ commit intentional source and tracked manifest changes before applying this gate
 `npm run verify` checks generated assets, boundaries, public documentation, the committed
 documentation diagram sets, focused tests, and isolated packed-package behavior. It does not replace the full
 workspace test command or manual/browser checks for UI changes. The CI workflows
-under `.github/workflows/` define their additional runtime and browser coverage.
+under `.github/workflows/` define their additional runtime and browser coverage. Artifact
+browser certification runs Chromium on every pull request that touches the artifact
+surfaces; Firefox and WebKit run nightly, on manual dispatch, and on pull requests
+labelled `browser-certification`.
 
 Record failed or unavailable checks honestly. Do not update fixtures simply to
 hide a regression, or make an unsupported compatibility claim from one local run.
