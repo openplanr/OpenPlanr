@@ -56,7 +56,7 @@ export const DIAGRAM_DEFAULT_METRICS = Object.freeze({
     radius: 18,
     glyph: 8.6,
   }),
-  phase: Object.freeze({ size: 13 }),
+  phase: Object.freeze({ size: 13, knockout: false }),
   sequence: Object.freeze({
     participantWidth: 220,
     participantGap: 96,
@@ -148,7 +148,7 @@ const BRAND_METRICS = Object.freeze({
     radius: 20,
     glyph: 8.4,
   }),
-  phase: Object.freeze({ size: 16 }),
+  phase: Object.freeze({ size: 16, knockout: true, glyph: 12 }),
   sequence: Object.freeze({
     participantWidth: 184,
     participantGap: 40,

@@ -250,7 +250,17 @@ test('the brand theme sets node titles apart and sizes type for a README column'
     ]),
     'participants start at the phase rule, with no rail beside them',
   );
-  assert.match(sequence.svg, /<g data-phase-id="[^"]+"><text [^>]*font-size="16"/u);
+  assert.match(
+    sequence.svg,
+    new RegExp(
+      `<g data-phase-id="[^"]+"><rect [^>]*fill="${light.background}"/><text [^>]*font-size="16"`,
+      'u',
+    ),
+  );
+  assert.ok(
+    sequence.svg.indexOf('data-phase-id') > sequence.svg.lastIndexOf('data-lifeline-id'),
+    'phase titles and their knockouts are drawn over the lifelines',
+  );
   assert.match(sequence.svg, /<g data-relation-id="[^"]+">.*?font-size="16" fill=/u);
 });
 

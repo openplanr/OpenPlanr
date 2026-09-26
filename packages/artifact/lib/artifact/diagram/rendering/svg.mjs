@@ -96,8 +96,16 @@ function renderLane(lane, theme, metrics) {
   return `<g data-lane-id="${escapeXml(lane.id)}"><rect x="${lane.x}" y="${lane.y}" width="${lane.width}" height="${lane.height}" rx="16" fill="${theme.surface}" fill-opacity="0.45" stroke="${stroke}" stroke-width="${lane.emphasis === 'primary' ? 3 : 1.5}"/><text x="${lane.x + 20}" y="${lane.y + 30}" ${containerTitle(theme, metrics.container)} fill="${stroke}">${escapeXml(lane.label)}</text></g>`;
 }
 
+/**
+ * A phase title over the lifelines, as in a sequence without a side rail, sits
+ * on a background knockout so no lifeline strikes through it.
+ */
 function renderPhase(phase, theme, metrics) {
-  return `<g data-phase-id="${escapeXml(phase.id)}"><text x="${phase.x1}" y="${phase.y - 10}" font-family="${theme.fontFamily}" font-size="${metrics.phase.size}" font-weight="700" letter-spacing="1.2" fill="${theme.accent}">${escapeXml(phase.label.toUpperCase())}</text><line x1="${phase.x1}" y1="${phase.y}" x2="${phase.x2}" y2="${phase.y}" stroke="${theme.border}" stroke-width="1" opacity="0.28"/></g>`;
+  const { size, knockout, glyph } = metrics.phase;
+  const backdrop = knockout
+    ? `<rect x="${phase.x1 - 6}" y="${phase.y - 10 - size}" width="${coordinate([...phase.label].length * glyph + 12)}" height="${size + 6}" fill="${theme.background}"/>`
+    : '';
+  return `<g data-phase-id="${escapeXml(phase.id)}">${backdrop}<text x="${phase.x1}" y="${phase.y - 10}" font-family="${theme.fontFamily}" font-size="${metrics.phase.size}" font-weight="700" letter-spacing="1.2" fill="${theme.accent}">${escapeXml(phase.label.toUpperCase())}</text><line x1="${phase.x1}" y1="${phase.y}" x2="${phase.x2}" y2="${phase.y}" stroke="${theme.border}" stroke-width="1" opacity="0.28"/></g>`;
 }
 
 function renderLifeline(lifeline, theme) {
@@ -135,6 +143,7 @@ export function renderDiagramSvg(document, { theme = resolveDiagramTheme(documen
   const scene = layoutDiagram(document, { theme });
   const metrics = diagramMetrics(theme);
   const labelStyle = scene.kind === 'sequence' ? metrics.message : metrics.label;
+  const phases = scene.phases.map((phase) => renderPhase(phase, theme, metrics));
   const titleId = `${document.diagramId}-title`;
   const descriptionId = `${document.diagramId}-description`;
   const bytes = [
@@ -145,8 +154,9 @@ export function renderDiagramSvg(document, { theme = resolveDiagramTheme(documen
     `<rect width="${scene.width}" height="${scene.height}" fill="${theme.background}"/>`,
     ...scene.lanes.map((lane) => renderLane(lane, theme, metrics)),
     ...scene.groups.map((group) => renderGroup(group, theme, metrics)),
-    ...scene.phases.map((phase) => renderPhase(phase, theme, metrics)),
+    ...(metrics.phase.knockout ? [] : phases),
     ...scene.lifelines.map((lifeline) => renderLifeline(lifeline, theme)),
+    ...(metrics.phase.knockout ? phases : []),
     ...scene.edges.map((edge) => renderEdge(edge, theme, labelStyle)),
     ...scene.notes.map((note) => renderNote(note, theme)),
     ...scene.boxes.map((box) => renderBox(box, theme, metrics)),
