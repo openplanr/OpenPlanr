@@ -4,7 +4,11 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import { makeBundle, sealBundle } from '../../../tests/protocol/fixtures/diagram-authoring.mjs';
-import { browserEngine, launchBrowser } from '../../../tests/support/browser-launcher.mjs';
+import {
+  browserEngine,
+  FIREFOX_COOP_PAGE_PREFS,
+  launchBrowser,
+} from '../../../tests/support/browser-launcher.mjs';
 import { createDiagramAuthoringStore } from '../lib/artifact/diagram/authoring/store.mjs';
 import { startDiagramOwner } from '../lib/artifact/diagram/editor/local-owner.mjs';
 import { mixedBundle } from './fixtures/diagram-editor-capacity.mjs';
@@ -34,7 +38,7 @@ async function fixture(
     assert.deepEqual(errors, []);
     assert.deepEqual(external, [], 'Local authoring requires no remote account or assets');
   });
-  browser = await launchBrowser();
+  browser = await launchBrowser({ firefoxUserPrefs: FIREFOX_COOP_PAGE_PREFS });
   const page = await browser.newPage({ viewport });
   page.setDefaultTimeout(7000);
   page.on('pageerror', (error) => errors.push(error.message));
