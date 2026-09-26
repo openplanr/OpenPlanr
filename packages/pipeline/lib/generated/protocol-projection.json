@@ -54,19 +54,19 @@
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/canonical-json.mjs",
       "target": "lib/protocol/canonical-json.mjs",
-      "sha256": "6f9f5cf566d060e23b6ba7c41bf45505e0ca13d1a615345466d3240fad2605d5",
+      "sha256": "68e7a0667bc4bbb269efd988291921dcd5f0a2ebd5f8a2e2e9030a4386034b20",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/contracts.mjs",
       "target": "lib/protocol/contracts.mjs",
-      "sha256": "04646768d947f9aa8f63dcc259e0772a83cfaee2888c7538d90b6fbbdbbcde90",
+      "sha256": "ae322fa382fe9e005ab38e3358c7bd721f8993faeecf5e0b796becac03fb1082",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/design-contracts.mjs",
       "target": "lib/protocol/design-contracts.mjs",
-      "sha256": "698bf456117acc66c31ea7c93e45c7bcbdef09fd37b8e0dd9f47c102aaf4d0c2",
+      "sha256": "d148a49dd94720c544e6160371620b5ee125c3ceb2ad7c8b66bc88328c576e0d",
       "mode": "644"
     },
     {
@@ -78,7 +78,7 @@
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/design-handoff-contracts.mjs",
       "target": "lib/protocol/design-handoff-contracts.mjs",
-      "sha256": "1442cc7e51972c5f13e1894f2aa414c8ac8440bf5a26fab9ff5c1eb0c948888c",
+      "sha256": "74579fd14c4e825cec785a19a43e4fb41a7399d387ec05cbe5809c4c1f01dfec",
       "mode": "644"
     },
     {
@@ -90,7 +90,7 @@
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/design-publication-contracts.mjs",
       "target": "lib/protocol/design-publication-contracts.mjs",
-      "sha256": "33e740397798d0e920f8668c7e0fa9533c5b69944e41360aa0e10696581c1e5b",
+      "sha256": "bcfb9254d6cc8dd16238920575eaba6ccb0f5ad0a9dd4dd52fe52bb9a7f7f830",
       "mode": "644"
     },
     {
@@ -102,13 +102,13 @@
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/diagram-authoring-contracts.mjs",
       "target": "lib/protocol/diagram-authoring-contracts.mjs",
-      "sha256": "e1226fb99183e2dca0a6f5ad8ee4bd115c2e570b7c47229bf431fe7181a61f3d",
+      "sha256": "40945b9ddc8e2adf677c42846b8e4e5b0a047911fcdb10eeb54a0f02e9661633",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/diagram-contracts.mjs",
       "target": "lib/protocol/diagram-contracts.mjs",
-      "sha256": "a83ea5e9ac86fd1e71fd13e435b9371fd0405b7e4c966fac8f4d7bb4f3dc091b",
+      "sha256": "f5c1fea3eb52db8187baf834aa2c147aaacf8c8b100a078ae1b9adc707bb0f0c",
       "mode": "644"
     },
     {
@@ -120,13 +120,13 @@
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/enterprise-contracts.mjs",
       "target": "lib/protocol/enterprise-contracts.mjs",
-      "sha256": "914db0190f7b7b447c0a21fb08746cf994d9f5438c26ffe6b055504c623dc0d5",
+      "sha256": "22edf2af8bfc622bc02d9b9ac575c834e19d8d9395d33a99ec8a852054c9c698",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/errors.mjs",
       "target": "lib/protocol/errors.mjs",
-      "sha256": "e64c0be848759a0e916c209e0f1175d0f09d37e2d9315b8ec57c047add221020",
+      "sha256": "49c41e1e5c13b5dc5cbe0ee426b03fb9d076de78c6bf99d4824f9b7f2d8a214f",
       "mode": "644"
     },
     {
@@ -150,13 +150,13 @@
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/jcs.mjs",
       "target": "lib/protocol/jcs.mjs",
-      "sha256": "6f9f5cf566d060e23b6ba7c41bf45505e0ca13d1a615345466d3240fad2605d5",
+      "sha256": "68e7a0667bc4bbb269efd988291921dcd5f0a2ebd5f8a2e2e9030a4386034b20",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/json-schema.mjs",
       "target": "lib/protocol/json-schema.mjs",
-      "sha256": "062aba735e192e6a83441cbf1d4a4c2f3a47a95dde328620d80bcddd06e698b0",
+      "sha256": "3ef52ce3d821952b13a2ebbbb52cb70c2147a708be82cc5c61f009a90dc48a36",
       "mode": "644"
     },
     {
@@ -180,25 +180,25 @@
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/planning-contracts.mjs",
       "target": "lib/protocol/planning-contracts.mjs",
-      "sha256": "74c66cf017deb92dde98b25a576ee979d20fc2241918f7c7bd57c7d2bc82b865",
+      "sha256": "8a3c46f63fdb225af6649522227a7cc35bb8b49e56830099941a59cfccd5d74a",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/review-experience-contracts.mjs",
       "target": "lib/protocol/review-experience-contracts.mjs",
-      "sha256": "8123a6937a6d7010bd61f3698c4f980912079433b3d7d250c66eca6ae39aebb0",
+      "sha256": "fd94b531005643835ae7ca2715fc01015a5f4f8e88d67ab4b54ae50b48fb760e",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/skill-source-contracts.mjs",
       "target": "lib/protocol/skill-source-contracts.mjs",
-      "sha256": "5975b7900e7879b02b63cb436854c0f2486b96a17617a0e0baec4768f2033315",
+      "sha256": "fed759ae6799756d3f946cb94a12ed76f16a79d610cea392b957a29b361539db",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/workspace-contracts.mjs",
       "target": "lib/protocol/workspace-contracts.mjs",
-      "sha256": "c0eaccbe8d889949f649b6effa0ea42e55b71cf15e4dac9fcff8214c8e9bd580",
+      "sha256": "0c9efb0e14e029ec05d20754b16b14022992ed9452b376e732038956f8e5a43c",
       "mode": "644"
     },
     {

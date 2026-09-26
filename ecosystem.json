@@ -19,7 +19,7 @@
       "packages/integrations",
       "apps/dashboard"
     ],
-    "manifestDigest": "sha256:506b90973e022b0b2caa3d7cdc6945a9cbf0c6fca23aa23f1525cf7a46429bd5"
+    "manifestDigest": "sha256:e61e2d6bdaa4f9d0a4e6e7d8a147b7006beee126e3636c3f5ef509794c5bbc3f"
   },
   "protocol": {
     "current": "1.8.0",
@@ -337,7 +337,7 @@
     ],
     "generatedAssets": {
       "path": "adapters/manifests/generated-assets.json",
-      "digest": "sha256:3477dac5d1209453aa239b9add7b3b723fca6d8790b5e014e3f55e542aa09a7b",
+      "digest": "sha256:39319989ed075e951a4f06585c2f07833499d5b37d929608f81e05f1f92b98cc",
       "count": 1807
     }
   },
@@ -413,7 +413,7 @@
   "generatedSurfaces": {
     "artifactShell": {
       "path": "packages/artifact/lib/artifact/ui/generated/artifact-shell-assets.json",
-      "digest": "sha256:4f0d3dd7cfddcab16fb2aed4008c22b1018ede065fd5c68bb2754940e91be540",
+      "digest": "sha256:d421d49dfb5089744cabce7ebbc7c4b7fabe26adfcb1a143882d40b67a02ab45",
       "shellVersion": "1.2.1",
       "assetCount": 7
     },

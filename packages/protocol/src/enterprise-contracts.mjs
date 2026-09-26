@@ -1,16 +1,23 @@
+// @ts-check
 import { canonicalizeJson, sha256Hex } from './canonical-json.mjs';
 import { validateJson } from './json-schema.mjs';
 
+/** @type {typeof import('./enterprise-contracts.d.mts').ENTERPRISE_CONTRACT_VERSION} */
 export const ENTERPRISE_CONTRACT_VERSION = '1.0.0';
+/** @type {typeof import('./enterprise-contracts.d.mts').ENTERPRISE_PROTOCOL_VERSION} */
 export const ENTERPRISE_PROTOCOL_VERSION = '1.12.0';
+/** @type {typeof import('./enterprise-contracts.d.mts').ENTERPRISE_CONTENT_DIGEST_HEADER} */
 export const ENTERPRISE_CONTENT_DIGEST_HEADER = 'X-OpenPlanr-Content-Digest';
+/** @type {typeof import('./enterprise-contracts.d.mts').ENTERPRISE_ID_PATTERN} */
 export const ENTERPRISE_ID_PATTERN = '^[A-Za-z0-9][A-Za-z0-9_-]{0,127}(?![\\s\\S])';
+/** @type {typeof import('./enterprise-contracts.d.mts').ENTERPRISE_REVIEW_CATEGORIES} */
 export const ENTERPRISE_REVIEW_CATEGORIES = Object.freeze([
   'question',
   'suggestion',
   'change-request',
   'blocker',
 ]);
+/** @type {typeof import('./enterprise-contracts.d.mts').ENTERPRISE_ACTIONS} */
 export const ENTERPRISE_ACTIONS = Object.freeze([
   'organization.manage',
   'ownership.transfer',
@@ -62,6 +69,7 @@ const versionedArtifact = { ...scoped, artifactId: id, revisionId: id };
 const activeStatus = { enum: ['active', 'revoked'] };
 const projectRole = { enum: ['maintainer', 'author', 'reviewer', 'viewer'] };
 
+/** @type {typeof import('./enterprise-contracts.d.mts').ENTERPRISE_ACCESS_CONTEXT_SCHEMA} */
 export const ENTERPRISE_ACCESS_CONTEXT_SCHEMA = schema(
   'enterprise-access-context',
   {
@@ -89,6 +97,7 @@ export const ENTERPRISE_ACCESS_CONTEXT_SCHEMA = schema(
   ['actor', 'organization', 'resource', 'action', 'now'],
 );
 
+/** @type {typeof import('./enterprise-contracts.d.mts').ENTERPRISE_ARTIFACT_REVISION_SCHEMA} */
 export const ENTERPRISE_ARTIFACT_REVISION_SCHEMA = schema('enterprise-artifact-revision', {
   ...envelope('enterprise-artifact-revision'),
   id,
@@ -102,77 +111,84 @@ export const ENTERPRISE_ARTIFACT_REVISION_SCHEMA = schema('enterprise-artifact-r
   actorId: id,
 });
 
-export const ENTERPRISE_REVIEW_ANCHOR_SCHEMA = closed(
-  {
-    revisionId: id,
-    elementId: semanticId,
-    screenId: semanticId,
-    frameId: semanticId,
-    x: { type: 'number', minimum: 0, maximum: 1 },
-    y: { type: 'number', minimum: 0, maximum: 1 },
-  },
-  ['revisionId'],
-);
-ENTERPRISE_REVIEW_ANCHOR_SCHEMA.anyOf = [
-  { required: ['elementId'] },
-  { required: ['screenId', 'frameId'] },
-  { required: ['x', 'y'] },
-];
-ENTERPRISE_REVIEW_ANCHOR_SCHEMA.allOf = [
-  { if: { required: ['x'] }, then: { required: ['y'] } },
-  { if: { required: ['y'] }, then: { required: ['x'] } },
-  { if: { required: ['frameId'] }, then: { required: ['screenId'] } },
-];
-const reply = closed({ id, authorId: id, body: text, createdAt: timestamp });
-export const ENTERPRISE_REVIEW_THREAD_SCHEMA = schema(
-  'enterprise-review-thread',
-  {
-    ...envelope('enterprise-review-thread'),
-    id,
-    ...scoped,
-    artifactId: id,
-    anchor: ENTERPRISE_REVIEW_ANCHOR_SCHEMA,
-    category: { enum: ENTERPRISE_REVIEW_CATEGORIES },
-    status: { enum: ['open', 'addressed', 'resolved'] },
-    authorId: id,
-    body: text,
-    createdAt: timestamp,
-    updatedAt: timestamp,
-    replies: list(reply, 10000),
-    assigneeId: nullableId,
-    addressedRevisionId: id,
-    resolvedAt: timestamp,
-  },
-  [
-    'kind',
-    'schemaVersion',
-    'id',
-    'organizationId',
-    'projectId',
-    'artifactId',
-    'anchor',
-    'category',
-    'status',
-    'authorId',
-    'body',
-    'createdAt',
-    'updatedAt',
-    'replies',
+/** @type {typeof import('./enterprise-contracts.d.mts').ENTERPRISE_REVIEW_ANCHOR_SCHEMA} */
+export const ENTERPRISE_REVIEW_ANCHOR_SCHEMA = {
+  ...closed(
+    {
+      revisionId: id,
+      elementId: semanticId,
+      screenId: semanticId,
+      frameId: semanticId,
+      x: { type: 'number', minimum: 0, maximum: 1 },
+      y: { type: 'number', minimum: 0, maximum: 1 },
+    },
+    ['revisionId'],
+  ),
+  anyOf: [
+    { required: ['elementId'] },
+    { required: ['screenId', 'frameId'] },
+    { required: ['x', 'y'] },
   ],
-);
-ENTERPRISE_REVIEW_THREAD_SCHEMA.allOf = [
-  {
-    if: { properties: { status: { const: 'addressed' } } },
-    then: { required: ['addressedRevisionId'], not: { required: ['resolvedAt'] } },
-  },
-  {
-    if: { properties: { status: { const: 'resolved' } } },
-    then: { required: ['resolvedAt'] },
-    else: { not: { required: ['resolvedAt'] } },
-  },
-];
+  allOf: [
+    { if: { required: ['x'] }, then: { required: ['y'] } },
+    { if: { required: ['y'] }, then: { required: ['x'] } },
+    { if: { required: ['frameId'] }, then: { required: ['screenId'] } },
+  ],
+};
+const reply = closed({ id, authorId: id, body: text, createdAt: timestamp });
+/** @type {typeof import('./enterprise-contracts.d.mts').ENTERPRISE_REVIEW_THREAD_SCHEMA} */
+export const ENTERPRISE_REVIEW_THREAD_SCHEMA = {
+  ...schema(
+    'enterprise-review-thread',
+    {
+      ...envelope('enterprise-review-thread'),
+      id,
+      ...scoped,
+      artifactId: id,
+      anchor: ENTERPRISE_REVIEW_ANCHOR_SCHEMA,
+      category: { enum: ENTERPRISE_REVIEW_CATEGORIES },
+      status: { enum: ['open', 'addressed', 'resolved'] },
+      authorId: id,
+      body: text,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+      replies: list(reply, 10000),
+      assigneeId: nullableId,
+      addressedRevisionId: id,
+      resolvedAt: timestamp,
+    },
+    [
+      'kind',
+      'schemaVersion',
+      'id',
+      'organizationId',
+      'projectId',
+      'artifactId',
+      'anchor',
+      'category',
+      'status',
+      'authorId',
+      'body',
+      'createdAt',
+      'updatedAt',
+      'replies',
+    ],
+  ),
+  allOf: [
+    {
+      if: { properties: { status: { const: 'addressed' } } },
+      then: { required: ['addressedRevisionId'], not: { required: ['resolvedAt'] } },
+    },
+    {
+      if: { properties: { status: { const: 'resolved' } } },
+      then: { required: ['resolvedAt'] },
+      else: { not: { required: ['resolvedAt'] } },
+    },
+  ],
+};
 
 const collection = { enum: ['nodes', 'relations', 'groups', 'events', 'items'] };
+/** @type {typeof import('./enterprise-contracts.d.mts').ENTERPRISE_CHANGE_OPERATION_SCHEMA} */
 export const ENTERPRISE_CHANGE_OPERATION_SCHEMA = {
   oneOf: [
     closed({ op: { const: 'replace-document' }, content: { type: 'object' } }),
@@ -201,64 +217,70 @@ export const ENTERPRISE_CHANGE_OPERATION_SCHEMA = {
     }),
   ],
 };
-export const ENTERPRISE_CHANGE_PROPOSAL_SCHEMA = schema(
-  'enterprise-change-proposal',
-  {
-    ...envelope('enterprise-change-proposal'),
-    id,
-    ...scoped,
-    artifactId: id,
-    baseRevisionId: id,
-    authorId: id,
-    createdAt: timestamp,
-    status: { enum: ['draft', 'proposed', 'accepted', 'rejected', 'applied', 'conflicted'] },
-    summary: title,
-    operations: { ...list(ENTERPRISE_CHANGE_OPERATION_SCHEMA, 1000), minItems: 1 },
-    validation: closed({
-      status: { enum: ['pending', 'passed', 'failed'] },
-      issues: list(closed({ code: id, message: text, targetId: semanticId }, ['code', 'message'])),
-    }),
-    application: closed(
-      {
-        revisionId: id,
-        appliedAt: timestamp,
-        actorId: id,
-        gitCommit: { type: 'string', pattern: '^(?:[a-f0-9]{40}|[a-f0-9]{64})$' },
-      },
-      ['revisionId', 'appliedAt', 'actorId'],
-    ),
-  },
-  [
-    'kind',
-    'schemaVersion',
-    'id',
-    'organizationId',
-    'projectId',
-    'artifactId',
-    'baseRevisionId',
-    'authorId',
-    'createdAt',
-    'status',
-    'summary',
-    'operations',
-    'validation',
-  ],
-);
-ENTERPRISE_CHANGE_PROPOSAL_SCHEMA.allOf = [
-  {
-    if: { properties: { status: { const: 'applied' } } },
-    then: {
-      required: ['application'],
-      properties: { validation: { properties: { status: { const: 'passed' } } } },
+/** @type {typeof import('./enterprise-contracts.d.mts').ENTERPRISE_CHANGE_PROPOSAL_SCHEMA} */
+export const ENTERPRISE_CHANGE_PROPOSAL_SCHEMA = {
+  ...schema(
+    'enterprise-change-proposal',
+    {
+      ...envelope('enterprise-change-proposal'),
+      id,
+      ...scoped,
+      artifactId: id,
+      baseRevisionId: id,
+      authorId: id,
+      createdAt: timestamp,
+      status: { enum: ['draft', 'proposed', 'accepted', 'rejected', 'applied', 'conflicted'] },
+      summary: title,
+      operations: { ...list(ENTERPRISE_CHANGE_OPERATION_SCHEMA, 1000), minItems: 1 },
+      validation: closed({
+        status: { enum: ['pending', 'passed', 'failed'] },
+        issues: list(
+          closed({ code: id, message: text, targetId: semanticId }, ['code', 'message']),
+        ),
+      }),
+      application: closed(
+        {
+          revisionId: id,
+          appliedAt: timestamp,
+          actorId: id,
+          gitCommit: { type: 'string', pattern: '^(?:[a-f0-9]{40}|[a-f0-9]{64})$' },
+        },
+        ['revisionId', 'appliedAt', 'actorId'],
+      ),
     },
-    else: { not: { required: ['application'] } },
-  },
-  {
-    if: { properties: { status: { const: 'accepted' } } },
-    then: { properties: { validation: { properties: { status: { const: 'passed' } } } } },
-  },
-];
+    [
+      'kind',
+      'schemaVersion',
+      'id',
+      'organizationId',
+      'projectId',
+      'artifactId',
+      'baseRevisionId',
+      'authorId',
+      'createdAt',
+      'status',
+      'summary',
+      'operations',
+      'validation',
+    ],
+  ),
+  allOf: [
+    {
+      if: { properties: { status: { const: 'applied' } } },
+      then: {
+        required: ['application'],
+        properties: { validation: { properties: { status: { const: 'passed' } } } },
+      },
+      else: { not: { required: ['application'] } },
+    },
+    {
+      if: { properties: { status: { const: 'accepted' } } },
+      then: { properties: { validation: { properties: { status: { const: 'passed' } } } } },
+    },
+  ],
+};
 
+/** @type {typeof import('./enterprise-contracts.d.mts').ENTERPRISE_EVIDENCE_REFERENCE_SCHEMA} */
 export const ENTERPRISE_EVIDENCE_REFERENCE_SCHEMA = schema(
   'enterprise-evidence-reference',
   {
@@ -302,6 +324,7 @@ export const ENTERPRISE_EVIDENCE_REFERENCE_SCHEMA = schema(
   ],
 );
 
+/** @type {typeof import('./enterprise-contracts.d.mts').ENTERPRISE_SYNC_STATE_SCHEMA} */
 export const ENTERPRISE_SYNC_STATE_SCHEMA = schema('enterprise-sync-state', {
   ...envelope('enterprise-sync-state'),
   ...scoped,
@@ -325,6 +348,7 @@ export const ENTERPRISE_SYNC_STATE_SCHEMA = schema('enterprise-sync-state', {
   issues: list(closed({ code: id, artifactId: id, message: text }, ['code', 'message'])),
 });
 
+/** @type {typeof import('./enterprise-contracts.d.mts').ENTERPRISE_AGENT_HANDOFF_SCHEMA} */
 export const ENTERPRISE_AGENT_HANDOFF_SCHEMA = schema('enterprise-agent-handoff', {
   ...envelope('enterprise-agent-handoff'),
   ...versionedArtifact,
@@ -337,6 +361,7 @@ export const ENTERPRISE_AGENT_HANDOFF_SCHEMA = schema('enterprise-agent-handoff'
   contentDigest: digest,
 });
 
+/** @type {typeof import('./enterprise-contracts.d.mts').ENTERPRISE_SCHEMAS} */
 export const ENTERPRISE_SCHEMAS = deepFreeze({
   'enterprise-access-context': ENTERPRISE_ACCESS_CONTEXT_SCHEMA,
   'enterprise-artifact-revision': ENTERPRISE_ARTIFACT_REVISION_SCHEMA,
@@ -407,7 +432,10 @@ function sameScope(value, expected) {
   return value.organizationId === expected.organizationId && value.projectId === expected.projectId;
 }
 
-/** Structural validation is not authentication, signature verification, or domain validation. */
+/**
+ * Structural validation is not authentication, signature verification, or domain validation.
+ * @returns {ReturnType<typeof import('./enterprise-contracts.d.mts').assertEnterpriseContract>}
+ */
 export function assertEnterpriseContract(value, schemaOrName) {
   const contract =
     typeof schemaOrName === 'string' ? ENTERPRISE_SCHEMAS[schemaOrName] : schemaOrName;
@@ -427,7 +455,10 @@ export function assertEnterpriseContract(value, schemaOrName) {
   return value;
 }
 
-/** Metadata immutability requires the storage adapter to compare-and-set IDs and recompute content digests. */
+/**
+ * Metadata immutability requires the storage adapter to compare-and-set IDs and recompute content digests.
+ * @type {typeof import('./enterprise-contracts.d.mts').assertEnterpriseRevision}
+ */
 export function assertEnterpriseRevision(value) {
   assertEnterpriseContract(value, ENTERPRISE_ARTIFACT_REVISION_SCHEMA);
   if (value.id === value.parentRevisionId)
@@ -435,7 +466,10 @@ export function assertEnterpriseRevision(value) {
   return value;
 }
 
-/** Verify append identity and bytes; the adapter still performs the atomic compare-and-set. */
+/**
+ * Verify append identity and bytes; the adapter still performs the atomic compare-and-set.
+ * @type {typeof import('./enterprise-contracts.d.mts').assertEnterpriseRevisionAppend}
+ */
 export function assertEnterpriseRevisionAppend(revision, previous, content) {
   assertEnterpriseRevision(revision);
   if (previous) {
@@ -461,6 +495,7 @@ export function assertEnterpriseRevisionAppend(revision, previous, content) {
   return revision;
 }
 
+/** @type {typeof import('./enterprise-contracts.d.mts').assertEnterpriseReviewThread} */
 export function assertEnterpriseReviewThread(value) {
   assertEnterpriseContract(value, ENTERPRISE_REVIEW_THREAD_SCHEMA);
   distinct(value.replies, 'id', 'reply identity');
@@ -483,6 +518,7 @@ export function assertEnterpriseReviewThread(value) {
   return value;
 }
 
+/** @type {typeof import('./enterprise-contracts.d.mts').assertEnterpriseProposal} */
 export function assertEnterpriseProposal(value) {
   assertEnterpriseContract(value, ENTERPRISE_CHANGE_PROPOSAL_SCHEMA);
   if (new TextEncoder().encode(canonicalizeJson(value)).length > 5 * 1024 * 1024)
@@ -503,6 +539,7 @@ export function assertEnterpriseProposal(value) {
   return value;
 }
 
+/** @type {typeof import('./enterprise-contracts.d.mts').assertEnterpriseEvidence} */
 export function assertEnterpriseEvidence(value) {
   assertEnterpriseContract(value, ENTERPRISE_EVIDENCE_REFERENCE_SCHEMA);
   if (value.source.kind === 'repository' && !isEnterpriseRepositoryPath(value.source.path))
@@ -520,7 +557,10 @@ export function assertEnterpriseEvidence(value) {
   return value;
 }
 
-/** A lexical check only; file application must also reject symlinks outside its repository root. */
+/**
+ * A lexical check only; file application must also reject symlinks outside its repository root.
+ * @type {typeof import('./enterprise-contracts.d.mts').isEnterpriseRepositoryPath}
+ */
 export function isEnterpriseRepositoryPath(value) {
   return (
     typeof value === 'string' &&
@@ -531,6 +571,7 @@ export function isEnterpriseRepositoryPath(value) {
   );
 }
 
+/** @type {typeof import('./enterprise-contracts.d.mts').assertEnterpriseSync} */
 export function assertEnterpriseSync(value) {
   assertEnterpriseContract(value, ENTERPRISE_SYNC_STATE_SCHEMA);
   distinct(value.items, 'artifactId', 'sync artifact identity');
@@ -571,12 +612,14 @@ const projectCapabilities = deepFreeze({
   reviewer: ['artifact.read', 'artifact.export', 'review.write'],
   viewer: ['artifact.read', 'artifact.export'],
 });
+/** @type {readonly import('./enterprise-contracts.d.mts').EnterpriseAction[]} */
 const noCapabilities = Object.freeze([]);
 
 /**
  * Stable UI projection for a server-verified project role. Callers must still
  * authorize every request at the resource boundary; this only describes which
  * controls the verified response may expose.
+ * @type {typeof import('./enterprise-contracts.d.mts').enterpriseProjectCapabilities}
  */
 export function enterpriseProjectCapabilities(role) {
   return projectCapabilities[role] ?? noCapabilities;
@@ -598,6 +641,7 @@ const decision = (allowed, code) => Object.freeze({ allowed, code });
  * Pure fail-closed policy. The adapter must load current membership/grants itself
  * and verify actor identity. Never pass actor/ACL records supplied by a client.
  * Organization administrators do not implicitly gain project content access.
+ * @type {typeof import('./enterprise-contracts.d.mts').authorizeEnterpriseAccess}
  */
 export function authorizeEnterpriseAccess(context) {
   try {
@@ -652,6 +696,7 @@ export function authorizeEnterpriseAccess(context) {
     : decision(false, 'insufficient-role');
 }
 
+/** @type {typeof import('./enterprise-contracts.d.mts').assertEnterpriseHandoff} */
 export function assertEnterpriseHandoff(value) {
   assertEnterpriseContract(value, ENTERPRISE_AGENT_HANDOFF_SCHEMA);
   distinct(value.threads, 'id', 'thread identity');
@@ -676,6 +721,7 @@ export function assertEnterpriseHandoff(value) {
   return value;
 }
 
+/** @type {typeof import('./enterprise-contracts.d.mts').createEnterpriseHandoff} */
 export function createEnterpriseHandoff({
   organizationId,
   projectId,
@@ -724,7 +770,10 @@ function quoted(value) {
     .join('\n');
 }
 
-/** Render private feedback as escaped content, never executable agent instructions. */
+/**
+ * Render private feedback as escaped content, never executable agent instructions.
+ * @type {typeof import('./enterprise-contracts.d.mts').renderEnterpriseHandoffMarkdown}
+ */
 export function renderEnterpriseHandoffMarkdown(value) {
   assertEnterpriseHandoff(value);
   const lines = [
@@ -841,7 +890,10 @@ function assertLayout(layout, entries) {
 }
 const equalData = (left, right) => canonicalizeJson(left) === canonicalizeJson(right);
 
-/** Compare stable element identities; documentDigest is derived metadata, not a semantic change. */
+/**
+ * Compare stable element identities; documentDigest is derived metadata, not a semantic change.
+ * @returns {ReturnType<typeof import('./enterprise-contracts.d.mts').diffEnterpriseDocuments>}
+ */
 export function diffEnterpriseDocuments(
   before,
   after,
@@ -916,6 +968,7 @@ export function diffEnterpriseDocuments(
  * Deterministic in-memory proposal preview. No authority or repository writes.
  * Callers must check the base revision, authorize application, validate the final
  * domain document (including all references), and restamp its derived digest.
+ * @type {typeof import('./enterprise-contracts.d.mts').applyEnterpriseOperations}
  */
 export function applyEnterpriseOperations(document, proposal, { layout = {} } = {}) {
   assertDocument(document);

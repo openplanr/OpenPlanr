@@ -1,3 +1,5 @@
+// @ts-check
+/** @type {typeof import('./errors.d.mts').ARTIFACT_ERROR_CODES} */
 export const ARTIFACT_ERROR_CODES = Object.freeze({
   INPUT_INVALID: 'E_ARTIFACT_INPUT_INVALID',
   FILE_MISSING: 'E_ARTIFACT_FILE_MISSING',
@@ -59,6 +61,7 @@ export const ARTIFACT_ERROR_CODES = Object.freeze({
   ROOM_EVENT_REPLAY: 'E_ARTIFACT_ROOM_EVENT_REPLAY',
 });
 
+/** @type {typeof import('./errors.d.mts').PROTOCOL_ERROR_CODES} */
 export const PROTOCOL_ERROR_CODES = Object.freeze({
   ASSET_NOT_FOUND: 'E_PROTOCOL_ASSET_NOT_FOUND',
   DIGEST_MISMATCH: 'E_PROTOCOL_DIGEST_MISMATCH',
@@ -75,6 +78,7 @@ export const PROTOCOL_ERROR_CODES = Object.freeze({
 
 // Compatibility name retained for consumers that imported the pipeline error
 // vocabulary object rather than the PipelineError class.
+/** @type {typeof import('./errors.d.mts').PIPELINE_ERROR_CODES} */
 export const PIPELINE_ERROR_CODES = PROTOCOL_ERROR_CODES;
 
 export class PipelineError extends Error {

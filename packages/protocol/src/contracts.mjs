@@ -1,3 +1,4 @@
+// @ts-check
 import { readFileSync } from 'node:fs';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -519,21 +520,34 @@ const explicitProtocolVersionKinds = new Set([
   'skill-session',
 ]);
 
+/** @type {typeof import('./contracts.d.mts').PROTOCOL_SCHEMA_REGISTRY} */
 export const PROTOCOL_SCHEMA_REGISTRY = Object.freeze(
   Object.fromEntries(
     Object.entries(paths).map(([kind, versions]) => [kind, Object.freeze({ ...versions })]),
   ),
 );
 
-/** Closed public product-experience and Operate-to-Planning contract identities. */
+/**
+ * Closed public product-experience and Operate-to-Planning contract identities.
+ * @type {typeof import('./contracts.d.mts').OPERATE_EXPERIENCE_CONTRACT_KINDS_V2}
+ */
 export const OPERATE_EXPERIENCE_CONTRACT_KINDS_V2 = OPERATE_EXPERIENCE_VOCABULARY_V1.kinds;
-/** The only delivery classifications accepted by the Operate-to-Planning bridge. */
+/**
+ * The only delivery classifications accepted by the Operate-to-Planning bridge.
+ * @type {typeof import('./contracts.d.mts').OPERATING_DELIVERY_ROUTES_V1}
+ */
 export const OPERATING_DELIVERY_ROUTES_V1 = OPERATE_EXPERIENCE_VOCABULARY_V1.routes;
 
-/** Compiler-owned, explicit Protocol 2.0 role mandates. */
+/**
+ * Compiler-owned, explicit Protocol 2.0 role mandates.
+ * @type {typeof import('./contracts.d.mts').OPERATE_ROLE_MANDATES_V2}
+ */
 export const OPERATE_ROLE_MANDATES_V2 = Object.freeze(compiledOperateRoleMandates());
 
-/** Compiler-owned public extension record identities. */
+/**
+ * Compiler-owned public extension record identities.
+ * @type {typeof import('./contracts.d.mts').OPERATE_EXTENSION_CONTRACT_KINDS_V2}
+ */
 export const OPERATE_EXTENSION_CONTRACT_KINDS_V2 = Object.freeze(
   OPERATE_CONTRACT_CATALOG_V2.contracts
     .filter(({ category }) => category === 'extension')
@@ -542,47 +556,89 @@ export const OPERATE_EXTENSION_CONTRACT_KINDS_V2 = Object.freeze(
 );
 
 const OPERATE_EVIDENCE_VOCABULARY_V2 = compiledOperateEvidenceVocabulary();
-/** Compiler-owned Phase 4 evidence record identities. */
+/**
+ * Compiler-owned Phase 4 evidence record identities.
+ * @type {typeof import('./contracts.d.mts').OPERATE_EVIDENCE_CONTRACT_KINDS_V2}
+ */
 export const OPERATE_EVIDENCE_CONTRACT_KINDS_V2 = OPERATE_EVIDENCE_VOCABULARY_V2.contractIds;
-/** The four shipped local evidence source kinds. */
+/**
+ * The four shipped local evidence source kinds.
+ * @type {typeof import('./contracts.d.mts').OPERATE_EVIDENCE_KINDS_V2}
+ */
 export const OPERATE_EVIDENCE_KINDS_V2 = OPERATE_EVIDENCE_VOCABULARY_V2.kinds;
-/** The only Phase 4 source-Artifact-local evidence edge relations. */
+/**
+ * The only Phase 4 source-Artifact-local evidence edge relations.
+ * @type {typeof import('./contracts.d.mts').OPERATE_EVIDENCE_EDGE_RELATIONS_V2}
+ */
 export const OPERATE_EVIDENCE_EDGE_RELATIONS_V2 = OPERATE_EVIDENCE_VOCABULARY_V2.edgeRelations;
-/** Stable, safe resolver failure reasons. */
+/**
+ * Stable, safe resolver failure reasons.
+ * @type {typeof import('./contracts.d.mts').OPERATE_EVIDENCE_RESOLVER_ERROR_CODES_V2}
+ */
 export const OPERATE_EVIDENCE_RESOLVER_ERROR_CODES_V2 =
   OPERATE_EVIDENCE_VOCABULARY_V2.resolverErrorCodes;
 
 const OPERATE_OPERATING_INTELLIGENCE_VOCABULARY_V2 =
   compiledOperateOperatingIntelligenceVocabulary();
-/** Compiler-owned Phase 5 operating-intelligence record identities. */
+/**
+ * Compiler-owned Phase 5 operating-intelligence record identities.
+ * @type {typeof import('./contracts.d.mts').OPERATE_OPERATING_INTELLIGENCE_CONTRACT_KINDS_V2}
+ */
 export const OPERATE_OPERATING_INTELLIGENCE_CONTRACT_KINDS_V2 =
   OPERATE_OPERATING_INTELLIGENCE_VOCABULARY_V2.contractIds;
-/** Exact public domain-projection identities; no implicit string derivation is allowed. */
+/**
+ * Exact public domain-projection identities; no implicit string derivation is allowed.
+ * @type {typeof import('./contracts.d.mts').OPERATE_OPERATING_PROJECTION_IDENTITIES_V2}
+ */
 export const OPERATE_OPERATING_PROJECTION_IDENTITIES_V2 =
   OPERATE_OPERATING_INTELLIGENCE_VOCABULARY_V2.projectionIdentities;
-/** Public Phase 5 provider declaration identities. Registration grants no authority. */
+/**
+ * Public Phase 5 provider declaration identities. Registration grants no authority.
+ * @type {typeof import('./contracts.d.mts').OPERATE_OPERATING_PROVIDER_REGISTRATION_CONTRACT_KINDS_V2}
+ */
 export const OPERATE_OPERATING_PROVIDER_REGISTRATION_CONTRACT_KINDS_V2 =
   OPERATE_OPERATING_INTELLIGENCE_VOCABULARY_V2.providerRegistrationContractIds;
 const OPERATE_GOVERNED_EXECUTION_VOCABULARY_V2 = compiledOperateGovernedExecutionVocabulary();
-/** Compiler-owned Phase 6 authority and execution contract identities. */
+/**
+ * Compiler-owned Phase 6 authority and execution contract identities.
+ * @type {typeof import('./contracts.d.mts').OPERATE_GOVERNED_EXECUTION_CONTRACT_KINDS_V2}
+ */
 export const OPERATE_GOVERNED_EXECUTION_CONTRACT_KINDS_V2 =
   OPERATE_GOVERNED_EXECUTION_VOCABULARY_V2.contractIds;
-/** Data-only capability, policy, and executor registration identities. */
+/**
+ * Data-only capability, policy, and executor registration identities.
+ * @type {typeof import('./contracts.d.mts').OPERATE_GOVERNED_PROVIDER_REGISTRATION_CONTRACT_KINDS_V2}
+ */
 export const OPERATE_GOVERNED_PROVIDER_REGISTRATION_CONTRACT_KINDS_V2 =
   OPERATE_GOVERNED_EXECUTION_VOCABULARY_V2.providerRegistrationContractIds;
-/** Exact classification vocabulary; classification alone never grants authority. */
+/**
+ * Exact classification vocabulary; classification alone never grants authority.
+ * @type {typeof import('./contracts.d.mts').OPERATE_GOVERNED_EFFECT_CLASSES_V2}
+ */
 export const OPERATE_GOVERNED_EFFECT_CLASSES_V2 =
   OPERATE_GOVERNED_EXECUTION_VOCABULARY_V2.effectClasses;
-/** Exact closed policy disposition vocabulary. */
+/**
+ * Exact closed policy disposition vocabulary.
+ * @type {typeof import('./contracts.d.mts').OPERATE_GOVERNED_POLICY_OUTCOMES_V2}
+ */
 export const OPERATE_GOVERNED_POLICY_OUTCOMES_V2 =
   OPERATE_GOVERNED_EXECUTION_VOCABULARY_V2.policyOutcomes;
-/** Immutable core > project > narrowing domain policy precedence. */
+/**
+ * Immutable core > project > narrowing domain policy precedence.
+ * @type {typeof import('./contracts.d.mts').OPERATE_GOVERNED_POLICY_TIERS_V2}
+ */
 export const OPERATE_GOVERNED_POLICY_TIERS_V2 =
   OPERATE_GOVERNED_EXECUTION_VOCABULARY_V2.policyTiers;
-/** Non-overridable reference policy prohibitions. */
+/**
+ * Non-overridable reference policy prohibitions.
+ * @type {typeof import('./contracts.d.mts').OPERATE_GOVERNED_CORE_PROHIBITIONS_V2}
+ */
 export const OPERATE_GOVERNED_CORE_PROHIBITIONS_V2 =
   OPERATE_GOVERNED_EXECUTION_VOCABULARY_V2.coreProhibitions;
-/** Closed crash-recovery outcomes; none of these outcomes independently grants authority. */
+/**
+ * Closed crash-recovery outcomes; none of these outcomes independently grants authority.
+ * @type {typeof import('./contracts.d.mts').OPERATE_GOVERNED_RECOVERY_CLASSIFICATIONS_V2}
+ */
 export const OPERATE_GOVERNED_RECOVERY_CLASSIFICATIONS_V2 = Object.freeze([
   'applied',
   'not-applied',
@@ -695,11 +751,13 @@ function operateCoreProhibitionTokens(value) {
  * Resolve one non-overridable governed-execution prohibition from semantic
  * identifier fragments. Matching is normalized, order-independent, and
  * intentionally shared by registration and contained-input validation.
+ * @type {typeof import('./contracts.d.mts').findOperateCoreProhibitionV2}
  */
 export function findOperateCoreProhibitionV2(values) {
   const input = Array.isArray(values) ? values : [values];
   const words = new Set(input.flatMap(operateCoreProhibitionTokens));
-  const matched = [
+  /** @type {Array<[string, boolean]>} */
+  const candidates = [
     ['credential-change', words.has('credential')],
     [
       'customer-contact',
@@ -712,19 +770,29 @@ export function findOperateCoreProhibitionV2(values) {
     ['production-merge', words.has('production') && words.has('merge')],
     ['publication', words.has('publish')],
     ['secret-mutation', words.has('secret')],
-  ].find(([, present]) => present);
+  ];
+  const matched = candidates.find(([, present]) => present);
   return matched && OPERATE_GOVERNED_CORE_PROHIBITIONS_V2.includes(matched[0]) ? matched[0] : null;
 }
-/** Exact durable governed-operation lifecycle vocabulary. */
+/**
+ * Exact durable governed-operation lifecycle vocabulary.
+ * @type {typeof import('./contracts.d.mts').OPERATE_GOVERNED_OPERATION_STATES_V2}
+ */
 export const OPERATE_GOVERNED_OPERATION_STATES_V2 =
   OPERATE_GOVERNED_EXECUTION_VOCABULARY_V2.operationStates;
-/** Terminal result-bearing states eligible for pure at-most-once replay. */
+/**
+ * Terminal result-bearing states eligible for pure at-most-once replay.
+ * @type {typeof import('./contracts.d.mts').OPERATE_GOVERNED_OPERATION_TERMINAL_STATES_V2}
+ */
 export const OPERATE_GOVERNED_OPERATION_TERMINAL_STATES_V2 = Object.freeze(
   OPERATE_GOVERNED_OPERATION_STATES_V2.filter((state) =>
     ['succeeded', 'failed', 'partial', 'uncertain', 'blocked'].includes(state),
   ).sort(),
 );
-/** Result truth retained independently from the later Action hypothesis verdict. */
+/**
+ * Result truth retained independently from the later Action hypothesis verdict.
+ * @type {typeof import('./contracts.d.mts').OPERATE_EXECUTION_VERIFICATION_STATUSES_V2}
+ */
 export const OPERATE_EXECUTION_VERIFICATION_STATUSES_V2 = Object.freeze([
   'success',
   'failure',
@@ -734,7 +802,10 @@ export const OPERATE_EXECUTION_VERIFICATION_STATUSES_V2 = Object.freeze([
   'cancelled',
   'rolled-back',
 ]);
-/** Bounded verification truth; `success` is intentionally absent. */
+/**
+ * Bounded verification truth; `success` is intentionally absent.
+ * @type {typeof import('./contracts.d.mts').OPERATE_HYPOTHESIS_VERIFICATION_STATUSES_V2}
+ */
 export const OPERATE_HYPOTHESIS_VERIFICATION_STATUSES_V2 = Object.freeze([
   'pending',
   'confirmed',
@@ -743,10 +814,16 @@ export const OPERATE_HYPOTHESIS_VERIFICATION_STATUSES_V2 = Object.freeze([
   'cancelled',
   'revisit',
 ]);
-/** Exact public tools owned by the canonical Phase 6 authority guard. */
+/**
+ * Exact public tools owned by the canonical Phase 6 authority guard.
+ * @type {typeof import('./contracts.d.mts').OPERATE_GOVERNED_TOOL_OPERATIONS_V2}
+ */
 export const OPERATE_GOVERNED_TOOL_OPERATIONS_V2 =
   OPERATE_GOVERNED_EXECUTION_VOCABULARY_V2.toolOperations;
-/** Compiler-owned guard identities used by governed Review and Action authority. */
+/**
+ * Compiler-owned guard identities used by governed Review and Action authority.
+ * @type {typeof import('./contracts.d.mts').OPERATE_AUTHORITY_GUARD_IDS_V2}
+ */
 export const OPERATE_AUTHORITY_GUARD_IDS_V2 = Object.freeze(
   OPERATE_CONTRACT_CATALOG_V2.guards
     .filter(({ id }) =>
@@ -760,7 +837,10 @@ export const OPERATE_AUTHORITY_GUARD_IDS_V2 = Object.freeze(
     .map(({ id }) => id)
     .sort(),
 );
-/** Exact compiler-owned public API-domain bindings; no string conversion is permitted. */
+/**
+ * Exact compiler-owned public API-domain bindings; no string conversion is permitted.
+ * @type {typeof import('./contracts.d.mts').OPERATE_PUBLIC_DOMAIN_CONTRACT_BINDINGS_V2}
+ */
 export const OPERATE_PUBLIC_DOMAIN_CONTRACT_BINDINGS_V2 =
   compiledPublicOperateDomainContractBindings();
 
@@ -837,7 +917,10 @@ function assertCanonicalOperateIntelligencePlanTopologyV2(plan) {
   }
 }
 
-/** Validate the exact compiler-owned explainable-plan contract and canonical topology. */
+/**
+ * Validate the exact compiler-owned explainable-plan contract and canonical topology.
+ * @returns {ReturnType<typeof import('./contracts.d.mts').assertOperateIntelligencePlanContractV2>}
+ */
 export function assertOperateIntelligencePlanContractV2(value) {
   const plan = assertProtocolArtifact('operating-intelligence-plan', value, {
     protocolVersion: '2.0.0',
@@ -909,6 +992,7 @@ function requireOperateRoleMandate(roleId, roleVersion) {
  * Resolve the exact mandate that an Operate Assignment can advertise. The
  * caller supplies a role version deliberately; no previous role version is
  * selected as a fallback.
+ * @type {typeof import('./contracts.d.mts').loadOperateRoleMandateV2}
  */
 export function loadOperateRoleMandateV2(roleId, { roleVersion } = {}) {
   const mandate = requireOperateRoleMandate(roleId, roleVersion);
@@ -921,10 +1005,11 @@ export function loadOperateRoleMandateV2(roleId, { roleVersion } = {}) {
  * The runtime continues to validate the resulting Assignment at submission;
  * this boundary makes the advertised template and that validation input one
  * explicit, versioned contract.
+ * @type {typeof import('./contracts.d.mts').assertOperateRoleOutputContractV2}
  */
 export function assertOperateRoleOutputContractV2(roleId, outputContract, { roleVersion } = {}) {
   const mandate = requireOperateRoleMandate(roleId, roleVersion);
-  const expected = mandate.output;
+  const expected = /** @type {Record<string, unknown>} */ (mandate.output);
   const actual = outputContract ?? {};
   for (const field of ['schemaId', 'schemaVersion', 'mediaType', 'maxBytes']) {
     if (actual[field] !== expected[field]) {
@@ -1013,6 +1098,7 @@ function inferredVersion(kind, value, explicitVersion) {
   );
 }
 
+/** @type {typeof import('./contracts.d.mts').listProtocolSchemas} */
 export function listProtocolSchemas() {
   return Object.entries(PROTOCOL_SCHEMA_REGISTRY).flatMap(([kind, versions]) =>
     Object.entries(versions).map(([protocolVersion, path]) => ({ kind, protocolVersion, path })),
@@ -1057,11 +1143,15 @@ function sharedOperateExperienceSchemaV2(kind, protocolVersion) {
 // Public resolvers hand out a mutable copy so callers can never reach the cache.
 const withSchemaCopy = (resolved) => ({ ...resolved, schema: structuredClone(resolved.schema) });
 
+/** @type {typeof import('./contracts.d.mts').resolveProtocolSchema} */
 export function resolveProtocolSchema(kind, { protocolVersion } = {}) {
   return withSchemaCopy(sharedProtocolSchema(kind, protocolVersion));
 }
 
-/** Resolve a public experience schema without adding it to the 61-contract runtime kernel. */
+/**
+ * Resolve a public experience schema without adding it to the 61-contract runtime kernel.
+ * @type {typeof import('./contracts.d.mts').resolveOperateExperienceSchemaV2}
+ */
 export function resolveOperateExperienceSchemaV2(kind, { protocolVersion } = {}) {
   return withSchemaCopy(sharedOperateExperienceSchemaV2(kind, protocolVersion));
 }
@@ -1099,6 +1189,7 @@ function guidedQuestionnaireCompatibilityErrors(value) {
   ];
 }
 
+/** @type {typeof import('./contracts.d.mts').validateProtocolArtifact} */
 export function validateProtocolArtifact(kind, value, { protocolVersion } = {}) {
   const authoringKind = Object.hasOwn(DIAGRAM_AUTHORING_CONTRACT_FILES, kind);
   let versionInput = value;
@@ -1133,6 +1224,7 @@ export function validateProtocolArtifact(kind, value, { protocolVersion } = {}) 
 /**
  * Validate the dashboard bootstrap schema plus invariants JSON Schema cannot
  * express, most importantly equality of the served and embedded build IDs.
+ * @returns {ReturnType<typeof import('./contracts.d.mts').validateDashboardBootstrapV1>}
  */
 export function validateDashboardBootstrapV1(value) {
   const errors = validateProtocolArtifact('dashboard-bootstrap', value, {
@@ -1172,7 +1264,10 @@ export function validateDashboardBootstrapV1(value) {
   return errors;
 }
 
-/** Assert the complete public dashboard bootstrap contract. */
+/**
+ * Assert the complete public dashboard bootstrap contract.
+ * @type {typeof import('./contracts.d.mts').assertDashboardBootstrapV1}
+ */
 export function assertDashboardBootstrapV1(value) {
   const errors = validateDashboardBootstrapV1(value);
   if (errors.length) {
@@ -1184,11 +1279,13 @@ export function assertDashboardBootstrapV1(value) {
   return value;
 }
 
+/** @type {typeof import('./contracts.d.mts').validateOperateExperienceArtifactV2} */
 export function validateOperateExperienceArtifactV2(kind, value) {
   const resolved = sharedOperateExperienceSchemaV2(kind, '2.0.0');
   return validateResolvedArtifact(value, resolved);
 }
 
+/** @type {typeof import('./contracts.d.mts').assertOperateExperienceArtifactV2} */
 export function assertOperateExperienceArtifactV2(kind, value) {
   const errors = validateOperateExperienceArtifactV2(kind, value);
   if (errors.length) {
@@ -1200,6 +1297,7 @@ export function assertOperateExperienceArtifactV2(kind, value) {
   return value;
 }
 
+/** @type {typeof import('./contracts.d.mts').assertProtocolArtifact} */
 export function assertProtocolArtifact(kind, value, options) {
   const errors = validateProtocolArtifact(kind, value, options);
   if (errors.length) {
@@ -1213,7 +1311,10 @@ export function assertProtocolArtifact(kind, value, options) {
   return value;
 }
 
-/** Validate only one of the three Phase 6 data-only registration contracts. */
+/**
+ * Validate only one of the three Phase 6 data-only registration contracts.
+ * @type {typeof import('./contracts.d.mts').assertOperateGovernedExtensionRegistrationV2}
+ */
 export function assertOperateGovernedExtensionRegistrationV2(kind, value) {
   if (!OPERATE_GOVERNED_PROVIDER_REGISTRATION_CONTRACT_KINDS_V2.includes(kind)) {
     throw new PipelineError(

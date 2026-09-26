@@ -1,3 +1,4 @@
+// @ts-check
 const hasOwn = (value, key) => Object.prototype.hasOwnProperty.call(value, key);
 
 function assertUnicodeScalarString(value, path) {
@@ -56,7 +57,10 @@ function serialize(value, path, seen) {
   }
 }
 
-/** RFC 8785 JSON canonicalization for already parsed JSON values. */
+/**
+ * RFC 8785 JSON canonicalization for already parsed JSON values.
+ * @type {typeof import('./canonical-json.d.mts').canonicalizeJson}
+ */
 export function canonicalizeJson(value) {
   return serialize(value, '$', new Set());
 }
@@ -74,7 +78,10 @@ const SHA256_K = new Uint32Array([
 
 const rotr = (value, bits) => (value >>> bits) | (value << (32 - bits));
 
-/** Dependency-free synchronous SHA-256 for browser and Node runtimes. */
+/**
+ * Dependency-free synchronous SHA-256 for browser and Node runtimes.
+ * @type {typeof import('./canonical-json.d.mts').sha256Hex}
+ */
 export function sha256Hex(value) {
   const candidate = typeof value === 'string' ? new TextEncoder().encode(value) : value;
   if (
@@ -150,16 +157,19 @@ export function sha256Hex(value) {
     .join('');
 }
 
+/** @type {typeof import('./canonical-json.d.mts').sha256Jcs} */
 export function sha256Jcs(value) {
   return `sha256:${sha256Hex(canonicalizeJson(value))}`;
 }
 
+/** @type {typeof import('./canonical-json.d.mts').withDocumentDigest} */
 export function withDocumentDigest(value) {
   const copy = { ...value };
   delete copy.documentDigest;
   return { ...copy, documentDigest: sha256Jcs(copy) };
 }
 
+/** @type {typeof import('./canonical-json.d.mts').verifyDocumentDigest} */
 export function verifyDocumentDigest(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   const copy = { ...value };

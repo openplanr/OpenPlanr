@@ -6,6 +6,7 @@ import type {
   DiagramBoundaryAttachment,
   DiagramBounds,
   DiagramGeometryLocks,
+  DiagramPlacement,
   DiagramRoute,
   DiagramSemanticEntry,
 } from '@openplanr/protocol/diagram-authoring-contracts';
@@ -84,6 +85,15 @@ export interface DiagramSceneFailure {
 }
 export declare const AUTHORED_SCENE_ITEM_BUDGET: 256;
 export declare const AUTHORED_MINIMUM_FONT_SIZE: 12;
+/** Internal shared geometry for rendering and the editor index; inputs are validated. */
+export declare function resolveDiagramSceneElement(
+  entry: DiagramSemanticEntry,
+  placement: DiagramPlacement,
+  placements: Map<string, DiagramPlacement>,
+  order: number,
+  emphasisLevel?: AuthoredDiagramSceneElement['emphasis'],
+  diagnostics?: DiagramSceneDiagnostic[],
+): AuthoredDiagramSceneElement;
 export declare function resolveDiagramScene(
   bundle: DiagramAuthoringBundle,
 ): { ok: true; scene: AuthoredDiagramScene; diagnostics: [] } | DiagramSceneFailure;

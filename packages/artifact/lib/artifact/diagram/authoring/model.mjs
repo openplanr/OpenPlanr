@@ -21,6 +21,7 @@ const canonical = (value) =>
 export const same = (left, right) =>
   JSON.stringify(canonical(left)) === JSON.stringify(canonical(right));
 export const diagnostic = (path, rule, detail) => ({ path, rule, detail });
+/** @type {(path: string, rule: string, detail: string) => import('./index.d.mts').DiagramKernelFailure} */
 export const failure = (path, rule, detail) => ({
   ok: false,
   diagnostics: [diagnostic(path, rule, detail)],
@@ -95,6 +96,7 @@ export function inspectPlainData(value, allowedKeyPaths = []) {
   return issue ? [issue] : [];
 }
 
+/** @type {typeof import('./index.d.mts').validateAuthoringBundle} */
 export function validateAuthoringBundle(bundle) {
   let diagnostics = inspectPlainData(bundle);
   if (!diagnostics.length) {

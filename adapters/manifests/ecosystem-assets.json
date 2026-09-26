@@ -6,7 +6,7 @@
   "inputs": [
     {
       "path": "adapters/manifests/generated-assets.json",
-      "digest": "sha256:3477dac5d1209453aa239b9add7b3b723fca6d8790b5e014e3f55e542aa09a7b"
+      "digest": "sha256:39319989ed075e951a4f06585c2f07833499d5b37d929608f81e05f1f92b98cc"
     },
     {
       "path": "apps/dashboard/package.json",
@@ -18,7 +18,7 @@
     },
     {
       "path": "package.json",
-      "digest": "sha256:506b90973e022b0b2caa3d7cdc6945a9cbf0c6fca23aa23f1525cf7a46429bd5"
+      "digest": "sha256:e61e2d6bdaa4f9d0a4e6e7d8a147b7006beee126e3636c3f5ef509794c5bbc3f"
     },
     {
       "path": "packages/artifact/package.json",
@@ -90,7 +90,7 @@
     },
     {
       "path": "packages/protocol/src/semver.mjs",
-      "digest": "sha256:7b8d9b5c6b7e030fe71297fbcbd80aabe1b0a02fd23c618e71db9b9d17ffe135"
+      "digest": "sha256:5db718c95dd528667a9b4cfb19c27e89c58b95fb59f9964c43452820159d261a"
     },
     {
       "path": "packages/skill-runtime/package.json",
@@ -116,7 +116,7 @@
     },
     {
       "path": "adapters/manifests/codex-plugin-content.json",
-      "digest": "sha256:fd909907fb0187a11b252b674ef441294c14c0bc6ee2f3761bf65682446269bb"
+      "digest": "sha256:cdb29da7bfa1f542ca446d565afa720b02705df4122c3f70013b0118ab3bb78b"
     },
     {
       "path": "docs/generated/adapters.md",
@@ -132,7 +132,7 @@
     },
     {
       "path": "ecosystem.json",
-      "digest": "sha256:b50d79e10a7a16ecc15034215d60dec52dc2301e7b9c5a664daa47cbbf60bd0a"
+      "digest": "sha256:41891d35a3c563ad8a3aa47cd3c531ac393e328a53a7e096847b4a83ac3ba2e0"
     },
     {
       "path": "packages/pipeline/.claude-plugin/plugin.json",

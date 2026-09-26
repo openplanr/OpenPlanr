@@ -1,3 +1,4 @@
+// @ts-check
 import {
   adoptMermaidCopy,
   exportMermaidCopy,
@@ -89,7 +90,10 @@ function fidelity(document, report) {
   return wrap;
 }
 
-/** One inert copy-interchange panel shared by local and company editor hosts. */
+/**
+ * One inert copy-interchange panel shared by local and company editor hosts.
+ * @type {typeof import('./diagram-source-panel.d.mts').mountDiagramSourcePanel}
+ */
 export function mountDiagramSourcePanel({
   root,
   session,
@@ -500,6 +504,7 @@ export function mountDiagramSourcePanel({
     const canAdopt =
       state.needsInitialization &&
       state.pendingCount === 0 &&
+      state.bundle !== null &&
       state.bundle.presentation.elements.length === 0 &&
       state.capabilities.read &&
       state.capabilities.write &&
@@ -548,7 +553,6 @@ export function mountDiagramSourcePanel({
       exportResult.append(diagnosticList(copy.diagnostics, { navigable: false }));
       showError(
         copy.diagnostics?.[0]?.message ??
-          copy.diagnostics?.[0]?.detail ??
           'Mermaid export is unavailable. Keep the editable bundle.',
       );
       return;

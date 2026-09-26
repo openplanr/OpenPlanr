@@ -1,3 +1,4 @@
+// @ts-check
 import {
   clone,
   elementIndex,
@@ -10,6 +11,7 @@ const CELL_SIZE = 256;
 const MAX_PRIMITIVE_CELLS = 16;
 const MAX_QUERY_CELLS = 4096;
 const MAX_QUERY_PRIMITIVES = 20000;
+/** @type {(rule: string, detail: string, path?: string) => import('./geometry-index.d.mts').DiagramGeometryFailure} */
 const fail = (rule, detail, path = '$.geometry') => ({
   ok: false,
   diagnostics: [{ path, rule, detail }],
@@ -78,10 +80,23 @@ function resolveGeometry(data, id) {
     order: element.order,
   };
 }
+/**
+ * @typedef {{
+ *   id: string;
+ *   kind: 'bounds' | 'label' | 'segment';
+ *   bounds: import('@openplanr/protocol/diagram-authoring-contracts').DiagramBounds;
+ *   start?: { x: number; y: number };
+ *   end?: { x: number; y: number };
+ *   cells: string[] | null;
+ * }} Primitive
+ */
 function primitives(record) {
+  /** @type {Primitive[]} */
   const result = [];
-  if (record.bounds) result.push({ id: record.id, kind: 'bounds', bounds: record.bounds });
-  if (record.labelBounds) result.push({ id: record.id, kind: 'label', bounds: record.labelBounds });
+  if (record.bounds)
+    result.push({ id: record.id, kind: 'bounds', bounds: record.bounds, cells: null });
+  if (record.labelBounds)
+    result.push({ id: record.id, kind: 'label', bounds: record.labelBounds, cells: null });
   for (let index = 1; index < record.points.length; index++) {
     const start = record.points[index - 1],
       end = record.points[index];
@@ -96,6 +111,7 @@ function primitives(record) {
       },
       start,
       end,
+      cells: null,
     });
   }
   return result;
@@ -117,6 +133,10 @@ function affectedClosure(ids, oldData, nextData) {
       for (const edge of data.incident.get(id) ?? []) result.add(edge);
   return result;
 }
+/**
+ * @returns {import('./geometry-index.d.mts').DiagramGeometryFailure
+ *   | { ok: true; world: { x: number; y: number }; radius: number; range: ReturnType<typeof cellRange>; scale: number }}
+ */
 function readQuery(input) {
   const diagnostics = inspectPlainData(input);
   if (diagnostics.length) return { ok: false, diagnostics };
@@ -173,13 +193,14 @@ function readQuery(input) {
 /**
  * Cached world geometry. Query converts screen coordinates through one camera;
  * no query validates the bundle, resolves scene geometry, or reads browser DOM.
+ * @type {typeof import('./geometry-index.d.mts').createDiagramGeometryIndex}
  */
 export function createDiagramGeometryIndex(bundle) {
   const checked = validateAuthoringBundle(bundle);
   if (!checked.ok) return checked;
   const diagramId = bundle.diagramId;
-  let digest = bundle.bundleDigest,
-    data = metadata(bundle);
+  const initial = metadata(bundle);
+  let digest = bundle.bundleDigest;
   const records = new Map(),
     buckets = new Map(),
     overflow = new Set(),
@@ -189,11 +210,11 @@ export function createDiagramGeometryIndex(bundle) {
     updates: 0,
     validations: 1,
     validatedElements: bundle.presentation.elements.length,
-    metadataEntriesScanned: data.byId.size,
+    metadataEntriesScanned: initial.byId.size,
     geometryResolved: 0,
     lastUpdateResolved: 0,
     lastUpdateRemoved: 0,
-    lastMetadataEntriesScanned: data.byId.size,
+    lastMetadataEntriesScanned: initial.byId.size,
     queries: 0,
     lastQueryCandidates: 0,
     lastQueryChecks: 0,
@@ -237,12 +258,17 @@ export function createDiagramGeometryIndex(bundle) {
     records.set(record.id, record);
     members.set(record.id, values);
   }
-  for (const id of data.byId.keys()) insert(resolveGeometry(data, id));
+  for (const id of initial.byId.keys()) insert(resolveGeometry(initial, id));
   work.geometryResolved = records.size;
   work.lastUpdateResolved = records.size;
   // Only detached signatures and dependency IDs survive this call. Mutable caller
   // objects cannot later change the cached geometry or the previous dependency set.
-  data = { signatures: data.signatures, children: data.children, incident: data.incident };
+  let data = {
+    signatures: initial.signatures,
+    children: initial.children,
+    incident: initial.incident,
+  };
+  /** @type {import('./geometry-index.d.mts').DiagramGeometryIndex['update']} */
   function update(nextBundle, affectedIds) {
     const checked = validateAuthoringBundle(nextBundle);
     work.validations++;
@@ -306,6 +332,7 @@ export function createDiagramGeometryIndex(bundle) {
       diagnostics: [],
     };
   }
+  /** @type {import('./geometry-index.d.mts').DiagramGeometryIndex['query']} */
   function query(input) {
     work.queries++;
     work.lastQueryCandidates = 0;

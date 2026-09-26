@@ -1,3 +1,4 @@
+// @ts-check
 export { mountDiagramEditor } from '../../ui/diagram-editor.mjs';
 export { mountDiagramSourcePanel } from '../../ui/diagram-source-panel.mjs';
 export { bindDiagramEditorCancellation } from './cancellation.mjs';

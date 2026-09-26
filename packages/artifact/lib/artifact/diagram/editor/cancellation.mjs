@@ -1,4 +1,8 @@
-/** Bind cancellation only; the mounting shell remains the sole gesture owner. */
+// @ts-check
+/**
+ * Bind cancellation only; the mounting shell remains the sole gesture owner.
+ * @type {typeof import('./index.d.mts').bindDiagramEditorCancellation}
+ */
 export function bindDiagramEditorCancellation(session, target) {
   if (!target?.addEventListener || !target?.removeEventListener)
     throw new TypeError('Expected an event target.');

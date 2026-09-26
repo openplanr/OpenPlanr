@@ -117,6 +117,7 @@ export function connector(from, to, label = '') {
     presentation: [entry],
   };
 }
+/** @returns {Extract<import('../diagram/authoring/index.d.mts').DiagramCommand, { type: 'create' }>} */
 export function processTemplate(position) {
   const start = createObject('start', position),
     process = createObject('process', { x: position.x + 240, y: position.y }),
@@ -130,6 +131,10 @@ export function processTemplate(position) {
     presentation: parts.flatMap((part) => part.presentation),
   };
 }
+/**
+ * @returns {import('../diagram/editor/index.d.mts').DiagramEditorFailure
+ *   | (import('../diagram/authoring/index.d.mts').DiagramCommandResult & { selectedIds: string[] })}
+ */
 export function duplicateSelection(bundle, ids, copied = null) {
   const result = copied ? { ok: true, value: copied } : copyDiagramSelection(bundle, ids);
   if (!result.ok) return result;
@@ -194,7 +199,10 @@ export function propertyTransaction(bundle, id, { semantic, geometry, appearance
     });
   return transaction(bundle, operations);
 }
-/** Compose existing move previews into one transaction, preserving container descendants. */
+/**
+ * Compose existing move previews into one transaction, preserving container descendants.
+ * @returns {import('../diagram/authoring/index.d.mts').DiagramCommand}
+ */
 export function arrangementCommand(bundle, ids, mode) {
   const parents = parentIndex(bundle.document),
     selected = new Set(ids);
@@ -250,6 +258,7 @@ export function arrangementCommand(bundle, ids, mode) {
   }
   return { type: 'geometry', changes: [...changes.values()] };
 }
+/** @returns {import('../diagram/authoring/index.d.mts').DiagramCommand} */
 export function laneArrangementCommand(bundle, laneId, direction) {
   const lane = [...bundle.document.lanes, ...bundle.document.groups].find(
     (item) => item.id === laneId,

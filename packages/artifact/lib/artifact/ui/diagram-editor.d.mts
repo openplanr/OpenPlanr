@@ -2,23 +2,54 @@
 import type { DiagramAuthoringBundle } from '@openplanr/protocol/diagram-authoring-contracts';
 import type { DiagramEditorSession, DiagramEditorState } from '../diagram/editor/index.mjs';
 
+/** Every icon the editor can render; hosts may use any of them on actions and panels. */
 export type DiagramEditorIconName =
   | 'panel'
   | 'undo'
   | 'redo'
   | 'save'
   | 'more'
-  | 'share'
-  | 'history'
-  | 'review'
+  | 'select'
+  | 'pan'
+  | 'snap'
+  | 'fit'
+  | 'search'
   | 'properties'
+  | 'review'
   | 'copy'
   | 'duplicate'
   | 'lock'
   | 'unlock'
   | 'trash'
+  | 'arrange'
+  | 'group'
+  | 'ungroup'
+  | 'connect'
+  | 'parent'
+  | 'route'
+  | 'content'
+  | 'geometry'
+  | 'appearance'
+  | 'structure'
+  | 'constraints'
+  | 'advanced'
   | 'plus'
-  | 'search';
+  | 'arrow-up'
+  | 'arrow-down'
+  | 'mark'
+  | 'chevron'
+  | 'share'
+  | 'history'
+  | 'kind-container'
+  | 'kind-lane'
+  | 'kind-lane-vertical'
+  | 'kind-terminal'
+  | 'kind-process'
+  | 'kind-decision'
+  | 'kind-store'
+  | 'kind-component'
+  | 'kind-connector'
+  | 'kind-annotation';
 
 /** A command added by the host after Save. Lowercase ids; hooks re-run whenever the editor state changes. */
 export interface DiagramEditorHostAction {
@@ -39,6 +70,8 @@ export interface DiagramEditorHostAction {
 export interface DiagramEditorHostPanel {
   id: string;
   label: string;
+  /** Checked against the icon set at mount; the tab itself renders the label only. */
+  icon?: DiagramEditorIconName;
   hidden?: (state: DiagramEditorState) => boolean;
   mount(options: {
     root: HTMLElement;

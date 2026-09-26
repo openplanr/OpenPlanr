@@ -1,10 +1,14 @@
+// @ts-check
 const LEGACY_TASK_FIELDS = Object.freeze({
   review_risks: 'reviewRisks',
   browser_surfaces: 'browserSurfaces',
   acceptance_refs: 'acceptanceRefs',
 });
 
-/** Translate released snake-case task metadata into the canonical 1.7 names. */
+/**
+ * Translate released snake-case task metadata into the canonical 1.7 names.
+ * @returns {ReturnType<typeof import('./planning-contracts.d.mts').normalizePlanningTask>}
+ */
 export function normalizePlanningTask(value) {
   const task = structuredClone(value ?? {});
   for (const [legacy, canonical] of Object.entries(LEGACY_TASK_FIELDS)) {
@@ -17,7 +21,10 @@ export function normalizePlanningTask(value) {
   return task;
 }
 
-/** Validate that every story criterion is assigned and named in task verification. */
+/**
+ * Validate that every story criterion is assigned and named in task verification.
+ * @returns {ReturnType<typeof import('./planning-contracts.d.mts').validatePlanningAcceptanceCoverage>}
+ */
 export function validatePlanningAcceptanceCoverage(stories, tasks) {
   const issues = [];
   const tasksByStory = new Map();

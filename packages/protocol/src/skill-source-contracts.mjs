@@ -1,5 +1,7 @@
+// @ts-check
 // Protocol 1.6 grows by additive contract families. Keep each family explicit,
 // then expose one aggregate map to schema resolvers and browser consumers.
+/** @type {typeof import('./skill-source-contracts.d.mts').SKILL_SOURCE_V16_CONTRACT_FILES} */
 export const SKILL_SOURCE_V16_CONTRACT_FILES = Object.freeze({
   'generated-asset-manifest': 'generated-asset-manifest.schema.json',
   'skill-catalog': 'skill-catalog.schema.json',
@@ -13,6 +15,7 @@ export const SKILL_SOURCE_V16_CONTRACT_FILES = Object.freeze({
   'skill-source': 'skill-source.schema.json',
 });
 
+/** @type {typeof import('./skill-source-contracts.d.mts').DIAGRAM_V16_CONTRACT_FILES} */
 export const DIAGRAM_V16_CONTRACT_FILES = Object.freeze({
   'diagram-consumer-reference': 'diagram-consumer-reference.schema.json',
   'diagram-document': 'diagram-document.schema.json',
@@ -24,13 +27,16 @@ export const DIAGRAM_V16_CONTRACT_FILES = Object.freeze({
   'diagram-type-registry': 'diagram-type-registry.schema.json',
 });
 
+/** @type {typeof import('./skill-source-contracts.d.mts').PROTOCOL_V16_CONTRACT_FILES} */
 export const PROTOCOL_V16_CONTRACT_FILES = Object.freeze({
   ...SKILL_SOURCE_V16_CONTRACT_FILES,
   ...DIAGRAM_V16_CONTRACT_FILES,
 });
 
+/** @type {typeof import('./skill-source-contracts.d.mts').SKILL_SOURCE_V17_CONTRACT_FILES} */
 export const SKILL_SOURCE_V17_CONTRACT_FILES = SKILL_SOURCE_V16_CONTRACT_FILES;
 
+/** @type {typeof import('./skill-source-contracts.d.mts').PLANNING_V17_CONTRACT_FILES} */
 export const PLANNING_V17_CONTRACT_FILES = Object.freeze({
   'planning-id-sequence': 'planning-id-sequence.schema.json',
   'request-authority': 'request-authority.schema.json',
@@ -39,21 +45,25 @@ export const PLANNING_V17_CONTRACT_FILES = Object.freeze({
   task: 'task.schema.json',
 });
 
+/** @type {typeof import('./skill-source-contracts.d.mts').PROTOCOL_V17_CONTRACT_FILES} */
 export const PROTOCOL_V17_CONTRACT_FILES = Object.freeze({
   ...SKILL_SOURCE_V17_CONTRACT_FILES,
   ...PLANNING_V17_CONTRACT_FILES,
 });
 
+/** @type {typeof import('./skill-source-contracts.d.mts').SKILL_PACKAGE_V18_CONTRACT_FILES} */
 export const SKILL_PACKAGE_V18_CONTRACT_FILES = Object.freeze({
   'skill-package': 'skill-package.schema.json',
   'utility-command-catalog': 'utility-command-catalog.schema.json',
 });
 
+/** @type {typeof import('./skill-source-contracts.d.mts').PROTOCOL_V18_CONTRACT_FILES} */
 export const PROTOCOL_V18_CONTRACT_FILES = SKILL_PACKAGE_V18_CONTRACT_FILES;
 
 // Canonical classification for the additive registries stored in the shared
 // registries/ directory. Projection, preservation, and ecosystem generators
 // derive version custody from this descriptor instead of owning filename lists.
+/** @type {typeof import('./skill-source-contracts.d.mts').SKILL_SOURCE_V16_REGISTRIES} */
 export const SKILL_SOURCE_V16_REGISTRIES = Object.freeze({
   'skill-host-profiles.json': Object.freeze({
     kind: 'skill-host-profile-registry',
@@ -75,6 +85,7 @@ export const SKILL_SOURCE_V16_REGISTRIES = Object.freeze({
   }),
 });
 
+/** @type {typeof import('./skill-source-contracts.d.mts').DIAGRAM_V16_REGISTRIES} */
 export const DIAGRAM_V16_REGISTRIES = Object.freeze({
   'diagram-grammars.json': Object.freeze({
     kind: 'diagram-type-registry',
@@ -90,11 +101,13 @@ export const DIAGRAM_V16_REGISTRIES = Object.freeze({
   }),
 });
 
+/** @type {typeof import('./skill-source-contracts.d.mts').PROTOCOL_V16_REGISTRIES} */
 export const PROTOCOL_V16_REGISTRIES = Object.freeze({
   ...SKILL_SOURCE_V16_REGISTRIES,
   ...DIAGRAM_V16_REGISTRIES,
 });
 
+/** @type {typeof import('./skill-source-contracts.d.mts').SKILL_SOURCE_V17_REGISTRIES} */
 export const SKILL_SOURCE_V17_REGISTRIES = Object.freeze(
   Object.fromEntries(
     Object.entries(SKILL_SOURCE_V16_REGISTRIES).map(([file, descriptor]) => [
@@ -107,4 +120,5 @@ export const SKILL_SOURCE_V17_REGISTRIES = Object.freeze(
   ),
 );
 
+/** @type {typeof import('./skill-source-contracts.d.mts').PROTOCOL_V17_REGISTRIES} */
 export const PROTOCOL_V17_REGISTRIES = SKILL_SOURCE_V17_REGISTRIES;

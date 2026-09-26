@@ -1,10 +1,16 @@
+// @ts-check
 import { DESIGN_DOCUMENT_SCHEMA } from './design-contracts.mjs';
 import { validateJson } from './json-schema.mjs';
 
+/** @type {typeof import('./workspace-contracts.d.mts').DESIGN_WORKSPACE_VERSION} */
 export const DESIGN_WORKSPACE_VERSION = '1.0.0';
+/** @type {typeof import('./workspace-contracts.d.mts').DESIGN_WORKSPACE_API} */
 export const DESIGN_WORKSPACE_API = '/api/v1/design-workspaces';
+/** @type {typeof import('./workspace-contracts.d.mts').DESIGN_WORKSPACE_MAX_BYTES} */
 export const DESIGN_WORKSPACE_MAX_BYTES = 5 * 1024 * 1024;
+/** @type {typeof import('./workspace-contracts.d.mts').DESIGN_WORKSPACE_MAX_EVENT_BYTES} */
 export const DESIGN_WORKSPACE_MAX_EVENT_BYTES = 256 * 1024;
+/** @type {typeof import('./workspace-contracts.d.mts').DESIGN_WORKSPACE_ID_PATTERN} */
 export const DESIGN_WORKSPACE_ID_PATTERN = '^[A-Za-z0-9_-]{22,64}$';
 const id = { type: 'string', pattern: DESIGN_WORKSPACE_ID_PATTERN };
 const digest = { type: 'string', pattern: '^[a-f0-9]{64}$' };
@@ -38,6 +44,7 @@ const schema = (name, properties, required = Object.keys(properties)) => ({
   required,
 });
 
+/** @type {typeof import('./workspace-contracts.d.mts').DESIGN_WORKSPACE_REVISION_SCHEMA} */
 export const DESIGN_WORKSPACE_REVISION_SCHEMA = schema('design-workspace-revision', {
   id,
   epoch,
@@ -46,6 +53,7 @@ export const DESIGN_WORKSPACE_REVISION_SCHEMA = schema('design-workspace-revisio
   ...cipherProperties,
   signature,
 });
+/** @type {typeof import('./workspace-contracts.d.mts').DESIGN_WORKSPACE_EVENT_SCHEMA} */
 export const DESIGN_WORKSPACE_EVENT_SCHEMA = schema('design-workspace-event', {
   id,
   revisionId: id,
@@ -61,6 +69,7 @@ const sealed = {
   required: ['iv', 'ciphertext'],
   properties: cipherProperties,
 };
+/** @type {typeof import('./workspace-contracts.d.mts').DESIGN_WORKSPACE_CREATE_SCHEMA} */
 export const DESIGN_WORKSPACE_CREATE_SCHEMA = schema('design-workspace-create', {
   schemaVersion: { const: DESIGN_WORKSPACE_VERSION },
   id,
@@ -73,6 +82,7 @@ export const DESIGN_WORKSPACE_CREATE_SCHEMA = schema('design-workspace-create', 
   operationId: id,
   signature,
 });
+/** @type {typeof import('./workspace-contracts.d.mts').DESIGN_WORKSPACE_SCHEMA} */
 export const DESIGN_WORKSPACE_SCHEMA = schema('design-review-workspace', {
   schemaVersion: { const: DESIGN_WORKSPACE_VERSION },
   id,
@@ -86,78 +96,85 @@ export const DESIGN_WORKSPACE_SCHEMA = schema('design-review-workspace', {
 
 // An explicit presentation-only model. Authored paths, source provenance, and
 // design-system references are deliberately not part of a published workspace.
-const designProperties = structuredClone(DESIGN_DOCUMENT_SCHEMA.properties);
+const designProperties =
+  /** @type {Record<string, { items: { properties: Record<string, unknown>; required: string[] } }>} */ (
+    structuredClone(DESIGN_DOCUMENT_SCHEMA.properties)
+  );
 for (const key of ['kind', 'schemaVersion', 'brief', 'assets', 'designSystem'])
   delete designProperties[key];
 delete designProperties.screens.items.properties.source;
 designProperties.screens.items.required = ['id', 'title'];
 delete designProperties.variants.items.properties.sources;
-export const DESIGN_REVIEW_BUNDLE_SCHEMA = schema(
-  'design-review-bundle',
-  {
-    kind: { const: 'openplanr-design-review-bundle' },
-    schemaVersion: { const: DESIGN_WORKSPACE_VERSION },
-    design: {
-      type: 'object',
-      additionalProperties: false,
-      properties: designProperties,
-      required: [
-        'id',
-        'title',
-        'frames',
-        'screens',
-        'screenOrder',
-        'variants',
-        'selectedVariant',
-        'defaultView',
-      ],
-    },
-    envelope: { type: 'object', required: ['schemaVersion', 'artifacts', 'viewer'] },
-    entries: {
-      type: 'array',
-      minItems: 1,
-      maxItems: 256,
-      items: {
+/** @type {typeof import('./workspace-contracts.d.mts').DESIGN_REVIEW_BUNDLE_SCHEMA} */
+export const DESIGN_REVIEW_BUNDLE_SCHEMA = {
+  ...schema(
+    'design-review-bundle',
+    {
+      kind: { const: 'openplanr-design-review-bundle' },
+      schemaVersion: { const: DESIGN_WORKSPACE_VERSION },
+      design: {
         type: 'object',
         additionalProperties: false,
-        required: ['artifactId', 'screenId', 'variantId', 'frameId'],
-        properties: Object.fromEntries(
-          ['artifactId', 'screenId', 'variantId', 'frameId'].map((key) => [
-            key,
-            { type: 'string', minLength: 1, maxLength: 128 },
-          ]),
-        ),
+        properties: designProperties,
+        required: [
+          'id',
+          'title',
+          'frames',
+          'screens',
+          'screenOrder',
+          'variants',
+          'selectedVariant',
+          'defaultView',
+        ],
       },
-    },
-    state: {
-      type: ['object', 'null'],
-      additionalProperties: false,
-      properties: {
-        positions: {
+      envelope: { type: 'object', required: ['schemaVersion', 'artifacts', 'viewer'] },
+      entries: {
+        type: 'array',
+        minItems: 1,
+        maxItems: 256,
+        items: {
           type: 'object',
-          additionalProperties: {
+          additionalProperties: false,
+          required: ['artifactId', 'screenId', 'variantId', 'frameId'],
+          properties: Object.fromEntries(
+            ['artifactId', 'screenId', 'variantId', 'frameId'].map((key) => [
+              key,
+              { type: 'string', minLength: 1, maxLength: 128 },
+            ]),
+          ),
+        },
+      },
+      state: {
+        type: ['object', 'null'],
+        additionalProperties: false,
+        properties: {
+          positions: {
             type: 'object',
-            additionalProperties: false,
-            required: ['x', 'y'],
-            properties: {
-              x: { type: 'number', minimum: -1e7, maximum: 1e7 },
-              y: { type: 'number', minimum: -1e7, maximum: 1e7 },
+            additionalProperties: {
+              type: 'object',
+              additionalProperties: false,
+              required: ['x', 'y'],
+              properties: {
+                x: { type: 'number', minimum: -1e7, maximum: 1e7 },
+                y: { type: 'number', minimum: -1e7, maximum: 1e7 },
+              },
             },
           },
         },
       },
+      revision: { type: 'string', minLength: 1, maxLength: 128 },
+      verification: {
+        type: ['object', 'null'],
+        additionalProperties: false,
+        properties: { status: { enum: ['verified', 'unverified', 'failed', 'pending'] } },
+      },
     },
-    revision: { type: 'string', minLength: 1, maxLength: 128 },
-    verification: {
-      type: ['object', 'null'],
-      additionalProperties: false,
-      properties: { status: { enum: ['verified', 'unverified', 'failed', 'pending'] } },
-    },
-  },
-  ['kind', 'schemaVersion', 'design', 'envelope', 'entries', 'revision'],
-);
-DESIGN_REVIEW_BUNDLE_SCHEMA.$defs = structuredClone(DESIGN_DOCUMENT_SCHEMA.$defs);
+    ['kind', 'schemaVersion', 'design', 'envelope', 'entries', 'revision'],
+  ),
+  $defs: structuredClone(DESIGN_DOCUMENT_SCHEMA.$defs),
+};
 
+/** @returns {ReturnType<typeof import('./workspace-contracts.d.mts').assertWorkspaceContract>} */
 export function assertWorkspaceContract(value, contract) {
   const errors = validateJson(value, contract);
   if (errors.length)
@@ -170,6 +187,7 @@ export function assertWorkspaceContract(value, contract) {
   return value;
 }
 
+/** @type {typeof import('./workspace-contracts.d.mts').DESIGN_WORKSPACE_SCHEMAS} */
 export const DESIGN_WORKSPACE_SCHEMAS = Object.freeze({
   'design-review-workspace': DESIGN_WORKSPACE_SCHEMA,
   'design-workspace-create': DESIGN_WORKSPACE_CREATE_SCHEMA,

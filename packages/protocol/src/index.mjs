@@ -1,3 +1,4 @@
+// @ts-check
 export {
   PROTOCOL_V15_CONTRACTS,
   PROTOCOL_V16_CONTRACTS,

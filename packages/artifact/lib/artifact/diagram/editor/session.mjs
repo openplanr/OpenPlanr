@@ -1,3 +1,4 @@
+// @ts-check
 import {
   compileDiagramCommand,
   createConditionalInverse,
@@ -9,7 +10,36 @@ import {
 import { clone, inspectPlainData, same, snapshot } from '../authoring/model.mjs';
 import { createDiagramGeometryIndex } from './geometry-index.mjs';
 
+/** @typedef {import('./index.d.mts').DiagramEditorSession} Session */
+/** @typedef {import('./index.d.mts').DiagramEditorTransport} Transport */
+/** @typedef {import('./index.d.mts').DiagramEditorBatchTransport} BatchTransport */
+/** @typedef {import('@openplanr/protocol/diagram-authoring-contracts').DiagramAuthoringBundle} DiagramAuthoringBundle */
+/** @typedef {import('@openplanr/protocol/diagram-authoring-contracts').DiagramEditTransaction} DiagramEditTransaction */
+/** @typedef {import('@openplanr/protocol/diagram-authoring-contracts').DiagramAuthoringValidationError} DiagramAuthoringValidationError */
+/**
+ * The draft persist() stores; restore() verifies every field before trusting it.
+ * @typedef {{
+ *   base: DiagramAuthoringBundle;
+ *   initialization: string | null;
+ *   transactions: DiagramEditTransaction[];
+ *   uncertain?: { count: number; batchId: string };
+ * }} RecoveryRecord
+ */
+
+/** @type {(rule: string, detail: string) => import('./index.d.mts').DiagramEditorFailure} */
 const fail = (rule, detail) => ({ ok: false, diagnostics: [{ path: '$session', rule, detail }] });
+/**
+ * @param {Transport | BatchTransport} transport
+ * @returns {transport is BatchTransport}
+ */
+const batching = (transport) =>
+  'saveBatch' in transport && typeof transport.saveBatch === 'function';
+/** @param {ReturnType<typeof diffDiagramBundles>} diff */
+const affectedIds = (diff) => {
+  if (!diff.ok)
+    throw new TypeError(diff.diagnostics[0]?.detail ?? 'The diagram comparison failed.');
+  return diff.impact.affectedIds;
+};
 const defaultId = () => `edit-${globalThis.crypto.randomUUID()}`;
 const validId = (value) =>
   typeof value === 'string' &&
@@ -27,7 +57,10 @@ const validBundle = (value) => {
 const batchIdFor = (initialization, transactions) =>
   `batch-${transactions.length}-${transactions.at(-1)?.transactionId ?? initialization}`;
 
-/** Framework-neutral content session. View state never enters a saved bundle. */
+/**
+ * Framework-neutral content session. View state never enters a saved bundle.
+ * @type {typeof import('./index.d.mts').createDiagramEditorSession}
+ */
 export function createDiagramEditorSession({
   bundle,
   acknowledged = false,
@@ -49,6 +82,7 @@ export function createDiagramEditorSession({
   let gesture = null;
   let comparison = null;
   let diagnostics = [];
+  /** @type {import('./index.d.mts').DiagramEditorSaveState} */
   let saveState = acknowledged ? 'saved' : 'unsaved';
   let capability = { read: capabilities.read === true, write: capabilities.write === true };
   let disposed = false;
@@ -159,6 +193,7 @@ export function createDiagramEditorSession({
     if (gesture) return fail('gesture-active', 'Finish or cancel the gesture before another edit.');
     return accept(previewDiagramTransaction(current, transaction));
   }
+  /** @type {Session['adoptInitialCopy']} */
   function adoptInitialCopy(bundle) {
     const blocked = guard();
     if (blocked) return blocked;
@@ -205,6 +240,7 @@ export function createDiagramEditorSession({
     emit('refresh', affectedIds);
     return { ok: true, bundle: clone(current) };
   }
+  /** @type {Session['cancelGesture']} */
   function cancelGesture(reason = 'cancel') {
     if (!gesture) return { ok: true, cancelled: false };
     const affected = gesture.preview?.impact.affectedIds ?? [];
@@ -213,6 +249,7 @@ export function createDiagramEditorSession({
     emit('gesture-cancel', affected);
     return { ok: true, cancelled: true, reason };
   }
+  /** @type {Session['beginGesture']} */
   function beginGesture({ transactionId = nextTransactionId() } = {}) {
     const blocked = guard();
     if (blocked) return blocked;
@@ -288,6 +325,7 @@ export function createDiagramEditorSession({
     }
     return result;
   }
+  /** @type {Session['refresh']} */
   function refresh(authoritative) {
     const blocked = disposed || !capability.read;
     if (blocked) return fail('access-changed', 'This session cannot read a revision.');
@@ -312,8 +350,8 @@ export function createDiagramEditorSession({
         comparison: diffDiagramBundles(authoritative, current),
       };
     }
-    const diff = diffDiagramBundles(current, authoritative);
-    updateGeometry(authoritative, diff.impact.affectedIds);
+    const touched = affectedIds(diffDiagramBundles(current, authoritative));
+    updateGeometry(authoritative, touched);
     current = clone(authoritative);
     base = clone(authoritative);
     saved = clone(authoritative);
@@ -321,7 +359,7 @@ export function createDiagramEditorSession({
     comparison = null;
     diagnostics = [];
     pruneView();
-    emit('refresh', diff.impact.affectedIds);
+    emit('refresh', touched);
     return { ok: true, changed: true };
   }
   function acknowledge(result, expected, transactionId) {
@@ -390,7 +428,8 @@ export function createDiagramEditorSession({
     if (comparison && idOf(comparison) === idOf(expected)) comparison = null;
     return true;
   }
-  async function performBatches(live, count) {
+  /** @param {BatchTransport} owner */
+  async function performBatches(owner, live, count) {
     const sizes =
       uncertain && uncertain.count <= count ? [uncertain.count, count - uncertain.count] : [count];
     for (const size of sizes) {
@@ -411,7 +450,7 @@ export function createDiagramEditorSession({
       };
       uncertain = { count: items.length, batchId: batch.batchId };
       persist();
-      const result = await transport.saveBatch(clone(batch));
+      const result = await owner.saveBatch(clone(batch));
       if (!live())
         return fail(
           'disposed',
@@ -435,17 +474,18 @@ export function createDiagramEditorSession({
     }
     return null;
   }
-  async function performSave(runEpoch, count) {
+  /** @param {Transport | BatchTransport} owner */
+  async function performSave(owner, runEpoch, count) {
     const live = () => !disposed && epoch === runEpoch && capability.read && capability.write;
     if (!live()) return fail('disposed', 'This session is closed.');
     try {
-      if (typeof transport.saveBatch === 'function') {
-        const failure = await performBatches(live, count);
+      if (batching(owner)) {
+        const failure = await performBatches(owner, live, count);
         if (failure) return failure;
       } else if (initialization) {
         const requestId = initialization;
         const expected = clone(base);
-        const result = await transport.initialize(clone(expected), { transactionId: requestId });
+        const result = await owner.initialize(clone(expected), { transactionId: requestId });
         if (!live())
           return fail(
             'disposed',
@@ -456,11 +496,11 @@ export function createDiagramEditorSession({
         persist();
         emit('acknowledged');
       }
-      if (typeof transport.saveBatch !== 'function')
+      if (!batching(owner))
         for (let index = 0; index < count; index++) {
           const item = pending[0];
           if (!item) break;
-          const result = await transport.commit(clone(item.transaction));
+          const result = await owner.commit(clone(item.transaction));
           if (!live())
             return fail(
               'disposed',
@@ -484,10 +524,14 @@ export function createDiagramEditorSession({
       return { ok: true, status: saveState, bundle: clone(saved) };
     } catch (error) {
       if (!live()) return fail('disposed', 'This session is closed.');
+      const thrown =
+        /** @type {{ httpStatus?: number; details?: { diagnostics?: DiagramAuthoringValidationError[] } } | null | undefined} */ (
+          error
+        );
       return await failureState({
         ok: false,
-        httpStatus: error?.httpStatus,
-        diagnostics: error?.details?.diagnostics ?? [
+        httpStatus: thrown?.httpStatus,
+        diagnostics: thrown?.details?.diagnostics ?? [
           {
             path: '$save',
             rule: 'save-unavailable',
@@ -520,7 +564,7 @@ export function createDiagramEditorSession({
     const count = pending.length;
     // Install the latch before notifying subscribers; they may call save again.
     const settled = Promise.resolve()
-      .then(() => performSave(runEpoch, count))
+      .then(() => performSave(transport, runEpoch, count))
       .finally(() => {
         if (saving === settled) saving = null;
       });
@@ -528,6 +572,7 @@ export function createDiagramEditorSession({
     emit('save');
     return settled;
   }
+  /** @type {Session['setView']} */
   function setView(patch) {
     if (disposed || !capability.read)
       return fail('access-changed', 'This session cannot update view state.');
@@ -564,7 +609,7 @@ export function createDiagramEditorSession({
   }
   function restore() {
     if (!recovery || !capability.read) return;
-    const record = recovery.load();
+    const record = /** @type {RecoveryRecord | null} */ (recovery.load());
     if (!record) return;
     try {
       if (
@@ -614,8 +659,7 @@ export function createDiagramEditorSession({
       undo = entries.map((item) => clone(item.inverse)).slice(-MAX_HISTORY);
       usedIds.clear();
       ids.forEach((id) => usedIds.add(id));
-      const diff = diffDiagramBundles(current, draft);
-      updateGeometry(draft, diff.impact.affectedIds);
+      updateGeometry(draft, affectedIds(diffDiagramBundles(current, draft)));
       current = draft;
       if (authoritative && idOf(authoritative) !== idOf(base)) {
         comparison = authoritative;
@@ -721,8 +765,8 @@ export function createDiagramEditorSession({
       if (!comparison) return fail('no-conflict', 'There is no authoritative comparison to adopt.');
       cancelGesture('use-authoritative');
       const target = clone(comparison);
-      const diff = diffDiagramBundles(current, target);
-      updateGeometry(target, diff.impact.affectedIds);
+      const touched = affectedIds(diffDiagramBundles(current, target));
+      updateGeometry(target, touched);
       current = target;
       base = clone(target);
       saved = clone(target);
@@ -736,7 +780,7 @@ export function createDiagramEditorSession({
       saveState = 'saved';
       pruneView();
       persist();
-      emit('refresh', diff.impact.affectedIds);
+      emit('refresh', touched);
       return { ok: true };
     },
     dispose() {
@@ -750,7 +794,10 @@ export function createDiagramEditorSession({
   };
 }
 
-/** Owner transport is injected; creation and editing never need a company account. */
+/**
+ * Owner transport is injected; creation and editing never need a company account.
+ * @type {typeof import('./index.d.mts').openDiagramEditorSession}
+ */
 export async function openDiagramEditorSession({ transport, create, ...options }) {
   const result = await transport.read();
   if (result?.ok && result.status === 'ready')

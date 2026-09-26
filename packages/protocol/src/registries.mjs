@@ -1,7 +1,9 @@
+// @ts-check
 import { verifyDocumentDigest } from './canonical-json.mjs';
 import { PROTOCOL_ERROR_CODES, ProtocolError } from './errors.mjs';
 import { CANONICAL_REGISTRIES } from './generated/canonical-registries.mjs';
 
+/** @returns {never} */
 const fail = (code, message, details) => {
   throw new ProtocolError(code, message, '', details);
 };
@@ -132,6 +134,7 @@ const EXPECTED_SKILLS = Object.freeze([
   'planr-sync',
 ]);
 
+/** @returns {ReturnType<typeof import('./registries.d.mts').validateCanonicalRegistries>} */
 export function validateCanonicalRegistries(registries = CANONICAL_REGISTRIES) {
   const roles = registries['roles.json'];
   const taskKinds = registries['task-kinds.json'];
@@ -429,29 +432,36 @@ const taskKindIndex = new Map(
 
 export { CANONICAL_REGISTRIES };
 
+/** @type {typeof import('./registries.d.mts').getCanonicalRegistry} */
 export function getCanonicalRegistry(name) {
   const value = CANONICAL_REGISTRIES[name];
   if (!value) fail(PROTOCOL_ERROR_CODES.ASSET_NOT_FOUND, `Unknown canonical registry: ${name}`);
   return value;
 }
 
+/** @type {typeof import('./registries.d.mts').getRole} */
 export function getRole(roleId) {
   const role = roleIndex.get(roleId);
   if (!role) fail(PROTOCOL_ERROR_CODES.REFERENCE_INVALID, `Unknown canonical role: ${roleId}`);
   return role;
 }
 
+/** @type {typeof import('./registries.d.mts').resolveLegacyRoleAlias} */
 export function resolveLegacyRoleAlias(alias) {
   return aliasIndex.get(alias) ?? null;
 }
 
+/** @type {typeof import('./registries.d.mts').resolveTaskKind} */
 export function resolveTaskKind(taskKind) {
   const binding = taskKindIndex.get(taskKind);
   if (!binding) fail(PROTOCOL_ERROR_CODES.REFERENCE_INVALID, `Unknown task kind: ${taskKind}`);
   return binding;
 }
 
-/** Resolve one output definition from the canonical catalog or a compatible supplied catalog. */
+/**
+ * Resolve one output definition from the canonical catalog or a compatible supplied catalog.
+ * @returns {ReturnType<typeof import('./registries.d.mts').getOutput>}
+ */
 export function getOutput(outputId, registries = CANONICAL_REGISTRIES) {
   const output = registries['outputs.json']?.outputs?.find(
     (candidate) => candidate.outputId === outputId,
@@ -460,7 +470,10 @@ export function getOutput(outputId, registries = CANONICAL_REGISTRIES) {
   return output;
 }
 
-/** Select the canonical template for one project mode while preserving legacy catalog fallback. */
+/**
+ * Select the canonical template for one project mode while preserving legacy catalog fallback.
+ * @returns {ReturnType<typeof import('./registries.d.mts').getOutputPathTemplate>}
+ */
 export function getOutputPathTemplate(
   outputId,
   projectMode = 'default',
@@ -481,7 +494,10 @@ const SAFE_RELATIVE_PATH =
   /^(?!\/)(?![A-Za-z]:)(?!.*\\)(?!.*(?:^|\/)\.{1,2}(?:\/|$))(?!.*\/\/).+$/u;
 const MAX_RELATIVE_PATH_LENGTH = 1024;
 
-/** Resolve one catalog path with explicit mode and named template arguments. */
+/**
+ * Resolve one catalog path with explicit mode and named template arguments.
+ * @returns {ReturnType<typeof import('./registries.d.mts').resolveOutputPath>}
+ */
 export function resolveOutputPath(outputId, options = {}, registries = CANONICAL_REGISTRIES) {
   const { projectMode = 'default', pathArguments = {} } = options;
   const template = getOutputPathTemplate(outputId, projectMode, registries);
@@ -510,7 +526,10 @@ export function resolveOutputPath(outputId, options = {}, registries = CANONICAL
   return resolved;
 }
 
-/** Route only explicit legacy fields; prose, filenames, hosts, and models are never evidence. */
+/**
+ * Route only explicit legacy fields; prose, filenames, hosts, and models are never evidence.
+ * @type {typeof import('./registries.d.mts').routeLegacyTask}
+ */
 export function routeLegacyTask({ legacyType, legacyAgent = null }) {
   const mappings = CANONICAL_REGISTRIES['task-kinds.json'].legacyMappings;
   const exact = mappings.find(

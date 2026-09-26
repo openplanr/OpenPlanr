@@ -1,3 +1,4 @@
+// @ts-check
 import { DESIGN_HANDOFF_CONTRACT_FILES } from './design-handoff-contracts.mjs';
 import { DIAGRAM_AUTHORING_CONTRACT_FILES } from './diagram-authoring-contracts.mjs';
 import {
@@ -6,6 +7,7 @@ import {
   PROTOCOL_V18_CONTRACT_FILES,
 } from './skill-source-contracts.mjs';
 
+/** @type {typeof import('./browser-contracts.d.mts').PROTOCOL_V15_CONTRACTS} */
 export const PROTOCOL_V15_CONTRACTS = Object.freeze({
   'command-catalog': 'command-catalog.schema.json',
   'generated-asset-manifest': 'generated-asset-manifest.schema.json',
@@ -21,14 +23,19 @@ export const PROTOCOL_V15_CONTRACTS = Object.freeze({
   'task-output-manifest': 'task-output-manifest.schema.json',
 });
 
+/** @type {typeof import('./browser-contracts.d.mts').PROTOCOL_V16_CONTRACTS} */
 export const PROTOCOL_V16_CONTRACTS = PROTOCOL_V16_CONTRACT_FILES;
+/** @type {typeof import('./browser-contracts.d.mts').PROTOCOL_V17_CONTRACTS} */
 export const PROTOCOL_V17_CONTRACTS = PROTOCOL_V17_CONTRACT_FILES;
+/** @type {typeof import('./browser-contracts.d.mts').PROTOCOL_V18_CONTRACTS} */
 export const PROTOCOL_V18_CONTRACTS = PROTOCOL_V18_CONTRACT_FILES;
+/** @type {typeof import('./browser-contracts.d.mts').PROTOCOL_V111_CONTRACTS} */
 export const PROTOCOL_V111_CONTRACTS = Object.freeze({
   'design-review-metadata-payload': 'design-review-metadata-payload.schema.json',
   ...DESIGN_HANDOFF_CONTRACT_FILES,
 });
 
+/** @type {typeof import('./browser-contracts.d.mts').PROTOCOL_V113_CONTRACTS} */
 export const PROTOCOL_V113_CONTRACTS = DIAGRAM_AUTHORING_CONTRACT_FILES;
 
 const PROTOCOL_CONTRACTS_BY_VERSION = Object.freeze({
@@ -40,7 +47,10 @@ const PROTOCOL_CONTRACTS_BY_VERSION = Object.freeze({
   '1.13.0': PROTOCOL_V113_CONTRACTS,
 });
 
-/** Resolve a packaged schema asset without a source checkout or Node-only API. */
+/**
+ * Resolve a packaged schema asset without a source checkout or Node-only API.
+ * @type {typeof import('./browser-contracts.d.mts').protocolAssetUrl}
+ */
 export function protocolAssetUrl(kind, { protocolVersion = '1.5.0' } = {}) {
   const contracts = Object.hasOwn(PROTOCOL_CONTRACTS_BY_VERSION, protocolVersion)
     ? PROTOCOL_CONTRACTS_BY_VERSION[protocolVersion]

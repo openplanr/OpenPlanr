@@ -1,4 +1,8 @@
-/** Same-origin loopback adapter. A URL is a capability: never persist it in recovery. */
+// @ts-check
+/**
+ * Same-origin loopback adapter. A URL is a capability: never persist it in recovery.
+ * @type {typeof import('./index.d.mts').createDiagramLocalOwnerTransport}
+ */
 export function createDiagramLocalOwnerTransport({
   apiBase,
   fetch: request = globalThis.fetch,
