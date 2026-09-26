@@ -27,12 +27,6 @@ import { ARTIFACT_ERROR_CODES } from '../../lib/pipeline/errors.mjs';
 const runBrowser =
   process.env.PLANR_BROWSER_TESTS === '1' ||
   process.env.npm_lifecycle_event === 'test:artifact:browser';
-const browserEngine = process.env.PLANR_BROWSER_ENGINE || 'chromium';
-if (!['chromium', 'firefox', 'webkit'].includes(browserEngine)) {
-  throw new Error(
-    `PLANR_BROWSER_ENGINE must be chromium, firefox, or webkit; received ${browserEngine}.`,
-  );
-}
 if (process.env.PLANR_REQUIRE_BROWSER === '1' && !runBrowser) {
   throw new Error('PLANR_REQUIRE_BROWSER requires the hostile artifact browser test to run.');
 }
@@ -422,16 +416,17 @@ test('real browser keeps dynamic artifacts useful while hostile capabilities fai
   skip: !runBrowser,
   timeout: 90_000,
 }, async (t) => {
-  const playwright = await import('playwright');
-  const browserType = playwright[browserEngine];
+  const { launchBrowser } = await import('../../../../tests/support/browser-launcher.mjs');
   const probe = await startProbe();
-  const browser = await browserType.launch({
-    headless: true,
-    ...(browserEngine === 'chromium' && process.env.PLANR_BROWSER_CHANNEL
-      ? { channel: process.env.PLANR_BROWSER_CHANNEL }
-      : {}),
+  let browser, context, review;
+  t.after(async () => {
+    await review?.close().catch(() => {});
+    await context?.close();
+    await browser?.close();
+    await probe.close();
   });
-  const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  browser = await launchBrowser();
+  context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
   const envelope = createArtifactEnvelope({
     artifacts: [
       {
@@ -451,16 +446,10 @@ test('real browser keeps dynamic artifacts useful while hostile capabilities fai
     ],
     viewer: { mode: 'variants', activeArtifactId: 'main' },
   });
-  const review = await startArtifactReview({
+  review = await startArtifactReview({
     envelope,
     env: isolatedEnv(),
     noOpen: true,
-  });
-  t.after(async () => {
-    await review.close().catch(() => {});
-    await context.close();
-    await browser.close();
-    await probe.close();
   });
 
   const page = await context.newPage();

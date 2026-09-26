@@ -45,8 +45,11 @@ test('hostile sandbox certification covers Chromium Firefox and WebKit', () => {
   );
 
   const hostile = read('tests/artifact/sandbox-hostile.test.mjs');
-  assert.match(hostile, /\['chromium', 'firefox', 'webkit'\]\.includes\(browserEngine\)/);
-  assert.match(hostile, /playwright\[browserEngine\]/);
+  assert.match(hostile, /tests\/support\/browser-launcher\.mjs/);
+  assert.match(hostile, /await launchBrowser\(\)/);
+  const launcher = readWorkspace('tests/support/browser-launcher.mjs');
+  assert.match(launcher, /BROWSER_ENGINES = Object\.freeze\(\['chromium', 'firefox', 'webkit'\]\)/);
+  assert.match(launcher, /playwright\[engine\]\.launch\(/);
 });
 
 test('release stack metadata remains valid in spec-driven conformance', () => {
