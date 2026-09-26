@@ -121,6 +121,26 @@ same commands as the Workspace CI jobs, in order, on your Node version (`--only`
 the suites `verify` does not run: workspace lint, the full CLI test tree, the heavy and
 Operate suites, and the package tests of every workspace.
 
+### Browser tests
+
+Every browser test, the dashboard's Playwright configuration and the packed proofs launch
+through `tests/support/browser-launcher.mjs`. It uses Playwright's bundled browser for the
+selected engine (never the system Chrome) and starts Chromium with `--no-proxy-server`, so
+loopback fixtures never wait on the operating system's proxy discovery. These variables
+control it:
+
+| Variable | Effect |
+| --- | --- |
+| `PLANR_BROWSER_TESTS=1` | Runs the opt-in Artifact and pipeline browser tests, which are skipped otherwise. The Design package's browser tests always run. |
+| `PLANR_REQUIRE_BROWSER=1` | Makes the pipeline artifact browser tests fail instead of skip when `PLANR_BROWSER_TESTS` is unset; the browser certification workflow sets it. |
+| `PLANR_BROWSER_ENGINE` | `chromium` (default), `firefox` or `webkit`. |
+| `PLANR_BROWSER_EXECUTABLE` | Path to a browser binary (or wrapper script) to launch instead of Playwright's bundled browser for that engine. |
+| `PLANR_BROWSER_CHANNEL` | A Chromium release channel such as `chrome`; ignored when an executable is set. |
+| `OPENPLANR_PROOF_CHROMIUM_EXECUTABLE` | Chromium binary for the packed proofs and the diagram portability tests when `PLANR_BROWSER_EXECUTABLE` is unset. `npm run verify:packed` keeps a value you export and otherwise pins Playwright's bundled Chromium, because its isolated home cannot see Playwright's browser cache. |
+
+Without a bundled browser (`./node_modules/.bin/playwright install chromium`) a launch fails
+at once with the install command, rather than hanging.
+
 ## Review and release
 
 Maintainers review changes for correctness, compatibility, usability, and clear
