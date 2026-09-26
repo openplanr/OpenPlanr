@@ -1,4 +1,4 @@
-/** Explicit Planning graph surface owned by the dashboard server. */
+/** Explicit Planning graph and live-envelope surface owned by the dashboard server. */
 export {
   assertPlanningGraph,
   assertPlanningNode,
@@ -6,3 +6,27 @@ export {
   detectMode,
   getNode as engineGetNode,
 } from '../graph-engine.mjs';
+export {
+  assertDashboardLiveEventEnvelope,
+  assertPlanningDetailEnvelope,
+  assertPlanningGraphEnvelope,
+  assertPlanningLiveEventEnvelope,
+  assertPlanningPatch,
+  assertPlanningPatchSignal,
+  createDashboardLiveEventEnvelope,
+  decodePlanningCheckpoint,
+  encodePlanningCheckpoint,
+  exactKeys,
+  LIVE_HASH,
+  LIVE_ID,
+  liveGeneration,
+  PLANNING_BINDING_QUERY_KEYS,
+  PLANNING_DOMAIN_ID,
+  PLANNING_DOMAIN_VERSION,
+  PLANNING_SCHEMA_VERSION,
+  PLANNING_SCOPE_ID,
+  sameLiveCursor,
+  validLiveBinding,
+  validLiveHead,
+  validPlanningSubject,
+} from '../planning-envelopes.mjs';

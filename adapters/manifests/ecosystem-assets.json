@@ -42,7 +42,7 @@
     },
     {
       "path": "packages/pipeline/package.json",
-      "digest": "sha256:d0bcab12fdaa85e2079b9adff6197d21f0e0e8eb25c737427d2bd034cbda27be"
+      "digest": "sha256:9763e5252e03a3dc63b6a606ea61fe0af8103e70071bebdca417adcf7556248c"
     },
     {
       "path": "packages/protocol/package.json",
@@ -102,7 +102,7 @@
     },
     {
       "path": "scripts/marketplace/generate-ecosystem.mjs",
-      "digest": "sha256:5bc66d8da70874978b7817cd7a13b86b11674a18a318480846a39dacb0d9a361"
+      "digest": "sha256:a72735da4746a9a7f12415d56c2d6d42c6c08aa4e7fe86ce054996c5e8b0ac90"
     },
     {
       "path": "scripts/marketplace/openplanr-ecosystem.schema.json",
@@ -128,7 +128,7 @@
     },
     {
       "path": "docs/generated/ecosystem.md",
-      "digest": "sha256:6095989f7bf5f15e1cc86c83cb5436d8f2d08af2aee6a7d16e8857cbeb646004"
+      "digest": "sha256:bf246d0d0afdfcc7dc404d5669039f27179607741f4189b7b056f64009598b42"
     },
     {
       "path": "docs/generated/skills.md",
@@ -136,7 +136,7 @@
     },
     {
       "path": "ecosystem.json",
-      "digest": "sha256:2ad389d8871c1fd4e95647e2beff8d2fe18e7826c372675fd8ae6c6233b7d774"
+      "digest": "sha256:44e68185dc188bc675347a10489c73710e4ac03891e43236ea30b198e5f9abab"
     },
     {
       "path": "packages/pipeline/.claude-plugin/plugin.json",

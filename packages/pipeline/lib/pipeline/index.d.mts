@@ -161,6 +161,7 @@ export * from './ship-risk.d.mts';
 export function completePlan(options?: Record<string, unknown>): unknown;
 export function nextShipBatch(tasks: unknown[]): unknown;
 export function runSyncAudit(options?: Record<string, unknown>): unknown;
+/** @deprecated Import `startDashboard` from `planr-pipeline/dashboard`; the root export loads the dashboard server eagerly. */
 export function startDashboard(options?: Record<string, unknown>): any;
 export function runDesignCommand(args?: string[]): Promise<any>;
 export function resolveRuntimeAdapter(options?: Record<string, unknown>): any;

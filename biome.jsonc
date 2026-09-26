@@ -227,7 +227,7 @@
     },
     {
       // A local named `escape` shadows the global; BL-110 renames it and removes this entry.
-      "includes": ["packages/pipeline/lib/dashboard/server.mjs"],
+      "includes": ["packages/pipeline/lib/dashboard/server/command-contracts.mjs"],
       "linter": {
         "rules": {
           "suspicious": {
