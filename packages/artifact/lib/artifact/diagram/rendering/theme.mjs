@@ -38,6 +38,7 @@ export const DIAGRAM_DEFAULT_METRICS = Object.freeze({
   }),
   title: Object.freeze({ size: 16, weight: 600, lineHeight: 22, glyph: 9 }),
   subtitle: Object.freeze({ size: 16, weight: 600, lineHeight: 22, glyph: 9 }),
+  // A full em per relation-label glyph also covers full-width scripts.
   label: Object.freeze({ size: 14, lineHeight: 18, glyph: 14, baseline: 18 }),
   message: Object.freeze({
     size: 14,

@@ -132,7 +132,7 @@
     },
     {
       "path": "ecosystem.json",
-      "digest": "sha256:ce521a1d94e6b3aa37aac1b71b6fe83ef98f6defa06b44e09ebd37801fc73090"
+      "digest": "sha256:4a510bd3d344ce51c24addd0619f5b3b21655a72afb9faa828a704080a906083"
     },
     {
       "path": "packages/pipeline/.claude-plugin/plugin.json",
