@@ -45,16 +45,30 @@ export function buildPlanningSchemas() {
     'x-openplanr-contract': { id: 'spec', version: '1.7.0' },
     ...closed(
       [
-        'id', 'title', 'slug', 'schemaVersion', 'status', 'priority', 'created',
-        'updated', 'ui_files', 'tech_dependencies',
+        'id',
+        'title',
+        'slug',
+        'schemaVersion',
+        'status',
+        'priority',
+        'created',
+        'updated',
+        'ui_files',
+        'tech_dependencies',
       ],
       {
         ...commonArtifact,
         id: { type: 'string', pattern: '^(?:SPEC|FEAT)-\\d{3,}$' },
         status: {
           enum: [
-            'pending', 'shaping', 'shaped', 'decomposing', 'decomposed',
-            'ready-for-pipeline', 'in-pipeline', 'done',
+            'pending',
+            'shaping',
+            'shaped',
+            'decomposing',
+            'decomposed',
+            'ready-for-pipeline',
+            'in-pipeline',
+            'done',
           ],
         },
         priority: { enum: ['P0', 'P1', 'P2', 'P3'] },
@@ -69,8 +83,11 @@ export function buildPlanningSchemas() {
           uniqueItems: true,
           items: {
             enum: [
-              'security-reviewer', 'performance-reviewer', 'migration-reviewer',
-              'api-contract-reviewer', 'data-integrity-reviewer',
+              'security-reviewer',
+              'performance-reviewer',
+              'migration-reviewer',
+              'api-contract-reviewer',
+              'data-integrity-reviewer',
             ],
           },
         },
@@ -85,7 +102,16 @@ export function buildPlanningSchemas() {
     $id: `${BASE}story.schema.json`,
     'x-openplanr-contract': { id: 'story', version: '1.7.0' },
     ...closed(
-      ['id', 'title', 'slug', 'schemaVersion', 'status', 'created', 'updated', 'acceptanceCriteria'],
+      [
+        'id',
+        'title',
+        'slug',
+        'schemaVersion',
+        'status',
+        'created',
+        'updated',
+        'acceptanceCriteria',
+      ],
       {
         ...commonArtifact,
         id: id('US'),
@@ -112,9 +138,21 @@ export function buildPlanningSchemas() {
     'x-openplanr-contract': { id: 'task', version: '1.7.0' },
     ...closed(
       [
-        'id', 'title', 'storyId', 'slug', 'schemaVersion', 'type', 'agent',
-        'status', 'created', 'updated', 'dependsOn', 'preserve', 'reviewRisks',
-        'browserSurfaces', 'acceptanceRefs',
+        'id',
+        'title',
+        'storyId',
+        'slug',
+        'schemaVersion',
+        'type',
+        'agent',
+        'status',
+        'created',
+        'updated',
+        'dependsOn',
+        'preserve',
+        'reviewRisks',
+        'browserSurfaces',
+        'acceptanceRefs',
       ],
       {
         ...commonArtifact,
@@ -127,8 +165,12 @@ export function buildPlanningSchemas() {
         rationale: { type: 'string', minLength: 1 },
         dependsOn: strings(id('T')),
         preserve: strings(preserveEntry),
-        reviewRisks: strings({ enum: ['security', 'performance', 'migration', 'api-contract', 'data-integrity'] }),
-        browserSurfaces: strings({ enum: ['ui', 'authentication', 'session', 'navigation', 'network'] }),
+        reviewRisks: strings({
+          enum: ['security', 'performance', 'migration', 'api-contract', 'data-integrity'],
+        }),
+        browserSurfaces: strings({
+          enum: ['ui', 'authentication', 'session', 'navigation', 'network'],
+        }),
         acceptanceRefs: { type: 'array', items: id('AC'), uniqueItems: true },
       },
       {
@@ -141,8 +183,17 @@ export function buildPlanningSchemas() {
           },
           {
             oneOf: [
-              { properties: { type: { const: 'UI' }, agent: { const: 'frontend-agent' } }, required: ['type', 'agent'] },
-              { properties: { type: { const: 'Tech' }, agent: { enum: ['backend-agent', 'db-agent'] } }, required: ['type', 'agent'] },
+              {
+                properties: { type: { const: 'UI' }, agent: { const: 'frontend-agent' } },
+                required: ['type', 'agent'],
+              },
+              {
+                properties: {
+                  type: { const: 'Tech' },
+                  agent: { enum: ['backend-agent', 'db-agent'] },
+                },
+                required: ['type', 'agent'],
+              },
             ],
           },
         ],
@@ -171,13 +222,30 @@ export function buildPlanningSchemas() {
     $id: `${BASE}request-authority.schema.json`,
     'x-openplanr-contract': { id: 'request-authority', version: '1.7.0' },
     ...closed(
-      ['kind', 'schemaVersion', 'protocolVersion', 'repositoryAccess', 'capabilities', 'tools', 'forbiddenEffects'],
+      [
+        'kind',
+        'schemaVersion',
+        'protocolVersion',
+        'repositoryAccess',
+        'capabilities',
+        'tools',
+        'forbiddenEffects',
+      ],
       {
         kind: { const: 'request-authority' },
         schemaVersion: { const: '1.0.0' },
         protocolVersion: { const: '1.7.0' },
         repositoryAccess: { enum: ['request-scope', 'declared-paths', 'read-only', 'none'] },
-        capabilities: strings({ enum: ['context-gathering', 'local-execution', 'planning-write', 'read', 'read-only-view', 'write'] }),
+        capabilities: strings({
+          enum: [
+            'context-gathering',
+            'local-execution',
+            'planning-write',
+            'read',
+            'read-only-view',
+            'write',
+          ],
+        }),
         tools: strings({ enum: ['read', 'edit', 'shell'] }),
         forbiddenEffects: strings(),
       },

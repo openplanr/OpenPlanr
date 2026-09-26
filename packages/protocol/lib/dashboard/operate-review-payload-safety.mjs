@@ -1,5 +1,7 @@
-const PRIVATE_PATH = /(?:\bfile:\/\/|(?:^|[\s"'(=])\/(?:Users|home|private|tmp|var|Volumes|etc|opt|root|srv)\/|\b[A-Za-z]:\\(?:Users|Documents and Settings|Windows|ProgramData)\\)/u;
-const SECRET_BODY = /(?:-----BEGIN [A-Z ]*PRIVATE KEY-----|\b(?:api[_-]?key|access[_-]?token|refresh[_-]?token|password|passwd|authorization|client[_-]?secret)\s*[:=]\s*[^\s,;]+|\bBearer\s+[A-Za-z0-9._~+\/-]{12,})/iu;
+const PRIVATE_PATH =
+  /(?:\bfile:\/\/|(?:^|[\s"'(=])\/(?:Users|home|private|tmp|var|Volumes|etc|opt|root|srv)\/|\b[A-Za-z]:\\(?:Users|Documents and Settings|Windows|ProgramData)\\)/u;
+const SECRET_BODY =
+  /(?:-----BEGIN [A-Z ]*PRIVATE KEY-----|\b(?:api[_-]?key|access[_-]?token|refresh[_-]?token|password|passwd|authorization|client[_-]?secret)\s*[:=]\s*[^\s,;]+|\bBearer\s+[A-Za-z0-9._~+\/-]{12,})/iu;
 
 function unsafeReviewWorkspaceError(path, reason) {
   const error = new Error('Review workspace contains unsafe display text.');

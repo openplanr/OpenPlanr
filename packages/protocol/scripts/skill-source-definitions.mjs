@@ -21,21 +21,29 @@ const BASE = 'https://openplanr.dev/schemas/v1.6.0/';
 const PROTOCOL_VERSION = '1.6.0';
 
 const COMPILER_OPERATION_SLUGS = ['compile', 'render'];
-const OPERATION_AUTHORITY_SLUGS = [...new Set([
-  ...ROOT_COMMAND_SLUGS,
-  ...COMPILER_OPERATION_SLUGS,
-])].sort((left, right) => left.localeCompare(right));
+const OPERATION_AUTHORITY_SLUGS = [
+  ...new Set([...ROOT_COMMAND_SLUGS, ...COMPILER_OPERATION_SLUGS]),
+].sort((left, right) => left.localeCompare(right));
 
 const GUIDED_QUESTION_REF = 'https://openplanr.dev/schemas/v1.2.0/guided-question.schema.json';
-const GUIDED_CONFIRMATION_REF = 'https://openplanr.dev/schemas/v1.2.0/guided-confirmation.schema.json';
+const GUIDED_CONFIRMATION_REF =
+  'https://openplanr.dev/schemas/v1.2.0/guided-confirmation.schema.json';
 
 const ref = (name) => ({ $ref: `common.schema.json#/$defs/${name}` });
 const nullableRef = (name) => ({ anyOf: [ref(name), { type: 'null' }] });
 const array = (items, minItems = 0, maxItems = 4096, uniqueItems = false) => ({
-  type: 'array', items, minItems, maxItems, ...(uniqueItems ? { uniqueItems: true } : {}),
+  type: 'array',
+  items,
+  minItems,
+  maxItems,
+  ...(uniqueItems ? { uniqueItems: true } : {}),
 });
 const closed = (required, properties, extra = {}) => ({
-  type: 'object', additionalProperties: false, required, properties, ...extra,
+  type: 'object',
+  additionalProperties: false,
+  required,
+  properties,
+  ...extra,
 });
 
 const envelopeProperties = {
@@ -56,7 +64,12 @@ function documentSchema(name, kind, schemaVersion, required, properties, extra =
     'x-openplanr-contract': { id: name, version: PROTOCOL_VERSION },
     ...closed(
       [...envelopeRequired, ...required],
-      { ...envelopeProperties, kind: { const: kind }, schemaVersion: { const: schemaVersion }, ...properties },
+      {
+        ...envelopeProperties,
+        kind: { const: kind },
+        schemaVersion: { const: schemaVersion },
+        ...properties,
+      },
       extra,
     ),
   };
@@ -77,89 +90,121 @@ export function buildSkillSourceSchemas() {
       semver: { type: 'string', pattern: SEMVER_PATTERN },
       dateTime: { type: 'string', format: 'date-time' },
       nonBlankText: { type: 'string', minLength: 1, maxLength: 16384, pattern: '.*\\S.*' },
-      identifier: { type: 'string', pattern: '^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$', minLength: 1, maxLength: 128 },
+      identifier: {
+        type: 'string',
+        pattern: '^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$',
+        minLength: 1,
+        maxLength: 128,
+      },
       // Closed authority vocabularies. The ceiling components below reference these
       // instead of the free identifier grammar so an invented capability, tool, or
       // operation is rejected by shape rather than silently accepted.
-      capabilityAuthority: { enum: ['context-gathering', 'planning-write', 'read', 'read-only-view', 'write'] },
+      capabilityAuthority: {
+        enum: ['context-gathering', 'planning-write', 'read', 'read-only-view', 'write'],
+      },
       operationAuthority: { enum: OPERATION_AUTHORITY_SLUGS },
       // Abstract composed-v1 tool vocabulary plus the raw host tool-authority
       // syntax used by canonical SKILL.md frontmatter (Title-case base name with an
       // optional parenthesized scope, e.g. Bash(git log:*)).
       toolAuthority: {
-        type: 'string', minLength: 1, maxLength: 128,
+        type: 'string',
+        minLength: 1,
+        maxLength: 128,
         pattern: '^(?:read|edit|shell|Bash|Edit|Glob|Grep|Read|Write)(?:\\([^()]+\\))?$',
       },
       skillId: { type: 'string', pattern: '^planr-[a-z0-9]+(?:-[a-z0-9]+)*$', maxLength: 128 },
-      moduleId: { type: 'string', pattern: '^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$', minLength: 1, maxLength: 128 },
+      moduleId: {
+        type: 'string',
+        pattern: '^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$',
+        minLength: 1,
+        maxLength: 128,
+      },
       relativePath: {
-        type: 'string', minLength: 1, maxLength: 1024,
+        type: 'string',
+        minLength: 1,
+        maxLength: 1024,
         pattern: '^(?!/)(?![A-Za-z]:)(?!.*\\\\)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*//).+$',
       },
       host: { enum: ['claude-code', 'codex', 'cursor', 'pipeline'] },
       runtimeCapability: { enum: ['attached-terminal', 'native-questions', 'structured-chat'] },
       interactionSurface: { enum: ['native', 'chat', 'terminal', 'headless'] },
       protocolInteraction: { enum: ['native', 'chat', 'terminal', 'none'] },
-      interactionBinding: closed(['surface', 'protocolInteraction'], {
-        surface: { $ref: '#/$defs/interactionSurface' },
-        protocolInteraction: { $ref: '#/$defs/protocolInteraction' },
-        capabilityId: { $ref: '#/$defs/runtimeCapability' },
-      }, {
-        oneOf: [
-          {
-            title: 'Native composer surface',
-            required: ['capabilityId'],
-            properties: {
-              surface: { const: 'native' },
-              protocolInteraction: { const: 'native' },
-              capabilityId: { const: 'native-questions' },
+      interactionBinding: closed(
+        ['surface', 'protocolInteraction'],
+        {
+          surface: { $ref: '#/$defs/interactionSurface' },
+          protocolInteraction: { $ref: '#/$defs/protocolInteraction' },
+          capabilityId: { $ref: '#/$defs/runtimeCapability' },
+        },
+        {
+          oneOf: [
+            {
+              title: 'Native composer surface',
+              required: ['capabilityId'],
+              properties: {
+                surface: { const: 'native' },
+                protocolInteraction: { const: 'native' },
+                capabilityId: { const: 'native-questions' },
+              },
             },
-          },
-          {
-            title: 'Structured chat surface',
-            required: ['capabilityId'],
-            properties: {
-              surface: { const: 'chat' },
-              protocolInteraction: { const: 'chat' },
-              capabilityId: { const: 'structured-chat' },
+            {
+              title: 'Structured chat surface',
+              required: ['capabilityId'],
+              properties: {
+                surface: { const: 'chat' },
+                protocolInteraction: { const: 'chat' },
+                capabilityId: { const: 'structured-chat' },
+              },
             },
-          },
-          {
-            title: 'Attached terminal surface',
-            required: ['capabilityId'],
-            properties: {
-              surface: { const: 'terminal' },
-              protocolInteraction: { const: 'terminal' },
-              capabilityId: { const: 'attached-terminal' },
+            {
+              title: 'Attached terminal surface',
+              required: ['capabilityId'],
+              properties: {
+                surface: { const: 'terminal' },
+                protocolInteraction: { const: 'terminal' },
+                capabilityId: { const: 'attached-terminal' },
+              },
             },
-          },
-          {
-            title: 'Non-interactive headless fallback',
-            properties: {
-              surface: { const: 'headless' },
-              protocolInteraction: { const: 'none' },
+            {
+              title: 'Non-interactive headless fallback',
+              properties: {
+                surface: { const: 'headless' },
+                protocolInteraction: { const: 'none' },
+              },
+              not: { required: ['capabilityId'] },
             },
-            not: { required: ['capabilityId'] },
-          },
-        ],
-      }),
+          ],
+        },
+      ),
       sourceFormat: {
         // markdown-v1 is the frozen compatibility rendering of the current
         // whole-Markdown skills; composed-v1 is the new declarative graph.
         enum: ['markdown-v1', 'composed-v1'],
       },
       contractRef: closed(['id', 'version'], {
-        id: { $ref: '#/$defs/identifier' }, version: { $ref: '#/$defs/semver' },
+        id: { $ref: '#/$defs/identifier' },
+        version: { $ref: '#/$defs/semver' },
       }),
       sourceRef: closed(['path', 'digest'], {
-        path: { $ref: '#/$defs/relativePath' }, digest: { $ref: '#/$defs/digest' },
+        path: { $ref: '#/$defs/relativePath' },
+        digest: { $ref: '#/$defs/digest' },
       }),
       moduleRef: closed(['moduleId', 'moduleVersion', 'digest'], {
         // Pinned exact version; ranges and floating tags are rejected by shape.
-        moduleId: { $ref: '#/$defs/moduleId' }, moduleVersion: { $ref: '#/$defs/semver' }, digest: { $ref: '#/$defs/digest' },
+        moduleId: { $ref: '#/$defs/moduleId' },
+        moduleVersion: { $ref: '#/$defs/semver' },
+        digest: { $ref: '#/$defs/digest' },
       }),
       authorityCeiling: closed(
-        ['repositoryAccess', 'externalDataAccess', 'allowedCapabilities', 'allowedTools', 'allowedOperations', 'allowedOutputClasses', 'forbiddenEffects'],
+        [
+          'repositoryAccess',
+          'externalDataAccess',
+          'allowedCapabilities',
+          'allowedTools',
+          'allowedOperations',
+          'allowedOutputClasses',
+          'forbiddenEffects',
+        ],
         {
           // Component-wise monotone ceiling. A shared module or host overlay may
           // narrow each component but never widen it; T-002 enforces the graph
@@ -172,11 +217,26 @@ export function buildSkillSourceSchemas() {
             enum: ['read-only', 'none'],
             description: 'Narrowing order read-only -> none.',
           },
-          allowedCapabilities: { ...array({ $ref: '#/$defs/capabilityAuthority' }, 0, 128, true), description: 'Closed ceiling set; overlays may only remove members.' },
-          allowedTools: { ...array({ $ref: '#/$defs/toolAuthority' }, 0, 128, true), description: 'Closed ceiling set; overlays may only remove members.' },
-          allowedOperations: { ...array({ $ref: '#/$defs/operationAuthority' }, 0, 128, true), description: 'Closed ceiling set; overlays may only remove members.' },
-          allowedOutputClasses: { ...array({ enum: ['A', 'B', 'C', 'D'] }, 0, 4, true), description: 'Ceiling set; overlays may only remove members.' },
-          forbiddenEffects: { ...array({ $ref: '#/$defs/identifier' }, 0, 64, true), description: 'Grows only; overlays may only add members.' },
+          allowedCapabilities: {
+            ...array({ $ref: '#/$defs/capabilityAuthority' }, 0, 128, true),
+            description: 'Closed ceiling set; overlays may only remove members.',
+          },
+          allowedTools: {
+            ...array({ $ref: '#/$defs/toolAuthority' }, 0, 128, true),
+            description: 'Closed ceiling set; overlays may only remove members.',
+          },
+          allowedOperations: {
+            ...array({ $ref: '#/$defs/operationAuthority' }, 0, 128, true),
+            description: 'Closed ceiling set; overlays may only remove members.',
+          },
+          allowedOutputClasses: {
+            ...array({ enum: ['A', 'B', 'C', 'D'] }, 0, 4, true),
+            description: 'Ceiling set; overlays may only remove members.',
+          },
+          forbiddenEffects: {
+            ...array({ $ref: '#/$defs/identifier' }, 0, 64, true),
+            description: 'Grows only; overlays may only add members.',
+          },
         },
       ),
       sourceMapOwner: closed(['ownerKind', 'pointer', 'version', 'digest'], {
@@ -199,60 +259,95 @@ export function buildSkillSourceSchemas() {
     },
   };
 
-  const skillSource = documentSchema('skill-source', 'skill-source', '1.0.0', [
-    'skillId', 'skillVersion', 'sourceFormat', 'authorityCeiling',
-  ], {
-    skillId: ref('skillId'),
-    skillVersion: ref('semver'),
-    sourceFormat: ref('sourceFormat'),
-    authorityCeiling,
-    // Presence selects the corresponding oneOf branch, so these values must be
-    // real source references. Accepting null would satisfy `required` while
-    // leaving the selected source mode without readable bytes.
-    markdown: sourceRef,
-    template: sourceRef,
-    modules: array(moduleRef, 0, 256),
-    references: array(closed(['module', 'routed'], { module: moduleRef, routed: { const: true } }), 0, 256),
-    // markdown-v1 compatibility documents may omit host selection entirely;
-    // the composed-v1 branch below tightens this same property to one or more.
-    hostProfiles: array(ref('contractRef'), 0, 8, true),
-    guidedQuestions: array({ $ref: GUIDED_QUESTION_REF }, 0, 64),
-  }, {
-    oneOf: [
-      {
-        title: 'markdown-v1 compatibility source',
-        required: ['markdown'],
-        properties: { sourceFormat: { const: 'markdown-v1' } },
-        not: { anyOf: [{ required: ['template'] }, { required: ['modules'] }, { required: ['references'] }] },
-      },
-      {
-        title: 'composed-v1 source graph',
-        required: ['template', 'modules', 'hostProfiles'],
-        properties: {
-          sourceFormat: { const: 'composed-v1' },
-          hostProfiles: array(ref('contractRef'), 1, 8, true),
+  const skillSource = documentSchema(
+    'skill-source',
+    'skill-source',
+    '1.0.0',
+    ['skillId', 'skillVersion', 'sourceFormat', 'authorityCeiling'],
+    {
+      skillId: ref('skillId'),
+      skillVersion: ref('semver'),
+      sourceFormat: ref('sourceFormat'),
+      authorityCeiling,
+      // Presence selects the corresponding oneOf branch, so these values must be
+      // real source references. Accepting null would satisfy `required` while
+      // leaving the selected source mode without readable bytes.
+      markdown: sourceRef,
+      template: sourceRef,
+      modules: array(moduleRef, 0, 256),
+      references: array(
+        closed(['module', 'routed'], { module: moduleRef, routed: { const: true } }),
+        0,
+        256,
+      ),
+      // markdown-v1 compatibility documents may omit host selection entirely;
+      // the composed-v1 branch below tightens this same property to one or more.
+      hostProfiles: array(ref('contractRef'), 0, 8, true),
+      guidedQuestions: array({ $ref: GUIDED_QUESTION_REF }, 0, 64),
+    },
+    {
+      oneOf: [
+        {
+          title: 'markdown-v1 compatibility source',
+          required: ['markdown'],
+          properties: { sourceFormat: { const: 'markdown-v1' } },
+          not: {
+            anyOf: [
+              { required: ['template'] },
+              { required: ['modules'] },
+              { required: ['references'] },
+            ],
+          },
         },
-        not: { required: ['markdown'] },
-      },
-    ],
-  });
+        {
+          title: 'composed-v1 source graph',
+          required: ['template', 'modules', 'hostProfiles'],
+          properties: {
+            sourceFormat: { const: 'composed-v1' },
+            hostProfiles: array(ref('contractRef'), 1, 8, true),
+          },
+          not: { required: ['markdown'] },
+        },
+      ],
+    },
+  );
 
-  const skillModuleRegistry = documentSchema('skill-module-registry', 'skill-module-registry', '1.0.0', ['modules'], {
-    modules: array(closed(
-      ['moduleId', 'moduleVersion', 'moduleKind', 'description', 'authorityCeiling', 'source', 'appliesWhen', 'dependsOn', 'references'],
-      {
-        moduleId: ref('moduleId'),
-        moduleVersion: ref('semver'),
-        moduleKind: { enum: ['lifecycle', 'context', 'review', 'implementation', 'shared'] },
-        description: ref('nonBlankText'),
-        authorityCeiling,
-        source: sourceRef,
-        appliesWhen: ref('nonBlankText'),
-        dependsOn: array(moduleRef, 0, 64),
-        references: array(moduleRef, 0, 64),
-      },
-    ), 0, 512),
-  });
+  const skillModuleRegistry = documentSchema(
+    'skill-module-registry',
+    'skill-module-registry',
+    '1.0.0',
+    ['modules'],
+    {
+      modules: array(
+        closed(
+          [
+            'moduleId',
+            'moduleVersion',
+            'moduleKind',
+            'description',
+            'authorityCeiling',
+            'source',
+            'appliesWhen',
+            'dependsOn',
+            'references',
+          ],
+          {
+            moduleId: ref('moduleId'),
+            moduleVersion: ref('semver'),
+            moduleKind: { enum: ['lifecycle', 'context', 'review', 'implementation', 'shared'] },
+            description: ref('nonBlankText'),
+            authorityCeiling,
+            source: sourceRef,
+            appliesWhen: ref('nonBlankText'),
+            dependsOn: array(moduleRef, 0, 64),
+            references: array(moduleRef, 0, 64),
+          },
+        ),
+        0,
+        512,
+      ),
+    },
+  );
 
   const hostProfileRequired = [
     'hostProfileId',
@@ -280,10 +375,7 @@ export function buildSkillSourceSchemas() {
     ],
   };
   const headlessBinding = {
-    allOf: [
-      ref('interactionBinding'),
-      { properties: { surface: { const: 'headless' } } },
-    ],
+    allOf: [ref('interactionBinding'), { properties: { surface: { const: 'headless' } } }],
   };
   const interactionBindingSequence = {
     type: 'array',
@@ -293,8 +385,18 @@ export function buildSkillSourceSchemas() {
     oneOf: [
       { items: interactiveBinding },
       { maxItems: 1, prefixItems: [headlessBinding], items: false },
-      { minItems: 2, maxItems: 2, prefixItems: [interactiveBinding, headlessBinding], items: false },
-      { minItems: 3, maxItems: 3, prefixItems: [interactiveBinding, interactiveBinding, headlessBinding], items: false },
+      {
+        minItems: 2,
+        maxItems: 2,
+        prefixItems: [interactiveBinding, headlessBinding],
+        items: false,
+      },
+      {
+        minItems: 3,
+        maxItems: 3,
+        prefixItems: [interactiveBinding, interactiveBinding, headlessBinding],
+        items: false,
+      },
       {
         minItems: 4,
         maxItems: 4,
@@ -371,110 +473,174 @@ export function buildSkillSourceSchemas() {
     ),
   };
 
-  const skillRoutingRegistry = documentSchema('skill-routing-registry', 'skill-routing-registry', '1.0.0', ['policies'], {
-    policies: array(closed(
-      ['routingPolicyId', 'routingPolicyVersion', 'description', 'includeModules', 'references', 'order'],
-      {
-        routingPolicyId: ref('identifier'),
-        routingPolicyVersion: ref('semver'),
-        description: ref('nonBlankText'),
-        includeModules: array(moduleRef, 0, 128),
-        references: array(moduleRef, 0, 128),
-        order: { enum: ['declared', 'topological'] },
-      },
-    ), 0, 128),
-  });
+  const skillRoutingRegistry = documentSchema(
+    'skill-routing-registry',
+    'skill-routing-registry',
+    '1.0.0',
+    ['policies'],
+    {
+      policies: array(
+        closed(
+          [
+            'routingPolicyId',
+            'routingPolicyVersion',
+            'description',
+            'includeModules',
+            'references',
+            'order',
+          ],
+          {
+            routingPolicyId: ref('identifier'),
+            routingPolicyVersion: ref('semver'),
+            description: ref('nonBlankText'),
+            includeModules: array(moduleRef, 0, 128),
+            references: array(moduleRef, 0, 128),
+            order: { enum: ['declared', 'topological'] },
+          },
+        ),
+        0,
+        128,
+      ),
+    },
+  );
 
   // Optional reporting-only data. This contract records a completed skill run
   // when a caller wants a portable summary; no Plan, Review, Ship, generator,
   // compiler, or runtime transition may require it as a prerequisite.
-  const skillCompletionReceipt = documentSchema('skill-completion-receipt', 'skill-completion-receipt', '1.0.0', [
-    'skillId', 'skillVersion', 'sourceFormat', 'completedAt', 'summary', 'selectedModules',
-  ], {
-    skillId: ref('skillId'),
-    skillVersion: ref('semver'),
-    sourceFormat: ref('sourceFormat'),
-    completedAt: ref('dateTime'),
-    summary: ref('nonBlankText'),
-    selectedModules: array(moduleRef, 0, 256),
-  }, {
-    description: 'Optional reporting-only summary; never a Plan, Review, Ship, generation, or runtime prerequisite.',
-  });
+  const skillCompletionReceipt = documentSchema(
+    'skill-completion-receipt',
+    'skill-completion-receipt',
+    '1.0.0',
+    ['skillId', 'skillVersion', 'sourceFormat', 'completedAt', 'summary', 'selectedModules'],
+    {
+      skillId: ref('skillId'),
+      skillVersion: ref('semver'),
+      sourceFormat: ref('sourceFormat'),
+      completedAt: ref('dateTime'),
+      summary: ref('nonBlankText'),
+      selectedModules: array(moduleRef, 0, 256),
+    },
+    {
+      description:
+        'Optional reporting-only summary; never a Plan, Review, Ship, generation, or runtime prerequisite.',
+    },
+  );
 
-  const skillConsentRecord = documentSchema('skill-consent-record', 'skill-consent-record', '1.0.0', [
-    'consentId', 'skillId', 'subject', 'decision', 'recordedAt', 'confirmation',
-  ], {
-    consentId: ref('identifier'),
-    skillId: ref('skillId'),
-    subject: { enum: ['learning', 'telemetry', 'external-data'] },
-    decision: { enum: ['granted', 'declined', 'withdrawn'] },
-    recordedAt: ref('dateTime'),
-    // Consent reuses the existing guided confirmation vocabulary rather than a
-    // second question/consent shape.
-    confirmation: { $ref: GUIDED_CONFIRMATION_REF },
-  });
+  const skillConsentRecord = documentSchema(
+    'skill-consent-record',
+    'skill-consent-record',
+    '1.0.0',
+    ['consentId', 'skillId', 'subject', 'decision', 'recordedAt', 'confirmation'],
+    {
+      consentId: ref('identifier'),
+      skillId: ref('skillId'),
+      subject: { enum: ['learning', 'telemetry', 'external-data'] },
+      decision: { enum: ['granted', 'declined', 'withdrawn'] },
+      recordedAt: ref('dateTime'),
+      // Consent reuses the existing guided confirmation vocabulary rather than a
+      // second question/consent shape.
+      confirmation: { $ref: GUIDED_CONFIRMATION_REF },
+    },
+  );
 
-  const skillLearningRecord = documentSchema('skill-learning-record', 'skill-learning-record', '1.0.0', [
-    'learningId', 'skillId', 'observedAt', 'category', 'note', 'consentGranted', 'consentRef',
-  ], {
-    learningId: ref('identifier'),
-    skillId: ref('skillId'),
-    observedAt: ref('dateTime'),
-    category: { enum: ['context', 'review', 'implementation', 'diagnostic'] },
-    note: ref('nonBlankText'),
-    consentGranted: { type: 'boolean' },
-    // A learning declaration cannot imply consent; it must point at an explicit
-    // consent record or declare its absence.
-    consentRef: nullableRef('identifier'),
-  }, {
-    allOf: [
-      { if: { properties: { consentGranted: { const: true } } }, then: { properties: { consentRef: ref('identifier') } } },
-      { if: { properties: { consentGranted: { const: false } } }, then: { properties: { consentRef: { type: 'null' } } } },
-    ],
-  });
+  const skillLearningRecord = documentSchema(
+    'skill-learning-record',
+    'skill-learning-record',
+    '1.0.0',
+    ['learningId', 'skillId', 'observedAt', 'category', 'note', 'consentGranted', 'consentRef'],
+    {
+      learningId: ref('identifier'),
+      skillId: ref('skillId'),
+      observedAt: ref('dateTime'),
+      category: { enum: ['context', 'review', 'implementation', 'diagnostic'] },
+      note: ref('nonBlankText'),
+      consentGranted: { type: 'boolean' },
+      // A learning declaration cannot imply consent; it must point at an explicit
+      // consent record or declare its absence.
+      consentRef: nullableRef('identifier'),
+    },
+    {
+      allOf: [
+        {
+          if: { properties: { consentGranted: { const: true } } },
+          then: { properties: { consentRef: ref('identifier') } },
+        },
+        {
+          if: { properties: { consentGranted: { const: false } } },
+          then: { properties: { consentRef: { type: 'null' } } },
+        },
+      ],
+    },
+  );
 
-  const skillSession = documentSchema('skill-session', 'skill-session', '1.0.0', [
-    'sessionId', 'skillId', 'startedAt', 'state', 'questions',
-  ], {
-    sessionId: { type: 'string', pattern: '^GIS-[A-Za-z0-9._-]{8,128}$' },
-    skillId: ref('skillId'),
-    startedAt: ref('dateTime'),
-    state: { enum: ['open', 'answered', 'closed', 'expired'] },
-    questions: array({ $ref: GUIDED_QUESTION_REF }, 0, 64),
-  });
+  const skillSession = documentSchema(
+    'skill-session',
+    'skill-session',
+    '1.0.0',
+    ['sessionId', 'skillId', 'startedAt', 'state', 'questions'],
+    {
+      sessionId: { type: 'string', pattern: '^GIS-[A-Za-z0-9._-]{8,128}$' },
+      skillId: ref('skillId'),
+      startedAt: ref('dateTime'),
+      state: { enum: ['open', 'answered', 'closed', 'expired'] },
+      questions: array({ $ref: GUIDED_QUESTION_REF }, 0, 64),
+    },
+  );
 
-  const skillCatalog = documentSchema('skill-catalog', 'skill-catalog', PROTOCOL_VERSION, ['catalogVersion', 'sources'], {
-    catalogVersion: ref('semver'),
-    sources: array(closed(
-      ['skillId', 'skillVersion', 'sourceFormat', 'sourceDigest', 'moduleGraphDigest', 'source'],
-      {
-        skillId: ref('skillId'),
-        skillVersion: ref('semver'),
-        sourceFormat: ref('sourceFormat'),
-        sourceDigest: ref('digest'),
-        moduleGraphDigest: ref('digest'),
-        source: sourceRef,
-      },
-    ), 0, 256),
-  });
+  const skillCatalog = documentSchema(
+    'skill-catalog',
+    'skill-catalog',
+    PROTOCOL_VERSION,
+    ['catalogVersion', 'sources'],
+    {
+      catalogVersion: ref('semver'),
+      sources: array(
+        closed(
+          [
+            'skillId',
+            'skillVersion',
+            'sourceFormat',
+            'sourceDigest',
+            'moduleGraphDigest',
+            'source',
+          ],
+          {
+            skillId: ref('skillId'),
+            skillVersion: ref('semver'),
+            sourceFormat: ref('sourceFormat'),
+            sourceDigest: ref('digest'),
+            moduleGraphDigest: ref('digest'),
+            source: sourceRef,
+          },
+        ),
+        0,
+        256,
+      ),
+    },
+  );
 
-  const generatedAssetManifest = documentSchema('generated-asset-manifest', 'generated-asset-manifest', PROTOCOL_VERSION, [
-    'assetSetId', 'sourceFormat', 'assets',
-  ], {
-    assetSetId: { type: 'string', pattern: '^sas_[0-9a-f]{32}$' },
-    sourceFormat: ref('sourceFormat'),
-    assets: array(closed(
-      ['path', 'host', 'mediaType', 'byteLength', 'digest', 'sourceMap'],
-      {
-        path: ref('relativePath'),
-        host: { anyOf: [ref('host'), { type: 'null' }] },
-        mediaType: { type: 'string', pattern: '^[a-z0-9.+-]+/[a-z0-9.+-]+$' },
-        byteLength: { type: 'integer', minimum: 0 },
-        digest: ref('digest'),
-        sourceMap: array(sourceMapRange, 0, 8192),
-      },
-    ), 0, 8192),
-  });
+  const generatedAssetManifest = documentSchema(
+    'generated-asset-manifest',
+    'generated-asset-manifest',
+    PROTOCOL_VERSION,
+    ['assetSetId', 'sourceFormat', 'assets'],
+    {
+      assetSetId: { type: 'string', pattern: '^sas_[0-9a-f]{32}$' },
+      sourceFormat: ref('sourceFormat'),
+      assets: array(
+        closed(['path', 'host', 'mediaType', 'byteLength', 'digest', 'sourceMap'], {
+          path: ref('relativePath'),
+          host: { anyOf: [ref('host'), { type: 'null' }] },
+          mediaType: { type: 'string', pattern: '^[a-z0-9.+-]+/[a-z0-9.+-]+$' },
+          byteLength: { type: 'integer', minimum: 0 },
+          digest: ref('digest'),
+          sourceMap: array(sourceMapRange, 0, 8192),
+        }),
+        0,
+        8192,
+      ),
+    },
+  );
 
   return new Map([
     ['common.schema.json', common],
@@ -491,10 +657,16 @@ export function buildSkillSourceSchemas() {
   ]);
 }
 
-const document = (kind, schemaVersion, documentVersion, fields) => withDocumentDigest({
-  kind, schemaVersion, protocolVersion: PROTOCOL_VERSION, documentVersion,
-  digestAlgorithm: 'sha256', canonicalization: 'rfc8785', ...fields,
-});
+const document = (kind, schemaVersion, documentVersion, fields) =>
+  withDocumentDigest({
+    kind,
+    schemaVersion,
+    protocolVersion: PROTOCOL_VERSION,
+    documentVersion,
+    digestAlgorithm: 'sha256',
+    canonicalization: 'rfc8785',
+    ...fields,
+  });
 
 const HOST_PROFILE_DEFINITIONS = Object.freeze([
   Object.freeze({
@@ -543,7 +715,8 @@ const HOST_PROFILE_DEFINITIONS = Object.freeze([
     hostProfileVersion: '1.0.0',
     host: 'pipeline',
     sourceFile: 'pipeline.md',
-    description: 'Host-neutral pipeline projection profile; narrows to read-only repository access.',
+    description:
+      'Host-neutral pipeline projection profile; narrows to read-only repository access.',
   }),
   Object.freeze({
     hostProfileId: 'pipeline-default',
@@ -561,7 +734,12 @@ const HOST_PROFILE_DEFINITIONS = Object.freeze([
 
 function hostProfile(definition) {
   const relativeSource = `packages/protocol/host-profiles/${definition.sourceFile}`;
-  const absoluteSource = join(dirname(fileURLToPath(import.meta.url)), '..', 'host-profiles', definition.sourceFile);
+  const absoluteSource = join(
+    dirname(fileURLToPath(import.meta.url)),
+    '..',
+    'host-profiles',
+    definition.sourceFile,
+  );
   return {
     hostProfileId: definition.hostProfileId,
     hostProfileVersion: definition.hostProfileVersion,
@@ -578,14 +756,18 @@ function hostProfile(definition) {
     },
     source: { path: relativeSource, digest: `sha256:${sha256Hex(readFileSync(absoluteSource))}` },
     overlayModules: [],
-    ...(definition.runtimeCapabilities ? {
-      runtimeCapabilities: [...definition.runtimeCapabilities],
-      interactionBindings: definition.interactionBindings.map(([surface, protocolInteraction, capabilityId]) => ({
-        surface,
-        protocolInteraction,
-        ...(capabilityId ? { capabilityId } : {}),
-      })),
-    } : {}),
+    ...(definition.runtimeCapabilities
+      ? {
+          runtimeCapabilities: [...definition.runtimeCapabilities],
+          interactionBindings: definition.interactionBindings.map(
+            ([surface, protocolInteraction, capabilityId]) => ({
+              surface,
+              protocolInteraction,
+              ...(capabilityId ? { capabilityId } : {}),
+            }),
+          ),
+        }
+      : {}),
   };
 }
 
@@ -596,16 +778,19 @@ export function buildSkillSourceRegistries() {
     ['skill-host-profile-registry', { profiles: HOST_PROFILE_DEFINITIONS.map(hostProfile) }],
     ['skill-routing-registry', { policies: graph.policies }],
   ]);
-  return new Map(Object.entries(SKILL_SOURCE_V16_REGISTRIES).map(([file, descriptor]) => {
-    const payload = payloads.get(descriptor.kind);
-    if (!payload) throw new Error(`Protocol 1.6 registry ${file} has no payload builder for ${descriptor.kind}.`);
-    return [file, document(
-      descriptor.kind,
-      descriptor.schemaVersion,
-      descriptor.documentVersion,
-      payload,
-    )];
-  }));
+  return new Map(
+    Object.entries(SKILL_SOURCE_V16_REGISTRIES).map(([file, descriptor]) => {
+      const payload = payloads.get(descriptor.kind);
+      if (!payload)
+        throw new Error(
+          `Protocol 1.6 registry ${file} has no payload builder for ${descriptor.kind}.`,
+        );
+      return [
+        file,
+        document(descriptor.kind, descriptor.schemaVersion, descriptor.documentVersion, payload),
+      ];
+    }),
+  );
 }
 
 /** Contract kinds introduced by Protocol 1.6, each resolved at version 1.6.0. */

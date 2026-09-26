@@ -26,14 +26,16 @@
       if (!Number.isFinite(value)) throw new TypeError(`JCS requires a finite number at ${path}.`);
       return JSON.stringify(value);
     }
-    if (typeof value !== "object") throw new TypeError(`JCS cannot canonicalize ${typeof value} at ${path}.`);
+    if (typeof value !== "object")
+      throw new TypeError(`JCS cannot canonicalize ${typeof value} at ${path}.`);
     if (seen.has(value)) throw new TypeError(`JCS cannot canonicalize a cycle at ${path}.`);
     seen.add(value);
     try {
       if (Array.isArray(value)) {
         const entries3 = [];
         for (let index2 = 0; index2 < value.length; index2 += 1) {
-          if (!hasOwn(value, index2)) throw new TypeError(`JCS cannot canonicalize a sparse array at ${path}[${index2}].`);
+          if (!hasOwn(value, index2))
+            throw new TypeError(`JCS cannot canonicalize a sparse array at ${path}[${index2}].`);
           entries3.push(serialize(value[index2], `${path}[${index2}]`, seen));
         }
         return `[${entries3.join(",")}]`;
@@ -253,13 +255,21 @@
     if (schema2.type !== void 0) {
       const types = Array.isArray(schema2.type) ? schema2.type : [schema2.type];
       if (!types.some((t) => matchesType(value, t))) {
-        errs.push({ path, rule: "type", detail: `expected ${types.join("|")}, got ${typeOf(value)}` });
+        errs.push({
+          path,
+          rule: "type",
+          detail: `expected ${types.join("|")}, got ${typeOf(value)}`
+        });
         return;
       }
     }
     if (schema2.const !== void 0) {
       if (value !== schema2.const) {
-        errs.push({ path, rule: "const", detail: `expected ${JSON.stringify(schema2.const)}, got ${JSON.stringify(value)}` });
+        errs.push({
+          path,
+          rule: "const",
+          detail: `expected ${JSON.stringify(schema2.const)}, got ${JSON.stringify(value)}`
+        });
       }
     }
     if (Array.isArray(schema2.enum)) {
@@ -273,25 +283,49 @@
     }
     if (typeof value === "string") {
       if (typeof schema2.minLength === "number" && value.length < schema2.minLength) {
-        errs.push({ path, rule: "minLength", detail: `length ${value.length} < ${schema2.minLength}` });
+        errs.push({
+          path,
+          rule: "minLength",
+          detail: `length ${value.length} < ${schema2.minLength}`
+        });
       }
       if (typeof schema2.maxLength === "number" && value.length > schema2.maxLength) {
-        errs.push({ path, rule: "maxLength", detail: `length ${value.length} > ${schema2.maxLength}` });
+        errs.push({
+          path,
+          rule: "maxLength",
+          detail: `length ${value.length} > ${schema2.maxLength}`
+        });
       }
       if (typeof schema2.pattern === "string") {
         try {
           if (!new RegExp(schema2.pattern).test(value)) {
-            errs.push({ path, rule: "pattern", detail: `value ${JSON.stringify(value)} does not match /${schema2.pattern}/` });
+            errs.push({
+              path,
+              rule: "pattern",
+              detail: `value ${JSON.stringify(value)} does not match /${schema2.pattern}/`
+            });
           }
         } catch (e) {
-          errs.push({ path, rule: "pattern", detail: `invalid regex /${schema2.pattern}/: ${e.message}` });
+          errs.push({
+            path,
+            rule: "pattern",
+            detail: `invalid regex /${schema2.pattern}/: ${e.message}`
+          });
         }
       }
       if (typeof schema2.format === "string") {
         if (schema2.format === "date" && !FORMAT_DATE.test(value)) {
-          errs.push({ path, rule: "format:date", detail: `value ${JSON.stringify(value)} is not YYYY-MM-DD` });
+          errs.push({
+            path,
+            rule: "format:date",
+            detail: `value ${JSON.stringify(value)} is not YYYY-MM-DD`
+          });
         } else if (schema2.format === "date-time" && !FORMAT_DATETIME.test(value)) {
-          errs.push({ path, rule: "format:date-time", detail: `value ${JSON.stringify(value)} is not ISO 8601 date-time` });
+          errs.push({
+            path,
+            rule: "format:date-time",
+            detail: `value ${JSON.stringify(value)} is not ISO 8601 date-time`
+          });
         }
       }
     }
@@ -342,10 +376,18 @@
         const minimum = Number.isSafeInteger(schema2.minContains) ? schema2.minContains : 1;
         const maximum = Number.isSafeInteger(schema2.maxContains) ? schema2.maxContains : null;
         if (matches < minimum) {
-          errs.push({ path, rule: "contains", detail: `matched ${matches} contained items; expected at least ${minimum}` });
+          errs.push({
+            path,
+            rule: "contains",
+            detail: `matched ${matches} contained items; expected at least ${minimum}`
+          });
         }
         if (maximum !== null && matches > maximum) {
-          errs.push({ path, rule: "contains", detail: `matched ${matches} contained items; expected at most ${maximum}` });
+          errs.push({
+            path,
+            rule: "contains",
+            detail: `matched ${matches} contained items; expected at most ${maximum}`
+          });
         }
       }
     }
@@ -422,10 +464,7 @@
       }
     }
   };
-  var validateJson = (value, schema2, {
-    resolveRef = null,
-    base = schema2?.$id ?? null
-  } = {}) => {
+  var validateJson = (value, schema2, { resolveRef = null, base = schema2?.$id ?? null } = {}) => {
     const errs = [];
     validateNode(value, schema2, "$", errs, {
       rootSchema: schema2,
@@ -2990,23 +3029,57 @@
     operations: 256,
     coordinate: 1e6
   });
-  var closed = (properties, required = Object.keys(properties)) => ({ type: "object", additionalProperties: false, properties, required });
-  var arr = (items, maxItems, minItems = 0, uniqueItems = false) => ({ type: "array", items, minItems, maxItems, ...uniqueItems ? { uniqueItems } : {} });
+  var closed = (properties, required = Object.keys(properties)) => ({
+    type: "object",
+    additionalProperties: false,
+    properties,
+    required
+  });
+  var arr = (items, maxItems, minItems = 0, uniqueItems = false) => ({
+    type: "array",
+    items,
+    minItems,
+    maxItems,
+    ...uniqueItems ? { uniqueItems } : {}
+  });
   var nullable = (schema2) => ({ anyOf: [{ type: "null" }, schema2] });
   var str = (maxLength = 4096, minLength = 0) => ({ type: "string", minLength, maxLength });
   var enumOf = (...values) => ({ enum: values });
-  var id = { type: "string", pattern: "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$", minLength: 1, maxLength: 128 };
+  var id = {
+    type: "string",
+    pattern: "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+    minLength: 1,
+    maxLength: 128
+  };
   var digest = { type: "string", pattern: "^sha256:[a-f0-9]{64}$" };
   var token = { type: "string", pattern: "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$", maxLength: 64 };
-  var relativePath = { type: "string", minLength: 1, maxLength: 1024, pattern: "^[A-Za-z0-9][A-Za-z0-9._/-]*$" };
+  var relativePath = {
+    type: "string",
+    minLength: 1,
+    maxLength: 1024,
+    pattern: "^[A-Za-z0-9][A-Za-z0-9._/-]*$"
+  };
   var coordinate = { type: "number", minimum: -1e6, maximum: 1e6 };
   var positiveSize = { type: "number", minimum: 0.01, maximum: 1e6 };
   var index = { type: "integer", minimum: 0, maximum: 1e4 };
   var ids = arr(id, 1e4, 0, true);
   var semanticKinds = ["process", "start", "end", "decision", "data-store", "component"];
   var relationKinds = ["association", "dependency", "flow", "message", "transition"];
-  var node = closed({ id, label: str(), kind: enumOf(...semanticKinds), description: nullable(str()) });
-  var relation = closed({ id, from: id, to: id, kind: enumOf(...relationKinds), direction: enumOf("forward", "both", "none"), label: nullable(str()), weight: nullable({ type: "number", minimum: 0, maximum: 1e6 }) });
+  var node = closed({
+    id,
+    label: str(),
+    kind: enumOf(...semanticKinds),
+    description: nullable(str())
+  });
+  var relation = closed({
+    id,
+    from: id,
+    to: id,
+    kind: enumOf(...relationKinds),
+    direction: enumOf("forward", "both", "none"),
+    label: nullable(str()),
+    weight: nullable({ type: "number", minimum: 0, maximum: 1e6 })
+  });
   var container = closed({ id, label: str(), members: ids });
   var annotation = closed({ id, text: str(), targetId: nullable(id) });
   var emphasis = closed({ targetId: id, level: enumOf("primary", "secondary", "muted") });
@@ -3024,11 +3097,29 @@
   };
   var bounds = closed({ x: coordinate, y: coordinate, width: positiveSize, height: positiveSize });
   var point = closed({ x: coordinate, y: coordinate });
-  var attachment = closed({ side: enumOf("top", "right", "bottom", "left"), offset: { type: "number", minimum: 0, maximum: 1 } });
-  var route = closed({ mode: enumOf("automatic", "manual"), strategy: enumOf("straight", "orthogonal"), from: attachment, to: attachment, points: arr(point, 256) });
+  var attachment = closed({
+    side: enumOf("top", "right", "bottom", "left"),
+    offset: { type: "number", minimum: 0, maximum: 1 }
+  });
+  var route = closed({
+    mode: enumOf("automatic", "manual"),
+    strategy: enumOf("straight", "orthogonal"),
+    from: attachment,
+    to: attachment,
+    points: arr(point, 256)
+  });
   var labelPlacement = closed({ x: coordinate, y: coordinate, width: positiveSize });
   var appearance = closed({
-    shape: enumOf("rectangle", "rounded-rectangle", "ellipse", "diamond", "cylinder", "text", "container", "connector"),
+    shape: enumOf(
+      "rectangle",
+      "rounded-rectangle",
+      "ellipse",
+      "diamond",
+      "cylinder",
+      "text",
+      "container",
+      "connector"
+    ),
     fill: enumOf("surface", "accent", "success", "warning", "danger", "transparent"),
     stroke: enumOf("default", "accent", "muted", "danger", "none"),
     strokeWidth: { type: "number", minimum: 0, maximum: 16 },
@@ -3036,21 +3127,45 @@
     fontSize: { type: "integer", minimum: 8, maximum: 72 },
     textAlign: enumOf("left", "center", "right")
   });
-  var locks = closed({ position: { type: "boolean" }, size: { type: "boolean" }, route: { type: "boolean" } });
-  var placement = closed({ elementId: id, bounds: nullable(bounds), route: nullable(route), label: nullable(labelPlacement), zIndex: index, appearance, locks });
-  var snapshot = closed({ bundleDigest: digest, semanticDigest: digest, presentationDigest: digest });
+  var locks = closed({
+    position: { type: "boolean" },
+    size: { type: "boolean" },
+    route: { type: "boolean" }
+  });
+  var placement = closed({
+    elementId: id,
+    bounds: nullable(bounds),
+    route: nullable(route),
+    label: nullable(labelPlacement),
+    zIndex: index,
+    appearance,
+    locks
+  });
+  var snapshot = closed({
+    bundleDigest: digest,
+    semanticDigest: digest,
+    presentationDigest: digest
+  });
   var schema = (name, kind, properties) => ({
     $schema: "https://json-schema.org/draft/2020-12/schema",
     $id: `https://openplanr.dev/schemas/v1.13.0/${name}.schema.json`,
     "x-openplanr-contract": { id: name, version: "1.13.0" },
-    ...closed({ kind: { const: kind }, schemaVersion: { const: "1.0.0" }, protocolVersion: { const: "1.13.0" }, ...properties })
+    ...closed({
+      kind: { const: kind },
+      schemaVersion: { const: "1.0.0" },
+      protocolVersion: { const: "1.13.0" },
+      ...properties
+    })
   });
   var documentSchema = schema("diagram-document", "planr-diagram", {
     diagramId: id,
     title: str(),
     summary: str(),
     audience: enumOf("engineer", "executive", "mixed"),
-    grammar: closed({ id: enumOf("flowchart", "process", "swimlane", "architecture"), version: { const: "1.0.0" } }),
+    grammar: closed({
+      id: enumOf("flowchart", "process", "swimlane", "architecture"),
+      version: { const: "1.0.0" }
+    }),
     ...semanticCollections,
     laneOrder: ids,
     accessibility: closed({ title: str(), description: str(), readingOrder: ids }),
@@ -3060,12 +3175,21 @@
     diagramId: id,
     semanticDigest: digest,
     coordinateSystem: { const: "global-canvas" },
-    layout: closed({ direction: enumOf("top-down", "left-right", "right-left", "bottom-up"), detailTier: enumOf("simplified", "balanced", "faithful") }),
-    theme: closed({ themeId: enumOf("paper", "slate", "midnight"), mode: enumOf("light", "dark", "auto") }),
+    layout: closed({
+      direction: enumOf("top-down", "left-right", "right-left", "bottom-up"),
+      detailTier: enumOf("simplified", "balanced", "faithful")
+    }),
+    theme: closed({
+      themeId: enumOf("paper", "slate", "midnight"),
+      mode: enumOf("light", "dark", "auto")
+    }),
     elements: arr(placement, 1e4),
     presentationDigest: digest
   });
-  var range = closed({ startByte: { type: "integer", minimum: 0, maximum: 1048576 }, endByte: { type: "integer", minimum: 0, maximum: 1048576 } });
+  var range = closed({
+    startByte: { type: "integer", minimum: 0, maximum: 1048576 },
+    endByte: { type: "integer", minimum: 0, maximum: 1048576 }
+  });
   var sourceMapSchema = schema("diagram-source-map", "diagram-source-map", {
     diagramId: id,
     semanticDigest: digest,
@@ -3074,7 +3198,17 @@
     encoding: { const: "utf-8" },
     parser: closed({ id: token, version: str(64, 1) }),
     certificationVersion: { const: "flowchart-copy-v1" },
-    entries: arr(closed({ sourceId: nullable(str(128, 1)), elementIds: ids, range: nullable(range), construct: token, confidence: enumOf("exact", "ambiguous"), losses: arr(str(512, 1), 64) }), 1e4)
+    entries: arr(
+      closed({
+        sourceId: nullable(str(128, 1)),
+        elementIds: ids,
+        range: nullable(range),
+        construct: token,
+        confidence: enumOf("exact", "ambiguous"),
+        losses: arr(str(512, 1), 64)
+      }),
+      1e4
+    )
   });
   var fidelityValue = enumOf("lossless", "partial", "unsupported");
   var fidelitySchema = schema("diagram-fidelity-report", "diagram-fidelity-report", {
@@ -3086,23 +3220,35 @@
     semantic: fidelityValue,
     presentation: fidelityValue,
     sourceText: fidelityValue,
-    losses: arr(closed({ dimension: enumOf("semantic", "presentation", "sourceText"), code: token, elementIds: ids, message: str(512, 1) }), 1024)
+    losses: arr(
+      closed({
+        dimension: enumOf("semantic", "presentation", "sourceText"),
+        code: token,
+        elementIds: ids,
+        message: str(512, 1)
+      }),
+      1024
+    )
   });
   var bundleSchema = schema("diagram-authoring-bundle", "diagram-authoring-bundle", {
     diagramId: id,
     document: documentSchema,
     presentation: presentationSchema,
-    originalSource: nullable(closed({ format: { const: "mermaid" }, text: str(1048576), sourceDigest: digest })),
+    originalSource: nullable(
+      closed({ format: { const: "mermaid" }, text: str(1048576), sourceDigest: digest })
+    ),
     sourceMap: nullable(sourceMapSchema),
     bundleDigest: digest
   });
-  var semanticEntry = { oneOf: [
-    closed({ collection: { const: "nodes" }, value: node }),
-    closed({ collection: { const: "relations" }, value: relation }),
-    closed({ collection: { const: "groups" }, value: container }),
-    closed({ collection: { const: "lanes" }, value: container }),
-    closed({ collection: { const: "annotations" }, value: annotation })
-  ] };
+  var semanticEntry = {
+    oneOf: [
+      closed({ collection: { const: "nodes" }, value: node }),
+      closed({ collection: { const: "relations" }, value: relation }),
+      closed({ collection: { const: "groups" }, value: container }),
+      closed({ collection: { const: "lanes" }, value: container }),
+      closed({ collection: { const: "annotations" }, value: annotation })
+    ]
+  };
   var editableSemanticValue = (collection, properties) => closed({
     type: { const: "update-semantics" },
     collection: { const: collection },
@@ -3111,26 +3257,112 @@
     after: closed(properties)
   });
   var updateSchemas = [
-    editableSemanticValue("nodes", { label: str(), kind: enumOf(...semanticKinds), description: nullable(str()) }),
-    editableSemanticValue("relations", { from: id, to: id, kind: enumOf(...relationKinds), direction: enumOf("forward", "both", "none"), label: nullable(str()), weight: nullable({ type: "number", minimum: 0, maximum: 1e6 }) }),
+    editableSemanticValue("nodes", {
+      label: str(),
+      kind: enumOf(...semanticKinds),
+      description: nullable(str())
+    }),
+    editableSemanticValue("relations", {
+      from: id,
+      to: id,
+      kind: enumOf(...relationKinds),
+      direction: enumOf("forward", "both", "none"),
+      label: nullable(str()),
+      weight: nullable({ type: "number", minimum: 0, maximum: 1e6 })
+    }),
     editableSemanticValue("groups", { label: str() }),
     editableSemanticValue("lanes", { label: str() }),
     editableSemanticValue("annotations", { text: str(), targetId: nullable(id) }),
-    closed({ type: { const: "update-semantics" }, collection: { const: "emphasis" }, elementId: id, before: nullable(enumOf("primary", "secondary", "muted")), after: nullable(enumOf("primary", "secondary", "muted")), index: { type: "integer", minimum: 0, maximum: 1024 } }, ["type", "collection", "elementId", "before", "after"]),
-    closed({ type: { const: "update-semantics" }, collection: { const: "document" }, before: closed({ title: str(), summary: str(), audience: enumOf("engineer", "executive", "mixed"), accessibility: documentSchema.properties.accessibility }), after: closed({ title: str(), summary: str(), audience: enumOf("engineer", "executive", "mixed"), accessibility: documentSchema.properties.accessibility }) }),
-    closed({ type: { const: "update-semantics" }, collection: { const: "source-map" }, before: nullable(sourceMapSchema), after: nullable(sourceMapSchema) })
+    closed(
+      {
+        type: { const: "update-semantics" },
+        collection: { const: "emphasis" },
+        elementId: id,
+        before: nullable(enumOf("primary", "secondary", "muted")),
+        after: nullable(enumOf("primary", "secondary", "muted")),
+        index: { type: "integer", minimum: 0, maximum: 1024 }
+      },
+      ["type", "collection", "elementId", "before", "after"]
+    ),
+    closed({
+      type: { const: "update-semantics" },
+      collection: { const: "document" },
+      before: closed({
+        title: str(),
+        summary: str(),
+        audience: enumOf("engineer", "executive", "mixed"),
+        accessibility: documentSchema.properties.accessibility
+      }),
+      after: closed({
+        title: str(),
+        summary: str(),
+        audience: enumOf("engineer", "executive", "mixed"),
+        accessibility: documentSchema.properties.accessibility
+      })
+    }),
+    closed({
+      type: { const: "update-semantics" },
+      collection: { const: "source-map" },
+      before: nullable(sourceMapSchema),
+      after: nullable(sourceMapSchema)
+    })
   ];
-  var membershipState = closed({ groups: arr(closed({ id, members: ids }), 1024), lanes: arr(closed({ id, members: ids }), 256), laneOrder: ids });
-  var geometryValue = closed({ bounds: nullable(bounds), route: nullable(route), label: nullable(labelPlacement), zIndex: index });
+  var membershipState = closed({
+    groups: arr(closed({ id, members: ids }), 1024),
+    lanes: arr(closed({ id, members: ids }), 256),
+    laneOrder: ids
+  });
+  var geometryValue = closed({
+    bounds: nullable(bounds),
+    route: nullable(route),
+    label: nullable(labelPlacement),
+    zIndex: index
+  });
   var appearanceValue = closed({ appearance, locks });
-  var operation = { oneOf: [
-    closed({ type: { const: "insert-elements" }, elements: arr(semanticEntry, 1e4, 1), presentation: arr(placement, 1e4, 1), positions: arr(closed({ elementId: id, semanticIndex: index, presentationIndex: index }), 1e4, 1) }, ["type", "elements", "presentation"]),
-    ...updateSchemas,
-    closed({ type: { const: "remove-elements" }, elements: arr(semanticEntry, 1e4, 1), presentation: arr(placement, 1e4, 1) }),
-    closed({ type: { const: "set-membership-order" }, before: membershipState, after: membershipState }),
-    closed({ type: { const: "set-geometry" }, changes: arr(closed({ elementId: id, before: geometryValue, after: geometryValue }), 1e4, 1) }),
-    closed({ type: { const: "set-appearance-locks" }, changes: arr(closed({ elementId: id, before: appearanceValue, after: appearanceValue }), 1e4, 1) })
-  ] };
+  var operation = {
+    oneOf: [
+      closed(
+        {
+          type: { const: "insert-elements" },
+          elements: arr(semanticEntry, 1e4, 1),
+          presentation: arr(placement, 1e4, 1),
+          positions: arr(
+            closed({ elementId: id, semanticIndex: index, presentationIndex: index }),
+            1e4,
+            1
+          )
+        },
+        ["type", "elements", "presentation"]
+      ),
+      ...updateSchemas,
+      closed({
+        type: { const: "remove-elements" },
+        elements: arr(semanticEntry, 1e4, 1),
+        presentation: arr(placement, 1e4, 1)
+      }),
+      closed({
+        type: { const: "set-membership-order" },
+        before: membershipState,
+        after: membershipState
+      }),
+      closed({
+        type: { const: "set-geometry" },
+        changes: arr(
+          closed({ elementId: id, before: geometryValue, after: geometryValue }),
+          1e4,
+          1
+        )
+      }),
+      closed({
+        type: { const: "set-appearance-locks" },
+        changes: arr(
+          closed({ elementId: id, before: appearanceValue, after: appearanceValue }),
+          1e4,
+          1
+        )
+      })
+    ]
+  };
   var transactionSchema = schema("diagram-edit-transaction", "diagram-edit-transaction", {
     transactionId: id,
     diagramId: id,
@@ -3159,25 +3391,54 @@
     basis: snapshot,
     bundle: closed({ path: relativePath, transportDigest: digest }),
     renderer: closed({ id: token, version: str(64, 1) }),
-    outputs: arr(closed({ path: relativePath, mediaType: enumOf("image/svg+xml", "text/html", "image/png"), transportDigest: digest, fidelity: fidelitySchema }), 32, 1)
+    outputs: arr(
+      closed({
+        path: relativePath,
+        mediaType: enumOf("image/svg+xml", "text/html", "image/png"),
+        transportDigest: digest,
+        fidelity: fidelitySchema
+      }),
+      32,
+      1
+    )
   });
   manifestSchema.properties.theme = closed({ id: token, version: str(64, 1) });
-  var mermaidConstruct = closed({ construct: token, import: fidelityValue, export: fidelityValue, semanticRoundTrip: fidelityValue, mapping: str(512, 1) });
+  var mermaidConstruct = closed({
+    construct: token,
+    import: fidelityValue,
+    export: fidelityValue,
+    semanticRoundTrip: fidelityValue,
+    mapping: str(512, 1)
+  });
   var capabilityProfile = closed({
     grammarId: enumOf("flowchart", "process", "swimlane", "architecture"),
     authoring: { const: true },
-    primitives: arr(enumOf("node", "relation", "group", "lane", "annotation", "emphasis"), 6, 1, true),
+    primitives: arr(
+      enumOf("node", "relation", "group", "lane", "annotation", "emphasis"),
+      6,
+      1,
+      true
+    ),
     nodeKinds: arr(enumOf(...semanticKinds), 6, 1, true),
     relationKinds: arr(enumOf(...relationKinds), 5, 1, true),
     operations: arr(enumOf(...DIAGRAM_EDIT_OPERATION_CLASSES), 6, 6, true),
-    mermaid: closed({ mode: { const: "copy" }, certificationVersion: { const: "flowchart-copy-v1" }, constructs: arr(mermaidConstruct, 32, 1), linkedSource: { const: false } })
+    mermaid: closed({
+      mode: { const: "copy" },
+      certificationVersion: { const: "flowchart-copy-v1" },
+      constructs: arr(mermaidConstruct, 32, 1),
+      linkedSource: { const: false }
+    })
   });
-  var capabilitiesSchema = schema("diagram-authoring-capabilities", "diagram-authoring-capabilities", {
-    version: { const: "1.0.0" },
-    liveCollaboration: { const: false },
-    profiles: arr(capabilityProfile, 4, 4),
-    unsupportedGrammars: arr(token, 128, 0, true)
-  });
+  var capabilitiesSchema = schema(
+    "diagram-authoring-capabilities",
+    "diagram-authoring-capabilities",
+    {
+      version: { const: "1.0.0" },
+      liveCollaboration: { const: false },
+      profiles: arr(capabilityProfile, 4, 4),
+      unsupportedGrammars: arr(token, 128, 0, true)
+    }
+  );
   var schemas = {
     "diagram-document": documentSchema,
     "diagram-presentation": presentationSchema,
@@ -3191,25 +3452,129 @@
     "diagram-authoring-capabilities": capabilitiesSchema
   };
   var DIAGRAM_AUTHORING_SCHEMAS = deepFreeze2(schemas);
-  var DIAGRAM_AUTHORING_CONTRACT_FILES = deepFreeze2(Object.fromEntries(Object.keys(schemas).map((name) => [name, `${name}.schema.json`])));
+  var DIAGRAM_AUTHORING_CONTRACT_FILES = deepFreeze2(
+    Object.fromEntries(Object.keys(schemas).map((name) => [name, `${name}.schema.json`]))
+  );
   var mermaidConstructs = [
-    ["flowchart-direction", "lossless", "lossless", "lossless", "flowchart TB/TD/LR/RL/BT maps to presentation layout direction"],
-    ["explicit-node-id", "lossless", "lossless", "lossless", "Explicit source ID maps through source-map to stable semantic node ID; labels never establish identity"],
-    ["plain-node-label", "lossless", "lossless", "lossless", "Escaped plain text maps to node label; HTML is inert text and is not executed"],
-    ["rectangle-node", "lossless", "lossless", "lossless", "node.kind process and presentation shape rectangle"],
-    ["rounded-node", "lossless", "lossless", "lossless", "node.kind process and presentation shape rounded-rectangle"],
-    ["decision-node", "lossless", "lossless", "lossless", "node.kind decision and presentation shape diamond"],
-    ["cylinder-node", "lossless", "lossless", "lossless", "node.kind data-store and presentation shape cylinder"],
-    ["directed-edge", "lossless", "lossless", "lossless", "relation.kind flow and direction forward; source and target IDs are semantic endpoints"],
-    ["bidirectional-edge", "lossless", "lossless", "lossless", "relation.kind flow and direction both"],
-    ["undirected-edge", "lossless", "lossless", "lossless", "relation.kind association and direction none"],
-    ["plain-edge-label", "lossless", "lossless", "lossless", "Escaped plain text maps to relation label"],
-    ["subgraph", "lossless", "lossless", "lossless", "Explicit subgraph ID maps to one semantic group in an acyclic single-parent forest"],
-    ["lane-semantics", "unsupported", "partial", "partial", "Mermaid subgraphs do not encode lane identity or explicit lane order"],
-    ["manual-geometry", "unsupported", "partial", "partial", "Standard Mermaid does not preserve coordinates, routes, attachments, stacking or locks"],
-    ["styles-and-directives", "unsupported", "unsupported", "unsupported", "CSS, classDef, init directives, links, callbacks and HTML labels are outside this certified subset"],
-    ["unsupported-construct", "unsupported", "unsupported", "unsupported", "Unrecognized syntax is retained as original source with explicit loss diagnostics"]
-  ].map(([construct, input, output, roundTrip, mapping]) => ({ construct, import: input, export: output, semanticRoundTrip: roundTrip, mapping }));
+    [
+      "flowchart-direction",
+      "lossless",
+      "lossless",
+      "lossless",
+      "flowchart TB/TD/LR/RL/BT maps to presentation layout direction"
+    ],
+    [
+      "explicit-node-id",
+      "lossless",
+      "lossless",
+      "lossless",
+      "Explicit source ID maps through source-map to stable semantic node ID; labels never establish identity"
+    ],
+    [
+      "plain-node-label",
+      "lossless",
+      "lossless",
+      "lossless",
+      "Escaped plain text maps to node label; HTML is inert text and is not executed"
+    ],
+    [
+      "rectangle-node",
+      "lossless",
+      "lossless",
+      "lossless",
+      "node.kind process and presentation shape rectangle"
+    ],
+    [
+      "rounded-node",
+      "lossless",
+      "lossless",
+      "lossless",
+      "node.kind process and presentation shape rounded-rectangle"
+    ],
+    [
+      "decision-node",
+      "lossless",
+      "lossless",
+      "lossless",
+      "node.kind decision and presentation shape diamond"
+    ],
+    [
+      "cylinder-node",
+      "lossless",
+      "lossless",
+      "lossless",
+      "node.kind data-store and presentation shape cylinder"
+    ],
+    [
+      "directed-edge",
+      "lossless",
+      "lossless",
+      "lossless",
+      "relation.kind flow and direction forward; source and target IDs are semantic endpoints"
+    ],
+    [
+      "bidirectional-edge",
+      "lossless",
+      "lossless",
+      "lossless",
+      "relation.kind flow and direction both"
+    ],
+    [
+      "undirected-edge",
+      "lossless",
+      "lossless",
+      "lossless",
+      "relation.kind association and direction none"
+    ],
+    [
+      "plain-edge-label",
+      "lossless",
+      "lossless",
+      "lossless",
+      "Escaped plain text maps to relation label"
+    ],
+    [
+      "subgraph",
+      "lossless",
+      "lossless",
+      "lossless",
+      "Explicit subgraph ID maps to one semantic group in an acyclic single-parent forest"
+    ],
+    [
+      "lane-semantics",
+      "unsupported",
+      "partial",
+      "partial",
+      "Mermaid subgraphs do not encode lane identity or explicit lane order"
+    ],
+    [
+      "manual-geometry",
+      "unsupported",
+      "partial",
+      "partial",
+      "Standard Mermaid does not preserve coordinates, routes, attachments, stacking or locks"
+    ],
+    [
+      "styles-and-directives",
+      "unsupported",
+      "unsupported",
+      "unsupported",
+      "CSS, classDef, init directives, links, callbacks and HTML labels are outside this certified subset"
+    ],
+    [
+      "unsupported-construct",
+      "unsupported",
+      "unsupported",
+      "unsupported",
+      "Unrecognized syntax is retained as original source with explicit loss diagnostics"
+    ]
+  ].map(([construct, input, output, roundTrip, mapping]) => ({
+    construct,
+    import: input,
+    export: output,
+    semanticRoundTrip: roundTrip,
+    mapping
+  }));
   var profileIds = ["flowchart", "process", "swimlane", "architecture"];
   var DIAGRAM_AUTHORING_CAPABILITIES = deepFreeze2({
     kind: "diagram-authoring-capabilities",
@@ -3220,11 +3585,23 @@
     profiles: profileIds.map((grammarId) => ({
       grammarId,
       authoring: true,
-      primitives: ["node", "relation", "group", ...grammarId === "process" || grammarId === "swimlane" ? ["lane"] : [], "annotation", "emphasis"],
+      primitives: [
+        "node",
+        "relation",
+        "group",
+        ...grammarId === "process" || grammarId === "swimlane" ? ["lane"] : [],
+        "annotation",
+        "emphasis"
+      ],
       nodeKinds: [...semanticKinds],
       relationKinds: [...relationKinds],
       operations: [...DIAGRAM_EDIT_OPERATION_CLASSES],
-      mermaid: { mode: "copy", certificationVersion: "flowchart-copy-v1", constructs: mermaidConstructs.map((entry2) => ({ ...entry2 })), linkedSource: false }
+      mermaid: {
+        mode: "copy",
+        certificationVersion: "flowchart-copy-v1",
+        constructs: mermaidConstructs.map((entry2) => ({ ...entry2 })),
+        linkedSource: false
+      }
     })),
     unsupportedGrammars: DIAGRAM_REGISTRIES["diagram-grammars.json"].grammars.map((entry2) => entry2.grammarId).filter((value) => !profileIds.includes(value))
   });
@@ -3240,18 +3617,23 @@
     function visit(current, path, depth) {
       if (issues.length) return;
       if (++count > DIAGRAM_AUTHORING_LIMITS.values || depth > DIAGRAM_AUTHORING_LIMITS.depth) {
-        issues.push(error(path, "resource-limit", "Data exceeds the portable value or nesting limit."));
+        issues.push(
+          error(path, "resource-limit", "Data exceeds the portable value or nesting limit.")
+        );
         return;
       }
       if (typeof current === "string") {
         textSize += current.length;
-        if (textSize > DIAGRAM_AUTHORING_LIMITS.textCodeUnits) issues.push(error(path, "resource-limit", "Data exceeds the portable text limit."));
-        else if (/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/u.test(current)) issues.push(error(path, "unicode", "Unpaired Unicode surrogate is not portable UTF-8."));
+        if (textSize > DIAGRAM_AUTHORING_LIMITS.textCodeUnits)
+          issues.push(error(path, "resource-limit", "Data exceeds the portable text limit."));
+        else if (/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/u.test(current))
+          issues.push(error(path, "unicode", "Unpaired Unicode surrogate is not portable UTF-8."));
         return;
       }
       if (current === null || typeof current === "boolean") return;
       if (typeof current === "number") {
-        if (!Number.isFinite(current)) issues.push(error(path, "finite-number", "Numbers must be finite."));
+        if (!Number.isFinite(current))
+          issues.push(error(path, "finite-number", "Numbers must be finite."));
         return;
       }
       if (typeof current !== "object") {
@@ -3284,10 +3666,15 @@
           issues.push(error(path, "plain-data", "Non-JSON properties are not accepted."));
           break;
         }
-        visit(descriptor.value, Array.isArray(current) ? `${path}[${key}]` : `${path}.${key}`, depth + 1);
+        visit(
+          descriptor.value,
+          Array.isArray(current) ? `${path}[${key}]` : `${path}.${key}`,
+          depth + 1
+        );
         if (issues.length) break;
       }
-      if (!issues.length && Array.isArray(current) && Object.keys(descriptors).length !== current.length + 1) issues.push(error(path, "sparse-array", "Sparse arrays are not accepted."));
+      if (!issues.length && Array.isArray(current) && Object.keys(descriptors).length !== current.length + 1)
+        issues.push(error(path, "sparse-array", "Sparse arrays are not accepted."));
       ancestors.delete(current);
     }
     try {
@@ -3303,7 +3690,8 @@
   }
   function digestExcluding(value, field2) {
     assertData(value);
-    if (!value || typeof value !== "object" || Array.isArray(value)) throw new TypeError("Digest input must be an object.");
+    if (!value || typeof value !== "object" || Array.isArray(value))
+      throw new TypeError("Digest input must be an object.");
     const input = { ...value };
     delete input[field2];
     return sha256Jcs(input);
@@ -3313,9 +3701,23 @@
   var diagramAuthoringBundleDigest = (value) => digestExcluding(value, "bundleDigest");
   var same = (a, b) => canonicalizeJson(a) === canonicalizeJson(b);
   var sourceDigest = (text2) => `sha256:${sha256Hex(text2)}`;
-  var semanticNames = ["nodes", "relations", "groups", "lanes", "events", "series", "axes", "sets", "annotations"];
+  var semanticNames = [
+    "nodes",
+    "relations",
+    "groups",
+    "lanes",
+    "events",
+    "series",
+    "axes",
+    "sets",
+    "annotations"
+  ];
   var allElements = (doc) => semanticNames.flatMap((name) => doc[name]);
-  var expectedSnapshot = (bundle) => ({ bundleDigest: bundle.bundleDigest, semanticDigest: bundle.document.documentDigest, presentationDigest: bundle.presentation.presentationDigest });
+  var expectedSnapshot = (bundle) => ({
+    bundleDigest: bundle.bundleDigest,
+    semanticDigest: bundle.document.documentDigest,
+    presentationDigest: bundle.presentation.presentationDigest
+  });
   function hasContainmentCycle(parents) {
     const complete = /* @__PURE__ */ new Set();
     for (const member of parents.keys()) {
@@ -3333,40 +3735,105 @@
   function documentIssues(doc, path, issues) {
     const entries2 = allElements(doc);
     const byId = /* @__PURE__ */ new Map();
-    if (entries2.length + doc.emphasis.length > 1e4) issues.push(error(path, "resource-limit", "Too many semantic primitive entries."));
-    for (const collection of semanticNames) for (let i = 0; i < doc[collection].length; i += 1) {
-      const entry2 = doc[collection][i];
-      if (byId.has(entry2.id)) issues.push(error(`${path}.${collection}[${i}].id`, "duplicate-id", "Semantic element IDs must be globally unique."));
-      byId.set(entry2.id, { ...entry2, collection });
-    }
+    if (entries2.length + doc.emphasis.length > 1e4)
+      issues.push(error(path, "resource-limit", "Too many semantic primitive entries."));
+    for (const collection of semanticNames)
+      for (let i = 0; i < doc[collection].length; i += 1) {
+        const entry2 = doc[collection][i];
+        if (byId.has(entry2.id))
+          issues.push(
+            error(
+              `${path}.${collection}[${i}].id`,
+              "duplicate-id",
+              "Semantic element IDs must be globally unique."
+            )
+          );
+        byId.set(entry2.id, { ...entry2, collection });
+      }
     const capability = getDiagramAuthoringCapability(doc.grammar.id);
-    if (!capability.primitives.includes("lane") && doc.lanes.length) issues.push(error(`${path}.lanes`, "profile-primitive", "This authoring profile does not support lanes."));
-    doc.relations.forEach((edge, i) => ["from", "to"].forEach((key) => {
-      if (byId.get(edge[key])?.collection !== "nodes") issues.push(error(`${path}.relations[${i}].${key}`, "endpoint", "Relationship endpoints must reference semantic nodes."));
-    }));
+    if (!capability.primitives.includes("lane") && doc.lanes.length)
+      issues.push(
+        error(`${path}.lanes`, "profile-primitive", "This authoring profile does not support lanes.")
+      );
+    doc.relations.forEach(
+      (edge, i) => ["from", "to"].forEach((key) => {
+        if (byId.get(edge[key])?.collection !== "nodes")
+          issues.push(
+            error(
+              `${path}.relations[${i}].${key}`,
+              "endpoint",
+              "Relationship endpoints must reference semantic nodes."
+            )
+          );
+      })
+    );
     const parent = /* @__PURE__ */ new Map();
-    for (const collection of ["groups", "lanes"]) doc[collection].forEach((group, i) => group.members.forEach((member, j) => {
-      const child = byId.get(member);
-      const memberPath = `${path}.${collection}[${i}].members[${j}]`;
-      if (!child || !["nodes", "groups", "lanes", "annotations"].includes(child.collection)) issues.push(error(memberPath, "containment-reference", "Container members must reference a placeable semantic element."));
-      if (parent.has(member)) issues.push(error(memberPath, "multiple-parents", "An element has more than one immediate container."));
-      parent.set(member, group.id);
-    }));
-    if (hasContainmentCycle(parent)) issues.push(error(path, "containment-cycle", "Container membership must form a forest."));
-    if (!same([...doc.laneOrder].sort(), doc.lanes.map((item) => item.id).sort())) issues.push(error(`${path}.laneOrder`, "lane-order", "Every lane must occur exactly once in laneOrder."));
+    for (const collection of ["groups", "lanes"])
+      doc[collection].forEach(
+        (group, i) => group.members.forEach((member, j) => {
+          const child = byId.get(member);
+          const memberPath = `${path}.${collection}[${i}].members[${j}]`;
+          if (!child || !["nodes", "groups", "lanes", "annotations"].includes(child.collection))
+            issues.push(
+              error(
+                memberPath,
+                "containment-reference",
+                "Container members must reference a placeable semantic element."
+              )
+            );
+          if (parent.has(member))
+            issues.push(
+              error(
+                memberPath,
+                "multiple-parents",
+                "An element has more than one immediate container."
+              )
+            );
+          parent.set(member, group.id);
+        })
+      );
+    if (hasContainmentCycle(parent))
+      issues.push(error(path, "containment-cycle", "Container membership must form a forest."));
+    if (!same([...doc.laneOrder].sort(), doc.lanes.map((item) => item.id).sort()))
+      issues.push(
+        error(`${path}.laneOrder`, "lane-order", "Every lane must occur exactly once in laneOrder.")
+      );
     doc.annotations.forEach((entry2, i) => {
-      if (entry2.targetId !== null && !byId.has(entry2.targetId)) issues.push(error(`${path}.annotations[${i}].targetId`, "reference", "Annotation target is missing."));
+      if (entry2.targetId !== null && !byId.has(entry2.targetId))
+        issues.push(
+          error(`${path}.annotations[${i}].targetId`, "reference", "Annotation target is missing.")
+        );
     });
     const emphasisIds = /* @__PURE__ */ new Set();
     doc.emphasis.forEach((entry2, i) => {
-      if (!byId.has(entry2.targetId)) issues.push(error(`${path}.emphasis[${i}].targetId`, "reference", "Emphasis target is missing."));
-      if (emphasisIds.has(entry2.targetId)) issues.push(error(`${path}.emphasis[${i}].targetId`, "duplicate-id", "Only one emphasis entry is allowed per target."));
+      if (!byId.has(entry2.targetId))
+        issues.push(
+          error(`${path}.emphasis[${i}].targetId`, "reference", "Emphasis target is missing.")
+        );
+      if (emphasisIds.has(entry2.targetId))
+        issues.push(
+          error(
+            `${path}.emphasis[${i}].targetId`,
+            "duplicate-id",
+            "Only one emphasis entry is allowed per target."
+          )
+        );
       emphasisIds.add(entry2.targetId);
     });
     doc.accessibility.readingOrder.forEach((entry2, i) => {
-      if (!byId.has(entry2)) issues.push(error(`${path}.accessibility.readingOrder[${i}]`, "reference", "Reading order target is missing."));
+      if (!byId.has(entry2))
+        issues.push(
+          error(
+            `${path}.accessibility.readingOrder[${i}]`,
+            "reference",
+            "Reading order target is missing."
+          )
+        );
     });
-    if (doc.documentDigest !== diagramDocumentDigest(doc)) issues.push(error(`${path}.documentDigest`, "digest", "Semantic content digest does not match."));
+    if (doc.documentDigest !== diagramDocumentDigest(doc))
+      issues.push(
+        error(`${path}.documentDigest`, "digest", "Semantic content digest does not match.")
+      );
   }
   function presentationIssues(value, doc, path, issues) {
     const idsSeen = /* @__PURE__ */ new Set();
@@ -3374,36 +3841,109 @@
     const nodes = doc ? new Set(doc.nodes.map((entry2) => entry2.id)) : null;
     const relations = doc ? new Map(doc.relations.map((entry2) => [entry2.id, entry2])) : null;
     const containers = doc ? new Set([...doc.groups, ...doc.lanes].map((entry2) => entry2.id)) : null;
-    if (doc && (value.diagramId !== doc.diagramId || value.semanticDigest !== doc.documentDigest)) issues.push(error(path, "basis", "Presentation does not reference the exact semantic document."));
+    if (doc && (value.diagramId !== doc.diagramId || value.semanticDigest !== doc.documentDigest))
+      issues.push(
+        error(path, "basis", "Presentation does not reference the exact semantic document.")
+      );
     value.elements.forEach((entry2, i) => {
       const location = `${path}.elements[${i}]`;
       geometryIssues(entry2, location, issues);
-      if (idsSeen.has(entry2.elementId)) issues.push(error(`${location}.elementId`, "duplicate-id", "Presentation element IDs must be unique."));
+      if (idsSeen.has(entry2.elementId))
+        issues.push(
+          error(`${location}.elementId`, "duplicate-id", "Presentation element IDs must be unique.")
+        );
       idsSeen.add(entry2.elementId);
-      if (byId && !byId.has(entry2.elementId)) issues.push(error(`${location}.elementId`, "reference", "Presentation element is not in the semantic document."));
-      if (entry2.route !== null && entry2.bounds !== null) issues.push(error(location, "geometry-kind", "A connector has a route; a shape has bounds."));
-      if (entry2.route === null && entry2.bounds === null) issues.push(error(location, "geometry-kind", "A placed element requires bounds or a route."));
-      if (entry2.route?.mode === "manual" && entry2.route.points.length < 2) issues.push(error(`${location}.route.points`, "manual-route", "A manual route requires at least two global points."));
-      if (entry2.route?.mode === "automatic" && entry2.route.points.length !== 0) issues.push(error(`${location}.route.points`, "automatic-route", "Automatic route geometry is derived and must not carry authored points."));
-      if (entry2.route && entry2.appearance.shape !== "connector") issues.push(error(`${location}.appearance.shape`, "shape-kind", "Routes must use the connector shape."));
-      if (entry2.bounds && entry2.appearance.shape === "connector") issues.push(error(`${location}.appearance.shape`, "shape-kind", "Bounded elements cannot use the connector shape."));
-      if (relations?.has(entry2.elementId) && !entry2.route) issues.push(error(location, "geometry-kind", "Semantic relations require route geometry."));
-      if (doc && !relations.has(entry2.elementId) && !entry2.bounds) issues.push(error(location, "geometry-kind", "Non-relation elements require bounds."));
-      if (containers?.has(entry2.elementId) && entry2.appearance.shape !== "container") issues.push(error(`${location}.appearance.shape`, "shape-kind", "Containers require the container visual shape."));
-      if (nodes?.has(entry2.elementId) && ["container", "text"].includes(entry2.appearance.shape)) issues.push(error(`${location}.appearance.shape`, "shape-kind", "Nodes require a node visual shape."));
+      if (byId && !byId.has(entry2.elementId))
+        issues.push(
+          error(
+            `${location}.elementId`,
+            "reference",
+            "Presentation element is not in the semantic document."
+          )
+        );
+      if (entry2.route !== null && entry2.bounds !== null)
+        issues.push(error(location, "geometry-kind", "A connector has a route; a shape has bounds."));
+      if (entry2.route === null && entry2.bounds === null)
+        issues.push(error(location, "geometry-kind", "A placed element requires bounds or a route."));
+      if (entry2.route?.mode === "manual" && entry2.route.points.length < 2)
+        issues.push(
+          error(
+            `${location}.route.points`,
+            "manual-route",
+            "A manual route requires at least two global points."
+          )
+        );
+      if (entry2.route?.mode === "automatic" && entry2.route.points.length !== 0)
+        issues.push(
+          error(
+            `${location}.route.points`,
+            "automatic-route",
+            "Automatic route geometry is derived and must not carry authored points."
+          )
+        );
+      if (entry2.route && entry2.appearance.shape !== "connector")
+        issues.push(
+          error(`${location}.appearance.shape`, "shape-kind", "Routes must use the connector shape.")
+        );
+      if (entry2.bounds && entry2.appearance.shape === "connector")
+        issues.push(
+          error(
+            `${location}.appearance.shape`,
+            "shape-kind",
+            "Bounded elements cannot use the connector shape."
+          )
+        );
+      if (relations?.has(entry2.elementId) && !entry2.route)
+        issues.push(error(location, "geometry-kind", "Semantic relations require route geometry."));
+      if (doc && !relations.has(entry2.elementId) && !entry2.bounds)
+        issues.push(error(location, "geometry-kind", "Non-relation elements require bounds."));
+      if (containers?.has(entry2.elementId) && entry2.appearance.shape !== "container")
+        issues.push(
+          error(
+            `${location}.appearance.shape`,
+            "shape-kind",
+            "Containers require the container visual shape."
+          )
+        );
+      if (nodes?.has(entry2.elementId) && ["container", "text"].includes(entry2.appearance.shape))
+        issues.push(
+          error(`${location}.appearance.shape`, "shape-kind", "Nodes require a node visual shape.")
+        );
     });
-    if (byId && (idsSeen.size !== byId.size || [...byId.keys()].some((key) => !idsSeen.has(key)))) issues.push(error(`${path}.elements`, "presentation-coverage", "Every semantic element must have exactly one placement."));
-    if (value.presentationDigest !== diagramPresentationDigest(value)) issues.push(error(`${path}.presentationDigest`, "digest", "Presentation content digest does not match."));
+    if (byId && (idsSeen.size !== byId.size || [...byId.keys()].some((key) => !idsSeen.has(key))))
+      issues.push(
+        error(
+          `${path}.elements`,
+          "presentation-coverage",
+          "Every semantic element must have exactly one placement."
+        )
+      );
+    if (value.presentationDigest !== diagramPresentationDigest(value))
+      issues.push(
+        error(`${path}.presentationDigest`, "digest", "Presentation content digest does not match.")
+      );
   }
   function sourceMapIssues(value, doc, text2, path, issues) {
-    if (doc && (value.diagramId !== doc.diagramId || value.semanticDigest !== doc.documentDigest)) issues.push(error(path, "basis", "Source map does not reference the exact semantic document."));
+    if (doc && (value.diagramId !== doc.diagramId || value.semanticDigest !== doc.documentDigest))
+      issues.push(error(path, "basis", "Source map does not reference the exact semantic document."));
     const elementIds = doc ? new Set(allElements(doc).map((entry2) => entry2.id)) : null;
     const sourceIds2 = /* @__PURE__ */ new Set();
     let boundaries = null;
     if (text2 !== void 0) {
       const byteLength = new TextEncoder().encode(text2).length;
-      if (value.sourceDigest !== sourceDigest(text2) || value.sourceByteLength !== byteLength) issues.push(error(path, "source-digest", "Source digest and byte length must match exact UTF-8 source text."));
-      const requested = new Set(value.entries.flatMap((entry2) => entry2.range ? [entry2.range.startByte, entry2.range.endByte] : []));
+      if (value.sourceDigest !== sourceDigest(text2) || value.sourceByteLength !== byteLength)
+        issues.push(
+          error(
+            path,
+            "source-digest",
+            "Source digest and byte length must match exact UTF-8 source text."
+          )
+        );
+      const requested = new Set(
+        value.entries.flatMap(
+          (entry2) => entry2.range ? [entry2.range.startByte, entry2.range.endByte] : []
+        )
+      );
       boundaries = /* @__PURE__ */ new Set([0]);
       let cursor = 0;
       for (const character of text2) {
@@ -3414,37 +3954,113 @@
     }
     value.entries.forEach((entry2, i) => {
       const location = `${path}.entries[${i}]`;
-      if (entry2.sourceId !== null && sourceIds2.has(entry2.sourceId)) issues.push(error(`${location}.sourceId`, "ambiguous-source-id", "Duplicate explicit source IDs must be represented by one ambiguous entry."));
+      if (entry2.sourceId !== null && sourceIds2.has(entry2.sourceId))
+        issues.push(
+          error(
+            `${location}.sourceId`,
+            "ambiguous-source-id",
+            "Duplicate explicit source IDs must be represented by one ambiguous entry."
+          )
+        );
       if (entry2.sourceId !== null) sourceIds2.add(entry2.sourceId);
-      if (entry2.confidence === "exact" && (entry2.sourceId === null && entry2.range === null || entry2.elementIds.length !== 1)) issues.push(error(location, "source-identity", "Exact correspondence requires a source ID or exact range and one semantic element."));
+      if (entry2.confidence === "exact" && (entry2.sourceId === null && entry2.range === null || entry2.elementIds.length !== 1))
+        issues.push(
+          error(
+            location,
+            "source-identity",
+            "Exact correspondence requires a source ID or exact range and one semantic element."
+          )
+        );
       const certification = mermaidConstructs.find((item) => item.construct === entry2.construct);
-      if (!certification || certification.import === "unsupported" && (entry2.confidence === "exact" || entry2.losses.length === 0)) issues.push(error(`${location}.construct`, "source-certification", "Unsupported syntax requires the certified loss record and cannot claim exact correspondence."));
-      if (elementIds) entry2.elementIds.forEach((item, j) => {
-        if (!elementIds.has(item)) issues.push(error(`${location}.elementIds[${j}]`, "reference", "Source map semantic element is missing."));
-      });
-      if (entry2.range && (entry2.range.startByte > entry2.range.endByte || entry2.range.endByte > value.sourceByteLength || boundaries && (!boundaries.has(entry2.range.startByte) || !boundaries.has(entry2.range.endByte)))) issues.push(error(`${location}.range`, "source-range", "Source range must lie on UTF-8 boundaries within the original source."));
+      if (!certification || certification.import === "unsupported" && (entry2.confidence === "exact" || entry2.losses.length === 0))
+        issues.push(
+          error(
+            `${location}.construct`,
+            "source-certification",
+            "Unsupported syntax requires the certified loss record and cannot claim exact correspondence."
+          )
+        );
+      if (elementIds)
+        entry2.elementIds.forEach((item, j) => {
+          if (!elementIds.has(item))
+            issues.push(
+              error(
+                `${location}.elementIds[${j}]`,
+                "reference",
+                "Source map semantic element is missing."
+              )
+            );
+        });
+      if (entry2.range && (entry2.range.startByte > entry2.range.endByte || entry2.range.endByte > value.sourceByteLength || boundaries && (!boundaries.has(entry2.range.startByte) || !boundaries.has(entry2.range.endByte))))
+        issues.push(
+          error(
+            `${location}.range`,
+            "source-range",
+            "Source range must lie on UTF-8 boundaries within the original source."
+          )
+        );
     });
   }
   function bundleIssues(bundle, path, issues) {
     documentIssues(bundle.document, `${path}.document`, issues);
     presentationIssues(bundle.presentation, bundle.document, `${path}.presentation`, issues);
-    if (bundle.diagramId !== bundle.document.diagramId || bundle.diagramId !== bundle.presentation.diagramId) issues.push(error(`${path}.diagramId`, "diagram-id", "Bundle members must identify one diagram."));
-    if (bundle.originalSource === null !== (bundle.sourceMap === null)) issues.push(error(path, "source-pair", "Original source and its correspondence map must be retained together."));
+    if (bundle.diagramId !== bundle.document.diagramId || bundle.diagramId !== bundle.presentation.diagramId)
+      issues.push(
+        error(`${path}.diagramId`, "diagram-id", "Bundle members must identify one diagram.")
+      );
+    if (bundle.originalSource === null !== (bundle.sourceMap === null))
+      issues.push(
+        error(
+          path,
+          "source-pair",
+          "Original source and its correspondence map must be retained together."
+        )
+      );
     if (bundle.originalSource) {
-      if (new TextEncoder().encode(bundle.originalSource.text).length > DIAGRAM_AUTHORING_LIMITS.sourceBytes) issues.push(error(`${path}.originalSource.text`, "resource-limit", "Original source exceeds the UTF-8 byte limit."));
-      if (bundle.originalSource.sourceDigest !== sourceDigest(bundle.originalSource.text)) issues.push(error(`${path}.originalSource.sourceDigest`, "source-digest", "Source digest must match exact original UTF-8 bytes."));
+      if (new TextEncoder().encode(bundle.originalSource.text).length > DIAGRAM_AUTHORING_LIMITS.sourceBytes)
+        issues.push(
+          error(
+            `${path}.originalSource.text`,
+            "resource-limit",
+            "Original source exceeds the UTF-8 byte limit."
+          )
+        );
+      if (bundle.originalSource.sourceDigest !== sourceDigest(bundle.originalSource.text))
+        issues.push(
+          error(
+            `${path}.originalSource.sourceDigest`,
+            "source-digest",
+            "Source digest must match exact original UTF-8 bytes."
+          )
+        );
     }
-    if (bundle.sourceMap) sourceMapIssues(bundle.sourceMap, bundle.document, bundle.originalSource?.text, `${path}.sourceMap`, issues);
-    if (bundle.bundleDigest !== diagramAuthoringBundleDigest(bundle)) issues.push(error(`${path}.bundleDigest`, "digest", "Bundle content digest does not match."));
+    if (bundle.sourceMap)
+      sourceMapIssues(
+        bundle.sourceMap,
+        bundle.document,
+        bundle.originalSource?.text,
+        `${path}.sourceMap`,
+        issues
+      );
+    if (bundle.bundleDigest !== diagramAuthoringBundleDigest(bundle))
+      issues.push(error(`${path}.bundleDigest`, "digest", "Bundle content digest does not match."));
   }
   function basisIssues(value, bundle, path, issues) {
-    if (bundle && (value.diagramId !== bundle.diagramId || !same(value.base ?? value.basis, expectedSnapshot(bundle)))) issues.push(error(path, "basis", "The artifact does not reference the exact supplied bundle snapshot."));
+    if (bundle && (value.diagramId !== bundle.diagramId || !same(value.base ?? value.basis, expectedSnapshot(bundle))))
+      issues.push(
+        error(path, "basis", "The artifact does not reference the exact supplied bundle snapshot.")
+      );
   }
   function transactionIssues(value, bundle, path, issues) {
     basisIssues(value, bundle, path, issues);
-    if (value.undoOf === value.transactionId) issues.push(error(`${path}.undoOf`, "undo-reference", "An inverse cannot reference its own transaction."));
+    if (value.undoOf === value.transactionId)
+      issues.push(
+        error(`${path}.undoOf`, "undo-reference", "An inverse cannot reference its own transaction.")
+      );
     const available = bundle ? new Set(allElements(bundle.document).map((entry2) => entry2.id)) : null;
-    const collectionById = bundle ? new Map(semanticNames.flatMap((name) => bundle.document[name].map((entry2) => [entry2.id, name]))) : null;
+    const collectionById = bundle ? new Map(
+      semanticNames.flatMap((name) => bundle.document[name].map((entry2) => [entry2.id, name]))
+    ) : null;
     const insertedCollections = /* @__PURE__ */ new Map();
     const inserted = /* @__PURE__ */ new Set();
     const removed = /* @__PURE__ */ new Set();
@@ -3453,133 +4069,442 @@
     const membershipReferences = (collection, item, location) => {
       if (!collectionById) return;
       const actualCollection = collectionOf(item.id);
-      if (!actualCollection) issues.push(error(`${location}.id`, "containment-reference", "Membership container is not in the base or inserts."));
-      else if (actualCollection !== collection) issues.push(error(`${location}.id`, "element-class", "Membership container must match its semantic collection."));
+      if (!actualCollection)
+        issues.push(
+          error(
+            `${location}.id`,
+            "containment-reference",
+            "Membership container is not in the base or inserts."
+          )
+        );
+      else if (actualCollection !== collection)
+        issues.push(
+          error(
+            `${location}.id`,
+            "element-class",
+            "Membership container must match its semantic collection."
+          )
+        );
       item.members.forEach((member, j) => {
-        if (!["nodes", "groups", "lanes", "annotations"].includes(collectionOf(member))) issues.push(error(`${location}.members[${j}]`, "containment-reference", "Container members must reference placeable elements in the base or inserts."));
+        if (!["nodes", "groups", "lanes", "annotations"].includes(collectionOf(member)))
+          issues.push(
+            error(
+              `${location}.members[${j}]`,
+              "containment-reference",
+              "Container members must reference placeable elements in the base or inserts."
+            )
+          );
       });
     };
     const semanticGeometry = (collection, geometry, location) => {
-      if (collection && collection === "relations" !== (geometry.route !== null)) issues.push(error(location, "geometry-kind", "Geometry must match the semantic element class."));
+      if (collection && collection === "relations" !== (geometry.route !== null))
+        issues.push(
+          error(location, "geometry-kind", "Geometry must match the semantic element class.")
+        );
     };
     const semanticAppearance = (collection, appearance2, location) => {
       if (!collection) return;
       const shape2 = appearance2.shape;
-      if (collection === "relations" && shape2 !== "connector" || collection !== "relations" && shape2 === "connector" || ["groups", "lanes"].includes(collection) && shape2 !== "container" || collection === "nodes" && ["container", "text"].includes(shape2)) issues.push(error(`${location}.shape`, "shape-kind", "Appearance must match the semantic element class."));
+      if (collection === "relations" && shape2 !== "connector" || collection !== "relations" && shape2 === "connector" || ["groups", "lanes"].includes(collection) && shape2 !== "container" || collection === "nodes" && ["container", "text"].includes(shape2))
+        issues.push(
+          error(
+            `${location}.shape`,
+            "shape-kind",
+            "Appearance must match the semantic element class."
+          )
+        );
     };
     value.operations.forEach((op, i) => {
       const location = `${path}.operations[${i}]`;
       if (op.type === "insert-elements" || op.type === "remove-elements") {
         const entryIds = op.elements.map((entry2) => entry2.value.id);
         const presentationIds = op.presentation.map((entry2) => entry2.elementId);
-        if (new Set(entryIds).size !== entryIds.length) issues.push(error(`${location}.elements`, "duplicate-id", "Each operation must identify unique semantic elements."));
-        if (!same([...entryIds].sort(), [...presentationIds].sort())) issues.push(error(`${location}.presentation`, "presentation-coverage", "Inserted or removed semantic elements require matching presentation entries."));
+        if (new Set(entryIds).size !== entryIds.length)
+          issues.push(
+            error(
+              `${location}.elements`,
+              "duplicate-id",
+              "Each operation must identify unique semantic elements."
+            )
+          );
+        if (!same([...entryIds].sort(), [...presentationIds].sort()))
+          issues.push(
+            error(
+              `${location}.presentation`,
+              "presentation-coverage",
+              "Inserted or removed semantic elements require matching presentation entries."
+            )
+          );
         if (op.type === "insert-elements" && op.positions) {
           const positionedIds = op.positions.map((entry2) => entry2.elementId);
-          if (new Set(positionedIds).size !== positionedIds.length) issues.push(error(`${location}.positions`, "duplicate-id", "Insertion positions must identify each element once."));
-          if (!same([...entryIds].sort(), [...positionedIds].sort())) issues.push(error(`${location}.positions`, "position-coverage", "Insertion positions must cover exactly the inserted elements."));
+          if (new Set(positionedIds).size !== positionedIds.length)
+            issues.push(
+              error(
+                `${location}.positions`,
+                "duplicate-id",
+                "Insertion positions must identify each element once."
+              )
+            );
+          if (!same([...entryIds].sort(), [...positionedIds].sort()))
+            issues.push(
+              error(
+                `${location}.positions`,
+                "position-coverage",
+                "Insertion positions must cover exactly the inserted elements."
+              )
+            );
         }
         for (const entry2 of op.elements) {
           if (op.type === "insert-elements") {
-            if (entry2.collection === "lanes" && capability && !capability.primitives.includes("lane")) issues.push(error(`${location}.elements`, "profile-primitive", "This authoring profile does not support lanes."));
-            if (inserted.has(entry2.value.id) || available?.has(entry2.value.id)) issues.push(error(`${location}.elements`, "duplicate-id", "An insert must allocate a new stable element ID."));
+            if (entry2.collection === "lanes" && capability && !capability.primitives.includes("lane"))
+              issues.push(
+                error(
+                  `${location}.elements`,
+                  "profile-primitive",
+                  "This authoring profile does not support lanes."
+                )
+              );
+            if (inserted.has(entry2.value.id) || available?.has(entry2.value.id))
+              issues.push(
+                error(
+                  `${location}.elements`,
+                  "duplicate-id",
+                  "An insert must allocate a new stable element ID."
+                )
+              );
             inserted.add(entry2.value.id);
             insertedCollections.set(entry2.value.id, entry2.collection);
           } else {
-            if (removed.has(entry2.value.id)) issues.push(error(`${location}.elements`, "duplicate-id", "An element cannot be removed twice."));
-            if (available && !available.has(entry2.value.id) && !inserted.has(entry2.value.id)) issues.push(error(`${location}.elements`, "reference", "Removed element is not in the base or earlier inserts."));
-            if (collectionById && (collectionById.get(entry2.value.id) ?? insertedCollections.get(entry2.value.id)) !== entry2.collection) issues.push(error(`${location}.elements`, "element-class", "Removed entry must identify the actual semantic element class."));
+            if (removed.has(entry2.value.id))
+              issues.push(
+                error(`${location}.elements`, "duplicate-id", "An element cannot be removed twice.")
+              );
+            if (available && !available.has(entry2.value.id) && !inserted.has(entry2.value.id))
+              issues.push(
+                error(
+                  `${location}.elements`,
+                  "reference",
+                  "Removed element is not in the base or earlier inserts."
+                )
+              );
+            if (collectionById && (collectionById.get(entry2.value.id) ?? insertedCollections.get(entry2.value.id)) !== entry2.collection)
+              issues.push(
+                error(
+                  `${location}.elements`,
+                  "element-class",
+                  "Removed entry must identify the actual semantic element class."
+                )
+              );
             removed.add(entry2.value.id);
           }
         }
-        if (op.type === "insert-elements" && collectionById) op.elements.forEach((entry2, j) => {
-          if (entry2.collection === "relations") for (const endpoint of ["from", "to"]) {
-            if ((collectionById.get(entry2.value[endpoint]) ?? insertedCollections.get(entry2.value[endpoint])) !== "nodes") issues.push(error(`${location}.elements[${j}].value.${endpoint}`, "endpoint", "Relationship endpoints must identify nodes in the base or this insertion."));
-          }
-          if (["groups", "lanes"].includes(entry2.collection)) membershipReferences(entry2.collection, entry2.value, `${location}.elements[${j}].value`);
-          if (entry2.collection === "annotations" && entry2.value.targetId !== null && !collectionOf(entry2.value.targetId)) issues.push(error(`${location}.elements[${j}].value.targetId`, "reference", "Annotation target is not in the base or inserts."));
-        });
+        if (op.type === "insert-elements" && collectionById)
+          op.elements.forEach((entry2, j) => {
+            if (entry2.collection === "relations")
+              for (const endpoint of ["from", "to"]) {
+                if ((collectionById.get(entry2.value[endpoint]) ?? insertedCollections.get(entry2.value[endpoint])) !== "nodes")
+                  issues.push(
+                    error(
+                      `${location}.elements[${j}].value.${endpoint}`,
+                      "endpoint",
+                      "Relationship endpoints must identify nodes in the base or this insertion."
+                    )
+                  );
+              }
+            if (["groups", "lanes"].includes(entry2.collection))
+              membershipReferences(entry2.collection, entry2.value, `${location}.elements[${j}].value`);
+            if (entry2.collection === "annotations" && entry2.value.targetId !== null && !collectionOf(entry2.value.targetId))
+              issues.push(
+                error(
+                  `${location}.elements[${j}].value.targetId`,
+                  "reference",
+                  "Annotation target is not in the base or inserts."
+                )
+              );
+          });
         for (const [j, entry2] of op.presentation.entries()) {
           const semantic = op.elements.find((item) => item.value.id === entry2.elementId);
           geometryIssues(entry2, `${location}.presentation[${j}]`, issues);
           semanticGeometry(semantic?.collection, entry2, `${location}.presentation[${j}]`);
-          semanticAppearance(semantic?.collection, entry2.appearance, `${location}.presentation[${j}].appearance`);
+          semanticAppearance(
+            semantic?.collection,
+            entry2.appearance,
+            `${location}.presentation[${j}].appearance`
+          );
         }
       } else if (op.type === "set-geometry" || op.type === "set-appearance-locks") {
         const touched = /* @__PURE__ */ new Set();
         op.changes.forEach((change, j) => {
-          if (touched.has(change.elementId)) issues.push(error(`${location}.changes[${j}].elementId`, "duplicate-id", "An operation must list each affected element once."));
+          if (touched.has(change.elementId))
+            issues.push(
+              error(
+                `${location}.changes[${j}].elementId`,
+                "duplicate-id",
+                "An operation must list each affected element once."
+              )
+            );
           touched.add(change.elementId);
-          if (available && !available.has(change.elementId) && !inserted.has(change.elementId)) issues.push(error(`${location}.changes[${j}].elementId`, "reference", "Affected element is not in the base or earlier inserts."));
+          if (available && !available.has(change.elementId) && !inserted.has(change.elementId))
+            issues.push(
+              error(
+                `${location}.changes[${j}].elementId`,
+                "reference",
+                "Affected element is not in the base or earlier inserts."
+              )
+            );
           for (const side of ["before", "after"]) {
             const changePath = `${location}.changes[${j}].${side}`;
             if (op.type === "set-geometry") {
               geometryIssues(change[side], changePath, issues);
-              if (collectionById) semanticGeometry(collectionOf(change.elementId), change[side], changePath);
-            } else if (collectionById) semanticAppearance(collectionOf(change.elementId), change[side].appearance, `${changePath}.appearance`);
+              if (collectionById)
+                semanticGeometry(collectionOf(change.elementId), change[side], changePath);
+            } else if (collectionById)
+              semanticAppearance(
+                collectionOf(change.elementId),
+                change[side].appearance,
+                `${changePath}.appearance`
+              );
           }
         });
       } else if (op.type === "update-semantics") {
-        if (op.collection === "emphasis" && op.index !== void 0 && (op.before !== null || op.after === null)) issues.push(error(`${location}.index`, "insertion-position", "An emphasis index is only valid when inserting an emphasis entry."));
-        if (!["document", "source-map"].includes(op.collection) && available && !available.has(op.elementId) && !inserted.has(op.elementId)) issues.push(error(`${location}.elementId`, "reference", "Affected semantic element is not in the base or earlier inserts."));
-        if (!["document", "source-map", "emphasis"].includes(op.collection) && collectionById && (collectionById.get(op.elementId) ?? insertedCollections.get(op.elementId)) !== op.collection) issues.push(error(`${location}.collection`, "element-class", "An update cannot change the class of its semantic element."));
-        if (op.collection === "relations") for (const side of ["before", "after"]) for (const end of ["from", "to"]) {
-          if (collectionById && (collectionById.get(op[side][end]) ?? insertedCollections.get(op[side][end])) !== "nodes") issues.push(error(`${location}.${side}.${end}`, "endpoint", "Relationship endpoints must identify nodes in the base or inserts."));
-        }
-        if (collectionById && op.collection === "annotations") for (const side of ["before", "after"]) {
-          if (op[side].targetId !== null && !collectionOf(op[side].targetId)) issues.push(error(`${location}.${side}.targetId`, "reference", "Annotation target is not in the base or inserts."));
-        }
-        if (collectionById && op.collection === "document") for (const side of ["before", "after"]) op[side].accessibility.readingOrder.forEach((elementId, j) => {
-          if (!collectionOf(elementId)) issues.push(error(`${location}.${side}.accessibility.readingOrder[${j}]`, "reference", "Reading order target is not in the base or inserts."));
-        });
+        if (op.collection === "emphasis" && op.index !== void 0 && (op.before !== null || op.after === null))
+          issues.push(
+            error(
+              `${location}.index`,
+              "insertion-position",
+              "An emphasis index is only valid when inserting an emphasis entry."
+            )
+          );
+        if (!["document", "source-map"].includes(op.collection) && available && !available.has(op.elementId) && !inserted.has(op.elementId))
+          issues.push(
+            error(
+              `${location}.elementId`,
+              "reference",
+              "Affected semantic element is not in the base or earlier inserts."
+            )
+          );
+        if (!["document", "source-map", "emphasis"].includes(op.collection) && collectionById && (collectionById.get(op.elementId) ?? insertedCollections.get(op.elementId)) !== op.collection)
+          issues.push(
+            error(
+              `${location}.collection`,
+              "element-class",
+              "An update cannot change the class of its semantic element."
+            )
+          );
+        if (op.collection === "relations")
+          for (const side of ["before", "after"])
+            for (const end of ["from", "to"]) {
+              if (collectionById && (collectionById.get(op[side][end]) ?? insertedCollections.get(op[side][end])) !== "nodes")
+                issues.push(
+                  error(
+                    `${location}.${side}.${end}`,
+                    "endpoint",
+                    "Relationship endpoints must identify nodes in the base or inserts."
+                  )
+                );
+            }
+        if (collectionById && op.collection === "annotations")
+          for (const side of ["before", "after"]) {
+            if (op[side].targetId !== null && !collectionOf(op[side].targetId))
+              issues.push(
+                error(
+                  `${location}.${side}.targetId`,
+                  "reference",
+                  "Annotation target is not in the base or inserts."
+                )
+              );
+          }
+        if (collectionById && op.collection === "document")
+          for (const side of ["before", "after"])
+            op[side].accessibility.readingOrder.forEach((elementId, j) => {
+              if (!collectionOf(elementId))
+                issues.push(
+                  error(
+                    `${location}.${side}.accessibility.readingOrder[${j}]`,
+                    "reference",
+                    "Reading order target is not in the base or inserts."
+                  )
+                );
+            });
       } else if (op.type === "set-membership-order") {
         for (const side of ["before", "after"]) {
           const state = op[side];
-          if (state.lanes.length && capability && !capability.primitives.includes("lane")) issues.push(error(`${location}.${side}.lanes`, "profile-primitive", "This authoring profile does not support lanes."));
-          for (const collection of ["groups", "lanes"]) state[collection].forEach((item, j) => membershipReferences(collection, item, `${location}.${side}.${collection}[${j}]`));
+          if (state.lanes.length && capability && !capability.primitives.includes("lane"))
+            issues.push(
+              error(
+                `${location}.${side}.lanes`,
+                "profile-primitive",
+                "This authoring profile does not support lanes."
+              )
+            );
+          for (const collection of ["groups", "lanes"])
+            state[collection].forEach(
+              (item, j) => membershipReferences(collection, item, `${location}.${side}.${collection}[${j}]`)
+            );
           const parents = /* @__PURE__ */ new Map();
           const containers = [...state.groups, ...state.lanes];
-          if (new Set(containers.map((item) => item.id)).size !== containers.length) issues.push(error(`${location}.${side}`, "duplicate-id", "Membership lists require distinct container IDs."));
-          for (const item of containers) for (const member of item.members) {
-            if (parents.has(member)) issues.push(error(`${location}.${side}`, "multiple-parents", "Membership assigns more than one immediate parent."));
-            parents.set(member, item.id);
-          }
-          if (hasContainmentCycle(parents)) issues.push(error(`${location}.${side}`, "containment-cycle", "Membership must form a forest."));
-          if (!same([...state.laneOrder].sort(), state.lanes.map((item) => item.id).sort())) issues.push(error(`${location}.${side}.laneOrder`, "lane-order", "Membership includes every lane in explicit order."));
+          if (new Set(containers.map((item) => item.id)).size !== containers.length)
+            issues.push(
+              error(
+                `${location}.${side}`,
+                "duplicate-id",
+                "Membership lists require distinct container IDs."
+              )
+            );
+          for (const item of containers)
+            for (const member of item.members) {
+              if (parents.has(member))
+                issues.push(
+                  error(
+                    `${location}.${side}`,
+                    "multiple-parents",
+                    "Membership assigns more than one immediate parent."
+                  )
+                );
+              parents.set(member, item.id);
+            }
+          if (hasContainmentCycle(parents))
+            issues.push(
+              error(`${location}.${side}`, "containment-cycle", "Membership must form a forest.")
+            );
+          if (!same([...state.laneOrder].sort(), state.lanes.map((item) => item.id).sort()))
+            issues.push(
+              error(
+                `${location}.${side}.laneOrder`,
+                "lane-order",
+                "Membership includes every lane in explicit order."
+              )
+            );
         }
       }
     });
   }
   function geometryIssues(entry2, path, issues) {
-    if (entry2.bounds === null === (entry2.route === null)) issues.push(error(path, "geometry-kind", "Geometry requires exactly one of bounds or route."));
-    if (entry2.route?.mode === "manual" && entry2.route.points.length < 2) issues.push(error(`${path}.route.points`, "manual-route", "Manual routes require at least two global points."));
-    if (entry2.route?.mode === "automatic" && entry2.route.points.length !== 0) issues.push(error(`${path}.route.points`, "automatic-route", "Automatic route points are derived."));
-    if (entry2.route?.mode === "manual" && entry2.route.strategy === "straight" && entry2.route.points.length !== 2) issues.push(error(`${path}.route.points`, "route-strategy", "A straight manual route has exactly two endpoint points."));
-    if (entry2.route?.mode === "manual" && entry2.route.strategy === "orthogonal" && entry2.route.points.some((point2, i, points) => i > 0 && point2.x !== points[i - 1].x && point2.y !== points[i - 1].y)) issues.push(error(`${path}.route.points`, "route-strategy", "Every orthogonal segment must be horizontal or vertical."));
+    if (entry2.bounds === null === (entry2.route === null))
+      issues.push(error(path, "geometry-kind", "Geometry requires exactly one of bounds or route."));
+    if (entry2.route?.mode === "manual" && entry2.route.points.length < 2)
+      issues.push(
+        error(
+          `${path}.route.points`,
+          "manual-route",
+          "Manual routes require at least two global points."
+        )
+      );
+    if (entry2.route?.mode === "automatic" && entry2.route.points.length !== 0)
+      issues.push(
+        error(`${path}.route.points`, "automatic-route", "Automatic route points are derived.")
+      );
+    if (entry2.route?.mode === "manual" && entry2.route.strategy === "straight" && entry2.route.points.length !== 2)
+      issues.push(
+        error(
+          `${path}.route.points`,
+          "route-strategy",
+          "A straight manual route has exactly two endpoint points."
+        )
+      );
+    if (entry2.route?.mode === "manual" && entry2.route.strategy === "orthogonal" && entry2.route.points.some(
+      (point2, i, points) => i > 0 && point2.x !== points[i - 1].x && point2.y !== points[i - 1].y
+    ))
+      issues.push(
+        error(
+          `${path}.route.points`,
+          "route-strategy",
+          "Every orthogonal segment must be horizontal or vertical."
+        )
+      );
   }
   function fidelityIssues(value, bundle, path, issues) {
     basisIssues(value, bundle, path, issues);
     const idsKnown = bundle ? new Set(allElements(bundle.document).map((entry2) => entry2.id)) : null;
     for (const [i, loss] of value.losses.entries()) {
-      if (value[loss.dimension] === "lossless") issues.push(error(`${path}.${loss.dimension}`, "fidelity", "A dimension with reported loss cannot claim lossless fidelity."));
-      if (idsKnown) loss.elementIds.forEach((entry2, j) => {
-        if (!idsKnown.has(entry2)) issues.push(error(`${path}.losses[${i}].elementIds[${j}]`, "reference", "Fidelity loss refers to an unknown semantic element."));
-      });
+      if (value[loss.dimension] === "lossless")
+        issues.push(
+          error(
+            `${path}.${loss.dimension}`,
+            "fidelity",
+            "A dimension with reported loss cannot claim lossless fidelity."
+          )
+        );
+      if (idsKnown)
+        loss.elementIds.forEach((entry2, j) => {
+          if (!idsKnown.has(entry2))
+            issues.push(
+              error(
+                `${path}.losses[${i}].elementIds[${j}]`,
+                "reference",
+                "Fidelity loss refers to an unknown semantic element."
+              )
+            );
+        });
     }
-    if (bundle && value.sourceDigest !== (bundle.originalSource?.sourceDigest ?? null)) issues.push(error(`${path}.sourceDigest`, "source-digest", "Fidelity report must identify the retained source, if any."));
-    if (value.sourceFormat === "mermaid" && value.sourceDigest === null) issues.push(error(`${path}.sourceDigest`, "source-digest", "A Mermaid import report must identify its exact source bytes."));
+    if (bundle && value.sourceDigest !== (bundle.originalSource?.sourceDigest ?? null))
+      issues.push(
+        error(
+          `${path}.sourceDigest`,
+          "source-digest",
+          "Fidelity report must identify the retained source, if any."
+        )
+      );
+    if (value.sourceFormat === "mermaid" && value.sourceDigest === null)
+      issues.push(
+        error(
+          `${path}.sourceDigest`,
+          "source-digest",
+          "A Mermaid import report must identify its exact source bytes."
+        )
+      );
     if (bundle && value.sourceFormat === "mermaid") {
-      const uncertain = bundle.sourceMap?.entries.some((entry2) => entry2.confidence === "ambiguous" || entry2.losses.length || mermaidConstructs.find((item) => item.construct === entry2.construct)?.import !== "lossless");
-      if (uncertain && value.semantic === "lossless") issues.push(error(`${path}.semantic`, "fidelity", "Source correspondence records ambiguity or unsupported content; semantic fidelity cannot be lossless."));
-      const lostPresentation = bundle.sourceMap?.entries.some((entry2) => ["styles-and-directives", "manual-geometry", "unsupported-construct"].includes(entry2.construct));
-      if (lostPresentation && value.presentation === "lossless") issues.push(error(`${path}.presentation`, "fidelity", "Unsupported source presentation cannot be reported as retained without loss."));
+      const uncertain = bundle.sourceMap?.entries.some(
+        (entry2) => entry2.confidence === "ambiguous" || entry2.losses.length || mermaidConstructs.find((item) => item.construct === entry2.construct)?.import !== "lossless"
+      );
+      if (uncertain && value.semantic === "lossless")
+        issues.push(
+          error(
+            `${path}.semantic`,
+            "fidelity",
+            "Source correspondence records ambiguity or unsupported content; semantic fidelity cannot be lossless."
+          )
+        );
+      const lostPresentation = bundle.sourceMap?.entries.some(
+        (entry2) => ["styles-and-directives", "manual-geometry", "unsupported-construct"].includes(
+          entry2.construct
+        )
+      );
+      if (lostPresentation && value.presentation === "lossless")
+        issues.push(
+          error(
+            `${path}.presentation`,
+            "fidelity",
+            "Unsupported source presentation cannot be reported as retained without loss."
+          )
+        );
     }
     if (bundle && value.targetFormat === "mermaid") {
-      if (bundle.presentation.elements.length && value.presentation === "lossless") issues.push(error(`${path}.presentation`, "fidelity", "Standard Mermaid does not retain authored global geometry, stacking, attachment offsets or locks."));
-      const appearances = new Map(bundle.presentation.elements.map((entry2) => [entry2.elementId, entry2.appearance.shape]));
-      const supportedNodes = bundle.document.nodes.every((entry2) => entry2.kind === "process" && ["rectangle", "rounded-rectangle"].includes(appearances.get(entry2.id)) || entry2.kind === "decision" && appearances.get(entry2.id) === "diamond" || entry2.kind === "data-store" && appearances.get(entry2.id) === "cylinder");
-      const supportedRelations = bundle.document.relations.every((entry2) => entry2.kind === "flow" && ["forward", "both"].includes(entry2.direction) || entry2.kind === "association" && entry2.direction === "none");
-      if ((!supportedNodes || !supportedRelations || bundle.document.lanes.length || bundle.document.annotations.length || bundle.document.emphasis.length) && value.semantic === "lossless") issues.push(error(`${path}.semantic`, "fidelity", "The certified Mermaid subset cannot preserve all authored semantic roles or primitives."));
+      if (bundle.presentation.elements.length && value.presentation === "lossless")
+        issues.push(
+          error(
+            `${path}.presentation`,
+            "fidelity",
+            "Standard Mermaid does not retain authored global geometry, stacking, attachment offsets or locks."
+          )
+        );
+      const appearances = new Map(
+        bundle.presentation.elements.map((entry2) => [entry2.elementId, entry2.appearance.shape])
+      );
+      const supportedNodes = bundle.document.nodes.every(
+        (entry2) => entry2.kind === "process" && ["rectangle", "rounded-rectangle"].includes(appearances.get(entry2.id)) || entry2.kind === "decision" && appearances.get(entry2.id) === "diamond" || entry2.kind === "data-store" && appearances.get(entry2.id) === "cylinder"
+      );
+      const supportedRelations = bundle.document.relations.every(
+        (entry2) => entry2.kind === "flow" && ["forward", "both"].includes(entry2.direction) || entry2.kind === "association" && entry2.direction === "none"
+      );
+      if ((!supportedNodes || !supportedRelations || bundle.document.lanes.length || bundle.document.annotations.length || bundle.document.emphasis.length) && value.semantic === "lossless")
+        issues.push(
+          error(
+            `${path}.semantic`,
+            "fidelity",
+            "The certified Mermaid subset cannot preserve all authored semantic roles or primitives."
+          )
+        );
     }
   }
   var validRelativePath = (value) => !value.split("/").some((part) => part === "" || part === "." || part === "..") && !/^[A-Za-z]:/u.test(value);
@@ -3587,23 +4512,58 @@
     const issues = inspectData(value);
     if (issues.length) return issues;
     const optionIssues = inspectData(options);
-    if (optionIssues.length) return optionIssues.map((entry2) => ({ ...entry2, path: entry2.path.replace(/^\$/u, "$options") }));
-    if (!options || Array.isArray(options) || typeof options !== "object" || Object.keys(options).some((key) => !["document", "bundle", "baseBundle", "sourceText"].includes(key))) return [error("$options", "options", "Only explicit document, bundle, baseBundle and sourceText contexts are accepted.")];
-    if (options.sourceText !== void 0 && typeof options.sourceText !== "string") return [error("$options.sourceText", "type", "Source text context must be a string.")];
-    if (typeof kind !== "string" || !Object.hasOwn(DIAGRAM_AUTHORING_SCHEMAS, kind)) return [error("$", "contract", "Unknown diagram authoring contract.")];
+    if (optionIssues.length)
+      return optionIssues.map((entry2) => ({
+        ...entry2,
+        path: entry2.path.replace(/^\$/u, "$options")
+      }));
+    if (!options || Array.isArray(options) || typeof options !== "object" || Object.keys(options).some(
+      (key) => !["document", "bundle", "baseBundle", "sourceText"].includes(key)
+    ))
+      return [
+        error(
+          "$options",
+          "options",
+          "Only explicit document, bundle, baseBundle and sourceText contexts are accepted."
+        )
+      ];
+    if (options.sourceText !== void 0 && typeof options.sourceText !== "string")
+      return [error("$options.sourceText", "type", "Source text context must be a string.")];
+    if (typeof kind !== "string" || !Object.hasOwn(DIAGRAM_AUTHORING_SCHEMAS, kind))
+      return [error("$", "contract", "Unknown diagram authoring contract.")];
     const shapeIssues = validateJson(value, DIAGRAM_AUTHORING_SCHEMAS[kind]);
-    if (shapeIssues.length) return shapeIssues.slice(0, 128).map(({ path, rule }) => error(path, rule, "Value does not satisfy the diagram authoring contract."));
-    for (const name of ["document", "bundle", "baseBundle"]) if (options[name] !== void 0) {
-      const contextKind = name === "document" ? "diagram-document" : "diagram-authoring-bundle";
-      const failures = validateDiagramAuthoringArtifact(contextKind, options[name]);
-      issues.push(...failures.map((entry2) => ({ ...entry2, path: entry2.path.replace(/^\$/u, `$options.${name}`) })));
-    }
+    if (shapeIssues.length)
+      return shapeIssues.slice(0, 128).map(
+        ({ path, rule }) => error(path, rule, "Value does not satisfy the diagram authoring contract.")
+      );
+    for (const name of ["document", "bundle", "baseBundle"])
+      if (options[name] !== void 0) {
+        const contextKind = name === "document" ? "diagram-document" : "diagram-authoring-bundle";
+        const failures = validateDiagramAuthoringArtifact(contextKind, options[name]);
+        issues.push(
+          ...failures.map((entry2) => ({
+            ...entry2,
+            path: entry2.path.replace(/^\$/u, `$options.${name}`)
+          }))
+        );
+      }
     if (issues.length) return issues;
-    if (options.bundle && options.baseBundle && !same(options.bundle, options.baseBundle)) return [error("$options", "basis", "Conflicting bundle contexts are not accepted.")];
+    if (options.bundle && options.baseBundle && !same(options.bundle, options.baseBundle))
+      return [error("$options", "basis", "Conflicting bundle contexts are not accepted.")];
     const contextBundle = options.baseBundle ?? options.bundle;
     const contextDoc = options.document ?? contextBundle?.document;
-    if (options.document && contextBundle && !same(options.document, contextBundle.document)) return [error("$options.document", "basis", "Document context must match the supplied bundle.")];
-    if (options.sourceText !== void 0 && contextBundle?.originalSource && options.sourceText !== contextBundle.originalSource.text) return [error("$options.sourceText", "source-digest", "Source text context must match the supplied bundle.")];
+    if (options.document && contextBundle && !same(options.document, contextBundle.document))
+      return [
+        error("$options.document", "basis", "Document context must match the supplied bundle.")
+      ];
+    if (options.sourceText !== void 0 && contextBundle?.originalSource && options.sourceText !== contextBundle.originalSource.text)
+      return [
+        error(
+          "$options.sourceText",
+          "source-digest",
+          "Source text context must match the supplied bundle."
+        )
+      ];
     switch (kind) {
       case "diagram-document":
         documentIssues(value, "$", issues);
@@ -3615,7 +4575,13 @@
         bundleIssues(value, "$", issues);
         break;
       case "diagram-source-map":
-        sourceMapIssues(value, contextDoc, options.sourceText ?? contextBundle?.originalSource?.text, "$", issues);
+        sourceMapIssues(
+          value,
+          contextDoc,
+          options.sourceText ?? contextBundle?.originalSource?.text,
+          "$",
+          issues
+        );
         break;
       case "diagram-edit-transaction":
         transactionIssues(value, contextBundle, "$", issues);
@@ -3623,30 +4589,99 @@
       case "diagram-change-proposal":
         basisIssues(value, contextBundle, "$", issues);
         transactionIssues(value.transaction, contextBundle, "$.transaction", issues);
-        if (value.diagramId !== value.transaction.diagramId || !same(value.base, value.transaction.base)) issues.push(error("$.transaction", "basis", "Proposal and transaction must identify the same exact diagram snapshot."));
+        if (value.diagramId !== value.transaction.diagramId || !same(value.base, value.transaction.base))
+          issues.push(
+            error(
+              "$.transaction",
+              "basis",
+              "Proposal and transaction must identify the same exact diagram snapshot."
+            )
+          );
         break;
       case "diagram-fidelity-report":
         fidelityIssues(value, contextBundle, "$", issues);
         break;
       case "diagram-manifest":
         basisIssues(value, contextBundle, "$", issues);
-        if (!validRelativePath(value.bundle.path)) issues.push(error("$.bundle.path", "relative-path", "Bundle path must remain within its artifact scope."));
-        if (!value.bundle.path.endsWith(".planr-diagram-bundle.json")) issues.push(error("$.bundle.path", "bundle-path", "The canonical bundle uses the planr-diagram-bundle.json extension."));
+        if (!validRelativePath(value.bundle.path))
+          issues.push(
+            error(
+              "$.bundle.path",
+              "relative-path",
+              "Bundle path must remain within its artifact scope."
+            )
+          );
+        if (!value.bundle.path.endsWith(".planr-diagram-bundle.json"))
+          issues.push(
+            error(
+              "$.bundle.path",
+              "bundle-path",
+              "The canonical bundle uses the planr-diagram-bundle.json extension."
+            )
+          );
         value.outputs.forEach((entry2, i) => {
-          if (!validRelativePath(entry2.path)) issues.push(error(`$.outputs[${i}].path`, "relative-path", "Output path must remain within its artifact scope."));
-          if (entry2.path === value.bundle.path) issues.push(error(`$.outputs[${i}].path`, "canonical-output-collision", "A derived output must not overwrite the canonical bundle."));
-          if (entry2.fidelity.targetFormat !== { "image/svg+xml": "svg", "text/html": "html", "image/png": "png" }[entry2.mediaType]) issues.push(error(`$.outputs[${i}].fidelity.targetFormat`, "output-format", "Output fidelity must describe the declared media type."));
+          if (!validRelativePath(entry2.path))
+            issues.push(
+              error(
+                `$.outputs[${i}].path`,
+                "relative-path",
+                "Output path must remain within its artifact scope."
+              )
+            );
+          if (entry2.path === value.bundle.path)
+            issues.push(
+              error(
+                `$.outputs[${i}].path`,
+                "canonical-output-collision",
+                "A derived output must not overwrite the canonical bundle."
+              )
+            );
+          if (entry2.fidelity.targetFormat !== { "image/svg+xml": "svg", "text/html": "html", "image/png": "png" }[entry2.mediaType])
+            issues.push(
+              error(
+                `$.outputs[${i}].fidelity.targetFormat`,
+                "output-format",
+                "Output fidelity must describe the declared media type."
+              )
+            );
           fidelityIssues(entry2.fidelity, contextBundle, `$.outputs[${i}].fidelity`, issues);
-          if (entry2.fidelity.diagramId !== value.diagramId || !same(entry2.fidelity.basis, value.basis)) issues.push(error(`$.outputs[${i}].fidelity`, "basis", "Every output must identify the manifest snapshot."));
+          if (entry2.fidelity.diagramId !== value.diagramId || !same(entry2.fidelity.basis, value.basis))
+            issues.push(
+              error(
+                `$.outputs[${i}].fidelity`,
+                "basis",
+                "Every output must identify the manifest snapshot."
+              )
+            );
         });
-        if (new Set(value.outputs.map((entry2) => entry2.path)).size !== value.outputs.length) issues.push(error("$.outputs", "duplicate-path", "Output paths must be unique."));
+        if (new Set(value.outputs.map((entry2) => entry2.path)).size !== value.outputs.length)
+          issues.push(error("$.outputs", "duplicate-path", "Output paths must be unique."));
         break;
       case "diagram-publication-state":
-        if (value.draft === null && value.published === null) issues.push(error("$", "publication-reference", "Publication metadata must identify at least one snapshot."));
-        if (contextBundle && (value.diagramId !== contextBundle.diagramId || ![value.draft, value.published].some((entry2) => entry2 && same(entry2, expectedSnapshot(contextBundle))))) issues.push(error("$", "basis", "Publication metadata does not reference the supplied snapshot."));
+        if (value.draft === null && value.published === null)
+          issues.push(
+            error(
+              "$",
+              "publication-reference",
+              "Publication metadata must identify at least one snapshot."
+            )
+          );
+        if (contextBundle && (value.diagramId !== contextBundle.diagramId || ![value.draft, value.published].some(
+          (entry2) => entry2 && same(entry2, expectedSnapshot(contextBundle))
+        )))
+          issues.push(
+            error("$", "basis", "Publication metadata does not reference the supplied snapshot.")
+          );
         break;
       case "diagram-authoring-capabilities":
-        if (!same(value, DIAGRAM_AUTHORING_CAPABILITIES)) issues.push(error("$", "capability-certification", "Capability claims must match the versioned certification catalog exactly."));
+        if (!same(value, DIAGRAM_AUTHORING_CAPABILITIES))
+          issues.push(
+            error(
+              "$",
+              "capability-certification",
+              "Capability claims must match the versioned certification catalog exactly."
+            )
+          );
         break;
       default:
         break;

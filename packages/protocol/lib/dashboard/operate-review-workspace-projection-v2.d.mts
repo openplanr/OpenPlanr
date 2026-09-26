@@ -12,9 +12,7 @@ import type {
   OperatingTraceMatrixV2,
 } from '../protocol/index.js';
 
-export type OperateReviewWorkspaceSourceV1 =
-  | OperatingReviewReadV2
-  | OperatingReviewReceiptV2;
+export type OperateReviewWorkspaceSourceV1 = OperatingReviewReadV2 | OperatingReviewReceiptV2;
 
 export type OperateSharedTruthEventHeadV1 =
   | Readonly<{ sequence: 0; hash: null }>
@@ -37,18 +35,20 @@ export type OperateSharedTruthSummaryV1 = Readonly<{
     skipped: number;
     uncertain: number;
     revisited: number;
-    byStage: ReadonlyArray<Readonly<{
-      id: 'observe' | 'understand' | 'decide' | 'govern' | 'act' | 'verify' | 'learn';
-      complete: number;
-      current: number;
-      available: number;
-      waiting: number;
-      blocked: number;
-      failed: number;
-      skipped: number;
-      uncertain: number;
-      revisited: number;
-    }>>;
+    byStage: ReadonlyArray<
+      Readonly<{
+        id: 'observe' | 'understand' | 'decide' | 'govern' | 'act' | 'verify' | 'learn';
+        complete: number;
+        current: number;
+        available: number;
+        waiting: number;
+        blocked: number;
+        failed: number;
+        skipped: number;
+        uncertain: number;
+        revisited: number;
+      }>
+    >;
   }>;
   proof: Readonly<{
     status: 'verified' | 'unverified' | 'partial' | 'not-required';
@@ -159,27 +159,39 @@ export type OperateReviewWorkspacePayloadV1 = Readonly<{
       uncertaintyCount: number;
     }>;
     recommendation:
-      | Readonly<{ status: 'available'; items: ReadonlyArray<OperatingReviewReadV2['decisions'][number]>; absence: null }>
-      | Readonly<{ status: 'absent'; items: readonly []; absence: Readonly<{ code: string; message: string }> }>;
+      | Readonly<{
+          status: 'available';
+          items: ReadonlyArray<OperatingReviewReadV2['decisions'][number]>;
+          absence: null;
+        }>
+      | Readonly<{
+          status: 'absent';
+          items: readonly [];
+          absence: Readonly<{ code: string; message: string }>;
+        }>;
     choices: readonly OperateReviewDisplayChoiceV1[];
     findings: ReadonlyArray<OperatingReviewReadV2['findings'][number]>;
     dissent: ReadonlyArray<OperatingReviewReadV2['dissent'][number]>;
-    uncertainty: ReadonlyArray<Readonly<{
-      uncertaintyId: string;
-      sourceKind: 'decision' | 'claim' | 'evidence' | 'gap';
-      sourceId: string;
-      statement: string;
-    }>>;
+    uncertainty: ReadonlyArray<
+      Readonly<{
+        uncertaintyId: string;
+        sourceKind: 'decision' | 'claim' | 'evidence' | 'gap';
+        sourceId: string;
+        statement: string;
+      }>
+    >;
     gaps: ReadonlyArray<OperatingReviewReadV2['gaps'][number]>;
     claims: readonly OperateExperienceClaimV1[];
     evidence: readonly OperateExperienceEvidenceV1[];
-    omissions: ReadonlyArray<Readonly<{
-      kind: 'restricted' | 'absent';
-      subject: 'evidence' | 'claim' | 'seat' | 'source';
-      count: number;
-      subjectIds: readonly string[];
-      reasonCode: string;
-    }>>;
+    omissions: ReadonlyArray<
+      Readonly<{
+        kind: 'restricted' | 'absent';
+        subject: 'evidence' | 'claim' | 'seat' | 'source';
+        count: number;
+        subjectIds: readonly string[];
+        reasonCode: string;
+      }>
+    >;
     traceMatrix: OperatingTraceMatrixV2 | null;
     truthSummary: OperateSharedTruthSummaryV1;
     terminalDisposition: null | Readonly<{
@@ -195,7 +207,9 @@ export type OperateReviewWorkspacePayloadV1 = Readonly<{
     capability:
       | Readonly<{
           available: true;
-          actions: ReadonlyArray<Readonly<{ subjectId: string; action: OperateAllowedActionV2<'operate.review.submit'> }>>;
+          actions: ReadonlyArray<
+            Readonly<{ subjectId: string; action: OperateAllowedActionV2<'operate.review.submit'> }>
+          >;
           reason: null;
         }>
       | Readonly<{

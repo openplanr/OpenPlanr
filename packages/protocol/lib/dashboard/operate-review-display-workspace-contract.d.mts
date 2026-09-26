@@ -1,8 +1,7 @@
 import type { JsonValue, ProtocolValidationError } from '../protocol/index.js';
 import type { OperateReviewWorkspacePayloadV1 } from './operate-review-workspace-projection-v2.mjs';
 
-export const OPERATE_REVIEW_DISPLAY_WORKSPACE_DOMAIN:
-  'openplanr:operate-review-display-workspace:1.0.0';
+export const OPERATE_REVIEW_DISPLAY_WORKSPACE_DOMAIN: 'openplanr:operate-review-display-workspace:1.0.0';
 
 export type OperateReviewDisplayWorkspaceIntegrityV1 = Readonly<{
   algorithm: 'sha-256-jcs';
@@ -49,6 +48,4 @@ export function issueOperateReviewDisplayWorkspaceV1(
   payload: OperateReviewWorkspacePayloadV1,
 ): OperateReviewDisplayWorkspaceV1;
 
-export const OPERATE_REVIEW_DISPLAY_WORKSPACE_SCHEMA_V1: Readonly<
-  Record<string, JsonValue>
->;
+export const OPERATE_REVIEW_DISPLAY_WORKSPACE_SCHEMA_V1: Readonly<Record<string, JsonValue>>;

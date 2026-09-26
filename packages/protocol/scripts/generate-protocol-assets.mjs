@@ -1,19 +1,39 @@
 #!/usr/bin/env node
 
-import { chmodSync, existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { sha256Hex } from '../src/canonical-json.mjs';
 import { buildRegistries, buildSchemas } from './protocol-definitions.mjs';
-import { buildSkillSourceRegistries, buildSkillSourceSchemas } from './skill-source-definitions.mjs';
-import { buildSkillSourceRegistriesV17, buildSkillSourceSchemasV17 } from './skill-source-definitions-v17.mjs';
+import {
+  buildSkillSourceRegistries,
+  buildSkillSourceSchemas,
+} from './skill-source-definitions.mjs';
+import {
+  buildSkillSourceRegistriesV17,
+  buildSkillSourceSchemasV17,
+} from './skill-source-definitions-v17.mjs';
 import { buildDiagramRegistries, buildDiagramSchemas } from './diagram-definitions.mjs';
-import { buildDiagramAuthoringSchemas, buildDiagramAuthoringRegistries } from './diagram-authoring-definitions.mjs';
+import {
+  buildDiagramAuthoringSchemas,
+  buildDiagramAuthoringRegistries,
+} from './diagram-authoring-definitions.mjs';
 import { buildPlanningSchemas } from './planning-definitions.mjs';
 import { buildSkillPackageSchemasV18 } from './skill-package-definitions-v18.mjs';
 import { DESIGN_DOCUMENT_SCHEMA } from '../src/design-contracts.mjs';
-import { REVIEW_EXPERIENCE_SCHEMAS, DESIGN_REVIEW_METADATA_PAYLOAD_V11_SCHEMA } from '../src/review-experience-contracts.mjs';
+import {
+  REVIEW_EXPERIENCE_SCHEMAS,
+  DESIGN_REVIEW_METADATA_PAYLOAD_V11_SCHEMA,
+} from '../src/review-experience-contracts.mjs';
 import { DESIGN_WORKSPACE_SCHEMAS } from '../src/workspace-contracts.mjs';
 import { ENTERPRISE_SCHEMAS } from '../src/enterprise-contracts.mjs';
 import { DESIGN_HANDOFF_SCHEMAS } from '../src/design-handoff-contracts.mjs';
@@ -30,82 +50,116 @@ for (const [name, value] of buildRegistries()) expected.set(`registries/${name}`
 // Protocol 1.6 skill-source contracts route to schemas/v1.6.0; the three
 // additive registries share the flat registries/ directory but project to
 // registry/v1.6.0 and stay out of the closed v1.5 canonical registry module.
-for (const [name, value] of buildSkillSourceSchemas()) expected.set(`schemas/v1.6.0/${name}`, json(value));
-for (const [name, value] of buildDiagramSchemas()) expected.set(`schemas/v1.6.0/${name}`, json(value));
-for (const [name, value] of buildDiagramRegistries()) expected.set(`registries/${name}`, json(value));
-for (const [name, value] of buildSkillSourceSchemasV17()) expected.set(`schemas/v1.7.0/${name}`, json(value));
-for (const [name, value] of buildPlanningSchemas()) expected.set(`schemas/v1.7.0/${name}`, json(value));
-for (const [name, value] of buildSkillSourceRegistriesV17()) expected.set(`registries/${name}`, json(value));
-for (const [name, value] of buildSkillPackageSchemasV18()) expected.set(`schemas/v1.8.0/${name}`, json(value));
+for (const [name, value] of buildSkillSourceSchemas())
+  expected.set(`schemas/v1.6.0/${name}`, json(value));
+for (const [name, value] of buildDiagramSchemas())
+  expected.set(`schemas/v1.6.0/${name}`, json(value));
+for (const [name, value] of buildDiagramRegistries())
+  expected.set(`registries/${name}`, json(value));
+for (const [name, value] of buildSkillSourceSchemasV17())
+  expected.set(`schemas/v1.7.0/${name}`, json(value));
+for (const [name, value] of buildPlanningSchemas())
+  expected.set(`schemas/v1.7.0/${name}`, json(value));
+for (const [name, value] of buildSkillSourceRegistriesV17())
+  expected.set(`registries/${name}`, json(value));
+for (const [name, value] of buildSkillPackageSchemasV18())
+  expected.set(`schemas/v1.8.0/${name}`, json(value));
 expected.set('schemas/v1.9.0/design-document.schema.json', json(DESIGN_DOCUMENT_SCHEMA));
-for (const [name, value] of Object.entries(DESIGN_WORKSPACE_SCHEMAS)) expected.set(`schemas/v1.9.0/${name}.schema.json`, json(value));
+for (const [name, value] of Object.entries(DESIGN_WORKSPACE_SCHEMAS))
+  expected.set(`schemas/v1.9.0/${name}.schema.json`, json(value));
 
-for (const [name, value] of Object.entries(REVIEW_EXPERIENCE_SCHEMAS)) expected.set(`schemas/v1.10.0/${name}.schema.json`, json(value));
-expected.set('schemas/v1.11.0/design-review-metadata-payload.schema.json', json(DESIGN_REVIEW_METADATA_PAYLOAD_V11_SCHEMA));
-for (const [name, value] of Object.entries(DESIGN_HANDOFF_SCHEMAS)) expected.set(`schemas/v1.11.0/${name}.schema.json`, json(value));
+for (const [name, value] of Object.entries(REVIEW_EXPERIENCE_SCHEMAS))
+  expected.set(`schemas/v1.10.0/${name}.schema.json`, json(value));
+expected.set(
+  'schemas/v1.11.0/design-review-metadata-payload.schema.json',
+  json(DESIGN_REVIEW_METADATA_PAYLOAD_V11_SCHEMA),
+);
+for (const [name, value] of Object.entries(DESIGN_HANDOFF_SCHEMAS))
+  expected.set(`schemas/v1.11.0/${name}.schema.json`, json(value));
 
-for (const [name, value] of Object.entries(ENTERPRISE_SCHEMAS)) expected.set(`schemas/v1.12.0/${name}.schema.json`, json(value));
+for (const [name, value] of Object.entries(ENTERPRISE_SCHEMAS))
+  expected.set(`schemas/v1.12.0/${name}.schema.json`, json(value));
 
-for (const [name, value] of buildDiagramAuthoringSchemas()) expected.set(`schemas/v1.13.0/${name}`, json(value));
-for (const [name, value] of buildDiagramAuthoringRegistries()) expected.set(`registries/${name}`, json(value));
+for (const [name, value] of buildDiagramAuthoringSchemas())
+  expected.set(`schemas/v1.13.0/${name}`, json(value));
+for (const [name, value] of buildDiagramAuthoringRegistries())
+  expected.set(`registries/${name}`, json(value));
 
 const registries = Object.fromEntries(buildRegistries());
-expected.set('src/generated/canonical-registries.mjs', [
-  '// Generated by scripts/generate-protocol-assets.mjs. Do not edit.',
-  'const deepFreeze = (value) => {',
-  "  if (value && typeof value === 'object' && !Object.isFrozen(value)) {",
-  '    for (const nested of Object.values(value)) deepFreeze(nested);',
-  '    Object.freeze(value);',
-  '  }',
-  '  return value;',
-  '};',
-  `export const CANONICAL_REGISTRIES = deepFreeze(${JSON.stringify(registries, null, 2)});`,
-  'export default CANONICAL_REGISTRIES;',
-  '',
-].join('\n'));
+expected.set(
+  'src/generated/canonical-registries.mjs',
+  [
+    '// Generated by scripts/generate-protocol-assets.mjs. Do not edit.',
+    'const deepFreeze = (value) => {',
+    "  if (value && typeof value === 'object' && !Object.isFrozen(value)) {",
+    '    for (const nested of Object.values(value)) deepFreeze(nested);',
+    '    Object.freeze(value);',
+    '  }',
+    '  return value;',
+    '};',
+    `export const CANONICAL_REGISTRIES = deepFreeze(${JSON.stringify(registries, null, 2)});`,
+    'export default CANONICAL_REGISTRIES;',
+    '',
+  ].join('\n'),
+);
 
 // Derive the browser-safe legacy descriptor from frozen files; do not maintain
 // a second handwritten interpretation of the compatibility contract.
-const legacyCommon = JSON.parse(readFileSync(join(packageRoot, 'schemas/v1.6.0/common.schema.json'), 'utf8'));
+const legacyCommon = JSON.parse(
+  readFileSync(join(packageRoot, 'schemas/v1.6.0/common.schema.json'), 'utf8'),
+);
 function inlineLegacyReferences(value) {
   if (Array.isArray(value)) return value.map(inlineLegacyReferences);
   if (!value || typeof value !== 'object') return value;
   if (Object.hasOwn(value, '$ref')) {
     const match = /^common\.schema\.json#\/\$defs\/([^/]+)$/u.exec(value.$ref);
-    if (!match || !Object.hasOwn(legacyCommon.$defs, match[1])) throw new Error(`Unexpected frozen legacy reference: ${value.$ref}`);
+    if (!match || !Object.hasOwn(legacyCommon.$defs, match[1]))
+      throw new Error(`Unexpected frozen legacy reference: ${value.$ref}`);
     const { $ref, ...siblings } = value;
     return inlineLegacyReferences({ ...legacyCommon.$defs[match[1]], ...siblings });
   }
-  return Object.fromEntries(Object.entries(value).map(([key, nested]) => [key, inlineLegacyReferences(nested)]));
+  return Object.fromEntries(
+    Object.entries(value).map(([key, nested]) => [key, inlineLegacyReferences(nested)]),
+  );
 }
-const legacyDiagramSchema = inlineLegacyReferences(JSON.parse(readFileSync(join(packageRoot, 'schemas/v1.6.0/diagram-document.schema.json'), 'utf8')));
-expected.set('src/generated/legacy-diagram-schema.mjs', [
-  '// Generated from frozen Protocol 1.6 schemas. Do not edit.',
-  'const deepFreeze = (value) => {',
-  "  if (value && typeof value === 'object' && !Object.isFrozen(value)) {",
-  '    Object.values(value).forEach(deepFreeze);',
-  '    Object.freeze(value);',
-  '  }',
-  '  return value;',
-  '};',
-  `export const LEGACY_DIAGRAM_DOCUMENT_SCHEMA = deepFreeze(${JSON.stringify(legacyDiagramSchema, null, 2)});`,
-  '',
-].join('\n'));
+const legacyDiagramSchema = inlineLegacyReferences(
+  JSON.parse(
+    readFileSync(join(packageRoot, 'schemas/v1.6.0/diagram-document.schema.json'), 'utf8'),
+  ),
+);
+expected.set(
+  'src/generated/legacy-diagram-schema.mjs',
+  [
+    '// Generated from frozen Protocol 1.6 schemas. Do not edit.',
+    'const deepFreeze = (value) => {',
+    "  if (value && typeof value === 'object' && !Object.isFrozen(value)) {",
+    '    Object.values(value).forEach(deepFreeze);',
+    '    Object.freeze(value);',
+    '  }',
+    '  return value;',
+    '};',
+    `export const LEGACY_DIAGRAM_DOCUMENT_SCHEMA = deepFreeze(${JSON.stringify(legacyDiagramSchema, null, 2)});`,
+    '',
+  ].join('\n'),
+);
 
 const diagramRegistries = Object.fromEntries(buildDiagramRegistries());
-expected.set('src/generated/diagram-registries.mjs', [
-  '// Generated by scripts/generate-protocol-assets.mjs. Do not edit.',
-  'const deepFreeze = (value) => {',
-  "  if (value && typeof value === 'object' && !Object.isFrozen(value)) {",
-  '    for (const nested of Object.values(value)) deepFreeze(nested);',
-  '    Object.freeze(value);',
-  '  }',
-  '  return value;',
-  '};',
-  `export const DIAGRAM_REGISTRIES = deepFreeze(${JSON.stringify(diagramRegistries, null, 2)});`,
-  'export default DIAGRAM_REGISTRIES;',
-  '',
-].join('\n'));
+expected.set(
+  'src/generated/diagram-registries.mjs',
+  [
+    '// Generated by scripts/generate-protocol-assets.mjs. Do not edit.',
+    'const deepFreeze = (value) => {',
+    "  if (value && typeof value === 'object' && !Object.isFrozen(value)) {",
+    '    for (const nested of Object.values(value)) deepFreeze(nested);',
+    '    Object.freeze(value);',
+    '  }',
+    '  return value;',
+    '};',
+    `export const DIAGRAM_REGISTRIES = deepFreeze(${JSON.stringify(diagramRegistries, null, 2)});`,
+    'export default DIAGRAM_REGISTRIES;',
+    '',
+  ].join('\n'),
+);
 
 function read(path) {
   return readFileSync(join(packageRoot, path), 'utf8');
@@ -131,29 +185,44 @@ const projectionFiles = new Map([
   ['enterprise-contracts.mjs', read('src/enterprise-contracts.mjs')],
   ['enterprise-contracts.d.mts', read('src/enterprise-contracts.d.mts')],
   ['review-experience-contracts.mjs', read('src/review-experience-contracts.mjs')],
-  ['contracts.mjs', read('src/contracts.mjs').replace(
-    "const packageRoot = join(dirname(fileURLToPath(import.meta.url)), '..');",
-    "const packageRoot = join(dirname(fileURLToPath(import.meta.url)), '..', '..');",
-  )],
+  [
+    'contracts.mjs',
+    read('src/contracts.mjs').replace(
+      "const packageRoot = join(dirname(fileURLToPath(import.meta.url)), '..');",
+      "const packageRoot = join(dirname(fileURLToPath(import.meta.url)), '..', '..');",
+    ),
+  ],
   ['generated/contract-catalog-v2.mjs', read('src/generated/contract-catalog-v2.mjs')],
   ['generated/diagram-registries.mjs', expected.get('src/generated/diagram-registries.mjs')],
-  ['live-evidence-v2.mjs', read('src/compat/live-evidence-v2.mjs')
-    .replace("from '../contracts.mjs'", "from './contracts.mjs'")
-    .replace("from '../canonical-json.mjs'", "from './canonical-json.mjs'")],
-  ['operate-experience-live-patch.mjs', read('src/compat/operate-experience-live-patch.mjs')
-    .replace("from '../errors.mjs'", "from './errors.mjs'")
-    .replace("from '../contracts.mjs'", "from './contracts.mjs'")
-    .replace("from '../canonical-json.mjs'", "from './canonical-json.mjs'")],
-  ['operating-planning-contracts.mjs', read('src/compat/operating-planning-contracts.mjs')
-    .replace("from '../errors.mjs'", "from './errors.mjs'")
-    .replace("from '../contracts.mjs'", "from './contracts.mjs'")
-    .replace("from '../canonical-json.mjs'", "from './canonical-json.mjs'")],
+  [
+    'live-evidence-v2.mjs',
+    read('src/compat/live-evidence-v2.mjs')
+      .replace("from '../contracts.mjs'", "from './contracts.mjs'")
+      .replace("from '../canonical-json.mjs'", "from './canonical-json.mjs'"),
+  ],
+  [
+    'operate-experience-live-patch.mjs',
+    read('src/compat/operate-experience-live-patch.mjs')
+      .replace("from '../errors.mjs'", "from './errors.mjs'")
+      .replace("from '../contracts.mjs'", "from './contracts.mjs'")
+      .replace("from '../canonical-json.mjs'", "from './canonical-json.mjs'"),
+  ],
+  [
+    'operating-planning-contracts.mjs',
+    read('src/compat/operating-planning-contracts.mjs')
+      .replace("from '../errors.mjs'", "from './errors.mjs'")
+      .replace("from '../contracts.mjs'", "from './contracts.mjs'")
+      .replace("from '../canonical-json.mjs'", "from './canonical-json.mjs'"),
+  ],
 ]);
-for (const [name, value] of projectionFiles) expected.set(`projections/pipeline/lib/protocol/${name}`, value);
+for (const [name, value] of projectionFiles)
+  expected.set(`projections/pipeline/lib/protocol/${name}`, value);
 
 function walk(root, prefix = '') {
   const values = [];
-  for (const name of readdirSync(root, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+  for (const name of readdirSync(root, { withFileTypes: true }).sort((a, b) =>
+    a.name.localeCompare(b.name),
+  )) {
     const path = join(root, name.name);
     const key = prefix ? `${prefix}/${name.name}` : name.name;
     if (name.isDirectory()) values.push(...walk(path, key));
@@ -162,11 +231,16 @@ function walk(root, prefix = '') {
   return values;
 }
 
-const originalSchemaFiles = walk(join(packageRoot, 'schemas'))
-  .filter(({ key }) => !/^v1\.(?:[5-9]|10|11|12|13)\.0\//u.test(key) && key.endsWith('.json'));
-const originalRegistryFiles = walk(join(packageRoot, 'registry')).filter(({ key }) => key.endsWith('.json'));
+const originalSchemaFiles = walk(join(packageRoot, 'schemas')).filter(
+  ({ key }) => !/^v1\.(?:[5-9]|10|11|12|13)\.0\//u.test(key) && key.endsWith('.json'),
+);
+const originalRegistryFiles = walk(join(packageRoot, 'registry')).filter(({ key }) =>
+  key.endsWith('.json'),
+);
 if (originalSchemaFiles.length !== 180 || originalRegistryFiles.length !== 12) {
-  throw new Error(`Preserved Protocol inventory drift: expected 180 schemas/12 registries, found ${originalSchemaFiles.length}/${originalRegistryFiles.length}.`);
+  throw new Error(
+    `Preserved Protocol inventory drift: expected 180 schemas/12 registries, found ${originalSchemaFiles.length}/${originalRegistryFiles.length}.`,
+  );
 }
 
 const preservationPath = join(packageRoot, 'preservation', 'original-assets.sha256.json');
@@ -174,13 +248,20 @@ const currentPreservation = {
   kind: 'protocol-original-asset-preservation',
   schemaVersion: '1.0.0',
   counts: { schemas: 180, registries: 12 },
-  assets: [...originalSchemaFiles.map(({ key, path }) => ({
-    path: `schemas/${key}`, mode: (statSync(path).mode & 0o111) ? '100755' : '100644', byteLength: statSync(path).size,
-    digest: `sha256:${sha256Hex(readFileSync(path))}`,
-  })), ...originalRegistryFiles.map(({ key, path }) => ({
-    path: `registry/${key}`, mode: (statSync(path).mode & 0o111) ? '100755' : '100644', byteLength: statSync(path).size,
-    digest: `sha256:${sha256Hex(readFileSync(path))}`,
-  }))].sort((left, right) => left.path.localeCompare(right.path)),
+  assets: [
+    ...originalSchemaFiles.map(({ key, path }) => ({
+      path: `schemas/${key}`,
+      mode: statSync(path).mode & 0o111 ? '100755' : '100644',
+      byteLength: statSync(path).size,
+      digest: `sha256:${sha256Hex(readFileSync(path))}`,
+    })),
+    ...originalRegistryFiles.map(({ key, path }) => ({
+      path: `registry/${key}`,
+      mode: statSync(path).mode & 0o111 ? '100755' : '100644',
+      byteLength: statSync(path).size,
+      digest: `sha256:${sha256Hex(readFileSync(path))}`,
+    })),
+  ].sort((left, right) => left.path.localeCompare(right.path)),
 };
 
 // Pipeline copies are build outputs. Their equality is checked by the projection
@@ -188,10 +269,14 @@ const currentPreservation = {
 if (existsSync(preservationPath) && !refreshPreservation) {
   const baseline = JSON.parse(readFileSync(preservationPath, 'utf8'));
   if (JSON.stringify(baseline) !== JSON.stringify(currentPreservation)) {
-    throw new Error('The 180 original schemas or 12 original registries differ from the immutable preservation baseline.');
+    throw new Error(
+      'The 180 original schemas or 12 original registries differ from the immutable preservation baseline.',
+    );
   }
 } else if (check) {
-  throw new Error('Protocol preservation baseline is missing; generation must initialize it explicitly.');
+  throw new Error(
+    'Protocol preservation baseline is missing; generation must initialize it explicitly.',
+  );
 } else {
   mkdirSync(dirname(preservationPath), { recursive: true });
   writeFileSync(preservationPath, json(currentPreservation));
@@ -208,11 +293,15 @@ for (const [path, content] of expected) {
 }
 
 if (check && drift.length) {
-  throw new Error(`Generated Protocol assets drifted:\n${drift.map((path) => `- ${path}`).join('\n')}`);
+  throw new Error(
+    `Generated Protocol assets drifted:\n${drift.map((path) => `- ${path}`).join('\n')}`,
+  );
 }
 
 if (!check) {
   chmodSync(join(packageRoot, 'scripts', 'generate-protocol-assets.mjs'), 0o755);
 }
 
-process.stdout.write(`${check ? 'Checked' : 'Generated'} ${expected.size} Protocol assets; preserved 180 schemas and 12 registries.\n`);
+process.stdout.write(
+  `${check ? 'Checked' : 'Generated'} ${expected.size} Protocol assets; preserved 180 schemas and 12 registries.\n`,
+);

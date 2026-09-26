@@ -26,14 +26,16 @@ function serialize(value, path, seen) {
     if (!Number.isFinite(value)) throw new TypeError(`JCS requires a finite number at ${path}.`);
     return JSON.stringify(value);
   }
-  if (typeof value !== 'object') throw new TypeError(`JCS cannot canonicalize ${typeof value} at ${path}.`);
+  if (typeof value !== 'object')
+    throw new TypeError(`JCS cannot canonicalize ${typeof value} at ${path}.`);
   if (seen.has(value)) throw new TypeError(`JCS cannot canonicalize a cycle at ${path}.`);
   seen.add(value);
   try {
     if (Array.isArray(value)) {
       const entries = [];
       for (let index = 0; index < value.length; index += 1) {
-        if (!hasOwn(value, index)) throw new TypeError(`JCS cannot canonicalize a sparse array at ${path}[${index}].`);
+        if (!hasOwn(value, index))
+          throw new TypeError(`JCS cannot canonicalize a sparse array at ${path}[${index}].`);
         entries.push(serialize(value[index], `${path}[${index}]`, seen));
       }
       return `[${entries.join(',')}]`;
@@ -42,10 +44,12 @@ function serialize(value, path, seen) {
     if (prototype !== Object.prototype && prototype !== null) {
       throw new TypeError(`JCS requires a plain JSON object at ${path}.`);
     }
-    const entries = Object.keys(value).sort().map((key) => {
-      assertUnicodeScalarString(key, `${path} key`);
-      return `${JSON.stringify(key)}:${serialize(value[key], `${path}.${key}`, seen)}`;
-    });
+    const entries = Object.keys(value)
+      .sort()
+      .map((key) => {
+        assertUnicodeScalarString(key, `${path} key`);
+        return `${JSON.stringify(key)}:${serialize(value[key], `${path}.${key}`, seen)}`;
+      });
     return `{${entries.join(',')}}`;
   } finally {
     seen.delete(value);
@@ -73,7 +77,10 @@ const rotr = (value, bits) => (value >>> bits) | (value << (32 - bits));
 /** Dependency-free synchronous SHA-256 for browser and Node runtimes. */
 export function sha256Hex(value) {
   const candidate = typeof value === 'string' ? new TextEncoder().encode(value) : value;
-  if (!ArrayBuffer.isView(candidate) || Object.prototype.toString.call(candidate) !== '[object Uint8Array]') {
+  if (
+    !ArrayBuffer.isView(candidate) ||
+    Object.prototype.toString.call(candidate) !== '[object Uint8Array]'
+  ) {
     throw new TypeError('sha256Hex expects a string or Uint8Array.');
   }
   const input = new Uint8Array(candidate.buffer, candidate.byteOffset, candidate.byteLength);
@@ -99,12 +106,20 @@ export function sha256Hex(value) {
   for (let offset = 0; offset < bytes.length; offset += 64) {
     for (let index = 0; index < 16; index += 1) words[index] = view.getUint32(offset + index * 4);
     for (let index = 16; index < 64; index += 1) {
-      const s0 = rotr(words[index - 15], 7) ^ rotr(words[index - 15], 18) ^ (words[index - 15] >>> 3);
-      const s1 = rotr(words[index - 2], 17) ^ rotr(words[index - 2], 19) ^ (words[index - 2] >>> 10);
+      const s0 =
+        rotr(words[index - 15], 7) ^ rotr(words[index - 15], 18) ^ (words[index - 15] >>> 3);
+      const s1 =
+        rotr(words[index - 2], 17) ^ rotr(words[index - 2], 19) ^ (words[index - 2] >>> 10);
       words[index] = (words[index - 16] + s0 + words[index - 7] + s1) >>> 0;
     }
-    let a = h0; let b = h1; let c = h2; let d = h3;
-    let e = h4; let f = h5; let g = h6; let h = h7;
+    let a = h0;
+    let b = h1;
+    let c = h2;
+    let d = h3;
+    let e = h4;
+    let f = h5;
+    let g = h6;
+    let h = h7;
     for (let index = 0; index < 64; index += 1) {
       const s1 = rotr(e, 6) ^ rotr(e, 11) ^ rotr(e, 25);
       const choice = (e & f) ^ (~e & g);
@@ -112,15 +127,27 @@ export function sha256Hex(value) {
       const s0 = rotr(a, 2) ^ rotr(a, 13) ^ rotr(a, 22);
       const majority = (a & b) ^ (a & c) ^ (b & c);
       const temp2 = (s0 + majority) >>> 0;
-      h = g; g = f; f = e; e = (d + temp1) >>> 0;
-      d = c; c = b; b = a; a = (temp1 + temp2) >>> 0;
+      h = g;
+      g = f;
+      f = e;
+      e = (d + temp1) >>> 0;
+      d = c;
+      c = b;
+      b = a;
+      a = (temp1 + temp2) >>> 0;
     }
-    h0 = (h0 + a) >>> 0; h1 = (h1 + b) >>> 0;
-    h2 = (h2 + c) >>> 0; h3 = (h3 + d) >>> 0;
-    h4 = (h4 + e) >>> 0; h5 = (h5 + f) >>> 0;
-    h6 = (h6 + g) >>> 0; h7 = (h7 + h) >>> 0;
+    h0 = (h0 + a) >>> 0;
+    h1 = (h1 + b) >>> 0;
+    h2 = (h2 + c) >>> 0;
+    h3 = (h3 + d) >>> 0;
+    h4 = (h4 + e) >>> 0;
+    h5 = (h5 + f) >>> 0;
+    h6 = (h6 + g) >>> 0;
+    h7 = (h7 + h) >>> 0;
   }
-  return [h0, h1, h2, h3, h4, h5, h6, h7].map((part) => part.toString(16).padStart(8, '0')).join('');
+  return [h0, h1, h2, h3, h4, h5, h6, h7]
+    .map((part) => part.toString(16).padStart(8, '0'))
+    .join('');
 }
 
 export function sha256Jcs(value) {

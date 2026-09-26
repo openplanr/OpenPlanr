@@ -12,7 +12,10 @@ import {
   PROTOCOL_V18_CONTRACT_FILES,
 } from './skill-source-contracts.mjs';
 import { DESIGN_HANDOFF_CONTRACT_FILES } from './design-handoff-contracts.mjs';
-import { DIAGRAM_AUTHORING_CONTRACT_FILES, validateDiagramAuthoringArtifact } from './diagram-authoring-contracts.mjs';
+import {
+  DIAGRAM_AUTHORING_CONTRACT_FILES,
+  validateDiagramAuthoringArtifact,
+} from './diagram-authoring-contracts.mjs';
 
 const packageRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -23,17 +26,33 @@ const v17Schema = (kind) => `schemas/v1.7.0/${PROTOCOL_V17_CONTRACT_FILES[kind]}
 const v18Schema = (kind) => `schemas/v1.8.0/${PROTOCOL_V18_CONTRACT_FILES[kind]}`;
 
 const foundationPaths = {
-  ...Object.fromEntries(Object.keys(ENTERPRISE_SCHEMAS).map(name => [name, { '1.12.0': `schemas/v1.12.0/${name}.schema.json` }])),
+  ...Object.fromEntries(
+    Object.keys(ENTERPRISE_SCHEMAS).map((name) => [
+      name,
+      { '1.12.0': `schemas/v1.12.0/${name}.schema.json` },
+    ]),
+  ),
   'design-document': { '1.9.0': 'schemas/v1.9.0/design-document.schema.json' },
   'design-review-workspace': { '1.9.0': 'schemas/v1.9.0/design-review-workspace.schema.json' },
   'design-workspace-create': { '1.9.0': 'schemas/v1.9.0/design-workspace-create.schema.json' },
   'design-workspace-revision': { '1.9.0': 'schemas/v1.9.0/design-workspace-revision.schema.json' },
   'design-workspace-event': { '1.9.0': 'schemas/v1.9.0/design-workspace-event.schema.json' },
-  'design-review-bundle': { '1.9.0': 'schemas/v1.9.0/design-review-bundle.schema.json', '1.10.0': 'schemas/v1.10.0/design-review-bundle.schema.json' },
+  'design-review-bundle': {
+    '1.9.0': 'schemas/v1.9.0/design-review-bundle.schema.json',
+    '1.10.0': 'schemas/v1.10.0/design-review-bundle.schema.json',
+  },
   'design-review-context': { '1.10.0': 'schemas/v1.10.0/design-review-context.schema.json' },
   'design-review-handoff': { '1.10.0': 'schemas/v1.10.0/design-review-handoff.schema.json' },
-  'design-review-metadata-payload': { '1.10.0': 'schemas/v1.10.0/design-review-metadata-payload.schema.json', '1.11.0': 'schemas/v1.11.0/design-review-metadata-payload.schema.json' },
-  ...Object.fromEntries(Object.keys(DESIGN_HANDOFF_CONTRACT_FILES).map(name => [name, { '1.11.0': `schemas/v1.11.0/${DESIGN_HANDOFF_CONTRACT_FILES[name]}` }])),
+  'design-review-metadata-payload': {
+    '1.10.0': 'schemas/v1.10.0/design-review-metadata-payload.schema.json',
+    '1.11.0': 'schemas/v1.11.0/design-review-metadata-payload.schema.json',
+  },
+  ...Object.fromEntries(
+    Object.keys(DESIGN_HANDOFF_CONTRACT_FILES).map((name) => [
+      name,
+      { '1.11.0': `schemas/v1.11.0/${DESIGN_HANDOFF_CONTRACT_FILES[name]}` },
+    ]),
+  ),
 
   spec: { '1.0.0': 'schemas/v1.0.0/spec.schema.json', '1.7.0': v17Schema('spec') },
   story: { '1.0.0': 'schemas/v1.0.0/story.schema.json', '1.7.0': v17Schema('story') },
@@ -43,12 +62,16 @@ const foundationPaths = {
   'runtime-lock': { '1.1.0': 'schemas/v1.1.0/runtime-lock.schema.json' },
   'provenance-event': { '1.1.0': 'schemas/v1.1.0/provenance-event.schema.json' },
   'ship-closure': { '1.1.0': 'schemas/v1.1.0/ship-closure.schema.json' },
-  'professional-specification': { '1.1.0': 'schemas/v1.1.0/professional-specification.schema.json' },
+  'professional-specification': {
+    '1.1.0': 'schemas/v1.1.0/professional-specification.schema.json',
+  },
   'planning-review-record': { '1.1.0': 'schemas/v1.1.0/planning-review-record.schema.json' },
   'planning-review-state': { '1.1.0': 'schemas/v1.1.0/planning-review-state.schema.json' },
   'planning-review-event': { '1.1.0': 'schemas/v1.1.0/planning-review-event.schema.json' },
   'planning-review-receipt': { '1.1.0': 'schemas/v1.1.0/planning-review-receipt.schema.json' },
-  'ship-review-specialist-registry': { '1.1.0': 'schemas/v1.1.0/ship-review-specialist-registry.schema.json' },
+  'ship-review-specialist-registry': {
+    '1.1.0': 'schemas/v1.1.0/ship-review-specialist-registry.schema.json',
+  },
   'specialist-review-result': { '1.1.0': 'schemas/v1.1.0/specialist-review-result.schema.json' },
   'ship-risk-classification': { '1.1.0': 'schemas/v1.1.0/ship-risk-classification.schema.json' },
   'browser-qa-session': { '1.1.0': 'schemas/v1.1.0/browser-qa-session.schema.json' },
@@ -73,16 +96,22 @@ const foundationPaths = {
     '1.3.0': 'schemas/v1.3.0/ecosystem-manifest.schema.json',
   },
   'release-ledger': { '1.3.0': 'schemas/v1.3.0/release-ledger.schema.json' },
-  'release-compatibility-claim': { '1.3.0': 'schemas/v1.3.0/release-compatibility-claim.schema.json' },
+  'release-compatibility-claim': {
+    '1.3.0': 'schemas/v1.3.0/release-compatibility-claim.schema.json',
+  },
   'release-ledger-receipt': { '1.3.0': 'schemas/v1.3.0/release-ledger-receipt.schema.json' },
   'artifact-envelope': { '1.1.0': 'schemas/v1.1.0/artifact-envelope.schema.json' },
   'artifact-review': { '1.1.0': 'schemas/v1.1.0/artifact-review.schema.json' },
   'artifact-paste': { '1.1.0': 'schemas/v1.1.0/artifact-paste.schema.json' },
   'artifact-room-event': { '1.1.0': 'schemas/v1.1.0/artifact-room-event.schema.json' },
   'artifact-room-descriptor': { '1.1.0': 'schemas/v1.1.0/artifact-room-descriptor.schema.json' },
-  'artifact-room-signed-event': { '1.1.0': 'schemas/v1.1.0/artifact-room-signed-event.schema.json' },
+  'artifact-room-signed-event': {
+    '1.1.0': 'schemas/v1.1.0/artifact-room-signed-event.schema.json',
+  },
   'ecosystem-saga': { '1.2.0': 'schemas/v1.2.0/ecosystem-saga.schema.json' },
-  'ecosystem-release-operation': { '1.2.0': 'schemas/v1.2.0/ecosystem-release-operation.schema.json' },
+  'ecosystem-release-operation': {
+    '1.2.0': 'schemas/v1.2.0/ecosystem-release-operation.schema.json',
+  },
   'guided-question': { '1.2.0': 'schemas/v1.2.0/guided-question.schema.json' },
   'guided-questionnaire': { '1.2.0': 'schemas/v1.2.0/guided-questionnaire.schema.json' },
   'guided-answer-envelope': { '1.2.0': 'schemas/v1.2.0/guided-answer-envelope.schema.json' },
@@ -96,22 +125,34 @@ const foundationPaths = {
   'landing-event': { '1.2.0': 'schemas/v1.2.0/landing-event.schema.json' },
   'landing-phase-receipt': { '1.2.0': 'schemas/v1.2.0/landing-phase-receipt.schema.json' },
   'landing-receipt': { '1.2.0': 'schemas/v1.2.0/landing-receipt.schema.json' },
-  'landing-operation-registry': { '1.2.0': 'schemas/v1.2.0/landing-operation-registry.schema.json' },
+  'landing-operation-registry': {
+    '1.2.0': 'schemas/v1.2.0/landing-operation-registry.schema.json',
+  },
   'landing-workflow-catalog': { '1.2.0': 'schemas/v1.2.0/landing-workflow-catalog.schema.json' },
   'evaluation-scenario': { '1.4.0': 'schemas/v1.4.0/evaluation-scenario.schema.json' },
   'evaluation-corpus': { '1.4.0': 'schemas/v1.4.0/evaluation-corpus.schema.json' },
   'evaluation-fixture': { '1.4.0': 'schemas/v1.4.0/evaluation-fixture.schema.json' },
   'evaluation-host-profile': { '1.4.0': 'schemas/v1.4.0/evaluation-host-profile.schema.json' },
-  'evaluation-host-profile-registry': { '1.4.0': 'schemas/v1.4.0/evaluation-host-profile-registry.schema.json' },
-  'evaluation-grader-registration': { '1.4.0': 'schemas/v1.4.0/evaluation-grader-registration.schema.json' },
-  'evaluation-grader-registry': { '1.4.0': 'schemas/v1.4.0/evaluation-grader-registry.schema.json' },
+  'evaluation-host-profile-registry': {
+    '1.4.0': 'schemas/v1.4.0/evaluation-host-profile-registry.schema.json',
+  },
+  'evaluation-grader-registration': {
+    '1.4.0': 'schemas/v1.4.0/evaluation-grader-registration.schema.json',
+  },
+  'evaluation-grader-registry': {
+    '1.4.0': 'schemas/v1.4.0/evaluation-grader-registry.schema.json',
+  },
   'evaluation-budget': { '1.4.0': 'schemas/v1.4.0/evaluation-budget.schema.json' },
   'evaluation-gate-policy': { '1.4.0': 'schemas/v1.4.0/evaluation-gate-policy.schema.json' },
   'evaluation-observation': { '1.4.0': 'schemas/v1.4.0/evaluation-observation.schema.json' },
   'evaluation-run-result': { '1.4.0': 'schemas/v1.4.0/evaluation-run-result.schema.json' },
-  'evaluation-aggregate-report': { '1.4.0': 'schemas/v1.4.0/evaluation-aggregate-report.schema.json' },
+  'evaluation-aggregate-report': {
+    '1.4.0': 'schemas/v1.4.0/evaluation-aggregate-report.schema.json',
+  },
   'evaluation-waiver': { '1.4.0': 'schemas/v1.4.0/evaluation-waiver.schema.json' },
-  'skill-certification-receipt': { '1.4.0': 'schemas/v1.4.0/skill-certification-receipt.schema.json' },
+  'skill-certification-receipt': {
+    '1.4.0': 'schemas/v1.4.0/skill-certification-receipt.schema.json',
+  },
   'role-registry': {
     '1.1.0': 'schemas/v1.1.0/role-registry.schema.json',
     '1.5.0': 'schemas/v1.5.0/role-registry.schema.json',
@@ -134,14 +175,34 @@ const foundationPaths = {
     '1.6.0': v16Schema('generated-asset-manifest'),
     '1.7.0': v17Schema('generated-asset-manifest'),
   },
-  'migration-preservation-manifest': { '1.5.0': 'schemas/v1.5.0/migration-preservation-manifest.schema.json' },
+  'migration-preservation-manifest': {
+    '1.5.0': 'schemas/v1.5.0/migration-preservation-manifest.schema.json',
+  },
   'skill-source': { '1.6.0': v16Schema('skill-source'), '1.7.0': v17Schema('skill-source') },
-  'skill-module-registry': { '1.6.0': v16Schema('skill-module-registry'), '1.7.0': v17Schema('skill-module-registry') },
-  'skill-host-profile-registry': { '1.6.0': v16Schema('skill-host-profile-registry'), '1.7.0': v17Schema('skill-host-profile-registry') },
-  'skill-routing-registry': { '1.6.0': v16Schema('skill-routing-registry'), '1.7.0': v17Schema('skill-routing-registry') },
-  'skill-completion-receipt': { '1.6.0': v16Schema('skill-completion-receipt'), '1.7.0': v17Schema('skill-completion-receipt') },
-  'skill-consent-record': { '1.6.0': v16Schema('skill-consent-record'), '1.7.0': v17Schema('skill-consent-record') },
-  'skill-learning-record': { '1.6.0': v16Schema('skill-learning-record'), '1.7.0': v17Schema('skill-learning-record') },
+  'skill-module-registry': {
+    '1.6.0': v16Schema('skill-module-registry'),
+    '1.7.0': v17Schema('skill-module-registry'),
+  },
+  'skill-host-profile-registry': {
+    '1.6.0': v16Schema('skill-host-profile-registry'),
+    '1.7.0': v17Schema('skill-host-profile-registry'),
+  },
+  'skill-routing-registry': {
+    '1.6.0': v16Schema('skill-routing-registry'),
+    '1.7.0': v17Schema('skill-routing-registry'),
+  },
+  'skill-completion-receipt': {
+    '1.6.0': v16Schema('skill-completion-receipt'),
+    '1.7.0': v17Schema('skill-completion-receipt'),
+  },
+  'skill-consent-record': {
+    '1.6.0': v16Schema('skill-consent-record'),
+    '1.7.0': v17Schema('skill-consent-record'),
+  },
+  'skill-learning-record': {
+    '1.6.0': v16Schema('skill-learning-record'),
+    '1.7.0': v17Schema('skill-learning-record'),
+  },
   'skill-session': { '1.6.0': v16Schema('skill-session'), '1.7.0': v17Schema('skill-session') },
   'planning-id-sequence': { '1.7.0': v17Schema('planning-id-sequence') },
   'request-authority': { '1.7.0': v17Schema('request-authority') },
@@ -165,11 +226,11 @@ for (const [kind, filename] of Object.entries(DIAGRAM_AUTHORING_CONTRACT_FILES))
 function compiledOperatePaths() {
   const catalog = OPERATE_CONTRACT_CATALOG_V2;
   if (
-    catalog?.kind !== 'operate-contract-catalog'
-    || catalog.protocol?.id !== 'operate'
-    || catalog.protocol?.version !== '2.0.0'
-    || catalog.protocol?.versionPolicy !== 'exact'
-    || !Array.isArray(catalog.contracts)
+    catalog?.kind !== 'operate-contract-catalog' ||
+    catalog.protocol?.id !== 'operate' ||
+    catalog.protocol?.version !== '2.0.0' ||
+    catalog.protocol?.versionPolicy !== 'exact' ||
+    !Array.isArray(catalog.contracts)
   ) {
     throw new PipelineError(
       'E_SCHEMA_VERSION_UNSUPPORTED',
@@ -178,7 +239,10 @@ function compiledOperatePaths() {
   }
   const entries = catalog.contracts.map(({ id, schemaPath }) => [id, { '2.0.0': schemaPath }]);
   if (new Set(entries.map(([id]) => id)).size !== entries.length) {
-    throw new PipelineError('E_SCHEMA_UNKNOWN', 'The packaged Operate contract catalog contains duplicate contract IDs.');
+    throw new PipelineError(
+      'E_SCHEMA_UNKNOWN',
+      'The packaged Operate contract catalog contains duplicate contract IDs.',
+    );
   }
   return Object.fromEntries(entries);
 }
@@ -200,27 +264,40 @@ function compiledOperateExperienceVocabulary() {
   const kinds = Array.isArray(experience?.contracts)
     ? experience.contracts.map(({ id }) => id).sort()
     : [];
-  const routes = Array.isArray(experience?.deliveryRoutes) ? [...experience.deliveryRoutes].sort() : [];
+  const routes = Array.isArray(experience?.deliveryRoutes)
+    ? [...experience.deliveryRoutes].sort()
+    : [];
   if (
-    JSON.stringify(kinds) !== JSON.stringify(expectedKinds)
-    || JSON.stringify(routes) !== JSON.stringify(expectedRoutes)
-    || experience.contracts.some(({ version, schemaPath }) => (
-      version !== '1.0.0' || typeof schemaPath !== 'string' || !schemaPath.startsWith('schemas/v2.0.0/')
-    ))
+    JSON.stringify(kinds) !== JSON.stringify(expectedKinds) ||
+    JSON.stringify(routes) !== JSON.stringify(expectedRoutes) ||
+    experience.contracts.some(
+      ({ version, schemaPath }) =>
+        version !== '1.0.0' ||
+        typeof schemaPath !== 'string' ||
+        !schemaPath.startsWith('schemas/v2.0.0/'),
+    )
   ) {
-    throw new PipelineError('E_SCHEMA_VERSION_UNSUPPORTED', 'The packaged Operate catalog does not declare the exact public experience contract family.');
+    throw new PipelineError(
+      'E_SCHEMA_VERSION_UNSUPPORTED',
+      'The packaged Operate catalog does not declare the exact public experience contract family.',
+    );
   }
   return Object.freeze({
     kinds: Object.freeze(kinds),
     routes: Object.freeze(routes),
-    paths: Object.freeze(Object.fromEntries(experience.contracts.map(({ id, schemaPath }) => [id, schemaPath]))),
+    paths: Object.freeze(
+      Object.fromEntries(experience.contracts.map(({ id, schemaPath }) => [id, schemaPath])),
+    ),
   });
 }
 
 function compiledOperateRoleMandates() {
   const catalog = OPERATE_CONTRACT_CATALOG_V2;
   if (!Array.isArray(catalog?.roles)) {
-    throw new PipelineError('E_SCHEMA_VERSION_UNSUPPORTED', 'The packaged Operate contract catalog does not declare role mandates.');
+    throw new PipelineError(
+      'E_SCHEMA_VERSION_UNSUPPORTED',
+      'The packaged Operate contract catalog does not declare role mandates.',
+    );
   }
   const mandates = catalog.roles.map((role) => ({
     id: role?.id,
@@ -229,44 +306,55 @@ function compiledOperateRoleMandates() {
     limits: role?.limits,
   }));
   if (
-    mandates.some(({ id, version, output, limits }) => (
-      typeof id !== 'string'
-      || version !== '2.0.0'
-      || typeof output?.schemaId !== 'string'
-      || output.schemaVersion !== '2.0.0'
-      || !Number.isSafeInteger(output.maxBytes)
-      || output.maxBytes < 1
-      || !Number.isSafeInteger(limits?.maxProposals)
-      || !Number.isSafeInteger(limits?.maxActions)
-    ))
-    || new Set(mandates.map(({ id, version }) => `${id}@${version}`)).size !== mandates.length
+    mandates.some(
+      ({ id, version, output, limits }) =>
+        typeof id !== 'string' ||
+        version !== '2.0.0' ||
+        typeof output?.schemaId !== 'string' ||
+        output.schemaVersion !== '2.0.0' ||
+        !Number.isSafeInteger(output.maxBytes) ||
+        output.maxBytes < 1 ||
+        !Number.isSafeInteger(limits?.maxProposals) ||
+        !Number.isSafeInteger(limits?.maxActions),
+    ) ||
+    new Set(mandates.map(({ id, version }) => `${id}@${version}`)).size !== mandates.length
   ) {
-    throw new PipelineError('E_SCHEMA_UNKNOWN', 'The packaged Operate contract catalog has invalid role mandates.');
+    throw new PipelineError(
+      'E_SCHEMA_UNKNOWN',
+      'The packaged Operate contract catalog has invalid role mandates.',
+    );
   }
-  return mandates.map(({ id, version, output, limits }) => Object.freeze({
-    id,
-    version,
-    output: Object.freeze({ ...output }),
-    limits: Object.freeze({ ...limits }),
-  }));
+  return mandates.map(({ id, version, output, limits }) =>
+    Object.freeze({
+      id,
+      version,
+      output: Object.freeze({ ...output }),
+      limits: Object.freeze({ ...limits }),
+    }),
+  );
 }
 
 function compiledOperateEvidenceVocabulary() {
   const evidence = OPERATE_CONTRACT_CATALOG_V2?.evidence;
   const fields = ['contractIds', 'kinds', 'edgeRelations', 'resolverErrorCodes'];
   if (
-    !evidence
-    || fields.some((field) => !Array.isArray(evidence[field]))
-    || evidence.contractIds.length !== 7
-    || evidence.kinds.length !== 4
-    || evidence.edgeRelations.length !== 2
-    || evidence.contractIds.some((id) => !OPERATE_CONTRACT_CATALOG_V2.contracts.some((contract) => contract.id === id))
-    || new Set(evidence.contractIds).size !== evidence.contractIds.length
-    || new Set(evidence.kinds).size !== evidence.kinds.length
-    || new Set(evidence.edgeRelations).size !== evidence.edgeRelations.length
-    || new Set(evidence.resolverErrorCodes).size !== evidence.resolverErrorCodes.length
+    !evidence ||
+    fields.some((field) => !Array.isArray(evidence[field])) ||
+    evidence.contractIds.length !== 7 ||
+    evidence.kinds.length !== 4 ||
+    evidence.edgeRelations.length !== 2 ||
+    evidence.contractIds.some(
+      (id) => !OPERATE_CONTRACT_CATALOG_V2.contracts.some((contract) => contract.id === id),
+    ) ||
+    new Set(evidence.contractIds).size !== evidence.contractIds.length ||
+    new Set(evidence.kinds).size !== evidence.kinds.length ||
+    new Set(evidence.edgeRelations).size !== evidence.edgeRelations.length ||
+    new Set(evidence.resolverErrorCodes).size !== evidence.resolverErrorCodes.length
   ) {
-    throw new PipelineError('E_SCHEMA_VERSION_UNSUPPORTED', 'The packaged Operate catalog does not declare the exact Phase 4 evidence vocabulary.');
+    throw new PipelineError(
+      'E_SCHEMA_VERSION_UNSUPPORTED',
+      'The packaged Operate catalog does not declare the exact Phase 4 evidence vocabulary.',
+    );
   }
   return Object.freeze({
     contractIds: Object.freeze([...evidence.contractIds]),
@@ -280,17 +368,23 @@ function compiledOperateOperatingIntelligenceVocabulary() {
   const vocabulary = OPERATE_CONTRACT_CATALOG_V2?.operatingIntelligence;
   const fields = ['contractIds', 'projectionIdentities', 'providerRegistrationContractIds'];
   if (
-    !vocabulary
-    || fields.some((field) => !Array.isArray(vocabulary[field]))
-    || vocabulary.contractIds.length !== 25
-    || vocabulary.projectionIdentities.length !== 2
-    || vocabulary.providerRegistrationContractIds.length !== 3
-    || vocabulary.contractIds.some((id) => !OPERATE_CONTRACT_CATALOG_V2.contracts.some((contract) => contract.id === id))
-    || new Set(vocabulary.contractIds).size !== vocabulary.contractIds.length
-    || new Set(vocabulary.projectionIdentities).size !== vocabulary.projectionIdentities.length
-    || new Set(vocabulary.providerRegistrationContractIds).size !== vocabulary.providerRegistrationContractIds.length
+    !vocabulary ||
+    fields.some((field) => !Array.isArray(vocabulary[field])) ||
+    vocabulary.contractIds.length !== 25 ||
+    vocabulary.projectionIdentities.length !== 2 ||
+    vocabulary.providerRegistrationContractIds.length !== 3 ||
+    vocabulary.contractIds.some(
+      (id) => !OPERATE_CONTRACT_CATALOG_V2.contracts.some((contract) => contract.id === id),
+    ) ||
+    new Set(vocabulary.contractIds).size !== vocabulary.contractIds.length ||
+    new Set(vocabulary.projectionIdentities).size !== vocabulary.projectionIdentities.length ||
+    new Set(vocabulary.providerRegistrationContractIds).size !==
+      vocabulary.providerRegistrationContractIds.length
   ) {
-    throw new PipelineError('E_SCHEMA_VERSION_UNSUPPORTED', 'The packaged Operate catalog does not declare the exact Phase 5 operating-intelligence vocabulary.');
+    throw new PipelineError(
+      'E_SCHEMA_VERSION_UNSUPPORTED',
+      'The packaged Operate catalog does not declare the exact Phase 5 operating-intelligence vocabulary.',
+    );
   }
   return Object.freeze({
     contractIds: Object.freeze([...vocabulary.contractIds]),
@@ -302,32 +396,60 @@ function compiledOperateOperatingIntelligenceVocabulary() {
 function compiledOperateGovernedExecutionVocabulary() {
   const vocabulary = OPERATE_CONTRACT_CATALOG_V2?.governedExecution;
   const fields = [
-    'contractIds', 'providerRegistrationContractIds', 'effectClasses', 'policyOutcomes',
-    'policyTiers', 'coreProhibitions', 'operationStates', 'toolOperations',
+    'contractIds',
+    'providerRegistrationContractIds',
+    'effectClasses',
+    'policyOutcomes',
+    'policyTiers',
+    'coreProhibitions',
+    'operationStates',
+    'toolOperations',
   ];
   if (
-    !vocabulary
-    || fields.some((field) => !Array.isArray(vocabulary[field]))
-    || vocabulary.contractIds.length !== 13
-    || vocabulary.providerRegistrationContractIds.length !== 3
-    || vocabulary.effectClasses.length !== 6
-    || vocabulary.policyOutcomes.length !== 7
-    || vocabulary.policyTiers.length !== 3
-    || vocabulary.coreProhibitions.length !== 9
-    || vocabulary.operationStates.length !== 10
-    || vocabulary.toolOperations.length !== 3
-    || vocabulary.contractIds.some((id) => !OPERATE_CONTRACT_CATALOG_V2.contracts.some((contract) => contract.id === id))
-    || ['contractIds', 'providerRegistrationContractIds', 'effectClasses', 'policyOutcomes', 'coreProhibitions', 'operationStates']
-      .some((field) => new Set(vocabulary[field]).size !== vocabulary[field].length)
-    || new Set(vocabulary.policyTiers.map(({ id }) => id)).size !== vocabulary.policyTiers.length
-    || vocabulary.toolOperations.some(({ id }) => !OPERATE_CONTRACT_CATALOG_V2.operations.some((operation) => operation.id === id))
-    || new Set(vocabulary.toolOperations.map(({ id }) => id)).size !== vocabulary.toolOperations.length
+    !vocabulary ||
+    fields.some((field) => !Array.isArray(vocabulary[field])) ||
+    vocabulary.contractIds.length !== 13 ||
+    vocabulary.providerRegistrationContractIds.length !== 3 ||
+    vocabulary.effectClasses.length !== 6 ||
+    vocabulary.policyOutcomes.length !== 7 ||
+    vocabulary.policyTiers.length !== 3 ||
+    vocabulary.coreProhibitions.length !== 9 ||
+    vocabulary.operationStates.length !== 10 ||
+    vocabulary.toolOperations.length !== 3 ||
+    vocabulary.contractIds.some(
+      (id) => !OPERATE_CONTRACT_CATALOG_V2.contracts.some((contract) => contract.id === id),
+    ) ||
+    [
+      'contractIds',
+      'providerRegistrationContractIds',
+      'effectClasses',
+      'policyOutcomes',
+      'coreProhibitions',
+      'operationStates',
+    ].some((field) => new Set(vocabulary[field]).size !== vocabulary[field].length) ||
+    new Set(vocabulary.policyTiers.map(({ id }) => id)).size !== vocabulary.policyTiers.length ||
+    vocabulary.toolOperations.some(
+      ({ id }) => !OPERATE_CONTRACT_CATALOG_V2.operations.some((operation) => operation.id === id),
+    ) ||
+    new Set(vocabulary.toolOperations.map(({ id }) => id)).size !== vocabulary.toolOperations.length
   ) {
-    throw new PipelineError('E_SCHEMA_VERSION_UNSUPPORTED', 'The packaged Operate catalog does not declare the exact Phase 6 governed-execution vocabulary.');
+    throw new PipelineError(
+      'E_SCHEMA_VERSION_UNSUPPORTED',
+      'The packaged Operate catalog does not declare the exact Phase 6 governed-execution vocabulary.',
+    );
   }
-  return Object.freeze(Object.fromEntries(fields.map((field) => [field, Object.freeze(
-    vocabulary[field].map((entry) => typeof entry === 'object' ? Object.freeze({ ...entry }) : entry),
-  )])));
+  return Object.freeze(
+    Object.fromEntries(
+      fields.map((field) => [
+        field,
+        Object.freeze(
+          vocabulary[field].map((entry) =>
+            typeof entry === 'object' ? Object.freeze({ ...entry }) : entry,
+          ),
+        ),
+      ]),
+    ),
+  );
 }
 
 function compiledPublicOperateDomainContractBindings() {
@@ -337,13 +459,21 @@ function compiledPublicOperateDomainContractBindings() {
     software: { apiDomainId: 'software', id: 'software-domain', version: '1.0.0' },
   };
   if (!Array.isArray(domains)) {
-    throw new PipelineError('E_SCHEMA_VERSION_UNSUPPORTED', 'The packaged Operate catalog does not declare public domain registrations.');
+    throw new PipelineError(
+      'E_SCHEMA_VERSION_UNSUPPORTED',
+      'The packaged Operate catalog does not declare public domain registrations.',
+    );
   }
   const bindings = {};
   for (const [domainId, binding] of Object.entries(expected)) {
-    const domain = domains.find((entry) => entry?.domainId === domainId && entry?.domainVersion === binding.version);
+    const domain = domains.find(
+      (entry) => entry?.domainId === domainId && entry?.domainVersion === binding.version,
+    );
     if (domain === undefined || JSON.stringify(domain.domainContract) !== JSON.stringify(binding)) {
-      throw new PipelineError('E_SCHEMA_VERSION_UNSUPPORTED', 'The packaged Operate catalog has an invalid explicit API-domain contract binding.');
+      throw new PipelineError(
+        'E_SCHEMA_VERSION_UNSUPPORTED',
+        'The packaged Operate catalog has an invalid explicit API-domain contract binding.',
+      );
     }
     bindings[domainId] = Object.freeze({ ...binding });
   }
@@ -356,40 +486,45 @@ const paths = {
 };
 
 const OPERATE_EXPERIENCE_VOCABULARY_V1 = compiledOperateExperienceVocabulary();
-const experiencePaths = Object.freeze(Object.fromEntries(
-  Object.entries(OPERATE_EXPERIENCE_VOCABULARY_V1.paths).map(([kind, path]) => [kind, Object.freeze({ '2.0.0': path })]),
-));
+const experiencePaths = Object.freeze(
+  Object.fromEntries(
+    Object.entries(OPERATE_EXPERIENCE_VOCABULARY_V1.paths).map(([kind, path]) => [
+      kind,
+      Object.freeze({ '2.0.0': path }),
+    ]),
+  ),
+);
 
 // Every Operate v2 identity is compiler-owned. Keeping this set derived avoids
 // a second hand-maintained version boundary when the canonical registry grows.
-const explicitProtocolVersionKinds = new Set(
-  [
-    ...OPERATE_CONTRACT_CATALOG_V2.contracts.map(({ id }) => id),
-    'role-registry',
-    'task-kind-registry',
-    'task-manifest',
-    'task-output-manifest',
-    'rule-catalog',
-    'command-catalog',
-    'skill-catalog',
-    'output-catalog',
-    'output-path-catalog',
-    'generated-asset-manifest',
-    'migration-preservation-manifest',
-    'skill-source',
-    'skill-module-registry',
-    'skill-host-profile-registry',
-    'skill-routing-registry',
-    'skill-completion-receipt',
-    'skill-consent-record',
-    'skill-learning-record',
-    'skill-session',
-  ],
-);
+const explicitProtocolVersionKinds = new Set([
+  ...OPERATE_CONTRACT_CATALOG_V2.contracts.map(({ id }) => id),
+  'role-registry',
+  'task-kind-registry',
+  'task-manifest',
+  'task-output-manifest',
+  'rule-catalog',
+  'command-catalog',
+  'skill-catalog',
+  'output-catalog',
+  'output-path-catalog',
+  'generated-asset-manifest',
+  'migration-preservation-manifest',
+  'skill-source',
+  'skill-module-registry',
+  'skill-host-profile-registry',
+  'skill-routing-registry',
+  'skill-completion-receipt',
+  'skill-consent-record',
+  'skill-learning-record',
+  'skill-session',
+]);
 
-export const PROTOCOL_SCHEMA_REGISTRY = Object.freeze(Object.fromEntries(
-  Object.entries(paths).map(([kind, versions]) => [kind, Object.freeze({ ...versions })]),
-));
+export const PROTOCOL_SCHEMA_REGISTRY = Object.freeze(
+  Object.fromEntries(
+    Object.entries(paths).map(([kind, versions]) => [kind, Object.freeze({ ...versions })]),
+  ),
+);
 
 /** Closed public product-experience and Operate-to-Planning contract identities. */
 export const OPERATE_EXPERIENCE_CONTRACT_KINDS_V2 = OPERATE_EXPERIENCE_VOCABULARY_V1.kinds;
@@ -415,126 +550,144 @@ export const OPERATE_EVIDENCE_KINDS_V2 = OPERATE_EVIDENCE_VOCABULARY_V2.kinds;
 /** The only Phase 4 source-Artifact-local evidence edge relations. */
 export const OPERATE_EVIDENCE_EDGE_RELATIONS_V2 = OPERATE_EVIDENCE_VOCABULARY_V2.edgeRelations;
 /** Stable, safe resolver failure reasons. */
-export const OPERATE_EVIDENCE_RESOLVER_ERROR_CODES_V2 = OPERATE_EVIDENCE_VOCABULARY_V2.resolverErrorCodes;
+export const OPERATE_EVIDENCE_RESOLVER_ERROR_CODES_V2 =
+  OPERATE_EVIDENCE_VOCABULARY_V2.resolverErrorCodes;
 
-const OPERATE_OPERATING_INTELLIGENCE_VOCABULARY_V2 = compiledOperateOperatingIntelligenceVocabulary();
+const OPERATE_OPERATING_INTELLIGENCE_VOCABULARY_V2 =
+  compiledOperateOperatingIntelligenceVocabulary();
 /** Compiler-owned Phase 5 operating-intelligence record identities. */
-export const OPERATE_OPERATING_INTELLIGENCE_CONTRACT_KINDS_V2 = OPERATE_OPERATING_INTELLIGENCE_VOCABULARY_V2.contractIds;
+export const OPERATE_OPERATING_INTELLIGENCE_CONTRACT_KINDS_V2 =
+  OPERATE_OPERATING_INTELLIGENCE_VOCABULARY_V2.contractIds;
 /** Exact public domain-projection identities; no implicit string derivation is allowed. */
-export const OPERATE_OPERATING_PROJECTION_IDENTITIES_V2 = OPERATE_OPERATING_INTELLIGENCE_VOCABULARY_V2.projectionIdentities;
+export const OPERATE_OPERATING_PROJECTION_IDENTITIES_V2 =
+  OPERATE_OPERATING_INTELLIGENCE_VOCABULARY_V2.projectionIdentities;
 /** Public Phase 5 provider declaration identities. Registration grants no authority. */
-export const OPERATE_OPERATING_PROVIDER_REGISTRATION_CONTRACT_KINDS_V2 = OPERATE_OPERATING_INTELLIGENCE_VOCABULARY_V2.providerRegistrationContractIds;
+export const OPERATE_OPERATING_PROVIDER_REGISTRATION_CONTRACT_KINDS_V2 =
+  OPERATE_OPERATING_INTELLIGENCE_VOCABULARY_V2.providerRegistrationContractIds;
 const OPERATE_GOVERNED_EXECUTION_VOCABULARY_V2 = compiledOperateGovernedExecutionVocabulary();
 /** Compiler-owned Phase 6 authority and execution contract identities. */
-export const OPERATE_GOVERNED_EXECUTION_CONTRACT_KINDS_V2 = OPERATE_GOVERNED_EXECUTION_VOCABULARY_V2.contractIds;
+export const OPERATE_GOVERNED_EXECUTION_CONTRACT_KINDS_V2 =
+  OPERATE_GOVERNED_EXECUTION_VOCABULARY_V2.contractIds;
 /** Data-only capability, policy, and executor registration identities. */
-export const OPERATE_GOVERNED_PROVIDER_REGISTRATION_CONTRACT_KINDS_V2 = OPERATE_GOVERNED_EXECUTION_VOCABULARY_V2.providerRegistrationContractIds;
+export const OPERATE_GOVERNED_PROVIDER_REGISTRATION_CONTRACT_KINDS_V2 =
+  OPERATE_GOVERNED_EXECUTION_VOCABULARY_V2.providerRegistrationContractIds;
 /** Exact classification vocabulary; classification alone never grants authority. */
-export const OPERATE_GOVERNED_EFFECT_CLASSES_V2 = OPERATE_GOVERNED_EXECUTION_VOCABULARY_V2.effectClasses;
+export const OPERATE_GOVERNED_EFFECT_CLASSES_V2 =
+  OPERATE_GOVERNED_EXECUTION_VOCABULARY_V2.effectClasses;
 /** Exact closed policy disposition vocabulary. */
-export const OPERATE_GOVERNED_POLICY_OUTCOMES_V2 = OPERATE_GOVERNED_EXECUTION_VOCABULARY_V2.policyOutcomes;
+export const OPERATE_GOVERNED_POLICY_OUTCOMES_V2 =
+  OPERATE_GOVERNED_EXECUTION_VOCABULARY_V2.policyOutcomes;
 /** Immutable core > project > narrowing domain policy precedence. */
-export const OPERATE_GOVERNED_POLICY_TIERS_V2 = OPERATE_GOVERNED_EXECUTION_VOCABULARY_V2.policyTiers;
+export const OPERATE_GOVERNED_POLICY_TIERS_V2 =
+  OPERATE_GOVERNED_EXECUTION_VOCABULARY_V2.policyTiers;
 /** Non-overridable reference policy prohibitions. */
-export const OPERATE_GOVERNED_CORE_PROHIBITIONS_V2 = OPERATE_GOVERNED_EXECUTION_VOCABULARY_V2.coreProhibitions;
+export const OPERATE_GOVERNED_CORE_PROHIBITIONS_V2 =
+  OPERATE_GOVERNED_EXECUTION_VOCABULARY_V2.coreProhibitions;
 /** Closed crash-recovery outcomes; none of these outcomes independently grants authority. */
 export const OPERATE_GOVERNED_RECOVERY_CLASSIFICATIONS_V2 = Object.freeze([
-  'applied', 'not-applied', 'partial', 'unknown',
+  'applied',
+  'not-applied',
+  'partial',
+  'unknown',
 ]);
 
-const OPERATE_CORE_PROHIBITION_TOKEN_EXPANSIONS_V2 = Object.freeze(Object.assign(Object.create(null), {
-  credentials: ['credential'],
-  customers: ['customer'],
-  funds: ['fund'],
-  funding: ['fund'],
-  money: ['fund'],
-  monies: ['fund'],
-  payments: ['payment'],
-  pay: ['payment'],
-  pays: ['payment'],
-  paying: ['payment'],
-  paid: ['payment'],
-  payout: ['payment', 'transfer'],
-  payouts: ['payment', 'transfer'],
-  transfers: ['transfer'],
-  transferred: ['transfer'],
-  transferring: ['transfer'],
-  remits: ['transfer'],
-  remit: ['transfer'],
-  remitted: ['transfer'],
-  remitting: ['transfer'],
-  contacted: ['contact'],
-  contacting: ['contact'],
-  contacts: ['contact'],
-  message: ['contact'],
-  messages: ['contact'],
-  messaged: ['contact'],
-  messaging: ['contact'],
-  email: ['contact'],
-  emails: ['contact'],
-  emailed: ['contact'],
-  emailing: ['contact'],
-  reachout: ['contact'],
-  reachouts: ['contact'],
-  deployed: ['deploy'],
-  deploying: ['deploy'],
-  deploys: ['deploy'],
-  ship: ['deploy'],
-  ships: ['deploy'],
-  shipped: ['deploy'],
-  shipping: ['deploy'],
-  deliver: ['deploy'],
-  delivers: ['deploy'],
-  delivered: ['deploy'],
-  delivering: ['deploy'],
-  delivery: ['deploy'],
-  deliveries: ['deploy'],
-  merged: ['merge'],
-  merging: ['merge'],
-  merges: ['merge'],
-  published: ['publish'],
-  publishing: ['publish'],
-  publishes: ['publish'],
-  publication: ['publish'],
-  publications: ['publish'],
-  released: ['publish'],
-  release: ['publish'],
-  releasing: ['publish'],
-  releases: ['publish'],
-  rotated: ['rotate'],
-  rotating: ['rotate'],
-  mutated: ['mutate'],
-  mutating: ['mutate'],
-  changed: ['change'],
-  changing: ['change'],
-  sent: ['send'],
-  sending: ['send'],
-  destroyed: ['destroy'],
-  destroying: ['destroy'],
-  deletes: ['delete'],
-  deleting: ['delete'],
-  deleted: ['delete'],
-  erased: ['delete'],
-  erase: ['delete'],
-  erasing: ['delete'],
-  removed: ['delete'],
-  remove: ['delete'],
-  removing: ['delete'],
-  wiped: ['delete'],
-  wipe: ['delete'],
-  wiping: ['delete'],
-  secrets: ['secret'],
-  prod: ['production'],
-}));
+const OPERATE_CORE_PROHIBITION_TOKEN_EXPANSIONS_V2 = Object.freeze(
+  Object.assign(Object.create(null), {
+    credentials: ['credential'],
+    customers: ['customer'],
+    funds: ['fund'],
+    funding: ['fund'],
+    money: ['fund'],
+    monies: ['fund'],
+    payments: ['payment'],
+    pay: ['payment'],
+    pays: ['payment'],
+    paying: ['payment'],
+    paid: ['payment'],
+    payout: ['payment', 'transfer'],
+    payouts: ['payment', 'transfer'],
+    transfers: ['transfer'],
+    transferred: ['transfer'],
+    transferring: ['transfer'],
+    remits: ['transfer'],
+    remit: ['transfer'],
+    remitted: ['transfer'],
+    remitting: ['transfer'],
+    contacted: ['contact'],
+    contacting: ['contact'],
+    contacts: ['contact'],
+    message: ['contact'],
+    messages: ['contact'],
+    messaged: ['contact'],
+    messaging: ['contact'],
+    email: ['contact'],
+    emails: ['contact'],
+    emailed: ['contact'],
+    emailing: ['contact'],
+    reachout: ['contact'],
+    reachouts: ['contact'],
+    deployed: ['deploy'],
+    deploying: ['deploy'],
+    deploys: ['deploy'],
+    ship: ['deploy'],
+    ships: ['deploy'],
+    shipped: ['deploy'],
+    shipping: ['deploy'],
+    deliver: ['deploy'],
+    delivers: ['deploy'],
+    delivered: ['deploy'],
+    delivering: ['deploy'],
+    delivery: ['deploy'],
+    deliveries: ['deploy'],
+    merged: ['merge'],
+    merging: ['merge'],
+    merges: ['merge'],
+    published: ['publish'],
+    publishing: ['publish'],
+    publishes: ['publish'],
+    publication: ['publish'],
+    publications: ['publish'],
+    released: ['publish'],
+    release: ['publish'],
+    releasing: ['publish'],
+    releases: ['publish'],
+    rotated: ['rotate'],
+    rotating: ['rotate'],
+    mutated: ['mutate'],
+    mutating: ['mutate'],
+    changed: ['change'],
+    changing: ['change'],
+    sent: ['send'],
+    sending: ['send'],
+    destroyed: ['destroy'],
+    destroying: ['destroy'],
+    deletes: ['delete'],
+    deleting: ['delete'],
+    deleted: ['delete'],
+    erased: ['delete'],
+    erase: ['delete'],
+    erasing: ['delete'],
+    removed: ['delete'],
+    remove: ['delete'],
+    removing: ['delete'],
+    wiped: ['delete'],
+    wipe: ['delete'],
+    wiping: ['delete'],
+    secrets: ['secret'],
+    prod: ['production'],
+  }),
+);
 
 function operateCoreProhibitionTokens(value) {
   if (typeof value !== 'string') return [];
-  const normalized = value.normalize('NFKC')
+  const normalized = value
+    .normalize('NFKC')
     .replace(/([a-z0-9])([A-Z])/gu, '$1-$2')
     .toLowerCase()
     .replace(/[^a-z0-9]+/gu, '-')
     .replace(/^-+|-+$/gu, '');
-  return normalized.split('-')
+  return normalized
+    .split('-')
     .filter((token) => token.length > 0 && !/^\d+$/u.test(token))
     .flatMap((token) => OPERATE_CORE_PROHIBITION_TOKEN_EXPANSIONS_V2[token] ?? [token]);
 }
@@ -549,9 +702,10 @@ export function findOperateCoreProhibitionV2(values) {
   const words = new Set(input.flatMap(operateCoreProhibitionTokens));
   const matched = [
     ['credential-change', words.has('credential')],
-    ['customer-contact', words.has('customer') && (
-      words.has('contact') || (words.has('reach') && words.has('out'))
-    )],
+    [
+      'customer-contact',
+      words.has('customer') && (words.has('contact') || (words.has('reach') && words.has('out'))),
+    ],
     ['destructive', ['destructive', 'destroy', 'delete'].some((word) => words.has(word))],
     ['funds-transfer', words.has('fund') && (words.has('transfer') || words.has('send'))],
     ['payment-transfer', words.has('payment') && (words.has('transfer') || words.has('send'))],
@@ -563,32 +717,53 @@ export function findOperateCoreProhibitionV2(values) {
   return matched && OPERATE_GOVERNED_CORE_PROHIBITIONS_V2.includes(matched[0]) ? matched[0] : null;
 }
 /** Exact durable governed-operation lifecycle vocabulary. */
-export const OPERATE_GOVERNED_OPERATION_STATES_V2 = OPERATE_GOVERNED_EXECUTION_VOCABULARY_V2.operationStates;
+export const OPERATE_GOVERNED_OPERATION_STATES_V2 =
+  OPERATE_GOVERNED_EXECUTION_VOCABULARY_V2.operationStates;
 /** Terminal result-bearing states eligible for pure at-most-once replay. */
 export const OPERATE_GOVERNED_OPERATION_TERMINAL_STATES_V2 = Object.freeze(
-  OPERATE_GOVERNED_OPERATION_STATES_V2
-    .filter((state) => ['succeeded', 'failed', 'partial', 'uncertain', 'blocked'].includes(state))
-    .sort(),
+  OPERATE_GOVERNED_OPERATION_STATES_V2.filter((state) =>
+    ['succeeded', 'failed', 'partial', 'uncertain', 'blocked'].includes(state),
+  ).sort(),
 );
 /** Result truth retained independently from the later Action hypothesis verdict. */
 export const OPERATE_EXECUTION_VERIFICATION_STATUSES_V2 = Object.freeze([
-  'success', 'failure', 'blocked', 'uncertain', 'partial', 'cancelled', 'rolled-back',
+  'success',
+  'failure',
+  'blocked',
+  'uncertain',
+  'partial',
+  'cancelled',
+  'rolled-back',
 ]);
 /** Bounded verification truth; `success` is intentionally absent. */
 export const OPERATE_HYPOTHESIS_VERIFICATION_STATUSES_V2 = Object.freeze([
-  'pending', 'confirmed', 'failed', 'blocked', 'cancelled', 'revisit',
+  'pending',
+  'confirmed',
+  'failed',
+  'blocked',
+  'cancelled',
+  'revisit',
 ]);
 /** Exact public tools owned by the canonical Phase 6 authority guard. */
-export const OPERATE_GOVERNED_TOOL_OPERATIONS_V2 = OPERATE_GOVERNED_EXECUTION_VOCABULARY_V2.toolOperations;
+export const OPERATE_GOVERNED_TOOL_OPERATIONS_V2 =
+  OPERATE_GOVERNED_EXECUTION_VOCABULARY_V2.toolOperations;
 /** Compiler-owned guard identities used by governed Review and Action authority. */
 export const OPERATE_AUTHORITY_GUARD_IDS_V2 = Object.freeze(
   OPERATE_CONTRACT_CATALOG_V2.guards
-    .filter(({ id }) => ['review-submit-authorized', 'action-approval-authorized', 'action-execution-authorized', 'action-rollback-authorized'].includes(id))
+    .filter(({ id }) =>
+      [
+        'review-submit-authorized',
+        'action-approval-authorized',
+        'action-execution-authorized',
+        'action-rollback-authorized',
+      ].includes(id),
+    )
     .map(({ id }) => id)
     .sort(),
 );
 /** Exact compiler-owned public API-domain bindings; no string conversion is permitted. */
-export const OPERATE_PUBLIC_DOMAIN_CONTRACT_BINDINGS_V2 = compiledPublicOperateDomainContractBindings();
+export const OPERATE_PUBLIC_DOMAIN_CONTRACT_BINDINGS_V2 =
+  compiledPublicOperateDomainContractBindings();
 
 const OPERATE_INTELLIGENCE_KERNEL_KINDS_V2 = Object.freeze(['advisor', 'challenger', 'chair']);
 
@@ -618,9 +793,7 @@ function assertCanonicalOperateIntelligencePlanTopologyV2(plan) {
     if (role.roleKind === 'advisor') return [];
     if (role.roleKind === 'challenger') return [...advisorIds];
     if (role.roleKind === 'chair') {
-      return plan.challengerRequired
-        ? [...advisorIds, challengers[0].roleId]
-        : [...advisorIds];
+      return plan.challengerRequired ? [...advisorIds, challengers[0].roleId] : [...advisorIds];
     }
     return null;
   };
@@ -629,27 +802,32 @@ function assertCanonicalOperateIntelligencePlanTopologyV2(plan) {
     challenger: 'operating-challenger-review',
     chair: 'operating-decision-ledger',
   };
-  const topologyInvalid = advisors.length < 1
-    || chairs.length !== 1
-    || challengers.length !== (plan.challengerRequired ? 1 : 0)
-    || omittedChallengers.length !== (plan.challengerRequired ? 0 : 1)
-    || JSON.stringify(selected.map(({ roleId }) => roleId)) !== JSON.stringify(expectedSelectedIds)
-    || JSON.stringify(omitted.map(({ roleId }) => roleId)) !== JSON.stringify(expectedOmittedIds)
-    || selected.some((role) => {
+  const topologyInvalid =
+    advisors.length < 1 ||
+    chairs.length !== 1 ||
+    challengers.length !== (plan.challengerRequired ? 1 : 0) ||
+    omittedChallengers.length !== (plan.challengerRequired ? 0 : 1) ||
+    JSON.stringify(selected.map(({ roleId }) => roleId)) !== JSON.stringify(expectedSelectedIds) ||
+    JSON.stringify(omitted.map(({ roleId }) => roleId)) !== JSON.stringify(expectedOmittedIds) ||
+    selected.some((role) => {
       const expectedDeps = dependencyExpectation(role);
-      return role.roleVersion !== '2.0.0'
-        || role.outputContract.schemaId !== outputSchemaByRoleKind[role.roleKind]
-        || role.outputContract.schemaVersion !== '2.0.0'
-        || !OPERATE_INTELLIGENCE_KERNEL_KINDS_V2.includes(role.roleKind)
-        || expectedDeps === null
-        || JSON.stringify([...role.dependsOnRoleIds].sort()) !== JSON.stringify([...expectedDeps].sort());
-    })
-    || omitted.some((role) => (
-      role.roleVersion !== '2.0.0'
-      || !OPERATE_INTELLIGENCE_KERNEL_KINDS_V2.includes(role.roleKind)
-      || typeof role.reason !== 'string'
-      || !role.reason.startsWith('not-selected:')
-    ));
+      return (
+        role.roleVersion !== '2.0.0' ||
+        role.outputContract.schemaId !== outputSchemaByRoleKind[role.roleKind] ||
+        role.outputContract.schemaVersion !== '2.0.0' ||
+        !OPERATE_INTELLIGENCE_KERNEL_KINDS_V2.includes(role.roleKind) ||
+        expectedDeps === null ||
+        JSON.stringify([...role.dependsOnRoleIds].sort()) !==
+          JSON.stringify([...expectedDeps].sort())
+      );
+    }) ||
+    omitted.some(
+      (role) =>
+        role.roleVersion !== '2.0.0' ||
+        !OPERATE_INTELLIGENCE_KERNEL_KINDS_V2.includes(role.roleKind) ||
+        typeof role.reason !== 'string' ||
+        !role.reason.startsWith('not-selected:'),
+    );
   if (topologyInvalid) {
     throw new PipelineError(
       'E_PROTOCOL_ARTIFACT_INVALID',
@@ -694,10 +872,10 @@ function assertCompiledOperateSchemaIdentities() {
     const expectedId = `https://openplanr.dev/${schemaPath}`;
     const declared = schema?.['x-openplanr-contract'];
     if (
-      schema?.$schema !== 'https://json-schema.org/draft/2020-12/schema'
-      || schema?.$id !== expectedId
-      || declared?.id !== id
-      || declared?.version !== version
+      schema?.$schema !== 'https://json-schema.org/draft/2020-12/schema' ||
+      schema?.$id !== expectedId ||
+      declared?.id !== id ||
+      declared?.version !== version
     ) {
       throw new PipelineError(
         'E_SCHEMA_VERSION_UNSUPPORTED',
@@ -716,7 +894,9 @@ function requireOperateRoleMandate(roleId, roleVersion) {
       `Operate role mandate "${roleId}" requires an explicit version.`,
     );
   }
-  const mandate = OPERATE_ROLE_MANDATES_V2.find(({ id, version }) => id === roleId && version === roleVersion);
+  const mandate = OPERATE_ROLE_MANDATES_V2.find(
+    ({ id, version }) => id === roleId && version === roleVersion,
+  );
   if (!mandate) {
     throw new PipelineError(
       'E_SCHEMA_VERSION_UNSUPPORTED',
@@ -777,9 +957,9 @@ function referencedSchemaPath(basePath, reference) {
   // safe.
   const packageRelative = relative(packageRoot, absolute).split(sep).join('/');
   if (
-    packageRelative.startsWith('..')
-    || packageRelative.includes('/../')
-    || !packageRelative.startsWith('schemas/')
+    packageRelative.startsWith('..') ||
+    packageRelative.includes('/../') ||
+    !packageRelative.startsWith('schemas/')
   ) {
     throw new PipelineError(
       'E_SCHEMA_REFERENCE_UNSAFE',
@@ -794,10 +974,10 @@ function resolveSchemaFragment(schema, reference) {
   if (fragmentIndex < 0 || reference.slice(fragmentIndex) === '#') return schema;
   const fragment = reference.slice(fragmentIndex);
   if (!fragment.startsWith('#/')) return null;
-  return fragment.slice(2).split('/').reduce(
-    (value, part) => value?.[part.replaceAll('~1', '/').replaceAll('~0', '~')],
-    schema,
-  );
+  return fragment
+    .slice(2)
+    .split('/')
+    .reduce((value, part) => value?.[part.replaceAll('~1', '/').replaceAll('~0', '~')], schema);
 }
 
 function compareProtocolVersions(left, right) {
@@ -835,14 +1015,15 @@ function inferredVersion(kind, value, explicitVersion) {
 }
 
 export function listProtocolSchemas() {
-  return Object.entries(PROTOCOL_SCHEMA_REGISTRY).flatMap(([kind, versions]) => (
-    Object.entries(versions).map(([protocolVersion, path]) => ({ kind, protocolVersion, path }))
-  ));
+  return Object.entries(PROTOCOL_SCHEMA_REGISTRY).flatMap(([kind, versions]) =>
+    Object.entries(versions).map(([protocolVersion, path]) => ({ kind, protocolVersion, path })),
+  );
 }
 
 function sharedProtocolSchema(kind, protocolVersion) {
   const versions = PROTOCOL_SCHEMA_REGISTRY[kind];
-  if (!versions) throw new PipelineError('E_SCHEMA_UNKNOWN', `Unknown protocol artifact kind: ${kind}`);
+  if (!versions)
+    throw new PipelineError('E_SCHEMA_UNKNOWN', `Unknown protocol artifact kind: ${kind}`);
   const path = versions[protocolVersion];
   if (!path) {
     throw new PipelineError(
@@ -856,7 +1037,11 @@ function sharedProtocolSchema(kind, protocolVersion) {
 
 function sharedOperateExperienceSchemaV2(kind, protocolVersion) {
   const versions = experiencePaths[kind];
-  if (!versions) throw new PipelineError('E_SCHEMA_UNKNOWN', `Unknown Operate experience artifact kind: ${kind}`);
+  if (!versions)
+    throw new PipelineError(
+      'E_SCHEMA_UNKNOWN',
+      `Unknown Operate experience artifact kind: ${kind}`,
+    );
   if (protocolVersion !== '2.0.0') {
     throw new PipelineError(
       protocolVersion ? 'E_SCHEMA_VERSION_UNSUPPORTED' : 'E_SCHEMA_VERSION_REQUIRED',
@@ -897,23 +1082,22 @@ function validateResolvedArtifact(value, resolved) {
   });
 }
 
-const GUIDED_ANSWER_COPY_FIELDS = Object.freeze([
-  'questionId',
-  'questionVersion',
-  'sensitivity',
-]);
+const GUIDED_ANSWER_COPY_FIELDS = Object.freeze(['questionId', 'questionVersion', 'sensitivity']);
 
 function guidedQuestionnaireCompatibilityErrors(value) {
   const copyFields = value?.submission?.envelope?.dynamicFields?.answers?.copyFields;
   if (
-    !Array.isArray(copyFields)
-    || JSON.stringify(copyFields) === JSON.stringify(GUIDED_ANSWER_COPY_FIELDS)
-  ) return [];
-  return [{
-    path: '$.submission.envelope.dynamicFields.answers.copyFields',
-    rule: 'exactAnswerCopyFields',
-    detail: 'answer copy fields must match the guided answer envelope schema',
-  }];
+    !Array.isArray(copyFields) ||
+    JSON.stringify(copyFields) === JSON.stringify(GUIDED_ANSWER_COPY_FIELDS)
+  )
+    return [];
+  return [
+    {
+      path: '$.submission.envelope.dynamicFields.answers.copyFields',
+      rule: 'exactAnswerCopyFields',
+      detail: 'answer copy fields must match the guided answer envelope schema',
+    },
+  ];
 }
 
 export function validateProtocolArtifact(kind, value, { protocolVersion } = {}) {
@@ -924,12 +1108,15 @@ export function validateProtocolArtifact(kind, value, { protocolVersion } = {}) 
     // Its safety preflight owns the resulting located diagnostic.
     let descriptor;
     try {
-      descriptor = value !== null && typeof value === 'object'
-        ? Object.getOwnPropertyDescriptor(value, 'protocolVersion') : undefined;
+      descriptor =
+        value !== null && typeof value === 'object'
+          ? Object.getOwnPropertyDescriptor(value, 'protocolVersion')
+          : undefined;
     } catch {
       return validateDiagramAuthoringArtifact(kind, value);
     }
-    if (descriptor && !Object.hasOwn(descriptor, 'value')) return validateDiagramAuthoringArtifact(kind, value);
+    if (descriptor && !Object.hasOwn(descriptor, 'value'))
+      return validateDiagramAuthoringArtifact(kind, value);
     versionInput = { protocolVersion: descriptor?.value };
   }
   const version = inferredVersion(kind, versionInput, protocolVersion);
@@ -1006,7 +1193,10 @@ export function validateOperateExperienceArtifactV2(kind, value) {
 export function assertOperateExperienceArtifactV2(kind, value) {
   const errors = validateOperateExperienceArtifactV2(kind, value);
   if (errors.length) {
-    throw new PipelineError('E_PROTOCOL_ARTIFACT_INVALID', `${kind}: ${errors[0].path} ${errors[0].detail}`);
+    throw new PipelineError(
+      'E_PROTOCOL_ARTIFACT_INVALID',
+      `${kind}: ${errors[0].path} ${errors[0].detail}`,
+    );
   }
   return value;
 }

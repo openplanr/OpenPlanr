@@ -95,11 +95,16 @@ export const PROTOCOL_V16_REGISTRIES = Object.freeze({
   ...DIAGRAM_V16_REGISTRIES,
 });
 
-export const SKILL_SOURCE_V17_REGISTRIES = Object.freeze(Object.fromEntries(
-  Object.entries(SKILL_SOURCE_V16_REGISTRIES).map(([file, descriptor]) => [file, Object.freeze({
-    ...descriptor,
-    protocolVersion: '1.7.0',
-  })]),
-));
+export const SKILL_SOURCE_V17_REGISTRIES = Object.freeze(
+  Object.fromEntries(
+    Object.entries(SKILL_SOURCE_V16_REGISTRIES).map(([file, descriptor]) => [
+      file,
+      Object.freeze({
+        ...descriptor,
+        protocolVersion: '1.7.0',
+      }),
+    ]),
+  ),
+);
 
 export const PROTOCOL_V17_REGISTRIES = SKILL_SOURCE_V17_REGISTRIES;

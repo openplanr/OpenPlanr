@@ -15,6 +15,14 @@
       "source": "packages/pipeline/docs/protocol/operate-runtime-v2.md"
     },
     {
+      "path": "lib/dashboard/operate-review-contract.d.mts",
+      "kind": "declaration",
+      "legacySha256": "2f1d89307457ba8767bab7c5eff2ae34f193deaa0cfd175e97674e5931081232",
+      "sha256": "32e0d05c77a050c86306d225142248a17bc50bc881e09f1cad76625bf6a7fadf",
+      "custody": "canonical-protocol-dashboard-runtime",
+      "source": "packages/protocol/lib/dashboard/operate-review-contract.d.mts"
+    },
+    {
       "path": "lib/dashboard/operate-review-contract.mjs",
       "kind": "validator",
       "legacySha256": "345d1e259c488d26e075da1d938ee18a7ba6c22797e541dde67f64efd4393602",
@@ -29,6 +37,22 @@
       "sha256": "afb4636e9d1019493673eeb39afb3dc43bbbe45214e3d198f22ead5eaf7860e4",
       "custody": "canonical-protocol-dashboard-runtime",
       "source": "packages/protocol/lib/dashboard/operate-review-display-workspace-contract.mjs"
+    },
+    {
+      "path": "lib/dashboard/operate-review-payload-safety.mjs",
+      "kind": "validator",
+      "legacySha256": "c921a82ef5e4237f1e0878b7b9cbe74c5c71badd08e6ef82fd850f029646557d",
+      "sha256": "af11057196d38b2b441c765784d631122577651a0a7f4f008a764b9777856ad9",
+      "custody": "canonical-protocol-dashboard-runtime",
+      "source": "packages/protocol/lib/dashboard/operate-review-payload-safety.mjs"
+    },
+    {
+      "path": "lib/dashboard/operate-review-workspace-projection-v2.d.mts",
+      "kind": "declaration",
+      "legacySha256": "4dcbeecdc1bf417cf2c158866cbac032de60964f463a9ffc04ea3823434829ea",
+      "sha256": "2c33c4f145979bfc778e0461513a009fa86a6510be97d8d9b65f82399d921683",
+      "custody": "canonical-protocol-dashboard-runtime",
+      "source": "packages/protocol/lib/dashboard/operate-review-workspace-projection-v2.d.mts"
     },
     {
       "path": "lib/operate/executive-board-compatibility-v2.mjs",
@@ -98,7 +122,7 @@
       "path": "lib/protocol/contracts.mjs",
       "kind": "validator",
       "legacySha256": "410d6f3bce30402f00948a750bd93cdc85541337e548dcb8f138ea924ef6e03e",
-      "sha256": "073d7affc82171520dac87077d6156c0a1dcde5ff5f0ba6b2f60f16400df1151",
+      "sha256": "b3781b166413147204cdbe0121388f52b7dddee302597469d7e065304a1c810b",
       "custody": "canonical-protocol-projection",
       "source": "packages/protocol/projections/pipeline/lib/protocol/contracts.mjs"
     },
@@ -106,7 +130,7 @@
       "path": "lib/protocol/live-evidence-v2.mjs",
       "kind": "validator",
       "legacySha256": "0af4b276e296388511e1ee943264eff63da863f9e1298a8b7d4d47fefd4d4e9b",
-      "sha256": "33df6b2770eee033291fa21f470fb1f1f6bf67c8bcbc1aa2dd7c1961c6e69835",
+      "sha256": "12728c9fecb17079e615c385972c1ec2d3e47aa76215148af7f81fe29f21749c",
       "custody": "canonical-protocol-projection",
       "source": "packages/protocol/projections/pipeline/lib/protocol/live-evidence-v2.mjs"
     },

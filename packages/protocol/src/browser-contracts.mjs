@@ -18,7 +18,7 @@ export const PROTOCOL_V15_CONTRACTS = Object.freeze({
   'skill-catalog': 'skill-catalog.schema.json',
   'task-kind-registry': 'task-kind-registry.schema.json',
   'task-manifest': 'task-manifest.schema.json',
-  'task-output-manifest': 'task-output-manifest.schema.json'
+  'task-output-manifest': 'task-output-manifest.schema.json',
 });
 
 export const PROTOCOL_V16_CONTRACTS = PROTOCOL_V16_CONTRACT_FILES;
@@ -43,7 +43,8 @@ const PROTOCOL_CONTRACTS_BY_VERSION = Object.freeze({
 /** Resolve a packaged schema asset without a source checkout or Node-only API. */
 export function protocolAssetUrl(kind, { protocolVersion = '1.5.0' } = {}) {
   const contracts = Object.hasOwn(PROTOCOL_CONTRACTS_BY_VERSION, protocolVersion)
-    ? PROTOCOL_CONTRACTS_BY_VERSION[protocolVersion] : null;
+    ? PROTOCOL_CONTRACTS_BY_VERSION[protocolVersion]
+    : null;
   const filename = contracts && Object.hasOwn(contracts, kind) ? contracts[kind] : null;
   if (!filename) {
     throw new RangeError(`Unknown browser-safe Protocol contract: ${kind}@${protocolVersion}`);
