@@ -10,12 +10,11 @@ const cli = resolve(root, 'packages/cli');
 
 // Mirrors .github/workflows/ci.yml; keep the two in step when a job changes.
 // CI's "Build generated outputs" job runs these steps once and the test jobs restore its
-// outputs; here they run once per invocation, and not at all after quality.
+// outputs; here they run once per invocation, and not at all after quality. Drift checks
+// stay in quality so a targeted job still runs on a tree with uncommitted edits.
 const PREPARE_GENERATED_RUNTIME = [
   ['npm', ['run', 'generate']],
-  ['git', ['diff', '--exit-code', 'HEAD', '--']],
   ['npm', ['run', 'build']],
-  ['git', ['diff', '--exit-code', 'HEAD', '--']],
 ];
 const JOBS = [
   {
