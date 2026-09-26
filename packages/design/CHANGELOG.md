@@ -1,5 +1,20 @@
 # @openplanr/design
 
+## 0.3.1
+### Patch Changes
+
+- 07b3459: The design studio runtime is now built from ES modules under `lib/design/ui/` into a single `templates/studio/studio.js` that already contains the review experience, the Handoff Center and the review export tools. `templates/studio/enhancements.js` and `templates/studio/handoff-center.js` are no longer shipped, so hosts that concatenated them load `templates/studio/studio.js` alone. The studio mounts when the artifact stage announces itself with the new `planr:artifact-stage-mount` window event instead of polling for it every 30 ms. `window.__openPlanrDesignStudio`, `window.__openPlanrDesignExperience` and `window.__openPlanrDesignHandoffCenter` are unchanged; the internal `window.__openPlanrDesignHandoffBridge` and `globalThis.OpenPlanrDesignReviewExport` globals are no longer defined by the local studio.
+- Updated dependencies [4ce826e]
+- Updated dependencies [4ce826e]
+- Updated dependencies [07b3459]
+- Updated dependencies [d0bee68]
+- Updated dependencies [8ec3c42]
+- Updated dependencies [ca1b9d9]
+- Updated dependencies [ca1b9d9]
+- Updated dependencies [c860f7c]
+  - @openplanr/artifact@0.5.3
+  - @openplanr/protocol@0.6.2
+
 ## 0.3.0
 ### Minor Changes
 
