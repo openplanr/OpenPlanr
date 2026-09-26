@@ -9,6 +9,12 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const cli = resolve(root, 'packages/cli');
 
 // Mirrors .github/workflows/ci.yml; keep the two in step when a job changes.
+// CI's "Prepare generated runtime" step precedes every job but quality, whose own
+// steps generate and build; it runs once per invocation here.
+const PREPARE_GENERATED_RUNTIME = [
+  ['npm', ['run', 'generate']],
+  ['npm', ['run', 'build']],
+];
 const JOBS = [
   {
     id: 'quality',
@@ -30,6 +36,7 @@ const JOBS = [
   {
     id: 'supporting',
     title: 'supporting package tests',
+    prepare: true,
     steps: [
       '@openplanr/protocol',
       '@openplanr/operate',
@@ -42,11 +49,13 @@ const JOBS = [
   {
     id: 'design',
     title: 'design package tests',
+    prepare: true,
     steps: [['npm', ['test', '--workspace=@openplanr/design']]],
   },
   {
     id: 'pipeline',
     title: 'pipeline suites',
+    prepare: true,
     steps: [
       'test:surface',
       'test:orchestration:runtime',
@@ -58,12 +67,14 @@ const JOBS = [
     id: 'cli',
     title: 'CLI tests (all shards, Operate boundary and runtime integrity)',
     cwd: cli,
+    prepare: true,
     steps: [['npx', ['--no-install', 'vitest', 'run', '--maxWorkers=1']]],
   },
   {
     id: 'cli-heavy',
     title: 'CLI heavy tests',
     cwd: cli,
+    prepare: true,
     steps: [
       ['npm', ['run', 'test:heavy']],
       [
@@ -83,6 +94,7 @@ const JOBS = [
   {
     id: 'packed',
     title: 'packed public-package proof',
+    prepare: true,
     steps: [['npm', ['run', 'verify:packed:strict']]],
   },
 ];
@@ -111,6 +123,7 @@ for (const id of [...(only ?? []), ...skip]) {
 
 const results = [];
 const startedAt = Date.now();
+let runtimePrepared = false;
 for (const job of JOBS) {
   if ((only && !only.has(job.id)) || skip.has(job.id)) {
     results.push({ id: job.id, status: 'skipped' });
@@ -119,10 +132,16 @@ for (const job of JOBS) {
   console.log(`\n=== ${job.id}: ${job.title} ===`);
   const jobStart = Date.now();
   let failure = null;
-  for (const [command, commandArgs] of job.steps) {
+  const steps = [
+    ...(job.prepare && !runtimePrepared
+      ? PREPARE_GENERATED_RUNTIME.map((step) => [...step, root])
+      : []),
+    ...job.steps,
+  ];
+  for (const [command, commandArgs, cwd = job.cwd ?? root] of steps) {
     console.log(`$ ${command} ${commandArgs.join(' ')}`);
     const run = spawnSync(command, commandArgs, {
-      cwd: job.cwd ?? root,
+      cwd,
       stdio: 'inherit',
       env: { ...process.env, CI: '1' },
     });
@@ -131,6 +150,7 @@ for (const job of JOBS) {
       break;
     }
   }
+  if (!failure) runtimePrepared = true;
   results.push({
     id: job.id,
     status: failure ? 'failed' : 'passed',
