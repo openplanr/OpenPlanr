@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "1.0.0",
+  "schemaVersion": "1.1.0",
   "name": "OpenPlanr Artifact Review Shell",
   "shellVersion": "1.2.1",
   "entrypoint": "templates/artifact-review-shell.html",
@@ -24,37 +24,65 @@
     {
       "path": "lib/artifact/ui/generated/artifact-theme.css",
       "bytes": 2734,
-      "sha256": "4e53d421dcb37532eeb6373b1d86babb9afe7e43bd988c7c930e5b7fdb794514"
+      "sha256": "4e53d421dcb37532eeb6373b1d86babb9afe7e43bd988c7c930e5b7fdb794514",
+      "budget": {
+        "bytes": 4096,
+        "gzipBytes": 1024
+      }
     },
     {
       "path": "lib/artifact/ui/generated/artifact-theme.json",
       "bytes": 1446,
-      "sha256": "c3c79c71d5e594bd1c18647f85a1482b3fa805fc7cb76c8b86da6fc28fa45693"
+      "sha256": "c3c79c71d5e594bd1c18647f85a1482b3fa805fc7cb76c8b86da6fc28fa45693",
+      "budget": {
+        "bytes": 2048,
+        "gzipBytes": 1024
+      }
     },
     {
       "path": "templates/artifact-review-shell.html",
       "bytes": 56871,
-      "sha256": "e3d4096921c3c00d1de2f711b0b6864e39aca02fda46d86282a4000b8382abb5"
+      "sha256": "e3d4096921c3c00d1de2f711b0b6864e39aca02fda46d86282a4000b8382abb5",
+      "budget": {
+        "bytes": 68608,
+        "gzipBytes": 13312
+      }
     },
     {
       "path": "templates/artifact-review-stage.js",
-      "bytes": 188720,
-      "sha256": "e09b186170ca1d1e06734114aef26331f9736338e8e2f877e43e3d48ece25027"
+      "bytes": 188790,
+      "sha256": "3a7c4a43d9102a399e596e8b6349eb8d7436470139492935f00496168810eed0",
+      "budget": {
+        "bytes": 227328,
+        "gzipBytes": 49152
+      }
     },
     {
       "path": "templates/design/design-board-adapter.js",
-      "bytes": 191054,
-      "sha256": "ec4864304c4e67b2e1518799109e68691327d468539cf900ad1c496e524d87e9"
+      "bytes": 191199,
+      "sha256": "e3361d6bf915937f37f67d2a93ecc8910bea33dd118512c3817be3e35e1234e7",
+      "budget": {
+        "bytes": 230400,
+        "gzipBytes": 46080
+      }
     },
     {
       "path": "templates/diagram-owner.js",
-      "bytes": 540605,
-      "sha256": "775e1f0e4760b12c5b1fac39b22969570230a0a20d268421978dacd974e5505f"
+      "bytes": 540675,
+      "sha256": "287d35536ec9550c999e574f3990597c665cdadd2c4d16de835edaa64150fec3",
+      "budget": {
+        "bytes": 649216,
+        "gzipBytes": 133120
+      }
     },
     {
       "path": "templates/diagram-studio.js",
-      "bytes": 116518,
-      "sha256": "e231a9f79a63e0865f2dfae5721adc8e14cde86a6079c3a03d3037dcf1b3f368"
+      "bytes": 116588,
+      "sha256": "6b56c8168e82efc5a6a24f1ea20fd122406c108d5aa87b1e403d77446cb21ab5",
+      "budget": {
+        "bytes": 140288,
+        "gzipBytes": 31744
+      }
     }
   ]
 }
