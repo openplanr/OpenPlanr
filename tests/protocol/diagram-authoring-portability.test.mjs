@@ -6,6 +6,7 @@ import { dirname, join, resolve } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
+import { launchBrowser } from '../support/browser-launcher.mjs';
 import { evaluateAuthoringCases } from './fixtures/diagram-authoring.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
@@ -13,7 +14,6 @@ const requireProtocol = createRequire(
   new URL('../../packages/protocol/package.json', import.meta.url),
 );
 const { build } = requireProtocol('esbuild');
-const { chromium } = requireProtocol('playwright');
 const { Miniflare, Log, LogLevel } = requireProtocol('miniflare');
 const fixture = fileURLToPath(new URL('./fixtures/diagram-authoring.mjs', import.meta.url));
 
@@ -76,12 +76,7 @@ test('authoring contracts return the same located diagnostics in Node, Chromium 
     'browser',
     'iife',
   );
-  const browser = await chromium.launch({
-    headless: true,
-    ...(process.env.OPENPLANR_PROOF_CHROMIUM_EXECUTABLE
-      ? { executablePath: process.env.OPENPLANR_PROOF_CHROMIUM_EXECUTABLE }
-      : {}),
-  });
+  const browser = await launchBrowser({ engine: 'chromium' });
   try {
     const page = await browser.newPage();
     await page.setContent(

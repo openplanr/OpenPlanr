@@ -1,16 +1,14 @@
 import assert from 'node:assert/strict';
 import { mkdtemp, realpath, rm } from 'node:fs/promises';
-import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import { makeBundle } from '../../../tests/protocol/fixtures/diagram-authoring.mjs';
+import { launchBrowser } from '../../../tests/support/browser-launcher.mjs';
 import { createDiagramAuthoringStore } from '../lib/artifact/diagram/authoring/store.mjs';
 import { startDiagramOwner } from '../lib/artifact/diagram/editor/local-owner.mjs';
 
 const enabled = process.env.PLANR_BROWSER_TESTS === '1';
-const requireProtocol = createRequire(new URL('../../protocol/package.json', import.meta.url));
-const playwright = requireProtocol('playwright');
 
 test('two real owner pages compare base, current and pending edits without overwriting the other author', {
   skip: !enabled,
@@ -25,8 +23,6 @@ test('two real owner pages compare base, current and pending edits without overw
     noOpen: true,
     env: { ...process.env, PLANR_HOME: join(root, 'home') },
   });
-  const engine = process.env.PLANR_BROWSER_ENGINE ?? 'chromium';
-  assert.ok(['chromium', 'firefox', 'webkit'].includes(engine));
   const errors = [];
   let browser;
   t.after(async () => {
@@ -35,12 +31,7 @@ test('two real owner pages compare base, current and pending edits without overw
     await rm(root, { recursive: true, force: true });
     assert.deepEqual(errors, []);
   });
-  browser = await playwright[engine].launch({
-    headless: true,
-    ...(process.env.PLANR_BROWSER_EXECUTABLE
-      ? { executablePath: process.env.PLANR_BROWSER_EXECUTABLE }
-      : {}),
-  });
+  browser = await launchBrowser();
   const pages = await Promise.all([
     browser.newPage({ viewport: { width: 1440, height: 900 } }),
     browser.newPage({ viewport: { width: 1440, height: 900 } }),

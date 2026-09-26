@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { mkdtemp, rm } from 'node:fs/promises';
-import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
+import { launchBrowser } from '../../../tests/support/browser-launcher.mjs';
 import { createDiagramDocument } from '../lib/artifact/diagram/model.mjs';
 import { renderDiagram } from '../lib/artifact/diagram/runtime.mjs';
 import { startDiagramReview } from '../lib/artifact/diagram-review.mjs';
@@ -56,14 +56,7 @@ async function fixture(t, viewport = { width: 1440, height: 960 }, inputDocument
     await session.close();
     await rm(root, { recursive: true, force: true });
   });
-  const requirePipeline = createRequire(new URL('../../pipeline/package.json', import.meta.url));
-  const { chromium, webkit } = requirePipeline('playwright');
-  const browser = await (process.env.PLANR_BROWSER_ENGINE === 'webkit' ? webkit : chromium).launch({
-    headless: true,
-    ...(process.env.PLANR_BROWSER_EXECUTABLE
-      ? { executablePath: process.env.PLANR_BROWSER_EXECUTABLE }
-      : {}),
-  });
+  const browser = await launchBrowser();
   const page = await browser.newPage({ viewport });
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));

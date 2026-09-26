@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
-import { createRequire } from 'node:module';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
+import { launchBrowser } from '../../../tests/support/browser-launcher.mjs';
 import {
   createArtifactBridgeNonce,
   prepareArtifactDocument,
@@ -116,18 +116,7 @@ for (const kind of ['local', ...(process.env.PLANR_HOSTED_BRIDGE_SOURCE ? ['host
   test(`${kind}: real iframe wheel gestures are opt-in, scale-independent and restored after load`, {
     skip: process.env.PLANR_BROWSER_TESTS !== '1',
   }, async (t) => {
-    const requirePipeline = createRequire(new URL('../../pipeline/package.json', import.meta.url));
-    const { chromium, webkit } = requirePipeline('playwright');
-    const browser = await (process.env.PLANR_BROWSER_ENGINE === 'webkit'
-      ? webkit
-      : chromium
-    ).launch({
-      headless: true,
-      ...(process.env.PLANR_BROWSER_CHANNEL ? { channel: process.env.PLANR_BROWSER_CHANNEL } : {}),
-      ...(process.env.PLANR_BROWSER_EXECUTABLE
-        ? { executablePath: process.env.PLANR_BROWSER_EXECUTABLE }
-        : {}),
-    });
+    const browser = await launchBrowser();
     const nonce = createArtifactBridgeNonce();
     let origin;
     const setup = `const artifact={id:'screen',viewport:{width:800,height:600}};const frame=document.createElement('iframe');frame.width=800;frame.height=600;frame.style.cssText='border:0;transform:scale(.6);transform-origin:top left';frame.setAttribute('sandbox','allow-scripts');window.frame=frame;window.zooms=[];window.pans=[];document.body.addEventListener('planr:artifact-viewport-zoom',event=>zooms.push(event.detail));document.body.addEventListener('planr:artifact-viewport-pan',event=>pans.push(event.detail));`;

@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
 import { join } from 'node:path';
 import test from 'node:test';
 import { build } from 'esbuild';
 
+import { launchBrowser } from '../../../tests/support/browser-launcher.mjs';
 import {
   adoptMermaidCopy,
   exportMermaidCopy,
@@ -15,8 +15,6 @@ import { sealBundle, validateAuthoringBundle } from '../lib/artifact/diagram/aut
 
 const fixture = (name) =>
   readFileSync(join(import.meta.dirname, '..', 'fixtures', 'diagram', 'interchange', name), 'utf8');
-const requireProtocol = createRequire(new URL('../../protocol/package.json', import.meta.url));
-const { chromium } = requireProtocol('playwright');
 const supported = fixture('flowchart-supported.mmd');
 const partial = fixture('flowchart-partial.mmd');
 const preview = (source, options = {}) =>
@@ -340,12 +338,7 @@ test('real Chromium and Node run the same pure converter without providers or fe
     write: false,
     logLevel: 'silent',
   });
-  const browser = await chromium.launch({
-    headless: true,
-    ...(process.env.OPENPLANR_PROOF_CHROMIUM_EXECUTABLE
-      ? { executablePath: process.env.OPENPLANR_PROOF_CHROMIUM_EXECUTABLE }
-      : {}),
-  });
+  const browser = await launchBrowser({ engine: 'chromium' });
   try {
     const page = await browser.newPage();
     await page.setContent('<!doctype html><html><body></body></html>');

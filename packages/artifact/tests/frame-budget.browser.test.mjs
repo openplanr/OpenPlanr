@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
-import { createRequire } from 'node:module';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
+import { launchBrowser } from '../../../tests/support/browser-launcher.mjs';
 import {
   createArtifactBridgeNonce,
   prepareArtifactDocument,
@@ -14,22 +14,13 @@ import { renderArtifactShellDocument } from '../lib/artifact/ui/shell.mjs';
 
 const enabled = process.env.PLANR_BROWSER_TESTS === '1';
 const rootPath = fileURLToPath(new URL('../../../', import.meta.url));
-const requirePipeline = createRequire(new URL('../../pipeline/package.json', import.meta.url));
 
 for (const transport of ['blob', 'srcdoc']) {
   test(`phone-sized ${transport} frame pool stays bounded through authenticated navigation and disposal`, {
     skip: !enabled,
     timeout: 60000,
   }, async (t) => {
-    const { chromium, webkit } = requirePipeline('playwright');
-    const engine = process.env.PLANR_BROWSER_ENGINE === 'webkit' ? webkit : chromium;
-    const browser = await engine.launch({
-      headless: true,
-      ...(process.env.PLANR_BROWSER_CHANNEL ? { channel: process.env.PLANR_BROWSER_CHANNEL } : {}),
-      ...(process.env.PLANR_BROWSER_EXECUTABLE
-        ? { executablePath: process.env.PLANR_BROWSER_EXECUTABLE }
-        : {}),
-    });
+    const browser = await launchBrowser();
     const nonce = createArtifactBridgeNonce();
     const artifacts = Array.from({ length: 27 }, (_, i) => ({
       id: `screen-${i}`,

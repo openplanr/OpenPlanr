@@ -5,13 +5,13 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { launchBrowser } from '../../../tests/support/browser-launcher.mjs';
 import { createDiagramAuthoringStore } from '../lib/artifact/diagram/authoring/store.mjs';
 import { startDiagramOwner } from '../lib/artifact/diagram/editor/local-owner.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 const requireProtocol = createRequire(new URL('../../protocol/package.json', import.meta.url));
 const { build } = requireProtocol('esbuild');
-const { chromium } = requireProtocol('playwright');
 const { Miniflare, Log, LogLevel } = requireProtocol('miniflare');
 const entry = fileURLToPath(new URL('../lib/artifact/diagram/editor/index.mjs', import.meta.url));
 async function bundled(contents, format = 'iife') {
@@ -34,12 +34,7 @@ test('browser session uses real scoped owner HTTP, saves offline and recovers a 
   t.after(() => rm(directory, { recursive: true, force: true }));
   const owner = await startDiagramOwner({ root: directory, slug: 'browser' });
   t.after(() => owner.close());
-  const browser = await chromium.launch({
-    headless: true,
-    ...(process.env.OPENPLANR_PROOF_CHROMIUM_EXECUTABLE
-      ? { executablePath: process.env.OPENPLANR_PROOF_CHROMIUM_EXECUTABLE }
-      : {}),
-  });
+  const browser = await launchBrowser({ engine: 'chromium' });
   t.after(() => browser.close());
   const page = await browser.newPage();
   // The shell has its own suite. This fixture supplies only its same-origin mounting

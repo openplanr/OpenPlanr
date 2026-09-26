@@ -5,13 +5,13 @@ import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
+import { launchBrowser } from '../../../tests/support/browser-launcher.mjs';
 import { adoptMermaidCopy, previewMermaidCopy } from '../lib/artifact/diagram/authoring/index.mjs';
 import { createDiagramAuthoringStore } from '../lib/artifact/diagram/authoring/store.mjs';
 import { startDiagramOwner } from '../lib/artifact/diagram/editor/local-owner.mjs';
 
 const enabled = process.env.PLANR_BROWSER_TESTS === '1';
 const requireProtocol = createRequire(new URL('../../protocol/package.json', import.meta.url));
-const playwright = requireProtocol('playwright');
 const { build } = requireProtocol('esbuild');
 const supported = readFileSync(
   new URL('../fixtures/diagram/interchange/flowchart-supported.mmd', import.meta.url),
@@ -37,14 +37,7 @@ async function fixture(t, { initial = null, viewport = { width: 1280, height: 80
     noOpen: true,
     env: { ...process.env, PLANR_HOME: join(root, 'home') },
   });
-  const engine = process.env.PLANR_BROWSER_ENGINE ?? 'chromium';
-  assert.ok(['chromium', 'firefox', 'webkit'].includes(engine));
-  const browser = await playwright[engine].launch({
-    headless: true,
-    ...(process.env.PLANR_BROWSER_EXECUTABLE
-      ? { executablePath: process.env.PLANR_BROWSER_EXECUTABLE }
-      : {}),
-  });
+  const browser = await launchBrowser();
   const page = await browser.newPage({ viewport, acceptDownloads: true });
   const errors = [],
     remote = [];
@@ -135,14 +128,7 @@ async function companyHostFixture(t) {
     write: false,
     logLevel: 'silent',
   });
-  const engine = process.env.PLANR_BROWSER_ENGINE ?? 'chromium';
-  assert.ok(['chromium', 'firefox', 'webkit'].includes(engine));
-  const browser = await playwright[engine].launch({
-    headless: true,
-    ...(process.env.PLANR_BROWSER_EXECUTABLE
-      ? { executablePath: process.env.PLANR_BROWSER_EXECUTABLE }
-      : {}),
-  });
+  const browser = await launchBrowser();
   const page = await browser.newPage({
     viewport: { width: 1024, height: 768 },
   });

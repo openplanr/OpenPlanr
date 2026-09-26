@@ -1,17 +1,15 @@
 import assert from 'node:assert/strict';
 import { mkdtemp, realpath, rm } from 'node:fs/promises';
-import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import { makeBundle, sealBundle } from '../../../tests/protocol/fixtures/diagram-authoring.mjs';
+import { browserEngine, launchBrowser } from '../../../tests/support/browser-launcher.mjs';
 import { createDiagramAuthoringStore } from '../lib/artifact/diagram/authoring/store.mjs';
 import { startDiagramOwner } from '../lib/artifact/diagram/editor/local-owner.mjs';
 import { mixedBundle } from './fixtures/diagram-editor-capacity.mjs';
 
 const enabled = process.env.PLANR_BROWSER_TESTS === '1';
-const requireProtocol = createRequire(new URL('../../protocol/package.json', import.meta.url));
-const playwright = requireProtocol('playwright');
 const options = { skip: !enabled, timeout: 60_000 };
 async function fixture(
   t,
@@ -26,8 +24,6 @@ async function fixture(
     noOpen: true,
     env: { ...process.env, PLANR_HOME: join(root, 'home') },
   });
-  const engine = process.env.PLANR_BROWSER_ENGINE ?? 'chromium';
-  assert.ok(['chromium', 'firefox', 'webkit'].includes(engine), `Unsupported browser: ${engine}`);
   let browser;
   const errors = [],
     external = [];
@@ -38,12 +34,7 @@ async function fixture(
     assert.deepEqual(errors, []);
     assert.deepEqual(external, [], 'Local authoring requires no remote account or assets');
   });
-  browser = await playwright[engine].launch({
-    headless: true,
-    ...(process.env.PLANR_BROWSER_EXECUTABLE
-      ? { executablePath: process.env.PLANR_BROWSER_EXECUTABLE }
-      : {}),
-  });
+  browser = await launchBrowser();
   const page = await browser.newPage({ viewport });
   page.setDefaultTimeout(7000);
   page.on('pageerror', (error) => errors.push(error.message));
@@ -519,7 +510,7 @@ test(
     await settle(page);
     const responseMs = Date.now() - started;
     t.diagnostic(
-      `1,000-object targeted keyboard gesture and two animation frames: ${responseMs} ms in ${process.env.PLANR_BROWSER_ENGINE ?? 'chromium'}; this is not a release p95.`,
+      `1,000-object targeted keyboard gesture and two animation frames: ${responseMs} ms in ${browserEngine()}; this is not a release p95.`,
     );
     assert.equal(await stable.evaluate((element) => element.isConnected), true);
     assert.equal(
