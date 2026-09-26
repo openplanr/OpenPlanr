@@ -102,7 +102,11 @@
     },
     {
       "path": "scripts/marketplace/generate-ecosystem.mjs",
-      "digest": "sha256:6bd185b1f2ec4a5ab7c7df88e871f9ff811a70d569283c2e45e6fbb2e456f189"
+      "digest": "sha256:5bc66d8da70874978b7817cd7a13b86b11674a18a318480846a39dacb0d9a361"
+    },
+    {
+      "path": "scripts/marketplace/openplanr-ecosystem.schema.json",
+      "digest": "sha256:a8541e38bacf5d3cc5b4ade9eceb060f350333aba17dc0a95ec98c0e4344d472"
     }
   ],
   "outputs": [
