@@ -1321,7 +1321,7 @@
     {
       "source": "packages/artifact/scripts/generate-artifact-shell.mjs",
       "target": "scripts/generate-artifact-shell.mjs",
-      "sha256": "1589aebd1ab99b0ea7b8c4a508cea67aaec5f1d22739ae579611466479ddc750",
+      "sha256": "6594920c3b511a1f415041648bffb25ad1c3b4ca65349b840b985440152dd56c",
       "mode": "644"
     },
     {

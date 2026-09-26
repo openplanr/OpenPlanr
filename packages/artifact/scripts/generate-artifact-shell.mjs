@@ -125,7 +125,8 @@ export function renderArtifactShellAssetManifest(assets) {
  * Bundle one browser entry into a deterministic classic script.
  * Output stays readable and unmapped on purpose: consumers and tests match on the
  * emitted source, and the hosted surfaces minify in their own build. Third-party
- * license headers stay in place; any esbuild warning fails the build.
+ * license headers stay in place; any esbuild warning fails the build. The empty
+ * tsconfig stops a tsconfig.json on disk (its `strict`) from changing the output.
  * `entry` resolves against `projectRoot`; `banner` names the calling generator.
  */
 export function bundleBrowserEntry(
@@ -147,6 +148,7 @@ export function bundleBrowserEntry(
     sourcemap: false,
     target: ['es2022'],
     treeShaking: true,
+    tsconfigRaw: {},
     write: false,
   });
   if (result.warnings.length > 0) {
