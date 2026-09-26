@@ -244,6 +244,23 @@ test(
   },
 );
 
+test('Escape cancels a session gesture that no pointer drag owns', options, async (t) => {
+  const page = await hostedFixture(t);
+  const node = page.locator('[data-editor-svg] [data-element-id="node-b"]');
+  const original = await node.boundingBox();
+  const preview = await page.evaluate(() => {
+    window.__session.beginGesture();
+    return window.__session.previewGesture({ type: 'move', ids: ['node-b'], dx: 40, dy: 0 }).ok;
+  });
+  assert.equal(preview, true);
+  assert.notDeepEqual(await node.boundingBox(), original, 'The editor shows the open preview');
+  await page.getByLabel('Diagram canvas', { exact: true }).focus();
+  await page.keyboard.press('Escape');
+  assert.equal(await page.evaluate(() => window.__session.getState().gesture), null);
+  assert.deepEqual(await node.boundingBox(), original);
+  assert.equal(await page.evaluate(() => window.__session.getState().pendingCount), 0);
+});
+
 test(
   'a session without write access shows a read-only view named by the host',
   options,

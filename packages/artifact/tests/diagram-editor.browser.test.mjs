@@ -616,6 +616,49 @@ test(
 );
 
 test(
+  'a rejected resize reverts and reports, and the next edit and its undo still work',
+  options,
+  async (t) => {
+    const { page, read } = await fixture(t, { bundle: makeBundle('process') });
+    const before = await read();
+    const button = (name) => page.getByRole('button', { name, exact: true });
+    await select(page, 'node-a');
+    const original = await drawing(page, 'node-a').boundingBox();
+    const handle = await page
+      .locator('[data-handle="resize"][data-handle-id="node-a"]')
+      .boundingBox();
+    await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(handle.x + handle.width / 2 + 120, handle.y + handle.height / 2, {
+      steps: 8,
+    });
+    await page.mouse.up();
+    await settle(page);
+    const rejection = 'Container group-a must contain child node-a.';
+    assert.equal(await page.locator('.de-alert').textContent(), rejection);
+    assert.equal(await page.locator('.de-announcer').textContent(), rejection);
+    assert.deepEqual(await drawing(page, 'node-a').boundingBox(), original, 'The preview reverts');
+    assert.equal(await button('Save diagram').isDisabled(), true, 'Nothing was applied');
+    assert.equal(await button('Undo').isDisabled(), true);
+
+    await page.getByLabel('Diagram canvas', { exact: true }).focus();
+    await page.keyboard.press('ArrowRight');
+    await settle(page);
+    assert.equal(await page.locator('.de-alert').isHidden(), true);
+    await save(page);
+    const moved = (await read()).presentation.elements.find((item) => item.elementId === 'node-a');
+    const start = before.presentation.elements.find((item) => item.elementId === 'node-a');
+    assert.deepEqual(moved.bounds, { ...start.bounds, x: start.bounds.x + 1 });
+
+    await button('Undo').click();
+    assert.equal(await button('Undo').isDisabled(), true, 'The nudge is the only undoable edit');
+    assert.equal(await button('Redo').isDisabled(), false);
+    await save(page);
+    assert.deepEqual((await read()).presentation, before.presentation);
+  },
+);
+
+test(
   'failed save, refresh recovery and blocked storage report actual durability',
   options,
   async (t) => {
