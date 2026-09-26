@@ -2,6 +2,7 @@ import { clientSelectionToNormalized, mountArtifactAnnotations } from './annotat
 import { mountArtifactFeedbackRail } from './feedback-rail.mjs';
 import { mountHostedArtifactViewer } from './hosted-viewer.mjs';
 import { mountArtifactShareDialog } from './share-dialog.mjs';
+import { publishArtifactStage } from './stage-mount.mjs';
 
 export { createArtifactStagePayload } from './stage-payload.mjs';
 
@@ -810,7 +811,7 @@ export function mountArtifactStage({
       return true;
     },
   });
-  window.__openPlanrArtifactStage = controller;
+  publishArtifactStage(window, controller);
 
   feedbackController = mountArtifactFeedbackRail({
     document,

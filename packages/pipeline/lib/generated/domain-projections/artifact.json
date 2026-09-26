@@ -955,7 +955,7 @@
     {
       "source": "packages/artifact/lib/artifact/ui/generated/artifact-shell-assets.json",
       "target": "lib/artifact/ui/generated/artifact-shell-assets.json",
-      "sha256": "09b4d85e2834954c40aeacc31cdd6d591927e64e401fbd80d53b58ec9ff2d6da",
+      "sha256": "0ee6cfe8773e3b1450c31b1fbf9fd6564a964922032c94cade4a13635efcd2d4",
       "mode": "644"
     },
     {
@@ -995,6 +995,12 @@
       "mode": "644"
     },
     {
+      "source": "packages/artifact/lib/artifact/ui/stage-mount.mjs",
+      "target": "lib/artifact/ui/stage-mount.mjs",
+      "sha256": "a535d2838a968b259e5b4ee450cf93eaf0362fde5a690efd4b4355634adfc2f7",
+      "mode": "644"
+    },
+    {
       "source": "packages/artifact/lib/artifact/ui/stage-payload.mjs",
       "target": "lib/artifact/ui/stage-payload.mjs",
       "sha256": "2e3c41109bb8702a9f9542c4d03ecdf63ad9daad75a702fa6a1411f9ab35d38e",
@@ -1003,7 +1009,7 @@
     {
       "source": "packages/artifact/lib/artifact/ui/stage.mjs",
       "target": "lib/artifact/ui/stage.mjs",
-      "sha256": "7ea2f12f54efc24f456753bb02d17d506e22a73ca2dde16ff282f50fcbf715da",
+      "sha256": "b6b91e8d7a304c32378aa7a1932c1e534f8b18169e6dea19f821d9a196837ebb",
       "mode": "644"
     },
     {
@@ -1255,7 +1261,7 @@
     {
       "source": "packages/artifact/scripts/generate-artifact-shell.mjs",
       "target": "scripts/generate-artifact-shell.mjs",
-      "sha256": "680636cf047e217c716a4c0c03c36e7c4e401340ebf47011e116fd7208677b9f",
+      "sha256": "1589aebd1ab99b0ea7b8c4a508cea67aaec5f1d22739ae579611466479ddc750",
       "mode": "644"
     },
     {
@@ -1273,7 +1279,7 @@
     {
       "source": "packages/artifact/templates/artifact-review-stage.js",
       "target": "templates/artifact-review-stage.js",
-      "sha256": "3a7c4a43d9102a399e596e8b6349eb8d7436470139492935f00496168810eed0",
+      "sha256": "032e62f9add2b01836785c910f53e181906baea31897e9886208c88e868b791e",
       "mode": "644"
     },
     {

@@ -13,10 +13,6 @@ import {
 
 const { JSDOM } = createRequire(new URL('../../cli/package.json', import.meta.url))('jsdom');
 const runtime = readFileSync(new URL('../templates/studio/studio.js', import.meta.url), 'utf8');
-const enhancements = readFileSync(
-  new URL('../templates/studio/enhancements.js', import.meta.url),
-  'utf8',
-);
 const scope = 'openplanr.experience./d/profile-test';
 
 async function mount({
@@ -86,9 +82,7 @@ async function mount({
   if (identity) stage.review.setIdentity(identity);
   window.eval(runtime);
   await stage.ready;
-  await delay(20);
-  window.eval(enhancements);
-  await delay(20);
+  await delay(40);
   return {
     window,
     document: window.document,

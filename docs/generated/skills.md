@@ -122,7 +122,7 @@ Design a polished product interface through adaptive consultation, a shared canv
 - Invocation from the plugin: `$planr:design` in Codex/ChatGPT; `/planr:design` in Claude Code.
 - Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
 - Aliases: none.
-- Packaged support: `references/craft.md`, `references/design-spec-template.md`, `references/design-system.md`, `references/discovery.md`, `references/generation.md`, `references/handoff.md`, `references/review.md`, `references/utilities.md`, `references/team-review.md`, and 36 packaged schema, script, and runtime resources.
+- Packaged support: `references/craft.md`, `references/design-spec-template.md`, `references/design-system.md`, `references/discovery.md`, `references/generation.md`, `references/handoff.md`, `references/review.md`, `references/utilities.md`, `references/team-review.md`, and 34 packaged schema, script, and runtime resources.
 
 ## `planr-design-loop`
 
@@ -133,7 +133,7 @@ Compare three materially different product design directions in a live review st
 - Invocation from the plugin: `$planr:design-loop` in Codex/ChatGPT; `/planr:design-loop` in Claude Code.
 - Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
 - Aliases: none.
-- Packaged support: `references/craft.md`, `references/design-spec-template.md`, `references/design-system.md`, `references/discovery.md`, `references/generation.md`, `references/handoff.md`, `references/review.md`, `references/utilities.md`, `references/team-review.md`, and 36 packaged schema, script, and runtime resources.
+- Packaged support: `references/craft.md`, `references/design-spec-template.md`, `references/design-system.md`, `references/discovery.md`, `references/generation.md`, `references/handoff.md`, `references/review.md`, `references/utilities.md`, `references/team-review.md`, and 34 packaged schema, script, and runtime resources.
 
 ## `planr-design-review`
 
@@ -144,7 +144,7 @@ Review and revise an existing product design using stable board pins and scoped 
 - Invocation from the plugin: `$planr:design-review` in Codex/ChatGPT; `/planr:design-review` in Claude Code.
 - Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
 - Aliases: none.
-- Packaged support: `references/craft.md`, `references/design-spec-template.md`, `references/design-system.md`, `references/discovery.md`, `references/generation.md`, `references/handoff.md`, `references/review.md`, `references/utilities.md`, `references/team-review.md`, and 36 packaged schema, script, and runtime resources.
+- Packaged support: `references/craft.md`, `references/design-spec-template.md`, `references/design-system.md`, `references/discovery.md`, `references/generation.md`, `references/handoff.md`, `references/review.md`, `references/utilities.md`, `references/team-review.md`, and 34 packaged schema, script, and runtime resources.
 
 ## `planr-diagram`
 
@@ -221,7 +221,7 @@ Turn a Protocol-compatible specification or product intent into schema-compatibl
 - Invocation from the plugin: `$planr:plan` in Codex/ChatGPT; `/planr:plan` in Claude Code.
 - Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
 - Aliases: none.
-- Packaged support: `references/artifact-contract.md`, `references/design-handoff.md`, and 37 packaged schema, script, and runtime resources.
+- Packaged support: `references/artifact-contract.md`, `references/design-handoff.md`, and 35 packaged schema, script, and runtime resources.
 
 ## `planr-plan-review`
 

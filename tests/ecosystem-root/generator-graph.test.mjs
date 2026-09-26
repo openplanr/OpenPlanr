@@ -10,6 +10,7 @@ const expectedOrder = [
   'dashboard-contracts',
   'artifact-shell',
   'diagram-assets',
+  'design-studio',
   'operate-artifact-design-public-projections',
   'operate-contracts-and-custody',
   'landing-workflow-custody',
