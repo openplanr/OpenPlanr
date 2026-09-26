@@ -8,6 +8,11 @@ export class CompanySyncError extends Error {
     this.name = 'CompanySyncError';
   }
 }
+/** Maps ENOENT from inspecting a held lock to null: its holder released it, so retry the link. */
+export function releasedLock(error: unknown): null {
+  if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
+  throw error;
+}
 export const DEFAULT_COMPANY_API_ORIGIN = 'https://api.openplanr.dev';
 const fail = (code: string, message: string, cause?: unknown): never => {
   throw new CompanySyncError(code, message, cause === undefined ? undefined : { cause });
