@@ -21,8 +21,10 @@ export class IntegrationError extends Error {
 }
 
 export function isLikelyLinearIssueId(value) {
-  return typeof value === 'string'
-    && (LINEAR_UUID.test(value.trim()) || LINEAR_IDENTIFIER.test(value.trim()));
+  return (
+    typeof value === 'string' &&
+    (LINEAR_UUID.test(value.trim()) || LINEAR_IDENTIFIER.test(value.trim()))
+  );
 }
 
 export function reconcileStatus({ base, local, remote }, strategy) {
@@ -46,7 +48,11 @@ export function reconcileStatus({ base, local, remote }, strategy) {
 
 async function run(command, args, cwd) {
   try {
-    return await execFileAsync(command, args, { cwd, encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 });
+    return await execFileAsync(command, args, {
+      cwd,
+      encoding: 'utf8',
+      maxBuffer: 10 * 1024 * 1024,
+    });
   } catch (error) {
     throw new IntegrationError('E_INTEGRATION_COMMAND', `${command} ${args.join(' ')} failed.`, {
       command,
@@ -61,8 +67,12 @@ export async function inspectGitHub({ cwd = process.cwd() } = {}) {
   return { provider: 'github', repository: JSON.parse(stdout) };
 }
 
-export async function executeGitHubOperations(operations, { cwd = process.cwd(), apply = false } = {}) {
-  if (!Array.isArray(operations)) throw new IntegrationError('E_SYNC_INPUT', 'GitHub operations must be an array.');
+export async function executeGitHubOperations(
+  operations,
+  { cwd = process.cwd(), apply = false } = {},
+) {
+  if (!Array.isArray(operations))
+    throw new IntegrationError('E_SYNC_INPUT', 'GitHub operations must be an array.');
   if (!apply) return { provider: 'github', applied: false, operations };
   const results = [];
   for (const operation of operations) {
@@ -83,13 +93,18 @@ export async function executeGitHubOperations(operations, { cwd = process.cwd(),
       results.push({ action: 'update', id: String(operation.id) });
       continue;
     }
-    throw new IntegrationError('E_SYNC_OPERATION', 'Unsupported GitHub synchronization operation.', { operation });
+    throw new IntegrationError(
+      'E_SYNC_OPERATION',
+      'Unsupported GitHub synchronization operation.',
+      { operation },
+    );
   }
   return { provider: 'github', applied: true, results };
 }
 
 async function linearRequest(query, variables, token, fetchImpl = fetch) {
-  if (!token) throw new IntegrationError('E_LINEAR_CREDENTIAL', 'Linear credentials are unavailable.');
+  if (!token)
+    throw new IntegrationError('E_LINEAR_CREDENTIAL', 'Linear credentials are unavailable.');
   let response;
   let payload;
   try {
@@ -117,16 +132,20 @@ function requireLinearMutationResult(data, field) {
   const result = data?.[field];
   const issue = result?.issue;
   if (
-    result?.success !== true
-    || !issue
-    || typeof issue.id !== 'string'
-    || typeof issue.identifier !== 'string'
-    || typeof issue.url !== 'string'
+    result?.success !== true ||
+    !issue ||
+    typeof issue.id !== 'string' ||
+    typeof issue.identifier !== 'string' ||
+    typeof issue.url !== 'string'
   ) {
-    throw new IntegrationError('E_LINEAR_API', `Linear ${field} did not confirm a successful issue mutation.`, {
-      field,
-      success: result?.success ?? null,
-    });
+    throw new IntegrationError(
+      'E_LINEAR_API',
+      `Linear ${field} did not confirm a successful issue mutation.`,
+      {
+        field,
+        success: result?.success ?? null,
+      },
+    );
   }
   return issue;
 }
@@ -140,14 +159,17 @@ export async function executeLinearOperations(
   operations,
   { token = process.env.PLANR_LINEAR_TOKEN, apply = false } = {},
 ) {
-  if (!Array.isArray(operations)) throw new IntegrationError('E_SYNC_INPUT', 'Linear operations must be an array.');
+  if (!Array.isArray(operations))
+    throw new IntegrationError('E_SYNC_INPUT', 'Linear operations must be an array.');
   if (!apply) return { provider: 'linear', applied: false, operations };
   const results = [];
   for (const operation of operations) {
     if (operation.action === 'create' && operation.teamId) {
       const data = await linearRequest(
         'mutation OpenPlanrCreate($input: IssueCreateInput!) { issueCreate(input: $input) { success issue { id identifier url } } }',
-        { input: { teamId: operation.teamId, title: operation.title, description: operation.body } },
+        {
+          input: { teamId: operation.teamId, title: operation.title, description: operation.body },
+        },
         token,
       );
       results.push({ action: 'create', ...requireLinearMutationResult(data, 'issueCreate') });
@@ -156,13 +178,20 @@ export async function executeLinearOperations(
     if (operation.action === 'update' && isLikelyLinearIssueId(operation.id)) {
       const data = await linearRequest(
         'mutation OpenPlanrUpdate($id: String!, $input: IssueUpdateInput!) { issueUpdate(id: $id, input: $input) { success issue { id identifier url } } }',
-        { id: operation.id, input: { title: operation.title, description: operation.body, stateId: operation.state } },
+        {
+          id: operation.id,
+          input: { title: operation.title, description: operation.body, stateId: operation.state },
+        },
         token,
       );
       results.push({ action: 'update', ...requireLinearMutationResult(data, 'issueUpdate') });
       continue;
     }
-    throw new IntegrationError('E_SYNC_OPERATION', 'Unsupported Linear synchronization operation.', { operation });
+    throw new IntegrationError(
+      'E_SYNC_OPERATION',
+      'Unsupported Linear synchronization operation.',
+      { operation },
+    );
   }
   return { provider: 'linear', applied: true, results };
 }
@@ -202,9 +231,13 @@ export async function runPortableSync(
   const args = parseArgs(argv);
   let result;
   if (args.provider === 'local' && args.action === 'inspect') result = await inspectLocal(cwd);
-  else if (args.provider === 'github' && args.action === 'inspect') result = await inspectGitHub({ cwd });
+  else if (args.provider === 'github' && args.action === 'inspect')
+    result = await inspectGitHub({ cwd });
   else if (args.provider === 'github' && args.action === 'sync') {
-    result = await executeGitHubOperations(await readJsonInput(args.input, stdin), { cwd, apply: args.apply });
+    result = await executeGitHubOperations(await readJsonInput(args.input, stdin), {
+      cwd,
+      apply: args.apply,
+    });
   } else if (args.provider === 'linear' && args.action === 'inspect') {
     result = await inspectLinear({ token: env.PLANR_LINEAR_TOKEN });
   } else if (args.provider === 'linear' && args.action === 'sync') {

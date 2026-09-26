@@ -34,9 +34,13 @@ test('Linear transport and malformed JSON failures remain typed and closed', asy
     async () => {
       throw new Error('network down');
     },
-    async () => ({ ok: true, status: 200, json: async () => {
-      throw new SyntaxError('invalid json');
-    } }),
+    async () => ({
+      ok: true,
+      status: 200,
+      json: async () => {
+        throw new SyntaxError('invalid json');
+      },
+    }),
   ]) {
     await assert.rejects(
       withFetch(fetchImpl, async () =>
@@ -56,7 +60,11 @@ test('Linear mutation returns only an explicitly confirmed issue', async () => {
         data: {
           issueCreate: {
             success: true,
-            issue: { id: 'uuid', identifier: 'ACME-1', url: 'https://linear.app/acme/issue/ACME-1' },
+            issue: {
+              id: 'uuid',
+              identifier: 'ACME-1',
+              url: 'https://linear.app/acme/issue/ACME-1',
+            },
           },
         },
       }),

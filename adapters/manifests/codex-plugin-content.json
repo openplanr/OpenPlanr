@@ -1493,7 +1493,7 @@
         },
         {
           "path": "skills/sync/scripts/sync.mjs",
-          "digest": "sha256:6378ad3477e4be8b7e916c4249404c50cafecac1c70ffbf5a1a2fce195dfea16"
+          "digest": "sha256:42fb430add6e96c73a8d1c5ea5df7a6ce0bdffc20b9c375eff9333c6c741b308"
         },
         {
           "path": "skills/sync/agents/openai.yaml",
