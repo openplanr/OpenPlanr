@@ -1,4 +1,5 @@
 import type { IncomingMessage } from 'node:http';
+import type { DiagramAuthoringProfile } from '@openplanr/protocol/diagram-authoring-contracts';
 import type { DiagramAuthoringStoreOptions } from '../authoring/store.mjs';
 
 export declare const DIAGRAM_OWNER_HEADER: 'x-openplanr-owner';
@@ -9,7 +10,7 @@ export interface DiagramLocalOwnerOptions {
   /** Initial blank title; saved document content always wins. */
   title?: string;
   /** Initial blank authoring grammar, default process. */
-  grammar?: string;
+  grammar?: DiagramAuthoringProfile;
   maxRequestBytes?: number;
   storeOptions?: Pick<DiagramAuthoringStoreOptions, 'maxBundleBytes' | 'faultInjector'>;
 }

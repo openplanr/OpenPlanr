@@ -2838,7 +2838,7 @@
           errs.push({
             path,
             rule: "pattern",
-            detail: `invalid regex /${schema2.pattern}/: ${e.message}`
+            detail: `invalid regex /${schema2.pattern}/: ${e instanceof Error ? e.message : String(e)}`
           });
         }
       }
@@ -2993,7 +2993,13 @@
       }
     }
   };
-  var validateJson = (value, schema2, { resolveRef = null, base = schema2?.$id ?? null } = {}) => {
+  var validateJson = (value, schema2, {
+    resolveRef,
+    base = (
+      /** @type {{ $id?: string } | null | undefined} */
+      schema2?.$id ?? null
+    )
+  } = {}) => {
     const errs = [];
     validateNode(value, schema2, "$", errs, {
       rootSchema: schema2,
@@ -3751,7 +3757,7 @@
         byId.set(entry2.id, { ...entry2, collection });
       }
     const capability = getDiagramAuthoringCapability(doc.grammar.id);
-    if (!capability.primitives.includes("lane") && doc.lanes.length)
+    if (capability && !capability.primitives.includes("lane") && doc.lanes.length)
       issues.push(
         error(`${path}.lanes`, "profile-primitive", "This authoring profile does not support lanes.")
       );
@@ -3895,7 +3901,7 @@
         );
       if (relations?.has(entry2.elementId) && !entry2.route)
         issues.push(error(location, "geometry-kind", "Semantic relations require route geometry."));
-      if (doc && !relations.has(entry2.elementId) && !entry2.bounds)
+      if (relations && !relations.has(entry2.elementId) && !entry2.bounds)
         issues.push(error(location, "geometry-kind", "Non-relation elements require bounds."));
       if (containers?.has(entry2.elementId) && entry2.appearance.shape !== "container")
         issues.push(
@@ -8416,11 +8422,21 @@
         return fail2("The clipboard does not contain an OpenPlanr selection.");
       }
     }
-    if (inspectPlainData(input).length || !input || input.kind !== "openplanr-diagram-selection" || input.version !== 1 || Object.keys(input).some((key) => !["kind", "version", "sourceBundle", "ids"].includes(key)) || !Array.isArray(input.ids) || input.ids.length > MAX_ELEMENTS || size(input) > MAX_BYTES2)
+    const fragment = (
+      /** @type {Partial<Record<keyof import('./index.d.mts').DiagramSelectionClipboard, unknown>> | null} */
+      input
+    );
+    if (inspectPlainData(fragment).length || !fragment || fragment.kind !== "openplanr-diagram-selection" || fragment.version !== 1 || Object.keys(fragment).some(
+      (key) => !["kind", "version", "sourceBundle", "ids"].includes(key)
+    ) || !Array.isArray(fragment.ids) || fragment.ids.length > MAX_ELEMENTS || size(fragment) > MAX_BYTES2)
       return fail2("Invalid or oversized clipboard fragment.");
+    const sourceBundle = (
+      /** @type {import('@openplanr/protocol/diagram-authoring-contracts').DiagramAuthoringBundle} */
+      fragment.sourceBundle
+    );
     return compileDiagramCommand(
       bundle,
-      { type: "paste", sourceBundle: input.sourceBundle, ids: input.ids, idMap, dx, dy },
+      { type: "paste", sourceBundle, ids: fragment.ids, idMap, dx, dy },
       { transactionId }
     );
   }
@@ -8754,7 +8770,10 @@
       const started = compileDiagramCommand(blank.bundle, NAMED_TEMPLATES[template](), {
         transactionId: `template-${template}`
       });
-      return started.ok ? { ok: true, bundle: started.bundle } : started;
+      if (!started.ok) return started;
+      if (!("bundle" in started))
+        return failure("$.template", "template", `Template ${template} produced no diagram.`);
+      return { ok: true, bundle: started.bundle };
     }
     if (template) {
       const check3 = validateAuthoringBundle(template);
@@ -8962,8 +8981,10 @@
   }
   function primitives(record2) {
     const result = [];
-    if (record2.bounds) result.push({ id: record2.id, kind: "bounds", bounds: record2.bounds });
-    if (record2.labelBounds) result.push({ id: record2.id, kind: "label", bounds: record2.labelBounds });
+    if (record2.bounds)
+      result.push({ id: record2.id, kind: "bounds", bounds: record2.bounds, cells: null });
+    if (record2.labelBounds)
+      result.push({ id: record2.id, kind: "label", bounds: record2.labelBounds, cells: null });
     for (let index2 = 1; index2 < record2.points.length; index2++) {
       const start = record2.points[index2 - 1], end = record2.points[index2];
       result.push({
@@ -8976,7 +8997,8 @@
           height: Math.abs(end.y - start.y)
         },
         start,
-        end
+        end,
+        cells: null
       });
     }
     return result;
@@ -9032,18 +9054,19 @@
     const checked = validateAuthoringBundle(bundle);
     if (!checked.ok) return checked;
     const diagramId = bundle.diagramId;
-    let digest3 = bundle.bundleDigest, data = metadata(bundle);
+    const initial = metadata(bundle);
+    let digest3 = bundle.bundleDigest;
     const records2 = /* @__PURE__ */ new Map(), buckets = /* @__PURE__ */ new Map(), overflow = /* @__PURE__ */ new Set(), members = /* @__PURE__ */ new Map();
     const work = {
       fullBuilds: 1,
       updates: 0,
       validations: 1,
       validatedElements: bundle.presentation.elements.length,
-      metadataEntriesScanned: data.byId.size,
+      metadataEntriesScanned: initial.byId.size,
       geometryResolved: 0,
       lastUpdateResolved: 0,
       lastUpdateRemoved: 0,
-      lastMetadataEntriesScanned: data.byId.size,
+      lastMetadataEntriesScanned: initial.byId.size,
       queries: 0,
       lastQueryCandidates: 0,
       lastQueryChecks: 0,
@@ -9087,22 +9110,26 @@
       records2.set(record2.id, record2);
       members.set(record2.id, values);
     }
-    for (const id2 of data.byId.keys()) insert(resolveGeometry(data, id2));
+    for (const id2 of initial.byId.keys()) insert(resolveGeometry(initial, id2));
     work.geometryResolved = records2.size;
     work.lastUpdateResolved = records2.size;
-    data = { signatures: data.signatures, children: data.children, incident: data.incident };
-    function update(nextBundle, affectedIds) {
+    let data = {
+      signatures: initial.signatures,
+      children: initial.children,
+      incident: initial.incident
+    };
+    function update(nextBundle, affectedIds2) {
       const checked2 = validateAuthoringBundle(nextBundle);
       work.validations++;
       if (!checked2.ok) return checked2;
       work.validatedElements += nextBundle.presentation.elements.length;
-      const diagnostics = inspectPlainData(affectedIds);
+      const diagnostics = inspectPlainData(affectedIds2);
       if (diagnostics.length) return { ok: false, diagnostics };
       if (nextBundle.diagramId !== diagramId)
         return fail3("diagram-identity", "An index cannot replace its diagram identity.");
-      if (!Array.isArray(affectedIds) || affectedIds.some((id2) => typeof id2 !== "string") || new Set(affectedIds).size !== affectedIds.length)
+      if (!Array.isArray(affectedIds2) || affectedIds2.some((id2) => typeof id2 !== "string") || new Set(affectedIds2).size !== affectedIds2.length)
         return fail3("affected-ids", "Supply distinct stable IDs affected by the edit.");
-      if (nextBundle.bundleDigest === digest3 && affectedIds.some((id2) => !data.signatures.has(id2)))
+      if (nextBundle.bundleDigest === digest3 && affectedIds2.some((id2) => !data.signatures.has(id2)))
         return fail3("affected-ids", "Affected IDs must exist in the current or next diagram.");
       if (nextBundle.bundleDigest === digest3) {
         work.lastUpdateResolved = 0;
@@ -9110,11 +9137,11 @@
         work.lastMetadataEntriesScanned = 0;
         return { ok: true, updatedIds: [], removedIds: [], diagnostics: [] };
       }
-      const nextData = metadata(nextBundle), changed = new Set(affectedIds);
+      const nextData = metadata(nextBundle), changed = new Set(affectedIds2);
       for (const [id2, signature] of nextData.signatures)
         if (signature !== data.signatures.get(id2)) changed.add(id2);
       for (const id2 of data.signatures.keys()) if (!nextData.signatures.has(id2)) changed.add(id2);
-      if (affectedIds.some((id2) => !nextData.signatures.has(id2) && !data.signatures.has(id2)))
+      if (affectedIds2.some((id2) => !nextData.signatures.has(id2) && !data.signatures.has(id2)))
         return fail3("affected-ids", "Affected IDs must exist in the current or next diagram.");
       const closure2 = affectedClosure(changed, data, nextData);
       const nextRecords = [], removedIds = [];
@@ -9219,6 +9246,12 @@
 
   // lib/artifact/diagram/editor/session.mjs
   var fail4 = (rule, detail) => ({ ok: false, diagnostics: [{ path: "$session", rule, detail }] });
+  var batching = (transport) => "saveBatch" in transport && typeof transport.saveBatch === "function";
+  var affectedIds = (diff) => {
+    if (!diff.ok)
+      throw new TypeError(diff.diagnostics[0]?.detail ?? "The diagram comparison failed.");
+    return diff.impact.affectedIds;
+  };
   var defaultId = () => `edit-${globalThis.crypto.randomUUID()}`;
   var validId = (value) => typeof value === "string" && value.length <= 128 && /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/u.test(value);
   var MAX_PENDING = 100;
@@ -9270,9 +9303,9 @@
     const indexResult = createDiagramGeometryIndex(current);
     if (!indexResult.ok) throw new TypeError(indexResult.diagnostics[0].detail);
     const geometry = indexResult.index;
-    function emit(type, affectedIds = []) {
+    function emit(type, affectedIds2 = []) {
       if (disposed) return;
-      const event = { type, affectedIds: [...affectedIds], revision: idOf(current), saveState };
+      const event = { type, affectedIds: [...affectedIds2], revision: idOf(current), saveState };
       for (const listener of [...listeners]) {
         try {
           listener(clone(event));
@@ -9375,14 +9408,14 @@
           "Create the copy with this diagram's current title before adopting it."
         );
       }
-      const affectedIds = bundle2.presentation.elements.map((item) => item.elementId);
-      updateGeometry(bundle2, affectedIds);
+      const affectedIds2 = bundle2.presentation.elements.map((item) => item.elementId);
+      updateGeometry(bundle2, affectedIds2);
       current = clone(bundle2);
       base = clone(bundle2);
       diagnostics = [];
       pruneView();
       persist();
-      emit("refresh", affectedIds);
+      emit("refresh", affectedIds2);
       return { ok: true, bundle: clone(current) };
     }
     function cancelGesture(reason = "cancel") {
@@ -9492,8 +9525,8 @@
           comparison: diffDiagramBundles(authoritative, current)
         };
       }
-      const diff = diffDiagramBundles(current, authoritative);
-      updateGeometry(authoritative, diff.impact.affectedIds);
+      const touched = affectedIds(diffDiagramBundles(current, authoritative));
+      updateGeometry(authoritative, touched);
       current = clone(authoritative);
       base = clone(authoritative);
       saved = clone(authoritative);
@@ -9501,7 +9534,7 @@
       comparison = null;
       diagnostics = [];
       pruneView();
-      emit("refresh", diff.impact.affectedIds);
+      emit("refresh", touched);
       return { ok: true, changed: true };
     }
     function acknowledge(result, expected, transactionId) {
@@ -9545,7 +9578,7 @@
       if (comparison && idOf(comparison) === idOf(expected)) comparison = null;
       return true;
     }
-    async function performBatches(live, count) {
+    async function performBatches(owner, live, count) {
       const sizes = uncertain && uncertain.count <= count ? [uncertain.count, count - uncertain.count] : [count];
       for (const size2 of sizes) {
         const items = pending.slice(0, size2);
@@ -9563,7 +9596,7 @@
         };
         uncertain = { count: items.length, batchId: batch.batchId };
         persist();
-        const result = await transport.saveBatch(clone(batch));
+        const result = await owner.saveBatch(clone(batch));
         if (!live())
           return fail4(
             "disposed",
@@ -9582,17 +9615,17 @@
       }
       return null;
     }
-    async function performSave(runEpoch, count) {
+    async function performSave(owner, runEpoch, count) {
       const live = () => !disposed && epoch === runEpoch && capability.read && capability.write;
       if (!live()) return fail4("disposed", "This session is closed.");
       try {
-        if (typeof transport.saveBatch === "function") {
-          const failure3 = await performBatches(live, count);
+        if (batching(owner)) {
+          const failure3 = await performBatches(owner, live, count);
           if (failure3) return failure3;
         } else if (initialization) {
           const requestId = initialization;
           const expected = clone(base);
-          const result = await transport.initialize(clone(expected), { transactionId: requestId });
+          const result = await owner.initialize(clone(expected), { transactionId: requestId });
           if (!live())
             return fail4(
               "disposed",
@@ -9603,11 +9636,11 @@
           persist();
           emit("acknowledged");
         }
-        if (typeof transport.saveBatch !== "function")
+        if (!batching(owner))
           for (let index2 = 0; index2 < count; index2++) {
             const item = pending[0];
             if (!item) break;
-            const result = await transport.commit(clone(item.transaction));
+            const result = await owner.commit(clone(item.transaction));
             if (!live())
               return fail4(
                 "disposed",
@@ -9628,10 +9661,14 @@
         return { ok: true, status: saveState, bundle: clone(saved) };
       } catch (error2) {
         if (!live()) return fail4("disposed", "This session is closed.");
+        const thrown = (
+          /** @type {{ httpStatus?: number; details?: { diagnostics?: DiagramAuthoringValidationError[] } } | null | undefined} */
+          error2
+        );
         return await failureState({
           ok: false,
-          httpStatus: error2?.httpStatus,
-          diagnostics: error2?.details?.diagnostics ?? [
+          httpStatus: thrown?.httpStatus,
+          diagnostics: thrown?.details?.diagnostics ?? [
             {
               path: "$save",
               rule: "save-unavailable",
@@ -9661,7 +9698,7 @@
       saveState = "saving";
       const runEpoch = epoch;
       const count = pending.length;
-      const settled = Promise.resolve().then(() => performSave(runEpoch, count)).finally(() => {
+      const settled = Promise.resolve().then(() => performSave(transport, runEpoch, count)).finally(() => {
         if (saving === settled) saving = null;
       });
       saving = settled;
@@ -9686,7 +9723,10 @@
     }
     function restore() {
       if (!recovery || !capability.read) return;
-      const record2 = recovery.load();
+      const record2 = (
+        /** @type {RecoveryRecord | null} */
+        recovery.load()
+      );
       if (!record2) return;
       try {
         if (inspectPlainData(record2).length || Object.keys(record2).some(
@@ -9720,8 +9760,7 @@
         undo = entries2.map((item) => clone(item.inverse)).slice(-MAX_HISTORY);
         usedIds.clear();
         ids2.forEach((id2) => usedIds.add(id2));
-        const diff = diffDiagramBundles(current, draft);
-        updateGeometry(draft, diff.impact.affectedIds);
+        updateGeometry(draft, affectedIds(diffDiagramBundles(current, draft)));
         current = draft;
         if (authoritative && idOf(authoritative) !== idOf(base)) {
           comparison = authoritative;
@@ -9814,8 +9853,8 @@
         if (!comparison) return fail4("no-conflict", "There is no authoritative comparison to adopt.");
         cancelGesture("use-authoritative");
         const target = clone(comparison);
-        const diff = diffDiagramBundles(current, target);
-        updateGeometry(target, diff.impact.affectedIds);
+        const touched = affectedIds(diffDiagramBundles(current, target));
+        updateGeometry(target, touched);
         current = target;
         base = clone(target);
         saved = clone(target);
@@ -9829,7 +9868,7 @@
         saveState = "saved";
         pruneView();
         persist();
-        emit("refresh", diff.impact.affectedIds);
+        emit("refresh", touched);
         return { ok: true };
       },
       dispose() {
@@ -9908,148 +9947,151 @@
 
   // lib/artifact/ui/diagram-editor-dom.mjs
   var SVG = "http://www.w3.org/2000/svg";
-  var ICONS = Object.freeze({
-    panel: [["path", { d: "M4 4h16v16H4zM9 4v16" }]],
-    undo: [["path", { d: "M9 7H4v-5M4 7l4-4M4 7h9a7 7 0 1 1-6.1 10.4" }]],
-    redo: [["path", { d: "M15 7h5v-5M20 7l-4-4M20 7h-9a7 7 0 1 0 6.1 10.4" }]],
-    save: [["path", { d: "M5 3h12l3 3v15H4V3zM8 3v6h8V3M8 21v-7h8v7" }]],
-    more: [
-      ["circle", { cx: 5, cy: 12, r: 1.4 }],
-      ["circle", { cx: 12, cy: 12, r: 1.4 }],
-      ["circle", { cx: 19, cy: 12, r: 1.4 }]
-    ],
-    select: [["path", { d: "M5 3l13 9-6 1.5L9 20z" }]],
-    pan: [
-      [
-        "path",
-        {
-          d: "M8 11V6a2 2 0 0 1 4 0v4-6a2 2 0 0 1 4 0v6-4a2 2 0 0 1 4 0v7c0 5-3 8-8 8h-1c-3 0-5-1.5-7-4l-2-3a2 2 0 0 1 3-2z"
-        }
-      ]
-    ],
-    snap: [["path", { d: "M5 4v7a7 7 0 0 0 14 0V4M5 8h4M15 8h4M5 4h4v4H5zM15 4h4v4h-4z" }]],
-    fit: [["path", { d: "M9 4H4v5M15 4h5v5M20 15v5h-5M9 20H4v-5" }]],
-    search: [
-      ["circle", { cx: 10.5, cy: 10.5, r: 6.5 }],
-      ["path", { d: "M15.5 15.5L21 21" }]
-    ],
-    properties: [
-      ["path", { d: "M4 6h7M15 6h5M4 12h3M11 12h9M4 18h9M17 18h3" }],
-      ["circle", { cx: 13, cy: 6, r: 2 }],
-      ["circle", { cx: 9, cy: 12, r: 2 }],
-      ["circle", { cx: 15, cy: 18, r: 2 }]
-    ],
-    review: [["path", { d: "M4 5h16v12H9l-5 4z" }]],
-    copy: [
-      ["rect", { x: 8, y: 8, width: 11, height: 11, rx: 2 }],
-      ["path", { d: "M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3" }]
-    ],
-    duplicate: [
-      ["rect", { x: 8, y: 8, width: 11, height: 11, rx: 2 }],
-      ["rect", { x: 3, y: 3, width: 11, height: 11, rx: 2 }],
-      ["path", { d: "M11 6v5M8.5 8.5h5" }]
-    ],
-    lock: [
-      ["rect", { x: 5, y: 10, width: 14, height: 11, rx: 2 }],
-      ["path", { d: "M8 10V7a4 4 0 0 1 8 0v3" }]
-    ],
-    unlock: [
-      ["rect", { x: 5, y: 10, width: 14, height: 11, rx: 2 }],
-      ["path", { d: "M16 10V7a4 4 0 0 0-7.5-2" }]
-    ],
-    trash: [["path", { d: "M4 7h16M9 7V4h6v3M7 7l1 14h8l1-14M10 11v6M14 11v6" }]],
-    arrange: [
-      ["rect", { x: 3, y: 4, width: 7, height: 6, rx: 1 }],
-      ["rect", { x: 14, y: 4, width: 7, height: 6, rx: 1 }],
-      ["rect", { x: 8.5, y: 14, width: 7, height: 6, rx: 1 }]
-    ],
-    group: [
-      ["rect", { x: 3, y: 3, width: 18, height: 18, rx: 2, "stroke-dasharray": "3 2" }],
-      ["rect", { x: 6, y: 7, width: 5, height: 5, rx: 1 }],
-      ["rect", { x: 13, y: 12, width: 5, height: 5, rx: 1 }]
-    ],
-    ungroup: [
-      ["rect", { x: 3, y: 3, width: 8, height: 8, rx: 1 }],
-      ["rect", { x: 13, y: 13, width: 8, height: 8, rx: 1 }],
-      ["path", { d: "M13 7h4v4M11 17H7v-4" }]
-    ],
-    connect: [
-      ["circle", { cx: 6, cy: 12, r: 3 }],
-      ["circle", { cx: 18, cy: 12, r: 3 }],
-      ["path", { d: "M9 12h6" }]
-    ],
-    parent: [
-      ["rect", { x: 3, y: 3, width: 18, height: 18, rx: 2 }],
-      ["path", { d: "M7 8h10v8H7z" }]
-    ],
-    route: [["path", { d: "M4 5h6v6h4v8h6M4 5l3-3M4 5l3 3M20 19l-3-3M20 19l-3 3" }]],
-    content: [["path", { d: "M6 4h12M6 9h12M6 14h8M6 19h10" }]],
-    geometry: [
-      ["rect", { x: 4, y: 4, width: 16, height: 16, rx: 2 }],
-      ["path", { d: "M8 4v4H4M16 4v4h4M8 20v-4H4M16 20v-4h4" }]
-    ],
-    appearance: [
-      [
-        "path",
-        {
-          d: "M12 3a9 9 0 1 0 0 18h1.5a2.5 2.5 0 0 0 0-5H12a2 2 0 0 1 0-4h5a4 4 0 0 0 0-8z"
-        }
+  var ICONS = Object.freeze(
+    /** @satisfies {Record<DiagramEditorIconName, IconPrimitive[]>} */
+    {
+      panel: [["path", { d: "M4 4h16v16H4zM9 4v16" }]],
+      undo: [["path", { d: "M9 7H4v-5M4 7l4-4M4 7h9a7 7 0 1 1-6.1 10.4" }]],
+      redo: [["path", { d: "M15 7h5v-5M20 7l-4-4M20 7h-9a7 7 0 1 0 6.1 10.4" }]],
+      save: [["path", { d: "M5 3h12l3 3v15H4V3zM8 3v6h8V3M8 21v-7h8v7" }]],
+      more: [
+        ["circle", { cx: 5, cy: 12, r: 1.4 }],
+        ["circle", { cx: 12, cy: 12, r: 1.4 }],
+        ["circle", { cx: 19, cy: 12, r: 1.4 }]
       ],
-      ["circle", { cx: 7.5, cy: 9, r: 1 }],
-      ["circle", { cx: 10, cy: 6.5, r: 1 }]
-    ],
-    structure: [
-      ["path", { d: "M12 4v5M6 20v-5h12v5M6 15v-3h12v3" }],
-      ["rect", { x: 9, y: 2, width: 6, height: 4, rx: 1 }],
-      ["rect", { x: 3, y: 18, width: 6, height: 4, rx: 1 }],
-      ["rect", { x: 15, y: 18, width: 6, height: 4, rx: 1 }]
-    ],
-    constraints: [
-      ["path", { d: "M7 4H4v3M17 4h3v3M20 17v3h-3M7 20H4v-3" }],
-      ["rect", { x: 8, y: 9, width: 8, height: 7, rx: 1 }],
-      ["path", { d: "M10 9V7a2 2 0 0 1 4 0v2" }]
-    ],
-    advanced: [
-      ["circle", { cx: 12, cy: 12, r: 3 }],
-      [
-        "path",
-        {
-          d: "M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"
-        }
-      ]
-    ],
-    plus: [["path", { d: "M12 5v14M5 12h14" }]],
-    "arrow-up": [["path", { d: "M12 20V4M6 10l6-6 6 6" }]],
-    "arrow-down": [["path", { d: "M12 4v16M6 14l6 6 6-6" }]],
-    mark: [
-      ["path", { d: "M18 5a9 9 0 1 0 3 7" }],
-      ["circle", { cx: 20, cy: 5, r: 1.6 }]
-    ],
-    chevron: [["path", { d: "m9 18 6-6-6-6" }]],
-    share: [["path", { d: "M4 12v7h16v-7M16 6l-4-4-4 4M12 2v13" }]],
-    history: [["path", { d: "M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5M12 7v5l3 2" }]],
-    "kind-container": [
-      ["rect", { x: 3, y: 4, width: 18, height: 16, rx: 2, "stroke-dasharray": "3 2" }]
-    ],
-    "kind-lane": [
-      ["rect", { x: 3, y: 5, width: 18, height: 14, rx: 2 }],
-      ["path", { d: "M3 10h18" }]
-    ],
-    "kind-lane-vertical": [
-      ["rect", { x: 3, y: 5, width: 18, height: 14, rx: 2 }],
-      ["path", { d: "M9 5v14" }]
-    ],
-    "kind-terminal": [["rect", { x: 3, y: 8, width: 18, height: 8, rx: 4 }]],
-    "kind-process": [["rect", { x: 3, y: 7, width: 18, height: 10, rx: 2 }]],
-    "kind-decision": [["path", { d: "M12 3 21 12 12 21 3 12z" }]],
-    "kind-store": [["path", { d: "M7 7h14l-4 10H3z" }]],
-    "kind-component": [
-      ["rect", { x: 6, y: 4, width: 14, height: 16, rx: 2 }],
-      ["path", { d: "M3 8h6M3 16h6" }]
-    ],
-    "kind-connector": [["path", { d: "M5 19 19 5M12 5h7v7" }]],
-    "kind-annotation": [["path", { d: "M5 6h14M12 6v12" }]]
-  });
+      select: [["path", { d: "M5 3l13 9-6 1.5L9 20z" }]],
+      pan: [
+        [
+          "path",
+          {
+            d: "M8 11V6a2 2 0 0 1 4 0v4-6a2 2 0 0 1 4 0v6-4a2 2 0 0 1 4 0v7c0 5-3 8-8 8h-1c-3 0-5-1.5-7-4l-2-3a2 2 0 0 1 3-2z"
+          }
+        ]
+      ],
+      snap: [["path", { d: "M5 4v7a7 7 0 0 0 14 0V4M5 8h4M15 8h4M5 4h4v4H5zM15 4h4v4h-4z" }]],
+      fit: [["path", { d: "M9 4H4v5M15 4h5v5M20 15v5h-5M9 20H4v-5" }]],
+      search: [
+        ["circle", { cx: 10.5, cy: 10.5, r: 6.5 }],
+        ["path", { d: "M15.5 15.5L21 21" }]
+      ],
+      properties: [
+        ["path", { d: "M4 6h7M15 6h5M4 12h3M11 12h9M4 18h9M17 18h3" }],
+        ["circle", { cx: 13, cy: 6, r: 2 }],
+        ["circle", { cx: 9, cy: 12, r: 2 }],
+        ["circle", { cx: 15, cy: 18, r: 2 }]
+      ],
+      review: [["path", { d: "M4 5h16v12H9l-5 4z" }]],
+      copy: [
+        ["rect", { x: 8, y: 8, width: 11, height: 11, rx: 2 }],
+        ["path", { d: "M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3" }]
+      ],
+      duplicate: [
+        ["rect", { x: 8, y: 8, width: 11, height: 11, rx: 2 }],
+        ["rect", { x: 3, y: 3, width: 11, height: 11, rx: 2 }],
+        ["path", { d: "M11 6v5M8.5 8.5h5" }]
+      ],
+      lock: [
+        ["rect", { x: 5, y: 10, width: 14, height: 11, rx: 2 }],
+        ["path", { d: "M8 10V7a4 4 0 0 1 8 0v3" }]
+      ],
+      unlock: [
+        ["rect", { x: 5, y: 10, width: 14, height: 11, rx: 2 }],
+        ["path", { d: "M16 10V7a4 4 0 0 0-7.5-2" }]
+      ],
+      trash: [["path", { d: "M4 7h16M9 7V4h6v3M7 7l1 14h8l1-14M10 11v6M14 11v6" }]],
+      arrange: [
+        ["rect", { x: 3, y: 4, width: 7, height: 6, rx: 1 }],
+        ["rect", { x: 14, y: 4, width: 7, height: 6, rx: 1 }],
+        ["rect", { x: 8.5, y: 14, width: 7, height: 6, rx: 1 }]
+      ],
+      group: [
+        ["rect", { x: 3, y: 3, width: 18, height: 18, rx: 2, "stroke-dasharray": "3 2" }],
+        ["rect", { x: 6, y: 7, width: 5, height: 5, rx: 1 }],
+        ["rect", { x: 13, y: 12, width: 5, height: 5, rx: 1 }]
+      ],
+      ungroup: [
+        ["rect", { x: 3, y: 3, width: 8, height: 8, rx: 1 }],
+        ["rect", { x: 13, y: 13, width: 8, height: 8, rx: 1 }],
+        ["path", { d: "M13 7h4v4M11 17H7v-4" }]
+      ],
+      connect: [
+        ["circle", { cx: 6, cy: 12, r: 3 }],
+        ["circle", { cx: 18, cy: 12, r: 3 }],
+        ["path", { d: "M9 12h6" }]
+      ],
+      parent: [
+        ["rect", { x: 3, y: 3, width: 18, height: 18, rx: 2 }],
+        ["path", { d: "M7 8h10v8H7z" }]
+      ],
+      route: [["path", { d: "M4 5h6v6h4v8h6M4 5l3-3M4 5l3 3M20 19l-3-3M20 19l-3 3" }]],
+      content: [["path", { d: "M6 4h12M6 9h12M6 14h8M6 19h10" }]],
+      geometry: [
+        ["rect", { x: 4, y: 4, width: 16, height: 16, rx: 2 }],
+        ["path", { d: "M8 4v4H4M16 4v4h4M8 20v-4H4M16 20v-4h4" }]
+      ],
+      appearance: [
+        [
+          "path",
+          {
+            d: "M12 3a9 9 0 1 0 0 18h1.5a2.5 2.5 0 0 0 0-5H12a2 2 0 0 1 0-4h5a4 4 0 0 0 0-8z"
+          }
+        ],
+        ["circle", { cx: 7.5, cy: 9, r: 1 }],
+        ["circle", { cx: 10, cy: 6.5, r: 1 }]
+      ],
+      structure: [
+        ["path", { d: "M12 4v5M6 20v-5h12v5M6 15v-3h12v3" }],
+        ["rect", { x: 9, y: 2, width: 6, height: 4, rx: 1 }],
+        ["rect", { x: 3, y: 18, width: 6, height: 4, rx: 1 }],
+        ["rect", { x: 15, y: 18, width: 6, height: 4, rx: 1 }]
+      ],
+      constraints: [
+        ["path", { d: "M7 4H4v3M17 4h3v3M20 17v3h-3M7 20H4v-3" }],
+        ["rect", { x: 8, y: 9, width: 8, height: 7, rx: 1 }],
+        ["path", { d: "M10 9V7a2 2 0 0 1 4 0v2" }]
+      ],
+      advanced: [
+        ["circle", { cx: 12, cy: 12, r: 3 }],
+        [
+          "path",
+          {
+            d: "M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"
+          }
+        ]
+      ],
+      plus: [["path", { d: "M12 5v14M5 12h14" }]],
+      "arrow-up": [["path", { d: "M12 20V4M6 10l6-6 6 6" }]],
+      "arrow-down": [["path", { d: "M12 4v16M6 14l6 6 6-6" }]],
+      mark: [
+        ["path", { d: "M18 5a9 9 0 1 0 3 7" }],
+        ["circle", { cx: 20, cy: 5, r: 1.6 }]
+      ],
+      chevron: [["path", { d: "m9 18 6-6-6-6" }]],
+      share: [["path", { d: "M4 12v7h16v-7M16 6l-4-4-4 4M12 2v13" }]],
+      history: [["path", { d: "M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5M12 7v5l3 2" }]],
+      "kind-container": [
+        ["rect", { x: 3, y: 4, width: 18, height: 16, rx: 2, "stroke-dasharray": "3 2" }]
+      ],
+      "kind-lane": [
+        ["rect", { x: 3, y: 5, width: 18, height: 14, rx: 2 }],
+        ["path", { d: "M3 10h18" }]
+      ],
+      "kind-lane-vertical": [
+        ["rect", { x: 3, y: 5, width: 18, height: 14, rx: 2 }],
+        ["path", { d: "M9 5v14" }]
+      ],
+      "kind-terminal": [["rect", { x: 3, y: 8, width: 18, height: 8, rx: 4 }]],
+      "kind-process": [["rect", { x: 3, y: 7, width: 18, height: 10, rx: 2 }]],
+      "kind-decision": [["path", { d: "M12 3 21 12 12 21 3 12z" }]],
+      "kind-store": [["path", { d: "M7 7h14l-4 10H3z" }]],
+      "kind-component": [
+        ["rect", { x: 6, y: 4, width: 14, height: 16, rx: 2 }],
+        ["path", { d: "M3 8h6M3 16h6" }]
+      ],
+      "kind-connector": [["path", { d: "M5 19 19 5M12 5h7v7" }]],
+      "kind-annotation": [["path", { d: "M5 6h14M12 6v12" }]]
+    }
+  );
   function element(document2, tag, attributes2 = {}, text2) {
     const node2 = document2.createElement(tag);
     for (const [name, value] of Object.entries(attributes2)) {
@@ -11447,7 +11489,7 @@
         );
       proposal.append(objectPane);
       result.append(proposal);
-      const canAdopt = state.needsInitialization && state.pendingCount === 0 && state.bundle.presentation.elements.length === 0 && state.capabilities.read && state.capabilities.write && state.saveState === "unsaved";
+      const canAdopt = state.needsInitialization && state.pendingCount === 0 && state.bundle !== null && state.bundle.presentation.elements.length === 0 && state.capabilities.read && state.capabilities.write && state.saveState === "unsaved";
       if (!canAdopt)
         result.append(
           element(
@@ -11491,7 +11533,7 @@
       if (!copy.ok) {
         exportResult.append(diagnosticList(copy.diagnostics, { navigable: false }));
         showError(
-          copy.diagnostics?.[0]?.message ?? copy.diagnostics?.[0]?.detail ?? "Mermaid export is unavailable. Keep the editable bundle."
+          copy.diagnostics?.[0]?.message ?? "Mermaid export is unavailable. Keep the editable bundle."
         );
         return;
       }
@@ -11666,6 +11708,20 @@
     reviewUnavailable: "Review comments are available after this diagram is published to a review workspace. Local editing does not publish it.",
     readOnly: "Read only"
   });
+  var windowOf = (document2) => {
+    const view = document2.defaultView;
+    if (!view) throw new TypeError("Mount needs a root inside a live document.");
+    return view;
+  };
+  var bundleOf = (state) => {
+    if (!state.bundle) throw new TypeError("The editor has no readable diagram.");
+    return state.bundle;
+  };
+  var placementOf = (bundle, id2) => {
+    const placement5 = bundle.presentation.elements.find((item) => item.elementId === id2);
+    if (!placement5) throw new TypeError(`Element ${id2} has no placement.`);
+    return placement5;
+  };
   var HOST_ID = /^[a-z][a-z0-9-]{0,39}$/u;
   var KIND_ICONS = Object.freeze({
     process: "kind-process",
@@ -11730,7 +11786,7 @@
     const labels = hostLabels(host.labels), hostActions = hostEntries(host.actions, "action", "onSelect"), hostPanels = hostEntries(host.panels, "panel", "mount");
     const reviewEnabled = host.review !== false;
     let hostScheme = colorSchemeOf(host.colorScheme);
-    const doc = root.ownerDocument, win = doc.defaultView;
+    const doc = root.ownerDocument, win = windowOf(doc);
     const colorScheme = win.matchMedia?.("(prefers-color-scheme: dark)");
     let disposed = false, raf = 0, drag = null, tempPan = false, tool = "select", tab = "outline", rightTab = "properties";
     let leftOpen = win.innerWidth > 1100, rightOpen = win.innerWidth > 1100, clipboard = null, dialog = null, conflictMount = null, sourceMount = null, sourceDraft = null, reviewCleanup = null;
@@ -12092,11 +12148,9 @@
       drawerOpener = null;
     }
     function rightPanes() {
-      return new Map([
-        ["properties", propertiesPane],
-        ...reviewEnabled ? [["review", reviewPane]] : [],
-        ...hostPanes
-      ]);
+      const panes = [["properties", propertiesPane]];
+      if (reviewEnabled) panes.push(["review", reviewPane]);
+      return new Map([...panes, ...hostPanes]);
     }
     function setRightTab(next, { focus = false } = {}) {
       const panes = rightPanes(), shown = [...rightTabs.querySelectorAll('[role="tab"]')].map((node2) => node2.dataset.tab);
@@ -12204,7 +12258,9 @@
             '<svg xmlns="' + SVG2 + '">' + renderAuthoredSceneElement(scene, palette, bundle.diagramId) + "</svg>",
             "image/svg+xml"
           );
-          const replacement = doc.importNode(xml.documentElement.firstElementChild, true);
+          const rendered = xml.documentElement.firstElementChild;
+          if (!rendered) throw new TypeError(`Element ${id2} rendered no SVG markup.`);
+          const replacement = doc.importNode(rendered, true);
           replacement.setAttribute("tabindex", "-1");
           replacement.setAttribute("role", "img");
           replacement.setAttribute("aria-label", scene.label || scene.kind);
@@ -12416,7 +12472,8 @@
         for (const kind of kinds) {
           const primitive = kind === "annotation" ? "annotation" : kind === "container" ? "group" : kind.endsWith("-lane") ? "lane" : "node";
           if (capability && !capability.primitives.includes(primitive)) continue;
-          if (capability && primitive === "node" && !capability.nodeKinds.includes(kind)) continue;
+          if (capability && primitive === "node" && !capability.nodeKinds.some((item) => item === kind))
+            continue;
           const shape2 = button(doc, "", "create", {
             "data-kind": kind,
             className: "de-shape-button",
@@ -12737,13 +12794,13 @@
     }
     function askDelete() {
       const state = current(), ids2 = state.view.selection;
-      if (!ids2.length) return;
+      if (!ids2.length || !state.bundle) return;
       const preview2 = compileDiagramCommand(
         state.bundle,
         { type: "delete", ids: ids2 },
         { transactionId: freshId() }
       );
-      const impact = preview2.deletionImpact;
+      const impact = preview2.ok ? null : preview2.deletionImpact;
       if (!impact) {
         report(errText(preview2));
         return;
@@ -12773,7 +12830,7 @@
       openDialog("Delete selection", body).dataset.impact = JSON.stringify(impact);
     }
     function connectDialog() {
-      const state = current(), nodes = state.bundle.document.nodes;
+      const state = current(), nodes = bundleOf(state).document.nodes;
       if (nodes.length < 2) {
         report("Create at least two nodes to connect.");
         return;
@@ -12788,7 +12845,7 @@
       const to = field(
         doc,
         "To",
-        ids2.find((id2) => nodes.some((node2) => node2.id === id2 && node2.id !== from.input.value)) ?? nodes.at(-1).id,
+        ids2.find((id2) => nodes.some((node2) => node2.id === id2 && node2.id !== from.input.value)) ?? nodes[nodes.length - 1].id,
         { choices: nodes.map((node2) => [node2.id, node2.label]) }
       );
       const label = field(doc, "Connector label", "");
@@ -12907,7 +12964,12 @@
           entry2.onSelect({ session, state, trigger: actionTrigger });
         return;
       }
-      if (!bundle && action !== "cancel-dialog") return;
+      if (action === "cancel-dialog") {
+        if (state.gesture) session.cancelGesture("cancel-dialog");
+        closeDialog();
+        return;
+      }
+      if (!bundle) return;
       if (action === "toggle-group") {
         if (actionTrigger?.dataset.id) toggleGroup(actionTrigger.dataset.id);
         return;
@@ -13007,11 +13069,6 @@
         moreButton.focus({ preventScroll: true });
         return;
       }
-      if (action === "cancel-dialog") {
-        if (state.gesture) session.cancelGesture("cancel-dialog");
-        closeDialog();
-        return;
-      }
       if (action === "conflict") {
         const wrap = element(doc, "div");
         openDialog("Compare revisions", wrap);
@@ -13100,7 +13157,7 @@
       }
       if (action === "create") {
         const kind = value, at = worldPoint({ x: stage.clientWidth / 2, y: stage.clientHeight / 2 });
-        const existing = bundle.presentation.elements.map((item) => item.bounds).filter(Boolean);
+        const existing = bundle.presentation.elements.map((item) => item.bounds).filter((rect) => rect !== null);
         const right = existing.length ? Math.max(...existing.map((item) => item.x + item.width)) : null;
         const y = existing.length ? Math.min(...existing.map((item) => item.y)) : Math.round(at.y - 36);
         const command = createObject(kind, {
@@ -13197,7 +13254,7 @@
         return;
       }
       if (action === "group") {
-        const selected2 = ids2.map((id3) => bundle.presentation.elements.find((item) => item.elementId === id3)?.bounds).filter(Boolean);
+        const selected2 = ids2.map((id3) => bundle.presentation.elements.find((item) => item.elementId === id3)?.bounds).filter((rect) => rect != null);
         if (selected2.length < 2) {
           report("Select at least two bounded objects to group.");
           return;
@@ -13239,7 +13296,7 @@
         return;
       }
       if (["add-bend", "remove-bend", "reset-route", "position-label"].includes(action)) {
-        const id2 = ids2[0], place = bundle.presentation.elements.find((item) => item.elementId === id2), before = geometryFields(place), after = clone(before);
+        const id2 = ids2[0], place = placementOf(bundle, id2), before = geometryFields(place), after = clone(before);
         const points = session.geometry(id2)?.points ?? [];
         if (action === "reset-route") {
           after.route.mode = "automatic";
@@ -13413,9 +13470,7 @@
           height: Math.abs(a.y - b.y)
         };
         if (rect.width > 3 || rect.height > 3) {
-          const picked = current().bundle.presentation.elements.filter(
-            (item) => item.bounds && intersect(item.bounds, rect)
-          ).map((item) => item.elementId);
+          const picked = bundleOf(current()).presentation.elements.filter((item) => item.bounds && intersect(item.bounds, rect)).map((item) => item.elementId);
           select(finished.additive ? [...finished.base, ...picked] : picked);
         }
       }

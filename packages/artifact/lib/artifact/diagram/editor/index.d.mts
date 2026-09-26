@@ -7,6 +7,8 @@ import type {
   DiagramBundleDiff,
   DiagramCommand,
   DiagramCommandResult,
+  DiagramEditImpact,
+  DiagramKernelFailure,
   DiagramPreviewResult,
 } from '../authoring/index.mjs';
 import type { DiagramStoreBasis, DiagramStoreReceipt } from '../authoring/store.mjs';
@@ -144,10 +146,17 @@ export interface DiagramEditorSession {
   cancelGesture(reason?: string): { ok: true; cancelled: boolean; reason?: string };
   undo(options?: { transactionId?: string }): DiagramCommandResult;
   redo(options?: { transactionId?: string }): DiagramCommandResult;
-  refresh(bundle: DiagramAuthoringBundle): { ok: true; changed: boolean } | DiagramEditorFailure;
+  /** A conflict failure carries the comparison of the authoritative revision with the draft. */
+  refresh(bundle: DiagramAuthoringBundle):
+    | { ok: true; changed: boolean }
+    | (DiagramEditorFailure & {
+        comparison?:
+          | ({ ok: true; impact: DiagramEditImpact } & DiagramBundleDiff)
+          | DiagramKernelFailure;
+      });
   save(): Promise<
     | { ok: true; status: DiagramEditorSaveState; bundle?: DiagramAuthoringBundle | null }
-    | DiagramEditorFailure
+    | (DiagramEditorFailure & { status?: DiagramEditorSaveState })
   >;
   setView(patch: Partial<DiagramEditorView>): { ok: true } | DiagramEditorFailure;
   query(input: {
@@ -222,7 +231,7 @@ export interface DiagramOwnerHttpResponse {
   headers: { get(name: string): string | null };
   body: {
     getReader(): {
-      read(): Promise<{ done: boolean; value?: Uint8Array }>;
+      read(): Promise<{ done: false; value: Uint8Array } | { done: true; value?: undefined }>;
       cancel(): Promise<void>;
       releaseLock(): void;
     };

@@ -28,9 +28,7 @@ export declare const OPERATE_GOVERNED_PROVIDER_REGISTRATION_CONTRACT_KINDS_V2: r
 export declare const OPERATE_GOVERNED_EFFECT_CLASSES_V2: readonly string[];
 export declare const OPERATE_GOVERNED_POLICY_OUTCOMES_V2: readonly string[];
 export declare const OPERATE_GOVERNED_POLICY_TIERS_V2: readonly string[];
-export declare const OPERATE_GOVERNED_CORE_PROHIBITIONS_V2: readonly Readonly<
-  Record<string, unknown>
->[];
+export declare const OPERATE_GOVERNED_CORE_PROHIBITIONS_V2: readonly string[];
 export declare const OPERATE_GOVERNED_RECOVERY_CLASSIFICATIONS_V2: readonly string[];
 export declare const OPERATE_GOVERNED_OPERATION_STATES_V2: readonly string[];
 export declare const OPERATE_GOVERNED_OPERATION_TERMINAL_STATES_V2: readonly string[];
@@ -39,19 +37,19 @@ export declare const OPERATE_HYPOTHESIS_VERIFICATION_STATUSES_V2: readonly strin
 export declare const OPERATE_GOVERNED_TOOL_OPERATIONS_V2: readonly string[];
 export declare const OPERATE_AUTHORITY_GUARD_IDS_V2: readonly string[];
 export declare const OPERATE_PUBLIC_DOMAIN_CONTRACT_BINDINGS_V2: Readonly<Record<string, unknown>>;
-export declare function findOperateCoreProhibitionV2(
-  values: unknown,
-): Readonly<Record<string, unknown>> | null;
+/** The matching prohibition id, or null when the identifiers name none. */
+export declare function findOperateCoreProhibitionV2(values: unknown): string | null;
 export declare function assertOperateIntelligencePlanContractV2<T>(value: T): T;
 export declare function loadOperateRoleMandateV2(
   roleId: string,
   options?: { roleVersion?: string },
 ): Readonly<Record<string, unknown>>;
-export declare function assertOperateRoleOutputContractV2<T>(
+/** The mandate's advertised output contract, with its shared schema path resolved. */
+export declare function assertOperateRoleOutputContractV2(
   roleId: string,
-  outputContract: T,
+  outputContract: unknown,
   options?: { roleVersion?: string },
-): T;
+): Record<string, unknown> & { path: string };
 export declare function listProtocolSchemas(): Array<{
   kind: string;
   protocolVersion: string;

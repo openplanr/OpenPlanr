@@ -1,10 +1,15 @@
+// @ts-check
 import { canonicalizeJson, sha256Hex } from './canonical-json.mjs';
 import { validateJson } from './json-schema.mjs';
 
+/** @type {typeof import('./design-handoff-contracts.d.mts').DESIGN_HANDOFF_PROTOCOL_VERSION} */
 export const DESIGN_HANDOFF_PROTOCOL_VERSION = '1.11.0';
+/** @type {typeof import('./design-handoff-contracts.d.mts').DESIGN_HANDOFF_CONTRACT_VERSION} */
 export const DESIGN_HANDOFF_CONTRACT_VERSION = '1.0.0';
+/** @type {typeof import('./design-handoff-contracts.d.mts').DESIGN_HANDOFF_AUTHORITY} */
 export const DESIGN_HANDOFF_AUTHORITY = 'prepare-plan';
 
+/** @type {typeof import('./design-handoff-contracts.d.mts').DESIGN_HANDOFF_CHECK_IDS} */
 export const DESIGN_HANDOFF_CHECK_IDS = Object.freeze([
   'current-revision',
   'selected-direction',
@@ -16,6 +21,7 @@ export const DESIGN_HANDOFF_CHECK_IDS = Object.freeze([
   'approved-review-handoff',
 ]);
 
+/** @type {typeof import('./design-handoff-contracts.d.mts').DESIGN_HANDOFF_SOURCE_KINDS} */
 export const DESIGN_HANDOFF_SOURCE_KINDS = Object.freeze([
   'design-revision',
   'selected-direction',
@@ -35,6 +41,7 @@ export const DESIGN_HANDOFF_SOURCE_KINDS = Object.freeze([
   'element-anchor',
 ]);
 
+/** @type {typeof import('./design-handoff-contracts.d.mts').DESIGN_HANDOFF_REQUIREMENT_KINDS} */
 export const DESIGN_HANDOFF_REQUIREMENT_KINDS = Object.freeze([
   'behavior',
   'visual-state',
@@ -45,6 +52,7 @@ export const DESIGN_HANDOFF_REQUIREMENT_KINDS = Object.freeze([
   'verification-intent',
 ]);
 
+/** @type {typeof import('./design-handoff-contracts.d.mts').DESIGN_HANDOFF_CONTRACT_FILES} */
 export const DESIGN_HANDOFF_CONTRACT_FILES = Object.freeze({
   'design-handoff-readiness': 'design-handoff-readiness.schema.json',
   'design-implementation-handoff': 'design-implementation-handoff.schema.json',
@@ -136,6 +144,7 @@ const readinessAbsence = closed({
   nextAction: action,
 });
 
+/** @type {typeof import('./design-handoff-contracts.d.mts').DESIGN_HANDOFF_READINESS_SCHEMA} */
 export const DESIGN_HANDOFF_READINESS_SCHEMA = contract('design-handoff-readiness', {
   oneOf: [readinessRecord, readinessAbsence],
 });
@@ -223,6 +232,7 @@ implementationHandoff.allOf = [
   },
 ];
 
+/** @type {typeof import('./design-handoff-contracts.d.mts').DESIGN_IMPLEMENTATION_HANDOFF_SCHEMA} */
 export const DESIGN_IMPLEMENTATION_HANDOFF_SCHEMA = contract(
   'design-implementation-handoff',
   implementationHandoff,
@@ -243,6 +253,7 @@ const lineageMapping = closed({
   taskIds: { ...list({ type: 'string', pattern: '^T-[0-9]{3,}$' }, 256), minItems: 1 },
 });
 
+/** @type {typeof import('./design-handoff-contracts.d.mts').DESIGN_PLANNING_LINEAGE_SCHEMA} */
 export const DESIGN_PLANNING_LINEAGE_SCHEMA = contract(
   'design-planning-lineage',
   closed({
@@ -254,6 +265,7 @@ export const DESIGN_PLANNING_LINEAGE_SCHEMA = contract(
   }),
 );
 
+/** @type {typeof import('./design-handoff-contracts.d.mts').DESIGN_HANDOFF_SCHEMAS} */
 export const DESIGN_HANDOFF_SCHEMAS = deepFreeze({
   'design-handoff-readiness': DESIGN_HANDOFF_READINESS_SCHEMA,
   'design-implementation-handoff': DESIGN_IMPLEMENTATION_HANDOFF_SCHEMA,
@@ -293,6 +305,7 @@ function distinct(items, select, label) {
   if (new Set(values).size !== values.length) throw new TypeError(`Duplicate ${label}.`);
 }
 
+/** @type {typeof import('./design-handoff-contracts.d.mts').isDesignHandoffRelativePath} */
 export function isDesignHandoffRelativePath(value) {
   return (
     typeof value === 'string' &&
@@ -311,6 +324,7 @@ export function isDesignHandoffRelativePath(value) {
   );
 }
 
+/** @returns {ReturnType<typeof import('./design-handoff-contracts.d.mts').assertDesignHandoffContract>} */
 export function assertDesignHandoffContract(value, schemaOrName) {
   const schema =
     typeof schemaOrName === 'string' ? DESIGN_HANDOFF_SCHEMAS[schemaOrName] : schemaOrName;
@@ -340,6 +354,7 @@ function assertProductCopy(value) {
     throw new TypeError('Design readiness guidance must use product language.');
 }
 
+/** @returns {ReturnType<typeof import('./design-handoff-contracts.d.mts').assertDesignHandoffReadiness>} */
 export function assertDesignHandoffReadiness(value) {
   assertDesignHandoffContract(value, DESIGN_HANDOFF_READINESS_SCHEMA);
   if (value.kind.endsWith('-absence')) {
@@ -385,6 +400,7 @@ export function assertDesignHandoffReadiness(value) {
   return value;
 }
 
+/** @type {typeof import('./design-handoff-contracts.d.mts').designImplementationHandoffDigest} */
 export function designImplementationHandoffDigest(value) {
   const projection = {
     kind: value.kind,
@@ -401,6 +417,7 @@ export function designImplementationHandoffDigest(value) {
   return `sha256:${sha256Hex(canonicalizeJson(projection))}`;
 }
 
+/** @type {typeof import('./design-handoff-contracts.d.mts').assertDesignImplementationHandoff} */
 export function assertDesignImplementationHandoff(value) {
   assertDesignHandoffContract(value, DESIGN_IMPLEMENTATION_HANDOFF_SCHEMA);
   assertEvidenceReferences(value.sources);
@@ -433,6 +450,7 @@ export function assertDesignImplementationHandoff(value) {
   return value;
 }
 
+/** @type {typeof import('./design-handoff-contracts.d.mts').assertDesignPlanningLineage} */
 export function assertDesignPlanningLineage(value, handoff) {
   assertDesignHandoffContract(value, DESIGN_PLANNING_LINEAGE_SCHEMA);
   distinct(value.mappings, (item) => item.requirementId, 'lineage requirement identity');

@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * Minimal JSON Schema (draft 2020-12) subset extracted from conformance/runner.mjs.
  * Supports the constructs used by packaged Protocol schemas, including local
@@ -137,7 +138,7 @@ const validateNode = (value, schema, path, errs, context) => {
         errs.push({
           path,
           rule: 'pattern',
-          detail: `invalid regex /${schema.pattern}/: ${e.message}`,
+          detail: `invalid regex /${schema.pattern}/: ${e instanceof Error ? e.message : String(e)}`,
         });
       }
     }
@@ -304,11 +305,14 @@ const validateNode = (value, schema, path, errs, context) => {
   }
 };
 
-/** @returns {{ path: string, rule: string, detail: string }[]} */
+/** @type {typeof import('./json-schema.d.mts').validateJson} */
 export const validateJson = (
   value,
   schema,
-  { resolveRef = null, base = schema?.$id ?? null } = {},
+  {
+    resolveRef,
+    base = /** @type {{ $id?: string } | null | undefined} */ (schema)?.$id ?? null,
+  } = {},
 ) => {
   const errs = [];
   validateNode(value, schema, '$', errs, {
@@ -320,5 +324,8 @@ export const validateJson = (
   return errs;
 };
 
-/** Alias matching legacy runner export name. */
+/**
+ * Alias matching legacy runner export name.
+ * @type {typeof import('./json-schema.d.mts').validate}
+ */
 export const validate = validateJson;

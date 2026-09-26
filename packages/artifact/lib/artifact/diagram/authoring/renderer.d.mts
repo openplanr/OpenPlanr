@@ -3,7 +3,11 @@ import type {
   DiagramAuthoringBundle,
   DiagramAuthoringValidationError,
 } from '@openplanr/protocol/diagram-authoring-contracts';
-import type { AuthoredDiagramScene, DiagramSceneQuality } from './scene.mjs';
+import type {
+  AuthoredDiagramScene,
+  AuthoredDiagramSceneElement,
+  DiagramSceneQuality,
+} from './scene.mjs';
 
 export interface AuthoredDiagramTheme {
   id: 'paper' | 'slate' | 'midnight';
@@ -46,6 +50,16 @@ export declare const AUTHORED_DIAGRAM_RENDERER: Readonly<{
   id: 'openplanr-authored-svg';
   version: '1.0.0';
 }>;
+/** Internal renderer palette shared by static output and the live editor. */
+export declare function authoredDiagramPalette(
+  themeId?: AuthoredDiagramTheme['id'],
+): AuthoredDiagramTheme;
+/** Render one resolved scene element as an SVG fragment at its saved geometry. */
+export declare function renderAuthoredSceneElement(
+  element: AuthoredDiagramSceneElement,
+  theme: AuthoredDiagramTheme,
+  diagramId: string,
+): string;
 export declare function renderAuthoredDiagramSvg(
   bundle: DiagramAuthoringBundle,
   options?: { theme?: 'paper' | 'slate' | 'midnight' },

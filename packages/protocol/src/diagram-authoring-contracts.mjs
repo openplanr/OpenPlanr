@@ -1,10 +1,15 @@
+// @ts-check
 import { canonicalizeJson, sha256Hex, sha256Jcs } from './canonical-json.mjs';
 import { DIAGRAM_REGISTRIES } from './generated/diagram-registries.mjs';
 import { LEGACY_DIAGRAM_DOCUMENT_SCHEMA } from './generated/legacy-diagram-schema.mjs';
 import { validateJson } from './json-schema.mjs';
 
-/** Portable, inert data contracts. Validation confers no authorization or readiness. */
+/**
+ * Portable, inert data contracts. Validation confers no authorization or readiness.
+ * @type {typeof import('./diagram-authoring-contracts.d.mts').DIAGRAM_AUTHORING_PROTOCOL_VERSION}
+ */
 export const DIAGRAM_AUTHORING_PROTOCOL_VERSION = '1.13.0';
+/** @type {typeof import('./diagram-authoring-contracts.d.mts').DIAGRAM_AUTHORING_CONTRACT_VERSION} */
 export const DIAGRAM_AUTHORING_CONTRACT_VERSION = '1.0.0';
 const deepFreeze = (value) => {
   if (value && typeof value === 'object' && !Object.isFrozen(value)) {
@@ -13,6 +18,7 @@ const deepFreeze = (value) => {
   }
   return value;
 };
+/** @type {typeof import('./diagram-authoring-contracts.d.mts').DIAGRAM_EDIT_OPERATION_CLASSES} */
 export const DIAGRAM_EDIT_OPERATION_CLASSES = deepFreeze([
   'insert-elements',
   'update-semantics',
@@ -21,6 +27,7 @@ export const DIAGRAM_EDIT_OPERATION_CLASSES = deepFreeze([
   'set-geometry',
   'set-appearance-locks',
 ]);
+/** @type {typeof import('./diagram-authoring-contracts.d.mts').DIAGRAM_AUTHORING_LIMITS} */
 export const DIAGRAM_AUTHORING_LIMITS = deepFreeze({
   depth: 48,
   values: 500000,
@@ -456,7 +463,9 @@ const schemas = {
   'diagram-publication-state': publicationSchema,
   'diagram-authoring-capabilities': capabilitiesSchema,
 };
+/** @type {typeof import('./diagram-authoring-contracts.d.mts').DIAGRAM_AUTHORING_SCHEMAS} */
 export const DIAGRAM_AUTHORING_SCHEMAS = deepFreeze(schemas);
+/** @type {typeof import('./diagram-authoring-contracts.d.mts').DIAGRAM_AUTHORING_CONTRACT_FILES} */
 export const DIAGRAM_AUTHORING_CONTRACT_FILES = deepFreeze(
   Object.fromEntries(Object.keys(schemas).map((name) => [name, `${name}.schema.json`])),
 );
@@ -581,6 +590,7 @@ const mermaidConstructs = [
   mapping,
 }));
 const profileIds = ['flowchart', 'process', 'swimlane', 'architecture'];
+/** @type {typeof import('./diagram-authoring-contracts.d.mts').DIAGRAM_AUTHORING_CAPABILITIES} */
 export const DIAGRAM_AUTHORING_CAPABILITIES = deepFreeze({
   kind: 'diagram-authoring-capabilities',
   schemaVersion: '1.0.0',
@@ -612,6 +622,7 @@ export const DIAGRAM_AUTHORING_CAPABILITIES = deepFreeze({
     .map((entry) => entry.grammarId)
     .filter((value) => !profileIds.includes(value)),
 });
+/** @type {typeof import('./diagram-authoring-contracts.d.mts').getDiagramAuthoringCapability} */
 export function getDiagramAuthoringCapability(grammarId) {
   return (
     DIAGRAM_AUTHORING_CAPABILITIES.profiles.find((entry) => entry.grammarId === grammarId) ?? null
@@ -726,8 +737,11 @@ function digestExcluding(value, field) {
   delete input[field];
   return sha256Jcs(input);
 }
+/** @type {typeof import('./diagram-authoring-contracts.d.mts').diagramDocumentDigest} */
 export const diagramDocumentDigest = (value) => digestExcluding(value, 'documentDigest');
+/** @type {typeof import('./diagram-authoring-contracts.d.mts').diagramPresentationDigest} */
 export const diagramPresentationDigest = (value) => digestExcluding(value, 'presentationDigest');
+/** @type {typeof import('./diagram-authoring-contracts.d.mts').diagramAuthoringBundleDigest} */
 export const diagramAuthoringBundleDigest = (value) => digestExcluding(value, 'bundleDigest');
 const same = (a, b) => canonicalizeJson(a) === canonicalizeJson(b);
 const sourceDigest = (text) => `sha256:${sha256Hex(text)}`;
@@ -782,7 +796,7 @@ function documentIssues(doc, path, issues) {
       byId.set(entry.id, { ...entry, collection });
     }
   const capability = getDiagramAuthoringCapability(doc.grammar.id);
-  if (!capability.primitives.includes('lane') && doc.lanes.length)
+  if (capability && !capability.primitives.includes('lane') && doc.lanes.length)
     issues.push(
       error(`${path}.lanes`, 'profile-primitive', 'This authoring profile does not support lanes.'),
     );
@@ -926,7 +940,7 @@ function presentationIssues(value, doc, path, issues) {
       );
     if (relations?.has(entry.elementId) && !entry.route)
       issues.push(error(location, 'geometry-kind', 'Semantic relations require route geometry.'));
-    if (doc && !relations.has(entry.elementId) && !entry.bounds)
+    if (relations && !relations.has(entry.elementId) && !entry.bounds)
       issues.push(error(location, 'geometry-kind', 'Non-relation elements require bounds.'));
     if (containers?.has(entry.elementId) && entry.appearance.shape !== 'container')
       issues.push(
@@ -1630,7 +1644,11 @@ const validRelativePath = (value) =>
   !value.split('/').some((part) => part === '' || part === '.' || part === '..') &&
   !/^[A-Za-z]:/u.test(value);
 
-/** Returns located, value-redacted errors. No option bypasses shape, safety or digest checks. */
+/**
+ * Returns located, value-redacted errors. No option bypasses shape, safety or digest checks.
+ * @param {import('./diagram-authoring-contracts.d.mts').DiagramAuthoringValidationOptions} [options]
+ * @returns {ReturnType<typeof import('./diagram-authoring-contracts.d.mts').validateDiagramAuthoringArtifact>}
+ */
 export function validateDiagramAuthoringArtifact(kind, value, options = {}) {
   const issues = inspectData(value);
   if (issues.length) return issues;
@@ -1836,33 +1854,44 @@ export function validateDiagramAuthoringArtifact(kind, value, options = {}) {
   }
   return issues.slice(0, 128);
 }
+/** @type {typeof import('./diagram-authoring-contracts.d.mts').assertDiagramAuthoringArtifact} */
 export function assertDiagramAuthoringArtifact(kind, value, options) {
   const errors = validateDiagramAuthoringArtifact(kind, value, options);
   if (errors.length) {
-    const failure = new TypeError(
-      `Invalid ${kind}: ${errors.map((entry) => `${entry.path}: ${entry.rule}`).join('; ')}`,
+    throw Object.assign(
+      new TypeError(
+        `Invalid ${kind}: ${errors.map((entry) => `${entry.path}: ${entry.rule}`).join('; ')}`,
+      ),
+      { errors },
     );
-    failure.errors = errors;
-    throw failure;
   }
   return value;
 }
+/** @type {typeof import('./diagram-authoring-contracts.d.mts').validateDiagramDocument} */
 export const validateDiagramDocument = (value, options) =>
   validateDiagramAuthoringArtifact('diagram-document', value, options);
+/** @type {typeof import('./diagram-authoring-contracts.d.mts').assertDiagramDocument} */
 export const assertDiagramDocument = (value, options) =>
   assertDiagramAuthoringArtifact('diagram-document', value, options);
+/** @type {typeof import('./diagram-authoring-contracts.d.mts').validateDiagramPresentation} */
 export const validateDiagramPresentation = (value, options) =>
   validateDiagramAuthoringArtifact('diagram-presentation', value, options);
+/** @type {typeof import('./diagram-authoring-contracts.d.mts').assertDiagramPresentation} */
 export const assertDiagramPresentation = (value, options) =>
   assertDiagramAuthoringArtifact('diagram-presentation', value, options);
+/** @type {typeof import('./diagram-authoring-contracts.d.mts').validateDiagramAuthoringBundle} */
 export const validateDiagramAuthoringBundle = (value, options) =>
   validateDiagramAuthoringArtifact('diagram-authoring-bundle', value, options);
+/** @type {typeof import('./diagram-authoring-contracts.d.mts').assertDiagramAuthoringBundle} */
 export const assertDiagramAuthoringBundle = (value, options) =>
   assertDiagramAuthoringArtifact('diagram-authoring-bundle', value, options);
+/** @type {typeof import('./diagram-authoring-contracts.d.mts').validateDiagramEditTransaction} */
 export const validateDiagramEditTransaction = (value, options) =>
   validateDiagramAuthoringArtifact('diagram-edit-transaction', value, options);
+/** @type {typeof import('./diagram-authoring-contracts.d.mts').assertDiagramEditTransaction} */
 export const assertDiagramEditTransaction = (value, options) =>
   assertDiagramAuthoringArtifact('diagram-edit-transaction', value, options);
+/** @type {typeof import('./diagram-authoring-contracts.d.mts').summarizeDiagramAuthoringContent} */
 export function summarizeDiagramAuthoringContent(bundle) {
   assertDiagramAuthoringBundle(bundle);
   const elementCount = allElements(bundle.document).length;
@@ -1870,6 +1899,7 @@ export function summarizeDiagramAuthoringContent(bundle) {
 }
 
 // Inspect the generated, exact frozen v1.6 descriptor without creating migrated data.
+/** @returns {ReturnType<typeof import('./diagram-authoring-contracts.d.mts').inspectLegacyDiagramDocument>} */
 export function inspectLegacyDiagramDocument(value) {
   let errors = inspectData(value);
   if (

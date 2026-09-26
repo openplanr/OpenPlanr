@@ -155,6 +155,8 @@ export function closeHttpServer(server) {
 /**
  * Read a request body with an exact byte ceiling. Data beyond the ceiling is
  * drained but never retained, allowing the handler to return a stable 413.
+ * @param {import('node:http').IncomingMessage} req
+ * @param {{ maxBytes?: number; encoding?: string | null }} [options]
  */
 export function readRequestBody(req, { maxBytes, encoding = null } = {}) {
   if (!Number.isInteger(maxBytes) || maxBytes < 1) {

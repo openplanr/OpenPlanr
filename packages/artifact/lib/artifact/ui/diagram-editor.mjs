@@ -1,3 +1,4 @@
+// @ts-check
 import { getDiagramAuthoringCapability } from '@openplanr/protocol/diagram-authoring-contracts';
 import { compileDiagramCommand } from '../diagram/authoring/index.mjs';
 import {
@@ -39,6 +40,11 @@ import {
 } from './diagram-editor-dom.mjs';
 import { renderDiagramProperties } from './diagram-editor-properties.mjs';
 import { mountDiagramSourcePanel } from './diagram-source-panel.mjs';
+
+/** @typedef {import('./diagram-editor.d.mts').DiagramEditorIconName} DiagramEditorIconName */
+/** @typedef {import('../diagram/editor/index.d.mts').DiagramEditorState} DiagramEditorState */
+/** @typedef {import('../diagram/authoring/index.d.mts').DiagramCommand} DiagramCommand */
+/** @typedef {import('@openplanr/protocol/diagram-authoring-contracts').DiagramAuthoringBundle} DiagramAuthoringBundle */
 
 const SVG = 'http://www.w3.org/2000/svg';
 const ACTION_LABELS = {
@@ -102,6 +108,26 @@ const DEFAULT_LABELS = Object.freeze({
     'Review comments are available after this diagram is published to a review workspace. Local editing does not publish it.',
   readOnly: 'Read only',
 });
+/** @param {Document} document */
+const windowOf = (document) => {
+  const view = document.defaultView;
+  if (!view) throw new TypeError('Mount needs a root inside a live document.');
+  return view;
+};
+/** @param {DiagramEditorState} state */
+const bundleOf = (state) => {
+  if (!state.bundle) throw new TypeError('The editor has no readable diagram.');
+  return state.bundle;
+};
+/**
+ * @param {DiagramAuthoringBundle} bundle
+ * @param {string} id
+ */
+const placementOf = (bundle, id) => {
+  const placement = bundle.presentation.elements.find((item) => item.elementId === id);
+  if (!placement) throw new TypeError(`Element ${id} has no placement.`);
+  return placement;
+};
 const HOST_ID = /^[a-z][a-z0-9-]{0,39}$/u;
 const KIND_ICONS = Object.freeze({
   process: 'kind-process',
@@ -170,7 +196,10 @@ function colorSchemeOf(value) {
   return value;
 }
 
-/** Browser-safe, framework-neutral UI. The supplied session remains owned by its host. */
+/**
+ * Browser-safe, framework-neutral UI. The supplied session remains owned by its host.
+ * @type {typeof import('./diagram-editor.d.mts').mountDiagramEditor}
+ */
 export function mountDiagramEditor({ root, session, host = {} }) {
   if (!root || !session || typeof session.getState !== 'function')
     throw new TypeError('Mount needs one root and one editor session.');
@@ -184,7 +213,7 @@ export function mountDiagramEditor({ root, session, host = {} }) {
   const reviewEnabled = host.review !== false;
   let hostScheme = colorSchemeOf(host.colorScheme);
   const doc = root.ownerDocument,
-    win = doc.defaultView;
+    win = windowOf(doc);
   const colorScheme = win.matchMedia?.('(prefers-color-scheme: dark)');
   let disposed = false,
     raf = 0,
@@ -270,6 +299,13 @@ export function mountDiagramEditor({ root, session, host = {} }) {
     }),
   );
   const hostPanelCleanups = new Map();
+  /**
+   * @param {HTMLElement} container
+   * @param {string} label
+   * @param {string} visible
+   * @param {string} action
+   * @param {{ title?: string; icon?: DiagramEditorIconName; className?: string }} [options]
+   */
   const commandButton = (
     container,
     label,
@@ -564,6 +600,7 @@ export function mountDiagramEditor({ root, session, host = {} }) {
     modalBackgroundInert = inert;
     synchronizeBackgroundInteractivity();
   }
+  /** @param {{ focusPanel?: boolean; focusTarget?: HTMLElement | null }} [options] */
   function syncPanelState({ focusPanel = false, focusTarget = null } = {}) {
     const drawer = win.innerWidth <= 1100;
     const left = $('.de-left'),
@@ -639,11 +676,10 @@ export function mountDiagramEditor({ root, session, host = {} }) {
     drawerOpener = null;
   }
   function rightPanes() {
-    return new Map([
-      ['properties', propertiesPane],
-      ...(reviewEnabled ? [['review', reviewPane]] : []),
-      ...hostPanes,
-    ]);
+    /** @type {Array<[string, HTMLElement]>} */
+    const panes = [['properties', propertiesPane]];
+    if (reviewEnabled) panes.push(['review', reviewPane]);
+    return new Map([...panes, ...hostPanes]);
   }
   function setRightTab(next, { focus = false } = {}) {
     const panes = rightPanes(),
@@ -700,6 +736,7 @@ export function mountDiagramEditor({ root, session, host = {} }) {
       if (selected && focus) tabNode.focus({ preventScroll: true });
     }
   }
+  /** @param {{ type: string; affectedIds?: string[] }} [event] */
   function draw(event = { type: 'initial', affectedIds: [] }) {
     if (disposed) return;
     const state = current(),
@@ -770,7 +807,9 @@ export function mountDiagramEditor({ root, session, host = {} }) {
             '</svg>',
           'image/svg+xml',
         );
-        const replacement = doc.importNode(xml.documentElement.firstElementChild, true);
+        const rendered = xml.documentElement.firstElementChild;
+        if (!rendered) throw new TypeError(`Element ${id} rendered no SVG markup.`);
+        const replacement = doc.importNode(rendered, true);
         replacement.setAttribute('tabindex', '-1');
         replacement.setAttribute('role', 'img');
         replacement.setAttribute('aria-label', scene.label || scene.kind);
@@ -1015,7 +1054,12 @@ export function mountDiagramEditor({ root, session, host = {} }) {
                 ? 'lane'
                 : 'node';
         if (capability && !capability.primitives.includes(primitive)) continue;
-        if (capability && primitive === 'node' && !capability.nodeKinds.includes(kind)) continue;
+        if (
+          capability &&
+          primitive === 'node' &&
+          !capability.nodeKinds.some((item) => item === kind)
+        )
+          continue;
         const shape = button(doc, '', 'create', {
           'data-kind': kind,
           className: 'de-shape-button',
@@ -1327,6 +1371,7 @@ export function mountDiagramEditor({ root, session, host = {} }) {
     panel.querySelector('button,input,select')?.focus();
     return panel;
   }
+  /** @param {{ tab?: 'import' | 'export' }} [options] */
   function openSourcePanel({ tab: initialTab = 'import' } = {}) {
     const state = current();
     if (!state.bundle || !guardPropertyDraft()) return false;
@@ -1369,13 +1414,13 @@ export function mountDiagramEditor({ root, session, host = {} }) {
   function askDelete() {
     const state = current(),
       ids = state.view.selection;
-    if (!ids.length) return;
+    if (!ids.length || !state.bundle) return;
     const preview = compileDiagramCommand(
       state.bundle,
       { type: 'delete', ids },
       { transactionId: freshId() },
     );
-    const impact = preview.deletionImpact;
+    const impact = preview.ok ? null : preview.deletionImpact;
     if (!impact) {
       report(errText(preview));
       return;
@@ -1410,7 +1455,7 @@ export function mountDiagramEditor({ root, session, host = {} }) {
   }
   function connectDialog() {
     const state = current(),
-      nodes = state.bundle.document.nodes;
+      nodes = bundleOf(state).document.nodes;
     if (nodes.length < 2) {
       report('Create at least two nodes to connect.');
       return;
@@ -1427,7 +1472,7 @@ export function mountDiagramEditor({ root, session, host = {} }) {
       doc,
       'To',
       ids.find((id) => nodes.some((node) => node.id === id && node.id !== from.input.value)) ??
-        nodes.at(-1).id,
+        nodes[nodes.length - 1].id,
       { choices: nodes.map((node) => [node.id, node.label]) },
     );
     const label = field(doc, 'Connector label', '');
@@ -1440,6 +1485,7 @@ export function mountDiagramEditor({ root, session, host = {} }) {
     );
     openDialog('Connect objects', body);
   }
+  /** @param {'horizontal' | 'vertical' | null} [lane] */
   function layoutDialog(lane = null) {
     const body = element(doc, 'div');
     body.append(
@@ -1554,7 +1600,12 @@ export function mountDiagramEditor({ root, session, host = {} }) {
         entry.onSelect({ session, state, trigger: actionTrigger });
       return;
     }
-    if (!bundle && action !== 'cancel-dialog') return;
+    if (action === 'cancel-dialog') {
+      if (state.gesture) session.cancelGesture('cancel-dialog');
+      closeDialog();
+      return;
+    }
+    if (!bundle) return;
     if (action === 'toggle-group') {
       if (actionTrigger?.dataset.id) toggleGroup(actionTrigger.dataset.id);
       return;
@@ -1656,11 +1707,6 @@ export function mountDiagramEditor({ root, session, host = {} }) {
       moreButton.focus({ preventScroll: true });
       return;
     }
-    if (action === 'cancel-dialog') {
-      if (state.gesture) session.cancelGesture('cancel-dialog');
-      closeDialog();
-      return;
-    }
     if (action === 'conflict') {
       const wrap = element(doc, 'div');
       openDialog('Compare revisions', wrap);
@@ -1755,7 +1801,9 @@ export function mountDiagramEditor({ root, session, host = {} }) {
     if (action === 'create') {
       const kind = value,
         at = worldPoint({ x: stage.clientWidth / 2, y: stage.clientHeight / 2 });
-      const existing = bundle.presentation.elements.map((item) => item.bounds).filter(Boolean);
+      const existing = bundle.presentation.elements
+        .map((item) => item.bounds)
+        .filter((rect) => rect !== null);
       const right = existing.length
         ? Math.max(...existing.map((item) => item.x + item.width))
         : null;
@@ -1866,7 +1914,7 @@ export function mountDiagramEditor({ root, session, host = {} }) {
     if (action === 'group') {
       const selected = ids
         .map((id) => bundle.presentation.elements.find((item) => item.elementId === id)?.bounds)
-        .filter(Boolean);
+        .filter((rect) => rect != null);
       if (selected.length < 2) {
         report('Select at least two bounded objects to group.');
         return;
@@ -1913,7 +1961,7 @@ export function mountDiagramEditor({ root, session, host = {} }) {
     }
     if (['add-bend', 'remove-bend', 'reset-route', 'position-label'].includes(action)) {
       const id = ids[0],
-        place = bundle.presentation.elements.find((item) => item.elementId === id),
+        place = placementOf(bundle, id),
         before = geometryFields(place),
         after = clone(before);
       const points = session.geometry(id)?.points ?? [];
@@ -2026,6 +2074,7 @@ export function mountDiagramEditor({ root, session, host = {} }) {
       scale = state.view.camera.scale;
     const dx = (drag.last.x - drag.start.x) / scale,
       dy = (drag.last.y - drag.start.y) / scale;
+    /** @type {DiagramCommand} */
     let command;
     if (drag.type === 'move') {
       const x = state.view.snap ? Math.round(dx / 8) * 8 : Math.round(dx),
@@ -2113,10 +2162,8 @@ export function mountDiagramEditor({ root, session, host = {} }) {
           height: Math.abs(a.y - b.y),
         };
       if (rect.width > 3 || rect.height > 3) {
-        const picked = current()
-          .bundle.presentation.elements.filter(
-            (item) => item.bounds && intersect(item.bounds, rect),
-          )
+        const picked = bundleOf(current())
+          .presentation.elements.filter((item) => item.bounds && intersect(item.bounds, rect))
           .map((item) => item.elementId);
         select(finished.additive ? [...finished.base, ...picked] : picked);
       }

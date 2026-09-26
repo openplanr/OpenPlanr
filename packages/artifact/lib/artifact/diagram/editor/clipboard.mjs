@@ -1,3 +1,4 @@
+// @ts-check
 import { compileDiagramCommand, validateAuthoringBundle } from '../authoring/index.mjs';
 import {
   COLLECTIONS,
@@ -9,13 +10,17 @@ import {
 
 const MAX_BYTES = 1024 * 1024;
 const MAX_ELEMENTS = 1000;
+/** @type {(detail: string) => import('./index.d.mts').DiagramEditorFailure} */
 const fail = (detail) => ({
   ok: false,
   diagnostics: [{ path: '$clipboard', rule: 'clipboard', detail }],
 });
 const size = (value) => new TextEncoder().encode(JSON.stringify(value)).length;
 
-/** Return only the self-contained selected fragment. No source bytes or view data. */
+/**
+ * Return only the self-contained selected fragment. No source bytes or view data.
+ * @type {typeof import('./index.d.mts').copyDiagramSelection}
+ */
 export function copyDiagramSelection(bundle, ids) {
   const check = validateAuthoringBundle(bundle);
   if (!check.ok) return check;
@@ -68,6 +73,7 @@ export function copyDiagramSelection(bundle, ids) {
   const sourceBundle = sealBundle(fragment);
   const checked = validateAuthoringBundle(sourceBundle);
   if (!checked.ok) return checked;
+  /** @type {import('./index.d.mts').DiagramSelectionClipboard} */
   const value = {
     kind: 'openplanr-diagram-selection',
     version: 1,
@@ -79,7 +85,10 @@ export function copyDiagramSelection(bundle, ids) {
   return { ok: true, value };
 }
 
-/** Unknown fields, active resources and graph relationships are validated by the kernel. */
+/**
+ * Unknown fields, active resources and graph relationships are validated by the kernel.
+ * @type {typeof import('./index.d.mts').pasteDiagramSelection}
+ */
 export function pasteDiagramSelection(bundle, input, { idMap, transactionId, dx = 24, dy = 24 }) {
   if (typeof input === 'string') {
     if (input.length > MAX_BYTES || new TextEncoder().encode(input).length > MAX_BYTES)
@@ -90,20 +99,31 @@ export function pasteDiagramSelection(bundle, input, { idMap, transactionId, dx 
       return fail('The clipboard does not contain an OpenPlanr selection.');
     }
   }
+  const fragment =
+    /** @type {Partial<Record<keyof import('./index.d.mts').DiagramSelectionClipboard, unknown>> | null} */ (
+      input
+    );
   if (
-    inspectPlainData(input).length ||
-    !input ||
-    input.kind !== 'openplanr-diagram-selection' ||
-    input.version !== 1 ||
-    Object.keys(input).some((key) => !['kind', 'version', 'sourceBundle', 'ids'].includes(key)) ||
-    !Array.isArray(input.ids) ||
-    input.ids.length > MAX_ELEMENTS ||
-    size(input) > MAX_BYTES
+    inspectPlainData(fragment).length ||
+    !fragment ||
+    fragment.kind !== 'openplanr-diagram-selection' ||
+    fragment.version !== 1 ||
+    Object.keys(fragment).some(
+      (key) => !['kind', 'version', 'sourceBundle', 'ids'].includes(key),
+    ) ||
+    !Array.isArray(fragment.ids) ||
+    fragment.ids.length > MAX_ELEMENTS ||
+    size(fragment) > MAX_BYTES
   )
     return fail('Invalid or oversized clipboard fragment.');
+  // The kernel validates the fragment's bundle along with the rest of the paste.
+  const sourceBundle =
+    /** @type {import('@openplanr/protocol/diagram-authoring-contracts').DiagramAuthoringBundle} */ (
+      fragment.sourceBundle
+    );
   return compileDiagramCommand(
     bundle,
-    { type: 'paste', sourceBundle: input.sourceBundle, ids: input.ids, idMap, dx, dy },
+    { type: 'paste', sourceBundle, ids: fragment.ids, idMap, dx, dy },
     { transactionId },
   );
 }

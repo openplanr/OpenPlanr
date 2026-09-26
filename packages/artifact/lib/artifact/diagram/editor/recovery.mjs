@@ -1,9 +1,13 @@
+// @ts-check
 import { inspectPlainData } from '../authoring/model.mjs';
 
 const MAX_RECOVERY_BYTES = 2 * 1024 * 1024;
 const scopePart = /^[a-zA-Z0-9_-]{1,160}$/u;
 
-/** Recovery is a bounded convenience, never an acknowledgement or authority. */
+/**
+ * Recovery is a bounded convenience, never an acknowledgement or authority.
+ * @type {typeof import('./index.d.mts').createDiagramEditorRecovery}
+ */
 export function createDiagramEditorRecovery({ storage, scope, maxBytes = MAX_RECOVERY_BYTES }) {
   if (!scope || !scopePart.test(scope.sessionId) || !scopePart.test(scope.diagramId))
     throw new TypeError('Recovery requires a verified owner session and diagram scope.');
@@ -12,10 +16,15 @@ export function createDiagramEditorRecovery({ storage, scope, maxBytes = MAX_REC
   const boundScope = { sessionId: scope.sessionId, diagramId: scope.diagramId };
   const key = `openplanr:diagram-editor:1:${boundScope.sessionId}:${boundScope.diagramId}`;
   let quarantined = false;
+  /** @type {import('./index.d.mts').DiagramEditorRecoveryStatus['mode']} */
   let mode = storage ? 'available' : 'memory-only';
   let warning = storage
     ? null
     : 'Pending edits survive only in this open session; recovery storage is unavailable.';
+  /**
+   * @param {string} message
+   * @returns {{ ok: false } & import('./index.d.mts').DiagramEditorRecoveryStatus}
+   */
   const unavailable = (message) => {
     mode = 'memory-only';
     warning = message;

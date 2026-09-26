@@ -1,9 +1,12 @@
+// @ts-check
 /** Company publication constraints over the existing, compatible review bundle. */
 
 import { canonicalizeJson, sha256Hex } from './canonical-json.mjs';
 import { assertDesignReviewBundle } from './review-experience-contracts.mjs';
 
+/** @type {typeof import('./design-publication-contracts.d.mts').COMPANY_DESIGN_MAX_BYTES} */
 export const COMPANY_DESIGN_MAX_BYTES = 1024 * 1024;
+/** @type {typeof import('./design-publication-contracts.d.mts').COMPANY_DESIGN_MAX_ENTRIES} */
 export const COMPANY_DESIGN_MAX_ENTRIES = 256;
 const fail = (message) => {
   throw new TypeError(`Invalid company design bundle: ${message}`);
@@ -26,13 +29,17 @@ const identities = (items, label) => {
   return map;
 };
 
-/** Pure browser/Worker-compatible validation; no artifact or design dependency. */
+/**
+ * Pure browser/Worker-compatible validation; no artifact or design dependency.
+ * @returns {ReturnType<typeof import('./design-publication-contracts.d.mts').assertCompanyDesignBundle>}
+ */
 export function assertCompanyDesignBundle(value) {
   // Bound complexity before recursive schema validation/canonical serialization.
+  /** @type {Array<[unknown, number]>} */
   const pending = [[value, 0]];
   let nodes = 0;
-  while (pending.length) {
-    const [item, depth] = pending.pop();
+  for (let next = pending.pop(); next; next = pending.pop()) {
+    const [item, depth] = next;
     if (++nodes > 50000 || depth > 40) fail('document complexity exceeds the publication limit.');
     if (item && typeof item === 'object')
       for (const child of Object.values(item)) pending.push([child, depth + 1]);

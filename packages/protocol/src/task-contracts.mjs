@@ -1,14 +1,21 @@
+// @ts-check
 import { ProtocolError } from './errors.mjs';
 import { CANONICAL_REGISTRIES, resolveTaskKind } from './registries.mjs';
 
+/**
+ * @typedef {{ roles: Array<{ roleId: string; roleVersion: string }>; documentDigest: string }} RoleRegistry
+ * @typedef {{ bindings: Array<{ taskKind: string; roleId: string }>; documentDigest: string }} TaskKindRegistry
+ * @typedef {NonNullable<Parameters<typeof import('./task-contracts.d.mts').validateTaskOutputSemantics>[1]>} TaskOutputOptions
+ */
 const diagnostic = (code, path, message) => ({ code, path, message });
 const pathKey = ({ repositoryKey, path }) => `${repositoryKey}:${path}`;
 
+/** @returns {ReturnType<typeof import('./task-contracts.d.mts').validateTaskManifestSemantics>} */
 export function validateTaskManifestSemantics(
   value,
   {
-    roles = CANONICAL_REGISTRIES['roles.json'],
-    taskKinds = CANONICAL_REGISTRIES['task-kinds.json'],
+    roles = /** @type {RoleRegistry} */ (CANONICAL_REGISTRIES['roles.json']),
+    taskKinds = /** @type {TaskKindRegistry} */ (CANONICAL_REGISTRIES['task-kinds.json']),
   } = {},
 ) {
   const diagnostics = [];
@@ -76,6 +83,7 @@ export function validateTaskManifestSemantics(
   return diagnostics;
 }
 
+/** @type {typeof import('./task-contracts.d.mts').assertTaskManifestSemantics} */
 export function assertTaskManifestSemantics(value, options) {
   const diagnostics = validateTaskManifestSemantics(value, options);
   if (diagnostics.length)
@@ -83,6 +91,7 @@ export function assertTaskManifestSemantics(value, options) {
   return value;
 }
 
+/** @returns {ReturnType<typeof import('./task-contracts.d.mts').validateTaskGraph>} */
 export function validateTaskGraph(values) {
   const diagnostics = [];
   const byId = new Map(values.map((value) => [value?.task?.taskId, value]));
@@ -119,6 +128,7 @@ export function validateTaskGraph(values) {
   return diagnostics;
 }
 
+/** @returns {ReturnType<typeof import('./task-contracts.d.mts').countR2Tasks>} */
 export function countR2Tasks(values) {
   return values.reduce((count, value) => {
     try {
@@ -129,7 +139,9 @@ export function countR2Tasks(values) {
   }, 0);
 }
 
-export function validateTaskOutputSemantics(value, { taskManifest } = {}) {
+/** @returns {ReturnType<typeof import('./task-contracts.d.mts').validateTaskOutputSemantics>} */
+export function validateTaskOutputSemantics(value, options = {}) {
+  const { taskManifest } = /** @type {TaskOutputOptions} */ (options);
   const diagnostics = [];
   if (taskManifest) {
     if (
@@ -250,6 +262,7 @@ export function validateTaskOutputSemantics(value, { taskManifest } = {}) {
   return diagnostics;
 }
 
+/** @type {typeof import('./task-contracts.d.mts').assertTaskOutputSemantics} */
 export function assertTaskOutputSemantics(value, options) {
   const diagnostics = validateTaskOutputSemantics(value, options);
   if (diagnostics.length)

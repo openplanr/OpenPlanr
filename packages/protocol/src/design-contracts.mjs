@@ -1,6 +1,10 @@
+// @ts-check
 import { validateJson } from './json-schema.mjs';
 
-/** The authored document version is independent of the Protocol release. */
+/**
+ * The authored document version is independent of the Protocol release.
+ * @type {typeof import('./design-contracts.d.mts').DESIGN_DOCUMENT_VERSION}
+ */
 export const DESIGN_DOCUMENT_VERSION = '1.0.0';
 
 const freeze = (value) => {
@@ -14,6 +18,7 @@ const freeze = (value) => {
 /**
  * Portable source of truth for the packaged Protocol 1.9 schema. Rendering,
  * file existence, symlink containment and revisions belong to the design domain.
+ * @type {typeof import('./design-contracts.d.mts').DESIGN_DOCUMENT_SCHEMA}
  */
 export const DESIGN_DOCUMENT_SCHEMA = freeze({
   $schema: 'https://json-schema.org/draft/2020-12/schema',
@@ -158,7 +163,10 @@ export const DESIGN_DOCUMENT_SCHEMA = freeze({
   },
 });
 
-/** Validate structure plus stable identity and cross-reference constraints. */
+/**
+ * Validate structure plus stable identity and cross-reference constraints.
+ * @returns {ReturnType<typeof import('./design-contracts.d.mts').validateDesignDocument>}
+ */
 export function validateDesignDocument(value) {
   const errors = validateJson(value, DESIGN_DOCUMENT_SCHEMA).map(
     ({ path, detail }) => `${path}: ${detail}`,
@@ -204,7 +212,10 @@ export function validateDesignDocument(value) {
   return { ok: errors.length === 0, errors };
 }
 
-/** Return the original valid document; never normalize authored design intent. */
+/**
+ * Return the original valid document; never normalize authored design intent.
+ * @returns {ReturnType<typeof import('./design-contracts.d.mts').assertDesignDocument>}
+ */
 export function assertDesignDocument(value) {
   const result = validateDesignDocument(value);
   if (!result.ok) throw new TypeError(`Invalid design document:\n${result.errors.join('\n')}`);
