@@ -13,7 +13,7 @@ import {
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { resolveCompanyAccessToken } from './company-auth-service.js';
-import { CompanySyncError, normalizeCompanyOrigin } from './company-common.js';
+import { CompanySyncError, normalizeCompanyOrigin, releasedLock } from './company-common.js';
 import {
   adoptDiagramBundle,
   canonicalDiagramTarget,
@@ -352,10 +352,12 @@ async function withBindingLock<T>(
         acquired = true;
       } catch (error) {
         if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
-        const info = await lstat(lockPath);
+        const info = await lstat(lockPath).catch(releasedLock);
+        if (info === null) continue;
         if (!info.isFile() || info.isSymbolicLink() || info.size > 1024)
           return fail('E_COMPANY_STATE', 'Invalid company binding lock.');
-        const previous = await readFile(lockPath, 'utf8');
+        const previous = await readFile(lockPath, 'utf8').catch(releasedLock);
+        if (previous === null) continue;
         let stale: { pid: number; nonce: string };
         try {
           stale = JSON.parse(previous);

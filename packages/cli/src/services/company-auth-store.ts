@@ -3,7 +3,7 @@ import { chmod, link, lstat, mkdir, open, readFile, rename, unlink } from 'node:
 import os from 'node:os';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
-import { CompanySyncError } from './company-common.js';
+import { CompanySyncError, releasedLock } from './company-common.js';
 
 export type StoredCredentialSource = 'keychain' | 'encrypted-file';
 export interface CompanyCredentialStore {
@@ -115,10 +115,12 @@ export class CompanyAuthStore {
           acquired = true;
         } catch (error) {
           if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
-          const info = await lstat(lock);
+          const info = await lstat(lock).catch(releasedLock);
+          if (info === null) continue;
           if (!info.isFile() || info.isSymbolicLink() || info.size > 1024)
             throw new CompanySyncError('E_COMPANY_AUTH_STORE', 'Authentication lock is invalid.');
-          const raw = await readFile(lock, 'utf8');
+          const raw = await readFile(lock, 'utf8').catch(releasedLock);
+          if (raw === null) continue;
           let previous: { pid: number; nonce: string };
           try {
             previous = JSON.parse(raw);
