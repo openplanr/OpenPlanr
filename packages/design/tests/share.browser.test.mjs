@@ -1,20 +1,20 @@
 import assert from 'node:assert/strict';
-import { test } from 'node:test';
 import {
+  existsSync,
   mkdtempSync,
   readFileSync,
-  writeFileSync,
-  existsSync,
-  rmSync,
   realpathSync,
+  rmSync,
+  writeFileSync,
 } from 'node:fs';
+import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { createRequire } from 'node:module';
+import { test } from 'node:test';
+import { currentDesign, renderDesignDocument } from '../lib/design/document.mjs';
+import { readDesignFeedback, startDesignReview } from '../lib/design/review.mjs';
+import { manageDesignShare, syncDesignShare } from '../lib/design/share.mjs';
 import { designFixture } from './design-fixture.mjs';
-import { renderDesignDocument, currentDesign } from '../lib/design/document.mjs';
-import { startDesignReview, readDesignFeedback } from '../lib/design/review.mjs';
-import { syncDesignShare, manageDesignShare } from '../lib/design/share.mjs';
 
 // Companion-service acceptance is explicitly opted into. Ordinary installs have
 // no dependency on the external web source tree or its development tools.

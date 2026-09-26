@@ -1,26 +1,26 @@
 /** Owner-local review organization and explicit, revision-bound handoff approval. */
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { acquireStartLock } from '@openplanr/artifact/internal/server-util.mjs';
 import { digestArtifactEnvelope } from '@openplanr/artifact/envelope.mjs';
+import { acquireStartLock } from '@openplanr/artifact/internal/server-util.mjs';
 import { withArtifactReviewLock } from '@openplanr/artifact/review.mjs';
 import {
   assertReviewExperience,
-  DESIGN_HANDOFF_SCHEMA,
   DESIGN_HANDOFF_CONTENT_SCHEMA,
+  DESIGN_HANDOFF_SCHEMA,
 } from '@openplanr/protocol/review-experience-contracts';
-import { atomicJson, currentDesign, designSpecPath, hash, readJson } from './document.mjs';
 import { emptyReviewContext, reviewDigest } from './context.mjs';
-import { readDesignFeedback, designReviewPath } from './review.mjs';
-import { getDesignShareStatus, publishDesignReviewMetadata } from './share.mjs';
-import {
-  canApproveDesignHandoffResolution,
-  compileDesignHandoffResolution,
-} from './handoff-resolution.mjs';
+import { atomicJson, currentDesign, designSpecPath, hash, readJson } from './document.mjs';
 import {
   compileDesignHandoffReadiness,
   designHandoffReadinessDigest,
 } from './handoff-readiness.mjs';
+import {
+  canApproveDesignHandoffResolution,
+  compileDesignHandoffResolution,
+} from './handoff-resolution.mjs';
+import { designReviewPath, readDesignFeedback } from './review.mjs';
+import { getDesignShareStatus, publishDesignReviewMetadata } from './share.mjs';
 
 const conflict = (message) => Object.assign(new Error(message), { statusCode: 409 });
 const sections = ['agreedChanges', 'openQuestions', 'deferred', 'rejected'];

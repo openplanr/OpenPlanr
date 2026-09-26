@@ -1,8 +1,9 @@
 /** Offline, uncompiled HTML/CSS/JavaScript packaging for portable design skills. */
+
+import { createHash } from 'node:crypto';
 import { readFileSync, realpathSync, statSync } from 'node:fs';
 import { dirname, extname, isAbsolute, relative, resolve } from 'node:path';
 import { Script } from 'node:vm';
-import { createHash } from 'node:crypto';
 import { parse, parseFragment, serialize } from 'parse5';
 
 const MIME = {

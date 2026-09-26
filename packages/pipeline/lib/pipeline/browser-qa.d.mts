@@ -8,6 +8,7 @@ export interface BrowserQaSession {
   custody: 'external-ephemeral';
   persisted: false;
 }
+
 import type { BrowserQaHostAttestation } from './browser-qa-custody.d.mts';
 export interface BrowserQaGateRecord {
   kind: 'browser-qa-gate';

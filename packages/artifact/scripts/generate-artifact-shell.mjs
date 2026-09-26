@@ -1,21 +1,20 @@
 #!/usr/bin/env node
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildSync } from 'esbuild';
-
-import {
-  loadArtifactTheme,
-  renderArtifactThemeCss,
-  renderArtifactThemeJson,
-} from '../lib/artifact/ui/tokens.mjs';
 import {
   ARTIFACT_SHELL_ASSET_PATHS,
   ARTIFACT_SHELL_VERSION,
   renderArtifactShellTemplate,
 } from '../lib/artifact/ui/shell.mjs';
+import {
+  loadArtifactTheme,
+  renderArtifactThemeCss,
+  renderArtifactThemeJson,
+} from '../lib/artifact/ui/tokens.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 

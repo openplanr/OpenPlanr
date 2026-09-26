@@ -10,8 +10,8 @@
 import { randomUUID } from 'node:crypto';
 import {
   existsSync,
-  realpathSync,
   readdirSync,
+  realpathSync,
   statSync,
   unlinkSync,
   writeFileSync,
@@ -20,8 +20,8 @@ import { basename, extname, isAbsolute, join, resolve } from 'node:path';
 
 import { bundleArtifact } from '@openplanr/artifact/bundle.mjs';
 import { createArtifactEnvelope, digestArtifactEnvelope } from '@openplanr/artifact/envelope.mjs';
-import { escapeHtml } from '../design/escape.mjs';
 import { ARTIFACT_ERROR_CODES, PipelineError } from '@openplanr/protocol/errors';
+import { escapeHtml } from '../design/escape.mjs';
 import { discoverVariants, imageDimensions } from './canvas-wrap.mjs';
 import { designFeedbackToArtifactReview } from './feedback.mjs';
 

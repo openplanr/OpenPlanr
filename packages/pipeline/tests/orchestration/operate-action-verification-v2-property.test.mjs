@@ -3,13 +3,13 @@ import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 
 import {
+  buildOperatingActionExecutionFeedbackV2,
   buildOperatingActionVerificationMaterializationV2,
   buildOperatingActionVerificationOutcomeV2,
-  buildOperatingActionExecutionFeedbackV2,
 } from '../../lib/operate/action-verification-v2.mjs';
-import { sha256Jcs } from '../../lib/protocol/jcs.mjs';
-import { deriveOperatingModelStateRuntimeHashV2 } from '../../lib/operate/operating-state-v2.mjs';
 import { deriveOperatingSnapshotRuntimeHashV2 } from '../../lib/operate/operating-snapshots-v2.mjs';
+import { deriveOperatingModelStateRuntimeHashV2 } from '../../lib/operate/operating-state-v2.mjs';
+import { sha256Jcs } from '../../lib/protocol/jcs.mjs';
 
 const fixture = (name) =>
   JSON.parse(

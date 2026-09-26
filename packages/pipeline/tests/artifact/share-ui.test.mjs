@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
-import { createServer } from 'node:http';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { createServer } from 'node:http';
 import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
+import { fileURLToPath } from 'node:url';
 
 import { createArtifactEnvelope } from '../../lib/artifact/envelope.mjs';
 import {
@@ -13,8 +13,8 @@ import {
   parseHostedArtifactLocation,
 } from '../../lib/artifact/ui/hosted-viewer.mjs';
 import {
-  renderArtifactShellMarkup,
   normalizeArtifactShellModel,
+  renderArtifactShellMarkup,
 } from '../../lib/artifact/ui/renderers.mjs';
 import {
   ARTIFACT_SHARE_FRAGMENT_LIMIT,

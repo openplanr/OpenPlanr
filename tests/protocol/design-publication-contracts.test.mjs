@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { canonicalizeJson, sha256Hex } from '../../packages/protocol/src/canonical-json.mjs';
-import { assertDesignReviewBundle } from '../../packages/protocol/src/review-experience-contracts.mjs';
 import { assertCompanyDesignBundle } from '../../packages/protocol/src/design-publication-contracts.mjs';
+import { assertDesignReviewBundle } from '../../packages/protocol/src/review-experience-contracts.mjs';
 
 function fixture() {
   const reviewContext = {

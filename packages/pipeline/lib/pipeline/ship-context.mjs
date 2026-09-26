@@ -1,11 +1,11 @@
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { buildContextEnvelope, renderContextEnvelope } from './context-envelope.mjs';
 import { resolveDesignPlanningLineage } from './design-lineage.mjs';
-import { PipelineError } from './errors.mjs';
 import { preparePlan, prepareShipContext } from './engine.mjs';
+import { PipelineError } from './errors.mjs';
 
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const TASK_FILE = /^(?:T-|task-).*\.md$/iu;

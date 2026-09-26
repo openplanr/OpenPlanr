@@ -14,7 +14,6 @@ import {
 import { resolveDiagramSceneElement } from '../diagram/authoring/scene.mjs';
 import { copyDiagramSelection } from '../diagram/editor/clipboard.mjs';
 import { mountDiagramConflicts } from './diagram-conflicts.mjs';
-import { mountDiagramSourcePanel } from './diagram-source-panel.mjs';
 import {
   addOrthogonalDetour,
   arrangementCommand,
@@ -39,6 +38,7 @@ import {
   iconButton,
 } from './diagram-editor-dom.mjs';
 import { renderDiagramProperties } from './diagram-editor-properties.mjs';
+import { mountDiagramSourcePanel } from './diagram-source-panel.mjs';
 
 const SVG = 'http://www.w3.org/2000/svg';
 const ACTION_LABELS = {

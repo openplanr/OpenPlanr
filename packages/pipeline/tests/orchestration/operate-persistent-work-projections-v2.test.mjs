@@ -1,21 +1,20 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
-
-import {
-  createEmptyOperatingRuntimeStateV2,
-  transitionOperatingActionLifecycleV2,
-} from '../../lib/operate/runtime-foundation.mjs';
 import { buildOperatingTerminalVerificationAssignmentV2 } from '../../lib/operate/execution-verification-v2.mjs';
-import {
-  derivePersistentOperatingActionRevisionHashV2,
-  derivePersistentOperatingExecutionVerificationProjectionV2,
-} from '../../lib/operate/persistent-work-v2.mjs';
-import { sha256Jcs } from '../../lib/protocol/jcs.mjs';
 import {
   buildOperatingCycleWorkViewV2,
   buildOperatingWorkLedgerV2,
 } from '../../lib/operate/persistent-work-projections-v2.mjs';
+import {
+  derivePersistentOperatingActionRevisionHashV2,
+  derivePersistentOperatingExecutionVerificationProjectionV2,
+} from '../../lib/operate/persistent-work-v2.mjs';
+import {
+  createEmptyOperatingRuntimeStateV2,
+  transitionOperatingActionLifecycleV2,
+} from '../../lib/operate/runtime-foundation.mjs';
+import { sha256Jcs } from '../../lib/protocol/jcs.mjs';
 
 const TIME = '2026-08-08T12:00:00.000Z';
 const scope = { scopeId: 'scope-acme', domainId: 'business', domainVersion: '1.0.0' };

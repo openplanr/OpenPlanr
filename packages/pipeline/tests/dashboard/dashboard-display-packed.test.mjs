@@ -5,16 +5,15 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-
-import * as actionDisplay from '../../schemas/v1.2.0/operate-action-display-workspace.mjs';
-import * as boardDisplay from '../../schemas/v1.2.0/operate-executive-board-display-surface.mjs';
-import * as cycleDisplay from '../../schemas/v1.2.0/operate-cycle-display-workspace.mjs';
-import * as recoveryDisplay from '../../schemas/v1.2.0/operate-recovery-display-surface.mjs';
-import * as surfaceDisplay from '../../schemas/v1.2.0/operate-experience-display-surface.mjs';
 import * as displayContract from '../../lib/dashboard/operate-experience-display-contract.mjs';
 import { selectOperateExperienceDisplaySurface } from '../../lib/dashboard/operate-experience-reader.mjs';
-import { pairedOpenPlanrTools } from '../helpers/paired-openplanr.mjs';
+import * as actionDisplay from '../../schemas/v1.2.0/operate-action-display-workspace.mjs';
+import * as cycleDisplay from '../../schemas/v1.2.0/operate-cycle-display-workspace.mjs';
+import * as boardDisplay from '../../schemas/v1.2.0/operate-executive-board-display-surface.mjs';
+import * as surfaceDisplay from '../../schemas/v1.2.0/operate-experience-display-surface.mjs';
+import * as recoveryDisplay from '../../schemas/v1.2.0/operate-recovery-display-surface.mjs';
 import { collectFilePaths } from '../helpers/files.mjs';
+import { pairedOpenPlanrTools } from '../helpers/paired-openplanr.mjs';
 import { resolveWorkspaceDependencyRoot } from '../helpers/workspace-dependency.mjs';
 
 const root = fileURLToPath(new URL('../..', import.meta.url));

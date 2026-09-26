@@ -1,16 +1,15 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { after, test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-
+import { OPERATE_RUNTIME_CONTRACT_KINDS } from '../../lib/protocol/loader.mjs';
 import {
   checkOperateRuntimePurity,
   packOperateV2DevelopmentSnapshot,
 } from '../../scripts/check-operate-runtime-purity.mjs';
-import { OPERATE_RUNTIME_CONTRACT_KINDS } from '../../lib/protocol/loader.mjs';
 import { resolveWorkspaceDependencyRoot } from '../helpers/workspace-dependency.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');

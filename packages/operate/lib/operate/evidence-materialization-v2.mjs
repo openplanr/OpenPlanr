@@ -1,8 +1,8 @@
-import { PipelineError } from '@openplanr/protocol/errors';
-import { assertProtocolArtifact } from '@openplanr/protocol/contracts';
-import { sha256Jcs } from '@openplanr/protocol/canonical-json';
-import { dispatchOperateEvidenceResolverV2 } from './evidence-v2.mjs';
 import { createHash } from 'node:crypto';
+import { sha256Jcs } from '@openplanr/protocol/canonical-json';
+import { assertProtocolArtifact } from '@openplanr/protocol/contracts';
+import { PipelineError } from '@openplanr/protocol/errors';
+import { dispatchOperateEvidenceResolverV2 } from './evidence-v2.mjs';
 
 const PROTOCOL_VERSION = '2.0.0';
 const CLASSIFICATION_RANK = Object.freeze({

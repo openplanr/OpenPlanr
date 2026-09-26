@@ -3,22 +3,22 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 import { validateJson } from '../../conformance/json-schema-validate.mjs';
+import { contentHash } from '../../lib/dashboard/closed-json-contract.mjs';
 import * as slicedReviewSchemaData from '../../lib/dashboard/generated/operate-review-schema-data.mjs';
-import {
-  issueOperateReviewDisplayWorkspaceV1,
-  OPERATE_REVIEW_DISPLAY_WORKSPACE_DOMAIN,
-  validateOperateReviewDisplayWorkspaceV1,
-} from '../../lib/dashboard/operate-review-display-workspace-contract.mjs';
-import {
-  assertOperateReviewDisplayWorkspaceV1 as assertBrowserSafeReviewDisplayWorkspaceV1,
-  assertOperatingReviewReceiptV2,
-} from '../../lib/dashboard/operate-review-contract.mjs';
 import {
   selectOperateExperienceSurface,
   selectOperateReviewDisplayWorkspace,
   selectOperateReviewWorkspace,
 } from '../../lib/dashboard/operate-experience-reader.mjs';
-import { contentHash } from '../../lib/dashboard/closed-json-contract.mjs';
+import {
+  assertOperateReviewDisplayWorkspaceV1 as assertBrowserSafeReviewDisplayWorkspaceV1,
+  assertOperatingReviewReceiptV2,
+} from '../../lib/dashboard/operate-review-contract.mjs';
+import {
+  issueOperateReviewDisplayWorkspaceV1,
+  OPERATE_REVIEW_DISPLAY_WORKSPACE_DOMAIN,
+  validateOperateReviewDisplayWorkspaceV1,
+} from '../../lib/dashboard/operate-review-display-workspace-contract.mjs';
 import {
   buildOperateReviewWorkspacePayloadV1,
   deriveOperateSharedTruthSummaryV1,

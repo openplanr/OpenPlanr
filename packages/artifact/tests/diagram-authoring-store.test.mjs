@@ -1,20 +1,21 @@
-import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
+import { once } from 'node:events';
 import {
-  mkdtemp,
+  link,
   mkdir,
-  readFile,
+  mkdtemp,
   readdir,
+  readFile,
   realpath,
   rm,
   symlink,
   writeFile,
-  link,
 } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { once } from 'node:events';
+import test from 'node:test';
+import { withDocumentDigest } from '@openplanr/protocol/canonical-json';
 import {
   makeBundle,
   makeTransaction,
@@ -22,15 +23,14 @@ import {
   sealBundle,
 } from '../../../tests/protocol/fixtures/diagram-authoring.mjs';
 import {
+  compileDiagramCommand,
+  createConditionalInverse,
+} from '../lib/artifact/diagram/authoring/index.mjs';
+import {
   createDiagramAuthoringStore,
   previewLegacyDiagramMigration,
 } from '../lib/artifact/diagram/authoring/store.mjs';
 import { renderDiagram } from '../lib/artifact/diagram/index.mjs';
-import { withDocumentDigest } from '@openplanr/protocol/canonical-json';
-import {
-  compileDiagramCommand,
-  createConditionalInverse,
-} from '../lib/artifact/diagram/authoring/index.mjs';
 
 const storeUrl = new URL('../lib/artifact/diagram/authoring/store.mjs', import.meta.url).href;
 const fixtureUrl = new URL(

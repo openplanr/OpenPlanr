@@ -1,24 +1,23 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { get } from 'node:http';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { get } from 'node:http';
 import { connect } from 'node:net';
-import { dirname, join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-
-import { createDashboardServer } from '../../lib/dashboard/server.mjs';
-import { encodeOperateExperienceCheckpoint } from '../../lib/dashboard/operate-experience-reader.mjs';
+import { validate } from '../../conformance/json-schema-validate.mjs';
 import { assertOperateExperienceDisplaySurfaceV1 } from '../../lib/dashboard/operate-experience-display-contract.mjs';
+import { encodeOperateExperienceCheckpoint } from '../../lib/dashboard/operate-experience-reader.mjs';
 import { deriveOperateSharedTruthSummaryV1 } from '../../lib/dashboard/operate-review-workspace-projection-v2.mjs';
+import { createDashboardServer } from '../../lib/dashboard/server.mjs';
 import {
   assertDashboardBootstrapV1,
   validateDashboardBootstrapV1,
   validateProtocolArtifact,
 } from '../../lib/protocol/contracts.mjs';
 import { sha256Jcs } from '../../lib/protocol/jcs.mjs';
-import { validate } from '../../conformance/json-schema-validate.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, '../..');

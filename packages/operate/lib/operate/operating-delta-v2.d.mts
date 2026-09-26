@@ -1,14 +1,14 @@
 import type {
-  OperatingAssumptionV2,
   OperatingArtifactV2,
+  OperatingAssumptionV2,
   OperatingClaimV2,
   OperatingDecisionV2,
   OperatingDeltaV2,
   OperatingEvidenceRefV2,
+  OperatingLearningV2,
   OperatingMetricObservationV2,
   OperatingModelStateV2,
   OperatingOutcomeV2,
-  OperatingLearningV2,
   OperatingRiskV2,
   OperatingSnapshotV2,
 } from '@openplanr/protocol';

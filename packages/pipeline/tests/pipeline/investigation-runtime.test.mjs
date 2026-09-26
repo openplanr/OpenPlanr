@@ -3,8 +3,6 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-
-import { sha256Jcs } from '../../lib/protocol/jcs.mjs';
 import {
   assertInvestigationRequest,
   investigationArtifactId,
@@ -20,6 +18,7 @@ import {
   startStoredInvestigation,
   verifyStoredInvestigation,
 } from '../../lib/pipeline/investigation-runtime.mjs';
+import { sha256Jcs } from '../../lib/protocol/jcs.mjs';
 
 function fixture() {
   const root = mkdtempSync(join(tmpdir(), 'planr-investigation-'));

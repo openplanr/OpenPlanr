@@ -2,10 +2,10 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import {
-  CONTEXT_ENVELOPE_SCHEMA_VERSION,
-  GOVERNANCE_FIELDS,
   assertContextEnvelope,
   buildContextEnvelope,
+  CONTEXT_ENVELOPE_SCHEMA_VERSION,
+  GOVERNANCE_FIELDS,
   renderContextEnvelope,
 } from '../../lib/pipeline/context-envelope.mjs';
 

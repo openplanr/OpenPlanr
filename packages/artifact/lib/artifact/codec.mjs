@@ -1,6 +1,5 @@
-import { Deflate, Inflate } from 'pako';
-
 import { ARTIFACT_ERROR_CODES, PipelineError } from '@openplanr/protocol/errors';
+import { Deflate, Inflate } from 'pako';
 
 export const ARTIFACT_FRAGMENT_VERSION = 'v1';
 export const ARTIFACT_FRAGMENT_PREFIX = `${ARTIFACT_FRAGMENT_VERSION}.`;

@@ -4,7 +4,7 @@
  * can be revisited days later. Every write is schema-validated.
  */
 
-import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { assertValid } from '../design/schema-loader.mjs';

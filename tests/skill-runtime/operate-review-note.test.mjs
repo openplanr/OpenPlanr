@@ -7,6 +7,8 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import {
+  detectOperateReviewNoteContract,
+  inspectOperateReviewNote,
   OPERATE_ADVISOR_REVIEW_RUBRICS,
   OPERATE_REVIEW_CONTRACT,
   OPERATE_REVIEW_CONTRACT_V1,
@@ -14,8 +16,6 @@ import {
   OPERATE_REVIEW_CONTRACTS,
   OPERATE_REVIEW_NOTE_PROFILES,
   SkillRuntimeError,
-  detectOperateReviewNoteContract,
-  inspectOperateReviewNote,
   validateOperateReviewNote,
 } from '../../packages/skill-runtime/src/index.mjs';
 

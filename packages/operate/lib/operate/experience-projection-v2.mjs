@@ -1,9 +1,20 @@
-import { PipelineError } from '@openplanr/protocol/errors';
+import { sha256Jcs } from '@openplanr/protocol/canonical-json';
 import {
   assertOperateExperienceArtifactV2,
   assertProtocolArtifact,
 } from '@openplanr/protocol/contracts';
-import { sha256Jcs } from '@openplanr/protocol/canonical-json';
+import { PipelineError } from '@openplanr/protocol/errors';
+import { buildOperateExperienceLivePatchV2 } from '@openplanr/protocol/operate-experience-live-patch';
+import {
+  assertOperatingApprovalRequirementIntegrityV2,
+  consumeOperatingApprovalRecordsV2,
+  evaluateOperatingApprovalSetV2,
+} from './approvals-v2.mjs';
+import { applyOperatingReviewWorkDispositionsV2 } from './cycle-closure-v2.mjs';
+import { readOperatingExecutiveBoardV2 } from './executive-board-compatibility-v2.mjs';
+import { buildExecutiveBoardForCycle } from './executive-board-projection-v2.mjs';
+import { OPERATING_INTELLIGENCE_NOT_SELECTED_ABSENCE } from './intelligence-router-v2.mjs';
+import { promotePersistentOperatingActionAuthorityV2 } from './persistent-work-v2.mjs';
 import {
   assertOperatingExecuteDispatchAuthorityChainV2,
   assertOperatingExecuteOperationV2,
@@ -14,21 +25,10 @@ import {
   verifyOperatingRuntimeEventChainV2,
 } from './runtime-foundation.mjs';
 import {
-  assertOperatingApprovalRequirementIntegrityV2,
-  consumeOperatingApprovalRecordsV2,
-  evaluateOperatingApprovalSetV2,
-} from './approvals-v2.mjs';
-import { promotePersistentOperatingActionAuthorityV2 } from './persistent-work-v2.mjs';
-import { applyOperatingReviewWorkDispositionsV2 } from './cycle-closure-v2.mjs';
-import {
   deriveOperatingIntelligenceAssignmentIdV2,
-  resolveOperatingAssignmentInputArtifactIdsV2,
   resolveOperatingAssignmentInputAbsencesV2,
+  resolveOperatingAssignmentInputArtifactIdsV2,
 } from './scheduler-v2.mjs';
-import { OPERATING_INTELLIGENCE_NOT_SELECTED_ABSENCE } from './intelligence-router-v2.mjs';
-import { buildExecutiveBoardForCycle } from './executive-board-projection-v2.mjs';
-import { readOperatingExecutiveBoardV2 } from './executive-board-compatibility-v2.mjs';
-import { buildOperateExperienceLivePatchV2 } from '@openplanr/protocol/operate-experience-live-patch';
 import { assertOperatingTraceMatrixV2 } from './trace-matrix-v2.mjs';
 
 const PROTOCOL_VERSION = '2.0.0';

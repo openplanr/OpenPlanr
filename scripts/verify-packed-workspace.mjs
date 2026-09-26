@@ -3,9 +3,9 @@
 import * as childProcess from 'node:child_process';
 import * as crypto from 'node:crypto';
 import * as fs from 'node:fs';
+import { createRequire } from 'node:module';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 
 import { createInstalledExportProbePlan } from '../packages/cli/scripts/package-contract.mjs';

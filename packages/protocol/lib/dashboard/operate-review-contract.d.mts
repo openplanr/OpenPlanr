@@ -3,13 +3,12 @@ import type {
   OperatingReviewReceiptV2,
 } from '../protocol/index.js';
 
-export { assertOperateReviewDisplayWorkspaceV1 } from './operate-review-display-workspace-contract.mjs';
-
 export type {
   OperateReviewDisplayWorkspaceExpectedBindingV1,
   OperateReviewDisplayWorkspaceIntegrityV1,
   OperateReviewDisplayWorkspaceV1,
 } from './operate-review-display-workspace-contract.mjs';
+export { assertOperateReviewDisplayWorkspaceV1 } from './operate-review-display-workspace-contract.mjs';
 
 export type { OperateReviewBoundSubmissionV1, OperatingReviewReceiptV2 };
 

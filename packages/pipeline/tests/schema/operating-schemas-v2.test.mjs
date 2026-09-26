@@ -1,18 +1,9 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { readFileSync, readdirSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { test } from 'node:test';
 
 import {
-  OPERATE_EXPERIENCE_CONTRACT_KINDS_V2,
-  OPERATE_EXTENSION_CONTRACT_KINDS_V2,
-  OPERATE_EVIDENCE_CONTRACT_KINDS_V2,
-  OPERATE_OPERATING_INTELLIGENCE_CONTRACT_KINDS_V2,
-  OPERATE_OPERATING_PROJECTION_IDENTITIES_V2,
-  OPERATE_PUBLIC_DOMAIN_CONTRACT_BINDINGS_V2,
-  OPERATE_ROLE_MANDATES_V2,
-  OPERATE_RUNTIME_CONTRACT_KINDS,
-  OPERATE_RUNTIME_PROTOCOL_VERSION,
   assertOperateIntelligencePlanContractV2,
   assertOperateRuntimeBindingsV2,
   assertProtocolArtifact,
@@ -20,6 +11,15 @@ import {
   loadOperateExperienceContract,
   loadOperateExtensionContract,
   loadOperateRuntimeContract,
+  OPERATE_EVIDENCE_CONTRACT_KINDS_V2,
+  OPERATE_EXPERIENCE_CONTRACT_KINDS_V2,
+  OPERATE_EXTENSION_CONTRACT_KINDS_V2,
+  OPERATE_OPERATING_INTELLIGENCE_CONTRACT_KINDS_V2,
+  OPERATE_OPERATING_PROJECTION_IDENTITIES_V2,
+  OPERATE_PUBLIC_DOMAIN_CONTRACT_BINDINGS_V2,
+  OPERATE_ROLE_MANDATES_V2,
+  OPERATE_RUNTIME_CONTRACT_KINDS,
+  OPERATE_RUNTIME_PROTOCOL_VERSION,
   readOperatingRuntimeStateV2,
   validateProtocolArtifact,
 } from 'planr-pipeline/protocol';

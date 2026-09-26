@@ -14,9 +14,8 @@ import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve, sep } from 'node:path';
 import { performance } from 'node:perf_hooks';
-import { pathToFileURL } from 'node:url';
-import { fileURLToPath } from 'node:url';
 import { after, before, test } from 'node:test';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 assert.equal(

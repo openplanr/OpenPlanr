@@ -1,16 +1,16 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, readdirSync, writeFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import { designFixture } from './design-fixture.mjs';
 import {
+  currentDesign,
   prepareDesignDocument,
   renderDesignDocument,
-  currentDesign,
 } from '../lib/design/document.mjs';
-import { startDesignReview, saveDesignState } from '../lib/design/review.mjs';
+import { saveDesignState, startDesignReview } from '../lib/design/review.mjs';
 import { verifyDesignDocument } from '../lib/design/utility.mjs';
+import { designFixture } from './design-fixture.mjs';
 
 function fixture(t, options) {
   const root = mkdtempSync(join(tmpdir(), 'planr-design-'));

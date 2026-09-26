@@ -1,9 +1,9 @@
 import type {
   OperatingArtifactV2,
+  OperatingEventV2,
   OperatingExecutionResultV2,
   OperatingGovernedOperationV2,
   OperatingRuntimeStateV2,
-  OperatingEventV2,
 } from '@openplanr/protocol';
 import type { OperatingArtifactByteStoreV2 } from './evidence-materialization-v2.d.mts';
 import type { OperateGovernedExtensionRegistryV2 } from './governed-extensions-v2.d.mts';

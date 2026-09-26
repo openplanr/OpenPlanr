@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-import { createRequire } from 'node:module';
 import { existsSync, lstatSync, readdirSync, readFileSync, realpathSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 

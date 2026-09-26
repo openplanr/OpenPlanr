@@ -1,26 +1,25 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
-
+import { createOperatingResultTemplateV2 } from '../../lib/operate/result-packet-v2.mjs';
 import {
   acceptOperatingAssignmentSubmissionV2,
   createNoModelReplayHookV2,
   createOperatingRuntimeEventV2,
   deriveOperatingChairLedgerIdV2,
   deriveOperatingRuntimeDeltaV2,
+  deriveOperatingVerificationFeedbackV2,
   materializeOperatingActionVerificationV2,
   materializeOperatingDecisionLedgerV2,
   materializeOperatingStateSnapshotV2,
   planOperatingRuntimeIntelligenceBoardV2,
   preflightOperatingAssignmentResultV2,
-  recordOperatingActionVerificationOutcomeV2,
-  recordOperatingIntelligenceStateV2,
   readOperatingArtifactRawBytesV2,
   reconstructOperatingVerificationPlanActionV2,
+  recordOperatingActionVerificationOutcomeV2,
+  recordOperatingIntelligenceStateV2,
   reduceOperatingRuntimeEventsV2,
-  deriveOperatingVerificationFeedbackV2,
 } from '../../lib/operate/runtime-foundation.mjs';
-import { createOperatingResultTemplateV2 } from '../../lib/operate/result-packet-v2.mjs';
 import { sha256Jcs } from '../../lib/protocol/jcs.mjs';
 import { checkpoint } from './operate-operating-intelligence-state-v2.test-support.mjs';
 

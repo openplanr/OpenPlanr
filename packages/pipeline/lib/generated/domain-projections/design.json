@@ -7,13 +7,13 @@
     {
       "source": "packages/design/lib/design-engine/artifact-adapter.mjs",
       "target": "lib/design-engine/artifact-adapter.mjs",
-      "sha256": "40e8dfa83490c46643b9b918a15746f2e6f9c09056dc24687e466f2c92da4060",
+      "sha256": "403fdb1f1bdcfc6a8d7b148729f08d42cc6967315318882c73e918a81c2759dd",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design-engine/auth.mjs",
       "target": "lib/design-engine/auth.mjs",
-      "sha256": "dbe9bc032bbc9ce34e7ba8fe9b7147cac0faccb25d5deb0c5268d4ba9d184596",
+      "sha256": "ecd38e086179e23cb43ad1bc175c6cb06fba44fa1874398249791036ed71a8f0",
       "mode": "644"
     },
     {
@@ -43,13 +43,13 @@
     {
       "source": "packages/design/lib/design-engine/cli.mjs",
       "target": "lib/design-engine/cli.mjs",
-      "sha256": "acc22d3b49ddc70f90655d5a46752cb807d100657f64710881984a3df8101998",
+      "sha256": "b141710025c8631a859c8f701027bac84aa635adda151b8fb60f0efc0b5184db",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design-engine/daemon.mjs",
       "target": "lib/design-engine/daemon.mjs",
-      "sha256": "2353b4c2fc8564857444169f42c8c289f37eb717e004f9375b7cda7657cb9f6f",
+      "sha256": "02965007d9e67ebbf8a978380ed52216caf83cdbcb3bcda29707d9b33f6a3377",
       "mode": "644"
     },
     {
@@ -73,13 +73,13 @@
     {
       "source": "packages/design/lib/design-engine/providers/index.mjs",
       "target": "lib/design-engine/providers/index.mjs",
-      "sha256": "83bd906447caac5f5936f64987b6c051ecfdb1c8bd6f49077a935f8f41b5539f",
+      "sha256": "31868183f39c529a21eee620d582c0e42f1e6db54f1dc55c66ac9ba1d32dec08",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design-engine/providers/openai.mjs",
       "target": "lib/design-engine/providers/openai.mjs",
-      "sha256": "a1107f9897978a03bc6abacb0d559a33ee600e731f66a034633c502f7ff13650",
+      "sha256": "e0a488d05683383517f48ed80ceb65413fdb26f2c2f82af43846d48d1ab29891",
       "mode": "644"
     },
     {
@@ -91,7 +91,7 @@
     {
       "source": "packages/design/lib/design-engine/session.mjs",
       "target": "lib/design-engine/session.mjs",
-      "sha256": "ee5fbdb401cebdbc5c553db3e058fb11d57c71b0be267927f3de8980bb0f5c69",
+      "sha256": "7f5c50f13f72edf1c00b4774d4cbde481b0aff0b61ee13475032085952d6e470",
       "mode": "644"
     },
     {
@@ -115,13 +115,13 @@
     {
       "source": "packages/design/lib/design/company-publication.mjs",
       "target": "lib/design/company-publication.mjs",
-      "sha256": "3a4755b225fd01024cc9741709ad09d22a5e271e3408569237dd1998adb53565",
+      "sha256": "36d0f6d4152ff5c50f037e0f7845e3a7f168108d2684ea07b541a70932908d83",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design/context.mjs",
       "target": "lib/design/context.mjs",
-      "sha256": "090beb7c0f72a1c0f67b6db81ff335de108530dfb217e94fded5e1352ad5f378",
+      "sha256": "942c9cd1b6361d34d9c4c78e18ec00d103e4aa0fbb3b66bba5b273a72260ab32",
       "mode": "644"
     },
     {
@@ -199,19 +199,19 @@
     {
       "source": "packages/design/lib/design/handoff.mjs",
       "target": "lib/design/handoff.mjs",
-      "sha256": "c0219fc51139ed1ae4a05013fe82b97227759445de2aed353ee8ae0911cbc0b0",
+      "sha256": "c67a08e49bc0ce94e3b19fc9be3f600bfd427d558d1726e4d9e85f0f6082912c",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design/implementation-handoff-approval.d.mts",
       "target": "lib/design/implementation-handoff-approval.d.mts",
-      "sha256": "cf21b02d448222b4b2b9581612c6ec9f431a23c43dac5ee5076598401d5ca16f",
+      "sha256": "9f628fd7ecadae22d746fa362114ff60b87961aa43fa956fb6d8c62fc7e25b4a",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design/implementation-handoff-approval.mjs",
       "target": "lib/design/implementation-handoff-approval.mjs",
-      "sha256": "757bb1e2dc4c0365ee35875737d889f653c0798ceb851cd145f65716bf7617a6",
+      "sha256": "fc3ef47a8b75271dc8ecd0a6c757cf332b7bd72b988bd6449f9ec4c2c2d7566f",
       "mode": "644"
     },
     {
@@ -235,7 +235,7 @@
     {
       "source": "packages/design/lib/design/index.mjs",
       "target": "lib/design/index.mjs",
-      "sha256": "43c9e46e6f5222742ea2a1dc08c2e7de7e44b8671480dff36830c408233fd1c6",
+      "sha256": "5607b05012c11cd7f094d8f6baa9c928f290c0e17011fe70ba4a192ac1ccb26e",
       "mode": "644"
     },
     {
@@ -247,7 +247,7 @@
     {
       "source": "packages/design/lib/design/lint.mjs",
       "target": "lib/design/lint.mjs",
-      "sha256": "fd6b316fc177e6b051e8fa2890d620c41560321608c4a56b1a793401645a9678",
+      "sha256": "07e3905d8012686d0f2cc515975b58b0a155ead0aa1c1f2c4fae49ff5471ab76",
       "mode": "644"
     },
     {
@@ -277,13 +277,13 @@
     {
       "source": "packages/design/lib/design/review-export.mjs",
       "target": "lib/design/review-export.mjs",
-      "sha256": "3ec8795ba4968d62ea99d747c5b958d675a4ed73fe9187ed3391ae2c9671e0da",
+      "sha256": "35de3f0cccf58c0bac2c13bb7998b5179cbb855336e97beb2c601c733336e01d",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design/review.mjs",
       "target": "lib/design/review.mjs",
-      "sha256": "5d252a6e75575799e8046e9cfc265ce00f672cb96b54fe456b141768bed0d710",
+      "sha256": "1ad03dabd01b04e09ef6869db2214b855f5dd7bb3a819bacce02a88cb4f7eab1",
       "mode": "644"
     },
     {
@@ -301,7 +301,7 @@
     {
       "source": "packages/design/lib/design/share.mjs",
       "target": "lib/design/share.mjs",
-      "sha256": "f5e7be50e0b1f22edaa88fdaf79af48606ac446a01f7474828aadabe7f15d7ad",
+      "sha256": "7be306466441a86df5d20177e204dde41cc5b227a04d58ce8edea94dee72e1b0",
       "mode": "644"
     },
     {
@@ -313,7 +313,7 @@
     {
       "source": "packages/design/lib/design/studio.mjs",
       "target": "lib/design/studio.mjs",
-      "sha256": "5dbea356119f9fc23a1c5afcdbeb5e8cfae5a8f4f260168c3c359d2884891062",
+      "sha256": "ae1a890447b26d203ba0053729372f7a3a85970b586f44a7b4b53eea75c875f0",
       "mode": "644"
     },
     {
@@ -325,7 +325,7 @@
     {
       "source": "packages/design/lib/design/utility.mjs",
       "target": "lib/design/utility.mjs",
-      "sha256": "d33fc5cbaa2cca97e5f2f6ebb311a4a36fa68a81fa1ef88a8e8489dabc675838",
+      "sha256": "dced57f485f30d3f0b2661525fd1e2009766da99cbc3883bd6ea065121c8b006",
       "mode": "644"
     },
     {
@@ -337,13 +337,13 @@
     {
       "source": "packages/design/lib/design/workspace-client.mjs",
       "target": "lib/design/workspace-client.mjs",
-      "sha256": "273409fb76bef0627bde86ad55eba60d71439e98e3334f9f7728f0e75d98a14f",
+      "sha256": "7f53d2146c8634e6f5911871cfb824252c57ac5fd05ea92337e36d4644524c3f",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design/workspace-feedback.mjs",
       "target": "lib/design/workspace-feedback.mjs",
-      "sha256": "2153749ded66c011ab56788359d0cbe2772895c17d14273edc63721a8460427d",
+      "sha256": "495c78ea28cfc25d6be51ae915c963ef19b0a7f9690dffcd1cd940eff135f5d2",
       "mode": "644"
     },
     {

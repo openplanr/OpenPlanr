@@ -1,14 +1,14 @@
 import {
   clone,
-  same,
-  failure,
-  inspectPlainData,
-  validateAuthoringBundle,
-  elementIndex,
-  parentIndex,
   descendants,
+  elementIndex,
+  failure,
   geometryFields,
+  inspectPlainData,
+  parentIndex,
+  same,
   snapshot,
+  validateAuthoringBundle,
 } from './model.mjs';
 import { previewDiagramTransaction } from './transactions.mjs';
 

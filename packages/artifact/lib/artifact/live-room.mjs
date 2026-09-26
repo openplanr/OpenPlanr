@@ -1,3 +1,4 @@
+import { ARTIFACT_ERROR_CODES, PipelineError } from '@openplanr/protocol/errors';
 import {
   ARTIFACT_COMPRESSED_LIMIT,
   bytesToBase64Url,
@@ -19,10 +20,9 @@ import {
   exportLiveRoomSignerSecret,
   importLiveRoomSignerSecret,
   normalizeLiveRoomDescriptor,
-  verifySignedLiveRoomEvent,
   verifyLiveRoomEventChain,
+  verifySignedLiveRoomEvent,
 } from './live-room-integrity.mjs';
-import { ARTIFACT_ERROR_CODES, PipelineError } from '@openplanr/protocol/errors';
 
 export const ARTIFACT_ROOM_VERSION = 'v1';
 export const ARTIFACT_ROOM_EVENT_KINDS = Object.freeze([

@@ -3,8 +3,8 @@ import test from 'node:test';
 
 import { createOperatingGovernedExecutionRuntimeV2 } from '../../lib/operate/governed-execution-v2.mjs';
 import {
-  OPEN_REFERENCE_PROJECT_EXECUTOR_HOST_V2,
   createDisposableLocalProjectTargetV2,
+  OPEN_REFERENCE_PROJECT_EXECUTOR_HOST_V2,
 } from '../../lib/operate/reference-governed-executors-v2.mjs';
 import { sha256Jcs } from '../../lib/protocol/jcs.mjs';
 import {

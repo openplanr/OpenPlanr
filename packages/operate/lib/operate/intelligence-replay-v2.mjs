@@ -1,7 +1,7 @@
 import { sha256Jcs } from '@openplanr/protocol/canonical-json';
 import {
-  resolveOperatingAssignmentInputArtifactIdsV2,
   resolveOperatingAssignmentInputAbsencesV2,
+  resolveOperatingAssignmentInputArtifactIdsV2,
 } from './scheduler-v2.mjs';
 
 const clone = (value) => structuredClone(value);

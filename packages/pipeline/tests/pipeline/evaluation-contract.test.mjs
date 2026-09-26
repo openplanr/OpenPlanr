@@ -3,11 +3,6 @@ import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 
 import {
-  EVALUATION_GATE_THRESHOLDS,
-  EVALUATION_METRICS,
-  EVALUATION_PROTOCOL_VERSION,
-  EVALUATION_SCHEMA_VERSION,
-  EVALUATION_WAIVABLE_METRICS,
   assertEvaluationAggregateReport,
   assertEvaluationBudget,
   assertEvaluationCorpus,
@@ -22,10 +17,15 @@ import {
   assertEvaluationScenario,
   assertEvaluationWaiver,
   assertSkillCertificationReceipt,
+  EVALUATION_GATE_THRESHOLDS,
+  EVALUATION_METRICS,
+  EVALUATION_PROTOCOL_VERSION,
+  EVALUATION_SCHEMA_VERSION,
+  EVALUATION_WAIVABLE_METRICS,
 } from '../../lib/pipeline/evaluation-contract.mjs';
 import {
-  EVALUATION_IDENTITY_BINDINGS,
   deriveEvaluationIdentity,
+  EVALUATION_IDENTITY_BINDINGS,
   evaluationContentDigest,
 } from '../../lib/pipeline/evaluation-identity.mjs';
 import { validateProtocolArtifact } from '../../lib/protocol/contracts.mjs';

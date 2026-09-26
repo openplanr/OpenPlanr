@@ -5,6 +5,10 @@ import test from 'node:test';
 
 import { verifyDocumentDigest } from '../../packages/protocol/src/canonical-json.mjs';
 import {
+  resolveProtocolSchema,
+  validateProtocolArtifact,
+} from '../../packages/protocol/src/contracts.mjs';
+import {
   DIAGRAM_CONTRACT_FILES,
   DIAGRAM_GRAMMAR_REGISTRY,
   DIAGRAM_SEMANTIC_PATTERN_REGISTRY,
@@ -12,10 +16,6 @@ import {
   diagramDocumentPath,
   getDiagramGrammar,
 } from '../../packages/protocol/src/diagram-contracts.mjs';
-import {
-  resolveProtocolSchema,
-  validateProtocolArtifact,
-} from '../../packages/protocol/src/contracts.mjs';
 
 const root = resolve(import.meta.dirname, '..', '..');
 const protocol = join(root, 'packages', 'protocol');

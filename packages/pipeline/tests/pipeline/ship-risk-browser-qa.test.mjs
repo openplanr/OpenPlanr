@@ -1,7 +1,15 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { test } from 'node:test';
-
+import {
+  assertBrowserQaRecordedEventAuthority,
+  issueBrowserQaRecordedEvent,
+} from '../../lib/pipeline/browser-qa.mjs';
+import {
+  attestBrowserQaEvidence,
+  createTrustedBrowserQaRuntimeHost,
+  establishBrowserQaRuntimeCapability,
+} from '../../lib/pipeline/browser-qa-custody.mjs';
 import * as publicPipeline from '../../lib/pipeline/index.mjs';
 import {
   assertBrowserQaGateRecord,
@@ -13,15 +21,6 @@ import {
   shipReviewSpecialistRegistry,
 } from '../../lib/pipeline/index.mjs';
 import { sha256Jcs } from '../../lib/protocol/jcs.mjs';
-import {
-  attestBrowserQaEvidence,
-  createTrustedBrowserQaRuntimeHost,
-  establishBrowserQaRuntimeCapability,
-} from '../../lib/pipeline/browser-qa-custody.mjs';
-import {
-  assertBrowserQaRecordedEventAuthority,
-  issueBrowserQaRecordedEvent,
-} from '../../lib/pipeline/browser-qa.mjs';
 
 const digest = (value) => sha256Jcs(value);
 const digestBytes = (value) => `sha256:${createHash('sha256').update(value).digest('hex')}`;

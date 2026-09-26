@@ -1,7 +1,7 @@
 export {
-  IntegrationError,
   executeGitHubOperations,
   executeLinearOperations,
+  IntegrationError,
   inspectGitHub,
   inspectLinear,
   isLikelyLinearIssueId,

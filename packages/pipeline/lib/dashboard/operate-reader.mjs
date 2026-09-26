@@ -82,12 +82,11 @@ export function readOperatingProjection(
   return result('ready', { state });
 }
 
-export {
-  CHECKPOINT_RELATIVE_PATH as OPERATING_CHECKPOINT_RELATIVE_PATH,
-  DEFAULT_MAX_BYTES as OPERATING_PROJECTION_MAX_BYTES,
-};
-
 // Product routes consume the already actor/access-safe public view through the
 // sibling reader. Re-exporting keeps dashboard callers on one read-only module
 // boundary without teaching the legacy technical projection about presentation.
 export { readOperateExperienceProjection } from './operate-experience-reader.mjs';
+export {
+  CHECKPOINT_RELATIVE_PATH as OPERATING_CHECKPOINT_RELATIVE_PATH,
+  DEFAULT_MAX_BYTES as OPERATING_PROJECTION_MAX_BYTES,
+};

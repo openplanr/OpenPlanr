@@ -44,12 +44,12 @@
     {
       "path": "templates/design/design-board-adapter.js",
       "bytes": 191054,
-      "sha256": "eecfbe796c1ffe000884660995513b561ce999a1ac3f0c9ed408c3819d9adf0c"
+      "sha256": "ec4864304c4e67b2e1518799109e68691327d468539cf900ad1c496e524d87e9"
     },
     {
       "path": "templates/diagram-owner.js",
-      "bytes": 540614,
-      "sha256": "c44b84ab77a8993d8582d2bf01f9a867096c5350c6ec1b2f77cd4be821ed9ff5"
+      "bytes": 540605,
+      "sha256": "775e1f0e4760b12c5b1fac39b22969570230a0a20d268421978dacd974e5505f"
     },
     {
       "path": "templates/diagram-studio.js",

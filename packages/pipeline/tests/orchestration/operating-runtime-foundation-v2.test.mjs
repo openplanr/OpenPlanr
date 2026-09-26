@@ -2,38 +2,37 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
-
 import {
-  OPERATE_GUARD_TABLE_V2,
-  computeOperatingRuntimeEventHashV2,
+  consumeOperatingApprovalRecordsV2,
+  createOperatingApprovalRecordV2,
+  createOperatingApprovalRequirementV2,
+} from '../../lib/operate/approvals-v2.mjs';
+import { derivePersistentOperatingActionRevisionHashV2 } from '../../lib/operate/persistent-work-v2.mjs';
+import {
+  createOperatingActionPolicyV2,
+  evaluateOperatingActionPolicyV2,
+} from '../../lib/operate/policy-v2.mjs';
+import {
   acceptOperatingAssignmentSubmissionV2,
   claimOperatingAssignmentV2,
-  createOperatingArtifactByteStoreV2,
-  createOperateFailureEnvelopeV2,
+  computeOperatingRuntimeEventHashV2,
   createEmptyOperatingRuntimeStateV2,
   createNoModelReplayHookV2,
+  createOperateFailureEnvelopeV2,
+  createOperatingArtifactByteStoreV2,
   createOperatingRuntimeEventV2,
   deriveOperateAllowedActionsV2,
   evaluateOperateGuardV2,
+  OPERATE_GUARD_TABLE_V2,
   promoteOperatingActionAuthorityV2,
   readOperatingArtifactV2,
   reduceOperatingRuntimeEventsV2,
   transitionOperatingAssignmentV2,
   verifyOperatingRuntimeEventChainV2,
 } from '../../lib/operate/runtime-foundation.mjs';
+import { deriveOperatingAssignmentReleaseIntentsV2 } from '../../lib/operate/scheduler-v2.mjs';
 import { assertProtocolArtifact } from '../../lib/protocol/contracts.mjs';
 import { sha256Jcs } from '../../lib/protocol/jcs.mjs';
-import { deriveOperatingAssignmentReleaseIntentsV2 } from '../../lib/operate/scheduler-v2.mjs';
-import {
-  consumeOperatingApprovalRecordsV2,
-  createOperatingApprovalRecordV2,
-  createOperatingApprovalRequirementV2,
-} from '../../lib/operate/approvals-v2.mjs';
-import {
-  createOperatingActionPolicyV2,
-  evaluateOperatingActionPolicyV2,
-} from '../../lib/operate/policy-v2.mjs';
-import { derivePersistentOperatingActionRevisionHashV2 } from '../../lib/operate/persistent-work-v2.mjs';
 
 const TIME = '2026-08-08T08:00:00.000Z';
 const NEXT_TIME = '2026-08-08T08:01:00.000Z';

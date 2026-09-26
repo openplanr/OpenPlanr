@@ -3,7 +3,8 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'no
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, test } from 'node:test';
-
+import { digestArtifactEnvelope } from '../../lib/artifact/envelope.mjs';
+import { createArtifactReview } from '../../lib/artifact/review.mjs';
 import { createDesignBoardArtifactEnvelope } from '../../lib/design-engine/artifact-adapter.mjs';
 import {
   DESIGN_BOARD_ENVELOPE_FILE,
@@ -11,8 +12,6 @@ import {
   renderBoardHtml,
 } from '../../lib/design-engine/board.mjs';
 import { createDaemon, daemonControlHeaders } from '../../lib/design-engine/daemon.mjs';
-import { digestArtifactEnvelope } from '../../lib/artifact/envelope.mjs';
-import { createArtifactReview } from '../../lib/artifact/review.mjs';
 
 const roots = [];
 const daemons = [];

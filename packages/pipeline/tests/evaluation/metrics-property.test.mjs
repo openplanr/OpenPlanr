@@ -2,11 +2,11 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
-  EVALUATION_BASIS_POINTS,
   aggregateMeasurements,
   assertEvaluationBaseline,
   basisPoints,
   deriveTriggerCounts,
+  EVALUATION_BASIS_POINTS,
   estimateCostMicros,
   estimateTokens,
   evaluationBaselineDigest,

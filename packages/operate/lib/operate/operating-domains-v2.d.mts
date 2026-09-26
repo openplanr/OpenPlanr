@@ -1,8 +1,8 @@
 import type {
+  OperateDomainRegistrationV2,
   OperatingArtifactV2,
   OperatingModelStateV2,
   OperatingSnapshotV2,
-  OperateDomainRegistrationV2,
 } from '@openplanr/protocol';
 import type { OperateExtensionRegistryV2 } from './extensions-v2.d.mts';
 

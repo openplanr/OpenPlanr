@@ -1,22 +1,22 @@
 import {
-  validateDiagramEditTransaction,
   diagramDocumentDigest,
+  validateDiagramEditTransaction,
 } from '@openplanr/protocol/diagram-authoring-contracts';
-import {
-  clone,
-  same,
-  diagnostic,
-  failure,
-  validateAuthoringBundle,
-  snapshot,
-  elementIndex,
-  semanticFields,
-  geometryFields,
-  appearanceFields,
-  membershipState,
-  sealBundle,
-} from './model.mjs';
 import { diffDiagramBundles, inverseDependencies, sourceMapChanges } from './diff.mjs';
+import {
+  appearanceFields,
+  clone,
+  diagnostic,
+  elementIndex,
+  failure,
+  geometryFields,
+  membershipState,
+  same,
+  sealBundle,
+  semanticFields,
+  snapshot,
+  validateAuthoringBundle,
+} from './model.mjs';
 
 function precondition(actual, expected, path, diagnostics) {
   if (same(actual, expected)) return true;

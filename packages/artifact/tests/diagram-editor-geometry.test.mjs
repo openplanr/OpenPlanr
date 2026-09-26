@@ -1,17 +1,17 @@
-import test from 'node:test';
 import assert from 'node:assert/strict';
+import test from 'node:test';
 import {
   makeBundle,
   placement,
   sealBundle,
 } from '../../../tests/protocol/fixtures/diagram-authoring.mjs';
-import { mixedBundle } from './fixtures/diagram-editor-capacity.mjs';
-import { createDiagramGeometryIndex } from '../lib/artifact/diagram/editor/geometry-index.mjs';
 import {
   compileDiagramCommand,
   resolveDiagramScene,
 } from '../lib/artifact/diagram/authoring/index.mjs';
 import { geometryFields } from '../lib/artifact/diagram/authoring/model.mjs';
+import { createDiagramGeometryIndex } from '../lib/artifact/diagram/editor/geometry-index.mjs';
+import { mixedBundle } from './fixtures/diagram-editor-capacity.mjs';
 
 const accepted = (result) => {
   assert.equal(result.ok, true, JSON.stringify(result.diagnostics));

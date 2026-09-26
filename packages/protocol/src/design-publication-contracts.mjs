@@ -1,6 +1,7 @@
 /** Company publication constraints over the existing, compatible review bundle. */
-import { assertDesignReviewBundle } from './review-experience-contracts.mjs';
+
 import { canonicalizeJson, sha256Hex } from './canonical-json.mjs';
+import { assertDesignReviewBundle } from './review-experience-contracts.mjs';
 
 export const COMPANY_DESIGN_MAX_BYTES = 1024 * 1024;
 export const COMPANY_DESIGN_MAX_ENTRIES = 256;

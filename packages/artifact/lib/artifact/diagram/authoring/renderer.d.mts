@@ -1,7 +1,7 @@
 import type {
+  DiagramAppearance,
   DiagramAuthoringBundle,
   DiagramAuthoringValidationError,
-  DiagramAppearance,
 } from '@openplanr/protocol/diagram-authoring-contracts';
 import type { AuthoredDiagramScene, DiagramSceneQuality } from './scene.mjs';
 

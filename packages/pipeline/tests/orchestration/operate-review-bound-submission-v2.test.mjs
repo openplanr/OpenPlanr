@@ -1,7 +1,5 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-
-import { sha256Jcs } from '../../lib/protocol/jcs.mjs';
 import {
   assertOperatingReviewBoundSubmissionV1,
   buildOperatingReviewBoundSubmissionV1,
@@ -11,6 +9,7 @@ import {
   readOperatingReviewV2,
   submitBoundOperatingReviewV2,
 } from '../../lib/operate/runtime-foundation.mjs';
+import { sha256Jcs } from '../../lib/protocol/jcs.mjs';
 
 const TIME = '2026-08-23T08:00:00.000Z';
 const COMMIT_TIME = '2026-08-23T08:01:00.000Z';

@@ -5,13 +5,13 @@ import {
   buildRegistries,
   buildSchemas,
 } from '../../packages/protocol/scripts/protocol-definitions.mjs';
+import { validateProtocolArtifact } from '../../packages/protocol/src/contracts.mjs';
 import { ProtocolError } from '../../packages/protocol/src/errors.mjs';
 import {
   getOutputPathTemplate,
   resolveOutputPath,
   validateCanonicalRegistries,
 } from '../../packages/protocol/src/registries.mjs';
-import { validateProtocolArtifact } from '../../packages/protocol/src/contracts.mjs';
 
 const registries = Object.fromEntries(buildRegistries());
 const outputs = registries['outputs.json'].outputs;

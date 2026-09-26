@@ -1,32 +1,45 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
-
+import { runOperatingIntelligenceJourneyV2 } from '../../conformance/verify-operate-v2-operating-intelligence.mjs';
+import { assertOperateExperienceTransportView } from '../../lib/dashboard/operate-experience-reader.mjs';
+import { createOperatingApprovalRequirementV2 } from '../../lib/operate/approvals-v2.mjs';
 import {
   applyOperateExperienceLivePatchV2,
   buildOperateExperienceLivePatchV2,
   buildOperateExperienceViewV2,
-  createOperateExperienceReplayCheckpointV2,
   createOperateExperiencePreviewV1,
+  createOperateExperienceReplayCheckpointV2,
   rankOperateAttentionV2,
 } from '../../lib/operate/experience-projection-v2.mjs';
+import { createOperatingGovernedExecutionRuntimeV2 } from '../../lib/operate/governed-execution-v2.mjs';
+import {
+  buildOperatingRollbackPlanV2,
+  createOperatingGovernedRecoveryRuntimeV2,
+  reconcileOperatingGovernedDispatchV2,
+  recordOperatingRollbackPlanV2,
+} from '../../lib/operate/governed-recovery-v2.mjs';
+import {
+  deriveOperatingChairLedgerIdV2,
+  deriveOperatingRoleLocalClaimIdV2,
+} from '../../lib/operate/intelligence-output-identities-v2.mjs';
+import {
+  derivePersistentOperatingActionRevisionHashV2,
+  promotePersistentOperatingActionAuthorityV2,
+} from '../../lib/operate/persistent-work-v2.mjs';
 import {
   assertOperatingDeliveryRouteRevisionV1,
-  buildOperatingPlanningProposalV1,
   buildOperatingDeliveryEvidenceV1,
+  buildOperatingPlanningProposalV1,
   confirmOperatingPlanningProposalV1,
   createOperatingDeliveryRouteV1,
   createOperatingOriginV1,
 } from '../../lib/operate/planning-bridge-v2.mjs';
-import { assertProtocolArtifact } from '../../lib/protocol/contracts.mjs';
-import { sha256Jcs } from '../../lib/protocol/jcs.mjs';
+import { evaluateOperatingActionPolicyV2 } from '../../lib/operate/policy-v2.mjs';
 import {
-  readOperateExperienceViewV1,
-  readOperatingDeliveryEvidenceV1,
-  readOperatingOriginV1,
-  readOperatingPlanningProposalV1,
-} from '../../lib/protocol/loader.mjs';
-import { assertOperateExperienceTransportView } from '../../lib/dashboard/operate-experience-reader.mjs';
+  createDisposableLocalProjectTargetV2,
+  OPEN_REFERENCE_PROJECT_EXECUTOR_HOST_V2,
+} from '../../lib/operate/reference-governed-executors-v2.mjs';
 import {
   computeOperatingRuntimeEventHashV2,
   deriveOperatingSnapshotRuntimeHashV2,
@@ -36,35 +49,21 @@ import {
   reconstructOperatingVerificationPlanActionV2,
   submitOperatingReviewV2,
 } from '../../lib/operate/runtime-foundation.mjs';
+import { assertProtocolArtifact } from '../../lib/protocol/contracts.mjs';
+import { sha256Jcs } from '../../lib/protocol/jcs.mjs';
 import {
-  deriveOperatingChairLedgerIdV2,
-  deriveOperatingRoleLocalClaimIdV2,
-} from '../../lib/operate/intelligence-output-identities-v2.mjs';
-import { createOperatingGovernedExecutionRuntimeV2 } from '../../lib/operate/governed-execution-v2.mjs';
-import { createOperatingApprovalRequirementV2 } from '../../lib/operate/approvals-v2.mjs';
-import { evaluateOperatingActionPolicyV2 } from '../../lib/operate/policy-v2.mjs';
-import {
-  derivePersistentOperatingActionRevisionHashV2,
-  promotePersistentOperatingActionAuthorityV2,
-} from '../../lib/operate/persistent-work-v2.mjs';
-import {
-  buildOperatingRollbackPlanV2,
-  createOperatingGovernedRecoveryRuntimeV2,
-  reconcileOperatingGovernedDispatchV2,
-  recordOperatingRollbackPlanV2,
-} from '../../lib/operate/governed-recovery-v2.mjs';
-import {
-  OPEN_REFERENCE_PROJECT_EXECUTOR_HOST_V2,
-  createDisposableLocalProjectTargetV2,
-} from '../../lib/operate/reference-governed-executors-v2.mjs';
+  readOperateExperienceViewV1,
+  readOperatingDeliveryEvidenceV1,
+  readOperatingOriginV1,
+  readOperatingPlanningProposalV1,
+} from '../../lib/protocol/loader.mjs';
+import { intelligenceAssignmentFieldsV2 } from '../helpers/intelligence-assignment-fixture.mjs';
 import {
   createGovernedExecutionCheckpointStore,
   governedExecutionScenario,
   reduceDirectResultTransaction,
 } from './operate-governed-execution-v2.test.mjs';
 import { governedRollbackDraft } from './operate-governed-rollback-v2.test.mjs';
-import { intelligenceAssignmentFieldsV2 } from '../helpers/intelligence-assignment-fixture.mjs';
-import { runOperatingIntelligenceJourneyV2 } from '../../conformance/verify-operate-v2-operating-intelligence.mjs';
 
 const root = new URL('../../conformance/fixtures/operating-runtime-v2/', import.meta.url);
 const base = JSON.parse(await readFile(new URL('all-contracts-valid.json', root), 'utf8'));

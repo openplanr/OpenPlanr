@@ -4,16 +4,14 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-
-import { readProfessionalSkillsCatalog } from '../../lib/pipeline/professional-skills.mjs';
 import {
-  EVALUATION_BROWSER_EVIDENCE_CLASSES,
   assertLoopbackSurface,
   countPermissionPrompts,
   createCliDriver,
   createDisposableCliRoot,
   createDisposableStore,
   createLoopbackBrowserAdapter,
+  EVALUATION_BROWSER_EVIDENCE_CLASSES,
   installPackedMember,
   routeTrigger,
   runBrowserJourney,
@@ -22,6 +20,7 @@ import {
   runRecoveryJourney,
   startLoopbackSurface,
 } from '../../lib/evaluation/journeys.mjs';
+import { readProfessionalSkillsCatalog } from '../../lib/pipeline/professional-skills.mjs';
 
 const root = dirname(fileURLToPath(new URL('../../package.json', import.meta.url)));
 const catalog = readProfessionalSkillsCatalog({ projectRoot: root });

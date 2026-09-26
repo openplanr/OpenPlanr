@@ -4,11 +4,11 @@ import { join, resolve } from 'node:path';
 import test from 'node:test';
 
 import {
-  SourceMapBuilder,
   compileComposedV1,
   compileMarkdownV1,
   loadComposedSkill,
   owner,
+  SourceMapBuilder,
   sha256Bytes,
   validateSourceMap,
 } from '../../packages/skill-runtime/src/index.mjs';

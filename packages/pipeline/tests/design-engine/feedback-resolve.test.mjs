@@ -1,18 +1,17 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync, writeFileSync, readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { tmpdir } from 'node:os';
-import { fileURLToPath } from 'node:url';
 import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
 import { test } from 'node:test';
-
+import { fileURLToPath } from 'node:url';
+import { promisify } from 'node:util';
+import { publicBoardId } from '../../lib/design-engine/board-token.mjs';
 import {
   createDaemon,
   daemonControlHeaders,
   killRunningDaemon,
 } from '../../lib/design-engine/daemon.mjs';
-import { publicBoardId } from '../../lib/design-engine/board-token.mjs';
 
 const execFileP = promisify(execFile);
 const here = dirname(fileURLToPath(import.meta.url));

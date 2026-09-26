@@ -2,8 +2,11 @@ import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { renderArtifactShellDocument } from '@openplanr/artifact/ui/shell.mjs';
 import { renderDesignStudioMarkup } from './studio-render.mjs';
-export { DESIGN_STUDIO_VERSION, DESIGN_STUDIO_ASSETS } from './studio-render.mjs';
+
+export { DESIGN_STUDIO_ASSETS, DESIGN_STUDIO_VERSION } from './studio-render.mjs';
+
 import { renderDesignReviewExportSource } from './review-export.mjs';
+
 const templateRoot = new URL('../../templates/studio/', import.meta.url);
 
 /** Stable review identities are independent of presentation and render revision. */

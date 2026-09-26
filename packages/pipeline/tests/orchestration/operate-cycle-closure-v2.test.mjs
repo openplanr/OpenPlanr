@@ -1,22 +1,21 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
-
 import {
-  createEmptyOperatingRuntimeStateV2,
-  readOperatingReviewV2,
-  submitOperatingReviewV2,
-  transitionOperatingActionLifecycleV2,
-} from '../../lib/operate/runtime-foundation.mjs';
+  applyOperatingReviewWorkDispositionsV2,
+  closeVerifiedOperatingCycleV2,
+} from '../../lib/operate/cycle-closure-v2.mjs';
 import {
   buildOperatingTerminalVerificationAssignmentV2,
   deriveOperatingVerificationFeedbackV2,
 } from '../../lib/operate/execution-verification-v2.mjs';
 import { derivePersistentOperatingActionRevisionHashV2 } from '../../lib/operate/persistent-work-v2.mjs';
 import {
-  applyOperatingReviewWorkDispositionsV2,
-  closeVerifiedOperatingCycleV2,
-} from '../../lib/operate/cycle-closure-v2.mjs';
+  createEmptyOperatingRuntimeStateV2,
+  readOperatingReviewV2,
+  submitOperatingReviewV2,
+  transitionOperatingActionLifecycleV2,
+} from '../../lib/operate/runtime-foundation.mjs';
 import { sha256Jcs } from '../../lib/protocol/jcs.mjs';
 
 const TIME = '2026-08-08T10:00:00.000Z';

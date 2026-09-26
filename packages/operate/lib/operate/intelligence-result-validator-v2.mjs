@@ -1,6 +1,6 @@
-import { PipelineError } from '@openplanr/protocol/errors';
-import { assertProtocolArtifact, validateProtocolArtifact } from '@openplanr/protocol/contracts';
 import { sha256Jcs } from '@openplanr/protocol/canonical-json';
+import { assertProtocolArtifact, validateProtocolArtifact } from '@openplanr/protocol/contracts';
+import { PipelineError } from '@openplanr/protocol/errors';
 import {
   deriveOperatingRoleLocalPositionIdV2,
   deriveOperatingRoleLocalRecommendationIdV2,

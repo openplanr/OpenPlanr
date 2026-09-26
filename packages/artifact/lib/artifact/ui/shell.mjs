@@ -1,12 +1,12 @@
-import { loadArtifactTheme, renderArtifactThemeCss } from './tokens.mjs';
+import { digestArtifactEnvelope } from '../envelope.mjs';
+import { embedJson, escapeHtml } from '../internal/escape.mjs';
 import {
   normalizeArtifactShellModel,
   renderArtifactShellMarkup,
   renderArtifactShellModelData,
 } from './renderers.mjs';
 import { createArtifactStagePayload } from './stage-payload.mjs';
-import { digestArtifactEnvelope } from '../envelope.mjs';
-import { embedJson, escapeHtml } from '../internal/escape.mjs';
+import { loadArtifactTheme, renderArtifactThemeCss } from './tokens.mjs';
 
 export const ARTIFACT_SHELL_VERSION = '1.2.1';
 export const ARTIFACT_SHELL_ASSET_PATHS = Object.freeze({

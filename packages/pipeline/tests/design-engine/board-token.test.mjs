@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, existsSync, readdirSync, rmSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, mkdtempSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { test } from 'node:test';
 
 import { ensureBoardToken, publicBoardId } from '../../lib/design-engine/board-token.mjs';

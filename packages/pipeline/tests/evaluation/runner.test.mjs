@@ -5,8 +5,8 @@ import {
   cpSync,
   mkdirSync,
   mkdtempSync,
-  readFileSync,
   readdirSync,
+  readFileSync,
   rmSync,
   statSync,
   writeFileSync,
@@ -15,13 +15,6 @@ import { tmpdir } from 'node:os';
 import { dirname, join, relative, resolve } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-
-import {
-  assertEvaluationAggregateReport,
-  assertEvaluationRunResult,
-  assertSkillCertificationReceipt,
-} from '../../lib/pipeline/evaluation-contract.mjs';
-import { assertEvaluationAggregatePublishable } from '../../lib/pipeline/evaluation-redaction.mjs';
 import { createLoopbackBrowserAdapter } from '../../lib/evaluation/journeys.mjs';
 import {
   EVALUATION_CI_ARTIFACTS,
@@ -30,6 +23,12 @@ import {
   writeLocalRun,
 } from '../../lib/evaluation/report.mjs';
 import { loadEvaluationInputs, runEvaluation } from '../../lib/evaluation/runner.mjs';
+import {
+  assertEvaluationAggregateReport,
+  assertEvaluationRunResult,
+  assertSkillCertificationReceipt,
+} from '../../lib/pipeline/evaluation-contract.mjs';
+import { assertEvaluationAggregatePublishable } from '../../lib/pipeline/evaluation-redaction.mjs';
 
 const root = dirname(fileURLToPath(new URL('../../package.json', import.meta.url)));
 const sourceRoot = resolve(root, '../..');

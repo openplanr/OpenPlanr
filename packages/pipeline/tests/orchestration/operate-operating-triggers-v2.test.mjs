@@ -1,10 +1,9 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
-
+import { recordOperatingTriggerScenarioV2 } from '../../lib/operate/runtime-foundation.mjs';
 import { validateProtocolArtifact } from '../../lib/protocol/contracts.mjs';
 import { sha256Jcs } from '../../lib/protocol/jcs.mjs';
-import { recordOperatingTriggerScenarioV2 } from '../../lib/operate/runtime-foundation.mjs';
 import { checkpoint } from './operate-operating-intelligence-state-v2.test-support.mjs';
 
 const TIME = '2026-08-09T12:02:00.000Z';

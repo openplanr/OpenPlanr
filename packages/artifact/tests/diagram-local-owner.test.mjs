@@ -1,22 +1,22 @@
-import test from 'node:test';
 import assert from 'node:assert/strict';
+import { mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import { request as httpRequest } from 'node:http';
-import { mkdtemp, mkdir, readFile, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import {
-  createDiagramLocalOwnerAdapter,
-  startDiagramOwner,
-} from '../lib/artifact/diagram/editor/local-owner.mjs';
-import { createArtifactReviewServer } from '../lib/artifact/review-server.mjs';
-import { createArtifactEnvelope } from '../lib/artifact/envelope.mjs';
-import { createDiagramAuthoringStore } from '../lib/artifact/diagram/authoring/store.mjs';
-import { compileDiagramCommand } from '../lib/artifact/diagram/authoring/index.mjs';
+import test from 'node:test';
 import {
   makeBundle,
   makeTransaction,
   placement,
 } from '../../../tests/protocol/fixtures/diagram-authoring.mjs';
+import { compileDiagramCommand } from '../lib/artifact/diagram/authoring/index.mjs';
+import { createDiagramAuthoringStore } from '../lib/artifact/diagram/authoring/store.mjs';
+import {
+  createDiagramLocalOwnerAdapter,
+  startDiagramOwner,
+} from '../lib/artifact/diagram/editor/local-owner.mjs';
+import { createArtifactEnvelope } from '../lib/artifact/envelope.mjs';
+import { createArtifactReviewServer } from '../lib/artifact/review-server.mjs';
 
 async function workspace(t) {
   const root = await mkdtemp(join(await realpath(tmpdir()), 'openplanr-diagram-owner-'));

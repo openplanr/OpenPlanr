@@ -1,10 +1,10 @@
-import { PipelineError } from '@openplanr/protocol/errors';
+import { sha256Jcs } from '@openplanr/protocol/canonical-json';
 import {
+  assertProtocolArtifact,
   OPERATE_GOVERNED_CORE_PROHIBITIONS_V2,
   OPERATE_GOVERNED_POLICY_TIERS_V2,
-  assertProtocolArtifact,
 } from '@openplanr/protocol/contracts';
-import { sha256Jcs } from '@openplanr/protocol/canonical-json';
+import { PipelineError } from '@openplanr/protocol/errors';
 
 const PROTOCOL_VERSION = '2.0.0';
 

@@ -1,12 +1,12 @@
-import { PipelineError } from './errors.mjs';
+import { assertProtocolArtifact } from '../protocol/contracts.mjs';
+import { sha256Jcs } from '../protocol/jcs.mjs';
 import {
   validateGuidedAnswerEnvelope,
   validateGuidedQuestion,
   validateGuidedQuestionnaire,
   validateStructuredAction,
 } from './engine.mjs';
-import { sha256Jcs } from '../protocol/jcs.mjs';
-import { assertProtocolArtifact } from '../protocol/contracts.mjs';
+import { PipelineError } from './errors.mjs';
 
 export const GUIDED_INTERACTION_MODES = Object.freeze(['native', 'chat', 'terminal', 'none']);
 

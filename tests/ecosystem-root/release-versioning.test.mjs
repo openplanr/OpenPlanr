@@ -3,23 +3,23 @@ import { spawnSync } from 'node:child_process';
 import {
   cpSync,
   existsSync,
-  mkdtempSync,
   mkdirSync,
-  readFileSync,
+  mkdtempSync,
   readdirSync,
+  readFileSync,
   rmSync,
   symlinkSync,
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { delimiter, dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 
 import {
   PUBLIC_PACKAGE_PATHS,
-  WORKSPACE_IDENTITIES,
   validateWorkspaceManifests,
+  WORKSPACE_IDENTITIES,
 } from '../../scripts/lib/workspace-release-policy.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');

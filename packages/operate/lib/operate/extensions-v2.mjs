@@ -4,12 +4,12 @@ import {
 } from '@openplanr/protocol/contracts';
 import { OPERATE_CONTRACT_CATALOG_V2 } from '@openplanr/protocol/operate-contract-catalog-v2';
 import {
-  OPEN_REFERENCE_EVIDENCE_REGISTRY_V2,
   createOperateEvidenceRegistryV2,
+  OPEN_REFERENCE_EVIDENCE_REGISTRY_V2,
 } from './evidence-registry-v2.mjs';
 import {
-  OPEN_REFERENCE_OPERATE_GOVERNED_EXTENSIONS_V2,
   createOperateGovernedExtensionRegistryV2,
+  OPEN_REFERENCE_OPERATE_GOVERNED_EXTENSIONS_V2,
 } from './governed-extensions-v2.mjs';
 
 const VERSION = '2.0.0';

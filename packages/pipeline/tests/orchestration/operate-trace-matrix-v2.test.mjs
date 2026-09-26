@@ -2,13 +2,13 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { runOperatingIntelligenceJourneyV2 } from '../../conformance/verify-operate-v2-operating-intelligence.mjs';
-import { sha256Jcs } from '../../lib/protocol/jcs.mjs';
 import {
   assertOperatingTraceMatrixV2,
   buildOperatingTraceMatrixV2,
   deriveOperatingOmittedRoleAbsenceIdV2,
   locateOperatingTraceNodeV2,
 } from '../../lib/operate/trace-matrix-v2.mjs';
+import { sha256Jcs } from '../../lib/protocol/jcs.mjs';
 
 function clone(value) {
   return structuredClone(value);

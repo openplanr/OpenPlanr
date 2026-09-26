@@ -1,20 +1,19 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { join, dirname } from 'node:path';
+import { dirname, join } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-
+import { issueOperateActionDisplayWorkspaceV1 } from '../../lib/dashboard/operate-experience-display-contract.mjs';
+import {
+  buildOperateExperienceTransportView,
+  selectOperateActionDisplayWorkspace,
+  selectOperateActionWorkspace,
+} from '../../lib/dashboard/operate-experience-reader.mjs';
+import { sha256Jcs } from '../../lib/protocol/jcs.mjs';
 import {
   assertOperateActionDisplayWorkspaceV1,
   validateOperateActionDisplayWorkspaceV1,
 } from '../../schemas/v1.2.0/operate-action-display-workspace.mjs';
-import { issueOperateActionDisplayWorkspaceV1 } from '../../lib/dashboard/operate-experience-display-contract.mjs';
-import {
-  selectOperateActionDisplayWorkspace,
-  selectOperateActionWorkspace,
-  buildOperateExperienceTransportView,
-} from '../../lib/dashboard/operate-experience-reader.mjs';
-import { sha256Jcs } from '../../lib/protocol/jcs.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '../..');
 const HASH_A = `sha256:${'a'.repeat(64)}`;

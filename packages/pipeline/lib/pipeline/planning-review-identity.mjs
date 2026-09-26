@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { existsSync, lstatSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, lstatSync, readdirSync, readFileSync } from 'node:fs';
 import { basename, join, relative, sep } from 'node:path';
 
 import { parseFrontmatter, splitFrontmatter } from '../dashboard/graph-reader.mjs';

@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 
+import { spawnSync } from 'node:child_process';
 import {
   existsSync,
   lstatSync,
-  readFileSync,
   mkdirSync,
   mkdtempSync,
+  readFileSync,
   realpathSync,
   rmSync,
   writeFileSync,
@@ -13,16 +14,14 @@ import {
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, join, parse, resolve } from 'node:path';
-import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-
+import { releaseLedgerRowsFromProofs } from '../lib/ecosystem/release-ledger.mjs';
 import {
   bindPackageProofToEcosystemCandidate,
   createEcosystemCandidateProof,
   createPackagePayloadProof,
   runInstalledExportProbes,
 } from '../lib/ecosystem/release-package-proof.mjs';
-import { releaseLedgerRowsFromProofs } from '../lib/ecosystem/release-ledger.mjs';
 import { discoverEcosystemRepositories } from '../lib/ecosystem/workspace-discovery.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');

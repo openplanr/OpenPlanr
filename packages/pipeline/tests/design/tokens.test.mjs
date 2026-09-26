@@ -2,14 +2,14 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import {
+  BREAKPOINTS,
+  DEFAULT_FRAME,
+  FRAMES,
+  isCanonicalFrame,
   isOnSpacingScale,
   nearestSpacing,
-  isCanonicalFrame,
-  FRAMES,
-  DEFAULT_FRAME,
-  SPACING_STEP,
-  BREAKPOINTS,
   RESPONSIVE_FRAMES,
+  SPACING_STEP,
 } from '../../lib/design/tokens.mjs';
 
 test('on the 4-point grid: 0, 2, and multiples of 4 pass', () => {

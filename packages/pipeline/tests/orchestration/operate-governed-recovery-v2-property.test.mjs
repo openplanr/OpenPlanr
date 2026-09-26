@@ -7,8 +7,8 @@ import {
   reconcileOperatingGovernedDispatchV2,
 } from '../../lib/operate/governed-recovery-v2.mjs';
 import {
-  OPEN_REFERENCE_PROJECT_EXECUTOR_HOST_V2,
   createDisposableLocalProjectTargetV2,
+  OPEN_REFERENCE_PROJECT_EXECUTOR_HOST_V2,
 } from '../../lib/operate/reference-governed-executors-v2.mjs';
 import {
   createGovernedExecutionCheckpointStore,

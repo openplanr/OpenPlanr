@@ -1,29 +1,29 @@
-import { PipelineError } from '@openplanr/protocol/errors';
+import { sha256Jcs } from '@openplanr/protocol/canonical-json';
 import {
   assertOperateIntelligencePlanContractV2,
   assertOperateRoleOutputContractV2,
   assertProtocolArtifact,
 } from '@openplanr/protocol/contracts';
-import { sha256Jcs } from '@openplanr/protocol/canonical-json';
-import { PUBLIC_OPERATING_DOMAIN_CONTRACTS_V2 } from './operating-domains-v2.mjs';
+import { PipelineError } from '@openplanr/protocol/errors';
 import {
   findOperateDomainRegistrationV2,
   OPEN_REFERENCE_OPERATE_EXTENSIONS_V2,
 } from './extensions-v2.mjs';
 import {
+  buildOperatingIntelligenceInputBundleV2,
+  deriveOperatingIntelligenceBundleCustodyIdsV2,
+  prepareOperatingIntelligenceEvidenceSelectionV2,
+} from './intelligence-input-bundle-v2.mjs';
+import {
   assertOperatingDeltaV2,
   classifyOperatingDeltaMaterialityV2,
 } from './operating-delta-v2.mjs';
+import { PUBLIC_OPERATING_DOMAIN_CONTRACTS_V2 } from './operating-domains-v2.mjs';
 import { assertOperatingSnapshotV2 } from './operating-snapshots-v2.mjs';
 import {
   deriveOperatingIntelligenceAssignmentIdV2,
   validateOperatingIntelligenceAssignmentGraphV2,
 } from './scheduler-v2.mjs';
-import {
-  buildOperatingIntelligenceInputBundleV2,
-  deriveOperatingIntelligenceBundleCustodyIdsV2,
-  prepareOperatingIntelligenceEvidenceSelectionV2,
-} from './intelligence-input-bundle-v2.mjs';
 
 const PROTOCOL_VERSION = '2.0.0';
 const KERNEL_ROLE_KINDS = Object.freeze(['advisor', 'challenger', 'chair']);

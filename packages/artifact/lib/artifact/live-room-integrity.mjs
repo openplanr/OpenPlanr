@@ -1,6 +1,6 @@
+import { ARTIFACT_ERROR_CODES, PipelineError } from '@openplanr/protocol/errors';
 import { base64UrlToBytes, bytesToBase64Url } from './codec.mjs';
 import { decryptArtifactPayload } from './crypto.mjs';
-import { ARTIFACT_ERROR_CODES, PipelineError } from '@openplanr/protocol/errors';
 
 export const ARTIFACT_ROOM_PROTOCOL_VERSION = '2.0.0';
 export const ARTIFACT_ROOM_SIGNATURE_ALGORITHM = 'ECDSA-P256-SHA256';

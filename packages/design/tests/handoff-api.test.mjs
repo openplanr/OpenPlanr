@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
@@ -8,10 +8,10 @@ import { digestArtifactEnvelope } from '@openplanr/artifact/envelope.mjs';
 import { createReviewLedger } from '@openplanr/artifact/merge.mjs';
 import { writeArtifactReviewState } from '@openplanr/artifact/review.mjs';
 import { assertDesignReviewBundle } from '@openplanr/protocol/review-experience-contracts';
-import { designFixture } from './design-fixture.mjs';
-import { atomicJson, currentDesign, renderDesignDocument } from '../lib/design/document.mjs';
 import { emptyReviewContext } from '../lib/design/context.mjs';
+import { atomicJson, currentDesign, renderDesignDocument } from '../lib/design/document.mjs';
 import { designReviewPath, startDesignReview } from '../lib/design/review.mjs';
+import { designFixture } from './design-fixture.mjs';
 
 async function fixture(t) {
   const root = mkdtempSync(join(tmpdir(), 'openplanr-handoff-http-'));

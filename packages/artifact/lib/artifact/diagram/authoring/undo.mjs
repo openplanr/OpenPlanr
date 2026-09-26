@@ -1,20 +1,20 @@
+import { inverseDependencies } from './diff.mjs';
 import {
+  appearanceFields,
   COLLECTIONS,
   clone,
-  same,
   diagnostic,
-  failure,
-  inspectPlainData,
-  validateAuthoringBundle,
-  snapshot,
   elementIndex,
-  semanticFields,
+  failure,
   geometryFields,
-  appearanceFields,
+  inspectPlainData,
   membershipState,
+  same,
   sealBundle,
+  semanticFields,
+  snapshot,
+  validateAuthoringBundle,
 } from './model.mjs';
-import { inverseDependencies } from './diff.mjs';
 import { applyOperation, previewDiagramTransaction } from './transactions.mjs';
 
 function record(bundle, change) {

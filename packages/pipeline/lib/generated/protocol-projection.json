@@ -24,13 +24,13 @@
     {
       "source": "packages/protocol/lib/dashboard/operate-experience-surface-contract.d.mts",
       "target": "lib/dashboard/operate-experience-surface-contract.d.mts",
-      "sha256": "de0a63edc81b2ac90130a60c69dd5af5882824e181c809e615feb2106d9d2148",
+      "sha256": "5be66493a2137e6c3f16a765b386046e063dd6ee75bc488f54f03388bc645c32",
       "mode": "644"
     },
     {
       "source": "packages/protocol/lib/dashboard/operate-review-contract.d.mts",
       "target": "lib/dashboard/operate-review-contract.d.mts",
-      "sha256": "32e0d05c77a050c86306d225142248a17bc50bc881e09f1cad76625bf6a7fadf",
+      "sha256": "0d871983b8b2ad0561b063f29ab75525e89d10531293f1cd4df49d8360cd0dc2",
       "mode": "644"
     },
     {
@@ -48,7 +48,7 @@
     {
       "source": "packages/protocol/lib/dashboard/operate-review-workspace-projection-v2.d.mts",
       "target": "lib/dashboard/operate-review-workspace-projection-v2.d.mts",
-      "sha256": "2c33c4f145979bfc778e0461513a009fa86a6510be97d8d9b65f82399d921683",
+      "sha256": "c3699081e05c6e02c1fa7a9e570823c01f684451308151755cf8e7c7e6a96e20",
       "mode": "644"
     },
     {
@@ -60,7 +60,7 @@
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/contracts.mjs",
       "target": "lib/protocol/contracts.mjs",
-      "sha256": "b3781b166413147204cdbe0121388f52b7dddee302597469d7e065304a1c810b",
+      "sha256": "04646768d947f9aa8f63dcc259e0772a83cfaee2888c7538d90b6fbbdbbcde90",
       "mode": "644"
     },
     {
@@ -90,7 +90,7 @@
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/design-publication-contracts.mjs",
       "target": "lib/protocol/design-publication-contracts.mjs",
-      "sha256": "f0a018d2db4c01d7d4771d4b444dba1ecb35459749807b8e31cfd3b59a6dc485",
+      "sha256": "33e740397798d0e920f8668c7e0fa9533c5b69944e41360aa0e10696581c1e5b",
       "mode": "644"
     },
     {
@@ -102,13 +102,13 @@
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/diagram-authoring-contracts.mjs",
       "target": "lib/protocol/diagram-authoring-contracts.mjs",
-      "sha256": "c3a761522e1a19005687ddfb641ec76d1956d8ee367dc13e0992f29b40a3e58c",
+      "sha256": "e1226fb99183e2dca0a6f5ad8ee4bd115c2e570b7c47229bf431fe7181a61f3d",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/diagram-contracts.mjs",
       "target": "lib/protocol/diagram-contracts.mjs",
-      "sha256": "bc27dabe26047b12061943fb29734c5bba8007aa864bbe2773aac66f6a629807",
+      "sha256": "a83ea5e9ac86fd1e71fd13e435b9371fd0405b7e4c966fac8f4d7bb4f3dc091b",
       "mode": "644"
     },
     {
@@ -162,19 +162,19 @@
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/live-evidence-v2.mjs",
       "target": "lib/protocol/live-evidence-v2.mjs",
-      "sha256": "12728c9fecb17079e615c385972c1ec2d3e47aa76215148af7f81fe29f21749c",
+      "sha256": "62fc22b84feadb48ae56d9dad2f870b2731293e9e053960b1d78e08ceefc5919",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/operate-experience-live-patch.mjs",
       "target": "lib/protocol/operate-experience-live-patch.mjs",
-      "sha256": "ebaf6a01f0eb2f77d28c2cbf40f1a53601d7ee667053107ad5c7071059d9aa3b",
+      "sha256": "77135be126709047fed17bda773407e4821b22f42ba9864551c3b6f450e95769",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/operating-planning-contracts.mjs",
       "target": "lib/protocol/operating-planning-contracts.mjs",
-      "sha256": "15bf3438b915a58d79b1b04be220be3037256330db4bcc74c43c37eb654ae4d0",
+      "sha256": "46eb1d93acce9e07f60ccaabdaaca3b068799f1158cfa5965295d81e0473ca26",
       "mode": "644"
     },
     {
@@ -186,7 +186,7 @@
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/review-experience-contracts.mjs",
       "target": "lib/protocol/review-experience-contracts.mjs",
-      "sha256": "105c62e8c4b74ef16a8d4cabd69872a4d5e14cb7026a50dbc1b5239707d36991",
+      "sha256": "8123a6937a6d7010bd61f3698c4f980912079433b3d7d250c66eca6ae39aebb0",
       "mode": "644"
     },
     {
@@ -198,7 +198,7 @@
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/workspace-contracts.mjs",
       "target": "lib/protocol/workspace-contracts.mjs",
-      "sha256": "e2c6605c634aaca2be9b56535e487239528e7b25bdfbe4f18b914f14a42ea2bd",
+      "sha256": "c0eaccbe8d889949f649b6effa0ea42e55b71cf15e4dac9fcff8214c8e9bd580",
       "mode": "644"
     },
     {

@@ -14,8 +14,8 @@ import { basename, isAbsolute, join, resolve, sep } from 'node:path';
 
 import { validateDiagramAuthoringArtifact } from '@openplanr/protocol/diagram-authoring-contracts';
 import { digestBytes, jsonBytes } from '../custody/bytes.mjs';
-import { renderDiagramPng, inspectDiagramPng } from '../rendering/png.mjs';
 import { renderDiagramHtml } from '../rendering/html.mjs';
+import { inspectDiagramPng, renderDiagramPng } from '../rendering/png.mjs';
 import { escapeXml } from '../rendering/svg.mjs';
 import { snapshot, validateAuthoringBundle } from './model.mjs';
 import { renderAuthoredDiagramSvg } from './renderer.mjs';

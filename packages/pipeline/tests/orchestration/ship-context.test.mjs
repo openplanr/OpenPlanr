@@ -1,21 +1,20 @@
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, test } from 'node:test';
 
 import { assertContextEnvelope } from '../../lib/pipeline/context-envelope.mjs';
-import { materializeLegacyPlanningFixture } from '../helpers/legacy-planning-fixture.mjs';
-import { designImplementationHandoffDigest } from '../../lib/protocol/design-handoff-contracts.mjs';
-
 import {
   buildPlanContext,
   buildShipContext,
   renderPlanContext,
   renderShipContext,
 } from '../../lib/pipeline/ship-context.mjs';
+import { designImplementationHandoffDigest } from '../../lib/protocol/design-handoff-contracts.mjs';
+import { materializeLegacyPlanningFixture } from '../helpers/legacy-planning-fixture.mjs';
 
 // SHIP requires the project root to be a Git top-level, so the fixture is staged into
 // a disposable repository. Both context builders then read byte-identical input.

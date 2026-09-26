@@ -3,14 +3,6 @@ import { readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-
-import { evaluationContentDigest } from '../../lib/pipeline/evaluation-identity.mjs';
-import {
-  PROFESSIONAL_SKILLS_MANIFEST_PATH,
-  readProfessionalSkillsCatalog,
-  renderProfessionalSkillAssets,
-  renderProfessionalSkillsBundle,
-} from '../../lib/pipeline/professional-skills.mjs';
 import {
   assertNoSiblingDiscovery,
   buildDeclaredArchive,
@@ -19,6 +11,13 @@ import {
   comparePackedMembership,
   packageFilesCover,
 } from '../../lib/evaluation/parity.mjs';
+import { evaluationContentDigest } from '../../lib/pipeline/evaluation-identity.mjs';
+import {
+  PROFESSIONAL_SKILLS_MANIFEST_PATH,
+  readProfessionalSkillsCatalog,
+  renderProfessionalSkillAssets,
+  renderProfessionalSkillsBundle,
+} from '../../lib/pipeline/professional-skills.mjs';
 
 const root = dirname(fileURLToPath(new URL('../../package.json', import.meta.url)));
 const sourceRoot = resolve(root, '../..');

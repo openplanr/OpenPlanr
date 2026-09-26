@@ -1,21 +1,20 @@
 import { canonicalizeJson, sha256Hex } from '@openplanr/protocol/canonical-json';
 import {
-  DESIGN_WORKSPACE_API,
-  DESIGN_WORKSPACE_VERSION,
-  DESIGN_WORKSPACE_MAX_BYTES,
-  DESIGN_WORKSPACE_MAX_EVENT_BYTES,
-  DESIGN_WORKSPACE_CREATE_SCHEMA,
-  DESIGN_WORKSPACE_REVISION_SCHEMA,
-  DESIGN_WORKSPACE_EVENT_SCHEMA,
-  DESIGN_WORKSPACE_SCHEMA,
-  DESIGN_REVIEW_BUNDLE_SCHEMA,
-  assertWorkspaceContract,
-} from '@openplanr/protocol/workspace-contracts';
-
-import {
   assertDesignReviewBundle,
   assertDesignReviewMetadata,
 } from '@openplanr/protocol/review-experience-contracts';
+import {
+  assertWorkspaceContract,
+  DESIGN_REVIEW_BUNDLE_SCHEMA,
+  DESIGN_WORKSPACE_API,
+  DESIGN_WORKSPACE_CREATE_SCHEMA,
+  DESIGN_WORKSPACE_EVENT_SCHEMA,
+  DESIGN_WORKSPACE_MAX_BYTES,
+  DESIGN_WORKSPACE_MAX_EVENT_BYTES,
+  DESIGN_WORKSPACE_REVISION_SCHEMA,
+  DESIGN_WORKSPACE_SCHEMA,
+  DESIGN_WORKSPACE_VERSION,
+} from '@openplanr/protocol/workspace-contracts';
 
 export const DESIGN_SHARE_BASE_URL = 'https://share.openplanr.dev';
 const encoder = new TextEncoder();

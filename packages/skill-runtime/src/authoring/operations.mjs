@@ -6,16 +6,16 @@ import {
   resolveModuleGraph,
   validateSourceMap,
 } from '../compiler/index.mjs';
-import { buildGeneratedAssetManifest } from '../manifests/index.mjs';
 import { linkSkillProjections } from '../linker/index.mjs';
+import { buildGeneratedAssetManifest } from '../manifests/index.mjs';
+import { describeAuthoringGraph } from './command-contract.mjs';
 import {
   compileHostProjections,
   flattenCompiledAssets,
   inspectGeneratedOutput,
 } from './compiled-assets.mjs';
-import { describeAuthoringGraph } from './command-contract.mjs';
-import { loadComposedSkill } from './loader.mjs';
 import { SkillAuthoringError } from './diagnostics.mjs';
+import { loadComposedSkill } from './loader.mjs';
 import { runOperation } from './operation-result.mjs';
 
 function profileLabel(profile) {

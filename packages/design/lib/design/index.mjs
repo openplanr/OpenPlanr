@@ -7,39 +7,24 @@
  * Barrel re-export; import named helpers from here or from the leaf modules.
  */
 
-export { escapeHtml, embedJson, hasUnsafeHtml } from './escape.mjs';
-export {
-  recommendFormat,
-  isExploratory,
-  DESIGN_FORMATS,
-  EXPLORATORY_KEYWORDS,
-} from './recommendFormat.mjs';
-export { resolveScreens, countScreens } from './screens.mjs';
-export { chooseWalkthroughNav, ANCHOR_MAX_SCREENS } from './walkthroughNav.mjs';
-export { decideThinSpec, isHeadless } from './interactivity.mjs';
-export {
-  buildManifest,
-  validateManifest,
-  DESIGN_SOURCES,
-  CONTENT_PROVENANCE,
-  FRAMEWORKS,
-  NAV_MODES,
-  SCHEMA_VERSION,
-} from './manifest.mjs';
-export {
-  SPACING_STEP,
-  COMMON_SPACING,
-  FRAMES,
-  DEFAULT_FRAME,
-  BREAKPOINTS,
-  RESPONSIVE_FRAMES,
-  isOnSpacingScale,
-  nearestSpacing,
-  isCanonicalFrame,
-  resolveTokens,
-} from './tokens.mjs';
-export { lintDesign, lintCanvasData } from './lint.mjs';
 export { prepareCompanyDesignPublication } from './company-publication.mjs';
+export {
+  AA_LARGE,
+  AA_NORMAL,
+  contrastRatio,
+  isReadable,
+  parseColor,
+  relativeLuminance,
+} from './contrast.mjs';
+export { projectDesignDeliveryStatus } from './delivery-status.mjs';
+export { prepareDesignPlanHandoff } from './design-plan-handoff.mjs';
+export {
+  DS_PACKAGE_FILES,
+  designSystemStatus,
+  resolveDesignSystem,
+  summarizeDesignSystem,
+} from './designSystem.mjs';
+export { embedJson, escapeHtml, hasUnsafeHtml } from './escape.mjs';
 export {
   canContinueDesignHandoff,
   compileDesignHandoffReadiness,
@@ -79,19 +64,34 @@ export {
   revokeImplementationHandoff,
   supersedeImplementationHandoff,
 } from './implementation-handoff-approval.mjs';
-export { prepareDesignPlanHandoff } from './design-plan-handoff.mjs';
-export { projectDesignDeliveryStatus } from './delivery-status.mjs';
+export { decideThinSpec, isHeadless } from './interactivity.mjs';
+export { lintCanvasData, lintDesign } from './lint.mjs';
 export {
-  designSystemStatus,
-  resolveDesignSystem,
-  summarizeDesignSystem,
-  DS_PACKAGE_FILES,
-} from './designSystem.mjs';
+  buildManifest,
+  CONTENT_PROVENANCE,
+  DESIGN_SOURCES,
+  FRAMEWORKS,
+  NAV_MODES,
+  SCHEMA_VERSION,
+  validateManifest,
+} from './manifest.mjs';
 export {
-  parseColor,
-  relativeLuminance,
-  contrastRatio,
-  isReadable,
-  AA_NORMAL,
-  AA_LARGE,
-} from './contrast.mjs';
+  DESIGN_FORMATS,
+  EXPLORATORY_KEYWORDS,
+  isExploratory,
+  recommendFormat,
+} from './recommendFormat.mjs';
+export { countScreens, resolveScreens } from './screens.mjs';
+export {
+  BREAKPOINTS,
+  COMMON_SPACING,
+  DEFAULT_FRAME,
+  FRAMES,
+  isCanonicalFrame,
+  isOnSpacingScale,
+  nearestSpacing,
+  RESPONSIVE_FRAMES,
+  resolveTokens,
+  SPACING_STEP,
+} from './tokens.mjs';
+export { ANCHOR_MAX_SCREENS, chooseWalkthroughNav } from './walkthroughNav.mjs';

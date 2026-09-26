@@ -1,19 +1,19 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { mkdtemp, readFile, writeFile, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { prepareDiagramSvg } from '../lib/artifact/ui/diagram-svg.mjs';
 import { createDiagramArtifactEnvelope } from '../lib/artifact/diagram/integration.mjs';
 import { renderDiagram, rerenderDiagram } from '../lib/artifact/diagram/runtime.mjs';
 import {
+  createDiagramReviewHandoff,
+  describeDiagramItems,
+  renderDiagramReviewMarkdown,
   renderDiagramStudio,
   startDiagramReview,
-  createDiagramReviewHandoff,
-  renderDiagramReviewMarkdown,
-  describeDiagramItems,
 } from '../lib/artifact/diagram-review.mjs';
+import { prepareDiagramSvg } from '../lib/artifact/ui/diagram-svg.mjs';
 
 const passive = (inner) =>
   `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1600" width="1200" height="1600"><title>Drawing</title>${inner}</svg>`;

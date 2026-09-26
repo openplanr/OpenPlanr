@@ -1,8 +1,8 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import {
-  prepareArtifactDocument,
   createArtifactBridgeNonce,
+  prepareArtifactDocument,
   renderArtifactParentRuntime,
 } from '@openplanr/artifact/bridge.mjs';
 import { digestArtifactEnvelope } from '@openplanr/artifact/envelope.mjs';
@@ -16,6 +16,8 @@ import {
 } from '@openplanr/artifact/review.mjs';
 import { createArtifactReviewServer } from '@openplanr/artifact/review-server.mjs';
 import { ARTIFACT_ERROR_CODES, PipelineError } from '@openplanr/protocol/errors';
+import { listDesignRevisions, readDesignRevision, reviewDigest } from './context.mjs';
+import { prepareDesignPlanHandoff } from './design-plan-handoff.mjs';
 import {
   atomicJson,
   currentDesign,
@@ -24,15 +26,6 @@ import {
   readJson,
   standaloneDesignHtml,
 } from './document.mjs';
-import { renderDesignStudio } from './studio.mjs';
-import {
-  getDesignShareStatus,
-  shareDesign,
-  publishDesignShare,
-  syncDesignShare,
-  manageDesignShare,
-  exportDesignShareRecovery,
-} from './share.mjs';
 
 import {
   readDesignExperience,
@@ -58,9 +51,16 @@ import {
   regenerateImplementationHandoffDraft,
   revokeImplementationHandoff,
 } from './implementation-handoff-approval.mjs';
-import { prepareDesignPlanHandoff } from './design-plan-handoff.mjs';
-import { listDesignRevisions, readDesignRevision, reviewDigest } from './context.mjs';
 import { createDesignReviewExport } from './review-export.mjs';
+import {
+  exportDesignShareRecovery,
+  getDesignShareStatus,
+  manageDesignShare,
+  publishDesignShare,
+  shareDesign,
+  syncDesignShare,
+} from './share.mjs';
+import { renderDesignStudio } from './studio.mjs';
 
 const VERSION = '1.3.0';
 export const designReviewKey = (document) => `design-${hash(document.id).slice(0, 24)}`;

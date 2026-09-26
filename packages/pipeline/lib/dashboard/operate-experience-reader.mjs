@@ -6,10 +6,6 @@ import {
   assertProtocolArtifact,
 } from '../protocol/contracts.mjs';
 import { sha256Jcs } from '../protocol/jcs.mjs';
-import {
-  buildOperateReviewWorkspacePayloadV1,
-  deriveOperateSharedTruthSummaryV1,
-} from './operate-review-workspace-projection-v2.mjs';
 import { issueOperateExperienceAuditDisplaySurfaceV1 } from './operate-experience-audit-display-contract.mjs';
 import {
   issueOperateActionDisplayWorkspaceV1,
@@ -20,6 +16,10 @@ import {
 } from './operate-experience-display-contract.mjs';
 import { assertOperateExperienceSurfaceV1 } from './operate-experience-surface-contract.mjs';
 import { issueOperateReviewDisplayWorkspaceV1 } from './operate-review-display-workspace-contract.mjs';
+import {
+  buildOperateReviewWorkspacePayloadV1,
+  deriveOperateSharedTruthSummaryV1,
+} from './operate-review-workspace-projection-v2.mjs';
 
 const PROJECTION_RELATIVE_PATH = 'operate/projections/experience-view.json';
 const DEFAULT_MAX_BYTES = 16 * 1024 * 1024;

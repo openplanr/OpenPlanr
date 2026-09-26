@@ -3,8 +3,8 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 
 const repositoryRoot = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const cli = join(repositoryRoot, 'bin', 'planr-pipeline.mjs');

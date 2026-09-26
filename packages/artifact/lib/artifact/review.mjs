@@ -10,8 +10,6 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { dirname } from 'node:path';
-
-import { acquireStartLock } from './internal/server-util.mjs';
 import { ARTIFACT_ERROR_CODES, PipelineError } from '@openplanr/protocol/errors';
 import {
   createArtifactEnvelope,
@@ -19,6 +17,7 @@ import {
   validateArtifactEnvelope,
   validateArtifactReview,
 } from './envelope.mjs';
+import { acquireStartLock } from './internal/server-util.mjs';
 import {
   assertUniqueReviewItemIds,
   createReviewLedger,

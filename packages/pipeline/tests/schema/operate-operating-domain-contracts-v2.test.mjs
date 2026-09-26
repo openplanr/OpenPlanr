@@ -1,12 +1,11 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
-
-import { assertProtocolArtifact, validateProtocolArtifact } from 'planr-pipeline/protocol';
 import {
   canonicalizeOperateExtensionRegistryV2,
   createOperateExtensionRegistryV2,
 } from 'planr-pipeline/operate/extensions-v2';
+import { assertProtocolArtifact, validateProtocolArtifact } from 'planr-pipeline/protocol';
 
 const fixture = (name) =>
   JSON.parse(

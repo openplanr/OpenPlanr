@@ -16,20 +16,20 @@ import {
   BUSINESS_EXECUTIVE_SKILL_BINDINGS,
   renderOperateMandateAppendixModule,
 } from '../lib/operate/contracts/role-skills.mjs';
-import { assertProtocolArtifact } from '../lib/protocol/contracts.mjs';
-import { sha256Jcs } from '../lib/protocol/jcs.mjs';
 import { resolveGuidedInteraction } from '../lib/pipeline/guided-interaction.mjs';
 import {
-  PROFESSIONAL_SKILLS_MANIFEST_PATH,
-  buildProfessionalSkillsManifest,
-  readProfessionalSkillsCatalog,
-} from '../lib/pipeline/professional-skills.mjs';
-import {
+  assertLandingWorkflowCatalog,
   LANDING_WORKFLOW_ASSET_PATHS,
   LANDING_WORKFLOW_CATALOG_PATH,
   LANDING_WORKFLOW_MANIFEST_PATH,
-  assertLandingWorkflowCatalog,
 } from '../lib/pipeline/landing.mjs';
+import {
+  buildProfessionalSkillsManifest,
+  PROFESSIONAL_SKILLS_MANIFEST_PATH,
+  readProfessionalSkillsCatalog,
+} from '../lib/pipeline/professional-skills.mjs';
+import { assertProtocolArtifact } from '../lib/protocol/contracts.mjs';
+import { sha256Jcs } from '../lib/protocol/jcs.mjs';
 
 const REGISTRY_PATH = 'registry/operate-v2-contracts.json';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');

@@ -759,4 +759,4 @@ export function createDiagramAuthoringStore({
   });
 }
 
-export { previewLegacyDiagramMigration, previewLegacyDiagramDocument } from './migration.mjs';
+export { previewLegacyDiagramDocument, previewLegacyDiagramMigration } from './migration.mjs';

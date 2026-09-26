@@ -1,10 +1,10 @@
+import { DESIGN_HANDOFF_CONTRACT_FILES } from './design-handoff-contracts.mjs';
+import { DIAGRAM_AUTHORING_CONTRACT_FILES } from './diagram-authoring-contracts.mjs';
 import {
   PROTOCOL_V16_CONTRACT_FILES,
   PROTOCOL_V17_CONTRACT_FILES,
   PROTOCOL_V18_CONTRACT_FILES,
 } from './skill-source-contracts.mjs';
-import { DESIGN_HANDOFF_CONTRACT_FILES } from './design-handoff-contracts.mjs';
-import { DIAGRAM_AUTHORING_CONTRACT_FILES } from './diagram-authoring-contracts.mjs';
 
 export const PROTOCOL_V15_CONTRACTS = Object.freeze({
   'command-catalog': 'command-catalog.schema.json',

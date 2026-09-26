@@ -4,14 +4,13 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { after, test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-
+import { evaluateOperateGuardV2 } from 'planr-pipeline/operate/runtime-v2';
 import {
-  OPERATE_ROLE_MANDATES_V2,
-  OPERATE_RUNTIME_CONTRACT_KINDS,
   assertOperateRoleOutputContract,
   loadOperateRoleMandate,
+  OPERATE_ROLE_MANDATES_V2,
+  OPERATE_RUNTIME_CONTRACT_KINDS,
 } from 'planr-pipeline/protocol';
-import { evaluateOperateGuardV2 } from 'planr-pipeline/operate/runtime-v2';
 import { OPERATE_CONTRACT_CATALOG_V2 } from '../../lib/protocol/generated/contract-catalog-v2.mjs';
 import { runOperateContractGenerator } from '../../scripts/generate-operate-contracts.mjs';
 

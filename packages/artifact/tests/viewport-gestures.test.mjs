@@ -1,19 +1,19 @@
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { createRequire } from 'node:module';
-import { fileURLToPath } from 'node:url';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
-import {
-  normalizeArtifactViewportPan,
-  normalizeArtifactViewportZoom,
-} from '../lib/artifact/ui/bridge-tools.mjs';
 import {
   createArtifactBridgeNonce,
   prepareArtifactDocument,
   renderArtifactParentRuntime,
   validateArtifactBridgeMessage,
 } from '../lib/artifact/bridge.mjs';
+import {
+  normalizeArtifactViewportPan,
+  normalizeArtifactViewportZoom,
+} from '../lib/artifact/ui/bridge-tools.mjs';
 
 const viewport = { width: 800, height: 600 };
 test('viewport zoom requires opt-in, exact authenticated identity and bounded coordinates', () => {

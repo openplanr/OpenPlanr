@@ -7,17 +7,17 @@ import type {
   OperatingRollbackResultV2,
   OperatingRuntimeStateV2,
 } from '@openplanr/protocol';
-import type { OperateGovernedExtensionRegistryV2 } from './governed-extensions-v2.d.mts';
 import type { OperatingArtifactByteStoreV2 } from './evidence-materialization-v2.d.mts';
+import type {
+  OperatingGovernedExecutionCheckpointStoreV2,
+  OperatingGovernedExecutionPayloadV2,
+} from './governed-execution-v2.d.mts';
+import type { OperateGovernedExtensionRegistryV2 } from './governed-extensions-v2.d.mts';
 import type {
   ContainedEffectReceiptV2,
   ContainedTargetAdapterV2,
   ReferenceExecutorHostV2,
 } from './reference-governed-executors-v2.d.mts';
-import type {
-  OperatingGovernedExecutionCheckpointStoreV2,
-  OperatingGovernedExecutionPayloadV2,
-} from './governed-execution-v2.d.mts';
 
 export type OperatingGovernedRecoveryClassificationV2 =
   | 'applied'

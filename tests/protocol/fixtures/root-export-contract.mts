@@ -3,8 +3,8 @@ import {
   PROTOCOL_V16_CONTRACTS,
   PROTOCOL_V111_CONTRACTS,
   PROTOCOL_V113_CONTRACTS,
-  validateDiagramAuthoringBundle,
   protocolAssetUrl,
+  validateDiagramAuthoringBundle,
 } from '@openplanr/protocol';
 import * as nodeContracts from '@openplanr/protocol/contracts';
 

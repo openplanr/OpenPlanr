@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
-import { get } from 'node:http';
 import { mkdtempSync, rmSync } from 'node:fs';
+import { get } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-
+import { assertPlanningGraph } from '../../lib/dashboard/graph-engine.mjs';
 import {
   assertPlanningGraphEnvelope,
   assertPlanningLiveEventEnvelope,
@@ -12,7 +12,6 @@ import {
   decodePlanningCheckpoint,
   encodePlanningCheckpoint,
 } from '../../lib/dashboard/server.mjs';
-import { assertPlanningGraph } from '../../lib/dashboard/graph-engine.mjs';
 import { sha256Jcs } from '../../lib/protocol/jcs.mjs';
 
 const planrDir = join(process.cwd(), 'conformance/fixtures/dashboard-graph/.planr');

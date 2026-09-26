@@ -1,33 +1,33 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { pathToFileURL } from 'node:url';
 import test from 'node:test';
+import { pathToFileURL } from 'node:url';
 
 import {
   createOperatingApprovalRecordV2,
   createOperatingApprovalRequirementV2,
 } from '../../lib/operate/approvals-v2.mjs';
 import { createOperatingGovernedExecutionRuntimeV2 } from '../../lib/operate/governed-execution-v2.mjs';
+import { deriveContainedExecutorRequestFingerprintFromBindingV2 } from '../../lib/operate/governed-extensions-v2.mjs';
+import { derivePersistentOperatingActionRevisionHashV2 } from '../../lib/operate/persistent-work-v2.mjs';
 import {
   createOperatingActionPolicyV2,
   evaluateOperatingActionPolicyV2,
 } from '../../lib/operate/policy-v2.mjs';
-import { derivePersistentOperatingActionRevisionHashV2 } from '../../lib/operate/persistent-work-v2.mjs';
+import {
+  createDisposableLocalProjectTargetV2,
+  createOpenReferenceCapabilityAvailabilityV2,
+  OPEN_REFERENCE_PROJECT_EXECUTOR_HOST_V2,
+} from '../../lib/operate/reference-governed-executors-v2.mjs';
 import {
   acceptOperatingAssignmentSubmissionV2,
   assertOperatingExecuteDispatchAuthorityChainV2,
   computeOperatingRuntimeEventHashV2,
-  createOperatingRuntimeEventV2,
   createEmptyOperatingRuntimeStateV2,
+  createOperatingRuntimeEventV2,
   OPERATING_EXECUTION_EFFECT_SUMMARIES_V2,
   reduceOperatingRuntimeEventsV2,
 } from '../../lib/operate/runtime-foundation.mjs';
-import { deriveContainedExecutorRequestFingerprintFromBindingV2 } from '../../lib/operate/governed-extensions-v2.mjs';
-import {
-  OPEN_REFERENCE_PROJECT_EXECUTOR_HOST_V2,
-  createOpenReferenceCapabilityAvailabilityV2,
-  createDisposableLocalProjectTargetV2,
-} from '../../lib/operate/reference-governed-executors-v2.mjs';
 import { canonicalizeJson, sha256Jcs } from '../../lib/protocol/jcs.mjs';
 
 const fixture = (name) =>

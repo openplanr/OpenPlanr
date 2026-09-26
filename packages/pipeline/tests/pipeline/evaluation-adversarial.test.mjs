@@ -2,12 +2,6 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import {
-  EVALUATION_GATE_THRESHOLDS,
-  EVALUATION_METRICS,
-  EVALUATION_PROTOCOL_VERSION,
-  EVALUATION_SCHEMA_VERSION,
-  EVALUATION_UNWAIVABLE_METRICS,
-  EVALUATION_WAIVABLE_METRICS,
   assertEvaluationAggregateReport,
   assertEvaluationCorpus,
   assertEvaluationGatePolicy,
@@ -18,11 +12,17 @@ import {
   assertEvaluationWaiver,
   assertEvaluationWaiverApplicable,
   assertSkillCertificationReceipt,
+  EVALUATION_GATE_THRESHOLDS,
+  EVALUATION_METRICS,
+  EVALUATION_PROTOCOL_VERSION,
+  EVALUATION_SCHEMA_VERSION,
+  EVALUATION_UNWAIVABLE_METRICS,
+  EVALUATION_WAIVABLE_METRICS,
 } from '../../lib/pipeline/evaluation-contract.mjs';
 import {
-  EVALUATION_EVIDENCE_INPUTS,
   assertUniqueJsonKeys,
   deriveEvaluationIdentity,
+  EVALUATION_EVIDENCE_INPUTS,
   evaluationContentDigest,
   evaluationEvidenceReuse,
   evaluationScenarioIdentityFromSource,

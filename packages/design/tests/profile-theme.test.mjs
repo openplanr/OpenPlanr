@@ -6,10 +6,11 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { createArtifactEnvelope } from '@openplanr/artifact/envelope.mjs';
 import { mountArtifactStage } from '@openplanr/artifact/ui/stage.mjs';
 import {
-  renderDesignStudio,
   createDesignStudioEntries,
   designStudioArtifactId,
+  renderDesignStudio,
 } from '../lib/design/studio.mjs';
+
 const { JSDOM } = createRequire(new URL('../../cli/package.json', import.meta.url))('jsdom');
 const runtime = readFileSync(new URL('../templates/studio/studio.js', import.meta.url), 'utf8');
 const enhancements = readFileSync(

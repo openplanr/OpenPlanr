@@ -1,11 +1,13 @@
 #!/usr/bin/env node
 
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-
+import { digestArtifactEnvelope } from '../lib/artifact/envelope.mjs';
+import { createArtifactReview } from '../lib/artifact/review.mjs';
+import { createDesignBoardArtifactEnvelope } from '../lib/design-engine/artifact-adapter.mjs';
 import {
   ARTIFACT_ERROR_CODES,
   bundleArtifact,
@@ -19,9 +21,6 @@ import {
   mergeArtifactFeedback,
   startArtifactReview,
 } from '../lib/pipeline/index.mjs';
-import { digestArtifactEnvelope } from '../lib/artifact/envelope.mjs';
-import { createArtifactReview } from '../lib/artifact/review.mjs';
-import { createDesignBoardArtifactEnvelope } from '../lib/design-engine/artifact-adapter.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const work = mkdtempSync(join(tmpdir(), 'planr-artifact-conformance-'));

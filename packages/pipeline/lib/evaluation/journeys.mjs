@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process';
-import { createServer } from 'node:http';
 import { lstatSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import { dirname, isAbsolute, join, normalize, relative, resolve } from 'node:path';
 

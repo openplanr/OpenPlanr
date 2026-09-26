@@ -1,18 +1,18 @@
-import { PipelineError } from '@openplanr/protocol/errors';
-import { assertProtocolArtifact } from '@openplanr/protocol/contracts';
 import { sha256Jcs } from '@openplanr/protocol/canonical-json';
+import { assertProtocolArtifact } from '@openplanr/protocol/contracts';
+import { PipelineError } from '@openplanr/protocol/errors';
 import { OPERATE_CONTRACT_CATALOG_V2 } from '@openplanr/protocol/operate-contract-catalog-v2';
-import {
-  assertOperatingActionPolicyV2,
-  assertOperatingPolicyEvaluationV2,
-  isOperatingRollbackEligibilityV2,
-} from './policy-v2.mjs';
 import { evaluateOperatingApprovalSetV2 } from './approvals-v2.mjs';
 import {
   assertContainedExecutorInputEnvelopeV2,
   assertOperateExecutorRegistrationV2,
   assertTrustedExecutorBindingV2,
 } from './governed-extensions-v2.mjs';
+import {
+  assertOperatingActionPolicyV2,
+  assertOperatingPolicyEvaluationV2,
+  isOperatingRollbackEligibilityV2,
+} from './policy-v2.mjs';
 
 const PROTOCOL_VERSION = '2.0.0';
 const AUTHORITY_DECISION_VERSION = '2.0.0';

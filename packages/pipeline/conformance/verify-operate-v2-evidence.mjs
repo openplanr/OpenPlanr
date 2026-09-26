@@ -4,22 +4,21 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-
+import { buildOperatingEvidenceMaterializationV2 } from 'planr-pipeline/operate/evidence-materialization-v2';
+import { buildOperatingEvidenceGraphV2 } from 'planr-pipeline/operate/evidence-projections-v2';
+import {
+  createOperateEvidenceRegistryV2,
+  dispatchOperateEvidenceResolverV2,
+  OPEN_REFERENCE_EVIDENCE_REGISTRY_V2,
+  prepareOperateEvidenceDispatchV2,
+} from 'planr-pipeline/operate/evidence-v2';
+import { createEmptyOperatingRuntimeStateV2 } from 'planr-pipeline/operate/runtime-v2';
 import {
   OPERATE_EVIDENCE_KINDS_V2,
   OPERATE_EVIDENCE_RESOLVER_ERROR_CODES_V2,
   OPERATE_RUNTIME_CONTRACT_KINDS,
   validateProtocolArtifact,
 } from 'planr-pipeline/protocol';
-import {
-  OPEN_REFERENCE_EVIDENCE_REGISTRY_V2,
-  createOperateEvidenceRegistryV2,
-  dispatchOperateEvidenceResolverV2,
-  prepareOperateEvidenceDispatchV2,
-} from 'planr-pipeline/operate/evidence-v2';
-import { buildOperatingEvidenceMaterializationV2 } from 'planr-pipeline/operate/evidence-materialization-v2';
-import { buildOperatingEvidenceGraphV2 } from 'planr-pipeline/operate/evidence-projections-v2';
-import { createEmptyOperatingRuntimeStateV2 } from 'planr-pipeline/operate/runtime-v2';
 
 const VERSION = '2.0.0';
 const root = dirname(fileURLToPath(new URL('../package.json', import.meta.url)));

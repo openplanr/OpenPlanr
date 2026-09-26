@@ -1,17 +1,19 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readdir, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import test from 'node:test';
-import { Resvg } from '@resvg/resvg-js';
-
 import { assertProtocolArtifact } from '@openplanr/protocol/contracts';
-
+import { Resvg } from '@resvg/resvg-js';
+import {
+  cleanupAbandonedDiagramStages,
+  recoverInterruptedDiagramPromotion,
+} from '../lib/artifact/diagram/custody/index.mjs';
 import {
   checkDiagram,
-  DIAGRAM_ERROR_CODES,
   createDiagramDocument,
+  DIAGRAM_ERROR_CODES,
   exportDiagramExcalidraw,
   exportDiagramMermaid,
   importMermaid,
@@ -26,13 +28,9 @@ import {
   rerenderDiagram,
   validateDiagramSvg,
 } from '../lib/artifact/diagram/index.mjs';
-import { prepareDiagramSvg } from '../lib/artifact/ui/diagram-svg.mjs';
-import {
-  cleanupAbandonedDiagramStages,
-  recoverInterruptedDiagramPromotion,
-} from '../lib/artifact/diagram/custody/index.mjs';
-import { createRenderQualityReport } from '../lib/artifact/diagram/rendering/reports.mjs';
 import { renderExcalidrawSceneSvg } from '../lib/artifact/diagram/projection/excalidraw.mjs';
+import { createRenderQualityReport } from '../lib/artifact/diagram/rendering/reports.mjs';
+import { prepareDiagramSvg } from '../lib/artifact/ui/diagram-svg.mjs';
 
 const packageRoot = resolve(import.meta.dirname, '..');
 const fixture = (grammarId) =>

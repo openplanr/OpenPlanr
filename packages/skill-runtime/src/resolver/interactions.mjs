@@ -1,7 +1,6 @@
 import { randomUUID } from 'node:crypto';
-
-import { validateProtocolArtifact } from '@openplanr/protocol/contracts';
 import { verifyDocumentDigest } from '@openplanr/protocol/canonical-json';
+import { validateProtocolArtifact } from '@openplanr/protocol/contracts';
 
 import { SkillRuntimeError } from '../errors.mjs';
 import { resolveCapabilities } from './capabilities.mjs';

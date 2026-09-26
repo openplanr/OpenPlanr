@@ -1,13 +1,13 @@
 /** Authored, share-safe review guidance. No owner or project discovery data. */
 import { createHash } from 'node:crypto';
-import { existsSync, readFileSync, readdirSync, realpathSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, realpathSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
+import { resolveLocalDocumentFile } from '@openplanr/artifact/local-document.mjs';
 import { canonicalizeJson } from '@openplanr/protocol/canonical-json';
 import {
   assertReviewExperience,
   DESIGN_REVIEW_CONTEXT_SCHEMA,
 } from '@openplanr/protocol/review-experience-contracts';
-import { resolveLocalDocumentFile } from '@openplanr/artifact/local-document.mjs';
 
 export const reviewDigest = (value) =>
   createHash('sha256').update(canonicalizeJson(value)).digest('hex');

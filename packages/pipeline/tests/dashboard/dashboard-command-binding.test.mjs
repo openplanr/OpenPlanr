@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
-import { request as httpRequest } from 'node:http';
 import { mkdtempSync, rmSync } from 'node:fs';
+import { request as httpRequest } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';

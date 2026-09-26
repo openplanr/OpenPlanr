@@ -1,23 +1,23 @@
-import { PipelineError } from '@openplanr/protocol/errors';
+import { sha256Jcs } from '@openplanr/protocol/canonical-json';
 import {
   assertOperateIntelligencePlanContractV2,
   assertProtocolArtifact,
 } from '@openplanr/protocol/contracts';
-import { sha256Jcs } from '@openplanr/protocol/canonical-json';
-import { assertOperatingModelStateV2 } from './operating-state-v2.mjs';
-import { assertOperatingSnapshotV2 } from './operating-snapshots-v2.mjs';
-import {
-  assertOperatingValidatedDependencyProofV2,
-  deriveOperatingIntelligenceAssignmentIdV2,
-  validateOperatingIntelligenceAssignmentGraphV2,
-} from './scheduler-v2.mjs';
-import { validateOperatingIntelligenceResultV2 } from './intelligence-result-validator-v2.mjs';
+import { PipelineError } from '@openplanr/protocol/errors';
 import {
   deriveOperatingMaterializedClaimIdV2,
   deriveOperatingMaterializedDecisionIdV2,
   deriveOperatingMaterializedFindingIdV2,
   deriveOperatingMaterializedRiskIdV2,
 } from './intelligence-output-identities-v2.mjs';
+import { validateOperatingIntelligenceResultV2 } from './intelligence-result-validator-v2.mjs';
+import { assertOperatingSnapshotV2 } from './operating-snapshots-v2.mjs';
+import { assertOperatingModelStateV2 } from './operating-state-v2.mjs';
+import {
+  assertOperatingValidatedDependencyProofV2,
+  deriveOperatingIntelligenceAssignmentIdV2,
+  validateOperatingIntelligenceAssignmentGraphV2,
+} from './scheduler-v2.mjs';
 
 const PROTOCOL_VERSION = '2.0.0';
 const TERMINAL_ADVISOR_OUTCOMES = new Set(['abandoned', 'failed']);

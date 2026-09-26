@@ -1,8 +1,7 @@
 import { createHash } from 'node:crypto';
-
-import { PipelineError } from '@openplanr/protocol/errors';
-import { assertProtocolArtifact } from '@openplanr/protocol/contracts';
 import { canonicalizeJson, sha256Jcs } from '@openplanr/protocol/canonical-json';
+import { assertProtocolArtifact } from '@openplanr/protocol/contracts';
+import { PipelineError } from '@openplanr/protocol/errors';
 import { assertOperatingDeltaV2 } from './operating-delta-v2.mjs';
 import { assertOperatingSnapshotV2 } from './operating-snapshots-v2.mjs';
 import { assertOperatingModelStateV2 } from './operating-state-v2.mjs';

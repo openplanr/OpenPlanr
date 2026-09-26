@@ -3,13 +3,11 @@ import { lookup as lookupDns } from 'node:dns/promises';
 import { createReadStream, existsSync, realpathSync, statSync } from 'node:fs';
 import { isIP } from 'node:net';
 import { dirname, extname, isAbsolute, relative, resolve } from 'node:path';
-
+import { ARTIFACT_ERROR_CODES, PipelineError } from '@openplanr/protocol/errors';
 import { build, transform } from 'esbuild';
 import { parse, parseFragment, serialize } from 'parse5';
-
-import { isPathContained } from './internal/path-util.mjs';
-import { ARTIFACT_ERROR_CODES, PipelineError } from '@openplanr/protocol/errors';
 import { digestArtifact, normalizeUtf8Text } from './envelope.mjs';
+import { isPathContained } from './internal/path-util.mjs';
 
 const DEFAULT_MAX_FILES = 1_000;
 const DEFAULT_MAX_BYTES = 10 * 1024 * 1024;

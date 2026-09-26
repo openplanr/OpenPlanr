@@ -1,14 +1,13 @@
 import { createHash } from 'node:crypto';
-
-import { assertProtocolArtifact } from '@openplanr/protocol/contracts';
 import { sha256Jcs } from '@openplanr/protocol/canonical-json';
+import { assertProtocolArtifact } from '@openplanr/protocol/contracts';
+import { readOperatingArtifactRawBytesV2 } from './evidence-materialization-v2.mjs';
+import { decodeOperatingIntelligenceArtifactBodyV2 } from './intelligence-ledger-v2.mjs';
+import { validateOperatingIntelligenceResultV2 } from './intelligence-result-validator-v2.mjs';
 import {
   assertOperatingValidatedDependencyProofV2,
   deriveOperatingIntelligenceAssignmentIdV2,
 } from './scheduler-v2.mjs';
-import { readOperatingArtifactRawBytesV2 } from './evidence-materialization-v2.mjs';
-import { decodeOperatingIntelligenceArtifactBodyV2 } from './intelligence-ledger-v2.mjs';
-import { validateOperatingIntelligenceResultV2 } from './intelligence-result-validator-v2.mjs';
 
 const PROTOCOL_VERSION = '2.0.0';
 const INTELLIGENCE_RESULT_KIND_BY_OUTPUT_SCHEMA = Object.freeze({

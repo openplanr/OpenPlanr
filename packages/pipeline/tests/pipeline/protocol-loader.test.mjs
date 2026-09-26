@@ -5,16 +5,16 @@ import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import {
-  LANDING_CONTRACT_KINDS_V1,
-  OPERATE_LIVE_EVIDENCE_CONTRACT_KINDS_V2,
-  OPERATE_RUNTIME_CONTRACT_KINDS,
   assertDashboardBootstrapV1,
   assertProtocolArtifact,
+  LANDING_CONTRACT_KINDS_V1,
   listProtocolSchemas,
   loadLandingContract,
   loadOperateLiveEvidenceContract,
   loadOperateRuntimeContract,
   loadProtocolContract,
+  OPERATE_LIVE_EVIDENCE_CONTRACT_KINDS_V2,
+  OPERATE_RUNTIME_CONTRACT_KINDS,
   validateDashboardBootstrapV1,
 } from 'planr-pipeline/protocol';
 

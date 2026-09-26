@@ -1,5 +1,5 @@
 import { diffDiagramBundles } from '../diagram/authoring/index.mjs';
-import { element, button, downloadJson } from './diagram-editor-dom.mjs';
+import { button, downloadJson, element } from './diagram-editor-dom.mjs';
 
 /** One comparison surface for local and company adapters. Choices never auto-save. */
 export function mountDiagramConflicts({ root, session, onClose = () => {}, onError = () => {} }) {

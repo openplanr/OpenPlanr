@@ -6,10 +6,10 @@ import { join, resolve } from 'node:path';
 import test from 'node:test';
 
 import {
-  SkillRuntimeError,
   compileComposedV1,
   loadComposedSkill,
   resolveModuleGraph,
+  SkillRuntimeError,
   sha256Bytes,
 } from '../../packages/skill-runtime/src/index.mjs';
 

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
+import { fileURLToPath } from 'node:url';
 
 const source = readFileSync(
   fileURLToPath(new URL('../../lib/operate/persistent-work-projections-v2.mjs', import.meta.url)),

@@ -1,19 +1,19 @@
 #!/usr/bin/env node
-import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import {
   existsSync,
   lstatSync,
-  mkdtempSync,
   mkdirSync,
-  writeFileSync,
-  rmSync,
+  mkdtempSync,
   readdirSync,
   readFileSync,
   realpathSync,
+  rmSync,
+  writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve, dirname } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   inventoryTree,

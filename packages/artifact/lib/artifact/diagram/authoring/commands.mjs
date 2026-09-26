@@ -1,11 +1,11 @@
 import {
   clone,
-  same,
-  snapshot,
   geometryFields,
-  semanticFields,
-  membershipState,
   inspectPlainData,
+  membershipState,
+  same,
+  semanticFields,
+  snapshot,
   validateAuthoringBundle,
 } from './model.mjs';
 import { previewDiagramTransaction } from './transactions.mjs';

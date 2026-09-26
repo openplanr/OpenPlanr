@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict';
-import { test } from 'node:test';
 import { readFileSync } from 'node:fs';
+import { test } from 'node:test';
 import {
-  REVIEW_EXPERIENCE_SCHEMAS,
+  assertDesignReviewMetadata,
+  assertReviewExperience,
   DESIGN_REVIEW_METADATA_PAYLOAD_SCHEMA,
   DESIGN_REVIEW_METADATA_PAYLOAD_V11_SCHEMA,
-  assertReviewExperience,
-  assertDesignReviewMetadata,
+  REVIEW_EXPERIENCE_SCHEMAS,
 } from '../../packages/protocol/src/review-experience-contracts.mjs';
 import { DESIGN_REVIEW_BUNDLE_SCHEMA } from '../../packages/protocol/src/workspace-contracts.mjs';
 

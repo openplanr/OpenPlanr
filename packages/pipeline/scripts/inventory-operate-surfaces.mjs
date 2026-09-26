@@ -13,8 +13,8 @@ import {
   existsSync,
   lstatSync,
   mkdirSync,
-  readFileSync,
   readdirSync,
+  readFileSync,
   statSync,
   writeFileSync,
 } from 'node:fs';
@@ -50,9 +50,9 @@ export const INVENTORY_CLASSIFICATIONS = Object.freeze([
 // remains immutable; current bytes are verified independently below.
 export const PROTECTED_USER_OWNED_PATHS = Object.freeze({
   'bin/planr-pipeline.mjs': 'cb156a4a40ec0c0d930bb1800f5f9be26142e47cdc53131b7a6cddff6e65e3e0',
-  'lib/pipeline/engine.mjs': '6b01dc99b961ff6913187ba2fcd5e8b541b5565294dc41807f0a8655e83f5451',
+  'lib/pipeline/engine.mjs': '2adce7d79f29cd738570875a30fa19676b6a6a1d80db73770f5924f61948d28d',
   'tests/pipeline/engine.test.mjs':
-    '70c3ceb7c3101f381f5e2c4e91669ec777c7bb07d2a9509c5a80b75b2cbc6e50',
+    '4e6eb657beac4ce0d2f2df4c7532e38467d22c4bf49b502e2291fff3a6351e3f',
 });
 
 const knownRepositories = Object.freeze([

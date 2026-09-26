@@ -1,25 +1,25 @@
 import assert from 'node:assert/strict';
-import test from 'node:test';
 import { readFileSync } from 'node:fs';
+import test from 'node:test';
+import { canonicalizeJson, sha256Hex } from '../../packages/protocol/src/canonical-json.mjs';
 import {
-  ENTERPRISE_SCHEMAS,
-  ENTERPRISE_REVIEW_CATEGORIES,
-  ENTERPRISE_CONTENT_DIGEST_HEADER,
   assertEnterpriseContract,
+  assertEnterpriseEvidence,
+  assertEnterpriseHandoff,
+  assertEnterpriseProposal,
+  assertEnterpriseReviewThread,
   assertEnterpriseRevision,
   assertEnterpriseRevisionAppend,
-  assertEnterpriseReviewThread,
-  assertEnterpriseProposal,
-  assertEnterpriseEvidence,
   assertEnterpriseSync,
-  assertEnterpriseHandoff,
   authorizeEnterpriseAccess,
-  enterpriseProjectCapabilities,
   createEnterpriseHandoff,
-  renderEnterpriseHandoffMarkdown,
+  ENTERPRISE_CONTENT_DIGEST_HEADER,
+  ENTERPRISE_REVIEW_CATEGORIES,
+  ENTERPRISE_SCHEMAS,
+  enterpriseProjectCapabilities,
   isEnterpriseRepositoryPath,
+  renderEnterpriseHandoffMarkdown,
 } from '../../packages/protocol/src/enterprise-contracts.mjs';
-import { canonicalizeJson, sha256Hex } from '../../packages/protocol/src/canonical-json.mjs';
 
 const at = '2026-09-13T09:00:00.000Z';
 const later = '2026-09-13T09:01:00.000Z';

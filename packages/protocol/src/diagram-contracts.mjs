@@ -1,6 +1,6 @@
-import { DIAGRAM_V16_CONTRACT_FILES } from './skill-source-contracts.mjs';
 import { DIAGRAM_AUTHORING_CONTRACT_FILES } from './diagram-authoring-contracts.mjs';
 import { DIAGRAM_REGISTRIES } from './generated/diagram-registries.mjs';
+import { DIAGRAM_V16_CONTRACT_FILES } from './skill-source-contracts.mjs';
 
 export const DIAGRAM_CONTRACT_FILES = DIAGRAM_V16_CONTRACT_FILES;
 export const DIAGRAM_GRAMMAR_REGISTRY = DIAGRAM_REGISTRIES['diagram-grammars.json'];

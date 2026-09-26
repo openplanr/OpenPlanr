@@ -1,11 +1,12 @@
 import { createHash } from 'node:crypto';
-import { existsSync, lstatSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, lstatSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { parseFrontmatter, splitFrontmatter } from '../dashboard/graph-reader.mjs';
 import { validateProtocolArtifact } from '../protocol/contracts.mjs';
 import { PipelineError } from './errors.mjs';
+import { createProvenanceEvent } from './provenance.mjs';
 import { captureCandidate, pathsIntersect } from './ship-closure-identity.mjs';
 import {
   assertPathCustody,
@@ -13,7 +14,6 @@ import {
   closurePaths,
   withLock,
 } from './ship-closure-persistence.mjs';
-import { createProvenanceEvent } from './provenance.mjs';
 import { assertClosure, assertShipReceiptLineage } from './ship-closure-reducer.mjs';
 
 const packageRoot = join(dirname(fileURLToPath(import.meta.url)), '..', '..');

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { lstat, readFile, readdir, stat } from 'node:fs/promises';
+import { lstat, readdir, readFile, stat } from 'node:fs/promises';
 import { extname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import test from 'node:test';
 

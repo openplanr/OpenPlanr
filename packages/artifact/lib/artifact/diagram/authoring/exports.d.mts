@@ -3,8 +3,8 @@ import type {
   DiagramAuthoringManifest,
   DiagramAuthoringValidationError,
 } from '@openplanr/protocol/diagram-authoring-contracts';
-import type { AuthoredDiagramScene, DiagramSceneQuality } from './scene.mjs';
 import type { AuthoredDiagramTheme } from './renderer.mjs';
+import type { AuthoredDiagramScene, DiagramSceneQuality } from './scene.mjs';
 
 export interface AuthoredDiagramExportOptions {
   root: string;

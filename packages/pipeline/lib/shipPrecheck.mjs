@@ -3,7 +3,7 @@
  * Mirrors `.cursor/rules/planr-pipeline-ship.mdc` §1b stories/tasks requirements in spec-driven mode.
  */
 
-import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
 const US_FILE = /^US-.*\.md$/i;

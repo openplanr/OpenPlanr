@@ -1,5 +1,5 @@
-import { assertProtocolArtifact } from '../contracts.mjs';
 import { sha256Jcs } from '../canonical-json.mjs';
+import { assertProtocolArtifact } from '../contracts.mjs';
 
 const HASH = /^sha256:[a-f0-9]{64}$/u;
 const CHECKPOINT_TRANSITIONS = Object.freeze({

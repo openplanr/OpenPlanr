@@ -1,14 +1,13 @@
 import { resolveInteraction } from '../resolver/interactions.mjs';
-
-import { assessLifecycleCompatibility } from './compatibility.mjs';
-import { loadLifecycleConfiguration, normalizeLifecycleConfiguration } from './configuration.mjs';
 import { cleanupLifecycleProgress } from './cleanup.mjs';
-import { classifyOperation, resolveLifecycleSettings } from './consent.mjs';
+import { assessLifecycleCompatibility } from './compatibility.mjs';
 import {
   COMPLETION_STATUSES,
   completionFromRuntimeResult,
   createCompletion,
 } from './completion.mjs';
+import { loadLifecycleConfiguration, normalizeLifecycleConfiguration } from './configuration.mjs';
+import { classifyOperation, resolveLifecycleSettings } from './consent.mjs';
 import { prepareLifecycleEnvironment } from './environment.mjs';
 import { firstRunGuidance } from './first-run.mjs';
 import { freezeJson } from './internal.mjs';

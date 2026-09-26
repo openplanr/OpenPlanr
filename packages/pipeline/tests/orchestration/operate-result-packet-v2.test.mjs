@@ -1,13 +1,12 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-
-import { OPERATE_CONTRACT_CATALOG_V2 } from '../../lib/protocol/generated/contract-catalog-v2.mjs';
 import {
   createOperatingResultTemplateV2,
   operatingResultSchemaDependenciesV2,
 } from '../../lib/operate/result-packet-v2.mjs';
 import { preflightOperatingIntelligenceResultV2 } from '../../lib/operate/runtime-foundation.mjs';
 import { assertProtocolArtifact } from '../../lib/protocol/contracts.mjs';
+import { OPERATE_CONTRACT_CATALOG_V2 } from '../../lib/protocol/generated/contract-catalog-v2.mjs';
 
 const PROFILE_FIELDS = Object.freeze({
   'strategy-finance': [

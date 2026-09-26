@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-
-import { sha256Jcs } from '../../lib/protocol/jcs.mjs';
+import {
+  assertPersistentWorkMaterializationPayloadV2,
+  buildPersistentWorkMaterializationPayloadV2,
+  promotePersistentOperatingActionAuthorityV2,
+} from '../../lib/operate/persistent-work-v2.mjs';
 import {
   createEmptyOperatingRuntimeStateV2,
   createOperatingRuntimeEventV2,
@@ -9,11 +12,7 @@ import {
   reduceOperatingRuntimeEventsV2,
 } from '../../lib/operate/runtime-foundation.mjs';
 import { deriveOperatingIntelligenceAssignmentIdV2 } from '../../lib/operate/scheduler-v2.mjs';
-import {
-  assertPersistentWorkMaterializationPayloadV2,
-  buildPersistentWorkMaterializationPayloadV2,
-  promotePersistentOperatingActionAuthorityV2,
-} from '../../lib/operate/persistent-work-v2.mjs';
+import { sha256Jcs } from '../../lib/protocol/jcs.mjs';
 import { chairAssignmentFieldsV2 } from '../helpers/intelligence-assignment-fixture.mjs';
 
 const TIME = '2026-08-08T10:00:00.000Z';

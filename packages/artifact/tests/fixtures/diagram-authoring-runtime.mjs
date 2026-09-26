@@ -1,18 +1,18 @@
 import {
-  compileDiagramCommand,
-  createConditionalInverse,
-  diffDiagramBundles,
-  previewDiagramTransaction,
-  validateAuthoringBundle,
-  resolveDiagramScene,
-  renderAuthoredDiagramSvg,
-} from '../../lib/artifact/diagram/authoring/index.mjs';
-import { canonicalizeJson } from '../../../protocol/src/canonical-json.mjs';
-import {
   makeBundle,
   placement,
   sealBundle,
 } from '../../../../tests/protocol/fixtures/diagram-authoring.mjs';
+import { canonicalizeJson } from '../../../protocol/src/canonical-json.mjs';
+import {
+  compileDiagramCommand,
+  createConditionalInverse,
+  diffDiagramBundles,
+  previewDiagramTransaction,
+  renderAuthoredDiagramSvg,
+  resolveDiagramScene,
+  validateAuthoringBundle,
+} from '../../lib/artifact/diagram/authoring/index.mjs';
 
 function freezeData(value) {
   if (value && typeof value === 'object' && !Object.isFrozen(value)) {

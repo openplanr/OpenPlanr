@@ -1,23 +1,7 @@
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-
-import { PipelineError } from './errors.mjs';
-import {
-  assertBrowserQaSession,
-  establishBrowserQaRuntimeCapability,
-  issueBrowserQaGateRecord,
-  issueBrowserQaRecordedEvent,
-} from './engine/quality.mjs';
-import {
-  advanceStoredPlanningReview,
-  decideStoredPlanningReview,
-  preparePlanningReview,
-  prepareStoredPlanningReviewOwnerDecision,
-  readPlanningReviewReceipt,
-  startStoredPlanningReview,
-} from './engine/planning.mjs';
 import {
   advanceStoredInvestigation,
   finalizeStoredInvestigation,
@@ -26,26 +10,13 @@ import {
   verifyStoredInvestigation,
 } from './engine/investigation.mjs';
 import {
-  appendProvenanceEvent,
-  assertPathCustody,
-  advanceStoredShipClosure,
-  BROWSER_SURFACES,
-  classifyShipRisk,
-  createProvenanceEvent,
-  createShipClosure,
-  finalizeStoredShipClosure,
-  inspectStoredShipClosureForLanding,
-  loadSpecOperatingOrigin,
-  listShipClosureSummaries,
-  normalizeRepositories,
-  projectPipelineOperatingOriginCorrelation,
-  projectSpecOperatingOrigin,
-  readStoredShipClosure,
-  reopenStoredShipClosure,
-  resolveShipClosureConfiguration,
-  runStoredShipGates,
-  SHIP_SPECIALIST_IDS,
-} from './engine/ship.mjs';
+  advanceStoredPlanningReview,
+  decideStoredPlanningReview,
+  preparePlanningReview,
+  prepareStoredPlanningReviewOwnerDecision,
+  readPlanningReviewReceipt,
+  startStoredPlanningReview,
+} from './engine/planning.mjs';
 import {
   buildGraph,
   canonicalizeJson,
@@ -56,6 +27,34 @@ import {
   validateCanonicalProtocolArtifact,
   validateJson,
 } from './engine/protocol.mjs';
+import {
+  assertBrowserQaSession,
+  establishBrowserQaRuntimeCapability,
+  issueBrowserQaGateRecord,
+  issueBrowserQaRecordedEvent,
+} from './engine/quality.mjs';
+import {
+  advanceStoredShipClosure,
+  appendProvenanceEvent,
+  assertPathCustody,
+  BROWSER_SURFACES,
+  classifyShipRisk,
+  createProvenanceEvent,
+  createShipClosure,
+  finalizeStoredShipClosure,
+  inspectStoredShipClosureForLanding,
+  listShipClosureSummaries,
+  loadSpecOperatingOrigin,
+  normalizeRepositories,
+  projectPipelineOperatingOriginCorrelation,
+  projectSpecOperatingOrigin,
+  readStoredShipClosure,
+  reopenStoredShipClosure,
+  resolveShipClosureConfiguration,
+  runStoredShipGates,
+  SHIP_SPECIALIST_IDS,
+} from './engine/ship.mjs';
+import { PipelineError } from './errors.mjs';
 
 const packageRoot = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const pkg = JSON.parse(readFileSync(join(packageRoot, 'package.json'), 'utf8'));

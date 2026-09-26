@@ -1,7 +1,7 @@
 import {
   closeSync,
-  constants as fsConstants,
   existsSync,
+  constants as fsConstants,
   fstatSync,
   lstatSync,
   mkdirSync,

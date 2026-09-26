@@ -3,38 +3,37 @@ import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import test from 'node:test';
-
-import {
-  DIAGRAM_AUTHORING_CAPABILITIES,
-  validateDiagramAuthoringArtifact,
-  assertDiagramAuthoringArtifact,
-  validateDiagramAuthoringBundle,
-  assertDiagramAuthoringBundle,
-  diagramDocumentDigest,
-  diagramPresentationDigest,
-  diagramAuthoringBundleDigest,
-  getDiagramAuthoringCapability,
-  summarizeDiagramAuthoringContent,
-  inspectLegacyDiagramDocument,
-} from '../../packages/protocol/src/diagram-authoring-contracts.mjs';
 import { canonicalizeJson } from '../../packages/protocol/src/canonical-json.mjs';
 import { validateProtocolArtifact } from '../../packages/protocol/src/contracts.mjs';
+import {
+  assertDiagramAuthoringArtifact,
+  assertDiagramAuthoringBundle,
+  DIAGRAM_AUTHORING_CAPABILITIES,
+  diagramAuthoringBundleDigest,
+  diagramDocumentDigest,
+  diagramPresentationDigest,
+  getDiagramAuthoringCapability,
+  inspectLegacyDiagramDocument,
+  summarizeDiagramAuthoringContent,
+  validateDiagramAuthoringArtifact,
+  validateDiagramAuthoringBundle,
+} from '../../packages/protocol/src/diagram-authoring-contracts.mjs';
 import { DIAGRAM_GRAMMAR_REGISTRY } from '../../packages/protocol/src/diagram-contracts.mjs';
 import {
-  SOURCE_TEXT,
-  makeBundle,
-  sealBundle,
-  rehashBundle,
-  makeTransaction,
-  makeProposal,
-  makeFidelity,
-  makeManifest,
-  snapshot,
-  placement,
+  authoringCases,
   clone,
   digestText,
-  authoringCases,
   evaluateAuthoringCases,
+  makeBundle,
+  makeFidelity,
+  makeManifest,
+  makeProposal,
+  makeTransaction,
+  placement,
+  rehashBundle,
+  SOURCE_TEXT,
+  sealBundle,
+  snapshot,
 } from './fixtures/diagram-authoring.mjs';
 
 const root = resolve(import.meta.dirname, '../..');

@@ -16,10 +16,10 @@
  * the network.
  */
 
+import { randomBytes } from 'node:crypto';
 import { writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { randomBytes } from 'node:crypto';
 
 const API = 'https://api.openai.com/v1/responses';
 

@@ -3,12 +3,11 @@ import { readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-
-import { BUSINESS_EXECUTIVE_SKILL_BINDINGS } from '../../lib/operate/contracts/role-skills.mjs';
 import {
   projectedSkillName,
   renderNamespacedSkill,
 } from '../../../../scripts/skills/host-invocations.mjs';
+import { BUSINESS_EXECUTIVE_SKILL_BINDINGS } from '../../lib/operate/contracts/role-skills.mjs';
 
 const PIPELINE_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const WORKSPACE_ROOT = resolve(PIPELINE_ROOT, '../..');

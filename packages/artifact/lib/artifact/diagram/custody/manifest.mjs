@@ -1,5 +1,5 @@
-import { assertProtocolArtifact } from '@openplanr/protocol/contracts';
 import { withDocumentDigest } from '@openplanr/protocol/canonical-json';
+import { assertProtocolArtifact } from '@openplanr/protocol/contracts';
 import { DIAGRAM_GRAMMAR_REGISTRY } from '@openplanr/protocol/diagram-contracts';
 
 import { DIAGRAM_RENDERER, DIAGRAM_THEME } from '../rendering/theme.mjs';

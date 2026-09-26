@@ -1,12 +1,12 @@
 import {
   compileDiagramCommand,
-  previewDiagramTransaction,
   createConditionalInverse,
-  validateAuthoringBundle,
   diffDiagramBundles,
   previewAutomaticLayout,
+  previewDiagramTransaction,
+  validateAuthoringBundle,
 } from '../authoring/index.mjs';
-import { clone, same, snapshot, inspectPlainData } from '../authoring/model.mjs';
+import { clone, inspectPlainData, same, snapshot } from '../authoring/model.mjs';
 import { createDiagramGeometryIndex } from './geometry-index.mjs';
 
 const fail = (rule, detail) => ({ ok: false, diagnostics: [{ path: '$session', rule, detail }] });

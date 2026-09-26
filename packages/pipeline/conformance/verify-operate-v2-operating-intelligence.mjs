@@ -6,28 +6,6 @@ import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSy
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-
-import { OPERATE_RUNTIME_CONTRACT_KINDS, validateProtocolArtifact } from 'planr-pipeline/protocol';
-import {
-  acceptOperatingAssignmentSubmissionV2,
-  createEmptyOperatingRuntimeStateV2,
-  createNoModelReplayHookV2,
-  createOperatingArtifactByteStoreV2,
-  createOperatingRuntimeEventV2,
-  deriveOperatingChairLedgerIdV2,
-  deriveOperatingRuntimeDeltaV2,
-  materializeOperatingActionVerificationV2,
-  materializeOperatingDecisionLedgerV2,
-  materializeOperatingEvidenceV2,
-  materializeOperatingStateSnapshotV2,
-  planOperatingRuntimeIntelligenceBoardV2,
-  readOperatingArtifactRawBytesV2,
-  recordOperatingActionVerificationOutcomeV2,
-  recordOperatingIntelligenceStateV2,
-  recordOperatingTriggerScenarioV2,
-  reduceOperatingRuntimeEventsV2,
-  deriveOperatingVerificationFeedbackV2,
-} from 'planr-pipeline/operate/runtime-v2';
 import { OPEN_REFERENCE_EVIDENCE_REGISTRY_V2 } from 'planr-pipeline/operate/evidence-v2';
 import { OPEN_REFERENCE_OPERATE_EXTENSIONS_V2 } from 'planr-pipeline/operate/extensions-v2';
 import {
@@ -42,12 +20,33 @@ import {
   selectOperatingSnapshotProviderV2,
   selectOperatingVerificationProviderV2,
 } from 'planr-pipeline/operate/operating-signal-providers-v2';
+import { createOperatingResultTemplateV2 } from 'planr-pipeline/operate/result-packet-v2';
+import {
+  acceptOperatingAssignmentSubmissionV2,
+  createEmptyOperatingRuntimeStateV2,
+  createNoModelReplayHookV2,
+  createOperatingArtifactByteStoreV2,
+  createOperatingRuntimeEventV2,
+  deriveOperatingChairLedgerIdV2,
+  deriveOperatingRuntimeDeltaV2,
+  deriveOperatingVerificationFeedbackV2,
+  materializeOperatingActionVerificationV2,
+  materializeOperatingDecisionLedgerV2,
+  materializeOperatingEvidenceV2,
+  materializeOperatingStateSnapshotV2,
+  planOperatingRuntimeIntelligenceBoardV2,
+  readOperatingArtifactRawBytesV2,
+  recordOperatingActionVerificationOutcomeV2,
+  recordOperatingIntelligenceStateV2,
+  recordOperatingTriggerScenarioV2,
+  reduceOperatingRuntimeEventsV2,
+} from 'planr-pipeline/operate/runtime-v2';
 import {
   assertOperatingValidatedDependencyProofV2,
   deriveOperatingAssignmentReleaseIntentsV2,
   validateOperatingIntelligenceAssignmentGraphV2,
 } from 'planr-pipeline/operate/scheduler-v2';
-import { createOperatingResultTemplateV2 } from 'planr-pipeline/operate/result-packet-v2';
+import { OPERATE_RUNTIME_CONTRACT_KINDS, validateProtocolArtifact } from 'planr-pipeline/protocol';
 
 const VERSION = '2.0.0';
 const root = dirname(fileURLToPath(new URL('../package.json', import.meta.url)));

@@ -1,6 +1,6 @@
-import { createDiagramEditorSession } from '../diagram/editor/session.mjs';
 import { createDiagramEditorDraft } from '../diagram/editor/draft.mjs';
 import { createDiagramEditorRecovery } from '../diagram/editor/recovery.mjs';
+import { createDiagramEditorSession } from '../diagram/editor/session.mjs';
 import { createDiagramLocalOwnerTransport } from '../diagram/editor/transport.mjs';
 import { mountDiagramEditor } from './diagram-editor.mjs';
 

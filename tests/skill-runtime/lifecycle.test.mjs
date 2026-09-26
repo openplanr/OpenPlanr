@@ -15,13 +15,13 @@ import test from 'node:test';
 import { withDocumentDigest } from '../../packages/protocol/src/canonical-json.mjs';
 import { validateProtocolArtifact } from '../../packages/protocol/src/contracts.mjs';
 import {
-  LOCAL_LEARNING_PATH,
   checkpointSession,
   classifyOperation,
   completionFromRuntimeResult,
   createCompletion,
   createConsentRecord,
   createSkillSession,
+  LOCAL_LEARNING_PATH,
   persistLearningRecord,
   prepareLearningRecord,
   recoverSession,

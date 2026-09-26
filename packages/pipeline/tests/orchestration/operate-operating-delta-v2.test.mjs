@@ -1,9 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
-
-import { validateProtocolArtifact } from '../../lib/protocol/contracts.mjs';
-import { sha256Jcs } from '../../lib/protocol/jcs.mjs';
 import {
   assertOperatingDeltaV2,
   classifyOperatingDeltaMaterialityV2,
@@ -11,6 +8,8 @@ import {
 } from '../../lib/operate/operating-delta-v2.mjs';
 import { buildOperatingSnapshotStateTransactionV2 } from '../../lib/operate/operating-snapshots-v2.mjs';
 import { deriveOperatingRuntimeDeltaV2 } from '../../lib/operate/runtime-foundation.mjs';
+import { validateProtocolArtifact } from '../../lib/protocol/contracts.mjs';
+import { sha256Jcs } from '../../lib/protocol/jcs.mjs';
 import { checkpoint } from './operate-operating-intelligence-state-v2.test-support.mjs';
 
 const TIME = '2026-08-09T12:00:00.000Z';

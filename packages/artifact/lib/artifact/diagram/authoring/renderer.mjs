@@ -1,8 +1,8 @@
-import { inspectPlainData } from './model.mjs';
-import { resolveDiagramScene } from './scene.mjs';
+import { validateDiagramSvg } from '../accessibility.mjs';
 import { escapeXml } from '../rendering/svg.mjs';
 import { DIAGRAM_THEME } from '../rendering/theme.mjs';
-import { validateDiagramSvg } from '../accessibility.mjs';
+import { inspectPlainData } from './model.mjs';
+import { resolveDiagramScene } from './scene.mjs';
 
 export const AUTHORED_DIAGRAM_RENDERER = Object.freeze({
   id: 'openplanr-authored-svg',

@@ -1,18 +1,17 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
-
+import { sha256Jcs } from '../../lib/protocol/jcs.mjs';
 import {
   assertAcceptedLiveEvidenceBridgeV2,
-  deriveOperatingLiveEvidenceContentDigestV2,
   assertOperatingOutcomeEvaluationV2,
+  deriveOperatingLiveEvidenceContentDigestV2,
   deriveOperatingLiveEvidenceRequestHashV2,
   evaluateOperatingOutcomeV2,
   reduceOperatingConnectorCheckpointV2,
   reduceOperatingMeasurementScheduleV2,
   registerLiveEvidenceProviderV2,
 } from '../../lib/protocol/live-evidence-v2.mjs';
-import { sha256Jcs } from '../../lib/protocol/jcs.mjs';
 
 const protocolFixtures = JSON.parse(
   readFileSync(

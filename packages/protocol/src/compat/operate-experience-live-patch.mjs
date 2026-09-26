@@ -6,9 +6,10 @@
  * rather than shared: the projection module has 111 `fail` and 46 `clone` call sites, and these
  * duplicates are meant to die with it.
  */
-import { PipelineError } from '../errors.mjs';
-import { assertOperateExperienceArtifactV2 } from '../contracts.mjs';
+
 import { sha256Jcs } from '../canonical-json.mjs';
+import { assertOperateExperienceArtifactV2 } from '../contracts.mjs';
+import { PipelineError } from '../errors.mjs';
 
 const PROTOCOL_VERSION = '2.0.0';
 

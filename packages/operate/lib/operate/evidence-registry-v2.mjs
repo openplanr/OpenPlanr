@@ -1,7 +1,7 @@
 import {
+  assertProtocolArtifact,
   OPERATE_EVIDENCE_KINDS_V2,
   OPERATE_EVIDENCE_RESOLVER_ERROR_CODES_V2,
-  assertProtocolArtifact,
 } from '@openplanr/protocol/contracts';
 
 const VERSION = '2.0.0';

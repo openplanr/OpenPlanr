@@ -1,13 +1,12 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
-
+import { issueOperateExperienceDisplaySurfaceV1 } from '../../lib/dashboard/operate-experience-display-contract.mjs';
+import { deriveOperateSharedTruthSummaryV1 } from '../../lib/dashboard/operate-review-workspace-projection-v2.mjs';
 import {
   assertDashboardLiveEventEnvelope,
   createDashboardLiveEventEnvelope,
 } from '../../lib/dashboard/server.mjs';
-import { issueOperateExperienceDisplaySurfaceV1 } from '../../lib/dashboard/operate-experience-display-contract.mjs';
-import { deriveOperateSharedTruthSummaryV1 } from '../../lib/dashboard/operate-review-workspace-projection-v2.mjs';
 
 const hash = (character) => `sha256:${character.repeat(64)}`;
 const binding = Object.freeze({

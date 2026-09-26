@@ -1,28 +1,28 @@
 import assert from 'node:assert/strict';
-import { test } from 'node:test';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { designFixture } from './design-fixture.mjs';
-import {
-  prepareDesignDocument,
-  renderDesignDocument,
-  currentDesign,
-  atomicJson,
-} from '../lib/design/document.mjs';
-import {
-  emptyReviewContext,
-  loadReviewContext,
-  bundleDesignRevision,
-  listDesignRevisions,
-  readDesignRevision,
-} from '../lib/design/context.mjs';
-import { assertDesignReviewBundle } from '@openplanr/protocol/review-experience-contracts';
-import { readDesignHandoff, updateDesignHandoff } from '../lib/design/handoff.mjs';
-import { designReviewPath, startDesignReview } from '../lib/design/review.mjs';
+import { test } from 'node:test';
+import { digestArtifactEnvelope } from '@openplanr/artifact/envelope.mjs';
 import { createReviewLedger } from '@openplanr/artifact/merge.mjs';
 import { readArtifactReviewState, writeArtifactReviewState } from '@openplanr/artifact/review.mjs';
-import { digestArtifactEnvelope } from '@openplanr/artifact/envelope.mjs';
+import { assertDesignReviewBundle } from '@openplanr/protocol/review-experience-contracts';
+import {
+  bundleDesignRevision,
+  emptyReviewContext,
+  listDesignRevisions,
+  loadReviewContext,
+  readDesignRevision,
+} from '../lib/design/context.mjs';
+import {
+  atomicJson,
+  currentDesign,
+  prepareDesignDocument,
+  renderDesignDocument,
+} from '../lib/design/document.mjs';
+import { readDesignHandoff, updateDesignHandoff } from '../lib/design/handoff.mjs';
+import { designReviewPath, startDesignReview } from '../lib/design/review.mjs';
+import { designFixture } from './design-fixture.mjs';
 
 function fixture(t) {
   const root = mkdtempSync(join(tmpdir(), 'planr-experience-'));

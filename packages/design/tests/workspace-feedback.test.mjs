@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { mergeWorkspaceFeedback, workspaceReviewerId } from '../lib/design/workspace-feedback.mjs';
+
 const digest = 'a'.repeat(64),
   revisionId = 'revision-abcdefghijklmnop';
 const pin = (id = 'pin-1') => ({

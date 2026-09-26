@@ -1,20 +1,19 @@
 import assert from 'node:assert/strict';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 import { test } from 'node:test';
-
+import { fileURLToPath } from 'node:url';
+import { createOperateExtensionRegistryV2 } from 'planr-pipeline/operate/extensions-v2';
 import {
-  OperateContractCompileError,
   compileOperateContractRegistry,
+  OperateContractCompileError,
 } from '../../lib/operate/contracts/compiler.mjs';
-import { renderOperateContractAssets } from '../../scripts/generate-operate-contracts.mjs';
-import { OPERATE_CONTRACT_CATALOG_V2 } from '../../lib/protocol/generated/contract-catalog-v2.mjs';
 import { planOperatingIntelligenceBoardV2 } from '../../lib/operate/intelligence-router-v2.mjs';
 import { deriveOperatingRuntimeDeltaV2 } from '../../lib/operate/runtime-foundation.mjs';
-import { createOperateExtensionRegistryV2 } from 'planr-pipeline/operate/extensions-v2';
 import { validateProtocolArtifact } from '../../lib/protocol/contracts.mjs';
+import { OPERATE_CONTRACT_CATALOG_V2 } from '../../lib/protocol/generated/contract-catalog-v2.mjs';
+import { renderOperateContractAssets } from '../../scripts/generate-operate-contracts.mjs';
 import { checkpoint } from '../orchestration/operate-operating-intelligence-state-v2.test-support.mjs';
 
 const RUBRIC_CLAUSES = [

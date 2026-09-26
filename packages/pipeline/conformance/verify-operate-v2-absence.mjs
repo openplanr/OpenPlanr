@@ -1,16 +1,16 @@
 #!/usr/bin/env node
 
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import {
-  OPERATE_RUNTIME_CONTRACT_KINDS,
   assertProtocolArtifact,
   listProtocolSchemas,
   loadOperateRuntimeContract,
   loadProtocolContract,
+  OPERATE_RUNTIME_CONTRACT_KINDS,
 } from 'planr-pipeline/protocol';
 
 const root = dirname(fileURLToPath(new URL('../package.json', import.meta.url)));

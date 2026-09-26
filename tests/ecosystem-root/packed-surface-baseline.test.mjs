@@ -1,16 +1,15 @@
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import test from 'node:test';
-
+import { fileURLToPath } from 'node:url';
+import { PACKED_WORKSPACE_PROTOCOL_ASSET_COUNTS } from '../../packages/pipeline/lib/ecosystem/packed-workspace-proof.mjs';
+import { GENERATOR_STEPS } from '../../scripts/generate-all.mjs';
 import {
   assertPackedSurfaceCompatibility,
   countProtocolAssets,
   readPackedSurfaceBaseline,
 } from '../../scripts/verify-packed-workspace.mjs';
-import { GENERATOR_STEPS } from '../../scripts/generate-all.mjs';
-import { PACKED_WORKSPACE_PROTOCOL_ASSET_COUNTS } from '../../packages/pipeline/lib/ecosystem/packed-workspace-proof.mjs';
 
 const baseline = readPackedSurfaceBaseline();
 const pipeline = new URL('../../packages/pipeline/', import.meta.url);

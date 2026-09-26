@@ -4,27 +4,26 @@ import { join, resolve } from 'node:path';
 import test from 'node:test';
 
 import { load as loadYaml } from 'js-yaml';
-
-import { validateProtocolArtifact } from '../../packages/protocol/src/contracts.mjs';
 import {
   verifyDocumentDigest,
   withDocumentDigest,
 } from '../../packages/protocol/src/canonical-json.mjs';
+import { validateProtocolArtifact } from '../../packages/protocol/src/contracts.mjs';
 import {
-  SkillRuntimeError,
+  readFrontmatter,
+  renderFrontmatterBlock,
+} from '../../packages/skill-runtime/src/compiler/frontmatter.mjs';
+import {
   assertAuthorityNarrows,
   buildCustodyManifest,
   buildGeneratedAssetManifest,
   compileComposedV1,
   compileMarkdownV1,
   resolveModuleGraph,
+  SkillRuntimeError,
   sha256,
   validateSourceMap,
 } from '../../packages/skill-runtime/src/index.mjs';
-import {
-  readFrontmatter,
-  renderFrontmatterBlock,
-} from '../../packages/skill-runtime/src/compiler/frontmatter.mjs';
 
 const root = resolve(import.meta.dirname, '..', '..');
 const fixtures = join(root, 'packages', 'skill-runtime', 'fixtures');

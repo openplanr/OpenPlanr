@@ -2,11 +2,11 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
-  SkillRuntimeError,
   parseMarkdownAsset,
   renderCodexSkill,
   renderHostTokens,
   renderTemplate,
+  SkillRuntimeError,
 } from '../../packages/skill-runtime/src/index.mjs';
 
 const skill = `---\nname: planr-fixture\ndescription: Fixture behavior.\nallowed-tools: "Read"\n---\n\n# Fixture\n\nRead only.\n`;

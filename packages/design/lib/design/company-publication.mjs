@@ -14,8 +14,8 @@ import {
   assertCompanyDesignBundle,
   COMPANY_DESIGN_MAX_BYTES,
 } from '@openplanr/protocol/design-publication-contracts';
-import { prepareDesignDocument } from './document.mjs';
 import { bundleDesignRevision } from './context.mjs';
+import { prepareDesignDocument } from './document.mjs';
 
 const sensitive =
   /-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----|(?:sk_live_|ghp_|github_pat_)[A-Za-z0-9_]{20,}|(?:authorization["']?\s*[:=]\s*["']?bearer\s+)[A-Za-z0-9._-]{20,}/iu;

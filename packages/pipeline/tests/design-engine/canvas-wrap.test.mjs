@@ -6,19 +6,20 @@
  * canvas data (with a per-variant `data-dc-slot` id), the script-safe shell
  * injection, and the prefer-canvas-else-degrade board discovery.
  */
-import { test } from 'node:test';
+
 import assert from 'node:assert/strict';
-import { readFileSync, writeFileSync, mkdtempSync } from 'node:fs';
-import { join, dirname } from 'node:path';
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
+import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { runInNewContext } from 'node:vm';
 
 import {
-  imageDimensions,
   buildImageCanvasData,
-  wrapInCanvas,
   discoverVariants,
+  imageDimensions,
+  wrapInCanvas,
 } from '../../lib/design-engine/canvas-wrap.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');

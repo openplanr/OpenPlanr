@@ -1,4 +1,4 @@
-import { lstat, readFile, readdir } from 'node:fs/promises';
+import { lstat, readdir, readFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 
 import {
@@ -7,8 +7,8 @@ import {
   diagramPresentationDigest,
   inspectLegacyDiagramDocument,
 } from '@openplanr/protocol/diagram-authoring-contracts';
-import { readDiagramSet } from '../custody/workspace.mjs';
 import { assertDiagramSlug } from '../custody/paths.mjs';
+import { readDiagramSet } from '../custody/workspace.mjs';
 import { layoutDiagram } from '../rendering/layout.mjs';
 import { isDashedRelation } from '../rendering/theme.mjs';
 import { validateAuthoringBundle } from './model.mjs';

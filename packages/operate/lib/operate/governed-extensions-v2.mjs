@@ -1,10 +1,10 @@
-import { PipelineError } from '@openplanr/protocol/errors';
+import { sha256Jcs } from '@openplanr/protocol/canonical-json';
 import {
-  OPERATE_GOVERNED_EFFECT_CLASSES_V2,
   assertProtocolArtifact,
   findOperateCoreProhibitionV2,
+  OPERATE_GOVERNED_EFFECT_CLASSES_V2,
 } from '@openplanr/protocol/contracts';
-import { sha256Jcs } from '@openplanr/protocol/canonical-json';
+import { PipelineError } from '@openplanr/protocol/errors';
 import { OPERATE_CONTRACT_CATALOG_V2 } from '@openplanr/protocol/operate-contract-catalog-v2';
 import {
   findOpenReferenceExecutorHostDeclarationV2,

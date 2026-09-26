@@ -1,22 +1,21 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-
+import { createOperatingGovernedRecoveryRuntimeV2 } from '../../lib/operate/governed-recovery-v2.mjs';
+import { OPEN_REFERENCE_PROJECT_EXECUTOR_HOST_V2 } from '../../lib/operate/reference-governed-executors-v2.mjs';
 import {
-  OPERATING_ASSIGNMENT_TRANSITIONS_V2,
   acceptOperatingAssignmentSubmissionV2,
   assertOperateAuthorizedV2,
   createEmptyOperatingRuntimeStateV2,
   createOperatingRuntimeEventV2,
   deriveOperateAllowedActionsV2,
   evaluateOperateGuardV2,
+  OPERATING_ASSIGNMENT_TRANSITIONS_V2,
   reduceOperatingRuntimeEventsV2,
   transitionOperatingAssignmentV2,
 } from '../../lib/operate/runtime-foundation.mjs';
+import { deriveOperatingAssignmentReleaseIntentsV2 } from '../../lib/operate/scheduler-v2.mjs';
 import { assertProtocolArtifact } from '../../lib/protocol/contracts.mjs';
 import { sha256Jcs } from '../../lib/protocol/jcs.mjs';
-import { deriveOperatingAssignmentReleaseIntentsV2 } from '../../lib/operate/scheduler-v2.mjs';
-import { createOperatingGovernedRecoveryRuntimeV2 } from '../../lib/operate/governed-recovery-v2.mjs';
-import { OPEN_REFERENCE_PROJECT_EXECUTOR_HOST_V2 } from '../../lib/operate/reference-governed-executors-v2.mjs';
 import { createGovernedExecutionCheckpointStore } from './operate-governed-execution-v2.test.mjs';
 import { governedRollbackScenario } from './operate-governed-rollback-v2.test.mjs';
 

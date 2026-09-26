@@ -1,10 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import {
-  normalizeArtifactBridgeToolResult,
-  normalizeArtifactViewportPan,
-  normalizeArtifactViewportZoom,
-  renderArtifactBridgeToolsSource,
-} from './ui/bridge-tools.mjs';
+import { ARTIFACT_ERROR_CODES, PipelineError } from '@openplanr/protocol/errors';
 
 import { parse, parseFragment, serialize } from 'parse5';
 
@@ -13,7 +8,12 @@ import {
   mintCapabilityToken,
   timingSafeTokenEqual,
 } from './internal/board-token.mjs';
-import { ARTIFACT_ERROR_CODES, PipelineError } from '@openplanr/protocol/errors';
+import {
+  normalizeArtifactBridgeToolResult,
+  normalizeArtifactViewportPan,
+  normalizeArtifactViewportZoom,
+  renderArtifactBridgeToolsSource,
+} from './ui/bridge-tools.mjs';
 
 export const ARTIFACT_BRIDGE_CHANNEL = 'openplanr.artifact-anchor';
 export const ARTIFACT_BRIDGE_VERSION = '1.0.0';

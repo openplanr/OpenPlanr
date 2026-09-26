@@ -1,8 +1,8 @@
+import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { lstatSync, readFileSync, readdirSync, realpathSync, writeFileSync } from 'node:fs';
+import { lstatSync, readdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, posix, relative, resolve } from 'node:path';
-import { spawnSync } from 'node:child_process';
 
 import { sha256Jcs } from '../protocol/jcs.mjs';
 

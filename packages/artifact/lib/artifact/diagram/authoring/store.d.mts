@@ -1,8 +1,8 @@
 import type {
   DiagramAuthoringBundle,
+  DiagramConditionalInverse,
   DiagramEditTransaction,
   DiagramPreviewResult,
-  DiagramConditionalInverse,
 } from './index.mjs';
 
 export interface DiagramStoreBasis {

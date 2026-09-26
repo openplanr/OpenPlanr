@@ -5,9 +5,11 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-
-import { collectFilePaths } from '../helpers/files.mjs';
-import { resolveWorkspaceDependencyRoot } from '../helpers/workspace-dependency.mjs';
+import {
+  selectOperateExperienceDisplaySurface,
+  selectOperateInboxItemDisplaySurface,
+} from '../../lib/dashboard/operate-experience-reader.mjs';
+import { sha256Jcs } from '../../lib/protocol/jcs.mjs';
 
 import {
   assertOperateExperienceDisplaySurfaceV1,
@@ -15,12 +17,9 @@ import {
   validateOperateExperienceDisplaySurfaceV1,
   validateOperateExperiencePreviewV1,
 } from '../../schemas/v1.2.0/operate-experience-display-surface.mjs';
-import {
-  selectOperateExperienceDisplaySurface,
-  selectOperateInboxItemDisplaySurface,
-} from '../../lib/dashboard/operate-experience-reader.mjs';
-import { sha256Jcs } from '../../lib/protocol/jcs.mjs';
+import { collectFilePaths } from '../helpers/files.mjs';
 import { pairedOpenPlanrTools } from '../helpers/paired-openplanr.mjs';
+import { resolveWorkspaceDependencyRoot } from '../helpers/workspace-dependency.mjs';
 import { rehashExperienceView } from './experience-view-test-support.mjs';
 
 const root = fileURLToPath(new URL('../..', import.meta.url));

@@ -8,8 +8,8 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import * as auditContract from '../../lib/dashboard/operate-experience-audit-display-contract.mjs';
 import { selectOperateExperienceSurface } from '../../lib/dashboard/operate-experience-reader.mjs';
 import * as auditSchema from '../../schemas/v1.2.0/operate-experience-audit-display-surface.mjs';
-import { pairedOpenPlanrTools } from '../helpers/paired-openplanr.mjs';
 import { collectFilePaths } from '../helpers/files.mjs';
+import { pairedOpenPlanrTools } from '../helpers/paired-openplanr.mjs';
 import { resolveWorkspaceDependencyRoot } from '../helpers/workspace-dependency.mjs';
 
 const root = fileURLToPath(new URL('../..', import.meta.url));

@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import {
-  DESIGN_WORKSPACE_SCHEMAS,
-  DESIGN_WORKSPACE_SCHEMA,
-  DESIGN_WORKSPACE_CREATE_SCHEMA,
   assertWorkspaceContract,
+  DESIGN_WORKSPACE_CREATE_SCHEMA,
+  DESIGN_WORKSPACE_SCHEMA,
+  DESIGN_WORKSPACE_SCHEMAS,
 } from '../../packages/protocol/src/workspace-contracts.mjs';
-import { readFileSync } from 'node:fs';
 
 test('workspace schemas are additive generated Protocol contracts', () => {
   for (const [name, schema] of Object.entries(DESIGN_WORKSPACE_SCHEMAS)) {

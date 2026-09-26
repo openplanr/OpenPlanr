@@ -1,6 +1,6 @@
-import { PipelineError } from '@openplanr/protocol/errors';
-import { assertProtocolArtifact } from '@openplanr/protocol/contracts';
 import { sha256Jcs } from '@openplanr/protocol/canonical-json';
+import { assertProtocolArtifact } from '@openplanr/protocol/contracts';
+import { PipelineError } from '@openplanr/protocol/errors';
 import { assertOperatingActionAuthorityTupleV2 } from './authorization-v2.mjs';
 import {
   deriveOperatingExecutionVerificationStatusV2,

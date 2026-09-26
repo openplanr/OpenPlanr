@@ -1,13 +1,13 @@
 import type {
   DiagramAuthoringBundle,
-  DiagramAuthoringValidationError,
-  DiagramEditTransaction,
-  DiagramEditOperation,
-  DiagramSemanticEntry,
-  DiagramPlacement,
-  DiagramBounds,
   DiagramAuthoringContainer,
+  DiagramAuthoringValidationError,
+  DiagramBounds,
+  DiagramEditOperation,
+  DiagramEditTransaction,
   DiagramFidelityReport,
+  DiagramPlacement,
+  DiagramSemanticEntry,
 } from '@openplanr/protocol/diagram-authoring-contracts';
 
 export type {
@@ -161,22 +161,22 @@ export declare function createConditionalInverse(
   options: DiagramTransactionIdentity,
 ): { ok: true; transaction: DiagramEditTransaction } | DiagramKernelFailure;
 
+export * from './layout.mjs';
 export {
-  resolveDiagramScene,
+  type AuthoredDiagramRenderFailure,
+  type AuthoredDiagramSvgResult,
+  type AuthoredDiagramTheme,
+  renderAuthoredDiagramSvg,
+} from './renderer.mjs';
+export {
+  type AuthoredDiagramScene,
+  type AuthoredDiagramSceneElement,
   type DiagramSceneDiagnostic,
+  type DiagramSceneFailure,
   type DiagramSceneQuality,
   type DiagramSceneText,
-  type AuthoredDiagramSceneElement,
-  type AuthoredDiagramScene,
-  type DiagramSceneFailure,
+  resolveDiagramScene,
 } from './scene.mjs';
-export {
-  renderAuthoredDiagramSvg,
-  type AuthoredDiagramTheme,
-  type AuthoredDiagramSvgResult,
-  type AuthoredDiagramRenderFailure,
-} from './renderer.mjs';
-export * from './layout.mjs';
 
 export interface MermaidCopyDiagnostic {
   code: string;

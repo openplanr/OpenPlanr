@@ -1,8 +1,8 @@
-import { spawn } from 'node:child_process';
 import { Buffer } from 'node:buffer';
+import { spawn } from 'node:child_process';
+import { resolve } from 'node:path';
 import { isatty } from 'node:tty';
 import { fileURLToPath } from 'node:url';
-import { resolve } from 'node:path';
 
 const PTY_DRIVER = String.raw`
 import base64

@@ -1,16 +1,15 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 import { test } from 'node:test';
-
-import {
-  OperateContractCompileError,
-  compileOperateContractRegistry,
-} from '../../lib/operate/contracts/compiler.mjs';
-import { OPERATE_CONTRACT_CATALOG_V2 } from '../../lib/protocol/generated/contract-catalog-v2.mjs';
+import { fileURLToPath } from 'node:url';
 import { createOperateExtensionRegistryV2 } from 'planr-pipeline/operate/extensions-v2';
 import { resolvePublicOperatingDomainV2 } from 'planr-pipeline/operate/operating-domains-v2';
+import {
+  compileOperateContractRegistry,
+  OperateContractCompileError,
+} from '../../lib/operate/contracts/compiler.mjs';
+import { OPERATE_CONTRACT_CATALOG_V2 } from '../../lib/protocol/generated/contract-catalog-v2.mjs';
 
 const EXECUTIVE_ADVISOR_IDS = [
   'growth-market',

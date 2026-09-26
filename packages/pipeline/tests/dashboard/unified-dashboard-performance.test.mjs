@@ -4,9 +4,8 @@ import { request } from 'node:http';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { performance } from 'node:perf_hooks';
-import { pathToFileURL } from 'node:url';
-import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { checkOperateRuntimePurity } from '../../scripts/check-operate-runtime-purity.mjs';
 

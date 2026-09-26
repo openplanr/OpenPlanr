@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict';
-import { createRequire } from 'node:module';
 import { mkdtemp, realpath, rm } from 'node:fs/promises';
+import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { startDiagramOwner } from '../lib/artifact/diagram/editor/local-owner.mjs';
-import { createDiagramAuthoringStore } from '../lib/artifact/diagram/authoring/store.mjs';
 import { makeBundle } from '../../../tests/protocol/fixtures/diagram-authoring.mjs';
+import { createDiagramAuthoringStore } from '../lib/artifact/diagram/authoring/store.mjs';
+import { startDiagramOwner } from '../lib/artifact/diagram/editor/local-owner.mjs';
 
 const enabled = process.env.PLANR_BROWSER_TESTS === '1';
 const requireProtocol = createRequire(new URL('../../protocol/package.json', import.meta.url));

@@ -1,4 +1,4 @@
-import { existsSync, lstatSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, lstatSync, readdirSync, readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 
 import { compileComposedV1, validateSourceMap } from '../compiler/index.mjs';

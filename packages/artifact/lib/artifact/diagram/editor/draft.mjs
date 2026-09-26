@@ -1,6 +1,6 @@
-import { clone, failure, sealBundle } from '../authoring/model.mjs';
-import { compileDiagramCommand, validateAuthoringBundle } from '../authoring/index.mjs';
 import { processTemplate } from '../../ui/diagram-editor-actions.mjs';
+import { compileDiagramCommand, validateAuthoringBundle } from '../authoring/index.mjs';
+import { clone, failure, sealBundle } from '../authoring/model.mjs';
 
 const meta = (kind) => ({ kind, schemaVersion: '1.0.0', protocolVersion: '1.13.0' });
 const NAMED_TEMPLATES = Object.freeze({ process: () => processTemplate({ x: 80, y: 160 }) });

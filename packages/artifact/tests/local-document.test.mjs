@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { Script } from 'node:vm';
 import test from 'node:test';
+import { Script } from 'node:vm';
 import { parse } from 'parse5';
 
 import { bundleLocalDocument, resolveLocalDocumentFile } from '../lib/artifact/local-document.mjs';

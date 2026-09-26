@@ -1,5 +1,5 @@
-import { validateJson } from './json-schema.mjs';
 import { DESIGN_DOCUMENT_SCHEMA } from './design-contracts.mjs';
+import { validateJson } from './json-schema.mjs';
 
 export const DESIGN_WORKSPACE_VERSION = '1.0.0';
 export const DESIGN_WORKSPACE_API = '/api/v1/design-workspaces';

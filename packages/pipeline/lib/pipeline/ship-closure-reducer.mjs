@@ -2,15 +2,15 @@ import { createHash } from 'node:crypto';
 
 import { validateProtocolArtifact } from '../protocol/contracts.mjs';
 import { sha256Jcs } from '../protocol/jcs.mjs';
-import { PipelineError } from './errors.mjs';
 import { assertBrowserQaGateRecord, assertBrowserQaRecordedEventAuthority } from './browser-qa.mjs';
-import { assertShipRiskClassification } from './ship-risk.mjs';
+import { PipelineError } from './errors.mjs';
 import {
   candidateCorrectionPaths,
   normalizeRepositoryPath,
   pathsIntersect,
   repositoryMap,
 } from './ship-closure-identity.mjs';
+import { assertShipRiskClassification } from './ship-risk.mjs';
 
 const TERMINAL_STATES = new Set(['passed', 'blocked']);
 const EVENT_KEYS = Object.freeze({

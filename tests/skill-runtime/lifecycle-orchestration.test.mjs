@@ -1,18 +1,18 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { spawnSync } from 'node:child_process';
 import test from 'node:test';
 
 import {
-  LIFECYCLE_CONFIGURATION_PATH,
-  LIFECYCLE_IGNORE_RULE,
   assessLifecycleCompatibility,
   closeSessionProgress,
   createConsentRecord,
   detectLifecycleEnvironment,
   executeAtEffectBoundary,
+  LIFECYCLE_CONFIGURATION_PATH,
+  LIFECYCLE_IGNORE_RULE,
   loadLifecycleConfiguration,
   persistSessionProgress,
   prepareLifecycleEnvironment,

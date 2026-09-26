@@ -1,6 +1,6 @@
 import { verifyDocumentDigest } from './canonical-json.mjs';
-import { CANONICAL_REGISTRIES } from './generated/canonical-registries.mjs';
 import { PROTOCOL_ERROR_CODES, ProtocolError } from './errors.mjs';
+import { CANONICAL_REGISTRIES } from './generated/canonical-registries.mjs';
 
 const fail = (code, message, details) => {
   throw new ProtocolError(code, message, '', details);

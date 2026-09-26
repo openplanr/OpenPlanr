@@ -1,16 +1,17 @@
 import type {
   DiagramAuthoringBundle,
-  DiagramEditTransaction,
   DiagramAuthoringValidationError,
+  DiagramEditTransaction,
 } from '@openplanr/protocol/diagram-authoring-contracts';
 import type {
+  DiagramBundleDiff,
   DiagramCommand,
   DiagramCommandResult,
   DiagramPreviewResult,
-  DiagramBundleDiff,
 } from '../authoring/index.mjs';
 import type { DiagramStoreBasis, DiagramStoreReceipt } from '../authoring/store.mjs';
 import type { DiagramGeometryIndex } from './geometry-index.mjs';
+
 export * from './geometry-index.mjs';
 
 export interface DiagramEditorFailure {
@@ -278,8 +279,8 @@ export declare function bindDiagramEditorCancellation(
 ): () => void;
 
 export { mountDiagramEditor } from '../../ui/diagram-editor.mjs';
-export { mountDiagramSourcePanel } from '../../ui/diagram-source-panel.mjs';
 export type {
   DiagramSourcePanelController,
   DiagramSourcePanelOptions,
 } from '../../ui/diagram-source-panel.mjs';
+export { mountDiagramSourcePanel } from '../../ui/diagram-source-panel.mjs';

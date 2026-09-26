@@ -1,5 +1,5 @@
-import { CANONICAL_REGISTRIES, resolveTaskKind } from './registries.mjs';
 import { ProtocolError } from './errors.mjs';
+import { CANONICAL_REGISTRIES, resolveTaskKind } from './registries.mjs';
 
 const diagnostic = (code, path, message) => ({ code, path, message });
 const pathKey = ({ repositoryKey, path }) => `${repositoryKey}:${path}`;

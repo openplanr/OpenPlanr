@@ -1,18 +1,17 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
-
-import {
-  DESIGN_DOCUMENT_SCHEMA,
-  DESIGN_DOCUMENT_VERSION,
-  assertDesignDocument,
-  validateDesignDocument,
-} from '../../packages/protocol/src/design-contracts.mjs';
-import { validateJson } from '../../packages/protocol/src/json-schema.mjs';
 import {
   listProtocolSchemas,
   validateProtocolArtifact,
 } from '../../packages/protocol/src/contracts.mjs';
+import {
+  assertDesignDocument,
+  DESIGN_DOCUMENT_SCHEMA,
+  DESIGN_DOCUMENT_VERSION,
+  validateDesignDocument,
+} from '../../packages/protocol/src/design-contracts.mjs';
+import { validateJson } from '../../packages/protocol/src/json-schema.mjs';
 
 const fixture = () => ({
   kind: 'openplanr-design-document',

@@ -3,11 +3,11 @@ import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 
 import {
+  loadOperateEvidenceContract,
   OPERATE_EVIDENCE_CONTRACT_KINDS_V2,
   OPERATE_EVIDENCE_EDGE_RELATIONS_V2,
   OPERATE_EVIDENCE_KINDS_V2,
   OPERATE_EVIDENCE_RESOLVER_ERROR_CODES_V2,
-  loadOperateEvidenceContract,
   validateProtocolArtifact,
 } from '../../lib/protocol/loader.mjs';
 

@@ -1,13 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-
-import { canonicalizeJson, sha256Jcs } from '../../lib/protocol/jcs.mjs';
 import { createOperatingGovernedRecoveryRuntimeV2 } from '../../lib/operate/governed-recovery-v2.mjs';
 import { OPEN_REFERENCE_PROJECT_EXECUTOR_HOST_V2 } from '../../lib/operate/reference-governed-executors-v2.mjs';
 import {
   computeOperatingRuntimeEventHashV2,
   reduceOperatingRuntimeEventsV2,
 } from '../../lib/operate/runtime-foundation.mjs';
+import { canonicalizeJson, sha256Jcs } from '../../lib/protocol/jcs.mjs';
 import { createGovernedExecutionCheckpointStore } from './operate-governed-execution-v2.test.mjs';
 import { governedRollbackScenario } from './operate-governed-rollback-v2.test.mjs';
 

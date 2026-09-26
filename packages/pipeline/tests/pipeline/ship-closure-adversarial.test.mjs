@@ -1,6 +1,5 @@
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { hostname, tmpdir } from 'node:os';
 import {
   chmodSync,
   existsSync,
@@ -14,9 +13,10 @@ import {
   unlinkSync,
   writeFileSync,
 } from 'node:fs';
+import { hostname, tmpdir } from 'node:os';
 import { basename, dirname, join, relative } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
 import { test } from 'node:test';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { Worker } from 'node:worker_threads';
 
 import {

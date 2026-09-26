@@ -12,13 +12,8 @@ import {
 import { request as httpRequest } from 'node:http';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { afterEach, test } from 'node:test';
-
-import {
-  artifactReviewToDesignFeedback,
-  designFeedbackToArtifactReview,
-} from '../../lib/design-engine/feedback.mjs';
+import { fileURLToPath } from 'node:url';
 import {
   createArtifactEnvelope,
   digestArtifactEnvelope,
@@ -42,6 +37,10 @@ import {
   closeArtifactReviewServers,
   startArtifactReview,
 } from '../../lib/artifact/review-server.mjs';
+import {
+  artifactReviewToDesignFeedback,
+  designFeedbackToArtifactReview,
+} from '../../lib/design-engine/feedback.mjs';
 import { ARTIFACT_ERROR_CODES } from '../../lib/pipeline/errors.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));

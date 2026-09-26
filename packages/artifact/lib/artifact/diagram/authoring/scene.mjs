@@ -1,6 +1,6 @@
-import { clone, same, snapshot, elementIndex, validateAuthoringBundle } from './model.mjs';
 import { wrapDiagramLabel } from '../rendering/layout.mjs';
 import { MAX_DIAGRAM_SCENE_EXTENT } from '../rendering/theme.mjs';
+import { clone, elementIndex, same, snapshot, validateAuthoringBundle } from './model.mjs';
 
 export const AUTHORED_SCENE_ITEM_BUDGET = 256;
 export const AUTHORED_MINIMUM_FONT_SIZE = 12;

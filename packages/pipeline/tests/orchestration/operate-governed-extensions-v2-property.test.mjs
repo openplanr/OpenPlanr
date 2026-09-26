@@ -3,12 +3,12 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 import {
-  OPEN_REFERENCE_OPERATE_GOVERNED_EXTENSIONS_V2,
   assertContainedExecutorInputEnvelopeV2,
   createContainedExecutorInputEnvelopeV2,
   createOperateGovernedExtensionRegistryV2,
   createTrustedExecutorBindingV2,
   deriveContainedExecutorRequestFingerprintV2,
+  OPEN_REFERENCE_OPERATE_GOVERNED_EXTENSIONS_V2,
   selectOperateExecutorV2,
 } from '../../lib/operate/governed-extensions-v2.mjs';
 import { OPEN_REFERENCE_PROJECT_EXECUTOR_HOST_V2 } from '../../lib/operate/reference-governed-executors-v2.mjs';

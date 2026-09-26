@@ -1,9 +1,9 @@
 import { PipelineError } from '../pipeline/errors.mjs';
 import {
-  EVALUATION_METRICS,
-  EVALUATION_UNWAIVABLE_METRICS,
   assertEvaluationGatePolicy,
   assertEvaluationWaiverApplicable,
+  EVALUATION_METRICS,
+  EVALUATION_UNWAIVABLE_METRICS,
 } from '../pipeline/evaluation-contract.mjs';
 
 export const EVALUATION_FINDING_SEVERITIES = Object.freeze(['p0', 'p1', 'p2', 'p3']);

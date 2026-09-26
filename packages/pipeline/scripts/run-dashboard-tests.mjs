@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
+import { spawnSync } from 'node:child_process';
 import { realpathSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
-import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const root = realpathSync(resolve(dirname(fileURLToPath(import.meta.url)), '..'));

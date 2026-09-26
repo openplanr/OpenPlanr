@@ -4,9 +4,9 @@ import { isAbsolute, relative, resolve } from 'node:path';
 import { PipelineError } from '../pipeline/errors.mjs';
 import { evaluationContentDigest } from '../pipeline/evaluation-identity.mjs';
 import {
+  buildProfessionalSkillsManifest,
   PROFESSIONAL_SKILLS_CATALOG_PATH,
   PROFESSIONAL_SKILLS_MANIFEST_PATH,
-  buildProfessionalSkillsManifest,
   readProfessionalSkillsCatalog,
   renderProfessionalSkillAssets,
   renderProfessionalSkillsBundle,

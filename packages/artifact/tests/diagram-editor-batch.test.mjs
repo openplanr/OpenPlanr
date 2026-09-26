@@ -3,13 +3,12 @@ import { mkdtemp, realpath, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-
-import { createDiagramEditorSession } from '../lib/artifact/diagram/editor/session.mjs';
-import { createDiagramEditorRecovery } from '../lib/artifact/diagram/editor/recovery.mjs';
-import { createDiagramEditorDraft } from '../lib/artifact/diagram/editor/draft.mjs';
-import { createDiagramAuthoringStore } from '../lib/artifact/diagram/authoring/store.mjs';
-import { snapshot } from '../lib/artifact/diagram/authoring/model.mjs';
 import { makeBundle, placement } from '../../../tests/protocol/fixtures/diagram-authoring.mjs';
+import { snapshot } from '../lib/artifact/diagram/authoring/model.mjs';
+import { createDiagramAuthoringStore } from '../lib/artifact/diagram/authoring/store.mjs';
+import { createDiagramEditorDraft } from '../lib/artifact/diagram/editor/draft.mjs';
+import { createDiagramEditorRecovery } from '../lib/artifact/diagram/editor/recovery.mjs';
+import { createDiagramEditorSession } from '../lib/artifact/diagram/editor/session.mjs';
 
 const good = (result) => {
   assert.equal(result.ok, true, JSON.stringify(result));

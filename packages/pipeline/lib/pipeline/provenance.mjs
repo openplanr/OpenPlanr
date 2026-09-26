@@ -12,8 +12,8 @@ import {
 } from 'node:fs';
 import { hostname } from 'node:os';
 import { dirname, join, relative } from 'node:path';
-import { isDeepStrictEqual } from 'node:util';
 import { fileURLToPath } from 'node:url';
+import { isDeepStrictEqual } from 'node:util';
 
 import { validateJson } from '../protocol/json-schema.mjs';
 import { PipelineError } from './errors.mjs';

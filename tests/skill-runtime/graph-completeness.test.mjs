@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
-  SkillRuntimeError,
   resolveModuleGraph,
+  SkillRuntimeError,
   sha256,
 } from '../../packages/skill-runtime/src/index.mjs';
 

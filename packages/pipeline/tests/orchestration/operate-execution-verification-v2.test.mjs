@@ -1,14 +1,13 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
-
-import { sha256Jcs } from '../../lib/protocol/jcs.mjs';
 import {
-  OPERATING_EXECUTION_VERIFICATION_STATUSES_V2,
   buildOperatingExecutionLifecycleV2,
   deriveOperatingExecutionVerificationStatusV2,
   deriveOperatingVerificationFeedbackV2,
+  OPERATING_EXECUTION_VERIFICATION_STATUSES_V2,
 } from '../../lib/operate/execution-verification-v2.mjs';
+import { sha256Jcs } from '../../lib/protocol/jcs.mjs';
 
 const fixture = (name) =>
   JSON.parse(

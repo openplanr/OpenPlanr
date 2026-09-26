@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { resolveScreens, countScreens } from '../../lib/design/screens.mjs';
+import { countScreens, resolveScreens } from '../../lib/design/screens.mjs';
 
 test('resolves a bullet list under a "Screens" heading', () => {
   const spec = [

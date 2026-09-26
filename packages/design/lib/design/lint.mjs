@@ -27,9 +27,8 @@
 
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-
-import { isOnSpacingScale, nearestSpacing, isCanonicalFrame, FRAMES } from './tokens.mjs';
-import { contrastRatio, AA_NORMAL } from './contrast.mjs';
+import { AA_NORMAL, contrastRatio } from './contrast.mjs';
+import { FRAMES, isCanonicalFrame, isOnSpacingScale, nearestSpacing } from './tokens.mjs';
 
 const SPACING_PROP =
   /^(padding|margin|gap|row-gap|column-gap|inset|top|right|bottom|left)(-(top|right|bottom|left|block|inline)(-(start|end))?)?$/;

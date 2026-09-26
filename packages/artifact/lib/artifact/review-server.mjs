@@ -1,45 +1,44 @@
+import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { createServer } from 'node:http';
-import { existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-
-import {
-  acquireStartLock,
-  assertLoopbackRequest,
-  closeHttpServer,
-  listenLoopback,
-  LOOPBACK_HOST,
-  probeLoopbackJson,
-  readJsonState,
-  readRequestBody,
-  writePrivateJsonState,
-} from './internal/server-util.mjs';
-import {
-  isCapabilityToken,
-  mintCapabilityToken,
-  timingSafeTokenEqual,
-} from './internal/board-token.mjs';
-import { planrHome } from './internal/paths.mjs';
 import { ARTIFACT_ERROR_CODES, PipelineError } from '@openplanr/protocol/errors';
+import {
+  createArtifactBridgeNonce,
+  prepareArtifactDocument,
+  renderArtifactParentRuntime,
+} from './bridge.mjs';
 import {
   digestArtifactEnvelope,
   validateArtifactEnvelope,
   validateArtifactReview,
 } from './envelope.mjs';
 import { resolveArtifactReviewDestination } from './import.mjs';
+import {
+  isCapabilityToken,
+  mintCapabilityToken,
+  timingSafeTokenEqual,
+} from './internal/board-token.mjs';
+import { planrHome } from './internal/paths.mjs';
+import {
+  acquireStartLock,
+  assertLoopbackRequest,
+  closeHttpServer,
+  LOOPBACK_HOST,
+  listenLoopback,
+  probeLoopbackJson,
+  readJsonState,
+  readRequestBody,
+  writePrivateJsonState,
+} from './internal/server-util.mjs';
 import { createReviewLedger, effectiveReviewDecision, mergeReviewLedger } from './merge.mjs';
 import {
-  ARTIFACT_REVIEW_MAX_STATE_BYTES as REVIEW_STATE_MAX_BYTES,
   exportArtifactReview,
+  ARTIFACT_REVIEW_MAX_STATE_BYTES as REVIEW_STATE_MAX_BYTES,
   readArtifactReviewState,
   withArtifactReviewLock,
   writeArtifactReviewState,
 } from './review.mjs';
-import {
-  createArtifactBridgeNonce,
-  prepareArtifactDocument,
-  renderArtifactParentRuntime,
-} from './bridge.mjs';
 import { renderArtifactShellDocument } from './ui/shell.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));

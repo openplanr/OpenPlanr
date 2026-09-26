@@ -2,11 +2,11 @@ import assert from 'node:assert/strict';
 import { mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
-import { join, resolve, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { dirname, join, resolve } from 'node:path';
 import test from 'node:test';
-import { startDiagramOwner } from '../lib/artifact/diagram/editor/local-owner.mjs';
+import { fileURLToPath } from 'node:url';
 import { createDiagramAuthoringStore } from '../lib/artifact/diagram/authoring/store.mjs';
+import { startDiagramOwner } from '../lib/artifact/diagram/editor/local-owner.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 const requireProtocol = createRequire(new URL('../../protocol/package.json', import.meta.url));

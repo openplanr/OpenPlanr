@@ -11,21 +11,19 @@ import {
 import { dirname, join, relative, resolve, sep } from 'node:path';
 
 import { validateProtocolArtifact } from '@openplanr/protocol/contracts';
-import { linkSkillProjections } from '../linker/index.mjs';
-
 import { isSkillAssetPath } from '../compiler/index.mjs';
-
+import { linkSkillProjections } from '../linker/index.mjs';
+import { describeAuthoringGraph } from './command-contract.mjs';
 import {
-  GENERATED_ASSET_MANIFEST,
-  GENERATED_CUSTODY_MANIFEST,
-  GENERATED_OUTPUT_DIR,
   buildCompiledManifests,
   compileHostProjections,
   flattenCompiledAssets,
+  GENERATED_ASSET_MANIFEST,
+  GENERATED_CUSTODY_MANIFEST,
+  GENERATED_OUTPUT_DIR,
 } from './compiled-assets.mjs';
 import { SkillAuthoringError } from './diagnostics.mjs';
 import { acquireGenerationLock } from './generation-lock.mjs';
-import { describeAuthoringGraph } from './command-contract.mjs';
 import { loadComposedSkill } from './loader.mjs';
 import { runOperation } from './operation-result.mjs';
 

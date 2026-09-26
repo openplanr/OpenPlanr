@@ -2,6 +2,7 @@ import { clientSelectionToNormalized, mountArtifactAnnotations } from './annotat
 import { mountArtifactFeedbackRail } from './feedback-rail.mjs';
 import { mountHostedArtifactViewer } from './hosted-viewer.mjs';
 import { mountArtifactShareDialog } from './share-dialog.mjs';
+
 export { createArtifactStagePayload } from './stage-payload.mjs';
 
 export const ARTIFACT_STAGE_EVENTS = Object.freeze({

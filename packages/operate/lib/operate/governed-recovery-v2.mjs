@@ -1,18 +1,23 @@
-import { PipelineError } from '@openplanr/protocol/errors';
-import { assertProtocolArtifact } from '@openplanr/protocol/contracts';
 import { canonicalizeJson, sha256Jcs } from '@openplanr/protocol/canonical-json';
-import { assertOperateAuthorityV2 } from './authorization-v2.mjs';
+import { assertProtocolArtifact } from '@openplanr/protocol/contracts';
+import { PipelineError } from '@openplanr/protocol/errors';
 import { evaluateOperatingRollbackApprovalSetV2 } from './approvals-v2.mjs';
+import { assertOperateAuthorityV2 } from './authorization-v2.mjs';
+import { buildOperatingRollbackVerificationV2 } from './execution-verification-v2.mjs';
 import {
-  OPEN_REFERENCE_OPERATE_GOVERNED_EXTENSIONS_V2,
   classifyOperateExecutorRecoveryCapabilityV2,
   createContainedExecutorInputEnvelopeV2,
   createTrustedExecutorBindingV2,
   deriveContainedExecutorRequestFingerprintV2,
   findOperateExecutorRegistrationV2,
+  OPEN_REFERENCE_OPERATE_GOVERNED_EXTENSIONS_V2,
   selectOperateExecutorV2,
 } from './governed-extensions-v2.mjs';
 import { assertOperatingRollbackPolicyV2, isOperatingRollbackEligibilityV2 } from './policy-v2.mjs';
+import {
+  createOpenReferenceCapabilityAvailabilityV2,
+  resolveOpenReferenceExecutorHostV2,
+} from './reference-governed-executors-v2.mjs';
 import {
   acceptOperatingAssignmentSubmissionV2,
   assertOperatingRollbackAuthorityChainV2,
@@ -22,11 +27,6 @@ import {
   resolveOperatingLatestActionEvaluationV2,
   scheduleOperatingRuntimeEventsV2,
 } from './runtime-foundation.mjs';
-import {
-  createOpenReferenceCapabilityAvailabilityV2,
-  resolveOpenReferenceExecutorHostV2,
-} from './reference-governed-executors-v2.mjs';
-import { buildOperatingRollbackVerificationV2 } from './execution-verification-v2.mjs';
 
 const PROTOCOL_VERSION = '2.0.0';
 const DEFAULT_RUNTIME_VERSION = '0.44.0';

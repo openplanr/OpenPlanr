@@ -1,13 +1,11 @@
 import type {
   OperatingActionV2,
   OperatingDecisionV2,
-  OperatingRuntimeStateV2,
-} from '@openplanr/protocol';
-import type {
   OperatingDeliveryEvidenceV1,
   OperatingDeliveryRouteV1,
   OperatingOriginV1,
   OperatingPlanningProposalV1,
+  OperatingRuntimeStateV2,
 } from '@openplanr/protocol';
 
 export const OPERATING_DELIVERY_ROUTES_V1: readonly [

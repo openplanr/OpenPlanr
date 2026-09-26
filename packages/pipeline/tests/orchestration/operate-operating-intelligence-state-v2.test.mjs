@@ -2,8 +2,6 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
-
-import { sha256Jcs } from '../../lib/protocol/jcs.mjs';
 import { buildOperatingIntelligenceStateTransitionV2 } from '../../lib/operate/operating-intelligence-state-v2.mjs';
 import { deriveOperatingSnapshotRuntimeHashV2 } from '../../lib/operate/operating-snapshots-v2.mjs';
 import { buildOperatingTriggerScenarioTransitionV2 } from '../../lib/operate/operating-triggers-v2.mjs';
@@ -14,6 +12,7 @@ import {
   recordOperatingIntelligenceStateV2,
   reduceOperatingRuntimeEventsV2,
 } from '../../lib/operate/runtime-foundation.mjs';
+import { sha256Jcs } from '../../lib/protocol/jcs.mjs';
 
 const TIME = '2026-08-09T12:00:00.000Z';
 const FACT_TIME = '2026-08-09T12:02:00.000Z';

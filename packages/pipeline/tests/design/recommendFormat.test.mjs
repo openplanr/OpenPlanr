@@ -2,9 +2,9 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import {
-  recommendFormat,
-  isExploratory,
   DESIGN_FORMATS,
+  isExploratory,
+  recommendFormat,
 } from '../../lib/design/recommendFormat.mjs';
 
 test('0–2 screens always recommend prototype', () => {

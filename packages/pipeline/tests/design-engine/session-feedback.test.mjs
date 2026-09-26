@@ -1,28 +1,27 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, writeFileSync, existsSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { test, afterEach } from 'node:test';
-
+import { afterEach, test } from 'node:test';
 import {
-  createSession,
-  appendRound,
-  recordRegionEdit,
-  saveSession,
-  loadSession,
-} from '../../lib/design-engine/session.mjs';
-import {
-  readFeedback,
-  clampPin,
   assertValidFeedback,
+  clampPin,
   FEEDBACK_FILE,
   PENDING_FILE,
+  readFeedback,
 } from '../../lib/design-engine/feedback.mjs';
 import {
   DEFAULT_IMAGE_MODEL,
   DEFAULT_MODEL,
   iterate,
 } from '../../lib/design-engine/providers/openai.mjs';
+import {
+  appendRound,
+  createSession,
+  loadSession,
+  recordRegionEdit,
+  saveSession,
+} from '../../lib/design-engine/session.mjs';
 
 const dirs = [];
 const tmp = () => {

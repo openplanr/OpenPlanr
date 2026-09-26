@@ -1,9 +1,8 @@
 import { createHash } from 'node:crypto';
 import { existsSync, lstatSync, readFileSync, realpathSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
-
-import { assertOperatingOriginV1 } from '../protocol/operating-planning-contracts.mjs';
 import { parseFrontmatter, splitFrontmatter } from '../dashboard/graph-reader.mjs';
+import { assertOperatingOriginV1 } from '../protocol/operating-planning-contracts.mjs';
 import { PipelineError } from './errors.mjs';
 
 function fail(message) {

@@ -1,15 +1,15 @@
-import test from 'node:test';
 import assert from 'node:assert/strict';
+import test from 'node:test';
 import {
   makeBundle,
   makeTransaction,
   placement,
   sealBundle,
 } from '../../../tests/protocol/fixtures/diagram-authoring.mjs';
-import { previewDiagramTransaction } from '../lib/artifact/diagram/authoring/transactions.mjs';
-import { createConditionalInverse } from '../lib/artifact/diagram/authoring/undo.mjs';
 import { compileDiagramCommand } from '../lib/artifact/diagram/authoring/commands.mjs';
 import { geometryFields, snapshot } from '../lib/artifact/diagram/authoring/model.mjs';
+import { previewDiagramTransaction } from '../lib/artifact/diagram/authoring/transactions.mjs';
+import { createConditionalInverse } from '../lib/artifact/diagram/authoring/undo.mjs';
 
 const tx = (bundle, operations, transactionId = 'edit-one') => ({
   kind: 'diagram-edit-transaction',

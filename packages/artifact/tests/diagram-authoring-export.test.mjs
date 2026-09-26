@@ -4,29 +4,29 @@ import {
   link,
   mkdir,
   mkdtemp,
-  readFile,
   readdir,
+  readFile,
   rm,
   symlink,
   writeFile,
 } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
-import { inflateSync } from 'node:zlib';
 import test from 'node:test';
-import {
-  exportAuthoredDiagram,
-  verifyAuthoredDiagramExports,
-} from '../lib/artifact/diagram/authoring/exports.mjs';
-import { compileDiagramCommand } from '../lib/artifact/diagram/authoring/commands.mjs';
-import { renderAuthoredDiagramSvg } from '../lib/artifact/diagram/authoring/renderer.mjs';
-import { renderDiagramPng } from '../lib/artifact/diagram/rendering/png.mjs';
-import { digestBytes, jsonBytes } from '../lib/artifact/diagram/custody/bytes.mjs';
+import { inflateSync } from 'node:zlib';
 import {
   makeBundle,
   placement,
   sealBundle,
 } from '../../../tests/protocol/fixtures/diagram-authoring.mjs';
+import { compileDiagramCommand } from '../lib/artifact/diagram/authoring/commands.mjs';
+import {
+  exportAuthoredDiagram,
+  verifyAuthoredDiagramExports,
+} from '../lib/artifact/diagram/authoring/exports.mjs';
+import { renderAuthoredDiagramSvg } from '../lib/artifact/diagram/authoring/renderer.mjs';
+import { digestBytes, jsonBytes } from '../lib/artifact/diagram/custody/bytes.mjs';
+import { renderDiagramPng } from '../lib/artifact/diagram/rendering/png.mjs';
 
 function authoredFixture() {
   const bundle = makeBundle('swimlane', { blank: true });

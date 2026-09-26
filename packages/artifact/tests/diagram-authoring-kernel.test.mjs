@@ -1,16 +1,16 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
-  compileDiagramCommand,
-  previewDiagramTransaction,
-  createConditionalInverse,
-} from '../lib/artifact/diagram/authoring/index.mjs';
-import {
+  clone,
   makeBundle,
   placement,
   sealBundle,
-  clone,
 } from '../../../tests/protocol/fixtures/diagram-authoring.mjs';
+import {
+  compileDiagramCommand,
+  createConditionalInverse,
+  previewDiagramTransaction,
+} from '../lib/artifact/diagram/authoring/index.mjs';
 
 const compile = (bundle, command, id = 'gesture-a') =>
   compileDiagramCommand(bundle, command, { transactionId: id });

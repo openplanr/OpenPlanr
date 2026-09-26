@@ -1,15 +1,15 @@
 import { readFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
-import { createArtifactReviewServer } from './review-server.mjs';
+import { digestBytes } from './diagram/custody/bytes.mjs';
+import { createDiagramArtifactEnvelope } from './diagram/integration.mjs';
 import { digestArtifactEnvelope } from './envelope.mjs';
 import { resolveArtifactReviewDestination } from './import.mjs';
 import { embedJson, escapeHtml } from './internal/escape.mjs';
+import { createArtifactReviewServer } from './review-server.mjs';
 import { renderArtifactRail, renderPlanrMark } from './ui/renderers.mjs';
 import { ARTIFACT_SHELL_CSS } from './ui/shell.mjs';
 import { loadArtifactTheme, renderArtifactThemeCss } from './ui/tokens.mjs';
-import { createDiagramArtifactEnvelope } from './diagram/integration.mjs';
-import { digestBytes } from './diagram/custody/bytes.mjs';
 
 const css = () => readFileSync(new URL('./ui/diagram-studio.css', import.meta.url), 'utf8');
 const runtime = () =>

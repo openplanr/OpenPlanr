@@ -3,13 +3,6 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-
-import {
-  EVALUATION_METRICS,
-  EVALUATION_UNWAIVABLE_METRICS,
-  assertEvaluationWaiver,
-} from '../../lib/pipeline/evaluation-contract.mjs';
-import { deriveEvaluationIdentity } from '../../lib/pipeline/evaluation-identity.mjs';
 import {
   admitWaiver,
   countFindings,
@@ -17,6 +10,12 @@ import {
   findingSeverity,
   meetsGate,
 } from '../../lib/evaluation/gates.mjs';
+import {
+  assertEvaluationWaiver,
+  EVALUATION_METRICS,
+  EVALUATION_UNWAIVABLE_METRICS,
+} from '../../lib/pipeline/evaluation-contract.mjs';
+import { deriveEvaluationIdentity } from '../../lib/pipeline/evaluation-identity.mjs';
 
 const root = dirname(fileURLToPath(new URL('../../package.json', import.meta.url)));
 const contracts = JSON.parse(

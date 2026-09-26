@@ -20,7 +20,7 @@
  * not depend on the engine honouring `scope`.
  */
 
-import { watch, readdirSync, statSync } from 'node:fs';
+import { readdirSync, statSync, watch } from 'node:fs';
 import { basename, join } from 'node:path';
 
 import { buildGraph as defaultBuildGraph } from './graph-engine.mjs';

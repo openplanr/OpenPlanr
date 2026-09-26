@@ -1,14 +1,14 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 
 import {
-  OPEN_REFERENCE_EVIDENCE_REGISTRY_V2,
   dispatchOperateEvidenceResolverV2,
+  OPEN_REFERENCE_EVIDENCE_REGISTRY_V2,
 } from 'planr-pipeline/operate/evidence-v2';
 
 const fixture = (name) =>

@@ -14,12 +14,11 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-
-import { PipelineError } from '../lib/pipeline/errors.mjs';
-import { assertEvaluationWaiver } from '../lib/pipeline/evaluation-contract.mjs';
 import { createLoopbackBrowserAdapter } from '../lib/evaluation/journeys.mjs';
 import { writeCiReports, writeLocalRun } from '../lib/evaluation/report.mjs';
 import { runEvaluation } from '../lib/evaluation/runner.mjs';
+import { PipelineError } from '../lib/pipeline/errors.mjs';
+import { assertEvaluationWaiver } from '../lib/pipeline/evaluation-contract.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const argv = process.argv.slice(2);

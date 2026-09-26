@@ -1,13 +1,13 @@
-import { assertProtocolArtifact } from '@openplanr/protocol/contracts';
 import { sha256Jcs } from '@openplanr/protocol/canonical-json';
-import { buildOperatingTerminalVerificationAssignmentV2 } from './execution-verification-v2.mjs';
+import { assertProtocolArtifact } from '@openplanr/protocol/contracts';
 import { OPERATE_CONTRACT_CATALOG_V2 } from '@openplanr/protocol/operate-contract-catalog-v2';
+import { buildOperatingTerminalVerificationAssignmentV2 } from './execution-verification-v2.mjs';
 import {
-  assertOperatingAssignmentTerminalPayloadV2,
   assertOperatingAssignmentAvailabilityPayloadV2,
+  assertOperatingAssignmentTerminalPayloadV2,
   assertOperatingValidatedDependencyProofV2,
-  resolveOperatingAssignmentInputArtifactIdsV2,
   resolveOperatingAssignmentInputAbsencesV2,
+  resolveOperatingAssignmentInputArtifactIdsV2,
 } from './scheduler-v2.mjs';
 
 const PROTOCOL_VERSION = '2.0.0';

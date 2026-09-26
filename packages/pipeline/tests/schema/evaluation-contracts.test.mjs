@@ -5,8 +5,8 @@ import { test } from 'node:test';
 import { validateProtocolArtifact } from '../../lib/protocol/contracts.mjs';
 import {
   EVALUATION_CONTRACT_KINDS_V1,
-  loadEvaluationContract,
   listProtocolSchemas,
+  loadEvaluationContract,
 } from '../../lib/protocol/loader.mjs';
 
 const PROTOCOL_VERSION = '1.4.0';

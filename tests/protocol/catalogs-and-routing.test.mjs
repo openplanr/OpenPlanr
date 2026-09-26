@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 
 import { withDocumentDigest } from '../../packages/protocol/src/canonical-json.mjs';
 import { ProtocolError } from '../../packages/protocol/src/errors.mjs';

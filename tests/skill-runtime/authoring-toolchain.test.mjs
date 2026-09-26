@@ -1,11 +1,10 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { mkdtempSync } from 'node:fs';
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import test from 'node:test';
-
+import { validateToolchainOwners } from '../../conformance/skills/check-toolchain-ownership.mjs';
 import {
   AUTHORING_COMMANDS,
   checkSkill,
@@ -14,7 +13,6 @@ import {
   lintSkill,
   previewSkill,
 } from '../../packages/skill-runtime/src/authoring/index.mjs';
-import { validateToolchainOwners } from '../../conformance/skills/check-toolchain-ownership.mjs';
 
 const root = resolve(import.meta.dirname, '..', '..');
 const fixture = JSON.parse(

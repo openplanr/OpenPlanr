@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { tmpdir } from 'node:os';
-import { fileURLToPath } from 'node:url';
 import { execFile } from 'node:child_process';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
+import { afterEach, test } from 'node:test';
+import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
-import { test, afterEach } from 'node:test';
 
 const execFileP = promisify(execFile);
 const here = dirname(fileURLToPath(import.meta.url));

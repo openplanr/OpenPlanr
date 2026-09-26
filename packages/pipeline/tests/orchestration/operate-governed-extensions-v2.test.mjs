@@ -1,12 +1,9 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 import {
-  OPERATE_GOVERNED_EFFECT_RANK_V2,
-  OPEN_REFERENCE_OPERATE_GOVERNED_EXTENSIONS_V2,
-  OPEN_REFERENCE_OPERATE_GOVERNED_EXTENSION_CATALOG_DIGEST_V2,
   assertOperateExecutorRegistrationV2,
   assertTrustedExecutorBindingV2,
   createOperateGovernedExtensionRegistryV2,
@@ -14,14 +11,17 @@ import {
   findOperateCapabilityProviderRegistrationV2,
   findOperateExecutorRegistrationV2,
   findOperatePolicyProviderRegistrationV2,
+  OPEN_REFERENCE_OPERATE_GOVERNED_EXTENSION_CATALOG_DIGEST_V2,
+  OPEN_REFERENCE_OPERATE_GOVERNED_EXTENSIONS_V2,
+  OPERATE_GOVERNED_EFFECT_RANK_V2,
   selectOperateCapabilityProviderV2,
   selectOperateExecutorV2,
   selectOperatePolicyProviderV2,
 } from '../../lib/operate/governed-extensions-v2.mjs';
 import {
+  createOpenReferenceCapabilityAvailabilityV2,
   OPEN_REFERENCE_CONTAINMENT_EXECUTOR_HOST_V2,
   OPEN_REFERENCE_PROJECT_EXECUTOR_HOST_V2,
-  createOpenReferenceCapabilityAvailabilityV2,
 } from '../../lib/operate/reference-governed-executors-v2.mjs';
 import { sha256Jcs } from '../../lib/protocol/jcs.mjs';
 

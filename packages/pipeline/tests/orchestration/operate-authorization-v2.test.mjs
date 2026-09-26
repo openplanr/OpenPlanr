@@ -1,14 +1,21 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import test from 'node:test';
-
+import { fileURLToPath } from 'node:url';
+import {
+  createOperatingApprovalRecordV2,
+  createOperatingApprovalRequirementV2,
+} from '../../lib/operate/approvals-v2.mjs';
 import {
   assertOperateAuthorityV2,
   deriveOperateAuthorityAllowedActionsV2,
   evaluateOperateAuthorityV2,
 } from '../../lib/operate/authorization-v2.mjs';
+import {
+  createOperatingActionPolicyV2,
+  evaluateOperatingActionPolicyV2,
+} from '../../lib/operate/policy-v2.mjs';
 import {
   assertOperateAuthorizedV2,
   deriveOperateAllowedActionsV2,
@@ -16,14 +23,6 @@ import {
 } from '../../lib/operate/runtime-foundation.mjs';
 import { assertProtocolArtifact } from '../../lib/protocol/contracts.mjs';
 import { sha256Jcs } from '../../lib/protocol/jcs.mjs';
-import {
-  createOperatingActionPolicyV2,
-  evaluateOperatingActionPolicyV2,
-} from '../../lib/operate/policy-v2.mjs';
-import {
-  createOperatingApprovalRecordV2,
-  createOperatingApprovalRequirementV2,
-} from '../../lib/operate/approvals-v2.mjs';
 
 const fixtureUrl = (name) =>
   new URL(`../../conformance/fixtures/operating-runtime-v2/${name}`, import.meta.url);

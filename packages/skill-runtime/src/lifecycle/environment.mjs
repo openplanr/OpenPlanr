@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process';
 import {
   appendFileSync,
   existsSync,
@@ -7,7 +8,6 @@ import {
   realpathSync,
 } from 'node:fs';
 import { isAbsolute, relative, resolve, sep } from 'node:path';
-import { spawnSync } from 'node:child_process';
 
 import { freezeJson } from './internal.mjs';
 import { ensureStateDirectory, resolveProjectRoot, resolveStatePath } from './storage.mjs';

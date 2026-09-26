@@ -1,14 +1,12 @@
 import type {
   OperateAllowedActionV2,
-  OperatingCheckpointV2,
-  OperatingEventV2,
-  OperatingRuntimeStateV2,
-} from '@openplanr/protocol';
-import type {
   OperateExperienceLivePatchV1,
   OperateExperiencePreviewV1,
   OperateExperienceViewV1,
+  OperatingCheckpointV2,
   OperatingDeliveryRouteV1,
+  OperatingEventV2,
+  OperatingRuntimeStateV2,
 } from '@openplanr/protocol';
 
 export interface OperateExperienceActorV1 {

@@ -1,19 +1,18 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
-
+import { deriveOperatingExecutionLifecycleIdentitiesV2 } from '../../lib/operate/execution-verification-v2.mjs';
+import { createOperatingGovernedExecutionRuntimeV2 } from '../../lib/operate/governed-execution-v2.mjs';
+import {
+  createDisposableLocalProjectTargetV2,
+  OPEN_REFERENCE_PROJECT_EXECUTOR_HOST_V2,
+} from '../../lib/operate/reference-governed-executors-v2.mjs';
 import {
   reduceOperatingRuntimeEventsV2,
   scheduleOperatingRuntimeEventsV2,
   transitionOperatingActionLifecycleV2,
   transitionOperatingCycleLifecycleV2,
 } from '../../lib/operate/runtime-foundation.mjs';
-import { createOperatingGovernedExecutionRuntimeV2 } from '../../lib/operate/governed-execution-v2.mjs';
-import { deriveOperatingExecutionLifecycleIdentitiesV2 } from '../../lib/operate/execution-verification-v2.mjs';
-import {
-  OPEN_REFERENCE_PROJECT_EXECUTOR_HOST_V2,
-  createDisposableLocalProjectTargetV2,
-} from '../../lib/operate/reference-governed-executors-v2.mjs';
 import {
   createGovernedExecutionCheckpointStore,
   governedExecutionScenario,

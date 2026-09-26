@@ -7,21 +7,21 @@ import {
   planOperatingIntelligenceBoardV2,
 } from '../../lib/operate/intelligence-router-v2.mjs';
 import {
+  claimOperatingAssignmentV2,
+  createNoModelReplayHookV2,
+  createOperatingRuntimeEventV2,
+  deriveOperatingRuntimeDeltaV2,
+  deriveOperatingSnapshotRuntimeHashV2,
+  planOperatingRuntimeIntelligenceBoardV2,
+  reduceOperatingRuntimeEventsV2,
+  scheduleOperatingRuntimeEventsV2,
+} from '../../lib/operate/runtime-foundation.mjs';
+import {
   deriveOperatingAssignmentReleaseIntentsV2,
   resolveOperatingAssignmentInputAbsencesV2,
   resolveOperatingAssignmentInputArtifactIdsV2,
   validateOperatingIntelligenceAssignmentGraphV2,
 } from '../../lib/operate/scheduler-v2.mjs';
-import {
-  claimOperatingAssignmentV2,
-  createNoModelReplayHookV2,
-  createOperatingRuntimeEventV2,
-  deriveOperatingSnapshotRuntimeHashV2,
-  deriveOperatingRuntimeDeltaV2,
-  planOperatingRuntimeIntelligenceBoardV2,
-  reduceOperatingRuntimeEventsV2,
-  scheduleOperatingRuntimeEventsV2,
-} from '../../lib/operate/runtime-foundation.mjs';
 import { validateProtocolArtifact } from '../../lib/protocol/contracts.mjs';
 import { sha256Jcs } from '../../lib/protocol/jcs.mjs';
 import { checkpoint } from './operate-operating-intelligence-state-v2.test-support.mjs';

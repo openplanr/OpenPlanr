@@ -6,20 +6,20 @@
  */
 
 import { randomBytes } from 'node:crypto';
-import { createConnection } from 'node:net';
 import {
   closeSync,
   existsSync,
+  lstatSync,
   mkdirSync,
   openSync,
-  lstatSync,
-  readFileSync,
   readdirSync,
+  readFileSync,
   renameSync,
   rmSync,
   statSync,
   writeFileSync,
 } from 'node:fs';
+import { createConnection } from 'node:net';
 import { dirname, join } from 'node:path';
 
 export const LOOPBACK_HOST = '127.0.0.1';

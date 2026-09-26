@@ -1,4 +1,16 @@
 /** Explicit authority and approval dependencies for the Operate runtime foundation. */
+
+export {
+  appendOperatingApprovalRecordV2,
+  assertOperatingApprovalRecordV2,
+  assertOperatingApprovalRequirementIntegrityV2,
+  assertOperatingApprovalRequirementSetIntegrityV2,
+  assertOperatingApprovalRequirementV2,
+  consumeOperatingApprovalRecordsV2,
+  createOperatingActionReviewV2,
+  createOperatingApprovalRequirementV2,
+  evaluateOperatingApprovalSetV2,
+} from '../approvals-v2.mjs';
 export {
   assertOperateAuthorityV2,
   assertOperatingActionAuthorityTupleV2,
@@ -19,14 +31,3 @@ export {
   deriveOperatingApprovalRequirementInstanceIdV2,
   isOperatingRollbackEligibilityV2,
 } from '../policy-v2.mjs';
-export {
-  appendOperatingApprovalRecordV2,
-  assertOperatingApprovalRecordV2,
-  assertOperatingApprovalRequirementIntegrityV2,
-  assertOperatingApprovalRequirementSetIntegrityV2,
-  assertOperatingApprovalRequirementV2,
-  consumeOperatingApprovalRecordsV2,
-  createOperatingApprovalRequirementV2,
-  createOperatingActionReviewV2,
-  evaluateOperatingApprovalSetV2,
-} from '../approvals-v2.mjs';

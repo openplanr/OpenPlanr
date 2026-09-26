@@ -1,6 +1,6 @@
-import { PipelineError } from './errors.mjs';
 import { assertProtocolArtifact } from '../protocol/contracts.mjs';
 import { sha256Jcs } from '../protocol/jcs.mjs';
+import { PipelineError } from './errors.mjs';
 
 function sagaError(message) {
   return new PipelineError('E_ECOSYSTEM_SAGA_INVALID', message);

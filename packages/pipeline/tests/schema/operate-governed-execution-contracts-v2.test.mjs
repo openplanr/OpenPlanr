@@ -3,12 +3,12 @@ import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 
 import {
+  loadOperateGovernedExecutionContract,
   OPERATE_GOVERNED_EFFECT_CLASSES_V2,
   OPERATE_GOVERNED_EXECUTION_CONTRACT_KINDS_V2,
   OPERATE_GOVERNED_OPERATION_STATES_V2,
   OPERATE_GOVERNED_POLICY_OUTCOMES_V2,
   OPERATE_GOVERNED_PROVIDER_REGISTRATION_CONTRACT_KINDS_V2,
-  loadOperateGovernedExecutionContract,
   validateProtocolArtifact,
 } from 'planr-pipeline/protocol';
 

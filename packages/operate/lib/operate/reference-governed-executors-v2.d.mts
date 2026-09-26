@@ -1,19 +1,19 @@
 import type {
-  OperateAuthorityContextV2,
-  OperateAuthorityDecisionV2,
-} from './authorization-v2.d.mts';
-import type {
   OperateCapabilityProviderRegistrationV2,
   OperateExecutorRegistrationV2,
   OperatePolicyProviderRegistrationV2,
+  OperateTargetBindingV2,
   OperateTrustedExecutorBindingV2,
-  OperatingActionV2,
   OperatingActionPolicyV2,
+  OperatingActionV2,
   OperatingCapabilityAvailabilityV2,
   OperatingPolicyEvaluationV2,
   OperatingRollbackPlanV2,
-  OperateTargetBindingV2,
 } from '@openplanr/protocol';
+import type {
+  OperateAuthorityContextV2,
+  OperateAuthorityDecisionV2,
+} from './authorization-v2.d.mts';
 import type {
   OperateContainedExecutorInputV2,
   OperateGovernedExtensionRegistryV2,

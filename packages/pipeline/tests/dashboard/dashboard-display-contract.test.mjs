@@ -1,13 +1,12 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
-
+import { selectOperateExperienceDisplaySurface } from '../../lib/dashboard/operate-experience-reader.mjs';
+import { sha256Jcs } from '../../lib/protocol/jcs.mjs';
 import {
   assertOperateExperienceDisplaySurfaceV1,
   validateOperateExperienceDisplaySurfaceV1,
 } from '../../schemas/v1.2.0/operate-experience-display-surface.mjs';
-import { selectOperateExperienceDisplaySurface } from '../../lib/dashboard/operate-experience-reader.mjs';
-import { sha256Jcs } from '../../lib/protocol/jcs.mjs';
 import { rehashExperienceView } from './experience-view-test-support.mjs';
 
 const fixture = JSON.parse(

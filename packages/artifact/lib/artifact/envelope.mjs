@@ -1,7 +1,6 @@
 import { createHash } from 'node:crypto';
-
-import { validate } from './internal/schema-loader.mjs';
 import { ARTIFACT_ERROR_CODES, PipelineError } from '@openplanr/protocol/errors';
+import { validate } from './internal/schema-loader.mjs';
 
 const textEncoder = new TextEncoder();
 const SHA256_RE = /^[a-f0-9]{64}$/;

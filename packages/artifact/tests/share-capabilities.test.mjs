@@ -2,12 +2,12 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import test from 'node:test';
 import { createArtifactEnvelope } from '../lib/artifact/envelope.mjs';
-import { renderArtifactShellDocument } from '../lib/artifact/ui/shell.mjs';
 import {
   artifactShareCapabilities,
   mountArtifactShareDialog,
   normalizeArtifactSharePreview,
 } from '../lib/artifact/ui/share-dialog.mjs';
+import { renderArtifactShellDocument } from '../lib/artifact/ui/shell.mjs';
 
 const { JSDOM } = createRequire(new URL('../../cli/package.json', import.meta.url))('jsdom');
 const preview = { fragmentLength: 1200, compressedBytes: 890, ciphertextBytes: 918 };

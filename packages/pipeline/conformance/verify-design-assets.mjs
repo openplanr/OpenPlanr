@@ -16,31 +16,30 @@
  */
 
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-
-import { validate } from './json-schema-validate.mjs';
 import {
-  escapeHtml,
-  embedJson,
-  hasUnsafeHtml,
-  recommendFormat,
-  resolveScreens,
-  countScreens,
   chooseWalkthroughNav,
-  decideThinSpec,
-  isOnSpacingScale,
-  isCanonicalFrame,
-  lintDesign,
-  lintCanvasData,
-  FRAMES,
-  RESPONSIVE_FRAMES,
-  designSystemStatus,
-  resolveDesignSystem,
   contrastRatio,
+  countScreens,
+  decideThinSpec,
+  designSystemStatus,
+  embedJson,
+  escapeHtml,
+  FRAMES,
+  hasUnsafeHtml,
+  isCanonicalFrame,
+  isOnSpacingScale,
   isReadable,
+  lintCanvasData,
+  lintDesign,
+  RESPONSIVE_FRAMES,
+  recommendFormat,
+  resolveDesignSystem,
+  resolveScreens,
 } from '../lib/design/index.mjs';
+import { validate } from './json-schema-validate.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, '..');

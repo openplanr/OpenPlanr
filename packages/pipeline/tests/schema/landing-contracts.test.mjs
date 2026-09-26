@@ -3,9 +3,9 @@ import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 
 import {
-  LANDING_WORKFLOW_ASSET_PATHS,
   assertLandingWorkflowCatalog,
   assertLandingWorkflowManifest,
+  LANDING_WORKFLOW_ASSET_PATHS,
   readLandingWorkflowCatalog,
   readLandingWorkflowManifest,
 } from '../../lib/pipeline/index.mjs';

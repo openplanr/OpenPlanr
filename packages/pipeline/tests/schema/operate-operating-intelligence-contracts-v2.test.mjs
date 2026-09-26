@@ -3,10 +3,10 @@ import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 
 import {
+  loadOperateOperatingIntelligenceContract,
   OPERATE_OPERATING_INTELLIGENCE_CONTRACT_KINDS_V2,
   OPERATE_OPERATING_PROJECTION_IDENTITIES_V2,
   OPERATE_OPERATING_PROVIDER_REGISTRATION_CONTRACT_KINDS_V2,
-  loadOperateOperatingIntelligenceContract,
   validateProtocolArtifact,
 } from 'planr-pipeline/protocol';
 

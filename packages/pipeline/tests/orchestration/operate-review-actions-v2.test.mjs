@@ -1,10 +1,8 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
-
-import { OPERATE_CONTRACT_CATALOG_V2 } from '../../lib/protocol/generated/contract-catalog-v2.mjs';
-import { getOperateAuthorityArgumentCandidatesV2 } from '../../lib/operate/authorization-v2.mjs';
 import { createOperatingActionReviewV2 } from '../../lib/operate/approvals-v2.mjs';
+import { getOperateAuthorityArgumentCandidatesV2 } from '../../lib/operate/authorization-v2.mjs';
 import {
   assertOperateAuthorizedV2,
   createEmptyOperatingRuntimeStateV2,
@@ -14,6 +12,7 @@ import {
   reduceOperatingRuntimeEventsV2,
   submitOperatingReviewV2,
 } from '../../lib/operate/runtime-foundation.mjs';
+import { OPERATE_CONTRACT_CATALOG_V2 } from '../../lib/protocol/generated/contract-catalog-v2.mjs';
 
 const TIME = '2026-08-08T08:00:00.000Z';
 const NEXT_TIME = '2026-08-08T08:01:00.000Z';

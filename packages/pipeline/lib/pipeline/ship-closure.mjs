@@ -1,13 +1,12 @@
 import { spawnSync } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
-import { existsSync, lstatSync, readFileSync, readdirSync, unlinkSync } from 'node:fs';
+import { existsSync, lstatSync, readdirSync, readFileSync, unlinkSync } from 'node:fs';
 import { join, relative } from 'node:path';
 
 import { sha256Jcs } from '../protocol/jcs.mjs';
 import { assertBrowserQaGateRecord, assertBrowserQaRecordedEventAuthority } from './browser-qa.mjs';
 import { PipelineError } from './errors.mjs';
 import { projectPipelineOperatingOriginCorrelation } from './operate-origin.mjs';
-import { assertShipRiskClassification, classifyShipRisk } from './ship-risk.mjs';
 import {
   assertPreserve,
   captureCandidate,
@@ -19,8 +18,8 @@ import {
   taskRepositoryPath,
 } from './ship-closure-identity.mjs';
 import {
-  assertRegularCustodyFile,
   assertPathCustody,
+  assertRegularCustodyFile,
   closurePaths,
   ensureClosureDirs,
   withLock,
@@ -41,6 +40,7 @@ import {
   terminalizeShipClosure,
   validateEvent,
 } from './ship-closure-reducer.mjs';
+import { assertShipRiskClassification, classifyShipRisk } from './ship-risk.mjs';
 
 const REVIEW_PHASE_STATE = Object.freeze({
   initial: 'reviewing_initial',

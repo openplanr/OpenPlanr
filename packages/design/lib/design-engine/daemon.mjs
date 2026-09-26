@@ -35,7 +35,6 @@
  * State: <planrHome>/design-daemon/{port,boards.json}. Localhost only.
  */
 
-import { createServer } from 'node:http';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import {
   chmodSync,
@@ -46,31 +45,10 @@ import {
   statSync,
   writeFileSync,
 } from 'node:fs';
+import { createServer } from 'node:http';
 import { createRequire } from 'node:module';
 import { basename, dirname, extname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-
-import { daemonDir } from './paths.mjs';
-import {
-  assertLoopbackRequest,
-  closeHttpServer,
-  listenLoopback,
-  readRequestBody,
-} from './server-util.mjs';
-import { MIME } from '../design/mime-types.mjs';
-import { resolveContainedRealPath, serveStaticFile } from '../design/path-util.mjs';
-import {
-  clampPin,
-  assertValidFeedback,
-  mergeFeedback,
-  normalizeLegacy,
-  isDeleteMarker,
-  artifactReviewToDesignFeedback,
-  designFeedbackToArtifactReview,
-  FEEDBACK_FILE,
-  PENDING_FILE,
-} from './feedback.mjs';
-import { DESIGN_BOARD_ENVELOPE_FILE, DESIGN_BOARD_SOURCES_FILE } from './board.mjs';
 import {
   createArtifactBridgeNonce,
   prepareArtifactDocument,
@@ -81,14 +59,35 @@ import {
   validateArtifactEnvelope,
   validateArtifactReview,
 } from '@openplanr/artifact/envelope.mjs';
+import { MIME } from '../design/mime-types.mjs';
+import { resolveContainedRealPath, serveStaticFile } from '../design/path-util.mjs';
+import { DESIGN_BOARD_ENVELOPE_FILE, DESIGN_BOARD_SOURCES_FILE } from './board.mjs';
+import {
+  artifactReviewToDesignFeedback,
+  assertValidFeedback,
+  clampPin,
+  designFeedbackToArtifactReview,
+  FEEDBACK_FILE,
+  isDeleteMarker,
+  mergeFeedback,
+  normalizeLegacy,
+  PENDING_FILE,
+} from './feedback.mjs';
+import { daemonDir } from './paths.mjs';
+import {
+  assertLoopbackRequest,
+  closeHttpServer,
+  listenLoopback,
+  readRequestBody,
+} from './server-util.mjs';
 
 // Shared server-lifecycle primitives live in server-util.mjs (used by both this daemon and the
 // dashboard server). Re-exported here for back-compat with importers that reach for them on daemon.
 export {
-  writePidFile,
-  readPidFile,
-  isProcessAlive,
   isPortInUse,
+  isProcessAlive,
+  readPidFile,
+  writePidFile,
 } from './server-util.mjs';
 
 /**

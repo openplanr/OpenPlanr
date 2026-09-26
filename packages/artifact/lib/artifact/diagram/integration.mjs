@@ -10,9 +10,9 @@ import {
   validateArtifactEnvelope,
   validateArtifactReview,
 } from '../envelope.mjs';
+import { prepareDiagramSvg } from '../ui/diagram-svg.mjs';
 import { digestBytes } from './custody/bytes.mjs';
 import { checkDiagram } from './runtime.mjs';
-import { prepareDiagramSvg } from '../ui/diagram-svg.mjs';
 
 const CONSUMERS = new Set(['specification', 'documentation', 'pdf']);
 const OUTPUT_MEDIA = Object.freeze({

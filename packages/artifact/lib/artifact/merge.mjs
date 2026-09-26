@@ -1,5 +1,5 @@
-import { canonicalSerialize, validateArtifactReview } from './envelope.mjs';
 import { ARTIFACT_ERROR_CODES, PipelineError } from '@openplanr/protocol/errors';
+import { canonicalSerialize, validateArtifactReview } from './envelope.mjs';
 
 export const ARTIFACT_REVIEW_STATE_VERSION = '1.0.0';
 export const ARTIFACT_REVIEW_STATE_KIND = 'artifact-review-state';

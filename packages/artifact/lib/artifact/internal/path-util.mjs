@@ -1,4 +1,4 @@
-import { existsSync, realpathSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, realpathSync } from 'node:fs';
 import { extname, isAbsolute, relative, resolve, sep } from 'node:path';
 
 export function isPathContained(base, candidate) {

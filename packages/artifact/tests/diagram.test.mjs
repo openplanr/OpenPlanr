@@ -4,13 +4,13 @@ import { join, resolve } from 'node:path';
 import test from 'node:test';
 
 import {
+  assertDiagramDocument,
+  createDiagramDocument,
   DIAGRAM_ERROR_CODES,
   DIAGRAM_GRAMMARS,
   DIAGRAM_PRIMITIVES,
-  MAX_DIAGRAM_PRIMITIVE_ITEMS,
-  assertDiagramDocument,
-  createDiagramDocument,
   importMermaid,
+  MAX_DIAGRAM_PRIMITIVE_ITEMS,
   planDiagramQuality,
   routeDiagramIntent,
   selectDiagramReferences,

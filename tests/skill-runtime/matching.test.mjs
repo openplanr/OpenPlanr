@@ -3,11 +3,11 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 import {
-  ROUTING_CASE_KINDS,
   buildRegistryRoutingCases,
   evaluateResilienceJourneys,
   evaluateRoutingCorpus,
   matchSkillRequest,
+  ROUTING_CASE_KINDS,
 } from '../../packages/skill-runtime/src/matching/index.mjs';
 
 const readJson = (path) => JSON.parse(readFileSync(new URL(path, import.meta.url), 'utf8'));

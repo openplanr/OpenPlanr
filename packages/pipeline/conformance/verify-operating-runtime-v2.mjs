@@ -3,104 +3,6 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
-
-import {
-  OPERATE_EXTENSION_CONTRACT_KINDS_V2,
-  OPERATE_AUTHORITY_GUARD_IDS_V2,
-  OPERATE_GOVERNED_TOOL_OPERATIONS_V2,
-  OPERATE_GOVERNED_EFFECT_CLASSES_V2,
-  OPERATE_GOVERNED_OPERATION_TERMINAL_STATES_V2,
-  OPERATE_GOVERNED_POLICY_OUTCOMES_V2,
-  OPERATE_GOVERNED_POLICY_TIERS_V2,
-  OPERATE_GOVERNED_CORE_PROHIBITIONS_V2,
-  OPERATE_GOVERNED_RECOVERY_CLASSIFICATIONS_V2,
-  OPERATE_EXECUTION_VERIFICATION_STATUSES_V2,
-  OPERATE_HYPOTHESIS_VERIFICATION_STATUSES_V2,
-  OPERATE_ROLE_MANDATES_V2,
-  OPERATE_RUNTIME_CONTRACT_KINDS,
-  assertOperateIntelligencePlanContractV2,
-  assertOperateRoleOutputContract,
-  assertOperateRuntimeBindingsV2,
-  listProtocolSchemas,
-  loadOperateRoleMandate,
-  loadOperateExtensionContract,
-  loadOperateRuntimeContract,
-  readOperatingRuntimeStateV2,
-  readOperatingGovernedOperationV2,
-  readOperatingRollbackPlanV2,
-  readOperatingRollbackResultV2,
-  sha256Jcs,
-  validateProtocolArtifact,
-} from 'planr-pipeline/protocol';
-import {
-  OPERATING_ASSIGNMENT_TRANSITIONS_V2,
-  OPERATING_REVIEW_TRANSITIONS_V2,
-  OPERATE_GUARD_TABLE_V2,
-  assertOperateAuthorizedV2,
-  acceptOperatingAssignmentSubmissionV2,
-  buildOperatingWorkLedgerV2,
-  createEmptyOperatingRuntimeStateV2,
-  createNoModelReplayHookV2,
-  createOperatingRuntimeEventV2,
-  classifyOperatingDeltaMaterialityV2,
-  deriveOperateAllowedActionsV2,
-  evaluateOperateAuthorityV2,
-  evaluateOperateGuardV2,
-  reduceOperatingRuntimeEventsV2,
-  scheduleOperatingRuntimeEventsV2,
-  transitionOperatingAssignmentV2,
-  transitionOperatingReviewV2,
-  verifyOperatingRuntimeEventChainV2,
-} from 'planr-pipeline/operate/runtime-v2';
-import {
-  OPERATING_GOVERNED_EXECUTION_TERMINAL_STATES_V2,
-  createOperatingGovernedExecutionRuntimeV2,
-  executeOperatingGovernedActionV2,
-} from 'planr-pipeline/operate/governed-execution-v2';
-import {
-  OPERATING_GOVERNED_RECOVERY_CLASSIFICATIONS_V2,
-  buildOperatingRollbackPlanV2,
-  classifyOperatingGovernedRecoveryV2,
-  createOperatingGovernedRecoveryRuntimeV2,
-  reconcileOperatingGovernedDispatchV2,
-  recordOperatingRollbackPlanV2,
-  rollbackOperatingGovernedActionV2,
-} from 'planr-pipeline/operate/governed-recovery-v2';
-import { assertOperatingIntelligencePlanV2 } from 'planr-pipeline/operate/intelligence-router-v2';
-import { deriveOperatingAssignmentReleaseIntentsV2 } from 'planr-pipeline/operate/scheduler-v2';
-import { OPEN_REFERENCE_OPERATE_EXTENSIONS_V2 } from 'planr-pipeline/operate/extensions-v2';
-import {
-  OPEN_REFERENCE_OPERATE_GOVERNED_EXTENSIONS_V2,
-  OPEN_REFERENCE_OPERATE_GOVERNED_EXTENSION_CATALOG_DIGEST_V2,
-  createContainedExecutorInputEnvelopeV2,
-  createOperateGovernedExtensionRegistryV2,
-  createTrustedExecutorBindingV2,
-  deriveContainedExecutorRequestFingerprintV2,
-  selectOperateCapabilityProviderV2,
-  selectOperateExecutorV2,
-  selectOperatePolicyProviderV2,
-} from 'planr-pipeline/operate/governed-extensions-v2';
-import {
-  OPEN_REFERENCE_PROJECT_EXECUTOR_HOST_V2,
-  createOpenReferenceCapabilityAvailabilityV2,
-  createDisposableLocalProjectTargetV2,
-} from 'planr-pipeline/operate/reference-governed-executors-v2';
-import {
-  createOperatingVerificationCandidateV2,
-  selectOperatingMetricProviderV2,
-  selectOperatingSnapshotProviderV2,
-  selectOperatingVerificationProviderV2,
-} from 'planr-pipeline/operate/operating-signal-providers-v2';
-import {
-  createOperateEvidenceRegistryV2,
-  dispatchOperateEvidenceResolverV2,
-  prepareOperateEvidenceDispatchV2,
-} from 'planr-pipeline/operate/evidence-v2';
-import {
-  assertOperatingPolicyEvaluationV2,
-  createOperatingActionPolicyV2,
-  evaluateOperatingActionPolicyV2,
-} from 'planr-pipeline/operate/policy-v2';
 import {
   appendOperatingApprovalRecordV2,
   consumeOperatingApprovalRecordsV2,
@@ -108,6 +10,103 @@ import {
   createOperatingApprovalRequirementV2,
   evaluateOperatingApprovalSetV2,
 } from 'planr-pipeline/operate/approvals-v2';
+import {
+  createOperateEvidenceRegistryV2,
+  dispatchOperateEvidenceResolverV2,
+  prepareOperateEvidenceDispatchV2,
+} from 'planr-pipeline/operate/evidence-v2';
+import { OPEN_REFERENCE_OPERATE_EXTENSIONS_V2 } from 'planr-pipeline/operate/extensions-v2';
+import {
+  createOperatingGovernedExecutionRuntimeV2,
+  executeOperatingGovernedActionV2,
+  OPERATING_GOVERNED_EXECUTION_TERMINAL_STATES_V2,
+} from 'planr-pipeline/operate/governed-execution-v2';
+import {
+  createContainedExecutorInputEnvelopeV2,
+  createOperateGovernedExtensionRegistryV2,
+  createTrustedExecutorBindingV2,
+  deriveContainedExecutorRequestFingerprintV2,
+  OPEN_REFERENCE_OPERATE_GOVERNED_EXTENSION_CATALOG_DIGEST_V2,
+  OPEN_REFERENCE_OPERATE_GOVERNED_EXTENSIONS_V2,
+  selectOperateCapabilityProviderV2,
+  selectOperateExecutorV2,
+  selectOperatePolicyProviderV2,
+} from 'planr-pipeline/operate/governed-extensions-v2';
+import {
+  buildOperatingRollbackPlanV2,
+  classifyOperatingGovernedRecoveryV2,
+  createOperatingGovernedRecoveryRuntimeV2,
+  OPERATING_GOVERNED_RECOVERY_CLASSIFICATIONS_V2,
+  reconcileOperatingGovernedDispatchV2,
+  recordOperatingRollbackPlanV2,
+  rollbackOperatingGovernedActionV2,
+} from 'planr-pipeline/operate/governed-recovery-v2';
+import { assertOperatingIntelligencePlanV2 } from 'planr-pipeline/operate/intelligence-router-v2';
+import {
+  createOperatingVerificationCandidateV2,
+  selectOperatingMetricProviderV2,
+  selectOperatingSnapshotProviderV2,
+  selectOperatingVerificationProviderV2,
+} from 'planr-pipeline/operate/operating-signal-providers-v2';
+import {
+  assertOperatingPolicyEvaluationV2,
+  createOperatingActionPolicyV2,
+  evaluateOperatingActionPolicyV2,
+} from 'planr-pipeline/operate/policy-v2';
+import {
+  createDisposableLocalProjectTargetV2,
+  createOpenReferenceCapabilityAvailabilityV2,
+  OPEN_REFERENCE_PROJECT_EXECUTOR_HOST_V2,
+} from 'planr-pipeline/operate/reference-governed-executors-v2';
+import {
+  acceptOperatingAssignmentSubmissionV2,
+  assertOperateAuthorizedV2,
+  buildOperatingWorkLedgerV2,
+  classifyOperatingDeltaMaterialityV2,
+  createEmptyOperatingRuntimeStateV2,
+  createNoModelReplayHookV2,
+  createOperatingRuntimeEventV2,
+  deriveOperateAllowedActionsV2,
+  evaluateOperateAuthorityV2,
+  evaluateOperateGuardV2,
+  OPERATE_GUARD_TABLE_V2,
+  OPERATING_ASSIGNMENT_TRANSITIONS_V2,
+  OPERATING_REVIEW_TRANSITIONS_V2,
+  reduceOperatingRuntimeEventsV2,
+  scheduleOperatingRuntimeEventsV2,
+  transitionOperatingAssignmentV2,
+  transitionOperatingReviewV2,
+  verifyOperatingRuntimeEventChainV2,
+} from 'planr-pipeline/operate/runtime-v2';
+import { deriveOperatingAssignmentReleaseIntentsV2 } from 'planr-pipeline/operate/scheduler-v2';
+import {
+  assertOperateIntelligencePlanContractV2,
+  assertOperateRoleOutputContract,
+  assertOperateRuntimeBindingsV2,
+  listProtocolSchemas,
+  loadOperateExtensionContract,
+  loadOperateRoleMandate,
+  loadOperateRuntimeContract,
+  OPERATE_AUTHORITY_GUARD_IDS_V2,
+  OPERATE_EXECUTION_VERIFICATION_STATUSES_V2,
+  OPERATE_EXTENSION_CONTRACT_KINDS_V2,
+  OPERATE_GOVERNED_CORE_PROHIBITIONS_V2,
+  OPERATE_GOVERNED_EFFECT_CLASSES_V2,
+  OPERATE_GOVERNED_OPERATION_TERMINAL_STATES_V2,
+  OPERATE_GOVERNED_POLICY_OUTCOMES_V2,
+  OPERATE_GOVERNED_POLICY_TIERS_V2,
+  OPERATE_GOVERNED_RECOVERY_CLASSIFICATIONS_V2,
+  OPERATE_GOVERNED_TOOL_OPERATIONS_V2,
+  OPERATE_HYPOTHESIS_VERIFICATION_STATUSES_V2,
+  OPERATE_ROLE_MANDATES_V2,
+  OPERATE_RUNTIME_CONTRACT_KINDS,
+  readOperatingGovernedOperationV2,
+  readOperatingRollbackPlanV2,
+  readOperatingRollbackResultV2,
+  readOperatingRuntimeStateV2,
+  sha256Jcs,
+  validateProtocolArtifact,
+} from 'planr-pipeline/protocol';
 
 const VERSION = '2.0.0';
 const TIME = '2026-08-08T08:00:00.000Z';

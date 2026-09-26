@@ -1,13 +1,12 @@
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import test from 'node:test';
-
+import { verifyDocumentDigest } from '../../packages/protocol/src/canonical-json.mjs';
 import {
   listProtocolSchemas,
   validateProtocolArtifact,
 } from '../../packages/protocol/src/contracts.mjs';
-import { verifyDocumentDigest } from '../../packages/protocol/src/canonical-json.mjs';
 import {
   DIAGRAM_V16_REGISTRIES,
   PROTOCOL_V17_REGISTRIES,

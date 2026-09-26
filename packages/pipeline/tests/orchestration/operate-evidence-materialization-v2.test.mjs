@@ -1,21 +1,20 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { test } from 'node:test';
-
-import { sha256Jcs } from '../../lib/protocol/jcs.mjs';
+import { OPEN_REFERENCE_EVIDENCE_REGISTRY_V2 } from '../../lib/operate/evidence-v2.mjs';
 import {
   buildOperatingEvidenceGraphV2,
-  createOperatingArtifactByteStoreV2,
   createEmptyOperatingRuntimeStateV2,
   createNoModelReplayHookV2,
+  createOperatingArtifactByteStoreV2,
   materializeOperatingEvidenceV2,
   readOperatingArtifactRawBytesV2,
   reduceOperatingRuntimeEventsV2,
 } from '../../lib/operate/runtime-foundation.mjs';
-import { OPEN_REFERENCE_EVIDENCE_REGISTRY_V2 } from '../../lib/operate/evidence-v2.mjs';
+import { sha256Jcs } from '../../lib/protocol/jcs.mjs';
 
 const TIME = '2026-08-09T10:00:00.000Z';
 const fixture = (name) =>

@@ -4,7 +4,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, statSync, writeFileSy
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-
+import { decidePlanReview, preparePlanReviewOwnerDecision } from '../../lib/pipeline/engine.mjs';
 import {
   advancePlanReview,
   getShipClosure,
@@ -12,7 +12,6 @@ import {
   startPlanReview,
   startShip,
 } from '../../lib/pipeline/index.mjs';
-import { decidePlanReview, preparePlanReviewOwnerDecision } from '../../lib/pipeline/engine.mjs';
 import { issuePlanningReviewOwnerDecisionCapability } from '../../lib/pipeline/planning-review.mjs';
 import { sha256Jcs } from '../../lib/protocol/jcs.mjs';
 

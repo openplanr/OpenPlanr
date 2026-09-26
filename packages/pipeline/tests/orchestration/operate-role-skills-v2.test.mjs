@@ -2,12 +2,11 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { test } from 'node:test';
-
+import { fileURLToPath } from 'node:url';
 import {
   projectedSkillName,
   renderNamespacedSkill,
 } from '../../../../scripts/skills/host-invocations.mjs';
-import { fileURLToPath } from 'node:url';
 
 import { compileOperateContractRegistry } from '../../lib/operate/contracts/compiler.mjs';
 import {

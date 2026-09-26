@@ -1,23 +1,22 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
-
-import { validateProtocolArtifact } from '../../packages/protocol/src/contracts.mjs';
 import {
   sha256Hex,
   verifyDocumentDigest,
   withDocumentDigest,
 } from '../../packages/protocol/src/canonical-json.mjs';
-import {
-  bindInteractionAnswers,
-  resolveCapabilities,
-  resolveInteraction,
-} from '../../packages/skill-runtime/src/resolver/index.mjs';
+import { validateProtocolArtifact } from '../../packages/protocol/src/contracts.mjs';
 import {
   checkpointSession,
   createSkillSession,
   recoverSession,
 } from '../../packages/skill-runtime/src/lifecycle/index.mjs';
+import {
+  bindInteractionAnswers,
+  resolveCapabilities,
+  resolveInteraction,
+} from '../../packages/skill-runtime/src/resolver/index.mjs';
 
 const readJson = (url) => JSON.parse(readFileSync(url, 'utf8'));
 const profiles = readJson(

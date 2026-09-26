@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 import { execFileSync, spawn } from 'node:child_process';
 import {
-  mkdtempSync,
   mkdirSync,
-  readFileSync,
+  mkdtempSync,
   readdirSync,
+  readFileSync,
   realpathSync,
   rmSync,
   writeFileSync,

@@ -1,7 +1,7 @@
-import { canonicalizeJson, sha256Jcs, sha256Hex } from './canonical-json.mjs';
-import { validateJson } from './json-schema.mjs';
+import { canonicalizeJson, sha256Hex, sha256Jcs } from './canonical-json.mjs';
 import { DIAGRAM_REGISTRIES } from './generated/diagram-registries.mjs';
 import { LEGACY_DIAGRAM_DOCUMENT_SCHEMA } from './generated/legacy-diagram-schema.mjs';
+import { validateJson } from './json-schema.mjs';
 
 /** Portable, inert data contracts. Validation confers no authorization or readiness. */
 export const DIAGRAM_AUTHORING_PROTOCOL_VERSION = '1.13.0';

@@ -1,21 +1,21 @@
 import assert from 'node:assert/strict';
-import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { after, test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import {
+  compileOperateContractRegistry,
   OPERATE_CONTRACT_COMPILER_VERSION,
   OperateContractCompileError,
-  compileOperateContractRegistry,
   renderOperateContractCatalogModule,
 } from '../../lib/operate/contracts/compiler.mjs';
-import { runOperateContractGenerator } from '../../scripts/generate-operate-contracts.mjs';
 import {
-  OPERATE_RUNTIME_CONTRACT_KINDS,
   loadOperateRuntimeContract,
+  OPERATE_RUNTIME_CONTRACT_KINDS,
 } from '../../lib/protocol/loader.mjs';
+import { runOperateContractGenerator } from '../../scripts/generate-operate-contracts.mjs';
 
 const root = fileURLToPath(new URL('../..', import.meta.url));
 const registryPath = join(root, 'registry/operate-v2-contracts.json');

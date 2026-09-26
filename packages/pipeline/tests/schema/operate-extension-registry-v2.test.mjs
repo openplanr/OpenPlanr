@@ -1,26 +1,25 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
-
 import {
-  OPERATE_EXTENSION_CONTRACT_KINDS_V2,
-  assertProtocolArtifact,
-  loadOperateExtensionContract,
-} from 'planr-pipeline/protocol';
-import {
-  DEFERRED_OPERATE_EXTENSION_KINDS_V2,
-  OPEN_REFERENCE_OPERATE_EXTENSIONS_V2,
   createOperateExtensionRegistryV2,
+  DEFERRED_OPERATE_EXTENSION_KINDS_V2,
+  findOperateDomainRegistrationV2,
   findOperateMetricProviderRegistrationV2,
   findOperateSnapshotProviderRegistrationV2,
   findOperateVerificationProviderRegistrationV2,
-  findOperateDomainRegistrationV2,
+  OPEN_REFERENCE_OPERATE_EXTENSIONS_V2,
 } from 'planr-pipeline/operate/extensions-v2';
 import {
   findOperateCapabilityProviderRegistrationV2,
   findOperateExecutorRegistrationV2,
   findOperatePolicyProviderRegistrationV2,
 } from 'planr-pipeline/operate/governed-extensions-v2';
+import {
+  assertProtocolArtifact,
+  loadOperateExtensionContract,
+  OPERATE_EXTENSION_CONTRACT_KINDS_V2,
+} from 'planr-pipeline/protocol';
 
 const fixture = (name) =>
   JSON.parse(

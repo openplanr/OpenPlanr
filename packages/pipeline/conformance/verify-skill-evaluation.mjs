@@ -4,26 +4,25 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-
-import { PipelineError } from '../lib/pipeline/errors.mjs';
-import { assertEvaluationWaiver } from '../lib/pipeline/evaluation-contract.mjs';
-import {
-  deriveEvaluationIdentity,
-  evaluationEvidenceReuse,
-  EVALUATION_EVIDENCE_INPUTS,
-} from '../lib/pipeline/evaluation-identity.mjs';
-import { assertEvaluationPublishSafe } from '../lib/pipeline/evaluation-redaction.mjs';
 import { admitWaiver, evaluateGates } from '../lib/evaluation/gates.mjs';
 import {
-  EVALUATION_JOURNEY_KINDS,
-  EVALUATION_JOURNEY_PROMPT_CLASS,
   assertCliEnvelope,
   assertLoopbackSurface,
+  EVALUATION_JOURNEY_KINDS,
+  EVALUATION_JOURNEY_PROMPT_CLASS,
   runBrowserJourney,
   runPackedInstallJourney,
 } from '../lib/evaluation/journeys.mjs';
 import { assertEvaluationBaseline } from '../lib/evaluation/metrics.mjs';
 import { loadEvaluationInputs } from '../lib/evaluation/runner.mjs';
+import { PipelineError } from '../lib/pipeline/errors.mjs';
+import { assertEvaluationWaiver } from '../lib/pipeline/evaluation-contract.mjs';
+import {
+  deriveEvaluationIdentity,
+  EVALUATION_EVIDENCE_INPUTS,
+  evaluationEvidenceReuse,
+} from '../lib/pipeline/evaluation-identity.mjs';
+import { assertEvaluationPublishSafe } from '../lib/pipeline/evaluation-redaction.mjs';
 
 const VERSION = '1.4.0';
 const NOW = '2026-08-25T09:16:00.000Z';

@@ -3,14 +3,14 @@ import { basename } from 'node:path';
 
 import { sha256Jcs } from '@openplanr/protocol/canonical-json';
 import { DIAGRAM_GRAMMAR_REGISTRY } from '@openplanr/protocol/diagram-contracts';
-
+import { validateDiagramSvg } from './accessibility.mjs';
 import {
+  assertDiagramSlug,
   cleanupAbandonedDiagramStages,
   createDiagramRenderManifest,
-  digestBytes,
   diagramRelativeDirectory,
+  digestBytes,
   jsonBytes,
-  assertDiagramSlug,
   promoteDiagramSet,
   readDiagramSet,
   recoverInterruptedDiagramPromotion,
@@ -26,14 +26,13 @@ import {
   exportDiagramMermaid,
   renderExcalidrawSceneSvg,
 } from './projection/index.mjs';
-import { validateDiagramSvg } from './accessibility.mjs';
 import {
+  createFidelityReport,
+  createRenderQualityReport,
   DIAGRAM_FONT,
   DIAGRAM_RASTERIZER,
   DIAGRAM_RENDERER,
   DIAGRAM_THEME,
-  createFidelityReport,
-  createRenderQualityReport,
   renderDiagramHtml,
   renderDiagramOutputs,
   renderDiagramPng,

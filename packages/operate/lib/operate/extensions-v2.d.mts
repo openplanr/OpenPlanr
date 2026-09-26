@@ -1,7 +1,7 @@
 import type {
+  OperateCapabilityProviderRegistrationV2,
   OperateEvidenceProviderRegistrationV2,
   OperateEvidenceResolverRegistrationV2,
-  OperateCapabilityProviderRegistrationV2,
   OperateExecutorRegistrationV2,
   OperateMetricProviderRegistrationV2,
   OperatePolicyProviderRegistrationV2,

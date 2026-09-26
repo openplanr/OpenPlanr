@@ -4,9 +4,10 @@
  * These assertions are needed by the protocol loader and the pipeline's origin reader, neither of
  * which should reach into the Operate runtime to get them. The Operate side imports them back.
  */
-import { PipelineError } from '../errors.mjs';
-import { assertOperateExperienceArtifactV2 } from '../contracts.mjs';
+
 import { sha256Jcs } from '../canonical-json.mjs';
+import { assertOperateExperienceArtifactV2 } from '../contracts.mjs';
+import { PipelineError } from '../errors.mjs';
 
 const PROTOCOL_VERSION = '2.0.0';
 
@@ -233,12 +234,12 @@ function assertDeliveryClassification(classification, artifacts) {
 }
 
 export {
-  FORBIDDEN_KEY,
-  FORBIDDEN_TEXT,
-  PROTOCOL_VERSION,
   assertDeliveryClassification,
   assertNoSensitiveContext,
+  FORBIDDEN_KEY,
+  FORBIDDEN_TEXT,
   fail,
+  PROTOCOL_VERSION,
   sameHead,
   sameScope,
   without,

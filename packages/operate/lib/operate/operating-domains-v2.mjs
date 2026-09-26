@@ -1,10 +1,10 @@
-import { PipelineError } from '@openplanr/protocol/errors';
-import { assertProtocolArtifact } from '@openplanr/protocol/contracts';
 import { sha256Jcs } from '@openplanr/protocol/canonical-json';
+import { assertProtocolArtifact } from '@openplanr/protocol/contracts';
+import { PipelineError } from '@openplanr/protocol/errors';
 import {
-  OPEN_REFERENCE_OPERATE_EXTENSIONS_V2,
   canonicalizeOperateExtensionRegistryV2,
   findOperateDomainRegistrationV2,
+  OPEN_REFERENCE_OPERATE_EXTENSIONS_V2,
 } from './extensions-v2.mjs';
 import { assertOperatingSnapshotV2 } from './operating-snapshots-v2.mjs';
 import { assertOperatingModelStateV2 } from './operating-state-v2.mjs';

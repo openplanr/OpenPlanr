@@ -2,8 +2,7 @@
 
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-
-import { sha256Jcs, validateProtocolArtifact } from 'planr-pipeline/protocol';
+import { buildPersistentWorkMaterializationPayloadV2 } from 'planr-pipeline/operate/persistent-work-v2';
 import {
   buildOperatingWorkLedgerV2,
   createEmptyOperatingRuntimeStateV2,
@@ -11,7 +10,7 @@ import {
   readOperatingReviewV2,
   reduceOperatingRuntimeEventsV2,
 } from 'planr-pipeline/operate/runtime-v2';
-import { buildPersistentWorkMaterializationPayloadV2 } from 'planr-pipeline/operate/persistent-work-v2';
+import { sha256Jcs, validateProtocolArtifact } from 'planr-pipeline/protocol';
 
 const TIME = '2026-08-08T13:00:00.000Z';
 const NEXT = '2026-08-08T13:01:00.000Z';

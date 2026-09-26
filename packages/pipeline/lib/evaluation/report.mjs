@@ -5,9 +5,9 @@ import { PipelineError } from '../pipeline/errors.mjs';
 import { assertEvaluationAggregateReport } from '../pipeline/evaluation-contract.mjs';
 import { deriveEvaluationIdentity } from '../pipeline/evaluation-identity.mjs';
 import {
+  assertEvaluationAggregatePublishable,
   EVALUATION_REDACTION_DECLARATIONS,
   EVALUATION_REDACTION_POLICY_VERSION,
-  assertEvaluationAggregatePublishable,
 } from '../pipeline/evaluation-redaction.mjs';
 
 /** Files a CI job may publish. Everything else stays in the local run directory. */

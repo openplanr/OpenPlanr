@@ -1,8 +1,8 @@
-import { canonicalizeJson, sha256Hex } from '@openplanr/protocol/canonical-json';
 import {
   ARTIFACT_REVIEW_LIMITS,
   normalizeArtifactReview,
 } from '@openplanr/artifact/ui/feedback-rail.mjs';
+import { canonicalizeJson, sha256Hex } from '@openplanr/protocol/canonical-json';
 import { assertDesignReviewMetadata } from '@openplanr/protocol/review-experience-contracts';
 
 export function workspaceReviewerId(publicKey) {

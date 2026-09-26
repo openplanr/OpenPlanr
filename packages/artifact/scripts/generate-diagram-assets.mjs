@@ -5,8 +5,8 @@ import {
   existsSync,
   lstatSync,
   mkdirSync,
-  readFileSync,
   readdirSync,
+  readFileSync,
   unlinkSync,
   writeFileSync,
 } from 'node:fs';

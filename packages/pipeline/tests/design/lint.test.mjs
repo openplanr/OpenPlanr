@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { lintDesign, lintCanvasData } from '../../lib/design/lint.mjs';
+import { lintCanvasData, lintDesign } from '../../lib/design/lint.mjs';
 
 test('clean design (on-grid spacing) passes', () => {
   const html = `<style>.card{padding:24px;margin-bottom:16px;gap:8px}</style>
@@ -140,9 +140,9 @@ test('lintDesign reports a declarations count (0 when no <style>/inline CSS is p
 });
 
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, dirname } from 'node:path';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const LINT = join(dirname(fileURLToPath(import.meta.url)), '../../lib/design/lint.mjs');

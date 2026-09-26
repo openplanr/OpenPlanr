@@ -1,14 +1,14 @@
-import { PipelineError } from '@openplanr/protocol/errors';
+import { sha256Jcs } from '@openplanr/protocol/canonical-json';
 import {
   assertProtocolArtifact,
   findOperateCoreProhibitionV2,
 } from '@openplanr/protocol/contracts';
-import { sha256Jcs } from '@openplanr/protocol/canonical-json';
+import { PipelineError } from '@openplanr/protocol/errors';
 import { assertOperateAuthorityV2 } from './authorization-v2.mjs';
 import {
-  OPEN_REFERENCE_OPERATE_GOVERNED_EXTENSIONS_V2,
   assertContainedExecutorInputEnvelopeV2,
   assertTrustedExecutorBindingV2,
+  OPEN_REFERENCE_OPERATE_GOVERNED_EXTENSIONS_V2,
   selectOperateCapabilityProviderV2,
   selectOperatePolicyProviderV2,
 } from './governed-extensions-v2.mjs';

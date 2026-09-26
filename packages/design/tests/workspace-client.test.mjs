@@ -2,26 +2,26 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { canonicalizeJson, sha256Hex } from '@openplanr/protocol/canonical-json';
 import {
+  assertWorkspaceContract,
   DESIGN_REVIEW_BUNDLE_SCHEMA,
   DESIGN_WORKSPACE_EVENT_SCHEMA,
-  assertWorkspaceContract,
 } from '@openplanr/protocol/workspace-contracts';
 import {
-  prepareWorkspace,
-  commitWorkspace,
-  deriveWorkspaceAuthentication,
-  workspaceReviewUrl,
-  getWorkspace,
-  decryptWorkspaceRevision,
-  verifyWorkspaceSignature,
-  prepareWorkspaceMutation,
+  appendWorkspaceEvent,
   canonicalWorkspacePublicKey,
+  commitWorkspace,
   commitWorkspaceMutation,
   createWorkspaceSigner,
+  decryptWorkspaceRevision,
+  deriveWorkspaceAuthentication,
+  getWorkspace,
+  prepareWorkspace,
   prepareWorkspaceEvent,
+  prepareWorkspaceMutation,
   readWorkspaceEvents,
+  verifyWorkspaceSignature,
   workspaceEnvelopeDigest,
-  appendWorkspaceEvent,
+  workspaceReviewUrl,
 } from '../lib/design/workspace-client.mjs';
 
 const bundle = () => ({

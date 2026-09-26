@@ -2,12 +2,12 @@
 
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import { readdir, readFile, realpath, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
-import { readFile, writeFile, readdir, realpath } from 'node:fs/promises';
 import { join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
-import { Miniflare, Log, LogLevel } from 'miniflare';
+import { Log, LogLevel, Miniflare } from 'miniflare';
 import { chromium } from 'playwright';
 
 // The harness uses development tools from this workspace; every subject module

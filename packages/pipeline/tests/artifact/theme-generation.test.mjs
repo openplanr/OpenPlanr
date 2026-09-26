@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { afterEach, test } from 'node:test';
+import { fileURLToPath } from 'node:url';
 
 import { validateJson } from '../../conformance/json-schema-validate.mjs';
 import {

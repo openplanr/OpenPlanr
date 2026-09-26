@@ -1,15 +1,15 @@
-import {
-  OPEN_REFERENCE_EVIDENCE_REGISTRY_V2,
-  OperatingEvidenceRegistryErrorV2,
-  createOperateEvidenceRegistryV2,
-  findOperateEvidenceProviderRegistrationV2,
-  findOperateEvidenceResolverRegistrationV2,
-  prepareOperateEvidenceDispatchV2,
-} from './evidence-registry-v2.mjs';
+import { resolveLocalOperateArtifactEvidenceV2 } from './evidence-artifact-v2.mjs';
 import { resolveLocalFilesystemEvidenceV2 } from './evidence-filesystem-v2.mjs';
 import { resolveLocalGitEvidenceV2 } from './evidence-git-v2.mjs';
 import { resolveLocalPlanrEvidenceV2 } from './evidence-planr-v2.mjs';
-import { resolveLocalOperateArtifactEvidenceV2 } from './evidence-artifact-v2.mjs';
+import {
+  createOperateEvidenceRegistryV2,
+  findOperateEvidenceProviderRegistrationV2,
+  findOperateEvidenceResolverRegistrationV2,
+  OPEN_REFERENCE_EVIDENCE_REGISTRY_V2,
+  OperatingEvidenceRegistryErrorV2,
+  prepareOperateEvidenceDispatchV2,
+} from './evidence-registry-v2.mjs';
 
 const unavailable = (selection) =>
   Object.freeze({
@@ -97,14 +97,14 @@ export function dispatchOperateEvidenceResolverV2(registry, candidate, context =
 }
 
 export {
-  OPEN_REFERENCE_EVIDENCE_REGISTRY_V2,
-  OperatingEvidenceRegistryErrorV2,
   createOperateEvidenceRegistryV2,
   findOperateEvidenceProviderRegistrationV2,
   findOperateEvidenceResolverRegistrationV2,
+  OPEN_REFERENCE_EVIDENCE_REGISTRY_V2,
+  OperatingEvidenceRegistryErrorV2,
   prepareOperateEvidenceDispatchV2,
   resolveLocalFilesystemEvidenceV2,
   resolveLocalGitEvidenceV2,
-  resolveLocalPlanrEvidenceV2,
   resolveLocalOperateArtifactEvidenceV2,
+  resolveLocalPlanrEvidenceV2,
 };

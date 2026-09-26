@@ -5,8 +5,8 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
-  readFileSync,
   readdirSync,
+  readFileSync,
   rmSync,
   writeFileSync,
 } from 'node:fs';
@@ -14,13 +14,12 @@ import { tmpdir } from 'node:os';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { after, test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-
+import { OPERATE_RUNTIME_CONTRACT_KINDS } from '../../lib/protocol/loader.mjs';
 import {
   checkOperateRuntimePurity,
   packOperateV2DevelopmentSnapshot,
 } from '../../scripts/check-operate-runtime-purity.mjs';
 import { PROTECTED_USER_OWNED_PATHS } from '../../scripts/inventory-operate-surfaces.mjs';
-import { OPERATE_RUNTIME_CONTRACT_KINDS } from '../../lib/protocol/loader.mjs';
 import { resolveWorkspaceDependencyRoot } from '../helpers/workspace-dependency.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');

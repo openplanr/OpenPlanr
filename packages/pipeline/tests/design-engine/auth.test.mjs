@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { test, afterEach } from 'node:test';
+import { afterEach, test } from 'node:test';
 
 import { resolveAuth } from '../../lib/design-engine/auth.mjs';
 import { resolveProvider } from '../../lib/design-engine/providers/index.mjs';

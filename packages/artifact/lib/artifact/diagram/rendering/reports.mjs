@@ -1,12 +1,12 @@
-import { assertProtocolArtifact } from '@openplanr/protocol/contracts';
 import { withDocumentDigest } from '@openplanr/protocol/canonical-json';
+import { assertProtocolArtifact } from '@openplanr/protocol/contracts';
 
 import { planDiagramQuality } from '../readability.mjs';
 import {
   LABEL_EDGE_DISTANCE,
-  SHARED_SEGMENT_LENGTH,
   labelAttached,
   routesMerge,
+  SHARED_SEGMENT_LENGTH,
 } from './layout.mjs';
 
 function finalize(kind, value) {

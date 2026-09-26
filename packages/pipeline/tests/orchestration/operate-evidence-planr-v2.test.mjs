@@ -6,8 +6,8 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 
 import {
-  OPEN_REFERENCE_EVIDENCE_REGISTRY_V2,
   dispatchOperateEvidenceResolverV2,
+  OPEN_REFERENCE_EVIDENCE_REGISTRY_V2,
 } from 'planr-pipeline/operate/evidence-v2';
 
 const fixture = (name) =>

@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import {
-  mkdtempSync,
   mkdirSync,
-  readFileSync,
+  mkdtempSync,
   readdirSync,
+  readFileSync,
   realpathSync,
   rmSync,
   symlinkSync,
@@ -14,12 +14,12 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 import { sha256Hex } from '@openplanr/protocol/canonical-json';
 import { assertCompanyDesignBundle } from '@openplanr/protocol/design-publication-contracts';
-import { designFixture } from './design-fixture.mjs';
-import { emptyReviewContext } from '../lib/design/context.mjs';
 import {
   createCompanyDesignSourceReader,
   prepareCompanyDesignPublication,
 } from '../lib/design/company-publication.mjs';
+import { emptyReviewContext } from '../lib/design/context.mjs';
+import { designFixture } from './design-fixture.mjs';
 
 function fixture(t, options) {
   const root = mkdtempSync(join(realpathSync(tmpdir()), 'planr-company-design-'));

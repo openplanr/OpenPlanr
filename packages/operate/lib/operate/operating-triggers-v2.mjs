@@ -1,8 +1,8 @@
-import { PipelineError } from '@openplanr/protocol/errors';
-import { assertProtocolArtifact } from '@openplanr/protocol/contracts';
 import { sha256Jcs } from '@openplanr/protocol/canonical-json';
-import { assertOperatingModelStateV2 } from './operating-state-v2.mjs';
+import { assertProtocolArtifact } from '@openplanr/protocol/contracts';
+import { PipelineError } from '@openplanr/protocol/errors';
 import { assertOperatingSnapshotV2 } from './operating-snapshots-v2.mjs';
+import { assertOperatingModelStateV2 } from './operating-state-v2.mjs';
 
 const PROTOCOL_VERSION = '2.0.0';
 

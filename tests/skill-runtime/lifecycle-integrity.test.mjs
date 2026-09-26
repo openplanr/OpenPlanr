@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import {
   existsSync,
   mkdtempSync,
@@ -10,18 +11,17 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { spawnSync } from 'node:child_process';
 import test from 'node:test';
 
 import { withDocumentDigest } from '@openplanr/protocol/canonical-json';
 
 import {
+  checkpointSession,
+  createConsentRecord,
+  createSkillSession,
   LIFECYCLE_CONFIGURATION_PATH,
   LIFECYCLE_IGNORE_RULE,
   LOCAL_LEARNING_PATH,
-  createConsentRecord,
-  createSkillSession,
-  checkpointSession,
   loadLatestSessionProgress,
   persistLearningRecord,
   persistSessionProgress,

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
-import { test } from 'node:test';
-import { dirname, resolve, sep } from 'node:path';
 import { createRequire } from 'node:module';
+import { dirname, resolve, sep } from 'node:path';
+import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import { checkPackageBoundaries } from '../../../scripts/domains/boundary-check.mjs';

@@ -2,9 +2,9 @@ import { Buffer } from 'node:buffer';
 
 import { SkillRuntimeError } from './errors.mjs';
 import {
-  OPERATE_REVIEW_CONTRACTS,
   OPERATE_REVIEW_CONTRACT_VERSION,
   OPERATE_REVIEW_CONTRACT_VERSIONS,
+  OPERATE_REVIEW_CONTRACTS,
 } from './operate-review-contract.mjs';
 
 const canonicalText = (value) => String(value).replace(/\r\n/gu, '\n');

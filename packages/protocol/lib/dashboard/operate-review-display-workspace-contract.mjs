@@ -1,5 +1,4 @@
 import { validateJson } from '../../src/json-schema.mjs';
-import { assertOperateReviewWorkspacePayloadSafeV1 } from './operate-review-payload-safety.mjs';
 import {
   contentHash,
   deepFreeze,
@@ -10,15 +9,16 @@ import {
 } from './closed-json-contract.mjs';
 import {
   OPERATE_ALLOWED_ACTION_SCHEMA_REVIEW_SLICE as allowedActionSchema,
-  OPERATE_EXPERIENCE_VIEW_SCHEMA_REVIEW_SLICE as experienceViewSchema,
-  OPERATE_REVIEW_DISPLAY_WORKSPACE_SCHEMA_REVIEW_SLICE as reviewWorkspaceSchema,
   OPERATING_ASSIGNMENT_SCHEMA_REVIEW_SLICE as assignmentSchema,
   OPERATING_EVIDENCE_RESOLUTION_SCHEMA_REVIEW_SLICE as evidenceResolutionSchema,
+  OPERATE_EXPERIENCE_VIEW_SCHEMA_REVIEW_SLICE as experienceViewSchema,
   OPERATING_REVIEW_READ_SCHEMA_REVIEW_SLICE as reviewReadSchema,
   OPERATING_REVIEW_RECEIPT_SCHEMA_REVIEW_SLICE as reviewReceiptSchema,
   OPERATING_REVIEW_SCHEMA_REVIEW_SLICE as reviewSchema,
+  OPERATE_REVIEW_DISPLAY_WORKSPACE_SCHEMA_REVIEW_SLICE as reviewWorkspaceSchema,
   OPERATING_TRACE_MATRIX_SCHEMA_REVIEW_SLICE as traceMatrixSchema,
 } from './generated/operate-review-schema-data.mjs';
+import { assertOperateReviewWorkspacePayloadSafeV1 } from './operate-review-payload-safety.mjs';
 
 export const OPERATE_REVIEW_DISPLAY_WORKSPACE_DOMAIN =
   'openplanr:operate-review-display-workspace:1.0.0';

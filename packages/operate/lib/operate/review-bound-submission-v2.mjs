@@ -1,6 +1,6 @@
-import { PipelineError } from '@openplanr/protocol/errors';
-import { assertProtocolArtifact } from '@openplanr/protocol/contracts';
 import { sha256Jcs } from '@openplanr/protocol/canonical-json';
+import { assertProtocolArtifact } from '@openplanr/protocol/contracts';
+import { PipelineError } from '@openplanr/protocol/errors';
 
 export const OPERATE_REVIEW_BOUND_SUBMISSION_DOMAIN =
   'openplanr:operate-review-bound-submission:project-write:operating-review@2.0.0#/$defs/workDisposition:1.0.0';

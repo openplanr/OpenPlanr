@@ -3,11 +3,11 @@ import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 
 import { planOperatingIntelligenceBoardV2 } from '../../lib/operate/intelligence-router-v2.mjs';
+import { deriveOperatingRuntimeDeltaV2 } from '../../lib/operate/runtime-foundation.mjs';
 import {
   deriveOperatingAssignmentReleaseIntentsV2,
   validateOperatingIntelligenceAssignmentGraphV2,
 } from '../../lib/operate/scheduler-v2.mjs';
-import { deriveOperatingRuntimeDeltaV2 } from '../../lib/operate/runtime-foundation.mjs';
 import { checkpoint } from './operate-operating-intelligence-state-v2.test-support.mjs';
 
 const PLAN_TIME = '2026-08-09T12:02:00.000Z';

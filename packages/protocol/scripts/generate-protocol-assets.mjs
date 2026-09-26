@@ -4,8 +4,8 @@ import {
   chmodSync,
   existsSync,
   mkdirSync,
-  readFileSync,
   readdirSync,
+  readFileSync,
   statSync,
   writeFileSync,
 } from 'node:fs';
@@ -13,7 +13,22 @@ import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { sha256Hex } from '../src/canonical-json.mjs';
+import { DESIGN_DOCUMENT_SCHEMA } from '../src/design-contracts.mjs';
+import { DESIGN_HANDOFF_SCHEMAS } from '../src/design-handoff-contracts.mjs';
+import { ENTERPRISE_SCHEMAS } from '../src/enterprise-contracts.mjs';
+import {
+  DESIGN_REVIEW_METADATA_PAYLOAD_V11_SCHEMA,
+  REVIEW_EXPERIENCE_SCHEMAS,
+} from '../src/review-experience-contracts.mjs';
+import { DESIGN_WORKSPACE_SCHEMAS } from '../src/workspace-contracts.mjs';
+import {
+  buildDiagramAuthoringRegistries,
+  buildDiagramAuthoringSchemas,
+} from './diagram-authoring-definitions.mjs';
+import { buildDiagramRegistries, buildDiagramSchemas } from './diagram-definitions.mjs';
+import { buildPlanningSchemas } from './planning-definitions.mjs';
 import { buildRegistries, buildSchemas } from './protocol-definitions.mjs';
+import { buildSkillPackageSchemasV18 } from './skill-package-definitions-v18.mjs';
 import {
   buildSkillSourceRegistries,
   buildSkillSourceSchemas,
@@ -22,21 +37,6 @@ import {
   buildSkillSourceRegistriesV17,
   buildSkillSourceSchemasV17,
 } from './skill-source-definitions-v17.mjs';
-import { buildDiagramRegistries, buildDiagramSchemas } from './diagram-definitions.mjs';
-import {
-  buildDiagramAuthoringSchemas,
-  buildDiagramAuthoringRegistries,
-} from './diagram-authoring-definitions.mjs';
-import { buildPlanningSchemas } from './planning-definitions.mjs';
-import { buildSkillPackageSchemasV18 } from './skill-package-definitions-v18.mjs';
-import { DESIGN_DOCUMENT_SCHEMA } from '../src/design-contracts.mjs';
-import {
-  REVIEW_EXPERIENCE_SCHEMAS,
-  DESIGN_REVIEW_METADATA_PAYLOAD_V11_SCHEMA,
-} from '../src/review-experience-contracts.mjs';
-import { DESIGN_WORKSPACE_SCHEMAS } from '../src/workspace-contracts.mjs';
-import { ENTERPRISE_SCHEMAS } from '../src/enterprise-contracts.mjs';
-import { DESIGN_HANDOFF_SCHEMAS } from '../src/design-handoff-contracts.mjs';
 
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const check = process.argv.includes('--check');

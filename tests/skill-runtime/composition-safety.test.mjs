@@ -13,7 +13,6 @@ import { join, resolve } from 'node:path';
 import test from 'node:test';
 
 import {
-  SkillRuntimeError,
   assertPortableAsset,
   assertSafeSourcePath,
   checkSkill,
@@ -21,6 +20,7 @@ import {
   composeIncludes,
   evaluateSkill,
   loadComposedSkill,
+  SkillRuntimeError,
   sha256,
 } from '../../packages/skill-runtime/src/index.mjs';
 

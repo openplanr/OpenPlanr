@@ -2,25 +2,24 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
-
 import {
-  DESIGN_HANDOFF_AUTHORITY,
-  DESIGN_HANDOFF_CHECK_IDS,
-  DESIGN_HANDOFF_SCHEMAS,
-  assertDesignHandoffContract,
-  assertDesignHandoffReadiness,
-  assertDesignImplementationHandoff,
-  assertDesignPlanningLineage,
-  designImplementationHandoffDigest,
-} from '../../packages/protocol/src/design-handoff-contracts.mjs';
+  PROTOCOL_V111_CONTRACTS,
+  protocolAssetUrl,
+} from '../../packages/protocol/src/browser-contracts.mjs';
 import {
   listProtocolSchemas,
   validateProtocolArtifact,
 } from '../../packages/protocol/src/contracts.mjs';
 import {
-  PROTOCOL_V111_CONTRACTS,
-  protocolAssetUrl,
-} from '../../packages/protocol/src/browser-contracts.mjs';
+  assertDesignHandoffContract,
+  assertDesignHandoffReadiness,
+  assertDesignImplementationHandoff,
+  assertDesignPlanningLineage,
+  DESIGN_HANDOFF_AUTHORITY,
+  DESIGN_HANDOFF_CHECK_IDS,
+  DESIGN_HANDOFF_SCHEMAS,
+  designImplementationHandoffDigest,
+} from '../../packages/protocol/src/design-handoff-contracts.mjs';
 
 const digest = (character) => `sha256:${character.repeat(64)}`;
 const action = (id) => ({ id: `fix-${id}`, label: `Resolve ${id.replaceAll('-', ' ')}` });

@@ -11,7 +11,7 @@
  */
 
 import assert from 'node:assert/strict';
-import { readFileSync, mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { test } from 'node:test';
@@ -19,14 +19,14 @@ import { fileURLToPath } from 'node:url';
 
 import { validate } from '../conformance/json-schema-validate.mjs';
 import { createDaemon, daemonControlHeaders } from '../lib/design-engine/daemon.mjs';
-import { openSse, isEvent } from './sse-client.mjs';
 import {
-  mergeFeedback,
-  normalizeLegacy,
+  DEFAULT_AUTHOR,
   generateStableId,
   isDeleteMarker,
-  DEFAULT_AUTHOR,
+  mergeFeedback,
+  normalizeLegacy,
 } from '../lib/design-engine/feedback.mjs';
+import { isEvent, openSse } from './sse-client.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const feedbackSchema = JSON.parse(

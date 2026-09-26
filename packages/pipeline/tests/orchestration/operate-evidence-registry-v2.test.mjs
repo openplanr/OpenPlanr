@@ -3,11 +3,11 @@ import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 
 import {
-  OPEN_REFERENCE_EVIDENCE_REGISTRY_V2,
   createOperateEvidenceRegistryV2,
   dispatchOperateEvidenceResolverV2,
   findOperateEvidenceProviderRegistrationV2,
   findOperateEvidenceResolverRegistrationV2,
+  OPEN_REFERENCE_EVIDENCE_REGISTRY_V2,
   prepareOperateEvidenceDispatchV2,
 } from 'planr-pipeline/operate/evidence-v2';
 

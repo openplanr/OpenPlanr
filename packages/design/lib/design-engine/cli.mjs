@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+
 /**
  * planr-design — the design-loop engine CLI (vendored in the plugin, zero deps).
  *
@@ -19,55 +20,54 @@
  * get the same JSON pretty-printed. Keys are NEVER echoed (hard rule 7).
  */
 
+import { spawn } from 'node:child_process';
 import {
   chmodSync,
   copyFileSync,
   existsSync,
   mkdirSync,
-  readFileSync,
   readdirSync,
+  readFileSync,
   writeFileSync,
 } from 'node:fs';
-import { join, resolve, basename, dirname } from 'node:path';
-import { spawn } from 'node:child_process';
+import { basename, dirname, join, resolve } from 'node:path';
 import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
-
+import { parseArgs } from '../design/cli-parser.mjs';
+import { createDesignBoardArtifactEnvelope } from './artifact-adapter.mjs';
 import { resolveAuth } from './auth.mjs';
-import {
-  credentialsPath,
-  planrHome,
-  projectDesignsDir,
-  sessionDirName,
-  tasteProfilePath,
-  ARTIFACT_GITIGNORE,
-} from './paths.mjs';
-import { DEFAULT_PROVIDER, resolveProvider } from './providers/index.mjs';
-import * as openai from './providers/openai.mjs';
-import { sheetContract, contractInstructions, validateSheet } from './providers/claudeSvg.mjs';
-import { createSession, loadSession, saveSession, appendRound } from './session.mjs';
 import {
   DESIGN_BOARD_ENVELOPE_FILE,
   DESIGN_BOARD_SOURCES_FILE,
   renderBoardHtml,
 } from './board.mjs';
-import { createDesignBoardArtifactEnvelope } from './artifact-adapter.mjs';
+import { publicBoardId } from './board-token.mjs';
 import {
+  buildImageCanvasData,
+  discoverVariants,
+  imageDimensions,
+  wrapInCanvas,
+} from './canvas-wrap.mjs';
+import {
+  createDaemon,
+  DAEMON_VERSION,
   daemonControlHeaders,
   findRunningDaemon,
-  DAEMON_VERSION,
-  createDaemon,
   killRunningDaemon,
 } from './daemon.mjs';
-import { publicBoardId } from './board-token.mjs';
-import { loadProfile, saveProfile, updateTaste, detectConflicts } from './taste.mjs';
 import {
-  imageDimensions,
-  buildImageCanvasData,
-  wrapInCanvas,
-  discoverVariants,
-} from './canvas-wrap.mjs';
-import { parseArgs } from '../design/cli-parser.mjs';
+  ARTIFACT_GITIGNORE,
+  credentialsPath,
+  planrHome,
+  projectDesignsDir,
+  sessionDirName,
+  tasteProfilePath,
+} from './paths.mjs';
+import { contractInstructions, sheetContract, validateSheet } from './providers/claudeSvg.mjs';
+import { DEFAULT_PROVIDER, resolveProvider } from './providers/index.mjs';
+import * as openai from './providers/openai.mjs';
+import { appendRound, createSession, loadSession, saveSession } from './session.mjs';
+import { detectConflicts, loadProfile, saveProfile, updateTaste } from './taste.mjs';
 
 const here = fileURLToPath(import.meta.url);
 // templates/design lives at the plugin root (cli.mjs is at lib/design-engine/).

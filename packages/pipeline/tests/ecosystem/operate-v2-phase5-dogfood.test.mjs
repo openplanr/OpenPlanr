@@ -1,13 +1,12 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { after, test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-
-import { packOperateV2DevelopmentSnapshot } from '../../scripts/check-operate-runtime-purity.mjs';
 import { OPERATE_RUNTIME_CONTRACT_KINDS } from '../../lib/protocol/loader.mjs';
+import { packOperateV2DevelopmentSnapshot } from '../../scripts/check-operate-runtime-purity.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const temporaryRoot = mkdtempSync(join(tmpdir(), 'planr-operate-v2-phase5-dogfood-'));

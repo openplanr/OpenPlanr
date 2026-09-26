@@ -7,22 +7,21 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-
 import {
-  assertReleaseCompatibilityClaim,
-  assertReleaseLedger,
-  renderCompatibilityDisplay,
-} from '../../lib/ecosystem/release-ledger.mjs';
-import {
+  capturePackedWorkspaceCustody,
   PACKED_WORKSPACE_DIAGRAM_GRAMMAR_COUNT,
   PACKED_WORKSPACE_GENERATED_SKILL_COUNT,
   PACKED_WORKSPACE_PROOF_KIND,
   PACKED_WORKSPACE_PROOF_SCHEMA_VERSION,
   PACKED_WORKSPACE_PROTOCOL_ASSET_COUNTS,
   PACKED_WORKSPACE_REQUIRED_CHECKS,
-  capturePackedWorkspaceCustody,
   packedWorkspaceProofDigest,
 } from '../../lib/ecosystem/packed-workspace-proof.mjs';
+import {
+  assertReleaseCompatibilityClaim,
+  assertReleaseLedger,
+  renderCompatibilityDisplay,
+} from '../../lib/ecosystem/release-ledger.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const readJson = (path) => JSON.parse(readFileSync(join(root, path), 'utf8'));

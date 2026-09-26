@@ -1,90 +1,90 @@
 import type {
-  OperateErrorContextV2,
   OperateAllowedActionV2,
-  OperateApiSuccessV2,
   OperateApiFailureV2,
+  OperateApiSuccessV2,
+  OperateDomainRegistrationV2,
   OperateErrorCodeV2,
+  OperateErrorContextV2,
   OperateToolNameV2,
   OperateToolRequestMapV2,
-  OperatingArtifactV2,
-  OperatingArtifactRepresentationV2,
-  OperatingApprovalRecordV2,
-  OperatingApprovalRequirementV2,
   OperatingActionV2,
   OperatingActionVerificationPlanV2,
+  OperatingAdvisorResultV2,
+  OperatingApprovalRecordV2,
+  OperatingApprovalRequirementV2,
+  OperatingArtifactRepresentationV2,
+  OperatingArtifactV2,
   OperatingAssignmentStateV2,
   OperatingAssignmentV2,
+  OperatingAssumptionV2,
+  OperatingCapabilityAvailabilityV2,
+  OperatingCapabilityGrantV2,
+  OperatingChallengerReviewV2,
+  OperatingClaimV2,
   OperatingCycleV2,
-  OperatingDecisionV2,
   OperatingDecisionLedgerV2,
+  OperatingDecisionV2,
+  OperatingDeliveryEvidenceV1,
   OperatingDeltaV2,
+  OperatingEventTriggerV2,
+  OperatingEventV2,
   OperatingEvidenceCandidateV2,
   OperatingEvidenceEdgeV2,
   OperatingEvidenceGraphV2,
   OperatingEvidenceRefV2,
   OperatingEvidenceResolutionV2,
-  OperatingEventV2,
-  OperatingExecutionResultV2,
   OperatingExecutionReceiptProofV2,
-  OperatingGovernedOperationV2,
-  OperatingCapabilityGrantV2,
-  OperatingCapabilityAvailabilityV2,
-  OperatingOperationReplayEntryV2,
+  OperatingExecutionResultV2,
   OperatingFindingV2,
-  OperatingClaimV2,
+  OperatingGovernedOperationV2,
+  OperatingIntelligenceInputBundleV2,
+  OperatingIntelligencePlanV2,
+  OperatingLearningV2,
   OperatingMetricObservationV2,
   OperatingMetricV2,
   OperatingModelStateV2,
+  OperatingOperationReplayEntryV2,
+  OperatingOriginV1,
   OperatingOutcomeV2,
   OperatingPolicyEvaluationV2,
-  OperatingLearningV2,
-  OperatingRiskV2,
-  OperatingAssumptionV2,
-  OperatingScenarioV2,
-  OperatingEventTriggerV2,
-  OperatingIntelligencePlanV2,
-  OperatingIntelligenceInputBundleV2,
-  OperatingAdvisorResultV2,
-  OperatingChallengerReviewV2,
-  OperateDomainRegistrationV2,
-  OperatingReviewStateV2,
   OperatingReviewReadV2,
   OperatingReviewReceiptV2,
+  OperatingReviewStateV2,
   OperatingReviewV2,
+  OperatingRiskV2,
   OperatingRuntimeStateV2,
+  OperatingScenarioV2,
   OperatingSnapshotV2,
   OperatingSubmissionReplayEntryV2,
   OperatingSubmissionV2,
   OperatingWorkChangeSetV2,
   OperatingWorkDispositionV2,
   OperatingWorkLedgerV2,
-  OperatingOriginV1,
-  OperatingDeliveryEvidenceV1,
 } from '@openplanr/protocol';
-import type { OperatingCycleWorkViewV2 } from './persistent-work-projections-v2.d.mts';
-import type { OperateEvidenceRegistryV2 } from './evidence-registry-v2.mjs';
-import type { OperateStaticEvidenceResolverContextV2 } from './evidence-v2.mjs';
-import type { OperatingArtifactByteStoreV2 } from './evidence-materialization-v2.mjs';
-import type { OperateGovernedExtensionRegistryV2 } from './governed-extensions-v2.d.mts';
-import type {
-  OperatingModelStateCollectionsV2,
-  OperatingModelStateScopeV2,
-} from './operating-state-v2.d.mts';
 import type {
   OperateAuthorityActorV2,
   OperateAuthorityContextV2,
   OperateAuthorityDecisionV2,
   OperateAuthorityOperationV2,
 } from './authorization-v2.mjs';
+import type { OperatingArtifactByteStoreV2 } from './evidence-materialization-v2.mjs';
+import type { OperateEvidenceRegistryV2 } from './evidence-registry-v2.mjs';
+import type { OperateStaticEvidenceResolverContextV2 } from './evidence-v2.mjs';
+import type { OperateGovernedExtensionRegistryV2 } from './governed-extensions-v2.d.mts';
+import type {
+  OperatingModelStateCollectionsV2,
+  OperatingModelStateScopeV2,
+} from './operating-state-v2.d.mts';
+import type { OperatingCycleWorkViewV2 } from './persistent-work-projections-v2.d.mts';
 import type { OperateReviewBoundSubmissionV1 } from './review-bound-submission-v2.mjs';
 
+export type { OperateReviewBoundSubmissionV1 } from './review-bound-submission-v2.mjs';
 export {
   assertOperatingReviewBoundSubmissionV1,
   buildOperatingReviewBoundSubmissionV1,
   computeOperatingReviewBoundSubmissionHashV1,
   OPERATE_REVIEW_BOUND_SUBMISSION_DOMAIN,
 } from './review-bound-submission-v2.mjs';
-export type { OperateReviewBoundSubmissionV1 } from './review-bound-submission-v2.mjs';
 
 export function deriveOperatingRoleLocalClaimIdV2(assignmentId: string, position?: number): string;
 export function deriveOperatingChairLedgerIdV2(assignmentId: string): string;
@@ -94,17 +94,10 @@ export function assertOperatingRoleLocalClaimIdsV2(
 ): readonly string[];
 
 export {
-  OPERATE_CORE_PROHIBITION_IDENTIFIERS_V2,
-  OPERATE_POLICY_OUTCOME_STRENGTH_V2,
-  OPERATE_POLICY_TIER_PRECEDENCE_V2,
-  assertOperatingActionPolicyV2,
-  assertOperatingPolicyEvaluationV2,
-  assertOperatingRollbackPolicyV2,
-  createOperatingActionPolicyV2,
-  deriveApplicableOperatingActionPoliciesV2,
-  deriveOperatingApprovalRequirementInstanceIdV2,
-  evaluateOperatingActionPolicyV2,
-} from './policy-v2.mjs';
+  buildOperatingActionExecutionFeedbackV2,
+  buildOperatingActionVerificationMaterializationV2,
+  buildOperatingActionVerificationOutcomeV2,
+} from './action-verification-v2.mjs';
 export {
   appendOperatingApprovalRecordV2,
   assertOperatingApprovalRecordV2,
@@ -119,69 +112,72 @@ export {
   evaluateOperatingRollbackApprovalSetV2,
   partitionSupersededOperatingAuthorityV2,
 } from './approvals-v2.mjs';
-
 export {
-  derivePersistentOperatingExecutionVerificationProjectionV2,
-  derivePersistentOperatingRecoveryProjectionV2,
-} from './persistent-work-v2.mjs';
-
-export {
-  OPERATE_AUTHORITY_DECISION_VERSION_V2,
-  OPERATE_AUTHORITY_TOOL_CAPABILITIES_V2,
   assertOperateAuthorityV2,
   assertOperatingActionAuthorityTupleV2,
   deriveOperateAuthorityAllowedActionsV2,
   evaluateOperateAuthorityV2,
   getOperateAuthorityArgumentCandidatesV2,
+  OPERATE_AUTHORITY_DECISION_VERSION_V2,
+  OPERATE_AUTHORITY_TOOL_CAPABILITIES_V2,
 } from './authorization-v2.mjs';
-
 export {
-  OPERATING_MODEL_STATE_COLLECTIONS_V2,
-  assertOperatingModelStateV2,
-  buildOperatingModelStateV2,
-  deriveOperatingModelStateRuntimeHashV2,
-} from './operating-state-v2.mjs';
+  closeVerifiedOperatingCycleV2,
+  deriveOperatingReviewWorkDispositionSetsV2,
+} from './cycle-closure-v2.mjs';
 export {
-  assertOperatingSnapshotV2,
-  buildOperatingSnapshotStateTransactionV2,
-  deriveOperatingSnapshotRuntimeHashV2,
-} from './operating-snapshots-v2.mjs';
+  createOperatingArtifactByteStoreV2,
+  readOperatingArtifactRawBytesV2,
+} from './evidence-materialization-v2.mjs';
 export {
-  assertOperatingDeltaV2,
-  classifyOperatingDeltaMaterialityV2,
-  deriveOperatingDeltaV2,
-} from './operating-delta-v2.mjs';
-export {
-  assertOperatingIntelligencePlanV2,
-  planOperatingIntelligenceBoardV2,
-} from './intelligence-router-v2.mjs';
-export { buildOperatingIntelligenceStateTransitionV2 } from './operating-intelligence-state-v2.mjs';
-export { buildOperatingTriggerScenarioTransitionV2 } from './operating-triggers-v2.mjs';
-export {
-  buildOperatingActionExecutionFeedbackV2,
-  buildOperatingActionVerificationMaterializationV2,
-  buildOperatingActionVerificationOutcomeV2,
-} from './action-verification-v2.mjs';
-export {
-  OPERATING_EXECUTION_VERIFICATION_STATUSES_V2,
-  OPERATING_HYPOTHESIS_VERIFICATION_STATUSES_V2,
   buildOperatingExecutionLifecycleV2,
   buildOperatingRollbackVerificationV2,
   buildOperatingTerminalVerificationAssignmentV2,
   deriveOperatingExecutionLifecycleIdentitiesV2,
   deriveOperatingExecutionVerificationStatusV2,
   deriveOperatingVerificationFeedbackV2,
+  OPERATING_EXECUTION_VERIFICATION_STATUSES_V2,
+  OPERATING_HYPOTHESIS_VERIFICATION_STATUSES_V2,
   selectOperatingTerminalVerificationAssignmentV2,
 } from './execution-verification-v2.mjs';
 export {
-  closeVerifiedOperatingCycleV2,
-  deriveOperatingReviewWorkDispositionSetsV2,
-} from './cycle-closure-v2.mjs';
-
+  assertOperatingIntelligencePlanV2,
+  planOperatingIntelligenceBoardV2,
+} from './intelligence-router-v2.mjs';
 export {
-  createOperatingArtifactByteStoreV2,
-  readOperatingArtifactRawBytesV2,
-} from './evidence-materialization-v2.mjs';
+  assertOperatingDeltaV2,
+  classifyOperatingDeltaMaterialityV2,
+  deriveOperatingDeltaV2,
+} from './operating-delta-v2.mjs';
+export { buildOperatingIntelligenceStateTransitionV2 } from './operating-intelligence-state-v2.mjs';
+export {
+  assertOperatingSnapshotV2,
+  buildOperatingSnapshotStateTransactionV2,
+  deriveOperatingSnapshotRuntimeHashV2,
+} from './operating-snapshots-v2.mjs';
+export {
+  assertOperatingModelStateV2,
+  buildOperatingModelStateV2,
+  deriveOperatingModelStateRuntimeHashV2,
+  OPERATING_MODEL_STATE_COLLECTIONS_V2,
+} from './operating-state-v2.mjs';
+export { buildOperatingTriggerScenarioTransitionV2 } from './operating-triggers-v2.mjs';
+export {
+  derivePersistentOperatingExecutionVerificationProjectionV2,
+  derivePersistentOperatingRecoveryProjectionV2,
+} from './persistent-work-v2.mjs';
+export {
+  assertOperatingActionPolicyV2,
+  assertOperatingPolicyEvaluationV2,
+  assertOperatingRollbackPolicyV2,
+  createOperatingActionPolicyV2,
+  deriveApplicableOperatingActionPoliciesV2,
+  deriveOperatingApprovalRequirementInstanceIdV2,
+  evaluateOperatingActionPolicyV2,
+  OPERATE_CORE_PROHIBITION_IDENTIFIERS_V2,
+  OPERATE_POLICY_OUTCOME_STRENGTH_V2,
+  OPERATE_POLICY_TIER_PRECEDENCE_V2,
+} from './policy-v2.mjs';
 
 export interface OperateGuardErrorV2 {
   code: OperateErrorCodeV2 | 'CONTRACT_VERSION_UNSUPPORTED';

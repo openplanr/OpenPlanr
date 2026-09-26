@@ -1,16 +1,16 @@
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { createRequire } from 'node:module';
-import { fileURLToPath } from 'node:url';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
-import { createArtifactEnvelope } from '../lib/artifact/envelope.mjs';
-import { renderArtifactShellDocument } from '../lib/artifact/ui/shell.mjs';
 import {
   createArtifactBridgeNonce,
   prepareArtifactDocument,
   renderArtifactParentRuntime,
 } from '../lib/artifact/bridge.mjs';
+import { createArtifactEnvelope } from '../lib/artifact/envelope.mjs';
+import { renderArtifactShellDocument } from '../lib/artifact/ui/shell.mjs';
 
 const enabled = process.env.PLANR_BROWSER_TESTS === '1';
 const rootPath = fileURLToPath(new URL('../../../', import.meta.url));

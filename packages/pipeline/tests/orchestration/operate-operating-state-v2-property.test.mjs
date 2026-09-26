@@ -2,8 +2,6 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
-
-import { sha256Jcs } from '../../lib/protocol/jcs.mjs';
 import {
   createEmptyOperatingRuntimeStateV2,
   createNoModelReplayHookV2,
@@ -11,6 +9,7 @@ import {
   materializeOperatingStateSnapshotV2,
   reduceOperatingRuntimeEventsV2,
 } from '../../lib/operate/runtime-foundation.mjs';
+import { sha256Jcs } from '../../lib/protocol/jcs.mjs';
 
 const TIME = '2026-08-09T12:00:00.000Z';
 const valid = JSON.parse(

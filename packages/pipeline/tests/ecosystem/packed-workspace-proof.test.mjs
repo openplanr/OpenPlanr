@@ -6,13 +6,13 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 
 import {
+  assertPackedWorkspaceProof,
   PACKED_WORKSPACE_DIAGRAM_GRAMMAR_COUNT,
   PACKED_WORKSPACE_GENERATED_SKILL_COUNT,
   PACKED_WORKSPACE_PROOF_KIND,
   PACKED_WORKSPACE_PROOF_SCHEMA_VERSION,
   PACKED_WORKSPACE_PROTOCOL_ASSET_COUNTS,
   PACKED_WORKSPACE_REQUIRED_CHECKS,
-  assertPackedWorkspaceProof,
   packedWorkspaceProofDigest,
   parseNpmPackJson,
   readPackedWorkspaceProof,

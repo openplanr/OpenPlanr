@@ -1,24 +1,24 @@
 import assert from 'node:assert/strict';
-import { createRequire } from 'node:module';
 import { createServer } from 'node:http';
-import { Script } from 'node:vm';
+import { createRequire } from 'node:module';
 import test from 'node:test';
+import { Script } from 'node:vm';
 import { parse } from 'parse5';
-import {
-  ARTIFACT_INSPECTION_PROPERTIES,
-  normalizeArtifactInspection,
-  normalizeArtifactThumbnail,
-  normalizeArtifactBridgeToolResult,
-  renderArtifactBridgeToolsSource,
-} from '../lib/artifact/ui/bridge-tools.mjs';
 import {
   createArtifactBridgeNonce,
   prepareArtifactDocument,
   renderArtifactParentRuntime,
   validateArtifactBridgeMessage,
 } from '../lib/artifact/bridge.mjs';
-import { mountArtifactFeedbackRail } from '../lib/artifact/ui/feedback-rail.mjs';
 import { mountArtifactAnnotations } from '../lib/artifact/ui/annotations.mjs';
+import {
+  ARTIFACT_INSPECTION_PROPERTIES,
+  normalizeArtifactBridgeToolResult,
+  normalizeArtifactInspection,
+  normalizeArtifactThumbnail,
+  renderArtifactBridgeToolsSource,
+} from '../lib/artifact/ui/bridge-tools.mjs';
+import { mountArtifactFeedbackRail } from '../lib/artifact/ui/feedback-rail.mjs';
 
 const viewport = { width: 800, height: 600 };
 const inspection = () => ({

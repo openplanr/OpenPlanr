@@ -4,16 +4,16 @@ import { spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
+import { fileURLToPath } from 'node:url';
 
 import {
+  bindPackageProofToEcosystemCandidate,
+  createEcosystemCandidateProof,
+  createInstalledExportProbePlan,
+  inventoryGitRepository,
   RELEASE_REPOSITORY_KEYS,
   REQUIRED_RELEASE_DOCUMENTS,
-  bindPackageProofToEcosystemCandidate,
-  createInstalledExportProbePlan,
-  createEcosystemCandidateProof,
-  inventoryGitRepository,
   releaseProofDigests,
   verifyExportTargets,
   verifyPackagedDocumentation,

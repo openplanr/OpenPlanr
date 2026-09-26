@@ -55,10 +55,9 @@
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
-
-import { assertValid } from './schema-loader.mjs';
-import { validateArtifactReview } from '../envelope.mjs';
 import { ARTIFACT_ERROR_CODES, PipelineError } from '@openplanr/protocol/errors';
+import { validateArtifactReview } from '../envelope.mjs';
+import { assertValid } from './schema-loader.mjs';
 
 export const FEEDBACK_FILE = 'feedback.json';
 export const PENDING_FILE = 'feedback-pending.json';

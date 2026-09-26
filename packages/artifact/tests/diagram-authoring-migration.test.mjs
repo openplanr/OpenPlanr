@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile, readdir, realpath, rm, symlink, writeFile } from 'node:fs/promises';
+import { mkdtemp, readdir, readFile, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
@@ -10,7 +10,7 @@ import {
   previewLegacyDiagramMigration,
 } from '../lib/artifact/diagram/authoring/migration.mjs';
 import { createDiagramAuthoringStore } from '../lib/artifact/diagram/authoring/store.mjs';
-import { renderDiagram, layoutDiagram } from '../lib/artifact/diagram/index.mjs';
+import { layoutDiagram, renderDiagram } from '../lib/artifact/diagram/index.mjs';
 
 const fixturePath = new URL(
   '../fixtures/diagram/grammars/flowchart.planr-diagram.json',

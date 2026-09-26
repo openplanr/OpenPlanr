@@ -4,6 +4,11 @@ export {
   buildOperatingActionVerificationOutcomeV2,
 } from '../action-verification-v2.mjs';
 export {
+  closeCycleWithCarriedWorkV2,
+  closeVerifiedOperatingCycleV2,
+  deriveOperatingReviewWorkDispositionSetsV2,
+} from '../cycle-closure-v2.mjs';
+export {
   buildOperatingExecutionLifecycleV2,
   buildOperatingRollbackVerificationV2,
   buildOperatingTerminalVerificationAssignmentV2,
@@ -13,13 +18,8 @@ export {
   selectOperatingTerminalVerificationAssignmentV2,
 } from '../execution-verification-v2.mjs';
 export {
-  closeCycleWithCarriedWorkV2,
-  closeVerifiedOperatingCycleV2,
-  deriveOperatingReviewWorkDispositionSetsV2,
-} from '../cycle-closure-v2.mjs';
-export {
-  OPEN_REFERENCE_OPERATE_GOVERNED_EXTENSIONS_V2,
   deriveContainedExecutorRequestFingerprintFromBindingV2,
+  OPEN_REFERENCE_OPERATE_GOVERNED_EXTENSIONS_V2,
   selectOperateCapabilityProviderV2,
   selectOperateExecutorV2,
 } from '../governed-extensions-v2.mjs';

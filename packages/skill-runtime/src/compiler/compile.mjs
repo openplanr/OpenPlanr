@@ -9,14 +9,14 @@ import {
 import { resolveModuleGraph } from './graph.mjs';
 import { assertHostOverlayIsPresentational } from './host-overlay.mjs';
 import {
-  HOST_SUBSTITUTIONS,
   assertPortableAsset,
   assertSafeSourcePath,
+  HOST_SUBSTITUTIONS,
   parseMarkdownAsset,
   serializeYamlScalarFragments,
   sha256,
 } from './render-primitives.mjs';
-import { SourceMapBuilder, owner, sha256Bytes, byteLength } from './source-map.mjs';
+import { byteLength, owner, SourceMapBuilder, sha256Bytes } from './source-map.mjs';
 
 const TOKEN = /\{\{([A-Z][A-Z0-9_]*)\}\}/gu;
 const MARKDOWN_V1_COMPILER_VERSION = '1.0.0';

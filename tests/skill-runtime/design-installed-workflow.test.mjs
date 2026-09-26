@@ -14,19 +14,18 @@ import {
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import test from 'node:test';
-
-import { createArtifactReview } from '../../packages/artifact/lib/artifact/review.mjs';
 import { digestArtifactEnvelope } from '../../packages/artifact/lib/artifact/envelope.mjs';
+import { createArtifactReview } from '../../packages/artifact/lib/artifact/review.mjs';
+import {
+  createDeterministicZip,
+  readDeterministicZip,
+} from '../../packages/skill-runtime/src/packaging/index.mjs';
 import {
   buildDesignSkillResources,
   DESIGN_SKILL_IDS,
 } from '../../scripts/skills/design-resources.mjs';
 import { projectedSkillName } from '../../scripts/skills/host-invocations.mjs';
 import { resourceBytes } from '../../scripts/skills/resource-bytes.mjs';
-import {
-  createDeterministicZip,
-  readDeterministicZip,
-} from '../../packages/skill-runtime/src/packaging/index.mjs';
 
 const root = resolve(import.meta.dirname, '../..');
 const pixel = Buffer.from(

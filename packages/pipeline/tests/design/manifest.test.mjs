@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { buildManifest, validateManifest, SCHEMA_VERSION } from '../../lib/design/manifest.mjs';
+import { buildManifest, SCHEMA_VERSION, validateManifest } from '../../lib/design/manifest.mjs';
 
 const BASE = {
   designFormat: 'walkthrough',

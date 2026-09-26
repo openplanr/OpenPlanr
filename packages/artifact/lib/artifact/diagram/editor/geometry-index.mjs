@@ -1,7 +1,7 @@
 import {
   clone,
-  inspectPlainData,
   elementIndex,
+  inspectPlainData,
   validateAuthoringBundle,
 } from '../authoring/model.mjs';
 import { resolveDiagramSceneElement } from '../authoring/scene.mjs';

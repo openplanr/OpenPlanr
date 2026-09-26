@@ -1,24 +1,24 @@
-import { PipelineError } from '@openplanr/protocol/errors';
+import { sha256Jcs } from '@openplanr/protocol/canonical-json';
 import {
   assertOperateExperienceArtifactV2,
   assertProtocolArtifact,
 } from '@openplanr/protocol/contracts';
-import { sha256Jcs } from '@openplanr/protocol/canonical-json';
-import { projectOperatingAcceptedIntelligenceOutputV2 } from './intelligence-ledger-v2.mjs';
-import { derivePersistentOperatingActionRevisionHashV2 } from './persistent-work-v2.mjs';
-import { reconstructOperatingVerificationPlanActionV2 } from './runtime-foundation.mjs';
+import { PipelineError } from '@openplanr/protocol/errors';
 import {
-  PROTOCOL_VERSION,
   assertDeliveryClassification,
   assertNoSensitiveContext,
   assertOperatingDeliveryEvidenceV1,
   assertOperatingOriginV1,
   assertOperatingPlanningProposalV1,
   fail,
+  PROTOCOL_VERSION,
   sameHead,
   sameScope,
   without,
 } from '@openplanr/protocol/operating-planning-contracts';
+import { projectOperatingAcceptedIntelligenceOutputV2 } from './intelligence-ledger-v2.mjs';
+import { derivePersistentOperatingActionRevisionHashV2 } from './persistent-work-v2.mjs';
+import { reconstructOperatingVerificationPlanActionV2 } from './runtime-foundation.mjs';
 
 const ROUTES = Object.freeze([
   'contained-execution',
@@ -1128,10 +1128,9 @@ export function buildOperatingDeliveryEvidenceV1({
   return freeze(evidence);
 }
 
-export { ROUTES as OPERATING_DELIVERY_ROUTES_V1 };
-
 export {
   assertOperatingDeliveryEvidenceV1,
   assertOperatingOriginV1,
   assertOperatingPlanningProposalV1,
+  ROUTES as OPERATING_DELIVERY_ROUTES_V1,
 };

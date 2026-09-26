@@ -4,14 +4,13 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-
+import { prepareShipContext } from '../../lib/pipeline/engine.mjs';
 import {
   completePlan,
   nextShipBatch,
   preparePlan,
   prepareShip,
 } from '../../lib/pipeline/index.mjs';
-import { prepareShipContext } from '../../lib/pipeline/engine.mjs';
 
 function project() {
   const root = mkdtempSync(join(tmpdir(), 'openplanr-engine-'));

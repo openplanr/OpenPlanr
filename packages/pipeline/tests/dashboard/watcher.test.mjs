@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { mkdtempSync, rmSync } from 'node:fs';
-import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { setTimeout as delay } from 'node:timers/promises';
+import { join } from 'node:path';
 import { test } from 'node:test';
+import { setTimeout as delay } from 'node:timers/promises';
 
 import { createWatcher } from '../../lib/dashboard/watcher.mjs';
 

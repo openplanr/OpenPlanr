@@ -1,5 +1,5 @@
-import { toDiagnostic } from './diagnostics.mjs';
 import { AUTHORING_RESULT_KIND, AUTHORING_RESULT_VERSION } from './command-contract.mjs';
+import { toDiagnostic } from './diagnostics.mjs';
 
 function envelope(command, status) {
   return {

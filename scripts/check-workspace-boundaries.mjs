@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, extname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   PUBLIC_PACKAGE_PATHS,
-  WORKSPACE_IDENTITIES,
   validateWorkspaceManifests,
+  WORKSPACE_IDENTITIES,
 } from './lib/workspace-release-policy.mjs';
 
 const workspaceRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');

@@ -1,30 +1,29 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { test, afterEach } from 'node:test';
-
-import {
-  emptyProfile,
-  updateTaste,
-  decayedConfidence,
-  loadProfile,
-  saveProfile,
-  detectConflicts,
-  DECAY_PER_WEEK,
-} from '../../lib/design-engine/taste.mjs';
-import { resolveProvider } from '../../lib/design-engine/providers/index.mjs';
+import { afterEach, test } from 'node:test';
 import { sheetContract, validateSheet } from '../../lib/design-engine/providers/claudeSvg.mjs';
+import { resolveProvider } from '../../lib/design-engine/providers/index.mjs';
 import {
-  DEFAULT_IMAGE_MODEL,
-  DEFAULT_MODEL,
-  IMAGE_QUALITIES,
   assertImageSize,
   checkQuality,
+  DEFAULT_IMAGE_MODEL,
+  DEFAULT_MODEL,
   extractAttributes,
   generateVariant,
+  IMAGE_QUALITIES,
   iterate,
 } from '../../lib/design-engine/providers/openai.mjs';
+import {
+  DECAY_PER_WEEK,
+  decayedConfidence,
+  detectConflicts,
+  emptyProfile,
+  loadProfile,
+  saveProfile,
+  updateTaste,
+} from '../../lib/design-engine/taste.mjs';
 
 const dirs = [];
 const tmp = () => {

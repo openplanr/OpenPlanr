@@ -1,13 +1,14 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync, mkdirSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
-import { dirname, join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
-import { fileURLToPath } from 'node:url';
+import { dirname, join, resolve } from 'node:path';
 import { test } from 'node:test';
+import { fileURLToPath } from 'node:url';
 
 import { createArtifactEnvelope } from '../../lib/artifact/envelope.mjs';
 import { startArtifactReview } from '../../lib/artifact/review-server.mjs';
+import { renderArtifactShellDocument } from '../../lib/artifact/ui/shell.mjs';
 import {
   ARTIFACT_STAGE_LIMITS,
   clientPointToNormalized,
@@ -17,7 +18,6 @@ import {
   reduceArtifactStageState,
   visibleArtifactIds,
 } from '../../lib/artifact/ui/stage.mjs';
-import { renderArtifactShellDocument } from '../../lib/artifact/ui/shell.mjs';
 import {
   renderArtifactShellAssets,
   renderArtifactStageRuntimeAsset,

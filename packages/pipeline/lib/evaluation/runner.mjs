@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync, existsSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 
 import { PipelineError } from '../pipeline/errors.mjs';
@@ -22,17 +22,17 @@ import {
   evaluationScenarioIdentityFromSource,
 } from '../pipeline/evaluation-identity.mjs';
 import {
-  readProfessionalSkillsCatalog,
   buildProfessionalSkillsManifest,
+  readProfessionalSkillsCatalog,
   renderProfessionalSkillAssets,
 } from '../pipeline/professional-skills.mjs';
 import { sha256Jcs } from '../protocol/jcs.mjs';
-import { evaluateGates, countFindings, EVALUATION_RESULT_READY } from './gates.mjs';
+import { countFindings, EVALUATION_RESULT_READY, evaluateGates } from './gates.mjs';
 import {
-  EVALUATION_JOURNEY_KINDS,
   createCliDriver,
   createDisposableCliRoot,
   createLoopbackBrowserAdapter,
+  EVALUATION_JOURNEY_KINDS,
   runBrowserJourney,
   runCliJourney,
   runHostJourney,
@@ -49,12 +49,12 @@ import {
   regressionBasisPoints,
   triggerRates,
 } from './metrics.mjs';
-import { buildAggregateReport } from './report.mjs';
 import {
   compareGeneratedAssets,
   comparePackageExports,
   comparePackedMembership,
 } from './parity.mjs';
+import { buildAggregateReport } from './report.mjs';
 
 export const EVALUATION_CORPUS_ROOT = 'evaluation/scenarios';
 export const EVALUATION_HOST_PROFILE_ROOT = 'evaluation/host-profiles';

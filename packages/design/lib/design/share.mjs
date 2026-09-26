@@ -1,4 +1,6 @@
 /** Local owner adapter for persistent, encrypted design review workspaces. */
+
+import { randomBytes } from 'node:crypto';
 import {
   chmodSync,
   closeSync,
@@ -15,21 +17,20 @@ import {
 } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
-import { randomBytes } from 'node:crypto';
-import { canonicalizeJson } from '@openplanr/protocol/canonical-json';
-import { acquireStartLock } from '@openplanr/artifact/internal/server-util.mjs';
 import { digestArtifactEnvelope } from '@openplanr/artifact/envelope.mjs';
-import { createReviewLedger } from '@openplanr/artifact/merge.mjs';
 import { resolveArtifactReviewDestination } from '@openplanr/artifact/import.mjs';
+import { acquireStartLock } from '@openplanr/artifact/internal/server-util.mjs';
+import { createReviewLedger } from '@openplanr/artifact/merge.mjs';
 import {
   readArtifactReviewState,
   withArtifactReviewLock,
   writeArtifactReviewState,
 } from '@openplanr/artifact/review.mjs';
+import { canonicalizeJson } from '@openplanr/protocol/canonical-json';
+import { bundleDesignRevision } from './context.mjs';
 import { atomicJson, currentDesign, hash, readJson } from './document.mjs';
 import * as workspace from './workspace-client.mjs';
 import { mergeWorkspaceFeedback } from './workspace-feedback.mjs';
-import { bundleDesignRevision } from './context.mjs';
 
 const FORMAT = 'openplanr-design-owner-custody';
 const pick = (value, keys) =>

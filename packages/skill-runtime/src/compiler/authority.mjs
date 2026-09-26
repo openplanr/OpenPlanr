@@ -80,4 +80,4 @@ export function assertAuthorityNarrows(base, overlay, { edge }) {
   return overlay;
 }
 
-export { REPOSITORY_ACCESS_ORDER, EXTERNAL_DATA_ACCESS_ORDER, ALLOWED_SET_COMPONENTS };
+export { ALLOWED_SET_COMPONENTS, EXTERNAL_DATA_ACCESS_ORDER, REPOSITORY_ACCESS_ORDER };

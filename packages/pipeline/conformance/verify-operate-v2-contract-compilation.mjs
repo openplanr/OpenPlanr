@@ -13,28 +13,27 @@ import {
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-
-import {
-  OPERATE_ROLE_MANDATES_V2,
-  OPERATE_OPERATING_INTELLIGENCE_CONTRACT_KINDS_V2,
-  OPERATE_OPERATING_PROJECTION_IDENTITIES_V2,
-  OPERATE_OPERATING_PROVIDER_REGISTRATION_CONTRACT_KINDS_V2,
-  OPERATE_GOVERNED_EXECUTION_CONTRACT_KINDS_V2,
-  OPERATE_GOVERNED_EFFECT_CLASSES_V2,
-  OPERATE_EXPERIENCE_CONTRACT_KINDS_V2,
-  OPERATING_DELIVERY_ROUTES_V1,
-  OPERATE_RUNTIME_CONTRACT_KINDS,
-  listProtocolSchemas,
-  loadOperateRuntimeContract,
-  loadOperateExperienceContract,
-  validateOperateExperienceArtifactV2,
-  validateProtocolArtifact,
-} from 'planr-pipeline/protocol';
 import {
   OPERATE_GUARD_TABLE_V2,
   OPERATING_ASSIGNMENT_TRANSITIONS_V2,
   OPERATING_REVIEW_TRANSITIONS_V2,
 } from 'planr-pipeline/operate/runtime-v2';
+import {
+  listProtocolSchemas,
+  loadOperateExperienceContract,
+  loadOperateRuntimeContract,
+  OPERATE_EXPERIENCE_CONTRACT_KINDS_V2,
+  OPERATE_GOVERNED_EFFECT_CLASSES_V2,
+  OPERATE_GOVERNED_EXECUTION_CONTRACT_KINDS_V2,
+  OPERATE_OPERATING_INTELLIGENCE_CONTRACT_KINDS_V2,
+  OPERATE_OPERATING_PROJECTION_IDENTITIES_V2,
+  OPERATE_OPERATING_PROVIDER_REGISTRATION_CONTRACT_KINDS_V2,
+  OPERATE_ROLE_MANDATES_V2,
+  OPERATE_RUNTIME_CONTRACT_KINDS,
+  OPERATING_DELIVERY_ROUTES_V1,
+  validateOperateExperienceArtifactV2,
+  validateProtocolArtifact,
+} from 'planr-pipeline/protocol';
 import {
   compileOperateContractRegistry,
   renderOperateContractCatalogModule,

@@ -1,14 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { pathToFileURL } from 'node:url';
-
-import { canonicalizeJson, sha256Jcs } from '../../lib/protocol/jcs.mjs';
-import { createOperatingGovernedExecutionRuntimeV2 } from '../../lib/operate/governed-execution-v2.mjs';
-import { OPEN_REFERENCE_OPERATE_GOVERNED_EXTENSIONS_V2 } from '../../lib/operate/governed-extensions-v2.mjs';
 import {
   createOperatingApprovalRecordV2,
   createOperatingApprovalRequirementV2,
 } from '../../lib/operate/approvals-v2.mjs';
+import { createOperatingGovernedExecutionRuntimeV2 } from '../../lib/operate/governed-execution-v2.mjs';
+import { OPEN_REFERENCE_OPERATE_GOVERNED_EXTENSIONS_V2 } from '../../lib/operate/governed-extensions-v2.mjs';
 import {
   buildOperatingRollbackPlanV2,
   classifyOperatingRollbackReconciliationReceiptV2,
@@ -18,17 +16,18 @@ import {
   rollbackOperatingGovernedActionV2,
 } from '../../lib/operate/governed-recovery-v2.mjs';
 import {
-  createOperatingRuntimeEventV2,
-  reduceOperatingRuntimeEventsV2,
-} from '../../lib/operate/runtime-foundation.mjs';
-import {
   assertOperatingRollbackPolicyV2,
   evaluateOperatingActionPolicyV2,
 } from '../../lib/operate/policy-v2.mjs';
 import {
-  OPEN_REFERENCE_PROJECT_EXECUTOR_HOST_V2,
   createDisposableLocalProjectTargetV2,
+  OPEN_REFERENCE_PROJECT_EXECUTOR_HOST_V2,
 } from '../../lib/operate/reference-governed-executors-v2.mjs';
+import {
+  createOperatingRuntimeEventV2,
+  reduceOperatingRuntimeEventsV2,
+} from '../../lib/operate/runtime-foundation.mjs';
+import { canonicalizeJson, sha256Jcs } from '../../lib/protocol/jcs.mjs';
 import {
   createGovernedExecutionCheckpointStore,
   governedExecutionScenario,

@@ -5,8 +5,6 @@ import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import {
-  RELEASE_MANIFEST_CLAIM_EDGES,
-  RELEASE_REPOSITORY_KEYS,
   assertEcosystemManifestProjection,
   assertPipelineCompatibilityDeclaration,
   assertReleaseCompatibilityClaim,
@@ -16,6 +14,8 @@ import {
   buildManifestClaimSet,
   buildReleaseLedger,
   buildReleaseLedgerReceipt,
+  RELEASE_MANIFEST_CLAIM_EDGES,
+  RELEASE_REPOSITORY_KEYS,
   releaseClaimSetDigest,
   releaseLedgerAbsence,
   releaseLedgerIdentity,

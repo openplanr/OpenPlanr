@@ -1,15 +1,14 @@
 import assert from 'node:assert/strict';
-import { fileURLToPath } from 'node:url';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 
 import { build } from 'esbuild';
-
+import { jcsHash } from '../../lib/dashboard/closed-json-contract.mjs';
 import {
   assertOperatingReviewBoundSubmissionV1,
   assertOperatingReviewReceiptV2,
   computeOperatingReviewBoundSubmissionHashV1,
 } from '../../lib/dashboard/operate-review-contract.mjs';
-import { jcsHash } from '../../lib/dashboard/closed-json-contract.mjs';
 
 const TIME = '2026-08-23T08:00:00.000Z';
 const COMMITTED_AT = '2026-08-23T08:01:00.000Z';

@@ -1,11 +1,11 @@
+import { compileDiagramCommand, validateAuthoringBundle } from '../authoring/index.mjs';
 import {
+  COLLECTIONS,
   clone,
+  descendants,
   inspectPlainData,
   sealBundle,
-  descendants,
-  COLLECTIONS,
 } from '../authoring/model.mjs';
-import { validateAuthoringBundle, compileDiagramCommand } from '../authoring/index.mjs';
 
 const MAX_BYTES = 1024 * 1024;
 const MAX_ELEMENTS = 1000;

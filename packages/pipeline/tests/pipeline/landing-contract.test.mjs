@@ -4,14 +4,6 @@ import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-
-import {
-  assertLandingConfirmation,
-  assertLandingPhaseReceipt,
-  assertLandingPlan,
-  assertLandingReceipt,
-  reduceLandingEvents,
-} from '../../lib/pipeline/landing-contract.mjs';
 import {
   advanceShip,
   finalizeShipClosure,
@@ -21,6 +13,13 @@ import {
   startShip,
   verifyShipCompatibilityProjection,
 } from '../../lib/pipeline/index.mjs';
+import {
+  assertLandingConfirmation,
+  assertLandingPhaseReceipt,
+  assertLandingPlan,
+  assertLandingReceipt,
+  reduceLandingEvents,
+} from '../../lib/pipeline/landing-contract.mjs';
 import { sha256Jcs } from '../../lib/protocol/jcs.mjs';
 
 const operating = JSON.parse(

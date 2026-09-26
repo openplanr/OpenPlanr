@@ -6,14 +6,14 @@ import {
   existsSync,
   lstatSync,
   mkdirSync,
-  readFileSync,
   readdirSync,
+  readFileSync,
   renameSync,
   writeFileSync,
 } from 'node:fs';
 import { dirname, relative, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { validateWorkspaceManifests } from '../lib/workspace-release-policy.mjs';
+import { DIAGRAM_AUTHORING_CONTRACT_FILES } from '../../packages/protocol/src/diagram-authoring-contracts.mjs';
 
 import {
   DIAGRAM_V16_REGISTRIES,
@@ -22,8 +22,7 @@ import {
   PROTOCOL_V17_REGISTRIES,
   PROTOCOL_V18_CONTRACT_FILES,
 } from '../../packages/protocol/src/skill-source-contracts.mjs';
-
-import { DIAGRAM_AUTHORING_CONTRACT_FILES } from '../../packages/protocol/src/diagram-authoring-contracts.mjs';
+import { validateWorkspaceManifests } from '../lib/workspace-release-policy.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const arguments_ = process.argv.slice(2);

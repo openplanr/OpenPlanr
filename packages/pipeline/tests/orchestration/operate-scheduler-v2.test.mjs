@@ -1,7 +1,12 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
-
+import {
+  acceptOperatingAssignmentSubmissionV2,
+  createEmptyOperatingRuntimeStateV2,
+  createOperatingRuntimeEventV2,
+  scheduleOperatingRuntimeEventsV2,
+} from '../../lib/operate/runtime-foundation.mjs';
 import {
   assertOperatingValidatedDependencyProofV2,
   deriveOperatingAssignmentReleaseIntentsV2,
@@ -9,12 +14,6 @@ import {
   validateOperatingAssignmentGraphV2,
   validateOperatingIntelligenceAssignmentGraphV2,
 } from '../../lib/operate/scheduler-v2.mjs';
-import {
-  acceptOperatingAssignmentSubmissionV2,
-  createEmptyOperatingRuntimeStateV2,
-  createOperatingRuntimeEventV2,
-  scheduleOperatingRuntimeEventsV2,
-} from '../../lib/operate/runtime-foundation.mjs';
 import { sha256Jcs } from '../../lib/protocol/jcs.mjs';
 
 const TIME = '2026-08-08T10:00:00.000Z';
@@ -48,6 +47,7 @@ function intelligenceSubmissionBase64(assignmentKind) {
     'utf8',
   ).toString('base64');
 }
+
 import { intelligenceAssignmentFieldsV2 } from '../helpers/intelligence-assignment-fixture.mjs';
 
 const fixture = (name) =>

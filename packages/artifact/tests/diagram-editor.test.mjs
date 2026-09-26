@@ -1,28 +1,28 @@
-import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, realpath, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import test from 'node:test';
 import {
   makeBundle,
   placement,
-  sealBundle,
   SOURCE_TEXT,
+  sealBundle,
 } from '../../../tests/protocol/fixtures/diagram-authoring.mjs';
-import { createDiagramAuthoringStore } from '../lib/artifact/diagram/authoring/store.mjs';
 import {
   adoptMermaidCopy,
   compileDiagramCommand,
   previewMermaidCopy,
 } from '../lib/artifact/diagram/authoring/index.mjs';
+import { createDiagramAuthoringStore } from '../lib/artifact/diagram/authoring/store.mjs';
 import {
-  createDiagramEditorSession,
-  openDiagramEditorSession,
+  bindDiagramEditorCancellation,
+  copyDiagramSelection,
   createDiagramEditorDraft,
   createDiagramEditorRecovery,
-  copyDiagramSelection,
+  createDiagramEditorSession,
+  openDiagramEditorSession,
   pasteDiagramSelection,
-  bindDiagramEditorCancellation,
 } from '../lib/artifact/diagram/editor/index.mjs';
 
 const ids = () => {

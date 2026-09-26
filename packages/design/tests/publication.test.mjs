@@ -11,8 +11,6 @@ import {
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-
-import { designFixture } from './design-fixture.mjs';
 import {
   atomicJson,
   currentDesign,
@@ -21,6 +19,7 @@ import {
 } from '../lib/design/document.mjs';
 import { saveDesignState, startDesignReview } from '../lib/design/review.mjs';
 import { designUtility, verifyDesignDocument } from '../lib/design/utility.mjs';
+import { designFixture } from './design-fixture.mjs';
 
 const json = (path) => JSON.parse(readFileSync(path, 'utf8'));
 const payload = (html) =>

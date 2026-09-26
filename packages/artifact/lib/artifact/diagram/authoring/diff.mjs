@@ -1,12 +1,12 @@
 import {
   COLLECTIONS,
   clone,
-  same,
-  elementIndex,
-  parentIndex,
   descendants,
-  validateAuthoringBundle,
+  elementIndex,
   failure,
+  parentIndex,
+  same,
+  validateAuthoringBundle,
 } from './model.mjs';
 
 function fields(before, after, base, result, path = []) {

@@ -1,18 +1,17 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { join, dirname } from 'node:path';
+import { dirname, join } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-
+import {
+  buildOperateExperienceTransportView,
+  selectOperateRecoveryDisplay,
+} from '../../lib/dashboard/operate-experience-reader.mjs';
+import { sha256Jcs } from '../../lib/protocol/jcs.mjs';
 import {
   assertOperateRecoveryDisplaySurfaceV1,
   validateOperateRecoveryDisplaySurfaceV1,
 } from '../../schemas/v1.2.0/operate-recovery-display-surface.mjs';
-import {
-  selectOperateRecoveryDisplay,
-  buildOperateExperienceTransportView,
-} from '../../lib/dashboard/operate-experience-reader.mjs';
-import { sha256Jcs } from '../../lib/protocol/jcs.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '../..');
 const emptyView = structuredClone(

@@ -1,9 +1,9 @@
 import type {
   OperatingActionV2,
+  OperatingArtifactV2,
   OperatingAssumptionV2,
   OperatingClaimV2,
   OperatingDecisionV2,
-  OperatingArtifactV2,
   OperatingEvidenceRefV2,
   OperatingMetricObservationV2,
   OperatingModelStateV2,

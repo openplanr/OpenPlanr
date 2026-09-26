@@ -1,10 +1,10 @@
+import { sha256Hex } from '../../../packages/protocol/src/canonical-json.mjs';
 import {
+  diagramAuthoringBundleDigest,
   diagramDocumentDigest,
   diagramPresentationDigest,
-  diagramAuthoringBundleDigest,
   validateDiagramAuthoringArtifact,
 } from '../../../packages/protocol/src/diagram-authoring-contracts.mjs';
-import { sha256Hex } from '../../../packages/protocol/src/canonical-json.mjs';
 
 const meta = (kind) => ({ kind, schemaVersion: '1.0.0', protocolVersion: '1.13.0' });
 export const SOURCE_TEXT = 'flowchart LR\r\n  A["Café ☕"] --> B[Done]\r\n';

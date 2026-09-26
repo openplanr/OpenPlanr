@@ -1,5 +1,5 @@
+import { clientSelectionToNormalized, mountArtifactAnnotations } from './annotations.mjs';
 import { mountArtifactFeedbackRail } from './feedback-rail.mjs';
-import { mountArtifactAnnotations, clientSelectionToNormalized } from './annotations.mjs';
 
 /** One camera owns all diagram coordinates. No scroll-sized wrappers or frames. */
 export function mountDiagramStudio(document = globalThis.document) {

@@ -2,21 +2,21 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
-
-import {
-  ARTIFACT_SHELL_CSS,
-  ARTIFACT_SHELL_ASSET_PATHS,
-  renderArtifactShellDocument,
-  renderArtifactShellTemplate,
-} from '../../lib/artifact/ui/shell.mjs';
+import { fileURLToPath } from 'node:url';
 import {
   ARTIFACT_SHELL_STATES,
   normalizeArtifactShellModel,
-  resolveArtifactPresentation,
   renderArtifactShellMarkup,
+  resolveArtifactPresentation,
 } from '../../lib/artifact/ui/renderers.mjs';
+import {
+  ARTIFACT_SHELL_ASSET_PATHS,
+  ARTIFACT_SHELL_CSS,
+  renderArtifactShellDocument,
+  renderArtifactShellTemplate,
+} from '../../lib/artifact/ui/shell.mjs';
+
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const canonicalArtifactRoot = resolve(root, '../artifact');
 const artifact = (id, title, overrides = {}) => ({

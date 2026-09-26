@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { escapeHtml, embedJson, hasUnsafeHtml } from '../../lib/design/escape.mjs';
+import { embedJson, escapeHtml, hasUnsafeHtml } from '../../lib/design/escape.mjs';
 
 test('escapeHtml escapes all five HTML-significant characters', () => {
   assert.equal(

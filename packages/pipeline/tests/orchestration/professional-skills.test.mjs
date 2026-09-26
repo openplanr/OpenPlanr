@@ -12,24 +12,24 @@ import {
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { test } from 'node:test';
+import { fileURLToPath } from 'node:url';
 import {
   projectedSkillName,
   renderNamespacedSkill,
 } from '../../../../scripts/skills/host-invocations.mjs';
-import { fileURLToPath } from 'node:url';
-
-import { sha256Jcs } from '../../lib/protocol/jcs.mjs';
 import {
-  PROFESSIONAL_SKILLS_CATALOG_PATH,
-  PROFESSIONAL_SKILLS_MANIFEST_PATH,
-  PROFESSIONAL_SKILL_IDS,
   assertProfessionalSkillsCatalog,
   buildProfessionalSkillsManifest,
+  PROFESSIONAL_SKILL_IDS,
+  PROFESSIONAL_SKILLS_CATALOG_PATH,
+  PROFESSIONAL_SKILLS_MANIFEST_PATH,
   professionalSkillDigest,
   readProfessionalSkillsCatalog,
   renderProfessionalSkillAssets,
   renderProfessionalSkillsBundle,
 } from '../../lib/pipeline/professional-skills.mjs';
+import { sha256Jcs } from '../../lib/protocol/jcs.mjs';
+
 const root = fileURLToPath(new URL('../../', import.meta.url));
 const workspaceRoot = resolve(root, '../..');
 const activeOptions = { projectRoot: root, view: 'active', sourceRoot: workspaceRoot };

@@ -1,15 +1,15 @@
+import { compileDiagramCommand } from '../diagram/authoring/index.mjs';
 import {
-  clone,
-  geometryFields,
   appearanceFields,
+  clone,
+  descendants,
+  elementIndex,
+  geometryFields,
+  parentIndex,
+  same,
   semanticFields,
   snapshot,
-  same,
-  elementIndex,
-  parentIndex,
-  descendants,
 } from '../diagram/authoring/model.mjs';
-import { compileDiagramCommand } from '../diagram/authoring/index.mjs';
 import { copyDiagramSelection, pasteDiagramSelection } from '../diagram/editor/clipboard.mjs';
 
 export const freshId = (prefix = 'edit') => `${prefix}-${globalThis.crypto.randomUUID()}`;

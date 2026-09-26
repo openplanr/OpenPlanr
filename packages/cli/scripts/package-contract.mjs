@@ -1,6 +1,6 @@
-import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
-import { lstatSync, readFileSync, readdirSync, realpathSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { lstatSync, readdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import { isAbsolute, join, posix, relative, resolve, sep } from 'node:path';
 
 function sha256(bytes) {

@@ -1,10 +1,14 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-
+import {
+  composeImplementationHandoff,
+  createRepositorySourceResolver,
+  writeImplementationHandoffDraft,
+} from '../lib/design/implementation-handoff.mjs';
 import {
   approveImplementationHandoff,
   compareImplementationHandoffVersions,
@@ -17,11 +21,6 @@ import {
   regenerateImplementationHandoffDraft,
   revokeImplementationHandoff,
 } from '../lib/design/implementation-handoff-approval.mjs';
-import {
-  composeImplementationHandoff,
-  createRepositorySourceResolver,
-  writeImplementationHandoffDraft,
-} from '../lib/design/implementation-handoff.mjs';
 
 const sha = (value) => `sha256:${createHash('sha256').update(value).digest('hex')}`;
 const fixed = (character) => `sha256:${character.repeat(64)}`;

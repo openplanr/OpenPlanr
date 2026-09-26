@@ -6,17 +6,16 @@ import {
   lstatSync,
   mkdirSync,
   mkdtempSync,
-  readFileSync,
   readdirSync,
+  readFileSync,
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, relative, resolve } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
 import { test } from 'node:test';
-
-import { runTestFileInOwnerPty } from './helpers/landing-owner-pty.mjs';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { resolveWorkspaceDependencyRoot } from '../helpers/workspace-dependency.mjs';
+import { runTestFileInOwnerPty } from './helpers/landing-owner-pty.mjs';
 
 const sourceRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const digest = (bytes) => `sha256:${createHash('sha256').update(bytes).digest('hex')}`;

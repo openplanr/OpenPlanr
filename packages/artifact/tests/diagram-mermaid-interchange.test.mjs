@@ -6,9 +6,9 @@ import test from 'node:test';
 import { build } from 'esbuild';
 
 import {
-  previewMermaidCopy,
   adoptMermaidCopy,
   exportMermaidCopy,
+  previewMermaidCopy,
   renderAuthoredDiagramSvg,
 } from '../lib/artifact/diagram/authoring/index.mjs';
 import { sealBundle, validateAuthoringBundle } from '../lib/artifact/diagram/authoring/model.mjs';

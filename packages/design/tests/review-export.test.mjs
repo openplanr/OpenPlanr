@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
-import { runInNewContext } from 'node:vm';
 import test from 'node:test';
+import { runInNewContext } from 'node:vm';
 import {
   createDesignReviewExport,
-  serializeDesignReviewExport,
   renderDesignReviewExportSource,
+  serializeDesignReviewExport,
 } from '../lib/design/review-export.mjs';
 
 const currentDigest = 'a'.repeat(64),

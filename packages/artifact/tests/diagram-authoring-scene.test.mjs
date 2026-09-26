@@ -1,24 +1,24 @@
-import test from 'node:test';
 import assert from 'node:assert/strict';
+import test from 'node:test';
 import {
   makeBundle,
   placement,
   sealBundle,
 } from '../../../tests/protocol/fixtures/diagram-authoring.mjs';
 import {
-  resolveDiagramScene,
-  resolveShapeAttachment,
-} from '../lib/artifact/diagram/authoring/scene.mjs';
-import { renderAuthoredDiagramSvg } from '../lib/artifact/diagram/authoring/renderer.mjs';
-import {
-  previewAutomaticLayout,
-  previewResetRoute,
-} from '../lib/artifact/diagram/authoring/layout.mjs';
-import {
   compileDiagramCommand,
   createConditionalInverse,
   previewDiagramTransaction,
 } from '../lib/artifact/diagram/authoring/index.mjs';
+import {
+  previewAutomaticLayout,
+  previewResetRoute,
+} from '../lib/artifact/diagram/authoring/layout.mjs';
+import { renderAuthoredDiagramSvg } from '../lib/artifact/diagram/authoring/renderer.mjs';
+import {
+  resolveDiagramScene,
+  resolveShapeAttachment,
+} from '../lib/artifact/diagram/authoring/scene.mjs';
 
 function fixture() {
   const bundle = makeBundle('swimlane', { blank: true });

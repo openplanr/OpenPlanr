@@ -8,9 +8,9 @@ import {
   OPERATING_FINDING_SCHEMA as findingSchema,
   OPERATING_GOVERNED_OPERATION_SCHEMA as governedOperationSchema,
   OPERATING_REVIEW_SCHEMA as reviewSchema,
-  OPERATING_TRACE_MATRIX_SCHEMA as traceMatrixSchema,
   OPERATE_REVIEW_DISPLAY_WORKSPACE_SCHEMA as reviewWorkspaceSchema,
   OPERATE_EXPERIENCE_SURFACE_SCHEMA as surfaceSchema,
+  OPERATING_TRACE_MATRIX_SCHEMA as traceMatrixSchema,
 } from './generated/operate-experience-surface-schema-data.mjs';
 
 const schemas = new Map([

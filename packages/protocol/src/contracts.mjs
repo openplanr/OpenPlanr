@@ -1,21 +1,20 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
-
-import { validateJson } from './json-schema.mjs';
-import { ENTERPRISE_SCHEMAS } from './enterprise-contracts.mjs';
-import { OPERATE_CONTRACT_CATALOG_V2 } from './generated/contract-catalog-v2.mjs';
-import { PipelineError } from './errors.mjs';
-import {
-  PROTOCOL_V16_CONTRACT_FILES,
-  PROTOCOL_V17_CONTRACT_FILES,
-  PROTOCOL_V18_CONTRACT_FILES,
-} from './skill-source-contracts.mjs';
 import { DESIGN_HANDOFF_CONTRACT_FILES } from './design-handoff-contracts.mjs';
 import {
   DIAGRAM_AUTHORING_CONTRACT_FILES,
   validateDiagramAuthoringArtifact,
 } from './diagram-authoring-contracts.mjs';
+import { ENTERPRISE_SCHEMAS } from './enterprise-contracts.mjs';
+import { PipelineError } from './errors.mjs';
+import { OPERATE_CONTRACT_CATALOG_V2 } from './generated/contract-catalog-v2.mjs';
+import { validateJson } from './json-schema.mjs';
+import {
+  PROTOCOL_V16_CONTRACT_FILES,
+  PROTOCOL_V17_CONTRACT_FILES,
+  PROTOCOL_V18_CONTRACT_FILES,
+} from './skill-source-contracts.mjs';
 
 const packageRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
 

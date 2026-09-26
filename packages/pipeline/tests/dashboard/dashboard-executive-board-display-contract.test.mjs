@@ -1,10 +1,5 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-
-import {
-  assertOperateExecutiveBoardDisplaySurfaceV1,
-  validateOperateExecutiveBoardDisplaySurfaceV1,
-} from '../../schemas/v1.2.0/operate-executive-board-display-surface.mjs';
 import {
   assertOperateExperienceTransportView,
   selectOperateExecutiveBoardDisplay,
@@ -12,6 +7,10 @@ import {
   selectOperateExperienceSurface,
 } from '../../lib/dashboard/operate-experience-reader.mjs';
 import { sha256Jcs } from '../../lib/protocol/jcs.mjs';
+import {
+  assertOperateExecutiveBoardDisplaySurfaceV1,
+  validateOperateExecutiveBoardDisplaySurfaceV1,
+} from '../../schemas/v1.2.0/operate-executive-board-display-surface.mjs';
 import { cycleWorkspace } from './dashboard-cycle-parity.test.mjs';
 
 function rehashView(input) {

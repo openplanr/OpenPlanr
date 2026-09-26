@@ -1,8 +1,8 @@
 import { validateJson } from '../protocol/json-schema.mjs';
 import { exactEventHead, exactJson, jcsHash, safeDataClone } from './closed-json-contract.mjs';
 import {
-  OPERATE_REVIEW_BOUND_SUBMISSION_SCHEMA_REVIEW_SLICE as boundSubmissionSchema,
   OPERATING_ASSIGNMENT_SCHEMA_REVIEW_SLICE as assignmentSchema,
+  OPERATE_REVIEW_BOUND_SUBMISSION_SCHEMA_REVIEW_SLICE as boundSubmissionSchema,
   OPERATING_REVIEW_READ_SCHEMA_REVIEW_SLICE as reviewReadSchema,
   OPERATING_REVIEW_RECEIPT_SCHEMA_REVIEW_SLICE as reviewReceiptSchema,
   OPERATING_REVIEW_SCHEMA_REVIEW_SLICE as reviewSchema,

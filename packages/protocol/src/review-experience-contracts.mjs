@@ -1,6 +1,6 @@
+import { canonicalizeJson, sha256Hex } from './canonical-json.mjs';
 import { validateJson } from './json-schema.mjs';
 import { DESIGN_REVIEW_BUNDLE_SCHEMA } from './workspace-contracts.mjs';
-import { canonicalizeJson, sha256Hex } from './canonical-json.mjs';
 
 const text = { type: 'string', maxLength: 16384 };
 const id = { type: 'string', minLength: 1, maxLength: 128 };

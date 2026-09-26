@@ -10,8 +10,8 @@ import {
 } from './closed-json-contract.mjs';
 import {
   OPERATE_EXPERIENCE_AUDIT_DISPLAY_SURFACE_SCHEMA as auditDisplaySchema,
-  OPERATE_REVIEW_DISPLAY_WORKSPACE_SCHEMA as reviewWorkspaceSchema,
   OPERATE_EXPERIENCE_VIEW_SCHEMA as experienceViewSchema,
+  OPERATE_REVIEW_DISPLAY_WORKSPACE_SCHEMA as reviewWorkspaceSchema,
   OPERATE_EXPERIENCE_SURFACE_SCHEMA as surfaceSchema,
   OPERATING_TRACE_MATRIX_SCHEMA as traceMatrixSchema,
 } from './generated/operate-experience-surface-schema-data.mjs';

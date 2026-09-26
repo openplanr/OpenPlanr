@@ -1,4 +1,4 @@
-import { existsSync, lstatSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, lstatSync, readdirSync, readFileSync } from 'node:fs';
 import { isAbsolute, relative, resolve, sep } from 'node:path';
 
 import { validateProtocolArtifact } from '@openplanr/protocol/contracts';
@@ -15,12 +15,12 @@ const generatedSkillMembership = JSON.parse(
 // consumers retain the historical symbol without a second authored table.
 export const EXPECTED_SKILL_IDS = Object.freeze([...generatedSkillMembership.skillIds]);
 
+export { assertAuthorityNarrows } from './compiler/authority.mjs';
+export { compileComposedV1, compileMarkdownV1 } from './compiler/compile.mjs';
 // Composed-v1 graph resolution is the versioned successor to the markdown-v1
 // contribution graph read below; both are surfaced from the catalog so a single
 // module owns skill-source reading.
 export { resolveModuleGraph } from './compiler/graph.mjs';
-export { assertAuthorityNarrows } from './compiler/authority.mjs';
-export { compileComposedV1, compileMarkdownV1 } from './compiler/compile.mjs';
 
 export const EXPECTED_ROLE_IDS = Object.freeze([
   'planr-backend',

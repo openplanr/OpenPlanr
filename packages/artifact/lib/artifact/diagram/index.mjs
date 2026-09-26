@@ -1,3 +1,5 @@
+export { assertDiagramSvg, validateDiagramSvg } from './accessibility.mjs';
+export * from './editor/index.mjs';
 export { DIAGRAM_ERROR_CODES, DiagramError } from './errors.mjs';
 export {
   bindDiagramArtifactReview,
@@ -7,13 +9,24 @@ export {
   createDiagramPdfAttachment,
   createDiagramSpecificationReference,
 } from './integration.mjs';
+export { importMermaid, MAX_MERMAID_BYTES } from './mermaid.mjs';
 export {
-  DIAGRAM_OUTPUT_MEDIA_TYPES,
-  checkDiagram,
-  inspectDiagram,
-  renderDiagram,
-  rerenderDiagram,
-} from './runtime.mjs';
+  assertDiagramDocument,
+  createDiagramDocument,
+  MAX_DIAGRAM_PRIMITIVE_ITEMS,
+} from './model.mjs';
+export {
+  assertExcalidrawScene,
+  EXCALIDRAW_EXPORT_CAPABILITIES,
+  excalidrawCapability,
+  exportDiagramExcalidraw,
+  exportDiagramMermaid,
+  MERMAID_EXPORT_CAPABILITIES,
+  mermaidCapability,
+  renderExcalidrawSceneSvg,
+} from './projection/index.mjs';
+export { planDiagramQuality } from './readability.mjs';
+export { DIAGRAM_SHARED_REFERENCE, selectDiagramReferences } from './references.mjs';
 export {
   DIAGRAM_GRAMMARS,
   DIAGRAM_LAYOUT_FAMILIES,
@@ -23,44 +36,30 @@ export {
   getGrammar,
 } from './registry.mjs';
 export {
-  MAX_DIAGRAM_PRIMITIVE_ITEMS,
-  assertDiagramDocument,
-  createDiagramDocument,
-} from './model.mjs';
-export { importMermaid, MAX_MERMAID_BYTES } from './mermaid.mjs';
-export { previewMermaidCopy, adoptMermaidCopy, exportMermaidCopy } from './source-map.mjs';
-export { routeDiagramIntent } from './router.mjs';
-export { planDiagramQuality } from './readability.mjs';
-export { assertDiagramSvg, validateDiagramSvg } from './accessibility.mjs';
-export { DIAGRAM_SHARED_REFERENCE, selectDiagramReferences } from './references.mjs';
-export {
-  EXCALIDRAW_EXPORT_CAPABILITIES,
-  MERMAID_EXPORT_CAPABILITIES,
-  assertExcalidrawScene,
-  excalidrawCapability,
-  exportDiagramExcalidraw,
-  exportDiagramMermaid,
-  mermaidCapability,
-  renderExcalidrawSceneSvg,
-} from './projection/index.mjs';
-export {
-  DIAGRAM_RENDERER,
-  DIAGRAM_FONT,
-  DIAGRAM_RASTERIZER,
-  DIAGRAM_THEME,
-  MAX_DIAGRAM_PNG_BYTES,
-  MAX_DIAGRAM_SCENE_EXTENT,
-  RASTER_SCALE,
   createFidelityReport,
   createRenderQualityReport,
+  DIAGRAM_FONT,
+  DIAGRAM_RASTERIZER,
+  DIAGRAM_RENDERER,
+  DIAGRAM_THEME,
   escapeXml,
   inspectDiagramPng,
   layoutDiagram,
+  MAX_DIAGRAM_PNG_BYTES,
+  MAX_DIAGRAM_SCENE_EXTENT,
+  RASTER_SCALE,
   renderDiagramHtml,
   renderDiagramOutputs,
   renderDiagramPng,
   renderDiagramSvg,
   wrapDiagramLabel,
 } from './rendering/index.mjs';
-
-export * from './editor/index.mjs';
+export { routeDiagramIntent } from './router.mjs';
+export {
+  checkDiagram,
+  DIAGRAM_OUTPUT_MEDIA_TYPES,
+  inspectDiagram,
+  renderDiagram,
+  rerenderDiagram,
+} from './runtime.mjs';
+export { adoptMermaidCopy, exportMermaidCopy, previewMermaidCopy } from './source-map.mjs';

@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
-
+import { buildOperateExperienceViewV2 } from '../../lib/operate/experience-projection-v2.mjs';
+import { projectOperatingAcceptedIntelligenceOutputV2 } from '../../lib/operate/intelligence-ledger-v2.mjs';
+import { preflightOperatingIntelligenceResultV2 } from '../../lib/operate/intelligence-result-validator-v2.mjs';
+import { createOperatingResultTemplateV2 } from '../../lib/operate/result-packet-v2.mjs';
 import {
   acceptOperatingAssignmentSubmissionV2,
   claimOperatingAssignmentV2,
@@ -12,16 +15,12 @@ import {
   materializeOperatingDecisionLedgerV2,
   planOperatingRuntimeIntelligenceBoardV2,
   preflightOperatingAssignmentResultV2,
-  readOperatingReviewV2,
   readOperatingArtifactRawBytesV2,
+  readOperatingReviewV2,
   reduceOperatingRuntimeEventsV2,
   scheduleOperatingRuntimeEventsV2,
   submitOperatingReviewV2,
 } from '../../lib/operate/runtime-foundation.mjs';
-import { preflightOperatingIntelligenceResultV2 } from '../../lib/operate/intelligence-result-validator-v2.mjs';
-import { createOperatingResultTemplateV2 } from '../../lib/operate/result-packet-v2.mjs';
-import { projectOperatingAcceptedIntelligenceOutputV2 } from '../../lib/operate/intelligence-ledger-v2.mjs';
-import { buildOperateExperienceViewV2 } from '../../lib/operate/experience-projection-v2.mjs';
 import { sha256Jcs } from '../../lib/protocol/jcs.mjs';
 import { checkpoint } from './operate-operating-intelligence-state-v2.test-support.mjs';
 

@@ -1,8 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
-
-import { buildOperatingSnapshotStateTransactionV2 } from '../../lib/operate/operating-snapshots-v2.mjs';
 import { OPEN_REFERENCE_OPERATE_EXTENSIONS_V2 } from '../../lib/operate/extensions-v2.mjs';
 import {
   createOperatingMetricObservationCandidateV2,
@@ -12,6 +10,7 @@ import {
   selectOperatingSnapshotProviderV2,
   selectOperatingVerificationProviderV2,
 } from '../../lib/operate/operating-signal-providers-v2.mjs';
+import { buildOperatingSnapshotStateTransactionV2 } from '../../lib/operate/operating-snapshots-v2.mjs';
 
 const valid = JSON.parse(
   readFileSync(

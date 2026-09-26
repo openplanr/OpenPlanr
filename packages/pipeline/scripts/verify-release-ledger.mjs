@@ -3,29 +3,28 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-
-import { validateProtocolArtifact } from '../lib/protocol/contracts.mjs';
 import {
-  RELEASE_MANIFEST_CLAIM_EDGES,
-  RELEASE_REPOSITORY_KEYS,
+  assertPackedWorkspaceProof,
+  readPackedWorkspaceProof,
+} from '../lib/ecosystem/packed-workspace-proof.mjs';
+import {
   assertEcosystemManifestProjection,
   assertPipelineCompatibilityDeclaration,
   buildManifestClaimSet,
   buildReleaseLedger,
   buildReleaseLedgerReceipt,
+  RELEASE_MANIFEST_CLAIM_EDGES,
+  RELEASE_REPOSITORY_KEYS,
   releaseLedgerAbsence,
   releaseLedgerRowsFromProofs,
   renderCompatibilityDisplay,
   renderLedgerVersionProjection,
 } from '../lib/ecosystem/release-ledger.mjs';
 import {
-  assertPackedWorkspaceProof,
-  readPackedWorkspaceProof,
-} from '../lib/ecosystem/packed-workspace-proof.mjs';
-import {
   discoverEcosystemRepositories,
   resolveWorkspaceRoot,
 } from '../lib/ecosystem/workspace-discovery.mjs';
+import { validateProtocolArtifact } from '../lib/protocol/contracts.mjs';
 import { sha256Jcs } from '../lib/protocol/jcs.mjs';
 
 const CONTRACT_VERSION = '1.3.0';

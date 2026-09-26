@@ -3,10 +3,10 @@ import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 
 import { buildExecutiveBoardForCycle } from '../../lib/operate/executive-board-projection-v2.mjs';
-import { OPERATE_CONTRACT_CATALOG_V2 } from '../../lib/protocol/generated/contract-catalog-v2.mjs';
-import { planOperatingIntelligenceBoardV2 } from '../../lib/operate/intelligence-router-v2.mjs';
 import { deriveOperatingChairLedgerIdV2 } from '../../lib/operate/intelligence-output-identities-v2.mjs';
+import { planOperatingIntelligenceBoardV2 } from '../../lib/operate/intelligence-router-v2.mjs';
 import { deriveOperatingRuntimeDeltaV2 } from '../../lib/operate/runtime-foundation.mjs';
+import { OPERATE_CONTRACT_CATALOG_V2 } from '../../lib/protocol/generated/contract-catalog-v2.mjs';
 import { checkpoint } from './operate-operating-intelligence-state-v2.test-support.mjs';
 
 const fixture = (name) =>

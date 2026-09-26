@@ -6,9 +6,9 @@ import { fileURLToPath } from 'node:url';
 
 import { validateProtocolArtifact } from '../../lib/protocol/contracts.mjs';
 import {
-  RELEASE_LEDGER_CONTRACT_KINDS_V1,
   listProtocolSchemas,
   loadReleaseLedgerContract,
+  RELEASE_LEDGER_CONTRACT_KINDS_V1,
 } from '../../lib/protocol/loader.mjs';
 
 const CONTRACT_VERSION = '1.3.0';

@@ -1,9 +1,9 @@
 import {
-  validateDiagramAuthoringBundle,
+  DIAGRAM_AUTHORING_LIMITS,
+  diagramAuthoringBundleDigest,
   diagramDocumentDigest,
   diagramPresentationDigest,
-  diagramAuthoringBundleDigest,
-  DIAGRAM_AUTHORING_LIMITS,
+  validateDiagramAuthoringBundle,
 } from '@openplanr/protocol/diagram-authoring-contracts';
 
 export const COLLECTIONS = ['nodes', 'relations', 'groups', 'lanes', 'annotations'];

@@ -6,8 +6,8 @@ import { join } from 'node:path';
 import test from 'node:test';
 
 import { designImplementationHandoffDigest } from '@openplanr/protocol/design-handoff-contracts';
-import { prepareDesignPlanHandoff } from '../lib/design/design-plan-handoff.mjs';
 import { projectDesignDeliveryStatus } from '../lib/design/delivery-status.mjs';
+import { prepareDesignPlanHandoff } from '../lib/design/design-plan-handoff.mjs';
 
 const fixed = (value) => `sha256:${value.repeat(64)}`;
 function handoff() {
