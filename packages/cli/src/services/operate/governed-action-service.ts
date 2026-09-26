@@ -1018,7 +1018,7 @@ export async function approveOperateAction(
           to: disposition.disposition,
           operationId: null,
           resultId: null,
-          reasonCode: null,
+          reasonCode: disposition.disposition === 'approved' ? null : disposition.reasonCode,
         },
       },
     );
