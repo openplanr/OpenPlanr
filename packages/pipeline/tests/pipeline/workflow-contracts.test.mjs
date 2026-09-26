@@ -36,13 +36,26 @@ test('local release proof installs the exact root lock and never publishes', () 
 
 test('hostile sandbox certification covers Chromium Firefox and WebKit', () => {
   const workflow = readWorkspace('.github/workflows/artifact-browser.yml');
-  assert.match(workflow, /browser:\s*\[chromium, firefox, webkit\]/);
+  assert.match(
+    workflow,
+    /browser: >-\s*\$\{\{ fromJSON\(github\.event_name == 'pull_request'\s*&& !contains\(github\.event\.pull_request\.labels\.\*\.name, 'browser-certification'\)\s*&& !startsWith\(github\.head_ref, 'dependabot\/npm_and_yarn\/'\)\s*&& '\["chromium"\]' \|\| '\["chromium", "firefox", "webkit"\]'\) \}\}/,
+  );
+  assert.match(workflow, /schedule:\s*\n\s*- cron:/);
+  assert.match(workflow, /types: \[opened, synchronize, reopened, labeled\]/);
+  assert.match(workflow, /group: .*\$\{\{ github\.event_name \}\}/);
   assert.match(workflow, /PLANR_BROWSER_ENGINE:\s*\$\{\{ matrix\.browser \}\}/);
   assert.match(workflow, /playwright install --with-deps \$\{\{ matrix\.browser \}\}/);
   assert.match(
     workflow,
     /node --test packages\/pipeline\/tests\/artifact\/sandbox-hostile\.test\.mjs/,
   );
+
+  const blocks = workflow.split(/\n(?= {6}- | {2}\S)/);
+  const report = blocks.find((block) => block.startsWith('  report:'));
+  assert.ok(report, 'a failed nightly run must be reported');
+  assert.match(report, /needs: hostile-sandbox/);
+  assert.match(report, /if: failure\(\) && github\.event_name == 'schedule'/);
+  assert.match(report, /permissions:\s*\n\s*actions: read\s*\n\s*issues: write/);
 
   const hostile = read('tests/artifact/sandbox-hostile.test.mjs');
   assert.match(hostile, /tests\/support\/browser-launcher\.mjs/);

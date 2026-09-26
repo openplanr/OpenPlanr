@@ -116,7 +116,14 @@ commit intentional source and tracked manifest changes before applying this gate
 `npm run verify` checks generated assets, boundaries, public documentation, the committed
 documentation diagram sets, focused tests, and isolated packed-package behavior. It does not replace the full
 workspace test command or manual/browser checks for UI changes. The CI workflows
-under `.github/workflows/` define their additional runtime and browser coverage.
+under `.github/workflows/` define their additional runtime and browser coverage. Artifact
+browser certification runs Chromium on every pull request that touches the artifact
+surfaces. Firefox and WebKit run nightly, on manual dispatch, on Dependabot npm updates,
+and on pull requests labelled `browser-certification`. For a branch the workflow's path
+filter does not match, run `gh workflow run artifact-browser.yml --ref <branch>` instead of
+labelling it. Version pull requests run Chromium only, so Firefox and WebKit cover a release
+through the nightly run, or through `gh workflow run artifact-browser.yml --ref main` before
+the version pull request merges.
 
 Record failed or unavailable checks honestly. Do not update fixtures simply to
 hide a regression, or make an unsupported compatibility claim from one local run.

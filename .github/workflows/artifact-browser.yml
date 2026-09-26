@@ -1,7 +1,13 @@
 name: Artifact Browser Certification
 
+# Chromium runs on every pull request that touches the artifact surfaces. Firefox times out
+# intermittently in the editor suites on pull requests that do not touch the editor, so
+# Firefox and WebKit run nightly, on manual dispatch, on Dependabot npm updates, and on pull
+# requests labelled `browser-certification`.
+
 on:
   pull_request:
+    types: [opened, synchronize, reopened, labeled]
     paths:
       - 'packages/artifact/**'
       - 'packages/pipeline/lib/artifact/**'
@@ -9,7 +15,13 @@ on:
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/artifact-browser.yml'
+  schedule:
+    - cron: '17 3 * * *'
   workflow_dispatch: {}
+
+concurrency:
+  group: artifact-browser-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -22,7 +34,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        browser: [chromium, firefox, webkit]
+        browser: >-
+          ${{ fromJSON(github.event_name == 'pull_request'
+          && !contains(github.event.pull_request.labels.*.name, 'browser-certification')
+          && !startsWith(github.head_ref, 'dependabot/npm_and_yarn/')
+          && '["chromium"]' || '["chromium", "firefox", "webkit"]') }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -46,3 +62,30 @@ jobs:
         env:
           PLANR_BROWSER_TESTS: '1'
           PLANR_BROWSER_ENGINE: ${{ matrix.browser }}
+
+  report:
+    name: Report a failed nightly run
+    needs: hostile-sandbox
+    if: failure() && github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: read
+      issues: write
+    steps:
+      - name: Open or update the nightly failure issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          HEAD_SHA: ${{ github.sha }}
+          TITLE: Nightly artifact browser certification failed
+        run: |
+          last_green=$(gh run list --workflow artifact-browser.yml --event schedule --status success --limit 1 --json headSha --jq '.[0].headSha // "none"')
+          body=$(printf 'Scheduled run failed: %s\n\nCommit: %s\nLast green scheduled run commit: %s\n' "$RUN_URL" "$HEAD_SHA" "$last_green")
+          issue=$(gh issue list --state open --limit 500 --json number,title --jq "map(select(.title == \"$TITLE\")) | .[0].number // empty")
+          if [ -n "$issue" ]; then
+            gh issue comment "$issue" --body "$body"
+          else
+            gh issue create --title "$TITLE" --body "$body"
+          fi
