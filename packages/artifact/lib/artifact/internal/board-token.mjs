@@ -47,8 +47,10 @@ export function isCapabilityToken(value, { bytes = 32, encoding = 'base64url' } 
   if (encoding === 'hex') return value.length === bytes * 2 && /^[a-f0-9]+$/.test(value);
   if (encoding !== 'base64url' || !BASE64URL_TOKEN_RE.test(value)) return false;
   try {
-    return Buffer.from(value, 'base64url').byteLength === bytes
-      && Buffer.from(value, 'base64url').toString('base64url') === value;
+    return (
+      Buffer.from(value, 'base64url').byteLength === bytes &&
+      Buffer.from(value, 'base64url').toString('base64url') === value
+    );
   } catch {
     return false;
   }

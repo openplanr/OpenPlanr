@@ -19,7 +19,13 @@ test('startup lock serializes simultaneous writers without shared-path unlink ra
       entered.push('second');
       unlock();
     })();
-    await new Promise((resolve) => { releaseFirst = () => { firstUnlock(); resolve(); }; setTimeout(releaseFirst, 40); });
+    await new Promise((resolve) => {
+      releaseFirst = () => {
+        firstUnlock();
+        resolve();
+      };
+      setTimeout(releaseFirst, 40);
+    });
     await second;
     assert.deepEqual(entered, ['first', 'second']);
   } finally {

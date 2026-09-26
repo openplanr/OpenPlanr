@@ -25,12 +25,18 @@ export async function acquireDiagramLock(root, slug, { staleMs = DEFAULT_STALE_M
   await mkdir(lockRoot, { recursive: true });
   const lockRootInfo = await lstat(lockRoot);
   if (lockRootInfo.isSymbolicLink() || !lockRootInfo.isDirectory()) {
-    diagramFail(DIAGRAM_ERROR_CODES.OUTPUT_ESCAPE, 'Diagram lock root must be a real directory.', { path: lockRoot });
+    diagramFail(DIAGRAM_ERROR_CODES.OUTPUT_ESCAPE, 'Diagram lock root must be a real directory.', {
+      path: lockRoot,
+    });
   }
   for (let attempt = 0; attempt < 2; attempt += 1) {
     try {
       await mkdir(lockPath);
-      await writeFile(join(lockPath, 'owner.json'), `${JSON.stringify({ pid: process.pid, acquiredAt: new Date().toISOString() })}\n`, { flag: 'wx' });
+      await writeFile(
+        join(lockPath, 'owner.json'),
+        `${JSON.stringify({ pid: process.pid, acquiredAt: new Date().toISOString() })}\n`,
+        { flag: 'wx' },
+      );
       return Object.freeze({
         path: lockPath,
         async release() {
@@ -39,9 +45,13 @@ export async function acquireDiagramLock(root, slug, { staleMs = DEFAULT_STALE_M
       });
     } catch (error) {
       if (error?.code !== 'EEXIST') throw error;
-      if (attempt === 0 && await removeIfStale(lockPath, staleMs)) continue;
+      if (attempt === 0 && (await removeIfStale(lockPath, staleMs))) continue;
       let owner = null;
-      try { owner = JSON.parse(await readFile(join(lockPath, 'owner.json'), 'utf8')); } catch { /* bounded diagnostic only */ }
+      try {
+        owner = JSON.parse(await readFile(join(lockPath, 'owner.json'), 'utf8'));
+      } catch {
+        /* bounded diagnostic only */
+      }
       diagramFail(DIAGRAM_ERROR_CODES.OUTPUT_LOCKED, `Diagram output is already locked: ${slug}`, {
         slug,
         ownerPid: owner?.pid ?? null,

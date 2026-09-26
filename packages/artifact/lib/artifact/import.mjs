@@ -42,11 +42,17 @@ import {
 const ARTIFACT_ID_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
 
 function pathError(code, message) {
-  throw new PipelineError(code, message, 'Choose a real, non-symlinked project or user review destination.');
+  throw new PipelineError(
+    code,
+    message,
+    'Choose a real, non-symlinked project or user review destination.',
+  );
 }
 
 function pathEntry(path, fs = { lstatSync }) {
-  try { return fs.lstatSync(path); } catch (error) {
+  try {
+    return fs.lstatSync(path);
+  } catch (error) {
     if (error?.code === 'ENOENT') return null;
     throw error;
   }
@@ -63,10 +69,16 @@ function parseablePlanrConfig(root) {
   try {
     if (lstatSync(path).isSymbolicLink()) return false;
     const value = JSON.parse(readFileSync(path, 'utf8'));
-    return value && typeof value === 'object' && !Array.isArray(value)
-      && ((typeof value.projectName === 'string' && value.projectName.trim() !== '')
-        || (value.idPrefix && typeof value.idPrefix === 'object'
-          && !Array.isArray(value.idPrefix) && Object.keys(value.idPrefix).length > 0));
+    return (
+      value &&
+      typeof value === 'object' &&
+      !Array.isArray(value) &&
+      ((typeof value.projectName === 'string' && value.projectName.trim() !== '') ||
+        (value.idPrefix &&
+          typeof value.idPrefix === 'object' &&
+          !Array.isArray(value.idPrefix) &&
+          Object.keys(value.idPrefix).length > 0))
+    );
   } catch (error) {
     return false;
   }
@@ -86,8 +98,12 @@ function hasGitMarker(root) {
     const match = /^gitdir:\s*(.+?)\s*$/u.exec(readFileSync(marker, 'utf8'));
     if (!match) return false;
     const gitDir = resolve(root, match[1]);
-    return existsSync(gitDir) && statSync(gitDir).isDirectory()
-      && existsSync(join(gitDir, 'HEAD')) && lstatSync(join(gitDir, 'HEAD')).isFile();
+    return (
+      existsSync(gitDir) &&
+      statSync(gitDir).isDirectory() &&
+      existsSync(join(gitDir, 'HEAD')) &&
+      lstatSync(join(gitDir, 'HEAD')).isFile()
+    );
   } catch (error) {
     return false;
   }
@@ -95,14 +111,24 @@ function hasGitMarker(root) {
 
 export function findArtifactProjectRoot(start = process.cwd(), { env = process.env } = {}) {
   let current;
-  try { current = realpathSync(resolve(start)); } catch {
-    pathError(ARTIFACT_ERROR_CODES.REVIEW_IMPORT, 'Artifact review working directory does not exist.');
+  try {
+    current = realpathSync(resolve(start));
+  } catch {
+    pathError(
+      ARTIFACT_ERROR_CODES.REVIEW_IMPORT,
+      'Artifact review working directory does not exist.',
+    );
   }
   const homeCandidate = resolve(env.HOME ?? homedir());
   let home = homeCandidate;
-  try { home = realpathSync(homeCandidate); } catch { /* a synthetic test HOME may not exist yet */ }
+  try {
+    home = realpathSync(homeCandidate);
+  } catch {
+    /* a synthetic test HOME may not exist yet */
+  }
   while (true) {
-    if (current !== home && (parseablePlanrConfig(current) || hasGitMarker(current))) return current;
+    if (current !== home && (parseablePlanrConfig(current) || hasGitMarker(current)))
+      return current;
     const parent = dirname(current);
     if (parent === current) return null;
     current = parent;
@@ -112,27 +138,49 @@ export function findArtifactProjectRoot(start = process.cwd(), { env = process.e
 function assertSafeDestination(base, relativeParts) {
   const absoluteBase = resolve(base);
   if (existsSync(absoluteBase) && lstatSync(absoluteBase).isSymbolicLink()) {
-    pathError(ARTIFACT_ERROR_CODES.SYMLINK_ESCAPE, 'Artifact review destination base is a symlink.');
+    pathError(
+      ARTIFACT_ERROR_CODES.SYMLINK_ESCAPE,
+      'Artifact review destination base is a symlink.',
+    );
   }
   let realBase = absoluteBase;
   if (existsSync(absoluteBase)) realBase = realpathSync(absoluteBase);
   let current = absoluteBase;
   for (const part of relativeParts) {
-    if (!part || part === '.' || part === '..' || part.includes('/') || part.includes('\\') || part.includes('\0')) {
-      pathError(ARTIFACT_ERROR_CODES.PATH_TRAVERSAL, 'Artifact review destination contains an unsafe segment.');
+    if (
+      !part ||
+      part === '.' ||
+      part === '..' ||
+      part.includes('/') ||
+      part.includes('\\') ||
+      part.includes('\0')
+    ) {
+      pathError(
+        ARTIFACT_ERROR_CODES.PATH_TRAVERSAL,
+        'Artifact review destination contains an unsafe segment.',
+      );
     }
     current = join(current, part);
     const entry = pathEntry(current);
     if (!entry) continue;
     if (entry.isSymbolicLink()) {
-      pathError(ARTIFACT_ERROR_CODES.SYMLINK_ESCAPE, 'Artifact review destination contains a symlink.');
+      pathError(
+        ARTIFACT_ERROR_CODES.SYMLINK_ESCAPE,
+        'Artifact review destination contains a symlink.',
+      );
     }
     if (!inside(realBase, realpathSync(current))) {
-      pathError(ARTIFACT_ERROR_CODES.PATH_TRAVERSAL, 'Artifact review destination escapes its storage root.');
+      pathError(
+        ARTIFACT_ERROR_CODES.PATH_TRAVERSAL,
+        'Artifact review destination escapes its storage root.',
+      );
     }
   }
   if (!inside(absoluteBase, current)) {
-    pathError(ARTIFACT_ERROR_CODES.PATH_TRAVERSAL, 'Artifact review destination escapes its storage root.');
+    pathError(
+      ARTIFACT_ERROR_CODES.PATH_TRAVERSAL,
+      'Artifact review destination escapes its storage root.',
+    );
   }
   return current;
 }
@@ -145,7 +193,10 @@ export function resolveArtifactReviewDestination({
   designDir,
 } = {}) {
   if (!ARTIFACT_ID_RE.test(artifactId ?? '')) {
-    pathError(ARTIFACT_ERROR_CODES.PATH_TRAVERSAL, 'Artifact review ID is unsafe for local storage.');
+    pathError(
+      ARTIFACT_ERROR_CODES.PATH_TRAVERSAL,
+      'Artifact review ID is unsafe for local storage.',
+    );
   }
   if (designDir !== undefined) {
     const lexical = resolve(designDir);
@@ -153,7 +204,10 @@ export function resolveArtifactReviewDestination({
       pathError(ARTIFACT_ERROR_CODES.REVIEW_IMPORT, 'Design review destination does not exist.');
     }
     if (lstatSync(lexical).isSymbolicLink()) {
-      pathError(ARTIFACT_ERROR_CODES.SYMLINK_ESCAPE, 'Design review destination must be a real directory.');
+      pathError(
+        ARTIFACT_ERROR_CODES.SYMLINK_ESCAPE,
+        'Design review destination must be a real directory.',
+      );
     }
     const requested = realpathSync(lexical);
     return Object.freeze({
@@ -168,19 +222,30 @@ export function resolveArtifactReviewDestination({
   if (projectRoot) {
     const directory = assertSafeDestination(projectRoot, ['.planr', 'artifacts', artifactId]);
     return Object.freeze({
-      kind: 'project', artifactId, root: projectRoot, directory, path: join(directory, 'review-state.json'),
+      kind: 'project',
+      artifactId,
+      root: projectRoot,
+      directory,
+      path: join(directory, 'review-state.json'),
     });
   }
   const root = resolve(planrHome(env));
   const directory = assertSafeDestination(root, ['artifacts', artifactId]);
   return Object.freeze({
-    kind: 'user', artifactId, root, directory, path: join(directory, 'review-state.json'),
+    kind: 'user',
+    artifactId,
+    root,
+    directory,
+    path: join(directory, 'review-state.json'),
   });
 }
 
 function reviewsFromDecoded(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    throw new PipelineError(ARTIFACT_ERROR_CODES.REVIEW_IMPORT, 'Decoded review payload is not an object.');
+    throw new PipelineError(
+      ARTIFACT_ERROR_CODES.REVIEW_IMPORT,
+      'Decoded review payload is not an object.',
+    );
   }
   if (value.kind === 'artifact-review-state') {
     validateReviewLedger(value);
@@ -189,7 +254,10 @@ function reviewsFromDecoded(value) {
   if (value.artifacts && value.viewer) {
     validateArtifactEnvelope(value);
     if (!value.review) {
-      throw new PipelineError(ARTIFACT_ERROR_CODES.REVIEW_IMPORT, 'Decoded artifact envelope contains no review.');
+      throw new PipelineError(
+        ARTIFACT_ERROR_CODES.REVIEW_IMPORT,
+        'Decoded artifact envelope contains no review.',
+      );
     }
     return [{ review: value.review, stale: false }];
   }
@@ -198,10 +266,16 @@ function reviewsFromDecoded(value) {
   return [{ review: value, stale: false }];
 }
 
-export async function decodeArtifactReviewSources(sources, { decodeSource, withMetadata = false } = {}) {
+export async function decodeArtifactReviewSources(
+  sources,
+  { decodeSource, withMetadata = false } = {},
+) {
   const list = Array.isArray(sources) ? sources : [sources];
   if (list.length === 0) {
-    throw new PipelineError(ARTIFACT_ERROR_CODES.REVIEW_IMPORT, 'At least one artifact review source is required.');
+    throw new PipelineError(
+      ARTIFACT_ERROR_CODES.REVIEW_IMPORT,
+      'At least one artifact review source is required.',
+    );
   }
   const entries = [];
   for (let index = 0; index < list.length; index += 1) {
@@ -216,7 +290,9 @@ export async function decodeArtifactReviewSources(sources, { decodeSource, withM
           { sourceIndex: index },
         );
       }
-      try { decoded = await decodeSource(source, { index }); } catch {
+      try {
+        decoded = await decodeSource(source, { index });
+      } catch {
         throw new PipelineError(
           ARTIFACT_ERROR_CODES.REVIEW_IMPORT,
           'Artifact review source could not be decoded.',
@@ -226,10 +302,12 @@ export async function decodeArtifactReviewSources(sources, { decodeSource, withM
       }
     }
     try {
-      entries.push(...reviewsFromDecoded(decoded).map((entry) => ({
-        review: structuredClone(entry.review),
-        stale: Boolean(entry.stale),
-      })));
+      entries.push(
+        ...reviewsFromDecoded(decoded).map((entry) => ({
+          review: structuredClone(entry.review),
+          stale: Boolean(entry.stale),
+        })),
+      );
     } catch (error) {
       if (error instanceof PipelineError && error.code === ARTIFACT_ERROR_CODES.REVIEW_IMPORT) {
         error.details = { sourceIndex: index };
@@ -273,22 +351,35 @@ function readDesignFeedback(path) {
   assertRegularFinal(path, { existsSync, lstatSync });
   try {
     if (statSync(path).size > ARTIFACT_REVIEW_MAX_STATE_BYTES) {
-      throw new PipelineError(ARTIFACT_ERROR_CODES.REQUEST_LIMIT, 'Design feedback exceeds the local review byte limit.');
+      throw new PipelineError(
+        ARTIFACT_ERROR_CODES.REQUEST_LIMIT,
+        'Design feedback exceeds the local review byte limit.',
+      );
     }
     return assertValidFeedback(JSON.parse(readFileSync(path, 'utf8')));
   } catch (error) {
     if (error instanceof PipelineError) throw error;
-    throw new PipelineError(ARTIFACT_ERROR_CODES.REVIEW_IMPORT, 'Existing design feedback is malformed.');
+    throw new PipelineError(
+      ARTIFACT_ERROR_CODES.REVIEW_IMPORT,
+      'Existing design feedback is malformed.',
+    );
   }
 }
 
-function atomicDesignReviewWrite({ statePath, feedbackPath, ledger, feedback }, {
-  fileSystem = {},
-} = {}) {
+function atomicDesignReviewWrite(
+  { statePath, feedbackPath, ledger, feedback },
+  { fileSystem = {} } = {},
+) {
   assertValidFeedback(feedback);
   validateReviewLedger(ledger);
   const fs = {
-    existsSync, lstatSync, mkdirSync, writeFileSync, renameSync, rmSync, ...fileSystem,
+    existsSync,
+    lstatSync,
+    mkdirSync,
+    writeFileSync,
+    renameSync,
+    rmSync,
+    ...fileSystem,
   };
   const suffix = `${process.pid}.${randomBytes(8).toString('hex')}`;
   const files = [
@@ -304,7 +395,10 @@ function atomicDesignReviewWrite({ statePath, feedbackPath, ledger, feedback }, 
   try {
     for (const entry of files) {
       if (Buffer.byteLength(entry.content, 'utf8') > ARTIFACT_REVIEW_MAX_STATE_BYTES) {
-        throw new PipelineError(ARTIFACT_ERROR_CODES.REQUEST_LIMIT, 'Artifact review state exceeds the local byte limit.');
+        throw new PipelineError(
+          ARTIFACT_ERROR_CODES.REQUEST_LIMIT,
+          'Artifact review state exceeds the local byte limit.',
+        );
       }
       assertRegularFinal(entry.path, fs);
       fs.mkdirSync(dirname(entry.path), { recursive: true, mode: 0o700 });
@@ -323,7 +417,11 @@ function atomicDesignReviewWrite({ statePath, feedbackPath, ledger, feedback }, 
     }
     for (const entry of files) {
       if (entry.backedUp) {
-        try { fs.rmSync(entry.backup, { force: true }); } catch { /* committed data is authoritative */ }
+        try {
+          fs.rmSync(entry.backup, { force: true });
+        } catch {
+          /* committed data is authoritative */
+        }
       }
     }
   } catch (error) {
@@ -331,7 +429,9 @@ function atomicDesignReviewWrite({ statePath, feedbackPath, ledger, feedback }, 
       try {
         if (entry.installed) fs.rmSync(entry.path, { force: true });
         if (entry.backedUp && fs.existsSync(entry.backup)) fs.renameSync(entry.backup, entry.path);
-      } catch { /* keep recovery backup if restoration itself fails */ }
+      } catch {
+        /* keep recovery backup if restoration itself fails */
+      }
     }
     if (error instanceof PipelineError) throw error;
     throw new PipelineError(
@@ -341,7 +441,11 @@ function atomicDesignReviewWrite({ statePath, feedbackPath, ledger, feedback }, 
     );
   } finally {
     for (const entry of files) {
-      try { fs.rmSync(entry.temporary, { force: true }); } catch { /* best effort */ }
+      try {
+        fs.rmSync(entry.temporary, { force: true });
+      } catch {
+        /* best effort */
+      }
     }
   }
 }
@@ -361,14 +465,15 @@ export async function importArtifactReview({
   validateArtifactEnvelope(currentEnvelope);
   const envelopeReviewOf = digestArtifactEnvelope(currentEnvelope);
   const artifactId = currentEnvelope.viewer.activeArtifactId;
-  const decodedEntries = await decodeArtifactReviewSources(sources, { decodeSource, withMetadata: true });
+  const decodedEntries = await decodeArtifactReviewSources(sources, {
+    decodeSource,
+    withMetadata: true,
+  });
   const reviews = decodedEntries.map((entry) => entry.review);
   const destination = resolveArtifactReviewDestination({ cwd, env, artifactId, designDir });
   const reviewStatePath = destination.reviewStatePath ?? destination.path;
   return withArtifactReviewLock(reviewStatePath, () => {
-    let ledger = persist
-      ? readArtifactReviewState(reviewStatePath, { allowMissing: true })
-      : null;
+    let ledger = persist ? readArtifactReviewState(reviewStatePath, { allowMissing: true }) : null;
     const currentReviewOf = ledger?.currentReviewOf ?? envelopeReviewOf;
     const summaries = decodedEntries.map((entry) => {
       const { review } = entry;
@@ -391,7 +496,10 @@ export async function importArtifactReview({
     });
     if (!ledger) ledger = createReviewLedger({ artifactId, currentReviewOf });
     if (ledger.artifactId !== artifactId) {
-      throw new PipelineError(ARTIFACT_ERROR_CODES.REVIEW_IMPORT, 'Stored review state belongs to another artifact.');
+      throw new PipelineError(
+        ARTIFACT_ERROR_CODES.REVIEW_IMPORT,
+        'Stored review state belongs to another artifact.',
+      );
     }
     for (const [index, review] of reviews.entries()) {
       ledger = mergeReviewLedger(ledger, review, { stale: summaries[index].stale });
@@ -405,12 +513,15 @@ export async function importArtifactReview({
           boardId: feedback?.boardId ?? artifactId,
         });
       }
-      atomicDesignReviewWrite({
-        statePath: reviewStatePath,
-        feedbackPath: destination.path,
-        ledger,
-        feedback,
-      }, { ...(fileSystem ? { fileSystem } : {}) });
+      atomicDesignReviewWrite(
+        {
+          statePath: reviewStatePath,
+          feedbackPath: destination.path,
+          ledger,
+          feedback,
+        },
+        { ...(fileSystem ? { fileSystem } : {}) },
+      );
     } else if (persist) {
       writeArtifactReviewState(destination.path, ledger, { ...(fileSystem ? { fileSystem } : {}) });
     }

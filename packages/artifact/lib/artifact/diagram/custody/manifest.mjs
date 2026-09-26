@@ -31,7 +31,9 @@ export function createDiagramRenderManifest(document, { source, outputs }) {
 export function assertDiagramRenderManifest(manifest, { slug = null } = {}) {
   assertProtocolArtifact('diagram-manifest', manifest, { protocolVersion: '1.6.0' });
   if (slug && manifest.diagramId !== slug) {
-    throw new TypeError(`Diagram manifest identity mismatch: expected ${slug}, received ${manifest.diagramId}.`);
+    throw new TypeError(
+      `Diagram manifest identity mismatch: expected ${slug}, received ${manifest.diagramId}.`,
+    );
   }
   return manifest;
 }

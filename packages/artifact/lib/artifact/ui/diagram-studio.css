@@ -1,118 +1,667 @@
-.diagram-shell { display: grid; grid-template-rows: var(--planr-toolbar-height) minmax(0,1fr); height: 100dvh; --diagram-outline-width: 248px; background: var(--planr-color-panel); color: var(--planr-color-text); }
-.diagram-shell button,.diagram-shell summary { cursor: pointer; }
-/* The toolbar is the shared studio header: mark, title block, status, actions. */
-.diagram-toolbar { height: var(--planr-toolbar-height); gap: 10px; }
-.diagram-toolbar .planr-brand { flex: 1; min-width: 0; }
-.diagram-toolbar .planr-title-block { display: grid; gap: 1px; align-items: start; }
-.diagram-toolbar .planr-title-block strong { max-width: min(40vw, 520px); font: 600 13px/1.25 var(--planr-font-display); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.diagram-toolbar .diagram-subtitle { color: var(--planr-color-text-muted); font: 400 10.5px/1.2 var(--planr-font-body); letter-spacing: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.diagram-subtitle-grammar { text-transform: capitalize; }
-.diagram-toolbar .planr-toolbar-action { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 32px; padding: 0 11px; border: 1px solid var(--planr-color-rule); border-radius: var(--planr-radius-small); background: var(--planr-color-panel); color: var(--planr-color-text); font: 600 12px/1 var(--planr-font-body); text-transform: none; transition: none; }
-.diagram-toolbar .planr-toolbar-action:enabled:is(:hover,:active) { background: var(--planr-color-raised); }
-.diagram-toolbar .planr-toolbar-action:is([aria-expanded=true],[aria-pressed=true]) { color: var(--planr-color-primary-strong); background: var(--planr-color-raised); border-color: var(--planr-color-primary); }
-.diagram-toolbar .diagram-outline-toggle { width: 32px; padding: 0; }
-.diagram-toolbar .diagram-outline-toggle svg { width: 16px; height: 16px; }
-.diagram-toolbar .planr-count { min-width: 18px; padding: 0 5px; border-radius: 9px; background: var(--planr-color-raised); color: var(--planr-color-text-muted); font-size: 10px; line-height: 18px; text-align: center; }
-.diagram-save { color:var(--planr-color-text-muted); font-size:11px; white-space:nowrap; }
-.diagram-header-actions { display:flex; align-items:center; gap:6px; }
-.diagram-presentation-nav { display:flex; align-items:center; gap:8px; min-width:220px; justify-content:center; }
-.diagram-presentation-nav[hidden] { display:none; }
-.diagram-presentation-nav > div { display:grid; min-width:120px; text-align:center; line-height:1.2; }
-.diagram-presentation-nav strong { max-width:240px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px; }
-.diagram-presentation-nav span { margin-top:3px; color:var(--planr-color-text-muted); font-size:10px; }
-.diagram-presentation-nav button { min-width:34px; padding-inline:8px; }
-.diagram-export { position:relative; }
-/* Keep the foreground/surface pair together for every primary-action state. */
-.diagram-toolbar .diagram-export summary { list-style:none; color:var(--planr-color-on-improve); background:var(--planr-color-primary); border-color:var(--planr-color-primary); }
-.diagram-toolbar .diagram-export summary:is(:hover,:active,:focus-visible),
-.diagram-toolbar .diagram-export[open] summary { color:var(--planr-color-on-improve); background:var(--planr-color-primary-strong); border-color:var(--planr-color-primary-strong); }
-.diagram-shell :is(button,summary,a):focus-visible { outline:2px solid var(--planr-color-primary); outline-offset:3px; }
-.diagram-export summary::-webkit-details-marker { display:none; }
-
-.diagram-export-menu { position:absolute; right:0; top:calc(100% + 8px); width:230px; background:var(--planr-color-panel); border:1px solid var(--planr-color-rule); border-radius:12px; padding:8px; box-shadow:0 12px 40px #101d2420; }
-.diagram-export-menu strong { display:block; padding:8px; font-size:10px; text-transform:uppercase; letter-spacing:.08em; color:var(--planr-color-text-muted); }
-.diagram-export-menu a { display:block; padding:8px; border-radius:6px; color:var(--planr-color-text); text-decoration:none; }
-.diagram-export-menu a:is(:hover,:active,:focus-visible) { background:var(--planr-color-raised); color:var(--planr-color-text); }
-.diagram-workspace { min-width:0; min-height:0; display:grid; grid-template-columns:var(--diagram-outline-width) minmax(0,1fr); position:relative; }
-.diagram-shell[data-outline-open=false] { --diagram-outline-width:0px; }
-.diagram-outline { min-height:0; min-width:0; overflow:hidden; border-right:1px solid var(--planr-color-rule); display:flex; flex-direction:column; background:var(--planr-color-panel); }
-.diagram-overview { padding:16px 16px 12px; }
-.diagram-type { display:inline-flex; padding:3px 7px; border:1px solid var(--planr-color-rule); border-radius:5px; text-transform:capitalize; font-size:11px; font-weight:600; }
-.diagram-overview p { font-size:12px; line-height:1.65; margin:12px 0; color:var(--planr-color-text-muted); }
-.diagram-nav-section { margin: 0 0 4px; }
-.diagram-nav-section summary { list-style:none; display:flex; align-items:center; gap:6px; padding:8px 10px; border-radius:7px; font:700 10px/1.2 var(--planr-font-body); letter-spacing:.06em; text-transform:uppercase; color:var(--planr-color-text-muted); }
-.diagram-nav-section summary::-webkit-details-marker { display:none; }
-.diagram-nav-section summary::before { content:""; width:6px; height:6px; border-right:1.5px solid currentColor; border-bottom:1.5px solid currentColor; rotate:-45deg; translate:0 -1px; transition:rotate var(--planr-motion-fast); }
-.diagram-nav-section[open] summary::before { rotate:45deg; translate:0 -2px; }
-.diagram-nav-section summary:is(:hover,:active) { background:var(--planr-color-raised); color:var(--planr-color-text); }
-.diagram-nav-section .planr-count { margin-left:auto; min-width:18px; padding:0 5px; border-radius:9px; background:var(--planr-color-raised); font-size:10px; line-height:18px; text-align:center; letter-spacing:0; }
-.diagram-search { display:grid; gap:6px; margin:0 16px 12px; font-size:11px; font-weight:600; }
-.diagram-search input { width:100%; min-width:0; padding:9px 10px; border:1px solid var(--planr-color-rule); border-radius:7px; background:var(--planr-color-background); color:var(--planr-color-text); font-weight:400; }
-.diagram-outline nav { min-height:0; overflow:auto; padding:0 8px 12px; flex:1; }
-.diagram-outline nav button { display:block; width:100%; text-align:left; padding:7px 10px 7px 22px; margin:1px 0; background:transparent; border:1px solid transparent; border-radius:7px; font:500 12px/1.4 var(--planr-font-body); color:var(--planr-color-text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.diagram-outline nav button span { display:block; margin-bottom:1px; font-size:9.5px; text-transform:capitalize; color:var(--planr-color-text-muted); }
-.diagram-outline nav button:is(:hover,:active),.diagram-outline nav button[aria-current=true] { border-color:var(--planr-color-rule); background:var(--planr-color-raised); }
-.diagram-outline nav button[aria-current=true] { color:var(--planr-color-primary-strong); box-shadow:inset 2px 0 var(--planr-color-primary); }
-.diagram-outline footer { padding:12px 16px; font-size:10px; color:var(--planr-color-text-muted); line-height:1.7; border-top:1px solid var(--planr-color-rule); display:grid; gap:8px; }
-.diagram-canvas { grid-column:2; position:relative; min-width:0; min-height:0; overflow:hidden; touch-action:none; background:var(--planr-color-background); background-image:radial-gradient(color-mix(in srgb, var(--planr-color-text-muted) 28%, transparent) .8px,transparent .8px); background-size:20px 20px; cursor:grab; outline-offset:-3px; }
-.diagram-canvas[data-dragging=true] { cursor:grabbing; }
-.diagram-shell[data-planr-review-mode=comment] .diagram-canvas { cursor:crosshair; }
-.diagram-scene { position:absolute; left:0; top:0; transform-origin:0 0; box-shadow:0 2px 14px color-mix(in srgb, var(--planr-color-text) 16%, transparent); background:white; border-radius:2px; }
-.diagram-drawing,.diagram-drawing > svg { display:block; width:100%; height:100%; }
-.diagram-drawing { pointer-events:none; }
-.diagram-drawing text { font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
-.diagram-drawing [data-selected=true] { filter:drop-shadow(0 0 4px #00857780); }
-.diagram-drawing [data-dimmed] { opacity:.18; }
-.diagram-drawing [data-group-hidden] { visibility:hidden; }
-.diagram-drawing [data-group-id][data-collapsed] rect { fill:var(--planr-color-panel); stroke:var(--planr-color-primary); stroke-dasharray:none; }
-.diagram-drawing [data-group-id][data-collapsed] text { fill:var(--planr-color-primary-strong); }
-.diagram-element-details { padding:12px 16px; border-block:1px solid var(--planr-color-rule); max-height:40%; overflow:auto; flex-shrink:0; }
-.diagram-element-details header { display:flex; align-items:center; justify-content:space-between; gap:8px; }
-.diagram-element-details header strong { font-size:11px; text-transform:capitalize; color:var(--planr-color-text-muted); }
-.diagram-element-details h2 { font:600 14px/1.4 var(--planr-font-body); margin:8px 0; overflow-wrap:anywhere; }
-.diagram-element-details p { font-size:12px; line-height:1.5; margin:8px 0; overflow-wrap:anywhere; }
-.diagram-element-details details { font-size:11px; margin:10px 0; }
-.diagram-element-details code { display:block; padding:8px 0; overflow-wrap:anywhere; }
-.diagram-element-details > div { display:grid; gap:6px; }
-.diagram-element-details button { min-height:32px; padding:6px 8px; border:1px solid var(--planr-color-rule); border-radius:6px; color:var(--planr-color-text); background:var(--planr-color-panel); font-size:11px; }
-.diagram-element-details button:enabled:is(:hover,:active),.diagram-element-details button[aria-pressed=true] { background:var(--planr-color-raised); color:var(--planr-color-primary-strong); }
-.diagram-element-details button:disabled { cursor:default; color:var(--planr-color-text-muted); }
-.diagram-thread-target { margin:6px 0; color:var(--planr-color-text-muted); font-size:11px; line-height:1.4; overflow-wrap:anywhere; }
-.diagram-legend summary { color:var(--planr-color-text); font-size:11px; }
-.diagram-legend p { line-height:1.5; margin:8px 0; }
-.diagram-scene .planr-pin { transform:scale(var(--diagram-inverse-zoom,1)); }
-.diagram-scene .planr-region-selection { z-index:8; }
-.diagram-canvas-tools { position:absolute; left:50%; bottom:26px; transform:translateX(-50%); display:flex; gap:6px; padding:6px; border:1px solid var(--planr-color-rule); border-radius:12px; background:var(--planr-color-panel); box-shadow:0 4px 20px #182c3818; cursor:default; white-space:nowrap; }
-.diagram-canvas-tools > div { display:flex; border-right:1px solid var(--planr-color-rule); padding-right:6px; }
-.diagram-canvas-tools > div:last-child { border:0; padding:0; }
-.diagram-canvas-tools button { min-height:34px; min-width:34px; padding:7px 10px; border:0; border-radius:7px; background:transparent; font-size:12px; }
-.diagram-canvas-tools button:enabled:is(:hover,:active) { background:var(--planr-color-raised); color:var(--planr-color-text); }
-.diagram-canvas-tools button[aria-pressed=true] { background:var(--planr-color-primary); color:var(--planr-color-on-improve); }
-.diagram-canvas-tools button[aria-pressed=true]:is(:hover,:active,:focus-visible) { background:var(--planr-color-primary-strong); color:var(--planr-color-on-improve); }
-.diagram-canvas-status { position:absolute; bottom:5px; left:14px; font-size:10px; color:var(--planr-color-text-muted); pointer-events:none; }
-.diagram-shell .planr-review-rail { position:absolute; z-index:20; right:0; top:0; bottom:0; width:340px; max-width:100%; background:var(--planr-color-panel); box-shadow:-6px 0 24px #182c3810; transition:none; }
-.diagram-shell[data-planr-rail-open=false] .planr-review-rail { display:none; }
-.diagram-shell[data-planr-rail-open=true] .diagram-canvas { margin-right:340px; }
-.diagram-shell .planr-rail-close { display:inline-grid; }
-.diagram-shell .planr-thread { padding:12px; margin:0 0 10px; }
-.diagram-shell .planr-thread-comment { font-size:13px; }
-.diagram-shell .planr-decision-slot textarea { min-height:54px; }
-.diagram-shell[data-present=true] { --diagram-outline-width:0px; }
-.diagram-shell[data-present=true] .diagram-subtitle,.diagram-shell[data-present=true] .diagram-outline-toggle,.diagram-shell[data-present=true] .diagram-save { display:none; }
-.diagram-shell[data-present=true] .diagram-header-actions > :not([data-action=present]),.diagram-shell[data-present=true] .diagram-canvas-tools,.diagram-shell[data-present=true] .diagram-canvas-status { display:none; }
-@media (max-width:1000px) { .diagram-save { display:none; } .diagram-shell { --diagram-outline-width:200px; } }
-@media (max-width:700px) {
- .diagram-shell { --diagram-outline-width:0px; }
- .diagram-toolbar { padding:0 8px; gap:6px; } .diagram-subtitle { display:none; } .diagram-toolbar .planr-title-block strong { max-width:38vw; font-size:12px; }
- .diagram-header-actions { gap:4px; } .diagram-toolbar .planr-toolbar-action { padding:0 8px; font-size:11px; } .diagram-toolbar [data-action=present] { display:none; }
- .diagram-outline { position:absolute; left:0; top:0; bottom:0; z-index:25; width:min(280px,85vw); box-shadow:8px 0 30px #182c3825; } .diagram-shell[data-outline-open=false] .diagram-outline { display:none; }
- .diagram-shell[data-planr-rail-open=true] .diagram-canvas { margin:0; } .diagram-shell .planr-review-rail { width:min(340px,94vw); z-index:26; }
- .diagram-canvas-tools { gap:2px; padding:4px; bottom:max(24px,env(safe-area-inset-bottom)); max-width:calc(100% - 16px); }
- .diagram-canvas-tools button { padding:8px; font-size:11px; min-height:42px; } .diagram-canvas-tools > div { padding-right:2px; }
- .diagram-shell input,.diagram-shell textarea,.diagram-shell select { font-size:16px; }
+.diagram-shell {
+  display: grid;
+  grid-template-rows: var(--planr-toolbar-height) minmax(0, 1fr);
+  height: 100dvh;
+  --diagram-outline-width: 248px;
+  background: var(--planr-color-panel);
+  color: var(--planr-color-text);
 }
-@media (prefers-reduced-motion:reduce) { .diagram-shell * { animation:none!important; transition:none!important; } }
+.diagram-shell button,
+.diagram-shell summary {
+  cursor: pointer;
+}
+/* The toolbar is the shared studio header: mark, title block, status, actions. */
+.diagram-toolbar {
+  height: var(--planr-toolbar-height);
+  gap: 10px;
+}
+.diagram-toolbar .planr-brand {
+  flex: 1;
+  min-width: 0;
+}
+.diagram-toolbar .planr-title-block {
+  display: grid;
+  gap: 1px;
+  align-items: start;
+}
+.diagram-toolbar .planr-title-block strong {
+  max-width: min(40vw, 520px);
+  font: 600 13px / 1.25 var(--planr-font-display);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.diagram-toolbar .diagram-subtitle {
+  color: var(--planr-color-text-muted);
+  font: 400 10.5px / 1.2 var(--planr-font-body);
+  letter-spacing: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.diagram-subtitle-grammar {
+  text-transform: capitalize;
+}
+.diagram-toolbar .planr-toolbar-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 11px;
+  border: 1px solid var(--planr-color-rule);
+  border-radius: var(--planr-radius-small);
+  background: var(--planr-color-panel);
+  color: var(--planr-color-text);
+  font: 600 12px / 1 var(--planr-font-body);
+  text-transform: none;
+  transition: none;
+}
+.diagram-toolbar .planr-toolbar-action:enabled:is(:hover, :active) {
+  background: var(--planr-color-raised);
+}
+.diagram-toolbar .planr-toolbar-action:is([aria-expanded="true"], [aria-pressed="true"]) {
+  color: var(--planr-color-primary-strong);
+  background: var(--planr-color-raised);
+  border-color: var(--planr-color-primary);
+}
+.diagram-toolbar .diagram-outline-toggle {
+  width: 32px;
+  padding: 0;
+}
+.diagram-toolbar .diagram-outline-toggle svg {
+  width: 16px;
+  height: 16px;
+}
+.diagram-toolbar .planr-count {
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--planr-color-raised);
+  color: var(--planr-color-text-muted);
+  font-size: 10px;
+  line-height: 18px;
+  text-align: center;
+}
+.diagram-save {
+  color: var(--planr-color-text-muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+.diagram-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.diagram-presentation-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 220px;
+  justify-content: center;
+}
+.diagram-presentation-nav[hidden] {
+  display: none;
+}
+.diagram-presentation-nav > div {
+  display: grid;
+  min-width: 120px;
+  text-align: center;
+  line-height: 1.2;
+}
+.diagram-presentation-nav strong {
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+.diagram-presentation-nav span {
+  margin-top: 3px;
+  color: var(--planr-color-text-muted);
+  font-size: 10px;
+}
+.diagram-presentation-nav button {
+  min-width: 34px;
+  padding-inline: 8px;
+}
+.diagram-export {
+  position: relative;
+}
+/* Keep the foreground/surface pair together for every primary-action state. */
+.diagram-toolbar .diagram-export summary {
+  list-style: none;
+  color: var(--planr-color-on-improve);
+  background: var(--planr-color-primary);
+  border-color: var(--planr-color-primary);
+}
+.diagram-toolbar .diagram-export summary:is(:hover, :active, :focus-visible),
+.diagram-toolbar .diagram-export[open] summary {
+  color: var(--planr-color-on-improve);
+  background: var(--planr-color-primary-strong);
+  border-color: var(--planr-color-primary-strong);
+}
+.diagram-shell :is(button, summary, a):focus-visible {
+  outline: 2px solid var(--planr-color-primary);
+  outline-offset: 3px;
+}
+.diagram-export summary::-webkit-details-marker {
+  display: none;
+}
 
-.diagram-toolbar .diagram-save { border:0; padding:0 4px; min-height:30px; font-weight:400; background:transparent; }
-.diagram-save[data-failed=true] { display:block; color:var(--planr-color-danger); }
-@media (max-width:1000px) { .diagram-save[data-failed=true] { position:absolute; top:72px; right:12px; padding:8px; background:var(--planr-color-panel); border:1px solid var(--planr-color-danger); } }
+.diagram-export-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  width: 230px;
+  background: var(--planr-color-panel);
+  border: 1px solid var(--planr-color-rule);
+  border-radius: 12px;
+  padding: 8px;
+  box-shadow: 0 12px 40px #101d2420;
+}
+.diagram-export-menu strong {
+  display: block;
+  padding: 8px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--planr-color-text-muted);
+}
+.diagram-export-menu a {
+  display: block;
+  padding: 8px;
+  border-radius: 6px;
+  color: var(--planr-color-text);
+  text-decoration: none;
+}
+.diagram-export-menu a:is(:hover, :active, :focus-visible) {
+  background: var(--planr-color-raised);
+  color: var(--planr-color-text);
+}
+.diagram-workspace {
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: var(--diagram-outline-width) minmax(0, 1fr);
+  position: relative;
+}
+.diagram-shell[data-outline-open="false"] {
+  --diagram-outline-width: 0px;
+}
+.diagram-outline {
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+  border-right: 1px solid var(--planr-color-rule);
+  display: flex;
+  flex-direction: column;
+  background: var(--planr-color-panel);
+}
+.diagram-overview {
+  padding: 16px 16px 12px;
+}
+.diagram-type {
+  display: inline-flex;
+  padding: 3px 7px;
+  border: 1px solid var(--planr-color-rule);
+  border-radius: 5px;
+  text-transform: capitalize;
+  font-size: 11px;
+  font-weight: 600;
+}
+.diagram-overview p {
+  font-size: 12px;
+  line-height: 1.65;
+  margin: 12px 0;
+  color: var(--planr-color-text-muted);
+}
+.diagram-nav-section {
+  margin: 0 0 4px;
+}
+.diagram-nav-section summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: 7px;
+  font: 700 10px / 1.2 var(--planr-font-body);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--planr-color-text-muted);
+}
+.diagram-nav-section summary::-webkit-details-marker {
+  display: none;
+}
+.diagram-nav-section summary::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  rotate: -45deg;
+  translate: 0 -1px;
+  transition: rotate var(--planr-motion-fast);
+}
+.diagram-nav-section[open] summary::before {
+  rotate: 45deg;
+  translate: 0 -2px;
+}
+.diagram-nav-section summary:is(:hover, :active) {
+  background: var(--planr-color-raised);
+  color: var(--planr-color-text);
+}
+.diagram-nav-section .planr-count {
+  margin-left: auto;
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--planr-color-raised);
+  font-size: 10px;
+  line-height: 18px;
+  text-align: center;
+  letter-spacing: 0;
+}
+.diagram-search {
+  display: grid;
+  gap: 6px;
+  margin: 0 16px 12px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.diagram-search input {
+  width: 100%;
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid var(--planr-color-rule);
+  border-radius: 7px;
+  background: var(--planr-color-background);
+  color: var(--planr-color-text);
+  font-weight: 400;
+}
+.diagram-outline nav {
+  min-height: 0;
+  overflow: auto;
+  padding: 0 8px 12px;
+  flex: 1;
+}
+.diagram-outline nav button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 7px 10px 7px 22px;
+  margin: 1px 0;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  font: 500 12px / 1.4 var(--planr-font-body);
+  color: var(--planr-color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.diagram-outline nav button span {
+  display: block;
+  margin-bottom: 1px;
+  font-size: 9.5px;
+  text-transform: capitalize;
+  color: var(--planr-color-text-muted);
+}
+.diagram-outline nav button:is(:hover, :active),
+.diagram-outline nav button[aria-current="true"] {
+  border-color: var(--planr-color-rule);
+  background: var(--planr-color-raised);
+}
+.diagram-outline nav button[aria-current="true"] {
+  color: var(--planr-color-primary-strong);
+  box-shadow: inset 2px 0 var(--planr-color-primary);
+}
+.diagram-outline footer {
+  padding: 12px 16px;
+  font-size: 10px;
+  color: var(--planr-color-text-muted);
+  line-height: 1.7;
+  border-top: 1px solid var(--planr-color-rule);
+  display: grid;
+  gap: 8px;
+}
+.diagram-canvas {
+  grid-column: 2;
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  touch-action: none;
+  background: var(--planr-color-background);
+  background-image: radial-gradient(
+    color-mix(in srgb, var(--planr-color-text-muted) 28%, transparent) 0.8px,
+    transparent 0.8px
+  );
+  background-size: 20px 20px;
+  cursor: grab;
+  outline-offset: -3px;
+}
+.diagram-canvas[data-dragging="true"] {
+  cursor: grabbing;
+}
+.diagram-shell[data-planr-review-mode="comment"] .diagram-canvas {
+  cursor: crosshair;
+}
+.diagram-scene {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
+  box-shadow: 0 2px 14px color-mix(in srgb, var(--planr-color-text) 16%, transparent);
+  background: white;
+  border-radius: 2px;
+}
+.diagram-drawing,
+.diagram-drawing > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.diagram-drawing {
+  pointer-events: none;
+}
+.diagram-drawing text {
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+.diagram-drawing [data-selected="true"] {
+  filter: drop-shadow(0 0 4px #00857780);
+}
+.diagram-drawing [data-dimmed] {
+  opacity: 0.18;
+}
+.diagram-drawing [data-group-hidden] {
+  visibility: hidden;
+}
+.diagram-drawing [data-group-id][data-collapsed] rect {
+  fill: var(--planr-color-panel);
+  stroke: var(--planr-color-primary);
+  stroke-dasharray: none;
+}
+.diagram-drawing [data-group-id][data-collapsed] text {
+  fill: var(--planr-color-primary-strong);
+}
+.diagram-element-details {
+  padding: 12px 16px;
+  border-block: 1px solid var(--planr-color-rule);
+  max-height: 40%;
+  overflow: auto;
+  flex-shrink: 0;
+}
+.diagram-element-details header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.diagram-element-details header strong {
+  font-size: 11px;
+  text-transform: capitalize;
+  color: var(--planr-color-text-muted);
+}
+.diagram-element-details h2 {
+  font: 600 14px / 1.4 var(--planr-font-body);
+  margin: 8px 0;
+  overflow-wrap: anywhere;
+}
+.diagram-element-details p {
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 8px 0;
+  overflow-wrap: anywhere;
+}
+.diagram-element-details details {
+  font-size: 11px;
+  margin: 10px 0;
+}
+.diagram-element-details code {
+  display: block;
+  padding: 8px 0;
+  overflow-wrap: anywhere;
+}
+.diagram-element-details > div {
+  display: grid;
+  gap: 6px;
+}
+.diagram-element-details button {
+  min-height: 32px;
+  padding: 6px 8px;
+  border: 1px solid var(--planr-color-rule);
+  border-radius: 6px;
+  color: var(--planr-color-text);
+  background: var(--planr-color-panel);
+  font-size: 11px;
+}
+.diagram-element-details button:enabled:is(:hover, :active),
+.diagram-element-details button[aria-pressed="true"] {
+  background: var(--planr-color-raised);
+  color: var(--planr-color-primary-strong);
+}
+.diagram-element-details button:disabled {
+  cursor: default;
+  color: var(--planr-color-text-muted);
+}
+.diagram-thread-target {
+  margin: 6px 0;
+  color: var(--planr-color-text-muted);
+  font-size: 11px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.diagram-legend summary {
+  color: var(--planr-color-text);
+  font-size: 11px;
+}
+.diagram-legend p {
+  line-height: 1.5;
+  margin: 8px 0;
+}
+.diagram-scene .planr-pin {
+  transform: scale(var(--diagram-inverse-zoom, 1));
+}
+.diagram-scene .planr-region-selection {
+  z-index: 8;
+}
+.diagram-canvas-tools {
+  position: absolute;
+  left: 50%;
+  bottom: 26px;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+  padding: 6px;
+  border: 1px solid var(--planr-color-rule);
+  border-radius: 12px;
+  background: var(--planr-color-panel);
+  box-shadow: 0 4px 20px #182c3818;
+  cursor: default;
+  white-space: nowrap;
+}
+.diagram-canvas-tools > div {
+  display: flex;
+  border-right: 1px solid var(--planr-color-rule);
+  padding-right: 6px;
+}
+.diagram-canvas-tools > div:last-child {
+  border: 0;
+  padding: 0;
+}
+.diagram-canvas-tools button {
+  min-height: 34px;
+  min-width: 34px;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  font-size: 12px;
+}
+.diagram-canvas-tools button:enabled:is(:hover, :active) {
+  background: var(--planr-color-raised);
+  color: var(--planr-color-text);
+}
+.diagram-canvas-tools button[aria-pressed="true"] {
+  background: var(--planr-color-primary);
+  color: var(--planr-color-on-improve);
+}
+.diagram-canvas-tools button[aria-pressed="true"]:is(:hover, :active, :focus-visible) {
+  background: var(--planr-color-primary-strong);
+  color: var(--planr-color-on-improve);
+}
+.diagram-canvas-status {
+  position: absolute;
+  bottom: 5px;
+  left: 14px;
+  font-size: 10px;
+  color: var(--planr-color-text-muted);
+  pointer-events: none;
+}
+.diagram-shell .planr-review-rail {
+  position: absolute;
+  z-index: 20;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 340px;
+  max-width: 100%;
+  background: var(--planr-color-panel);
+  box-shadow: -6px 0 24px #182c3810;
+  transition: none;
+}
+.diagram-shell[data-planr-rail-open="false"] .planr-review-rail {
+  display: none;
+}
+.diagram-shell[data-planr-rail-open="true"] .diagram-canvas {
+  margin-right: 340px;
+}
+.diagram-shell .planr-rail-close {
+  display: inline-grid;
+}
+.diagram-shell .planr-thread {
+  padding: 12px;
+  margin: 0 0 10px;
+}
+.diagram-shell .planr-thread-comment {
+  font-size: 13px;
+}
+.diagram-shell .planr-decision-slot textarea {
+  min-height: 54px;
+}
+.diagram-shell[data-present="true"] {
+  --diagram-outline-width: 0px;
+}
+.diagram-shell[data-present="true"] .diagram-subtitle,
+.diagram-shell[data-present="true"] .diagram-outline-toggle,
+.diagram-shell[data-present="true"] .diagram-save {
+  display: none;
+}
+.diagram-shell[data-present="true"] .diagram-header-actions > :not([data-action="present"]),
+.diagram-shell[data-present="true"] .diagram-canvas-tools,
+.diagram-shell[data-present="true"] .diagram-canvas-status {
+  display: none;
+}
+@media (max-width: 1000px) {
+  .diagram-save {
+    display: none;
+  }
+  .diagram-shell {
+    --diagram-outline-width: 200px;
+  }
+}
+@media (max-width: 700px) {
+  .diagram-shell {
+    --diagram-outline-width: 0px;
+  }
+  .diagram-toolbar {
+    padding: 0 8px;
+    gap: 6px;
+  }
+  .diagram-subtitle {
+    display: none;
+  }
+  .diagram-toolbar .planr-title-block strong {
+    max-width: 38vw;
+    font-size: 12px;
+  }
+  .diagram-header-actions {
+    gap: 4px;
+  }
+  .diagram-toolbar .planr-toolbar-action {
+    padding: 0 8px;
+    font-size: 11px;
+  }
+  .diagram-toolbar [data-action="present"] {
+    display: none;
+  }
+  .diagram-outline {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 25;
+    width: min(280px, 85vw);
+    box-shadow: 8px 0 30px #182c3825;
+  }
+  .diagram-shell[data-outline-open="false"] .diagram-outline {
+    display: none;
+  }
+  .diagram-shell[data-planr-rail-open="true"] .diagram-canvas {
+    margin: 0;
+  }
+  .diagram-shell .planr-review-rail {
+    width: min(340px, 94vw);
+    z-index: 26;
+  }
+  .diagram-canvas-tools {
+    gap: 2px;
+    padding: 4px;
+    bottom: max(24px, env(safe-area-inset-bottom));
+    max-width: calc(100% - 16px);
+  }
+  .diagram-canvas-tools button {
+    padding: 8px;
+    font-size: 11px;
+    min-height: 42px;
+  }
+  .diagram-canvas-tools > div {
+    padding-right: 2px;
+  }
+  .diagram-shell input,
+  .diagram-shell textarea,
+  .diagram-shell select {
+    font-size: 16px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .diagram-shell * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+.diagram-toolbar .diagram-save {
+  border: 0;
+  padding: 0 4px;
+  min-height: 30px;
+  font-weight: 400;
+  background: transparent;
+}
+.diagram-save[data-failed="true"] {
+  display: block;
+  color: var(--planr-color-danger);
+}
+@media (max-width: 1000px) {
+  .diagram-save[data-failed="true"] {
+    position: absolute;
+    top: 72px;
+    right: 12px;
+    padding: 8px;
+    background: var(--planr-color-panel);
+    border: 1px solid var(--planr-color-danger);
+  }
+}

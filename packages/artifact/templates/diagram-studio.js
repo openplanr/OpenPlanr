@@ -26,8 +26,16 @@
   }
   function clientSelectionToNormalized(rect, start, end = start, { dragThreshold = ARTIFACT_ANNOTATION_LIMITS.dragThreshold } = {}) {
     assertRect(rect);
-    const startX = clamp(finite(start?.x ?? start?.clientX, rect.left), rect.left, rect.left + rect.width);
-    const startY = clamp(finite(start?.y ?? start?.clientY, rect.top), rect.top, rect.top + rect.height);
+    const startX = clamp(
+      finite(start?.x ?? start?.clientX, rect.left),
+      rect.left,
+      rect.left + rect.width
+    );
+    const startY = clamp(
+      finite(start?.y ?? start?.clientY, rect.top),
+      rect.top,
+      rect.top + rect.height
+    );
     const endX = clamp(finite(end?.x ?? end?.clientX, startX), rect.left, rect.left + rect.width);
     const endY = clamp(finite(end?.y ?? end?.clientY, startY), rect.top, rect.top + rect.height);
     const dragged = Math.hypot(endX - startX, endY - startY) >= Math.max(0, finite(dragThreshold, 4));
@@ -130,7 +138,10 @@
     if (node) node.textContent = value;
   }
   function identityName(reviewController) {
-    return text(reviewController?.getIdentity?.()?.name, ARTIFACT_ANNOTATION_LIMITS.maxIdentityLength);
+    return text(
+      reviewController?.getIdentity?.()?.name,
+      ARTIFACT_ANNOTATION_LIMITS.maxIdentityLength
+    );
   }
   function createIntentPicker(document2) {
     const group = make(document2, "div", {
@@ -179,10 +190,14 @@
       return reviewController.getReview?.() ?? reviewController.getState?.()?.review ?? reviewController.getState?.();
     }
     function layerFor(artifactId) {
-      return [...document2.querySelectorAll("[data-planr-annotation-layer]")].find((node) => node.dataset.planrAnnotationLayer === artifactId) ?? null;
+      return [...document2.querySelectorAll("[data-planr-annotation-layer]")].find(
+        (node) => node.dataset.planrAnnotationLayer === artifactId
+      ) ?? null;
     }
     function frameFor(artifactId) {
-      return [...document2.querySelectorAll("[data-planr-artifact-frame]")].find((node) => node.dataset.planrArtifactFrame === artifactId) ?? null;
+      return [...document2.querySelectorAll("[data-planr-artifact-frame]")].find(
+        (node) => node.dataset.planrArtifactFrame === artifactId
+      ) ?? null;
     }
     function focusThread(pinId) {
       const pin = review()?.pins?.find((item) => item.id === pinId);
@@ -206,7 +221,10 @@
       queueMicrotask(() => {
         const marker = document2.getElementById(annotationDomIds(pinId).pin);
         if (marker?.hidden) {
-          announce(document2, "This pin’s element is not currently visible. The original comment remains in Review.");
+          announce(
+            document2,
+            "This pin’s element is not currently visible. The original comment remains in Review."
+          );
           return;
         }
         if (onFocusPin) onFocusPin(pin);
@@ -244,27 +262,40 @@
     function refreshAnchors() {
       if (destroyed) return;
       const now = window.performance.now();
-      const frames = new Map([...document2.querySelectorAll("[data-planr-artifact-frame]")].map((frame) => [frame.dataset.planrArtifactFrame, frame]));
+      const frames = new Map(
+        [...document2.querySelectorAll("[data-planr-artifact-frame]")].map((frame) => [
+          frame.dataset.planrArtifactFrame,
+          frame
+        ])
+      );
       const records = [...pinRecords.values()].flatMap((records2) => [...records2.values()]).filter((record) => record.pin.anchor?.planrId).sort((a, b) => a.requestedAt - b.requestedAt);
       for (const record of records) {
         if (record.pending || now - record.requestedAt < 200 || !record.button.isConnected) continue;
         const frame = frames.get(record.pin.artifactId);
         const bridge = frame?.__openPlanrBridge;
-        if (!bridge?.resolve || frame.closest("[hidden]") || frame.dataset.planrBridgeTrusted === "false" || (anchorRequests.get(frame) ?? 0) >= 8) continue;
+        if (!bridge?.resolve || frame.closest("[hidden]") || frame.dataset.planrBridgeTrusted === "false" || (anchorRequests.get(frame) ?? 0) >= 8)
+          continue;
         const request = {}, key = record.geometryKey, pin = record.pin;
         record.pending = request;
         record.requestedAt = now;
         anchorRequests.set(frame, (anchorRequests.get(frame) ?? 0) + 1);
         Promise.resolve().then(() => bridge.resolve(pin.anchor.planrId, pin.anchor.screen)).then((anchor) => {
-          if (destroyed || record.pending !== request || record.geometryKey !== key || !record.button.isConnected || frame.__openPlanrBridge !== bridge) return;
+          if (destroyed || record.pending !== request || record.geometryKey !== key || !record.button.isConnected || frame.__openPlanrBridge !== bridge)
+            return;
           if (!anchor || anchor.rect.width <= 0 || anchor.rect.height <= 0) {
             hidePin(record);
-            if (record.button.dataset.planrAnchorStatus !== "unavailable") record.button.dataset.planrAnchorStatus = "unavailable";
+            if (record.button.dataset.planrAnchorStatus !== "unavailable")
+              record.button.dataset.planrAnchorStatus = "unavailable";
             return;
           }
-          const projected = anchorRegionToViewportRegion(pin.region, anchor.viewport ?? pin.viewport, anchor.rect);
+          const projected = anchorRegionToViewportRegion(
+            pin.region,
+            anchor.viewport ?? pin.viewport,
+            anchor.rect
+          );
           setPinPosition(record, projected);
-          if (record.button.dataset.planrAnchorStatus !== "resolved") record.button.dataset.planrAnchorStatus = "resolved";
+          if (record.button.dataset.planrAnchorStatus !== "resolved")
+            record.button.dataset.planrAnchorStatus = "resolved";
         }).catch(() => {
         }).finally(() => {
           const remaining = (anchorRequests.get(frame) ?? 1) - 1;
@@ -297,20 +328,31 @@
           const hasRegion = pin.region.w > 0 || pin.region.h > 0;
           let record = records.get(pin.id);
           if (!record) {
-            const button = make(document2, "button", { attributes: {
-              type: "button",
-              id: ids.pin,
-              "data-planr-pin-id": pin.id,
-              "aria-controls": ids.thread
-            } });
+            const button = make(document2, "button", {
+              attributes: {
+                type: "button",
+                id: ids.pin,
+                "data-planr-pin-id": pin.id,
+                "aria-controls": ids.thread
+              }
+            });
             button.addEventListener("click", () => focusThread(pin.id));
             layer.append(button);
-            record = { button, region: null, pin, geometryKey: null, pending: null, requestedAt: -Infinity };
+            record = {
+              button,
+              region: null,
+              pin,
+              geometryKey: null,
+              pending: null,
+              requestedAt: -Infinity
+            };
             records.set(pin.id, record);
           }
           record.pin = pin;
           if (hasRegion && !record.region) {
-            record.region = make(document2, "span", { attributes: { "data-planr-pin-region-id": pin.id, "aria-hidden": "true" } });
+            record.region = make(document2, "span", {
+              attributes: { "data-planr-pin-region-id": pin.id, "aria-hidden": "true" }
+            });
             layer.insertBefore(record.region, record.button);
           } else if (!hasRegion && record.region) {
             record.region.remove();
@@ -318,7 +360,8 @@
           }
           const buttonClass = `planr-pin planr-pin-${pin.intent} planr-pin-${pin.status}${hasRegion ? " planr-pin-region-handle" : ""}${record.button.classList.contains("planr-pin-highlight") ? " planr-pin-highlight" : ""}`;
           if (record.button.className !== buttonClass) record.button.className = buttonClass;
-          if (record.button.textContent !== String(ordinal)) record.button.textContent = String(ordinal);
+          if (record.button.textContent !== String(ordinal))
+            record.button.textContent = String(ordinal);
           for (const [name, value] of Object.entries({
             "data-planr-intent": pin.intent,
             "data-planr-status": pin.status,
@@ -405,7 +448,12 @@
       const layer = draft && layerFor(draft.artifactId);
       if (!composer || !layer) return;
       const visual = window.visualViewport;
-      const viewport = { x: finite(visual?.offsetLeft), y: finite(visual?.offsetTop), width: finite(visual?.width, window.innerWidth), height: finite(visual?.height, window.innerHeight) };
+      const viewport = {
+        x: finite(visual?.offsetLeft),
+        y: finite(visual?.offsetTop),
+        width: finite(visual?.width, window.innerWidth),
+        height: finite(visual?.height, window.innerHeight)
+      };
       const margin = Math.min(12, viewport.width / 8, viewport.height / 8);
       const availableWidth = Math.max(1, viewport.width - margin * 2), availableHeight = Math.max(1, viewport.height - margin * 2);
       composer.style.width = `${Math.min(360, availableWidth)}px`;
@@ -448,7 +496,15 @@
       });
       const header = make(document2, "header", { className: "planr-composer-header" });
       const heading = make(document2, "strong", { textContent: "New comment" });
-      const close = make(document2, "button", { textContent: "×", attributes: { type: "button", "data-planr-composer-close": "", "aria-label": "Close new comment", title: "Close new comment (Escape)" } });
+      const close = make(document2, "button", {
+        textContent: "×",
+        attributes: {
+          type: "button",
+          "data-planr-composer-close": "",
+          "aria-label": "Close new comment",
+          title: "Close new comment (Escape)"
+        }
+      });
       header.append(heading, close);
       const identityLabel = make(document2, "label", { textContent: "Your name" });
       const identity = make(document2, "input", {
@@ -512,7 +568,8 @@
         }
       });
       listen(intentPicker, "keydown", (event) => {
-        if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) return;
+        if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"].includes(event.key))
+          return;
         const options = [...intentPicker.querySelectorAll("[data-planr-intent]")];
         const current = options.findIndex((option) => option.getAttribute("aria-checked") === "true");
         const delta = ["ArrowRight", "ArrowDown"].includes(event.key) ? 1 : -1;
@@ -522,9 +579,14 @@
         options[nextIndex].focus();
       });
       listen(close, "click", () => closeComposer({ restoreFocus: true }));
-      listen(composer.querySelector("[data-planr-composer-cancel]"), "click", () => {
-        closeComposer({ restoreFocus: true });
-      }, { once: true });
+      listen(
+        composer.querySelector("[data-planr-composer-cancel]"),
+        "click",
+        () => {
+          closeComposer({ restoreFocus: true });
+        },
+        { once: true }
+      );
       listen(composer, "keydown", (event) => {
         if (event.key === "Escape") {
           event.preventDefault();
@@ -570,10 +632,12 @@
         if (created?.id) queueMicrotask(() => focusThread(created.id));
       });
       comment.focus();
-      root.dispatchEvent(new window.CustomEvent(ARTIFACT_ANNOTATION_EVENTS.draft, {
-        bubbles: true,
-        detail: Object.freeze({ ...draft })
-      }));
+      root.dispatchEvent(
+        new window.CustomEvent(ARTIFACT_ANNOTATION_EVENTS.draft, {
+          bubbles: true,
+          detail: Object.freeze({ ...draft })
+        })
+      );
       if (restoredDraft) {
         identity.value = restoredDraft.identity;
         comment.value = restoredDraft.comment;
@@ -583,8 +647,17 @@
           option.setAttribute("aria-checked", String(selected));
           option.tabIndex = selected ? 0 : -1;
         }
-        if (Number.isInteger(restoredDraft.selectionStart)) comment.setSelectionRange(restoredDraft.selectionStart, restoredDraft.selectionEnd, restoredDraft.selectionDirection);
-        const fields = new Map(Object.entries(restoredDraft.fields ?? {}).slice(0, 32).filter(([key, value]) => key.length <= 128 && typeof value === "string" && value.length <= ARTIFACT_ANNOTATION_LIMITS.maxCommentLength));
+        if (Number.isInteger(restoredDraft.selectionStart))
+          comment.setSelectionRange(
+            restoredDraft.selectionStart,
+            restoredDraft.selectionEnd,
+            restoredDraft.selectionDirection
+          );
+        const fields = new Map(
+          Object.entries(restoredDraft.fields ?? {}).slice(0, 32).filter(
+            ([key, value]) => key.length <= 128 && typeof value === "string" && value.length <= ARTIFACT_ANNOTATION_LIMITS.maxCommentLength
+          )
+        );
         if (fields.size) {
           let restoreFields = function() {
             if (token !== draftToken || !composer.isConnected) {
@@ -621,7 +694,14 @@
         ...draft,
         reviewOf: reviewController.getReviewOf?.() ?? review()?.reviewOf ?? null,
         identity: composer.querySelector("[data-planr-composer-identity]").value,
-        fields: Object.fromEntries([...composer.querySelectorAll("[data-planr-draft-key]")].slice(0, 32).filter((field) => field.dataset.planrDraftKey.length <= 128 && typeof field.value === "string").map((field) => [field.dataset.planrDraftKey, field.value.slice(0, ARTIFACT_ANNOTATION_LIMITS.maxCommentLength)])),
+        fields: Object.fromEntries(
+          [...composer.querySelectorAll("[data-planr-draft-key]")].slice(0, 32).filter(
+            (field) => field.dataset.planrDraftKey.length <= 128 && typeof field.value === "string"
+          ).map((field) => [
+            field.dataset.planrDraftKey,
+            field.value.slice(0, ARTIFACT_ANNOTATION_LIMITS.maxCommentLength)
+          ])
+        ),
         comment: comment.value,
         intent: composer.querySelector('[data-planr-intent][aria-checked="true"]')?.dataset.planrIntent ?? "fix",
         selectionStart: comment.selectionStart,
@@ -630,9 +710,15 @@
       });
     }
     function restoreDraft(snapshot) {
-      if (!snapshot || snapshot.reviewOf !== (reviewController.getReviewOf?.() ?? review()?.reviewOf ?? null)) return false;
+      if (!snapshot || snapshot.reviewOf !== (reviewController.getReviewOf?.() ?? review()?.reviewOf ?? null))
+        return false;
       const artifact = stageController.getState().artifacts.find((entry) => entry.id === snapshot.artifactId);
-      if (!artifact || artifact.viewport.width !== snapshot.viewport?.width || artifact.viewport.height !== snapshot.viewport?.height || !["x", "y", "w", "h"].every((key) => Number.isFinite(snapshot.region?.[key]) && snapshot.region[key] >= 0 && snapshot.region[key] <= 1) || !["x", "y", "w", "h"].every((key) => Number.isFinite(snapshot.displayRegion?.[key]) && snapshot.displayRegion[key] >= 0 && snapshot.displayRegion[key] <= 1) || typeof snapshot.comment !== "string" || snapshot.comment.length > ARTIFACT_ANNOTATION_LIMITS.maxCommentLength || typeof snapshot.identity !== "string" || snapshot.identity.length > ARTIFACT_ANNOTATION_LIMITS.maxIdentityLength || !INTENTS.includes(snapshot.intent) || snapshot.anchor && (typeof snapshot.anchor.planrId !== "string" || snapshot.anchor.planrId.length > 512)) return false;
+      if (!artifact || artifact.viewport.width !== snapshot.viewport?.width || artifact.viewport.height !== snapshot.viewport?.height || !["x", "y", "w", "h"].every(
+        (key) => Number.isFinite(snapshot.region?.[key]) && snapshot.region[key] >= 0 && snapshot.region[key] <= 1
+      ) || !["x", "y", "w", "h"].every(
+        (key) => Number.isFinite(snapshot.displayRegion?.[key]) && snapshot.displayRegion[key] >= 0 && snapshot.displayRegion[key] <= 1
+      ) || typeof snapshot.comment !== "string" || snapshot.comment.length > ARTIFACT_ANNOTATION_LIMITS.maxCommentLength || typeof snapshot.identity !== "string" || snapshot.identity.length > ARTIFACT_ANNOTATION_LIMITS.maxIdentityLength || !INTENTS.includes(snapshot.intent) || snapshot.anchor && (typeof snapshot.anchor.planrId !== "string" || snapshot.anchor.planrId.length > 512))
+        return false;
       openComposer(snapshot, { restoredDraft: snapshot });
       return Boolean(draft);
     }
@@ -646,7 +732,8 @@
       const state = stageController.getState();
       const visible = state.viewMode === "split" ? [state.activeArtifactId, state.comparisonArtifactId] : [state.activeArtifactId];
       if (!draft) {
-        if (suspendedDraft && state.status === "ready" && state.reviewMode === "comment" && visible.includes(suspendedDraft.artifactId)) restoreDraft(suspendedDraft);
+        if (suspendedDraft && state.status === "ready" && state.reviewMode === "comment" && visible.includes(suspendedDraft.artifactId))
+          restoreDraft(suspendedDraft);
         return;
       }
       if (state.status !== "ready" || state.presentation !== "document" && state.reviewMode !== "comment") {
@@ -684,7 +771,8 @@
         destroyed = true;
         closeComposer();
         for (const remove of cleanup.splice(0)) remove();
-        for (const records of pinRecords.values()) for (const record of records.values()) removePin(record);
+        for (const records of pinRecords.values())
+          for (const record of records.values()) removePin(record);
         pinRecords.clear();
         anchorRequests.clear();
       }
@@ -878,7 +966,8 @@
     return screen === void 0 ? { planrId } : { planrId, screen };
   }
   function normalizeReply(reply, label = "reply") {
-    if (!reply || typeof reply !== "object" || Array.isArray(reply)) invalid(`${label} must be an object.`);
+    if (!reply || typeof reply !== "object" || Array.isArray(reply))
+      invalid(`${label} must be an object.`);
     return {
       id: boundedString(reply.id, `${label}.id`, {
         min: 1,
@@ -903,7 +992,9 @@
     if (!Array.isArray(pin.replies) || pin.replies.length > ARTIFACT_REVIEW_LIMITS.replies) {
       invalid(`${label}.replies must contain no more than ${ARTIFACT_REVIEW_LIMITS.replies} items.`);
     }
-    const replies = pin.replies.map((reply, index) => normalizeReply(reply, `${label}.replies[${index}]`));
+    const replies = pin.replies.map(
+      (reply, index) => normalizeReply(reply, `${label}.replies[${index}]`)
+    );
     const replyIds = new Set(replies.map(({ id }) => id));
     if (replyIds.size !== replies.length) invalid(`${label}.replies must have unique ids.`);
     const normalized2 = {
@@ -969,8 +1060,10 @@
       }),
       pins: pins.sort(compareTimestampThenId)
     };
-    if (review.createdAt !== void 0) normalized2.createdAt = isoTimestamp(review.createdAt, "review.createdAt");
-    if (review.updatedAt !== void 0) normalized2.updatedAt = isoTimestamp(review.updatedAt, "review.updatedAt");
+    if (review.createdAt !== void 0)
+      normalized2.createdAt = isoTimestamp(review.createdAt, "review.createdAt");
+    if (review.updatedAt !== void 0)
+      normalized2.updatedAt = isoTimestamp(review.updatedAt, "review.updatedAt");
     return deepFreezeArtifactReview(normalized2);
   }
   function createArtifactReview({ reviewId, reviewOf, createId = defaultCreateId } = {}) {
@@ -1003,7 +1096,10 @@
     });
     const pin = review.pins.find(({ id }) => id === normalizedId);
     if (!pin) {
-      throw new ArtifactReviewStateError("E_ARTIFACT_REVIEW_PIN_NOT_FOUND", `Unknown feedback pin: ${normalizedId}`);
+      throw new ArtifactReviewStateError(
+        "E_ARTIFACT_REVIEW_PIN_NOT_FOUND",
+        `Unknown feedback pin: ${normalizedId}`
+      );
     }
     return pin;
   }
@@ -1012,12 +1108,10 @@
     if (review.updatedAt !== void 0) next.updatedAt = timestamp;
     return next;
   }
-  function reduceArtifactReview(review, action, {
-    createId = defaultCreateId,
-    now = defaultNow
-  } = {}) {
+  function reduceArtifactReview(review, action, { createId = defaultCreateId, now = defaultNow } = {}) {
     const current = normalizeArtifactReview(review);
-    if (!action || typeof action !== "object" || Array.isArray(action)) invalid("Review action must be an object.");
+    if (!action || typeof action !== "object" || Array.isArray(action))
+      invalid("Review action must be an object.");
     const timestamp = dependencyTimestamp(now);
     let next;
     switch (action.type) {
@@ -1033,7 +1127,10 @@
           trim: true
         });
         if (current.pins.some(({ id }) => id === pinId)) {
-          throw new ArtifactReviewStateError("E_ARTIFACT_REVIEW_ID_COLLISION", `Duplicate pin id: ${pinId}`);
+          throw new ArtifactReviewStateError(
+            "E_ARTIFACT_REVIEW_ID_COLLISION",
+            `Duplicate pin id: ${pinId}`
+          );
         }
         const pin = normalizePin({
           ...pinInput,
@@ -1044,10 +1141,14 @@
           createdAt: pinInput.createdAt ?? timestamp,
           updatedAt: pinInput.updatedAt ?? timestamp
         });
-        next = preserveOptionalReviewTimestamps(current, {
-          ...current,
-          pins: [...current.pins, pin]
-        }, timestamp);
+        next = preserveOptionalReviewTimestamps(
+          current,
+          {
+            ...current,
+            pins: [...current.pins, pin]
+          },
+          timestamp
+        );
         break;
       }
       case "add-reply": {
@@ -1061,7 +1162,10 @@
           trim: true
         });
         if (pin.replies.some(({ id }) => id === replyId)) {
-          throw new ArtifactReviewStateError("E_ARTIFACT_REVIEW_ID_COLLISION", `Duplicate reply id: ${replyId}`);
+          throw new ArtifactReviewStateError(
+            "E_ARTIFACT_REVIEW_ID_COLLISION",
+            `Duplicate reply id: ${replyId}`
+          );
         }
         const reply = normalizeReply({
           id: replyId,
@@ -1074,10 +1178,14 @@
           replies: [...pin.replies, reply],
           updatedAt: timestamp
         });
-        next = preserveOptionalReviewTimestamps(current, {
-          ...current,
-          pins: replacePin(current, updatedPin)
-        }, timestamp);
+        next = preserveOptionalReviewTimestamps(
+          current,
+          {
+            ...current,
+            pins: replacePin(current, updatedPin)
+          },
+          timestamp
+        );
         break;
       }
       case "set-status": {
@@ -1087,23 +1195,35 @@
           status: enumValue(action.status, ARTIFACT_REVIEW_STATUSES, "status"),
           updatedAt: timestamp
         });
-        next = preserveOptionalReviewTimestamps(current, {
-          ...current,
-          pins: replacePin(current, updatedPin)
-        }, timestamp);
+        next = preserveOptionalReviewTimestamps(
+          current,
+          {
+            ...current,
+            pins: replacePin(current, updatedPin)
+          },
+          timestamp
+        );
         break;
       }
       case "set-overall":
-        next = preserveOptionalReviewTimestamps(current, {
-          ...current,
-          overall: boundedString(action.overall, "overall", { max: ARTIFACT_REVIEW_LIMITS.text })
-        }, timestamp);
+        next = preserveOptionalReviewTimestamps(
+          current,
+          {
+            ...current,
+            overall: boundedString(action.overall, "overall", { max: ARTIFACT_REVIEW_LIMITS.text })
+          },
+          timestamp
+        );
         break;
       case "set-decision":
-        next = preserveOptionalReviewTimestamps(current, {
-          ...current,
-          decision: enumValue(action.decision, ARTIFACT_REVIEW_DECISIONS, "decision")
-        }, timestamp);
+        next = preserveOptionalReviewTimestamps(
+          current,
+          {
+            ...current,
+            decision: enumValue(action.decision, ARTIFACT_REVIEW_DECISIONS, "decision")
+          },
+          timestamp
+        );
         break;
       default:
         throw new ArtifactReviewStateError(
@@ -1134,7 +1254,10 @@
     const listeners = /* @__PURE__ */ new Set();
     const assertAlive = () => {
       if (destroyed) {
-        throw new ArtifactReviewStateError("E_ARTIFACT_REVIEW_DESTROYED", "Artifact review controller is destroyed.");
+        throw new ArtifactReviewStateError(
+          "E_ARTIFACT_REVIEW_DESTROYED",
+          "Artifact review controller is destroyed."
+        );
       }
     };
     const ensureReview = () => {
@@ -1234,7 +1357,10 @@
     return `${canonical.slice(0, 10)} ${canonical.slice(11, 16)} UTC`;
   }
   function renderReply(document2, reply) {
-    const item = createElement(document2, "li", { className: "planr-reply", attributes: { "data-planr-reply-id": reply.id } });
+    const item = createElement(document2, "li", {
+      className: "planr-reply",
+      attributes: { "data-planr-reply-id": reply.id }
+    });
     const heading = createElement(document2, "header");
     heading.append(createElement(document2, "strong", { text: reply.author.name }));
     const time = createElement(document2, "time", {
@@ -1262,7 +1388,11 @@
     });
     const form = createElement(document2, "form", {
       className: "planr-reply-form",
-      attributes: { "data-planr-reply-form": pin.id, id: `${fieldId}-form`, ...expanded ? {} : { hidden: "" } }
+      attributes: {
+        "data-planr-reply-form": pin.id,
+        id: `${fieldId}-form`,
+        ...expanded ? {} : { hidden: "" }
+      }
     });
     const label = createElement(document2, "label", {
       className: "planr-reply-label",
@@ -1281,13 +1411,33 @@
       }
     });
     const controls = createElement(document2, "div", { className: "planr-reply-controls" });
-    const hint = createElement(document2, "span", { className: "planr-reply-hint", text: "Ctrl/⌘ + Enter to send" });
+    const hint = createElement(document2, "span", {
+      className: "planr-reply-hint",
+      text: "Ctrl/⌘ + Enter to send"
+    });
     const submit = createElement(document2, "button", {
       className: "planr-reply-send",
-      attributes: { type: "submit", disabled: "", "aria-label": "Send reply", title: "Send reply (Ctrl/⌘ + Enter)" }
+      attributes: {
+        type: "submit",
+        disabled: "",
+        "aria-label": "Send reply",
+        title: "Send reply (Ctrl/⌘ + Enter)"
+      }
     });
     const svg = document2.createElementNS("http://www.w3.org/2000/svg", "svg");
-    for (const [name, value] of Object.entries({ viewBox: "0 0 24 24", width: "16", height: "16", fill: "none", stroke: "currentColor", "stroke-width": "1.8", "stroke-linecap": "round", "stroke-linejoin": "round", "aria-hidden": "true", focusable: "false" })) svg.setAttribute(name, value);
+    for (const [name, value] of Object.entries({
+      viewBox: "0 0 24 24",
+      width: "16",
+      height: "16",
+      fill: "none",
+      stroke: "currentColor",
+      "stroke-width": "1.8",
+      "stroke-linecap": "round",
+      "stroke-linejoin": "round",
+      "aria-hidden": "true",
+      focusable: "false"
+    }))
+      svg.setAttribute(name, value);
     const path = document2.createElementNS("http://www.w3.org/2000/svg", "path");
     path.setAttribute("d", "M12 19V5m-6 6 6-6 6 6");
     svg.append(path);
@@ -1330,7 +1480,11 @@
     });
     const lifecycle = createElement(document2, "div", { className: "planr-thread-actions" });
     lifecycle.append(
-      createElement(document2, "span", { className: "planr-thread-status", text: pin.status, attributes: { title: `Status: ${pin.status}` } }),
+      createElement(document2, "span", {
+        className: "planr-thread-status",
+        text: pin.status,
+        attributes: { title: `Status: ${pin.status}` }
+      }),
       createElement(document2, "button", {
         text: pin.status === "resolved" ? "Reopen" : "Resolve",
         attributes: {
@@ -1353,14 +1507,38 @@
       attributes: { "aria-label": "Replies" }
     });
     const earlierReplies = description.compact ? Math.max(0, pin.replies.length - (description.replyLimit || 2)) : 0;
-    for (const reply of pin.replies.slice(earlierReplies)) replies.append(renderReply(document2, reply));
+    for (const reply of pin.replies.slice(earlierReplies))
+      replies.append(renderReply(document2, reply));
     const editor = renderReplyForm(document2, pin, description.replyExpanded);
     article.append(header, comment);
     if (description.compact && pin.comment.length > 240) {
       comment.dataset.planrCommentCollapsed = String(!description.commentExpanded);
-      article.append(createElement(document2, "button", { className: "planr-comment-expand", text: description.commentExpanded ? "Show less" : "Read full comment", attributes: { type: "button", id: `${annotationDomIds(pin.id).thread}-expand`, "data-planr-comment-expand": pin.id, "aria-expanded": String(Boolean(description.commentExpanded)) } }));
+      article.append(
+        createElement(document2, "button", {
+          className: "planr-comment-expand",
+          text: description.commentExpanded ? "Show less" : "Read full comment",
+          attributes: {
+            type: "button",
+            id: `${annotationDomIds(pin.id).thread}-expand`,
+            "data-planr-comment-expand": pin.id,
+            "aria-expanded": String(Boolean(description.commentExpanded))
+          }
+        })
+      );
     }
-    if (earlierReplies) article.append(createElement(document2, "button", { className: "planr-history-expand", text: `Show ${earlierReplies} earlier ${earlierReplies === 1 ? "reply" : "replies"}`, attributes: { type: "button", id: `${annotationDomIds(pin.id).thread}-history`, "data-planr-history-expand": pin.id, "aria-expanded": "false" } }));
+    if (earlierReplies)
+      article.append(
+        createElement(document2, "button", {
+          className: "planr-history-expand",
+          text: `Show ${earlierReplies} earlier ${earlierReplies === 1 ? "reply" : "replies"}`,
+          attributes: {
+            type: "button",
+            id: `${annotationDomIds(pin.id).thread}-history`,
+            "data-planr-history-expand": pin.id,
+            "aria-expanded": "false"
+          }
+        })
+      );
     if (pin.replies.length) article.append(replies);
     if (description.compact) {
       lifecycle.append(editor.querySelector("[data-planr-reply-toggle]"));
@@ -1422,7 +1600,8 @@
         if (field) replyDrafts.set(form.dataset.planrReplyForm, field.value);
       }
       for (const field of slot.querySelectorAll("[data-planr-draft-key]")) {
-        if (typeof field.value === "string") extraDrafts.set(field.dataset.planrDraftKey, field.value);
+        if (typeof field.value === "string")
+          extraDrafts.set(field.dataset.planrDraftKey, field.value);
       }
     };
     const snapshotDrafts = () => {
@@ -1436,7 +1615,12 @@
         identity: identityInput.value
       });
     };
-    const emitDraftChange = () => root.dispatchEvent(new window.CustomEvent(ARTIFACT_REVIEW_DRAFT_CHANGE_EVENT, { bubbles: true, detail: snapshotDrafts() }));
+    const emitDraftChange = () => root.dispatchEvent(
+      new window.CustomEvent(ARTIFACT_REVIEW_DRAFT_CHANGE_EVENT, {
+        bubbles: true,
+        detail: snapshotDrafts()
+      })
+    );
     const focusDescriptor = () => {
       const element = document2.activeElement;
       if (!element || !slot.contains(element)) return null;
@@ -1457,9 +1641,16 @@
     const restoreFocus = (descriptor) => {
       if (!descriptor) return;
       const thread = descriptor.pinId && document2.getElementById(artifactReviewThreadDomId(descriptor.pinId));
-      const target = descriptor.id && document2.getElementById(descriptor.id) || descriptor.draftKey && [...slot.querySelectorAll("[data-planr-draft-key]")].find((field) => field.dataset.planrDraftKey === descriptor.draftKey) || descriptor.action && [...thread?.querySelectorAll("[data-planr-thread-action]") ?? []].find((button) => button.dataset.planrThreadAction === descriptor.action) || descriptor.showPin && thread?.querySelector("[data-planr-thread-focus]") || [...thread?.querySelectorAll("button,input,select,textarea") ?? []].find((field) => field.tagName === descriptor.tag && field.name === descriptor.name);
+      const target = descriptor.id && document2.getElementById(descriptor.id) || descriptor.draftKey && [...slot.querySelectorAll("[data-planr-draft-key]")].find(
+        (field) => field.dataset.planrDraftKey === descriptor.draftKey
+      ) || descriptor.action && [...thread?.querySelectorAll("[data-planr-thread-action]") ?? []].find(
+        (button) => button.dataset.planrThreadAction === descriptor.action
+      ) || descriptor.showPin && thread?.querySelector("[data-planr-thread-focus]") || [...thread?.querySelectorAll("button,input,select,textarea") ?? []].find(
+        (field) => field.tagName === descriptor.tag && field.name === descriptor.name
+      );
       target?.focus?.({ preventScroll: true });
-      if (Number.isInteger(descriptor.start)) target?.setSelectionRange?.(descriptor.start, descriptor.end, descriptor.direction);
+      if (Number.isInteger(descriptor.start))
+        target?.setSelectionRange?.(descriptor.start, descriptor.end, descriptor.direction);
     };
     const showError = (error) => {
       const target = root.querySelector("#planr-review-error");
@@ -1480,13 +1671,16 @@
     };
     const updateCounts = (pins) => {
       const label = `${pins.length} ${pins.length === 1 ? "comment" : "comments"}`;
-      for (const count of root.querySelectorAll('[data-planr-action="feedback"] .planr-count, .planr-review-rail > header .planr-count')) {
+      for (const count of root.querySelectorAll(
+        '[data-planr-action="feedback"] .planr-count, .planr-review-rail > header .planr-count'
+      )) {
         count.textContent = String(pins.length);
         count.setAttribute("aria-label", label);
       }
       const commentsButton = root.querySelector('[data-planr-action="feedback"]');
       commentsButton?.setAttribute("aria-label", commentsButton.dataset.planrReviewLabel || label);
-      if (commentsButton?.dataset.planrReviewLabel) commentsButton.setAttribute("aria-description", label);
+      if (commentsButton?.dataset.planrReviewLabel)
+        commentsButton.setAttribute("aria-description", label);
     };
     const render = ({ capture = true } = {}) => {
       if (composing) {
@@ -1496,7 +1690,8 @@
       if (capture) captureDrafts();
       const focus = focusDescriptor();
       const scroll = [];
-      for (let node = slot; node && root.contains(node); node = node.parentElement) scroll.push([node, node.scrollTop, node.scrollLeft]);
+      for (let node = slot; node && root.contains(node); node = node.parentElement)
+        scroll.push([node, node.scrollTop, node.scrollLeft]);
       const state = controller.getState();
       const { review, activePinId } = state;
       const allPins = review?.pins ?? [];
@@ -1510,24 +1705,40 @@
         attributes: { "aria-label": "Comment threads" }
       });
       if (pins.length === 0) {
-        list.append(createElement(document2, "p", {
-          className: "planr-review-empty",
-          text: typeof presentation.emptyMessage === "string" ? presentation.emptyMessage : allPins.length ? "No comments match these filters." : "No comments yet. Choose Add comment, then select a point or region in the artifact."
-        }));
+        list.append(
+          createElement(document2, "p", {
+            className: "planr-review-empty",
+            text: typeof presentation.emptyMessage === "string" ? presentation.emptyMessage : allPins.length ? "No comments match these filters." : "No comments yet. Choose Add comment, then select a point or region in the artifact."
+          })
+        );
       } else {
         for (const pin of visiblePins) {
-          const thread = renderThread(document2, pin, pin.id === activePinId, { ...presentation.describePin?.(pin, state), compact: presentation.compact === true, replyLimit: expandedHistory.get(pin.id) || 2, commentExpanded: expandedComments.has(pin.id), replyExpanded: expandedReplies.has(pin.id) });
+          const thread = renderThread(document2, pin, pin.id === activePinId, {
+            ...presentation.describePin?.(pin, state),
+            compact: presentation.compact === true,
+            replyLimit: expandedHistory.get(pin.id) || 2,
+            commentExpanded: expandedComments.has(pin.id),
+            replyExpanded: expandedReplies.has(pin.id)
+          });
           presentation.decorateThread?.({ element: thread, pin, state, document: document2 });
           const reply = thread.querySelector('[name="reply"]');
           if (replyDrafts.has(pin.id)) reply.value = replyDrafts.get(pin.id);
           thread.querySelector(".planr-reply-send").disabled = !reply.value.trim();
           for (const field of thread.querySelectorAll("[data-planr-draft-key]")) {
-            if (extraDrafts.has(field.dataset.planrDraftKey)) field.value = extraDrafts.get(field.dataset.planrDraftKey);
+            if (extraDrafts.has(field.dataset.planrDraftKey))
+              field.value = extraDrafts.get(field.dataset.planrDraftKey);
           }
           list.append(thread);
         }
       }
-      if (pins.length > visibleLimit) list.append(createElement(document2, "button", { className: "planr-threads-more", text: `Show more comments · ${Math.min(visibleLimit, pins.length)} of ${pins.length}`, attributes: { type: "button", "data-planr-threads-more": "" } }));
+      if (pins.length > visibleLimit)
+        list.append(
+          createElement(document2, "button", {
+            className: "planr-threads-more",
+            text: `Show more comments · ${Math.min(visibleLimit, pins.length)} of ${pins.length}`,
+            attributes: { type: "button", "data-planr-threads-more": "" }
+          })
+        );
       fragment.append(list);
       slot.replaceChildren(fragment);
       const identityName2 = controller.getIdentity()?.name ?? "";
@@ -1539,7 +1750,10 @@
       overall.maxLength = ARTIFACT_REVIEW_LIMITS.text;
       if (!overallDirty && document2.activeElement !== overall) overall.value = review?.overall ?? "";
       for (const button of decisionButtons) {
-        button.setAttribute("aria-pressed", String(button.dataset.planrDecision === (review?.decision ?? "pending")));
+        button.setAttribute(
+          "aria-pressed",
+          String(button.dataset.planrDecision === (review?.decision ?? "pending"))
+        );
       }
       decisionStatus.textContent = decisionCopy(review?.decision ?? "pending");
       updateCounts(allPins);
@@ -1549,7 +1763,8 @@
         node.scrollLeft = left;
       }
       const openMetric = root.querySelector('[data-planr-metric="open"]');
-      if (openMetric) openMetric.textContent = `${allPins.filter(({ status }) => status !== "resolved").length} open`;
+      if (openMetric)
+        openMetric.textContent = `${allPins.filter(({ status }) => status !== "resolved").length} open`;
     };
     const focusThread = (pinId) => {
       const thread = document2.getElementById(artifactReviewThreadDomId(pinId));
@@ -1558,15 +1773,18 @@
     };
     const emitReview = (review) => {
       const detail = cloneFrozenArtifactReview(review);
-      root.dispatchEvent(new window.CustomEvent(ARTIFACT_REVIEW_CHANGE_EVENT, {
-        detail,
-        bubbles: true
-      }));
+      root.dispatchEvent(
+        new window.CustomEvent(ARTIFACT_REVIEW_CHANGE_EVENT, {
+          detail,
+          bubbles: true
+        })
+      );
     };
     const unsubscribe = controller.subscribe((state, change) => {
       if (destroyed) return;
       if (["review", "review-replaced", "selection"].includes(change.type)) render();
-      if (["review", "review-replaced"].includes(change.type) && state.review) emitReview(state.review);
+      if (["review", "review-replaced"].includes(change.type) && state.review)
+        emitReview(state.review);
     });
     const onInput = (event) => {
       if (event.target !== identityInput) return;
@@ -1593,7 +1811,8 @@
       toggle.setAttribute("aria-expanded", String(expanded));
       toggle.textContent = expanded ? "− Reply" : "+ Reply";
       toggle.title = expanded ? "Collapse reply" : "Reply to this comment";
-      if (focus) (expanded ? form.elements.namedItem("reply") : toggle).focus({ preventScroll: true });
+      if (focus)
+        (expanded ? form.elements.namedItem("reply") : toggle).focus({ preventScroll: true });
       emitDraftChange();
     };
     const onKeyDown = (event) => {
@@ -1610,10 +1829,12 @@
     };
     const emitSelection = (pinId) => {
       controller.selectPin(pinId);
-      root.dispatchEvent(new window.CustomEvent(ARTIFACT_REVIEW_SELECT_EVENT, {
-        detail: deepFreezeArtifactReview({ pinId, source: "thread" }),
-        bubbles: true
-      }));
+      root.dispatchEvent(
+        new window.CustomEvent(ARTIFACT_REVIEW_SELECT_EVENT, {
+          detail: deepFreezeArtifactReview({ pinId, source: "thread" }),
+          bubbles: true
+        })
+      );
       onSelectPin?.(pinId);
     };
     const onClick = (event) => {
@@ -1639,7 +1860,11 @@
       }
       const replyToggle = event.target?.closest?.("[data-planr-reply-toggle]");
       if (replyToggle) {
-        setReplyExpanded(replyToggle.dataset.planrReplyToggle, replyToggle.getAttribute("aria-expanded") !== "true", { focus: true });
+        setReplyExpanded(
+          replyToggle.dataset.planrReplyToggle,
+          replyToggle.getAttribute("aria-expanded") !== "true",
+          { focus: true }
+        );
         return;
       }
       const action = event.target?.closest?.("[data-planr-thread-action]");
@@ -1652,7 +1877,9 @@
             pinId,
             status: action.dataset.planrThreadAction === "resolve" ? "resolved" : "open"
           });
-          announce2(action.dataset.planrThreadAction === "resolve" ? "Comment resolved" : "Comment reopened");
+          announce2(
+            action.dataset.planrThreadAction === "resolve" ? "Comment resolved" : "Comment reopened"
+          );
           focusThread(pinId);
           clearError();
         } catch (error) {
@@ -1733,11 +1960,17 @@
       if (!key || lastOpened === key) return;
       lastOpened = key;
       presentation.onThreadOpen?.(pin.id, controller.getState());
-      root.dispatchEvent(new window.CustomEvent("planr:artifact-thread-open", { bubbles: true, detail: Object.freeze({ pinId: pin.id }) }));
+      root.dispatchEvent(
+        new window.CustomEvent("planr:artifact-thread-open", {
+          bubbles: true,
+          detail: Object.freeze({ pinId: pin.id })
+        })
+      );
     };
     const onDraftInput = (event) => {
       const form = event.target.closest?.("[data-planr-reply-form]");
-      if (form) form.querySelector(".planr-reply-send").disabled = !form.elements.namedItem("reply").value.trim();
+      if (form)
+        form.querySelector(".planr-reply-send").disabled = !form.elements.namedItem("reply").value.trim();
       emitDraftChange();
     };
     const onOverallInput = () => {
@@ -1779,7 +2012,8 @@
       selectPin: (pinId) => controller.selectPin(pinId),
       render,
       setPresentation(options = {}) {
-        if (options.filterKey !== presentation.filterKey || options.pageSize !== void 0 && options.pageSize !== presentation.pageSize) visibleLimit = options.pageSize || presentation.pageSize || Infinity;
+        if (options.filterKey !== presentation.filterKey || options.pageSize !== void 0 && options.pageSize !== presentation.pageSize)
+          visibleLimit = options.pageSize || presentation.pageSize || Infinity;
         presentation = { ...presentation, ...options };
         render();
       },
@@ -1792,17 +2026,28 @@
           const name = snapshot.identity.slice(0, ARTIFACT_REVIEW_LIMITS.authorName);
           controller.setIdentity(name.trim() ? { ...controller.getIdentity(), name } : null);
         }
-        for (const [id, value] of Object.entries(snapshot.replies ?? {}).slice(0, ARTIFACT_REVIEW_LIMITS.pins)) {
-          if (id.length <= ARTIFACT_REVIEW_LIMITS.id && typeof value === "string") replyDrafts.set(id, value.slice(0, ARTIFACT_REVIEW_LIMITS.text));
+        for (const [id, value] of Object.entries(snapshot.replies ?? {}).slice(
+          0,
+          ARTIFACT_REVIEW_LIMITS.pins
+        )) {
+          if (id.length <= ARTIFACT_REVIEW_LIMITS.id && typeof value === "string")
+            replyDrafts.set(id, value.slice(0, ARTIFACT_REVIEW_LIMITS.text));
         }
         expandedReplies.clear();
         const expanded = Array.isArray(snapshot.expandedReplies) ? snapshot.expandedReplies : [...replyDrafts.keys()];
-        for (const id of expanded.slice(0, ARTIFACT_REVIEW_LIMITS.pins)) if (typeof id === "string" && id.length <= ARTIFACT_REVIEW_LIMITS.id) expandedReplies.add(id);
-        for (const [key, value] of Object.entries(snapshot.fields ?? {}).slice(0, ARTIFACT_REVIEW_LIMITS.pins)) {
-          if (key.length <= 512 && typeof value === "string") extraDrafts.set(key, value.slice(0, ARTIFACT_REVIEW_LIMITS.text));
+        for (const id of expanded.slice(0, ARTIFACT_REVIEW_LIMITS.pins))
+          if (typeof id === "string" && id.length <= ARTIFACT_REVIEW_LIMITS.id)
+            expandedReplies.add(id);
+        for (const [key, value] of Object.entries(snapshot.fields ?? {}).slice(
+          0,
+          ARTIFACT_REVIEW_LIMITS.pins
+        )) {
+          if (key.length <= 512 && typeof value === "string")
+            extraDrafts.set(key, value.slice(0, ARTIFACT_REVIEW_LIMITS.text));
         }
         overallDirty = snapshot.overall?.dirty === true;
-        if (overallDirty && typeof snapshot.overall?.value === "string") overall.value = snapshot.overall.value.slice(0, ARTIFACT_REVIEW_LIMITS.text);
+        if (overallDirty && typeof snapshot.overall?.value === "string")
+          overall.value = snapshot.overall.value.slice(0, ARTIFACT_REVIEW_LIMITS.text);
         render({ capture: false });
         return true;
       },
@@ -1839,7 +2084,12 @@
     const drawing = root.querySelector(".diagram-drawing");
     const { width, height } = config.artifact.viewport;
     const camera = { x: 0, y: 0, scale: 1, fit: "all" };
-    const state = { status: "ready", activeArtifactId: config.artifact.id, artifacts: [config.artifact], reviewMode: "interact" };
+    const state = {
+      status: "ready",
+      activeArtifactId: config.artifact.id,
+      artifacts: [config.artifact],
+      reviewMode: "interact"
+    };
     const cleanup = [];
     const listen = (target, event, handler, options) => {
       target.addEventListener(event, handler, options);
@@ -1848,11 +2098,28 @@
     let paintId = 0, space = false, gesture = null, annotations;
     let selectedIndex = -1, connectionFocus = false, presentationIndex = 0;
     const intentLabels = { fix: "Change request", improve: "Suggestion", question: "Question" };
-    const semanticAttributes = ["data-item-id", "data-relation-id", "data-phase-id", "data-group-id", "data-lane-id", "data-annotation-id", "data-scene-id"];
-    const drawingElements = [...drawing.querySelectorAll(semanticAttributes.map((attribute) => `[${attribute}]`).join(","))];
-    const elementIndex = new Map(drawingElements.map((element) => [semanticAttributes.map((attribute) => element.getAttribute(attribute)).find(Boolean), element]));
+    const semanticAttributes = [
+      "data-item-id",
+      "data-relation-id",
+      "data-phase-id",
+      "data-group-id",
+      "data-lane-id",
+      "data-annotation-id",
+      "data-scene-id"
+    ];
+    const drawingElements = [
+      ...drawing.querySelectorAll(semanticAttributes.map((attribute) => `[${attribute}]`).join(","))
+    ];
+    const elementIndex = new Map(
+      drawingElements.map((element) => [
+        semanticAttributes.map((attribute) => element.getAttribute(attribute)).find(Boolean),
+        element
+      ])
+    );
     const itemIndex = new Map(config.items.map((item, index) => [item.id, index]));
-    const groups = new Map(config.items.filter((item) => item.kind === "Group").map((item) => [item.id, item]));
+    const groups = new Map(
+      config.items.filter((item) => item.kind === "Group").map((item) => [item.id, item])
+    );
     const groupMembers = /* @__PURE__ */ new Map();
     const collapsedGroups = /* @__PURE__ */ new Set();
     let groupHiddenIds = /* @__PURE__ */ new Set();
@@ -1863,7 +2130,8 @@
       trail.add(id);
       for (const member of groups.get(id)?.members ?? []) {
         members.add(member);
-        if (groups.has(member)) for (const nested of resolveGroupMembers(member, trail)) members.add(nested);
+        if (groups.has(member))
+          for (const nested of resolveGroupMembers(member, trail)) members.add(nested);
       }
       trail.delete(id);
       groupMembers.set(id, members);
@@ -1874,10 +2142,17 @@
       const element = elementIndex.get(id);
       if (!element) return null;
       const bounds = element.getBBox();
-      return { x: Math.max(0, bounds.x - 4), y: Math.max(0, bounds.y - 4), width: Math.max(8, bounds.width + 8), height: Math.max(8, bounds.height + 8) };
+      return {
+        x: Math.max(0, bounds.x - 4),
+        y: Math.max(0, bounds.y - 4),
+        width: Math.max(8, bounds.width + 8),
+        height: Math.max(8, bounds.height + 8)
+      };
     }
     function hitItem(x, y) {
-      return config.items.map((item, index) => ({ item, index, rect: elementBounds(item.id) })).filter(({ item, rect }) => !groupHiddenIds.has(item.id) && rect && x >= rect.x && x <= rect.x + rect.width && y >= rect.y && y <= rect.y + rect.height).sort((a, b) => a.rect.width * a.rect.height - b.rect.width * b.rect.height)[0] ?? null;
+      return config.items.map((item, index) => ({ item, index, rect: elementBounds(item.id) })).filter(
+        ({ item, rect }) => !groupHiddenIds.has(item.id) && rect && x >= rect.x && x <= rect.x + rect.width && y >= rect.y && y <= rect.y + rect.height
+      ).sort((a, b) => a.rect.width * a.rect.height - b.rect.width * b.rect.height)[0] ?? null;
     }
     drawing.dataset.planrArtifactFrame = config.artifact.id;
     drawing.__openPlanrBridge = {
@@ -1902,7 +2177,9 @@
       root.dataset.planrReviewMode = mode;
       root.querySelector("[data-action=pan]").setAttribute("aria-pressed", String(mode === "interact"));
       root.querySelector("[data-action=comment]").setAttribute("aria-pressed", String(mode === "comment"));
-      status(mode === "comment" ? "Click or drag an area to comment · Esc to pan" : "Drag anywhere to pan");
+      status(
+        mode === "comment" ? "Click or drag an area to comment · Esc to pan" : "Drag anywhere to pan"
+      );
       emit();
     };
     function setRail(open) {
@@ -1919,10 +2196,13 @@
       document2.getElementById("diagram-outline").inert = !open;
       if (open && window.innerWidth <= 700) setRail(false);
     }
-    const stage = { getState: () => state, dispatch(action) {
-      if (action.type === "set-review-mode") setMode(action.reviewMode);
-      if (action.type === "set-rail-open") setRail(action.railOpen);
-    } };
+    const stage = {
+      getState: () => state,
+      dispatch(action) {
+        if (action.type === "set-review-mode") setMode(action.reviewMode);
+        if (action.type === "set-rail-open") setRail(action.railOpen);
+      }
+    };
     function draw() {
       paintId = 0;
       surface.style.transform = `translate(${camera.x}px,${camera.y}px) scale(${camera.scale})`;
@@ -1942,7 +2222,10 @@
       camera.fit = mode;
       const availableWidth = Math.max(1, canvas.clientWidth - 48);
       const availableHeight = Math.max(1, canvas.clientHeight - 116);
-      camera.scale = Math.min(1, mode === "width" ? availableWidth / width : Math.min(availableWidth / width, availableHeight / height));
+      camera.scale = Math.min(
+        1,
+        mode === "width" ? availableWidth / width : Math.min(availableWidth / width, availableHeight / height)
+      );
       camera.x = (canvas.clientWidth - width * camera.scale) / 2;
       camera.y = mode === "width" ? 24 : 24 + (availableHeight - height * camera.scale) / 2;
       paint();
@@ -1973,7 +2256,11 @@
       const availableWidth = Math.max(1, canvas.clientWidth - 96);
       const availableHeight = Math.max(1, canvas.clientHeight - 128);
       camera.fit = null;
-      camera.scale = Math.min(2, availableWidth / Math.max(1, bounds.width), availableHeight / Math.max(1, bounds.height));
+      camera.scale = Math.min(
+        2,
+        availableWidth / Math.max(1, bounds.width),
+        availableHeight / Math.max(1, bounds.height)
+      );
       camera.x = (canvas.clientWidth - bounds.width * camera.scale) / 2 - bounds.x * camera.scale;
       camera.y = 24 + (availableHeight - bounds.height * camera.scale) / 2 - bounds.y * camera.scale;
       canvas.scrollTop = 0;
@@ -1984,7 +2271,16 @@
     const chapters = sections.length > 0 ? sections.map((item, index) => {
       const next = sections[index + 1];
       const y = Math.max(0, item.y - 46);
-      return { id: item.id, label: item.label, bounds: { x: 0, y, width, height: Math.max(80, (next?.y ?? height) - y - (next ? 30 : 0)) } };
+      return {
+        id: item.id,
+        label: item.label,
+        bounds: {
+          x: 0,
+          y,
+          width,
+          height: Math.max(80, (next?.y ?? height) - y - (next ? 30 : 0))
+        }
+      };
     }) : config.items.filter((item) => item.kind === "Group").map((item) => ({ id: item.id, label: item.label, bounds: elementBounds(item.id) }));
     if (chapters.length === 0) chapters.push({ id: "overview", label: "Overview", bounds: null });
     function updateOutlineFilter() {
@@ -2000,12 +2296,15 @@
     }
     function applyGroupVisibility() {
       groupHiddenIds = /* @__PURE__ */ new Set();
-      for (const id of collapsedGroups) for (const member of groupMembers.get(id) ?? []) groupHiddenIds.add(member);
+      for (const id of collapsedGroups)
+        for (const member of groupMembers.get(id) ?? []) groupHiddenIds.add(member);
       for (const relation of config.relations ?? []) {
-        if (groupHiddenIds.has(relation.from) && groupHiddenIds.has(relation.to)) groupHiddenIds.add(relation.id);
+        if (groupHiddenIds.has(relation.from) && groupHiddenIds.has(relation.to))
+          groupHiddenIds.add(relation.id);
       }
       for (const item of config.items) {
-        if (item.kind === "Note" && item.targetId && groupHiddenIds.has(item.targetId)) groupHiddenIds.add(item.id);
+        if (item.kind === "Note" && item.targetId && groupHiddenIds.has(item.targetId))
+          groupHiddenIds.add(item.id);
       }
       for (const [id, element] of elementIndex) {
         element.toggleAttribute("data-group-hidden", groupHiddenIds.has(id));
@@ -2063,7 +2362,10 @@
           connectionFocus = false;
           updateSelection();
         }
-        focusPoint(rect ? rect.x + x * rect.width : x * width, rect ? rect.y + y * rect.height : y * height);
+        focusPoint(
+          rect ? rect.x + x * rect.width : x * width,
+          rect ? rect.y + y * rect.height : y * height
+        );
       }
     });
     async function save() {
@@ -2077,7 +2379,11 @@
         const review = pendingReview;
         pendingReview = null;
         try {
-          const response = await window.fetch(`${config.base}api/review`, { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ review }) });
+          const response = await window.fetch(`${config.base}api/review`, {
+            method: "PUT",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ review })
+          });
           if (!response.ok) throw new Error("Review could not be saved");
         } catch {
           pendingReview ??= review;
@@ -2130,7 +2436,9 @@
       if (!item) return;
       expandForItem(item.id);
       selectedIndex = index;
-      root.querySelectorAll("[data-item-index]").forEach((button) => button.setAttribute("aria-current", String(Number(button.dataset.itemIndex) === index)));
+      root.querySelectorAll("[data-item-index]").forEach(
+        (button) => button.setAttribute("aria-current", String(Number(button.dataset.itemIndex) === index))
+      );
       const details = root.querySelector("[data-element-details]");
       details.hidden = false;
       details.querySelector("[data-element-label]").textContent = item.label;
@@ -2142,7 +2450,9 @@
       groupToggle.hidden = item.kind !== "Group";
       groupToggle.textContent = collapsedGroups.has(item.id) ? "Expand group details" : "Collapse group details";
       groupToggle.setAttribute("aria-pressed", String(collapsedGroups.has(item.id)));
-      root.querySelector("[data-action=connections]").disabled = !(config.relations ?? []).some((relation) => relation.id === item.id || relation.from === item.id || relation.to === item.id);
+      root.querySelector("[data-action=connections]").disabled = !(config.relations ?? []).some(
+        (relation) => relation.id === item.id || relation.from === item.id || relation.to === item.id
+      );
       updateSelection();
       if (focus) {
         if (window.innerWidth <= 700) setOutline(false);
@@ -2195,13 +2505,26 @@
     listen(document2, "fullscreenchange", () => {
       if (!document2.fullscreenElement && root.dataset.present === "true") resetPresentation();
     });
-    const actions = { pan: () => setMode("interact"), comment: () => setMode("comment"), "zoom-in": () => zoom(camera.scale * 1.2), "zoom-out": () => zoom(camera.scale / 1.2), fit: () => fit(), width: () => fit("width"), actual: () => zoom(1), outline: () => setOutline(root.dataset.outlineOpen !== "true"), review: () => setRail(root.dataset.planrRailOpen !== "true"), present };
+    const actions = {
+      pan: () => setMode("interact"),
+      comment: () => setMode("comment"),
+      "zoom-in": () => zoom(camera.scale * 1.2),
+      "zoom-out": () => zoom(camera.scale / 1.2),
+      fit: () => fit(),
+      width: () => fit("width"),
+      actual: () => zoom(1),
+      outline: () => setOutline(root.dataset.outlineOpen !== "true"),
+      review: () => setRail(root.dataset.planrRailOpen !== "true"),
+      present
+    };
     actions["previous-chapter"] = () => showChapter(presentationIndex - 1);
     actions["next-chapter"] = () => showChapter(presentationIndex + 1);
     actions.connections = () => {
       connectionFocus = !connectionFocus;
       updateSelection();
-      status(connectionFocus ? "Direct connections highlighted · Click again to show all" : "Showing the complete diagram");
+      status(
+        connectionFocus ? "Direct connections highlighted · Click again to show all" : "Showing the complete diagram"
+      );
     };
     actions["toggle-group"] = () => {
       const item = config.items[selectedIndex];
@@ -2210,7 +2533,9 @@
       else collapsedGroups.add(item.id);
       applyGroupVisibility();
       selectItem(selectedIndex, { focus: false });
-      status(collapsedGroups.has(item.id) ? `${item.label} details collapsed` : `${item.label} details expanded`);
+      status(
+        collapsedGroups.has(item.id) ? `${item.label} details collapsed` : `${item.label} details expanded`
+      );
     };
     actions["close-details"] = () => {
       selectedIndex = -1;
@@ -2224,7 +2549,17 @@
       if (!item) return;
       const rect = elementBounds(item.id);
       if (!rect) return;
-      annotations.openComposer({ artifactId: config.artifact.id, viewport: config.artifact.viewport, variant: "diagram", region: { x: (rect.x + rect.width / 2) / width, y: (rect.y + rect.height / 2) / height, w: 0, h: 0 } });
+      annotations.openComposer({
+        artifactId: config.artifact.id,
+        viewport: config.artifact.viewport,
+        variant: "diagram",
+        region: {
+          x: (rect.x + rect.width / 2) / width,
+          y: (rect.y + rect.height / 2) / height,
+          w: 0,
+          h: 0
+        }
+      });
     };
     listen(root, "click", (event) => {
       const button = event.target.closest("[data-action]");
@@ -2235,7 +2570,8 @@
         setRail(false);
         root.querySelector("[data-action=review]").focus();
       }
-      if (!event.target.closest(".diagram-export")) root.querySelector(".diagram-export").open = false;
+      if (!event.target.closest(".diagram-export"))
+        root.querySelector(".diagram-export").open = false;
     });
     function point(event) {
       const rect = canvas.getBoundingClientRect();
@@ -2260,7 +2596,8 @@
       root.querySelector("[data-selection]").hidden = true;
     }
     listen(canvas, "pointerdown", (event) => {
-      if (event.target.closest("button,a,input,.diagram-canvas-tools,.planr-pin") || ![0, 1].includes(event.button)) return;
+      if (event.target.closest("button,a,input,.diagram-canvas-tools,.planr-pin") || ![0, 1].includes(event.button))
+        return;
       event.preventDefault();
       canvas.focus({ preventScroll: true });
       canvas.setPointerCapture(event.pointerId);
@@ -2287,7 +2624,10 @@
       if (!gesture) return;
       if (gesture.type === "pinch" && pointers.size === 2) {
         const [a, b] = [...pointers.values()];
-        camera.scale = Math.max(0.04, Math.min(4, gesture.scale * Math.hypot(a.x - b.x, a.y - b.y) / gesture.distance));
+        camera.scale = Math.max(
+          0.04,
+          Math.min(4, gesture.scale * Math.hypot(a.x - b.x, a.y - b.y) / gesture.distance)
+        );
         camera.x = (a.x + b.x) / 2 - gesture.diagramX * camera.scale;
         camera.y = (a.y + b.y) / 2 - gesture.diagramY * camera.scale;
         camera.fit = null;
@@ -2302,10 +2642,18 @@
         paint();
       }
       if (gesture.type === "comment") {
-        const region = clientSelectionToNormalized(surface.getBoundingClientRect(), gesture.client, { x: event.clientX, y: event.clientY });
+        const region = clientSelectionToNormalized(surface.getBoundingClientRect(), gesture.client, {
+          x: event.clientX,
+          y: event.clientY
+        });
         const selection = root.querySelector("[data-selection]");
         selection.hidden = false;
-        Object.assign(selection.style, { left: `${region.x * 100}%`, top: `${region.y * 100}%`, width: `${region.w * 100}%`, height: `${region.h * 100}%` });
+        Object.assign(selection.style, {
+          left: `${region.x * 100}%`,
+          top: `${region.y * 100}%`,
+          width: `${region.w * 100}%`,
+          height: `${region.h * 100}%`
+        });
       }
     });
     listen(canvas, "pointerup", (event) => {
@@ -2315,8 +2663,16 @@
         if (window.innerWidth <= 700) setOutline(true);
       }
       if (gesture?.type === "comment" && pointers.size === 1) {
-        const region = clientSelectionToNormalized(surface.getBoundingClientRect(), gesture.client, { x: event.clientX, y: event.clientY });
-        annotations.openComposer({ artifactId: config.artifact.id, viewport: config.artifact.viewport, variant: "diagram", region });
+        const region = clientSelectionToNormalized(surface.getBoundingClientRect(), gesture.client, {
+          x: event.clientX,
+          y: event.clientY
+        });
+        annotations.openComposer({
+          artifactId: config.artifact.id,
+          viewport: config.artifact.viewport,
+          variant: "diagram",
+          region
+        });
       }
       if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
       resetGesture();
@@ -2329,24 +2685,40 @@
       space = false;
       resetGesture();
     });
-    listen(canvas, "wheel", (event) => {
-      if (event.target.closest(".diagram-canvas-tools")) return;
-      event.preventDefault();
-      const p = point(event);
-      const units = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? canvas.clientHeight : 1;
-      if (event.ctrlKey || event.metaKey) zoom(camera.scale * Math.exp(-event.deltaY * units * 4e-3), p.x, p.y);
-      else {
-        camera.fit = null;
-        camera.x -= (event.shiftKey ? event.deltaY : event.deltaX) * units;
-        camera.y -= (event.shiftKey ? 0 : event.deltaY) * units;
-        paint();
-      }
-    }, { passive: false });
+    listen(
+      canvas,
+      "wheel",
+      (event) => {
+        if (event.target.closest(".diagram-canvas-tools")) return;
+        event.preventDefault();
+        const p = point(event);
+        const units = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? canvas.clientHeight : 1;
+        if (event.ctrlKey || event.metaKey)
+          zoom(camera.scale * Math.exp(-event.deltaY * units * 4e-3), p.x, p.y);
+        else {
+          camera.fit = null;
+          camera.x -= (event.shiftKey ? event.deltaY : event.deltaX) * units;
+          camera.y -= (event.shiftKey ? 0 : event.deltaY) * units;
+          paint();
+        }
+      },
+      { passive: false }
+    );
     listen(document2, "keydown", (event) => {
-      if (event.target.closest("input,textarea,select,[contenteditable=true],.planr-annotation-composer") || event.metaKey || event.ctrlKey || event.altKey) return;
+      if (event.target.closest(
+        "input,textarea,select,[contenteditable=true],.planr-annotation-composer"
+      ) || event.metaKey || event.ctrlKey || event.altKey)
+        return;
       const key = event.key.toLowerCase();
       if (root.dataset.present === "true") {
-        const chapterKey = { arrowleft: presentationIndex - 1, pageup: presentationIndex - 1, arrowright: presentationIndex + 1, pagedown: presentationIndex + 1, home: 0, end: chapters.length - 1 }[key];
+        const chapterKey = {
+          arrowleft: presentationIndex - 1,
+          pageup: presentationIndex - 1,
+          arrowright: presentationIndex + 1,
+          pagedown: presentationIndex + 1,
+          home: 0,
+          end: chapters.length - 1
+        }[key];
         if (chapterKey !== void 0) {
           event.preventDefault();
           showChapter(chapterKey);
@@ -2357,7 +2729,19 @@
         event.preventDefault();
         space = true;
       }
-      const keys = { f: "fit", "0": "fit", w: "width", "1": "actual", "+": "zoom-in", "=": "zoom-in", "-": "zoom-out", c: "comment", v: "pan", n: "outline", p: "present" };
+      const keys = {
+        f: "fit",
+        0: "fit",
+        w: "width",
+        1: "actual",
+        "+": "zoom-in",
+        "=": "zoom-in",
+        "-": "zoom-out",
+        c: "comment",
+        v: "pan",
+        n: "outline",
+        p: "present"
+      };
       if (keys[key]) {
         event.preventDefault();
         actions[keys[key]]();
@@ -2395,13 +2779,22 @@
     setOutline(window.innerWidth > 700);
     fit(initialFit());
     draw();
-    const api = { camera, fit, focusPoint, feedback, annotations, chapters, collapsedGroups, destroy() {
-      resize.disconnect();
-      window.cancelAnimationFrame(paintId);
-      annotations.destroy();
-      feedback.destroy();
-      cleanup.splice(0).forEach((remove) => remove());
-    } };
+    const api = {
+      camera,
+      fit,
+      focusPoint,
+      feedback,
+      annotations,
+      chapters,
+      collapsedGroups,
+      destroy() {
+        resize.disconnect();
+        window.cancelAnimationFrame(paintId);
+        annotations.destroy();
+        feedback.destroy();
+        cleanup.splice(0).forEach((remove) => remove());
+      }
+    };
     window.__openPlanrDiagramStudio = api;
     root.dataset.ready = "true";
     return api;

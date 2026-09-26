@@ -22,18 +22,15 @@ import {
 } from '../lib/artifact/index.mjs';
 
 const packageRoot = resolve(import.meta.dirname, '..');
-const fixture = JSON.parse(readFileSync(
-  join(packageRoot, 'fixtures/diagram/grammars/flowchart.planr-diagram.json'),
-  'utf8',
-));
-const pin = JSON.parse(readFileSync(
-  join(packageRoot, 'fixtures/diagram/integration/review-pin.json'),
-  'utf8',
-));
-const consumers = JSON.parse(readFileSync(
-  join(packageRoot, 'fixtures/diagram/integration/consumers.json'),
-  'utf8',
-));
+const fixture = JSON.parse(
+  readFileSync(join(packageRoot, 'fixtures/diagram/grammars/flowchart.planr-diagram.json'), 'utf8'),
+);
+const pin = JSON.parse(
+  readFileSync(join(packageRoot, 'fixtures/diagram/integration/review-pin.json'), 'utf8'),
+);
+const consumers = JSON.parse(
+  readFileSync(join(packageRoot, 'fixtures/diagram/integration/consumers.json'), 'utf8'),
+);
 
 async function rendered(t) {
   const root = await mkdtemp(join(tmpdir(), 'openplanr-diagram-integration-'));
@@ -55,7 +52,9 @@ test('diagram HTML uses the existing canvas review envelope and binds returned p
   assert.equal(prepared.envelope.viewer.presentation, 'canvas');
   assert.equal(prepared.envelope.artifacts[0].id, fixture.diagramId);
   assert.deepEqual(
-    validateProtocolArtifact('diagram-review-binding', prepared.binding, { protocolVersion: '1.6.0' }),
+    validateProtocolArtifact('diagram-review-binding', prepared.binding, {
+      protocolVersion: '1.6.0',
+    }),
     [],
   );
 
@@ -78,7 +77,10 @@ test('diagram HTML uses the existing canvas review envelope and binds returned p
     validateProtocolArtifact('diagram-review-binding', binding, { protocolVersion: '1.6.0' }),
     [],
   );
-  assert.ok(sourceBefore.equals(await readFile(set.source)), 'review must not rewrite canonical IR');
+  assert.ok(
+    sourceBefore.equals(await readFile(set.source)),
+    'review must not rewrite canonical IR',
+  );
 });
 
 test('specification, documentation, and PDF consumers reuse one verified offline artifact set', async (t) => {
@@ -96,14 +98,15 @@ test('specification, documentation, and PDF consumers reuse one verified offline
     }),
   ]);
 
-  assert.deepEqual(values.map(({ reference }) => reference.consumer.kind), [
-    'specification',
-    'documentation',
-    'pdf',
-  ]);
+  assert.deepEqual(
+    values.map(({ reference }) => reference.consumer.kind),
+    ['specification', 'documentation', 'pdf'],
+  );
   for (const { reference, bytes, absolutePath } of values) {
     assert.deepEqual(
-      validateProtocolArtifact('diagram-consumer-reference', reference, { protocolVersion: '1.6.0' }),
+      validateProtocolArtifact('diagram-consumer-reference', reference, {
+        protocolVersion: '1.6.0',
+      }),
       [],
     );
     assert.equal(reference.manifest.digest, values[0].reference.manifest.digest);
@@ -113,5 +116,8 @@ test('specification, documentation, and PDF consumers reuse one verified offline
     assert.equal(reference.accessibility.title, fixture.accessibility.title);
   }
   assert.match(values[2].reference.output.mediaType, /^image\/(?:svg\+xml|png)/u);
-  assert.ok(sourceBefore.equals(await readFile(set.source)), 'consumers must not copy or rewrite canonical IR');
+  assert.ok(
+    sourceBefore.equals(await readFile(set.source)),
+    'consumers must not copy or rewrite canonical IR',
+  );
 });

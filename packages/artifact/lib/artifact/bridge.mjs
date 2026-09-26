@@ -1,5 +1,10 @@
 import { randomBytes } from 'node:crypto';
-import { normalizeArtifactBridgeToolResult, normalizeArtifactViewportPan, normalizeArtifactViewportZoom, renderArtifactBridgeToolsSource } from './ui/bridge-tools.mjs';
+import {
+  normalizeArtifactBridgeToolResult,
+  normalizeArtifactViewportPan,
+  normalizeArtifactViewportZoom,
+  renderArtifactBridgeToolsSource,
+} from './ui/bridge-tools.mjs';
 
 import { parse, parseFragment, serialize } from 'parse5';
 
@@ -26,12 +31,36 @@ const ID_RE = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,511}$/;
 const REQUEST_ID_RE = /^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$/;
 const SCRIPT_NONCE_RE = /^[A-Za-z0-9_-]{24}$/;
 const FORBIDDEN_TAGS = new Set([
-  'applet', 'base', 'embed', 'fencedframe', 'form', 'frame', 'frameset', 'iframe',
-  'noembed', 'noframes', 'noscript', 'object', 'portal',
+  'applet',
+  'base',
+  'embed',
+  'fencedframe',
+  'form',
+  'frame',
+  'frameset',
+  'iframe',
+  'noembed',
+  'noframes',
+  'noscript',
+  'object',
+  'portal',
 ]);
 const URL_ATTRIBUTES = new Set([
-  'action', 'archive', 'background', 'classid', 'codebase', 'formaction', 'href',
-  'longdesc', 'manifest', 'ping', 'profile', 'src', 'srcdoc', 'target', 'xlink:href',
+  'action',
+  'archive',
+  'background',
+  'classid',
+  'codebase',
+  'formaction',
+  'href',
+  'longdesc',
+  'manifest',
+  'ping',
+  'profile',
+  'src',
+  'srcdoc',
+  'target',
+  'xlink:href',
 ]);
 const REMOTE_URL_RE = /^(?:https?:|file:|ftp:|wss?:|\/\/)/i;
 
@@ -58,10 +87,7 @@ function createText(value, parentNode) {
 }
 
 function descendants(node) {
-  return [
-    ...(node?.childNodes ?? []),
-    ...(node?.content?.childNodes ?? []),
-  ];
+  return [...(node?.childNodes ?? []), ...(node?.content?.childNodes ?? [])];
 }
 
 function removeNode(node) {
@@ -155,7 +181,10 @@ function assertSandboxableTree(document, { allowLocalForms = false } = {}) {
       );
     }
     if (tag === 'meta' && getAttr(node, 'http-equiv')?.trim().toLowerCase() === 'refresh') {
-      throw pipelineError(ARTIFACT_ERROR_CODES.SANDBOX_POLICY, 'Meta refresh navigation is forbidden.');
+      throw pipelineError(
+        ARTIFACT_ERROR_CODES.SANDBOX_POLICY,
+        'Meta refresh navigation is forbidden.',
+      );
     }
     for (const attribute of node.attrs ?? []) {
       const name = attribute.name.toLowerCase();
@@ -179,7 +208,10 @@ function assertSandboxableTree(document, { allowLocalForms = false } = {}) {
     if (tag === 'style') {
       const css = (node.childNodes ?? []).map((child) => child.value ?? '').join('');
       if (/(?:@import|url\s*\(\s*['"]?(?:https?:|file:|\/\/))/i.test(css)) {
-        throw pipelineError(ARTIFACT_ERROR_CODES.SANDBOX_POLICY, 'Remote stylesheet resources are forbidden.');
+        throw pipelineError(
+          ARTIFACT_ERROR_CODES.SANDBOX_POLICY,
+          'Remote stylesheet resources are forbidden.',
+        );
       }
     }
     queue.push(...descendants(node));
@@ -488,14 +520,27 @@ export function prepareArtifactDocument({
   }
   const originMatch = /^http:\/\/127\.0\.0\.1:(\d{1,5})$/.exec(parentOrigin ?? '');
   const originPort = Number(originMatch?.[1]);
-  if (!(portable && parentOrigin === 'null') && (!originMatch || !Number.isInteger(originPort) || originPort < 1 || originPort > 65_535
-    || String(originPort) !== originMatch[1])) {
-    throw pipelineError(ARTIFACT_ERROR_CODES.SANDBOX_POLICY, 'Artifact parent origin must be IPv4 loopback.');
+  if (
+    !(portable && parentOrigin === 'null') &&
+    (!originMatch ||
+      !Number.isInteger(originPort) ||
+      originPort < 1 ||
+      originPort > 65_535 ||
+      String(originPort) !== originMatch[1])
+  ) {
+    throw pipelineError(
+      ARTIFACT_ERROR_CODES.SANDBOX_POLICY,
+      'Artifact parent origin must be IPv4 loopback.',
+    );
   }
   const document = parse(html, { sourceCodeLocationInfo: false });
   assertSandboxableTree(document, { allowLocalForms });
   const head = findElement(document, 'head');
-  if (!head) throw pipelineError(ARTIFACT_ERROR_CODES.SANDBOX_POLICY, 'Artifact document has no head element.');
+  if (!head)
+    throw pipelineError(
+      ARTIFACT_ERROR_CODES.SANDBOX_POLICY,
+      'Artifact document has no head element.',
+    );
 
   for (const node of [...descendants(head)]) {
     if (node?.tagName?.toLowerCase() === 'meta') {
@@ -504,8 +549,11 @@ export function prepareArtifactDocument({
     }
   }
   const csp = artifactContentSecurityPolicy(scriptNonce);
-  const hasViewport = descendants(head).some((node) => node?.tagName?.toLowerCase() === 'meta'
-    && getAttr(node, 'name')?.trim().toLowerCase() === 'viewport');
+  const hasViewport = descendants(head).some(
+    (node) =>
+      node?.tagName?.toLowerCase() === 'meta' &&
+      getAttr(node, 'name')?.trim().toLowerCase() === 'viewport',
+  );
   const viewportMeta = hasViewport ? null : createElement('meta');
   if (viewportMeta) {
     setAttr(viewportMeta, 'name', 'viewport');
@@ -522,7 +570,9 @@ export function prepareArtifactDocument({
   referrerMeta.parentNode = head;
   const bridge = createElement('script');
   setAttr(bridge, 'nonce', scriptNonce);
-  bridge.childNodes = [createText(artifactGuardAndBridgeSource({ artifactId, nonce, parentOrigin }), bridge)];
+  bridge.childNodes = [
+    createText(artifactGuardAndBridgeSource({ artifactId, nonce, parentOrigin }), bridge),
+  ];
   bridge.parentNode = head;
 
   const queue = descendants(document);
@@ -531,21 +581,35 @@ export function prepareArtifactDocument({
     if (node?.tagName?.toLowerCase() === 'script') setAttr(node, 'nonce', scriptNonce);
     queue.push(...descendants(node));
   }
-  head.childNodes = [cspMeta, referrerMeta, ...(viewportMeta ? [viewportMeta] : []), bridge, ...(head.childNodes ?? [])];
+  head.childNodes = [
+    cspMeta,
+    referrerMeta,
+    ...(viewportMeta ? [viewportMeta] : []),
+    bridge,
+    ...(head.childNodes ?? []),
+  ];
   return Object.freeze({ html: serialize(document), csp, scriptNonce });
 }
 
 /** Pure parent-side validator. Invalid messages preserve coordinate fallback. */
-export function validateArtifactBridgeMessage(event, {
-  source,
-  nonce,
-  artifactId,
-  viewport,
-  pendingRequestIds,
-  pendingChallengeIds,
-  viewportGesturesEnabled = false,
-} = {}) {
-  if (!source || !isCapabilityToken(nonce) || typeof artifactId !== 'string' || !ID_RE.test(artifactId)) {
+export function validateArtifactBridgeMessage(
+  event,
+  {
+    source,
+    nonce,
+    artifactId,
+    viewport,
+    pendingRequestIds,
+    pendingChallengeIds,
+    viewportGesturesEnabled = false,
+  } = {},
+) {
+  if (
+    !source ||
+    !isCapabilityToken(nonce) ||
+    typeof artifactId !== 'string' ||
+    !ID_RE.test(artifactId)
+  ) {
     return bridgeFailure('contract');
   }
   if (!event || event.source !== source) return bridgeFailure('source');
@@ -555,49 +619,90 @@ export function validateArtifactBridgeMessage(event, {
   const type = ownDataValue(data, 'type');
   const baseKeys = new Set(['channel', 'schemaVersion', 'type', 'nonce', 'artifactId']);
   if (['inspect.result', 'inspect.miss', 'thumbnail.result', 'thumbnail.error'].includes(type)) {
-    if (ownDataValue(data, 'channel') !== ARTIFACT_BRIDGE_CHANNEL || ownDataValue(data, 'schemaVersion') !== ARTIFACT_BRIDGE_VERSION
-      || !timingSafeTokenEqual(ownDataValue(data, 'nonce'), nonce) || ownDataValue(data, 'artifactId') !== artifactId) return bridgeFailure('contract');
+    if (
+      ownDataValue(data, 'channel') !== ARTIFACT_BRIDGE_CHANNEL ||
+      ownDataValue(data, 'schemaVersion') !== ARTIFACT_BRIDGE_VERSION ||
+      !timingSafeTokenEqual(ownDataValue(data, 'nonce'), nonce) ||
+      ownDataValue(data, 'artifactId') !== artifactId
+    )
+      return bridgeFailure('contract');
     const requestId = ownDataValue(data, 'requestId');
-    if (typeof requestId !== 'string' || !REQUEST_ID_RE.test(requestId) || !(pendingRequestIds instanceof Set) || !pendingRequestIds.has(requestId)) return bridgeFailure('request');
-    const result = normalizeArtifactBridgeToolResult(type.startsWith('inspect.') ? 'inspect.point' : 'thumbnail.request', data, viewport);
-    return result.valid ? Object.freeze({ ok: true, value: Object.freeze({ type, artifactId, requestId, result: result.value }) }) : bridgeFailure('tool-result');
+    if (
+      typeof requestId !== 'string' ||
+      !REQUEST_ID_RE.test(requestId) ||
+      !(pendingRequestIds instanceof Set) ||
+      !pendingRequestIds.has(requestId)
+    )
+      return bridgeFailure('request');
+    const result = normalizeArtifactBridgeToolResult(
+      type.startsWith('inspect.') ? 'inspect.point' : 'thumbnail.request',
+      data,
+      viewport,
+    );
+    return result.valid
+      ? Object.freeze({
+          ok: true,
+          value: Object.freeze({ type, artifactId, requestId, result: result.value }),
+        })
+      : bridgeFailure('tool-result');
   }
   if (type === 'bridge.ready') {
     if (!exactKeys(data, baseKeys)) return bridgeFailure('schema');
   } else if (type === 'viewport.zoom') {
-    if (!exactKeys(data, new Set([...baseKeys, 'x', 'y', 'deltaY']))) return bridgeFailure('schema');
+    if (!exactKeys(data, new Set([...baseKeys, 'x', 'y', 'deltaY'])))
+      return bridgeFailure('schema');
   } else if (type === 'viewport.pan') {
-    if (!exactKeys(data, new Set([...baseKeys, 'deltaX', 'deltaY']))) return bridgeFailure('schema');
+    if (!exactKeys(data, new Set([...baseKeys, 'deltaX', 'deltaY'])))
+      return bridgeFailure('schema');
   } else if (type === 'layout.measurement') {
     if (!exactKeys(data, new Set([...baseKeys, 'layout']))) return bridgeFailure('schema');
   } else if (type === 'bridge.challenge-ack' || type === 'anchor.miss') {
     if (!exactKeys(data, new Set([...baseKeys, 'requestId']))) return bridgeFailure('schema');
   } else if (type === 'anchor.result') {
-    if (!exactKeys(data, new Set([...baseKeys, 'requestId', 'anchor']))) return bridgeFailure('schema');
+    if (!exactKeys(data, new Set([...baseKeys, 'requestId', 'anchor'])))
+      return bridgeFailure('schema');
   } else if (type === 'export.error') {
-    if (!exactKeys(data, new Set([...baseKeys, 'requestId', 'reason']))) return bridgeFailure('schema');
+    if (!exactKeys(data, new Set([...baseKeys, 'requestId', 'reason'])))
+      return bridgeFailure('schema');
   } else if (type === 'export.result') {
-    if (!exactKeys(data, new Set([
-      ...baseKeys, 'requestId', 'dataUrl', 'width', 'height', 'label',
-    ]))) return bridgeFailure('schema');
+    if (
+      !exactKeys(data, new Set([...baseKeys, 'requestId', 'dataUrl', 'width', 'height', 'label']))
+    )
+      return bridgeFailure('schema');
   } else {
     return bridgeFailure('type');
   }
-  if (ownDataValue(data, 'channel') !== ARTIFACT_BRIDGE_CHANNEL
-    || ownDataValue(data, 'schemaVersion') !== ARTIFACT_BRIDGE_VERSION) {
+  if (
+    ownDataValue(data, 'channel') !== ARTIFACT_BRIDGE_CHANNEL ||
+    ownDataValue(data, 'schemaVersion') !== ARTIFACT_BRIDGE_VERSION
+  ) {
     return bridgeFailure('schema');
   }
   if (!timingSafeTokenEqual(ownDataValue(data, 'nonce'), nonce)) return bridgeFailure('nonce');
   if (ownDataValue(data, 'artifactId') !== artifactId) return bridgeFailure('artifact');
   if (type === 'viewport.zoom') {
     if (viewportGesturesEnabled !== true) return bridgeFailure('disabled');
-    const zoom = normalizeArtifactViewportZoom({ x: ownDataValue(data, 'x'), y: ownDataValue(data, 'y'), deltaY: ownDataValue(data, 'deltaY') }, viewport);
-    return zoom ? Object.freeze({ ok: true, value: Object.freeze({ type, artifactId, zoom }) }) : bridgeFailure('viewport');
+    const zoom = normalizeArtifactViewportZoom(
+      {
+        x: ownDataValue(data, 'x'),
+        y: ownDataValue(data, 'y'),
+        deltaY: ownDataValue(data, 'deltaY'),
+      },
+      viewport,
+    );
+    return zoom
+      ? Object.freeze({ ok: true, value: Object.freeze({ type, artifactId, zoom }) })
+      : bridgeFailure('viewport');
   }
   if (type === 'viewport.pan') {
     if (viewportGesturesEnabled !== true) return bridgeFailure('disabled');
-    const pan = normalizeArtifactViewportPan({ deltaX: ownDataValue(data, 'deltaX'), deltaY: ownDataValue(data, 'deltaY') });
-    return pan ? Object.freeze({ ok: true, value: Object.freeze({ type, artifactId, pan }) }) : bridgeFailure('viewport');
+    const pan = normalizeArtifactViewportPan({
+      deltaX: ownDataValue(data, 'deltaX'),
+      deltaY: ownDataValue(data, 'deltaY'),
+    });
+    return pan
+      ? Object.freeze({ ok: true, value: Object.freeze({ type, artifactId, pan }) })
+      : bridgeFailure('viewport');
   }
   if (type === 'bridge.ready') {
     return Object.freeze({
@@ -610,9 +715,14 @@ export function validateArtifactBridgeMessage(event, {
     if (!exactKeys(layout, new Set(['width', 'height']))) return bridgeFailure('layout');
     const layoutWidth = ownDataValue(layout, 'width');
     const layoutHeight = ownDataValue(layout, 'height');
-    if (!Number.isInteger(layoutWidth) || !Number.isInteger(layoutHeight)
-      || layoutWidth < 1 || layoutWidth > ARTIFACT_LAYOUT_MAX_WIDTH
-      || layoutHeight < 1 || layoutHeight > ARTIFACT_LAYOUT_MAX_HEIGHT) {
+    if (
+      !Number.isInteger(layoutWidth) ||
+      !Number.isInteger(layoutHeight) ||
+      layoutWidth < 1 ||
+      layoutWidth > ARTIFACT_LAYOUT_MAX_WIDTH ||
+      layoutHeight < 1 ||
+      layoutHeight > ARTIFACT_LAYOUT_MAX_HEIGHT
+    ) {
       return bridgeFailure('layout');
     }
     return Object.freeze({
@@ -627,7 +737,8 @@ export function validateArtifactBridgeMessage(event, {
   }
 
   const requestId = ownDataValue(data, 'requestId');
-  if (typeof requestId !== 'string' || !REQUEST_ID_RE.test(requestId)) return bridgeFailure('request');
+  if (typeof requestId !== 'string' || !REQUEST_ID_RE.test(requestId))
+    return bridgeFailure('request');
   if (type === 'bridge.challenge-ack') {
     if (!(pendingChallengeIds instanceof Set) || !pendingChallengeIds.has(requestId)) {
       return bridgeFailure('request');
@@ -653,18 +764,32 @@ export function validateArtifactBridgeMessage(event, {
     const exportWidth = ownDataValue(data, 'width');
     const exportHeight = ownDataValue(data, 'height');
     const label = ownDataValue(data, 'label');
-    if (typeof dataUrl !== 'string' || dataUrl.length > ARTIFACT_EXPORT_MAX_DATA_URL
-      || !/^data:image\/png;base64,[A-Za-z0-9+/]+=*$/.test(dataUrl)
-      || !Number.isInteger(exportWidth) || !Number.isInteger(exportHeight)
-      || exportWidth < 1 || exportHeight < 1
-      || exportWidth > ARTIFACT_EXPORT_MAX_EDGE || exportHeight > ARTIFACT_EXPORT_MAX_EDGE
-      || typeof label !== 'string' || label.length < 1 || label.length > 128) {
+    if (
+      typeof dataUrl !== 'string' ||
+      dataUrl.length > ARTIFACT_EXPORT_MAX_DATA_URL ||
+      !/^data:image\/png;base64,[A-Za-z0-9+/]+=*$/.test(dataUrl) ||
+      !Number.isInteger(exportWidth) ||
+      !Number.isInteger(exportHeight) ||
+      exportWidth < 1 ||
+      exportHeight < 1 ||
+      exportWidth > ARTIFACT_EXPORT_MAX_EDGE ||
+      exportHeight > ARTIFACT_EXPORT_MAX_EDGE ||
+      typeof label !== 'string' ||
+      label.length < 1 ||
+      label.length > 128
+    ) {
       return bridgeFailure('export');
     }
     return Object.freeze({
       ok: true,
       value: Object.freeze({
-        type, artifactId, requestId, dataUrl, width: exportWidth, height: exportHeight, label,
+        type,
+        artifactId,
+        requestId,
+        dataUrl,
+        width: exportWidth,
+        height: exportHeight,
+        label,
       }),
     });
   }
@@ -678,25 +803,42 @@ export function validateArtifactBridgeMessage(event, {
   if (!exactKeys(anchor, anchorKeys)) return bridgeFailure('anchor');
   const planrId = ownDataValue(anchor, 'planrId');
   const screen = ownDataValue(anchor, 'screen');
-  if (typeof planrId !== 'string' || !ID_RE.test(planrId)
-    || (screen !== undefined && (typeof screen !== 'string' || !/^[^\u0000-\u001f\u007f]{1,128}$/.test(screen)))) {
+  if (
+    typeof planrId !== 'string' ||
+    !ID_RE.test(planrId) ||
+    (screen !== undefined &&
+      (typeof screen !== 'string' || !/^[^\u0000-\u001f\u007f]{1,128}$/.test(screen)))
+  ) {
     return bridgeFailure('anchor');
   }
   const rect = ownDataValue(anchor, 'rect');
   const reportedViewport = ownDataValue(anchor, 'viewport');
-  if (!exactKeys(rect, new Set(['x', 'y', 'width', 'height']))
-    || !exactKeys(reportedViewport, new Set(['width', 'height']))) return bridgeFailure('geometry');
+  if (
+    !exactKeys(rect, new Set(['x', 'y', 'width', 'height'])) ||
+    !exactKeys(reportedViewport, new Set(['width', 'height']))
+  )
+    return bridgeFailure('geometry');
   const width = viewport?.width;
   const height = viewport?.height;
-  if (!Number.isInteger(width) || !Number.isInteger(height)
-    || ownDataValue(reportedViewport, 'width') !== width
-    || ownDataValue(reportedViewport, 'height') !== height) return bridgeFailure('viewport');
+  if (
+    !Number.isInteger(width) ||
+    !Number.isInteger(height) ||
+    ownDataValue(reportedViewport, 'width') !== width ||
+    ownDataValue(reportedViewport, 'height') !== height
+  )
+    return bridgeFailure('viewport');
   const geometry = Object.fromEntries(
     ['x', 'y', 'width', 'height'].map((key) => [key, ownDataValue(rect, key)]),
   );
-  if (!Object.values(geometry).every(finite)
-    || geometry.x < 0 || geometry.y < 0 || geometry.width < 0 || geometry.height < 0
-    || geometry.x + geometry.width > width || geometry.y + geometry.height > height) {
+  if (
+    !Object.values(geometry).every(finite) ||
+    geometry.x < 0 ||
+    geometry.y < 0 ||
+    geometry.width < 0 ||
+    geometry.height < 0 ||
+    geometry.x + geometry.width > width ||
+    geometry.y + geometry.height > height
+  ) {
     return bridgeFailure('geometry');
   }
   return Object.freeze({
@@ -727,23 +869,50 @@ export function renderArtifactParentRuntime({
   inlineArtifacts,
 } = {}) {
   const canonicalPath = (value, { trailingSlash = false } = {}) => {
-    if (typeof value !== 'string' || !value.startsWith('/') || value.startsWith('//')
-      || value.includes('\\') || value.includes('?') || value.includes('#') || /[\u0000-\u001f]/.test(value)
-      || /%(?:00|2f|5c)/i.test(value) || (trailingSlash ? !value.endsWith('/') : value.endsWith('/'))) return false;
+    if (
+      typeof value !== 'string' ||
+      !value.startsWith('/') ||
+      value.startsWith('//') ||
+      value.includes('\\') ||
+      value.includes('?') ||
+      value.includes('#') ||
+      /[\u0000-\u001f]/.test(value) ||
+      /%(?:00|2f|5c)/i.test(value) ||
+      (trailingSlash ? !value.endsWith('/') : value.endsWith('/'))
+    )
+      return false;
     try {
-      return value.split('/').filter(Boolean).every((segment) => {
-        const decoded = decodeURIComponent(segment);
-        return decoded !== '.' && decoded !== '..' && !decoded.includes('/') && !decoded.includes('\\');
-      });
-    } catch { return false; }
+      return value
+        .split('/')
+        .filter(Boolean)
+        .every((segment) => {
+          const decoded = decodeURIComponent(segment);
+          return (
+            decoded !== '.' && decoded !== '..' && !decoded.includes('/') && !decoded.includes('\\')
+          );
+        });
+    } catch {
+      return false;
+    }
   };
-  const portable = inlineArtifacts && typeof inlineArtifacts === 'object' && !Array.isArray(inlineArtifacts)
-    && Object.values(inlineArtifacts).every((html) => typeof html === 'string');
-  if ((!portable && !canonicalPath(artifactBaseUrl, { trailingSlash: true }))
-    || !(canonicalPath(stageRuntimeUrl) || (portable && /^data:text\/javascript;base64,[A-Za-z0-9+/=]+$/u.test(stageRuntimeUrl)))
-    || (adapterRuntimeUrl !== undefined && !canonicalPath(adapterRuntimeUrl))
-    || !isCapabilityToken(nonce)) {
-    throw pipelineError(ARTIFACT_ERROR_CODES.BRIDGE_INVALID, 'Artifact parent runtime configuration is invalid.');
+  const portable =
+    inlineArtifacts &&
+    typeof inlineArtifacts === 'object' &&
+    !Array.isArray(inlineArtifacts) &&
+    Object.values(inlineArtifacts).every((html) => typeof html === 'string');
+  if (
+    (!portable && !canonicalPath(artifactBaseUrl, { trailingSlash: true })) ||
+    !(
+      canonicalPath(stageRuntimeUrl) ||
+      (portable && /^data:text\/javascript;base64,[A-Za-z0-9+/=]+$/u.test(stageRuntimeUrl))
+    ) ||
+    (adapterRuntimeUrl !== undefined && !canonicalPath(adapterRuntimeUrl)) ||
+    !isCapabilityToken(nonce)
+  ) {
+    throw pipelineError(
+      ARTIFACT_ERROR_CODES.BRIDGE_INVALID,
+      'Artifact parent runtime configuration is invalid.',
+    );
   }
   const config = JSON.stringify({
     artifactBaseUrl,

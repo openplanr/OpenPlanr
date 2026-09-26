@@ -7,7 +7,13 @@ const MAX_MERMAID_BYTES = 65_536;
 const HEADER = /^(?:flowchart|graph)\s+(TB|TD|BT|LR|RL)\s*$/iu;
 const EDGE = /^(.*?)\s*(-->|---|-.->)\s*(?:\|([^|]+)\|\s*)?(.*?)\s*$/u;
 const NODE = /^([A-Za-z][A-Za-z0-9_-]*)(?:\s*(?:\[([^\]]+)\]|\(([^)]+)\)|\{([^}]+)\}))?\s*$/u;
-const DIRECTIONS = Object.freeze({ TB: 'top-down', TD: 'top-down', BT: 'bottom-up', LR: 'left-right', RL: 'right-left' });
+const DIRECTIONS = Object.freeze({
+  TB: 'top-down',
+  TD: 'top-down',
+  BT: 'bottom-up',
+  LR: 'left-right',
+  RL: 'right-left',
+});
 const SEQUENCE_HEADER = /^sequenceDiagram\s*$/iu;
 const PARTICIPANT = /^participant\s+([A-Za-z][A-Za-z0-9_]*)\s+as\s+(.+)$/iu;
 const MESSAGE = /^([A-Za-z][A-Za-z0-9_]*)\s*(-->>|->>)\s*([A-Za-z][A-Za-z0-9_]*)\s*:\s*(.+)$/u;
@@ -15,12 +21,16 @@ const PHASE_NOTE = /^Note\s+over\s+([^,\s]+)\s*,\s*([^:\s]+)\s*:\s*Phase:\s*(.+)
 const MESSAGE_NOTE = /^Note\s+over\s+([^,\s]+)\s*,\s*([^:\s]+)\s*:\s*Note:\s*(.+)$/iu;
 const PARTICIPANT_NOTE = /^Note\s+right\s+of\s+([^:\s]+)\s*:\s*Note:\s*(.+)$/iu;
 
-const cleanLabel = (value, fallback) => String(value ?? fallback).trim().replace(/^["']|["']$/gu, '');
-const semanticId = (value) => String(value)
-  .normalize('NFKD')
-  .toLowerCase()
-  .replace(/[^a-z0-9]+/gu, '-')
-  .replace(/^-+|-+$/gu, '');
+const cleanLabel = (value, fallback) =>
+  String(value ?? fallback)
+    .trim()
+    .replace(/^["']|["']$/gu, '');
+const semanticId = (value) =>
+  String(value)
+    .normalize('NFKD')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/gu, '-')
+    .replace(/^-+|-+$/gu, '');
 const parseNodeExpression = (value) => {
   const match = String(value).trim().match(NODE);
   if (!match) return null;
@@ -31,25 +41,42 @@ const parseNodeExpression = (value) => {
   };
 };
 
-export function importMermaid(source, {
-  diagramId = 'imported-flowchart',
-  title = 'Imported flowchart',
-  summary = 'Semantic proposal imported from Mermaid.',
-  audience = 'mixed',
-  detailTier = 'balanced',
-  themeId = 'openplanr-default',
-  sourcePath = null,
-} = {}) {
+export function importMermaid(
+  source,
+  {
+    diagramId = 'imported-flowchart',
+    title = 'Imported flowchart',
+    summary = 'Semantic proposal imported from Mermaid.',
+    audience = 'mixed',
+    detailTier = 'balanced',
+    themeId = 'openplanr-default',
+    sourcePath = null,
+  } = {},
+) {
   const bytes = String(source).replace(/\r\n?/gu, '\n');
   if (Buffer.byteLength(bytes, 'utf8') > MAX_MERMAID_BYTES) {
-    diagramFail(DIAGRAM_ERROR_CODES.MERMAID_TOO_LARGE, `Mermaid input exceeds ${MAX_MERMAID_BYTES} bytes.`);
+    diagramFail(
+      DIAGRAM_ERROR_CODES.MERMAID_TOO_LARGE,
+      `Mermaid input exceeds ${MAX_MERMAID_BYTES} bytes.`,
+    );
   }
-  if (/%%\{|<(?:script|foreignObject)\b|javascript:|https?:\/\/|(?:^|\s)(?:click|href)\s+/imu.test(bytes)) {
-    diagramFail(DIAGRAM_ERROR_CODES.MERMAID_INVALID, 'Mermaid input contains executable configuration or an external resource.', {
-      repair: 'Remove directives, links, scripts, and remote resources before importing.',
-    });
+  if (
+    /%%\{|<(?:script|foreignObject)\b|javascript:|https?:\/\/|(?:^|\s)(?:click|href)\s+/imu.test(
+      bytes,
+    )
+  ) {
+    diagramFail(
+      DIAGRAM_ERROR_CODES.MERMAID_INVALID,
+      'Mermaid input contains executable configuration or an external resource.',
+      {
+        repair: 'Remove directives, links, scripts, and remote resources before importing.',
+      },
+    );
   }
-  const lines = bytes.split('\n').map((line) => line.trim()).filter((line) => line && !line.startsWith('%%'));
+  const lines = bytes
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith('%%'));
   if (SEQUENCE_HEADER.test(lines[0] ?? '')) {
     lines.shift();
     return importSequenceMermaid(bytes, lines, {
@@ -63,14 +90,25 @@ export function importMermaid(source, {
     });
   }
   const header = lines.shift()?.match(HEADER);
-  if (!header) diagramFail(DIAGRAM_ERROR_CODES.MERMAID_INVALID, 'Only bounded Mermaid flowchart/graph input is supported in Protocol 1.6.');
+  if (!header)
+    diagramFail(
+      DIAGRAM_ERROR_CODES.MERMAID_INVALID,
+      'Only bounded Mermaid flowchart/graph input is supported in Protocol 1.6.',
+    );
   const nodes = new Map();
   const relations = [];
   const interpreted = [{ source: header[0], targetId: diagramId, construct: 'flowchart-header' }];
   const omitted = [];
   const ensureNode = (rawId, label = rawId, kind = 'step') => {
     const id = semanticId(rawId);
-    if (!nodes.has(id)) nodes.set(id, { id, label: cleanLabel(label, rawId), kind, description: null, semanticPosition: null });
+    if (!nodes.has(id))
+      nodes.set(id, {
+        id,
+        label: cleanLabel(label, rawId),
+        kind,
+        description: null,
+        semanticPosition: null,
+      });
     return id;
   };
   for (const line of lines) {
@@ -82,7 +120,14 @@ export function importMermaid(source, {
         const from = ensureNode(sourceNode.rawId, sourceNode.label, sourceNode.kind);
         const to = ensureNode(targetNode.rawId, targetNode.label, targetNode.kind);
         const relationId = `relation-${relations.length + 1}`;
-        relations.push({ id: relationId, from, to, kind: 'flow', label: edge[3] ? cleanLabel(edge[3]) : null, weight: null });
+        relations.push({
+          id: relationId,
+          from,
+          to,
+          kind: 'flow',
+          label: edge[3] ? cleanLabel(edge[3]) : null,
+          weight: null,
+        });
         interpreted.push({ source: line, targetId: relationId, construct: 'relation' });
         continue;
       }
@@ -93,9 +138,16 @@ export function importMermaid(source, {
       interpreted.push({ source: line, targetId: id, construct: 'node' });
       continue;
     }
-    omitted.push({ source: line, reason: 'Construct is outside the bounded flowchart import subset.' });
+    omitted.push({
+      source: line,
+      reason: 'Construct is outside the bounded flowchart import subset.',
+    });
   }
-  if (nodes.size === 0) diagramFail(DIAGRAM_ERROR_CODES.MERMAID_INVALID, 'Mermaid input contains no supported semantic nodes.');
+  if (nodes.size === 0)
+    diagramFail(
+      DIAGRAM_ERROR_CODES.MERMAID_INVALID,
+      'Mermaid input contains no supported semantic nodes.',
+    );
   const document = createDiagramDocument({
     diagramId,
     title,
@@ -126,26 +178,26 @@ export function importMermaid(source, {
     status: omitted.length > 0 ? 'partial' : 'editable',
     interpreted,
     omitted,
-    notes: ['Mermaid renderer coordinates, styling, classes, and themes are never imported into canonical IR.'],
+    notes: [
+      'Mermaid renderer coordinates, styling, classes, and themes are never imported into canonical IR.',
+    ],
   });
   return Object.freeze({ document, fidelity });
 }
 
-function importSequenceMermaid(bytes, lines, {
-  diagramId,
-  title,
-  summary,
-  audience,
-  detailTier,
-  themeId,
-  sourcePath,
-}) {
+function importSequenceMermaid(
+  bytes,
+  lines,
+  { diagramId, title, summary, audience, detailTier, themeId, sourcePath },
+) {
   const participants = new Map();
   const relations = [];
   const events = [];
   const annotations = [];
   const timeline = [];
-  const interpreted = [{ source: 'sequenceDiagram', targetId: diagramId, construct: 'sequence-header' }];
+  const interpreted = [
+    { source: 'sequenceDiagram', targetId: diagramId, construct: 'sequence-header' },
+  ];
   const omitted = [];
   let lastRelation = null;
   const ensureParticipant = (alias, label = alias) => {
@@ -187,7 +239,12 @@ function importSequenceMermaid(bytes, lines, {
     }
     const phase = line.match(PHASE_NOTE);
     if (phase) {
-      const event = { id: `phase-${events.length + 1}`, label: cleanLabel(phase[3]), order: events.length, at: null };
+      const event = {
+        id: `phase-${events.length + 1}`,
+        label: cleanLabel(phase[3]),
+        order: events.length,
+        at: null,
+      };
       events.push(event);
       timeline.push(event.id);
       interpreted.push({ source: line, targetId: event.id, construct: 'phase-note' });
@@ -195,7 +252,11 @@ function importSequenceMermaid(bytes, lines, {
     }
     const messageNote = line.match(MESSAGE_NOTE);
     if (messageNote && lastRelation) {
-      const annotation = { id: `annotation-${annotations.length + 1}`, text: cleanLabel(messageNote[3]), targetId: lastRelation.id };
+      const annotation = {
+        id: `annotation-${annotations.length + 1}`,
+        text: cleanLabel(messageNote[3]),
+        targetId: lastRelation.id,
+      };
       annotations.push(annotation);
       interpreted.push({ source: line, targetId: annotation.id, construct: 'message-note' });
       continue;
@@ -203,15 +264,25 @@ function importSequenceMermaid(bytes, lines, {
     const participantNote = line.match(PARTICIPANT_NOTE);
     if (participantNote) {
       const target = ensureParticipant(participantNote[1]);
-      const annotation = { id: `annotation-${annotations.length + 1}`, text: cleanLabel(participantNote[2]), targetId: target.id };
+      const annotation = {
+        id: `annotation-${annotations.length + 1}`,
+        text: cleanLabel(participantNote[2]),
+        targetId: target.id,
+      };
       annotations.push(annotation);
       interpreted.push({ source: line, targetId: annotation.id, construct: 'participant-note' });
       continue;
     }
-    omitted.push({ source: line, reason: 'Construct is outside the bounded sequence import subset.' });
+    omitted.push({
+      source: line,
+      reason: 'Construct is outside the bounded sequence import subset.',
+    });
   }
   if (participants.size === 0 || relations.length === 0 || events.length === 0) {
-    diagramFail(DIAGRAM_ERROR_CODES.MERMAID_INVALID, 'Sequence Mermaid requires participants, messages, and at least one Phase note.');
+    diagramFail(
+      DIAGRAM_ERROR_CODES.MERMAID_INVALID,
+      'Sequence Mermaid requires participants, messages, and at least one Phase note.',
+    );
   }
   const nodes = [...participants.values()];
   const document = createDiagramDocument({

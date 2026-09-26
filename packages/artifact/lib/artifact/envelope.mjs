@@ -19,17 +19,29 @@ function invalid(message, details = undefined) {
 }
 
 function assertBoundedString(value, label, { min = 0, max, pattern } = {}) {
-  if (typeof value !== 'string' || value.length < min || (max !== undefined && value.length > max)
-    || (pattern && !pattern.test(value))) {
+  if (
+    typeof value !== 'string' ||
+    value.length < min ||
+    (max !== undefined && value.length > max) ||
+    (pattern && !pattern.test(value))
+  ) {
     invalid(`${label} is outside its allowed string bounds.`);
   }
 }
 
 function assertViewport(viewport, label, { maxHeight = 16_384 } = {}) {
-  if (!viewport || !Number.isInteger(viewport.width) || !Number.isInteger(viewport.height)
-    || viewport.width < 1 || viewport.width > 16384
-    || viewport.height < 1 || viewport.height > maxHeight) {
-    invalid(`${label} must have an integer width from 1 through 16384 pixels and height from 1 through ${maxHeight} pixels.`);
+  if (
+    !viewport ||
+    !Number.isInteger(viewport.width) ||
+    !Number.isInteger(viewport.height) ||
+    viewport.width < 1 ||
+    viewport.width > 16384 ||
+    viewport.height < 1 ||
+    viewport.height > maxHeight
+  ) {
+    invalid(
+      `${label} must have an integer width from 1 through 16384 pixels and height from 1 through ${maxHeight} pixels.`,
+    );
   }
 }
 
@@ -56,7 +68,9 @@ function canonicalObject(value) {
   if (Array.isArray(value)) return value.map(canonicalObject);
   if (!value || typeof value !== 'object') return value;
   return Object.fromEntries(
-    Object.keys(value).sort().map((key) => [key, canonicalObject(value[key])]),
+    Object.keys(value)
+      .sort()
+      .map((key) => [key, canonicalObject(value[key])]),
   );
 }
 
@@ -71,8 +85,14 @@ export function canonicalBytes(value) {
 function normalizeViewport(viewport = {}) {
   const width = viewport.width ?? 1440;
   const height = viewport.height ?? 900;
-  if (!Number.isInteger(width) || width < 1 || width > 16384
-    || !Number.isInteger(height) || height < 1 || height > 16384) {
+  if (
+    !Number.isInteger(width) ||
+    width < 1 ||
+    width > 16384 ||
+    !Number.isInteger(height) ||
+    height < 1 ||
+    height > 16384
+  ) {
     throw new PipelineError(
       ARTIFACT_ERROR_CODES.ENVELOPE_INVALID,
       'Artifact viewport width and height must be integers from 1 through 16384.',
@@ -83,15 +103,24 @@ function normalizeViewport(viewport = {}) {
 
 function normalizeArtifact(artifact) {
   if (!artifact || typeof artifact !== 'object') {
-    throw new PipelineError(ARTIFACT_ERROR_CODES.ENVELOPE_INVALID, 'Each artifact must be an object.');
+    throw new PipelineError(
+      ARTIFACT_ERROR_CODES.ENVELOPE_INVALID,
+      'Each artifact must be an object.',
+    );
   }
   const id = artifact.id;
   const title = artifact.title;
   if (typeof id !== 'string' || !ID_RE.test(id) || id.length > 128) {
-    throw new PipelineError(ARTIFACT_ERROR_CODES.ENVELOPE_INVALID, `Invalid artifact id: ${String(id)}`);
+    throw new PipelineError(
+      ARTIFACT_ERROR_CODES.ENVELOPE_INVALID,
+      `Invalid artifact id: ${String(id)}`,
+    );
   }
   if (typeof title !== 'string' || title.length === 0 || title.length > 512) {
-    throw new PipelineError(ARTIFACT_ERROR_CODES.ENVELOPE_INVALID, `Artifact ${id} requires a title.`);
+    throw new PipelineError(
+      ARTIFACT_ERROR_CODES.ENVELOPE_INVALID,
+      `Artifact ${id} requires a title.`,
+    );
   }
   const html = normalizeUtf8Text(artifact.html);
   if (html.length === 0) {
@@ -111,7 +140,10 @@ function normalizeArtifact(artifact) {
   }
   const colorScheme = artifact.colorScheme ?? 'light';
   if (!['light', 'dark'].includes(colorScheme)) {
-    throw new PipelineError(ARTIFACT_ERROR_CODES.ENVELOPE_INVALID, `Artifact ${id} has an invalid color scheme.`);
+    throw new PipelineError(
+      ARTIFACT_ERROR_CODES.ENVELOPE_INVALID,
+      `Artifact ${id} has an invalid color scheme.`,
+    );
   }
   return {
     id,
@@ -131,10 +163,16 @@ function normalizeViewer(viewer, artifacts) {
     activeArtifactId: viewer?.activeArtifactId ?? artifacts[0].id,
   };
   if (!['single', 'variants'].includes(normalized.mode)) {
-    throw new PipelineError(ARTIFACT_ERROR_CODES.ENVELOPE_INVALID, 'Viewer mode must be single or variants.');
+    throw new PipelineError(
+      ARTIFACT_ERROR_CODES.ENVELOPE_INVALID,
+      'Viewer mode must be single or variants.',
+    );
   }
   if (!ids.has(normalized.activeArtifactId)) {
-    throw new PipelineError(ARTIFACT_ERROR_CODES.ENVELOPE_INVALID, 'Viewer activeArtifactId is not present in artifacts.');
+    throw new PipelineError(
+      ARTIFACT_ERROR_CODES.ENVELOPE_INVALID,
+      'Viewer activeArtifactId is not present in artifacts.',
+    );
   }
   if (viewer?.presentation !== undefined) {
     if (!ARTIFACT_PRESENTATIONS.includes(viewer.presentation)) {
@@ -178,18 +216,21 @@ export function validateArtifactReview(review) {
   assertBoundedString(review.reviewId, 'reviewId', { min: 1, max: 128 });
   assertBoundedString(review.reviewOf, 'reviewOf', { min: 64, max: 64, pattern: SHA256_RE });
   assertBoundedString(review.overall, 'overall', { max: 65_536 });
-  if (!Array.isArray(review.pins) || review.pins.length > MAX_PINS) invalid(`Review pins exceed ${MAX_PINS}.`);
+  if (!Array.isArray(review.pins) || review.pins.length > MAX_PINS)
+    invalid(`Review pins exceed ${MAX_PINS}.`);
   for (const [pinIndex, pin] of review.pins.entries()) {
     const label = `pins[${pinIndex}]`;
     assertBoundedString(pin.id, `${label}.id`, { min: 1, max: 128 });
     assertBoundedString(pin.author?.id ?? '', `${label}.author.id`, { max: 128 });
     assertBoundedString(pin.author?.name, `${label}.author.name`, { min: 1, max: 256 });
     assertBoundedString(pin.artifactId, `${label}.artifactId`, { min: 1, max: 128 });
-    if (pin.variant !== undefined) assertBoundedString(pin.variant, `${label}.variant`, { min: 1, max: 128 });
+    if (pin.variant !== undefined)
+      assertBoundedString(pin.variant, `${label}.variant`, { min: 1, max: 128 });
     assertBoundedString(pin.comment, `${label}.comment`, { min: 1, max: 65_536 });
     if (pin.anchor) {
       assertBoundedString(pin.anchor.planrId, `${label}.anchor.planrId`, { min: 1, max: 512 });
-      if (pin.anchor.screen !== undefined) assertBoundedString(pin.anchor.screen, `${label}.anchor.screen`, { min: 1, max: 128 });
+      if (pin.anchor.screen !== undefined)
+        assertBoundedString(pin.anchor.screen, `${label}.anchor.screen`, { min: 1, max: 128 });
     }
     assertViewport(pin.viewport, `${label}.viewport`, { maxHeight: ARTIFACT_DOCUMENT_MAX_HEIGHT });
     for (const coordinate of ['x', 'y', 'w', 'h']) {
@@ -201,7 +242,8 @@ export function validateArtifactReview(review) {
     if (pin.region.x + pin.region.w > 1 || pin.region.y + pin.region.h > 1) {
       invalid(`${label}.region must remain inside normalized artifact bounds.`);
     }
-    if (!Array.isArray(pin.replies) || pin.replies.length > MAX_REPLIES) invalid(`${label}.replies exceeds ${MAX_REPLIES}.`);
+    if (!Array.isArray(pin.replies) || pin.replies.length > MAX_REPLIES)
+      invalid(`${label}.replies exceeds ${MAX_REPLIES}.`);
     for (const [replyIndex, reply] of pin.replies.entries()) {
       const replyLabel = `${label}.replies[${replyIndex}]`;
       assertBoundedString(reply.id, `${replyLabel}.id`, { min: 1, max: 128 });
@@ -223,7 +265,11 @@ export function validateArtifactEnvelope(envelope) {
       { issues },
     );
   }
-  if (!Array.isArray(envelope.artifacts) || envelope.artifacts.length < 1 || envelope.artifacts.length > MAX_ARTIFACTS) {
+  if (
+    !Array.isArray(envelope.artifacts) ||
+    envelope.artifacts.length < 1 ||
+    envelope.artifacts.length > MAX_ARTIFACTS
+  ) {
     invalid(`Envelope requires 1 through ${MAX_ARTIFACTS} artifacts.`);
   }
   const ids = envelope.artifacts.map(({ id }) => id);
@@ -241,17 +287,27 @@ export function validateArtifactEnvelope(envelope) {
     }
     assertViewport(artifact.viewport, `Artifact ${artifact.id} viewport`);
     if (!SHA256_RE.test(artifact.sha256) || digestArtifact(artifact.html) !== artifact.sha256) {
-      throw new PipelineError(ARTIFACT_ERROR_CODES.ENVELOPE_INVALID, `Artifact ${artifact.id} digest is invalid.`);
+      throw new PipelineError(
+        ARTIFACT_ERROR_CODES.ENVELOPE_INVALID,
+        `Artifact ${artifact.id} digest is invalid.`,
+      );
     }
   }
-  assertBoundedString(envelope.viewer.activeArtifactId, 'viewer.activeArtifactId', { min: 1, max: 128 });
+  assertBoundedString(envelope.viewer.activeArtifactId, 'viewer.activeArtifactId', {
+    min: 1,
+    max: 128,
+  });
   if (!ids.includes(envelope.viewer.activeArtifactId)) {
-    throw new PipelineError(ARTIFACT_ERROR_CODES.ENVELOPE_INVALID, 'Viewer references an unknown artifact.');
+    throw new PipelineError(
+      ARTIFACT_ERROR_CODES.ENVELOPE_INVALID,
+      'Viewer references an unknown artifact.',
+    );
   }
   if (envelope.review) {
     validateArtifactReview(envelope.review);
     for (const pin of envelope.review.pins) {
-      if (!ids.includes(pin.artifactId)) invalid(`Review pin references unknown artifact: ${pin.artifactId}`);
+      if (!ids.includes(pin.artifactId))
+        invalid(`Review pin references unknown artifact: ${pin.artifactId}`);
     }
     const expected = digestArtifactEnvelope(envelope);
     if (envelope.review.reviewOf !== expected) {
@@ -268,7 +324,10 @@ export function validateArtifactEnvelope(envelope) {
 
 export function createArtifactEnvelope({ artifacts, viewer, review } = {}) {
   if (!Array.isArray(artifacts) || artifacts.length === 0 || artifacts.length > MAX_ARTIFACTS) {
-    throw new PipelineError(ARTIFACT_ERROR_CODES.ENVELOPE_INVALID, 'Envelope requires 1 through 256 artifacts.');
+    throw new PipelineError(
+      ARTIFACT_ERROR_CODES.ENVELOPE_INVALID,
+      'Envelope requires 1 through 256 artifacts.',
+    );
   }
   const normalizedArtifacts = [];
   let artifactBytes = 0;
@@ -305,10 +364,13 @@ export function validateArtifactPaste(paste) {
   if (paste.ciphertext !== undefined) {
     assertBoundedString(paste.ciphertext, 'paste.ciphertext', { min: 1 });
     const bytes = Buffer.from(paste.ciphertext, 'base64url').byteLength;
-    if (bytes < 1 || bytes > MAX_PASTE_BYTES) invalid(`Paste ciphertext exceeds ${MAX_PASTE_BYTES} bytes.`);
+    if (bytes < 1 || bytes > MAX_PASTE_BYTES)
+      invalid(`Paste ciphertext exceeds ${MAX_PASTE_BYTES} bytes.`);
   }
-  if (paste.size !== undefined
-    && (!Number.isInteger(paste.size) || paste.size < 1 || paste.size > MAX_PASTE_BYTES)) {
+  if (
+    paste.size !== undefined &&
+    (!Number.isInteger(paste.size) || paste.size < 1 || paste.size > MAX_PASTE_BYTES)
+  ) {
     invalid(`Paste size must be between 1 and ${MAX_PASTE_BYTES} bytes.`);
   }
   return paste;

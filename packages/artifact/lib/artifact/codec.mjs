@@ -25,7 +25,8 @@ function boundedLimit(value, hardMaximum, label) {
 function byteArray(value, label = 'payload') {
   if (value instanceof Uint8Array) return value;
   if (value instanceof ArrayBuffer) return new Uint8Array(value);
-  if (ArrayBuffer.isView(value)) return new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
+  if (ArrayBuffer.isView(value))
+    return new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
   throw codecError(ARTIFACT_ERROR_CODES.CODEC_INVALID, `Artifact ${label} must be binary bytes.`);
 }
 
@@ -53,14 +54,16 @@ function textDecoder() {
 
 function canonicalValue(value, ancestors) {
   if (Array.isArray(value)) {
-    if (ancestors.has(value)) throw codecError(ARTIFACT_ERROR_CODES.CODEC_INVALID, 'Artifact payload is cyclic.');
+    if (ancestors.has(value))
+      throw codecError(ARTIFACT_ERROR_CODES.CODEC_INVALID, 'Artifact payload is cyclic.');
     ancestors.add(value);
     const output = value.map((item) => canonicalValue(item, ancestors));
     ancestors.delete(value);
     return output;
   }
   if (!value || typeof value !== 'object') return value;
-  if (ancestors.has(value)) throw codecError(ARTIFACT_ERROR_CODES.CODEC_INVALID, 'Artifact payload is cyclic.');
+  if (ancestors.has(value))
+    throw codecError(ARTIFACT_ERROR_CODES.CODEC_INVALID, 'Artifact payload is cyclic.');
   ancestors.add(value);
   const output = {};
   for (const key of Object.keys(value).sort()) {
@@ -75,15 +78,26 @@ function canonicalValue(value, ancestors) {
 
 export function canonicalArtifactJson(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    throw codecError(ARTIFACT_ERROR_CODES.CODEC_INVALID, 'Artifact payload must be a non-array JSON object.');
+    throw codecError(
+      ARTIFACT_ERROR_CODES.CODEC_INVALID,
+      'Artifact payload must be a non-array JSON object.',
+    );
   }
   let serialized;
-  try { serialized = JSON.stringify(canonicalValue(value, new Set())); } catch (error) {
+  try {
+    serialized = JSON.stringify(canonicalValue(value, new Set()));
+  } catch (error) {
     if (error instanceof PipelineError) throw error;
-    throw codecError(ARTIFACT_ERROR_CODES.CODEC_INVALID, 'Artifact payload cannot be serialized as canonical JSON.');
+    throw codecError(
+      ARTIFACT_ERROR_CODES.CODEC_INVALID,
+      'Artifact payload cannot be serialized as canonical JSON.',
+    );
   }
   if (typeof serialized !== 'string') {
-    throw codecError(ARTIFACT_ERROR_CODES.CODEC_INVALID, 'Artifact payload must serialize to a JSON value.');
+    throw codecError(
+      ARTIFACT_ERROR_CODES.CODEC_INVALID,
+      'Artifact payload must serialize to a JSON value.',
+    );
   }
   return serialized;
 }
@@ -105,18 +119,29 @@ export function bytesToBase64Url(value) {
   return output;
 }
 
-export function base64UrlToBytes(value, {
-  label = 'base64url value',
-  maxBytes = ARTIFACT_COMPRESSED_LIMIT,
-} = {}) {
-  if (typeof value !== 'string' || value.length === 0 || !BASE64URL_RE.test(value)
-    || value.includes('=') || value.length % 4 === 1) {
-    throw codecError(ARTIFACT_ERROR_CODES.FRAGMENT_INVALID, `Artifact ${label} is not strict unpadded base64url.`);
+export function base64UrlToBytes(
+  value,
+  { label = 'base64url value', maxBytes = ARTIFACT_COMPRESSED_LIMIT } = {},
+) {
+  if (
+    typeof value !== 'string' ||
+    value.length === 0 ||
+    !BASE64URL_RE.test(value) ||
+    value.includes('=') ||
+    value.length % 4 === 1
+  ) {
+    throw codecError(
+      ARTIFACT_ERROR_CODES.FRAGMENT_INVALID,
+      `Artifact ${label} is not strict unpadded base64url.`,
+    );
   }
   const remainder = value.length % 4;
   const finalValue = BASE64URL_ALPHABET.indexOf(value.at(-1));
   if ((remainder === 2 && (finalValue & 15) !== 0) || (remainder === 3 && (finalValue & 3) !== 0)) {
-    throw codecError(ARTIFACT_ERROR_CODES.FRAGMENT_INVALID, `Artifact ${label} has non-canonical trailing bits.`);
+    throw codecError(
+      ARTIFACT_ERROR_CODES.FRAGMENT_INVALID,
+      `Artifact ${label} has non-canonical trailing bits.`,
+    );
   }
   const length = Math.floor((value.length * 6) / 8);
   if (!Number.isInteger(maxBytes) || maxBytes < 0 || length > maxBytes) {
@@ -150,10 +175,13 @@ function equalBytes(left, right) {
   return difference === 0;
 }
 
-export function compressArtifactPayload(value, {
-  maxExpandedBytes: requestedExpandedBytes = ARTIFACT_EXPANDED_LIMIT,
-  maxCompressedBytes: requestedCompressedBytes = ARTIFACT_COMPRESSED_LIMIT,
-} = {}) {
+export function compressArtifactPayload(
+  value,
+  {
+    maxExpandedBytes: requestedExpandedBytes = ARTIFACT_EXPANDED_LIMIT,
+    maxCompressedBytes: requestedCompressedBytes = ARTIFACT_COMPRESSED_LIMIT,
+  } = {},
+) {
   const maxExpandedBytes = boundedLimit(
     requestedExpandedBytes,
     ARTIFACT_EXPANDED_LIMIT,
@@ -190,10 +218,13 @@ export function compressArtifactPayload(value, {
   return Object.freeze({ json, expanded, compressed });
 }
 
-export function decodeCompressedArtifactPayload(value, {
-  maxExpandedBytes: requestedExpandedBytes = ARTIFACT_EXPANDED_LIMIT,
-  maxCompressedBytes: requestedCompressedBytes = ARTIFACT_COMPRESSED_LIMIT,
-} = {}) {
+export function decodeCompressedArtifactPayload(
+  value,
+  {
+    maxExpandedBytes: requestedExpandedBytes = ARTIFACT_EXPANDED_LIMIT,
+    maxCompressedBytes: requestedCompressedBytes = ARTIFACT_COMPRESSED_LIMIT,
+  } = {},
+) {
   const maxExpandedBytes = boundedLimit(
     requestedExpandedBytes,
     ARTIFACT_EXPANDED_LIMIT,
@@ -224,9 +255,14 @@ export function decodeCompressedArtifactPayload(value, {
     }
     chunks.push(chunk);
   };
-  try { inflator.push(compressed, true); } catch (error) {
+  try {
+    inflator.push(compressed, true);
+  } catch (error) {
     if (error !== limitSentinel && !exceeded) {
-      throw codecError(ARTIFACT_ERROR_CODES.CODEC_FAILED, 'Artifact compressed payload is malformed.');
+      throw codecError(
+        ARTIFACT_ERROR_CODES.CODEC_FAILED,
+        'Artifact compressed payload is malformed.',
+      );
     }
   }
   if (exceeded) {
@@ -236,7 +272,10 @@ export function decodeCompressedArtifactPayload(value, {
     );
   }
   if (inflator.err || !inflator.ended) {
-    throw codecError(ARTIFACT_ERROR_CODES.CODEC_FAILED, 'Artifact compressed payload is malformed.');
+    throw codecError(
+      ARTIFACT_ERROR_CODES.CODEC_FAILED,
+      'Artifact compressed payload is malformed.',
+    );
   }
   const expanded = new Uint8Array(expandedBytes);
   let offset = 0;
@@ -250,10 +289,16 @@ export function decodeCompressedArtifactPayload(value, {
     json = textDecoder().decode(expanded);
     parsed = JSON.parse(json);
   } catch {
-    throw codecError(ARTIFACT_ERROR_CODES.CODEC_INVALID, 'Artifact payload is not valid UTF-8 canonical JSON.');
+    throw codecError(
+      ARTIFACT_ERROR_CODES.CODEC_INVALID,
+      'Artifact payload is not valid UTF-8 canonical JSON.',
+    );
   }
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-    throw codecError(ARTIFACT_ERROR_CODES.CODEC_INVALID, 'Artifact payload must be a non-array JSON object.');
+    throw codecError(
+      ARTIFACT_ERROR_CODES.CODEC_INVALID,
+      'Artifact payload must be a non-array JSON object.',
+    );
   }
   if (canonicalArtifactJson(parsed) !== json) {
     throw codecError(ARTIFACT_ERROR_CODES.CODEC_INVALID, 'Artifact JSON is not in canonical form.');
@@ -263,7 +308,10 @@ export function decodeCompressedArtifactPayload(value, {
     maxCompressedBytes,
   }).compressed;
   if (!equalBytes(compressed, canonicalCompressed)) {
-    throw codecError(ARTIFACT_ERROR_CODES.CODEC_INVALID, 'Artifact compressed bytes are not canonical raw DEFLATE.');
+    throw codecError(
+      ARTIFACT_ERROR_CODES.CODEC_INVALID,
+      'Artifact compressed bytes are not canonical raw DEFLATE.',
+    );
   }
   return Object.freeze({ value: parsed, json, expanded, compressed });
 }
@@ -284,7 +332,10 @@ function loopbackHostname(hostname) {
 
 function extractFragment(source, { allowedOrigins } = {}) {
   if (typeof source !== 'string' || source.length === 0) {
-    throw codecError(ARTIFACT_ERROR_CODES.FRAGMENT_INVALID, 'Artifact fragment must be a non-empty string.');
+    throw codecError(
+      ARTIFACT_ERROR_CODES.FRAGMENT_INVALID,
+      'Artifact fragment must be a non-empty string.',
+    );
   }
   // Keep direct versioned fragments transport-neutral so the version parser can
   // return the precise unsupported-version diagnostic instead of treating them
@@ -292,22 +343,34 @@ function extractFragment(source, { allowedOrigins } = {}) {
   if (/^v[0-9]+\./.test(source)) return source;
   if (source.startsWith('#')) return source.slice(1);
   let url;
-  try { url = new globalThis.URL(source); } catch {
+  try {
+    url = new globalThis.URL(source);
+  } catch {
     throw codecError(ARTIFACT_ERROR_CODES.FRAGMENT_INVALID, 'Artifact review URL is malformed.');
   }
-  const transportAllowed = url.protocol === 'https:'
-    || (url.protocol === 'http:' && loopbackHostname(url.hostname));
+  const transportAllowed =
+    url.protocol === 'https:' || (url.protocol === 'http:' && loopbackHostname(url.hostname));
   const originAllowed = allowedOrigins === undefined || allowedOrigins.includes(url.origin);
-  if (!transportAllowed || !originAllowed || url.username || url.password || !url.hash || url.search) {
-    throw codecError(ARTIFACT_ERROR_CODES.FRAGMENT_INVALID, 'Artifact review URL is not an allowed fragment link.');
+  if (
+    !transportAllowed ||
+    !originAllowed ||
+    url.username ||
+    url.password ||
+    !url.hash ||
+    url.search
+  ) {
+    throw codecError(
+      ARTIFACT_ERROR_CODES.FRAGMENT_INVALID,
+      'Artifact review URL is not an allowed fragment link.',
+    );
   }
   return url.hash.slice(1);
 }
 
-export function decodeArtifactFragmentDetails(source, {
-  maxFragmentChars: requestedFragmentChars = ARTIFACT_FRAGMENT_LIMIT,
-  ...options
-} = {}) {
+export function decodeArtifactFragmentDetails(
+  source,
+  { maxFragmentChars: requestedFragmentChars = ARTIFACT_FRAGMENT_LIMIT, ...options } = {},
+) {
   const maxFragmentChars = boundedLimit(
     requestedFragmentChars,
     ARTIFACT_FRAGMENT_LIMIT,

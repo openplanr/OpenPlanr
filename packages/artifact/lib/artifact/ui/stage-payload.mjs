@@ -13,17 +13,16 @@ function freezeArtifactMetadata(artifact, index) {
   }
   return Object.freeze({
     id: artifact.id,
-    title: typeof artifact.title === 'string' && artifact.title.length > 0
-      ? artifact.title
-      : `Artifact ${index + 1}`,
+    title:
+      typeof artifact.title === 'string' && artifact.title.length > 0
+        ? artifact.title
+        : `Artifact ${index + 1}`,
     sha256: typeof artifact.sha256 === 'string' ? artifact.sha256 : '',
     viewport: Object.freeze({
       width: positiveInteger(artifact.viewport?.width, 1440),
       height: positiveInteger(artifact.viewport?.height, 900),
     }),
-    colorScheme: ['light', 'dark'].includes(artifact.colorScheme)
-      ? artifact.colorScheme
-      : 'light',
+    colorScheme: ['light', 'dark'].includes(artifact.colorScheme) ? artifact.colorScheme : 'light',
   });
 }
 
@@ -50,9 +49,12 @@ export function createArtifactStagePayload(envelope = {}, { viewer } = {}) {
   const artifacts = Object.freeze(
     (Array.isArray(envelope?.artifacts) ? envelope.artifacts : []).map(freezeArtifactMetadata),
   );
-  const sourceViewer = viewer && typeof viewer === 'object'
-    ? viewer
-    : (envelope?.viewer && typeof envelope.viewer === 'object' ? envelope.viewer : {});
+  const sourceViewer =
+    viewer && typeof viewer === 'object'
+      ? viewer
+      : envelope?.viewer && typeof envelope.viewer === 'object'
+        ? envelope.viewer
+        : {};
   const firstId = artifacts[0]?.id ?? '';
   const activeArtifactId = availableId(
     artifacts,

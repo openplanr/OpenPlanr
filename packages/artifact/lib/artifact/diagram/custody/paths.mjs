@@ -29,21 +29,33 @@ function canonicalizePotentialPath(target) {
 
 export function resolveDiagramOutputRoot(outputRoot) {
   if (typeof outputRoot !== 'string' || outputRoot.trim() === '' || outputRoot.includes('\0')) {
-    diagramFail(DIAGRAM_ERROR_CODES.OUTPUT_ESCAPE, 'Diagram output root must be a non-empty filesystem path.');
+    diagramFail(
+      DIAGRAM_ERROR_CODES.OUTPUT_ESCAPE,
+      'Diagram output root must be a non-empty filesystem path.',
+    );
   }
   const root = canonicalizePotentialPath(resolve(outputRoot));
-  if (root === sep) diagramFail(DIAGRAM_ERROR_CODES.OUTPUT_ESCAPE, 'The filesystem root cannot be a diagram output root.');
+  if (root === sep)
+    diagramFail(
+      DIAGRAM_ERROR_CODES.OUTPUT_ESCAPE,
+      'The filesystem root cannot be a diagram output root.',
+    );
   return root;
 }
 
 export function assertContainedPath(root, target) {
   const resolved = resolve(target);
   const rel = relative(root, resolved);
-  if (rel === '' || (!rel.startsWith(`..${sep}`) && rel !== '..' && !isAbsolute(rel))) return resolved;
-  diagramFail(DIAGRAM_ERROR_CODES.OUTPUT_ESCAPE, 'Diagram output path escapes its configured root.', {
-    root,
-    target: resolved,
-  });
+  if (rel === '' || (!rel.startsWith(`..${sep}`) && rel !== '..' && !isAbsolute(rel)))
+    return resolved;
+  diagramFail(
+    DIAGRAM_ERROR_CODES.OUTPUT_ESCAPE,
+    'Diagram output path escapes its configured root.',
+    {
+      root,
+      target: resolved,
+    },
+  );
 }
 
 export function diagramRelativeDirectory(slug) {

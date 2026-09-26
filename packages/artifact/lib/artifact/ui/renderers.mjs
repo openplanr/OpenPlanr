@@ -101,36 +101,51 @@ function normalizeArtifact(value, index) {
 export function normalizeArtifactShellModel(input = {}) {
   const source = input && typeof input === 'object' ? input : {};
   const envelope = source.envelope && typeof source.envelope === 'object' ? source.envelope : {};
-  const viewer = source.viewer && typeof source.viewer === 'object'
-    ? source.viewer
-    : (envelope.viewer && typeof envelope.viewer === 'object' ? envelope.viewer : {});
+  const viewer =
+    source.viewer && typeof source.viewer === 'object'
+      ? source.viewer
+      : envelope.viewer && typeof envelope.viewer === 'object'
+        ? envelope.viewer
+        : {};
   const shell = source.shell && typeof source.shell === 'object' ? source.shell : {};
-  const artifacts = Object.freeze((Array.isArray(envelope.artifacts) ? envelope.artifacts : [])
-    .map(normalizeArtifact));
+  const artifacts = Object.freeze(
+    (Array.isArray(envelope.artifacts) ? envelope.artifacts : []).map(normalizeArtifact),
+  );
 
   const requestedActiveId = plainText(viewer.activeArtifactId);
-  const activeIndex = Math.max(0, artifacts.findIndex((artifact) => artifact.id === requestedActiveId));
+  const activeIndex = Math.max(
+    0,
+    artifacts.findIndex((artifact) => artifact.id === requestedActiveId),
+  );
   const activeArtifact = artifacts[activeIndex] ?? null;
   const requestedComparisonId = plainText(viewer.comparisonArtifactId);
-  let comparisonIndex = artifacts.findIndex((artifact, index) => (
-    index !== activeIndex && artifact.id === requestedComparisonId
-  ));
+  let comparisonIndex = artifacts.findIndex(
+    (artifact, index) => index !== activeIndex && artifact.id === requestedComparisonId,
+  );
   if (comparisonIndex < 0 && artifacts.length > 1) comparisonIndex = activeIndex === 0 ? 1 : 0;
   const comparisonArtifact = comparisonIndex >= 0 ? artifacts[comparisonIndex] : null;
 
-  let viewMode = member(viewer.mode, ARTIFACT_VIEW_MODES, artifacts.length > 1 ? 'variants' : 'single');
+  let viewMode = member(
+    viewer.mode,
+    ARTIFACT_VIEW_MODES,
+    artifacts.length > 1 ? 'variants' : 'single',
+  );
   if (artifacts.length < 2 && viewMode !== 'single') viewMode = 'single';
-  const reviewMode = member(viewer.reviewMode ?? shell.reviewMode, ARTIFACT_REVIEW_MODES, 'interact');
+  const reviewMode = member(
+    viewer.reviewMode ?? shell.reviewMode,
+    ARTIFACT_REVIEW_MODES,
+    'interact',
+  );
   let status = member(viewer.status ?? shell.status, ARTIFACT_SHELL_STATES, 'ready');
   if (artifacts.length === 0 && status === 'ready') status = 'empty';
   const privacy = member(shell.privacy, Object.keys(PRIVACY_LABELS), 'local');
   const theme = member(shell.theme, ARTIFACT_SHELL_THEMES, 'auto');
   const zoom = Math.min(200, Math.max(25, nonNegativeInteger(shell.zoom, 72)));
   const feedbackCount = nonNegativeInteger(shell.feedbackCount, 0);
-  const presentation = resolveArtifactPresentation(
-    viewer.presentation ?? shell.presentation,
-    { mode: viewMode, artifactCount: artifacts.length },
-  );
+  const presentation = resolveArtifactPresentation(viewer.presentation ?? shell.presentation, {
+    mode: viewMode,
+    artifactCount: artifacts.length,
+  });
 
   return Object.freeze({
     schemaVersion: '1.0.0',
@@ -180,8 +195,10 @@ ${canvas ? `  <button class="planr-toolbar-action" type="button" data-planr-acti
 
 function actionIcon(name) {
   const paths = {
-    comment: '<path d="M12 20a8 8 0 1 0-7.1-4.3L4 20l4.3-.9A8 8 0 0 0 12 20Z"/><path d="M12 8v8M8 12h8"/>',
-    comments: '<path d="M20 11.5a7.5 7.5 0 0 1-8 7.5 8.8 8.8 0 0 1-3.2-.6L4 20l1.6-4.1A7.4 7.4 0 0 1 4 11.5a8 8 0 0 1 16 0Z"/><path d="M8.5 11.5h7"/>',
+    comment:
+      '<path d="M12 20a8 8 0 1 0-7.1-4.3L4 20l4.3-.9A8 8 0 0 0 12 20Z"/><path d="M12 8v8M8 12h8"/>',
+    comments:
+      '<path d="M20 11.5a7.5 7.5 0 0 1-8 7.5 8.8 8.8 0 0 1-3.2-.6L4 20l1.6-4.1A7.4 7.4 0 0 1 4 11.5a8 8 0 0 1 16 0Z"/><path d="M8.5 11.5h7"/>',
     share: '<path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 13v6h14v-6"/>',
     more: '<circle cx="5" cy="12" r="1.25"/><circle cx="12" cy="12" r="1.25"/><circle cx="19" cy="12" r="1.25"/>',
   };
@@ -219,10 +236,12 @@ function renderViewButton(mode, model, disabled = false) {
 
 export function renderArtifactVariantControls(model) {
   const hasVariants = model.artifacts.length > 1;
-  const tabs = model.artifacts.map((artifact, index) => {
-    const selected = index === model.activeIndex;
-    return `<button type="button" role="tab" id="planr-variant-tab-${index + 1}" aria-controls="${artifact.domId}-panel" aria-selected="${selected}" tabindex="${selected ? 0 : -1}" data-artifact-id="${escapeHtml(artifact.id)}"><span>${String(index + 1).padStart(2, '0')}</span> ${escapeHtml(artifact.title)}</button>`;
-  }).join('');
+  const tabs = model.artifacts
+    .map((artifact, index) => {
+      const selected = index === model.activeIndex;
+      return `<button type="button" role="tab" id="planr-variant-tab-${index + 1}" aria-controls="${artifact.domId}-panel" aria-selected="${selected}" tabindex="${selected ? 0 : -1}" data-artifact-id="${escapeHtml(artifact.id)}"><span>${String(index + 1).padStart(2, '0')}</span> ${escapeHtml(artifact.title)}</button>`;
+    })
+    .join('');
 
   return `<div class="planr-stage-controls" role="group" aria-label="Artifact display controls">
   <div class="planr-segment planr-view-modes" role="group" aria-label="Artifact view mode">${renderViewButton('single', model)}${renderViewButton('variants', model, !hasVariants)}${renderViewButton('split', model, !hasVariants)}</div>
@@ -240,17 +259,19 @@ function visibleArtifactIndexes(model) {
 export function renderArtifactPanels(model) {
   const visible = visibleArtifactIndexes(model);
   const unavailable = model.status !== 'ready';
-  return model.artifacts.map((artifact, index) => {
-    const hidden = !visible.has(index);
-    const primary = index === model.activeIndex;
-    const annotationTabIndex = !hidden && !unavailable && model.reviewMode === 'comment' ? 0 : -1;
-    const frameTabIndex = !hidden && !unavailable && model.reviewMode === 'interact' ? 0 : -1;
-    return `<section class="planr-artifact-panel" id="${artifact.domId}-panel" role="tabpanel" aria-labelledby="planr-variant-tab-${index + 1}" data-artifact-id="${escapeHtml(artifact.id)}" data-artifact-color-scheme="${artifact.colorScheme}" style="--planr-artifact-width:${artifact.viewport.width}px;--planr-artifact-height:${artifact.viewport.height}px" aria-label="${primary ? 'Primary' : 'Comparison'} artifact: ${escapeHtml(artifact.title)}"${hidden ? ' hidden' : ''}>
+  return model.artifacts
+    .map((artifact, index) => {
+      const hidden = !visible.has(index);
+      const primary = index === model.activeIndex;
+      const annotationTabIndex = !hidden && !unavailable && model.reviewMode === 'comment' ? 0 : -1;
+      const frameTabIndex = !hidden && !unavailable && model.reviewMode === 'interact' ? 0 : -1;
+      return `<section class="planr-artifact-panel" id="${artifact.domId}-panel" role="tabpanel" aria-labelledby="planr-variant-tab-${index + 1}" data-artifact-id="${escapeHtml(artifact.id)}" data-artifact-color-scheme="${artifact.colorScheme}" style="--planr-artifact-width:${artifact.viewport.width}px;--planr-artifact-height:${artifact.viewport.height}px" aria-label="${primary ? 'Primary' : 'Comparison'} artifact: ${escapeHtml(artifact.title)}"${hidden ? ' hidden' : ''}>
   <span class="planr-frame-label">${String(index + 1).padStart(2, '0')} · ${escapeHtml(artifact.title)}</span>
   <div class="planr-frame"><iframe id="${artifact.domId}" title="${escapeHtml(artifact.title)} artifact" sandbox="allow-scripts" referrerpolicy="no-referrer" tabindex="${frameTabIndex}" data-planr-artifact-frame="${escapeHtml(artifact.id)}"></iframe></div>
   <div class="planr-annotation-layer" role="region" aria-label="Annotations for ${escapeHtml(artifact.title)}" aria-disabled="${annotationTabIndex < 0}" tabindex="${annotationTabIndex}" data-coordinate-space="normalized" data-planr-annotation-layer="${escapeHtml(artifact.id)}"></div>
 </section>`;
-  }).join('');
+    })
+    .join('');
 }
 
 export function renderArtifactStatus(model) {
@@ -265,8 +286,12 @@ export function renderArtifactStage(model) {
   const unavailable = model.status !== 'ready';
   const breadcrumb = model.activeArtifact?.title ?? 'Artifact';
   return `<main class="planr-stage" aria-label="Artifact review stage">
-${model.presentation === 'canvas' ? `  <div class="planr-stage-heading"><span>ARTIFACT / ${escapeHtml(breadcrumb.toUpperCase())}</span><span role="status" aria-live="polite" data-planr-slot="status">${model.reviewMode === 'comment' ? 'Comment mode' : 'Interactions enabled'}</span></div>
-  ${renderArtifactVariantControls(model)}\n` : ''}  <div class="planr-stage-scroll"><div class="planr-stage-surface" style="--planr-shell-zoom:${model.zoom / 100}"${unavailable ? ' inert aria-hidden="true"' : ''}><div class="planr-frame-grid" data-planr-layout="${model.viewMode}">${renderArtifactPanels(model)}</div></div></div>
+${
+  model.presentation === 'canvas'
+    ? `  <div class="planr-stage-heading"><span>ARTIFACT / ${escapeHtml(breadcrumb.toUpperCase())}</span><span role="status" aria-live="polite" data-planr-slot="status">${model.reviewMode === 'comment' ? 'Comment mode' : 'Interactions enabled'}</span></div>
+  ${renderArtifactVariantControls(model)}\n`
+    : ''
+}  <div class="planr-stage-scroll"><div class="planr-stage-surface" style="--planr-shell-zoom:${model.zoom / 100}"${unavailable ? ' inert aria-hidden="true"' : ''}><div class="planr-frame-grid" data-planr-layout="${model.viewMode}">${renderArtifactPanels(model)}</div></div></div>
   ${renderArtifactStatus(model)}
 </main>`;
 }
@@ -325,9 +350,11 @@ export function renderHostedArtifactViewerSlot() {
 
 export function renderArtifactShellMarkup(model) {
   return `<div class="planr-shell" data-planr-presentation="${model.presentation}" data-planr-view="${model.viewMode}" data-planr-review-mode="${model.reviewMode}" data-planr-state="${model.status}" data-planr-rail-open="${model.railOpen}">
-  ${model.presentation === 'canvas'
-    ? renderArtifactToolbar(model)
-    : `${renderDocumentActionRail(model)}\n  ${renderDocumentCommentsScrim()}`}
+  ${
+    model.presentation === 'canvas'
+      ? renderArtifactToolbar(model)
+      : `${renderDocumentActionRail(model)}\n  ${renderDocumentCommentsScrim()}`
+  }
   <div class="planr-workspace">${renderArtifactStage(model)}${renderArtifactRail(model)}</div>
 </div>
 <div data-planr-slot="dialogs">${renderArtifactShareDialog()}</div>

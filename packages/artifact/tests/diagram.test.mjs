@@ -18,10 +18,13 @@ import {
 } from '../lib/artifact/diagram/index.mjs';
 
 const packageRoot = resolve(import.meta.dirname, '..');
-const loadFixture = (grammarId) => JSON.parse(readFileSync(
-  join(packageRoot, 'fixtures', 'diagram', 'grammars', `${grammarId}.planr-diagram.json`),
-  'utf8',
-));
+const loadFixture = (grammarId) =>
+  JSON.parse(
+    readFileSync(
+      join(packageRoot, 'fixtures', 'diagram', 'grammars', `${grammarId}.planr-diagram.json`),
+      'utf8',
+    ),
+  );
 
 function expectDiagramError(action, code) {
   assert.throws(action, (error) => error?.name === 'DiagramError' && error.code === code);
@@ -55,10 +58,11 @@ test('semantic validation reports typed grammar, reference, and schema failures'
     DIAGRAM_ERROR_CODES.SCHEMA_INVALID,
   );
   expectDiagramError(
-    () => assertDiagramDocument({
-      ...flowchart,
-      nodes: Array.from({ length: MAX_DIAGRAM_PRIMITIVE_ITEMS + 1 }, () => flowchart.nodes[0]),
-    }),
+    () =>
+      assertDiagramDocument({
+        ...flowchart,
+        nodes: Array.from({ length: MAX_DIAGRAM_PRIMITIVE_ITEMS + 1 }, () => flowchart.nodes[0]),
+      }),
     DIAGRAM_ERROR_CODES.RESOURCE_BUDGET_EXCEEDED,
   );
 
@@ -74,7 +78,10 @@ test('intent routing covers every registered grammar and keeps ambiguity explici
   for (const grammar of DIAGRAM_GRAMMARS) {
     assert.equal(routeDiagramIntent({ intent: grammar.title }).grammarId, grammar.grammarId);
   }
-  assert.equal(routeDiagramIntent({ intent: 'show the customer journey' }).grammarId, 'user-journey');
+  assert.equal(
+    routeDiagramIntent({ intent: 'show the customer journey' }).grammarId,
+    'user-journey',
+  );
   expectDiagramError(
     () => routeDiagramIntent({ intent: 'show information' }),
     DIAGRAM_ERROR_CODES.GRAMMAR_AMBIGUOUS,
@@ -119,10 +126,15 @@ test('bounded Mermaid import preserves semantics and reports unsupported lines',
 });
 
 test('SVG checks enforce a static accessible rendering boundary', () => {
-  const valid = '<svg role="img" viewBox="0 0 200 100" aria-labelledby="title desc"><title id="title">Flow</title><desc id="desc">A two-step flow.</desc><text font-size="14">Start</text></svg>';
+  const valid =
+    '<svg role="img" viewBox="0 0 200 100" aria-labelledby="title desc"><title id="title">Flow</title><desc id="desc">A two-step flow.</desc><text font-size="14">Start</text></svg>';
   assert.equal(validateDiagramSvg(valid).ok, true);
   const invalid = '<svg><script>alert(1)</script><text font-size="8">Unreadable</text></svg>';
-  const result = validateDiagramSvg(invalid, { foreground: '#777777', background: '#777777', clipped: true });
+  const result = validateDiagramSvg(invalid, {
+    foreground: '#777777',
+    background: '#777777',
+    clipped: true,
+  });
   assert.equal(result.ok, false);
   assert.ok(result.errors.includes('external-or-executable-resource'));
   assert.ok(result.errors.includes('text-below-12px'));
@@ -131,10 +143,15 @@ test('SVG checks enforce a static accessible rendering boundary', () => {
 });
 
 test('generated gallery inventory accounts for every grammar and primitive without scripts or remote assets', () => {
-  const inventory = JSON.parse(readFileSync(join(packageRoot, 'gallery', 'diagram', 'inventory.json'), 'utf8'));
+  const inventory = JSON.parse(
+    readFileSync(join(packageRoot, 'gallery', 'diagram', 'inventory.json'), 'utf8'),
+  );
   assert.equal(inventory.grammarCount, 39);
   assert.equal(inventory.primitiveCount, DIAGRAM_PRIMITIVES.length);
-  assert.deepEqual(inventory.grammars.map(({ grammarId }) => grammarId), DIAGRAM_GRAMMARS.map(({ grammarId }) => grammarId));
+  assert.deepEqual(
+    inventory.grammars.map(({ grammarId }) => grammarId),
+    DIAGRAM_GRAMMARS.map(({ grammarId }) => grammarId),
+  );
   for (const file of ['types.html', 'primitives.html']) {
     const html = readFileSync(join(packageRoot, 'gallery', 'diagram', file), 'utf8');
     assert.doesNotMatch(html, /<script\b|(?:href|src)=["'](?:https?:|\/\/)/iu, file);

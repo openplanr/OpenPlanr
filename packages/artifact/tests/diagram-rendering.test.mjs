@@ -1,14 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import {
-  mkdir,
-  mkdtemp,
-  readFile,
-  readdir,
-  rm,
-  symlink,
-  writeFile,
-} from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import test from 'node:test';
@@ -43,10 +35,13 @@ import { createRenderQualityReport } from '../lib/artifact/diagram/rendering/rep
 import { renderExcalidrawSceneSvg } from '../lib/artifact/diagram/projection/excalidraw.mjs';
 
 const packageRoot = resolve(import.meta.dirname, '..');
-const fixture = (grammarId) => JSON.parse(readFileSync(
-  join(packageRoot, 'fixtures', 'diagram', 'grammars', `${grammarId}.planr-diagram.json`),
-  'utf8',
-));
+const fixture = (grammarId) =>
+  JSON.parse(
+    readFileSync(
+      join(packageRoot, 'fixtures', 'diagram', 'grammars', `${grammarId}.planr-diagram.json`),
+      'utf8',
+    ),
+  );
 
 async function temporaryRoot(t) {
   const root = await mkdtemp(join(tmpdir(), 'openplanr-diagram-test-'));
@@ -59,12 +54,15 @@ async function diagramDirectory(root, slug) {
 }
 
 async function readManifest(root, slug) {
-  return JSON.parse(await readFile(join(await diagramDirectory(root, slug), `${slug}.manifest.json`), 'utf8'));
+  return JSON.parse(
+    await readFile(join(await diagramDirectory(root, slug), `${slug}.manifest.json`), 'utf8'),
+  );
 }
 
 async function snapshotDirectory(directory) {
   const result = new Map();
-  for (const name of (await readdir(directory)).sort()) result.set(name, await readFile(join(directory, name)));
+  for (const name of (await readdir(directory)).sort())
+    result.set(name, await readFile(join(directory, name)));
   return result;
 }
 
@@ -82,20 +80,52 @@ function connectedFlowchart(diagramId = 'connected-flowchart') {
 function dependencyFlowchart(direction) {
   const base = connectedFlowchart('dependency-flowchart');
   const definitions = [
-    ['observe', 'Observe release'], ['backend', 'Backend change'], ['request', 'Change request'],
-    ['deploy', 'Deploy'], ['docs', 'Documentation'], ['schema', 'Protocol schema'],
-    ['release', 'Release'], ['frontend', 'Frontend change'], ['approve', 'Approve'],
-    ['tests', 'Verification'], ['auth', 'Authorization'], ['review', 'Engineering review'],
+    ['observe', 'Observe release'],
+    ['backend', 'Backend change'],
+    ['request', 'Change request'],
+    ['deploy', 'Deploy'],
+    ['docs', 'Documentation'],
+    ['schema', 'Protocol schema'],
+    ['release', 'Release'],
+    ['frontend', 'Frontend change'],
+    ['approve', 'Approve'],
+    ['tests', 'Verification'],
+    ['auth', 'Authorization'],
+    ['review', 'Engineering review'],
   ];
-  const nodes = definitions.map(([id, label]) => ({ id, label, kind: 'step', description: null, semanticPosition: null }));
+  const nodes = definitions.map(([id, label]) => ({
+    id,
+    label,
+    kind: 'step',
+    description: null,
+    semanticPosition: null,
+  }));
   const paths = [
-    ['request', 'schema'], ['request', 'auth'], ['request', 'frontend'], ['request', 'docs'],
-    ['schema', 'backend'], ['auth', 'backend'], ['schema', 'tests'], ['frontend', 'tests'],
-    ['backend', 'tests'], ['docs', 'review'], ['tests', 'review'], ['request', 'review'],
-    ['review', 'approve'], ['approve', 'deploy'], ['deploy', 'release'], ['release', 'observe'],
+    ['request', 'schema'],
+    ['request', 'auth'],
+    ['request', 'frontend'],
+    ['request', 'docs'],
+    ['schema', 'backend'],
+    ['auth', 'backend'],
+    ['schema', 'tests'],
+    ['frontend', 'tests'],
+    ['backend', 'tests'],
+    ['docs', 'review'],
+    ['tests', 'review'],
+    ['request', 'review'],
+    ['review', 'approve'],
+    ['approve', 'deploy'],
+    ['deploy', 'release'],
+    ['release', 'observe'],
   ];
-  const relations = paths.map(([from, to], index) => ({ id: `dependency-${index + 1}`, from, to,
-    kind: 'dependency', label: `${from} to ${to}`, weight: null }));
+  const relations = paths.map(([from, to], index) => ({
+    id: `dependency-${index + 1}`,
+    from,
+    to,
+    kind: 'dependency',
+    label: `${from} to ${to}`,
+    weight: null,
+  }));
   return createDiagramDocument({
     ...base,
     diagramId: `dependency-flowchart-${direction}`,
@@ -106,7 +136,8 @@ function dependencyFlowchart(direction) {
     relations,
     accessibility: {
       title: 'Engineering change dependency flow',
-      description: 'A change request progresses through parallel engineering work, review, deployment, and observation.',
+      description:
+        'A change request progresses through parallel engineering work, review, deployment, and observation.',
       readingOrder: [...nodes.map(({ id }) => id), ...relations.map(({ id }) => id)],
     },
   });
@@ -114,10 +145,19 @@ function dependencyFlowchart(direction) {
 
 function directedRing(size, direction = 'left-right') {
   const nodes = Array.from({ length: size }, (_, index) => ({
-    id: `node-${index + 1}`, label: `Step ${index + 1}`, kind: 'step', description: null, semanticPosition: null,
+    id: `node-${index + 1}`,
+    label: `Step ${index + 1}`,
+    kind: 'step',
+    description: null,
+    semanticPosition: null,
   }));
   const relations = nodes.map((node, index) => ({
-    id: `rel-${index + 1}`, from: node.id, to: nodes[(index + 1) % size].id, kind: 'flow', label: `to ${(index + 1) % size + 1}`, weight: null,
+    id: `rel-${index + 1}`,
+    from: node.id,
+    to: nodes[(index + 1) % size].id,
+    kind: 'flow',
+    label: `to ${((index + 1) % size) + 1}`,
+    weight: null,
   }));
   return createDiagramDocument({
     diagramId: `ring-${size}-${direction}`,
@@ -139,7 +179,13 @@ function directedRing(size, direction = 'left-right') {
 }
 
 function releaseHandoff(direction = 'left-right') {
-  const node = (id, label) => ({ id, label, kind: 'primary-item', description: null, semanticPosition: null });
+  const node = (id, label) => ({
+    id,
+    label,
+    kind: 'primary-item',
+    description: null,
+    semanticPosition: null,
+  });
   const flow = (id, from, to, label) => ({ id, from, to, kind: 'flow', label, weight: null });
   return createDiagramDocument({
     diagramId: 'release-handoff',
@@ -150,18 +196,33 @@ function releaseHandoff(direction = 'left-right') {
     layout: { direction, detailTier: 'balanced' },
     theme: { themeId: 'openplanr-default', mode: 'auto' },
     source: { format: 'english', path: null, digest: null },
-    nodes: [node('request', 'Change request'), node('review', 'Review the plan'), node('build', 'Implement'),
-      node('verify', 'Verify'), node('approve', 'Approve release'), node('publish', 'Publish'), node('note', 'Release note')],
-    relations: [flow('r1', 'request', 'review', 'scope'), flow('r2', 'review', 'build', 'approved'),
-      flow('r3', 'build', 'verify', 'diff'), flow('r4', 'verify', 'approve', 'evidence'), flow('r5', 'approve', 'publish', 'release')],
+    nodes: [
+      node('request', 'Change request'),
+      node('review', 'Review the plan'),
+      node('build', 'Implement'),
+      node('verify', 'Verify'),
+      node('approve', 'Approve release'),
+      node('publish', 'Publish'),
+      node('note', 'Release note'),
+    ],
+    relations: [
+      flow('r1', 'request', 'review', 'scope'),
+      flow('r2', 'review', 'build', 'approved'),
+      flow('r3', 'build', 'verify', 'diff'),
+      flow('r4', 'verify', 'approve', 'evidence'),
+      flow('r5', 'approve', 'publish', 'release'),
+    ],
     lanes: [
       { id: 'owner', label: 'Product owner', members: ['request', 'review', 'approve'] },
       { id: 'agent', label: 'Host agent', members: ['build'] },
       { id: 'cli', label: 'planr CLI', members: ['verify', 'publish'] },
     ],
     emphasis: [{ targetId: 'agent', level: 'primary' }],
-    accessibility: { title: 'Release handoff', description: 'A request crosses three lanes to publication.',
-      readingOrder: ['request', 'review', 'build', 'verify', 'approve', 'publish', 'note'] },
+    accessibility: {
+      title: 'Release handoff',
+      description: 'A request crosses three lanes to publication.',
+      readingOrder: ['request', 'review', 'build', 'verify', 'approve', 'publish', 'note'],
+    },
   });
 }
 
@@ -208,8 +269,16 @@ function muviSequence(diagramId = 'muvi-apply-crm-flow') {
     relations: messages,
     events,
     annotations: [
-      { id: 'submission-note', text: 'Submission is the ownership boundary.', targetId: 'create-application' },
-      { id: 'ops-note', text: 'Admissions continues from the CRM work queue.', targetId: 'apply-ops' },
+      {
+        id: 'submission-note',
+        text: 'Submission is the ownership boundary.',
+        targetId: 'create-application',
+      },
+      {
+        id: 'ops-note',
+        text: 'Admissions continues from the CRM work queue.',
+        targetId: 'apply-ops',
+      },
     ],
     emphasis: [
       { targetId: 'muvi-apply', level: 'primary' },
@@ -219,11 +288,23 @@ function muviSequence(diagramId = 'muvi-apply-crm-flow') {
       title: 'MUVi Apply to CRM flow',
       description: 'A time-ordered sequence from applicant sign-up through admissions follow-up.',
       readingOrder: [
-        'applicant', 'muvi-apply', 'crm', 'apply-ops',
-        'sign-up', 'open', 'verify',
-        'application', 'complete', 'create-lead', 'sync-details',
-        'submission', 'submit', 'create-application', 'confirm',
-        'follow-up', 'notify',
+        'applicant',
+        'muvi-apply',
+        'crm',
+        'apply-ops',
+        'sign-up',
+        'open',
+        'verify',
+        'application',
+        'complete',
+        'create-lead',
+        'sync-details',
+        'submission',
+        'submit',
+        'create-application',
+        'confirm',
+        'follow-up',
+        'notify',
       ],
     },
   });
@@ -233,7 +314,7 @@ async function sourceFiles(directory) {
   const files = [];
   for (const entry of await readdir(directory, { withFileTypes: true })) {
     const target = join(directory, entry.name);
-    if (entry.isDirectory()) files.push(...await sourceFiles(target));
+    if (entry.isDirectory()) files.push(...(await sourceFiles(target)));
     else if (entry.isFile() && entry.name.endsWith('.mjs')) files.push(target);
   }
   return files;
@@ -264,8 +345,13 @@ test('offline flowchart rendering produces validated HTML, SVG, high-resolution 
   const manifest = await readManifest(root, document.diagramId);
   assertProtocolArtifact('diagram-manifest', manifest, { protocolVersion: '1.6.0' });
   assert.equal(manifest.outputs.length, 10);
-  assert.equal(manifest.source.path, `diagrams/${document.diagramId}/${document.diagramId}.planr-diagram.json`);
-  const scene = JSON.parse(await readFile(join(directory, `${document.diagramId}.excalidraw`), 'utf8'));
+  assert.equal(
+    manifest.source.path,
+    `diagrams/${document.diagramId}/${document.diagramId}.planr-diagram.json`,
+  );
+  const scene = JSON.parse(
+    await readFile(join(directory, `${document.diagramId}.excalidraw`), 'utf8'),
+  );
   assert.equal(scene.elements.filter(({ type }) => type === 'arrow').length, 2);
 });
 
@@ -308,16 +394,32 @@ test('sequence rendering preserves chronology, prevents label collisions, and em
   assert.equal(excalidraw.report.status, 'editable');
   assert.equal(excalidraw.scene.elements.filter(({ id }) => id.startsWith('arrow-')).length, 9);
   assert.equal(excalidraw.scene.elements.filter(({ id }) => id.startsWith('lifeline-')).length, 4);
-  assert.equal(excalidraw.scene.elements.filter(({ id }) => id.startsWith('phase-text-')).length, 4);
-  assert.equal(excalidraw.scene.elements.filter(({ id }) => id.startsWith('note-') && !id.startsWith('note-text-')).length, 2);
+  assert.equal(
+    excalidraw.scene.elements.filter(({ id }) => id.startsWith('phase-text-')).length,
+    4,
+  );
+  assert.equal(
+    excalidraw.scene.elements.filter(
+      ({ id }) => id.startsWith('note-') && !id.startsWith('note-text-'),
+    ).length,
+    2,
+  );
 });
 
 test('graph rendering preserves semantic groups, annotations, and emphasis in the native studio surface', () => {
   const base = connectedFlowchart('grouped-flowchart');
   const document = createDiagramDocument({
     ...base,
-    groups: [{ id: 'delivery-group', label: 'Delivery path', members: ['intake', 'review', 'publish'] }],
-    annotations: [{ id: 'decision-note', text: 'A reviewer confirms readiness before publication.', targetId: 'review' }],
+    groups: [
+      { id: 'delivery-group', label: 'Delivery path', members: ['intake', 'review', 'publish'] },
+    ],
+    annotations: [
+      {
+        id: 'decision-note',
+        text: 'A reviewer confirms readiness before publication.',
+        targetId: 'review',
+      },
+    ],
     emphasis: [
       { targetId: 'delivery-group', level: 'secondary' },
       { targetId: 'decision-note', level: 'primary' },
@@ -336,40 +438,69 @@ test('graph rendering preserves semantic groups, annotations, and emphasis in th
 });
 
 test('quality reports fail clipped or missing semantic content and disclose unmeasured labels', () => {
-  const document=muviSequence();
-  const rendered=renderDiagramOutputs(document);
-  const report=scene=>createRenderQualityReport(document,{scene,png:{width:100,height:100,byteLength:100},svgValidation:{ok:true,contrastRatio:21}});
-  const clipped=report({...rendered.scene,boxes:rendered.scene.boxes.map((box,i)=>i===0?{...box,x:-20}:box)});
-  assert.equal(clipped.status,'invalid');
-  assert.equal(clipped.checks.find(check=>check.id==='rendered-clipping').status,'fail');
-  const missing=report({...rendered.scene,phases:[],notes:[]});
-  assert.equal(missing.status,'invalid');
-  assert.match(missing.checks.find(check=>check.id==='semantic-coverage').message,/sign-up/);
-  const unmeasured=report({...rendered.scene,labelBounds:[]});
-  assert.equal(unmeasured.status,'warning');
-  assert.equal(unmeasured.checks.find(check=>check.id==='label-overlap').status,'warning');
-  const overlapping=report({...rendered.scene,labelBounds:[rendered.scene.labelBounds[0],{...rendered.scene.labelBounds[0],id:'collision'}]});
-  assert.equal(overlapping.status,'invalid');
-  assert.equal(overlapping.checks.find(check=>check.id==='label-overlap').status,'fail');
+  const document = muviSequence();
+  const rendered = renderDiagramOutputs(document);
+  const report = (scene) =>
+    createRenderQualityReport(document, {
+      scene,
+      png: { width: 100, height: 100, byteLength: 100 },
+      svgValidation: { ok: true, contrastRatio: 21 },
+    });
+  const clipped = report({
+    ...rendered.scene,
+    boxes: rendered.scene.boxes.map((box, i) => (i === 0 ? { ...box, x: -20 } : box)),
+  });
+  assert.equal(clipped.status, 'invalid');
+  assert.equal(clipped.checks.find((check) => check.id === 'rendered-clipping').status, 'fail');
+  const missing = report({ ...rendered.scene, phases: [], notes: [] });
+  assert.equal(missing.status, 'invalid');
+  assert.match(missing.checks.find((check) => check.id === 'semantic-coverage').message, /sign-up/);
+  const unmeasured = report({ ...rendered.scene, labelBounds: [] });
+  assert.equal(unmeasured.status, 'warning');
+  assert.equal(unmeasured.checks.find((check) => check.id === 'label-overlap').status, 'warning');
+  const overlapping = report({
+    ...rendered.scene,
+    labelBounds: [
+      rendered.scene.labelBounds[0],
+      { ...rendered.scene.labelBounds[0], id: 'collision' },
+    ],
+  });
+  assert.equal(overlapping.status, 'invalid');
+  assert.equal(overlapping.checks.find((check) => check.id === 'label-overlap').status, 'fail');
 });
 
 test('parallel and opposing graph connections retain distinct labels, routes, arrow directions, and editable geometry', () => {
-  const fixtureDocument = JSON.parse(readFileSync(join(packageRoot, 'fixtures/diagram/regressions/parallel-opposing.planr-diagram.json'), 'utf8'));
+  const fixtureDocument = JSON.parse(
+    readFileSync(
+      join(packageRoot, 'fixtures/diagram/regressions/parallel-opposing.planr-diagram.json'),
+      'utf8',
+    ),
+  );
   for (const direction of ['left-right', 'right-left', 'top-down', 'bottom-up']) {
-    const document = createDiagramDocument({ ...fixtureDocument, layout: { ...fixtureDocument.layout, direction } });
+    const document = createDiagramDocument({
+      ...fixtureDocument,
+      layout: { ...fixtureDocument.layout, direction },
+    });
     const rendered = renderDiagramOutputs(document);
     const { scene } = rendered;
     assert.equal(rendered.quality.status, 'pass', direction);
     assert.equal(scene.edges.length, document.relations.length);
     assert.equal(scene.labelBounds.length, document.relations.length);
-    assert.equal(new Set(scene.edges.map(edge => JSON.stringify(edge.routePoints))).size, 4);
+    assert.equal(new Set(scene.edges.map((edge) => JSON.stringify(edge.routePoints))).size, 4);
     assert.equal(new Set(scene.labelBounds.map(({ x, y }) => `${x},${y}`)).size, 4);
-    assert.ok(scene.edges.every(edge => edge.labelLines.length > 1));
-    const service = scene.boxes.find(box => box.id === 'service');
-    const store = scene.boxes.find(box => box.id === 'store');
-    assert.ok(direction === 'left-right' ? service.x < store.x
-      : direction === 'right-left' ? service.x > store.x
-        : direction === 'top-down' ? service.y < store.y : service.y > store.y, direction);
+    assert.ok(scene.edges.every((edge) => edge.labelLines.length > 1));
+    const service = scene.boxes.find((box) => box.id === 'service');
+    const store = scene.boxes.find((box) => box.id === 'store');
+    assert.ok(
+      direction === 'left-right'
+        ? service.x < store.x
+        : direction === 'right-left'
+          ? service.x > store.x
+          : direction === 'top-down'
+            ? service.y < store.y
+            : service.y > store.y,
+      direction,
+    );
     const editable = exportDiagramExcalidraw(document).scene;
     const projectedSvg = renderExcalidrawSceneSvg(editable).svg;
     for (const svg of [rendered.svg, projectedSvg]) {
@@ -387,12 +518,18 @@ test('parallel and opposing graph connections retain distinct labels, routes, ar
         // target port. A fixed/right-facing marker fails reverse/up/down here.
         const x = Math.round(endX - dx * 8 - dy * 3);
         const y = Math.round(endY - dy * 8 + dx * 3);
-        assert.ok(pixels[(y * raster.width + x) * 4] < 160, `${direction}: ${edge.id} arrow reaches its semantic target`);
+        assert.ok(
+          pixels[(y * raster.width + x) * 4] < 160,
+          `${direction}: ${edge.id} arrow reaches its semantic target`,
+        );
       }
     }
     for (const edge of scene.edges) {
       const projected = editable.elements.find(({ id }) => id === `arrow-${edge.id}`);
-      assert.deepEqual(projected.points.map(([x, y]) => [x + projected.x, y + projected.y]), edge.routePoints);
+      assert.deepEqual(
+        projected.points.map(([x, y]) => [x + projected.x, y + projected.y]),
+        edge.routePoints,
+      );
       assert.equal(projected.startBinding.elementId, `box-${edge.from}`);
       assert.equal(projected.endBinding.elementId, `box-${edge.to}`);
       const label = editable.elements.find(({ id }) => id === `label-${edge.id}`);
@@ -409,15 +546,23 @@ test('dependency graphs use topology-aware layers and route branches, fan-in, an
     const rendered = renderDiagramOutputs(document);
     assert.equal(rendered.quality.status, 'pass', direction);
     assert.equal(rendered.quality.checks.find(({ id }) => id === 'node-overlap').status, 'pass');
-    assert.equal(rendered.quality.checks.find(({ id }) => id === 'edge-node-overlap').status, 'pass');
+    assert.equal(
+      rendered.quality.checks.find(({ id }) => id === 'edge-node-overlap').status,
+      'pass',
+    );
     assert.equal(rendered.quality.checks.find(({ id }) => id === 'label-overlap').status, 'pass');
     const boxes = new Map(rendered.scene.boxes.map((box) => [box.id, box]));
     for (const relation of document.relations) {
       const source = boxes.get(relation.from);
       const target = boxes.get(relation.to);
-      const forward = direction === 'left-right' ? source.x < target.x
-        : direction === 'right-left' ? source.x > target.x
-          : direction === 'top-down' ? source.y < target.y : source.y > target.y;
+      const forward =
+        direction === 'left-right'
+          ? source.x < target.x
+          : direction === 'right-left'
+            ? source.x > target.x
+            : direction === 'top-down'
+              ? source.y < target.y
+              : source.y > target.y;
       assert.equal(forward, true, `${direction}: ${relation.from} precedes ${relation.to}`);
     }
   }
@@ -428,26 +573,64 @@ test('a 500-node directed ring wraps into bands inside the viewport boundary wit
     const document = directedRing(500, direction);
     const { svg, scene } = renderDiagramSvg(document);
     assert.equal(renderDiagramSvg(document).svg, svg, `${direction}: deterministic bytes`);
-    assert.ok(scene.width <= MAX_DIAGRAM_SCENE_EXTENT && scene.height <= MAX_DIAGRAM_SCENE_EXTENT, `${direction}: ${scene.width}x${scene.height}`);
-    assert.ok(Math.max(scene.width, scene.height) / Math.min(scene.width, scene.height) < 1.5, `${direction}: balanced bands`);
+    assert.ok(
+      scene.width <= MAX_DIAGRAM_SCENE_EXTENT && scene.height <= MAX_DIAGRAM_SCENE_EXTENT,
+      `${direction}: ${scene.width}x${scene.height}`,
+    );
+    assert.ok(
+      Math.max(scene.width, scene.height) / Math.min(scene.width, scene.height) < 1.5,
+      `${direction}: balanced bands`,
+    );
     assert.equal(scene.boxes.length, 500);
     assert.equal(scene.edges.length, 500);
-    assert.deepEqual(scene.boxes.map(({ label }) => label), document.nodes.map(({ label }) => label));
-    assert.deepEqual(scene.edges.map(({ id, from, to }) => [id, from, to]), document.relations.map(({ id, from, to }) => [id, from, to]));
-    assert.deepEqual(scene.edges.map(({ labelLines }) => labelLines.join(' ')), document.relations.map(({ label }) => label));
+    assert.deepEqual(
+      scene.boxes.map(({ label }) => label),
+      document.nodes.map(({ label }) => label),
+    );
+    assert.deepEqual(
+      scene.edges.map(({ id, from, to }) => [id, from, to]),
+      document.relations.map(({ id, from, to }) => [id, from, to]),
+    );
+    assert.deepEqual(
+      scene.edges.map(({ labelLines }) => labelLines.join(' ')),
+      document.relations.map(({ label }) => label),
+    );
     const boxes = new Map(scene.boxes.map((box) => [box.id, box]));
-    const onBorder = ([x, y], box) => (Math.abs(x - box.x) < 0.5 || Math.abs(x - box.x - box.width) < 0.5)
-      ? y >= box.y && y <= box.y + box.height
-      : (Math.abs(y - box.y) < 0.5 || Math.abs(y - box.y - box.height) < 0.5) && x >= box.x && x <= box.x + box.width;
+    const onBorder = ([x, y], box) =>
+      Math.abs(x - box.x) < 0.5 || Math.abs(x - box.x - box.width) < 0.5
+        ? y >= box.y && y <= box.y + box.height
+        : (Math.abs(y - box.y) < 0.5 || Math.abs(y - box.y - box.height) < 0.5) &&
+          x >= box.x &&
+          x <= box.x + box.width;
     for (const edge of scene.edges) {
-      assert.ok(onBorder(edge.routePoints[0], boxes.get(edge.from)), `${direction}: ${edge.id} leaves its source`);
-      assert.ok(onBorder(edge.routePoints.at(-1), boxes.get(edge.to)), `${direction}: ${edge.id} reaches its target`);
+      assert.ok(
+        onBorder(edge.routePoints[0], boxes.get(edge.from)),
+        `${direction}: ${edge.id} leaves its source`,
+      );
+      assert.ok(
+        onBorder(edge.routePoints.at(-1), boxes.get(edge.to)),
+        `${direction}: ${edge.id} reaches its target`,
+      );
     }
     const quality = createRenderQualityReport(document, {
-      scene, png: { width: scene.width, height: scene.height, byteLength: 1 }, svgValidation: validateDiagramSvg(svg),
+      scene,
+      png: { width: scene.width, height: scene.height, byteLength: 1 },
+      svgValidation: validateDiagramSvg(svg),
     });
-    for (const id of ['svg-validated', 'node-overlap', 'label-overlap', 'label-node-overlap', 'edge-node-overlap', 'rendered-clipping', 'semantic-coverage']) {
-      assert.equal(quality.checks.find((check) => check.id === id).status, 'pass', `${direction}: ${id}`);
+    for (const id of [
+      'svg-validated',
+      'node-overlap',
+      'label-overlap',
+      'label-node-overlap',
+      'edge-node-overlap',
+      'rendered-clipping',
+      'semantic-coverage',
+    ]) {
+      assert.equal(
+        quality.checks.find((check) => check.id === id).status,
+        'pass',
+        `${direction}: ${id}`,
+      );
     }
     const prepared = prepareDiagramSvg(svg);
     assert.deepEqual(prepared.scene, { width: scene.width, height: scene.height });
@@ -463,20 +646,42 @@ test('a small cycle keeps its single-band layout and layered graphs that cannot 
   assert.equal(rendered.scene.height, 448);
   assert.equal(new Set(rendered.scene.boxes.map(({ y }) => y)).size, 1);
   const leaves = Array.from({ length: 120 }, (_, index) => ({
-    id: `leaf-${index + 1}`, label: `Leaf ${index + 1}`, kind: 'step', description: null, semanticPosition: null,
+    id: `leaf-${index + 1}`,
+    label: `Leaf ${index + 1}`,
+    kind: 'step',
+    description: null,
+    semanticPosition: null,
   }));
   const base = directedRing(8);
   const star = createDiagramDocument({
     ...base,
     documentDigest: undefined,
     diagramId: 'wide-star',
-    nodes: [{ id: 'hub', label: 'Hub', kind: 'step', description: null, semanticPosition: null }, ...leaves],
-    relations: leaves.map((leaf, index) => ({ id: `spoke-${index + 1}`, from: 'hub', to: leaf.id, kind: 'flow', label: null, weight: null })),
+    nodes: [
+      { id: 'hub', label: 'Hub', kind: 'step', description: null, semanticPosition: null },
+      ...leaves,
+    ],
+    relations: leaves.map((leaf, index) => ({
+      id: `spoke-${index + 1}`,
+      from: 'hub',
+      to: leaf.id,
+      kind: 'flow',
+      label: null,
+      weight: null,
+    })),
     accessibility: { ...base.accessibility, readingOrder: ['hub', ...leaves.map(({ id }) => id)] },
   });
-  assert.throws(() => layoutDiagram(star), (error) => error?.code === DIAGRAM_ERROR_CODES.RESOURCE_BUDGET_EXCEEDED
-    && error.details.maximum === MAX_DIAGRAM_SCENE_EXTENT && error.details.height > MAX_DIAGRAM_SCENE_EXTENT);
-  assert.throws(() => renderDiagramSvg(star), (error) => error?.code === DIAGRAM_ERROR_CODES.RESOURCE_BUDGET_EXCEEDED);
+  assert.throws(
+    () => layoutDiagram(star),
+    (error) =>
+      error?.code === DIAGRAM_ERROR_CODES.RESOURCE_BUDGET_EXCEEDED &&
+      error.details.maximum === MAX_DIAGRAM_SCENE_EXTENT &&
+      error.details.height > MAX_DIAGRAM_SCENE_EXTENT,
+  );
+  assert.throws(
+    () => renderDiagramSvg(star),
+    (error) => error?.code === DIAGRAM_ERROR_CODES.RESOURCE_BUDGET_EXCEEDED,
+  );
 });
 
 test('large split plans stay within the Protocol panel bounds and keep every primary item exactly once', () => {
@@ -488,7 +693,10 @@ test('large split plans stay within the Protocol panel bounds and keep every pri
   const { panels } = report.splitPlan;
   assert.ok(panels.length >= 2 && panels.length <= 32, `${panels.length} panels`);
   assert.ok(panels.every(({ itemIds }) => itemIds.length >= 1 && itemIds.length <= 256));
-  assert.deepEqual(panels.flatMap(({ itemIds }) => itemIds), document.nodes.map(({ id }) => id));
+  assert.deepEqual(
+    panels.flatMap(({ itemIds }) => itemIds),
+    document.nodes.map(({ id }) => id),
+  );
   assert.equal(new Set(panels.map(({ id }) => id)).size, panels.length);
   const rendered = renderDiagramOutputs(directedRing(40));
   assert.equal(rendered.quality.status, 'split-required');
@@ -500,25 +708,46 @@ test('lanes render as titled bands that hold their members and line handoffs up 
     const document = releaseHandoff(direction);
     const rendered = renderDiagramOutputs(document);
     const { scene } = rendered;
-    assert.equal(rendered.quality.status, 'pass', `${direction}: ${JSON.stringify(rendered.quality.checks.filter(c => c.status !== 'pass'))}`);
+    assert.equal(
+      rendered.quality.status,
+      'pass',
+      `${direction}: ${JSON.stringify(rendered.quality.checks.filter((c) => c.status !== 'pass'))}`,
+    );
     assert.equal(scene.lanes.length, 3, direction);
     assert.equal(scene.lanes.find(({ id }) => id === 'agent').emphasis, 'primary');
-    const inside = (box, lane) => box.x >= lane.x && box.y >= lane.y
-      && box.x + box.width <= lane.x + lane.width && box.y + box.height <= lane.y + lane.height;
+    const inside = (box, lane) =>
+      box.x >= lane.x &&
+      box.y >= lane.y &&
+      box.x + box.width <= lane.x + lane.width &&
+      box.y + box.height <= lane.y + lane.height;
     for (const lane of document.lanes) {
       const band = scene.lanes.find(({ id }) => id === lane.id);
       for (const member of lane.members) {
-        assert.ok(inside(scene.boxes.find(({ id }) => id === member), band), `${direction}: ${member} sits in ${lane.id}`);
+        assert.ok(
+          inside(
+            scene.boxes.find(({ id }) => id === member),
+            band,
+          ),
+          `${direction}: ${member} sits in ${lane.id}`,
+        );
       }
     }
     // A node outside every lane still renders, outside every band.
     const loose = scene.boxes.find(({ id }) => id === 'note');
-    assert.ok(loose && scene.lanes.every((band) => !inside(loose, band)), `${direction}: loose node stays outside the bands`);
+    assert.ok(
+      loose && scene.lanes.every((band) => !inside(loose, band)),
+      `${direction}: loose node stays outside the bands`,
+    );
     // Each step along the flow axis owns one slot, so a handoff lines up across lanes.
     const horizontal = ['left-right', 'right-left'].includes(direction);
-    const flowPosition = (id) => { const box = scene.boxes.find((value) => value.id === id); return horizontal ? box.x : box.y; };
+    const flowPosition = (id) => {
+      const box = scene.boxes.find((value) => value.id === id);
+      return horizontal ? box.x : box.y;
+    };
     const order = ['request', 'review', 'build', 'verify', 'approve', 'publish'].map(flowPosition);
-    const sorted = [...order].sort((left, right) => (['right-left', 'bottom-up'].includes(direction) ? right - left : left - right));
+    const sorted = [...order].sort((left, right) =>
+      ['right-left', 'bottom-up'].includes(direction) ? right - left : left - right,
+    );
     assert.deepEqual(order, sorted, `${direction}: steps advance along the flow axis`);
     assert.match(rendered.svg, /data-lane-id="owner"/);
     assert.match(rendered.svg, /Product owner/);
@@ -529,11 +758,24 @@ test('a board without relations packs each column and still passes quality', () 
   const document = createDiagramDocument({
     ...fixture('kanban'),
     diagramId: 'board',
-    nodes: ['a', 'b', 'c', 'd'].map((id) => ({ id, label: `Card ${id}`, kind: 'secondary-item', description: null, semanticPosition: null })),
-    lanes: [{ id: 'todo', label: 'Todo', members: ['a', 'b'] }, { id: 'done', label: 'Done', members: ['c', 'd'] }],
+    nodes: ['a', 'b', 'c', 'd'].map((id) => ({
+      id,
+      label: `Card ${id}`,
+      kind: 'secondary-item',
+      description: null,
+      semanticPosition: null,
+    })),
+    lanes: [
+      { id: 'todo', label: 'Todo', members: ['a', 'b'] },
+      { id: 'done', label: 'Done', members: ['c', 'd'] },
+    ],
     relations: [],
     emphasis: [],
-    accessibility: { title: 'Board', description: 'Two columns.', readingOrder: ['a', 'b', 'c', 'd'] },
+    accessibility: {
+      title: 'Board',
+      description: 'Two columns.',
+      readingOrder: ['a', 'b', 'c', 'd'],
+    },
   });
   const rendered = renderDiagramOutputs(document);
   assert.equal(rendered.quality.status, 'pass');
@@ -545,7 +787,12 @@ test('a board without relations packs each column and still passes quality', () 
 test('quality flags a label away from its path, unrelated merged runs, and a label on a container title', () => {
   const document = connectedFlowchart();
   const rendered = renderDiagramOutputs(document);
-  const report = (scene) => createRenderQualityReport(document, { scene, png: rendered.png, svgValidation: { ok: true, contrastRatio: 21 } });
+  const report = (scene) =>
+    createRenderQualityReport(document, {
+      scene,
+      png: rendered.png,
+      svgValidation: { ok: true, contrastRatio: 21 },
+    });
   const check = (result, id) => result.checks.find((value) => value.id === id).status;
   assert.equal(check(rendered.quality, 'label-edge-distance'), 'pass');
   assert.equal(check(rendered.quality, 'edge-merge'), 'pass');
@@ -553,25 +800,78 @@ test('quality flags a label away from its path, unrelated merged runs, and a lab
 
   const label = rendered.scene.labelBounds[0];
   // Pushed far down the scene, still inside it: only its distance to its path changes.
-  const detached = report({ ...rendered.scene, height: rendered.scene.height + 400,
-    labelBounds: rendered.scene.labelBounds.map((value) => value.id === label.id ? { ...value, y: value.y + 400 } : value) });
+  const detached = report({
+    ...rendered.scene,
+    height: rendered.scene.height + 400,
+    labelBounds: rendered.scene.labelBounds.map((value) =>
+      value.id === label.id ? { ...value, y: value.y + 400 } : value,
+    ),
+  });
   assert.equal(check(detached, 'label-edge-distance'), 'warning');
   assert.equal(detached.status, 'warning');
 
   const [first, second] = rendered.scene.edges;
-  const shared = [[10, 10], [10, 300], [400, 300]];
-  const merged = report({ ...rendered.scene, edges: [
-    { ...first, from: 'p', to: 'q', routePoints: shared },
-    { ...second, from: 'r', to: 's', routePoints: [[20, 10], [10, 10], [10, 300], [400, 300], [400, 320]] },
-  ] });
+  const shared = [
+    [10, 10],
+    [10, 300],
+    [400, 300],
+  ];
+  const merged = report({
+    ...rendered.scene,
+    edges: [
+      { ...first, from: 'p', to: 'q', routePoints: shared },
+      {
+        ...second,
+        from: 'r',
+        to: 's',
+        routePoints: [
+          [20, 10],
+          [10, 10],
+          [10, 300],
+          [400, 300],
+          [400, 320],
+        ],
+      },
+    ],
+  });
   assert.equal(check(merged, 'edge-merge'), 'warning');
-  const fanOut = report({ ...rendered.scene, edges: [
-    { ...first, from: 'p', to: 'q', routePoints: shared },
-    { ...second, from: 'p', to: 's', routePoints: [[10, 10], [10, 300], [400, 300], [400, 320]] },
-  ] });
-  assert.equal(check(fanOut, 'edge-merge'), 'pass', 'a fan-out from one source may share its first run');
+  const fanOut = report({
+    ...rendered.scene,
+    edges: [
+      { ...first, from: 'p', to: 'q', routePoints: shared },
+      {
+        ...second,
+        from: 'p',
+        to: 's',
+        routePoints: [
+          [10, 10],
+          [10, 300],
+          [400, 300],
+          [400, 320],
+        ],
+      },
+    ],
+  });
+  assert.equal(
+    check(fanOut, 'edge-merge'),
+    'pass',
+    'a fan-out from one source may share its first run',
+  );
 
-  const framed = report({ ...rendered.scene, groups: [{ id: 'frame', label: 'Frame', x: label.x - 10, y: label.y - 10, width: 400, height: 200, emphasis: null }] });
+  const framed = report({
+    ...rendered.scene,
+    groups: [
+      {
+        id: 'frame',
+        label: 'Frame',
+        x: label.x - 10,
+        y: label.y - 10,
+        width: 400,
+        height: 200,
+        emphasis: null,
+      },
+    ],
+  });
   assert.equal(check(framed, 'label-cluster-overlap'), 'fail');
   assert.equal(framed.status, 'invalid');
 });
@@ -579,42 +879,107 @@ test('quality flags a label away from its path, unrelated merged runs, and a lab
 test('graph quality rejects clipped route bends, partial label measurements, and labels or paths through nodes', () => {
   const document = connectedFlowchart();
   const rendered = renderDiagramOutputs(document);
-  const report = scene => createRenderQualityReport(document, { scene, png: rendered.png, svgValidation: { ok: true, contrastRatio: 21 } });
-  const bendOutside = report({ ...rendered.scene, edges: rendered.scene.edges.map((edge, index) => index ? edge : {
-    ...edge, routePoints: [edge.routePoints[0], [-10, -10], edge.routePoints.at(-1)],
-  }) });
-  assert.equal(bendOutside.checks.find(check => check.id === 'rendered-clipping').status, 'fail');
+  const report = (scene) =>
+    createRenderQualityReport(document, {
+      scene,
+      png: rendered.png,
+      svgValidation: { ok: true, contrastRatio: 21 },
+    });
+  const bendOutside = report({
+    ...rendered.scene,
+    edges: rendered.scene.edges.map((edge, index) =>
+      index
+        ? edge
+        : {
+            ...edge,
+            routePoints: [edge.routePoints[0], [-10, -10], edge.routePoints.at(-1)],
+          },
+    ),
+  });
+  assert.equal(bendOutside.checks.find((check) => check.id === 'rendered-clipping').status, 'fail');
   const box = rendered.scene.boxes[0];
-  const onNode = report({ ...rendered.scene, labelBounds: rendered.scene.labelBounds.map(label => ({ ...label, x: box.x, y: box.y })) });
+  const onNode = report({
+    ...rendered.scene,
+    labelBounds: rendered.scene.labelBounds.map((label) => ({ ...label, x: box.x, y: box.y })),
+  });
   assert.equal(onNode.status, 'invalid');
-  assert.equal(onNode.checks.find(check => check.id === 'label-node-overlap').status, 'fail');
-  const throughNode = report({ ...rendered.scene, edges: [{ ...rendered.scene.edges[0],
-    routePoints: [[box.x - 20, box.y + box.height / 2], [box.x + box.width + 20, box.y + box.height / 2]],
-  }] });
-  assert.equal(throughNode.checks.find(check => check.id === 'edge-node-overlap').status, 'fail');
-  const collidingNodes = report({ ...rendered.scene, boxes: rendered.scene.boxes.map((value, index) => index === 1
-    ? { ...value, x: box.x, y: box.y } : value) });
-  assert.equal(collidingNodes.checks.find(check => check.id === 'node-overlap').status, 'fail');
+  assert.equal(onNode.checks.find((check) => check.id === 'label-node-overlap').status, 'fail');
+  const throughNode = report({
+    ...rendered.scene,
+    edges: [
+      {
+        ...rendered.scene.edges[0],
+        routePoints: [
+          [box.x - 20, box.y + box.height / 2],
+          [box.x + box.width + 20, box.y + box.height / 2],
+        ],
+      },
+    ],
+  });
+  assert.equal(throughNode.checks.find((check) => check.id === 'edge-node-overlap').status, 'fail');
+  const collidingNodes = report({
+    ...rendered.scene,
+    boxes: rendered.scene.boxes.map((value, index) =>
+      index === 1 ? { ...value, x: box.x, y: box.y } : value,
+    ),
+  });
+  assert.equal(collidingNodes.checks.find((check) => check.id === 'node-overlap').status, 'fail');
   const sequence = muviSequence();
   const sequenceRender = renderDiagramOutputs(sequence);
-  const partial = createRenderQualityReport(sequence, { scene: { ...sequenceRender.scene, labelBounds: sequenceRender.scene.labelBounds.slice(0, 1) },
-    png: sequenceRender.png, svgValidation: { ok: true, contrastRatio: 21 } });
-  assert.equal(partial.checks.find(check => check.id === 'label-overlap').status, 'warning');
+  const partial = createRenderQualityReport(sequence, {
+    scene: { ...sequenceRender.scene, labelBounds: sequenceRender.scene.labelBounds.slice(0, 1) },
+    png: sequenceRender.png,
+    svgValidation: { ok: true, contrastRatio: 21 },
+  });
+  assert.equal(partial.checks.find((check) => check.id === 'label-overlap').status, 'warning');
 });
 
 test('self connections form visible loops and skip edges route around graph obstacles', () => {
   const base = connectedFlowchart();
-  const self = createDiagramDocument({ ...base, relations: [{ id: 'retry', from: 'intake', to: 'intake', label: 'Retry locally', kind: 'flow', weight: null }],
-    accessibility: { ...base.accessibility, readingOrder: [...base.nodes.map(({ id }) => id), 'retry'] } });
+  const self = createDiagramDocument({
+    ...base,
+    relations: [
+      {
+        id: 'retry',
+        from: 'intake',
+        to: 'intake',
+        label: 'Retry locally',
+        kind: 'flow',
+        weight: null,
+      },
+    ],
+    accessibility: {
+      ...base.accessibility,
+      readingOrder: [...base.nodes.map(({ id }) => id), 'retry'],
+    },
+  });
   const rendered = renderDiagramOutputs(self);
   assert.equal(rendered.quality.status, 'pass');
   assert.ok(rendered.scene.edges[0].routePoints.length >= 4);
   assert.ok(rendered.scene.edges[0].routePoints.some(([, y]) => y < rendered.scene.boxes[0].y));
-  const obstructed = createDiagramDocument({ ...base, relations: [{ id: 'bypass', from: 'intake', to: 'publish', label: 'Bypass review', kind: 'flow', weight: null }],
-    accessibility: { ...base.accessibility, readingOrder: [...base.nodes.map(({ id }) => id), 'bypass'] } });
+  const obstructed = createDiagramDocument({
+    ...base,
+    relations: [
+      {
+        id: 'bypass',
+        from: 'intake',
+        to: 'publish',
+        label: 'Bypass review',
+        kind: 'flow',
+        weight: null,
+      },
+    ],
+    accessibility: {
+      ...base.accessibility,
+      readingOrder: [...base.nodes.map(({ id }) => id), 'bypass'],
+    },
+  });
   const dense = renderDiagramOutputs(obstructed);
   assert.equal(dense.quality.status, 'pass');
-  assert.equal(dense.quality.checks.find(check => check.id === 'edge-node-overlap').status, 'pass');
+  assert.equal(
+    dense.quality.checks.find((check) => check.id === 'edge-node-overlap').status,
+    'pass',
+  );
   assert.ok(dense.scene.edges[0].routePoints.length >= 4);
 });
 
@@ -622,8 +987,9 @@ test('schema failures name the invalid field in structured diagnostics', () => {
   const document = connectedFlowchart();
   assert.throws(
     () => createDiagramDocument({ ...document, highlight: { targetId: 'review' } }),
-    (error) => error.code === DIAGRAM_ERROR_CODES.SCHEMA_INVALID
-      && error.details.diagnostics.some(({ detail }) => /unknown property 'highlight'/u.test(detail)),
+    (error) =>
+      error.code === DIAGRAM_ERROR_CODES.SCHEMA_INVALID &&
+      error.details.diagnostics.some(({ detail }) => /unknown property 'highlight'/u.test(detail)),
   );
 });
 
@@ -634,7 +1000,14 @@ test('three identical renders are byte-stable and converge to unchanged', async 
   const manifests = [];
   for (let index = 0; index < 3; index += 1) {
     statuses.push((await renderDiagram(document, { outputRoot: root })).status);
-    manifests.push(await readFile(join(await diagramDirectory(root, document.diagramId), `${document.diagramId}.manifest.json`)));
+    manifests.push(
+      await readFile(
+        join(
+          await diagramDirectory(root, document.diagramId),
+          `${document.diagramId}.manifest.json`,
+        ),
+      ),
+    );
   }
   assert.deepEqual(statuses, ['created', 'unchanged', 'unchanged']);
   assert.ok(manifests[0].equals(manifests[1]));
@@ -679,7 +1052,10 @@ test('an edited Excalidraw scene owns rerendered pixels without rewriting IR or 
   assert.match(result.manifest.source.path, /\.excalidraw$/u);
   assert.ok(beforeIr.equals(await readFile(irPath)));
   assert.ok(beforeMermaid.equals(await readFile(mermaidPath)));
-  assert.equal(beforeSvg.equals(await readFile(join(directory, `${document.diagramId}.svg`))), false);
+  assert.equal(
+    beforeSvg.equals(await readFile(join(directory, `${document.diagramId}.svg`))),
+    false,
+  );
 });
 
 test('UTF-8 and hostile-looking labels remain inert and render through the packaged font', async (t) => {
@@ -741,7 +1117,10 @@ test('inspection reports drift and check enforces the same manifest boundary', a
   assert.deepEqual(clean.sourceChanges, []);
   assert.deepEqual(clean.generatedChanges, []);
 
-  const svgPath = join(await diagramDirectory(root, document.diagramId), `${document.diagramId}.svg`);
+  const svgPath = join(
+    await diagramDirectory(root, document.diagramId),
+    `${document.diagramId}.svg`,
+  );
   await writeFile(svgPath, '<svg>changed</svg>\n');
   const changed = await inspectDiagram({ outputRoot: root, slug: document.diagramId });
   assert.equal(changed.validation, 'changed');
@@ -796,7 +1175,9 @@ test('two changed source branches return E_DIAGRAM_SOURCE_CONFLICT and preserve 
   });
   assert.equal(resolved.status, 'replaced');
   assert.match(resolved.manifest.source.path, /\.excalidraw$/u);
-  assert.ok((await readFile(irPath)).equals(before.get(`${document.diagramId}.planr-diagram.json`)));
+  assert.ok(
+    (await readFile(irPath)).equals(before.get(`${document.diagramId}.planr-diagram.json`)),
+  );
 });
 
 test('production diagram runtime has no network or browser dependency path', async () => {
@@ -820,7 +1201,9 @@ test('parallel same-slug renders cannot mix sessions', async (t) => {
   assert.equal(results.filter(({ status }) => status === 'fulfilled').length, 1);
   const rejected = results.find(({ status }) => status === 'rejected');
   assert.equal(rejected.reason.code, DIAGRAM_ERROR_CODES.OUTPUT_LOCKED);
-  assertProtocolArtifact('diagram-manifest', await readManifest(root, document.diagramId), { protocolVersion: '1.6.0' });
+  assertProtocolArtifact('diagram-manifest', await readManifest(root, document.diagramId), {
+    protocolVersion: '1.6.0',
+  });
 });
 
 test('runtime roots reject symlink escape and recovery restores one complete backup', async (t) => {

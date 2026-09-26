@@ -28,13 +28,23 @@ function loopback(hostname) {
 
 function normalizeBaseUrl(value = ARTIFACT_SHARE_BASE_URL) {
   let url;
-  try { url = new globalThis.URL(value); } catch {
+  try {
+    url = new globalThis.URL(value);
+  } catch {
     throw shareError(ARTIFACT_ERROR_CODES.PASTE_INVALID, 'Artifact share service URL is invalid.');
   }
-  if (url.username || url.password || url.search || url.hash
-    || (url.pathname !== '/' && url.pathname !== '')
-    || (url.protocol !== 'https:' && !(url.protocol === 'http:' && loopback(url.hostname)))) {
-    throw shareError(ARTIFACT_ERROR_CODES.PASTE_INVALID, 'Artifact share service URL is not a secure origin.');
+  if (
+    url.username ||
+    url.password ||
+    url.search ||
+    url.hash ||
+    (url.pathname !== '/' && url.pathname !== '') ||
+    (url.protocol !== 'https:' && !(url.protocol === 'http:' && loopback(url.hostname)))
+  ) {
+    throw shareError(
+      ARTIFACT_ERROR_CODES.PASTE_INVALID,
+      'Artifact share service URL is not a secure origin.',
+    );
   }
   return url;
 }
@@ -63,18 +73,32 @@ function validateCiphertext(value, declaredSize) {
     throw shareError(ARTIFACT_ERROR_CODES.PASTE_INVALID, 'Artifact paste ciphertext is invalid.');
   }
   const decoded = ciphertextBytes(value);
-  if (decoded.byteLength < 16 || decoded.byteLength > ARTIFACT_COMPRESSED_LIMIT
-    || (declaredSize !== undefined && declaredSize !== decoded.byteLength)) {
-    throw shareError(ARTIFACT_ERROR_CODES.PASTE_INVALID, 'Artifact paste ciphertext size is invalid.');
+  if (
+    decoded.byteLength < 16 ||
+    decoded.byteLength > ARTIFACT_COMPRESSED_LIMIT ||
+    (declaredSize !== undefined && declaredSize !== decoded.byteLength)
+  ) {
+    throw shareError(
+      ARTIFACT_ERROR_CODES.PASTE_INVALID,
+      'Artifact paste ciphertext size is invalid.',
+    );
   }
   return decoded.byteLength;
 }
 
 function validateCreateRequest(value) {
-  if (!value || typeof value !== 'object' || Array.isArray(value)
-    || value.schemaVersion !== '1.0.0' || value.operation !== 'create'
-    || !ARTIFACT_SHARE_TTLS.includes(value.ttl)) {
-    throw shareError(ARTIFACT_ERROR_CODES.PASTE_INVALID, 'Artifact paste creation request is invalid.');
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    Array.isArray(value) ||
+    value.schemaVersion !== '1.0.0' ||
+    value.operation !== 'create' ||
+    !ARTIFACT_SHARE_TTLS.includes(value.ttl)
+  ) {
+    throw shareError(
+      ARTIFACT_ERROR_CODES.PASTE_INVALID,
+      'Artifact paste creation request is invalid.',
+    );
   }
   validateIv(value.iv);
   validateCiphertext(value.ciphertext);
@@ -88,30 +112,58 @@ function validateCreateRequest(value) {
 }
 
 function validateCreated(value) {
-  if (!value || typeof value !== 'object' || Array.isArray(value)
-    || value.schemaVersion !== '1.0.0' || value.operation !== 'created'
-    || !ID_RE.test(value.id ?? '') || !TOKEN_RE.test(value.deletionToken ?? '')
-    || typeof value.expiresAt !== 'string' || !Number.isFinite(Date.parse(value.expiresAt))) {
-    throw shareError(ARTIFACT_ERROR_CODES.PASTE_INVALID, 'Artifact paste service returned an invalid creation response.');
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    Array.isArray(value) ||
+    value.schemaVersion !== '1.0.0' ||
+    value.operation !== 'created' ||
+    !ID_RE.test(value.id ?? '') ||
+    !TOKEN_RE.test(value.deletionToken ?? '') ||
+    typeof value.expiresAt !== 'string' ||
+    !Number.isFinite(Date.parse(value.expiresAt))
+  ) {
+    throw shareError(
+      ARTIFACT_ERROR_CODES.PASTE_INVALID,
+      'Artifact paste service returned an invalid creation response.',
+    );
   }
   return Object.freeze({
-    schemaVersion: '1.0.0', operation: 'created',
-    id: value.id, expiresAt: value.expiresAt, deletionToken: value.deletionToken,
+    schemaVersion: '1.0.0',
+    operation: 'created',
+    id: value.id,
+    expiresAt: value.expiresAt,
+    deletionToken: value.deletionToken,
   });
 }
 
 function validateRead(value) {
-  if (!value || typeof value !== 'object' || Array.isArray(value)
-    || value.schemaVersion !== '1.0.0' || value.operation !== 'read'
-    || typeof value.expiresAt !== 'string' || !Number.isFinite(Date.parse(value.expiresAt))
-    || !Number.isInteger(value.size) || value.size < 16 || value.size > ARTIFACT_COMPRESSED_LIMIT) {
-    throw shareError(ARTIFACT_ERROR_CODES.PASTE_INVALID, 'Artifact paste service returned an invalid read response.');
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    Array.isArray(value) ||
+    value.schemaVersion !== '1.0.0' ||
+    value.operation !== 'read' ||
+    typeof value.expiresAt !== 'string' ||
+    !Number.isFinite(Date.parse(value.expiresAt)) ||
+    !Number.isInteger(value.size) ||
+    value.size < 16 ||
+    value.size > ARTIFACT_COMPRESSED_LIMIT
+  ) {
+    throw shareError(
+      ARTIFACT_ERROR_CODES.PASTE_INVALID,
+      'Artifact paste service returned an invalid read response.',
+    );
   }
   validateIv(value.iv);
   validateCiphertext(value.ciphertext, value.size);
   return Object.freeze({
-    schemaVersion: '1.0.0', operation: 'read', iv: value.iv,
-    ciphertext: value.ciphertext, expiresAt: value.expiresAt, size: value.size,
+    schemaVersion: '1.0.0',
+    operation: 'read',
+    iv: value.iv,
+    ciphertext: value.ciphertext,
+    expiresAt: value.expiresAt,
+    size: value.size,
   });
 }
 
@@ -123,8 +175,13 @@ function safeId(value) {
 }
 
 async function responseJson(response) {
-  try { return await response.json(); } catch {
-    throw shareError(ARTIFACT_ERROR_CODES.PASTE_INVALID, 'Artifact paste service returned malformed JSON.');
+  try {
+    return await response.json();
+  } catch {
+    throw shareError(
+      ARTIFACT_ERROR_CODES.PASTE_INVALID,
+      'Artifact paste service returned malformed JSON.',
+    );
   }
 }
 
@@ -137,7 +194,10 @@ export function createPasteClient({
 } = {}) {
   const base = normalizeBaseUrl(baseUrl);
   if (typeof fetchImpl !== 'function') {
-    throw shareError(ARTIFACT_ERROR_CODES.BROWSER_UNSUPPORTED, 'This runtime does not provide fetch support.');
+    throw shareError(
+      ARTIFACT_ERROR_CODES.BROWSER_UNSUPPORTED,
+      'This runtime does not provide fetch support.',
+    );
   }
   const request = async (path, options, meta) => {
     try {
@@ -163,21 +223,33 @@ export function createPasteClient({
     async create(value) {
       const body = validateCreateRequest(value);
       const size = validateCiphertext(body.ciphertext);
-      const response = await request('/api/v1/pastes', {
-        method: 'POST',
-        headers: Object.freeze({ 'content-type': 'application/json' }),
-        body: JSON.stringify(body),
-      }, { operation: 'create', ciphertextBytes: size, ttl: body.ttl });
+      const response = await request(
+        '/api/v1/pastes',
+        {
+          method: 'POST',
+          headers: Object.freeze({ 'content-type': 'application/json' }),
+          body: JSON.stringify(body),
+        },
+        { operation: 'create', ciphertextBytes: size, ttl: body.ttl },
+      );
       if (!response?.ok) {
-        throw shareError(ARTIFACT_ERROR_CODES.PASTE_UNAVAILABLE, 'Artifact paste could not be created.');
+        throw shareError(
+          ARTIFACT_ERROR_CODES.PASTE_UNAVAILABLE,
+          'Artifact paste could not be created.',
+        );
       }
       return validateCreated(await responseJson(response));
     },
     async get(id) {
       const pasteId = safeId(id);
-      const response = await request(`/api/v1/pastes/${encodeURIComponent(pasteId)}`, {
-        method: 'GET', headers: Object.freeze({ accept: 'application/json' }),
-      }, { operation: 'read' });
+      const response = await request(
+        `/api/v1/pastes/${encodeURIComponent(pasteId)}`,
+        {
+          method: 'GET',
+          headers: Object.freeze({ accept: 'application/json' }),
+        },
+        { operation: 'read' },
+      );
       if (response?.status === 410) {
         throw shareError(ARTIFACT_ERROR_CODES.PASTE_EXPIRED, 'Artifact paste has expired.');
       }
@@ -189,7 +261,9 @@ export function createPasteClient({
       try {
         const result = now();
         current = result instanceof Date ? result.getTime() : new Date(result).getTime();
-      } catch { current = Number.NaN; }
+      } catch {
+        current = Number.NaN;
+      }
       if (!Number.isFinite(current)) {
         throw shareError(ARTIFACT_ERROR_CODES.PASTE_INVALID, 'Artifact paste clock is invalid.');
       }
@@ -201,14 +275,24 @@ export function createPasteClient({
     async delete(id, deletionToken) {
       const pasteId = safeId(id);
       if (typeof deletionToken !== 'string' || !TOKEN_RE.test(deletionToken)) {
-        throw shareError(ARTIFACT_ERROR_CODES.PASTE_INVALID, 'Artifact paste deletion token is invalid.');
+        throw shareError(
+          ARTIFACT_ERROR_CODES.PASTE_INVALID,
+          'Artifact paste deletion token is invalid.',
+        );
       }
-      const response = await request(`/api/v1/pastes/${encodeURIComponent(pasteId)}`, {
-        method: 'DELETE',
-        headers: Object.freeze({ authorization: `Bearer ${deletionToken}` }),
-      }, { operation: 'delete' });
+      const response = await request(
+        `/api/v1/pastes/${encodeURIComponent(pasteId)}`,
+        {
+          method: 'DELETE',
+          headers: Object.freeze({ authorization: `Bearer ${deletionToken}` }),
+        },
+        { operation: 'delete' },
+      );
       if (!response?.ok) {
-        throw shareError(ARTIFACT_ERROR_CODES.PASTE_UNAVAILABLE, 'Artifact paste could not be deleted.');
+        throw shareError(
+          ARTIFACT_ERROR_CODES.PASTE_UNAVAILABLE,
+          'Artifact paste could not be deleted.',
+        );
       }
       return Object.freeze({ ok: true });
     },
@@ -222,12 +306,21 @@ export function selectReviewLinkTransport({ fragmentLength, short = false } = {}
   return short || fragmentLength > ARTIFACT_FRAGMENT_LIMIT ? 'short' : 'fragment';
 }
 
-export function prepareReviewLink(value, { encodeImpl = encodeArtifactFragmentDetails, ...codecOptions } = {}) {
+export function prepareReviewLink(
+  value,
+  { encodeImpl = encodeArtifactFragmentDetails, ...codecOptions } = {},
+) {
   const encoded = encodeImpl(value, codecOptions);
-  if (!encoded || typeof encoded.fragment !== 'string'
-    || !(encoded.compressed instanceof Uint8Array)
-    || encoded.fragmentLength !== encoded.fragment.length) {
-    throw shareError(ARTIFACT_ERROR_CODES.CODEC_INVALID, 'Artifact fragment encoder returned an invalid result.');
+  if (
+    !encoded ||
+    typeof encoded.fragment !== 'string' ||
+    !(encoded.compressed instanceof Uint8Array) ||
+    encoded.fragmentLength !== encoded.fragment.length
+  ) {
+    throw shareError(
+      ARTIFACT_ERROR_CODES.CODEC_INVALID,
+      'Artifact fragment encoder returned an invalid result.',
+    );
   }
   return Object.freeze({
     fragment: encoded.fragment,
@@ -249,24 +342,30 @@ export function createReviewLinkPreview(value, options = {}) {
   });
 }
 
-export async function createReviewLink(value, {
-  baseUrl = ARTIFACT_SHARE_BASE_URL,
-  short = false,
-  transport = short ? 'short' : 'auto',
-  shortConsent = false,
-  confirmShort,
-  ttl = '7d',
-  confirmed = false,
-  yes = false,
-  pasteClient,
-  fetchImpl,
-  encodeImpl,
-  encryptImpl = encryptArtifactPayload,
-  crypto,
-  ...codecOptions
-} = {}) {
+export async function createReviewLink(
+  value,
+  {
+    baseUrl = ARTIFACT_SHARE_BASE_URL,
+    short = false,
+    transport = short ? 'short' : 'auto',
+    shortConsent = false,
+    confirmShort,
+    ttl = '7d',
+    confirmed = false,
+    yes = false,
+    pasteClient,
+    fetchImpl,
+    encodeImpl,
+    encryptImpl = encryptArtifactPayload,
+    crypto,
+    ...codecOptions
+  } = {},
+) {
   if (!['auto', 'short'].includes(transport)) {
-    throw shareError(ARTIFACT_ERROR_CODES.PASTE_INVALID, 'Artifact share transport must be auto or short.');
+    throw shareError(
+      ARTIFACT_ERROR_CODES.PASTE_INVALID,
+      'Artifact share transport must be auto or short.',
+    );
   }
   const base = normalizeBaseUrl(baseUrl);
   const prepared = prepareReviewLink(value, { encodeImpl, ...codecOptions });
@@ -292,17 +391,24 @@ export async function createReviewLink(value, {
     });
   }
   if (!ARTIFACT_SHARE_TTLS.includes(ttl)) {
-    throw shareError(ARTIFACT_ERROR_CODES.PASTE_INVALID, 'Artifact paste TTL must be 1d, 7d, or 30d.');
+    throw shareError(
+      ARTIFACT_ERROR_CODES.PASTE_INVALID,
+      'Artifact paste TTL must be 1d, 7d, or 30d.',
+    );
   }
   let consent = Boolean(confirmed || yes || shortConsent);
   if (!consent && typeof confirmShort === 'function') {
-    consent = Boolean(await confirmShort(Object.freeze({
-      fragmentLength: prepared.fragmentLength,
-      compressedBytes: prepared.compressedBytes,
-      ciphertextBytes: prepared.ciphertextBytes,
-      ttl,
-      forced: prepared.fragmentLength > ARTIFACT_FRAGMENT_LIMIT,
-    })));
+    consent = Boolean(
+      await confirmShort(
+        Object.freeze({
+          fragmentLength: prepared.fragmentLength,
+          compressedBytes: prepared.compressedBytes,
+          ciphertextBytes: prepared.ciphertextBytes,
+          ttl,
+          forced: prepared.fragmentLength > ARTIFACT_FRAGMENT_LIMIT,
+        }),
+      ),
+    );
   }
   if (!consent) {
     throw shareError(
@@ -326,7 +432,10 @@ export async function createReviewLink(value, {
   const url = new globalThis.URL(`/p/${encodeURIComponent(created.id)}`, base);
   url.hash = `k=${encrypted.keyFragment}`;
   if (url.toString().includes(created.deletionToken)) {
-    throw shareError(ARTIFACT_ERROR_CODES.PASTE_INVALID, 'Artifact deletion token isolation failed.');
+    throw shareError(
+      ARTIFACT_ERROR_CODES.PASTE_INVALID,
+      'Artifact deletion token isolation failed.',
+    );
   }
   return Object.freeze({
     ok: true,
@@ -347,45 +456,58 @@ export async function createReviewLink(value, {
 
 function parseShortLink(source) {
   let url;
-  try { url = new globalThis.URL(source); } catch {
+  try {
+    url = new globalThis.URL(source);
+  } catch {
     throw shareError(ARTIFACT_ERROR_CODES.PASTE_INVALID, 'Artifact review link is malformed.');
   }
-  if (url.username || url.password || url.search
-    || (url.protocol !== 'https:' && !(url.protocol === 'http:' && loopback(url.hostname)))) {
-    throw shareError(ARTIFACT_ERROR_CODES.PASTE_INVALID, 'Artifact review link is not a secure supported URL.');
+  if (
+    url.username ||
+    url.password ||
+    url.search ||
+    (url.protocol !== 'https:' && !(url.protocol === 'http:' && loopback(url.hostname)))
+  ) {
+    throw shareError(
+      ARTIFACT_ERROR_CODES.PASTE_INVALID,
+      'Artifact review link is not a secure supported URL.',
+    );
   }
   const match = /^\/p\/([A-Za-z0-9_-]{16,128})\/?$/.exec(url.pathname);
   const key = /^#k=([A-Za-z0-9_-]{43})$/.exec(url.hash)?.[1];
   if (!match || !key) {
-    throw shareError(ARTIFACT_ERROR_CODES.PASTE_INVALID, 'Artifact encrypted review link is malformed.');
+    throw shareError(
+      ARTIFACT_ERROR_CODES.PASTE_INVALID,
+      'Artifact encrypted review link is malformed.',
+    );
   }
   return Object.freeze({ origin: url.origin, id: match[1], keyFragment: key });
 }
 
 /** Async transport adapter designed to be injected directly into T-008 import. */
-export async function decodeReviewLink(source, {
-  pasteClient,
-  fetchImpl,
-  crypto,
-  ...codecOptions
-} = {}) {
-  if (typeof source === 'string'
-    && (/^v[0-9]+\./.test(source)
-      || /^#v[0-9]+\./.test(source)
-      || /#v[0-9]+\./.test(source))) {
+export async function decodeReviewLink(
+  source,
+  { pasteClient, fetchImpl, crypto, ...codecOptions } = {},
+) {
+  if (
+    typeof source === 'string' &&
+    (/^v[0-9]+\./.test(source) || /^#v[0-9]+\./.test(source) || /#v[0-9]+\./.test(source))
+  ) {
     return decodeArtifactFragment(source, codecOptions);
   }
   const link = parseShortLink(source);
   const client = pasteClient ?? createPasteClient({ baseUrl: link.origin, fetchImpl });
   const encrypted = await client.get(link.id);
-  const compressed = await decryptArtifactPayload({
-    version: 'v1',
-    iv: encrypted.iv,
-    ciphertext: encrypted.ciphertext,
-  }, {
-    keyFragment: link.keyFragment,
-    crypto,
-    maxEncryptedBytes: ARTIFACT_COMPRESSED_LIMIT,
-  });
+  const compressed = await decryptArtifactPayload(
+    {
+      version: 'v1',
+      iv: encrypted.iv,
+      ciphertext: encrypted.ciphertext,
+    },
+    {
+      keyFragment: link.keyFragment,
+      crypto,
+      maxEncryptedBytes: ARTIFACT_COMPRESSED_LIMIT,
+    },
+  );
   return decodeCompressedArtifactPayload(compressed, codecOptions).value;
 }

@@ -48,17 +48,20 @@ async function verifiedSet(manifestPath) {
   const location = locator(manifestPath);
   const inspected = await checkDiagram({ outputRoot: location.outputRoot, slug: location.slug });
   const manifest = inspected.manifest;
-  const canonical = manifest.outputs.find(output => output.path.endsWith('.planr-diagram.json'));
+  const canonical = manifest.outputs.find((output) => output.path.endsWith('.planr-diagram.json'));
   if (!canonical) fail('Diagram set has no canonical metadata.');
   const sourcePath = join(location.outputRoot, ...canonical.path.split('/'));
   const sourceBytes = await readFile(sourcePath);
-  if (digestBytes(sourceBytes) !== canonical.digest) fail('Canonical diagram source digest changed.');
+  if (digestBytes(sourceBytes) !== canonical.digest)
+    fail('Canonical diagram source digest changed.');
   let document;
   try {
     document = JSON.parse(sourceBytes.toString('utf8'));
     assertProtocolArtifact('diagram-document', document, { protocolVersion: '1.6.0' });
   } catch (error) {
-    fail('Canonical diagram source is not a valid Protocol 1.6 document.', { cause: error.message });
+    fail('Canonical diagram source is not a valid Protocol 1.6 document.', {
+      cause: error.message,
+    });
   }
   return { location, manifest, document };
 }
@@ -74,25 +77,22 @@ function relativeConsumerPath(outputRoot, value) {
 }
 
 function selectConsumerOutput(manifest, consumer, preferred) {
-  const formats = preferred
-    ? [preferred]
-    : consumer === 'pdf'
-      ? ['svg', 'png']
-      : ['svg'];
+  const formats = preferred ? [preferred] : consumer === 'pdf' ? ['svg', 'png'] : ['svg'];
   for (const format of formats) {
-    if (!Object.hasOwn(OUTPUT_MEDIA, format)) fail(`Unsupported diagram attachment format: ${format}.`);
+    if (!Object.hasOwn(OUTPUT_MEDIA, format))
+      fail(`Unsupported diagram attachment format: ${format}.`);
     const output = outputBySuffix(manifest, `.${format}`);
     if (output) return output;
   }
   fail(`Diagram set has no verified ${formats.join(' or ')} output.`);
 }
 
-export async function createDiagramConsumerReference(manifestPath, {
-  consumer,
-  consumerPath = null,
-  preferredFormat,
-} = {}) {
-  if (!CONSUMERS.has(consumer)) fail('Diagram consumer must be specification, documentation, or pdf.');
+export async function createDiagramConsumerReference(
+  manifestPath,
+  { consumer, consumerPath = null, preferredFormat } = {},
+) {
+  if (!CONSUMERS.has(consumer))
+    fail('Diagram consumer must be specification, documentation, or pdf.');
   const set = await verifiedSet(manifestPath);
   const output = selectConsumerOutput(set.manifest, consumer, preferredFormat);
   const outputPath = join(set.location.outputRoot, ...output.path.split('/'));
@@ -175,11 +175,13 @@ function reviewBinding(set, envelope, review = null) {
       envelopeDigest: `sha256:${digestArtifactEnvelope(envelope)}`,
       htmlDigest: html.digest,
     },
-    review: review ? {
-      reviewId: review.reviewId,
-      reviewDigest: sha256Jcs(review),
-      pinIds: review.pins.map(({ id }) => id).sort(),
-    } : null,
+    review: review
+      ? {
+          reviewId: review.reviewId,
+          reviewDigest: sha256Jcs(review),
+          pinIds: review.pins.map(({ id }) => id).sort(),
+        }
+      : null,
   });
   assertProtocolArtifact('diagram-review-binding', binding, { protocolVersion: '1.6.0' });
   return binding;
@@ -202,13 +204,17 @@ export async function createDiagramArtifactEnvelope(manifestPath, { nativeViewpo
   }
   const scene = drawing?.scene;
   const envelope = createArtifactEnvelope({
-    artifacts: [{
-      id: set.location.slug,
-      title: set.document.title,
-      html,
-      viewport: scene ? { width: scene.width, height: scene.height } : { width: 1440, height: 900 },
-      colorScheme: set.document.theme.mode === 'dark' ? 'dark' : 'light',
-    }],
+    artifacts: [
+      {
+        id: set.location.slug,
+        title: set.document.title,
+        html,
+        viewport: scene
+          ? { width: scene.width, height: scene.height }
+          : { width: 1440, height: 900 },
+        colorScheme: set.document.theme.mode === 'dark' ? 'dark' : 'light',
+      },
+    ],
     viewer: {
       mode: 'single',
       activeArtifactId: set.location.slug,

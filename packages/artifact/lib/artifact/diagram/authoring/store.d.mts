@@ -1,4 +1,9 @@
-import type { DiagramAuthoringBundle, DiagramEditTransaction, DiagramPreviewResult, DiagramConditionalInverse } from './index.mjs';
+import type {
+  DiagramAuthoringBundle,
+  DiagramEditTransaction,
+  DiagramPreviewResult,
+  DiagramConditionalInverse,
+} from './index.mjs';
 
 export interface DiagramStoreBasis {
   bundleDigest: string;
@@ -43,10 +48,22 @@ export interface DiagramStoreReady {
   basis: DiagramStoreBasis;
   receipt: DiagramStoreReceipt;
 }
-export interface DiagramStoreAbsent { ok: true; status: 'absent'; path: string }
+export interface DiagramStoreAbsent {
+  ok: true;
+  status: 'absent';
+  path: string;
+}
 export type DiagramStoreReadResult = DiagramStoreReady | DiagramStoreAbsent | DiagramStoreUnknown;
 export type DiagramStoreSaveResult = DiagramStoreSaved | DiagramStoreUnknown;
-export type DiagramStoreFaultPhase = 'before-ownership' | 'before-journal' | 'after-journal' | 'after-temporary-flush' | 'after-replacement' | 'after-receipt' | 'after-head' | 'before-acknowledgement';
+export type DiagramStoreFaultPhase =
+  | 'before-ownership'
+  | 'before-journal'
+  | 'after-journal'
+  | 'after-temporary-flush'
+  | 'after-replacement'
+  | 'after-receipt'
+  | 'after-head'
+  | 'before-acknowledgement';
 export interface DiagramAuthoringStoreOptions {
   /** Existing workspace directory. Canonical sources live below diagrams/{slug}. */
   root: string;
@@ -59,15 +76,28 @@ export interface DiagramAuthoringStoreOptions {
 export interface DiagramAuthoringStore {
   readonly path: string;
   read(): Promise<DiagramStoreReadResult>;
-  initialize(bundle: DiagramAuthoringBundle, identity: { transactionId: string }): Promise<DiagramStoreSaveResult>;
+  initialize(
+    bundle: DiagramAuthoringBundle,
+    identity: { transactionId: string },
+  ): Promise<DiagramStoreSaveResult>;
   preview(transaction: DiagramEditTransaction): Promise<DiagramPreviewResult | DiagramStoreUnknown>;
   commit(transaction: DiagramEditTransaction): Promise<DiagramStoreSaveResult>;
   /** Explicit reviewed successor; refuses any change to the exact complete-file base. */
-  commitSnapshot(bundle: DiagramAuthoringBundle, identity: {
-    transactionId: string;
-    expectedBase: { byteDigest: string; basis: DiagramStoreBasis };
-  }): Promise<DiagramStoreSaveResult>;
-  recover(identity?: { transactionId?: string; fingerprint?: string }): Promise<DiagramStoreSaved | DiagramStoreReadResult | { ok: true; status: 'not-found'; transactionId: string }>;
+  commitSnapshot(
+    bundle: DiagramAuthoringBundle,
+    identity: {
+      transactionId: string;
+      expectedBase: { byteDigest: string; basis: DiagramStoreBasis };
+    },
+  ): Promise<DiagramStoreSaveResult>;
+  recover(identity?: {
+    transactionId?: string;
+    fingerprint?: string;
+  }): Promise<
+    | DiagramStoreSaved
+    | DiagramStoreReadResult
+    | { ok: true; status: 'not-found'; transactionId: string }
+  >;
   /** Exact complete-file identity from a receipt, not the semantic bundle digest. */
   readSnapshot(byteDigest: string): Promise<DiagramAuthoringBundle>;
   history(page?: { limit?: number; beforeSequence?: number }): Promise<DiagramStoreReceipt[]>;
@@ -77,6 +107,8 @@ export declare class DiagramAuthoringStoreError extends Error {
   readonly details: Record<string, unknown>;
 }
 /** Filesystem-only adapter. Do not import it into browser or Worker bundles. */
-export declare function createDiagramAuthoringStore(options: DiagramAuthoringStoreOptions): DiagramAuthoringStore;
+export declare function createDiagramAuthoringStore(
+  options: DiagramAuthoringStoreOptions,
+): DiagramAuthoringStore;
 
 export * from './migration.mjs';

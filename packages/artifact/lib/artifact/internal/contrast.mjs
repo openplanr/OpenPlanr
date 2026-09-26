@@ -22,7 +22,11 @@ const linearToSrgb = (c) => {
 
 function parseHex(s) {
   let h = s.replace('#', '').trim();
-  if (h.length === 3 || h.length === 4) h = h.split('').map((d) => d + d).join('');
+  if (h.length === 3 || h.length === 4)
+    h = h
+      .split('')
+      .map((d) => d + d)
+      .join('');
   if (h.length !== 6 && h.length !== 8) return null;
   const r = parseInt(h.slice(0, 2), 16) / 255;
   const g = parseInt(h.slice(2, 4), 16) / 255;
@@ -33,11 +37,16 @@ function parseHex(s) {
 function parseRgb(s) {
   const m = /rgba?\(([^)]+)\)/i.exec(s);
   if (!m) return null;
-  const parts = m[1].split(/[,\s/]+/).filter(Boolean).slice(0, 3);
+  const parts = m[1]
+    .split(/[,\s/]+/)
+    .filter(Boolean)
+    .slice(0, 3);
   if (parts.length < 3) return null;
   const toUnit = (p) => (p.endsWith('%') ? parseFloat(p) / 100 : parseFloat(p) / 255);
   const [r, g, b] = parts.map(toUnit);
-  return [r, g, b].some((x) => !Number.isFinite(x)) ? null : { r: clamp01(r), g: clamp01(g), b: clamp01(b) };
+  return [r, g, b].some((x) => !Number.isFinite(x))
+    ? null
+    : { r: clamp01(r), g: clamp01(g), b: clamp01(b) };
 }
 
 function parseOklch(s) {
@@ -56,12 +65,14 @@ function parseOklch(s) {
   // OKLab → LMS' → linear sRGB (Ottosson)
   const l_ = L + 0.3963377774 * a + 0.2158037573 * b2;
   const m_ = L - 0.1055613458 * a - 0.0638541728 * b2;
-  const s_ = L - 0.0894841775 * a - 1.2914855480 * b2;
-  const l = l_ ** 3, mm = m_ ** 3, ss = s_ ** 3;
+  const s_ = L - 0.0894841775 * a - 1.291485548 * b2;
+  const l = l_ ** 3,
+    mm = m_ ** 3,
+    ss = s_ ** 3;
   return {
     r: linearToSrgb(4.0767416621 * l - 3.3077115913 * mm + 0.2309699292 * ss),
     g: linearToSrgb(-1.2684380046 * l + 2.6097574011 * mm - 0.3413193965 * ss),
-    b: linearToSrgb(-0.0041960863 * l - 0.7034186147 * mm + 1.7076147010 * ss),
+    b: linearToSrgb(-0.0041960863 * l - 0.7034186147 * mm + 1.707614701 * ss),
   };
 }
 
@@ -71,7 +82,12 @@ const NAMED = { white: { r: 1, g: 1, b: 1 }, black: { r: 0, g: 0, b: 0 } };
 export function parseColor(input) {
   if (!input || typeof input !== 'string') return null;
   const s = input.trim().toLowerCase();
-  if (s.includes('var(') || s.includes('gradient') || ['currentcolor', 'transparent', 'inherit', 'none'].includes(s)) return null;
+  if (
+    s.includes('var(') ||
+    s.includes('gradient') ||
+    ['currentcolor', 'transparent', 'inherit', 'none'].includes(s)
+  )
+    return null;
   if (s in NAMED) return NAMED[s];
   if (s.startsWith('#')) return parseHex(s);
   if (s.startsWith('rgb')) return parseRgb(s);
@@ -90,7 +106,8 @@ export function contrastRatio(a, b) {
   const la = relativeLuminance(typeof a === 'string' ? parseColor(a) : a);
   const lb = relativeLuminance(typeof b === 'string' ? parseColor(b) : b);
   if (la == null || lb == null) return null;
-  const hi = Math.max(la, lb), lo = Math.min(la, lb);
+  const hi = Math.max(la, lb),
+    lo = Math.min(la, lb);
   return (hi + 0.05) / (lo + 0.05);
 }
 

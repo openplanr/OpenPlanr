@@ -1,7 +1,4 @@
-import {
-  clientSelectionToNormalized,
-  mountArtifactAnnotations,
-} from './annotations.mjs';
+import { clientSelectionToNormalized, mountArtifactAnnotations } from './annotations.mjs';
 import { mountArtifactFeedbackRail } from './feedback-rail.mjs';
 import { mountHostedArtifactViewer } from './hosted-viewer.mjs';
 import { mountArtifactShareDialog } from './share-dialog.mjs';
@@ -105,7 +102,8 @@ function availableId(artifacts, requested, fallback = '') {
 }
 
 function comparisonIdFor(artifacts, activeArtifactId, requested = '') {
-  if (requested !== activeArtifactId && artifacts.some(({ id }) => id === requested)) return requested;
+  if (requested !== activeArtifactId && artifacts.some(({ id }) => id === requested))
+    return requested;
   return artifacts.find(({ id }) => id !== activeArtifactId)?.id ?? '';
 }
 
@@ -114,9 +112,14 @@ function normalizeViewMode(value, artifactCount) {
   return member(value, VIEW_MODES, 'variants');
 }
 
-export function resolveArtifactPresentation(value, { viewMode = 'single', artifactCount = 1 } = {}) {
+export function resolveArtifactPresentation(
+  value,
+  { viewMode = 'single', artifactCount = 1 } = {},
+) {
   if (PRESENTATIONS.includes(value)) return value;
-  return artifactCount > 1 || viewMode === 'variants' || viewMode === 'split' ? 'canvas' : 'document';
+  return artifactCount > 1 || viewMode === 'variants' || viewMode === 'split'
+    ? 'canvas'
+    : 'document';
 }
 
 export function createArtifactStageState(payload = {}, shellModel = {}) {
@@ -126,8 +129,8 @@ export function createArtifactStageState(payload = {}, shellModel = {}) {
   const firstId = artifacts[0]?.id ?? '';
   const activeArtifactId = availableId(
     artifacts,
-    requestedArtifactId(shellModel.activeArtifact ?? shellModel.activeArtifactId)
-      || requestedArtifactId(payload?.viewer?.activeArtifactId),
+    requestedArtifactId(shellModel.activeArtifact ?? shellModel.activeArtifactId) ||
+      requestedArtifactId(payload?.viewer?.activeArtifactId),
     firstId,
   );
   const comparisonArtifactId = comparisonIdFor(
@@ -159,7 +162,8 @@ export function createArtifactStageState(payload = {}, shellModel = {}) {
       ARTIFACT_STAGE_LIMITS.minZoom,
       ARTIFACT_STAGE_LIMITS.maxZoom,
     ),
-    railOpen: shellModel.railOpen === undefined ? presentation === 'canvas' : Boolean(shellModel.railOpen),
+    railOpen:
+      shellModel.railOpen === undefined ? presentation === 'canvas' : Boolean(shellModel.railOpen),
     theme: member(shellModel.theme, THEMES, 'auto'),
     status,
   });
@@ -174,14 +178,17 @@ export function reduceArtifactStageState(state, action = {}) {
     case 'set-active': {
       const id = availableId(state.artifacts, action.artifactId);
       if (!id || id === state.activeArtifactId) return state;
-      const comparisonArtifactId = id === state.comparisonArtifactId
-        ? state.activeArtifactId
-        : comparisonIdFor(state.artifacts, id, state.comparisonArtifactId);
+      const comparisonArtifactId =
+        id === state.comparisonArtifactId
+          ? state.activeArtifactId
+          : comparisonIdFor(state.artifacts, id, state.comparisonArtifactId);
       return nextState(state, { activeArtifactId: id, comparisonArtifactId });
     }
     case 'set-comparison': {
       const id = comparisonIdFor(state.artifacts, state.activeArtifactId, action.artifactId);
-      return id === state.comparisonArtifactId ? state : nextState(state, { comparisonArtifactId: id });
+      return id === state.comparisonArtifactId
+        ? state
+        : nextState(state, { comparisonArtifactId: id });
     }
     case 'set-view-mode': {
       const viewMode = normalizeViewMode(action.viewMode, state.artifacts.length);
@@ -236,9 +243,15 @@ export function visibleArtifactIds(state) {
 }
 
 function assertRect(rect) {
-  if (!rect || !Number.isFinite(rect.left) || !Number.isFinite(rect.top)
-    || !Number.isFinite(rect.width) || !Number.isFinite(rect.height)
-    || rect.width <= 0 || rect.height <= 0) {
+  if (
+    !rect ||
+    !Number.isFinite(rect.left) ||
+    !Number.isFinite(rect.top) ||
+    !Number.isFinite(rect.width) ||
+    !Number.isFinite(rect.height) ||
+    rect.width <= 0 ||
+    rect.height <= 0
+  ) {
     throw new RangeError('Artifact bounds must have positive finite dimensions.');
   }
 }
@@ -267,8 +280,11 @@ function parseDataScript(document, id) {
 
 function isEditableTarget(target) {
   const HTMLElement = target?.ownerDocument?.defaultView?.HTMLElement;
-  return Boolean(HTMLElement && target instanceof HTMLElement
-    && (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)));
+  return Boolean(
+    HTMLElement &&
+      target instanceof HTMLElement &&
+      (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)),
+  );
 }
 
 function stageArtifactById(state, id) {
@@ -349,12 +365,16 @@ export function mountArtifactStage({
   }
 
   const frames = new Map(
-    [...document.querySelectorAll('[data-planr-artifact-frame]')]
-      .map((frame) => [frame.dataset.planrArtifactFrame, frame]),
+    [...document.querySelectorAll('[data-planr-artifact-frame]')].map((frame) => [
+      frame.dataset.planrArtifactFrame,
+      frame,
+    ]),
   );
   const panels = new Map(
-    [...document.querySelectorAll('.planr-artifact-panel[data-artifact-id]')]
-      .map((panel) => [panel.dataset.artifactId, panel]),
+    [...document.querySelectorAll('.planr-artifact-panel[data-artifact-id]')].map((panel) => [
+      panel.dataset.artifactId,
+      panel,
+    ]),
   );
   const documentLayouts = new Map();
   const cleanup = [];
@@ -395,9 +415,10 @@ export function mountArtifactStage({
     const activeArtifact = stageArtifactById(state, state.activeArtifactId);
 
     if (grid) grid.dataset.planrLayout = state.viewMode;
-    const visualOrder = state.viewMode === 'split'
-      ? [...visible, ...state.artifacts.map(({ id }) => id).filter((id) => !visible.has(id))]
-      : state.artifacts.map(({ id }) => id);
+    const visualOrder =
+      state.viewMode === 'split'
+        ? [...visible, ...state.artifacts.map(({ id }) => id).filter((id) => !visible.has(id))]
+        : state.artifacts.map(({ id }) => id);
     if (surface) surface.style.setProperty('--planr-shell-zoom', String(state.zoom / 100));
     if (tablist) tablist.hidden = state.viewMode === 'single' || state.artifacts.length < 2;
     if (rail) {
@@ -420,13 +441,14 @@ export function mountArtifactStage({
       themeButton.textContent = state.theme;
       themeButton.setAttribute('aria-label', `Shell theme ${state.theme}`);
     }
-    if (statusSlot) statusSlot.textContent = state.reviewMode === 'comment'
-      ? 'Comment mode'
-      : 'Interactions enabled';
+    if (statusSlot)
+      statusSlot.textContent =
+        state.reviewMode === 'comment' ? 'Comment mode' : 'Interactions enabled';
     if (metadata && activeArtifact) {
       metadata.textContent = `HTML · ${activeArtifact.viewport.width}×${activeArtifact.viewport.height}`;
     }
-    if (breadcrumb) breadcrumb.textContent = `ARTIFACT / ${(activeArtifact?.title ?? 'Artifact').toUpperCase()}`;
+    if (breadcrumb)
+      breadcrumb.textContent = `ARTIFACT / ${(activeArtifact?.title ?? 'Artifact').toUpperCase()}`;
 
     for (const button of document.querySelectorAll('[data-planr-view]')) {
       const mode = button.dataset.planrView;
@@ -450,12 +472,18 @@ export function mountArtifactStage({
       panel.hidden = !isVisible;
       panel.style.order = String(visualOrder.indexOf(id));
       const artifact = stageArtifactById(state, id);
-      panel.setAttribute('aria-label', `${isPrimary ? 'Primary' : 'Comparison'} artifact: ${artifact?.title ?? id}`);
+      panel.setAttribute(
+        'aria-label',
+        `${isPrimary ? 'Primary' : 'Comparison'} artifact: ${artifact?.title ?? id}`,
+      );
       const frame = frames.get(id);
       const frameReady = frameBudget === null || frame?.dataset.planrFrameState === 'ready';
       const annotationLayer = panel.querySelector('[data-planr-annotation-layer]');
       if (frame) {
-        frame.tabIndex = isVisible && frameReady && state.status === 'ready' && state.reviewMode === 'interact' ? 0 : -1;
+        frame.tabIndex =
+          isVisible && frameReady && state.status === 'ready' && state.reviewMode === 'interact'
+            ? 0
+            : -1;
         if (state.presentation === 'document') {
           // The outer review page owns natural scrolling in document mode. This
           // also suppresses scroll containers authored on the artifact root,
@@ -468,8 +496,11 @@ export function mountArtifactStage({
         }
       }
       if (annotationLayer) {
-        const enabled = isVisible && frameReady && state.status === 'ready' && state.reviewMode === 'comment';
-        const hasComposer = Boolean(annotationLayer.querySelector('[data-planr-annotation-composer]'));
+        const enabled =
+          isVisible && frameReady && state.status === 'ready' && state.reviewMode === 'comment';
+        const hasComposer = Boolean(
+          annotationLayer.querySelector('[data-planr-annotation-composer]'),
+        );
         annotationLayer.tabIndex = enabled ? 0 : -1;
         annotationLayer.setAttribute('aria-disabled', String(!enabled && !hasComposer));
       }
@@ -549,7 +580,9 @@ export function mountArtifactStage({
       }
       case 'sharing-options':
         target.closest('.planr-more-menu').hidden = true;
-        document.querySelector('[data-planr-action="more"]')?.setAttribute('aria-expanded', 'false');
+        document
+          .querySelector('[data-planr-action="more"]')
+          ?.setAttribute('aria-expanded', 'false');
         shareController?.open?.();
         break;
       case 'theme':
@@ -602,11 +635,12 @@ export function mountArtifactStage({
     const index = tabs.indexOf(tab);
     if (index < 0) return;
     event.preventDefault();
-    const nextIndex = event.key === 'Home'
-      ? 0
-      : event.key === 'End'
-        ? tabs.length - 1
-        : (index + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+    const nextIndex =
+      event.key === 'Home'
+        ? 0
+        : event.key === 'End'
+          ? tabs.length - 1
+          : (index + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
     setActiveFromTab(tabs[nextIndex], { focus: true });
   }
 
@@ -647,11 +681,10 @@ export function mountArtifactStage({
     });
     listen(layer, 'pointermove', (event) => {
       if (!selection || selection.pointerId !== event.pointerId || !selectionPreview) return;
-      const region = clientSelectionToNormalized(
-        layer.getBoundingClientRect(),
-        selection.start,
-        { x: event.clientX, y: event.clientY },
-      );
+      const region = clientSelectionToNormalized(layer.getBoundingClientRect(), selection.start, {
+        x: event.clientX,
+        y: event.clientY,
+      });
       selectionPreview.style.left = `${region.x * 100}%`;
       selectionPreview.style.top = `${region.y * 100}%`;
       selectionPreview.style.width = `${region.w * 100}%`;
@@ -678,7 +711,10 @@ export function mountArtifactStage({
       if (event.target !== layer) return;
       event.preventDefault();
       const bounds = layer.getBoundingClientRect();
-      emitSelection(layer, { x: bounds.left + bounds.width / 2, y: bounds.top + bounds.height / 2 });
+      emitSelection(layer, {
+        x: bounds.left + bounds.width / 2,
+        y: bounds.top + bounds.height / 2,
+      });
     });
   }
   for (const [artifactId, frame] of frames) {
@@ -686,9 +722,15 @@ export function mountArtifactStage({
       if (state.presentation !== 'document') return;
       const width = event.detail?.width;
       const height = event.detail?.height;
-      if (!Number.isInteger(width) || !Number.isInteger(height)
-        || width < 1 || width > ARTIFACT_STAGE_LIMITS.maxDocumentWidth
-        || height < 1 || height > ARTIFACT_STAGE_LIMITS.maxDocumentHeight) return;
+      if (
+        !Number.isInteger(width) ||
+        !Number.isInteger(height) ||
+        width < 1 ||
+        width > ARTIFACT_STAGE_LIMITS.maxDocumentWidth ||
+        height < 1 ||
+        height > ARTIFACT_STAGE_LIMITS.maxDocumentHeight
+      )
+        return;
       const layout = Object.freeze({ width, height });
       documentLayouts.set(artifactId, layout);
       const panel = panels.get(artifactId);
@@ -706,15 +748,19 @@ export function mountArtifactStage({
     more.hidden = true;
     document.querySelector('[data-planr-action="more"]')?.setAttribute('aria-expanded', 'false');
   });
-  const roomStateObserver = typeof window.MutationObserver === 'function'
-    ? new window.MutationObserver(() => {
-      if (root.hasAttribute('data-planr-room-comments-paused') && state.reviewMode === 'comment') {
-        dispatch({ type: 'set-review-mode', reviewMode: 'interact' });
-      } else {
-        render();
-      }
-    })
-    : null;
+  const roomStateObserver =
+    typeof window.MutationObserver === 'function'
+      ? new window.MutationObserver(() => {
+          if (
+            root.hasAttribute('data-planr-room-comments-paused') &&
+            state.reviewMode === 'comment'
+          ) {
+            dispatch({ type: 'set-review-mode', reviewMode: 'interact' });
+          } else {
+            render();
+          }
+        })
+      : null;
   roomStateObserver?.observe(root, {
     attributes: true,
     attributeFilter: ['data-planr-room-comments-paused'],
@@ -731,7 +777,8 @@ export function mountArtifactStage({
   const controller = Object.freeze({
     frameBudget,
     ensureFrames,
-    getLoadedArtifactIds: () => [...frameLoads].filter(([, record]) => record.status === 'ready').map(([id]) => id),
+    getLoadedArtifactIds: () =>
+      [...frameLoads].filter(([, record]) => record.status === 'ready').map(([id]) => id),
     getState: () => state,
     getFrame: (artifactId) => frames.get(artifactId) ?? null,
     getPanel: (artifactId) => panels.get(artifactId) ?? null,
@@ -826,7 +873,11 @@ export function mountArtifactStage({
     frame.removeAttribute('src');
     delete frame.dataset.planrArtifactDigest;
     delete frame.dataset.planrBridgeTrusted;
-    try { delete frame.__openPlanrBridge; } catch { /* Host-owned configurable bridge. */ }
+    try {
+      delete frame.__openPlanrBridge;
+    } catch {
+      /* Host-owned configurable bridge. */
+    }
     if (record.sourceUrl) window.URL.revokeObjectURL(record.sourceUrl);
     documentLayouts.delete(artifactId);
     const panel = panels.get(artifactId);
@@ -842,29 +893,63 @@ export function mountArtifactStage({
     if (disposed) return Promise.reject(cancelledFrame());
     const existing = frameLoads.get(artifact.id);
     if (existing) {
-      if (existing.status === 'ready' && existing.requireTrust && frames.get(artifact.id)?.dataset.planrBridgeTrusted !== 'true') {
+      if (
+        existing.status === 'ready' &&
+        existing.requireTrust &&
+        frames.get(artifact.id)?.dataset.planrBridgeTrusted !== 'true'
+      ) {
         // A previously loaded document may have attempted navigation. Demanding
         // it again must authenticate a clean source, not reuse its old readiness.
         releaseFrame(artifact.id);
-      } else { existing.used = ++frameUse; return existing.promise; }
+      } else {
+        existing.used = ++frameUse;
+        return existing.promise;
+      }
     }
     const frame = frames.get(artifact.id);
     if (!frame) return Promise.reject(new Error(`Missing artifact frame: ${artifact.id}`));
-    const record = { status: 'loading', used: ++frameUse, cancelled: false,
-      abort: typeof window.AbortController === 'function' ? new window.AbortController() : { signal: undefined, abort() {} },
+    const record = {
+      status: 'loading',
+      used: ++frameUse,
+      cancelled: false,
+      abort:
+        typeof window.AbortController === 'function'
+          ? new window.AbortController()
+          : { signal: undefined, abort() {} },
     };
-    record.promise = new Promise((resolve, reject) => { record.resolve = resolve; record.reject = reject; });
+    record.promise = new Promise((resolve, reject) => {
+      record.resolve = resolve;
+      record.reject = reject;
+    });
     frameLoads.set(artifact.id, record);
     const current = () => !disposed && !record.cancelled && frameLoads.get(artifact.id) === record;
-    const fail = error => { if (current()) releaseFrame(artifact.id, { status: 'error', error }); };
-    const timer = frameBudget === null ? null
-      : window.setTimeout(() => fail(new Error(`Artifact frame did not finish loading: ${artifact.id}`)), 15000);
+    const fail = (error) => {
+      if (current()) releaseFrame(artifact.id, { status: 'error', error });
+    };
+    const timer =
+      frameBudget === null
+        ? null
+        : window.setTimeout(
+            () => fail(new Error(`Artifact frame did not finish loading: ${artifact.id}`)),
+            15000,
+          );
     let loaded = false;
     const ready = () => {
-      if (!current() || !loaded || (record.requireTrust && frame.dataset.planrBridgeTrusted !== 'true')) return;
-      record.status = 'ready'; record.unlisten(); frameStatus(artifact.id, 'ready'); record.resolve(artifact.id);
+      if (
+        !current() ||
+        !loaded ||
+        (record.requireTrust && frame.dataset.planrBridgeTrusted !== 'true')
+      )
+        return;
+      record.status = 'ready';
+      record.unlisten();
+      frameStatus(artifact.id, 'ready');
+      record.resolve(artifact.id);
     };
-    const onLoad = () => { loaded = true; ready(); };
+    const onLoad = () => {
+      loaded = true;
+      ready();
+    };
     const onError = () => fail(new Error(`Artifact frame failed: ${artifact.id}`));
     record.unlisten = () => {
       window.clearTimeout(timer);
@@ -876,79 +961,92 @@ export function mountArtifactStage({
     if (!current()) return record.promise;
     // Source preparation can be asynchronous; it cannot revive an evicted frame.
     void (async () => {
-    const source = await resolveArtifactSource(artifact, {
-      frame,
-      getState: () => state,
-      signal: record.abort.signal,
-    });
-    if (!current()) return;
-    if (typeof window.TextDecoder !== 'function') {
-      const error = new Error('UTF-8 decoding support is required for artifact sources.');
-      error.code = 'E_ARTIFACT_BROWSER_UNSUPPORTED';
-      throw error;
-    }
-    const html = await htmlForSource(window, source);
-    if (!current()) return;
-    if (!html) {
-      throw new TypeError(
-        `Artifact source resolver must return HTML bytes or a Blob for ${artifact.id}.`,
-      );
-    }
-
-    if (typeof bridgeClient?.attach === 'function') {
-      const detach = bridgeClient.attach({
-        artifact,
+      const source = await resolveArtifactSource(artifact, {
         frame,
         getState: () => state,
+        signal: record.abort.signal,
       });
-      if (typeof detach === 'function') record.detach = detach;
-      record.requireTrust = frameBudget !== null;
-    }
-    // Bridge load handlers quarantine each navigation before we check trust.
-    frame.addEventListener('load', onLoad);
-    frame.addEventListener('error', onError);
-    frame.addEventListener('planr:artifact-bridge-ready', ready);
-    frame.dataset.planrArtifactDigest = artifact.sha256;
-    if (sourceTransport === 'srcdoc') {
-      // Trusted hosts may choose srcdoc to avoid WebKit applying inherited
-      // frame-ancestors rules to blob navigations. The existing opaque sandbox
-      // and the prepared document's CSP remain unchanged for either transport.
-      frame.removeAttribute('src');
-      frame.srcdoc = html;
-    } else {
-      if (typeof window.URL?.createObjectURL !== 'function' || typeof window.Blob !== 'function') {
-        const error = new Error('Blob URL support is required for artifact sources.');
+      if (!current()) return;
+      if (typeof window.TextDecoder !== 'function') {
+        const error = new Error('UTF-8 decoding support is required for artifact sources.');
         error.code = 'E_ARTIFACT_BROWSER_UNSUPPORTED';
         throw error;
       }
-      const sourceUrl = window.URL.createObjectURL(new window.Blob([html], {
-        type: 'text/html;charset=utf-8',
-      }));
-      record.sourceUrl = sourceUrl;
-      frame.removeAttribute('srcdoc');
-      frame.src = sourceUrl;
-    }
+      const html = await htmlForSource(window, source);
+      if (!current()) return;
+      if (!html) {
+        throw new TypeError(
+          `Artifact source resolver must return HTML bytes or a Blob for ${artifact.id}.`,
+        );
+      }
+
+      if (typeof bridgeClient?.attach === 'function') {
+        const detach = bridgeClient.attach({
+          artifact,
+          frame,
+          getState: () => state,
+        });
+        if (typeof detach === 'function') record.detach = detach;
+        record.requireTrust = frameBudget !== null;
+      }
+      // Bridge load handlers quarantine each navigation before we check trust.
+      frame.addEventListener('load', onLoad);
+      frame.addEventListener('error', onError);
+      frame.addEventListener('planr:artifact-bridge-ready', ready);
+      frame.dataset.planrArtifactDigest = artifact.sha256;
+      if (sourceTransport === 'srcdoc') {
+        // Trusted hosts may choose srcdoc to avoid WebKit applying inherited
+        // frame-ancestors rules to blob navigations. The existing opaque sandbox
+        // and the prepared document's CSP remain unchanged for either transport.
+        frame.removeAttribute('src');
+        frame.srcdoc = html;
+      } else {
+        if (
+          typeof window.URL?.createObjectURL !== 'function' ||
+          typeof window.Blob !== 'function'
+        ) {
+          const error = new Error('Blob URL support is required for artifact sources.');
+          error.code = 'E_ARTIFACT_BROWSER_UNSUPPORTED';
+          throw error;
+        }
+        const sourceUrl = window.URL.createObjectURL(
+          new window.Blob([html], {
+            type: 'text/html;charset=utf-8',
+          }),
+        );
+        record.sourceUrl = sourceUrl;
+        frame.removeAttribute('srcdoc');
+        frame.src = sourceUrl;
+      }
     })().catch(fail);
     return record.promise;
   }
 
   function ensureFrames(artifactIds) {
     if (disposed) return Promise.reject(cancelledFrame());
-    if (!Array.isArray(artifactIds) || artifactIds.some(id => typeof id !== 'string' || !frames.has(id))) {
+    if (
+      !Array.isArray(artifactIds) ||
+      artifactIds.some((id) => typeof id !== 'string' || !frames.has(id))
+    ) {
       return Promise.reject(new TypeError('Requested artifact frames must be known artifact IDs.'));
     }
     const requested = [...new Set(artifactIds)];
     if (frameBudget !== null && requested.length > frameBudget) {
-      return Promise.reject(new RangeError(`At most ${frameBudget} artifact frames may be requested together.`));
+      return Promise.reject(
+        new RangeError(`At most ${frameBudget} artifact frames may be requested together.`),
+      );
     }
-    if (frameBudget === null) return Promise.all(requested.map(id => assignArtifactSource(stageArtifactById(state, id))));
+    if (frameBudget === null)
+      return Promise.all(requested.map((id) => assignArtifactSource(stageArtifactById(state, id))));
     const run = async () => {
       if (disposed) throw cancelledFrame();
       for (const id of requested) {
         if (disposed) throw cancelledFrame();
         if (!frameLoads.has(id)) {
           while (frameLoads.size >= frameBudget) {
-            const candidates = [...frameLoads].filter(([loadedId]) => !requested.includes(loadedId)).sort((a, b) => a[1].used - b[1].used);
+            const candidates = [...frameLoads]
+              .filter(([loadedId]) => !requested.includes(loadedId))
+              .sort((a, b) => a[1].used - b[1].used);
             if (!candidates.length) throw new Error('The artifact frame budget is exhausted.');
             releaseFrame(candidates[0][0]);
           }
@@ -970,9 +1068,11 @@ export function mountArtifactStage({
     } else {
       state = reduceArtifactStageState(state, { type: 'set-status', status: 'loading' });
       render();
-      readyPromise = (frameBudget === null
-        ? Promise.all(state.artifacts.map(assignArtifactSource))
-        : ensureFrames([state.activeArtifactId]))
+      readyPromise = (
+        frameBudget === null
+          ? Promise.all(state.artifacts.map(assignArtifactSource))
+          : ensureFrames([state.activeArtifactId])
+      )
         .then(() => {
           if (disposed) return state;
           state = reduceArtifactStageState(state, { type: 'set-status', status: 'ready' });
@@ -981,9 +1081,8 @@ export function mountArtifactStage({
         })
         .catch((error) => {
           if (disposed) return state;
-          const status = error?.code === 'E_ARTIFACT_BROWSER_UNSUPPORTED'
-            ? 'unsupported-browser'
-            : 'invalid';
+          const status =
+            error?.code === 'E_ARTIFACT_BROWSER_UNSUPPORTED' ? 'unsupported-browser' : 'invalid';
           state = reduceArtifactStageState(state, { type: 'set-status', status });
           render({ announce: true });
           return state;
@@ -1000,7 +1099,9 @@ export function bootstrapArtifactStage(document = globalThis.document, options =
 if (typeof document !== 'undefined') {
   const options = globalThis.__OPENPLANR_ARTIFACT_STAGE_OPTIONS__ ?? {};
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => bootstrapArtifactStage(document, options), { once: true });
+    document.addEventListener('DOMContentLoaded', () => bootstrapArtifactStage(document, options), {
+      once: true,
+    });
   } else {
     queueMicrotask(() => bootstrapArtifactStage(document, options));
   }

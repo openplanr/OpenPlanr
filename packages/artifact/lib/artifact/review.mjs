@@ -31,7 +31,9 @@ export const ARTIFACT_REVIEW_MAX_STATE_BYTES = 5 * 1024 * 1024;
 const reviewPathQueues = new Map();
 
 function finalEntry(path, fs = { lstatSync }) {
-  try { return fs.lstatSync(path); } catch (error) {
+  try {
+    return fs.lstatSync(path);
+  } catch (error) {
     if (error?.code === 'ENOENT') return null;
     throw error;
   }
@@ -50,18 +52,30 @@ function deepFreeze(value) {
 function canonicalObject(value) {
   if (Array.isArray(value)) return value.map(canonicalObject);
   if (!value || typeof value !== 'object') return value;
-  return Object.fromEntries(Object.keys(value).sort().map((key) => [key, canonicalObject(value[key])]));
+  return Object.fromEntries(
+    Object.keys(value)
+      .sort()
+      .map((key) => [key, canonicalObject(value[key])]),
+  );
 }
 
 function stableItemSort(a, b) {
-  return String(a.createdAt ?? a.updatedAt ?? '').localeCompare(String(b.createdAt ?? b.updatedAt ?? ''))
-    || String(a.id ?? a.reviewId).localeCompare(String(b.id ?? b.reviewId));
+  return (
+    String(a.createdAt ?? a.updatedAt ?? '').localeCompare(
+      String(b.createdAt ?? b.updatedAt ?? ''),
+    ) || String(a.id ?? a.reviewId).localeCompare(String(b.id ?? b.reviewId))
+  );
 }
 
 export function normalizeArtifactReview(review) {
   let normalized;
-  try { normalized = clone(review); } catch {
-    throw new PipelineError(ARTIFACT_ERROR_CODES.REVIEW_INVALID, 'Artifact review is not cloneable.');
+  try {
+    normalized = clone(review);
+  } catch {
+    throw new PipelineError(
+      ARTIFACT_ERROR_CODES.REVIEW_INVALID,
+      'Artifact review is not cloneable.',
+    );
   }
   try {
     validateArtifactReview(normalized);
@@ -77,10 +91,12 @@ export function normalizeArtifactReview(review) {
     }
     throw error;
   }
-  normalized.pins = normalized.pins.map((pin) => ({
-    ...pin,
-    replies: [...pin.replies].sort(stableItemSort),
-  })).sort(stableItemSort);
+  normalized.pins = normalized.pins
+    .map((pin) => ({
+      ...pin,
+      replies: [...pin.replies].sort(stableItemSort),
+    }))
+    .sort(stableItemSort);
   validateArtifactReview(normalized);
   return normalized;
 }
@@ -97,14 +113,20 @@ export function createArtifactReview({
   createId = randomUUID,
 } = {}) {
   if (!DECISIONS.has(decision)) {
-    throw new PipelineError(ARTIFACT_ERROR_CODES.REVIEW_INVALID, 'Artifact review decision is invalid.');
+    throw new PipelineError(
+      ARTIFACT_ERROR_CODES.REVIEW_INVALID,
+      'Artifact review decision is invalid.',
+    );
   }
   let iso;
   try {
     const timestamp = now();
     iso = timestamp instanceof Date ? timestamp.toISOString() : new Date(timestamp).toISOString();
   } catch {
-    throw new PipelineError(ARTIFACT_ERROR_CODES.REVIEW_INVALID, 'Artifact review clock returned an invalid timestamp.');
+    throw new PipelineError(
+      ARTIFACT_ERROR_CODES.REVIEW_INVALID,
+      'Artifact review clock returned an invalid timestamp.',
+    );
   }
   return normalizeArtifactReview({
     schemaVersion: '1.0.0',
@@ -142,9 +164,10 @@ export function createArtifactReviewEnvelope(envelope, review) {
 export const createReviewEnvelope = createArtifactReviewEnvelope;
 
 export function serializeReviewState(value) {
-  const normalized = value?.kind === 'artifact-review-state'
-    ? validateReviewLedger(clone(value))
-    : normalizeArtifactReview(value);
+  const normalized =
+    value?.kind === 'artifact-review-state'
+      ? validateReviewLedger(clone(value))
+      : normalizeArtifactReview(value);
   return `${JSON.stringify(canonicalObject(normalized), null, 2)}\n`;
 }
 
@@ -152,7 +175,10 @@ export function readArtifactReviewState(path, { allowMissing = false } = {}) {
   const entry = finalEntry(path);
   if (!entry) {
     if (allowMissing) return null;
-    throw new PipelineError(ARTIFACT_ERROR_CODES.REVIEW_IMPORT, 'Artifact review state does not exist.');
+    throw new PipelineError(
+      ARTIFACT_ERROR_CODES.REVIEW_IMPORT,
+      'Artifact review state does not exist.',
+    );
   }
   try {
     if (entry.isSymbolicLink() || !entry.isFile()) {
@@ -170,15 +196,19 @@ export function readArtifactReviewState(path, { allowMissing = false } = {}) {
     return validateReviewLedger(JSON.parse(readFileSync(path, 'utf8')));
   } catch (error) {
     if (error instanceof PipelineError) throw error;
-    throw new PipelineError(ARTIFACT_ERROR_CODES.REVIEW_INVALID, 'Artifact review state is malformed.');
+    throw new PipelineError(
+      ARTIFACT_ERROR_CODES.REVIEW_INVALID,
+      'Artifact review state is malformed.',
+    );
   }
 }
 
 /** Atomic, private persistence with injectable operations for failure testing. */
-export function writeArtifactReviewState(path, ledger, {
-  fileSystem = {},
-  suffix = `${process.pid}.${randomBytes(8).toString('hex')}`,
-} = {}) {
+export function writeArtifactReviewState(
+  path,
+  ledger,
+  { fileSystem = {}, suffix = `${process.pid}.${randomBytes(8).toString('hex')}` } = {},
+) {
   validateReviewLedger(ledger);
   const fs = { existsSync, lstatSync, mkdirSync, writeFileSync, renameSync, rmSync, ...fileSystem };
   const temporary = `${path}.${suffix}.tmp`;
@@ -204,7 +234,11 @@ export function writeArtifactReviewState(path, ledger, {
     }
     fs.renameSync(temporary, path);
   } catch {
-    try { fs.rmSync(temporary, { force: true }); } catch { /* best-effort temp cleanup */ }
+    try {
+      fs.rmSync(temporary, { force: true });
+    } catch {
+      /* best-effort temp cleanup */
+    }
     throw new PipelineError(
       ARTIFACT_ERROR_CODES.REVIEW_WRITE,
       'Artifact review state could not be written atomically.',
@@ -236,7 +270,10 @@ export function withArtifactReviewLock(path, action) {
     }
   };
   const operation = previous.then(run, run);
-  const tail = operation.then(() => undefined, () => undefined);
+  const tail = operation.then(
+    () => undefined,
+    () => undefined,
+  );
   reviewPathQueues.set(path, tail);
   tail.finally(() => {
     if (reviewPathQueues.get(path) === tail) reviewPathQueues.delete(path);
@@ -251,7 +288,9 @@ function normalizedExportInput(value) {
 }
 
 function markdownText(value) {
-  return String(value ?? '').replace(/\r\n?/g, '\n').trim();
+  return String(value ?? '')
+    .replace(/\r\n?/g, '\n')
+    .trim();
 }
 
 function renderPinMarkdown(pin, number) {
@@ -263,7 +302,11 @@ function renderPinMarkdown(pin, number) {
     `- Artifact: \`${pin.artifactId}\`${pin.variant ? ` · variant \`${pin.variant}\`` : ''}`,
     `- Author: ${pin.author.name}`,
     `- Region: \`${region}\` at ${pin.viewport.width}×${pin.viewport.height}`,
-    ...(pin.anchor ? [`- Anchor: \`${pin.anchor.planrId}\`${pin.anchor.screen ? ` · screen \`${pin.anchor.screen}\`` : ''}`] : []),
+    ...(pin.anchor
+      ? [
+          `- Anchor: \`${pin.anchor.planrId}\`${pin.anchor.screen ? ` · screen \`${pin.anchor.screen}\`` : ''}`,
+        ]
+      : []),
     `- Updated: ${pin.updatedAt}`,
     '',
     markdownText(pin.comment),
@@ -302,9 +345,14 @@ function reviewMarkdown(review, headingLevel = 2, stale = false) {
 
 export function exportArtifactReview(value, { format = 'json' } = {}) {
   let normalized;
-  try { normalized = normalizedExportInput(value); } catch (error) {
+  try {
+    normalized = normalizedExportInput(value);
+  } catch (error) {
     if (error instanceof PipelineError) throw error;
-    throw new PipelineError(ARTIFACT_ERROR_CODES.REVIEW_EXPORT, 'Artifact review cannot be exported.');
+    throw new PipelineError(
+      ARTIFACT_ERROR_CODES.REVIEW_EXPORT,
+      'Artifact review cannot be exported.',
+    );
   }
   if (format === 'json') return serializeReviewState(normalized);
   if (format !== 'markdown') {

@@ -1,7 +1,4 @@
-import {
-  loadArtifactTheme,
-  renderArtifactThemeCss,
-} from './tokens.mjs';
+import { loadArtifactTheme, renderArtifactThemeCss } from './tokens.mjs';
 import {
   normalizeArtifactShellModel,
   renderArtifactShellMarkup,

@@ -111,7 +111,9 @@ export function isPortInUse(port, { host = '127.0.0.1', timeout = 500 } = {}) {
  */
 export function listenLoopback(server, port = 0, { host = LOOPBACK_HOST } = {}) {
   if (host !== LOOPBACK_HOST) {
-    return Promise.reject(codedError('E_LOOPBACK_HOST', `Refusing non-loopback bind host: ${host}`));
+    return Promise.reject(
+      codedError('E_LOOPBACK_HOST', `Refusing non-loopback bind host: ${host}`),
+    );
   }
   if (!Number.isInteger(port) || port < 0 || port > 65_535) {
     return Promise.reject(codedError('E_LOOPBACK_PORT', `Invalid loopback port: ${String(port)}`));
@@ -125,10 +127,14 @@ export function listenLoopback(server, port = 0, { host = LOOPBACK_HOST } = {}) 
       server.off('error', onError);
       const address = server.address();
       if (!address || typeof address === 'string' || address.address !== LOOPBACK_HOST) {
-        closeHttpServer(server).finally(() => reject(codedError(
-          'E_LOOPBACK_BIND',
-          'Server did not bind to the required IPv4 loopback interface.',
-        )));
+        closeHttpServer(server).finally(() =>
+          reject(
+            codedError(
+              'E_LOOPBACK_BIND',
+              'Server did not bind to the required IPv4 loopback interface.',
+            ),
+          ),
+        );
         return;
       }
       resolveListen(address.port);
@@ -155,16 +161,19 @@ export function closeHttpServer(server) {
  */
 export function readRequestBody(req, { maxBytes, encoding = null } = {}) {
   if (!Number.isInteger(maxBytes) || maxBytes < 1) {
-    return Promise.reject(codedError('E_REQUEST_BODY_LIMIT', 'A positive request byte limit is required.'));
+    return Promise.reject(
+      codedError('E_REQUEST_BODY_LIMIT', 'A positive request byte limit is required.'),
+    );
   }
   const declared = Number(req.headers?.['content-length']);
   if (Number.isFinite(declared) && declared > maxBytes) {
     req.resume?.();
-    return Promise.reject(codedError(
-      'E_REQUEST_BODY_LIMIT',
-      `Request body exceeds ${maxBytes} bytes.`,
-      { maxBytes, declaredBytes: declared },
-    ));
+    return Promise.reject(
+      codedError('E_REQUEST_BODY_LIMIT', `Request body exceeds ${maxBytes} bytes.`, {
+        maxBytes,
+        declaredBytes: declared,
+      }),
+    );
   }
   return new Promise((resolveBody, reject) => {
     const chunks = [];
@@ -180,11 +189,12 @@ export function readRequestBody(req, { maxBytes, encoding = null } = {}) {
       bytes += buffer.byteLength;
       if (bytes > maxBytes) {
         chunks.length = 0;
-        rejectOnce(codedError(
-          'E_REQUEST_BODY_LIMIT',
-          `Request body exceeds ${maxBytes} bytes.`,
-          { maxBytes, receivedBytes: bytes },
-        ));
+        rejectOnce(
+          codedError('E_REQUEST_BODY_LIMIT', `Request body exceeds ${maxBytes} bytes.`, {
+            maxBytes,
+            receivedBytes: bytes,
+          }),
+        );
         return;
       }
       if (!settled) chunks.push(buffer);
@@ -196,7 +206,9 @@ export function readRequestBody(req, { maxBytes, encoding = null } = {}) {
       resolveBody(encoding ? body.toString(encoding) : body);
     });
     req.on('error', rejectOnce);
-    req.on('aborted', () => rejectOnce(codedError('E_REQUEST_ABORTED', 'Request body was aborted.')));
+    req.on('aborted', () =>
+      rejectOnce(codedError('E_REQUEST_ABORTED', 'Request body was aborted.')),
+    );
   });
 }
 
@@ -205,12 +217,10 @@ export function readRequestBody(req, { maxBytes, encoding = null } = {}) {
  * navigations may omit Origin; state-changing browser calls must provide the
  * exact loopback origin. Internal CLI calls opt into origin-less mutation.
  */
-export function assertLoopbackRequest(req, {
-  port,
-  mutating = false,
-  internal = false,
-  hosts = [LOOPBACK_HOST],
-} = {}) {
+export function assertLoopbackRequest(
+  req,
+  { port, mutating = false, internal = false, hosts = [LOOPBACK_HOST] } = {},
+) {
   const allowedHosts = new Set(hosts);
   const hostHeaders = req.headersDistinct?.host;
   const receivedHost = req.headers?.host;
@@ -220,9 +230,9 @@ export function assertLoopbackRequest(req, {
   const expectedHost = `${receivedName}:${port}`;
   const expectedOrigin = `http://${expectedHost}`;
   if (
-    !allowedHosts.has(receivedName)
-    || receivedPort !== String(port)
-    || (Array.isArray(hostHeaders) && hostHeaders.length !== 1)
+    !allowedHosts.has(receivedName) ||
+    receivedPort !== String(port) ||
+    (Array.isArray(hostHeaders) && hostHeaders.length !== 1)
   ) {
     throw codedError('E_LOOPBACK_HOST', 'Loopback Host header rejected.');
   }
@@ -231,10 +241,16 @@ export function assertLoopbackRequest(req, {
     throw codedError('E_LOOPBACK_ORIGIN', 'Loopback Origin header rejected.');
   }
   if (mutating && !internal && origin !== expectedOrigin) {
-    throw codedError('E_LOOPBACK_ORIGIN', 'State-changing browser requests require the exact loopback origin.');
+    throw codedError(
+      'E_LOOPBACK_ORIGIN',
+      'State-changing browser requests require the exact loopback origin.',
+    );
   }
   if (internal && origin !== undefined) {
-    throw codedError('E_LOOPBACK_ORIGIN', 'Internal control requests must not carry a browser Origin.');
+    throw codedError(
+      'E_LOOPBACK_ORIGIN',
+      'Internal control requests must not carry a browser Origin.',
+    );
   }
   const fetchSite = String(req.headers?.['sec-fetch-site'] ?? '').toLowerCase();
   if (fetchSite && !['none', 'same-origin'].includes(fetchSite)) {
@@ -244,10 +260,11 @@ export function assertLoopbackRequest(req, {
 }
 
 /** Probe a loopback JSON health endpoint without ever throwing. */
-export async function probeLoopbackJson(port, path = '/health', {
-  fetchImpl = fetch,
-  timeout = 800,
-} = {}) {
+export async function probeLoopbackJson(
+  port,
+  path = '/health',
+  { fetchImpl = fetch, timeout = 800 } = {},
+) {
   try {
     const response = await fetchImpl(`http://${LOOPBACK_HOST}:${port}${path}`, {
       cache: 'no-store',
@@ -267,14 +284,17 @@ const wait = (milliseconds) => new Promise((resolveWait) => setTimeout(resolveWa
  * Acquire a cross-process startup lock. Only a dead owner's lock is removed;
  * an alive but slow owner is allowed to finish or the waiter times out.
  */
-export async function acquireStartLock(path, {
-  timeout = 5_000,
-  poll = 25,
-  pid = process.pid,
-  now = () => Date.now(),
-  isAlive = isProcessAlive,
-  waitImpl = wait,
-} = {}) {
+export async function acquireStartLock(
+  path,
+  {
+    timeout = 5_000,
+    poll = 25,
+    pid = process.pid,
+    now = () => Date.now(),
+    isAlive = isProcessAlive,
+    waitImpl = wait,
+  } = {},
+) {
   mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
   const started = now();
 
@@ -304,10 +324,13 @@ export async function acquireStartLock(path, {
     for (const entry of readdirSync(directory)) {
       if (!entry.endsWith('.json')) continue;
       const match = /^([1-9]\d*)-([a-f0-9]{32})\.json$/u.exec(entry);
-      if (!match) throw codedError('E_START_LOCK_UNSAFE', `Startup lock record is invalid: ${entry}`);
+      if (!match)
+        throw codedError('E_START_LOCK_UNSAFE', `Startup lock record is invalid: ${entry}`);
       const entryPath = join(directory, entry);
       let info;
-      try { info = lstatSync(entryPath); } catch (error) {
+      try {
+        info = lstatSync(entryPath);
+      } catch (error) {
         if (error?.code === 'ENOENT') continue;
         throw error;
       }
@@ -316,11 +339,12 @@ export async function acquireStartLock(path, {
       }
       const value = readJsonState(entryPath);
       if (
-        value?.pid !== Number(match[1])
-        || value?.owner !== match[2]
-        || !Number.isSafeInteger(value.ticket)
-        || value.ticket < 0
-      ) throw codedError('E_START_LOCK_UNSAFE', `Startup lock record is invalid: ${entry}`);
+        value?.pid !== Number(match[1]) ||
+        value?.owner !== match[2] ||
+        !Number.isSafeInteger(value.ticket) ||
+        value.ticket < 0
+      )
+        throw codedError('E_START_LOCK_UNSAFE', `Startup lock record is invalid: ${entry}`);
       if (!isAlive(value.pid)) {
         // Writer names are random and never reused. Reclaimers can remove this
         // exact dead writer without risking a later owner's record.
@@ -340,14 +364,13 @@ export async function acquireStartLock(path, {
     }
     announce(ticket);
     while (now() - started <= timeout) {
-      const blocked = writers().some((writer) => (
-        writer.name !== name
-        && (
-          writer.ticket === 0
-          || writer.ticket < ticket
-          || (writer.ticket === ticket && writer.name < name)
-        )
-      ));
+      const blocked = writers().some(
+        (writer) =>
+          writer.name !== name &&
+          (writer.ticket === 0 ||
+            writer.ticket < ticket ||
+            (writer.ticket === ticket && writer.name < name)),
+      );
       if (!blocked) {
         return () => {
           const current = readJsonState(recordPath);
