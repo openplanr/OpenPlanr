@@ -5,11 +5,6 @@ packages/pipeline/registry/generated-skill-assets.json linguist-generated=true
 packages/protocol/src/generated/** linguist-generated=true
 skills/planr-*/contribution.json linguist-generated=true
 
-# esbuild bundles written by packages/artifact/scripts/generate-artifact-shell.mjs.
-# Edit their entry points under packages/artifact/lib/artifact and run generation.
-packages/artifact/templates/*.js linguist-generated=true
-packages/artifact/templates/design/*.js linguist-generated=true
-
 # Markdown uses trailing spaces for intentional hard line breaks.
 *.md whitespace=-blank-at-eol
 
