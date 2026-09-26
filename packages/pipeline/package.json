@@ -54,6 +54,10 @@
       "types": "./lib/protocol/index.d.ts",
       "import": "./lib/protocol/loader.mjs"
     },
+    "./dashboard": {
+      "types": "./lib/dashboard/index.d.mts",
+      "import": "./lib/dashboard/index.mjs"
+    },
     "./dashboard/operate-experience-reader": {
       "types": "./lib/dashboard/operate-experience-reader.d.mts",
       "import": "./lib/dashboard/operate-experience-reader.mjs"

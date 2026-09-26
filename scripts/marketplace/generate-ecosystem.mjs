@@ -334,6 +334,7 @@ async function buildOutputs() {
   const preservedExports = readJson('conformance/packed-surface-baseline.json').baselineExportKeys;
   const expectedExports = [
     ...preservedExports,
+    './dashboard',
     './design-lineage',
     './design-plan-handoff',
     './design-delivery-status',

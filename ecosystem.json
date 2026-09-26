@@ -57,7 +57,7 @@
       "version": "0.53.0",
       "path": "packages/pipeline",
       "publication": "public",
-      "manifestDigest": "sha256:d0bcab12fdaa85e2079b9adff6197d21f0e0e8eb25c737427d2bd034cbda27be"
+      "manifestDigest": "sha256:9763e5252e03a3dc63b6a606ea61fe0af8103e70071bebdca417adcf7556248c"
     },
     "protocol": {
       "package": "@openplanr/protocol",
@@ -131,7 +131,7 @@
     }
   },
   "publicCompatibility": {
-    "pipelineExportKeys": 46,
+    "pipelineExportKeys": 47,
     "pipelineRootSymbols": 229
   },
   "catalogs": {

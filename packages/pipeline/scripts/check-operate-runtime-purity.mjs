@@ -95,6 +95,8 @@ const OPERATE_V2_DEVELOPMENT_OVERLAYS = Object.freeze([
   'lib/dashboard/operate-review-payload-safety.mjs',
   'lib/dashboard/graph-engine.mjs',
   'lib/dashboard/operate-reader.mjs',
+  'lib/dashboard/index.d.mts',
+  'lib/dashboard/index.mjs',
   'lib/dashboard/planning-envelopes.mjs',
   'lib/dashboard/server.mjs',
   'lib/dashboard/server',
