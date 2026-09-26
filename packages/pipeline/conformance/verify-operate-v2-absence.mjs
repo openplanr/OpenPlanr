@@ -232,8 +232,18 @@ assert.deepEqual(
 );
 assert.deepEqual(
   readdirSync(join(runtimeDirectory, 'runtime-foundation')).sort(),
-  ['authority.mjs', 'evidence-state.mjs', 'execution.mjs', 'intelligence.mjs', 'protocol.mjs'],
-  'the Runtime foundation may expose only its five explicit internal dependency facades',
+  [
+    'authority-events.mjs',
+    'authority.mjs',
+    'evidence-state-events.mjs',
+    'evidence-state.mjs',
+    'execution.mjs',
+    'intelligence-events.mjs',
+    'intelligence.mjs',
+    'protocol.mjs',
+    'workflow-events.mjs',
+  ],
+  'the Runtime foundation may expose only its five explicit internal dependency facades and four Event handler modules',
 );
 
 assert.equal(

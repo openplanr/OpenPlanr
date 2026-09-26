@@ -178,7 +178,7 @@
       "path": "lib/operate/runtime-foundation.mjs",
       "kind": "projection",
       "legacySha256": "75d880b14d0304f71e7ba9ec33c20ca1ac0e48656d3492b62ff8f7dedd079f4e",
-      "sha256": "46fb6fd75c76a2dffbd5559016dde4eb9ec3fb1e1d574d7fab38787580c9434e",
+      "sha256": "775168f0abbc1f8797a02fbcd852cdbb1d327224e63024874a72bec816fdc099",
       "custody": "canonical-operate-domain-projection",
       "source": "packages/operate/lib/operate/runtime-foundation.mjs"
     },

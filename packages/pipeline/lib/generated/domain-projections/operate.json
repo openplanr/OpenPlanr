@@ -481,13 +481,25 @@
     {
       "source": "packages/operate/lib/operate/runtime-foundation.mjs",
       "target": "lib/operate/runtime-foundation.mjs",
-      "sha256": "46fb6fd75c76a2dffbd5559016dde4eb9ec3fb1e1d574d7fab38787580c9434e",
+      "sha256": "775168f0abbc1f8797a02fbcd852cdbb1d327224e63024874a72bec816fdc099",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/runtime-foundation/authority-events.mjs",
+      "target": "lib/operate/runtime-foundation/authority-events.mjs",
+      "sha256": "3c6808e2d77b0c8ed52e607f53a176184405fff9f0df786f0c81ef0403890e5f",
       "mode": "644"
     },
     {
       "source": "packages/operate/lib/operate/runtime-foundation/authority.mjs",
       "target": "lib/operate/runtime-foundation/authority.mjs",
       "sha256": "fb42410a2db04f862b1eac279ceb991428fe7f04ef746009800961782e40bfb4",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/runtime-foundation/evidence-state-events.mjs",
+      "target": "lib/operate/runtime-foundation/evidence-state-events.mjs",
+      "sha256": "1ec828a2872b62534601746e08a47daaaf85516a5e4c146dfb47f51a1615898d",
       "mode": "644"
     },
     {
@@ -503,6 +515,12 @@
       "mode": "644"
     },
     {
+      "source": "packages/operate/lib/operate/runtime-foundation/intelligence-events.mjs",
+      "target": "lib/operate/runtime-foundation/intelligence-events.mjs",
+      "sha256": "ac153aea5fffb396f35b06dd103bcb474fb6feb0684d7c6fbcfaf9ff054d9444",
+      "mode": "644"
+    },
+    {
       "source": "packages/operate/lib/operate/runtime-foundation/intelligence.mjs",
       "target": "lib/operate/runtime-foundation/intelligence.mjs",
       "sha256": "b9da419d0fb5f1ab2368993ba7649a339585c493621c9fb082d61c1a1cb61ed7",
@@ -512,6 +530,12 @@
       "source": "packages/operate/lib/operate/runtime-foundation/protocol.mjs",
       "target": "lib/operate/runtime-foundation/protocol.mjs",
       "sha256": "f2104b2f4ef2ebbd71f29eaf6df300ca6f620de9e5cff4fbe38ff2821fee5951",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/runtime-foundation/workflow-events.mjs",
+      "target": "lib/operate/runtime-foundation/workflow-events.mjs",
+      "sha256": "2931597ee2c227135dd95f251cada5164f5b64d756fbf4f1ee8c3ade89c9d7ed",
       "mode": "644"
     },
     {
