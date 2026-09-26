@@ -4,15 +4,17 @@ import { renderDiagramHtml } from './html.mjs';
 import { renderDiagramPng } from './png.mjs';
 import { createRenderQualityReport } from './reports.mjs';
 import { renderDiagramSvg } from './svg.mjs';
+import { resolveDiagramTheme } from './theme.mjs';
 
 export function renderDiagramOutputs(document) {
   assertDiagramDocument(document);
-  const { svg, scene } = renderDiagramSvg(document);
-  const png = renderDiagramPng(svg);
-  const html = renderDiagramHtml(document, svg);
+  const theme = resolveDiagramTheme(document.theme);
+  const { svg, scene } = renderDiagramSvg(document, { theme });
+  const png = renderDiagramPng(svg, { theme });
+  const html = renderDiagramHtml(document, svg, { theme });
   const svgValidation = validateDiagramSvg(svg);
   const quality = createRenderQualityReport(document, { scene, png, svgValidation });
-  return Object.freeze({ html, png, quality, scene, svg });
+  return Object.freeze({ html, png, quality, scene, svg, theme });
 }
 
 export { renderDiagramHtml } from './html.mjs';
@@ -29,6 +31,10 @@ export { escapeXml, renderDiagramSvg } from './svg.mjs';
 export {
   DIAGRAM_RENDERER,
   DIAGRAM_THEME,
+  DIAGRAM_THEMES,
   MAX_DIAGRAM_SCENE_EXTENT,
+  OPENPLANR_BRAND_TOKENS,
+  OPENPLANR_THEME,
   RASTER_SCALE,
+  resolveDiagramTheme,
 } from './theme.mjs';

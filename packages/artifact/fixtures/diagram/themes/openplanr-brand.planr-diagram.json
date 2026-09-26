@@ -1,0 +1,162 @@
+{
+  "kind": "planr-diagram",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.6.0",
+  "documentVersion": "1.0.0",
+  "digestAlgorithm": "sha256",
+  "canonicalization": "rfc8785",
+  "diagramId": "openplanr-brand",
+  "title": "Review evidence pipeline",
+  "summary": "How a rendered diagram set, its manifest, and reviewer pins stay bound to the same verified bytes.",
+  "audience": "mixed",
+  "grammar": {
+    "id": "architecture",
+    "version": "1.0.0"
+  },
+  "layout": {
+    "direction": "left-right",
+    "detailTier": "balanced"
+  },
+  "theme": {
+    "themeId": "openplanr",
+    "mode": "auto"
+  },
+  "source": {
+    "format": "english",
+    "path": null,
+    "digest": null
+  },
+  "nodes": [
+    {
+      "id": "document",
+      "label": "Canonical document",
+      "kind": "primary-item",
+      "description": "Semantic intent, validated against the grammar registry.",
+      "semanticPosition": null
+    },
+    {
+      "id": "renderer",
+      "label": "Offline renderer",
+      "kind": "primary-item",
+      "description": "Lays out and rasterizes without a browser or network.",
+      "semanticPosition": null
+    },
+    {
+      "id": "manifest",
+      "label": "Set manifest",
+      "kind": "primary-item",
+      "description": "Digests every output and the theme that produced it.",
+      "semanticPosition": null
+    },
+    {
+      "id": "studio",
+      "label": "Review studio",
+      "kind": "primary-item",
+      "description": "Pins feedback to the exact manifest digest.",
+      "semanticPosition": null
+    },
+    {
+      "id": "ci",
+      "label": "CI check",
+      "kind": "secondary-item",
+      "description": "Fails when any committed byte drifts from its manifest.",
+      "semanticPosition": null
+    }
+  ],
+  "relations": [
+    {
+      "id": "render",
+      "from": "document",
+      "to": "renderer",
+      "kind": "flow",
+      "label": "render",
+      "weight": null
+    },
+    {
+      "id": "bind",
+      "from": "renderer",
+      "to": "manifest",
+      "kind": "flow",
+      "label": "digest outputs",
+      "weight": null
+    },
+    {
+      "id": "review",
+      "from": "manifest",
+      "to": "studio",
+      "kind": "flow",
+      "label": "open",
+      "weight": null
+    },
+    {
+      "id": "verify",
+      "from": "manifest",
+      "to": "ci",
+      "kind": "dependency",
+      "label": "planr diagram check",
+      "weight": null
+    }
+  ],
+  "groups": [
+    {
+      "id": "engine",
+      "label": "Deterministic engine",
+      "members": [
+        "document",
+        "renderer",
+        "manifest"
+      ]
+    },
+    {
+      "id": "consumers",
+      "label": "Consumers",
+      "members": [
+        "studio",
+        "ci"
+      ]
+    }
+  ],
+  "annotations": [
+    {
+      "id": "theme-note",
+      "text": "Theme id and mode are part of the manifest.",
+      "targetId": "manifest"
+    }
+  ],
+  "emphasis": [
+    {
+      "targetId": "manifest",
+      "level": "primary"
+    },
+    {
+      "targetId": "bind",
+      "level": "primary"
+    },
+    {
+      "targetId": "engine",
+      "level": "primary"
+    }
+  ],
+  "accessibility": {
+    "title": "Review evidence pipeline",
+    "description": "A canonical document is rendered offline into a manifest-bound set that the review studio and CI both verify.",
+    "readingOrder": [
+      "document",
+      "renderer",
+      "manifest",
+      "studio",
+      "ci",
+      "render",
+      "bind",
+      "review",
+      "verify",
+      "theme-note"
+    ]
+  },
+  "lanes": [],
+  "events": [],
+  "series": [],
+  "axes": [],
+  "sets": [],
+  "documentDigest": "sha256:ee281649235b5a3e8cf681005b54b39669b59820b660a2e8e7788db5a20b39e3"
+}

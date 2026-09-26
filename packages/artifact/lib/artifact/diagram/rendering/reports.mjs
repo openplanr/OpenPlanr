@@ -3,8 +3,10 @@ import { assertProtocolArtifact } from '@openplanr/protocol/contracts';
 
 import { planDiagramQuality } from '../readability.mjs';
 import {
+  CONTAINER_TITLE_BAND,
   LABEL_EDGE_DISTANCE,
   labelAttached,
+  labelStraddlesFrame,
   routesMerge,
   SHARED_SEGMENT_LENGTH,
 } from './layout.mjs';
@@ -97,10 +99,18 @@ function labelOnContainerTitleCount(scene) {
     x: frame.x,
     y: frame.y,
     width: frame.width,
-    height: 34,
+    height: CONTAINER_TITLE_BAND,
   }));
   return (scene.labelBounds ?? []).filter((label) => titles.some((title) => overlaps(label, title)))
     .length;
+}
+
+function labelOnFrameBorderCount(scene) {
+  // A label knockout across a container border cuts a gap into the frame.
+  const frames = [...(scene.groups ?? []), ...(scene.lanes ?? [])];
+  return (scene.labelBounds ?? []).filter((label) =>
+    frames.some((frame) => labelStraddlesFrame(label, frame)),
+  ).length;
 }
 
 function edgePoints(edge) {
@@ -235,6 +245,7 @@ export function createRenderQualityReport(document, { scene, png, svgValidation 
   const detachedLabels = detachedLabelCount(scene);
   const mergedEdges = mergedEdgeCount(scene);
   const titleLabels = labelOnContainerTitleCount(scene);
+  const frameLabels = labelOnFrameBorderCount(scene);
   const edgeNodeCount = scene.edges.filter((edge) => {
     const points = edgePoints(edge);
     return points
@@ -311,6 +322,13 @@ export function createRenderQualityReport(document, { scene, png, svgValidation 
       message: titleLabels
         ? `${titleLabels} relation labels overlap a group or lane title.`
         : 'Relation labels keep clear of group and lane titles.',
+    },
+    {
+      id: 'label-frame-overlap',
+      status: frameLabels ? 'fail' : 'pass',
+      message: frameLabels
+        ? `${frameLabels} relation label${frameLabels === 1 ? ' crosses' : 's cross'} a group or lane border.`
+        : 'Relation labels lie inside or outside each group and lane frame, never across its border.',
     },
     {
       id: 'edge-node-overlap',

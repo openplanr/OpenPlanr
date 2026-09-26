@@ -88,32 +88,26 @@ In Claude Code you can install the plugin from the public marketplace instead of
 
 ## How it works
 
-```mermaid
-%%{init: {"theme":"base","themeVariables":{"fontFamily":"DM Sans, ui-sans-serif, system-ui, sans-serif","fontSize":"14px","primaryColor":"#5EEAD4","primaryTextColor":"#08080C","primaryBorderColor":"#237A72","secondaryColor":"#F5F7F7","secondaryTextColor":"#08080C","secondaryBorderColor":"#237A72","tertiaryColor":"#F5F7F7","tertiaryTextColor":"#08080C","tertiaryBorderColor":"#237A72","lineColor":"#237A72","textColor":"#08080C","edgeLabelBackground":"#F5F7F7","clusterBkg":"#F5F7F7","clusterBorder":"#237A72","noteBkgColor":"#F5F7F7","noteTextColor":"#08080C","noteBorderColor":"#237A72"}}}%%
-flowchart LR
-    request["Request<br/><i>a feature, bug, or question</i>"]
-    subgraph host["Your coding agent · Claude Code, Codex, Cursor"]
-        direction LR
-        spec["planr-spec<br/>specification"] --> plan["planr-plan<br/>stories and tasks"] --> ship["planr-ship<br/>implementation"]
-    end
-    subgraph repo["Your repository"]
-        direction LR
-        files[".planr/<br/>specs · stories · tasks<br/>provenance log"]
-        code["Source code<br/>and tests"]
-    end
-    cli["planr CLI<br/>validate · render<br/>sync · doctor"]
-    trackers["GitHub Issues · Linear<br/><i>optional</i>"]
-    request --> spec
-    spec --> files
-    plan --> files
-    files --> ship
-    ship --> code
-    files <--> cli
-    cli <--> trackers
-```
+<p align="center">
+  <a href="docs/diagrams/delivery-loop/delivery-loop.svg">
+    <img alt="The OpenPlanr delivery loop: you invoke the spec, plan, ship, and land skills in your coding agent; spec and plan write the plans under .planr/ in your repository, ship reads the plan first and implements one task, and land assesses release readiness before you merge; the planr CLI validates the planning files offline and keeps GitHub Issues or Linear in step; review skills and operate readouts return the evidence for the next request" width="880" src="docs/diagrams/delivery-loop/delivery-loop.svg">
+  </a>
+</p>
 
 Reasoning stays in the host agent. The CLI never calls a model; it validates what the agent
 wrote, renders it, and keeps trackers in step.
+
+### One feature, end to end
+
+<p align="center">
+  <a href="docs/diagrams/one-feature/one-feature.svg">
+    <img alt="One feature from specification to operate readout: you invoke spec, plan, ship, land, release, and operate in your coding agent; the agent writes the specification, stories, and tasks into your repository, reads the plan before it implements each task, and returns the merge commands; planr sync validates the planning files offline; you open the PR and merge on GitHub" width="880" src="docs/diagrams/one-feature/one-feature.svg">
+  </a>
+</p>
+
+The plan is a file in your repository that you review like code, and the agent reads it before
+it changes code. `ship` implements one task at a time, verified and small enough to review as
+one pull request, and the CLI validates the planning files offline, never by a model.
 
 ## Capabilities
 
@@ -141,13 +135,14 @@ the registry and lists every trigger, deferral, and packaged reference.
 
 <p align="center">
   <a href="docs/diagrams/planning-artifacts/planning-artifacts.svg">
-    <img alt="How planning artifacts are written and validated" width="880" src="docs/diagrams/planning-artifacts/planning-artifacts.svg">
+    <img alt="Planning artifacts: the spec, plan, and ship skills write the specification, the stories and tasks, and the provenance log under .planr/; the planr CLI validates them offline and keeps GitHub Issues and Linear in step" width="880" src="docs/diagrams/planning-artifacts/planning-artifacts.svg">
   </a>
 </p>
 
 <p align="center"><sub>Rendered by <code>planr diagram render</code> from
-<a href="docs/diagrams/planning-artifacts/planning-artifacts.planr-diagram.json">a canonical document</a>;
-verified in CI by <code>planr diagram check</code>. The engine ships one light theme today.</sub></p>
+<a href="docs/diagrams/planning-artifacts/planning-artifacts.planr-diagram.json">a canonical document</a>,
+as are the diagrams under How it works; verified in CI by <code>planr diagram check</code>.
+The <code>openplanr</code> theme adapts each SVG to the viewer's light or dark scheme.</sub></p>
 
 `planr-diagram` turns intent into a canonical semantic document, and the offline engine lays
 it out deterministically across 39 grammars (architecture, sequence, ER, Gantt, story map,

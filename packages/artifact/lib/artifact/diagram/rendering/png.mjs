@@ -86,7 +86,7 @@ export function renderDiagramPng(svg, { scale = RASTER_SCALE, theme = DIAGRAM_TH
       background: theme.background,
       fitTo: { mode: 'zoom', value: scale },
       font: {
-        defaultFontFamily: theme.fontFamily,
+        defaultFontFamily: DIAGRAM_FONT.family,
         fontBuffers: [font],
         loadSystemFonts: false,
       },

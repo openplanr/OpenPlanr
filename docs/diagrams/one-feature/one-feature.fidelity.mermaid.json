@@ -1,0 +1,160 @@
+{
+  "kind": "diagram-fidelity-report",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.6.0",
+  "documentVersion": "1.0.0",
+  "digestAlgorithm": "sha256",
+  "canonicalization": "rfc8785",
+  "diagramId": "one-feature",
+  "sourceFormat": "planr-diagram",
+  "targetFormat": "mermaid",
+  "status": "partial",
+  "interpreted": [
+    {
+      "source": "node:you",
+      "targetId": "you",
+      "construct": "participant"
+    },
+    {
+      "source": "node:agent",
+      "targetId": "agent",
+      "construct": "participant"
+    },
+    {
+      "source": "node:repo",
+      "targetId": "repo",
+      "construct": "participant"
+    },
+    {
+      "source": "node:cli",
+      "targetId": "cli",
+      "construct": "participant"
+    },
+    {
+      "source": "node:github",
+      "targetId": "github",
+      "construct": "participant"
+    },
+    {
+      "source": "event:e-specify",
+      "targetId": "e-specify",
+      "construct": "phase-note"
+    },
+    {
+      "source": "relation:m1",
+      "targetId": "m1",
+      "construct": "message"
+    },
+    {
+      "source": "relation:m2",
+      "targetId": "m2",
+      "construct": "message"
+    },
+    {
+      "source": "relation:m3",
+      "targetId": "m3",
+      "construct": "message"
+    },
+    {
+      "source": "event:e-plan",
+      "targetId": "e-plan",
+      "construct": "phase-note"
+    },
+    {
+      "source": "relation:m4",
+      "targetId": "m4",
+      "construct": "message"
+    },
+    {
+      "source": "relation:m5",
+      "targetId": "m5",
+      "construct": "message"
+    },
+    {
+      "source": "relation:m6",
+      "targetId": "m6",
+      "construct": "message"
+    },
+    {
+      "source": "relation:m7",
+      "targetId": "m7",
+      "construct": "message"
+    },
+    {
+      "source": "event:e-ship",
+      "targetId": "e-ship",
+      "construct": "phase-note"
+    },
+    {
+      "source": "relation:m8",
+      "targetId": "m8",
+      "construct": "message"
+    },
+    {
+      "source": "relation:m9",
+      "targetId": "m9",
+      "construct": "message"
+    },
+    {
+      "source": "relation:m10",
+      "targetId": "m10",
+      "construct": "message"
+    },
+    {
+      "source": "relation:m11",
+      "targetId": "m11",
+      "construct": "message"
+    },
+    {
+      "source": "event:e-land",
+      "targetId": "e-land",
+      "construct": "phase-note"
+    },
+    {
+      "source": "relation:m12",
+      "targetId": "m12",
+      "construct": "message"
+    },
+    {
+      "source": "relation:m13",
+      "targetId": "m13",
+      "construct": "message"
+    },
+    {
+      "source": "relation:m14",
+      "targetId": "m14",
+      "construct": "message"
+    },
+    {
+      "source": "event:e-operate",
+      "targetId": "e-operate",
+      "construct": "phase-note"
+    },
+    {
+      "source": "relation:m15",
+      "targetId": "m15",
+      "construct": "message"
+    },
+    {
+      "source": "relation:m16",
+      "targetId": "m16",
+      "construct": "message"
+    },
+    {
+      "source": "relation:m17",
+      "targetId": "m17",
+      "construct": "message"
+    }
+  ],
+  "omitted": [
+    {
+      "source": "emphasis:m9",
+      "reason": "Mermaid sequence source does not preserve OpenPlanr emphasis levels."
+    }
+  ],
+  "notes": [
+    "The bounded sequence projection preserves participants, ordered messages, phases, and notes.",
+    "Participant order represents the selected OpenPlanr direction."
+  ],
+  "documentDigest": "sha256:2cac27364968be279ed07303dfffa8144a8ddca54f59cc50e91df846aa76a645"
+}

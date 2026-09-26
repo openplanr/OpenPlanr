@@ -4,7 +4,7 @@ import { DIAGRAM_GRAMMAR_REGISTRY } from '@openplanr/protocol/diagram-contracts'
 
 import { DIAGRAM_RENDERER, DIAGRAM_THEME } from '../rendering/theme.mjs';
 
-export function createDiagramRenderManifest(document, { source, outputs }) {
+export function createDiagramRenderManifest(document, { source, outputs, theme = DIAGRAM_THEME }) {
   const manifest = withDocumentDigest({
     kind: 'diagram-manifest',
     schemaVersion: '1.0.0',
@@ -21,7 +21,7 @@ export function createDiagramRenderManifest(document, { source, outputs }) {
       grammarVersion: document.grammar.version,
     },
     renderer: { id: DIAGRAM_RENDERER.id, version: DIAGRAM_RENDERER.version },
-    theme: { id: DIAGRAM_THEME.id, version: DIAGRAM_THEME.version },
+    theme: { id: theme.id, version: theme.version },
     outputs: [...outputs].sort((left, right) => left.path.localeCompare(right.path)),
   });
   assertProtocolArtifact('diagram-manifest', manifest, { protocolVersion: '1.6.0' });
