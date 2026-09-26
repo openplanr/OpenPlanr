@@ -190,7 +190,7 @@ test('document presentation uses authenticated natural sizing, outer scrolling, 
   skip: !runBrowser,
   timeout: 60_000,
 }, async (t) => {
-  const { chromium } = await import('playwright');
+  const { launchBrowser } = await import('../../../../tests/support/browser-launcher.mjs');
   const home = mkdtempSync(join(tmpdir(), 'planr-document-shell-'));
   const artifact = {
     id: 'long-document',
@@ -210,7 +210,7 @@ test('document presentation uses authenticated natural sizing, outer scrolling, 
     env: { ...process.env, PLANR_HOME: home },
     noOpen: true,
   });
-  const browser = await chromium.launch({ headless: true });
+  const browser = await launchBrowser({ engine: 'chromium' });
   const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
   t.after(async () => {
     await review.close().catch(() => {});
@@ -432,8 +432,8 @@ test('real browser stage preserves dynamic interaction, comment routing, accessi
   skip: !runBrowser,
   timeout: 60_000,
 }, async (t) => {
-  const [{ chromium }, pngModule, pixelmatchModule] = await Promise.all([
-    import('playwright'),
+  const [{ launchBrowser }, pngModule, pixelmatchModule] = await Promise.all([
+    import('../../../../tests/support/browser-launcher.mjs'),
     import('pngjs'),
     import('pixelmatch'),
   ]);
@@ -454,7 +454,7 @@ test('real browser stage preserves dynamic interaction, comment routing, accessi
   });
   const runtime = renderArtifactStageRuntimeAsset();
   const host = await serve(document, runtime, envelope.artifacts);
-  const browser = await chromium.launch({ headless: true });
+  const browser = await launchBrowser({ engine: 'chromium' });
   t.after(async () => {
     await browser.close();
     await host.close();

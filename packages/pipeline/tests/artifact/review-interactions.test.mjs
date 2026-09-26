@@ -432,8 +432,8 @@ test('real browser review supports dynamic artifacts, comments, threads, decisio
   skip: !runBrowser,
   timeout: 60_000,
 }, async (t) => {
-  const [{ chromium }, pngModule, pixelmatchModule] = await Promise.all([
-    import('playwright'),
+  const [{ launchBrowser }, pngModule, pixelmatchModule] = await Promise.all([
+    import('../../../../tests/support/browser-launcher.mjs'),
     import('pngjs'),
     import('pixelmatch'),
   ]);
@@ -453,7 +453,7 @@ test('real browser review supports dynamic artifacts, comments, threads, decisio
   });
   const runtime = renderArtifactStageRuntimeAsset();
   const host = await serve(document, runtime, envelope.artifacts);
-  const browser = await chromium.launch({ headless: true });
+  const browser = await launchBrowser({ engine: 'chromium' });
   t.after(async () => {
     await browser.close();
     await host.close();

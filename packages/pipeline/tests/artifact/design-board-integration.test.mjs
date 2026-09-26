@@ -296,12 +296,9 @@ test('real board restores every round and export control on the shared shell', {
   skip: runBrowser ? false : 'browser-gated',
   timeout: 60_000,
 }, async () => {
-  const { chromium } = await import('playwright');
+  const { launchBrowser } = await import('../../../../tests/support/browser-launcher.mjs');
   const { base, id, sessionDir } = await fixture();
-  const browser = await chromium.launch({
-    headless: true,
-    ...(process.env.PLANR_BROWSER_CHANNEL ? { channel: process.env.PLANR_BROWSER_CHANNEL } : {}),
-  });
+  const browser = await launchBrowser({ engine: 'chromium' });
   try {
     const context = await browser.newContext({ acceptDownloads: true });
     const page = await context.newPage();
