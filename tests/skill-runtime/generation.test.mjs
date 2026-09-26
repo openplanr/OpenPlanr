@@ -19,6 +19,10 @@ import {
   readStandardSkillPackage,
 } from '../../packages/skill-runtime/src/catalog.mjs';
 import { projectedSkillName } from '../../scripts/skills/host-invocations.mjs';
+import {
+  countReadmeWords,
+  PLUGIN_README_MINIMUM_WORDS,
+} from '../../scripts/skills/plugin-readme.mjs';
 
 const root = resolve(import.meta.dirname, '..', '..');
 const read = (path) => readFileSync(resolve(root, path), 'utf8');
@@ -102,6 +106,30 @@ test('generated host distributions contain every canonical skill and nine Claude
       );
     }
   }
+});
+
+test('the Claude plugin ships a directory-ready README and discovery metadata', () => {
+  assert.equal(countReadmeWords('one two\n```\nthree four five\n```\n`six` [seven](https://x)'), 3);
+
+  const readmePath = 'dist/plugins/claude/openplanr/README.md';
+  assert.ok(existsSync(resolve(root, readmePath)), readmePath);
+  const readme = read(readmePath);
+  const words = countReadmeWords(readme);
+  assert.ok(
+    words >= PLUGIN_README_MINIMUM_WORDS,
+    `${readmePath} has ${words} words outside code blocks; need ${PLUGIN_README_MINIMUM_WORDS}`,
+  );
+  assert.match(readme, new RegExp(`\\b${skillIds.length} skills\\b`, 'u'));
+  assert.match(readme, new RegExp(`\\b${EXPECTED_ROLE_IDS.length} role agents\\b`, 'u'));
+  assert.doesNotMatch(readme, /\{\{[A-Z0-9_]+\}\}/u);
+  assert.equal(read('packages/cli/lib/host-packages/claude/openplanr/README.md'), readme);
+
+  const manifest = JSON.parse(read('dist/plugins/claude/openplanr/.claude-plugin/plugin.json'));
+  assert.ok(readme.includes(manifest.version), 'README names the plugin version');
+  assert.equal(manifest.displayName, 'OpenPlanr');
+  assert.ok(URL.canParse(manifest.homepage), manifest.homepage);
+  assert.ok(URL.canParse(manifest.repository), manifest.repository);
+  assert.ok(Array.isArray(manifest.keywords) && manifest.keywords.length > 0);
 });
 
 test('Plan, Spec, and Ship are host-native and independent of CLI or provider credentials', () => {

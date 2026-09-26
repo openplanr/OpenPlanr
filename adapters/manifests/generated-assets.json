@@ -21,12 +21,12 @@
     },
     {
       "path": "dist/plugins/claude/openplanr/.claude-plugin/plugin.json",
-      "digest": "sha256:177bc1e8ca36d99283a1c20f043f360db711f025c4c5278522cb7210675de9d0",
+      "digest": "sha256:7e485d0273ca1f00193cf47eab39bce21af73ff0c806d66dc5971e7d59356300",
       "generated": true
     },
     {
       "path": "dist/plugins/claude/openplanr/.openplanr-content.json",
-      "digest": "sha256:ba98c58bc1ac654f92b7787d0a18260e36d7a5bdda6534885f50d19999130d9b",
+      "digest": "sha256:bc653c86c749843d79bd9e3d2d50a9b2453ec868ae4c6222db52180efd7f25a0",
       "generated": true
     },
     {
@@ -72,6 +72,11 @@
     {
       "path": "dist/plugins/claude/openplanr/agents/planr-specification.md",
       "digest": "sha256:bbeca127a8f6d6fd0d3a1ad167effbbc277db3331e2891d378a060160c665f53",
+      "generated": true
+    },
+    {
+      "path": "dist/plugins/claude/openplanr/README.md",
+      "digest": "sha256:97c40e87546c31e6760519979257e4695a60bd4259c5bf6ea44d207119fc5397",
       "generated": true
     },
     {
@@ -4521,12 +4526,12 @@
     },
     {
       "path": "packages/cli/lib/host-packages/claude/openplanr/.claude-plugin/plugin.json",
-      "digest": "sha256:177bc1e8ca36d99283a1c20f043f360db711f025c4c5278522cb7210675de9d0",
+      "digest": "sha256:7e485d0273ca1f00193cf47eab39bce21af73ff0c806d66dc5971e7d59356300",
       "generated": true
     },
     {
       "path": "packages/cli/lib/host-packages/claude/openplanr/.openplanr-content.json",
-      "digest": "sha256:ba98c58bc1ac654f92b7787d0a18260e36d7a5bdda6534885f50d19999130d9b",
+      "digest": "sha256:bc653c86c749843d79bd9e3d2d50a9b2453ec868ae4c6222db52180efd7f25a0",
       "generated": true
     },
     {
@@ -4572,6 +4577,11 @@
     {
       "path": "packages/cli/lib/host-packages/claude/openplanr/agents/planr-specification.md",
       "digest": "sha256:bbeca127a8f6d6fd0d3a1ad167effbbc277db3331e2891d378a060160c665f53",
+      "generated": true
+    },
+    {
+      "path": "packages/cli/lib/host-packages/claude/openplanr/README.md",
+      "digest": "sha256:97c40e87546c31e6760519979257e4695a60bd4259c5bf6ea44d207119fc5397",
       "generated": true
     },
     {
