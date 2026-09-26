@@ -76,7 +76,10 @@ test('Planning REST is exact-bound, graph-revision committed, and byte-parallel 
     assert.deepEqual(Object.keys(envelope.cursor).sort(), ['eventHead', 'viewHash']);
     assert.equal(Object.hasOwn(envelope.cursor, 'revision'), false);
     const legacyEvents = await request(port, '/api/events');
-    assert.equal(legacyEvents.body, `event: ready\ndata: ${JSON.stringify({ ok: true, pid: process.pid })}\n\n`);
+    assert.equal(
+      legacyEvents.body,
+      `event: ready\ndata: ${JSON.stringify({ ok: true, pid: process.pid })}\n\n`,
+    );
 
     for (const path of [
       `/api/planning/graph?${query(projectId).replace('scopeId=planning', 'scopeId=foreign')}`,
@@ -101,10 +104,15 @@ test('Planning REST is exact-bound, graph-revision committed, and byte-parallel 
 test('Planning detail is bound to the exact graph summary and refuses foreign substitution', async () => {
   const home = mkdtempSync(join(tmpdir(), 'planr-planning-detail-'));
   const graph = assertPlanningGraph({
-    nodes: [{
-      id: 'T-022', type: 'task', title: 'Planning transport', status: 'in-progress',
-      frontmatter: { id: 'T-022', storyId: 'US-011' },
-    }],
+    nodes: [
+      {
+        id: 'T-022',
+        type: 'task',
+        title: 'Planning transport',
+        status: 'in-progress',
+        frontmatter: { id: 'T-022', storyId: 'US-011' },
+      },
+    ],
     edges: [],
   });
   let detail = { ...graph.nodes[0], body: 'Exact public body.' };
@@ -144,10 +152,15 @@ test('Planning detail is bound to the exact graph summary and refuses foreign su
 test('Planning SSE replays a committed patch and emits stale after a gap or restart', async () => {
   const home = mkdtempSync(join(tmpdir(), 'planr-planning-sse-'));
   const graph = assertPlanningGraph({
-    nodes: [{
-      id: 'T-022', type: 'task', title: 'Before', status: 'outstanding',
-      frontmatter: { id: 'T-022' },
-    }],
+    nodes: [
+      {
+        id: 'T-022',
+        type: 'task',
+        title: 'Before',
+        status: 'outstanding',
+        frontmatter: { id: 'T-022' },
+      },
+    ],
     edges: [],
   });
   const dashboard = createDashboardServer({
@@ -162,15 +175,22 @@ test('Planning SSE replays a committed patch and emits stale after a gap or rest
     const bootstrap = JSON.parse((await request(port, '/api/bootstrap')).body);
     const path = `/api/planning/events?${query(bootstrap.project.projectId)}`;
     const headers = { 'X-OpenPlanr-Actor': actorId };
-    const snapshot = assertPlanningLiveEventEnvelope(eventFrom((await request(port, path, headers)).body));
+    const snapshot = assertPlanningLiveEventEnvelope(
+      eventFrom((await request(port, path, headers)).body),
+    );
     assert.equal(snapshot.event, 'snapshot');
     const checkpoint = encodePlanningCheckpoint(snapshot.cursor);
     assert.deepEqual(decodePlanningCheckpoint(checkpoint), snapshot.cursor);
 
-    assert.equal(dashboard.acceptPlanningWatcherPatch({
-      updated: [{ ...graph.nodes[0], title: 'After', status: 'in-progress' }],
-      added: [], removed: [], edges: { added: [], removed: [] },
-    }), true);
+    assert.equal(
+      dashboard.acceptPlanningWatcherPatch({
+        updated: [{ ...graph.nodes[0], title: 'After', status: 'in-progress' }],
+        added: [],
+        removed: [],
+        edges: { added: [], removed: [] },
+      }),
+      true,
+    );
     const replay = await request(port, path, { ...headers, 'Last-Event-ID': checkpoint });
     const patch = assertPlanningLiveEventEnvelope(eventFrom(replay.body));
     assert.equal(patch.event, 'patch');
@@ -179,13 +199,26 @@ test('Planning SSE replays a committed patch and emits stale after a gap or rest
     assert.equal(patch.payload.to.viewHash, sha256Jcs(dashboard.getCurrentGraph()));
 
     const committedCursor = dashboard.getPlanningCursor();
-    assert.equal(dashboard.acceptPlanningWatcherPatch({
-      updated: [dashboard.getCurrentGraph().nodes[0]],
-      added: [], removed: [], edges: { added: [], removed: [] },
-    }), false, 'a no-op cannot advance the event cursor without a new graph revision');
-    assert.equal(dashboard.acceptPlanningWatcherPatch({
-      updated: [], added: [], removed: ['T-foreign'], edges: { added: [], removed: [] },
-    }), false, 'a patch cannot target a foreign graph identity');
+    assert.equal(
+      dashboard.acceptPlanningWatcherPatch({
+        updated: [dashboard.getCurrentGraph().nodes[0]],
+        added: [],
+        removed: [],
+        edges: { added: [], removed: [] },
+      }),
+      false,
+      'a no-op cannot advance the event cursor without a new graph revision',
+    );
+    assert.equal(
+      dashboard.acceptPlanningWatcherPatch({
+        updated: [],
+        added: [],
+        removed: ['T-foreign'],
+        edges: { added: [], removed: [] },
+      }),
+      false,
+      'a patch cannot target a foreign graph identity',
+    );
     assert.deepEqual(dashboard.getPlanningCursor(), committedCursor);
 
     const staleCursor = encodePlanningCheckpoint({
@@ -205,9 +238,12 @@ test('Planning SSE replays a committed patch and emits stale after a gap or rest
 test('Planning graph owner rejects duplicate identities, orphan edges, bodies, and unsafe values', () => {
   const node = { id: 'T-1', type: 'task', title: 'Task', status: 'outstanding', frontmatter: {} };
   assert.throws(() => assertPlanningGraph({ nodes: [node, node], edges: [] }));
-  assert.throws(() => assertPlanningGraph({
-    nodes: [node], edges: [{ from: 'T-1', to: 'T-2', kind: 'depends_on' }],
-  }));
+  assert.throws(() =>
+    assertPlanningGraph({
+      nodes: [node],
+      edges: [{ from: 'T-1', to: 'T-2', kind: 'depends_on' }],
+    }),
+  );
   assert.throws(() => assertPlanningGraph({ nodes: [{ ...node, body: 'leak' }], edges: [] }));
   const hostile = { nodes: [node], edges: [] };
   Object.defineProperty(hostile, 'secret', { enumerable: true, get: () => 'executed' });
@@ -215,8 +251,13 @@ test('Planning graph owner rejects duplicate identities, orphan edges, bodies, a
   for (const id of ['\uD800', '\uDC00']) {
     assert.throws(() => assertPlanningGraph({ nodes: [{ ...node, id }], edges: [] }));
   }
-  assert.doesNotThrow(() => assertPlanningGraph({
-    nodes: [{ ...node, id: '\uFFFD' }, { ...node, id: 'unicode-مرحبا-計画-😀' }],
-    edges: [],
-  }));
+  assert.doesNotThrow(() =>
+    assertPlanningGraph({
+      nodes: [
+        { ...node, id: '\uFFFD' },
+        { ...node, id: 'unicode-مرحبا-計画-😀' },
+      ],
+      edges: [],
+    }),
+  );
 });

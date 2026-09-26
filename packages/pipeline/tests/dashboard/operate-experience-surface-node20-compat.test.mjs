@@ -1,56 +1,44 @@
-import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import test from "node:test";
-import { fileURLToPath } from "node:url";
+import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 
-import { packOperateV2DevelopmentSnapshot } from "../../scripts/check-operate-runtime-purity.mjs";
+import { packOperateV2DevelopmentSnapshot } from '../../scripts/check-operate-runtime-purity.mjs';
 
-const root = fileURLToPath(new URL("../..", import.meta.url));
+const root = fileURLToPath(new URL('../..', import.meta.url));
 const node20Executable = process.env.PLANR_NODE20_EXECUTABLE;
 
 function run(command, args, options = {}) {
-	const result = spawnSync(command, args, { encoding: "utf8", ...options });
-	assert.equal(
-		result.status,
-		0,
-		`${command} ${args.join(" ")} failed\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}`,
-	);
-	return result;
+  const result = spawnSync(command, args, { encoding: 'utf8', ...options });
+  assert.equal(
+    result.status,
+    0,
+    `${command} ${args.join(' ')} failed\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}`,
+  );
+  return result;
 }
 
-test("complete clean packed surface assertion executes under exact Node 20.0.0", {
-	timeout: 180_000,
-	skip: node20Executable ? false : "PLANR_NODE20_EXECUTABLE is not configured",
+test('complete clean packed surface assertion executes under exact Node 20.0.0', {
+  timeout: 180_000,
+  skip: node20Executable ? false : 'PLANR_NODE20_EXECUTABLE is not configured',
 }, () => {
-	const temporaryRoot = mkdtempSync(join(tmpdir(), "planr-surface-node20-"));
-	try {
-		assert.equal(run(node20Executable, ["--version"]).stdout.trim(), "v20.0.0");
-		const packed = packOperateV2DevelopmentSnapshot(
-			join(temporaryRoot, "pack"),
-			{
-				sourceRoot: root,
-			},
-		);
-		const consumer = join(temporaryRoot, "consumer");
-		const installedPackage = join(consumer, "node_modules", "planr-pipeline");
-		mkdirSync(installedPackage, { recursive: true });
-		run("tar", [
-			"-xzf",
-			packed.tarballPath,
-			"-C",
-			installedPackage,
-			"--strip-components=1",
-		]);
-		writeFileSync(
-			join(consumer, "package.json"),
-			JSON.stringify({ type: "module" }),
-		);
-		writeFileSync(
-			join(consumer, "verify.mjs"),
-			`
+  const temporaryRoot = mkdtempSync(join(tmpdir(), 'planr-surface-node20-'));
+  try {
+    assert.equal(run(node20Executable, ['--version']).stdout.trim(), 'v20.0.0');
+    const packed = packOperateV2DevelopmentSnapshot(join(temporaryRoot, 'pack'), {
+      sourceRoot: root,
+    });
+    const consumer = join(temporaryRoot, 'consumer');
+    const installedPackage = join(consumer, 'node_modules', 'planr-pipeline');
+    mkdirSync(installedPackage, { recursive: true });
+    run('tar', ['-xzf', packed.tarballPath, '-C', installedPackage, '--strip-components=1']);
+    writeFileSync(join(consumer, 'package.json'), JSON.stringify({ type: 'module' }));
+    writeFileSync(
+      join(consumer, 'verify.mjs'),
+      `
           import assert from 'node:assert/strict';
           import { readFileSync } from 'node:fs';
           import { resolve } from 'node:path';
@@ -106,9 +94,9 @@ test("complete clean packed surface assertion executes under exact Node 20.0.0",
           }];
           assert.ok(validateOperateExperienceSurfaceV1(hostile).length > 0);
 				`,
-		);
-		run(node20Executable, ["verify.mjs"], { cwd: consumer });
-	} finally {
-		rmSync(temporaryRoot, { recursive: true, force: true });
-	}
+    );
+    run(node20Executable, ['verify.mjs'], { cwd: consumer });
+  } finally {
+    rmSync(temporaryRoot, { recursive: true, force: true });
+  }
 });

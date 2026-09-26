@@ -428,7 +428,7 @@
       },
       "generatedAssets": {
         "path": "packages/pipeline/conformance/fixtures/landing-workflow/generated-assets.json",
-        "digest": "sha256:a79dfa600b923b436b64ae277af068402e589416c580a7798f0d19110df8249f",
+        "digest": "sha256:e6ae9363886e4dd1cb328889dba35d0472682c3f15629b69407496d674fa7306",
         "assetCount": 4,
         "workflowCatalogDigest": "sha256:7bff6d6150b6cef7d46603216d4225bc9000f9f286a203c65e668a077b3ead80"
       }

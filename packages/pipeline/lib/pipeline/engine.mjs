@@ -1,10 +1,4 @@
-import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  readdirSync,
-  writeFileSync,
-} from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { basename, dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -85,11 +79,7 @@ const GUIDED_ANSWER_VALUE_TYPES = Object.freeze({
   'multi-select': 'string-array',
   'repeated-text': 'string-array',
 });
-const GUIDED_ANSWER_COPY_FIELDS = Object.freeze([
-  'questionId',
-  'questionVersion',
-  'sensitivity',
-]);
+const GUIDED_ANSWER_COPY_FIELDS = Object.freeze(['questionId', 'questionVersion', 'sensitivity']);
 
 function guidedContract(kind) {
   const contract = GUIDED_INTERACTION_CONTRACTS[kind];
@@ -104,13 +94,16 @@ function guidedContract(kind) {
 
 export function validateGuidedInteractionArtifact(kind, value, options = {}) {
   const contract = guidedContract(kind);
-  const protocolVersion = options.protocolVersion ?? value?.protocolVersion ?? contract.protocolVersion;
+  const protocolVersion =
+    options.protocolVersion ?? value?.protocolVersion ?? contract.protocolVersion;
   if (protocolVersion !== contract.protocolVersion) {
-    return [{
-      path: '$.protocolVersion',
-      rule: 'version',
-      detail: `${kind} supports Protocol ${contract.protocolVersion}, not ${protocolVersion}`,
-    }];
+    return [
+      {
+        path: '$.protocolVersion',
+        rule: 'version',
+        detail: `${kind} supports Protocol ${contract.protocolVersion}, not ${protocolVersion}`,
+      },
+    ];
   }
   const errors = validateCanonicalProtocolArtifact(kind, value, { protocolVersion });
   if (errors.length) return errors;
@@ -126,24 +119,27 @@ export function validateGuidedInteractionArtifact(kind, value, options = {}) {
   };
   if (kind === 'guided-question' && value.choices) {
     const duplicate = duplicateIds(value.choices, 'id');
-    if (duplicate) errors.push({
-      path: '$.choices',
-      rule: 'uniqueChoiceId',
-      detail: `duplicate choice id ${duplicate}`,
-    });
+    if (duplicate)
+      errors.push({
+        path: '$.choices',
+        rule: 'uniqueChoiceId',
+        detail: `duplicate choice id ${duplicate}`,
+      });
   }
   if (kind === 'guided-questionnaire') {
     const duplicate = duplicateIds(value.questions, 'questionId');
-    if (duplicate) errors.push({
-      path: '$.questions',
-      rule: 'uniqueQuestionId',
-      detail: `duplicate question id ${duplicate}`,
-    });
-    if (value.step > value.totalSteps) errors.push({
-      path: '$.step',
-      rule: 'stepRange',
-      detail: `step ${value.step} exceeds totalSteps ${value.totalSteps}`,
-    });
+    if (duplicate)
+      errors.push({
+        path: '$.questions',
+        rule: 'uniqueQuestionId',
+        detail: `duplicate question id ${duplicate}`,
+      });
+    if (value.step > value.totalSteps)
+      errors.push({
+        path: '$.step',
+        rule: 'stepRange',
+        detail: `step ${value.step} exceeds totalSteps ${value.totalSteps}`,
+      });
     if (value.submission) {
       const bindings = {
         sessionId: value.sessionId,
@@ -156,13 +152,14 @@ export function validateGuidedInteractionArtifact(kind, value, options = {}) {
       };
       for (const [field, expected] of Object.entries(bindings)) {
         if (
-          canonicalizeJson(value.submission.envelope.fixedFields[field])
-          !== canonicalizeJson(expected)
-        ) errors.push({
-          path: `$.submission.envelope.fixedFields.${field}`,
-          rule: 'exactQuestionnaireBinding',
-          detail: `${field} must match the questionnaire`,
-        });
+          canonicalizeJson(value.submission.envelope.fixedFields[field]) !==
+          canonicalizeJson(expected)
+        )
+          errors.push({
+            path: `$.submission.envelope.fixedFields.${field}`,
+            rule: 'exactQuestionnaireBinding',
+            detail: `${field} must match the questionnaire`,
+          });
       }
       const expectedArgv = [
         'planr',
@@ -190,38 +187,42 @@ export function validateGuidedInteractionArtifact(kind, value, options = {}) {
           valueType: GUIDED_ANSWER_VALUE_TYPES[question.type],
         }));
       if (
-        JSON.stringify(value.submission.envelope.dynamicFields.answers.items)
-        !== JSON.stringify(expectedAnswers)
-      ) errors.push({
-        path: '$.submission.envelope.dynamicFields.answers.items',
-        rule: 'exactAnswerDescriptors',
-        detail: 'answer descriptors must match the ordered answerable questions',
-      });
+        JSON.stringify(value.submission.envelope.dynamicFields.answers.items) !==
+        JSON.stringify(expectedAnswers)
+      )
+        errors.push({
+          path: '$.submission.envelope.dynamicFields.answers.items',
+          rule: 'exactAnswerDescriptors',
+          detail: 'answer descriptors must match the ordered answerable questions',
+        });
       if (
-        JSON.stringify(value.submission.envelope.dynamicFields.answers.copyFields)
-        !== JSON.stringify(GUIDED_ANSWER_COPY_FIELDS)
-      ) errors.push({
-        path: '$.submission.envelope.dynamicFields.answers.copyFields',
-        rule: 'exactAnswerCopyFields',
-        detail: 'answer copy fields must match the guided answer envelope schema',
-      });
+        JSON.stringify(value.submission.envelope.dynamicFields.answers.copyFields) !==
+        JSON.stringify(GUIDED_ANSWER_COPY_FIELDS)
+      )
+        errors.push({
+          path: '$.submission.envelope.dynamicFields.answers.copyFields',
+          rule: 'exactAnswerCopyFields',
+          detail: 'answer copy fields must match the guided answer envelope schema',
+        });
     }
   }
   if (kind === 'guided-answer-envelope') {
     const duplicate = duplicateIds(value.answers, 'questionId');
-    if (duplicate) errors.push({
-      path: '$.answers',
-      rule: 'uniqueQuestionId',
-      detail: `duplicate answer for question ${duplicate}`,
-    });
+    if (duplicate)
+      errors.push({
+        path: '$.answers',
+        rule: 'uniqueQuestionId',
+        detail: `duplicate answer for question ${duplicate}`,
+      });
   }
   if (kind === 'evidence-diagnostic' && value.classification) {
     for (const field of ['ruleId', 'contentDigest', 'projectHead']) {
-      if (value.classification[field] !== value[field]) errors.push({
-        path: `$.classification.${field}`,
-        rule: 'exactEvidenceBinding',
-        detail: `${field} must match the diagnosed candidate`,
-      });
+      if (value.classification[field] !== value[field])
+        errors.push({
+          path: `$.classification.${field}`,
+          rule: 'exactEvidenceBinding',
+          detail: `${field} must match the diagnosed candidate`,
+        });
     }
   }
   return errors;
@@ -261,7 +262,11 @@ export const validateEvidenceDiagnostic = (value, options) =>
   validateGuidedInteractionArtifact('evidence-diagnostic', value, options);
 
 function slugify(value) {
-  const slug = String(value ?? '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const slug = String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
   if (!slug) throw new PipelineError('E_FEATURE_INVALID', 'A non-empty feature slug is required.');
   return slug;
 }
@@ -273,7 +278,10 @@ export function detectPipelineMode(projectRoot) {
       const config = JSON.parse(readFileSync(configPath, 'utf8'));
       if (String(config?.idPrefix?.spec ?? '').trim()) return 'spec-driven';
     } catch (error) {
-      throw new PipelineError('E_CONFIG_INVALID', `Could not parse ${configPath}: ${error.message}`);
+      throw new PipelineError(
+        'E_CONFIG_INVALID',
+        `Could not parse ${configPath}: ${error.message}`,
+      );
     }
   }
   return 'default';
@@ -292,14 +300,17 @@ function nextSpecId(projectRoot) {
 function resolveSpecDir(projectRoot, slug) {
   const specsRoot = join(projectRoot, '.planr', 'specs');
   if (!existsSync(specsRoot)) return null;
-  const match = readdirSync(specsRoot).sort().find((name) => new RegExp(`^SPEC-\\d{3}-${slug}$`).test(name));
+  const match = readdirSync(specsRoot)
+    .sort()
+    .find((name) => new RegExp(`^SPEC-\\d{3}-${slug}$`).test(name));
   return match ? join(specsRoot, match) : null;
 }
 
 function scaffoldSpec(projectRoot, slug) {
   const id = nextSpecId(projectRoot);
   const specDir = join(projectRoot, '.planr', 'specs', `${id}-${slug}`);
-  for (const child of ['stories', 'tasks', 'design']) mkdirSync(join(specDir, child), { recursive: true });
+  for (const child of ['stories', 'tasks', 'design'])
+    mkdirSync(join(specDir, child), { recursive: true });
   const today = new Date().toISOString().slice(0, 10);
   const title = slug.replace(/-/g, ' ');
   const content = readFileSync(join(packageRoot, 'templates', 'spec-driven.md.tpl'), 'utf8')
@@ -320,7 +331,12 @@ function scaffoldStack(projectRoot) {
   return true;
 }
 
-export function preparePlan({ projectRoot = process.cwd(), feature, scaffold = false, createStackTemplate = false } = {}) {
+export function preparePlan({
+  projectRoot = process.cwd(),
+  feature,
+  scaffold = false,
+  createStackTemplate = false,
+} = {}) {
   const slug = slugify(feature);
   const mode = detectPipelineMode(projectRoot);
   const stackTemplateCreated = createStackTemplate ? scaffoldStack(projectRoot) : false;
@@ -390,10 +406,10 @@ function specArtifact({ root, mode, projectRoot, slug }) {
 }
 
 function storyPaths(root, mode) {
-  return walkFiles(root, (name) => (
-    /^US-.*\.md$/i.test(name)
-    || (mode === 'default' && /^us-\d+\.md$/i.test(name))
-  ));
+  return walkFiles(
+    root,
+    (name) => /^US-.*\.md$/i.test(name) || (mode === 'default' && /^us-\d+\.md$/i.test(name)),
+  );
 }
 
 function planArtifactSchemaError(
@@ -423,11 +439,13 @@ function validateDeclaredPlanArtifacts(kind, paths, projectRoot, { requiredVersi
     const artifact = artifactInfo(path);
     const declaredVersion = artifact.frontmatter.schemaVersion;
     if (requiredVersion !== null && declaredVersion !== requiredVersion) {
-      const errors = [{
-        path: '$.schemaVersion',
-        rule: 'required',
-        detail: `must equal ${requiredVersion} because the parent specification declares it`,
-      }];
+      const errors = [
+        {
+          path: '$.schemaVersion',
+          rule: 'required',
+          detail: `must equal ${requiredVersion} because the parent specification declares it`,
+        },
+      ];
       planArtifactSchemaError(
         kind,
         path,
@@ -439,11 +457,13 @@ function validateDeclaredPlanArtifacts(kind, paths, projectRoot, { requiredVersi
     }
     if (declaredVersion === undefined) continue;
     if (!['1.0.0', '1.7.0'].includes(declaredVersion)) {
-      const errors = [{
-        path: '$.schemaVersion',
-        rule: 'version',
-        detail: `unsupported schema version ${declaredVersion}`,
-      }];
+      const errors = [
+        {
+          path: '$.schemaVersion',
+          rule: 'version',
+          detail: `unsupported schema version ${declaredVersion}`,
+        },
+      ];
       planArtifactSchemaError(
         kind,
         path,
@@ -470,14 +490,31 @@ function validateDeclaredPlanArtifacts(kind, paths, projectRoot, { requiredVersi
   }
 }
 
-export function completePlan({ projectRoot = process.cwd(), feature, runtime = 'unknown', runId = randomUUID() } = {}) {
+export function completePlan({
+  projectRoot = process.cwd(),
+  feature,
+  runtime = 'unknown',
+  runId = randomUUID(),
+} = {}) {
   const prepared = preparePlan({ projectRoot, feature });
   const root = featureRoot(prepared);
-  if (!root) throw new PipelineError('E_SPEC_MISSING', `No spec exists for "${prepared.slug}".`, `Run PLAN again to scaffold the spec.`);
+  if (!root)
+    throw new PipelineError(
+      'E_SPEC_MISSING',
+      `No spec exists for "${prepared.slug}".`,
+      `Run PLAN again to scaffold the spec.`,
+    );
   const stories = storyPaths(root, prepared.mode);
-  const tasks = walkFiles(root, (name) => /^(?:T-|task-).*\.md$/i.test(name) && !/error-report/i.test(name));
+  const tasks = walkFiles(
+    root,
+    (name) => /^(?:T-|task-).*\.md$/i.test(name) && !/error-report/i.test(name),
+  );
   if (stories.length === 0 || tasks.length === 0) {
-    throw new PipelineError('E_PLAN_INCOMPLETE', 'PLAN did not produce both stories and tasks.', 'Complete PO decomposition before marking PLAN complete.');
+    throw new PipelineError(
+      'E_PLAN_INCOMPLETE',
+      'PLAN did not produce both stories and tasks.',
+      'Complete PO decomposition before marking PLAN complete.',
+    );
   }
   const spec = specArtifact({
     root,
@@ -486,9 +523,10 @@ export function completePlan({ projectRoot = process.cwd(), feature, runtime = '
     slug: prepared.slug,
   });
   if (!spec) {
-    const expected = prepared.mode === 'default'
-      ? join(projectRoot, 'input', 'specs', `spec-${prepared.slug}.md`)
-      : root;
+    const expected =
+      prepared.mode === 'default'
+        ? join(projectRoot, 'input', 'specs', `spec-${prepared.slug}.md`)
+        : root;
     throw new PipelineError(
       'E_SPEC_MISSING',
       `No specification document exists for "${prepared.slug}" at ${relative(projectRoot, expected).split('\\').join('/') || '.'}.`,
@@ -502,18 +540,21 @@ export function completePlan({ projectRoot = process.cwd(), feature, runtime = '
   validateDeclaredPlanArtifacts('task', tasks, projectRoot, { requiredVersion });
   const artifactId = spec?.frontmatter?.id ?? `FEAT-${prepared.slug}`;
   if (spec) {
-    appendProvenanceEvent(projectRoot, createProvenanceEvent({
+    appendProvenanceEvent(
       projectRoot,
-      artifactId,
-      artifactPath: spec.path,
-      operation: 'decomposed',
-      product: 'planr-pipeline',
-      version: pkg.version,
-      runtime,
-      phase: 'po',
-      runId,
-      correlation: projectPipelineOperatingOriginCorrelation(prepared.operatingOrigin ?? null),
-    }));
+      createProvenanceEvent({
+        projectRoot,
+        artifactId,
+        artifactPath: spec.path,
+        operation: 'decomposed',
+        product: 'planr-pipeline',
+        version: pkg.version,
+        runtime,
+        phase: 'po',
+        runId,
+        correlation: projectPipelineOperatingOriginCorrelation(prepared.operatingOrigin ?? null),
+      }),
+    );
   }
   return {
     ok: true,
@@ -531,15 +572,26 @@ export function completePlan({ projectRoot = process.cwd(), feature, runtime = '
 function planningReviewContext({ projectRoot, feature } = {}) {
   const planned = preparePlan({ projectRoot, feature });
   const root = featureRoot(planned);
-  if (!root) throw new PipelineError('E_SPEC_MISSING', `No planned feature exists for "${planned.slug}".`);
-  return preparePlanningReview({ projectRoot, featureRoot: root, mode: planned.mode, slug: planned.slug });
+  if (!root)
+    throw new PipelineError('E_SPEC_MISSING', `No planned feature exists for "${planned.slug}".`);
+  return preparePlanningReview({
+    projectRoot,
+    featureRoot: root,
+    mode: planned.mode,
+    slug: planned.slug,
+  });
 }
 
 export function preparePlanReview({ projectRoot = process.cwd(), feature } = {}) {
   return planningReviewContext({ projectRoot, feature });
 }
 
-export function startPlanReview({ projectRoot = process.cwd(), feature, runtime = 'unknown', runId } = {}) {
+export function startPlanReview({
+  projectRoot = process.cwd(),
+  feature,
+  runtime = 'unknown',
+  runId,
+} = {}) {
   const prepared = planningReviewContext({ projectRoot, feature });
   return startStoredPlanningReview({ prepared, runtime, runId });
 }
@@ -549,7 +601,11 @@ export function advancePlanReview({ projectRoot = process.cwd(), feature, runId,
   return advanceStoredPlanningReview({ prepared, runId, event });
 }
 
-export function preparePlanReviewOwnerDecision({ projectRoot = process.cwd(), feature, runId } = {}) {
+export function preparePlanReviewOwnerDecision({
+  projectRoot = process.cwd(),
+  feature,
+  runId,
+} = {}) {
   const prepared = planningReviewContext({ projectRoot, feature });
   return prepareStoredPlanningReviewOwnerDecision({ prepared, runId });
 }
@@ -561,7 +617,9 @@ export function decidePlanReview({ projectRoot = process.cwd(), feature, runId, 
 
 function sectionList(body, heading) {
   const lines = body.replace(/\r\n/g, '\n').split('\n');
-  const start = lines.findIndex((line) => new RegExp(`^#{2,4}\\s+${heading}\\s*$`, 'i').test(line.trim()));
+  const start = lines.findIndex((line) =>
+    new RegExp(`^#{2,4}\\s+${heading}\\s*$`, 'i').test(line.trim()),
+  );
   if (start === -1) return [];
   const out = [];
   for (let index = start + 1; index < lines.length; index++) {
@@ -573,7 +631,10 @@ function sectionList(body, heading) {
 }
 
 function taskRecords(root) {
-  return walkFiles(root, (name) => /^(?:T-|task-).*\.md$/i.test(name) && !/error-report/i.test(name))
+  return walkFiles(
+    root,
+    (name) => /^(?:T-|task-).*\.md$/i.test(name) && !/error-report/i.test(name),
+  )
     .sort()
     .map((path) => {
       const artifact = artifactInfo(path);
@@ -606,13 +667,15 @@ function posixPath(path) {
 function scopeTaskRecords(tasks, { mode, root }) {
   const scoped = tasks.map((task) => {
     const path = posixPath(relative(root, task.path));
-    const pathScope = path.includes('/tasks/') ? path.slice(0, path.indexOf('/tasks/')) : dirname(path);
-    const defaultStoryPath = mode === 'default'
-      ? join(root, pathScope, `${basename(pathScope)}.md`)
-      : null;
-    const inferredStoryId = defaultStoryPath && existsSync(defaultStoryPath)
-      ? artifactInfo(defaultStoryPath).frontmatter.id
-      : null;
+    const pathScope = path.includes('/tasks/')
+      ? path.slice(0, path.indexOf('/tasks/'))
+      : dirname(path);
+    const defaultStoryPath =
+      mode === 'default' ? join(root, pathScope, `${basename(pathScope)}.md`) : null;
+    const inferredStoryId =
+      defaultStoryPath && existsSync(defaultStoryPath)
+        ? artifactInfo(defaultStoryPath).frontmatter.id
+        : null;
     const storyId = task.storyId ?? inferredStoryId;
     const scope = storyId ?? pathScope;
     return {
@@ -645,18 +708,23 @@ function ordinaryShipRepositories(projectRoot) {
       diagnostics: [],
     };
   } catch (error) {
-    if (!(error instanceof PipelineError) || ![
-      'E_SHIP_CONFIG_INVALID',
-      'E_SHIP_REPOSITORY_INVALID',
-      'E_SHIP_GATE_INVALID',
-    ].includes(error.code)) throw error;
+    if (
+      !(error instanceof PipelineError) ||
+      !['E_SHIP_CONFIG_INVALID', 'E_SHIP_REPOSITORY_INVALID', 'E_SHIP_GATE_INVALID'].includes(
+        error.code,
+      )
+    )
+      throw error;
     return {
       repositories: fallback,
-      diagnostics: [{
-        code: error.code,
-        message: error.message,
-        recovery: 'Ordinary Ship is using the current project only. Repair shipClosure before running release commands.',
-      }],
+      diagnostics: [
+        {
+          code: error.code,
+          message: error.message,
+          recovery:
+            'Ordinary Ship is using the current project only. Repair shipClosure before running release commands.',
+        },
+      ],
     };
   }
 }
@@ -670,37 +738,86 @@ function configuredShipClosure(projectRoot, { ignoreGates = false } = {}) {
   if (!existsSync(configPath)) return { repositories: undefined, gates: undefined };
   assertPathCustody(projectRoot, configPath, { expectedKind: 'file' });
   let config;
-  try { config = JSON.parse(readFileSync(configPath, 'utf8')); } catch (error) { throw new PipelineError('E_CONFIG_INVALID', `${configPath} is not valid JSON: ${error.message}`); }
+  try {
+    config = JSON.parse(readFileSync(configPath, 'utf8'));
+  } catch (error) {
+    throw new PipelineError(
+      'E_CONFIG_INVALID',
+      `${configPath} is not valid JSON: ${error.message}`,
+    );
+  }
   const closure = config?.shipClosure;
-  if (closure !== undefined && (closure === null || typeof closure !== 'object' || Array.isArray(closure)
-    || Object.keys(closure).some((key) => !['repositories', 'gates'].includes(key)))) {
-    throw new PipelineError('E_SHIP_CONFIG_INVALID', 'config.shipClosure is closed and accepts only repositories and gates.');
+  if (
+    closure !== undefined &&
+    (closure === null ||
+      typeof closure !== 'object' ||
+      Array.isArray(closure) ||
+      Object.keys(closure).some((key) => !['repositories', 'gates'].includes(key)))
+  ) {
+    throw new PipelineError(
+      'E_SHIP_CONFIG_INVALID',
+      'config.shipClosure is closed and accepts only repositories and gates.',
+    );
   }
   const descriptors = closure?.repositories;
   let records;
   if (descriptors === undefined) {
     records = undefined;
   } else if (!Array.isArray(descriptors) || descriptors.length === 0 || descriptors.length > 16) {
-    throw new PipelineError('E_SHIP_REPOSITORY_INVALID', 'config.shipClosure.repositories must contain 1-16 closed repository descriptors.');
-  } else records = descriptors.map((descriptor) => {
-    if (descriptor === null || typeof descriptor !== 'object' || Array.isArray(descriptor)
-      || JSON.stringify(Object.keys(descriptor).sort()) !== JSON.stringify(['path', 'repositoryKey'])) {
-      throw new PipelineError('E_SHIP_REPOSITORY_INVALID', 'Each configured SHIP repository must contain exactly repositoryKey and path.');
-    }
-    if (!/^[a-z][a-z0-9-]{0,127}$/.test(descriptor.repositoryKey ?? '')
-      || typeof descriptor.path !== 'string' || descriptor.path.length === 0 || descriptor.path.length > 1024
-      || descriptor.path.startsWith('/') || /^[A-Za-z]:[\\/]/.test(descriptor.path)) {
-      throw new PipelineError('E_SHIP_REPOSITORY_INVALID', 'Configured SHIP repositories require a bounded slug key and relative filesystem path.');
-    }
-    return { repositoryKey: descriptor.repositoryKey, root: resolve(projectRoot, descriptor.path) };
-  });
-  if (records && (new Set(records.map(({ repositoryKey }) => repositoryKey)).size !== records.length
-    || !records.some(({ repositoryKey, root }) => repositoryKey === 'project' && resolve(root) === resolve(projectRoot)))) {
-    throw new PipelineError('E_SHIP_REPOSITORY_INVALID', 'Configured SHIP repositories must be unique and include project at path ".".');
+    throw new PipelineError(
+      'E_SHIP_REPOSITORY_INVALID',
+      'config.shipClosure.repositories must contain 1-16 closed repository descriptors.',
+    );
+  } else
+    records = descriptors.map((descriptor) => {
+      if (
+        descriptor === null ||
+        typeof descriptor !== 'object' ||
+        Array.isArray(descriptor) ||
+        JSON.stringify(Object.keys(descriptor).sort()) !== JSON.stringify(['path', 'repositoryKey'])
+      ) {
+        throw new PipelineError(
+          'E_SHIP_REPOSITORY_INVALID',
+          'Each configured SHIP repository must contain exactly repositoryKey and path.',
+        );
+      }
+      if (
+        !/^[a-z][a-z0-9-]{0,127}$/.test(descriptor.repositoryKey ?? '') ||
+        typeof descriptor.path !== 'string' ||
+        descriptor.path.length === 0 ||
+        descriptor.path.length > 1024 ||
+        descriptor.path.startsWith('/') ||
+        /^[A-Za-z]:[\\/]/.test(descriptor.path)
+      ) {
+        throw new PipelineError(
+          'E_SHIP_REPOSITORY_INVALID',
+          'Configured SHIP repositories require a bounded slug key and relative filesystem path.',
+        );
+      }
+      return {
+        repositoryKey: descriptor.repositoryKey,
+        root: resolve(projectRoot, descriptor.path),
+      };
+    });
+  if (
+    records &&
+    (new Set(records.map(({ repositoryKey }) => repositoryKey)).size !== records.length ||
+      !records.some(
+        ({ repositoryKey, root }) =>
+          repositoryKey === 'project' && resolve(root) === resolve(projectRoot),
+      ))
+  ) {
+    throw new PipelineError(
+      'E_SHIP_REPOSITORY_INVALID',
+      'Configured SHIP repositories must be unique and include project at path ".".',
+    );
   }
   const gates = ignoreGates ? undefined : closure?.gates;
   if (gates !== undefined && (!Array.isArray(gates) || gates.length === 0 || gates.length > 32)) {
-    throw new PipelineError('E_SHIP_GATE_INVALID', 'config.shipClosure.gates must contain 1-32 closed gate records.');
+    throw new PipelineError(
+      'E_SHIP_GATE_INVALID',
+      'config.shipClosure.gates must contain 1-32 closed gate records.',
+    );
   }
   return { repositories: records, gates: gates === undefined ? undefined : structuredClone(gates) };
 }
@@ -711,15 +828,19 @@ function assertShipPlanningCustody(projectRoot) {
     join(projectRoot, '.planr', 'specs'),
     join(projectRoot, 'output'),
     join(projectRoot, 'output', 'feats'),
-  ]) assertPathCustody(projectRoot, path, { allowMissing: true, expectedKind: 'directory' });
+  ])
+    assertPathCustody(projectRoot, path, { allowMissing: true, expectedKind: 'directory' });
 }
 
 function prepareShipRunContext({ projectRoot, feature, includeTasks = false } = {}) {
   assertShipPlanningCustody(projectRoot);
   const planned = preparePlan({ projectRoot, feature });
   const root = featureRoot(planned);
-  if (!root) throw new PipelineError('E_SPEC_MISSING', `No planned feature exists for "${planned.slug}".`);
-  const repositoryInputs = configuredShipRepositories(projectRoot) ?? [{ repositoryKey: 'project', root: projectRoot }];
+  if (!root)
+    throw new PipelineError('E_SPEC_MISSING', `No planned feature exists for "${planned.slug}".`);
+  const repositoryInputs = configuredShipRepositories(projectRoot) ?? [
+    { repositoryKey: 'project', root: projectRoot },
+  ];
   const closureRepositories = normalizeRepositories(projectRoot, repositoryInputs);
   return {
     ...planned,
@@ -735,16 +856,21 @@ function prepareShipRunContext({ projectRoot, feature, includeTasks = false } = 
 export function prepareShipContext({ projectRoot = process.cwd(), feature, taskId } = {}) {
   assertShipPlanningCustody(projectRoot);
   const prepared = preparePlan({ projectRoot, feature });
-  const root = featureRoot(prepared) ?? join(projectRoot, '.planr', 'specs', `SPEC-NNN-${prepared.slug}`);
+  const root =
+    featureRoot(prepared) ?? join(projectRoot, '.planr', 'specs', `SPEC-NNN-${prepared.slug}`);
   const diagnostics = [];
-  if (!existsSync(root)) diagnostics.push({
-    code: 'E_SPEC_MISSING',
-    message: `No planned feature directory exists for "${prepared.slug}".`,
-    recovery: 'The Ship skill can inspect the repository and continue from the user request; run Plan first when structured artifacts are wanted.',
-  });
+  if (!existsSync(root))
+    diagnostics.push({
+      code: 'E_SPEC_MISSING',
+      message: `No planned feature directory exists for "${prepared.slug}".`,
+      recovery:
+        'The Ship skill can inspect the repository and continue from the user request; run Plan first when structured artifacts are wanted.',
+    });
   const stories = storyPaths(root, prepared.mode);
   const allTasks = scopeTaskRecords(taskRecords(root), { mode: prepared.mode, root });
-  const sourceDone = new Set(allTasks.filter(({ status }) => status === 'done').map(({ selector }) => selector));
+  const sourceDone = new Set(
+    allTasks.filter(({ status }) => status === 'done').map(({ selector }) => selector),
+  );
   let tasks = allTasks
     .filter(({ status }) => status !== 'done')
     .map((task) => {
@@ -759,7 +885,9 @@ export function prepareShipContext({ projectRoot = process.cwd(), feature, taskI
     });
   if (taskId !== undefined) {
     const qualifiedMatches = allTasks.filter(({ selector }) => selector === taskId);
-    const matches = qualifiedMatches.length ? qualifiedMatches : allTasks.filter(({ id }) => id === taskId);
+    const matches = qualifiedMatches.length
+      ? qualifiedMatches
+      : allTasks.filter(({ id }) => id === taskId);
     if (matches.length === 0) {
       const searchedRoot = relative(projectRoot, root).split('\\').join('/') || '.';
       const candidates = allTasks.map(({ id, selector, storyId, path }) => ({
@@ -795,24 +923,35 @@ export function prepareShipContext({ projectRoot = process.cwd(), feature, taskI
         `Task ${taskId} is already complete; choose an active task or update the planning context for rework.`,
       );
     }
-    const externalIncomplete = selected.dependencySelectors.filter((dependency) => allTasks.find(({ selector }) => selector === dependency)?.status !== 'done');
+    const externalIncomplete = selected.dependencySelectors.filter(
+      (dependency) => allTasks.find(({ selector }) => selector === dependency)?.status !== 'done',
+    );
     if (externalIncomplete.length) {
-      throw new PipelineError('E_TASK_DEPENDENCY', `Single-task SHIP cannot select ${taskId} before dependencies complete: ${externalIncomplete.join(', ')}.`);
+      throw new PipelineError(
+        'E_TASK_DEPENDENCY',
+        `Single-task SHIP cannot select ${taskId} before dependencies complete: ${externalIncomplete.join(', ')}.`,
+      );
     }
     tasks = [{ ...selected, dependsOn: [], dependencySelectors: [] }];
   }
-  if (stories.length === 0) diagnostics.push({
-    code: 'E_R1_MISSING_STORIES',
-    message: 'No planned user stories were found.',
-    recovery: 'The Ship skill will continue with the available specification and repository context.',
-  });
-  if (allTasks.length === 0) diagnostics.push({
-    code: 'E_TASKS_MISSING',
-    message: 'No planned tasks were found.',
-    recovery: 'The Ship skill will continue with the available specification and repository context.',
-  });
+  if (stories.length === 0)
+    diagnostics.push({
+      code: 'E_R1_MISSING_STORIES',
+      message: 'No planned user stories were found.',
+      recovery:
+        'The Ship skill will continue with the available specification and repository context.',
+    });
+  if (allTasks.length === 0)
+    diagnostics.push({
+      code: 'E_TASKS_MISSING',
+      message: 'No planned tasks were found.',
+      recovery:
+        'The Ship skill will continue with the available specification and repository context.',
+    });
   const unresolved = tasks.filter(({ status }) => status !== 'done');
-  const initialReadyTasks = nextShipBatch(tasks.map((task) => task.status === 'blocked' ? { ...task, status: 'pending' } : task)).ready;
+  const initialReadyTasks = nextShipBatch(
+    tasks.map((task) => (task.status === 'blocked' ? { ...task, status: 'pending' } : task)),
+  ).ready;
   const initialReadyTaskIds = initialReadyTasks.map(({ id }) => id);
   const initialReadyTaskSelectors = initialReadyTasks.map(({ selector }) => selector);
   const ordinaryRepositories = ordinaryShipRepositories(projectRoot);
@@ -827,29 +966,48 @@ export function prepareShipContext({ projectRoot = process.cwd(), feature, taskI
     phase: 'ship.prepared',
     mode: prepared.mode,
     slug: prepared.slug,
-    unresolvedTasks: unresolved.map(({ id, selector, storyId, status, dependsOn, dependencySelectors, reviewRisks, browserSurfaces, acceptanceRefs, structuredPreserve, structuredPreserveDeclared, legacyPreserve }) => ({
-      id,
-      selector,
-      storyId,
-      sourceStatus: status,
-      dependsOn,
-      dependencySelectors,
-      reviewRisks,
-      browserSurfaces,
-      acceptanceRefs,
-      structuredPreserve: structuredPreserveDeclared ? structuredPreserve : null,
-      preserveSource: structuredPreserveDeclared
-        ? 'structured'
-        : legacyPreserve.length > 0 ? 'legacy' : 'none',
-    })),
+    unresolvedTasks: unresolved.map(
+      ({
+        id,
+        selector,
+        storyId,
+        status,
+        dependsOn,
+        dependencySelectors,
+        reviewRisks,
+        browserSurfaces,
+        acceptanceRefs,
+        structuredPreserve,
+        structuredPreserveDeclared,
+        legacyPreserve,
+      }) => ({
+        id,
+        selector,
+        storyId,
+        sourceStatus: status,
+        dependsOn,
+        dependencySelectors,
+        reviewRisks,
+        browserSurfaces,
+        acceptanceRefs,
+        structuredPreserve: structuredPreserveDeclared ? structuredPreserve : null,
+        preserveSource: structuredPreserveDeclared
+          ? 'structured'
+          : legacyPreserve.length > 0
+            ? 'legacy'
+            : 'none',
+      }),
+    ),
     initialReadyTaskIds,
     initialReadyTaskSelectors,
-    dependencyEdges: tasks.flatMap(({ id, selector, dependsOn, dependencySelectors }) => dependsOn.map((dependencyId, index) => ({
-      dependencyId,
-      taskId: id,
-      dependencySelector: dependencySelectors[index],
-      taskSelector: selector,
-    }))),
+    dependencyEdges: tasks.flatMap(({ id, selector, dependsOn, dependencySelectors }) =>
+      dependsOn.map((dependencyId, index) => ({
+        dependencyId,
+        taskId: id,
+        dependencySelector: dependencySelectors[index],
+        taskSelector: selector,
+      })),
+    ),
     parentReferences: [...new Set(tasks.map(({ storyId }) => storyId).filter(Boolean))],
     repositoryDescriptors,
     selectedTaskId: taskId ?? null,
@@ -868,13 +1026,15 @@ export function prepareShipContext({ projectRoot = process.cwd(), feature, taskI
 
 export function prepareShip({ projectRoot = process.cwd(), feature, taskId } = {}) {
   const context = prepareShipContext({ projectRoot, feature, taskId });
-  const planningProblem = context.diagnostics.find(({ code }) => [
-    'E_SPEC_MISSING',
-    'E_R1_MISSING_STORIES',
-    'E_TASKS_MISSING',
-  ].includes(code));
+  const planningProblem = context.diagnostics.find(({ code }) =>
+    ['E_SPEC_MISSING', 'E_R1_MISSING_STORIES', 'E_TASKS_MISSING'].includes(code),
+  );
   if (planningProblem) {
-    throw new PipelineError(planningProblem.code, planningProblem.message, planningProblem.recovery);
+    throw new PipelineError(
+      planningProblem.code,
+      planningProblem.message,
+      planningProblem.recovery,
+    );
   }
   const configured = configuredShipClosure(projectRoot);
   const closureRepositories = normalizeRepositories(projectRoot, configured.repositories);
@@ -885,11 +1045,22 @@ export function prepareShip({ projectRoot = process.cwd(), feature, taskId } = {
     mode: context.mode,
     closureRepositories,
   });
-  const priorClosure = closureSummaries.active[0]
-    ?? [...closureSummaries.terminal].sort((left, right) => left.terminal.at.localeCompare(right.terminal.at) || left.runId.localeCompare(right.runId)).at(-1);
+  const priorClosure =
+    closureSummaries.active[0] ??
+    [...closureSummaries.terminal]
+      .sort(
+        (left, right) =>
+          left.terminal.at.localeCompare(right.terminal.at) ||
+          left.runId.localeCompare(right.runId),
+      )
+      .at(-1);
   const resolvedClosure = priorClosure
     ? { repositories: closureRepositories, gates: priorClosure.gates }
-    : resolveShipClosureConfiguration({ projectRoot, repositories: configured.repositories, gates: configured.gates });
+    : resolveShipClosureConfiguration({
+        projectRoot,
+        repositories: configured.repositories,
+        gates: configured.gates,
+      });
   const preview = {
     ...context,
     phase: 'ship.prepared',
@@ -912,12 +1083,20 @@ export function prepareShip({ projectRoot = process.cwd(), feature, taskId } = {
 }
 
 export function startShip({
-  projectRoot = process.cwd(), feature, runtime = 'unknown', taskId,
-  repositories, reviewerRoster, gates, runId, planningReviewReceiptHash,
+  projectRoot = process.cwd(),
+  feature,
+  runtime = 'unknown',
+  taskId,
+  repositories,
+  reviewerRoster,
+  gates,
+  runId,
+  planningReviewReceiptHash,
 } = {}) {
   const planned = preparePlan({ projectRoot, feature });
   const root = featureRoot(planned);
-  if (!root) throw new PipelineError('E_SPEC_MISSING', `No planned feature exists for "${planned.slug}".`);
+  if (!root)
+    throw new PipelineError('E_SPEC_MISSING', `No planned feature exists for "${planned.slug}".`);
   const currentSpec = specArtifact({
     root,
     mode: planned.mode,
@@ -927,7 +1106,10 @@ export function startShip({
   let planningReview = null;
   if (planningReviewReceiptHash !== undefined) {
     const reviewPrepared = planningReviewContext({ projectRoot, feature });
-    const receipt = readPlanningReviewReceipt({ prepared: reviewPrepared, receiptHash: planningReviewReceiptHash });
+    const receipt = readPlanningReviewReceipt({
+      prepared: reviewPrepared,
+      receiptHash: planningReviewReceiptHash,
+    });
     planningReview = {
       receiptHash: receipt.receiptHash,
       planDigest: receipt.candidateRevisions.at(-1).planDigest,
@@ -935,29 +1117,44 @@ export function startShip({
     };
   }
   const prepared = prepareShip({ projectRoot, feature, taskId });
-  if (prepared.tasks.length === 0) throw new PipelineError('E_SHIP_SCOPE_COMPLETE', 'Every planned task is already covered as complete; use reopen for an overlapping terminal scope.');
+  if (prepared.tasks.length === 0)
+    throw new PipelineError(
+      'E_SHIP_SCOPE_COMPLETE',
+      'Every planned task is already covered as complete; use reopen for an overlapping terminal scope.',
+    );
   const declaredSpecialists = [
-    ...(Array.isArray(currentSpec?.frontmatter?.review_specialists) ? currentSpec.frontmatter.review_specialists : []),
+    ...(Array.isArray(currentSpec?.frontmatter?.review_specialists)
+      ? currentSpec.frontmatter.review_specialists
+      : []),
     ...prepared.tasks.flatMap(({ reviewRisks = [] }) => reviewRisks),
   ];
   const declaredSurfaces = [
     ...prepared.tasks.flatMap(({ browserSurfaces = [] }) => browserSurfaces),
     ...(prepared.tasks.some(({ type }) => type === 'UI') ? ['ui'] : []),
   ];
-  const riskClassification = planningReview === null ? null : classifyShipRisk({
-    subjectDigest: planningReview.planDigest,
-    changedPaths: [],
-    browserSurfaces: BROWSER_SURFACES.filter((surface) => declaredSurfaces.includes(surface)),
-    contractChanges: false,
-    migrationChanges: false,
-    permissionEffects: false,
-    dataWrites: false,
-    performanceBudgets: false,
-    explicitRisks: SHIP_SPECIALIST_IDS.filter((id) => declaredSpecialists.includes(id)),
-  });
-  if (riskClassification !== null && reviewerRoster !== undefined
-    && JSON.stringify(reviewerRoster) !== JSON.stringify(riskClassification.reviewerRoster)) {
-    throw new PipelineError('E_SHIP_REVIEWER_DERIVATION_INVALID', 'New Protocol 1.1 SHIP reviewer membership is classifier-owned and cannot be supplied by the caller.');
+  const riskClassification =
+    planningReview === null
+      ? null
+      : classifyShipRisk({
+          subjectDigest: planningReview.planDigest,
+          changedPaths: [],
+          browserSurfaces: BROWSER_SURFACES.filter((surface) => declaredSurfaces.includes(surface)),
+          contractChanges: false,
+          migrationChanges: false,
+          permissionEffects: false,
+          dataWrites: false,
+          performanceBudgets: false,
+          explicitRisks: SHIP_SPECIALIST_IDS.filter((id) => declaredSpecialists.includes(id)),
+        });
+  if (
+    riskClassification !== null &&
+    reviewerRoster !== undefined &&
+    JSON.stringify(reviewerRoster) !== JSON.stringify(riskClassification.reviewerRoster)
+  ) {
+    throw new PipelineError(
+      'E_SHIP_REVIEWER_DERIVATION_INVALID',
+      'New Protocol 1.1 SHIP reviewer membership is classifier-owned and cannot be supplied by the caller.',
+    );
   }
   return createShipClosure({
     projectRoot,
@@ -977,14 +1174,25 @@ export function advanceShip({ projectRoot = process.cwd(), feature, runId, event
   return advanceStoredShipClosure({ prepared, runId, event });
 }
 
-export function runShipGates({ projectRoot = process.cwd(), feature, runId, phase, expectedGeneration } = {}) {
+export function runShipGates({
+  projectRoot = process.cwd(),
+  feature,
+  runId,
+  phase,
+  expectedGeneration,
+} = {}) {
   const prepared = prepareShipRunContext({ projectRoot, feature });
   return runStoredShipGates({ prepared, runId, phase, expectedGeneration });
 }
 
 export function finalizeShipClosure({ projectRoot = process.cwd(), feature, runId } = {}) {
   const prepared = prepareShipRunContext({ projectRoot, feature });
-  return finalizeStoredShipClosure({ projectRoot, prepared, runId, repositories: prepared.repositoryInputs });
+  return finalizeStoredShipClosure({
+    projectRoot,
+    prepared,
+    runId,
+    repositories: prepared.repositoryInputs,
+  });
 }
 
 /**
@@ -1019,12 +1227,20 @@ export function recordTaskResult() {
 }
 
 export function reopenShip({
-  projectRoot = process.cwd(), feature, receiptHash, reason, ownerConfirmed = false, runtime = 'unknown', runId,
-  repositories, gates,
+  projectRoot = process.cwd(),
+  feature,
+  receiptHash,
+  reason,
+  ownerConfirmed = false,
+  runtime = 'unknown',
+  runId,
+  repositories,
+  gates,
 } = {}) {
   const prepared = prepareShipRunContext({ projectRoot, feature, includeTasks: true });
   return reopenStoredShipClosure({
-    projectRoot, prepared,
+    projectRoot,
+    prepared,
     receiptHash,
     reason,
     ownerConfirmed,
@@ -1049,51 +1265,93 @@ export function inspectShipClosureForLanding({
   return inspectStoredShipClosureForLanding({ projectRoot, prepared, receiptHash });
 }
 
-export function prepareBrowserQa({ projectRoot = process.cwd(), feature, runId, runtimeHost = null, session = null, now = new Date().toISOString() } = {}) {
+export function prepareBrowserQa({
+  projectRoot = process.cwd(),
+  feature,
+  runId,
+  runtimeHost = null,
+  session = null,
+  now = new Date().toISOString(),
+} = {}) {
   const prepared = prepareShipRunContext({ projectRoot, feature });
   const state = readStoredShipClosure({ prepared, runId });
   const candidate = state.candidateRevisions.at(-1);
   if (!state.riskClassification?.browserQa.required || !candidate) {
-    throw new PipelineError('E_BROWSER_QA_NOT_REQUIRED', 'This SHIP run has no sealed mandatory browser-QA requirement.');
+    throw new PipelineError(
+      'E_BROWSER_QA_NOT_REQUIRED',
+      'This SHIP run has no sealed mandatory browser-QA requirement.',
+    );
   }
   const preview = {
-    ok: true, runId, generation: state.generation, candidateRevision: candidate.revision,
-    candidateDigest: candidate.digest, required: true,
+    ok: true,
+    runId,
+    generation: state.generation,
+    candidateRevision: candidate.revision,
+    candidateDigest: candidate.digest,
+    required: true,
     requirementDigest: state.riskClassification.browserQa.requirementDigest,
     triggers: structuredClone(state.riskClassification.browserQa.triggers),
   };
   if ((runtimeHost === null) !== (session === null)) {
-    throw new PipelineError('E_BROWSER_QA_HOST_UNTRUSTED', 'A trusted browser runtime host and ephemeral session must be established together.');
+    throw new PipelineError(
+      'E_BROWSER_QA_HOST_UNTRUSTED',
+      'A trusted browser runtime host and ephemeral session must be established together.',
+    );
   }
   if (runtimeHost !== null) {
     assertBrowserQaSession(session, { now });
     const runtimeCapability = establishBrowserQaRuntimeCapability({
-      host: runtimeHost, candidateDigest: candidate.digest,
+      host: runtimeHost,
+      candidateDigest: candidate.digest,
       requirementDigest: state.riskClassification.browserQa.requirementDigest,
-      sessionBindingDigest: sha256Jcs(session), sessionId: session.sessionId, signedIn: session.signedIn,
-      issuedAt: now, expiresAt: session.expiresAt,
+      sessionBindingDigest: sha256Jcs(session),
+      sessionId: session.sessionId,
+      signedIn: session.signedIn,
+      issuedAt: now,
+      expiresAt: session.expiresAt,
     });
-    Object.defineProperty(preview, 'runtimeCapability', { value: runtimeCapability, enumerable: false });
+    Object.defineProperty(preview, 'runtimeCapability', {
+      value: runtimeCapability,
+      enumerable: false,
+    });
   }
   return preview;
 }
 
-export function recordBrowserQa({ projectRoot = process.cwd(), feature, runId, expectedGeneration, result, session = null, attestation = null, now = new Date().toISOString() } = {}) {
+export function recordBrowserQa({
+  projectRoot = process.cwd(),
+  feature,
+  runId,
+  expectedGeneration,
+  result,
+  session = null,
+  attestation = null,
+  now = new Date().toISOString(),
+} = {}) {
   const prepared = prepareShipRunContext({ projectRoot, feature });
   const state = readStoredShipClosure({ prepared, runId });
   const candidate = state.candidateRevisions.at(-1);
   if (!state.riskClassification?.browserQa.required || !candidate) {
-    throw new PipelineError('E_BROWSER_QA_NOT_REQUIRED', 'This SHIP run has no sealed mandatory browser-QA requirement.');
+    throw new PipelineError(
+      'E_BROWSER_QA_NOT_REQUIRED',
+      'This SHIP run has no sealed mandatory browser-QA requirement.',
+    );
   }
   const record = issueBrowserQaGateRecord({
-    result, session, attestation, required: true, candidateRevision: candidate.revision,
+    result,
+    session,
+    attestation,
+    required: true,
+    candidateRevision: candidate.revision,
     candidateDigest: candidate.digest,
     requirementDigest: state.riskClassification.browserQa.requirementDigest,
     now,
   });
   const issuedEvent = issueBrowserQaRecordedEvent({ expectedGeneration, record });
   return advanceStoredShipClosure({
-    prepared, runId, now,
+    prepared,
+    runId,
+    now,
     event: issuedEvent.event,
     browserQaEventAuthority: issuedEvent.authority,
   });
@@ -1104,17 +1362,29 @@ function investigationContext({ projectRoot, feature }) {
   return {
     projectRoot,
     featureRoot: prepared.root,
-    repositoryRoots: Object.fromEntries(prepared.closureRepositories.map(({ repositoryKey, root }) => [repositoryKey, root])),
+    repositoryRoots: Object.fromEntries(
+      prepared.closureRepositories.map(({ repositoryKey, root }) => [repositoryKey, root]),
+    ),
   };
 }
 
-export function prepareInvestigationFixAuthorization({ projectRoot = process.cwd(), feature, request } = {}) {
+export function prepareInvestigationFixAuthorization({
+  projectRoot = process.cwd(),
+  feature,
+  request,
+} = {}) {
   return prepareStoredInvestigationFixAuthorization({
     ...investigationContext({ projectRoot, feature }),
     request,
   });
 }
-export function startInvestigation({ projectRoot = process.cwd(), feature, request, commandHost, fixCapability } = {}) {
+export function startInvestigation({
+  projectRoot = process.cwd(),
+  feature,
+  request,
+  commandHost,
+  fixCapability,
+} = {}) {
   return startStoredInvestigation({
     ...investigationContext({ projectRoot, feature }),
     request,
@@ -1122,20 +1392,44 @@ export function startInvestigation({ projectRoot = process.cwd(), feature, reque
     fixCapability,
   });
 }
-export function advanceInvestigation({ projectRoot = process.cwd(), feature, runId, event, commandHost } = {}) {
-  return advanceStoredInvestigation({ ...investigationContext({ projectRoot, feature }), runId, event, commandHost });
+export function advanceInvestigation({
+  projectRoot = process.cwd(),
+  feature,
+  runId,
+  event,
+  commandHost,
+} = {}) {
+  return advanceStoredInvestigation({
+    ...investigationContext({ projectRoot, feature }),
+    runId,
+    event,
+    commandHost,
+  });
 }
-export function verifyInvestigation({ projectRoot = process.cwd(), feature, runId, commandHost } = {}) {
-  return verifyStoredInvestigation({ ...investigationContext({ projectRoot, feature }), runId, commandHost });
+export function verifyInvestigation({
+  projectRoot = process.cwd(),
+  feature,
+  runId,
+  commandHost,
+} = {}) {
+  return verifyStoredInvestigation({
+    ...investigationContext({ projectRoot, feature }),
+    runId,
+    commandHost,
+  });
 }
 export function finalizeInvestigation({ projectRoot = process.cwd(), feature, runId } = {}) {
   return finalizeStoredInvestigation({ ...investigationContext({ projectRoot, feature }), runId });
 }
 
 export function nextShipBatch(tasks) {
-  const done = new Set(tasks.filter((task) => task.status === 'done').map((task) => task.selector ?? task.id));
+  const done = new Set(
+    tasks.filter((task) => task.status === 'done').map((task) => task.selector ?? task.id),
+  );
   const pending = tasks.filter((task) => !['done', 'blocked'].includes(task.status));
-  const ready = pending.filter((task) => (task.dependencySelectors ?? task.dependsOn).every((dependency) => done.has(dependency)));
+  const ready = pending.filter((task) =>
+    (task.dependencySelectors ?? task.dependsOn).every((dependency) => done.has(dependency)),
+  );
   const blocked = tasks.filter((task) => task.status === 'blocked');
   return {
     ready,
@@ -1156,7 +1450,8 @@ const SCHEMAS = {
 
 export function validateProtocolArtifact(kind, value) {
   const schemaPath = SCHEMAS[kind];
-  if (!schemaPath) throw new PipelineError('E_SCHEMA_UNKNOWN', `Unknown protocol artifact kind: ${kind}`);
+  if (!schemaPath)
+    throw new PipelineError('E_SCHEMA_UNKNOWN', `Unknown protocol artifact kind: ${kind}`);
   const schema = JSON.parse(readFileSync(join(packageRoot, schemaPath), 'utf8'));
   return validateJson(value, schema);
 }
@@ -1164,6 +1459,11 @@ export function validateProtocolArtifact(kind, value) {
 export function runSyncAudit({ projectRoot = process.cwd() } = {}) {
   const planrDir = join(projectRoot, '.planr');
   const graph = buildGraph(planrDir, { preferNative: true });
-  const counts = Object.fromEntries(['spec', 'story', 'task', 'quick', 'backlog'].map((type) => [type, graph.nodes.filter((node) => node.type === type).length]));
+  const counts = Object.fromEntries(
+    ['spec', 'story', 'task', 'quick', 'backlog'].map((type) => [
+      type,
+      graph.nodes.filter((node) => node.type === type).length,
+    ]),
+  );
   return { ok: true, readOnly: true, counts, nodes: graph.nodes.length, edges: graph.edges.length };
 }

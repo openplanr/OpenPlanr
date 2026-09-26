@@ -5,7 +5,8 @@ import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../../../..');
-const OPERATE_VALIDATE_NOTE_LINE = /^node "<skill-root>\/scripts\/validate-note\.mjs" "<absolute-(?:advisor-output|challenger-output|chair-output|board-report-path)>" --profile (?:advisor|challenger|chair|board-report) --contract-version 2\.0\.0$/u;
+const OPERATE_VALIDATE_NOTE_LINE =
+  /^node "<skill-root>\/scripts\/validate-note\.mjs" "<absolute-(?:advisor-output|challenger-output|chair-output|board-report-path)>" --profile (?:advisor|challenger|chair|board-report) --contract-version 2\.0\.0$/u;
 
 function files(dir, out = []) {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {

@@ -13,7 +13,10 @@ export interface EvaluationBrowserAdapter {
   adapterId: string;
   trusted: boolean;
   attests: readonly string[];
-  probe(session: { origin: string; requests: unknown[] }, surface: unknown): Promise<{
+  probe(
+    session: { origin: string; requests: unknown[] },
+    surface: unknown,
+  ): Promise<{
     evidence: unknown[];
     unattested: readonly string[];
   }>;
@@ -65,7 +68,11 @@ export interface EvaluationOutcome {
   evidenceInputs: readonly EvaluationScenarioEvidence[];
   reuse: {
     reusable: readonly string[];
-    invalidated: readonly { scenarioId: string; reason: string; changedInputs: readonly string[] }[];
+    invalidated: readonly {
+      scenarioId: string;
+      reason: string;
+      changedInputs: readonly string[];
+    }[];
     unevaluated: readonly string[];
   } | null;
   uncoveredSkills: readonly string[];

@@ -42,20 +42,23 @@ test('fresh packed landing install is regular-file, root-API exact, ambient-isol
   mkdirSync(archives, { recursive: true });
   mkdirSync(extracted, { recursive: true });
   mkdirSync(cache, { recursive: true });
-  const packed = JSON.parse(execFileSync('npm', [
-    'pack', '--json', '--ignore-scripts', '--pack-destination', archives,
-  ], {
-    cwd: sourceRoot,
-    encoding: 'utf8',
-    env: { ...process.env, npm_config_cache: cache },
-  }));
+  const packed = JSON.parse(
+    execFileSync('npm', ['pack', '--json', '--ignore-scripts', '--pack-destination', archives], {
+      cwd: sourceRoot,
+      encoding: 'utf8',
+      env: { ...process.env, npm_config_cache: cache },
+    }),
+  );
   assert.equal(packed.length, 1);
   const archive = join(archives, packed[0].filename);
   execFileSync('tar', ['-xzf', archive, '-C', extracted]);
   const packageRoot = join(extracted, 'package');
   assert.equal(lstatSync(packageRoot).isDirectory(), true);
   const packedEntries = entries(packageRoot);
-  assert.deepEqual(packedEntries.filter((path) => lstatSync(path).isSymbolicLink()), []);
+  assert.deepEqual(
+    packedEntries.filter((path) => lstatSync(path).isSymbolicLink()),
+    [],
+  );
   assert.deepEqual(
     packedEntries.filter((path) => {
       const stat = lstatSync(path);
@@ -73,20 +76,42 @@ test('fresh packed landing install is regular-file, root-API exact, ambient-isol
     });
   }
 
-  const publicPipeline = await import(pathToFileURL(join(packageRoot, 'lib/pipeline/index.mjs')).href);
+  const publicPipeline = await import(
+    pathToFileURL(join(packageRoot, 'lib/pipeline/index.mjs')).href
+  );
   for (const name of [
-    'advanceLanding', 'assertLandingWorkflowCatalog', 'assertLandingWorkflowManifest',
-    'bindLandingPlan', 'createLandingOwnerRuntimeHost', 'inspectShipClosureForLanding',
-    'landingStatus', 'prepareLanding',
-    'previewLandingDocket', 'readLandingOperationRegistry', 'readLandingWorkflowCatalog',
-    'readLandingWorkflowManifest', 'showLanding',
-  ]) assert.equal(typeof publicPipeline[name], 'function', `missing packed root API ${name}`);
+    'advanceLanding',
+    'assertLandingWorkflowCatalog',
+    'assertLandingWorkflowManifest',
+    'bindLandingPlan',
+    'createLandingOwnerRuntimeHost',
+    'inspectShipClosureForLanding',
+    'landingStatus',
+    'prepareLanding',
+    'previewLandingDocket',
+    'readLandingOperationRegistry',
+    'readLandingWorkflowCatalog',
+    'readLandingWorkflowManifest',
+    'showLanding',
+  ])
+    assert.equal(typeof publicPipeline[name], 'function', `missing packed root API ${name}`);
   for (const name of [
-    'createLandingTrustedRuntimeHost', 'issueLandingOwnerConfirmation',
-    'createLandingEvent', 'createLandingPhaseReceipt', 'createLandingReceipt',
-  ]) assert.equal(Object.hasOwn(publicPipeline, name), false, `authority API leaked at root: ${name}`);
+    'createLandingTrustedRuntimeHost',
+    'issueLandingOwnerConfirmation',
+    'createLandingEvent',
+    'createLandingPhaseReceipt',
+    'createLandingReceipt',
+  ])
+    assert.equal(
+      Object.hasOwn(publicPipeline, name),
+      false,
+      `authority API leaked at root: ${name}`,
+    );
 
-  const manifestPath = join(packageRoot, 'conformance/fixtures/landing-workflow/generated-assets.json');
+  const manifestPath = join(
+    packageRoot,
+    'conformance/fixtures/landing-workflow/generated-assets.json',
+  );
   const manifest = publicPipeline.readLandingWorkflowManifest();
   const expectedPaths = [
     'lib/pipeline/landing.mjs',
@@ -94,7 +119,10 @@ test('fresh packed landing install is regular-file, root-API exact, ambient-isol
     'schemas/v1.2.0/landing-workflow-catalog.schema.json',
     'registry/landing-workflows.json',
   ];
-  assert.deepEqual(manifest.assets.map(({ path }) => path), expectedPaths);
+  assert.deepEqual(
+    manifest.assets.map(({ path }) => path),
+    expectedPaths,
+  );
   for (const asset of manifest.assets) {
     const packedBytes = readFileSync(join(packageRoot, asset.path));
     const sourceBytes = readFileSync(join(sourceRoot, asset.path));
@@ -107,7 +135,9 @@ test('fresh packed landing install is regular-file, root-API exact, ambient-isol
     expectedPaths,
   );
 
-  const landingModuleAsset = manifest.assets.find(({ path }) => path === 'lib/pipeline/landing.mjs');
+  const landingModuleAsset = manifest.assets.find(
+    ({ path }) => path === 'lib/pipeline/landing.mjs',
+  );
   assert.ok(landingModuleAsset);
   const landingModulePath = join(packageRoot, landingModuleAsset.path);
   assert.equal(lstatSync(landingModulePath).isFile(), true);
@@ -125,11 +155,21 @@ test('fresh packed landing install is regular-file, root-API exact, ambient-isol
 
   let nonTtyCallbackCalls = 0;
   const nonTtyCallbacks = {
-    snapshot: async () => { nonTtyCallbackCalls += 1; },
-    commitIntent: async () => { nonTtyCallbackCalls += 1; },
-    dispatch: async () => { nonTtyCallbackCalls += 1; },
-    reconcile: async () => { nonTtyCallbackCalls += 1; },
-    commitOutcome: async () => { nonTtyCallbackCalls += 1; },
+    snapshot: async () => {
+      nonTtyCallbackCalls += 1;
+    },
+    commitIntent: async () => {
+      nonTtyCallbackCalls += 1;
+    },
+    dispatch: async () => {
+      nonTtyCallbackCalls += 1;
+    },
+    reconcile: async () => {
+      nonTtyCallbackCalls += 1;
+    },
+    commitOutcome: async () => {
+      nonTtyCallbackCalls += 1;
+    },
   };
   for (const bridge of [
     publicPipeline.createLandingOwnerRuntimeHost,
@@ -145,24 +185,27 @@ test('fresh packed landing install is regular-file, root-API exact, ambient-isol
   const packedOwnerTest = join(temporary, 'packed-owner-advance.test.mjs');
   const fixtureModuleUrl = pathToFileURL(join(sourceRoot, 'tests/pipeline/landing.test.mjs')).href;
   const packedRootUrl = pathToFileURL(join(packageRoot, 'lib/pipeline/index.mjs')).href;
-  writeFileSync(packedOwnerTest, [
-    "import assert from 'node:assert/strict';",
-    "import { test } from 'node:test';",
-    `import { landingFixture, memoryHost } from ${JSON.stringify(fixtureModuleUrl)};`,
-    `const publicPipeline = await import(${JSON.stringify(packedRootUrl)});`,
-    "test('packed named-root owner bridge advances once', async () => {",
-    '  const fixture = landingFixture(publicPipeline);',
-    '  const runtime = memoryHost(fixture.plan, { pipeline: publicPipeline });',
-    '  const result = await publicPipeline.advanceLanding({',
-    '    host: runtime.host, plan: fixture.plan, operationId: fixture.operation.operationId,',
-    "    now: '2026-08-25T10:00:00.000Z',",
-    '  });',
-    "  assert.equal(result.landingReceipt.status, 'landed');",
-    '  assert.equal(runtime.state.dispatches, 1);',
-    '  assert.equal(runtime.state.reconciliations, 0);',
-    '});',
-    '',
-  ].join('\n'));
+  writeFileSync(
+    packedOwnerTest,
+    [
+      "import assert from 'node:assert/strict';",
+      "import { test } from 'node:test';",
+      `import { landingFixture, memoryHost } from ${JSON.stringify(fixtureModuleUrl)};`,
+      `const publicPipeline = await import(${JSON.stringify(packedRootUrl)});`,
+      "test('packed named-root owner bridge advances once', async () => {",
+      '  const fixture = landingFixture(publicPipeline);',
+      '  const runtime = memoryHost(fixture.plan, { pipeline: publicPipeline });',
+      '  const result = await publicPipeline.advanceLanding({',
+      '    host: runtime.host, plan: fixture.plan, operationId: fixture.operation.operationId,',
+      "    now: '2026-08-25T10:00:00.000Z',",
+      '  });',
+      "  assert.equal(result.landingReceipt.status, 'landed');",
+      '  assert.equal(runtime.state.dispatches, 1);',
+      '  assert.equal(runtime.state.reconciliations, 0);',
+      '});',
+      '',
+    ].join('\n'),
+  );
   const packedOwnerResult = await runTestFileInOwnerPty(packedOwnerTest, {
     choices: ['confirm'],
   });
@@ -173,31 +216,55 @@ test('fresh packed landing install is regular-file, root-API exact, ambient-isol
   const installedPackage = join(exportConsumer, 'node_modules', 'planr-pipeline');
   mkdirSync(dirname(installedPackage), { recursive: true });
   cpSync(packageRoot, installedPackage, { dereference: true, recursive: true });
-  writeFileSync(join(exportConsumer, 'package.json'), JSON.stringify({
-    name: 'landing-export-boundary-consumer', private: true, type: 'module',
-  }));
-  const deepImport = spawnSync(process.execPath, [
-    '--input-type=module',
-    '-e',
+  writeFileSync(
+    join(exportConsumer, 'package.json'),
+    JSON.stringify({
+      name: 'landing-export-boundary-consumer',
+      private: true,
+      type: 'module',
+    }),
+  );
+  const deepImport = spawnSync(
+    process.execPath,
     [
-      "try { await import('planr-pipeline/lib/pipeline/landing.mjs'); process.exit(2); }",
-      "catch (error) { if (error.code !== 'ERR_PACKAGE_PATH_NOT_EXPORTED') process.exit(3); }",
-    ].join('\n'),
-  ], { cwd: exportConsumer, encoding: 'utf8' });
+      '--input-type=module',
+      '-e',
+      [
+        "try { await import('planr-pipeline/lib/pipeline/landing.mjs'); process.exit(2); }",
+        "catch (error) { if (error.code !== 'ERR_PACKAGE_PATH_NOT_EXPORTED') process.exit(3); }",
+      ].join('\n'),
+    ],
+    { cwd: exportConsumer, encoding: 'utf8' },
+  );
   assert.equal(deepImport.status, 0, deepImport.stderr || deepImport.stdout);
 
   const typescriptPath = process.env.PLANR_TSC_PATH;
   if (typescriptPath) {
     const rootImportPath = join(exportConsumer, 'root-import.mts');
-    writeFileSync(rootImportPath, [
-      "import { createLandingTrustedRuntimeHost } from 'planr-pipeline';",
-      'void createLandingTrustedRuntimeHost;',
-      '',
-    ].join('\n'));
-    const typecheck = spawnSync(process.execPath, [
-      typescriptPath, '--noEmit', '--skipLibCheck', '--target', 'ES2022',
-      '--module', 'NodeNext', '--moduleResolution', 'NodeNext', rootImportPath,
-    ], { cwd: exportConsumer, encoding: 'utf8' });
+    writeFileSync(
+      rootImportPath,
+      [
+        "import { createLandingTrustedRuntimeHost } from 'planr-pipeline';",
+        'void createLandingTrustedRuntimeHost;',
+        '',
+      ].join('\n'),
+    );
+    const typecheck = spawnSync(
+      process.execPath,
+      [
+        typescriptPath,
+        '--noEmit',
+        '--skipLibCheck',
+        '--target',
+        'ES2022',
+        '--module',
+        'NodeNext',
+        '--moduleResolution',
+        'NodeNext',
+        rootImportPath,
+      ],
+      { cwd: exportConsumer, encoding: 'utf8' },
+    );
     assert.notEqual(typecheck.status, 0, 'root issuer import must fail TypeScript compilation');
     assert.match(
       `${typecheck.stdout}\n${typecheck.stderr}`,
@@ -207,26 +274,39 @@ test('fresh packed landing install is regular-file, root-API exact, ambient-isol
 
   const poisonRoot = join(temporary, 'consumer', 'node_modules', 'planr-pipeline');
   mkdirSync(poisonRoot, { recursive: true });
-  writeFileSync(join(poisonRoot, 'package.json'), JSON.stringify({
-    name: 'planr-pipeline', version: '99.0.0', type: 'module', exports: './index.mjs',
-  }));
+  writeFileSync(
+    join(poisonRoot, 'package.json'),
+    JSON.stringify({
+      name: 'planr-pipeline',
+      version: '99.0.0',
+      type: 'module',
+      exports: './index.mjs',
+    }),
+  );
   writeFileSync(join(poisonRoot, 'index.mjs'), "throw new Error('ambient poison loaded');\n");
-  const child = execFileSync(process.execPath, [
-    '--input-type=module',
-    '-e',
+  const child = execFileSync(
+    process.execPath,
     [
-      `const value = await import(${JSON.stringify(packedRootUrl)});`,
-      "if (value.readLandingWorkflowCatalog().workflow.workflowId !== 'planr-land') process.exit(2);",
-      "if (Object.hasOwn(value, 'createLandingTrustedRuntimeHost')) process.exit(3);",
-    ].join('\n'),
-  ], { cwd: dirname(dirname(poisonRoot)), encoding: 'utf8' });
+      '--input-type=module',
+      '-e',
+      [
+        `const value = await import(${JSON.stringify(packedRootUrl)});`,
+        "if (value.readLandingWorkflowCatalog().workflow.workflowId !== 'planr-land') process.exit(2);",
+        "if (Object.hasOwn(value, 'createLandingTrustedRuntimeHost')) process.exit(3);",
+      ].join('\n'),
+    ],
+    { cwd: dirname(dirname(poisonRoot)), encoding: 'utf8' },
+  );
   assert.equal(child, '');
 
   const packedSources = [
     readFileSync(join(packageRoot, 'lib/pipeline/landing.mjs'), 'utf8'),
     readFileSync(join(packageRoot, 'lib/pipeline/index.mjs'), 'utf8'),
   ].join('\n');
-  assert.doesNotMatch(packedSources, /\/Users\/|node_modules\/planr-pipeline|require\.resolve|candidateRoots/u);
+  assert.doesNotMatch(
+    packedSources,
+    /\/Users\/|node_modules\/planr-pipeline|require\.resolve|candidateRoots/u,
+  );
   assert.doesNotMatch(
     packedSources,
     /NODE_TEST_CONTEXT|PLANR_LANDING_OWNER_PTY_CHILD|Symbol\.for|landing-owner-pty/u,

@@ -19,8 +19,7 @@ const planrDir = join(root, 'conformance/fixtures/dashboard-graph/.planr');
 const collisionDir = join(root, 'conformance/fixtures/dashboard-collision/.planr');
 
 const sortedIds = (graph) => graph.nodes.map((n) => n.id).sort();
-const sortedEdges = (graph) =>
-  graph.edges.map((e) => `${e.kind} ${e.from} ${e.to}`).sort();
+const sortedEdges = (graph) => graph.edges.map((e) => `${e.kind} ${e.from} ${e.to}`).sort();
 
 /**
  * A CLI `run` stub that emulates `planr` for the delegate path: `--version`
@@ -46,7 +45,9 @@ function makeDelegateRun() {
 
 /** A CLI `run` stub that simulates the CLI being absent (delegate unavailable). */
 function absentCliRun() {
-  return () => { throw new Error('command not found: planr'); };
+  return () => {
+    throw new Error('command not found: planr');
+  };
 }
 
 test('native-reader path and CLI-delegate path agree on the node id set', () => {
@@ -54,7 +55,10 @@ test('native-reader path and CLI-delegate path agree on the node id set', () => 
   const delegate = buildGraph(planrDir, { run: makeDelegateRun() });
 
   // Sanity: the fixture is non-trivial (avoids a vacuous pass).
-  assert.ok(native.nodes.length >= 5, `fixture should have several nodes, got ${native.nodes.length}`);
+  assert.ok(
+    native.nodes.length >= 5,
+    `fixture should have several nodes, got ${native.nodes.length}`,
+  );
 
   assert.deepStrictEqual(sortedIds(native), sortedIds(delegate));
 });
@@ -94,20 +98,33 @@ test('two specs that both restart at US-001 / T-001 keep distinct namespaced ids
   const g = readGraph(collisionDir);
 
   // Both specs, both stories, both tasks survive — nothing collapsed.
-  const stories = g.nodes.filter((n) => n.type === 'story').map((n) => n.id).sort();
-  const tasks = g.nodes.filter((n) => n.type === 'task').map((n) => n.id).sort();
-  const specs = g.nodes.filter((n) => n.type === 'spec').map((n) => n.id).sort();
+  const stories = g.nodes
+    .filter((n) => n.type === 'story')
+    .map((n) => n.id)
+    .sort();
+  const tasks = g.nodes
+    .filter((n) => n.type === 'task')
+    .map((n) => n.id)
+    .sort();
+  const specs = g.nodes
+    .filter((n) => n.type === 'spec')
+    .map((n) => n.id)
+    .sort();
 
   assert.deepStrictEqual(specs, ['SPEC-001', 'SPEC-002']);
-  assert.deepStrictEqual(stories, ['SPEC-001/US-001', 'SPEC-002/US-001'],
-    'both US-001 stories must be present as distinct namespaced ids');
-  assert.deepStrictEqual(tasks, ['SPEC-001/T-001', 'SPEC-002/T-001'],
-    'both T-001 tasks must be present as distinct namespaced ids');
+  assert.deepStrictEqual(
+    stories,
+    ['SPEC-001/US-001', 'SPEC-002/US-001'],
+    'both US-001 stories must be present as distinct namespaced ids',
+  );
+  assert.deepStrictEqual(
+    tasks,
+    ['SPEC-001/T-001', 'SPEC-002/T-001'],
+    'both T-001 tasks must be present as distinct namespaced ids',
+  );
 
   // The displayed (local) id is preserved in frontmatter for both.
-  const localStoryIds = g.nodes
-    .filter((n) => n.type === 'story')
-    .map((n) => n.frontmatter.id);
+  const localStoryIds = g.nodes.filter((n) => n.type === 'story').map((n) => n.frontmatter.id);
   assert.deepStrictEqual(localStoryIds.sort(), ['US-001', 'US-001']);
 });
 

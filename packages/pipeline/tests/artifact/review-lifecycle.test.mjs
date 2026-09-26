@@ -60,10 +60,15 @@ afterEach(async () => {
 
 function envelope(html = '<!doctype html><title>Checkout</title><button>Pay</button>') {
   return createArtifactEnvelope({
-    artifacts: [{
-      id: 'checkout', title: 'Checkout flow', html,
-      viewport: { width: 1440, height: 900 }, colorScheme: 'light',
-    }],
+    artifacts: [
+      {
+        id: 'checkout',
+        title: 'Checkout flow',
+        html,
+        viewport: { width: 1440, height: 900 },
+        colorScheme: 'light',
+      },
+    ],
   });
 }
 
@@ -72,10 +77,14 @@ function pin({
   status = 'open',
   comment = 'Clarify the delivery timing.',
   updatedAt = '2026-07-14T10:00:00.000Z',
-  replies = [{
-    id: 'reply-1', author: { name: 'Sam' }, comment: 'Agreed.',
-    createdAt: '2026-07-14T10:05:00.000Z',
-  }],
+  replies = [
+    {
+      id: 'reply-1',
+      author: { name: 'Sam' },
+      comment: 'Agreed.',
+      createdAt: '2026-07-14T10:05:00.000Z',
+    },
+  ],
 } = {}) {
   return {
     id,
@@ -85,15 +94,20 @@ function pin({
     region: { x: 0.25, y: 0.5, w: 0.2, h: 0.1 },
     viewport: { width: 1440, height: 900 },
     anchor: { planrId: 'delivery', screen: 'checkout' },
-    intent: 'fix', status, comment, replies,
-    createdAt: '2026-07-14T10:00:00.000Z', updatedAt,
+    intent: 'fix',
+    status,
+    comment,
+    replies,
+    createdAt: '2026-07-14T10:00:00.000Z',
+    updatedAt,
   };
 }
 
 function review(reviewOf, overrides = {}) {
   const { reviewId = 'review-1', ...rest } = overrides;
   return createArtifactReview({
-    reviewId, reviewOf,
+    reviewId,
+    reviewOf,
     decision: 'changes_requested',
     overall: 'Resolve delivery timing before approval.',
     pins: [pin()],
@@ -108,11 +122,13 @@ function http(port, path, { method = 'GET', headers = {}, body } = {}) {
     const req = httpRequest({ host: '127.0.0.1', port, path, method, headers }, (res) => {
       const chunks = [];
       res.on('data', (chunk) => chunks.push(chunk));
-      res.on('end', () => resolveRequest({
-        status: res.statusCode,
-        headers: res.headers,
-        body: Buffer.concat(chunks).toString('utf8'),
-      }));
+      res.on('end', () =>
+        resolveRequest({
+          status: res.statusCode,
+          headers: res.headers,
+          body: Buffer.concat(chunks).toString('utf8'),
+        }),
+      );
     });
     req.once('error', reject);
     if (body !== undefined) req.write(body);
@@ -125,11 +141,21 @@ test('review creation, immutable envelope, and canonical JSON/Markdown exports m
   const digest = digestArtifactEnvelope(current);
   const value = review(digest);
   validateArtifactReview(value);
-  const ledger = mergeReviewLedger(createReviewLedger({
-    artifactId: 'checkout', currentReviewOf: digest,
-  }), value);
-  assert.equal(exportArtifactReview(ledger, { format: 'json' }), fixture('review-export.golden.json'));
-  assert.equal(exportArtifactReview(ledger, { format: 'markdown' }), fixture('review-export.golden.md'));
+  const ledger = mergeReviewLedger(
+    createReviewLedger({
+      artifactId: 'checkout',
+      currentReviewOf: digest,
+    }),
+    value,
+  );
+  assert.equal(
+    exportArtifactReview(ledger, { format: 'json' }),
+    fixture('review-export.golden.json'),
+  );
+  assert.equal(
+    exportArtifactReview(ledger, { format: 'markdown' }),
+    fixture('review-export.golden.md'),
+  );
   const attached = createArtifactReviewEnvelope(current, value);
   assert.equal(attached.review.reviewId, 'review-1');
   assert.equal(Object.isFrozen(attached), true);
@@ -140,37 +166,72 @@ test('stable merge is idempotent, deterministic, conflict-safe, and preserves di
   const digest = digestArtifactEnvelope(envelope());
   const original = review(digest);
   const changed = review(digest, {
-    decision: 'approved', overall: '',
+    decision: 'approved',
+    overall: '',
     updatedAt: '2026-07-14T11:00:00.000Z',
-    pins: [pin({
-      status: 'resolved', updatedAt: '2026-07-14T10:30:00.000Z',
-      replies: [pin().replies[0], {
-        id: 'reply-2', author: { name: 'Asem' }, comment: 'Fixed.',
-        createdAt: '2026-07-14T10:20:00.000Z',
-      }],
-    })],
+    pins: [
+      pin({
+        status: 'resolved',
+        updatedAt: '2026-07-14T10:30:00.000Z',
+        replies: [
+          pin().replies[0],
+          {
+            id: 'reply-2',
+            author: { name: 'Asem' },
+            comment: 'Fixed.',
+            createdAt: '2026-07-14T10:20:00.000Z',
+          },
+        ],
+      }),
+    ],
   });
   const merged = mergeArtifactReviews(original, changed);
   assert.equal(merged.decision, 'approved');
   assert.equal(merged.overall, '');
   assert.equal(merged.pins[0].status, 'resolved');
-  assert.deepEqual(merged.pins[0].replies.map(({ id }) => id), ['reply-1', 'reply-2']);
-  assert.equal(mergeArtifactReviews(merged, changed), merged, 'identical replay is a reference no-op');
-  assert.throws(() => mergeArtifactReviews(original, {
-    ...original, overall: 'divergent equal-time value',
-  }), (error) => error.code === ARTIFACT_ERROR_CODES.MERGE_CONFLICT);
-  assert.throws(() => mergeArtifactReviews(original, {
-    ...original, pins: [pin({ replies: [...pin().replies, pin().replies[0]] })],
-  }), (error) => error.code === ARTIFACT_ERROR_CODES.REVIEW_INVALID);
+  assert.deepEqual(
+    merged.pins[0].replies.map(({ id }) => id),
+    ['reply-1', 'reply-2'],
+  );
+  assert.equal(
+    mergeArtifactReviews(merged, changed),
+    merged,
+    'identical replay is a reference no-op',
+  );
+  assert.throws(
+    () =>
+      mergeArtifactReviews(original, {
+        ...original,
+        overall: 'divergent equal-time value',
+      }),
+    (error) => error.code === ARTIFACT_ERROR_CODES.MERGE_CONFLICT,
+  );
+  assert.throws(
+    () =>
+      mergeArtifactReviews(original, {
+        ...original,
+        pins: [pin({ replies: [...pin().replies, pin().replies[0]] })],
+      }),
+    (error) => error.code === ARTIFACT_ERROR_CODES.REVIEW_INVALID,
+  );
 
   let ledger = createReviewLedger({ artifactId: 'checkout', currentReviewOf: digest });
   ledger = mergeReviewLedger(ledger, changed);
-  ledger = mergeReviewLedger(ledger, review(digest, {
-    reviewId: 'review-2', decision: 'changes_requested',
-    createdAt: '2026-07-14T12:00:00.000Z', updatedAt: '2026-07-14T12:00:00.000Z', pins: [],
-  }));
+  ledger = mergeReviewLedger(
+    ledger,
+    review(digest, {
+      reviewId: 'review-2',
+      decision: 'changes_requested',
+      createdAt: '2026-07-14T12:00:00.000Z',
+      updatedAt: '2026-07-14T12:00:00.000Z',
+      pins: [],
+    }),
+  );
   assert.equal(effectiveReviewDecision(ledger), 'changes_requested');
-  assert.deepEqual(ledger.reviews.map(({ review: item }) => item.reviewId), ['review-1', 'review-2']);
+  assert.deepEqual(
+    ledger.reviews.map(({ review: item }) => item.reviewId),
+    ['review-1', 'review-2'],
+  );
 });
 
 test('transport-neutral import redacts decoder inputs and stale review details', async () => {
@@ -180,28 +241,41 @@ test('transport-neutral import redacts decoder inputs and stale review details',
   const source = 'https://share.openplanr.dev/p/private#k=SECRET';
   await assert.rejects(
     importArtifactReview({ sources: source, currentEnvelope: current, persist: false }),
-    (error) => error.code === ARTIFACT_ERROR_CODES.REVIEW_DECODER_REQUIRED
-      && !JSON.stringify(error).includes('SECRET'),
+    (error) =>
+      error.code === ARTIFACT_ERROR_CODES.REVIEW_DECODER_REQUIRED &&
+      !JSON.stringify(error).includes('SECRET'),
   );
   await assert.rejects(
     importArtifactReview({
-      sources: source, currentEnvelope: current, persist: false,
-      decodeSource: async () => { throw new Error(`leak ${source}`); },
+      sources: source,
+      currentEnvelope: current,
+      persist: false,
+      decodeSource: async () => {
+        throw new Error(`leak ${source}`);
+      },
     }),
-    (error) => error.code === ARTIFACT_ERROR_CODES.REVIEW_IMPORT
-      && error.details.sourceIndex === 0 && !JSON.stringify(error).includes('SECRET'),
+    (error) =>
+      error.code === ARTIFACT_ERROR_CODES.REVIEW_IMPORT &&
+      error.details.sourceIndex === 0 &&
+      !JSON.stringify(error).includes('SECRET'),
   );
   await assert.rejects(
     importArtifactReview({
-      sources: review(staleDigest), currentEnvelope: current, persist: false,
+      sources: review(staleDigest),
+      currentEnvelope: current,
+      persist: false,
     }),
-    (error) => error.code === ARTIFACT_ERROR_CODES.STALE_REVIEW
-      && error.details.localDigest === currentDigest
-      && error.details.reviewDigest === staleDigest
-      && !Object.hasOwn(error.details, 'reviewId'),
+    (error) =>
+      error.code === ARTIFACT_ERROR_CODES.STALE_REVIEW &&
+      error.details.localDigest === currentDigest &&
+      error.details.reviewDigest === staleDigest &&
+      !Object.hasOwn(error.details, 'reviewId'),
   );
   const accepted = await importArtifactReview({
-    sources: review(staleDigest), currentEnvelope: current, persist: false, allowStale: true,
+    sources: review(staleDigest),
+    currentEnvelope: current,
+    persist: false,
+    allowStale: true,
   });
   assert.equal(accepted.reviewState.reviews[0].stale, true);
   assert.equal(accepted.reviewState.reviews[0].review.reviewOf, staleDigest);
@@ -211,7 +285,9 @@ test('transport-neutral import redacts decoder inputs and stale review details',
     reviews: [{ review: review(currentDigest), stale: true }],
   });
   const retained = await importArtifactReview({
-    sources: staleLedger, currentEnvelope: current, persist: false,
+    sources: staleLedger,
+    currentEnvelope: current,
+    persist: false,
   });
   assert.equal(retained.reviewState.reviews[0].stale, true, 'source ledger audit label survives');
 
@@ -219,7 +295,12 @@ test('transport-neutral import redacts decoder inputs and stale review details',
   mkdirSync(join(project, '.git'));
   writeFileSync(join(project, '.git', 'HEAD'), 'ref: refs/heads/main\n');
   const env = { ...process.env, PLANR_HOME: temporary('planr-review-stale-home-') };
-  await importArtifactReview({ sources: review(currentDigest), currentEnvelope: current, cwd: project, env });
+  await importArtifactReview({
+    sources: review(currentDigest),
+    currentEnvelope: current,
+    cwd: project,
+    env,
+  });
   await assert.rejects(
     importArtifactReview({
       sources: review(staleDigest, { reviewId: 'review-stale' }),
@@ -227,8 +308,9 @@ test('transport-neutral import redacts decoder inputs and stale review details',
       cwd: project,
       env,
     }),
-    (error) => error.code === ARTIFACT_ERROR_CODES.STALE_REVIEW
-      && error.details.localDigest === currentDigest,
+    (error) =>
+      error.code === ARTIFACT_ERROR_CODES.STALE_REVIEW &&
+      error.details.localDigest === currentDigest,
   );
   const preserved = await importArtifactReview({
     sources: review(staleDigest, { reviewId: 'review-stale' }),
@@ -254,8 +336,14 @@ test('project, user, HOME, worktree, traversal, symlink, and atomic destinations
   writeFileSync(join(project, '.git', 'HEAD'), 'ref: refs/heads/main\n');
   const nested = join(project, 'packages', 'app');
   mkdirSync(nested, { recursive: true });
-  assert.equal(resolveArtifactReviewDestination({ cwd: nested, env, artifactId: 'checkout' }).kind, 'project');
-  assert.equal(resolveArtifactReviewDestination({ cwd: home, env, artifactId: 'checkout' }).kind, 'user');
+  assert.equal(
+    resolveArtifactReviewDestination({ cwd: nested, env, artifactId: 'checkout' }).kind,
+    'project',
+  );
+  assert.equal(
+    resolveArtifactReviewDestination({ cwd: home, env, artifactId: 'checkout' }).kind,
+    'user',
+  );
   assert.throws(
     () => resolveArtifactReviewDestination({ cwd: nested, env, artifactId: '../escape' }),
     (error) => error.code === ARTIFACT_ERROR_CODES.PATH_TRAVERSAL,
@@ -263,9 +351,18 @@ test('project, user, HOME, worktree, traversal, symlink, and atomic destinations
 
   const current = envelope();
   const value = review(digestArtifactEnvelope(current));
-  const first = await importArtifactReview({ sources: value, currentEnvelope: current, cwd: nested, env });
+  const first = await importArtifactReview({
+    sources: value,
+    currentEnvelope: current,
+    cwd: nested,
+    env,
+  });
   assert.equal(first.destination.kind, 'project');
-  const destination = resolveArtifactReviewDestination({ cwd: nested, env, artifactId: 'checkout' });
+  const destination = resolveArtifactReviewDestination({
+    cwd: nested,
+    env,
+    artifactId: 'checkout',
+  });
   assert.equal(readArtifactReviewState(destination.path).reviews.length, 1);
   const repeated = await Promise.all([
     importArtifactReview({ sources: value, currentEnvelope: current, cwd: nested, env }),
@@ -291,19 +388,39 @@ test('design translation preserves every legacy-only field and persists a stale-
   const current = envelope();
   const digest = digestArtifactEnvelope(current);
   const legacy = {
-    schema_version: '1.0.0', boardId: 'board-1', publishedAt: '2026-07-14T08:00:00.000Z',
-    preferred: 'A', ratings: { A: 5 }, comments: { A: 'Keep it' }, overall: 'Legacy overall',
-    regenerated: true, regenerateAction: 'remix', remixSpec: { layoutFrom: 'A' },
-    authors: [{ name: 'Legacy', color: '--avatar-2', initials: 'LG', lastSeen: '2026-07-14T08:00:00.000Z' }],
-    pins: [{
-      id: 'legacy-pin', author: 'Legacy', variant: 'A',
-      x: 0.1, y: 0.2, w: 0, h: 0, comment: 'Legacy pin', intent: 'question',
-      replies: [{ author: 'Legacy', comment: 'Legacy reply without an ID' }],
-    }],
+    schema_version: '1.0.0',
+    boardId: 'board-1',
+    publishedAt: '2026-07-14T08:00:00.000Z',
+    preferred: 'A',
+    ratings: { A: 5 },
+    comments: { A: 'Keep it' },
+    overall: 'Legacy overall',
+    regenerated: true,
+    regenerateAction: 'remix',
+    remixSpec: { layoutFrom: 'A' },
+    authors: [
+      { name: 'Legacy', color: '--avatar-2', initials: 'LG', lastSeen: '2026-07-14T08:00:00.000Z' },
+    ],
+    pins: [
+      {
+        id: 'legacy-pin',
+        author: 'Legacy',
+        variant: 'A',
+        x: 0.1,
+        y: 0.2,
+        w: 0,
+        h: 0,
+        comment: 'Legacy pin',
+        intent: 'question',
+        replies: [{ author: 'Legacy', comment: 'Legacy reply without an ID' }],
+      },
+    ],
   };
   writeFileSync(join(designDir, 'feedback.json'), `${JSON.stringify(legacy, null, 2)}\n`);
   const result = await importArtifactReview({
-    sources: review(digest), currentEnvelope: current, designDir,
+    sources: review(digest),
+    currentEnvelope: current,
+    designDir,
   });
   assert.equal(result.destination.kind, 'design');
   const stored = JSON.parse(readFileSync(join(designDir, 'feedback.json'), 'utf8'));
@@ -319,7 +436,10 @@ test('design translation preserves every legacy-only field and persists a stale-
 
   const generic = designFeedbackToArtifactReview(legacy, { reviewOf: digest });
   assert.equal(generic.createdAt, '2026-07-14T08:00:00.000Z');
-  assert.deepEqual(artifactReviewToDesignFeedback(generic, { storedFeedback: legacy }).ratings, legacy.ratings);
+  assert.deepEqual(
+    artifactReviewToDesignFeedback(generic, { storedFeedback: legacy }).ratings,
+    legacy.ratings,
+  );
   assert.deepEqual(
     designFeedbackToArtifactReview(legacy, { reviewOf: digest }),
     designFeedbackToArtifactReview(legacy, { reviewOf: digest }),
@@ -367,21 +487,26 @@ test('atomic write failure leaves old design feedback and ledger byte-for-byte i
   const beforeFeedback = readFileSync(feedbackPath);
   const beforeState = readFileSync(statePath);
   let renames = 0;
-  await assert.rejects(importArtifactReview({
-    sources: review(digest, {
-      reviewId: 'review-2', createdAt: '2026-07-14T12:00:00.000Z',
-      updatedAt: '2026-07-14T12:00:00.000Z', pins: [],
-    }),
-    currentEnvelope: current,
-    designDir,
-    fileSystem: {
-      renameSync(...args) {
-        renames += 1;
-        if (renames === 4) throw new Error('injected rename failure');
-        return renameSync(...args);
+  await assert.rejects(
+    importArtifactReview({
+      sources: review(digest, {
+        reviewId: 'review-2',
+        createdAt: '2026-07-14T12:00:00.000Z',
+        updatedAt: '2026-07-14T12:00:00.000Z',
+        pins: [],
+      }),
+      currentEnvelope: current,
+      designDir,
+      fileSystem: {
+        renameSync(...args) {
+          renames += 1;
+          if (renames === 4) throw new Error('injected rename failure');
+          return renameSync(...args);
+        },
       },
-    },
-  }), (error) => error.code === ARTIFACT_ERROR_CODES.REVIEW_WRITE);
+    }),
+    (error) => error.code === ARTIFACT_ERROR_CODES.REVIEW_WRITE,
+  );
   assert.deepEqual(readFileSync(feedbackPath), beforeFeedback);
   assert.deepEqual(readFileSync(statePath), beforeState);
 });
@@ -401,28 +526,48 @@ test('capability routes enforce exact Origin, five-MiB bounds, atomic persistenc
   const firstApi = `${firstUrl.pathname}api/review`;
   const secondApi = `${secondUrl.pathname}api/review`;
   assert.equal((await http(first.port, firstApi)).status, 200, 'origin-less read is safe');
-  assert.equal((await http(first.port, firstApi, { headers: { origin: 'https://evil.test' } })).status, 403);
-  assert.equal((await http(first.port, firstApi, {
-    method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(review(digest)),
-  })).status, 403, 'origin-less public mutation is rejected');
+  assert.equal(
+    (await http(first.port, firstApi, { headers: { origin: 'https://evil.test' } })).status,
+    403,
+  );
+  assert.equal(
+    (
+      await http(first.port, firstApi, {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(review(digest)),
+      })
+    ).status,
+    403,
+    'origin-less public mutation is rejected',
+  );
   const origin = `http://127.0.0.1:${first.port}`;
   const [one, two] = await Promise.all([
     http(first.port, firstApi, {
-      method: 'PUT', headers: { origin, 'content-type': 'application/json' },
+      method: 'PUT',
+      headers: { origin, 'content-type': 'application/json' },
       body: JSON.stringify(review(digest)),
     }),
     http(second.port, secondApi, {
-      method: 'PUT', headers: { origin, 'content-type': 'application/json' },
-      body: JSON.stringify(review(digest, {
-        reviewId: 'review-2', pins: [],
-        createdAt: '2026-07-14T12:00:00.000Z', updatedAt: '2026-07-14T12:00:00.000Z',
-      })),
+      method: 'PUT',
+      headers: { origin, 'content-type': 'application/json' },
+      body: JSON.stringify(
+        review(digest, {
+          reviewId: 'review-2',
+          pins: [],
+          createdAt: '2026-07-14T12:00:00.000Z',
+          updatedAt: '2026-07-14T12:00:00.000Z',
+        }),
+      ),
     }),
   ]);
   assert.equal(one.status, 200);
   assert.equal(two.status, 200);
   const durable = await first.getReview();
-  assert.deepEqual(durable.reviewState.reviews.map((entry) => entry.review.reviewId), ['review-1', 'review-2']);
+  assert.deepEqual(
+    durable.reviewState.reviews.map((entry) => entry.review.reviewId),
+    ['review-1', 'review-2'],
+  );
   assert.match(await first.exportReview('markdown'), /Effective decision/);
   assert.doesNotMatch(JSON.stringify(durable), /review-state\.json|planr-review-server/);
 

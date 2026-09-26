@@ -15,19 +15,32 @@ import {
 function redraft(source, suffix) {
   const draft = structuredClone(source);
   for (const [field, prefix] of Object.entries({
-    assignmentId: 'asg', submissionId: 'sub', operationId: 'op', grantId: 'cgr',
-    resultId: 'xres', resultArtifactId: 'art_result', claimId: 'claim', correlationId: 'corr',
-  })) draft[field] = `${prefix}_${suffix}`;
-  draft.eventIds = Object.fromEntries(Object.keys(draft.eventIds).map((field, index) => (
-    [field, `evt_${suffix}_${String(index + 1).padStart(2, '0')}`]
-  )));
+    assignmentId: 'asg',
+    submissionId: 'sub',
+    operationId: 'op',
+    grantId: 'cgr',
+    resultId: 'xres',
+    resultArtifactId: 'art_result',
+    claimId: 'claim',
+    correlationId: 'corr',
+  }))
+    draft[field] = `${prefix}_${suffix}`;
+  draft.eventIds = Object.fromEntries(
+    Object.keys(draft.eventIds).map((field, index) => [
+      field,
+      `evt_${suffix}_${String(index + 1).padStart(2, '0')}`,
+    ]),
+  );
   draft.uncertainty = {
     resultId: `xres_uncertain${suffix}`,
     resultArtifactId: `art_uncertain${suffix}`,
     submissionId: `sub_uncertain${suffix}`,
-    eventIds: Object.fromEntries(Object.keys(draft.uncertainty.eventIds).map((field, index) => (
-      [field, `evt_${suffix}_uncertain_${String(index + 1).padStart(2, '0')}`]
-    ))),
+    eventIds: Object.fromEntries(
+      Object.keys(draft.uncertainty.eventIds).map((field, index) => [
+        field,
+        `evt_${suffix}_uncertain_${String(index + 1).padStart(2, '0')}`,
+      ]),
+    ),
   };
   return draft;
 }
@@ -58,16 +71,32 @@ test('Promise-concurrent attempts elect one durable dispatcher and one contained
   assert.equal(runtime.getState().operationReplayIndex.length, 1);
   const dispatcher = fulfilled.find(({ value }) => !value.replayed).value;
   const replay = fulfilled.find(({ value }) => value.replayed).value;
-  assert.equal(dispatcher.events.filter(({ type }) => type === 'operation.intent-recorded').length, 1);
-  assert.equal(dispatcher.events.filter(({ type }) => type === 'execution.result-recorded').length, 1);
+  assert.equal(
+    dispatcher.events.filter(({ type }) => type === 'operation.intent-recorded').length,
+    1,
+  );
+  assert.equal(
+    dispatcher.events.filter(({ type }) => type === 'execution.result-recorded').length,
+    1,
+  );
   assert.deepEqual(replay.events, []);
   const reconciliations = await Promise.all([
-    reconcileOperatingGovernedDispatchV2({ state: runtime.getState(), operationId: dispatcher.operation.operationId }),
-    reconcileOperatingGovernedDispatchV2({ state: runtime.getState(), operationId: dispatcher.operation.operationId }),
+    reconcileOperatingGovernedDispatchV2({
+      state: runtime.getState(),
+      operationId: dispatcher.operation.operationId,
+    }),
+    reconcileOperatingGovernedDispatchV2({
+      state: runtime.getState(),
+      operationId: dispatcher.operation.operationId,
+    }),
   ]);
   assert.deepEqual(reconciliations[0], reconciliations[1]);
   assert.equal(reconciliations[0].classification, 'applied');
-  assert.equal(targetAdapter.describe().effectCount, 1, 'read-only concurrent reconciliation never repeats the effect');
+  assert.equal(
+    targetAdapter.describe().effectCount,
+    1,
+    'read-only concurrent reconciliation never repeats the effect',
+  );
 });
 
 test('concurrent divergent reuse cannot steal the dispatch identity or mutate the target', async () => {
@@ -137,26 +166,54 @@ test('a post-intent target race commits one terminal uncertain result and never 
       });
     },
   });
-  const runtime = createOperatingGovernedExecutionRuntimeV2({ initialState: scenario.initial, checkpointStore });
-  await assert.rejects(runtime.execute(scenario.request, scenario.draft, {
-    trustedHost: OPEN_REFERENCE_PROJECT_EXECUTOR_HOST_V2,
-    targetAdapter,
-  }), (error) => error.code === 'OPERATION_UNCERTAIN'
-    && error.details.context.resultId === scenario.draft.uncertainty.resultId);
+  const runtime = createOperatingGovernedExecutionRuntimeV2({
+    initialState: scenario.initial,
+    checkpointStore,
+  });
+  await assert.rejects(
+    runtime.execute(scenario.request, scenario.draft, {
+      trustedHost: OPEN_REFERENCE_PROJECT_EXECUTOR_HOST_V2,
+      targetAdapter,
+    }),
+    (error) =>
+      error.code === 'OPERATION_UNCERTAIN' &&
+      error.details.context.resultId === scenario.draft.uncertainty.resultId,
+  );
   const state = checkpointStore.snapshot();
   assert.equal(state.governedOperations[0].state, 'uncertain');
   assert.equal(state.executionResults[0].status, 'uncertain');
   assert.equal(state.executionResults[0].targetAfterHash, null);
   assert.equal(state.executionResults[0].effectSummary.changed, false);
   assert.equal(state.capabilityGrants[0].consumedAt, scenario.draft.preparedAt);
-  assert.deepEqual(checkpointStore.commits.map(({ phase }) => phase), ['dispatch-intent', 'terminal-result']);
+  assert.deepEqual(
+    checkpointStore.commits.map(({ phase }) => phase),
+    ['dispatch-intent', 'terminal-result'],
+  );
 
   const replay = await runtime.execute(scenario.request, scenario.draft, {
-    trustedHost: new Proxy({}, { get() { throw new Error('uncertain replay touched host'); } }),
-    targetAdapter: new Proxy({}, { get() { throw new Error('uncertain replay touched target'); } }),
+    trustedHost: new Proxy(
+      {},
+      {
+        get() {
+          throw new Error('uncertain replay touched host');
+        },
+      },
+    ),
+    targetAdapter: new Proxy(
+      {},
+      {
+        get() {
+          throw new Error('uncertain replay touched target');
+        },
+      },
+    ),
   });
   assert.equal(replay.replayed, true);
   assert.equal(replay.result.status, 'uncertain');
   assert.equal(runtime.dispatchCount, 1);
-  assert.equal(targetAdapter.describe().effectCount, 1, 'only the external race changed the target');
+  assert.equal(
+    targetAdapter.describe().effectCount,
+    1,
+    'only the external race changed the target',
+  );
 });

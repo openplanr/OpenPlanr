@@ -20,7 +20,9 @@ import {
 import { assertProtocolArtifact } from '../../lib/protocol/contracts.mjs';
 import { sha256Jcs } from '../../lib/protocol/jcs.mjs';
 
-function clone(value) { return structuredClone(value); }
+function clone(value) {
+  return structuredClone(value);
+}
 function without(value, field) {
   return Object.fromEntries(Object.entries(value).filter(([key]) => key !== field));
 }
@@ -75,7 +77,13 @@ function oldReviewState() {
   state.reviews = [review];
   delete state.executiveBoards;
   assertProtocolArtifact('operating-runtime-state', state, { protocolVersion: '2.0.0' });
-  return { state, cycle, review, plan: state.intelligencePlans[0], ledger: state.decisionLedgers[0] };
+  return {
+    state,
+    cycle,
+    review,
+    plan: state.intelligencePlans[0],
+    ledger: state.decisionLedgers[0],
+  };
 }
 
 function materializedReviewTransaction() {
@@ -98,27 +106,34 @@ function materializedReviewTransaction() {
     createdAt: '2026-08-10T10:14:00.000Z',
     updatedAt: '2026-08-10T10:14:00.000Z',
   };
-  const prepared = createOperatingExecutiveBoardMaterializationV2({
-    cycleId: cycle.cycleId,
-    planId: plan.planId,
-    ledgerId: ledger.ledgerId,
-    review,
-  }, {
-    eventId: 'evt_executive_board_materialized_001',
-    timestamp: review.createdAt,
-    correlationId: 'corr_executive_board_materialized_001',
-  }, { initialState: state });
-  const reviewEvent = createOperatingRuntimeEventV2({
-    eventId: 'evt_executive_board_review_created_001',
-    timestamp: review.createdAt,
-    cycleId: cycle.cycleId,
-    type: 'review.created',
-    entityId: review.reviewId,
-    actor: { kind: 'runtime', id: 'openplanr' },
-    causationId: prepared.event.eventId,
-    correlationId: prepared.event.correlationId,
-    payload: review,
-  }, { previousEvent: prepared.event });
+  const prepared = createOperatingExecutiveBoardMaterializationV2(
+    {
+      cycleId: cycle.cycleId,
+      planId: plan.planId,
+      ledgerId: ledger.ledgerId,
+      review,
+    },
+    {
+      eventId: 'evt_executive_board_materialized_001',
+      timestamp: review.createdAt,
+      correlationId: 'corr_executive_board_materialized_001',
+    },
+    { initialState: state },
+  );
+  const reviewEvent = createOperatingRuntimeEventV2(
+    {
+      eventId: 'evt_executive_board_review_created_001',
+      timestamp: review.createdAt,
+      cycleId: cycle.cycleId,
+      type: 'review.created',
+      entityId: review.reviewId,
+      actor: { kind: 'runtime', id: 'openplanr' },
+      causationId: prepared.event.eventId,
+      correlationId: prepared.event.correlationId,
+      payload: review,
+    },
+    { previousEvent: prepared.event },
+  );
   const finalState = reduceOperatingRuntimeEventsV2([prepared.event, reviewEvent], {
     initialState: state,
   });
@@ -150,15 +165,21 @@ test('old Cycle compatibility board is deterministic, schema-valid, non-authorit
   assert.equal(first.ledgerId, ledger.ledgerId);
   assert.equal(first.reviewId, review.reviewId);
   assert.equal(first.reviewHash, sha256Jcs(review));
-  assert.equal(first.seatBindings.every(({ roleId }) => typeof roleId === 'string'), true);
+  assert.equal(
+    first.seatBindings.every(({ roleId }) => typeof roleId === 'string'),
+    true,
+  );
   assert.doesNotThrow(() => assertOperatingExecutiveBoardV2(first));
   assert.equal(JSON.stringify(state), beforeBytes);
-  assert.equal(sha256Jcs({
-    eventReplayIndex: state.eventReplayIndex,
-    artifacts: state.artifacts,
-    reviews: state.reviews,
-    executiveBoards: state.executiveBoards ?? null,
-  }), beforeInventoryHash);
+  assert.equal(
+    sha256Jcs({
+      eventReplayIndex: state.eventReplayIndex,
+      artifacts: state.artifacts,
+      reviews: state.reviews,
+      executiveBoards: state.executiveBoards ?? null,
+    }),
+    beforeInventoryHash,
+  );
 });
 
 test('materialized and compatibility variants share semantic Chair truth but only the materialized branch can enter an Event', () => {
@@ -170,16 +191,20 @@ test('materialized and compatibility variants share semantic Chair truth but onl
   const ledger = state.decisionLedgers[0];
   const { review } = existing;
   const beforeHash = sha256Jcs(state);
-  const materialized = createOperatingExecutiveBoardMaterializationV2({
-    cycleId: cycle.cycleId,
-    planId: plan.planId,
-    ledgerId: ledger.ledgerId,
-    review: clone(review),
-  }, {
-    eventId: 'evt_executive_board_001',
-    timestamp: review.createdAt,
-    correlationId: 'corr_executive_board_001',
-  }, { initialState: state });
+  const materialized = createOperatingExecutiveBoardMaterializationV2(
+    {
+      cycleId: cycle.cycleId,
+      planId: plan.planId,
+      ledgerId: ledger.ledgerId,
+      review: clone(review),
+    },
+    {
+      eventId: 'evt_executive_board_001',
+      timestamp: review.createdAt,
+      correlationId: 'corr_executive_board_001',
+    },
+    { initialState: state },
+  );
   const compatibility = buildExistingOperatingExecutiveBoardCompatibilityV2(existing.state, {
     cycleId: existing.cycle.cycleId,
     reviewId: review.reviewId,
@@ -200,9 +225,13 @@ test('materialized and compatibility variants share semantic Chair truth but onl
   const forgedEvent = clone(materialized.event);
   forgedEvent.payload = clone(compatibility);
   forgedEvent.eventHash = sha256Jcs(without(forgedEvent, 'eventHash'));
-  assert.throws(() => assertProtocolArtifact('operating-event', forgedEvent, {
-    protocolVersion: '2.0.0',
-  }), { code: 'E_PROTOCOL_ARTIFACT_INVALID' });
+  assert.throws(
+    () =>
+      assertProtocolArtifact('operating-event', forgedEvent, {
+        protocolVersion: '2.0.0',
+      }),
+    { code: 'E_PROTOCOL_ARTIFACT_INVALID' },
+  );
 
   const forgedBoard = clone(compatibility);
   forgedBoard.authoritativeForMutation = true;
@@ -214,10 +243,13 @@ test('materialized and compatibility variants share semantic Chair truth but onl
 
 test('stored board reads prefer the exact materialized record while compatibility never claims mutation authority', () => {
   const { cycle, review, finalState, prepared } = materializedReviewTransaction();
-  assert.deepEqual(readOperatingExecutiveBoardV2(finalState, {
-    cycleId: cycle.cycleId,
-    reviewId: review.reviewId,
-  }), prepared.board);
+  assert.deepEqual(
+    readOperatingExecutiveBoardV2(finalState, {
+      cycleId: cycle.cycleId,
+      reviewId: review.reviewId,
+    }),
+    prepared.board,
+  );
   const compatibility = buildExistingOperatingExecutiveBoardCompatibilityV2(finalState, {
     cycleId: cycle.cycleId,
     reviewId: review.reviewId,
@@ -228,10 +260,14 @@ test('stored board reads prefer the exact materialized record while compatibilit
 
   const forgedState = clone(finalState);
   forgedState.reviews[0].ownerActorId = 'owner-foreign-001';
-  assert.throws(() => readOperatingExecutiveBoardV2(forgedState, {
-    cycleId: cycle.cycleId,
-    reviewId: review.reviewId,
-  }), { code: 'E_OPERATE_BOARD_BINDING_INVALID' });
+  assert.throws(
+    () =>
+      readOperatingExecutiveBoardV2(forgedState, {
+        cycleId: cycle.cycleId,
+        reviewId: review.reviewId,
+      }),
+    { code: 'E_OPERATE_BOARD_BINDING_INVALID' },
+  );
 });
 
 test('materialized Board remains readable with its frozen trace after terminal Review submission', () => {
@@ -251,21 +287,28 @@ test('materialized Board remains readable with its frozen trace after terminal R
     capabilities: ['operate.review.get'],
     readAt: '2026-08-10T10:15:00.000Z',
   });
-  const rejected = read.data.dispositionChoices.find(({ submitArguments }) => (
-    submitArguments.disposition === 'rejected'
-  ));
-  const committed = submitOperatingReviewV2(rejected.submitArguments, {
-    eventId: 'evt_executive_board_review_submitted_001',
-    timestamp: '2026-08-10T10:15:00.000Z',
-    correlationId: prepared.event.correlationId,
-  }, {
-    initialState: finalState,
-    capabilities: [{ id: 'operate-review-submit', version: '2.0.0' }],
-  });
-  assert.deepEqual(readOperatingExecutiveBoardV2(committed.state, {
-    cycleId: cycle.cycleId,
-    reviewId: review.reviewId,
-  }), prepared.board);
+  const rejected = read.data.dispositionChoices.find(
+    ({ submitArguments }) => submitArguments.disposition === 'rejected',
+  );
+  const committed = submitOperatingReviewV2(
+    rejected.submitArguments,
+    {
+      eventId: 'evt_executive_board_review_submitted_001',
+      timestamp: '2026-08-10T10:15:00.000Z',
+      correlationId: prepared.event.correlationId,
+    },
+    {
+      initialState: finalState,
+      capabilities: [{ id: 'operate-review-submit', version: '2.0.0' }],
+    },
+  );
+  assert.deepEqual(
+    readOperatingExecutiveBoardV2(committed.state, {
+      cycleId: cycle.cycleId,
+      reviewId: review.reviewId,
+    }),
+    prepared.board,
+  );
   assert.deepEqual(
     committed.state.executiveBoards[0].traceMatrix,
     prepared.board.traceMatrix,
@@ -277,72 +320,109 @@ test('Board and Cycle Review reduce as one adjacent atomic transaction with boun
   const transaction = materializedReviewTransaction();
   assert.equal(transaction.finalState.executiveBoards.length, 1);
   assert.equal(transaction.finalState.reviews.length, 1);
-  assert.equal(transaction.finalState.cycles.find(({ cycleId }) => cycleId === transaction.cycle.cycleId).state, 'awaiting_review');
-  assert.equal(transaction.finalState.cycles.find(({ cycleId }) => cycleId === transaction.cycle.cycleId).activeReviewId, transaction.review.reviewId);
-  const replayed = reduceOperatingRuntimeEventsV2([
-    transaction.prepared.event,
-    transaction.reviewEvent,
-  ], { initialState: transaction.finalState });
+  assert.equal(
+    transaction.finalState.cycles.find(({ cycleId }) => cycleId === transaction.cycle.cycleId)
+      .state,
+    'awaiting_review',
+  );
+  assert.equal(
+    transaction.finalState.cycles.find(({ cycleId }) => cycleId === transaction.cycle.cycleId)
+      .activeReviewId,
+    transaction.review.reviewId,
+  );
+  const replayed = reduceOperatingRuntimeEventsV2(
+    [transaction.prepared.event, transaction.reviewEvent],
+    { initialState: transaction.finalState },
+  );
   assert.equal(sha256Jcs(replayed), sha256Jcs(transaction.finalState));
 
-  assert.throws(() => reduceOperatingRuntimeEventsV2([
-    transaction.prepared.event,
-  ], { initialState: transaction.state }), { code: 'STATE_TRANSITION_INVALID' });
+  assert.throws(
+    () =>
+      reduceOperatingRuntimeEventsV2([transaction.prepared.event], {
+        initialState: transaction.state,
+      }),
+    { code: 'STATE_TRANSITION_INVALID' },
+  );
 
-  const binding = transaction.state.inputBindings.find(({ cycleId }) => cycleId === transaction.cycle.cycleId);
-  const intervening = createOperatingRuntimeEventV2({
-    eventId: 'evt_executive_board_intervening_001',
-    timestamp: transaction.review.createdAt,
-    cycleId: transaction.cycle.cycleId,
-    type: 'cycle.input-bound',
-    entityId: binding.inputBindingId,
-    actor: { kind: 'runtime', id: 'openplanr' },
-    causationId: transaction.prepared.event.eventId,
-    correlationId: transaction.prepared.event.correlationId,
-    payload: {
-      inputBindingId: binding.inputBindingId,
-      scopeId: transaction.cycle.scopeId,
-      domainId: transaction.cycle.domainId,
-      domainVersion: transaction.cycle.domainVersion,
-      contractVersions: clone(transaction.cycle.contractVersions),
+  const binding = transaction.state.inputBindings.find(
+    ({ cycleId }) => cycleId === transaction.cycle.cycleId,
+  );
+  const intervening = createOperatingRuntimeEventV2(
+    {
+      eventId: 'evt_executive_board_intervening_001',
+      timestamp: transaction.review.createdAt,
+      cycleId: transaction.cycle.cycleId,
+      type: 'cycle.input-bound',
+      entityId: binding.inputBindingId,
+      actor: { kind: 'runtime', id: 'openplanr' },
+      causationId: transaction.prepared.event.eventId,
+      correlationId: transaction.prepared.event.correlationId,
+      payload: {
+        inputBindingId: binding.inputBindingId,
+        scopeId: transaction.cycle.scopeId,
+        domainId: transaction.cycle.domainId,
+        domainVersion: transaction.cycle.domainVersion,
+        contractVersions: clone(transaction.cycle.contractVersions),
+      },
     },
-  }, { previousEvent: transaction.prepared.event });
-  const lateReview = createOperatingRuntimeEventV2({
-    ...without(transaction.reviewEvent, 'eventHash'),
-    previousEventHash: undefined,
-  }, { previousEvent: intervening });
-  assert.throws(() => reduceOperatingRuntimeEventsV2([
-    transaction.prepared.event,
-    intervening,
-    lateReview,
-  ], { initialState: transaction.state }), { code: 'STATE_TRANSITION_INVALID' });
+    { previousEvent: transaction.prepared.event },
+  );
+  const lateReview = createOperatingRuntimeEventV2(
+    {
+      ...without(transaction.reviewEvent, 'eventHash'),
+      previousEventHash: undefined,
+    },
+    { previousEvent: intervening },
+  );
+  assert.throws(
+    () =>
+      reduceOperatingRuntimeEventsV2([transaction.prepared.event, intervening, lateReview], {
+        initialState: transaction.state,
+      }),
+    { code: 'STATE_TRANSITION_INVALID' },
+  );
 
   const divergentReview = clone(transaction.review);
   divergentReview.ownerActorId = 'owner-divergent-001';
-  const divergentEvent = createOperatingRuntimeEventV2({
-    ...without(transaction.reviewEvent, 'eventHash'),
-    payload: divergentReview,
-  }, { previousEvent: transaction.prepared.event });
-  assert.throws(() => reduceOperatingRuntimeEventsV2([
-    transaction.prepared.event,
-    divergentEvent,
-  ], { initialState: transaction.state }), { code: 'STATE_TRANSITION_INVALID' });
+  const divergentEvent = createOperatingRuntimeEventV2(
+    {
+      ...without(transaction.reviewEvent, 'eventHash'),
+      payload: divergentReview,
+    },
+    { previousEvent: transaction.prepared.event },
+  );
+  assert.throws(
+    () =>
+      reduceOperatingRuntimeEventsV2([transaction.prepared.event, divergentEvent], {
+        initialState: transaction.state,
+      }),
+    { code: 'STATE_TRANSITION_INVALID' },
+  );
 
   const awaitingNew = clone(transaction.state);
   const newCycle = awaitingNew.cycles.find(({ cycleId }) => cycleId === transaction.cycle.cycleId);
   newCycle.state = 'awaiting_review';
   newCycle.updatedAt = transaction.review.createdAt;
-  const unboarded = createOperatingRuntimeEventV2({
-    ...without(transaction.reviewEvent, 'eventHash'),
-    causationId: null,
-    correlationId: 'corr_unboarded_new_review_001',
-  }, { previousEvent: {
-    sequence: awaitingNew.eventHead.sequence,
-    eventHash: awaitingNew.eventHead.hash,
-  } });
-  assert.throws(() => reduceOperatingRuntimeEventsV2([unboarded], {
-    initialState: awaitingNew,
-  }), { code: 'STATE_TRANSITION_INVALID' });
+  const unboarded = createOperatingRuntimeEventV2(
+    {
+      ...without(transaction.reviewEvent, 'eventHash'),
+      causationId: null,
+      correlationId: 'corr_unboarded_new_review_001',
+    },
+    {
+      previousEvent: {
+        sequence: awaitingNew.eventHead.sequence,
+        eventHash: awaitingNew.eventHead.hash,
+      },
+    },
+  );
+  assert.throws(
+    () =>
+      reduceOperatingRuntimeEventsV2([unboarded], {
+        initialState: awaitingNew,
+      }),
+    { code: 'STATE_TRANSITION_INVALID' },
+  );
 
   const legacy = clone(awaitingNew);
   delete legacy.executiveBoards;
@@ -361,7 +441,9 @@ test('stored Board custody rejects canonical reorder, missing/substituted Event 
   });
 
   const substitutedEvent = clone(finalState);
-  substitutedEvent.eventReplayIndex.find(({ eventId }) => eventId === prepared.event.eventId).entityId = 'xbr_substituted_0001';
+  substitutedEvent.eventReplayIndex.find(
+    ({ eventId }) => eventId === prepared.event.eventId,
+  ).entityId = 'xbr_substituted_0001';
   assert.throws(() => reduceOperatingRuntimeEventsV2([], { initialState: substitutedEvent }), {
     code: 'STATE_TRANSITION_INVALID',
   });
@@ -374,7 +456,8 @@ test('stored Board custody rejects canonical reorder, missing/substituted Event 
   });
 
   const forgedReview = clone(finalState);
-  forgedReview.reviews.find(({ reviewId }) => reviewId === review.reviewId).ownerActorId = 'owner-forged-001';
+  forgedReview.reviews.find(({ reviewId }) => reviewId === review.reviewId).ownerActorId =
+    'owner-forged-001';
   assert.throws(() => reduceOperatingRuntimeEventsV2([], { initialState: forgedReview }), {
     code: 'STATE_TRANSITION_INVALID',
   });

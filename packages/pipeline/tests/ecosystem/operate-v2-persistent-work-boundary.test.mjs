@@ -3,9 +3,10 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
 
-const source = readFileSync(fileURLToPath(new URL(
-  '../../lib/operate/persistent-work-projections-v2.mjs', import.meta.url,
-)), 'utf8');
+const source = readFileSync(
+  fileURLToPath(new URL('../../lib/operate/persistent-work-projections-v2.mjs', import.meta.url)),
+  'utf8',
+);
 
 test('persistent-work projections remain a v2-only, read-only boundary', () => {
   assert.doesNotMatch(source, /parked/iu);

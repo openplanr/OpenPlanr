@@ -18,19 +18,32 @@ import {
 test('terminal replay classifications stay exact across deterministic scenario seeds', async () => {
   for (let seed = 1; seed <= 12; seed += 1) {
     const suffix = `74${String(seed).padStart(6, '0')}`;
-    const scenario = governedExecutionScenario({ suffix, automatic: true, payloadValue: { seed, applied: true } });
+    const scenario = governedExecutionScenario({
+      suffix,
+      automatic: true,
+      payloadValue: { seed, applied: true },
+    });
     const targetAdapter = createDisposableLocalProjectTargetV2({
       target: scenario.action.targetBinding,
       initialValue: scenario.initialValue,
     });
     const store = createGovernedExecutionCheckpointStore(scenario.initial);
-    const runtime = createOperatingGovernedExecutionRuntimeV2({ initialState: scenario.initial, checkpointStore: store });
+    const runtime = createOperatingGovernedExecutionRuntimeV2({
+      initialState: scenario.initial,
+      checkpointStore: store,
+    });
     const completed = await runtime.execute(scenario.request, scenario.draft, {
       trustedHost: OPEN_REFERENCE_PROJECT_EXECUTOR_HOST_V2,
       targetAdapter,
     });
-    const first = classifyOperatingGovernedRecoveryV2({ state: completed.state, operationId: completed.operation.operationId });
-    const second = classifyOperatingGovernedRecoveryV2({ state: structuredClone(completed.state), operationId: completed.operation.operationId });
+    const first = classifyOperatingGovernedRecoveryV2({
+      state: completed.state,
+      operationId: completed.operation.operationId,
+    });
+    const second = classifyOperatingGovernedRecoveryV2({
+      state: structuredClone(completed.state),
+      operationId: completed.operation.operationId,
+    });
     assert.deepEqual(first, second, `seed ${seed}`);
     assert.equal(first.classification, 'applied', `seed ${seed}`);
     assert.equal(targetAdapter.describe().effectCount, 1, `seed ${seed}`);
@@ -39,7 +52,10 @@ test('terminal replay classifications stay exact across deterministic scenario s
 
 test('divergent reconciliation envelopes fail closed without a target effect', async () => {
   const scenario = governedExecutionScenario({ suffix: '74000020', automatic: true });
-  const targetAdapter = createDisposableLocalProjectTargetV2({ target: scenario.action.targetBinding, initialValue: scenario.initialValue });
+  const targetAdapter = createDisposableLocalProjectTargetV2({
+    target: scenario.action.targetBinding,
+    initialValue: scenario.initialValue,
+  });
   let intentState;
   const store = createGovernedExecutionCheckpointStore(scenario.initial, {
     afterCommit({ phase }, state) {
@@ -49,21 +65,40 @@ test('divergent reconciliation envelopes fail closed without a target effect', a
       }
     },
   });
-  const runtime = createOperatingGovernedExecutionRuntimeV2({ initialState: scenario.initial, checkpointStore: store });
-  await assert.rejects(runtime.execute(scenario.request, scenario.draft, {
-    trustedHost: OPEN_REFERENCE_PROJECT_EXECUTOR_HOST_V2, targetAdapter,
-  }), { code: 'OPERATION_UNCERTAIN' });
+  const runtime = createOperatingGovernedExecutionRuntimeV2({
+    initialState: scenario.initial,
+    checkpointStore: store,
+  });
+  await assert.rejects(
+    runtime.execute(scenario.request, scenario.draft, {
+      trustedHost: OPEN_REFERENCE_PROJECT_EXECUTOR_HOST_V2,
+      targetAdapter,
+    }),
+    { code: 'OPERATION_UNCERTAIN' },
+  );
   for (const mutate of [
-    (request) => { request.payload.contentHash = `sha256:${'f'.repeat(64)}`; },
-    (request) => { request.rollbackBaseline.artifactId = 'art_divergent74000020'; },
-    (request) => { request.payload.value = { divergent: true }; },
+    (request) => {
+      request.payload.contentHash = `sha256:${'f'.repeat(64)}`;
+    },
+    (request) => {
+      request.rollbackBaseline.artifactId = 'art_divergent74000020';
+    },
+    (request) => {
+      request.payload.value = { divergent: true };
+    },
   ]) {
     const request = structuredClone(scenario.request);
     mutate(request);
-    await assert.rejects(reconcileOperatingGovernedDispatchV2({
-      state: intentState, operationId: scenario.draft.operationId, request,
-      trustedHost: OPEN_REFERENCE_PROJECT_EXECUTOR_HOST_V2, targetAdapter,
-    }), { code: 'OPERATION_CONFLICT' });
+    await assert.rejects(
+      reconcileOperatingGovernedDispatchV2({
+        state: intentState,
+        operationId: scenario.draft.operationId,
+        request,
+        trustedHost: OPEN_REFERENCE_PROJECT_EXECUTOR_HOST_V2,
+        targetAdapter,
+      }),
+      { code: 'OPERATION_CONFLICT' },
+    );
   }
   assert.equal(targetAdapter.describe().effectCount, 0);
 });

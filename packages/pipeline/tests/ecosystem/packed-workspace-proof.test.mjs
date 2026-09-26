@@ -1,11 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import {
-  mkdirSync,
-  mkdtempSync,
-  rmSync,
-  writeFileSync,
-} from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
@@ -60,7 +55,12 @@ function fixture() {
       manifestDigest: manifestDigests.root,
     },
     components: {
-      protocol: { package: manifests.protocol.name, version: manifests.protocol.version, path: 'packages/protocol', manifestDigest: manifestDigests.protocol },
+      protocol: {
+        package: manifests.protocol.name,
+        version: manifests.protocol.version,
+        path: 'packages/protocol',
+        manifestDigest: manifestDigests.protocol,
+      },
       cli: {
         package: manifests.cli.name,
         version: manifests.cli.version,
@@ -96,7 +96,11 @@ function fixture() {
     checks: PACKED_WORKSPACE_REQUIRED_CHECKS.map((id) => ({ id, status: 'pass' })),
     environment: { nodeVersion: 'v22.0.0' },
     packages: {
-      protocol: { name: manifests.protocol.name, version: manifests.protocol.version, ...packageCustody.protocol },
+      protocol: {
+        name: manifests.protocol.name,
+        version: manifests.protocol.version,
+        ...packageCustody.protocol,
+      },
       cli: {
         name: manifests.cli.name,
         version: manifests.cli.version,
@@ -121,7 +125,13 @@ function fixture() {
     },
     installs: {
       full: {
-        protocol: { name: manifests.protocol.name, version: manifests.protocol.version, node: { status: 'passed', exports: 28, typedExports: 18, assets: 46 }, browser: { status: 'passed', exports: 24, assets: 46 }, workers: { status: 'passed', exports: 24 } },
+        protocol: {
+          name: manifests.protocol.name,
+          version: manifests.protocol.version,
+          node: { status: 'passed', exports: 28, typedExports: 18, assets: 46 },
+          browser: { status: 'passed', exports: 24, assets: 46 },
+          workers: { status: 'passed', exports: 24 },
+        },
         diagram: {
           galleryCount: PACKED_WORKSPACE_DIAGRAM_GRAMMAR_COUNT,
           renderValidation: 'passed',
@@ -145,7 +155,9 @@ function fixture() {
 test('npm pack JSON parsing tolerates lifecycle output prefixes and rejects suffixes', () => {
   const report = [{ filename: 'openplanr-1.25.3.tgz' }];
   assert.deepEqual(
-    parseNpmPackJson(`\n> openplanr@1.25.3 prepare\n> npm run build\n[prepare] complete\n${JSON.stringify(report)}\n`),
+    parseNpmPackJson(
+      `\n> openplanr@1.25.3 prepare\n> npm run build\n[prepare] complete\n${JSON.stringify(report)}\n`,
+    ),
     report,
   );
   assert.equal(parseNpmPackJson(`${JSON.stringify(report)}\npostfix`), null);
@@ -155,16 +167,14 @@ test('npm pack JSON parsing tolerates lifecycle output prefixes and rejects suff
 test('missing and malformed packed-workspace proofs fail closed', () => {
   const { root } = fixture();
   try {
-    assert.throws(
-      () => readPackedWorkspaceProof(join(root, 'missing.json')),
-      { code: 'E_PACKED_WORKSPACE_PROOF_MISSING' },
-    );
+    assert.throws(() => readPackedWorkspaceProof(join(root, 'missing.json')), {
+      code: 'E_PACKED_WORKSPACE_PROOF_MISSING',
+    });
     const malformed = join(root, 'malformed.json');
     writeFileSync(malformed, '{not-json');
-    assert.throws(
-      () => readPackedWorkspaceProof(malformed),
-      { code: 'E_PACKED_WORKSPACE_PROOF_INVALID' },
-    );
+    assert.throws(() => readPackedWorkspaceProof(malformed), {
+      code: 'E_PACKED_WORKSPACE_PROOF_INVALID',
+    });
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
@@ -191,11 +201,12 @@ test('a proof from sibling package bytes cannot satisfy current workspace custod
       pipeline: { ...packageCustody.pipeline, payloadDigest: fakeDigest('e') },
     };
     assert.throws(
-      () => assertPackedWorkspaceProof({
-        proof,
-        workspaceRoot: root,
-        packageCustody: siblingCustody,
-      }),
+      () =>
+        assertPackedWorkspaceProof({
+          proof,
+          workspaceRoot: root,
+          packageCustody: siblingCustody,
+        }),
       { code: 'E_PACKED_WORKSPACE_PROOF_CUSTODY' },
     );
   } finally {
@@ -221,11 +232,21 @@ test('the packed-workspace digest binds proof identity, result, and every check'
   try {
     const expected = proof.proofDigest;
     for (const mutate of [
-      (candidate) => { candidate.kind = 'forged-proof'; },
-      (candidate) => { candidate.schemaVersion = '9.9.9'; },
-      (candidate) => { candidate.ok = false; },
-      (candidate) => { candidate.checks[0].status = 'fail'; },
-      (candidate) => { candidate.checks[0].detail = { forged: true }; },
+      (candidate) => {
+        candidate.kind = 'forged-proof';
+      },
+      (candidate) => {
+        candidate.schemaVersion = '9.9.9';
+      },
+      (candidate) => {
+        candidate.ok = false;
+      },
+      (candidate) => {
+        candidate.checks[0].status = 'fail';
+      },
+      (candidate) => {
+        candidate.checks[0].detail = { forged: true };
+      },
     ]) {
       const candidate = structuredClone(proof);
       mutate(candidate);
@@ -269,27 +290,39 @@ test('strict proof validation rejects stale Protocol totals and generated-skill 
 test('the exact digest-bound workspace proof is accepted', () => {
   const { root, proof, packageCustody } = fixture();
   try {
-    assert.deepEqual(
-      assertPackedWorkspaceProof({ proof, workspaceRoot: root, packageCustody }),
-      {
-        proofDigest: proof.proofDigest,
-        cliPayloadDigest: packageCustody.cli.payloadDigest,
-        pipelinePayloadDigest: packageCustody.pipeline.payloadDigest,
-        protocolPayloadDigest: packageCustody.protocol.payloadDigest,
-      },
-    );
+    assert.deepEqual(assertPackedWorkspaceProof({ proof, workspaceRoot: root, packageCustody }), {
+      proofDigest: proof.proofDigest,
+      cliPayloadDigest: packageCustody.cli.payloadDigest,
+      pipelinePayloadDigest: packageCustody.pipeline.payloadDigest,
+      protocolPayloadDigest: packageCustody.protocol.payloadDigest,
+    });
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
 });
 
-
 test('Protocol proof rejects stale package bytes and absent Workers execution', () => {
   const { root, proof, packageCustody } = fixture();
   try {
-    assert.throws(() => assertPackedWorkspaceProof({ proof, workspaceRoot: root, packageCustody: { ...packageCustody, protocol: { ...packageCustody.protocol, payloadDigest: fakeDigest('a') } } }), { code: 'E_PACKED_WORKSPACE_PROOF_CUSTODY' });
+    assert.throws(
+      () =>
+        assertPackedWorkspaceProof({
+          proof,
+          workspaceRoot: root,
+          packageCustody: {
+            ...packageCustody,
+            protocol: { ...packageCustody.protocol, payloadDigest: fakeDigest('a') },
+          },
+        }),
+      { code: 'E_PACKED_WORKSPACE_PROOF_CUSTODY' },
+    );
     delete proof.installs.full.protocol.workers;
     proof.proofDigest = packedWorkspaceProofDigest(proof);
-    assert.throws(() => assertPackedWorkspaceProof({ proof, workspaceRoot: root, packageCustody }), { code: 'E_PACKED_WORKSPACE_PROOF_INSTALL' });
-  } finally { rmSync(root, { recursive: true, force: true }); }
+    assert.throws(
+      () => assertPackedWorkspaceProof({ proof, workspaceRoot: root, packageCustody }),
+      { code: 'E_PACKED_WORKSPACE_PROOF_INSTALL' },
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });

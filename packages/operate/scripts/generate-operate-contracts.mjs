@@ -29,6 +29,8 @@ function custodyFor(path) {
   if (path.startsWith('lib/dashboard/')) return 'canonical-protocol-dashboard-runtime';
   if (path === 'docs/protocol/operate-runtime-v2.md') return 'captured-development-overlay';
   if (path === 'scripts/generate-operate-contracts.mjs') return 'protocol-1.5-custody-generator';
+  if (path.startsWith('lib/pipeline/') || path.startsWith('scripts/'))
+    return 'pipeline-owned-source';
   throw new Error(`A changed legacy verification target has no additive custody class: ${path}`);
 }
 

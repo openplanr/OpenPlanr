@@ -13,22 +13,25 @@ import {
 } from './operate-governed-execution-v2.test.mjs';
 
 function hostileProxyCasReceipt({ durableState, claimedState, reads }) {
-  return new Proxy({
-    committed: false,
-    state: structuredClone(durableState),
-  }, {
-    get(target, property, receiver) {
-      if (property === 'committed') {
-        reads.count += 1;
-        return true;
-      }
-      if (property === 'state') {
-        reads.count += 1;
-        return structuredClone(claimedState);
-      }
-      return Reflect.get(target, property, receiver);
+  return new Proxy(
+    {
+      committed: false,
+      state: structuredClone(durableState),
     },
-  });
+    {
+      get(target, property, receiver) {
+        if (property === 'committed') {
+          reads.count += 1;
+          return true;
+        }
+        if (property === 'state') {
+          reads.count += 1;
+          return structuredClone(claimedState);
+        }
+        return Reflect.get(target, property, receiver);
+      },
+    },
+  );
 }
 
 function verificationPlanFor(action) {
@@ -61,7 +64,10 @@ test('restart reconstructs a terminal operation and returns lost-ack replay with
     initialValue: scenario.initialValue,
   });
   const firstStore = createGovernedExecutionCheckpointStore(scenario.initial);
-  const firstRuntime = createOperatingGovernedExecutionRuntimeV2({ initialState: scenario.initial, checkpointStore: firstStore });
+  const firstRuntime = createOperatingGovernedExecutionRuntimeV2({
+    initialState: scenario.initial,
+    checkpointStore: firstStore,
+  });
   const completed = await firstRuntime.execute(scenario.request, scenario.draft, {
     trustedHost: OPEN_REFERENCE_PROJECT_EXECUTOR_HOST_V2,
     targetAdapter,
@@ -71,8 +77,22 @@ test('restart reconstructs a terminal operation and returns lost-ack replay with
     checkpointStore: createGovernedExecutionCheckpointStore(completed.state),
   });
   const replay = await restarted.execute(scenario.request, scenario.draft, {
-    trustedHost: new Proxy({}, { get() { throw new Error('restart replay touched host'); } }),
-    targetAdapter: new Proxy({}, { get() { throw new Error('restart replay touched target'); } }),
+    trustedHost: new Proxy(
+      {},
+      {
+        get() {
+          throw new Error('restart replay touched host');
+        },
+      },
+    ),
+    targetAdapter: new Proxy(
+      {},
+      {
+        get() {
+          throw new Error('restart replay touched target');
+        },
+      },
+    ),
   });
   assert.equal(replay.replayed, true);
   assert.equal(replay.events.length, 0);
@@ -102,8 +122,22 @@ test('a stale runtime refreshes the shared checkpoint and replays before host or
     targetAdapter,
   });
   const replay = await runtimeB.execute(scenario.request, scenario.draft, {
-    trustedHost: new Proxy({}, { get() { throw new Error('stale runtime touched host'); } }),
-    targetAdapter: new Proxy({}, { get() { throw new Error('stale runtime touched target'); } }),
+    trustedHost: new Proxy(
+      {},
+      {
+        get() {
+          throw new Error('stale runtime touched host');
+        },
+      },
+    ),
+    targetAdapter: new Proxy(
+      {},
+      {
+        get() {
+          throw new Error('stale runtime touched target');
+        },
+      },
+    ),
   });
   assert.equal(replay.replayed, true);
   assert.deepEqual(replay.events, []);
@@ -122,8 +156,12 @@ test('restart from durable dispatch intent records explicit uncertainty and neve
   });
   let releaseCommittedIntent;
   let observeCommittedIntent;
-  const committedIntent = new Promise((resolve) => { observeCommittedIntent = resolve; });
-  const intentRelease = new Promise((resolve) => { releaseCommittedIntent = resolve; });
+  const committedIntent = new Promise((resolve) => {
+    observeCommittedIntent = resolve;
+  });
+  const intentRelease = new Promise((resolve) => {
+    releaseCommittedIntent = resolve;
+  });
   const firstStore = createGovernedExecutionCheckpointStore(scenario.initial, {
     async afterCommit({ phase }) {
       if (phase !== 'dispatch-intent') return;
@@ -131,7 +169,10 @@ test('restart from durable dispatch intent records explicit uncertainty and neve
       await intentRelease;
     },
   });
-  const firstRuntime = createOperatingGovernedExecutionRuntimeV2({ initialState: scenario.initial, checkpointStore: firstStore });
+  const firstRuntime = createOperatingGovernedExecutionRuntimeV2({
+    initialState: scenario.initial,
+    checkpointStore: firstStore,
+  });
   const delayedCompletion = firstRuntime.execute(scenario.request, scenario.draft, {
     trustedHost: OPEN_REFERENCE_PROJECT_EXECUTOR_HOST_V2,
     targetAdapter,
@@ -141,7 +182,11 @@ test('restart from durable dispatch intent records explicit uncertainty and neve
   assert.equal(dispatchCheckpoint.governedOperations[0].state, 'dispatching');
   assert.equal(dispatchCheckpoint.executionResults.length, 0);
   assert.equal(dispatchCheckpoint.capabilityGrants[0].consumedAt, scenario.draft.preparedAt);
-  assert.equal(targetAdapter.describe().effectCount, 0, 'durable CAS commit completes before the host can touch the target');
+  assert.equal(
+    targetAdapter.describe().effectCount,
+    0,
+    'durable CAS commit completes before the host can touch the target',
+  );
   const recovery = classifyOperatingGovernedRecoveryV2({
     state: dispatchCheckpoint,
     operationId: scenario.draft.operationId,
@@ -154,13 +199,29 @@ test('restart from durable dispatch intent records explicit uncertainty and neve
     initialState: dispatchCheckpoint,
     checkpointStore: createGovernedExecutionCheckpointStore(dispatchCheckpoint),
   });
-  await assert.rejects(restarted.execute(scenario.request, scenario.draft, {
-    trustedHost: new Proxy({}, { get() { throw new Error('uncertain replay touched host'); } }),
-    targetAdapter: new Proxy({}, { get() { throw new Error('uncertain replay touched target'); } }),
-  }), (error) => (
-    error.code === 'OPERATION_UNCERTAIN'
-    && error.details.context.recoveryDisposition === 'reconcile-before-retry'
-  ));
+  await assert.rejects(
+    restarted.execute(scenario.request, scenario.draft, {
+      trustedHost: new Proxy(
+        {},
+        {
+          get() {
+            throw new Error('uncertain replay touched host');
+          },
+        },
+      ),
+      targetAdapter: new Proxy(
+        {},
+        {
+          get() {
+            throw new Error('uncertain replay touched target');
+          },
+        },
+      ),
+    }),
+    (error) =>
+      error.code === 'OPERATION_UNCERTAIN' &&
+      error.details.context.recoveryDisposition === 'reconcile-before-retry',
+  );
   assert.equal(restarted.dispatchCount, 0);
   assert.equal(restarted.getState().executionResults.length, 1);
   assert.equal(restarted.getState().executionResults[0].status, 'uncertain');
@@ -186,8 +247,12 @@ test('restart rejects a foreign present pre-terminal relationship before commit,
   });
   let releaseCommittedIntent;
   let observeCommittedIntent;
-  const committedIntent = new Promise((resolve) => { observeCommittedIntent = resolve; });
-  const intentRelease = new Promise((resolve) => { releaseCommittedIntent = resolve; });
+  const committedIntent = new Promise((resolve) => {
+    observeCommittedIntent = resolve;
+  });
+  const intentRelease = new Promise((resolve) => {
+    releaseCommittedIntent = resolve;
+  });
   const firstStore = createGovernedExecutionCheckpointStore(scenario.initial, {
     async afterCommit({ phase }) {
       if (phase !== 'dispatch-intent') return;
@@ -230,14 +295,38 @@ test('restart rejects a foreign present pre-terminal relationship before commit,
           initialState: dispatchCheckpoint,
           checkpointStore: restartedStore,
         });
-        await assert.rejects(() => restarted.execute(scenario.request, scenario.draft, {
-          trustedHost: new Proxy({}, { get() { throw new Error('foreign restart touched host'); } }),
-          targetAdapter: new Proxy(targetAdapter, { get() { throw new Error('foreign restart touched target'); } }),
-        }), (error) => error?.code === 'OPERATING_SCOPE_INVALID', `${collection}.${field}`);
+        await assert.rejects(
+          () =>
+            restarted.execute(scenario.request, scenario.draft, {
+              trustedHost: new Proxy(
+                {},
+                {
+                  get() {
+                    throw new Error('foreign restart touched host');
+                  },
+                },
+              ),
+              targetAdapter: new Proxy(targetAdapter, {
+                get() {
+                  throw new Error('foreign restart touched target');
+                },
+              }),
+            }),
+          (error) => error?.code === 'OPERATING_SCOPE_INVALID',
+          `${collection}.${field}`,
+        );
         assert.deepEqual(commits, [], `${collection}.${field} commit count`);
         assert.equal(restarted.dispatchCount, 0, `${collection}.${field} dispatch count`);
-        assert.equal(restarted.getState().executionResults.length, 0, `${collection}.${field} result count`);
-        assert.equal(targetAdapter.describe().effectCount, 0, `${collection}.${field} effect count`);
+        assert.equal(
+          restarted.getState().executionResults.length,
+          0,
+          `${collection}.${field} result count`,
+        );
+        assert.equal(
+          targetAdapter.describe().effectCount,
+          0,
+          `${collection}.${field} effect count`,
+        );
       }
     }
   } finally {
@@ -270,11 +359,18 @@ test('a hostile Proxy CAS receipt cannot fabricate durable dispatch intent befor
     initialState: scenario.initial,
     checkpointStore,
   });
-  await assert.rejects(runtime.execute(scenario.request, scenario.draft, {
-    trustedHost: OPEN_REFERENCE_PROJECT_EXECUTOR_HOST_V2,
-    targetAdapter,
-  }), { code: 'CONCURRENT_MODIFICATION' });
-  assert.equal(reads.count, 0, 'CAS receipt values are consumed from descriptors, never Proxy get traps');
+  await assert.rejects(
+    runtime.execute(scenario.request, scenario.draft, {
+      trustedHost: OPEN_REFERENCE_PROJECT_EXECUTOR_HOST_V2,
+      targetAdapter,
+    }),
+    { code: 'CONCURRENT_MODIFICATION' },
+  );
+  assert.equal(
+    reads.count,
+    0,
+    'CAS receipt values are consumed from descriptors, never Proxy get traps',
+  );
   assert.equal(runtime.dispatchCount, 0);
   assert.equal(targetAdapter.describe().effectCount, 0);
   assert.equal(checkpointStore.snapshot().governedOperations.length, 0);
@@ -305,11 +401,14 @@ test('a hostile Proxy terminal CAS receipt cannot fabricate result ownership aft
     initialState: scenario.initial,
     checkpointStore,
   });
-  await assert.rejects(runtime.execute(scenario.request, scenario.draft, {
-    trustedHost: OPEN_REFERENCE_PROJECT_EXECUTOR_HOST_V2,
-    targetAdapter,
-  }), (error) => error.code === 'CONCURRENT_MODIFICATION'
-    && error.details.context.provenTerminal === true);
+  await assert.rejects(
+    runtime.execute(scenario.request, scenario.draft, {
+      trustedHost: OPEN_REFERENCE_PROJECT_EXECUTOR_HOST_V2,
+      targetAdapter,
+    }),
+    (error) =>
+      error.code === 'CONCURRENT_MODIFICATION' && error.details.context.provenTerminal === true,
+  );
   const durable = checkpointStore.snapshot();
   assert.equal(reads.count, 0, 'terminal receipt values are snapshotted without Proxy get traps');
   assert.equal(runtime.dispatchCount, 1);
@@ -318,7 +417,10 @@ test('a hostile Proxy terminal CAS receipt cannot fabricate result ownership aft
   assert.equal(durable.governedOperations[0].state, 'dispatching');
   assert.equal(durable.governedOperations[0].resultId, null);
   assert.equal(durable.executionResults.length, 0);
-  assert.equal(durable.artifacts.some(({ artifactId }) => (
-    artifactId === scenario.draft.uncertainty.resultArtifactId
-  )), false);
+  assert.equal(
+    durable.artifacts.some(
+      ({ artifactId }) => artifactId === scenario.draft.uncertainty.resultArtifactId,
+    ),
+    false,
+  );
 });

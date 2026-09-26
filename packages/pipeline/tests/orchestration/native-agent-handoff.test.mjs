@@ -17,7 +17,15 @@ execFileSync('git', ['init', '-q'], { cwd: projectRoot });
 execFileSync('git', ['add', '-A'], { cwd: projectRoot });
 execFileSync(
   'git',
-  ['-c', 'user.email=fixture@example.invalid', '-c', 'user.name=Fixture', 'commit', '-qm', 'fixture'],
+  [
+    '-c',
+    'user.email=fixture@example.invalid',
+    '-c',
+    'user.name=Fixture',
+    'commit',
+    '-qm',
+    'fixture',
+  ],
   { cwd: projectRoot },
 );
 after(() => rmSync(projectRoot, { recursive: true, force: true }));
@@ -26,11 +34,15 @@ function ship(extra = [], cwd = projectRoot) {
   // A handoff deliberately exits 2; only a missing payload is a failure here.
   let stdout;
   try {
-    stdout = execFileSync(process.execPath, [bin, 'ship', FEATURE, '--no-launch', '--json', ...extra], {
-      cwd,
-      encoding: 'utf8',
-      maxBuffer: 8 * 1024 * 1024,
-    });
+    stdout = execFileSync(
+      process.execPath,
+      [bin, 'ship', FEATURE, '--no-launch', '--json', ...extra],
+      {
+        cwd,
+        encoding: 'utf8',
+        maxBuffer: 8 * 1024 * 1024,
+      },
+    );
   } catch (error) {
     stdout = error.stdout ?? '';
     if (!stdout.trim()) throw error;
@@ -48,7 +60,10 @@ test('SHIP composes the canonical host entrypoint with the generated working con
   const result = ship(['--runtime', 'codex']);
   assert.equal(result.executionMode, 'handoff');
   assert.ok(result.context, 'the handoff carries working context');
-  assert.match(result.command, /Invoke \$planr-ship live-evidence-outcomes-and-governed-landing with the working context below/u);
+  assert.match(
+    result.command,
+    /Invoke \$planr-ship live-evidence-outcomes-and-governed-landing with the working context below/u,
+  );
   assert.match(result.context, /## Acceptance criteria/u);
   const adapter = { id: 'codex', entrypoints: { ship: '$planr-ship' }, capabilities: {} };
   const prompt = composeRuntimePrompt(adapter, 'ship', FEATURE, result.context);
@@ -61,7 +76,10 @@ test('SHIP composes the canonical host entrypoint with the generated working con
     !result.context.includes('planr-pipeline:ship'),
     'the generated context remains work data; the host entrypoint owns skill guidance',
   );
-  assert.ok(!/--run-id|advance-ship|finalize-ship/u.test(result.context), 'no lifecycle CLI is imposed');
+  assert.ok(
+    !/--run-id|advance-ship|finalize-ship/u.test(result.context),
+    'no lifecycle CLI is imposed',
+  );
 });
 
 test('the runtime receives concise implementation guidance without workflow governance', () => {
@@ -70,14 +88,23 @@ test('the runtime receives concise implementation guidance without workflow gove
   // say the agent owns them. What matters is Planr's own closing instruction, and that
   // nothing anywhere scripts a procedure for the runtime to follow.
   const ownVoice = context.slice(context.indexOf('## Implementation'));
-  assert.match(ownVoice, /Use the specification, active task details, repository context, and conventions above/u);
+  assert.match(
+    ownVoice,
+    /Use the specification, active task details, repository context, and conventions above/u,
+  );
   assert.match(ownVoice, /return changed files, checks run, and any material remaining issue/u);
   for (const directive of ['subagent', 'reviewer', 'correction pass', 'retry']) {
     assert.ok(!ownVoice.toLowerCase().includes(directive), `Planr must not prescribe ${directive}`);
   }
-  assert.ok(!/^\s*\d+\.\s+(Run|Execute|Invoke|Dispatch)\b/mu.test(context), 'no numbered procedure');
+  assert.ok(
+    !/^\s*\d+\.\s+(Run|Execute|Invoke|Dispatch)\b/mu.test(context),
+    'no numbered procedure',
+  );
   assert.ok(!/^\s*(First|Then|Next|Finally),/mu.test(context), 'no imposed sequence');
-  assert.ok(!/approval|authorization|stopping point/iu.test(ownVoice), 'no generic governance boilerplate');
+  assert.ok(
+    !/approval|authorization|stopping point/iu.test(ownVoice),
+    'no generic governance boilerplate',
+  );
 });
 
 test('re-running SHIP reproduces the same context from the current workspace', () => {
@@ -106,7 +133,15 @@ test('ordinary CLI SHIP skips release gate initialization', () => {
   execFileSync('git', ['add', '-A'], { cwd: contextRoot });
   execFileSync(
     'git',
-    ['-c', 'user.email=fixture@example.invalid', '-c', 'user.name=Fixture', 'commit', '-qm', 'fixture'],
+    [
+      '-c',
+      'user.email=fixture@example.invalid',
+      '-c',
+      'user.name=Fixture',
+      'commit',
+      '-qm',
+      'fixture',
+    ],
     { cwd: contextRoot },
   );
 
@@ -123,11 +158,14 @@ test('ordinary CLI SHIP skips release gate initialization', () => {
 
 test('ordinary SHIP surfaces a stale runtime lock as a diagnostic', () => {
   const contextRoot = materializePlanrFixture('native-agent-handoff');
-  writeFileSync(join(contextRoot, '.planr', 'runtime-lock.json'), JSON.stringify({
-    protocolVersion: '1.0.0',
-    components: { pipeline: '0.1.0' },
-    adapters: [],
-  }));
+  writeFileSync(
+    join(contextRoot, '.planr', 'runtime-lock.json'),
+    JSON.stringify({
+      protocolVersion: '1.0.0',
+      components: { pipeline: '0.1.0' },
+      adapters: [],
+    }),
+  );
 
   try {
     const result = ship(['--runtime', 'codex'], contextRoot);
@@ -142,13 +180,22 @@ test('ordinary SHIP surfaces a stale runtime lock as a diagnostic', () => {
 test('ordinary SHIP hands the canonical skill diagnostic context when planning artifacts are absent', () => {
   const contextRoot = mkdtempSync(join(tmpdir(), 'planr-missing-context-'));
   mkdirSync(join(contextRoot, '.planr'), { recursive: true });
-  writeFileSync(join(contextRoot, '.planr', 'config.json'), JSON.stringify({ defaultAgent: 'codex' }));
+  writeFileSync(
+    join(contextRoot, '.planr', 'config.json'),
+    JSON.stringify({ defaultAgent: 'codex' }),
+  );
 
   try {
     const result = ship(['--runtime', 'codex'], contextRoot);
     assert.equal(result.executionMode, 'handoff');
-    assert.match(result.command, /Invoke \$planr-ship live-evidence-outcomes-and-governed-landing/u);
-    assert.match(result.context, /Context diagnostic E_(?:SPEC_MISSING|R1_MISSING_STORIES|TASKS_MISSING)/u);
+    assert.match(
+      result.command,
+      /Invoke \$planr-ship live-evidence-outcomes-and-governed-landing/u,
+    );
+    assert.match(
+      result.context,
+      /Context diagnostic E_(?:SPEC_MISSING|R1_MISSING_STORIES|TASKS_MISSING)/u,
+    );
     assert.match(result.context, /No Planr specification document was available/u);
   } finally {
     rmSync(contextRoot, { recursive: true, force: true });

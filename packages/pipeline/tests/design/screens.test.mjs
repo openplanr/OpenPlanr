@@ -5,9 +5,14 @@ import { resolveScreens, countScreens } from '../../lib/design/screens.mjs';
 
 test('resolves a bullet list under a "Screens" heading', () => {
   const spec = [
-    '# Feature', 'intro prose',
-    '## Screens', '- Login', '- Dashboard', '- Settings',
-    '## Out of scope', '- billing',
+    '# Feature',
+    'intro prose',
+    '## Screens',
+    '- Login',
+    '- Dashboard',
+    '- Settings',
+    '## Out of scope',
+    '- billing',
   ].join('\n');
   assert.deepEqual(resolveScreens(spec), ['Login', 'Dashboard', 'Settings']);
 });
@@ -19,8 +24,15 @@ test('strips a trailing " — description" and markdown decoration', () => {
 
 test('reads a frontmatter ui_files list and de-duplicates against the body', () => {
   const spec = [
-    '---', 'title: X', 'ui_files:', '  - login.png', '  - dashboard.png', '---',
-    '## Screens', '- Login', '- Reports',
+    '---',
+    'title: X',
+    'ui_files:',
+    '  - login.png',
+    '  - dashboard.png',
+    '---',
+    '## Screens',
+    '- Login',
+    '- Reports',
   ].join('\n');
   // login (frontmatter) + dashboard (frontmatter) + Reports (body); "Login"
   // de-dupes against "login".

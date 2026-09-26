@@ -20,7 +20,10 @@ function write(path, content = '') {
 
 function addRepo(workspace, name, signature, remote) {
   const repo = join(workspace, name);
-  write(join(repo, signature), signature.endsWith('.json') ? '{}\n' : '---\nname: openplanr\n---\n');
+  write(
+    join(repo, signature),
+    signature.endsWith('.json') ? '{}\n' : '---\nname: openplanr\n---\n',
+  );
   if (remote) {
     write(join(repo, '.git', 'config'), `[remote "origin"]\n  url = ${remote}\n`);
   }
@@ -35,7 +38,10 @@ test('discovers the ecosystem using the real short checkout names', () => {
   const cli = addRepo(workspace, 'OpenPlanr', 'package.json');
   const web = addRepo(workspace, 'openplanr-web', 'package.json');
 
-  const result = discoverEcosystemRepositories({ pipelineRoot: pipeline, workspaceRoot: workspace });
+  const result = discoverEcosystemRepositories({
+    pipelineRoot: pipeline,
+    workspaceRoot: workspace,
+  });
 
   assert.equal(result.repositories.pipeline.path, pipeline);
   assert.equal(result.repositories.marketplace.path, marketplace);
@@ -47,11 +53,18 @@ test('discovers the ecosystem using the real short checkout names', () => {
 test('keeps compatibility with legacy prefixed checkout names', () => {
   const workspace = makeWorkspace();
   const pipeline = addRepo(workspace, 'planr-pipeline', '.claude-plugin/plugin.json');
-  const marketplace = addRepo(workspace, 'openplanr-marketplace', '.claude-plugin/marketplace.json');
+  const marketplace = addRepo(
+    workspace,
+    'openplanr-marketplace',
+    '.claude-plugin/marketplace.json',
+  );
   const skills = addRepo(workspace, 'openplanr-skills', 'skills/openplanr/SKILL.md');
   const web = addRepo(workspace, 'OpenPlanr-web', 'package.json');
 
-  const result = discoverEcosystemRepositories({ pipelineRoot: pipeline, workspaceRoot: workspace });
+  const result = discoverEcosystemRepositories({
+    pipelineRoot: pipeline,
+    workspaceRoot: workspace,
+  });
 
   assert.equal(result.repositories.marketplace.path, marketplace);
   assert.equal(result.repositories.skills.path, skills);
@@ -80,7 +93,10 @@ test('discovers arbitrarily named checkouts from OpenPlanr git remotes', () => {
     'https://github.com/openplanr/openplanr-web.git',
   );
 
-  const result = discoverEcosystemRepositories({ pipelineRoot: pipeline, workspaceRoot: workspace });
+  const result = discoverEcosystemRepositories({
+    pipelineRoot: pipeline,
+    workspaceRoot: workspace,
+  });
 
   assert.equal(result.repositories.marketplace.path, marketplace);
   assert.equal(result.repositories.marketplace.method, 'git-remote');
@@ -173,7 +189,10 @@ test('an unrelated workspace boundary does not inherit consolidated domains', ()
   write(join(pipeline, '.claude-plugin', 'plugin.json'), '{}\n');
   write(join(unrelated, '.keep'), '');
 
-  const result = discoverEcosystemRepositories({ pipelineRoot: pipeline, workspaceRoot: unrelated });
+  const result = discoverEcosystemRepositories({
+    pipelineRoot: pipeline,
+    workspaceRoot: unrelated,
+  });
 
   assert.equal(result.layout, 'multi-repository');
   assert.equal(result.repositories.pipeline.path, pipeline);
@@ -210,7 +229,11 @@ test('workspace root precedence is CLI, environment, then pipeline parent', () =
 
 test('rejects a missing --workspace-root value', () => {
   assert.throws(
-    () => resolveWorkspaceRoot({ pipelineRoot: '/workspace/planr-pipeline', argv: ['--workspace-root'] }),
+    () =>
+      resolveWorkspaceRoot({
+        pipelineRoot: '/workspace/planr-pipeline',
+        argv: ['--workspace-root'],
+      }),
     /requires a directory path/,
   );
 });

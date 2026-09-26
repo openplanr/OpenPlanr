@@ -19,26 +19,32 @@ const EXECUTIVE_ADVISOR_IDS = [
   'technology-risk',
 ];
 const fixture = (name) => {
-  const registration = JSON.parse(readFileSync(
-    new URL(`../../conformance/fixtures/operating-runtime-v2/${name}`, import.meta.url),
-    'utf8',
-  ));
+  const registration = JSON.parse(
+    readFileSync(
+      new URL(`../../conformance/fixtures/operating-runtime-v2/${name}`, import.meta.url),
+      'utf8',
+    ),
+  );
   registration.policyRequirements = [];
   return registration;
 };
 
 function boardInput(domainDescriptor) {
   const base = checkpoint();
-  const derived = deriveOperatingRuntimeDeltaV2({
-    cycleId: base.result.state.cycles[0].cycleId,
-    snapshotId: base.result.snapshot.snapshotId,
-    stateId: base.result.operatingState.stateId,
-  }, {
-    deltaId: 'dlt_parallel_advisors_001',
-    eventId: 'evt_parallel_advisors_delta_001',
-    timestamp: '2026-08-09T12:01:00.000Z',
-    correlationId: 'corr_parallel_advisors_delta_001',
-  }, { initialState: base.result.state });
+  const derived = deriveOperatingRuntimeDeltaV2(
+    {
+      cycleId: base.result.state.cycles[0].cycleId,
+      snapshotId: base.result.snapshot.snapshotId,
+      stateId: base.result.operatingState.stateId,
+    },
+    {
+      deltaId: 'dlt_parallel_advisors_001',
+      eventId: 'evt_parallel_advisors_delta_001',
+      timestamp: '2026-08-09T12:01:00.000Z',
+      correlationId: 'corr_parallel_advisors_delta_001',
+    },
+    { initialState: base.result.state },
+  );
   return {
     cycleId: base.result.state.cycles[0].cycleId,
     delta: derived.delta,
@@ -56,36 +62,56 @@ function boardInput(domainDescriptor) {
 test('the router fans out every advisor seat in parallel while scheduling by kernel kind', () => {
   const board = planOperatingIntelligenceBoardV2(boardInput(fixture('business-domain-valid.json')));
   assert.deepEqual(
-    board.plan.selectedRoles.filter(({ roleKind }) => roleKind === 'advisor').map(({ roleId }) => roleId),
+    board.plan.selectedRoles
+      .filter(({ roleKind }) => roleKind === 'advisor')
+      .map(({ roleId }) => roleId),
     [...EXECUTIVE_ADVISOR_IDS].sort((left, right) => left.localeCompare(right)),
   );
   assert.equal(
-    [...board.plan.selectedRoles.find(({ roleKind }) => roleKind === 'challenger').dependsOnRoleIds].sort().join(','),
+    [...board.plan.selectedRoles.find(({ roleKind }) => roleKind === 'challenger').dependsOnRoleIds]
+      .sort()
+      .join(','),
     [...EXECUTIVE_ADVISOR_IDS].sort().join(','),
   );
   assert.deepEqual(
-    [...board.plan.selectedRoles.find(({ roleKind }) => roleKind === 'chair').dependsOnRoleIds].sort(),
+    [
+      ...board.plan.selectedRoles.find(({ roleKind }) => roleKind === 'chair').dependsOnRoleIds,
+    ].sort(),
     [...EXECUTIVE_ADVISOR_IDS, 'independent-challenge'].sort(),
   );
   assert.equal(board.assignments.length, 7);
-  assert.ok(board.assignments.every(({ assignmentKind, roleId }) => (
-    (assignmentKind === 'advisor' && EXECUTIVE_ADVISOR_IDS.includes(roleId))
-    || (assignmentKind === 'challenger' && roleId === 'independent-challenge')
-    || (assignmentKind === 'chair' && roleId === 'chair')
-  )));
-  assert.ok(board.assignments.filter(({ assignmentKind }) => assignmentKind === 'advisor').every(({ dependsOn }) => dependsOn.length === 0));
+  assert.ok(
+    board.assignments.every(
+      ({ assignmentKind, roleId }) =>
+        (assignmentKind === 'advisor' && EXECUTIVE_ADVISOR_IDS.includes(roleId)) ||
+        (assignmentKind === 'challenger' && roleId === 'independent-challenge') ||
+        (assignmentKind === 'chair' && roleId === 'chair'),
+    ),
+  );
+  assert.ok(
+    board.assignments
+      .filter(({ assignmentKind }) => assignmentKind === 'advisor')
+      .every(({ dependsOn }) => dependsOn.length === 0),
+  );
 });
 
 test('advisor assignments release in parallel and challenger waits for every advisor proof', () => {
   const board = planOperatingIntelligenceBoardV2(boardInput(fixture('business-domain-valid.json')));
   validateOperatingIntelligenceAssignmentGraphV2(board.plan, board.assignments);
 
-  const advisorAssignments = board.assignments.filter(({ assignmentKind }) => assignmentKind === 'advisor');
-  const challenger = board.assignments.find(({ assignmentKind }) => assignmentKind === 'challenger');
+  const advisorAssignments = board.assignments.filter(
+    ({ assignmentKind }) => assignmentKind === 'advisor',
+  );
+  const challenger = board.assignments.find(
+    ({ assignmentKind }) => assignmentKind === 'challenger',
+  );
   const intents = deriveOperatingAssignmentReleaseIntentsV2({ assignments: board.assignments });
   assert.deepEqual(
     intents.map(({ assignmentId }) => assignmentId).sort(),
     advisorAssignments.map(({ assignmentId }) => assignmentId).sort(),
   );
-  assert.equal(intents.some(({ assignmentId }) => assignmentId === challenger.assignmentId), false);
+  assert.equal(
+    intents.some(({ assignmentId }) => assignmentId === challenger.assignmentId),
+    false,
+  );
 });

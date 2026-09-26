@@ -10,10 +10,13 @@ import {
   deriveOperatingVerificationFeedbackV2,
 } from '../../lib/operate/execution-verification-v2.mjs';
 
-const fixture = (name) => JSON.parse(readFileSync(
-  new URL(`../../conformance/fixtures/operating-runtime-v2/${name}`, import.meta.url),
-  'utf8',
-));
+const fixture = (name) =>
+  JSON.parse(
+    readFileSync(
+      new URL(`../../conformance/fixtures/operating-runtime-v2/${name}`, import.meta.url),
+      'utf8',
+    ),
+  );
 const clone = (value) => structuredClone(value);
 
 function scenario() {
@@ -38,14 +41,24 @@ function scenario() {
     activeReviewId: null,
   };
   const verificationPlan = {
-    kind: 'operating-action-verification-plan', schemaVersion: '1.0.0', protocolVersion: '2.0.0',
-    verificationPlanId: action.verificationPlanId, actionId: action.actionId,
-    scopeId: action.scopeId, domainId: action.domainId, domainVersion: action.domainVersion,
-    metricId: action.metricId, baseline: action.baseline, target: action.target,
-    window: action.verificationWindow, method: 'Compare one accepted observation with the declared target.',
+    kind: 'operating-action-verification-plan',
+    schemaVersion: '1.0.0',
+    protocolVersion: '2.0.0',
+    verificationPlanId: action.verificationPlanId,
+    actionId: action.actionId,
+    scopeId: action.scopeId,
+    domainId: action.domainId,
+    domainVersion: action.domainVersion,
+    metricId: action.metricId,
+    baseline: action.baseline,
+    target: action.target,
+    window: action.verificationWindow,
+    method: 'Compare one accepted observation with the declared target.',
     observationRequest: { kind: 'future-observation', reason: action.expectedResult },
-    evaluationRules: ['succeeded: target reached.'], revisitDecisionIds: [action.sourceDecisionId],
-    sourceArtifactId: action.sourceArtifactId, createdAt: action.createdAt,
+    evaluationRules: ['succeeded: target reached.'],
+    revisitDecisionIds: [action.sourceDecisionId],
+    sourceArtifactId: action.sourceArtifactId,
+    createdAt: action.createdAt,
   };
   return { action, cycle, operation, result, verificationPlan };
 }
@@ -71,25 +84,41 @@ test('direct lifecycle and feedback reject mixed Action, Cycle, and plan scope o
     domainVersion: '9.9.9',
   };
   for (const field of ['scopeId', 'domainId', 'domainVersion']) {
-    assert.throws(() => buildOperatingExecutionLifecycleV2({
-      ...value,
-      cycle: { ...value.cycle, [field]: foreign[field] },
-    }), (error) => error?.code === 'OPERATING_SCOPE_INVALID');
-    assert.throws(() => buildOperatingExecutionLifecycleV2({
-      ...value,
-      verificationPlan: { ...value.verificationPlan, [field]: foreign[field] },
-    }), (error) => error?.code === 'OPERATING_SCOPE_INVALID');
-    assert.throws(() => deriveOperatingVerificationFeedbackV2({
-      action: value.action,
-      verificationPlan: { ...value.verificationPlan, [field]: foreign[field] },
-      executionStatus: 'success',
-    }), (error) => error?.code === 'OPERATING_SCOPE_INVALID');
-    assert.throws(() => deriveOperatingVerificationFeedbackV2({
-      action: value.action,
-      verificationPlan: value.verificationPlan,
-      executionStatus: 'success',
-      cycle: { ...value.cycle, [field]: foreign[field] },
-    }), (error) => error?.code === 'OPERATING_SCOPE_INVALID');
+    assert.throws(
+      () =>
+        buildOperatingExecutionLifecycleV2({
+          ...value,
+          cycle: { ...value.cycle, [field]: foreign[field] },
+        }),
+      (error) => error?.code === 'OPERATING_SCOPE_INVALID',
+    );
+    assert.throws(
+      () =>
+        buildOperatingExecutionLifecycleV2({
+          ...value,
+          verificationPlan: { ...value.verificationPlan, [field]: foreign[field] },
+        }),
+      (error) => error?.code === 'OPERATING_SCOPE_INVALID',
+    );
+    assert.throws(
+      () =>
+        deriveOperatingVerificationFeedbackV2({
+          action: value.action,
+          verificationPlan: { ...value.verificationPlan, [field]: foreign[field] },
+          executionStatus: 'success',
+        }),
+      (error) => error?.code === 'OPERATING_SCOPE_INVALID',
+    );
+    assert.throws(
+      () =>
+        deriveOperatingVerificationFeedbackV2({
+          action: value.action,
+          verificationPlan: value.verificationPlan,
+          executionStatus: 'success',
+          cycle: { ...value.cycle, [field]: foreign[field] },
+        }),
+      (error) => error?.code === 'OPERATING_SCOPE_INVALID',
+    );
   }
 });
 
@@ -97,53 +126,90 @@ test('observation-owned Outcome and Learning confirm the hypothesis with exact p
   const value = scenario();
   const records = fixture('action-verification-valid.json');
   const outcome = {
-    ...clone(records.outcome), actionId: value.action.actionId,
-    scopeId: value.action.scopeId, domainId: value.action.domainId, domainVersion: value.action.domainVersion,
+    ...clone(records.outcome),
+    actionId: value.action.actionId,
+    scopeId: value.action.scopeId,
+    domainId: value.action.domainId,
+    domainVersion: value.action.domainVersion,
     verificationPlanId: value.verificationPlan.verificationPlanId,
   };
   const learning = {
-    ...clone(records.learning), outcomeId: outcome.outcomeId,
-    scopeId: value.action.scopeId, domainId: value.action.domainId, domainVersion: value.action.domainVersion,
+    ...clone(records.learning),
+    outcomeId: outcome.outcomeId,
+    scopeId: value.action.scopeId,
+    domainId: value.action.domainId,
+    domainVersion: value.action.domainVersion,
   };
   const pending = deriveOperatingVerificationFeedbackV2({
-    action: value.action, verificationPlan: value.verificationPlan, executionStatus: 'success',
+    action: value.action,
+    verificationPlan: value.verificationPlan,
+    executionStatus: 'success',
   });
   const confirmed = deriveOperatingVerificationFeedbackV2({
-    action: value.action, verificationPlan: value.verificationPlan, executionStatus: 'success', outcome, learning,
+    action: value.action,
+    verificationPlan: value.verificationPlan,
+    executionStatus: 'success',
+    outcome,
+    learning,
   });
   assert.equal(pending.hypothesisStatus, 'pending');
   assert.equal(pending.hypothesisConfirmed, false);
   assert.equal(confirmed.hypothesisStatus, 'confirmed');
   assert.equal(confirmed.provenance.outcomeId, outcome.outcomeId);
   assert.equal(confirmed.provenance.learningId, learning.learningId);
-  assert.throws(() => deriveOperatingVerificationFeedbackV2({
-    action: value.action,
-    verificationPlan: value.verificationPlan,
-    executionStatus: 'success',
-    outcome: { ...outcome, domainId: 'business' },
-  }), (error) => error?.code === 'OPERATING_SCOPE_INVALID');
-  assert.throws(() => deriveOperatingVerificationFeedbackV2({
-    action: value.action,
-    verificationPlan: value.verificationPlan,
-    executionStatus: 'success',
-    outcome,
-    learning: { ...learning, evidenceRefIds: [] },
-  }), (error) => error?.code === 'STATE_TRANSITION_INVALID');
+  assert.throws(
+    () =>
+      deriveOperatingVerificationFeedbackV2({
+        action: value.action,
+        verificationPlan: value.verificationPlan,
+        executionStatus: 'success',
+        outcome: { ...outcome, domainId: 'business' },
+      }),
+    (error) => error?.code === 'OPERATING_SCOPE_INVALID',
+  );
+  assert.throws(
+    () =>
+      deriveOperatingVerificationFeedbackV2({
+        action: value.action,
+        verificationPlan: value.verificationPlan,
+        executionStatus: 'success',
+        outcome,
+        learning: { ...learning, evidenceRefIds: [] },
+      }),
+    (error) => error?.code === 'STATE_TRANSITION_INVALID',
+  );
 });
 
 test('execution outcomes remain distinct, including rollback and cancellation truth', () => {
   assert.deepEqual(OPERATING_EXECUTION_VERIFICATION_STATUSES_V2, [
-    'success', 'failure', 'blocked', 'uncertain', 'partial', 'cancelled', 'rolled-back',
+    'success',
+    'failure',
+    'blocked',
+    'uncertain',
+    'partial',
+    'cancelled',
+    'rolled-back',
   ]);
   assert.equal(deriveOperatingExecutionVerificationStatusV2({ cancelled: true }), 'cancelled');
   const { result } = scenario();
   for (const [status, expected] of [
-    ['succeeded', 'success'], ['failed', 'failure'], ['blocked', 'blocked'],
-    ['uncertain', 'uncertain'], ['partial', 'partial'],
+    ['succeeded', 'success'],
+    ['failed', 'failure'],
+    ['blocked', 'blocked'],
+    ['uncertain', 'uncertain'],
+    ['partial', 'partial'],
   ]) {
-    assert.equal(deriveOperatingExecutionVerificationStatusV2({ result: { ...result, status } }), expected);
+    assert.equal(
+      deriveOperatingExecutionVerificationStatusV2({ result: { ...result, status } }),
+      expected,
+    );
   }
-  assert.equal(deriveOperatingExecutionVerificationStatusV2({
-    rollbackResult: fixture('governed-execution-contracts-valid.json')['operating-rollback-result'],
-  }), 'rolled-back');
+  assert.equal(
+    deriveOperatingExecutionVerificationStatusV2({
+      rollbackResult: fixture('governed-execution-contracts-valid.json')[
+        'operating-rollback-result'
+      ],
+    }),
+    'rolled-back',
+  );
 });

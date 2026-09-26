@@ -57,12 +57,16 @@ function classifiedRows(markdown) {
   const marker = '| Repository | Path | Classification | Kind | Proof mode |';
   const index = markdown.indexOf(marker);
   assert.notEqual(index, -1, 'human view has classified-surface table');
-  return markdown.slice(index + marker.length).split('\n').slice(1)
+  return markdown
+    .slice(index + marker.length)
+    .split('\n')
+    .slice(1)
     .filter((line) => /^\| [^|]+ \| [^|]+ \| [A-Z0-9_]+ \|/.test(line))
     .map((line) => {
       const [, repositoryId, path, classification] = line.split('|').map((part) => part.trim());
       return `${repositoryId}:${path}:${classification}`;
-    }).sort();
+    })
+    .sort();
 }
 
 function throwsMutation(mutator, label) {
@@ -72,13 +76,21 @@ function throwsMutation(mutator, label) {
 }
 
 test('repository identity removes local clone paths and remote credentials', () => {
-  assert.equal(portableRepositoryRemote('/private/tmp/openplanr-clean-clone/OpenPlanr'), 'local-checkout');
+  assert.equal(
+    portableRepositoryRemote('/private/tmp/openplanr-clean-clone/OpenPlanr'),
+    'local-checkout',
+  );
   assert.equal(portableRepositoryRemote('/Users/example/Work/OpenPlanr'), 'local-checkout');
   assert.equal(portableRepositoryRemote('file:///private/tmp/OpenPlanr'), 'local-checkout');
   assert.equal(portableRepositoryRemote('../OpenPlanr'), 'local-checkout');
-  assert.equal(portableRepositoryRemote('git@github.com:AsemDevs/openplanr.git'), 'github.com/AsemDevs/openplanr.git');
   assert.equal(
-    portableRepositoryRemote('https://token@example.com/AsemDevs/openplanr.git?access=secret#branch'),
+    portableRepositoryRemote('git@github.com:AsemDevs/openplanr.git'),
+    'github.com/AsemDevs/openplanr.git',
+  );
+  assert.equal(
+    portableRepositoryRemote(
+      'https://token@example.com/AsemDevs/openplanr.git?access=secret#branch',
+    ),
     'example.com/AsemDevs/openplanr.git',
   );
 });
@@ -89,16 +101,35 @@ test('Operate reset inventory is schema-valid, deterministic, portable, and agre
   assert.equal(JSON.stringify(first), JSON.stringify(second));
   assert.equal(digest(JSON.stringify(first)), digest(JSON.stringify(second)));
 
-  const schema = JSON.parse(readFileSync(resolve(phaseRoot, 'operate-reset-inventory.schema.json'), 'utf8'));
+  const schema = JSON.parse(
+    readFileSync(resolve(phaseRoot, 'operate-reset-inventory.schema.json'), 'utf8'),
+  );
   assert.deepEqual(validateJson(first, schema), []);
   assert.deepEqual(
     classifiedRows(renderInventoryMarkdown(first)),
-    first.surfaces.map(({ repositoryId, path, classification }) => `${repositoryId}:${path}:${classification}`).sort(),
+    first.surfaces
+      .map(({ repositoryId, path, classification }) => `${repositoryId}:${path}:${classification}`)
+      .sort(),
   );
-  assert.equal(first.surfaces.some(({ path }) => path === 'lib/operate/runtime-foundation.mjs'), true);
-  assert.equal(first.surfaces.some(({ path }) => path === 'lib/operate/compatibility-v1_4.mjs'), false);
-  assert.equal(first.surfaces.find(({ path }) => path === 'schemas/v2.0.0/operating-cycle.schema.json').evidence.schemaRegistration.length, 1);
-  assert.equal(first.protectedPreserveEvidence.every(({ matchesRecorded, preserveOnly }) => matchesRecorded && preserveOnly), true);
+  assert.equal(
+    first.surfaces.some(({ path }) => path === 'lib/operate/runtime-foundation.mjs'),
+    true,
+  );
+  assert.equal(
+    first.surfaces.some(({ path }) => path === 'lib/operate/compatibility-v1_4.mjs'),
+    false,
+  );
+  assert.equal(
+    first.surfaces.find(({ path }) => path === 'schemas/v2.0.0/operating-cycle.schema.json')
+      .evidence.schemaRegistration.length,
+    1,
+  );
+  assert.equal(
+    first.protectedPreserveEvidence.every(
+      ({ matchesRecorded, preserveOnly }) => matchesRecorded && preserveOnly,
+    ),
+    true,
+  );
   assert.equal(JSON.stringify(first).includes('/Users/'), false);
   assert.equal(JSON.stringify(first).includes('../'), false);
 });
@@ -110,17 +141,23 @@ test('inventory rejects the required destructive-decision mutation fixtures', ()
   }, 'embedded absolute repository identity is rejected');
 
   throwsMutation((inventory) => {
-    inventory.surfaces.find(({ path }) => path === 'lib/protocol/index.d.ts').classification = 'UNCLASSIFIED_EXPORT';
+    inventory.surfaces.find(({ path }) => path === 'lib/protocol/index.d.ts').classification =
+      'UNCLASSIFIED_EXPORT';
   }, 'unclassified export is rejected');
 
   throwsMutation((inventory) => {
     const surface = inventory.surfaces.find(({ path }) => path === 'docs/generated/adapters.md');
-    surface.evidence.observations = surface.evidence.observations.filter((entry) => entry !== 'generated:declared-generator');
+    surface.evidence.observations = surface.evidence.observations.filter(
+      (entry) => entry !== 'generated:declared-generator',
+    );
     surface.evidence.generatorEvidence = [];
     surface.evidence.observations.push('generated:declared-generator');
   }, 'stale generated asset without generator evidence is rejected');
 
-  assert.equal(first.surfaces.some(({ path }) => path.includes('compatibility-v1_4')), false);
+  assert.equal(
+    first.surfaces.some(({ path }) => path.includes('compatibility-v1_4')),
+    false,
+  );
 });
 
 test('inventory CLI is read-only by default and rejects every non-explicit write mode without changing protected evidence', () => {
@@ -131,7 +168,11 @@ test('inventory CLI is read-only by default and rejects every non-explicit write
   assertPreserved(before, 'plain invocation leaves every protected file byte-identical');
 
   const checkSummary = parseSummary(runInventory(['--check']), 'explicit check invocation');
-  assert.deepEqual(checkSummary, defaultSummary, '--check has the same deterministic machine summary');
+  assert.deepEqual(
+    checkSummary,
+    defaultSummary,
+    '--check has the same deterministic machine summary',
+  );
   assertPreserved(before, '--check leaves every protected file byte-identical');
 
   const rejected = [
@@ -169,12 +210,25 @@ test('inventory materializes a schema-valid, internally consistent bundle only i
     for (const path of preservedPaths) {
       assert.equal(existsSync(join(target, path)), true, `write target includes ${path}`);
     }
-    const inventory = JSON.parse(readFileSync(join(target, 'OPERATE_LEGACY_INVENTORY.json'), 'utf8'));
-    const schema = JSON.parse(readFileSync(join(target, 'operate-reset-inventory.schema.json'), 'utf8'));
+    const inventory = JSON.parse(
+      readFileSync(join(target, 'OPERATE_LEGACY_INVENTORY.json'), 'utf8'),
+    );
+    const schema = JSON.parse(
+      readFileSync(join(target, 'operate-reset-inventory.schema.json'), 'utf8'),
+    );
     assert.deepEqual(validateJson(inventory, schema), []);
-    assert.equal(readFileSync(join(target, 'OPERATE_LEGACY_INVENTORY.md'), 'utf8'), renderInventoryMarkdown(inventory));
-    assert.equal(readFileSync(join(target, 'OPERATE_DOWNSTREAM_DELETION_MANIFEST.md'), 'utf8'), renderDownstreamManifest(inventory));
-    assertPreserved(before, 'explicit disposable output leaves every protected file byte-identical');
+    assert.equal(
+      readFileSync(join(target, 'OPERATE_LEGACY_INVENTORY.md'), 'utf8'),
+      renderInventoryMarkdown(inventory),
+    );
+    assert.equal(
+      readFileSync(join(target, 'OPERATE_DOWNSTREAM_DELETION_MANIFEST.md'), 'utf8'),
+      renderDownstreamManifest(inventory),
+    );
+    assertPreserved(
+      before,
+      'explicit disposable output leaves every protected file byte-identical',
+    );
   } finally {
     rmSync(target, { recursive: true, force: true });
   }

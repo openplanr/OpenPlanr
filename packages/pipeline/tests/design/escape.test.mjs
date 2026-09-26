@@ -4,8 +4,10 @@ import { test } from 'node:test';
 import { escapeHtml, embedJson, hasUnsafeHtml } from '../../lib/design/escape.mjs';
 
 test('escapeHtml escapes all five HTML-significant characters', () => {
-  assert.equal(escapeHtml(`<a href="x" class='y'>& tag</a>`),
-    '&lt;a href=&quot;x&quot; class=&#39;y&#39;&gt;&amp; tag&lt;/a&gt;');
+  assert.equal(
+    escapeHtml(`<a href="x" class='y'>& tag</a>`),
+    '&lt;a href=&quot;x&quot; class=&#39;y&#39;&gt;&amp; tag&lt;/a&gt;',
+  );
 });
 
 test('escapeHtml coerces null/undefined/numbers without throwing', () => {

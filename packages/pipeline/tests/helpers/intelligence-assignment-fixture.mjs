@@ -73,14 +73,16 @@ export function intelligenceAssignmentFieldsV2() {
       questionIds: ['test-intelligence-question'],
     },
     evidenceRequirements: [],
-    resultRequirements: [{
-      requirementId: 'test-intelligence-analysis-result',
-      description: 'The test result retains one bounded analysis profile.',
-      target: 'analysis',
-      appliesToOutcomes: ['always'],
-      minimumItems: 1,
-      maximumItems: 16,
-    }],
+    resultRequirements: [
+      {
+        requirementId: 'test-intelligence-analysis-result',
+        description: 'The test result retains one bounded analysis profile.',
+        target: 'analysis',
+        appliesToOutcomes: ['always'],
+        minimumItems: 1,
+        maximumItems: 16,
+      },
+    ],
   };
 }
 
@@ -95,16 +97,19 @@ export function chairAssignmentFieldsV2() {
       questionIds: ['test-chair-question'],
     },
     evidenceRequirements: [],
-    resultRequirements: [{
-      requirementId: 'test-chair-decisions',
-      description: 'The test Chair accounts for its bounded decisions.',
-      target: 'decisions',
-      appliesToOutcomes: ['always'],
-      minimumItems: 0,
-      maximumItems: 16,
-    }],
+    resultRequirements: [
+      {
+        requirementId: 'test-chair-decisions',
+        description: 'The test Chair accounts for its bounded decisions.',
+        target: 'decisions',
+        appliesToOutcomes: ['always'],
+        minimumItems: 0,
+        maximumItems: 16,
+      },
+    ],
     mandate: structuredClone({
-      scope: 'Evidence-bound synthesis. Carry missing, abandoned, and conflicting work as gaps. Propose Decisions and Actions without approval or execution authority.',
+      scope:
+        'Evidence-bound synthesis. Carry missing, abandoned, and conflicting work as gaps. Propose Decisions and Actions without approval or execution authority.',
       allowedEvidence: [
         'terminal selected advisor Artifacts',
         'Challenger Artifact',

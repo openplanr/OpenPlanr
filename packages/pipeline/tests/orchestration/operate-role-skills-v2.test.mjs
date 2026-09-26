@@ -3,7 +3,10 @@ import { readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { test } from 'node:test';
 
-import { projectedSkillName, renderNamespacedSkill } from '../../../../scripts/skills/host-invocations.mjs';
+import {
+  projectedSkillName,
+  renderNamespacedSkill,
+} from '../../../../scripts/skills/host-invocations.mjs';
 import { fileURLToPath } from 'node:url';
 
 import { compileOperateContractRegistry } from '../../lib/operate/contracts/compiler.mjs';
@@ -20,9 +23,12 @@ import { OPERATE_CONTRACT_CATALOG_V2 } from '../../lib/protocol/generated/contra
 
 const PIPELINE_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const WORKSPACE_ROOT = resolve(PIPELINE_ROOT, '../..');
-const RETIRED_CEREMONY = /packetId|assignmentId|resultPath|templatePath|evidence-digest|idempotenc|content-base64|data\.continuation|allowedActions/iu;
-const GOVERNANCE_PROSE = /Human gate|named cycle owner|correction (?:pass|loop|attempt)|retry loop|Evidence index|Audit note|receipt|sha-?256|digest-bound/iu;
-const MODEL_OR_PIPELINE_SUBPROCESS = /\b(?:planr-pipeline|planr plan|planr spec decompose|ANTHROPIC_API_KEY|OPENAI_API_KEY|OLLAMA_HOST)\b/iu;
+const RETIRED_CEREMONY =
+  /packetId|assignmentId|resultPath|templatePath|evidence-digest|idempotenc|content-base64|data\.continuation|allowedActions/iu;
+const GOVERNANCE_PROSE =
+  /Human gate|named cycle owner|correction (?:pass|loop|attempt)|retry loop|Evidence index|Audit note|receipt|sha-?256|digest-bound/iu;
+const MODEL_OR_PIPELINE_SUBPROCESS =
+  /\b(?:planr-pipeline|planr plan|planr spec decompose|ANTHROPIC_API_KEY|OPENAI_API_KEY|OLLAMA_HOST)\b/iu;
 
 function readWorkspace(path) {
   return readFileSync(join(WORKSPACE_ROOT, path), 'utf8');
@@ -31,10 +37,18 @@ function readWorkspace(path) {
 function parseFrontmatter(markdown) {
   const match = markdown.match(/^---\n([\s\S]*?)\n---\n/iu);
   assert.ok(match, 'skill frontmatter exists');
-  return Object.fromEntries(match[1].split('\n').map((line) => {
-    const separator = line.indexOf(':');
-    return [line.slice(0, separator).trim(), line.slice(separator + 1).trim().replace(/^"|"$/gu, '')];
-  }));
+  return Object.fromEntries(
+    match[1].split('\n').map((line) => {
+      const separator = line.indexOf(':');
+      return [
+        line.slice(0, separator).trim(),
+        line
+          .slice(separator + 1)
+          .trim()
+          .replace(/^"|"$/gu, ''),
+      ];
+    }),
+  );
 }
 
 function stripCursorFrontmatter(markdown) {
@@ -76,9 +90,10 @@ test('canonical Operate role skills bind every Protocol-owned executive role', (
       );
       assert.match(markdown, /references\/operate-advisor-contract\.md/u, binding.skillName);
       assert.ok(
-        manifest.resources.some(({ path, kind }) => (
-          path === 'references/operate-advisor-contract.md' && kind === 'reference'
-        )),
+        manifest.resources.some(
+          ({ path, kind }) =>
+            path === 'references/operate-advisor-contract.md' && kind === 'reference',
+        ),
         `${binding.skillName}: declares shared contract`,
       );
       assert.match(contract, /## Recommended next move/u, binding.skillName);
@@ -143,11 +158,26 @@ test('the parent Operate skill runs all seven lenses in-session and produces act
 
 test('generated identity formulas retain exact runtime compatibility', () => {
   const assignmentId = 'asg_formula_contract_001';
-  assert.equal(deriveOperatingRoleLocalPositionIdV2('analysis', assignmentId, 2), `analysis:${assignmentId}:2`);
-  assert.equal(deriveOperatingRoleLocalPositionIdV2('finding', assignmentId, 3), `finding:${assignmentId}:3`);
-  assert.equal(deriveOperatingRoleLocalPositionIdV2('decision', assignmentId, 4), `decision:${assignmentId}:4`);
-  assert.equal(deriveOperatingRoleLocalPositionIdV2('action-hypothesis', assignmentId, 5), `action-hypothesis:${assignmentId}:5`);
-  assert.equal(deriveOperatingRoleLocalRecommendationIdV2(assignmentId), `recommendation:${assignmentId}:1`);
+  assert.equal(
+    deriveOperatingRoleLocalPositionIdV2('analysis', assignmentId, 2),
+    `analysis:${assignmentId}:2`,
+  );
+  assert.equal(
+    deriveOperatingRoleLocalPositionIdV2('finding', assignmentId, 3),
+    `finding:${assignmentId}:3`,
+  );
+  assert.equal(
+    deriveOperatingRoleLocalPositionIdV2('decision', assignmentId, 4),
+    `decision:${assignmentId}:4`,
+  );
+  assert.equal(
+    deriveOperatingRoleLocalPositionIdV2('action-hypothesis', assignmentId, 5),
+    `action-hypothesis:${assignmentId}:5`,
+  );
+  assert.equal(
+    deriveOperatingRoleLocalRecommendationIdV2(assignmentId),
+    `recommendation:${assignmentId}:1`,
+  );
   assert.equal(deriveOperatingChairLedgerIdV2(assignmentId), 'ldg_formula_contract_001');
   assert.throws(
     () => deriveOperatingRoleLocalPositionIdV2('foreign', assignmentId, 1),
@@ -156,10 +186,9 @@ test('generated identity formulas retain exact runtime compatibility', () => {
 });
 
 test('compiled Operate registry and static role bindings cannot drift', () => {
-  const sourceRegistry = JSON.parse(readFileSync(
-    join(PIPELINE_ROOT, 'registry/operate-v2-contracts.json'),
-    'utf8',
-  ));
+  const sourceRegistry = JSON.parse(
+    readFileSync(join(PIPELINE_ROOT, 'registry/operate-v2-contracts.json'), 'utf8'),
+  );
   const expected = businessExecutiveRoles(compileOperateContractRegistry(sourceRegistry));
   assert.deepEqual(
     expected.map(({ roleId, skillName }) => [roleId, skillName]),

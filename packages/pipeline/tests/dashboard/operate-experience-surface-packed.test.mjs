@@ -1,82 +1,64 @@
-import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
-import { createHash } from "node:crypto";
-import {
-	mkdirSync,
-	mkdtempSync,
-	readFileSync,
-	rmSync,
-	writeFileSync,
-} from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import test from "node:test";
-import { fileURLToPath } from "node:url";
+import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 
-const root = fileURLToPath(new URL("../..", import.meta.url));
+const root = fileURLToPath(new URL('../..', import.meta.url));
 const custodyPaths = Object.freeze([
-	"schemas/v1.2.0/operate-experience-surface.schema.json",
-	"schemas/v1.2.0/operate-experience-surface.mjs",
-	"lib/dashboard/operate-experience-surface-contract.mjs",
-	"lib/dashboard/generated/operate-experience-surface-schema-data.mjs",
-	"schemas/v1.2.0/dashboard-bootstrap.schema.json",
+  'schemas/v1.2.0/operate-experience-surface.schema.json',
+  'schemas/v1.2.0/operate-experience-surface.mjs',
+  'lib/dashboard/operate-experience-surface-contract.mjs',
+  'lib/dashboard/generated/operate-experience-surface-schema-data.mjs',
+  'schemas/v1.2.0/dashboard-bootstrap.schema.json',
 ]);
 
 function sha256(path) {
-	return createHash("sha256").update(readFileSync(path)).digest("hex");
+  return createHash('sha256').update(readFileSync(path)).digest('hex');
 }
 
 function run(command, args, options = {}) {
-	const result = spawnSync(command, args, { encoding: "utf8", ...options });
-	assert.equal(
-		result.status,
-		0,
-		`${command} ${args.join(" ")} failed\n${result.stderr}`,
-	);
-	return result;
+  const result = spawnSync(command, args, { encoding: 'utf8', ...options });
+  assert.equal(result.status, 0, `${command} ${args.join(' ')} failed\n${result.stderr}`);
+  return result;
 }
 
-test("packed consumer resolves and executes the public dashboard surface assertion", {
-	timeout: 120_000,
+test('packed consumer resolves and executes the public dashboard surface assertion', {
+  timeout: 120_000,
 }, () => {
-	const temporaryRoot = mkdtempSync(join(tmpdir(), "planr-surface-pack-"));
-	try {
-		const packed = run(
-			"npm",
-			[
-				"pack",
-				"--ignore-scripts",
-				"--json",
-				"--cache",
-				join(temporaryRoot, "npm-cache"),
-				"--pack-destination",
-				temporaryRoot,
-			],
-			{ cwd: root },
-		);
-		const [{ filename }] = JSON.parse(packed.stdout);
-		const installedPackage = join(
-			temporaryRoot,
-			"consumer",
-			"node_modules",
-			"planr-pipeline",
-		);
-		mkdirSync(installedPackage, { recursive: true });
-		run("tar", [
-			"-xzf",
-			join(temporaryRoot, filename),
-			"-C",
-			installedPackage,
-			"--strip-components=1",
-		]);
-		const consumer = join(temporaryRoot, "consumer");
-		writeFileSync(
-			join(consumer, "package.json"),
-			JSON.stringify({ type: "module" }),
-		);
-		writeFileSync(
-			join(consumer, "verify.mjs"),
-			`
+  const temporaryRoot = mkdtempSync(join(tmpdir(), 'planr-surface-pack-'));
+  try {
+    const packed = run(
+      'npm',
+      [
+        'pack',
+        '--ignore-scripts',
+        '--json',
+        '--cache',
+        join(temporaryRoot, 'npm-cache'),
+        '--pack-destination',
+        temporaryRoot,
+      ],
+      { cwd: root },
+    );
+    const [{ filename }] = JSON.parse(packed.stdout);
+    const installedPackage = join(temporaryRoot, 'consumer', 'node_modules', 'planr-pipeline');
+    mkdirSync(installedPackage, { recursive: true });
+    run('tar', [
+      '-xzf',
+      join(temporaryRoot, filename),
+      '-C',
+      installedPackage,
+      '--strip-components=1',
+    ]);
+    const consumer = join(temporaryRoot, 'consumer');
+    writeFileSync(join(consumer, 'package.json'), JSON.stringify({ type: 'module' }));
+    writeFileSync(
+      join(consumer, 'verify.mjs'),
+      `
       import assert from 'node:assert/strict';
       import { readFileSync } from 'node:fs';
       import { resolve } from 'node:path';
@@ -116,16 +98,16 @@ test("packed consumer resolves and executes the public dashboard surface asserti
       }];
       assert.ok(validateOperateExperienceSurfaceV1(hostile).length > 0);
     `,
-		);
-		for (const path of custodyPaths) {
-			assert.equal(
-				sha256(join(installedPackage, path)),
-				sha256(join(root, path)),
-				`${path}: packed bytes must match source`,
-			);
-		}
-		run(process.execPath, ["verify.mjs"], { cwd: consumer });
-	} finally {
-		rmSync(temporaryRoot, { recursive: true, force: true });
-	}
+    );
+    for (const path of custodyPaths) {
+      assert.equal(
+        sha256(join(installedPackage, path)),
+        sha256(join(root, path)),
+        `${path}: packed bytes must match source`,
+      );
+    }
+    run(process.execPath, ['verify.mjs'], { cwd: consumer });
+  } finally {
+    rmSync(temporaryRoot, { recursive: true, force: true });
+  }
 });

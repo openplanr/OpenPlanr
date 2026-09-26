@@ -7,8 +7,11 @@ import { parseFrontmatter, splitFrontmatter } from '../dashboard/graph-reader.mj
 import { PipelineError } from './errors.mjs';
 
 function fail(message) {
-  throw new PipelineError('E_OPERATING_ORIGIN_INVALID', message,
-    'Repair the parent SPEC operating-origin.json before running PLAN or SHIP.');
+  throw new PipelineError(
+    'E_OPERATING_ORIGIN_INVALID',
+    message,
+    'Repair the parent SPEC operating-origin.json before running PLAN or SHIP.',
+  );
 }
 
 export function loadSpecOperatingOrigin(specDir) {
@@ -20,8 +23,15 @@ export function loadSpecOperatingOrigin(specDir) {
   try {
     const rootStat = lstatSync(root);
     const targetStat = lstatSync(target);
-    if (!rootStat.isDirectory() || rootStat.isSymbolicLink() || !targetStat.isFile() || targetStat.isSymbolicLink()) {
-      fail('Parent SPEC and operating-origin paths must be regular, non-symbolic filesystem entries.');
+    if (
+      !rootStat.isDirectory() ||
+      rootStat.isSymbolicLink() ||
+      !targetStat.isFile() ||
+      targetStat.isSymbolicLink()
+    ) {
+      fail(
+        'Parent SPEC and operating-origin paths must be regular, non-symbolic filesystem entries.',
+      );
     }
     const canonicalRoot = realpathSync(root);
     if (realpathSync(dirname(target)) !== canonicalRoot) {
@@ -35,7 +45,11 @@ export function loadSpecOperatingOrigin(specDir) {
     }
     const specPath = join(root, `${expectedDirectory}.md`);
     const specStat = lstatSync(specPath);
-    if (!specStat.isFile() || specStat.isSymbolicLink() || realpathSync(dirname(specPath)) !== canonicalRoot) {
+    if (
+      !specStat.isFile() ||
+      specStat.isSymbolicLink() ||
+      realpathSync(dirname(specPath)) !== canonicalRoot
+    ) {
       fail('Parent SPEC artifact must be a regular file in its canonical SPEC directory.');
     }
     const specText = readFileSync(specPath, 'utf8');
@@ -50,7 +64,9 @@ export function loadSpecOperatingOrigin(specDir) {
     }
   } catch (cause) {
     if (cause instanceof PipelineError && cause.code === 'E_OPERATING_ORIGIN_INVALID') throw cause;
-    fail(`Parent SPEC operating origin is not a valid closed contract: ${cause?.code ?? 'invalid JSON'}.`);
+    fail(
+      `Parent SPEC operating origin is not a valid closed contract: ${cause?.code ?? 'invalid JSON'}.`,
+    );
   }
   return Object.freeze(structuredClone(origin));
 }
@@ -59,10 +75,14 @@ export function projectSpecOperatingOrigin(origin) {
   if (origin === null) return null;
   assertOperatingOriginV1(origin);
   return Object.freeze({
-    correlationId: origin.correlationId, proposalId: origin.proposalId,
-    proposalHash: origin.proposalHash, originHash: origin.originHash,
-    specId: origin.spec.specId, decision: structuredClone(origin.decision),
-    action: structuredClone(origin.action), metric: structuredClone(origin.metric),
+    correlationId: origin.correlationId,
+    proposalId: origin.proposalId,
+    proposalHash: origin.proposalHash,
+    originHash: origin.originHash,
+    specId: origin.spec.specId,
+    decision: structuredClone(origin.decision),
+    action: structuredClone(origin.action),
+    metric: structuredClone(origin.metric),
     verification: structuredClone(origin.verification),
     transactionId: origin.transaction.transactionId,
     receiptHash: origin.transaction.receiptHash,

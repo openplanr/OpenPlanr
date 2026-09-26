@@ -11,10 +11,13 @@ import {
   dispatchOperateEvidenceResolverV2,
 } from 'planr-pipeline/operate/evidence-v2';
 
-const fixture = (name) => JSON.parse(readFileSync(
-  new URL(`../../conformance/fixtures/operating-runtime-v2/${name}`, import.meta.url),
-  'utf8',
-));
+const fixture = (name) =>
+  JSON.parse(
+    readFileSync(
+      new URL(`../../conformance/fixtures/operating-runtime-v2/${name}`, import.meta.url),
+      'utf8',
+    ),
+  );
 const clone = (value) => structuredClone(value);
 const digest = (bytes) => `sha256:${createHash('sha256').update(bytes).digest('hex')}`;
 const SOURCE_CONTRACT = { id: 'repository-architecture', version: '1.0.0' };
@@ -29,12 +32,40 @@ function createRepository() {
   writeFileSync(join(root, 'notes/evidence.txt'), 'alpha\nbeta\ngamma\n', 'utf8');
   runGit(root, ['init', '--quiet']);
   runGit(root, ['add', 'notes/evidence.txt']);
-  runGit(root, ['-c', 'user.name=Test', '-c', 'user.email=test@example.invalid', 'commit', '--quiet', '-m', 'initial']);
+  runGit(root, [
+    '-c',
+    'user.name=Test',
+    '-c',
+    'user.email=test@example.invalid',
+    'commit',
+    '--quiet',
+    '-m',
+    'initial',
+  ]);
   const first = runGit(root, ['rev-parse', 'HEAD']);
-  runGit(root, ['-c', 'user.name=Test', '-c', 'user.email=test@example.invalid', 'tag', '-a', 'release-one', '-m', 'release one']);
+  runGit(root, [
+    '-c',
+    'user.name=Test',
+    '-c',
+    'user.email=test@example.invalid',
+    'tag',
+    '-a',
+    'release-one',
+    '-m',
+    'release one',
+  ]);
   writeFileSync(join(root, 'notes/evidence.txt'), 'alpha\nbeta\ngamma\ndelta\n', 'utf8');
   runGit(root, ['add', 'notes/evidence.txt']);
-  runGit(root, ['-c', 'user.name=Test', '-c', 'user.email=test@example.invalid', 'commit', '--quiet', '-m', 'second']);
+  runGit(root, [
+    '-c',
+    'user.name=Test',
+    '-c',
+    'user.email=test@example.invalid',
+    'commit',
+    '--quiet',
+    '-m',
+    'second',
+  ]);
   return { root, first, second: runGit(root, ['rev-parse', 'HEAD']) };
 }
 
@@ -43,7 +74,9 @@ function resolve(candidate, repository, extra = {}) {
   return dispatchOperateEvidenceResolverV2(OPEN_REFERENCE_EVIDENCE_REGISTRY_V2, candidate, {
     scope: valid.scope,
     capabilities: ['evidence.git.read'],
-    gitRepositories: [{ ...valid.repository, rootPath: repository.root, sourceContract: SOURCE_CONTRACT }],
+    gitRepositories: [
+      { ...valid.repository, rootPath: repository.root, sourceContract: SOURCE_CONTRACT },
+    ],
     ...extra,
   });
 }
@@ -57,7 +90,10 @@ test('OP-15: local Git resolution separately pins revision, path, lines, bytes, 
     const resolved = resolve(candidate, repository);
 
     assert.equal(resolved.status, 'resolved');
-    assert.equal(Buffer.from(resolved.capture.contentBase64, 'base64').toString('utf8'), 'beta\ngamma\n');
+    assert.equal(
+      Buffer.from(resolved.capture.contentBase64, 'base64').toString('utf8'),
+      'beta\ngamma\n',
+    );
     assert.equal(resolved.capture.rawHash, digest(Buffer.from('beta\ngamma\n')));
     assert.equal(resolved.capture.locator.revision, repository.second);
     assert.equal(resolved.capture.locator.objectType, 'blob');
@@ -69,7 +105,10 @@ test('OP-15: local Git resolution separately pins revision, path, lines, bytes, 
     const dirty = resolve(candidate, repository);
     assert.equal(dirty.status, 'resolved');
     assert.equal(dirty.capture.provenance.worktreeState, 'dirty');
-    assert.equal(Buffer.from(dirty.capture.contentBase64, 'base64').toString('utf8'), 'beta\ngamma\n');
+    assert.equal(
+      Buffer.from(dirty.capture.contentBase64, 'base64').toString('utf8'),
+      'beta\ngamma\n',
+    );
     assert.equal(dirty.capture.freshness, 'historical');
   } finally {
     rmSync(repository.root, { recursive: true, force: true });
@@ -127,7 +166,11 @@ test('OP-15: object, revision, path, range, and requested ancestry emit independ
     const noAncestry = clone(base);
     noAncestry.locator.revision = repository.first;
     delete noAncestry.locator.ancestry;
-    assert.equal(resolve(noAncestry, repository).status, 'resolved', 'a valid revision has no implicit ancestry constraint');
+    assert.equal(
+      resolve(noAncestry, repository).status,
+      'resolved',
+      'a valid revision has no implicit ancestry constraint',
+    );
 
     const denied = resolve(base, repository, { capabilities: [] });
     assert.equal(denied.error.code, invalid.denied);
@@ -151,7 +194,10 @@ test('OP-15: Git captures commit, tree, blob, and tag objects without shell or n
       const resolved = resolve(candidate, repository);
       assert.equal(resolved.status, 'resolved', `${objectType} resolves`);
       assert.equal(resolved.capture.provenance.resolvedObjectType, objectType);
-      assert.equal(resolved.capture.sizeBytes, Buffer.from(resolved.capture.contentBase64, 'base64').byteLength);
+      assert.equal(
+        resolved.capture.sizeBytes,
+        Buffer.from(resolved.capture.contentBase64, 'base64').byteLength,
+      );
     }
   } finally {
     rmSync(repository.root, { recursive: true, force: true });

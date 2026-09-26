@@ -119,7 +119,9 @@ function compareVersions(left, right) {
 }
 
 function satisfiesNodeEngine(current, range) {
-  const match = String(range || '').trim().match(/^>=\s*(\d+)(?:\.(\d+))?(?:\.(\d+))?$/);
+  const match = String(range || '')
+    .trim()
+    .match(/^>=\s*(\d+)(?:\.(\d+))?(?:\.(\d+))?$/);
   if (!match) return true;
 
   const minimum = [
@@ -143,7 +145,11 @@ function checkLocalhostHealth(id, label, dirName) {
   const stateDir = join(process.env.PLANR_HOME || join(homedir(), '.planr'), dirName);
   const portFile = join(stateDir, 'port');
   if (!existsSync(portFile)) {
-    ok(`${id}.state`, 'Daemons', `${label} daemon state file is absent; no running daemon detected`);
+    ok(
+      `${id}.state`,
+      'Daemons',
+      `${label} daemon state file is absent; no running daemon detected`,
+    );
     return;
   }
 
@@ -161,7 +167,12 @@ function checkLocalhostHealth(id, label, dirName) {
       .then(async (response) => {
         clearTimeout(timeout);
         if (!response.ok) {
-          handleStaleDaemon(id, label, stateDir, `${label} daemon health returned HTTP ${response.status}`);
+          handleStaleDaemon(
+            id,
+            label,
+            stateDir,
+            `${label} daemon health returned HTTP ${response.status}`,
+          );
           return;
         }
 
@@ -174,7 +185,12 @@ function checkLocalhostHealth(id, label, dirName) {
       })
       .catch(() => {
         clearTimeout(timeout);
-        handleStaleDaemon(id, label, stateDir, `${label} daemon state exists but localhost:${port} is unreachable`);
+        handleStaleDaemon(
+          id,
+          label,
+          stateDir,
+          `${label} daemon state exists but localhost:${port} is unreachable`,
+        );
       }),
   );
 }
@@ -184,11 +200,20 @@ function handleStaleDaemon(id, label, stateDir, message) {
   if (options.fix) {
     rmSync(stateDir, { recursive: true, force: true });
     repairs.push({ ...repair, applied: true });
-    ok(`${id}.health`, 'Daemons', `Removed stale ${label.toLowerCase()} daemon state under ${stateDir}`);
+    ok(
+      `${id}.health`,
+      'Daemons',
+      `Removed stale ${label.toLowerCase()} daemon state under ${stateDir}`,
+    );
     return;
   }
   if (options.repairPreview) repairs.push({ ...repair, applied: false });
-  warn(`${id}.health`, 'Daemons', message, 'Run `planr doctor --fix` to preview and remove this Planr-owned stale state.');
+  warn(
+    `${id}.health`,
+    'Daemons',
+    message,
+    'Run `planr doctor --fix` to preview and remove this Planr-owned stale state.',
+  );
 }
 
 function readGithubRelease(cwd, tag) {
@@ -201,7 +226,11 @@ function readGithubRelease(cwd, tag) {
 }
 
 function remoteTagExists(cwd, tag) {
-  const result = run('git', ['ls-remote', '--exit-code', '--tags', 'origin', `refs/tags/${tag}`], cwd);
+  const result = run(
+    'git',
+    ['ls-remote', '--exit-code', '--tags', 'origin', `refs/tags/${tag}`],
+    cwd,
+  );
   return result.status === 0;
 }
 
@@ -213,7 +242,13 @@ function remoteTagExists(cwd, tag) {
 function checkChangelogEntry(version) {
   const changelogPath = join(root, 'CHANGELOG.md');
   if (!existsSync(changelogPath)) {
-    warn('release.changelog', 'Releases', 'CHANGELOG.md is missing; the release audit cannot confirm the version is documented', 'Restore CHANGELOG.md at the repository root.', true);
+    warn(
+      'release.changelog',
+      'Releases',
+      'CHANGELOG.md is missing; the release audit cannot confirm the version is documented',
+      'Restore CHANGELOG.md at the repository root.',
+      true,
+    );
     return;
   }
 
@@ -224,7 +259,13 @@ function checkChangelogEntry(version) {
   if (heading.test(changelog)) {
     ok('release.changelog', 'Releases', `CHANGELOG.md documents ${version}`);
   } else {
-    warn('release.changelog', 'Releases', `CHANGELOG.md has no section for ${version}`, `Add a "## [${version}]" section to CHANGELOG.md before tagging and publishing.`, true);
+    warn(
+      'release.changelog',
+      'Releases',
+      `CHANGELOG.md has no section for ${version}`,
+      `Add a "## [${version}]" section to CHANGELOG.md before tagging and publishing.`,
+      true,
+    );
   }
 }
 
@@ -234,16 +275,34 @@ function checkRelease(id, label, cwd, version) {
   if (remoteTagExists(cwd, tag)) {
     ok(`${id}.tag`, 'Releases', `${label} tag ${tag} exists on origin`);
   } else {
-    warn(`${id}.tag`, 'Releases', `${label} tag ${tag} is missing on origin`, `Create and push tag ${tag}.`, true);
+    warn(
+      `${id}.tag`,
+      'Releases',
+      `${label} tag ${tag} is missing on origin`,
+      `Create and push tag ${tag}.`,
+      true,
+    );
   }
 
   const release = readGithubRelease(cwd, tag);
   if (!release.available) {
-    warn(`${id}.release`, 'Releases', '`gh` is not available; GitHub release check skipped', 'Install GitHub CLI or verify releases manually.', true);
+    warn(
+      `${id}.release`,
+      'Releases',
+      '`gh` is not available; GitHub release check skipped',
+      'Install GitHub CLI or verify releases manually.',
+      true,
+    );
   } else if (release.ok) {
     ok(`${id}.release`, 'Releases', `${label} GitHub release ${tag} exists`);
   } else {
-    warn(`${id}.release`, 'Releases', `${label} GitHub release ${tag} is missing`, `Create GitHub release ${tag}.`, true);
+    warn(
+      `${id}.release`,
+      'Releases',
+      `${label} GitHub release ${tag} is missing`,
+      `Create GitHub release ${tag}.`,
+      true,
+    );
   }
 }
 
@@ -252,14 +311,28 @@ const pendingHealthChecks = [];
 function runEnvironmentChecks(pkg) {
   const nodeRange = pkg.engines?.node;
   if (!nodeRange) {
-    warn('environment.node-engine', 'Environment', 'package.json has no engines.node requirement', 'Declare the supported Node range.');
+    warn(
+      'environment.node-engine',
+      'Environment',
+      'package.json has no engines.node requirement',
+      'Declare the supported Node range.',
+    );
     return;
   }
 
   if (satisfiesNodeEngine(process.versions.node, nodeRange)) {
-    ok('environment.node-engine', 'Environment', `Node ${process.versions.node} satisfies engines.node ${nodeRange}`);
+    ok(
+      'environment.node-engine',
+      'Environment',
+      `Node ${process.versions.node} satisfies engines.node ${nodeRange}`,
+    );
   } else {
-    fail('environment.node-engine', 'Environment', `Node ${process.versions.node} does not satisfy engines.node ${nodeRange}`, 'Use Node 20 or newer.');
+    fail(
+      'environment.node-engine',
+      'Environment',
+      `Node ${process.versions.node} does not satisfy engines.node ${nodeRange}`,
+      'Use Node 20 or newer.',
+    );
   }
 }
 
@@ -276,7 +349,12 @@ function runVersionAndProtocolChecks(pkg) {
       `${pkg.name} ${version} is a prompt-free runtime package; host plugin versions are owned by the workspace`,
     );
   } catch (error) {
-    fail('versions.runtime-package', 'Versions', `Invalid pipeline package identity: ${error.message}`, 'Declare planr-pipeline and an exact semantic version in package.json.');
+    fail(
+      'versions.runtime-package',
+      'Versions',
+      `Invalid pipeline package identity: ${error.message}`,
+      'Declare planr-pipeline and an exact semantic version in package.json.',
+    );
   }
 
   if (sourceCheckout) {
@@ -285,20 +363,46 @@ function runVersionAndProtocolChecks(pkg) {
     const stackSchemaVersion = stack.match(/^schemaVersion:\s*"([^"]+)"/m)?.[1];
     const declaredSchema = readOptionalJsonFile(join(root, 'schemas/v1.0.0/stack.schema.json'));
     const expectedSchemaVersion = declaredSchema?.properties?.schemaVersion?.const;
-    if (stackName === pkg.name && expectedSchemaVersion && stackSchemaVersion === expectedSchemaVersion) {
-      ok('versions.stack', 'Versions', `input/tech/stack.md identifies ${pkg.name} with schemaVersion ${expectedSchemaVersion}; package versions are owned by package.json`);
+    if (
+      stackName === pkg.name &&
+      expectedSchemaVersion &&
+      stackSchemaVersion === expectedSchemaVersion
+    ) {
+      ok(
+        'versions.stack',
+        'Versions',
+        `input/tech/stack.md identifies ${pkg.name} with schemaVersion ${expectedSchemaVersion}; package versions are owned by package.json`,
+      );
     } else {
-      fail('versions.stack', 'Versions', `input/tech/stack.md must identify ${pkg.name} and the declared stack schemaVersion ${expectedSchemaVersion || '(missing)'}`, 'Restore AppName and schemaVersion in input/tech/stack.md; keep the package version in package.json.');
+      fail(
+        'versions.stack',
+        'Versions',
+        `input/tech/stack.md must identify ${pkg.name} and the declared stack schemaVersion ${expectedSchemaVersion || '(missing)'}`,
+        'Restore AppName and schemaVersion in input/tech/stack.md; keep the package version in package.json.',
+      );
     }
   } else {
-    ok('versions.package-mode', 'Versions', 'installed package health mode does not require repository-only release metadata');
+    ok(
+      'versions.package-mode',
+      'Versions',
+      'installed package health mode does not require repository-only release metadata',
+    );
   }
 
   const protocol = readText('docs/protocol/README.md');
   if (protocol.includes('schemas/v1.0.0/')) {
-    ok('protocol.schema-reference', 'Protocol', 'protocol README points to the schemas/v1.0.0 compatibility assets');
+    ok(
+      'protocol.schema-reference',
+      'Protocol',
+      'protocol README points to the schemas/v1.0.0 compatibility assets',
+    );
   } else {
-    fail('protocol.schema-reference', 'Protocol', 'protocol README does not point to schemas/v1.0.0', 'Keep schema ownership explicit in docs/protocol/README.md.');
+    fail(
+      'protocol.schema-reference',
+      'Protocol',
+      'protocol README does not point to schemas/v1.0.0',
+      'Keep schema ownership explicit in docs/protocol/README.md.',
+    );
   }
 
   const schemaDir = join(root, 'schemas/v1.0.0');
@@ -312,23 +416,53 @@ function runVersionAndProtocolChecks(pkg) {
   ];
   const missingSchemas = requiredSchemas.filter((name) => !existsSync(join(schemaDir, name)));
   if (missingSchemas.length === 0) {
-    ok('protocol.schemas-present', 'Protocol', 'schemas/v1.0.0 contains the required protocol schemas');
+    ok(
+      'protocol.schemas-present',
+      'Protocol',
+      'schemas/v1.0.0 contains the required protocol schemas',
+    );
   } else {
-    fail('protocol.schemas-present', 'Protocol', `schemas/v1.0.0 is missing ${missingSchemas.join(', ')}`, 'Restore the canonical schema files.');
+    fail(
+      'protocol.schemas-present',
+      'Protocol',
+      `schemas/v1.0.0 is missing ${missingSchemas.join(', ')}`,
+      'Restore the canonical schema files.',
+    );
   }
 
   const markerSchema = readJson('schemas/v1.0.0/pipeline-shipped.schema.json');
   const qaEnum = markerSchema.properties?.qa_gate_status?.enum || [];
   if (JSON.stringify(qaEnum) === JSON.stringify(['passed', 'failed', 'skipped'])) {
-    ok('protocol.qa-gate-schema', 'Protocol', 'pipeline-shipped schema keeps qa_gate_status values passed, failed, skipped');
+    ok(
+      'protocol.qa-gate-schema',
+      'Protocol',
+      'pipeline-shipped schema keeps qa_gate_status values passed, failed, skipped',
+    );
   } else {
-    fail('protocol.qa-gate-schema', 'Protocol', `pipeline-shipped schema qa_gate_status enum is ${qaEnum.join(', ')}`, 'Restore passed, failed, skipped.');
+    fail(
+      'protocol.qa-gate-schema',
+      'Protocol',
+      `pipeline-shipped schema qa_gate_status enum is ${qaEnum.join(', ')}`,
+      'Restore passed, failed, skipped.',
+    );
   }
 
-  if (protocol.includes('packages/protocol/schemas/') && protocol.includes('planr-pipeline/schemas/')) {
-    ok('protocol.ownership-reference', 'Protocol', 'public Protocol documentation identifies canonical schemas and the portable package projection');
+  if (
+    protocol.includes('packages/protocol/schemas/') &&
+    protocol.includes('planr-pipeline/schemas/')
+  ) {
+    ok(
+      'protocol.ownership-reference',
+      'Protocol',
+      'public Protocol documentation identifies canonical schemas and the portable package projection',
+    );
   } else {
-    fail('protocol.ownership-reference', 'Protocol', 'public Protocol schema ownership is undocumented', 'Restore the ownership reference in docs/protocol/README.md.');
+    fail(
+      'protocol.ownership-reference',
+      'Protocol',
+      'public Protocol schema ownership is undocumented',
+      'Restore the ownership reference in docs/protocol/README.md.',
+    );
   }
 
   const staleActiveDocs = [
@@ -354,9 +488,18 @@ function runVersionAndProtocolChecks(pkg) {
     }
   }
   if (staleHits.length === 0) {
-    ok('versions.no-stale-active-docs', 'Versions', 'active docs have no stale version or shipped-marker claims');
+    ok(
+      'versions.no-stale-active-docs',
+      'Versions',
+      'active docs have no stale version or shipped-marker claims',
+    );
   } else {
-    fail('versions.no-stale-active-docs', 'Versions', `stale active docs found: ${staleHits.join('; ')}`, 'Update active docs or move historical claims to changelog only.');
+    fail(
+      'versions.no-stale-active-docs',
+      'Versions',
+      `stale active docs found: ${staleHits.join('; ')}`,
+      'Update active docs or move historical claims to changelog only.',
+    );
   }
 
   const modelContextFiles = ['README.md'];
@@ -365,9 +508,18 @@ function runVersionAndProtocolChecks(pkg) {
     if (/claude-[a-z0-9-]+\[[^\]]+\]/i.test(readText(file))) contextHits.push(file);
   }
   if (contextHits.length === 0) {
-    ok('versions.no-model-context-suffix', 'Versions', 'Claude model strings rely on default context window');
+    ok(
+      'versions.no-model-context-suffix',
+      'Versions',
+      'Claude model strings rely on default context window',
+    );
   } else {
-    fail('versions.no-model-context-suffix', 'Versions', `explicit Claude context-window suffix found in ${contextHits.join(', ')}`, 'Remove [context] suffixes from active model strings.');
+    fail(
+      'versions.no-model-context-suffix',
+      'Versions',
+      `explicit Claude context-window suffix found in ${contextHits.join(', ')}`,
+      'Remove [context] suffixes from active model strings.',
+    );
   }
 }
 
@@ -388,7 +540,9 @@ function runExternalWebCheck() {
       return;
     }
     const requiredScripts = ['build', 'test', 'share:check'];
-    const missingScripts = requiredScripts.filter((name) => typeof web.scripts?.[name] !== 'string');
+    const missingScripts = requiredScripts.filter(
+      (name) => typeof web.scripts?.[name] !== 'string',
+    );
     if (web.name === 'openplanr-web' && missingScripts.length === 0) {
       ok(
         'ecosystem.openplanr-web-custody',
@@ -433,14 +587,14 @@ function runConsolidatedWorkspaceChecks(pkg) {
   const ecosystemManifest = readOptionalJsonFile(join(workspaceRoot, 'ecosystem.json'));
   const workspaceEntries = Array.isArray(workspacePackage?.workspaces)
     ? workspacePackage.workspaces
-    : workspacePackage?.workspaces?.packages ?? [];
+    : (workspacePackage?.workspaces?.packages ?? []);
   const requiredWorkspaces = ['packages/cli', 'packages/pipeline'];
   const missingWorkspaces = requiredWorkspaces.filter((entry) => !workspaceEntries.includes(entry));
 
   if (
-    workspacePackage?.name === 'openplanr-workspace'
-    && workspacePackage?.private === true
-    && missingWorkspaces.length === 0
+    workspacePackage?.name === 'openplanr-workspace' &&
+    workspacePackage?.private === true &&
+    missingWorkspaces.length === 0
   ) {
     ok(
       'ecosystem.workspace-layout',
@@ -457,7 +611,10 @@ function runConsolidatedWorkspaceChecks(pkg) {
   }
 
   const pipelineComponent = ecosystemManifest?.components?.pipeline;
-  if (pipelineComponent?.path === 'packages/pipeline' && pipelineComponent.version === pkg.version) {
+  if (
+    pipelineComponent?.path === 'packages/pipeline' &&
+    pipelineComponent.version === pkg.version
+  ) {
     ok(
       'ecosystem.pipeline-version',
       'Ecosystem',
@@ -476,9 +633,9 @@ function runConsolidatedWorkspaceChecks(pkg) {
   const cliPackage = readOptionalJsonFile(cliPackagePath);
   const cliComponent = ecosystemManifest?.components?.cli;
   if (
-    cliPackage?.name === 'openplanr'
-    && cliComponent?.path === 'packages/cli'
-    && cliComponent.version === cliPackage.version
+    cliPackage?.name === 'openplanr' &&
+    cliComponent?.path === 'packages/cli' &&
+    cliComponent.version === cliPackage.version
   ) {
     ok(
       'ecosystem.openplanr-version-present',
@@ -497,10 +654,10 @@ function runConsolidatedWorkspaceChecks(pkg) {
   const skillsRoot = ecosystem.repositories.skills?.path;
   const skillsRegistry = ecosystemManifest?.catalogs?.skills?.path;
   if (
-    skillsRoot === workspaceRoot
-    && existsSync(join(workspaceRoot, 'skills', 'planr-plan', 'SKILL.md'))
-    && skillsRegistry
-    && existsSync(join(workspaceRoot, skillsRegistry))
+    skillsRoot === workspaceRoot &&
+    existsSync(join(workspaceRoot, 'skills', 'planr-plan', 'SKILL.md')) &&
+    skillsRegistry &&
+    existsSync(join(workspaceRoot, skillsRegistry))
   ) {
     ok(
       'ecosystem.skills-present',
@@ -521,9 +678,9 @@ function runConsolidatedWorkspaceChecks(pkg) {
   const marketplace = readOptionalJsonFile(marketplacePath);
   const workspacePlugin = (marketplace?.plugins ?? []).find((plugin) => plugin.name === 'planr');
   if (
-    ecosystem.repositories.marketplace?.path === workspaceRoot
-    && marketplace?.name === 'openplanr'
-    && workspacePlugin?.version === cliPackage?.version
+    ecosystem.repositories.marketplace?.path === workspaceRoot &&
+    marketplace?.name === 'openplanr' &&
+    workspacePlugin?.version === cliPackage?.version
   ) {
     ok(
       'ecosystem.marketplace-present',
@@ -561,32 +718,32 @@ function runEcosystemChecks(pkg) {
   const marketplaceManifest = marketplaceRoot
     ? join(marketplaceRoot, '.claude-plugin/marketplace.json')
     : null;
-  const ecosystemManifest = marketplaceRoot
-    ? join(marketplaceRoot, 'ecosystem.json')
-    : null;
-  const skillsManifest = skillsRoot
-    ? join(skillsRoot, '.claude-plugin/marketplace.json')
-    : null;
+  const ecosystemManifest = marketplaceRoot ? join(marketplaceRoot, 'ecosystem.json') : null;
+  const skillsManifest = skillsRoot ? join(skillsRoot, '.claude-plugin/marketplace.json') : null;
   const openPlanrPackage = openPlanrRoot ? join(openPlanrRoot, 'package.json') : null;
 
   let marketplace = null;
   const marketplaceEcosystem =
-    ecosystemManifest && existsSync(ecosystemManifest)
-      ? readJsonFile(ecosystemManifest)
-      : null;
+    ecosystemManifest && existsSync(ecosystemManifest) ? readJsonFile(ecosystemManifest) : null;
   const guidedCandidate = marketplaceEcosystem?.capabilities?.guidedOperatingBoard;
   const guidedWithheld =
-    guidedCandidate?.status === 'unavailable'
-    && guidedCandidate?.releaseOperation?.state !== 'verified';
+    guidedCandidate?.status === 'unavailable' &&
+    guidedCandidate?.releaseOperation?.state !== 'verified';
   if (marketplaceManifest && existsSync(marketplaceManifest)) {
     marketplace = readJsonFile(marketplaceManifest);
-    const pipelinePlugin = (marketplace.plugins || []).find((entry) => entry.name === 'planr-pipeline');
+    const pipelinePlugin = (marketplace.plugins || []).find(
+      (entry) => entry.name === 'planr-pipeline',
+    );
     if (pipelinePlugin?.version === version) {
-      ok('ecosystem.marketplace-pipeline-version', 'Ecosystem', `marketplace planr-pipeline version matches ${version}`);
+      ok(
+        'ecosystem.marketplace-pipeline-version',
+        'Ecosystem',
+        `marketplace planr-pipeline version matches ${version}`,
+      );
     } else if (
-      guidedWithheld
-      && guidedCandidate?.components?.pipeline === version
-      && pipelinePlugin?.version === marketplaceEcosystem?.components?.pipeline?.version
+      guidedWithheld &&
+      guidedCandidate?.components?.pipeline === version &&
+      pipelinePlugin?.version === marketplaceEcosystem?.components?.pipeline?.version
     ) {
       ok(
         'ecosystem.marketplace-pipeline-version',
@@ -594,7 +751,13 @@ function runEcosystemChecks(pkg) {
         `marketplace correctly withholds candidate planr-pipeline ${version} until its guided release ledger is verified`,
       );
     } else {
-      warn('ecosystem.marketplace-pipeline-version', 'Ecosystem', `marketplace planr-pipeline version is ${pipelinePlugin?.version || '(missing)'}, expected ${version}`, 'Update marketplace/.claude-plugin/marketplace.json.', true);
+      warn(
+        'ecosystem.marketplace-pipeline-version',
+        'Ecosystem',
+        `marketplace planr-pipeline version is ${pipelinePlugin?.version || '(missing)'}, expected ${version}`,
+        'Update marketplace/.claude-plugin/marketplace.json.',
+        true,
+      );
     }
 
     const readmePath = join(marketplaceRoot, 'README.md');
@@ -604,41 +767,80 @@ function runEcosystemChecks(pkg) {
       for (const plugin of marketplace.plugins || []) {
         const row = readme.split('\n').find((line) => line.includes(`[\`${plugin.name}\`]`));
         if (!row) errors.push(`missing README row for ${plugin.name}`);
-        else if (!row.includes(`| ${plugin.version} |`)) errors.push(`${plugin.name} README row does not match ${plugin.version}`);
+        else if (!row.includes(`| ${plugin.version} |`))
+          errors.push(`${plugin.name} README row does not match ${plugin.version}`);
       }
       if (!readme.includes('Versions in this README mirror `.claude-plugin/marketplace.json`')) {
         errors.push('manifest mirror note missing');
       }
       if (errors.length === 0) {
-        ok('ecosystem.marketplace-readme', 'Ecosystem', 'marketplace README matches marketplace manifest');
+        ok(
+          'ecosystem.marketplace-readme',
+          'Ecosystem',
+          'marketplace README matches marketplace manifest',
+        );
       } else {
-        warn('ecosystem.marketplace-readme', 'Ecosystem', `marketplace README mismatch: ${errors.join('; ')}`, 'Run npm run check in the marketplace repo and update README.', true);
+        warn(
+          'ecosystem.marketplace-readme',
+          'Ecosystem',
+          `marketplace README mismatch: ${errors.join('; ')}`,
+          'Run npm run check in the marketplace repo and update README.',
+          true,
+        );
       }
     } else {
-      warn('ecosystem.marketplace-readme', 'Ecosystem', 'marketplace README.md is missing', 'Restore marketplace/README.md.', true);
+      warn(
+        'ecosystem.marketplace-readme',
+        'Ecosystem',
+        'marketplace README.md is missing',
+        'Restore marketplace/README.md.',
+        true,
+      );
     }
   } else {
-    warn('ecosystem.marketplace-present', 'Ecosystem', 'marketplace repo not found', 'Use --workspace-root or OPENPLANR_ECOSYSTEM_ROOT to point at sibling OpenPlanr repos.', true);
+    warn(
+      'ecosystem.marketplace-present',
+      'Ecosystem',
+      'marketplace repo not found',
+      'Use --workspace-root or OPENPLANR_ECOSYSTEM_ROOT to point at sibling OpenPlanr repos.',
+      true,
+    );
   }
 
   if (skillsManifest && existsSync(skillsManifest)) {
     const skills = readJsonFile(skillsManifest);
     const skillVersion = skills.metadata?.version;
     if (skillVersion) {
-      ok('ecosystem.skills-version-present', 'Ecosystem', `skills manifest reports version ${skillVersion}`);
+      ok(
+        'ecosystem.skills-version-present',
+        'Ecosystem',
+        `skills manifest reports version ${skillVersion}`,
+      );
     } else {
-      warn('ecosystem.skills-version-present', 'Ecosystem', 'skills manifest has no metadata.version', 'Add metadata.version to skills/.claude-plugin/marketplace.json.', true);
+      warn(
+        'ecosystem.skills-version-present',
+        'Ecosystem',
+        'skills manifest has no metadata.version',
+        'Add metadata.version to skills/.claude-plugin/marketplace.json.',
+        true,
+      );
     }
 
-    const marketplaceSkill = (marketplace?.plugins || []).find((entry) => entry.name === 'openplanr');
+    const marketplaceSkill = (marketplace?.plugins || []).find(
+      (entry) => entry.name === 'openplanr',
+    );
     if (marketplace && skillVersion && marketplaceSkill?.version === skillVersion) {
-      ok('ecosystem.marketplace-skills-version', 'Ecosystem', `marketplace openplanr version matches skills ${skillVersion}`);
+      ok(
+        'ecosystem.marketplace-skills-version',
+        'Ecosystem',
+        `marketplace openplanr version matches skills ${skillVersion}`,
+      );
     } else if (
-      marketplace
-      && skillVersion
-      && guidedWithheld
-      && guidedCandidate?.components?.skills === skillVersion
-      && marketplaceSkill?.version === marketplaceEcosystem?.components?.skills?.version
+      marketplace &&
+      skillVersion &&
+      guidedWithheld &&
+      guidedCandidate?.components?.skills === skillVersion &&
+      marketplaceSkill?.version === marketplaceEcosystem?.components?.skills?.version
     ) {
       ok(
         'ecosystem.marketplace-skills-version',
@@ -646,21 +848,49 @@ function runEcosystemChecks(pkg) {
         `marketplace correctly withholds candidate skills ${skillVersion} until its guided release ledger is verified`,
       );
     } else if (marketplace && skillVersion) {
-      warn('ecosystem.marketplace-skills-version', 'Ecosystem', `marketplace openplanr version is ${marketplaceSkill?.version || '(missing)'}, expected ${skillVersion}`, 'Update marketplace/.claude-plugin/marketplace.json.', true);
+      warn(
+        'ecosystem.marketplace-skills-version',
+        'Ecosystem',
+        `marketplace openplanr version is ${marketplaceSkill?.version || '(missing)'}, expected ${skillVersion}`,
+        'Update marketplace/.claude-plugin/marketplace.json.',
+        true,
+      );
     }
   } else {
-    warn('ecosystem.skills-present', 'Ecosystem', 'skills repo not found', 'Use --workspace-root or OPENPLANR_ECOSYSTEM_ROOT to point at sibling OpenPlanr repos.', true);
+    warn(
+      'ecosystem.skills-present',
+      'Ecosystem',
+      'skills repo not found',
+      'Use --workspace-root or OPENPLANR_ECOSYSTEM_ROOT to point at sibling OpenPlanr repos.',
+      true,
+    );
   }
 
   if (openPlanrPackage && existsSync(openPlanrPackage)) {
     const openPlanr = readJsonFile(openPlanrPackage);
     if (openPlanr.version) {
-      ok('ecosystem.openplanr-version-present', 'Ecosystem', `OpenPlanr package version is ${openPlanr.version}`);
+      ok(
+        'ecosystem.openplanr-version-present',
+        'Ecosystem',
+        `OpenPlanr package version is ${openPlanr.version}`,
+      );
     } else {
-      warn('ecosystem.openplanr-version-present', 'Ecosystem', 'OpenPlanr package.json has no version', 'Restore package.json version.', true);
+      warn(
+        'ecosystem.openplanr-version-present',
+        'Ecosystem',
+        'OpenPlanr package.json has no version',
+        'Restore package.json version.',
+        true,
+      );
     }
   } else {
-    warn('ecosystem.openplanr-present', 'Ecosystem', 'OpenPlanr CLI repo not found', 'Use --workspace-root or OPENPLANR_ECOSYSTEM_ROOT to point at sibling OpenPlanr repos.', true);
+    warn(
+      'ecosystem.openplanr-present',
+      'Ecosystem',
+      'OpenPlanr CLI repo not found',
+      'Use --workspace-root or OPENPLANR_ECOSYSTEM_ROOT to point at sibling OpenPlanr repos.',
+      true,
+    );
   }
 
   runExternalWebCheck();
@@ -685,12 +915,21 @@ function runCredentialChecks() {
     if (gitIgnored(absPath, projectRoot)) {
       ok(`credentials.${file}`, 'Credentials', `${file} contains OPENAI_API_KEY and is gitignored`);
     } else {
-      warn(`credentials.${file}`, 'Credentials', `${file} contains OPENAI_API_KEY and is not gitignored`, `Add ${file} to .gitignore or move the key to user-level credentials.`);
+      warn(
+        `credentials.${file}`,
+        'Credentials',
+        `${file} contains OPENAI_API_KEY and is not gitignored`,
+        `Add ${file} to .gitignore or move the key to user-level credentials.`,
+      );
     }
   }
 
   if (!found) {
-    ok('credentials.project-env', 'Credentials', 'project .env files do not contain OPENAI_API_KEY');
+    ok(
+      'credentials.project-env',
+      'Credentials',
+      'project .env files do not contain OPENAI_API_KEY',
+    );
   }
 }
 
@@ -721,19 +960,42 @@ async function runArtifactChecks() {
   ];
   const missing = required.filter((path) => !existsSync(join(root, path)));
   if (missing.length === 0) {
-    ok('artifact.assets-present', 'Artifact review', 'portable artifact schemas, engine, shell, and conformance assets are present');
+    ok(
+      'artifact.assets-present',
+      'Artifact review',
+      'portable artifact schemas, engine, shell, and conformance assets are present',
+    );
   } else {
-    fail('artifact.assets-present', 'Artifact review', `portable artifact assets are missing: ${missing.join(', ')}`, 'Restore the package allowlist and regenerate artifact assets.');
+    fail(
+      'artifact.assets-present',
+      'Artifact review',
+      `portable artifact assets are missing: ${missing.join(', ')}`,
+      'Restore the package allowlist and regenerate artifact assets.',
+    );
     return;
   }
 
   try {
-    for (const name of ['artifact-envelope', 'artifact-paste', 'artifact-review', 'artifact-theme']) {
+    for (const name of [
+      'artifact-envelope',
+      'artifact-paste',
+      'artifact-review',
+      'artifact-theme',
+    ]) {
       readJson(`schemas/v1.1.0/${name}.schema.json`);
     }
-    ok('artifact.schemas-readable', 'Artifact review', 'Protocol v1.1 artifact schemas parse as JSON');
+    ok(
+      'artifact.schemas-readable',
+      'Artifact review',
+      'Protocol v1.1 artifact schemas parse as JSON',
+    );
   } catch {
-    fail('artifact.schemas-readable', 'Artifact review', 'one or more Protocol v1.1 artifact schemas are invalid JSON', 'Regenerate or restore the artifact schemas.');
+    fail(
+      'artifact.schemas-readable',
+      'Artifact review',
+      'one or more Protocol v1.1 artifact schemas are invalid JSON',
+      'Regenerate or restore the artifact schemas.',
+    );
   }
 
   const manifest = readJson('lib/artifact/ui/generated/artifact-shell-assets.json');
@@ -751,28 +1013,58 @@ async function runArtifactChecks() {
     }
   }
   if (drift.length === 0 && (manifest.assets?.length ?? 0) >= 5) {
-    ok('artifact.generated-assets', 'Artifact review', 'generated shell, theme, stage, and design adapter match their manifest');
+    ok(
+      'artifact.generated-assets',
+      'Artifact review',
+      'generated shell, theme, stage, and design adapter match their manifest',
+    );
   } else {
-    fail('artifact.generated-assets', 'Artifact review', drift.join('; ') || 'artifact shell manifest is incomplete', 'Run `npm run generate:artifact-shell` and commit every generated output.');
+    fail(
+      'artifact.generated-assets',
+      'Artifact review',
+      drift.join('; ') || 'artifact shell manifest is incomplete',
+      'Run `npm run generate:artifact-shell` and commit every generated output.',
+    );
   }
 
   const publicIndex = readText('lib/pipeline/index.mjs');
   const names = [
-    'bundleArtifact', 'createArtifactEnvelope', 'encodeArtifactFragment',
-    'decodeArtifactFragment', 'encryptArtifactPayload', 'decryptArtifactPayload',
-    'startArtifactReview', 'createReviewLink', 'importArtifactReview',
-    'mergeArtifactFeedback', 'ARTIFACT_ERROR_CODES',
+    'bundleArtifact',
+    'createArtifactEnvelope',
+    'encodeArtifactFragment',
+    'decodeArtifactFragment',
+    'encryptArtifactPayload',
+    'decryptArtifactPayload',
+    'startArtifactReview',
+    'createReviewLink',
+    'importArtifactReview',
+    'mergeArtifactFeedback',
+    'ARTIFACT_ERROR_CODES',
   ];
   if (names.every((name) => new RegExp(`\\b${name}\\b`).test(publicIndex))) {
-    ok('artifact.public-exports', 'Artifact review', 'package root declares the stable artifact API and named errors');
+    ok(
+      'artifact.public-exports',
+      'Artifact review',
+      'package root declares the stable artifact API and named errors',
+    );
   } else {
-    fail('artifact.public-exports', 'Artifact review', 'package root artifact exports are incomplete', 'Export the complete stable artifact API from lib/pipeline/index.mjs.');
+    fail(
+      'artifact.public-exports',
+      'Artifact review',
+      'package root artifact exports are incomplete',
+      'Export the complete stable artifact API from lib/pipeline/index.mjs.',
+    );
   }
 
   if (readText('bin/planr-pipeline.mjs').startsWith('#!/usr/bin/env node')) {
     ok('artifact.package-bin', 'Artifact review', 'package executable has a portable Node shebang');
   } else {
-    fail('artifact.package-bin', 'Artifact review', 'package executable is missing its portable Node shebang', 'Restore bin/planr-pipeline.mjs and its package.json bin entry.');
+    fail(
+      'artifact.package-bin',
+      'Artifact review',
+      'package executable is missing its portable Node shebang',
+      'Restore bin/planr-pipeline.mjs and its package.json bin entry.',
+    );
   }
 }
 
@@ -781,16 +1073,20 @@ function runReleaseChecks(pkg) {
   checkRelease('release.pipeline', 'planr-pipeline', root, pkg.version);
 
   const skillsRoot = ecosystem.repositories.skills?.path;
-  const skillsManifest = skillsRoot
-    ? join(skillsRoot, '.claude-plugin/marketplace.json')
-    : null;
+  const skillsManifest = skillsRoot ? join(skillsRoot, '.claude-plugin/marketplace.json') : null;
   if (skillsManifest && existsSync(skillsManifest)) {
     const skills = readJsonFile(skillsManifest);
     if (skills.metadata?.version) {
       checkRelease('release.skills', 'skills', skillsRoot, skills.metadata.version);
     }
   } else {
-    warn('release.skills-present', 'Releases', 'skills repo not found; release check skipped', 'Use --workspace-root or OPENPLANR_ECOSYSTEM_ROOT before the final release audit.', true);
+    warn(
+      'release.skills-present',
+      'Releases',
+      'skills repo not found; release check skipped',
+      'Use --workspace-root or OPENPLANR_ECOSYSTEM_ROOT before the final release audit.',
+      true,
+    );
   }
 
   const openPlanrRoot = ecosystem.repositories.cli?.path;
@@ -801,15 +1097,32 @@ function runReleaseChecks(pkg) {
       checkRelease('release.openplanr', 'OpenPlanr', openPlanrRoot, openPlanr.version);
     }
   } else {
-    warn('release.openplanr-present', 'Releases', 'OpenPlanr CLI repo not found; release check skipped', 'Use --workspace-root or OPENPLANR_ECOSYSTEM_ROOT before the final release audit.', true);
+    warn(
+      'release.openplanr-present',
+      'Releases',
+      'OpenPlanr CLI repo not found; release check skipped',
+      'Use --workspace-root or OPENPLANR_ECOSYSTEM_ROOT before the final release audit.',
+      true,
+    );
   }
 }
 
 function printHumanSummary(summary) {
   const title = options.versionsOnly ? 'OpenPlanr doctor (versions only)' : 'OpenPlanr doctor';
-  console.log(`${title}: ${summary.ok ? 'ok' : 'failed'} (${summary.failures} failure(s), ${summary.warnings} warning(s))`);
+  console.log(
+    `${title}: ${summary.ok ? 'ok' : 'failed'} (${summary.failures} failure(s), ${summary.warnings} warning(s))`,
+  );
 
-  const order = ['Environment', 'Versions', 'Protocol', 'Artifact review', 'Ecosystem', 'Daemons', 'Credentials', 'Releases'];
+  const order = [
+    'Environment',
+    'Versions',
+    'Protocol',
+    'Artifact review',
+    'Ecosystem',
+    'Daemons',
+    'Credentials',
+    'Releases',
+  ];
   for (const category of order) {
     const categoryChecks = checks.filter((check) => check.category === category);
     if (categoryChecks.length === 0) continue;
@@ -830,7 +1143,11 @@ await runArtifactChecks();
 if (sourceCheckout) {
   runEcosystemChecks(pkg);
 } else {
-  ok('ecosystem.package-mode', 'Ecosystem', 'installed package health does not require sibling source repositories');
+  ok(
+    'ecosystem.package-mode',
+    'Ecosystem',
+    'installed package health does not require sibling source repositories',
+  );
 }
 
 if (!options.versionsOnly) {
@@ -841,7 +1158,12 @@ if (!options.versionsOnly) {
 if (options.release && sourceCheckout) {
   runReleaseChecks(pkg);
 } else if (options.release) {
-  fail('release.source-required', 'Releases', 'release audit requires a source checkout', 'Run the release audit from the planr-pipeline repository.');
+  fail(
+    'release.source-required',
+    'Releases',
+    'release audit requires a source checkout',
+    'Run the release audit from the planr-pipeline repository.',
+  );
 }
 
 await Promise.all(pendingHealthChecks);

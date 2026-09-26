@@ -30,7 +30,9 @@ function run(command, args, options = {}) {
   return result;
 }
 
-test('Phase 3 packed consumer exposes durable-work readers without a legacy or execution surface', { timeout: 120_000 }, () => {
+test('Phase 3 packed consumer exposes durable-work readers without a legacy or execution surface', {
+  timeout: 120_000,
+}, () => {
   const packageDestination = join(temporaryRoot, 'package');
   const packed = packOperateV2DevelopmentSnapshot(packageDestination, { sourceRoot: root });
   assert.equal(packed.ok, true);
@@ -57,7 +59,8 @@ test('Phase 3 packed consumer exposes durable-work readers without a legacy or e
     'schemas/v2.0.0/operating-action.schema.json',
     'schemas/v2.0.0/operating-work-change-set.schema.json',
     'schemas/v2.0.0/operating-work-ledger.schema.json',
-  ]) assert.equal(packedFiles.has(required), true, `missing Phase 3 package asset ${required}`);
+  ])
+    assert.equal(packedFiles.has(required), true, `missing Phase 3 package asset ${required}`);
 
   for (const path of packedFiles) {
     assert.doesNotMatch(path, /^(?:\.planr\/|tests\/|node_modules\/|\.env(?:\.|\/|$))/);
@@ -78,11 +81,16 @@ test('Phase 3 packed consumer exposes durable-work readers without a legacy or e
   });
   assert.equal(metadata.exports['./operate/cycle-close-v2'], undefined);
   assert.equal(metadata.exports['./operate/executor-v2'], undefined);
-  assert.equal(existsSync(join(installedPackage, 'schemas/v1.4.0/operating-event.schema.json')), false);
+  assert.equal(
+    existsSync(join(installedPackage, 'schemas/v1.4.0/operating-event.schema.json')),
+    false,
+  );
 
-  const conformance = run(process.execPath, [
-    join(installedPackage, 'conformance', 'verify-operate-v2-persistent-work.mjs'),
-  ], { cwd: installedPackage });
+  const conformance = run(
+    process.execPath,
+    [join(installedPackage, 'conformance', 'verify-operate-v2-persistent-work.mjs')],
+    { cwd: installedPackage },
+  );
   const report = JSON.parse(conformance.stdout);
   assert.deepEqual(report, { ok: true, protocolVersion: '2.0.0', checks: 9 });
   assert.equal(checkOperateRuntimePurity(installedPackage).ok, true);

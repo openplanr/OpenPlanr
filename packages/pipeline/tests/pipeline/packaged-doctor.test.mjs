@@ -59,7 +59,11 @@ test('the installed package doctor accepts a package release bump without source
   const report = JSON.parse(result.stdout);
   assert.equal(report.ok, true);
   assert.ok(report.checks.some((check) => check.id === 'versions.package-mode'));
-  assert.ok(report.checks.some((check) => check.id === 'protocol.ownership-reference' && check.status === 'ok'));
+  assert.ok(
+    report.checks.some(
+      (check) => check.id === 'protocol.ownership-reference' && check.status === 'ok',
+    ),
+  );
   assert.ok(report.checks.every((check) => check.id !== 'protocol.ownership-adr'));
   assert.ok(report.checks.some((check) => check.id === 'ecosystem.package-mode'));
 });
@@ -108,11 +112,15 @@ test('the source doctor recognizes consolidated workspace domains without siblin
     'ok',
   );
 
-  const strict = spawnSync(process.execPath, [join(root, 'scripts/doctor.mjs'), '--strict', '--json'], {
-    cwd: workspaceRoot,
-    encoding: 'utf8',
-    env: { ...process.env, HOME: home, PLANR_HOME: join(home, '.planr') },
-  });
+  const strict = spawnSync(
+    process.execPath,
+    [join(root, 'scripts/doctor.mjs'), '--strict', '--json'],
+    {
+      cwd: workspaceRoot,
+      encoding: 'utf8',
+      env: { ...process.env, HOME: home, PLANR_HOME: join(home, '.planr') },
+    },
+  );
   assert.equal(strict.status, 0, strict.stderr || strict.stdout);
   const strictReport = JSON.parse(strict.stdout);
   assert.equal(strictReport.failures, 0);
@@ -129,16 +137,15 @@ test('doctor reports malformed external web metadata without losing its JSON res
   mkdirSync(webRoot, { recursive: true });
   writeFileSync(join(webRoot, 'package.json'), '{ malformed\n');
 
-  const result = spawnSync(process.execPath, [
-    join(root, 'scripts/doctor.mjs'),
-    '--workspace-root',
-    temp,
-    '--json',
-  ], {
-    cwd: temp,
-    encoding: 'utf8',
-    env: { ...process.env, HOME: home, PLANR_HOME: join(home, '.planr') },
-  });
+  const result = spawnSync(
+    process.execPath,
+    [join(root, 'scripts/doctor.mjs'), '--workspace-root', temp, '--json'],
+    {
+      cwd: temp,
+      encoding: 'utf8',
+      env: { ...process.env, HOME: home, PLANR_HOME: join(home, '.planr') },
+    },
+  );
 
   assert.equal(result.status, 0, result.stderr || result.stdout);
   const report = JSON.parse(result.stdout);
@@ -159,11 +166,15 @@ test('doctor previews and repairs stale Planr-owned daemon state', () => {
   writeFileSync(join(designState, 'port'), '1\n');
   writeFileSync(join(dashboardState, 'port'), 'not-a-port\n');
 
-  const preview = spawnSync(process.execPath, [join(root, 'scripts/doctor.mjs'), '--json', '--repair-preview'], {
-    cwd: projectRoot,
-    encoding: 'utf8',
-    env: { ...process.env, HOME: home, PLANR_HOME: join(home, '.planr') },
-  });
+  const preview = spawnSync(
+    process.execPath,
+    [join(root, 'scripts/doctor.mjs'), '--json', '--repair-preview'],
+    {
+      cwd: projectRoot,
+      encoding: 'utf8',
+      env: { ...process.env, HOME: home, PLANR_HOME: join(home, '.planr') },
+    },
+  );
   assert.equal(preview.status, 0, preview.stderr || preview.stdout);
   const previewReport = JSON.parse(preview.stdout);
   assert.equal(previewReport.repairs.length, 2);

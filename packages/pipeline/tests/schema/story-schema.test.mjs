@@ -11,7 +11,9 @@ const root = join(here, '../..');
 
 const schema = JSON.parse(readFileSync(join(root, 'schemas/v1.0.0/story.schema.json'), 'utf-8'));
 const valid = JSON.parse(readFileSync(join(root, 'tests/fixtures/valid-story.json'), 'utf-8'));
-const invalid = JSON.parse(readFileSync(join(root, 'tests/fixtures/invalid-story-bad-enum.json'), 'utf-8'));
+const invalid = JSON.parse(
+  readFileSync(join(root, 'tests/fixtures/invalid-story-bad-enum.json'), 'utf-8'),
+);
 
 test('Story frontmatter validates for spec-driven parent reference', () => {
   assert.equal(validate(valid, schema).length, 0);

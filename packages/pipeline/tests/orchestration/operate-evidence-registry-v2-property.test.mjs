@@ -7,10 +7,13 @@ import {
   prepareOperateEvidenceDispatchV2,
 } from 'planr-pipeline/operate/evidence-v2';
 
-const fixture = (name) => JSON.parse(readFileSync(
-  new URL(`../../conformance/fixtures/operating-runtime-v2/${name}`, import.meta.url),
-  'utf8',
-));
+const fixture = (name) =>
+  JSON.parse(
+    readFileSync(
+      new URL(`../../conformance/fixtures/operating-runtime-v2/${name}`, import.meta.url),
+      'utf8',
+    ),
+  );
 
 function shuffled(entries, seed) {
   const copy = structuredClone(entries);

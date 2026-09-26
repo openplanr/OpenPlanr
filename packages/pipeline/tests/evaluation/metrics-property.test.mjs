@@ -67,7 +67,8 @@ test('a regression never rounds down into a pass and an improvement reports nega
     const baseline = 1 + Math.floor(next() * 5_000);
     const observed = Math.floor(next() * 10_000);
     const regression = regressionBasisPoints(observed, baseline);
-    if (observed >= baseline) assert.ok(regression >= ((observed - baseline) * EVALUATION_BASIS_POINTS) / baseline);
+    if (observed >= baseline)
+      assert.ok(regression >= ((observed - baseline) * EVALUATION_BASIS_POINTS) / baseline);
     else assert.ok(regression < 0);
   }
 });
@@ -91,17 +92,22 @@ test('precision and recall come from the positive and negative corpora together'
     { expected: 'refuse', observed: 'refuse' },
   ];
   const counts = deriveTriggerCounts(decisions);
-  assert.deepEqual({ ...counts }, { truePositives: 1, falsePositives: 1, falseNegatives: 1, trueNegatives: 2 });
+  assert.deepEqual(
+    { ...counts },
+    { truePositives: 1, falsePositives: 1, falseNegatives: 1, trueNegatives: 2 },
+  );
   const rates = triggerRates(counts);
   assert.equal(rates.triggerPrecision, 5_000);
   assert.equal(rates.triggerRecall, 5_000);
 });
 
 test('a scenario that must not trigger and does is a precision failure', () => {
-  const rates = triggerRates(deriveTriggerCounts([
-    ...Array.from({ length: 19 }, () => ({ expected: 'invoke', observed: 'invoke' })),
-    { expected: 'decline', observed: 'invoke' },
-  ]));
+  const rates = triggerRates(
+    deriveTriggerCounts([
+      ...Array.from({ length: 19 }, () => ({ expected: 'invoke', observed: 'invoke' })),
+      { expected: 'decline', observed: 'invoke' },
+    ]),
+  );
   assert.equal(rates.triggerPrecision, 9_500);
   assert.equal(rates.triggerRecall, 10_000);
 });
@@ -113,7 +119,10 @@ test('a silent skill fails recall even though it never fires falsely', () => {
 });
 
 test('a trigger decision with unknown fields is refused', () => {
-  assert.throws(() => deriveTriggerCounts([{ expected: 'invoke', observed: 'invoke', certified: true }]), { code: 'E_EVALUATION_METRIC_INVALID' });
+  assert.throws(
+    () => deriveTriggerCounts([{ expected: 'invoke', observed: 'invoke', certified: true }]),
+    { code: 'E_EVALUATION_METRIC_INVALID' },
+  );
 });
 
 test('aggregation is order independent and sums every friction', () => {
@@ -130,7 +139,10 @@ test('aggregation is order independent and sums every friction', () => {
   assert.equal(forward.retries, 3);
   assert.ok(forward.latencyMsP95 >= forward.latencyMsP50);
   assert.equal(forward.costEstimateMicros, estimateCostMicros(forward.totalTokens));
-  assert.equal(frictionCount({ permissionPrompts: 3, retries: 3, clarifications: 1, typedUnavailable: 2 }), 9);
+  assert.equal(
+    frictionCount({ permissionPrompts: 3, retries: 3, clarifications: 1, typedUnavailable: 2 }),
+    9,
+  );
 });
 
 test('token and cost estimates are a pure function of the bytes measured', () => {
@@ -155,6 +167,10 @@ test('a frozen baseline is closed and digest bound', () => {
   };
   assert.equal(assertEvaluationBaseline(baseline), baseline);
   assert.match(evaluationBaselineDigest(baseline), /^sha256:[a-f0-9]{64}$/u);
-  assert.throws(() => assertEvaluationBaseline({ ...baseline, verdict: 'release-ready' }), { code: 'E_EVALUATION_BASELINE_INVALID' });
-  assert.throws(() => assertEvaluationBaseline({ ...baseline, capturedAt: '2026-08-25' }), { code: 'E_EVALUATION_BASELINE_INVALID' });
+  assert.throws(() => assertEvaluationBaseline({ ...baseline, verdict: 'release-ready' }), {
+    code: 'E_EVALUATION_BASELINE_INVALID',
+  });
+  assert.throws(() => assertEvaluationBaseline({ ...baseline, capturedAt: '2026-08-25' }), {
+    code: 'E_EVALUATION_BASELINE_INVALID',
+  });
 });

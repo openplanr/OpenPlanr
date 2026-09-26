@@ -55,7 +55,8 @@ test('an implicit version, an unsupported version, and an unknown kind are each 
     (error) => error.code === 'E_SCHEMA_VERSION_UNSUPPORTED',
   );
   assert.throws(
-    () => loadReleaseLedgerContract('release-ledger-summary', { protocolVersion: CONTRACT_VERSION }),
+    () =>
+      loadReleaseLedgerContract('release-ledger-summary', { protocolVersion: CONTRACT_VERSION }),
     (error) => error.code === 'E_SCHEMA_UNKNOWN',
   );
 });
@@ -74,14 +75,21 @@ test('every release-ledger schema is closed, fully required, and binds digests e
     });
     for (const [name, definition] of Object.entries(schema.$defs ?? {})) {
       if (name !== 'digest') continue;
-      assert.equal(definition.pattern, DIGEST_PATTERN, `${kind} digests must be exact SHA-256 digests`);
+      assert.equal(
+        definition.pattern,
+        DIGEST_PATTERN,
+        `${kind} digests must be exact SHA-256 digests`,
+      );
     }
   }
 });
 
 test('the frozen ecosystem-manifest 1.1.0 contract stays registered alongside the new revision', () => {
   const registered = listProtocolSchemas().filter(({ kind }) => kind === 'ecosystem-manifest');
-  assert.deepEqual(registered.map(({ protocolVersion }) => protocolVersion).sort(), ['1.1.0', '1.3.0']);
+  assert.deepEqual(registered.map(({ protocolVersion }) => protocolVersion).sort(), [
+    '1.1.0',
+    '1.3.0',
+  ]);
   const frozen = readJson('schemas/v1.1.0/ecosystem-manifest.schema.json');
   assert.equal(frozen.$id, 'https://openplanr.dev/schemas/v1.1.0/ecosystem-manifest.schema.json');
   assert.equal(frozen.properties.schemaVersion.const, '1.0.0');
@@ -97,7 +105,10 @@ test('the reference ledger, claim, and receipt satisfy their published schemas',
     ['ecosystem-manifest', valid['ecosystem-manifest']],
     ['release-compatibility-claim', claims['release-compatibility-claim']],
   ]) {
-    assert.deepEqual(validateProtocolArtifact(kind, record, { protocolVersion: CONTRACT_VERSION }), []);
+    assert.deepEqual(
+      validateProtocolArtifact(kind, record, { protocolVersion: CONTRACT_VERSION }),
+      [],
+    );
   }
 });
 

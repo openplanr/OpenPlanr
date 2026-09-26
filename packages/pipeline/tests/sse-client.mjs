@@ -54,7 +54,11 @@ export function openSse(base, id, identity = {}) {
           }
           if (dataLines.length) {
             let data;
-            try { data = JSON.parse(dataLines.join('\n')); } catch { data = dataLines.join('\n'); }
+            try {
+              data = JSON.parse(dataLines.join('\n'));
+            } catch {
+              data = dataLines.join('\n');
+            }
             events.push({ event: eventName, data });
             flushWaiters();
           }
@@ -81,7 +85,11 @@ export function openSse(base, id, identity = {}) {
       });
     },
     close() {
-      try { req.destroy(); } catch { /* already closed */ }
+      try {
+        req.destroy();
+      } catch {
+        /* already closed */
+      }
     },
   };
 }

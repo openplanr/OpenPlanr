@@ -15,11 +15,18 @@ test('daemon startup prunes legacy + dead boards, keeps live tokenized ones', ()
   const regPath = join(stateDir, 'boards.json');
 
   const TOKEN = 'a'.repeat(24);
-  writeFileSync(regPath, `${JSON.stringify({
-    'legacy-slug': liveDir, // pre-token (no --token), live dir → pruned as legacy
-    [`dead--${TOKEN}`]: join(tmpdir(), 'planr-reg-gone-nonexistent'), // tokenized but dir gone → pruned
-    [`live--${TOKEN}`]: liveDir, // tokenized + live dir → kept
-  }, null, 2)}\n`);
+  writeFileSync(
+    regPath,
+    `${JSON.stringify(
+      {
+        'legacy-slug': liveDir, // pre-token (no --token), live dir → pruned as legacy
+        [`dead--${TOKEN}`]: join(tmpdir(), 'planr-reg-gone-nonexistent'), // tokenized but dir gone → pruned
+        [`live--${TOKEN}`]: liveDir, // tokenized + live dir → kept
+      },
+      null,
+      2,
+    )}\n`,
+  );
 
   try {
     // The prune runs synchronously inside createDaemon (no listen needed).

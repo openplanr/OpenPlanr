@@ -1,10 +1,21 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import {
+  cpSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { test } from 'node:test';
-import { projectedSkillName, renderNamespacedSkill } from '../../../../scripts/skills/host-invocations.mjs';
+import {
+  projectedSkillName,
+  renderNamespacedSkill,
+} from '../../../../scripts/skills/host-invocations.mjs';
 import { fileURLToPath } from 'node:url';
 
 import { sha256Jcs } from '../../lib/protocol/jcs.mjs';
@@ -33,13 +44,21 @@ function sha256(bytes) {
 
 test('legacy professional skill catalog remains byte-preserved and schema-valid', () => {
   const catalog = readProfessionalSkillsCatalog({ projectRoot: root, view: 'legacy' });
-  assert.deepEqual(catalog.skills.map(({ skillId }) => skillId), PROFESSIONAL_SKILL_IDS);
-  assert.ok(catalog.skills.every(({ sourceOwner, sourceVersion }) => (
-    sourceOwner === 'skills' && sourceVersion === '1.0.0'
-  )));
+  assert.deepEqual(
+    catalog.skills.map(({ skillId }) => skillId),
+    PROFESSIONAL_SKILL_IDS,
+  );
+  assert.ok(
+    catalog.skills.every(
+      ({ sourceOwner, sourceVersion }) => sourceOwner === 'skills' && sourceVersion === '1.0.0',
+    ),
+  );
   for (const skill of catalog.skills) {
     assert.equal(skill.sourceDigest, professionalSkillDigest(skill.sourceSnapshot));
-    assert.deepEqual(skill.hosts.map(({ host }) => host), ['claude-code', 'codex', 'cursor']);
+    assert.deepEqual(
+      skill.hosts.map(({ host }) => host),
+      ['claude-code', 'codex', 'cursor'],
+    );
     assert.ok(skill.cliRequirements.length > 0);
     assert.ok(skill.contracts.inputs.length > 0);
     assert.ok(skill.contracts.outputs.length > 0);
@@ -69,11 +88,7 @@ test('all active professional overlays use explicit canonical source prompts wit
       sourceDigest: legacyRow.sourceDigest,
       cliRequirements: legacyRow.cliRequirements,
     };
-    assert.deepEqual(
-      restoredLegacyFields,
-      legacyRow,
-      skillId,
-    );
+    assert.deepEqual(restoredLegacyFields, legacyRow, skillId);
   }
   assert.throws(() => assertProfessionalSkillsCatalog(active));
 });
@@ -87,7 +102,9 @@ test('canonical active sources deterministically render all three hosts and one 
   assert.equal(Object.keys(first).length, 13);
 
   const manifest = JSON.parse(first[PROFESSIONAL_SKILLS_MANIFEST_PATH]);
-  const activeRegistry = JSON.parse(readFileSync(join(root, 'registry/v1.5.0/skills.json'), 'utf8'));
+  const activeRegistry = JSON.parse(
+    readFileSync(join(root, 'registry/v1.5.0/skills.json'), 'utf8'),
+  );
   const registrations = new Map(activeRegistry.skills.map((skill) => [skill.skillId, skill]));
   assert.deepEqual(manifest.skillIds, PROFESSIONAL_SKILL_IDS);
   assert.equal(manifest.membershipDigest, sha256Jcs(PROFESSIONAL_SKILL_IDS));
@@ -123,11 +140,21 @@ test('canonical active sources deterministically render all three hosts and one 
 test('catalog validation fails closed for stale source, owner, membership, path, and authority drift', () => {
   const source = readProfessionalSkillsCatalog({ projectRoot: root, view: 'legacy' });
   for (const mutate of [
-    (value) => { value.skills[0].sourceSnapshot += '\n'; },
-    (value) => { value.skills[0].sourceOwner = 'pipeline'; },
-    (value) => { value.skills[0].skillId = 'planr-spec'; },
-    (value) => { value.skills[0].hosts[0].path = '../skills/planr-browser-qa/SKILL.md'; },
-    (value) => { value.skills[0].authorityClass = 'release'; },
+    (value) => {
+      value.skills[0].sourceSnapshot += '\n';
+    },
+    (value) => {
+      value.skills[0].sourceOwner = 'pipeline';
+    },
+    (value) => {
+      value.skills[0].skillId = 'planr-spec';
+    },
+    (value) => {
+      value.skills[0].hosts[0].path = '../skills/planr-browser-qa/SKILL.md';
+    },
+    (value) => {
+      value.skills[0].authorityClass = 'release';
+    },
   ]) {
     const hostile = clone(source);
     mutate(hostile);
@@ -145,17 +172,17 @@ test('generated guidance rejects vendor selection, hidden paths, and prompt-auth
     const hostile = clone(source);
     hostile.skills[0].sourceSnapshot += injection;
     hostile.skills[0].sourceDigest = professionalSkillDigest(hostile.skills[0].sourceSnapshot);
-    assert.throws(() => renderProfessionalSkillAssets(hostile), (error) => (
-      error.code === 'E_PROFESSIONAL_SKILL_PORTABILITY_INVALID'
-    ));
+    assert.throws(
+      () => renderProfessionalSkillAssets(hostile),
+      (error) => error.code === 'E_PROFESSIONAL_SKILL_PORTABILITY_INVALID',
+    );
   }
 });
 
 test('canonical host packages own current professional skill distribution', () => {
-  const canonical = JSON.parse(readFileSync(
-    join(workspaceRoot, 'adapters/manifests/canonical-skills.json'),
-    'utf8',
-  ));
+  const canonical = JSON.parse(
+    readFileSync(join(workspaceRoot, 'adapters/manifests/canonical-skills.json'), 'utf8'),
+  );
   assert.ok(PROFESSIONAL_SKILL_IDS.every((skillId) => canonical.skillIds.includes(skillId)));
   assert.equal(canonical.protocolVersion, '1.8.0');
   assert.equal(canonical.sourceFormat, 'package-v1');
@@ -200,30 +227,42 @@ test('manifest builder rejects missing generated members instead of inferring in
   const catalog = readProfessionalSkillsCatalog(activeOptions);
   const assets = renderProfessionalSkillAssets(catalog);
   delete assets['adapters/codex/skills/planr-spec/SKILL.md'];
-  assert.throws(() => buildProfessionalSkillsManifest(catalog, assets), (error) => (
-    error.code === 'E_PROFESSIONAL_SKILL_ASSET_MISSING'
-  ));
+  assert.throws(
+    () => buildProfessionalSkillsManifest(catalog, assets),
+    (error) => error.code === 'E_PROFESSIONAL_SKILL_ASSET_MISSING',
+  );
 });
 
 test('default catalog reads only bundled compatibility snapshots in an isolated package', () => {
   const isolated = mkdtempSync(join(tmpdir(), 'planr-professional-catalog-'));
   try {
     mkdirSync(join(isolated, 'registry'));
-    cpSync(join(root, PROFESSIONAL_SKILLS_CATALOG_PATH), join(isolated, PROFESSIONAL_SKILLS_CATALOG_PATH));
+    cpSync(
+      join(root, PROFESSIONAL_SKILLS_CATALOG_PATH),
+      join(isolated, PROFESSIONAL_SKILLS_CATALOG_PATH),
+    );
     const catalog = readProfessionalSkillsCatalog({ projectRoot: isolated });
     assert.deepEqual(catalog, readProfessionalSkillsCatalog({ projectRoot: root, view: 'legacy' }));
     assert.deepEqual(readProfessionalSkillsCatalog(), catalog);
     assert.ok(catalog.skills.every(({ cliRequirements }) => cliRequirements.length > 0));
+    assert.throws(() => readProfessionalSkillsCatalog({ projectRoot: isolated, view: 'active' }), {
+      code: 'E_PROFESSIONAL_SKILL_SOURCE_REQUIRED',
+    });
     assert.throws(
-      () => readProfessionalSkillsCatalog({ projectRoot: isolated, view: 'active' }),
-      { code: 'E_PROFESSIONAL_SKILL_SOURCE_REQUIRED' },
-    );
-    assert.throws(
-      () => readProfessionalSkillsCatalog({ projectRoot: isolated, view: 'active', sourceRoot: isolated }),
+      () =>
+        readProfessionalSkillsCatalog({
+          projectRoot: isolated,
+          view: 'active',
+          sourceRoot: isolated,
+        }),
       { code: 'E_PROFESSIONAL_SKILL_SOURCE_INVALID' },
     );
     assert.deepEqual(
-      readProfessionalSkillsCatalog({ projectRoot: isolated, view: 'active', sourceRoot: workspaceRoot }),
+      readProfessionalSkillsCatalog({
+        projectRoot: isolated,
+        view: 'active',
+        sourceRoot: workspaceRoot,
+      }),
       readProfessionalSkillsCatalog(activeOptions),
     );
   } finally {

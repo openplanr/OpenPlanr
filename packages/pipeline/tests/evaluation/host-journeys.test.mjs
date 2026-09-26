@@ -25,7 +25,11 @@ import {
 
 const root = dirname(fileURLToPath(new URL('../../package.json', import.meta.url)));
 const catalog = readProfessionalSkillsCatalog({ projectRoot: root });
-const surface = assertLoopbackSurface(JSON.parse(readFileSync(join(root, 'conformance/fixtures/skill-evaluation/loopback-surface.json'), 'utf8')));
+const surface = assertLoopbackSurface(
+  JSON.parse(
+    readFileSync(join(root, 'conformance/fixtures/skill-evaluation/loopback-surface.json'), 'utf8'),
+  ),
+);
 const browserQa = catalog.skills.find((row) => row.skillId === 'planr-browser-qa');
 const NOW = '2026-08-25T09:16:00.000Z';
 
@@ -34,14 +38,23 @@ function disposable(prefix) {
 }
 
 test('a declared trigger phrase invokes and a declared exclusion declines', () => {
-  const invoke = routeTrigger({ promptText: browserQa.triggerPolicy.include[0], triggerPolicy: browserQa.triggerPolicy });
+  const invoke = routeTrigger({
+    promptText: browserQa.triggerPolicy.include[0],
+    triggerPolicy: browserQa.triggerPolicy,
+  });
   assert.equal(invoke.outcome, 'invoke');
-  const decline = routeTrigger({ promptText: browserQa.triggerPolicy.exclude[0], triggerPolicy: browserQa.triggerPolicy });
+  const decline = routeTrigger({
+    promptText: browserQa.triggerPolicy.exclude[0],
+    triggerPolicy: browserQa.triggerPolicy,
+  });
   assert.equal(decline.outcome, 'decline');
 });
 
 test('half a trigger phrase asks rather than guesses', () => {
-  const clarify = routeTrigger({ promptText: 'verify routes, forms.', triggerPolicy: browserQa.triggerPolicy });
+  const clarify = routeTrigger({
+    promptText: 'verify routes, forms.',
+    triggerPolicy: browserQa.triggerPolicy,
+  });
   assert.equal(clarify.outcome, 'clarify');
 });
 
@@ -80,8 +93,14 @@ test('a prompting host counts one prompt per effectful grant', () => {
 test('a real CLI journey answers typed in both human and strict output', () => {
   const cliRoot = createDisposableCliRoot();
   try {
-    const driver = createCliDriver({ executable: join(root, 'bin/planr-pipeline.mjs'), cwd: cliRoot.root });
-    const journey = runCliJourney({ driver, argv: ['prepare-browser-qa', 'evaluation-subject', '--run-id', 'evaluation'] });
+    const driver = createCliDriver({
+      executable: join(root, 'bin/planr-pipeline.mjs'),
+      cwd: cliRoot.root,
+    });
+    const journey = runCliJourney({
+      driver,
+      argv: ['prepare-browser-qa', 'evaluation-subject', '--run-id', 'evaluation'],
+    });
     assert.equal(journey.completed, true);
     assert.equal(journey.terminalReason, 'CLI_TYPED_UNAVAILABLE');
     assert.equal(journey.typedUnavailable, 1);
@@ -93,7 +112,17 @@ test('a real CLI journey answers typed in both human and strict output', () => {
 });
 
 test('an untyped CLI answer is a typed absence, never a pass', () => {
-  const driver = { invoke: () => ({ argvDigest: 'sha256:0', mode: 'json', envelope: null, status: 0, latencyMs: 1, outputDigest: 'sha256:0', outputTokens: 1 }) };
+  const driver = {
+    invoke: () => ({
+      argvDigest: 'sha256:0',
+      mode: 'json',
+      envelope: null,
+      status: 0,
+      latencyMs: 1,
+      outputDigest: 'sha256:0',
+      outputTokens: 1,
+    }),
+  };
   const journey = runCliJourney({ driver, argv: ['status'] });
   assert.equal(journey.completed, false);
   assert.equal(journey.absence.code, 'fixture-unavailable');
@@ -113,7 +142,11 @@ test('output modes that disagree are a failure rather than a pass', () => {
 });
 
 test('a loopback browser journey records every declared evidence class', async () => {
-  const journey = await runBrowserJourney({ surface, adapter: createLoopbackBrowserAdapter(), declaredViewports: surface.viewports });
+  const journey = await runBrowserJourney({
+    surface,
+    adapter: createLoopbackBrowserAdapter(),
+    declaredViewports: surface.viewports,
+  });
   assert.equal(journey.completed, true);
   assert.equal(journey.terminalReason, 'BROWSER_EVIDENCE_RECORDED');
   const evidence = journey.outputs[0].record;
@@ -126,22 +159,41 @@ test('a loopback browser journey records every declared evidence class', async (
 });
 
 test('the loopback adapter attests exactly the declared evidence classes', () => {
-  assert.deepEqual([...createLoopbackBrowserAdapter().attests], [...EVALUATION_BROWSER_EVIDENCE_CLASSES]);
+  assert.deepEqual(
+    [...createLoopbackBrowserAdapter().attests],
+    [...EVALUATION_BROWSER_EVIDENCE_CLASSES],
+  );
 });
 
 test('a document carrying script leaves its console channel unattested', async () => {
   const scripted = {
     ...surface,
-    routes: [{ ...surface.routes[0], document: surface.routes[0].document.replace('</body>', '<script>console.log(1)</script></body>') }],
+    routes: [
+      {
+        ...surface.routes[0],
+        document: surface.routes[0].document.replace(
+          '</body>',
+          '<script>console.log(1)</script></body>',
+        ),
+      },
+    ],
   };
-  const journey = await runBrowserJourney({ surface: scripted, adapter: createLoopbackBrowserAdapter(), declaredViewports: surface.viewports });
+  const journey = await runBrowserJourney({
+    surface: scripted,
+    adapter: createLoopbackBrowserAdapter(),
+    declaredViewports: surface.viewports,
+  });
   assert.equal(journey.completed, false);
   assert.equal(journey.terminalReason, 'BROWSER_EVIDENCE_UNATTESTED');
   assert.equal(journey.absence.code, 'host-unavailable');
 });
 
 test('no trusted adapter keeps the browser journey blocking', async () => {
-  const journey = await runBrowserJourney({ surface, adapter: null, declaredViewports: surface.viewports });
+  const journey = await runBrowserJourney({
+    surface,
+    adapter: null,
+    declaredViewports: surface.viewports,
+  });
   assert.equal(journey.completed, false);
   assert.equal(journey.terminalReason, 'BROWSER_TRUSTED_HOST_REQUIRED');
   assert.equal(journey.absence.treatedAsPass, false);
@@ -163,9 +215,17 @@ test('a packed journey exercises the installed bytes rather than the working tre
   const archive = { 'skills/planr-spec/SKILL.md': 'installed bytes\n' };
   const installRoot = disposable('planr-packed-exercise');
   try {
-    const journey = runPackedInstallJourney({ archive, declaredMembers: Object.keys(archive), exercisePath: 'skills/planr-spec/SKILL.md', installRoot });
+    const journey = runPackedInstallJourney({
+      archive,
+      declaredMembers: Object.keys(archive),
+      exercisePath: 'skills/planr-spec/SKILL.md',
+      installRoot,
+    });
     assert.equal(journey.completed, true);
-    assert.equal(readFileSync(join(installRoot, 'skills/planr-spec/SKILL.md'), 'utf8'), archive['skills/planr-spec/SKILL.md']);
+    assert.equal(
+      readFileSync(join(installRoot, 'skills/planr-spec/SKILL.md'), 'utf8'),
+      archive['skills/planr-spec/SKILL.md'],
+    );
   } finally {
     rmSync(installRoot, { recursive: true, force: true });
   }
@@ -184,10 +244,9 @@ test('a symlink already sitting on a member path is refused rather than followed
       context.skip('this host does not permit creating a symlink');
       return;
     }
-    assert.throws(
-      () => installPackedMember(installRoot, 'SKILL.md', 'installed bytes\n'),
-      { code: 'E_EVALUATION_PACKED_MEMBER_REFUSED' },
-    );
+    assert.throws(() => installPackedMember(installRoot, 'SKILL.md', 'installed bytes\n'), {
+      code: 'E_EVALUATION_PACKED_MEMBER_REFUSED',
+    });
     assert.equal(readFileSync(join(outside, 'target.md'), 'utf8'), 'foreign bytes\n');
   } finally {
     rmSync(installRoot, { recursive: true, force: true });
@@ -198,8 +257,16 @@ test('a symlink already sitting on a member path is refused rather than followed
 test('sibling checkout discovery is refused', () => {
   const installRoot = disposable('planr-packed-sibling');
   try {
-    for (const path of ['../sibling/SKILL.md', 'skills/../../sibling/SKILL.md', '/etc/planr/SKILL.md']) {
-      assert.throws(() => installPackedMember(installRoot, path, 'bytes\n'), { code: 'E_EVALUATION_PACKED_MEMBER_REFUSED' }, path);
+    for (const path of [
+      '../sibling/SKILL.md',
+      'skills/../../sibling/SKILL.md',
+      '/etc/planr/SKILL.md',
+    ]) {
+      assert.throws(
+        () => installPackedMember(installRoot, path, 'bytes\n'),
+        { code: 'E_EVALUATION_PACKED_MEMBER_REFUSED' },
+        path,
+      );
     }
   } finally {
     rmSync(installRoot, { recursive: true, force: true });

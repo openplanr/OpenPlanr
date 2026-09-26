@@ -48,9 +48,7 @@ export function listUserStoryFiles(specDir) {
 export function listTaskFiles(specDir) {
   const tasks = join(specDir, 'tasks');
   if (!existsSync(tasks)) return [];
-  return readdirSync(tasks).filter(
-    (f) => /^T-.*\.md$/i.test(f) && !/error-report\.md$/i.test(f),
-  );
+  return readdirSync(tasks).filter((f) => /^T-.*\.md$/i.test(f) && !/error-report\.md$/i.test(f));
 }
 
 /**
@@ -78,8 +76,7 @@ export function assertShipStoriesReady(projectRoot, slug) {
     return {
       ok: false,
       code: 'R1_MISSING_STORIES_DIR',
-      message:
-        `Missing PO decomposition output: <SPEC_DIR>/stories/ absent (${storiesPath}). Human review gate (R1) requires ≥1 US-*.md under stories/.`,
+      message: `Missing PO decomposition output: <SPEC_DIR>/stories/ absent (${storiesPath}). Human review gate (R1) requires ≥1 US-*.md under stories/.`,
     };
   }
   const stories = listUserStoryFiles(specDir);
@@ -87,8 +84,7 @@ export function assertShipStoriesReady(projectRoot, slug) {
     return {
       ok: false,
       code: 'R1_MISSING_USER_STORIES',
-      message:
-        `Missing PO decomposition output: stories/ exists but contains no US-*.md files under ${storiesPath}.`,
+      message: `Missing PO decomposition output: stories/ exists but contains no US-*.md files under ${storiesPath}.`,
     };
   }
   return { ok: true, specDir, storyFiles: stories };

@@ -1,13 +1,7 @@
 #!/usr/bin/env node
 
 import { createHash } from 'node:crypto';
-import {
-  existsSync,
-  lstatSync,
-  mkdirSync,
-  readFileSync,
-  writeFileSync,
-} from 'node:fs';
+import { existsSync, lstatSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -40,9 +34,7 @@ import {
 const REGISTRY_PATH = 'registry/operate-v2-contracts.json';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
-const RUNTIME_ASSETS = Object.freeze([
-  'adapters/cursor/rules/openplanr.mdc',
-]);
+const RUNTIME_ASSETS = Object.freeze(['adapters/cursor/rules/openplanr.mdc']);
 
 const OPERATE_RUNTIME_CLIENTS = Object.freeze([
   Object.freeze({
@@ -69,7 +61,8 @@ const OPERATE_RUNTIME_CLIENTS = Object.freeze([
 ]);
 
 const GENERATED_MANIFEST = 'conformance/fixtures/guided-runtime-parity/generated-assets.json';
-const GENERATED_OPERATE_MANIFEST = 'conformance/fixtures/operate-adapter-parity/generated-assets.json';
+const GENERATED_OPERATE_MANIFEST =
+  'conformance/fixtures/operate-adapter-parity/generated-assets.json';
 const GENERATED_LANDING_MANIFEST = LANDING_WORKFLOW_MANIFEST_PATH;
 const GENERATED_DOC = 'docs/runtime-guided-interactions.md';
 const GENERATED_ADAPTER_DOC = 'docs/generated/adapters.md';
@@ -120,11 +113,12 @@ function assertSafePackageSkillPath(path, { skillId, host }) {
       { skillId, host, path },
     );
   }
-  const rootPath = host === 'pipeline'
-    ? `skills/${skillId}`
-    : host === 'codex'
-      ? `adapters/codex/skills/${skillId}`
-      : 'adapters/cursor/rules';
+  const rootPath =
+    host === 'pipeline'
+      ? `skills/${skillId}`
+      : host === 'codex'
+        ? `adapters/codex/skills/${skillId}`
+        : 'adapters/cursor/rules';
   if (path !== rootPath && !path.startsWith(`${rootPath}/`)) {
     throw new GuidedAdapterGenerationError(
       'E_GUIDED_ADAPTER_SKILL_CUSTODY',
@@ -151,9 +145,11 @@ export function readGeneratedSkillCustody({ projectRoot = root } = {}) {
   }
   const manifest = readJson(projectRoot, GENERATED_SKILL_CUSTODY_MANIFEST);
   const skillRegistry = readJson(projectRoot, SKILL_REGISTRY_PATH);
-  if (skillRegistry.kind !== 'skill-catalog'
-    || skillRegistry.protocolVersion !== '1.5.0'
-    || !Array.isArray(skillRegistry.skills)) {
+  if (
+    skillRegistry.kind !== 'skill-catalog' ||
+    skillRegistry.protocolVersion !== '1.5.0' ||
+    !Array.isArray(skillRegistry.skills)
+  ) {
     throw new GuidedAdapterGenerationError(
       'E_GUIDED_ADAPTER_SKILL_CUSTODY',
       `${SKILL_REGISTRY_PATH} must expose the projected Protocol skill catalog.`,
@@ -162,23 +158,28 @@ export function readGeneratedSkillCustody({ projectRoot = root } = {}) {
   const registryById = new Map(skillRegistry.skills.map((skill) => [skill.skillId, skill]));
   const registrySkillIds = [...registryById.keys()];
   const skillIds = manifest.skillIds;
-  if (manifest.kind !== 'openplanr-package-skill-assets'
-    || manifest.schemaVersion !== '1.0.0'
-    || manifest.protocolVersion !== '1.5.0'
-    || manifest.generator !== 'scripts/skills/generate.mjs'
-    || !Array.isArray(skillIds)
-    || new Set(skillIds).size !== skillIds.length
-    || skillIds.some((id) => typeof id !== 'string' || !/^planr-[a-z][a-z0-9-]*$/u.test(id))
-    || JSON.stringify(skillIds) !== JSON.stringify(registrySkillIds)
-    || JSON.stringify(skillIds) !== JSON.stringify([...skillIds].sort())) {
+  if (
+    manifest.kind !== 'openplanr-package-skill-assets' ||
+    manifest.schemaVersion !== '1.0.0' ||
+    manifest.protocolVersion !== '1.5.0' ||
+    manifest.generator !== 'scripts/skills/generate.mjs' ||
+    !Array.isArray(skillIds) ||
+    new Set(skillIds).size !== skillIds.length ||
+    skillIds.some((id) => typeof id !== 'string' || !/^planr-[a-z][a-z0-9-]*$/u.test(id)) ||
+    JSON.stringify(skillIds) !== JSON.stringify(registrySkillIds) ||
+    JSON.stringify(skillIds) !== JSON.stringify([...skillIds].sort())
+  ) {
     throw new GuidedAdapterGenerationError(
       'E_GUIDED_ADAPTER_SKILL_CUSTODY',
       'The generated package skill custody envelope is invalid or incomplete.',
       { skillIds },
     );
   }
-  if (!Array.isArray(manifest.skills) || manifest.skills.length !== skillIds.length
-    || !Array.isArray(manifest.assets)) {
+  if (
+    !Array.isArray(manifest.skills) ||
+    manifest.skills.length !== skillIds.length ||
+    !Array.isArray(manifest.assets)
+  ) {
     throw new GuidedAdapterGenerationError(
       'E_GUIDED_ADAPTER_SKILL_CUSTODY',
       'The generated package skill custody inventory is incomplete.',
@@ -189,15 +190,21 @@ export function readGeneratedSkillCustody({ projectRoot = root } = {}) {
   for (const row of manifest.skills) {
     const registration = registryById.get(row?.id);
     const registeredCommands = registration?.cliRequirements?.map(({ argv }) => argv[0]);
-    if (!row || typeof row !== 'object' || !skillIds.includes(row.id)
-      || skillsById.has(row.id) || row.source !== registration?.source
-      || row.sourceDigest !== registration?.sourceDigest
-      || typeof row.sourceDigest !== 'string' || !/^sha256:[a-f0-9]{64}$/u.test(row.sourceDigest)
-      || !Array.isArray(row.commands)
-      || row.commands.some((id) => typeof id !== 'string' || !/^[a-z][a-z0-9-]*$/u.test(id))
-      || new Set(row.commands).size !== row.commands.length
-      || JSON.stringify(row.commands) !== JSON.stringify(registeredCommands)
-      || !Array.isArray(row.assets)) {
+    if (
+      !row ||
+      typeof row !== 'object' ||
+      !skillIds.includes(row.id) ||
+      skillsById.has(row.id) ||
+      row.source !== registration?.source ||
+      row.sourceDigest !== registration?.sourceDigest ||
+      typeof row.sourceDigest !== 'string' ||
+      !/^sha256:[a-f0-9]{64}$/u.test(row.sourceDigest) ||
+      !Array.isArray(row.commands) ||
+      row.commands.some((id) => typeof id !== 'string' || !/^[a-z][a-z0-9-]*$/u.test(id)) ||
+      new Set(row.commands).size !== row.commands.length ||
+      JSON.stringify(row.commands) !== JSON.stringify(registeredCommands) ||
+      !Array.isArray(row.assets)
+    ) {
       throw new GuidedAdapterGenerationError(
         'E_GUIDED_ADAPTER_SKILL_CUSTODY',
         'A generated package skill custody row is invalid.',
@@ -214,9 +221,12 @@ export function readGeneratedSkillCustody({ projectRoot = root } = {}) {
     }
     for (const asset of row.assets) {
       const expectedPath = expectedPackageSkillPath(row.id, asset.host);
-      if (asset.path !== expectedPath || typeof asset.digest !== 'string'
-        || !/^sha256:[a-f0-9]{64}$/u.test(asset.digest)
-        || !Array.isArray(asset.supportAssets ?? [])) {
+      if (
+        asset.path !== expectedPath ||
+        typeof asset.digest !== 'string' ||
+        !/^sha256:[a-f0-9]{64}$/u.test(asset.digest) ||
+        !Array.isArray(asset.supportAssets ?? [])
+      ) {
         throw new GuidedAdapterGenerationError(
           'E_GUIDED_ADAPTER_SKILL_CUSTODY',
           `Skill ${row.id} has an invalid ${asset.host} main asset.`,
@@ -236,9 +246,14 @@ export function readGeneratedSkillCustody({ projectRoot = root } = {}) {
   const assetBytesByPath = {};
   const assetsBySkillAndHost = new Map();
   for (const asset of manifest.assets) {
-    if (!asset || typeof asset !== 'object' || !skillsById.has(asset.skillId)
-      || !PACKAGE_SKILL_HOSTS.includes(asset.host)
-      || typeof asset.digest !== 'string' || !/^sha256:[a-f0-9]{64}$/u.test(asset.digest)) {
+    if (
+      !asset ||
+      typeof asset !== 'object' ||
+      !skillsById.has(asset.skillId) ||
+      !PACKAGE_SKILL_HOSTS.includes(asset.host) ||
+      typeof asset.digest !== 'string' ||
+      !/^sha256:[a-f0-9]{64}$/u.test(asset.digest)
+    ) {
       throw new GuidedAdapterGenerationError(
         'E_GUIDED_ADAPTER_SKILL_CUSTODY',
         'A generated package skill asset row is invalid.',
@@ -254,7 +269,11 @@ export function readGeneratedSkillCustody({ projectRoot = root } = {}) {
       );
     }
     const absolute = resolve(projectRoot, path);
-    if (!existsSync(absolute) || lstatSync(absolute).isSymbolicLink() || !lstatSync(absolute).isFile()) {
+    if (
+      !existsSync(absolute) ||
+      lstatSync(absolute).isSymbolicLink() ||
+      !lstatSync(absolute).isFile()
+    ) {
       throw new GuidedAdapterGenerationError(
         'E_GUIDED_ADAPTER_SKILL_CUSTODY',
         `Generated package skill asset ${path} is missing or not a regular file.`,
@@ -283,8 +302,10 @@ export function readGeneratedSkillCustody({ projectRoot = root } = {}) {
       const key = `${skillId}:${main.host}`;
       const paths = assetsBySkillAndHost.get(key) ?? [];
       const declared = [main.path, ...(main.supportAssets ?? []).map(({ path }) => path)].sort();
-      if (JSON.stringify([...paths].sort()) !== JSON.stringify(declared)
-        || digest(assetBytesByPath[main.path] ?? '') !== main.digest) {
+      if (
+        JSON.stringify([...paths].sort()) !== JSON.stringify(declared) ||
+        digest(assetBytesByPath[main.path] ?? '') !== main.digest
+      ) {
         throw new GuidedAdapterGenerationError(
           'E_GUIDED_ADAPTER_SKILL_CUSTODY',
           `Skill ${skillId} ${main.host} assets do not match root custody.`,
@@ -410,23 +431,27 @@ function renderLandingManifest(projectRoot, registry, assetBytesByPath, labels) 
   }
   assertLandingWorkflowCatalog(readJson(projectRoot, LANDING_WORKFLOW_CATALOG_PATH));
   const assets = LANDING_WORKFLOW_ASSET_PATHS.map((path) => {
-    const bytes = canonicalText(assetBytesByPath[path]
-      ?? readFileSync(resolve(projectRoot, path), 'utf8'));
+    const bytes = canonicalText(
+      assetBytesByPath[path] ?? readFileSync(resolve(projectRoot, path), 'utf8'),
+    );
     assertPortableAsset(path, bytes, labels);
     return { path, digest: digest(bytes) };
   });
-  const catalogBytes = canonicalText(readFileSync(
-    resolve(projectRoot, LANDING_WORKFLOW_CATALOG_PATH),
-    'utf8',
-  ));
-  return `${JSON.stringify({
-    kind: 'landing-workflow-assets',
-    schemaVersion: '1.0.0',
-    protocolVersion: '1.2.0',
-    generator: 'scripts/generate-guided-adapters.mjs',
-    workflowCatalogDigest: digest(catalogBytes),
-    assets,
-  }, null, 2)}\n`;
+  const catalogBytes = canonicalText(
+    readFileSync(resolve(projectRoot, LANDING_WORKFLOW_CATALOG_PATH), 'utf8'),
+  );
+  return `${JSON.stringify(
+    {
+      kind: 'landing-workflow-assets',
+      schemaVersion: '1.0.0',
+      protocolVersion: '1.2.0',
+      generator: 'scripts/generate-guided-adapters.mjs',
+      workflowCatalogDigest: digest(catalogBytes),
+      assets,
+    },
+    null,
+    2,
+  )}\n`;
 }
 
 function copiedQuestionLabels(projectRoot) {
@@ -479,13 +504,17 @@ function renderManifest(projectRoot, assetBytesByPath = {}) {
     assertPortableAsset(path, bytes, labels);
     return { path, digest: digest(bytes) };
   });
-  return `${JSON.stringify({
-    kind: 'guided-runtime-assets',
-    schemaVersion: '1.0.0',
-    protocolVersion: '1.2.0',
-    generator: 'scripts/generate-guided-adapters.mjs',
-    assets,
-  }, null, 2)}\n`;
+  return `${JSON.stringify(
+    {
+      kind: 'guided-runtime-assets',
+      schemaVersion: '1.0.0',
+      protocolVersion: '1.2.0',
+      generator: 'scripts/generate-guided-adapters.mjs',
+      assets,
+    },
+    null,
+    2,
+  )}\n`;
 }
 
 function canonicalCliRequirements(skillRegistry) {
@@ -577,9 +606,11 @@ function renderCodexSkillDistribution(skillCustody) {
 function renderOperateManifest(registry, assetBytesByPath, labels, skillCustody) {
   const adapters = OPERATE_RUNTIME_CLIENTS.map((client) => {
     const adapter = registry.adapters.find(({ id }) => id === client.id);
-    if (!adapter
-      || !adapter.assets.includes(client.registryAsset)
-      || !adapter.healthChecks.includes('operate-machine-json')) {
+    if (
+      !adapter ||
+      !adapter.assets.includes(client.registryAsset) ||
+      !adapter.healthChecks.includes('operate-machine-json')
+    ) {
       throw new GuidedAdapterGenerationError(
         'E_GUIDED_ADAPTER_OPERATE_REGISTRATION',
         `Adapter ${client.id} does not declare its Operate asset and machine-JSON health check.`,
@@ -606,29 +637,33 @@ function renderOperateManifest(registry, assetBytesByPath, labels, skillCustody)
       assets,
     };
   });
-  return `${JSON.stringify({
-    kind: 'operate-adapter-assets',
-    schemaVersion: '1.0.0',
-    protocolVersion: '2.0.0',
-    generator: 'scripts/generate-guided-adapters.mjs',
-    skillDistribution: renderCodexSkillDistribution(skillCustody),
-    cliRequirements: {
-      executable: 'planr',
+  return `${JSON.stringify(
+    {
+      kind: 'operate-adapter-assets',
+      schemaVersion: '1.0.0',
       protocolVersion: '2.0.0',
-      output: 'json',
-      commands: canonicalCliRequirements(skillCustody.skillRegistry),
+      generator: 'scripts/generate-guided-adapters.mjs',
+      skillDistribution: renderCodexSkillDistribution(skillCustody),
+      cliRequirements: {
+        executable: 'planr',
+        protocolVersion: '2.0.0',
+        output: 'json',
+        commands: canonicalCliRequirements(skillCustody.skillRegistry),
+      },
+      capabilityPolicy: {
+        evidencePreparation: 'automatic-adapter-screened-on-start',
+        executiveEvidenceAccess: 'screened-artifacts-only',
+        grantedCapabilities: ['artifact.read', 'artifact.submit'],
+        repositoryRead: 'not-granted',
+        privateRuntimeStorage: 'not-readable',
+        supportedOperatingDomains: ['business'],
+        deferredOperatingDomains: ['software'],
+      },
+      adapters,
     },
-    capabilityPolicy: {
-      evidencePreparation: 'automatic-adapter-screened-on-start',
-      executiveEvidenceAccess: 'screened-artifacts-only',
-      grantedCapabilities: ['artifact.read', 'artifact.submit'],
-      repositoryRead: 'not-granted',
-      privateRuntimeStorage: 'not-readable',
-      supportedOperatingDomains: ['business'],
-      deferredOperatingDomains: ['software'],
-    },
-    adapters,
-  }, null, 2)}\n`;
+    null,
+    2,
+  )}\n`;
 }
 
 export function renderGuidedAdapterAssets({ projectRoot = root } = {}) {
@@ -653,7 +688,9 @@ export function renderGuidedAdapterAssets({ projectRoot = root } = {}) {
   );
   const generatedAssets = {
     'adapters/claude-code/README.md': renderClaudeCodeReadme(skillCustody.manifest.skillIds),
-    'adapters/codex/project-guidance.md': renderCodexProjectGuidance(skillCustody.manifest.skillIds),
+    'adapters/codex/project-guidance.md': renderCodexProjectGuidance(
+      skillCustody.manifest.skillIds,
+    ),
     'adapters/cursor/rules/openplanr.mdc': renderCursorProjectGuidance(),
     'lib/operate/contracts/mandate-appendix-v2.mjs': renderOperateMandateAppendixModule(catalog),
     [PROFESSIONAL_SKILLS_MANIFEST_PATH]: `${JSON.stringify(professionalManifest, null, 2)}\n`,
@@ -683,8 +720,9 @@ function staleTargets(projectRoot, assets) {
   return Object.entries(assets)
     .filter(([target, expected]) => {
       const path = resolve(projectRoot, target);
-      return !existsSync(path)
-        || canonicalText(readFileSync(path, 'utf8')) !== canonicalText(expected);
+      return (
+        !existsSync(path) || canonicalText(readFileSync(path, 'utf8')) !== canonicalText(expected)
+      );
     })
     .map(([target]) => target)
     .sort();

@@ -103,9 +103,9 @@ test('guided actions require their exact confirmation digest', () => {
 });
 
 test('generated host packages expose every canonical skill and nine Claude agents', () => {
-  const canonical = JSON.parse(
-    readFileSync(join(workspaceRoot, 'skills/registry.json'), 'utf8'),
-  ).skills.map(({ skillId }) => skillId).sort();
+  const canonical = JSON.parse(readFileSync(join(workspaceRoot, 'skills/registry.json'), 'utf8'))
+    .skills.map(({ skillId }) => skillId)
+    .sort();
   assert.equal(new Set(canonical).size, canonical.length);
   const check = spawnSync(process.execPath, ['scripts/skills/check-host-parity.mjs'], {
     cwd: workspaceRoot,
@@ -129,7 +129,10 @@ test('generated host packages expose every canonical skill and nine Claude agent
   assert.deepEqual(expected, canonical);
   for (const host of ['openai', 'claude']) {
     const pluginRoot = join(workspaceRoot, 'dist', 'plugins', host, 'openplanr');
-    assert.deepEqual(directories(join(pluginRoot, 'skills')), expected.map(projectedSkillName).sort());
+    assert.deepEqual(
+      directories(join(pluginRoot, 'skills')),
+      expected.map(projectedSkillName).sort(),
+    );
     assert.equal(existsSync(join(pluginRoot, 'commands')), false);
     assert.equal(existsSync(join(pluginRoot, 'codex-skills')), false);
   }

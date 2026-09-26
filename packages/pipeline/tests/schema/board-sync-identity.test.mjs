@@ -49,14 +49,20 @@ for (const kind of ['spec', 'story', 'task']) {
     ];
     for (const contentHash of bad) {
       const errs = validate({ ...withSync[kind], contentHash }, schemas[kind]);
-      assert.ok(errs.length > 0, `${kind} contentHash ${JSON.stringify(contentHash)} should fail validation`);
+      assert.ok(
+        errs.length > 0,
+        `${kind} contentHash ${JSON.stringify(contentHash)} should fail validation`,
+      );
     }
   });
 
   test(`${kind} kanbanosId MUST be an opaque url-safe token of at least 8 chars`, () => {
     for (const kanbanosId of ['', 'short', 'has space in id', 'bad/slash/id', 'a'.repeat(129)]) {
       const errs = validate({ ...withSync[kind], kanbanosId }, schemas[kind]);
-      assert.ok(errs.length > 0, `${kind} kanbanosId ${JSON.stringify(kanbanosId)} should fail validation`);
+      assert.ok(
+        errs.length > 0,
+        `${kind} kanbanosId ${JSON.stringify(kanbanosId)} should fail validation`,
+      );
     }
   });
 

@@ -15,7 +15,9 @@ const workspaceRoot = resolve(root, '../..');
 const openPlanrRoot = join(workspaceRoot, 'packages/cli');
 const fixtureRoot = join(root, 'conformance/fixtures/dashboard-graph');
 const planrDir = join(fixtureRoot, '.planr');
-const graphSchema = JSON.parse(readFileSync(join(root, 'schemas/v1.0.0/graph.schema.json'), 'utf-8'));
+const graphSchema = JSON.parse(
+  readFileSync(join(root, 'schemas/v1.0.0/graph.schema.json'), 'utf-8'),
+);
 
 function normalize(graph) {
   return {

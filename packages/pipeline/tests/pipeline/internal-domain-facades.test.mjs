@@ -12,7 +12,9 @@ test('pipeline internals expose all eight internal domain facades', async () => 
 });
 
 test('pipeline domain ownership catalog is complete and explicit', async () => {
-  const catalog = JSON.parse(await readFile(new URL('../../lib/domain-ownership.json', import.meta.url), 'utf8'));
+  const catalog = JSON.parse(
+    await readFile(new URL('../../lib/domain-ownership.json', import.meta.url), 'utf8'),
+  );
   assert.deepEqual(Object.keys(catalog.domains), domainNames);
   for (const domain of domainNames) {
     assert.ok(catalog.domains[domain].length > 0, `${domain} must own at least one module`);

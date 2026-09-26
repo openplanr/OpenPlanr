@@ -84,8 +84,14 @@ test('unknown non-governance fields are refused too', () => {
 });
 
 test('requirements and acceptance criteria may not be empty', () => {
-  assert.throws(() => buildContextEnvelope({ ...minimal, requirements: [] }), /requirements needs at least 1/);
-  assert.throws(() => buildContextEnvelope({ ...minimal, acceptanceCriteria: [] }), /acceptanceCriteria needs at least 1/);
+  assert.throws(
+    () => buildContextEnvelope({ ...minimal, requirements: [] }),
+    /requirements needs at least 1/,
+  );
+  assert.throws(
+    () => buildContextEnvelope({ ...minimal, acceptanceCriteria: [] }),
+    /acceptanceCriteria needs at least 1/,
+  );
 });
 
 test('the rendered context is host-neutral and prescribes no workflow', () => {
@@ -100,16 +106,25 @@ test('the rendered context is host-neutral and prescribes no workflow', () => {
     assert.ok(!rendered.includes(vendor), `rendered context must not name ${vendor}`);
   }
   for (const directive of ['subagent', 'retry', 'correction pass', 'reviewer', 'dispatch']) {
-    assert.ok(!rendered.toLowerCase().includes(directive), `rendered context must not prescribe ${directive}`);
+    assert.ok(
+      !rendered.toLowerCase().includes(directive),
+      `rendered context must not prescribe ${directive}`,
+    );
   }
-  assert.match(rendered, /Use the specification, active task details, repository context, and conventions above/);
+  assert.match(
+    rendered,
+    /Use the specification, active task details, repository context, and conventions above/,
+  );
   assert.match(rendered, /Explicit external effects/);
   assert.match(rendered, /publishing a package/);
   assert.doesNotMatch(rendered, /stopping point|confirm before|approval|authorization/iu);
 });
 
 test('real external actions survive the simplification', () => {
-  const envelope = buildContextEnvelope({ ...minimal, externalActions: ['deploying to production'] });
+  const envelope = buildContextEnvelope({
+    ...minimal,
+    externalActions: ['deploying to production'],
+  });
   assert.deepEqual(envelope.externalActions, ['deploying to production']);
 });
 
@@ -170,7 +185,10 @@ test('the rendered graph names dependency facts without scheduling work', () => 
   );
   assert.match(rendered, /No declared predecessors: T-001/u);
   assert.match(rendered, /T-002 needs T-001/u);
-  assert.doesNotMatch(rendered, /take(?:n)? in any order|choose the schedule|how much runs at once/iu);
+  assert.doesNotMatch(
+    rendered,
+    /take(?:n)? in any order|choose the schedule|how much runs at once/iu,
+  );
   for (const scheduling of ['first', 'then ', 'step 1', 'in this order']) {
     assert.ok(!rendered.toLowerCase().includes(scheduling), `must not schedule (${scheduling})`);
   }

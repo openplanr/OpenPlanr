@@ -14,10 +14,12 @@ import {
 import { sha256Jcs } from '../../lib/protocol/jcs.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
-const fixture = JSON.parse(readFileSync(join(
-  root,
-  'conformance/fixtures/operating-runtime-v2/experience-bridge-valid.json',
-), 'utf8'))['operate-experience-view'];
+const fixture = JSON.parse(
+  readFileSync(
+    join(root, 'conformance/fixtures/operating-runtime-v2/experience-bridge-valid.json'),
+    'utf8',
+  ),
+)['operate-experience-view'];
 const HASH = `sha256:${'a'.repeat(64)}`;
 
 function event(sequence) {
@@ -143,22 +145,27 @@ test('10,000-Event Today, update, navigation, replay, and memory stay within pro
     const refreshed = updateRoute.response;
     const heapDeltaBytes = Math.max(0, collectRetainedHeap() - beforeHeap);
 
-    context.diagnostic(JSON.stringify({
-      projectionReadMs,
-      startupMs,
-      todayMs: todayRoute.ms,
-      updateMs: updateRoute.ms,
-      navigationMs: cycleRoute.ms,
-      replayMs: replayRoute.ms,
-      heapDeltaBytes,
-    }));
+    context.diagnostic(
+      JSON.stringify({
+        projectionReadMs,
+        startupMs,
+        todayMs: todayRoute.ms,
+        updateMs: updateRoute.ms,
+        navigationMs: cycleRoute.ms,
+        replayMs: replayRoute.ms,
+        heapDeltaBytes,
+      }),
+    );
 
     assert.equal(today.ok, true);
     assert.equal(history.ok, true);
     assert.equal(history.data.history.length, 10_000);
     assert.equal(cycles.ok, true);
     assert.equal(refreshed.viewHash, current.viewHash);
-    assert.ok(projectionReadMs <= 2_000, `projection read ${projectionReadMs.toFixed(1)}ms exceeds 2000ms`);
+    assert.ok(
+      projectionReadMs <= 2_000,
+      `projection read ${projectionReadMs.toFixed(1)}ms exceeds 2000ms`,
+    );
     assert.ok(startupMs <= 2_000, `startup ${startupMs.toFixed(1)}ms exceeds 2000ms`);
     assert.ok(todayRoute.ms <= 200, `Today ${todayRoute.ms.toFixed(1)}ms exceeds 200ms`);
     assert.ok(updateRoute.ms <= 200, `update ${updateRoute.ms.toFixed(1)}ms exceeds 200ms`);

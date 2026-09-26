@@ -18,15 +18,15 @@ const openPlanrRoot = realpathSync(configuredOpenPlanrRoot);
 const openPlanrRequire = createRequire(resolve(openPlanrRoot, 'package.json'));
 const typescript = openPlanrRequire.resolve('typescript/bin/tsc');
 const vite = resolve(dirname(openPlanrRequire.resolve('vite/package.json')), 'bin/vite.js');
-for (const path of [
-  'package.json',
-  'dist/dashboard/dashboard-manifest.json',
-]) {
+for (const path of ['package.json', 'dist/dashboard/dashboard-manifest.json']) {
   if (!existsSync(resolve(openPlanrRoot, path))) {
     throw new Error(`paired OpenPlanr checkout is missing ${path}`);
   }
 }
-for (const [name, path] of [['TypeScript', typescript], ['Vite', vite]]) {
+for (const [name, path] of [
+  ['TypeScript', typescript],
+  ['Vite', vite],
+]) {
   if (!existsSync(path)) throw new Error(`workspace ${name} executable is missing: ${path}`);
 }
 

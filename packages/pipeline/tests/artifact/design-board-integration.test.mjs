@@ -1,18 +1,10 @@
 import assert from 'node:assert/strict';
-import {
-  existsSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, test } from 'node:test';
 
-import {
-  createDesignBoardArtifactEnvelope,
-} from '../../lib/design-engine/artifact-adapter.mjs';
+import { createDesignBoardArtifactEnvelope } from '../../lib/design-engine/artifact-adapter.mjs';
 import {
   DESIGN_BOARD_ENVELOPE_FILE,
   DESIGN_BOARD_SOURCES_FILE,
@@ -24,8 +16,9 @@ import { createArtifactReview } from '../../lib/artifact/review.mjs';
 
 const roots = [];
 const daemons = [];
-const runBrowser = process.env.PLANR_BROWSER_TESTS === '1'
-  || process.env.npm_lifecycle_event === 'test:artifact:browser';
+const runBrowser =
+  process.env.PLANR_BROWSER_TESTS === '1' ||
+  process.env.npm_lifecycle_event === 'test:artifact:browser';
 
 function temporary(prefix) {
   const path = mkdtempSync(join(tmpdir(), prefix));
@@ -41,13 +34,22 @@ afterEach(async () => {
 async function fixture() {
   const sessionDir = temporary('planr-design-board-');
   const home = temporary('planr-design-home-');
-  writeFileSync(join(sessionDir, 'variant-A.html'), `<!doctype html>
+  writeFileSync(
+    join(sessionDir, 'variant-A.html'),
+    `<!doctype html>
 <html><head><meta charset="utf-8"><title>Checkout</title></head>
-<body><button data-planr-id="checkout-submit">Pay now</button></body></html>`);
-  writeFileSync(join(sessionDir, 'variant-B.html'), `<!doctype html>
+<body><button data-planr-id="checkout-submit">Pay now</button></body></html>`,
+  );
+  writeFileSync(
+    join(sessionDir, 'variant-B.html'),
+    `<!doctype html>
 <html><head><meta charset="utf-8"><title>Checkout compact</title></head>
-<body><button data-planr-id="checkout-submit-compact">Pay</button></body></html>`);
-  writeFileSync(join(sessionDir, 'variant-A.svg'), '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><path d="M0 0h10v10z"/></svg>');
+<body><button data-planr-id="checkout-submit-compact">Pay</button></body></html>`,
+  );
+  writeFileSync(
+    join(sessionDir, 'variant-A.svg'),
+    '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><path d="M0 0h10v10z"/></svg>',
+  );
   writeFileSync(join(sessionDir, 'variant-B.png'), Buffer.from('89504e470d0a1a0a00000000', 'hex'));
 
   const envelope = await createDesignBoardArtifactEnvelope({
@@ -59,17 +61,32 @@ async function fixture() {
       { id: 'B', label: 'Checkout compact', src: 'variant-B.html', type: 'html' },
     ],
   });
-  writeFileSync(join(sessionDir, DESIGN_BOARD_ENVELOPE_FILE), `${JSON.stringify(envelope, null, 2)}\n`);
-  writeFileSync(join(sessionDir, DESIGN_BOARD_SOURCES_FILE), `${JSON.stringify({
-    schemaVersion: '1.0.0',
-    sources: [
-      { artifactId: 'A', src: 'variant-A.svg', kind: 'svg' },
-      { artifactId: 'B', src: 'variant-B.png', kind: 'png' },
-    ],
-  }, null, 2)}\n`);
-  writeFileSync(join(sessionDir, 'board.html'), renderBoardHtml({
-    title: 'Checkout design round', mode: 'loop', envelope,
-  }));
+  writeFileSync(
+    join(sessionDir, DESIGN_BOARD_ENVELOPE_FILE),
+    `${JSON.stringify(envelope, null, 2)}\n`,
+  );
+  writeFileSync(
+    join(sessionDir, DESIGN_BOARD_SOURCES_FILE),
+    `${JSON.stringify(
+      {
+        schemaVersion: '1.0.0',
+        sources: [
+          { artifactId: 'A', src: 'variant-A.svg', kind: 'svg' },
+          { artifactId: 'B', src: 'variant-B.png', kind: 'png' },
+        ],
+      },
+      null,
+      2,
+    )}\n`,
+  );
+  writeFileSync(
+    join(sessionDir, 'board.html'),
+    renderBoardHtml({
+      title: 'Checkout design round',
+      mode: 'loop',
+      envelope,
+    }),
+  );
 
   const daemon = createDaemon({ env: { PLANR_HOME: home } });
   daemons.push(daemon);
@@ -97,7 +114,10 @@ test('design-loop uses one shared shell and serves ordered artifacts through tru
   assert.doesNotMatch(board, /class="rb-|--rb-/);
 
   const payload = await fetch(`${boardBase}api/envelope`).then((response) => response.json());
-  assert.deepEqual(payload.envelope.artifacts.map(({ id: artifactId }) => artifactId), ['A', 'B']);
+  assert.deepEqual(
+    payload.envelope.artifacts.map(({ id: artifactId }) => artifactId),
+    ['A', 'B'],
+  );
   assert.equal(payload.envelope.review.reviewOf, digestArtifactEnvelope(envelope));
 
   const runtimes = {};
@@ -108,16 +128,35 @@ test('design-loop uses one shared shell and serves ordered artifacts through tru
     runtimes[route] = await response.text();
   }
   for (const control of [
-    'Overall direction', 'planrVariantComment', 'planrVariantRating',
-    'planrRemixLayout', 'planrRemixColors', 'planrRemixNote',
-    'Regenerate', 'More like selected', 'Remix', 'Save design review',
-    'PNG — current screen', 'PNG — full design', 'HTML — artifact',
+    'Overall direction',
+    'planrVariantComment',
+    'planrVariantRating',
+    'planrRemixLayout',
+    'planrRemixColors',
+    'planrRemixNote',
+    'Regenerate',
+    'More like selected',
+    'Remix',
+    'Save design review',
+    'PNG — current screen',
+    'PNG — full design',
+    'HTML — artifact',
     'source-${source.kind}',
-  ]) assert.match(runtimes['design-adapter.js'], new RegExp(control.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  ])
+    assert.match(
+      runtimes['design-adapter.js'],
+      new RegExp(control.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')),
+    );
   assert.match(runtimes['runtime.js'], /exportPng/);
 
   const sourceIndex = await fetch(`${boardBase}api/sources`).then((response) => response.json());
-  assert.deepEqual(sourceIndex.sources.map(({ artifactId, kind }) => [artifactId, kind]), [['A', 'svg'], ['B', 'png']]);
+  assert.deepEqual(
+    sourceIndex.sources.map(({ artifactId, kind }) => [artifactId, kind]),
+    [
+      ['A', 'svg'],
+      ['B', 'png'],
+    ],
+  );
   assert.doesNotMatch(JSON.stringify(sourceIndex), /planr-design-board-|\/private\/|\/Users\//);
   for (const source of sourceIndex.sources) {
     const response = await fetch(`${boardBase}${source.url}`);
@@ -148,21 +187,23 @@ test('generic review writes translate into the unchanged durable feedback contra
     overall: 'Increase the primary action contrast.',
     createdAt: '2026-07-14T19:00:00.000Z',
     updatedAt: '2026-07-14T19:00:00.000Z',
-    pins: [{
-      id: 'pin-1',
-      author: { name: 'Asem' },
-      artifactId: 'A',
-      variant: 'A',
-      region: { x: 0.2, y: 0.3, w: 0.1, h: 0.05 },
-      viewport: { width: 1440, height: 900 },
-      anchor: { planrId: 'checkout-submit' },
-      intent: 'fix',
-      status: 'open',
-      comment: 'Increase the primary action contrast.',
-      replies: [],
-      createdAt: '2026-07-14T19:00:00.000Z',
-      updatedAt: '2026-07-14T19:00:00.000Z',
-    }],
+    pins: [
+      {
+        id: 'pin-1',
+        author: { name: 'Asem' },
+        artifactId: 'A',
+        variant: 'A',
+        region: { x: 0.2, y: 0.3, w: 0.1, h: 0.05 },
+        viewport: { width: 1440, height: 900 },
+        anchor: { planrId: 'checkout-submit' },
+        intent: 'fix',
+        status: 'open',
+        comment: 'Increase the primary action contrast.',
+        replies: [],
+        createdAt: '2026-07-14T19:00:00.000Z',
+        updatedAt: '2026-07-14T19:00:00.000Z',
+      },
+    ],
   });
 
   const saved = await fetch(`${boardBase}api/artifact-review`, {
@@ -182,7 +223,9 @@ test('generic review writes translate into the unchanged durable feedback contra
   assert.equal(legacy.pins[0].status, 'open');
   assert.equal(JSON.parse(readFileSync(join(sessionDir, 'feedback.json'), 'utf8')).pins.length, 1);
 
-  const hydrated = await fetch(`${boardBase}api/artifact-review`).then((response) => response.json());
+  const hydrated = await fetch(`${boardBase}api/artifact-review`).then((response) =>
+    response.json(),
+  );
   assert.equal(hydrated.review.reviewOf, review.reviewOf);
   assert.equal(hydrated.review.pins[0].anchor.planrId, 'checkout-submit');
 
@@ -256,7 +299,10 @@ test('real board restores every round and export control on the shared shell', {
 }, async () => {
   const { chromium } = await import('playwright');
   const { base, id, sessionDir } = await fixture();
-  const browser = await chromium.launch({ headless: true, ...(process.env.PLANR_BROWSER_CHANNEL ? { channel: process.env.PLANR_BROWSER_CHANNEL } : {}) });
+  const browser = await chromium.launch({
+    headless: true,
+    ...(process.env.PLANR_BROWSER_CHANNEL ? { channel: process.env.PLANR_BROWSER_CHANNEL } : {}),
+  });
   try {
     const context = await browser.newContext({ acceptDownloads: true });
     const page = await context.newPage();
@@ -277,7 +323,11 @@ test('real board restores every round and export control on the shared shell', {
     await page.locator('[data-planr-remix]').click();
     await waitForFile(join(sessionDir, 'feedback-pending.json'));
     const pending = JSON.parse(readFileSync(join(sessionDir, 'feedback-pending.json'), 'utf8'));
-    assert.deepEqual(pending.remixSpec, { layoutFrom: 'A', colorsFrom: 'B', note: 'Use fewer cards.' });
+    assert.deepEqual(pending.remixSpec, {
+      layoutFrom: 'A',
+      colorsFrom: 'B',
+      note: 'Use fewer cards.',
+    });
     assert.equal(pending.overall, 'Use the stronger hierarchy.');
     assert.deepEqual(pending.comments, { A: 'Keep this hierarchy.', B: 'Tighten the density.' });
 
@@ -289,7 +339,9 @@ test('real board restores every round and export control on the shared shell', {
     assert.deepEqual(saved.comments, { A: 'Keep this hierarchy.', B: 'Tighten the density.' });
 
     await page.locator('summary').filter({ hasText: 'Exports' }).click();
-    await page.locator('[data-planr-artifact-frame="A"][data-planr-bridge-trusted="true"]').waitFor();
+    await page
+      .locator('[data-planr-artifact-frame="A"][data-planr-bridge-trusted="true"]')
+      .waitFor();
     for (const [selector, extension] of [
       ['[data-planr-export="png-screen"]', '.png'],
       ['[data-planr-export="png-full"]', '.png'],
@@ -301,7 +353,10 @@ test('real board restores every round and export control on the shared shell', {
         page.waitForEvent('download'),
         page.locator(selector).click(),
       ]);
-      assert.ok(downloaded.suggestedFilename().endsWith(extension), `${selector} downloads ${extension}`);
+      assert.ok(
+        downloaded.suggestedFilename().endsWith(extension),
+        `${selector} downloads ${extension}`,
+      );
     }
     await context.close();
   } finally {

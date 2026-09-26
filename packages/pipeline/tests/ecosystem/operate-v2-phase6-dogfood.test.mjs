@@ -40,24 +40,31 @@ const PHASE_6_STAGES = [
 
 after(() => rmSync(temporaryRoot, { recursive: true, force: true }));
 
-test('packed dogfood executes exact business and software governed-loop vectors', { timeout: 120_000 }, () => {
-  const packed = packOperateV2DevelopmentSnapshot(join(temporaryRoot, 'package'), { sourceRoot: root });
+test('packed dogfood executes exact business and software governed-loop vectors', {
+  timeout: 120_000,
+}, () => {
+  const packed = packOperateV2DevelopmentSnapshot(join(temporaryRoot, 'package'), {
+    sourceRoot: root,
+  });
   const consumer = join(temporaryRoot, 'consumer');
   const installedPackage = join(consumer, 'node_modules', 'planr-pipeline');
   mkdirSync(installedPackage, { recursive: true });
-  const extracted = spawnSync('tar', [
-    '-xzf', packed.tarballPath, '-C', installedPackage, '--strip-components=1',
-  ], { encoding: 'utf8' });
+  const extracted = spawnSync(
+    'tar',
+    ['-xzf', packed.tarballPath, '-C', installedPackage, '--strip-components=1'],
+    { encoding: 'utf8' },
+  );
   assert.equal(extracted.status, 0, extracted.stderr);
   writeFileSync(join(consumer, 'package.json'), JSON.stringify({ type: 'module' }));
   const runnerPath = join(consumer, 'verify-phase6.mjs');
-  writeFileSync(runnerPath, [
-    "import { verifyOperateV2GovernedExecution } from './node_modules/planr-pipeline/conformance/verify-operate-v2-governed-execution.mjs';",
-    "process.stdout.write(JSON.stringify(await verifyOperateV2GovernedExecution()));",
-  ].join('\n'));
-  const result = spawnSync(process.execPath, [
+  writeFileSync(
     runnerPath,
-  ], {
+    [
+      "import { verifyOperateV2GovernedExecution } from './node_modules/planr-pipeline/conformance/verify-operate-v2-governed-execution.mjs';",
+      'process.stdout.write(JSON.stringify(await verifyOperateV2GovernedExecution()));',
+    ].join('\n'),
+  );
+  const result = spawnSync(process.execPath, [runnerPath], {
     cwd: consumer,
     encoding: 'utf8',
     maxBuffer: 64 * 1024 * 1024,
@@ -65,35 +72,44 @@ test('packed dogfood executes exact business and software governed-loop vectors'
   });
   assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
   const report = JSON.parse(result.stdout);
-  assert.deepEqual({
-    ok: report.ok,
-    contracts: report.contracts,
-    checks: report.checks,
-    networkAttempts: report.networkAttempts,
-    credentialReads: report.credentialReads,
-    externalEffects: report.externalEffects,
-    realEffects: report.realEffects,
-  }, {
-    ok: true,
-    contracts: OPERATE_RUNTIME_CONTRACT_KINDS.length,
-    checks: 61,
-    networkAttempts: 0,
-    credentialReads: 0,
-    externalEffects: 0,
-    realEffects: 0,
-  });
-  assert.deepEqual(report.journeys.map(({ domainId }) => domainId), ['business', 'software']);
+  assert.deepEqual(
+    {
+      ok: report.ok,
+      contracts: report.contracts,
+      checks: report.checks,
+      networkAttempts: report.networkAttempts,
+      credentialReads: report.credentialReads,
+      externalEffects: report.externalEffects,
+      realEffects: report.realEffects,
+    },
+    {
+      ok: true,
+      contracts: OPERATE_RUNTIME_CONTRACT_KINDS.length,
+      checks: 61,
+      networkAttempts: 0,
+      credentialReads: 0,
+      externalEffects: 0,
+      realEffects: 0,
+    },
+  );
+  assert.deepEqual(
+    report.journeys.map(({ domainId }) => domainId),
+    ['business', 'software'],
+  );
   for (const journey of report.journeys) {
-    assert.deepEqual(journey.stageOrder, [
-      ...PHASE_5_ACTION_STAGES,
-      ...PHASE_6_STAGES.map((stage) => stage ?? (
-        journey.domainId === 'business' ? 'governed-rollback' : 'rollback-not-required'
-      )),
-    ], `${journey.domainId}: exact governed-loop order`);
-    assert.equal(
-      journey.counts.phase5Events,
-      journey.domainId === 'business' ? 118 : 62,
+    assert.deepEqual(
+      journey.stageOrder,
+      [
+        ...PHASE_5_ACTION_STAGES,
+        ...PHASE_6_STAGES.map(
+          (stage) =>
+            stage ??
+            (journey.domainId === 'business' ? 'governed-rollback' : 'rollback-not-required'),
+        ),
+      ],
+      `${journey.domainId}: exact governed-loop order`,
     );
+    assert.equal(journey.counts.phase5Events, journey.domainId === 'business' ? 118 : 62);
     assert.equal(journey.counts.executeOperations, 1);
     assert.equal(journey.counts.executionResults, 1);
     assert.equal(journey.counts.modelDispatches, 0);

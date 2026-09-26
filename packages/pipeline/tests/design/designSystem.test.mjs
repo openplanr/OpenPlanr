@@ -3,7 +3,11 @@ import { test } from 'node:test';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { designSystemStatus, resolveDesignSystem, summarizeDesignSystem } from '../../lib/design/designSystem.mjs';
+import {
+  designSystemStatus,
+  resolveDesignSystem,
+  summarizeDesignSystem,
+} from '../../lib/design/designSystem.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const fixtures = join(here, '..', 'fixtures');
@@ -34,5 +38,8 @@ test('resolveDesignSystem on an empty project → not found → gate message', (
   const dir = join(fixtures, '__none__');
   const ds = resolveDesignSystem({ dir, projectRoot: dir });
   assert.equal(ds.found, false);
-  assert.equal(summarizeDesignSystem(ds), 'none — preflight will ask to generate / point to one / describe');
+  assert.equal(
+    summarizeDesignSystem(ds),
+    'none — preflight will ask to generate / point to one / describe',
+  );
 });

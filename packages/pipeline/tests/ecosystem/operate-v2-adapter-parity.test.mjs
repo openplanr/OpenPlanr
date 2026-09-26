@@ -5,7 +5,10 @@ import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import { BUSINESS_EXECUTIVE_SKILL_BINDINGS } from '../../lib/operate/contracts/role-skills.mjs';
-import { projectedSkillName, renderNamespacedSkill } from '../../../../scripts/skills/host-invocations.mjs';
+import {
+  projectedSkillName,
+  renderNamespacedSkill,
+} from '../../../../scripts/skills/host-invocations.mjs';
 
 const PIPELINE_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const WORKSPACE_ROOT = resolve(PIPELINE_ROOT, '../..');
@@ -22,7 +25,8 @@ const LEGACY_OPERATE_SKILL_IDS = [
   'planr-operate-challenger',
   'planr-operate-chair',
 ];
-const FORBIDDEN_EXECUTION = /\b(?:planr-pipeline|planr plan|planr spec decompose|ANTHROPIC_API_KEY|OPENAI_API_KEY|OLLAMA_HOST)\b/iu;
+const FORBIDDEN_EXECUTION =
+  /\b(?:planr-pipeline|planr plan|planr spec decompose|ANTHROPIC_API_KEY|OPENAI_API_KEY|OLLAMA_HOST)\b/iu;
 
 function readWorkspace(path) {
   return readFileSync(join(WORKSPACE_ROOT, path), 'utf8');
@@ -106,9 +110,9 @@ test('Cursor rules preserve canonical Operate bodies and deterministic resources
     assert.equal(skillBody(cursorRule), skillBody(readWorkspace(`skills/${skillId}/SKILL.md`)));
     assert.ok(cursorManifest.rules.includes(`rules/${skillId}.mdc`));
 
-    for (const resource of manifest.resources.filter(({ kind, hosts }) => (
-      kind !== 'agent-metadata' && hosts.includes('cursor')
-    ))) {
+    for (const resource of manifest.resources.filter(
+      ({ kind, hosts }) => kind !== 'agent-metadata' && hosts.includes('cursor'),
+    )) {
       assert.equal(
         readWorkspace(`dist/plugins/cursor/openplanr/rules/${skillId}/${resource.path}`),
         readWorkspace(`skills/${skillId}/${resource.path}`),
@@ -126,7 +130,10 @@ test('Operate dispatch is host-native and contains no model-backed subprocess', 
   assert.match(parent, /If the directory is ignored by Git, continue locally/u);
   assert.match(parent, /## Action plan/u);
   assert.doesNotMatch(parent, FORBIDDEN_EXECUTION);
-  assert.doesNotMatch(parent, /data\.continuation|allowedActions|packetId|assignmentId|evidence-digest/iu);
+  assert.doesNotMatch(
+    parent,
+    /data\.continuation|allowedActions|packetId|assignmentId|evidence-digest/iu,
+  );
 
   for (const { skillName } of BUSINESS_EXECUTIVE_SKILL_BINDINGS) {
     assert.match(parent, new RegExp(`\\b${skillName}\\b`, 'u'), skillName);

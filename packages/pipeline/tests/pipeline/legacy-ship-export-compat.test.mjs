@@ -9,12 +9,11 @@ test('legacy SHIP named exports remain linkable with bounded migration behavior'
 
   assert.throws(
     () => finalizeShip({ feature: 'legacy-feature' }),
-    (error) => error?.code === 'E_SHIP_LEGACY_API_RETIRED'
-      && /finalizeShipClosure/.test(error?.fix ?? ''),
+    (error) =>
+      error?.code === 'E_SHIP_LEGACY_API_RETIRED' && /finalizeShipClosure/.test(error?.fix ?? ''),
   );
   assert.throws(
     () => recordTaskResult({ task: { id: 'T-001' }, result: { status: 'done' } }),
-    (error) => error?.code === 'E_SHIP_LEGACY_API_RETIRED'
-      && /advanceShip/.test(error?.fix ?? ''),
+    (error) => error?.code === 'E_SHIP_LEGACY_API_RETIRED' && /advanceShip/.test(error?.fix ?? ''),
   );
 });

@@ -125,7 +125,10 @@ export function readPackedWorkspaceProof(path) {
   }
   const stat = lstatSync(selected);
   if (!stat.isFile() || stat.isSymbolicLink() || stat.size > MAX_PROOF_BYTES) {
-    fail('E_PACKED_WORKSPACE_PROOF_UNSAFE', 'The packed-workspace proof is not a bounded regular file.');
+    fail(
+      'E_PACKED_WORKSPACE_PROOF_UNSAFE',
+      'The packed-workspace proof is not a bounded regular file.',
+    );
   }
   return readJson(selected, 'E_PACKED_WORKSPACE_PROOF_INVALID', 'The packed-workspace proof');
 }
@@ -139,13 +142,17 @@ function inventoryTree(root) {
   const realRoot = realpathSync(lexicalRoot);
   const entries = [];
   const visit = (directory) => {
-    for (const entry of readdirSync(directory, { withFileTypes: true })
-      .sort((left, right) => left.name.localeCompare(right.name))) {
+    for (const entry of readdirSync(directory, { withFileTypes: true }).sort((left, right) =>
+      left.name.localeCompare(right.name),
+    )) {
       const absolute = join(directory, entry.name);
       const stat = lstatSync(absolute);
       const path = relative(realRoot, absolute).split(sep).join('/');
       if (entry.isSymbolicLink() || stat.isSymbolicLink()) {
-        fail('E_PACKED_WORKSPACE_PROOF_CUSTODY', `Packed package custody contains a symlink at ${path}.`);
+        fail(
+          'E_PACKED_WORKSPACE_PROOF_CUSTODY',
+          `Packed package custody contains a symlink at ${path}.`,
+        );
       }
       if (entry.isDirectory()) {
         visit(absolute);
@@ -158,7 +165,10 @@ function inventoryTree(root) {
           sha256: sha256(bytes),
         });
       } else {
-        fail('E_PACKED_WORKSPACE_PROOF_CUSTODY', `Packed package custody contains a special entry at ${path}.`);
+        fail(
+          'E_PACKED_WORKSPACE_PROOF_CUSTODY',
+          `Packed package custody contains a special entry at ${path}.`,
+        );
       }
     }
   };
@@ -182,7 +192,10 @@ function run(command, args, options = {}) {
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   if (result.status !== 0) {
-    fail('E_PACKED_WORKSPACE_PROOF_CUSTODY', 'Current workspace package custody could not be reproduced.');
+    fail(
+      'E_PACKED_WORKSPACE_PROOF_CUSTODY',
+      'Current workspace package custody could not be reproduced.',
+    );
   }
   return result.stdout;
 }
@@ -208,28 +221,28 @@ export function parseNpmPackJson(output) {
 function capturePackage(root, destination) {
   mkdirSync(destination, { recursive: true });
   const npm = npmCommand();
-  const raw = run(npm.command, [
-    ...npm.prefix,
-    'pack',
-    '--json',
-    '--ignore-scripts',
-    '--pack-destination',
-    destination,
-  ], {
-    cwd: root,
-    env: {
-      ...process.env,
-      npm_config_audit: 'false',
-      npm_config_fund: 'false',
-      npm_config_update_notifier: 'false',
+  const raw = run(
+    npm.command,
+    [...npm.prefix, 'pack', '--json', '--ignore-scripts', '--pack-destination', destination],
+    {
+      cwd: root,
+      env: {
+        ...process.env,
+        npm_config_audit: 'false',
+        npm_config_fund: 'false',
+        npm_config_update_notifier: 'false',
+      },
     },
-  });
+  );
   const reports = parseNpmPackJson(raw);
   if (!reports) {
     fail('E_PACKED_WORKSPACE_PROOF_CUSTODY', 'npm pack returned invalid custody metadata.');
   }
   if (!Array.isArray(reports) || reports.length !== 1 || typeof reports[0]?.filename !== 'string') {
-    fail('E_PACKED_WORKSPACE_PROOF_CUSTODY', 'npm pack did not return exactly one custody archive.');
+    fail(
+      'E_PACKED_WORKSPACE_PROOF_CUSTODY',
+      'npm pack did not return exactly one custody archive.',
+    );
   }
   const archive = join(destination, reports[0].filename);
   const extracted = join(destination, 'extracted');
@@ -255,8 +268,8 @@ export function capturePackedWorkspaceCustody(workspaceRoot) {
     const selectedTemp = realpathSync(temp);
     const parent = dirname(selectedTemp);
     if (
-      parent !== realpathSync(tmpdir())
-      || !selectedTemp.startsWith(join(parent, 'openplanr-ecosystem-proof-'))
+      parent !== realpathSync(tmpdir()) ||
+      !selectedTemp.startsWith(join(parent, 'openplanr-ecosystem-proof-'))
     ) {
       fail('E_PACKED_WORKSPACE_PROOF_CUSTODY', 'Refused to clean an unsafe proof workspace.');
     }
@@ -274,11 +287,31 @@ function manifestCustody(workspaceRoot) {
   const pipelineManifestPath = join(workspaceRoot, 'packages/pipeline/package.json');
   const protocolManifestPath = join(workspaceRoot, 'packages/protocol/package.json');
   const ecosystemPath = join(workspaceRoot, 'ecosystem.json');
-  const rootManifest = readJson(rootManifestPath, 'E_PACKED_WORKSPACE_PROOF_WORKSPACE', 'Root package manifest');
-  const cliManifest = readJson(cliManifestPath, 'E_PACKED_WORKSPACE_PROOF_WORKSPACE', 'CLI package manifest');
-  const pipelineManifest = readJson(pipelineManifestPath, 'E_PACKED_WORKSPACE_PROOF_WORKSPACE', 'Pipeline package manifest');
-  const protocolManifest = readJson(protocolManifestPath, 'E_PACKED_WORKSPACE_PROOF_WORKSPACE', 'Protocol package manifest');
-  const ecosystem = readJson(ecosystemPath, 'E_PACKED_WORKSPACE_PROOF_WORKSPACE', 'Generated ecosystem manifest');
+  const rootManifest = readJson(
+    rootManifestPath,
+    'E_PACKED_WORKSPACE_PROOF_WORKSPACE',
+    'Root package manifest',
+  );
+  const cliManifest = readJson(
+    cliManifestPath,
+    'E_PACKED_WORKSPACE_PROOF_WORKSPACE',
+    'CLI package manifest',
+  );
+  const pipelineManifest = readJson(
+    pipelineManifestPath,
+    'E_PACKED_WORKSPACE_PROOF_WORKSPACE',
+    'Pipeline package manifest',
+  );
+  const protocolManifest = readJson(
+    protocolManifestPath,
+    'E_PACKED_WORKSPACE_PROOF_WORKSPACE',
+    'Protocol package manifest',
+  );
+  const ecosystem = readJson(
+    ecosystemPath,
+    'E_PACKED_WORKSPACE_PROOF_WORKSPACE',
+    'Generated ecosystem manifest',
+  );
   return {
     root: { manifest: rootManifest, digest: sha256(readFileSync(rootManifestPath)) },
     cli: { manifest: cliManifest, digest: sha256(readFileSync(cliManifestPath)) },
@@ -291,11 +324,11 @@ function manifestCustody(workspaceRoot) {
 function assertGeneratedEcosystem(custody) {
   const { ecosystem, root, cli, pipeline, protocol } = custody;
   if (
-    ecosystem?.kind !== 'openplanr-ecosystem'
-    || !['local-snapshot', 'local-candidate'].includes(ecosystem?.releaseState)
-    || ecosystem?.workspace?.package !== root.manifest.name
-    || ecosystem?.workspace?.version !== root.manifest.version
-    || ecosystem?.workspace?.manifestDigest !== root.digest
+    ecosystem?.kind !== 'openplanr-ecosystem' ||
+    !['local-snapshot', 'local-candidate'].includes(ecosystem?.releaseState) ||
+    ecosystem?.workspace?.package !== root.manifest.name ||
+    ecosystem?.workspace?.version !== root.manifest.version ||
+    ecosystem?.workspace?.manifestDigest !== root.digest
   ) {
     fail('E_PACKED_WORKSPACE_PROOF_ECOSYSTEM', 'Generated workspace ecosystem custody is stale.');
   }
@@ -306,21 +339,24 @@ function assertGeneratedEcosystem(custody) {
   ]) {
     const component = ecosystem.components?.[key];
     if (
-      component?.package !== selected.manifest.name
-      || component?.version !== selected.manifest.version
-      || component?.path !== expectedPath
-      || component?.manifestDigest !== selected.digest
+      component?.package !== selected.manifest.name ||
+      component?.version !== selected.manifest.version ||
+      component?.path !== expectedPath ||
+      component?.manifestDigest !== selected.digest
     ) {
       fail('E_PACKED_WORKSPACE_PROOF_ECOSYSTEM', `Generated ${key} ecosystem custody is stale.`);
     }
   }
   if (
-    ecosystem.compatibility?.cliOptionalPipeline?.package !== pipeline.manifest.name
-    || ecosystem.compatibility?.cliOptionalPipeline?.version !== pipeline.manifest.version
-    || ecosystem.compatibility?.cliOptionalPipeline?.exact !== true
-    || cli.manifest.optionalDependencies?.[pipeline.manifest.name] !== pipeline.manifest.version
+    ecosystem.compatibility?.cliOptionalPipeline?.package !== pipeline.manifest.name ||
+    ecosystem.compatibility?.cliOptionalPipeline?.version !== pipeline.manifest.version ||
+    ecosystem.compatibility?.cliOptionalPipeline?.exact !== true ||
+    cli.manifest.optionalDependencies?.[pipeline.manifest.name] !== pipeline.manifest.version
   ) {
-    fail('E_PACKED_WORKSPACE_PROOF_ECOSYSTEM', 'Generated CLI/pipeline compatibility custody is stale.');
+    fail(
+      'E_PACKED_WORKSPACE_PROOF_ECOSYSTEM',
+      'Generated CLI/pipeline compatibility custody is stale.',
+    );
   }
 }
 
@@ -333,39 +369,70 @@ function assertPackageProof(proof, custody, packageCustody) {
   const cli = proof.packages.cli;
   const pipeline = proof.packages.pipeline;
   const protocol = proof.packages.protocol;
-  if (protocol?.name !== '@openplanr/protocol' || protocol?.name !== custody.protocol.manifest.name
-    || protocol?.version !== custody.protocol.manifest.version || custody.protocol.manifest.private === true) {
-    fail('E_PACKED_WORKSPACE_PROOF_IDENTITY', 'Packed Protocol identity does not match the public workspace package.');
+  if (
+    protocol?.name !== '@openplanr/protocol' ||
+    protocol?.name !== custody.protocol.manifest.name ||
+    protocol?.version !== custody.protocol.manifest.version ||
+    custody.protocol.manifest.private === true
+  ) {
+    fail(
+      'E_PACKED_WORKSPACE_PROOF_IDENTITY',
+      'Packed Protocol identity does not match the public workspace package.',
+    );
   }
   if (
-    cli?.name !== custody.cli.manifest.name
-    || cli?.version !== custody.cli.manifest.version
-    || JSON.stringify(stable(cli?.binAliases)) !== JSON.stringify(stable(expectedAliases))
+    cli?.name !== custody.cli.manifest.name ||
+    cli?.version !== custody.cli.manifest.version ||
+    JSON.stringify(stable(cli?.binAliases)) !== JSON.stringify(stable(expectedAliases))
   ) {
-    fail('E_PACKED_WORKSPACE_PROOF_IDENTITY', 'Packed CLI identity does not match the current workspace.');
+    fail(
+      'E_PACKED_WORKSPACE_PROOF_IDENTITY',
+      'Packed CLI identity does not match the current workspace.',
+    );
   }
   if (
-    pipeline?.name !== custody.pipeline.manifest.name
-    || pipeline?.version !== custody.pipeline.manifest.version
-    || pipeline?.exportKeys !== custody.ecosystem.publicCompatibility?.pipelineExportKeys
-    || pipeline?.generatedSkillPortability?.skills !== PACKED_WORKSPACE_GENERATED_SKILL_COUNT
-    || pipeline?.generatedSkillPortability?.violations !== 0
+    pipeline?.name !== custody.pipeline.manifest.name ||
+    pipeline?.version !== custody.pipeline.manifest.version ||
+    pipeline?.exportKeys !== custody.ecosystem.publicCompatibility?.pipelineExportKeys ||
+    pipeline?.generatedSkillPortability?.skills !== PACKED_WORKSPACE_GENERATED_SKILL_COUNT ||
+    pipeline?.generatedSkillPortability?.violations !== 0
   ) {
-    fail('E_PACKED_WORKSPACE_PROOF_IDENTITY', 'Packed pipeline identity does not match the current workspace.');
+    fail(
+      'E_PACKED_WORKSPACE_PROOF_IDENTITY',
+      'Packed pipeline identity does not match the current workspace.',
+    );
   }
-  for (const [key, selected] of [['cli', cli], ['pipeline', pipeline], ['protocol', protocol]]) {
-    assertDigest(selected?.payloadDigest, 'E_PACKED_WORKSPACE_PROOF_INVALID', `${key} payload digest`);
-    assertDigest(selected?.archiveSha256, 'E_PACKED_WORKSPACE_PROOF_INVALID', `${key} archive digest`);
+  for (const [key, selected] of [
+    ['cli', cli],
+    ['pipeline', pipeline],
+    ['protocol', protocol],
+  ]) {
+    assertDigest(
+      selected?.payloadDigest,
+      'E_PACKED_WORKSPACE_PROOF_INVALID',
+      `${key} payload digest`,
+    );
+    assertDigest(
+      selected?.archiveSha256,
+      'E_PACKED_WORKSPACE_PROOF_INVALID',
+      `${key} archive digest`,
+    );
     if (
-      selected.payloadDigest !== packageCustody[key]?.payloadDigest
-      || selected.archiveSha256 !== packageCustody[key]?.archiveSha256
+      selected.payloadDigest !== packageCustody[key]?.payloadDigest ||
+      selected.archiveSha256 !== packageCustody[key]?.archiveSha256
     ) {
-      fail('E_PACKED_WORKSPACE_PROOF_CUSTODY', `Packed ${key} proof does not bind the current workspace package bytes.`);
+      fail(
+        'E_PACKED_WORKSPACE_PROOF_CUSTODY',
+        `Packed ${key} proof does not bind the current workspace package bytes.`,
+      );
     }
   }
   const protocolAssets = pipeline.protocolAssets;
-  if (Object.entries(PACKED_WORKSPACE_PROTOCOL_ASSET_COUNTS)
-    .some(([key, count]) => protocolAssets?.[key] !== count)) {
+  if (
+    Object.entries(PACKED_WORKSPACE_PROTOCOL_ASSET_COUNTS).some(
+      ([key, count]) => protocolAssets?.[key] !== count,
+    )
+  ) {
     fail('E_PACKED_WORKSPACE_PROOF_IDENTITY', 'Packed protocol asset custody is incomplete.');
   }
 }
@@ -376,47 +443,62 @@ function assertChecks(proof) {
   }
   const ids = proof.checks.map((entry) => entry?.id).sort();
   if (
-    JSON.stringify(ids) !== JSON.stringify(PACKED_WORKSPACE_REQUIRED_CHECKS)
-    || proof.checks.some((entry) => entry?.status !== 'pass')
+    JSON.stringify(ids) !== JSON.stringify(PACKED_WORKSPACE_REQUIRED_CHECKS) ||
+    proof.checks.some((entry) => entry?.status !== 'pass')
   ) {
-    fail('E_PACKED_WORKSPACE_PROOF_CHECKS', 'Packed-workspace proof checks are incomplete or non-passing.');
+    fail(
+      'E_PACKED_WORKSPACE_PROOF_CHECKS',
+      'Packed-workspace proof checks are incomplete or non-passing.',
+    );
   }
 }
 
 function assertInstalledSurface(proof, custody) {
   const full = proof.installs?.full;
   const cliOnly = proof.installs?.cliOnly;
-  if (full?.protocol?.name !== custody.protocol.manifest.name || full?.protocol?.version !== custody.protocol.manifest.version
-    || ['node', 'browser', 'workers'].some((host) => full?.protocol?.[host]?.status !== 'passed' || !(full.protocol[host].exports > 0))
-    || !(full.protocol.node.typedExports > 0) || !(full.protocol.node.assets > 0) || !(full.protocol.browser.assets > 0)) {
-    fail('E_PACKED_WORKSPACE_PROOF_INSTALL', 'Packed Protocol Node/browser/Workers consumer proof is incomplete.');
+  if (
+    full?.protocol?.name !== custody.protocol.manifest.name ||
+    full?.protocol?.version !== custody.protocol.manifest.version ||
+    ['node', 'browser', 'workers'].some(
+      (host) => full?.protocol?.[host]?.status !== 'passed' || !(full.protocol[host].exports > 0),
+    ) ||
+    !(full.protocol.node.typedExports > 0) ||
+    !(full.protocol.node.assets > 0) ||
+    !(full.protocol.browser.assets > 0)
+  ) {
+    fail(
+      'E_PACKED_WORKSPACE_PROOF_INSTALL',
+      'Packed Protocol Node/browser/Workers consumer proof is incomplete.',
+    );
   }
   if (
-    full?.exportKeys !== custody.ecosystem.publicCompatibility?.pipelineExportKeys
-    || full?.rootSymbols !== 229
-    || full?.diagram?.galleryCount !== PACKED_WORKSPACE_DIAGRAM_GRAMMAR_COUNT
-    || full?.diagram?.renderValidation !== 'passed'
-    || full?.diagram?.checkValidation !== 'passed'
-    || full?.retiredPipelineOperate?.absenceContracts !== 80
-    || full?.retiredPipelineOperate?.removedPaths !== 34
-    || cliOnly?.pipelineInstalled !== false
-    || cliOnly?.operateUtility?.status !== 'passed'
+    full?.exportKeys !== custody.ecosystem.publicCompatibility?.pipelineExportKeys ||
+    full?.rootSymbols !== 229 ||
+    full?.diagram?.galleryCount !== PACKED_WORKSPACE_DIAGRAM_GRAMMAR_COUNT ||
+    full?.diagram?.renderValidation !== 'passed' ||
+    full?.diagram?.checkValidation !== 'passed' ||
+    full?.retiredPipelineOperate?.absenceContracts !== 80 ||
+    full?.retiredPipelineOperate?.removedPaths !== 34 ||
+    cliOnly?.pipelineInstalled !== false ||
+    cliOnly?.operateUtility?.status !== 'passed'
   ) {
-    fail('E_PACKED_WORKSPACE_PROOF_INSTALL', 'Packed-workspace installed surface proof is incomplete.');
+    fail(
+      'E_PACKED_WORKSPACE_PROOF_INSTALL',
+      'Packed-workspace installed surface proof is incomplete.',
+    );
   }
   if (
-    custody.ecosystem.publicCompatibility?.pipelineExportKeys !== full.exportKeys
-    || custody.ecosystem.publicCompatibility?.pipelineRootSymbols !== full.rootSymbols
+    custody.ecosystem.publicCompatibility?.pipelineExportKeys !== full.exportKeys ||
+    custody.ecosystem.publicCompatibility?.pipelineRootSymbols !== full.rootSymbols
   ) {
-    fail('E_PACKED_WORKSPACE_PROOF_ECOSYSTEM', 'Generated public compatibility custody differs from the packed proof.');
+    fail(
+      'E_PACKED_WORKSPACE_PROOF_ECOSYSTEM',
+      'Generated public compatibility custody differs from the packed proof.',
+    );
   }
 }
 
-export function assertPackedWorkspaceProof({
-  proof,
-  workspaceRoot,
-  packageCustody = null,
-}) {
+export function assertPackedWorkspaceProof({ proof, workspaceRoot, packageCustody = null }) {
   assertExactKeys(
     proof,
     ['checks', 'environment', 'installs', 'kind', 'ok', 'packages', 'proofDigest', 'schemaVersion'],
@@ -424,15 +506,25 @@ export function assertPackedWorkspaceProof({
     'Packed-workspace proof',
   );
   if (
-    proof.kind !== PACKED_WORKSPACE_PROOF_KIND
-    || proof.schemaVersion !== PACKED_WORKSPACE_PROOF_SCHEMA_VERSION
-    || proof.ok !== true
+    proof.kind !== PACKED_WORKSPACE_PROOF_KIND ||
+    proof.schemaVersion !== PACKED_WORKSPACE_PROOF_SCHEMA_VERSION ||
+    proof.ok !== true
   ) {
-    fail('E_PACKED_WORKSPACE_PROOF_INVALID', 'Packed-workspace proof identity or result is invalid.');
+    fail(
+      'E_PACKED_WORKSPACE_PROOF_INVALID',
+      'Packed-workspace proof identity or result is invalid.',
+    );
   }
-  assertDigest(proof.proofDigest, 'E_PACKED_WORKSPACE_PROOF_INVALID', 'Packed-workspace proof digest');
+  assertDigest(
+    proof.proofDigest,
+    'E_PACKED_WORKSPACE_PROOF_INVALID',
+    'Packed-workspace proof digest',
+  );
   if (packedWorkspaceProofDigest(proof) !== proof.proofDigest) {
-    fail('E_PACKED_WORKSPACE_PROOF_DIGEST', 'Packed-workspace proof digest does not bind its result.');
+    fail(
+      'E_PACKED_WORKSPACE_PROOF_DIGEST',
+      'Packed-workspace proof digest does not bind its result.',
+    );
   }
   assertChecks(proof);
 

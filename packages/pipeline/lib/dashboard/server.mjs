@@ -27,12 +27,8 @@
 
 import { createServer } from 'node:http';
 import { createHash } from 'node:crypto';
-import {
-  lstatSync, readFileSync, realpathSync, statSync,
-} from 'node:fs';
-import {
-  dirname, isAbsolute, join, relative, resolve, sep,
-} from 'node:path';
+import { lstatSync, readFileSync, realpathSync, statSync } from 'node:fs';
+import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { types as utilTypes } from 'node:util';
 
@@ -94,17 +90,30 @@ export const DASHBOARD_SERVER_KIND = 'openplanr-dashboard';
  * uses this list to pre-select the landing view and to keep the hash router and
  * the server's notion of "known views" from drifting (one source of truth).
  */
-export const DASHBOARD_VIEWS = ['overview', 'graph', 'board', 'list', 'sprints', 'activity', 'operate'];
+export const DASHBOARD_VIEWS = [
+  'overview',
+  'graph',
+  'board',
+  'list',
+  'sprints',
+  'activity',
+  'operate',
+];
 
 /** The landing view the client pre-activates on first load. */
 export const DEFAULT_VIEW = 'overview';
 const DASHBOARD_MANIFEST_FILE = 'dashboard-manifest.json';
 const DASHBOARD_BUILD_ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,159}$/u;
 const DASHBOARD_MANIFEST_LEGACY_KEYS = Object.freeze([
-  'assets', 'buildId', 'entry', 'kind', 'schemaVersion',
+  'assets',
+  'buildId',
+  'entry',
+  'kind',
+  'schemaVersion',
 ]);
 const DASHBOARD_MANIFEST_DIGEST_KEYS = Object.freeze([
-  ...DASHBOARD_MANIFEST_LEGACY_KEYS, 'assetDigests',
+  ...DASHBOARD_MANIFEST_LEGACY_KEYS,
+  'assetDigests',
 ]);
 const DASHBOARD_ASSET_DIGEST_KEYS = Object.freeze(['bytes', 'sha256']);
 const DASHBOARD_ASSET_SHA256 = /^sha256:[a-f0-9]{64}$/u;
@@ -137,10 +146,12 @@ function sha256(value) {
 }
 
 function exactKeys(value, keys) {
-  return value !== null
-    && typeof value === 'object'
-    && !Array.isArray(value)
-    && JSON.stringify(Object.keys(value).sort()) === JSON.stringify([...keys].sort());
+  return (
+    value !== null &&
+    typeof value === 'object' &&
+    !Array.isArray(value) &&
+    JSON.stringify(Object.keys(value).sort()) === JSON.stringify([...keys].sort())
+  );
 }
 
 function isPublicProjectName(value) {
@@ -179,18 +190,21 @@ function safeProjectMetadata(planrDir) {
 function validDashboardAssetDigests(manifest) {
   const paths = [manifest.entry, ...manifest.assets].sort();
   if (
-    manifest.assetDigests === null
-    || typeof manifest.assetDigests !== 'object'
-    || Array.isArray(manifest.assetDigests)
-    || JSON.stringify(Object.keys(manifest.assetDigests)) !== JSON.stringify(paths)
-  ) return false;
+    manifest.assetDigests === null ||
+    typeof manifest.assetDigests !== 'object' ||
+    Array.isArray(manifest.assetDigests) ||
+    JSON.stringify(Object.keys(manifest.assetDigests)) !== JSON.stringify(paths)
+  )
+    return false;
   return paths.every((path) => {
     const digest = manifest.assetDigests[path];
-    return exactKeys(digest, DASHBOARD_ASSET_DIGEST_KEYS)
-      && Number.isSafeInteger(digest.bytes)
-      && digest.bytes >= 0
-      && typeof digest.sha256 === 'string'
-      && DASHBOARD_ASSET_SHA256.test(digest.sha256);
+    return (
+      exactKeys(digest, DASHBOARD_ASSET_DIGEST_KEYS) &&
+      Number.isSafeInteger(digest.bytes) &&
+      digest.bytes >= 0 &&
+      typeof digest.sha256 === 'string' &&
+      DASHBOARD_ASSET_SHA256.test(digest.sha256)
+    );
   });
 }
 
@@ -202,13 +216,17 @@ function dashboardManifestState(staticRoot) {
     const real = realpathSync(manifestPath);
     const rel = relative(staticRoot, real);
     if (
-      lexical.isSymbolicLink()
-      || !lexical.isFile()
-      || rel === '..'
-      || rel.startsWith(`..${sep}`)
-      || isAbsolute(rel)
+      lexical.isSymbolicLink() ||
+      !lexical.isFile() ||
+      rel === '..' ||
+      rel.startsWith(`..${sep}`) ||
+      isAbsolute(rel)
     ) {
-      return { buildId: null, assetManifestHash: null, reasonCodes: ['DASHBOARD_MANIFEST_INVALID'] };
+      return {
+        buildId: null,
+        assetManifestHash: null,
+        reasonCodes: ['DASHBOARD_MANIFEST_INVALID'],
+      };
     }
     manifestBytes = readFileSync(real);
   } catch {
@@ -219,29 +237,37 @@ function dashboardManifestState(staticRoot) {
   try {
     manifest = JSON.parse(manifestBytes.toString('utf8'));
   } catch {
-    return { buildId: null, assetManifestHash: sha256(manifestBytes), reasonCodes: ['DASHBOARD_MANIFEST_INVALID'] };
+    return {
+      buildId: null,
+      assetManifestHash: sha256(manifestBytes),
+      reasonCodes: ['DASHBOARD_MANIFEST_INVALID'],
+    };
   }
   const hasAssetDigests = Object.hasOwn(manifest, 'assetDigests');
   if (
     !exactKeys(
       manifest,
       hasAssetDigests ? DASHBOARD_MANIFEST_DIGEST_KEYS : DASHBOARD_MANIFEST_LEGACY_KEYS,
-    )
-    || manifest.kind !== 'openplanr-dashboard-build'
-    || manifest.schemaVersion !== '1.0.0'
-    || !DASHBOARD_BUILD_ID.test(manifest.buildId)
-    || manifest.entry !== 'index.html'
-    || !Array.isArray(manifest.assets)
-    || new Set(manifest.assets).size !== manifest.assets.length
-    || manifest.assets.some((asset) => typeof asset !== 'string' || asset.length === 0)
-    || (hasAssetDigests
-      && (JSON.stringify(manifest.assets) !== JSON.stringify([...manifest.assets].sort())
-        || manifest.assets.includes(manifest.entry)
-        || manifest.assets.includes(DASHBOARD_MANIFEST_FILE)
-        || manifest.assets.includes('.vite/manifest.json')
-        || !validDashboardAssetDigests(manifest)))
+    ) ||
+    manifest.kind !== 'openplanr-dashboard-build' ||
+    manifest.schemaVersion !== '1.0.0' ||
+    !DASHBOARD_BUILD_ID.test(manifest.buildId) ||
+    manifest.entry !== 'index.html' ||
+    !Array.isArray(manifest.assets) ||
+    new Set(manifest.assets).size !== manifest.assets.length ||
+    manifest.assets.some((asset) => typeof asset !== 'string' || asset.length === 0) ||
+    (hasAssetDigests &&
+      (JSON.stringify(manifest.assets) !== JSON.stringify([...manifest.assets].sort()) ||
+        manifest.assets.includes(manifest.entry) ||
+        manifest.assets.includes(DASHBOARD_MANIFEST_FILE) ||
+        manifest.assets.includes('.vite/manifest.json') ||
+        !validDashboardAssetDigests(manifest)))
   ) {
-    return { buildId: null, assetManifestHash: sha256(manifestBytes), reasonCodes: ['DASHBOARD_MANIFEST_INVALID'] };
+    return {
+      buildId: null,
+      assetManifestHash: sha256(manifestBytes),
+      reasonCodes: ['DASHBOARD_MANIFEST_INVALID'],
+    };
   }
   try {
     for (const asset of [manifest.entry, ...manifest.assets]) {
@@ -252,13 +278,14 @@ function dashboardManifestState(staticRoot) {
       const real = realpathSync(lexical);
       const realRel = relative(staticRoot, real);
       if (
-        lexicalStat.isSymbolicLink()
-        || !lexicalStat.isFile()
-        || realRel === '..'
-        || realRel.startsWith(`..${sep}`)
-        || isAbsolute(realRel)
-        || !statSync(real).isFile()
-      ) throw new Error();
+        lexicalStat.isSymbolicLink() ||
+        !lexicalStat.isFile() ||
+        realRel === '..' ||
+        realRel.startsWith(`..${sep}`) ||
+        isAbsolute(realRel) ||
+        !statSync(real).isFile()
+      )
+        throw new Error();
       if (hasAssetDigests) {
         const bytes = readFileSync(real);
         const expected = manifest.assetDigests[asset];
@@ -340,11 +367,13 @@ export function resolveDashboardStaticRoot(staticRoot) {
     throw new Error('dashboard staticRoot must contain index.html');
   }
   const entryRelative = relative(realRoot, realEntry);
-  if (lstatSync(lexicalEntry).isSymbolicLink()
-    || entryRelative === '..'
-    || entryRelative.startsWith(`..${sep}`)
-    || isAbsolute(entryRelative)
-    || !statSync(realEntry).isFile()) {
+  if (
+    lstatSync(lexicalEntry).isSymbolicLink() ||
+    entryRelative === '..' ||
+    entryRelative.startsWith(`..${sep}`) ||
+    isAbsolute(entryRelative) ||
+    !statSync(realEntry).isFile()
+  ) {
     throw new Error('dashboard staticRoot index.html must be a contained regular file');
   }
 
@@ -395,11 +424,18 @@ export const DASHBOARD_SAFE_ERROR_CODES = Object.freeze([
 ]);
 const DASHBOARD_SAFE_ERROR_CODE_SET = new Set(DASHBOARD_SAFE_ERROR_CODES);
 export const DASHBOARD_SAFE_CONTEXT_FIELDS = Object.freeze([
-  'operation', 'cycleId', 'assignmentId', 'submissionId', 'submissionState',
-  'reviewId', 'state', 'maxBytes',
+  'operation',
+  'cycleId',
+  'assignmentId',
+  'submissionId',
+  'submissionState',
+  'reviewId',
+  'state',
+  'maxBytes',
 ]);
 const DASHBOARD_SAFE_CONTEXT_FIELD_SET = new Set(DASHBOARD_SAFE_CONTEXT_FIELDS);
-const DASHBOARD_SAFE_OPERATION = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*(?:\.[a-z][a-z0-9]*(?:-[a-z0-9]+)*){1,7}$/u;
+const DASHBOARD_SAFE_OPERATION =
+  /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*(?:\.[a-z][a-z0-9]*(?:-[a-z0-9]+)*){1,7}$/u;
 const DASHBOARD_PRIVATE_OPERATION_SEGMENTS = new Set(['private', 'secret']);
 const DASHBOARD_SAFE_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/u;
 const DASHBOARD_SAFE_STATE = /^[a-z][a-z0-9]*(?:[_-][a-z0-9]+){0,7}$/u;
@@ -407,10 +443,12 @@ const DASHBOARD_SAFE_CONTEXT_TEXT_LENGTH = 160;
 const DASHBOARD_SAFE_MAX_BYTES = 16 * 1024 * 1024;
 
 function dashboardSafeOperation(value) {
-  return typeof value === 'string'
-    && value.length <= DASHBOARD_SAFE_CONTEXT_TEXT_LENGTH
-    && DASHBOARD_SAFE_OPERATION.test(value)
-    && !value.split(/[.-]/u).some((segment) => DASHBOARD_PRIVATE_OPERATION_SEGMENTS.has(segment));
+  return (
+    typeof value === 'string' &&
+    value.length <= DASHBOARD_SAFE_CONTEXT_TEXT_LENGTH &&
+    DASHBOARD_SAFE_OPERATION.test(value) &&
+    !value.split(/[.-]/u).some((segment) => DASHBOARD_PRIVATE_OPERATION_SEGMENTS.has(segment))
+  );
 }
 const DASHBOARD_SAFE_ERROR_FALLBACK = Object.freeze({
   code: 'DASHBOARD_ERROR_UNAVAILABLE',
@@ -424,14 +462,26 @@ function safeDashboardErrorRecord(value, allowInternalError = false) {
   }
   try {
     const prototype = Object.getPrototypeOf(value);
-    if (prototype !== Object.prototype && prototype !== null
-      && !(allowInternalError && value instanceof Error)) {
+    if (
+      prototype !== Object.prototype &&
+      prototype !== null &&
+      !(allowInternalError && value instanceof Error)
+    ) {
       return null;
     }
     const descriptors = Object.getOwnPropertyDescriptors(value);
-    if (Reflect.ownKeys(descriptors).some((key) => typeof key !== 'string'
-      || descriptors[key]?.get !== undefined || descriptors[key]?.set !== undefined)) return null;
-    return Object.fromEntries(Object.entries(descriptors).map(([key, descriptor]) => [key, descriptor.value]));
+    if (
+      Reflect.ownKeys(descriptors).some(
+        (key) =>
+          typeof key !== 'string' ||
+          descriptors[key]?.get !== undefined ||
+          descriptors[key]?.set !== undefined,
+      )
+    )
+      return null;
+    return Object.fromEntries(
+      Object.entries(descriptors).map(([key, descriptor]) => [key, descriptor.value]),
+    );
   } catch {
     return null;
   }
@@ -446,17 +496,19 @@ function dashboardSafeErrorContext(value) {
     if (!Object.hasOwn(source, key)) continue;
     const candidate = source[key];
     if (key === 'maxBytes') {
-      if (!Number.isSafeInteger(candidate) || candidate < 0
-        || candidate > DASHBOARD_SAFE_MAX_BYTES) return null;
+      if (!Number.isSafeInteger(candidate) || candidate < 0 || candidate > DASHBOARD_SAFE_MAX_BYTES)
+        return null;
       context[key] = candidate;
     } else {
-      const valid = key === 'operation'
-        ? dashboardSafeOperation(candidate)
-        : typeof candidate === 'string'
-          && candidate.length <= DASHBOARD_SAFE_CONTEXT_TEXT_LENGTH
-          && (key.endsWith('State') || key === 'state'
-            ? DASHBOARD_SAFE_STATE
-            : DASHBOARD_SAFE_ID).test(candidate);
+      const valid =
+        key === 'operation'
+          ? dashboardSafeOperation(candidate)
+          : typeof candidate === 'string' &&
+            candidate.length <= DASHBOARD_SAFE_CONTEXT_TEXT_LENGTH &&
+            (key.endsWith('State') || key === 'state'
+              ? DASHBOARD_SAFE_STATE
+              : DASHBOARD_SAFE_ID
+            ).test(candidate);
       if (!valid) return null;
       context[key] = candidate;
     }
@@ -470,8 +522,8 @@ function dashboardSafeErrorContext(value) {
  */
 export function mapDashboardSafeError(error) {
   const source = safeDashboardErrorRecord(error, true);
-  if (!source || typeof source.code !== 'string'
-    || !DASHBOARD_SAFE_ERROR_CODE_SET.has(source.code)) return DASHBOARD_SAFE_ERROR_FALLBACK;
+  if (!source || typeof source.code !== 'string' || !DASHBOARD_SAFE_ERROR_CODE_SET.has(source.code))
+    return DASHBOARD_SAFE_ERROR_FALLBACK;
   const context = dashboardSafeErrorContext(source.context);
   if (!context) return DASHBOARD_SAFE_ERROR_FALLBACK;
   return Object.freeze({
@@ -484,9 +536,13 @@ export function mapDashboardSafeError(error) {
 /** Validate exact server/client parity for the public safe-error output. */
 export function assertDashboardSafeError(value) {
   const source = safeDashboardErrorRecord(value);
-  if (!source || Object.keys(source).sort().join(',') !== 'code,context,retryable'
-    || typeof source.code !== 'string' || !DASHBOARD_SAFE_ERROR_CODE_SET.has(source.code)
-    || typeof source.retryable !== 'boolean') {
+  if (
+    !source ||
+    Object.keys(source).sort().join(',') !== 'code,context,retryable' ||
+    typeof source.code !== 'string' ||
+    !DASHBOARD_SAFE_ERROR_CODE_SET.has(source.code) ||
+    typeof source.retryable !== 'boolean'
+  ) {
     throw new TypeError('Invalid dashboard safe error.');
   }
   const context = safeDashboardErrorRecord(source.context);
@@ -495,18 +551,23 @@ export function assertDashboardSafeError(value) {
   }
   for (const [key, candidate] of Object.entries(context)) {
     if (key === 'maxBytes') {
-      if (!Number.isSafeInteger(candidate) || candidate < 0
-        || candidate > DASHBOARD_SAFE_MAX_BYTES) {
+      if (
+        !Number.isSafeInteger(candidate) ||
+        candidate < 0 ||
+        candidate > DASHBOARD_SAFE_MAX_BYTES
+      ) {
         throw new TypeError('Invalid dashboard safe error.');
       }
     } else {
-      const valid = key === 'operation'
-        ? dashboardSafeOperation(candidate)
-        : typeof candidate === 'string'
-          && candidate.length <= DASHBOARD_SAFE_CONTEXT_TEXT_LENGTH
-          && (key.endsWith('State') || key === 'state'
-            ? DASHBOARD_SAFE_STATE
-            : DASHBOARD_SAFE_ID).test(candidate);
+      const valid =
+        key === 'operation'
+          ? dashboardSafeOperation(candidate)
+          : typeof candidate === 'string' &&
+            candidate.length <= DASHBOARD_SAFE_CONTEXT_TEXT_LENGTH &&
+            (key.endsWith('State') || key === 'state'
+              ? DASHBOARD_SAFE_STATE
+              : DASHBOARD_SAFE_ID
+            ).test(candidate);
       if (!valid) {
         throw new TypeError('Invalid dashboard safe error.');
       }
@@ -521,21 +582,21 @@ export function assertDashboardSafeError(value) {
   });
 }
 
-const dashboardSafeErrorJson = (res, status, error) => experienceJson(res, status, {
-  error: assertDashboardSafeError(mapDashboardSafeError(error)),
-});
+const dashboardSafeErrorJson = (res, status, error) =>
+  experienceJson(res, status, {
+    error: assertDashboardSafeError(mapDashboardSafeError(error)),
+  });
 
 function experienceBinding(req, searchParams) {
   const actorHeader = req.headers['x-openplanr-actor'];
   const actorHeaders = req.headersDistinct?.['x-openplanr-actor'];
   const binding = {
-    actorId: Array.isArray(actorHeader)
-      || (Array.isArray(actorHeaders) && actorHeaders.length !== 1)
-      ? null
-      : actorHeader,
+    actorId:
+      Array.isArray(actorHeader) || (Array.isArray(actorHeaders) && actorHeaders.length !== 1)
+        ? null
+        : actorHeader,
     ...Object.fromEntries(
-      ['scopeId', 'domainId', 'domainVersion']
-        .map((field) => [field, searchParams.get(field)]),
+      ['scopeId', 'domainId', 'domainVersion'].map((field) => [field, searchParams.get(field)]),
     ),
   };
   return Object.values(binding).every((value) => typeof value === 'string' && value.length > 0)
@@ -559,10 +620,22 @@ const OPERATE_DETAIL_ROUTES = new Map([
   ['outcomes', 'outcome'],
 ]);
 const OPERATE_SINGLETON_ROUTES = new Set([
-  'today', 'inbox', 'evidence', 'history', 'search', 'export', 'events', 'recovery',
+  'today',
+  'inbox',
+  'evidence',
+  'history',
+  'search',
+  'export',
+  'events',
+  'recovery',
 ]);
 const OPERATE_AUDIT_DISPLAY_SURFACES = new Set([
-  'evidence', 'outcomes', 'outcome', 'history', 'search', 'export',
+  'evidence',
+  'outcomes',
+  'outcome',
+  'history',
+  'search',
+  'export',
 ]);
 const OPERATE_SUBJECT_SEGMENT = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/u;
 const OPERATE_INBOX_ITEM_SEGMENT = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/u;
@@ -577,45 +650,84 @@ const OPERATE_COMMAND_MUTATIONS = new Set([
   'operate.action.rollback',
 ]);
 const OPERATE_COMMAND_ROUTES = new Map([
-  ['/api/operate/session', Object.freeze({
-    kind: 'session',
-    fields: ['cycleId', 'eventHead', 'sourceViewHash', 'actionLocator'],
-  })],
-  ['/api/operate/commands/preview', Object.freeze({
-    kind: 'preview', fields: ['sessionId', 'actionReference'],
-  })],
-  ['/api/operate/commands/confirm', Object.freeze({
-    kind: 'confirm', fields: ['sessionId', 'previewId', 'previewHash'],
-    optionalFields: ['note'],
-  })],
-  ['/api/operate/planning/preview', Object.freeze({
-    kind: 'planning-preview',
-    fields: ['sessionId', 'actionId'],
-    optionalFields: ['framing'],
-  })],
-  ['/api/operate/planning/create-spec', Object.freeze({
-    kind: 'planning-create-spec',
-    fields: ['sessionId', 'proposalId', 'confirmDigest'],
-  })],
+  [
+    '/api/operate/session',
+    Object.freeze({
+      kind: 'session',
+      fields: ['cycleId', 'eventHead', 'sourceViewHash', 'actionLocator'],
+    }),
+  ],
+  [
+    '/api/operate/commands/preview',
+    Object.freeze({
+      kind: 'preview',
+      fields: ['sessionId', 'actionReference'],
+    }),
+  ],
+  [
+    '/api/operate/commands/confirm',
+    Object.freeze({
+      kind: 'confirm',
+      fields: ['sessionId', 'previewId', 'previewHash'],
+      optionalFields: ['note'],
+    }),
+  ],
+  [
+    '/api/operate/planning/preview',
+    Object.freeze({
+      kind: 'planning-preview',
+      fields: ['sessionId', 'actionId'],
+      optionalFields: ['framing'],
+    }),
+  ],
+  [
+    '/api/operate/planning/create-spec',
+    Object.freeze({
+      kind: 'planning-create-spec',
+      fields: ['sessionId', 'proposalId', 'confirmDigest'],
+    }),
+  ],
 ]);
 
 const PLANNING_FRAMING_FIELDS = Object.freeze([
-  'title', 'slug', 'problem', 'objective', 'users', 'scope', 'nonScope', 'risks',
-  'constraints', 'requirements', 'acceptanceOutcomes',
+  'title',
+  'slug',
+  'problem',
+  'objective',
+  'users',
+  'scope',
+  'nonScope',
+  'risks',
+  'constraints',
+  'requirements',
+  'acceptanceOutcomes',
 ]);
 
 function exactPlanningFraming(value) {
   if (!exactObject(value, PLANNING_FRAMING_FIELDS)) return false;
-  return ['title', 'slug', 'problem', 'objective'].every((field) => typeof value[field] === 'string')
-    && ['users', 'scope', 'nonScope', 'risks', 'constraints', 'requirements', 'acceptanceOutcomes']
-      .every((field) => Array.isArray(value[field])
-        && value[field].every((entry) => typeof entry === 'string'));
+  return (
+    ['title', 'slug', 'problem', 'objective'].every((field) => typeof value[field] === 'string') &&
+    [
+      'users',
+      'scope',
+      'nonScope',
+      'risks',
+      'constraints',
+      'requirements',
+      'acceptanceOutcomes',
+    ].every(
+      (field) =>
+        Array.isArray(value[field]) && value[field].every((entry) => typeof entry === 'string'),
+    )
+  );
 }
 
 function strictJsonError(code = 'OPERATE_BODY_INVALID') {
-  const error = new Error(code === 'OPERATE_DUPLICATE_MEMBER'
-    ? 'The command body contains a duplicate JSON object member.'
-    : 'The command body is invalid JSON.');
+  const error = new Error(
+    code === 'OPERATE_DUPLICATE_MEMBER'
+      ? 'The command body contains a duplicate JSON object member.'
+      : 'The command body is invalid JSON.',
+  );
   error.code = code;
   error.status = 400;
   return error;
@@ -725,7 +837,9 @@ function parseStrictCommandJson(source) {
       offset += primitive[0].length;
       return;
     }
-    const number = /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?(?=[\t\n\r ,}\]]|$)/u.exec(remainder);
+    const number = /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?(?=[\t\n\r ,}\]]|$)/u.exec(
+      remainder,
+    );
     if (!number) throw strictJsonError();
     offset += number[0].length;
   };
@@ -767,11 +881,7 @@ function parseOperateRoute(pathname) {
   if (parts.length === 1 && OPERATE_COLLECTION_ROUTES.has(parts[0])) {
     return Object.freeze({ surface: OPERATE_COLLECTION_ROUTES.get(parts[0]), subjectId: null });
   }
-  if (
-    parts.length === 3
-    && parts[0] === 'cycles'
-    && parts[2] === 'executive-board'
-  ) {
+  if (parts.length === 3 && parts[0] === 'cycles' && parts[2] === 'executive-board') {
     const subjectId = parts[1];
     if (!OPERATE_SUBJECT_SEGMENT.test(subjectId) || subjectId === '.' || subjectId === '..') {
       return null;
@@ -781,9 +891,12 @@ function parseOperateRoute(pathname) {
   if (parts.length === 4 && parts[0] === 'cycles' && parts[2] === 'reviews') {
     const cycleId = parts[1];
     const subjectId = parts[3];
-    if (![cycleId, subjectId].every((id) => (
-      OPERATE_SUBJECT_SEGMENT.test(id) && id !== '.' && id !== '..'
-    ))) return null;
+    if (
+      ![cycleId, subjectId].every(
+        (id) => OPERATE_SUBJECT_SEGMENT.test(id) && id !== '.' && id !== '..',
+      )
+    )
+      return null;
     return Object.freeze({ surface: 'review', cycleId, subjectId });
   }
   if (parts.length === 2 && parts[0] === 'inbox') {
@@ -793,7 +906,8 @@ function parseOperateRoute(pathname) {
   }
   if (parts.length !== 2 || !OPERATE_DETAIL_ROUTES.has(parts[0])) return null;
   const subjectId = parts[1];
-  if (!OPERATE_SUBJECT_SEGMENT.test(subjectId) || subjectId === '.' || subjectId === '..') return null;
+  if (!OPERATE_SUBJECT_SEGMENT.test(subjectId) || subjectId === '.' || subjectId === '..')
+    return null;
   return Object.freeze({ surface: OPERATE_DETAIL_ROUTES.get(parts[0]), subjectId });
 }
 
@@ -821,8 +935,12 @@ function hasInvalidOperateQuery(route, searchParams) {
 }
 
 function sameExperienceBinding(view, binding) {
-  return binding && ['actorId', 'scopeId', 'domainId', 'domainVersion']
-    .every((field) => view?.[field] === binding[field]);
+  return (
+    binding &&
+    ['actorId', 'scopeId', 'domainId', 'domainVersion'].every(
+      (field) => view?.[field] === binding[field],
+    )
+  );
 }
 
 function exactEventHead(left, right) {
@@ -830,35 +948,49 @@ function exactEventHead(left, right) {
 }
 
 function sameCommandSessionBinding(sessionBinding, requestBinding, request) {
-  return sameExperienceBinding(sessionBinding, requestBinding)
-    && typeof request?.cycleId === 'string'
-    && sessionBinding?.cycleId === request.cycleId
-    && exactEventHead(sessionBinding?.eventHead, request.eventHead)
-    && sessionBinding?.sourceViewHash === request.sourceViewHash
-    && sessionBinding?.actionLocator?.subjectId === request.actionLocator?.subjectId
-    && sessionBinding?.actionLocator?.actionDigest === request.actionLocator?.actionDigest;
+  return (
+    sameExperienceBinding(sessionBinding, requestBinding) &&
+    typeof request?.cycleId === 'string' &&
+    sessionBinding?.cycleId === request.cycleId &&
+    exactEventHead(sessionBinding?.eventHead, request.eventHead) &&
+    sessionBinding?.sourceViewHash === request.sourceViewHash &&
+    sessionBinding?.actionLocator?.subjectId === request.actionLocator?.subjectId &&
+    sessionBinding?.actionLocator?.actionDigest === request.actionLocator?.actionDigest
+  );
 }
 
 function validCommandSessionBinding(sessionBinding, requestBinding) {
-  return sameExperienceBinding(sessionBinding, requestBinding)
-    && typeof sessionBinding?.cycleId === 'string'
-    && OPERATE_SUBJECT_SEGMENT.test(sessionBinding.cycleId)
-    && validLiveHead(sessionBinding.eventHead)
-    && typeof sessionBinding.sourceViewHash === 'string'
-    && LIVE_HASH.test(sessionBinding.sourceViewHash)
-    && exactObject(sessionBinding.actionLocator, ['subjectId', 'actionDigest'])
-    && typeof sessionBinding.actionLocator.subjectId === 'string'
-    && OPERATE_SUBJECT_SEGMENT.test(sessionBinding.actionLocator.subjectId)
-    && typeof sessionBinding.actionLocator.actionDigest === 'string'
-    && LIVE_HASH.test(sessionBinding.actionLocator.actionDigest);
+  return (
+    sameExperienceBinding(sessionBinding, requestBinding) &&
+    typeof sessionBinding?.cycleId === 'string' &&
+    OPERATE_SUBJECT_SEGMENT.test(sessionBinding.cycleId) &&
+    validLiveHead(sessionBinding.eventHead) &&
+    typeof sessionBinding.sourceViewHash === 'string' &&
+    LIVE_HASH.test(sessionBinding.sourceViewHash) &&
+    exactObject(sessionBinding.actionLocator, ['subjectId', 'actionDigest']) &&
+    typeof sessionBinding.actionLocator.subjectId === 'string' &&
+    OPERATE_SUBJECT_SEGMENT.test(sessionBinding.actionLocator.subjectId) &&
+    typeof sessionBinding.actionLocator.actionDigest === 'string' &&
+    LIVE_HASH.test(sessionBinding.actionLocator.actionDigest)
+  );
 }
 
 function closedCommandSessionBinding(value) {
   const source = safeDashboardErrorRecord(value);
-  if (!source || !exactObject(source, [
-    'actorId', 'scopeId', 'domainId', 'domainVersion', 'cycleId',
-    'eventHead', 'sourceViewHash', 'actionLocator',
-  ])) return null;
+  if (
+    !source ||
+    !exactObject(source, [
+      'actorId',
+      'scopeId',
+      'domainId',
+      'domainVersion',
+      'cycleId',
+      'eventHead',
+      'sourceViewHash',
+      'actionLocator',
+    ])
+  )
+    return null;
   const eventHead = safeDashboardErrorRecord(source.eventHead);
   const actionLocator = safeDashboardErrorRecord(source.actionLocator);
   const binding = {
@@ -871,64 +1003,81 @@ function closedCommandSessionBinding(value) {
     sourceViewHash: source.sourceViewHash,
     actionLocator,
   };
-  return eventHead && actionLocator && validCommandSessionBinding(binding, {
-    actorId: binding.actorId,
-    scopeId: binding.scopeId,
-    domainId: binding.domainId,
-    domainVersion: binding.domainVersion,
-  }) ? binding : null;
+  return eventHead &&
+    actionLocator &&
+    validCommandSessionBinding(binding, {
+      actorId: binding.actorId,
+      scopeId: binding.scopeId,
+      domainId: binding.domainId,
+      domainVersion: binding.domainVersion,
+    })
+    ? binding
+    : null;
 }
 
 function sameClosedCommandSessionBinding(left, right) {
-  return sameExperienceBinding(left, right)
-    && left?.cycleId === right?.cycleId
-    && exactEventHead(left?.eventHead, right?.eventHead)
-    && left?.sourceViewHash === right?.sourceViewHash
-    && left?.actionLocator?.subjectId === right?.actionLocator?.subjectId
-    && left?.actionLocator?.actionDigest === right?.actionLocator?.actionDigest;
+  return (
+    sameExperienceBinding(left, right) &&
+    left?.cycleId === right?.cycleId &&
+    exactEventHead(left?.eventHead, right?.eventHead) &&
+    left?.sourceViewHash === right?.sourceViewHash &&
+    left?.actionLocator?.subjectId === right?.actionLocator?.subjectId &&
+    left?.actionLocator?.actionDigest === right?.actionLocator?.actionDigest
+  );
 }
 
 function exactObject(value, fields) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   const actual = Object.keys(value).sort();
   const expected = [...fields].sort();
-  return actual.length === expected.length
-    && actual.every((field, index) => field === expected[index]);
+  return (
+    actual.length === expected.length && actual.every((field, index) => field === expected[index])
+  );
 }
 
 function exactRouteBody(value, route) {
   if (exactObject(value, route.fields)) {
     if (route.kind !== 'session') return true;
-    return typeof value.cycleId === 'string'
-      && OPERATE_SUBJECT_SEGMENT.test(value.cycleId)
-      && validLiveHead(value.eventHead)
-      && typeof value.sourceViewHash === 'string'
-      && LIVE_HASH.test(value.sourceViewHash)
-      && exactObject(value.actionLocator, ['subjectId', 'actionDigest'])
-      && typeof value.actionLocator.subjectId === 'string'
-      && OPERATE_SUBJECT_SEGMENT.test(value.actionLocator.subjectId)
-      && typeof value.actionLocator.actionDigest === 'string'
-      && LIVE_HASH.test(value.actionLocator.actionDigest);
+    return (
+      typeof value.cycleId === 'string' &&
+      OPERATE_SUBJECT_SEGMENT.test(value.cycleId) &&
+      validLiveHead(value.eventHead) &&
+      typeof value.sourceViewHash === 'string' &&
+      LIVE_HASH.test(value.sourceViewHash) &&
+      exactObject(value.actionLocator, ['subjectId', 'actionDigest']) &&
+      typeof value.actionLocator.subjectId === 'string' &&
+      OPERATE_SUBJECT_SEGMENT.test(value.actionLocator.subjectId) &&
+      typeof value.actionLocator.actionDigest === 'string' &&
+      LIVE_HASH.test(value.actionLocator.actionDigest)
+    );
   }
   const optional = route.optionalFields ?? [];
   if (optional.length === 0 || !exactObject(value, [...route.fields, ...optional])) return false;
   if (Object.hasOwn(value, 'framing') && !exactPlanningFraming(value.framing)) return false;
-  if (Object.hasOwn(value, 'note') && !(value.note === null || (
-    typeof value.note === 'string'
-    && value.note.length <= 2048
-    && /^\S(?:[\s\S]*\S)?$/u.test(value.note)
-  ))) return false;
+  if (
+    Object.hasOwn(value, 'note') &&
+    !(
+      value.note === null ||
+      (typeof value.note === 'string' &&
+        value.note.length <= 2048 &&
+        /^\S(?:[\s\S]*\S)?$/u.test(value.note))
+    )
+  )
+    return false;
   return true;
 }
 
 function exactReturnedSessionAction(response, request) {
-  if (!Array.isArray(response?.allowedActions) || response.allowedActions.length !== 1) return false;
+  if (!Array.isArray(response?.allowedActions) || response.allowedActions.length !== 1)
+    return false;
   const [action] = response.allowedActions;
-  return exactObject(action, ['actionReference', 'subjectId', 'actionDigest'])
-    && typeof action.actionReference === 'string'
-    && /^[A-Za-z0-9_-]{16,256}$/u.test(action.actionReference)
-    && action.subjectId === request.actionLocator.subjectId
-    && action.actionDigest === request.actionLocator.actionDigest;
+  return (
+    exactObject(action, ['actionReference', 'subjectId', 'actionDigest']) &&
+    typeof action.actionReference === 'string' &&
+    /^[A-Za-z0-9_-]{16,256}$/u.test(action.actionReference) &&
+    action.subjectId === request.actionLocator.subjectId &&
+    action.actionDigest === request.actionLocator.actionDigest
+  );
 }
 
 function canonicalCommandTimestamp(value) {
@@ -946,30 +1095,46 @@ function closedCommandSessionResponse(response, requestBinding, request) {
   const source = safeDashboardErrorRecord(response);
   const issuedAtMs = source ? canonicalCommandTimestamp(source.issuedAt) : null;
   const expiresAtMs = source ? canonicalCommandTimestamp(source.expiresAt) : null;
-  if (!source || !exactObject(source, [
-    'kind', 'schemaVersion', 'protocolVersion', 'sessionId', 'sessionCapability',
-    'issuedAt', 'expiresAt', 'binding', 'allowedActions', 'readOnly',
-  ])
-    || source.kind !== 'operate-command-session'
-    || source.schemaVersion !== '1.0.0'
-    || source.protocolVersion !== '2.0.0'
-    || typeof source.sessionId !== 'string'
-    || !/^opsess_[A-Za-z0-9_-]{16,249}$/u.test(source.sessionId)
-    || typeof source.sessionCapability !== 'string'
-    || !/^[A-Za-z0-9_-]{43,256}$/u.test(source.sessionCapability)
-    || issuedAtMs === null
-    || expiresAtMs === null
-    || expiresAtMs - issuedAtMs < OPERATE_COMMAND_SESSION_MIN_TTL_MS
-    || expiresAtMs - issuedAtMs > OPERATE_COMMAND_SESSION_MAX_TTL_MS
-    || source.readOnly !== false
-    || !Array.isArray(source.allowedActions)
-    || utilTypes.isProxy(source.allowedActions)
-    || source.allowedActions.length !== 1) return null;
+  if (
+    !source ||
+    !exactObject(source, [
+      'kind',
+      'schemaVersion',
+      'protocolVersion',
+      'sessionId',
+      'sessionCapability',
+      'issuedAt',
+      'expiresAt',
+      'binding',
+      'allowedActions',
+      'readOnly',
+    ]) ||
+    source.kind !== 'operate-command-session' ||
+    source.schemaVersion !== '1.0.0' ||
+    source.protocolVersion !== '2.0.0' ||
+    typeof source.sessionId !== 'string' ||
+    !/^opsess_[A-Za-z0-9_-]{16,249}$/u.test(source.sessionId) ||
+    typeof source.sessionCapability !== 'string' ||
+    !/^[A-Za-z0-9_-]{43,256}$/u.test(source.sessionCapability) ||
+    issuedAtMs === null ||
+    expiresAtMs === null ||
+    expiresAtMs - issuedAtMs < OPERATE_COMMAND_SESSION_MIN_TTL_MS ||
+    expiresAtMs - issuedAtMs > OPERATE_COMMAND_SESSION_MAX_TTL_MS ||
+    source.readOnly !== false ||
+    !Array.isArray(source.allowedActions) ||
+    utilTypes.isProxy(source.allowedActions) ||
+    source.allowedActions.length !== 1
+  )
+    return null;
   const binding = closedCommandSessionBinding(source.binding);
   const action = safeDashboardErrorRecord(source.allowedActions[0]);
-  if (!binding || !action
-    || !sameCommandSessionBinding(binding, requestBinding, request)
-    || !exactReturnedSessionAction({ allowedActions: [action] }, request)) return null;
+  if (
+    !binding ||
+    !action ||
+    !sameCommandSessionBinding(binding, requestBinding, request) ||
+    !exactReturnedSessionAction({ allowedActions: [action] }, request)
+  )
+    return null;
   return Object.freeze({
     kind: source.kind,
     schemaVersion: source.schemaVersion,
@@ -987,11 +1152,15 @@ function closedCommandSessionResponse(response, requestBinding, request) {
 function closedCommandPreviewProof(value, sessionBinding) {
   const source = safeDashboardErrorRecord(value);
   const binding = source ? closedCommandSessionBinding(source.binding) : null;
-  if (!source || !exactObject(source, ['binding', 'operation'])
-    || !binding
-    || !sameClosedCommandSessionBinding(binding, sessionBinding)
-    || typeof source.operation !== 'string'
-    || !OPERATE_COMMAND_MUTATIONS.has(source.operation)) return null;
+  if (
+    !source ||
+    !exactObject(source, ['binding', 'operation']) ||
+    !binding ||
+    !sameClosedCommandSessionBinding(binding, sessionBinding) ||
+    typeof source.operation !== 'string' ||
+    !OPERATE_COMMAND_MUTATIONS.has(source.operation)
+  )
+    return null;
   return Object.freeze({ binding, operation: source.operation });
 }
 
@@ -1002,29 +1171,36 @@ function emptyClosedArray(value) {
 function closedCommandFailureResponse(response, expectedOperation) {
   const source = safeDashboardErrorRecord(response);
   const error = source ? safeDashboardErrorRecord(source.error) : null;
-  if (!source || !error
-    || !exactObject(source, ['ok', 'operation', 'error', 'allowedActions'])
-    || !exactObject(error, ['code', 'message', 'retryable', 'context'])
-    || source.ok !== false
-    || source.operation !== expectedOperation
-    || !emptyClosedArray(source.allowedActions)
-    || typeof error.code !== 'string'
-    || typeof error.message !== 'string'
-    || typeof error.retryable !== 'boolean') return null;
-  const safe = assertDashboardSafeError(mapDashboardSafeError({
-    code: error.code,
-    retryable: error.retryable,
-    context: error.context,
-  }));
+  if (
+    !source ||
+    !error ||
+    !exactObject(source, ['ok', 'operation', 'error', 'allowedActions']) ||
+    !exactObject(error, ['code', 'message', 'retryable', 'context']) ||
+    source.ok !== false ||
+    source.operation !== expectedOperation ||
+    !emptyClosedArray(source.allowedActions) ||
+    typeof error.code !== 'string' ||
+    typeof error.message !== 'string' ||
+    typeof error.retryable !== 'boolean'
+  )
+    return null;
+  const safe = assertDashboardSafeError(
+    mapDashboardSafeError({
+      code: error.code,
+      retryable: error.retryable,
+      context: error.context,
+    }),
+  );
   if (safe.code !== error.code) return null;
   return Object.freeze({
     ok: false,
     operation: expectedOperation,
     error: Object.freeze({
       code: safe.code,
-      message: safe.code === 'OPERATION_UNCERTAIN'
-        ? 'The durable result is uncertain. Inspect recovery state; do not retry blindly.'
-        : 'The governed command was refused without effect.',
+      message:
+        safe.code === 'OPERATION_UNCERTAIN'
+          ? 'The durable result is uncertain. Inspect recovery state; do not retry blindly.'
+          : 'The governed command was refused without effect.',
       retryable: false,
       context: Object.freeze({}),
     }),
@@ -1034,21 +1210,27 @@ function closedCommandFailureResponse(response, expectedOperation) {
 
 function closedCommandSuccessResponse(response, expectedOperation, refreshedView) {
   const source = safeDashboardErrorRecord(response);
-  if (!source
-    || !exactObject(source, ['ok', 'operation', 'data', 'allowedActions', 'eventHead'])
-    || source.ok !== true
-    || source.operation !== expectedOperation
-    || !emptyClosedArray(source.allowedActions)
-    || !validLiveHead(source.eventHead)
-    || !exactEventHead(source.eventHead, refreshedView.eventHead)) return null;
+  if (
+    !source ||
+    !exactObject(source, ['ok', 'operation', 'data', 'allowedActions', 'eventHead']) ||
+    source.ok !== true ||
+    source.operation !== expectedOperation ||
+    !emptyClosedArray(source.allowedActions) ||
+    !validLiveHead(source.eventHead) ||
+    !exactEventHead(source.eventHead, refreshedView.eventHead)
+  )
+    return null;
   try {
     assertOperateExperienceTransportView(source.data);
   } catch {
     return null;
   }
-  if (!sameExperienceBinding(source.data, refreshedView)
-    || !exactEventHead(source.data.eventHead, source.eventHead)
-    || source.data.viewHash !== refreshedView.viewHash) return null;
+  if (
+    !sameExperienceBinding(source.data, refreshedView) ||
+    !exactEventHead(source.data.eventHead, source.eventHead) ||
+    source.data.viewHash !== refreshedView.viewHash
+  )
+    return null;
   return Object.freeze({
     ok: true,
     operation: expectedOperation,
@@ -1067,19 +1249,24 @@ function closedReviewWorkspace(value, binding, cycleId, reviewId, refreshedView)
     return null;
   }
   const payload = workspace.payload;
-  const exactCurrentSource = exactEventHead(payload.sourceEventHead, refreshedView.eventHead)
-    && payload.sourceViewHash === refreshedView.viewHash;
-  const historicalTerminalSource = payload.sourceArtifactKind === 'operating-review-receipt'
-    && payload.status === 'terminal'
-    && payload.sourceEventHead.sequence < refreshedView.eventHead.sequence
-    && refreshedView.cycles.some((cycle) => cycle.cycleId === cycleId);
-  if (payload.actorId !== binding.actorId
-    || payload.scopeId !== binding.scopeId
-    || payload.domainId !== binding.domainId
-    || payload.domainVersion !== binding.domainVersion
-    || payload.cycleId !== cycleId
-    || payload.reviewId !== reviewId
-    || (!exactCurrentSource && !historicalTerminalSource)) return null;
+  const exactCurrentSource =
+    exactEventHead(payload.sourceEventHead, refreshedView.eventHead) &&
+    payload.sourceViewHash === refreshedView.viewHash;
+  const historicalTerminalSource =
+    payload.sourceArtifactKind === 'operating-review-receipt' &&
+    payload.status === 'terminal' &&
+    payload.sourceEventHead.sequence < refreshedView.eventHead.sequence &&
+    refreshedView.cycles.some((cycle) => cycle.cycleId === cycleId);
+  if (
+    payload.actorId !== binding.actorId ||
+    payload.scopeId !== binding.scopeId ||
+    payload.domainId !== binding.domainId ||
+    payload.domainVersion !== binding.domainVersion ||
+    payload.cycleId !== cycleId ||
+    payload.reviewId !== reviewId ||
+    (!exactCurrentSource && !historicalTerminalSource)
+  )
+    return null;
   return Object.freeze(workspace);
 }
 
@@ -1092,14 +1279,18 @@ function closedReviewCommandSuccessResponse(
 ) {
   const source = safeDashboardErrorRecord(response);
   const data = source ? safeDashboardErrorRecord(source.data) : null;
-  if (!source || !data
-    || !exactObject(source, ['ok', 'operation', 'data', 'allowedActions', 'eventHead'])
-    || !exactObject(data, ['receipt', 'workspace'])
-    || source.ok !== true
-    || source.operation !== 'operate.review.submit'
-    || !emptyClosedArray(source.allowedActions)
-    || !validLiveHead(source.eventHead)
-    || !currentHeadIncludesCommitted(refreshedView.eventHead, source.eventHead)) return null;
+  if (
+    !source ||
+    !data ||
+    !exactObject(source, ['ok', 'operation', 'data', 'allowedActions', 'eventHead']) ||
+    !exactObject(data, ['receipt', 'workspace']) ||
+    source.ok !== true ||
+    source.operation !== 'operate.review.submit' ||
+    !emptyClosedArray(source.allowedActions) ||
+    !validLiveHead(source.eventHead) ||
+    !currentHeadIncludesCommitted(refreshedView.eventHead, source.eventHead)
+  )
+    return null;
   const reviewId = sessionBinding.actionLocator.subjectId;
   const workspace = closedReviewWorkspace(
     reviewWorkspace,
@@ -1119,27 +1310,30 @@ function closedReviewCommandSuccessResponse(
   }
   const bound = receipt.boundSubmission;
   const terminal = workspace.payload.data.terminalDisposition;
-  if (receipt.cycleId !== sessionBinding.cycleId
-    || receipt.review.reviewId !== reviewId
-    || receipt.actor.actorId !== sessionBinding.actorId
-    || receipt.scope.scopeId !== sessionBinding.scopeId
-    || receipt.scope.domainId !== sessionBinding.domainId
-    || receipt.scope.domainVersion !== sessionBinding.domainVersion
-    || !exactEventHead(receipt.eventHead, source.eventHead)
-    || !exactEventHead(receipt.readEventHead, sessionBinding.eventHead)
-    || !exactEventHead(bound.expectedReadEventHead, sessionBinding.eventHead)
-    || bound.note !== expectedNote
-    || bound.choiceId !== receipt.appliedChoiceId
-    || bound.choiceHash !== receipt.appliedChoiceHash
-    || workspace.payload.sourceArtifactKind !== 'operating-review-receipt'
-    || workspace.payload.sourceArtifactHash !== sha256Jcs(receipt)
-    || workspace.payload.status !== 'terminal'
-    || terminal === null
-    || terminal.receiptId !== receipt.receiptId
-    || terminal.appliedChoiceId !== receipt.appliedChoiceId
-    || terminal.appliedChoiceHash !== receipt.appliedChoiceHash
-    || !exactEventHead(terminal.eventHead, receipt.eventHead)
-    || !exactEventHead(terminal.readEventHead, receipt.readEventHead)) return null;
+  if (
+    receipt.cycleId !== sessionBinding.cycleId ||
+    receipt.review.reviewId !== reviewId ||
+    receipt.actor.actorId !== sessionBinding.actorId ||
+    receipt.scope.scopeId !== sessionBinding.scopeId ||
+    receipt.scope.domainId !== sessionBinding.domainId ||
+    receipt.scope.domainVersion !== sessionBinding.domainVersion ||
+    !exactEventHead(receipt.eventHead, source.eventHead) ||
+    !exactEventHead(receipt.readEventHead, sessionBinding.eventHead) ||
+    !exactEventHead(bound.expectedReadEventHead, sessionBinding.eventHead) ||
+    bound.note !== expectedNote ||
+    bound.choiceId !== receipt.appliedChoiceId ||
+    bound.choiceHash !== receipt.appliedChoiceHash ||
+    workspace.payload.sourceArtifactKind !== 'operating-review-receipt' ||
+    workspace.payload.sourceArtifactHash !== sha256Jcs(receipt) ||
+    workspace.payload.status !== 'terminal' ||
+    terminal === null ||
+    terminal.receiptId !== receipt.receiptId ||
+    terminal.appliedChoiceId !== receipt.appliedChoiceId ||
+    terminal.appliedChoiceHash !== receipt.appliedChoiceHash ||
+    !exactEventHead(terminal.eventHead, receipt.eventHead) ||
+    !exactEventHead(terminal.readEventHead, receipt.readEventHead)
+  )
+    return null;
   return Object.freeze({
     ok: true,
     operation: 'operate.review.submit',
@@ -1152,31 +1346,39 @@ function closedReviewCommandSuccessResponse(
 function closedReviewCommandFailureResponse(response, workspace) {
   const source = safeDashboardErrorRecord(response);
   const error = source ? safeDashboardErrorRecord(source.error) : null;
-  if (!source || !error
-    || !exactObject(source, ['ok', 'operation', 'error', 'allowedActions'])
-    || source.ok !== false
-    || source.operation !== 'operate.review.submit'
-    || !Array.isArray(source.allowedActions)
-    || typeof error.code !== 'string'
-    || typeof error.message !== 'string'
-    || typeof error.retryable !== 'boolean') return null;
-  const safe = assertDashboardSafeError(mapDashboardSafeError({
-    code: error.code,
-    retryable: error.retryable,
-    context: error.context,
-  }));
+  if (
+    !source ||
+    !error ||
+    !exactObject(source, ['ok', 'operation', 'error', 'allowedActions']) ||
+    source.ok !== false ||
+    source.operation !== 'operate.review.submit' ||
+    !Array.isArray(source.allowedActions) ||
+    typeof error.code !== 'string' ||
+    typeof error.message !== 'string' ||
+    typeof error.retryable !== 'boolean'
+  )
+    return null;
+  const safe = assertDashboardSafeError(
+    mapDashboardSafeError({
+      code: error.code,
+      retryable: error.retryable,
+      context: error.context,
+    }),
+  );
   if (safe.code !== error.code) return null;
-  const allowedActions = workspace?.payload?.data?.capability?.available === true
-    ? workspace.payload.data.capability.actions
-    : [];
+  const allowedActions =
+    workspace?.payload?.data?.capability?.available === true
+      ? workspace.payload.data.capability.actions
+      : [];
   return Object.freeze({
     ok: false,
     operation: 'operate.review.submit',
     error: Object.freeze({
       code: safe.code,
-      message: safe.code === 'OPERATION_UNCERTAIN'
-        ? 'The durable result is uncertain. Inspect recovery state; do not retry blindly.'
-        : 'The governed command was refused without effect.',
+      message:
+        safe.code === 'OPERATION_UNCERTAIN'
+          ? 'The durable result is uncertain. Inspect recovery state; do not retry blindly.'
+          : 'The governed command was refused without effect.',
       retryable: false,
       context: Object.freeze({}),
     }),
@@ -1185,30 +1387,39 @@ function closedReviewCommandFailureResponse(response, workspace) {
 }
 
 function exactAdvancedHead(candidate, previous) {
-  return validLiveHead(candidate)
-    && candidate.sequence > previous.sequence
-    && candidate.hash !== null;
+  return (
+    validLiveHead(candidate) && candidate.sequence > previous.sequence && candidate.hash !== null
+  );
 }
 
 function currentHeadIncludesCommitted(current, committed) {
-  return validLiveHead(current)
-    && validLiveHead(committed)
-    && current.sequence >= committed.sequence
-    && (current.sequence !== committed.sequence || current.hash === committed.hash);
+  return (
+    validLiveHead(current) &&
+    validLiveHead(committed) &&
+    current.sequence >= committed.sequence &&
+    (current.sequence !== committed.sequence || current.hash === committed.hash)
+  );
 }
 
 function exactCommandBinding(req, searchParams, rawSearch, extraKeys = []) {
   const expectedKeys = [...OPERATE_BINDING_QUERY_KEYS, ...extraKeys];
   const seen = [...searchParams.keys()];
-  const rawKeys = typeof rawSearch === 'string' && rawSearch.startsWith('?')
-    ? rawSearch.slice(1).split('&').map((member) => member.split('=', 1)[0])
-    : [];
-  if (seen.length !== expectedKeys.length
-    || new Set(seen).size !== expectedKeys.length
-    || seen.some((key) => !expectedKeys.includes(key))
-    || rawKeys.length !== expectedKeys.length
-    || new Set(rawKeys).size !== expectedKeys.length
-    || rawKeys.some((key) => !expectedKeys.includes(key))) return null;
+  const rawKeys =
+    typeof rawSearch === 'string' && rawSearch.startsWith('?')
+      ? rawSearch
+          .slice(1)
+          .split('&')
+          .map((member) => member.split('=', 1)[0])
+      : [];
+  if (
+    seen.length !== expectedKeys.length ||
+    new Set(seen).size !== expectedKeys.length ||
+    seen.some((key) => !expectedKeys.includes(key)) ||
+    rawKeys.length !== expectedKeys.length ||
+    new Set(rawKeys).size !== expectedKeys.length ||
+    rawKeys.some((key) => !expectedKeys.includes(key))
+  )
+    return null;
   return experienceBinding(req, searchParams);
 }
 
@@ -1217,19 +1428,27 @@ function commandOrigin(req) {
   const host = req.headers.host;
   const origins = req.headersDistinct?.origin;
   const hosts = req.headersDistinct?.host;
-  if (Array.isArray(header) || typeof header !== 'string'
-    || Array.isArray(host) || typeof host !== 'string'
-    || (Array.isArray(origins) && origins.length !== 1)
-    || (Array.isArray(hosts) && hosts.length !== 1)) return null;
+  if (
+    Array.isArray(header) ||
+    typeof header !== 'string' ||
+    Array.isArray(host) ||
+    typeof host !== 'string' ||
+    (Array.isArray(origins) && origins.length !== 1) ||
+    (Array.isArray(hosts) && hosts.length !== 1)
+  )
+    return null;
   try {
     const origin = new URL(header);
     const requested = new URL(`http://${host}`);
     const loopback = ['127.0.0.1', 'localhost', '[::1]'];
-    if (origin.origin !== header
-      || origin.origin !== requested.origin
-      || origin.protocol !== 'http:'
-      || !loopback.includes(origin.hostname)
-      || !loopback.includes(requested.hostname)) return null;
+    if (
+      origin.origin !== header ||
+      origin.origin !== requested.origin ||
+      origin.protocol !== 'http:' ||
+      !loopback.includes(origin.hostname) ||
+      !loopback.includes(requested.hostname)
+    )
+      return null;
     return origin.origin;
   } catch {
     return null;
@@ -1239,8 +1458,12 @@ function commandOrigin(req) {
 function loopbackCommandHost(req) {
   const host = req.headers.host;
   const hosts = req.headersDistinct?.host;
-  if (Array.isArray(host) || typeof host !== 'string'
-    || (Array.isArray(hosts) && hosts.length !== 1)) return false;
+  if (
+    Array.isArray(host) ||
+    typeof host !== 'string' ||
+    (Array.isArray(hosts) && hosts.length !== 1)
+  )
+    return false;
   try {
     const requested = new URL(`http://${host}`);
     return ['127.0.0.1', 'localhost', '[::1]'].includes(requested.hostname);
@@ -1252,26 +1475,31 @@ function loopbackCommandHost(req) {
 function bearerCapability(req) {
   const header = req.headers.authorization;
   const headers = req.headersDistinct?.authorization;
-  if (Array.isArray(header) || typeof header !== 'string'
-    || (Array.isArray(headers) && headers.length !== 1)) return null;
+  if (
+    Array.isArray(header) ||
+    typeof header !== 'string' ||
+    (Array.isArray(headers) && headers.length !== 1)
+  )
+    return null;
   const match = /^Bearer ([A-Za-z0-9_-]{43,256})$/u.exec(header);
   return match?.[1] ?? null;
 }
 
 function readCommandBody(req) {
   const contentType = req.headers['content-type'];
-  if (Array.isArray(contentType)
-    || typeof contentType !== 'string'
-    || !/^application\/json(?:\s*;\s*charset=utf-8)?$/iu.test(contentType)) {
+  if (
+    Array.isArray(contentType) ||
+    typeof contentType !== 'string' ||
+    !/^application\/json(?:\s*;\s*charset=utf-8)?$/iu.test(contentType)
+  ) {
     const error = new Error('The command body must be JSON.');
     error.code = 'OPERATE_CONTENT_TYPE_INVALID';
     error.status = 415;
     throw error;
   }
   const lengthHeader = req.headers['content-length'];
-  const declared = typeof lengthHeader === 'string' && /^\d+$/u.test(lengthHeader)
-    ? Number(lengthHeader)
-    : null;
+  const declared =
+    typeof lengthHeader === 'string' && /^\d+$/u.test(lengthHeader) ? Number(lengthHeader) : null;
   if (declared !== null && declared > OPERATE_COMMAND_BODY_LIMIT) {
     const error = new Error('The command body is too large.');
     error.code = 'OPERATE_BODY_TOO_LARGE';
@@ -1308,12 +1536,14 @@ function readCommandBody(req) {
 }
 
 function commandError(res, error) {
-  const status = Number.isInteger(error?.status) && error.status >= 400 && error.status < 500
-    ? error.status
-    : 409;
-  const code = typeof error?.code === 'string' && /^[A-Z][A-Z0-9_]*$/u.test(error.code)
-    ? error.code
-    : 'OPERATE_COMMAND_REFUSED';
+  const status =
+    Number.isInteger(error?.status) && error.status >= 400 && error.status < 500
+      ? error.status
+      : 409;
+  const code =
+    typeof error?.code === 'string' && /^[A-Z][A-Z0-9_]*$/u.test(error.code)
+      ? error.code
+      : 'OPERATE_COMMAND_REFUSED';
   return experienceJson(res, status, {
     ok: false,
     error: {
@@ -1334,46 +1564,73 @@ const LIVE_HASH = /^sha256:[a-f0-9]{64}$/u;
 const LIVE_REASON = /^[A-Z][A-Z0-9_]{0,127}$/u;
 const LIVE_PATCH_ID = /^xpatch_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$/u;
 const LIVE_PATCH_PATHS = new Set([
-  '/status', '/attention', '/domainMetrics', '/cycles', '/inbox', '/actions', '/evidence',
-  '/claims', '/rationale', '/outcomes', '/learnings', '/history', '/replay',
-  '/allowedActions', '/omissions', '/export',
+  '/status',
+  '/attention',
+  '/domainMetrics',
+  '/cycles',
+  '/inbox',
+  '/actions',
+  '/evidence',
+  '/claims',
+  '/rationale',
+  '/outcomes',
+  '/learnings',
+  '/history',
+  '/replay',
+  '/allowedActions',
+  '/omissions',
+  '/export',
 ]);
 
 function validLiveHead(value) {
-  return exactKeys(value, ['sequence', 'hash'])
-    && Number.isSafeInteger(value.sequence)
-    && value.sequence >= 0
-    && ((value.sequence === 0 && value.hash === null)
-      || (value.sequence > 0 && typeof value.hash === 'string' && LIVE_HASH.test(value.hash)));
+  return (
+    exactKeys(value, ['sequence', 'hash']) &&
+    Number.isSafeInteger(value.sequence) &&
+    value.sequence >= 0 &&
+    ((value.sequence === 0 && value.hash === null) ||
+      (value.sequence > 0 && typeof value.hash === 'string' && LIVE_HASH.test(value.hash)))
+  );
 }
 
 function validLiveBinding(value) {
-  return exactKeys(value, [
-    'actorId', 'projectId', 'scopeId', 'domainId', 'domainVersion', 'generation',
-  ])
-    && [value.actorId, value.scopeId, value.domainId, value.domainVersion]
-      .every((entry) => typeof entry === 'string' && LIVE_ID.test(entry))
-    && typeof value.projectId === 'string'
-    && LIVE_HASH.test(value.projectId)
-    && Number.isSafeInteger(value.generation)
-    && value.generation >= 0;
+  return (
+    exactKeys(value, [
+      'actorId',
+      'projectId',
+      'scopeId',
+      'domainId',
+      'domainVersion',
+      'generation',
+    ]) &&
+    [value.actorId, value.scopeId, value.domainId, value.domainVersion].every(
+      (entry) => typeof entry === 'string' && LIVE_ID.test(entry),
+    ) &&
+    typeof value.projectId === 'string' &&
+    LIVE_HASH.test(value.projectId) &&
+    Number.isSafeInteger(value.generation) &&
+    value.generation >= 0
+  );
 }
 
 function validLiveCursor(value) {
-  return exactKeys(value, ['eventHead', 'viewHash'])
-    && validLiveHead(value.eventHead)
-    && typeof value.viewHash === 'string'
-    && LIVE_HASH.test(value.viewHash);
+  return (
+    exactKeys(value, ['eventHead', 'viewHash']) &&
+    validLiveHead(value.eventHead) &&
+    typeof value.viewHash === 'string' &&
+    LIVE_HASH.test(value.viewHash)
+  );
 }
 
 /** Validate the closed, access-safe dashboard SSE envelope at its server-owner boundary. */
 export function assertDashboardLiveEventEnvelope(value) {
-  if (!exactKeys(value, ['kind', 'schemaVersion', 'event', 'binding', 'cursor', 'payload'])
-    || value.kind !== 'dashboard-live-event'
-    || value.schemaVersion !== '1.0.0'
-    || !LIVE_EVENT_KINDS.has(value.event)
-    || !validLiveBinding(value.binding)
-    || !validLiveCursor(value.cursor)) {
+  if (
+    !exactKeys(value, ['kind', 'schemaVersion', 'event', 'binding', 'cursor', 'payload']) ||
+    value.kind !== 'dashboard-live-event' ||
+    value.schemaVersion !== '1.0.0' ||
+    !LIVE_EVENT_KINDS.has(value.event) ||
+    !validLiveBinding(value.binding) ||
+    !validLiveCursor(value.cursor)
+  ) {
     throw new TypeError('Invalid dashboard live event envelope.');
   }
   const { binding, cursor, payload } = value;
@@ -1395,43 +1652,54 @@ export function assertDashboardLiveEventEnvelope(value) {
         ? { projectId: binding.projectId, generation: binding.generation, subjectId: null }
         : {}),
     });
-    if (payload.payload.ok !== true
-      || payload.payload.surface !== surface) {
+    if (payload.payload.ok !== true || payload.payload.surface !== surface) {
       throw new TypeError('Dashboard live snapshot binding is inconsistent.');
     }
   } else if (value.event === 'patch') {
-    if (!exactKeys(payload, ['patchId', 'patchHash', 'from', 'to', 'changedPaths'])
-      || typeof payload.patchId !== 'string'
-      || !LIVE_PATCH_ID.test(payload.patchId)
-      || typeof payload.patchHash !== 'string'
-      || !LIVE_HASH.test(payload.patchHash)
-      || !validLiveCursor(payload.from)
-      || !validLiveCursor(payload.to)
-      || !Array.isArray(payload.changedPaths)
-      || payload.changedPaths.length !== new Set(payload.changedPaths).size
-      || !payload.changedPaths.every((path) => typeof path === 'string' && LIVE_PATCH_PATHS.has(path))
-      || payload.to.eventHead.sequence !== cursor.eventHead.sequence
-      || payload.to.eventHead.hash !== cursor.eventHead.hash
-      || payload.to.viewHash !== cursor.viewHash) {
+    if (
+      !exactKeys(payload, ['patchId', 'patchHash', 'from', 'to', 'changedPaths']) ||
+      typeof payload.patchId !== 'string' ||
+      !LIVE_PATCH_ID.test(payload.patchId) ||
+      typeof payload.patchHash !== 'string' ||
+      !LIVE_HASH.test(payload.patchHash) ||
+      !validLiveCursor(payload.from) ||
+      !validLiveCursor(payload.to) ||
+      !Array.isArray(payload.changedPaths) ||
+      payload.changedPaths.length !== new Set(payload.changedPaths).size ||
+      !payload.changedPaths.every(
+        (path) => typeof path === 'string' && LIVE_PATCH_PATHS.has(path),
+      ) ||
+      payload.to.eventHead.sequence !== cursor.eventHead.sequence ||
+      payload.to.eventHead.hash !== cursor.eventHead.hash ||
+      payload.to.viewHash !== cursor.viewHash
+    ) {
       throw new TypeError('Invalid dashboard live patch signal.');
     }
   } else if (value.event === 'ready') {
-    if (!exactKeys(payload, ['mutationEnabled', 'reasonCodes'])
-      || typeof payload.mutationEnabled !== 'boolean'
-      || !Array.isArray(payload.reasonCodes)
-      || !payload.reasonCodes.every((reason) => typeof reason === 'string' && LIVE_REASON.test(reason))
-      || (payload.mutationEnabled && payload.reasonCodes.length !== 0)
-      || (!payload.mutationEnabled && payload.reasonCodes.length === 0)) {
+    if (
+      !exactKeys(payload, ['mutationEnabled', 'reasonCodes']) ||
+      typeof payload.mutationEnabled !== 'boolean' ||
+      !Array.isArray(payload.reasonCodes) ||
+      !payload.reasonCodes.every(
+        (reason) => typeof reason === 'string' && LIVE_REASON.test(reason),
+      ) ||
+      (payload.mutationEnabled && payload.reasonCodes.length !== 0) ||
+      (!payload.mutationEnabled && payload.reasonCodes.length === 0)
+    ) {
       throw new TypeError('Invalid dashboard live ready payload.');
     }
-  } else if (!exactKeys(payload, ['mutationEnabled', 'reasonCodes', 'recovery'])
-    || payload.mutationEnabled !== false
-    || !Array.isArray(payload.reasonCodes)
-    || payload.reasonCodes.length < 1
-    || !payload.reasonCodes.every((reason) => typeof reason === 'string' && LIVE_REASON.test(reason))
-    || typeof payload.recovery !== 'string'
-    || payload.recovery.length < 1
-    || payload.recovery.length > 240) {
+  } else if (
+    !exactKeys(payload, ['mutationEnabled', 'reasonCodes', 'recovery']) ||
+    payload.mutationEnabled !== false ||
+    !Array.isArray(payload.reasonCodes) ||
+    payload.reasonCodes.length < 1 ||
+    !payload.reasonCodes.every(
+      (reason) => typeof reason === 'string' && LIVE_REASON.test(reason),
+    ) ||
+    typeof payload.recovery !== 'string' ||
+    payload.recovery.length < 1 ||
+    payload.recovery.length > 240
+  ) {
     throw new TypeError('Invalid dashboard live stale payload.');
   }
   return value;
@@ -1441,13 +1709,15 @@ export function createDashboardLiveEventEnvelope({ event, binding, cursor, paylo
   let transportPayload = payload;
   if (event === 'patch') {
     assertOperateExperienceArtifactV2('operate-experience-live-patch', payload);
-    if (payload.actorId !== binding.actorId
-      || payload.scopeId !== binding.scopeId
-      || payload.domainId !== binding.domainId
-      || payload.domainVersion !== binding.domainVersion
-      || payload.toEventHead.sequence !== cursor.eventHead.sequence
-      || payload.toEventHead.hash !== cursor.eventHead.hash
-      || payload.toViewHash !== cursor.viewHash) {
+    if (
+      payload.actorId !== binding.actorId ||
+      payload.scopeId !== binding.scopeId ||
+      payload.domainId !== binding.domainId ||
+      payload.domainVersion !== binding.domainVersion ||
+      payload.toEventHead.sequence !== cursor.eventHead.sequence ||
+      payload.toEventHead.hash !== cursor.eventHead.hash ||
+      payload.toViewHash !== cursor.viewHash
+    ) {
       throw new TypeError('Dashboard live patch binding is inconsistent.');
     }
     transportPayload = Object.freeze({
@@ -1482,9 +1752,7 @@ function liveCheckpointHeader(req) {
   if (values === undefined && fallback === undefined) {
     return Object.freeze({ valid: true, checkpoint: null });
   }
-  const rawValues = Array.isArray(values)
-    ? values
-    : (typeof fallback === 'string' ? [fallback] : []);
+  const rawValues = Array.isArray(values) ? values : typeof fallback === 'string' ? [fallback] : [];
   if (rawValues.length !== 1 || typeof rawValues[0] !== 'string') {
     return Object.freeze({ valid: false, checkpoint: null });
   }
@@ -1500,7 +1768,11 @@ const PLANNING_SCOPE_ID = 'planning';
 const PLANNING_DOMAIN_ID = 'planning';
 const PLANNING_DOMAIN_VERSION = '1.0.0';
 const PLANNING_BINDING_QUERY_KEYS = Object.freeze([
-  'projectId', 'scopeId', 'domainId', 'domainVersion', 'generation',
+  'projectId',
+  'scopeId',
+  'domainId',
+  'domainVersion',
+  'generation',
 ]);
 const PLANNING_MODES = new Set(['agile', 'spec', 'mixed', 'empty']);
 const PLANNING_EVENT_KINDS = new Set(['snapshot', 'ready', 'patch', 'stale']);
@@ -1512,28 +1784,35 @@ function sameLiveHead(left, right) {
 }
 
 function sameLiveCursor(left, right) {
-  return sameLiveHead(left?.eventHead, right?.eventHead)
-    && left?.viewHash === right?.viewHash;
+  return sameLiveHead(left?.eventHead, right?.eventHead) && left?.viewHash === right?.viewHash;
 }
 
 function sameLiveBinding(left, right) {
-  return ['actorId', 'projectId', 'scopeId', 'domainId', 'domainVersion', 'generation']
-    .every((field) => left?.[field] === right?.[field]);
+  return ['actorId', 'projectId', 'scopeId', 'domainId', 'domainVersion', 'generation'].every(
+    (field) => left?.[field] === right?.[field],
+  );
 }
 
 function planningRequestBinding(req, searchParams, projectId, expectedActorId) {
   const keys = [...searchParams.keys()];
-  if (keys.length !== PLANNING_BINDING_QUERY_KEYS.length
-    || new Set(keys).size !== keys.length
-    || keys.some((key) => !PLANNING_BINDING_QUERY_KEYS.includes(key))) return null;
+  if (
+    keys.length !== PLANNING_BINDING_QUERY_KEYS.length ||
+    new Set(keys).size !== keys.length ||
+    keys.some((key) => !PLANNING_BINDING_QUERY_KEYS.includes(key))
+  )
+    return null;
   for (const key of PLANNING_BINDING_QUERY_KEYS) {
     if (searchParams.getAll(key).length !== 1) return null;
   }
   const actorValues = req.headersDistinct?.['x-openplanr-actor'];
   const actorFallback = req.headers['x-openplanr-actor'];
   const actorId = Array.isArray(actorValues)
-    ? (actorValues.length === 1 ? actorValues[0] : null)
-    : (typeof actorFallback === 'string' ? actorFallback : null);
+    ? actorValues.length === 1
+      ? actorValues[0]
+      : null
+    : typeof actorFallback === 'string'
+      ? actorFallback
+      : null;
   const generation = liveGeneration(searchParams);
   const binding = {
     actorId,
@@ -1543,66 +1822,80 @@ function planningRequestBinding(req, searchParams, projectId, expectedActorId) {
     domainVersion: searchParams.get('domainVersion'),
     generation,
   };
-  if (!validLiveBinding(binding)
-    || binding.projectId !== projectId
-    || binding.scopeId !== PLANNING_SCOPE_ID
-    || binding.domainId !== PLANNING_DOMAIN_ID
-    || binding.domainVersion !== PLANNING_DOMAIN_VERSION
-    || (expectedActorId !== null && binding.actorId !== expectedActorId)) return null;
+  if (
+    !validLiveBinding(binding) ||
+    binding.projectId !== projectId ||
+    binding.scopeId !== PLANNING_SCOPE_ID ||
+    binding.domainId !== PLANNING_DOMAIN_ID ||
+    binding.domainVersion !== PLANNING_DOMAIN_VERSION ||
+    (expectedActorId !== null && binding.actorId !== expectedActorId)
+  )
+    return null;
   return Object.freeze(binding);
 }
 
 function planningBindingError(res) {
   return dashboardSafeErrorJson(res, 403, {
-    code: 'CAPABILITY_DENIED', retryable: false, context: {},
+    code: 'CAPABILITY_DENIED',
+    retryable: false,
+    context: {},
   });
 }
 
 function planningResponseError(res, status = 409) {
   return dashboardSafeErrorJson(res, status, {
-    code: 'DASHBOARD_RESPONSE_INVALID', retryable: false, context: {},
+    code: 'DASHBOARD_RESPONSE_INVALID',
+    retryable: false,
+    context: {},
   });
 }
 
 function validPlanningSubject(value) {
-  if (typeof value !== 'string'
-    || value.length < 1
-    || value.length > 256
-    || value === '.'
-    || value === '..'
-    || value.includes('\\')) return false;
+  if (
+    typeof value !== 'string' ||
+    value.length < 1 ||
+    value.length > 256 ||
+    value === '.' ||
+    value === '..' ||
+    value.includes('\\')
+  )
+    return false;
   for (let index = 0; index < value.length; index += 1) {
     const codeUnit = value.charCodeAt(index);
-    if (codeUnit >= 0xD800 && codeUnit <= 0xDBFF) {
+    if (codeUnit >= 0xd800 && codeUnit <= 0xdbff) {
       const next = value.charCodeAt(index + 1);
-      if (!(next >= 0xDC00 && next <= 0xDFFF)) return false;
+      if (!(next >= 0xdc00 && next <= 0xdfff)) return false;
       index += 1;
-    } else if (codeUnit >= 0xDC00 && codeUnit <= 0xDFFF) {
+    } else if (codeUnit >= 0xdc00 && codeUnit <= 0xdfff) {
       return false;
     }
   }
   return ![...value].some((character) => {
-      const codePoint = character.codePointAt(0) ?? 0;
-      return codePoint <= 31 || codePoint === 127;
+    const codePoint = character.codePointAt(0) ?? 0;
+    return codePoint <= 31 || codePoint === 127;
   });
 }
 
 /** Closed structural assertion for the legacy watcher patch transported to React. */
 export function assertPlanningPatch(value) {
-  if (!exactKeys(value, ['updated', 'added', 'removed', 'edges'])
-    || !Array.isArray(value.updated)
-    || !Array.isArray(value.added)
-    || !Array.isArray(value.removed)
-    || !exactKeys(value.edges, ['added', 'removed'])
-    || !Array.isArray(value.edges.added)
-    || !Array.isArray(value.edges.removed)) {
+  if (
+    !exactKeys(value, ['updated', 'added', 'removed', 'edges']) ||
+    !Array.isArray(value.updated) ||
+    !Array.isArray(value.added) ||
+    !Array.isArray(value.removed) ||
+    !exactKeys(value.edges, ['added', 'removed']) ||
+    !Array.isArray(value.edges.added) ||
+    !Array.isArray(value.edges.removed)
+  ) {
     throw new TypeError('Invalid Planning watcher patch.');
   }
-  const nodes = (entries) => entries.map((entry) => {
-    const node = assertPlanningNode(entry);
-    if (Object.hasOwn(node, 'body')) throw new TypeError('Planning watcher patches cannot include bodies.');
-    return node;
-  });
+  const nodes = (entries) =>
+    entries.map((entry) => {
+      const node = assertPlanningNode(entry);
+      if (Object.hasOwn(node, 'body'))
+        throw new TypeError('Planning watcher patches cannot include bodies.');
+      return node;
+    });
   const updated = nodes(value.updated);
   const added = nodes(value.added);
   const removed = value.removed.map((id) => {
@@ -1610,28 +1903,35 @@ export function assertPlanningPatch(value) {
     return id;
   });
   const allNodeIds = [...updated, ...added].map((node) => node.id);
-  if (new Set(allNodeIds).size !== allNodeIds.length
-    || new Set(removed).size !== removed.length
-    || allNodeIds.some((id) => removed.includes(id))) {
+  if (
+    new Set(allNodeIds).size !== allNodeIds.length ||
+    new Set(removed).size !== removed.length ||
+    allNodeIds.some((id) => removed.includes(id))
+  ) {
     throw new TypeError('Planning watcher patch has conflicting node operations.');
   }
-  const edges = (entries) => entries.map((edge) => {
-    if (!exactKeys(edge, ['from', 'to', 'kind'])
-      || !validPlanningSubject(edge.from)
-      || !validPlanningSubject(edge.to)
-      || (edge.kind !== 'contains' && edge.kind !== 'depends_on')) {
-      throw new TypeError('Invalid Planning watcher edge.');
-    }
-    return Object.freeze({ from: edge.from, to: edge.to, kind: edge.kind });
-  });
+  const edges = (entries) =>
+    entries.map((edge) => {
+      if (
+        !exactKeys(edge, ['from', 'to', 'kind']) ||
+        !validPlanningSubject(edge.from) ||
+        !validPlanningSubject(edge.to) ||
+        (edge.kind !== 'contains' && edge.kind !== 'depends_on')
+      ) {
+        throw new TypeError('Invalid Planning watcher edge.');
+      }
+      return Object.freeze({ from: edge.from, to: edge.to, kind: edge.kind });
+    });
   const edgeAdded = edges(value.edges.added);
   const edgeRemoved = edges(value.edges.removed);
   const edgeKey = (edge) => `${edge.kind}\0${edge.from}\0${edge.to}`;
   const addedKeys = edgeAdded.map(edgeKey);
   const removedKeys = edgeRemoved.map(edgeKey);
-  if (new Set(addedKeys).size !== addedKeys.length
-    || new Set(removedKeys).size !== removedKeys.length
-    || addedKeys.some((key) => removedKeys.includes(key))) {
+  if (
+    new Set(addedKeys).size !== addedKeys.length ||
+    new Set(removedKeys).size !== removedKeys.length ||
+    addedKeys.some((key) => removedKeys.includes(key))
+  ) {
     throw new TypeError('Planning watcher patch has conflicting edge operations.');
   }
   return Object.freeze({
@@ -1643,12 +1943,14 @@ export function assertPlanningPatch(value) {
 }
 
 export function assertPlanningGraphEnvelope(value) {
-  if (!exactKeys(value, ['kind', 'schemaVersion', 'binding', 'cursor', 'mode', 'graph'])
-    || value.kind !== 'planning-graph-snapshot'
-    || value.schemaVersion !== PLANNING_SCHEMA_VERSION
-    || !validLiveBinding(value.binding)
-    || !validLiveCursor(value.cursor)
-    || !PLANNING_MODES.has(value.mode)) {
+  if (
+    !exactKeys(value, ['kind', 'schemaVersion', 'binding', 'cursor', 'mode', 'graph']) ||
+    value.kind !== 'planning-graph-snapshot' ||
+    value.schemaVersion !== PLANNING_SCHEMA_VERSION ||
+    !validLiveBinding(value.binding) ||
+    !validLiveCursor(value.cursor) ||
+    !PLANNING_MODES.has(value.mode)
+  ) {
     throw new TypeError('Invalid Planning graph envelope.');
   }
   const graph = assertPlanningGraph(value.graph);
@@ -1659,16 +1961,24 @@ export function assertPlanningGraphEnvelope(value) {
 }
 
 export function assertPlanningDetailEnvelope(value) {
-  if (!exactKeys(value, [
-    'kind', 'schemaVersion', 'binding', 'cursor', 'subjectId', 'node', 'nodeHash',
-  ])
-    || value.kind !== 'planning-detail'
-    || value.schemaVersion !== PLANNING_SCHEMA_VERSION
-    || !validLiveBinding(value.binding)
-    || !validLiveCursor(value.cursor)
-    || !validPlanningSubject(value.subjectId)
-    || typeof value.nodeHash !== 'string'
-    || !LIVE_HASH.test(value.nodeHash)) {
+  if (
+    !exactKeys(value, [
+      'kind',
+      'schemaVersion',
+      'binding',
+      'cursor',
+      'subjectId',
+      'node',
+      'nodeHash',
+    ]) ||
+    value.kind !== 'planning-detail' ||
+    value.schemaVersion !== PLANNING_SCHEMA_VERSION ||
+    !validLiveBinding(value.binding) ||
+    !validLiveCursor(value.cursor) ||
+    !validPlanningSubject(value.subjectId) ||
+    typeof value.nodeHash !== 'string' ||
+    !LIVE_HASH.test(value.nodeHash)
+  ) {
     throw new TypeError('Invalid Planning detail envelope.');
   }
   const node = assertPlanningNode(value.node, value.subjectId);
@@ -1679,16 +1989,18 @@ export function assertPlanningDetailEnvelope(value) {
 }
 
 function assertPlanningPatchSignal(value, cursor) {
-  if (!exactKeys(value, ['patchId', 'patchHash', 'from', 'to', 'patch'])
-    || typeof value.patchId !== 'string'
-    || !PLANNING_PATCH_ID.test(value.patchId)
-    || typeof value.patchHash !== 'string'
-    || !LIVE_HASH.test(value.patchHash)
-    || !validLiveCursor(value.from)
-    || !validLiveCursor(value.to)
-    || !sameLiveCursor(value.to, cursor)
-    || value.to.eventHead.sequence !== value.from.eventHead.sequence + 1
-    || value.to.viewHash === value.from.viewHash) {
+  if (
+    !exactKeys(value, ['patchId', 'patchHash', 'from', 'to', 'patch']) ||
+    typeof value.patchId !== 'string' ||
+    !PLANNING_PATCH_ID.test(value.patchId) ||
+    typeof value.patchHash !== 'string' ||
+    !LIVE_HASH.test(value.patchHash) ||
+    !validLiveCursor(value.from) ||
+    !validLiveCursor(value.to) ||
+    !sameLiveCursor(value.to, cursor) ||
+    value.to.eventHead.sequence !== value.from.eventHead.sequence + 1 ||
+    value.to.viewHash === value.from.viewHash
+  ) {
     throw new TypeError('Invalid Planning live patch signal.');
   }
   const patch = assertPlanningPatch(value.patch);
@@ -1700,21 +2012,25 @@ function assertPlanningPatchSignal(value, cursor) {
     patchHash: patchDigest,
     viewHash: value.to.viewHash,
   });
-  if (value.to.eventHead.hash !== expectedHeadHash
-    || sha256Jcs({ from: value.from, to: value.to, patch }) !== value.patchHash
-    || value.patchId !== `ppatch_${value.to.eventHead.sequence}_${value.patchHash.slice(7, 23)}`) {
+  if (
+    value.to.eventHead.hash !== expectedHeadHash ||
+    sha256Jcs({ from: value.from, to: value.to, patch }) !== value.patchHash ||
+    value.patchId !== `ppatch_${value.to.eventHead.sequence}_${value.patchHash.slice(7, 23)}`
+  ) {
     throw new TypeError('Planning live patch commitment is invalid.');
   }
   return Object.freeze({ ...value, patch });
 }
 
 export function assertPlanningLiveEventEnvelope(value) {
-  if (!exactKeys(value, ['kind', 'schemaVersion', 'event', 'binding', 'cursor', 'payload'])
-    || value.kind !== 'planning-live-event'
-    || value.schemaVersion !== PLANNING_SCHEMA_VERSION
-    || !PLANNING_EVENT_KINDS.has(value.event)
-    || !validLiveBinding(value.binding)
-    || !validLiveCursor(value.cursor)) {
+  if (
+    !exactKeys(value, ['kind', 'schemaVersion', 'event', 'binding', 'cursor', 'payload']) ||
+    value.kind !== 'planning-live-event' ||
+    value.schemaVersion !== PLANNING_SCHEMA_VERSION ||
+    !PLANNING_EVENT_KINDS.has(value.event) ||
+    !validLiveBinding(value.binding) ||
+    !validLiveCursor(value.cursor)
+  ) {
     throw new TypeError('Invalid Planning live event envelope.');
   }
   let payload;
@@ -1730,25 +2046,29 @@ export function assertPlanningLiveEventEnvelope(value) {
   } else if (value.event === 'patch') {
     payload = assertPlanningPatchSignal(value.payload, value.cursor);
   } else if (value.event === 'ready') {
-    if (!exactKeys(value.payload, ['readOnly', 'reasonCodes'])
-      || value.payload.readOnly !== true
-      || !Array.isArray(value.payload.reasonCodes)
-      || value.payload.reasonCodes.length !== 0) {
+    if (
+      !exactKeys(value.payload, ['readOnly', 'reasonCodes']) ||
+      value.payload.readOnly !== true ||
+      !Array.isArray(value.payload.reasonCodes) ||
+      value.payload.reasonCodes.length !== 0
+    ) {
       throw new TypeError('Invalid Planning live ready state.');
     }
     payload = Object.freeze({ readOnly: true, reasonCodes: Object.freeze([]) });
   } else {
-    if (!exactKeys(value.payload, ['readOnly', 'reasonCodes', 'recovery'])
-      || value.payload.readOnly !== true
-      || !Array.isArray(value.payload.reasonCodes)
-      || value.payload.reasonCodes.length < 1
-      || value.payload.reasonCodes.length > 8
-      || value.payload.reasonCodes.some((reason) => (
-        typeof reason !== 'string' || !PLANNING_REASON.test(reason)
-      ))
-      || typeof value.payload.recovery !== 'string'
-      || value.payload.recovery.length < 1
-      || value.payload.recovery.length > 240) {
+    if (
+      !exactKeys(value.payload, ['readOnly', 'reasonCodes', 'recovery']) ||
+      value.payload.readOnly !== true ||
+      !Array.isArray(value.payload.reasonCodes) ||
+      value.payload.reasonCodes.length < 1 ||
+      value.payload.reasonCodes.length > 8 ||
+      value.payload.reasonCodes.some(
+        (reason) => typeof reason !== 'string' || !PLANNING_REASON.test(reason),
+      ) ||
+      typeof value.payload.recovery !== 'string' ||
+      value.payload.recovery.length < 1 ||
+      value.payload.recovery.length > 240
+    ) {
       throw new TypeError('Invalid Planning live stale state.');
     }
     payload = Object.freeze({
@@ -1785,9 +2105,7 @@ function planningCheckpointHeader(req) {
   if (values === undefined && fallback === undefined) {
     return Object.freeze({ valid: true, checkpoint: null });
   }
-  const rawValues = Array.isArray(values)
-    ? values
-    : (typeof fallback === 'string' ? [fallback] : []);
+  const rawValues = Array.isArray(values) ? values : typeof fallback === 'string' ? [fallback] : [];
   if (rawValues.length !== 1) return Object.freeze({ valid: false, checkpoint: null });
   const checkpoint = decodePlanningCheckpoint(rawValues[0]);
   return Object.freeze({ valid: checkpoint !== null, checkpoint });
@@ -1811,7 +2129,10 @@ export function applyPatch(graph, patch) {
     .map((n) => (replaced.has(n.id) ? replaced.get(n.id) : n));
   const have = new Set(nodes.map((n) => n.id));
   for (const n of patch.added || []) {
-    if (n && n.id && !have.has(n.id)) { nodes.push(n); have.add(n.id); }
+    if (n && n.id && !have.has(n.id)) {
+      nodes.push(n);
+      have.add(n.id);
+    }
   }
 
   const edgePatch = patch.edges || { added: [], removed: [] };
@@ -1820,7 +2141,10 @@ export function applyPatch(graph, patch) {
   const edges = (base.edges || []).filter((e) => !dropEdges.has(edgeKey(e)));
   const haveEdges = new Set(edges.map(edgeKey));
   for (const e of edgePatch.added || []) {
-    if (e && !haveEdges.has(edgeKey(e))) { edges.push(e); haveEdges.add(edgeKey(e)); }
+    if (e && !haveEdges.has(edgeKey(e))) {
+      edges.push(e);
+      haveEdges.add(edgeKey(e));
+    }
   }
 
   return { nodes, edges };
@@ -1829,15 +2153,19 @@ export function applyPatch(graph, patch) {
 /** Refuse no-op/foreign patch operations before they can become a committed revision. */
 function applyPlanningPatch(graph, patch) {
   const nodeIds = new Set(graph.nodes.map((node) => node.id));
-  if (patch.updated.some((node) => !nodeIds.has(node.id))
-    || patch.added.some((node) => nodeIds.has(node.id))
-    || patch.removed.some((id) => !nodeIds.has(id))) {
+  if (
+    patch.updated.some((node) => !nodeIds.has(node.id)) ||
+    patch.added.some((node) => nodeIds.has(node.id)) ||
+    patch.removed.some((id) => !nodeIds.has(id))
+  ) {
     throw new TypeError('Planning watcher patch targets a foreign node revision.');
   }
   const edgeKey = (edge) => `${edge.kind}\0${edge.from}\0${edge.to}`;
   const edgeIds = new Set(graph.edges.map(edgeKey));
-  if (patch.edges.added.some((edge) => edgeIds.has(edgeKey(edge)))
-    || patch.edges.removed.some((edge) => !edgeIds.has(edgeKey(edge)))) {
+  if (
+    patch.edges.added.some((edge) => edgeIds.has(edgeKey(edge))) ||
+    patch.edges.removed.some((edge) => !edgeIds.has(edgeKey(edge)))
+  ) {
     throw new TypeError('Planning watcher patch targets a foreign edge revision.');
   }
   const next = assertPlanningGraph(applyPatch(graph, patch));
@@ -1871,15 +2199,18 @@ export function createDashboardServer({
 } = {}) {
   const dashboardStaticRoot = resolveDashboardStaticRoot(staticRoot);
   const dashboardManifest = dashboardManifestState(dashboardStaticRoot);
-  if (dashboardBuildId !== undefined && (
-    typeof dashboardBuildId !== 'string' || !DASHBOARD_BUILD_ID.test(dashboardBuildId)
-  )) {
+  if (
+    dashboardBuildId !== undefined &&
+    (typeof dashboardBuildId !== 'string' || !DASHBOARD_BUILD_ID.test(dashboardBuildId))
+  ) {
     throw new TypeError('dashboardBuildId must be a valid embedded dashboard build identity');
   }
   const expectedDashboardBuildId = dashboardBuildId ?? dashboardManifest.buildId;
   const project = safeProjectMetadata(planrDir);
-  if (planningActorId !== null
-    && (typeof planningActorId !== 'string' || !LIVE_ID.test(planningActorId))) {
+  if (
+    planningActorId !== null &&
+    (typeof planningActorId !== 'string' || !LIVE_ID.test(planningActorId))
+  ) {
     throw new TypeError('planningActorId must be a valid public actor identity');
   }
   // In-memory graph cache: seeded lazily, patched in place by the watcher so
@@ -1888,11 +2219,12 @@ export function createDashboardServer({
   let planningHeadHash = null;
   let planningViewHash = null;
   let currentGraph = null;
-  const readFreshGraph = (options = {}) => assertPlanningGraph(
-    typeof getGraph === 'function'
-      ? getGraph(Object.freeze({ planrDir, scope: options.scope ?? null }))
-      : buildGraph(planrDir, options),
-  );
+  const readFreshGraph = (options = {}) =>
+    assertPlanningGraph(
+      typeof getGraph === 'function'
+        ? getGraph(Object.freeze({ planrDir, scope: options.scope ?? null }))
+        : buildGraph(planrDir, options),
+    );
   const ensureGraph = () => {
     if (!currentGraph) {
       currentGraph = readFreshGraph();
@@ -1902,9 +2234,8 @@ export function createDashboardServer({
   };
   const readGraph = ensureGraph;
   const readNode = (id) => {
-    const value = typeof suppliedGetNode === 'function'
-      ? suppliedGetNode(id)
-      : engineGetNode(planrDir, id);
+    const value =
+      typeof suppliedGetNode === 'function' ? suppliedGetNode(id) : engineGetNode(planrDir, id);
     return value === null || value === undefined ? null : assertPlanningNode(value, id);
   };
   const planningCursor = () => {
@@ -1914,15 +2245,16 @@ export function createDashboardServer({
       viewHash: planningViewHash,
     });
   };
-  const planningGraphEnvelope = (binding) => assertPlanningGraphEnvelope({
-    kind: 'planning-graph-snapshot',
-    schemaVersion: PLANNING_SCHEMA_VERSION,
-    binding,
-    cursor: planningCursor(),
-    mode: detectMode(ensureGraph()),
-    graph: ensureGraph(),
-  });
-  const planningLiveEnvelope = (event, binding, cursor, payload) => (
+  const planningGraphEnvelope = (binding) =>
+    assertPlanningGraphEnvelope({
+      kind: 'planning-graph-snapshot',
+      schemaVersion: PLANNING_SCHEMA_VERSION,
+      binding,
+      cursor: planningCursor(),
+      mode: detectMode(ensureGraph()),
+      graph: ensureGraph(),
+    });
+  const planningLiveEnvelope = (event, binding, cursor, payload) =>
     assertPlanningLiveEventEnvelope({
       kind: 'planning-live-event',
       schemaVersion: PLANNING_SCHEMA_VERSION,
@@ -1930,30 +2262,32 @@ export function createDashboardServer({
       binding,
       cursor,
       payload,
-    })
-  );
-  const planningSnapshotEvent = (binding) => planningLiveEnvelope(
-    'snapshot',
-    binding,
-    planningCursor(),
-    Object.freeze({ mode: detectMode(ensureGraph()), graph: ensureGraph() }),
-  );
-  const planningReadyEvent = (binding) => planningLiveEnvelope(
-    'ready',
-    binding,
-    planningCursor(),
-    Object.freeze({ readOnly: true, reasonCodes: Object.freeze([]) }),
-  );
-  const planningStaleEvent = (binding, reasonCode = 'PLANNING_EVENT_GAP') => planningLiveEnvelope(
-    'stale',
-    binding,
-    planningCursor(),
-    Object.freeze({
-      readOnly: true,
-      reasonCodes: Object.freeze([reasonCode]),
-      recovery: 'Refetch the validated Planning graph before applying more live events.',
-    }),
-  );
+    });
+  const planningSnapshotEvent = (binding) =>
+    planningLiveEnvelope(
+      'snapshot',
+      binding,
+      planningCursor(),
+      Object.freeze({ mode: detectMode(ensureGraph()), graph: ensureGraph() }),
+    );
+  const planningReadyEvent = (binding) =>
+    planningLiveEnvelope(
+      'ready',
+      binding,
+      planningCursor(),
+      Object.freeze({ readOnly: true, reasonCodes: Object.freeze([]) }),
+    );
+  const planningStaleEvent = (binding, reasonCode = 'PLANNING_EVENT_GAP') =>
+    planningLiveEnvelope(
+      'stale',
+      binding,
+      planningCursor(),
+      Object.freeze({
+        readOnly: true,
+        reasonCodes: Object.freeze([reasonCode]),
+        recovery: 'Refetch the validated Planning graph before applying more live events.',
+      }),
+    );
   const replayPlanningPatches = (checkpoint) => {
     const current = planningCursor();
     if (sameLiveCursor(checkpoint, current)) return Object.freeze([]);
@@ -1975,9 +2309,8 @@ export function createDashboardServer({
     if (!operatingCommandGatewayResolved) {
       operatingCommandGatewayResolved = true;
       try {
-        operatingCommandGateway = typeof getOperatingCommandGateway === 'function'
-          ? getOperatingCommandGateway()
-          : null;
+        operatingCommandGateway =
+          typeof getOperatingCommandGateway === 'function' ? getOperatingCommandGateway() : null;
       } catch {
         // Capability discovery is optional. A broken provider remains safely unavailable.
         operatingCommandGateway = null;
@@ -1985,20 +2318,21 @@ export function createDashboardServer({
     }
     return operatingCommandGateway;
   };
-  const supportsOperateSession = (gateway) => gateway !== null
-    && typeof gateway?.issueSession === 'function'
-    && typeof gateway?.assertSessionBinding === 'function';
-  const supportsGovernedAction = (gateway) => supportsOperateSession(gateway)
-    && typeof gateway?.preview === 'function'
-    && typeof gateway?.assertPreviewBinding === 'function'
-    && typeof gateway?.confirm === 'function';
+  const supportsOperateSession = (gateway) =>
+    gateway !== null &&
+    typeof gateway?.issueSession === 'function' &&
+    typeof gateway?.assertSessionBinding === 'function';
+  const supportsGovernedAction = (gateway) =>
+    supportsOperateSession(gateway) &&
+    typeof gateway?.preview === 'function' &&
+    typeof gateway?.assertPreviewBinding === 'function' &&
+    typeof gateway?.confirm === 'function';
   let operatingPlanningGatewayResolved = false;
   let operatingPlanningGateway = null;
   const resolveOperatingPlanningGateway = () => {
     if (!operatingPlanningGatewayResolved) {
-      operatingPlanningGateway = typeof getOperatingPlanningGateway === 'function'
-        ? getOperatingPlanningGateway()
-        : null;
+      operatingPlanningGateway =
+        typeof getOperatingPlanningGateway === 'function' ? getOperatingPlanningGateway() : null;
       operatingPlanningGatewayResolved = true;
     }
     return operatingPlanningGateway;
@@ -2039,28 +2373,31 @@ export function createDashboardServer({
   const dashboardQueryRoots = () => {
     const experience = ensureExperience();
     const view = experience?.view;
-    const operate = view
-      && [view.actorId, view.scopeId, view.domainId, view.domainVersion]
-        .every((value) => typeof value === 'string' && value.length > 0)
-      ? Object.freeze({
-        actorId: view.actorId,
-        projectId: project.projectId,
-        scopeId: view.scopeId,
-        domainId: view.domainId,
-        domainVersion: view.domainVersion,
-        generation: 0,
-      })
-      : null;
-    const planning = planningActorId === null
-      ? null
-      : Object.freeze({
-        actorId: planningActorId,
-        projectId: project.projectId,
-        scopeId: PLANNING_SCOPE_ID,
-        domainId: PLANNING_DOMAIN_ID,
-        domainVersion: PLANNING_DOMAIN_VERSION,
-        generation: 0,
-      });
+    const operate =
+      view &&
+      [view.actorId, view.scopeId, view.domainId, view.domainVersion].every(
+        (value) => typeof value === 'string' && value.length > 0,
+      )
+        ? Object.freeze({
+            actorId: view.actorId,
+            projectId: project.projectId,
+            scopeId: view.scopeId,
+            domainId: view.domainId,
+            domainVersion: view.domainVersion,
+            generation: 0,
+          })
+        : null;
+    const planning =
+      planningActorId === null
+        ? null
+        : Object.freeze({
+            actorId: planningActorId,
+            projectId: project.projectId,
+            scopeId: PLANNING_SCOPE_ID,
+            domainId: PLANNING_DOMAIN_ID,
+            domainVersion: PLANNING_DOMAIN_VERSION,
+            generation: 0,
+          });
     return Object.freeze({ planning, operate });
   };
 
@@ -2078,8 +2415,9 @@ export function createDashboardServer({
     try {
       const url = new URL(req.url, 'http://localhost');
       pathname = url.pathname;
-      commandRequest = (req.method === 'POST' && OPERATE_COMMAND_ROUTES.has(pathname))
-        || (req.method === 'GET' && pathname.startsWith('/api/operate/planning/trace/'));
+      commandRequest =
+        (req.method === 'POST' && OPERATE_COMMAND_ROUTES.has(pathname)) ||
+        (req.method === 'GET' && pathname.startsWith('/api/operate/planning/trace/'));
       assertLoopbackRequest(req, {
         port: req.socket.localPort,
         mutating: req.method !== 'GET' && req.method !== 'HEAD',
@@ -2089,15 +2427,16 @@ export function createDashboardServer({
 
       if (req.method === 'GET' && pathname === '/api/bootstrap') {
         const hostHeaders = req.headersDistinct?.host;
-        const requestedHost = typeof req.headers.host === 'string'
-          && Array.isArray(hostHeaders)
-          && hostHeaders.length === 1
-          ? req.headers.host
-          : '';
+        const requestedHost =
+          typeof req.headers.host === 'string' &&
+          Array.isArray(hostHeaders) &&
+          hostHeaders.length === 1
+            ? req.headers.host
+            : '';
         const hostMatch = requestedHost.match(/^(127\.0\.0\.1|localhost):([1-9][0-9]{0,4})$/u);
         const localPort = req.socket.localPort;
-        const origin = hostMatch && Number(hostMatch[2]) === localPort
-          ? `http://${requestedHost}` : null;
+        const origin =
+          hostMatch && Number(hostMatch[2]) === localPort ? `http://${requestedHost}` : null;
         if (!origin) {
           return dashboardSafeErrorJson(res, 400, {
             code: 'DASHBOARD_LOOPBACK_HOST_INVALID',
@@ -2107,9 +2446,10 @@ export function createDashboardServer({
         }
         const reasonCodes = [...dashboardManifest.reasonCodes];
         if (
-          dashboardManifest.buildId !== expectedDashboardBuildId
-          && !reasonCodes.includes('DASHBOARD_BUILD_MISMATCH')
-        ) reasonCodes.push('DASHBOARD_BUILD_MISMATCH');
+          dashboardManifest.buildId !== expectedDashboardBuildId &&
+          !reasonCodes.includes('DASHBOARD_BUILD_MISMATCH')
+        )
+          reasonCodes.push('DASHBOARD_BUILD_MISMATCH');
         const body = {
           kind: 'dashboard-bootstrap',
           schemaVersion: '1.0.0',
@@ -2161,32 +2501,37 @@ export function createDashboardServer({
         const origin = commandOrigin(req);
         if (!origin) {
           return commandError(res, {
-            code: 'OPERATE_ORIGIN_INVALID', status: 403,
+            code: 'OPERATE_ORIGIN_INVALID',
+            status: 403,
           });
         }
         const binding = exactCommandBinding(req, url.searchParams, url.search);
         if (!binding) {
           return commandError(res, {
-            code: 'OPERATE_BINDING_REQUIRED', status: 400,
+            code: 'OPERATE_BINDING_REQUIRED',
+            status: 400,
           });
         }
         const gateway = resolveOperatingCommandGateway();
-        const gatewaySupportsRoute = route.kind === 'session'
-          ? supportsOperateSession(gateway)
-          : route.kind === 'preview'
-            ? supportsOperateSession(gateway) && typeof gateway?.preview === 'function'
-            : route.kind === 'confirm'
-              ? supportsGovernedAction(gateway)
-              : supportsOperateSession(gateway);
+        const gatewaySupportsRoute =
+          route.kind === 'session'
+            ? supportsOperateSession(gateway)
+            : route.kind === 'preview'
+              ? supportsOperateSession(gateway) && typeof gateway?.preview === 'function'
+              : route.kind === 'confirm'
+                ? supportsGovernedAction(gateway)
+                : supportsOperateSession(gateway);
         if (!gatewaySupportsRoute) {
           return commandError(res, {
-            code: 'OPERATE_READ_ONLY', status: 409,
+            code: 'OPERATE_READ_ONLY',
+            status: 409,
           });
         }
         const body = await readCommandBody(req);
         if (!exactRouteBody(body, route)) {
           return commandError(res, {
-            code: 'OPERATE_COMMAND_INVALID', status: 400,
+            code: 'OPERATE_COMMAND_INVALID',
+            status: 400,
           });
         }
         let response;
@@ -2204,7 +2549,8 @@ export function createDashboardServer({
           const closedSession = closedCommandSessionResponse(response, binding, body);
           if (!closedSession) {
             return commandError(res, {
-              code: 'OPERATE_BINDING_MISMATCH', status: 403,
+              code: 'OPERATE_BINDING_MISMATCH',
+              status: 403,
             });
           }
           response = closedSession;
@@ -2212,12 +2558,14 @@ export function createDashboardServer({
           const capability = bearerCapability(req);
           if (!capability) {
             return commandError(res, {
-              code: 'OPERATE_SESSION_DENIED', status: 401,
+              code: 'OPERATE_SESSION_DENIED',
+              status: 401,
             });
           }
           if (typeof gateway.assertSessionBinding !== 'function') {
             return commandError(res, {
-              code: 'OPERATE_READ_ONLY', status: 409,
+              code: 'OPERATE_READ_ONLY',
+              status: 409,
             });
           }
           const sessionBinding = await gateway.assertSessionBinding({
@@ -2227,7 +2575,8 @@ export function createDashboardServer({
           });
           if (!validCommandSessionBinding(sessionBinding, binding)) {
             return commandError(res, {
-              code: 'OPERATE_BINDING_MISMATCH', status: 403,
+              code: 'OPERATE_BINDING_MISMATCH',
+              status: 403,
             });
           }
           if (route.kind.startsWith('planning-')) {
@@ -2245,45 +2594,55 @@ export function createDashboardServer({
               binding: structuredClone(sessionBinding),
             };
             delete request.sessionId;
-            if (route.kind === 'planning-preview'
-              && typeof body.actionId === 'string'
-              && body.actionId !== sessionBinding.actionLocator?.subjectId) {
+            if (
+              route.kind === 'planning-preview' &&
+              typeof body.actionId === 'string' &&
+              body.actionId !== sessionBinding.actionLocator?.subjectId
+            ) {
               return commandError(res, {
-                code: 'OPERATE_BINDING_MISMATCH', status: 403,
+                code: 'OPERATE_BINDING_MISMATCH',
+                status: 403,
               });
             }
-            response = route.kind === 'planning-preview'
-              ? await planningGateway.preview(request)
-              : await planningGateway.createSpec(request);
+            response =
+              route.kind === 'planning-preview'
+                ? await planningGateway.preview(request)
+                : await planningGateway.createSpec(request);
           } else {
             let expectedOperation = null;
             if (route.kind === 'confirm') {
               if (typeof gateway.assertPreviewBinding !== 'function') {
                 return commandError(res, {
-                  code: 'OPERATE_READ_ONLY', status: 409,
+                  code: 'OPERATE_READ_ONLY',
+                  status: 409,
                 });
               }
-              const proof = closedCommandPreviewProof(await gateway.assertPreviewBinding({
-                ...body,
-                capability,
-                origin,
-              }), sessionBinding);
+              const proof = closedCommandPreviewProof(
+                await gateway.assertPreviewBinding({
+                  ...body,
+                  capability,
+                  origin,
+                }),
+                sessionBinding,
+              );
               if (!proof) {
                 return commandError(res, {
-                  code: 'OPERATE_BINDING_MISMATCH', status: 403,
+                  code: 'OPERATE_BINDING_MISMATCH',
+                  status: 403,
                 });
               }
               expectedOperation = proof.operation;
-              if (Object.hasOwn(body, 'note')
-                && expectedOperation !== 'operate.review.submit') {
+              if (Object.hasOwn(body, 'note') && expectedOperation !== 'operate.review.submit') {
                 return commandError(res, {
-                  code: 'OPERATE_COMMAND_INVALID', status: 400,
+                  code: 'OPERATE_COMMAND_INVALID',
+                  status: 400,
                 });
               }
             }
-            response = route.kind === 'preview'
-              ? await gateway.preview({ ...body, capability, origin })
-              : await gateway.confirm({ ...body, capability, origin });
+            response =
+              route.kind === 'preview'
+                ? await gateway.preview({ ...body, capability, origin })
+                : await gateway.confirm({ ...body, capability, origin });
             if (route.kind === 'preview') {
               try {
                 assertOperateExperiencePreviewV1(response, {
@@ -2298,81 +2657,96 @@ export function createDashboardServer({
                 });
               } catch {
                 return commandError(res, {
-                  code: 'OPERATE_PREVIEW_INVALID', status: 409,
+                  code: 'OPERATE_PREVIEW_INVALID',
+                  status: 409,
                 });
               }
             } else {
               const responseRecord = safeDashboardErrorRecord(response);
               if (!responseRecord || typeof expectedOperation !== 'string') {
                 return commandError(res, {
-                  code: 'OPERATE_COMMAND_REFUSED', status: 409,
+                  code: 'OPERATE_COMMAND_REFUSED',
+                  status: 409,
                 });
               }
               if (responseRecord.ok === true) {
                 const refreshed = refreshOperatingExperience();
                 experienceRefreshed = true;
-                const committedHeadIsVisible = expectedOperation === 'operate.review.submit'
-                  ? currentHeadIncludesCommitted(refreshed?.view?.eventHead, responseRecord.eventHead)
-                  : exactEventHead(refreshed?.view?.eventHead, responseRecord.eventHead);
-                if (!exactAdvancedHead(responseRecord.eventHead, sessionBinding.eventHead)
-                  || !refreshed?.view
-                  || !sameExperienceBinding(refreshed.view, sessionBinding)
-                  || !committedHeadIsVisible) {
+                const committedHeadIsVisible =
+                  expectedOperation === 'operate.review.submit'
+                    ? currentHeadIncludesCommitted(
+                        refreshed?.view?.eventHead,
+                        responseRecord.eventHead,
+                      )
+                    : exactEventHead(refreshed?.view?.eventHead, responseRecord.eventHead);
+                if (
+                  !exactAdvancedHead(responseRecord.eventHead, sessionBinding.eventHead) ||
+                  !refreshed?.view ||
+                  !sameExperienceBinding(refreshed.view, sessionBinding) ||
+                  !committedHeadIsVisible
+                ) {
                   return commandError(res, {
-                    code: 'OPERATION_UNCERTAIN', status: 409,
+                    code: 'OPERATION_UNCERTAIN',
+                    status: 409,
                   });
                 }
                 let reviewWorkspace = null;
-                if (expectedOperation === 'operate.review.submit'
-                  && typeof getOperatingReviewRead === 'function') {
+                if (
+                  expectedOperation === 'operate.review.submit' &&
+                  typeof getOperatingReviewRead === 'function'
+                ) {
                   try {
-                    reviewWorkspace = await getOperatingReviewRead(Object.freeze({
-                      cycleId: sessionBinding.cycleId,
-                      reviewId: sessionBinding.actionLocator.subjectId,
-                      actorId: sessionBinding.actorId,
-                      scopeId: sessionBinding.scopeId,
-                      domainId: sessionBinding.domainId,
-                      domainVersion: sessionBinding.domainVersion,
-                    }));
-                  } catch {
-                    reviewWorkspace = null;
-                  }
-                }
-                const closedSuccess = expectedOperation === 'operate.review.submit'
-                  ? closedReviewCommandSuccessResponse(
-                    response,
-                    refreshed.view,
-                    reviewWorkspace,
-                    sessionBinding,
-                    Object.hasOwn(body, 'note') ? body.note : null,
-                  )
-                  : closedCommandSuccessResponse(
-                    response,
-                    expectedOperation,
-                    refreshed.view,
-                  );
-                if (!closedSuccess) {
-                  return commandError(res, {
-                    code: 'OPERATION_UNCERTAIN', status: 409,
-                  });
-                }
-                response = closedSuccess;
-              } else if (responseRecord.ok === false) {
-                let reviewWorkspace = null;
-                if (expectedOperation === 'operate.review.submit'
-                  && typeof getOperatingReviewRead === 'function') {
-                  const refreshed = refreshOperatingExperience();
-                  experienceRefreshed = true;
-                  if (refreshed?.view) {
-                    try {
-                      const candidate = await getOperatingReviewRead(Object.freeze({
+                    reviewWorkspace = await getOperatingReviewRead(
+                      Object.freeze({
                         cycleId: sessionBinding.cycleId,
                         reviewId: sessionBinding.actionLocator.subjectId,
                         actorId: sessionBinding.actorId,
                         scopeId: sessionBinding.scopeId,
                         domainId: sessionBinding.domainId,
                         domainVersion: sessionBinding.domainVersion,
-                      }));
+                      }),
+                    );
+                  } catch {
+                    reviewWorkspace = null;
+                  }
+                }
+                const closedSuccess =
+                  expectedOperation === 'operate.review.submit'
+                    ? closedReviewCommandSuccessResponse(
+                        response,
+                        refreshed.view,
+                        reviewWorkspace,
+                        sessionBinding,
+                        Object.hasOwn(body, 'note') ? body.note : null,
+                      )
+                    : closedCommandSuccessResponse(response, expectedOperation, refreshed.view);
+                if (!closedSuccess) {
+                  return commandError(res, {
+                    code: 'OPERATION_UNCERTAIN',
+                    status: 409,
+                  });
+                }
+                response = closedSuccess;
+              } else if (responseRecord.ok === false) {
+                let reviewWorkspace = null;
+                if (
+                  expectedOperation === 'operate.review.submit' &&
+                  typeof getOperatingReviewRead === 'function'
+                ) {
+                  const refreshed = refreshOperatingExperience();
+                  experienceRefreshed = true;
+                  if (refreshed?.view) {
+                    try {
+                      const candidate = await getOperatingReviewRead(
+                        Object.freeze({
+                          cycleId: sessionBinding.cycleId,
+                          reviewId: sessionBinding.actionLocator.subjectId,
+                          actorId: sessionBinding.actorId,
+                          scopeId: sessionBinding.scopeId,
+                          domainId: sessionBinding.domainId,
+                          domainVersion: sessionBinding.domainVersion,
+                        }),
+                      );
                       reviewWorkspace = closedReviewWorkspace(
                         candidate,
                         sessionBinding,
@@ -2385,18 +2759,21 @@ export function createDashboardServer({
                     }
                   }
                 }
-                const closedFailure = expectedOperation === 'operate.review.submit'
-                  ? closedReviewCommandFailureResponse(response, reviewWorkspace)
-                  : closedCommandFailureResponse(response, expectedOperation);
+                const closedFailure =
+                  expectedOperation === 'operate.review.submit'
+                    ? closedReviewCommandFailureResponse(response, reviewWorkspace)
+                    : closedCommandFailureResponse(response, expectedOperation);
                 if (!closedFailure) {
                   return commandError(res, {
-                    code: 'OPERATE_COMMAND_REFUSED', status: 409,
+                    code: 'OPERATE_COMMAND_REFUSED',
+                    status: 409,
                   });
                 }
                 response = closedFailure;
               } else {
                 return commandError(res, {
-                  code: 'OPERATE_COMMAND_REFUSED', status: 409,
+                  code: 'OPERATE_COMMAND_REFUSED',
+                  status: 409,
                 });
               }
             }
@@ -2418,7 +2795,10 @@ export function createDashboardServer({
       if (req.method === 'GET' && pathname === '/api/planning/graph') {
         planningRequest = true;
         const binding = planningRequestBinding(
-          req, url.searchParams, project.projectId, planningActorId,
+          req,
+          url.searchParams,
+          project.projectId,
+          planningActorId,
         );
         if (!binding) return planningBindingError(res);
         return planningJson(res, 200, planningGraphEnvelope(binding));
@@ -2427,7 +2807,10 @@ export function createDashboardServer({
       if (req.method === 'GET' && pathname.startsWith('/api/planning/detail/')) {
         planningRequest = true;
         const binding = planningRequestBinding(
-          req, url.searchParams, project.projectId, planningActorId,
+          req,
+          url.searchParams,
+          project.projectId,
+          planningActorId,
         );
         if (!binding) return planningBindingError(res);
         const rawSubject = pathname.slice('/api/planning/detail/'.length);
@@ -2437,9 +2820,11 @@ export function createDashboardServer({
         } catch {
           return planningResponseError(res, 400);
         }
-        if (!validPlanningSubject(subjectId)
-          || rawSubject.includes('/')
-          || encodeURIComponent(subjectId) !== rawSubject) {
+        if (
+          !validPlanningSubject(subjectId) ||
+          rawSubject.includes('/') ||
+          encodeURIComponent(subjectId) !== rawSubject
+        ) {
           return planningResponseError(res, 400);
         }
         const graph = ensureGraph();
@@ -2468,7 +2853,10 @@ export function createDashboardServer({
       if (req.method === 'GET' && pathname === '/api/planning/events') {
         planningRequest = true;
         const binding = planningRequestBinding(
-          req, url.searchParams, project.projectId, planningActorId,
+          req,
+          url.searchParams,
+          project.projectId,
+          planningActorId,
         );
         if (!binding) return planningBindingError(res);
         const header = planningCheckpointHeader(req);
@@ -2514,21 +2902,29 @@ export function createDashboardServer({
         const page = pageValue === null ? 1 : Number(pageValue);
         const pageSize = pageSizeValue === null ? 20 : Number(pageSizeValue);
         if (
-          [...url.searchParams.keys()].some((key) => key !== 'page' && key !== 'pageSize')
-          || [...url.searchParams.getAll('page')].length > 1
-          || [...url.searchParams.getAll('pageSize')].length > 1
-          || !Number.isSafeInteger(page) || page < 1
-          || !Number.isSafeInteger(pageSize) || pageSize < 1 || pageSize > 50
+          [...url.searchParams.keys()].some((key) => key !== 'page' && key !== 'pageSize') ||
+          [...url.searchParams.getAll('page')].length > 1 ||
+          [...url.searchParams.getAll('pageSize')].length > 1 ||
+          !Number.isSafeInteger(page) ||
+          page < 1 ||
+          !Number.isSafeInteger(pageSize) ||
+          pageSize < 1 ||
+          pageSize > 50
         ) {
           return dashboardSafeErrorJson(res, 400, {
-            code: 'DASHBOARD_RESPONSE_INVALID', retryable: false, context: {},
+            code: 'DASHBOARD_RESPONSE_INVALID',
+            retryable: false,
+            context: {},
           });
         }
         return experienceJson(res, 200, readLocalOperateReviewIndex(planrDir, { page, pageSize }));
       }
 
-      if (req.method === 'GET' && parts.length === 4
-        && parts.slice(0, 3).join('/') === 'api/operate/local-reviews') {
+      if (
+        req.method === 'GET' &&
+        parts.length === 4 &&
+        parts.slice(0, 3).join('/') === 'api/operate/local-reviews'
+      ) {
         let cycleId;
         try {
           cycleId = decodeURIComponent(parts[3]);
@@ -2539,16 +2935,21 @@ export function createDashboardServer({
         return report
           ? experienceJson(res, 200, report)
           : dashboardSafeErrorJson(res, 404, {
-            code: 'DASHBOARD_ERROR_UNAVAILABLE', retryable: false, context: {},
-          });
+              code: 'DASHBOARD_ERROR_UNAVAILABLE',
+              retryable: false,
+              context: {},
+            });
       }
 
       if (req.method === 'GET' && pathname === '/api/operate') {
         return json(res, 200, getOperatingProjection());
       }
 
-      if (req.method === 'GET' && parts.length === 5
-        && parts.slice(0, 4).join('/') === 'api/operate/planning/trace') {
+      if (
+        req.method === 'GET' &&
+        parts.length === 5 &&
+        parts.slice(0, 4).join('/') === 'api/operate/planning/trace'
+      ) {
         commandRequest = true;
         if (!OPERATE_SUBJECT_SEGMENT.test(parts[4])) {
           return commandError(res, { code: 'OPERATE_COMMAND_INVALID', status: 400 });
@@ -2610,9 +3011,10 @@ export function createDashboardServer({
         const requestedAuditCycleId = requestedAuditSurface
           ? url.searchParams.get('cycleId')
           : null;
-        if (requestedAuditSurface
-          && (requestedAuditCycleId === null
-            || !OPERATE_SUBJECT_SEGMENT.test(requestedAuditCycleId))) {
+        if (
+          requestedAuditSurface &&
+          (requestedAuditCycleId === null || !OPERATE_SUBJECT_SEGMENT.test(requestedAuditCycleId))
+        ) {
           return experienceJson(res, 400, {
             ok: false,
             error: {
@@ -2622,15 +3024,14 @@ export function createDashboardServer({
             },
           });
         }
-        const requestedAuditQuery = route.surface === 'search'
-          ? (url.searchParams.get('q') ?? '')
-          : null;
-        const requestedAuditFormat = route.surface === 'export'
-          ? (url.searchParams.get('format') ?? 'json')
-          : null;
-        if ((route.surface === 'search' && requestedAuditQuery.length > 512)
-          || (route.surface === 'export'
-            && !['json', 'html'].includes(requestedAuditFormat))) {
+        const requestedAuditQuery =
+          route.surface === 'search' ? (url.searchParams.get('q') ?? '') : null;
+        const requestedAuditFormat =
+          route.surface === 'export' ? (url.searchParams.get('format') ?? 'json') : null;
+        if (
+          (route.surface === 'search' && requestedAuditQuery.length > 512) ||
+          (route.surface === 'export' && !['json', 'html'].includes(requestedAuditFormat))
+        ) {
           return experienceJson(res, 400, {
             ok: false,
             error: {
@@ -2640,11 +3041,12 @@ export function createDashboardServer({
             },
           });
         }
-        const requestedLiveSurface = pathname === '/api/operate/events'
-          ? (url.searchParams.get('surface') ?? 'today')
-          : null;
-        if (pathname === '/api/operate/events'
-          && !['today', 'inbox'].includes(requestedLiveSurface)) {
+        const requestedLiveSurface =
+          pathname === '/api/operate/events' ? (url.searchParams.get('surface') ?? 'today') : null;
+        if (
+          pathname === '/api/operate/events' &&
+          !['today', 'inbox'].includes(requestedLiveSurface)
+        ) {
           return experienceJson(res, 400, {
             ok: false,
             error: {
@@ -2654,12 +3056,13 @@ export function createDashboardServer({
             },
           });
         }
-        const requestedActionsCycleId = route.surface === 'actions'
-          ? url.searchParams.get('cycleId')
-          : null;
-        if (route.surface === 'actions'
-          && (requestedActionsCycleId === null
-            || !OPERATE_SUBJECT_SEGMENT.test(requestedActionsCycleId))) {
+        const requestedActionsCycleId =
+          route.surface === 'actions' ? url.searchParams.get('cycleId') : null;
+        if (
+          route.surface === 'actions' &&
+          (requestedActionsCycleId === null ||
+            !OPERATE_SUBJECT_SEGMENT.test(requestedActionsCycleId))
+        ) {
           return experienceJson(res, 400, {
             ok: false,
             error: {
@@ -2669,13 +3072,18 @@ export function createDashboardServer({
             },
           });
         }
-        const inboxSnapshot = route.surface === 'inbox'
-          || (pathname === '/api/operate/events' && requestedLiveSurface === 'inbox');
+        const inboxSnapshot =
+          route.surface === 'inbox' ||
+          (pathname === '/api/operate/events' && requestedLiveSurface === 'inbox');
         const actionsSnapshot = pathname === '/api/operate/actions';
-        const generation = (pathname === '/api/operate/events' || inboxSnapshot || actionsSnapshot)
-          ? liveGeneration(url.searchParams)
-          : undefined;
-        if ((pathname === '/api/operate/events' || inboxSnapshot || actionsSnapshot) && generation === null) {
+        const generation =
+          pathname === '/api/operate/events' || inboxSnapshot || actionsSnapshot
+            ? liveGeneration(url.searchParams)
+            : undefined;
+        if (
+          (pathname === '/api/operate/events' || inboxSnapshot || actionsSnapshot) &&
+          generation === null
+        ) {
           return experienceJson(res, 400, {
             ok: false,
             error: {
@@ -2685,7 +3093,10 @@ export function createDashboardServer({
             },
           });
         }
-        if ((inboxSnapshot || actionsSnapshot) && url.searchParams.get('projectId') !== project.projectId) {
+        if (
+          (inboxSnapshot || actionsSnapshot) &&
+          url.searchParams.get('projectId') !== project.projectId
+        ) {
           return experienceJson(res, 403, {
             ok: false,
             error: {
@@ -2695,9 +3106,8 @@ export function createDashboardServer({
             },
           });
         }
-        const checkpointHeader = pathname === '/api/operate/events'
-          ? liveCheckpointHeader(req)
-          : undefined;
+        const checkpointHeader =
+          pathname === '/api/operate/events' ? liveCheckpointHeader(req) : undefined;
         if (checkpointHeader && !checkpointHeader.valid) {
           return experienceJson(res, 400, {
             ok: false,
@@ -2749,65 +3159,91 @@ export function createDashboardServer({
             viewHash: current.viewHash,
           });
           if (!checkpoint) {
-			const surface = selectOperateExperienceDisplaySurface(current, {
-			  surface: requestedLiveSurface,
-			  binding: {
-				...binding,
-				generatedAt: current.generatedAt,
-				eventHead: current.eventHead,
-				viewHash: current.viewHash,
-				surface: requestedLiveSurface,
-				...(requestedLiveSurface === 'inbox'
-				  ? { projectId: project.projectId, generation, subjectId: null }
-				  : {}),
-			  },
-			});
-            res.write(sseFrame('snapshot', createDashboardLiveEventEnvelope({
-              event: 'snapshot', binding: liveBinding, cursor: currentCursor, payload: surface,
-            }), currentId));
-          } else if (checkpoint.viewHash === current.viewHash
-            && checkpoint.eventHead.sequence === current.eventHead.sequence
-            && checkpoint.eventHead.hash === current.eventHead.hash) {
-			const currentSurface = selectOperateExperienceDisplaySurface(current, {
-			  surface: requestedLiveSurface,
-			  binding: {
-				...binding,
-				generatedAt: current.generatedAt,
-				eventHead: current.eventHead,
-				viewHash: current.viewHash,
-				surface: requestedLiveSurface,
-				...(requestedLiveSurface === 'inbox'
-				  ? { projectId: project.projectId, generation, subjectId: null }
-				  : {}),
-			  },
-            });
-            res.write(sseFrame('ready', createDashboardLiveEventEnvelope({
-              event: 'ready', binding: liveBinding, cursor: currentCursor, payload: {
-			  mutationEnabled: currentSurface.kind === 'operate-experience-display-surface'
-				&& currentSurface.payload.status === 'ready'
-				&& currentSurface.payload.mutationEnabled === true,
-			  reasonCodes: currentSurface.kind === 'operate-experience-display-surface'
-				? currentSurface.payload.reasonCodes
-				: ['OPERATE_PROJECTION_UNAVAILABLE'],
+            const surface = selectOperateExperienceDisplaySurface(current, {
+              surface: requestedLiveSurface,
+              binding: {
+                ...binding,
+                generatedAt: current.generatedAt,
+                eventHead: current.eventHead,
+                viewHash: current.viewHash,
+                surface: requestedLiveSurface,
+                ...(requestedLiveSurface === 'inbox'
+                  ? { projectId: project.projectId, generation, subjectId: null }
+                  : {}),
               },
-            }), currentId));
+            });
+            res.write(
+              sseFrame(
+                'snapshot',
+                createDashboardLiveEventEnvelope({
+                  event: 'snapshot',
+                  binding: liveBinding,
+                  cursor: currentCursor,
+                  payload: surface,
+                }),
+                currentId,
+              ),
+            );
+          } else if (
+            checkpoint.viewHash === current.viewHash &&
+            checkpoint.eventHead.sequence === current.eventHead.sequence &&
+            checkpoint.eventHead.hash === current.eventHead.hash
+          ) {
+            const currentSurface = selectOperateExperienceDisplaySurface(current, {
+              surface: requestedLiveSurface,
+              binding: {
+                ...binding,
+                generatedAt: current.generatedAt,
+                eventHead: current.eventHead,
+                viewHash: current.viewHash,
+                surface: requestedLiveSurface,
+                ...(requestedLiveSurface === 'inbox'
+                  ? { projectId: project.projectId, generation, subjectId: null }
+                  : {}),
+              },
+            });
+            res.write(
+              sseFrame(
+                'ready',
+                createDashboardLiveEventEnvelope({
+                  event: 'ready',
+                  binding: liveBinding,
+                  cursor: currentCursor,
+                  payload: {
+                    mutationEnabled:
+                      currentSurface.kind === 'operate-experience-display-surface' &&
+                      currentSurface.payload.status === 'ready' &&
+                      currentSurface.payload.mutationEnabled === true,
+                    reasonCodes:
+                      currentSurface.kind === 'operate-experience-display-surface'
+                        ? currentSurface.payload.reasonCodes
+                        : ['OPERATE_PROJECTION_UNAVAILABLE'],
+                  },
+                }),
+                currentId,
+              ),
+            );
           } else {
             const chain = [];
             let expectedViewHash = checkpoint.viewHash;
             let expectedHead = checkpoint.eventHead;
             for (const patch of operatePatchHistory) {
-              if (patch.fromViewHash !== expectedViewHash
-                || patch.fromEventHead.sequence !== expectedHead.sequence
-                || patch.fromEventHead.hash !== expectedHead.hash) continue;
+              if (
+                patch.fromViewHash !== expectedViewHash ||
+                patch.fromEventHead.sequence !== expectedHead.sequence ||
+                patch.fromEventHead.hash !== expectedHead.hash
+              )
+                continue;
               chain.push(patch);
               expectedViewHash = patch.toViewHash;
               expectedHead = patch.toEventHead;
               if (expectedViewHash === current.viewHash) break;
             }
-            const complete = chain.length > 0
-              && expectedViewHash === current.viewHash
-              && expectedHead.sequence === current.eventHead.sequence
-              && expectedHead.hash === current.eventHead.hash;
+            const complete =
+              chain.length > 0 &&
+              expectedViewHash === current.viewHash &&
+              expectedHead.sequence === current.eventHead.sequence &&
+              expectedHead.hash === current.eventHead.hash;
             if (complete && requestedLiveSurface === 'inbox') {
               const surface = selectOperateExperienceDisplaySurface(current, {
                 surface: 'inbox',
@@ -2822,24 +3258,51 @@ export function createDashboardServer({
                   subjectId: null,
                 },
               });
-              res.write(sseFrame('snapshot', createDashboardLiveEventEnvelope({
-                event: 'snapshot', binding: liveBinding, cursor: currentCursor, payload: surface,
-              }), currentId));
+              res.write(
+                sseFrame(
+                  'snapshot',
+                  createDashboardLiveEventEnvelope({
+                    event: 'snapshot',
+                    binding: liveBinding,
+                    cursor: currentCursor,
+                    payload: surface,
+                  }),
+                  currentId,
+                ),
+              );
             } else if (complete) {
               for (const patch of chain) {
                 const cursor = { eventHead: patch.toEventHead, viewHash: patch.toViewHash };
-                res.write(sseFrame('patch', createDashboardLiveEventEnvelope({
-                  event: 'patch', binding: liveBinding, cursor, payload: patch,
-                }), encodeOperateExperienceCheckpoint(cursor)));
+                res.write(
+                  sseFrame(
+                    'patch',
+                    createDashboardLiveEventEnvelope({
+                      event: 'patch',
+                      binding: liveBinding,
+                      cursor,
+                      payload: patch,
+                    }),
+                    encodeOperateExperienceCheckpoint(cursor),
+                  ),
+                );
               }
             } else {
-              res.write(sseFrame('stale', createDashboardLiveEventEnvelope({
-                event: 'stale', binding: liveBinding, cursor: currentCursor, payload: {
-                mutationEnabled: false,
-                reasonCodes: ['OPERATE_EVENT_GAP'],
-                recovery: 'Refresh the validated snapshot before submitting any command.',
-                },
-              }), currentId));
+              res.write(
+                sseFrame(
+                  'stale',
+                  createDashboardLiveEventEnvelope({
+                    event: 'stale',
+                    binding: liveBinding,
+                    cursor: currentCursor,
+                    payload: {
+                      mutationEnabled: false,
+                      reasonCodes: ['OPERATE_EVENT_GAP'],
+                      recovery: 'Refresh the validated snapshot before submitting any command.',
+                    },
+                  }),
+                  currentId,
+                ),
+              );
             }
           }
           const client = { res, binding: liveBinding, surface: requestedLiveSurface };
@@ -2848,264 +3311,254 @@ export function createDashboardServer({
           return undefined;
         }
 
-		if (route.surface === 'cycle-executive-board') {
-		  const response = selectOperateExecutiveBoardDisplay(read.view, {
-			  binding: {
-				  ...binding,
-				  cycleId: route.subjectId,
-				  subjectId: route.subjectId,
-				  generatedAt: read.view.generatedAt,
-				  eventHead: read.view.eventHead,
-				  viewHash: read.view.viewHash,
-			  },
-			  subjectId: route.subjectId,
-			});
-		  return experienceJson(
-		    res,
-		    response.ok === false ? response.status : 200,
-		    response,
-		  );
-		}
+        if (route.surface === 'cycle-executive-board') {
+          const response = selectOperateExecutiveBoardDisplay(read.view, {
+            binding: {
+              ...binding,
+              cycleId: route.subjectId,
+              subjectId: route.subjectId,
+              generatedAt: read.view.generatedAt,
+              eventHead: read.view.eventHead,
+              viewHash: read.view.viewHash,
+            },
+            subjectId: route.subjectId,
+          });
+          return experienceJson(res, response.ok === false ? response.status : 200, response);
+        }
 
-		if (route.surface === 'review') {
-		  if (typeof getOperatingReviewRead !== 'function') {
-		    return experienceJson(res, 409, {
-		      ok: false,
-		      error: {
-		        reasonCode: 'OPERATE_PROJECTION_UNAVAILABLE',
-		        message: 'The Review workspace is unavailable until OpenPlanr connects its owner read.',
-		        retryable: false,
-		      },
-		    });
-		  }
-		  let workspace;
-		  try {
-		    workspace = await getOperatingReviewRead(Object.freeze({
-		      cycleId: route.cycleId,
-		      reviewId: route.subjectId,
-		      actorId: binding.actorId,
-		      scopeId: binding.scopeId,
-		      domainId: binding.domainId,
-		      domainVersion: binding.domainVersion,
-		    }));
-		  } catch {
-		    return experienceJson(res, 409, {
-		      ok: false,
-		      error: {
-		        reasonCode: 'OPERATE_PROJECTION_UNAVAILABLE',
-		        message: 'The Review workspace is unavailable until OpenPlanr refreshes its owner read.',
-		        retryable: false,
-		      },
-		    });
-		  }
-		  const closed = closedReviewWorkspace(
-		    workspace,
-		    binding,
-		    route.cycleId,
-		    route.subjectId,
-		    read.view,
-		  );
-		  if (!closed) {
-		    return experienceJson(res, 409, {
-		      ok: false,
-		      error: {
-		        reasonCode: 'OPERATE_BINDING_MISMATCH',
-		        message: 'The Review workspace does not match the current actor-bound operating view.',
-		        retryable: false,
-		      },
-		    });
-		  }
-		  return experienceJson(res, 200, closed);
-		}
+        if (route.surface === 'review') {
+          if (typeof getOperatingReviewRead !== 'function') {
+            return experienceJson(res, 409, {
+              ok: false,
+              error: {
+                reasonCode: 'OPERATE_PROJECTION_UNAVAILABLE',
+                message:
+                  'The Review workspace is unavailable until OpenPlanr connects its owner read.',
+                retryable: false,
+              },
+            });
+          }
+          let workspace;
+          try {
+            workspace = await getOperatingReviewRead(
+              Object.freeze({
+                cycleId: route.cycleId,
+                reviewId: route.subjectId,
+                actorId: binding.actorId,
+                scopeId: binding.scopeId,
+                domainId: binding.domainId,
+                domainVersion: binding.domainVersion,
+              }),
+            );
+          } catch {
+            return experienceJson(res, 409, {
+              ok: false,
+              error: {
+                reasonCode: 'OPERATE_PROJECTION_UNAVAILABLE',
+                message:
+                  'The Review workspace is unavailable until OpenPlanr refreshes its owner read.',
+                retryable: false,
+              },
+            });
+          }
+          const closed = closedReviewWorkspace(
+            workspace,
+            binding,
+            route.cycleId,
+            route.subjectId,
+            read.view,
+          );
+          if (!closed) {
+            return experienceJson(res, 409, {
+              ok: false,
+              error: {
+                reasonCode: 'OPERATE_BINDING_MISMATCH',
+                message:
+                  'The Review workspace does not match the current actor-bound operating view.',
+                retryable: false,
+              },
+            });
+          }
+          return experienceJson(res, 200, closed);
+        }
 
-		if (route.surface === 'action') {
-		  const commandGateway = resolveOperatingCommandGateway();
-		  const response = selectOperateActionDisplayWorkspace(read.view, {
-			  binding: {
-				  ...binding,
-				  actionId: route.subjectId,
-				  subjectId: route.subjectId,
-				  generatedAt: read.view.generatedAt,
-				  eventHead: read.view.eventHead,
-				  viewHash: read.view.viewHash,
-			  },
-			  subjectId: route.subjectId,
-			  commandsAvailable: supportsGovernedAction(commandGateway),
-			});
-		  return experienceJson(
-		    res,
-		    response.ok === false ? response.status : 200,
-		    response,
-		  );
-		}
+        if (route.surface === 'action') {
+          const commandGateway = resolveOperatingCommandGateway();
+          const response = selectOperateActionDisplayWorkspace(read.view, {
+            binding: {
+              ...binding,
+              actionId: route.subjectId,
+              subjectId: route.subjectId,
+              generatedAt: read.view.generatedAt,
+              eventHead: read.view.eventHead,
+              viewHash: read.view.viewHash,
+            },
+            subjectId: route.subjectId,
+            commandsAvailable: supportsGovernedAction(commandGateway),
+          });
+          return experienceJson(res, response.ok === false ? response.status : 200, response);
+        }
 
-		if (route.surface === 'cycle') {
-		  if (typeof getOperatingCycleRead !== 'function') {
-		    return experienceJson(res, 409, {
-		      ok: false,
-		      error: {
-		        reasonCode: 'OPERATE_PROJECTION_UNAVAILABLE',
-		        message: 'The Cycle workspace is unavailable until OpenPlanr connects its owner read.',
-		        retryable: false,
-		      },
-		    });
-		  }
-		  let cycleRead;
-		  try {
-		    cycleRead = await getOperatingCycleRead(Object.freeze({
-		      cycleId: route.subjectId,
-		      actorId: binding.actorId,
-		      scopeId: binding.scopeId,
-		      domainId: binding.domainId,
-		      domainVersion: binding.domainVersion,
-		    }));
-		  } catch {
-		    return experienceJson(res, 409, {
-		      ok: false,
-		      error: {
-		        reasonCode: 'OPERATE_PROJECTION_UNAVAILABLE',
-		        message: 'The Cycle workspace is unavailable until OpenPlanr refreshes its owner read.',
-		        retryable: false,
-		      },
-		    });
-		  }
-		  const response = selectOperateCycleDisplayWorkspace(read.view, cycleRead, {
-		    binding: {
-		      ...binding,
-		      cycleId: route.subjectId,
-		      subjectId: route.subjectId,
-		      generatedAt: read.view.generatedAt,
-		      eventHead: read.view.eventHead,
-		      viewHash: read.view.viewHash,
-		    },
-		    subjectId: route.subjectId,
-		  });
-		  return experienceJson(
-		    res,
-		    response.ok === false ? response.status : 200,
-		    response,
-		  );
-		}
+        if (route.surface === 'cycle') {
+          if (typeof getOperatingCycleRead !== 'function') {
+            return experienceJson(res, 409, {
+              ok: false,
+              error: {
+                reasonCode: 'OPERATE_PROJECTION_UNAVAILABLE',
+                message:
+                  'The Cycle workspace is unavailable until OpenPlanr connects its owner read.',
+                retryable: false,
+              },
+            });
+          }
+          let cycleRead;
+          try {
+            cycleRead = await getOperatingCycleRead(
+              Object.freeze({
+                cycleId: route.subjectId,
+                actorId: binding.actorId,
+                scopeId: binding.scopeId,
+                domainId: binding.domainId,
+                domainVersion: binding.domainVersion,
+              }),
+            );
+          } catch {
+            return experienceJson(res, 409, {
+              ok: false,
+              error: {
+                reasonCode: 'OPERATE_PROJECTION_UNAVAILABLE',
+                message:
+                  'The Cycle workspace is unavailable until OpenPlanr refreshes its owner read.',
+                retryable: false,
+              },
+            });
+          }
+          const response = selectOperateCycleDisplayWorkspace(read.view, cycleRead, {
+            binding: {
+              ...binding,
+              cycleId: route.subjectId,
+              subjectId: route.subjectId,
+              generatedAt: read.view.generatedAt,
+              eventHead: read.view.eventHead,
+              viewHash: read.view.viewHash,
+            },
+            subjectId: route.subjectId,
+          });
+          return experienceJson(res, response.ok === false ? response.status : 200, response);
+        }
 
-		if (route.surface === 'recovery') {
-		  const gateway = resolveOperatingCommandGateway();
-		  if (!gateway || typeof gateway.inspectRecovery !== 'function') {
-		    return experienceJson(res, 409, {
-		      ok: false,
-		      error: {
-		        reasonCode: 'OPERATE_READ_ONLY',
-		        message: 'Recovery inspection is unavailable until OpenPlanr is connected.',
-		        retryable: false,
-		      },
-		    });
-		  }
-		  let recoveryRead;
-		  try {
-		    recoveryRead = await gateway.inspectRecovery();
-		  } catch {
-		    return experienceJson(res, 409, {
-		      ok: false,
-		      error: {
-		        reasonCode: 'OPERATE_PROJECTION_UNAVAILABLE',
-		        message: 'Recovery inspection is unavailable until OpenPlanr refreshes it.',
-		        retryable: false,
-		      },
-		    });
-		  }
-		  const response = selectOperateRecoveryDisplay(read.view, recoveryRead, {
-		    binding: {
-		      ...binding,
-		      generatedAt: read.view.generatedAt,
-		      eventHead: read.view.eventHead,
-		      viewHash: read.view.viewHash,
-		    },
-		  });
-		  return experienceJson(
-		    res,
-		    response.ok === false ? response.status : 200,
-		    response,
-		  );
-		}
+        if (route.surface === 'recovery') {
+          const gateway = resolveOperatingCommandGateway();
+          if (!gateway || typeof gateway.inspectRecovery !== 'function') {
+            return experienceJson(res, 409, {
+              ok: false,
+              error: {
+                reasonCode: 'OPERATE_READ_ONLY',
+                message: 'Recovery inspection is unavailable until OpenPlanr is connected.',
+                retryable: false,
+              },
+            });
+          }
+          let recoveryRead;
+          try {
+            recoveryRead = await gateway.inspectRecovery();
+          } catch {
+            return experienceJson(res, 409, {
+              ok: false,
+              error: {
+                reasonCode: 'OPERATE_PROJECTION_UNAVAILABLE',
+                message: 'Recovery inspection is unavailable until OpenPlanr refreshes it.',
+                retryable: false,
+              },
+            });
+          }
+          const response = selectOperateRecoveryDisplay(read.view, recoveryRead, {
+            binding: {
+              ...binding,
+              generatedAt: read.view.generatedAt,
+              eventHead: read.view.eventHead,
+              viewHash: read.view.viewHash,
+            },
+          });
+          return experienceJson(res, response.ok === false ? response.status : 200, response);
+        }
 
-		const displaySurface = ['today', 'inbox', 'cycles', 'actions'].includes(route.surface);
-		const auditDisplaySurface = requestedAuditSurface;
-		const auditCycleId = requestedAuditCycleId;
-		const response = route.surface === 'inbox' && route.subjectId !== null
-		  ? selectOperateInboxItemDisplaySurface(read.view, {
-			  binding: {
-				  ...binding,
-				  generatedAt: read.view.generatedAt,
-				  eventHead: read.view.eventHead,
-				  viewHash: read.view.viewHash,
-				  surface: 'inbox',
-				  projectId: project.projectId,
-				  generation,
-				  subjectId: route.subjectId,
-			  },
-			  subjectId: route.subjectId,
-		    })
-		  : displaySurface
-		  ? selectOperateExperienceDisplaySurface(read.view, {
-			  surface: route.surface,
-			  binding: {
-				  ...binding,
-				  generatedAt: read.view.generatedAt,
-				  eventHead: read.view.eventHead,
-				  viewHash: read.view.viewHash,
-				  surface: route.surface,
-				  ...(route.surface === 'inbox' || route.surface === 'actions'
-				    ? { projectId: project.projectId, generation }
-				    : {}),
-				  subjectId: route.subjectId,
-				  cycleId:
-				    route.surface === 'cycle'
-				      ? route.subjectId
-				      : route.surface === 'actions'
-				        ? requestedActionsCycleId
-				        : route.subjectId,
-			  },
-			  subjectId: route.subjectId,
-			  cycleId:
-			    route.surface === 'actions'
-			      ? requestedActionsCycleId
-			      : route.surface === 'cycle'
-			        ? route.subjectId
-			        : null,
-			})
-		  : auditDisplaySurface
-			? selectOperateExperienceAuditDisplaySurface(read.view, {
-				surface: route.surface,
-				binding: {
-				  ...binding,
-				  cycleId: auditCycleId,
-				  subjectId: route.subjectId,
-				  surface: route.surface,
-				  query: requestedAuditQuery,
-				  format: requestedAuditFormat,
-				  generatedAt: read.view.generatedAt,
-				  eventHead: read.view.eventHead,
-				  viewHash: read.view.viewHash,
-				},
-				subjectId: route.subjectId,
-				cycleId: auditCycleId,
-				query: requestedAuditQuery,
-				format: requestedAuditFormat,
-			  })
-			: selectOperateExperienceSurface(read.view, {
-			  surface: route.surface,
-			  binding,
-			  subjectId: route.subjectId,
-			  cycleId: route.surface === 'actions' ? requestedActionsCycleId : null,
-			  query: url.searchParams.get('q') ?? '',
-			  format: url.searchParams.get('format') ?? 'json',
-			  projectId: route.surface === 'actions' ? project.projectId : null,
-			  generation: route.surface === 'actions' ? generation : null,
-			  });
-		return experienceJson(
-		  res,
-		  response.ok === false ? response.status : 200,
-		  response,
-		);
+        const displaySurface = ['today', 'inbox', 'cycles', 'actions'].includes(route.surface);
+        const auditDisplaySurface = requestedAuditSurface;
+        const auditCycleId = requestedAuditCycleId;
+        const response =
+          route.surface === 'inbox' && route.subjectId !== null
+            ? selectOperateInboxItemDisplaySurface(read.view, {
+                binding: {
+                  ...binding,
+                  generatedAt: read.view.generatedAt,
+                  eventHead: read.view.eventHead,
+                  viewHash: read.view.viewHash,
+                  surface: 'inbox',
+                  projectId: project.projectId,
+                  generation,
+                  subjectId: route.subjectId,
+                },
+                subjectId: route.subjectId,
+              })
+            : displaySurface
+              ? selectOperateExperienceDisplaySurface(read.view, {
+                  surface: route.surface,
+                  binding: {
+                    ...binding,
+                    generatedAt: read.view.generatedAt,
+                    eventHead: read.view.eventHead,
+                    viewHash: read.view.viewHash,
+                    surface: route.surface,
+                    ...(route.surface === 'inbox' || route.surface === 'actions'
+                      ? { projectId: project.projectId, generation }
+                      : {}),
+                    subjectId: route.subjectId,
+                    cycleId:
+                      route.surface === 'cycle'
+                        ? route.subjectId
+                        : route.surface === 'actions'
+                          ? requestedActionsCycleId
+                          : route.subjectId,
+                  },
+                  subjectId: route.subjectId,
+                  cycleId:
+                    route.surface === 'actions'
+                      ? requestedActionsCycleId
+                      : route.surface === 'cycle'
+                        ? route.subjectId
+                        : null,
+                })
+              : auditDisplaySurface
+                ? selectOperateExperienceAuditDisplaySurface(read.view, {
+                    surface: route.surface,
+                    binding: {
+                      ...binding,
+                      cycleId: auditCycleId,
+                      subjectId: route.subjectId,
+                      surface: route.surface,
+                      query: requestedAuditQuery,
+                      format: requestedAuditFormat,
+                      generatedAt: read.view.generatedAt,
+                      eventHead: read.view.eventHead,
+                      viewHash: read.view.viewHash,
+                    },
+                    subjectId: route.subjectId,
+                    cycleId: auditCycleId,
+                    query: requestedAuditQuery,
+                    format: requestedAuditFormat,
+                  })
+                : selectOperateExperienceSurface(read.view, {
+                    surface: route.surface,
+                    binding,
+                    subjectId: route.subjectId,
+                    cycleId: route.surface === 'actions' ? requestedActionsCycleId : null,
+                    query: url.searchParams.get('q') ?? '',
+                    format: url.searchParams.get('format') ?? 'json',
+                    projectId: route.surface === 'actions' ? project.projectId : null,
+                    generation: route.surface === 'actions' ? generation : null,
+                  });
+        return experienceJson(res, response.ok === false ? response.status : 200, response);
       }
 
       // Shell metadata: lets the client pre-select the landing view, render the
@@ -3153,8 +3606,11 @@ export function createDashboardServer({
       return json(res, 404, { error: 'not found' });
     } catch (err) {
       if (String(err?.code ?? '').startsWith('E_LOOPBACK_')) {
-        if (req.method === 'GET' && pathname === '/api/bootstrap'
-          && err.code === 'E_LOOPBACK_HOST') {
+        if (
+          req.method === 'GET' &&
+          pathname === '/api/bootstrap' &&
+          err.code === 'E_LOOPBACK_HOST'
+        ) {
           return dashboardSafeErrorJson(res, 400, {
             code: 'DASHBOARD_LOOPBACK_HOST_INVALID',
             retryable: false,
@@ -3198,9 +3654,7 @@ export function createDashboardServer({
       for (const client of planningSseClients) {
         try {
           const event = planningStaleEvent(client.binding, 'PLANNING_PATCH_INVALID');
-          client.res.write(sseFrame(
-            'stale', event, encodePlanningCheckpoint(event.cursor),
-          ));
+          client.res.write(sseFrame('stale', event, encodePlanningCheckpoint(event.cursor)));
         } catch {
           planningSseClients.delete(client);
         }
@@ -3224,13 +3678,16 @@ export function createDashboardServer({
       viewHash,
     });
     const patchHash = sha256Jcs({ from, to, patch: accepted });
-    const signal = assertPlanningPatchSignal({
-      patchId: `ppatch_${nextSequence}_${patchHash.slice(7, 23)}`,
-      patchHash,
-      from,
+    const signal = assertPlanningPatchSignal(
+      {
+        patchId: `ppatch_${nextSequence}_${patchHash.slice(7, 23)}`,
+        patchHash,
+        from,
+        to,
+        patch: accepted,
+      },
       to,
-      patch: accepted,
-    }, to);
+    );
 
     currentGraph = next;
     planningSequence = nextSequence;
@@ -3241,7 +3698,11 @@ export function createDashboardServer({
 
     const frame = `data: ${JSON.stringify(accepted)}\n\n`;
     for (const client of sseClients) {
-      try { client.write(frame); } catch { sseClients.delete(client); }
+      try {
+        client.write(frame);
+      } catch {
+        sseClients.delete(client);
+      }
     }
     for (const client of planningSseClients) {
       try {
@@ -3274,13 +3735,21 @@ export function createDashboardServer({
           const fallback = before ?? after;
           if (!fallback) continue;
           const cursor = { eventHead: fallback.eventHead, viewHash: fallback.viewHash };
-          client.res.write(sseFrame('stale', createDashboardLiveEventEnvelope({
-            event: 'stale', binding: client.binding, cursor, payload: {
-            mutationEnabled: false,
-            reasonCodes: ['OPERATE_PROJECTION_UNAVAILABLE'],
-            recovery: 'Refresh the validated snapshot before submitting any command.',
-            },
-          })));
+          client.res.write(
+            sseFrame(
+              'stale',
+              createDashboardLiveEventEnvelope({
+                event: 'stale',
+                binding: client.binding,
+                cursor,
+                payload: {
+                  mutationEnabled: false,
+                  reasonCodes: ['OPERATE_PROJECTION_UNAVAILABLE'],
+                  recovery: 'Refresh the validated snapshot before submitting any command.',
+                },
+              }),
+            ),
+          );
         } else if (client.surface === 'inbox') {
           const cursor = { eventHead: after.eventHead, viewHash: after.viewHash };
           const surface = selectOperateExperienceDisplaySurface(after, {
@@ -3302,34 +3771,72 @@ export function createDashboardServer({
           if (surface?.kind !== 'operate-experience-display-surface') {
             throw new TypeError('The live Inbox display could not be issued.');
           }
-          client.res.write(sseFrame('snapshot', createDashboardLiveEventEnvelope({
-            event: 'snapshot', binding: client.binding, cursor, payload: surface,
-          }), encodeOperateExperienceCheckpoint(cursor)));
-          client.res.write(sseFrame('ready', createDashboardLiveEventEnvelope({
-            event: 'ready', binding: client.binding, cursor, payload: {
-              mutationEnabled: surface.payload.status === 'ready'
-                && surface.payload.mutationEnabled === true,
-              reasonCodes: surface.payload.reasonCodes,
-            },
-          }), encodeOperateExperienceCheckpoint(cursor)));
-        } else if (patch
-          && patch.actorId === client.binding.actorId
-          && patch.scopeId === client.binding.scopeId
-          && patch.domainId === client.binding.domainId
-          && patch.domainVersion === client.binding.domainVersion) {
+          client.res.write(
+            sseFrame(
+              'snapshot',
+              createDashboardLiveEventEnvelope({
+                event: 'snapshot',
+                binding: client.binding,
+                cursor,
+                payload: surface,
+              }),
+              encodeOperateExperienceCheckpoint(cursor),
+            ),
+          );
+          client.res.write(
+            sseFrame(
+              'ready',
+              createDashboardLiveEventEnvelope({
+                event: 'ready',
+                binding: client.binding,
+                cursor,
+                payload: {
+                  mutationEnabled:
+                    surface.payload.status === 'ready' && surface.payload.mutationEnabled === true,
+                  reasonCodes: surface.payload.reasonCodes,
+                },
+              }),
+              encodeOperateExperienceCheckpoint(cursor),
+            ),
+          );
+        } else if (
+          patch &&
+          patch.actorId === client.binding.actorId &&
+          patch.scopeId === client.binding.scopeId &&
+          patch.domainId === client.binding.domainId &&
+          patch.domainVersion === client.binding.domainVersion
+        ) {
           const cursor = { eventHead: patch.toEventHead, viewHash: patch.toViewHash };
-          client.res.write(sseFrame('patch', createDashboardLiveEventEnvelope({
-            event: 'patch', binding: client.binding, cursor, payload: patch,
-          }), encodeOperateExperienceCheckpoint(cursor)));
+          client.res.write(
+            sseFrame(
+              'patch',
+              createDashboardLiveEventEnvelope({
+                event: 'patch',
+                binding: client.binding,
+                cursor,
+                payload: patch,
+              }),
+              encodeOperateExperienceCheckpoint(cursor),
+            ),
+          );
         } else {
           const cursor = { eventHead: after.eventHead, viewHash: after.viewHash };
-          client.res.write(sseFrame('stale', createDashboardLiveEventEnvelope({
-            event: 'stale', binding: client.binding, cursor, payload: {
-            mutationEnabled: false,
-            reasonCodes: ['OPERATE_EVENT_GAP'],
-            recovery: 'Refresh the validated snapshot before submitting any command.',
-            },
-          }), encodeOperateExperienceCheckpoint(after)));
+          client.res.write(
+            sseFrame(
+              'stale',
+              createDashboardLiveEventEnvelope({
+                event: 'stale',
+                binding: client.binding,
+                cursor,
+                payload: {
+                  mutationEnabled: false,
+                  reasonCodes: ['OPERATE_EVENT_GAP'],
+                  recovery: 'Refresh the validated snapshot before submitting any command.',
+                },
+              }),
+              encodeOperateExperienceCheckpoint(after),
+            ),
+          );
         }
       } catch {
         operateSseClients.delete(client);
@@ -3377,9 +3884,13 @@ export function createDashboardServer({
       for (const client of sseClients) client.write(frame);
     },
     /** True when the last listen() reused a running server instead of binding. */
-    get reused() { return reused; },
+    get reused() {
+      return reused;
+    },
     /** Pid of the server the last listen() bound or reused (never a stale guess). */
-    get ownerPid() { return ownerPid; },
+    get ownerPid() {
+      return ownerPid;
+    },
     /**
      * Bind on 127.0.0.1 and write the port + PID files for reuse discovery.
      * A failed bind rejects (never an uncaught 'error' event). On EADDRINUSE, a
@@ -3396,16 +3907,19 @@ export function createDashboardServer({
         if (error?.code === 'EADDRINUSE' && Number(port) > 0) {
           const existing = await probeLoopbackJson(port, '/health');
           if (
-            existing?.ok === true
-            && existing.kind === DASHBOARD_SERVER_KIND
-            && existing.version === readPackageVersion()
+            existing?.ok === true &&
+            existing.kind === DASHBOARD_SERVER_KIND &&
+            existing.version === readPackageVersion()
           ) {
             reused = true;
-            ownerPid = Number.isInteger(existing.pid) && existing.pid > 0 ? existing.pid : process.pid;
+            ownerPid =
+              Number.isInteger(existing.pid) && existing.pid > 0 ? existing.pid : process.pid;
             return port;
           }
           throw Object.assign(
-            new Error(`Port ${port} is already in use by a process that is not a compatible dashboard.`),
+            new Error(
+              `Port ${port} is already in use by a process that is not a compatible dashboard.`,
+            ),
             { code: 'E_DASHBOARD_PORT_IN_USE' },
           );
         }
@@ -3430,38 +3944,47 @@ export function createDashboardServer({
       }
       return actual;
     },
-    close: () => new Promise((r) => {
-      if (watcher) { watcher.stop(); watcher = null; }
-      for (const client of sseClients) client.end();
-      sseClients.clear();
-      for (const client of planningSseClients) client.res.end();
-      planningSseClients.clear();
-      for (const client of operateSseClients) client.res.end();
-      operateSseClients.clear();
-      server.close(r);
-    }),
+    close: () =>
+      new Promise((r) => {
+        if (watcher) {
+          watcher.stop();
+          watcher = null;
+        }
+        for (const client of sseClients) client.end();
+        sseClients.clear();
+        for (const client of planningSseClients) client.res.end();
+        planningSseClients.clear();
+        for (const client of operateSseClients) client.res.end();
+        operateSseClients.clear();
+        server.close(r);
+      }),
   };
 }
 
 // CLI entry: `node server.mjs --serve [port] [--no-watch]`
 if (
-  process.argv[1]
-  && import.meta.url.endsWith(process.argv[1].split('/').pop())
-  && process.argv.includes('--serve')
+  process.argv[1] &&
+  import.meta.url.endsWith(process.argv[1].split('/').pop()) &&
+  process.argv.includes('--serve')
 ) {
   const serveArg = process.argv[process.argv.indexOf('--serve') + 1];
   const portArg = Number(serveArg) || DEFAULT_PORT;
   // --no-watch suppresses the filesystem watcher (live sync off).
   const watch = !process.argv.includes('--no-watch');
   const dash = createDashboardServer({ watch });
-  dash.listen(portArg).then((port) => {
-    process.stdout.write(`DASHBOARD_URL: http://localhost:${port}/\n`);
-  }).catch((error) => {
-    process.stderr.write(`${JSON.stringify({
-      ok: false,
-      code: error?.code ?? 'E_DASHBOARD_LISTEN',
-      problem: error?.message ?? 'The dashboard server failed to start.',
-    })}\n`);
-    process.exitCode = 1;
-  });
+  dash
+    .listen(portArg)
+    .then((port) => {
+      process.stdout.write(`DASHBOARD_URL: http://localhost:${port}/\n`);
+    })
+    .catch((error) => {
+      process.stderr.write(
+        `${JSON.stringify({
+          ok: false,
+          code: error?.code ?? 'E_DASHBOARD_LISTEN',
+          problem: error?.message ?? 'The dashboard server failed to start.',
+        })}\n`,
+      );
+      process.exitCode = 1;
+    });
 }

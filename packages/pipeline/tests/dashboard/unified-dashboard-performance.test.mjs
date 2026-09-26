@@ -21,17 +21,16 @@ const dashboardRoot = join(openPlanrRoot, 'dist/dashboard');
 
 function httpGet(port, path, headers = {}) {
   return new Promise((resolveRequest, rejectRequest) => {
-    const req = request(
-      { hostname: '127.0.0.1', port, path, method: 'GET', headers },
-      (res) => {
-        const chunks = [];
-        res.on('data', (chunk) => chunks.push(chunk));
-        res.on('end', () => resolveRequest({
+    const req = request({ hostname: '127.0.0.1', port, path, method: 'GET', headers }, (res) => {
+      const chunks = [];
+      res.on('data', (chunk) => chunks.push(chunk));
+      res.on('end', () =>
+        resolveRequest({
           status: res.statusCode,
           body: Buffer.concat(chunks).toString('utf8'),
-        }));
-      },
-    );
+        }),
+      );
+    });
     req.on('error', rejectRequest);
     req.end();
   });
@@ -52,14 +51,23 @@ test('unified dashboard protocol custody remains in the packed pipeline product'
 test('unified dashboard optional dependency absence keeps diagnostics available', {
   timeout: 120_000,
 }, async () => {
-  assert.equal(existsSync(dashboardRoot), true, 'OpenPlanr dist/dashboard must exist; run npm run build in OpenPlanr');
+  assert.equal(
+    existsSync(dashboardRoot),
+    true,
+    'OpenPlanr dist/dashboard must exist; run npm run build in OpenPlanr',
+  );
   const manifest = JSON.parse(readFileSync(join(dashboardRoot, 'dashboard-manifest.json'), 'utf8'));
   const temporaryRoot = mkdtempSync(join(tmpdir(), 'planr-unified-dashboard-optional-'));
   const planrDir = join(temporaryRoot, 'project', '.planr');
   mkdirSync(planrDir, { recursive: true });
-  writeFileSync(join(planrDir, 'config.json'), JSON.stringify({ projectName: 'Optional dependency dogfood' }));
+  writeFileSync(
+    join(planrDir, 'config.json'),
+    JSON.stringify({ projectName: 'Optional dependency dogfood' }),
+  );
 
-  const { createDashboardServer } = await import(pathToFileURL(join(root, 'lib/dashboard/server.mjs')).href);
+  const { createDashboardServer } = await import(
+    pathToFileURL(join(root, 'lib/dashboard/server.mjs')).href
+  );
   const dashboard = createDashboardServer({
     staticRoot: dashboardRoot,
     dashboardBuildId: manifest.buildId,
@@ -88,14 +96,23 @@ test('unified dashboard optional dependency absence keeps diagnostics available'
 test('unified dashboard static reads remain bounded under repeated access', {
   timeout: 120_000,
 }, async () => {
-  assert.equal(existsSync(dashboardRoot), true, 'OpenPlanr dist/dashboard must exist; run npm run build in OpenPlanr');
+  assert.equal(
+    existsSync(dashboardRoot),
+    true,
+    'OpenPlanr dist/dashboard must exist; run npm run build in OpenPlanr',
+  );
   const manifest = JSON.parse(readFileSync(join(dashboardRoot, 'dashboard-manifest.json'), 'utf8'));
   const temporaryRoot = mkdtempSync(join(tmpdir(), 'planr-unified-dashboard-static-'));
   const planrDir = join(temporaryRoot, 'project', '.planr');
   mkdirSync(planrDir, { recursive: true });
-  writeFileSync(join(planrDir, 'config.json'), JSON.stringify({ projectName: 'Static read budget' }));
+  writeFileSync(
+    join(planrDir, 'config.json'),
+    JSON.stringify({ projectName: 'Static read budget' }),
+  );
 
-  const { createDashboardServer } = await import(pathToFileURL(join(root, 'lib/dashboard/server.mjs')).href);
+  const { createDashboardServer } = await import(
+    pathToFileURL(join(root, 'lib/dashboard/server.mjs')).href
+  );
   const dashboard = createDashboardServer({
     staticRoot: dashboardRoot,
     dashboardBuildId: manifest.buildId,

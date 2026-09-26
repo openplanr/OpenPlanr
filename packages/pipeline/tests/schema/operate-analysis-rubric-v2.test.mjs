@@ -17,14 +17,23 @@ import { createOperateExtensionRegistryV2 } from 'planr-pipeline/operate/extensi
 import { validateProtocolArtifact } from '../../lib/protocol/contracts.mjs';
 import { checkpoint } from '../orchestration/operate-operating-intelligence-state-v2.test-support.mjs';
 
-const RUBRIC_CLAUSES = ['requiredQuestions', 'requiredEvidence', 'failureModes', 'artifactQualityBar', 'outOfScope'];
+const RUBRIC_CLAUSES = [
+  'requiredQuestions',
+  'requiredEvidence',
+  'failureModes',
+  'artifactQualityBar',
+  'outOfScope',
+];
 const root = fileURLToPath(new URL('../..', import.meta.url));
-const registry = () => JSON.parse(readFileSync(join(root, 'registry/operate-v2-contracts.json'), 'utf8'));
+const registry = () =>
+  JSON.parse(readFileSync(join(root, 'registry/operate-v2-contracts.json'), 'utf8'));
 const fixture = (name) => {
-  const registration = JSON.parse(readFileSync(
-    new URL(`../../conformance/fixtures/operating-runtime-v2/${name}`, import.meta.url),
-    'utf8',
-  ));
+  const registration = JSON.parse(
+    readFileSync(
+      new URL(`../../conformance/fixtures/operating-runtime-v2/${name}`, import.meta.url),
+      'utf8',
+    ),
+  );
   registration.policyRequirements = [];
   return registration;
 };
@@ -42,10 +51,15 @@ test('every catalog role carries a five-clause rubric bound to its role version'
     for (const role of domain.roles) {
       const binding = `${domain.domainId}/${role.roleId}@${role.roleVersion}`;
       assert.equal(typeof role.analysisRubric, 'object', binding);
-      assert.deepEqual(Object.keys(role.analysisRubric).sort(), [...RUBRIC_CLAUSES].sort(), binding);
+      assert.deepEqual(
+        Object.keys(role.analysisRubric).sort(),
+        [...RUBRIC_CLAUSES].sort(),
+        binding,
+      );
       for (const clause of RUBRIC_CLAUSES) {
         assert.ok(role.analysisRubric[clause].length >= 1, `${binding}.${clause}`);
-        for (const text of role.analysisRubric[clause]) assert.equal(typeof text, 'string', `${binding}.${clause}`);
+        for (const text of role.analysisRubric[clause])
+          assert.equal(typeof text, 'string', `${binding}.${clause}`);
       }
     }
   }
@@ -54,7 +68,9 @@ test('every catalog role carries a five-clause rubric bound to its role version'
 test('Challenger and Chair registries own one exact always-on question-coverage requirement', () => {
   for (const domain of OPERATE_CONTRACT_CATALOG_V2.extensions.domains) {
     for (const role of domain.roles.filter(({ roleKind }) => roleKind !== 'advisor')) {
-      const mappings = role.resultRequirements.filter(({ target }) => target === 'question-coverage');
+      const mappings = role.resultRequirements.filter(
+        ({ target }) => target === 'question-coverage',
+      );
       assert.equal(mappings.length, 1, `${domain.domainId}/${role.roleId}`);
       assert.deepEqual(mappings[0].appliesToOutcomes, ['always']);
       assert.equal(mappings[0].minimumItems, role.analysisProfile.questionIds.length);
@@ -63,19 +79,31 @@ test('Challenger and Chair registries own one exact always-on question-coverage 
   }
 
   for (const [label, mutate] of [
-    ['missing mapping', (role) => {
-      role.resultRequirements = role.resultRequirements.filter(({ target }) => target !== 'question-coverage');
-    }],
-    ['wrong question count', (role) => {
-      role.resultRequirements.find(({ target }) => target === 'question-coverage').minimumItems -= 1;
-    }],
+    [
+      'missing mapping',
+      (role) => {
+        role.resultRequirements = role.resultRequirements.filter(
+          ({ target }) => target !== 'question-coverage',
+        );
+      },
+    ],
+    [
+      'wrong question count',
+      (role) => {
+        role.resultRequirements.find(({ target }) => target === 'question-coverage').minimumItems -=
+          1;
+      },
+    ],
   ]) {
     assert.throws(
-      () => compileOperateContractRegistry(businessDomain((domain) => {
-        mutate(domain.roles.find(({ roleKind }) => roleKind === 'challenger'));
-      })),
-      (error) => error instanceof OperateContractCompileError
-        && /question-coverage/u.test(error.message),
+      () =>
+        compileOperateContractRegistry(
+          businessDomain((domain) => {
+            mutate(domain.roles.find(({ roleKind }) => roleKind === 'challenger'));
+          }),
+        ),
+      (error) =>
+        error instanceof OperateContractCompileError && /question-coverage/u.test(error.message),
       label,
     );
   }
@@ -83,10 +111,14 @@ test('Challenger and Chair registries own one exact always-on question-coverage 
 
 test('a role without a rubric compiles no catalog and registers no domain', () => {
   assert.throws(
-    () => compileOperateContractRegistry(businessDomain((domain) => {
-      delete domain.roles.find(({ roleKind }) => roleKind === 'advisor').analysisRubric;
-    })),
-    (error) => error instanceof OperateContractCompileError && error.code === 'E_OPERATE_CONTRACT_MALFORMED',
+    () =>
+      compileOperateContractRegistry(
+        businessDomain((domain) => {
+          delete domain.roles.find(({ roleKind }) => roleKind === 'advisor').analysisRubric;
+        }),
+      ),
+    (error) =>
+      error instanceof OperateContractCompileError && error.code === 'E_OPERATE_CONTRACT_MALFORMED',
   );
 
   const seatless = business();
@@ -99,19 +131,43 @@ test('a role without a rubric compiles no catalog and registers no domain', () =
 
 test('the compiler refuses an empty, duplicated, or unknown rubric clause', () => {
   const cases = [
-    ['an empty clause', (seat) => { seat.analysisRubric.requiredQuestions = []; }],
-    ['a repeated clause entry', (seat) => {
-      seat.analysisRubric.failureModes = [seat.analysisRubric.failureModes[0], seat.analysisRubric.failureModes[0]];
-    }],
-    ['a missing clause', (seat) => { delete seat.analysisRubric.outOfScope; }],
-    ['an unknown clause', (seat) => { seat.analysisRubric.preferredTone = ['Concise.']; }],
+    [
+      'an empty clause',
+      (seat) => {
+        seat.analysisRubric.requiredQuestions = [];
+      },
+    ],
+    [
+      'a repeated clause entry',
+      (seat) => {
+        seat.analysisRubric.failureModes = [
+          seat.analysisRubric.failureModes[0],
+          seat.analysisRubric.failureModes[0],
+        ];
+      },
+    ],
+    [
+      'a missing clause',
+      (seat) => {
+        delete seat.analysisRubric.outOfScope;
+      },
+    ],
+    [
+      'an unknown clause',
+      (seat) => {
+        seat.analysisRubric.preferredTone = ['Concise.'];
+      },
+    ],
   ];
 
   for (const [label, mutate] of cases) {
     assert.throws(
-      () => compileOperateContractRegistry(businessDomain((domain) => {
-        mutate(domain.roles.find(({ roleKind }) => roleKind === 'advisor'));
-      })),
+      () =>
+        compileOperateContractRegistry(
+          businessDomain((domain) => {
+            mutate(domain.roles.find(({ roleKind }) => roleKind === 'advisor'));
+          }),
+        ),
       (error) => error instanceof OperateContractCompileError,
       label,
     );
@@ -129,7 +185,10 @@ test('the registry is the sole rubric source and any edit changes generated asse
       'Treating an unpriced delay as a cost-free option.',
     ];
   });
-  writeFileSync(join(projectRoot, 'registry/operate-v2-contracts.json'), JSON.stringify(edited, null, 2));
+  writeFileSync(
+    join(projectRoot, 'registry/operate-v2-contracts.json'),
+    JSON.stringify(edited, null, 2),
+  );
   const rendered = renderOperateContractAssets({ projectRoot });
   assert.notEqual(
     rendered.assets[edited.generation.catalogPath],
@@ -137,11 +196,15 @@ test('the registry is the sole rubric source and any edit changes generated asse
   );
 
   const compiled = compileOperateContractRegistry(registry());
-  const businessRoles = compiled.extensions.domains.find(({ domainId }) => domainId === 'business').roles;
+  const businessRoles = compiled.extensions.domains.find(
+    ({ domainId }) => domainId === 'business',
+  ).roles;
   const ceo = businessRoles.find(({ roleId }) => roleId === 'strategy-finance');
   const cpo = businessRoles.find(({ roleId }) => roleId === 'product-activation');
   assert.notDeepEqual(ceo.analysisRubric, cpo.analysisRubric);
-  assert.ok(cpo.analysisRubric.requiredQuestions.some((question) => /acceptance criteria/iu.test(question)));
+  assert.ok(
+    cpo.analysisRubric.requiredQuestions.some((question) => /acceptance criteria/iu.test(question)),
+  );
   assert.ok(ceo.analysisRubric.outOfScope.every((entry) => !/product-owner/iu.test(entry)));
 });
 
@@ -155,9 +218,9 @@ test('rubric text may name the effects a seat is forbidden, and still cannot smu
   assert.ok(createOperateExtensionRegistryV2({ domains: [named, software()] }));
 
   const smuggled = business();
-  smuggled.roles.find(({ roleId }) => roleId === 'strategy-finance').analysisRubric.requiredEvidence = [
-    '../../etc/operating-objectives.json',
-  ];
+  smuggled.roles.find(
+    ({ roleId }) => roleId === 'strategy-finance',
+  ).analysisRubric.requiredEvidence = ['../../etc/operating-objectives.json'];
   assert.throws(() => createOperateExtensionRegistryV2({ domains: [smuggled, software()] }), {
     code: 'E_EXTENSION_REGISTRATION_INVALID',
   });
@@ -165,20 +228,29 @@ test('rubric text may name the effects a seat is forbidden, and still cannot smu
 
 test('an issued assignment carries the rubric of the role version it bound', () => {
   const base = checkpoint();
-  const derived = deriveOperatingRuntimeDeltaV2({
-    cycleId: base.result.state.cycles[0].cycleId,
-    snapshotId: base.result.snapshot.snapshotId,
-    stateId: base.result.operatingState.stateId,
-  }, {
-    deltaId: 'dlt_rubric_001',
-    eventId: 'evt_rubric_delta_001',
-    timestamp: '2026-08-09T12:01:00.000Z',
-    correlationId: 'corr_rubric_delta_001',
-  }, { initialState: base.result.state });
-  const domainDescriptor = JSON.parse(readFileSync(
-    new URL('../../conformance/fixtures/operating-runtime-v2/business-domain-valid.json', import.meta.url),
-    'utf8',
-  ));
+  const derived = deriveOperatingRuntimeDeltaV2(
+    {
+      cycleId: base.result.state.cycles[0].cycleId,
+      snapshotId: base.result.snapshot.snapshotId,
+      stateId: base.result.operatingState.stateId,
+    },
+    {
+      deltaId: 'dlt_rubric_001',
+      eventId: 'evt_rubric_delta_001',
+      timestamp: '2026-08-09T12:01:00.000Z',
+      correlationId: 'corr_rubric_delta_001',
+    },
+    { initialState: base.result.state },
+  );
+  const domainDescriptor = JSON.parse(
+    readFileSync(
+      new URL(
+        '../../conformance/fixtures/operating-runtime-v2/business-domain-valid.json',
+        import.meta.url,
+      ),
+      'utf8',
+    ),
+  );
   const board = planOperatingIntelligenceBoardV2({
     cycleId: base.result.state.cycles[0].cycleId,
     delta: derived.delta,
@@ -192,7 +264,9 @@ test('an issued assignment carries the rubric of the role version it bound', () 
     createdAt: '2026-08-09T12:02:00.000Z',
   });
   const seats = new Map(domainDescriptor.roles.map((role) => [role.roleId, role]));
-  const bound = new Map(board.plan.selectedRoles.map(({ roleId, roleVersion }) => [roleId, roleVersion]));
+  const bound = new Map(
+    board.plan.selectedRoles.map(({ roleId, roleVersion }) => [roleId, roleVersion]),
+  );
 
   assert.equal(board.assignments.length, domainDescriptor.roles.length);
   for (const assignment of board.assignments) {

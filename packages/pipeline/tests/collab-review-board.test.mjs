@@ -11,9 +11,7 @@
  */
 
 import assert from 'node:assert/strict';
-import {
-  readFileSync, mkdtempSync, mkdirSync, writeFileSync, rmSync,
-} from 'node:fs';
+import { readFileSync, mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { test } from 'node:test';
@@ -63,13 +61,25 @@ const pin = (over) => ({
 // ── generateStableId ──────────────────────────────────────────────────────
 
 test('generateStableId: deterministic 12-char hex, content-keyed', () => {
-  const a = generateStableId({ author: 'Dana', createdAt: '2026-06-17T10:00:00Z', comment: 'fix this' });
-  const b = generateStableId({ author: 'Dana', createdAt: '2026-06-17T10:00:00Z', comment: 'fix this' });
+  const a = generateStableId({
+    author: 'Dana',
+    createdAt: '2026-06-17T10:00:00Z',
+    comment: 'fix this',
+  });
+  const b = generateStableId({
+    author: 'Dana',
+    createdAt: '2026-06-17T10:00:00Z',
+    comment: 'fix this',
+  });
   assert.equal(a, b, 'same content → same id (idempotent)');
   assert.equal(a.length, 12);
   assert.match(a, /^[0-9a-f]{12}$/, '12-char lowercase hex prefix');
 
-  const diff = generateStableId({ author: 'Ravi', createdAt: '2026-06-17T10:00:00Z', comment: 'fix this' });
+  const diff = generateStableId({
+    author: 'Ravi',
+    createdAt: '2026-06-17T10:00:00Z',
+    comment: 'fix this',
+  });
   assert.notEqual(a, diff, 'different author → different id');
 });
 
@@ -78,7 +88,10 @@ test('generateStableId: deterministic 12-char hex, content-keyed', () => {
 test('normalizeLegacy: legacy file with no id/author maps to Anonymous + stable id', () => {
   const legacy = {
     ...emptyStore(),
-    pins: [pin({ comment: 'legacy note one' }), pin({ comment: 'legacy note two', intent: 'improve' })],
+    pins: [
+      pin({ comment: 'legacy note one' }),
+      pin({ comment: 'legacy note two', intent: 'improve' }),
+    ],
   };
   const norm = normalizeLegacy(legacy);
 
@@ -87,7 +100,10 @@ test('normalizeLegacy: legacy file with no id/author maps to Anonymous + stable 
     assert.match(p.id, /^[0-9a-f]{12}$/, 'stable id assigned');
   }
   // roster reconstructed from pins
-  assert.deepEqual(norm.authors.map((a) => a.name), [DEFAULT_AUTHOR]);
+  assert.deepEqual(
+    norm.authors.map((a) => a.name),
+    [DEFAULT_AUTHOR],
+  );
 });
 
 test('normalizeLegacy: preserves all existing fields and does not mutate the input', () => {
@@ -128,7 +144,12 @@ test('mergeFeedback: two authors → both items preserved, neither overwritten',
     pins: [{ ...danaPin, id: danaPinId }],
   };
 
-  const raviPin = pin({ author: 'Ravi', createdAt: '2026-06-17T10:02:00Z', comment: 'ravi improve', intent: 'improve' });
+  const raviPin = pin({
+    author: 'Ravi',
+    createdAt: '2026-06-17T10:02:00Z',
+    comment: 'ravi improve',
+    intent: 'improve',
+  });
   const contribution = {
     ...emptyStore(),
     authors: [{ name: 'Ravi', color: '--avatar-3' }],
@@ -137,15 +158,22 @@ test('mergeFeedback: two authors → both items preserved, neither overwritten',
 
   const merged = mergeFeedback(stored, contribution);
 
-  assert.equal(merged.pins.length, 2, 'both authors\' pins survive the merge');
+  assert.equal(merged.pins.length, 2, "both authors' pins survive the merge");
   const byAuthor = merged.pins.map((p) => p.author).sort();
   assert.deepEqual(byAuthor, ['Dana', 'Ravi']);
   assert.equal(merged.authors.length, 2, 'both authors in the roster, once each');
-  assert.ok(merged.authors.find((a) => a.name === 'Ravi').color === '--avatar-3', 'roster fields merged');
+  assert.ok(
+    merged.authors.find((a) => a.name === 'Ravi').color === '--avatar-3',
+    'roster fields merged',
+  );
 });
 
 test('mergeFeedback: idempotent re-submit of the same item → exactly one pin', () => {
-  const danaPin = pin({ author: 'Dana', createdAt: '2026-06-17T10:01:00Z', comment: 'same content' });
+  const danaPin = pin({
+    author: 'Dana',
+    createdAt: '2026-06-17T10:01:00Z',
+    comment: 'same content',
+  });
   const withId = { ...danaPin, id: generateStableId(danaPin) };
   const stored = { ...emptyStore(), authors: [{ name: 'Dana' }], pins: [withId] };
 
@@ -161,7 +189,11 @@ test('mergeFeedback: idempotent re-submit of the same item → exactly one pin',
 test('mergeFeedback: editing an item is last-write-wins per item (no duplicate)', () => {
   const base = pin({ author: 'Dana', createdAt: '2026-06-17T10:01:00Z', comment: 'first take' });
   const id = generateStableId(base);
-  const stored = { ...emptyStore(), authors: [{ name: 'Dana' }], pins: [{ ...base, id, status: 'open' }] };
+  const stored = {
+    ...emptyStore(),
+    authors: [{ name: 'Dana' }],
+    pins: [{ ...base, id, status: 'open' }],
+  };
 
   const edited = { ...base, id, status: 'resolved', intent: 'improve' };
   const contribution = { ...emptyStore(), authors: [{ name: 'Dana' }], pins: [edited] };
@@ -179,10 +211,17 @@ test('mergeFeedback: a contribution never removes a stored item it omits', () =>
 
   // contribution carries only Ravi's pin
   const b = pin({ author: 'Ravi', createdAt: '2026-06-17T10:05:00Z', comment: 'add me' });
-  const contribution = { ...emptyStore(), authors: [{ name: 'Ravi' }], pins: [{ ...b, id: generateStableId(b) }] };
+  const contribution = {
+    ...emptyStore(),
+    authors: [{ name: 'Ravi' }],
+    pins: [{ ...b, id: generateStableId(b) }],
+  };
 
   const merged = mergeFeedback(stored, contribution);
-  assert.ok(merged.pins.some((p) => p.id === aId), 'Dana\'s omitted pin is retained');
+  assert.ok(
+    merged.pins.some((p) => p.id === aId),
+    "Dana's omitted pin is retained",
+  );
   assert.equal(merged.pins.length, 2);
 });
 
@@ -195,8 +234,14 @@ test('mergeFeedback: per-variant ratings/comments merge key-by-key (no clobber)'
 });
 
 test('mergeFeedback: is pure — neither argument is mutated', () => {
-  const stored = { ...emptyStore(), pins: [{ ...pin({ author: 'Dana', comment: 'x' }), id: 'aaaaaaaaaaaa' }] };
-  const contribution = { ...emptyStore(), pins: [{ ...pin({ author: 'Ravi', comment: 'y' }), id: 'bbbbbbbbbbbb' }] };
+  const stored = {
+    ...emptyStore(),
+    pins: [{ ...pin({ author: 'Dana', comment: 'x' }), id: 'aaaaaaaaaaaa' }],
+  };
+  const contribution = {
+    ...emptyStore(),
+    pins: [{ ...pin({ author: 'Ravi', comment: 'y' }), id: 'bbbbbbbbbbbb' }],
+  };
   const storedBefore = JSON.parse(JSON.stringify(stored));
   const contribBefore = JSON.parse(JSON.stringify(contribution));
 
@@ -209,7 +254,12 @@ test('mergeFeedback: is pure — neither argument is mutated', () => {
 // ── schema validation of the merged / normalized output ─────────────────────
 
 test('mergeFeedback output validates against the extended design-feedback schema', () => {
-  const danaPin = pin({ author: 'Dana', createdAt: '2026-06-17T10:01:00Z', comment: 'dana', status: 'open' });
+  const danaPin = pin({
+    author: 'Dana',
+    createdAt: '2026-06-17T10:01:00Z',
+    comment: 'dana',
+    status: 'open',
+  });
   const raviPin = pin({
     author: 'Ravi',
     createdAt: '2026-06-17T10:02:00Z',
@@ -271,7 +321,10 @@ async function startBoard() {
   const registerBoard = () =>
     fetch(`${base}/api/boards`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', ...daemonControlHeaders({ PLANR_HOME: home }) },
+      headers: {
+        'content-type': 'application/json',
+        ...daemonControlHeaders({ PLANR_HOME: home }),
+      },
       body: JSON.stringify({ id, dir: boardDir }),
     });
   const reg = await registerBoard();
@@ -339,20 +392,32 @@ test('daemon: two sequential POSTs from different authors both survive + GET ret
     assert.equal(a.status, 200, 'Author A POST ok');
     // GET immediately after the first POST already reflects the merged record
     const afterA = await getFeedback(base, id);
-    assert.equal(afterA.pins.length, 1, 'GET after first POST shows A\'s pin');
+    assert.equal(afterA.pins.length, 1, "GET after first POST shows A's pin");
     assert.ok(afterA.pins.some((p) => p.author === 'Author A'));
 
-    const b = await postFeedback(base, id, contributionFor('Author B', 'B says improve this', { intent: 'improve' }));
+    const b = await postFeedback(
+      base,
+      id,
+      contributionFor('Author B', 'B says improve this', { intent: 'improve' }),
+    );
     assert.equal(b.status, 200, 'Author B POST ok');
 
     const merged = await getFeedback(base, id);
     const authors = merged.pins.map((p) => p.author).sort();
-    assert.deepEqual(authors, ['Author A', 'Author B'], 'both authors\' pins survive — neither overwritten');
+    assert.deepEqual(
+      authors,
+      ['Author A', 'Author B'],
+      "both authors' pins survive — neither overwritten",
+    );
     assert.equal(merged.authors.length, 2, 'both authors in the roster, once each');
 
     // The durable file on disk is the source of truth and stays schema-valid.
     const onDisk = JSON.parse(readFileSync(join(boardDir, 'feedback.json'), 'utf-8'));
-    assert.equal(validate(onDisk, feedbackSchema).length, 0, 'durable file validates against the schema');
+    assert.equal(
+      validate(onDisk, feedbackSchema).length,
+      0,
+      'durable file validates against the schema',
+    );
     assert.equal(onDisk.pins.length, 2);
   } finally {
     await cleanup();
@@ -366,7 +431,9 @@ test('daemon: async-parallel POSTs (Promise.all) do not corrupt the file or drop
     // read-merge-write so the final file is valid JSON with every contribution present.
     const authors = ['A', 'B', 'C', 'D', 'E'];
     const results = await Promise.all(
-      authors.map((name) => postFeedback(base, id, contributionFor(`Author ${name}`, `${name} pin`))),
+      authors.map((name) =>
+        postFeedback(base, id, contributionFor(`Author ${name}`, `${name} pin`)),
+      ),
     );
     for (const r of results) assert.equal(r.status, 200, 'every concurrent POST ok');
 
@@ -382,7 +449,11 @@ test('daemon: async-parallel POSTs (Promise.all) do not corrupt the file or drop
     const raw = readFileSync(join(boardDir, 'feedback.json'), 'utf-8');
     const onDisk = JSON.parse(raw); // throws on corruption — that is the assertion
     assert.equal(onDisk.pins.length, authors.length, 'all 5 pins persisted, none clobbered');
-    assert.equal(validate(onDisk, feedbackSchema).length, 0, 'concurrent-merged file still validates');
+    assert.equal(
+      validate(onDisk, feedbackSchema).length,
+      0,
+      'concurrent-merged file still validates',
+    );
   } finally {
     await cleanup();
   }
@@ -409,11 +480,19 @@ test('daemon: a "pending" round is reconciled into the durable store, never dest
       await new Promise((r) => setTimeout(r, 20));
     }
     const authors = merged.pins.map((p) => p.author).sort();
-    assert.deepEqual(authors, ['Author A', 'Author B'], 'pending round folded into the durable store');
+    assert.deepEqual(
+      authors,
+      ['Author A', 'Author B'],
+      'pending round folded into the durable store',
+    );
 
     // The pending file still exists (emptied, not deleted) so a stale round can't double-apply.
     const pendingRaw = JSON.parse(readFileSync(join(boardDir, 'feedback-pending.json'), 'utf-8'));
-    assert.deepEqual(pendingRaw.pins, [], 'pending file emptied after reconciliation, not deleted destructively');
+    assert.deepEqual(
+      pendingRaw.pins,
+      [],
+      'pending file emptied after reconciliation, not deleted destructively',
+    );
   } finally {
     await cleanup();
   }
@@ -471,11 +550,19 @@ test('a POSTed item carries author + createdAt, and the authors roster carries n
 
     // The stored feedback file is the durable record — the attribution must survive into it.
     const onDisk = JSON.parse(readFileSync(join(boardDir, 'feedback.json'), 'utf-8'));
-    assert.equal(validate(onDisk, feedbackSchema).length, 0, 'stored file validates against the schema');
+    assert.equal(
+      validate(onDisk, feedbackSchema).length,
+      0,
+      'stored file validates against the schema',
+    );
 
     const storedPin = onDisk.pins.find((p) => p.comment === 'tighten this spacing');
     assert.ok(storedPin, 'the POSTed pin is in the stored file');
-    assert.equal(storedPin.author, 'Alice Chen', 'stored pin carries author.name (the display name)');
+    assert.equal(
+      storedPin.author,
+      'Alice Chen',
+      'stored pin carries author.name (the display name)',
+    );
     assert.ok(storedPin.createdAt, 'stored pin carries createdAt');
     assert.match(storedPin.id, /^[0-9a-f]{12}$/, 'stored pin has a stable id');
 
@@ -542,9 +629,15 @@ test('a dropped pin POSTed to /api/feedback is returned by a subsequent GET with
   try {
     // Open: before any drop, GET returns the designed empty record (the load half).
     const initial = await getFeedback(base, id);
-    assert.deepEqual(initial, { authors: [], items: [] }, 'open on an empty board → designed empty record');
+    assert.deepEqual(
+      initial,
+      { authors: [], items: [] },
+      'open on an empty board → designed empty record',
+    );
 
-    const item = droppedItem('Dana Reviewer', 'lift the contrast on this label', { screen: 's-dashboard' });
+    const item = droppedItem('Dana Reviewer', 'lift the contrast on this label', {
+      screen: 's-dashboard',
+    });
     const res = await postFeedback(base, id, droppedPinContribution('Dana Reviewer', item));
     assert.equal(res.status, 200, 'pin-drop POST accepted');
     const posted = await res.json();
@@ -558,13 +651,21 @@ test('a dropped pin POSTed to /api/feedback is returned by a subsequent GET with
     assert.equal(stored.intent, 'improve', 'intent intact');
     assert.equal(stored.status, 'open', 'status intact');
     assert.equal(stored.createdAt, '2026-06-17T10:01:00Z', 'createdAt intact');
-    assert.equal(stored.x, 0.42, 'x intact'); assert.equal(stored.y, 0.18, 'y intact');
+    assert.equal(stored.x, 0.42, 'x intact');
+    assert.equal(stored.y, 0.18, 'y intact');
     assert.deepEqual(stored.replies, [], 'replies intact');
     assert.match(stored.id, /^[0-9a-f]{12}$/, 'stable id present');
-    assert.equal(stored.id, item.id, 'the client-computed id is the daemon\'s canonical id (idempotent)');
+    assert.equal(
+      stored.id,
+      item.id,
+      "the client-computed id is the daemon's canonical id (idempotent)",
+    );
 
     // The roster the GET returns drives the authors-seen cluster on the next load.
-    assert.ok((after.authors ?? []).some((a) => a.name === 'Dana Reviewer'), 'author in the returned roster');
+    assert.ok(
+      (after.authors ?? []).some((a) => a.name === 'Dana Reviewer'),
+      'author in the returned roster',
+    );
   } finally {
     await cleanup();
   }
@@ -595,7 +696,11 @@ test('a pin persists across a refresh and a board re-serve (load on open never s
 
     // The durable file on disk holds the pin and validates against the schema.
     const onDisk = JSON.parse(readFileSync(join(boardDir, 'feedback.json'), 'utf-8'));
-    assert.equal(validate(onDisk, feedbackSchema).length, 0, 'durable file validates against the schema');
+    assert.equal(
+      validate(onDisk, feedbackSchema).length,
+      0,
+      'durable file validates against the schema',
+    );
     assert.ok(onDisk.pins.some((p) => p.comment === 'persist me across refresh'));
   } finally {
     await cleanup();
@@ -641,31 +746,45 @@ test('dropping a second pin merges in without clobbering the first (per-pin POST
 // schema-valid + merges non-destructively against the real daemon.
 
 const { renderBoardHtml } = await import('../lib/design-engine/board.mjs');
-const boardHtml = () => renderBoardHtml({
-  boardId: FIXED_BOARD_ID,
-  title: 'collab review',
-  mode: 'review',
-  variants: [{ id: 'A', label: 'screen', src: 'a.svg', type: 'svg' }],
-});
-const boardRuntime = () => readFileSync(join(here, '..', 'templates/design/design-board-adapter.js'), 'utf8');
-const stageRuntime = () => readFileSync(join(here, '..', 'templates/artifact-review-stage.js'), 'utf8');
+const boardHtml = () =>
+  renderBoardHtml({
+    boardId: FIXED_BOARD_ID,
+    title: 'collab review',
+    mode: 'review',
+    variants: [{ id: 'A', label: 'screen', src: 'a.svg', type: 'svg' }],
+  });
+const boardRuntime = () =>
+  readFileSync(join(here, '..', 'templates/design/design-board-adapter.js'), 'utf8');
+const stageRuntime = () =>
+  readFileSync(join(here, '..', 'templates/artifact-review-stage.js'), 'utf8');
 
 test('the board consumes the shared feedback rail and decision primitives once', () => {
   const html = boardHtml();
   for (const hook of [
-    'planr-review-rail', 'data-planr-slot="feedback-rail"', 'data-planr-thread-list',
-    'data-planr-slot="domain-rail"', 'data-planr-slot="decision"',
+    'planr-review-rail',
+    'data-planr-slot="feedback-rail"',
+    'data-planr-thread-list',
+    'data-planr-slot="domain-rail"',
+    'data-planr-slot="decision"',
   ]) {
     assert.ok(html.includes(hook), `feedback rail ships ${hook}`);
   }
-  assert.equal((html.match(/class="planr-review-rail"/g) ?? []).length, 1, 'no nested/duplicate review rail');
+  assert.equal(
+    (html.match(/class="planr-review-rail"/g) ?? []).length,
+    1,
+    'no nested/duplicate review rail',
+  );
 });
 
 test('the shared runtime ships threads, replies and resolve/reopen lifecycle', () => {
   const html = stageRuntime();
   for (const hook of [
-    'planr-thread', 'planr-reply-form', 'data-planr-thread-action',
-    'Resolve', 'Reopen', 'Show pin',
+    'planr-thread',
+    'planr-reply-form',
+    'data-planr-thread-action',
+    'Resolve',
+    'Reopen',
+    'Show pin',
   ]) {
     assert.ok(html.includes(hook), `shared feedback runtime ships ${hook}`);
   }
@@ -674,9 +793,7 @@ test('the shared runtime ships threads, replies and resolve/reopen lifecycle', (
 test('shared selection and legacy persistence adapters are both wired', () => {
   const html = stageRuntime();
   const adapter = boardRuntime();
-  for (const fn of [
-    'focusThread', 'focusPin', 'selectPin', 'mountArtifactFeedbackRail',
-  ]) {
+  for (const fn of ['focusThread', 'focusPin', 'selectPin', 'mountArtifactFeedbackRail']) {
     assert.ok(html.includes(fn), `shared client wires ${fn}`);
   }
   for (const route of ['api/artifact-review', 'api/feedback', 'api/feedback/stream']) {
@@ -687,7 +804,10 @@ test('shared selection and legacy persistence adapters are both wired', () => {
 test('the shared rail uses canonical Planr theme tokens', () => {
   const html = boardHtml();
   assert.ok(html.includes('.planr-review-rail'), 'shared feedback rail CSS ships');
-  assert.ok(html.includes('var(--planr-color-rule)'), 'shared rail consumes generated theme tokens');
+  assert.ok(
+    html.includes('var(--planr-color-rule)'),
+    'shared rail consumes generated theme tokens',
+  );
   assert.ok(!html.includes('--rb-'), 'legacy board palette is not duplicated');
 });
 
@@ -710,10 +830,16 @@ test('a reply the detail card POSTs is schema-valid and merges non-destructively
       regenerated: false,
       ratings: {},
       comments: {},
-      authors: [{ name: 'Ravi', initials: 'R', color: '#0e7490', lastSeen: '2026-06-17T11:00:00Z' }],
+      authors: [
+        { name: 'Ravi', initials: 'R', color: '#0e7490', lastSeen: '2026-06-17T11:00:00Z' },
+      ],
       pins: [replied],
     };
-    assert.equal(validate(contribution, feedbackSchema).length, 0, 'reply contribution is schema-valid');
+    assert.equal(
+      validate(contribution, feedbackSchema).length,
+      0,
+      'reply contribution is schema-valid',
+    );
 
     const res = await postFeedback(base, id, contribution);
     assert.equal(res.status, 200, 'reply POST accepted');
@@ -782,7 +908,7 @@ test('isDeleteMarker flags { deleted:true } and ignores real pins', () => {
   assert.equal(isDeleteMarker(null), false);
 });
 
-test('mergeFeedback removes an item on the OWNER\'s delete marker only', () => {
+test("mergeFeedback removes an item on the OWNER's delete marker only", () => {
   const danaPin = pin({ author: 'Dana', createdAt: '2026-06-17T10:01:00Z', comment: 'dana item' });
   const danaId = generateStableId(danaPin);
   const stored = {
@@ -792,14 +918,22 @@ test('mergeFeedback removes an item on the OWNER\'s delete marker only', () => {
   };
 
   // Dana deletes Dana's own item → removed.
-  const ownDelete = { ...emptyStore(), authors: [{ name: 'Dana' }], pins: [{ id: danaId, author: 'Dana', deleted: true }] };
+  const ownDelete = {
+    ...emptyStore(),
+    authors: [{ name: 'Dana' }],
+    pins: [{ id: danaId, author: 'Dana', deleted: true }],
+  };
   const afterOwn = mergeFeedback(stored, ownDelete);
   assert.equal(afterOwn.pins.length, 0, 'owner delete removes the item');
 
   // Ravi tries to delete Dana's item (same id, wrong author) → no-op, item stays.
-  const foreignDelete = { ...emptyStore(), authors: [{ name: 'Ravi' }], pins: [{ id: danaId, author: 'Ravi', deleted: true }] };
+  const foreignDelete = {
+    ...emptyStore(),
+    authors: [{ name: 'Ravi' }],
+    pins: [{ id: danaId, author: 'Ravi', deleted: true }],
+  };
   const afterForeign = mergeFeedback(stored, foreignDelete);
-  assert.equal(afterForeign.pins.length, 1, 'a non-owner cannot delete another reviewer\'s item');
+  assert.equal(afterForeign.pins.length, 1, "a non-owner cannot delete another reviewer's item");
   assert.equal(afterForeign.pins[0].author, 'Dana');
 });
 
@@ -809,23 +943,42 @@ test('mergeFeedback appends new replies and is idempotent by reply signature', (
   const stored = {
     ...emptyStore(),
     authors: [{ name: 'Dana' }],
-    pins: [{ ...base, id, replies: [{ author: 'Dana', comment: 'first', createdAt: '2026-06-17T10:02:00Z' }] }],
+    pins: [
+      {
+        ...base,
+        id,
+        replies: [{ author: 'Dana', comment: 'first', createdAt: '2026-06-17T10:02:00Z' }],
+      },
+    ],
   };
 
   // a NEW reply (different content) is appended to the thread, not clobbering the first
   const withSecond = {
     ...emptyStore(),
     authors: [{ name: 'Ravi' }],
-    pins: [{ ...base, id, replies: [{ author: 'Ravi', comment: 'second', createdAt: '2026-06-17T10:03:00Z' }] }],
+    pins: [
+      {
+        ...base,
+        id,
+        replies: [{ author: 'Ravi', comment: 'second', createdAt: '2026-06-17T10:03:00Z' }],
+      },
+    ],
   };
   const merged = mergeFeedback(stored, withSecond);
   assert.equal(merged.pins.length, 1, 'one pin');
   assert.equal(merged.pins[0].replies.length, 2, 'new reply appended, the first preserved');
-  assert.deepEqual(merged.pins[0].replies.map((r) => r.comment), ['first', 'second']);
+  assert.deepEqual(
+    merged.pins[0].replies.map((r) => r.comment),
+    ['first', 'second'],
+  );
 
   // re-merging the same contribution is idempotent — no duplicate reply
   const again = mergeFeedback(merged, withSecond);
-  assert.equal(again.pins[0].replies.length, 2, 're-posting the same reply is a no-op (idempotent)');
+  assert.equal(
+    again.pins[0].replies.length,
+    2,
+    're-posting the same reply is a no-op (idempotent)',
+  );
 });
 
 // ── reply append persists + idempotent (HTTP round-trip) ─────────────
@@ -848,11 +1001,19 @@ test('a reply POSTed for a pin persists and a re-POST of the same reply is idemp
     assert.equal(stored.replies[0].comment, 'looking at it');
 
     // POST the SAME reply again (same author/comment/createdAt) → no duplicate entry (idempotent).
-    const dup = await postFeedback(base, id, droppedPinContribution('Ravi', { ...item, replies: [reply] }));
+    const dup = await postFeedback(
+      base,
+      id,
+      droppedPinContribution('Ravi', { ...item, replies: [reply] }),
+    );
     assert.equal(dup.status, 200);
     const afterDup = await getFeedback(base, id);
     const storedDup = afterDup.pins.find((p) => p.comment === 'reply round-trip');
-    assert.equal(storedDup.replies.length, 1, 're-posting the identical reply is a no-op (idempotent)');
+    assert.equal(
+      storedDup.replies.length,
+      1,
+      're-posting the identical reply is a no-op (idempotent)',
+    );
     assert.equal(afterDup.pins.length, 1, 'no duplicate pin');
   } finally {
     await cleanup();
@@ -869,15 +1030,29 @@ test('POST status:resolved persists, then POST status:open reverts (last-write-w
 
     // resolve
     const resolved = { ...item, status: 'resolved' };
-    assert.equal((await postFeedback(base, id, droppedPinContribution('Dana Reviewer', resolved))).status, 200);
+    assert.equal(
+      (await postFeedback(base, id, droppedPinContribution('Dana Reviewer', resolved))).status,
+      200,
+    );
     let after = await getFeedback(base, id);
-    assert.equal(after.pins.find((p) => p.comment === 'flip my status').status, 'resolved', 'resolved persists');
+    assert.equal(
+      after.pins.find((p) => p.comment === 'flip my status').status,
+      'resolved',
+      'resolved persists',
+    );
 
     // re-open — last write wins per item
     const reopened = { ...item, status: 'open' };
-    assert.equal((await postFeedback(base, id, droppedPinContribution('Dana Reviewer', reopened))).status, 200);
+    assert.equal(
+      (await postFeedback(base, id, droppedPinContribution('Dana Reviewer', reopened))).status,
+      200,
+    );
     after = await getFeedback(base, id);
-    assert.equal(after.pins.find((p) => p.comment === 'flip my status').status, 'open', 'status reverts to open (last-write-wins)');
+    assert.equal(
+      after.pins.find((p) => p.comment === 'flip my status').status,
+      'open',
+      'status reverts to open (last-write-wins)',
+    );
     assert.equal(after.pins.length, 1, 'still one item — status edits never duplicate');
   } finally {
     await cleanup();
@@ -900,19 +1075,36 @@ test('an author deletes their own pin; a foreign delete marker is a no-op', asyn
     assert.equal(delOwn.status, 200, 'own-item delete marker accepted');
     let after = await getFeedback(base, id);
     assert.ok(!after.pins.some((p) => p.comment === 'A owns P1'), 'P1 removed by its owner');
-    assert.ok(after.pins.some((p) => p.comment === 'B owns P2'), 'P2 untouched');
+    assert.ok(
+      after.pins.some((p) => p.comment === 'B owns P2'),
+      'P2 untouched',
+    );
 
     // Author A POSTs a delete marker for P2 (owned by Author B) → no-op, P2 still present.
-    const delForeign = await postFeedback(base, id, deleteMarkerContribution('Author A', { id: p2.id, author: 'Author A' }));
+    const delForeign = await postFeedback(
+      base,
+      id,
+      deleteMarkerContribution('Author A', { id: p2.id, author: 'Author A' }),
+    );
     assert.equal(delForeign.status, 200, 'a foreign delete marker is accepted but is a no-op');
     after = await getFeedback(base, id);
-    assert.ok(after.pins.some((p) => p.comment === 'B owns P2'), 'a non-owner cannot delete another author\'s item');
+    assert.ok(
+      after.pins.some((p) => p.comment === 'B owns P2'),
+      "a non-owner cannot delete another author's item",
+    );
     assert.equal(after.pins.length, 1, 'only P2 remains');
 
     // The durable file is still valid (delete markers are never written verbatim).
     const onDisk = JSON.parse(readFileSync(join(boardDir, 'feedback.json'), 'utf-8'));
-    assert.equal(validate(onDisk, feedbackSchema).length, 0, 'durable file still validates after deletes');
-    assert.ok(!onDisk.pins.some((p) => p.deleted), 'no delete marker is ever stored in the durable file');
+    assert.equal(
+      validate(onDisk, feedbackSchema).length,
+      0,
+      'durable file still validates after deletes',
+    );
+    assert.ok(
+      !onDisk.pins.some((p) => p.deleted),
+      'no delete marker is ever stored in the durable file',
+    );
   } finally {
     await cleanup();
   }
@@ -933,7 +1125,8 @@ test('an author deletes their own pin; a foreign delete marker is a no-op', asyn
 
 test('a second SSE client connecting triggers presence:join on the first', async () => {
   const { base, id, cleanup } = await startBoard();
-  let a; let b;
+  let a;
+  let b;
   try {
     a = openSse(base, id, { name: 'Reviewer A', initials: 'RA', color: '--avatar-1' });
     await a.ready;
@@ -949,7 +1142,11 @@ test('a second SSE client connecting triggers presence:join on the first', async
     const rosterB = join.data.roster.find((r) => r.name === 'Reviewer B');
     assert.equal(rosterB.initials, 'RB', 'roster carries the avatar initials');
     assert.equal(rosterB.color, '--avatar-2', 'roster carries the avatar color');
-    assert.equal(b.events.filter(isEvent('presence:join')).length, 0, 'B does not receive its own join');
+    assert.equal(
+      b.events.filter(isEvent('presence:join')).length,
+      0,
+      'B does not receive its own join',
+    );
   } finally {
     a?.close();
     b?.close();
@@ -959,7 +1156,9 @@ test('a second SSE client connecting triggers presence:join on the first', async
 
 test('same reviewer with two tabs is deduplicated to one presence entry (by name)', async () => {
   const { base, id, cleanup } = await startBoard();
-  let watcher; let tab1; let tab2;
+  let watcher;
+  let tab1;
+  let tab2;
   try {
     watcher = openSse(base, id, { name: 'Watcher', initials: 'W', color: '--avatar-5' });
     await watcher.ready;
@@ -972,14 +1171,17 @@ test('same reviewer with two tabs is deduplicated to one presence entry (by name
     tab2 = openSse(base, id, { name: 'Dana', initials: 'D', color: '--avatar-3' });
     await tab2.ready;
     // Wait until the watcher has seen two join events (one per tab connecting).
-    await watcher.waitFor(
-      () => watcher.events.filter(isEvent('presence:join')).length >= 2,
-      { label: 'second join' },
-    );
+    await watcher.waitFor(() => watcher.events.filter(isEvent('presence:join')).length >= 2, {
+      label: 'second join',
+    });
 
     const lastJoin = watcher.events.filter(isEvent('presence:join')).at(-1);
     const danaEntries = (lastJoin.data.roster ?? []).filter((r) => r.name === 'Dana');
-    assert.equal(danaEntries.length, 1, 'two tabs by the same reviewer surface as one presence entry');
+    assert.equal(
+      danaEntries.length,
+      1,
+      'two tabs by the same reviewer surface as one presence entry',
+    );
   } finally {
     tab1?.close();
     tab2?.close();
@@ -990,7 +1192,8 @@ test('same reviewer with two tabs is deduplicated to one presence entry (by name
 
 test('a successful POST /api/feedback emits feedback:update to all connected clients', async () => {
   const { base, id, cleanup } = await startBoard();
-  let a; let b;
+  let a;
+  let b;
   try {
     a = openSse(base, id, { name: 'Reviewer A', initials: 'RA', color: '--avatar-1' });
     b = openSse(base, id, { name: 'Reviewer B', initials: 'RB', color: '--avatar-2' });
@@ -1012,7 +1215,10 @@ test('a successful POST /api/feedback emits feedback:update to all connected cli
     assert.equal(evA.data.item.id, item.id, 'the broadcast carries the canonical merged item id');
     assert.equal(evA.data.item.author, 'Reviewer B', 'attribution rides the live update');
     // The event is the single item delta, not the entire file (no pins[]/authors[] envelope).
-    assert.ok(!Array.isArray(evA.data.pins), 'feedback:update carries only the changed item, not the whole record');
+    assert.ok(
+      !Array.isArray(evA.data.pins),
+      'feedback:update carries only the changed item, not the whole record',
+    );
   } finally {
     a?.close();
     b?.close();
@@ -1022,7 +1228,8 @@ test('a successful POST /api/feedback emits feedback:update to all connected cli
 
 test('when a client disconnects, the remaining client receives presence:leave', async () => {
   const { base, id, cleanup } = await startBoard();
-  let a; let b;
+  let a;
+  let b;
   try {
     a = openSse(base, id, { name: 'Reviewer A', initials: 'RA', color: '--avatar-1' });
     await a.ready;
@@ -1054,11 +1261,17 @@ test('when a client disconnects, the remaining client receives presence:leave', 
 
 test('the board ships a keyboard-accessible Show/Hide pins toggle (role=switch + aria-checked)', () => {
   const html = boardRuntime();
-  assert.ok(html.includes('data-planr-pins-toggle'), 'show/hide pins toggle ships in the domain slot');
+  assert.ok(
+    html.includes('data-planr-pins-toggle'),
+    'show/hide pins toggle ships in the domain slot',
+  );
   assert.ok(html.includes('role", "switch"'), 'the toggle is role=switch (keyboard accessible)');
   assert.ok(html.includes('aria-checked'), 'aria-checked mirrors pin visibility for AT');
   assert.ok(html.includes('Pins hidden'), 'the toggle itself surfaces the hidden state');
-  assert.ok(html.includes('data-planr-annotation-layer'), 'the toggle controls the one shared annotation layer');
+  assert.ok(
+    html.includes('data-planr-annotation-layer'),
+    'the toggle controls the one shared annotation layer',
+  );
 });
 
 // ── premium designed states + accessibility (board render) ────────────
@@ -1073,12 +1286,21 @@ test('the board ships every designed no-dead-end state (empty / loading / offlin
 
   // empty (first-comment invite) — the DESIGN stays visible; the invitation lives in the
   // comments rail, never as a full-stage overlay that hides the design.
-  assert.ok(!html.includes('id="rbEmptyStage"'), 'no full-stage empty overlay (the design is always visible)');
+  assert.ok(
+    !html.includes('id="rbEmptyStage"'),
+    'no full-stage empty overlay (the design is always visible)',
+  );
   assert.ok(html.includes('No comments yet'), 'the rail invites the first comment');
 
   assert.ok(html.includes('class="planr-stage-status"'), 'loading/error status surface ships');
-  assert.ok(html.includes('role="status"') && html.includes('aria-live="polite"'), 'status is announced politely');
-  assert.ok(html.includes('class="planr-field-error"'), 'save/validation errors have an alert surface');
+  assert.ok(
+    html.includes('role="status"') && html.includes('aria-live="polite"'),
+    'status is announced politely',
+  );
+  assert.ok(
+    html.includes('class="planr-field-error"'),
+    'save/validation errors have an alert surface',
+  );
   assert.match(
     stageRuntime(),
     /allPins\.filter\(\(\{ status \}\) => status !== "resolved"\)\.length/u,
@@ -1092,5 +1314,8 @@ test('the board honours prefers-reduced-motion (motion collapses to ~0ms)', () =
     html.includes('@media (prefers-reduced-motion: reduce)'),
     'a reduced-motion kill-switch neutralises animations/transitions',
   );
-  assert.ok(html.includes('transition-duration: 0s !important'), 'reduced motion collapses transitions');
+  assert.ok(
+    html.includes('transition-duration: 0s !important'),
+    'reduced motion collapses transitions',
+  );
 });

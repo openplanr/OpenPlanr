@@ -26,7 +26,10 @@ export async function verifyOperateV2ProductExperience() {
   const governed = await verifyOperateV2GovernedExecution();
 
   exactDomains(intelligence.domains, 'operating intelligence');
-  exactDomains(governed.journeys.map(({ domainId }) => domainId), 'governed execution');
+  exactDomains(
+    governed.journeys.map(({ domainId }) => domainId),
+    'governed execution',
+  );
   assert.equal(intelligence.ok, true);
   assert.equal(governed.ok, true);
   assert.equal(governed.networkAttempts, 0);
@@ -89,7 +92,8 @@ export async function verifyOperateV2ProductExperience() {
       realEffects: governed.realEffects,
       containedEffects: journeys.reduce((total, journey) => total + journey.counts.effects, 0),
       modelDispatches: journeys.reduce(
-        (total, journey) => total + journey.intelligence.modelDispatchCount + journey.counts.modelDispatches,
+        (total, journey) =>
+          total + journey.intelligence.modelDispatchCount + journey.counts.modelDispatches,
         0,
       ),
     }),
@@ -98,7 +102,9 @@ export async function verifyOperateV2ProductExperience() {
   });
 }
 
-if (process.argv[1]
-  && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))) {
+if (
+  process.argv[1] &&
+  realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))
+) {
   process.stdout.write(`${JSON.stringify(await verifyOperateV2ProductExperience())}\n`);
 }

@@ -35,26 +35,38 @@ const productExperience = runJson('conformance/verify-operate-v2-product-experie
 const purity = checkOperateRuntimePurity(root);
 assert.equal(purity.ok, true);
 
-const hasPrivateReports = downstreamReports.every(([, report]) => existsSync(join(phaseRoot, report)));
+const hasPrivateReports = downstreamReports.every(([, report]) =>
+  existsSync(join(phaseRoot, report)),
+);
 const downstream = hasPrivateReports
   ? downstreamReports.map(([repository, report]) => {
-    const content = readFileSync(join(phaseRoot, report), 'utf8');
-    assert.match(content, /\*\*Status:\*\* COMPLETE/u, `${report} must record completed owner evidence`);
-    return { repository, status: 'COMPLETE', report: `.planr/products/operate-2.0/phases/${report}` };
-  })
+      const content = readFileSync(join(phaseRoot, report), 'utf8');
+      assert.match(
+        content,
+        /\*\*Status:\*\* COMPLETE/u,
+        `${report} must record completed owner evidence`,
+      );
+      return {
+        repository,
+        status: 'COMPLETE',
+        report: `.planr/products/operate-2.0/phases/${report}`,
+      };
+    })
   : [];
 
-process.stdout.write(`${JSON.stringify({
-  status: hasPrivateReports ? 'PASS' : 'NOT_APPLICABLE',
-  local: {
-    status: 'PASS',
-    absence,
-    runtime,
-    evidence,
-    operatingIntelligence,
-    governedExecution,
-    productExperience,
-    packagePurity: purity.ok,
-  },
-  downstream,
-})}\n`);
+process.stdout.write(
+  `${JSON.stringify({
+    status: hasPrivateReports ? 'PASS' : 'NOT_APPLICABLE',
+    local: {
+      status: 'PASS',
+      absence,
+      runtime,
+      evidence,
+      operatingIntelligence,
+      governedExecution,
+      productExperience,
+      packagePurity: purity.ok,
+    },
+    downstream,
+  })}\n`,
+);

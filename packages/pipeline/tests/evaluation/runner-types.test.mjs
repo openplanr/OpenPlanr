@@ -10,8 +10,13 @@ import { resolveWorkspaceDependencyRoot } from '../helpers/workspace-dependency.
 test('evaluation declarations require explicit active sources and accept portable legacy reads', () => {
   const consumer = mkdtempSync(join(tmpdir(), 'planr-evaluation-types-'));
   try {
-    copyFileSync(new URL('../../lib/evaluation/runner.d.mts', import.meta.url), join(consumer, 'runner.d.mts'));
-    writeFileSync(join(consumer, 'consumer.mts'), `
+    copyFileSync(
+      new URL('../../lib/evaluation/runner.d.mts', import.meta.url),
+      join(consumer, 'runner.d.mts'),
+    );
+    writeFileSync(
+      join(consumer, 'consumer.mts'),
+      `
 import { loadEvaluationInputs, runEvaluation } from './runner.mjs';
 import type { EvaluationInputs, EvaluationOutcome, EvaluationRunOptions } from './runner.mjs';
 const repoRoot = '/installed/pipeline';
@@ -32,12 +37,24 @@ runEvaluation({ repoRoot, now: options.now });
 // @ts-expect-error supplying inputs does not remove the source-root requirement
 runEvaluation({ repoRoot, now: options.now, inputs: legacy });
 void outcome;
-`);
-    const result = spawnSync(process.execPath, [
-      join(resolveWorkspaceDependencyRoot('typescript'), 'bin', 'tsc'),
-      '--noEmit', '--strict', '--target', 'ES2022',
-      '--module', 'NodeNext', '--moduleResolution', 'NodeNext', 'consumer.mts',
-    ], { cwd: consumer, encoding: 'utf8' });
+`,
+    );
+    const result = spawnSync(
+      process.execPath,
+      [
+        join(resolveWorkspaceDependencyRoot('typescript'), 'bin', 'tsc'),
+        '--noEmit',
+        '--strict',
+        '--target',
+        'ES2022',
+        '--module',
+        'NodeNext',
+        '--moduleResolution',
+        'NodeNext',
+        'consumer.mts',
+      ],
+      { cwd: consumer, encoding: 'utf8' },
+    );
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
   } finally {
     rmSync(consumer, { recursive: true, force: true });

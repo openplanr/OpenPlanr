@@ -24,7 +24,13 @@ test('a plan authored under the removed bookkeeping fields still loads', () => {
 
 test('none of the obsolete fields reaches the working context', () => {
   const serialized = JSON.stringify(plan());
-  for (const obsolete of ['contentHash', 'correctionBudget', 'reviewerIds', 'proofPacket', 'deadbeef']) {
+  for (const obsolete of [
+    'contentHash',
+    'correctionBudget',
+    'reviewerIds',
+    'proofPacket',
+    'deadbeef',
+  ]) {
     assert.ok(!serialized.includes(obsolete), `${obsolete} must not survive into the context`);
   }
 });
@@ -62,7 +68,14 @@ test('a spec without FR headings or acceptance criteria still yields usable cont
 
 test('the task schema requires no orchestration bookkeeping', () => {
   const schema = JSON.parse(readFileSync(join(root, 'schemas/v1.0.0/task.schema.json'), 'utf8'));
-  for (const field of ['contentHash', 'runId', 'candidate', 'receiptHash', 'reviewerIds', 'correctionBudget']) {
+  for (const field of [
+    'contentHash',
+    'runId',
+    'candidate',
+    'receiptHash',
+    'reviewerIds',
+    'correctionBudget',
+  ]) {
     assert.ok(!schema.required.includes(field), `${field} must not be required of a task`);
   }
 });

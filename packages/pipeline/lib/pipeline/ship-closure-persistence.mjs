@@ -39,24 +39,36 @@ export function closurePaths(featureRoot, runId, custodyRoot = undefined) {
   };
 }
 
-export function assertPathCustody(custodyRoot, target, { allowMissing = false, expectedKind = undefined } = {}) {
-  if (typeof custodyRoot !== 'string' || !isAbsolute(resolve(custodyRoot))) fail('E_SHIP_STORAGE_UNSAFE', 'SHIP custody requires one trusted absolute project root.');
+export function assertPathCustody(
+  custodyRoot,
+  target,
+  { allowMissing = false, expectedKind = undefined } = {},
+) {
+  if (typeof custodyRoot !== 'string' || !isAbsolute(resolve(custodyRoot)))
+    fail('E_SHIP_STORAGE_UNSAFE', 'SHIP custody requires one trusted absolute project root.');
   const root = resolve(custodyRoot);
   const resolvedTarget = resolve(target);
-  if (resolvedTarget !== root && !resolvedTarget.startsWith(`${root}${sep}`)) fail('E_SHIP_STORAGE_UNSAFE', `SHIP custody target escapes its trusted root: ${target}`);
+  if (resolvedTarget !== root && !resolvedTarget.startsWith(`${root}${sep}`))
+    fail('E_SHIP_STORAGE_UNSAFE', `SHIP custody target escapes its trusted root: ${target}`);
   const segments = relative(root, resolvedTarget).split(sep).filter(Boolean);
   let current = root;
   for (let index = -1; index < segments.length; index += 1) {
     if (index >= 0) current = join(current, segments[index]);
     let stat;
-    try { stat = lstatSync(current); } catch (error) {
+    try {
+      stat = lstatSync(current);
+    } catch (error) {
       if (allowMissing && error?.code === 'ENOENT') return null;
       throw error;
     }
-    if (stat.isSymbolicLink()) fail('E_SHIP_STORAGE_UNSAFE', `SHIP custody traverses a symlink: ${current}`);
-    if (index < segments.length - 1 && !stat.isDirectory()) fail('E_SHIP_STORAGE_UNSAFE', `SHIP custody ancestor is not a directory: ${current}`);
-    if (index === segments.length - 1 && expectedKind === 'directory' && !stat.isDirectory()) fail('E_SHIP_STORAGE_UNSAFE', `SHIP custody target is not a directory: ${current}`);
-    if (index === segments.length - 1 && expectedKind === 'file' && !stat.isFile()) fail('E_SHIP_STORAGE_UNSAFE', `SHIP custody target is not a regular file: ${current}`);
+    if (stat.isSymbolicLink())
+      fail('E_SHIP_STORAGE_UNSAFE', `SHIP custody traverses a symlink: ${current}`);
+    if (index < segments.length - 1 && !stat.isDirectory())
+      fail('E_SHIP_STORAGE_UNSAFE', `SHIP custody ancestor is not a directory: ${current}`);
+    if (index === segments.length - 1 && expectedKind === 'directory' && !stat.isDirectory())
+      fail('E_SHIP_STORAGE_UNSAFE', `SHIP custody target is not a directory: ${current}`);
+    if (index === segments.length - 1 && expectedKind === 'file' && !stat.isFile())
+      fail('E_SHIP_STORAGE_UNSAFE', `SHIP custody target is not a regular file: ${current}`);
   }
   return lstatSync(resolvedTarget);
 }
@@ -64,7 +76,8 @@ export function assertPathCustody(custodyRoot, target, { allowMissing = false, e
 function ensureOwnedDirectory(path) {
   if (existsSync(path)) {
     const stat = lstatSync(path);
-    if (stat.isSymbolicLink() || !stat.isDirectory()) fail('E_SHIP_STORAGE_UNSAFE', `SHIP storage component is not an owned directory: ${path}`);
+    if (stat.isSymbolicLink() || !stat.isDirectory())
+      fail('E_SHIP_STORAGE_UNSAFE', `SHIP storage component is not an owned directory: ${path}`);
     return;
   }
   try {
@@ -72,14 +85,17 @@ function ensureOwnedDirectory(path) {
   } catch (error) {
     if (error?.code !== 'EEXIST') throw error;
     const stat = lstatSync(path);
-    if (stat.isSymbolicLink() || !stat.isDirectory()) fail('E_SHIP_STORAGE_UNSAFE', `SHIP storage component is not an owned directory: ${path}`);
+    if (stat.isSymbolicLink() || !stat.isDirectory())
+      fail('E_SHIP_STORAGE_UNSAFE', `SHIP storage component is not an owned directory: ${path}`);
   }
 }
 
 export function ensureClosureDirs(paths) {
-  if (paths.custodyRoot) assertPathCustody(paths.custodyRoot, paths.featureRoot, { expectedKind: 'directory' });
+  if (paths.custodyRoot)
+    assertPathCustody(paths.custodyRoot, paths.featureRoot, { expectedKind: 'directory' });
   const feature = lstatSync(paths.featureRoot);
-  if (feature.isSymbolicLink() || !feature.isDirectory()) fail('E_SHIP_STORAGE_UNSAFE', `Feature root is not a real directory: ${paths.featureRoot}`);
+  if (feature.isSymbolicLink() || !feature.isDirectory())
+    fail('E_SHIP_STORAGE_UNSAFE', `Feature root is not a real directory: ${paths.featureRoot}`);
   ensureOwnedDirectory(paths.shipRoot);
   ensureOwnedDirectory(paths.activeDir);
   ensureOwnedDirectory(paths.receiptDir);
@@ -88,14 +104,16 @@ export function ensureClosureDirs(paths) {
 
 export function assertRegularCustodyFile(path) {
   const stat = lstatSync(path);
-  if (stat.isSymbolicLink() || !stat.isFile()) fail('E_SHIP_STORAGE_UNSAFE', `SHIP custody file is not a regular file: ${path}`);
+  if (stat.isSymbolicLink() || !stat.isFile())
+    fail('E_SHIP_STORAGE_UNSAFE', `SHIP custody file is not a regular file: ${path}`);
   return stat;
 }
 
 export function atomicWrite(path, bytes) {
   const parent = dirname(path);
   const parentStat = lstatSync(parent);
-  if (parentStat.isSymbolicLink() || !parentStat.isDirectory()) fail('E_SHIP_STORAGE_UNSAFE', `SHIP write parent is unsafe: ${parent}`);
+  if (parentStat.isSymbolicLink() || !parentStat.isDirectory())
+    fail('E_SHIP_STORAGE_UNSAFE', `SHIP write parent is unsafe: ${parent}`);
   const temp = `${path}.${process.pid}.${randomUUID()}.tmp`;
   let fd;
   try {
@@ -106,10 +124,18 @@ export function atomicWrite(path, bytes) {
     fd = undefined;
     renameSync(temp, path);
     const directoryFd = openSync(parent, 'r');
-    try { fsyncSync(directoryFd); } finally { closeSync(directoryFd); }
+    try {
+      fsyncSync(directoryFd);
+    } finally {
+      closeSync(directoryFd);
+    }
   } catch (error) {
     if (fd !== undefined) closeSync(fd);
-    try { unlinkSync(temp); } catch (cleanupError) { if (cleanupError?.code !== 'ENOENT') throw cleanupError; }
+    try {
+      unlinkSync(temp);
+    } catch (cleanupError) {
+      if (cleanupError?.code !== 'ENOENT') throw cleanupError;
+    }
     throw error;
   }
 }
@@ -119,7 +145,10 @@ export function writeJson(path, value) {
 }
 
 function processStartIdentity(pid) {
-  const result = spawnSync('ps', ['-p', String(pid), '-o', 'lstart='], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+  const result = spawnSync('ps', ['-p', String(pid), '-o', 'lstart='], {
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'ignore'],
+  });
   return result.status === 0 && result.stdout.trim() ? result.stdout.trim() : null;
 }
 
@@ -134,7 +163,12 @@ function inspectProcess(pid) {
 }
 
 function lockMetadata() {
-  return { pid: process.pid, host: hostname(), processStart: processStartIdentity(process.pid), createdAt: new Date().toISOString() };
+  return {
+    pid: process.pid,
+    host: hostname(),
+    processStart: processStartIdentity(process.pid),
+    createdAt: new Date().toISOString(),
+  };
 }
 
 function provablyStaleLock(path) {
@@ -147,12 +181,27 @@ function provablyStaleLock(path) {
     return false;
   }
   let metadata;
-  try { metadata = JSON.parse(bytes); } catch { return false; }
-  if (metadata?.host !== hostname() || !Number.isSafeInteger(metadata.pid) || metadata.pid < 1 || typeof metadata.processStart !== 'string') return false;
+  try {
+    metadata = JSON.parse(bytes);
+  } catch {
+    return false;
+  }
+  if (
+    metadata?.host !== hostname() ||
+    !Number.isSafeInteger(metadata.pid) ||
+    metadata.pid < 1 ||
+    typeof metadata.processStart !== 'string'
+  )
+    return false;
   const inspected = inspectProcess(metadata.pid);
-  if (inspected.exists && (inspected.processStart === null || inspected.processStart === metadata.processStart)) return false;
+  if (
+    inspected.exists &&
+    (inspected.processStart === null || inspected.processStart === metadata.processStart)
+  )
+    return false;
   const current = lstatSync(path);
-  if (current.dev !== stat.dev || current.ino !== stat.ino || readFileSync(path, 'utf8') !== bytes) return false;
+  if (current.dev !== stat.dev || current.ino !== stat.ino || readFileSync(path, 'utf8') !== bytes)
+    return false;
   return true;
 }
 
@@ -164,9 +213,19 @@ function lockOwner(path) {
   } catch {
     return null;
   }
-  if (metadata?.host !== hostname() || !Number.isSafeInteger(metadata.pid) || metadata.pid < 1 || typeof metadata.processStart !== 'string') return null;
+  if (
+    metadata?.host !== hostname() ||
+    !Number.isSafeInteger(metadata.pid) ||
+    metadata.pid < 1 ||
+    typeof metadata.processStart !== 'string'
+  )
+    return null;
   const inspected = inspectProcess(metadata.pid);
-  return inspected.exists && inspected.processStart !== null && inspected.processStart === metadata.processStart ? metadata : null;
+  return inspected.exists &&
+    inspected.processStart !== null &&
+    inspected.processStart === metadata.processStart
+    ? metadata
+    : null;
 }
 
 export function lockIsProvablyLive(path) {
@@ -193,7 +252,11 @@ function acquire(path) {
       return { bytes, dev: stat.dev, ino: stat.ino };
     } catch (error) {
       if (fd !== undefined) closeSync(fd);
-      try { unlinkSync(temp); } catch (cleanupError) { if (cleanupError?.code !== 'ENOENT') throw cleanupError; }
+      try {
+        unlinkSync(temp);
+      } catch (cleanupError) {
+        if (cleanupError?.code !== 'ENOENT') throw cleanupError;
+      }
       if (error.code !== 'EEXIST') throw error;
       if (attempt === 0 && provablyStaleLock(path)) {
         unlinkSync(path);
@@ -207,14 +270,19 @@ function acquire(path) {
 export function withLock(path, fn) {
   const parent = dirname(path);
   const stat = lstatSync(parent);
-  if (stat.isSymbolicLink() || !stat.isDirectory()) fail('E_SHIP_STORAGE_UNSAFE', `SHIP lock parent is unsafe: ${parent}`);
+  if (stat.isSymbolicLink() || !stat.isDirectory())
+    fail('E_SHIP_STORAGE_UNSAFE', `SHIP lock parent is unsafe: ${parent}`);
   const ownership = acquire(path);
   try {
     return fn();
   } finally {
     try {
       const current = assertRegularCustodyFile(path);
-      if (current.dev !== ownership.dev || current.ino !== ownership.ino || readFileSync(path, 'utf8') !== ownership.bytes) {
+      if (
+        current.dev !== ownership.dev ||
+        current.ino !== ownership.ino ||
+        readFileSync(path, 'utf8') !== ownership.bytes
+      ) {
         fail('E_SHIP_LOCK_OWNERSHIP', `SHIP lock ownership changed before release: ${path}`);
       }
       unlinkSync(path);

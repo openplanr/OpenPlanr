@@ -6,7 +6,10 @@ import { dirname, join, resolve } from 'node:path';
 import { after, test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import { checkOperateRuntimePurity, packOperateV2DevelopmentSnapshot } from '../../scripts/check-operate-runtime-purity.mjs';
+import {
+  checkOperateRuntimePurity,
+  packOperateV2DevelopmentSnapshot,
+} from '../../scripts/check-operate-runtime-purity.mjs';
 import { OPERATE_RUNTIME_CONTRACT_KINDS } from '../../lib/protocol/loader.mjs';
 import { resolveWorkspaceDependencyRoot } from '../helpers/workspace-dependency.mjs';
 
@@ -43,7 +46,9 @@ function runNpm(args, options = {}) {
     : run('npm', args, { ...options, env: { ...env, ...options.env } });
 }
 
-test('Phase 2 packed consumer uses only declared v2 exports for Assignment, Review, retry, and extension boundaries', { timeout: 180_000 }, () => {
+test('Phase 2 packed consumer uses only declared v2 exports for Assignment, Review, retry, and extension boundaries', {
+  timeout: 180_000,
+}, () => {
   const packageDestination = join(temporaryRoot, 'package');
   const packed = packOperateV2DevelopmentSnapshot(packageDestination, { sourceRoot: root });
   assert.equal(packed.ok, true);
@@ -57,7 +62,8 @@ test('Phase 2 packed consumer uses only declared v2 exports for Assignment, Revi
     'lib/operate/runtime-foundation.mjs',
     'lib/operate/scheduler-v2.mjs',
     'lib/operate/extensions-v2.mjs',
-  ]) assert.equal(packedFiles.has(required), true, `missing Phase 2 package surface ${required}`);
+  ])
+    assert.equal(packedFiles.has(required), true, `missing Phase 2 package surface ${required}`);
   for (const path of packedFiles) {
     assert.doesNotMatch(path, /^(?:\.planr\/|tests\/|node_modules\/|\.env(?:\.|\/|$))/);
     assert.doesNotMatch(path, /operate-2\.0\/(?:phases|audits|decisions)/i);
@@ -71,21 +77,36 @@ test('Phase 2 packed consumer uses only declared v2 exports for Assignment, Revi
   const localDependencies = {};
   for (const dependency of ['@noble/hashes', 'entities', 'esbuild', 'pako', 'parse5']) {
     const dependencyRootPath = resolveWorkspaceDependencyRoot(dependency);
-    const [dependencyPack] = JSON.parse(runNpm([
-      'pack', '--ignore-scripts', '--json', '--pack-destination', dependencyRoot,
-    ], { cwd: dependencyRootPath }).stdout);
+    const [dependencyPack] = JSON.parse(
+      runNpm(['pack', '--ignore-scripts', '--json', '--pack-destination', dependencyRoot], {
+        cwd: dependencyRootPath,
+      }).stdout,
+    );
     localDependencies[dependency] = `file:${join(dependencyRoot, dependencyPack.filename)}`;
   }
-  writeFileSync(join(installRoot, 'package.json'), JSON.stringify({
-    name: 'operate-v2-phase2-consumer',
-    private: true,
-    type: 'module',
-    dependencies: localDependencies,
-  }));
-  runNpm([
-    'install', '--ignore-scripts', '--no-audit', '--no-fund', '--omit=dev',
-    '--omit=optional', '--no-package-lock', '--offline', packed.tarballPath,
-  ], { cwd: installRoot });
+  writeFileSync(
+    join(installRoot, 'package.json'),
+    JSON.stringify({
+      name: 'operate-v2-phase2-consumer',
+      private: true,
+      type: 'module',
+      dependencies: localDependencies,
+    }),
+  );
+  runNpm(
+    [
+      'install',
+      '--ignore-scripts',
+      '--no-audit',
+      '--no-fund',
+      '--omit=dev',
+      '--omit=optional',
+      '--no-package-lock',
+      '--offline',
+      packed.tarballPath,
+    ],
+    { cwd: installRoot },
+  );
 
   const installedPackage = join(installRoot, 'node_modules', 'planr-pipeline');
   assert.equal(existsSync(join(installedPackage, 'lib/operate/scheduler-v2.mjs')), true);
@@ -241,9 +262,11 @@ test('Phase 2 packed consumer uses only declared v2 exports for Assignment, Revi
   writeFileSync(consumerPath, consumer);
   run(process.execPath, [consumerPath], { cwd: installRoot });
 
-  const compilation = run(process.execPath, [
-    join(installedPackage, 'conformance', 'verify-operate-v2-contract-compilation.mjs'),
-  ], { cwd: installRoot });
+  const compilation = run(
+    process.execPath,
+    [join(installedPackage, 'conformance', 'verify-operate-v2-contract-compilation.mjs')],
+    { cwd: installRoot },
+  );
   const report = JSON.parse(compilation.stdout);
   assert.equal(report.ok, true);
   assert.equal(report.contracts, OPERATE_RUNTIME_CONTRACT_KINDS.length);

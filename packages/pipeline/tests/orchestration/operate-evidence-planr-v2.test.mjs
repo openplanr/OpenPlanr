@@ -10,10 +10,13 @@ import {
   dispatchOperateEvidenceResolverV2,
 } from 'planr-pipeline/operate/evidence-v2';
 
-const fixture = (name) => JSON.parse(readFileSync(
-  new URL(`../../conformance/fixtures/operating-runtime-v2/${name}`, import.meta.url),
-  'utf8',
-));
+const fixture = (name) =>
+  JSON.parse(
+    readFileSync(
+      new URL(`../../conformance/fixtures/operating-runtime-v2/${name}`, import.meta.url),
+      'utf8',
+    ),
+  );
 const clone = (value) => structuredClone(value);
 const digest = (bytes) => `sha256:${createHash('sha256').update(bytes).digest('hex')}`;
 const SOURCE_CONTRACT = { id: 'planning-acceptance', version: '1.0.0' };
@@ -48,7 +51,10 @@ test('OP-14: a declared untracked .planr artifact resolves by Planr identity and
     assert.equal(resolved.capture.rawHash, digest(bytes));
     assert.deepEqual(resolved.capture.locator, valid.candidate.locator);
     assert.deepEqual(resolved.capture.provenance, {
-      projectId: 'project-default', artifactId: 'SPEC-016', artifactType: 'specification', contentHash: digest(bytes),
+      projectId: 'project-default',
+      artifactId: 'SPEC-016',
+      artifactType: 'specification',
+      contentHash: digest(bytes),
     });
     assert.equal(Object.hasOwn(resolved.capture.provenance, 'repositoryId'), false);
     assert.deepEqual(resolved.capture.sourceContract, SOURCE_CONTRACT);
@@ -78,14 +84,20 @@ test('Planr evidence rejects source/scope/identity/path/hash/capability errors p
     const invalid = fixture('evidence-planr-invalid.json');
     const base = clone(valid.candidate);
 
-    assert.equal(resolve(base, project.root, { planrProjects: [] }).error.code, invalid.missingProject);
+    assert.equal(
+      resolve(base, project.root, { planrProjects: [] }).error.code,
+      invalid.missingProject,
+    );
     assert.equal(resolve(base, project.root, { capabilities: [] }).error.code, invalid.denied);
 
     const differentScope = clone(base);
     differentScope.scopeId = 'other-scope';
-    assert.equal(resolve(differentScope, project.root, {
-      scope: { ...valid.scope, scopeId: 'other-scope' },
-    }).error.code, invalid.scopeMismatch);
+    assert.equal(
+      resolve(differentScope, project.root, {
+        scope: { ...valid.scope, scopeId: 'other-scope' },
+      }).error.code,
+      invalid.scopeMismatch,
+    );
 
     const missingArtifact = clone(base);
     missingArtifact.locator.artifactId = 'SPEC-404';

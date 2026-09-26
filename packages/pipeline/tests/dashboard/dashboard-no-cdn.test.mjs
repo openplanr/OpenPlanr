@@ -7,8 +7,10 @@ const PIPELINE_ROOT = resolve(import.meta.dirname, '../..');
 const WORKSPACE_ROOT = resolve(PIPELINE_ROOT, '../..');
 const OPENPLANR_ROOT = resolve(WORKSPACE_ROOT, 'packages/cli');
 const DASHBOARD_APP_ROOT = resolve(WORKSPACE_ROOT, 'apps/dashboard');
-const REMOTE_ASSET = /(?:src|href)\s*=\s*['"](?:https?:)?\/\/|@import\s+(?:url\()?\s*['"]?(?:https?:)?\/\/|url\(\s*['"]?(?:https?:)?\/\/|(?:fetch|import)\s*\(\s*['"](?:https?:)?\/\/|new\s+(?:Worker|SharedWorker)\s*\(\s*['"](?:https?:)?\/\//iu;
-const PRIVATE_REFERENCE = /(?:\.planr\/products\/operate-2\.0|private consumer|node_modules\/openplanr|\.\.\/OpenPlanr)/iu;
+const REMOTE_ASSET =
+  /(?:src|href)\s*=\s*['"](?:https?:)?\/\/|@import\s+(?:url\()?\s*['"]?(?:https?:)?\/\/|url\(\s*['"]?(?:https?:)?\/\/|(?:fetch|import)\s*\(\s*['"](?:https?:)?\/\/|new\s+(?:Worker|SharedWorker)\s*\(\s*['"](?:https?:)?\/\//iu;
+const PRIVATE_REFERENCE =
+  /(?:\.planr\/products\/operate-2\.0|private consumer|node_modules\/openplanr|\.\.\/OpenPlanr)/iu;
 
 async function regularFiles(root) {
   const output = [];
@@ -89,11 +91,13 @@ test('runtime URL scan rejects remote assets and source-only metadata stays outs
     'dashboard-asset',
   ]);
   try {
-    const components = JSON.parse(await readFile(resolve(DASHBOARD_APP_ROOT, 'components.json'), 'utf8'));
+    const components = JSON.parse(
+      await readFile(resolve(DASHBOARD_APP_ROOT, 'components.json'), 'utf8'),
+    );
     assert.equal(components.$schema, 'https://ui.shadcn.com/schema.json');
     assert.equal(
-      (await regularFiles(resolve(OPENPLANR_ROOT, 'dist/dashboard'))).some(
-        (file) => file.endsWith('components.json'),
+      (await regularFiles(resolve(OPENPLANR_ROOT, 'dist/dashboard'))).some((file) =>
+        file.endsWith('components.json'),
       ),
       false,
     );

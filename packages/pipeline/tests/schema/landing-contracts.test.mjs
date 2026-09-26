@@ -11,14 +11,12 @@ import {
 } from '../../lib/pipeline/index.mjs';
 import { validateProtocolArtifact } from '../../lib/protocol/loader.mjs';
 
-const fixture = (name) => JSON.parse(readFileSync(
-  new URL(`../../conformance/fixtures/${name}`, import.meta.url),
-  'utf8',
-));
-const schema = (kind) => JSON.parse(readFileSync(
-  new URL(`../../schemas/v1.2.0/${kind}.schema.json`, import.meta.url),
-  'utf8',
-));
+const fixture = (name) =>
+  JSON.parse(readFileSync(new URL(`../../conformance/fixtures/${name}`, import.meta.url), 'utf8'));
+const schema = (kind) =>
+  JSON.parse(
+    readFileSync(new URL(`../../schemas/v1.2.0/${kind}.schema.json`, import.meta.url), 'utf8'),
+  );
 
 const valid = fixture('landing-contracts-valid.json');
 const invalid = fixture('landing-contracts-invalid.json');
@@ -42,7 +40,10 @@ function applyDescriptor(base, descriptor) {
   const key = tokens.pop();
   let parent = candidate;
   for (const token of tokens) {
-    assert.ok(parent !== null && typeof parent === 'object' && token in parent, `${descriptor.name}: ${descriptor.path}`);
+    assert.ok(
+      parent !== null && typeof parent === 'object' && token in parent,
+      `${descriptor.name}: ${descriptor.path}`,
+    );
     parent = parent[token];
   }
   if (descriptor.operation === 'remove') {
@@ -56,7 +57,8 @@ function applyDescriptor(base, descriptor) {
   return candidate;
 }
 
-const validate = (kind, value) => validateProtocolArtifact(kind, value, { protocolVersion: '1.2.0' });
+const validate = (kind, value) =>
+  validateProtocolArtifact(kind, value, { protocolVersion: '1.2.0' });
 
 test('Protocol 1.2 landing fixtures cover the exact closed contract family', () => {
   assert.deepEqual(Object.keys(valid).sort(), [...LANDING_CONTRACT_KINDS].sort());
@@ -74,18 +76,34 @@ test('the distinct landing workflow catalog and deterministic-asset manifest are
   const catalog = readLandingWorkflowCatalog();
   const manifest = readLandingWorkflowManifest();
   assert.deepEqual(validate('landing-workflow-catalog', catalog), []);
-  assert.deepEqual(catalog.workflow.commands.map(({ id }) => id), ['prepare', 'show', 'status', 'advance']);
-  assert.deepEqual(catalog.workflow.hostAssets.map(({ runtime }) => runtime), ['claude-code', 'codex', 'cursor']);
-  assert.deepEqual(manifest.assets.map(({ path }) => path), LANDING_WORKFLOW_ASSET_PATHS);
+  assert.deepEqual(
+    catalog.workflow.commands.map(({ id }) => id),
+    ['prepare', 'show', 'status', 'advance'],
+  );
+  assert.deepEqual(
+    catalog.workflow.hostAssets.map(({ runtime }) => runtime),
+    ['claude-code', 'codex', 'cursor'],
+  );
+  assert.deepEqual(
+    manifest.assets.map(({ path }) => path),
+    LANDING_WORKFLOW_ASSET_PATHS,
+  );
   assert.equal(Object.isFrozen(assertLandingWorkflowCatalog(catalog)), true);
-  assert.equal(Object.isFrozen(assertLandingWorkflowManifest(manifest, { verifyFiles: true })), true);
+  assert.equal(
+    Object.isFrozen(assertLandingWorkflowManifest(manifest, { verifyFiles: true })),
+    true,
+  );
 
   const widened = structuredClone(catalog);
   widened.workflow.commands.push(structuredClone(widened.workflow.commands[0]));
-  assert.throws(() => assertLandingWorkflowCatalog(widened), { code: 'E_LANDING_WORKFLOW_CATALOG_INVALID' });
+  assert.throws(() => assertLandingWorkflowCatalog(widened), {
+    code: 'E_LANDING_WORKFLOW_CATALOG_INVALID',
+  });
   const substituted = structuredClone(manifest);
   substituted.assets[0].path = 'lib/pipeline/foreign-landing.mjs';
-  assert.throws(() => assertLandingWorkflowManifest(substituted), { code: 'E_LANDING_WORKFLOW_MANIFEST_INVALID' });
+  assert.throws(() => assertLandingWorkflowManifest(substituted), {
+    code: 'E_LANDING_WORKFLOW_MANIFEST_INVALID',
+  });
 });
 
 test('every required root field fails closed and every unknown-field hostile is rejected', () => {
@@ -97,14 +115,22 @@ test('every required root field fails closed and every unknown-field hostile is 
     }
     const unknown = invalid[kind].find(({ name }) => name === 'unknown field');
     assert.ok(unknown, `${kind}: unknown-field fixture`);
-    assert.ok(validate(kind, applyDescriptor(valid[kind], unknown)).length > 0, `${kind}: closed unknown`);
+    assert.ok(
+      validate(kind, applyDescriptor(valid[kind], unknown)).length > 0,
+      `${kind}: closed unknown`,
+    );
   }
 });
 
 test('all schema-level hostile mutations are rejected', () => {
   for (const kind of LANDING_CONTRACT_KINDS) {
-    for (const descriptor of invalid[kind].filter(({ expectedLayer }) => expectedLayer === 'schema')) {
-      assert.ok(validate(kind, applyDescriptor(valid[kind], descriptor)).length > 0, `${kind}: ${descriptor.name}`);
+    for (const descriptor of invalid[kind].filter(
+      ({ expectedLayer }) => expectedLayer === 'schema',
+    )) {
+      assert.ok(
+        validate(kind, applyDescriptor(valid[kind], descriptor)).length > 0,
+        `${kind}: ${descriptor.name}`,
+      );
     }
   }
 });
@@ -132,11 +158,17 @@ test('portable plans, confirmations, receipts, and registry rows grant no effect
   assert.equal(receipt.authority, 'none');
   assert.equal(receipt.recovery.authority, 'none');
   assert.equal(registry.authority, 'none');
-  assert.ok(registry.operations.every(({ portableAuthority, runtimeAdapterRequired }) => (
-    portableAuthority === 'none' && runtimeAdapterRequired === true
-  )));
+  assert.ok(
+    registry.operations.every(
+      ({ portableAuthority, runtimeAdapterRequired }) =>
+        portableAuthority === 'none' && runtimeAdapterRequired === true,
+    ),
+  );
   assert.equal(plan.operations[0].containment.authority, 'containment-only');
-  assert.equal(confirmation.docket.authorityBoundary, 'portable-confirmation-is-not-effect-authority');
+  assert.equal(
+    confirmation.docket.authorityBoundary,
+    'portable-confirmation-is-not-effect-authority',
+  );
 });
 
 test('owner confirmation presents a neutral docket with no default or cancellation effect', () => {
@@ -151,8 +183,9 @@ test('owner confirmation presents a neutral docket with no default or cancellati
 });
 
 test('a changed docket under one confirmation identity remains a custody conflict, not new authority', () => {
-  const descriptor = invalid['landing-confirmation']
-    .find(({ expectedLayer }) => expectedLayer === 'custody-conflict');
+  const descriptor = invalid['landing-confirmation'].find(
+    ({ expectedLayer }) => expectedLayer === 'custody-conflict',
+  );
   assert.ok(descriptor, 'changed-docket fixture');
   const base = valid['landing-confirmation'];
   const divergent = applyDescriptor(base, descriptor);
@@ -164,8 +197,15 @@ test('a changed docket under one confirmation identity remains a custody conflic
 });
 
 test('structurally valid plan, registration, and receipt substitutions remain semantic binding conflicts', () => {
-  for (const kind of ['landing-plan', 'landing-confirmation', 'landing-phase-receipt', 'landing-receipt']) {
-    const descriptor = invalid[kind].find(({ expectedLayer }) => expectedLayer === 'binding-conflict');
+  for (const kind of [
+    'landing-plan',
+    'landing-confirmation',
+    'landing-phase-receipt',
+    'landing-receipt',
+  ]) {
+    const descriptor = invalid[kind].find(
+      ({ expectedLayer }) => expectedLayer === 'binding-conflict',
+    );
     assert.ok(descriptor, `${kind}: binding-conflict fixture`);
     const divergent = applyDescriptor(valid[kind], descriptor);
     assert.deepEqual(validate(kind, divergent), [], `${kind}: structurally valid substitution`);
@@ -182,7 +222,9 @@ test('deploy plans require preconfirmed containment before any dispatch', () => 
   assert.equal(operation.containment.isolateFailedTarget, true);
   assert.equal(operation.containment.authority, 'containment-only');
 
-  const hostile = invalid['landing-plan'].find(({ name }) => name === 'deploy without preconfirmed containment');
+  const hostile = invalid['landing-plan'].find(
+    ({ name }) => name === 'deploy without preconfirmed containment',
+  );
   assert.ok(validate('landing-plan', applyDescriptor(valid['landing-plan'], hostile)).length > 0);
 });
 
@@ -207,13 +249,20 @@ test('operation registry versions are exact, data-only, and non-executable', () 
   assert.equal(registry.registryVersion, '1.0.0');
   assert.equal(registry.operations[0].operationVersion, '1.0.0');
   assert.deepEqual(registry.operations[0].inputContract, {
-    schemaId: 'landing-plan', schemaVersion: '1.0.0', protocolVersion: '1.2.0',
+    schemaId: 'landing-plan',
+    schemaVersion: '1.0.0',
+    protocolVersion: '1.2.0',
   });
   assert.deepEqual(registry.operations[0].outputContract, {
-    schemaId: 'landing-phase-receipt', schemaVersion: '1.0.0', protocolVersion: '1.2.0',
+    schemaId: 'landing-phase-receipt',
+    schemaVersion: '1.0.0',
+    protocolVersion: '1.2.0',
   });
-  assert.doesNotMatch(JSON.stringify(registry), /modulePath|sourcePath|credential|capability/ui);
-  for (const name of ['unsupported registry version', 'operation carries executable implementation']) {
+  assert.doesNotMatch(JSON.stringify(registry), /modulePath|sourcePath|credential|capability/iu);
+  for (const name of [
+    'unsupported registry version',
+    'operation carries executable implementation',
+  ]) {
     const hostile = invalid['landing-operation-registry'].find((entry) => entry.name === name);
     assert.ok(validate(registry.kind, applyDescriptor(registry, hostile)).length > 0, name);
   }

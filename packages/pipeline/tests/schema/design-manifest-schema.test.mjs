@@ -9,9 +9,15 @@ import { validate } from '../../conformance/json-schema-validate.mjs';
 const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, '../..');
 
-const schema = JSON.parse(readFileSync(join(root, 'schemas/v1.0.0/design-manifest.schema.json'), 'utf-8'));
-const valid = JSON.parse(readFileSync(join(root, 'tests/fixtures/valid-design-manifest.json'), 'utf-8'));
-const invalid = JSON.parse(readFileSync(join(root, 'tests/fixtures/invalid-design-manifest-missing-fields.json'), 'utf-8'));
+const schema = JSON.parse(
+  readFileSync(join(root, 'schemas/v1.0.0/design-manifest.schema.json'), 'utf-8'),
+);
+const valid = JSON.parse(
+  readFileSync(join(root, 'tests/fixtures/valid-design-manifest.json'), 'utf-8'),
+);
+const invalid = JSON.parse(
+  readFileSync(join(root, 'tests/fixtures/invalid-design-manifest-missing-fields.json'), 'utf-8'),
+);
 
 test('A complete design manifest validates against the schema', () => {
   assert.equal(validate(valid, schema).length, 0);

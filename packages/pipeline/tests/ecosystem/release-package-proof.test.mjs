@@ -1,14 +1,7 @@
 // @planr-test-group serial
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import {
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  unlinkSync,
-  writeFileSync,
-} from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -56,15 +49,16 @@ test('export proof resolves every literal condition and wildcard to archive byte
   });
 
   assert.equal(results.length, 3);
-  assert.deepEqual(
-    results.find(({ subpath }) => subpath === './schemas/*').matches,
-    ['schemas/v1/example.schema.json', 'schemas/v2/example.schema.json'],
-  );
+  assert.deepEqual(results.find(({ subpath }) => subpath === './schemas/*').matches, [
+    'schemas/v1/example.schema.json',
+    'schemas/v2/example.schema.json',
+  ]);
   assert.throws(
-    () => verifyExportTargets({
-      exportsField: { './missing': './lib/missing.mjs' },
-      archiveFiles: ['lib/index.mjs'],
-    }),
+    () =>
+      verifyExportTargets({
+        exportsField: { './missing': './lib/missing.mjs' },
+        archiveFiles: ['lib/index.mjs'],
+      }),
     { code: 'E_RELEASE_PACKAGE_PROOF' },
   );
 });
@@ -93,14 +87,14 @@ test('installed export probe plan expands wildcard JSON and separates type-only 
   assert.equal(probes.length, 6);
   assert.deepEqual(
     probes.filter(({ kind }) => kind === 'json').map(({ specifier }) => specifier),
-    [
-      'fixture-package/schemas/v1/one.schema.json',
-      'fixture-package/schemas/v2/two.schema.json',
-    ],
+    ['fixture-package/schemas/v1/one.schema.json', 'fixture-package/schemas/v2/two.schema.json'],
   );
   assert.equal(probes.filter(({ kind }) => kind === 'type-only').length, 1);
   assert.equal(probes.filter(({ kind }) => kind === 'import').length, 2);
-  assert.deepEqual(probes.filter(({ kind }) => kind === 'css').map(({ specifier }) => specifier), ['fixture-package/editor.css']);
+  assert.deepEqual(
+    probes.filter(({ kind }) => kind === 'css').map(({ specifier }) => specifier),
+    ['fixture-package/editor.css'],
+  );
 });
 
 test('packaged documentation accepts archive-local paths and stable HTTPS URLs only', () => {
@@ -118,25 +112,25 @@ test('packaged documentation accepts archive-local paths and stable HTTPS URLs o
   assert.equal(results.length, 3);
 
   write(packageRoot, 'README.md', '[Missing](docs/not-packed.md)\n');
-  assert.throws(
-    () => verifyPackagedDocumentation({ packageRoot, archiveFiles }),
-    { code: 'E_RELEASE_PACKAGE_PROOF' },
-  );
+  assert.throws(() => verifyPackagedDocumentation({ packageRoot, archiveFiles }), {
+    code: 'E_RELEASE_PACKAGE_PROOF',
+  });
 
   write(packageRoot, 'README.md', '[Insecure](http://openplanr.dev/docs)\n');
-  assert.throws(
-    () => verifyPackagedDocumentation({ packageRoot, archiveFiles }),
-    { code: 'E_RELEASE_PACKAGE_PROOF' },
-  );
+  assert.throws(() => verifyPackagedDocumentation({ packageRoot, archiveFiles }), {
+    code: 'E_RELEASE_PACKAGE_PROOF',
+  });
 });
 
 test('coordinated candidate proof requires exactly the five repository custody keys', () => {
   const workspace = mkdtempSync(join(tmpdir(), 'planr-five-repository-proof-'));
-  const repositories = Object.fromEntries(RELEASE_REPOSITORY_KEYS.map((key) => {
-    const path = join(workspace, key);
-    mkdirSync(path, { recursive: true });
-    return [key, { path, label: key }];
-  }));
+  const repositories = Object.fromEntries(
+    RELEASE_REPOSITORY_KEYS.map((key) => {
+      const path = join(workspace, key);
+      mkdirSync(path, { recursive: true });
+      return [key, { path, label: key }];
+    }),
+  );
   const inventoryRepository = ({ key, label }) => ({
     key,
     label,
@@ -158,7 +152,10 @@ test('coordinated candidate proof requires exactly the five repository custody k
     { code: 'E_RELEASE_PACKAGE_PROOF' },
   );
 
-  const aliased = { ...repositories, web: { ...repositories.web, path: repositories.pipeline.path } };
+  const aliased = {
+    ...repositories,
+    web: { ...repositories.web, path: repositories.pipeline.path },
+  };
   assert.throws(
     () => createEcosystemCandidateProof({ repositories: aliased, inventoryRepository }),
     { code: 'E_RELEASE_PACKAGE_PROOF' },
@@ -185,14 +182,18 @@ test('dirty repository identity is deterministic, deletion-aware, and sensitive 
     assert.equal(first.dirty, true);
     assert.equal(first.snapshotDigest, replay.snapshotDigest);
     assert.equal(first.inventory.find(({ path }) => path === 'deleted.txt').kind, 'deletion');
-    assert.equal(first.inventory.find(({ path }) => path === 'untracked.txt').kind, 'untracked-file');
+    assert.equal(
+      first.inventory.find(({ path }) => path === 'untracked.txt').kind,
+      'untracked-file',
+    );
     assert.throws(
-      () => inventoryGitRepository({
-        key: 'fixture',
-        label: 'fixture',
-        root: repository,
-        requireClean: true,
-      }),
+      () =>
+        inventoryGitRepository({
+          key: 'fixture',
+          label: 'fixture',
+          root: repository,
+          requireClean: true,
+        }),
       { code: 'E_RELEASE_PACKAGE_PROOF' },
     );
 
@@ -207,11 +208,13 @@ test('dirty repository identity is deterministic, deletion-aware, and sensitive 
 test('five-repository proof rejects bytes that drift between custody passes', () => {
   const workspace = mkdtempSync(join(tmpdir(), 'planr-drifting-candidate-'));
   try {
-    const repositories = Object.fromEntries(RELEASE_REPOSITORY_KEYS.map((key) => {
-      const path = join(workspace, key);
-      mkdirSync(path, { recursive: true });
-      return [key, { path, label: key }];
-    }));
+    const repositories = Object.fromEntries(
+      RELEASE_REPOSITORY_KEYS.map((key) => {
+        const path = join(workspace, key);
+        mkdirSync(path, { recursive: true });
+        return [key, { path, label: key }];
+      }),
+    );
     let call = 0;
     const driftingInventory = ({ key, label }) => {
       const pass = Math.floor(call / RELEASE_REPOSITORY_KEYS.length);
@@ -221,10 +224,11 @@ test('five-repository proof rejects bytes that drift between custody passes', ()
     };
 
     assert.throws(
-      () => createEcosystemCandidateProof({
-        repositories,
-        inventoryRepository: driftingInventory,
-      }),
+      () =>
+        createEcosystemCandidateProof({
+          repositories,
+          inventoryRepository: driftingInventory,
+        }),
       { code: 'E_RELEASE_PACKAGE_PROOF' },
     );
   } finally {
@@ -233,19 +237,23 @@ test('five-repository proof rejects bytes that drift between custody passes', ()
 });
 
 test('package source inventory is digest-bound to the coordinated pipeline candidate', () => {
-  const sourceInventory = [{
-    path: 'lib/index.mjs',
-    mode: 0o644,
-    size: 5,
-    contentDigest: `sha256:${'a'.repeat(64)}`,
-  }];
+  const sourceInventory = [
+    {
+      path: 'lib/index.mjs',
+      mode: 0o644,
+      size: 5,
+      contentDigest: `sha256:${'a'.repeat(64)}`,
+    },
+  ];
   const packageProof = { sourceInventory, sourceDigest: sha256Jcs(sourceInventory) };
   const ecosystemProof = {
     candidateDigest: `sha256:${'b'.repeat(64)}`,
-    repositories: [{
-      key: 'pipeline',
-      inventory: [{ ...sourceInventory[0], kind: 'tracked-file', tracked: true }],
-    }],
+    repositories: [
+      {
+        key: 'pipeline',
+        inventory: [{ ...sourceInventory[0], kind: 'tracked-file', tracked: true }],
+      },
+    ],
   };
 
   const binding = bindPackageProofToEcosystemCandidate({ packageProof, ecosystemProof });
@@ -253,24 +261,27 @@ test('package source inventory is digest-bound to the coordinated pipeline candi
   assert.equal(binding.candidateDigest, ecosystemProof.candidateDigest);
 
   ecosystemProof.repositories[0].inventory[0].contentDigest = `sha256:${'c'.repeat(64)}`;
-  assert.throws(
-    () => bindPackageProofToEcosystemCandidate({ packageProof, ecosystemProof }),
-    { code: 'E_RELEASE_PACKAGE_PROOF' },
-  );
+  assert.throws(() => bindPackageProofToEcosystemCandidate({ packageProof, ecosystemProof }), {
+    code: 'E_RELEASE_PACKAGE_PROOF',
+  });
 });
 
 test('the proof exposes the per-repository digests a release ledger binds', () => {
-  const exports = [{ subpath: '.', conditions: ['import'], target: 'lib/index.mjs', matches: ['lib/index.mjs'] }];
+  const exports = [
+    { subpath: '.', conditions: ['import'], target: 'lib/index.mjs', matches: ['lib/index.mjs'] },
+  ];
   const ecosystemProof = {
     candidateDigest: `sha256:${'b'.repeat(64)}`,
-    repositories: [{
-      key: 'pipeline',
-      baseline: 'a'.repeat(40),
-      dirty: false,
-      fileCount: 1,
-      inventoryDigest: `sha256:${'c'.repeat(64)}`,
-      snapshotDigest: `sha256:${'d'.repeat(64)}`,
-    }],
+    repositories: [
+      {
+        key: 'pipeline',
+        baseline: 'a'.repeat(40),
+        dirty: false,
+        fileCount: 1,
+        inventoryDigest: `sha256:${'c'.repeat(64)}`,
+        snapshotDigest: `sha256:${'d'.repeat(64)}`,
+      },
+    ],
   };
   const packageProof = {
     package: { name: 'planr-pipeline', version: '0.42.0' },
@@ -280,13 +291,21 @@ test('the proof exposes the per-repository digests a release ledger binds', () =
   };
 
   const surface = releaseProofDigests({ ecosystemProof, packageProof });
-  assert.deepEqual(surface.repositories.map(({ key }) => key), [...RELEASE_REPOSITORY_KEYS]);
-  assert.equal(surface.repositories.find(({ key }) => key === 'pipeline').inventoryDigest, ecosystemProof.repositories[0].inventoryDigest);
+  assert.deepEqual(
+    surface.repositories.map(({ key }) => key),
+    [...RELEASE_REPOSITORY_KEYS],
+  );
+  assert.equal(
+    surface.repositories.find(({ key }) => key === 'pipeline').inventoryDigest,
+    ecosystemProof.repositories[0].inventoryDigest,
+  );
   assert.equal(surface.repositories.find(({ key }) => key === 'web').present, false);
   assert.equal(surface.payload.payloadDigest, packageProof.archive.digest);
   assert.equal(surface.payload.exportSurfaceDigest, sha256Jcs(exports));
   assert.equal(releaseProofDigests({ ecosystemProof }).payload, null);
-  assert.throws(() => releaseProofDigests({ ecosystemProof: {} }), { code: 'E_RELEASE_PACKAGE_PROOF' });
+  assert.throws(() => releaseProofDigests({ ecosystemProof: {} }), {
+    code: 'E_RELEASE_PACKAGE_PROOF',
+  });
 });
 
 test('real pipeline archive is deterministic and byte-equal to its source inventory', () => {
@@ -302,15 +321,23 @@ test('real pipeline archive is deterministic and byte-equal to its source invent
   assert.equal(proof.package.archive.deterministicRepack, true);
   assert.equal(proof.package.archive.symlinkCount, 0);
   assert.equal(proof.package.sourceDigest, proof.package.payloadDigest);
-  assert.equal(proof.package.package.version, JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version);
+  assert.equal(
+    proof.package.package.version,
+    JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version,
+  );
   assert.ok(proof.package.exports.length > 0);
   assert.equal(proof.package.installedExports.count, proof.package.installedExports.results.length);
   assert.ok(proof.package.installedExports.runtime > 0);
   assert.ok(proof.package.installedExports.typeOnly > 0);
   assert.ok(proof.package.installedExports.json > 0);
-  assert.ok(proof.package.installedExports.results.every(({ status }) =>
-    ['loaded', 'validated'].includes(status)));
-  assert.ok(proof.package.sourceInventory.some(({ path }) => path === 'scripts/verify-release-package.mjs'));
+  assert.ok(
+    proof.package.installedExports.results.every(({ status }) =>
+      ['loaded', 'validated'].includes(status),
+    ),
+  );
+  assert.ok(
+    proof.package.sourceInventory.some(({ path }) => path === 'scripts/verify-release-package.mjs'),
+  );
   assert.doesNotMatch(result.stdout, /(?:\/Users\/|[A-Z]:\\Users\\)/u);
 });
 

@@ -13,7 +13,10 @@ test('the clean-install gate remains wired to the isolated package proof', () =>
     'utf8',
   );
 
-  assert.match(packageJson.scripts['test:operate-v2-development'], /operate-v2-development-package/);
+  assert.match(
+    packageJson.scripts['test:operate-v2-development'],
+    /operate-v2-development-package/,
+  );
   assert.match(packageTest, /packOperateV2DevelopmentSnapshot/);
   assert.match(packageTest, /--offline/);
   assert.match(packageTest, /assertPackagedMarkdownLinks/);

@@ -27,7 +27,8 @@ function mutate(base, { operation, path, value }) {
   const segments = path.split('/').filter(Boolean);
   const key = segments.pop();
   let target = clone;
-  for (const segment of segments) target = target?.[Array.isArray(target) ? Number(segment) : segment];
+  for (const segment of segments)
+    target = target?.[Array.isArray(target) ? Number(segment) : segment];
   if (target === undefined || target === null) return clone;
   if (operation === 'remove') delete target[key];
   else target[Array.isArray(target) ? Number(key) : key] = value;
@@ -36,7 +37,6 @@ function mutate(base, { operation, path, value }) {
 
 const valid = fixture('landing-contracts-valid.json');
 const invalid = fixture('landing-contracts-invalid.json');
-
 
 let refusedShapes = 0;
 const deferred = [];
@@ -76,15 +76,20 @@ for (const [kind, record] of Object.entries(valid)) {
 // Landing exists to gate real external effects, so no fixture may carry a live secret.
 const serialized = JSON.stringify(valid);
 for (const forbidden of ['BEGIN RSA', 'BEGIN PRIVATE KEY', 'AKIA', 'ghp_', 'xoxb-']) {
-  pass(!serialized.includes(forbidden), `landing fixtures carry no ${forbidden} credential material`);
+  pass(
+    !serialized.includes(forbidden),
+    `landing fixtures carry no ${forbidden} credential material`,
+  );
 }
 
-process.stdout.write(`${JSON.stringify({
-  ok: true,
-  protocolVersion: VERSION,
-  suite: 'governed-landing',
-  contracts: Object.keys(valid).length,
-  refusedShapes,
-  deferredToContractSuite: deferred.length,
-  checks,
-})}\n`);
+process.stdout.write(
+  `${JSON.stringify({
+    ok: true,
+    protocolVersion: VERSION,
+    suite: 'governed-landing',
+    contracts: Object.keys(valid).length,
+    refusedShapes,
+    deferredToContractSuite: deferred.length,
+    checks,
+  })}\n`,
+);

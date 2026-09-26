@@ -35,7 +35,12 @@ function observedValue(measured, metric) {
   const [group, field] = EVALUATION_GATE_SOURCES[metric];
   const value = measured?.[group]?.[field];
   if (!Number.isSafeInteger(value)) {
-    fail('E_EVALUATION_GATE_INPUT_MISSING', `The run carries no measured value for ${metric}.`, 'Measure every mandatory gate; an unmeasured gate is never a met gate.', { metric });
+    fail(
+      'E_EVALUATION_GATE_INPUT_MISSING',
+      `The run carries no measured value for ${metric}.`,
+      'Measure every mandatory gate; an unmeasured gate is never a met gate.',
+      { metric },
+    );
   }
   return value;
 }
@@ -45,30 +50,65 @@ export function meetsGate(observed, { comparator, threshold }) {
   if (comparator === '>=') return observed >= threshold;
   if (comparator === '<=') return observed <= threshold;
   if (comparator === '==') return observed === threshold;
-  return fail('E_EVALUATION_GATE_POLICY_INVALID', `Comparator ${String(comparator)} is not representable.`, 'A gate compares with >=, <=, or ==.');
+  return fail(
+    'E_EVALUATION_GATE_POLICY_INVALID',
+    `Comparator ${String(comparator)} is not representable.`,
+    'A gate compares with >=, <=, or ==.',
+  );
 }
 
 /**
  * A structurally valid waiver still has to be live, in policy, owner-signed by a
  * declared owner, and aimed at a gate this policy allows waiving.
  */
-export function admitWaiver(waiver, { policy, metric, now, owners, scenarioDigests = null, label = 'waiver' }) {
+export function admitWaiver(
+  waiver,
+  { policy, metric, now, owners, scenarioDigests = null, label = 'waiver' },
+) {
   if (waiver.metric !== metric) {
-    fail('E_EVALUATION_WAIVER_REFUSED', `${label} names ${waiver.metric}, not ${metric}.`, 'A waiver covers exactly the metric it names.', { metric, waived: waiver.metric });
+    fail(
+      'E_EVALUATION_WAIVER_REFUSED',
+      `${label} names ${waiver.metric}, not ${metric}.`,
+      'A waiver covers exactly the metric it names.',
+      { metric, waived: waiver.metric },
+    );
   }
   if (EVALUATION_UNWAIVABLE_METRICS.includes(metric) || policy.gates[metric].waivable !== true) {
-    fail('E_EVALUATION_WAIVER_REFUSED', `${label} targets a gate this policy does not allow waiving.`, 'Fix the finding; schema validity, package parity, and P0/P1 findings have no waiver path.', { metric });
+    fail(
+      'E_EVALUATION_WAIVER_REFUSED',
+      `${label} targets a gate this policy does not allow waiving.`,
+      'Fix the finding; schema validity, package parity, and P0/P1 findings have no waiver path.',
+      { metric },
+    );
   }
   if (!Array.isArray(owners) || owners.length === 0) {
-    fail('E_EVALUATION_WAIVER_REFUSED', `${label} cannot be admitted with no declared owner roster.`, 'Declare the accountable owners a waiver may be signed by.');
+    fail(
+      'E_EVALUATION_WAIVER_REFUSED',
+      `${label} cannot be admitted with no declared owner roster.`,
+      'Declare the accountable owners a waiver may be signed by.',
+    );
   }
   if (!owners.includes(waiver.ownerSignature.identity)) {
-    fail('E_EVALUATION_WAIVER_REFUSED', `${label} is signed by an identity that is not a declared owner.`, 'Only a declared accountable owner can accept a gate risk.', { identity: waiver.ownerSignature.identity });
+    fail(
+      'E_EVALUATION_WAIVER_REFUSED',
+      `${label} is signed by an identity that is not a declared owner.`,
+      'Only a declared accountable owner can accept a gate risk.',
+      { identity: waiver.ownerSignature.identity },
+    );
   }
-  assertEvaluationWaiverApplicable(waiver, { now, gatePolicyDigest: policy.gatePolicyDigest, label });
+  assertEvaluationWaiverApplicable(waiver, {
+    now,
+    gatePolicyDigest: policy.gatePolicyDigest,
+    label,
+  });
   if (waiver.scope.kind === 'scenario') {
     if (!Array.isArray(scenarioDigests) || !scenarioDigests.includes(waiver.scope.scenarioDigest)) {
-      fail('E_EVALUATION_WAIVER_REFUSED', `${label} names a scenario this run did not grade.`, 'A scenario waiver never carries to a run whose scenario bytes differ.', { scenarioDigest: waiver.scope.scenarioDigest });
+      fail(
+        'E_EVALUATION_WAIVER_REFUSED',
+        `${label} names a scenario this run did not grade.`,
+        'A scenario waiver never carries to a run whose scenario bytes differ.',
+        { scenarioDigest: waiver.scope.scenarioDigest },
+      );
     }
   }
   return waiver;
@@ -79,7 +119,14 @@ export function admitWaiver(waiver, { policy, metric, now, owners, scenarioDiges
  * A waiver is applied only where the gate is unmet and the waiver is admissible;
  * an expired, foreign, or unwaivable waiver leaves the blocking result standing.
  */
-export function evaluateGates({ policy, measured, waivers = [], owners = [], now, scenarioDigests = null }) {
+export function evaluateGates({
+  policy,
+  measured,
+  waivers = [],
+  owners = [],
+  now,
+  scenarioDigests = null,
+}) {
   assertEvaluationGatePolicy(policy);
   const gateEvaluation = [];
   const appliedWaivers = [];
@@ -103,12 +150,21 @@ export function evaluateGates({ policy, measured, waivers = [], owners = [], now
     try {
       admitWaiver(candidate, { policy, metric, now, owners, scenarioDigests });
     } catch (error) {
-      refusedWaivers.push({ waiverDigest: candidate.waiverDigest, metric, code: error instanceof PipelineError ? error.code : 'E_EVALUATION_WAIVER_REFUSED' });
+      refusedWaivers.push({
+        waiverDigest: candidate.waiverDigest,
+        metric,
+        code: error instanceof PipelineError ? error.code : 'E_EVALUATION_WAIVER_REFUSED',
+      });
       gateEvaluation.push({ metric, waivable, status: 'not-met', waiverDigest: null });
       blockingMetrics.push(metric);
       continue;
     }
-    gateEvaluation.push({ metric, waivable, status: 'waived', waiverDigest: candidate.waiverDigest });
+    gateEvaluation.push({
+      metric,
+      waivable,
+      status: 'waived',
+      waiverDigest: candidate.waiverDigest,
+    });
     appliedWaivers.push({
       waiverDigest: candidate.waiverDigest,
       metric: candidate.metric,
@@ -151,7 +207,11 @@ export function findingSeverity(kind) {
   };
   const severity = severities[kind];
   if (severity === undefined) {
-    fail('E_EVALUATION_FINDING_INVALID', `Finding kind "${String(kind)}" has no declared severity.`, `Use one of: ${Object.keys(severities).join(', ')}.`);
+    fail(
+      'E_EVALUATION_FINDING_INVALID',
+      `Finding kind "${String(kind)}" has no declared severity.`,
+      `Use one of: ${Object.keys(severities).join(', ')}.`,
+    );
   }
   return severity;
 }

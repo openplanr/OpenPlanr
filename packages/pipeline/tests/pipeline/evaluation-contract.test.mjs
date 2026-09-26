@@ -51,12 +51,21 @@ const hostProfile = seal('evaluation-host-profile', {
   runtime: 'cli',
   platform: 'linux',
   capabilityTier: 'workflow',
-  permissionModel: { mode: 'prompted', promptSurface: 'terminal', toolIsolation: 'enforced', escalation: 'refused' },
+  permissionModel: {
+    mode: 'prompted',
+    promptSurface: 'terminal',
+    toolIsolation: 'enforced',
+    escalation: 'refused',
+  },
   outputModes: ['json', 'text'],
   skillHostSupport: true,
   certifiedFullPipelineRuntime: false,
   adapterBinding: null,
-  provenance: { packageName: 'planr-pipeline', packageVersion: '0.42.0', sourceDigest: digest('host-source') },
+  provenance: {
+    packageName: 'planr-pipeline',
+    packageVersion: '0.42.0',
+    sourceDigest: digest('host-source'),
+  },
 });
 
 const hostProfileRegistry = seal('evaluation-host-profile-registry', {
@@ -95,7 +104,11 @@ const graderRegistration = seal('evaluation-grader-registration', {
   },
   unavailableBehavior: 'typed-absence',
   blocksContractValidation: false,
-  provenance: { packageName: 'planr-pipeline', packageVersion: '0.42.0', sourceDigest: digest('grader-source') },
+  provenance: {
+    packageName: 'planr-pipeline',
+    packageVersion: '0.42.0',
+    sourceDigest: digest('grader-source'),
+  },
 });
 
 const graderRegistry = seal('evaluation-grader-registry', {
@@ -122,7 +135,11 @@ const budget = seal('evaluation-budget', {
     permissionPromptCeiling: 2,
     retryCeiling: 1,
   },
-  baseline: { frozen: true, baselineDigest: digest('baseline'), capturedAt: '2026-08-01T00:00:00.000Z' },
+  baseline: {
+    frozen: true,
+    baselineDigest: digest('baseline'),
+    capturedAt: '2026-08-01T00:00:00.000Z',
+  },
 });
 
 const gatePolicy = seal('evaluation-gate-policy', {
@@ -130,7 +147,10 @@ const gatePolicy = seal('evaluation-gate-policy', {
   budgetDigest: budget.budgetDigest,
   baselineDigest: budget.baseline.baselineDigest,
   gates: Object.fromEntries(
-    Object.entries(EVALUATION_GATE_THRESHOLDS).map(([metric, threshold]) => [metric, { ...threshold }]),
+    Object.entries(EVALUATION_GATE_THRESHOLDS).map(([metric, threshold]) => [
+      metric,
+      { ...threshold },
+    ]),
   ),
 });
 
@@ -151,10 +171,15 @@ const scenario = seal('evaluation-scenario', {
   skill: { id: 'reference-skill', version: '1.0.0' },
   hostProfileRef: { hostProfileId: 'reference-host', hostProfileDigest: hostProfile.profileDigest },
   promptClass: 'positive',
-  expectedTrigger: { outcome: 'invoke', rationale: 'The prompt names the task the skill exists to do.' },
+  expectedTrigger: {
+    outcome: 'invoke',
+    rationale: 'The prompt names the task the skill exists to do.',
+  },
   declaredPermissions: [{ capability: 'file-read', decision: 'granted' }],
   riskClass: 'read-only',
-  fixtureRefs: [{ fixtureId: fixture.fixtureId, contentDigest: fixture.contentDigest, role: 'prompt' }],
+  fixtureRefs: [
+    { fixtureId: fixture.fixtureId, contentDigest: fixture.contentDigest, role: 'prompt' },
+  ],
   budgetRef: { budgetId: 'reference-budget', budgetDigest: budget.budgetDigest },
 });
 
@@ -162,11 +187,13 @@ const corpus = seal('evaluation-corpus', {
   ...envelope('evaluation-corpus'),
   title: 'Reference corpus for the evaluation contracts',
   skill: { id: 'reference-skill', version: '1.0.0' },
-  members: [{
-    scenarioId: scenario.scenarioId,
-    scenarioDigest: scenario.scenarioDigest,
-    sourcePath: 'fixtures/evaluation/scenario.json',
-  }],
+  members: [
+    {
+      scenarioId: scenario.scenarioId,
+      scenarioDigest: scenario.scenarioDigest,
+      sourcePath: 'fixtures/evaluation/scenario.json',
+    },
+  ],
 });
 
 const RUN_ID = 'eru_2f1b6d4c8a0e47159c3d5b7e91a0c246';
@@ -211,17 +238,21 @@ const runResult = seal('evaluation-run-result', {
   corpusDigest: corpus.corpusDigest,
   graderRegistryDigest: graderRegistry.registryDigest,
   hostProfileRegistryDigest: hostProfileRegistry.registryDigest,
-  hostProfiles: [{ hostProfileId: hostProfile.hostProfileId, profileDigest: hostProfile.profileDigest }],
+  hostProfiles: [
+    { hostProfileId: hostProfile.hostProfileId, profileDigest: hostProfile.profileDigest },
+  ],
   budgetDigest: budget.budgetDigest,
   gatePolicyDigest: gatePolicy.gatePolicyDigest,
   packageDigest: digest('package'),
   sourceDigest: digest('source'),
-  observations: [{
-    observationId: observation.observationId,
-    observationDigest: observation.observationDigest,
-    scenarioDigest: scenario.scenarioDigest,
-    outcome: 'pass',
-  }],
+  observations: [
+    {
+      observationId: observation.observationId,
+      observationDigest: observation.observationDigest,
+      scenarioDigest: scenario.scenarioDigest,
+      outcome: 'pass',
+    },
+  ],
   measurements: {
     latencyMsP50: 1_200,
     latencyMsP95: 2_400,
@@ -234,12 +265,14 @@ const runResult = seal('evaluation-run-result', {
     retries: 0,
   },
   findingCounts: { p0: 0, p1: 0, p2: 0, p3: 0 },
-  rawEvidence: [{
-    evidenceId: 'eev_5c8a1f0b3d6e29471a8b0c2d4e6f8091',
-    class: 'prompt',
-    contentDigest: digest('prompt-bytes'),
-    byteLength: 64,
-  }],
+  rawEvidence: [
+    {
+      evidenceId: 'eev_5c8a1f0b3d6e29471a8b0c2d4e6f8091',
+      class: 'prompt',
+      contentDigest: digest('prompt-bytes'),
+      byteLength: 64,
+    },
+  ],
   terminalReason: 'RUN_COMPLETED',
   startedAt: '2026-08-10T11:59:00.000Z',
   completedAt: '2026-08-10T12:00:00.000Z',
@@ -322,29 +355,33 @@ const aggregateReport = seal('evaluation-aggregate-report', {
     budgetExceeded: 0,
     notRun: 0,
   },
-  skills: [{
-    skillId: 'reference-skill',
-    skillVersion: '1.0.0',
-    scenariosTotal: 1,
-    scenariosPassed: 1,
-    scenariosFailed: 0,
-    scenariosBlocked: 0,
-    scenariosAbsent: 0,
-    scenariosWaived: 0,
-  }],
-  scenarios: [{
-    scenarioDigest: scenario.scenarioDigest,
-    skillId: 'reference-skill',
-    hostProfileDigest: hostProfile.profileDigest,
-    graderRegistrationDigest: graderRegistration.registrationDigest,
-    fixtureSetDigest: digest('fixture-set'),
-    promptClass: 'positive',
-    status: 'passed',
-    absenceReason: null,
-    waiverDigest: null,
-    observations: 1,
-    latencyMs: 1_200,
-  }],
+  skills: [
+    {
+      skillId: 'reference-skill',
+      skillVersion: '1.0.0',
+      scenariosTotal: 1,
+      scenariosPassed: 1,
+      scenariosFailed: 0,
+      scenariosBlocked: 0,
+      scenariosAbsent: 0,
+      scenariosWaived: 0,
+    },
+  ],
+  scenarios: [
+    {
+      scenarioDigest: scenario.scenarioDigest,
+      skillId: 'reference-skill',
+      hostProfileDigest: hostProfile.profileDigest,
+      graderRegistrationDigest: graderRegistration.registrationDigest,
+      fixtureSetDigest: digest('fixture-set'),
+      promptClass: 'positive',
+      status: 'passed',
+      absenceReason: null,
+      waiverDigest: null,
+      observations: 1,
+      latencyMs: 1_200,
+    },
+  ],
 });
 
 const waiver = seal('evaluation-waiver', {
@@ -370,11 +407,17 @@ const receipt = seal('skill-certification-receipt', {
   ...envelope('skill-certification-receipt'),
   recordType: 'readiness',
   issuedAt: '2026-08-10T12:10:00.000Z',
-  subject: { skillId: 'reference-skill', skillVersion: '1.0.0', skillSourceDigest: digest('skill-source') },
+  subject: {
+    skillId: 'reference-skill',
+    skillVersion: '1.0.0',
+    skillSourceDigest: digest('skill-source'),
+  },
   inputs: {
     corpusDigest: corpus.corpusDigest,
     graderRegistryDigest: graderRegistry.registryDigest,
-    hostProfiles: [{ hostProfileId: 'reference-host', hostProfileDigest: hostProfile.profileDigest }],
+    hostProfiles: [
+      { hostProfileId: 'reference-host', hostProfileDigest: hostProfile.profileDigest },
+    ],
     budgetBaselineDigest: budget.baseline.baselineDigest,
     gatePolicyDigest: gatePolicy.gatePolicyDigest,
     aggregateReportDigest: aggregateReport.reportDigest,
@@ -401,20 +444,91 @@ const inMember = (field) => (record) => ({
 
 /** One reference record and one nested injection per kind, so both closure depths are covered. */
 const CONTRACTS = Object.freeze([
-  { kind: 'evaluation-scenario', validate: assertEvaluationScenario, record: scenario, nest: inNested('expectedTrigger') },
-  { kind: 'evaluation-corpus', validate: assertEvaluationCorpus, record: corpus, nest: inMember('members') },
+  {
+    kind: 'evaluation-scenario',
+    validate: assertEvaluationScenario,
+    record: scenario,
+    nest: inNested('expectedTrigger'),
+  },
+  {
+    kind: 'evaluation-corpus',
+    validate: assertEvaluationCorpus,
+    record: corpus,
+    nest: inMember('members'),
+  },
   { kind: 'evaluation-fixture', validate: assertEvaluationFixture, record: fixture, nest: null },
-  { kind: 'evaluation-host-profile', validate: assertEvaluationHostProfile, record: hostProfile, nest: inNested('permissionModel') },
-  { kind: 'evaluation-host-profile-registry', validate: assertEvaluationHostProfileRegistry, record: hostProfileRegistry, nest: inMember('profiles') },
-  { kind: 'evaluation-grader-registration', validate: assertEvaluationGraderRegistration, record: graderRegistration, nest: inNested('determinism') },
-  { kind: 'evaluation-grader-registry', validate: assertEvaluationGraderRegistry, record: graderRegistry, nest: inMember('graders') },
-  { kind: 'evaluation-budget', validate: assertEvaluationBudget, record: budget, nest: inNested('ceilings') },
-  { kind: 'evaluation-gate-policy', validate: assertEvaluationGatePolicy, record: gatePolicy, nest: (record) => ({ ...record, gates: { ...record.gates, 'schema-validity': { ...record.gates['schema-validity'], ...UNKNOWN } } }) },
-  { kind: 'evaluation-observation', validate: assertEvaluationObservation, record: observation, nest: inNested('grader') },
-  { kind: 'evaluation-run-result', validate: assertEvaluationRunResult, record: runResult, nest: inNested('measurements') },
-  { kind: 'evaluation-aggregate-report', validate: assertEvaluationAggregateReport, record: aggregateReport, nest: inNested('counters') },
-  { kind: 'evaluation-waiver', validate: assertEvaluationWaiver, record: waiver, nest: inNested('ownerSignature') },
-  { kind: 'skill-certification-receipt', validate: assertSkillCertificationReceipt, record: receipt, nest: inNested('subject') },
+  {
+    kind: 'evaluation-host-profile',
+    validate: assertEvaluationHostProfile,
+    record: hostProfile,
+    nest: inNested('permissionModel'),
+  },
+  {
+    kind: 'evaluation-host-profile-registry',
+    validate: assertEvaluationHostProfileRegistry,
+    record: hostProfileRegistry,
+    nest: inMember('profiles'),
+  },
+  {
+    kind: 'evaluation-grader-registration',
+    validate: assertEvaluationGraderRegistration,
+    record: graderRegistration,
+    nest: inNested('determinism'),
+  },
+  {
+    kind: 'evaluation-grader-registry',
+    validate: assertEvaluationGraderRegistry,
+    record: graderRegistry,
+    nest: inMember('graders'),
+  },
+  {
+    kind: 'evaluation-budget',
+    validate: assertEvaluationBudget,
+    record: budget,
+    nest: inNested('ceilings'),
+  },
+  {
+    kind: 'evaluation-gate-policy',
+    validate: assertEvaluationGatePolicy,
+    record: gatePolicy,
+    nest: (record) => ({
+      ...record,
+      gates: {
+        ...record.gates,
+        'schema-validity': { ...record.gates['schema-validity'], ...UNKNOWN },
+      },
+    }),
+  },
+  {
+    kind: 'evaluation-observation',
+    validate: assertEvaluationObservation,
+    record: observation,
+    nest: inNested('grader'),
+  },
+  {
+    kind: 'evaluation-run-result',
+    validate: assertEvaluationRunResult,
+    record: runResult,
+    nest: inNested('measurements'),
+  },
+  {
+    kind: 'evaluation-aggregate-report',
+    validate: assertEvaluationAggregateReport,
+    record: aggregateReport,
+    nest: inNested('counters'),
+  },
+  {
+    kind: 'evaluation-waiver',
+    validate: assertEvaluationWaiver,
+    record: waiver,
+    nest: inNested('ownerSignature'),
+  },
+  {
+    kind: 'skill-certification-receipt',
+    validate: assertSkillCertificationReceipt,
+    record: receipt,
+    nest: inNested('subject'),
+  },
 ]);
 
 const CLOSED_FIELD_REFUSAL = (error) => error.code === 'E_EVALUATION_CONTRACT_INVALID';
@@ -442,7 +556,11 @@ test('every reference identity is derived from the record it names', () => {
   for (const { kind, record } of CONTRACTS) {
     const derived = deriveEvaluationIdentity(record, kind);
     assert.equal(record[derived.idField], derived.id, `${kind}: identity is not content-bound`);
-    assert.equal(record[derived.digestField], derived.digest, `${kind}: digest is not content-bound`);
+    assert.equal(
+      record[derived.digestField],
+      derived.digest,
+      `${kind}: digest is not content-bound`,
+    );
   }
 });
 
@@ -469,8 +587,15 @@ test('removing any declared field is refused, so no field is quietly optional', 
     for (const field of Object.keys(record)) {
       const truncated = { ...record };
       delete truncated[field];
-      const expected = field === 'schemaVersion' || field === 'protocolVersion' ? VERSION_REFUSAL : CLOSED_FIELD_REFUSAL;
-      assert.throws(() => validate(truncated), expected, `${kind}: a record without ${field} was accepted`);
+      const expected =
+        field === 'schemaVersion' || field === 'protocolVersion'
+          ? VERSION_REFUSAL
+          : CLOSED_FIELD_REFUSAL;
+      assert.throws(
+        () => validate(truncated),
+        expected,
+        `${kind}: a record without ${field} was accepted`,
+      );
     }
   }
 });
@@ -485,7 +610,11 @@ test('an implicit or unsupported contract version is refused for every kind', ()
 test('a record of the wrong kind is refused rather than coerced', () => {
   for (const { kind, validate, record } of CONTRACTS) {
     assert.throws(
-      () => validate({ ...record, kind: kind === 'evaluation-fixture' ? 'evaluation-scenario' : 'evaluation-fixture' }),
+      () =>
+        validate({
+          ...record,
+          kind: kind === 'evaluation-fixture' ? 'evaluation-scenario' : 'evaluation-fixture',
+        }),
       CLOSED_FIELD_REFUSAL,
       kind,
     );
@@ -494,9 +623,17 @@ test('a record of the wrong kind is refused rather than coerced', () => {
 
 test('corpus membership is verified against recomputed source bytes, not against its own claim', () => {
   const [member] = corpus.members;
-  assert.equal(assertEvaluationCorpus(corpus, { sourceDigests: { [member.sourcePath]: member.scenarioDigest } }), corpus);
+  assert.equal(
+    assertEvaluationCorpus(corpus, {
+      sourceDigests: { [member.sourcePath]: member.scenarioDigest },
+    }),
+    corpus,
+  );
   assert.throws(
-    () => assertEvaluationCorpus(corpus, { sourceDigests: { [member.sourcePath]: digest('rewritten-scenario') } }),
+    () =>
+      assertEvaluationCorpus(corpus, {
+        sourceDigests: { [member.sourcePath]: digest('rewritten-scenario') },
+      }),
     (error) => error.code === 'E_EVALUATION_DIGEST_MISMATCH',
   );
   assert.throws(
@@ -509,29 +646,42 @@ test('corpus membership is verified against recomputed source bytes, not against
 test('the gate policy states the mandatory thresholds and cannot be relaxed', () => {
   assert.deepEqual(Object.keys(gatePolicy.gates).sort(), [...EVALUATION_METRICS].sort());
   assert.throws(
-    () => assertEvaluationGatePolicy({
-      ...gatePolicy,
-      gates: { ...gatePolicy.gates, 'trigger-recall': { ...gatePolicy.gates['trigger-recall'], threshold: 9_000 } },
-    }),
+    () =>
+      assertEvaluationGatePolicy({
+        ...gatePolicy,
+        gates: {
+          ...gatePolicy.gates,
+          'trigger-recall': { ...gatePolicy.gates['trigger-recall'], threshold: 9_000 },
+        },
+      }),
     (error) => error.code === 'E_EVALUATION_GATE_POLICY_INVALID',
   );
   assert.throws(
-    () => assertEvaluationGatePolicy({
-      ...gatePolicy,
-      gates: { ...gatePolicy.gates, 'package-parity': { ...gatePolicy.gates['package-parity'], waivable: true } },
-    }),
+    () =>
+      assertEvaluationGatePolicy({
+        ...gatePolicy,
+        gates: {
+          ...gatePolicy.gates,
+          'package-parity': { ...gatePolicy.gates['package-parity'], waivable: true },
+        },
+      }),
     (error) => error.code === 'E_EVALUATION_GATE_POLICY_INVALID',
   );
 });
 
 test('the shipped grader and host-profile registries are self-sealed', () => {
-  const read = (name) => JSON.parse(readFileSync(new URL(`../../registry/${name}.json`, import.meta.url), 'utf8'));
+  const read = (name) =>
+    JSON.parse(readFileSync(new URL(`../../registry/${name}.json`, import.meta.url), 'utf8'));
   const graders = read('evaluation-graders');
   const hosts = read('evaluation-host-profiles');
   assert.equal(assertEvaluationGraderRegistry(graders), graders);
   assert.equal(assertEvaluationHostProfileRegistry(hosts), hosts);
   for (const grader of graders.graders) {
-    assert.equal(grader.graderType === 'live-model-judgement', false, 'the built-in rows stay on the deterministic path');
+    assert.equal(
+      grader.graderType === 'live-model-judgement',
+      false,
+      'the built-in rows stay on the deterministic path',
+    );
     assert.equal(grader.determinism.modelCall, false);
     assert.equal(grader.determinism.network, false);
     assert.equal(grader.determinism.credentialUse, false);

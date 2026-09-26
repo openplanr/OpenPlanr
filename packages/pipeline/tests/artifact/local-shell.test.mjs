@@ -25,8 +25,9 @@ import {
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const snapshotDir = join(root, 'tests/artifact/__snapshots__');
-const runBrowser = process.env.PLANR_BROWSER_TESTS === '1'
-  || process.env.npm_lifecycle_event === 'test:artifact:browser';
+const runBrowser =
+  process.env.PLANR_BROWSER_TESTS === '1' ||
+  process.env.npm_lifecycle_event === 'test:artifact:browser';
 const updateSnapshots = process.env.PLANR_UPDATE_SNAPSHOTS === '1';
 if (process.env.PLANR_REQUIRE_BROWSER === '1' && !runBrowser) {
   throw new Error('PLANR_REQUIRE_BROWSER requires the real artifact browser test to run.');
@@ -68,7 +69,10 @@ test('stage payload is metadata-only and retains digest plus frozen viewport', (
   assert.deepEqual(payload.artifacts[0].viewport, { width: 1440, height: 900 });
   assert.equal(Object.isFrozen(payload.artifacts[0].viewport), true);
   const serialized = JSON.stringify(payload);
-  assert.doesNotMatch(serialized, /<html|Interactions|private|\/Users\/private|machinePath|review|"html"/);
+  assert.doesNotMatch(
+    serialized,
+    /<html|Interactions|private|\/Users\/private|machinePath|review|"html"/,
+  );
 });
 
 test('stage reducer keeps transient layout and interaction state valid and immutable', () => {
@@ -91,7 +95,10 @@ test('stage reducer keeps transient layout and interaction state valid and immut
   assert.deepEqual(visibleArtifactIds(swapped), ['insights', 'checkout']);
   assert.equal(initial.activeArtifactId, 'checkout', 'the prior state is never mutated');
 
-  const comment = reduceArtifactStageState(swapped, { type: 'set-review-mode', reviewMode: 'comment' });
+  const comment = reduceArtifactStageState(swapped, {
+    type: 'set-review-mode',
+    reviewMode: 'comment',
+  });
   assert.equal(comment.reviewMode, 'comment');
   const zoomed = reduceArtifactStageState(comment, { type: 'set-zoom', zoom: 999 });
   assert.equal(zoomed.zoom, ARTIFACT_STAGE_LIMITS.maxZoom);
@@ -108,8 +115,12 @@ test('zero and one artifact can never enter variants or split state', () => {
   assert.equal(empty.viewMode, 'single');
   assert.equal(empty.status, 'empty');
 
-  const envelope = createArtifactEnvelope({ artifacts: [dynamicArtifact('only', 'Only artifact')] });
-  const one = createArtifactStageState(createArtifactStagePayload(envelope), { viewMode: 'variants' });
+  const envelope = createArtifactEnvelope({
+    artifacts: [dynamicArtifact('only', 'Only artifact')],
+  });
+  const one = createArtifactStageState(createArtifactStagePayload(envelope), {
+    viewMode: 'variants',
+  });
   assert.equal(one.viewMode, 'single');
   assert.equal(one.zoom, ARTIFACT_STAGE_LIMITS.defaultZoom);
   assert.equal(
@@ -149,7 +160,10 @@ test('shell document keeps artifact bytes out of the parent and exposes only the
   assert.doesNotMatch(document, /frame-src[^;]*'self'|frame-src[^;]*data:/);
   assert.match(document, /<script src="\.\/artifact-review-stage\.js" defer><\/script>/);
   assert.equal((document.match(/sandbox="allow-scripts"/g) ?? []).length, 3);
-  assert.doesNotMatch(document, /allow-same-origin|allow-forms|allow-popups|allow-downloads|allow-top-navigation/);
+  assert.doesNotMatch(
+    document,
+    /allow-same-origin|allow-forms|allow-popups|allow-downloads|allow-top-navigation/,
+  );
 
   const stageJson = document.match(/id="planr-artifact-stage-payload">([\s\S]*?)<\/script>/)?.[1];
   assert.ok(stageJson);
@@ -206,23 +220,42 @@ test('document presentation uses authenticated natural sizing, outer scrolling, 
   });
   const page = await context.newPage();
   await page.goto(review.url);
-  await page.waitForFunction(() => document.querySelector('[data-artifact-id="long-document"]')?.dataset.planrLayoutMeasured === 'true');
-  assert.equal(await page.locator('.planr-shell').getAttribute('data-planr-presentation'), 'document');
+  await page.waitForFunction(
+    () =>
+      document.querySelector('[data-artifact-id="long-document"]')?.dataset.planrLayoutMeasured ===
+      'true',
+  );
+  assert.equal(
+    await page.locator('.planr-shell').getAttribute('data-planr-presentation'),
+    'document',
+  );
   assert.equal(await page.locator('html').getAttribute('data-planr-presentation'), 'document');
-  assert.equal(await page.locator('[data-planr-action="feedback"]').getAttribute('aria-expanded'), 'false');
+  assert.equal(
+    await page.locator('[data-planr-action="feedback"]').getAttribute('aria-expanded'),
+    'false',
+  );
   await expectHiddenCanvasChrome(page);
   assert.equal(await page.locator('.planr-toolbar').count(), 0);
   assert.equal(await page.locator('.planr-floating-actions').count(), 1);
   await page.keyboard.press('c');
-  assert.equal(await page.locator('.planr-shell').getAttribute('data-planr-review-mode'), 'comment');
+  assert.equal(
+    await page.locator('.planr-shell').getAttribute('data-planr-review-mode'),
+    'comment',
+  );
   await page.keyboard.press('Escape');
-  assert.equal(await page.locator('.planr-shell').getAttribute('data-planr-review-mode'), 'interact');
+  assert.equal(
+    await page.locator('.planr-shell').getAttribute('data-planr-review-mode'),
+    'interact',
+  );
   await page.locator('.planr-shell').evaluate((node) => {
     node.setAttribute('data-planr-room-comments-paused', '');
   });
   assert.equal(await page.locator('[data-planr-action="add-comment"]').isDisabled(), true);
   await page.keyboard.press('c');
-  assert.equal(await page.locator('.planr-shell').getAttribute('data-planr-review-mode'), 'interact');
+  assert.equal(
+    await page.locator('.planr-shell').getAttribute('data-planr-review-mode'),
+    'interact',
+  );
   await page.locator('.planr-shell').evaluate((node) => {
     node.removeAttribute('data-planr-room-comments-paused');
   });
@@ -230,7 +263,8 @@ test('document presentation uses authenticated natural sizing, outer scrolling, 
 
   const initial = await page.evaluate(() => ({
     outerHeight: document.documentElement.scrollHeight,
-    frameHeight: document.querySelector('[data-planr-artifact-frame]')?.getBoundingClientRect().height,
+    frameHeight: document.querySelector('[data-planr-artifact-frame]')?.getBoundingClientRect()
+      .height,
     width: document.querySelector('.planr-artifact-panel')?.getBoundingClientRect().width,
   }));
   assert.ok(initial.outerHeight > 2_300);
@@ -251,15 +285,26 @@ test('document presentation uses authenticated natural sizing, outer scrolling, 
   assert.equal(innerScroll, 0, 'the artifact iframe does not consume wheel scrolling');
 
   await frame.locator('#grow').click();
-  await page.waitForFunction((height) => document.documentElement.scrollHeight > height + 400, initial.outerHeight);
+  await page.waitForFunction(
+    (height) => document.documentElement.scrollHeight > height + 400,
+    initial.outerHeight,
+  );
 
-  const widthBefore = await page.locator('.planr-artifact-panel').evaluate((node) => node.getBoundingClientRect().width);
+  const widthBefore = await page
+    .locator('.planr-artifact-panel')
+    .evaluate((node) => node.getBoundingClientRect().width);
   const commentsAction = page.locator('[data-planr-action="feedback"]');
   await commentsAction.click();
-  const widthAfter = await page.locator('.planr-artifact-panel').evaluate((node) => node.getBoundingClientRect().width);
+  const widthAfter = await page
+    .locator('.planr-artifact-panel')
+    .evaluate((node) => node.getBoundingClientRect().width);
   assert.equal(widthAfter, widthBefore, 'feedback overlay never resizes document content');
   const commentsScrim = page.locator('[data-planr-comments-scrim]');
-  assert.equal(await commentsScrim.isVisible(), true, 'document comments expose an outside-click target');
+  assert.equal(
+    await commentsScrim.isVisible(),
+    true,
+    'document comments expose an outside-click target',
+  );
   await commentsScrim.click({ position: { x: 20, y: 20 } });
   assert.equal(await commentsAction.getAttribute('aria-expanded'), 'false');
   assert.equal(await commentsAction.evaluate((node) => document.activeElement === node), true);
@@ -269,7 +314,9 @@ test('document presentation uses authenticated natural sizing, outer scrolling, 
 
   await page.evaluate(() => {
     globalThis.__planrDocumentRegions = [];
-    addEventListener('planr:artifact-region', (event) => globalThis.__planrDocumentRegions.push(event.detail));
+    addEventListener('planr:artifact-region', (event) =>
+      globalThis.__planrDocumentRegions.push(event.detail),
+    );
     scrollTo(0, 1_650);
   });
   await page.locator('[data-planr-action="add-comment"]').click();
@@ -292,8 +339,13 @@ test('document presentation uses authenticated natural sizing, outer scrolling, 
   await composerIdentity.fill('Asem');
   await composer.locator('[data-planr-composer-comment]').fill('Keep this learning path clear.');
   await composer.locator('[data-planr-composer-submit]').click();
-  await page.waitForFunction(() => globalThis.__openPlanrArtifactStage.review.getReview().pins.length === 1);
-  assert.equal(await page.locator('[data-planr-annotation-layer] > [data-planr-pin-id]').count(), 1);
+  await page.waitForFunction(
+    () => globalThis.__openPlanrArtifactStage.review.getReview().pins.length === 1,
+  );
+  assert.equal(
+    await page.locator('[data-planr-annotation-layer] > [data-planr-pin-id]').count(),
+    1,
+  );
   const region = await page.evaluate(() => globalThis.__planrDocumentRegions[0]);
   assert.equal(region.artifactId, 'long-document');
   assert.ok(region.region.y > 0.4, 'below-the-fold comments use full-document coordinates');
@@ -312,14 +364,14 @@ async function expectHiddenCanvasChrome(page) {
     '.planr-stage-controls',
     '[data-planr-action="zoom-reset"]',
     '[data-planr-action="theme"]',
-  ]) assert.equal(await page.locator(selector).count(), 0, `${selector} is absent in document mode`);
+  ])
+    assert.equal(await page.locator(selector).count(), 0, `${selector} is absent in document mode`);
 }
 
 async function serve(document, runtime, artifacts = []) {
-  const artifactByPath = new Map(artifacts.map((artifact) => [
-    `/artifact/${encodeURIComponent(artifact.id)}`,
-    artifact.html,
-  ]));
+  const artifactByPath = new Map(
+    artifacts.map((artifact) => [`/artifact/${encodeURIComponent(artifact.id)}`, artifact.html]),
+  );
   const server = createServer((request, response) => {
     response.setHeader('Cache-Control', 'no-store');
     if (request.url === '/artifact-review-stage.js') {
@@ -342,9 +394,10 @@ async function serve(document, runtime, artifacts = []) {
   const address = server.address();
   return {
     url: `http://127.0.0.1:${address.port}/`,
-    close: () => new Promise((resolveClose, reject) => server.close((error) => (
-      error ? reject(error) : resolveClose()
-    ))),
+    close: () =>
+      new Promise((resolveClose, reject) =>
+        server.close((error) => (error ? reject(error) : resolveClose())),
+      ),
   };
 }
 
@@ -413,33 +466,37 @@ test('real browser stage preserves dynamic interaction, comment routing, accessi
     reducedMotion: 'no-preference',
     viewport: { width: 1440, height: 900 },
   });
-  await context.addInitScript((sources) => {
-    globalThis.__OPENPLANR_ARTIFACT_STAGE_OPTIONS__ = {
-      async resolveArtifactSource(artifact) {
-        const response = await fetch(sources[artifact.id], {
-          cache: 'no-store',
-          credentials: 'same-origin',
-        });
-        if (!response.ok) throw new Error(`Artifact source failed: ${response.status}`);
-        return response.blob();
-      },
-      onState(state) {
-        globalThis.__planrStageState = state;
-      },
-      bridgeClient: {
-        attach({ artifact, frame }) {
-          globalThis.__planrBridgeAttachments.push(artifact.id);
-          frame.dataset.planrBridge = 'attached';
+  await context.addInitScript(
+    (sources) => {
+      globalThis.__OPENPLANR_ARTIFACT_STAGE_OPTIONS__ = {
+        async resolveArtifactSource(artifact) {
+          const response = await fetch(sources[artifact.id], {
+            cache: 'no-store',
+            credentials: 'same-origin',
+          });
+          if (!response.ok) throw new Error(`Artifact source failed: ${response.status}`);
+          return response.blob();
         },
-      },
-    };
-    globalThis.__planrPointEvents = [];
-    globalThis.__planrBridgeAttachments = [];
-    addEventListener('planr:artifact-point', (event) => globalThis.__planrPointEvents.push(event.detail));
-  }, Object.fromEntries(envelope.artifacts.map(({ id }) => [
-    id,
-    `${host.url}artifact/${encodeURIComponent(id)}`,
-  ])));
+        onState(state) {
+          globalThis.__planrStageState = state;
+        },
+        bridgeClient: {
+          attach({ artifact, frame }) {
+            globalThis.__planrBridgeAttachments.push(artifact.id);
+            frame.dataset.planrBridge = 'attached';
+          },
+        },
+      };
+      globalThis.__planrPointEvents = [];
+      globalThis.__planrBridgeAttachments = [];
+      addEventListener('planr:artifact-point', (event) =>
+        globalThis.__planrPointEvents.push(event.detail),
+      );
+    },
+    Object.fromEntries(
+      envelope.artifacts.map(({ id }) => [id, `${host.url}artifact/${encodeURIComponent(id)}`]),
+    ),
+  );
   const page = await context.newPage();
   const cspScriptViolations = [];
   page.on('console', (message) => {
@@ -449,19 +506,27 @@ test('real browser stage preserves dynamic interaction, comment routing, accessi
     }
   });
   await page.goto(host.url);
-  await page.waitForFunction(() => globalThis.__openPlanrArtifactStage?.getState().status === 'ready');
+  await page.waitForFunction(
+    () => globalThis.__openPlanrArtifactStage?.getState().status === 'ready',
+  );
   assert.equal(await page.evaluate(() => globalThis.__openPlanrArtifactStage.getState().zoom), 72);
   const bridgeAttachments = await page.evaluate(() => globalThis.__planrBridgeAttachments);
-  assert.equal(new Set(bridgeAttachments).size, envelope.artifacts.length, 'each artifact bridge attaches once');
+  assert.equal(
+    new Set(bridgeAttachments).size,
+    envelope.artifacts.length,
+    'each artifact bridge attaches once',
+  );
   assert.deepEqual(
     [...bridgeAttachments].sort(),
     envelope.artifacts.map(({ id }) => id).sort(),
     'concurrently loaded artifact bridges all attach regardless of completion order',
   );
   assert.deepEqual(
-    await page.locator('[data-planr-artifact-frame]').evaluateAll((frames) => (
-      frames.map((frame) => frame.getAttribute('src')?.startsWith('blob:'))
-    )),
+    await page
+      .locator('[data-planr-artifact-frame]')
+      .evaluateAll((frames) =>
+        frames.map((frame) => frame.getAttribute('src')?.startsWith('blob:')),
+      ),
     [true, true, true],
     'bundled source responses use opaque-origin Blob navigation',
   );
@@ -474,17 +539,32 @@ test('real browser stage preserves dynamic interaction, comment routing, accessi
     [],
     'packaged artifact scripts execute without a CSP violation inside the opaque srcdoc frame',
   );
-  assert.equal(await page.locator('[data-planr-artifact-frame="checkout"]').getAttribute('sandbox'), 'allow-scripts');
-  assert.equal(await page.locator('[data-planr-artifact-frame="checkout"]').evaluate((frame) => frame.contentDocument), null);
+  assert.equal(
+    await page.locator('[data-planr-artifact-frame="checkout"]').getAttribute('sandbox'),
+    'allow-scripts',
+  );
+  assert.equal(
+    await page
+      .locator('[data-planr-artifact-frame="checkout"]')
+      .evaluate((frame) => frame.contentDocument),
+    null,
+  );
 
-  await compareSnapshot('local-shell-desktop-light', await page.screenshot({ animations: 'disabled' }), {
-    PNG,
-    pixelmatch,
-  });
+  await compareSnapshot(
+    'local-shell-desktop-light',
+    await page.screenshot({ animations: 'disabled' }),
+    {
+      PNG,
+      pixelmatch,
+    },
+  );
 
   await page.locator('[data-planr-mode="interact"]').focus();
   await page.keyboard.press('c');
-  assert.equal(await page.locator('.planr-shell').getAttribute('data-planr-review-mode'), 'comment');
+  assert.equal(
+    await page.locator('.planr-shell').getAttribute('data-planr-review-mode'),
+    'comment',
+  );
   const layer = page.locator('[data-planr-annotation-layer="checkout"]');
   const bounds = await layer.boundingBox();
   assert.ok(bounds);
@@ -495,17 +575,25 @@ test('real browser stage preserves dynamic interaction, comment routing, accessi
   assert.ok(Math.abs(point.region.x - 0.25) < 0.01);
   assert.ok(Math.abs(point.region.y - 0.6) < 0.01);
   assert.deepEqual(point.viewport, { width: 1440, height: 900 });
-  assert.equal(await checkout.locator('#count').textContent(), '1', 'comment input never reaches the artifact');
+  assert.equal(
+    await checkout.locator('#count').textContent(),
+    '1',
+    'comment input never reaches the artifact',
+  );
 
   const before = await layer.boundingBox();
   await page.locator('[data-planr-action="zoom-in"]').click();
   await page.waitForFunction(() => globalThis.__openPlanrArtifactStage.getState().zoom === 82);
-  await page.waitForFunction(() => getComputedStyle(
-    document.querySelector('.planr-stage-surface'),
-  ).transform.startsWith('matrix(0.82'));
+  await page.waitForFunction(() =>
+    getComputedStyle(document.querySelector('.planr-stage-surface')).transform.startsWith(
+      'matrix(0.82',
+    ),
+  );
   const after = await layer.boundingBox();
   assert.ok(after.width > before.width);
-  const frozen = await page.evaluate(() => globalThis.__openPlanrArtifactStage.getState().artifacts[0].viewport);
+  const frozen = await page.evaluate(
+    () => globalThis.__openPlanrArtifactStage.getState().artifacts[0].viewport,
+  );
   assert.deepEqual(frozen, { width: 1440, height: 900 });
   await page.locator('[data-planr-action="zoom-reset"]').click();
   assert.equal(await page.evaluate(() => globalThis.__openPlanrArtifactStage.getState().zoom), 72);
@@ -516,25 +604,40 @@ test('real browser stage preserves dynamic interaction, comment routing, accessi
   assert.equal(await page.locator('#planr-artifact-1-panel').isVisible(), false);
   await page.locator('[data-planr-view="split"]').click();
   assert.equal(await page.locator('.planr-artifact-panel:visible').count(), 2);
-  await page.evaluate(() => globalThis.__openPlanrArtifactStage.dispatch({ type: 'set-zoom', zoom: 25 }));
-  await page.waitForFunction(() => getComputedStyle(
-    document.querySelector('.planr-stage-surface'),
-  ).transform.startsWith('matrix(0.25'));
+  await page.evaluate(() =>
+    globalThis.__openPlanrArtifactStage.dispatch({ type: 'set-zoom', zoom: 25 }),
+  );
+  await page.waitForFunction(() =>
+    getComputedStyle(document.querySelector('.planr-stage-surface')).transform.startsWith(
+      'matrix(0.25',
+    ),
+  );
   await page.locator('[data-planr-action="theme"]').click();
   assert.equal(await page.locator('html').getAttribute('data-planr-theme'), 'dark');
-  await compareSnapshot('local-shell-desktop-dark-split', await page.screenshot({ animations: 'disabled' }), {
-    PNG,
-    pixelmatch,
-  });
+  await compareSnapshot(
+    'local-shell-desktop-dark-split',
+    await page.screenshot({ animations: 'disabled' }),
+    {
+      PNG,
+      pixelmatch,
+    },
+  );
 
   await page.locator('#planr-variant-tab-2').focus();
   await page.keyboard.press('End');
   assert.equal(await page.locator('#planr-variant-tab-3').getAttribute('aria-selected'), 'true');
-  assert.equal(await page.locator('#planr-variant-tab-3').evaluate((element) => document.activeElement === element), true);
+  assert.equal(
+    await page
+      .locator('#planr-variant-tab-3')
+      .evaluate((element) => document.activeElement === element),
+    true,
+  );
 
   await page.emulateMedia({ reducedMotion: 'reduce' });
   assert.equal(
-    await page.locator('.planr-workspace').evaluate((element) => getComputedStyle(element).transitionDuration),
+    await page
+      .locator('.planr-workspace')
+      .evaluate((element) => getComputedStyle(element).transitionDuration),
     '0s',
   );
 
@@ -551,6 +654,9 @@ test('real browser stage preserves dynamic interaction, comment routing, accessi
   assert.equal(await page.locator('[data-planr-close-feedback]').isVisible(), true);
 
   await page.keyboard.press('Escape');
-  assert.equal(await page.locator('[data-planr-action="feedback"]').getAttribute('aria-expanded'), 'false');
+  assert.equal(
+    await page.locator('[data-planr-action="feedback"]').getAttribute('aria-expanded'),
+    'false',
+  );
   await context.close();
 });

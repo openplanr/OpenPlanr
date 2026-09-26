@@ -22,10 +22,13 @@ import {
   findOperatePolicyProviderRegistrationV2,
 } from 'planr-pipeline/operate/governed-extensions-v2';
 
-const fixture = (name) => JSON.parse(readFileSync(
-  new URL(`../../conformance/fixtures/operating-runtime-v2/${name}`, import.meta.url),
-  'utf8',
-));
+const fixture = (name) =>
+  JSON.parse(
+    readFileSync(
+      new URL(`../../conformance/fixtures/operating-runtime-v2/${name}`, import.meta.url),
+      'utf8',
+    ),
+  );
 const clone = (value) => structuredClone(value);
 const patchFixtureTarget = (value, descriptor) => {
   const patched = clone(value);
@@ -82,7 +85,11 @@ test('governed-execution extensions remain closed data-only registrations', () =
   }
 
   const unsafe = [
-    ['operate-capability-provider-registration', 'capabilityProviderCredential', 'capabilityProviders'],
+    [
+      'operate-capability-provider-registration',
+      'capabilityProviderCredential',
+      'capabilityProviders',
+    ],
     ['operate-policy-provider-registration', 'policyProviderDecision', 'policyProviders'],
     ['operate-executor-registration', 'executorEffectWidening', 'executors'],
     ['operate-executor-registration', 'executorConnector', 'executors'],
@@ -91,25 +98,69 @@ test('governed-execution extensions remain closed data-only registrations', () =
   for (const [kind, descriptorName, collection] of unsafe) {
     const patched = patchFixtureTarget(extensions, invalid[descriptorName]);
     assert.throws(
-      () => assertProtocolArtifact(kind, patched.governedExecutionRegistrations[collection][0], { protocolVersion: '2.0.0' }),
+      () =>
+        assertProtocolArtifact(kind, patched.governedExecutionRegistrations[collection][0], {
+          protocolVersion: '2.0.0',
+        }),
       { code: 'E_PROTOCOL_ARTIFACT_INVALID' },
     );
   }
 });
 
 test('public registry is deterministic and contains only exact public domains and closed built-ins', () => {
-  const registry = createOperateExtensionRegistryV2({ domains: [software(), fixture('business-domain-valid.json')] });
+  const registry = createOperateExtensionRegistryV2({
+    domains: [software(), fixture('business-domain-valid.json')],
+  });
   assert.deepEqual(registry, OPEN_REFERENCE_OPERATE_EXTENSIONS_V2);
   assert.equal(Object.isFrozen(registry), true);
-  assert.deepEqual(registry.domains.map(({ domainId, domainVersion, domainContract }) => ({ domainId, domainVersion, domainContract })), [
-    { domainId: 'business', domainVersion: '1.0.0', domainContract: { apiDomainId: 'business', id: 'business-domain', version: '1.0.0' } },
-    { domainId: 'software', domainVersion: '1.0.0', domainContract: { apiDomainId: 'software', id: 'software-domain', version: '1.0.0' } },
-  ]);
-  assert.equal(findOperateDomainRegistrationV2(registry, 'reference-domain', { domainVersion: '1.0.0' }), null);
-  assert.equal(findOperateDomainRegistrationV2(registry, 'business', { domainVersion: '1.0.0' })?.domainContract.id, 'business-domain');
-  assert.equal(findOperateSnapshotProviderRegistrationV2(registry, 'open-reference-snapshot-provider', { providerVersion: '1.0.0' })?.implementation.id, 'open-reference-snapshot-provider-v2');
-  assert.equal(findOperateMetricProviderRegistrationV2(registry, 'open-reference-metric-provider', { providerVersion: '1.0.0' })?.implementation.id, 'open-reference-metric-provider-v2');
-  assert.equal(findOperateVerificationProviderRegistrationV2(registry, 'open-reference-verification-provider', { providerVersion: '1.0.0' })?.implementation.id, 'open-reference-verification-provider-v2');
+  assert.deepEqual(
+    registry.domains.map(({ domainId, domainVersion, domainContract }) => ({
+      domainId,
+      domainVersion,
+      domainContract,
+    })),
+    [
+      {
+        domainId: 'business',
+        domainVersion: '1.0.0',
+        domainContract: { apiDomainId: 'business', id: 'business-domain', version: '1.0.0' },
+      },
+      {
+        domainId: 'software',
+        domainVersion: '1.0.0',
+        domainContract: { apiDomainId: 'software', id: 'software-domain', version: '1.0.0' },
+      },
+    ],
+  );
+  assert.equal(
+    findOperateDomainRegistrationV2(registry, 'reference-domain', { domainVersion: '1.0.0' }),
+    null,
+  );
+  assert.equal(
+    findOperateDomainRegistrationV2(registry, 'business', { domainVersion: '1.0.0' })
+      ?.domainContract.id,
+    'business-domain',
+  );
+  assert.equal(
+    findOperateSnapshotProviderRegistrationV2(registry, 'open-reference-snapshot-provider', {
+      providerVersion: '1.0.0',
+    })?.implementation.id,
+    'open-reference-snapshot-provider-v2',
+  );
+  assert.equal(
+    findOperateMetricProviderRegistrationV2(registry, 'open-reference-metric-provider', {
+      providerVersion: '1.0.0',
+    })?.implementation.id,
+    'open-reference-metric-provider-v2',
+  );
+  assert.equal(
+    findOperateVerificationProviderRegistrationV2(
+      registry,
+      'open-reference-verification-provider',
+      { providerVersion: '1.0.0' },
+    )?.implementation.id,
+    'open-reference-verification-provider-v2',
+  );
   assert.equal(registry.snapshotProviders.length, 1);
   assert.equal(registry.metricProviders.length, 1);
   assert.equal(registry.verificationProviders.length, 1);
@@ -121,15 +172,39 @@ test('public registry is deterministic and contains only exact public domains an
     policyProviders: registry.policyProviders,
     executors: registry.executors,
   };
-  assert.equal(findOperateCapabilityProviderRegistrationV2(governedRegistry, 'open-reference-capability-provider', { providerVersion: '1.0.0' })?.effectCeiling, 'project-write');
-  assert.equal(findOperatePolicyProviderRegistrationV2(governedRegistry, 'open-reference-policy-provider', { providerVersion: '1.0.0' })?.narrowingOnly, true);
-  assert.equal(findOperateExecutorRegistrationV2(governedRegistry, 'open-reference-project-executor', { executorVersion: '1.0.0' })?.implementation.id, 'open-reference-project-executor-v2');
-  assert.equal(findOperateExecutorRegistrationV2(governedRegistry, 'open-reference-containment-executor', { executorVersion: '1.0.0' })?.implementation.id, 'open-reference-containment-executor-v2');
+  assert.equal(
+    findOperateCapabilityProviderRegistrationV2(
+      governedRegistry,
+      'open-reference-capability-provider',
+      { providerVersion: '1.0.0' },
+    )?.effectCeiling,
+    'project-write',
+  );
+  assert.equal(
+    findOperatePolicyProviderRegistrationV2(governedRegistry, 'open-reference-policy-provider', {
+      providerVersion: '1.0.0',
+    })?.narrowingOnly,
+    true,
+  );
+  assert.equal(
+    findOperateExecutorRegistrationV2(governedRegistry, 'open-reference-project-executor', {
+      executorVersion: '1.0.0',
+    })?.implementation.id,
+    'open-reference-project-executor-v2',
+  );
+  assert.equal(
+    findOperateExecutorRegistrationV2(governedRegistry, 'open-reference-containment-executor', {
+      executorVersion: '1.0.0',
+    })?.implementation.id,
+    'open-reference-containment-executor-v2',
+  );
 });
 
 test('invalid, authority-bearing, cross-domain, and implicit domain declarations fail closed before a registry exists', () => {
   const invalid = phase5DomainRegistration('operating-domain-invalid.json');
-  assert.ok(assertProtocolArtifact('operate-domain-registration', business(), { protocolVersion: '2.0.0' }));
+  assert.ok(
+    assertProtocolArtifact('operate-domain-registration', business(), { protocolVersion: '2.0.0' }),
+  );
   assert.throws(() => createOperateExtensionRegistryV2({ domains: [invalid, software()] }), {
     code: 'E_PROTOCOL_ARTIFACT_INVALID',
   });
@@ -139,7 +214,9 @@ test('invalid, authority-bearing, cross-domain, and implicit domain declarations
     code: 'E_EXTENSION_REGISTRATION_INVALID',
   });
   const authority = business();
-  authority.requestedCapabilities = [{ id: 'execute-work', version: '1.0.0', reason: 'Run an executor.' }];
+  authority.requestedCapabilities = [
+    { id: 'execute-work', version: '1.0.0', reason: 'Run an executor.' },
+  ];
   assert.throws(() => createOperateExtensionRegistryV2({ domains: [authority, software()] }), {
     code: 'E_EXTENSION_REGISTRATION_INVALID',
   });
@@ -156,15 +233,28 @@ test('invalid, authority-bearing, cross-domain, and implicit domain declarations
 test('an explicitly enabled synthetic conformance domain uses the same data-only shape without acquiring a provider or authority', () => {
   const synthetic = clone(business());
   synthetic.domainId = 'synthetic-domain';
-  synthetic.domainContract = { apiDomainId: 'synthetic-domain', id: 'synthetic-domain-domain', version: '1.0.0' };
-  synthetic.projectionContracts = [{ schemaId: 'operating-domain-projection', schemaVersion: '2.0.0' }];
+  synthetic.domainContract = {
+    apiDomainId: 'synthetic-domain',
+    id: 'synthetic-domain-domain',
+    version: '1.0.0',
+  };
+  synthetic.projectionContracts = [
+    { schemaId: 'operating-domain-projection', schemaVersion: '2.0.0' },
+  ];
   synthetic.actionKinds = [{ id: 'synthetic-operating-hypothesis', version: '1.0.0' }];
   const registry = createOperateExtensionRegistryV2({
     domains: [business(), software(), synthetic],
     allowSyntheticDomains: true,
   });
-  assert.equal(findOperateDomainRegistrationV2(registry, 'synthetic-domain', { domainVersion: '1.0.0' })?.requestedCapabilities.length, 0);
-  assert.throws(() => createOperateExtensionRegistryV2({ domains: [business(), software(), synthetic] }), {
-    code: 'E_EXTENSION_REGISTRATION_INVALID',
-  });
+  assert.equal(
+    findOperateDomainRegistrationV2(registry, 'synthetic-domain', { domainVersion: '1.0.0' })
+      ?.requestedCapabilities.length,
+    0,
+  );
+  assert.throws(
+    () => createOperateExtensionRegistryV2({ domains: [business(), software(), synthetic] }),
+    {
+      code: 'E_EXTENSION_REGISTRATION_INVALID',
+    },
+  );
 });

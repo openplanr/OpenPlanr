@@ -58,14 +58,21 @@ function runOpenPlanrGraph(openPlanrRoot, fixtureRoot) {
     return { skipped: true, reason: 'OpenPlanr source CLI is missing' };
   }
   if (!existsSync(tsx)) {
-    return { skipped: true, reason: 'OpenPlanr local tsx binary is missing; run npm install in OpenPlanr' };
+    return {
+      skipped: true,
+      reason: 'OpenPlanr local tsx binary is missing; run npm install in OpenPlanr',
+    };
   }
 
-  const result = spawnSync(process.execPath, ['--import', tsx, cli, '--project-dir', fixtureRoot, 'graph', '--json'], {
-    cwd: openPlanrRoot,
-    encoding: 'utf-8',
-    env: { ...process.env, NO_COLOR: '1' },
-  });
+  const result = spawnSync(
+    process.execPath,
+    ['--import', tsx, cli, '--project-dir', fixtureRoot, 'graph', '--json'],
+    {
+      cwd: openPlanrRoot,
+      encoding: 'utf-8',
+      env: { ...process.env, NO_COLOR: '1' },
+    },
+  );
   if (result.status !== 0) {
     return { error: result.stderr || result.stdout || `exit ${result.status}` };
   }
@@ -79,38 +86,76 @@ function runOpenPlanrGraph(openPlanrRoot, fixtureRoot) {
 
 const fixtureRoot = join(root, 'conformance/fixtures/dashboard-graph');
 const planrDir = join(fixtureRoot, '.planr');
-const graphSchema = JSON.parse(readFileSync(join(root, 'schemas/v1.0.0/graph.schema.json'), 'utf-8'));
+const graphSchema = JSON.parse(
+  readFileSync(join(root, 'schemas/v1.0.0/graph.schema.json'), 'utf-8'),
+);
 
 let native = null;
 try {
   native = readGraph(planrDir);
   const errors = validateJson(native, graphSchema);
   if (errors.length === 0) {
-    add('ok', 'graph.native-schema', 'pipeline native dashboard graph fixture validates against graph schema');
+    add(
+      'ok',
+      'graph.native-schema',
+      'pipeline native dashboard graph fixture validates against graph schema',
+    );
   } else {
-    add('fail', 'graph.native-schema', `pipeline native graph fixture failed schema validation: ${errors[0].path} ${errors[0].rule}`);
+    add(
+      'fail',
+      'graph.native-schema',
+      `pipeline native graph fixture failed schema validation: ${errors[0].path} ${errors[0].rule}`,
+    );
   }
 } catch (error) {
-  add('fail', 'graph.native-read', `pipeline native graph fixture could not be read: ${error instanceof Error ? error.message : String(error)}`);
+  add(
+    'fail',
+    'graph.native-read',
+    `pipeline native graph fixture could not be read: ${error instanceof Error ? error.message : String(error)}`,
+  );
 }
 
 const openPlanrRoot = join(workspaceRoot, 'packages/cli');
 if (!existsSync(openPlanrRoot)) {
-  add('warn', 'graph.openplanr-present', 'OpenPlanr workspace package not found; CLI graph equivalence skipped', 'Restore packages/cli from migration custody.', true);
+  add(
+    'warn',
+    'graph.openplanr-present',
+    'OpenPlanr workspace package not found; CLI graph equivalence skipped',
+    'Restore packages/cli from migration custody.',
+    true,
+  );
 } else if (native) {
   const result = runOpenPlanrGraph(openPlanrRoot, fixtureRoot);
   if (result.skipped) {
-    add('warn', 'graph.openplanr-cli', result.reason, 'Install the root workspace lockfile before strict ecosystem conformance.', true);
+    add(
+      'warn',
+      'graph.openplanr-cli',
+      result.reason,
+      'Install the root workspace lockfile before strict ecosystem conformance.',
+      true,
+    );
   } else if (result.error) {
     add('fail', 'graph.openplanr-cli', `OpenPlanr graph command failed: ${result.error}`);
   } else {
     const errors = validateJson(result.graph, graphSchema);
     if (errors.length > 0) {
-      add('fail', 'graph.openplanr-schema', `OpenPlanr graph output failed schema validation: ${errors[0].path} ${errors[0].rule}`);
+      add(
+        'fail',
+        'graph.openplanr-schema',
+        `OpenPlanr graph output failed schema validation: ${errors[0].path} ${errors[0].rule}`,
+      );
     } else if (JSON.stringify(normalize(result.graph)) === JSON.stringify(normalize(native))) {
-      add('ok', 'graph.openplanr-equivalence', 'OpenPlanr CLI graph output matches pipeline native graph fixture');
+      add(
+        'ok',
+        'graph.openplanr-equivalence',
+        'OpenPlanr CLI graph output matches pipeline native graph fixture',
+      );
     } else {
-      add('fail', 'graph.openplanr-equivalence', 'OpenPlanr CLI graph output differs from pipeline native graph fixture');
+      add(
+        'fail',
+        'graph.openplanr-equivalence',
+        'OpenPlanr CLI graph output differs from pipeline native graph fixture',
+      );
     }
   }
 }
@@ -155,9 +200,17 @@ try {
   ledgerReport = null;
 }
 if (ledgerReport === null) {
-  add('fail', 'ledger.derivation', `release ledger derivation did not report: ${ledger.stderr || `exit ${ledger.status}`}`);
+  add(
+    'fail',
+    'ledger.derivation',
+    `release ledger derivation did not report: ${ledger.stderr || `exit ${ledger.status}`}`,
+  );
 } else if (ledgerReport.refusals.length > 0) {
-  add('fail', 'ledger.derivation', `published compatibility drifted from the ledger: ${ledgerReport.refusals[0].reason}`);
+  add(
+    'fail',
+    'ledger.derivation',
+    `published compatibility drifted from the ledger: ${ledgerReport.refusals[0].reason}`,
+  );
 } else if (ledgerReport.unproven.length > 0) {
   add(
     'warn',
@@ -170,7 +223,11 @@ if (ledgerReport === null) {
   );
 } else {
   const custodyDigest = ledgerReport.ledgerDigest ?? ledgerReport.packedProofDigest;
-  add('ok', 'ledger.derivation', `every published compatibility claim derives from verified custody (${custodyDigest})`);
+  add(
+    'ok',
+    'ledger.derivation',
+    `every published compatibility claim derives from verified custody (${custodyDigest})`,
+  );
 }
 
 const summary = {
@@ -183,7 +240,9 @@ const summary = {
 if (json) {
   console.log(JSON.stringify(summary, null, 2));
 } else {
-  console.log(`OpenPlanr ecosystem conformance: ${summary.ok ? 'ok' : 'failed'} (${summary.failures} failure(s), ${summary.warnings} warning(s))`);
+  console.log(
+    `OpenPlanr ecosystem conformance: ${summary.ok ? 'ok' : 'failed'} (${summary.failures} failure(s), ${summary.warnings} warning(s))`,
+  );
   for (const check of checks) {
     console.log(`[${check.status}] ${check.message}`);
     if (check.fix && check.status !== 'ok') console.log(`      fix: ${check.fix}`);

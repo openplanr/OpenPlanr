@@ -29,10 +29,10 @@ function safeReadJson(path, maxBytes) {
  * Read an Operate 2.0 runtime projection only. This reader never loads,
  * translates, or reports a legacy board layout, and never repairs state.
  */
-export function readOperatingProjection(planrDir, {
-  maxBytes = DEFAULT_MAX_BYTES,
-  expectedEventHead = null,
-} = {}) {
+export function readOperatingProjection(
+  planrDir,
+  { maxBytes = DEFAULT_MAX_BYTES, expectedEventHead = null } = {},
+) {
   const projectionPath = join(planrDir, PROJECTION_RELATIVE_PATH);
   if (!existsSync(projectionPath)) return result('absent', { state: null });
 
@@ -44,7 +44,8 @@ export function readOperatingProjection(planrDir, {
     return result('invalid', {
       state: null,
       error: String(error?.message ?? error),
-      recovery: 'Inspect runtime integrity with the owning CLI; do not edit the projection by hand.',
+      recovery:
+        'Inspect runtime integrity with the owning CLI; do not edit the projection by hand.',
     });
   }
 
@@ -59,20 +60,22 @@ export function readOperatingProjection(planrDir, {
       return result('invalid', {
         state: null,
         error: `checkpoint: ${String(error?.message ?? error)}`,
-        recovery: 'Inspect runtime integrity with the owning CLI; do not edit checkpoints manually.',
+        recovery:
+          'Inspect runtime integrity with the owning CLI; do not edit checkpoints manually.',
       });
     }
   }
 
   if (
-    expected
-    && (state.eventHead.sequence !== expected.sequence || state.eventHead.hash !== expected.hash)
+    expected &&
+    (state.eventHead.sequence !== expected.sequence || state.eventHead.hash !== expected.hash)
   ) {
     return result('stale', {
       state,
       expectedEventHead: structuredClone(expected),
       actualEventHead: structuredClone(state.eventHead),
-      recovery: 'The runtime projection and checkpoint disagree. Inspect integrity with the owning CLI.',
+      recovery:
+        'The runtime projection and checkpoint disagree. Inspect integrity with the owning CLI.',
     });
   }
 

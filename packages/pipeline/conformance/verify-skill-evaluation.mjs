@@ -7,7 +7,11 @@ import { fileURLToPath } from 'node:url';
 
 import { PipelineError } from '../lib/pipeline/errors.mjs';
 import { assertEvaluationWaiver } from '../lib/pipeline/evaluation-contract.mjs';
-import { deriveEvaluationIdentity, evaluationEvidenceReuse, EVALUATION_EVIDENCE_INPUTS } from '../lib/pipeline/evaluation-identity.mjs';
+import {
+  deriveEvaluationIdentity,
+  evaluationEvidenceReuse,
+  EVALUATION_EVIDENCE_INPUTS,
+} from '../lib/pipeline/evaluation-identity.mjs';
 import { assertEvaluationPublishSafe } from '../lib/pipeline/evaluation-redaction.mjs';
 import { admitWaiver, evaluateGates } from '../lib/evaluation/gates.mjs';
 import {
@@ -38,7 +42,8 @@ function fixture(name) {
 
 function resolvePath(container, segments) {
   let target = container;
-  for (const segment of segments) target = target?.[Array.isArray(target) ? Number(segment) : segment];
+  for (const segment of segments)
+    target = target?.[Array.isArray(target) ? Number(segment) : segment];
   return target;
 }
 
@@ -79,7 +84,9 @@ const inputs = loadEvaluationInputs({ repoRoot: root });
 pass(inputs.corpora.length > 0, 'the laboratory carries at least one contract-valid corpus');
 pass(inputs.uncoveredSkills.length === 0, 'every skill in the frozen catalog carries a corpus');
 
-const catalogHosts = new Map(inputs.catalog.skills.map((row) => [row.skillId, row.hosts.map((host) => host.host).sort()]));
+const catalogHosts = new Map(
+  inputs.catalog.skills.map((row) => [row.skillId, row.hosts.map((host) => host.host).sort()]),
+);
 for (const { corpus, scenarios } of inputs.corpora) {
   const expectedHosts = catalogHosts.get(corpus.skill.id);
   const covered = new Map();
@@ -104,13 +111,26 @@ for (const { corpus, scenarios } of inputs.corpora) {
   }
 }
 
-pass(inputs.gatePolicy.budgetDigest === inputs.budget.budgetDigest, 'the gate policy binds the budget on disk');
-pass(inputs.gatePolicy.baselineDigest === inputs.budget.baseline.baselineDigest, 'the budget and the gate policy bind one frozen baseline');
+pass(
+  inputs.gatePolicy.budgetDigest === inputs.budget.budgetDigest,
+  'the gate policy binds the budget on disk',
+);
+pass(
+  inputs.gatePolicy.baselineDigest === inputs.budget.baseline.baselineDigest,
+  'the budget and the gate policy bind one frozen baseline',
+);
 
 // ── thresholds are read from the policy, never restated ─────────────────────
 
 for (const boundary of valid.gateBoundaries) {
-  const outcome = evaluateGates({ policy, measured: boundary.measured, waivers: [], owners, now: NOW, scenarioDigests });
+  const outcome = evaluateGates({
+    policy,
+    measured: boundary.measured,
+    waivers: [],
+    owners,
+    now: NOW,
+    scenarioDigests,
+  });
   pass(outcome.result === boundary.expectedResult, `gate boundary: ${boundary.name}`);
   pass(
     JSON.stringify(outcome.blockingMetrics) === JSON.stringify(boundary.expectedBlocking),
@@ -127,21 +147,40 @@ const waived = evaluateGates({
   scenarioDigests,
 });
 pass(waived.result === valid.waivedBoundary.expectedResult, valid.waivedBoundary.name);
-pass(waived.appliedWaivers.length === 1, 'an applied waiver is recorded so a reader can see what was accepted');
-pass(waived.appliedWaivers[0].metric === valid.waivedBoundary.expectedWaivedMetric, 'the applied waiver names the metric it covers');
-pass(waived.appliedWaivers[0].ownerSignatureIdentity === owners[0], 'the applied waiver names its accountable owner');
-pass(typeof waived.appliedWaivers[0].expiresAt === 'string', 'the applied waiver carries its expiry');
+pass(
+  waived.appliedWaivers.length === 1,
+  'an applied waiver is recorded so a reader can see what was accepted',
+);
+pass(
+  waived.appliedWaivers[0].metric === valid.waivedBoundary.expectedWaivedMetric,
+  'the applied waiver names the metric it covers',
+);
+pass(
+  waived.appliedWaivers[0].ownerSignatureIdentity === owners[0],
+  'the applied waiver names its accountable owner',
+);
+pass(
+  typeof waived.appliedWaivers[0].expiresAt === 'string',
+  'the applied waiver carries its expiry',
+);
 
 // ── hostile waivers ─────────────────────────────────────────────────────────
 
 for (const mutation of hostile.waiverMutations) {
   const candidate = mutateAndReseal(referenceWaiver, mutation.operations, 'evaluation-waiver');
-  const code = mutation.layer === 'contract'
-    ? refusalCode(() => assertEvaluationWaiver(candidate))
-    : refusalCode(() => {
-      assertEvaluationWaiver(candidate);
-      admitWaiver(candidate, { policy, metric: candidate.metric, now: NOW, owners, scenarioDigests });
-    });
+  const code =
+    mutation.layer === 'contract'
+      ? refusalCode(() => assertEvaluationWaiver(candidate))
+      : refusalCode(() => {
+          assertEvaluationWaiver(candidate);
+          admitWaiver(candidate, {
+            policy,
+            metric: candidate.metric,
+            now: NOW,
+            owners,
+            scenarioDigests,
+          });
+        });
   pass(code === mutation.expectedCode, `waiver refused: ${mutation.name}`);
 
   const stillBlocked = evaluateGates({
@@ -152,16 +191,25 @@ for (const mutation of hostile.waiverMutations) {
     now: NOW,
     scenarioDigests,
   });
-  pass(stillBlocked.result === 'blocked', `an inadmissible waiver leaves the blocking result standing: ${mutation.name}`);
+  pass(
+    stillBlocked.result === 'blocked',
+    `an inadmissible waiver leaves the blocking result standing: ${mutation.name}`,
+  );
 }
 
 // ── typed CLI answers ───────────────────────────────────────────────────────
 
 for (const entry of valid.cliEnvelopes) {
-  pass(refusalCode(() => assertCliEnvelope(entry.record)) === null, `cli envelope accepted: ${entry.name}`);
+  pass(
+    refusalCode(() => assertCliEnvelope(entry.record)) === null,
+    `cli envelope accepted: ${entry.name}`,
+  );
 }
 for (const entry of invalid.cliEnvelopes) {
-  pass(refusalCode(() => assertCliEnvelope(entry.record)) === entry.expectedCode, `cli envelope refused: ${entry.name}`);
+  pass(
+    refusalCode(() => assertCliEnvelope(entry.record)) === entry.expectedCode,
+    `cli envelope refused: ${entry.name}`,
+  );
 }
 
 // ── loopback surfaces and baselines ─────────────────────────────────────────
@@ -169,10 +217,16 @@ for (const entry of invalid.cliEnvelopes) {
 const surface = assertLoopbackSurface(fixture('loopback-surface.json'));
 pass(surface.routes.length > 1, 'the loopback surface declares more than one route');
 for (const entry of invalid.loopbackSurfaces) {
-  pass(refusalCode(() => assertLoopbackSurface(entry.record)) === entry.expectedCode, `loopback surface refused: ${entry.name}`);
+  pass(
+    refusalCode(() => assertLoopbackSurface(entry.record)) === entry.expectedCode,
+    `loopback surface refused: ${entry.name}`,
+  );
 }
 for (const entry of invalid.baselines) {
-  pass(refusalCode(() => assertEvaluationBaseline(entry.record)) === entry.expectedCode, `baseline refused: ${entry.name}`);
+  pass(
+    refusalCode(() => assertEvaluationBaseline(entry.record)) === entry.expectedCode,
+    `baseline refused: ${entry.name}`,
+  );
 }
 
 // ── fabricated browser results ──────────────────────────────────────────────
@@ -180,23 +234,41 @@ for (const entry of invalid.baselines) {
 for (const entry of hostile.fabricatedAdapters) {
   const journey = await runBrowserJourney({
     surface,
-    adapter: { adapterId: 'fabricated', trusted: entry.adapter.trusted, attests: entry.adapter.attests, probe: () => { throw new Error('a fabricated adapter is never probed'); } },
+    adapter: {
+      adapterId: 'fabricated',
+      trusted: entry.adapter.trusted,
+      attests: entry.adapter.attests,
+      probe: () => {
+        throw new Error('a fabricated adapter is never probed');
+      },
+    },
     declaredViewports: surface.viewports,
   });
   pass(journey.completed === false, `a fabricated browser result never completes: ${entry.name}`);
-  pass(journey.terminalReason === entry.expectedTerminalReason, `a fabricated browser result is typed: ${entry.name}`);
-  pass(journey.absence?.code === entry.expectedAbsenceCode, `a fabricated browser result records a typed absence: ${entry.name}`);
-  pass(journey.absence?.treatedAsPass === false, `a typed absence is never read as a pass: ${entry.name}`);
+  pass(
+    journey.terminalReason === entry.expectedTerminalReason,
+    `a fabricated browser result is typed: ${entry.name}`,
+  );
+  pass(
+    journey.absence?.code === entry.expectedAbsenceCode,
+    `a fabricated browser result records a typed absence: ${entry.name}`,
+  );
+  pass(
+    journey.absence?.treatedAsPass === false,
+    `a typed absence is never read as a pass: ${entry.name}`,
+  );
 }
 
 // ── packed membership ───────────────────────────────────────────────────────
 
 for (const entry of hostile.packedMembers) {
-  const code = refusalCode(() => runPackedInstallJourney({
-    archive: { [entry.path]: 'refused\n' },
-    declaredMembers: [entry.path],
-    exercisePath: entry.path,
-  }));
+  const code = refusalCode(() =>
+    runPackedInstallJourney({
+      archive: { [entry.path]: 'refused\n' },
+      declaredMembers: [entry.path],
+      exercisePath: entry.path,
+    }),
+  );
   pass(code === entry.expectedCode, `packed member refused: ${entry.name}`);
 }
 
@@ -207,54 +279,87 @@ const installed = runPackedInstallJourney({
   exercisePath: 'skills/planr-spec/SKILL.md',
 });
 pass(installed.completed === true, 'a packed journey exercises the installed bytes');
-pass(installed.terminalReason === 'PACKED_BYTES_EXERCISED', 'a packed journey names the bytes it exercised');
+pass(
+  installed.terminalReason === 'PACKED_BYTES_EXERCISED',
+  'a packed journey names the bytes it exercised',
+);
 
 const wrongMembership = runPackedInstallJourney({
   archive: honestArchive,
   declaredMembers: [...Object.keys(honestArchive), 'skills/planr-spec/EXTRA.md'],
   exercisePath: 'skills/planr-spec/SKILL.md',
 });
-pass(wrongMembership.completed === false, 'declared membership that the archive does not carry is a mismatch');
+pass(
+  wrongMembership.completed === false,
+  'declared membership that the archive does not carry is a mismatch',
+);
 
 // ── redaction ───────────────────────────────────────────────────────────────
 
 for (const entry of hostile.publishProjections) {
-  pass(refusalCode(() => assertEvaluationPublishSafe(entry.value)) === entry.expectedCode, `publication refused: ${entry.name}`);
+  pass(
+    refusalCode(() => assertEvaluationPublishSafe(entry.value)) === entry.expectedCode,
+    `publication refused: ${entry.name}`,
+  );
 }
-pass(refusalCode(() => assertEvaluationPublishSafe(contracts['evaluation-aggregate-report'])) === null, 'the reference aggregate report is publishable');
+pass(
+  refusalCode(() => assertEvaluationPublishSafe(contracts['evaluation-aggregate-report'])) === null,
+  'the reference aggregate report is publishable',
+);
 
 // ── stale evidence ──────────────────────────────────────────────────────────
 
-const baseInputs = Object.fromEntries(EVALUATION_EVIDENCE_INPUTS.map((field, index) => [field, `sha256:${String(index).repeat(64).slice(0, 64)}`]));
+const baseInputs = Object.fromEntries(
+  EVALUATION_EVIDENCE_INPUTS.map((field, index) => [
+    field,
+    `sha256:${String(index).repeat(64).slice(0, 64)}`,
+  ]),
+);
 const scenarioId = `esc_${'a'.repeat(64)}`;
 for (const entry of hostile.staleEvidence) {
   const prior = [{ scenarioId, inputs: { ...baseInputs } }];
-  const current = [{ scenarioId, inputs: { ...baseInputs, [entry.changedInput]: `sha256:${'f'.repeat(64)}` } }];
+  const current = [
+    { scenarioId, inputs: { ...baseInputs, [entry.changedInput]: `sha256:${'f'.repeat(64)}` } },
+  ];
   const reuse = evaluationEvidenceReuse(prior, current);
   pass(reuse.reusable.length === 0, `stale evidence is refused: ${entry.name}`);
-  pass(reuse.invalidated[0].reason === entry.expectedReason, `stale evidence names why it was refused: ${entry.name}`);
+  pass(
+    reuse.invalidated[0].reason === entry.expectedReason,
+    `stale evidence names why it was refused: ${entry.name}`,
+  );
   pass(
     JSON.stringify(reuse.invalidated[0].changedInputs) === JSON.stringify([entry.changedInput]),
     `stale evidence names exactly the input that changed: ${entry.name}`,
   );
 }
-const unchanged = evaluationEvidenceReuse([{ scenarioId, inputs: { ...baseInputs } }], [{ scenarioId, inputs: { ...baseInputs } }]);
-pass(unchanged.reusable.length === 1, 'evidence whose every bound input is byte-identical carries forward');
+const unchanged = evaluationEvidenceReuse(
+  [{ scenarioId, inputs: { ...baseInputs } }],
+  [{ scenarioId, inputs: { ...baseInputs } }],
+);
+pass(
+  unchanged.reusable.length === 1,
+  'evidence whose every bound input is byte-identical carries forward',
+);
 
 // ── no fixture carries credential material ──────────────────────────────────
 
 const serialized = JSON.stringify({ valid, invalid, hostile, surface });
 for (const forbidden of ['BEGIN RSA', 'BEGIN PRIVATE KEY', 'AKIA', 'ghp_', 'xoxb-']) {
-  pass(!serialized.includes(forbidden), `evaluation fixtures carry no ${forbidden} credential material`);
+  pass(
+    !serialized.includes(forbidden),
+    `evaluation fixtures carry no ${forbidden} credential material`,
+  );
 }
 
-process.stdout.write(`${JSON.stringify({
-  ok: true,
-  protocolVersion: VERSION,
-  suite: 'skill-evaluation',
-  corpora: inputs.corpora.length,
-  scenarios: inputs.corpora.reduce((total, entry) => total + entry.scenarios.length, 0),
-  hostProfiles: inputs.hostProfileRegistry.profiles.length,
-  uncoveredSkills: inputs.uncoveredSkills.length,
-  checks,
-})}\n`);
+process.stdout.write(
+  `${JSON.stringify({
+    ok: true,
+    protocolVersion: VERSION,
+    suite: 'skill-evaluation',
+    corpora: inputs.corpora.length,
+    scenarios: inputs.corpora.reduce((total, entry) => total + entry.scenarios.length, 0),
+    hostProfiles: inputs.hostProfileRegistry.profiles.length,
+    uncoveredSkills: inputs.uncoveredSkills.length,
+    checks,
+  })}\n`,
+);

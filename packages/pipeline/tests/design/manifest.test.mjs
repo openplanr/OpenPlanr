@@ -1,9 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import {
-  buildManifest, validateManifest, SCHEMA_VERSION,
-} from '../../lib/design/manifest.mjs';
+import { buildManifest, validateManifest, SCHEMA_VERSION } from '../../lib/design/manifest.mjs';
 
 const BASE = {
   designFormat: 'walkthrough',
@@ -36,22 +34,41 @@ test('canvas defaults to the react framework', () => {
 });
 
 test('buildManifest throws when a required field is missing', () => {
-  assert.throws(() => buildManifest({ source: 'spec', generatedAt: 'x' }), /designFormat is required/);
-  assert.throws(() => buildManifest({ designFormat: 'prototype', generatedAt: 'x' }), /source is required/);
-  assert.throws(() => buildManifest({ designFormat: 'prototype', source: 'spec' }), /generatedAt is required/);
+  assert.throws(
+    () => buildManifest({ source: 'spec', generatedAt: 'x' }),
+    /designFormat is required/,
+  );
+  assert.throws(
+    () => buildManifest({ designFormat: 'prototype', generatedAt: 'x' }),
+    /source is required/,
+  );
+  assert.throws(
+    () => buildManifest({ designFormat: 'prototype', source: 'spec' }),
+    /generatedAt is required/,
+  );
 });
 
 test('validateManifest rejects a bad format enum and a react/non-canvas mismatch', () => {
   const bad = validateManifest({
-    schema_version: '1.0.0', design_format: 'mockup', source: 'spec',
-    content_provenance: 'spec', framework: 'vanilla', screens: [], generated_at: 'x',
+    schema_version: '1.0.0',
+    design_format: 'mockup',
+    source: 'spec',
+    content_provenance: 'spec',
+    framework: 'vanilla',
+    screens: [],
+    generated_at: 'x',
   });
   assert.equal(bad.ok, false);
   assert.ok(bad.errors.some((e) => e.includes('design_format')));
 
   const mismatch = validateManifest({
-    schema_version: '1.0.0', design_format: 'prototype', source: 'spec',
-    content_provenance: 'spec', framework: 'react', screens: [], generated_at: 'x',
+    schema_version: '1.0.0',
+    design_format: 'prototype',
+    source: 'spec',
+    content_provenance: 'spec',
+    framework: 'react',
+    screens: [],
+    generated_at: 'x',
   });
   assert.equal(mismatch.ok, false);
   assert.ok(mismatch.errors.some((e) => e.includes('react')));

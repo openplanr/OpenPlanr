@@ -8,8 +8,14 @@ import { resolveAuth } from '../../lib/design-engine/auth.mjs';
 import { resolveProvider } from '../../lib/design-engine/providers/index.mjs';
 
 const dirs = [];
-const tmp = () => { const d = mkdtempSync(join(tmpdir(), 'planr-auth-')); dirs.push(d); return d; };
-afterEach(() => { while (dirs.length) rmSync(dirs.pop(), { recursive: true, force: true }); });
+const tmp = () => {
+  const d = mkdtempSync(join(tmpdir(), 'planr-auth-'));
+  dirs.push(d);
+  return d;
+};
+afterEach(() => {
+  while (dirs.length) rmSync(dirs.pop(), { recursive: true, force: true });
+});
 
 test('order 1: credentials.json wins over env', () => {
   const home = tmp();
@@ -34,15 +40,25 @@ test('silent-billing DISCLOSURE when the env key matches the cwd .env (and gitig
     checkIgnore: () => false, // simulate NOT gitignored
   });
   assert.equal(auth.source, 'env');
-  assert.ok(auth.warnings.some((w) => w.startsWith('DISCLOSURE')), 'billing disclosure present');
-  assert.ok(auth.warnings.some((w) => w.startsWith('SECURITY')), 'not-gitignored warning present');
+  assert.ok(
+    auth.warnings.some((w) => w.startsWith('DISCLOSURE')),
+    'billing disclosure present',
+  );
+  assert.ok(
+    auth.warnings.some((w) => w.startsWith('SECURITY')),
+    'not-gitignored warning present',
+  );
   assert.ok(!auth.warnings.join(' ').includes('sk-shared'), 'the key itself is never echoed');
 });
 
 test('gitignored .env carrying the key → disclosure only, no SECURITY warning', () => {
   const cwd = tmp();
   writeFileSync(join(cwd, '.env.local'), "OPENAI_API_KEY='sk-shared'\n");
-  const auth = resolveAuth({ cwd, env: { PLANR_HOME: tmp(), OPENAI_API_KEY: 'sk-shared' }, checkIgnore: () => true });
+  const auth = resolveAuth({
+    cwd,
+    env: { PLANR_HOME: tmp(), OPENAI_API_KEY: 'sk-shared' },
+    checkIgnore: () => true,
+  });
   assert.ok(auth.warnings.some((w) => w.startsWith('DISCLOSURE')));
   assert.ok(!auth.warnings.some((w) => w.startsWith('SECURITY')));
 });
@@ -58,7 +74,10 @@ test('a dormant key in cwd .env (not exported) → HINT, never auto-used, never 
   const auth = resolveAuth({ cwd, env: { PLANR_HOME: tmp() } });
   assert.equal(auth.apiKey, null, 'the engine never auto-reads .env');
   assert.equal(auth.source, 'none');
-  assert.ok(auth.warnings.some((w) => w.startsWith('HINT') && w.includes('.env')), 'doctor can surface the dormant key');
+  assert.ok(
+    auth.warnings.some((w) => w.startsWith('HINT') && w.includes('.env')),
+    'doctor can surface the dormant key',
+  );
   assert.ok(!auth.warnings.join(' ').includes('sk-dormant'), 'the key value is never echoed');
 });
 

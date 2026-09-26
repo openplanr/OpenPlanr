@@ -31,7 +31,9 @@ const sha256 = (value) => createHash('sha256').update(value).digest('hex');
 
 const valid = readJson('conformance/fixtures/release-ledger/ledger-valid.json');
 const ledger = valid['release-ledger'];
-const claims = readJson('conformance/fixtures/release-ledger/compatibility-claims-valid.json').claimSet;
+const claims = readJson(
+  'conformance/fixtures/release-ledger/compatibility-claims-valid.json',
+).claimSet;
 
 function codeOf(call) {
   try {
@@ -49,27 +51,39 @@ function write(directory, path, content) {
 }
 
 function runVerifier(args, environment = {}) {
-  const result = spawnSync(process.execPath, [join(root, 'scripts/verify-release-ledger.mjs'), ...args], {
-    cwd: root,
-    encoding: 'utf8',
-    env: { ...process.env, NO_COLOR: '1', OPENPLANR_STRICT_ECOSYSTEM: '0', ...environment },
-  });
+  const result = spawnSync(
+    process.execPath,
+    [join(root, 'scripts/verify-release-ledger.mjs'), ...args],
+    {
+      cwd: root,
+      encoding: 'utf8',
+      env: { ...process.env, NO_COLOR: '1', OPENPLANR_STRICT_ECOSYSTEM: '0', ...environment },
+    },
+  );
   return { status: result.status, stdout: result.stdout, stderr: result.stderr };
 }
 
 function runStrictPackedVerifier(args, environment = {}) {
-  const result = spawnSync(process.execPath, [resolve(root, '../../scripts/verify-packed-workspace-strict.mjs'), ...args], {
-    cwd: resolve(root, '../..'),
-    encoding: 'utf8',
-    env: { ...process.env, NO_COLOR: '1', ...environment },
-  });
+  const result = spawnSync(
+    process.execPath,
+    [resolve(root, '../../scripts/verify-packed-workspace-strict.mjs'), ...args],
+    {
+      cwd: resolve(root, '../..'),
+      encoding: 'utf8',
+      env: { ...process.env, NO_COLOR: '1', ...environment },
+    },
+  );
   return { status: result.status, stdout: result.stdout, stderr: result.stderr };
 }
 
 function createPackedWorkspaceProof(workspaceRoot, custody) {
   const cli = JSON.parse(readFileSync(join(workspaceRoot, 'packages/cli/package.json'), 'utf8'));
-  const pipeline = JSON.parse(readFileSync(join(workspaceRoot, 'packages/pipeline/package.json'), 'utf8'));
-  const protocol = JSON.parse(readFileSync(join(workspaceRoot, 'packages/protocol/package.json'), 'utf8'));
+  const pipeline = JSON.parse(
+    readFileSync(join(workspaceRoot, 'packages/pipeline/package.json'), 'utf8'),
+  );
+  const protocol = JSON.parse(
+    readFileSync(join(workspaceRoot, 'packages/protocol/package.json'), 'utf8'),
+  );
   const proof = {
     kind: PACKED_WORKSPACE_PROOF_KIND,
     schemaVersion: PACKED_WORKSPACE_PROOF_SCHEMA_VERSION,
@@ -104,7 +118,13 @@ function createPackedWorkspaceProof(workspaceRoot, custody) {
         operateUtility: { status: 'passed' },
       },
       full: {
-        protocol: { name: protocol.name, version: protocol.version, node: { status: 'passed', exports: 28, typedExports: 18, assets: 46 }, browser: { status: 'passed', exports: 24, assets: 46 }, workers: { status: 'passed', exports: 24 } },
+        protocol: {
+          name: protocol.name,
+          version: protocol.version,
+          node: { status: 'passed', exports: 28, typedExports: 18, assets: 46 },
+          browser: { status: 'passed', exports: 24, assets: 46 },
+          workers: { status: 'passed', exports: 24 },
+        },
         diagram: {
           galleryCount: PACKED_WORKSPACE_DIAGRAM_GRAMMAR_COUNT,
           renderValidation: 'passed',
@@ -120,15 +140,23 @@ function createPackedWorkspaceProof(workspaceRoot, custody) {
 }
 
 test('a version label edited without repacking is a typed refusal, not a re-rendered claim', () => {
-  const claim = structuredClone(claims.find(({ producer }) => producer.repositoryKey === 'pipeline'));
+  const claim = structuredClone(
+    claims.find(({ producer }) => producer.repositoryKey === 'pipeline'),
+  );
   const original = claim.display;
   claim.producer.declaredVersion = '9.9.9';
-  assert.equal(codeOf(() => assertReleaseCompatibilityClaim(claim, { ledger })), 'E_RELEASE_LEDGER_CLAIM_DRIFT');
+  assert.equal(
+    codeOf(() => assertReleaseCompatibilityClaim(claim, { ledger })),
+    'E_RELEASE_LEDGER_CLAIM_DRIFT',
+  );
   assert.equal(claim.display, original, 'a refused claim is never re-rendered in place');
 
   const relabelled = structuredClone(ledger);
   relabelled.rows[0].declaredVersion = '9.9.9';
-  assert.equal(codeOf(() => assertReleaseLedger(relabelled)), 'E_RELEASE_LEDGER_DIGEST_MISMATCH');
+  assert.equal(
+    codeOf(() => assertReleaseLedger(relabelled)),
+    'E_RELEASE_LEDGER_DIGEST_MISMATCH',
+  );
   assert.equal(
     relabelled.rows[0].payloadDigest,
     ledger.rows[0].payloadDigest,
@@ -140,7 +168,10 @@ test('a version label edited without repacking is a typed refusal, not a re-rend
     derivation: rerendered.derivation,
     declaredVersion: '9.9.9',
   });
-  assert.equal(codeOf(() => assertReleaseCompatibilityClaim(rerendered, { ledger })), 'E_RELEASE_LEDGER_CLAIM_DRIFT');
+  assert.equal(
+    codeOf(() => assertReleaseCompatibilityClaim(rerendered, { ledger })),
+    'E_RELEASE_LEDGER_CLAIM_DRIFT',
+  );
 });
 
 test('the workspace verifier refuses a published range the repositories do not derive', () => {
@@ -154,10 +185,22 @@ test('the workspace verifier refuses a published range the repositories do not d
 
     write(workspace, 'marketplace/.claude-plugin/marketplace.json', '{"plugins":[]}\n');
     write(workspace, 'marketplace/ecosystem.json', `${JSON.stringify(manifest, null, 2)}\n`);
-    write(workspace, 'marketplace/package.json', `${JSON.stringify({ name: 'openplanr-marketplace', version: manifest.components.marketplace.version })}\n`);
-    write(workspace, 'OpenPlanr/package.json', `${JSON.stringify({ name: 'openplanr', version: manifest.components.cli.version })}\n`);
+    write(
+      workspace,
+      'marketplace/package.json',
+      `${JSON.stringify({ name: 'openplanr-marketplace', version: manifest.components.marketplace.version })}\n`,
+    );
+    write(
+      workspace,
+      'OpenPlanr/package.json',
+      `${JSON.stringify({ name: 'openplanr', version: manifest.components.cli.version })}\n`,
+    );
     write(workspace, 'skills/skills/openplanr/SKILL.md', '# skill\n');
-    write(workspace, 'skills/package.json', `${JSON.stringify({ name: '@openplanr/skills', version: manifest.components.skills.version, pipelineCompatibility: `planr-pipeline@${pipelineVersion}` })}\n`);
+    write(
+      workspace,
+      'skills/package.json',
+      `${JSON.stringify({ name: '@openplanr/skills', version: manifest.components.skills.version, pipelineCompatibility: `planr-pipeline@${pipelineVersion}` })}\n`,
+    );
     write(workspace, 'openplanr-web/package.json', '{"name":"openplanr-web","version":"0.1.0"}\n');
 
     const drifted = runVerifier(['--workspace-root', workspace, '--json']);
@@ -165,7 +208,10 @@ test('the workspace verifier refuses a published range the repositories do not d
     const report = JSON.parse(drifted.stdout);
     assert.equal(report.ok, false);
     assert.ok(
-      report.refusals.some(({ code, reason }) => code === 'E_RELEASE_LEDGER_MANIFEST_DRIFT' && reason.includes('^9.9.9')),
+      report.refusals.some(
+        ({ code, reason }) =>
+          code === 'E_RELEASE_LEDGER_MANIFEST_DRIFT' && reason.includes('^9.9.9'),
+      ),
       `expected a typed manifest drift refusal, got ${JSON.stringify(report.refusals)}`,
     );
 
@@ -177,13 +223,19 @@ test('the workspace verifier refuses a published range the repositories do not d
     const cleanReport = JSON.parse(clean.stdout);
     assert.deepEqual(cleanReport.refusals, []);
     assert.equal(cleanReport.layout, 'multi-repository');
-    assert.deepEqual(cleanReport.releasePackageKeys, ['pipeline', 'web', 'cli', 'skills', 'marketplace']);
+    assert.deepEqual(cleanReport.releasePackageKeys, [
+      'pipeline',
+      'web',
+      'cli',
+      'skills',
+      'marketplace',
+    ]);
 
     const strict = runVerifier(['--workspace-root', workspace, '--strict', '--json']);
     assert.equal(strict.status, 1, strict.stdout || strict.stderr);
     assert.deepEqual(
-      JSON.parse(strict.stdout).unproven
-        .filter(({ input }) => input.startsWith('payload.'))
+      JSON.parse(strict.stdout)
+        .unproven.filter(({ input }) => input.startsWith('payload.'))
         .map(({ repositoryKey }) => repositoryKey),
       ['pipeline', 'web', 'cli', 'skills', 'marketplace'],
       'the legacy layout retains the frozen five-repository proof boundary',
@@ -204,14 +256,26 @@ test('verification is byte-stable and mutates no committed metadata', () => {
   const first = runVerifier(['--json']);
   const second = runVerifier(['--json']);
   assert.equal(first.status, 0, first.stdout || first.stderr);
-  assert.equal(first.stdout, second.stdout, 'repeated verification from unchanged inputs is byte-identical');
+  assert.equal(
+    first.stdout,
+    second.stdout,
+    'repeated verification from unchanged inputs is byte-identical',
+  );
 
-  const conformance = spawnSync(process.execPath, [join(root, 'conformance/verify-release-ledger.mjs')], {
-    cwd: root,
-    encoding: 'utf8',
-  });
+  const conformance = spawnSync(
+    process.execPath,
+    [join(root, 'conformance/verify-release-ledger.mjs')],
+    {
+      cwd: root,
+      encoding: 'utf8',
+    },
+  );
   assert.equal(conformance.status, 0, conformance.stdout || conformance.stderr);
-  assert.deepEqual(watched.map((path) => sha256(bytes(path))), before, 'verification writes nothing');
+  assert.deepEqual(
+    watched.map((path) => sha256(bytes(path))),
+    before,
+    'verification writes nothing',
+  );
 });
 
 test('the workspace verifier understands the consolidated integration manifest', () => {
@@ -224,7 +288,9 @@ test('the workspace verifier understands the consolidated integration manifest',
     `expected the consolidated adapter-host projection, got ${JSON.stringify(report.projections)}`,
   );
   assert.ok(
-    report.versionProjections.every(({ repositoryKey }) => !['skills', 'marketplace'].includes(repositoryKey)),
+    report.versionProjections.every(
+      ({ repositoryKey }) => !['skills', 'marketplace'].includes(repositoryKey),
+    ),
     `workspace domains are not independent package identities: ${JSON.stringify(report.versionProjections)}`,
   );
   assert.deepEqual(report.releasePackageKeys, ['pipeline', 'cli']);
@@ -253,10 +319,9 @@ test('consolidated strict verification accepts the current CLI and pipeline pack
       ['payload.pipeline', 'payload.cli'],
     );
 
-    const verified = runVerifier(
-      ['--strict', '--json', '--proof', proofPath],
-      { npm_config_cache: npmCache },
-    );
+    const verified = runVerifier(['--strict', '--json', '--proof', proofPath], {
+      npm_config_cache: npmCache,
+    });
     assert.equal(verified.status, 0, verified.stdout || verified.stderr);
     const report = JSON.parse(verified.stdout);
     assert.equal(report.ok, true);
@@ -265,10 +330,9 @@ test('consolidated strict verification accepts the current CLI and pipeline pack
     assert.deepEqual(report.refusals, []);
     assert.deepEqual(report.unproven, []);
 
-    const strictPacked = runStrictPackedVerifier(
-      ['--proof', proofPath],
-      { npm_config_cache: npmCache },
-    );
+    const strictPacked = runStrictPackedVerifier(['--proof', proofPath], {
+      npm_config_cache: npmCache,
+    });
     assert.equal(strictPacked.status, 0, strictPacked.stdout || strictPacked.stderr);
     const strictReport = JSON.parse(strictPacked.stdout);
     assert.equal(strictReport.ok, true);
@@ -302,12 +366,23 @@ test('the reconciliation reaches no network, credential, git write, or publicati
     'conformance/verify-release-ledger.mjs',
   ];
   const forbidden = [
-    'await fetch(', 'globalThis.fetch', 'XMLHttpRequest',
-    'npm publish', 'git push', 'git tag', 'git commit', 'git add',
-    'NPM_TOKEN', 'GITHUB_TOKEN',
+    'await fetch(',
+    'globalThis.fetch',
+    'XMLHttpRequest',
+    'npm publish',
+    'git push',
+    'git tag',
+    'git commit',
+    'git add',
+    'NPM_TOKEN',
+    'GITHUB_TOKEN',
   ];
   const allowedSpecifiers = new Set([
-    'node:assert/strict', 'node:fs', 'node:path', 'node:url', 'planr-pipeline/protocol',
+    'node:assert/strict',
+    'node:fs',
+    'node:path',
+    'node:url',
+    'planr-pipeline/protocol',
   ]);
   for (const path of sources) {
     const text = bytes(path).toString('utf8');
@@ -322,6 +397,8 @@ test('the reconciliation reaches no network, credential, git write, or publicati
     }
   }
   const ledgerSource = bytes('lib/ecosystem/release-ledger.mjs').toString('utf8');
-  const specifiers = [...ledgerSource.matchAll(/from\s+'([^']+)'/gu)].map(([, specifier]) => specifier);
+  const specifiers = [...ledgerSource.matchAll(/from\s+'([^']+)'/gu)].map(
+    ([, specifier]) => specifier,
+  );
   assert.deepEqual(specifiers, ['../protocol/jcs.mjs', './release-package-proof.mjs']);
 });

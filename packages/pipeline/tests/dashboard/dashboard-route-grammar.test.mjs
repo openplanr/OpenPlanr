@@ -38,10 +38,10 @@ test('closed Operate API grammar rejects encoding, traversal, and unknown surfac
     surface: 'action',
     subjectId: 'act_00000001',
   });
-  assert.deepEqual(
-    parseOperateApiRoute('/api/operate/inbox/verification%3Aasg_00000001'),
-    { surface: 'inbox', subjectId: 'verification:asg_00000001' },
-  );
+  assert.deepEqual(parseOperateApiRoute('/api/operate/inbox/verification%3Aasg_00000001'), {
+    surface: 'inbox',
+    subjectId: 'verification:asg_00000001',
+  });
   assert.deepEqual(parseOperateApiRoute('/api/operate/recovery'), {
     surface: 'recovery',
     subjectId: null,
@@ -66,10 +66,11 @@ test('closed Operate API grammar rejects encoding, traversal, and unknown surfac
 });
 
 test('search destinations reject encoded ownership tricks and keep exact owned routes', () => {
-  assert.deepEqual(
-    resolveOperateExperienceSearchDestination(view, '#/operate/cycles/cycle-1'),
-    { route: 'cycles', surface: 'cycle', subjectId: 'cycle-1' },
-  );
+  assert.deepEqual(resolveOperateExperienceSearchDestination(view, '#/operate/cycles/cycle-1'), {
+    route: 'cycles',
+    surface: 'cycle',
+    subjectId: 'cycle-1',
+  });
   assert.deepEqual(
     resolveOperateExperienceSearchDestination(view, '#/operate/evidence/evidence-available'),
     { route: 'evidence', surface: 'evidence', subjectId: 'evidence-available' },

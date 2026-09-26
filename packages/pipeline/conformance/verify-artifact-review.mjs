@@ -27,19 +27,31 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const work = mkdtempSync(join(tmpdir(), 'planr-artifact-conformance-'));
 let controller;
 
-function pass(label) { console.log(`  ✓ ${label}`); }
+function pass(label) {
+  console.log(`  ✓ ${label}`);
+}
 
 try {
   const source = join(work, 'artifact.html');
-  writeFileSync(source, '<!doctype html><main data-planr-id="hero"><button>Dynamic</button></main>');
+  writeFileSync(
+    source,
+    '<!doctype html><main data-planr-id="hero"><button>Dynamic</button></main>',
+  );
   const bundled = await bundleArtifact(source, { root: work });
   assert.match(bundled.html, /data-planr-id="hero"/);
   pass('generic HTML bundles without machine metadata');
 
-  const envelope = createArtifactEnvelope({ artifacts: [{
-    id: 'artifact', title: 'Artifact', html: bundled.html,
-    viewport: { width: 1440, height: 900 }, colorScheme: 'light',
-  }] });
+  const envelope = createArtifactEnvelope({
+    artifacts: [
+      {
+        id: 'artifact',
+        title: 'Artifact',
+        html: bundled.html,
+        viewport: { width: 1440, height: 900 },
+        colorScheme: 'light',
+      },
+    ],
+  });
   const fragment = encodeArtifactFragment(envelope);
   assert.deepEqual(decodeArtifactFragment(fragment), envelope);
   const fragmentLink = await createReviewLink(envelope);
@@ -61,8 +73,11 @@ try {
     now: () => new Date('2026-07-14T12:00:00.000Z'),
   });
   const imported = await importArtifactReview({
-    sources: [review], currentEnvelope: envelope, persist: false,
-    cwd: work, env: { ...process.env, HOME: work, PLANR_HOME: join(work, '.planr') },
+    sources: [review],
+    currentEnvelope: envelope,
+    persist: false,
+    cwd: work,
+    env: { ...process.env, HOME: work, PLANR_HOME: join(work, '.planr') },
   });
   assert.equal(imported.effectiveDecision, 'changes_requested');
   assert.deepEqual(mergeArtifactFeedback(imported.reviewState, review), imported.reviewState);
@@ -71,8 +86,14 @@ try {
   mkdirSync(join(work, 'design'), { recursive: true });
   writeFileSync(join(work, 'design', 'variant-A.html'), '<main>A</main>');
   writeFileSync(join(work, 'design', 'variant-B.html'), '<main>B</main>');
-  const design = await createDesignBoardArtifactEnvelope({ sessionDir: join(work, 'design'), mode: 'loop' });
-  assert.deepEqual(design.artifacts.map(({ id }) => id), ['A', 'B']);
+  const design = await createDesignBoardArtifactEnvelope({
+    sessionDir: join(work, 'design'),
+    mode: 'loop',
+  });
+  assert.deepEqual(
+    design.artifacts.map(({ id }) => id),
+    ['A', 'B'],
+  );
   assert.equal(design.viewer.mode, 'variants');
   assert.doesNotMatch(JSON.stringify(design), /board\.html/);
   pass('design-loop variants share one ordered envelope without nested chrome');
@@ -85,7 +106,9 @@ try {
   pass('opaque-origin sandbox permits scripts while blocking network and privilege escalation');
 
   controller = await startArtifactReview({
-    envelope, noOpen: true, cwd: work,
+    envelope,
+    noOpen: true,
+    cwd: work,
     env: { ...process.env, HOME: work, PLANR_HOME: join(work, '.planr') },
   });
   assert.equal(controller.host, '127.0.0.1');

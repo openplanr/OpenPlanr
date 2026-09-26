@@ -15,7 +15,12 @@ const reportTemplate = `# Task error report (simulated)\nIterations exhausted.\n
  * @param {number} [opts.maxIterations=3]
  * @param {(taskId: string, iterationZeroBased: number) => boolean} opts.llmSucceedsOnIteration mock "LLM" — return true when work would succeed
  */
-export function simulateDevLoopWithRetries({ specDir, taskIds, maxIterations = 3, llmSucceedsOnIteration }) {
+export function simulateDevLoopWithRetries({
+  specDir,
+  taskIds,
+  maxIterations = 3,
+  llmSucceedsOnIteration,
+}) {
   const tasksDir = join(specDir, 'tasks');
   if (!existsSync(tasksDir)) mkdirSync(tasksDir, { recursive: true });
 

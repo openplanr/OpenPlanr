@@ -16,7 +16,11 @@ const COMMITTED_AT = '2026-08-23T08:01:00.000Z';
 const HASH_A = `sha256:${'a'.repeat(64)}`;
 const HASH_B = `sha256:${'b'.repeat(64)}`;
 const ACTOR = Object.freeze({ actorId: 'owner-browser-001', kind: 'human', runtime: 'openplanr' });
-const SCOPE = Object.freeze({ scopeId: 'scope-browser', domainId: 'business', domainVersion: '1.0.0' });
+const SCOPE = Object.freeze({
+  scopeId: 'scope-browser',
+  domainId: 'business',
+  domainVersion: '1.0.0',
+});
 
 function boundSubmission(submitArguments) {
   const base = {
@@ -75,12 +79,14 @@ function receipt() {
     findings: [],
     dissent: [],
     gaps: [],
-    dispositionChoices: [{
-      choiceId: bound.choiceId,
-      choiceHash: bound.choiceHash,
-      label: 'Approve the exact proposed work',
-      submitArguments: structuredClone(submitArguments),
-    }],
+    dispositionChoices: [
+      {
+        choiceId: bound.choiceId,
+        choiceHash: bound.choiceHash,
+        label: 'Approve the exact proposed work',
+        submitArguments: structuredClone(submitArguments),
+      },
+    ],
     appliedChoiceId: bound.choiceId,
     appliedChoiceHash: bound.choiceHash,
     appliedWorkDispositions: [],
@@ -104,7 +110,10 @@ function rehashBound(value) {
 
 test('browser Review contract accepts exact bound submissions and legacy or bound receipts', () => {
   const exact = receipt();
-  assert.equal(assertOperatingReviewBoundSubmissionV1(exact.boundSubmission), exact.boundSubmission);
+  assert.equal(
+    assertOperatingReviewBoundSubmissionV1(exact.boundSubmission),
+    exact.boundSubmission,
+  );
   assert.equal(assertOperatingReviewReceiptV2(exact), exact);
 
   const legacy = structuredClone(exact);
@@ -120,11 +129,13 @@ test('browser Review contract rejects closed-schema, choice, work, head, hash, a
   choice.appliedChoiceHash = `sha256:${'c'.repeat(64)}`;
 
   const work = structuredClone(receipt());
-  work.review.workDispositions = [{
-    entityType: 'operating-finding',
-    entityId: 'fnd_browser_00000001',
-    disposition: 'accepted',
-  }];
+  work.review.workDispositions = [
+    {
+      entityType: 'operating-finding',
+      entityId: 'fnd_browser_00000001',
+      disposition: 'accepted',
+    },
+  ];
 
   const head = structuredClone(receipt());
   head.eventHead.sequence = 9;
@@ -186,7 +197,9 @@ test('browser Review contract rejects schema-valid private paths and secrets in 
 
 test('public Review contract bundles for a browser with no Node builtin or Node global', async () => {
   const result = await build({
-    entryPoints: [fileURLToPath(new URL('../../lib/dashboard/operate-review-contract.mjs', import.meta.url))],
+    entryPoints: [
+      fileURLToPath(new URL('../../lib/dashboard/operate-review-contract.mjs', import.meta.url)),
+    ],
     bundle: true,
     format: 'esm',
     platform: 'browser',
@@ -196,7 +209,10 @@ test('public Review contract bundles for a browser with no Node builtin or Node 
     logLevel: 'silent',
   });
   const inputs = Object.keys(result.metafile.inputs);
-  assert.equal(inputs.some((input) => input.startsWith('node:')), false);
+  assert.equal(
+    inputs.some((input) => input.startsWith('node:')),
+    false,
+  );
   assert.equal(
     inputs.some((input) => input.endsWith('generated/operate-review-schema-data.mjs')),
     true,
@@ -209,10 +225,22 @@ test('public Review contract bundles for a browser with no Node builtin or Node 
     inputs.some((input) => input.endsWith('generated/operate-schema-token-codec.mjs')),
     true,
   );
-  assert.equal(inputs.some((input) => input.includes('review-workspace-projection-v2')), false);
-  assert.equal(inputs.some((input) => input.includes('protocol/contracts')), false);
-  assert.equal(inputs.some((input) => input.includes('protocol/loader')), false);
-  assert.equal(inputs.some((input) => input.includes('runtime-foundation')), false);
+  assert.equal(
+    inputs.some((input) => input.includes('review-workspace-projection-v2')),
+    false,
+  );
+  assert.equal(
+    inputs.some((input) => input.includes('protocol/contracts')),
+    false,
+  );
+  assert.equal(
+    inputs.some((input) => input.includes('protocol/loader')),
+    false,
+  );
+  assert.equal(
+    inputs.some((input) => input.includes('runtime-foundation')),
+    false,
+  );
   const output = result.outputFiles.map(({ text }) => text).join('\n');
   assert.doesNotMatch(output, /\bnode:/u);
   assert.doesNotMatch(output, /\bprocess\s*\.|\b(?:Buffer|__dirname|__filename)\b/u);

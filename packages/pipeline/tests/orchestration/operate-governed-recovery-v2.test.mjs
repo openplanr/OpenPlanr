@@ -23,7 +23,10 @@ test('durable terminal history classifies recovery without host, connector, exec
     initialValue: scenario.initialValue,
   });
   const store = createGovernedExecutionCheckpointStore(scenario.initial);
-  const runtime = createOperatingGovernedExecutionRuntimeV2({ initialState: scenario.initial, checkpointStore: store });
+  const runtime = createOperatingGovernedExecutionRuntimeV2({
+    initialState: scenario.initial,
+    checkpointStore: store,
+  });
   const completed = await runtime.execute(scenario.request, scenario.draft, {
     trustedHost: OPEN_REFERENCE_PROJECT_EXECUTOR_HOST_V2,
     targetAdapter,
@@ -47,10 +50,12 @@ test('runtime reconciliation is bound to its current checkpoint and configured r
   });
   const executionStore = createGovernedExecutionCheckpointStore(scenario.initial);
   const execution = createOperatingGovernedExecutionRuntimeV2({
-    initialState: scenario.initial, checkpointStore: executionStore,
+    initialState: scenario.initial,
+    checkpointStore: executionStore,
   });
   const completed = await execution.execute(scenario.request, scenario.draft, {
-    trustedHost: OPEN_REFERENCE_PROJECT_EXECUTOR_HOST_V2, targetAdapter,
+    trustedHost: OPEN_REFERENCE_PROJECT_EXECUTOR_HOST_V2,
+    targetAdapter,
   });
   const recovery = createOperatingGovernedRecoveryRuntimeV2({
     initialState: completed.state,
@@ -65,16 +70,22 @@ test('runtime reconciliation is bound to its current checkpoint and configured r
     request: reconcileRequest,
   });
   assert.equal(proof.classification, 'applied');
-  await assert.rejects(recovery.reconcile({
-    operationId: completed.operation.operationId,
-    request: reconcileRequest,
-    state: scenario.initial,
-  }), { code: 'RESULT_CONTRACT_INVALID' });
-  await assert.rejects(recovery.reconcile({
-    operationId: completed.operation.operationId,
-    request: reconcileRequest,
-    registry: { executors: [] },
-  }), { code: 'RESULT_CONTRACT_INVALID' });
+  await assert.rejects(
+    recovery.reconcile({
+      operationId: completed.operation.operationId,
+      request: reconcileRequest,
+      state: scenario.initial,
+    }),
+    { code: 'RESULT_CONTRACT_INVALID' },
+  );
+  await assert.rejects(
+    recovery.reconcile({
+      operationId: completed.operation.operationId,
+      request: reconcileRequest,
+      registry: { executors: [] },
+    }),
+    { code: 'RESULT_CONTRACT_INVALID' },
+  );
   assert.equal(targetAdapter.describe().effectCount, 1);
 });
 
@@ -86,8 +97,12 @@ test('deterministic reconciliation proves no prior effect before one safe restar
   });
   let releaseIntent;
   let observeIntent;
-  const intentSeen = new Promise((resolve) => { observeIntent = resolve; });
-  const intentHold = new Promise((resolve) => { releaseIntent = resolve; });
+  const intentSeen = new Promise((resolve) => {
+    observeIntent = resolve;
+  });
+  const intentHold = new Promise((resolve) => {
+    releaseIntent = resolve;
+  });
   const store = createGovernedExecutionCheckpointStore(scenario.initial, {
     async afterCommit({ phase }) {
       if (phase !== 'dispatch-intent') return;
@@ -95,7 +110,10 @@ test('deterministic reconciliation proves no prior effect before one safe restar
       await intentHold;
     },
   });
-  const original = createOperatingGovernedExecutionRuntimeV2({ initialState: scenario.initial, checkpointStore: store });
+  const original = createOperatingGovernedExecutionRuntimeV2({
+    initialState: scenario.initial,
+    checkpointStore: store,
+  });
   const delayed = original.execute(scenario.request, scenario.draft, {
     trustedHost: OPEN_REFERENCE_PROJECT_EXECUTOR_HOST_V2,
     targetAdapter,
@@ -129,7 +147,11 @@ test('deterministic reconciliation proves no prior effect before one safe restar
   releaseIntent();
   const originalCompletion = await delayed;
   assert.equal(originalCompletion.result.status, 'succeeded');
-  assert.equal(targetAdapter.describe().effectCount, 1, 'the original host call replays the same idempotent receipt');
+  assert.equal(
+    targetAdapter.describe().effectCount,
+    1,
+    'the original host call replays the same idempotent receipt',
+  );
 });
 
 test('unsupported reconciliation remains unknown and cannot imply redispatch authority', async () => {
@@ -147,11 +169,17 @@ test('unsupported reconciliation remains unknown and cannot imply redispatch aut
       throw Object.assign(new Error('intent-ack-lost'), { code: 'INTENT_ACK_LOST' });
     },
   });
-  const runtime = createOperatingGovernedExecutionRuntimeV2({ initialState: initial, checkpointStore: store });
-  await assert.rejects(runtime.execute(scenario.request, scenario.draft, {
-    trustedHost: OPEN_REFERENCE_PROJECT_EXECUTOR_HOST_V2,
-    targetAdapter,
-  }), { code: 'OPERATION_UNCERTAIN' });
+  const runtime = createOperatingGovernedExecutionRuntimeV2({
+    initialState: initial,
+    checkpointStore: store,
+  });
+  await assert.rejects(
+    runtime.execute(scenario.request, scenario.draft, {
+      trustedHost: OPEN_REFERENCE_PROJECT_EXECUTOR_HOST_V2,
+      targetAdapter,
+    }),
+    { code: 'OPERATION_UNCERTAIN' },
+  );
   const proof = await reconcileOperatingGovernedDispatchV2({
     state: snapshot,
     operationId: scenario.draft.operationId,

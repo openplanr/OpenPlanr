@@ -34,9 +34,7 @@ function fail(code, message, fix, details) {
 }
 
 function safeDeclaredVersion(value) {
-  return typeof value === 'string' && /^\d+\.\d+\.\d+$/u.test(value)
-    ? value
-    : null;
+  return typeof value === 'string' && /^\d+\.\d+\.\d+$/u.test(value) ? value : null;
 }
 
 function historyFailure({ line, record, reason, declaredSchemaVersion = null }) {
@@ -113,11 +111,12 @@ function boundedRegularFile(path, { allowMissing = false } = {}) {
   }
   const after = lstatSync(path);
   if (
-    before.dev !== after.dev
-    || before.ino !== after.ino
-    || before.size !== after.size
-    || before.mtimeMs !== after.mtimeMs
-  ) generationFailure();
+    before.dev !== after.dev ||
+    before.ino !== after.ino ||
+    before.size !== after.size ||
+    before.mtimeMs !== after.mtimeMs
+  )
+    generationFailure();
   return bytes;
 }
 
@@ -132,22 +131,24 @@ function terminalPosition(bytes) {
 function validateRecord(value, { line, record, history }) {
   const declaredSchemaVersion = safeDeclaredVersion(value?.schema_version);
   if (value?.schema_version !== supportedSchemaVersion) {
-    if (history) historyFailure({
-      line,
-      record,
-      reason: 'unsupported-version',
-      declaredSchemaVersion,
-    });
+    if (history)
+      historyFailure({
+        line,
+        record,
+        reason: 'unsupported-version',
+        declaredSchemaVersion,
+      });
     incomingFailure('unsupported-version');
   }
   const errors = validateJson(value, schema);
   if (errors.length > 0) {
-    if (history) historyFailure({
-      line,
-      record,
-      reason: 'schema-invalid',
-      declaredSchemaVersion,
-    });
+    if (history)
+      historyFailure({
+        line,
+        record,
+        reason: 'schema-invalid',
+        declaredSchemaVersion,
+      });
     incomingFailure('schema-invalid');
   }
   return value;
@@ -206,7 +207,11 @@ function normalizeIncomingEvent(event) {
 
 function fsyncDirectory(path) {
   const fd = openSync(path, 'r');
-  try { fsyncSync(fd); } finally { closeSync(fd); }
+  try {
+    fsyncSync(fd);
+  } finally {
+    closeSync(fd);
+  }
 }
 
 function removeStage(stage, planrDir) {
@@ -224,9 +229,10 @@ function recoverStagedAppend({ target, stage, planrDir }) {
     removeStage(stage, planrDir);
     return;
   }
-  const extendsTarget = stageBytes.length > targetBytes.length
-    && stageBytes.subarray(0, targetBytes.length).equals(targetBytes)
-    && stageRecords.length === targetRecords.length + 1;
+  const extendsTarget =
+    stageBytes.length > targetBytes.length &&
+    stageBytes.subarray(0, targetBytes.length).equals(targetBytes) &&
+    stageRecords.length === targetRecords.length + 1;
   if (!extendsTarget) {
     fail(
       'E_PROVENANCE_RECOVERY_REQUIRED',
@@ -286,11 +292,8 @@ function removeProvablyDeadLock(lock) {
   } catch {
     return false;
   }
-  if (
-    metadata?.host !== hostname()
-    || !Number.isSafeInteger(metadata.pid)
-    || metadata.pid < 1
-  ) return false;
+  if (metadata?.host !== hostname() || !Number.isSafeInteger(metadata.pid) || metadata.pid < 1)
+    return false;
   try {
     process.kill(metadata.pid, 0);
     return false;
@@ -300,10 +303,11 @@ function removeProvablyDeadLock(lock) {
   try {
     const current = lstatSync(lock);
     if (
-      current.dev !== before.dev
-      || current.ino !== before.ino
-      || readFileSync(lock, 'utf8') !== bytes
-    ) return false;
+      current.dev !== before.dev ||
+      current.ino !== before.ino ||
+      readFileSync(lock, 'utf8') !== bytes
+    )
+      return false;
     unlinkSync(lock);
     fsyncDirectory(dirname(lock));
     return true;
@@ -387,13 +391,15 @@ export function appendProvenanceEvent(projectRoot, event, { hooks = {} } = {}) {
   const lock = join(planrDir, 'provenance.lock');
   try {
     ensurePlanrDirectory(planrDir);
-    return withProvenanceLock(lock, () => appendLocked({
-      target,
-      stage,
-      planrDir,
-      normalized,
-      hooks,
-    }));
+    return withProvenanceLock(lock, () =>
+      appendLocked({
+        target,
+        stage,
+        planrDir,
+        normalized,
+        hooks,
+      }),
+    );
   } catch (error) {
     if (error instanceof PipelineError) throw error;
     throw new PipelineError(

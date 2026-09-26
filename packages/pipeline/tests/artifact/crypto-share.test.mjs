@@ -56,22 +56,32 @@ test('AES-256-GCM matches the fixed v1 vector and authenticated context', async 
   });
   assert.equal(Object.prototype.hasOwnProperty.call(encrypted, 'key'), false);
   assert.equal(
-    bytesToBase64Url(await decryptArtifactPayload({ version: 'v1', iv, ciphertext }, { keyFragment: key })),
+    bytesToBase64Url(
+      await decryptArtifactPayload({ version: 'v1', iv, ciphertext }, { keyFragment: key }),
+    ),
     plaintext,
   );
 });
 
 test('wrong keys, tampering, and unsupported encrypted versions fail identically', async () => {
   const failures = [
-    () => decryptArtifactPayload({ version: 'v1', iv, ciphertext }, { keyFragment: 'A'.repeat(43) }),
-    () => decryptArtifactPayload({ version: 'v1', iv, ciphertext: `${ciphertext.slice(0, -1)}A` }, { keyFragment: key }),
+    () =>
+      decryptArtifactPayload({ version: 'v1', iv, ciphertext }, { keyFragment: 'A'.repeat(43) }),
+    () =>
+      decryptArtifactPayload(
+        { version: 'v1', iv, ciphertext: `${ciphertext.slice(0, -1)}A` },
+        { keyFragment: key },
+      ),
     () => decryptArtifactPayload({ version: 'v2', iv, ciphertext }, { keyFragment: key }),
   ];
   for (const failure of failures) {
-    await assert.rejects(failure, (error) => (
-      error?.code === 'E_ARTIFACT_DECRYPTION_FAILED'
-      && error.message === 'Artifact payload could not be decrypted. The link may be invalid or modified.'
-    ));
+    await assert.rejects(
+      failure,
+      (error) =>
+        error?.code === 'E_ARTIFACT_DECRYPTION_FAILED' &&
+        error.message ===
+          'Artifact payload could not be decrypted. The link may be invalid or modified.',
+    );
   }
 });
 
@@ -82,11 +92,17 @@ test('generated encryption IVs do not repeat and encrypted byte ceiling includes
   }
   assert.equal(values.size, 256);
   await assert.rejects(
-    () => encryptArtifactPayload(new Uint8Array(5 * 1024 * 1024), { maxEncryptedBytes: 5 * 1024 * 1024 }),
+    () =>
+      encryptArtifactPayload(new Uint8Array(5 * 1024 * 1024), {
+        maxEncryptedBytes: 5 * 1024 * 1024,
+      }),
     errorCode('E_ARTIFACT_PASTE_LIMIT'),
   );
   await assert.rejects(
-    () => encryptArtifactPayload(new Uint8Array(5 * 1024 * 1024), { maxEncryptedBytes: Number.MAX_SAFE_INTEGER }),
+    () =>
+      encryptArtifactPayload(new Uint8Array(5 * 1024 * 1024), {
+        maxEncryptedBytes: Number.MAX_SAFE_INTEGER,
+      }),
     errorCode('E_ARTIFACT_PASTE_LIMIT'),
     'callers cannot raise the hard five-MiB encrypted ceiling',
   );
@@ -104,8 +120,11 @@ test('paste client reconstructs a ciphertext-only allowlisted request', async ()
         ok: true,
         status: 201,
         json: async () => ({
-          schemaVersion: '1.0.0', operation: 'created', id: pasteId,
-          expiresAt, deletionToken,
+          schemaVersion: '1.0.0',
+          operation: 'created',
+          id: pasteId,
+          expiresAt,
+          deletionToken,
         }),
       };
     },
@@ -113,14 +132,23 @@ test('paste client reconstructs a ciphertext-only allowlisted request', async ()
   });
   const encryptedBody = bytesToBase64Url(new Uint8Array(16));
   const result = await client.create({
-    schemaVersion: '1.0.0', operation: 'create', iv,
-    ciphertext: encryptedBody, ttl: '7d', key, deletionToken, plaintext: '<secret>',
+    schemaVersion: '1.0.0',
+    operation: 'create',
+    iv,
+    ciphertext: encryptedBody,
+    ttl: '7d',
+    key,
+    deletionToken,
+    plaintext: '<secret>',
   });
   assert.equal(result.id, pasteId);
   const body = JSON.parse(seen[0].options.body);
   assert.deepEqual(Object.keys(body), ['schemaVersion', 'operation', 'iv', 'ciphertext', 'ttl']);
   assert.equal(JSON.stringify({ url: seen[0].url, body, telemetry }).includes(key), false);
-  assert.equal(JSON.stringify({ url: seen[0].url, body, telemetry }).includes(deletionToken), false);
+  assert.equal(
+    JSON.stringify({ url: seen[0].url, body, telemetry }).includes(deletionToken),
+    false,
+  );
   assert.deepEqual(telemetry, [{ operation: 'create', ciphertextBytes: 16, ttl: '7d' }]);
 });
 
@@ -129,11 +157,20 @@ test('8,000 stays local while 8,001 requires consent before crypto or fetch', as
   assert.equal(selectReviewLinkTransport({ fragmentLength: 8_001 }), 'short');
   let encrypted = 0;
   let uploaded = 0;
-  const fragment = await createReviewLink({ ok: true }, {
-    encodeImpl: encodedAt(8_000),
-    encryptImpl: async () => { encrypted += 1; },
-    pasteClient: { create: async () => { uploaded += 1; } },
-  });
+  const fragment = await createReviewLink(
+    { ok: true },
+    {
+      encodeImpl: encodedAt(8_000),
+      encryptImpl: async () => {
+        encrypted += 1;
+      },
+      pasteClient: {
+        create: async () => {
+          uploaded += 1;
+        },
+      },
+    },
+  );
   assert.equal(fragment.transport, 'fragment');
   assert.equal(fragment.uploaded, false);
   assert.equal(fragment.expiresAt, null);
@@ -144,12 +181,22 @@ test('8,000 stays local while 8,001 requires consent before crypto or fetch', as
   assert.equal(uploaded, 0);
 
   await assert.rejects(
-    () => createReviewLink({ ok: true }, {
-      encodeImpl: encodedAt(8_001),
-      confirmShort: async () => false,
-      encryptImpl: async () => { encrypted += 1; },
-      pasteClient: { create: async () => { uploaded += 1; } },
-    }),
+    () =>
+      createReviewLink(
+        { ok: true },
+        {
+          encodeImpl: encodedAt(8_001),
+          confirmShort: async () => false,
+          encryptImpl: async () => {
+            encrypted += 1;
+          },
+          pasteClient: {
+            create: async () => {
+              uploaded += 1;
+            },
+          },
+        },
+      ),
     errorCode('E_ARTIFACT_SHORT_CONFIRMATION_REQUIRED'),
   );
   assert.equal(encrypted, 0);
@@ -157,10 +204,19 @@ test('8,000 stays local while 8,001 requires consent before crypto or fetch', as
 
   let confirmations = 0;
   await assert.rejects(
-    () => createReviewLink({ ok: true }, {
-      transport: 'short', ttl: 'forever', encodeImpl: encodedAt(400),
-      confirmShort: async () => { confirmations += 1; return true; },
-    }),
+    () =>
+      createReviewLink(
+        { ok: true },
+        {
+          transport: 'short',
+          ttl: 'forever',
+          encodeImpl: encodedAt(400),
+          confirmShort: async () => {
+            confirmations += 1;
+            return true;
+          },
+        },
+      ),
     errorCode('E_ARTIFACT_PASTE_INVALID'),
   );
   assert.equal(confirmations, 0, 'invalid requests do not prompt for upload consent');
@@ -169,24 +225,38 @@ test('8,000 stays local while 8,001 requires consent before crypto or fetch', as
 test('forced short links isolate the key and deletion token', async () => {
   let preview;
   let request;
-  const result = await createReviewLink({ ok: true }, {
-    transport: 'short',
-    encodeImpl: encodedAt(400),
-    confirmShort: async (value) => { preview = value; return true; },
-    encryptImpl: async () => ({
-      version: 'v1', iv, ciphertext, keyFragment: key,
-      compressedBytes: 3, encryptedBytes: 45,
-    }),
-    pasteClient: {
-      create: async (value) => {
-        request = value;
-        return { id: pasteId, expiresAt, deletionToken };
+  const result = await createReviewLink(
+    { ok: true },
+    {
+      transport: 'short',
+      encodeImpl: encodedAt(400),
+      confirmShort: async (value) => {
+        preview = value;
+        return true;
+      },
+      encryptImpl: async () => ({
+        version: 'v1',
+        iv,
+        ciphertext,
+        keyFragment: key,
+        compressedBytes: 3,
+        encryptedBytes: 45,
+      }),
+      pasteClient: {
+        create: async (value) => {
+          request = value;
+          return { id: pasteId, expiresAt, deletionToken };
+        },
       },
     },
-  });
+  );
   assert.equal(preview.forced, false);
   assert.deepEqual(request, {
-    schemaVersion: '1.0.0', operation: 'create', iv, ciphertext, ttl: '7d',
+    schemaVersion: '1.0.0',
+    operation: 'create',
+    iv,
+    ciphertext,
+    ttl: '7d',
   });
   assert.equal(result.uploaded, true);
   assert.equal(result.id, pasteId);
@@ -202,9 +272,16 @@ test('fragment and encrypted short review links decode through one transport ada
   const value = { schemaVersion: '1.0.0', html: '<p>Café 🌍</p>' };
   const fragment = await createReviewLink(value);
   let reads = 0;
-  assert.deepEqual(await decodeReviewLink(fragment.url, {
-    pasteClient: { get: async () => { reads += 1; } },
-  }), value);
+  assert.deepEqual(
+    await decodeReviewLink(fragment.url, {
+      pasteClient: {
+        get: async () => {
+          reads += 1;
+        },
+      },
+    }),
+    value,
+  );
   assert.equal(reads, 0);
 
   let stored;
@@ -216,10 +293,19 @@ test('fragment and encrypted short review links decode through one transport ada
     get: async (id) => {
       reads += 1;
       assert.equal(id, pasteId);
-      return { iv: stored.iv, ciphertext: stored.ciphertext, expiresAt, size: base64UrlToBytes(stored.ciphertext).length };
+      return {
+        iv: stored.iv,
+        ciphertext: stored.ciphertext,
+        expiresAt,
+        size: base64UrlToBytes(stored.ciphertext).length,
+      };
     },
   };
-  const short = await createReviewLink(value, { transport: 'short', shortConsent: true, pasteClient: client });
+  const short = await createReviewLink(value, {
+    transport: 'short',
+    shortConsent: true,
+    pasteClient: client,
+  });
   assert.deepEqual(await decodeReviewLink(short.url, { pasteClient: client }), value);
   assert.equal(reads, 1);
 });
@@ -235,18 +321,38 @@ test('paste reads sanitize expiry, missing, and network failures', async () => {
   );
   await assert.rejects(
     () => get({ ok: false, status: 404, json: async () => ({ secret: 'do-not-leak' }) }),
-    (error) => error?.code === 'E_ARTIFACT_PASTE_UNAVAILABLE' && !error.message.includes('do-not-leak'),
+    (error) =>
+      error?.code === 'E_ARTIFACT_PASTE_UNAVAILABLE' && !error.message.includes('do-not-leak'),
   );
   await assert.rejects(
-    () => createPasteClient({ fetchImpl: async () => { throw new Error('private endpoint detail'); } }).get(pasteId),
-    (error) => error?.code === 'E_ARTIFACT_SHARE_NETWORK' && !error.message.includes('private endpoint detail'),
+    () =>
+      createPasteClient({
+        fetchImpl: async () => {
+          throw new Error('private endpoint detail');
+        },
+      }).get(pasteId),
+    (error) =>
+      error?.code === 'E_ARTIFACT_SHARE_NETWORK' &&
+      !error.message.includes('private endpoint detail'),
   );
   const body = bytesToBase64Url(new Uint8Array(16));
   await assert.rejects(
-    () => get({
-      ok: true, status: 200,
-      json: async () => ({ schemaVersion: '1.0.0', operation: 'read', iv, ciphertext: body, expiresAt, size: 16 }),
-    }, () => new Date('2026-07-22T12:00:00.000Z')),
+    () =>
+      get(
+        {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            schemaVersion: '1.0.0',
+            operation: 'read',
+            iv,
+            ciphertext: body,
+            expiresAt,
+            size: 16,
+          }),
+        },
+        () => new Date('2026-07-22T12:00:00.000Z'),
+      ),
     errorCode('E_ARTIFACT_PASTE_EXPIRED'),
   );
 });
@@ -259,17 +365,24 @@ test('short-link GET paths never include the fragment key', async () => {
     fetchImpl: async (url) => {
       urls.push(url);
       return {
-        ok: true, status: 200,
+        ok: true,
+        status: 200,
         json: async () => ({
-          schemaVersion: '1.0.0', operation: 'read', iv,
-          ciphertext: encrypted.ciphertext, expiresAt, size: encrypted.encryptedBytes,
+          schemaVersion: '1.0.0',
+          operation: 'read',
+          iv,
+          ciphertext: encrypted.ciphertext,
+          expiresAt,
+          size: encrypted.encryptedBytes,
         }),
       };
     },
     now: () => new Date('2026-07-20T12:00:00.000Z'),
   });
   assert.deepEqual(
-    await decodeReviewLink(`https://share.openplanr.dev/p/${pasteId}#k=${key}`, { pasteClient: client }),
+    await decodeReviewLink(`https://share.openplanr.dev/p/${pasteId}#k=${key}`, {
+      pasteClient: client,
+    }),
     { hello: 'private' },
   );
   assert.equal(urls.length, 1);

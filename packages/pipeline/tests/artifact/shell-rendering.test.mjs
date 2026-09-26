@@ -51,10 +51,12 @@ function sha256(value) {
 test('normalization retains shell metadata but excludes artifact and review payload bytes', () => {
   const model = normalizeArtifactShellModel({
     envelope: {
-      artifacts: [artifact('safe', 'Safe title', {
-        html: '<script>globalThis.__artifactPayload = true</script>',
-        machinePath: '/Users/private/project/artifact.html',
-      })],
+      artifacts: [
+        artifact('safe', 'Safe title', {
+          html: '<script>globalThis.__artifactPayload = true</script>',
+          machinePath: '/Users/private/project/artifact.html',
+        }),
+      ],
       review: { overall: 'private review content' },
     },
     viewer: { mode: 'single', activeArtifactId: 'safe' },
@@ -64,7 +66,10 @@ test('normalization retains shell metadata but excludes artifact and review payl
   assert.equal(model.activeArtifact.viewport.width, 1440);
   assert.equal(model.activeArtifact.viewport.height, 900);
   const serialized = JSON.stringify(model);
-  assert.doesNotMatch(serialized, /__artifactPayload|private review content|\/Users\/private|machinePath/);
+  assert.doesNotMatch(
+    serialized,
+    /__artifactPayload|private review content|\/Users\/private|machinePath/,
+  );
   assert.equal(Object.hasOwn(model.activeArtifact, 'html'), false);
 });
 
@@ -76,7 +81,11 @@ test('parent HTML and embedded JSON contain hostile metadata only in escaped dat
     shell: { title: attack },
   });
 
-  assert.equal((document.match(/<script\b/g) ?? []).length, 4, 'three inert data blocks and one generated controller exist');
+  assert.equal(
+    (document.match(/<script\b/g) ?? []).length,
+    4,
+    'three inert data blocks and one generated controller exist',
+  );
   assert.equal((document.match(/<script type="application\/json"/g) ?? []).length, 3);
   assert.match(document, /<script src="\.\/artifact-review-stage\.js" defer><\/script>/);
   assert.match(document, /script-src 'self'/);
@@ -85,15 +94,21 @@ test('parent HTML and embedded JSON contain hostile metadata only in escaped dat
   assert.match(document, /data-artifact-id="id&#39;&quot;&gt;&lt;svg\/onload=1&gt;"/);
   assert.doesNotMatch(document, /artifact bytes must never enter the parent shell/);
 
-  const embedded = document.match(/<script type="application\/json" id="planr-artifact-shell-model">([\s\S]*?)<\/script>/)?.[1];
+  const embedded = document.match(
+    /<script type="application\/json" id="planr-artifact-shell-model">([\s\S]*?)<\/script>/,
+  )?.[1];
   assert.ok(embedded, 'normalized model data is embedded');
   assert.doesNotMatch(embedded, /[<>]/);
   assert.equal(JSON.parse(embedded).title, attack);
-  const stagePayload = document.match(/<script type="application\/json" id="planr-artifact-stage-payload">([\s\S]*?)<\/script>/)?.[1];
+  const stagePayload = document.match(
+    /<script type="application\/json" id="planr-artifact-stage-payload">([\s\S]*?)<\/script>/,
+  )?.[1];
   assert.ok(stagePayload, 'metadata-only stage payload is embedded');
   assert.equal(JSON.parse(stagePayload).artifacts[0].id, `id'\"><svg/onload=1>`);
   assert.doesNotMatch(stagePayload, /artifact bytes|__artifactPayload|<script|html/);
-  const reviewState = document.match(/<script type="application\/json" id="planr-artifact-review-state">([\s\S]*?)<\/script>/)?.[1];
+  const reviewState = document.match(
+    /<script type="application\/json" id="planr-artifact-review-state">([\s\S]*?)<\/script>/,
+  )?.[1];
   assert.ok(reviewState, 'digest-bound review bootstrap is embedded as inert data');
   assert.match(JSON.parse(reviewState).reviewOf, /^[a-f0-9]{64}$/);
 });
@@ -104,35 +119,63 @@ test('single, variants, and split modes keep ordered accessible relationships', 
   assert.equal(variants.viewMode, 'variants');
   assert.equal((variantHtml.match(/role="tab"/g) ?? []).length, 3);
   assert.equal((variantHtml.match(/sandbox="allow-scripts"/g) ?? []).length, 3);
-  assert.match(variantHtml, /id="planr-variant-tab-1" aria-controls="planr-artifact-1-panel" aria-selected="true"/);
-  assert.match(variantHtml, /id="planr-artifact-1-panel" role="tabpanel" aria-labelledby="planr-variant-tab-1"[^>]+style="--planr-artifact-width:1440px;--planr-artifact-height:900px"/);
+  assert.match(
+    variantHtml,
+    /id="planr-variant-tab-1" aria-controls="planr-artifact-1-panel" aria-selected="true"/,
+  );
+  assert.match(
+    variantHtml,
+    /id="planr-artifact-1-panel" role="tabpanel" aria-labelledby="planr-variant-tab-1"[^>]+style="--planr-artifact-width:1440px;--planr-artifact-height:900px"/,
+  );
   assert.match(variantHtml, /class="planr-segment" role="group" aria-label="Viewport controls"/);
   assert.match(variantHtml, /class="planr-segment" role="group" aria-label="Review mode"/);
-  assert.match(variantHtml, /class="planr-stage-controls" role="group" aria-label="Artifact display controls"/);
-  assert.match(variantHtml, /class="planr-segment planr-view-modes" role="group" aria-label="Artifact view mode"/);
+  assert.match(
+    variantHtml,
+    /class="planr-stage-controls" role="group" aria-label="Artifact display controls"/,
+  );
+  assert.match(
+    variantHtml,
+    /class="planr-segment planr-view-modes" role="group" aria-label="Artifact view mode"/,
+  );
   assert.match(variantHtml, /data-coordinate-space="normalized"/);
   assert.doesNotMatch(variantHtml, /allow-same-origin/);
 
-  const split = normalizeArtifactShellModel(input({
-    viewer: { mode: 'split', activeArtifactId: 'insights', comparisonArtifactId: 'components' },
-  }));
+  const split = normalizeArtifactShellModel(
+    input({
+      viewer: { mode: 'split', activeArtifactId: 'insights', comparisonArtifactId: 'components' },
+    }),
+  );
   assert.equal(split.viewMode, 'split');
   assert.equal(split.activeArtifact.id, 'insights');
   assert.equal(split.comparisonArtifact.id, 'components');
   const splitHtml = renderArtifactShellMarkup(split);
   assert.match(splitHtml, /data-planr-layout="split"/);
-  assert.match(splitHtml, /id="planr-variant-tab-2" aria-controls="planr-artifact-2-panel" aria-selected="true"/);
-  assert.match(splitHtml, /id="planr-artifact-2-panel" role="tabpanel" aria-labelledby="planr-variant-tab-2"/);
+  assert.match(
+    splitHtml,
+    /id="planr-variant-tab-2" aria-controls="planr-artifact-2-panel" aria-selected="true"/,
+  );
+  assert.match(
+    splitHtml,
+    /id="planr-artifact-2-panel" role="tabpanel" aria-labelledby="planr-variant-tab-2"/,
+  );
   assert.match(splitHtml, /id="planr-variant-tab-3" aria-controls="planr-artifact-3-panel"/);
-  assert.match(splitHtml, /id="planr-artifact-3-panel" role="tabpanel" aria-labelledby="planr-variant-tab-3"/);
+  assert.match(
+    splitHtml,
+    /id="planr-artifact-3-panel" role="tabpanel" aria-labelledby="planr-variant-tab-3"/,
+  );
   assert.match(splitHtml, /aria-label="Primary artifact: Insights dashboard"/);
   assert.match(splitHtml, /aria-label="Comparison artifact: Component states"/);
 
-  const single = normalizeArtifactShellModel(input({
-    viewer: { mode: 'single', activeArtifactId: 'components' },
-  }));
+  const single = normalizeArtifactShellModel(
+    input({
+      viewer: { mode: 'single', activeArtifactId: 'components' },
+    }),
+  );
   assert.equal(single.viewMode, 'single');
-  assert.match(renderArtifactShellMarkup(single), /role="tablist" aria-label="Artifact variants" hidden/);
+  assert.match(
+    renderArtifactShellMarkup(single),
+    /role="tablist" aria-label="Artifact variants" hidden/,
+  );
 });
 
 test('zero and one artifact force single mode for every non-single request', () => {
@@ -153,15 +196,30 @@ test('zero and one artifact force single mode for every non-single request', () 
     const html = renderArtifactShellMarkup(one);
     assert.match(html, /data-planr-view="single"/);
     assert.match(html, /data-planr-presentation="document"/);
-    assert.doesNotMatch(html, /Artifact display controls|Viewport controls|data-planr-action="theme"/);
+    assert.doesNotMatch(
+      html,
+      /Artifact display controls|Viewport controls|data-planr-action="theme"/,
+    );
   }
 });
 
 test('presentation resolution is compatible, explicit, and keeps document chrome quiet', () => {
-  assert.equal(resolveArtifactPresentation(undefined, { mode: 'single', artifactCount: 1 }), 'document');
-  assert.equal(resolveArtifactPresentation(undefined, { mode: 'variants', artifactCount: 2 }), 'canvas');
-  assert.equal(resolveArtifactPresentation('canvas', { mode: 'single', artifactCount: 1 }), 'canvas');
-  assert.equal(resolveArtifactPresentation('document', { mode: 'variants', artifactCount: 2 }), 'document');
+  assert.equal(
+    resolveArtifactPresentation(undefined, { mode: 'single', artifactCount: 1 }),
+    'document',
+  );
+  assert.equal(
+    resolveArtifactPresentation(undefined, { mode: 'variants', artifactCount: 2 }),
+    'canvas',
+  );
+  assert.equal(
+    resolveArtifactPresentation('canvas', { mode: 'single', artifactCount: 1 }),
+    'canvas',
+  );
+  assert.equal(
+    resolveArtifactPresentation('document', { mode: 'variants', artifactCount: 2 }),
+    'document',
+  );
 
   const documentModel = normalizeArtifactShellModel({
     envelope: { artifacts: [artifact('only', 'Only artifact')] },
@@ -171,7 +229,10 @@ test('presentation resolution is compatible, explicit, and keeps document chrome
   assert.equal(documentModel.presentation, 'document');
   assert.equal(documentModel.railOpen, false);
   assert.match(documentHtml, /data-planr-presentation="document"/);
-  assert.doesNotMatch(documentHtml, /planr-toolbar|planr-brand|HTML ·|ARTIFACT \/|Single|Variants|Split|Viewport controls|data-planr-action="theme"|>Interact<|>Comment<|>Feedback</);
+  assert.doesNotMatch(
+    documentHtml,
+    /planr-toolbar|planr-brand|HTML ·|ARTIFACT \/|Single|Variants|Split|Viewport controls|data-planr-action="theme"|>Interact<|>Comment<|>Feedback</,
+  );
   assert.match(documentHtml, /class="planr-floating-actions"/);
   assert.match(documentHtml, /data-planr-action="add-comment"/);
   assert.match(documentHtml, /data-planr-action="feedback"[^>]+aria-label="0 comments"/);
@@ -242,7 +303,11 @@ test('shell theme stays independent from frozen artifact color scheme and review
 });
 
 test('structural CSS is token-only and carries approved desktop, mobile, focus, and motion rules', () => {
-  assert.doesNotMatch(ARTIFACT_SHELL_CSS, /#[0-9a-f]{3,8}\b/i, 'shell source contains no copied color values');
+  assert.doesNotMatch(
+    ARTIFACT_SHELL_CSS,
+    /#[0-9a-f]{3,8}\b/i,
+    'shell source contains no copied color values',
+  );
   for (const token of [
     '--planr-toolbar-height',
     '--planr-review-rail-width',
@@ -252,7 +317,8 @@ test('structural CSS is token-only and carries approved desktop, mobile, focus, 
     '--planr-color-primary',
     '--planr-motion-fast',
     '--planr-motion-base',
-  ]) assert.match(ARTIFACT_SHELL_CSS, new RegExp(token));
+  ])
+    assert.match(ARTIFACT_SHELL_CSS, new RegExp(token));
   assert.match(ARTIFACT_SHELL_CSS, /height: min\(52dvh, 480px\)/);
   assert.match(ARTIFACT_SHELL_CSS, /@media \(max-width: 900px\)/);
   assert.match(ARTIFACT_SHELL_CSS, /@media \(max-width: 390px\)/);
@@ -269,8 +335,14 @@ test('structural CSS is token-only and carries approved desktop, mobile, focus, 
 // This is intentionally a deterministic source-byte contract, not a rendered
 // screenshot claim. T-005 owns browser interaction and visual snapshot coverage.
 test('light and dark source contracts are byte-stable while T-005 owns rendered visual coverage', () => {
-  const light = renderArtifactShellDocument({ ...input(), shell: { theme: 'light', title: 'Snapshot' } });
-  const dark = renderArtifactShellDocument({ ...input(), shell: { theme: 'dark', title: 'Snapshot' } });
+  const light = renderArtifactShellDocument({
+    ...input(),
+    shell: { theme: 'light', title: 'Snapshot' },
+  });
+  const dark = renderArtifactShellDocument({
+    ...input(),
+    shell: { theme: 'dark', title: 'Snapshot' },
+  });
   assert.match(light, /data-planr-theme="light"/);
   assert.match(dark, /data-planr-theme="dark"/);
   assert.match(light, /--planr-toolbar-height: 48px/);
@@ -280,7 +352,10 @@ test('light and dark source contracts are byte-stable while T-005 owns rendered 
   const lightCss = light.match(/<style>\n([\s\S]*?)<\/style>/)?.[1];
   const darkCss = dark.match(/<style>\n([\s\S]*?)<\/style>/)?.[1];
   assert.equal(lightCss, darkCss, 'both theme choices use the same generated token and shell CSS');
-  assert.equal(light, renderArtifactShellDocument({ ...input(), shell: { theme: 'light', title: 'Snapshot' } }));
+  assert.equal(
+    light,
+    renderArtifactShellDocument({ ...input(), shell: { theme: 'light', title: 'Snapshot' } }),
+  );
 });
 
 test('generated public projection matches canonical artifact bytes and digests', () => {
@@ -295,29 +370,32 @@ test('generated public projection matches canonical artifact bytes and digests',
     ARTIFACT_SHELL_ASSET_PATHS.template,
     ...manifest.assets.map(({ path }) => path),
   ];
-  const assets = Object.fromEntries(projectedPaths.map((path) => [
-    path,
-    readFileSync(join(root, path), 'utf8'),
-  ]));
-  for (const [path, bytes] of Object.entries(assets)) {
-    assert.equal(bytes, readFileSync(join(canonicalArtifactRoot, path), 'utf8'), `${path} matches canonical custody`);
-  }
-  assert.equal(
-    assets[ARTIFACT_SHELL_ASSET_PATHS.template],
-    renderArtifactShellTemplate(),
+  const assets = Object.fromEntries(
+    projectedPaths.map((path) => [path, readFileSync(join(root, path), 'utf8')]),
   );
+  for (const [path, bytes] of Object.entries(assets)) {
+    assert.equal(
+      bytes,
+      readFileSync(join(canonicalArtifactRoot, path), 'utf8'),
+      `${path} matches canonical custody`,
+    );
+  }
+  assert.equal(assets[ARTIFACT_SHELL_ASSET_PATHS.template], renderArtifactShellTemplate());
 
   assert.equal(manifest.sync, 'byte-for-byte');
   assert.equal(manifest.entrypoint, ARTIFACT_SHELL_ASSET_PATHS.template);
-  assert.deepEqual(manifest.assets.map(({ path }) => path), [
-    'lib/artifact/ui/generated/artifact-theme.css',
-    'lib/artifact/ui/generated/artifact-theme.json',
-    'templates/artifact-review-shell.html',
-    'templates/artifact-review-stage.js',
-    'templates/design/design-board-adapter.js',
-    'templates/diagram-owner.js',
-    'templates/diagram-studio.js',
-  ]);
+  assert.deepEqual(
+    manifest.assets.map(({ path }) => path),
+    [
+      'lib/artifact/ui/generated/artifact-theme.css',
+      'lib/artifact/ui/generated/artifact-theme.json',
+      'templates/artifact-review-shell.html',
+      'templates/artifact-review-stage.js',
+      'templates/design/design-board-adapter.js',
+      'templates/diagram-owner.js',
+      'templates/diagram-studio.js',
+    ],
+  );
   for (const record of manifest.assets) {
     assert.equal(record.sha256, sha256(assets[record.path]));
     assert.equal(record.bytes, Buffer.byteLength(assets[record.path], 'utf8'));

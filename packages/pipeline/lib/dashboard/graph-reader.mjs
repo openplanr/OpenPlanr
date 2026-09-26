@@ -122,7 +122,11 @@ export function parseFrontmatter(raw) {
         const firstKey = rawItem.slice(0, itemColon).trim();
         item[firstKey] = coerceScalar(rawItem.slice(itemColon + 1));
         j++;
-        while (j < lines.length && /^\s{4,}[A-Za-z][A-Za-z0-9_-]*\s*:/.test(lines[j]) && !/^\s*-\s+/.test(lines[j])) {
+        while (
+          j < lines.length &&
+          /^\s{4,}[A-Za-z][A-Za-z0-9_-]*\s*:/.test(lines[j]) &&
+          !/^\s*-\s+/.test(lines[j])
+        ) {
           const nested = lines[j].trim();
           const nestedColon = nested.indexOf(':');
           item[nested.slice(0, nestedColon).trim()] = coerceScalar(nested.slice(nestedColon + 1));
@@ -213,9 +217,12 @@ const ADDRESSED_STATES = new Set(['promoted', 'superseded']);
  * - everything else = outstanding.
  */
 export function classifyStatus(rawStatus) {
-  const s = String(rawStatus ?? '').trim().toLowerCase();
+  const s = String(rawStatus ?? '')
+    .trim()
+    .toLowerCase();
   if (s === 'blocked') return 'blocked';
-  if (s === 'active' || s === 'in-progress' || s === 'in_progress' || s === 'in progress') return 'in-progress';
+  if (s === 'active' || s === 'in-progress' || s === 'in_progress' || s === 'in progress')
+    return 'in-progress';
   if (DONE_STATES.has(s)) return 'done';
   if (ADDRESSED_STATES.has(s)) return 'addressed';
   return 'outstanding';
@@ -354,10 +361,7 @@ function buildNode(absPath, planrDir, includeBody) {
 
   // `.planr/`-relative dir, normalized via path.relative so a relative or a
   // trailing-slashed planrDir still yields a clean POSIX-style relative path.
-  const relDir = relative(planrDir, dirname(absPath))
-    .split(sep)
-    .join('/')
-    .replace(/^\//, '');
+  const relDir = relative(planrDir, dirname(absPath)).split(sep).join('/').replace(/^\//, '');
 
   let localId = fm.id != null ? String(fm.id) : '';
   if (localId === '') {
@@ -385,9 +389,7 @@ function buildNode(absPath, planrDir, includeBody) {
 
   const authoredTitle = fm.title ?? fm.name;
   const title =
-    authoredTitle != null && String(authoredTitle).trim() !== ''
-      ? String(authoredTitle)
-      : localId;
+    authoredTitle != null && String(authoredTitle).trim() !== '' ? String(authoredTitle) : localId;
   const status = classifyStatus(fm.status);
 
   const node = { id, type, title, status, frontmatter: fm };
@@ -486,7 +488,10 @@ export function readGraph(planrDir, opts = {}) {
   if (shouldValidate) {
     const errs = validate(graph, 'graph');
     if (errs.length > 0) {
-      const first = errs.slice(0, 3).map((e) => `${e.path}: ${e.rule} — ${e.detail}`).join('; ');
+      const first = errs
+        .slice(0, 3)
+        .map((e) => `${e.path}: ${e.rule} — ${e.detail}`)
+        .join('; ');
       throw new Error(`graph-reader produced a graph that fails graph.schema.json: ${first}`);
     }
   }

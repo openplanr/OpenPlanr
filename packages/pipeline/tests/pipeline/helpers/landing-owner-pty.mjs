@@ -77,22 +77,21 @@ print(json.dumps({
 `;
 
 export function hasRealOwnerTerminal() {
-  return Number.isInteger(process.stdin?.fd)
-    && Number.isInteger(process.stderr?.fd)
-    && isatty(process.stdin.fd)
-    && isatty(process.stderr.fd);
+  return (
+    Number.isInteger(process.stdin?.fd) &&
+    Number.isInteger(process.stderr?.fd) &&
+    isatty(process.stdin.fd) &&
+    isatty(process.stderr.fd)
+  );
 }
 
 export function isDirectTestModule(url) {
-  return typeof process.argv[1] === 'string'
-    && resolve(process.argv[1]) === resolve(fileURLToPath(url));
+  return (
+    typeof process.argv[1] === 'string' && resolve(process.argv[1]) === resolve(fileURLToPath(url))
+  );
 }
 
-export function runTestFileInOwnerPty(testFile, {
-  choices = [],
-  env = {},
-  testNamePattern,
-} = {}) {
+export function runTestFileInOwnerPty(testFile, { choices = [], env = {}, testNamePattern } = {}) {
   const testPath = testFile instanceof URL ? fileURLToPath(testFile) : testFile;
   const nodeArguments = [
     process.execPath,
@@ -104,26 +103,30 @@ export function runTestFileInOwnerPty(testFile, {
   ];
 
   return new Promise((resolveRun, rejectRun) => {
-    const child = spawn('python3', [
-      '-c',
-      PTY_DRIVER,
-      JSON.stringify({ argv: nodeArguments, choices }),
-    ], {
-      env: { ...process.env, ...env },
-      stdio: ['ignore', 'pipe', 'pipe'],
-    });
+    const child = spawn(
+      'python3',
+      ['-c', PTY_DRIVER, JSON.stringify({ argv: nodeArguments, choices })],
+      {
+        env: { ...process.env, ...env },
+        stdio: ['ignore', 'pipe', 'pipe'],
+      },
+    );
     let driverOutput = '';
     let driverError = '';
-    child.stdout.on('data', (chunk) => { driverOutput += chunk.toString(); });
-    child.stderr.on('data', (chunk) => { driverError += chunk.toString(); });
-    child.once('error', (cause) => rejectRun(new Error(
-      `Unable to start the owner PTY test harness: ${cause.message}`,
-    )));
+    child.stdout.on('data', (chunk) => {
+      driverOutput += chunk.toString();
+    });
+    child.stderr.on('data', (chunk) => {
+      driverError += chunk.toString();
+    });
+    child.once('error', (cause) =>
+      rejectRun(new Error(`Unable to start the owner PTY test harness: ${cause.message}`)),
+    );
     child.once('close', (code, signal) => {
       if (code !== 0) {
-        rejectRun(new Error(
-          `Owner PTY driver failed (${signal ?? code}).\n${driverError || driverOutput}`,
-        ));
+        rejectRun(
+          new Error(`Owner PTY driver failed (${signal ?? code}).\n${driverError || driverOutput}`),
+        );
         return;
       }
       let result;
@@ -135,9 +138,11 @@ export function runTestFileInOwnerPty(testFile, {
         return;
       }
       if (result.harnessError || result.childStatus !== 0) {
-        rejectRun(new Error(
-          `Owner PTY test child failed (${result.harnessError ?? result.childStatus}).\n${result.output}`,
-        ));
+        rejectRun(
+          new Error(
+            `Owner PTY test child failed (${result.harnessError ?? result.childStatus}).\n${result.output}`,
+          ),
+        );
         return;
       }
       resolveRun(result);

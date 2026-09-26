@@ -106,7 +106,9 @@ export interface LandingOwnerRuntimeCallbacks {
   readonly commitIntent: (request: Readonly<Record<string, unknown>>) => unknown | Promise<unknown>;
   readonly dispatch: (request: Readonly<Record<string, unknown>>) => unknown | Promise<unknown>;
   readonly reconcile: (request: Readonly<Record<string, unknown>>) => unknown | Promise<unknown>;
-  readonly commitOutcome: (request: Readonly<Record<string, unknown>>) => unknown | Promise<unknown>;
+  readonly commitOutcome: (
+    request: Readonly<Record<string, unknown>>,
+  ) => unknown | Promise<unknown>;
 }
 
 export interface LandingOwnerRuntimeHost {
@@ -124,22 +126,37 @@ export const LANDING_WORKFLOW_ASSET_PATHS: readonly string[];
 export function assertLandingWorkflowCatalog(value: unknown): Readonly<Record<string, unknown>>;
 export function readLandingWorkflowCatalog(): Readonly<Record<string, unknown>>;
 export function readLandingOperationRegistry(): Readonly<Record<string, unknown>>;
-export function assertLandingWorkflowManifest(value: unknown, options?: { verifyFiles?: boolean }): Readonly<Record<string, unknown>>;
-export function readLandingWorkflowManifest(options?: { verifyFiles?: boolean }): Readonly<Record<string, unknown>>;
+export function assertLandingWorkflowManifest(
+  value: unknown,
+  options?: { verifyFiles?: boolean },
+): Readonly<Record<string, unknown>>;
+export function readLandingWorkflowManifest(options?: {
+  verifyFiles?: boolean;
+}): Readonly<Record<string, unknown>>;
 export function bindLandingPlan(options?: Record<string, unknown>): Readonly<LandingPlan>;
 export function createLandingOwnerRuntimeHost(
   callbacks: LandingOwnerRuntimeCallbacks,
 ): Readonly<LandingOwnerRuntimeHost>;
 export function prepareLanding(options?: Record<string, unknown>): Readonly<LandingPlan>;
-export function landingStatus(options?: { plan?: LandingPlan; events?: LandingEvent[] }): Readonly<Record<string, unknown>>;
-export function showLanding(options?: { plan?: LandingPlan; events?: LandingEvent[] }): Readonly<Record<string, unknown>>;
-export function previewLandingDocket(options?: Record<string, unknown>): Readonly<Record<string, unknown>>;
-export function advanceLanding(options?: Record<string, unknown>): Promise<Readonly<{
-  ok: true;
-  operation?: 'landing.advance';
-  status?: 'cancelled';
-  authority: 'none';
-  state?: LandingState;
-  phaseReceipt?: Readonly<Record<string, unknown>>;
-  landingReceipt?: Readonly<Record<string, unknown>> | null;
-}>>;
+export function landingStatus(options?: {
+  plan?: LandingPlan;
+  events?: LandingEvent[];
+}): Readonly<Record<string, unknown>>;
+export function showLanding(options?: {
+  plan?: LandingPlan;
+  events?: LandingEvent[];
+}): Readonly<Record<string, unknown>>;
+export function previewLandingDocket(
+  options?: Record<string, unknown>,
+): Readonly<Record<string, unknown>>;
+export function advanceLanding(options?: Record<string, unknown>): Promise<
+  Readonly<{
+    ok: true;
+    operation?: 'landing.advance';
+    status?: 'cancelled';
+    authority: 'none';
+    state?: LandingState;
+    phaseReceipt?: Readonly<Record<string, unknown>>;
+    landingReceipt?: Readonly<Record<string, unknown>> | null;
+  }>
+>;

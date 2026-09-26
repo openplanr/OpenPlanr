@@ -1,12 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
-import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  renameSync,
-  rmSync,
-  writeFileSync,
-} from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 
 import {
@@ -35,7 +28,11 @@ function safeRelativePath(value, label = 'Planning artifact path') {
 
 function assertInside(root, path) {
   const rel = relative(root, path);
-  if (rel === '..' || rel.startsWith(`..${process.platform === 'win32' ? '\\' : '/'}`) || isAbsolute(rel)) {
+  if (
+    rel === '..' ||
+    rel.startsWith(`..${process.platform === 'win32' ? '\\' : '/'}`) ||
+    isAbsolute(rel)
+  ) {
     throw new TypeError('Planning transaction path escaped its root.');
   }
 }
@@ -45,12 +42,14 @@ function normalizeArtifact(artifact) {
     throw new TypeError('Each planning artifact must be one object.');
   }
   const path = safeRelativePath(artifact.path);
-  const bytes = typeof artifact.bytes === 'string'
-    ? artifact.bytes
-    : artifact.bytes instanceof Uint8Array
-      ? Buffer.from(artifact.bytes)
-      : null;
-  if (bytes === null) throw new TypeError(`Planning artifact ${path} must provide string or Uint8Array bytes.`);
+  const bytes =
+    typeof artifact.bytes === 'string'
+      ? artifact.bytes
+      : artifact.bytes instanceof Uint8Array
+        ? Buffer.from(artifact.bytes)
+        : null;
+  if (bytes === null)
+    throw new TypeError(`Planning artifact ${path} must provide string or Uint8Array bytes.`);
   return { path, bytes };
 }
 
@@ -63,9 +62,16 @@ function normalizePlanningTask(task) {
 }
 
 /** Build and fully validate the closed requirement → acceptance → task lineage. */
-export function composeDesignPlanningLineage({ handoff, specId, mappings, stories = [], tasks = [] } = {}) {
+export function composeDesignPlanningLineage({
+  handoff,
+  specId,
+  mappings,
+  stories = [],
+  tasks = [],
+} = {}) {
   assertDesignImplementationHandoff(handoff);
-  if (handoff.status !== 'approved') throw new TypeError('Planning lineage requires a current approved implementation handoff.');
+  if (handoff.status !== 'approved')
+    throw new TypeError('Planning lineage requires a current approved implementation handoff.');
   const lineage = {
     kind: 'openplanr-design-planning-lineage',
     schemaVersion: '1.0.0',
@@ -77,14 +83,18 @@ export function composeDesignPlanningLineage({ handoff, specId, mappings, storie
 
   const normalizedTasks = tasks.map(normalizePlanningTask);
   const taskById = new Map(normalizedTasks.map((task) => [task.id, task]));
-  const acceptanceByStory = new Map(stories.map((story) => [
-    story.id,
-    new Set((story.acceptanceCriteria ?? []).map((criterion) => criterion.id)),
-  ]));
+  const acceptanceByStory = new Map(
+    stories.map((story) => [
+      story.id,
+      new Set((story.acceptanceCriteria ?? []).map((criterion) => criterion.id)),
+    ]),
+  );
   for (const mapping of lineage.mappings) {
     for (const reference of mapping.acceptanceRefs) {
       if (!acceptanceByStory.get(reference.storyId)?.has(reference.acceptanceId)) {
-        throw new TypeError(`${mapping.requirementId} references missing acceptance criterion ${reference.storyId}:${reference.acceptanceId}.`);
+        throw new TypeError(
+          `${mapping.requirementId} references missing acceptance criterion ${reference.storyId}:${reference.acceptanceId}.`,
+        );
       }
     }
     for (const taskId of mapping.taskIds) {
@@ -94,16 +104,26 @@ export function composeDesignPlanningLineage({ handoff, specId, mappings, storie
         .filter(({ storyId }) => storyId === task.storyId)
         .map(({ acceptanceId }) => acceptanceId);
       if (!relevantAcceptance.some((acceptanceId) => task.acceptanceRefs.includes(acceptanceId))) {
-        throw new TypeError(`${taskId} does not map an acceptance criterion for ${mapping.requirementId}.`);
+        throw new TypeError(
+          `${taskId} does not map an acceptance criterion for ${mapping.requirementId}.`,
+        );
       }
-      if (!relevantAcceptance.some((acceptanceId) => String(task.testRequirements).includes(acceptanceId))) {
-        throw new TypeError(`${taskId} Test Requirements do not name the acceptance criterion for ${mapping.requirementId}.`);
+      if (
+        !relevantAcceptance.some((acceptanceId) =>
+          String(task.testRequirements).includes(acceptanceId),
+        )
+      ) {
+        throw new TypeError(
+          `${taskId} Test Requirements do not name the acceptance criterion for ${mapping.requirementId}.`,
+        );
       }
     }
   }
   const coverageIssues = validatePlanningAcceptanceCoverage(stories, normalizedTasks);
   if (coverageIssues.length) {
-    throw new TypeError(`Planning acceptance coverage is incomplete: ${coverageIssues.map(({ path, detail }) => `${path}: ${detail}`).join(' ')}`);
+    throw new TypeError(
+      `Planning acceptance coverage is incomplete: ${coverageIssues.map(({ path, detail }) => `${path}: ${detail}`).join(' ')}`,
+    );
   }
   return Object.freeze(lineage);
 }
@@ -143,14 +163,19 @@ export function recoverDesignPlanningWrite(root, fs = {}) {
  * All semantic validation finishes before the first filesystem write.
  */
 export function writeDesignPlanningArtifacts(root, input, options = {}) {
-  const io = { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync, ...options.fs };
+  const io = {
+    existsSync,
+    mkdirSync,
+    readFileSync,
+    renameSync,
+    rmSync,
+    writeFileSync,
+    ...options.fs,
+  };
   const absoluteRoot = resolve(root);
   const lineage = composeDesignPlanningLineage(input);
   const artifacts = (input.artifacts ?? []).map(normalizeArtifact);
-  const targets = [
-    ...artifacts,
-    { path: LINEAGE_FILE, bytes: json(lineage) },
-  ];
+  const targets = [...artifacts, { path: LINEAGE_FILE, bytes: json(lineage) }];
   if (new Set(targets.map(({ path }) => path)).size !== targets.length) {
     throw new TypeError('Planning transaction declares a target path more than once.');
   }
@@ -165,8 +190,13 @@ export function writeDesignPlanningArtifacts(root, input, options = {}) {
       }
     }
   }
-  if (targets.every(({ path, bytes }) => io.existsSync(join(absoluteRoot, path))
-    && Buffer.from(io.readFileSync(join(absoluteRoot, path))).equals(Buffer.from(bytes)))) {
+  if (
+    targets.every(
+      ({ path, bytes }) =>
+        io.existsSync(join(absoluteRoot, path)) &&
+        Buffer.from(io.readFileSync(join(absoluteRoot, path))).equals(Buffer.from(bytes)),
+    )
+  ) {
     return Object.freeze({ lineage, written: [], repeated: true });
   }
 
@@ -185,7 +215,15 @@ export function writeDesignPlanningArtifacts(root, input, options = {}) {
       io.mkdirSync(dirname(entry.target), { recursive: true });
       io.writeFileSync(entry.stage, entry.bytes, { flag: 'wx', mode: 0o600 });
     }
-    io.writeFileSync(journalPath, json({ kind: 'openplanr-design-planning-transaction', schemaVersion: '1.0.0', entries: entries.map(({ bytes: _bytes, ...entry }) => entry) }), { flag: 'wx', mode: 0o600 });
+    io.writeFileSync(
+      journalPath,
+      json({
+        kind: 'openplanr-design-planning-transaction',
+        schemaVersion: '1.0.0',
+        entries: entries.map(({ bytes: _bytes, ...entry }) => entry),
+      }),
+      { flag: 'wx', mode: 0o600 },
+    );
     for (const entry of entries) {
       if (entry.existed) io.renameSync(entry.target, entry.backup);
       io.renameSync(entry.stage, entry.target);
@@ -194,10 +232,15 @@ export function writeDesignPlanningArtifacts(root, input, options = {}) {
     io.rmSync(journalPath, { force: true });
     return Object.freeze({ lineage, written: entries.map(({ path }) => path), repeated: false });
   } catch (error) {
-    try { recoverDesignPlanningWrite(absoluteRoot, io); } catch { /* retain the original transaction error */ }
+    try {
+      recoverDesignPlanningWrite(absoluteRoot, io);
+    } catch {
+      /* retain the original transaction error */
+    }
     for (const entry of entries) {
       io.rmSync(entry.stage, { force: true });
-      if (io.existsSync(entry.backup) && !io.existsSync(entry.target)) io.renameSync(entry.backup, entry.target);
+      if (io.existsSync(entry.backup) && !io.existsSync(entry.target))
+        io.renameSync(entry.backup, entry.target);
       io.rmSync(entry.backup, { force: true });
     }
     io.rmSync(journalPath, { force: true });
@@ -220,12 +263,30 @@ function handoffDirectoryName(identity) {
 }
 
 function readJsonIfPresent(path, readFile) {
-  try { return JSON.parse(readFile(path, 'utf8')); } catch { return null; }
+  try {
+    return JSON.parse(readFile(path, 'utf8'));
+  } catch {
+    return null;
+  }
 }
 
 /** Resolve the exact approved package named by lineage without scanning unrelated package versions. */
-export function resolveDesignPlanningLineage({ root, lineage, taskIds = [], readFile = readFileSync } = {}) {
-  if (!lineage) return Object.freeze({ status: 'absent', reason: 'no-lineage', lineage: null, handoff: null, mappings: [], requirements: [], sources: [] });
+export function resolveDesignPlanningLineage({
+  root,
+  lineage,
+  taskIds = [],
+  readFile = readFileSync,
+} = {}) {
+  if (!lineage)
+    return Object.freeze({
+      status: 'absent',
+      reason: 'no-lineage',
+      lineage: null,
+      handoff: null,
+      mappings: [],
+      requirements: [],
+      sources: [],
+    });
   assertDesignPlanningLineage(lineage);
   const selected = new Set(taskIds);
   const mappings = selected.size
@@ -236,15 +297,44 @@ export function resolveDesignPlanningLineage({ root, lineage, taskIds = [], read
   let handoff = null;
   let current = null;
   for (const handoffRoot of roots) {
-    handoff ??= readJsonIfPresent(join(handoffRoot, 'implementation-handoff', 'versions', directory, 'handoff.json'), readFile);
-    current ??= readJsonIfPresent(join(handoffRoot, 'implementation-handoff', 'current.json'), readFile);
+    handoff ??= readJsonIfPresent(
+      join(handoffRoot, 'implementation-handoff', 'versions', directory, 'handoff.json'),
+      readFile,
+    );
+    current ??= readJsonIfPresent(
+      join(handoffRoot, 'implementation-handoff', 'current.json'),
+      readFile,
+    );
   }
-  if (!handoff) return Object.freeze({ status: 'stale', reason: 'approved-package-unavailable', lineage, handoff: null, mappings, requirements: [], sources: [] });
-  try { assertDesignPlanningLineage(lineage, handoff); } catch {
-    return Object.freeze({ status: 'stale', reason: 'package-mismatch', lineage, handoff: null, mappings, requirements: [], sources: [] });
+  if (!handoff)
+    return Object.freeze({
+      status: 'stale',
+      reason: 'approved-package-unavailable',
+      lineage,
+      handoff: null,
+      mappings,
+      requirements: [],
+      sources: [],
+    });
+  try {
+    assertDesignPlanningLineage(lineage, handoff);
+  } catch {
+    return Object.freeze({
+      status: 'stale',
+      reason: 'package-mismatch',
+      lineage,
+      handoff: null,
+      mappings,
+      requirements: [],
+      sources: [],
+    });
   }
-  const exactCurrent = current && current.id === handoff.id && current.version === handoff.version
-    && current.contentDigest === handoff.contentDigest && current.status === 'approved';
+  const exactCurrent =
+    current &&
+    current.id === handoff.id &&
+    current.version === handoff.version &&
+    current.contentDigest === handoff.contentDigest &&
+    current.status === 'approved';
   const requirementIds = new Set(mappings.map(({ requirementId }) => requirementId));
   const requirements = handoff.requirements.filter(({ id }) => requirementIds.has(id));
   const sourceIds = new Set(requirements.flatMap(({ sourceRefs }) => sourceRefs));

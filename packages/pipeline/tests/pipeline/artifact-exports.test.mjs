@@ -62,20 +62,28 @@ test('artifact error codes are named, unique, stable E_ARTIFACT values', () => {
     'E_ARTIFACT_SHORT_CONFIRMATION_REQUIRED',
   );
   assert.equal(pipeline.ARTIFACT_ERROR_CODES.ROOM_CLOSED, 'E_ARTIFACT_ROOM_CLOSED');
-  assert.equal(pipeline.ARTIFACT_ERROR_CODES.ROOM_LEGACY_READ_ONLY, 'E_ARTIFACT_ROOM_LEGACY_READ_ONLY');
+  assert.equal(
+    pipeline.ARTIFACT_ERROR_CODES.ROOM_LEGACY_READ_ONLY,
+    'E_ARTIFACT_ROOM_LEGACY_READ_ONLY',
+  );
   assert.equal(pipeline.ARTIFACT_ERROR_CODES.ROOM_EVENT_REPLAY, 'E_ARTIFACT_ROOM_EVENT_REPLAY');
-  assert.equal(pipeline.ARTIFACT_ERROR_CODES.ROOM_CREATE_AMBIGUOUS, 'E_ARTIFACT_ROOM_CREATE_AMBIGUOUS');
+  assert.equal(
+    pipeline.ARTIFACT_ERROR_CODES.ROOM_CREATE_AMBIGUOUS,
+    'E_ARTIFACT_ROOM_CREATE_AMBIGUOUS',
+  );
 });
 
 test('root exports execute a deterministic fragment round trip', () => {
   const envelope = pipeline.createArtifactEnvelope({
-    artifacts: [{
-      id: 'checkout',
-      title: 'Checkout',
-      html: '<!doctype html><main data-planr-id="checkout">Hello 🌍</main>',
-      viewport: { width: 1280, height: 720 },
-      colorScheme: 'dark',
-    }],
+    artifacts: [
+      {
+        id: 'checkout',
+        title: 'Checkout',
+        html: '<!doctype html><main data-planr-id="checkout">Hello 🌍</main>',
+        viewport: { width: 1280, height: 720 },
+        colorScheme: 'dark',
+      },
+    ],
   });
   const fragment = pipeline.encodeArtifactFragment(envelope);
   assert.match(fragment, /^v1\.[A-Za-z0-9_-]+$/);

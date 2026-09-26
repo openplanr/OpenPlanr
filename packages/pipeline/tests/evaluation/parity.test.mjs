@@ -35,7 +35,10 @@ test('parity compares exact bytes, not a version string', () => {
   const generated = renderProfessionalSkillsBundle({ projectRoot: root, view: 'legacy' });
   const path = PROFESSIONAL_SKILLS_MANIFEST_PATH;
   const bytes = generated[path];
-  assert.equal(evaluationContentDigest(readFileSync(join(root, path))), evaluationContentDigest(bytes));
+  assert.equal(
+    evaluationContentDigest(readFileSync(join(root, path))),
+    evaluationContentDigest(bytes),
+  );
   assert.notEqual(evaluationContentDigest(`${bytes} `), evaluationContentDigest(bytes));
 });
 
@@ -63,14 +66,23 @@ test('package-owned evaluation metadata is covered by the packed inventory', () 
 });
 
 test('evaluation metadata the archive would not carry is a package parity failure', () => {
-  const parity = comparePackedMembership({ repoRoot: root, sourceRoot, packageJson: { ...packageJson, files: ['lib/'] } });
+  const parity = comparePackedMembership({
+    repoRoot: root,
+    sourceRoot,
+    packageJson: { ...packageJson, files: ['lib/'] },
+  });
   assert.ok(parity.mismatches.length > 0);
   assert.ok(parity.mismatches.every((entry) => entry.reason === 'not-covered-by-packed-files'));
   assert.equal(parity.present, 0);
 });
 
 test('installed bytes that diverge from the source are a package parity failure', () => {
-  const parity = comparePackedMembership({ repoRoot: root, sourceRoot, packageJson, installedRoot: join(root, 'conformance') });
+  const parity = comparePackedMembership({
+    repoRoot: root,
+    sourceRoot,
+    packageJson,
+    installedRoot: join(root, 'conformance'),
+  });
   assert.ok(parity.mismatches.length > 0);
   assert.ok(parity.mismatches.every((entry) => entry.reason === 'installed-bytes-diverged'));
 });
@@ -84,19 +96,28 @@ test('packed file coverage distinguishes a directory prefix from an exact member
 
 test('the pipeline package excludes host prompt distributions', () => {
   for (const entry of ['skills/', 'adapters/', 'agents/', 'commands/', 'plugins/']) {
-    assert.equal(packageJson.files.some((member) => member === entry || member.startsWith(entry)), false, entry);
+    assert.equal(
+      packageJson.files.some((member) => member === entry || member.startsWith(entry)),
+      false,
+      entry,
+    );
   }
 });
 
 test('the declared archive carries the exact generated assets', () => {
   const archive = buildDeclaredArchive({ repoRoot: root, sourceRoot });
-  const generated = renderProfessionalSkillAssets(readProfessionalSkillsCatalog({ projectRoot: root, view: 'active', sourceRoot }));
+  const generated = renderProfessionalSkillAssets(
+    readProfessionalSkillsCatalog({ projectRoot: root, view: 'active', sourceRoot }),
+  );
   assert.deepEqual(Object.keys(archive).sort(), Object.keys(generated).sort());
   for (const [path, bytes] of Object.entries(archive)) assert.equal(bytes, generated[path]);
 });
 
 test('a declared member that would leave the installation root is refused', () => {
-  assert.equal(assertNoSiblingDiscovery('/tmp/install-root', ['skills/planr-spec/SKILL.md']), '/tmp/install-root');
+  assert.equal(
+    assertNoSiblingDiscovery('/tmp/install-root', ['skills/planr-spec/SKILL.md']),
+    '/tmp/install-root',
+  );
   assert.throws(
     () => assertNoSiblingDiscovery('/tmp/install-root', ['../sibling-checkout/skills/SKILL.md']),
     { code: 'E_EVALUATION_PACKED_MEMBER_REFUSED' },

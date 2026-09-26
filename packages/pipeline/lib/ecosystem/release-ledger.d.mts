@@ -45,7 +45,11 @@ export interface ReleaseCompatibilityClaim {
   kind: 'release-compatibility-claim';
   schemaVersion: '1.3.0';
   ledgerDigest: string;
-  consumer: { repositoryKey: ReleaseRepositoryKey; payloadDigest: string; terminalReceiptDigest: string };
+  consumer: {
+    repositoryKey: ReleaseRepositoryKey;
+    payloadDigest: string;
+    terminalReceiptDigest: string;
+  };
   producer: {
     repositoryKey: ReleaseRepositoryKey;
     payloadDigest: string;
@@ -180,7 +184,11 @@ export function buildReleaseLedgerReceipt(options: {
   ledger: ReleaseLedger;
   claims: readonly ReleaseCompatibilityClaim[];
   issuedAt: string;
-  refusals?: readonly { code: string; repositoryKey?: ReleaseRepositoryKey | null; reason: string }[];
+  refusals?: readonly {
+    code: string;
+    repositoryKey?: ReleaseRepositoryKey | null;
+    reason: string;
+  }[];
 }): ReleaseLedgerReceipt;
 export function renderLedgerVersionProjection(row: {
   packageName: string;

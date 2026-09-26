@@ -15,38 +15,71 @@ import {
 const TIME = '2026-08-23T08:00:00.000Z';
 const COMMIT_TIME = '2026-08-23T08:01:00.000Z';
 const ACTOR = Object.freeze({ actorId: 'owner-bound-001', kind: 'human', runtime: 'portable' });
-const SCOPE = Object.freeze({ scopeId: 'scope-bound', domainId: 'business', domainVersion: '1.0.0' });
+const SCOPE = Object.freeze({
+  scopeId: 'scope-bound',
+  domainId: 'business',
+  domainVersion: '1.0.0',
+});
 const CAPABILITY = Object.freeze({ id: 'operate-review-submit', version: '2.0.0' });
 
 function state() {
   return {
     ...createEmptyOperatingRuntimeStateV2(TIME),
-    cycles: [{
-      kind: 'operating-cycle', schemaVersion: '1.0.0', protocolVersion: '2.0.0',
-      cycleId: 'cyc_bound_00000001', scopeId: SCOPE.scopeId, domainId: SCOPE.domainId,
-      domainVersion: SCOPE.domainVersion, state: 'awaiting_review', inputBindingId: 'inb_bound_00000001',
-      contractVersions: { 'advisor-result': '1.0.0' }, trigger: { kind: 'manual' }, focus: ['strategy'],
-      health: 'normal', activeReviewId: 'rev_bound_00000001', createdAt: TIME, updatedAt: TIME,
-    }],
-    reviews: [{
-      kind: 'operating-review', schemaVersion: '1.0.0', protocolVersion: '2.0.0',
-      reviewId: 'rev_bound_00000001', cycleId: 'cyc_bound_00000001', ownerActorId: ACTOR.actorId,
-      state: 'pending', disposition: null, workDispositions: [], createdAt: TIME, updatedAt: TIME,
-    }],
+    cycles: [
+      {
+        kind: 'operating-cycle',
+        schemaVersion: '1.0.0',
+        protocolVersion: '2.0.0',
+        cycleId: 'cyc_bound_00000001',
+        scopeId: SCOPE.scopeId,
+        domainId: SCOPE.domainId,
+        domainVersion: SCOPE.domainVersion,
+        state: 'awaiting_review',
+        inputBindingId: 'inb_bound_00000001',
+        contractVersions: { 'advisor-result': '1.0.0' },
+        trigger: { kind: 'manual' },
+        focus: ['strategy'],
+        health: 'normal',
+        activeReviewId: 'rev_bound_00000001',
+        createdAt: TIME,
+        updatedAt: TIME,
+      },
+    ],
+    reviews: [
+      {
+        kind: 'operating-review',
+        schemaVersion: '1.0.0',
+        protocolVersion: '2.0.0',
+        reviewId: 'rev_bound_00000001',
+        cycleId: 'cyc_bound_00000001',
+        ownerActorId: ACTOR.actorId,
+        state: 'pending',
+        disposition: null,
+        workDispositions: [],
+        createdAt: TIME,
+        updatedAt: TIME,
+      },
+    ],
   };
 }
 
 function read(initialState = state()) {
-  return readOperatingReviewV2({
-    reviewId: 'rev_bound_00000001', cycleId: 'cyc_bound_00000001', actor: ACTOR, scope: SCOPE,
-  }, { initialState, capabilities: ['operate.review.get'], readAt: COMMIT_TIME });
+  return readOperatingReviewV2(
+    {
+      reviewId: 'rev_bound_00000001',
+      cycleId: 'cyc_bound_00000001',
+      actor: ACTOR,
+      scope: SCOPE,
+    },
+    { initialState, capabilities: ['operate.review.get'], readAt: COMMIT_TIME },
+  );
 }
 
 function bound(disposition = 'approved', note = null, initialState = state()) {
   const reviewRead = read(initialState);
-  const choice = reviewRead.data.dispositionChoices.find((entry) => (
-    entry.submitArguments.disposition === disposition
-  ));
+  const choice = reviewRead.data.dispositionChoices.find(
+    (entry) => entry.submitArguments.disposition === disposition,
+  );
   return buildOperatingReviewBoundSubmissionV1({
     expectedReadEventHead: reviewRead.data.eventHead,
     choice,
@@ -111,20 +144,27 @@ test('foreign actor/scope/Review and altered dispositions append no Review event
   candidates.push({ request: rehash(foreignReview), code: 'REVIEW_NOT_FOUND' });
 
   const changedDispositions = structuredClone(bound());
-  changedDispositions.submitArguments.workDispositions = [{
-    entityType: 'operating-finding', entityId: 'fnd_foreign_00000001', disposition: 'accepted',
-  }];
+  changedDispositions.submitArguments.workDispositions = [
+    {
+      entityType: 'operating-finding',
+      entityId: 'fnd_foreign_00000001',
+      disposition: 'accepted',
+    },
+  ];
   changedDispositions.choiceHash = sha256Jcs(changedDispositions.submitArguments);
   candidates.push({ request: rehash(changedDispositions), code: 'CONCURRENT_MODIFICATION' });
 
   for (const [index, candidate] of candidates.entries()) {
     const initialState = state();
     const before = structuredClone(initialState);
-    assert.throws(() => submitBoundOperatingReviewV2(
-      candidate.request,
-      draft(`evt_bound_hostile_${index}`),
-      { initialState, capabilities: [CAPABILITY] },
-    ), { code: candidate.code });
+    assert.throws(
+      () =>
+        submitBoundOperatingReviewV2(candidate.request, draft(`evt_bound_hostile_${index}`), {
+          initialState,
+          capabilities: [CAPABILITY],
+        }),
+      { code: candidate.code },
+    );
     assert.deepEqual(initialState, before);
     assert.equal(initialState.eventHead.sequence, 0);
   }
@@ -135,25 +175,33 @@ test('bound Review commit retains note/proof, reconstructs receipt, and lost-res
   const request = bound('approved', 'Approve after reviewing the exact evidence.', initialState);
   const eventDraft = draft();
   const committed = submitBoundOperatingReviewV2(request, eventDraft, {
-    initialState, capabilities: [CAPABILITY],
+    initialState,
+    capabilities: [CAPABILITY],
   });
   assert.equal(committed.replayed, false);
   assert.equal(committed.events.length, 1);
   assert.deepEqual(committed.events[0].payload.receiptProjection.boundSubmission, request);
   assert.deepEqual(committed.response.data.boundSubmission, request);
-  assert.equal(committed.response.data.boundSubmission.note, 'Approve after reviewing the exact evidence.');
+  assert.equal(
+    committed.response.data.boundSubmission.note,
+    'Approve after reviewing the exact evidence.',
+  );
   assert.equal(committed.state.reviews[0].state, 'approved');
 
-  const reconstructed = readCommittedOperatingReviewReceiptV2({
-    reviewId: request.submitArguments.reviewId,
-    cycleId: request.submitArguments.cycleId,
-    actor: ACTOR,
-    scope: SCOPE,
-  }, { initialState: committed.state, capabilities: ['operate.review.get'] });
+  const reconstructed = readCommittedOperatingReviewReceiptV2(
+    {
+      reviewId: request.submitArguments.reviewId,
+      cycleId: request.submitArguments.cycleId,
+      actor: ACTOR,
+      scope: SCOPE,
+    },
+    { initialState: committed.state, capabilities: ['operate.review.get'] },
+  );
   assert.deepEqual(reconstructed.data, committed.response.data);
 
   const replayed = submitBoundOperatingReviewV2(request, eventDraft, {
-    initialState: committed.state, capabilities: [CAPABILITY],
+    initialState: committed.state,
+    capabilities: [CAPABILITY],
   });
   assert.equal(replayed.replayed, true);
   assert.deepEqual(replayed.events, []);
@@ -186,18 +234,32 @@ test('novel stale/future head and changed choice proofs fail before mutation', (
     const initialState = state();
     const request = rehash({ ...structuredClone(bound()), expectedReadEventHead });
     const before = structuredClone(initialState);
-    assert.throws(() => submitBoundOperatingReviewV2(request, draft(`evt_bound_head_${expectedReadEventHead.sequence}`), {
-      initialState, capabilities: [CAPABILITY],
-    }), { code: 'CONCURRENT_MODIFICATION' });
+    assert.throws(
+      () =>
+        submitBoundOperatingReviewV2(
+          request,
+          draft(`evt_bound_head_${expectedReadEventHead.sequence}`),
+          {
+            initialState,
+            capabilities: [CAPABILITY],
+          },
+        ),
+      { code: 'CONCURRENT_MODIFICATION' },
+    );
     assert.deepEqual(initialState, before);
   }
 
   const initialState = state();
   const changedChoice = rehash({ ...structuredClone(bound()), choiceId: 'rch_changed_00000001' });
   const before = structuredClone(initialState);
-  assert.throws(() => submitBoundOperatingReviewV2(changedChoice, draft('evt_bound_changed_choice'), {
-    initialState, capabilities: [CAPABILITY],
-  }), { code: 'CONCURRENT_MODIFICATION' });
+  assert.throws(
+    () =>
+      submitBoundOperatingReviewV2(changedChoice, draft('evt_bound_changed_choice'), {
+        initialState,
+        capabilities: [CAPABILITY],
+      }),
+    { code: 'CONCURRENT_MODIFICATION' },
+  );
   assert.deepEqual(initialState, before);
 });
 
@@ -206,11 +268,17 @@ test('concurrent owner tabs close once and divergent retry identity conflicts', 
   const approved = bound('approved', null, initialState);
   const rejected = bound('rejected', null, initialState);
   const committed = submitBoundOperatingReviewV2(approved, draft('evt_bound_tab_approved'), {
-    initialState, capabilities: [CAPABILITY],
+    initialState,
+    capabilities: [CAPABILITY],
   });
-  assert.throws(() => submitBoundOperatingReviewV2(rejected, draft('evt_bound_tab_rejected'), {
-    initialState: committed.state, capabilities: [CAPABILITY],
-  }), { code: 'CONCURRENT_MODIFICATION' });
+  assert.throws(
+    () =>
+      submitBoundOperatingReviewV2(rejected, draft('evt_bound_tab_rejected'), {
+        initialState: committed.state,
+        capabilities: [CAPABILITY],
+      }),
+    { code: 'CONCURRENT_MODIFICATION' },
+  );
   assert.equal(committed.state.eventHead.sequence, 1);
 
   const changedNote = buildOperatingReviewBoundSubmissionV1({
@@ -218,8 +286,13 @@ test('concurrent owner tabs close once and divergent retry identity conflicts', 
     choice: approved,
     note: 'Different retry bytes.',
   });
-  assert.throws(() => submitBoundOperatingReviewV2(changedNote, draft('evt_bound_tab_approved'), {
-    initialState: committed.state, capabilities: [CAPABILITY],
-  }), { code: 'CONCURRENT_MODIFICATION' });
+  assert.throws(
+    () =>
+      submitBoundOperatingReviewV2(changedNote, draft('evt_bound_tab_approved'), {
+        initialState: committed.state,
+        capabilities: [CAPABILITY],
+      }),
+    { code: 'CONCURRENT_MODIFICATION' },
+  );
   assert.equal(committed.state.eventHead.sequence, 1);
 });

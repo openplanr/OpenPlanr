@@ -51,7 +51,8 @@ test('active pipeline docs do not carry stale release-version claims', () => {
 });
 
 test('semantic skills execute in-session without model-backed CLI delegation', () => {
-  const forbidden = /`planr\s+(?:plan|spec\s+decompose)(?:\s|`)|`planr-pipeline(?:\s|`)|ANTHROPIC_API_KEY|OPENAI_API_KEY|OLLAMA_HOST/u;
+  const forbidden =
+    /`planr\s+(?:plan|spec\s+decompose)(?:\s|`)|`planr-pipeline(?:\s|`)|ANTHROPIC_API_KEY|OPENAI_API_KEY|OLLAMA_HOST/u;
   for (const skillId of [
     'planr-plan',
     'planr-spec',
@@ -73,12 +74,18 @@ test('semantic skills execute in-session without model-backed CLI delegation', (
 test('design skills keep sharing and Plan or Ship transitions explicit', () => {
   const transitionBoundaries = {
     'planr-design': /Plan, Ship, creating a share link and deployment are separate user actions/iu,
-    'planr-design-loop': /Selection does not start Plan or Ship or authorize creating or sending a review link or deployment/iu,
-    'planr-design-review': /never auto-starts Plan, Ship, publication, deployment, review-link creation or review-URL import/iu,
+    'planr-design-loop':
+      /Selection does not start Plan or Ship or authorize creating or sending a review link or deployment/iu,
+    'planr-design-review':
+      /never auto-starts Plan, Ship, publication, deployment, review-link creation or review-URL import/iu,
   };
   for (const [skillId, boundary] of Object.entries(transitionBoundaries)) {
     const skill = readWorkspace(`skills/${skillId}/SKILL.md`).replace(/\s+/gu, ' ');
-    assert.match(skill, boundary, `${skillId} must preserve its transition and publication boundary`);
+    assert.match(
+      skill,
+      boundary,
+      `${skillId} must preserve its transition and publication boundary`,
+    );
     assert.doesNotMatch(skill, /planr-pipeline/iu, skillId);
   }
 });
@@ -138,6 +145,9 @@ test('doctor and ecosystem docs describe the prompt-free consolidated boundary',
   assert.match(doctor, /--json/u);
   assert.match(doctor, /prompt-free runtime package/u);
   assert.match(guide, /`packages\/pipeline` is the public delivery package/u);
-  assert.match(guide, /`skills\/`, `agents\/`, and `packages\/skill-runtime` own workflow sources/u);
+  assert.match(
+    guide,
+    /`skills\/`, `agents\/`, and `packages\/skill-runtime` own workflow sources/u,
+  );
   assert.match(guide, /The hosted service is the independently deployed surface/u);
 });

@@ -1,5 +1,13 @@
 import assert from 'node:assert/strict';
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import {
+  chmodSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
 import { request as httpRequest } from 'node:http';
 import { createServer as createNetServer } from 'node:net';
 import { tmpdir } from 'node:os';
@@ -33,37 +41,42 @@ function isolatedEnv(overrides = {}) {
 
 function envelope({ html, artifacts } = {}) {
   return createArtifactEnvelope({
-    artifacts: artifacts ?? [{
-      id: 'checkout',
-      title: 'Checkout flow',
-      html: html ?? '<!doctype html><html><body><button data-planr-id="pay" onclick="this.dataset.clicked=\'yes\'">Pay</button><script>document.body.dataset.dynamic="ready"</script></body></html>',
-      viewport: { width: 800, height: 600 },
-      colorScheme: 'light',
-    }],
+    artifacts: artifacts ?? [
+      {
+        id: 'checkout',
+        title: 'Checkout flow',
+        html:
+          html ??
+          '<!doctype html><html><body><button data-planr-id="pay" onclick="this.dataset.clicked=\'yes\'">Pay</button><script>document.body.dataset.dynamic="ready"</script></body></html>',
+        viewport: { width: 800, height: 600 },
+        colorScheme: 'light',
+      },
+    ],
   });
 }
 
-function request(port, path, {
-  method = 'GET',
-  headers = {},
-  body,
-} = {}) {
+function request(port, path, { method = 'GET', headers = {}, body } = {}) {
   return new Promise((resolve, reject) => {
-    const req = httpRequest({
-      host: '127.0.0.1',
-      port,
-      path,
-      method,
-      headers,
-    }, (res) => {
-      const chunks = [];
-      res.on('data', (chunk) => chunks.push(chunk));
-      res.on('end', () => resolve({
-        status: res.statusCode,
-        headers: res.headers,
-        body: Buffer.concat(chunks).toString('utf8'),
-      }));
-    });
+    const req = httpRequest(
+      {
+        host: '127.0.0.1',
+        port,
+        path,
+        method,
+        headers,
+      },
+      (res) => {
+        const chunks = [];
+        res.on('data', (chunk) => chunks.push(chunk));
+        res.on('end', () =>
+          resolve({
+            status: res.statusCode,
+            headers: res.headers,
+            body: Buffer.concat(chunks).toString('utf8'),
+          }),
+        );
+      },
+    );
     req.on('error', reject);
     req.setTimeout(5_000, () => req.destroy(new Error('request timed out')));
     if (body !== undefined) req.write(body);
@@ -154,8 +167,14 @@ test('startArtifactReview returns a private tokenized session and serves only me
   assert.match(artifact.body, /onclick="this\.dataset\.clicked='yes'"/);
   const cspIndex = artifact.body.indexOf('Content-Security-Policy');
   const firstScriptIndex = artifact.body.indexOf('<script');
-  assert.ok(cspIndex >= 0 && cspIndex < firstScriptIndex, 'artifact CSP precedes every active script');
-  assert.match(artifact.body.slice(firstScriptIndex, firstScriptIndex + 400), /injectedScript\?\.remove\(\)/);
+  assert.ok(
+    cspIndex >= 0 && cspIndex < firstScriptIndex,
+    'artifact CSP precedes every active script',
+  );
+  assert.match(
+    artifact.body.slice(firstScriptIndex, firstScriptIndex + 400),
+    /injectedScript\?\.remove\(\)/,
+  );
 
   const statePath = artifactReviewStatePath(0, env);
   const state = JSON.parse(readFileSync(statePath, 'utf8'));
@@ -194,7 +213,12 @@ test('no-open and SSH sessions suppress browser launch and provide serializable 
   const localEnv = isolatedEnv();
   let calls = 0;
   const noOpen = await startArtifactReview({
-    envelope: envelope(), env: localEnv, noOpen: true, openUrl: async () => { calls++; },
+    envelope: envelope(),
+    env: localEnv,
+    noOpen: true,
+    openUrl: async () => {
+      calls++;
+    },
   });
   assert.equal(noOpen.shouldOpen, false);
   assert.equal(noOpen.opened, false);
@@ -203,13 +227,20 @@ test('no-open and SSH sessions suppress browser launch and provide serializable 
 
   const sshEnv = isolatedEnv({ SSH_CONNECTION: '192.0.2.1 50000 192.0.2.2 22' });
   const ssh = await startArtifactReview({
-    envelope: envelope(), env: sshEnv, openUrl: async () => { calls++; },
+    envelope: envelope(),
+    env: sshEnv,
+    openUrl: async () => {
+      calls++;
+    },
   });
   assert.equal(ssh.remote.detected, true);
   assert.equal(ssh.shouldOpen, false);
   assert.equal(ssh.opened, false);
   assert.equal(calls, 0);
-  assert.match(ssh.remote.forwardingCommand, new RegExp(`-L ${ssh.port}:127\\.0\\.0\\.1:${ssh.port}`));
+  assert.match(
+    ssh.remote.forwardingCommand,
+    new RegExp(`-L ${ssh.port}:127\\.0\\.0\\.1:${ssh.port}`),
+  );
   assert.match(ssh.remote.instruction, /Forward the port/);
   assert.doesNotThrow(() => JSON.stringify(ssh));
   await ssh.close();
@@ -221,7 +252,9 @@ test('browser launch failures are nonfatal, redacted, and leave a closable sessi
   const review = await startArtifactReview({
     envelope: envelope(),
     env,
-    openUrl: async () => { throw new Error(secret); },
+    openUrl: async () => {
+      throw new Error(secret);
+    },
   });
   assert.equal(review.ok, true);
   assert.equal(review.opened, false);
@@ -241,13 +274,21 @@ test('explicit free ports bind exactly and invalid ports fail with a named error
     reservation.listen(0, '127.0.0.1', resolveListen);
   });
   const explicitPort = reservation.address().port;
-  await new Promise((resolveClose, reject) => reservation.close((error) => (
-    error ? reject(error) : resolveClose()
-  )));
+  await new Promise((resolveClose, reject) =>
+    reservation.close((error) => (error ? reject(error) : resolveClose())),
+  );
 
-  const review = await startArtifactReview({ envelope: envelope(), env, noOpen: true, port: explicitPort });
+  const review = await startArtifactReview({
+    envelope: envelope(),
+    env,
+    noOpen: true,
+    port: explicitPort,
+  });
   assert.equal(review.port, explicitPort);
-  assert.equal(JSON.parse(readFileSync(artifactReviewStatePath(explicitPort, env), 'utf8')).port, explicitPort);
+  assert.equal(
+    JSON.parse(readFileSync(artifactReviewStatePath(explicitPort, env), 'utf8')).port,
+    explicitPort,
+  );
   await review.close();
   await waitFor(() => !artifactReviewServerStateExists(explicitPort, env));
 
@@ -267,10 +308,24 @@ test('every session route is capability gated and Host/origin/path confusion fai
     const denied = await request(parts.port, `/r/${parts.sessionId}/${wrongToken}/${suffix}`);
     assert.equal(denied.status, 404, `wrong token denies ${suffix || 'shell'}`);
   }
-  assert.equal((await request(parts.port, parts.path, { headers: { host: `evil.test:${parts.port}` } })).status, 403);
-  assert.equal((await request(parts.port, parts.path, { headers: { origin: 'https://evil.test' } })).status, 403);
-  assert.equal((await request(parts.port, parts.path, { headers: { 'sec-fetch-site': 'cross-site' } })).status, 403);
-  assert.equal((await request(parts.port, parts.path, { method: 'POST' })).status, 403, 'origin-less public mutation is rejected');
+  assert.equal(
+    (await request(parts.port, parts.path, { headers: { host: `evil.test:${parts.port}` } }))
+      .status,
+    403,
+  );
+  assert.equal(
+    (await request(parts.port, parts.path, { headers: { origin: 'https://evil.test' } })).status,
+    403,
+  );
+  assert.equal(
+    (await request(parts.port, parts.path, { headers: { 'sec-fetch-site': 'cross-site' } })).status,
+    403,
+  );
+  assert.equal(
+    (await request(parts.port, parts.path, { method: 'POST' })).status,
+    403,
+    'origin-less public mutation is rejected',
+  );
   assert.equal((await request(parts.port, '/')).status, 404, 'root never enumerates sessions');
   assert.equal((await request(parts.port, '//health')).status, 400);
   assert.equal((await request(parts.port, '/%2e%2e/health')).status, 400);
@@ -326,11 +381,13 @@ test('control transport accepts the worst-case JSON expansion of a valid 10 MiB 
   const suffix = '</pre></body></html>';
   const html = `${prefix}${'\u0001'.repeat(maximum - Buffer.byteLength(prefix) - Buffer.byteLength(suffix))}${suffix}`;
   const maximumEnvelope = envelope({ html });
-  const serializedBytes = Buffer.byteLength(JSON.stringify({
-    envelope: maximumEnvelope,
-    title: 'Maximum valid artifact',
-    theme: 'auto',
-  }));
+  const serializedBytes = Buffer.byteLength(
+    JSON.stringify({
+      envelope: maximumEnvelope,
+      title: 'Maximum valid artifact',
+      theme: 'auto',
+    }),
+  );
   assert.ok(serializedBytes > 60 * 1024 * 1024, 'fixture exercises six-byte JSON escapes');
   assert.ok(serializedBytes <= ARTIFACT_REVIEW_MAX_CONTROL_BYTES);
   const review = await startArtifactReview({ envelope: maximumEnvelope, env, noOpen: true });
@@ -362,10 +419,18 @@ test('legacy locks fail closed until explicitly cleared while a foreign occupied
   const statePath = artifactReviewStatePath(0, env);
   const stateDir = join(env.PLANR_HOME, 'artifact-daemon');
   mkdirSync(stateDir, { recursive: true });
-  writeFileSync(statePath, JSON.stringify({
-    schemaVersion: '1.0.0', kind: 'artifact-review', serverVersion: 1,
-    pid: 999_999_999, port: 65534, controlToken: 'A'.repeat(43), instanceId: 'A'.repeat(22),
-  }));
+  writeFileSync(
+    statePath,
+    JSON.stringify({
+      schemaVersion: '1.0.0',
+      kind: 'artifact-review',
+      serverVersion: 1,
+      pid: 999_999_999,
+      port: 65534,
+      controlToken: 'A'.repeat(43),
+      instanceId: 'A'.repeat(22),
+    }),
+  );
   const lockPath = join(stateDir, 'start-default.lock');
   writeFileSync(lockPath, JSON.stringify({ pid: 999_999_999, owner: 'dead', createdAt: 0 }));
   chmodSync(lockPath, 0o600);

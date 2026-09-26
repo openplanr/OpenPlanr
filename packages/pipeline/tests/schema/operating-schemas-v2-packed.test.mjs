@@ -22,18 +22,24 @@ test('packed package is an isolated Operate 2.0 contract consumer', { timeout: 1
   const temporaryRoot = mkdtempSync(join(tmpdir(), 'planr-operate-v2-pack-'));
   try {
     const cache = join(temporaryRoot, 'npm-cache');
-    const packed = run('npm', [
-      'pack', '--ignore-scripts', '--json', '--pack-destination', temporaryRoot,
-    ], {
-      cwd: root,
-      env: { ...process.env, NPM_CONFIG_CACHE: cache },
-    });
+    const packed = run(
+      'npm',
+      ['pack', '--ignore-scripts', '--json', '--pack-destination', temporaryRoot],
+      {
+        cwd: root,
+        env: { ...process.env, NPM_CONFIG_CACHE: cache },
+      },
+    );
     const [{ filename }] = JSON.parse(packed.stdout);
     const consumer = join(temporaryRoot, 'consumer');
     const installedPackage = join(consumer, 'node_modules', 'planr-pipeline');
     mkdirSync(installedPackage, { recursive: true });
     run('tar', [
-      '-xzf', join(temporaryRoot, filename), '-C', installedPackage, '--strip-components=1',
+      '-xzf',
+      join(temporaryRoot, filename),
+      '-C',
+      installedPackage,
+      '--strip-components=1',
     ]);
     writeFileSync(join(consumer, 'package.json'), JSON.stringify({ type: 'module' }));
 
@@ -336,7 +342,9 @@ test('packed package is an isolated Operate 2.0 contract consumer', { timeout: 1
     writeFileSync(verificationPath, verification);
     run(process.execPath, [verificationPath], { cwd: consumer });
 
-    assert.ok(readFileSync(join(installedPackage, 'package.json'), 'utf8').includes('planr-pipeline'));
+    assert.ok(
+      readFileSync(join(installedPackage, 'package.json'), 'utf8').includes('planr-pipeline'),
+    );
   } finally {
     rmSync(temporaryRoot, { recursive: true, force: true });
   }

@@ -41,7 +41,12 @@ export function compareGeneratedAssets({ repoRoot }) {
     if (actual === expected) present += 1;
     else mismatches.push(Object.freeze({ path, expected, actual }));
   }
-  return Object.freeze({ declared: declared.length, present, mismatches: Object.freeze(mismatches), catalog });
+  return Object.freeze({
+    declared: declared.length,
+    present,
+    mismatches: Object.freeze(mismatches),
+    catalog,
+  });
 }
 
 /**
@@ -57,12 +62,14 @@ export function comparePackageExports({ repoRoot, packageJson }) {
     if (typeof value === 'string') {
       if (value.includes('*')) return;
       declared += 1;
-      if (diskDigest(repoRoot, value.replace(/^\.\//u, '')) === null) mismatches.push(Object.freeze({ subpath: cursor, target: value }));
+      if (diskDigest(repoRoot, value.replace(/^\.\//u, '')) === null)
+        mismatches.push(Object.freeze({ subpath: cursor, target: value }));
       else present += 1;
       return;
     }
     if (value && typeof value === 'object' && !Array.isArray(value)) {
-      for (const [key, entry] of Object.entries(value)) visit(entry, key.startsWith('.') ? key : cursor);
+      for (const [key, entry] of Object.entries(value))
+        visit(entry, key.startsWith('.') ? key : cursor);
     }
   };
   visit(packageJson.exports ?? {}, '.');
@@ -78,10 +85,7 @@ export function comparePackedMembership({ repoRoot, packageJson, installedRoot =
   const catalog = readProfessionalSkillsCatalog({ projectRoot: repoRoot, view: 'legacy' });
   const manifest = buildProfessionalSkillsManifest(catalog);
   const files = packageJson.files ?? [];
-  const declared = [
-    PROFESSIONAL_SKILLS_CATALOG_PATH,
-    PROFESSIONAL_SKILLS_MANIFEST_PATH,
-  ].sort();
+  const declared = [PROFESSIONAL_SKILLS_CATALOG_PATH, PROFESSIONAL_SKILLS_MANIFEST_PATH].sort();
   const mismatches = [];
   let present = 0;
   for (const path of declared) {
@@ -103,7 +107,12 @@ export function comparePackedMembership({ repoRoot, packageJson, installedRoot =
     }
     present += 1;
   }
-  return Object.freeze({ declared: declared.length, present, mismatches: Object.freeze(mismatches), manifest });
+  return Object.freeze({
+    declared: declared.length,
+    present,
+    mismatches: Object.freeze(mismatches),
+    manifest,
+  });
 }
 
 /**
@@ -112,7 +121,11 @@ export function comparePackedMembership({ repoRoot, packageJson, installedRoot =
  * installed journey; npm package membership is checked separately above.
  */
 export function buildDeclaredArchive({ repoRoot, sourceRoot }) {
-  const catalog = readProfessionalSkillsCatalog({ projectRoot: repoRoot, view: 'active', sourceRoot });
+  const catalog = readProfessionalSkillsCatalog({
+    projectRoot: repoRoot,
+    view: 'active',
+    sourceRoot,
+  });
   const generated = renderProfessionalSkillAssets(catalog);
   const archive = {};
   for (const path of Object.keys(generated).sort()) {
@@ -126,7 +139,12 @@ export function assertNoSiblingDiscovery(installedRoot, declaredMembers) {
   for (const path of declaredMembers) {
     const inside = relative(installedRoot, resolve(installedRoot, path));
     if (inside.startsWith('..') || isAbsolute(inside)) {
-      fail('E_EVALUATION_PACKED_MEMBER_REFUSED', `Declared member ${path} resolves outside the installation root.`, 'A packed skill is exercised from its own root, never from a sibling checkout.', { path });
+      fail(
+        'E_EVALUATION_PACKED_MEMBER_REFUSED',
+        `Declared member ${path} resolves outside the installation root.`,
+        'A packed skill is exercised from its own root, never from a sibling checkout.',
+        { path },
+      );
     }
   }
   return installedRoot;

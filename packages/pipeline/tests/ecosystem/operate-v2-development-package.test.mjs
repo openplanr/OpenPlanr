@@ -244,11 +244,12 @@ function localMarkdownTarget(rawDestination) {
   }
   destination = destination.replace(/\\([\\`*{}\[\]()#+.!_> -])/g, '$1');
   if (
-    destination.startsWith('#')
-    || destination.startsWith('//')
-    || isAbsolute(destination)
-    || /^[a-z][a-z0-9+.-]*:/i.test(destination)
-  ) return null;
+    destination.startsWith('#') ||
+    destination.startsWith('//') ||
+    isAbsolute(destination) ||
+    /^[a-z][a-z0-9+.-]*:/i.test(destination)
+  )
+    return null;
   const path = destination.split(/[?#]/, 1)[0];
   if (!path) return null;
   try {
@@ -268,9 +269,10 @@ function assertPackagedMarkdownLinks(packageRoot) {
       if (localTarget === null) continue;
       const target = resolve(dirname(document), localTarget);
       const packageRelativeTarget = relative(packageRoot, target);
-      const outsidePackage = packageRelativeTarget === '..'
-        || packageRelativeTarget.startsWith(`..${sep}`)
-        || isAbsolute(packageRelativeTarget);
+      const outsidePackage =
+        packageRelativeTarget === '..' ||
+        packageRelativeTarget.startsWith(`..${sep}`) ||
+        isAbsolute(packageRelativeTarget);
       if (outsidePackage || !existsSync(target)) {
         missing.push(`${documentPath} -> ${localTarget}`);
       }
@@ -280,7 +282,9 @@ function assertPackagedMarkdownLinks(packageRoot) {
   assert.deepEqual(missing, [], `missing packaged Markdown link targets:\n${missing.join('\n')}`);
 }
 
-test('Operate 2.0 development package installs the clean typed contract without release semantics', { timeout: 180_000 }, async () => {
+test('Operate 2.0 development package installs the clean typed contract without release semantics', {
+  timeout: 180_000,
+}, async () => {
   const packageDestination = join(temporaryRoot, 'package');
   const packed = packOperateV2DevelopmentSnapshot(packageDestination, { sourceRoot: root });
   assert.equal(packed.ok, true);
@@ -422,7 +426,8 @@ test('Operate 2.0 development package installs the clean typed contract without 
     'operating-intelligence-input-bundle',
     'operating-review-read',
     'operating-review-receipt',
-  ]) required.push(`schemas/v2.0.0/${kind}.schema.json`);
+  ])
+    required.push(`schemas/v2.0.0/${kind}.schema.json`);
   for (const fixture of [
     'all-contracts-valid.json',
     'all-contracts-invalid.json',
@@ -452,10 +457,15 @@ test('Operate 2.0 development package installs the clean typed contract without 
     'evidence-registry-invalid.json',
     'evidence-resolution-valid.json',
     'evidence-resolution-invalid.json',
-  ]) required.push(`conformance/fixtures/operating-runtime-v2/${fixture}`);
+  ])
+    required.push(`conformance/fixtures/operating-runtime-v2/${fixture}`);
   for (const path of required) assert.equal(packedFiles.has(path), true, `missing ${path}`);
   for (const path of LIVE_EVIDENCE_LANDING_SNAPSHOT_TESTS) {
-    assert.equal(packed.cleanSnapshot.overlays.includes(path), true, `missing development snapshot overlay ${path}`);
+    assert.equal(
+      packed.cleanSnapshot.overlays.includes(path),
+      true,
+      `missing development snapshot overlay ${path}`,
+    );
   }
   for (const path of packedFiles) {
     assert.doesNotMatch(path, /^(?:\.planr\/|tests\/|node_modules\/|\.env(?:\.|\/|$))/);
@@ -468,24 +478,41 @@ test('Operate 2.0 development package installs the clean typed contract without 
   mkdirSync(dependencyRoot, { recursive: true });
   const localDependencies = {};
   for (const dependency of ['@noble/hashes', 'entities', 'esbuild', 'pako', 'parse5']) {
-    const [dependencyPack] = JSON.parse(runNpm([
-      'pack', '--ignore-scripts', '--json', '--pack-destination', dependencyRoot,
-    ], { cwd: resolveWorkspaceDependencyRoot(dependency) }).stdout);
+    const [dependencyPack] = JSON.parse(
+      runNpm(['pack', '--ignore-scripts', '--json', '--pack-destination', dependencyRoot], {
+        cwd: resolveWorkspaceDependencyRoot(dependency),
+      }).stdout,
+    );
     localDependencies[dependency] = `file:${join(dependencyRoot, dependencyPack.filename)}`;
   }
-  writeFileSync(join(installRoot, 'package.json'), JSON.stringify({
-    name: 'operate-v2-development-consumer',
-    private: true,
-    type: 'module',
-    dependencies: localDependencies,
-  }));
-  runNpm([
-    'install', '--ignore-scripts', '--no-audit', '--no-fund', '--omit=dev',
-    '--omit=optional', '--no-package-lock', '--offline', packed.tarballPath,
-  ], { cwd: installRoot });
+  writeFileSync(
+    join(installRoot, 'package.json'),
+    JSON.stringify({
+      name: 'operate-v2-development-consumer',
+      private: true,
+      type: 'module',
+      dependencies: localDependencies,
+    }),
+  );
+  runNpm(
+    [
+      'install',
+      '--ignore-scripts',
+      '--no-audit',
+      '--no-fund',
+      '--omit=dev',
+      '--omit=optional',
+      '--no-package-lock',
+      '--offline',
+      packed.tarballPath,
+    ],
+    { cwd: installRoot },
+  );
 
   const installedPackage = join(installRoot, 'node_modules', 'planr-pipeline');
-  const installedMetadata = JSON.parse(readFileSync(join(installedPackage, 'package.json'), 'utf8'));
+  const installedMetadata = JSON.parse(
+    readFileSync(join(installedPackage, 'package.json'), 'utf8'),
+  );
   assert.equal(installedMetadata.version, packageVersion);
   assert.equal(installedMetadata.exports['./schemas/*'], './schemas/*');
   for (const retiredPromptRoot of ['.claude-plugin', 'adapters', 'agents', 'commands', 'skills']) {
@@ -638,7 +665,11 @@ test('Operate 2.0 development package installs the clean typed contract without 
     './operate/evidence-projections-v2',
   ]) {
     const target = installedMetadata.exports[subpath];
-    assert.equal(existsSync(join(installedPackage, target.import)), true, `${subpath} runtime target`);
+    assert.equal(
+      existsSync(join(installedPackage, target.import)),
+      true,
+      `${subpath} runtime target`,
+    );
     assert.equal(existsSync(join(installedPackage, target.types)), true, `${subpath} types target`);
     const declarations = readFileSync(join(installedPackage, target.types), 'utf8');
     assert.doesNotMatch(declarations, /\.\.\/protocol\/index\.d\.ts/);
@@ -648,65 +679,63 @@ test('Operate 2.0 development package installs the clean typed contract without 
         'OPERATING_ASSIGNMENT_TRANSITIONS_V2',
         'evaluateOperateGuardV2',
         'reduceOperatingRuntimeEventsV2',
-      ]) assert.match(declarations, new RegExp(`\\b${symbol}\\b`));
+      ])
+        assert.match(declarations, new RegExp(`\\b${symbol}\\b`));
       assert.doesNotMatch(declarations, /prepareOperatingV14CompatibilityV2/);
     }
     if (subpath.endsWith('result-packet-v2')) {
       for (const symbol of [
         'createOperatingResultTemplateV2',
         'operatingResultSchemaDependenciesV2',
-      ]) assert.match(declarations, new RegExp(`\\b${symbol}\\b`));
+      ])
+        assert.match(declarations, new RegExp(`\\b${symbol}\\b`));
     }
     if (subpath.endsWith('scheduler-v2')) {
       for (const symbol of [
         'validateOperatingAssignmentGraphV2',
         'deriveOperatingAssignmentReleaseIntentsV2',
-      ]) assert.match(declarations, new RegExp(`\\b${symbol}\\b`));
+      ])
+        assert.match(declarations, new RegExp(`\\b${symbol}\\b`));
     }
     if (subpath.endsWith('extensions-v2')) {
-      for (const symbol of [
-        'createOperateExtensionRegistryV2',
-        'selectAgentRuntimeManifestV2',
-      ]) assert.match(declarations, new RegExp(`\\b${symbol}\\b`));
+      for (const symbol of ['createOperateExtensionRegistryV2', 'selectAgentRuntimeManifestV2'])
+        assert.match(declarations, new RegExp(`\\b${symbol}\\b`));
     }
     if (subpath.endsWith('experience-projection-v2')) {
-      for (const symbol of [
-        'buildOperateExperienceViewV2',
-        'createOperateExperiencePreviewV1',
-      ]) assert.match(declarations, new RegExp(`\\b${symbol}\\b`));
+      for (const symbol of ['buildOperateExperienceViewV2', 'createOperateExperiencePreviewV1'])
+        assert.match(declarations, new RegExp(`\\b${symbol}\\b`));
     }
     if (subpath.endsWith('planning-bridge-v2')) {
-      for (const symbol of [
-        'createOperatingDeliveryRouteV1',
-        'buildOperatingPlanningProposalV1',
-      ]) assert.match(declarations, new RegExp(`\\b${symbol}\\b`));
+      for (const symbol of ['createOperatingDeliveryRouteV1', 'buildOperatingPlanningProposalV1'])
+        assert.match(declarations, new RegExp(`\\b${symbol}\\b`));
     }
     if (subpath.endsWith('governed-execution-v2')) {
       for (const symbol of [
         'createOperatingGovernedExecutionRuntimeV2',
         'executeOperatingGovernedActionV2',
-      ]) assert.match(declarations, new RegExp(`\\b${symbol}\\b`));
+      ])
+        assert.match(declarations, new RegExp(`\\b${symbol}\\b`));
     }
     if (subpath.endsWith('governed-recovery-v2')) {
       for (const symbol of [
         'createOperatingGovernedRecoveryRuntimeV2',
         'rollbackOperatingGovernedActionV2',
-      ]) assert.match(declarations, new RegExp(`\\b${symbol}\\b`));
+      ])
+        assert.match(declarations, new RegExp(`\\b${symbol}\\b`));
     }
     if (subpath.endsWith('execution-verification-v2')) {
       for (const symbol of [
         'buildOperatingExecutionLifecycleV2',
         'deriveOperatingVerificationFeedbackV2',
-      ]) assert.match(declarations, new RegExp(`\\b${symbol}\\b`));
+      ])
+        assert.match(declarations, new RegExp(`\\b${symbol}\\b`));
     }
     if (subpath.endsWith('persistent-work-v2')) {
       assert.match(declarations, /buildPersistentWorkMaterializationPayloadV2/);
     }
     if (subpath.endsWith('persistent-work-projections-v2')) {
-      for (const symbol of [
-        'buildOperatingWorkLedgerV2',
-        'buildOperatingCycleWorkViewV2',
-      ]) assert.match(declarations, new RegExp(`\\b${symbol}\\b`));
+      for (const symbol of ['buildOperatingWorkLedgerV2', 'buildOperatingCycleWorkViewV2'])
+        assert.match(declarations, new RegExp(`\\b${symbol}\\b`));
     }
     if (subpath.endsWith('evidence-v2')) {
       assert.match(declarations, /export \* from '\.\/evidence-registry-v2\.mjs'/);
@@ -839,46 +868,59 @@ test('Operate 2.0 development package installs the clean typed contract without 
   `;
   run(process.execPath, ['--input-type=module', '--eval', importSmoke], { cwd: installRoot });
 
-  const conformance = run(process.execPath, [
-    join(installedPackage, 'conformance', 'verify-operating-runtime-v2.mjs'),
-  ], { cwd: installRoot });
+  const conformance = run(
+    process.execPath,
+    [join(installedPackage, 'conformance', 'verify-operating-runtime-v2.mjs')],
+    { cwd: installRoot },
+  );
   const report = JSON.parse(conformance.stdout);
   assert.equal(report.ok, true);
   assert.equal(report.protocolVersion, '2.0.0');
   assert.ok(report.checks > 100);
 
-  const persistentWork = run(process.execPath, [
-    join(installedPackage, 'conformance', 'verify-operate-v2-persistent-work.mjs'),
-  ], { cwd: installRoot });
+  const persistentWork = run(
+    process.execPath,
+    [join(installedPackage, 'conformance', 'verify-operate-v2-persistent-work.mjs')],
+    { cwd: installRoot },
+  );
   const persistentWorkReport = JSON.parse(persistentWork.stdout);
   assert.equal(persistentWorkReport.ok, true);
   assert.equal(persistentWorkReport.protocolVersion, '2.0.0');
   assert.ok(persistentWorkReport.checks >= 7);
 
-  const compilation = run(process.execPath, [
-    join(installedPackage, 'conformance', 'verify-operate-v2-contract-compilation.mjs'),
-  ], { cwd: installRoot });
+  const compilation = run(
+    process.execPath,
+    [join(installedPackage, 'conformance', 'verify-operate-v2-contract-compilation.mjs')],
+    { cwd: installRoot },
+  );
   const compilationReport = JSON.parse(compilation.stdout);
   assert.equal(compilationReport.ok, true);
   assert.equal(compilationReport.contracts, OPERATE_RUNTIME_CONTRACT_KINDS.length);
 
-  const evidence = run(process.execPath, [
-    join(installedPackage, 'conformance', 'verify-operate-v2-evidence.mjs'),
-  ], { cwd: installRoot });
+  const evidence = run(
+    process.execPath,
+    [join(installedPackage, 'conformance', 'verify-operate-v2-evidence.mjs')],
+    { cwd: installRoot },
+  );
   const evidenceReport = JSON.parse(evidence.stdout);
   assert.equal(evidenceReport.ok, true);
   assert.equal(evidenceReport.contracts, OPERATE_RUNTIME_CONTRACT_KINDS.length);
   assert.equal(evidenceReport.evidenceContracts, 7);
 
-  const boundary = run(process.execPath, [
-    join(installedPackage, 'conformance', 'verify-operate-v2-clean-boundary.mjs'),
-  ], { cwd: installRoot });
+  const boundary = run(
+    process.execPath,
+    [join(installedPackage, 'conformance', 'verify-operate-v2-clean-boundary.mjs')],
+    { cwd: installRoot },
+  );
   const boundaryReport = JSON.parse(boundary.stdout);
   assert.equal(boundaryReport.status, 'NOT_APPLICABLE');
   assert.equal(boundaryReport.local.status, 'PASS');
   assert.equal(boundaryReport.local.operatingIntelligence.ok, true);
   assert.equal(boundaryReport.local.governedExecution.ok, true);
-  assert.equal(boundaryReport.local.governedExecution.contracts, OPERATE_RUNTIME_CONTRACT_KINDS.length);
+  assert.equal(
+    boundaryReport.local.governedExecution.contracts,
+    OPERATE_RUNTIME_CONTRACT_KINDS.length,
+  );
   assert.equal(boundaryReport.local.governedExecution.networkAttempts, 0);
 
   assert.equal(checkOperateRuntimePurity(installedPackage).ok, true);
@@ -892,10 +934,18 @@ test('Operate 2.0 development package installs the clean typed contract without 
   for (const proof of packed.cleanSnapshot.excludedProof) {
     const installedPath = join(installedPackage, proof.path);
     if (!existsSync(installedPath)) continue;
-    assert.equal(sha256File(installedPath), proof.headSha256, `${proof.path}: committed release bytes`);
+    assert.equal(
+      sha256File(installedPath),
+      proof.headSha256,
+      `${proof.path}: committed release bytes`,
+    );
     assert.equal(proof.snapshotSha256, proof.headSha256, `${proof.path}: clean snapshot proof`);
     if (proof.worktreeSha256 !== proof.headSha256) {
-      assert.notEqual(sha256File(installedPath), proof.worktreeSha256, `${proof.path}: dirty user bytes excluded`);
+      assert.notEqual(
+        sha256File(installedPath),
+        proof.worktreeSha256,
+        `${proof.path}: dirty user bytes excluded`,
+      );
     }
   }
 });

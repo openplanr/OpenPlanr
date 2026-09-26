@@ -1,9 +1,7 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { get } from 'node:http';
-import {
-  mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync,
-} from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { connect } from 'node:net';
 import { dirname, join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -65,7 +63,9 @@ function rawRequest(port, bytes) {
     let response = '';
     socket.setEncoding('utf8');
     socket.on('connect', () => socket.end(bytes));
-    socket.on('data', (chunk) => { response += chunk; });
+    socket.on('data', (chunk) => {
+      response += chunk;
+    });
     socket.on('end', () => resolvePromise(response));
     socket.on('error', reject);
   });
@@ -94,10 +94,13 @@ function dashboardFixture(parent, overrides = {}, { includeAssetDigests = false 
     manifest.assetDigests = Object.fromEntries(
       [manifest.entry, ...manifest.assets].sort().map((asset) => {
         const bytes = readFileSync(join(staticRoot, asset));
-        return [asset, {
-          bytes: bytes.byteLength,
-          sha256: `sha256:${createHash('sha256').update(bytes).digest('hex')}`,
-        }];
+        return [
+          asset,
+          {
+            bytes: bytes.byteLength,
+            sha256: `sha256:${createHash('sha256').update(bytes).digest('hex')}`,
+          },
+        ];
       }),
     );
   }
@@ -115,22 +118,51 @@ const HASH_B = `sha256:${'b'.repeat(64)}`;
 
 function experienceHistory(overrides = {}) {
   return {
-    eventId: 'evt_test_0001', sequence: 1, type: 'cycle.started', entityId: 'cycle-1',
-    actorKind: 'engine', actorId: 'openplanr', timestamp: '2026-08-11T08:00:00Z',
-    correlationId: 'correlation-1', eventHash: HASH_A,
-    change: { subjectKind: 'cycle', summary: 'Cycle started.' }, why: 'The owner started it.',
-    authority: null, evidenceRefIds: [], prior: { previousEventHash: null, causationId: null },
-    result: null, next: null, deepLinks: ['#/operate/cycles/cycle-1'], beforeAfter: null,
+    eventId: 'evt_test_0001',
+    sequence: 1,
+    type: 'cycle.started',
+    entityId: 'cycle-1',
+    actorKind: 'engine',
+    actorId: 'openplanr',
+    timestamp: '2026-08-11T08:00:00Z',
+    correlationId: 'correlation-1',
+    eventHash: HASH_A,
+    change: { subjectKind: 'cycle', summary: 'Cycle started.' },
+    why: 'The owner started it.',
+    authority: null,
+    evidenceRefIds: [],
+    prior: { previousEventHash: null, causationId: null },
+    result: null,
+    next: null,
+    deepLinks: ['#/operate/cycles/cycle-1'],
+    beforeAfter: null,
     ...overrides,
   };
 }
 
 function experienceMetric() {
   return {
-    metricId: 'metric-retention', title: 'Retention rate', value: 91, unit: 'percent',
-    change: { kind: 'changed', priorValue: 89, currentValue: 91, deltaValue: 2, deltaId: 'delta-retention' },
-    window: '30 days', freshness: 'current', state: 'current', target: 93, threshold: 90,
-    evidenceRefIds: [], snapshot: null, delta: null, dueVerification: [], accessReason: null,
+    metricId: 'metric-retention',
+    title: 'Retention rate',
+    value: 91,
+    unit: 'percent',
+    change: {
+      kind: 'changed',
+      priorValue: 89,
+      currentValue: 91,
+      deltaValue: 2,
+      deltaId: 'delta-retention',
+    },
+    window: '30 days',
+    freshness: 'current',
+    state: 'current',
+    target: 93,
+    threshold: 90,
+    evidenceRefIds: [],
+    snapshot: null,
+    delta: null,
+    dueVerification: [],
+    accessReason: null,
   };
 }
 
@@ -159,40 +191,80 @@ function experienceInboxItem() {
 
 function experienceCycle() {
   return {
-    cycleId: 'cycle-1', state: 'approved', health: 'normal', focus: ['Audit transport'],
-    createdAt: '2026-08-11T07:00:00Z', updatedAt: '2026-08-11T08:00:00Z',
-    stages: ['observe', 'understand', 'decide', 'govern', 'act', 'verify', 'learn']
-      .map((id, index) => ({
-        id, state: index < 3 ? 'complete' : index === 3 ? 'current' : 'waiting',
-        reason: null, inputArtifactIds: [], outputArtifactIds: [],
-        gates: [], evidenceGapIds: [], uncertaintyIds: [], persistentActionIds: [],
-      })),
-    assignments: [], lensAbsences: [], executiveBoard: null, dependencies: [], blockers: [], persistentActionIds: [],
-    replayCheckpoint: null, deepLink: '#/operate/cycles/cycle-1',
+    cycleId: 'cycle-1',
+    state: 'approved',
+    health: 'normal',
+    focus: ['Audit transport'],
+    createdAt: '2026-08-11T07:00:00Z',
+    updatedAt: '2026-08-11T08:00:00Z',
+    stages: ['observe', 'understand', 'decide', 'govern', 'act', 'verify', 'learn'].map(
+      (id, index) => ({
+        id,
+        state: index < 3 ? 'complete' : index === 3 ? 'current' : 'waiting',
+        reason: null,
+        inputArtifactIds: [],
+        outputArtifactIds: [],
+        gates: [],
+        evidenceGapIds: [],
+        uncertaintyIds: [],
+        persistentActionIds: [],
+      }),
+    ),
+    assignments: [],
+    lensAbsences: [],
+    executiveBoard: null,
+    dependencies: [],
+    blockers: [],
+    persistentActionIds: [],
+    replayCheckpoint: null,
+    deepLink: '#/operate/cycles/cycle-1',
   };
 }
 
 function experienceView(overrides = {}) {
   const base = {
-    kind: 'operate-experience-view', schemaVersion: '1.0.0', protocolVersion: '2.0.0',
-    viewId: 'xview_1234567890abcdef1234567890abcdef', scopeId: 'scope-acme',
-    domainId: 'business', domainVersion: '1.0.0', actorId: 'owner-acme', accessLevel: 'public',
-    generatedAt: '2026-08-11T08:00:00Z', eventHead: { sequence: 1, hash: HASH_A },
-    sourceStateHash: HASH_B, status: 'ready', attention: [], domainMetrics: [], cycles: [],
-    inbox: [], actions: [], evidence: [], claims: [], rationale: [], outcomes: [], learnings: [],
+    kind: 'operate-experience-view',
+    schemaVersion: '1.0.0',
+    protocolVersion: '2.0.0',
+    viewId: 'xview_1234567890abcdef1234567890abcdef',
+    scopeId: 'scope-acme',
+    domainId: 'business',
+    domainVersion: '1.0.0',
+    actorId: 'owner-acme',
+    accessLevel: 'public',
+    generatedAt: '2026-08-11T08:00:00Z',
+    eventHead: { sequence: 1, hash: HASH_A },
+    sourceStateHash: HASH_B,
+    status: 'ready',
+    attention: [],
+    domainMetrics: [],
+    cycles: [],
+    inbox: [],
+    actions: [],
+    evidence: [],
+    claims: [],
+    rationale: [],
+    outcomes: [],
+    learnings: [],
     history: [experienceHistory()],
     replay: {
       checkpoint: null,
       tail: { startSequence: 1, endSequence: 1, eventCount: 1, eventReplayIndexHash: HASH_A },
-      finalHead: { sequence: 1, hash: HASH_A }, liveAccessUsed: false,
+      finalHead: { sequence: 1, hash: HASH_A },
+      liveAccessUsed: false,
       parityProof: {
-        sourceStateHash: HASH_B, eventReplayIndexHash: HASH_A, checkpointVerified: false,
-        finalEventHashMatches: true, stateParityVerified: true,
+        sourceStateHash: HASH_B,
+        eventReplayIndexHash: HASH_A,
+        checkpointVerified: false,
+        finalEventHashMatches: true,
+        stateParityVerified: true,
       },
-      filterDimensions: ['cycle', 'actor', 'event-type'], redactions: [],
+      filterDimensions: ['cycle', 'actor', 'event-type'],
+      redactions: [],
     },
     allowedActions: [],
-    omissions: [], export: { formats: ['html', 'json'], accessSafe: true, redactionCount: 0 },
+    omissions: [],
+    export: { formats: ['html', 'json'], accessSafe: true, redactionCount: 0 },
     ...overrides,
   };
   delete base.viewHash;
@@ -205,7 +277,9 @@ function probeHealth(port) {
     const req = get({ host: '127.0.0.1', port, path: '/health' }, (res) => {
       let body = '';
       res.setEncoding('utf-8');
-      res.on('data', (c) => { body += c; });
+      res.on('data', (c) => {
+        body += c;
+      });
       res.on('end', () => {
         try {
           const parsed = JSON.parse(body);
@@ -216,7 +290,10 @@ function probeHealth(port) {
       });
     });
     req.on('error', () => resolvePromise(null));
-    req.setTimeout(1500, () => { req.destroy(); resolvePromise(null); });
+    req.setTimeout(1500, () => {
+      req.destroy();
+      resolvePromise(null);
+    });
   });
 }
 
@@ -255,9 +332,20 @@ test('dashboard server: /api/graph, /api/events SSE, and reuse-if-running', asyn
     // ── reuse-if-running: a /health probe answers and carries the kind + version
     //    a reuse decision requires, so a second launch reuses instead of binding.
     const health = await probeHealth(port);
-    assert.ok(health && health.ok === true, '/health should answer { ok: true } for reuse detection');
-    assert.equal(health.kind, 'openplanr-dashboard', '/health must name its server kind for safe reuse');
-    assert.equal(typeof health.version, 'string', '/health must carry the package version for safe reuse');
+    assert.ok(
+      health && health.ok === true,
+      '/health should answer { ok: true } for reuse detection',
+    );
+    assert.equal(
+      health.kind,
+      'openplanr-dashboard',
+      '/health must name its server kind for safe reuse',
+    );
+    assert.equal(
+      typeof health.version,
+      'string',
+      '/health must carry the package version for safe reuse',
+    );
     assert.equal(health.pid, process.pid, '/health must report the owning pid');
     assert.equal(
       dash.getOperatingCommandGateway(),
@@ -383,7 +471,10 @@ test('dashboard server: local operating reviews are bounded, paginated, and refr
     assert.equal(detailResponse.body.includes('private-marker'), false);
     assert.equal(detail.item.recovery.complete, false);
 
-    const updatedReport = firstReport.replace('Act now on the release path.', 'Act now; CRM is verified.');
+    const updatedReport = firstReport.replace(
+      'Act now on the release path.',
+      'Act now; CRM is verified.',
+    );
     writeFileSync(join(cycleDir, 'board-report.md'), updatedReport);
     const refreshed = JSON.parse((await request(port, detailPath)).body);
     assert.equal(refreshed.item.markdown, updatedReport);
@@ -405,7 +496,11 @@ test('dashboard server: Operate REST/SSE requires exact binding and fails stale 
     planrDir,
     watch: false,
     getOperatingExperience: () => ({
-      available: true, readOnly: true, status: 'ready', view: current, reasonCodes: [],
+      available: true,
+      readOnly: true,
+      status: 'ready',
+      view: current,
+      reasonCodes: [],
     }),
   });
   const query = 'scopeId=scope-acme&domainId=business&domainVersion=1.0.0';
@@ -416,16 +511,19 @@ test('dashboard server: Operate REST/SSE requires exact binding and fails stale 
     assert.equal(today.status, 200);
     assert.match(today.headers['cache-control'] || '', /no-store/);
     const todayDisplay = JSON.parse(today.body);
-    assert.equal(assertOperateExperienceDisplaySurfaceV1(todayDisplay, {
-      actorId: 'owner-acme',
-      scopeId: 'scope-acme',
-      domainId: 'business',
-      domainVersion: '1.0.0',
-      generatedAt: current.generatedAt,
-      eventHead: current.eventHead,
-      viewHash: current.viewHash,
-      surface: 'today',
-    }), todayDisplay);
+    assert.equal(
+      assertOperateExperienceDisplaySurfaceV1(todayDisplay, {
+        actorId: 'owner-acme',
+        scopeId: 'scope-acme',
+        domainId: 'business',
+        domainVersion: '1.0.0',
+        generatedAt: current.generatedAt,
+        eventHead: current.eventHead,
+        viewHash: current.viewHash,
+        surface: 'today',
+      }),
+      todayDisplay,
+    );
     assert.deepEqual(todayDisplay.payload, {
       ok: true,
       kind: 'operate-experience-surface',
@@ -450,8 +548,13 @@ test('dashboard server: Operate REST/SSE requires exact binding and fails stale 
       status: 'ready',
       reasonCodes: [],
       data: {
-        attention: [], domainMetrics: [], activeCycle: null, inbox: [], actions: [],
-        outcomes: [], allowedActions: [],
+        attention: [],
+        domainMetrics: [],
+        activeCycle: null,
+        inbox: [],
+        actions: [],
+        outcomes: [],
+        allowedActions: [],
       },
     });
 
@@ -460,8 +563,16 @@ test('dashboard server: Operate REST/SSE requires exact binding and fails stale 
     assert.equal(JSON.parse(missing.body).error.reasonCode, 'OPERATE_BINDING_REQUIRED');
     const privateIdentity = 'private-approver-must-not-leak';
     for (const key of [
-      'actorId', 'ACTORID', 'actor_id', 'current-actor-id', 'OwnerActorId',
-      'approver', 'APPROVER_ID', 'userId', 'principal-id', 'X-OpenPlanr-Actor',
+      'actorId',
+      'ACTORID',
+      'actor_id',
+      'current-actor-id',
+      'OwnerActorId',
+      'approver',
+      'APPROVER_ID',
+      'userId',
+      'principal-id',
+      'X-OpenPlanr-Actor',
     ]) {
       const urlActor = await request(
         port,
@@ -496,7 +607,8 @@ test('dashboard server: Operate REST/SSE requires exact binding and fails stale 
     assert.equal(snapshotEnvelope.binding.generation, 7);
     assert.match(snapshotEnvelope.binding.projectId, /^sha256:[a-f0-9]{64}$/u);
     assert.deepEqual(snapshotEnvelope.cursor, {
-      eventHead: current.eventHead, viewHash: current.viewHash,
+      eventHead: current.eventHead,
+      viewHash: current.viewHash,
     });
     assert.equal(snapshotEnvelope.payload.kind, 'operate-experience-display-surface');
     assert.equal(snapshotEnvelope.payload.payload.surface, 'today');
@@ -529,18 +641,20 @@ test('dashboard server: Operate REST/SSE requires exact binding and fails stale 
       eventHead: { sequence: 2, hash: HASH_B },
       sourceStateHash: HASH_A,
       domainMetrics: [experienceMetric()],
-      history: [experienceHistory({
-        eventId: 'evt_private_approver_0001',
-        sequence: 2,
-        type: 'review.submitted',
-        entityId: 'rev_private_approver_0001',
-        actorKind: 'human',
-        actorId: 'restricted-actor',
-        timestamp: '2026-08-11T08:01:00Z',
-        correlationId: 'corr_private_approver_0001',
-        eventHash: HASH_B,
-        prior: { previousEventHash: HASH_A, causationId: null },
-      })],
+      history: [
+        experienceHistory({
+          eventId: 'evt_private_approver_0001',
+          sequence: 2,
+          type: 'review.submitted',
+          entityId: 'rev_private_approver_0001',
+          actorKind: 'human',
+          actorId: 'restricted-actor',
+          timestamp: '2026-08-11T08:01:00Z',
+          correlationId: 'corr_private_approver_0001',
+          eventHash: HASH_B,
+          prior: { previousEventHash: HASH_A, causationId: null },
+        }),
+      ],
       replay: {
         ...current.replay,
         tail: { startSequence: 1, endSequence: 2, eventCount: 2, eventReplayIndexHash: HASH_B },
@@ -567,16 +681,22 @@ test('dashboard server: Operate REST/SSE requires exact binding and fails stale 
     const patchEnvelope = firstSseEnvelope(patched.body);
     assert.equal(patchEnvelope.event, 'patch');
     assert.deepEqual(Object.keys(patchEnvelope.payload).sort(), [
-      'changedPaths', 'from', 'patchHash', 'patchId', 'to',
+      'changedPaths',
+      'from',
+      'patchHash',
+      'patchId',
+      'to',
     ]);
     assert.deepEqual(patchEnvelope.payload.changedPaths, ['/domainMetrics', '/history', '/replay']);
     assert.equal(Object.hasOwn(patchEnvelope.payload, 'operations'), false);
     assert.deepEqual(patchEnvelope.cursor, {
-      eventHead: current.eventHead, viewHash: current.viewHash,
+      eventHead: current.eventHead,
+      viewHash: current.viewHash,
     });
 
     const prior = encodeOperateExperienceCheckpoint({
-      eventHead: { sequence: 0, hash: null }, viewHash: `sha256:${'c'.repeat(64)}`,
+      eventHead: { sequence: 0, hash: null },
+      viewHash: `sha256:${'c'.repeat(64)}`,
     });
     const stale = await request(port, `/api/operate/events?${query}&generation=7`, {
       ...actorHeaders,
@@ -604,7 +724,11 @@ test('dashboard server: Inbox detail returns one exact itemId-bound display', as
     planrDir,
     watch: false,
     getOperatingExperience: () => ({
-      available: true, readOnly: true, status: 'ready', view: current, reasonCodes: [],
+      available: true,
+      readOnly: true,
+      status: 'ready',
+      view: current,
+      reasonCodes: [],
     }),
   });
   const actorHeaders = { 'X-OpenPlanr-Actor': 'owner-acme' };
@@ -639,13 +763,17 @@ test('dashboard server: Inbox detail returns one exact itemId-bound display', as
     assert.equal(assertOperateExperienceDisplaySurfaceV1(display, expected), display);
     assert.deepEqual(display.payload.data.inbox, [item]);
     assert.deepEqual(display.payload.data.requestBinding, {
-      projectId, generation: 3, subjectId: item.itemId,
+      projectId,
+      generation: 3,
+      subjectId: item.itemId,
     });
 
     const collection = await request(port, `/api/operate/inbox?${query}`, actorHeaders);
     assert.equal(collection.status, 200);
     assert.deepEqual(JSON.parse(collection.body).payload.data.requestBinding, {
-      projectId, generation: 3, subjectId: null,
+      projectId,
+      generation: 3,
+      subjectId: null,
     });
 
     const missingId = 'verification:asg_foreign_0001';
@@ -723,15 +851,19 @@ test('dashboard server: noncanonical live checkpoints fail before replay or prov
   });
   const encoded = (value) => Buffer.from(value, 'utf8').toString('base64url');
   const canonical = encodeOperateExperienceCheckpoint({
-    eventHead: { sequence: 1, hash: HASH_A }, viewHash: HASH_B,
+    eventHead: { sequence: 1, hash: HASH_A },
+    viewHash: HASH_B,
   });
   const hostile = [
     encoded(`{"sequence":0,"sequence":1,"hash":"${HASH_A}","viewHash":"${HASH_B}"}`),
-    encoded(`{"sequence":1,"hash":"${HASH_A}","viewHash":"${HASH_B}","private":"${privateMarker}"}`),
+    encoded(
+      `{"sequence":1,"hash":"${HASH_A}","viewHash":"${HASH_B}","private":"${privateMarker}"}`,
+    ),
     encoded(`{"hash":"${HASH_A}","sequence":1,"viewHash":"${HASH_B}"}`),
     `${canonical}=`,
   ];
-  const path = '/api/operate/events?scopeId=scope-acme&domainId=business&domainVersion=1.0.0&generation=4';
+  const path =
+    '/api/operate/events?scopeId=scope-acme&domainId=business&domainVersion=1.0.0&generation=4';
   try {
     const port = await dash.listen(0, { env: { ...process.env, PLANR_HOME: home } });
     for (const checkpoint of hostile) {
@@ -763,8 +895,12 @@ test('dashboard server: valid live reads and generic failures never echo provide
   const dash = createDashboardServer({
     planrDir,
     watch: false,
-    getOperatingExperience: () => { throw new Error(privateMarker); },
-    getGraph: () => { throw new Error(privateMarker); },
+    getOperatingExperience: () => {
+      throw new Error(privateMarker);
+    },
+    getGraph: () => {
+      throw new Error(privateMarker);
+    },
   });
   try {
     const port = await dash.listen(0, { env: { ...process.env, PLANR_HOME: home } });
@@ -792,18 +928,29 @@ test('dashboard server: raw provider history is rebound to one safe REST/SSE tra
   const privateIdentity = 'private-approver-must-not-leak';
   const unsafe = experienceView({
     cycles: [experienceCycle()],
-    history: [experienceHistory({
-      eventId: 'evt_private_approver_0001', sequence: 1, type: 'review.submitted',
-      entityId: 'rev_private_approver_0001', actorKind: 'human', actorId: privateIdentity,
-      timestamp: '2026-08-11T08:00:00Z', correlationId: 'corr_private_approver_0001',
-      eventHash: HASH_A,
-    })],
+    history: [
+      experienceHistory({
+        eventId: 'evt_private_approver_0001',
+        sequence: 1,
+        type: 'review.submitted',
+        entityId: 'rev_private_approver_0001',
+        actorKind: 'human',
+        actorId: privateIdentity,
+        timestamp: '2026-08-11T08:00:00Z',
+        correlationId: 'corr_private_approver_0001',
+        eventHash: HASH_A,
+      }),
+    ],
   });
   const dash = createDashboardServer({
     planrDir,
     watch: false,
     getOperatingExperience: () => ({
-      available: true, readOnly: true, status: 'ready', view: unsafe, reasonCodes: [],
+      available: true,
+      readOnly: true,
+      status: 'ready',
+      view: unsafe,
+      reasonCodes: [],
     }),
   });
   const query = 'scopeId=scope-acme&domainId=business&domainVersion=1.0.0';
@@ -841,12 +988,32 @@ test('dashboard server: every Operate route rejects unknown query keys before pr
   const bindingQuery = 'scopeId=scope-acme&domainId=business&domainVersion=1.0.0';
   const headers = { 'X-OpenPlanr-Actor': 'owner-acme' };
   const routes = [
-    'today', 'cycles', 'cycles/cycle-1', 'cycle/cycle-1', 'evidence', 'outcomes',
-    'outcomes/outcome-1', 'outcome/outcome-1', 'history', 'search', 'export', 'events',
+    'today',
+    'cycles',
+    'cycles/cycle-1',
+    'cycle/cycle-1',
+    'evidence',
+    'outcomes',
+    'outcomes/outcome-1',
+    'outcome/outcome-1',
+    'history',
+    'search',
+    'export',
+    'events',
   ];
   const adversarialKeys = [
-    'ReviewerId', 'reviewer%49d', 'agentId', 'party-id', 'namedActorId', 'member_id',
-    'email', 'ActorId', '%61ctorId', 'scopeid', 'domainversion', 'unknown',
+    'ReviewerId',
+    'reviewer%49d',
+    'agentId',
+    'party-id',
+    'namedActorId',
+    'member_id',
+    'email',
+    'ActorId',
+    '%61ctorId',
+    'scopeid',
+    'domainversion',
+    'unknown',
   ];
   const privateIdentity = 'private-query-identity-must-not-echo';
   try {
@@ -865,7 +1032,10 @@ test('dashboard server: every Operate route rejects unknown query keys before pr
         assert.equal(JSON.parse(response.body).error.reasonCode, 'OPERATE_QUERY_INVALID');
       }
     }
-    for (const [route, key] of [['today', 'q'], ['history', 'format']]) {
+    for (const [route, key] of [
+      ['today', 'q'],
+      ['history', 'format'],
+    ]) {
       const response = await request(
         port,
         `/api/operate/${route}?${key}=safe&${bindingQuery}`,
@@ -918,13 +1088,26 @@ test('dashboard server: exact Operate route grammar rejects malformed paths befo
   const singletonRoutes = ['today', 'history', 'search', 'export', 'events'];
   const invalidPaths = [
     ...singletonRoutes.map((route) => `${route}/${privateIdentity}`),
-    'cycles/cycle-1/extra', 'outcomes/outcome-1/extra',
-    'cycle', 'outcome', 'cycle/', 'outcome/', 'cycle//cycle-1',
-    'cycle/.', 'cycle/..', 'cycle/%2E', 'cycle/%2E%2E',
+    'cycles/cycle-1/extra',
+    'outcomes/outcome-1/extra',
+    'cycle',
+    'outcome',
+    'cycle/',
+    'outcome/',
+    'cycle//cycle-1',
+    'cycle/.',
+    'cycle/..',
+    'cycle/%2E',
+    'cycle/%2E%2E',
     `cycle/cycle-1%2F${privateIdentity}`,
     `cycles/cycle-1%2f${privateIdentity}`,
-    'cycle/%252F', 'Today', 'Cycles', 'Outcome/outcome-1',
-    '%74oday', `today%2F${privateIdentity}`, 'cycles%2Fcycle-1',
+    'cycle/%252F',
+    'Today',
+    'Cycles',
+    'Outcome/outcome-1',
+    '%74oday',
+    `today%2F${privateIdentity}`,
+    'cycles%2Fcycle-1',
   ];
   try {
     const port = await dash.listen(0, { env: { ...process.env, PLANR_HOME: home } });
@@ -934,11 +1117,15 @@ test('dashboard server: exact Operate route grammar rejects malformed paths befo
       assert.match(response.headers['cache-control'] || '', /no-store/);
       assert.equal(response.headers.location, undefined);
       assert.equal(response.body.includes(privateIdentity), false);
-      assert.deepEqual(JSON.parse(response.body).error, {
-        reasonCode: 'OPERATE_ROUTE_INVALID',
-        message: 'The operating route does not match a documented surface shape.',
-        retryable: false,
-      }, path);
+      assert.deepEqual(
+        JSON.parse(response.body).error,
+        {
+          reasonCode: 'OPERATE_ROUTE_INVALID',
+          message: 'The operating route does not match a documented surface shape.',
+          retryable: false,
+        },
+        path,
+      );
     }
     assert.equal(providerReads, 0, 'invalid paths must not reach the projection provider');
 
@@ -963,7 +1150,10 @@ test('dashboard server: bootstrap binds manifest, origin, project, and semantic 
   const projectRoot = join(fixtureRoot, 'project-private-name');
   const projectPlanrDir = join(projectRoot, '.planr');
   mkdirSync(projectPlanrDir, { recursive: true });
-  writeFileSync(join(projectPlanrDir, 'config.json'), JSON.stringify({ projectName: 'Public dogfood' }));
+  writeFileSync(
+    join(projectPlanrDir, 'config.json'),
+    JSON.stringify({ projectName: 'Public dogfood' }),
+  );
   const fixture = dashboardFixture(fixtureRoot, {}, { includeAssetDigests: true });
   let gatewayReads = 0;
   const dash = createDashboardServer({
@@ -983,9 +1173,12 @@ test('dashboard server: bootstrap binds manifest, origin, project, and semantic 
     assert.equal(numeric.headers['cache-control'], 'no-store');
     const bootstrap = JSON.parse(numeric.body);
     assert.equal(validate(bootstrap, bootstrapSchema).length, 0);
-    assert.equal(validateProtocolArtifact('dashboard-bootstrap', bootstrap, {
-      protocolVersion: '1.2.0',
-    }).length, 0);
+    assert.equal(
+      validateProtocolArtifact('dashboard-bootstrap', bootstrap, {
+        protocolVersion: '1.2.0',
+      }).length,
+      0,
+    );
     assert.equal(validateDashboardBootstrapV1(bootstrap).length, 0);
     assert.equal(bootstrap.origin, `http://127.0.0.1:${port}`);
     assert.equal(bootstrap.ui.buildId, fixture.manifest.buildId);
@@ -994,8 +1187,16 @@ test('dashboard server: bootstrap binds manifest, origin, project, and semantic 
     assert.match(bootstrap.project.projectId, /^sha256:[a-f0-9]{64}$/u);
     assert.equal(bootstrap.project.name, 'Public dogfood');
     assert.deepEqual(new Set(bootstrap.project.products), new Set(['planning', 'operate']));
-    assert.equal(numeric.body.includes(projectRoot), false, 'bootstrap must not disclose its project path');
-    assert.equal(numeric.body.includes('project-private-name'), false, 'bootstrap must not disclose a private basename');
+    assert.equal(
+      numeric.body.includes(projectRoot),
+      false,
+      'bootstrap must not disclose its project path',
+    );
+    assert.equal(
+      numeric.body.includes('project-private-name'),
+      false,
+      'bootstrap must not disclose a private basename',
+    );
 
     const localhost = await request(port, '/api/bootstrap', { Host: `localhost:${port}` });
     assert.equal(localhost.status, 200);
@@ -1003,7 +1204,11 @@ test('dashboard server: bootstrap binds manifest, origin, project, and semantic 
 
     const semanticMismatch = structuredClone(bootstrap);
     semanticMismatch.ui.expectedBuildId = 'dashboard-foreign-build';
-    assert.equal(validate(semanticMismatch, bootstrapSchema).length, 0, 'equality is a semantic invariant');
+    assert.equal(
+      validate(semanticMismatch, bootstrapSchema).length,
+      0,
+      'equality is a semantic invariant',
+    );
     assert.notEqual(validateDashboardBootstrapV1(semanticMismatch).length, 0);
     assert.throws(() => assertDashboardBootstrapV1(semanticMismatch), {
       code: 'E_PROTOCOL_ARTIFACT_INVALID',
@@ -1052,7 +1257,9 @@ test('dashboard server: bootstrap rejects duplicate and wrong-port Host before c
       dashboardBuildId: fixture.manifest.buildId,
       planrDir,
       watch: false,
-      getOperatingCommandGateway: () => { throw new Error(privateMarker); },
+      getOperatingCommandGateway: () => {
+        throw new Error(privateMarker);
+      },
     });
     try {
       const throwingPort = await throwing.listen(0, {
@@ -1110,37 +1317,63 @@ test('dashboard server: bootstrap reports closed manifest failures and collision
   const staticRoot = dashboardFixture(fixtureRoot).staticRoot;
   const cases = [
     [['DASHBOARD_BUILD_MISMATCH'], () => {}, 'dashboard-other-build'],
-    [['DASHBOARD_MANIFEST_MISSING', 'DASHBOARD_BUILD_MISMATCH'],
-      () => rmSync(join(staticRoot, 'dashboard-manifest.json')), 'dashboard-test-build'],
-    [['DASHBOARD_MANIFEST_INVALID', 'DASHBOARD_BUILD_MISMATCH'],
-      () => writeFileSync(join(staticRoot, 'dashboard-manifest.json'), '{'), 'dashboard-test-build'],
-    [['DASHBOARD_ASSET_MISSING'], () => {
-      dashboardFixture(fixtureRoot, { assets: ['assets/missing.js'] });
-    }, undefined],
-    [['DASHBOARD_MANIFEST_INVALID'], () => {
-      dashboardFixture(fixtureRoot, {}, { includeAssetDigests: true });
-      writeFileSync(join(staticRoot, 'assets/main.js'), 'globalThis.__TAMPERED__ = true;\n');
-    }, undefined],
-    [['DASHBOARD_MANIFEST_INVALID'], () => {
-      dashboardFixture(fixtureRoot, {}, { includeAssetDigests: true });
-      writeFileSync(join(staticRoot, 'index.html'), '<main id="tampered"></main>\n');
-    }, undefined],
-    [['DASHBOARD_MANIFEST_INVALID'], () => {
-      const fixture = dashboardFixture(fixtureRoot, {}, { includeAssetDigests: true });
-      delete fixture.manifest.assetDigests['index.html'];
-      writeFileSync(
-        join(staticRoot, 'dashboard-manifest.json'),
-        `${JSON.stringify(fixture.manifest, null, 2)}\n`,
-      );
-    }, undefined],
-    [['DASHBOARD_MANIFEST_INVALID'], () => {
-      const fixture = dashboardFixture(fixtureRoot, {}, { includeAssetDigests: true });
-      fixture.manifest.assetDigests['assets/main.js'].privateField = true;
-      writeFileSync(
-        join(staticRoot, 'dashboard-manifest.json'),
-        `${JSON.stringify(fixture.manifest, null, 2)}\n`,
-      );
-    }, undefined],
+    [
+      ['DASHBOARD_MANIFEST_MISSING', 'DASHBOARD_BUILD_MISMATCH'],
+      () => rmSync(join(staticRoot, 'dashboard-manifest.json')),
+      'dashboard-test-build',
+    ],
+    [
+      ['DASHBOARD_MANIFEST_INVALID', 'DASHBOARD_BUILD_MISMATCH'],
+      () => writeFileSync(join(staticRoot, 'dashboard-manifest.json'), '{'),
+      'dashboard-test-build',
+    ],
+    [
+      ['DASHBOARD_ASSET_MISSING'],
+      () => {
+        dashboardFixture(fixtureRoot, { assets: ['assets/missing.js'] });
+      },
+      undefined,
+    ],
+    [
+      ['DASHBOARD_MANIFEST_INVALID'],
+      () => {
+        dashboardFixture(fixtureRoot, {}, { includeAssetDigests: true });
+        writeFileSync(join(staticRoot, 'assets/main.js'), 'globalThis.__TAMPERED__ = true;\n');
+      },
+      undefined,
+    ],
+    [
+      ['DASHBOARD_MANIFEST_INVALID'],
+      () => {
+        dashboardFixture(fixtureRoot, {}, { includeAssetDigests: true });
+        writeFileSync(join(staticRoot, 'index.html'), '<main id="tampered"></main>\n');
+      },
+      undefined,
+    ],
+    [
+      ['DASHBOARD_MANIFEST_INVALID'],
+      () => {
+        const fixture = dashboardFixture(fixtureRoot, {}, { includeAssetDigests: true });
+        delete fixture.manifest.assetDigests['index.html'];
+        writeFileSync(
+          join(staticRoot, 'dashboard-manifest.json'),
+          `${JSON.stringify(fixture.manifest, null, 2)}\n`,
+        );
+      },
+      undefined,
+    ],
+    [
+      ['DASHBOARD_MANIFEST_INVALID'],
+      () => {
+        const fixture = dashboardFixture(fixtureRoot, {}, { includeAssetDigests: true });
+        fixture.manifest.assetDigests['assets/main.js'].privateField = true;
+        writeFileSync(
+          join(staticRoot, 'dashboard-manifest.json'),
+          `${JSON.stringify(fixture.manifest, null, 2)}\n`,
+        );
+      },
+      undefined,
+    ],
   ];
   try {
     for (const [reasons, mutate, dashboardBuildId] of cases) {
@@ -1170,7 +1403,10 @@ test('dashboard server: bootstrap reports closed manifest failures and collision
     for (const suffix of ['one', 'two']) {
       const projectPlanrDir = join(fixtureRoot, suffix, '.planr');
       mkdirSync(projectPlanrDir, { recursive: true });
-      writeFileSync(join(projectPlanrDir, 'config.json'), JSON.stringify({ projectName: 'Same public name' }));
+      writeFileSync(
+        join(projectPlanrDir, 'config.json'),
+        JSON.stringify({ projectName: 'Same public name' }),
+      );
       const dash = createDashboardServer({ staticRoot, planrDir: projectPlanrDir, watch: false });
       try {
         const port = await dash.listen(0, {
@@ -1185,7 +1421,10 @@ test('dashboard server: bootstrap reports closed manifest failures and collision
 
     const hostilePlanrDir = join(fixtureRoot, 'private-hostile-name', '.planr');
     mkdirSync(hostilePlanrDir, { recursive: true });
-    writeFileSync(join(hostilePlanrDir, 'config.json'), JSON.stringify({ projectName: 'Public\nname' }));
+    writeFileSync(
+      join(hostilePlanrDir, 'config.json'),
+      JSON.stringify({ projectName: 'Public\nname' }),
+    );
     const hostile = createDashboardServer({ staticRoot, planrDir: hostilePlanrDir, watch: false });
     try {
       const port = await hostile.listen(0, {

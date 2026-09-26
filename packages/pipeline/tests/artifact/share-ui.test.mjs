@@ -12,7 +12,10 @@ import {
   hostedArtifactStateForError,
   parseHostedArtifactLocation,
 } from '../../lib/artifact/ui/hosted-viewer.mjs';
-import { renderArtifactShellMarkup, normalizeArtifactShellModel } from '../../lib/artifact/ui/renderers.mjs';
+import {
+  renderArtifactShellMarkup,
+  normalizeArtifactShellModel,
+} from '../../lib/artifact/ui/renderers.mjs';
 import {
   ARTIFACT_SHARE_FRAGMENT_LIMIT,
   ARTIFACT_SHARE_TTLS,
@@ -27,8 +30,9 @@ import { renderArtifactStageRuntimeAsset } from '../../scripts/generate-artifact
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const snapshotDir = join(root, 'tests/artifact/__snapshots__');
-const runBrowser = process.env.PLANR_BROWSER_TESTS === '1'
-  || process.env.npm_lifecycle_event === 'test:artifact:browser';
+const runBrowser =
+  process.env.PLANR_BROWSER_TESTS === '1' ||
+  process.env.npm_lifecycle_event === 'test:artifact:browser';
 const updateSnapshots = process.env.PLANR_UPDATE_SNAPSHOTS === '1';
 
 function fixtureArtifact() {
@@ -122,10 +126,7 @@ test('manual short selection, TTL, and deletion-token result remain explicit imm
   assert.equal(state.result.deletionToken, 'delete-once');
   assert.doesNotMatch(state.result.url, /delete-once/);
   assert.equal(Object.isFrozen(state.result), true);
-  assert.equal(
-    artifactShareExpiry('1d', '2026-07-14T12:00:00.000Z'),
-    '2026-07-15T12:00:00.000Z',
-  );
+  assert.equal(artifactShareExpiry('1d', '2026-07-14T12:00:00.000Z'), '2026-07-15T12:00:00.000Z');
   assert.deepEqual(Object.keys(ARTIFACT_SHARE_TTLS), ['1d', '7d', '30d']);
   assert.equal(
     reduceArtifactShareDialog(state, {
@@ -192,7 +193,10 @@ test('live result state preserves three disjoint room capabilities without expos
     'owner and management authorities cannot replace a terminal receipt',
   );
   assert.equal(reduceArtifactShareDialog(state, { type: 'set-ttl', ttl: '30d' }), state);
-  assert.equal(reduceArtifactShareDialog(state, { type: 'select-transport', transport: 'short' }), state);
+  assert.equal(
+    reduceArtifactShareDialog(state, { type: 'select-transport', transport: 'short' }),
+    state,
+  );
   assert.equal(reduceArtifactShareDialog(state, { type: 'create-start' }), state);
 });
 
@@ -220,18 +224,20 @@ test('owner custody validates and completes its explicit local handoff before re
   );
   await assert.rejects(
     establishArtifactOwnerCustody({
-      prepareOwnerCustody: async () => fixtureOwnerCustody({
-        secret: { ...custody.secret, keyId: `sha256:${'b'.repeat(64)}` },
-      }),
+      prepareOwnerCustody: async () =>
+        fixtureOwnerCustody({
+          secret: { ...custody.secret, keyId: `sha256:${'b'.repeat(64)}` },
+        }),
       saveOwnerCustody: async () => true,
     }),
     (error) => error.code === 'E_ARTIFACT_SHARE_OWNER_CUSTODY_INVALID',
   );
   await assert.rejects(
     establishArtifactOwnerCustody({
-      prepareOwnerCustody: async () => fixtureOwnerCustody({
-        secret: { ...custody.secret, privateKey: 'A'.repeat(65 * 1024) },
-      }),
+      prepareOwnerCustody: async () =>
+        fixtureOwnerCustody({
+          secret: { ...custody.secret, privateKey: 'A'.repeat(65 * 1024) },
+        }),
       saveOwnerCustody: async () => true,
     }),
     (error) => error.code === 'E_ARTIFACT_SHARE_OWNER_CUSTODY_INVALID',
@@ -258,9 +264,18 @@ test('full retry-safe recovery custody is downloaded before its opaque preparati
     },
   };
   Object.defineProperties(prepared, {
-    url: { enumerable: false, value: `https://share.openplanr.dev/r/${roomId}#k=${key}&w=${'R'.repeat(43)}` },
-    ownerUrl: { enumerable: false, value: `https://share.openplanr.dev/r/${roomId}#k=${key}&o=${'O'.repeat(43)}` },
-    manageUrl: { enumerable: false, value: `https://share.openplanr.dev/r/${roomId}#k=${key}&m=${'M'.repeat(43)}` },
+    url: {
+      enumerable: false,
+      value: `https://share.openplanr.dev/r/${roomId}#k=${key}&w=${'R'.repeat(43)}`,
+    },
+    ownerUrl: {
+      enumerable: false,
+      value: `https://share.openplanr.dev/r/${roomId}#k=${key}&o=${'O'.repeat(43)}`,
+    },
+    manageUrl: {
+      enumerable: false,
+      value: `https://share.openplanr.dev/r/${roomId}#k=${key}&m=${'M'.repeat(43)}`,
+    },
     ownerSigner: { enumerable: false, value: signer },
   });
   Object.freeze(prepared);
@@ -281,20 +296,24 @@ test('full retry-safe recovery custody is downloaded before its opaque preparati
   const saved = [];
   const credential = await establishArtifactOwnerCustody({
     prepareOwnerCustody: async () => ({ prepared, recovery }),
-    saveOwnerCustody: async (value) => { saved.push(value); return true; },
+    saveOwnerCustody: async (value) => {
+      saved.push(value);
+      return true;
+    },
   });
   assert.equal(credential, prepared);
   assert.match(saved[0].filename, /^openplanr-live-room-recovery-room_1234567\.json$/);
   assert.deepEqual(JSON.parse(saved[0].serialized), recovery);
   assert.equal(JSON.stringify(prepared).includes(secret.privateKey), false);
   await assert.rejects(
-    () => establishArtifactOwnerCustody({
-      prepareOwnerCustody: async () => ({
-        prepared,
-        recovery: { ...recovery, manageUrl: recovery.ownerUrl },
+    () =>
+      establishArtifactOwnerCustody({
+        prepareOwnerCustody: async () => ({
+          prepared,
+          recovery: { ...recovery, manageUrl: recovery.ownerUrl },
+        }),
+        saveOwnerCustody: async () => true,
       }),
-      saveOwnerCustody: async () => true,
-    }),
     { code: 'E_ARTIFACT_SHARE_OWNER_CUSTODY_INVALID' },
   );
 });
@@ -307,7 +326,10 @@ test('custody-bound and ambiguous phases freeze configuration until exact retry 
   state = reduceArtifactShareDialog(state, { type: 'custody-ready' });
   const custodyReady = state;
   assert.equal(reduceArtifactShareDialog(state, { type: 'set-ttl', ttl: '30d' }), state);
-  assert.equal(reduceArtifactShareDialog(state, { type: 'select-transport', transport: 'short' }), state);
+  assert.equal(
+    reduceArtifactShareDialog(state, { type: 'select-transport', transport: 'short' }),
+    state,
+  );
   state = reduceArtifactShareDialog(state, { type: 'create-start' });
   state = reduceArtifactShareDialog(state, {
     type: 'failure',
@@ -324,62 +346,112 @@ test('custody-bound and ambiguous phases freeze configuration until exact retry 
 });
 
 test('privacy receipt copy distinguishes encoded fragments from encrypted storage', () => {
-  const markup = renderArtifactShellMarkup(normalizeArtifactShellModel({
-    envelope: fixtureEnvelope(),
-    shell: { status: 'ready' },
-  }));
-  const fragmentRow = markup.match(/<button[^>]+data-planr-share-transport="fragment"[\s\S]*?<\/button>/)?.[0];
-  const shortRow = markup.match(/<button[^>]+data-planr-share-transport="short"[\s\S]*?<\/button>/)?.[0];
+  const markup = renderArtifactShellMarkup(
+    normalizeArtifactShellModel({
+      envelope: fixtureEnvelope(),
+      shell: { status: 'ready' },
+    }),
+  );
+  const fragmentRow = markup.match(
+    /<button[^>]+data-planr-share-transport="fragment"[\s\S]*?<\/button>/,
+  )?.[0];
+  const shortRow = markup.match(
+    /<button[^>]+data-planr-share-transport="short"[\s\S]*?<\/button>/,
+  )?.[0];
   assert.ok(fragmentRow);
   assert.match(fragmentRow, /Compressed into the URL\. Nothing is uploaded\./);
   assert.doesNotMatch(fragmentRow, /encrypt/i);
   assert.ok(shortRow);
-  assert.match(shortRow, /AES-256-GCM ciphertext is stored until expiry; the key stays in this link fragment\./);
+  assert.match(
+    shortRow,
+    /AES-256-GCM ciphertext is stored until expiry; the key stays in this link fragment\./,
+  );
   assert.doesNotMatch(shortRow, /nothing is uploaded/i);
-  assert.match(markup, /Store this token now; it cannot be recovered\. It is separate from the review URL\./);
+  assert.match(
+    markup,
+    /Store this token now; it cannot be recovered\. It is separate from the review URL\./,
+  );
   assert.match(markup, /Download the private owner key first\./);
   assert.match(markup, /Private owner-verdict URL/);
-  assert.match(markup, /Use this URL with the matching downloaded owner key to approve or request changes\./);
+  assert.match(
+    markup,
+    /Use this URL with the matching downloaded owner key to approve or request changes\./,
+  );
   assert.match(markup, /Management cannot set a verdict\./);
   assert.doesNotMatch(markup, /management URL[^.]*set (?:the )?(?:final )?(?:decision|verdict)/i);
 });
 
 test('hosted presentation parser covers empty, version, shape, threshold, fragment, and short URLs', () => {
   assert.equal(parseHostedArtifactLocation('https://share.openplanr.dev/').status, 'empty-hash');
-  assert.equal(parseHostedArtifactLocation('https://share.openplanr.dev/#v2.abc').status, 'invalid-version');
-  assert.equal(parseHostedArtifactLocation('https://share.openplanr.dev/#v1.').status, 'malformed-payload');
-  assert.equal(parseHostedArtifactLocation('https://share.openplanr.dev/#v1.a%20b').status, 'malformed-payload');
+  assert.equal(
+    parseHostedArtifactLocation('https://share.openplanr.dev/#v2.abc').status,
+    'invalid-version',
+  );
+  assert.equal(
+    parseHostedArtifactLocation('https://share.openplanr.dev/#v1.').status,
+    'malformed-payload',
+  );
+  assert.equal(
+    parseHostedArtifactLocation('https://share.openplanr.dev/#v1.a%20b').status,
+    'malformed-payload',
+  );
   assert.equal(
     parseHostedArtifactLocation(`https://share.openplanr.dev/#v1.${'a'.repeat(7_997)}`).ok,
     true,
     'the final v1 fragment is exactly 8,000 characters',
   );
   assert.deepEqual(
-    parseHostedArtifactLocation(`https://share.openplanr.dev/r/room_123456789012#k=${'A'.repeat(43)}&w=${'B'.repeat(43)}`),
-    { ok: true, transport: 'room', id: 'room_123456789012', key: 'A'.repeat(43), write: 'B'.repeat(43) },
+    parseHostedArtifactLocation(
+      `https://share.openplanr.dev/r/room_123456789012#k=${'A'.repeat(43)}&w=${'B'.repeat(43)}`,
+    ),
+    {
+      ok: true,
+      transport: 'room',
+      id: 'room_123456789012',
+      key: 'A'.repeat(43),
+      write: 'B'.repeat(43),
+    },
   );
   assert.deepEqual(
-    parseHostedArtifactLocation(`https://share.openplanr.dev/r/room_123456789012#k=${'A'.repeat(43)}&o=${'C'.repeat(43)}`),
-    { ok: true, transport: 'room', id: 'room_123456789012', key: 'A'.repeat(43), owner: 'C'.repeat(43) },
+    parseHostedArtifactLocation(
+      `https://share.openplanr.dev/r/room_123456789012#k=${'A'.repeat(43)}&o=${'C'.repeat(43)}`,
+    ),
+    {
+      ok: true,
+      transport: 'room',
+      id: 'room_123456789012',
+      key: 'A'.repeat(43),
+      owner: 'C'.repeat(43),
+    },
   );
   assert.equal(
-    parseHostedArtifactLocation(`https://share.openplanr.dev/r/room_123456789012#k=${'A'.repeat(43)}&w=${'B'.repeat(43)}&o=${'C'.repeat(43)}`).status,
+    parseHostedArtifactLocation(
+      `https://share.openplanr.dev/r/room_123456789012#k=${'A'.repeat(43)}&w=${'B'.repeat(43)}&o=${'C'.repeat(43)}`,
+    ).status,
     'malformed-payload',
   );
   assert.equal(
     parseHostedArtifactLocation(`https://share.openplanr.dev/#v1.${'a'.repeat(7_998)}`).status,
     'too-large',
   );
-  assert.deepEqual(
-    parseHostedArtifactLocation('https://share.openplanr.dev/#v1.abc_DEF-123'),
-    { ok: true, transport: 'fragment', version: 'v1', payload: 'abc_DEF-123' },
-  );
+  assert.deepEqual(parseHostedArtifactLocation('https://share.openplanr.dev/#v1.abc_DEF-123'), {
+    ok: true,
+    transport: 'fragment',
+    version: 'v1',
+    payload: 'abc_DEF-123',
+  });
   assert.deepEqual(
     parseHostedArtifactLocation(`https://share.openplanr.dev/p/paste_123#k=${'k'.repeat(43)}`),
     { ok: true, transport: 'short', id: 'paste_123', key: 'k'.repeat(43) },
   );
-  assert.equal(parseHostedArtifactLocation('https://share.openplanr.dev/p/paste_123').status, 'malformed-payload');
-  assert.equal(parseHostedArtifactLocation('https://share.openplanr.dev/p/paste_123#k=bad%20key').status, 'malformed-payload');
+  assert.equal(
+    parseHostedArtifactLocation('https://share.openplanr.dev/p/paste_123').status,
+    'malformed-payload',
+  );
+  assert.equal(
+    parseHostedArtifactLocation('https://share.openplanr.dev/p/paste_123#k=bad%20key').status,
+    'malformed-payload',
+  );
 });
 
 test('hosted errors map to every safe actionable state and only network errors retry', () => {
@@ -396,7 +468,9 @@ test('hosted errors map to every safe actionable state and only network errors r
   for (const [code, expected] of Object.entries(cases)) {
     assert.equal(hostedArtifactStateForError(Object.assign(new Error(code), { code })), expected);
   }
-  const visibleStates = HOSTED_ARTIFACT_VIEWER_STATES.filter((state) => !['idle', 'ready'].includes(state));
+  const visibleStates = HOSTED_ARTIFACT_VIEWER_STATES.filter(
+    (state) => !['idle', 'ready'].includes(state),
+  );
   for (const state of visibleStates) {
     assert.ok(HOSTED_ARTIFACT_STATE_COPY[state], `${state} has hosted copy`);
     assert.equal(Boolean(HOSTED_ARTIFACT_STATE_COPY[state].action), state === 'network-error');
@@ -426,9 +500,10 @@ async function serve(document, runtime, artifact) {
   const address = server.address();
   return {
     url: `http://127.0.0.1:${address.port}/`,
-    close: () => new Promise((resolveClose, reject) => server.close((error) => (
-      error ? reject(error) : resolveClose()
-    ))),
+    close: () =>
+      new Promise((resolveClose, reject) =>
+        server.close((error) => (error ? reject(error) : resolveClose())),
+      ),
   };
 }
 
@@ -487,170 +562,206 @@ test('real browser share receipt is explicit, focus-safe, upload-safe, and visua
     reducedMotion: 'reduce',
     viewport: { width: 1440, height: 900 },
   });
-  await context.addInitScript(({ artifactUrl }) => {
-    globalThis.__planrSharePreview = { fragmentLength: 8_000, compressedBytes: 5_914, ciphertextBytes: 5_942 };
-    globalThis.__planrCreateCalls = [];
-    globalThis.__planrCopies = [];
-    globalThis.__planrCustodyExports = [];
-    globalThis.__planrAttemptMatches = [];
-    globalThis.__planrCustodySaveMode = 'ok';
-    globalThis.__planrLiveCreateMode = 'ok';
-    globalThis.__planrCopyMode = 'ok';
-    globalThis.__planrHostedLocation = { pathname: '/', hash: '' };
-    globalThis.__planrHostedMode = 'ready';
-    globalThis.__OPENPLANR_ARTIFACT_STAGE_OPTIONS__ = {
-      async resolveArtifactSource() {
-        const response = await fetch(artifactUrl, { cache: 'no-store' });
-        return response.blob();
-      },
-      share: {
-        async prepareShare() {
-          return { ...globalThis.__planrSharePreview };
+  await context.addInitScript(
+    ({ artifactUrl }) => {
+      globalThis.__planrSharePreview = {
+        fragmentLength: 8_000,
+        compressedBytes: 5_914,
+        ciphertextBytes: 5_942,
+      };
+      globalThis.__planrCreateCalls = [];
+      globalThis.__planrCopies = [];
+      globalThis.__planrCustodyExports = [];
+      globalThis.__planrAttemptMatches = [];
+      globalThis.__planrCustodySaveMode = 'ok';
+      globalThis.__planrLiveCreateMode = 'ok';
+      globalThis.__planrCopyMode = 'ok';
+      globalThis.__planrHostedLocation = { pathname: '/', hash: '' };
+      globalThis.__planrHostedMode = 'ready';
+      globalThis.__OPENPLANR_ARTIFACT_STAGE_OPTIONS__ = {
+        async resolveArtifactSource() {
+          const response = await fetch(artifactUrl, { cache: 'no-store' });
+          return response.blob();
         },
-        async prepareOwnerCustody({ ttl }) {
-          const keyId = `sha256:${'a'.repeat(64)}`;
-          const publicKey = 'A'.repeat(120);
-          const signer = {
-            role: 'owner',
-            algorithm: 'ECDSA-P256-SHA256',
-            encoding: 'spki-base64url',
-            keyId,
-            value: publicKey,
-          };
-          Object.defineProperty(signer, 'sign', { enumerable: false, value: async () => 'signature' });
-          const roomId = 'room_123456789012';
-          const key = 'K'.repeat(43);
-          const prepared = {
-            schemaVersion: '1.0.0',
-            kind: 'openplanr-live-room-preparation',
-            protocolVersion: '2.0.0',
-            id: roomId,
-            roomId,
-            reviewOf: 'a'.repeat(64),
-            ttl,
-            ownerKey: { algorithm: signer.algorithm, encoding: signer.encoding, keyId, value: publicKey },
-          };
-          Object.defineProperties(prepared, {
-            url: { enumerable: false, value: `https://share.openplanr.dev/r/${roomId}#k=${key}&w=${'R'.repeat(43)}` },
-            ownerUrl: { enumerable: false, value: `https://share.openplanr.dev/r/${roomId}#k=${key}&o=${'O'.repeat(43)}` },
-            manageUrl: { enumerable: false, value: `https://share.openplanr.dev/r/${roomId}#k=${key}&m=${'M'.repeat(43)}` },
-            ownerSigner: { enumerable: false, value: signer },
-          });
-          Object.freeze(prepared);
-          globalThis.__planrPreparedAttempt = prepared;
-          return { prepared, recovery: {
-            schemaVersion: '1.0.0',
-            kind: 'openplanr-live-room-recovery',
-            protocolVersion: '2.0.0',
-            id: roomId,
-            roomId,
-            reviewOf: prepared.reviewOf,
-            ttl,
-            ownerKey: prepared.ownerKey,
-            url: prepared.url,
-            ownerUrl: prepared.ownerUrl,
-            manageUrl: prepared.manageUrl,
-            ownerSigner: {
-              schemaVersion: '1.0.0',
-              kind: 'openplanr-live-room-signer',
+        share: {
+          async prepareShare() {
+            return { ...globalThis.__planrSharePreview };
+          },
+          async prepareOwnerCustody({ ttl }) {
+            const keyId = `sha256:${'a'.repeat(64)}`;
+            const publicKey = 'A'.repeat(120);
+            const signer = {
               role: 'owner',
               algorithm: 'ECDSA-P256-SHA256',
+              encoding: 'spki-base64url',
               keyId,
-              publicKey,
-              privateKey: 'B'.repeat(160),
-            },
-          } };
-        },
-        async saveOwnerCustody(value) {
-          if (globalThis.__planrCustodySaveMode === 'fail') {
-            throw new Error('Owner key download was refused.');
-          }
-          globalThis.__planrCustodyExports.push(structuredClone(value));
-          return true;
-        },
-        async createShare(input) {
-          globalThis.__planrCreateCalls.push(structuredClone(input));
-          if (input.transport === 'live') {
-            globalThis.__planrAttemptMatches.push(input.prepared === globalThis.__planrPreparedAttempt);
-            if (globalThis.__planrLiveCreateMode === 'fail') {
-              throw Object.assign(new Error('Live room creation outcome is unknown.'), {
-                details: { effect: 'ambiguous' },
-              });
-            }
-            if (globalThis.__planrLiveCreateMode === 'delay') {
-              await new Promise((resolveDelay) => {
-                globalThis.__planrResolveLiveCreate = resolveDelay;
-              });
-            }
+              value: publicKey,
+            };
+            Object.defineProperty(signer, 'sign', {
+              enumerable: false,
+              value: async () => 'signature',
+            });
             const roomId = 'room_123456789012';
             const key = 'K'.repeat(43);
-            const result = {
-              url: `https://share.openplanr.dev/r/${roomId}#k=${key}&w=${'R'.repeat(43)}`,
-              ownerUrl: `https://share.openplanr.dev/r/${roomId}#k=${key}&o=${'O'.repeat(43)}`,
-              manageUrl: `https://share.openplanr.dev/r/${roomId}#k=${key}&m=${'M'.repeat(43)}`,
-              expiresAt: '2026-07-21T12:00:00.000Z',
+            const prepared = {
+              schemaVersion: '1.0.0',
+              kind: 'openplanr-live-room-preparation',
+              protocolVersion: '2.0.0',
+              id: roomId,
+              roomId,
+              reviewOf: 'a'.repeat(64),
+              ttl,
+              ownerKey: {
+                algorithm: signer.algorithm,
+                encoding: signer.encoding,
+                keyId,
+                value: publicKey,
+              },
             };
-            Object.defineProperty(result, 'ownerSigner', {
-              enumerable: false,
-              value: input.prepared?.ownerSigner ?? input.ownerSigner,
+            Object.defineProperties(prepared, {
+              url: {
+                enumerable: false,
+                value: `https://share.openplanr.dev/r/${roomId}#k=${key}&w=${'R'.repeat(43)}`,
+              },
+              ownerUrl: {
+                enumerable: false,
+                value: `https://share.openplanr.dev/r/${roomId}#k=${key}&o=${'O'.repeat(43)}`,
+              },
+              manageUrl: {
+                enumerable: false,
+                value: `https://share.openplanr.dev/r/${roomId}#k=${key}&m=${'M'.repeat(43)}`,
+              },
+              ownerSigner: { enumerable: false, value: signer },
             });
-            return result;
-          }
-          if (input.transport === 'short') {
+            Object.freeze(prepared);
+            globalThis.__planrPreparedAttempt = prepared;
             return {
-              url: `https://share.openplanr.dev/p/paste-123#k=${'k'.repeat(43)}`,
-              deletionToken: 'delete-once-789',
-              expiresAt: '2026-08-13T12:00:00.000Z',
+              prepared,
+              recovery: {
+                schemaVersion: '1.0.0',
+                kind: 'openplanr-live-room-recovery',
+                protocolVersion: '2.0.0',
+                id: roomId,
+                roomId,
+                reviewOf: prepared.reviewOf,
+                ttl,
+                ownerKey: prepared.ownerKey,
+                url: prepared.url,
+                ownerUrl: prepared.ownerUrl,
+                manageUrl: prepared.manageUrl,
+                ownerSigner: {
+                  schemaVersion: '1.0.0',
+                  kind: 'openplanr-live-room-signer',
+                  role: 'owner',
+                  algorithm: 'ECDSA-P256-SHA256',
+                  keyId,
+                  publicKey,
+                  privateKey: 'B'.repeat(160),
+                },
+              },
             };
-          }
-          return { url: `https://share.openplanr.dev/#v1.${'a'.repeat(7_997)}` };
+          },
+          async saveOwnerCustody(value) {
+            if (globalThis.__planrCustodySaveMode === 'fail') {
+              throw new Error('Owner key download was refused.');
+            }
+            globalThis.__planrCustodyExports.push(structuredClone(value));
+            return true;
+          },
+          async createShare(input) {
+            globalThis.__planrCreateCalls.push(structuredClone(input));
+            if (input.transport === 'live') {
+              globalThis.__planrAttemptMatches.push(
+                input.prepared === globalThis.__planrPreparedAttempt,
+              );
+              if (globalThis.__planrLiveCreateMode === 'fail') {
+                throw Object.assign(new Error('Live room creation outcome is unknown.'), {
+                  details: { effect: 'ambiguous' },
+                });
+              }
+              if (globalThis.__planrLiveCreateMode === 'delay') {
+                await new Promise((resolveDelay) => {
+                  globalThis.__planrResolveLiveCreate = resolveDelay;
+                });
+              }
+              const roomId = 'room_123456789012';
+              const key = 'K'.repeat(43);
+              const result = {
+                url: `https://share.openplanr.dev/r/${roomId}#k=${key}&w=${'R'.repeat(43)}`,
+                ownerUrl: `https://share.openplanr.dev/r/${roomId}#k=${key}&o=${'O'.repeat(43)}`,
+                manageUrl: `https://share.openplanr.dev/r/${roomId}#k=${key}&m=${'M'.repeat(43)}`,
+                expiresAt: '2026-07-21T12:00:00.000Z',
+              };
+              Object.defineProperty(result, 'ownerSigner', {
+                enumerable: false,
+                value: input.prepared?.ownerSigner ?? input.ownerSigner,
+              });
+              return result;
+            }
+            if (input.transport === 'short') {
+              return {
+                url: `https://share.openplanr.dev/p/paste-123#k=${'k'.repeat(43)}`,
+                deletionToken: 'delete-once-789',
+                expiresAt: '2026-08-13T12:00:00.000Z',
+              };
+            }
+            return { url: `https://share.openplanr.dev/#v1.${'a'.repeat(7_997)}` };
+          },
+          async copyText(value) {
+            if (globalThis.__planrCopyMode === 'fail') throw new Error('Clipboard unavailable.');
+            globalThis.__planrCopies.push(value);
+          },
+          now: () => new Date('2026-07-14T12:00:00.000Z'),
         },
-        async copyText(value) {
-          if (globalThis.__planrCopyMode === 'fail') throw new Error('Clipboard unavailable.');
-          globalThis.__planrCopies.push(value);
+        hosted: {
+          enabled: true,
+          location: globalThis.__planrHostedLocation,
+          supportsTransport() {
+            return globalThis.__planrHostedMode !== 'unsupported';
+          },
+          async decodeFragment() {
+            if (globalThis.__planrHostedMode === 'loading') {
+              await new Promise((resolve) => setTimeout(resolve, 500));
+            }
+            if (globalThis.__planrHostedMode === 'network') {
+              throw Object.assign(new Error('network'), { code: 'E_ARTIFACT_SHARE_NETWORK' });
+            }
+            return { schemaVersion: '1.0.0', artifacts: [] };
+          },
+          async loadShort() {
+            const code = {
+              expired: 'E_ARTIFACT_PASTE_EXPIRED',
+              missing: 'E_ARTIFACT_PASTE_UNAVAILABLE',
+              wrong: 'E_ARTIFACT_DECRYPTION_FAILED',
+              network: 'E_ARTIFACT_SHARE_NETWORK',
+            }[globalThis.__planrHostedMode];
+            if (code) throw Object.assign(new Error(code), { code });
+            return { schemaVersion: '1.0.0', artifacts: [] };
+          },
+          onEnvelope(envelopeValue) {
+            globalThis.__planrHostedEnvelope = envelopeValue;
+          },
         },
-        now: () => new Date('2026-07-14T12:00:00.000Z'),
-      },
-      hosted: {
-        enabled: true,
-        location: globalThis.__planrHostedLocation,
-        supportsTransport() {
-          return globalThis.__planrHostedMode !== 'unsupported';
-        },
-        async decodeFragment() {
-          if (globalThis.__planrHostedMode === 'loading') {
-            await new Promise((resolve) => setTimeout(resolve, 500));
-          }
-          if (globalThis.__planrHostedMode === 'network') {
-            throw Object.assign(new Error('network'), { code: 'E_ARTIFACT_SHARE_NETWORK' });
-          }
-          return { schemaVersion: '1.0.0', artifacts: [] };
-        },
-        async loadShort() {
-          const code = {
-            expired: 'E_ARTIFACT_PASTE_EXPIRED',
-            missing: 'E_ARTIFACT_PASTE_UNAVAILABLE',
-            wrong: 'E_ARTIFACT_DECRYPTION_FAILED',
-            network: 'E_ARTIFACT_SHARE_NETWORK',
-          }[globalThis.__planrHostedMode];
-          if (code) throw Object.assign(new Error(code), { code });
-          return { schemaVersion: '1.0.0', artifacts: [] };
-        },
-        onEnvelope(envelopeValue) {
-          globalThis.__planrHostedEnvelope = envelopeValue;
-        },
-      },
-    };
-  }, { artifactUrl: `${host.url}artifact/checkout` });
+      };
+    },
+    { artifactUrl: `${host.url}artifact/checkout` },
+  );
   const page = await context.newPage();
   await page.goto(host.url);
-  await page.waitForFunction(() => globalThis.__openPlanrArtifactStage?.getState().status === 'ready');
-  assert.equal(await page.evaluate(() => globalThis.__openPlanrHostedArtifactViewer.getState().status), 'empty-hash');
+  await page.waitForFunction(
+    () => globalThis.__openPlanrArtifactStage?.getState().status === 'ready',
+  );
+  assert.equal(
+    await page.evaluate(() => globalThis.__openPlanrHostedArtifactViewer.getState().status),
+    'empty-hash',
+  );
 
   const shareTrigger = page.locator('[data-planr-action="share"]');
   await shareTrigger.focus();
   await shareTrigger.click();
-  await page.waitForFunction(() => globalThis.__openPlanrArtifactShare.getState().phase === 'ready');
+  await page.waitForFunction(
+    () => globalThis.__openPlanrArtifactShare.getState().phase === 'ready',
+  );
   const fragment = page.locator('[data-planr-share-transport="fragment"]');
   const live = page.locator('[data-planr-share-transport="live"]');
   const short = page.locator('[data-planr-share-transport="short"]');
@@ -666,11 +777,16 @@ test('real browser share receipt is explicit, focus-safe, upload-safe, and visua
   await close.focus();
   await page.keyboard.press('Shift+Tab');
   assert.equal(
-    await page.locator('[data-planr-share-confirm]').evaluate((element) => document.activeElement === element),
+    await page
+      .locator('[data-planr-share-confirm]')
+      .evaluate((element) => document.activeElement === element),
     true,
     'focus wraps backward inside the dialog',
   );
-  assert.equal(await page.locator('.planr-share-dialog').getAttribute('data-planr-share-selected'), 'fragment');
+  assert.equal(
+    await page.locator('.planr-share-dialog').getAttribute('data-planr-share-selected'),
+    'fragment',
+  );
   await page.keyboard.press('Escape');
   assert.equal(await shareTrigger.evaluate((element) => document.activeElement === element), true);
   assert.equal(await page.evaluate(() => globalThis.__planrCreateCalls.length), 0);
@@ -678,62 +794,104 @@ test('real browser share receipt is explicit, focus-safe, upload-safe, and visua
   await page.locator('[data-planr-action="theme"]').click();
   assert.equal(await page.locator('html').getAttribute('data-planr-theme'), 'dark');
   await page.evaluate(() => {
-    globalThis.__planrSharePreview = { fragmentLength: 8_001, compressedBytes: 5_915, ciphertextBytes: 5_943 };
+    globalThis.__planrSharePreview = {
+      fragmentLength: 8_001,
+      compressedBytes: 5_915,
+      ciphertextBytes: 5_943,
+    };
   });
   await shareTrigger.click();
-  await page.waitForFunction(() => globalThis.__openPlanrArtifactShare.getState().phase === 'ready');
+  await page.waitForFunction(
+    () => globalThis.__openPlanrArtifactShare.getState().phase === 'ready',
+  );
   assert.equal(await fragment.isDisabled(), true);
   assert.equal(await short.getAttribute('aria-pressed'), 'true');
   await page.locator('[data-planr-share-ttl]').selectOption('30d');
   assert.match(await page.locator('[data-planr-share-ttl-row]').textContent(), /Aug 13, 2026/);
   assert.equal(await page.locator('[data-planr-share-ttl-row]').isVisible(), true);
   await page.locator('[data-planr-share-cancel]').click();
-  assert.equal(await page.evaluate(() => globalThis.__planrCreateCalls.length), 0, 'cancel performs no upload');
+  assert.equal(
+    await page.evaluate(() => globalThis.__planrCreateCalls.length),
+    0,
+    'cancel performs no upload',
+  );
 
   await page.evaluate(() => {
-    globalThis.__planrSharePreview = { fragmentLength: 4_000, compressedBytes: 2_914, ciphertextBytes: 2_942 };
+    globalThis.__planrSharePreview = {
+      fragmentLength: 4_000,
+      compressedBytes: 2_914,
+      ciphertextBytes: 2_942,
+    };
   });
   await shareTrigger.click();
-  await page.waitForFunction(() => globalThis.__openPlanrArtifactShare.getState().phase === 'ready');
+  await page.waitForFunction(
+    () => globalThis.__openPlanrArtifactShare.getState().phase === 'ready',
+  );
   await short.click();
   await page.locator('[data-planr-share-ttl]').selectOption('1d');
   await page.locator('[data-planr-share-confirm]').click();
-  await page.waitForFunction(() => globalThis.__openPlanrArtifactShare.getState().phase === 'created');
+  await page.waitForFunction(
+    () => globalThis.__openPlanrArtifactShare.getState().phase === 'created',
+  );
   const created = await page.evaluate(() => globalThis.__planrCreateCalls.at(-1));
   assert.equal(created.transport, 'short');
   assert.equal(created.ttl, '1d');
   assert.equal(created.confirmed, true);
   assert.equal(await page.locator('[data-planr-share-deletion]').isVisible(), true);
-  assert.equal(await page.locator('[data-planr-share-deletion-token]').textContent(), 'delete-once-789');
+  assert.equal(
+    await page.locator('[data-planr-share-deletion-token]').textContent(),
+    'delete-once-789',
+  );
   assert.doesNotMatch(await page.locator('[data-planr-share-url]').inputValue(), /delete-once-789/);
   assert.equal(
     await page.evaluate(() => globalThis.__planrCopies.at(-1)),
     `https://share.openplanr.dev/p/paste-123#k=${'k'.repeat(43)}`,
   );
   await page.locator('[data-planr-share-copy-url]').click();
-  assert.equal(await page.locator('[data-planr-share-copy-url]').getAttribute('data-planr-copy-state'), 'copied');
+  assert.equal(
+    await page.locator('[data-planr-share-copy-url]').getAttribute('data-planr-copy-state'),
+    'copied',
+  );
   assert.equal(await page.locator('[data-planr-share-copy-url]').textContent(), 'Copied');
   await page.locator('[data-planr-share-copy-deletion]').click();
   await page.waitForFunction(() => globalThis.__planrCopies.at(-1) === 'delete-once-789');
   await page.locator('[data-planr-share-close]').click();
 
   const callsBeforeLive = await page.evaluate(() => globalThis.__planrCreateCalls.length);
-  await page.evaluate(() => { globalThis.__planrCustodySaveMode = 'fail'; });
+  await page.evaluate(() => {
+    globalThis.__planrCustodySaveMode = 'fail';
+  });
   await shareTrigger.click();
-  await page.waitForFunction(() => globalThis.__openPlanrArtifactShare.getState().phase === 'ready');
+  await page.waitForFunction(
+    () => globalThis.__openPlanrArtifactShare.getState().phase === 'ready',
+  );
   await live.click();
-  assert.equal(await page.locator('[data-planr-share-confirm]').textContent(), 'Download recovery bundle');
+  assert.equal(
+    await page.locator('[data-planr-share-confirm]').textContent(),
+    'Download recovery bundle',
+  );
   await page.locator('[data-planr-share-confirm]').click();
-  await page.waitForFunction(() => globalThis.__openPlanrArtifactShare.getState().phase === 'error');
+  await page.waitForFunction(
+    () => globalThis.__openPlanrArtifactShare.getState().phase === 'error',
+  );
   assert.equal(await page.evaluate(() => globalThis.__planrCreateCalls.length), callsBeforeLive);
-  assert.match(await page.locator('[data-planr-share-error]').textContent(), /download was refused/i);
+  assert.match(
+    await page.locator('[data-planr-share-error]').textContent(),
+    /download was refused/i,
+  );
   await page.locator('[data-planr-share-close]').click();
 
-  await page.evaluate(() => { globalThis.__planrCustodySaveMode = 'ok'; });
+  await page.evaluate(() => {
+    globalThis.__planrCustodySaveMode = 'ok';
+  });
   await shareTrigger.click();
-  await page.waitForFunction(() => globalThis.__openPlanrArtifactShare.getState().phase === 'ready');
+  await page.waitForFunction(
+    () => globalThis.__openPlanrArtifactShare.getState().phase === 'ready',
+  );
   await page.locator('[data-planr-share-confirm]').click();
-  await page.waitForFunction(() => globalThis.__openPlanrArtifactShare.getState().phase === 'custody-ready');
+  await page.waitForFunction(
+    () => globalThis.__openPlanrArtifactShare.getState().phase === 'custody-ready',
+  );
   assert.equal(await page.evaluate(() => globalThis.__planrCreateCalls.length), callsBeforeLive);
   assert.equal(await page.evaluate(() => globalThis.__planrCustodyExports.length), 1);
   assert.equal(
@@ -746,67 +904,122 @@ test('real browser share receipt is explicit, focus-safe, upload-safe, and visua
     await page.evaluate(() => JSON.stringify(globalThis.__openPlanrArtifactShare.getState())),
     /privateKey|BBBBBBBB/,
   );
-  assert.match(await page.locator('[data-planr-share-owner-custody-status]').textContent(), /no room exists/i);
-  assert.equal(await page.locator('[data-planr-share-confirm]').textContent(), 'I saved it — create live room');
-  await page.evaluate(() => { globalThis.__planrLiveCreateMode = 'fail'; });
+  assert.match(
+    await page.locator('[data-planr-share-owner-custody-status]').textContent(),
+    /no room exists/i,
+  );
+  assert.equal(
+    await page.locator('[data-planr-share-confirm]').textContent(),
+    'I saved it — create live room',
+  );
+  await page.evaluate(() => {
+    globalThis.__planrLiveCreateMode = 'fail';
+  });
   await page.locator('[data-planr-share-confirm]').click();
-  await page.waitForFunction(() => globalThis.__openPlanrArtifactShare.getState().phase === 'ambiguous');
+  await page.waitForFunction(
+    () => globalThis.__openPlanrArtifactShare.getState().phase === 'ambiguous',
+  );
   assert.equal(await page.locator('[data-planr-share-result]').isHidden(), true);
-  assert.equal(await page.evaluate(() => globalThis.__openPlanrArtifactShare.getState().ownerCustodyEstablished), true);
+  assert.equal(
+    await page.evaluate(
+      () => globalThis.__openPlanrArtifactShare.getState().ownerCustodyEstablished,
+    ),
+    true,
+  );
   assert.equal(await page.evaluate(() => globalThis.__planrCustodyExports.length), 1);
-  assert.equal(await page.locator('[data-planr-share-confirm]').textContent(), 'Retry exact room creation');
+  assert.equal(
+    await page.locator('[data-planr-share-confirm]').textContent(),
+    'Retry exact room creation',
+  );
   assert.equal(await page.locator('[data-planr-share-close]').isDisabled(), true);
   assert.equal(await page.locator('[data-planr-share-cancel]').isDisabled(), true);
   await page.evaluate(() => globalThis.__openPlanrArtifactShare.close());
-  assert.equal(await page.evaluate(() => globalThis.__openPlanrArtifactShare.getState().phase), 'ambiguous');
+  assert.equal(
+    await page.evaluate(() => globalThis.__openPlanrArtifactShare.getState().phase),
+    'ambiguous',
+  );
   assert.equal(await page.evaluate(() => globalThis.__openPlanrArtifactStage.destroy()), false);
   await page.keyboard.press('Escape');
-  assert.equal(await page.evaluate(() => globalThis.__openPlanrArtifactShare.getState().phase), 'ambiguous');
+  assert.equal(
+    await page.evaluate(() => globalThis.__openPlanrArtifactShare.getState().phase),
+    'ambiguous',
+  );
   await page.evaluate(() => {
     globalThis.__planrLiveCreateMode = 'delay';
     globalThis.__planrCopyMode = 'fail';
   });
   await page.locator('[data-planr-share-confirm]').click();
-  await page.waitForFunction(() => globalThis.__openPlanrArtifactShare.getState().phase === 'creating');
+  await page.waitForFunction(
+    () => globalThis.__openPlanrArtifactShare.getState().phase === 'creating',
+  );
   assert.equal(await page.locator('[data-planr-share-close]').isDisabled(), true);
   assert.equal(await page.locator('[data-planr-share-cancel]').isDisabled(), true);
   await page.evaluate(() => globalThis.__openPlanrArtifactShare.close());
-  assert.equal(await page.evaluate(() => globalThis.__openPlanrArtifactShare.getState().phase), 'creating');
+  assert.equal(
+    await page.evaluate(() => globalThis.__openPlanrArtifactShare.getState().phase),
+    'creating',
+  );
   assert.equal(
     await page.evaluate(() => globalThis.__openPlanrArtifactStage.destroy()),
     false,
     'outer stage teardown is blocked while a room receipt is in flight',
   );
-  assert.equal(await page.evaluate(() => globalThis.__openPlanrArtifactShare.getState().phase), 'creating');
+  assert.equal(
+    await page.evaluate(() => globalThis.__openPlanrArtifactShare.getState().phase),
+    'creating',
+  );
   await page.keyboard.press('Escape');
-  assert.equal(await page.evaluate(() => globalThis.__openPlanrArtifactShare.getState().phase), 'creating');
-  assert.match(await page.locator('[data-planr-share-status]').textContent(), /creation is in progress/i);
+  assert.equal(
+    await page.evaluate(() => globalThis.__openPlanrArtifactShare.getState().phase),
+    'creating',
+  );
+  assert.match(
+    await page.locator('[data-planr-share-status]').textContent(),
+    /creation is in progress/i,
+  );
   await page.evaluate(() => {
     globalThis.__planrLiveCreateMode = 'ok';
     globalThis.__planrResolveLiveCreate();
   });
-  await page.waitForFunction(() => globalThis.__openPlanrArtifactShare.getState().phase === 'created');
-  assert.equal(await page.evaluate(() => globalThis.__planrCreateCalls.length), callsBeforeLive + 2);
+  await page.waitForFunction(
+    () => globalThis.__openPlanrArtifactShare.getState().phase === 'created',
+  );
+  assert.equal(
+    await page.evaluate(() => globalThis.__planrCreateCalls.length),
+    callsBeforeLive + 2,
+  );
   assert.deepEqual(await page.evaluate(() => globalThis.__planrAttemptMatches), [true, true]);
-  assert.equal(await page.locator('[data-planr-share-result]').isVisible(), true, 'clipboard failure keeps the room receipt visible');
+  assert.equal(
+    await page.locator('[data-planr-share-result]').isVisible(),
+    true,
+    'clipboard failure keeps the room receipt visible',
+  );
   assert.equal(await page.locator('[data-planr-share-owner]').isVisible(), true);
   assert.equal(await page.locator('[data-planr-share-manage]').isVisible(), true);
   assert.match(await page.locator('[data-planr-share-owner-url]').inputValue(), /#k=.*&o=/);
   assert.match(await page.locator('[data-planr-share-manage-url]').inputValue(), /#k=.*&m=/);
-  assert.match(await page.locator('[data-planr-share-manage]').textContent(), /cannot set a verdict/i);
+  assert.match(
+    await page.locator('[data-planr-share-manage]').textContent(),
+    /cannot set a verdict/i,
+  );
   assert.doesNotMatch(
     await page.evaluate(() => JSON.stringify(globalThis.__openPlanrArtifactShare.getState())),
     /privateKey|BBBBBBBB/,
   );
   await page.locator('[data-planr-share-copy-owner]').click();
-  await page.waitForFunction(() => document.querySelector('[data-planr-share-copy-owner]')?.dataset.planrCopyState === 'error');
+  await page.waitForFunction(
+    () =>
+      document.querySelector('[data-planr-share-copy-owner]')?.dataset.planrCopyState === 'error',
+  );
   assert.equal(
     await page.evaluate(() => globalThis.__openPlanrArtifactShare.getState().phase),
     'created',
     'a manual clipboard failure cannot erase owner custody URLs',
   );
   assert.equal(await page.locator('[data-planr-share-result]').isVisible(), true);
-  const terminalReceipt = await page.evaluate(() => JSON.stringify(globalThis.__openPlanrArtifactShare.getState().result));
+  const terminalReceipt = await page.evaluate(() =>
+    JSON.stringify(globalThis.__openPlanrArtifactShare.getState().result),
+  );
   const terminalCalls = await page.evaluate(() => globalThis.__planrCreateCalls.length);
   assert.equal(await page.locator('[data-planr-share-confirm]').isDisabled(), true);
   assert.equal(await page.locator('[data-planr-share-confirm]').isHidden(), true);
@@ -820,11 +1033,15 @@ test('real browser share receipt is explicit, focus-safe, upload-safe, and visua
     await globalThis.__openPlanrArtifactShare.confirm();
   });
   assert.equal(
-    await page.evaluate(() => JSON.stringify(globalThis.__openPlanrArtifactShare.getState().result)),
+    await page.evaluate(() =>
+      JSON.stringify(globalThis.__openPlanrArtifactShare.getState().result),
+    ),
     terminalReceipt,
   );
   assert.equal(await page.evaluate(() => globalThis.__planrCreateCalls.length), terminalCalls);
-  await page.evaluate(() => { globalThis.__planrCopyMode = 'ok'; });
+  await page.evaluate(() => {
+    globalThis.__planrCopyMode = 'ok';
+  });
   await page.locator('[data-planr-share-copy-owner]').click();
   assert.match(await page.evaluate(() => globalThis.__planrCopies.at(-1)), /&o=/);
   await page.locator('[data-planr-share-copy-manage]').click();
@@ -835,9 +1052,24 @@ test('real browser share receipt is explicit, focus-safe, upload-safe, and visua
     { pathname: '/', hash: '#v2.abc', expected: 'invalid-version' },
     { pathname: '/', hash: '#v1.', expected: 'malformed-payload' },
     { pathname: '/', hash: `#v1.${'a'.repeat(7_998)}`, expected: 'too-large' },
-    { pathname: '/p/paste-123', hash: `#k=${'k'.repeat(43)}`, mode: 'missing', expected: 'paste-missing' },
-    { pathname: '/p/paste-123', hash: `#k=${'k'.repeat(43)}`, mode: 'expired', expected: 'expired' },
-    { pathname: '/p/paste-123', hash: `#k=${'k'.repeat(43)}`, mode: 'wrong', expected: 'decryption-failed' },
+    {
+      pathname: '/p/paste-123',
+      hash: `#k=${'k'.repeat(43)}`,
+      mode: 'missing',
+      expected: 'paste-missing',
+    },
+    {
+      pathname: '/p/paste-123',
+      hash: `#k=${'k'.repeat(43)}`,
+      mode: 'expired',
+      expected: 'expired',
+    },
+    {
+      pathname: '/p/paste-123',
+      hash: `#k=${'k'.repeat(43)}`,
+      mode: 'wrong',
+      expected: 'decryption-failed',
+    },
     { pathname: '/', hash: '#v1.abc', mode: 'unsupported', expected: 'unsupported-browser' },
   ];
   for (const value of hostedCases) {
@@ -862,10 +1094,14 @@ test('real browser share receipt is explicit, focus-safe, upload-safe, and visua
     await page.evaluate(() => globalThis.__openPlanrHostedArtifactViewer.getState().status),
     'decryption-failed',
   );
-  await compareSnapshot('artifact-hosted-review-states', await page.screenshot({ animations: 'disabled' }), {
-    PNG,
-    pixelmatch,
-  });
+  await compareSnapshot(
+    'artifact-hosted-review-states',
+    await page.screenshot({ animations: 'disabled' }),
+    {
+      PNG,
+      pixelmatch,
+    },
+  );
 
   await page.evaluate(() => {
     globalThis.__planrHostedLocation.pathname = '/';
@@ -874,14 +1110,20 @@ test('real browser share receipt is explicit, focus-safe, upload-safe, and visua
   });
   await page.evaluate(() => globalThis.__openPlanrHostedArtifactViewer.load());
   assert.equal(await page.locator('[data-planr-hosted-retry]').isVisible(), true);
-  await page.evaluate(() => { globalThis.__planrHostedMode = 'ready'; });
+  await page.evaluate(() => {
+    globalThis.__planrHostedMode = 'ready';
+  });
   await page.locator('[data-planr-hosted-retry]').click();
-  await page.waitForFunction(() => globalThis.__openPlanrHostedArtifactViewer.getState().status === 'ready');
+  await page.waitForFunction(
+    () => globalThis.__openPlanrHostedArtifactViewer.getState().status === 'ready',
+  );
   assert.equal(await page.evaluate(() => globalThis.__planrHostedEnvelope.schemaVersion), '1.0.0');
 
   await page.setViewportSize({ width: 390, height: 844 });
   await shareTrigger.click();
-  await page.waitForFunction(() => globalThis.__openPlanrArtifactShare.getState().phase === 'ready');
+  await page.waitForFunction(
+    () => globalThis.__openPlanrArtifactShare.getState().phase === 'ready',
+  );
   const modalStyle = await page.locator('.planr-share-dialog').evaluate((element) => ({
     width: element.getBoundingClientRect().width,
     maxHeight: getComputedStyle(element).maxHeight,
@@ -896,76 +1138,121 @@ test('real browser share receipt is explicit, focus-safe, upload-safe, and visua
     acceptDownloads: true,
     viewport: { width: 900, height: 700 },
   });
-  await downloadContext.addInitScript(({ artifactUrl }) => {
-    globalThis.__planrDefaultCustodyCreateCalls = 0;
-    globalThis.__OPENPLANR_ARTIFACT_STAGE_OPTIONS__ = {
-      async resolveArtifactSource() {
-        const response = await fetch(artifactUrl, { cache: 'no-store' });
-        return response.blob();
-      },
-      share: {
-        async prepareShare() {
-          return { fragmentLength: 4_000, compressedBytes: 2_914, ciphertextBytes: 2_942 };
+  await downloadContext.addInitScript(
+    ({ artifactUrl }) => {
+      globalThis.__planrDefaultCustodyCreateCalls = 0;
+      globalThis.__OPENPLANR_ARTIFACT_STAGE_OPTIONS__ = {
+        async resolveArtifactSource() {
+          const response = await fetch(artifactUrl, { cache: 'no-store' });
+          return response.blob();
         },
-        async prepareOwnerCustody({ ttl }) {
-          const keyId = `sha256:${'c'.repeat(64)}`;
-          const publicKey = 'C'.repeat(120);
-          const signer = {
-            role: 'owner',
-            algorithm: 'ECDSA-P256-SHA256',
-            encoding: 'spki-base64url',
-            keyId,
-            value: publicKey,
-          };
-          Object.defineProperty(signer, 'sign', { enumerable: false, value: async () => 'signature' });
-          const roomId = 'room_abcdefghijklmn';
-          const key = 'K'.repeat(43);
-          const prepared = {
-            schemaVersion: '1.0.0', kind: 'openplanr-live-room-preparation', protocolVersion: '2.0.0',
-            id: roomId, roomId, reviewOf: 'c'.repeat(64), ttl,
-            ownerKey: { algorithm: signer.algorithm, encoding: signer.encoding, keyId, value: publicKey },
-          };
-          Object.defineProperties(prepared, {
-            url: { enumerable: false, value: `https://share.openplanr.dev/r/${roomId}#k=${key}&w=${'R'.repeat(43)}` },
-            ownerUrl: { enumerable: false, value: `https://share.openplanr.dev/r/${roomId}#k=${key}&o=${'O'.repeat(43)}` },
-            manageUrl: { enumerable: false, value: `https://share.openplanr.dev/r/${roomId}#k=${key}&m=${'M'.repeat(43)}` },
-            ownerSigner: { enumerable: false, value: signer },
-          });
-          Object.freeze(prepared);
-          return { prepared, recovery: {
-            schemaVersion: '1.0.0', kind: 'openplanr-live-room-recovery', protocolVersion: '2.0.0',
-            id: roomId, roomId, reviewOf: prepared.reviewOf, ttl, ownerKey: prepared.ownerKey,
-            url: prepared.url, ownerUrl: prepared.ownerUrl, manageUrl: prepared.manageUrl,
-            ownerSigner: {
-              schemaVersion: '1.0.0',
-              kind: 'openplanr-live-room-signer',
+        share: {
+          async prepareShare() {
+            return { fragmentLength: 4_000, compressedBytes: 2_914, ciphertextBytes: 2_942 };
+          },
+          async prepareOwnerCustody({ ttl }) {
+            const keyId = `sha256:${'c'.repeat(64)}`;
+            const publicKey = 'C'.repeat(120);
+            const signer = {
               role: 'owner',
               algorithm: 'ECDSA-P256-SHA256',
+              encoding: 'spki-base64url',
               keyId,
-              publicKey,
-              privateKey: 'D'.repeat(160),
-            },
-          } };
+              value: publicKey,
+            };
+            Object.defineProperty(signer, 'sign', {
+              enumerable: false,
+              value: async () => 'signature',
+            });
+            const roomId = 'room_abcdefghijklmn';
+            const key = 'K'.repeat(43);
+            const prepared = {
+              schemaVersion: '1.0.0',
+              kind: 'openplanr-live-room-preparation',
+              protocolVersion: '2.0.0',
+              id: roomId,
+              roomId,
+              reviewOf: 'c'.repeat(64),
+              ttl,
+              ownerKey: {
+                algorithm: signer.algorithm,
+                encoding: signer.encoding,
+                keyId,
+                value: publicKey,
+              },
+            };
+            Object.defineProperties(prepared, {
+              url: {
+                enumerable: false,
+                value: `https://share.openplanr.dev/r/${roomId}#k=${key}&w=${'R'.repeat(43)}`,
+              },
+              ownerUrl: {
+                enumerable: false,
+                value: `https://share.openplanr.dev/r/${roomId}#k=${key}&o=${'O'.repeat(43)}`,
+              },
+              manageUrl: {
+                enumerable: false,
+                value: `https://share.openplanr.dev/r/${roomId}#k=${key}&m=${'M'.repeat(43)}`,
+              },
+              ownerSigner: { enumerable: false, value: signer },
+            });
+            Object.freeze(prepared);
+            return {
+              prepared,
+              recovery: {
+                schemaVersion: '1.0.0',
+                kind: 'openplanr-live-room-recovery',
+                protocolVersion: '2.0.0',
+                id: roomId,
+                roomId,
+                reviewOf: prepared.reviewOf,
+                ttl,
+                ownerKey: prepared.ownerKey,
+                url: prepared.url,
+                ownerUrl: prepared.ownerUrl,
+                manageUrl: prepared.manageUrl,
+                ownerSigner: {
+                  schemaVersion: '1.0.0',
+                  kind: 'openplanr-live-room-signer',
+                  role: 'owner',
+                  algorithm: 'ECDSA-P256-SHA256',
+                  keyId,
+                  publicKey,
+                  privateKey: 'D'.repeat(160),
+                },
+              },
+            };
+          },
+          async createShare() {
+            globalThis.__planrDefaultCustodyCreateCalls += 1;
+            throw new Error('must not create during custody handoff');
+          },
+          async copyText() {},
         },
-        async createShare() {
-          globalThis.__planrDefaultCustodyCreateCalls += 1;
-          throw new Error('must not create during custody handoff');
-        },
-        async copyText() {},
-      },
-    };
-  }, { artifactUrl: `${host.url}artifact/checkout` });
+      };
+    },
+    { artifactUrl: `${host.url}artifact/checkout` },
+  );
   const downloadPage = await downloadContext.newPage();
   await downloadPage.goto(host.url);
-  await downloadPage.waitForFunction(() => globalThis.__openPlanrArtifactStage?.getState().status === 'ready');
+  await downloadPage.waitForFunction(
+    () => globalThis.__openPlanrArtifactStage?.getState().status === 'ready',
+  );
   await downloadPage.locator('[data-planr-action="share"]').click();
-  await downloadPage.waitForFunction(() => globalThis.__openPlanrArtifactShare.getState().phase === 'ready');
+  await downloadPage.waitForFunction(
+    () => globalThis.__openPlanrArtifactShare.getState().phase === 'ready',
+  );
   const [ownerDownload] = await Promise.all([
     downloadPage.waitForEvent('download'),
     downloadPage.locator('[data-planr-share-confirm]').click(),
   ]);
-  await downloadPage.waitForFunction(() => globalThis.__openPlanrArtifactShare.getState().phase === 'custody-ready');
-  assert.match(ownerDownload.suggestedFilename(), /^openplanr-live-room-recovery-room_abcdefg\.json$/);
+  await downloadPage.waitForFunction(
+    () => globalThis.__openPlanrArtifactShare.getState().phase === 'custody-ready',
+  );
+  assert.match(
+    ownerDownload.suggestedFilename(),
+    /^openplanr-live-room-recovery-room_abcdefg\.json$/,
+  );
   const ownerStream = await ownerDownload.createReadStream();
   let ownerBytes = '';
   for await (const chunk of ownerStream) ownerBytes += chunk.toString('utf8');
@@ -977,53 +1264,76 @@ test('real browser share receipt is explicit, focus-safe, upload-safe, and visua
   assert.match(downloadedRecovery.manageUrl, /&m=/);
   assert.equal(Object.hasOwn(downloadedRecovery, 'ciphertext'), false);
   assert.equal(await downloadPage.evaluate(() => globalThis.__planrDefaultCustodyCreateCalls), 0);
-  assert.deepEqual(await downloadPage.evaluate(() => ({
-    local: localStorage.length,
-    session: sessionStorage.length,
-    state: JSON.stringify(globalThis.__openPlanrArtifactShare.getState()),
-  })), { local: 0, session: 0, state: JSON.stringify({
-    open: true,
-    phase: 'custody-ready',
-    transport: 'live',
-    ttl: '7d',
-    preview: {
-      fragmentLength: 4_000,
-      compressedBytes: 2_914,
-      ciphertextBytes: 2_942,
-      fragmentEligible: true,
+  assert.deepEqual(
+    await downloadPage.evaluate(() => ({
+      local: localStorage.length,
+      session: sessionStorage.length,
+      state: JSON.stringify(globalThis.__openPlanrArtifactShare.getState()),
+    })),
+    {
+      local: 0,
+      session: 0,
+      state: JSON.stringify({
+        open: true,
+        phase: 'custody-ready',
+        transport: 'live',
+        ttl: '7d',
+        preview: {
+          fragmentLength: 4_000,
+          compressedBytes: 2_914,
+          ciphertextBytes: 2_942,
+          fragmentEligible: true,
+        },
+        ownerCustodyEstablished: true,
+        result: null,
+        error: '',
+      }),
     },
-    ownerCustodyEstablished: true,
-    result: null,
-    error: '',
-  }) });
+  );
   assert.doesNotMatch(
-    await downloadPage.evaluate(() => JSON.stringify(globalThis.__openPlanrArtifactShare.getState())),
+    await downloadPage.evaluate(() =>
+      JSON.stringify(globalThis.__openPlanrArtifactShare.getState()),
+    ),
     /privateKey|DDDDDDDD/,
   );
   await downloadPage.locator('[data-planr-share-close]').click();
   await downloadPage.locator('[data-planr-action="share"]').click();
-  await downloadPage.waitForFunction(() => globalThis.__openPlanrArtifactShare.getState().phase === 'ready');
-  assert.equal(await downloadPage.evaluate(() => globalThis.__openPlanrArtifactShare.getState().ownerCustodyEstablished), false);
+  await downloadPage.waitForFunction(
+    () => globalThis.__openPlanrArtifactShare.getState().phase === 'ready',
+  );
+  assert.equal(
+    await downloadPage.evaluate(
+      () => globalThis.__openPlanrArtifactShare.getState().ownerCustodyEstablished,
+    ),
+    false,
+  );
   await downloadContext.close();
 
   const roomContext = await browser.newContext({ viewport: { width: 900, height: 700 } });
-  await roomContext.addInitScript(({ artifactUrl }) => {
-    globalThis.__planrRoomCopies = [];
-    globalThis.__OPENPLANR_ARTIFACT_STAGE_OPTIONS__ = {
-      async resolveArtifactSource() {
-        const response = await fetch(artifactUrl, { cache: 'no-store' });
-        return response.blob();
-      },
-      share: {
-        existingRoom: true,
-        existingShareUrl: 'https://share.openplanr.dev/r/room-stable#k=key&w=write',
-        async copyText(value) { globalThis.__planrRoomCopies.push(value); },
-      },
-    };
-  }, { artifactUrl: `${host.url}artifact/checkout` });
+  await roomContext.addInitScript(
+    ({ artifactUrl }) => {
+      globalThis.__planrRoomCopies = [];
+      globalThis.__OPENPLANR_ARTIFACT_STAGE_OPTIONS__ = {
+        async resolveArtifactSource() {
+          const response = await fetch(artifactUrl, { cache: 'no-store' });
+          return response.blob();
+        },
+        share: {
+          existingRoom: true,
+          existingShareUrl: 'https://share.openplanr.dev/r/room-stable#k=key&w=write',
+          async copyText(value) {
+            globalThis.__planrRoomCopies.push(value);
+          },
+        },
+      };
+    },
+    { artifactUrl: `${host.url}artifact/checkout` },
+  );
   const roomPage = await roomContext.newPage();
   await roomPage.goto(host.url);
-  await roomPage.waitForFunction(() => globalThis.__openPlanrArtifactStage?.getState().status === 'ready');
+  await roomPage.waitForFunction(
+    () => globalThis.__openPlanrArtifactStage?.getState().status === 'ready',
+  );
   const roomShare = roomPage.locator('[data-planr-action="share"]');
   assert.equal(await roomShare.textContent(), 'Copy link');
   assert.equal(await roomShare.getAttribute('aria-haspopup'), null);

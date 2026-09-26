@@ -17,7 +17,12 @@ export interface ShipClosureRecord {
   state: ShipClosureState;
   receiptHash: `sha256:${string}` | null;
   approvedScope: { featureRoot: string; taskIds: string[]; digest: `sha256:${string}` };
-  repositories: Array<{ repositoryKey: string; root: string | null; head: string; baselineDigest: `sha256:${string}` }>;
+  repositories: Array<{
+    repositoryKey: string;
+    root: string | null;
+    head: string;
+    baselineDigest: `sha256:${string}`;
+  }>;
   reviewerRoster: string[];
   rosterDigest: `sha256:${string}`;
   gates: unknown[];
@@ -43,24 +48,48 @@ export class PipelineError extends Error {
 }
 
 export function assertShipClosure(value: unknown): ShipClosureRecord;
-export function reduceShipClosure(value: ShipClosureRecord, event: unknown, runtime?: unknown): ShipClosureRecord;
-export function buildShipClosureManifestRow(receipt: ShipClosureRecord, projectRoot: string, featureRoot: string): unknown;
-export function buildShipClosureMarker(receipt: ShipClosureRecord, options: {
-  manifestBytes: string | Uint8Array;
-  rowIndex: number;
-  aggregate?: {
-    status: 'passed' | 'blocked';
-    allDone: boolean;
-    receiptCount: number;
-    tasksExecuted: number;
-    tasksFailed: number;
-  };
-}): unknown;
-export function buildShipClosureRunEvidence(receipt: ShipClosureRecord, marker: unknown, markerBytes: string | Uint8Array): unknown;
-export function buildShipClosureProvenanceEvent(receipt: ShipClosureRecord, options: Record<string, unknown>): unknown;
+export function reduceShipClosure(
+  value: ShipClosureRecord,
+  event: unknown,
+  runtime?: unknown,
+): ShipClosureRecord;
+export function buildShipClosureManifestRow(
+  receipt: ShipClosureRecord,
+  projectRoot: string,
+  featureRoot: string,
+): unknown;
+export function buildShipClosureMarker(
+  receipt: ShipClosureRecord,
+  options: {
+    manifestBytes: string | Uint8Array;
+    rowIndex: number;
+    aggregate?: {
+      status: 'passed' | 'blocked';
+      allDone: boolean;
+      receiptCount: number;
+      tasksExecuted: number;
+      tasksFailed: number;
+    };
+  },
+): unknown;
+export function buildShipClosureRunEvidence(
+  receipt: ShipClosureRecord,
+  marker: unknown,
+  markerBytes: string | Uint8Array,
+): unknown;
+export function buildShipClosureProvenanceEvent(
+  receipt: ShipClosureRecord,
+  options: Record<string, unknown>,
+): unknown;
 export function renderShipClosureMarker(marker: unknown): string;
-export function renderShipClosureQaReport(receipt: ShipClosureRecord, options?: Record<string, unknown>): string;
-export function verifyShipCompatibilityProjection(receipt: ShipClosureRecord, options: Record<string, unknown>): boolean;
+export function renderShipClosureQaReport(
+  receipt: ShipClosureRecord,
+  options?: Record<string, unknown>,
+): string;
+export function verifyShipCompatibilityProjection(
+  receipt: ShipClosureRecord,
+  options: Record<string, unknown>,
+): boolean;
 export function prepareShip(options?: Record<string, unknown>): unknown;
 export function startShip(options?: Record<string, unknown>): unknown;
 export function advanceShip(options?: Record<string, unknown>): unknown;
@@ -72,7 +101,9 @@ export function finalizeShipClosure(options?: Record<string, unknown>): unknown;
 export function recordTaskResult(options?: Record<string, unknown>): never;
 export function reopenShip(options?: Record<string, unknown>): unknown;
 export function getShipClosure(options?: Record<string, unknown>): ShipClosureRecord;
-export function inspectShipClosureForLanding(options?: Record<string, unknown>): import('./landing.mjs').ShipClosureLandingInspection;
+export function inspectShipClosureForLanding(
+  options?: Record<string, unknown>,
+): import('./landing.mjs').ShipClosureLandingInspection;
 export function preparePlan(options?: Record<string, unknown>): unknown;
 export function preparePlanReview(options?: Record<string, unknown>): unknown;
 export function prepareBrowserQa(options?: Record<string, unknown>): unknown;

@@ -25,8 +25,29 @@ const validFeedback = {
   overall: 'lean into B, darker indigo',
   regenerated: false,
   pins: [
-    { id: 'a1b2c3d4e5f6', author: 'Dana', variant: 'B', x: 0.42, y: 0.1, w: 0.2, h: 0.08, comment: 'kern the wordmark tighter', intent: 'fix' },
-    { id: 'f6e5d4c3b2a1', author: 'Dana', variant: 'A', x: 0.5, y: 0.5, w: 0, h: 0, comment: 'what font is this?', intent: 'question', screen: 's-hero' },
+    {
+      id: 'a1b2c3d4e5f6',
+      author: 'Dana',
+      variant: 'B',
+      x: 0.42,
+      y: 0.1,
+      w: 0.2,
+      h: 0.08,
+      comment: 'kern the wordmark tighter',
+      intent: 'fix',
+    },
+    {
+      id: 'f6e5d4c3b2a1',
+      author: 'Dana',
+      variant: 'A',
+      x: 0.5,
+      y: 0.5,
+      w: 0,
+      h: 0,
+      comment: 'what font is this?',
+      intent: 'question',
+      screen: 's-hero',
+    },
   ],
 };
 
@@ -53,9 +74,18 @@ test('design-feedback: bad intent, missing comment, unknown key all fail', () =>
     pins: [{ variant: 'A', x: 0.1, y: 0.1, w: 0, h: 0, comment: '', intent: 'delete' }],
   };
   const errs = validate(bad, feedbackSchema);
-  assert.ok(errs.some((e) => e.rule === 'enum'), 'intent enum rejected');
-  assert.ok(errs.some((e) => e.rule === 'minLength'), 'empty comment rejected');
-  assert.ok(errs.some((e) => e.rule === 'additionalProperties'), 'unknown key rejected');
+  assert.ok(
+    errs.some((e) => e.rule === 'enum'),
+    'intent enum rejected',
+  );
+  assert.ok(
+    errs.some((e) => e.rule === 'minLength'),
+    'empty comment rejected',
+  );
+  assert.ok(
+    errs.some((e) => e.rule === 'additionalProperties'),
+    'unknown key rejected',
+  );
 });
 
 // SPEC-017: the extended collaborative shape round-trips through the schema —
@@ -77,7 +107,10 @@ test('design-feedback: a full attributed collaborative record validates', () => 
         id: 'a1b2c3d4e5f6',
         author: 'Dana',
         variant: 's-dashboard',
-        x: 0.42, y: 0.1, w: 0.2, h: 0.08,
+        x: 0.42,
+        y: 0.1,
+        w: 0.2,
+        h: 0.08,
         comment: 'kern the wordmark tighter',
         intent: 'fix',
         status: 'open',
@@ -88,14 +121,22 @@ test('design-feedback: a full attributed collaborative record validates', () => 
         id: 'f6e5d4c3b2a1',
         author: 'Ravi',
         variant: 's-dashboard',
-        x: 0.5, y: 0.5, w: 0, h: 0,
+        x: 0.5,
+        y: 0.5,
+        w: 0,
+        h: 0,
         comment: 'is this the right radius?',
         intent: 'question',
         status: 'resolved',
         createdAt: '2026-06-17T10:02:00Z',
         screen: 's-dashboard',
         replies: [
-          { id: 'aa11bb22cc33', author: 'Dana', comment: 'yes, matches the token', createdAt: '2026-06-17T10:03:00Z' },
+          {
+            id: 'aa11bb22cc33',
+            author: 'Dana',
+            comment: 'yes, matches the token',
+            createdAt: '2026-06-17T10:03:00Z',
+          },
         ],
       },
     ],
@@ -118,7 +159,10 @@ test('design-feedback: a legacy attributed-but-id-less record fails id/author re
     pins: [{ variant: 'A', x: 0.1, y: 0.1, w: 0, h: 0, comment: 'legacy note', intent: 'fix' }],
   };
   const errs = validate(legacy, feedbackSchema);
-  assert.ok(errs.some((e) => e.rule === 'required'), 'a raw legacy pin lacks the required id/author (normalized at load)');
+  assert.ok(
+    errs.some((e) => e.rule === 'required'),
+    'a raw legacy pin lacks the required id/author (normalized at load)',
+  );
 
   // Once normalized (id + author added; "Anonymous" attribution), the same record validates.
   const normalized = {
@@ -126,7 +170,11 @@ test('design-feedback: a legacy attributed-but-id-less record fails id/author re
     authors: [{ name: 'Anonymous' }],
     pins: [{ ...legacy.pins[0], id: 'abc123abc123', author: 'Anonymous' }],
   };
-  assert.equal(validate(normalized, feedbackSchema).length, 0, 'normalized legacy record validates');
+  assert.equal(
+    validate(normalized, feedbackSchema).length,
+    0,
+    'normalized legacy record validates',
+  );
 });
 
 const validSession = {
@@ -140,7 +188,12 @@ const validSession = {
   feedbackHistory: ['tighter kerning'],
   outputPaths: ['/abs/variant-A.svg', '/abs/variant-A-v2.svg'],
   regionEdits: [
-    { at: '2026-06-10T12:10:00Z', screen: 's-hero', pins: [{ variant: 'A' }], summary: 'kerned wordmark' },
+    {
+      at: '2026-06-10T12:10:00Z',
+      screen: 's-hero',
+      pins: [{ variant: 'A' }],
+      summary: 'kerned wordmark',
+    },
   ],
   lastResponseId: null,
   createdAt: '2026-06-10T11:00:00Z',
@@ -168,12 +221,43 @@ const validTaste = {
   schema_version: '1.0.0',
   profile_version: 1,
   dimensions: {
-    fonts: [{ value: 'Inter', confidence: 0.8, approved_count: 4, rejected_count: 1, last_seen: '2026-06-10T12:00:00Z' }],
-    colors: [{ value: 'deep indigo', confidence: 0.7, approved_count: 3, rejected_count: 0, last_seen: '2026-06-10T12:00:00Z' }],
+    fonts: [
+      {
+        value: 'Inter',
+        confidence: 0.8,
+        approved_count: 4,
+        rejected_count: 1,
+        last_seen: '2026-06-10T12:00:00Z',
+      },
+    ],
+    colors: [
+      {
+        value: 'deep indigo',
+        confidence: 0.7,
+        approved_count: 3,
+        rejected_count: 0,
+        last_seen: '2026-06-10T12:00:00Z',
+      },
+    ],
     layouts: [],
-    aesthetics: [{ value: 'minimal', confidence: 0.9, approved_count: 6, rejected_count: 1, last_seen: '2026-06-01T12:00:00Z' }],
+    aesthetics: [
+      {
+        value: 'minimal',
+        confidence: 0.9,
+        approved_count: 6,
+        rejected_count: 1,
+        last_seen: '2026-06-01T12:00:00Z',
+      },
+    ],
   },
-  sessions: [{ sessionId: 'logo-2026-06-10-A', verdict: 'approved', at: '2026-06-10T12:00:00Z', artifact: '/abs/a.svg' }],
+  sessions: [
+    {
+      sessionId: 'logo-2026-06-10-A',
+      verdict: 'approved',
+      at: '2026-06-10T12:00:00Z',
+      artifact: '/abs/a.svg',
+    },
+  ],
 };
 
 test('taste-profile: a populated profile validates', () => {

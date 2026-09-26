@@ -38,7 +38,8 @@ const { schedule, enableTransition } = fixture('measurement-schedule-valid.json'
 const invalid = fixture('measurement-schedule-invalid.json');
 
 pass(
-  validateProtocolArtifact('operating-measurement-schedule', schedule, { protocolVersion: VERSION }).length === 0,
+  validateProtocolArtifact('operating-measurement-schedule', schedule, { protocolVersion: VERSION })
+    .length === 0,
   'the reference schedule satisfies its published contract',
 );
 
@@ -54,17 +55,22 @@ pass(
 );
 
 for (const [name, candidate] of Object.entries(invalid)) {
-  pass(refuses(() => assertOperatingMeasurementScheduleV2(candidate)), `the contract refuses: ${name}`);
+  pass(
+    refuses(() => assertOperatingMeasurementScheduleV2(candidate)),
+    `the contract refuses: ${name}`,
+  );
 }
 
 const enabled = reduceOperatingMeasurementScheduleV2(schedule, enableTransition);
 pass(
-  enabled.replay === false && enabled.schedule.state === 'enabled' && enabled.schedule.nextDueAt !== null,
+  enabled.replay === false &&
+    enabled.schedule.state === 'enabled' &&
+    enabled.schedule.nextDueAt !== null,
   'an explicit owner transition is the only path from disabled to enabled',
 );
 pass(
-  enabled.schedule.generation === schedule.generation + 1
-    && enabled.receipt.previousScheduleHash === schedule.scheduleHash,
+  enabled.schedule.generation === schedule.generation + 1 &&
+    enabled.receipt.previousScheduleHash === schedule.scheduleHash,
   'the resulting schedule advances one generation and binds its exact predecessor',
 );
 
@@ -99,10 +105,12 @@ pass(
   'a stale expected generation is refused before any state change',
 );
 
-process.stdout.write(`${JSON.stringify({
-  ok: true,
-  protocolVersion: VERSION,
-  suite: 'live-evidence',
-  refusedShapes: Object.keys(invalid).length,
-  checks,
-})}\n`);
+process.stdout.write(
+  `${JSON.stringify({
+    ok: true,
+    protocolVersion: VERSION,
+    suite: 'live-evidence',
+    refusedShapes: Object.keys(invalid).length,
+    checks,
+  })}\n`,
+);

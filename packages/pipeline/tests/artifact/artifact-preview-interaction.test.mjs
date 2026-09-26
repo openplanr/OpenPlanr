@@ -8,16 +8,23 @@ const html = readFileSync(previewPath, 'utf8');
 const theme = JSON.parse(readFileSync(themePath, 'utf8'));
 
 function luminance(hex) {
-  const channels = hex.slice(1).match(/../g).map((channel) => Number.parseInt(channel, 16) / 255);
-  const linear = channels.map((channel) => channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4);
+  const channels = hex
+    .slice(1)
+    .match(/../g)
+    .map((channel) => Number.parseInt(channel, 16) / 255);
+  const linear = channels.map((channel) =>
+    channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4,
+  );
   return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
 }
 
 function contrast(foreground, background) {
   const foregroundLuminance = luminance(foreground);
   const backgroundLuminance = luminance(background);
-  return (Math.max(foregroundLuminance, backgroundLuminance) + 0.05)
-    / (Math.min(foregroundLuminance, backgroundLuminance) + 0.05);
+  return (
+    (Math.max(foregroundLuminance, backgroundLuminance) + 0.05) /
+    (Math.min(foregroundLuminance, backgroundLuminance) + 0.05)
+  );
 }
 
 test('preview exposes three ordered dynamic variants plus single and split comparison modes', () => {
@@ -62,13 +69,14 @@ test('interaction contract covers mode, synchronized focus, feedback lifecycle, 
     'trapDialogFocus(event)',
     'lastDialogFocus?.focus()',
     "app.toggleAttribute('inert', true)",
-    "openComposerAt(.5, .5)",
-    "closeComposer({ restoreFocus: true })",
+    'openComposerAt(.5, .5)',
+    'closeComposer({ restoreFocus: true })',
     "surface.toggleAttribute('inert', Boolean(message))",
     "primary.addEventListener('load', guardArtifactNavigation)",
-    "Artifact navigation was blocked; the packaged preview was restored.",
+    'Artifact navigation was blocked; the packaged preview was restored.',
     "event.key === 'Escape'",
-  ]) assert.ok(html.includes(required), `interaction controller includes ${required}`);
+  ])
+    assert.ok(html.includes(required), `interaction controller includes ${required}`);
 
   assert.match(html, /id="pin-1"[^>]+aria-controls="thread-1"/);
   assert.match(html, /id="thread-1"[^>]+tabindex="0"[^>]+aria-controls="pin-1"/);
@@ -92,7 +100,9 @@ test('privacy receipts distinguish fragment and encrypted short-link guarantees'
 });
 
 test('every artifact is opaque-origin and CSP-blocked from network, forms, embedding, and navigation', () => {
-  const iframeSandboxes = [...html.matchAll(/<iframe[^>]+sandbox="([^"]+)"/g)].map((match) => match[1]);
+  const iframeSandboxes = [...html.matchAll(/<iframe[^>]+sandbox="([^"]+)"/g)].map(
+    (match) => match[1],
+  );
   assert.deepEqual(iframeSandboxes, ['allow-scripts', 'allow-scripts']);
   assert.doesNotMatch(html, /allow-same-origin/);
   assert.doesNotMatch(html, /https?:\/\//);
@@ -100,7 +110,10 @@ test('every artifact is opaque-origin and CSP-blocked from network, forms, embed
   assert.match(html, /Content-Security-Policy" content="[^"]*frame-src data:/);
   assert.match(html, /data:text\/html;charset=utf-8;base64/);
   assert.match(html, /new TextEncoder\(\)\.encode\(html\)/);
-  assert.match(html, /artifactFrameStates\.set\(frame, \{ url, expectedLoads: 1, recoveryCount: 0 \}\)/);
+  assert.match(
+    html,
+    /artifactFrameStates\.set\(frame, \{ url, expectedLoads: 1, recoveryCount: 0 \}\)/,
+  );
   assert.match(html, /setPreviewState\('navigation-blocked'\)/);
   assert.doesNotMatch(html, /\.srcdoc\s*=/);
   for (const directive of [
@@ -110,7 +123,8 @@ test('every artifact is opaque-origin and CSP-blocked from network, forms, embed
     "object-src 'none'",
     "form-action 'none'",
     "base-uri 'none'",
-  ]) assert.ok(html.includes(directive), `artifact CSP contains ${directive}`);
+  ])
+    assert.ok(html.includes(directive), `artifact CSP contains ${directive}`);
 });
 
 test('canonical text, control, and semantic color pairs meet WCAG AA contrast', () => {
