@@ -29,8 +29,8 @@ does not depend on host fonts or a font CDN.
 - Source: <https://github.com/nodeca/pako>
 
 pako is bundled unmodified into `templates/design/design-board-adapter.js`.
-The bundle build strips comment headers, so the copyright notices and license
-terms below travel with the bundle.
+The bundle keeps pako's `@license` header in place; the full copyright notices
+and license terms below travel with the bundle.
 
 ### MIT License
 
