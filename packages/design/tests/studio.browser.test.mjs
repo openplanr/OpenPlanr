@@ -982,7 +982,13 @@ test('generated portable HTML and the public design review composition preserve 
     const download = page.waitForEvent('download');
     await page.locator('.design-export summary').click();
     await page.locator('[data-design-export="png"]').click();
-    assert.match((await download).suggestedFilename(), /\.png$/);
+    const png = await download;
+    assert.match(png.suggestedFilename(), /\.png$/);
+    // A close sent mid-download leaves Chromium running until Playwright kills it 30 s later.
+    assert.deepEqual(
+      readFileSync(await png.path()).subarray(0, 8),
+      Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    );
     assert.deepEqual(errors, []);
   } finally {
     await browser?.close();
