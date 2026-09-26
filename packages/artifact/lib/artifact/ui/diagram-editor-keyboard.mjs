@@ -187,6 +187,11 @@ export function createEditorKeyboard(ctx) {
       canvas.cancelDrag();
       return true;
     }
+    if (event.key === 'Escape' && ctx.current().gesture) {
+      event.preventDefault();
+      ctx.session.cancelGesture('escape');
+      return true;
+    }
     return false;
   }
   function navigateTree(event) {
