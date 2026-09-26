@@ -54,18 +54,17 @@ function projectionSources(path) {
 function renderCustody() {
   const registryBytes = readFileSync(registryPath, 'utf8');
   const registry = JSON.parse(registryBytes);
-  const operateProjection = projectionSources(resolve(
-    pipelineRoot,
-    'lib/generated/domain-projections/operate.json',
-  ));
-  const protocolProjection = projectionSources(resolve(
-    pipelineRoot,
-    'lib/generated/protocol-projection.json',
-  ));
+  const operateProjection = projectionSources(
+    resolve(pipelineRoot, 'lib/generated/domain-projections/operate.json'),
+  );
+  const protocolProjection = projectionSources(
+    resolve(pipelineRoot, 'lib/generated/protocol-projection.json'),
+  );
   const overrides = [];
   for (const target of registry.generation.verifiedTargets) {
     const absolute = resolve(pipelineRoot, target.path);
-    if (!existsSync(absolute)) throw new Error(`Operate contract target is missing: ${target.path}`);
+    if (!existsSync(absolute))
+      throw new Error(`Operate contract target is missing: ${target.path}`);
     const current = sha256(readFileSync(absolute, 'utf8'));
     if (current === target.sha256) continue;
     const custody = custodyFor(target.path);
@@ -79,15 +78,19 @@ function renderCustody() {
     });
   }
   overrides.sort((left, right) => left.path.localeCompare(right.path));
-  return `${JSON.stringify({
-    kind: 'operate-contract-generated-custody',
-    schemaVersion: '1.0.0',
-    protocolVersion: '1.5.0',
-    legacyRegistry: 'registry/operate-v2-contracts.json',
-    legacyRegistrySha256: sha256(registryBytes),
-    generator: 'packages/operate/scripts/generate-operate-contracts.mjs',
-    overrides,
-  }, null, 2)}\n`;
+  return `${JSON.stringify(
+    {
+      kind: 'operate-contract-generated-custody',
+      schemaVersion: '1.0.0',
+      protocolVersion: '1.5.0',
+      legacyRegistry: 'registry/operate-v2-contracts.json',
+      legacyRegistrySha256: sha256(registryBytes),
+      generator: 'packages/operate/scripts/generate-operate-contracts.mjs',
+      overrides,
+    },
+    null,
+    2,
+  )}\n`;
 }
 
 function atomicWrite(path, bytes) {
@@ -101,7 +104,9 @@ const mode = parseMode(process.argv.slice(2));
 const expected = renderCustody();
 const current = existsSync(custodyPath) ? readFileSync(custodyPath, 'utf8') : null;
 if (mode === 'check' && current !== expected) {
-  throw new Error('Operate Protocol 1.5 generated-asset custody is stale. Run the workspace generator.');
+  throw new Error(
+    'Operate Protocol 1.5 generated-asset custody is stale. Run the workspace generator.',
+  );
 }
 if (mode === 'write' && current !== expected) atomicWrite(custodyPath, expected);
 
@@ -112,7 +117,12 @@ const generated = spawnSync(process.execPath, [pipelineGenerator, `--${mode}`], 
 if (generated.stdout) process.stdout.write(generated.stdout);
 if (generated.stderr) process.stderr.write(generated.stderr);
 if (generated.error || generated.signal || generated.status !== 0) {
-  throw new Error(generated.error?.message ?? `Pipeline compatibility generator failed (${generated.signal ?? generated.status}).`);
+  throw new Error(
+    generated.error?.message ??
+      `Pipeline compatibility generator failed (${generated.signal ?? generated.status}).`,
+  );
 }
 const custody = JSON.parse(expected);
-process.stdout.write(`Operate contract custody ${mode === 'check' ? 'checked' : 'generated'}: ${custody.overrides.length} additive overrides.\n`);
+process.stdout.write(
+  `Operate contract custody ${mode === 'check' ? 'checked' : 'generated'}: ${custody.overrides.length} additive overrides.\n`,
+);

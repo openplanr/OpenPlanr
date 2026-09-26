@@ -7,67 +7,67 @@
     {
       "source": "packages/operate/lib/operate/action-verification-v2.d.mts",
       "target": "lib/operate/action-verification-v2.d.mts",
-      "sha256": "c8978b0eaa48b1df1bca0ae82fa1064b10d8ebaaa258d43caf50e6074b74f841",
+      "sha256": "381744567147a1ffee97ffc8286167f7d4a893561f664aba82ee0aaeef6b8045",
       "mode": "644"
     },
     {
       "source": "packages/operate/lib/operate/action-verification-v2.mjs",
       "target": "lib/operate/action-verification-v2.mjs",
-      "sha256": "cd28b247aa804a2452b0fd6fab837e21941aaceb77e734e34004c28818c4c69a",
+      "sha256": "cfa852be4a592b5c0abd04bc7fa35b5ff176d4b78ef9c8ec5770f58d0b24c19d",
       "mode": "644"
     },
     {
       "source": "packages/operate/lib/operate/approvals-v2.d.mts",
       "target": "lib/operate/approvals-v2.d.mts",
-      "sha256": "1f0c01718cff97f969e2301813fd89ef34b79a56e335e83ed55ce5568539dc7f",
+      "sha256": "9092adbb5592cca0dd6d3f7514bee144c9f4fe00a855bc4b513f0f32f7167e25",
       "mode": "644"
     },
     {
       "source": "packages/operate/lib/operate/approvals-v2.mjs",
       "target": "lib/operate/approvals-v2.mjs",
-      "sha256": "84055864e43c50e6e8d35329c6917d2e0bf7a12696e9e7de9ec40d52d3fa465f",
+      "sha256": "bc3cdf910ac195fbbf2e6f16d25b8949f305942c457a83f4254a724f6cae2784",
       "mode": "644"
     },
     {
       "source": "packages/operate/lib/operate/assignment-contract-v2.mjs",
       "target": "lib/operate/assignment-contract-v2.mjs",
-      "sha256": "9e1a363968b05b18f251adb2524de887753e0d25a624b8b4825fbce7841e9612",
+      "sha256": "1b00f8bffff214447eb8a120bc761729d91f411c43af29428ba83cc2e3dc621a",
       "mode": "644"
     },
     {
       "source": "packages/operate/lib/operate/authorization-v2.d.mts",
       "target": "lib/operate/authorization-v2.d.mts",
-      "sha256": "df412a569be11a5869fdedc69f74131674a92e466a69990ed33a592dcf94e5c9",
+      "sha256": "f0d3b253be410da57fe1fae7c98b2315daf60fd4c50686e911abfb3442c8bab5",
       "mode": "644"
     },
     {
       "source": "packages/operate/lib/operate/authorization-v2.mjs",
       "target": "lib/operate/authorization-v2.mjs",
-      "sha256": "32ea3a1c7431d6d88abadc29105d30c3038f890b709789f49fee47bd24b033d3",
+      "sha256": "b0c9620a5cc57b5b4f57276176d0c3e8bb59a68331562c85995d2e043710908c",
       "mode": "644"
     },
     {
       "source": "packages/operate/lib/operate/contracts/compiler.mjs",
       "target": "lib/operate/contracts/compiler.mjs",
-      "sha256": "15fc1f46f40ce671c7a078c37c264a105cc03e076d988b397872f14f01e2a27f",
+      "sha256": "780938ef0c18c6ebd116dff9b07ca9bd65105df6e3b39a445ea2c3c612ebe05a",
       "mode": "644"
     },
     {
       "source": "packages/operate/lib/operate/contracts/mandate-appendix-v2.mjs",
       "target": "lib/operate/contracts/mandate-appendix-v2.mjs",
-      "sha256": "dffda7b1503b78996f37720287adb9b4d85c67261fddd39473317a9efe5b4fa8",
+      "sha256": "b403edd806af0a4ff7db63d3cf7da973bc030efe518973c9b20d2b746bc1b07b",
       "mode": "644"
     },
     {
       "source": "packages/operate/lib/operate/contracts/operate-adapter-skills.mjs",
       "target": "lib/operate/contracts/operate-adapter-skills.mjs",
-      "sha256": "f9b354515964a10ef63b9e161d1d28d639e764beec15ee561d601f06c4b312aa",
+      "sha256": "511fb33289f1e4e6d3f2fd0ed2493324c1e78b2420b94d8fde355ef44eb0d8c7",
       "mode": "644"
     },
     {
       "source": "packages/operate/lib/operate/contracts/role-skills.mjs",
       "target": "lib/operate/contracts/role-skills.mjs",
-      "sha256": "4b815f068b3fd3ec331d5846d32de3ab24149aaeff9c889ea9117356d4fc1d91",
+      "sha256": "231e3c427bfefdb87d914ed0ec1ad20ef67abfaeaec0c122b1cbace7405cce15",
       "mode": "644"
     },
     {
@@ -79,25 +79,25 @@
     {
       "source": "packages/operate/lib/operate/cycle-closure-v2.mjs",
       "target": "lib/operate/cycle-closure-v2.mjs",
-      "sha256": "1cbaefdc3ae7e7c6cf3abb9121dd25d9350746b7ee5a1612cdf61986137e496e",
+      "sha256": "455a5a6072f7312014c0f546cb430c1fbd7ba27f4e74fcf00b2b6b4fcdaeb53d",
       "mode": "644"
     },
     {
       "source": "packages/operate/lib/operate/evidence-artifact-v2.mjs",
       "target": "lib/operate/evidence-artifact-v2.mjs",
-      "sha256": "2d792ce9b5f62a095ef683ad42a62f66241f2fe0c08e5a65f01d6a1df6bf4cde",
+      "sha256": "e19a34e2a6051a83c754ef4277c0333d3146656855ee4aa4039ec7f5bac09932",
       "mode": "644"
     },
     {
       "source": "packages/operate/lib/operate/evidence-filesystem-v2.mjs",
       "target": "lib/operate/evidence-filesystem-v2.mjs",
-      "sha256": "46c62bef20e66b12cf097fec20b1e134222f52b586402967dba8bb2c3a14ea68",
+      "sha256": "622c3091430789af6915c798d7dd5ef27fd0b3f46f0769060ba272c05574460e",
       "mode": "644"
     },
     {
       "source": "packages/operate/lib/operate/evidence-git-v2.mjs",
       "target": "lib/operate/evidence-git-v2.mjs",
-      "sha256": "f5708d99084f70443377be194ad0e50d9383a88020305422efcbc23e6c3f6957",
+      "sha256": "a68d2343ca044f23cc2b7a23a0267e8b43bea2cc35b95d8af66eed8a1b5ab1c5",
       "mode": "644"
     },
     {
@@ -109,13 +109,13 @@
     {
       "source": "packages/operate/lib/operate/evidence-materialization-v2.mjs",
       "target": "lib/operate/evidence-materialization-v2.mjs",
-      "sha256": "7fad36ebf21870e63e2b03830d048610ba72659685dc14ee93840216b2523b3b",
+      "sha256": "9c96d0413304020977437dbac542409967a90063fc8aa6e96f00994838bc052b",
       "mode": "644"
     },
     {
       "source": "packages/operate/lib/operate/evidence-planr-v2.mjs",
       "target": "lib/operate/evidence-planr-v2.mjs",
-      "sha256": "eaa76a3ec1f82b24ace80b93b4eeaedea6bc1e37589642d36d3874f81d931e93",
+      "sha256": "3b5e783fc72a298f4449bc070eaaa1c9f68aa6eb5bf1b4bc93dc0f6a8bef4268",
       "mode": "644"
     },
     {
@@ -127,43 +127,43 @@
     {
       "source": "packages/operate/lib/operate/evidence-projections-v2.mjs",
       "target": "lib/operate/evidence-projections-v2.mjs",
-      "sha256": "da382248b1c4fb40af0cf3e84d6abe8e2a3021fc9d288e6d20c9acde3e61dff2",
+      "sha256": "515e94bf2ef2f344277a9c643bdf57336afd651d32636f21fa3b4998f45d9a28",
       "mode": "644"
     },
     {
       "source": "packages/operate/lib/operate/evidence-registry-v2.d.mts",
       "target": "lib/operate/evidence-registry-v2.d.mts",
-      "sha256": "d830326f20b6e50abf95e68b8b32467981db095022bc7fbfcb9201dd9c7bc0bc",
+      "sha256": "86d11e7f6d90360fc6922a8f95ef3a2b69e3d1e3ef433bf8e9e6d2f20fd4c472",
       "mode": "644"
     },
     {
       "source": "packages/operate/lib/operate/evidence-registry-v2.mjs",
       "target": "lib/operate/evidence-registry-v2.mjs",
-      "sha256": "4ed3e24d9f120d95f09a1c50a5465199a354d66b917c58c2e806ce9185d3d811",
+      "sha256": "35dcb107222a94c3b06e7b2a979e54d5a83499024c5286cf617531b336be3e3a",
       "mode": "644"
     },
     {
       "source": "packages/operate/lib/operate/evidence-v2.d.mts",
       "target": "lib/operate/evidence-v2.d.mts",
-      "sha256": "98a42870436ac46d8baa00bdfd2c8f004ebde45c26d64f3d1b033ea289d3973e",
+      "sha256": "7315c34a6195e7c3514a46ad805aa38eedfb78247a244e2cda935fdfe043eea6",
       "mode": "644"
     },
     {
       "source": "packages/operate/lib/operate/evidence-v2.mjs",
       "target": "lib/operate/evidence-v2.mjs",
-      "sha256": "a84b7d4663e60abb17ac7703980cf43c5e782df8a6fb7a49a229695376ab3842",
+      "sha256": "7dfffeb32311c9cb2c55c8d84edf8dc89a9dd87a8b35125e9456eb0383b6fe2c",
       "mode": "644"
     },
     {
       "source": "packages/operate/lib/operate/execution-verification-v2.d.mts",
       "target": "lib/operate/execution-verification-v2.d.mts",
-      "sha256": "bbdfa8a7661fbfd69013e615cdd60a4cb350e8cd959cb247ced8d5840189070b",
+      "sha256": "da253e564dfda87160fd3a86d91d8ac1840cacdec824cced7a22600ed2ca5d64",
       "mode": "644"
     },
     {
       "source": "packages/operate/lib/operate/execution-verification-v2.mjs",
       "target": "lib/operate/execution-verification-v2.mjs",
-      "sha256": "c4eb755f1baafafa256b58bd908316acf9d6feb35b6518a26f4394611b94b6ce",
+      "sha256": "90a5be18e54a4251ced1128be44b138cb719d7d1660fcd1c00c3e115e52363c9",
       "mode": "644"
     },
     {
@@ -175,115 +175,115 @@
     {
       "source": "packages/operate/lib/operate/executive-board-compatibility-v2.mjs",
       "target": "lib/operate/executive-board-compatibility-v2.mjs",
-      "sha256": "5cdf47c165c5307e0100b14077af2163a3cce2b228d36912c041b7fa32279855",
+      "sha256": "7cec0eede07545ec407db64ac638e46278c926c0de249c0988a92d03e5f8a27d",
       "mode": "644"
     },
     {
       "source": "packages/operate/lib/operate/executive-board-materialization-v2.d.mts",
       "target": "lib/operate/executive-board-materialization-v2.d.mts",
-      "sha256": "d7dedd3a1a136d8457f4ab3dfa522f6c549a9e468a95ab345ba490aa7cde60c8",
+      "sha256": "531dd0b78adc5993c98a9eb4eaaa6c8f906188288bb948eaf01c9d62b16b3bda",
       "mode": "644"
     },
     {
       "source": "packages/operate/lib/operate/executive-board-materialization-v2.mjs",
       "target": "lib/operate/executive-board-materialization-v2.mjs",
-      "sha256": "fd356322e0b67b9485afd6a4bd955067597f78f10d323be9588d08312dd5b84c",
+      "sha256": "504be4fb5fe7aa140c17f14c600252f3fca0511d24c7e6e81e0a9aaea34d87e3",
       "mode": "644"
     },
     {
       "source": "packages/operate/lib/operate/executive-board-projection-v2.mjs",
       "target": "lib/operate/executive-board-projection-v2.mjs",
-      "sha256": "0af46580664c8944a7f396fd4a8579b0ffb35f396543a1f97892c22031328266",
+      "sha256": "8d2ceaccda61d08271d0c9467cd43def5b2b249b5f2bc9a4d56b0e77f98e6107",
       "mode": "644"
     },
     {
       "source": "packages/operate/lib/operate/experience-projection-v2.d.mts",
       "target": "lib/operate/experience-projection-v2.d.mts",
-      "sha256": "dd015b5a0717f1e4586824eab10df39fa0281a8c3dc8626d4eb96ee0f3f7d29b",
+      "sha256": "beb26501ab43f7ed513b421ac90b0dbb0e43c99187f20f7f4301a07b71c378b6",
       "mode": "644"
     },
     {
       "source": "packages/operate/lib/operate/experience-projection-v2.mjs",
       "target": "lib/operate/experience-projection-v2.mjs",
-      "sha256": "8547e1a5f3aa3fce47814eca9ca4d8a82381f524e1d5d03c3d40a9e85fc015e0",
+      "sha256": "6635a78450c33039950ec0d9e89f54f7ee636cd447d2a78c637e289b99b5995f",
       "mode": "644"
     },
     {
       "source": "packages/operate/lib/operate/extensions-v2.d.mts",
       "target": "lib/operate/extensions-v2.d.mts",
-      "sha256": "d743b89afc81432de90d89c6ea41ad5ab8469c8a848af9d9df8d3ee6add7c9fa",
+      "sha256": "00327f33f45d7c90510f3432a408f8f5f4999fea83fa74087f4376e5e526aa0d",
       "mode": "644"
     },
     {
       "source": "packages/operate/lib/operate/extensions-v2.mjs",
       "target": "lib/operate/extensions-v2.mjs",
-      "sha256": "4aa8ee52437bf7b3734a91b2f4f887191333e7c2bf710aa1595bc29fc4fd94f2",
+      "sha256": "96572188a232eb2f334c82bd404b10a43cd004207913937b063aae804d963e0e",
       "mode": "644"
     },
     {
       "source": "packages/operate/lib/operate/governed-execution-v2.d.mts",
       "target": "lib/operate/governed-execution-v2.d.mts",
-      "sha256": "b361e497576afd423947ecbfbf93ced4b144dbe8d970219940a6334b445f1d66",
+      "sha256": "9997cd83e12262fa5fcca80ca92c50d1c5fce869db02fe19de1939550b5b0a25",
       "mode": "644"
     },
     {
       "source": "packages/operate/lib/operate/governed-execution-v2.mjs",
       "target": "lib/operate/governed-execution-v2.mjs",
-      "sha256": "977ca750accdbcd28c0d9d605e9fdfb0983f0ccf67c38d34dd18d58e6ef1f4be",
+      "sha256": "6efa0b4a60de7a02fda4f45a401c962bcc17ecdb8fc7dcefe303cf94b09936f3",
       "mode": "644"
     },
     {
       "source": "packages/operate/lib/operate/governed-extensions-v2.d.mts",
       "target": "lib/operate/governed-extensions-v2.d.mts",
-      "sha256": "db2ac757145d244daac680ca088de468fc1724d8a84a72488c83aa941c01c471",
+      "sha256": "98abc6cf60c31cf9fca679cbdc892fe2571d217b3ae63827e63e40e6ab85d3a3",
       "mode": "644"
     },
     {
       "source": "packages/operate/lib/operate/governed-extensions-v2.mjs",
       "target": "lib/operate/governed-extensions-v2.mjs",
-      "sha256": "7a2d90b7e329a1b607510e6408206360a5d63e0ea903c03ea3a3c2440087368d",
+      "sha256": "5b1f5d48e44c4de2e7306a31830829af596229e4e6505a82c130405d64a34719",
       "mode": "644"
     },
     {
       "source": "packages/operate/lib/operate/governed-recovery-v2.d.mts",
       "target": "lib/operate/governed-recovery-v2.d.mts",
-      "sha256": "b0566caf3637dcd18f540f2cd1b717ede33fe6e9d59c074df32ea44540ef437a",
+      "sha256": "cecca140f7ffb55c6fcecb077d8426d37c7656bdf34ac4d5722da497e5c2b79b",
       "mode": "644"
     },
     {
       "source": "packages/operate/lib/operate/governed-recovery-v2.mjs",
       "target": "lib/operate/governed-recovery-v2.mjs",
-      "sha256": "b089f5139cba512839e347ddc4bc15b878c0c7fc98b042ba39f730fe52b2e6f5",
+      "sha256": "0977507d91a56e356c253c29f09b80610a4755133d65f9df9e64ceff018f7330",
       "mode": "644"
     },
     {
       "source": "packages/operate/lib/operate/intelligence-input-bundle-v2.mjs",
       "target": "lib/operate/intelligence-input-bundle-v2.mjs",
-      "sha256": "11eb9e3f2480ca0d23b835253e2d9d51e2edd29b11f0627c4c0ebe795e647533",
+      "sha256": "5fa6f12ba61fc3a344838100e06580b51bc2d2b92738d373cdc87656198b8330",
       "mode": "644"
     },
     {
       "source": "packages/operate/lib/operate/intelligence-ledger-v2.mjs",
       "target": "lib/operate/intelligence-ledger-v2.mjs",
-      "sha256": "7640acb7c227ee7d3cab53c297a7066fe7f3a0e7b2bac6f45fc6dc8f9bf58d16",
+      "sha256": "9011e7a5d3f9d790adbdcb488911ed9bd13a43ab0c9098b2f7598795d7ec9345",
       "mode": "644"
     },
     {
       "source": "packages/operate/lib/operate/intelligence-output-identities-v2.mjs",
       "target": "lib/operate/intelligence-output-identities-v2.mjs",
-      "sha256": "e8780060d59b30f59df4c039075b3ff9cefdb1286e3ddc38a8438a547f851aec",
+      "sha256": "33a75e62ac4ab162624169bbb1b5d4e88a6a866f6e502392253ac3421efbe9dd",
       "mode": "644"
     },
     {
       "source": "packages/operate/lib/operate/intelligence-replay-v2.mjs",
       "target": "lib/operate/intelligence-replay-v2.mjs",
-      "sha256": "05192d426b153f656b1ee2371bbe743b93a1f6975f5c64856513a066640a7b83",
+      "sha256": "56a69076eb308d318fbb6be8609a3e891d88a712045211c63b4aed33099fbb0c",
       "mode": "644"
     },
     {
       "source": "packages/operate/lib/operate/intelligence-result-validator-v2.mjs",
       "target": "lib/operate/intelligence-result-validator-v2.mjs",
-      "sha256": "31c15df07a8475d068207d859174d708caacf9e49fbc0fa6a2f24eb41a31ac4d",
+      "sha256": "3f891a10ccfd29ef3d17a406d7208d6e60014c1a409165f693465de1b5fa45bd",
       "mode": "644"
     },
     {
@@ -295,7 +295,7 @@
     {
       "source": "packages/operate/lib/operate/intelligence-router-v2.mjs",
       "target": "lib/operate/intelligence-router-v2.mjs",
-      "sha256": "030a6440a9c0c3b362b05e84c304fa5dc2cb0b344767208f658c403580d705ad",
+      "sha256": "dc3b7f1731198b0f4ecba911311df8b6c2ab59075964ffc98689af9eba9e8bf5",
       "mode": "644"
     },
     {
@@ -307,19 +307,19 @@
     {
       "source": "packages/operate/lib/operate/operating-delta-v2.mjs",
       "target": "lib/operate/operating-delta-v2.mjs",
-      "sha256": "d78fb835d338c2449f6a81c5c28147dcfb619c104109a30238a7b68ef97d7820",
+      "sha256": "aa6659794dd5aa3dc8b0ceeb8d99d07ee92ea2894a25def76cb09e35bc9b9abf",
       "mode": "644"
     },
     {
       "source": "packages/operate/lib/operate/operating-domains-v2.d.mts",
       "target": "lib/operate/operating-domains-v2.d.mts",
-      "sha256": "deeaac3fdf9c04c9e3c907b06f8415d95600b6d7884542813caa1aa34c95e310",
+      "sha256": "99707a7a7fbc65c2d54ecccedfbfd0612a99600544c07d0f16b91050d12323b6",
       "mode": "644"
     },
     {
       "source": "packages/operate/lib/operate/operating-domains-v2.mjs",
       "target": "lib/operate/operating-domains-v2.mjs",
-      "sha256": "50dd32b21eaea4a83be777c65d9a0ecd23f9b2fbc76ad845ac94f48a17024c27",
+      "sha256": "d4f9899356ef494793134fb039c665dd5446b635eead584f93dc385d41e04cc6",
       "mode": "644"
     },
     {
@@ -331,31 +331,31 @@
     {
       "source": "packages/operate/lib/operate/operating-intelligence-state-v2.mjs",
       "target": "lib/operate/operating-intelligence-state-v2.mjs",
-      "sha256": "49b4dfd71053f201db38fc20224cd822b157f35f7622d3e3eff7ebd2513f2ff0",
+      "sha256": "33e49dc3870ff95817bf73e6bc32bcc7d49f36b94a778920d09973d3906c6d71",
       "mode": "644"
     },
     {
       "source": "packages/operate/lib/operate/operating-signal-providers-v2.d.mts",
       "target": "lib/operate/operating-signal-providers-v2.d.mts",
-      "sha256": "036f94365934be973c98b57410c8499fe56f40381b1de2ab49691d41785a0def",
+      "sha256": "294f22c1caf7e17d1deedba47c8f9d04d8e0352df4f4458ac674e0ae72b2c3f7",
       "mode": "644"
     },
     {
       "source": "packages/operate/lib/operate/operating-signal-providers-v2.mjs",
       "target": "lib/operate/operating-signal-providers-v2.mjs",
-      "sha256": "495a708e8c93a55d4ba5d2116d15a3755b10d96960cf8cff5f9b566597a148c3",
+      "sha256": "a84e674d925497004097d0e7b590aae97116d7a49beb7bb9cce1698abab2474b",
       "mode": "644"
     },
     {
       "source": "packages/operate/lib/operate/operating-snapshots-v2.d.mts",
       "target": "lib/operate/operating-snapshots-v2.d.mts",
-      "sha256": "b95716dc257530fd5da58ba7ca7b853800bda108e4c85e91d17e811fac6dce3c",
+      "sha256": "1966fb30eff031c8714424a89b4897dfd5b8bb4befb71c5220f2fa64ecb6b4b2",
       "mode": "644"
     },
     {
       "source": "packages/operate/lib/operate/operating-snapshots-v2.mjs",
       "target": "lib/operate/operating-snapshots-v2.mjs",
-      "sha256": "a43f9e269c613827f5e230a1902e2b89e24066e99a177967019d24d8c95fa07d",
+      "sha256": "556719a76a5478af6ff87e054cb48de7ad74c7213b3e906606ea384efcdd6352",
       "mode": "644"
     },
     {
@@ -367,7 +367,7 @@
     {
       "source": "packages/operate/lib/operate/operating-state-v2.mjs",
       "target": "lib/operate/operating-state-v2.mjs",
-      "sha256": "03b79e4ca2b4042a4af8787f5a8156eaa2cab322ff87bf21f20a01bb664245c0",
+      "sha256": "4748c126590554e52ccaef586762ad47cdc08ca6576251139a6562adcaefd6f4",
       "mode": "644"
     },
     {
@@ -379,7 +379,7 @@
     {
       "source": "packages/operate/lib/operate/operating-triggers-v2.mjs",
       "target": "lib/operate/operating-triggers-v2.mjs",
-      "sha256": "659292fa13874cd561305d2eb2168798b0eed53e146f158016f1d62d8d834595",
+      "sha256": "3a9eef5f38993eb418ce382a4484277cc479430cfc2f8e34b6b16a4167f548c5",
       "mode": "644"
     },
     {
@@ -391,97 +391,97 @@
     {
       "source": "packages/operate/lib/operate/persistent-work-projections-v2.mjs",
       "target": "lib/operate/persistent-work-projections-v2.mjs",
-      "sha256": "50685e372cc09a9e0256a31254177c8328155cab91079ead64b89818f9d78efb",
+      "sha256": "815f579b2ed71d0997475a04a91d7341069036d029129bec38ef32437ab5e8a4",
       "mode": "644"
     },
     {
       "source": "packages/operate/lib/operate/persistent-work-v2.d.mts",
       "target": "lib/operate/persistent-work-v2.d.mts",
-      "sha256": "c3aad67fc0594a7bb84b95a6b9dd1666279f3d2409c5c4eae448557444b5d9a9",
+      "sha256": "a0488bc4e2c0e9028e20f97128ce3c592604c16d5f656e23c5c6b39dffc7a0fb",
       "mode": "644"
     },
     {
       "source": "packages/operate/lib/operate/persistent-work-v2.mjs",
       "target": "lib/operate/persistent-work-v2.mjs",
-      "sha256": "3377d785091363cbc508ce545b7b896f213e7f1b53d71a39ef477a50520ce8b3",
+      "sha256": "067129564ef9843e9660243a1732daad82a77b230adc177a71b9eee0ad9b9bb0",
       "mode": "644"
     },
     {
       "source": "packages/operate/lib/operate/planning-bridge-v2.d.mts",
       "target": "lib/operate/planning-bridge-v2.d.mts",
-      "sha256": "1fb2d9fba5a1e2a3956b191a09e0e345e5bb1bba98092eedfb02058c3ba37d8d",
+      "sha256": "4e43e879b3a38cddb3348852292f231e3d8288fe5fbce3934de7b0160c228a7f",
       "mode": "644"
     },
     {
       "source": "packages/operate/lib/operate/planning-bridge-v2.mjs",
       "target": "lib/operate/planning-bridge-v2.mjs",
-      "sha256": "bc617d50eb75676da40d44efcc657283f9760b5c1298caf9334c696b7905d31b",
+      "sha256": "8f741916c01de936dad65c3cf8fe104261d6a52694b174b884ac1c4e6f7a5435",
       "mode": "644"
     },
     {
       "source": "packages/operate/lib/operate/policy-v2.d.mts",
       "target": "lib/operate/policy-v2.d.mts",
-      "sha256": "6849361798637d6121e8d8ad15d30c2cd924df9cc9900d746151eebc5096ce19",
+      "sha256": "acdbc784504678699468a1329edc2567f3abf411a9f6beb999459c0377bb027d",
       "mode": "644"
     },
     {
       "source": "packages/operate/lib/operate/policy-v2.mjs",
       "target": "lib/operate/policy-v2.mjs",
-      "sha256": "31cb62e527673b6d719a8cadfc48ce35714a178a93baa7ffa7dbc0a5dfeed1d4",
+      "sha256": "7343853fc2f4d9125462ace3cd3db2ac42777535db1ae617471feab086c353cd",
       "mode": "644"
     },
     {
       "source": "packages/operate/lib/operate/reference-governed-executors-v2.d.mts",
       "target": "lib/operate/reference-governed-executors-v2.d.mts",
-      "sha256": "640463c9b3cefb748e76589beb6e7e91d5e6806a59f191e248d61a6ed804cefb",
+      "sha256": "5721a110380d2632d120bf4906666efcc63f6cfb0c624c4912efd1214ee048d8",
       "mode": "644"
     },
     {
       "source": "packages/operate/lib/operate/reference-governed-executors-v2.mjs",
       "target": "lib/operate/reference-governed-executors-v2.mjs",
-      "sha256": "9fa5f651d052e38bb3917ecf54add6bdbb72404280d02cc6369ab993563cdee0",
+      "sha256": "b8f9c79b9ebb0b8a095e749e3f7a36d8d5dfb69635a62edddea420be83586ce4",
       "mode": "644"
     },
     {
       "source": "packages/operate/lib/operate/result-packet-v2.d.mts",
       "target": "lib/operate/result-packet-v2.d.mts",
-      "sha256": "b04da287e6cfb65f4b04b427d823d1f09df75abe0ef371e9c9fd1e4b90fa72b7",
+      "sha256": "7d29008ebdcc469d722e077bdd85c0f59f005d9258233c849d3f4cb88867d2d6",
       "mode": "644"
     },
     {
       "source": "packages/operate/lib/operate/result-packet-v2.mjs",
       "target": "lib/operate/result-packet-v2.mjs",
-      "sha256": "b795ddf9f92c3d85e423bde47c1368c9d66e27827367306320de39d2d9c499f0",
+      "sha256": "cc849379b10301f2d5fd84824378de8bd232896eb5faae7580e0a7bf365ab742",
       "mode": "644"
     },
     {
       "source": "packages/operate/lib/operate/review-bound-submission-v2.d.mts",
       "target": "lib/operate/review-bound-submission-v2.d.mts",
-      "sha256": "17e2b6e273088433a896b21ceb90862df003a8522865357c2e9824f2a8b5ace4",
+      "sha256": "899a633b9efab5ea88044d39877308e55d21cd68ced0699caf971981d803ed22",
       "mode": "644"
     },
     {
       "source": "packages/operate/lib/operate/review-bound-submission-v2.mjs",
       "target": "lib/operate/review-bound-submission-v2.mjs",
-      "sha256": "6c9f383df01629f80962f22a352c9f48ed9270175df3f090a0df173106ee756e",
+      "sha256": "e1be75a4d3ff820ededca30713ec2e46462e794f662c02e014c065552095e8cf",
       "mode": "644"
     },
     {
       "source": "packages/operate/lib/operate/runtime-event-reducer-v2.mjs",
       "target": "lib/operate/runtime-event-reducer-v2.mjs",
-      "sha256": "98aed7109a7f1fd5e1397c81919e27197e3083d9bdabaddffe4919a2b9789154",
+      "sha256": "403eec2582125d35f3213b44a27a2b32c18fd40d789ccc09a16a685dd2bf0cc6",
       "mode": "644"
     },
     {
       "source": "packages/operate/lib/operate/runtime-foundation.d.mts",
       "target": "lib/operate/runtime-foundation.d.mts",
-      "sha256": "661445ec536b64daabb043faaf056873b2cdd97cba7397be6c0a2a0dbbf99ccd",
+      "sha256": "dff8e1210b17b6a8eed83f1e15e54e4371c8962a5446095c38482f0858b8eeb5",
       "mode": "644"
     },
     {
       "source": "packages/operate/lib/operate/runtime-foundation.mjs",
       "target": "lib/operate/runtime-foundation.mjs",
-      "sha256": "4206c0e6142afd0368c926471ab00666b1a73f508abf8adb4c6dae08e1a4b0f9",
+      "sha256": "d613ac901b52a34b32a71151dc49124cc714521bf774cd368005220885c27dc8",
       "mode": "644"
     },
     {
@@ -523,7 +523,7 @@
     {
       "source": "packages/operate/lib/operate/scheduler-v2.mjs",
       "target": "lib/operate/scheduler-v2.mjs",
-      "sha256": "934e1e36067b8e4d9ac4c5bab2c90f629aaff68e069208e2d6ae4ebc93c1b510",
+      "sha256": "de5afe3f9f6f7351d09ded1f31aecddf610999826b5ce6f2f5dc2483786a6d29",
       "mode": "644"
     },
     {
@@ -535,7 +535,7 @@
     {
       "source": "packages/operate/lib/operate/trace-matrix-v2.mjs",
       "target": "lib/operate/trace-matrix-v2.mjs",
-      "sha256": "a6981d0355c6070c9b3623845b39ea1ee52897439d8b5eca4da0f2fa6a43c31f",
+      "sha256": "d11c3d8033374130834aef2c6a1b2cb7ef1e46f9f584af9981e909677f5e096c",
       "mode": "644"
     }
   ]

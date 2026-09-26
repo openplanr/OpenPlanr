@@ -16,7 +16,10 @@ export const OPERATING_MODEL_STATE_COLLECTIONS_V2 = Object.freeze([
 ]);
 
 function stateError(code, message, context = {}) {
-  return new PipelineError(code, message, '', { retryable: false, context: structuredClone(context) });
+  return new PipelineError(code, message, '', {
+    retryable: false,
+    context: structuredClone(context),
+  });
 }
 
 function clone(value) {
@@ -36,31 +39,47 @@ function validTimestamp(value) {
 }
 
 function assertScope(scope) {
-  if (!scope || typeof scope !== 'object' || Array.isArray(scope)
-    || ['scopeId', 'domainId', 'domainVersion'].some((key) => (
-      typeof scope[key] !== 'string' || scope[key].length === 0
-    ))) {
-    throw stateError('OPERATING_SCOPE_INVALID', 'Operating-model state requires one explicit scope and domain binding.');
+  if (
+    !scope ||
+    typeof scope !== 'object' ||
+    Array.isArray(scope) ||
+    ['scopeId', 'domainId', 'domainVersion'].some(
+      (key) => typeof scope[key] !== 'string' || scope[key].length === 0,
+    )
+  ) {
+    throw stateError(
+      'OPERATING_SCOPE_INVALID',
+      'Operating-model state requires one explicit scope and domain binding.',
+    );
   }
 }
 
 function sameScope(record, scope) {
-  return record.scopeId === scope.scopeId
-    && record.domainId === scope.domainId
-    && record.domainVersion === scope.domainVersion;
+  return (
+    record.scopeId === scope.scopeId &&
+    record.domainId === scope.domainId &&
+    record.domainVersion === scope.domainVersion
+  );
 }
 
 function sortedRecords(records, id) {
   if (!Array.isArray(records)) {
-    throw stateError('RESULT_CONTRACT_INVALID', 'Each operating-model state collection must be an array.');
+    throw stateError(
+      'RESULT_CONTRACT_INVALID',
+      'Each operating-model state collection must be an array.',
+    );
   }
   const seen = new Set();
   const normalized = records.map((record) => clone(record));
   for (const record of normalized) {
     if (typeof record?.[id] !== 'string' || record[id].length === 0 || seen.has(record[id])) {
-      throw stateError('STATE_TRANSITION_INVALID', 'Operating-model state collections require unique durable record identities.', {
-        id: record?.[id] ?? null,
-      });
+      throw stateError(
+        'STATE_TRANSITION_INVALID',
+        'Operating-model state collections require unique durable record identities.',
+        {
+          id: record?.[id] ?? null,
+        },
+      );
     }
     seen.add(record[id]);
   }
@@ -78,7 +97,10 @@ export function deriveOperatingModelStateRuntimeHashV2(state) {
   try {
     return sha256Jcs(stateWithoutRuntimeHash(state));
   } catch {
-    throw stateError('RESULT_CONTRACT_INVALID', 'Operating-model state must contain deterministic JSON values.');
+    throw stateError(
+      'RESULT_CONTRACT_INVALID',
+      'Operating-model state must contain deterministic JSON values.',
+    );
   }
 }
 
@@ -87,30 +109,45 @@ function validateCollectionRecords(state, scope) {
     const records = state[field];
     const seen = new Set();
     if (!Array.isArray(records)) {
-      throw stateError('RESULT_CONTRACT_INVALID', `Operating-model state ${field} must be an array.`);
+      throw stateError(
+        'RESULT_CONTRACT_INVALID',
+        `Operating-model state ${field} must be an array.`,
+      );
     }
-    const canonicalOrder = [...records].sort((left, right) => (
-      String(left?.[id] ?? '').localeCompare(String(right?.[id] ?? ''))
-    ));
+    const canonicalOrder = [...records].sort((left, right) =>
+      String(left?.[id] ?? '').localeCompare(String(right?.[id] ?? '')),
+    );
     if (records.some((record, position) => record?.[id] !== canonicalOrder[position]?.[id])) {
-      throw stateError('STATE_TRANSITION_INVALID', 'Operating-model state collections must use canonical durable-identity order.', {
-        field,
-      });
+      throw stateError(
+        'STATE_TRANSITION_INVALID',
+        'Operating-model state collections must use canonical durable-identity order.',
+        {
+          field,
+        },
+      );
     }
     for (const record of records) {
       try {
         assertProtocolArtifact(kind, record, { protocolVersion: PROTOCOL_VERSION });
       } catch (cause) {
-        throw stateError('RESULT_CONTRACT_INVALID', `Operating-model state contains an invalid ${kind} record.`, {
-          kind,
-          cause: cause.code ?? null,
-        });
+        throw stateError(
+          'RESULT_CONTRACT_INVALID',
+          `Operating-model state contains an invalid ${kind} record.`,
+          {
+            kind,
+            cause: cause.code ?? null,
+          },
+        );
       }
       if (!sameScope(record, scope) || seen.has(record[id])) {
-        throw stateError('OPERATING_SCOPE_INVALID', 'Operating-model state records must be unique and match the immutable state scope.', {
-          kind,
-          entityId: record?.[id] ?? null,
-        });
+        throw stateError(
+          'OPERATING_SCOPE_INVALID',
+          'Operating-model state records must be unique and match the immutable state scope.',
+          {
+            kind,
+            entityId: record?.[id] ?? null,
+          },
+        );
       }
       seen.add(record[id]);
     }
@@ -126,9 +163,13 @@ export function assertOperatingModelStateV2(state) {
   try {
     assertProtocolArtifact('operating-model-state', state, { protocolVersion: PROTOCOL_VERSION });
   } catch (cause) {
-    throw stateError('RESULT_CONTRACT_INVALID', 'Operating-model state is not a valid Protocol 2.0 record.', {
-      cause: cause.code ?? null,
-    });
+    throw stateError(
+      'RESULT_CONTRACT_INVALID',
+      'Operating-model state is not a valid Protocol 2.0 record.',
+      {
+        cause: cause.code ?? null,
+      },
+    );
   }
   const scope = {
     scopeId: state.scopeId,
@@ -137,16 +178,24 @@ export function assertOperatingModelStateV2(state) {
   };
   assertScope(scope);
   if (!validTimestamp(state.generatedAt)) {
-    throw stateError('STATE_TRANSITION_INVALID', 'Operating-model state requires an Event-owned generatedAt timestamp.', {
-      stateId: state.stateId,
-    });
+    throw stateError(
+      'STATE_TRANSITION_INVALID',
+      'Operating-model state requires an Event-owned generatedAt timestamp.',
+      {
+        stateId: state.stateId,
+      },
+    );
   }
   validateCollectionRecords(state, scope);
   const expectedHash = deriveOperatingModelStateRuntimeHashV2(state);
   if (state.runtimeHash !== expectedHash) {
-    throw stateError('STATE_TRANSITION_INVALID', 'Operating-model state runtimeHash does not match its immutable safe projection.', {
-      stateId: state.stateId,
-    });
+    throw stateError(
+      'STATE_TRANSITION_INVALID',
+      'Operating-model state runtimeHash does not match its immutable safe projection.',
+      {
+        stateId: state.stateId,
+      },
+    );
   }
   return freeze(clone(state));
 }
@@ -163,27 +212,51 @@ export function buildOperatingModelStateV2({
   generatedAt,
 }) {
   assertScope(scope);
-  if (typeof stateId !== 'string' || stateId.length === 0
-    || typeof snapshotId !== 'string' || snapshotId.length === 0
-    || !validTimestamp(generatedAt)
-    || !collections || typeof collections !== 'object' || Array.isArray(collections)) {
-    throw stateError('STATE_TRANSITION_INVALID', 'Runtime-owned state identity, snapshot identity, timestamp, and collections are required.');
+  if (
+    typeof stateId !== 'string' ||
+    stateId.length === 0 ||
+    typeof snapshotId !== 'string' ||
+    snapshotId.length === 0 ||
+    !validTimestamp(generatedAt) ||
+    !collections ||
+    typeof collections !== 'object' ||
+    Array.isArray(collections)
+  ) {
+    throw stateError(
+      'STATE_TRANSITION_INVALID',
+      'Runtime-owned state identity, snapshot identity, timestamp, and collections are required.',
+    );
   }
   const expectedFields = new Set(OPERATING_MODEL_STATE_COLLECTIONS_V2.map(({ field }) => field));
   const suppliedFields = Object.keys(collections);
   const unsupported = suppliedFields.filter((key) => !expectedFields.has(key));
   const missing = [...expectedFields].filter((key) => !Object.hasOwn(collections, key));
   if (unsupported.length > 0 || missing.length > 0) {
-    throw stateError('RESULT_CONTRACT_INVALID', 'Operating-model state requires exactly its seven domain-neutral collections.', {
-      unsupportedFields: unsupported.sort(),
-      missingFields: missing.sort(),
-    });
+    throw stateError(
+      'RESULT_CONTRACT_INVALID',
+      'Operating-model state requires exactly its seven domain-neutral collections.',
+      {
+        unsupportedFields: unsupported.sort(),
+        missingFields: missing.sort(),
+      },
+    );
   }
   const state = {
-    kind: 'operating-model-state', schemaVersion: '1.0.0', protocolVersion: PROTOCOL_VERSION,
-    stateId, snapshotId,
-    scopeId: scope.scopeId, domainId: scope.domainId, domainVersion: scope.domainVersion,
-    objectives: [], metrics: [], findings: [], decisions: [], actions: [], risks: [], assumptions: [],
+    kind: 'operating-model-state',
+    schemaVersion: '1.0.0',
+    protocolVersion: PROTOCOL_VERSION,
+    stateId,
+    snapshotId,
+    scopeId: scope.scopeId,
+    domainId: scope.domainId,
+    domainVersion: scope.domainVersion,
+    objectives: [],
+    metrics: [],
+    findings: [],
+    decisions: [],
+    actions: [],
+    risks: [],
+    assumptions: [],
     generatedAt,
   };
   for (const { field, id } of OPERATING_MODEL_STATE_COLLECTIONS_V2) {

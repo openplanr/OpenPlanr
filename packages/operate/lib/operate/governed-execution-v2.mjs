@@ -27,15 +27,22 @@ import {
   createOpenReferenceCapabilityAvailabilityV2,
   resolveOpenReferenceExecutorHostV2,
 } from './reference-governed-executors-v2.mjs';
-import {
-  reconcileOperatingGovernedDispatchV2,
-} from './governed-recovery-v2.mjs';
+import { reconcileOperatingGovernedDispatchV2 } from './governed-recovery-v2.mjs';
 import { buildOperatingExecutionLifecycleV2 } from './execution-verification-v2.mjs';
 
 const PROTOCOL_VERSION = '2.0.0';
 const DEFAULT_RUNTIME_VERSION = '0.44.0';
-const EXECUTE_TOOL_CAPABILITY = Object.freeze({ id: 'operate-action-execute', version: PROTOCOL_VERSION });
-const TERMINAL_OPERATION_STATES = new Set(['succeeded', 'failed', 'partial', 'uncertain', 'blocked']);
+const EXECUTE_TOOL_CAPABILITY = Object.freeze({
+  id: 'operate-action-execute',
+  version: PROTOCOL_VERSION,
+});
+const TERMINAL_OPERATION_STATES = new Set([
+  'succeeded',
+  'failed',
+  'partial',
+  'uncertain',
+  'blocked',
+]);
 
 function fail(code, message, context = {}) {
   throw new PipelineError(code, message, '', {
@@ -46,15 +53,14 @@ function fail(code, message, context = {}) {
 
 function provenTerminalError(error, context = {}) {
   if (error?.details?.context?.provenTerminal === true) return error;
-  const inherited = error?.details && typeof error.details === 'object'
-    ? structuredClone(error.details)
-    : {};
-  const inheritedContext = inherited.context && typeof inherited.context === 'object'
-    ? inherited.context
-    : {};
+  const inherited =
+    error?.details && typeof error.details === 'object' ? structuredClone(error.details) : {};
+  const inheritedContext =
+    inherited.context && typeof inherited.context === 'object' ? inherited.context : {};
   return new PipelineError(
     typeof error?.code === 'string' ? error.code : 'OPERATION_UNCERTAIN',
-    error?.message ?? 'Execution terminalization failed after the exact contained effect was proved.',
+    error?.message ??
+      'Execution terminalization failed after the exact contained effect was proved.',
     error?.fix ?? '',
     {
       ...inherited,
@@ -93,8 +99,13 @@ function exactPlainRecord(value, fields) {
 }
 
 function snapshotExactDataRecord(value, fields) {
-  if (!value || typeof value !== 'object' || Array.isArray(value)
-    || Object.getPrototypeOf(value) !== Object.prototype) return null;
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    Array.isArray(value) ||
+    Object.getPrototypeOf(value) !== Object.prototype
+  )
+    return null;
   let descriptors;
   try {
     descriptors = Object.getOwnPropertyDescriptors(value);
@@ -105,8 +116,8 @@ function snapshotExactDataRecord(value, fields) {
   if (ownKeys.some((field) => typeof field !== 'string')) return null;
   const actual = ownKeys.sort();
   const expected = [...fields].sort();
-  if (actual.length !== expected.length
-    || actual.some((field, index) => field !== expected[index])) return null;
+  if (actual.length !== expected.length || actual.some((field, index) => field !== expected[index]))
+    return null;
   const snapshot = {};
   for (const field of expected) {
     const descriptor = descriptors[field];
@@ -118,82 +129,141 @@ function snapshotExactDataRecord(value, fields) {
 
 function explicitTime(value, field) {
   const parsed = typeof value === 'string' ? Date.parse(value) : Number.NaN;
-  if (Number.isNaN(parsed)) fail('RESULT_CONTRACT_INVALID', `${field} must be an explicit RFC 3339 timestamp.`, { field });
+  if (Number.isNaN(parsed))
+    fail('RESULT_CONTRACT_INVALID', `${field} must be an explicit RFC 3339 timestamp.`, { field });
   return parsed;
 }
 
 function assertExecutionRequest(request) {
-  if (!exactPlainRecord(request, ['actionId', 'payload', 'rollbackBaseline'])
-    || typeof request.actionId !== 'string'
-    || !exactPlainRecord(request.payload, ['artifactId', 'contentHash', 'value'])
-    || (request.rollbackBaseline !== null
-      && !exactPlainRecord(request.rollbackBaseline, ['artifactId', 'contentHash', 'value']))) {
-    fail('RESULT_CONTRACT_INVALID', 'Governed execution requires one closed Action, payload, and explicit rollback-baseline request.');
+  if (
+    !exactPlainRecord(request, ['actionId', 'payload', 'rollbackBaseline']) ||
+    typeof request.actionId !== 'string' ||
+    !exactPlainRecord(request.payload, ['artifactId', 'contentHash', 'value']) ||
+    (request.rollbackBaseline !== null &&
+      !exactPlainRecord(request.rollbackBaseline, ['artifactId', 'contentHash', 'value']))
+  ) {
+    fail(
+      'RESULT_CONTRACT_INVALID',
+      'Governed execution requires one closed Action, payload, and explicit rollback-baseline request.',
+    );
   }
-  if (request.payload.contentHash !== sha256Jcs(request.payload.value)
-    || (request.rollbackBaseline !== null
-      && request.rollbackBaseline.contentHash !== sha256Jcs(request.rollbackBaseline.value))) {
-    fail('OPERATION_CONFLICT', 'Governed execution payload hashes must equal their exact closed values.', {
-      actionId: request.actionId,
-    });
+  if (
+    request.payload.contentHash !== sha256Jcs(request.payload.value) ||
+    (request.rollbackBaseline !== null &&
+      request.rollbackBaseline.contentHash !== sha256Jcs(request.rollbackBaseline.value))
+  ) {
+    fail(
+      'OPERATION_CONFLICT',
+      'Governed execution payload hashes must equal their exact closed values.',
+      {
+        actionId: request.actionId,
+      },
+    );
   }
-  if (request.rollbackBaseline !== null
-    && request.payload.artifactId === request.rollbackBaseline.artifactId) {
-    fail('OPERATION_CONFLICT', 'Payload and rollback baseline must be distinct immutable Artifact identities.', {
-      actionId: request.actionId,
-    });
+  if (
+    request.rollbackBaseline !== null &&
+    request.payload.artifactId === request.rollbackBaseline.artifactId
+  ) {
+    fail(
+      'OPERATION_CONFLICT',
+      'Payload and rollback baseline must be distinct immutable Artifact identities.',
+      {
+        actionId: request.actionId,
+      },
+    );
   }
   return clone(request);
 }
 
 const DRAFT_FIELDS = Object.freeze([
-  'assignmentId', 'submissionId', 'operationId', 'grantId', 'resultId', 'resultArtifactId',
-  'claimId', 'preparedAt', 'completedAt', 'grantExpiresAt', 'availabilityExpiresAt',
-  'correlationId', 'eventIds', 'uncertainty',
+  'assignmentId',
+  'submissionId',
+  'operationId',
+  'grantId',
+  'resultId',
+  'resultArtifactId',
+  'claimId',
+  'preparedAt',
+  'completedAt',
+  'grantExpiresAt',
+  'availabilityExpiresAt',
+  'correlationId',
+  'eventIds',
+  'uncertainty',
 ]);
 
 const EVENT_ID_FIELDS = Object.freeze([
-  'assignmentCreated', 'assignmentClaimed', 'assignmentStarted', 'availabilityRecorded',
-  'capabilityGranted', 'intentRecorded', 'submitted', 'artifactCreated', 'validated',
+  'assignmentCreated',
+  'assignmentClaimed',
+  'assignmentStarted',
+  'availabilityRecorded',
+  'capabilityGranted',
+  'intentRecorded',
+  'submitted',
+  'artifactCreated',
+  'validated',
   'resultRecorded',
 ]);
 
 const TERMINAL_EVENT_ID_FIELDS = Object.freeze([
-  'submitted', 'artifactCreated', 'validated', 'resultRecorded',
+  'submitted',
+  'artifactCreated',
+  'validated',
+  'resultRecorded',
 ]);
 
 const UNCERTAINTY_FIELDS = Object.freeze([
-  'resultId', 'resultArtifactId', 'submissionId', 'eventIds',
+  'resultId',
+  'resultArtifactId',
+  'submissionId',
+  'eventIds',
 ]);
 
 function assertExecutionDraft(draft) {
-  if (!exactPlainRecord(draft, DRAFT_FIELDS)
-    || !exactPlainRecord(draft.eventIds, EVENT_ID_FIELDS)
-    || !exactPlainRecord(draft.uncertainty, UNCERTAINTY_FIELDS)
-    || !exactPlainRecord(draft.uncertainty.eventIds, TERMINAL_EVENT_ID_FIELDS)
-    || DRAFT_FIELDS.filter((field) => !['eventIds', 'uncertainty'].includes(field))
-      .some((field) => typeof draft[field] !== 'string' || draft[field].length === 0)
-    || EVENT_ID_FIELDS.some((field) => typeof draft.eventIds[field] !== 'string' || draft.eventIds[field].length === 0)
-    || UNCERTAINTY_FIELDS.filter((field) => field !== 'eventIds')
-      .some((field) => typeof draft.uncertainty[field] !== 'string' || draft.uncertainty[field].length === 0)
-    || TERMINAL_EVENT_ID_FIELDS.some((field) => (
-      typeof draft.uncertainty.eventIds[field] !== 'string'
-      || draft.uncertainty.eventIds[field].length === 0
-    ))
-    || new Set([
-      ...Object.values(draft.eventIds),
-      ...Object.values(draft.uncertainty.eventIds),
-    ]).size !== EVENT_ID_FIELDS.length + TERMINAL_EVENT_ID_FIELDS.length
-    || draft.resultId === draft.uncertainty.resultId
-    || draft.resultArtifactId === draft.uncertainty.resultArtifactId
-    || draft.submissionId === draft.uncertainty.submissionId) {
-    fail('RESULT_CONTRACT_INVALID', 'Governed execution requires one complete runtime-owned identity and Event draft.');
+  if (
+    !exactPlainRecord(draft, DRAFT_FIELDS) ||
+    !exactPlainRecord(draft.eventIds, EVENT_ID_FIELDS) ||
+    !exactPlainRecord(draft.uncertainty, UNCERTAINTY_FIELDS) ||
+    !exactPlainRecord(draft.uncertainty.eventIds, TERMINAL_EVENT_ID_FIELDS) ||
+    DRAFT_FIELDS.filter((field) => !['eventIds', 'uncertainty'].includes(field)).some(
+      (field) => typeof draft[field] !== 'string' || draft[field].length === 0,
+    ) ||
+    EVENT_ID_FIELDS.some(
+      (field) => typeof draft.eventIds[field] !== 'string' || draft.eventIds[field].length === 0,
+    ) ||
+    UNCERTAINTY_FIELDS.filter((field) => field !== 'eventIds').some(
+      (field) =>
+        typeof draft.uncertainty[field] !== 'string' || draft.uncertainty[field].length === 0,
+    ) ||
+    TERMINAL_EVENT_ID_FIELDS.some(
+      (field) =>
+        typeof draft.uncertainty.eventIds[field] !== 'string' ||
+        draft.uncertainty.eventIds[field].length === 0,
+    ) ||
+    new Set([...Object.values(draft.eventIds), ...Object.values(draft.uncertainty.eventIds)])
+      .size !==
+      EVENT_ID_FIELDS.length + TERMINAL_EVENT_ID_FIELDS.length ||
+    draft.resultId === draft.uncertainty.resultId ||
+    draft.resultArtifactId === draft.uncertainty.resultArtifactId ||
+    draft.submissionId === draft.uncertainty.submissionId
+  ) {
+    fail(
+      'RESULT_CONTRACT_INVALID',
+      'Governed execution requires one complete runtime-owned identity and Event draft.',
+    );
   }
   const preparedAt = explicitTime(draft.preparedAt, 'draft.preparedAt');
   const completedAt = explicitTime(draft.completedAt, 'draft.completedAt');
   const grantExpiresAt = explicitTime(draft.grantExpiresAt, 'draft.grantExpiresAt');
-  const availabilityExpiresAt = explicitTime(draft.availabilityExpiresAt, 'draft.availabilityExpiresAt');
-  if (completedAt < preparedAt || grantExpiresAt <= preparedAt || availabilityExpiresAt <= preparedAt) {
+  const availabilityExpiresAt = explicitTime(
+    draft.availabilityExpiresAt,
+    'draft.availabilityExpiresAt',
+  );
+  if (
+    completedAt < preparedAt ||
+    grantExpiresAt <= preparedAt ||
+    availabilityExpiresAt <= preparedAt
+  ) {
     fail('RESULT_CONTRACT_INVALID', 'Execution completion and authority expiries must be causal.', {
       preparedAt: draft.preparedAt,
       completedAt: draft.completedAt,
@@ -212,17 +282,22 @@ function sameEventHead(left, right) {
 
 async function commitCheckpoint(checkpointStore, expectedState, nextState, context) {
   if (typeof checkpointStore?.compareAndSwap !== 'function') {
-    fail('RESULT_CONTRACT_INVALID', 'Governed execution requires a durable checkpoint store with compareAndSwap.');
+    fail(
+      'RESULT_CONTRACT_INVALID',
+      'Governed execution requires a durable checkpoint store with compareAndSwap.',
+    );
   }
   let response;
   try {
-    response = await checkpointStore.compareAndSwap(freeze({
-      expectedEventHead: clone(expectedState.eventHead),
-      nextState: clone(nextState),
-      phase: context.phase,
-      operationId: context.operationId,
-      requestFingerprint: context.requestFingerprint,
-    }));
+    response = await checkpointStore.compareAndSwap(
+      freeze({
+        expectedEventHead: clone(expectedState.eventHead),
+        nextState: clone(nextState),
+        phase: context.phase,
+        operationId: context.operationId,
+        requestFingerprint: context.requestFingerprint,
+      }),
+    );
   } catch (error) {
     fail('OPERATION_UNCERTAIN', 'Durable checkpoint compare-and-swap failed.', {
       operationId: context.operationId,
@@ -233,31 +308,46 @@ async function commitCheckpoint(checkpointStore, expectedState, nextState, conte
   }
   const receipt = snapshotExactDataRecord(response, ['committed', 'state']);
   if (receipt === null || typeof receipt.committed !== 'boolean') {
-    fail('RESULT_CONTRACT_INVALID', 'Checkpoint store returned an invalid compare-and-swap receipt.', {
-      operationId: context.operationId,
-      phase: context.phase,
-    });
+    fail(
+      'RESULT_CONTRACT_INVALID',
+      'Checkpoint store returned an invalid compare-and-swap receipt.',
+      {
+        operationId: context.operationId,
+        phase: context.phase,
+      },
+    );
   }
   const state = reduceOperatingRuntimeEventsV2([], { initialState: receipt.state });
   if (receipt.committed) {
     if (sha256Jcs(state) !== sha256Jcs(nextState)) {
-      fail('CONCURRENT_MODIFICATION', 'Checkpoint store committed bytes other than the proposed runtime state.', {
-        operationId: context.operationId,
-        phase: context.phase,
-      });
+      fail(
+        'CONCURRENT_MODIFICATION',
+        'Checkpoint store committed bytes other than the proposed runtime state.',
+        {
+          operationId: context.operationId,
+          phase: context.phase,
+        },
+      );
     }
   } else if (sameEventHead(state.eventHead, expectedState.eventHead)) {
-    fail('CONCURRENT_MODIFICATION', 'Checkpoint store rejected compare-and-swap without returning a newer durable state.', {
-      operationId: context.operationId,
-      phase: context.phase,
-    });
+    fail(
+      'CONCURRENT_MODIFICATION',
+      'Checkpoint store rejected compare-and-swap without returning a newer durable state.',
+      {
+        operationId: context.operationId,
+        phase: context.phase,
+      },
+    );
   }
   return { committed: receipt.committed, state };
 }
 
 async function readCheckpoint(checkpointStore, currentState) {
   if (typeof checkpointStore?.readSnapshot !== 'function') {
-    fail('RESULT_CONTRACT_INVALID', 'Governed execution requires a durable read-only checkpoint snapshot primitive.');
+    fail(
+      'RESULT_CONTRACT_INVALID',
+      'Governed execution requires a durable read-only checkpoint snapshot primitive.',
+    );
   }
   let snapshot;
   try {
@@ -270,27 +360,37 @@ async function readCheckpoint(checkpointStore, currentState) {
   }
   const durable = reduceOperatingRuntimeEventsV2([], { initialState: snapshot });
   const sameHead = sameEventHead(durable.eventHead, currentState.eventHead);
-  const currentHeadInDurable = currentState.eventHead.sequence === 0
-    || durable.eventReplayIndex.some(({ sequence, eventHash }) => (
-      sequence === currentState.eventHead.sequence && eventHash === currentState.eventHead.hash
-    ));
-  if (durable.eventHead.sequence < currentState.eventHead.sequence
-    || (!sameHead && !currentHeadInDurable)
-    || (sameHead && sha256Jcs(durable) !== sha256Jcs(currentState))) {
-    fail('CONCURRENT_MODIFICATION', 'Durable checkpoint refresh returned a stale or forked runtime history.', {
-      currentSequence: currentState.eventHead.sequence,
-      durableSequence: durable.eventHead.sequence,
-    });
+  const currentHeadInDurable =
+    currentState.eventHead.sequence === 0 ||
+    durable.eventReplayIndex.some(
+      ({ sequence, eventHash }) =>
+        sequence === currentState.eventHead.sequence && eventHash === currentState.eventHead.hash,
+    );
+  if (
+    durable.eventHead.sequence < currentState.eventHead.sequence ||
+    (!sameHead && !currentHeadInDurable) ||
+    (sameHead && sha256Jcs(durable) !== sha256Jcs(currentState))
+  ) {
+    fail(
+      'CONCURRENT_MODIFICATION',
+      'Durable checkpoint refresh returned a stale or forked runtime history.',
+      {
+        currentSequence: currentState.eventHead.sequence,
+        durableSequence: durable.eventHead.sequence,
+      },
+    );
   }
   return durable;
 }
 
 async function hasExactArtifactCustody(artifactStore, artifact, expectedBytes) {
   try {
-    const value = await Promise.resolve(artifactStore.readRaw({
-      artifactId: artifact.artifactId,
-      rawHash: artifact.rawHash,
-    }));
+    const value = await Promise.resolve(
+      artifactStore.readRaw({
+        artifactId: artifact.artifactId,
+        rawHash: artifact.rawHash,
+      }),
+    );
     if (!(Buffer.isBuffer(value) || value instanceof Uint8Array)) return false;
     return Buffer.from(value).equals(Buffer.from(expectedBytes));
   } catch {
@@ -311,7 +411,9 @@ async function stageAndProveArtifactCustody(artifactStore, artifact, rawBytes) {
 
 function runtimeHead(state) {
   if (state.eventHead.sequence === 0) return { previousEvent: null, causationId: null };
-  const entry = state.eventReplayIndex.find(({ sequence }) => sequence === state.eventHead.sequence);
+  const entry = state.eventReplayIndex.find(
+    ({ sequence }) => sequence === state.eventHead.sequence,
+  );
   if (!entry || entry.eventHash !== state.eventHead.hash) {
     fail('STATE_TRANSITION_INVALID', 'Runtime checkpoint Event head is incomplete.');
   }
@@ -323,9 +425,12 @@ function runtimeHead(state) {
 
 function runtimeEvent(state, input) {
   const head = runtimeHead(state);
-  return createOperatingRuntimeEventV2({ ...input, causationId: head.causationId }, {
-    previousEvent: head.previousEvent,
-  });
+  return createOperatingRuntimeEventV2(
+    { ...input, causationId: head.causationId },
+    {
+      previousEvent: head.previousEvent,
+    },
+  );
 }
 
 function exactAuthority(state, action, now) {
@@ -335,37 +440,53 @@ function exactAuthority(state, action, now) {
     configuredPolicies: state.actionPolicies,
     at: now,
   });
-  if (!evaluation) fail('POLICY_EVALUATION_REJECTED', 'Approved Action has no current exact policy evaluation.', {
-    actionId: action.actionId,
-  });
-  const actionPolicy = state.actionPolicies.find((policy) => (
-    policy.policyId === evaluation.policy.policyId
-    && policy.policyVersion === evaluation.policy.policyVersion
-    && policy.policyHash === evaluation.policy.policyHash
-  ));
-  const requirements = evaluation.approvalRequirementIds.map((requirementId) => (
-    state.approvalRequirements.find((requirement) => requirement.requirementId === requirementId)
-  ));
-  const approvals = state.approvalRecords.filter((approval) => (
-    approval.evaluationId === evaluation.evaluationId
-  ));
-  if (!actionPolicy || requirements.some((requirement) => !requirement)) {
-    fail('POLICY_EVALUATION_REJECTED', 'Current policy or approval requirement history is incomplete.', {
+  if (!evaluation)
+    fail('POLICY_EVALUATION_REJECTED', 'Approved Action has no current exact policy evaluation.', {
       actionId: action.actionId,
-      evaluationId: evaluation.evaluationId,
     });
+  const actionPolicy = state.actionPolicies.find(
+    (policy) =>
+      policy.policyId === evaluation.policy.policyId &&
+      policy.policyVersion === evaluation.policy.policyVersion &&
+      policy.policyHash === evaluation.policy.policyHash,
+  );
+  const requirements = evaluation.approvalRequirementIds.map((requirementId) =>
+    state.approvalRequirements.find((requirement) => requirement.requirementId === requirementId),
+  );
+  const approvals = state.approvalRecords.filter(
+    (approval) => approval.evaluationId === evaluation.evaluationId,
+  );
+  if (!actionPolicy || requirements.some((requirement) => !requirement)) {
+    fail(
+      'POLICY_EVALUATION_REJECTED',
+      'Current policy or approval requirement history is incomplete.',
+      {
+        actionId: action.actionId,
+        evaluationId: evaluation.evaluationId,
+      },
+    );
   }
   let disposition;
   try {
-    disposition = evaluateOperatingApprovalSetV2({ evaluation, action, requirements, approvals, now });
+    disposition = evaluateOperatingApprovalSetV2({
+      evaluation,
+      action,
+      requirements,
+      approvals,
+      now,
+    });
   } catch (error) {
     fail(error.code ?? 'APPROVAL_INVALID', error.message, error.details?.context ?? {});
   }
   if (!disposition.complete || disposition.disposition !== 'approved') {
-    fail('APPROVAL_REQUIRED', 'Only one current exactly approved Action can become an execution operation.', {
-      actionId: action.actionId,
-      reasonCode: disposition.reasonCode,
-    });
+    fail(
+      'APPROVAL_REQUIRED',
+      'Only one current exactly approved Action can become an execution operation.',
+      {
+        actionId: action.actionId,
+        reasonCode: disposition.reasonCode,
+      },
+    );
   }
   return { evaluation, actionPolicy, requirements, approvals, disposition };
 }
@@ -432,12 +553,14 @@ function terminalReservationForStatus(draft, status) {
     resultId: identity.resultId,
     resultArtifactId: identity.resultArtifactId,
     submissionId: identity.submissionId,
-    eventIds: success ? {
-      submitted: draft.eventIds.submitted,
-      artifactCreated: draft.eventIds.artifactCreated,
-      validated: draft.eventIds.validated,
-      resultRecorded: draft.eventIds.resultRecorded,
-    } : clone(identity.eventIds),
+    eventIds: success
+      ? {
+          submitted: draft.eventIds.submitted,
+          artifactCreated: draft.eventIds.artifactCreated,
+          validated: draft.eventIds.validated,
+          resultRecorded: draft.eventIds.resultRecorded,
+        }
+      : clone(identity.eventIds),
     completedAt: draft.completedAt,
     correlationId: draft.correlationId,
   };
@@ -450,98 +573,134 @@ function assertTerminalReservationAvailable(state, draft) {
   const artifactIds = [reservation.resultArtifactId, uncertainty.resultArtifactId];
   const submissionIds = [reservation.submissionId, uncertainty.submissionId];
   const eventIds = [...Object.values(reservation.eventIds), ...Object.values(uncertainty.eventIds)];
-  if (new Set(resultIds).size !== resultIds.length
-    || new Set(artifactIds).size !== artifactIds.length
-    || new Set(submissionIds).size !== submissionIds.length
-    || new Set(eventIds).size !== eventIds.length
-    || state.executionResults.some(({ resultId }) => resultIds.includes(resultId))
-    || state.artifacts.some(({ artifactId }) => artifactIds.includes(artifactId))
-    || state.submissions.some(({ submissionId }) => submissionIds.includes(submissionId))
-    || eventIds.some((eventId) => state.eventReplayIndex.some((entry) => entry.eventId === eventId))) {
-    fail('OPERATION_CONFLICT', 'Governed execution terminal identities must be reserved before contained dispatch.', {
-      operationId: draft.operationId,
-      resultId: reservation.resultId,
-      resultArtifactId: reservation.resultArtifactId,
-      uncertaintyResultId: uncertainty.resultId,
-      uncertaintyResultArtifactId: uncertainty.resultArtifactId,
-    });
+  if (
+    new Set(resultIds).size !== resultIds.length ||
+    new Set(artifactIds).size !== artifactIds.length ||
+    new Set(submissionIds).size !== submissionIds.length ||
+    new Set(eventIds).size !== eventIds.length ||
+    state.executionResults.some(({ resultId }) => resultIds.includes(resultId)) ||
+    state.artifacts.some(({ artifactId }) => artifactIds.includes(artifactId)) ||
+    state.submissions.some(({ submissionId }) => submissionIds.includes(submissionId)) ||
+    eventIds.some((eventId) => state.eventReplayIndex.some((entry) => entry.eventId === eventId))
+  ) {
+    fail(
+      'OPERATION_CONFLICT',
+      'Governed execution terminal identities must be reserved before contained dispatch.',
+      {
+        operationId: draft.operationId,
+        resultId: reservation.resultId,
+        resultArtifactId: reservation.resultArtifactId,
+        uncertaintyResultId: uncertainty.resultId,
+        uncertaintyResultArtifactId: uncertainty.resultArtifactId,
+      },
+    );
   }
   return reservation;
 }
 
 function assertReplayJournalIdentity(state, operation, draft) {
-  const assignment = state.assignments.find(({ assignmentId }) => assignmentId === operation.assignmentId);
+  const assignment = state.assignments.find(
+    ({ assignmentId }) => assignmentId === operation.assignmentId,
+  );
   const grant = state.capabilityGrants.find(({ grantId }) => grantId === operation.grantId);
   const action = state.actions.find(({ actionId }) => actionId === operation.action.actionId);
-  const evaluation = state.policyEvaluations.find(({ evaluationId }) => evaluationId === operation.evaluationId);
-  const requirements = evaluation?.approvalRequirementIds.map((requirementId) => (
-    state.approvalRequirements.find((requirement) => requirement.requirementId === requirementId)
-  )) ?? [];
+  const evaluation = state.policyEvaluations.find(
+    ({ evaluationId }) => evaluationId === operation.evaluationId,
+  );
+  const requirements =
+    evaluation?.approvalRequirementIds.map((requirementId) =>
+      state.approvalRequirements.find((requirement) => requirement.requirementId === requirementId),
+    ) ?? [];
   const approvals = evaluation
     ? state.approvalRecords.filter(({ evaluationId }) => evaluationId === evaluation.evaluationId)
     : [];
-  const submissions = state.submissions.filter(({ assignmentId }) => assignmentId === operation.assignmentId);
-  const availability = state.capabilityAvailability.filter((candidate) => (
-    candidate.checkedAt === operation.createdAt
-    && candidate.capability.id === operation.capability.id
-    && candidate.capability.version === operation.capability.version
-    && candidate.target.kind === operation.target.kind
-    && candidate.target.id === operation.target.id
-    && candidate.target.revision === operation.target.revision
-  ));
-  const exactIntent = state.eventReplayIndex.find(({ eventId }) => eventId === operation.intentEventId);
-  const replayEntry = state.operationReplayIndex.find(({ operationId }) => operationId === operation.operationId);
+  const submissions = state.submissions.filter(
+    ({ assignmentId }) => assignmentId === operation.assignmentId,
+  );
+  const availability = state.capabilityAvailability.filter(
+    (candidate) =>
+      candidate.checkedAt === operation.createdAt &&
+      candidate.capability.id === operation.capability.id &&
+      candidate.capability.version === operation.capability.version &&
+      candidate.target.kind === operation.target.kind &&
+      candidate.target.id === operation.target.id &&
+      candidate.target.revision === operation.target.revision,
+  );
+  const exactIntent = state.eventReplayIndex.find(
+    ({ eventId }) => eventId === operation.intentEventId,
+  );
+  const replayEntry = state.operationReplayIndex.find(
+    ({ operationId }) => operationId === operation.operationId,
+  );
   const reservedEventIds = replayEntry ? replayEntry.reservedTerminalEventIds : null;
-  const reservedUncertaintyEventIds = replayEntry ? replayEntry.reservedUncertaintyTerminalEventIds : null;
-  const successSubmission = submissions.find(({ submissionId }) => submissionId === draft.submissionId);
-  const uncertaintySubmission = submissions.find(({ submissionId }) => (
-    submissionId === draft.uncertainty.submissionId
-  ));
-  if (!assignment || !grant || submissions.length !== 2 || availability.length !== 1 || !exactIntent
-    || !action || !evaluation || !replayEntry
-    || draft.operationId !== operation.operationId
-    || draft.assignmentId !== operation.assignmentId
-    || draft.grantId !== operation.grantId
-    || draft.preparedAt !== operation.createdAt
-    || exactIntent.requestHash !== operation.requestFingerprint
-    || exactIntent.type !== 'operation.intent-recorded'
-    || exactIntent.entityId !== operation.operationId
-    || exactIntent.cycleId !== assignment.cycleId
-    || exactIntent.timestamp !== operation.createdAt
-    || exactIntent.correlationId !== draft.correlationId
-    || replayEntry.requestFingerprint !== operation.requestFingerprint
-    || replayEntry.reservedResultId !== draft.resultId
-    || replayEntry.reservedResultArtifactId !== draft.resultArtifactId
-    || replayEntry.reservedSubmissionId !== draft.submissionId
-    || replayEntry.reservedUncertaintyResultId !== draft.uncertainty.resultId
-    || replayEntry.reservedUncertaintyResultArtifactId !== draft.uncertainty.resultArtifactId
-    || replayEntry.reservedUncertaintySubmissionId !== draft.uncertainty.submissionId
-    || replayEntry.reservedCompletedAt !== draft.completedAt
-    || replayEntry.reservedCorrelationId !== draft.correlationId
-    || sha256Jcs(reservedEventIds) !== sha256Jcs(terminalReservation(draft).eventIds)
-    || sha256Jcs(reservedUncertaintyEventIds) !== sha256Jcs(draft.uncertainty.eventIds)
-    || assignment.claim?.claimId !== draft.claimId
-    || !successSubmission || !uncertaintySubmission
-    || successSubmission.issuedAt !== operation.createdAt
-    || uncertaintySubmission.issuedAt !== operation.createdAt
-    || grant.issuedAt !== draft.preparedAt
-    || grant.expiresAt !== draft.grantExpiresAt
-    || availability[0].checkedAt !== draft.preparedAt
-    || availability[0].expiresAt !== draft.availabilityExpiresAt) {
-    fail('OPERATION_CONFLICT', 'Governed operation replay requires the exact persisted Assignment, grant, availability, intent, and submission identities.', {
-      operationId: operation.operationId,
-    });
+  const reservedUncertaintyEventIds = replayEntry
+    ? replayEntry.reservedUncertaintyTerminalEventIds
+    : null;
+  const successSubmission = submissions.find(
+    ({ submissionId }) => submissionId === draft.submissionId,
+  );
+  const uncertaintySubmission = submissions.find(
+    ({ submissionId }) => submissionId === draft.uncertainty.submissionId,
+  );
+  if (
+    !assignment ||
+    !grant ||
+    submissions.length !== 2 ||
+    availability.length !== 1 ||
+    !exactIntent ||
+    !action ||
+    !evaluation ||
+    !replayEntry ||
+    draft.operationId !== operation.operationId ||
+    draft.assignmentId !== operation.assignmentId ||
+    draft.grantId !== operation.grantId ||
+    draft.preparedAt !== operation.createdAt ||
+    exactIntent.requestHash !== operation.requestFingerprint ||
+    exactIntent.type !== 'operation.intent-recorded' ||
+    exactIntent.entityId !== operation.operationId ||
+    exactIntent.cycleId !== assignment.cycleId ||
+    exactIntent.timestamp !== operation.createdAt ||
+    exactIntent.correlationId !== draft.correlationId ||
+    replayEntry.requestFingerprint !== operation.requestFingerprint ||
+    replayEntry.reservedResultId !== draft.resultId ||
+    replayEntry.reservedResultArtifactId !== draft.resultArtifactId ||
+    replayEntry.reservedSubmissionId !== draft.submissionId ||
+    replayEntry.reservedUncertaintyResultId !== draft.uncertainty.resultId ||
+    replayEntry.reservedUncertaintyResultArtifactId !== draft.uncertainty.resultArtifactId ||
+    replayEntry.reservedUncertaintySubmissionId !== draft.uncertainty.submissionId ||
+    replayEntry.reservedCompletedAt !== draft.completedAt ||
+    replayEntry.reservedCorrelationId !== draft.correlationId ||
+    sha256Jcs(reservedEventIds) !== sha256Jcs(terminalReservation(draft).eventIds) ||
+    sha256Jcs(reservedUncertaintyEventIds) !== sha256Jcs(draft.uncertainty.eventIds) ||
+    assignment.claim?.claimId !== draft.claimId ||
+    !successSubmission ||
+    !uncertaintySubmission ||
+    successSubmission.issuedAt !== operation.createdAt ||
+    uncertaintySubmission.issuedAt !== operation.createdAt ||
+    grant.issuedAt !== draft.preparedAt ||
+    grant.expiresAt !== draft.grantExpiresAt ||
+    availability[0].checkedAt !== draft.preparedAt ||
+    availability[0].expiresAt !== draft.availabilityExpiresAt
+  ) {
+    fail(
+      'OPERATION_CONFLICT',
+      'Governed operation replay requires the exact persisted Assignment, grant, availability, intent, and submission identities.',
+      {
+        operationId: operation.operationId,
+      },
+    );
   }
-  const historicalOperation = TERMINAL_OPERATION_STATES.has(operation.state) ? {
-    ...clone(operation),
-    state: 'dispatching',
-    resultId: null,
-    updatedAt: operation.createdAt,
-    operationHash: replayEntry.operationHash,
-  } : operation;
-  const authorityAction = action.state === 'approved'
-    ? action
-    : { ...clone(action), state: 'approved' };
+  const historicalOperation = TERMINAL_OPERATION_STATES.has(operation.state)
+    ? {
+        ...clone(operation),
+        state: 'dispatching',
+        resultId: null,
+        updatedAt: operation.createdAt,
+        operationHash: replayEntry.operationHash,
+      }
+    : operation;
+  const authorityAction =
+    action.state === 'approved' ? action : { ...clone(action), state: 'approved' };
   assertOperatingExecuteOperationV2({
     operation: historicalOperation,
     action: authorityAction,
@@ -558,10 +717,13 @@ function assertReplayJournalIdentity(state, operation, draft) {
         artifactId: replayEntry.payloadArtifactId,
         contentHash: replayEntry.payloadHash,
       },
-      rollbackBaseline: replayEntry.baselineArtifactId === null ? null : {
-        artifactId: replayEntry.baselineArtifactId,
-        contentHash: replayEntry.baselineHash,
-      },
+      rollbackBaseline:
+        replayEntry.baselineArtifactId === null
+          ? null
+          : {
+              artifactId: replayEntry.baselineArtifactId,
+              contentHash: replayEntry.baselineHash,
+            },
     },
     timestamp: operation.createdAt,
   });
@@ -569,55 +731,80 @@ function assertReplayJournalIdentity(state, operation, draft) {
 }
 
 function replayResult(state, request, draft, { allowIncomplete = false } = {}) {
-  const operation = state.governedOperations.find(({ operationId }) => operationId === draft.operationId);
+  const operation = state.governedOperations.find(
+    ({ operationId }) => operationId === draft.operationId,
+  );
   if (!operation) return null;
   const expectedFingerprint = deriveContainedExecutorRequestFingerprintV2({
     operation,
     payload: request.payload,
     rollbackBaseline: request.rollbackBaseline,
   });
-  if (expectedFingerprint !== operation.requestFingerprint || operation.action.actionId !== request.actionId) {
-    fail('OPERATION_CONFLICT', 'Governed operation identity was reused with a divergent Action or request fingerprint.', {
-      operationId: operation.operationId,
-    });
+  if (
+    expectedFingerprint !== operation.requestFingerprint ||
+    operation.action.actionId !== request.actionId
+  ) {
+    fail(
+      'OPERATION_CONFLICT',
+      'Governed operation identity was reused with a divergent Action or request fingerprint.',
+      {
+        operationId: operation.operationId,
+      },
+    );
   }
   const terminal = TERMINAL_OPERATION_STATES.has(operation.state) && operation.resultId !== null;
   const journal = assertReplayJournalIdentity(state, operation, draft);
   if (!terminal) {
     if (allowIncomplete) return { incomplete: true, operation, journal };
-    fail('OPERATION_UNCERTAIN', 'Governed operation has durable dispatch ownership but no terminal result; blind redispatch is forbidden.', {
-      operationId: operation.operationId,
-      state: operation.state,
-      recoveryDisposition: 'reconcile-before-retry',
-    });
+    fail(
+      'OPERATION_UNCERTAIN',
+      'Governed operation has durable dispatch ownership but no terminal result; blind redispatch is forbidden.',
+      {
+        operationId: operation.operationId,
+        state: operation.state,
+        recoveryDisposition: 'reconcile-before-retry',
+      },
+    );
   }
   const result = state.executionResults.find(({ resultId }) => resultId === operation.resultId);
   const artifact = result
     ? state.artifacts.find(({ artifactId }) => artifactId === result.resultArtifactId)
     : null;
   const reservation = result ? terminalReservationForStatus(draft, result.status) : null;
-  const terminalSubmission = result && ['succeeded', 'partial'].includes(result.status)
-    ? journal.successSubmission
-    : journal.uncertaintySubmission;
-  const expectedResultEventIds = result ? [
-    draft.eventIds.intentRecorded,
-    reservation.eventIds.submitted,
-    reservation.eventIds.artifactCreated,
-    reservation.eventIds.validated,
-    reservation.eventIds.resultRecorded,
-  ] : [];
-  if (!result || !artifact || artifact.canonicalHash !== sha256Jcs(result)
-    || reservation.resultId !== result.resultId
-    || reservation.resultArtifactId !== result.resultArtifactId
-    || draft.completedAt !== result.completedAt
-    || journal.replayEntry.terminalResultId !== result.resultId
-    || terminalSubmission.artifactId !== result.resultArtifactId
-    || sha256Jcs(terminalSubmission.acceptanceEventIds) !== sha256Jcs(expectedResultEventIds.slice(1, 4))
-    || sha256Jcs(result.eventIds) !== sha256Jcs(expectedResultEventIds)) {
-    fail('RESULT_CONTRACT_INVALID', 'Terminal governed operation replay is missing its exact accepted result Artifact.', {
-      operationId: operation.operationId,
-      resultId: operation.resultId,
-    });
+  const terminalSubmission =
+    result && ['succeeded', 'partial'].includes(result.status)
+      ? journal.successSubmission
+      : journal.uncertaintySubmission;
+  const expectedResultEventIds = result
+    ? [
+        draft.eventIds.intentRecorded,
+        reservation.eventIds.submitted,
+        reservation.eventIds.artifactCreated,
+        reservation.eventIds.validated,
+        reservation.eventIds.resultRecorded,
+      ]
+    : [];
+  if (
+    !result ||
+    !artifact ||
+    artifact.canonicalHash !== sha256Jcs(result) ||
+    reservation.resultId !== result.resultId ||
+    reservation.resultArtifactId !== result.resultArtifactId ||
+    draft.completedAt !== result.completedAt ||
+    journal.replayEntry.terminalResultId !== result.resultId ||
+    terminalSubmission.artifactId !== result.resultArtifactId ||
+    sha256Jcs(terminalSubmission.acceptanceEventIds) !==
+      sha256Jcs(expectedResultEventIds.slice(1, 4)) ||
+    sha256Jcs(result.eventIds) !== sha256Jcs(expectedResultEventIds)
+  ) {
+    fail(
+      'RESULT_CONTRACT_INVALID',
+      'Terminal governed operation replay is missing its exact accepted result Artifact.',
+      {
+        operationId: operation.operationId,
+        resultId: operation.resultId,
+      },
+    );
   }
   return freeze({
     state: clone(state),
@@ -625,7 +812,10 @@ function replayResult(state, request, draft, { allowIncomplete = false } = {}) {
     result: clone(result),
     artifact: clone(artifact),
     events: [],
-    response: clone(state.submissionReplayIndex.find(({ artifactId }) => artifactId === artifact.artifactId)?.responseData),
+    response: clone(
+      state.submissionReplayIndex.find(({ artifactId }) => artifactId === artifact.artifactId)
+        ?.responseData,
+    ),
     receipt: null,
     replayed: true,
     dispatchCount: 0,
@@ -636,9 +826,13 @@ function replayResult(state, request, draft, { allowIncomplete = false } = {}) {
 function buildGrant({ action, authority, availability, draft, runtimeActorId }) {
   const scopeHashes = [...new Set(authority.requirements.map(({ scopeHash }) => scopeHash))];
   if (authority.evaluation.outcome !== 'automatic' && scopeHashes.length !== 1) {
-    fail('CAPABILITY_GRANT_INVALID', 'Approved authority must resolve to one exact grant scope hash.', {
-      evaluationId: authority.evaluation.evaluationId,
-    });
+    fail(
+      'CAPABILITY_GRANT_INVALID',
+      'Approved authority must resolve to one exact grant scope hash.',
+      {
+        evaluationId: authority.evaluation.evaluationId,
+      },
+    );
   }
   const authorityExpiries = [
     availability.expiresAt,
@@ -647,9 +841,13 @@ function buildGrant({ action, authority, availability, draft, runtimeActorId }) 
   ].map((value) => explicitTime(value, 'authority.expiresAt'));
   const grantExpiresAt = explicitTime(draft.grantExpiresAt, 'draft.grantExpiresAt');
   if (authorityExpiries.some((expiry) => grantExpiresAt > expiry)) {
-    fail('CAPABILITY_GRANT_INVALID', 'The one-use runtime grant cannot outlive capability or approval authority.', {
-      actionId: action.actionId,
-    });
+    fail(
+      'CAPABILITY_GRANT_INVALID',
+      'The one-use runtime grant cannot outlive capability or approval authority.',
+      {
+        actionId: action.actionId,
+      },
+    );
   }
   const grant = {
     kind: 'operating-capability-grant',
@@ -670,20 +868,33 @@ function buildGrant({ action, authority, availability, draft, runtimeActorId }) 
     expiresAt: draft.grantExpiresAt,
     consumedAt: null,
     revokedAt: null,
-    scopeHash: scopeHashes[0] ?? sha256Jcs({
-      action: actionIdentity(action),
-      evaluationId: authority.evaluation.evaluationId,
-      scopeId: action.scopeId,
-      domainId: action.domainId,
-      domainVersion: action.domainVersion,
-    }),
+    scopeHash:
+      scopeHashes[0] ??
+      sha256Jcs({
+        action: actionIdentity(action),
+        evaluationId: authority.evaluation.evaluationId,
+        scopeId: action.scopeId,
+        domainId: action.domainId,
+        domainVersion: action.domainVersion,
+      }),
   };
   grant.grantHash = sha256Jcs(grant);
-  assertProtocolArtifact('operating-capability-grant', grant, { protocolVersion: PROTOCOL_VERSION });
+  assertProtocolArtifact('operating-capability-grant', grant, {
+    protocolVersion: PROTOCOL_VERSION,
+  });
   return grant;
 }
 
-function buildOperation({ action, authority, assignment, grant, selection, binding, request, draft }) {
+function buildOperation({
+  action,
+  authority,
+  assignment,
+  grant,
+  selection,
+  binding,
+  request,
+  draft,
+}) {
   const operation = {
     kind: 'operating-governed-operation',
     schemaVersion: '1.0.0',
@@ -723,11 +934,26 @@ function buildOperation({ action, authority, assignment, grant, selection, bindi
     rollbackBaseline: request.rollbackBaseline,
   });
   operation.operationHash = sha256Jcs(without(operation, 'operationHash'));
-  assertProtocolArtifact('operating-governed-operation', operation, { protocolVersion: PROTOCOL_VERSION });
+  assertProtocolArtifact('operating-governed-operation', operation, {
+    protocolVersion: PROTOCOL_VERSION,
+  });
   return operation;
 }
 
-function buildAuthorityContext({ state, action, authority, availability, grant, operation, selection, binding, executorInput, draft, runtimeActorId, registry }) {
+function buildAuthorityContext({
+  state,
+  action,
+  authority,
+  availability,
+  grant,
+  operation,
+  selection,
+  binding,
+  executorInput,
+  draft,
+  runtimeActorId,
+  registry,
+}) {
   return {
     actor: {
       actorId: runtimeActorId,
@@ -739,9 +965,15 @@ function buildAuthorityContext({ state, action, authority, availability, grant, 
     action,
     actionRequest: { action: actionIdentity(action) },
     request: { action: actionIdentity(action) },
-    scope: { scopeId: action.scopeId, domainId: action.domainId, domainVersion: action.domainVersion },
+    scope: {
+      scopeId: action.scopeId,
+      domainId: action.domainId,
+      domainVersion: action.domainVersion,
+    },
     target: clone(action.targetBinding),
-    dependencyActions: state.actions.filter(({ actionId }) => action.dependsOnActionIds.includes(actionId)),
+    dependencyActions: state.actions.filter(({ actionId }) =>
+      action.dependsOnActionIds.includes(actionId),
+    ),
     actionPolicy: authority.actionPolicy,
     actionPolicies: state.actionPolicies,
     policyEvaluation: authority.evaluation,
@@ -759,7 +991,16 @@ function buildAuthorityContext({ state, action, authority, availability, grant, 
   };
 }
 
-function buildResult({ operation, receiptProof, request, draft, reservation, eventIds, status = 'succeeded', targetBeforeHash }) {
+function buildResult({
+  operation,
+  receiptProof,
+  request,
+  draft,
+  reservation,
+  eventIds,
+  status = 'succeeded',
+  targetBeforeHash,
+}) {
   const provenEffect = status === 'succeeded' || status === 'partial';
   const beforeHash = receiptProof?.before?.stateHash ?? targetBeforeHash;
   const afterHash = provenEffect ? receiptProof.after.stateHash : null;
@@ -811,43 +1052,62 @@ function buildResult({ operation, receiptProof, request, draft, reservation, eve
     completedAt: draft.completedAt,
   };
   result.resultHash = sha256Jcs(result);
-  assertProtocolArtifact('operating-execution-result', result, { protocolVersion: PROTOCOL_VERSION });
+  assertProtocolArtifact('operating-execution-result', result, {
+    protocolVersion: PROTOCOL_VERSION,
+  });
   return result;
 }
 
 function materializeTerminalResult({
-  state, operation, assignment, action, draft, reservation, result, receiptProof, runtimeActorId,
+  state,
+  operation,
+  assignment,
+  action,
+  draft,
+  reservation,
+  result,
+  receiptProof,
+  runtimeActorId,
 }) {
   let workingState = state;
   const lifecycleEvents = [];
   const sourceActions = state.actions.filter(({ actionId }) => actionId === action.actionId);
   const sourceCycles = state.cycles.filter(({ cycleId }) => cycleId === action.sourceCycleId);
-  const verificationPlans = state.verificationPlans.filter(({ verificationPlanId }) => (
-    verificationPlanId === action.verificationPlanId
-  ));
+  const verificationPlans = state.verificationPlans.filter(
+    ({ verificationPlanId }) => verificationPlanId === action.verificationPlanId,
+  );
   const sourceAction = sourceActions[0] ?? null;
   const sourceCycle = sourceCycles[0] ?? null;
   const verificationPlan = verificationPlans[0] ?? null;
-  const sameScope = (record) => record?.scopeId === action.scopeId
-    && record.domainId === action.domainId
-    && record.domainVersion === action.domainVersion;
-  if (sourceActions.length !== 1 || sourceCycles.length !== 1 || verificationPlans.length > 1
-    || !sameScope(sourceAction) || !sameScope(sourceCycle)
-    || (verificationPlan && (!sameScope(verificationPlan) || verificationPlan.actionId !== action.actionId))) {
-    fail('OPERATING_SCOPE_INVALID', 'Terminal lifecycle selection requires one exact Action, Cycle, and verification-plan scope and domain version.', {
-      actionId: action.actionId,
-      cycleId: action.sourceCycleId,
-      verificationPlanId: action.verificationPlanId,
-    });
+  const sameScope = (record) =>
+    record?.scopeId === action.scopeId &&
+    record.domainId === action.domainId &&
+    record.domainVersion === action.domainVersion;
+  if (
+    sourceActions.length !== 1 ||
+    sourceCycles.length !== 1 ||
+    verificationPlans.length > 1 ||
+    !sameScope(sourceAction) ||
+    !sameScope(sourceCycle) ||
+    (verificationPlan &&
+      (!sameScope(verificationPlan) || verificationPlan.actionId !== action.actionId))
+  ) {
+    fail(
+      'OPERATING_SCOPE_INVALID',
+      'Terminal lifecycle selection requires one exact Action, Cycle, and verification-plan scope and domain version.',
+      {
+        actionId: action.actionId,
+        cycleId: action.sourceCycleId,
+        verificationPlanId: action.verificationPlanId,
+      },
+    );
   }
   let lifecycle = null;
   // Protocol v2 checkpoints created before integrated execution lifecycles did
   // not necessarily contain a verification plan or an approved Cycle. Preserve
   // their replayability while making the complete lifecycle mandatory whenever
   // all Phase 5 authority records are present.
-  if (sourceAction?.state === 'approved'
-    && sourceCycle?.state === 'approved'
-    && verificationPlan) {
+  if (sourceAction?.state === 'approved' && sourceCycle?.state === 'approved' && verificationPlan) {
     const terminalOperation = {
       ...clone(operation),
       state: result.status,
@@ -895,41 +1155,49 @@ function materializeTerminalResult({
     });
   }
   const resultBytes = Buffer.from(canonicalizeJson(result), 'utf8');
-  const claimedAssignment = workingState.assignments.find(({ assignmentId }) => (
-    assignmentId === assignment.assignmentId
-  ));
+  const claimedAssignment = workingState.assignments.find(
+    ({ assignmentId }) => assignmentId === assignment.assignmentId,
+  );
   if (!claimedAssignment?.claim || claimedAssignment.state !== 'running') {
-    fail('ASSIGNMENT_NOT_AVAILABLE', 'Terminal result materialization requires the exact running Assignment claim.', {
-      assignmentId: assignment.assignmentId,
-    });
+    fail(
+      'ASSIGNMENT_NOT_AVAILABLE',
+      'Terminal result materialization requires the exact running Assignment claim.',
+      {
+        assignmentId: assignment.assignmentId,
+      },
+    );
   }
-  const accepted = acceptOperatingAssignmentSubmissionV2({
-    assignmentId: assignment.assignmentId,
-    submissionId: reservation.submissionId,
-    actor: {
-      actorId: claimedAssignment.claim.actorId,
-      kind: claimedAssignment.claim.actorKind,
-      runtime: claimedAssignment.claim.runtime,
+  const accepted = acceptOperatingAssignmentSubmissionV2(
+    {
+      assignmentId: assignment.assignmentId,
+      submissionId: reservation.submissionId,
+      actor: {
+        actorId: claimedAssignment.claim.actorId,
+        kind: claimedAssignment.claim.actorKind,
+        runtime: claimedAssignment.claim.runtime,
+      },
+      contentBase64: resultBytes.toString('base64'),
+      mediaType: 'application/json',
+      encoding: 'utf-8',
     },
-    contentBase64: resultBytes.toString('base64'),
-    mediaType: 'application/json',
-    encoding: 'utf-8',
-  }, {
-    artifactId: reservation.resultArtifactId,
-    artifactType: 'operating-execution-result',
-    storageClass: 'machine-local',
-    sensitivity: 'internal',
-    retentionClass: 'project',
-    inputArtifactIds: operation.inputArtifactIds,
-    timestamp: draft.completedAt,
-    validatorVersion: 'operate-governed-execution-v2@1.0.0',
-    eventIds: {
-      submitted: reservation.eventIds.submitted,
-      artifactCreated: reservation.eventIds.artifactCreated,
-      validated: reservation.eventIds.validated,
+    {
+      artifactId: reservation.resultArtifactId,
+      artifactType: 'operating-execution-result',
+      storageClass: 'machine-local',
+      sensitivity: 'internal',
+      retentionClass: 'project',
+      inputArtifactIds: operation.inputArtifactIds,
+      timestamp: draft.completedAt,
+      validatorVersion: 'operate-governed-execution-v2@1.0.0',
+      eventIds: {
+        submitted: reservation.eventIds.submitted,
+        artifactCreated: reservation.eventIds.artifactCreated,
+        validated: reservation.eventIds.validated,
+      },
+      correlationId: draft.correlationId,
     },
-    correlationId: draft.correlationId,
-  }, { initialState: workingState });
+    { initialState: workingState },
+  );
   const resultRecorded = runtimeEvent(accepted.state, {
     eventId: reservation.eventIds.resultRecorded,
     timestamp: draft.completedAt,
@@ -940,10 +1208,9 @@ function materializeTerminalResult({
     correlationId: draft.correlationId,
     payload: { result, receipt: receiptProof },
   });
-  workingState = reduceOperatingRuntimeEventsV2(
-    [...accepted.events, resultRecorded],
-    { initialState: workingState },
-  );
+  workingState = reduceOperatingRuntimeEventsV2([...accepted.events, resultRecorded], {
+    initialState: workingState,
+  });
   if (lifecycle) {
     const actor = { kind: 'engine', id: runtimeActorId };
     const append = (input) => {
@@ -959,7 +1226,10 @@ function materializeTerminalResult({
     };
     append({
       eventId: lifecycle.identities.eventIds.actionTerminal,
-      type: lifecycle.transitions.actionTerminal.to === 'completed' ? 'action.completed' : 'action.blocked',
+      type:
+        lifecycle.transitions.actionTerminal.to === 'completed'
+          ? 'action.completed'
+          : 'action.blocked',
       entityId: action.actionId,
       payload: lifecycle.transitions.actionTerminal,
     });
@@ -1005,16 +1275,28 @@ export function createOperatingGovernedExecutionRuntimeV2({
   runtimeActorId = 'operate-runtime-v2',
   registry = OPEN_REFERENCE_OPERATE_GOVERNED_EXTENSIONS_V2,
 } = {}) {
-  if (!initialState) fail('RESULT_CONTRACT_INVALID', 'Governed execution runtime requires an explicit checkpoint.');
+  if (!initialState)
+    fail('RESULT_CONTRACT_INVALID', 'Governed execution runtime requires an explicit checkpoint.');
   if (typeof checkpointStore?.compareAndSwap !== 'function') {
-    fail('RESULT_CONTRACT_INVALID', 'Governed execution runtime requires an explicit durable checkpoint store.');
+    fail(
+      'RESULT_CONTRACT_INVALID',
+      'Governed execution runtime requires an explicit durable checkpoint store.',
+    );
   }
   if (typeof checkpointStore?.readSnapshot !== 'function') {
-    fail('RESULT_CONTRACT_INVALID', 'Governed execution runtime requires an explicit read-only checkpoint snapshot primitive.');
+    fail(
+      'RESULT_CONTRACT_INVALID',
+      'Governed execution runtime requires an explicit read-only checkpoint snapshot primitive.',
+    );
   }
-  if (artifactStore !== undefined
-    && (typeof artifactStore?.stageRaw !== 'function' || typeof artifactStore?.readRaw !== 'function')) {
-    fail('RESULT_CONTRACT_INVALID', 'Artifact byte storage must implement exact raw staging and retrieval.');
+  if (
+    artifactStore !== undefined &&
+    (typeof artifactStore?.stageRaw !== 'function' || typeof artifactStore?.readRaw !== 'function')
+  ) {
+    fail(
+      'RESULT_CONTRACT_INVALID',
+      'Artifact byte storage must implement exact raw staging and retrieval.',
+    );
   }
   let currentState = reduceOperatingRuntimeEventsV2([], { initialState });
   let totalDispatchCount = 0;
@@ -1029,7 +1311,10 @@ export function createOperatingGovernedExecutionRuntimeV2({
     if (replay && !replay.incomplete) return replay;
     if (replay?.incomplete && provenTerminalOperations.has(replay.operation.operationId)) {
       throw provenTerminalError(
-        new PipelineError('OPERATION_UNCERTAIN', 'The contained effect is proved but terminal metadata is not yet durable.'),
+        new PipelineError(
+          'OPERATION_UNCERTAIN',
+          'The contained effect is proved but terminal metadata is not yet durable.',
+        ),
         { operationId: replay.operation.operationId },
       );
     }
@@ -1040,20 +1325,26 @@ export function createOperatingGovernedExecutionRuntimeV2({
         const durable = replayResult(currentState, request, draft, { allowIncomplete: true });
         if (durable && !durable.incomplete) {
           if (durable.result.status === 'succeeded') return durable;
-          fail('OPERATION_UNCERTAIN', 'The governed operation has a durable terminal non-success result.', {
-            operationId: durable.operation.operationId,
-            resultId: durable.result.resultId,
-            status: durable.result.status,
-            cause: causeCode,
-            recoveryDisposition: 'reconcile-before-retry',
-          });
+          fail(
+            'OPERATION_UNCERTAIN',
+            'The governed operation has a durable terminal non-success result.',
+            {
+              operationId: durable.operation.operationId,
+              resultId: durable.result.resultId,
+              status: durable.result.status,
+              cause: causeCode,
+              recoveryDisposition: 'reconcile-before-retry',
+            },
+          );
         }
         const durableOperation = durable?.operation ?? operation;
-        const durableJournal = durable?.journal ?? assertReplayJournalIdentity(currentState, durableOperation, draft);
+        const durableJournal =
+          durable?.journal ?? assertReplayJournalIdentity(currentState, durableOperation, draft);
         const durableAssignment = durableJournal.assignment ?? assignment;
-        const durableAction = currentState.actions.find(({ actionId }) => (
-          actionId === durableOperation.action.actionId
-        )) ?? action;
+        const durableAction =
+          currentState.actions.find(
+            ({ actionId }) => actionId === durableOperation.action.actionId,
+          ) ?? action;
         const durableGrant = durableJournal.grant;
         const replayEntry = durableJournal.replayEntry;
         const uncertaintyReservation = terminalReservationForStatus(draft, 'uncertain');
@@ -1097,38 +1388,61 @@ export function createOperatingGovernedExecutionRuntimeV2({
           terminal.resultBytes,
         );
         try {
-          const terminalCommit = await commitCheckpoint(checkpointStore, currentState, terminal.finalState, {
-            phase: 'terminal-result',
-            operationId: durableOperation.operationId,
-            requestFingerprint: durableOperation.requestFingerprint,
-          });
+          const terminalCommit = await commitCheckpoint(
+            checkpointStore,
+            currentState,
+            terminal.finalState,
+            {
+              phase: 'terminal-result',
+              operationId: durableOperation.operationId,
+              requestFingerprint: durableOperation.requestFingerprint,
+            },
+          );
           currentState = terminalCommit.state;
           if (!terminalCommit.committed) continue;
-          fail('OPERATION_UNCERTAIN', 'A post-intent failure was atomically recorded as a terminal uncertain result.', {
-            operationId: durableOperation.operationId,
-            resultId: result.resultId,
-            cause: causeCode,
-            causeMessage: cause?.message ?? null,
-            recoveryDisposition: 'reconcile-before-retry',
-          });
+          fail(
+            'OPERATION_UNCERTAIN',
+            'A post-intent failure was atomically recorded as a terminal uncertain result.',
+            {
+              operationId: durableOperation.operationId,
+              resultId: result.resultId,
+              cause: causeCode,
+              causeMessage: cause?.message ?? null,
+              recoveryDisposition: 'reconcile-before-retry',
+            },
+          );
         } catch (commitError) {
-          if (commitError?.code !== 'OPERATION_UNCERTAIN'
-            || commitError?.details?.context?.resultId === result.resultId) throw commitError;
+          if (
+            commitError?.code !== 'OPERATION_UNCERTAIN' ||
+            commitError?.details?.context?.resultId === result.resultId
+          )
+            throw commitError;
           // A compare-and-swap acknowledgement can be lost after the store made
           // the state durable. Retry against the same head to recover its state.
         }
       }
       const finalReplay = replayResult(currentState, request, draft, { allowIncomplete: true });
-      if (finalReplay && !finalReplay.incomplete && finalReplay.result.status === 'succeeded') return finalReplay;
-      fail('OPERATION_UNCERTAIN', 'The governed operation remains non-redispatchable and requires durable reconciliation.', {
-        operationId: operation.operationId,
-        cause: causeCode,
-        recoveryDisposition: 'reconcile-before-retry',
-      });
+      if (finalReplay && !finalReplay.incomplete && finalReplay.result.status === 'succeeded')
+        return finalReplay;
+      fail(
+        'OPERATION_UNCERTAIN',
+        'The governed operation remains non-redispatchable and requires durable reconciliation.',
+        {
+          operationId: operation.operationId,
+          cause: causeCode,
+          recoveryDisposition: 'reconcile-before-retry',
+        },
+      );
     }
 
     async function commitProvenSuccess({
-      operation, assignment, action, result, receiptProof, receipt, preEffectEvents,
+      operation,
+      assignment,
+      action,
+      result,
+      receiptProof,
+      receipt,
+      preEffectEvents,
     }) {
       try {
         // A contained receipt has already proved the exact effect. Any unrelated
@@ -1138,55 +1452,72 @@ export function createOperatingGovernedExecutionRuntimeV2({
           const durable = replayResult(currentState, request, draft, { allowIncomplete: true });
           if (durable && !durable.incomplete) {
             if (durable.result.resultHash !== result.resultHash) {
-              fail('OPERATION_CONFLICT', 'A different terminal result already owns the reserved operation identities.', {
-                operationId: operation.operationId,
-                resultId: durable.result.resultId,
-              });
+              fail(
+                'OPERATION_CONFLICT',
+                'A different terminal result already owns the reserved operation identities.',
+                {
+                  operationId: operation.operationId,
+                  resultId: durable.result.resultId,
+                },
+              );
             }
             return durable;
           }
           const successReservation = terminalReservationForStatus(draft, 'succeeded');
-          const terminal = { result, ...materializeTerminalResult({
-            state: currentState,
-            operation,
-            assignment,
-            action,
-            draft,
-            reservation: successReservation,
+          const terminal = {
             result,
-            receiptProof,
-            runtimeActorId,
-          }) };
-          if (!await stageAndProveArtifactCustody(
-            artifactStore,
-            terminal.accepted.artifact,
-            terminal.resultBytes,
-          )) {
-            fail('OPERATION_UNCERTAIN', 'Success Artifact custody could not be proven after contained execution.', {
-              operationId: operation.operationId,
-              resultId: result.resultId,
-              resultArtifactId: result.resultArtifactId,
-            });
+            ...materializeTerminalResult({
+              state: currentState,
+              operation,
+              assignment,
+              action,
+              draft,
+              reservation: successReservation,
+              result,
+              receiptProof,
+              runtimeActorId,
+            }),
+          };
+          if (
+            !(await stageAndProveArtifactCustody(
+              artifactStore,
+              terminal.accepted.artifact,
+              terminal.resultBytes,
+            ))
+          ) {
+            fail(
+              'OPERATION_UNCERTAIN',
+              'Success Artifact custody could not be proven after contained execution.',
+              {
+                operationId: operation.operationId,
+                resultId: result.resultId,
+                resultArtifactId: result.resultArtifactId,
+              },
+            );
           }
           try {
-            const terminalCommit = await commitCheckpoint(checkpointStore, currentState, terminal.finalState, {
-              phase: 'terminal-result',
-              operationId: operation.operationId,
-              requestFingerprint: operation.requestFingerprint,
-            });
+            const terminalCommit = await commitCheckpoint(
+              checkpointStore,
+              currentState,
+              terminal.finalState,
+              {
+                phase: 'terminal-result',
+                operationId: operation.operationId,
+                requestFingerprint: operation.requestFingerprint,
+              },
+            );
             currentState = terminalCommit.state;
             if (!terminalCommit.committed) continue;
             return freeze({
               state: clone(terminal.finalState),
-              operation: clone(terminal.finalState.governedOperations.find(({ operationId }) => (
-                operationId === operation.operationId
-              ))),
+              operation: clone(
+                terminal.finalState.governedOperations.find(
+                  ({ operationId }) => operationId === operation.operationId,
+                ),
+              ),
               result: clone(result),
               artifact: clone(terminal.accepted.artifact),
-              events: [
-                ...preEffectEvents,
-                ...terminal.events,
-              ].map(clone),
+              events: [...preEffectEvents, ...terminal.events].map(clone),
               response: clone(terminal.accepted.response),
               receipt: clone(receipt),
               replayed: false,
@@ -1199,9 +1530,13 @@ export function createOperatingGovernedExecutionRuntimeV2({
             // state returned by the next CAS, without another host/target call.
           }
         }
-        fail('OPERATION_UNCERTAIN', 'Proven terminal success could not acquire the durable checkpoint after bounded rebasing.', {
-          operationId: operation.operationId,
-        });
+        fail(
+          'OPERATION_UNCERTAIN',
+          'Proven terminal success could not acquire the durable checkpoint after bounded rebasing.',
+          {
+            operationId: operation.operationId,
+          },
+        );
       } catch (error) {
         throw provenTerminalError(error, {
           operationId: operation.operationId,
@@ -1212,7 +1547,9 @@ export function createOperatingGovernedExecutionRuntimeV2({
 
     if (replay?.incomplete) {
       const operation = replay.operation;
-      const action = currentState.actions.find(({ actionId }) => actionId === operation.action.actionId);
+      const action = currentState.actions.find(
+        ({ actionId }) => actionId === operation.action.actionId,
+      );
       let reconciliation;
       try {
         reconciliation = await reconcileOperatingGovernedDispatchV2({
@@ -1266,55 +1603,86 @@ export function createOperatingGovernedExecutionRuntimeV2({
       }
       if (reconciliation.classification === 'not-applied') {
         const host = resolveOpenReferenceExecutorHostV2(trustedHost);
-        const selection = host && selectOperateExecutorV2(registry, {
-          executorId: host.executorId,
-          executorVersion: host.executorVersion,
-          protocolVersion: PROTOCOL_VERSION,
-          runtimeVersion,
-          now: operation.createdAt,
-          domainId: action.domainId,
-          actionKind: action.actionKind,
-          capability: action.requestedCapability,
-          targetKind: action.targetBinding.kind,
-          effectClass: action.effectClass,
-          operationKind: 'execute',
-        });
-        if (!host || selection?.status !== 'available'
-          || classifyOperateExecutorRecoveryCapabilityV2(selection.registration) === 'uncertain-no-redispatch') {
-          return terminalizeUncertain({ operation, assignment: replay.journal.assignment, action, cause: { code: 'REDISPATCH_NOT_PROVED_SAFE' } });
+        const selection =
+          host &&
+          selectOperateExecutorV2(registry, {
+            executorId: host.executorId,
+            executorVersion: host.executorVersion,
+            protocolVersion: PROTOCOL_VERSION,
+            runtimeVersion,
+            now: operation.createdAt,
+            domainId: action.domainId,
+            actionKind: action.actionKind,
+            capability: action.requestedCapability,
+            targetKind: action.targetBinding.kind,
+            effectClass: action.effectClass,
+            operationKind: 'execute',
+          });
+        if (
+          !host ||
+          selection?.status !== 'available' ||
+          classifyOperateExecutorRecoveryCapabilityV2(selection.registration) ===
+            'uncertain-no-redispatch'
+        ) {
+          return terminalizeUncertain({
+            operation,
+            assignment: replay.journal.assignment,
+            action,
+            cause: { code: 'REDISPATCH_NOT_PROVED_SAFE' },
+          });
         }
         const binding = createTrustedExecutorBindingV2({ selection, trustedHost });
         const executorInput = createContainedExecutorInputEnvelopeV2({
-          operation, payload: request.payload, rollbackBaseline: request.rollbackBaseline,
+          operation,
+          payload: request.payload,
+          rollbackBaseline: request.rollbackBaseline,
         });
-        const evaluation = currentState.policyEvaluations.find(({ evaluationId }) => evaluationId === operation.evaluationId);
-        const requirements = evaluation.approvalRequirementIds.map((requirementId) => (
-          currentState.approvalRequirements.find((candidate) => candidate.requirementId === requirementId)
-        ));
-        const approvals = currentState.approvalRecords.filter(({ evaluationId }) => evaluationId === evaluation.evaluationId);
-        const actionPolicy = currentState.actionPolicies.find((candidate) => (
-          candidate.policyId === evaluation.policy.policyId
-          && candidate.policyVersion === evaluation.policy.policyVersion
-          && candidate.policyHash === evaluation.policy.policyHash
-        ));
-        const availability = currentState.capabilityAvailability.find((candidate) => (
-          candidate.checkedAt === operation.createdAt
-          && candidate.capability.id === operation.capability.id
-          && candidate.capability.version === operation.capability.version
-          && candidate.target.kind === operation.target.kind
-          && candidate.target.id === operation.target.id
-          && candidate.target.revision === operation.target.revision
-        ));
+        const evaluation = currentState.policyEvaluations.find(
+          ({ evaluationId }) => evaluationId === operation.evaluationId,
+        );
+        const requirements = evaluation.approvalRequirementIds.map((requirementId) =>
+          currentState.approvalRequirements.find(
+            (candidate) => candidate.requirementId === requirementId,
+          ),
+        );
+        const approvals = currentState.approvalRecords.filter(
+          ({ evaluationId }) => evaluationId === evaluation.evaluationId,
+        );
+        const actionPolicy = currentState.actionPolicies.find(
+          (candidate) =>
+            candidate.policyId === evaluation.policy.policyId &&
+            candidate.policyVersion === evaluation.policy.policyVersion &&
+            candidate.policyHash === evaluation.policy.policyHash,
+        );
+        const availability = currentState.capabilityAvailability.find(
+          (candidate) =>
+            candidate.checkedAt === operation.createdAt &&
+            candidate.capability.id === operation.capability.id &&
+            candidate.capability.version === operation.capability.version &&
+            candidate.target.kind === operation.target.kind &&
+            candidate.target.id === operation.target.id &&
+            candidate.target.revision === operation.target.revision,
+        );
         const authorityContext = {
-          actor: { actorId: replay.journal.grant.issuer.id, kind: 'engine', capabilities: [clone(action.requestedCapability)] },
+          actor: {
+            actorId: replay.journal.grant.issuer.id,
+            kind: 'engine',
+            capabilities: [clone(action.requestedCapability)],
+          },
           capabilities: [clone(EXECUTE_TOOL_CAPABILITY)],
           now: operation.createdAt,
           action,
           actionRequest: { action: actionIdentity(action) },
           request: { action: actionIdentity(action) },
-          scope: { scopeId: action.scopeId, domainId: action.domainId, domainVersion: action.domainVersion },
+          scope: {
+            scopeId: action.scopeId,
+            domainId: action.domainId,
+            domainVersion: action.domainVersion,
+          },
           target: clone(action.targetBinding),
-          dependencyActions: currentState.actions.filter(({ actionId }) => action.dependsOnActionIds.includes(actionId)),
+          dependencyActions: currentState.actions.filter(({ actionId }) =>
+            action.dependsOnActionIds.includes(actionId),
+          ),
           actionPolicy,
           actionPolicies: currentState.actionPolicies,
           policyEvaluation: evaluation,
@@ -1331,17 +1699,30 @@ export function createOperatingGovernedExecutionRuntimeV2({
           executorInput,
           reconciliationProof: reconciliation,
         };
-        const authorityDecision = assertOperateAuthorityV2('operate.action.execute', authorityContext);
+        const authorityDecision = assertOperateAuthorityV2(
+          'operate.action.execute',
+          authorityContext,
+        );
         totalDispatchCount += 1;
         try {
-          const receipt = await Promise.resolve(trustedHost.execute({
-            authorityContext, authorityDecision, executorInput, binding,
-            executor: selection.registration, targetAdapter,
-          }));
+          const receipt = await Promise.resolve(
+            trustedHost.execute({
+              authorityContext,
+              authorityDecision,
+              executorInput,
+              binding,
+              executor: selection.registration,
+              targetAdapter,
+            }),
+          );
           const receiptProof = createOperatingExecutionReceiptProofV2({ operation, receipt });
           const successReservation = terminalReservationForStatus(draft, 'succeeded');
           const result = buildResult({
-            operation, receiptProof, request, draft, reservation: successReservation,
+            operation,
+            receiptProof,
+            request,
+            draft,
+            reservation: successReservation,
             eventIds: [
               operation.intentEventId,
               successReservation.eventIds.submitted,
@@ -1352,65 +1733,116 @@ export function createOperatingGovernedExecutionRuntimeV2({
             targetBeforeHash: replay.journal.replayEntry.targetBeforeHash,
           });
           return commitProvenSuccess({
-            operation, assignment: replay.journal.assignment, action, result,
-            receiptProof, receipt, preEffectEvents: [],
+            operation,
+            assignment: replay.journal.assignment,
+            action,
+            result,
+            receiptProof,
+            receipt,
+            preEffectEvents: [],
           });
         } catch (error) {
-          return terminalizeUncertain({ operation, assignment: replay.journal.assignment, action, cause: error });
+          return terminalizeUncertain({
+            operation,
+            assignment: replay.journal.assignment,
+            action,
+            cause: error,
+          });
         }
       }
       return terminalizeUncertain({
         operation,
         assignment: replay.journal.assignment,
         action,
-        cause: { code: `RECONCILIATION_${reconciliation.classification.toUpperCase().replace('-', '_')}` },
+        cause: {
+          code: `RECONCILIATION_${reconciliation.classification.toUpperCase().replace('-', '_')}`,
+        },
       });
     }
 
-    const actionMatches = currentState.actions.filter(({ actionId }) => actionId === request.actionId);
-    if (actionMatches.length !== 1) fail('ACTION_NOT_FOUND', 'Governed execution requires one exact current Action.', {
-      actionId: request.actionId,
-    });
-    const [action] = actionMatches;
-    const existingActionOwner = findOperatingExactActionOperationOwnerV2(currentState.governedOperations, action);
-    if (existingActionOwner) {
-      fail('OPERATION_CONFLICT', 'The exact Action revision already owns a governed execution operation.', {
-        actionId: action.actionId,
-        operationId: existingActionOwner.operationId,
+    const actionMatches = currentState.actions.filter(
+      ({ actionId }) => actionId === request.actionId,
+    );
+    if (actionMatches.length !== 1)
+      fail('ACTION_NOT_FOUND', 'Governed execution requires one exact current Action.', {
+        actionId: request.actionId,
       });
+    const [action] = actionMatches;
+    const existingActionOwner = findOperatingExactActionOperationOwnerV2(
+      currentState.governedOperations,
+      action,
+    );
+    if (existingActionOwner) {
+      fail(
+        'OPERATION_CONFLICT',
+        'The exact Action revision already owns a governed execution operation.',
+        {
+          actionId: action.actionId,
+          operationId: existingActionOwner.operationId,
+        },
+      );
     }
-    if (action.state !== 'approved') fail('STATE_TRANSITION_INVALID', 'Only a current approved Action may create an execution operation.', {
-      actionId: action.actionId,
-      state: action.state,
-    });
-    if (currentState.assignments.some(({ governedOperationId }) => governedOperationId === draft.operationId)) {
+    if (action.state !== 'approved')
+      fail(
+        'STATE_TRANSITION_INVALID',
+        'Only a current approved Action may create an execution operation.',
+        {
+          actionId: action.actionId,
+          state: action.state,
+        },
+      );
+    if (
+      currentState.assignments.some(
+        ({ governedOperationId }) => governedOperationId === draft.operationId,
+      )
+    ) {
       fail('OPERATION_CONFLICT', 'A governed operation may own only one execution Assignment.', {
         operationId: draft.operationId,
       });
     }
     const reservation = assertTerminalReservationAvailable(currentState, draft);
     if (action.executionBinding.rollbackRequired && request.rollbackBaseline === null) {
-      fail('OPERATION_CONFLICT', 'A reversible Action requires one exact reviewed rollback baseline before dispatch.', {
-        actionId: action.actionId,
-      });
+      fail(
+        'OPERATION_CONFLICT',
+        'A reversible Action requires one exact reviewed rollback baseline before dispatch.',
+        {
+          actionId: action.actionId,
+        },
+      );
     }
     if (!action.executionBinding.rollbackRequired && request.rollbackBaseline !== null) {
-      fail('OPERATION_CONFLICT', 'A non-reversible Action cannot add an undeclared rollback baseline.', {
-        actionId: action.actionId,
-      });
+      fail(
+        'OPERATION_CONFLICT',
+        'A non-reversible Action cannot add an undeclared rollback baseline.',
+        {
+          actionId: action.actionId,
+        },
+      );
     }
-    const inputArtifactIds = [...new Set([action.sourceArtifactId, ...action.preconditionArtifactIds])].sort();
-    if (!inputArtifactIds.includes(request.payload.artifactId)
-      || (request.rollbackBaseline !== null && !inputArtifactIds.includes(request.rollbackBaseline.artifactId))) {
-      fail('RESULT_CONTRACT_INVALID', 'Executor payload and rollback baseline must use only reviewed Action inputs.', {
-        actionId: action.actionId,
-      });
+    const inputArtifactIds = [
+      ...new Set([action.sourceArtifactId, ...action.preconditionArtifactIds]),
+    ].sort();
+    if (
+      !inputArtifactIds.includes(request.payload.artifactId) ||
+      (request.rollbackBaseline !== null &&
+        !inputArtifactIds.includes(request.rollbackBaseline.artifactId))
+    ) {
+      fail(
+        'RESULT_CONTRACT_INVALID',
+        'Executor payload and rollback baseline must use only reviewed Action inputs.',
+        {
+          actionId: action.actionId,
+        },
+      );
     }
 
     const authority = exactAuthority(currentState, action, draft.preparedAt);
     const host = resolveOpenReferenceExecutorHostV2(trustedHost);
     if (host === null || !targetAdapter) {
-      fail('EXECUTOR_UNAVAILABLE', 'Governed execution requires one package-owned contained host and explicit contained target adapter.');
+      fail(
+        'EXECUTOR_UNAVAILABLE',
+        'Governed execution requires one package-owned contained host and explicit contained target adapter.',
+      );
     }
     const selection = selectOperateExecutorV2(registry, {
       executorId: host.executorId,
@@ -1445,7 +1877,16 @@ export function createOperatingGovernedExecutionRuntimeV2({
     }
     const assignment = buildAssignment(action, draft, inputArtifactIds);
     const grant = buildGrant({ action, authority, availability, draft, runtimeActorId });
-    const operation = buildOperation({ action, authority, assignment, grant, selection, binding, request, draft });
+    const operation = buildOperation({
+      action,
+      authority,
+      assignment,
+      grant,
+      selection,
+      binding,
+      request,
+      draft,
+    });
     assertOperatingExecuteOperationV2({
       operation,
       action,
@@ -1485,23 +1926,38 @@ export function createOperatingGovernedExecutionRuntimeV2({
     // Canonical authority denial must precede any target observation. Only an
     // already-authorized closed operation may inspect its contained target.
     const targetBefore = trustedHost.inspect({ targetAdapter, target: action.targetBinding });
-    if (request.rollbackBaseline !== null
-      && request.rollbackBaseline.contentHash !== targetBefore.stateHash) {
-      fail('OPERATION_CONFLICT', 'Reviewed rollback baseline must equal the exact contained target state before dispatch.', {
-        actionId: action.actionId,
-      });
+    if (
+      request.rollbackBaseline !== null &&
+      request.rollbackBaseline.contentHash !== targetBefore.stateHash
+    ) {
+      fail(
+        'OPERATION_CONFLICT',
+        'Reviewed rollback baseline must equal the exact contained target state before dispatch.',
+        {
+          actionId: action.actionId,
+        },
+      );
     }
-    if (deriveContainedExecutorRequestFingerprintV2({
-      operation,
-      payload: request.payload,
-      rollbackBaseline: request.rollbackBaseline,
-    }) !== operation.requestFingerprint) {
-      fail('OPERATION_CONFLICT', 'Contained target preflight diverged from the canonical operation fingerprint.', {
-        actionId: action.actionId,
-        operationId: operation.operationId,
-      });
+    if (
+      deriveContainedExecutorRequestFingerprintV2({
+        operation,
+        payload: request.payload,
+        rollbackBaseline: request.rollbackBaseline,
+      }) !== operation.requestFingerprint
+    ) {
+      fail(
+        'OPERATION_CONFLICT',
+        'Contained target preflight diverged from the canonical operation fingerprint.',
+        {
+          actionId: action.actionId,
+          operationId: operation.operationId,
+        },
+      );
     }
-    const finalAuthorityDecision = assertOperateAuthorityV2('operate.action.execute', authorityContext);
+    const finalAuthorityDecision = assertOperateAuthorityV2(
+      'operate.action.execute',
+      authorityContext,
+    );
     if (sha256Jcs(finalAuthorityDecision) !== sha256Jcs(authorityDecision)) {
       fail('OPERATION_CONFLICT', 'Canonical authority changed during contained target preflight.', {
         actionId: action.actionId,
@@ -1569,10 +2025,13 @@ export function createOperatingGovernedExecutionRuntimeV2({
               artifactId: request.payload.artifactId,
               contentHash: request.payload.contentHash,
             },
-            rollbackBaseline: request.rollbackBaseline === null ? null : {
-              artifactId: request.rollbackBaseline.artifactId,
-              contentHash: request.rollbackBaseline.contentHash,
-            },
+            rollbackBaseline:
+              request.rollbackBaseline === null
+                ? null
+                : {
+                    artifactId: request.rollbackBaseline.artifactId,
+                    contentHash: request.rollbackBaseline.contentHash,
+                  },
             targetBeforeHash: targetBefore.stateHash,
           },
           terminal: reservation,
@@ -1608,21 +2067,29 @@ export function createOperatingGovernedExecutionRuntimeV2({
           cause: { code: 'DISPATCH_OWNERSHIP_ALREADY_DURABLE' },
         });
       }
-      const electedOwner = findOperatingExactActionOperationOwnerV2(currentState.governedOperations, action);
-      fail(electedOwner ? 'OPERATION_CONFLICT' : 'CONCURRENT_MODIFICATION',
+      const electedOwner = findOperatingExactActionOperationOwnerV2(
+        currentState.governedOperations,
+        action,
+      );
+      fail(
+        electedOwner ? 'OPERATION_CONFLICT' : 'CONCURRENT_MODIFICATION',
         electedOwner
           ? 'Another operation already owns the exact Action revision.'
-          : 'Dispatch ownership compare-and-swap lost to another runtime state.', {
+          : 'Dispatch ownership compare-and-swap lost to another runtime state.',
+        {
           actionId: action.actionId,
           operationId: operation.operationId,
           electedOperationId: electedOwner?.operationId ?? null,
-        });
+        },
+      );
     }
     totalDispatchCount += 1;
-    const durableReplayEntry = currentState.operationReplayIndex.find(({ operationId }) => (
-      operationId === operation.operationId
-    ));
-    const durableGrant = currentState.capabilityGrants.find(({ grantId }) => grantId === operation.grantId);
+    const durableReplayEntry = currentState.operationReplayIndex.find(
+      ({ operationId }) => operationId === operation.operationId,
+    );
+    const durableGrant = currentState.capabilityGrants.find(
+      ({ grantId }) => grantId === operation.grantId,
+    );
     const successReservation = terminalReservationForStatus(draft, 'succeeded');
     const allResultEventIds = [
       operation.intentEventId,
@@ -1663,7 +2130,13 @@ export function createOperatingGovernedExecutionRuntimeV2({
         receiptProof,
       });
       return await commitProvenSuccess({
-        operation, assignment, action, result, receiptProof, receipt, preEffectEvents,
+        operation,
+        assignment,
+        action,
+        result,
+        receiptProof,
+        receipt,
+        preEffectEvents,
       });
     } catch (postIntentError) {
       if (effectProven) {
@@ -1680,9 +2153,13 @@ export function createOperatingGovernedExecutionRuntimeV2({
     const active = typeof operationId === 'string' ? inFlight.get(operationId) : null;
     if (active) {
       if (active.invocationHash !== invocationHash) {
-        fail('OPERATION_CONFLICT', 'An in-flight governed operation identity cannot be reused with divergent input.', {
-          operationId,
-        });
+        fail(
+          'OPERATION_CONFLICT',
+          'An in-flight governed operation identity cannot be reused with divergent input.',
+          {
+            operationId,
+          },
+        );
       }
       await active.promise;
       const request = assertExecutionRequest(requestInput);
@@ -1702,7 +2179,9 @@ export function createOperatingGovernedExecutionRuntimeV2({
     execute,
     checkpoint: () => clone(currentState),
     getState: () => clone(currentState),
-    get dispatchCount() { return totalDispatchCount; },
+    get dispatchCount() {
+      return totalDispatchCount;
+    },
   });
 }
 

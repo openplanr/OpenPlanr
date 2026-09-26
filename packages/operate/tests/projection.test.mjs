@@ -26,19 +26,21 @@ function walk(root) {
 test('domain projections are deterministic, private-package-free ordinary files', () => {
   const target = mkdtempSync(join(tmpdir(), 'openplanr-domain-projection-'));
   execFileSync(process.execPath, [projector, '--write', '--target', target], { stdio: 'pipe' });
-  const check = JSON.parse(execFileSync(
-    process.execPath,
-    [projector, '--check', '--target', target],
-    { encoding: 'utf8' },
-  ));
+  const check = JSON.parse(
+    execFileSync(process.execPath, [projector, '--check', '--target', target], {
+      encoding: 'utf8',
+    }),
+  );
   assert.equal(check.ok, true);
   assert.equal(check.manifestFiles, 3);
   assert.equal(check.driftFiles, 0);
   const projectedFiles = check.domains.reduce((total, domain) => {
-    const manifest = JSON.parse(readFileSync(
-      join(target, 'lib', 'generated', 'domain-projections', `${domain}.json`),
-      'utf8',
-    ));
+    const manifest = JSON.parse(
+      readFileSync(
+        join(target, 'lib', 'generated', 'domain-projections', `${domain}.json`),
+        'utf8',
+      ),
+    );
     assert.equal(manifest.domain, domain);
     return total + manifest.entries.length;
   }, 0);
@@ -61,13 +63,14 @@ test('domain projections are deterministic, private-package-free ordinary files'
     mode: '644',
   });
   writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
-  const staleCheck = spawnSync(
-    process.execPath,
-    [projector, '--check', '--target', target],
-    { encoding: 'utf8' },
-  );
+  const staleCheck = spawnSync(process.execPath, [projector, '--check', '--target', target], {
+    encoding: 'utf8',
+  });
   assert.equal(staleCheck.status, 1);
-  assert.equal(JSON.parse(staleCheck.stdout).drift.some((entry) => entry.stale === true), true);
+  assert.equal(
+    JSON.parse(staleCheck.stdout).drift.some((entry) => entry.stale === true),
+    true,
+  );
   execFileSync(process.execPath, [projector, '--write', '--target', target], { stdio: 'pipe' });
   assert.equal(existsSync(staleTarget), false);
 });

@@ -52,7 +52,11 @@ export function appendOperatingApprovalRecordV2(input: {
   record: OperatingApprovalRecordV2;
   requirement: OperatingApprovalRequirementV2;
   requirements?: readonly OperatingApprovalRequirementV2[];
-}): Readonly<{ records: readonly OperatingApprovalRecordV2[]; record: OperatingApprovalRecordV2; replayed: boolean }>;
+}): Readonly<{
+  records: readonly OperatingApprovalRecordV2[];
+  record: OperatingApprovalRecordV2;
+  replayed: boolean;
+}>;
 
 export interface OperatingApprovalSetResultV2 {
   readonly complete: boolean;
@@ -69,7 +73,9 @@ export function evaluateOperatingApprovalSetV2(input: {
   approvals?: readonly OperatingApprovalRecordV2[];
   now: string;
 }): OperatingApprovalSetResultV2;
-export function evaluateOperatingRollbackApprovalSetV2(input: Parameters<typeof evaluateOperatingApprovalSetV2>[0]): OperatingApprovalSetResultV2;
+export function evaluateOperatingRollbackApprovalSetV2(
+  input: Parameters<typeof evaluateOperatingApprovalSetV2>[0],
+): OperatingApprovalSetResultV2;
 
 export function consumeOperatingApprovalRecordsV2(input: {
   approvals: readonly OperatingApprovalRecordV2[];

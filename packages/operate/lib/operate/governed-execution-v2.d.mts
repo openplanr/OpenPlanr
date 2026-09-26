@@ -6,9 +6,7 @@ import type {
   OperatingEventV2,
 } from '@openplanr/protocol';
 import type { OperatingArtifactByteStoreV2 } from './evidence-materialization-v2.d.mts';
-import type {
-  OperateGovernedExtensionRegistryV2,
-} from './governed-extensions-v2.d.mts';
+import type { OperateGovernedExtensionRegistryV2 } from './governed-extensions-v2.d.mts';
 import type {
   ContainedEffectReceiptV2,
   ContainedTargetAdapterV2,
@@ -44,8 +42,10 @@ export interface OperatingGovernedExecutionTerminalIdentityV2 {
   resultId: string;
   resultArtifactId: string;
   submissionId: string;
-  eventIds: Pick<OperatingGovernedExecutionEventIdsV2,
-    'submitted' | 'artifactCreated' | 'validated' | 'resultRecorded'>;
+  eventIds: Pick<
+    OperatingGovernedExecutionEventIdsV2,
+    'submitted' | 'artifactCreated' | 'validated' | 'resultRecorded'
+  >;
 }
 
 export interface OperatingGovernedExecutionDraftV2 {
@@ -81,13 +81,16 @@ export interface OperatingGovernedExecutionRuntimeOptionsV2 {
 
 export interface OperatingGovernedExecutionCheckpointStoreV2 {
   readSnapshot(): Promise<OperatingRuntimeStateV2> | OperatingRuntimeStateV2;
-  compareAndSwap(input: Readonly<{
-    expectedEventHead: OperatingRuntimeStateV2['eventHead'];
-    nextState: OperatingRuntimeStateV2;
-    phase: 'dispatch-intent' | 'terminal-result' | 'rollback-intent' | 'rollback-result';
-    operationId: string;
-    requestFingerprint: string;
-  }>): Promise<Readonly<{ committed: boolean; state: OperatingRuntimeStateV2 }>>
+  compareAndSwap(
+    input: Readonly<{
+      expectedEventHead: OperatingRuntimeStateV2['eventHead'];
+      nextState: OperatingRuntimeStateV2;
+      phase: 'dispatch-intent' | 'terminal-result' | 'rollback-intent' | 'rollback-result';
+      operationId: string;
+      requestFingerprint: string;
+    }>,
+  ):
+    | Promise<Readonly<{ committed: boolean; state: OperatingRuntimeStateV2 }>>
     | Readonly<{ committed: boolean; state: OperatingRuntimeStateV2 }>;
 }
 
@@ -126,5 +129,9 @@ export function executeOperatingGovernedActionV2(
 ): Promise<Readonly<OperatingGovernedExecutionResultV2>>;
 
 export const OPERATING_GOVERNED_EXECUTION_TERMINAL_STATES_V2: readonly [
-  'blocked', 'failed', 'partial', 'succeeded', 'uncertain',
+  'blocked',
+  'failed',
+  'partial',
+  'succeeded',
+  'uncertain',
 ];

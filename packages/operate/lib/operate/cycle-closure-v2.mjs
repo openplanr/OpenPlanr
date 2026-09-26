@@ -3,8 +3,14 @@ import { OPERATE_CONTRACT_CATALOG_V2 } from '@openplanr/protocol/operate-contrac
 import { selectOperatingTerminalVerificationAssignmentV2 } from './execution-verification-v2.mjs';
 
 const ENTITY_CONFIG = Object.freeze({
-  'operating-finding': Object.freeze({ id: 'findingId', unresolved: new Set(['open', 'accepted', 'deferred']) }),
-  'operating-decision': Object.freeze({ id: 'decisionId', unresolved: new Set(['proposed', 'deferred']) }),
+  'operating-finding': Object.freeze({
+    id: 'findingId',
+    unresolved: new Set(['open', 'accepted', 'deferred']),
+  }),
+  'operating-decision': Object.freeze({
+    id: 'decisionId',
+    unresolved: new Set(['proposed', 'deferred']),
+  }),
   'operating-action': Object.freeze({
     id: 'actionId',
     unresolved: new Set(['proposed', 'approved', 'queued', 'in_progress', 'blocked', 'deferred']),
@@ -31,15 +37,18 @@ function recordKey(entityType, entityId) {
 }
 
 function transition(entityType, from, to) {
-  return OPERATE_CONTRACT_CATALOG_V2.transitions.find((entry) => (
-    entry.entityId === entityType
-    && entry.from === from
-    && entry.to === to
-    && entry.event === 'review.submitted'
-    && entry.guard === 'review-submit-authorized'
-    && entry.actorKinds.length === 1
-    && entry.actorKinds[0] === 'human'
-  )) ?? null;
+  return (
+    OPERATE_CONTRACT_CATALOG_V2.transitions.find(
+      (entry) =>
+        entry.entityId === entityType &&
+        entry.from === from &&
+        entry.to === to &&
+        entry.event === 'review.submitted' &&
+        entry.guard === 'review-submit-authorized' &&
+        entry.actorKinds.length === 1 &&
+        entry.actorKinds[0] === 'human',
+    ) ?? null
+  );
 }
 
 const REVIEW_DISPOSITION_STRATEGIES = Object.freeze([
@@ -72,22 +81,33 @@ export function deriveOperatingReviewWorkDispositionSetsV2({
   timestamp,
   reviewOwnerActorId,
 }) {
-  if (!cycle || !Array.isArray(findings) || !Array.isArray(decisions)
-    || !Array.isArray(actions) || typeof timestamp !== 'string') {
-    fail('Approved Review choice derivation requires one Cycle, durable collections, and timestamp.', {
-      cycleId: cycle?.cycleId ?? null,
-    });
+  if (
+    !cycle ||
+    !Array.isArray(findings) ||
+    !Array.isArray(decisions) ||
+    !Array.isArray(actions) ||
+    typeof timestamp !== 'string'
+  ) {
+    fail(
+      'Approved Review choice derivation requires one Cycle, durable collections, and timestamp.',
+      {
+        cycleId: cycle?.cycleId ?? null,
+      },
+    );
   }
   const required = allRecords({ findings, decisions, actions })
-    .filter(([entityType, record]) => (
-      record.sourceCycleId === cycle.cycleId
-      && ENTITY_CONFIG[entityType].unresolved.has(record.state)
-    ))
+    .filter(
+      ([entityType, record]) =>
+        record.sourceCycleId === cycle.cycleId &&
+        ENTITY_CONFIG[entityType].unresolved.has(record.state),
+    )
     .sort(([leftType, left], [rightType, right]) => {
       const typeOrder = leftType.localeCompare(rightType);
       return typeOrder !== 0
         ? typeOrder
-        : String(left[ENTITY_CONFIG[leftType].id]).localeCompare(String(right[ENTITY_CONFIG[rightType].id]));
+        : String(left[ENTITY_CONFIG[leftType].id]).localeCompare(
+            String(right[ENTITY_CONFIG[rightType].id]),
+          );
     });
   const seen = new Set();
   const choices = [];
@@ -123,11 +143,13 @@ export function deriveOperatingReviewWorkDispositionSetsV2({
       continue;
     }
     seen.add(identity);
-    choices.push(Object.freeze({
-      strategy: strategy.id,
-      label: strategy.label,
-      workDispositions: Object.freeze(workDispositions.map((entry) => Object.freeze(entry))),
-    }));
+    choices.push(
+      Object.freeze({
+        strategy: strategy.id,
+        label: strategy.label,
+        workDispositions: Object.freeze(workDispositions.map((entry) => Object.freeze(entry))),
+      }),
+    );
   }
   return Object.freeze(choices);
 }
@@ -143,37 +165,52 @@ export function applyOperatingReviewWorkDispositionsV2({
   reviewOwnerActorId,
 }) {
   if (!cycle || !Array.isArray(workDispositions) || typeof timestamp !== 'string') {
-    fail('Approved Review work projection requires one Cycle, explicit dispositions, and timestamp.', {
-      cycleId: cycle?.cycleId ?? null,
-    });
+    fail(
+      'Approved Review work projection requires one Cycle, explicit dispositions, and timestamp.',
+      {
+        cycleId: cycle?.cycleId ?? null,
+      },
+    );
   }
   const records = new Map();
   for (const [entityType, record] of allRecords({ findings, decisions, actions })) {
-    records.set(recordKey(entityType, record[ENTITY_CONFIG[entityType].id]), { entityType, record });
+    records.set(recordKey(entityType, record[ENTITY_CONFIG[entityType].id]), {
+      entityType,
+      record,
+    });
   }
   const replacements = new Map();
   for (const disposition of workDispositions) {
     const key = recordKey(disposition.entityType, disposition.entityId);
-    if (replacements.has(key)) fail('A Review may record one disposition per durable work item.', {
-      cycleId: cycle.cycleId, entityId: disposition.entityId,
-    });
+    if (replacements.has(key))
+      fail('A Review may record one disposition per durable work item.', {
+        cycleId: cycle.cycleId,
+        entityId: disposition.entityId,
+      });
     const entry = records.get(key);
-    if (!entry) fail('A Review disposition references unknown durable work.', {
-      cycleId: cycle.cycleId, entityId: disposition.entityId,
-    });
+    if (!entry)
+      fail('A Review disposition references unknown durable work.', {
+        cycleId: cycle.cycleId,
+        entityId: disposition.entityId,
+      });
     const { entityType, record } = entry;
     const config = ENTITY_CONFIG[entityType];
-    if (record.sourceCycleId !== cycle.cycleId
-      || record.scopeId !== cycle.scopeId
-      || record.domainId !== cycle.domainId
-      || record.domainVersion !== cycle.domainVersion) {
+    if (
+      record.sourceCycleId !== cycle.cycleId ||
+      record.scopeId !== cycle.scopeId ||
+      record.domainId !== cycle.domainId ||
+      record.domainVersion !== cycle.domainVersion
+    ) {
       fail('A Review may touch only source durable work in its bound Cycle, scope, and domain.', {
-        cycleId: cycle.cycleId, entityId: disposition.entityId,
+        cycleId: cycle.cycleId,
+        entityId: disposition.entityId,
       });
     }
     if (!config.unresolved.has(record.state)) {
       fail('A Review disposition may not mutate terminal durable work.', {
-        cycleId: cycle.cycleId, entityId: disposition.entityId, state: record.state,
+        cycleId: cycle.cycleId,
+        entityId: disposition.entityId,
+        state: record.state,
       });
     }
     if (record.state === 'deferred' && disposition.disposition === 'deferred') {
@@ -182,15 +219,23 @@ export function applyOperatingReviewWorkDispositionsV2({
     }
     if (!transition(entityType, record.state, disposition.disposition)) {
       fail('The requested durable-work disposition is not a canonical human Review transition.', {
-        cycleId: cycle.cycleId, entityId: disposition.entityId,
-        from: record.state, to: disposition.disposition,
+        cycleId: cycle.cycleId,
+        entityId: disposition.entityId,
+        from: record.state,
+        to: disposition.disposition,
       });
     }
-    const replacement = { ...structuredClone(record), state: disposition.disposition, updatedAt: timestamp };
-    if (entityType === 'operating-finding'
-      && disposition.disposition === 'deferred'
-      && replacement.ownerActorId === null
-      && replacement.revisitAt === null) {
+    const replacement = {
+      ...structuredClone(record),
+      state: disposition.disposition,
+      updatedAt: timestamp,
+    };
+    if (
+      entityType === 'operating-finding' &&
+      disposition.disposition === 'deferred' &&
+      replacement.ownerActorId === null &&
+      replacement.revisitAt === null
+    ) {
       if (typeof reviewOwnerActorId !== 'string' || reviewOwnerActorId.trim().length === 0) {
         fail('Deferring an unowned Finding requires the exact human Review owner.', {
           cycleId: cycle.cycleId,
@@ -201,9 +246,12 @@ export function applyOperatingReviewWorkDispositionsV2({
     }
     replacements.set(key, replacement);
   }
-  const replace = (entityType, recordsForType) => recordsForType.map((record) => (
-    replacements.get(recordKey(entityType, record[ENTITY_CONFIG[entityType].id])) ?? structuredClone(record)
-  ));
+  const replace = (entityType, recordsForType) =>
+    recordsForType.map(
+      (record) =>
+        replacements.get(recordKey(entityType, record[ENTITY_CONFIG[entityType].id])) ??
+        structuredClone(record),
+    );
   return Object.freeze({
     findings: Object.freeze(replace('operating-finding', findings)),
     decisions: Object.freeze(replace('operating-decision', decisions)),
@@ -225,7 +273,11 @@ export function closeCycleWithCarriedWorkV2({
   timestamp,
   reviewOwnerActorId,
 }) {
-  if (!cycle || cycle.state !== 'awaiting_review' || !['normal', 'partial'].includes(cycle.health)) {
+  if (
+    !cycle ||
+    cycle.state !== 'awaiting_review' ||
+    !['normal', 'partial'].includes(cycle.health)
+  ) {
     fail('Successful Cycle closure requires a non-quiet, non-blocked awaiting-review Cycle.', {
       cycleId: cycle?.cycleId ?? null,
       state: cycle?.state ?? null,
@@ -240,28 +292,33 @@ export function closeCycleWithCarriedWorkV2({
 
   const records = new Map();
   for (const [entityType, record] of allRecords({ findings, decisions, actions })) {
-    records.set(recordKey(entityType, record[ENTITY_CONFIG[entityType].id]), { entityType, record });
+    records.set(recordKey(entityType, record[ENTITY_CONFIG[entityType].id]), {
+      entityType,
+      record,
+    });
   }
 
   const dispositions = new Map();
   for (const disposition of workDispositions) {
     const key = recordKey(disposition.entityType, disposition.entityId);
-    if (dispositions.has(key)) fail('A Review may record one disposition per durable work item.', {
-      cycleId: cycle.cycleId,
-      entityType: disposition.entityType,
-      entityId: disposition.entityId,
-    });
+    if (dispositions.has(key))
+      fail('A Review may record one disposition per durable work item.', {
+        cycleId: cycle.cycleId,
+        entityType: disposition.entityType,
+        entityId: disposition.entityId,
+      });
     const entry = records.get(key);
-    if (!entry) fail('A Review disposition references unknown durable work.', {
-      cycleId: cycle.cycleId,
-      entityType: disposition.entityType,
-      entityId: disposition.entityId,
-    });
+    if (!entry)
+      fail('A Review disposition references unknown durable work.', {
+        cycleId: cycle.cycleId,
+        entityType: disposition.entityType,
+        entityId: disposition.entityId,
+      });
     const { record } = entry;
     if (
-      record.scopeId !== cycle.scopeId
-      || record.domainId !== cycle.domainId
-      || record.domainVersion !== cycle.domainVersion
+      record.scopeId !== cycle.scopeId ||
+      record.domainId !== cycle.domainId ||
+      record.domainVersion !== cycle.domainVersion
     ) {
       fail('A Review may touch only durable work in its bound scope and domain.', {
         cycleId: cycle.cycleId,
@@ -280,18 +337,29 @@ export function closeCycleWithCarriedWorkV2({
     }
   }
   for (const [key, { entityType, record }] of records) {
-    if (dispositions.has(key) && ENTITY_CONFIG[entityType].unresolved.has(record.state)) required.add(key);
+    if (dispositions.has(key) && ENTITY_CONFIG[entityType].unresolved.has(record.state))
+      required.add(key);
   }
   for (const key of required) {
-    if (!dispositions.has(key)) fail('Every unresolved source or touched durable-work item requires an explicit Review disposition.', {
-      cycleId: cycle.cycleId,
-      entityType: key.split(':', 1)[0],
-      entityId: key.slice(key.indexOf(':') + 1),
-    });
+    if (!dispositions.has(key))
+      fail(
+        'Every unresolved source or touched durable-work item requires an explicit Review disposition.',
+        {
+          cycleId: cycle.cycleId,
+          entityType: key.split(':', 1)[0],
+          entityId: key.slice(key.indexOf(':') + 1),
+        },
+      );
   }
 
   const projected = applyOperatingReviewWorkDispositionsV2({
-    cycle, findings, decisions, actions, workDispositions, timestamp, reviewOwnerActorId,
+    cycle,
+    findings,
+    decisions,
+    actions,
+    workDispositions,
+    timestamp,
+    reviewOwnerActorId,
   });
   return Object.freeze({
     cycle: Object.freeze({
@@ -324,32 +392,44 @@ export function closeVerifiedOperatingCycleV2({
   carriedActionIds = [],
   timestamp,
 }) {
-  if (!cycle || cycle.state !== 'verifying'
-    || typeof timestamp !== 'string'
-    || Number.isNaN(Date.parse(timestamp))
-    || !Array.isArray(actions)
-    || !Array.isArray(verificationPlans)
-    || !Array.isArray(governedOperations)
-    || !Array.isArray(executionResults)
-    || !Array.isArray(rollbackResults)
-    || !Array.isArray(verificationAssignments)
-    || !Array.isArray(verificationFeedback)
-    || !Array.isArray(carriedActionIds)
-    || new Set(carriedActionIds).size !== carriedActionIds.length) {
-    fail('Verified Cycle closure requires exact verifying state, typed collections, and one timestamp.', {
-      cycleId: cycle?.cycleId ?? null,
-      state: cycle?.state ?? null,
-    });
+  if (
+    !cycle ||
+    cycle.state !== 'verifying' ||
+    typeof timestamp !== 'string' ||
+    Number.isNaN(Date.parse(timestamp)) ||
+    !Array.isArray(actions) ||
+    !Array.isArray(verificationPlans) ||
+    !Array.isArray(governedOperations) ||
+    !Array.isArray(executionResults) ||
+    !Array.isArray(rollbackResults) ||
+    !Array.isArray(verificationAssignments) ||
+    !Array.isArray(verificationFeedback) ||
+    !Array.isArray(carriedActionIds) ||
+    new Set(carriedActionIds).size !== carriedActionIds.length
+  ) {
+    fail(
+      'Verified Cycle closure requires exact verifying state, typed collections, and one timestamp.',
+      {
+        cycleId: cycle?.cycleId ?? null,
+        state: cycle?.state ?? null,
+      },
+    );
   }
   const selected = actions.filter(({ sourceCycleId }) => sourceCycleId === cycle.cycleId);
-  if (selected.some((action) => (
-    action.scopeId !== cycle.scopeId
-    || action.domainId !== cycle.domainId
-    || action.domainVersion !== cycle.domainVersion
-  ))) {
-    fail('Verified Cycle closure may use only source Actions in its exact scope and domain version.', {
-      cycleId: cycle.cycleId,
-    });
+  if (
+    selected.some(
+      (action) =>
+        action.scopeId !== cycle.scopeId ||
+        action.domainId !== cycle.domainId ||
+        action.domainVersion !== cycle.domainVersion,
+    )
+  ) {
+    fail(
+      'Verified Cycle closure may use only source Actions in its exact scope and domain version.',
+      {
+        cycleId: cycle.cycleId,
+      },
+    );
   }
   const feedbackByAction = new Map();
   for (const entry of verificationFeedback) {
@@ -364,25 +444,28 @@ export function closeVerifiedOperatingCycleV2({
   const carried = new Set(carriedActionIds);
   for (const action of selected) {
     const feedback = feedbackByAction.get(action.actionId);
-    const persistentCarry = carried.has(action.actionId)
-      && ['blocked', 'deferred'].includes(action.state);
+    const persistentCarry =
+      carried.has(action.actionId) && ['blocked', 'deferred'].includes(action.state);
     let assignment = null;
     if (feedback && !persistentCarry) {
-      const plans = verificationPlans.filter(({ verificationPlanId }) => (
-        verificationPlanId === feedback.verificationPlanId
-      ));
-      const operations = governedOperations.filter(({ operationId }) => (
-        operationId === feedback.operationId
-      ));
+      const plans = verificationPlans.filter(
+        ({ verificationPlanId }) => verificationPlanId === feedback.verificationPlanId,
+      );
+      const operations = governedOperations.filter(
+        ({ operationId }) => operationId === feedback.operationId,
+      );
       const results = [
         ...executionResults.filter(({ resultId }) => resultId === feedback.resultId),
         ...rollbackResults.filter(({ rollbackResultId }) => rollbackResultId === feedback.resultId),
       ];
       if (plans.length !== 1 || operations.length !== 1 || results.length !== 1) {
-        fail('Verified Cycle closure requires one exact plan, operation, and terminal result per Action.', {
-          cycleId: cycle.cycleId,
-          actionId: action.actionId,
-        });
+        fail(
+          'Verified Cycle closure requires one exact plan, operation, and terminal result per Action.',
+          {
+            cycleId: cycle.cycleId,
+            actionId: action.actionId,
+          },
+        );
       }
       try {
         assignment = selectOperatingTerminalVerificationAssignmentV2({
@@ -402,22 +485,30 @@ export function closeVerifiedOperatingCycleV2({
         });
       }
       if (assignment.assignmentId !== feedback.verificationAssignmentId) {
-        fail('Verified Cycle closure feedback does not retain its canonical verification Assignment identity.', {
-          cycleId: cycle.cycleId,
-          actionId: action.actionId,
-          assignmentId: feedback.verificationAssignmentId ?? null,
-        });
+        fail(
+          'Verified Cycle closure feedback does not retain its canonical verification Assignment identity.',
+          {
+            cycleId: cycle.cycleId,
+            actionId: action.actionId,
+            assignmentId: feedback.verificationAssignmentId ?? null,
+          },
+        );
       }
     }
     if ((!feedback || !assignment) && !persistentCarry) {
-      fail('Every executed Action requires one owned verification disposition or explicit persistent carry-forward.', {
-        cycleId: cycle.cycleId,
-        actionId: action.actionId,
-      });
+      fail(
+        'Every executed Action requires one owned verification disposition or explicit persistent carry-forward.',
+        {
+          cycleId: cycle.cycleId,
+          actionId: action.actionId,
+        },
+      );
     }
-    if (['queued', 'in_progress'].includes(action.state)
-      || (carried.has(action.actionId) && !persistentCarry)
-      || (feedback?.hypothesisStatus === 'pending' && !persistentCarry)) {
+    if (
+      ['queued', 'in_progress'].includes(action.state) ||
+      (carried.has(action.actionId) && !persistentCarry) ||
+      (feedback?.hypothesisStatus === 'pending' && !persistentCarry)
+    ) {
       fail('Cycle closure cannot hide active execution or an undisposed verification hypothesis.', {
         cycleId: cycle.cycleId,
         actionId: action.actionId,
@@ -428,7 +519,10 @@ export function closeVerifiedOperatingCycleV2({
   }
   for (const actionId of carried) {
     if (!selected.some((action) => action.actionId === actionId)) {
-      fail('Cycle carry-forward references an unknown source Action.', { cycleId: cycle.cycleId, actionId });
+      fail('Cycle carry-forward references an unknown source Action.', {
+        cycleId: cycle.cycleId,
+        actionId,
+      });
     }
   }
   return Object.freeze({
@@ -441,6 +535,8 @@ export function closeVerifiedOperatingCycleV2({
     }),
     actions: Object.freeze(actions.map((action) => Object.freeze(structuredClone(action)))),
     carriedActionIds: Object.freeze([...carried].sort()),
-    verificationFeedback: Object.freeze(verificationFeedback.map((entry) => Object.freeze(structuredClone(entry)))),
+    verificationFeedback: Object.freeze(
+      verificationFeedback.map((entry) => Object.freeze(structuredClone(entry))),
+    ),
   });
 }

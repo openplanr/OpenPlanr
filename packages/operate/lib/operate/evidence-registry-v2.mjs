@@ -7,24 +7,26 @@ import {
 const VERSION = '2.0.0';
 const PROVIDER_KIND = 'operate-evidence-provider-registration';
 const RESOLVER_KIND = 'operate-evidence-resolver-registration';
-const OPEN_REFERENCE_SOURCE_CONTRACTS = Object.freeze([
-  'capacity-throughput',
-  'channel-economics',
-  'ci-test-evidence',
-  'competitor-positioning',
-  'context-manifest',
-  'demand-market',
-  'finance-metrics',
-  'incident-history',
-  'objective-metrics',
-  'operations-customer-health',
-  'planning-acceptance',
-  'prior-decisions',
-  'product-activation',
-  'repository-architecture',
-  'retention-discovery',
-  'support-incidents',
-].map((id) => Object.freeze({ id, version: '1.0.0' })));
+const OPEN_REFERENCE_SOURCE_CONTRACTS = Object.freeze(
+  [
+    'capacity-throughput',
+    'channel-economics',
+    'ci-test-evidence',
+    'competitor-positioning',
+    'context-manifest',
+    'demand-market',
+    'finance-metrics',
+    'incident-history',
+    'objective-metrics',
+    'operations-customer-health',
+    'planning-acceptance',
+    'prior-decisions',
+    'product-activation',
+    'repository-architecture',
+    'retention-discovery',
+    'support-incidents',
+  ].map((id) => Object.freeze({ id, version: '1.0.0' })),
+);
 
 const REQUIRED_CAPABILITY_BY_KIND = Object.freeze({
   filesystem: 'evidence.filesystem.read',
@@ -82,11 +84,15 @@ const BUILT_IN_IDENTITIES = Object.freeze({
 });
 
 export const BUILT_IN_EVIDENCE_PROVIDER_IDS_V2 = Object.freeze(
-  Object.values(BUILT_IN_IDENTITIES).map(({ providerId }) => providerId).sort(),
+  Object.values(BUILT_IN_IDENTITIES)
+    .map(({ providerId }) => providerId)
+    .sort(),
 );
 
 export const BUILT_IN_EVIDENCE_RESOLVER_IDS_V2 = Object.freeze(
-  Object.values(BUILT_IN_IDENTITIES).map(({ resolverId }) => resolverId).sort(),
+  Object.values(BUILT_IN_IDENTITIES)
+    .map(({ resolverId }) => resolverId)
+    .sort(),
 );
 
 export class OperatingEvidenceRegistryErrorV2 extends Error {
@@ -116,7 +122,9 @@ function freeze(value) {
 
 function portable(value, path = '$') {
   if (typeof value === 'function' || typeof value === 'symbol' || typeof value === 'bigint') {
-    fail('E_EVIDENCE_REGISTRATION_INVALID', 'Evidence registration must be JSON-only data.', { path });
+    fail('E_EVIDENCE_REGISTRATION_INVALID', 'Evidence registration must be JSON-only data.', {
+      path,
+    });
   }
   if (Array.isArray(value)) {
     value.forEach((entry, index) => portable(entry, `${path}[${index}]`));
@@ -128,14 +136,20 @@ function portable(value, path = '$') {
   }
   if (typeof value !== 'string') return;
   if (
-    value.includes('\u0000')
-    || value.startsWith('/')
-    || value.startsWith('~')
-    || value.split(/[\\/]/u).includes('..')
-    || /(?:^|[^a-z])(?:file|data|node|npm|http|https):/iu.test(value)
-    || /\b(?:module|plugin|function|import|require|private[-_ ]?consumer|credential|secret|api[-_ ]?key|access[-_ ]?token|codex|claude|cursor|openai|anthropic)\b/iu.test(value)
+    value.includes('\u0000') ||
+    value.startsWith('/') ||
+    value.startsWith('~') ||
+    value.split(/[\\/]/u).includes('..') ||
+    /(?:^|[^a-z])(?:file|data|node|npm|http|https):/iu.test(value) ||
+    /\b(?:module|plugin|function|import|require|private[-_ ]?consumer|credential|secret|api[-_ ]?key|access[-_ ]?token|codex|claude|cursor|openai|anthropic)\b/iu.test(
+      value,
+    )
   ) {
-    fail('E_EVIDENCE_REGISTRATION_INVALID', 'Evidence registration contains a non-portable declaration.', { path });
+    fail(
+      'E_EVIDENCE_REGISTRATION_INVALID',
+      'Evidence registration contains a non-portable declaration.',
+      { path },
+    );
   }
 }
 
@@ -203,31 +217,67 @@ function expectedIdentity(registration, { resolver }) {
   const field = resolver ? 'resolverId' : 'providerId';
   const kind = registration.supportedEvidenceKinds?.[0];
   const expected = BUILT_IN_IDENTITIES[kind];
-  if (!expected || registration.supportedEvidenceKinds.length !== 1 || registration[field] !== expected[field]) {
-    fail('E_EVIDENCE_REGISTRATION_INVALID', 'Evidence registration must name one supported built-in implementation.', {
-      kind,
-      [field]: registration[field],
-    });
+  if (
+    !expected ||
+    registration.supportedEvidenceKinds.length !== 1 ||
+    registration[field] !== expected[field]
+  ) {
+    fail(
+      'E_EVIDENCE_REGISTRATION_INVALID',
+      'Evidence registration must name one supported built-in implementation.',
+      {
+        kind,
+        [field]: registration[field],
+      },
+    );
   }
-  const implementationId = resolver ? expected.resolverImplementationId : expected.providerImplementationId;
-  if (registration.implementation.kind !== 'built-in' || registration.implementation.id !== implementationId) {
-    fail('E_EVIDENCE_REGISTRATION_INVALID', 'Evidence registration implementation must match its explicit built-in identity.', {
-      kind,
-      implementationId: registration.implementation?.id,
-    });
+  const implementationId = resolver
+    ? expected.resolverImplementationId
+    : expected.providerImplementationId;
+  if (
+    registration.implementation.kind !== 'built-in' ||
+    registration.implementation.id !== implementationId
+  ) {
+    fail(
+      'E_EVIDENCE_REGISTRATION_INVALID',
+      'Evidence registration implementation must match its explicit built-in identity.',
+      {
+        kind,
+        implementationId: registration.implementation?.id,
+      },
+    );
   }
-  if (registration.requiredCapabilities.length !== 1 || registration.requiredCapabilities[0] !== REQUIRED_CAPABILITY_BY_KIND[kind]) {
-    fail('E_EVIDENCE_REGISTRATION_INVALID', 'Evidence registration must require the exact local read capability for its kind.', {
-      kind,
-    });
+  if (
+    registration.requiredCapabilities.length !== 1 ||
+    registration.requiredCapabilities[0] !== REQUIRED_CAPABILITY_BY_KIND[kind]
+  ) {
+    fail(
+      'E_EVIDENCE_REGISTRATION_INVALID',
+      'Evidence registration must require the exact local read capability for its kind.',
+      {
+        kind,
+      },
+    );
   }
   if (registration.effectClass !== 'local-read-only') {
-    fail('E_EVIDENCE_REGISTRATION_INVALID', 'Evidence registration must remain local and read-only.', { kind });
+    fail(
+      'E_EVIDENCE_REGISTRATION_INVALID',
+      'Evidence registration must remain local and read-only.',
+      { kind },
+    );
   }
-  if (resolver && JSON.stringify(registration.supportedSourceContracts) !== JSON.stringify(OPEN_REFERENCE_SOURCE_CONTRACTS)) {
-    fail('E_EVIDENCE_REGISTRATION_INVALID', 'Evidence resolver registration must declare the exact built-in source-contract vocabulary.', {
-      kind,
-    });
+  if (
+    resolver &&
+    JSON.stringify(registration.supportedSourceContracts) !==
+      JSON.stringify(OPEN_REFERENCE_SOURCE_CONTRACTS)
+  ) {
+    fail(
+      'E_EVIDENCE_REGISTRATION_INVALID',
+      'Evidence resolver registration must declare the exact built-in source-contract vocabulary.',
+      {
+        kind,
+      },
+    );
   }
 }
 
@@ -236,8 +286,14 @@ function validateRegistration(registration, { resolver }) {
   const contractKind = resolver ? RESOLVER_KIND : PROVIDER_KIND;
   assertProtocolArtifact(contractKind, registration, { protocolVersion: VERSION });
   expectedIdentity(registration, { resolver });
-  if (resolver && registration.errorCodes.some((code) => !OPERATE_EVIDENCE_RESOLVER_ERROR_CODES_V2.includes(code))) {
-    fail('E_EVIDENCE_REGISTRATION_INVALID', 'Evidence resolver registration declares an unsupported error code.');
+  if (
+    resolver &&
+    registration.errorCodes.some((code) => !OPERATE_EVIDENCE_RESOLVER_ERROR_CODES_V2.includes(code))
+  ) {
+    fail(
+      'E_EVIDENCE_REGISTRATION_INVALID',
+      'Evidence resolver registration declares an unsupported error code.',
+    );
   }
   return clone(registration);
 }
@@ -248,10 +304,14 @@ function indexRegistrations(registrations, { resolver }) {
     : ({ providerId, providerVersion }) => `${providerId}@${providerVersion}`;
   const label = resolver ? 'resolver' : 'provider';
   const indexed = new Map();
-  for (const registration of registrations.map((entry) => validateRegistration(entry, { resolver }))) {
+  for (const registration of registrations.map((entry) =>
+    validateRegistration(entry, { resolver }),
+  )) {
     const key = identity(registration);
     if (indexed.has(key)) {
-      fail('E_EVIDENCE_REGISTRATION_CONFLICT', `Duplicate evidence ${label} registration ${key}.`, { key });
+      fail('E_EVIDENCE_REGISTRATION_CONFLICT', `Duplicate evidence ${label} registration ${key}.`, {
+        key,
+      });
     }
     indexed.set(key, freeze(registration));
   }
@@ -259,7 +319,8 @@ function indexRegistrations(registrations, { resolver }) {
 }
 
 function ensureArray(value, field) {
-  if (!Array.isArray(value)) fail('E_EVIDENCE_REGISTRATION_INVALID', `${field} must be an array.`, { field });
+  if (!Array.isArray(value))
+    fail('E_EVIDENCE_REGISTRATION_INVALID', `${field} must be an array.`, { field });
   return value;
 }
 
@@ -272,16 +333,22 @@ export function createOperateEvidenceRegistryV2({
   providers = OPEN_REFERENCE_EVIDENCE_PROVIDERS_V2,
   resolvers = OPEN_REFERENCE_EVIDENCE_RESOLVERS_V2,
 } = {}) {
-  const providerIndex = indexRegistrations(ensureArray(providers, 'providers'), { resolver: false });
+  const providerIndex = indexRegistrations(ensureArray(providers, 'providers'), {
+    resolver: false,
+  });
   const resolverIndex = indexRegistrations(ensureArray(resolvers, 'resolvers'), { resolver: true });
   return freeze({
     protocolVersion: VERSION,
-    providers: [...providerIndex.values()].sort((left, right) => (
-      `${left.providerId}@${left.providerVersion}`.localeCompare(`${right.providerId}@${right.providerVersion}`)
-    )),
-    resolvers: [...resolverIndex.values()].sort((left, right) => (
-      `${left.resolverId}@${left.resolverVersion}`.localeCompare(`${right.resolverId}@${right.resolverVersion}`)
-    )),
+    providers: [...providerIndex.values()].sort((left, right) =>
+      `${left.providerId}@${left.providerVersion}`.localeCompare(
+        `${right.providerId}@${right.providerVersion}`,
+      ),
+    ),
+    resolvers: [...resolverIndex.values()].sort((left, right) =>
+      `${left.resolverId}@${left.resolverVersion}`.localeCompare(
+        `${right.resolverId}@${right.resolverVersion}`,
+      ),
+    ),
   });
 }
 
@@ -293,38 +360,59 @@ function requireVersion(version, subject) {
   }
 }
 
-export function findOperateEvidenceProviderRegistrationV2(registry, providerId, { providerVersion } = {}) {
+export function findOperateEvidenceProviderRegistrationV2(
+  registry,
+  providerId,
+  { providerVersion } = {},
+) {
   requireVersion(providerVersion, `Evidence provider registration ${providerId}`);
-  const registration = registry?.providers?.find((entry) => (
-    entry.providerId === providerId && entry.providerVersion === providerVersion
-  ));
+  const registration = registry?.providers?.find(
+    (entry) => entry.providerId === providerId && entry.providerVersion === providerVersion,
+  );
   return registration === undefined ? null : clone(registration);
 }
 
-export function findOperateEvidenceResolverRegistrationV2(registry, resolverId, { resolverVersion } = {}) {
+export function findOperateEvidenceResolverRegistrationV2(
+  registry,
+  resolverId,
+  { resolverVersion } = {},
+) {
   requireVersion(resolverVersion, `Evidence resolver registration ${resolverId}`);
-  const registration = registry?.resolvers?.find((entry) => (
-    entry.resolverId === resolverId && entry.resolverVersion === resolverVersion
-  ));
+  const registration = registry?.resolvers?.find(
+    (entry) => entry.resolverId === resolverId && entry.resolverVersion === resolverVersion,
+  );
   return registration === undefined ? null : clone(registration);
 }
 
 function rejection(code, context) {
-  return freeze({ status: 'rejected', provider: null, resolver: null, error: { code, retryable: false, context } });
+  return freeze({
+    status: 'rejected',
+    provider: null,
+    resolver: null,
+    error: { code, retryable: false, context },
+  });
 }
 
 function capabilitySet(capabilities) {
-  if (!Array.isArray(capabilities) || capabilities.some((capability) => typeof capability !== 'string')) {
-    fail('E_EVIDENCE_CAPABILITY_CONTEXT_INVALID', 'Evidence dispatch capabilities must be an explicit array of strings.');
+  if (
+    !Array.isArray(capabilities) ||
+    capabilities.some((capability) => typeof capability !== 'string')
+  ) {
+    fail(
+      'E_EVIDENCE_CAPABILITY_CONTEXT_INVALID',
+      'Evidence dispatch capabilities must be an explicit array of strings.',
+    );
   }
   return new Set(capabilities);
 }
 
 function sameScope(candidate, scope) {
-  return scope
-    && candidate.scopeId === scope.scopeId
-    && candidate.domainId === scope.domainId
-    && candidate.domainVersion === scope.domainVersion;
+  return (
+    scope &&
+    candidate.scopeId === scope.scopeId &&
+    candidate.domainId === scope.domainId &&
+    candidate.domainVersion === scope.domainVersion
+  );
 }
 
 /**
@@ -332,10 +420,11 @@ function sameScope(candidate, scope) {
  * scope and read capabilities are checked at this boundary; candidates and
  * registrations never confer either one.
  */
-export function prepareOperateEvidenceDispatchV2(registry, candidate, {
-  scope,
-  capabilities = [],
-} = {}) {
+export function prepareOperateEvidenceDispatchV2(
+  registry,
+  candidate,
+  { scope, capabilities = [] } = {},
+) {
   assertProtocolArtifact('operating-evidence-candidate', candidate, { protocolVersion: VERSION });
   if (!sameScope(candidate, scope)) {
     return rejection('EVIDENCE_SOURCE_SCOPE_MISMATCH', { evidenceKind: candidate.evidenceKind });
@@ -350,21 +439,33 @@ export function prepareOperateEvidenceDispatchV2(registry, candidate, {
     resolverVersion: candidate.resolver.version,
   });
   if (resolver === null) {
-    const knownResolver = registry?.resolvers?.some(({ resolverId }) => resolverId === candidate.resolver.id);
+    const knownResolver = registry?.resolvers?.some(
+      ({ resolverId }) => resolverId === candidate.resolver.id,
+    );
     return rejection(
       knownResolver ? 'EVIDENCE_RESOLVER_VERSION_UNSUPPORTED' : 'EVIDENCE_RESOLVER_UNREGISTERED',
       { evidenceKind: candidate.evidenceKind, resolverId: candidate.resolver.id },
     );
   }
-  if (!OPERATE_EVIDENCE_KINDS_V2.includes(candidate.evidenceKind)
-    || !provider.supportedEvidenceKinds.includes(candidate.evidenceKind)
-    || !resolver.supportedEvidenceKinds.includes(candidate.evidenceKind)) {
-    return rejection('UNSUPPORTED_EVIDENCE_KIND', { evidenceKind: candidate.evidenceKind, resolverId: resolver.resolverId });
+  if (
+    !OPERATE_EVIDENCE_KINDS_V2.includes(candidate.evidenceKind) ||
+    !provider.supportedEvidenceKinds.includes(candidate.evidenceKind) ||
+    !resolver.supportedEvidenceKinds.includes(candidate.evidenceKind)
+  ) {
+    return rejection('UNSUPPORTED_EVIDENCE_KIND', {
+      evidenceKind: candidate.evidenceKind,
+      resolverId: resolver.resolverId,
+    });
   }
   const granted = capabilitySet(capabilities);
-  const required = [...new Set([...provider.requiredCapabilities, ...resolver.requiredCapabilities])];
+  const required = [
+    ...new Set([...provider.requiredCapabilities, ...resolver.requiredCapabilities]),
+  ];
   if (required.some((capability) => !granted.has(capability))) {
-    return rejection('CAPABILITY_DENIED', { evidenceKind: candidate.evidenceKind, resolverId: resolver.resolverId });
+    return rejection('CAPABILITY_DENIED', {
+      evidenceKind: candidate.evidenceKind,
+      resolverId: resolver.resolverId,
+    });
   }
   return freeze({
     status: 'authorized',

@@ -1,7 +1,4 @@
-import type {
-  OperateExperienceEventHeadV1,
-  OperatingReviewReadV2,
-} from '@openplanr/protocol';
+import type { OperateExperienceEventHeadV1, OperatingReviewReadV2 } from '@openplanr/protocol';
 
 export type OperateReviewBoundSubmissionV1 = Readonly<{
   kind: 'operate-review-bound-submission';
@@ -18,13 +15,17 @@ export type OperateReviewBoundSubmissionV1 = Readonly<{
 export const OPERATE_REVIEW_BOUND_SUBMISSION_DOMAIN: string;
 
 export function computeOperatingReviewBoundSubmissionHashV1(
-  value: Omit<OperateReviewBoundSubmissionV1, 'boundSubmissionHash'> | OperateReviewBoundSubmissionV1,
+  value:
+    | Omit<OperateReviewBoundSubmissionV1, 'boundSubmissionHash'>
+    | OperateReviewBoundSubmissionV1,
 ): string;
 
 export function assertOperatingReviewBoundSubmissionV1<T>(value: T): T;
 
-export function buildOperatingReviewBoundSubmissionV1(input: Readonly<{
-  expectedReadEventHead: OperateExperienceEventHeadV1;
-  choice: OperatingReviewReadV2['dispositionChoices'][number];
-  note?: string | null;
-}>): OperateReviewBoundSubmissionV1;
+export function buildOperatingReviewBoundSubmissionV1(
+  input: Readonly<{
+    expectedReadEventHead: OperateExperienceEventHeadV1;
+    choice: OperatingReviewReadV2['dispositionChoices'][number];
+    note?: string | null;
+  }>,
+): OperateReviewBoundSubmissionV1;

@@ -18,8 +18,22 @@ export const DEFAULT_FILESYSTEM_EVIDENCE_MAX_BYTES_V2 = 262144;
 
 const CLASSIFICATIONS = new Set(['public', 'internal', 'confidential', 'restricted']);
 const PRIVATE_PATH_SEGMENTS = new Set([
-  '.aws', '.azure', '.git', '.gnupg', '.gradle', '.kube', '.pnpm', '.ssh', '.venv', '.yarn',
-  '__pycache__', 'bower_components', 'node_modules', 'pods', 'venv', 'vendor',
+  '.aws',
+  '.azure',
+  '.git',
+  '.gnupg',
+  '.gradle',
+  '.kube',
+  '.pnpm',
+  '.ssh',
+  '.venv',
+  '.yarn',
+  '__pycache__',
+  'bower_components',
+  'node_modules',
+  'pods',
+  'venv',
+  'vendor',
 ]);
 const PRIVATE_OPERATE_DIRECTORIES = new Set(['archive', 'packets', 'state']);
 const SECRET_FILE_PATTERNS = [
@@ -62,7 +76,9 @@ function safeError(candidate, provider, resolver, code, context = {}) {
       retryable: false,
       context: {
         evidenceKind: 'filesystem',
-        ...(candidate?.locator?.sourceRootId ? { sourceRootId: candidate.locator.sourceRootId } : {}),
+        ...(candidate?.locator?.sourceRootId
+          ? { sourceRootId: candidate.locator.sourceRootId }
+          : {}),
         ...(resolver?.resolverId ? { resolverId: resolver.resolverId } : {}),
         ...context,
       },
@@ -75,23 +91,29 @@ function hasCapability(capabilities, capability) {
 }
 
 function safeRelativePath(path) {
-  return typeof path === 'string'
-    && path.length > 0
-    && !isAbsolute(path)
-    && !path.includes('\\')
-    && path.split('/').every((segment) => segment.length > 0 && segment !== '.' && segment !== '..');
+  return (
+    typeof path === 'string' &&
+    path.length > 0 &&
+    !isAbsolute(path) &&
+    !path.includes('\\') &&
+    path.split('/').every((segment) => segment.length > 0 && segment !== '.' && segment !== '..')
+  );
 }
 
 function restrictedRepositoryPath(path) {
   const segments = path.split('/');
   const normalized = segments.map((segment) => segment.toLowerCase());
-  if (normalized.some((segment) => PRIVATE_PATH_SEGMENTS.has(segment))) return 'SENSITIVITY_BLOCKED';
+  if (normalized.some((segment) => PRIVATE_PATH_SEGMENTS.has(segment)))
+    return 'SENSITIVITY_BLOCKED';
   for (let index = 0; index < normalized.length; index += 1) {
     if (normalized[index] !== '.planr') continue;
     if (normalized[index + 1] === 'operate-v2' || normalized[index + 1] === 'operate-legacy') {
       return 'SENSITIVITY_BLOCKED';
     }
-    if (normalized[index + 1] === 'operate' && PRIVATE_OPERATE_DIRECTORIES.has(normalized[index + 2])) {
+    if (
+      normalized[index + 1] === 'operate' &&
+      PRIVATE_OPERATE_DIRECTORIES.has(normalized[index + 2])
+    ) {
       return 'SENSITIVITY_BLOCKED';
     }
   }
@@ -112,7 +134,11 @@ function configuredRoot(context, sourceRootId) {
 
 function configuredMaximum(source) {
   const maximum = source?.maxBytes ?? DEFAULT_FILESYSTEM_EVIDENCE_MAX_BYTES_V2;
-  return Number.isSafeInteger(maximum) && maximum > 0 && maximum <= DEFAULT_FILESYSTEM_EVIDENCE_MAX_BYTES_V2 ? maximum : null;
+  return Number.isSafeInteger(maximum) &&
+    maximum > 0 &&
+    maximum <= DEFAULT_FILESYSTEM_EVIDENCE_MAX_BYTES_V2
+    ? maximum
+    : null;
 }
 
 function sourceClassification(source) {
@@ -121,8 +147,11 @@ function sourceClassification(source) {
 
 function declaredSourceContract(source) {
   const value = source?.sourceContract;
-  return value && typeof value === 'object' && !Array.isArray(value)
-    && typeof value.id === 'string' && typeof value.version === 'string'
+  return value &&
+    typeof value === 'object' &&
+    !Array.isArray(value) &&
+    typeof value.id === 'string' &&
+    typeof value.version === 'string'
     ? value
     : null;
 }
@@ -162,9 +191,11 @@ function readRegularFileNoFollow(candidate, maximum) {
 }
 
 function assertSelection(candidate, provider, resolver) {
-  return candidate?.evidenceKind === 'filesystem'
-    && provider?.providerId === LOCAL_FILESYSTEM_EVIDENCE_PROVIDER_ID_V2
-    && resolver?.resolverId === LOCAL_FILESYSTEM_EVIDENCE_RESOLVER_ID_V2;
+  return (
+    candidate?.evidenceKind === 'filesystem' &&
+    provider?.providerId === LOCAL_FILESYSTEM_EVIDENCE_PROVIDER_ID_V2 &&
+    resolver?.resolverId === LOCAL_FILESYSTEM_EVIDENCE_RESOLVER_ID_V2
+  );
 }
 
 /**
@@ -172,12 +203,10 @@ function assertSelection(candidate, provider, resolver) {
  * It cannot read absolute paths, traverse, follow symlinks, execute content,
  * create durable records, or reach a connected source.
  */
-export function resolveLocalFilesystemEvidenceV2(candidate, {
-  provider,
-  resolver,
-  capabilities = [],
-  ...context
-} = {}) {
+export function resolveLocalFilesystemEvidenceV2(
+  candidate,
+  { provider, resolver, capabilities = [], ...context } = {},
+) {
   if (!assertSelection(candidate, provider, resolver)) {
     return safeError(candidate, provider, resolver, 'UNSUPPORTED_EVIDENCE_KIND');
   }
@@ -185,7 +214,12 @@ export function resolveLocalFilesystemEvidenceV2(candidate, {
     return safeError(candidate, provider, resolver, 'CAPABILITY_DENIED');
   }
   const locator = candidate.locator;
-  if (!locator || typeof locator !== 'object' || typeof locator.sourceRootId !== 'string' || !safeRelativePath(locator.path)) {
+  if (
+    !locator ||
+    typeof locator !== 'object' ||
+    typeof locator.sourceRootId !== 'string' ||
+    !safeRelativePath(locator.path)
+  ) {
     return safeError(candidate, provider, resolver, 'EVIDENCE_LOCATOR_INVALID');
   }
   const pathRestriction = restrictedRepositoryPath(locator.path);
@@ -194,23 +228,29 @@ export function resolveLocalFilesystemEvidenceV2(candidate, {
   const rootPath = usableRoot(source);
   if (rootPath === null) return safeError(candidate, provider, resolver, 'SOURCE_NOT_FOUND');
   const sourceContract = declaredSourceContract(source);
-  if (sourceContract === null) return safeError(candidate, provider, resolver, 'EVIDENCE_LOCATOR_INVALID');
+  if (sourceContract === null)
+    return safeError(candidate, provider, resolver, 'EVIDENCE_LOCATOR_INVALID');
   const maximum = configuredMaximum(source);
   if (maximum === null) return safeError(candidate, provider, resolver, 'SENSITIVITY_BLOCKED');
 
   const candidatePath = resolve(rootPath, ...locator.path.split('/'));
-  if (!isContained(rootPath, candidatePath)) return safeError(candidate, provider, resolver, 'EVIDENCE_LOCATOR_INVALID');
+  if (!isContained(rootPath, candidatePath))
+    return safeError(candidate, provider, resolver, 'EVIDENCE_LOCATOR_INVALID');
   try {
-    if (!existsSync(candidatePath)) return safeError(candidate, provider, resolver, 'PATH_NOT_FOUND');
-    if (lstatSync(candidatePath).isSymbolicLink()) return safeError(candidate, provider, resolver, 'SENSITIVITY_BLOCKED');
+    if (!existsSync(candidatePath))
+      return safeError(candidate, provider, resolver, 'PATH_NOT_FOUND');
+    if (lstatSync(candidatePath).isSymbolicLink())
+      return safeError(candidate, provider, resolver, 'SENSITIVITY_BLOCKED');
     const realCandidate = realpathSync(candidatePath);
-    if (!isContained(rootPath, realCandidate)) return safeError(candidate, provider, resolver, 'SENSITIVITY_BLOCKED');
+    if (!isContained(rootPath, realCandidate))
+      return safeError(candidate, provider, resolver, 'SENSITIVITY_BLOCKED');
   } catch {
     return safeError(candidate, provider, resolver, 'PATH_NOT_FOUND');
   }
   const read = readRegularFileNoFollow(candidatePath, maximum);
   if (read.error) return safeError(candidate, provider, resolver, read.error);
-  if (containsSecret(read.bytes)) return safeError(candidate, provider, resolver, 'SECRET_DETECTED');
+  if (containsSecret(read.bytes))
+    return safeError(candidate, provider, resolver, 'SECRET_DETECTED');
 
   return freeze({
     status: 'resolved',

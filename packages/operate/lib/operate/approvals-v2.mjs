@@ -39,15 +39,19 @@ function policyRef(evaluation) {
 }
 
 function sameAction(left, right) {
-  return left?.actionId === right?.actionId
-    && left?.revision === right?.revision
-    && left?.actionHash === right?.actionHash;
+  return (
+    left?.actionId === right?.actionId &&
+    left?.revision === right?.revision &&
+    left?.actionHash === right?.actionHash
+  );
 }
 
 function samePolicy(left, right) {
-  return left?.policyId === right?.policyId
-    && left?.policyVersion === right?.policyVersion
-    && left?.policyHash === right?.policyHash;
+  return (
+    left?.policyId === right?.policyId &&
+    left?.policyVersion === right?.policyVersion &&
+    left?.policyHash === right?.policyHash
+  );
 }
 
 function sameIdentity(left, right) {
@@ -60,75 +64,99 @@ function sameTarget(left, right) {
 
 function time(value, field) {
   const parsed = typeof value === 'string' ? Date.parse(value) : Number.NaN;
-  if (Number.isNaN(parsed)) fail('RESULT_CONTRACT_INVALID', `${field} must be an explicit timestamp.`, { field });
+  if (Number.isNaN(parsed))
+    fail('RESULT_CONTRACT_INVALID', `${field} must be an explicit timestamp.`, { field });
   return parsed;
 }
 
 function exactRequirementBinding(requirement, evaluation, action) {
-  return requirement.evaluationId === evaluation.evaluationId
-    && samePolicy(requirement.policy, evaluation.policy)
-    && sameAction(requirement.action, evaluation.action)
-    && sameAction(requirement.action, actionIdentity(action))
-    && requirement.scopeId === action.scopeId
-    && requirement.domainId === action.domainId
-    && requirement.domainVersion === action.domainVersion
-    && sameIdentity(requirement.capability, action.requestedCapability)
-    && sameTarget(requirement.target, action.targetBinding)
-    && requirement.effectClass === action.effectClass
-    && requirement.mode === evaluation.outcome
-    && evaluation.approvalRequirementIds.includes(requirement.requirementId);
+  return (
+    requirement.evaluationId === evaluation.evaluationId &&
+    samePolicy(requirement.policy, evaluation.policy) &&
+    sameAction(requirement.action, evaluation.action) &&
+    sameAction(requirement.action, actionIdentity(action)) &&
+    requirement.scopeId === action.scopeId &&
+    requirement.domainId === action.domainId &&
+    requirement.domainVersion === action.domainVersion &&
+    sameIdentity(requirement.capability, action.requestedCapability) &&
+    sameTarget(requirement.target, action.targetBinding) &&
+    requirement.effectClass === action.effectClass &&
+    requirement.mode === evaluation.outcome &&
+    evaluation.approvalRequirementIds.includes(requirement.requirementId)
+  );
 }
 
 function exactRecordBinding(record, requirement) {
-  return record.requirementId === requirement.requirementId
-    && record.evaluationId === requirement.evaluationId
-    && samePolicy(record.policy, requirement.policy)
-    && sameAction(record.action, requirement.action)
-    && record.scopeId === requirement.scopeId
-    && record.domainId === requirement.domainId
-    && record.domainVersion === requirement.domainVersion
-    && sameIdentity(record.capability, requirement.capability)
-    && sameTarget(record.target, requirement.target)
-    && record.effectClass === requirement.effectClass
-    && record.scopeHash === requirement.scopeHash;
+  return (
+    record.requirementId === requirement.requirementId &&
+    record.evaluationId === requirement.evaluationId &&
+    samePolicy(record.policy, requirement.policy) &&
+    sameAction(record.action, requirement.action) &&
+    record.scopeId === requirement.scopeId &&
+    record.domainId === requirement.domainId &&
+    record.domainVersion === requirement.domainVersion &&
+    sameIdentity(record.capability, requirement.capability) &&
+    sameTarget(record.target, requirement.target) &&
+    record.effectClass === requirement.effectClass &&
+    record.scopeHash === requirement.scopeHash
+  );
 }
 
 function exactScalarArray(actual, expected) {
-  return Array.isArray(actual)
-    && actual.length === expected.length
-    && actual.every((value, index) => value === expected[index]);
+  return (
+    Array.isArray(actual) &&
+    actual.length === expected.length &&
+    actual.every((value, index) => value === expected[index])
+  );
 }
 
 function declaredParty(requirement, record) {
   const party = requirement.parties.find(({ partyId }) => partyId === record.partyId);
-  return party && party.actorKind === record.actor.kind
-    && (party.actorId === null || party.actorId === record.actor.actorId)
-    && sameIdentity(party.requiredCapability, record.actor.capability);
+  return (
+    party &&
+    party.actorKind === record.actor.kind &&
+    (party.actorId === null || party.actorId === record.actor.actorId) &&
+    sameIdentity(party.requiredCapability, record.actor.capability)
+  );
 }
 
 function assertEvaluationActionBinding(evaluation, action, nowMs) {
   try {
-    assertProtocolArtifact('operating-policy-evaluation', evaluation, { protocolVersion: PROTOCOL_VERSION });
+    assertProtocolArtifact('operating-policy-evaluation', evaluation, {
+      protocolVersion: PROTOCOL_VERSION,
+    });
     assertProtocolArtifact('operating-action', action, { protocolVersion: PROTOCOL_VERSION });
   } catch (cause) {
-    fail('APPROVAL_INVALID', 'Approval evaluation requires contract-valid Action and policy-evaluation records.', {
-      cause: cause?.code ?? null,
-    });
+    fail(
+      'APPROVAL_INVALID',
+      'Approval evaluation requires contract-valid Action and policy-evaluation records.',
+      {
+        cause: cause?.code ?? null,
+      },
+    );
   }
-  if (!sameAction(evaluation.action, actionIdentity(action))
-    || !sameIdentity(evaluation.capability, action.requestedCapability)
-    || !sameTarget(evaluation.target, action.targetBinding)
-    || evaluation.effectClass !== action.effectClass
-    || time(evaluation.evaluatedAt, 'evaluatedAt') > nowMs) {
-    fail('APPROVAL_INVALID', 'Policy evaluation does not bind the exact current Action authority tuple and decision time.', {
-      evaluationId: evaluation.evaluationId,
-    });
+  if (
+    !sameAction(evaluation.action, actionIdentity(action)) ||
+    !sameIdentity(evaluation.capability, action.requestedCapability) ||
+    !sameTarget(evaluation.target, action.targetBinding) ||
+    evaluation.effectClass !== action.effectClass ||
+    time(evaluation.evaluatedAt, 'evaluatedAt') > nowMs
+  ) {
+    fail(
+      'APPROVAL_INVALID',
+      'Policy evaluation does not bind the exact current Action authority tuple and decision time.',
+      {
+        evaluationId: evaluation.evaluationId,
+      },
+    );
   }
 }
 
 function assertApprovalRequirementIntegrity(requirement) {
   try {
-    assertProtocolArtifact('operating-approval-requirement', requirement, { protocolVersion: PROTOCOL_VERSION });
+    assertProtocolArtifact('operating-approval-requirement', requirement, {
+      protocolVersion: PROTOCOL_VERSION,
+    });
   } catch (cause) {
     fail('APPROVAL_INVALID', 'Approval requirement is not contract-valid.', {
       requirementId: requirement?.requirementId ?? null,
@@ -136,9 +164,13 @@ function assertApprovalRequirementIntegrity(requirement) {
     });
   }
   if (requirement.scopeHash !== sha256Jcs(without(requirement, 'scopeHash'))) {
-    fail('APPROVAL_INVALID', 'Approval requirement hash does not bind its exact scope and consumption rule.', {
-      requirementId: requirement.requirementId,
-    });
+    fail(
+      'APPROVAL_INVALID',
+      'Approval requirement hash does not bind its exact scope and consumption rule.',
+      {
+        requirementId: requirement.requirementId,
+      },
+    );
   }
   const parties = requirement.parties;
   const partyIds = parties.map(({ partyId }) => partyId);
@@ -150,33 +182,38 @@ function assertApprovalRequirementIntegrity(requirement) {
     .filter((actorId) => actorId !== null)
     .sort();
   const requiredActorKinds = [...new Set(parties.map(({ actorKind }) => actorKind))].sort();
-  const allPartiesNamed = parties.every(({ actorId }) => typeof actorId === 'string' && actorId.length > 0);
-  const partiesAreUnique = new Set(partyIds).size === partyIds.length
-    && new Set(namedActorKeys).size === namedActorKeys.length;
-  const derivedSetsAreExact = exactScalarArray(requirement.namedActorIds, namedActorIds)
-    && exactScalarArray(requirement.requiredActorKinds, requiredActorKinds);
-  const cardinalityIsExact = (
-    requirement.mode === 'named-single-party'
-    && parties.length === 1
-    && allPartiesNamed
-    && requirement.threshold === 1
-  ) || (
-    requirement.mode === 'named-multi-party'
-    && parties.length >= 2
-    && allPartiesNamed
-    && requirement.threshold === parties.length
-  ) || (
-    requirement.mode === 'threshold'
-    && parties.length >= 2
-    && allPartiesNamed
-    && requirement.threshold >= 2
-    && requirement.threshold <= parties.length
+  const allPartiesNamed = parties.every(
+    ({ actorId }) => typeof actorId === 'string' && actorId.length > 0,
   );
+  const partiesAreUnique =
+    new Set(partyIds).size === partyIds.length &&
+    new Set(namedActorKeys).size === namedActorKeys.length;
+  const derivedSetsAreExact =
+    exactScalarArray(requirement.namedActorIds, namedActorIds) &&
+    exactScalarArray(requirement.requiredActorKinds, requiredActorKinds);
+  const cardinalityIsExact =
+    (requirement.mode === 'named-single-party' &&
+      parties.length === 1 &&
+      allPartiesNamed &&
+      requirement.threshold === 1) ||
+    (requirement.mode === 'named-multi-party' &&
+      parties.length >= 2 &&
+      allPartiesNamed &&
+      requirement.threshold === parties.length) ||
+    (requirement.mode === 'threshold' &&
+      parties.length >= 2 &&
+      allPartiesNamed &&
+      requirement.threshold >= 2 &&
+      requirement.threshold <= parties.length);
   if (!partiesAreUnique || !derivedSetsAreExact || !cardinalityIsExact) {
-    fail('APPROVAL_INVALID', 'Approval requirement party identities, named actors, actor kinds, mode, and threshold must be exact.', {
-      requirementId: requirement.requirementId,
-      mode: requirement.mode,
-    });
+    fail(
+      'APPROVAL_INVALID',
+      'Approval requirement party identities, named actors, actor kinds, mode, and threshold must be exact.',
+      {
+        requirementId: requirement.requirementId,
+        mode: requirement.mode,
+      },
+    );
   }
   return requirement;
 }
@@ -207,9 +244,13 @@ function assertApprovalRequirementSetIntegrity(requirements, { evaluationId = nu
       const actorKey = `${party.actorKind}:${party.actorId}`;
       const partyKey = `${requirement.requirementId}:${party.partyId}`;
       if (namedActorParties.has(actorKey) && namedActorParties.get(actorKey) !== partyKey) {
-        fail('APPROVAL_INVALID', 'One named actor cannot be declared for two parties in the same evaluation.', {
-          evaluationId: requirement.evaluationId,
-        });
+        fail(
+          'APPROVAL_INVALID',
+          'One named actor cannot be declared for two parties in the same evaluation.',
+          {
+            evaluationId: requirement.evaluationId,
+          },
+        );
       }
       namedActorParties.set(actorKey, partyKey);
     }
@@ -223,7 +264,10 @@ export function assertOperatingApprovalRequirementIntegrityV2(requirement) {
 }
 
 /** Validate one complete requirement collection, including global actor-to-party uniqueness. */
-export function assertOperatingApprovalRequirementSetIntegrityV2({ requirements, evaluationId = null } = {}) {
+export function assertOperatingApprovalRequirementSetIntegrityV2({
+  requirements,
+  evaluationId = null,
+} = {}) {
   return freeze(assertApprovalRequirementSetIntegrity(requirements, { evaluationId }).map(clone));
 }
 
@@ -238,27 +282,45 @@ export function createOperatingApprovalRequirementV2({
   consumable = true,
 } = {}) {
   if (!['named-single-party', 'named-multi-party', 'threshold'].includes(evaluation?.outcome)) {
-    fail('APPROVAL_INVALID', 'Only an approval-bearing policy evaluation may create an approval requirement.', {
-      evaluationId: evaluation?.evaluationId ?? null,
-    });
+    fail(
+      'APPROVAL_INVALID',
+      'Only an approval-bearing policy evaluation may create an approval requirement.',
+      {
+        evaluationId: evaluation?.evaluationId ?? null,
+      },
+    );
   }
   const requirementId = deriveOperatingApprovalRequirementInstanceIdV2({
     policyRequirementId,
     evaluationId: evaluation.evaluationId,
   });
   if (!evaluation.approvalRequirementIds.includes(requirementId)) {
-    fail('APPROVAL_INVALID', 'Requirement instance identity must be declared by the exact policy evaluation.', {
-      policyRequirementId,
-      requirementId,
-    });
+    fail(
+      'APPROVAL_INVALID',
+      'Requirement instance identity must be declared by the exact policy evaluation.',
+      {
+        policyRequirementId,
+        requirementId,
+      },
+    );
   }
-  const normalizedParties = [...(parties ?? [])].map(clone).sort((left, right) => left.partyId.localeCompare(right.partyId));
-  const namedActorIds = normalizedParties.map(({ actorId }) => actorId).filter((actorId) => actorId !== null).sort();
-  const requiredActorKinds = [...new Set(normalizedParties.map(({ actorKind }) => actorKind))].sort();
-  const requiredThreshold = threshold ?? (evaluation.outcome === 'named-single-party' ? 1 : normalizedParties.length);
+  const normalizedParties = [...(parties ?? [])]
+    .map(clone)
+    .sort((left, right) => left.partyId.localeCompare(right.partyId));
+  const namedActorIds = normalizedParties
+    .map(({ actorId }) => actorId)
+    .filter((actorId) => actorId !== null)
+    .sort();
+  const requiredActorKinds = [
+    ...new Set(normalizedParties.map(({ actorKind }) => actorKind)),
+  ].sort();
+  const requiredThreshold =
+    threshold ?? (evaluation.outcome === 'named-single-party' ? 1 : normalizedParties.length);
   if (expiresAt !== null) time(expiresAt, 'expiresAt');
   const record = {
-    kind: 'operating-approval-requirement', schemaVersion: '1.0.0', protocolVersion: PROTOCOL_VERSION,
+    kind: 'operating-approval-requirement',
+    schemaVersion: '1.0.0',
+    protocolVersion: PROTOCOL_VERSION,
     requirementId,
     evaluationId: evaluation.evaluationId,
     policy: policyRef(evaluation),
@@ -284,9 +346,13 @@ export function createOperatingApprovalRequirementV2({
 export function assertOperatingApprovalRequirementV2(requirement, { evaluation, action }) {
   assertApprovalRequirementIntegrity(requirement);
   if (!exactRequirementBinding(requirement, evaluation, action)) {
-    fail('APPROVAL_INVALID', 'Approval requirement does not bind the exact Action, evaluation, scope, party, and use rule.', {
-      requirementId: requirement.requirementId,
-    });
+    fail(
+      'APPROVAL_INVALID',
+      'Approval requirement does not bind the exact Action, evaluation, scope, party, and use rule.',
+      {
+        requirementId: requirement.requirementId,
+      },
+    );
   }
   return freeze(clone(requirement));
 }
@@ -303,20 +369,36 @@ export function createOperatingApprovalRecordV2({
   issuedAt,
   expiresAt,
 } = {}) {
-  const checkedRequirement = assertOperatingApprovalRequirementV2(requirement, { evaluation, action });
+  const checkedRequirement = assertOperatingApprovalRequirementV2(requirement, {
+    evaluation,
+    action,
+  });
   const issued = time(issuedAt, 'issuedAt');
   const evaluated = time(evaluation.evaluatedAt, 'evaluatedAt');
-  const requirementExpiry = checkedRequirement.expiresAt === null ? null : time(checkedRequirement.expiresAt, 'requirement.expiresAt');
+  const requirementExpiry =
+    checkedRequirement.expiresAt === null
+      ? null
+      : time(checkedRequirement.expiresAt, 'requirement.expiresAt');
   const recordExpiry = expiresAt === undefined ? checkedRequirement.expiresAt : expiresAt;
   const expiry = recordExpiry === null ? null : time(recordExpiry, 'expiresAt');
-  if (issued < evaluated || (requirementExpiry !== null && issued >= requirementExpiry)
-    || (expiry !== null && (expiry <= issued || (requirementExpiry !== null && expiry > requirementExpiry)))) {
-    fail('APPROVAL_EXPIRED', 'Approval issuance and expiry must be causal and no broader than its requirement.', {
-      requirementId: checkedRequirement.requirementId,
-    });
+  if (
+    issued < evaluated ||
+    (requirementExpiry !== null && issued >= requirementExpiry) ||
+    (expiry !== null &&
+      (expiry <= issued || (requirementExpiry !== null && expiry > requirementExpiry)))
+  ) {
+    fail(
+      'APPROVAL_EXPIRED',
+      'Approval issuance and expiry must be causal and no broader than its requirement.',
+      {
+        requirementId: checkedRequirement.requirementId,
+      },
+    );
   }
   const record = {
-    kind: 'operating-approval-record', schemaVersion: '1.0.0', protocolVersion: PROTOCOL_VERSION,
+    kind: 'operating-approval-record',
+    schemaVersion: '1.0.0',
+    protocolVersion: PROTOCOL_VERSION,
     approvalId,
     requirementId: checkedRequirement.requirementId,
     evaluationId: checkedRequirement.evaluationId,
@@ -343,24 +425,38 @@ export function createOperatingApprovalRecordV2({
 export function assertOperatingApprovalRecordV2(record, { requirement }) {
   assertApprovalRequirementIntegrity(requirement);
   try {
-    assertProtocolArtifact('operating-approval-record', record, { protocolVersion: PROTOCOL_VERSION });
+    assertProtocolArtifact('operating-approval-record', record, {
+      protocolVersion: PROTOCOL_VERSION,
+    });
   } catch (cause) {
     fail('APPROVAL_INVALID', 'Approval record is not contract-valid.', {
       approvalId: record?.approvalId ?? null,
       cause: cause?.code ?? null,
     });
   }
-  if (!exactRecordBinding(record, requirement) || !declaredParty(requirement, record)
-    || record.recordHash !== sha256Jcs(without(record, 'recordHash'))) {
-    fail('APPROVAL_INVALID', 'Approval record does not bind the exact requirement, party, actor capability, or hash.', {
-      approvalId: record.approvalId,
-    });
+  if (
+    !exactRecordBinding(record, requirement) ||
+    !declaredParty(requirement, record) ||
+    record.recordHash !== sha256Jcs(without(record, 'recordHash'))
+  ) {
+    fail(
+      'APPROVAL_INVALID',
+      'Approval record does not bind the exact requirement, party, actor capability, or hash.',
+      {
+        approvalId: record.approvalId,
+      },
+    );
   }
   return freeze(clone(record));
 }
 
 /** Append with runtime replay semantics: same ID+bytes is harmless, divergence is terminal. */
-export function appendOperatingApprovalRecordV2({ records = [], record, requirement, requirements = [requirement] }) {
+export function appendOperatingApprovalRecordV2({
+  records = [],
+  record,
+  requirement,
+  requirements = [requirement],
+}) {
   const checked = assertOperatingApprovalRecordV2(record, { requirement });
   const checkedRequirements = assertApprovalRequirementSetIntegrity(requirements, {
     evaluationId: checked.evaluationId,
@@ -372,19 +468,30 @@ export function appendOperatingApprovalRecordV2({ records = [], record, requirem
       const actorKey = `${party.actorKind}:${party.actorId}`;
       const partyKey = `${candidateRequirement.requirementId}:${party.partyId}`;
       if (namedActorParties.has(actorKey) && namedActorParties.get(actorKey) !== partyKey) {
-        fail('APPROVAL_INVALID', 'One named actor cannot be declared for two parties in the same evaluation.', {
-          evaluationId: checked.evaluationId,
-        });
+        fail(
+          'APPROVAL_INVALID',
+          'One named actor cannot be declared for two parties in the same evaluation.',
+          {
+            evaluationId: checked.evaluationId,
+          },
+        );
       }
       namedActorParties.set(actorKey, partyKey);
     }
   }
   const checkedActorKey = `${checked.actor.kind}:${checked.actor.actorId}`;
   const checkedPartyKey = `${checked.requirementId}:${checked.partyId}`;
-  if (namedActorParties.has(checkedActorKey) && namedActorParties.get(checkedActorKey) !== checkedPartyKey) {
-    fail('APPROVAL_INVALID', 'A named actor cannot record authority for a different party in the same evaluation.', {
-      evaluationId: checked.evaluationId,
-    });
+  if (
+    namedActorParties.has(checkedActorKey) &&
+    namedActorParties.get(checkedActorKey) !== checkedPartyKey
+  ) {
+    fail(
+      'APPROVAL_INVALID',
+      'A named actor cannot record authority for a different party in the same evaluation.',
+      {
+        evaluationId: checked.evaluationId,
+      },
+    );
   }
   const existing = records.find(({ approvalId }) => approvalId === checked.approvalId);
   if (existing) {
@@ -395,18 +502,27 @@ export function appendOperatingApprovalRecordV2({ records = [], record, requirem
     }
     return freeze({ records: [...records].map(clone), record: clone(existing), replayed: true });
   }
-  const partyReuse = records.find((candidate) => (
-    candidate.evaluationId === checked.evaluationId
-    && ((candidate.requirementId === checked.requirementId && candidate.partyId === checked.partyId)
-      || `${candidate.actor.kind}:${candidate.actor.actorId}` === `${checked.actor.kind}:${checked.actor.actorId}`)
-  ));
+  const partyReuse = records.find(
+    (candidate) =>
+      candidate.evaluationId === checked.evaluationId &&
+      ((candidate.requirementId === checked.requirementId &&
+        candidate.partyId === checked.partyId) ||
+        `${candidate.actor.kind}:${candidate.actor.actorId}` ===
+          `${checked.actor.kind}:${checked.actor.actorId}`),
+  );
   if (partyReuse) {
-    fail('APPROVAL_INVALID', 'One actor may satisfy only one party across the complete current evaluation.', {
-      requirementId: checked.requirementId,
-      partyId: checked.partyId,
-    });
+    fail(
+      'APPROVAL_INVALID',
+      'One actor may satisfy only one party across the complete current evaluation.',
+      {
+        requirementId: checked.requirementId,
+        partyId: checked.partyId,
+      },
+    );
   }
-  const next = [...records.map(clone), clone(checked)].sort((left, right) => left.approvalId.localeCompare(right.approvalId));
+  const next = [...records.map(clone), clone(checked)].sort((left, right) =>
+    left.approvalId.localeCompare(right.approvalId),
+  );
   return freeze({ records: next, record: clone(checked), replayed: false });
 }
 
@@ -421,25 +537,53 @@ export function evaluateOperatingApprovalSetV2({
   const nowMs = time(now, 'now');
   assertEvaluationActionBinding(evaluation, action, nowMs);
   if (evaluation.outcome === 'automatic') {
-    if (evaluation.approvalRequirementIds.length !== 0 || requirements.length !== 0 || approvals.length !== 0) {
-      fail('APPROVAL_INVALID', 'Automatic policy authority has an exact empty requirement and approval set.');
+    if (
+      evaluation.approvalRequirementIds.length !== 0 ||
+      requirements.length !== 0 ||
+      approvals.length !== 0
+    ) {
+      fail(
+        'APPROVAL_INVALID',
+        'Automatic policy authority has an exact empty requirement and approval set.',
+      );
     }
-    return freeze({ complete: true, disposition: 'approved', approvalIds: [], requirementIds: [], reasonCode: 'automatic' });
+    return freeze({
+      complete: true,
+      disposition: 'approved',
+      approvalIds: [],
+      requirementIds: [],
+      reasonCode: 'automatic',
+    });
   }
   if (['deferred', 'rejected', 'prohibited'].includes(evaluation.outcome)) {
-    if (evaluation.approvalRequirementIds.length !== 0 || requirements.length !== 0 || approvals.length !== 0) {
-      fail('APPROVAL_INVALID', 'Non-approval policy dispositions cannot borrow approval authority.');
+    if (
+      evaluation.approvalRequirementIds.length !== 0 ||
+      requirements.length !== 0 ||
+      approvals.length !== 0
+    ) {
+      fail(
+        'APPROVAL_INVALID',
+        'Non-approval policy dispositions cannot borrow approval authority.',
+      );
     }
     return freeze({
       complete: true,
       disposition: evaluation.outcome === 'prohibited' ? 'rejected' : evaluation.outcome,
-      approvalIds: [], requirementIds: [], reasonCode: `policy-${evaluation.outcome}`,
+      approvalIds: [],
+      requirementIds: [],
+      reasonCode: `policy-${evaluation.outcome}`,
     });
   }
   const requirementIds = requirements.map(({ requirementId }) => requirementId);
-  if (new Set(requirementIds).size !== requirementIds.length
-    || sha256Jcs([...requirementIds].sort()) !== sha256Jcs([...evaluation.approvalRequirementIds].sort())) {
-    fail('APPROVAL_REQUIRED', 'Approval requirements must equal the current evaluation requirement set exactly.');
+  if (
+    new Set(requirementIds).size !== requirementIds.length ||
+    sha256Jcs([...requirementIds].sort()) !==
+      sha256Jcs([...evaluation.approvalRequirementIds].sort())
+  ) {
+    fail(
+      'APPROVAL_REQUIRED',
+      'Approval requirements must equal the current evaluation requirement set exactly.',
+    );
   }
   const approvalIds = approvals.map(({ approvalId }) => approvalId);
   if (new Set(approvalIds).size !== approvalIds.length) {
@@ -452,31 +596,44 @@ export function evaluateOperatingApprovalSetV2({
     evaluationId: evaluation.evaluationId,
   })
     .sort((left, right) => left.requirementId.localeCompare(right.requirementId))
-    .map((requirement) => assertOperatingApprovalRequirementV2(requirement, { evaluation, action }));
-  const declaredActors = new Map(checkedRequirements.flatMap((requirement) => (
-    requirement.parties.map((party) => [
-      `${party.actorKind}:${party.actorId}`,
-      `${requirement.requirementId}:${party.partyId}`,
-    ])
-  )));
+    .map((requirement) =>
+      assertOperatingApprovalRequirementV2(requirement, { evaluation, action }),
+    );
+  const declaredActors = new Map(
+    checkedRequirements.flatMap((requirement) =>
+      requirement.parties.map((party) => [
+        `${party.actorKind}:${party.actorId}`,
+        `${requirement.requirementId}:${party.partyId}`,
+      ]),
+    ),
+  );
   const checkedRecordsByRequirement = new Map();
   const recordedActors = new Map();
   for (const requirement of checkedRequirements) {
-    const records = approvals.filter(({ requirementId }) => requirementId === requirement.requirementId)
+    const records = approvals
+      .filter(({ requirementId }) => requirementId === requirement.requirementId)
       .map((record) => assertOperatingApprovalRecordV2(record, { requirement }));
     const parties = new Set();
     for (const record of records) {
       const actorKey = `${record.actor.kind}:${record.actor.actorId}`;
       const partyKey = `${requirement.requirementId}:${record.partyId}`;
       if (declaredActors.has(actorKey) && declaredActors.get(actorKey) !== partyKey) {
-        fail('APPROVAL_INVALID', 'A named actor cannot satisfy a different party in the same evaluation.', {
-          evaluationId: evaluation.evaluationId,
-        });
+        fail(
+          'APPROVAL_INVALID',
+          'A named actor cannot satisfy a different party in the same evaluation.',
+          {
+            evaluationId: evaluation.evaluationId,
+          },
+        );
       }
       if (recordedActors.has(actorKey) && recordedActors.get(actorKey) !== partyKey) {
-        fail('APPROVAL_INVALID', 'One actor cannot satisfy two parties across the current evaluation.', {
-          evaluationId: evaluation.evaluationId,
-        });
+        fail(
+          'APPROVAL_INVALID',
+          'One actor cannot satisfy two parties across the current evaluation.',
+          {
+            evaluationId: evaluation.evaluationId,
+          },
+        );
       }
       if (parties.has(record.partyId)) {
         fail('APPROVAL_INVALID', 'One approval party cannot be counted twice.', {
@@ -492,37 +649,57 @@ export function evaluateOperatingApprovalSetV2({
   let incompleteReason = null;
   const approvedIds = [];
   for (const checkedRequirement of checkedRequirements) {
-    if (checkedRequirement.expiresAt !== null && time(checkedRequirement.expiresAt, 'requirement.expiresAt') <= nowMs) {
-      fail('APPROVAL_EXPIRED', 'Approval requirement has expired.', { requirementId: checkedRequirement.requirementId });
+    if (
+      checkedRequirement.expiresAt !== null &&
+      time(checkedRequirement.expiresAt, 'requirement.expiresAt') <= nowMs
+    ) {
+      fail('APPROVAL_EXPIRED', 'Approval requirement has expired.', {
+        requirementId: checkedRequirement.requirementId,
+      });
     }
     const records = checkedRecordsByRequirement.get(checkedRequirement.requirementId);
     for (const record of records) {
       const issued = time(record.issuedAt, 'approval.issuedAt');
-      const expiry = record.expiresAt === null ? null : time(record.expiresAt, 'approval.expiresAt');
-      if (issued < time(evaluation.evaluatedAt, 'evaluatedAt') || issued > nowMs
-        || (expiry !== null && expiry <= nowMs) || record.consumedByOperationId !== null) {
-        fail(record.consumedByOperationId === null ? 'APPROVAL_EXPIRED' : 'APPROVAL_INVALID',
-          'Stale, future, expired, or consumed approval cannot authorize execution.', {
+      const expiry =
+        record.expiresAt === null ? null : time(record.expiresAt, 'approval.expiresAt');
+      if (
+        issued < time(evaluation.evaluatedAt, 'evaluatedAt') ||
+        issued > nowMs ||
+        (expiry !== null && expiry <= nowMs) ||
+        record.consumedByOperationId !== null
+      ) {
+        fail(
+          record.consumedByOperationId === null ? 'APPROVAL_EXPIRED' : 'APPROVAL_INVALID',
+          'Stale, future, expired, or consumed approval cannot authorize execution.',
+          {
             approvalId: record.approvalId,
-          });
+          },
+        );
       }
     }
     if (records.some(({ decision }) => decision === 'rejected')) disposition = 'rejected';
-    else if (records.some(({ decision }) => decision === 'deferred') && disposition !== 'rejected') disposition = 'deferred';
+    else if (records.some(({ decision }) => decision === 'deferred') && disposition !== 'rejected')
+      disposition = 'deferred';
     if (disposition !== 'approved') continue;
     const approved = records.filter(({ decision }) => decision === 'approved');
     approvedIds.push(...approved.map(({ approvalId }) => approvalId));
     if (approved.length < checkedRequirement.threshold) {
       incompleteReason ??= 'approval-quorum-incomplete';
     }
-    if (checkedRequirement.mode === 'named-multi-party' && approved.length !== checkedRequirement.parties.length) {
+    if (
+      checkedRequirement.mode === 'named-multi-party' &&
+      approved.length !== checkedRequirement.parties.length
+    ) {
       incompleteReason ??= 'named-party-set-incomplete';
     }
   }
   if (disposition === 'approved' && incompleteReason !== null) {
     return freeze({
-      complete: false, disposition: null, approvalIds: approvedIds.sort(),
-      requirementIds: [...requirementIds].sort(), reasonCode: incompleteReason,
+      complete: false,
+      disposition: null,
+      approvalIds: approvedIds.sort(),
+      requirementIds: [...requirementIds].sort(),
+      reasonCode: incompleteReason,
     });
   }
   return freeze({
@@ -538,24 +715,42 @@ export function evaluateOperatingApprovalSetV2({
 export function evaluateOperatingRollbackApprovalSetV2(input = {}) {
   const result = evaluateOperatingApprovalSetV2(input);
   if (result.disposition !== 'approved' || result.complete !== true) {
-    fail('APPROVAL_REQUIRED', 'Rollback requires one complete independently valid approval disposition.', {
-      reasonCode: result.reasonCode,
-    });
+    fail(
+      'APPROVAL_REQUIRED',
+      'Rollback requires one complete independently valid approval disposition.',
+      {
+        reasonCode: result.reasonCode,
+      },
+    );
   }
   return result;
 }
 
 /** Replace only the current projection while retaining the immutable pre-consumption records as history. */
-export function consumeOperatingApprovalRecordsV2({ approvals, requirements, approvalIds, operationId }) {
+export function consumeOperatingApprovalRecordsV2({
+  approvals,
+  requirements,
+  approvalIds,
+  operationId,
+}) {
   const selected = new Set(approvalIds);
-  if (selected.size !== approvalIds.length || selected.size === 0
-    || typeof operationId !== 'string' || !/^op_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$/u.test(operationId)) {
-    fail('APPROVAL_INVALID', 'Approval consumption requires one nonempty unique exact approval set.');
+  if (
+    selected.size !== approvalIds.length ||
+    selected.size === 0 ||
+    typeof operationId !== 'string' ||
+    !/^op_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$/u.test(operationId)
+  ) {
+    fail(
+      'APPROVAL_INVALID',
+      'Approval consumption requires one nonempty unique exact approval set.',
+    );
   }
   const consumed = [];
   const history = [];
   const checkedRequirements = assertApprovalRequirementSetIntegrity(requirements ?? []);
-  const requirementById = new Map(checkedRequirements.map((requirement) => [requirement.requirementId, requirement]));
+  const requirementById = new Map(
+    checkedRequirements.map((requirement) => [requirement.requirementId, requirement]),
+  );
   if (requirementById.size !== checkedRequirements.length) {
     fail('APPROVAL_INVALID', 'Approval consumption requires unique bound requirement identities.');
   }
@@ -569,7 +764,9 @@ export function consumeOperatingApprovalRecordsV2({ approvals, requirements, app
     }
     assertOperatingApprovalRecordV2(record, { requirement });
     if (record.decision !== 'approved' || record.consumedByOperationId !== null) {
-      fail('APPROVAL_INVALID', 'Only an unconsumed approved record may be consumed.', { approvalId: record.approvalId });
+      fail('APPROVAL_INVALID', 'Only an unconsumed approved record may be consumed.', {
+        approvalId: record.approvalId,
+      });
     }
     history.push(clone(record));
     const next = { ...clone(record), consumedByOperationId: operationId };
@@ -578,13 +775,21 @@ export function consumeOperatingApprovalRecordsV2({ approvals, requirements, app
     return next;
   });
   if (consumed.length !== selected.size) {
-    fail('APPROVAL_INVALID', 'Every consumed approval identity must exist in the current exact set.');
+    fail(
+      'APPROVAL_INVALID',
+      'Every consumed approval identity must exist in the current exact set.',
+    );
   }
   return freeze({ records, consumedApprovalIds: consumed.sort(), history });
 }
 
 /** Keep append-only history while making only the new evaluation's authority current. */
-export function partitionSupersededOperatingAuthorityV2({ evaluation, requirements = [], approvals = [], currentEvaluationId }) {
+export function partitionSupersededOperatingAuthorityV2({
+  evaluation,
+  requirements = [],
+  approvals = [],
+  currentEvaluationId,
+}) {
   const active = evaluation.evaluationId === currentEvaluationId;
   return freeze({
     activeEvaluation: active ? clone(evaluation) : null,
@@ -607,26 +812,40 @@ export function createOperatingActionReviewV2({ reviewId, action, ownerActorId, 
   try {
     assertProtocolArtifact('operating-action', action, { protocolVersion: PROTOCOL_VERSION });
   } catch (cause) {
-    fail('RESULT_CONTRACT_INVALID', 'Action-scoped Review requires one contract-valid governed Action.', {
-      cause: cause?.code ?? null,
-    });
+    fail(
+      'RESULT_CONTRACT_INVALID',
+      'Action-scoped Review requires one contract-valid governed Action.',
+      {
+        cause: cause?.code ?? null,
+      },
+    );
   }
   if (['actionId', 'revision', 'actionHash'].some((field) => !Object.hasOwn(action, field))) {
-    fail('ACTION_REVISION_MISMATCH', 'Action-scoped Review requires one complete Action authority identity.');
+    fail(
+      'ACTION_REVISION_MISMATCH',
+      'Action-scoped Review requires one complete Action authority identity.',
+    );
   }
   const review = {
-    kind: 'operating-review', schemaVersion: '1.0.0', protocolVersion: PROTOCOL_VERSION,
+    kind: 'operating-review',
+    schemaVersion: '1.0.0',
+    protocolVersion: PROTOCOL_VERSION,
     reviewId,
     cycleId: action.sourceCycleId,
     subject: { type: 'action', ...actionIdentity(action) },
     ownerActorId,
-    state: 'pending', disposition: null, workDispositions: [],
-    createdAt: timestamp, updatedAt: timestamp,
+    state: 'pending',
+    disposition: null,
+    workDispositions: [],
+    createdAt: timestamp,
+    updatedAt: timestamp,
   };
   try {
     assertProtocolArtifact('operating-review', review, { protocolVersion: PROTOCOL_VERSION });
   } catch (cause) {
-    fail('RESULT_CONTRACT_INVALID', 'Action-scoped Review is not contract-valid.', { cause: cause?.code ?? null });
+    fail('RESULT_CONTRACT_INVALID', 'Action-scoped Review is not contract-valid.', {
+      cause: cause?.code ?? null,
+    });
   }
   return freeze(review);
 }

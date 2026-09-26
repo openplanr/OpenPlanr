@@ -49,25 +49,29 @@ export interface OperateEvidenceArtifactReferenceV2 {
   readonly provenance: Readonly<Record<string, string>>;
 }
 
-export type OperateEvidenceCaptureV2 = OperateEvidenceByteCaptureV2 | OperateEvidenceArtifactReferenceV2;
+export type OperateEvidenceCaptureV2 =
+  | OperateEvidenceByteCaptureV2
+  | OperateEvidenceArtifactReferenceV2;
 
-export type OperateEvidenceStaticResolutionV2 = {
-  readonly status: 'resolved';
-  readonly provider: OperateEvidenceProviderRegistrationV2;
-  readonly resolver: OperateEvidenceResolverRegistrationV2;
-  readonly error: null;
-  readonly capture: OperateEvidenceCaptureV2;
-} | {
-  readonly status: 'rejected';
-  readonly provider: OperateEvidenceProviderRegistrationV2 | null;
-  readonly resolver: OperateEvidenceResolverRegistrationV2 | null;
-  readonly error: {
-    readonly code: string;
-    readonly retryable: false;
-    readonly context: Readonly<Record<string, string>>;
-  };
-  readonly capture: null;
-};
+export type OperateEvidenceStaticResolutionV2 =
+  | {
+      readonly status: 'resolved';
+      readonly provider: OperateEvidenceProviderRegistrationV2;
+      readonly resolver: OperateEvidenceResolverRegistrationV2;
+      readonly error: null;
+      readonly capture: OperateEvidenceCaptureV2;
+    }
+  | {
+      readonly status: 'rejected';
+      readonly provider: OperateEvidenceProviderRegistrationV2 | null;
+      readonly resolver: OperateEvidenceResolverRegistrationV2 | null;
+      readonly error: {
+        readonly code: string;
+        readonly retryable: false;
+        readonly context: Readonly<Record<string, string>>;
+      };
+      readonly capture: null;
+    };
 
 export interface OperateGitEvidenceSourceV2 {
   readonly repositoryId: string;
@@ -124,7 +128,10 @@ export function dispatchOperateEvidenceResolverV2(
   registry: OperateEvidenceRegistryV2,
   candidate: OperatingEvidenceCandidateV2,
   context: { scope: OperateEvidenceScopeBindingV2 } & OperateStaticEvidenceResolverContextV2,
-): OperateEvidenceDispatchPreparationV2 | OperateEvidenceUnavailableDispatchV2 | OperateEvidenceStaticResolutionV2;
+):
+  | OperateEvidenceDispatchPreparationV2
+  | OperateEvidenceUnavailableDispatchV2
+  | OperateEvidenceStaticResolutionV2;
 
 export function resolveLocalGitEvidenceV2(
   candidate: OperatingEvidenceCandidateV2,

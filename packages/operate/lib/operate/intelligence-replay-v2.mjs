@@ -58,20 +58,29 @@ export function createOperatingIntelligenceReplayServiceV2({ runtimeError }) {
     const proofs = [...intent.dependsOn].sort().map((dependencyId) => {
       const dependency = index.assignments.get(dependencyId);
       if (!dependency) {
-        throw runtimeError('STATE_TRANSITION_INVALID', 'Intelligence replay has a foreign or missing dependency.', {
-          assignmentId: intent.assignmentId,
-          dependencyId,
-        });
+        throw runtimeError(
+          'STATE_TRANSITION_INVALID',
+          'Intelligence replay has a foreign or missing dependency.',
+          {
+            assignmentId: intent.assignmentId,
+            dependencyId,
+          },
+        );
       }
       if (dependency.state === 'validated') {
-        const submission = [...index.submissions.values()].find((candidate) => (
-          candidate.assignmentId === dependency.assignmentId && candidate.state === 'accepted'
-        ));
+        const submission = [...index.submissions.values()].find(
+          (candidate) =>
+            candidate.assignmentId === dependency.assignmentId && candidate.state === 'accepted',
+        );
         const artifact = index.artifacts.get(submission?.artifactId);
         if (!submission || !artifact) {
-          throw runtimeError('STATE_TRANSITION_INVALID', 'Validated intelligence replay dependency lacks accepted Artifact custody.', {
-            dependencyId,
-          });
+          throw runtimeError(
+            'STATE_TRANSITION_INVALID',
+            'Validated intelligence replay dependency lacks accepted Artifact custody.',
+            {
+              dependencyId,
+            },
+          );
         }
         return {
           assignmentId: dependency.assignmentId,
@@ -92,10 +101,14 @@ export function createOperatingIntelligenceReplayServiceV2({ runtimeError }) {
           },
         };
       }
-      throw runtimeError('STATE_TRANSITION_INVALID', 'Released intelligence replay dependency is not terminal.', {
-        assignmentId: intent.assignmentId,
-        dependencyId,
-      });
+      throw runtimeError(
+        'STATE_TRANSITION_INVALID',
+        'Released intelligence replay dependency is not terminal.',
+        {
+          assignmentId: intent.assignmentId,
+          dependencyId,
+        },
+      );
     });
     return {
       inputArtifactIds: resolveOperatingAssignmentInputArtifactIdsV2(intent, proofs),
@@ -111,27 +124,47 @@ export function createOperatingIntelligenceReplayServiceV2({ runtimeError }) {
     const identities = [planEventId, ...creationEventIds];
     const present = identities.filter((eventId) => index.eventReplay.has(eventId));
     const plan = index.intelligencePlans.get(board.plan.planId);
-    const assignments = board.assignments.map((intent) => index.assignments.get(intent.assignmentId));
+    const assignments = board.assignments.map((intent) =>
+      index.assignments.get(intent.assignmentId),
+    );
     const hasRecord = plan !== undefined || assignments.some(Boolean);
     if (present.length === 0 && !hasRecord) return false;
-    if (present.length !== identities.length || !plan || assignments.some((assignment) => !assignment)) {
-      throw runtimeError('CONCURRENT_MODIFICATION', 'Intelligence board replay identity is incomplete or conflicts with a partial prior transaction.', {
-        planId: board.plan.planId,
-        eventIds: present.sort(),
-      });
+    if (
+      present.length !== identities.length ||
+      !plan ||
+      assignments.some((assignment) => !assignment)
+    ) {
+      throw runtimeError(
+        'CONCURRENT_MODIFICATION',
+        'Intelligence board replay identity is incomplete or conflicts with a partial prior transaction.',
+        {
+          planId: board.plan.planId,
+          eventIds: present.sort(),
+        },
+      );
     }
     const replay = index.eventReplay.get(planEventId);
-    if (replay.requestHash !== requestHash || sha256Jcs(plan) !== sha256Jcs(board.plan)
-      || assignments.some((assignment, position) => {
+    if (
+      replay.requestHash !== requestHash ||
+      sha256Jcs(plan) !== sha256Jcs(board.plan) ||
+      assignments.some((assignment, position) => {
         const intent = board.assignments[position];
         const custody = expectedIntelligenceAssignmentCustody(index, plan, intent, assignment);
         const expected = { ...clone(intent), ...clone(custody) };
-        return sha256Jcs(immutableAssignmentIntent(assignment)) !== sha256Jcs(immutableAssignmentIntent(expected));
-      })) {
-      throw runtimeError('STATE_TRANSITION_INVALID', 'A runtime-issued intelligence board identity was reused with a different exact request, plan, or Assignment graph.', {
-        planId: board.plan.planId,
-        eventId: planEventId,
-      });
+        return (
+          sha256Jcs(immutableAssignmentIntent(assignment)) !==
+          sha256Jcs(immutableAssignmentIntent(expected))
+        );
+      })
+    ) {
+      throw runtimeError(
+        'STATE_TRANSITION_INVALID',
+        'A runtime-issued intelligence board identity was reused with a different exact request, plan, or Assignment graph.',
+        {
+          planId: board.plan.planId,
+          eventId: planEventId,
+        },
+      );
     }
     return true;
   }

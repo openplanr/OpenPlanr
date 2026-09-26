@@ -78,12 +78,17 @@ export interface OperateAuthorityContextV2 {
   executorInput?: OperateContainedExecutorInputV2 | null;
   rollbackPlan?: OperatingRollbackPlanV2;
   reconciliationProof?: {
-    kind: 'operating-reconciliation-proof'; schemaVersion: '1.0.0'; protocolVersion: '2.0.0';
-    operationId: string; requestFingerprint: string;
+    kind: 'operating-reconciliation-proof';
+    schemaVersion: '1.0.0';
+    protocolVersion: '2.0.0';
+    operationId: string;
+    requestFingerprint: string;
     executor: { executorId: string; executorVersion: string };
     classification: 'applied' | 'not-applied' | 'partial' | 'unknown';
-    observedAt: string; source: 'deterministic-executor' | 'durable-history';
-    receipt: OperatingExecutionReceiptProofV2 | null; reconciliationHash: string;
+    observedAt: string;
+    source: 'deterministic-executor' | 'durable-history';
+    receipt: OperatingExecutionReceiptProofV2 | null;
+    reconciliationHash: string;
   };
 }
 
@@ -109,28 +114,27 @@ export interface OperateAuthorityDecisionBaseV2 {
 
 export type OperateAuthorityDecisionV2 =
   | (OperateAuthorityDecisionBaseV2 & {
-    readonly allowed: true;
-    readonly replayed: false;
-    readonly replayResultId: null;
-    readonly error: null;
-  })
+      readonly allowed: true;
+      readonly replayed: false;
+      readonly replayResultId: null;
+      readonly error: null;
+    })
   | (OperateAuthorityDecisionBaseV2 & {
-    readonly allowed: true;
-    readonly replayed: true;
-    readonly replayResultId: string;
-    readonly error: null;
-  })
+      readonly allowed: true;
+      readonly replayed: true;
+      readonly replayResultId: string;
+      readonly error: null;
+    })
   | (OperateAuthorityDecisionBaseV2 & {
-    readonly allowed: false;
-    readonly replayed: false;
-    readonly replayResultId: null;
-    readonly error: OperateErrorV2;
-  });
+      readonly allowed: false;
+      readonly replayed: false;
+      readonly replayResultId: null;
+      readonly error: OperateErrorV2;
+    });
 
-export const OPERATE_AUTHORITY_TOOL_CAPABILITIES_V2: Readonly<Record<
-  OperateAuthorityOperationV2,
-  Readonly<OperateVersionedIdentityV2>
->>;
+export const OPERATE_AUTHORITY_TOOL_CAPABILITIES_V2: Readonly<
+  Record<OperateAuthorityOperationV2, Readonly<OperateVersionedIdentityV2>>
+>;
 
 export const OPERATE_AUTHORITY_DECISION_VERSION_V2: '2.0.0';
 
@@ -144,7 +148,9 @@ export function assertOperateAuthorityV2(
   context?: OperateAuthorityContextV2,
 ): OperateAuthorityDecisionV2 & { readonly allowed: true };
 
-export function assertOperatingActionAuthorityTupleV2(action: OperatingActionV2): Readonly<OperatingActionV2>;
+export function assertOperatingActionAuthorityTupleV2(
+  action: OperatingActionV2,
+): Readonly<OperatingActionV2>;
 
 export function getOperateAuthorityArgumentCandidatesV2<T extends OperateAuthorityOperationV2>(
   operation: T,

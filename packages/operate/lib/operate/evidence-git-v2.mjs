@@ -50,7 +50,9 @@ function safeError(candidate, provider, resolver, code, context = {}) {
       retryable: false,
       context: {
         evidenceKind: 'git',
-        ...(candidate?.locator?.repositoryId ? { repositoryId: candidate.locator.repositoryId } : {}),
+        ...(candidate?.locator?.repositoryId
+          ? { repositoryId: candidate.locator.repositoryId }
+          : {}),
         ...(resolver?.resolverId ? { resolverId: resolver.resolverId } : {}),
         ...context,
       },
@@ -63,11 +65,13 @@ function hasCapability(capabilities, capability) {
 }
 
 function safeRelativePath(path) {
-  return typeof path === 'string'
-    && path.length > 0
-    && !isAbsolute(path)
-    && !path.includes('\\')
-    && path.split('/').every((segment) => segment.length > 0 && segment !== '.' && segment !== '..');
+  return (
+    typeof path === 'string' &&
+    path.length > 0 &&
+    !isAbsolute(path) &&
+    !path.includes('\\') &&
+    path.split('/').every((segment) => segment.length > 0 && segment !== '.' && segment !== '..')
+  );
 }
 
 function configuredRepository(context, repositoryId) {
@@ -78,7 +82,11 @@ function configuredRepository(context, repositoryId) {
 
 function configuredMaximum(source) {
   const maximum = source?.maxBytes ?? DEFAULT_GIT_EVIDENCE_MAX_BYTES_V2;
-  return Number.isSafeInteger(maximum) && maximum > 0 && maximum <= DEFAULT_GIT_EVIDENCE_MAX_BYTES_V2 ? maximum : null;
+  return Number.isSafeInteger(maximum) &&
+    maximum > 0 &&
+    maximum <= DEFAULT_GIT_EVIDENCE_MAX_BYTES_V2
+    ? maximum
+    : null;
 }
 
 function sourceClassification(source) {
@@ -87,8 +95,11 @@ function sourceClassification(source) {
 
 function declaredSourceContract(source) {
   const value = source?.sourceContract;
-  return value && typeof value === 'object' && !Array.isArray(value)
-    && typeof value.id === 'string' && typeof value.version === 'string'
+  return value &&
+    typeof value === 'object' &&
+    !Array.isArray(value) &&
+    typeof value.id === 'string' &&
+    typeof value.version === 'string'
     ? value
     : null;
 }
@@ -108,19 +119,28 @@ function usableRepositoryRoot(source) {
  * pager, prompts, optional locks, hooks, or network-capable transport.
  */
 function git(rootPath, args, { buffer = false } = {}) {
-  const result = spawnSync('git', [
-    '-c', 'core.fsmonitor=false',
-    '-c', 'core.hooksPath=/dev/null',
-    '-c', 'credential.helper=',
-    '-c', 'protocol.file.allow=never',
-    '-C', rootPath,
-    ...args,
-  ], {
-    encoding: buffer ? 'buffer' : 'utf8',
-    env: GIT_ENV,
-    maxBuffer: DEFAULT_GIT_EVIDENCE_MAX_BYTES_V2 + 4096,
-    windowsHide: true,
-  });
+  const result = spawnSync(
+    'git',
+    [
+      '-c',
+      'core.fsmonitor=false',
+      '-c',
+      'core.hooksPath=/dev/null',
+      '-c',
+      'credential.helper=',
+      '-c',
+      'protocol.file.allow=never',
+      '-C',
+      rootPath,
+      ...args,
+    ],
+    {
+      encoding: buffer ? 'buffer' : 'utf8',
+      env: GIT_ENV,
+      maxBuffer: DEFAULT_GIT_EVIDENCE_MAX_BYTES_V2 + 4096,
+      windowsHide: true,
+    },
+  );
   return {
     ok: result.status === 0 && !result.error,
     status: result.status,
@@ -129,7 +149,13 @@ function git(rootPath, args, { buffer = false } = {}) {
 }
 
 function verifyObject(rootPath, expression) {
-  const result = git(rootPath, ['rev-parse', '--verify', '--quiet', '--end-of-options', expression]);
+  const result = git(rootPath, [
+    'rev-parse',
+    '--verify',
+    '--quiet',
+    '--end-of-options',
+    expression,
+  ]);
   return result.ok ? result.stdout.trim() : null;
 }
 
@@ -154,7 +180,12 @@ function worktreeState(rootPath) {
   const bare = git(rootPath, ['rev-parse', '--is-bare-repository']);
   if (!bare.ok) return 'unknown';
   if (bare.stdout.trim() === 'true') return 'bare';
-  const status = git(rootPath, ['status', '--porcelain=v1', '--untracked-files=all', '--ignore-submodules=none']);
+  const status = git(rootPath, [
+    'status',
+    '--porcelain=v1',
+    '--untracked-files=all',
+    '--ignore-submodules=none',
+  ]);
   return status.ok && status.stdout.length === 0 ? 'clean' : 'dirty';
 }
 
@@ -170,7 +201,13 @@ function containsSecret(bytes) {
 }
 
 function selectedLineBytes(bytes, lines) {
-  if (!isText(bytes) || !Number.isInteger(lines?.start) || !Number.isInteger(lines?.end) || lines.start < 1 || lines.end < lines.start) {
+  if (
+    !isText(bytes) ||
+    !Number.isInteger(lines?.start) ||
+    !Number.isInteger(lines?.end) ||
+    lines.start < 1 ||
+    lines.end < lines.start
+  ) {
     return null;
   }
   if (bytes.byteLength === 0) return null;
@@ -190,9 +227,11 @@ function resolvedFreshness(rootPath, revisionId, worktree) {
 }
 
 function assertSelection(candidate, provider, resolver) {
-  return candidate?.evidenceKind === 'git'
-    && provider?.providerId === LOCAL_GIT_EVIDENCE_PROVIDER_ID_V2
-    && resolver?.resolverId === LOCAL_GIT_EVIDENCE_RESOLVER_ID_V2;
+  return (
+    candidate?.evidenceKind === 'git' &&
+    provider?.providerId === LOCAL_GIT_EVIDENCE_PROVIDER_ID_V2 &&
+    resolver?.resolverId === LOCAL_GIT_EVIDENCE_RESOLVER_ID_V2
+  );
 }
 
 /**
@@ -200,12 +239,10 @@ function assertSelection(candidate, provider, resolver) {
  * It deliberately cannot create an Artifact, EvidenceRef, Event, graph edge,
  * or runtime state. Phase 4 materialization owns those durable effects.
  */
-export function resolveLocalGitEvidenceV2(candidate, {
-  provider,
-  resolver,
-  capabilities = [],
-  ...context
-} = {}) {
+export function resolveLocalGitEvidenceV2(
+  candidate,
+  { provider, resolver, capabilities = [], ...context } = {},
+) {
   if (!assertSelection(candidate, provider, resolver)) {
     return safeError(candidate, provider, resolver, 'UNSUPPORTED_EVIDENCE_KIND');
   }
@@ -213,20 +250,27 @@ export function resolveLocalGitEvidenceV2(candidate, {
     return safeError(candidate, provider, resolver, 'CAPABILITY_DENIED');
   }
   const locator = candidate.locator;
-  if (!locator || typeof locator !== 'object' || typeof locator.repositoryId !== 'string' || typeof locator.revision !== 'string'
-    || (locator.path !== undefined && !safeRelativePath(locator.path))
-    || (locator.lines !== undefined && !locator.path)
-    || (locator.objectType !== undefined && !SAFE_OBJECT_TYPES.has(locator.objectType))) {
+  if (
+    !locator ||
+    typeof locator !== 'object' ||
+    typeof locator.repositoryId !== 'string' ||
+    typeof locator.revision !== 'string' ||
+    (locator.path !== undefined && !safeRelativePath(locator.path)) ||
+    (locator.lines !== undefined && !locator.path) ||
+    (locator.objectType !== undefined && !SAFE_OBJECT_TYPES.has(locator.objectType))
+  ) {
     return safeError(candidate, provider, resolver, 'EVIDENCE_LOCATOR_INVALID');
   }
   const source = configuredRepository(context, locator.repositoryId);
   const rootPath = usableRepositoryRoot(source);
   if (rootPath === null) return safeError(candidate, provider, resolver, 'SOURCE_NOT_FOUND');
   const sourceContract = declaredSourceContract(source);
-  if (sourceContract === null) return safeError(candidate, provider, resolver, 'EVIDENCE_LOCATOR_INVALID');
+  if (sourceContract === null)
+    return safeError(candidate, provider, resolver, 'EVIDENCE_LOCATOR_INVALID');
   const maximum = configuredMaximum(source);
   if (maximum === null) return safeError(candidate, provider, resolver, 'SENSITIVITY_BLOCKED');
-  if (!git(rootPath, ['rev-parse', '--git-dir']).ok) return safeError(candidate, provider, resolver, 'SOURCE_NOT_FOUND');
+  if (!git(rootPath, ['rev-parse', '--git-dir']).ok)
+    return safeError(candidate, provider, resolver, 'SOURCE_NOT_FOUND');
 
   const revisionId = verifyObject(rootPath, `${locator.revision}^{object}`);
   if (revisionId === null) return safeError(candidate, provider, resolver, 'REVISION_NOT_FOUND');
@@ -240,7 +284,12 @@ export function resolveLocalGitEvidenceV2(candidate, {
     const ancestorId = verifyObject(rootPath, `${locator.ancestry.ancestorRevision}^{commit}`);
     const descendantId = verifyObject(rootPath, `${revisionId}^{commit}`);
     if (ancestorId === null || descendantId === null) {
-      return safeError(candidate, provider, resolver, ancestorId === null ? 'REVISION_NOT_FOUND' : 'OBJECT_TYPE_MISMATCH');
+      return safeError(
+        candidate,
+        provider,
+        resolver,
+        ancestorId === null ? 'REVISION_NOT_FOUND' : 'OBJECT_TYPE_MISMATCH',
+      );
     }
     if (!git(rootPath, ['merge-base', '--is-ancestor', ancestorId, descendantId]).ok) {
       return safeError(candidate, provider, resolver, 'ANCESTRY_MISMATCH');
@@ -260,19 +309,33 @@ export function resolveLocalGitEvidenceV2(candidate, {
     if (targetType === null) return safeError(candidate, provider, resolver, 'PATH_NOT_FOUND');
   }
   const expectedType = locator.objectType ?? (locator.path ? 'blob' : revisionType);
-  if (targetType !== expectedType) return safeError(candidate, provider, resolver, 'OBJECT_TYPE_MISMATCH');
-  if (locator.lines && targetType !== 'blob') return safeError(candidate, provider, resolver, 'OBJECT_TYPE_MISMATCH');
+  if (targetType !== expectedType)
+    return safeError(candidate, provider, resolver, 'OBJECT_TYPE_MISMATCH');
+  if (locator.lines && targetType !== 'blob')
+    return safeError(candidate, provider, resolver, 'OBJECT_TYPE_MISMATCH');
 
   const size = objectSize(rootPath, expression);
-  if (size === null) return safeError(candidate, provider, resolver, locator.path ? 'PATH_NOT_FOUND' : 'REVISION_NOT_FOUND');
+  if (size === null)
+    return safeError(
+      candidate,
+      provider,
+      resolver,
+      locator.path ? 'PATH_NOT_FOUND' : 'REVISION_NOT_FOUND',
+    );
   if (size > maximum) return safeError(candidate, provider, resolver, 'SENSITIVITY_BLOCKED');
   const fullBytes = objectBytes(rootPath, targetType, expression);
   if (fullBytes === null || fullBytes.byteLength !== size) {
-    return safeError(candidate, provider, resolver, locator.path ? 'PATH_NOT_FOUND' : 'REVISION_NOT_FOUND');
+    return safeError(
+      candidate,
+      provider,
+      resolver,
+      locator.path ? 'PATH_NOT_FOUND' : 'REVISION_NOT_FOUND',
+    );
   }
   const bytes = locator.lines ? selectedLineBytes(fullBytes, locator.lines) : fullBytes;
   if (bytes === null) return safeError(candidate, provider, resolver, 'LINE_RANGE_INVALID');
-  if (bytes.byteLength > maximum) return safeError(candidate, provider, resolver, 'SENSITIVITY_BLOCKED');
+  if (bytes.byteLength > maximum)
+    return safeError(candidate, provider, resolver, 'SENSITIVITY_BLOCKED');
   if (containsSecret(bytes)) return safeError(candidate, provider, resolver, 'SECRET_DETECTED');
 
   const worktree = worktreeState(rootPath);
@@ -282,9 +345,16 @@ export function resolveLocalGitEvidenceV2(candidate, {
     objectType: targetType,
     ...(locator.path ? { path: locator.path } : {}),
     ...(locator.lines ? { lines: { start: locator.lines.start, end: locator.lines.end } } : {}),
-    ...(locator.ancestry ? {
-      ancestry: { ancestorRevision: verifyObject(rootPath, `${locator.ancestry.ancestorRevision}^{commit}`) },
-    } : {}),
+    ...(locator.ancestry
+      ? {
+          ancestry: {
+            ancestorRevision: verifyObject(
+              rootPath,
+              `${locator.ancestry.ancestorRevision}^{commit}`,
+            ),
+          },
+        }
+      : {}),
   };
   return freeze({
     status: 'resolved',

@@ -1,5 +1,8 @@
 import type { OperatingModelStateV2, OperatingSnapshotV2 } from '@openplanr/protocol';
-import type { OperatingModelStateCollectionsV2, OperatingModelStateScopeV2 } from './operating-state-v2.d.mts';
+import type {
+  OperatingModelStateCollectionsV2,
+  OperatingModelStateScopeV2,
+} from './operating-state-v2.d.mts';
 
 export interface OperatingSnapshotManifestV2 {
   scope: OperatingModelStateScopeV2;

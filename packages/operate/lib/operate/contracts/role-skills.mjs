@@ -3,20 +3,55 @@
  * workspace `skills/` tree and projected by `scripts/skills/generate-v18.mjs`.
  */
 export const BUSINESS_EXECUTIVE_SKILL_BINDINGS = Object.freeze([
-  Object.freeze({ roleId: 'strategy-finance', skillName: 'planr-ceo-review', label: 'CEO', outputFile: 'ceo.md' }),
-  Object.freeze({ roleId: 'technology-risk', skillName: 'planr-cto-review', label: 'CTO', outputFile: 'cto.md' }),
-  Object.freeze({ roleId: 'product-activation', skillName: 'planr-cpo-review', label: 'CPO', outputFile: 'cpo.md' }),
-  Object.freeze({ roleId: 'growth-market', skillName: 'planr-cmo-review', label: 'CMO', outputFile: 'cmo.md' }),
-  Object.freeze({ roleId: 'operations-customer', skillName: 'planr-coo-review', label: 'COO', outputFile: 'coo.md' }),
-  Object.freeze({ roleId: 'independent-challenge', skillName: 'planr-challenger-review', label: 'Challenger', outputFile: 'challenger.md' }),
-  Object.freeze({ roleId: 'chair', skillName: 'planr-chair-review', label: 'Chair', outputFile: 'chair.md' }),
+  Object.freeze({
+    roleId: 'strategy-finance',
+    skillName: 'planr-ceo-review',
+    label: 'CEO',
+    outputFile: 'ceo.md',
+  }),
+  Object.freeze({
+    roleId: 'technology-risk',
+    skillName: 'planr-cto-review',
+    label: 'CTO',
+    outputFile: 'cto.md',
+  }),
+  Object.freeze({
+    roleId: 'product-activation',
+    skillName: 'planr-cpo-review',
+    label: 'CPO',
+    outputFile: 'cpo.md',
+  }),
+  Object.freeze({
+    roleId: 'growth-market',
+    skillName: 'planr-cmo-review',
+    label: 'CMO',
+    outputFile: 'cmo.md',
+  }),
+  Object.freeze({
+    roleId: 'operations-customer',
+    skillName: 'planr-coo-review',
+    label: 'COO',
+    outputFile: 'coo.md',
+  }),
+  Object.freeze({
+    roleId: 'independent-challenge',
+    skillName: 'planr-challenger-review',
+    label: 'Challenger',
+    outputFile: 'challenger.md',
+  }),
+  Object.freeze({
+    roleId: 'chair',
+    skillName: 'planr-chair-review',
+    label: 'Chair',
+    outputFile: 'chair.md',
+  }),
 ]);
 
 /** Resolve declarative bindings against the compiled Protocol-owned registry. */
 export function businessExecutiveRoles(catalog) {
-  const domain = catalog.extensions.domains.find(({ domainId, domainVersion }) => (
-    domainId === 'business' && domainVersion === '1.0.0'
-  ));
+  const domain = catalog.extensions.domains.find(
+    ({ domainId, domainVersion }) => domainId === 'business' && domainVersion === '1.0.0',
+  );
   if (!domain) {
     throw new Error('business-domain@1.0.0 is missing from the compiled Operate catalog.');
   }
@@ -32,10 +67,12 @@ export function businessExecutiveRoles(catalog) {
 /** Generate the compatibility appendix from registry-owned mandate data. */
 export function renderOperateMandateAppendixModule(catalog) {
   businessExecutiveRoles(catalog);
-  const domains = Object.fromEntries(catalog.extensions.domains.map((domain) => [
-    domain.domainId,
-    Object.fromEntries(domain.roles.map((role) => [role.roleId, role.mandate])),
-  ]));
+  const domains = Object.fromEntries(
+    catalog.extensions.domains.map((domain) => [
+      domain.domainId,
+      Object.fromEntries(domain.roles.map((role) => [role.roleId, role.mandate])),
+    ]),
+  );
   const firstMandate = catalog.extensions.domains.flatMap(({ roles }) => roles)[0]?.mandate;
   if (!firstMandate) throw new Error('The compiled Operate catalog has no role mandates.');
   const ceiling = {

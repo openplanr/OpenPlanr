@@ -60,12 +60,14 @@ function hasCapability(capabilities, capability) {
 }
 
 function safePlanrPath(path) {
-  return typeof path === 'string'
-    && path.startsWith('.planr/')
-    && path.length > '.planr/'.length
-    && !isAbsolute(path)
-    && !path.includes('\\')
-    && path.split('/').every((segment) => segment.length > 0 && segment !== '.' && segment !== '..');
+  return (
+    typeof path === 'string' &&
+    path.startsWith('.planr/') &&
+    path.length > '.planr/'.length &&
+    !isAbsolute(path) &&
+    !path.includes('\\') &&
+    path.split('/').every((segment) => segment.length > 0 && segment !== '.' && segment !== '..')
+  );
 }
 
 function isContained(root, target) {
@@ -81,15 +83,19 @@ function configuredProject(context, projectId) {
 
 function scopeMatches(candidate, project) {
   const scope = project?.scope;
-  return scope
-    && candidate.scopeId === scope.scopeId
-    && candidate.domainId === scope.domainId
-    && candidate.domainVersion === scope.domainVersion;
+  return (
+    scope &&
+    candidate.scopeId === scope.scopeId &&
+    candidate.domainId === scope.domainId &&
+    candidate.domainVersion === scope.domainVersion
+  );
 }
 
 function configuredMaximum(project) {
   const maximum = project?.maxBytes ?? DEFAULT_PLANR_EVIDENCE_MAX_BYTES_V2;
-  return Number.isSafeInteger(maximum) && maximum > 0 && maximum <= DEFAULT_PLANR_EVIDENCE_MAX_BYTES_V2
+  return Number.isSafeInteger(maximum) &&
+    maximum > 0 &&
+    maximum <= DEFAULT_PLANR_EVIDENCE_MAX_BYTES_V2
     ? maximum
     : null;
 }
@@ -101,14 +107,18 @@ function classificationFor(project, artifact) {
 
 function declaredSourceContract(project, artifact) {
   const value = artifact?.sourceContract ?? project?.sourceContract;
-  return value && typeof value === 'object' && !Array.isArray(value)
-    && typeof value.id === 'string' && typeof value.version === 'string'
+  return value &&
+    typeof value === 'object' &&
+    !Array.isArray(value) &&
+    typeof value.id === 'string' &&
+    typeof value.version === 'string'
     ? value
     : null;
 }
 
 function usableProjectRoot(project) {
-  if (!project || typeof project.rootPath !== 'string' || !existsSync(project.rootPath)) return null;
+  if (!project || typeof project.rootPath !== 'string' || !existsSync(project.rootPath))
+    return null;
   try {
     if (lstatSync(project.rootPath).isSymbolicLink()) return null;
     return realpathSync(project.rootPath);
@@ -123,12 +133,14 @@ function declaredArtifact(project, locator) {
 }
 
 function validDeclaredArtifact(artifact) {
-  return artifact
-    && typeof artifact.artifactId === 'string'
-    && typeof artifact.artifactType === 'string'
-    && safePlanrPath(artifact.path)
-    && typeof artifact.contentHash === 'string'
-    && DIGEST.test(artifact.contentHash);
+  return (
+    artifact &&
+    typeof artifact.artifactId === 'string' &&
+    typeof artifact.artifactType === 'string' &&
+    safePlanrPath(artifact.path) &&
+    typeof artifact.contentHash === 'string' &&
+    DIGEST.test(artifact.contentHash)
+  );
 }
 
 function containsSecret(bytes) {
@@ -156,9 +168,11 @@ function readRegularFileNoFollow(candidate, maximum) {
 }
 
 function assertSelection(candidate, provider, resolver) {
-  return candidate?.evidenceKind === 'planr'
-    && provider?.providerId === LOCAL_PLANR_EVIDENCE_PROVIDER_ID_V2
-    && resolver?.resolverId === LOCAL_PLANR_EVIDENCE_RESOLVER_ID_V2;
+  return (
+    candidate?.evidenceKind === 'planr' &&
+    provider?.providerId === LOCAL_PLANR_EVIDENCE_PROVIDER_ID_V2 &&
+    resolver?.resolverId === LOCAL_PLANR_EVIDENCE_RESOLVER_ID_V2
+  );
 }
 
 /**
@@ -166,12 +180,10 @@ function assertSelection(candidate, provider, resolver) {
  * hash semantics. It only reads a non-symlink regular file below the supplied
  * project root; it never asks Git whether the artifact is tracked.
  */
-export function resolveLocalPlanrEvidenceV2(candidate, {
-  provider,
-  resolver,
-  capabilities = [],
-  ...context
-} = {}) {
+export function resolveLocalPlanrEvidenceV2(
+  candidate,
+  { provider, resolver, capabilities = [], ...context } = {},
+) {
   if (!assertSelection(candidate, provider, resolver)) {
     return safeError(candidate, provider, resolver, 'UNSUPPORTED_EVIDENCE_KIND');
   }
@@ -179,16 +191,23 @@ export function resolveLocalPlanrEvidenceV2(candidate, {
     return safeError(candidate, provider, resolver, 'CAPABILITY_DENIED');
   }
   const locator = candidate.locator;
-  if (!locator || typeof locator !== 'object' || typeof locator.projectId !== 'string'
-    || typeof locator.artifactId !== 'string' || typeof locator.artifactType !== 'string'
-    || (locator.path !== undefined && !safePlanrPath(locator.path))
-    || (locator.contentHash !== undefined && (typeof locator.contentHash !== 'string' || !DIGEST.test(locator.contentHash)))) {
+  if (
+    !locator ||
+    typeof locator !== 'object' ||
+    typeof locator.projectId !== 'string' ||
+    typeof locator.artifactId !== 'string' ||
+    typeof locator.artifactType !== 'string' ||
+    (locator.path !== undefined && !safePlanrPath(locator.path)) ||
+    (locator.contentHash !== undefined &&
+      (typeof locator.contentHash !== 'string' || !DIGEST.test(locator.contentHash)))
+  ) {
     return safeError(candidate, provider, resolver, 'EVIDENCE_LOCATOR_INVALID');
   }
 
   const project = configuredProject(context, locator.projectId);
   if (project === null) return safeError(candidate, provider, resolver, 'SOURCE_NOT_FOUND');
-  if (!scopeMatches(candidate, project)) return safeError(candidate, provider, resolver, 'EVIDENCE_SOURCE_SCOPE_MISMATCH');
+  if (!scopeMatches(candidate, project))
+    return safeError(candidate, provider, resolver, 'EVIDENCE_SOURCE_SCOPE_MISMATCH');
   const rootPath = usableProjectRoot(project);
   if (rootPath === null) return safeError(candidate, provider, resolver, 'SOURCE_NOT_FOUND');
   const maximum = configuredMaximum(project);
@@ -198,9 +217,11 @@ export function resolveLocalPlanrEvidenceV2(candidate, {
   if (artifact === null || artifact.artifactType !== locator.artifactType) {
     return safeError(candidate, provider, resolver, 'ARTIFACT_NOT_FOUND');
   }
-  if (!validDeclaredArtifact(artifact)) return safeError(candidate, provider, resolver, 'EVIDENCE_LOCATOR_INVALID');
+  if (!validDeclaredArtifact(artifact))
+    return safeError(candidate, provider, resolver, 'EVIDENCE_LOCATOR_INVALID');
   const sourceContract = declaredSourceContract(project, artifact);
-  if (sourceContract === null) return safeError(candidate, provider, resolver, 'EVIDENCE_LOCATOR_INVALID');
+  if (sourceContract === null)
+    return safeError(candidate, provider, resolver, 'EVIDENCE_LOCATOR_INVALID');
   if (locator.path !== undefined && locator.path !== artifact.path) {
     return safeError(candidate, provider, resolver, 'PATH_NOT_FOUND');
   }
@@ -209,20 +230,26 @@ export function resolveLocalPlanrEvidenceV2(candidate, {
   }
 
   const artifactPath = resolve(rootPath, ...artifact.path.split('/'));
-  if (!isContained(rootPath, artifactPath)) return safeError(candidate, provider, resolver, 'EVIDENCE_LOCATOR_INVALID');
+  if (!isContained(rootPath, artifactPath))
+    return safeError(candidate, provider, resolver, 'EVIDENCE_LOCATOR_INVALID');
   try {
-    if (!existsSync(artifactPath)) return safeError(candidate, provider, resolver, 'PATH_NOT_FOUND');
-    if (lstatSync(artifactPath).isSymbolicLink()) return safeError(candidate, provider, resolver, 'SENSITIVITY_BLOCKED');
+    if (!existsSync(artifactPath))
+      return safeError(candidate, provider, resolver, 'PATH_NOT_FOUND');
+    if (lstatSync(artifactPath).isSymbolicLink())
+      return safeError(candidate, provider, resolver, 'SENSITIVITY_BLOCKED');
     const realArtifactPath = realpathSync(artifactPath);
-    if (!isContained(rootPath, realArtifactPath)) return safeError(candidate, provider, resolver, 'SENSITIVITY_BLOCKED');
+    if (!isContained(rootPath, realArtifactPath))
+      return safeError(candidate, provider, resolver, 'SENSITIVITY_BLOCKED');
   } catch {
     return safeError(candidate, provider, resolver, 'PATH_NOT_FOUND');
   }
   const read = readRegularFileNoFollow(artifactPath, maximum);
   if (read.error) return safeError(candidate, provider, resolver, read.error);
-  if (containsSecret(read.bytes)) return safeError(candidate, provider, resolver, 'SECRET_DETECTED');
+  if (containsSecret(read.bytes))
+    return safeError(candidate, provider, resolver, 'SECRET_DETECTED');
   const rawHash = sha256(read.bytes);
-  if (rawHash !== artifact.contentHash) return safeError(candidate, provider, resolver, 'ARTIFACT_HASH_MISMATCH');
+  if (rawHash !== artifact.contentHash)
+    return safeError(candidate, provider, resolver, 'ARTIFACT_HASH_MISMATCH');
 
   return freeze({
     status: 'resolved',

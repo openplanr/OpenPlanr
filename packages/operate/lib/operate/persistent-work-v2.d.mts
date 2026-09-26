@@ -38,22 +38,29 @@ export function derivePersistentOperatingActionRevisionProjectionV2(
   action: OperatingActionV2,
 ): Omit<OperatingActionV2, 'actionHash' | 'revisionId' | 'state' | 'updatedAt'>;
 
-export function derivePersistentOperatingActionRevisionHashV2(
-  action: OperatingActionV2,
-): string;
+export function derivePersistentOperatingActionRevisionHashV2(action: OperatingActionV2): string;
 
 export function derivePersistentOperatingRecoveryProjectionV2(input: {
   operation: import('@openplanr/protocol').OperatingGovernedOperationV2;
-  result?: import('@openplanr/protocol').OperatingExecutionResultV2
-    | import('@openplanr/protocol').OperatingRollbackResultV2 | null;
+  result?:
+    | import('@openplanr/protocol').OperatingExecutionResultV2
+    | import('@openplanr/protocol').OperatingRollbackResultV2
+    | null;
   rollbackPlan?: import('@openplanr/protocol').OperatingRollbackPlanV2 | null;
 }): Readonly<{
-  operationId: string; operationKind: 'execute' | 'rollback';
+  operationId: string;
+  operationKind: 'execute' | 'rollback';
   action: { actionId: string; revision: number; actionHash: string };
-  state: string; resultId: string | null; rollbackPlanId: string | null;
-  parentOperationId: string | null; verificationPlanId: string;
-  targetBeforeHash: string | null; targetAfterHash: string | null;
-  baselineArtifactId: string | null; baselineHash: string | null; projectionHash: string;
+  state: string;
+  resultId: string | null;
+  rollbackPlanId: string | null;
+  parentOperationId: string | null;
+  verificationPlanId: string;
+  targetBeforeHash: string | null;
+  targetAfterHash: string | null;
+  baselineArtifactId: string | null;
+  baselineHash: string | null;
+  projectionHash: string;
 }>;
 
 export function promotePersistentOperatingActionAuthorityV2(
@@ -85,7 +92,9 @@ export interface PersistentOperatingExecutionVerificationProjectionV2 {
   readonly resultId: string | null;
   readonly verificationPlanId: string;
   readonly verificationAssignmentId: string | null;
-  readonly executionStatus: import('./execution-verification-v2.d.mts').OperatingExecutionVerificationStatusV2 | null;
+  readonly executionStatus:
+    | import('./execution-verification-v2.d.mts').OperatingExecutionVerificationStatusV2
+    | null;
   readonly hypothesisStatus: import('./execution-verification-v2.d.mts').OperatingHypothesisVerificationStatusV2;
   readonly outcomeId: string | null;
   readonly learningId: string | null;

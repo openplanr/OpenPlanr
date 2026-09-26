@@ -16,7 +16,6 @@ export type {
   OperatingExecutiveBoardV2,
 } from '@openplanr/protocol';
 
-
 type OperatingExecutiveBoardRecordOptionsV2 = {
   cycleId: string;
   planId: string;
@@ -55,11 +54,12 @@ export function assertOperatingExecutiveBoardV2(
   options?: { materializedOnly?: false },
 ): OperatingExecutiveBoardV2;
 
-export type OperatingPendingCycleReviewV2 = OperatingReviewV2 & Readonly<{
-  state: 'pending';
-  disposition: null;
-  workDispositions: readonly [];
-}>;
+export type OperatingPendingCycleReviewV2 = OperatingReviewV2 &
+  Readonly<{
+    state: 'pending';
+    disposition: null;
+    workDispositions: readonly [];
+  }>;
 
 export function createOperatingExecutiveBoardMaterializationV2(
   request: {

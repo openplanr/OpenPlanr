@@ -32,8 +32,12 @@ function without(value, ...fields) {
 }
 
 function exactKeys(value, keys, subject) {
-  if (!value || typeof value !== 'object' || Array.isArray(value)
-    || Object.keys(value).sort().join('\0') !== [...keys].sort().join('\0')) {
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    Array.isArray(value) ||
+    Object.keys(value).sort().join('\0') !== [...keys].sort().join('\0')
+  ) {
     fail('E_OPERATE_BOARD_REQUEST_INVALID', `${subject} must contain only its closed fields.`);
   }
 }
@@ -65,27 +69,38 @@ function boardSemanticValue(board) {
 }
 
 function acceptedArtifactId(state, assignment) {
-  const accepted = state.submissions.filter((submission) => (
-    submission.assignmentId === assignment.assignmentId
-    && submission.cycleId === assignment.cycleId
-    && submission.state === 'accepted'
-    && typeof submission.artifactId === 'string'
-  ));
+  const accepted = state.submissions.filter(
+    (submission) =>
+      submission.assignmentId === assignment.assignmentId &&
+      submission.cycleId === assignment.cycleId &&
+      submission.state === 'accepted' &&
+      typeof submission.artifactId === 'string',
+  );
   if (accepted.length > 1) {
-    fail('E_OPERATE_BOARD_BINDING_INVALID', 'Executive Board seat has more than one accepted Artifact.', {
-      assignmentId: assignment.assignmentId,
-    });
+    fail(
+      'E_OPERATE_BOARD_BINDING_INVALID',
+      'Executive Board seat has more than one accepted Artifact.',
+      {
+        assignmentId: assignment.assignmentId,
+      },
+    );
   }
   if (accepted.length === 0) return null;
   const artifact = state.artifacts.find(({ artifactId }) => artifactId === accepted[0].artifactId);
-  if (!artifact
-    || artifact.assignmentId !== assignment.assignmentId
-    || artifact.rawHash !== accepted[0].rawHash
-    || artifact.canonicalHash !== accepted[0].canonicalHash
-    || assignment.state !== 'validated') {
-    fail('E_OPERATE_BOARD_BINDING_INVALID', 'Executive Board seat lost its exact accepted Artifact custody.', {
-      assignmentId: assignment.assignmentId,
-    });
+  if (
+    !artifact ||
+    artifact.assignmentId !== assignment.assignmentId ||
+    artifact.rawHash !== accepted[0].rawHash ||
+    artifact.canonicalHash !== accepted[0].canonicalHash ||
+    assignment.state !== 'validated'
+  ) {
+    fail(
+      'E_OPERATE_BOARD_BINDING_INVALID',
+      'Executive Board seat lost its exact accepted Artifact custody.',
+      {
+        assignmentId: assignment.assignmentId,
+      },
+    );
   }
   return artifact.artifactId;
 }
@@ -95,32 +110,48 @@ function resolveBoardSources(state, { cycleId, planId, ledgerId }) {
   const plans = (state.intelligencePlans ?? []).filter((entry) => entry.planId === planId);
   const ledgers = (state.decisionLedgers ?? []).filter((entry) => entry.ledgerId === ledgerId);
   if (cycles.length !== 1 || plans.length !== 1 || ledgers.length !== 1) {
-    fail('E_OPERATE_BOARD_BINDING_INVALID', 'Executive Board requires one exact Cycle, intelligence plan, and Chair ledger.', {
-      cycleId, planId, ledgerId,
-    });
+    fail(
+      'E_OPERATE_BOARD_BINDING_INVALID',
+      'Executive Board requires one exact Cycle, intelligence plan, and Chair ledger.',
+      {
+        cycleId,
+        planId,
+        ledgerId,
+      },
+    );
   }
   const [cycle] = cycles;
   const [plan] = plans;
   const [ledger] = ledgers;
-  if (cycle.domainId !== 'business'
-    || plan.scopeId !== cycle.scopeId
-    || plan.domainId !== cycle.domainId
-    || plan.domainVersion !== cycle.domainVersion
-    || ledger.scopeId !== cycle.scopeId
-    || ledger.domainId !== cycle.domainId
-    || ledger.domainVersion !== cycle.domainVersion
-    || ledger.intelligencePlanId !== plan.planId) {
-    fail('E_OPERATE_BOARD_FOREIGN_SCOPE', 'Executive Board sources cross a Cycle, scope, domain, or plan boundary.', {
-      cycleId, planId, ledgerId,
-    });
+  if (
+    cycle.domainId !== 'business' ||
+    plan.scopeId !== cycle.scopeId ||
+    plan.domainId !== cycle.domainId ||
+    plan.domainVersion !== cycle.domainVersion ||
+    ledger.scopeId !== cycle.scopeId ||
+    ledger.domainId !== cycle.domainId ||
+    ledger.domainVersion !== cycle.domainVersion ||
+    ledger.intelligencePlanId !== plan.planId
+  ) {
+    fail(
+      'E_OPERATE_BOARD_FOREIGN_SCOPE',
+      'Executive Board sources cross a Cycle, scope, domain, or plan boundary.',
+      {
+        cycleId,
+        planId,
+        ledgerId,
+      },
+    );
   }
   return { cycle, plan, ledger };
 }
 
 function seatBindings(state, cycle, plan) {
-  const assignments = new Map(state.assignments
-    .filter((entry) => entry.cycleId === cycle.cycleId)
-    .map((entry) => [entry.assignmentId, entry]));
+  const assignments = new Map(
+    state.assignments
+      .filter((entry) => entry.cycleId === cycle.cycleId)
+      .map((entry) => [entry.assignmentId, entry]),
+  );
   return [
     ...plan.selectedRoles.map((role) => [role, false]),
     ...plan.omittedRoles.map((role) => [role, true]),
@@ -130,22 +161,34 @@ function seatBindings(state, cycle, plan) {
         ? deriveOperatingIntelligenceAssignmentIdV2(plan.planId, role.roleId, role.roleVersion)
         : null;
       const assignment = assignmentId === null ? null : assignments.get(assignmentId);
-      if (assignmentId !== null && (!assignment
-        || assignment.roleId !== role.roleId
-        || assignment.roleVersion !== role.roleVersion)) {
-        fail('E_OPERATE_BOARD_BINDING_INVALID', 'Executive Board selected seat lost its exact Assignment.', {
-          planId: plan.planId,
-          roleId: role.roleId,
-        });
+      if (
+        assignmentId !== null &&
+        (!assignment ||
+          assignment.roleId !== role.roleId ||
+          assignment.roleVersion !== role.roleVersion)
+      ) {
+        fail(
+          'E_OPERATE_BOARD_BINDING_INVALID',
+          'Executive Board selected seat lost its exact Assignment.',
+          {
+            planId: plan.planId,
+            roleId: role.roleId,
+          },
+        );
       }
-      const roleAbsences = assignment?.inputAbsences?.filter((absence) => (
-        absence.kind === 'role' && absence.roleId === role.roleId
-      )) ?? [];
+      const roleAbsences =
+        assignment?.inputAbsences?.filter(
+          (absence) => absence.kind === 'role' && absence.roleId === role.roleId,
+        ) ?? [];
       if (roleAbsences.length > 1) {
-        fail('E_OPERATE_BOARD_BINDING_INVALID', 'Executive Board seat has ambiguous role absence custody.', {
-          assignmentId,
-          roleId: role.roleId,
-        });
+        fail(
+          'E_OPERATE_BOARD_BINDING_INVALID',
+          'Executive Board seat has ambiguous role absence custody.',
+          {
+            assignmentId,
+            roleId: role.roleId,
+          },
+        );
       }
       return {
         roleId: role.roleId,
@@ -155,7 +198,7 @@ function seatBindings(state, cycle, plan) {
         artifactId: assignment ? acceptedArtifactId(state, assignment) : null,
         absenceId: omitted
           ? deriveOperatingOmittedRoleAbsenceIdV2(plan.planId, role.roleId, role.roleVersion)
-          : roleAbsences[0]?.absenceId ?? null,
+          : (roleAbsences[0]?.absenceId ?? null),
       };
     })
     .sort((left, right) => left.roleId.localeCompare(right.roleId));
@@ -165,27 +208,38 @@ function seatBindings(state, cycle, plan) {
  * Build either the stored materialized record or the same closed compatibility
  * record. Compatibility is always non-authoritative and has no Event identity.
  */
-export function buildOperatingExecutiveBoardRecordV2(state, {
-  cycleId,
-  planId,
-  ledgerId,
-  reviewId,
-  reviewHash,
-  projectionMode,
-  materializedEventId,
-  createdAt,
-  eventHead = state?.eventHead,
-  accessLevel = 'restricted',
-} = {}) {
+export function buildOperatingExecutiveBoardRecordV2(
+  state,
+  {
+    cycleId,
+    planId,
+    ledgerId,
+    reviewId,
+    reviewHash,
+    projectionMode,
+    materializedEventId,
+    createdAt,
+    eventHead = state?.eventHead,
+    accessLevel = 'restricted',
+  } = {},
+) {
   assertProtocolArtifact('operating-runtime-state', state, { protocolVersion: PROTOCOL_VERSION });
   const { cycle, plan } = resolveBoardSources(state, { cycleId, planId, ledgerId });
-  if (!['materialized', 'compatibility'].includes(projectionMode)
-    || (projectionMode === 'materialized' && (typeof materializedEventId !== 'string' || materializedEventId.length === 0))
-    || (projectionMode === 'compatibility' && materializedEventId !== null)
-    || typeof reviewId !== 'string' || reviewId.length === 0
-    || !/^sha256:[a-f0-9]{64}$/u.test(reviewHash ?? '')
-    || typeof createdAt !== 'string' || Number.isNaN(Date.parse(createdAt))) {
-    fail('E_OPERATE_BOARD_REQUEST_INVALID', 'Executive Board projection mode, Review, Event, or timestamp is invalid.');
+  if (
+    !['materialized', 'compatibility'].includes(projectionMode) ||
+    (projectionMode === 'materialized' &&
+      (typeof materializedEventId !== 'string' || materializedEventId.length === 0)) ||
+    (projectionMode === 'compatibility' && materializedEventId !== null) ||
+    typeof reviewId !== 'string' ||
+    reviewId.length === 0 ||
+    !/^sha256:[a-f0-9]{64}$/u.test(reviewHash ?? '') ||
+    typeof createdAt !== 'string' ||
+    Number.isNaN(Date.parse(createdAt))
+  ) {
+    fail(
+      'E_OPERATE_BOARD_REQUEST_INVALID',
+      'Executive Board projection mode, Review, Event, or timestamp is invalid.',
+    );
   }
   const traceMatrix = buildOperatingTraceMatrixV2(state, {
     cycleId,
@@ -235,38 +289,60 @@ export function buildOperatingExecutiveBoardRecordV2(state, {
 
 export function assertOperatingExecutiveBoardV2(value, { materializedOnly = false } = {}) {
   assertProtocolArtifact('operating-executive-board', value, { protocolVersion: PROTOCOL_VERSION });
-  if (!value || value.kind !== 'operating-executive-board'
-    || value.schemaVersion !== '1.0.0'
-    || value.protocolVersion !== PROTOCOL_VERSION
-    || !['materialized', 'compatibility'].includes(value.projectionMode)
-    || value.authoritativeForMutation !== (value.projectionMode === 'materialized')
-    || (value.projectionMode === 'materialized') !== (typeof value.materializedEventId === 'string')
-    || (materializedOnly && value.projectionMode !== 'materialized')) {
-    fail('E_OPERATE_BOARD_CONTRACT_INVALID', 'Executive Board record has an invalid closed projection variant.');
+  if (
+    !value ||
+    value.kind !== 'operating-executive-board' ||
+    value.schemaVersion !== '1.0.0' ||
+    value.protocolVersion !== PROTOCOL_VERSION ||
+    !['materialized', 'compatibility'].includes(value.projectionMode) ||
+    value.authoritativeForMutation !== (value.projectionMode === 'materialized') ||
+    (value.projectionMode === 'materialized') !== (typeof value.materializedEventId === 'string') ||
+    (materializedOnly && value.projectionMode !== 'materialized')
+  ) {
+    fail(
+      'E_OPERATE_BOARD_CONTRACT_INVALID',
+      'Executive Board record has an invalid closed projection variant.',
+    );
   }
   assertOperatingTraceMatrixV2(value.traceMatrix);
-  if (value.traceMatrix.scopeId !== value.scopeId
-    || value.traceMatrix.domainId !== value.domainId
-    || value.traceMatrix.domainVersion !== value.domainVersion
-    || value.traceMatrix.cycleId !== value.cycleId
-    || value.traceMatrix.eventHead.sequence !== value.sourceEventHead?.sequence
-    || value.traceMatrix.eventHead.hash !== value.sourceEventHead?.hash) {
-    fail('E_OPERATE_BOARD_BINDING_INVALID', 'Executive Board and trace matrix lost their exact scope, Cycle, or Event-head binding.');
+  if (
+    value.traceMatrix.scopeId !== value.scopeId ||
+    value.traceMatrix.domainId !== value.domainId ||
+    value.traceMatrix.domainVersion !== value.domainVersion ||
+    value.traceMatrix.cycleId !== value.cycleId ||
+    value.traceMatrix.eventHead.sequence !== value.sourceEventHead?.sequence ||
+    value.traceMatrix.eventHead.hash !== value.sourceEventHead?.hash
+  ) {
+    fail(
+      'E_OPERATE_BOARD_BINDING_INVALID',
+      'Executive Board and trace matrix lost their exact scope, Cycle, or Event-head binding.',
+    );
   }
   if (value.semanticHash !== sha256Jcs(boardSemanticValue(value))) {
-    fail('E_OPERATE_BOARD_HASH_MISMATCH', 'Executive Board semantic hash does not equal its canonical source identities.');
+    fail(
+      'E_OPERATE_BOARD_HASH_MISMATCH',
+      'Executive Board semantic hash does not equal its canonical source identities.',
+    );
   }
   if (value.boardHash !== sha256Jcs(without(value, 'boardHash'))) {
-    fail('E_OPERATE_BOARD_HASH_MISMATCH', 'Executive Board hash does not equal its canonical content.');
+    fail(
+      'E_OPERATE_BOARD_HASH_MISMATCH',
+      'Executive Board hash does not equal its canonical content.',
+    );
   }
   const roles = value.seatBindings?.map(({ roleId }) => roleId) ?? [];
-  if (new Set(roles).size !== roles.length
-    || value.seatBindings.some(({ roleId }) => typeof roleId !== 'string' || roleId.length === 0)
-    || !isLexicallySorted(roles)
-    || !isLexicallySorted(value.findingIds)
-    || !isLexicallySorted(value.decisionIds)
-    || !isLexicallySorted(value.actionIds)) {
-    fail('E_OPERATE_BOARD_BINDING_INVALID', 'Executive Board identities must be unique and builder-canonically ordered.');
+  if (
+    new Set(roles).size !== roles.length ||
+    value.seatBindings.some(({ roleId }) => typeof roleId !== 'string' || roleId.length === 0) ||
+    !isLexicallySorted(roles) ||
+    !isLexicallySorted(value.findingIds) ||
+    !isLexicallySorted(value.decisionIds) ||
+    !isLexicallySorted(value.actionIds)
+  ) {
+    fail(
+      'E_OPERATE_BOARD_BINDING_INVALID',
+      'Executive Board identities must be unique and builder-canonically ordered.',
+    );
   }
   return value;
 }
@@ -275,34 +351,48 @@ export function assertOperatingExecutiveBoardV2(value, { materializedOnly = fals
  * Prepare the pipeline-owned Event that OpenPlanr composes immediately before
  * review.created. The returned value is pure and does not reduce or persist.
  */
-export function createOperatingExecutiveBoardMaterializationV2(request, draft, {
-  initialState,
-} = {}) {
+export function createOperatingExecutiveBoardMaterializationV2(
+  request,
+  draft,
+  { initialState } = {},
+) {
   exactKeys(request, ['cycleId', 'planId', 'ledgerId', 'review'], 'Executive Board request');
   exactKeys(draft, ['eventId', 'timestamp', 'correlationId'], 'Executive Board draft');
-  assertProtocolArtifact('operating-runtime-state', initialState, { protocolVersion: PROTOCOL_VERSION });
+  assertProtocolArtifact('operating-runtime-state', initialState, {
+    protocolVersion: PROTOCOL_VERSION,
+  });
   assertProtocolArtifact('operating-review', request.review, { protocolVersion: PROTOCOL_VERSION });
   const review = request.review;
-  if (review.cycleId !== request.cycleId
-    || review.subject?.type === 'action'
-    || review.state !== 'pending'
-    || review.disposition !== null
-    || review.workDispositions.length !== 0
-    || review.createdAt !== draft.timestamp
-    || review.updatedAt !== draft.timestamp) {
-    fail('E_OPERATE_BOARD_BINDING_INVALID', 'Executive Board requires the exact following pending Cycle Review bytes.', {
-      cycleId: request.cycleId,
-      reviewId: review?.reviewId ?? null,
-    });
+  if (
+    review.cycleId !== request.cycleId ||
+    review.subject?.type === 'action' ||
+    review.state !== 'pending' ||
+    review.disposition !== null ||
+    review.workDispositions.length !== 0 ||
+    review.createdAt !== draft.timestamp ||
+    review.updatedAt !== draft.timestamp
+  ) {
+    fail(
+      'E_OPERATE_BOARD_BINDING_INVALID',
+      'Executive Board requires the exact following pending Cycle Review bytes.',
+      {
+        cycleId: request.cycleId,
+        reviewId: review?.reviewId ?? null,
+      },
+    );
   }
-  const ledgerEvents = initialState.eventReplayIndex.filter((entry) => (
-    entry.type === 'decision-ledger.materialized' && entry.entityId === request.ledgerId
-  ));
+  const ledgerEvents = initialState.eventReplayIndex.filter(
+    (entry) => entry.type === 'decision-ledger.materialized' && entry.entityId === request.ledgerId,
+  );
   if (ledgerEvents.length !== 1) {
-    fail('E_OPERATE_BOARD_BINDING_INVALID', 'Executive Board requires one exact decision-ledger materialization Event.', {
-      ledgerId: request.ledgerId,
-      eventCount: ledgerEvents.length,
-    });
+    fail(
+      'E_OPERATE_BOARD_BINDING_INVALID',
+      'Executive Board requires one exact decision-ledger materialization Event.',
+      {
+        ledgerId: request.ledgerId,
+        eventCount: ledgerEvents.length,
+      },
+    );
   }
   const board = buildOperatingExecutiveBoardRecordV2(initialState, {
     cycleId: request.cycleId,

@@ -21,7 +21,10 @@ const COLLECTIONS = Object.freeze([
 ]);
 
 function fail(code, message, context = {}) {
-  throw new PipelineError(code, message, '', { retryable: false, context: structuredClone(context) });
+  throw new PipelineError(code, message, '', {
+    retryable: false,
+    context: structuredClone(context),
+  });
 }
 
 function clone(value) {
@@ -41,8 +44,10 @@ function digestToken(prefix, value, length = 24) {
 }
 
 export function deriveOperatingIntelligenceBundleCustodyIdsV2(bundle) {
-  const suffix = sha256Jcs({ bundleId: bundle?.bundleId, canonicalHash: sha256Jcs(bundle) })
-    .slice('sha256:'.length, 'sha256:'.length + 24);
+  const suffix = sha256Jcs({ bundleId: bundle?.bundleId, canonicalHash: sha256Jcs(bundle) }).slice(
+    'sha256:'.length,
+    'sha256:'.length + 24,
+  );
   return Object.freeze({
     assignmentId: `asg_bundle_${suffix}`,
     submissionId: `sub_bundle_${suffix}`,
@@ -122,33 +127,49 @@ export function deriveOperatingRoleAbsenceIdV2({
 }
 
 function titleFor(record, kind) {
-  const candidate = record.title
-    ?? record.name
-    ?? record.question
-    ?? record.statement
-    ?? `${kind} ${Object.values(record).find((value) => typeof value === 'string') ?? 'record'}`;
+  const candidate =
+    record.title ??
+    record.name ??
+    record.question ??
+    record.statement ??
+    `${kind} ${Object.values(record).find((value) => typeof value === 'string') ?? 'record'}`;
   return candidate.slice(0, 256).trim();
 }
 
 function stateFor(record) {
-  return String(record.state ?? record.status ?? record.epistemicStatus ?? 'recorded').slice(0, 128);
+  return String(record.state ?? record.status ?? record.epistemicStatus ?? 'recorded').slice(
+    0,
+    128,
+  );
 }
 
 function evidenceFor(record) {
-  return [...new Set([
-    ...(record.evidenceRefIds ?? []),
-    ...(record.supportingEvidenceRefIds ?? []),
-    ...(record.contradictingEvidenceRefIds ?? []),
-  ])].sort().slice(0, MAX_PROJECTED_EVIDENCE_REFS);
+  return [
+    ...new Set([
+      ...(record.evidenceRefIds ?? []),
+      ...(record.supportingEvidenceRefIds ?? []),
+      ...(record.contradictingEvidenceRefIds ?? []),
+    ]),
+  ]
+    .sort()
+    .slice(0, MAX_PROJECTED_EVIDENCE_REFS);
 }
 
 function projectedCollection(records, kind, idField) {
   const ordered = [...records].sort((left, right) => {
-    const leftCurrent = ['open', 'active', 'in_progress', 'proposed'].includes(stateFor(left)) ? 0 : 1;
-    const rightCurrent = ['open', 'active', 'in_progress', 'proposed'].includes(stateFor(right)) ? 0 : 1;
-    return leftCurrent - rightCurrent
-      || String(right.updatedAt ?? right.createdAt ?? '').localeCompare(String(left.updatedAt ?? left.createdAt ?? ''))
-      || String(left[idField]).localeCompare(String(right[idField]));
+    const leftCurrent = ['open', 'active', 'in_progress', 'proposed'].includes(stateFor(left))
+      ? 0
+      : 1;
+    const rightCurrent = ['open', 'active', 'in_progress', 'proposed'].includes(stateFor(right))
+      ? 0
+      : 1;
+    return (
+      leftCurrent - rightCurrent ||
+      String(right.updatedAt ?? right.createdAt ?? '').localeCompare(
+        String(left.updatedAt ?? left.createdAt ?? ''),
+      ) ||
+      String(left[idField]).localeCompare(String(right[idField]))
+    );
   });
   const selected = ordered.slice(0, MAX_PROJECTED_RECORDS).map((record) => ({
     recordId: record[idField],
@@ -198,55 +219,88 @@ function evidenceIndexes(snapshot, evidenceRefs, evidenceArtifacts) {
     try {
       assertProtocolArtifact('operating-evidence-ref', ref, { protocolVersion: PROTOCOL_VERSION });
     } catch (cause) {
-      fail('RESULT_CONTRACT_INVALID', 'Snapshot EvidenceRef metadata is malformed and cannot be converted into an evidence absence.', {
-        evidenceRefId: ref?.evidenceRefId ?? null,
-        cause: cause?.code ?? null,
-      });
+      fail(
+        'RESULT_CONTRACT_INVALID',
+        'Snapshot EvidenceRef metadata is malformed and cannot be converted into an evidence absence.',
+        {
+          evidenceRefId: ref?.evidenceRefId ?? null,
+          cause: cause?.code ?? null,
+        },
+      );
     }
-    if (ref.scopeId !== snapshot.scopeId
-      || ref.domainId !== snapshot.domainId
-      || ref.domainVersion !== snapshot.domainVersion) {
-      fail('OPERATING_SCOPE_INVALID', 'Snapshot EvidenceRef crosses the immutable bundle scope or domain boundary.', {
+    if (
+      ref.scopeId !== snapshot.scopeId ||
+      ref.domainId !== snapshot.domainId ||
+      ref.domainVersion !== snapshot.domainVersion
+    ) {
+      fail(
+        'OPERATING_SCOPE_INVALID',
+        'Snapshot EvidenceRef crosses the immutable bundle scope or domain boundary.',
+        {
+          evidenceRefId: ref.evidenceRefId,
+        },
+      );
+    }
+    if (refById.has(ref.evidenceRefId))
+      fail('STATE_TRANSITION_INVALID', 'Snapshot EvidenceRef identities must be unique.', {
         evidenceRefId: ref.evidenceRefId,
       });
-    }
-    if (refById.has(ref.evidenceRefId)) fail('STATE_TRANSITION_INVALID', 'Snapshot EvidenceRef identities must be unique.', {
-      evidenceRefId: ref.evidenceRefId,
-    });
     refById.set(ref.evidenceRefId, ref);
   }
-  const missingEvidenceRefIds = snapshot.evidenceRefIds.filter((evidenceRefId) => !refById.has(evidenceRefId));
+  const missingEvidenceRefIds = snapshot.evidenceRefIds.filter(
+    (evidenceRefId) => !refById.has(evidenceRefId),
+  );
   if (missingEvidenceRefIds.length > 0) {
-    fail('RESULT_CONTRACT_INVALID', 'Snapshot EvidenceRef custody is structurally incomplete and cannot be represented as no evidence.', {
-      snapshotId: snapshot.snapshotId,
-      evidenceRefIds: missingEvidenceRefIds,
-    });
+    fail(
+      'RESULT_CONTRACT_INVALID',
+      'Snapshot EvidenceRef custody is structurally incomplete and cannot be represented as no evidence.',
+      {
+        snapshotId: snapshot.snapshotId,
+        evidenceRefIds: missingEvidenceRefIds,
+      },
+    );
   }
   const artifactById = new Map();
-  const referencedArtifactIds = new Set([...refById.values()].map(({ evidenceArtifactId }) => evidenceArtifactId));
+  const referencedArtifactIds = new Set(
+    [...refById.values()].map(({ evidenceArtifactId }) => evidenceArtifactId),
+  );
   for (const artifact of evidenceArtifacts) {
     try {
       assertProtocolArtifact('operating-artifact', artifact, { protocolVersion: PROTOCOL_VERSION });
     } catch (cause) {
-      fail('RESULT_CONTRACT_INVALID', 'Evidence Artifact metadata is malformed and cannot enter intelligence-bundle custody.', {
-        artifactId: artifact?.artifactId ?? null,
-        cause: cause?.code ?? null,
-      });
+      fail(
+        'RESULT_CONTRACT_INVALID',
+        'Evidence Artifact metadata is malformed and cannot enter intelligence-bundle custody.',
+        {
+          artifactId: artifact?.artifactId ?? null,
+          cause: cause?.code ?? null,
+        },
+      );
     }
     if (artifactById.has(artifact.artifactId)) {
-      fail('STATE_TRANSITION_INVALID', 'Evidence Artifact identities must be unique before bundle materialization.', {
-        artifactId: artifact.artifactId,
-      });
+      fail(
+        'STATE_TRANSITION_INVALID',
+        'Evidence Artifact identities must be unique before bundle materialization.',
+        {
+          artifactId: artifact.artifactId,
+        },
+      );
     }
-    if (referencedArtifactIds.has(artifact.artifactId)
-      && (artifact.artifactType !== 'evidence-snapshot'
-        || artifact.schemaId !== 'operating-evidence-snapshot'
-        || artifact.artifactSchemaVersion !== '1.0.0')) {
-      fail('RESULT_CONTRACT_INVALID', 'An EvidenceRef may bind only one materialized evidence-snapshot Artifact.', {
-        artifactId: artifact.artifactId,
-        artifactType: artifact.artifactType,
-        schemaId: artifact.schemaId,
-      });
+    if (
+      referencedArtifactIds.has(artifact.artifactId) &&
+      (artifact.artifactType !== 'evidence-snapshot' ||
+        artifact.schemaId !== 'operating-evidence-snapshot' ||
+        artifact.artifactSchemaVersion !== '1.0.0')
+    ) {
+      fail(
+        'RESULT_CONTRACT_INVALID',
+        'An EvidenceRef may bind only one materialized evidence-snapshot Artifact.',
+        {
+          artifactId: artifact.artifactId,
+          artifactType: artifact.artifactType,
+          schemaId: artifact.schemaId,
+        },
+      );
     }
     artifactById.set(artifact.artifactId, artifact);
   }
@@ -286,29 +340,46 @@ function roleEvidenceSelection({ role, snapshot, refById, artifactById, authoriz
       .map((id) => refById.get(id))
       .filter(Boolean)
       .filter((ref) => requirement.acceptedEvidenceKinds.includes(ref.evidenceKind));
-    const refs = kindMatches.filter((ref) => requirement.acceptedSourceContracts.some((contract) => (
-      contract.id === ref.sourceContract.id && contract.version === ref.sourceContract.version
-    )));
-    const freshnessMatches = refs.filter((ref) => requirement.acceptedFreshness.includes(ref.freshness));
+    const refs = kindMatches.filter((ref) =>
+      requirement.acceptedSourceContracts.some(
+        (contract) =>
+          contract.id === ref.sourceContract.id && contract.version === ref.sourceContract.version,
+      ),
+    );
+    const freshnessMatches = refs.filter((ref) =>
+      requirement.acceptedFreshness.includes(ref.freshness),
+    );
     const resolved = freshnessMatches.filter((ref) => {
       const artifact = artifactById.get(ref.evidenceArtifactId);
-      return artifact
-        && artifact.artifactType === 'evidence-snapshot'
-        && artifact.schemaId === 'operating-evidence-snapshot'
-        && artifact.artifactSchemaVersion === '1.0.0'
-        && artifact.inputArtifactIds.includes(ref.sourceArtifactId)
-        && artifact.rawHash === ref.evidenceArtifactRawHash
-        && artifact.canonicalHash === ref.evidenceArtifactCanonicalHash
-        && artifact.scopeId === snapshot.scopeId
-        && artifact.domainId === snapshot.domainId
-        && artifact.domainVersion === snapshot.domainVersion;
+      return (
+        artifact &&
+        artifact.artifactType === 'evidence-snapshot' &&
+        artifact.schemaId === 'operating-evidence-snapshot' &&
+        artifact.artifactSchemaVersion === '1.0.0' &&
+        artifact.inputArtifactIds.includes(ref.sourceArtifactId) &&
+        artifact.rawHash === ref.evidenceArtifactRawHash &&
+        artifact.canonicalHash === ref.evidenceArtifactCanonicalHash &&
+        artifact.scopeId === snapshot.scopeId &&
+        artifact.domainId === snapshot.domainId &&
+        artifact.domainVersion === snapshot.domainVersion
+      );
     });
     const authorized = resolved
-      .filter((ref) => authorizeEvidence({ role, requirement, evidenceRef: ref, artifact: artifactById.get(ref.evidenceArtifactId) }) === true)
-      .sort((left, right) => (
-        requirement.acceptedFreshness.indexOf(left.freshness) - requirement.acceptedFreshness.indexOf(right.freshness)
-        || left.evidenceRefId.localeCompare(right.evidenceRefId)
-      ));
+      .filter(
+        (ref) =>
+          authorizeEvidence({
+            role,
+            requirement,
+            evidenceRef: ref,
+            artifact: artifactById.get(ref.evidenceArtifactId),
+          }) === true,
+      )
+      .sort(
+        (left, right) =>
+          requirement.acceptedFreshness.indexOf(left.freshness) -
+            requirement.acceptedFreshness.indexOf(right.freshness) ||
+          left.evidenceRefId.localeCompare(right.evidenceRefId),
+      );
     const selected = authorized.slice(0, requirement.maximumEvidenceRefs);
     for (const ref of selected) {
       const artifact = artifactById.get(ref.evidenceArtifactId);
@@ -324,9 +395,10 @@ function roleEvidenceSelection({ role, snapshot, refById, artifactById, authoriz
     }
     if (selected.length >= requirement.minimumEvidenceRefs) continue;
     let absenceCode = 'not-available';
-    let reason = selected.length === 0
-      ? 'No materialized in-scope Evidence matched this role requirement.'
-      : `Only ${selected.length} of minimum ${requirement.minimumEvidenceRefs} authorized EvidenceRefs were available.`;
+    let reason =
+      selected.length === 0
+        ? 'No materialized in-scope Evidence matched this role requirement.'
+        : `Only ${selected.length} of minimum ${requirement.minimumEvidenceRefs} authorized EvidenceRefs were available.`;
     let absenceRefs = refs.length > 0 ? refs : kindMatches;
     if (refs.length > 0 && freshnessMatches.length === 0) {
       absenceCode = 'stale';
@@ -344,18 +416,23 @@ function roleEvidenceSelection({ role, snapshot, refById, artifactById, authoriz
       requirementId: requirement.requirementId,
       evidenceKinds: [...requirement.acceptedEvidenceKinds].sort(),
       sourceContracts: [...requirement.acceptedSourceContracts]
-        .sort((left, right) => `${left.id}@${left.version}`.localeCompare(`${right.id}@${right.version}`))
+        .sort((left, right) =>
+          `${left.id}@${left.version}`.localeCompare(`${right.id}@${right.version}`),
+        )
         .map((contract) => clone(contract)),
       absenceCode,
       reason,
       sourceEvidenceRefIds: absenceRefs.map(({ evidenceRefId }) => evidenceRefId).sort(),
     });
   }
-  issuedEvidence.sort((left, right) => (
-    left.requirementId.localeCompare(right.requirementId)
-      || left.evidenceRefId.localeCompare(right.evidenceRefId)
-  ));
-  evidenceAbsenceDrafts.sort((left, right) => left.requirementId.localeCompare(right.requirementId));
+  issuedEvidence.sort(
+    (left, right) =>
+      left.requirementId.localeCompare(right.requirementId) ||
+      left.evidenceRefId.localeCompare(right.evidenceRefId),
+  );
+  evidenceAbsenceDrafts.sort((left, right) =>
+    left.requirementId.localeCompare(right.requirementId),
+  );
   return { issuedEvidence, evidenceAbsenceDrafts };
 }
 
@@ -367,14 +444,20 @@ export function prepareOperatingIntelligenceEvidenceSelectionV2({
   authorizeEvidence = () => true,
 } = {}) {
   const checkedSnapshot = assertOperatingSnapshotV2(snapshot);
-  const { refById, artifactById } = evidenceIndexes(checkedSnapshot, evidenceRefs, evidenceArtifacts);
-  return freeze(roleEvidenceSelection({
-    role,
-    snapshot: checkedSnapshot,
-    refById,
-    artifactById,
-    authorizeEvidence,
-  }));
+  const { refById, artifactById } = evidenceIndexes(
+    checkedSnapshot,
+    evidenceRefs,
+    evidenceArtifacts,
+  );
+  return freeze(
+    roleEvidenceSelection({
+      role,
+      snapshot: checkedSnapshot,
+      refById,
+      artifactById,
+      authorizeEvidence,
+    }),
+  );
 }
 
 /** Build exact canonical bytes for one least-authority Assignment bundle. */
@@ -394,23 +477,34 @@ export function buildOperatingIntelligenceInputBundleV2({
   const checkedSnapshot = assertOperatingSnapshotV2(snapshot, { state: operatingState });
   const checkedDelta = assertOperatingDeltaV2(delta, { currentSnapshot: checkedSnapshot });
   const checkedState = assertOperatingModelStateV2(operatingState);
-  if (!cycle || cycle.cycleId === undefined
-    || checkedDelta.currentSnapshotId !== checkedSnapshot.snapshotId
-    || checkedState.snapshotId !== checkedSnapshot.snapshotId
-    || checkedState.stateId !== checkedSnapshot.stateId
-    || checkedDelta.scopeId !== cycle.scopeId
-    || checkedSnapshot.scopeId !== cycle.scopeId
-    || checkedSnapshot.domainId !== cycle.domainId
-    || checkedSnapshot.domainVersion !== cycle.domainVersion
-    || typeof createdAt !== 'string'
-    || Number.isNaN(Date.parse(createdAt))
-    || typeof assignmentId !== 'string'
-    || !assignmentId.startsWith('asg_')
-    || !role || typeof role !== 'object') {
-    fail('OPERATING_SCOPE_INVALID', 'Intelligence input bundle requires one exact Assignment, Cycle, Snapshot, Delta, state, role, and timestamp binding.');
+  if (
+    !cycle ||
+    cycle.cycleId === undefined ||
+    checkedDelta.currentSnapshotId !== checkedSnapshot.snapshotId ||
+    checkedState.snapshotId !== checkedSnapshot.snapshotId ||
+    checkedState.stateId !== checkedSnapshot.stateId ||
+    checkedDelta.scopeId !== cycle.scopeId ||
+    checkedSnapshot.scopeId !== cycle.scopeId ||
+    checkedSnapshot.domainId !== cycle.domainId ||
+    checkedSnapshot.domainVersion !== cycle.domainVersion ||
+    typeof createdAt !== 'string' ||
+    Number.isNaN(Date.parse(createdAt)) ||
+    typeof assignmentId !== 'string' ||
+    !assignmentId.startsWith('asg_') ||
+    !role ||
+    typeof role !== 'object'
+  ) {
+    fail(
+      'OPERATING_SCOPE_INVALID',
+      'Intelligence input bundle requires one exact Assignment, Cycle, Snapshot, Delta, state, role, and timestamp binding.',
+    );
   }
   const sourceArtifactIds = [...checkedSnapshot.sourceArtifactIds].sort();
-  const { refById, artifactById } = evidenceIndexes(checkedSnapshot, evidenceRefs, evidenceArtifacts);
+  const { refById, artifactById } = evidenceIndexes(
+    checkedSnapshot,
+    evidenceRefs,
+    evidenceArtifacts,
+  );
   const roleRequirementsHash = sha256Jcs({
     roleId: role.roleId,
     roleKind: role.roleKind,
@@ -419,22 +513,24 @@ export function buildOperatingIntelligenceInputBundleV2({
     evidenceRequirements: role.evidenceRequirements,
     resultRequirements: role.resultRequirements,
   });
-  const evidenceBindingHash = sha256Jcs(checkedSnapshot.evidenceRefIds.map((evidenceRefId) => {
-    const ref = refById.get(evidenceRefId);
-    const artifact = ref ? artifactById.get(ref.evidenceArtifactId) : null;
-    return {
-      evidenceRefId,
-      evidenceKind: ref?.evidenceKind ?? null,
-      sourceContract: ref?.sourceContract ?? null,
-      freshness: ref?.freshness ?? null,
-      classification: ref?.classification ?? null,
-      evidenceArtifactId: ref?.evidenceArtifactId ?? null,
-      evidenceArtifactRawHash: ref?.evidenceArtifactRawHash ?? null,
-      evidenceArtifactCanonicalHash: ref?.evidenceArtifactCanonicalHash ?? null,
-      availableArtifactRawHash: artifact?.rawHash ?? null,
-      availableArtifactCanonicalHash: artifact?.canonicalHash ?? null,
-    };
-  }));
+  const evidenceBindingHash = sha256Jcs(
+    checkedSnapshot.evidenceRefIds.map((evidenceRefId) => {
+      const ref = refById.get(evidenceRefId);
+      const artifact = ref ? artifactById.get(ref.evidenceArtifactId) : null;
+      return {
+        evidenceRefId,
+        evidenceKind: ref?.evidenceKind ?? null,
+        sourceContract: ref?.sourceContract ?? null,
+        freshness: ref?.freshness ?? null,
+        classification: ref?.classification ?? null,
+        evidenceArtifactId: ref?.evidenceArtifactId ?? null,
+        evidenceArtifactRawHash: ref?.evidenceArtifactRawHash ?? null,
+        evidenceArtifactCanonicalHash: ref?.evidenceArtifactCanonicalHash ?? null,
+        availableArtifactRawHash: artifact?.rawHash ?? null,
+        availableArtifactCanonicalHash: artifact?.canonicalHash ?? null,
+      };
+    }),
+  );
   const computedSelection = roleEvidenceSelection({
     role,
     snapshot: checkedSnapshot,
@@ -443,10 +539,14 @@ export function buildOperatingIntelligenceInputBundleV2({
     authorizeEvidence,
   });
   if (evidenceSelection !== null && sha256Jcs(evidenceSelection) !== sha256Jcs(computedSelection)) {
-    fail('STATE_TRANSITION_INVALID', 'Prepared Evidence selection differs from the exact recomputed authorization result.', {
-      assignmentId,
-      roleId: role.roleId,
-    });
+    fail(
+      'STATE_TRANSITION_INVALID',
+      'Prepared Evidence selection differs from the exact recomputed authorization result.',
+      {
+        assignmentId,
+        roleId: role.roleId,
+      },
+    );
   }
   const selectedEvidence = computedSelection;
   const authorizationHash = sha256Jcs(selectedEvidence);
@@ -463,11 +563,13 @@ export function buildOperatingIntelligenceInputBundleV2({
     evidenceBindingHash,
     authorizationHash,
   });
-  const evidenceAbsences = selectedEvidence.evidenceAbsenceDrafts.map((draft) => absenceFor({
-    bundleId,
-    role,
-    draft,
-  }));
+  const evidenceAbsences = selectedEvidence.evidenceAbsenceDrafts.map((draft) =>
+    absenceFor({
+      bundleId,
+      role,
+      draft,
+    }),
+  );
   const assignmentBinding = {
     assignmentId,
     roleId: role.roleId,
@@ -492,18 +594,26 @@ export function buildOperatingIntelligenceInputBundleV2({
     domainVersion: cycle.domainVersion,
     snapshot: clone(checkedSnapshot),
     delta: clone(checkedDelta),
-    operatingState: clone(projectOperatingIntelligenceStateV2(checkedState, { projectedAt: createdAt })),
+    operatingState: clone(
+      projectOperatingIntelligenceStateV2(checkedState, { projectedAt: createdAt }),
+    ),
     sourceArtifactIds,
     assignmentBinding,
     createdAt,
   };
   try {
-    assertProtocolArtifact('operating-intelligence-input-bundle', bundle, { protocolVersion: PROTOCOL_VERSION });
-  } catch (cause) {
-    fail('RESULT_CONTRACT_INVALID', 'The runtime-built intelligence input bundle is not contract-valid.', {
-      bundleId,
-      cause: cause?.code ?? null,
+    assertProtocolArtifact('operating-intelligence-input-bundle', bundle, {
+      protocolVersion: PROTOCOL_VERSION,
     });
+  } catch (cause) {
+    fail(
+      'RESULT_CONTRACT_INVALID',
+      'The runtime-built intelligence input bundle is not contract-valid.',
+      {
+        bundleId,
+        cause: cause?.code ?? null,
+      },
+    );
   }
   const rawBytes = Buffer.from(canonicalizeJson(bundle), 'utf8');
   const rawHash = `sha256:${createHash('sha256').update(rawBytes).digest('hex')}`;
@@ -512,8 +622,12 @@ export function buildOperatingIntelligenceInputBundleV2({
     rawBytes: Buffer.from(rawBytes),
     rawHash,
     canonicalHash: sha256Jcs(bundle),
-    evidenceArtifactIds: Object.freeze([...new Set(assignmentBinding.issuedEvidence.map(({ evidenceArtifactId }) => (
-      evidenceArtifactId
-    )))].sort()),
+    evidenceArtifactIds: Object.freeze(
+      [
+        ...new Set(
+          assignmentBinding.issuedEvidence.map(({ evidenceArtifactId }) => evidenceArtifactId),
+        ),
+      ].sort(),
+    ),
   });
 }

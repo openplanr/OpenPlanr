@@ -8,9 +8,11 @@ import { sha256Jcs } from '@openplanr/protocol/canonical-json';
 
 const PROTOCOL_VERSION = '2.0.0';
 
-export const OPERATE_POLICY_TIER_PRECEDENCE_V2 = Object.freeze(Object.fromEntries(
-  OPERATE_GOVERNED_POLICY_TIERS_V2.map(({ id, precedence }) => [id, precedence]),
-));
+export const OPERATE_POLICY_TIER_PRECEDENCE_V2 = Object.freeze(
+  Object.fromEntries(
+    OPERATE_GOVERNED_POLICY_TIERS_V2.map(({ id, precedence }) => [id, precedence]),
+  ),
+);
 
 export const OPERATE_POLICY_OUTCOME_STRENGTH_V2 = Object.freeze({
   automatic: 0,
@@ -88,27 +90,45 @@ function assertAction(action) {
   try {
     assertProtocolArtifact('operating-action', action, { protocolVersion: PROTOCOL_VERSION });
   } catch (cause) {
-    fail('RESULT_CONTRACT_INVALID', 'Policy evaluation requires one contract-valid governed Action.', {
-      cause: cause?.code ?? null,
-    });
+    fail(
+      'RESULT_CONTRACT_INVALID',
+      'Policy evaluation requires one contract-valid governed Action.',
+      {
+        cause: cause?.code ?? null,
+      },
+    );
   }
   const fields = [
-    'revisionId', 'revision', 'predecessorRevisionId', 'actionHash', 'actionKind',
-    'requestedCapability', 'targetBinding', 'effectClass', 'preconditionArtifactIds', 'executionBinding',
+    'revisionId',
+    'revision',
+    'predecessorRevisionId',
+    'actionHash',
+    'actionKind',
+    'requestedCapability',
+    'targetBinding',
+    'effectClass',
+    'preconditionArtifactIds',
+    'executionBinding',
   ];
   if (fields.some((field) => !Object.hasOwn(action, field))) {
-    fail('ACTION_REVISION_MISMATCH', 'Policy evaluation requires the complete Action authority tuple.', {
-      actionId: action?.actionId ?? null,
-    });
+    fail(
+      'ACTION_REVISION_MISMATCH',
+      'Policy evaluation requires the complete Action authority tuple.',
+      {
+        actionId: action?.actionId ?? null,
+      },
+    );
   }
 }
 
 function policyMatchesAction(policy, action) {
-  return policy.domainId === action.domainId
-    && sameIdentity(policy.actionKind, action.actionKind)
-    && sameIdentity(policy.capability, action.requestedCapability)
-    && policy.effectClasses.includes(action.effectClass)
-    && policy.targetKinds.includes(action.targetBinding.kind);
+  return (
+    policy.domainId === action.domainId &&
+    sameIdentity(policy.actionKind, action.actionKind) &&
+    sameIdentity(policy.capability, action.requestedCapability) &&
+    policy.effectClasses.includes(action.effectClass) &&
+    policy.targetKinds.includes(action.targetBinding.kind)
+  );
 }
 
 function policyFingerprint(policy) {
@@ -124,9 +144,16 @@ export function deriveOperatingApprovalRequirementInstanceIdV2({
   policyRequirementId,
   evaluationId,
 } = {}) {
-  if (typeof policyRequirementId !== 'string' || !/^aprq_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$/u.test(policyRequirementId)
-    || typeof evaluationId !== 'string' || !/^pevl_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$/u.test(evaluationId)) {
-    fail('POLICY_EVALUATION_REJECTED', 'Approval requirement instance identity needs exact policy-template and evaluation identities.');
+  if (
+    typeof policyRequirementId !== 'string' ||
+    !/^aprq_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$/u.test(policyRequirementId) ||
+    typeof evaluationId !== 'string' ||
+    !/^pevl_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$/u.test(evaluationId)
+  ) {
+    fail(
+      'POLICY_EVALUATION_REJECTED',
+      'Approval requirement instance identity needs exact policy-template and evaluation identities.',
+    );
   }
   return `aprq_${sha256Jcs({ policyRequirementId, evaluationId }).slice('sha256:'.length)}`;
 }
@@ -138,9 +165,13 @@ export function deriveOperatingApprovalRequirementInstanceIdV2({
 export function deriveApplicableOperatingActionPoliciesV2({ action, configuredPolicies } = {}) {
   assertAction(action);
   if (!Array.isArray(configuredPolicies) || configuredPolicies.length === 0) {
-    fail('POLICY_EVALUATION_REJECTED', 'Policy evaluation requires the configured versioned policy registry.', {
-      state: 'actionPolicies',
-    });
+    fail(
+      'POLICY_EVALUATION_REJECTED',
+      'Policy evaluation requires the configured versioned policy registry.',
+      {
+        state: 'actionPolicies',
+      },
+    );
   }
   const configured = configuredPolicies.map(assertOperatingActionPolicyV2);
   const configuredIdentities = configured.map(policyFingerprint);
@@ -153,32 +184,47 @@ export function deriveApplicableOperatingActionPoliciesV2({ action, configuredPo
   const byTier = new Map();
   for (const policy of applicable) {
     if (byTier.has(policy.tier)) {
-      fail('POLICY_EVALUATION_REJECTED', 'Configured applicability is ambiguous: at most one policy may match each precedence tier.', {
-        tier: policy.tier,
-      });
+      fail(
+        'POLICY_EVALUATION_REJECTED',
+        'Configured applicability is ambiguous: at most one policy may match each precedence tier.',
+        {
+          tier: policy.tier,
+        },
+      );
     }
     byTier.set(policy.tier, policy);
   }
   if (!byTier.has('core')) {
-    fail('POLICY_EVALUATION_REJECTED', 'Every governed Action requires one applicable configured core policy.', {
-      actionId: action.actionId,
-      state: 'core-policy-missing',
-    });
+    fail(
+      'POLICY_EVALUATION_REJECTED',
+      'Every governed Action requires one applicable configured core policy.',
+      {
+        actionId: action.actionId,
+        state: 'core-policy-missing',
+      },
+    );
   }
-  return freeze(['core', 'project', 'domain'].flatMap((tier) => (
-    byTier.has(tier) ? [clone(byTier.get(tier))] : []
-  )));
+  return freeze(
+    ['core', 'project', 'domain'].flatMap((tier) =>
+      byTier.has(tier) ? [clone(byTier.get(tier))] : [],
+    ),
+  );
 }
 
 function prohibitedIdentifier(action) {
   if (action.effectClass === 'destructive') return 'destructive';
   const values = [action.actionKind.id, action.requestedCapability.id, action.targetBinding.kind];
-  return OPERATE_CORE_PROHIBITION_IDENTIFIERS_V2.find((identifier) => values.some((value) => (
-    value === identifier
-    || value.startsWith(`${identifier}-`)
-    || value.endsWith(`-${identifier}`)
-    || value.includes(`-${identifier}-`)
-  ))) ?? null;
+  return (
+    OPERATE_CORE_PROHIBITION_IDENTIFIERS_V2.find((identifier) =>
+      values.some(
+        (value) =>
+          value === identifier ||
+          value.startsWith(`${identifier}-`) ||
+          value.endsWith(`-${identifier}`) ||
+          value.includes(`-${identifier}-`),
+      ),
+    ) ?? null
+  );
 }
 
 /** Construct one immutable policy record and bind its hash to all policy bytes. */
@@ -210,25 +256,39 @@ export function createOperatingActionPolicyV2(input) {
 /** Validate schema, tier invariants, and the exact immutable policy hash. */
 export function assertOperatingActionPolicyV2(policy) {
   try {
-    assertProtocolArtifact('operating-action-policy', policy, { protocolVersion: PROTOCOL_VERSION });
+    assertProtocolArtifact('operating-action-policy', policy, {
+      protocolVersion: PROTOCOL_VERSION,
+    });
   } catch (cause) {
     fail('POLICY_EVALUATION_REJECTED', 'Action policy is not contract-valid.', {
       policyId: policy?.policyId ?? null,
       cause: cause?.code ?? null,
     });
   }
-  if (policy.precedence !== OPERATE_POLICY_TIER_PRECEDENCE_V2[policy.tier]
-    || policy.narrowingOnly !== (policy.tier !== 'core')
-    || policy.policyHash !== sha256Jcs(without(policy, 'policyHash'))) {
-    fail('POLICY_EVALUATION_REJECTED', 'Action policy tier, precedence, narrowing rule, or hash is invalid.', {
-      policyId: policy.policyId,
-    });
+  if (
+    policy.precedence !== OPERATE_POLICY_TIER_PRECEDENCE_V2[policy.tier] ||
+    policy.narrowingOnly !== (policy.tier !== 'core') ||
+    policy.policyHash !== sha256Jcs(without(policy, 'policyHash'))
+  ) {
+    fail(
+      'POLICY_EVALUATION_REJECTED',
+      'Action policy tier, precedence, narrowing rule, or hash is invalid.',
+      {
+        policyId: policy.policyId,
+      },
+    );
   }
-  const requiresApproval = ['named-single-party', 'named-multi-party', 'threshold'].includes(policy.decisionMode);
-  if (requiresApproval !== (policy.approvalRequirementIds.length > 0)) {
-    fail('POLICY_EVALUATION_REJECTED', 'Only approval-bearing policy outcomes may name approval requirements.', {
-      policyId: policy.policyId,
-    });
+  const requiresApproval = ['named-single-party', 'named-multi-party', 'threshold'].includes(
+    policy.decisionMode,
+  );
+  if (requiresApproval !== policy.approvalRequirementIds.length > 0) {
+    fail(
+      'POLICY_EVALUATION_REJECTED',
+      'Only approval-bearing policy outcomes may name approval requirements.',
+      {
+        policyId: policy.policyId,
+      },
+    );
   }
   return freeze(clone(policy));
 }
@@ -257,54 +317,92 @@ export function evaluateOperatingActionPolicyV2({
   let prior = null;
   for (const policy of ordered) {
     if (prior !== null) {
-      const widenedOutcome = OPERATE_POLICY_OUTCOME_STRENGTH_V2[policy.decisionMode]
-        < OPERATE_POLICY_OUTCOME_STRENGTH_V2[prior.decisionMode];
-      const widenedEffects = policy.effectClasses.some((effect) => !prior.effectClasses.includes(effect));
-      const widenedTargets = policy.targetKinds.some((target) => !prior.targetKinds.includes(target));
+      const widenedOutcome =
+        OPERATE_POLICY_OUTCOME_STRENGTH_V2[policy.decisionMode] <
+        OPERATE_POLICY_OUTCOME_STRENGTH_V2[prior.decisionMode];
+      const widenedEffects = policy.effectClasses.some(
+        (effect) => !prior.effectClasses.includes(effect),
+      );
+      const widenedTargets = policy.targetKinds.some(
+        (target) => !prior.targetKinds.includes(target),
+      );
       const weakenedRollback = prior.rollbackRequired && !policy.rollbackRequired;
       const weakenedVerification = prior.verificationRequired && !policy.verificationRequired;
-      if (widenedOutcome || widenedEffects || widenedTargets || weakenedRollback || weakenedVerification) {
-        fail('POLICY_EVALUATION_REJECTED', 'A lower-precedence policy attempted to widen or relabel higher policy authority.', {
-          policyId: policy.policyId,
-          higherPolicyId: prior.policyId,
-        });
+      if (
+        widenedOutcome ||
+        widenedEffects ||
+        widenedTargets ||
+        weakenedRollback ||
+        weakenedVerification
+      ) {
+        fail(
+          'POLICY_EVALUATION_REJECTED',
+          'A lower-precedence policy attempted to widen or relabel higher policy authority.',
+          {
+            policyId: policy.policyId,
+            higherPolicyId: prior.policyId,
+          },
+        );
       }
     }
     prior = policy;
   }
 
   const prohibited = prohibitedIdentifier(action);
-  if (prohibited !== null && (!byTier.has('core') || byTier.get('core').decisionMode !== 'prohibited')) {
-    fail('POLICY_PROHIBITED', 'A reference hard-prohibition requires an explicit non-overridable core prohibition.', {
-      actionId: action.actionId,
-      state: prohibited,
-    });
+  if (
+    prohibited !== null &&
+    (!byTier.has('core') || byTier.get('core').decisionMode !== 'prohibited')
+  ) {
+    fail(
+      'POLICY_PROHIBITED',
+      'A reference hard-prohibition requires an explicit non-overridable core prohibition.',
+      {
+        actionId: action.actionId,
+        state: prohibited,
+      },
+    );
   }
   if (prohibited !== null && ordered.some(({ decisionMode }) => decisionMode !== 'prohibited')) {
-    fail('POLICY_EVALUATION_REJECTED', 'No lower policy may weaken or relabel a core prohibition.', {
-      actionId: action.actionId,
-    });
+    fail(
+      'POLICY_EVALUATION_REJECTED',
+      'No lower policy may weaken or relabel a core prohibition.',
+      {
+        actionId: action.actionId,
+      },
+    );
   }
 
   const effective = ordered.at(-1);
-  if (effective.policyId !== action.executionBinding.policyId
-    || effective.policyVersion !== action.executionBinding.policyVersion
-    || effective.rollbackRequired !== action.executionBinding.rollbackRequired
-    || effective.verificationRequired !== action.executionBinding.verificationRequired) {
-    fail('POLICY_EVALUATION_REJECTED', 'The effective policy must equal the Action execution binding exactly.', {
-      actionId: action.actionId,
-      policyId: effective.policyId,
-    });
+  if (
+    effective.policyId !== action.executionBinding.policyId ||
+    effective.policyVersion !== action.executionBinding.policyVersion ||
+    effective.rollbackRequired !== action.executionBinding.rollbackRequired ||
+    effective.verificationRequired !== action.executionBinding.verificationRequired
+  ) {
+    fail(
+      'POLICY_EVALUATION_REJECTED',
+      'The effective policy must equal the Action execution binding exactly.',
+      {
+        actionId: action.actionId,
+        policyId: effective.policyId,
+      },
+    );
   }
   const provider = evaluatedBy ?? {
     providerId: effective.provenance.providerId,
     providerVersion: effective.provenance.providerVersion,
   };
-  if (provider.providerId !== effective.provenance.providerId
-    || provider.providerVersion !== effective.provenance.providerVersion) {
-    fail('POLICY_EVALUATION_REJECTED', 'The evaluator identity must equal effective policy provenance.', {
-      policyId: effective.policyId,
-    });
+  if (
+    provider.providerId !== effective.provenance.providerId ||
+    provider.providerVersion !== effective.provenance.providerVersion
+  ) {
+    fail(
+      'POLICY_EVALUATION_REJECTED',
+      'The evaluator identity must equal effective policy provenance.',
+      {
+        policyId: effective.policyId,
+      },
+    );
   }
   const refs = ordered.map(policyRef);
   const input = {
@@ -318,10 +416,13 @@ export function evaluateOperatingActionPolicyV2({
     appliedPolicyRefs: refs,
   };
   const inputHash = sha256Jcs(input);
-  const id = evaluationId ?? `pevl_${sha256Jcs({ inputHash, evaluatedAt }).slice('sha256:'.length)}`;
-  const approvalRequirementIds = effective.approvalRequirementIds.map((policyRequirementId) => (
-    deriveOperatingApprovalRequirementInstanceIdV2({ policyRequirementId, evaluationId: id })
-  )).sort();
+  const id =
+    evaluationId ?? `pevl_${sha256Jcs({ inputHash, evaluatedAt }).slice('sha256:'.length)}`;
+  const approvalRequirementIds = effective.approvalRequirementIds
+    .map((policyRequirementId) =>
+      deriveOperatingApprovalRequirementInstanceIdV2({ policyRequirementId, evaluationId: id }),
+    )
+    .sort();
   const evaluation = {
     kind: 'operating-policy-evaluation',
     schemaVersion: '1.0.0',
@@ -337,17 +438,21 @@ export function evaluateOperatingActionPolicyV2({
     effectClass: action.effectClass,
     outcome: effective.decisionMode,
     approvalRequirementIds,
-    reasonCodes: [...new Set([
-      prohibited === null ? `policy-${effective.decisionMode}` : `core-prohibition-${prohibited}`,
-      ...ordered.map(({ tier }) => `${tier}-policy-applied`),
-    ])].sort(),
+    reasonCodes: [
+      ...new Set([
+        prohibited === null ? `policy-${effective.decisionMode}` : `core-prohibition-${prohibited}`,
+        ...ordered.map(({ tier }) => `${tier}-policy-applied`),
+      ]),
+    ].sort(),
     evaluatedBy: clone(provider),
     evaluatedAt,
     inputHash,
   };
   evaluation.evaluationHash = sha256Jcs(evaluation);
   try {
-    assertProtocolArtifact('operating-policy-evaluation', evaluation, { protocolVersion: PROTOCOL_VERSION });
+    assertProtocolArtifact('operating-policy-evaluation', evaluation, {
+      protocolVersion: PROTOCOL_VERSION,
+    });
   } catch (cause) {
     fail('POLICY_EVALUATION_REJECTED', 'Deterministic policy evaluation is not contract-valid.', {
       cause: cause?.code ?? null,
@@ -365,9 +470,13 @@ export function assertOperatingPolicyEvaluationV2(evaluation, options) {
     evaluatedBy: evaluation?.evaluatedBy,
   });
   if (sha256Jcs(evaluation) !== sha256Jcs(expected)) {
-    fail('POLICY_EVALUATION_REJECTED', 'Policy evaluation does not equal deterministic precedence output.', {
-      evaluationId: evaluation?.evaluationId ?? null,
-    });
+    fail(
+      'POLICY_EVALUATION_REJECTED',
+      'Policy evaluation does not equal deterministic precedence output.',
+      {
+        evaluationId: evaluation?.evaluationId ?? null,
+      },
+    );
   }
   return expected;
 }
@@ -376,24 +485,43 @@ export function assertOperatingPolicyEvaluationV2(evaluation, options) {
 export function assertOperatingRollbackPolicyV2({ action, evaluation, rollbackPlan, at } = {}) {
   assertTimestamp(at, 'at');
   try {
-    assertProtocolArtifact('operating-policy-evaluation', evaluation, { protocolVersion: PROTOCOL_VERSION });
-    assertProtocolArtifact('operating-rollback-plan', rollbackPlan, { protocolVersion: PROTOCOL_VERSION });
-  } catch (error) {
-    fail(error.code ?? 'ROLLBACK_NOT_ELIGIBLE', 'Rollback policy requires valid exact policy and plan contracts.');
-  }
-  if (!action?.executionBinding?.rollbackRequired
-    || !['automatic', 'named-single-party', 'named-multi-party', 'threshold'].includes(evaluation.outcome)
-    || sha256Jcs(evaluation.action) !== sha256Jcs(actionIdentity(action))
-    || sha256Jcs(rollbackPlan.action) !== sha256Jcs(actionIdentity(action))
-    || !isOperatingRollbackEligibilityV2(rollbackPlan.eligibility)
-    || Date.parse(rollbackPlan.expiresAt) <= Date.parse(at)
-    || rollbackPlan.verificationPlanId !== action.verificationPlanId
-    || rollbackPlan.baselineArtifactId === action.sourceArtifactId
-    || !action.preconditionArtifactIds.includes(rollbackPlan.baselineArtifactId)) {
-    fail('ROLLBACK_NOT_ELIGIBLE', 'Current policy does not authorize this exact unexpired reversible rollback plan.', {
-      actionId: action?.actionId ?? null,
-      rollbackPlanId: rollbackPlan?.rollbackPlanId ?? null,
+    assertProtocolArtifact('operating-policy-evaluation', evaluation, {
+      protocolVersion: PROTOCOL_VERSION,
     });
+    assertProtocolArtifact('operating-rollback-plan', rollbackPlan, {
+      protocolVersion: PROTOCOL_VERSION,
+    });
+  } catch (error) {
+    fail(
+      error.code ?? 'ROLLBACK_NOT_ELIGIBLE',
+      'Rollback policy requires valid exact policy and plan contracts.',
+    );
   }
-  return freeze({ action: actionIdentity(action), evaluationId: evaluation.evaluationId, rollbackPlanId: rollbackPlan.rollbackPlanId });
+  if (
+    !action?.executionBinding?.rollbackRequired ||
+    !['automatic', 'named-single-party', 'named-multi-party', 'threshold'].includes(
+      evaluation.outcome,
+    ) ||
+    sha256Jcs(evaluation.action) !== sha256Jcs(actionIdentity(action)) ||
+    sha256Jcs(rollbackPlan.action) !== sha256Jcs(actionIdentity(action)) ||
+    !isOperatingRollbackEligibilityV2(rollbackPlan.eligibility) ||
+    Date.parse(rollbackPlan.expiresAt) <= Date.parse(at) ||
+    rollbackPlan.verificationPlanId !== action.verificationPlanId ||
+    rollbackPlan.baselineArtifactId === action.sourceArtifactId ||
+    !action.preconditionArtifactIds.includes(rollbackPlan.baselineArtifactId)
+  ) {
+    fail(
+      'ROLLBACK_NOT_ELIGIBLE',
+      'Current policy does not authorize this exact unexpired reversible rollback plan.',
+      {
+        actionId: action?.actionId ?? null,
+        rollbackPlanId: rollbackPlan?.rollbackPlanId ?? null,
+      },
+    );
+  }
+  return freeze({
+    action: actionIdentity(action),
+    evaluationId: evaluation.evaluationId,
+    rollbackPlanId: rollbackPlan.rollbackPlanId,
+  });
 }

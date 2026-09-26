@@ -16,7 +16,9 @@ export interface PublicOperatingDomainContractV2 {
   };
 }
 
-export const PUBLIC_OPERATING_DOMAIN_CONTRACTS_V2: Readonly<Record<'business' | 'software', PublicOperatingDomainContractV2>>;
+export const PUBLIC_OPERATING_DOMAIN_CONTRACTS_V2: Readonly<
+  Record<'business' | 'software', PublicOperatingDomainContractV2>
+>;
 
 export interface PublicOperatingDomainSummaryV2 {
   readonly domainId: 'business' | 'software';

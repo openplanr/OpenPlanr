@@ -18,21 +18,21 @@ export interface OperateEvidenceRegistryV2 {
 
 export type OperateEvidenceDispatchPreparationV2 =
   | {
-    readonly status: 'authorized';
-    readonly provider: OperateEvidenceProviderRegistrationV2;
-    readonly resolver: OperateEvidenceResolverRegistrationV2;
-    readonly error: null;
-  }
+      readonly status: 'authorized';
+      readonly provider: OperateEvidenceProviderRegistrationV2;
+      readonly resolver: OperateEvidenceResolverRegistrationV2;
+      readonly error: null;
+    }
   | {
-    readonly status: 'rejected';
-    readonly provider: null;
-    readonly resolver: null;
-    readonly error: {
-      readonly code: string;
-      readonly retryable: false;
-      readonly context: Readonly<Record<string, string>>;
+      readonly status: 'rejected';
+      readonly provider: null;
+      readonly resolver: null;
+      readonly error: {
+        readonly code: string;
+        readonly retryable: false;
+        readonly context: Readonly<Record<string, string>>;
+      };
     };
-  };
 
 export class OperatingEvidenceRegistryErrorV2 extends Error {
   readonly code: string;

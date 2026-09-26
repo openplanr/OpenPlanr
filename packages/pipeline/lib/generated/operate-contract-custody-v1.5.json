@@ -55,34 +55,82 @@
       "source": "packages/protocol/lib/dashboard/operate-review-workspace-projection-v2.d.mts"
     },
     {
+      "path": "lib/operate/contracts/compiler.mjs",
+      "kind": "compiler",
+      "legacySha256": "15fc1f46f40ce671c7a078c37c264a105cc03e076d988b397872f14f01e2a27f",
+      "sha256": "780938ef0c18c6ebd116dff9b07ca9bd65105df6e3b39a445ea2c3c612ebe05a",
+      "custody": "canonical-operate-domain-projection",
+      "source": "packages/operate/lib/operate/contracts/compiler.mjs"
+    },
+    {
       "path": "lib/operate/executive-board-compatibility-v2.mjs",
       "kind": "projection",
       "legacySha256": "e024efe53abf018bc89db48e4d398d8514bf139c468924efa6a0b5ac038ed46b",
-      "sha256": "5cdf47c165c5307e0100b14077af2163a3cce2b228d36912c041b7fa32279855",
+      "sha256": "7cec0eede07545ec407db64ac638e46278c926c0de249c0988a92d03e5f8a27d",
       "custody": "canonical-operate-domain-projection",
       "source": "packages/operate/lib/operate/executive-board-compatibility-v2.mjs"
+    },
+    {
+      "path": "lib/operate/executive-board-materialization-v2.d.mts",
+      "kind": "projection",
+      "legacySha256": "d7dedd3a1a136d8457f4ab3dfa522f6c549a9e468a95ab345ba490aa7cde60c8",
+      "sha256": "531dd0b78adc5993c98a9eb4eaaa6c8f906188288bb948eaf01c9d62b16b3bda",
+      "custody": "canonical-operate-domain-projection",
+      "source": "packages/operate/lib/operate/executive-board-materialization-v2.d.mts"
     },
     {
       "path": "lib/operate/executive-board-materialization-v2.mjs",
       "kind": "projection",
       "legacySha256": "87b036c8061812e03aec975fd15db2f550ad22eb929189008b98fba187c6e2f4",
-      "sha256": "fd356322e0b67b9485afd6a4bd955067597f78f10d323be9588d08312dd5b84c",
+      "sha256": "504be4fb5fe7aa140c17f14c600252f3fca0511d24c7e6e81e0a9aaea34d87e3",
       "custody": "canonical-operate-domain-projection",
       "source": "packages/operate/lib/operate/executive-board-materialization-v2.mjs"
+    },
+    {
+      "path": "lib/operate/experience-projection-v2.d.mts",
+      "kind": "projection",
+      "legacySha256": "dd015b5a0717f1e4586824eab10df39fa0281a8c3dc8626d4eb96ee0f3f7d29b",
+      "sha256": "beb26501ab43f7ed513b421ac90b0dbb0e43c99187f20f7f4301a07b71c378b6",
+      "custody": "canonical-operate-domain-projection",
+      "source": "packages/operate/lib/operate/experience-projection-v2.d.mts"
     },
     {
       "path": "lib/operate/experience-projection-v2.mjs",
       "kind": "projection",
       "legacySha256": "acbe5a6261e95fe690f193d74f659a511e323986733ce1754436e24f854f6d58",
-      "sha256": "8547e1a5f3aa3fce47814eca9ca4d8a82381f524e1d5d03c3d40a9e85fc015e0",
+      "sha256": "6635a78450c33039950ec0d9e89f54f7ee636cd447d2a78c637e289b99b5995f",
       "custody": "canonical-operate-domain-projection",
       "source": "packages/operate/lib/operate/experience-projection-v2.mjs"
+    },
+    {
+      "path": "lib/operate/extensions-v2.d.mts",
+      "kind": "extension",
+      "legacySha256": "d743b89afc81432de90d89c6ea41ad5ab8469c8a848af9d9df8d3ee6add7c9fa",
+      "sha256": "00327f33f45d7c90510f3432a408f8f5f4999fea83fa74087f4376e5e526aa0d",
+      "custody": "canonical-operate-domain-projection",
+      "source": "packages/operate/lib/operate/extensions-v2.d.mts"
+    },
+    {
+      "path": "lib/operate/extensions-v2.mjs",
+      "kind": "extension",
+      "legacySha256": "4aa8ee52437bf7b3734a91b2f4f887191333e7c2bf710aa1595bc29fc4fd94f2",
+      "sha256": "96572188a232eb2f334c82bd404b10a43cd004207913937b063aae804d963e0e",
+      "custody": "canonical-operate-domain-projection",
+      "source": "packages/operate/lib/operate/extensions-v2.mjs"
+    },
+    {
+      "path": "lib/operate/planning-bridge-v2.d.mts",
+      "kind": "projection",
+      "legacySha256": "1fb2d9fba5a1e2a3956b191a09e0e345e5bb1bba98092eedfb02058c3ba37d8d",
+      "sha256": "4e43e879b3a38cddb3348852292f231e3d8288fe5fbce3934de7b0160c228a7f",
+      "custody": "canonical-operate-domain-projection",
+      "source": "packages/operate/lib/operate/planning-bridge-v2.d.mts"
     },
     {
       "path": "lib/operate/planning-bridge-v2.mjs",
       "kind": "projection",
       "legacySha256": "218754a1ac2ad7dc8106728eeb778e2b41727a15417c1aa54a263ca251363487",
-      "sha256": "bc617d50eb75676da40d44efcc657283f9760b5c1298caf9334c696b7905d31b",
+      "sha256": "8f741916c01de936dad65c3cf8fe104261d6a52694b174b884ac1c4e6f7a5435",
       "custody": "canonical-operate-domain-projection",
       "source": "packages/operate/lib/operate/planning-bridge-v2.mjs"
     },
@@ -90,7 +138,7 @@
       "path": "lib/operate/review-bound-submission-v2.d.mts",
       "kind": "projection",
       "legacySha256": "13614aa11657f935f018bf6a1f1970fe4834c6c88c52503f7f970afc030540d0",
-      "sha256": "17e2b6e273088433a896b21ceb90862df003a8522865357c2e9824f2a8b5ace4",
+      "sha256": "899a633b9efab5ea88044d39877308e55d21cd68ced0699caf971981d803ed22",
       "custody": "canonical-operate-domain-projection",
       "source": "packages/operate/lib/operate/review-bound-submission-v2.d.mts"
     },
@@ -98,15 +146,23 @@
       "path": "lib/operate/review-bound-submission-v2.mjs",
       "kind": "projection",
       "legacySha256": "7af2ee0aff14f48c1bd1fcae43fa02c748ad5b46376f6632c981f35578a263a8",
-      "sha256": "6c9f383df01629f80962f22a352c9f48ed9270175df3f090a0df173106ee756e",
+      "sha256": "e1be75a4d3ff820ededca30713ec2e46462e794f662c02e014c065552095e8cf",
       "custody": "canonical-operate-domain-projection",
       "source": "packages/operate/lib/operate/review-bound-submission-v2.mjs"
+    },
+    {
+      "path": "lib/operate/runtime-foundation.d.mts",
+      "kind": "declaration",
+      "legacySha256": "661445ec536b64daabb043faaf056873b2cdd97cba7397be6c0a2a0dbbf99ccd",
+      "sha256": "dff8e1210b17b6a8eed83f1e15e54e4371c8962a5446095c38482f0858b8eeb5",
+      "custody": "canonical-operate-domain-projection",
+      "source": "packages/operate/lib/operate/runtime-foundation.d.mts"
     },
     {
       "path": "lib/operate/runtime-foundation.mjs",
       "kind": "projection",
       "legacySha256": "75d880b14d0304f71e7ba9ec33c20ca1ac0e48656d3492b62ff8f7dedd079f4e",
-      "sha256": "4206c0e6142afd0368c926471ab00666b1a73f508abf8adb4c6dae08e1a4b0f9",
+      "sha256": "d613ac901b52a34b32a71151dc49124cc714521bf774cd368005220885c27dc8",
       "custody": "canonical-operate-domain-projection",
       "source": "packages/operate/lib/operate/runtime-foundation.mjs"
     },
@@ -114,7 +170,7 @@
       "path": "lib/operate/trace-matrix-v2.mjs",
       "kind": "projection",
       "legacySha256": "00ebc696df061226b1912e77050274fddf82c0b5982a939945ef0436a995a06b",
-      "sha256": "a6981d0355c6070c9b3623845b39ea1ee52897439d8b5eca4da0f2fa6a43c31f",
+      "sha256": "d11c3d8033374130834aef2c6a1b2cb7ef1e46f9f584af9981e909677f5e096c",
       "custody": "canonical-operate-domain-projection",
       "source": "packages/operate/lib/operate/trace-matrix-v2.mjs"
     },

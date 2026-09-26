@@ -88,7 +88,10 @@ export type { OperateReviewBoundSubmissionV1 } from './review-bound-submission-v
 
 export function deriveOperatingRoleLocalClaimIdV2(assignmentId: string, position?: number): string;
 export function deriveOperatingChairLedgerIdV2(assignmentId: string): string;
-export function assertOperatingRoleLocalClaimIdsV2(assignmentId: string, claimIds: string[]): readonly string[];
+export function assertOperatingRoleLocalClaimIdsV2(
+  assignmentId: string,
+  claimIds: string[],
+): readonly string[];
 
 export {
   OPERATE_CORE_PROHIBITION_IDENTIFIERS_V2,
@@ -198,7 +201,8 @@ export interface OperateRuntimeActorV2 {
   runtime: string;
 }
 
-export interface OperateRuntimeGuardContextV2 extends Omit<OperateAuthorityContextV2, 'capabilities' | 'actor'> {
+export interface OperateRuntimeGuardContextV2
+  extends Omit<OperateAuthorityContextV2, 'capabilities' | 'actor'> {
   capabilities?: Array<string | import('@openplanr/protocol').OperateVersionedIdentityV2>;
   cycle?: OperatingCycleV2;
   assignment?: OperatingAssignmentV2;
@@ -220,7 +224,9 @@ export interface OperateGuardRowV2 {
   readonly effect: 'read-only' | 'machine-local-write' | 'project-write';
   readonly guardId: string;
   readonly actorKinds: readonly ('agent' | 'human' | 'engine')[];
-  readonly argumentCandidates: (context: OperateRuntimeGuardContextV2) => OperateToolRequestMapV2[OperateToolNameV2][];
+  readonly argumentCandidates: (
+    context: OperateRuntimeGuardContextV2,
+  ) => OperateToolRequestMapV2[OperateToolNameV2][];
   readonly guard: (context: OperateRuntimeGuardContextV2) => OperateGuardResultV2;
 }
 
@@ -244,10 +250,14 @@ export const OPERATING_EXECUTION_EFFECT_SUMMARIES_V2: Readonly<{
 export function createOperatingExecutionReceiptProofV2(input: {
   operation: OperatingGovernedOperationV2;
   receipt: {
-    operationId: string; requestFingerprint: string; target: { kind: string; id: string };
+    operationId: string;
+    requestFingerprint: string;
+    target: { kind: string; id: string };
     before: { value: unknown; revision: string; stateHash: string };
     after: { value: unknown; revision: string; stateHash: string };
-    changed: boolean; synthetic: boolean; effectCount: number;
+    changed: boolean;
+    synthetic: boolean;
+    effectCount: number;
   };
 }): Readonly<OperatingExecutionReceiptProofV2>;
 
@@ -335,7 +345,9 @@ export function readOperatingArtifactV2(
     capabilities?: string[];
     scopeMembership?: OperatingArtifactScopeMembershipV2 | null;
   },
-): OperateApiSuccessV2<'operate.artifact.get'> & { readonly data: OperatingArtifactRepresentationV2 };
+): OperateApiSuccessV2<'operate.artifact.get'> & {
+  readonly data: OperatingArtifactRepresentationV2;
+};
 
 export function readOperatingReviewV2(
   request: OperateToolRequestMapV2['operate.review.get'],
@@ -354,7 +366,9 @@ export interface OperatingReviewSubmissionDraftV2 {
 
 export interface OperatingReviewSubmissionResultV2 {
   readonly state: OperatingRuntimeStateV2;
-  readonly response: OperateApiSuccessV2<'operate.review.submit'> & { readonly data: OperatingReviewReceiptV2 };
+  readonly response: OperateApiSuccessV2<'operate.review.submit'> & {
+    readonly data: OperatingReviewReceiptV2;
+  };
   readonly events: readonly Extract<OperatingEventV2, { type: 'review.submitted' }>[];
   readonly replayed: boolean;
 }
@@ -415,10 +429,17 @@ export function claimOperatingAssignmentV2(
 export function transitionOperatingAssignmentV2(
   assignment: OperatingAssignmentV2,
   nextState: OperatingAssignmentStateV2,
-  patch?: Partial<Pick<
-    OperatingAssignmentV2,
-    'availableAt' | 'inputArtifactIds' | 'inputAbsences' | 'claim' | 'attemptPolicy' | 'completedAt'
-  >>,
+  patch?: Partial<
+    Pick<
+      OperatingAssignmentV2,
+      | 'availableAt'
+      | 'inputArtifactIds'
+      | 'inputAbsences'
+      | 'claim'
+      | 'attemptPolicy'
+      | 'completedAt'
+    >
+  >,
 ): OperatingAssignmentV2;
 
 export function transitionOperatingReviewV2(
@@ -442,8 +463,10 @@ export function transitionOperatingCycleLifecycleV2(
 export function computeOperatingRuntimeEventHashV2(event: OperatingEventV2): string;
 
 export function createOperatingRuntimeEventV2<TEvent extends OperatingEventV2['type']>(
-  input: Omit<Extract<OperatingEventV2, { type: TEvent }>,
-    'kind' | 'schemaVersion' | 'protocolVersion' | 'sequence' | 'previousEventHash' | 'eventHash'>,
+  input: Omit<
+    Extract<OperatingEventV2, { type: TEvent }>,
+    'kind' | 'schemaVersion' | 'protocolVersion' | 'sequence' | 'previousEventHash' | 'eventHash'
+  >,
   options?: {
     previousEvent?: Pick<OperatingEventV2, 'sequence' | 'eventHash'> | null;
     sequence?: number;
@@ -556,8 +579,10 @@ export interface OperatingStateSnapshotMaterializationResultV2 {
   readonly state: OperatingRuntimeStateV2;
   readonly snapshot: OperatingSnapshotV2;
   readonly operatingState: OperatingModelStateV2;
-  readonly events: readonly Extract<OperatingEventV2,
-    { type: 'snapshot.materialized' | 'operating-state.materialized' }> [];
+  readonly events: readonly Extract<
+    OperatingEventV2,
+    { type: 'snapshot.materialized' | 'operating-state.materialized' }
+  >[];
   readonly replayed: boolean;
 }
 
@@ -589,7 +614,10 @@ export interface OperatingRuntimeDeltaResultV2 {
   readonly delta: OperatingDeltaV2;
   readonly events: readonly Extract<OperatingEventV2, { type: 'delta.derived' }>[];
   readonly replayed: boolean;
-  readonly materiality: Readonly<{ material: boolean; reason: 'material-change' | 'no-material-change' }>;
+  readonly materiality: Readonly<{
+    material: boolean;
+    reason: 'material-change' | 'no-material-change';
+  }>;
 }
 
 /** Derive a pure, evidence-backed Delta and append its one runtime Event. */
@@ -641,8 +669,10 @@ export interface OperatingDecisionLedgerMaterializationResultV2 {
   readonly ledger: OperatingDecisionLedgerV2;
   readonly decisions: readonly OperatingDecisionV2[];
   readonly actionHypotheses: readonly Readonly<Record<string, unknown>>[];
-  readonly events: readonly Extract<OperatingEventV2,
-    { type: 'decision-ledger.materialized' | 'decision.revised' }> [];
+  readonly events: readonly Extract<
+    OperatingEventV2,
+    { type: 'decision-ledger.materialized' | 'decision.revised' }
+  >[];
   readonly replayed: boolean;
 }
 
@@ -740,7 +770,10 @@ export interface OperatingActionVerificationOutcomeResultV2 {
   readonly state: OperatingRuntimeStateV2;
   readonly outcome: OperatingOutcomeV2;
   readonly learning: OperatingLearningV2;
-  readonly events: readonly Extract<OperatingEventV2, { type: 'outcome.recorded' | 'learning.recorded' }> [];
+  readonly events: readonly Extract<
+    OperatingEventV2,
+    { type: 'outcome.recorded' | 'learning.recorded' }
+  >[];
   readonly replayed: boolean;
 }
 
@@ -761,7 +794,10 @@ export function buildOperatingTerminalVerificationInsufficientEvidenceV2(input: 
 export interface OperatingTerminalVerificationInsufficientEvidenceResultV2
   extends OperatingTerminalVerificationInsufficientEvidenceRecordsV2 {
   readonly state: OperatingRuntimeStateV2;
-  readonly events: readonly Extract<OperatingEventV2, { type: 'outcome.recorded' | 'learning.recorded' }>[];
+  readonly events: readonly Extract<
+    OperatingEventV2,
+    { type: 'outcome.recorded' | 'learning.recorded' }
+  >[];
   readonly replayed: boolean;
 }
 
@@ -799,7 +835,9 @@ export function recordOperatingActionVerificationOutcomeV2(
 
 export interface OperatingVerifiedRuntimeCycleCloseResultV2 {
   readonly state: OperatingRuntimeStateV2;
-  readonly feedback: import('./execution-verification-v2.d.mts').OperatingVerificationFeedbackV2 | null;
+  readonly feedback:
+    | import('./execution-verification-v2.d.mts').OperatingVerificationFeedbackV2
+    | null;
   readonly events: readonly Extract<OperatingEventV2, { type: 'cycle.closed' }>[];
   readonly replayed: boolean;
 }
@@ -835,8 +873,17 @@ export interface OperatingIntelligenceStateDraftV2 {
 export interface OperatingIntelligenceStateResultV2 {
   readonly state: OperatingRuntimeStateV2;
   readonly transition: import('./operating-intelligence-state-v2.d.mts').OperatingIntelligenceStateTransitionV2;
-  readonly events: readonly Extract<OperatingEventV2,
-    { type: 'claim.recorded' | 'metric.observed' | 'risk.recorded' | 'assumption.recorded' | 'decision.revised' }>[];
+  readonly events: readonly Extract<
+    OperatingEventV2,
+    {
+      type:
+        | 'claim.recorded'
+        | 'metric.observed'
+        | 'risk.recorded'
+        | 'assumption.recorded'
+        | 'decision.revised';
+    }
+  >[];
   readonly replayed: boolean;
 }
 
@@ -865,13 +912,22 @@ export interface OperatingTriggerScenarioDraftV2 {
 export interface OperatingTriggerScenarioResultV2 {
   readonly state: OperatingRuntimeStateV2;
   readonly transition: import('./operating-triggers-v2.d.mts').OperatingTriggerScenarioTransitionV2;
-  readonly events: readonly Extract<OperatingEventV2, { type: 'scenario.recorded' | 'trigger.recorded' }>[];
+  readonly events: readonly Extract<
+    OperatingEventV2,
+    { type: 'scenario.recorded' | 'trigger.recorded' }
+  >[];
   readonly replayed: boolean;
 }
 
 /** Persist analytical scenarios and normal-work trigger requests without scheduling or effect authority. */
 export function recordOperatingTriggerScenarioV2(
-  request: { cycleId: string; snapshotId: string; stateId: string; scenarios: OperatingScenarioV2[]; triggers: OperatingEventTriggerV2[] },
+  request: {
+    cycleId: string;
+    snapshotId: string;
+    stateId: string;
+    scenarios: OperatingScenarioV2[];
+    triggers: OperatingEventTriggerV2[];
+  },
   draft: OperatingTriggerScenarioDraftV2,
   options?: { initialState?: OperatingRuntimeStateV2; replayHook?: NoModelReplayHookV2 },
 ): OperatingTriggerScenarioResultV2;
@@ -896,7 +952,10 @@ export interface OperatingEvidenceClaimLinkProposalV2 {
 
 export interface OperatingEvidenceMaterializationResultV2 {
   readonly state: OperatingRuntimeStateV2;
-  readonly events: readonly Extract<OperatingEventV2, { type: 'evidence.resolved' | 'evidence.rejected' }>[];
+  readonly events: readonly Extract<
+    OperatingEventV2,
+    { type: 'evidence.resolved' | 'evidence.rejected' }
+  >[];
   readonly resolution: OperatingEvidenceResolutionV2;
   readonly evidenceRef: OperatingEvidenceRefV2 | null;
   readonly evidenceArtifact: OperatingArtifactV2 | null;

@@ -13,9 +13,20 @@ import type {
 } from '@openplanr/protocol';
 
 export type OperatingExecutionVerificationStatusV2 =
-  | 'success' | 'failure' | 'blocked' | 'uncertain' | 'partial' | 'cancelled' | 'rolled-back';
+  | 'success'
+  | 'failure'
+  | 'blocked'
+  | 'uncertain'
+  | 'partial'
+  | 'cancelled'
+  | 'rolled-back';
 export type OperatingHypothesisVerificationStatusV2 =
-  | 'pending' | 'confirmed' | 'failed' | 'blocked' | 'cancelled' | 'revisit';
+  | 'pending'
+  | 'confirmed'
+  | 'failed'
+  | 'blocked'
+  | 'cancelled'
+  | 'revisit';
 
 export const OPERATING_EXECUTION_VERIFICATION_STATUSES_V2: readonly OperatingExecutionVerificationStatusV2[];
 export const OPERATING_HYPOTHESIS_VERIFICATION_STATUSES_V2: readonly OperatingHypothesisVerificationStatusV2[];

@@ -37,7 +37,10 @@ const REFERENCE_HOST_DECLARATIONS = Object.freeze([
 ]);
 
 function fail(code, message, context = {}) {
-  throw new PipelineError(code, message, '', { retryable: false, context: structuredClone(context) });
+  throw new PipelineError(code, message, '', {
+    retryable: false,
+    context: structuredClone(context),
+  });
 }
 
 function clone(value) {
@@ -67,21 +70,34 @@ function sameIdentity(left, right) {
 }
 
 function plainExactRecord(value, fields) {
-  if (!value || typeof value !== 'object' || Array.isArray(value)
-    || Object.getPrototypeOf(value) !== Object.prototype
-    || Object.getOwnPropertySymbols(value).length > 0) return false;
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    Array.isArray(value) ||
+    Object.getPrototypeOf(value) !== Object.prototype ||
+    Object.getOwnPropertySymbols(value).length > 0
+  )
+    return false;
   const keys = Object.getOwnPropertyNames(value).sort();
   const expected = [...fields].sort();
-  return keys.length === expected.length
-    && keys.every((key, index) => key === expected[index])
-    && Object.values(Object.getOwnPropertyDescriptors(value)).every((descriptor) => (
-      Object.hasOwn(descriptor, 'value') && descriptor.get === undefined && descriptor.set === undefined
-    ));
+  return (
+    keys.length === expected.length &&
+    keys.every((key, index) => key === expected[index]) &&
+    Object.values(Object.getOwnPropertyDescriptors(value)).every(
+      (descriptor) =>
+        Object.hasOwn(descriptor, 'value') &&
+        descriptor.get === undefined &&
+        descriptor.set === undefined,
+    )
+  );
 }
 
 function assertTime(value, field) {
   const parsed = typeof value === 'string' ? Date.parse(value) : Number.NaN;
-  if (Number.isNaN(parsed)) fail('OPERATING_PROVIDER_INPUT_INVALID', `${field} must be an explicit RFC 3339 timestamp.`, { field });
+  if (Number.isNaN(parsed))
+    fail('OPERATING_PROVIDER_INPUT_INVALID', `${field} must be an explicit RFC 3339 timestamp.`, {
+      field,
+    });
   return parsed;
 }
 
@@ -92,24 +108,38 @@ function assertReferenceData(value, path = '$', semanticPath = []) {
       ...(typeof value === 'string' ? [value] : []),
     ]);
     if (typeof value === 'number' && !Number.isFinite(value)) {
-      fail('OPERATING_PROVIDER_INPUT_INVALID', `Reference input must be finite at ${path}.`, { path });
+      fail('OPERATING_PROVIDER_INPUT_INVALID', `Reference input must be finite at ${path}.`, {
+        path,
+      });
     }
-    if (typeof value === 'string' && (
-      value.includes('\u0000')
-      || /^(?:file|https?|data|node):/iu.test(value)
-      || prohibition !== null
-    ) || typeof value !== 'string' && prohibition !== null) {
-      fail('CAPABILITY_DENIED', `Reference input contains a prohibited or ambient declaration at ${path}.`, { path });
+    if (
+      (typeof value === 'string' &&
+        (value.includes('\u0000') ||
+          /^(?:file|https?|data|node):/iu.test(value) ||
+          prohibition !== null)) ||
+      (typeof value !== 'string' && prohibition !== null)
+    ) {
+      fail(
+        'CAPABILITY_DENIED',
+        `Reference input contains a prohibited or ambient declaration at ${path}.`,
+        { path },
+      );
     }
     return;
   }
   if (!value || typeof value !== 'object') {
-    fail('OPERATING_PROVIDER_INPUT_INVALID', `Reference input must contain only closed data at ${path}.`, { path });
+    fail(
+      'OPERATING_PROVIDER_INPUT_INVALID',
+      `Reference input must contain only closed data at ${path}.`,
+      { path },
+    );
   }
   const prototype = Object.getPrototypeOf(value);
   const expected = Array.isArray(value) ? Array.prototype : Object.prototype;
   if (prototype !== expected || Object.getOwnPropertySymbols(value).length > 0) {
-      fail('OPERATING_PROVIDER_INPUT_INVALID', `Reference input must use plain data at ${path}.`, { path });
+    fail('OPERATING_PROVIDER_INPUT_INVALID', `Reference input must use plain data at ${path}.`, {
+      path,
+    });
   }
   const descriptors = Object.entries(Object.getOwnPropertyDescriptors(value));
   const objectSemanticPath = [
@@ -121,22 +151,39 @@ function assertReferenceData(value, path = '$', semanticPath = []) {
   ];
   const objectProhibition = findOperateCoreProhibitionV2(objectSemanticPath);
   if (objectProhibition !== null) {
-    fail('CAPABILITY_DENIED', `Reference input contains a core-prohibited composed object at ${path}.`, {
-      path,
-      prohibition: objectProhibition,
-    });
+    fail(
+      'CAPABILITY_DENIED',
+      `Reference input contains a core-prohibited composed object at ${path}.`,
+      {
+        path,
+        prohibition: objectProhibition,
+      },
+    );
   }
   for (const [key, descriptor] of descriptors) {
-    if (!Object.hasOwn(descriptor, 'value') || descriptor.get || descriptor.set || typeof descriptor.value === 'function') {
-      fail('OPERATING_PROVIDER_INPUT_INVALID', `Reference input cannot contain executable fields at ${path}.${key}.`, { path: `${path}.${key}` });
+    if (
+      !Object.hasOwn(descriptor, 'value') ||
+      descriptor.get ||
+      descriptor.set ||
+      typeof descriptor.value === 'function'
+    ) {
+      fail(
+        'OPERATING_PROVIDER_INPUT_INVALID',
+        `Reference input cannot contain executable fields at ${path}.${key}.`,
+        { path: `${path}.${key}` },
+      );
     }
     const nextSemanticPath = [...objectSemanticPath, key];
     const keyProhibition = findOperateCoreProhibitionV2(nextSemanticPath);
     if (keyProhibition !== null) {
-      fail('CAPABILITY_DENIED', `Reference input contains a core-prohibited semantic key at ${path}.${key}.`, {
-        path: `${path}.${key}`,
-        prohibition: keyProhibition,
-      });
+      fail(
+        'CAPABILITY_DENIED',
+        `Reference input contains a core-prohibited semantic key at ${path}.${key}.`,
+        {
+          path: `${path}.${key}`,
+          prohibition: keyProhibition,
+        },
+      );
     }
     assertReferenceData(descriptor.value, `${path}.${key}`, nextSemanticPath);
   }
@@ -146,15 +193,31 @@ function assertAction(action) {
   try {
     assertProtocolArtifact('operating-action', action, { protocolVersion: PROTOCOL_VERSION });
   } catch (cause) {
-    fail('OPERATING_PROVIDER_INPUT_INVALID', 'Reference provider requires one contract-valid Action.', {
-      cause: cause?.code ?? null,
-    });
+    fail(
+      'OPERATING_PROVIDER_INPUT_INVALID',
+      'Reference provider requires one contract-valid Action.',
+      {
+        cause: cause?.code ?? null,
+      },
+    );
   }
-  const required = ['revision', 'actionHash', 'actionKind', 'requestedCapability', 'targetBinding', 'effectClass', 'executionBinding'];
+  const required = [
+    'revision',
+    'actionHash',
+    'actionKind',
+    'requestedCapability',
+    'targetBinding',
+    'effectClass',
+    'executionBinding',
+  ];
   if (required.some((field) => !Object.hasOwn(action, field))) {
-    fail('ACTION_REVISION_MISMATCH', 'Reference provider requires the complete version-bound Action authority tuple.', {
-      actionId: action?.actionId ?? null,
-    });
+    fail(
+      'ACTION_REVISION_MISMATCH',
+      'Reference provider requires the complete version-bound Action authority tuple.',
+      {
+        actionId: action?.actionId ?? null,
+      },
+    );
   }
   return action;
 }
@@ -175,7 +238,11 @@ export function createOpenReferenceCapabilityAvailabilityV2({
   assertAction(action);
   const checked = assertTime(checkedAt, 'checkedAt');
   const expires = assertTime(expiresAt, 'expiresAt');
-  if (expires <= checked) fail('OPERATING_PROVIDER_INPUT_INVALID', 'Capability availability expiry must follow its check time.');
+  if (expires <= checked)
+    fail(
+      'OPERATING_PROVIDER_INPUT_INVALID',
+      'Capability availability expiry must follow its check time.',
+    );
   const selection = selectOperateCapabilityProviderV2(registry, {
     providerId,
     providerVersion,
@@ -188,11 +255,18 @@ export function createOpenReferenceCapabilityAvailabilityV2({
     targetKind: action.targetBinding.kind,
     effectClass: action.effectClass,
   });
-  if (selection.status === 'available' && expires > assertTime(selection.registration.health.expiresAt, 'provider.health.expiresAt')) {
-    fail('OPERATING_PROVIDER_INPUT_INVALID', 'Capability availability cannot outlive the selected provider health window.', {
-      providerId,
-      providerVersion,
-    });
+  if (
+    selection.status === 'available' &&
+    expires > assertTime(selection.registration.health.expiresAt, 'provider.health.expiresAt')
+  ) {
+    fail(
+      'OPERATING_PROVIDER_INPUT_INVALID',
+      'Capability availability cannot outlive the selected provider health window.',
+      {
+        providerId,
+        providerVersion,
+      },
+    );
   }
   const status = selection.status === 'available' ? 'available' : 'unavailable';
   const availability = {
@@ -213,9 +287,15 @@ export function createOpenReferenceCapabilityAvailabilityV2({
   availability.availabilityId = `cava_${identityHash.slice('sha256:'.length)}`;
   availability.availabilityHash = sha256Jcs(availability);
   try {
-    assertProtocolArtifact('operating-capability-availability', availability, { protocolVersion: PROTOCOL_VERSION });
+    assertProtocolArtifact('operating-capability-availability', availability, {
+      protocolVersion: PROTOCOL_VERSION,
+    });
   } catch (cause) {
-    fail('OPERATING_PROVIDER_INPUT_INVALID', 'Reference capability availability is not contract-valid.', { cause: cause?.code ?? null });
+    fail(
+      'OPERATING_PROVIDER_INPUT_INVALID',
+      'Reference capability availability is not contract-valid.',
+      { cause: cause?.code ?? null },
+    );
   }
   return freeze(availability);
 }
@@ -247,9 +327,13 @@ export function evaluateOpenReferencePolicyProviderV2({
     effectClass: action.effectClass,
   });
   if (selection.status !== 'available') {
-    fail('POLICY_PROVIDER_UNAVAILABLE', 'The exact open reference policy provider is unavailable.', {
-      reasonCode: selection.reasonCode,
-    });
+    fail(
+      'POLICY_PROVIDER_UNAVAILABLE',
+      'The exact open reference policy provider is unavailable.',
+      {
+        reasonCode: selection.reasonCode,
+      },
+    );
   }
   return evaluateOperatingActionPolicyV2({
     action,
@@ -261,9 +345,16 @@ export function evaluateOpenReferencePolicyProviderV2({
 }
 
 function assertTargetBinding(target) {
-  if (!plainExactRecord(target, ['kind', 'id', 'revision'])
-    || typeof target.kind !== 'string' || typeof target.id !== 'string' || typeof target.revision !== 'string') {
-    fail('OPERATING_PROVIDER_INPUT_INVALID', 'Contained target requires an exact kind, id, and revision.');
+  if (
+    !plainExactRecord(target, ['kind', 'id', 'revision']) ||
+    typeof target.kind !== 'string' ||
+    typeof target.id !== 'string' ||
+    typeof target.revision !== 'string'
+  ) {
+    fail(
+      'OPERATING_PROVIDER_INPUT_INVALID',
+      'Contained target requires an exact kind, id, and revision.',
+    );
   }
   assertReferenceData(target);
 }
@@ -286,8 +377,10 @@ function makeTarget({ target, initialValue, synthetic }) {
   const adapter = Object.freeze({
     describe() {
       return freeze({
-        target: { ...clone(target), revision }, stateHash: sha256Jcs(current),
-        effectCount, restoreCallCount,
+        target: { ...clone(target), revision },
+        stateHash: sha256Jcs(current),
+        effectCount,
+        restoreCallCount,
       });
     },
     read() {
@@ -298,10 +391,20 @@ function makeTarget({ target, initialValue, synthetic }) {
       const fingerprint = sha256Jcs({ requestFingerprint, expectedRevision, nextValue });
       const prior = receipts.get(operationId);
       if (prior) {
-        if (prior.fingerprint !== fingerprint) fail('OPERATION_CONFLICT', 'Contained operation identity was reused with different input.', { operationId });
+        if (prior.fingerprint !== fingerprint)
+          fail(
+            'OPERATION_CONFLICT',
+            'Contained operation identity was reused with different input.',
+            { operationId },
+          );
         return freeze(clone(prior.receipt));
       }
-      if (expectedRevision !== revision) fail('OPERATION_CONFLICT', 'Contained target revision is stale.', { operationId, expectedRevision, actualRevision: revision });
+      if (expectedRevision !== revision)
+        fail('OPERATION_CONFLICT', 'Contained target revision is stale.', {
+          operationId,
+          expectedRevision,
+          actualRevision: revision,
+        });
       const before = { value: clone(current), revision, stateHash: sha256Jcs(current) };
       current = clone(nextValue);
       revision = `rev-${sha256Jcs({ operationId, requestFingerprint, current }).slice('sha256:'.length, 22)}`;
@@ -332,16 +435,22 @@ function makeTarget({ target, initialValue, synthetic }) {
       restoreCallCount += 1;
       assertReferenceData(baseline);
       const original = receipts.get(originalOperationId);
-      if (!original
-        || original.receipt.operationId !== originalOperationId
-        || original.receipt.requestFingerprint !== originalRequestFingerprint
-        || original.receipt.before.revision !== governedRevision
-        || original.receipt.after.revision !== revision
-        || original.receipt.before.stateHash !== sha256Jcs(baseline.value)) {
-        fail('OPERATION_CONFLICT', 'Contained rollback target does not equal the exact original governed receipt and baseline.', {
-          operationId,
-          originalOperationId,
-        });
+      if (
+        !original ||
+        original.receipt.operationId !== originalOperationId ||
+        original.receipt.requestFingerprint !== originalRequestFingerprint ||
+        original.receipt.before.revision !== governedRevision ||
+        original.receipt.after.revision !== revision ||
+        original.receipt.before.stateHash !== sha256Jcs(baseline.value)
+      ) {
+        fail(
+          'OPERATION_CONFLICT',
+          'Contained rollback target does not equal the exact original governed receipt and baseline.',
+          {
+            operationId,
+            originalOperationId,
+          },
+        );
       }
       return this.apply({
         operationId,
@@ -352,15 +461,25 @@ function makeTarget({ target, initialValue, synthetic }) {
     },
     reconcile(input) {
       if (!plainExactRecord(input, ['operationId', 'requestFingerprint'])) {
-        fail('OPERATION_CONFLICT', 'Contained reconciliation accepts only the exact operation identity and request fingerprint.');
+        fail(
+          'OPERATION_CONFLICT',
+          'Contained reconciliation accepts only the exact operation identity and request fingerprint.',
+        );
       }
       const { operationId, requestFingerprint } = input;
       const prior = receipts.get(operationId);
       if (!prior) return freeze({ status: 'not-found', receipt: null });
-      if (prior.receipt.operationId !== operationId || prior.receipt.requestFingerprint !== requestFingerprint) {
-        fail('OPERATION_CONFLICT', 'Contained reconciliation requires the exact stored operation receipt fingerprint.', {
-          operationId,
-        });
+      if (
+        prior.receipt.operationId !== operationId ||
+        prior.receipt.requestFingerprint !== requestFingerprint
+      ) {
+        fail(
+          'OPERATION_CONFLICT',
+          'Contained reconciliation requires the exact stored operation receipt fingerprint.',
+          {
+            operationId,
+          },
+        );
       }
       return freeze({ status: 'succeeded', receipt: clone(prior.receipt) });
     },
@@ -372,59 +491,95 @@ function makeTarget({ target, initialValue, synthetic }) {
 
 /** Explicit in-memory disposable target. It has no filesystem or network reach. */
 export function createDisposableLocalProjectTargetV2({ target, initialValue = {} } = {}) {
-  if (target?.kind !== 'project-record') fail('CAPABILITY_DENIED', 'Disposable project target requires kind project-record.');
+  if (target?.kind !== 'project-record')
+    fail('CAPABILITY_DENIED', 'Disposable project target requires kind project-record.');
   return makeTarget({ target, initialValue, synthetic: false });
 }
 
 /** Synthetic in-memory target used to prove connector containment. */
 export function createSyntheticNoNetworkTargetV2({ target, initialValue = {} } = {}) {
-  if (target?.kind !== 'synthetic-target') fail('CAPABILITY_DENIED', 'Synthetic containment target requires kind synthetic-target.');
+  if (target?.kind !== 'synthetic-target')
+    fail('CAPABILITY_DENIED', 'Synthetic containment target requires kind synthetic-target.');
   return makeTarget({ target, initialValue, synthetic: true });
 }
 
-function assertContainedTarget(targetAdapter, operationTarget, synthetic, {
-  phase, operationId, requireRevision = true,
-}) {
+function assertContainedTarget(
+  targetAdapter,
+  operationTarget,
+  synthetic,
+  { phase, operationId, requireRevision = true },
+) {
   const metadata = TARGET_METADATA.get(targetAdapter);
   const expectedSet = synthetic ? SYNTHETIC_TARGETS : PROJECT_TARGETS;
-  const prior = operationId === undefined ? null : metadata?.receipts.get(operationId) ?? null;
+  const prior = operationId === undefined ? null : (metadata?.receipts.get(operationId) ?? null);
   const expectedRevision = prior?.receipt.before.revision ?? metadata?.currentRevision;
-  if (!metadata || !expectedSet.has(targetAdapter)
-    || !plainExactRecord(operationTarget, ['kind', 'id', 'revision'])
-    || metadata.synthetic !== synthetic
-    || metadata.target.kind !== operationTarget.kind
-    || metadata.target.id !== operationTarget.id
-    || (requireRevision && expectedRevision !== operationTarget.revision)) {
-    fail('OPERATION_CONFLICT', 'Contained target adapter must equal the governed target kind, id, and current revision.', {
-      target: operationTarget ?? null,
-    });
+  if (
+    !metadata ||
+    !expectedSet.has(targetAdapter) ||
+    !plainExactRecord(operationTarget, ['kind', 'id', 'revision']) ||
+    metadata.synthetic !== synthetic ||
+    metadata.target.kind !== operationTarget.kind ||
+    metadata.target.id !== operationTarget.id ||
+    (requireRevision && expectedRevision !== operationTarget.revision)
+  ) {
+    fail(
+      'OPERATION_CONFLICT',
+      'Contained target adapter must equal the governed target kind, id, and current revision.',
+      {
+        target: operationTarget ?? null,
+      },
+    );
   }
   return metadata;
 }
 
-function assertAuthorityDecision({ authorityDecision, operation, binding, executor, targetAdapter, synthetic }) {
+function assertAuthorityDecision({
+  authorityDecision,
+  operation,
+  binding,
+  executor,
+  targetAdapter,
+  synthetic,
+}) {
   const checkedBinding = assertTrustedExecutorBindingV2(binding, { executor });
-  if (!operation || !authorityDecision || authorityDecision.allowed !== true || authorityDecision.replayed !== false
-    || authorityDecision.operationId !== operation.operationId
-    || authorityDecision.evaluationId !== operation.evaluationId
-    || authorityDecision.grantId !== operation.grantId
-    || authorityDecision.effectClass !== operation.effectClass
-    || authorityDecision.target?.kind !== operation.target.kind
-    || authorityDecision.target?.id !== operation.target.id
-    || authorityDecision.target?.revision !== operation.target.revision
-    || !authorityDecision.checks?.includes('executor-exact-healthy-contained-ceiling')
-    || !authorityDecision.checks?.includes('trusted-executor-connector-binding')
-    || !sameIdentity(operation.connector, checkedBinding.connector)
-    || operation.executor.executorId !== checkedBinding.executor.executorId
-    || operation.executor.executorVersion !== checkedBinding.executor.executorVersion) {
-    fail('CAPABILITY_DENIED', 'Contained executor requires the exact live canonical authority decision, trusted binding, and explicit target adapter.', {
-      operationId: operation?.operationId ?? null,
-    });
+  if (
+    !operation ||
+    !authorityDecision ||
+    authorityDecision.allowed !== true ||
+    authorityDecision.replayed !== false ||
+    authorityDecision.operationId !== operation.operationId ||
+    authorityDecision.evaluationId !== operation.evaluationId ||
+    authorityDecision.grantId !== operation.grantId ||
+    authorityDecision.effectClass !== operation.effectClass ||
+    authorityDecision.target?.kind !== operation.target.kind ||
+    authorityDecision.target?.id !== operation.target.id ||
+    authorityDecision.target?.revision !== operation.target.revision ||
+    !authorityDecision.checks?.includes('executor-exact-healthy-contained-ceiling') ||
+    !authorityDecision.checks?.includes('trusted-executor-connector-binding') ||
+    !sameIdentity(operation.connector, checkedBinding.connector) ||
+    operation.executor.executorId !== checkedBinding.executor.executorId ||
+    operation.executor.executorVersion !== checkedBinding.executor.executorVersion
+  ) {
+    fail(
+      'CAPABILITY_DENIED',
+      'Contained executor requires the exact live canonical authority decision, trusted binding, and explicit target adapter.',
+      {
+        operationId: operation?.operationId ?? null,
+      },
+    );
   }
   return checkedBinding;
 }
 
-function executeContained({ authorityContext, authorityDecision, executorInput, binding, executor, targetAdapter, synthetic }) {
+function executeContained({
+  authorityContext,
+  authorityDecision,
+  executorInput,
+  binding,
+  executor,
+  targetAdapter,
+  synthetic,
+}) {
   const operation = executorInput?.operation;
   const checkedInput = assertContainedExecutorInputEnvelopeV2(executorInput, {
     operation: authorityContext?.operation,
@@ -432,30 +587,53 @@ function executeContained({ authorityContext, authorityDecision, executorInput, 
   });
   assertReferenceData(checkedInput.payload.value, 'executorInput.payload.value');
   if (checkedInput.rollbackBaseline !== null) {
-    assertReferenceData(checkedInput.rollbackBaseline.value, 'executorInput.rollbackBaseline.value');
+    assertReferenceData(
+      checkedInput.rollbackBaseline.value,
+      'executorInput.rollbackBaseline.value',
+    );
   }
   const canonicalDecision = assertOperateAuthorityV2(
     operation.operationKind === 'rollback' ? 'operate.action.rollback' : 'operate.action.execute',
     authorityContext,
   );
   if (!sameJson(canonicalDecision, authorityDecision)) {
-    fail('CAPABILITY_DENIED', 'Contained executor accepts only the unchanged canonical authorization decision.', {
-      operationId: operation.operationId,
-    });
+    fail(
+      'CAPABILITY_DENIED',
+      'Contained executor accepts only the unchanged canonical authorization decision.',
+      {
+        operationId: operation.operationId,
+      },
+    );
   }
-  assertAuthorityDecision({ authorityDecision, operation, binding, executor, targetAdapter, synthetic });
+  assertAuthorityDecision({
+    authorityDecision,
+    operation,
+    binding,
+    executor,
+    targetAdapter,
+    synthetic,
+  });
   const metadata = assertContainedTarget(targetAdapter, operation.target, synthetic, {
-    phase: 'execute', operationId: operation.operationId,
+    phase: 'execute',
+    operationId: operation.operationId,
   });
   if (operation.operationKind !== 'execute') {
-    fail('OPERATION_CONFLICT', 'Contained execute requires an execute operation.', { operationId: operation.operationId });
-  }
-  if (!metadata.receipts.has(operation.operationId)
-    && checkedInput.rollbackBaseline !== null
-    && checkedInput.rollbackBaseline.contentHash !== metadata.stateHash) {
-    fail('OPERATION_CONFLICT', 'Contained target initial state differs from the fingerprint-bound rollback baseline.', {
+    fail('OPERATION_CONFLICT', 'Contained execute requires an execute operation.', {
       operationId: operation.operationId,
     });
+  }
+  if (
+    !metadata.receipts.has(operation.operationId) &&
+    checkedInput.rollbackBaseline !== null &&
+    checkedInput.rollbackBaseline.contentHash !== metadata.stateHash
+  ) {
+    fail(
+      'OPERATION_CONFLICT',
+      'Contained target initial state differs from the fingerprint-bound rollback baseline.',
+      {
+        operationId: operation.operationId,
+      },
+    );
   }
   const current = targetAdapter.read();
   return targetAdapter.apply({
@@ -467,9 +645,18 @@ function executeContained({ authorityContext, authorityDecision, executorInput, 
   });
 }
 
-function rollbackContained({ authorityContext, authorityDecision, executorInput, binding, executor, targetAdapter, synthetic }) {
+function rollbackContained({
+  authorityContext,
+  authorityDecision,
+  executorInput,
+  binding,
+  executor,
+  targetAdapter,
+  synthetic,
+}) {
   const operation = executorInput?.operation;
-  if (operation?.operationKind !== 'rollback') fail('ROLLBACK_NOT_ELIGIBLE', 'Contained rollback requires one rollback operation.');
+  if (operation?.operationKind !== 'rollback')
+    fail('ROLLBACK_NOT_ELIGIBLE', 'Contained rollback requires one rollback operation.');
   const checkedInput = assertContainedExecutorInputEnvelopeV2(executorInput, {
     operation: authorityContext?.operation,
     rollbackPlan: authorityContext?.rollbackPlan ?? null,
@@ -477,20 +664,36 @@ function rollbackContained({ authorityContext, authorityDecision, executorInput,
   assertReferenceData(checkedInput.payload.value, 'executorInput.payload.value');
   assertReferenceData(checkedInput.rollbackBaseline.value, 'executorInput.rollbackBaseline.value');
   const canonicalDecision = assertOperateAuthorityV2('operate.action.rollback', authorityContext);
-  if (!sameJson(canonicalDecision, authorityDecision)) fail('CAPABILITY_DENIED', 'Contained rollback requires the unchanged canonical authority decision.');
-  assertAuthorityDecision({ authorityDecision, operation, binding, executor, targetAdapter, synthetic });
-  const parentOperations = (authorityContext.operationHistory ?? []).filter((entry) => (
-    entry.operationId === operation.parentOperationId
-  ));
+  if (!sameJson(canonicalDecision, authorityDecision))
+    fail(
+      'CAPABILITY_DENIED',
+      'Contained rollback requires the unchanged canonical authority decision.',
+    );
+  assertAuthorityDecision({
+    authorityDecision,
+    operation,
+    binding,
+    executor,
+    targetAdapter,
+    synthetic,
+  });
+  const parentOperations = (authorityContext.operationHistory ?? []).filter(
+    (entry) => entry.operationId === operation.parentOperationId,
+  );
   const [parentOperation] = parentOperations;
   if (parentOperations.length !== 1 || typeof parentOperation?.requestFingerprint !== 'string') {
-    fail('OPERATION_CONFLICT', 'Contained rollback requires the validated parent operation history identity and fingerprint.', {
-      operationId: operation.operationId,
-      parentOperationId: operation.parentOperationId,
-    });
+    fail(
+      'OPERATION_CONFLICT',
+      'Contained rollback requires the validated parent operation history identity and fingerprint.',
+      {
+        operationId: operation.operationId,
+        parentOperationId: operation.parentOperationId,
+      },
+    );
   }
   assertContainedTarget(targetAdapter, operation.target, synthetic, {
-    phase: 'rollback', operationId: operation.parentOperationId,
+    phase: 'rollback',
+    operationId: operation.parentOperationId,
   });
   return targetAdapter.restore({
     operationId: operation.operationId,
@@ -511,10 +714,16 @@ function referenceHost(declaration) {
     inspect(input) {
       const initialInspection = plainExactRecord(input, ['targetAdapter', 'target']);
       const recoveryInspection = plainExactRecord(input, [
-        'targetAdapter', 'target', 'operationId', 'expectedStateHash',
+        'targetAdapter',
+        'target',
+        'operationId',
+        'expectedStateHash',
       ]);
       if (!initialInspection && !recoveryInspection) {
-        fail('OPERATION_CONFLICT', 'Contained target inspection accepts one closed target binding only.');
+        fail(
+          'OPERATION_CONFLICT',
+          'Contained target inspection accepts one closed target binding only.',
+        );
       }
       const { targetAdapter, target, operationId, expectedStateHash } = input;
       assertContainedTarget(targetAdapter, target, declaration.synthetic, {
@@ -522,66 +731,115 @@ function referenceHost(declaration) {
         operationId,
       });
       const snapshot = targetAdapter.read();
-      if ((!recoveryInspection && snapshot.revision !== target.revision)
-        || snapshot.stateHash !== sha256Jcs(snapshot.value)
-        || (recoveryInspection && snapshot.stateHash !== expectedStateHash)) {
-        fail('OPERATION_CONFLICT', 'Contained target inspection must prove the exact current revision and state hash.', {
-          target: target.id,
-        });
+      if (
+        (!recoveryInspection && snapshot.revision !== target.revision) ||
+        snapshot.stateHash !== sha256Jcs(snapshot.value) ||
+        (recoveryInspection && snapshot.stateHash !== expectedStateHash)
+      ) {
+        fail(
+          'OPERATION_CONFLICT',
+          'Contained target inspection must prove the exact current revision and state hash.',
+          {
+            target: target.id,
+          },
+        );
       }
       return freeze(clone(snapshot));
     },
     execute(input) {
-      if (!plainExactRecord(input, [
-        'authorityContext', 'authorityDecision', 'executorInput', 'binding', 'executor', 'targetAdapter',
-      ])) {
-        fail('OPERATION_CONFLICT', 'Contained execute accepts one closed executor invocation envelope only.');
+      if (
+        !plainExactRecord(input, [
+          'authorityContext',
+          'authorityDecision',
+          'executorInput',
+          'binding',
+          'executor',
+          'targetAdapter',
+        ])
+      ) {
+        fail(
+          'OPERATION_CONFLICT',
+          'Contained execute accepts one closed executor invocation envelope only.',
+        );
       }
       return executeContained({ ...input, synthetic: declaration.synthetic });
     },
     rollback(input) {
-      if (!plainExactRecord(input, [
-        'authorityContext', 'authorityDecision', 'executorInput', 'binding', 'executor', 'targetAdapter',
-      ])) {
-        fail('OPERATION_CONFLICT', 'Contained rollback accepts one closed executor invocation envelope only.');
+      if (
+        !plainExactRecord(input, [
+          'authorityContext',
+          'authorityDecision',
+          'executorInput',
+          'binding',
+          'executor',
+          'targetAdapter',
+        ])
+      ) {
+        fail(
+          'OPERATION_CONFLICT',
+          'Contained rollback accepts one closed executor invocation envelope only.',
+        );
       }
       return rollbackContained({ ...input, synthetic: declaration.synthetic });
     },
     reconcile(input) {
-      if (!plainExactRecord(input, [
-        'targetAdapter', 'executorInput', 'binding', 'executor', 'rollbackPlan',
-      ])) {
-        fail('OPERATION_CONFLICT', 'Contained reconciliation accepts one closed exact invocation only.');
+      if (
+        !plainExactRecord(input, [
+          'targetAdapter',
+          'executorInput',
+          'binding',
+          'executor',
+          'rollbackPlan',
+        ])
+      ) {
+        fail(
+          'OPERATION_CONFLICT',
+          'Contained reconciliation accepts one closed exact invocation only.',
+        );
       }
-      const {
-        targetAdapter, executorInput, binding, executor, rollbackPlan,
-      } = input;
+      const { targetAdapter, executorInput, binding, executor, rollbackPlan } = input;
       const operation = executorInput?.operation;
       if ((operation?.operationKind === 'rollback') !== (rollbackPlan !== null)) {
-        fail('ROLLBACK_NOT_ELIGIBLE', 'Contained reconciliation requires the exact rollback plan only for rollback operations.', {
-          operationId: operation?.operationId ?? null,
-        });
+        fail(
+          'ROLLBACK_NOT_ELIGIBLE',
+          'Contained reconciliation requires the exact rollback plan only for rollback operations.',
+          {
+            operationId: operation?.operationId ?? null,
+          },
+        );
       }
       if (rollbackPlan !== null) {
         assertProtocolArtifact('operating-rollback-plan', rollbackPlan, {
           protocolVersion: PROTOCOL_VERSION,
         });
-        if (rollbackPlan.rollbackPlanId !== operation.rollbackPlanId
-          || rollbackPlan.operationId !== operation.parentOperationId) {
-          fail('ROLLBACK_NOT_ELIGIBLE', 'Contained reconciliation rollback plan must bind the exact durable rollback operation.', {
-            operationId: operation.operationId,
-            rollbackPlanId: rollbackPlan.rollbackPlanId,
-          });
+        if (
+          rollbackPlan.rollbackPlanId !== operation.rollbackPlanId ||
+          rollbackPlan.operationId !== operation.parentOperationId
+        ) {
+          fail(
+            'ROLLBACK_NOT_ELIGIBLE',
+            'Contained reconciliation rollback plan must bind the exact durable rollback operation.',
+            {
+              operationId: operation.operationId,
+              rollbackPlanId: rollbackPlan.rollbackPlanId,
+            },
+          );
         }
       }
       assertContainedExecutorInputEnvelopeV2(executorInput, { operation, rollbackPlan });
       const checkedBinding = assertTrustedExecutorBindingV2(binding, { executor });
-      if (!sameIdentity(operation?.connector, checkedBinding.connector)
-        || operation?.executor?.executorId !== checkedBinding.executor.executorId
-        || operation?.executor?.executorVersion !== checkedBinding.executor.executorVersion) {
-        fail('CAPABILITY_DENIED', 'Reconciliation requires the exact host-owned connector binding.', {
-          operationId: operation?.operationId ?? null,
-        });
+      if (
+        !sameIdentity(operation?.connector, checkedBinding.connector) ||
+        operation?.executor?.executorId !== checkedBinding.executor.executorId ||
+        operation?.executor?.executorVersion !== checkedBinding.executor.executorVersion
+      ) {
+        fail(
+          'CAPABILITY_DENIED',
+          'Reconciliation requires the exact host-owned connector binding.',
+          {
+            operationId: operation?.operationId ?? null,
+          },
+        );
       }
       assertContainedTarget(targetAdapter, operation.target, declaration.synthetic, {
         phase: 'reconcile',
@@ -592,8 +850,11 @@ function referenceHost(declaration) {
         operationId: operation.operationId,
         requestFingerprint: operation.requestFingerprint,
       });
-      if (rollbackPlan !== null && response.status === 'not-found'
-        && targetAdapter.read().stateHash !== rollbackPlan.steps[0].expectedTargetHash) {
+      if (
+        rollbackPlan !== null &&
+        response.status === 'not-found' &&
+        targetAdapter.read().stateHash !== rollbackPlan.steps[0].expectedTargetHash
+      ) {
         return freeze({ status: 'unknown', receipt: null });
       }
       return response;
@@ -608,15 +869,24 @@ export function resolveOpenReferenceExecutorHostV2(host) {
   return declaration === undefined ? null : freeze(clone(declaration));
 }
 
-export function findOpenReferenceExecutorHostDeclarationV2({ executorId, executorVersion, implementationId } = {}) {
-  const declaration = REFERENCE_HOST_DECLARATIONS.find((entry) => (
-    entry.executorId === executorId
-    && entry.executorVersion === executorVersion
-    && entry.implementationId === implementationId
-  ));
+export function findOpenReferenceExecutorHostDeclarationV2({
+  executorId,
+  executorVersion,
+  implementationId,
+} = {}) {
+  const declaration = REFERENCE_HOST_DECLARATIONS.find(
+    (entry) =>
+      entry.executorId === executorId &&
+      entry.executorVersion === executorVersion &&
+      entry.implementationId === implementationId,
+  );
   return declaration === undefined ? null : freeze(clone(declaration));
 }
 
-export const OPEN_REFERENCE_PROJECT_EXECUTOR_HOST_V2 = referenceHost(REFERENCE_HOST_DECLARATIONS[0]);
+export const OPEN_REFERENCE_PROJECT_EXECUTOR_HOST_V2 = referenceHost(
+  REFERENCE_HOST_DECLARATIONS[0],
+);
 
-export const OPEN_REFERENCE_CONTAINMENT_EXECUTOR_HOST_V2 = referenceHost(REFERENCE_HOST_DECLARATIONS[1]);
+export const OPEN_REFERENCE_CONTAINMENT_EXECUTOR_HOST_V2 = referenceHost(
+  REFERENCE_HOST_DECLARATIONS[1],
+);

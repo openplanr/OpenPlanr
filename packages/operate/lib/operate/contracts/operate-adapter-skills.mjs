@@ -13,7 +13,10 @@ export function splitSkillMarkdown(markdown) {
     if (index === -1) continue;
     const key = line.slice(0, index).trim();
     let value = line.slice(index + 1).trim();
-    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith('\'') && value.endsWith('\''))) {
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
       value = value.slice(1, -1);
     }
     frontmatter[key] = value;
@@ -44,7 +47,9 @@ export function operateAdapterAssetPaths(clientId) {
   }
   return [
     'adapters/cursor/rules/openplanr-operate.mdc',
-    ...roleSkillNames.map((skillName) => `adapters/cursor/rules/openplanr-${cursorRuleName(skillName)}.mdc`),
+    ...roleSkillNames.map(
+      (skillName) => `adapters/cursor/rules/openplanr-${cursorRuleName(skillName)}.mdc`,
+    ),
     'adapters/cursor/rules/openplanr.mdc',
   ];
 }

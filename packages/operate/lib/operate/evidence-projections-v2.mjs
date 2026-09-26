@@ -20,16 +20,23 @@ function projectionError(message, context = {}) {
 }
 
 function assertScope(scope) {
-  if (!scope || typeof scope !== 'object'
-    || ['scopeId', 'domainId', 'domainVersion'].some((key) => typeof scope[key] !== 'string' || scope[key].length === 0)) {
+  if (
+    !scope ||
+    typeof scope !== 'object' ||
+    ['scopeId', 'domainId', 'domainVersion'].some(
+      (key) => typeof scope[key] !== 'string' || scope[key].length === 0,
+    )
+  ) {
     throw projectionError('An evidence graph requires an explicit scope/domain binding.');
   }
 }
 
 function sameScope(record, scope) {
-  return record.scopeId === scope.scopeId
-    && record.domainId === scope.domainId
-    && record.domainVersion === scope.domainVersion;
+  return (
+    record.scopeId === scope.scopeId &&
+    record.domainId === scope.domainId &&
+    record.domainVersion === scope.domainVersion
+  );
 }
 
 /**
@@ -37,11 +44,17 @@ function sameScope(record, scope) {
  * a pure read-only projection: it creates no Claim or Operating State and
  * cannot modify the supplied runtime projection.
  */
-export function buildOperatingEvidenceGraphV2(state, scope, { generatedAt = state?.generatedAt } = {}) {
+export function buildOperatingEvidenceGraphV2(
+  state,
+  scope,
+  { generatedAt = state?.generatedAt } = {},
+) {
   try {
     assertProtocolArtifact('operating-runtime-state', state, { protocolVersion: PROTOCOL_VERSION });
   } catch (cause) {
-    throw projectionError('An evidence graph requires a valid v2 runtime checkpoint.', { cause: cause.code ?? null });
+    throw projectionError('An evidence graph requires a valid v2 runtime checkpoint.', {
+      cause: cause.code ?? null,
+    });
   }
   assertScope(scope);
   if (typeof generatedAt !== 'string' || Number.isNaN(Date.parse(generatedAt))) {
@@ -62,25 +75,42 @@ export function buildOperatingEvidenceGraphV2(state, scope, { generatedAt = stat
     const evidence = knownRefs.get(edge.evidenceRefId);
     const source = artifacts.get(edge.sourceArtifactId);
     const semanticKey = `${edge.sourceArtifactId}:${edge.localClaimId}:${edge.relation}:${edge.evidenceRefId}`;
-    if (!evidence || !source || !sameScope(source, scope) || !sameScope(evidence, scope)
-      || evidence.sourceArtifactId !== edge.sourceArtifactId || semanticEdges.has(semanticKey)) {
-      throw projectionError('The durable evidence graph contains an unresolved, foreign, or duplicate proof edge.', {
-        edgeId: edge.edgeId,
-      });
+    if (
+      !evidence ||
+      !source ||
+      !sameScope(source, scope) ||
+      !sameScope(evidence, scope) ||
+      evidence.sourceArtifactId !== edge.sourceArtifactId ||
+      semanticEdges.has(semanticKey)
+    ) {
+      throw projectionError(
+        'The durable evidence graph contains an unresolved, foreign, or duplicate proof edge.',
+        {
+          edgeId: edge.edgeId,
+        },
+      );
     }
     semanticEdges.add(semanticKey);
   }
   const graph = {
-    kind: 'operating-evidence-graph', schemaVersion: '1.0.0', protocolVersion: PROTOCOL_VERSION,
-    scopeId: scope.scopeId, domainId: scope.domainId, domainVersion: scope.domainVersion,
+    kind: 'operating-evidence-graph',
+    schemaVersion: '1.0.0',
+    protocolVersion: PROTOCOL_VERSION,
+    scopeId: scope.scopeId,
+    domainId: scope.domainId,
+    domainVersion: scope.domainVersion,
     generatedAt,
     evidenceRefs,
     edges,
   };
   try {
-    assertProtocolArtifact('operating-evidence-graph', graph, { protocolVersion: PROTOCOL_VERSION });
+    assertProtocolArtifact('operating-evidence-graph', graph, {
+      protocolVersion: PROTOCOL_VERSION,
+    });
   } catch (cause) {
-    throw projectionError('The rebuilt evidence graph is not contract-valid.', { cause: cause.code ?? null });
+    throw projectionError('The rebuilt evidence graph is not contract-valid.', {
+      cause: cause.code ?? null,
+    });
   }
   return freeze(graph);
 }
