@@ -238,6 +238,9 @@ generation time. See the [architecture guide](docs/architecture/README.md).
 
 ## Community and license
 
+**Beta:** try OpenPlanr on one real feature and tell us what you'd change in the
+[beta discussion](https://github.com/openplanr/OpenPlanr/discussions/324).
+
 Ask questions and share what you built in
 [Discussions](https://github.com/openplanr/OpenPlanr/discussions); report bugs through the
 [issue forms](https://github.com/openplanr/OpenPlanr/issues/new/choose). [SUPPORT.md](SUPPORT.md)

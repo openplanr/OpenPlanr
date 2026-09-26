@@ -138,3 +138,5 @@ no longer want the planning files.
 - [CLI reference](../packages/cli/docs/CLI.md): every command and option.
 - [Diagrams](diagrams/authoring.md): render and verify diagrams offline.
 - [Host matrix](skills/host-matrix.md): what differs between Claude Code, Codex, and Cursor.
+
+Tried it on a real feature? Tell us what you'd change in the [beta discussion](https://github.com/openplanr/OpenPlanr/discussions/324).
