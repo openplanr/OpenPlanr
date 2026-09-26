@@ -235,6 +235,7 @@ assert.deepEqual(
   [
     'authority-events.mjs',
     'authority.mjs',
+    'event-registry.mjs',
     'evidence-state-events.mjs',
     'evidence-state.mjs',
     'execution.mjs',
@@ -243,7 +244,7 @@ assert.deepEqual(
     'protocol.mjs',
     'workflow-events.mjs',
   ],
-  'the Runtime foundation may expose only its five explicit internal dependency facades and four Event handler modules',
+  'the Runtime foundation may expose only its five explicit internal dependency facades, four Event handler modules, and its Event registry',
 );
 
 assert.equal(

@@ -16,6 +16,12 @@ import { buildExecutiveBoardForCycle } from './executive-board-projection-v2.mjs
 import { OPERATING_INTELLIGENCE_NOT_SELECTED_ABSENCE } from './intelligence-router-v2.mjs';
 import { promotePersistentOperatingActionAuthorityV2 } from './persistent-work-v2.mjs';
 import {
+  assertRuntimeEventParityRules,
+  RUNTIME_EVENT_COLLECTIONS,
+  runtimeEventEntityId,
+  runtimeEventEntry,
+} from './runtime-foundation/event-registry.mjs';
+import {
   assertOperatingExecuteDispatchAuthorityChainV2,
   assertOperatingExecuteOperationV2,
   assertOperatingRollbackAuthorityChainV2,
@@ -690,65 +696,6 @@ function exactReplayEntry(event) {
   };
 }
 
-function expectedEventEntityId(event) {
-  const payload = event.payload;
-  if (event.type === 'planning-delivery.ingested')
-    return payload.deliveryEvidence.deliveryEvidenceId;
-  if (event.type === 'cycle.input-bound') return payload.inputBindingId;
-  if (event.type === 'executive-board.materialized') return payload.boardId;
-  if (event.type.startsWith('assignment.')) return payload.assignmentId;
-  if (event.type === 'artifact.created') return payload.artifactId;
-  if (event.type.startsWith('review.')) return payload.reviewId;
-  if (event.type === 'work-change-set.materialized') return payload.artifactId;
-  if (event.type === 'evidence.resolved') return payload.evidenceRef.evidenceRefId;
-  if (event.type === 'evidence.rejected') return payload.resolution.resolutionId;
-  if (event.type === 'operating-state.materialized') return payload.stateId;
-  if (event.type === 'snapshot.materialized') return payload.snapshotId;
-  if (
-    [
-      'metric.observed',
-      'claim.recorded',
-      'finding.recorded',
-      'risk.recorded',
-      'assumption.recorded',
-      'decision.revised',
-      'delta.derived',
-      'scenario.recorded',
-      'trigger.recorded',
-    ].includes(event.type)
-  ) {
-    const field = {
-      'metric.observed': 'observationId',
-      'claim.recorded': 'claimId',
-      'finding.recorded': 'findingId',
-      'risk.recorded': 'riskId',
-      'assumption.recorded': 'assumptionId',
-      'decision.revised': 'decisionId',
-      'delta.derived': 'deltaId',
-      'scenario.recorded': 'scenarioId',
-      'trigger.recorded': 'triggerId',
-    }[event.type];
-    return payload.record[field];
-  }
-  if (event.type === 'intelligence.plan-recorded') return payload.planId;
-  if (event.type === 'decision-ledger.materialized') return payload.ledgerId;
-  if (event.type === 'verification.plan-recorded') return payload.verificationPlanId;
-  if (event.type === 'outcome.recorded') return payload.outcomeId;
-  if (event.type === 'learning.recorded') return payload.learningId;
-  if (event.type === 'domain-projection.rebuilt') return payload.projectionId;
-  if (event.type === 'policy.evaluated') return payload.evaluationId;
-  if (event.type === 'approval.recorded') return payload.approvalId;
-  if (event.type === 'capability.availability-recorded') return payload.availabilityId;
-  if (event.type === 'capability.granted') return payload.grantId;
-  if (event.type === 'operation.intent-recorded') return payload.operation.operationId;
-  if (event.type === 'execution.result-recorded') return payload.result.resultId;
-  if (event.type === 'rollback.plan-recorded') return payload.rollbackPlanId;
-  if (event.type === 'rollback.result-recorded') return payload.rollbackResultId;
-  if (event.type.startsWith('action.')) return payload.action.actionId;
-  if (event.type.startsWith('cycle.')) return payload.cycleId;
-  return null;
-}
-
 function scopedEventPayloadRecords(value, records = []) {
   if (Array.isArray(value)) {
     for (const entry of value) scopedEventPayloadRecords(entry, records);
@@ -760,41 +707,6 @@ function scopedEventPayloadRecords(value, records = []) {
   for (const entry of Object.values(value)) scopedEventPayloadRecords(entry, records);
   return records;
 }
-
-const EVENT_PARITY_COLLECTIONS = Object.freeze({
-  assignments: ['assignments', 'assignmentId'],
-  artifacts: ['artifacts', 'artifactId'],
-  findings: ['findings', 'findingId'],
-  decisions: ['decisions', 'decisionId'],
-  actions: ['actions', 'actionId'],
-  executiveBoards: ['executiveBoards', 'boardId'],
-  operatingModelStates: ['operatingModelStates', 'stateId'],
-  risks: ['risks', 'riskId'],
-  assumptions: ['assumptions', 'assumptionId'],
-  intelligencePlans: ['intelligencePlans', 'planId'],
-  decisionLedgers: ['decisionLedgers', 'ledgerId'],
-  scenarios: ['scenarios', 'scenarioId'],
-  eventTriggers: ['eventTriggers', 'triggerId'],
-  domainProjections: ['domainProjections', 'projectionId'],
-  policyEvaluations: ['policyEvaluations', 'evaluationId'],
-  approvalRecords: ['approvalRecords', 'approvalId'],
-  capabilityAvailability: ['capabilityAvailability', 'availabilityId'],
-  capabilityGrants: ['capabilityGrants', 'grantId'],
-  governedOperations: ['governedOperations', 'operationId'],
-  rollbackPlans: ['rollbackPlans', 'rollbackPlanId'],
-  evidenceRefs: ['evidenceRefs', 'evidenceRefId'],
-  evidenceResolutions: ['evidenceResolutions', 'resolutionId'],
-  evidenceEdges: ['evidenceEdges', 'edgeId'],
-  snapshots: ['operatingSnapshots', 'snapshotId'],
-  metricObservations: ['metricObservations', 'observationId'],
-  claims: ['claims', 'claimId'],
-  deltas: ['deltas', 'deltaId'],
-  verificationPlans: ['verificationPlans', 'verificationPlanId'],
-  outcomes: ['outcomes', 'outcomeId'],
-  learnings: ['learnings', 'learningId'],
-  executionResults: ['executionResults', 'resultId'],
-  rollbackResults: ['rollbackResults', 'rollbackResultId'],
-});
 
 function scopedRecordKey(record, identityField) {
   return `${record.scopeId}\u0000${record.domainId}\u0000${record.domainVersion}\u0000${record[identityField]}`;
@@ -1040,9 +952,869 @@ function validateOperationIntentAuthority(state, event, derived, promotedActionK
   return intentReplayEntry;
 }
 
+function recordParity({ put }, event, { collection, record }) {
+  put(
+    collection,
+    record.reduce((value, key) => value[key], event.payload),
+  );
+}
+
+function planningDeliveryParity({ state, put }, event) {
+  const payload = event.payload;
+  let reconstructed;
+  try {
+    reconstructed = reconstructOperatingVerificationPlanActionV2({
+      state,
+      event: payload.verificationPlanEvent,
+    });
+  } catch (error) {
+    fail(
+      'E_OPERATE_BINDING_MISMATCH',
+      'Planning delivery evidence cannot reconstruct its original canonical verification plan.',
+      {
+        deliveryEvidenceId: payload.deliveryEvidence?.deliveryEvidenceId ?? null,
+        cause: error.code ?? error.message,
+      },
+    );
+  }
+  const action = state.actions.find(({ actionId }) => actionId === payload.origin.action.id);
+  const decision = state.decisions.find(
+    ({ decisionId }) => decisionId === payload.origin.decision.id,
+  );
+  if (
+    event.actor.kind !== 'runtime' ||
+    event.actor.id !== 'openplanr' ||
+    event.entityId !== payload.deliveryEvidence.deliveryEvidenceId ||
+    event.causationId !== payload.verificationPlanEvent.eventId ||
+    payload.deliveryEvidence.deliveryEvidenceHash !==
+      sha256Jcs(without(payload.deliveryEvidence, 'deliveryEvidenceHash')) ||
+    payload.artifact.canonicalHash !== sha256Jcs(payload.deliveryEvidence) ||
+    payload.evidenceRef.evidenceArtifactId !== payload.artifact.artifactId ||
+    !payload.assignment.inputArtifactIds.includes(payload.artifact.artifactId) ||
+    payload.assignment.assignmentKind !== 'verification' ||
+    payload.assignment.governedOperationId !== null ||
+    payload.assignment.capabilityGrantId !== null ||
+    !action ||
+    action.revision !== payload.origin.action.revision ||
+    action.actionHash !== payload.origin.action.hash ||
+    !decision ||
+    decision.revision !== payload.origin.decision.revision ||
+    sha256Jcs(decision) !== payload.origin.decision.hash ||
+    reconstructed.action.actionId !== action.actionId ||
+    reconstructed.verificationPlan.verificationPlanId !==
+      payload.origin.verification.verificationPlanId ||
+    sha256Jcs(reconstructed.verificationPlan) !==
+      payload.origin.verification.verificationPlanHash ||
+    reconstructed.metric.metricId !== payload.origin.metric.metricId ||
+    sha256Jcs(reconstructed.metric) !== payload.origin.metric.metricHash
+  ) {
+    fail(
+      'E_OPERATE_BINDING_MISMATCH',
+      'Planning delivery Event lost its exact Action, Decision, metric, verification, evidence, or Assignment custody.',
+      {
+        deliveryEvidenceId: payload.deliveryEvidence?.deliveryEvidenceId ?? null,
+      },
+    );
+  }
+  put('assignments', payload.assignment);
+  put('artifacts', payload.artifact);
+  put('evidenceRefs', payload.evidenceRef);
+}
+
+function assignmentLifecycleParity({ derived, submissions, submissionReplay, putGlobal }, event) {
+  const payload = event.payload;
+  const assignmentKey = [...derived.assignments.keys()].find(
+    (key) => derived.assignments.get(key).assignmentId === payload.assignmentId,
+  );
+  const assignment = assignmentKey ? derived.assignments.get(assignmentKey) : null;
+  if (assignment) {
+    const patches = {
+      'assignment.available': {
+        state: 'available',
+        availableAt: event.timestamp,
+        inputArtifactIds: resolveOperatingAssignmentInputArtifactIdsV2(
+          assignment,
+          payload.dependencyProofs ?? [],
+        ),
+        inputAbsences: resolveOperatingAssignmentInputAbsencesV2(assignment, {
+          dependencyProofs: payload.dependencyProofs ?? [],
+          assignments: [...derived.assignments.values()],
+          intelligencePlans: [...derived.intelligencePlans.values()],
+        }),
+      },
+      'assignment.claimed': {
+        state: 'claimed',
+        claim: {
+          actorId: payload.actorId,
+          actorKind: payload.actorKind,
+          runtime: payload.runtime,
+          claimId: payload.claimId,
+        },
+      },
+      'assignment.started': {
+        state: 'running',
+        attemptPolicy: { ...assignment.attemptPolicy, attempt: payload.attempt },
+      },
+      'assignment.submitted': { state: 'submitted' },
+      'assignment.validated': { state: 'validated', completedAt: event.timestamp },
+      'assignment.rejected': { state: 'rejected' },
+      'assignment.abandoned': {
+        state: 'abandoned',
+        completedAt: event.timestamp,
+        terminalOutcome: {
+          outcome: 'abandoned',
+          eventId: event.eventId,
+          code: payload.reasonCode,
+          reason: payload.reason,
+          recoveryDisposition: payload.recoveryDisposition,
+        },
+      },
+      'assignment.failed': {
+        state: 'failed',
+        completedAt: event.timestamp,
+        terminalOutcome: {
+          outcome: 'failed',
+          eventId: event.eventId,
+          code: payload.errorCode,
+          reason: payload.reason,
+          recoveryDisposition: payload.recoveryStatus,
+        },
+      },
+    };
+    if (patches[event.type])
+      derived.assignments.set(assignmentKey, { ...assignment, ...patches[event.type] });
+    if (event.type === 'assignment.claimed') {
+      putGlobal(
+        submissions,
+        payload.submissionId,
+        {
+          kind: 'operating-submission',
+          schemaVersion: '1.0.0',
+          protocolVersion: PROTOCOL_VERSION,
+          submissionId: payload.submissionId,
+          assignmentId: assignment.assignmentId,
+          cycleId: assignment.cycleId,
+          state: 'issued',
+          rawHash: null,
+          canonicalHash: null,
+          sizeBytes: null,
+          artifactId: null,
+          acceptanceEventIds: [],
+          responseData: null,
+          issuedAt: event.timestamp,
+          resolvedAt: null,
+        },
+        'submissions',
+      );
+    }
+    if (event.type === 'assignment.submitted') {
+      const submission = submissions.get(payload.submissionId);
+      if (
+        !submission ||
+        submission.assignmentId !== assignment.assignmentId ||
+        submission.state !== 'issued'
+      ) {
+        fail(
+          'E_OPERATE_BINDING_MISMATCH',
+          'Assignment submission lacks one prior runtime-issued Submission.',
+          { submissionId: payload.submissionId },
+        );
+      }
+      submissions.set(payload.submissionId, {
+        ...submission,
+        rawHash: payload.rawHash,
+        canonicalHash: payload.canonicalHash,
+        sizeBytes: payload.sizeBytes,
+        acceptanceEventIds: [event.eventId],
+      });
+    }
+    if (event.type === 'assignment.validated') {
+      const submission = submissions.get(payload.submissionId);
+      const artifact = [...derived.artifacts.values()].find(
+        ({ artifactId }) => artifactId === payload.artifactId,
+      );
+      if (!submission || !artifact || submission.assignmentId !== assignment.assignmentId) {
+        fail(
+          'E_OPERATE_BINDING_MISMATCH',
+          'Assignment validation lacks its prior Submission and Artifact.',
+          { submissionId: payload.submissionId, artifactId: payload.artifactId },
+        );
+      }
+      const responseData = {
+        accepted: true,
+        artifactId: artifact.artifactId,
+        rawHash: artifact.rawHash,
+        sizeBytes: artifact.sizeBytes,
+        assignmentState: 'validated',
+      };
+      const acceptanceEventIds = [...submission.acceptanceEventIds, event.eventId];
+      submissions.set(payload.submissionId, {
+        ...submission,
+        state: 'accepted',
+        artifactId: artifact.artifactId,
+        acceptanceEventIds,
+        responseData,
+        resolvedAt: event.timestamp,
+      });
+      putGlobal(
+        submissionReplay,
+        payload.submissionId,
+        {
+          submissionId: payload.submissionId,
+          assignmentId: assignment.assignmentId,
+          rawHash: artifact.rawHash,
+          canonicalHash: artifact.canonicalHash,
+          sizeBytes: artifact.sizeBytes,
+          artifactId: artifact.artifactId,
+          acceptanceEventIds,
+          responseData,
+        },
+        'submissionReplayIndex',
+      );
+    }
+    if (event.type === 'assignment.rejected') {
+      const submission = submissions.get(payload.submissionId);
+      if (!submission || submission.assignmentId !== assignment.assignmentId) {
+        fail('E_OPERATE_BINDING_MISMATCH', 'Assignment rejection lacks its prior Submission.', {
+          submissionId: payload.submissionId,
+        });
+      }
+      submissions.set(payload.submissionId, {
+        ...submission,
+        state: 'rejected',
+        acceptanceEventIds: [event.eventId],
+        responseData: {
+          accepted: false,
+          violations: clone(payload.violations),
+          attemptsRemaining: payload.attemptsRemaining,
+        },
+        resolvedAt: event.timestamp,
+      });
+    }
+  }
+}
+
+function artifactParity({ submissions, put }, event) {
+  const payload = event.payload;
+  put('artifacts', payload);
+  const matchingSubmissions = [...submissions.values()].filter(
+    (candidate) =>
+      candidate.assignmentId === payload.assignmentId &&
+      candidate.rawHash === payload.rawHash &&
+      candidate.canonicalHash === payload.canonicalHash &&
+      candidate.sizeBytes === payload.sizeBytes &&
+      candidate.acceptanceEventIds.at(-1) === event.causationId,
+  );
+  if (matchingSubmissions.length > 1) {
+    fail(
+      'E_OPERATE_BINDING_MISMATCH',
+      'Artifact creation has ambiguous prior Submission custody.',
+      { assignmentId: payload.assignmentId, artifactId: payload.artifactId },
+    );
+  }
+  if (matchingSubmissions.length === 1) {
+    const [submission] = matchingSubmissions;
+    submissions.set(submission.submissionId, {
+      ...submission,
+      acceptanceEventIds: [...submission.acceptanceEventIds, event.eventId],
+    });
+  }
+}
+
+function executiveBoardParity({ cycleTransitions, put }, event) {
+  const payload = event.payload;
+  put('executiveBoards', payload);
+  cycleTransitions.set(event.cycleId, { state: 'awaiting_review', updatedAt: event.timestamp });
+}
+
+function workChangeSetParity({ put }, event) {
+  const payload = event.payload;
+  for (const record of payload.findings) put('findings', record);
+  for (const record of payload.decisions) put('decisions', record);
+  for (const record of payload.actions) put('actions', record);
+}
+
+function actionAuthorityParity({ derived, promotedActionKeys }, event) {
+  const payload = event.payload;
+  const key = scopedRecordKey(payload.action, 'actionId');
+  const prior = derived.actions.get(key);
+  let expectedPromotion = null;
+  try {
+    expectedPromotion = promotePersistentOperatingActionAuthorityV2(
+      payload.before,
+      payload.authority,
+    );
+  } catch {
+    expectedPromotion = null;
+  }
+  if (
+    !prior ||
+    sha256Jcs(prior) !== sha256Jcs(payload.before) ||
+    Object.hasOwn(prior, 'revisionId') ||
+    payload.action.revision !== 1 ||
+    payload.action.predecessorRevisionId !== null ||
+    !expectedPromotion ||
+    sha256Jcs(expectedPromotion) !== sha256Jcs(payload.action) ||
+    event.requestHash !==
+      sha256Jcs({
+        contract: 'operating-action-authority-promotion-v2',
+        before: payload.before,
+        authority: payload.authority,
+      }) ||
+    event.actor.kind !== 'engine' ||
+    event.actor.id !== 'openplanr'
+  ) {
+    fail(
+      'E_OPERATE_BINDING_MISMATCH',
+      'Action authority promotion requires one exact prior Event-backed ungoverned Action.',
+      { actionId: payload.action.actionId },
+    );
+  }
+  derived.actions.set(key, clone(payload.action));
+  promotedActionKeys.add(key);
+}
+
+function evidenceResolutionParity({ put }, event) {
+  const payload = event.payload;
+  put('evidenceResolutions', payload.resolution);
+  put('evidenceRefs', payload.evidenceRef);
+  put('artifacts', payload.evidenceArtifact);
+  for (const record of payload.edges) put('evidenceEdges', record);
+}
+
+function verificationPlanParity({ state, derived, put, putCanonicalMetric }, event) {
+  const payload = event.payload;
+  let reconstructed;
+  try {
+    reconstructed = reconstructOperatingVerificationPlanActionV2({ state, event });
+  } catch (error) {
+    fail(
+      'E_OPERATE_BINDING_MISMATCH',
+      'Verification-plan Event cannot reconstruct its exact ledger-derived Action.',
+      {
+        verificationPlanId: payload?.verificationPlanId ?? null,
+        cause: error.code ?? error.message,
+      },
+    );
+  }
+  put('verificationPlans', payload);
+  putCanonicalMetric(reconstructed.metric);
+  const actionKey = scopedRecordKey(reconstructed.action, 'actionId');
+  const prior = derived.actions.get(actionKey);
+  if (prior && sha256Jcs(prior) !== sha256Jcs(reconstructed.action)) {
+    fail(
+      'E_OPERATE_BINDING_MISMATCH',
+      'Verification-plan Event Action conflicts with an earlier Event owner.',
+      {
+        actionId: reconstructed.action.actionId,
+        verificationPlanId: payload.verificationPlanId,
+      },
+    );
+  }
+  if (!prior) derived.actions.set(actionKey, clone(reconstructed.action));
+}
+
+function outcomeParity({ derived, submissions, put }, event) {
+  const payload = event.payload;
+  const sourceArtifact =
+    [...derived.artifacts.values()].find(
+      ({ artifactId }) => artifactId === payload.sourceArtifactId,
+    ) ?? null;
+  const sourceAssignment = sourceArtifact
+    ? ([...derived.assignments.values()].find(
+        ({ assignmentId }) => assignmentId === sourceArtifact.assignmentId,
+      ) ?? null)
+    : null;
+  if (
+    payload.status === 'insufficient-evidence' &&
+    sourceAssignment?.assignmentKind === 'verification'
+  ) {
+    const plan =
+      [...derived.verificationPlans.values()].find(
+        ({ verificationPlanId }) => verificationPlanId === payload.verificationPlanId,
+      ) ?? null;
+    const action =
+      [...derived.actions.values()].find(({ actionId }) => actionId === payload.actionId) ?? null;
+    const source = exactInsufficientEvidenceChain(derived, plan, action, payload);
+    const submission =
+      [...submissions.values()].find(
+        (candidate) => candidate.artifactId === source.artifact.artifactId,
+      ) ?? null;
+    if (
+      event.actor.kind !== 'runtime' ||
+      event.actor.id !== 'openplanr' ||
+      !submission ||
+      submission.state !== 'accepted' ||
+      event.causationId !== submission.acceptanceEventIds.at(-1)
+    ) {
+      fail(
+        'E_OPERATE_BINDING_MISMATCH',
+        'Insufficient-evidence Outcome lacks its exact accepted terminal verification Event chain.',
+        {
+          outcomeId: payload.outcomeId,
+        },
+      );
+    }
+  }
+  put('outcomes', payload);
+}
+
+function learningParity({ derived, submissions, put }, event) {
+  const payload = event.payload;
+  const outcome =
+    [...derived.outcomes.values()].find(({ outcomeId }) => outcomeId === payload.outcomeId) ?? null;
+  const sourceArtifact = outcome
+    ? ([...derived.artifacts.values()].find(
+        ({ artifactId }) => artifactId === outcome.sourceArtifactId,
+      ) ?? null)
+    : null;
+  const sourceAssignment = sourceArtifact
+    ? ([...derived.assignments.values()].find(
+        ({ assignmentId }) => assignmentId === sourceArtifact.assignmentId,
+      ) ?? null)
+    : null;
+  if (
+    outcome?.status === 'insufficient-evidence' &&
+    sourceAssignment?.assignmentKind === 'verification'
+  ) {
+    const plan =
+      [...derived.verificationPlans.values()].find(
+        ({ verificationPlanId }) => verificationPlanId === outcome.verificationPlanId,
+      ) ?? null;
+    const action =
+      [...derived.actions.values()].find(({ actionId }) => actionId === outcome.actionId) ?? null;
+    const source = exactInsufficientEvidenceChain(derived, plan, action, outcome);
+    const submission =
+      [...submissions.values()].find(
+        (candidate) => candidate.artifactId === source.artifact.artifactId,
+      ) ?? null;
+    if (
+      event.actor.kind !== 'runtime' ||
+      event.actor.id !== 'openplanr' ||
+      !submission ||
+      submission.state !== 'accepted' ||
+      event.causationId !== submission.acceptanceEventIds.at(-1) ||
+      payload.sourceArtifactId !== outcome.sourceArtifactId ||
+      payload.createdAt !== event.timestamp ||
+      payload.evidenceRefIds.length !== 0 ||
+      payload.assumptionIds.length !== 0 ||
+      payload.decisionIds.length !== 1 ||
+      payload.decisionIds[0] !== action.sourceDecisionId
+    ) {
+      fail(
+        'E_OPERATE_BINDING_MISMATCH',
+        'Insufficient-evidence Learning lacks its exact accepted Outcome and terminal verification Event chain.',
+        {
+          learningId: payload.learningId,
+        },
+      );
+    }
+  }
+  put('learnings', payload);
+}
+
+function policyEvaluationParity({ put }, event) {
+  const payload = event.payload;
+  if (
+    event.actor.kind !== 'runtime' ||
+    event.actor.id !== 'openplanr' ||
+    event.requestHash !== payload.inputHash ||
+    event.timestamp !== payload.evaluatedAt
+  ) {
+    fail(
+      'E_OPERATE_BINDING_MISMATCH',
+      'Policy evaluation authority requires its exact prior runtime Event.',
+      { evaluationId: payload.evaluationId },
+    );
+  }
+  put('policyEvaluations', payload);
+}
+
+function approvalParity({ put }, event) {
+  const payload = event.payload;
+  if (
+    event.actor.kind !== payload.actor.kind ||
+    event.actor.id !== payload.actor.actorId ||
+    event.timestamp !== payload.issuedAt
+  ) {
+    fail(
+      'E_OPERATE_BINDING_MISMATCH',
+      'Approval authority requires its exact prior actor and issuance Event.',
+      { approvalId: payload.approvalId },
+    );
+  }
+  put('approvalRecords', payload);
+}
+
+function operationIntentParity(
+  { state, derived, submissions, operationReplay, promotedActionKeys, put, putGlobal },
+  event,
+) {
+  const payload = event.payload;
+  const intentReplayEntry = validateOperationIntentAuthority(
+    state,
+    event,
+    derived,
+    promotedActionKeys,
+  );
+  put('governedOperations', payload.operation);
+  putGlobal(
+    operationReplay,
+    payload.operation.operationId,
+    intentReplayEntry,
+    'operationReplayIndex',
+  );
+  const successSubmission = submissions.get(payload.terminal.submissionId);
+  if (
+    !successSubmission ||
+    successSubmission.assignmentId !== payload.operation.assignmentId ||
+    successSubmission.state !== 'issued'
+  ) {
+    fail(
+      'E_OPERATE_BINDING_MISMATCH',
+      'Operation intent lacks its exact runtime-issued success Submission.',
+      { operationId: payload.operation.operationId },
+    );
+  }
+  putGlobal(
+    submissions,
+    payload.terminal.uncertainty.submissionId,
+    {
+      kind: 'operating-submission',
+      schemaVersion: '1.0.0',
+      protocolVersion: PROTOCOL_VERSION,
+      submissionId: payload.terminal.uncertainty.submissionId,
+      assignmentId: payload.operation.assignmentId,
+      cycleId: event.cycleId,
+      state: 'issued',
+      rawHash: null,
+      canonicalHash: null,
+      sizeBytes: null,
+      artifactId: null,
+      acceptanceEventIds: [],
+      responseData: null,
+      issuedAt: event.timestamp,
+      resolvedAt: null,
+    },
+    'submissions',
+  );
+  const grantKey = [...derived.capabilityGrants.keys()].find(
+    (key) => derived.capabilityGrants.get(key).grantId === payload.operation.grantId,
+  );
+  if (!grantKey)
+    fail('E_OPERATE_BINDING_MISMATCH', 'Operation intent lacks one prior exact grant Event.', {
+      operationId: payload.operation.operationId,
+    });
+  const consumedGrant = {
+    ...derived.capabilityGrants.get(grantKey),
+    consumedAt: event.timestamp,
+  };
+  consumedGrant.grantHash = sha256Jcs(without(consumedGrant, 'grantHash'));
+  derived.capabilityGrants.set(grantKey, consumedGrant);
+}
+
+function executionResultParity({ derived, submissions, operationReplay, put }, event) {
+  const payload = event.payload;
+  put('executionResults', payload.result);
+  const operationKey = [...derived.governedOperations.keys()].find(
+    (key) => derived.governedOperations.get(key).operationId === payload.result.operationId,
+  );
+  const operation = operationKey ? derived.governedOperations.get(operationKey) : null;
+  const replay = operationReplay.get(payload.result.operationId);
+  const terminalReservation = ['succeeded', 'partial'].includes(payload.result.status)
+    ? {
+        resultId: replay?.reservedResultId,
+        artifactId: replay?.reservedResultArtifactId,
+        submissionId: replay?.reservedSubmissionId,
+      }
+    : {
+        resultId: replay?.reservedUncertaintyResultId,
+        artifactId: replay?.reservedUncertaintyResultArtifactId,
+        submissionId: replay?.reservedUncertaintySubmissionId,
+      };
+  const assignment = operation
+    ? [...derived.assignments.values()].find(
+        ({ assignmentId }) => assignmentId === operation.assignmentId,
+      )
+    : null;
+  const submission = submissions.get(terminalReservation.submissionId);
+  const artifact = [...derived.artifacts.values()].find(
+    ({ artifactId }) => artifactId === terminalReservation.artifactId,
+  );
+  if (!operation || !replay || operation.state !== 'dispatching' || operation.resultId !== null) {
+    fail(
+      'E_OPERATE_BINDING_MISMATCH',
+      'Execution result lacks one prior dispatching operation and replay owner.',
+      { resultId: payload.result.resultId },
+    );
+  }
+  if (
+    !assignment ||
+    assignment.state !== 'validated' ||
+    !submission ||
+    submission.state !== 'accepted' ||
+    !artifact ||
+    payload.result.resultId !== terminalReservation.resultId ||
+    payload.result.resultArtifactId !== terminalReservation.artifactId
+  ) {
+    fail(
+      'E_OPERATE_BINDING_MISMATCH',
+      'Execution result precedes or diverges from its canonical terminal Assignment, Submission, and Artifact.',
+      { resultId: payload.result.resultId },
+    );
+  }
+  const next = {
+    ...operation,
+    state: payload.result.status,
+    resultId: payload.result.resultId,
+    updatedAt: payload.result.completedAt,
+  };
+  next.operationHash = sha256Jcs(without(next, 'operationHash'));
+  derived.governedOperations.set(operationKey, next);
+  operationReplay.set(operation.operationId, {
+    ...replay,
+    terminalResultId: payload.result.resultId,
+    terminalReceipt: clone(payload.receipt),
+  });
+}
+
+function rollbackResultParity({ derived, submissions, operationReplay, put }, event) {
+  const payload = event.payload;
+  put('rollbackResults', payload);
+  const operationKey = [...derived.governedOperations.keys()].find(
+    (key) => derived.governedOperations.get(key).operationId === payload.rollbackOperationId,
+  );
+  const operation = operationKey ? derived.governedOperations.get(operationKey) : null;
+  const replay = operationReplay.get(payload.rollbackOperationId);
+  const terminalReservation = ['succeeded', 'partial'].includes(payload.status)
+    ? {
+        resultId: replay?.reservedResultId,
+        artifactId: replay?.reservedResultArtifactId,
+        submissionId: replay?.reservedSubmissionId,
+      }
+    : {
+        resultId: replay?.reservedUncertaintyResultId,
+        artifactId: replay?.reservedUncertaintyResultArtifactId,
+        submissionId: replay?.reservedUncertaintySubmissionId,
+      };
+  const assignment = operation
+    ? [...derived.assignments.values()].find(
+        ({ assignmentId }) => assignmentId === operation.assignmentId,
+      )
+    : null;
+  const submission = submissions.get(terminalReservation.submissionId);
+  const artifact = [...derived.artifacts.values()].find(
+    ({ artifactId }) => artifactId === terminalReservation.artifactId,
+  );
+  if (
+    !operation ||
+    !replay ||
+    operation.operationKind !== 'rollback' ||
+    operation.state !== 'dispatching' ||
+    operation.resultId !== null
+  ) {
+    fail(
+      'E_OPERATE_BINDING_MISMATCH',
+      'Rollback result lacks one prior dispatching rollback operation and replay owner.',
+      { rollbackResultId: payload.rollbackResultId },
+    );
+  }
+  if (
+    !assignment ||
+    assignment.state !== 'validated' ||
+    !submission ||
+    submission.state !== 'accepted' ||
+    !artifact ||
+    payload.rollbackResultId !== terminalReservation.resultId ||
+    payload.resultArtifactId !== terminalReservation.artifactId
+  ) {
+    fail(
+      'E_OPERATE_BINDING_MISMATCH',
+      'Rollback result precedes or diverges from its canonical terminal Assignment, Submission, and Artifact.',
+      { rollbackResultId: payload.rollbackResultId },
+    );
+  }
+  const next = {
+    ...operation,
+    state: payload.status,
+    resultId: payload.rollbackResultId,
+    updatedAt: payload.completedAt,
+  };
+  next.operationHash = sha256Jcs(without(next, 'operationHash'));
+  derived.governedOperations.set(operationKey, next);
+  operationReplay.set(operation.operationId, {
+    ...replay,
+    terminalResultId: payload.rollbackResultId,
+    terminalReceipt: null,
+  });
+}
+
+function reviewCreatedParity({ reviews }, event) {
+  const payload = event.payload;
+  const key = `${event.cycleId}\u0000${payload.reviewId}`;
+  if (reviews.has(key))
+    fail(
+      'E_OPERATE_BINDING_MISMATCH',
+      'Review lifecycle contains duplicate canonical creation Events.',
+      { reviewId: payload.reviewId },
+    );
+  reviews.set(key, clone(payload));
+}
+
+function reviewSubmittedParity({ derived, cycleTransitions, reviews, cycles }, event) {
+  const cycle = cycles.get(event.cycleId);
+  const payload = event.payload;
+  const key = `${event.cycleId}\u0000${payload.reviewId}`;
+  const record = reviews.get(key);
+  if (record) {
+    if (record.state !== 'pending')
+      fail(
+        'E_OPERATE_BINDING_MISMATCH',
+        'Review lifecycle contains a non-contiguous canonical submission Event.',
+        { reviewId: payload.reviewId },
+      );
+    reviews.set(key, {
+      ...record,
+      state: payload.disposition,
+      disposition: payload.disposition,
+      workDispositions: clone(payload.workDispositions),
+      updatedAt: event.timestamp,
+    });
+    if (payload.disposition === 'approved' && record.subject?.type === 'cycle') {
+      let projected;
+      try {
+        projected = applyOperatingReviewWorkDispositionsV2({
+          cycle,
+          findings: [...derived.findings.values()],
+          decisions: [...derived.decisions.values()],
+          actions: [...derived.actions.values()],
+          workDispositions: payload.workDispositions,
+          timestamp: event.timestamp,
+          reviewOwnerActorId: event.actor.id,
+        });
+      } catch (error) {
+        fail(
+          'E_OPERATE_BINDING_MISMATCH',
+          'Approved Review work dispositions do not match canonical Cycle closure semantics.',
+          {
+            reviewId: payload.reviewId,
+            cause: error.code ?? error.message,
+          },
+        );
+      }
+      derived.findings = new Map(
+        projected.findings.map((entry) => [scopedRecordKey(entry, 'findingId'), entry]),
+      );
+      derived.decisions = new Map(
+        projected.decisions.map((entry) => [scopedRecordKey(entry, 'decisionId'), entry]),
+      );
+      derived.actions = new Map(
+        projected.actions.map((entry) => [scopedRecordKey(entry, 'actionId'), entry]),
+      );
+    }
+    if (record.subject?.type === 'cycle') {
+      const priorCycle = cycleTransitions.get(event.cycleId);
+      if (!priorCycle || priorCycle.state !== 'awaiting_review') {
+        fail(
+          'E_OPERATE_BINDING_MISMATCH',
+          'Cycle Review submission lacks one canonical awaiting-review predecessor.',
+          {
+            reviewId: payload.reviewId,
+            cycleId: event.cycleId,
+          },
+        );
+      }
+      cycleTransitions.set(event.cycleId, {
+        state: payload.disposition === 'approved' ? 'closed' : priorCycle.state,
+        updatedAt: event.timestamp,
+      });
+    }
+  }
+}
+
+function actionLifecycleParity({ derived, actionTransitions, cycles }, event) {
+  const cycle = cycles.get(event.cycleId);
+  const payload = event.payload;
+  if (
+    event.type === 'action.approved' &&
+    (event.actor.kind !== 'engine' || event.actor.id !== 'openplanr')
+  ) {
+    fail(
+      'E_OPERATE_BINDING_MISMATCH',
+      'Action approval requires its exact prior governance Event.',
+      { actionId: payload.action.actionId },
+    );
+  }
+  const key = `${cycle.scopeId}\u0000${cycle.domainId}\u0000${cycle.domainVersion}\u0000${payload.action.actionId}`;
+  const current = derived.actions.get(key);
+  if (current) {
+    if (
+      current.revision !== payload.action.revision ||
+      current.actionHash !== payload.action.actionHash ||
+      current.state !== payload.from
+    ) {
+      fail(
+        'E_OPERATE_BINDING_MISMATCH',
+        'Action Event lineage diverges from its canonical projected record.',
+        { eventId: event.eventId, actionId: payload.action.actionId },
+      );
+    }
+    derived.actions.set(key, { ...current, state: payload.to, updatedAt: event.timestamp });
+  }
+  const previous = actionTransitions.get(key);
+  if (previous && previous.state !== payload.from)
+    fail(
+      'E_OPERATE_BINDING_MISMATCH',
+      'Action lifecycle contains non-contiguous canonical transition Events.',
+      { actionId: payload.action.actionId, eventId: event.eventId },
+    );
+  actionTransitions.set(key, {
+    ...clone(payload.action),
+    state: payload.to,
+    updatedAt: event.timestamp,
+  });
+}
+
+function cycleLifecycleParity({ cycleTransitions }, event) {
+  const payload = event.payload;
+  const previous = cycleTransitions.get(event.cycleId);
+  if (previous && previous.state !== payload.from)
+    fail(
+      'E_OPERATE_BINDING_MISMATCH',
+      'Cycle lifecycle contains non-contiguous canonical transition Events.',
+      { cycleId: event.cycleId, eventId: event.eventId },
+    );
+  cycleTransitions.set(event.cycleId, { state: payload.to, updatedAt: event.timestamp });
+}
+
+/** Parity rule name, as the runtime Event registry names it → rule. */
+const EVENT_PARITY_RULES = Object.freeze({
+  record: recordParity,
+  'planning-delivery': planningDeliveryParity,
+  'assignment-lifecycle': assignmentLifecycleParity,
+  artifact: artifactParity,
+  'executive-board': executiveBoardParity,
+  'work-change-set': workChangeSetParity,
+  'action-authority': actionAuthorityParity,
+  'evidence-resolution': evidenceResolutionParity,
+  'verification-plan': verificationPlanParity,
+  outcome: outcomeParity,
+  learning: learningParity,
+  'policy-evaluation': policyEvaluationParity,
+  approval: approvalParity,
+  'operation-intent': operationIntentParity,
+  'execution-result': executionResultParity,
+  'rollback-result': rollbackResultParity,
+  'review-created': reviewCreatedParity,
+  'review-submitted': reviewSubmittedParity,
+  'action-lifecycle': actionLifecycleParity,
+  'cycle-lifecycle': cycleLifecycleParity,
+});
+assertRuntimeEventParityRules(Object.keys(EVENT_PARITY_RULES));
+
 function validateProjectedStateEventParity(state, events, cycles, baseState = null) {
   const derived = Object.fromEntries(
-    Object.keys(EVENT_PARITY_COLLECTIONS).map((name) => [name, new Map()]),
+    Object.keys(RUNTIME_EVENT_COLLECTIONS).map((name) => [name, new Map()]),
   );
   const canonicalMetrics = new Map();
   const submissions = new Map();
@@ -1053,13 +1825,13 @@ function validateProjectedStateEventParity(state, events, cycles, baseState = nu
   const reviews = new Map();
   const promotedActionKeys = new Set();
   const put = (name, record) => {
-    const [, identityField] = EVENT_PARITY_COLLECTIONS[name];
+    const [, identityField] = RUNTIME_EVENT_COLLECTIONS[name];
     const key = scopedRecordKey(record, identityField);
     if (derived[name].has(key))
       fail(
         'E_OPERATE_BINDING_MISMATCH',
         'Canonical Event history duplicates one immutable full-record identity.',
-        { collection: EVENT_PARITY_COLLECTIONS[name][0], identity: record[identityField] },
+        { collection: RUNTIME_EVENT_COLLECTIONS[name][0], identity: record[identityField] },
       );
     derived[name].set(key, clone(record));
   };
@@ -1087,7 +1859,7 @@ function validateProjectedStateEventParity(state, events, cycles, baseState = nu
     if (!prior) canonicalMetrics.set(key, clone(metric));
   };
   if (baseState !== null) {
-    for (const [name, [stateField, identityField]] of Object.entries(EVENT_PARITY_COLLECTIONS)) {
+    for (const [name, [stateField, identityField]] of Object.entries(RUNTIME_EVENT_COLLECTIONS)) {
       for (const record of baseState[stateField] ?? []) {
         const key = scopedRecordKey(record, identityField);
         if (derived[name].has(key)) {
@@ -1130,823 +1902,26 @@ function validateProjectedStateEventParity(state, events, cycles, baseState = nu
       reviews.set(`${review.cycleId}\u0000${review.reviewId}`, clone(review));
     }
   }
+  const parity = {
+    state,
+    cycles,
+    derived,
+    submissions,
+    submissionReplay,
+    operationReplay,
+    actionTransitions,
+    cycleTransitions,
+    reviews,
+    promotedActionKeys,
+    put,
+    putGlobal,
+    putCanonicalMetric,
+  };
   for (const event of events) {
-    const cycle = cycles.get(event.cycleId);
-    const payload = event.payload;
-    if (event.type === 'planning-delivery.ingested') {
-      let reconstructed;
-      try {
-        reconstructed = reconstructOperatingVerificationPlanActionV2({
-          state,
-          event: payload.verificationPlanEvent,
-        });
-      } catch (error) {
-        fail(
-          'E_OPERATE_BINDING_MISMATCH',
-          'Planning delivery evidence cannot reconstruct its original canonical verification plan.',
-          {
-            deliveryEvidenceId: payload.deliveryEvidence?.deliveryEvidenceId ?? null,
-            cause: error.code ?? error.message,
-          },
-        );
-      }
-      const action = state.actions.find(({ actionId }) => actionId === payload.origin.action.id);
-      const decision = state.decisions.find(
-        ({ decisionId }) => decisionId === payload.origin.decision.id,
-      );
-      if (
-        event.actor.kind !== 'runtime' ||
-        event.actor.id !== 'openplanr' ||
-        event.entityId !== payload.deliveryEvidence.deliveryEvidenceId ||
-        event.causationId !== payload.verificationPlanEvent.eventId ||
-        payload.deliveryEvidence.deliveryEvidenceHash !==
-          sha256Jcs(without(payload.deliveryEvidence, 'deliveryEvidenceHash')) ||
-        payload.artifact.canonicalHash !== sha256Jcs(payload.deliveryEvidence) ||
-        payload.evidenceRef.evidenceArtifactId !== payload.artifact.artifactId ||
-        !payload.assignment.inputArtifactIds.includes(payload.artifact.artifactId) ||
-        payload.assignment.assignmentKind !== 'verification' ||
-        payload.assignment.governedOperationId !== null ||
-        payload.assignment.capabilityGrantId !== null ||
-        !action ||
-        action.revision !== payload.origin.action.revision ||
-        action.actionHash !== payload.origin.action.hash ||
-        !decision ||
-        decision.revision !== payload.origin.decision.revision ||
-        sha256Jcs(decision) !== payload.origin.decision.hash ||
-        reconstructed.action.actionId !== action.actionId ||
-        reconstructed.verificationPlan.verificationPlanId !==
-          payload.origin.verification.verificationPlanId ||
-        sha256Jcs(reconstructed.verificationPlan) !==
-          payload.origin.verification.verificationPlanHash ||
-        reconstructed.metric.metricId !== payload.origin.metric.metricId ||
-        sha256Jcs(reconstructed.metric) !== payload.origin.metric.metricHash
-      ) {
-        fail(
-          'E_OPERATE_BINDING_MISMATCH',
-          'Planning delivery Event lost its exact Action, Decision, metric, verification, evidence, or Assignment custody.',
-          {
-            deliveryEvidenceId: payload.deliveryEvidence?.deliveryEvidenceId ?? null,
-          },
-        );
-      }
-      put('assignments', payload.assignment);
-      put('artifacts', payload.artifact);
-      put('evidenceRefs', payload.evidenceRef);
-    }
-    if (event.type === 'assignment.created') put('assignments', payload);
-    if (event.type.startsWith('assignment.') && event.type !== 'assignment.created') {
-      const assignmentKey = [...derived.assignments.keys()].find(
-        (key) => derived.assignments.get(key).assignmentId === payload.assignmentId,
-      );
-      const assignment = assignmentKey ? derived.assignments.get(assignmentKey) : null;
-      if (assignment) {
-        const patches = {
-          'assignment.available': {
-            state: 'available',
-            availableAt: event.timestamp,
-            inputArtifactIds: resolveOperatingAssignmentInputArtifactIdsV2(
-              assignment,
-              payload.dependencyProofs ?? [],
-            ),
-            inputAbsences: resolveOperatingAssignmentInputAbsencesV2(assignment, {
-              dependencyProofs: payload.dependencyProofs ?? [],
-              assignments: [...derived.assignments.values()],
-              intelligencePlans: [...derived.intelligencePlans.values()],
-            }),
-          },
-          'assignment.claimed': {
-            state: 'claimed',
-            claim: {
-              actorId: payload.actorId,
-              actorKind: payload.actorKind,
-              runtime: payload.runtime,
-              claimId: payload.claimId,
-            },
-          },
-          'assignment.started': {
-            state: 'running',
-            attemptPolicy: { ...assignment.attemptPolicy, attempt: payload.attempt },
-          },
-          'assignment.submitted': { state: 'submitted' },
-          'assignment.validated': { state: 'validated', completedAt: event.timestamp },
-          'assignment.rejected': { state: 'rejected' },
-          'assignment.abandoned': {
-            state: 'abandoned',
-            completedAt: event.timestamp,
-            terminalOutcome: {
-              outcome: 'abandoned',
-              eventId: event.eventId,
-              code: payload.reasonCode,
-              reason: payload.reason,
-              recoveryDisposition: payload.recoveryDisposition,
-            },
-          },
-          'assignment.failed': {
-            state: 'failed',
-            completedAt: event.timestamp,
-            terminalOutcome: {
-              outcome: 'failed',
-              eventId: event.eventId,
-              code: payload.errorCode,
-              reason: payload.reason,
-              recoveryDisposition: payload.recoveryStatus,
-            },
-          },
-        };
-        if (patches[event.type])
-          derived.assignments.set(assignmentKey, { ...assignment, ...patches[event.type] });
-        if (event.type === 'assignment.claimed') {
-          putGlobal(
-            submissions,
-            payload.submissionId,
-            {
-              kind: 'operating-submission',
-              schemaVersion: '1.0.0',
-              protocolVersion: PROTOCOL_VERSION,
-              submissionId: payload.submissionId,
-              assignmentId: assignment.assignmentId,
-              cycleId: assignment.cycleId,
-              state: 'issued',
-              rawHash: null,
-              canonicalHash: null,
-              sizeBytes: null,
-              artifactId: null,
-              acceptanceEventIds: [],
-              responseData: null,
-              issuedAt: event.timestamp,
-              resolvedAt: null,
-            },
-            'submissions',
-          );
-        }
-        if (event.type === 'assignment.submitted') {
-          const submission = submissions.get(payload.submissionId);
-          if (
-            !submission ||
-            submission.assignmentId !== assignment.assignmentId ||
-            submission.state !== 'issued'
-          ) {
-            fail(
-              'E_OPERATE_BINDING_MISMATCH',
-              'Assignment submission lacks one prior runtime-issued Submission.',
-              { submissionId: payload.submissionId },
-            );
-          }
-          submissions.set(payload.submissionId, {
-            ...submission,
-            rawHash: payload.rawHash,
-            canonicalHash: payload.canonicalHash,
-            sizeBytes: payload.sizeBytes,
-            acceptanceEventIds: [event.eventId],
-          });
-        }
-        if (event.type === 'assignment.validated') {
-          const submission = submissions.get(payload.submissionId);
-          const artifact = [...derived.artifacts.values()].find(
-            ({ artifactId }) => artifactId === payload.artifactId,
-          );
-          if (!submission || !artifact || submission.assignmentId !== assignment.assignmentId) {
-            fail(
-              'E_OPERATE_BINDING_MISMATCH',
-              'Assignment validation lacks its prior Submission and Artifact.',
-              { submissionId: payload.submissionId, artifactId: payload.artifactId },
-            );
-          }
-          const responseData = {
-            accepted: true,
-            artifactId: artifact.artifactId,
-            rawHash: artifact.rawHash,
-            sizeBytes: artifact.sizeBytes,
-            assignmentState: 'validated',
-          };
-          const acceptanceEventIds = [...submission.acceptanceEventIds, event.eventId];
-          submissions.set(payload.submissionId, {
-            ...submission,
-            state: 'accepted',
-            artifactId: artifact.artifactId,
-            acceptanceEventIds,
-            responseData,
-            resolvedAt: event.timestamp,
-          });
-          putGlobal(
-            submissionReplay,
-            payload.submissionId,
-            {
-              submissionId: payload.submissionId,
-              assignmentId: assignment.assignmentId,
-              rawHash: artifact.rawHash,
-              canonicalHash: artifact.canonicalHash,
-              sizeBytes: artifact.sizeBytes,
-              artifactId: artifact.artifactId,
-              acceptanceEventIds,
-              responseData,
-            },
-            'submissionReplayIndex',
-          );
-        }
-        if (event.type === 'assignment.rejected') {
-          const submission = submissions.get(payload.submissionId);
-          if (!submission || submission.assignmentId !== assignment.assignmentId) {
-            fail('E_OPERATE_BINDING_MISMATCH', 'Assignment rejection lacks its prior Submission.', {
-              submissionId: payload.submissionId,
-            });
-          }
-          submissions.set(payload.submissionId, {
-            ...submission,
-            state: 'rejected',
-            acceptanceEventIds: [event.eventId],
-            responseData: {
-              accepted: false,
-              violations: clone(payload.violations),
-              attemptsRemaining: payload.attemptsRemaining,
-            },
-            resolvedAt: event.timestamp,
-          });
-        }
-      }
-    }
-    if (event.type === 'artifact.created') {
-      put('artifacts', payload);
-      const matchingSubmissions = [...submissions.values()].filter(
-        (candidate) =>
-          candidate.assignmentId === payload.assignmentId &&
-          candidate.rawHash === payload.rawHash &&
-          candidate.canonicalHash === payload.canonicalHash &&
-          candidate.sizeBytes === payload.sizeBytes &&
-          candidate.acceptanceEventIds.at(-1) === event.causationId,
-      );
-      if (matchingSubmissions.length > 1) {
-        fail(
-          'E_OPERATE_BINDING_MISMATCH',
-          'Artifact creation has ambiguous prior Submission custody.',
-          { assignmentId: payload.assignmentId, artifactId: payload.artifactId },
-        );
-      }
-      if (matchingSubmissions.length === 1) {
-        const [submission] = matchingSubmissions;
-        submissions.set(submission.submissionId, {
-          ...submission,
-          acceptanceEventIds: [...submission.acceptanceEventIds, event.eventId],
-        });
-      }
-    }
-    if (event.type === 'executive-board.materialized') {
-      put('executiveBoards', payload);
-      cycleTransitions.set(event.cycleId, { state: 'awaiting_review', updatedAt: event.timestamp });
-    }
-    if (event.type === 'work-change-set.materialized') {
-      for (const record of payload.findings) put('findings', record);
-      for (const record of payload.decisions) put('decisions', record);
-      for (const record of payload.actions) put('actions', record);
-    }
-    if (event.type === 'action.authority-promoted') {
-      const key = scopedRecordKey(payload.action, 'actionId');
-      const prior = derived.actions.get(key);
-      let expectedPromotion = null;
-      try {
-        expectedPromotion = promotePersistentOperatingActionAuthorityV2(
-          payload.before,
-          payload.authority,
-        );
-      } catch {
-        expectedPromotion = null;
-      }
-      if (
-        !prior ||
-        sha256Jcs(prior) !== sha256Jcs(payload.before) ||
-        Object.hasOwn(prior, 'revisionId') ||
-        payload.action.revision !== 1 ||
-        payload.action.predecessorRevisionId !== null ||
-        !expectedPromotion ||
-        sha256Jcs(expectedPromotion) !== sha256Jcs(payload.action) ||
-        event.requestHash !==
-          sha256Jcs({
-            contract: 'operating-action-authority-promotion-v2',
-            before: payload.before,
-            authority: payload.authority,
-          }) ||
-        event.actor.kind !== 'engine' ||
-        event.actor.id !== 'openplanr'
-      ) {
-        fail(
-          'E_OPERATE_BINDING_MISMATCH',
-          'Action authority promotion requires one exact prior Event-backed ungoverned Action.',
-          { actionId: payload.action.actionId },
-        );
-      }
-      derived.actions.set(key, clone(payload.action));
-      promotedActionKeys.add(key);
-    }
-    if (event.type === 'evidence.resolved') {
-      put('evidenceResolutions', payload.resolution);
-      put('evidenceRefs', payload.evidenceRef);
-      put('artifacts', payload.evidenceArtifact);
-      for (const record of payload.edges) put('evidenceEdges', record);
-    }
-    if (event.type === 'evidence.rejected') put('evidenceResolutions', payload.resolution);
-    if (event.type === 'operating-state.materialized') put('operatingModelStates', payload);
-    if (event.type === 'snapshot.materialized') put('snapshots', payload);
-    if (event.type === 'metric.observed') put('metricObservations', payload.record);
-    if (event.type === 'claim.recorded') put('claims', payload.record);
-    if (event.type === 'finding.recorded') put('findings', payload.record);
-    if (event.type === 'risk.recorded') put('risks', payload.record);
-    if (event.type === 'assumption.recorded') put('assumptions', payload.record);
-    if (event.type === 'decision.revised') put('decisions', payload.record);
-    if (event.type === 'delta.derived') put('deltas', payload.record);
-    if (event.type === 'intelligence.plan-recorded') put('intelligencePlans', payload);
-    if (event.type === 'decision-ledger.materialized') put('decisionLedgers', payload);
-    if (event.type === 'verification.plan-recorded') {
-      let reconstructed;
-      try {
-        reconstructed = reconstructOperatingVerificationPlanActionV2({ state, event });
-      } catch (error) {
-        fail(
-          'E_OPERATE_BINDING_MISMATCH',
-          'Verification-plan Event cannot reconstruct its exact ledger-derived Action.',
-          {
-            verificationPlanId: payload?.verificationPlanId ?? null,
-            cause: error.code ?? error.message,
-          },
-        );
-      }
-      put('verificationPlans', payload);
-      putCanonicalMetric(reconstructed.metric);
-      const actionKey = scopedRecordKey(reconstructed.action, 'actionId');
-      const prior = derived.actions.get(actionKey);
-      if (prior && sha256Jcs(prior) !== sha256Jcs(reconstructed.action)) {
-        fail(
-          'E_OPERATE_BINDING_MISMATCH',
-          'Verification-plan Event Action conflicts with an earlier Event owner.',
-          {
-            actionId: reconstructed.action.actionId,
-            verificationPlanId: payload.verificationPlanId,
-          },
-        );
-      }
-      if (!prior) derived.actions.set(actionKey, clone(reconstructed.action));
-    }
-    if (event.type === 'outcome.recorded') {
-      const sourceArtifact =
-        [...derived.artifacts.values()].find(
-          ({ artifactId }) => artifactId === payload.sourceArtifactId,
-        ) ?? null;
-      const sourceAssignment = sourceArtifact
-        ? ([...derived.assignments.values()].find(
-            ({ assignmentId }) => assignmentId === sourceArtifact.assignmentId,
-          ) ?? null)
-        : null;
-      if (
-        payload.status === 'insufficient-evidence' &&
-        sourceAssignment?.assignmentKind === 'verification'
-      ) {
-        const plan =
-          [...derived.verificationPlans.values()].find(
-            ({ verificationPlanId }) => verificationPlanId === payload.verificationPlanId,
-          ) ?? null;
-        const action =
-          [...derived.actions.values()].find(({ actionId }) => actionId === payload.actionId) ??
-          null;
-        const source = exactInsufficientEvidenceChain(derived, plan, action, payload);
-        const submission =
-          [...submissions.values()].find(
-            (candidate) => candidate.artifactId === source.artifact.artifactId,
-          ) ?? null;
-        if (
-          event.actor.kind !== 'runtime' ||
-          event.actor.id !== 'openplanr' ||
-          !submission ||
-          submission.state !== 'accepted' ||
-          event.causationId !== submission.acceptanceEventIds.at(-1)
-        ) {
-          fail(
-            'E_OPERATE_BINDING_MISMATCH',
-            'Insufficient-evidence Outcome lacks its exact accepted terminal verification Event chain.',
-            {
-              outcomeId: payload.outcomeId,
-            },
-          );
-        }
-      }
-      put('outcomes', payload);
-    }
-    if (event.type === 'learning.recorded') {
-      const outcome =
-        [...derived.outcomes.values()].find(({ outcomeId }) => outcomeId === payload.outcomeId) ??
-        null;
-      const sourceArtifact = outcome
-        ? ([...derived.artifacts.values()].find(
-            ({ artifactId }) => artifactId === outcome.sourceArtifactId,
-          ) ?? null)
-        : null;
-      const sourceAssignment = sourceArtifact
-        ? ([...derived.assignments.values()].find(
-            ({ assignmentId }) => assignmentId === sourceArtifact.assignmentId,
-          ) ?? null)
-        : null;
-      if (
-        outcome?.status === 'insufficient-evidence' &&
-        sourceAssignment?.assignmentKind === 'verification'
-      ) {
-        const plan =
-          [...derived.verificationPlans.values()].find(
-            ({ verificationPlanId }) => verificationPlanId === outcome.verificationPlanId,
-          ) ?? null;
-        const action =
-          [...derived.actions.values()].find(({ actionId }) => actionId === outcome.actionId) ??
-          null;
-        const source = exactInsufficientEvidenceChain(derived, plan, action, outcome);
-        const submission =
-          [...submissions.values()].find(
-            (candidate) => candidate.artifactId === source.artifact.artifactId,
-          ) ?? null;
-        if (
-          event.actor.kind !== 'runtime' ||
-          event.actor.id !== 'openplanr' ||
-          !submission ||
-          submission.state !== 'accepted' ||
-          event.causationId !== submission.acceptanceEventIds.at(-1) ||
-          payload.sourceArtifactId !== outcome.sourceArtifactId ||
-          payload.createdAt !== event.timestamp ||
-          payload.evidenceRefIds.length !== 0 ||
-          payload.assumptionIds.length !== 0 ||
-          payload.decisionIds.length !== 1 ||
-          payload.decisionIds[0] !== action.sourceDecisionId
-        ) {
-          fail(
-            'E_OPERATE_BINDING_MISMATCH',
-            'Insufficient-evidence Learning lacks its exact accepted Outcome and terminal verification Event chain.',
-            {
-              learningId: payload.learningId,
-            },
-          );
-        }
-      }
-      put('learnings', payload);
-    }
-    if (event.type === 'scenario.recorded') put('scenarios', payload.record);
-    if (event.type === 'trigger.recorded') put('eventTriggers', payload.record);
-    if (event.type === 'domain-projection.rebuilt') put('domainProjections', payload);
-    if (event.type === 'policy.evaluated') {
-      if (
-        event.actor.kind !== 'runtime' ||
-        event.actor.id !== 'openplanr' ||
-        event.requestHash !== payload.inputHash ||
-        event.timestamp !== payload.evaluatedAt
-      ) {
-        fail(
-          'E_OPERATE_BINDING_MISMATCH',
-          'Policy evaluation authority requires its exact prior runtime Event.',
-          { evaluationId: payload.evaluationId },
-        );
-      }
-      put('policyEvaluations', payload);
-    }
-    if (event.type === 'approval.recorded') {
-      if (
-        event.actor.kind !== payload.actor.kind ||
-        event.actor.id !== payload.actor.actorId ||
-        event.timestamp !== payload.issuedAt
-      ) {
-        fail(
-          'E_OPERATE_BINDING_MISMATCH',
-          'Approval authority requires its exact prior actor and issuance Event.',
-          { approvalId: payload.approvalId },
-        );
-      }
-      put('approvalRecords', payload);
-    }
-    if (event.type === 'capability.availability-recorded') put('capabilityAvailability', payload);
-    if (event.type === 'capability.granted') put('capabilityGrants', payload);
-    if (event.type === 'operation.intent-recorded') {
-      const intentReplayEntry = validateOperationIntentAuthority(
-        state,
-        event,
-        derived,
-        promotedActionKeys,
-      );
-      put('governedOperations', payload.operation);
-      putGlobal(
-        operationReplay,
-        payload.operation.operationId,
-        intentReplayEntry,
-        'operationReplayIndex',
-      );
-      const successSubmission = submissions.get(payload.terminal.submissionId);
-      if (
-        !successSubmission ||
-        successSubmission.assignmentId !== payload.operation.assignmentId ||
-        successSubmission.state !== 'issued'
-      ) {
-        fail(
-          'E_OPERATE_BINDING_MISMATCH',
-          'Operation intent lacks its exact runtime-issued success Submission.',
-          { operationId: payload.operation.operationId },
-        );
-      }
-      putGlobal(
-        submissions,
-        payload.terminal.uncertainty.submissionId,
-        {
-          kind: 'operating-submission',
-          schemaVersion: '1.0.0',
-          protocolVersion: PROTOCOL_VERSION,
-          submissionId: payload.terminal.uncertainty.submissionId,
-          assignmentId: payload.operation.assignmentId,
-          cycleId: event.cycleId,
-          state: 'issued',
-          rawHash: null,
-          canonicalHash: null,
-          sizeBytes: null,
-          artifactId: null,
-          acceptanceEventIds: [],
-          responseData: null,
-          issuedAt: event.timestamp,
-          resolvedAt: null,
-        },
-        'submissions',
-      );
-      const grantKey = [...derived.capabilityGrants.keys()].find(
-        (key) => derived.capabilityGrants.get(key).grantId === payload.operation.grantId,
-      );
-      if (!grantKey)
-        fail('E_OPERATE_BINDING_MISMATCH', 'Operation intent lacks one prior exact grant Event.', {
-          operationId: payload.operation.operationId,
-        });
-      const consumedGrant = {
-        ...derived.capabilityGrants.get(grantKey),
-        consumedAt: event.timestamp,
-      };
-      consumedGrant.grantHash = sha256Jcs(without(consumedGrant, 'grantHash'));
-      derived.capabilityGrants.set(grantKey, consumedGrant);
-    }
-    if (event.type === 'execution.result-recorded') {
-      put('executionResults', payload.result);
-      const operationKey = [...derived.governedOperations.keys()].find(
-        (key) => derived.governedOperations.get(key).operationId === payload.result.operationId,
-      );
-      const operation = operationKey ? derived.governedOperations.get(operationKey) : null;
-      const replay = operationReplay.get(payload.result.operationId);
-      const terminalReservation = ['succeeded', 'partial'].includes(payload.result.status)
-        ? {
-            resultId: replay?.reservedResultId,
-            artifactId: replay?.reservedResultArtifactId,
-            submissionId: replay?.reservedSubmissionId,
-          }
-        : {
-            resultId: replay?.reservedUncertaintyResultId,
-            artifactId: replay?.reservedUncertaintyResultArtifactId,
-            submissionId: replay?.reservedUncertaintySubmissionId,
-          };
-      const assignment = operation
-        ? [...derived.assignments.values()].find(
-            ({ assignmentId }) => assignmentId === operation.assignmentId,
-          )
-        : null;
-      const submission = submissions.get(terminalReservation.submissionId);
-      const artifact = [...derived.artifacts.values()].find(
-        ({ artifactId }) => artifactId === terminalReservation.artifactId,
-      );
-      if (
-        !operation ||
-        !replay ||
-        operation.state !== 'dispatching' ||
-        operation.resultId !== null
-      ) {
-        fail(
-          'E_OPERATE_BINDING_MISMATCH',
-          'Execution result lacks one prior dispatching operation and replay owner.',
-          { resultId: payload.result.resultId },
-        );
-      }
-      if (
-        !assignment ||
-        assignment.state !== 'validated' ||
-        !submission ||
-        submission.state !== 'accepted' ||
-        !artifact ||
-        payload.result.resultId !== terminalReservation.resultId ||
-        payload.result.resultArtifactId !== terminalReservation.artifactId
-      ) {
-        fail(
-          'E_OPERATE_BINDING_MISMATCH',
-          'Execution result precedes or diverges from its canonical terminal Assignment, Submission, and Artifact.',
-          { resultId: payload.result.resultId },
-        );
-      }
-      const next = {
-        ...operation,
-        state: payload.result.status,
-        resultId: payload.result.resultId,
-        updatedAt: payload.result.completedAt,
-      };
-      next.operationHash = sha256Jcs(without(next, 'operationHash'));
-      derived.governedOperations.set(operationKey, next);
-      operationReplay.set(operation.operationId, {
-        ...replay,
-        terminalResultId: payload.result.resultId,
-        terminalReceipt: clone(payload.receipt),
-      });
-    }
-    if (event.type === 'rollback.plan-recorded') put('rollbackPlans', payload);
-    if (event.type === 'rollback.result-recorded') {
-      put('rollbackResults', payload);
-      const operationKey = [...derived.governedOperations.keys()].find(
-        (key) => derived.governedOperations.get(key).operationId === payload.rollbackOperationId,
-      );
-      const operation = operationKey ? derived.governedOperations.get(operationKey) : null;
-      const replay = operationReplay.get(payload.rollbackOperationId);
-      const terminalReservation = ['succeeded', 'partial'].includes(payload.status)
-        ? {
-            resultId: replay?.reservedResultId,
-            artifactId: replay?.reservedResultArtifactId,
-            submissionId: replay?.reservedSubmissionId,
-          }
-        : {
-            resultId: replay?.reservedUncertaintyResultId,
-            artifactId: replay?.reservedUncertaintyResultArtifactId,
-            submissionId: replay?.reservedUncertaintySubmissionId,
-          };
-      const assignment = operation
-        ? [...derived.assignments.values()].find(
-            ({ assignmentId }) => assignmentId === operation.assignmentId,
-          )
-        : null;
-      const submission = submissions.get(terminalReservation.submissionId);
-      const artifact = [...derived.artifacts.values()].find(
-        ({ artifactId }) => artifactId === terminalReservation.artifactId,
-      );
-      if (
-        !operation ||
-        !replay ||
-        operation.operationKind !== 'rollback' ||
-        operation.state !== 'dispatching' ||
-        operation.resultId !== null
-      ) {
-        fail(
-          'E_OPERATE_BINDING_MISMATCH',
-          'Rollback result lacks one prior dispatching rollback operation and replay owner.',
-          { rollbackResultId: payload.rollbackResultId },
-        );
-      }
-      if (
-        !assignment ||
-        assignment.state !== 'validated' ||
-        !submission ||
-        submission.state !== 'accepted' ||
-        !artifact ||
-        payload.rollbackResultId !== terminalReservation.resultId ||
-        payload.resultArtifactId !== terminalReservation.artifactId
-      ) {
-        fail(
-          'E_OPERATE_BINDING_MISMATCH',
-          'Rollback result precedes or diverges from its canonical terminal Assignment, Submission, and Artifact.',
-          { rollbackResultId: payload.rollbackResultId },
-        );
-      }
-      const next = {
-        ...operation,
-        state: payload.status,
-        resultId: payload.rollbackResultId,
-        updatedAt: payload.completedAt,
-      };
-      next.operationHash = sha256Jcs(without(next, 'operationHash'));
-      derived.governedOperations.set(operationKey, next);
-      operationReplay.set(operation.operationId, {
-        ...replay,
-        terminalResultId: payload.rollbackResultId,
-        terminalReceipt: null,
-      });
-    }
-    if (event.type === 'review.created') {
-      const key = `${event.cycleId}\u0000${payload.reviewId}`;
-      if (reviews.has(key))
-        fail(
-          'E_OPERATE_BINDING_MISMATCH',
-          'Review lifecycle contains duplicate canonical creation Events.',
-          { reviewId: payload.reviewId },
-        );
-      reviews.set(key, clone(payload));
-    }
-    if (event.type === 'review.submitted') {
-      const key = `${event.cycleId}\u0000${payload.reviewId}`;
-      const record = reviews.get(key);
-      if (record) {
-        if (record.state !== 'pending')
-          fail(
-            'E_OPERATE_BINDING_MISMATCH',
-            'Review lifecycle contains a non-contiguous canonical submission Event.',
-            { reviewId: payload.reviewId },
-          );
-        reviews.set(key, {
-          ...record,
-          state: payload.disposition,
-          disposition: payload.disposition,
-          workDispositions: clone(payload.workDispositions),
-          updatedAt: event.timestamp,
-        });
-        if (payload.disposition === 'approved' && record.subject?.type === 'cycle') {
-          let projected;
-          try {
-            projected = applyOperatingReviewWorkDispositionsV2({
-              cycle,
-              findings: [...derived.findings.values()],
-              decisions: [...derived.decisions.values()],
-              actions: [...derived.actions.values()],
-              workDispositions: payload.workDispositions,
-              timestamp: event.timestamp,
-              reviewOwnerActorId: event.actor.id,
-            });
-          } catch (error) {
-            fail(
-              'E_OPERATE_BINDING_MISMATCH',
-              'Approved Review work dispositions do not match canonical Cycle closure semantics.',
-              {
-                reviewId: payload.reviewId,
-                cause: error.code ?? error.message,
-              },
-            );
-          }
-          derived.findings = new Map(
-            projected.findings.map((entry) => [scopedRecordKey(entry, 'findingId'), entry]),
-          );
-          derived.decisions = new Map(
-            projected.decisions.map((entry) => [scopedRecordKey(entry, 'decisionId'), entry]),
-          );
-          derived.actions = new Map(
-            projected.actions.map((entry) => [scopedRecordKey(entry, 'actionId'), entry]),
-          );
-        }
-        if (record.subject?.type === 'cycle') {
-          const priorCycle = cycleTransitions.get(event.cycleId);
-          if (!priorCycle || priorCycle.state !== 'awaiting_review') {
-            fail(
-              'E_OPERATE_BINDING_MISMATCH',
-              'Cycle Review submission lacks one canonical awaiting-review predecessor.',
-              {
-                reviewId: payload.reviewId,
-                cycleId: event.cycleId,
-              },
-            );
-          }
-          cycleTransitions.set(event.cycleId, {
-            state: payload.disposition === 'approved' ? 'closed' : priorCycle.state,
-            updatedAt: event.timestamp,
-          });
-        }
-      }
-    }
-    if (event.type.startsWith('action.') && event.type !== 'action.authority-promoted') {
-      if (
-        event.type === 'action.approved' &&
-        (event.actor.kind !== 'engine' || event.actor.id !== 'openplanr')
-      ) {
-        fail(
-          'E_OPERATE_BINDING_MISMATCH',
-          'Action approval requires its exact prior governance Event.',
-          { actionId: payload.action.actionId },
-        );
-      }
-      const key = `${cycle.scopeId}\u0000${cycle.domainId}\u0000${cycle.domainVersion}\u0000${payload.action.actionId}`;
-      const current = derived.actions.get(key);
-      if (current) {
-        if (
-          current.revision !== payload.action.revision ||
-          current.actionHash !== payload.action.actionHash ||
-          current.state !== payload.from
-        ) {
-          fail(
-            'E_OPERATE_BINDING_MISMATCH',
-            'Action Event lineage diverges from its canonical projected record.',
-            { eventId: event.eventId, actionId: payload.action.actionId },
-          );
-        }
-        derived.actions.set(key, { ...current, state: payload.to, updatedAt: event.timestamp });
-      }
-      const previous = actionTransitions.get(key);
-      if (previous && previous.state !== payload.from)
-        fail(
-          'E_OPERATE_BINDING_MISMATCH',
-          'Action lifecycle contains non-contiguous canonical transition Events.',
-          { actionId: payload.action.actionId, eventId: event.eventId },
-        );
-      actionTransitions.set(key, {
-        ...clone(payload.action),
-        state: payload.to,
-        updatedAt: event.timestamp,
-      });
-    }
-    if (event.type.startsWith('cycle.') && event.type !== 'cycle.input-bound') {
-      const previous = cycleTransitions.get(event.cycleId);
-      if (previous && previous.state !== payload.from)
-        fail(
-          'E_OPERATE_BINDING_MISMATCH',
-          'Cycle lifecycle contains non-contiguous canonical transition Events.',
-          { cycleId: event.cycleId, eventId: event.eventId },
-        );
-      cycleTransitions.set(event.cycleId, { state: payload.to, updatedAt: event.timestamp });
-    }
+    const entry = runtimeEventEntry(event.type);
+    if (entry?.parity) EVENT_PARITY_RULES[entry.parity](parity, event, entry);
   }
-  for (const [name, [stateField, identityField]] of Object.entries(EVENT_PARITY_COLLECTIONS)) {
+  for (const [name, [stateField, identityField]] of Object.entries(RUNTIME_EVENT_COLLECTIONS)) {
     const records = state[stateField] ?? [];
     if (baseState !== null && records.length !== derived[name].size) {
       fail(
@@ -2147,7 +2122,7 @@ function validateEventReplayIndex(state, events, checkpointValidation) {
         eventId: event.eventId,
         cycleId: event.cycleId,
       });
-    if (expectedEventEntityId(event) !== event.entityId)
+    if (runtimeEventEntityId(event) !== event.entityId)
       fail(
         'E_OPERATE_BINDING_MISMATCH',
         'Canonical Event entity metadata does not equal its validated payload.',

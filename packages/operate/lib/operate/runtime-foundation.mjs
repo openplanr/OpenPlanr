@@ -8372,22 +8372,6 @@ const applyAuthorityRuntimeEvent = createAuthorityRuntimeEventHandlerV2({
   sameCanonicalStringSet,
 });
 
-// The reducer hands evidence-state and intelligence record Events to one intelligence handler.
-const EVIDENCE_STATE_EVENT_PREFIXES = new Set([
-  'evidence',
-  'planning-delivery',
-  'snapshot',
-  'operating-state',
-  'metric',
-]);
-
-function applyIntelligenceRuntimeEvent(index, event, options) {
-  const apply = EVIDENCE_STATE_EVENT_PREFIXES.has(event.type.split('.')[0])
-    ? applyEvidenceStateRuntimeEvent
-    : applyIntelligenceRecordRuntimeEvent;
-  apply(index, event, options);
-}
-
 function sorted(index, key) {
   return [...index.values()].sort((left, right) =>
     String(left[key]).localeCompare(String(right[key])),
@@ -12689,7 +12673,8 @@ const { eventReplayEntry, reduceOperatingRuntimeEventsV2 } = createOperatingRunt
   transitionAssignment: transitionOperatingAssignmentV2,
   eventHandlers: Object.freeze({
     workflow: applyWorkflowRuntimeEvent,
-    intelligence: applyIntelligenceRuntimeEvent,
+    evidenceState: applyEvidenceStateRuntimeEvent,
+    intelligence: applyIntelligenceRecordRuntimeEvent,
     authority: applyAuthorityRuntimeEvent,
   }),
   materializeRuntimeState,

@@ -2,6 +2,7 @@ import { sha256Jcs } from '@openplanr/protocol/canonical-json';
 import { assertProtocolArtifact } from '@openplanr/protocol/contracts';
 import { OPERATE_CONTRACT_CATALOG_V2 } from '@openplanr/protocol/operate-contract-catalog-v2';
 import { buildOperatingTerminalVerificationAssignmentV2 } from './execution-verification-v2.mjs';
+import { RUNTIME_EVENT_REGISTRY, runtimeEventEntry } from './runtime-foundation/event-registry.mjs';
 import {
   assertOperatingAssignmentAvailabilityPayloadV2,
   assertOperatingAssignmentTerminalPayloadV2,
@@ -19,84 +20,17 @@ const compiledAssignmentTransition = (from, to) =>
       transition.from === from &&
       transition.to === to,
   ) ?? null;
-const EVENT_HANDLER_TYPES = Object.freeze({
-  assignment: Object.freeze([
-    'assignment.created',
-    'assignment.available',
-    'assignment.claimed',
-    'assignment.started',
-    'assignment.submitted',
-    'artifact.created',
-    'assignment.validated',
-    'assignment.rejected',
-    'assignment.abandoned',
-    'assignment.failed',
-  ]),
-  workflow: Object.freeze([
-    'cycle.input-bound',
-    'executive-board.materialized',
-    'review.created',
-    'review.submitted',
-    'work-change-set.materialized',
-    'action.authority-promoted',
-    'action.approved',
-    'action.rejected',
-    'action.deferred',
-    'action.reopened',
-    'action.queued',
-    'action.started',
-    'action.completed',
-    'action.blocked',
-    'action.cancelled',
-    'cycle.approved',
-    'cycle.executing',
-    'cycle.verifying',
-    'cycle.closed',
-  ]),
-  intelligence: Object.freeze([
-    'evidence.resolved',
-    'planning-delivery.ingested',
-    'evidence.rejected',
-    'snapshot.materialized',
-    'operating-state.materialized',
-    'metric.observed',
-    'claim.recorded',
-    'finding.recorded',
-    'risk.recorded',
-    'assumption.recorded',
-    'decision.revised',
-    'delta.derived',
-    'intelligence.plan-recorded',
-    'decision-ledger.materialized',
-    'verification.plan-recorded',
-    'outcome.recorded',
-    'learning.recorded',
-    'scenario.recorded',
-    'trigger.recorded',
-  ]),
-  authority: Object.freeze([
-    'policy.evaluated',
-    'approval.recorded',
-    'capability.availability-recorded',
-    'capability.granted',
-    'rollback.plan-recorded',
-    'operation.intent-recorded',
-    'execution.result-recorded',
-    'rollback.result-recorded',
-  ]),
-});
-const EVENT_HANDLER_NAME_BY_TYPE = Object.freeze(
-  Object.fromEntries(
-    Object.entries(EVENT_HANDLER_TYPES).flatMap(([handlerName, eventTypes]) =>
-      eventTypes.map((eventType) => [eventType, handlerName]),
-    ),
+const DOMAIN_EVENT_HANDLERS = Object.freeze([
+  ...new Set(
+    Object.values(RUNTIME_EVENT_REGISTRY)
+      .map(({ handler }) => handler)
+      .filter((handler) => handler !== null && handler !== 'assignment'),
   ),
-);
+]);
 
 /**
- * Private deterministic Event reducer. Assignment lifecycle rules live here;
- * the still-bounded workflow/intelligence/authority handlers are injected so
- * the public runtime facade can retain one stable API during consolidation.
+ * Private deterministic Event reducer. Assignment lifecycle rules live here; the
+ * Event registry routes every other type to one of the injected domain handlers.
  */
 export function createOperatingRuntimeEventReducerV2({
   runtimeError,
@@ -124,9 +58,7 @@ export function createOperatingRuntimeEventReducerV2({
   }
   if (
     !eventHandlers ||
-    Object.keys(EVENT_HANDLER_TYPES)
-      .filter((handlerName) => handlerName !== 'assignment')
-      .some((handlerName) => typeof eventHandlers[handlerName] !== 'function')
+    DOMAIN_EVENT_HANDLERS.some((handlerName) => typeof eventHandlers[handlerName] !== 'function')
   ) {
     throw new TypeError('Event reducer requires every remaining named domain Event handler.');
   }
@@ -818,7 +750,7 @@ export function createOperatingRuntimeEventReducerV2({
   }
 
   function dispatchRuntimeEvent(index, event, options) {
-    const handlerName = EVENT_HANDLER_NAME_BY_TYPE[event.type];
+    const handlerName = runtimeEventEntry(event.type)?.handler;
     if (!handlerName) {
       throw runtimeError(
         'CONTRACT_VERSION_UNSUPPORTED',
