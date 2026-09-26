@@ -106,7 +106,7 @@
       "version": "0.1.6",
       "path": "apps/dashboard",
       "publication": "private",
-      "manifestDigest": "sha256:b2974be49067975f537b5ef1f029cacbdf21ca899906433810f64bea2044bd43"
+      "manifestDigest": "sha256:5d40b139ff20010bed191fc30d4a7dee209a09657ab1515f85c43ad51225d78c"
     }
   },
   "compatibility": {
