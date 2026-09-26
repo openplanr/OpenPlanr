@@ -1,7 +1,12 @@
 name: Artifact Browser Certification
 
+# Chromium certifies every pull request that touches the artifact surfaces. Firefox and
+# WebKit time out intermittently on pull requests that do not touch the editor, so they
+# certify nightly, on manual dispatch, and on pull requests labelled `browser-certification`.
+
 on:
   pull_request:
+    types: [opened, synchronize, reopened, labeled]
     paths:
       - 'packages/artifact/**'
       - 'packages/pipeline/lib/artifact/**'
@@ -9,7 +14,13 @@ on:
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/artifact-browser.yml'
+  schedule:
+    - cron: '17 3 * * *'
   workflow_dispatch: {}
+
+concurrency:
+  group: artifact-browser-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -22,7 +33,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        browser: [chromium, firefox, webkit]
+        browser: >-
+          ${{ fromJSON(github.event_name == 'pull_request'
+          && !contains(github.event.pull_request.labels.*.name, 'browser-certification')
+          && '["chromium"]' || '["chromium", "firefox", "webkit"]') }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
