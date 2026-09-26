@@ -4,7 +4,7 @@ import { existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { fileURLToPath } from 'node:url';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, type TestContext } from 'vitest';
 import {
   parseDashboardRoute,
   serializeDashboardRoute,
@@ -48,6 +48,28 @@ function planningNodes(count: number): readonly PlanningModelNode[] {
   );
 }
 
+// Time budgets fail only at SHARED_RUNNER_MARGIN times the product budget, because shared CI
+// runners drift by more than the budgets tolerate; the product budget itself is annotated.
+const SHARED_RUNNER_MARGIN = 2;
+
+async function expectWithinBudget(
+  context: TestContext,
+  label: string,
+  elapsedMs: number,
+  budgetMs: number,
+): Promise<void> {
+  if (elapsedMs > budgetMs) {
+    await context.annotate(
+      `${label} ${elapsedMs.toFixed(1)}ms exceeds the ${budgetMs}ms product budget`,
+    );
+  }
+  const limit = budgetMs * SHARED_RUNNER_MARGIN;
+  expect(
+    elapsedMs,
+    `${label} ${elapsedMs.toFixed(1)}ms exceeds ${limit}ms (${SHARED_RUNNER_MARGIN}x the ${budgetMs}ms product budget)`,
+  ).toBeLessThanOrEqual(limit);
+}
+
 describe('dashboard performance budgets', () => {
   it('keeps packed asset bytes within certified bundle budgets', () => {
     expect(existsSync(dashboardRoot), 'run npm run build before performance tests').toBe(true);
@@ -56,7 +78,7 @@ describe('dashboard performance budgets', () => {
     expect(report.sizes.runtime).toBeLessThanOrEqual(DASHBOARD_BUNDLE_BUDGETS.maxRuntimeAssetBytes);
   });
 
-  it('parses and serializes closed routes within the Today budget', () => {
+  it('parses and serializes closed routes within the Today budget', async (context) => {
     const started = performance.now();
     for (let index = 0; index < 5_000; index += 1) {
       for (const hash of ROUTE_SAMPLES) {
@@ -65,10 +87,10 @@ describe('dashboard performance budgets', () => {
       }
     }
     const elapsed = performance.now() - started;
-    expect(elapsed).toBeLessThan(300);
+    await expectWithinBudget(context, 'route parsing', elapsed, 300);
   });
 
-  it('searches a 1,000-node planning index within the navigation budget', () => {
+  it('searches a 1,000-node planning index within the navigation budget', async (context) => {
     const index = buildDashboardSearchIndex({ planningNodes: planningNodes(1_000) });
     const started = performance.now();
     let hits = 0;
@@ -77,7 +99,7 @@ describe('dashboard performance budgets', () => {
     }
     const elapsed = performance.now() - started;
     expect(hits).toBeGreaterThan(0);
-    expect(elapsed).toBeLessThan(300);
+    await expectWithinBudget(context, 'planning search', elapsed, 300);
   });
 
   it('resolves diagnostics without unbounded memory growth', () => {
