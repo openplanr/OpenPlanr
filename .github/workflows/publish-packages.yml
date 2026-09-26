@@ -54,11 +54,11 @@ jobs:
       cli_pending: ${{ steps.plan.outputs.cli_pending }}
       tag: ${{ github.event.inputs.tag || 'latest' }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
           persist-credentials: false
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
       - name: Decide which public packages still need publishing
@@ -80,7 +80,7 @@ jobs:
     timeout-minutes: 60
     steps:
       - name: Require the successful exact-commit main verification
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         env:
           RELEASE_COMMIT: ${{ needs.plan.outputs.commit }}
         with:
@@ -103,11 +103,11 @@ jobs:
               return;
             }
             core.notice(`Reusing Workspace CI evidence from ${verified.html_url}`);
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           ref: ${{ needs.plan.outputs.commit }}
           persist-credentials: false
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
@@ -119,13 +119,13 @@ jobs:
         env:
           RELEASE_PENDING: ${{ needs.plan.outputs.pending }}
         run: node scripts/release-train/prepare-bundles.mjs "$RUNNER_TEMP/openplanr-npm" --pending "$RELEASE_PENDING"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: verified-public-packages
           path: ${{ runner.temp }}/openplanr-npm/
           if-no-files-found: error
           retention-days: 7
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: claude-plugin
           path: dist/plugins/claude/openplanr/
@@ -143,14 +143,14 @@ jobs:
       contents: write
       id-token: write
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           ref: ${{ needs.plan.outputs.commit }}
           persist-credentials: false
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: verified-public-packages
           path: release
@@ -163,7 +163,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: node scripts/release-train/tag-and-release.mjs --bundles release --repo "$GITHUB_REPOSITORY" --run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: publication-record
           path: release/published.json
@@ -176,26 +176,26 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/create-github-app-token@v2
+      - uses: actions/create-github-app-token@v3
         id: app
         with:
           app-id: ${{ vars.RELEASE_APP_ID }}
           private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
           owner: openplanr
           repositories: marketplace
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           ref: ${{ needs.plan.outputs.commit }}
           persist-credentials: false
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           repository: openplanr/marketplace
           token: ${{ steps.app.outputs.token }}
           path: marketplace
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: claude-plugin
           path: plugin
