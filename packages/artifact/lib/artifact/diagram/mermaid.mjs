@@ -50,6 +50,7 @@ export function importMermaid(
     audience = 'mixed',
     detailTier = 'balanced',
     themeId = 'openplanr-default',
+    mode = 'auto',
     sourcePath = null,
   } = {},
 ) {
@@ -86,6 +87,7 @@ export function importMermaid(
       audience,
       detailTier,
       themeId,
+      mode,
       sourcePath,
     });
   }
@@ -155,7 +157,7 @@ export function importMermaid(
     audience,
     grammar: { id: 'flowchart', version: '1.0.0' },
     layout: { direction: DIRECTIONS[header[1].toUpperCase()], detailTier },
-    theme: { themeId, mode: 'auto' },
+    theme: { themeId, mode },
     source: { format: 'mermaid', path: sourcePath, digest: `sha256:${sha256Hex(bytes)}` },
     nodes: [...nodes.values()],
     relations,
@@ -188,7 +190,7 @@ export function importMermaid(
 function importSequenceMermaid(
   bytes,
   lines,
-  { diagramId, title, summary, audience, detailTier, themeId, sourcePath },
+  { diagramId, title, summary, audience, detailTier, themeId, mode, sourcePath },
 ) {
   const participants = new Map();
   const relations = [];
@@ -292,7 +294,7 @@ function importSequenceMermaid(
     audience,
     grammar: { id: 'sequence', version: '1.0.0' },
     layout: { direction: 'left-right', detailTier },
-    theme: { themeId, mode: 'auto' },
+    theme: { themeId, mode },
     source: { format: 'mermaid', path: sourcePath, digest: `sha256:${sha256Hex(bytes)}` },
     nodes,
     relations,

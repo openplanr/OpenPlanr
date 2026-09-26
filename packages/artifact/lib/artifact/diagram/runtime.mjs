@@ -65,14 +65,14 @@ function addOutput(outputs, name, value, mediaType, fidelity) {
   outputs.set(name, Object.freeze({ bytes, mediaType, fidelity }));
 }
 
-function assetReceipt() {
+function assetReceipt(theme = DIAGRAM_THEME) {
   return {
     kind: 'openplanr-diagram-render-assets',
     schemaVersion: '1.0.0',
     renderer: { ...DIAGRAM_RENDERER, digest: sha256Jcs(DIAGRAM_RENDERER) },
     rasterizer: { ...DIAGRAM_RASTERIZER, digest: sha256Jcs(DIAGRAM_RASTERIZER) },
     font: DIAGRAM_FONT,
-    theme: { ...DIAGRAM_THEME, digest: sha256Jcs(DIAGRAM_THEME) },
+    theme: { ...theme, digest: sha256Jcs(theme) },
     registry: {
       path: 'registry/v1.6.0/diagram-grammars.json',
       digest: DIAGRAM_GRAMMAR_REGISTRY.documentDigest,
@@ -89,7 +89,7 @@ function descriptor(relativeDirectory, name, output) {
   };
 }
 
-function finalizeBundle(document, slug, outputs, sourceName) {
+function finalizeBundle(document, slug, outputs, sourceName, theme = DIAGRAM_THEME) {
   const relativeDirectory = diagramRelativeDirectory(slug);
   const sourceOutput = outputs.get(sourceName);
   if (!sourceOutput) throw new Error(`Missing active diagram source: ${sourceName}`);
@@ -102,6 +102,7 @@ function finalizeBundle(document, slug, outputs, sourceName) {
       digest: digestBytes(sourceOutput.bytes),
     },
     outputs: descriptors,
+    theme,
   });
   const manifestName = outputName(slug, 'manifest.json');
   const files = new Map([...outputs].map(([name, output]) => [name, output.bytes]));
@@ -151,7 +152,7 @@ function buildIrBundle(document, slug) {
   addOutput(
     outputs,
     outputName(slug, 'assets.json'),
-    jsonBytes(assetReceipt()),
+    jsonBytes(assetReceipt(rendered.theme)),
     MEDIA.assets,
     'render-only',
   );
@@ -185,7 +186,13 @@ function buildIrBundle(document, slug) {
       MEDIA.excalidraw,
       excalidraw.report.status,
     );
-  return finalizeBundle(document, slug, outputs, outputName(slug, 'planr-diagram.json'));
+  return finalizeBundle(
+    document,
+    slug,
+    outputs,
+    outputName(slug, 'planr-diagram.json'),
+    rendered.theme,
+  );
 }
 
 function findOutput(current, suffix) {
@@ -406,6 +413,7 @@ export async function rerenderDiagram({
         audience: document.audience,
         detailTier: document.layout.detailTier,
         themeId: document.theme.themeId,
+        mode: document.theme.mode,
         sourcePath: mermaid.path,
       });
       return promote(root, slug, buildIrBundle(imported.document, slug), current);

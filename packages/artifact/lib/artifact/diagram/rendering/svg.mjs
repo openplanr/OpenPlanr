@@ -1,6 +1,6 @@
 import { assertDiagramSvg } from '../accessibility.mjs';
 import { layoutDiagram } from './layout.mjs';
-import { DIAGRAM_THEME, isDashedRelation } from './theme.mjs';
+import { DIAGRAM_PALETTE_KEYS, isDashedRelation, resolveDiagramTheme } from './theme.mjs';
 
 export function escapeXml(value) {
   return String(value)
@@ -78,7 +78,22 @@ function renderNote(note, theme) {
   return `<g data-annotation-id="${escapeXml(note.id)}"${target}><rect x="${note.x}" y="${note.y}" width="${note.width}" height="${note.height}" rx="12" fill="${theme.surface}" stroke="${stroke}" stroke-width="${note.emphasis === 'primary' ? 3 : 1.5}"/>${connector}<text x="${note.x + 16}" y="${firstBaseline}" font-family="${theme.fontFamily}" font-size="13" fill="${theme.foreground}">${note.lines.map((line, index) => `<tspan x="${note.x + 16}" y="${firstBaseline + index * 18}">${escapeXml(line)}</tspan>`).join('')}</text></g>`;
 }
 
-export function renderDiagramSvg(document, { theme = DIAGRAM_THEME } = {}) {
+/**
+ * Dark-scheme remap for an adaptive theme. Presentation attributes carry the
+ * light palette; any CSS rule outranks them, so matching each light value
+ * swaps the whole drawing without structural hooks. resvg skips at-rules, so
+ * the PNG keeps the light values.
+ */
+function renderAdaptiveStyle(theme) {
+  if (!theme.dark) return '';
+  const rules = DIAGRAM_PALETTE_KEYS.flatMap((key) => [
+    `[fill="${theme[key]}"]{fill:${theme.dark[key]}}`,
+    `[stroke="${theme[key]}"]{stroke:${theme.dark[key]}}`,
+  ]).join('');
+  return `<style>@media (prefers-color-scheme: dark){${rules}}</style>`;
+}
+
+export function renderDiagramSvg(document, { theme = resolveDiagramTheme(document.theme) } = {}) {
   const scene = layoutDiagram(document);
   const titleId = `${document.diagramId}-title`;
   const descriptionId = `${document.diagramId}-description`;
@@ -86,7 +101,7 @@ export function renderDiagramSvg(document, { theme = DIAGRAM_THEME } = {}) {
     `<svg xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="${titleId} ${descriptionId}" viewBox="0 0 ${scene.width} ${scene.height}" width="${scene.width}" height="${scene.height}">`,
     `<title id="${titleId}">${escapeXml(document.accessibility.title)}</title>`,
     `<desc id="${descriptionId}">${escapeXml(document.accessibility.description)}</desc>`,
-    `<defs><marker id="diagram-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="${theme.border}"/></marker></defs>`,
+    `<defs>${renderAdaptiveStyle(theme)}<marker id="diagram-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="${theme.border}"/></marker></defs>`,
     `<rect width="${scene.width}" height="${scene.height}" fill="${theme.background}"/>`,
     ...scene.lanes.map((lane) => renderLane(lane, theme)),
     ...scene.groups.map((group) => renderGroup(group, theme)),

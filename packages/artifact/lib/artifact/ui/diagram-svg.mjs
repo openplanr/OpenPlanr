@@ -1,4 +1,5 @@
 import { parseFragment } from 'parse5';
+import { DIAGRAM_ADAPTIVE_STYLE_PATTERN } from '../diagram/rendering/theme.mjs';
 import { escapeHtml } from '../internal/escape.mjs';
 
 const TAGS = new Set([
@@ -102,6 +103,18 @@ export function prepareDiagramSvg(bytes) {
   function serialize(node, depth = 0) {
     if (++nodes > 50000 || depth > 64) fail();
     if (node.nodeName === '#text') return escapeHtml(node.value);
+    // Only the renderer's own dark-scheme remap is passive. A stylesheet inside
+    // inline SVG would reach the host document, and the presentation attributes
+    // already carry the light rendering, so even that one is dropped.
+    if (node.tagName === 'style') {
+      if (
+        node.namespaceURI !== 'http://www.w3.org/2000/svg' ||
+        (node.attrs ?? []).length > 0 ||
+        !DIAGRAM_ADAPTIVE_STYLE_PATTERN.test(text(node))
+      )
+        fail();
+      return '';
+    }
     if (!TAGS.has(node.tagName) || node.namespaceURI !== 'http://www.w3.org/2000/svg') fail();
     const values = attrs(node);
     const fields = (node.attrs ?? []).map((attr) => {

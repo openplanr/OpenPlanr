@@ -86,6 +86,30 @@ planr diagram rerender ./diagrams/architecture/architecture.manifest.json --acce
 `check` reports source or generated drift without rewriting files. `rerender`
 accepts only the selected source and regenerates the rest of the set.
 
+## Themes
+
+`theme.themeId` selects the palette and `theme.mode` selects `light`, `dark`, or `auto`:
+
+```json
+"theme": { "themeId": "openplanr", "mode": "auto" }
+```
+
+- `openplanr-default` is the neutral light palette. Every mode renders the same bytes,
+  so existing sets do not change.
+- `openplanr` is the brand palette. Light mode sets Ink text and teal-on-light accents on
+  Paper; dark mode sets Paper text and Teal accents on Ink. Node fills, strokes, group
+  outlines, and labels are blended from those four tokens, and every text colour meets
+  WCAG AA on the surface it is drawn over. Text uses DM Sans with system fallbacks, so the
+  SVG stays legible where web fonts do not load.
+
+In `auto` mode the SVG carries the light values as presentation attributes and one inline
+`@media (prefers-color-scheme: dark)` stylesheet that swaps them, so a single file follows
+the viewer's colour scheme on GitHub and in the accessible HTML. The PNG and the review
+studio keep the light values: resvg ignores media queries and the studio drops the
+stylesheet before the drawing enters its DOM. Render `mode: "dark"` when a dark raster is
+required. Mermaid and Excalidraw projections keep the default palette. Any other theme id
+is rejected at render time.
+
 ## Mermaid and natural-language input
 
 The CLI imports the supported Mermaid flowchart subset directly:
