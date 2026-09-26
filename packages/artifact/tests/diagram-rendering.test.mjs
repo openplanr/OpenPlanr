@@ -30,6 +30,10 @@ import {
 } from '../lib/artifact/diagram/index.mjs';
 import { renderExcalidrawSceneSvg } from '../lib/artifact/diagram/projection/excalidraw.mjs';
 import { createRenderQualityReport } from '../lib/artifact/diagram/rendering/reports.mjs';
+import {
+  DIAGRAM_DEFAULT_METRICS,
+  OPENPLANR_THEME,
+} from '../lib/artifact/diagram/rendering/theme.mjs';
 import { prepareDiagramSvg } from '../lib/artifact/ui/diagram-svg.mjs';
 
 const packageRoot = resolve(import.meta.dirname, '..');
@@ -172,6 +176,67 @@ function directedRing(size, direction = 'left-right') {
       title: `Ring of ${size}`,
       description: 'Each step flows to the next and the last step returns to the first.',
       readingOrder: [...nodes.map(({ id }) => id), ...relations.map(({ id }) => id)],
+    },
+  });
+}
+
+function requestLoop(direction = 'top-down', themeId = 'openplanr-default') {
+  const node = (id, label) => ({
+    id,
+    label,
+    kind: 'step',
+    description: null,
+    semanticPosition: null,
+  });
+  const flow = (from, to, label = null) => ({
+    id: `${from}-${to}`,
+    from,
+    to,
+    kind: 'flow',
+    label,
+    weight: null,
+  });
+  const nodes = [
+    node('request', 'Request\na feature, a bug, a question'),
+    node('spec', 'Specification\nwhat done means'),
+    node('plan', 'Plan\nstories and tasks'),
+    node('ship', 'Ship\none task, verified'),
+    node('plans', 'Plans under .planr/'),
+    node('code', 'Source code and tests'),
+    node('cli', 'planr CLI'),
+    node('review', 'Review'),
+    node('operate', 'Operate readout'),
+  ];
+  return createDiagramDocument({
+    diagramId: `request-loop-${direction}`,
+    title: 'Request loop',
+    summary: 'A delivery loop whose readout returns to the request.',
+    audience: 'engineer',
+    grammar: { id: 'architecture', version: '1.0.0' },
+    layout: { direction, detailTier: 'balanced' },
+    theme: { themeId, mode: 'light' },
+    source: { format: 'english', path: null, digest: null },
+    nodes,
+    relations: [
+      flow('request', 'spec'),
+      flow('request', 'plan'),
+      flow('request', 'ship'),
+      flow('spec', 'plans', 'writes'),
+      flow('plan', 'plans', 'writes'),
+      flow('ship', 'code', 'implements'),
+      flow('plans', 'cli', 'validated'),
+      flow('code', 'review'),
+      flow('review', 'operate'),
+      flow('operate', 'request', 'evidence for the next request'),
+    ],
+    groups: [
+      { id: 'agent', label: 'Skills your coding agent runs', members: ['spec', 'plan', 'ship'] },
+    ],
+    accessibility: {
+      title: 'Request loop',
+      description:
+        'Skills write the plans and the code; the operate readout returns evidence to the next request.',
+      readingOrder: nodes.map(({ id }) => id),
     },
   });
 }
@@ -979,6 +1044,77 @@ test('self connections form visible loops and skip edges route around graph obst
     'pass',
   );
   assert.ok(dense.scene.edges[0].routePoints.length >= 4);
+});
+
+test('a relation back to an earlier node routes around the layers without reranking them', () => {
+  for (const direction of ['top-down', 'left-right']) {
+    const rendered = renderDiagramOutputs(requestLoop(direction));
+    assert.equal(rendered.quality.status, 'pass', direction);
+    const vertical = direction === 'top-down';
+    const [flow, flowSize, cross, crossSize] = vertical
+      ? ['y', 'height', 'x', 'width']
+      : ['x', 'width', 'y', 'height'];
+    const boxes = new Map(rendered.scene.boxes.map((box) => [box.id, box]));
+    assert.equal(
+      boxes.get('request')[flow],
+      Math.min(...rendered.scene.boxes.map((box) => box[flow])),
+      `${direction}: the request stays in the first layer`,
+    );
+    assert.ok(boxes.get('operate')[flow] > boxes.get('review')[flow], direction);
+    const feedback = rendered.scene.edges.find(({ id }) => id === 'operate-request');
+    const onSide = (point, box) =>
+      [box[cross], box[cross] + box[crossSize]].includes(point[vertical ? 0 : 1]) &&
+      point[vertical ? 1 : 0] === box[flow] + box[flowSize] / 2;
+    assert.ok(onSide(feedback.routePoints[0], boxes.get('operate')), `${direction}: leaves a side`);
+    assert.ok(
+      onSide(feedback.routePoints.at(-1), boxes.get('request')),
+      `${direction}: enters a side`,
+    );
+    assert.deepEqual(feedback.labelLines, ['evidence for the next request'], direction);
+  }
+});
+
+test('chains straighten under their only predecessor and no route keeps a short jog', () => {
+  for (const themeId of ['openplanr-default', 'openplanr']) {
+    const rendered = renderDiagramOutputs(requestLoop('top-down', themeId));
+    assert.equal(rendered.quality.status, 'pass', themeId);
+    for (const id of ['ship-code', 'plans-cli', 'code-review', 'review-operate']) {
+      const edge = rendered.scene.edges.find((candidate) => candidate.id === id);
+      assert.equal(new Set(edge.routePoints.map(([x]) => x)).size, 1, `${themeId}: ${id}`);
+    }
+    for (const edge of rendered.scene.edges) {
+      for (const [index, [x, y]] of edge.routePoints.slice(1).entries()) {
+        const [px, py] = edge.routePoints[index];
+        const length = Math.abs(x - px) + Math.abs(y - py);
+        assert.ok(length === 0 || length >= 12, `${themeId}: ${edge.id} has a ${length}px jog`);
+      }
+    }
+  }
+});
+
+test('a group title keeps clear of the connectors that cross its title band', () => {
+  for (const [themeId, glyph] of [
+    ['openplanr-default', DIAGRAM_DEFAULT_METRICS.container.glyph],
+    ['openplanr', OPENPLANR_THEME.light.metrics.container.glyph],
+  ]) {
+    const { scene } = renderDiagramOutputs(requestLoop('top-down', themeId));
+    const group = scene.groups.find(({ id }) => id === 'agent');
+    const start = group.x + group.titleOffset;
+    const end = start + [...group.label].length * glyph;
+    const crossings = scene.edges.flatMap(({ routePoints }) =>
+      routePoints
+        .slice(1)
+        .filter(
+          ([x, y], index) =>
+            x === routePoints[index][0] &&
+            Math.min(y, routePoints[index][1]) <= group.y + 34 &&
+            Math.max(y, routePoints[index][1]) >= group.y,
+        )
+        .map(([x]) => x),
+    );
+    assert.ok(crossings.length > 0, `${themeId}: connectors cross the band`);
+    for (const x of crossings) assert.ok(x < start || x > end, `${themeId}: title over x=${x}`);
+  }
 });
 
 test('schema failures name the invalid field in structured diagnostics', () => {

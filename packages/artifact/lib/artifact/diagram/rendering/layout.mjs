@@ -38,6 +38,12 @@ const LANE_GAP = 20;
 const LANE_SLOT_GAP = 112;
 const LANE_STACK_GAP = 34;
 const SEQUENCE_MESSAGE_LINE_HEIGHT = 18;
+// Connectors whose ports differ by less than this across the flow are drawn
+// straight; the jog would read as a kink rather than a turn.
+const STRAIGHTEN_TOLERANCE = 12;
+// Distance a feedback connector keeps outside everything it runs beside.
+const FEEDBACK_CLEARANCE = 40;
+const FEEDBACK_LABEL_LIMIT = 32;
 
 function semanticItems(document) {
   if (document.nodes.length > 0) return document.nodes;
@@ -201,102 +207,52 @@ function gridLayout(items, direction, metrics) {
   };
 }
 
-function graphComponents(items, relations) {
-  const order = new Map(items.map(({ id }, index) => [id, index]));
-  const adjacency = new Map(items.map(({ id }) => [id, []]));
-  for (const relation of relations) {
-    if (
-      relation.from !== relation.to &&
-      adjacency.has(relation.from) &&
-      adjacency.has(relation.to)
-    ) {
-      adjacency.get(relation.from).push(relation.to);
-    }
-  }
-  for (const targets of adjacency.values())
-    targets.sort((left, right) => order.get(left) - order.get(right));
-  let nextIndex = 0;
-  const indices = new Map();
-  const lowLinks = new Map();
-  const stack = [];
-  const onStack = new Set();
-  const components = [];
-  const visit = (id) => {
-    indices.set(id, nextIndex);
-    lowLinks.set(id, nextIndex);
-    nextIndex += 1;
-    stack.push(id);
-    onStack.add(id);
-    for (const target of adjacency.get(id)) {
-      if (!indices.has(target)) {
-        visit(target);
-        lowLinks.set(id, Math.min(lowLinks.get(id), lowLinks.get(target)));
-      } else if (onStack.has(target))
-        lowLinks.set(id, Math.min(lowLinks.get(id), indices.get(target)));
-    }
-    if (lowLinks.get(id) !== indices.get(id)) return;
-    const component = [];
-    let member;
-    do {
-      member = stack.pop();
-      onStack.delete(member);
-      component.push(member);
-    } while (member !== id);
-    component.sort((left, right) => order.get(left) - order.get(right));
-    components.push(component);
-  };
-  for (const { id } of items) if (!indices.has(id)) visit(id);
-  return components.sort((left, right) => order.get(left[0]) - order.get(right[0]));
-}
-
+/**
+ * Longest-path layers. A depth-first walk in document order marks each relation
+ * that closes a cycle as feedback; feedback does not rank, so a loop back to an
+ * earlier node leaves the rest of the graph layered by its forward flow.
+ */
 function graphRanks(items, relations) {
   const order = new Map(items.map(({ id }, index) => [id, index]));
-  const components = graphComponents(items, relations);
-  const componentById = new Map();
-  components.forEach((component, index) => component.forEach((id) => componentById.set(id, index)));
-  const successors = new Map(components.map((_, index) => [index, new Set()]));
-  const incoming = new Map(components.map((_, index) => [index, 0]));
+  const outgoing = new Map(items.map(({ id }) => [id, []]));
   for (const relation of relations) {
-    const source = componentById.get(relation.from);
-    const target = componentById.get(relation.to);
-    if (
-      source === undefined ||
-      target === undefined ||
-      source === target ||
-      successors.get(source).has(target)
-    )
-      continue;
-    successors.get(source).add(target);
-    incoming.set(target, incoming.get(target) + 1);
+    if (relation.from !== relation.to && order.has(relation.from) && order.has(relation.to))
+      outgoing.get(relation.from).push(relation);
   }
-  const componentOrder = (index) => Math.min(...components[index].map((id) => order.get(id)));
-  const queue = [...incoming]
-    .filter(([, count]) => count === 0)
-    .map(([index]) => index)
-    .sort((left, right) => componentOrder(left) - componentOrder(right));
-  const bases = new Map(components.map((_, index) => [index, 0]));
+  for (const list of outgoing.values())
+    list.sort((left, right) => order.get(left.to) - order.get(right.to));
+  const feedback = new Set();
+  const state = new Map();
+  const visit = (id) => {
+    state.set(id, 'open');
+    for (const relation of outgoing.get(id)) {
+      const target = state.get(relation.to);
+      if (target === 'open') feedback.add(relation.id);
+      else if (target === undefined) visit(relation.to);
+    }
+    state.set(id, 'closed');
+  };
+  for (const { id } of items) if (!state.has(id)) visit(id);
+  const incoming = new Map(items.map(({ id }) => [id, 0]));
+  for (const list of outgoing.values())
+    for (const relation of list)
+      if (!feedback.has(relation.id)) incoming.set(relation.to, incoming.get(relation.to) + 1);
+  const ranks = new Map(items.map(({ id }) => [id, 0]));
+  const queue = items.filter(({ id }) => incoming.get(id) === 0).map(({ id }) => id);
   while (queue.length > 0) {
     const source = queue.shift();
-    for (const target of [...successors.get(source)].sort(
-      (left, right) => componentOrder(left) - componentOrder(right),
-    )) {
-      bases.set(target, Math.max(bases.get(target), bases.get(source) + components[source].length));
-      incoming.set(target, incoming.get(target) - 1);
-      if (incoming.get(target) === 0) {
-        queue.push(target);
-        queue.sort((left, right) => componentOrder(left) - componentOrder(right));
-      }
+    for (const relation of outgoing.get(source)) {
+      if (feedback.has(relation.id)) continue;
+      ranks.set(relation.to, Math.max(ranks.get(relation.to), ranks.get(source) + 1));
+      incoming.set(relation.to, incoming.get(relation.to) - 1);
+      if (incoming.get(relation.to) === 0) queue.push(relation.to);
     }
   }
-  const ranks = new Map();
-  components.forEach((component, componentIndex) => {
-    component.forEach((id, offset) => ranks.set(id, bases.get(componentIndex) + offset));
-  });
-  return ranks;
+  return { ranks, feedback };
 }
 
-// Every strongly connected component occupies one layer per member, so a long
-// chain or a large cycle would otherwise stretch the flow axis without bound.
+// A long chain or a large ring takes one layer per node, so it would otherwise
+// stretch the flow axis without bound.
 // Bands wrap the layer sequence along the cross axis; the band length balances
 // the scene toward a square so it stays inside the viewport budget.
 function wrapLayers(layers, primarySize, crossSize, primaryGap) {
@@ -327,9 +283,102 @@ function wrapLayers(layers, primarySize, crossSize, primaryGap) {
   return bands;
 }
 
+/**
+ * Moves each block of adjacent boxes that share an anchor so the block is
+ * centred on it, keeping order and gap; overlapping blocks settle together at
+ * the mean of their wanted positions. Returns whether anything moved.
+ */
+function settleLayer(layer, anchorOf, { cross, size, gap }) {
+  const blocks = [];
+  for (const box of layer) {
+    const anchor = anchorOf(box);
+    const last = blocks.at(-1);
+    if (anchor !== null && last?.anchor === anchor) last.members.push(box);
+    else blocks.push({ anchor, members: [box] });
+  }
+  for (const block of blocks) {
+    block.extent = block.members.reduce(
+      (total, box, index) => total + box[size] + (index === 0 ? 0 : gap),
+      0,
+    );
+    block.desired =
+      block.anchor === null
+        ? block.members[0][cross]
+        : block.anchor[cross] + block.anchor[size] / 2 - block.extent / 2;
+  }
+  if (blocks.every(({ desired, members }) => Math.abs(desired - members[0][cross]) <= 1e-6))
+    return false;
+  const clusters = [];
+  for (const block of blocks) {
+    let cluster = { members: block.members, extent: block.extent, sum: block.desired, count: 1 };
+    while (clusters.length > 0) {
+      const previous = clusters.at(-1);
+      if (previous.sum / previous.count + previous.extent + gap <= cluster.sum / cluster.count)
+        break;
+      clusters.pop();
+      const offset = previous.extent + gap;
+      cluster = {
+        members: [...previous.members, ...cluster.members],
+        extent: offset + cluster.extent,
+        sum: previous.sum + cluster.sum - cluster.count * offset,
+        count: previous.count + cluster.count,
+      };
+    }
+    clusters.push(cluster);
+  }
+  for (const cluster of clusters) {
+    let position = cluster.sum / cluster.count;
+    for (const box of cluster.members) {
+      box[cross] = position;
+      position += box[size] + gap;
+    }
+  }
+  return true;
+}
+
+/**
+ * Straightens chains. Downward, siblings that share their only predecessor are
+ * centred on it; upward, a node linked one-to-one with its successor is centred
+ * over it, which absorbs a successor layer wider than its own. Feedback and
+ * self relations do not anchor.
+ */
+function alignLayers(layers, relations, feedback, horizontal, gap) {
+  const geometry = horizontal
+    ? { cross: 'y', size: 'height', gap }
+    : { cross: 'x', size: 'width', gap };
+  const layerOf = new Map(layers.flatMap((layer, index) => layer.map((box) => [box.id, index])));
+  const boxById = new Map(layers.flat().map((box) => [box.id, box]));
+  const predecessors = new Map();
+  const successors = new Map();
+  for (const relation of relations) {
+    if (relation.from === relation.to || feedback.has(relation.id)) continue;
+    if (!layerOf.has(relation.from) || !layerOf.has(relation.to)) continue;
+    if (layerOf.get(relation.from) >= layerOf.get(relation.to)) continue;
+    if (!predecessors.has(relation.to)) predecessors.set(relation.to, new Set());
+    if (!successors.has(relation.from)) successors.set(relation.from, new Set());
+    predecessors.get(relation.to).add(relation.from);
+    successors.get(relation.from).add(relation.to);
+  }
+  const only = (set) => (set?.size === 1 ? [...set][0] : null);
+  const parentOf = (box) => {
+    const id = only(predecessors.get(box.id));
+    return id === null ? null : boxById.get(id);
+  };
+  const childOf = (box) => {
+    const id = only(successors.get(box.id));
+    return id !== null && only(predecessors.get(id)) === box.id ? boxById.get(id) : null;
+  };
+  let moved = false;
+  for (let index = 1; index < layers.length; index += 1)
+    moved = settleLayer(layers[index], parentOf, geometry) || moved;
+  for (let index = layers.length - 2; index >= 0; index -= 1)
+    moved = settleLayer(layers[index], childOf, geometry) || moved;
+  return moved;
+}
+
 function layeredGraphLayout(items, relations, direction, layerGap, metrics) {
   const horizontal = ['left-right', 'right-left'].includes(direction);
-  const ranks = graphRanks(items, relations);
+  const { ranks, feedback } = graphRanks(items, relations);
   const layers = new Map();
   for (const item of items) {
     const rank = ranks.get(item.id) ?? 0;
@@ -355,17 +404,32 @@ function layeredGraphLayout(items, relations, direction, layerGap, metrics) {
   let bandStart = PADDING;
   for (const [bandIndex, bandLayers] of bands.entries()) {
     const bandCrossSize = Math.max(0, ...bandLayers.map(layerCrossSize));
+    const placedLayers = [];
     let primary = PADDING;
     for (const boxes of bandLayers) {
       let cross = bandStart + (bandCrossSize - layerCrossSize(boxes)) / 2;
+      const placedLayer = [];
       for (const box of boxes) {
-        raw.push({ ...box, x: horizontal ? primary : cross, y: horizontal ? cross : primary });
+        const placed = { ...box, x: horizontal ? primary : cross, y: horizontal ? cross : primary };
+        raw.push(placed);
+        placedLayer.push(placed);
         bandById.set(box.id, bandIndex);
         cross += (horizontal ? box.height : box.width) + siblingGap;
       }
+      placedLayers.push(placedLayer);
       primary += layerPrimarySize(boxes) + primaryGap;
     }
-    bandStart += bandCrossSize + BAND_GAP;
+    if (alignLayers(placedLayers, relations, feedback, horizontal, siblingGap)) {
+      const members = placedLayers.flat();
+      const start = (box) => (horizontal ? box.y : box.x);
+      const end = (box) => (horizontal ? box.y + box.height : box.x + box.width);
+      const shift = bandStart - Math.min(...members.map(start));
+      for (const box of members) {
+        if (horizontal) box.y += shift;
+        else box.x += shift;
+      }
+      bandStart = Math.max(...members.map(end)) + BAND_GAP;
+    } else bandStart += bandCrossSize + BAND_GAP;
   }
   const rawWidth = Math.max(640, ...raw.map((box) => box.x + box.width + PADDING));
   const rawHeight = Math.max(360, ...raw.map((box) => box.y + box.height + PADDING));
@@ -384,6 +448,7 @@ function layeredGraphLayout(items, relations, direction, layerGap, metrics) {
     width: rawWidth,
     height: rawHeight,
     bands: { horizontal, byId: bandById, bounds },
+    feedback,
   };
 }
 
@@ -412,7 +477,7 @@ function laneLayout(document, metrics) {
     else strips[index].push(box);
   }
   const ranks =
-    document.relations.length > 0 ? graphRanks(document.nodes, document.relations) : null;
+    document.relations.length > 0 ? graphRanks(document.nodes, document.relations).ranks : null;
   const slotOf = (box, strip) => (ranks ? (ranks.get(box.id) ?? 0) : strip.indexOf(box));
   const allStrips = [...strips, unassigned];
   const slots = [
@@ -652,7 +717,7 @@ export function routesMerge(left, right) {
   );
 }
 
-function selectRoute(
+function validRoute(
   candidates,
   boxes,
   source,
@@ -669,20 +734,109 @@ function selectRoute(
   // a labelled relation, at least one of its label placements is free.
   const labelled = Boolean(label?.lines?.length);
   const unrelated = routed.filter((edge) => edge.from !== source.id && edge.to !== target.id);
-  return (
-    [...candidates]
-      .sort((left, right) => routeLength(left.points) - routeLength(right.points))
-      .find(
-        ({ points, placements }) =>
-          !routeHitsBoxes(points, boxes, source, target) &&
-          !unrelated.some((edge) => routesMerge(points, edge.routePoints)) &&
-          (!labelled ||
-            placements.some(
-              (bounds) =>
-                labelAttached(bounds, points) && labelFits(bounds, blockers, allocatedLabelBounds),
-            )),
-      ) ?? candidates[0]
+  return [...candidates]
+    .sort((left, right) => routeLength(left.points) - routeLength(right.points))
+    .find(
+      ({ points, placements }) =>
+        !routeHitsBoxes(points, boxes, source, target) &&
+        !unrelated.some((edge) => routesMerge(points, edge.routePoints)) &&
+        (!labelled ||
+          placements.some(
+            (bounds) =>
+              labelAttached(bounds, points) && labelFits(bounds, blockers, allocatedLabelBounds),
+          )),
+    );
+}
+
+/**
+ * Side-port routes for a relation that runs against the flow: out of the
+ * source's side, along a lane beyond everything between the two layers, and
+ * into the target's side. `alongX` is true when the flow runs across the page.
+ */
+function feedbackRoutes(source, target, alongX, obstacles, label) {
+  const [flow, crossAxis, flowSize, crossSize] = alongX
+    ? ['x', 'y', 'width', 'height']
+    : ['y', 'x', 'height', 'width'];
+  const low = Math.min(source[flow], target[flow]);
+  const high = Math.max(source[flow] + source[flowSize], target[flow] + target[flowSize]);
+  const beside = obstacles.filter(
+    (bounds) => bounds[flow] < high && bounds[flow] + bounds[flowSize] > low,
   );
+  const point = (flowValue, crossValue) =>
+    alongX ? [flowValue, crossValue] : [crossValue, flowValue];
+  const rect = (flowValue, crossValue, flowExtent, crossExtent) =>
+    alongX
+      ? { x: flowValue, y: crossValue, width: flowExtent, height: crossExtent }
+      : { x: crossValue, y: flowValue, width: crossExtent, height: flowExtent };
+  const labelFlow = alongX ? label.width : label.height;
+  const labelCross = alongX ? label.height : label.width;
+  const sourceMiddle = source[flow] + source[flowSize] / 2;
+  const targetMiddle = target[flow] + target[flowSize] / 2;
+  return [1, -1].map((side) => {
+    const edge = (box) => (side > 0 ? box[crossAxis] + box[crossSize] : box[crossAxis]);
+    const lane =
+      side > 0
+        ? Math.max(...beside.map(edge)) + FEEDBACK_CLEARANCE
+        : Math.min(...beside.map(edge)) - FEEDBACK_CLEARANCE;
+    const entry = edge(target);
+    const onEntry = rect(
+      targetMiddle - labelFlow - LABEL_TARGET_CLEARANCE,
+      (entry + lane) / 2 - labelCross / 2,
+      labelFlow,
+      labelCross,
+    );
+    const nearTarget = rect(
+      targetMiddle - labelFlow - LABEL_TARGET_CLEARANCE,
+      side > 0 ? entry + LABEL_TARGET_CLEARANCE : entry - labelCross - LABEL_TARGET_CLEARANCE,
+      labelFlow,
+      labelCross,
+    );
+    const onLane = rect(
+      (sourceMiddle + targetMiddle) / 2 - labelFlow / 2,
+      side > 0 ? lane + LABEL_TARGET_CLEARANCE : lane - labelCross - LABEL_TARGET_CLEARANCE,
+      labelFlow,
+      labelCross,
+    );
+    return {
+      lane,
+      points: [
+        point(sourceMiddle, edge(source)),
+        point(sourceMiddle, lane),
+        point(targetMiddle, lane),
+        point(targetMiddle, entry),
+      ],
+      placements: [onEntry, nearTarget, onLane],
+    };
+  });
+}
+
+/**
+ * A two-turn route whose ports differ by less than STRAIGHTEN_TOLERANCE across
+ * the flow, as one straight segment. Only a port this relation owns alone
+ * moves, so a shared fan-in or fan-out port stays where its siblings meet.
+ */
+function straightenRoute(points, across, source, target, { sourceShared, targetShared }) {
+  if (points.length !== 4) return null;
+  const along = 1 - across;
+  const [first, bend, turn, last] = points;
+  if (
+    first[across] !== bend[across] ||
+    turn[across] !== last[across] ||
+    bend[along] !== turn[along]
+  )
+    return null;
+  const delta = last[across] - first[across];
+  if (delta === 0 || Math.abs(delta) >= STRAIGHTEN_TOLERANCE) return null;
+  const side = across === 0 ? ['x', 'width'] : ['y', 'height'];
+  const within = (box, value) =>
+    value >= box[side[0]] + STRAIGHTEN_TOLERANCE &&
+    value <= box[side[0]] + box[side[1]] - STRAIGHTEN_TOLERANCE;
+  const at = (value, point) => (across === 0 ? [value, point[1]] : [point[0], value]);
+  if (!sourceShared && within(source, last[across]))
+    return { points: [at(last[across], first), last], from: first[across], to: last[across] };
+  if (!targetShared && within(target, first[across]))
+    return { points: [first, at(first[across], last)], from: last[across], to: first[across] };
+  return null;
 }
 
 /** Each group's frame around its member boxes, before relations are routed. */
@@ -741,7 +895,11 @@ function crossesFrame(envelopes, source, target) {
   return groupsOf(source) !== groupsOf(target);
 }
 
-function graphEdges(document, boxes, { bands = null, flowAxis = null, lanes = [], metrics }) {
+function graphEdges(
+  document,
+  boxes,
+  { bands = null, flowAxis = null, lanes = [], metrics, feedback },
+) {
   const boxIndex = new Map(boxes.map((box) => [box.id, box]));
   const envelopes = boxEnvelopes(document, boxes);
   // Labels keep off container title bands as well as nodes.
@@ -781,6 +939,40 @@ function graphEdges(document, boxes, { bands = null, flowAxis = null, lanes = []
   }
   const fanOut = (relation) => (outgoing.get(relation.from) ?? 0) > 1;
   const fanIn = (relation) => (incoming.get(relation.to) ?? 0) > 1;
+  const routed = () => [...byId.values()];
+  const measureLabel = (text, limit) => {
+    const lines = text ? wrapDiagramLabel(text, limit) : [];
+    return {
+      lines,
+      width: lines.length
+        ? Math.max(...lines.map((line) => [...line].length)) * metrics.label.glyph + 24
+        : 0,
+      height: lines.length ? lines.length * metrics.label.lineHeight + 14 : 0,
+    };
+  };
+  const obstacles = () => [
+    ...boxes.map((box) => envelope(box)),
+    ...allocatedLabelBounds,
+    ...routed().flatMap((edge) =>
+      edge.routePoints.map(([x, y]) => ({ x, y, width: 0, height: 0 })),
+    ),
+  ];
+  // A feedback route carries its label on a straight run across the flow, so
+  // the label keeps the wider limit of a horizontal run.
+  const routeFeedback = (relation, source, target, alongX) => {
+    const label = measureLabel(relation.label, FEEDBACK_LABEL_LIMIT);
+    const candidate = validRoute(
+      feedbackRoutes(source, target, alongX, obstacles(), label),
+      boxes,
+      source,
+      target,
+      allocatedLabelBounds,
+      label,
+      routed(),
+      blockers,
+    );
+    return candidate ? { ...candidate, label } : undefined;
+  };
   for (const relations of pairs.values()) {
     const first = boxIndex.get(relations[0].from);
     const second = boxIndex.get(relations[0].to);
@@ -812,16 +1004,7 @@ function graphEdges(document, boxes, { bands = null, flowAxis = null, lanes = []
         : horizontal
           ? Math.max(8, Math.min(32, Math.floor((gap - 64) / metrics.label.glyph)))
           : 24;
-    const labels = relations.map((relation) => {
-      const lines = relation.label ? wrapDiagramLabel(relation.label, labelLimit) : [];
-      return {
-        lines,
-        width: lines.length
-          ? Math.max(...lines.map((line) => [...line].length)) * metrics.label.glyph + 24
-          : 0,
-        height: lines.length ? lines.length * metrics.label.lineHeight + 14 : 0,
-      };
-    });
+    const labels = relations.map((relation) => measureLabel(relation.label, labelLimit));
     const spacing = Math.max(
       48,
       ...labels.map((label) => (horizontal ? label.height : label.width) + 24),
@@ -829,7 +1012,7 @@ function graphEdges(document, boxes, { bands = null, flowAxis = null, lanes = []
     for (const [index, relation] of relations.entries()) {
       const source = boxIndex.get(relation.from);
       const target = boxIndex.get(relation.to);
-      const label = labels[index];
+      let label = labels[index];
       const slot = index - (relations.length - 1) / 2;
       const fraction = relations.length > 1 ? slot / relations.length : 0;
       let routePoints;
@@ -952,16 +1135,22 @@ function graphEdges(document, boxes, { bands = null, flowAxis = null, lanes = []
             return { lane, points, placements: stacked([nearTarget, midpoint], 'y') };
           }),
         ];
-        const candidate = selectRoute(
-          candidates,
-          boxes,
-          source,
-          target,
-          allocatedLabelBounds,
-          label,
-          [...byId.values()],
-          blockers,
-        );
+        const candidate =
+          validRoute(
+            candidates,
+            boxes,
+            source,
+            target,
+            allocatedLabelBounds,
+            label,
+            routed(),
+            blockers,
+          ) ??
+          (feedback.has(relation.id) && !crossBand
+            ? routeFeedback(relation, source, target, true)
+            : undefined) ??
+          candidates[0];
+        label = candidate.label ?? label;
         routePoints = candidate.points;
         const placement = placeLabel(label, candidate, blockers, allocatedLabelBounds);
         labelX = placement.x + label.width / 2;
@@ -1076,20 +1265,50 @@ function graphEdges(document, boxes, { bands = null, flowAxis = null, lanes = []
             return { lane, points, placements: stacked([nearTarget, midpoint]) };
           }),
         ];
-        const candidate = selectRoute(
-          candidates,
-          boxes,
-          source,
-          target,
-          allocatedLabelBounds,
-          label,
-          [...byId.values()],
-          blockers,
-        );
+        const candidate =
+          validRoute(
+            candidates,
+            boxes,
+            source,
+            target,
+            allocatedLabelBounds,
+            label,
+            routed(),
+            blockers,
+          ) ??
+          (feedback.has(relation.id) && !crossBand
+            ? routeFeedback(relation, source, target, false)
+            : undefined) ??
+          candidates[0];
+        label = candidate.label ?? label;
         routePoints = candidate.points;
         const placement = placeLabel(label, candidate, blockers, allocatedLabelBounds);
         labelX = placement.x + label.width / 2;
         labelY = placement.y;
+      }
+      if (source !== target && relations.length === 1) {
+        const straight = straightenRoute(routePoints, horizontal ? 1 : 0, source, target, {
+          sourceShared: fanOut(relation),
+          targetShared: fanIn(relation),
+        });
+        if (straight) {
+          const centre = horizontal ? labelY + label.height / 2 : labelX;
+          const shift =
+            Math.abs(centre - straight.from) < Math.abs(centre - straight.to)
+              ? straight.to - straight.from
+              : 0;
+          const moved = {
+            x: labelX - label.width / 2 + (horizontal ? 0 : shift),
+            y: labelY + (horizontal ? shift : 0),
+            width: label.width,
+            height: label.height,
+          };
+          if (!label.lines.length || labelFits(moved, blockers, allocatedLabelBounds)) {
+            routePoints = straight.points;
+            if (horizontal) labelY += shift;
+            else labelX += shift;
+          }
+        }
       }
       routePoints = routePoints.filter(
         ([x, y], pointIndex) =>
@@ -1152,7 +1371,53 @@ function edgeBounds(edge) {
   return geometryBounds([route, ...(edge.labelBounds ? [edge.labelBounds] : [])]);
 }
 
-function graphGroups(document, boxes, edges) {
+// Where a group title starts inside its frame, and the band it occupies.
+const GROUP_TITLE = Object.freeze({ inset: 18, top: 8, bottom: 34, clearance: 6 });
+
+/**
+ * Keeps a group title off the connectors that cross its title band. A small
+ * growth of the frame on its title side comes first, so the title keeps its
+ * corner; then the first gap between crossings that holds the title; then any
+ * growth that takes in no other node.
+ */
+function placeGroupTitle(frame, edges, boxes, glyph) {
+  const width = [...frame.label].length * glyph;
+  const top = frame.y + GROUP_TITLE.top;
+  const bottom = frame.y + GROUP_TITLE.bottom;
+  const blocked = edges
+    .flatMap(({ routePoints }) =>
+      routePoints.slice(1).map((point, index) => [routePoints[index], point]),
+    )
+    .filter(([[, y1], [, y2]]) => Math.min(y1, y2) <= bottom && Math.max(y1, y2) >= top)
+    .map(([[x1], [x2]]) => [
+      Math.min(x1, x2) - GROUP_TITLE.clearance,
+      Math.max(x1, x2) + GROUP_TITLE.clearance,
+    ])
+    .sort(([left], [right]) => left - right);
+  const inset = frame.x + GROUP_TITLE.inset;
+  const clear = (start) => blocked.every(([low, high]) => high <= start || low >= start + width);
+  const inside = (start) => start + width <= frame.x + frame.width - GROUP_TITLE.inset;
+  if (clear(inset) && inside(inset)) return { titleOffset: GROUP_TITLE.inset };
+  const crossing = blocked.find(([low, high]) => high > inset && low < inset + width);
+  const grown = (() => {
+    if (!crossing) return null;
+    // Whole units keep the scene translation that follows free of float noise.
+    const x = Math.floor(crossing[0] - width - GROUP_TITLE.inset);
+    const start = x + GROUP_TITLE.inset;
+    const strip = { x, y: frame.y, width: frame.x - x, height: frame.height };
+    if (x >= frame.x || !clear(start) || boxes.some((box) => rectanglesOverlap(strip, box)))
+      return null;
+    return { x, width: frame.width + frame.x - x, titleOffset: GROUP_TITLE.inset };
+  })();
+  if (grown && frame.x - grown.x <= 2 * GROUP_PADDING.side) return grown;
+  const gap = blocked
+    .map(([, high]) => high + GROUP_TITLE.inset - GROUP_TITLE.clearance)
+    .find((start) => start >= inset && clear(start) && inside(start));
+  if (gap !== undefined) return { titleOffset: gap - frame.x };
+  return grown ?? { titleOffset: GROUP_TITLE.inset };
+}
+
+function graphGroups(document, boxes, edges, metrics) {
   const geometry = new Map(boxes.map((box) => [box.id, box]));
   for (const edge of edges) geometry.set(edge.id, edgeBounds(edge));
   const byId = new Map();
@@ -1171,6 +1436,7 @@ function graphGroups(document, boxes, edges) {
         height: bounds.height + GROUP_PADDING.top + GROUP_PADDING.bottom,
         emphasis: document.emphasis.find(({ targetId }) => targetId === group.id)?.level ?? null,
       };
+      Object.assign(rendered, placeGroupTitle(rendered, edges, boxes, metrics.container.glyph));
       byId.set(group.id, rendered);
       geometry.set(group.id, rendered);
       pending.delete(group.id);
@@ -1500,8 +1766,9 @@ export function layoutDiagram(document, { theme = resolveDiagramTheme(document.t
     flowAxis,
     metrics,
     lanes: layout.lanes ?? [],
+    feedback: layout.feedback ?? new Set(),
   });
-  const groups = graphGroups(document, layout.boxes, edges);
+  const groups = graphGroups(document, layout.boxes, edges, metrics);
   const lanes = layout.lanes ?? [];
   const notes = graphNotes(document, layout.boxes, edges, groups);
   const labelBounds = edges.flatMap((edge) => (edge.labelBounds ? [edge.labelBounds] : []));

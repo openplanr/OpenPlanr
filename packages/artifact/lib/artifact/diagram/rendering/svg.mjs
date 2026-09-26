@@ -88,7 +88,7 @@ const containerTitle = (theme, { size, weight, letterSpacing, fontFamily }) =>
 
 function renderGroup(group, theme, metrics) {
   const stroke = group.emphasis ? theme.accent : theme.border;
-  return `<g data-group-id="${escapeXml(group.id)}"><rect x="${group.x}" y="${group.y}" width="${group.width}" height="${group.height}" rx="${metrics.container.radius}" fill="none" stroke="${stroke}" stroke-width="${group.emphasis === 'primary' ? 3 : 1.5}" stroke-dasharray="8 6"/><text x="${group.x + 18}" y="${group.y + 27}" ${containerTitle(theme, metrics.container)} fill="${stroke}">${escapeXml(group.label)}</text></g>`;
+  return `<g data-group-id="${escapeXml(group.id)}"><rect x="${group.x}" y="${group.y}" width="${group.width}" height="${group.height}" rx="${metrics.container.radius}" fill="none" stroke="${stroke}" stroke-width="${group.emphasis === 'primary' ? 3 : 1.5}" stroke-dasharray="8 6"/><text x="${group.x + group.titleOffset}" y="${group.y + 27}" ${containerTitle(theme, metrics.container)} fill="${stroke}">${escapeXml(group.label)}</text></g>`;
 }
 
 function renderLane(lane, theme, metrics) {

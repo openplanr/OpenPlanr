@@ -32,9 +32,10 @@ reads at a glance.
   `description`; the studio shows it on selection.
 - Use `flow` for the main path, `dependency` for "uses" or "reads", and
   `transition` for a return or retry. Flow renders solid, dependency dashed.
-- Add a back edge (a relation to an earlier node) only when the grammar is a
-  cycle by nature, such as `state-machine` or `loop-flywheel`. In `architecture`
-  and `flowchart` a back edge pushes its target to the bottom of the canvas.
+- Add a back edge (a relation to an earlier node) only when the loop is part of
+  the meaning, such as a readout returning to the request or a retry in a
+  `state-machine`. The layers follow the forward flow, and the back edge runs
+  around the outside of the graph into the side of its target.
 - Use groups sparingly, at most one level, and never for the whole graph. Use
   at most one annotation; more than that draws connectors across the canvas.
 - Lanes are bands perpendicular to the flow: rows under `left-right`, columns

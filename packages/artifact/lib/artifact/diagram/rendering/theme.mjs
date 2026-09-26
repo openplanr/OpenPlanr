@@ -2,7 +2,7 @@ import { DIAGRAM_ERROR_CODES, diagramFail } from '../errors.mjs';
 
 export const DIAGRAM_RENDERER = Object.freeze({
   id: 'openplanr-semantic-svg-resvg',
-  version: '1.3.0',
+  version: '1.4.0',
 });
 
 export const DIAGRAM_THEME = Object.freeze({
@@ -54,6 +54,7 @@ export const DIAGRAM_DEFAULT_METRICS = Object.freeze({
     letterSpacing: 0.8,
     fontFamily: null,
     radius: 18,
+    glyph: 8.6,
   }),
   phase: Object.freeze({ size: 13 }),
   sequence: Object.freeze({
@@ -145,6 +146,7 @@ const BRAND_METRICS = Object.freeze({
     letterSpacing: 0.2,
     fontFamily: BRAND_HEADLINE_FONT,
     radius: 20,
+    glyph: 8.4,
   }),
   phase: Object.freeze({ size: 16 }),
   sequence: Object.freeze({
