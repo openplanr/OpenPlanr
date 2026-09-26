@@ -1,39 +1,102 @@
-// @ts-check
 import { readFileSync } from 'node:fs';
+import type { IncomingMessage } from 'node:http';
+import type {
+  DiagramAuthoringBundle,
+  DiagramAuthoringProfile,
+  DiagramEditTransaction,
+} from '@openplanr/protocol/diagram-authoring-contracts';
 import { embedJson, escapeHtml } from '../../internal/escape.mjs';
 import { readRequestBody } from '../../internal/server-util.mjs';
 import { createArtifactReviewServer } from '../../review-server.mjs';
-import { createDiagramAuthoringStore } from '../authoring/store.mjs';
+import {
+  createDiagramAuthoringStore,
+  type DiagramAuthoringStoreOptions,
+  type DiagramStoreReadResult,
+  type DiagramStoreSaveResult,
+  type DiagramStoreUnknown,
+} from '../authoring/store.mjs';
 import { createDiagramEditorDraft } from './draft.mjs';
 
-/**
- * A store result as the API reports it; only unknown outcomes carry path, reason and code.
- * @typedef {(
- *   | import('../authoring/store.d.mts').DiagramStoreReadResult
- *   | import('../authoring/store.d.mts').DiagramStoreSaveResult
- *   | { ok: true; status: 'not-found'; transactionId: string }
- * ) & Partial<Pick<import('../authoring/store.d.mts').DiagramStoreUnknown, 'path' | 'reason' | 'code'>>} StoreOutcome
- */
+export interface DiagramLocalOwnerOptions {
+  root: string;
+  slug: string;
+  /** Initial blank title; saved document content always wins. */
+  title?: string;
+  /** Initial blank authoring grammar, default process. */
+  grammar?: DiagramAuthoringProfile;
+  maxRequestBytes?: number;
+  storeOptions?: Pick<DiagramAuthoringStoreOptions, 'maxBundleBytes' | 'faultInjector'>;
+}
+export interface DiagramLocalOwnerAdapter {
+  readonly capabilities: Readonly<{ read: true; write: true }>;
+  handleRequest(context: {
+    req: IncomingMessage;
+    segments: string[];
+    origin: string;
+    recoveryScope: string;
+    head?: boolean;
+  }): Promise<
+    | false
+    | { status: number; body: Record<string, unknown> }
+    | { status: number; kind: 'asset'; asset: 'document' | 'runtime' | 'stylesheet'; body: string }
+  >;
+}
+export interface DiagramOwnerHandle {
+  readonly ok: true;
+  readonly kind: 'diagram-owner';
+  readonly status: 'ready';
+  readonly sessionId: string;
+  /** Public recovery namespace; contains no source path or authorization token. */
+  readonly recoveryScope: string;
+  /** Scoped local editor page. */
+  readonly baseUrl: string;
+  readonly url: string;
+  readonly launchError?: string;
+  readonly apiBase: string;
+  readonly capabilities: Readonly<{ read: true; write: true }>;
+  readonly headers: Readonly<{ 'x-openplanr-owner': '1' }>;
+  close(): Promise<void>;
+}
 
-/** @type {typeof import('./local-owner.d.mts').DIAGRAM_OWNER_HEADER} */
+/** A store result as the API reports it; only unknown outcomes carry path, reason and code. */
+type StoreOutcome = (
+  | DiagramStoreReadResult
+  | DiagramStoreSaveResult
+  | { ok: true; status: 'not-found'; transactionId: string }
+) &
+  Partial<Pick<DiagramStoreUnknown, 'path' | 'reason' | 'code'>>;
+/** A thrown store or request-body error; invalid transactions also list diagnostics. */
+interface OwnerFailure {
+  code?: unknown;
+  details?: { diagnostics?: Array<{ rule: string }> };
+}
+/** An http.Server request, which always carries its method. */
+type OwnerRequest = IncomingMessage & { method: string };
+type OwnerRequestContext = Omit<Parameters<DiagramLocalOwnerAdapter['handleRequest']>[0], 'req'> & {
+  req: OwnerRequest;
+};
+
 export const DIAGRAM_OWNER_HEADER = 'x-openplanr-owner';
-/** @type {typeof import('./local-owner.d.mts').DIAGRAM_OWNER_MAX_REQUEST_BYTES} */
-export const DIAGRAM_OWNER_MAX_REQUEST_BYTES = 64 * 1024 * 1024;
+export const DIAGRAM_OWNER_MAX_REQUEST_BYTES: number = 64 * 1024 * 1024;
 const CAPABILITIES = Object.freeze({ read: true, write: true });
-const METHODS = Object.freeze({
+const METHODS: Readonly<Record<string, string[]>> = Object.freeze({
   read: ['GET', 'HEAD'],
   initialize: ['POST'],
   commit: ['POST'],
   recover: ['POST'],
 });
 
-function response(status, body) {
+function response(status: number, body: Record<string, unknown>) {
   return { status, body };
 }
-function rejected(status, code, message, state = 'invalid') {
+function rejected(status: number, code: string, message: string, state = 'invalid') {
   return response(status, { ok: false, status: state, code, message });
 }
-function closedBody(value, allowed, required) {
+function closedBody(
+  value: unknown,
+  allowed: string[],
+  required: string[],
+): value is Record<string, unknown> {
   return (
     value !== null &&
     typeof value === 'object' &&
@@ -42,7 +105,7 @@ function closedBody(value, allowed, required) {
     required.every((key) => Object.hasOwn(value, key))
   );
 }
-function storeFailure(error) {
+function storeFailure(error: OwnerFailure) {
   const code = typeof error?.code === 'string' ? error.code : '';
   if (code === 'E_REQUEST_BODY_LIMIT')
     return rejected(413, code, 'The owner request exceeds its byte limit.');
@@ -101,7 +164,15 @@ function storeFailure(error) {
 }
 
 /** The owner shell carries preferences, never document content or source paths. */
-function ownerPage({ slug, title, grammar }) {
+function ownerPage({
+  slug,
+  title,
+  grammar,
+}: {
+  slug: string;
+  title: string;
+  grammar: DiagramAuthoringProfile;
+}) {
   const config = embedJson({ diagramId: slug, title, grammar });
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="referrer" content="no-referrer"><meta name="color-scheme" content="light dark"><title>${escapeHtml(title)} · OpenPlanr Diagram Editor</title><link rel="stylesheet" href="editor.css"></head><body class="planr-diagram-owner-page"><main id="diagram-owner-editor" aria-label="Diagram editor"><p role="status">Opening local diagram…</p></main><script type="application/json" id="diagram-owner-data">${config}</script><script src="runtime.js" defer></script></body></html>`;
 }
@@ -110,7 +181,6 @@ function ownerPage({ slug, title, grammar }) {
  * Bind one local document before exposing any HTTP capability. HTTP bodies may
  * provide content and operation identity only, never roots, slugs or filenames.
  * Register this adapter with createArtifactReviewServer.registerOwnerSession().
- * @type {typeof import('./local-owner.d.mts').createDiagramLocalOwnerAdapter}
  */
 export function createDiagramLocalOwnerAdapter({
   root,
@@ -119,7 +189,7 @@ export function createDiagramLocalOwnerAdapter({
   grammar = 'process',
   maxRequestBytes = DIAGRAM_OWNER_MAX_REQUEST_BYTES,
   storeOptions = {},
-}) {
+}: DiagramLocalOwnerOptions): DiagramLocalOwnerAdapter {
   if (
     !Number.isSafeInteger(maxRequestBytes) ||
     maxRequestBytes < 1 ||
@@ -139,7 +209,12 @@ export function createDiagramLocalOwnerAdapter({
   const store = createDiagramAuthoringStore({ ...storeOptions, root, slug });
   return Object.freeze({
     capabilities: CAPABILITIES,
-    async handleRequest({ req, segments, origin, recoveryScope }) {
+    async handleRequest({
+      req,
+      segments,
+      origin,
+      recoveryScope,
+    }: OwnerRequestContext): ReturnType<DiagramLocalOwnerAdapter['handleRequest']> {
       if (
         ['GET', 'HEAD'].includes(req.method) &&
         (segments.length === 0 ||
@@ -206,8 +281,7 @@ export function createDiagramLocalOwnerAdapter({
         );
       const extra = { diagramId: slug, recoveryScope, capabilities: CAPABILITIES };
       try {
-        /** @type {StoreOutcome} */
-        let result;
+        let result: StoreOutcome;
         if (action === 'read') {
           if (req.headers['transfer-encoding'] || Number(req.headers['content-length'] ?? 0) !== 0)
             return rejected(400, 'E_DIAGRAM_OWNER_BODY', 'Read requests cannot carry a body.');
@@ -232,7 +306,7 @@ export function createDiagramLocalOwnerAdapter({
               'E_DIAGRAM_OWNER_ENCODING',
               'Encoded request bodies are not accepted.',
             );
-          let value;
+          let value: unknown;
           try {
             const bytes = await readRequestBody(req, { maxBytes: maxRequestBytes });
             value = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
@@ -245,6 +319,7 @@ export function createDiagramLocalOwnerAdapter({
               'The request body must be one valid UTF-8 JSON object.',
             );
           }
+          // The store validates body content; these assertions only name its typed inputs.
           if (action === 'initialize') {
             if (!closedBody(value, ['bundle', 'transactionId'], ['bundle', 'transactionId']))
               return rejected(
@@ -252,11 +327,13 @@ export function createDiagramLocalOwnerAdapter({
                 'E_DIAGRAM_OWNER_BODY',
                 'Initialization requires only a bundle and transactionId.',
               );
-            result = await store.initialize(value.bundle, { transactionId: value.transactionId });
+            result = await store.initialize(value.bundle as DiagramAuthoringBundle, {
+              transactionId: value.transactionId as string,
+            });
           } else if (action === 'commit') {
             if (!closedBody(value, ['transaction'], ['transaction']))
               return rejected(400, 'E_DIAGRAM_OWNER_BODY', 'A commit requires only a transaction.');
-            result = await store.commit(value.transaction);
+            result = await store.commit(value.transaction as DiagramEditTransaction);
           } else {
             if (!closedBody(value, ['transactionId', 'fingerprint'], []))
               return rejected(
@@ -264,7 +341,7 @@ export function createDiagramLocalOwnerAdapter({
                 'E_DIAGRAM_OWNER_BODY',
                 'Recovery accepts only transaction identity.',
               );
-            result = await store.recover(value);
+            result = await store.recover(value as { transactionId?: string; fingerprint?: string });
           }
         }
         // Source paths and filesystem failure messages are never browser data.
@@ -277,16 +354,13 @@ export function createDiagramLocalOwnerAdapter({
           });
         return response(200, { ...body, ...extra });
       } catch (error) {
-        return storeFailure(error);
+        return storeFailure(error as OwnerFailure);
       }
     },
   });
 }
 
-/**
- * Start the local editor and scoped API; review never grants owner authority.
- * @type {typeof import('./local-owner.d.mts').startDiagramOwner}
- */
+/** Start the local editor and scoped API; review never grants owner authority. */
 export async function startDiagramOwner({
   root,
   slug,
@@ -298,7 +372,12 @@ export async function startDiagramOwner({
   maxRequestBytes,
   storeOptions,
   env = process.env,
-}) {
+}: DiagramLocalOwnerOptions & {
+  port?: number;
+  env?: Record<string, string | undefined>;
+  noOpen?: boolean;
+  openUrl?: (url: string) => void | Promise<void>;
+}): Promise<DiagramOwnerHandle> {
   const adapter = createDiagramLocalOwnerAdapter({
     root,
     slug,
@@ -312,7 +391,7 @@ export async function startDiagramOwner({
   try {
     await server.listen(port);
     const baseUrl = `http://127.0.0.1:${server.port}${registration.path}`;
-    let launchError;
+    let launchError: string | undefined;
     if (!noOpen && openUrl) {
       try {
         await openUrl(baseUrl);

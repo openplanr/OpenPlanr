@@ -559,13 +559,13 @@
     {
       "source": "packages/artifact/lib/artifact/diagram/editor/geometry-index.d.mts",
       "target": "lib/artifact/diagram/editor/geometry-index.d.mts",
-      "sha256": "8b66ebb9494530b968c0970f54e3af75110d9e1b88822e0f9efe9de330cd3faf",
+      "sha256": "9fa9e953eaf4a758f51317ec1ff0861306ae46cef8f458c4bbd5de309640db52",
       "mode": "644"
     },
     {
       "source": "packages/artifact/lib/artifact/diagram/editor/geometry-index.mjs",
       "target": "lib/artifact/diagram/editor/geometry-index.mjs",
-      "sha256": "614255ba9dbf80f88b87ca320d3e16a1c8857e70683f6802682dcb97e4750d39",
+      "sha256": "d8a97f40947924b66c168ffe1d095d373ff248a07597afdc83f4e91ce0842329",
       "mode": "644"
     },
     {
@@ -583,13 +583,13 @@
     {
       "source": "packages/artifact/lib/artifact/diagram/editor/local-owner.d.mts",
       "target": "lib/artifact/diagram/editor/local-owner.d.mts",
-      "sha256": "465071ae1c9b9dfd518b4eccfb60fdbd376d1e7f85f27adaf3306e2024cbdab1",
+      "sha256": "6a51de4f158ccf4f093b4e0cbd4230f62772ed4575b9099016b833aae931eb87",
       "mode": "644"
     },
     {
       "source": "packages/artifact/lib/artifact/diagram/editor/local-owner.mjs",
       "target": "lib/artifact/diagram/editor/local-owner.mjs",
-      "sha256": "f23d9faf0033a26ec106cc921b32f910ed24ffa43af4387ece815c47b3b9b0fd",
+      "sha256": "2f9b6073176f39e11c1dfd850e74010b0a1d986b3316d91abfc01972f62baa2d",
       "mode": "644"
     },
     {

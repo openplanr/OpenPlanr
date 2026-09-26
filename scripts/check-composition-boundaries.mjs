@@ -23,7 +23,7 @@ function visitSourceFiles(relativeRoot, callback) {
         if (!['generated', 'vendor'].includes(entry.name)) stack.push(path);
       } else if (
         entry.isFile() &&
-        ['.js', '.mjs', '.ts', '.tsx'].includes(extname(entry.name)) &&
+        ['.js', '.mjs', '.ts', '.mts', '.tsx'].includes(extname(entry.name)) &&
         !/\.d\.(?:mts|ts)$/u.test(entry.name)
       ) {
         callback(relativePath, readFileSync(path, 'utf8'));

@@ -6,6 +6,7 @@
   // `@type {typeof import('./x.d.mts').name}`, so the body is checked against the
   // declared signature; a validator whose declared input is `unknown` and whose
   // body duck-types it binds its result with `@returns {ReturnType<...>}` instead.
+  // TypeScript sources are included too; their compiled .mjs then drops out as a root.
   "compilerOptions": {
     "allowJs": true,
     "checkJs": false,
@@ -23,7 +24,8 @@
   "include": [
     "packages/artifact/lib/artifact/ui/**/*.mjs",
     "packages/artifact/lib/artifact/diagram/editor/**/*.mjs",
+    "packages/artifact/lib/**/*.mts",
     "packages/protocol/src/**/*.mjs"
   ],
-  "exclude": ["**/generated/**"]
+  "exclude": ["**/generated/**", "**/*.d.mts"]
 }
