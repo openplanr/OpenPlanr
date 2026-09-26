@@ -110,7 +110,10 @@ export declare const MERMAID_EXPORT_CAPABILITIES: Readonly<
 export declare const EXCALIDRAW_EXPORT_CAPABILITIES: Readonly<
   Record<string, Readonly<Record<string, string>>>
 >;
-export declare function layoutDiagram(document: DiagramDocument): Readonly<Record<string, unknown>>;
+export declare function layoutDiagram(
+  document: DiagramDocument,
+  options?: Readonly<{ theme?: DiagramTheme }>,
+): Readonly<Record<string, unknown>>;
 export declare function wrapDiagramLabel(label: string, maximum?: number): readonly string[];
 export declare function escapeXml(value: unknown): string;
 export declare function renderDiagramSvg(

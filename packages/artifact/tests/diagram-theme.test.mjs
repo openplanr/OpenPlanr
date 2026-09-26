@@ -113,8 +113,9 @@ test('every brand text colour meets WCAG AA on the surface it is drawn over', ()
     // Box, note and label text.
     assert.ok(ratio(palette.foreground, palette.background) >= 7, `${mode} foreground`);
     assert.ok(ratio(palette.foreground, palette.surface) >= 7, `${mode} foreground on surface`);
-    // Relation labels sit on a background-coloured knockout.
+    // Relation labels sit on a background-coloured knockout; node subtitles on the surface.
     assert.ok(ratio(palette.muted, palette.background) >= AA_TEXT, `${mode} muted`);
+    assert.ok(ratio(palette.muted, palette.surface) >= AA_TEXT, `${mode} subtitle`);
     // Phase labels and emphasised group titles.
     assert.ok(ratio(palette.accent, palette.background) >= AA_TEXT, `${mode} accent`);
     // Plain group titles reuse the border colour as text.
@@ -213,6 +214,46 @@ test('auto mode remaps every light value to its dark value and stays passive in 
   );
 });
 
+test('the brand theme sets node titles apart and sizes type for a README column', () => {
+  const light = OPENPLANR_THEME.light;
+  const titled = brandDocument('light', {
+    ...brandFixture,
+    nodes: brandFixture.nodes.map((node, index) =>
+      index === 0 ? { ...node, label: `${node.label}\nsource of truth` } : node,
+    ),
+  });
+  const rendered = renderDiagramOutputs(titled);
+  assert.equal(rendered.quality.status, 'pass');
+  const first = brandFixture.nodes[0];
+  assert.match(
+    rendered.svg,
+    new RegExp(
+      `font-size="18" font-weight="600" fill="${light.foreground}">${first.label}</tspan><tspan [^>]*font-size="15" font-weight="400" fill="${light.muted}">source of truth</tspan>`,
+      'u',
+    ),
+  );
+  assert.match(rendered.svg, /<g data-group-id="[^"]+"><rect [^>]*rx="20"/u);
+  assert.match(
+    rendered.svg,
+    /font-family="Outfit, DM Sans, [^"]+" font-size="15" font-weight="600"/u,
+  );
+  assert.match(rendered.svg, /<g data-relation-id="[^"]+">.*?font-size="15" fill=/u);
+
+  const sequence = renderDiagramOutputs(brandDocument('light', grammarFixture('sequence')));
+  assert.equal(sequence.quality.status, 'pass');
+  const { participantWidth, participantGap } = light.metrics.sequence;
+  assert.deepEqual(
+    sequence.scene.boxes.map(({ x, width }) => [x, width]),
+    sequence.scene.boxes.map((_, index) => [
+      sequence.scene.phases[0].x1 + index * (participantWidth + participantGap),
+      participantWidth,
+    ]),
+    'participants start at the phase rule, with no rail beside them',
+  );
+  assert.match(sequence.svg, /<g data-phase-id="[^"]+"><text [^>]*font-size="16"/u);
+  assert.match(sequence.svg, /<g data-relation-id="[^"]+">.*?font-size="16" fill=/u);
+});
+
 test('the default theme output is untouched by the brand theme', () => {
   const rendered = renderDiagramOutputs(
     createDiagramDocument({
@@ -223,6 +264,7 @@ test('the default theme output is untouched by the brand theme', () => {
   assert.equal(rendered.theme, DIAGRAM_THEME);
   assert.doesNotMatch(rendered.svg, /<style|#F5F7F7|#08080C/u);
   assert.match(rendered.svg, /font-family="Inter"/u);
+  assert.doesNotMatch(rendered.svg, /<tspan [^>]*font-size/u);
   assert.ok(rendered.html.includes(':root{color-scheme:light;--bg:#ffffff;'));
   assert.ok(rendered.html.includes('background:linear-gradient(180deg,#f8fafc 0,#fff 320px)'));
   assert.doesNotMatch(rendered.html, /h1\{font-family|prefers-color-scheme/u);

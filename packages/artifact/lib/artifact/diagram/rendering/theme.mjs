@@ -18,6 +18,58 @@ export const DIAGRAM_THEME = Object.freeze({
   fontSize: 16,
 });
 
+/**
+ * Type scale and spacing for themes that declare no `metrics`. Kept off
+ * DIAGRAM_THEME so the default asset receipt and its digest stay unchanged.
+ * Glyph widths are the per-character advances the layout reserves.
+ */
+export const DIAGRAM_DEFAULT_METRICS = Object.freeze({
+  hierarchy: false,
+  siblingGap: 112,
+  node: Object.freeze({
+    minWidth: 220,
+    maxWidth: 420,
+    minHeight: 88,
+    paddingX: 26,
+    paddingY: 22,
+    titleWrap: 32,
+    subtitleWrap: 32,
+    radius: 14,
+  }),
+  title: Object.freeze({ size: 16, weight: 600, lineHeight: 22, glyph: 9 }),
+  subtitle: Object.freeze({ size: 16, weight: 600, lineHeight: 22, glyph: 9 }),
+  label: Object.freeze({ size: 14, lineHeight: 18, glyph: 14, baseline: 18 }),
+  message: Object.freeze({
+    size: 14,
+    lineHeight: 18,
+    glyph: 7.5,
+    wrapGlyph: 8,
+    baseline: 18,
+    minWidth: 220,
+    balance: false,
+  }),
+  container: Object.freeze({
+    size: 13,
+    weight: 700,
+    letterSpacing: 0.8,
+    fontFamily: null,
+    radius: 18,
+  }),
+  phase: Object.freeze({ size: 13 }),
+  sequence: Object.freeze({
+    participantWidth: 220,
+    participantGap: 96,
+    phaseRail: 176,
+    participantWrap: 24,
+    participantMinHeight: 88,
+    participantPaddingY: 36,
+    headerGap: 72,
+    phaseLead: 0,
+    phaseGap: 52,
+    messageGap: 34,
+  }),
+});
+
 /** Palette slots every theme fills; the adaptive stylesheet remaps each one. */
 export const DIAGRAM_PALETTE_KEYS = Object.freeze([
   'background',
@@ -56,6 +108,58 @@ const BRAND_BLEND = Object.freeze({
 
 const BRAND_BODY_FONT = 'DM Sans, Inter, system-ui, -apple-system, Helvetica, Arial, sans-serif';
 const BRAND_HEADLINE_FONT = `Outfit, ${BRAND_BODY_FONT}`;
+
+/**
+ * A compact, README-scale density: larger type on a narrower scene. The first
+ * line of a node label is its title and the rest its muted subtitle. Glyph
+ * widths cover the widest Latin face in the stack's system fallbacks.
+ */
+const BRAND_METRICS = Object.freeze({
+  hierarchy: true,
+  siblingGap: 48,
+  node: Object.freeze({
+    minWidth: 176,
+    maxWidth: 420,
+    minHeight: 84,
+    paddingX: 24,
+    paddingY: 20,
+    titleWrap: 34,
+    subtitleWrap: 44,
+    radius: 16,
+  }),
+  title: Object.freeze({ size: 18, weight: 600, lineHeight: 24, glyph: 9.6 }),
+  subtitle: Object.freeze({ size: 15, weight: 400, lineHeight: 20, glyph: 7.8 }),
+  label: Object.freeze({ size: 15, lineHeight: 20, glyph: 8, baseline: 22 }),
+  message: Object.freeze({
+    size: 16,
+    lineHeight: 22,
+    glyph: 8.4,
+    wrapGlyph: 8.4,
+    baseline: 23,
+    minWidth: 360,
+    balance: true,
+  }),
+  container: Object.freeze({
+    size: 15,
+    weight: 600,
+    letterSpacing: 0.2,
+    fontFamily: BRAND_HEADLINE_FONT,
+    radius: 20,
+  }),
+  phase: Object.freeze({ size: 16 }),
+  sequence: Object.freeze({
+    participantWidth: 184,
+    participantGap: 40,
+    phaseRail: 0,
+    participantWrap: 17,
+    participantMinHeight: 64,
+    participantPaddingY: 32,
+    headerGap: 56,
+    phaseLead: 28,
+    phaseGap: 44,
+    messageGap: 16,
+  }),
+});
 
 const channels = (hex) =>
   [1, 3, 5].map((offset) => Number.parseInt(hex.slice(offset, offset + 2), 16));
@@ -117,6 +221,7 @@ function brandTheme(mode, palette, dark = null) {
     ...palette,
     fontFamily: BRAND_BODY_FONT,
     fontSize: 16,
+    metrics: BRAND_METRICS,
     ...(dark ? { dark } : {}),
   });
 }
@@ -168,6 +273,10 @@ export function resolveDiagramTheme(theme) {
     themes: DIAGRAM_THEMES.map(({ id }) => id),
     repair: `Set theme.themeId to one of ${DIAGRAM_THEMES.map(({ id }) => id).join(', ')}.`,
   });
+}
+
+export function diagramMetrics(theme) {
+  return theme.metrics ?? DIAGRAM_DEFAULT_METRICS;
 }
 
 /**

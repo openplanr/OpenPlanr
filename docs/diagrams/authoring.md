@@ -100,7 +100,10 @@ accepts only the selected source and regenerates the rest of the set.
   Paper; dark mode sets Paper text and Teal accents on Ink. Node fills, strokes, group
   outlines, and labels are blended from those four tokens, and every text colour meets
   WCAG AA on the surface it is drawn over. Text uses DM Sans with system fallbacks, so the
-  SVG stays legible where web fonts do not load.
+  SVG stays legible where web fonts do not load. The theme also sets a compact density
+  for embedding in a README: the first line of a node label is a semibold title and later
+  lines a muted subtitle, group titles use the Outfit headline face, and a sequence uses
+  narrower participants with each phase title above its rule instead of a side rail.
 
 In `auto` mode the SVG carries the light values as presentation attributes and one inline
 `@media (prefers-color-scheme: dark)` stylesheet that swaps them, so a single file follows

@@ -3,6 +3,7 @@ import { assertProtocolArtifact } from '@openplanr/protocol/contracts';
 
 import { planDiagramQuality } from '../readability.mjs';
 import {
+  CONTAINER_TITLE_BAND,
   LABEL_EDGE_DISTANCE,
   labelAttached,
   routesMerge,
@@ -97,7 +98,7 @@ function labelOnContainerTitleCount(scene) {
     x: frame.x,
     y: frame.y,
     width: frame.width,
-    height: 34,
+    height: CONTAINER_TITLE_BAND,
   }));
   return (scene.labelBounds ?? []).filter((label) => titles.some((title) => overlaps(label, title)))
     .length;

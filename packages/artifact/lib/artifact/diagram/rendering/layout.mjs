@@ -1,5 +1,11 @@
 import { DIAGRAM_ERROR_CODES, diagramFail } from '../errors.mjs';
-import { MAX_DIAGRAM_SCENE_EXTENT, MAX_VISIBLE_LABEL_CHARACTERS, RASTER_SCALE } from './theme.mjs';
+import {
+  diagramMetrics,
+  MAX_DIAGRAM_SCENE_EXTENT,
+  MAX_VISIBLE_LABEL_CHARACTERS,
+  RASTER_SCALE,
+  resolveDiagramTheme,
+} from './theme.mjs';
 
 const PADDING = 64;
 // A layer gap holds the source lane, the target lane, and a one-line relation
@@ -17,10 +23,7 @@ const BAND_GAP = 144;
 const BAND_WRAP_EXTENT = 4_096;
 // The longest band still rasterizes at RASTER_SCALE inside the viewport budget.
 const MAX_BAND_EXTENT = MAX_DIAGRAM_SCENE_EXTENT / RASTER_SCALE;
-const MIN_NODE_WIDTH = 220;
 const MAX_NODE_WIDTH = 420;
-const LINE_HEIGHT = 22;
-const NODE_VERTICAL_PADDING = 44;
 const CHARACTERS_PER_LINE = 32;
 // A single word up to this length is kept whole even when it exceeds the
 // per-line budget; "describes" must never render as "describe" + "s".
@@ -34,14 +37,7 @@ const LANE_PADDING = Object.freeze({ title: 40, edge: 26 });
 const LANE_GAP = 20;
 const LANE_SLOT_GAP = 112;
 const LANE_STACK_GAP = 34;
-const SEQUENCE_PARTICIPANT_WIDTH = 220;
-const SEQUENCE_PARTICIPANT_GAP = 96;
-const SEQUENCE_PHASE_RAIL = 176;
 const SEQUENCE_MESSAGE_LINE_HEIGHT = 18;
-const SEQUENCE_MESSAGE_GAP = 34;
-// Reserve a full em for each relation-label glyph at 14px. This conservative
-// bound covers wide Latin/full-width glyphs instead of assuming average text.
-const GRAPH_LABEL_GLYPH_WIDTH = 14;
 
 function semanticItems(document) {
   if (document.nodes.length > 0) return document.nodes;
@@ -96,11 +92,58 @@ export function wrapDiagramLabel(label, maximum = CHARACTERS_PER_LINE) {
   return lines.length > 0 ? lines : [''];
 }
 
-function dimensions(lines) {
-  const longest = Math.max(1, ...lines.map((line) => [...line].length));
+/** Wrapped node lines; a hierarchy theme sets the first paragraph apart as the title. */
+function nodeLines(
+  label,
+  metrics,
+  titleWrap = metrics.node.titleWrap,
+  subtitleWrap = metrics.node.subtitleWrap,
+) {
+  // Wrapping the whole label first enforces the text budget on the label as a whole.
+  const lines = wrapDiagramLabel(label, titleWrap);
+  if (!metrics.hierarchy) return { lines, titleLines: null };
+  const [title, ...detail] = String(label).normalize('NFC').split(/\r?\n/u);
+  const titleLines = wrapDiagramLabel(title, titleWrap);
   return {
-    width: Math.max(MIN_NODE_WIDTH, Math.min(MAX_NODE_WIDTH, longest * 9 + 52)),
-    height: Math.max(88, lines.length * LINE_HEIGHT + NODE_VERTICAL_PADDING),
+    lines: [
+      ...titleLines,
+      ...(detail.length > 0 ? wrapDiagramLabel(detail.join('\n'), subtitleWrap) : []),
+    ],
+    titleLines: titleLines.length,
+  };
+}
+
+const lineStyle = (metrics, titleLines, index) =>
+  index < (titleLines ?? Number.POSITIVE_INFINITY) ? metrics.title : metrics.subtitle;
+
+function textHeight(lines, titleLines, metrics) {
+  return lines.reduce(
+    (total, _, index) => total + lineStyle(metrics, titleLines, index).lineHeight,
+    0,
+  );
+}
+
+/** The narrowest wrap that keeps the line count of `maximum`, so no line ends as an orphan. */
+function balancedLines(label, maximum) {
+  const lines = wrapDiagramLabel(label, maximum);
+  let best = lines;
+  for (let width = maximum - 1; width > 0 && lines.length > 1; width -= 1) {
+    const next = wrapDiagramLabel(label, width);
+    if (next.length > lines.length) break;
+    best = next;
+  }
+  return best;
+}
+
+function dimensions(lines, titleLines, metrics) {
+  const { node } = metrics;
+  const widest = Math.max(
+    metrics.title.glyph,
+    ...lines.map((line, index) => [...line].length * lineStyle(metrics, titleLines, index).glyph),
+  );
+  return {
+    width: Math.max(node.minWidth, Math.min(node.maxWidth, widest + 2 * node.paddingX)),
+    height: Math.max(node.minHeight, textHeight(lines, titleLines, metrics) + 2 * node.paddingY),
   };
 }
 
@@ -112,26 +155,27 @@ function orient(box, direction, extent) {
   return { ...box, x: box.y, y: box.x };
 }
 
-function createBox(item) {
-  const lines = wrapDiagramLabel(item.label);
+function createBox(item, metrics) {
+  const { lines, titleLines } = nodeLines(item.label, metrics);
   return {
     id: item.id,
     kind: item.kind,
     label: item.label,
     description: item.description ?? null,
     lines,
+    ...(titleLines === null ? {} : { titleLines }),
     x: 0,
     y: 0,
-    ...dimensions(lines),
+    ...dimensions(lines, titleLines, metrics),
   };
 }
 
-function gridLayout(items, direction) {
+function gridLayout(items, direction, metrics) {
   const horizontal = ['left-right', 'right-left'].includes(direction);
   const columns = horizontal
     ? Math.min(6, Math.max(1, items.length))
     : Math.min(3, Math.max(1, items.length));
-  const sized = items.map(createBox);
+  const sized = items.map((item) => createBox(item, metrics));
   const maximumNodeHeight = Math.max(88, ...sized.map(({ height }) => height));
   const raw = [];
   let maximumWidth = 0;
@@ -283,24 +327,23 @@ function wrapLayers(layers, primarySize, crossSize, primaryGap) {
   return bands;
 }
 
-function layeredGraphLayout(items, relations, direction, layerGap = ROW_GAP) {
+function layeredGraphLayout(items, relations, direction, layerGap, metrics) {
   const horizontal = ['left-right', 'right-left'].includes(direction);
   const ranks = graphRanks(items, relations);
   const layers = new Map();
   for (const item of items) {
     const rank = ranks.get(item.id) ?? 0;
     if (!layers.has(rank)) layers.set(rank, []);
-    layers.get(rank).push(createBox(item));
+    layers.get(rank).push(createBox(item, metrics));
   }
   const orderedLayers = [...layers.entries()]
     .sort(([left], [right]) => left - right)
     .map(([, boxes]) => boxes);
+  const siblingGap = metrics.siblingGap;
   const layerCrossSize = (boxes) =>
     boxes.reduce(
       (total, box, index) =>
-        total +
-        (horizontal ? box.height : box.width) +
-        (index === 0 ? 0 : horizontal ? ROW_GAP : COLUMN_GAP),
+        total + (horizontal ? box.height : box.width) + (index === 0 ? 0 : siblingGap),
       0,
     );
   const layerPrimarySize = (boxes) =>
@@ -318,7 +361,7 @@ function layeredGraphLayout(items, relations, direction, layerGap = ROW_GAP) {
       for (const box of boxes) {
         raw.push({ ...box, x: horizontal ? primary : cross, y: horizontal ? cross : primary });
         bandById.set(box.id, bandIndex);
-        cross += horizontal ? box.height + ROW_GAP : box.width + COLUMN_GAP;
+        cross += (horizontal ? box.height : box.width) + siblingGap;
       }
       primary += layerPrimarySize(boxes) + primaryGap;
     }
@@ -348,13 +391,13 @@ function layeredGraphLayout(items, relations, direction, layerGap = ROW_GAP) {
 // rows beside a left-right flow. A node's position along the flow axis is its
 // relation rank, so a handoff between lanes lines up across them; without
 // relations the declared member order decides it.
-function laneLayout(document) {
+function laneLayout(document, metrics) {
   const direction = document.layout.direction;
   const horizontalFlow = ['left-right', 'right-left'].includes(direction);
   const reversed = ['right-left', 'bottom-up'].includes(direction);
   const flowSize = (box) => (horizontalFlow ? box.width : box.height);
   const crossSize = (box) => (horizontalFlow ? box.height : box.width);
-  const boxes = document.nodes.map(createBox);
+  const boxes = document.nodes.map((item) => createBox(item, metrics));
   const byId = new Map(boxes.map((box) => [box.id, box]));
   const laneOf = new Map();
   for (const [index, lane] of document.lanes.entries()) {
@@ -539,6 +582,10 @@ function stacked(placements, across = 'x') {
 // quality report measures the same distance so layout and report agree.
 export const LABEL_EDGE_DISTANCE = 28;
 
+// Height of the strip at the top of a group or lane frame that holds its title;
+// the quality report reserves the same strip.
+export const CONTAINER_TITLE_BAND = 34;
+
 function distanceToSegment([px, py], [x1, y1], [x2, y2]) {
   const dx = x2 - x1;
   const dy = y2 - y1;
@@ -613,6 +660,7 @@ function selectRoute(
   allocatedLabelBounds,
   label = null,
   routed = [],
+  blockers = boxes,
 ) {
   // Candidates are ordered by length before validation so a graph with many
   // relations never validates every lane when the shortest one already fits. A
@@ -631,10 +679,31 @@ function selectRoute(
           (!labelled ||
             placements.some(
               (bounds) =>
-                labelAttached(bounds, points) && labelFits(bounds, boxes, allocatedLabelBounds),
+                labelAttached(bounds, points) && labelFits(bounds, blockers, allocatedLabelBounds),
             )),
       ) ?? candidates[0]
   );
+}
+
+/** Each group's frame around its member boxes, before relations are routed. */
+function boxFrames(document, boxes) {
+  return document.groups.flatMap((group) => {
+    const members = group.members.map((id) => boxes.find((box) => box.id === id)).filter(Boolean);
+    if (members.length === 0) return [];
+    const bounds = geometryBounds(members);
+    return [
+      {
+        members,
+        frame: {
+          x: bounds.x - GROUP_PADDING.side,
+          y: bounds.y - GROUP_PADDING.top,
+          width: bounds.width + 2 * GROUP_PADDING.side,
+          height: bounds.height + GROUP_PADDING.top + GROUP_PADDING.bottom,
+        },
+        id: group.id,
+      },
+    ];
+  });
 }
 
 // The rectangle an edge must clear when leaving or entering a box: the box
@@ -646,16 +715,8 @@ function boxEnvelopes(document, boxes) {
       { x: box.x, y: box.y, width: box.width, height: box.height, framed: false },
     ]),
   );
-  for (const group of document.groups) {
-    const members = group.members.map((id) => boxes.find((box) => box.id === id)).filter(Boolean);
-    if (members.length === 0) continue;
-    const bounds = geometryBounds(members);
-    const frame = {
-      x: bounds.x - GROUP_PADDING.side,
-      y: bounds.y - GROUP_PADDING.top,
-      width: bounds.width + 2 * GROUP_PADDING.side,
-      height: bounds.height + GROUP_PADDING.top + GROUP_PADDING.bottom,
-    };
+  for (const { members, frame, id } of boxFrames(document, boxes)) {
+    const group = { id };
     for (const member of members) {
       const current = envelopes.get(member.id);
       const x = Math.min(current.x, frame.x);
@@ -680,9 +741,19 @@ function crossesFrame(envelopes, source, target) {
   return groupsOf(source) !== groupsOf(target);
 }
 
-function graphEdges(document, boxes, bands = null, flowAxis = null) {
+function graphEdges(document, boxes, { bands = null, flowAxis = null, lanes = [], metrics }) {
   const boxIndex = new Map(boxes.map((box) => [box.id, box]));
   const envelopes = boxEnvelopes(document, boxes);
+  // Labels keep off container title bands as well as nodes.
+  const blockers = [
+    ...boxes,
+    ...[...boxFrames(document, boxes).map(({ frame }) => frame), ...lanes].map((frame) => ({
+      x: frame.x,
+      y: frame.y,
+      width: frame.width,
+      height: CONTAINER_TITLE_BAND,
+    })),
+  ];
   const envelope = (box) => envelopes.get(box.id);
   const laneOffset = (layer, framed) =>
     framed && layer.some((box) => envelope(box)?.framed) ? FRAME_LANE_OFFSET : BOX_LANE_OFFSET;
@@ -739,16 +810,16 @@ function graphEdges(document, boxes, bands = null, flowAxis = null) {
       first === second
         ? 24
         : horizontal
-          ? Math.max(8, Math.min(32, Math.floor((gap - 64) / GRAPH_LABEL_GLYPH_WIDTH)))
+          ? Math.max(8, Math.min(32, Math.floor((gap - 64) / metrics.label.glyph)))
           : 24;
     const labels = relations.map((relation) => {
       const lines = relation.label ? wrapDiagramLabel(relation.label, labelLimit) : [];
       return {
         lines,
         width: lines.length
-          ? Math.max(...lines.map((line) => [...line].length)) * GRAPH_LABEL_GLYPH_WIDTH + 24
+          ? Math.max(...lines.map((line) => [...line].length)) * metrics.label.glyph + 24
           : 0,
-        height: lines.length ? lines.length * 18 + 14 : 0,
+        height: lines.length ? lines.length * metrics.label.lineHeight + 14 : 0,
       };
     });
     const spacing = Math.max(
@@ -889,9 +960,10 @@ function graphEdges(document, boxes, bands = null, flowAxis = null) {
           allocatedLabelBounds,
           label,
           [...byId.values()],
+          blockers,
         );
         routePoints = candidate.points;
-        const placement = placeLabel(label, candidate, boxes, allocatedLabelBounds);
+        const placement = placeLabel(label, candidate, blockers, allocatedLabelBounds);
         labelX = placement.x + label.width / 2;
         labelY = placement.y;
       } else {
@@ -1012,9 +1084,10 @@ function graphEdges(document, boxes, bands = null, flowAxis = null) {
           allocatedLabelBounds,
           label,
           [...byId.values()],
+          blockers,
         );
         routePoints = candidate.points;
-        const placement = placeLabel(label, candidate, boxes, allocatedLabelBounds);
+        const placement = placeLabel(label, candidate, blockers, allocatedLabelBounds);
         labelX = placement.x + label.width / 2;
         labelY = placement.y;
       }
@@ -1173,27 +1246,34 @@ function sequenceTimeline(document) {
   return timeline;
 }
 
-function sequenceLayout(document) {
+function sequenceLayout(document, metrics) {
+  const { sequence } = metrics;
   const reversed = ['right-left', 'bottom-up'].includes(document.layout.direction);
   const participants = reversed ? [...document.nodes].reverse() : [...document.nodes];
   const participantLines = participants.map((participant) =>
-    wrapDiagramLabel(participant.label, 24),
+    nodeLines(participant.label, metrics, sequence.participantWrap),
   );
   const participantHeight = Math.max(
-    88,
-    ...participantLines.map((lines) => lines.length * LINE_HEIGHT + 36),
+    sequence.participantMinHeight,
+    ...participantLines.map(
+      ({ lines, titleLines }) =>
+        textHeight(lines, titleLines, metrics) + sequence.participantPaddingY,
+    ),
   );
-  const participantStart = PADDING + SEQUENCE_PHASE_RAIL;
-  const participantSpan = SEQUENCE_PARTICIPANT_WIDTH + SEQUENCE_PARTICIPANT_GAP;
+  const participantStart = PADDING + sequence.phaseRail;
+  const participantSpan = sequence.participantWidth + sequence.participantGap;
   const boxes = participants.map((participant, index) => ({
     id: participant.id,
     kind: participant.kind,
     label: participant.label,
     description: participant.description ?? null,
-    lines: participantLines[index],
+    lines: participantLines[index].lines,
+    ...(participantLines[index].titleLines === null
+      ? {}
+      : { titleLines: participantLines[index].titleLines }),
     x: participantStart + index * participantSpan,
     y: PADDING,
-    width: SEQUENCE_PARTICIPANT_WIDTH,
+    width: sequence.participantWidth,
     height: participantHeight,
     emphasis: document.emphasis.find(({ targetId }) => targetId === participant.id)?.level ?? null,
   }));
@@ -1210,9 +1290,10 @@ function sequenceLayout(document) {
   const edges = [];
   const notes = [];
   const labelBounds = [];
-  let y = PADDING + participantHeight + 72;
+  let y = PADDING + participantHeight + sequence.headerGap;
   for (const entry of sequenceTimeline(document)) {
     if (entry.type === 'phase') {
+      if (phases.length > 0) y += sequence.phaseLead;
       phases.push({
         id: entry.value.id,
         label: entry.value.label,
@@ -1220,7 +1301,7 @@ function sequenceLayout(document) {
         x2: phaseEnd,
         y,
       });
-      y += 52;
+      y += sequence.phaseGap;
       continue;
     }
     const relation = entry.value;
@@ -1229,23 +1310,38 @@ function sequenceLayout(document) {
     if (!source || !target) continue;
     const x1 = source.x + source.width / 2;
     const x2 = target.x + target.width / 2;
-    const maximum = Math.max(18, Math.min(46, Math.floor(Math.max(220, Math.abs(x2 - x1)) / 8)));
-    const labelLines = relation.label ? wrapDiagramLabel(relation.label, maximum) : [];
+    const maximum = Math.max(
+      18,
+      Math.min(
+        46,
+        Math.floor(
+          Math.max(metrics.message.minWidth, Math.abs(x2 - x1)) / metrics.message.wrapGlyph,
+        ),
+      ),
+    );
+    const labelLines = relation.label
+      ? metrics.message.balance
+        ? balancedLines(relation.label, maximum)
+        : wrapDiagramLabel(relation.label, maximum)
+      : [];
     const labelWidth =
       labelLines.length === 0
         ? 0
         : Math.min(
-            Math.max(120, Math.max(...labelLines.map((line) => [...line].length)) * 7.5 + 28),
-            Math.max(220, Math.abs(x2 - x1) - 24),
+            Math.max(
+              120,
+              Math.max(...labelLines.map((line) => [...line].length)) * metrics.message.glyph + 28,
+            ),
+            Math.max(metrics.message.minWidth, Math.abs(x2 - x1) - 24),
           );
     const labelHeight =
-      labelLines.length * SEQUENCE_MESSAGE_LINE_HEIGHT + (labelLines.length > 0 ? 14 : 0);
+      labelLines.length * metrics.message.lineHeight + (labelLines.length > 0 ? 14 : 0);
     const messageY = y + labelHeight + 10;
     const labelBoundsValue =
       labelLines.length > 0
         ? {
             id: relation.id,
-            x: (x1 + x2) / 2 - labelWidth / 2,
+            x: Math.min(Math.max(PADDING, (x1 + x2) / 2 - labelWidth / 2), phaseEnd - labelWidth),
             y,
             width: labelWidth,
             height: labelHeight,
@@ -1283,7 +1379,7 @@ function sequenceLayout(document) {
       });
       noteY += height + 12;
     }
-    y = Math.max(messageY + SEQUENCE_MESSAGE_GAP, noteY + 12);
+    y = Math.max(messageY + sequence.messageGap, relationNotes.length > 0 ? noteY + 12 : 0);
   }
   for (const annotation of document.annotations.filter(({ targetId }) => boxIndex.has(targetId))) {
     const lines = wrapDiagramLabel(annotation.text, 48);
@@ -1341,9 +1437,10 @@ function assertSceneExtent(width, height) {
   );
 }
 
-export function layoutDiagram(document) {
+export function layoutDiagram(document, { theme = resolveDiagramTheme(document.theme) } = {}) {
+  const metrics = diagramMetrics(theme);
   if (document.grammar.id === 'sequence') {
-    const scene = sequenceLayout(document);
+    const scene = sequenceLayout(document, metrics);
     assertSceneExtent(scene.width, scene.height);
     return Object.freeze({
       ...scene,
@@ -1375,7 +1472,7 @@ export function layoutDiagram(document) {
     document.relations.length > 0 &&
     document.layout.direction !== 'radial';
   const layout = useLanes
-    ? laneLayout(document)
+    ? laneLayout(document, metrics)
     : useLayeredGraph
       ? layeredGraphLayout(
           items,
@@ -1386,8 +1483,9 @@ export function layoutDiagram(document) {
             : ['left-right', 'right-left'].includes(document.layout.direction)
               ? COLUMN_GAP
               : ROW_GAP,
+          metrics,
         )
-      : gridLayout(items, document.layout.direction);
+      : gridLayout(items, document.layout.direction, metrics);
   for (const box of layout.boxes) {
     box.emphasis = document.emphasis.find(({ targetId }) => targetId === box.id)?.level ?? null;
   }
@@ -1397,7 +1495,12 @@ export function layoutDiagram(document) {
       : ['left-right', 'right-left'].includes(document.layout.direction)
         ? 'horizontal'
         : 'vertical';
-  const edges = graphEdges(document, layout.boxes, layout.bands ?? null, flowAxis);
+  const edges = graphEdges(document, layout.boxes, {
+    bands: layout.bands ?? null,
+    flowAxis,
+    metrics,
+    lanes: layout.lanes ?? [],
+  });
   const groups = graphGroups(document, layout.boxes, edges);
   const lanes = layout.lanes ?? [];
   const notes = graphNotes(document, layout.boxes, edges, groups);
