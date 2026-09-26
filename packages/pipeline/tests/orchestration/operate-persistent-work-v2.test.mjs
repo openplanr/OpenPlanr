@@ -357,6 +357,46 @@ test('exact current Chair Artifact cannot enter the superseded work-change-set m
   );
 });
 
+test('a work-change-set.materialized Event cannot materialize work from a current Chair Artifact', () => {
+  const work = changeSet();
+  const before = acceptedChairState(work);
+  const beforeHash = sha256Jcs(before);
+  const materialized = (actor) =>
+    createOperatingRuntimeEventV2(
+      {
+        eventId: 'evt-work-forged-001',
+        timestamp: NEXT,
+        cycleId: 'cyc_00000001',
+        type: 'work-change-set.materialized',
+        entityId: CHAIR_ARTIFACT_ID,
+        actor,
+        causationId: null,
+        correlationId: 'corr-work-001',
+        payload: buildPersistentPayload(work),
+      },
+      { previousEvent: { sequence: before.eventHead.sequence, eventHash: before.eventHead.hash } },
+    );
+  assert.throws(
+    () =>
+      reduceOperatingRuntimeEventsV2([materialized({ kind: 'human', id: 'owner-001' })], {
+        initialState: before,
+      }),
+    { code: 'CAPABILITY_DENIED' },
+  );
+  assert.throws(
+    () =>
+      reduceOperatingRuntimeEventsV2([materialized({ kind: 'runtime', id: 'openplanr' })], {
+        initialState: before,
+      }),
+    {
+      code: 'RESULT_CONTRACT_INVALID',
+      message: /not a canonical UTF-8 v2 operating-work-change-set/,
+    },
+  );
+  assert.equal(sha256Jcs(before), beforeHash);
+  assert.deepEqual(before.workChangeSetReplayIndex, []);
+});
+
 test('pure persistent-work builder derives canonical records and rejects forged bytes or local references', () => {
   const work = changeSet();
   const payload = buildPersistentPayload(work);

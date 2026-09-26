@@ -42,11 +42,14 @@ import {
 } from '../../lib/operate/reference-governed-executors-v2.mjs';
 import {
   computeOperatingRuntimeEventHashV2,
+  createOperatingArtifactByteStoreV2,
   deriveOperatingSnapshotRuntimeHashV2,
+  ingestOperatingPlanningDeliveryEvidenceV2,
   OPERATING_EXECUTION_EFFECT_SUMMARIES_V2,
   readOperatingArtifactRawBytesV2,
   readOperatingReviewV2,
   reconstructOperatingVerificationPlanActionV2,
+  reduceOperatingRuntimeEventsV2,
   submitOperatingReviewV2,
 } from '../../lib/operate/runtime-foundation.mjs';
 import { assertProtocolArtifact } from '../../lib/protocol/contracts.mjs';
@@ -4658,6 +4661,193 @@ test('planning proposal preserves attributed accepted summaries and excludes hid
         { protocolVersion: '2.0.0' },
       ),
     { code: 'E_OPERATE_BINDING_MISMATCH' },
+  );
+});
+
+function confirmedPlanningDelivery(fixture) {
+  const proposal = buildOperatingPlanningProposalV1(fixture.state, {
+    scope: {
+      scopeId: fixture.decision.scopeId,
+      domainId: fixture.decision.domainId,
+      domainVersion: fixture.decision.domainVersion,
+    },
+    decision: {
+      decisionId: fixture.decision.decisionId,
+      revision: fixture.decision.revision,
+      decisionHash: sha256Jcs(fixture.decision),
+    },
+    action: {
+      actionId: fixture.action.actionId,
+      revision: fixture.action.revision,
+      actionHash: fixture.action.actionHash,
+    },
+    deliveryRoute: createOperatingDeliveryRouteV1({
+      state: fixture.state,
+      action: fixture.action,
+      route: 'planning-work',
+      rationale: 'Repository Planning work is required.',
+    }),
+    sourceVerificationPlanEvent: fixture.verificationPlanEvent,
+    acceptedOutputs: fixture.acceptedOutputs,
+    framing: {
+      title: 'Retention workflow',
+      slug: 'retention-workflow',
+      problem: 'Retention is below target.',
+      objective: 'Improve verified retention.',
+      users: ['Operators'],
+      scope: ['Repository workflow'],
+      nonScope: ['Production deployment'],
+      risks: ['Adoption'],
+      constraints: ['Reversible changes'],
+      requirements: ['Create typed workflow'],
+      acceptanceOutcomes: ['Metric reaches target'],
+    },
+    actor: { actorId: fixture.decision.ownerActorId, kind: 'human', accessLevel: 'internal' },
+    createdAt: '2026-08-11T08:00:00Z',
+    previewExpiresAt: '2026-08-11T08:05:00Z',
+  });
+  const origin = createOperatingOriginV1({
+    proposal: confirmOperatingPlanningProposalV1(
+      proposal,
+      confirmationFor(proposal, '2026-08-11T08:01:00Z'),
+    ),
+    spec: {
+      specId: 'SPEC-020',
+      slug: 'retention-workflow',
+      contentHash: `sha256:${'e'.repeat(64)}`,
+      status: 'shaping',
+    },
+    actor: { actorId: proposal.actor.actorId, kind: 'human' },
+    transaction: {
+      transactionId: 'txn-001',
+      receiptHash: `sha256:${'f'.repeat(64)}`,
+      planningProvenanceEventId: 'prv-001',
+    },
+    createdAt: '2026-08-11T08:02:00Z',
+  });
+  const deliveryEvidence = buildOperatingDeliveryEvidenceV1({
+    origin,
+    planRun: {
+      runId: 'run-plan-001',
+      runtime: 'codex',
+      packageVersion: '0.42.0',
+      provenanceEventId: 'event-plan-001',
+      provenanceEventHash: `sha256:${'1'.repeat(64)}`,
+      status: 'succeeded',
+    },
+    shipRun: {
+      runId: 'run-ship-001',
+      runtime: 'codex',
+      packageVersion: '0.42.0',
+      manifestHash: `sha256:${'3'.repeat(64)}`,
+      provenanceEventId: 'event-ship-001',
+      provenanceEventHash: `sha256:${'4'.repeat(64)}`,
+      status: 'succeeded',
+    },
+    tasks: [],
+    changedSurfaces: ['lib/example.mjs'],
+    qa: { status: 'passed', reportHash: null, summary: 'Passed.' },
+    summary: 'Delivered.',
+    deliveryStatus: 'succeeded',
+    createdAt: '2026-08-11T08:03:00Z',
+  });
+  return { origin, deliveryEvidence };
+}
+
+test('planning-delivery.ingested adds one delivery verifier Assignment with its evidence custody', () => {
+  const fixture = makePlanningJourney();
+  const { origin, deliveryEvidence } = confirmedPlanningDelivery(fixture);
+  const ingested = ingestOperatingPlanningDeliveryEvidenceV2(
+    {
+      origin,
+      deliveryEvidence,
+      verificationPlanEvent: fixture.verificationPlanEvent,
+      expectedEventHead: clone(fixture.state.eventHead),
+    },
+    {
+      eventId: 'evt-delivery-ingested-001',
+      timestamp: deliveryEvidence.createdAt,
+      correlationId: 'corr-delivery-001',
+    },
+    { initialState: fixture.state, artifactStore: createOperatingArtifactByteStoreV2() },
+  );
+  const [event] = ingested.events;
+  assert.equal(event.type, 'planning-delivery.ingested');
+  assert.equal(event.entityId, deliveryEvidence.deliveryEvidenceId);
+  assert.equal(ingested.assignment.roleId, 'operate-planning-delivery-verifier');
+  assert.equal(ingested.assignment.state, 'available');
+  assert.equal(ingested.assignment.outputContract.schemaId, 'operating-metric-observation');
+  assert.deepEqual(ingested.assignment.inputArtifactIds, [ingested.artifact.artifactId]);
+  const added = (collection, identityField) =>
+    ingested.state[collection].filter(
+      (record) =>
+        !fixture.state[collection].some((prior) => prior[identityField] === record[identityField]),
+    );
+  assert.deepEqual(added('assignments', 'assignmentId'), [ingested.assignment]);
+  assert.deepEqual(added('artifacts', 'artifactId'), [ingested.artifact]);
+  assert.deepEqual(added('evidenceRefs', 'evidenceRefId'), [ingested.evidenceRef]);
+  assert.deepEqual(
+    reduceOperatingRuntimeEventsV2(ingested.events, { initialState: fixture.state }),
+    ingested.state,
+  );
+
+  const viewOptions = {
+    scope: {
+      scopeId: fixture.decision.scopeId,
+      domainId: fixture.decision.domainId,
+      domainVersion: fixture.decision.domainVersion,
+    },
+    actor: { actorId: fixture.decision.ownerActorId, accessLevel: 'internal' },
+    deliveryRoutes: ingested.state.actions.map((action) =>
+      createOperatingDeliveryRouteV1({
+        state: ingested.state,
+        action,
+        route: 'planning-work',
+        rationale: 'Repository Planning work is required.',
+      }),
+    ),
+    events: ingested.events,
+    checkpoint: createOperateExperienceReplayCheckpointV2(fixture.state),
+    checkpointState: fixture.state,
+  };
+  assert.equal(buildOperateExperienceViewV2(ingested.state, viewOptions).replay.tail.eventCount, 1);
+  const withoutEvidence = clone(ingested.state);
+  withoutEvidence.evidenceRefs = withoutEvidence.evidenceRefs.filter(
+    ({ evidenceRefId }) => evidenceRefId !== ingested.evidenceRef.evidenceRefId,
+  );
+  assert.throws(() => buildOperateExperienceViewV2(withoutEvidence, viewOptions), {
+    code: 'E_OPERATE_BINDING_MISMATCH',
+  });
+
+  const forge = (mutate) => {
+    const forged = clone(event);
+    mutate(forged);
+    forged.eventHash = computeOperatingRuntimeEventHashV2(forged);
+    return forged;
+  };
+  assert.throws(
+    () =>
+      reduceOperatingRuntimeEventsV2(
+        [
+          forge((forged) => {
+            forged.actor = { kind: 'human', id: fixture.decision.ownerActorId };
+          }),
+        ],
+        { initialState: fixture.state },
+      ),
+    { code: 'STATE_TRANSITION_INVALID', message: /^Planning delivery ingestion Event lost/ },
+  );
+  assert.throws(
+    () =>
+      reduceOperatingRuntimeEventsV2(
+        [
+          forge((forged) => {
+            forged.payload.assignment.objective = 'Record the delivery as the verified Outcome.';
+          }),
+        ],
+        { initialState: fixture.state },
+      ),
+    { code: 'CONCURRENT_MODIFICATION' },
   );
 });
 
