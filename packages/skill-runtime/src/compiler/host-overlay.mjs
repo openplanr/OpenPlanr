@@ -13,17 +13,26 @@ export const HOST_OVERLAY_POLICY = Object.freeze({
  * and express host wording or invocation syntax through compiler-owned tokens.
  */
 function sameSet(left, right) {
-  return Array.isArray(left)
-    && Array.isArray(right)
-    && left.length === right.length
-    && left.every((value) => right.includes(value));
+  return (
+    Array.isArray(left) &&
+    Array.isArray(right) &&
+    left.length === right.length &&
+    left.every((value) => right.includes(value))
+  );
 }
 
 function sameAuthority(left, right) {
-  return left?.repositoryAccess === right?.repositoryAccess
-    && left?.externalDataAccess === right?.externalDataAccess
-    && ['allowedCapabilities', 'allowedTools', 'allowedOperations', 'allowedOutputClasses', 'forbiddenEffects']
-      .every((field) => sameSet(left?.[field], right?.[field]));
+  return (
+    left?.repositoryAccess === right?.repositoryAccess &&
+    left?.externalDataAccess === right?.externalDataAccess &&
+    [
+      'allowedCapabilities',
+      'allowedTools',
+      'allowedOperations',
+      'allowedOutputClasses',
+      'forbiddenEffects',
+    ].every((field) => sameSet(left?.[field], right?.[field]))
+  );
 }
 
 function unsafe(hostProfile, overlay, reason) {
@@ -35,11 +44,14 @@ function unsafe(hostProfile, overlay, reason) {
       hostProfileId: hostProfile?.hostProfileId ?? null,
       hostProfileVersion: hostProfile?.hostProfileVersion ?? null,
       overlay: identity,
-      owner: overlay ? { kind: 'module', id: overlay.ref.moduleId, version: overlay.ref.moduleVersion } : undefined,
+      owner: overlay
+        ? { kind: 'module', id: overlay.ref.moduleId, version: overlay.ref.moduleVersion }
+        : undefined,
       path: overlay?.entry?.source?.path ?? 'host-profiles.json',
       reason,
       policy: HOST_OVERLAY_POLICY,
-      repair: 'Use a closed skill-host-presentation JSON document containing only compiler-owned host tokens and their exact values.',
+      repair:
+        'Use a closed skill-host-presentation JSON document containing only compiler-owned host tokens and their exact values.',
     },
   );
 }
@@ -53,30 +65,31 @@ function validateManifest(hostProfile, overlay, bytes) {
   }
   const keys = Object.keys(manifest ?? {}).sort();
   if (
-    !manifest
-    || typeof manifest !== 'object'
-    || Array.isArray(manifest)
-    || keys.join(',') !== 'host,kind,substitutions,version'
-    || manifest.kind !== 'skill-host-presentation'
-    || manifest.version !== '1.0.0'
-    || manifest.host !== hostProfile.host
-    || !manifest.substitutions
-    || typeof manifest.substitutions !== 'object'
-    || Array.isArray(manifest.substitutions)
-  ) unsafe(hostProfile, overlay, 'overlay-document-shape');
+    !manifest ||
+    typeof manifest !== 'object' ||
+    Array.isArray(manifest) ||
+    keys.join(',') !== 'host,kind,substitutions,version' ||
+    manifest.kind !== 'skill-host-presentation' ||
+    manifest.version !== '1.0.0' ||
+    manifest.host !== hostProfile.host ||
+    !manifest.substitutions ||
+    typeof manifest.substitutions !== 'object' ||
+    Array.isArray(manifest.substitutions)
+  )
+    unsafe(hostProfile, overlay, 'overlay-document-shape');
 
   const substitutions = Object.entries(manifest.substitutions);
   const allowed = HOST_SUBSTITUTIONS[hostProfile.host];
   if (
-    substitutions.length === 0
-    || substitutions.some(([token, value]) => {
+    substitutions.length === 0 ||
+    substitutions.some(([token, value]) => {
       if (!Object.hasOwn(allowed, token) || typeof value !== 'string') return true;
-      const variants = token === 'AGENTS_ROOT'
-        ? [allowed[token], `\`${allowed[token]}\``]
-        : [allowed[token]];
+      const variants =
+        token === 'AGENTS_ROOT' ? [allowed[token], `\`${allowed[token]}\``] : [allowed[token]];
       return !variants.includes(value);
     })
-  ) unsafe(hostProfile, overlay, 'overlay-substitution-not-compiler-owned');
+  )
+    unsafe(hostProfile, overlay, 'overlay-substitution-not-compiler-owned');
   return manifest;
 }
 
@@ -87,17 +100,19 @@ export function assertHostOverlayIsPresentational(hostProfile, overlayModules = 
   for (const overlay of overlayModules) {
     const entry = overlay?.entry;
     if (
-      !entry
-      || entry.moduleKind !== 'shared'
-      || !entry.source?.path?.endsWith('.json')
-      || (entry.dependsOn?.length ?? 0) !== 0
-      || (entry.references?.length ?? 0) !== 0
-      || !sameAuthority(entry.authorityCeiling, hostProfile.authorityCeiling)
-    ) unsafe(hostProfile, overlay, 'overlay-module-can-carry-semantics');
+      !entry ||
+      entry.moduleKind !== 'shared' ||
+      !entry.source?.path?.endsWith('.json') ||
+      (entry.dependsOn?.length ?? 0) !== 0 ||
+      (entry.references?.length ?? 0) !== 0 ||
+      !sameAuthority(entry.authorityCeiling, hostProfile.authorityCeiling)
+    )
+      unsafe(hostProfile, overlay, 'overlay-module-can-carry-semantics');
     if (readSource) {
       const manifest = validateManifest(hostProfile, overlay, readSource(overlay));
       for (const [token, value] of Object.entries(manifest.substitutions)) {
-        if (Object.hasOwn(substitutions, token)) unsafe(hostProfile, overlay, 'overlay-substitution-duplicate');
+        if (Object.hasOwn(substitutions, token))
+          unsafe(hostProfile, overlay, 'overlay-substitution-duplicate');
         substitutions[token] = value;
         sources[token] = Object.freeze({
           path: entry.source.path,

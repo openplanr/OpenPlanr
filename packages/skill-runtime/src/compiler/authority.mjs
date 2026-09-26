@@ -6,7 +6,12 @@ import { SkillRuntimeError } from '../errors.mjs';
 //   externalDataAccess: read-only -> none
 //   allowed{Capabilities,Tools,Operations,OutputClasses}: subset only
 //   forbiddenEffects : superset only (grows)
-const REPOSITORY_ACCESS_ORDER = Object.freeze(['request-scope', 'declared-paths', 'read-only', 'none']);
+const REPOSITORY_ACCESS_ORDER = Object.freeze([
+  'request-scope',
+  'declared-paths',
+  'read-only',
+  'none',
+]);
 const EXTERNAL_DATA_ACCESS_ORDER = Object.freeze(['read-only', 'none']);
 const ALLOWED_SET_COMPONENTS = Object.freeze([
   'allowedCapabilities',
@@ -18,7 +23,11 @@ const ALLOWED_SET_COMPONENTS = Object.freeze([
 function rank(order, value, component, edge) {
   const index = order.indexOf(value);
   if (index === -1) {
-    throw new SkillRuntimeError('E_SKILL_AUTHORITY_COMPONENT_INVALID', `${component} value ${String(value)} is not part of the authority lattice.`, { component, value, edge });
+    throw new SkillRuntimeError(
+      'E_SKILL_AUTHORITY_COMPONENT_INVALID',
+      `${component} value ${String(value)} is not part of the authority lattice.`,
+      { component, value, edge },
+    );
   }
   return index;
 }
@@ -42,13 +51,23 @@ function widen(component, edge, detail) {
  * repair action. Returns the narrowed (overlay) authority when valid.
  */
 export function assertAuthorityNarrows(base, overlay, { edge }) {
-  if (rank(REPOSITORY_ACCESS_ORDER, overlay.repositoryAccess, 'repositoryAccess', edge)
-    < rank(REPOSITORY_ACCESS_ORDER, base.repositoryAccess, 'repositoryAccess', edge)) {
-    throw widen('repositoryAccess', edge, { base: base.repositoryAccess, overlay: overlay.repositoryAccess });
+  if (
+    rank(REPOSITORY_ACCESS_ORDER, overlay.repositoryAccess, 'repositoryAccess', edge) <
+    rank(REPOSITORY_ACCESS_ORDER, base.repositoryAccess, 'repositoryAccess', edge)
+  ) {
+    throw widen('repositoryAccess', edge, {
+      base: base.repositoryAccess,
+      overlay: overlay.repositoryAccess,
+    });
   }
-  if (rank(EXTERNAL_DATA_ACCESS_ORDER, overlay.externalDataAccess, 'externalDataAccess', edge)
-    < rank(EXTERNAL_DATA_ACCESS_ORDER, base.externalDataAccess, 'externalDataAccess', edge)) {
-    throw widen('externalDataAccess', edge, { base: base.externalDataAccess, overlay: overlay.externalDataAccess });
+  if (
+    rank(EXTERNAL_DATA_ACCESS_ORDER, overlay.externalDataAccess, 'externalDataAccess', edge) <
+    rank(EXTERNAL_DATA_ACCESS_ORDER, base.externalDataAccess, 'externalDataAccess', edge)
+  ) {
+    throw widen('externalDataAccess', edge, {
+      base: base.externalDataAccess,
+      overlay: overlay.externalDataAccess,
+    });
   }
   for (const component of ALLOWED_SET_COMPONENTS) {
     const allowed = new Set(base[component]);

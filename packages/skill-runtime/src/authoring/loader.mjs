@@ -16,13 +16,14 @@ import { validateProtocolArtifact } from '@openplanr/protocol/contracts';
 import { sha256 } from '../compiler/render-primitives.mjs';
 import { SkillAuthoringError } from './diagnostics.mjs';
 
-const envelopeFor = (protocolVersion) => Object.freeze({
-  schemaVersion: '1.0.0',
-  protocolVersion,
-  documentVersion: '1.0.0',
-  digestAlgorithm: 'sha256',
-  canonicalization: 'rfc8785',
-});
+const envelopeFor = (protocolVersion) =>
+  Object.freeze({
+    schemaVersion: '1.0.0',
+    protocolVersion,
+    documentVersion: '1.0.0',
+    digestAlgorithm: 'sha256',
+    canonicalization: 'rfc8785',
+  });
 
 const SKILL_SOURCE_KINDS = Object.freeze([
   ['skill.json', 'skill-source'],
@@ -42,23 +43,40 @@ function isOutside(root, candidate) {
 
 function readSkillFile(skillDir, relativePath) {
   if (
-    typeof relativePath !== 'string'
-    || relativePath.length === 0
-    || relativePath.includes('\0')
-    || relativePath.includes('\\')
-    || isAbsolute(relativePath)
-    || /^[A-Za-z]:/u.test(relativePath)
-    || relativePath.split('/').some((segment) => segment.length === 0 || segment === '.' || segment === '..')
+    typeof relativePath !== 'string' ||
+    relativePath.length === 0 ||
+    relativePath.includes('\0') ||
+    relativePath.includes('\\') ||
+    isAbsolute(relativePath) ||
+    /^[A-Za-z]:/u.test(relativePath) ||
+    relativePath
+      .split('/')
+      .some((segment) => segment.length === 0 || segment === '.' || segment === '..')
   ) {
-    throw new SkillAuthoringError('E_SKILL_SOURCE_PATH_INVALID', `Skill source path ${String(relativePath)} must be a non-empty repository-relative path.`, { path: relativePath });
+    throw new SkillAuthoringError(
+      'E_SKILL_SOURCE_PATH_INVALID',
+      `Skill source path ${String(relativePath)} must be a non-empty repository-relative path.`,
+      { path: relativePath },
+    );
   }
   const segments = relativePath.split('/');
   const absolute = resolve(skillDir, ...segments);
   if (isOutside(skillDir, absolute)) {
-    throw new SkillAuthoringError('E_SKILL_SOURCE_PATH_ESCAPE', `Skill source path ${relativePath} escapes the skill directory.`, { path: relativePath });
+    throw new SkillAuthoringError(
+      'E_SKILL_SOURCE_PATH_ESCAPE',
+      `Skill source path ${relativePath} escapes the skill directory.`,
+      { path: relativePath },
+    );
   }
   if (!existsSync(absolute)) {
-    throw new SkillAuthoringError('E_SKILL_SOURCE_FILE_MISSING', `Referenced source file ${relativePath} does not exist.`, { path: relativePath, repair: `Create ${relativePath} or correct the reference in the skill graph.` });
+    throw new SkillAuthoringError(
+      'E_SKILL_SOURCE_FILE_MISSING',
+      `Referenced source file ${relativePath} does not exist.`,
+      {
+        path: relativePath,
+        repair: `Create ${relativePath} or correct the reference in the skill graph.`,
+      },
+    );
   }
   let cursor = skillDir;
   let finalStat;
@@ -66,16 +84,28 @@ function readSkillFile(skillDir, relativePath) {
     cursor = join(cursor, segment);
     const stat = lstatSync(cursor);
     if (stat.isSymbolicLink()) {
-      throw new SkillAuthoringError('E_SKILL_SOURCE_SYMLINK', `Skill source path ${relativePath} may not pass through a symlink.`, { path: relativePath, segment });
+      throw new SkillAuthoringError(
+        'E_SKILL_SOURCE_SYMLINK',
+        `Skill source path ${relativePath} may not pass through a symlink.`,
+        { path: relativePath, segment },
+      );
     }
     finalStat = stat;
   }
   if (!finalStat.isFile()) {
-    throw new SkillAuthoringError('E_SKILL_SOURCE_PATH_INVALID', `Skill source path ${relativePath} must resolve to a regular file.`, { path: relativePath });
+    throw new SkillAuthoringError(
+      'E_SKILL_SOURCE_PATH_INVALID',
+      `Skill source path ${relativePath} must resolve to a regular file.`,
+      { path: relativePath },
+    );
   }
   const real = realpathSync(absolute);
   if (isOutside(skillDir, real)) {
-    throw new SkillAuthoringError('E_SKILL_SOURCE_PATH_ESCAPE', `Skill source path ${relativePath} resolves outside the skill directory.`, { path: relativePath });
+    throw new SkillAuthoringError(
+      'E_SKILL_SOURCE_PATH_ESCAPE',
+      `Skill source path ${relativePath} resolves outside the skill directory.`,
+      { path: relativePath },
+    );
   }
   // Raw bytes: custody digests hash exactly what is on disk. Canonicalization to
   // LF happens later, explicitly, at the compiler's render sites.
@@ -84,12 +114,20 @@ function readSkillFile(skillDir, relativePath) {
     descriptor = openSync(absolute, constants.O_RDONLY | constants.O_NOFOLLOW);
     const openedStat = fstatSync(descriptor);
     if (openedStat.dev !== finalStat.dev || openedStat.ino !== finalStat.ino) {
-      throw new SkillAuthoringError('E_SKILL_SOURCE_CHANGED', `Source file ${relativePath} changed while it was being opened.`, { path: relativePath });
+      throw new SkillAuthoringError(
+        'E_SKILL_SOURCE_CHANGED',
+        `Source file ${relativePath} changed while it was being opened.`,
+        { path: relativePath },
+      );
     }
     return readFileSync(descriptor, 'utf8');
   } catch (error) {
     if (error instanceof SkillAuthoringError) throw error;
-    throw new SkillAuthoringError('E_SKILL_SOURCE_FILE_READ', `Unable to read source file ${relativePath}: ${error.message}`, { path: relativePath });
+    throw new SkillAuthoringError(
+      'E_SKILL_SOURCE_FILE_READ',
+      `Unable to read source file ${relativePath}: ${error.message}`,
+      { path: relativePath },
+    );
   } finally {
     if (descriptor !== undefined) closeSync(descriptor);
   }
@@ -101,10 +139,19 @@ function readSkillJson(skillDir, name) {
     return Object.freeze({ bytes, document: JSON.parse(bytes) });
   } catch (error) {
     if (error?.code === 'E_SKILL_SOURCE_FILE_MISSING') {
-      throw new SkillAuthoringError('E_SKILL_DIR_INVALID', `${name} is required in ${skillDir}.`, { path: name, usage: true, repair: `Add ${name} to the composed-v1 skill directory.` });
+      throw new SkillAuthoringError('E_SKILL_DIR_INVALID', `${name} is required in ${skillDir}.`, {
+        path: name,
+        usage: true,
+        repair: `Add ${name} to the composed-v1 skill directory.`,
+      });
     }
-    if (error instanceof SkillAuthoringError && error.code !== 'E_SKILL_SOURCE_JSON_INVALID') throw error;
-    throw new SkillAuthoringError('E_SKILL_SOURCE_JSON_INVALID', `${name} is not valid JSON: ${error.message}`, { path: name });
+    if (error instanceof SkillAuthoringError && error.code !== 'E_SKILL_SOURCE_JSON_INVALID')
+      throw error;
+    throw new SkillAuthoringError(
+      'E_SKILL_SOURCE_JSON_INVALID',
+      `${name} is not valid JSON: ${error.message}`,
+      { path: name },
+    );
   }
 }
 
@@ -113,12 +160,18 @@ function assertSchemaValid(kind, document, protocolVersion) {
   if (errors.length > 0) {
     const first = errors[0];
     const firstDetail = typeof first === 'string' ? first : first?.detail;
-    throw new SkillAuthoringError('E_SKILL_SOURCE_SCHEMA_INVALID', `${kind} document does not satisfy the Protocol ${protocolVersion} contract${firstDetail ? `: ${firstDetail}` : '.'}`, {
-      kind,
-      pointer: typeof first === 'string' ? null : first?.path ?? null,
-      errors: errors.map((issue) => (typeof issue === 'string' ? issue : `${issue.path}: ${issue.detail}`)),
-      repair: `Correct ${kind} so it satisfies schemas/v${protocolVersion}/${kind}.schema.json.`,
-    });
+    throw new SkillAuthoringError(
+      'E_SKILL_SOURCE_SCHEMA_INVALID',
+      `${kind} document does not satisfy the Protocol ${protocolVersion} contract${firstDetail ? `: ${firstDetail}` : '.'}`,
+      {
+        kind,
+        pointer: typeof first === 'string' ? null : (first?.path ?? null),
+        errors: errors.map((issue) =>
+          typeof issue === 'string' ? issue : `${issue.path}: ${issue.detail}`,
+        ),
+        repair: `Correct ${kind} so it satisfies schemas/v${protocolVersion}/${kind}.schema.json.`,
+      },
+    );
   }
 }
 
@@ -133,10 +186,17 @@ function assertSchemaValid(kind, document, protocolVersion) {
 export function loadComposedSkill({ skillDir }) {
   const resolvedDir = resolve(skillDir);
   if (!existsSync(resolvedDir) || !lstatSync(resolvedDir).isDirectory()) {
-    throw new SkillAuthoringError('E_SKILL_DIR_INVALID', `${skillDir} is not a skill directory.`, { path: skillDir, usage: true });
+    throw new SkillAuthoringError('E_SKILL_DIR_INVALID', `${skillDir} is not a skill directory.`, {
+      path: skillDir,
+      usage: true,
+    });
   }
   if (lstatSync(resolvedDir).isSymbolicLink()) {
-    throw new SkillAuthoringError('E_SKILL_DIR_INVALID', `${skillDir} may not be a symbolic-link skill directory.`, { path: skillDir, usage: true });
+    throw new SkillAuthoringError(
+      'E_SKILL_DIR_INVALID',
+      `${skillDir} may not be a symbolic-link skill directory.`,
+      { path: skillDir, usage: true },
+    );
   }
   const realSkillDir = realpathSync(resolvedDir);
   const skillsRoot = dirname(realSkillDir);
@@ -149,24 +209,31 @@ export function loadComposedSkill({ skillDir }) {
   const profileDoc = profileFile.document;
   const protocolVersion = skillDoc.protocolVersion ?? '1.6.0';
   if (!['1.6.0', '1.7.0'].includes(protocolVersion)) {
-    throw new SkillAuthoringError('E_SKILL_SOURCE_PROTOCOL_UNSUPPORTED', `Skill source protocol ${String(protocolVersion)} is unsupported.`, {
-      path: 'skill.json',
-      repair: 'Use protocolVersion 1.6.0 or 1.7.0.',
-    });
+    throw new SkillAuthoringError(
+      'E_SKILL_SOURCE_PROTOCOL_UNSUPPORTED',
+      `Skill source protocol ${String(protocolVersion)} is unsupported.`,
+      {
+        path: 'skill.json',
+        repair: 'Use protocolVersion 1.6.0 or 1.7.0.',
+      },
+    );
   }
   const envelope = envelopeFor(protocolVersion);
 
-  const localModules = Array.isArray(moduleDoc) ? moduleDoc : moduleDoc.modules ?? [];
-  const imports = Array.isArray(moduleDoc) ? [] : moduleDoc.imports ?? [];
-  const authoredProfiles = Array.isArray(profileDoc) ? profileDoc : profileDoc.profiles ?? [];
+  const localModules = Array.isArray(moduleDoc) ? moduleDoc : (moduleDoc.modules ?? []);
+  const imports = Array.isArray(moduleDoc) ? [] : (moduleDoc.imports ?? []);
+  const authoredProfiles = Array.isArray(profileDoc) ? profileDoc : (profileDoc.profiles ?? []);
 
-  const sharedModules = imports.length === 0
-    ? []
-    : readSkillJson(resolve(skillsRoot, 'shared'), 'modules.json').document.modules ?? [];
-  const sharedIndex = new Map(sharedModules.map((module) => [
-    `${module.moduleId}@${module.moduleVersion}`,
-    { ...module, source: `shared/${module.source}` },
-  ]));
+  const sharedModules =
+    imports.length === 0
+      ? []
+      : (readSkillJson(resolve(skillsRoot, 'shared'), 'modules.json').document.modules ?? []);
+  const sharedIndex = new Map(
+    sharedModules.map((module) => [
+      `${module.moduleId}@${module.moduleVersion}`,
+      { ...module, source: `shared/${module.source}` },
+    ]),
+  );
   const importedModules = [];
   const selectedImports = new Set();
   const selectShared = ({ moduleId, moduleVersion }, edge = 'modules.json#imports') => {
@@ -174,10 +241,14 @@ export function loadComposedSkill({ skillDir }) {
     if (selectedImports.has(key)) return;
     const module = sharedIndex.get(key);
     if (!module) {
-      throw new SkillAuthoringError('E_SKILL_MODULE_UNDECLARED', `Shared module ${key} is imported but absent from skills/shared/modules.json.`, {
-        pointer: edge,
-        repair: `Declare ${key} in skills/shared/modules.json or remove the import.`,
-      });
+      throw new SkillAuthoringError(
+        'E_SKILL_MODULE_UNDECLARED',
+        `Shared module ${key} is imported but absent from skills/shared/modules.json.`,
+        {
+          pointer: edge,
+          repair: `Declare ${key} in skills/shared/modules.json or remove the import.`,
+        },
+      );
     }
     selectedImports.add(key);
     for (const dependency of [...(module.dependsOn ?? []), ...(module.references ?? [])]) {
@@ -188,21 +259,26 @@ export function loadComposedSkill({ skillDir }) {
   for (const imported of imports) selectShared(imported);
   const authoredModules = [...localModules, ...importedModules];
 
-  const readSource = (relativePath) => (
+  const readSource = (relativePath) =>
     relativePath.startsWith('shared/')
       ? readSkillFile(skillsRoot, relativePath)
-      : readSkillFile(realSkillDir, relativePath)
-  );
+      : readSkillFile(realSkillDir, relativePath);
 
-  const sourceByModule = new Map(authoredModules.map((module) => [`${module.moduleId}@${module.moduleVersion}`, module.source]));
+  const sourceByModule = new Map(
+    authoredModules.map((module) => [`${module.moduleId}@${module.moduleVersion}`, module.source]),
+  );
   const digestOf = (relativePath) => sha256(readSource(relativePath));
   const moduleRef = ({ moduleId, moduleVersion }) => {
     const sourcePath = sourceByModule.get(`${moduleId}@${moduleVersion}`);
     if (!sourcePath) {
-      throw new SkillAuthoringError('E_SKILL_MODULE_UNDECLARED', `Module ${moduleId}@${moduleVersion} is referenced but absent from modules.json.`, {
-        pointer: `modules.json#/${moduleId}@${moduleVersion}`,
-        repair: `Declare ${moduleId}@${moduleVersion} in modules.json before referencing it.`,
-      });
+      throw new SkillAuthoringError(
+        'E_SKILL_MODULE_UNDECLARED',
+        `Module ${moduleId}@${moduleVersion} is referenced but absent from modules.json.`,
+        {
+          pointer: `modules.json#/${moduleId}@${moduleVersion}`,
+          repair: `Declare ${moduleId}@${moduleVersion} in modules.json before referencing it.`,
+        },
+      );
     }
     return { moduleId, moduleVersion, digest: digestOf(sourcePath) };
   };
@@ -223,11 +299,15 @@ export function loadComposedSkill({ skillDir }) {
   for (const profile of authoredProfiles) {
     const key = `${profile.hostProfileId}@${profile.hostProfileVersion}`;
     if (hostProfilesByKey.has(key)) {
-      throw new SkillAuthoringError('E_SKILL_HOST_PROFILE_DUPLICATE', `Host profile ${key} is declared more than once in host-profiles.json.`, {
-        path: 'host-profiles.json',
-        pointer: `host-profiles.json#/${key}`,
-        repair: `Keep one declaration for ${key}; distinct versions must use distinct exact keys.`,
-      });
+      throw new SkillAuthoringError(
+        'E_SKILL_HOST_PROFILE_DUPLICATE',
+        `Host profile ${key} is declared more than once in host-profiles.json.`,
+        {
+          path: 'host-profiles.json',
+          pointer: `host-profiles.json#/${key}`,
+          repair: `Keep one declaration for ${key}; distinct versions must use distinct exact keys.`,
+        },
+      );
     }
     hostProfilesByKey.set(key, {
       hostProfileId: profile.hostProfileId,
@@ -255,15 +335,23 @@ export function loadComposedSkill({ skillDir }) {
     authorityCeiling: skillDoc.authorityCeiling,
     template: { path: skillDoc.template, digest: digestOf(skillDoc.template) },
     modules: (skillDoc.modules ?? []).map(moduleRef),
-    references: (skillDoc.references ?? []).map((reference) => ({ module: moduleRef(reference), routed: true })),
+    references: (skillDoc.references ?? []).map((reference) => ({
+      module: moduleRef(reference),
+      routed: true,
+    })),
     hostProfiles: (skillDoc.hostProfiles ?? []).map(({ id, version }) => ({ id, version })),
   });
 
-  const moduleRegistry = withDocumentDigest({ kind: 'skill-module-registry', ...envelope, modules });
+  const moduleRegistry = withDocumentDigest({
+    kind: 'skill-module-registry',
+    ...envelope,
+    modules,
+  });
   const profiles = [...hostProfilesByKey.values()];
-  const capabilityAware = profiles.some((profile) => (
-    profile.runtimeCapabilities !== undefined || profile.interactionBindings !== undefined
-  ));
+  const capabilityAware = profiles.some(
+    (profile) =>
+      profile.runtimeCapabilities !== undefined || profile.interactionBindings !== undefined,
+  );
   const hostProfileEnvelope = capabilityAware
     ? { ...envelope, schemaVersion: '1.1.0', documentVersion: '1.1.0' }
     : envelope;
@@ -274,17 +362,29 @@ export function loadComposedSkill({ skillDir }) {
   });
 
   for (const [, kind] of SKILL_SOURCE_KINDS) {
-    assertSchemaValid(kind, { 'skill-source': skillSource, 'skill-module-registry': moduleRegistry, 'skill-host-profile-registry': hostProfileRegistry }[kind], protocolVersion);
+    assertSchemaValid(
+      kind,
+      {
+        'skill-source': skillSource,
+        'skill-module-registry': moduleRegistry,
+        'skill-host-profile-registry': hostProfileRegistry,
+      }[kind],
+      protocolVersion,
+    );
   }
 
   const declaredProfiles = skillSource.hostProfiles.map(({ id, version }) => {
     const key = `${id}@${version}`;
     const profile = hostProfilesByKey.get(key);
     if (!profile) {
-      throw new SkillAuthoringError('E_SKILL_HOST_PROFILE_UNDECLARED', `Host profile ${id}@${version} is declared by the skill but absent from host-profiles.json.`, {
-        pointer: `host-profiles.json#/${key}`,
-        repair: `Declare ${id}@${version} in host-profiles.json or correct the skill's hostProfiles list.`,
-      });
+      throw new SkillAuthoringError(
+        'E_SKILL_HOST_PROFILE_UNDECLARED',
+        `Host profile ${id}@${version} is declared by the skill but absent from host-profiles.json.`,
+        {
+          pointer: `host-profiles.json#/${key}`,
+          repair: `Declare ${id}@${version} in host-profiles.json or correct the skill's hostProfiles list.`,
+        },
+      );
     }
     return profile;
   });

@@ -1,10 +1,7 @@
 import { resolveInteraction } from '../resolver/interactions.mjs';
 
 import { assessLifecycleCompatibility } from './compatibility.mjs';
-import {
-  loadLifecycleConfiguration,
-  normalizeLifecycleConfiguration,
-} from './configuration.mjs';
+import { loadLifecycleConfiguration, normalizeLifecycleConfiguration } from './configuration.mjs';
 import { cleanupLifecycleProgress } from './cleanup.mjs';
 import { classifyOperation, resolveLifecycleSettings } from './consent.mjs';
 import {
@@ -44,11 +41,22 @@ export function startSkillLifecycle({
 } = {}) {
   const clock = nowIso(now);
   const environment = prepareLifecycleEnvironment({ projectRoot });
-  const configuration = configured === undefined
-    ? environment.stateAvailable
-      ? loadLifecycleConfiguration({ projectRoot: environment.projectRoot })
-      : freezeJson({ status: 'partial', source: 'default', settings: normalizeLifecycleConfiguration(), notice: environment.notice })
-    : freezeJson({ status: 'completed', source: 'call', settings: normalizeLifecycleConfiguration(configured), notice: 'Used explicit lifecycle settings.' });
+  const configuration =
+    configured === undefined
+      ? environment.stateAvailable
+        ? loadLifecycleConfiguration({ projectRoot: environment.projectRoot })
+        : freezeJson({
+            status: 'partial',
+            source: 'default',
+            settings: normalizeLifecycleConfiguration(),
+            notice: environment.notice,
+          })
+      : freezeJson({
+          status: 'completed',
+          source: 'call',
+          settings: normalizeLifecycleConfiguration(configured),
+          notice: 'Used explicit lifecycle settings.',
+        });
   const lifecycle = resolveLifecycleSettings({
     skillId,
     projectIdentity,
@@ -59,13 +67,24 @@ export function startSkillLifecycle({
 
   const cleanup = environment.stateAvailable
     ? cleanupLifecycleProgress({ projectRoot: environment.projectRoot, now: clock })
-    : freezeJson({ status: 'partial', removed: [], retained: 0, unreadable: 0, notice: environment.notice });
+    : freezeJson({
+        status: 'partial',
+        removed: [],
+        retained: 0,
+        unreadable: 0,
+        notice: environment.notice,
+      });
   const progress = environment.stateAvailable
     ? loadLatestSessionProgress({ projectRoot: environment.projectRoot, skillId, now: clock })
-    : freezeJson({ status: 'unavailable', record: null, unreadable: 0, notice: environment.notice });
+    : freezeJson({
+        status: 'unavailable',
+        record: null,
+        unreadable: 0,
+        notice: environment.notice,
+      });
   const compatibility = assessLifecycleCompatibility({ state: progress.record });
   const recovery = recoverSession({
-    checkpoint: compatibility.compatible ? progress.record?.checkpoint ?? null : null,
+    checkpoint: compatibility.compatible ? (progress.record?.checkpoint ?? null) : null,
     skillId,
     context,
     questions,
@@ -154,41 +173,58 @@ export async function executeAtEffectBoundary({
     return createCompletion({
       status: 'unavailable',
       summary: `${route.execution === 'host' ? 'Host' : 'Local'} execution is unavailable.`,
-      checks: [{ name: 'effect-boundary', status: 'not-run', detail: `No ${route.execution} executor was supplied.` }],
-      issues: [{
-        problem: `The ${route.execution} executor is unavailable.`,
-        impact: 'The operation was not attempted.',
-        nextAction: `Run through a host that supplies the ${route.execution} executor, or continue without this effect.`,
-      }],
+      checks: [
+        {
+          name: 'effect-boundary',
+          status: 'not-run',
+          detail: `No ${route.execution} executor was supplied.`,
+        },
+      ],
+      issues: [
+        {
+          problem: `The ${route.execution} executor is unavailable.`,
+          impact: 'The operation was not attempted.',
+          nextAction: `Run through a host that supplies the ${route.execution} executor, or continue without this effect.`,
+        },
+      ],
     });
   }
   const request = freezeJson({ operationClass: route.operationClass, effect: route.effect });
   const output = await executor(request);
   if (
-    output
-    && typeof output === 'object'
-    && !Array.isArray(output)
-    && (COMPLETION_STATUSES.includes(output.status) || output.status === 'denied')
+    output &&
+    typeof output === 'object' &&
+    !Array.isArray(output) &&
+    (COMPLETION_STATUSES.includes(output.status) || output.status === 'denied')
   ) {
     const status = output.status === 'denied' ? 'unavailable' : output.status;
     return completionFromRuntimeResult(output, {
-      summary: typeof output.summary === 'string' && output.summary.trim().length > 0
-        ? output.summary
-        : `${route.execution === 'host' ? 'Host' : 'Local'} execution returned ${status}.`,
+      summary:
+        typeof output.summary === 'string' && output.summary.trim().length > 0
+          ? output.summary
+          : `${route.execution === 'host' ? 'Host' : 'Local'} execution returned ${status}.`,
       checks: Array.isArray(output.checks)
         ? output.checks
-        : [{
-            name: 'effect-boundary',
-            status: status === 'completed' ? 'passed' : 'failed',
-            detail: `The ${route.execution} executor returned ${status}.`,
-          }],
+        : [
+            {
+              name: 'effect-boundary',
+              status: status === 'completed' ? 'passed' : 'failed',
+              detail: `The ${route.execution} executor returned ${status}.`,
+            },
+          ],
       issues: Array.isArray(output.issues) ? output.issues : [],
     });
   }
   return createCompletion({
     status: 'completed',
     summary: `${route.execution === 'host' ? 'Host' : 'Local'} execution completed.`,
-    checks: [{ name: 'effect-boundary', status: 'passed', detail: `Executed by the ${route.execution} boundary.` }],
+    checks: [
+      {
+        name: 'effect-boundary',
+        status: 'passed',
+        detail: `Executed by the ${route.execution} boundary.`,
+      },
+    ],
     ...(output === undefined ? {} : { output }),
   });
 }

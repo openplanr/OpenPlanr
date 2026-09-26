@@ -16,11 +16,41 @@ export const CHANGE_KINDS = Object.freeze([
 
 const BUMP_RANK = Object.freeze({ none: 0, patch: 1, minor: 2, major: 3 });
 const REQUIRED_BUMP = Object.freeze({
-  source: Object.freeze({ none: 'none', editorial: 'patch', compatible: 'minor', behavior: 'minor', breaking: 'major' }),
-  module: Object.freeze({ none: 'none', editorial: 'patch', compatible: 'minor', behavior: 'minor', breaking: 'major' }),
-  'host-profile': Object.freeze({ none: 'none', editorial: 'patch', compatible: 'minor', behavior: 'minor', breaking: 'major' }),
-  skill: Object.freeze({ none: 'none', editorial: 'patch', compatible: 'minor', behavior: 'minor', breaking: 'major' }),
-  asset: Object.freeze({ none: 'none', editorial: 'patch', compatible: 'patch', behavior: 'minor', breaking: 'major' }),
+  source: Object.freeze({
+    none: 'none',
+    editorial: 'patch',
+    compatible: 'minor',
+    behavior: 'minor',
+    breaking: 'major',
+  }),
+  module: Object.freeze({
+    none: 'none',
+    editorial: 'patch',
+    compatible: 'minor',
+    behavior: 'minor',
+    breaking: 'major',
+  }),
+  'host-profile': Object.freeze({
+    none: 'none',
+    editorial: 'patch',
+    compatible: 'minor',
+    behavior: 'minor',
+    breaking: 'major',
+  }),
+  skill: Object.freeze({
+    none: 'none',
+    editorial: 'patch',
+    compatible: 'minor',
+    behavior: 'minor',
+    breaking: 'major',
+  }),
+  asset: Object.freeze({
+    none: 'none',
+    editorial: 'patch',
+    compatible: 'patch',
+    behavior: 'minor',
+    breaking: 'major',
+  }),
 });
 
 function parseVersion(value, label) {
@@ -32,9 +62,11 @@ function parseVersion(value, label) {
 export function classifyVersionBump(previousVersion, nextVersion) {
   const previous = parseVersion(previousVersion, 'previousVersion');
   const next = parseVersion(nextVersion, 'nextVersion');
-  if (next[0] < previous[0]
-    || (next[0] === previous[0] && next[1] < previous[1])
-    || (next[0] === previous[0] && next[1] === previous[1] && next[2] < previous[2])) {
+  if (
+    next[0] < previous[0] ||
+    (next[0] === previous[0] && next[1] < previous[1]) ||
+    (next[0] === previous[0] && next[1] === previous[1] && next[2] < previous[2])
+  ) {
     return 'regression';
   }
   if (next[0] > previous[0]) return 'major';
@@ -44,16 +76,19 @@ export function classifyVersionBump(previousVersion, nextVersion) {
 }
 
 export function requiredVersionBump(dimension, changeKind) {
-  if (!VERSION_DIMENSIONS.includes(dimension)) throw new TypeError(`Unknown version dimension: ${dimension}.`);
-  if (!CHANGE_KINDS.includes(changeKind)) throw new TypeError(`Unknown change kind: ${changeKind}.`);
+  if (!VERSION_DIMENSIONS.includes(dimension))
+    throw new TypeError(`Unknown version dimension: ${dimension}.`);
+  if (!CHANGE_KINDS.includes(changeKind))
+    throw new TypeError(`Unknown change kind: ${changeKind}.`);
   return REQUIRED_BUMP[dimension][changeKind];
 }
 
 export function assessVersionChange({ dimension, changeKind, previousVersion, nextVersion } = {}) {
   const required = requiredVersionBump(dimension, changeKind);
   const actual = classifyVersionBump(previousVersion, nextVersion);
-  const pass = actual !== 'regression'
-    && (changeKind === 'none' ? actual === 'none' : BUMP_RANK[actual] >= BUMP_RANK[required]);
+  const pass =
+    actual !== 'regression' &&
+    (changeKind === 'none' ? actual === 'none' : BUMP_RANK[actual] >= BUMP_RANK[required]);
   return Object.freeze({
     dimension,
     changeKind,
@@ -62,12 +97,17 @@ export function assessVersionChange({ dimension, changeKind, previousVersion, ne
     required,
     actual,
     pass,
-    reason: pass ? 'version-policy-satisfied' : actual === 'regression' ? 'version-regressed' : 'version-bump-too-small',
+    reason: pass
+      ? 'version-policy-satisfied'
+      : actual === 'regression'
+        ? 'version-regressed'
+        : 'version-bump-too-small',
   });
 }
 
 export function assessVersionSet(changes) {
-  if (!Array.isArray(changes) || changes.length === 0) throw new TypeError('changes must be a non-empty array.');
+  if (!Array.isArray(changes) || changes.length === 0)
+    throw new TypeError('changes must be a non-empty array.');
   const results = changes.map(assessVersionChange);
   const dimensions = new Set(results.map(({ dimension }) => dimension));
   return Object.freeze({

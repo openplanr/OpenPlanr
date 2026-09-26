@@ -9,7 +9,9 @@ export function byteLength(text) {
 
 /** sha256 over the exact literal bytes on disk (no line-ending normalization). */
 export function sha256Bytes(text) {
-  return `sha256:${createHash('sha256').update(Buffer.from(String(text), 'utf8')).digest('hex')}`;
+  return `sha256:${createHash('sha256')
+    .update(Buffer.from(String(text), 'utf8'))
+    .digest('hex')}`;
 }
 
 /**
@@ -28,7 +30,11 @@ export function sha256Bytes(text) {
  */
 export function owner(ownerKind, pointer, version, digest) {
   if (!['template', 'source', 'host-profile', 'compiler'].includes(ownerKind)) {
-    throw new SkillRuntimeError('E_SOURCE_MAP_OWNER_INVALID', `Unknown source-map owner kind ${ownerKind}.`, { ownerKind });
+    throw new SkillRuntimeError(
+      'E_SOURCE_MAP_OWNER_INVALID',
+      `Unknown source-map owner kind ${ownerKind}.`,
+      { ownerKind },
+    );
   }
   return Object.freeze({ ownerKind, pointer, version, digest });
 }
@@ -89,16 +95,32 @@ export class SourceMapBuilder {
 export function validateSourceMap(ranges, totalBytes) {
   let expected = 0;
   for (const range of ranges) {
-    if (!Number.isInteger(range.startByte) || !Number.isInteger(range.endByte) || range.endByte <= range.startByte) {
-      throw new SkillRuntimeError('E_SOURCE_MAP_RANGE_INVALID', 'A source-map range must have integer startByte < endByte.', { range });
+    if (
+      !Number.isInteger(range.startByte) ||
+      !Number.isInteger(range.endByte) ||
+      range.endByte <= range.startByte
+    ) {
+      throw new SkillRuntimeError(
+        'E_SOURCE_MAP_RANGE_INVALID',
+        'A source-map range must have integer startByte < endByte.',
+        { range },
+      );
     }
     if (range.startByte !== expected) {
-      throw new SkillRuntimeError('E_SOURCE_MAP_NOT_CONTIGUOUS', 'Source-map ranges are not ordered and gap-free.', { expected, actual: range.startByte });
+      throw new SkillRuntimeError(
+        'E_SOURCE_MAP_NOT_CONTIGUOUS',
+        'Source-map ranges are not ordered and gap-free.',
+        { expected, actual: range.startByte },
+      );
     }
     expected = range.endByte;
   }
   if (expected !== totalBytes) {
-    throw new SkillRuntimeError('E_SOURCE_MAP_COVERAGE_INCOMPLETE', 'Source-map ranges do not cover every output byte exactly once.', { covered: expected, totalBytes });
+    throw new SkillRuntimeError(
+      'E_SOURCE_MAP_COVERAGE_INCOMPLETE',
+      'Source-map ranges do not cover every output byte exactly once.',
+      { covered: expected, totalBytes },
+    );
   }
   return true;
 }

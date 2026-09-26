@@ -1,4 +1,11 @@
-import { appendFileSync, existsSync, lstatSync, mkdirSync, readFileSync, realpathSync } from 'node:fs';
+import {
+  appendFileSync,
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  readFileSync,
+  realpathSync,
+} from 'node:fs';
 import { isAbsolute, relative, resolve, sep } from 'node:path';
 import { spawnSync } from 'node:child_process';
 
@@ -64,7 +71,8 @@ function ensureIgnoreRule(root) {
   }
   if (existsSync(exclude)) {
     const stat = lstatSync(exclude);
-    if (stat.isSymbolicLink() || !stat.isFile()) throw new TypeError('Git exclude path must be a regular file.');
+    if (stat.isSymbolicLink() || !stat.isFile())
+      throw new TypeError('Git exclude path must be a regular file.');
   }
   const existing = existsSync(exclude) ? readFileSync(exclude, 'utf8') : '';
   if (existing.split(/\r?\n/u).includes(LIFECYCLE_IGNORE_RULE)) {
@@ -79,7 +87,11 @@ function ensureIgnoreRule(root) {
 export function detectLifecycleEnvironment({ projectRoot } = {}) {
   const root = resolveProjectRoot(projectRoot);
   const repository = isRepository(root);
-  const { target } = resolveStatePath(root, LIFECYCLE_RUNTIME_DIRECTORY, 'lifecycle runtime directory');
+  const { target } = resolveStatePath(
+    root,
+    LIFECYCLE_RUNTIME_DIRECTORY,
+    'lifecycle runtime directory',
+  );
   const stateExists = existsSync(target);
   if (stateExists) {
     const stat = lstatSync(target);
@@ -103,7 +115,8 @@ export function prepareLifecycleEnvironment({ projectRoot } = {}) {
   try {
     detected = detectLifecycleEnvironment({ projectRoot });
     const runtimeIgnored = detected.repository ? ensureIgnoreRule(detected.projectRoot) : true;
-    if (!runtimeIgnored) throw new TypeError('Project-local lifecycle state is not ignored by Git.');
+    if (!runtimeIgnored)
+      throw new TypeError('Project-local lifecycle state is not ignored by Git.');
     ensureStateDirectory(detected.projectRoot, LIFECYCLE_SESSION_DIRECTORY);
     return freezeJson({
       status: 'completed',
@@ -127,7 +140,8 @@ export function prepareLifecycleEnvironment({ projectRoot } = {}) {
       stateAvailable: false,
       firstRun: true,
       nodeMajor: Number(process.versions.node.split('.')[0]),
-      notice: 'Continued without persisted skill state because a safe ignored path was unavailable.',
+      notice:
+        'Continued without persisted skill state because a safe ignored path was unavailable.',
       issue: error instanceof Error ? error.message : String(error),
     });
   }

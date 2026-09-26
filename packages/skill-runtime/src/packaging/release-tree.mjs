@@ -13,7 +13,8 @@ function fail(code, message, details = {}) {
 }
 
 function add(tree, path, bytes) {
-  if (tree.has(path)) fail('E_SKILL_RELEASE_PATH_DUPLICATE', `Duplicate release output ${path}.`, { path });
+  if (tree.has(path))
+    fail('E_SKILL_RELEASE_PATH_DUPLICATE', `Duplicate release output ${path}.`, { path });
   tree.set(path, Buffer.isBuffer(bytes) ? bytes : Buffer.from(String(bytes), 'utf8'));
 }
 
@@ -23,7 +24,14 @@ function inventory(entries) {
     .sort((left, right) => left.path.localeCompare(right.path));
 }
 
-function packageManifest({ packageId, packageVersion, classification, canonicalSkillId = null, host, entries }) {
+function packageManifest({
+  packageId,
+  packageVersion,
+  classification,
+  canonicalSkillId = null,
+  host,
+  entries,
+}) {
   const files = inventory(entries);
   return Object.freeze({
     kind: 'openplanr-skill-release-unit',
@@ -34,7 +42,10 @@ function packageManifest({ packageId, packageVersion, classification, canonicalS
     canonicalSkillId,
     host,
     license: 'MIT',
-    provenance: { repository: 'openplanr/OpenPlanr', generator: 'scripts/skills/package-v18-release.mjs' },
+    provenance: {
+      repository: 'openplanr/OpenPlanr',
+      generator: 'scripts/skills/package-v18-release.mjs',
+    },
     maintainerDigest: digest(Buffer.from(stableJson(files), 'utf8')),
     files,
   });
@@ -45,11 +56,19 @@ function validateSkillUnit(skillId, entries) {
   const primary = members.find(({ path }) => path === 'SKILL.md');
   const metadata = members.find(({ path }) => path === 'agents/openai.yaml');
   if (!primary || !metadata) {
-    fail('E_SKILL_RELEASE_ENTRYPOINT_MISSING', `${skillId} requires SKILL.md and agents/openai.yaml.`, { skillId });
+    fail(
+      'E_SKILL_RELEASE_ENTRYPOINT_MISSING',
+      `${skillId} requires SKILL.md and agents/openai.yaml.`,
+      { skillId },
+    );
   }
   parseMarkdownAsset(primary.bytes, { expectedName: skillId });
   if (!metadata.bytes.includes(`$${skillId}`)) {
-    fail('E_SKILL_RELEASE_NATIVE_INVOCATION', `${skillId} Codex metadata must invoke its native skill name.`, { skillId });
+    fail(
+      'E_SKILL_RELEASE_NATIVE_INVOCATION',
+      `${skillId} Codex metadata must invoke its native skill name.`,
+      { skillId },
+    );
   }
   linkSkillProjection({
     skillId,
@@ -77,11 +96,21 @@ export function buildSkillReleaseTree({
     { id: 'openplanr-cursor', host: 'cursor', source: 'dist/plugins/cursor/openplanr' },
   ],
 }) {
-  if (!workspaceVersion || !Array.isArray(sourceRegistry?.skills) || !Array.isArray(sourceRegistry?.aliases)) {
-    fail('E_SKILL_RELEASE_CATALOG_INVALID', 'Release packaging requires a workspace version and canonical skill registry.');
+  if (
+    !workspaceVersion ||
+    !Array.isArray(sourceRegistry?.skills) ||
+    !Array.isArray(sourceRegistry?.aliases)
+  ) {
+    fail(
+      'E_SKILL_RELEASE_CATALOG_INVALID',
+      'Release packaging requires a workspace version and canonical skill registry.',
+    );
   }
   if (!Array.isArray(contentManifest?.skills) || typeof readProductEntries !== 'function') {
-    fail('E_SKILL_RELEASE_CONTENT_INVALID', 'Release packaging requires compiled plugin content and a product reader.');
+    fail(
+      'E_SKILL_RELEASE_CONTENT_INVALID',
+      'Release packaging requires compiled plugin content and a product reader.',
+    );
   }
 
   const canonical = new Map(sourceRegistry.skills.map((skill) => [skill.skillId, skill]));
@@ -105,10 +134,15 @@ export function buildSkillReleaseTree({
       host: 'portable-agent-skill',
       entries,
     });
-    entries.push({ path: 'openplanr-package.json', bytes: Buffer.from(stableJson(manifest), 'utf8') });
+    entries.push({
+      path: 'openplanr-package.json',
+      bytes: Buffer.from(stableJson(manifest), 'utf8'),
+    });
     for (const entry of entries) add(tree, `skills/${skill.skillId}/${entry.path}`, entry.bytes);
     const archivePath = `archives/${skill.skillId}-${version}.zip`;
-    const archive = createDeterministicZip(entries.map((entry) => ({ path: `${skill.skillId}/${entry.path}`, bytes: entry.bytes })));
+    const archive = createDeterministicZip(
+      entries.map((entry) => ({ path: `${skill.skillId}/${entry.path}`, bytes: entry.bytes })),
+    );
     add(tree, archivePath, archive);
     products.push({
       productId: skill.skillId,
@@ -131,10 +165,15 @@ export function buildSkillReleaseTree({
     host: 'claude-code+codex',
     entries: suiteEntries,
   });
-  suiteEntries.push({ path: 'openplanr-package.json', bytes: Buffer.from(stableJson(suiteManifest), 'utf8') });
+  suiteEntries.push({
+    path: 'openplanr-package.json',
+    bytes: Buffer.from(stableJson(suiteManifest), 'utf8'),
+  });
   for (const entry of suiteEntries) add(tree, `plugins/openplanr/${entry.path}`, entry.bytes);
   const suiteArchivePath = `archives/openplanr-suite-${workspaceVersion}.zip`;
-  const suiteArchive = createDeterministicZip(suiteEntries.map((entry) => ({ path: `openplanr/${entry.path}`, bytes: entry.bytes })));
+  const suiteArchive = createDeterministicZip(
+    suiteEntries.map((entry) => ({ path: `openplanr/${entry.path}`, bytes: entry.bytes })),
+  );
   add(tree, suiteArchivePath, suiteArchive);
   products.push({
     productId: 'openplanr',
@@ -156,10 +195,15 @@ export function buildSkillReleaseTree({
       host: product.host,
       entries,
     });
-    entries.push({ path: 'openplanr-package.json', bytes: Buffer.from(stableJson(manifest), 'utf8') });
+    entries.push({
+      path: 'openplanr-package.json',
+      bytes: Buffer.from(stableJson(manifest), 'utf8'),
+    });
     for (const entry of entries) add(tree, `hosts/${product.host}/${entry.path}`, entry.bytes);
     const archivePath = `archives/${product.id}-${workspaceVersion}.zip`;
-    const archive = createDeterministicZip(entries.map((entry) => ({ path: `${product.id}/${entry.path}`, bytes: entry.bytes })));
+    const archive = createDeterministicZip(
+      entries.map((entry) => ({ path: `${product.id}/${entry.path}`, bytes: entry.bytes })),
+    );
     add(tree, archivePath, archive);
     products.push({
       productId: product.id,
@@ -184,11 +228,15 @@ export function buildSkillReleaseTree({
     publication: { state: 'local-only', publicActionOwner: 'maintainer-release-approval' },
   });
   add(tree, 'release-index.json', stableJson(releaseIndex));
-  add(tree, '.openplanr-release.json', stableJson({
-    kind: 'openplanr-generated-release-root',
-    schemaVersion: '1.0.0',
-    releaseVersion: workspaceVersion,
-    indexDigest: digest(Buffer.from(stableJson(releaseIndex), 'utf8')),
-  }));
+  add(
+    tree,
+    '.openplanr-release.json',
+    stableJson({
+      kind: 'openplanr-generated-release-root',
+      schemaVersion: '1.0.0',
+      releaseVersion: workspaceVersion,
+      indexDigest: digest(Buffer.from(stableJson(releaseIndex), 'utf8')),
+    }),
+  );
   return Object.freeze({ tree, index: releaseIndex });
 }

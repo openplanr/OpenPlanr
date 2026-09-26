@@ -81,15 +81,15 @@
         },
         {
           "path": "skills/ceo-review/scripts/validate-note.mjs",
-          "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7"
+          "digest": "sha256:ca58b77b782f78404f0fc65a42afa25b03d782e8b3f5ae89f42262c9dc21db51"
         },
         {
           "path": "skills/ceo-review/scripts/operate-review-note.mjs",
-          "digest": "sha256:9479eacfa12887fabd0b5681734cb7ec66b0ff45bef1fc765fcc026f2d4211d4"
+          "digest": "sha256:c4214b54039b2748c5846e6f4564cf3217c4b78334b27b6b77ea343c8ca9ae8c"
         },
         {
           "path": "skills/ceo-review/scripts/operate-review-contract.mjs",
-          "digest": "sha256:33ba9b87c5543ee05ce290e24aa0be05f6dc9e5d41e85f3b1597d48c45f8b7ca"
+          "digest": "sha256:76de44f9fda5444ad5b4805ae16b21221cde19a99669140ea7a6f032f383edcd"
         },
         {
           "path": "skills/ceo-review/scripts/errors.mjs",
@@ -118,15 +118,15 @@
         },
         {
           "path": "skills/chair-review/scripts/validate-note.mjs",
-          "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7"
+          "digest": "sha256:ca58b77b782f78404f0fc65a42afa25b03d782e8b3f5ae89f42262c9dc21db51"
         },
         {
           "path": "skills/chair-review/scripts/operate-review-note.mjs",
-          "digest": "sha256:9479eacfa12887fabd0b5681734cb7ec66b0ff45bef1fc765fcc026f2d4211d4"
+          "digest": "sha256:c4214b54039b2748c5846e6f4564cf3217c4b78334b27b6b77ea343c8ca9ae8c"
         },
         {
           "path": "skills/chair-review/scripts/operate-review-contract.mjs",
-          "digest": "sha256:33ba9b87c5543ee05ce290e24aa0be05f6dc9e5d41e85f3b1597d48c45f8b7ca"
+          "digest": "sha256:76de44f9fda5444ad5b4805ae16b21221cde19a99669140ea7a6f032f383edcd"
         },
         {
           "path": "skills/chair-review/scripts/errors.mjs",
@@ -155,15 +155,15 @@
         },
         {
           "path": "skills/challenger-review/scripts/validate-note.mjs",
-          "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7"
+          "digest": "sha256:ca58b77b782f78404f0fc65a42afa25b03d782e8b3f5ae89f42262c9dc21db51"
         },
         {
           "path": "skills/challenger-review/scripts/operate-review-note.mjs",
-          "digest": "sha256:9479eacfa12887fabd0b5681734cb7ec66b0ff45bef1fc765fcc026f2d4211d4"
+          "digest": "sha256:c4214b54039b2748c5846e6f4564cf3217c4b78334b27b6b77ea343c8ca9ae8c"
         },
         {
           "path": "skills/challenger-review/scripts/operate-review-contract.mjs",
-          "digest": "sha256:33ba9b87c5543ee05ce290e24aa0be05f6dc9e5d41e85f3b1597d48c45f8b7ca"
+          "digest": "sha256:76de44f9fda5444ad5b4805ae16b21221cde19a99669140ea7a6f032f383edcd"
         },
         {
           "path": "skills/challenger-review/scripts/errors.mjs",
@@ -196,15 +196,15 @@
         },
         {
           "path": "skills/cmo-review/scripts/validate-note.mjs",
-          "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7"
+          "digest": "sha256:ca58b77b782f78404f0fc65a42afa25b03d782e8b3f5ae89f42262c9dc21db51"
         },
         {
           "path": "skills/cmo-review/scripts/operate-review-note.mjs",
-          "digest": "sha256:9479eacfa12887fabd0b5681734cb7ec66b0ff45bef1fc765fcc026f2d4211d4"
+          "digest": "sha256:c4214b54039b2748c5846e6f4564cf3217c4b78334b27b6b77ea343c8ca9ae8c"
         },
         {
           "path": "skills/cmo-review/scripts/operate-review-contract.mjs",
-          "digest": "sha256:33ba9b87c5543ee05ce290e24aa0be05f6dc9e5d41e85f3b1597d48c45f8b7ca"
+          "digest": "sha256:76de44f9fda5444ad5b4805ae16b21221cde19a99669140ea7a6f032f383edcd"
         },
         {
           "path": "skills/cmo-review/scripts/errors.mjs",
@@ -237,15 +237,15 @@
         },
         {
           "path": "skills/coo-review/scripts/validate-note.mjs",
-          "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7"
+          "digest": "sha256:ca58b77b782f78404f0fc65a42afa25b03d782e8b3f5ae89f42262c9dc21db51"
         },
         {
           "path": "skills/coo-review/scripts/operate-review-note.mjs",
-          "digest": "sha256:9479eacfa12887fabd0b5681734cb7ec66b0ff45bef1fc765fcc026f2d4211d4"
+          "digest": "sha256:c4214b54039b2748c5846e6f4564cf3217c4b78334b27b6b77ea343c8ca9ae8c"
         },
         {
           "path": "skills/coo-review/scripts/operate-review-contract.mjs",
-          "digest": "sha256:33ba9b87c5543ee05ce290e24aa0be05f6dc9e5d41e85f3b1597d48c45f8b7ca"
+          "digest": "sha256:76de44f9fda5444ad5b4805ae16b21221cde19a99669140ea7a6f032f383edcd"
         },
         {
           "path": "skills/coo-review/scripts/errors.mjs",
@@ -278,15 +278,15 @@
         },
         {
           "path": "skills/cpo-review/scripts/validate-note.mjs",
-          "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7"
+          "digest": "sha256:ca58b77b782f78404f0fc65a42afa25b03d782e8b3f5ae89f42262c9dc21db51"
         },
         {
           "path": "skills/cpo-review/scripts/operate-review-note.mjs",
-          "digest": "sha256:9479eacfa12887fabd0b5681734cb7ec66b0ff45bef1fc765fcc026f2d4211d4"
+          "digest": "sha256:c4214b54039b2748c5846e6f4564cf3217c4b78334b27b6b77ea343c8ca9ae8c"
         },
         {
           "path": "skills/cpo-review/scripts/operate-review-contract.mjs",
-          "digest": "sha256:33ba9b87c5543ee05ce290e24aa0be05f6dc9e5d41e85f3b1597d48c45f8b7ca"
+          "digest": "sha256:76de44f9fda5444ad5b4805ae16b21221cde19a99669140ea7a6f032f383edcd"
         },
         {
           "path": "skills/cpo-review/scripts/errors.mjs",
@@ -319,15 +319,15 @@
         },
         {
           "path": "skills/cto-review/scripts/validate-note.mjs",
-          "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7"
+          "digest": "sha256:ca58b77b782f78404f0fc65a42afa25b03d782e8b3f5ae89f42262c9dc21db51"
         },
         {
           "path": "skills/cto-review/scripts/operate-review-note.mjs",
-          "digest": "sha256:9479eacfa12887fabd0b5681734cb7ec66b0ff45bef1fc765fcc026f2d4211d4"
+          "digest": "sha256:c4214b54039b2748c5846e6f4564cf3217c4b78334b27b6b77ea343c8ca9ae8c"
         },
         {
           "path": "skills/cto-review/scripts/operate-review-contract.mjs",
-          "digest": "sha256:33ba9b87c5543ee05ce290e24aa0be05f6dc9e5d41e85f3b1597d48c45f8b7ca"
+          "digest": "sha256:76de44f9fda5444ad5b4805ae16b21221cde19a99669140ea7a6f032f383edcd"
         },
         {
           "path": "skills/cto-review/scripts/errors.mjs",
@@ -1101,15 +1101,15 @@
         },
         {
           "path": "skills/operate/scripts/validate-note.mjs",
-          "digest": "sha256:db01314507b7ae39e7dd5973a5ac70c06a0eee4c7733bb75992bbac8821fd8a7"
+          "digest": "sha256:ca58b77b782f78404f0fc65a42afa25b03d782e8b3f5ae89f42262c9dc21db51"
         },
         {
           "path": "skills/operate/scripts/operate-review-note.mjs",
-          "digest": "sha256:9479eacfa12887fabd0b5681734cb7ec66b0ff45bef1fc765fcc026f2d4211d4"
+          "digest": "sha256:c4214b54039b2748c5846e6f4564cf3217c4b78334b27b6b77ea343c8ca9ae8c"
         },
         {
           "path": "skills/operate/scripts/operate-review-contract.mjs",
-          "digest": "sha256:33ba9b87c5543ee05ce290e24aa0be05f6dc9e5d41e85f3b1597d48c45f8b7ca"
+          "digest": "sha256:76de44f9fda5444ad5b4805ae16b21221cde19a99669140ea7a6f032f383edcd"
         },
         {
           "path": "skills/operate/scripts/errors.mjs",

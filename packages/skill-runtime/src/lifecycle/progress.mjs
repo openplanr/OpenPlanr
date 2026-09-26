@@ -6,10 +6,7 @@ import {
   LIFECYCLE_RUNTIME_VERSION,
   LIFECYCLE_STATE_VERSION,
 } from './compatibility.mjs';
-import {
-  LIFECYCLE_SESSION_DIRECTORY,
-  prepareLifecycleEnvironment,
-} from './environment.mjs';
+import { LIFECYCLE_SESSION_DIRECTORY, prepareLifecycleEnvironment } from './environment.mjs';
 import { checkpointSession } from './sessions.mjs';
 import { listStateJson, readStateJson, writeStateJson } from './storage.mjs';
 
@@ -34,22 +31,22 @@ function progressRecord(value) {
   const checkpoint = value?.checkpoint;
   const session = checkpoint?.session;
   return Boolean(
-    value
-    && typeof value === 'object'
-    && value.kind === 'skill-progress-record'
-    && typeof value.sessionId === 'string'
-    && SESSION_ID.test(value.sessionId)
-    && typeof value.skillId === 'string'
-    && typeof value.checkpointedAt === 'string'
-    && typeof value.expiresAt === 'string'
-    && verifyDocumentDigest(value)
-    && checkpoint
-    && typeof checkpoint === 'object'
-    && checkpoint.skillId === value.skillId
-    && checkpoint.checkpointedAt === value.checkpointedAt
-    && session
-    && typeof session === 'object'
-    && session.sessionId === value.sessionId,
+    value &&
+      typeof value === 'object' &&
+      value.kind === 'skill-progress-record' &&
+      typeof value.sessionId === 'string' &&
+      SESSION_ID.test(value.sessionId) &&
+      typeof value.skillId === 'string' &&
+      typeof value.checkpointedAt === 'string' &&
+      typeof value.expiresAt === 'string' &&
+      verifyDocumentDigest(value) &&
+      checkpoint &&
+      typeof checkpoint === 'object' &&
+      checkpoint.skillId === value.skillId &&
+      checkpoint.checkpointedAt === value.checkpointedAt &&
+      session &&
+      typeof session === 'object' &&
+      session.sessionId === value.sessionId,
   );
 }
 
@@ -123,7 +120,8 @@ export function persistSessionProgress({
       status: 'partial',
       path: null,
       expiresAt: null,
-      notice: 'Continued without persisted progress because local state could not be written safely.',
+      notice:
+        'Continued without persisted progress because local state could not be written safely.',
     });
   }
   return freezeJson({
@@ -139,12 +137,14 @@ export function loadLatestSessionProgress({ projectRoot, skillId, now } = {}) {
   assertNonBlank(skillId, 'skillId');
   const clock = nowDate(now).getTime();
   const { records, unreadable } = readProgressRecords({ projectRoot });
-  const selected = records
-    .filter(({ record }) => record.skillId === skillId && Date.parse(record.expiresAt) > clock)
-    .sort((left, right) => (
-      Date.parse(right.record.checkpointedAt) - Date.parse(left.record.checkpointedAt)
-      || right.path.localeCompare(left.path)
-    ))[0] ?? null;
+  const selected =
+    records
+      .filter(({ record }) => record.skillId === skillId && Date.parse(record.expiresAt) > clock)
+      .sort(
+        (left, right) =>
+          Date.parse(right.record.checkpointedAt) - Date.parse(left.record.checkpointedAt) ||
+          right.path.localeCompare(left.path),
+      )[0] ?? null;
   if (!selected) {
     return freezeJson({
       status: 'unavailable',

@@ -6,7 +6,7 @@ const MAX_SHORT_DESCRIPTION = 64;
 function displayName(skillId) {
   return skillId
     .split('-')
-    .map((part) => part === 'planr' ? 'Planr' : part.charAt(0).toUpperCase() + part.slice(1))
+    .map((part) => (part === 'planr' ? 'Planr' : part.charAt(0).toUpperCase() + part.slice(1)))
     .join(' ');
 }
 
@@ -20,14 +20,21 @@ function shortDescription(description) {
 
 /** Render one Codex-native skill card from canonical skill identity. */
 export function renderOpenAiSkillMetadata({ skillId, description, invocation = `$${skillId}` }) {
-  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(skillId) || typeof description !== 'string' || description.trim().length === 0) {
+  if (
+    !/^[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(skillId) ||
+    typeof description !== 'string' ||
+    description.trim().length === 0
+  ) {
     throw new SkillRuntimeError(
       'E_SKILL_OPENAI_METADATA_INVALID',
       'Codex skill metadata requires a canonical skill ID and non-empty description.',
       { skillId, repair: 'Use the parsed canonical SKILL.md identity as the metadata source.' },
     );
   }
-  if (typeof invocation !== 'string' || !/^\$[a-z0-9]+(?:-[a-z0-9]+)*(?::[a-z0-9]+(?:-[a-z0-9]+)*)?$/u.test(invocation)) {
+  if (
+    typeof invocation !== 'string' ||
+    !/^\$[a-z0-9]+(?:-[a-z0-9]+)*(?::[a-z0-9]+(?:-[a-z0-9]+)*)?$/u.test(invocation)
+  ) {
     throw new SkillRuntimeError(
       'E_SKILL_OPENAI_METADATA_INVALID',
       'Codex skill metadata requires a valid explicit invocation.',

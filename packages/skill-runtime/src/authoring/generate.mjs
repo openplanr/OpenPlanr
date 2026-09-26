@@ -57,7 +57,10 @@ function assertOwnedOutput(outputRoot, skillId) {
     throw new SkillAuthoringError(
       'E_SKILL_OUTPUT_UNOWNED',
       `${outputRoot} is not a generated skill-output directory.`,
-      { path: outputRoot, repair: `Move the existing ${DIST_DIR} path, then run generation again.` },
+      {
+        path: outputRoot,
+        repair: `Move the existing ${DIST_DIR} path, then run generation again.`,
+      },
     );
   }
 
@@ -72,26 +75,34 @@ function assertOwnedOutput(outputRoot, skillId) {
     throw new SkillAuthoringError(
       'E_SKILL_OUTPUT_UNOWNED',
       `${outputRoot} does not contain readable OpenPlanr generated manifests.`,
-      { path: manifestPath, repair: `Move the existing ${DIST_DIR} directory, then run generation again.` },
+      {
+        path: manifestPath,
+        repair: `Move the existing ${DIST_DIR} directory, then run generation again.`,
+      },
     );
   }
-  const manifestErrors = validateProtocolArtifact('generated-asset-manifest', manifest, { protocolVersion: '1.6.0' });
+  const manifestErrors = validateProtocolArtifact('generated-asset-manifest', manifest, {
+    protocolVersion: '1.6.0',
+  });
   if (
-    manifestErrors.length > 0
-    || manifest.sourceFormat !== 'composed-v1'
-    || !Array.isArray(manifest.assets)
-    || manifest.assets.length === 0
-    || manifest.assets.some((asset) => !belongsToSkill(asset, skillId))
-    || custody.kind !== 'openplanr-skill-generated-custody'
-    || custody.assetSetId !== manifest.assetSetId
-    || !Array.isArray(custody.assets)
-    || custody.assets.length !== manifest.assets.length
-    || custody.assets.some((asset) => !belongsToSkill(asset, skillId))
+    manifestErrors.length > 0 ||
+    manifest.sourceFormat !== 'composed-v1' ||
+    !Array.isArray(manifest.assets) ||
+    manifest.assets.length === 0 ||
+    manifest.assets.some((asset) => !belongsToSkill(asset, skillId)) ||
+    custody.kind !== 'openplanr-skill-generated-custody' ||
+    custody.assetSetId !== manifest.assetSetId ||
+    !Array.isArray(custody.assets) ||
+    custody.assets.length !== manifest.assets.length ||
+    custody.assets.some((asset) => !belongsToSkill(asset, skillId))
   ) {
     throw new SkillAuthoringError(
       'E_SKILL_OUTPUT_UNOWNED',
       `${outputRoot} is not owned by composed skill ${skillId}.`,
-      { path: manifestPath, repair: `Move the existing ${DIST_DIR} directory, then run generation again.` },
+      {
+        path: manifestPath,
+        repair: `Move the existing ${DIST_DIR} directory, then run generation again.`,
+      },
     );
   }
 }
@@ -100,7 +111,11 @@ function writeOutputTree(stagingRoot, assets, generatedManifest, custodyManifest
   for (const asset of assets) {
     const outputPath = resolve(stagingRoot, asset.host, ...asset.path.split('/'));
     if (isOutside(stagingRoot, outputPath)) {
-      throw new SkillAuthoringError('E_SKILL_OUTPUT_PATH_INVALID', `Generated path ${asset.path} escapes the output directory.`, { path: asset.path });
+      throw new SkillAuthoringError(
+        'E_SKILL_OUTPUT_PATH_INVALID',
+        `Generated path ${asset.path} escapes the output directory.`,
+        { path: asset.path },
+      );
     }
     mkdirSync(dirname(outputPath), { recursive: true });
     writeFileSync(outputPath, asset.bytes, 'utf8');
@@ -146,8 +161,14 @@ export function generateSkill({ skillDir }) {
         skillVersion: loaded.skillSource.skillVersion,
         assets: flattenCompiledAssets(projections),
       };
-      const { generated: generatedManifest, custody: custodyManifest } = buildCompiledManifests(compiled.assets);
-      const manifestErrors = validateProtocolArtifact('generated-asset-manifest', generatedManifest, { protocolVersion: '1.6.0' });
+      const { generated: generatedManifest, custody: custodyManifest } = buildCompiledManifests(
+        compiled.assets,
+      );
+      const manifestErrors = validateProtocolArtifact(
+        'generated-asset-manifest',
+        generatedManifest,
+        { protocolVersion: '1.6.0' },
+      );
       if (manifestErrors.length > 0) {
         throw new SkillAuthoringError(
           'E_SKILL_GENERATED_MANIFEST_INVALID',

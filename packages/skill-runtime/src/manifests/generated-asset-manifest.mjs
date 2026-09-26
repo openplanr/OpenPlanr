@@ -1,4 +1,8 @@
-import { canonicalizeJson, sha256Hex, withDocumentDigest } from '@openplanr/protocol/canonical-json';
+import {
+  canonicalizeJson,
+  sha256Hex,
+  withDocumentDigest,
+} from '@openplanr/protocol/canonical-json';
 
 import { SkillRuntimeError } from '../errors.mjs';
 import {
@@ -18,7 +22,12 @@ function mediaTypeFor(path) {
   const dot = path.lastIndexOf('.');
   const extension = dot === -1 ? '' : path.slice(dot);
   const mediaType = MEDIA_TYPES[extension];
-  if (!mediaType) throw new SkillRuntimeError('E_ASSET_MEDIA_TYPE_UNKNOWN', `No media type is registered for ${path}.`, { path });
+  if (!mediaType)
+    throw new SkillRuntimeError(
+      'E_ASSET_MEDIA_TYPE_UNKNOWN',
+      `No media type is registered for ${path}.`,
+      { path },
+    );
   return mediaType;
 }
 
@@ -41,24 +50,23 @@ export function deriveAssetSetId(assets) {
  * wall-clock, no randomness, so re-running the same compilation is byte-stable.
  */
 export function buildGeneratedAssetManifest({ assets, sourceFormat, documentVersion = '1.0.0' }) {
-  const normalized = assets
-    .map((asset) => ({
-      path: asset.path,
-      host: normalizedAssetHost(asset),
-      mediaType: mediaTypeFor(asset.path),
-      byteLength: asset.byteLength,
-      digest: asset.digest,
-      sourceMap: asset.sourceMap.map((range) => ({
-        startByte: range.startByte,
-        endByte: range.endByte,
-        owner: {
-          ownerKind: range.owner.ownerKind,
-          pointer: range.owner.pointer,
-          version: range.owner.version,
-          digest: range.owner.digest,
-        },
-      })),
-    }))
+  const normalized = assets.map((asset) => ({
+    path: asset.path,
+    host: normalizedAssetHost(asset),
+    mediaType: mediaTypeFor(asset.path),
+    byteLength: asset.byteLength,
+    digest: asset.digest,
+    sourceMap: asset.sourceMap.map((range) => ({
+      startByte: range.startByte,
+      endByte: range.endByte,
+      owner: {
+        ownerKind: range.owner.ownerKind,
+        pointer: range.owner.pointer,
+        version: range.owner.version,
+        digest: range.owner.digest,
+      },
+    })),
+  }));
   assertUniqueAssetIdentities(normalized);
   normalized.sort(compareAssetIdentity);
   return withDocumentDigest({

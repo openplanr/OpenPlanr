@@ -14,11 +14,7 @@ import {
 export function buildAssetCustody(asset) {
   const byKey = new Map();
   for (const range of asset.sourceMap) {
-    const key = canonicalizeJson([
-      range.owner.ownerKind,
-      range.owner.pointer,
-      range.owner.version,
-    ]);
+    const key = canonicalizeJson([range.owner.ownerKind, range.owner.pointer, range.owner.version]);
     if (!byKey.has(key)) {
       byKey.set(key, {
         ownerKind: range.owner.ownerKind,
@@ -30,9 +26,12 @@ export function buildAssetCustody(asset) {
     }
     byKey.get(key).ranges.push({ startByte: range.startByte, endByte: range.endByte });
   }
-  const contributors = [...byKey.values()].sort((left, right) => (
-    left.ownerKind.localeCompare(right.ownerKind) || left.pointer.localeCompare(right.pointer) || left.version.localeCompare(right.version)
-  ));
+  const contributors = [...byKey.values()].sort(
+    (left, right) =>
+      left.ownerKind.localeCompare(right.ownerKind) ||
+      left.pointer.localeCompare(right.pointer) ||
+      left.version.localeCompare(right.version),
+  );
   return {
     path: asset.path,
     host: normalizedAssetHost(asset),
@@ -50,9 +49,9 @@ export function buildCustodyManifest({ assets, sourceFormat, assetSetId }) {
   const rows = assets.map((asset) => buildAssetCustody(asset));
   assertUniqueAssetIdentities(rows);
   rows.sort(compareAssetIdentity);
-  const custodyDigest = `sha256:${sha256Hex(canonicalizeJson(
-    rows.map(({ path, host, digest }) => [path, host, digest]),
-  ))}`;
+  const custodyDigest = `sha256:${sha256Hex(
+    canonicalizeJson(rows.map(({ path, host, digest }) => [path, host, digest])),
+  )}`;
   return {
     kind: 'openplanr-skill-generated-custody',
     schemaVersion: '1.0.0',

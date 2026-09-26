@@ -34,7 +34,9 @@ export interface HostOverlayPolicy {
 export interface HostOverlayResolution {
   readonly policy: HostOverlayPolicy;
   readonly substitutions: Readonly<Record<string, string>>;
-  readonly sources: Readonly<Record<string, Readonly<{ path: string; version: string; digest: Digest }>>>;
+  readonly sources: Readonly<
+    Record<string, Readonly<{ path: string; version: string; digest: Digest }>>
+  >;
 }
 
 export interface SourceEdge {
@@ -69,7 +71,11 @@ export interface ResolvedModuleGraph {
   readonly routedGroups: ReadonlyArray<RoutedModule>;
   readonly allSelectedModules: ReadonlyArray<ResolvedModule>;
   readonly edges: ReadonlyArray<Readonly<SourceEdge>>;
-  readonly selectedIds: ReadonlyArray<{ readonly moduleId: string; readonly moduleVersion: string; readonly mode: 'inline' | 'overlay' | 'routed' }>;
+  readonly selectedIds: ReadonlyArray<{
+    readonly moduleId: string;
+    readonly moduleVersion: string;
+    readonly mode: 'inline' | 'overlay' | 'routed';
+  }>;
 }
 
 export interface CompiledAsset {
@@ -97,14 +103,28 @@ export interface ComposedCompileResult {
     readonly skillVersion: string;
     readonly host: string;
     readonly hostProfile: string;
-    readonly inline: ReadonlyArray<{ readonly moduleId: string; readonly moduleVersion: string; readonly source: string; readonly mode: 'inline' }>;
-    readonly overlay: ReadonlyArray<{ readonly moduleId: string; readonly moduleVersion: string; readonly source: string; readonly mode: 'overlay' }>;
+    readonly inline: ReadonlyArray<{
+      readonly moduleId: string;
+      readonly moduleVersion: string;
+      readonly source: string;
+      readonly mode: 'inline';
+    }>;
+    readonly overlay: ReadonlyArray<{
+      readonly moduleId: string;
+      readonly moduleVersion: string;
+      readonly source: string;
+      readonly mode: 'overlay';
+    }>;
     readonly routed: ReadonlyArray<{
       readonly moduleId: string;
       readonly moduleVersion: string;
       readonly path: string;
       readonly mode: 'routed';
-      readonly sources: ReadonlyArray<{ readonly moduleId: string; readonly moduleVersion: string; readonly source: string }>;
+      readonly sources: ReadonlyArray<{
+        readonly moduleId: string;
+        readonly moduleVersion: string;
+        readonly source: string;
+      }>;
     }>;
   };
   readonly graph: ResolvedModuleGraph;
@@ -194,7 +214,10 @@ export declare function skillPrimaryPath(host: string, id: string): string;
 export declare function skillSupportPath(host: string, id: string, supportPath: string): string;
 export declare function isSkillAssetPath(host: string, id: string, path: string): boolean;
 
-export declare function readFrontmatter(bytes: string, options?: { expectedName?: string }): {
+export declare function readFrontmatter(
+  bytes: string,
+  options?: { expectedName?: string },
+): {
   fields: Record<string, string>;
   body: string;
 };
@@ -208,15 +231,31 @@ export declare class SourceMapBuilder {
 }
 
 export declare function byteLength(text: string): number;
-export declare function owner(ownerKind: SourceMapOwnerKind, pointer: string, version: string, digest: Digest): SourceMapOwner;
+export declare function owner(
+  ownerKind: SourceMapOwnerKind,
+  pointer: string,
+  version: string,
+  digest: Digest,
+): SourceMapOwner;
 export declare function sha256Bytes(text: string): Digest;
-export declare function validateSourceMap(ranges: ReadonlyArray<SourceMapRange>, totalBytes: number): true;
+export declare function validateSourceMap(
+  ranges: ReadonlyArray<SourceMapRange>,
+  totalBytes: number,
+): true;
 
 export declare const HOST_SUBSTITUTIONS: Readonly<Record<string, Readonly<Record<string, string>>>>;
-export declare function assertPortableAsset(path: string, bytes: string, host: string, authority?: AuthorityCeiling): string;
+export declare function assertPortableAsset(
+  path: string,
+  bytes: string,
+  host: string,
+  authority?: AuthorityCeiling,
+): string;
 export declare function assertSafeSourcePath(path: string, label?: string): string;
 export declare function canonicalText(value: unknown): string;
-export declare function parseMarkdownAsset(bytes: string, options?: { expectedName?: string }): {
+export declare function parseMarkdownAsset(
+  bytes: string,
+  options?: { expectedName?: string },
+): {
   source: string;
   frontmatter: string;
   lines: string[];
@@ -232,6 +271,11 @@ export declare function renderCursorSkill(
   options?: { quoteDescription?: boolean },
 ): string;
 export declare function renderHostTokens(bytes: string, host: string): string;
-export declare function renderRoleAsset(bytes: string, role: Record<string, unknown>, host: string, templates: { aliasTemplate: string; cursorTemplate: string }): string;
+export declare function renderRoleAsset(
+  bytes: string,
+  role: Record<string, unknown>,
+  host: string,
+  templates: { aliasTemplate: string; cursorTemplate: string },
+): string;
 export declare function renderTemplate(template: string, values: Record<string, string>): string;
 export declare function sha256(value: unknown): Digest;

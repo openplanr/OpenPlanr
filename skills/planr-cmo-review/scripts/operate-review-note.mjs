@@ -10,7 +10,8 @@ import {
 const canonicalText = (value) => String(value).replace(/\r\n/gu, '\n');
 const normalizeHeading = (value) => value.trim().replace(/\s+/gu, ' ');
 const PLACEHOLDER = /^(?:<[^>]+>|\.{3}|tbd|todo)$/iu;
-const CONTRACT_DECLARATION = /^(?:>|-)\s+\*\*Contract:\*\*\s*([a-z][a-z0-9-]*)@(\d+\.\d+\.\d+)\s*$/gmu;
+const CONTRACT_DECLARATION =
+  /^(?:>|-)\s+\*\*Contract:\*\*\s*([a-z][a-z0-9-]*)@(\d+\.\d+\.\d+)\s*$/gmu;
 const AUTO_CONTRACT_VERSION = 'auto';
 
 function diagnostic(code, message, details = {}) {
@@ -60,10 +61,12 @@ function sectionIndex(markdown) {
     start: match.index,
     bodyStart: match.index + match[0].length,
   }));
-  return headings.map((heading, index) => Object.freeze({
-    ...heading,
-    body: markdown.slice(heading.bodyStart, headings[index + 1]?.start ?? markdown.length).trim(),
-  }));
+  return headings.map((heading, index) =>
+    Object.freeze({
+      ...heading,
+      body: markdown.slice(heading.bodyStart, headings[index + 1]?.start ?? markdown.length).trim(),
+    }),
+  );
 }
 
 function profileFor(contract, profile) {
@@ -84,8 +87,8 @@ export function detectOperateReviewNoteContract(
   { profile, contractVersion = AUTO_CONTRACT_VERSION } = {},
 ) {
   if (
-    contractVersion !== AUTO_CONTRACT_VERSION
-    && !OPERATE_REVIEW_CONTRACT_VERSIONS.includes(contractVersion)
+    contractVersion !== AUTO_CONTRACT_VERSION &&
+    !OPERATE_REVIEW_CONTRACT_VERSIONS.includes(contractVersion)
   ) {
     contractFor(contractVersion);
   }
@@ -125,9 +128,7 @@ export function detectOperateReviewNoteContract(
   });
   const legacy = scores.find(({ version }) => version === '1.0.0');
   const current = scores.find(({ version }) => version === OPERATE_REVIEW_CONTRACT_VERSION);
-  const contractVersionDetected = legacy.score > current.score
-    ? legacy.version
-    : current.version;
+  const contractVersionDetected = legacy.score > current.score ? legacy.version : current.version;
   const contract = contractFor(contractVersionDetected);
   return Object.freeze({
     contractVersion: contractVersionDetected,
@@ -151,24 +152,33 @@ function requireFields(markdown, required, diagnostics, context, allowedValues =
   const fields = fieldsIn(markdown);
   for (const field of required) {
     const values = fields.get(field) ?? [];
-    if (values.length === 0 || values.every((value) => value.length === 0 || PLACEHOLDER.test(value))) {
-      diagnostics.push(diagnostic(
-        'E_OPERATE_REVIEW_FIELD_MISSING',
-        `${context} requires a non-empty ${field} field.`,
-        { context, field },
-      ));
+    if (
+      values.length === 0 ||
+      values.every((value) => value.length === 0 || PLACEHOLDER.test(value))
+    ) {
+      diagnostics.push(
+        diagnostic(
+          'E_OPERATE_REVIEW_FIELD_MISSING',
+          `${context} requires a non-empty ${field} field.`,
+          { context, field },
+        ),
+      );
     } else if (values.length > 1) {
-      diagnostics.push(diagnostic(
-        'E_OPERATE_REVIEW_FIELD_DUPLICATE',
-        `${context} contains ${values.length} ${field} fields.`,
-        { context, field, count: values.length },
-      ));
+      diagnostics.push(
+        diagnostic(
+          'E_OPERATE_REVIEW_FIELD_DUPLICATE',
+          `${context} contains ${values.length} ${field} fields.`,
+          { context, field, count: values.length },
+        ),
+      );
     } else if (allowedValues[field] && !allowedValues[field].includes(values[0])) {
-      diagnostics.push(diagnostic(
-        'E_OPERATE_REVIEW_FIELD_VALUE_INVALID',
-        `${context} has an invalid ${field} value.`,
-        { context, field, expected: allowedValues[field], actual: values[0] },
-      ));
+      diagnostics.push(
+        diagnostic(
+          'E_OPERATE_REVIEW_FIELD_VALUE_INVALID',
+          `${context} has an invalid ${field} value.`,
+          { context, field, expected: allowedValues[field], actual: values[0] },
+        ),
+      );
     }
   }
 }
@@ -180,35 +190,40 @@ function validateSections(markdown, contract, diagnostics) {
   for (const section of expected) {
     const count = actual.filter((name) => name === section).length;
     if (count === 0) {
-      diagnostics.push(diagnostic(
-        'E_OPERATE_REVIEW_SECTION_MISSING',
-        `Required section ${section} is missing.`,
-        { section },
-      ));
+      diagnostics.push(
+        diagnostic('E_OPERATE_REVIEW_SECTION_MISSING', `Required section ${section} is missing.`, {
+          section,
+        }),
+      );
     } else if (count > 1) {
-      diagnostics.push(diagnostic(
-        'E_OPERATE_REVIEW_SECTION_DUPLICATE',
-        `Required section ${section} appears ${count} times.`,
-        { section, count },
-      ));
+      diagnostics.push(
+        diagnostic(
+          'E_OPERATE_REVIEW_SECTION_DUPLICATE',
+          `Required section ${section} appears ${count} times.`,
+          { section, count },
+        ),
+      );
     }
   }
   const unexpected = actual.filter((section) => !expected.includes(section));
   for (const section of unexpected) {
-    diagnostics.push(diagnostic(
-      'E_OPERATE_REVIEW_SECTION_UNEXPECTED',
-      `Unexpected top-level section ${section} is not part of this review contract.`,
-      { section },
-    ));
+    diagnostics.push(
+      diagnostic(
+        'E_OPERATE_REVIEW_SECTION_UNEXPECTED',
+        `Unexpected top-level section ${section} is not part of this review contract.`,
+        { section },
+      ),
+    );
   }
   const presentExpected = actual.filter((section) => expected.includes(section));
   const expectedPresentOrder = expected.filter((section) => actual.includes(section));
   if (JSON.stringify(presentExpected) !== JSON.stringify(expectedPresentOrder)) {
-    diagnostics.push(diagnostic(
-      'E_OPERATE_REVIEW_SECTION_ORDER',
-      'Review sections are not in contract order.',
-      { expected: expectedPresentOrder, actual: presentExpected },
-    ));
+    diagnostics.push(
+      diagnostic('E_OPERATE_REVIEW_SECTION_ORDER', 'Review sections are not in contract order.', {
+        expected: expectedPresentOrder,
+        actual: presentExpected,
+      }),
+    );
   }
   return new Map(headings.map(({ name, body }) => [name, body]));
 }
@@ -225,39 +240,52 @@ function validateItems(sectionBody, itemContract, diagnostics) {
   }));
   if (items.length === 0) {
     if (!sectionBody.includes(itemContract.emptyText)) {
-      diagnostics.push(diagnostic(
-        'E_OPERATE_REVIEW_ITEM_OR_EMPTY_STATE_MISSING',
-        `${itemContract.section} requires an item or the exact empty state.`,
-        { section: itemContract.section, emptyText: itemContract.emptyText },
-      ));
+      diagnostics.push(
+        diagnostic(
+          'E_OPERATE_REVIEW_ITEM_OR_EMPTY_STATE_MISSING',
+          `${itemContract.section} requires an item or the exact empty state.`,
+          { section: itemContract.section, emptyText: itemContract.emptyText },
+        ),
+      );
     }
     return 0;
   }
   if (items.length > itemContract.maxItems) {
-    diagnostics.push(diagnostic(
-      'E_OPERATE_REVIEW_ITEM_LIMIT',
-      `${itemContract.section} has ${items.length} items; at most ${itemContract.maxItems} are allowed.`,
-      { section: itemContract.section, count: items.length, maxItems: itemContract.maxItems },
-    ));
+    diagnostics.push(
+      diagnostic(
+        'E_OPERATE_REVIEW_ITEM_LIMIT',
+        `${itemContract.section} has ${items.length} items; at most ${itemContract.maxItems} are allowed.`,
+        { section: itemContract.section, count: items.length, maxItems: itemContract.maxItems },
+      ),
+    );
   }
   const expectedIds = items.map((_, index) => `${prefix}${index + 1}`);
   const actualIds = items.map(({ id }) => id);
   if (JSON.stringify(actualIds) !== JSON.stringify(expectedIds)) {
-    diagnostics.push(diagnostic(
-      'E_OPERATE_REVIEW_ITEM_SEQUENCE',
-      `${itemContract.section} item IDs must be unique and contiguous.`,
-      { section: itemContract.section, expected: expectedIds, actual: actualIds },
-    ));
+    diagnostics.push(
+      diagnostic(
+        'E_OPERATE_REVIEW_ITEM_SEQUENCE',
+        `${itemContract.section} item IDs must be unique and contiguous.`,
+        { section: itemContract.section, expected: expectedIds, actual: actualIds },
+      ),
+    );
   }
   for (const [index, item] of items.entries()) {
-    if (itemContract.headingSuffixPattern && !itemContract.headingSuffixPattern.test(item.headingSuffix)) {
-      diagnostics.push(diagnostic(
-        'E_OPERATE_REVIEW_ITEM_HEADING_INVALID',
-        `${item.id} must declare a contracted priority in its heading.`,
-        { section: itemContract.section, itemId: item.id },
-      ));
+    if (
+      itemContract.headingSuffixPattern &&
+      !itemContract.headingSuffixPattern.test(item.headingSuffix)
+    ) {
+      diagnostics.push(
+        diagnostic(
+          'E_OPERATE_REVIEW_ITEM_HEADING_INVALID',
+          `${item.id} must declare a contracted priority in its heading.`,
+          { section: itemContract.section, itemId: item.id },
+        ),
+      );
     }
-    const body = sectionBody.slice(item.bodyStart, items[index + 1]?.start ?? sectionBody.length).trim();
+    const body = sectionBody
+      .slice(item.bodyStart, items[index + 1]?.start ?? sectionBody.length)
+      .trim();
     requireFields(body, itemContract.fields, diagnostics, item.id, itemContract.fieldValues);
   }
   return items.length;
@@ -269,27 +297,30 @@ function validateSectionItemLimits(sectionBodies, limits, diagnostics) {
     if (typeof body !== 'string' || /^None\.\s*$/iu.test(body)) continue;
     const count = [...body.matchAll(/^\s*-\s+\S/gmu)].length;
     if (count > maxItems) {
-      diagnostics.push(diagnostic(
-        'E_OPERATE_REVIEW_SECTION_ITEM_LIMIT',
-        `${section} has ${count} items; at most ${maxItems} are allowed.`,
-        { section, count, maxItems },
-      ));
+      diagnostics.push(
+        diagnostic(
+          'E_OPERATE_REVIEW_SECTION_ITEM_LIMIT',
+          `${section} has ${count} items; at most ${maxItems} are allowed.`,
+          { section, count, maxItems },
+        ),
+      );
     }
   }
 }
 
 function legacyBoardDecisions(sectionBody) {
   if (typeof sectionBody !== 'string') return [];
-  const headings = [...sectionBody.matchAll(/^###\s+(D[1-9][0-9]*)\s+—\s+.+?\s*$/gmu)].map((match) => ({
-    id: match[1],
-    start: match.index,
-    bodyStart: match.index + match[0].length,
-  }));
+  const headings = [...sectionBody.matchAll(/^###\s+(D[1-9][0-9]*)\s+—\s+.+?\s*$/gmu)].map(
+    (match) => ({
+      id: match[1],
+      start: match.index,
+      bodyStart: match.index + match[0].length,
+    }),
+  );
   return headings.map((heading, index) => {
-    const body = sectionBody.slice(
-      heading.bodyStart,
-      headings[index + 1]?.start ?? sectionBody.length,
-    ).trim();
+    const body = sectionBody
+      .slice(heading.bodyStart, headings[index + 1]?.start ?? sectionBody.length)
+      .trim();
     return Object.freeze({
       id: heading.id,
       owner: fieldsIn(body).get('Owner')?.[0] ?? null,
@@ -302,15 +333,18 @@ function escapedPattern(value) {
 }
 
 function validateLegacyDecisionGate(gate, decision, diagnostics) {
-  const statements = gate.split('\n')
+  const statements = gate
+    .split('\n')
     .map((line) => line.trim())
     .filter((line) => line.length > 0 && new RegExp(`\\b${decision.id}\\b`, 'u').test(line));
   if (statements.length !== 1) {
-    diagnostics.push(diagnostic(
-      'E_OPERATE_REVIEW_HUMAN_GATE_INCOMPLETE',
-      `Human gate must contain exactly one disposition statement for ${decision.id}.`,
-      { section: 'Human gate', decisionId: decision.id, statementCount: statements.length },
-    ));
+    diagnostics.push(
+      diagnostic(
+        'E_OPERATE_REVIEW_HUMAN_GATE_INCOMPLETE',
+        `Human gate must contain exactly one disposition statement for ${decision.id}.`,
+        { section: 'Human gate', decisionId: decision.id, statementCount: statements.length },
+      ),
+    );
     return;
   }
 
@@ -324,11 +358,13 @@ function validateLegacyDecisionGate(gate, decision, diagnostics) {
   }
   if (!/\breason\b/iu.test(statement)) missing.push('reason');
   if (missing.length > 0) {
-    diagnostics.push(diagnostic(
-      'E_OPERATE_REVIEW_HUMAN_GATE_INCOMPLETE',
-      `Human gate disposition for ${decision.id} is missing: ${missing.join(', ')}.`,
-      { section: 'Human gate', decisionId: decision.id, missing },
-    ));
+    diagnostics.push(
+      diagnostic(
+        'E_OPERATE_REVIEW_HUMAN_GATE_INCOMPLETE',
+        `Human gate disposition for ${decision.id} is missing: ${missing.join(', ')}.`,
+        { section: 'Human gate', decisionId: decision.id, missing },
+      ),
+    );
   }
 }
 
@@ -337,7 +373,10 @@ function absentLegacyReviewSeats(reviewTrail) {
   const seats = [];
   for (const line of reviewTrail.split('\n')) {
     if (!line.trim().startsWith('|')) continue;
-    const cells = line.split('|').slice(1, -1).map((cell) => cell.trim());
+    const cells = line
+      .split('|')
+      .slice(1, -1)
+      .map((cell) => cell.trim());
     if (cells.length < 2 || !/^absent(?:\b|\s*[:—-])/iu.test(cells[1])) continue;
     const seat = cells[0].replace(/[`*_]/gu, '').trim();
     if (seat.length > 0 && !seats.includes(seat)) seats.push(seat);
@@ -346,84 +385,110 @@ function absentLegacyReviewSeats(reviewTrail) {
 }
 
 function legacyGateNamesAbsentSeat(gate, absentSeats) {
-  return absentSeats.some((seat) => new RegExp(
-    `\\bre[- ]run\\s+(?:\`${escapedPattern(seat)}\`|${escapedPattern(seat)})(?=$|[^\\p{L}\\p{N}-])`,
-    'iu',
-  ).test(gate));
+  return absentSeats.some((seat) =>
+    new RegExp(
+      `\\bre[- ]run\\s+(?:\`${escapedPattern(seat)}\`|${escapedPattern(seat)})(?=$|[^\\p{L}\\p{N}-])`,
+      'iu',
+    ).test(gate),
+  );
 }
 
 function validateLegacyNoDecisionGate(gate, diagnostics, absentSeats) {
-  const contradictoryDispositions = ['adopt', 'reject', 'defer']
-    .filter((disposition) => new RegExp(`\\b${disposition}\\b`, 'iu').test(gate));
+  const contradictoryDispositions = ['adopt', 'reject', 'defer'].filter((disposition) =>
+    new RegExp(`\\b${disposition}\\b`, 'iu').test(gate),
+  );
   if (contradictoryDispositions.length > 0) {
-    diagnostics.push(diagnostic(
-      'E_OPERATE_REVIEW_HUMAN_GATE_CONTRADICTORY',
-      'A no-decision Human gate must not offer decision dispositions.',
-      { section: 'Human gate', dispositions: contradictoryDispositions },
-    ));
+    diagnostics.push(
+      diagnostic(
+        'E_OPERATE_REVIEW_HUMAN_GATE_CONTRADICTORY',
+        'A no-decision Human gate must not offer decision dispositions.',
+        { section: 'Human gate', dispositions: contradictoryDispositions },
+      ),
+    );
   }
   for (const [option, pattern] of [
     ['close', /\bclose\b/iu],
     ['supply evidence', /\bsupply\s+evidence\b/iu],
   ]) {
     if (!pattern.test(gate)) {
-      diagnostics.push(diagnostic(
-        'E_OPERATE_REVIEW_HUMAN_GATE_INCOMPLETE',
-        `A no-decision Human gate must offer ${option}.`,
-        { section: 'Human gate', option },
-      ));
+      diagnostics.push(
+        diagnostic(
+          'E_OPERATE_REVIEW_HUMAN_GATE_INCOMPLETE',
+          `A no-decision Human gate must offer ${option}.`,
+          { section: 'Human gate', option },
+        ),
+      );
     }
   }
   if (absentSeats.length > 0 && !legacyGateNamesAbsentSeat(gate, absentSeats)) {
-    diagnostics.push(diagnostic(
-      'E_OPERATE_REVIEW_HUMAN_GATE_INCOMPLETE',
-      'A no-decision Human gate with an absent review seat must offer re-run for a named absent seat.',
-      { section: 'Human gate', option: 're-run <seat>', absentSeats },
-    ));
+    diagnostics.push(
+      diagnostic(
+        'E_OPERATE_REVIEW_HUMAN_GATE_INCOMPLETE',
+        'A no-decision Human gate with an absent review seat must offer re-run for a named absent seat.',
+        { section: 'Human gate', option: 're-run <seat>', absentSeats },
+      ),
+    );
   }
 }
 
-function validateLegacyDecisionLedger(sectionBodies, itemCount, diagnostics, {
-  requireExecutiveCallSection = false,
-  requireNoDecisionOptions = false,
-} = {}) {
+function validateLegacyDecisionLedger(
+  sectionBodies,
+  itemCount,
+  diagnostics,
+  { requireExecutiveCallSection = false, requireNoDecisionOptions = false } = {},
+) {
   const executiveCall = sectionBodies.get('Executive call') ?? '';
   if (requireExecutiveCallSection && executiveCall.length === 0) {
-    diagnostics.push(diagnostic(
-      'E_OPERATE_REVIEW_EXECUTIVE_CALL_MISSING',
-      'Executive call must lead with one concise decision signal.',
-      { section: 'Executive call' },
-    ));
+    diagnostics.push(
+      diagnostic(
+        'E_OPERATE_REVIEW_EXECUTIVE_CALL_MISSING',
+        'Executive call must lead with one concise decision signal.',
+        { section: 'Executive call' },
+      ),
+    );
   }
 
   const actionPlan = sectionBodies.get('Action plan') ?? '';
   if (itemCount > 0) {
-    const header = /^\|\s*ID\s*\|\s*Priority\s*\|\s*Action\s*\|\s*Owner\s*\|\s*First step\s*\|\s*Success measure\s*\|\s*Verification\s*\|\s*Depends on\s*\|\s*$/mu;
+    const header =
+      /^\|\s*ID\s*\|\s*Priority\s*\|\s*Action\s*\|\s*Owner\s*\|\s*First step\s*\|\s*Success measure\s*\|\s*Verification\s*\|\s*Depends on\s*\|\s*$/mu;
     const action = /^\|\s*A[1-9][0-9]*\s*\|/mu;
     if (!header.test(actionPlan) || !action.test(actionPlan)) {
-      diagnostics.push(diagnostic(
-        'E_OPERATE_REVIEW_ACTION_PLAN_INVALID',
-        'A non-empty decision queue requires the contracted action table and at least one action row.',
-        { section: 'Action plan' },
-      ));
+      diagnostics.push(
+        diagnostic(
+          'E_OPERATE_REVIEW_ACTION_PLAN_INVALID',
+          'A non-empty decision queue requires the contracted action table and at least one action row.',
+          { section: 'Action plan' },
+        ),
+      );
     } else {
-      const actionRows = actionPlan.split('\n')
+      const actionRows = actionPlan
+        .split('\n')
         .filter((line) => /^\|\s*A[1-9][0-9]*\s*\|/u.test(line))
-        .map((line) => line.split('|').slice(1, -1).map((cell) => cell.trim()));
+        .map((line) =>
+          line
+            .split('|')
+            .slice(1, -1)
+            .map((cell) => cell.trim()),
+        );
       if (actionRows.length > 7) {
-        diagnostics.push(diagnostic(
-          'E_OPERATE_REVIEW_ACTION_LIMIT',
-          `Action plan has ${actionRows.length} actions; at most 7 are allowed.`,
-          { section: 'Action plan', count: actionRows.length, maxItems: 7 },
-        ));
+        diagnostics.push(
+          diagnostic(
+            'E_OPERATE_REVIEW_ACTION_LIMIT',
+            `Action plan has ${actionRows.length} actions; at most 7 are allowed.`,
+            { section: 'Action plan', count: actionRows.length, maxItems: 7 },
+          ),
+        );
       }
       for (const row of actionRows) {
         if (row.length !== 8 || row.some((cell) => cell.length === 0 || PLACEHOLDER.test(cell))) {
-          diagnostics.push(diagnostic(
-            'E_OPERATE_REVIEW_ACTION_ROW_INVALID',
-            `Action ${row[0] ?? '(unknown)'} must populate all eight contracted columns.`,
-            { section: 'Action plan', actionId: row[0] ?? null },
-          ));
+          diagnostics.push(
+            diagnostic(
+              'E_OPERATE_REVIEW_ACTION_ROW_INVALID',
+              `Action ${row[0] ?? '(unknown)'} must populate all eight contracted columns.`,
+              { section: 'Action plan', actionId: row[0] ?? null },
+            ),
+          );
         }
       }
     }
@@ -444,43 +509,63 @@ function validateLegacyDecisionLedger(sectionBodies, itemCount, diagnostics, {
   for (const decision of decisions) validateLegacyDecisionGate(gate, decision, diagnostics);
 }
 
-function validateCurrentDecisionLedger(sectionBodies, itemCount, diagnostics, { summarySection } = {}) {
+function validateCurrentDecisionLedger(
+  sectionBodies,
+  itemCount,
+  diagnostics,
+  { summarySection } = {},
+) {
   if (summarySection && (sectionBodies.get(summarySection) ?? '').trim().length === 0) {
-    diagnostics.push(diagnostic(
-      'E_OPERATE_REVIEW_SUMMARY_MISSING',
-      `${summarySection} must contain a concise decision signal.`,
-      { section: summarySection },
-    ));
+    diagnostics.push(
+      diagnostic(
+        'E_OPERATE_REVIEW_SUMMARY_MISSING',
+        `${summarySection} must contain a concise decision signal.`,
+        { section: summarySection },
+      ),
+    );
   }
 
   const actionPlan = sectionBodies.get('Action plan') ?? '';
   if (itemCount > 0) {
-    const header = /^\|\s*ID\s*\|\s*Priority\s*\|\s*Action\s*\|\s*Suggested owner\s*\|\s*First step\s*\|\s*Success measure\s*\|\s*Check\s*\|\s*Depends on\s*\|\s*$/mu;
+    const header =
+      /^\|\s*ID\s*\|\s*Priority\s*\|\s*Action\s*\|\s*Suggested owner\s*\|\s*First step\s*\|\s*Success measure\s*\|\s*Check\s*\|\s*Depends on\s*\|\s*$/mu;
     const action = /^\|\s*A[1-9][0-9]*\s*\|/mu;
     if (!header.test(actionPlan) || !action.test(actionPlan)) {
-      diagnostics.push(diagnostic(
-        'E_OPERATE_REVIEW_ACTION_PLAN_INVALID',
-        'A non-empty decision queue requires the contracted action table and at least one action row.',
-        { section: 'Action plan' },
-      ));
+      diagnostics.push(
+        diagnostic(
+          'E_OPERATE_REVIEW_ACTION_PLAN_INVALID',
+          'A non-empty decision queue requires the contracted action table and at least one action row.',
+          { section: 'Action plan' },
+        ),
+      );
     } else {
-      const actionRows = actionPlan.split('\n')
+      const actionRows = actionPlan
+        .split('\n')
         .filter((line) => /^\|\s*A[1-9][0-9]*\s*\|/u.test(line))
-        .map((line) => line.split('|').slice(1, -1).map((cell) => cell.trim()));
+        .map((line) =>
+          line
+            .split('|')
+            .slice(1, -1)
+            .map((cell) => cell.trim()),
+        );
       if (actionRows.length > 7) {
-        diagnostics.push(diagnostic(
-          'E_OPERATE_REVIEW_ACTION_LIMIT',
-          `Action plan has ${actionRows.length} actions; at most 7 are allowed.`,
-          { section: 'Action plan', count: actionRows.length, maxItems: 7 },
-        ));
+        diagnostics.push(
+          diagnostic(
+            'E_OPERATE_REVIEW_ACTION_LIMIT',
+            `Action plan has ${actionRows.length} actions; at most 7 are allowed.`,
+            { section: 'Action plan', count: actionRows.length, maxItems: 7 },
+          ),
+        );
       }
       for (const row of actionRows) {
         if (row.length !== 8 || row.some((cell) => cell.length === 0 || PLACEHOLDER.test(cell))) {
-          diagnostics.push(diagnostic(
-            'E_OPERATE_REVIEW_ACTION_ROW_INVALID',
-            `Action ${row[0] ?? '(unknown)'} must populate all eight contracted columns.`,
-            { section: 'Action plan', actionId: row[0] ?? null },
-          ));
+          diagnostics.push(
+            diagnostic(
+              'E_OPERATE_REVIEW_ACTION_ROW_INVALID',
+              `Action ${row[0] ?? '(unknown)'} must populate all eight contracted columns.`,
+              { section: 'Action plan', actionId: row[0] ?? null },
+            ),
+          );
         }
       }
     }
@@ -488,58 +573,60 @@ function validateCurrentDecisionLedger(sectionBodies, itemCount, diagnostics, { 
 }
 
 /** Return structural quality diagnostics without changing or rejecting the note. */
-export function inspectOperateReviewNote(markdown, {
-  profile,
-  contractVersion = AUTO_CONTRACT_VERSION,
-} = {}) {
+export function inspectOperateReviewNote(
+  markdown,
+  { profile, contractVersion = AUTO_CONTRACT_VERSION } = {},
+) {
   const source = canonicalText(markdown);
   const detected = detectOperateReviewNoteContract(source, { profile, contractVersion });
   const versionedContract = contractFor(detected.contractVersion);
   const contract = profileFor(versionedContract, profile);
   const diagnostics = [];
   if (
-    detected.declaredContractVersion
-    && detected.declaredContractVersion !== detected.contractVersion
+    detected.declaredContractVersion &&
+    detected.declaredContractVersion !== detected.contractVersion
   ) {
-    diagnostics.push(diagnostic(
-      'E_OPERATE_REVIEW_CONTRACT_VERSION_MISMATCH',
-      `Note declares contract ${detected.declaredContractVersion} but ${detected.contractVersion} was requested.`,
-      {
-        declaredContractVersion: detected.declaredContractVersion,
-        requestedContractVersion: detected.contractVersion,
-      },
-    ));
+    diagnostics.push(
+      diagnostic(
+        'E_OPERATE_REVIEW_CONTRACT_VERSION_MISMATCH',
+        `Note declares contract ${detected.declaredContractVersion} but ${detected.contractVersion} was requested.`,
+        {
+          declaredContractVersion: detected.declaredContractVersion,
+          requestedContractVersion: detected.contractVersion,
+        },
+      ),
+    );
   }
   const titles = [...source.matchAll(/^#\s+\S.*$/gmu)];
   if (titles.length === 0) {
-    diagnostics.push(diagnostic(
-      'E_OPERATE_REVIEW_TITLE_MISSING',
-      'Review note requires one non-empty level-one title.',
-    ));
+    diagnostics.push(
+      diagnostic(
+        'E_OPERATE_REVIEW_TITLE_MISSING',
+        'Review note requires one non-empty level-one title.',
+      ),
+    );
   } else if (titles.length > 1) {
-    diagnostics.push(diagnostic(
-      'E_OPERATE_REVIEW_TITLE_DUPLICATE',
-      `Review note contains ${titles.length} level-one titles.`,
-      { count: titles.length },
-    ));
+    diagnostics.push(
+      diagnostic(
+        'E_OPERATE_REVIEW_TITLE_DUPLICATE',
+        `Review note contains ${titles.length} level-one titles.`,
+        { count: titles.length },
+      ),
+    );
   }
   const byteLength = Buffer.byteLength(source, 'utf8');
   if (byteLength > contract.maxBytes) {
-    diagnostics.push(diagnostic(
-      'E_OPERATE_REVIEW_SIZE_LIMIT',
-      `Review note is ${byteLength} bytes; the ${profile} limit is ${contract.maxBytes}.`,
-      { byteLength, maxBytes: contract.maxBytes },
-    ));
+    diagnostics.push(
+      diagnostic(
+        'E_OPERATE_REVIEW_SIZE_LIMIT',
+        `Review note is ${byteLength} bytes; the ${profile} limit is ${contract.maxBytes}.`,
+        { byteLength, maxBytes: contract.maxBytes },
+      ),
+    );
   }
   const firstSection = source.search(/^##\s+/mu);
   const preamble = source.slice(0, firstSection === -1 ? source.length : firstSection);
-  requireFields(
-    preamble,
-    contract.summaryFields,
-    diagnostics,
-    'summary',
-    contract.summaryValues,
-  );
+  requireFields(preamble, contract.summaryFields, diagnostics, 'summary', contract.summaryValues);
   const sectionBodies = validateSections(source, contract, diagnostics);
   validateSectionItemLimits(sectionBodies, contract.sectionItemLimits, diagnostics);
   for (const [section, fields] of Object.entries(contract.sectionFields)) {
@@ -548,7 +635,11 @@ export function inspectOperateReviewNote(markdown, {
     if (body === contract.sectionEmptyStates?.[section]) continue;
     requireFields(body, fields, diagnostics, section);
   }
-  const itemCount = validateItems(sectionBodies.get(contract.item.section), contract.item, diagnostics);
+  const itemCount = validateItems(
+    sectionBodies.get(contract.item.section),
+    contract.item,
+    diagnostics,
+  );
   if (detected.contractVersion === '1.0.0') {
     if (profile === 'chair') validateLegacyDecisionLedger(sectionBodies, itemCount, diagnostics);
     if (profile === 'board-report') {

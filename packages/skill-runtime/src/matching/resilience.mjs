@@ -3,10 +3,14 @@ import { resolveCapabilities } from '../resolver/capabilities.mjs';
 import { resolveInteraction } from '../resolver/interactions.mjs';
 
 function pickProfile(profiles, reference) {
-  const matches = profiles.filter(({ hostProfileId, hostProfileVersion }) => (
-    hostProfileId === reference.id && hostProfileVersion === reference.version
-  ));
-  if (matches.length !== 1) throw new TypeError(`Host profile ${reference.id}@${reference.version} must resolve exactly once.`);
+  const matches = profiles.filter(
+    ({ hostProfileId, hostProfileVersion }) =>
+      hostProfileId === reference.id && hostProfileVersion === reference.version,
+  );
+  if (matches.length !== 1)
+    throw new TypeError(
+      `Host profile ${reference.id}@${reference.version} must resolve exactly once.`,
+    );
   return matches[0];
 }
 
@@ -70,8 +74,11 @@ export function runResilienceJourney({ journey, hostProfiles, questions } = {}) 
 }
 
 export function evaluateResilienceJourneys({ journeys, hostProfiles, questions } = {}) {
-  if (!Array.isArray(journeys) || journeys.length === 0) throw new TypeError('journeys must be a non-empty array.');
-  const results = journeys.map((journey) => runResilienceJourney({ journey, hostProfiles, questions }));
+  if (!Array.isArray(journeys) || journeys.length === 0)
+    throw new TypeError('journeys must be a non-empty array.');
+  const results = journeys.map((journey) =>
+    runResilienceJourney({ journey, hostProfiles, questions }),
+  );
   return Object.freeze({
     kind: 'skill-resilience-evaluation',
     schemaVersion: '1.0.0',

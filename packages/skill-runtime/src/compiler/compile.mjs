@@ -61,7 +61,12 @@ function createVerifiedReader(readSource) {
         throw new SkillRuntimeError(
           'E_SKILL_SOURCE_DIGEST_CONFLICT',
           `Source ${path} is selected with conflicting declared digests.`,
-          { path, first: prior.digest, second: declaredDigest, repair: `Use one exact source digest for ${path}.` },
+          {
+            path,
+            first: prior.digest,
+            second: declaredDigest,
+            repair: `Use one exact source digest for ${path}.`,
+          },
         );
       }
       return prior.bytes;
@@ -72,7 +77,12 @@ function createVerifiedReader(readSource) {
       throw new SkillRuntimeError(
         'E_SKILL_SOURCE_DIGEST_STALE',
         `Live bytes for ${path} do not match the declared source digest.`,
-        { path, expected: declaredDigest, actual, repair: `Recompute the digest for ${path} or restore the bytes that produced ${declaredDigest}.` },
+        {
+          path,
+          expected: declaredDigest,
+          actual,
+          repair: `Recompute the digest for ${path} or restore the bytes that produced ${declaredDigest}.`,
+        },
       );
     }
     cache.set(path, Object.freeze({ bytes, digest: declaredDigest }));
@@ -81,9 +91,10 @@ function createVerifiedReader(readSource) {
 }
 
 function assertSelectedHostProfile(skillSource, hostProfile) {
-  const selected = (skillSource.hostProfiles ?? []).some(({ id, version }) => (
-    id === hostProfile.hostProfileId && version === hostProfile.hostProfileVersion
-  ));
+  const selected = (skillSource.hostProfiles ?? []).some(
+    ({ id, version }) =>
+      id === hostProfile.hostProfileId && version === hostProfile.hostProfileVersion,
+  );
   if (!selected) {
     throw new SkillRuntimeError(
       'E_SKILL_HOST_PROFILE_UNDECLARED',
@@ -109,15 +120,13 @@ function appendNormalized(builder, text, baseOwner, lfOwner) {
   builder.append(raw.slice(last), baseOwner);
 }
 
-function appendTokenized(builder, text, baseOwner, host, {
-  hostOwner,
-  hostValues,
-  hostValueOwners,
-  lfOwner,
-  skillId,
-  skillIdOwner,
-  allowSkillId = false,
-}) {
+function appendTokenized(
+  builder,
+  text,
+  baseOwner,
+  host,
+  { hostOwner, hostValues, hostValueOwners, lfOwner, skillId, skillIdOwner, allowSkillId = false },
+) {
   const values = hostValues ?? HOST_SUBSTITUTIONS[host];
   if (!values) throw new SkillRuntimeError('E_HOST_INVALID', `Unknown adapter host ${host}.`);
   const raw = String(text);
@@ -133,7 +142,10 @@ function appendTokenized(builder, text, baseOwner, host, {
       throw new SkillRuntimeError(
         'E_TEMPLATE_TOKEN_UNRESOLVED',
         `No value was supplied for {{${key}}}.`,
-        { token: match[0], repair: `Declare ${key} in the skill identity or compiler host table, or remove the token.` },
+        {
+          token: match[0],
+          repair: `Declare ${key} in the skill identity or compiler host table, or remove the token.`,
+        },
       );
     }
     last = match.index + match[0].length;
@@ -156,7 +168,12 @@ function appendModuleSequence(
     const moduleOwner = owner('source', entry.source.path, ref.moduleVersion, entry.source.digest);
     const moduleBuilder = new SourceMapBuilder();
     appendTokenized(moduleBuilder, sourceBytes.get(key).trimEnd(), moduleOwner, host, context);
-    assertPortableAsset(`${assetPath}#module=${key}`, moduleBuilder.text, host, entry.authorityCeiling);
+    assertPortableAsset(
+      `${assetPath}#module=${key}`,
+      moduleBuilder.text,
+      host,
+      entry.authorityCeiling,
+    );
     for (const segment of sourceMapSegments(moduleBuilder.text, moduleBuilder.build())) {
       builder.append(segment.text, segment.owner);
     }
@@ -182,10 +199,12 @@ function appendSourceMapSlice(builder, segments, start, end) {
 
 function sourceMapSegments(text, sourceMap) {
   const buffer = Buffer.from(text, 'utf8');
-  return sourceMap.map((range) => Object.freeze({
-    text: buffer.subarray(range.startByte, range.endByte).toString('utf8'),
-    owner: range.owner,
-  }));
+  return sourceMap.map((range) =>
+    Object.freeze({
+      text: buffer.subarray(range.startByte, range.endByte).toString('utf8'),
+      owner: range.owner,
+    }),
+  );
 }
 
 function ownerAt(segments, offset) {
@@ -201,7 +220,10 @@ function ownerAt(segments, offset) {
 function projectCodexMap(text, segments) {
   const separator = text.indexOf('\n---\n\n', 4);
   if (!text.startsWith('---\n') || separator < 0) {
-    throw new SkillRuntimeError('E_MARKDOWN_FRONTMATTER_INVALID', 'Markdown asset requires one closed YAML frontmatter block.');
+    throw new SkillRuntimeError(
+      'E_MARKDOWN_FRONTMATTER_INVALID',
+      'Markdown asset requires one closed YAML frontmatter block.',
+    );
   }
   const builder = new SourceMapBuilder();
   appendSourceMapSlice(builder, segments, 0, 4);
@@ -269,7 +291,10 @@ function projectCursorMap(
     if (match[1] === 'DESCRIPTION') {
       if (quoteDescription) {
         for (const fragment of serializeYamlScalarFragments(parsed.fields.description)) {
-          builder.append(fragment.text, fragment.generated ? descriptionEncodingOwner : descriptionOwner);
+          builder.append(
+            fragment.text,
+            fragment.generated ? descriptionEncodingOwner : descriptionOwner,
+          );
         }
       } else {
         builder.append(parsed.fields.description, descriptionOwner);
@@ -277,7 +302,11 @@ function projectCursorMap(
     } else if (match[1] === 'BODY') {
       appendSourceMapSlice(builder, segments, bodyStart, bodyEnd);
     } else {
-      throw new SkillRuntimeError('E_TEMPLATE_TOKEN_UNRESOLVED', `Cursor template token {{${match[1]}}} is unresolved.`, { token: match[0] });
+      throw new SkillRuntimeError(
+        'E_TEMPLATE_TOKEN_UNRESOLVED',
+        `Cursor template token {{${match[1]}}} is unresolved.`,
+        { token: match[0] },
+      );
     }
     last = match.index + match[0].length;
   }
@@ -343,7 +372,10 @@ export function compileMarkdownV1({
       false,
     );
   } else {
-    throw new SkillRuntimeError('E_SKILL_HOST_INVALID', `Unsupported skill projection host ${host}.`);
+    throw new SkillRuntimeError(
+      'E_SKILL_HOST_INVALID',
+      `Unsupported skill projection host ${host}.`,
+    );
   }
 
   const bytes = renderSkillForHost(composed.bytes, skillId, host, cursorTemplate, supportPaths);
@@ -375,14 +407,22 @@ export function compileComposedV1({
   cursorTemplate,
 }) {
   if (skillSource.sourceFormat !== 'composed-v1') {
-    throw new SkillRuntimeError('E_SKILL_SOURCE_FORMAT_INVALID', `compileComposedV1 requires a composed-v1 source; got ${skillSource.sourceFormat}.`);
+    throw new SkillRuntimeError(
+      'E_SKILL_SOURCE_FORMAT_INVALID',
+      `compileComposedV1 requires a composed-v1 source; got ${skillSource.sourceFormat}.`,
+    );
   }
   const host = hostProfile.host;
   if (!Object.hasOwn(HOST_SUBSTITUTIONS, host)) {
     throw new SkillRuntimeError(
       'E_SKILL_HOST_PROFILE_INCOMPATIBLE',
       `Host profile ${hostProfile.hostProfileId}@${hostProfile.hostProfileVersion} targets unsupported host ${String(host)}.`,
-      { host, hostProfileId: hostProfile.hostProfileId, supported: Object.keys(HOST_SUBSTITUTIONS), repair: `Retarget the host profile to one of ${Object.keys(HOST_SUBSTITUTIONS).join(', ')}.` },
+      {
+        host,
+        hostProfileId: hostProfile.hostProfileId,
+        supported: Object.keys(HOST_SUBSTITUTIONS),
+        repair: `Retarget the host profile to one of ${Object.keys(HOST_SUBSTITUTIONS).join(', ')}.`,
+      },
     );
   }
   if (host === 'cursor' && (typeof cursorTemplate !== 'string' || cursorTemplate.length === 0)) {
@@ -396,7 +436,11 @@ export function compileComposedV1({
 
   const skillNode = `skill:${skillSource.skillId}@${skillSource.skillVersion}`;
   assertAuthorityNarrows(skillSource.authorityCeiling, hostProfile.authorityCeiling, {
-    edge: { from: skillNode, to: `host-profile:${hostProfile.hostProfileId}@${hostProfile.hostProfileVersion}`, field: 'authorityCeiling' },
+    edge: {
+      from: skillNode,
+      to: `host-profile:${hostProfile.hostProfileId}@${hostProfile.hostProfileVersion}`,
+      field: 'authorityCeiling',
+    },
   });
   const graph = resolveModuleGraph({ skillSource, modules, hostProfile });
   const readVerified = createVerifiedReader(readSource);
@@ -404,11 +448,18 @@ export function compileComposedV1({
   // Verify every selected source before rendering any bytes, including authored
   // skill identity, profile material, and routed dependencies that stay outside
   // the primary body.
-  if (!skillSourceCustody || typeof skillSourceCustody.path !== 'string' || typeof skillSourceCustody.digest !== 'string') {
+  if (
+    !skillSourceCustody ||
+    typeof skillSourceCustody.path !== 'string' ||
+    typeof skillSourceCustody.digest !== 'string'
+  ) {
     throw new SkillRuntimeError(
       'E_SKILL_SOURCE_CUSTODY_MISSING',
       `Compilation of ${skillSource.skillId}@${skillSource.skillVersion} requires exact authored skill-source custody.`,
-      { repair: 'Pass the authored skill.json path and its exact raw-byte digest as skillSourceCustody.' },
+      {
+        repair:
+          'Pass the authored skill.json path and its exact raw-byte digest as skillSourceCustody.',
+      },
     );
   }
   readVerified(skillSourceCustody.path, skillSourceCustody.digest);
@@ -416,7 +467,10 @@ export function compileComposedV1({
   readVerified(hostProfile.source.path, hostProfile.source.digest);
   const sourceBytes = new Map();
   for (const { ref, entry } of graph.allSelectedModules) {
-    sourceBytes.set(`${ref.moduleId}@${ref.moduleVersion}`, readVerified(entry.source.path, entry.source.digest));
+    sourceBytes.set(
+      `${ref.moduleId}@${ref.moduleVersion}`,
+      readVerified(entry.source.path, entry.source.digest),
+    );
   }
   const presentation = assertHostOverlayIsPresentational(
     hostProfile,
@@ -433,15 +487,29 @@ export function compileComposedV1({
       throw new SkillRuntimeError(
         'E_SKILL_ROUTED_OUTPUT_COLLISION',
         `Routed references ${collision} and ${identity} both render to ${path}.`,
-        { path, first: collision, second: identity, repair: `Declare only one version of ${ref.moduleId} as a routed reference per skill+host.` },
+        {
+          path,
+          first: collision,
+          second: identity,
+          repair: `Declare only one version of ${ref.moduleId} as a routed reference per skill+host.`,
+        },
       );
     }
     referencePaths.set(path, identity);
   }
 
   const templatePath = skillSource.template.path;
-  const tmplOwner = templateOwner(templatePath, skillSource.skillVersion, skillSource.template.digest);
-  const skillIdOwner = owner('source', `${skillSourceCustody.path}#/skillId`, skillSource.skillVersion, skillSourceCustody.digest);
+  const tmplOwner = templateOwner(
+    templatePath,
+    skillSource.skillVersion,
+    skillSource.template.digest,
+  );
+  const skillIdOwner = owner(
+    'source',
+    `${skillSourceCustody.path}#/skillId`,
+    skillSource.skillVersion,
+    skillSourceCustody.digest,
+  );
   const hostOwner = hostSubstitutionOwner(host);
   const lfOwner = lineEndingOwner();
   const separatorOwner = compilerOwner(
@@ -451,15 +519,37 @@ export function compileComposedV1({
   );
   const markerParts = templateBytes.split('{{MODULES}}');
   if (markerParts.length !== 2) {
-    throw new SkillRuntimeError('E_SKILL_TEMPLATE_MODULES_MARKER_INVALID', 'A composed-v1 template must contain exactly one {{MODULES}} insertion point.', { templatePath });
+    throw new SkillRuntimeError(
+      'E_SKILL_TEMPLATE_MODULES_MARKER_INVALID',
+      'A composed-v1 template must contain exactly one {{MODULES}} insertion point.',
+      { templatePath },
+    );
   }
 
   const hostValues = Object.freeze({ ...HOST_SUBSTITUTIONS[host], ...presentation.substitutions });
-  const hostValueOwners = Object.freeze(Object.fromEntries(Object.entries(presentation.sources).map(([token, source]) => [
-    token,
-    owner('host-profile', `${source.path}#/substitutions/${token}`, source.version, source.digest),
-  ])));
-  const context = { hostOwner, hostValues, hostValueOwners, lfOwner, separatorOwner, skillId: skillSource.skillId, skillIdOwner, allowSkillId: true };
+  const hostValueOwners = Object.freeze(
+    Object.fromEntries(
+      Object.entries(presentation.sources).map(([token, source]) => [
+        token,
+        owner(
+          'host-profile',
+          `${source.path}#/substitutions/${token}`,
+          source.version,
+          source.digest,
+        ),
+      ]),
+    ),
+  );
+  const context = {
+    hostOwner,
+    hostValues,
+    hostValueOwners,
+    lfOwner,
+    separatorOwner,
+    skillId: skillSource.skillId,
+    skillIdOwner,
+    allowSkillId: true,
+  };
   const intermediate = new SourceMapBuilder();
   appendTokenized(intermediate, markerParts[0], tmplOwner, host, context);
   const primaryPath = skillPrimaryPath(host, skillSource.skillId);
@@ -502,7 +592,11 @@ export function compileComposedV1({
       { host, expected: sha256(bytes), actual: sha256(projected.text) },
     );
   }
-  if (!bytes.endsWith('\n')) throw new SkillRuntimeError('E_GENERATED_NEWLINE_INVALID', `Composed asset for ${skillSource.skillId} must end with a newline.`);
+  if (!bytes.endsWith('\n'))
+    throw new SkillRuntimeError(
+      'E_GENERATED_NEWLINE_INVALID',
+      `Composed asset for ${skillSource.skillId} must end with a newline.`,
+    );
   assertPortableAsset(primaryPath, bytes, host, hostProfile.authorityCeiling);
   const primary = Object.freeze({
     host,
@@ -513,44 +607,72 @@ export function compileComposedV1({
     sourceMap: projected.build(),
   });
 
-  const references = Object.freeze(graph.routedReferences.map(({ ref, modules: routedModules }) => {
-    const refBuilder = new SourceMapBuilder();
-    const sourcePath = `references/${ref.moduleId}.md`;
-    const path = skillSupportPath(host, skillSource.skillId, sourcePath);
-    appendModuleSequence(refBuilder, routedModules, sourceBytes, host, context, path);
-    const refBytes = refBuilder.text;
-    assertPortableAsset(path, refBytes, host, hostProfile.authorityCeiling);
-    return Object.freeze({
-      host,
-      moduleId: ref.moduleId,
-      moduleVersion: ref.moduleVersion,
-      path,
-      routed: true,
-      bytes: refBytes,
-      digest: sha256(refBytes),
-      byteLength: byteLength(refBytes),
-      sourceMap: refBuilder.build(),
-    });
-  }));
+  const references = Object.freeze(
+    graph.routedReferences.map(({ ref, modules: routedModules }) => {
+      const refBuilder = new SourceMapBuilder();
+      const sourcePath = `references/${ref.moduleId}.md`;
+      const path = skillSupportPath(host, skillSource.skillId, sourcePath);
+      appendModuleSequence(refBuilder, routedModules, sourceBytes, host, context, path);
+      const refBytes = refBuilder.text;
+      assertPortableAsset(path, refBytes, host, hostProfile.authorityCeiling);
+      return Object.freeze({
+        host,
+        moduleId: ref.moduleId,
+        moduleVersion: ref.moduleVersion,
+        path,
+        routed: true,
+        bytes: refBytes,
+        digest: sha256(refBytes),
+        byteLength: byteLength(refBytes),
+        sourceMap: refBuilder.build(),
+      });
+    }),
+  );
 
   const preview = Object.freeze({
     skillId: skillSource.skillId,
     skillVersion: skillSource.skillVersion,
     host,
     hostProfile: `${hostProfile.hostProfileId}@${hostProfile.hostProfileVersion}`,
-    inline: Object.freeze(graph.inlineModules.map(({ ref, entry }) => Object.freeze({ moduleId: ref.moduleId, moduleVersion: ref.moduleVersion, source: entry.source.path, mode: 'inline' }))),
-    overlay: Object.freeze(graph.overlayModules.map(({ ref, entry }) => Object.freeze({ moduleId: ref.moduleId, moduleVersion: ref.moduleVersion, source: entry.source.path, mode: 'overlay' }))),
-    routed: Object.freeze(graph.routedReferences.map(({ ref, modules: routedModules }) => Object.freeze({
-      moduleId: ref.moduleId,
-      moduleVersion: ref.moduleVersion,
-      path: skillSupportPath(host, skillSource.skillId, `references/${ref.moduleId}.md`),
-      mode: 'routed',
-      sources: Object.freeze(routedModules.map(({ ref: selectedRef, entry }) => Object.freeze({
-        moduleId: selectedRef.moduleId,
-        moduleVersion: selectedRef.moduleVersion,
-        source: entry.source.path,
-      }))),
-    }))),
+    inline: Object.freeze(
+      graph.inlineModules.map(({ ref, entry }) =>
+        Object.freeze({
+          moduleId: ref.moduleId,
+          moduleVersion: ref.moduleVersion,
+          source: entry.source.path,
+          mode: 'inline',
+        }),
+      ),
+    ),
+    overlay: Object.freeze(
+      graph.overlayModules.map(({ ref, entry }) =>
+        Object.freeze({
+          moduleId: ref.moduleId,
+          moduleVersion: ref.moduleVersion,
+          source: entry.source.path,
+          mode: 'overlay',
+        }),
+      ),
+    ),
+    routed: Object.freeze(
+      graph.routedReferences.map(({ ref, modules: routedModules }) =>
+        Object.freeze({
+          moduleId: ref.moduleId,
+          moduleVersion: ref.moduleVersion,
+          path: skillSupportPath(host, skillSource.skillId, `references/${ref.moduleId}.md`),
+          mode: 'routed',
+          sources: Object.freeze(
+            routedModules.map(({ ref: selectedRef, entry }) =>
+              Object.freeze({
+                moduleId: selectedRef.moduleId,
+                moduleVersion: selectedRef.moduleVersion,
+                source: entry.source.path,
+              }),
+            ),
+          ),
+        }),
+      ),
+    ),
   });
 
   return Object.freeze({ skillId: skillSource.skillId, host, primary, references, preview, graph });

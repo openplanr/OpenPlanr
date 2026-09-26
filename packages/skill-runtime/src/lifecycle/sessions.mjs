@@ -18,7 +18,8 @@ import {
 const SESSION_PREFIX = 'GIS-';
 const CHECKPOINT_VERSION = '1.0.0';
 const SESSION_STATES = new Set(['open', 'answered', 'closed', 'expired']);
-const DISALLOWED_STATE_KEY = /(?:artifact.?bod(?:y|ies)|credential|password|private.?key|raw.?prompt|secret|token)/iu;
+const DISALLOWED_STATE_KEY =
+  /(?:artifact.?bod(?:y|ies)|credential|password|private.?key|raw.?prompt|secret|token)/iu;
 
 function nowIso(now) {
   const value = typeof now === 'function' ? now() : (now ?? new Date().toISOString());
@@ -32,7 +33,9 @@ function defaultSessionId() {
 function sessionId(createSessionId) {
   const value = createSessionId?.() ?? defaultSessionId();
   if (typeof value !== 'string' || !/^GIS-[A-Za-z0-9._-]{8,128}$/u.test(value)) {
-    throw new TypeError('createSessionId must return a Protocol-compatible internal session identifier.');
+    throw new TypeError(
+      'createSessionId must return a Protocol-compatible internal session identifier.',
+    );
   }
   return value;
 }
@@ -63,7 +66,8 @@ function questionBinding(questions) {
 }
 
 function sessionValidationErrors(value) {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return ['session must be an object'];
+  if (!value || typeof value !== 'object' || Array.isArray(value))
+    return ['session must be an object'];
   try {
     return validateProtocolArtifact('skill-session', value, { protocolVersion: '1.6.0' });
   } catch (error) {
@@ -140,7 +144,8 @@ export function checkpointSession({ session, context, safeState = {}, checkpoint
     return freezeJson({
       status: 'partial',
       checkpoint: null,
-      notice: 'Continued without a local checkpoint because the selected state contained private data.',
+      notice:
+        'Continued without a local checkpoint because the selected state contained private data.',
     });
   }
 
@@ -173,22 +178,25 @@ export function checkpointSession({ session, context, safeState = {}, checkpoint
 
 function compatibleCheckpoint(checkpoint, skillId, context, questions) {
   if (
-    !checkpoint
-    || typeof checkpoint !== 'object'
-    || checkpoint.kind !== 'skill-session-checkpoint'
-    || checkpoint.version !== CHECKPOINT_VERSION
-    || checkpoint.skillId !== skillId
-    || !verifyDocumentDigest(checkpoint)
-    || !isSession(checkpoint.session)
-    || checkpoint.session.skillId !== skillId
-    || !['open', 'answered'].includes(checkpoint.session.state)
-  ) return false;
+    !checkpoint ||
+    typeof checkpoint !== 'object' ||
+    checkpoint.kind !== 'skill-session-checkpoint' ||
+    checkpoint.version !== CHECKPOINT_VERSION ||
+    checkpoint.skillId !== skillId ||
+    !verifyDocumentDigest(checkpoint) ||
+    !isSession(checkpoint.session) ||
+    checkpoint.session.skillId !== skillId ||
+    !['open', 'answered'].includes(checkpoint.session.state)
+  )
+    return false;
   try {
-    return checkpoint.contextBinding === contextBinding(context ?? {})
-      && checkpoint.questionBinding === questionBinding(checkpoint.session.questions)
-      && checkpoint.questionBinding === questionBinding(questions)
-      && !findDisallowedStatePath(checkpoint.safeState ?? {})
-      && Boolean(cloneJson(checkpoint.safeState ?? {}, 'checkpoint.safeState'));
+    return (
+      checkpoint.contextBinding === contextBinding(context ?? {}) &&
+      checkpoint.questionBinding === questionBinding(checkpoint.session.questions) &&
+      checkpoint.questionBinding === questionBinding(questions) &&
+      !findDisallowedStatePath(checkpoint.safeState ?? {}) &&
+      Boolean(cloneJson(checkpoint.safeState ?? {}, 'checkpoint.safeState'))
+    );
   } catch {
     return false;
   }

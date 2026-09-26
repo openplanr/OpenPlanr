@@ -1,9 +1,4 @@
-import {
-  existsSync,
-  lstatSync,
-  readFileSync,
-  readdirSync,
-} from 'node:fs';
+import { existsSync, lstatSync, readFileSync, readdirSync } from 'node:fs';
 import { join, relative } from 'node:path';
 
 import { compileComposedV1, validateSourceMap } from '../compiler/index.mjs';
@@ -30,30 +25,30 @@ function assetFromProjection(projection, asset) {
 
 /** Compile every declared host from one already-loaded canonical skill graph. */
 export function compileHostProjections(loaded) {
-  const {
-    skillSource,
-    skillSourceCustody,
-    modules,
-    declaredProfiles,
-    cursorTemplate,
-    readSource,
-  } = loaded;
-  return Object.freeze(declaredProfiles.map((hostProfile) => compileComposedV1({
-    skillSource,
-    skillSourceCustody,
-    modules,
-    hostProfile,
-    cursorTemplate,
-    readSource,
-  })));
+  const { skillSource, skillSourceCustody, modules, declaredProfiles, cursorTemplate, readSource } =
+    loaded;
+  return Object.freeze(
+    declaredProfiles.map((hostProfile) =>
+      compileComposedV1({
+        skillSource,
+        skillSourceCustody,
+        modules,
+        hostProfile,
+        cursorTemplate,
+        readSource,
+      }),
+    ),
+  );
 }
 
 /** Flatten compiled host projections into their deterministic asset order. */
 export function flattenCompiledAssets(projections) {
-  return Object.freeze(projections.flatMap((projection) => [
-    assetFromProjection(projection, projection.primary),
-    ...projection.references.map((reference) => assetFromProjection(projection, reference)),
-  ]));
+  return Object.freeze(
+    projections.flatMap((projection) => [
+      assetFromProjection(projection, projection.primary),
+      ...projection.references.map((reference) => assetFromProjection(projection, reference)),
+    ]),
+  );
 }
 
 /** Build the two deterministic manifests that own one compiled output set. */
@@ -82,7 +77,10 @@ function outputFiles(root) {
         throw new SkillAuthoringError(
           'E_SKILL_GENERATED_OUTPUT_DRIFT',
           `Generated output ${relative(root, path)} is a symbolic link.`,
-          { path: relative(root, path), repair: 'Run the canonical skill generator to replace the drifted output tree.' },
+          {
+            path: relative(root, path),
+            repair: 'Run the canonical skill generator to replace the drifted output tree.',
+          },
         );
       }
       if (entry.isDirectory()) pending.push(path);
@@ -91,7 +89,10 @@ function outputFiles(root) {
         throw new SkillAuthoringError(
           'E_SKILL_GENERATED_OUTPUT_DRIFT',
           `Generated output ${relative(root, path)} is not a regular file.`,
-          { path: relative(root, path), repair: 'Run the canonical skill generator to replace the drifted output tree.' },
+          {
+            path: relative(root, path),
+            repair: 'Run the canonical skill generator to replace the drifted output tree.',
+          },
         );
       }
     }
@@ -103,14 +104,21 @@ function outputFiles(root) {
 export function inspectGeneratedOutput({ skillDir, assets }) {
   const outputRoot = join(skillDir, GENERATED_OUTPUT_DIR);
   if (!existsSync(outputRoot)) {
-    return Object.freeze({ state: 'not-generated', checked: false, outputDir: GENERATED_OUTPUT_DIR });
+    return Object.freeze({
+      state: 'not-generated',
+      checked: false,
+      outputDir: GENERATED_OUTPUT_DIR,
+    });
   }
   const stat = lstatSync(outputRoot);
   if (stat.isSymbolicLink() || !stat.isDirectory()) {
     throw new SkillAuthoringError(
       'E_SKILL_GENERATED_OUTPUT_DRIFT',
       `${GENERATED_OUTPUT_DIR} is not a regular generated-output directory.`,
-      { path: GENERATED_OUTPUT_DIR, repair: 'Move the conflicting path, then run the canonical skill generator.' },
+      {
+        path: GENERATED_OUTPUT_DIR,
+        repair: 'Move the conflicting path, then run the canonical skill generator.',
+      },
     );
   }
 
@@ -142,7 +150,10 @@ export function inspectGeneratedOutput({ skillDir, assets }) {
       throw new SkillAuthoringError(
         'E_SKILL_GENERATED_OUTPUT_DRIFT',
         `Generated output ${path} differs from the canonical compiled bytes.`,
-        { path: `${GENERATED_OUTPUT_DIR}/${path}`, repair: 'Run the canonical skill generator to refresh the drifted output.' },
+        {
+          path: `${GENERATED_OUTPUT_DIR}/${path}`,
+          repair: 'Run the canonical skill generator to refresh the drifted output.',
+        },
       );
     }
   }

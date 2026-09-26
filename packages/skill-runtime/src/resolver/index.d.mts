@@ -10,7 +10,9 @@ export interface RuntimeCapabilityState {
   readonly source?: string;
 }
 
-export type RuntimeCapabilityReport = Readonly<Record<string, CapabilityState | RuntimeCapabilityState>>;
+export type RuntimeCapabilityReport = Readonly<
+  Record<string, CapabilityState | RuntimeCapabilityState>
+>;
 
 export interface NativeHostInteractionBinding {
   readonly surface: 'native';
@@ -52,14 +54,22 @@ export type HostInteractionBindings =
   | readonly [InteractiveHostInteractionBinding]
   | readonly [InteractiveHostInteractionBinding, HeadlessHostInteractionBinding]
   | readonly [InteractiveHostInteractionBinding, InteractiveHostInteractionBinding]
-  | readonly [InteractiveHostInteractionBinding, InteractiveHostInteractionBinding, HeadlessHostInteractionBinding]
-  | readonly [InteractiveHostInteractionBinding, InteractiveHostInteractionBinding, InteractiveHostInteractionBinding]
   | readonly [
-    InteractiveHostInteractionBinding,
-    InteractiveHostInteractionBinding,
-    InteractiveHostInteractionBinding,
-    HeadlessHostInteractionBinding,
-  ];
+      InteractiveHostInteractionBinding,
+      InteractiveHostInteractionBinding,
+      HeadlessHostInteractionBinding,
+    ]
+  | readonly [
+      InteractiveHostInteractionBinding,
+      InteractiveHostInteractionBinding,
+      InteractiveHostInteractionBinding,
+    ]
+  | readonly [
+      InteractiveHostInteractionBinding,
+      InteractiveHostInteractionBinding,
+      InteractiveHostInteractionBinding,
+      HeadlessHostInteractionBinding,
+    ];
 
 export interface HostProfile {
   readonly hostProfileId: string;
@@ -102,7 +112,15 @@ export interface GuidedQuestion {
   readonly protocolVersion: '1.2.0';
   readonly questionId: string;
   readonly questionVersion: string;
-  readonly type: 'text' | 'secret' | 'single-select' | 'multi-select' | 'confirmation' | 'path' | 'repeated-text' | 'informational';
+  readonly type:
+    | 'text'
+    | 'secret'
+    | 'single-select'
+    | 'multi-select'
+    | 'confirmation'
+    | 'path'
+    | 'repeated-text'
+    | 'informational';
   readonly label: string;
   readonly explanation: string;
   readonly required: boolean;
@@ -113,22 +131,32 @@ export interface GuidedQuestion {
   readonly suggestionReason?: string;
   readonly defaultValue?: AnswerValue;
   readonly defaultReason?: string;
-  readonly choices?: ReadonlyArray<{ readonly id: string; readonly label: string; readonly description?: string; readonly preselected?: boolean }>;
-  readonly validation?: Readonly<{ readonly minLength?: number; readonly maxLength?: number; readonly minItems?: number; readonly maxItems?: number }>;
+  readonly choices?: ReadonlyArray<{
+    readonly id: string;
+    readonly label: string;
+    readonly description?: string;
+    readonly preselected?: boolean;
+  }>;
+  readonly validation?: Readonly<{
+    readonly minLength?: number;
+    readonly maxLength?: number;
+    readonly minItems?: number;
+    readonly maxItems?: number;
+  }>;
   readonly visibleWhen?: ReadonlyArray<GuidedQuestionVisibilityCondition>;
 }
 
 export type GuidedQuestionVisibilityCondition = Readonly<
   | {
-    questionId: string;
-    operator: 'equals' | 'not-equals' | 'contains' | 'not-contains';
-    value: AnswerValue;
-  }
+      questionId: string;
+      operator: 'equals' | 'not-equals' | 'contains' | 'not-contains';
+      value: AnswerValue;
+    }
   | {
-    questionId: string;
-    operator: 'answered' | 'not-answered';
-    value?: never;
-  }
+      questionId: string;
+      operator: 'answered' | 'not-answered';
+      value?: never;
+    }
 >;
 
 export interface RepositoryContextValue {

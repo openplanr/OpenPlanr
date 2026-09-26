@@ -23,12 +23,19 @@ function fail(code, message, details = {}) {
 }
 
 function identifierList(value, label) {
-  if (!Array.isArray(value) || value.some((entry) => typeof entry !== 'string' || entry.length === 0)) {
-    fail('E_SKILL_CAPABILITY_INPUT_INVALID', `${label} must be an array of capability IDs.`, { label });
+  if (
+    !Array.isArray(value) ||
+    value.some((entry) => typeof entry !== 'string' || entry.length === 0)
+  ) {
+    fail('E_SKILL_CAPABILITY_INPUT_INVALID', `${label} must be an array of capability IDs.`, {
+      label,
+    });
   }
   const unique = [...new Set(value)];
   if (unique.length !== value.length) {
-    fail('E_SKILL_CAPABILITY_INPUT_INVALID', `${label} contains a duplicate capability ID.`, { label });
+    fail('E_SKILL_CAPABILITY_INPUT_INVALID', `${label} contains a duplicate capability ID.`, {
+      label,
+    });
   }
   return unique;
 }
@@ -39,9 +46,10 @@ function normalizeReport(runtimeCapabilities, capabilityId) {
     return { state: 'unavailable', source: 'runtime-report:missing' };
   }
   const state = typeof reported === 'string' ? reported : reported?.state;
-  const source = typeof reported === 'object' && reported !== null
-    ? reported.source ?? `runtime-report:${capabilityId}`
-    : `runtime-report:${capabilityId}`;
+  const source =
+    typeof reported === 'object' && reported !== null
+      ? (reported.source ?? `runtime-report:${capabilityId}`)
+      : `runtime-report:${capabilityId}`;
   if (!STATUS_SET.has(state) || typeof source !== 'string' || source.length === 0) {
     fail(
       'E_SKILL_CAPABILITY_REPORT_INVALID',
@@ -60,13 +68,16 @@ function diagnostic(status, hostProfileId, requiredResults) {
       repair: null,
     };
   }
-  const affected = requiredResults.filter(({ state }) => state === status).map(({ capabilityId }) => capabilityId);
+  const affected = requiredResults
+    .filter(({ state }) => state === status)
+    .map(({ capabilityId }) => capabilityId);
   return {
     code: status === 'denied' ? 'E_SKILL_CAPABILITY_DENIED' : 'E_SKILL_CAPABILITY_UNAVAILABLE',
     message: `${affected.join(', ')} ${affected.length === 1 ? 'is' : 'are'} ${status} for ${hostProfileId}.`,
-    repair: status === 'denied'
-      ? 'Use another declared fallback or enable the capability through the host.'
-      : 'Use another declared fallback or run on a host that reports the capability.',
+    repair:
+      status === 'denied'
+        ? 'Use another declared fallback or enable the capability through the host.'
+        : 'Use another declared fallback or run on a host that reports the capability.',
   };
 }
 
@@ -83,16 +94,27 @@ export function resolveCapabilities({
   if (!hostProfile || typeof hostProfile !== 'object' || Array.isArray(hostProfile)) {
     fail('E_SKILL_HOST_PROFILE_INVALID', 'A Protocol host profile is required.');
   }
-  if (!runtimeCapabilities || typeof runtimeCapabilities !== 'object' || Array.isArray(runtimeCapabilities)) {
+  if (
+    !runtimeCapabilities ||
+    typeof runtimeCapabilities !== 'object' ||
+    Array.isArray(runtimeCapabilities)
+  ) {
     fail('E_SKILL_CAPABILITY_INPUT_INVALID', 'runtimeCapabilities must be keyed by capability ID.');
   }
 
-  const declaredCapabilities = identifierList(hostProfile.runtimeCapabilities ?? [], 'hostProfile.runtimeCapabilities');
+  const declaredCapabilities = identifierList(
+    hostProfile.runtimeCapabilities ?? [],
+    'hostProfile.runtimeCapabilities',
+  );
   const requiredCapabilities = identifierList(required, 'required');
   const optionalCapabilities = identifierList(optional, 'optional');
-  const overlap = requiredCapabilities.filter((capabilityId) => optionalCapabilities.includes(capabilityId));
+  const overlap = requiredCapabilities.filter((capabilityId) =>
+    optionalCapabilities.includes(capabilityId),
+  );
   if (overlap.length) {
-    fail('E_SKILL_CAPABILITY_INPUT_INVALID', 'A capability cannot be both required and optional.', { overlap });
+    fail('E_SKILL_CAPABILITY_INPUT_INVALID', 'A capability cannot be both required and optional.', {
+      overlap,
+    });
   }
 
   const declared = new Set(declaredCapabilities);
@@ -107,11 +129,21 @@ export function resolveCapabilities({
       };
     }
     const report = normalizeReport(runtimeCapabilities, capabilityId);
-    return { capabilityId, requirement, state: report.state, declared: true, source: report.source };
+    return {
+      capabilityId,
+      requirement,
+      state: report.state,
+      declared: true,
+      source: report.source,
+    };
   };
 
-  const requiredResults = requiredCapabilities.map((capabilityId) => resolveOne(capabilityId, 'required'));
-  const optionalResults = optionalCapabilities.map((capabilityId) => resolveOne(capabilityId, 'optional'));
+  const requiredResults = requiredCapabilities.map((capabilityId) =>
+    resolveOne(capabilityId, 'required'),
+  );
+  const optionalResults = optionalCapabilities.map((capabilityId) =>
+    resolveOne(capabilityId, 'optional'),
+  );
   const status = requiredResults.some(({ state }) => state === 'denied')
     ? 'denied'
     : requiredResults.some(({ state }) => state === 'unavailable')

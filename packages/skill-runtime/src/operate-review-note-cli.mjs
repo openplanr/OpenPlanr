@@ -13,7 +13,10 @@ function option(argv, name, fallback) {
 
 export async function runOperateReviewNoteValidator(argv = process.argv.slice(2)) {
   const file = argv[0];
-  if (!file) throw new Error('Usage: validate-note.mjs <markdown> --profile <profile> [--contract-version <version>]');
+  if (!file)
+    throw new Error(
+      'Usage: validate-note.mjs <markdown> --profile <profile> [--contract-version <version>]',
+    );
   const result = inspectOperateReviewNote(await readFile(resolve(file), 'utf8'), {
     profile: option(argv, '--profile', 'board-report'),
     contractVersion: option(argv, '--contract-version', 'auto'),

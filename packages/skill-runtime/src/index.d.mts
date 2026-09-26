@@ -239,10 +239,20 @@ export declare const EXPECTED_ROLE_IDS: readonly string[];
 export declare function assertSafeRelativePath(path: string, label?: string): string;
 export declare function resolveRegularFile(repoRoot: string, path: string, label?: string): string;
 export declare function listRegularFiles(root: string, options?: { relativeTo?: string }): string[];
-export declare function readContributionGraph(options: { repoRoot: string }): Record<string, unknown>;
-export declare function readSkillSourceRegistry(options: { repoRoot: string }): Record<string, unknown>;
-export declare function validateContributionGraph(manifests: unknown, options?: Record<string, unknown>): unknown;
-export declare function validateRoleContributions(manifest: unknown, options?: Record<string, unknown>): unknown;
+export declare function readContributionGraph(options: {
+  repoRoot: string;
+}): Record<string, unknown>;
+export declare function readSkillSourceRegistry(options: {
+  repoRoot: string;
+}): Record<string, unknown>;
+export declare function validateContributionGraph(
+  manifests: unknown,
+  options?: Record<string, unknown>,
+): unknown;
+export declare function validateRoleContributions(
+  manifest: unknown,
+  options?: Record<string, unknown>,
+): unknown;
 
 export declare const OPERATE_ADVISOR_REVIEW_RUBRICS: Readonly<Record<string, unknown>>;
 export declare const OPERATE_REVIEW_CONTRACT: Readonly<Record<string, unknown>>;
@@ -255,6 +265,15 @@ export declare const OPERATE_REVIEW_NOTE_PROFILES: Readonly<Record<string, unkno
 export declare const OPERATE_REVIEW_NOTE_PROFILES_V1: Readonly<Record<string, unknown>>;
 export declare const OPERATE_REVIEW_NOTE_PROFILES_V2: Readonly<Record<string, unknown>>;
 
-export declare function detectOperateReviewNoteContract(markdown: string, options?: Record<string, unknown>): unknown;
-export declare function inspectOperateReviewNote(markdown: string, options?: Record<string, unknown>): unknown;
-export declare function validateOperateReviewNote(markdown: string, options?: Record<string, unknown>): unknown;
+export declare function detectOperateReviewNoteContract(
+  markdown: string,
+  options?: Record<string, unknown>,
+): unknown;
+export declare function inspectOperateReviewNote(
+  markdown: string,
+  options?: Record<string, unknown>,
+): unknown;
+export declare function validateOperateReviewNote(
+  markdown: string,
+  options?: Record<string, unknown>,
+): unknown;

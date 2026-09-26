@@ -10,13 +10,13 @@ export function firstRunGuidance({ environment, settings } = {}) {
   }
   const messages = environment.firstRun
     ? [
-      environment.stateAvailable
-        ? `Optional skill state stays in ${environment.runtimePath} and is ignored locally.`
-        : 'This run will continue without persisted skill state.',
-      Object.values(settings).some(Boolean)
-        ? 'Only explicitly configured optional features are active.'
-        : 'Optional data and background features are off.',
-    ]
+        environment.stateAvailable
+          ? `Optional skill state stays in ${environment.runtimePath} and is ignored locally.`
+          : 'This run will continue without persisted skill state.',
+        Object.values(settings).some(Boolean)
+          ? 'Only explicitly configured optional features are active.'
+          : 'Optional data and background features are off.',
+      ]
     : [];
   return freezeJson({
     status: 'completed',
