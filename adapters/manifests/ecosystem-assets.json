@@ -10,7 +10,7 @@
     },
     {
       "path": "apps/dashboard/package.json",
-      "digest": "sha256:b2974be49067975f537b5ef1f029cacbdf21ca899906433810f64bea2044bd43"
+      "digest": "sha256:5d40b139ff20010bed191fc30d4a7dee209a09657ab1515f85c43ad51225d78c"
     },
     {
       "path": "conformance/packed-surface-baseline.json",
@@ -18,7 +18,7 @@
     },
     {
       "path": "package.json",
-      "digest": "sha256:e61e2d6bdaa4f9d0a4e6e7d8a147b7006beee126e3636c3f5ef509794c5bbc3f"
+      "digest": "sha256:a9b8e81b52c0b0af6216dd86a2550f7eaca1c5b0b173b9be8c66aa5af88adc75"
     },
     {
       "path": "packages/artifact/package.json",
@@ -26,7 +26,7 @@
     },
     {
       "path": "packages/cli/package.json",
-      "digest": "sha256:688cd546476ce483a2074f6941d78ade7062188f195c19f1bb932259cfe43012"
+      "digest": "sha256:455aef97399ae1e8deb52b000ddac822473ceb9562d583d46961ff3ca7c33509"
     },
     {
       "path": "packages/design/package.json",
@@ -132,7 +132,7 @@
     },
     {
       "path": "ecosystem.json",
-      "digest": "sha256:497fd5d4f574fdff7af704f01a4862c1e23e8a4baba9be8b49baaef9c47479cd"
+      "digest": "sha256:1dbbd32355e983e1a5d72af584cb2cfcd1dde6e22456c3022c249ab22fa41e92"
     },
     {
       "path": "packages/pipeline/.claude-plugin/plugin.json",

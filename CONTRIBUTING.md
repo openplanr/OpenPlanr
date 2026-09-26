@@ -102,6 +102,12 @@ npm run verify
 over every workspace, and CI fails on any error it reports. `npm run lint:fix` applies
 its safe fixes and `npm run format` its formatting.
 
+`npm ci` also installs a pre-commit hook (`.husky/pre-commit`, configured in
+`.lintstagedrc.mjs`). It applies Biome's safe fixes to the staged JavaScript, TypeScript,
+JSON and CSS files and restages them, and runs `check:comments` or `check:docs` when a file
+they cover is staged. It runs no tests, and CI does not install it. `HUSKY=0 git commit`
+skips it once.
+
 In a clean verification checkout, run `git diff --exit-code HEAD --` after
 generation and after the build. Ignored local distributions may be created, but
 tracked files must reproduce without changes. During development, review and

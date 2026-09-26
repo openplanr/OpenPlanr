@@ -9,6 +9,7 @@
     "**/*.css"
   ],
   "scripts": {
+    "dev": "npm --prefix ../.. run test:browser:fixture --workspace=openplanr",
     "build": "vite build --config vite.config.ts",
     "typecheck": "tsc -p tsconfig.json",
     "test": "npm run test:architecture",
