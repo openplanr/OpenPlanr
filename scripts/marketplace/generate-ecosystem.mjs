@@ -14,6 +14,7 @@ import {
 import { dirname, relative, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { DIAGRAM_AUTHORING_CONTRACT_FILES } from '../../packages/protocol/src/diagram-authoring-contracts.mjs';
+import { validateJson } from '../../packages/protocol/src/json-schema.mjs';
 
 import {
   DIAGRAM_V16_REGISTRIES,
@@ -26,6 +27,7 @@ import { validateWorkspaceManifests } from '../lib/workspace-release-policy.mjs'
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const arguments_ = process.argv.slice(2);
+const ecosystemSchemaPath = 'scripts/marketplace/openplanr-ecosystem.schema.json';
 
 class EcosystemGenerationError extends Error {
   constructor(code, message, details = {}) {
@@ -757,6 +759,12 @@ async function buildOutputs() {
       },
     },
   };
+  const ecosystemJson = stableJson(ecosystem);
+  const schemaErrors = validateJson(JSON.parse(ecosystemJson), readJson(ecosystemSchemaPath));
+  if (schemaErrors.length > 0)
+    fail('E_ECOSYSTEM_SCHEMA', `ecosystem.json does not satisfy ${ecosystemSchemaPath}.`, {
+      errors: schemaErrors,
+    });
 
   const codexPluginContent = readJson('adapters/manifests/codex-plugin-content.json');
   const plugin = {
@@ -797,7 +805,7 @@ async function buildOutputs() {
     version: components.pipeline.version,
   };
   const outputsMap = new Map([
-    ['ecosystem.json', stableJson(ecosystem)],
+    ['ecosystem.json', ecosystemJson],
     ['.claude-plugin/plugin.json', stableJson(plugin)],
     ['packages/pipeline/.claude-plugin/plugin.json', stableJson(pipelinePlugin)],
     ['.claude-plugin/marketplace.json', stableJson(marketplace)],
@@ -813,6 +821,7 @@ async function buildOutputs() {
     generator: 'scripts/marketplace/generate-ecosystem.mjs',
     inputs: [
       'scripts/marketplace/generate-ecosystem.mjs',
+      ecosystemSchemaPath,
       'scripts/lib/workspace-release-policy.mjs',
       'conformance/packed-surface-baseline.json',
       'packages/protocol/src/semver.mjs',

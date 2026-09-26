@@ -23,6 +23,7 @@ const steps = Object.freeze([
       'tests/ecosystem-root/release-versioning.test.mjs',
       'tests/ecosystem-root/diagram-onboarding.test.mjs',
       'tests/ecosystem-root/plugin-manifest-versions.test.mjs',
+      'tests/ecosystem-root/ecosystem-schema.test.mjs',
       'tests/release-train/plan.test.mjs',
       'tests/release-train/notes.test.mjs',
       'tests/release-train/marketplace.test.mjs',
