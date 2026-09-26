@@ -42,7 +42,7 @@ test('browser session uses real scoped owner HTTP, saves offline and recovers a 
   });
   t.after(() => browser.close());
   const page = await browser.newPage();
-  // T-051 owns the shell. This fixture supplies only its same-origin mounting
+  // The shell has its own suite. This fixture supplies only its same-origin mounting
   // document; every API request below reaches the real guarded owner server.
   await page.route(owner.baseUrl, (route) =>
     route.fulfill({

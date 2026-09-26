@@ -25,7 +25,7 @@ import {
 const cliVersion = JSON.parse(readFileSync(resolve('package.json'), 'utf8')).version as string;
 const [cliMajor, cliMinor] = cliVersion.split('.').map(Number);
 const higherCli = `${cliMajor}.${cliMinor + 1}.0`;
-/** A published version *below* the installed CLI — the BL-005 downgrade-offer case. */
+/** A published version *below* the installed CLI — the downgrade-offer case. */
 const lowerCli = `${cliMajor}.${cliMinor - 1}.0`;
 
 let root: string;
@@ -356,7 +356,7 @@ describe('reconcileInstalledTuple', () => {
 });
 
 // ---------------------------------------------------------------------------
-// T-003 — executeCliHalfUpgrade, the CLI-owned half plus the plugin prescription
+// executeCliHalfUpgrade — the CLI-owned half plus the plugin prescription
 // ---------------------------------------------------------------------------
 
 /** An injectable npm runner that records every argv it is asked to run. */
@@ -393,7 +393,7 @@ function recordingClaude(
   return { runner, calls };
 }
 
-/** The mutating `claude plugin` verbs the CLI must never invoke (FR4 hard constraint). */
+/** The mutating `claude plugin` verbs the CLI must never invoke. */
 function isMutatingClaudeCall(args: string[]): boolean {
   if (args[0] !== 'plugin') return false;
   if (args[1] === 'install' || args[1] === 'update' || args[1] === 'enable') return true;
@@ -434,7 +434,7 @@ describe('executeCliHalfUpgrade', () => {
     // command was ever run — the hard-constraint proof at the spawn boundary.
     expect(claude.calls.length).toBeGreaterThan(0);
     expect(claude.calls.some(isMutatingClaudeCall)).toBe(false);
-    // The refresh of the bundled marketplace is prescribed first (FR4), then the
+    // The refresh of the bundled marketplace is prescribed first, then the
     // update of the plugin `planr setup` installed from it.
     expect(result.pluginHalfCommands).toEqual([
       'claude plugin marketplace update openplanr-local',
@@ -498,7 +498,7 @@ describe('executeCliHalfUpgrade', () => {
 
   it('restores the previous version when a zero-exit install lands the wrong version (Trap D, non-vacuous)', async () => {
     // npm exits clean on every call, but the on-disk version never becomes the
-    // target — the decisive FR9 case. The guard is the restore call; its proof
+    // target — the decisive restore case. The guard is the restore call; its proof
     // is the second npm invocation. Revert that call in the source and this
     // `toHaveLength(2)` / `calls[1]` assertion goes red.
     const npm = recordingNpm(() => ({ status: 0, stdout: '', stderr: '' }));

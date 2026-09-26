@@ -8,8 +8,8 @@
  * ONE artboard (markup is just an <img> sized to the image), inject it into
  * templates/design/canvas-shell.html through the same `GENERATOR:data` contract
  * /design uses, and rely on the vendored React + DesignCanvas runtime copied
- * alongside. Every spec-derived string goes through embedJson()/escapeHtml()
- * (SPEC-015 S1) — never hand-concatenated into the <script>.
+ * alongside. Every spec-derived string goes through embedJson()/escapeHtml() —
+ * never hand-concatenated into the <script>.
  *
  * The artboard id is the VARIANT LETTER (a `data-dc-slot`), so a pin dropped on
  * the canvas anchors to a stable, per-variant slot that survives re-wraps on

@@ -1,5 +1,5 @@
 /**
- * FR7 — a versioned migration registry.
+ * A versioned migration registry.
  *
  * A migration reconciles state a reinstall cannot fix — stale config, orphaned
  * files, a changed on-disk layout. Each is idempotent, keyed to the CLI version
@@ -10,8 +10,8 @@
  * order, and report each result honestly — one failure never prevents the others
  * from being attempted or from being reported individually.
  *
- * This runs after a verified-successful CLI-half upgrade (T-003's
- * `executeCliHalfUpgrade`), which injects `runPendingMigrations` as its migration
+ * This runs after a verified-successful CLI-half upgrade
+ * (`executeCliHalfUpgrade`), which injects `runPendingMigrations` as its migration
  * runner. It never re-derives the upgrade executor and never runs a mutation on
  * an install the CLI half did not first land and verify.
  */

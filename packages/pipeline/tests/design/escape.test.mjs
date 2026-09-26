@@ -40,7 +40,7 @@ test('hasUnsafeHtml flags unescaped content and clears escaped content', () => {
   assert.equal(hasUnsafeHtml(escapeHtml('<img>')), false);
 });
 
-// SPEC-015 finding S1 — the injection regression. A malicious screen name must
+// The injection regression. A malicious screen name must
 // be inert in BOTH the HTML-text context and the embedded-JSON context.
 test('INJECTION: a hostile screen name is inert after escaping', () => {
   const hostile = `</script><img src=x onerror=alert(document.cookie)>`;

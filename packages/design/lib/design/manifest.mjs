@@ -3,8 +3,8 @@
  * alongside every generated design artifact.
  *
  * The discriminator field is `design_format`, NOT `format` — `format` is a
- * reserved JSON-Schema validation keyword and collides with tooling
- * (SPEC-015 finding T2). The canonical schema is
+ * reserved JSON-Schema validation keyword and collides with tooling. The
+ * canonical schema is
  * `schemas/v1.0.0/design-manifest.schema.json`; `validateManifest()` mirrors
  * it so conformance/tests can check a manifest with zero dependencies.
  *

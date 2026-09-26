@@ -39,7 +39,7 @@
  * (pin.id + pin.author), last-write-wins per item; items not present in the contribution are
  * never removed. Legacy (unattributed) files load via normalizeLegacy() → "Anonymous" + stable id.
  *
- * The board↔agent FILE handshake (hard rule 3). The board writes feedback as a
+ * The board↔agent FILE handshake. The board writes feedback as a
  * file NEXT TO the board HTML; the agent reads it only after the user says
  * they're done in the blocking AskUserQuestion — never parsed from chat.
  *

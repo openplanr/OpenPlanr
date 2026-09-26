@@ -6,7 +6,7 @@
  *   > 8 screens → 'lazy'    (discrete screen-switching; mount the active
  *                            screen + neighbors, lazy the rest)
  *
- * Resolved at the SPEC-015 final gate (#19: "support both, default lazy").
+ * The decision was "support both, default lazy".
  * Anchor reads better for a small gallery; lazy keeps first paint fast once a
  * spec has many heavy screens. Pure, stdlib-only.
  */

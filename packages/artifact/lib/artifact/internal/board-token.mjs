@@ -1,5 +1,5 @@
 /**
- * Per-board capability tokens (SPEC-017 / board scoping).
+ * Per-board capability tokens (board scoping).
  *
  * The board daemon is one shared, persistent localhost server: a flat registry
  * maps board id → dir, and any registered board is reachable at /boards/<id>/.

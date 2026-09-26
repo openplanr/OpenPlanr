@@ -333,7 +333,7 @@ test('structural CSS is token-only and carries approved desktop, mobile, focus, 
 });
 
 // This is intentionally a deterministic source-byte contract, not a rendered
-// screenshot claim. T-005 owns browser interaction and visual snapshot coverage.
+// screenshot claim. Browser interaction and visual snapshots belong to the browser suites.
 test('light and dark source contracts are byte-stable while T-005 owns rendered visual coverage', () => {
   const light = renderArtifactShellDocument({
     ...input(),

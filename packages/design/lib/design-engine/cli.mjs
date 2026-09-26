@@ -17,7 +17,7 @@
  *   taste     read | approved <artifact> | rejected <artifact> (updates the profile)
  *
  * Outputs one JSON result line on stdout per command (agent-parseable); humans
- * get the same JSON pretty-printed. Keys are NEVER echoed (hard rule 7).
+ * get the same JSON pretty-printed. Keys are NEVER echoed.
  */
 
 import { spawn } from 'node:child_process';
@@ -126,7 +126,7 @@ const fail = (msg, code = 1) => {
 function ensureArtifactDir(dir) {
   mkdirSync(dir, { recursive: true });
   const gi = join(dir, '.gitignore');
-  if (!existsSync(gi)) writeFileSync(gi, ARTIFACT_GITIGNORE); // hard rule 13
+  if (!existsSync(gi)) writeFileSync(gi, ARTIFACT_GITIGNORE);
   return dir;
 }
 
@@ -229,7 +229,7 @@ async function cmdSetup(args) {
     { ...openaiOptions(args, key), size: '1024x1024', quality: 'low' },
   );
   const outputPath = join(smokeDir, 'smoke.png');
-  copyFileSync(imagePath, outputPath); // tmp → final (hard rule 5)
+  copyFileSync(imagePath, outputPath); // tmp → final
   let session = createSession({
     id: 'smoke',
     provider: 'openai',
@@ -325,7 +325,7 @@ async function cmdGenerate(args) {
     imageInputPath: args['from-image'] || null,
   });
   const outputPath = join(sessionDir, `variant-${variant}.png`);
-  copyFileSync(imagePath, outputPath); // tmp → final (hard rule 5)
+  copyFileSync(imagePath, outputPath); // tmp → final
   // render the variant onto the real DesignCanvas (board shows it pannable)
   materializeCanvasArtifact(sessionDir, variant, `variant-${variant}.png`, target);
 
@@ -510,7 +510,7 @@ async function ensureDaemon() {
     });
   });
   child.stderr.destroy();
-  child.unref(); // daemon outlives the agent (hard rule 14)
+  child.unref(); // daemon outlives the agent
   return port;
 }
 

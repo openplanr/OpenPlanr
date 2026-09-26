@@ -339,7 +339,7 @@ function inspectBundledHostPlugin(runner?: ClaudeCommandRunner) {
 }
 
 /**
- * FR3: read the published compatibility manifest, compare it against the real
+ * Read the published compatibility manifest, compare it against the real
  * installed tuple (this CLI's version plus the host plugin), and report whether
  * the tuple is aligned, has an upgrade available, or is genuinely incompatible.
  * The warn-vs-fail call is delegated to `classifyComponentDrift` so it is
@@ -418,8 +418,8 @@ export async function reconcileInstalledTuple(
 }
 
 // ===========================================================================
-// T-003 — Execute the CLI-half upgrade safely, prescribe the plugin half
-// (FR4/FR8/FR9). Additive to the reconcile region above: this consumes
+// Execute the CLI-half upgrade safely, prescribe the plugin half.
+// Additive to the reconcile region above: this consumes
 // `reconcileInstalledTuple`'s verdict, it never re-derives it.
 // ===========================================================================
 
@@ -437,7 +437,7 @@ export type NpmCommandRunner = (args: string[]) => NpmCommandResult;
  * `claude-plugin-service.ts`'s `defaultRunner`: a thin `spawnSync` wrapper that
  * surfaces exit status and streams rather than throwing.
  *
- * `OPENPLANR_NPM_BIN` is a test seam of the same shape as T-002's
+ * `OPENPLANR_NPM_BIN` is a test seam of the same shape as
  * `OPENPLANR_ECOSYSTEM_SOURCE`: a path to a Node script that stands in for the
  * npm binary, so the packed-install e2e can drive a real `apply` without a real,
  * machine-wide `npm install -g`. Unset in production, where the real `npm` runs.
@@ -479,7 +479,7 @@ export interface UpgradePlan {
 }
 
 /**
- * FR4 ownership split, decided once so the CLI command stays thin: the npm half
+ * The ownership split, decided once so the CLI command stays thin: the npm half
  * is executed only when the CLI itself can move forward — `upgrade-available`,
  * or `incompatible` with the CLI genuinely behind the published version. An
  * `incompatible` tuple whose CLI is not behind cannot be fixed by upgrading the
@@ -575,7 +575,7 @@ function extractChangelogBullets(lines: string[]): string[] {
 }
 
 /**
- * FR8 — "what's new, honestly." Return the changelog bullets between two
+ * "What's new, honestly." Return the changelog bullets between two
  * `## <version>` headers: everything after `## <newVersion>` and before
  * `## <oldVersion>` (the changelog is newest-first, so the new version sits
  * above the old one). Only real list items in that window are returned, each
@@ -617,7 +617,7 @@ export function summarizeChangelogBetween(oldVersion: string, newVersion: string
 }
 
 /**
- * FR4's manifest-refresh guarantee: the marketplace refresh is printed FIRST —
+ * The manifest-refresh guarantee: the marketplace refresh is printed FIRST —
  * "without which the installer reinstalls the stale version." A stable sort keeps
  * every other operation in the order the bundled inspection produced, and each is
  * rendered by `formatClaudePluginOperationCommand` (the same argv setup would run),
@@ -647,7 +647,7 @@ export function prescribePluginHalfCommands(
     .map((operation) => formatClaudePluginOperationCommand(operation, marketplaceRoot));
 }
 
-/** One migration's outcome as the injected registry runner reports it (T-006). */
+/** One migration's outcome as the injected registry runner reports it. */
 export interface MigrationRunResult {
   id: string;
   applied: boolean;
@@ -656,7 +656,7 @@ export interface MigrationRunResult {
 }
 
 /**
- * FR7's migration registry, injected rather than imported so this service owns
+ * The migration registry, injected rather than imported so this service owns
  * only the call site and result field (the registry lives in
  * `migration-registry.ts`). Called with the pre-upgrade and verified
  * post-upgrade versions so a migration runs only when the upgrade crosses its
@@ -669,7 +669,7 @@ export type MigrationRunner = (
 ) => Promise<MigrationRunResult[]>;
 
 /**
- * FR4's plugin-half prescription, derived independently of whether the CLI half moved.
+ * The plugin-half prescription, derived independently of whether the CLI half moved.
  *
  * Two situations need these commands: a completed CLI upgrade, and a tuple where the CLI
  * is already current but the plugins trail (the state every release creates for anyone
@@ -693,7 +693,7 @@ export interface ExecuteCliHalfUpgradeInput {
   /** Injectable `claude` runner for the prescription's inspection (hermetic tests). */
   claudeCommandRunner?: ClaudeCommandRunner;
   /**
-   * FR7 migration runner, run after the CLI half verifies. Omitted (no runner)
+   * Migration runner, run after the CLI half verifies. Omitted (no runner)
    * means no migrations are attempted; the `apply` command injects the real
    * registry's `runPendingMigrations`.
    */
@@ -716,10 +716,10 @@ export interface ExecuteCliHalfUpgradeResult {
 }
 
 /**
- * FR4/FR8/FR9. Execute the one half the CLI owns — a global npm install — and
+ * Execute the one half the CLI owns — a global npm install — and
  * prescribe (never execute) the plugin half.
  *
- * FR9's atomicity is enforced by verify-after-write: the previously installed
+ * Atomicity is enforced by verify-after-write: the previously installed
  * version is captured *before* any mutation as the restorable backup, and after
  * a zero-exit install the on-disk version is re-read. A clean exit that did not
  * land the target is the decisive case the spec names — it triggers an automatic
@@ -758,7 +758,7 @@ export async function executeCliHalfUpgrade(
   // Verify-after-write: re-read the on-disk version the install just wrote.
   const verifiedVersion = readOpenPlanrVersion();
   if (verifiedVersion !== input.targetCliVersion) {
-    // The decisive FR9 case: a clean exit that did NOT land the target. Restore
+    // The decisive case: a clean exit that did NOT land the target. Restore
     // the captured previous version and never report success.
     const restore = runNpm(['install', '-g', `openplanr@${previousVersion}`]);
     const restoredVersion = readOpenPlanrVersion();
@@ -780,7 +780,7 @@ export async function executeCliHalfUpgrade(
 
   // The CLI half landed and verified — `cliUpgraded` is now true and stays true
   // regardless of what follows, so the npm step's own success is reported
-  // accurately. FR7: run the migrations this upgrade crosses. Each owns its
+  // accurately. Then run the migrations this upgrade crosses. Each owns its
   // restorable backup, so a failure is recoverable; the registry reports each
   // result rather than swallowing it.
   const migrations = input.migrationRunner
@@ -790,7 +790,7 @@ export async function executeCliHalfUpgrade(
     : [];
   const failedMigration = migrations.find((migration) => migration.failure !== undefined);
   if (failedMigration) {
-    // The decisive FR7/FR9 case: the CLI upgraded, but a post-upgrade migration
+    // The decisive migration case: the CLI upgraded, but a post-upgrade migration
     // failed. `ok` is false and the migration is named, so a half-migrated
     // install can never report success — while `cliUpgraded` stays true, because
     // the migration's failure must not hide the npm step's real success.
