@@ -60,3 +60,9 @@ jobs:
         env:
           PLANR_BROWSER_TESTS: '1'
           PLANR_BROWSER_ENGINE: ${{ matrix.browser }}
+      - name: Verify the read-only studio, pin stability and frame budget in Chromium
+        if: matrix.browser == 'chromium'
+        run: node --test --test-concurrency=1 packages/artifact/tests/diagram-studio.browser.test.mjs packages/artifact/tests/pin-stability.browser.test.mjs packages/artifact/tests/frame-budget.browser.test.mjs
+        env:
+          PLANR_BROWSER_TESTS: '1'
+          PLANR_BROWSER_ENGINE: ${{ matrix.browser }}
