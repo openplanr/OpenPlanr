@@ -337,15 +337,13 @@ function settleLayer(layer, anchorOf, { cross, size, gap }) {
 }
 
 /**
- * Straightens chains. Downward, siblings that share their only predecessor are
- * centred on it; upward, a node linked one-to-one with its successor is centred
- * over it, which absorbs a successor layer wider than its own. Feedback and
- * self relations do not anchor.
+ * Straightens the chains of a vertical flow. Downward, siblings that share their
+ * only predecessor are centred on it; upward, a node linked one-to-one with its
+ * successor is centred over it, which absorbs a successor layer wider than its
+ * own. Feedback and self relations do not anchor.
  */
-function alignLayers(layers, relations, feedback, horizontal, gap) {
-  const geometry = horizontal
-    ? { cross: 'y', size: 'height', gap }
-    : { cross: 'x', size: 'width', gap };
+function alignLayers(layers, relations, feedback, gap) {
+  const geometry = { cross: 'x', size: 'width', gap };
   const layerOf = new Map(layers.flatMap((layer, index) => layer.map((box) => [box.id, index])));
   const boxById = new Map(layers.flat().map((box) => [box.id, box]));
   const predecessors = new Map();
@@ -419,16 +417,13 @@ function layeredGraphLayout(items, relations, direction, layerGap, metrics) {
       placedLayers.push(placedLayer);
       primary += layerPrimarySize(boxes) + primaryGap;
     }
-    if (alignLayers(placedLayers, relations, feedback, horizontal, siblingGap)) {
+    // A horizontal flow keeps centred layers: its labels sit above a horizontal
+    // run, and an aligned pair leaves no room beside the boxes for a long one.
+    if (!horizontal && alignLayers(placedLayers, relations, feedback, siblingGap)) {
       const members = placedLayers.flat();
-      const start = (box) => (horizontal ? box.y : box.x);
-      const end = (box) => (horizontal ? box.y + box.height : box.x + box.width);
-      const shift = bandStart - Math.min(...members.map(start));
-      for (const box of members) {
-        if (horizontal) box.y += shift;
-        else box.x += shift;
-      }
-      bandStart = Math.max(...members.map(end)) + BAND_GAP;
+      const shift = bandStart - Math.min(...members.map(({ x }) => x));
+      for (const box of members) box.x += shift;
+      bandStart = Math.max(...members.map(({ x, width }) => x + width)) + BAND_GAP;
     } else bandStart += bandCrossSize + BAND_GAP;
   }
   const rawWidth = Math.max(640, ...raw.map((box) => box.x + box.width + PADDING));
@@ -805,7 +800,9 @@ function feedbackRoutes(source, target, alongX, obstacles, label) {
         point(targetMiddle, lane),
         point(targetMiddle, entry),
       ],
-      placements: [onEntry, nearTarget, onLane],
+      // A label reads best along a horizontal run: the entry into the target in
+      // a vertical flow, the long outside lane in a horizontal one.
+      placements: alongX ? [onLane, onEntry, nearTarget] : [onEntry, nearTarget, onLane],
     };
   });
 }

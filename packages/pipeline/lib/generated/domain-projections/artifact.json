@@ -697,7 +697,7 @@
     {
       "source": "packages/artifact/lib/artifact/diagram/rendering/layout.mjs",
       "target": "lib/artifact/diagram/rendering/layout.mjs",
-      "sha256": "b5637ce8ae1f8212bb8b413ed073b27be851aa0e380e7f15d67008cdc36282cb",
+      "sha256": "9cad1a46103b4758ef6fa3d134d4e70f94c5d22296f1c434f29774d4b44d5ea9",
       "mode": "644"
     },
     {
