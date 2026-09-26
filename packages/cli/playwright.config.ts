@@ -1,8 +1,13 @@
 import { defineConfig, devices } from '@playwright/test';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
+import { browserLaunchOptions } from '../../tests/support/browser-launcher.mjs';
 
 const DEFAULT_DASHBOARD_FIXTURE_PORT = 4173;
+// The runner owns headless mode; the shared launcher supplies the binary, channel and flags.
+const { headless: _headless, channel, ...launchOptions } = browserLaunchOptions({
+  engine: 'chromium',
+});
 
 function dashboardFixturePort(): number {
   const raw = process.env.OPENPLANR_DASHBOARD_FIXTURE_PORT ?? String(DEFAULT_DASHBOARD_FIXTURE_PORT);
@@ -33,6 +38,8 @@ export default defineConfig({
     : resolve(tmpdir(), 'openplanr-dashboard-browser-results'),
   use: {
     ...devices['Desktop Chrome'],
+    ...(channel ? { channel } : {}),
+    launchOptions,
     baseURL: fixtureOrigin,
     locale: 'en-US',
     timezoneId: 'UTC',
