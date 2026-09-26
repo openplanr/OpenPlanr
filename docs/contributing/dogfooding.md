@@ -89,7 +89,8 @@ npm run test:focused
 
 `npm run verify` bundles the check and focused gates with the packed-package proof;
 `npm run verify:ci` replays the Workspace CI jobs in order (`--list`, `--only`, `--skip`).
-Run `npx biome check --write src/ tests/` from `packages/cli`, not from the root.
+`npm run lint` runs Biome over every workspace from the root `biome.jsonc`; `npm run lint:fix`
+applies its safe fixes and `npm run format` its formatting.
 
 Skill changes have their own loop:
 

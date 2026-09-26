@@ -1,0 +1,247 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.5.11/schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "files": {
+    "includes": [
+      "packages/*/lib/**",
+      "packages/*/src/**",
+      "packages/*/scripts/**",
+      "packages/*/tests/**",
+      "packages/*/conformance/**",
+      "apps/*/src/**",
+      "apps/*/tests/**",
+      "scripts/**",
+      "tests/**",
+      "conformance/**",
+      // Generated outputs: edit the canonical sources and run `npm run generate`.
+      "!**/generated",
+      "!**/dist",
+      "!**/vendor",
+      "!packages/cli/lib/host-packages",
+      "!packages/pipeline/lib/artifact",
+      "!packages/pipeline/lib/design",
+      "!packages/pipeline/lib/design-engine",
+      "!packages/pipeline/lib/operate",
+      "!packages/pipeline/lib/protocol",
+      "!packages/pipeline/scripts/generate-artifact-shell.mjs",
+      "!conformance/packed-surface-baseline.json",
+      // Test inputs and recorded outputs keep their own bytes.
+      "!**/__snapshots__",
+      "!**/fixtures/**/*.json",
+      "!packages/cli/tests/e2e/baselines",
+      "!packages/cli/tests/fixtures",
+      "!packages/pipeline/conformance/expected",
+      "!packages/pipeline/conformance/fixtures",
+      "!packages/pipeline/tests/dashboard/fixtures",
+      "!packages/pipeline/tests/fixtures"
+    ]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 100,
+    "lineEnding": "lf"
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "preset": "recommended",
+      "complexity": {
+        "noExcessiveCognitiveComplexity": "warn",
+        "noForEach": "off"
+      },
+      "correctness": {
+        "noUnusedVariables": "warn",
+        "noUnusedImports": "warn"
+      },
+      "style": {
+        "noNonNullAssertion": "error",
+        "useConst": "warn",
+        "noParameterAssign": "off"
+      },
+      "suspicious": {
+        "noExplicitAny": "error",
+        "noConsole": "error",
+        "noThenProperty": "off"
+      }
+    }
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "single",
+      "trailingCommas": "all",
+      "arrowParentheses": "always",
+      "semicolons": "always",
+      "bracketSpacing": true
+    }
+  },
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
+    }
+  },
+  "assist": {
+    "enabled": true,
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  },
+  "overrides": [
+    {
+      // Command-line entry points and conformance runners report through the console.
+      "includes": [
+        "scripts/**",
+        "packages/*/scripts/**",
+        "packages/*/conformance/**",
+        "conformance/**",
+        "packages/design/lib/design/lint.mjs"
+      ],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noConsole": "off"
+          }
+        }
+      }
+    },
+    {
+      // Hand-written declarations still use `any`; BL-110 (after BL-078) removes this entry.
+      "includes": ["packages/pipeline/lib/pipeline/index.d.mts", "packages/protocol/src/task-contracts.d.mts"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noExplicitAny": "warn"
+          }
+        }
+      }
+    },
+    {
+      // Iterable callbacks that return values need rewriting; BL-110 removes this entry.
+      "includes": [
+        "packages/artifact/lib/artifact/diagram/authoring/commands.mjs",
+        "packages/artifact/lib/artifact/diagram/editor/session.mjs",
+        "packages/artifact/lib/artifact/diagram/rendering/layout.mjs",
+        "packages/artifact/lib/artifact/diagram/router.mjs",
+        "packages/artifact/lib/artifact/review.mjs",
+        "packages/artifact/lib/artifact/ui/diagram-editor.mjs",
+        "packages/artifact/lib/artifact/ui/diagram-studio.mjs",
+        "packages/artifact/tests/diagram-editor.test.mjs",
+        "packages/cli/scripts/package-contract.mjs",
+        "packages/design/lib/design/screens.mjs",
+        "packages/operate/lib/operate/evidence-registry-v2.mjs",
+        "packages/operate/lib/operate/extensions-v2.mjs",
+        "packages/pipeline/lib/dashboard/operate-review-workspace-projection-v2.mjs",
+        "packages/pipeline/lib/ecosystem/release-package-proof.mjs",
+        "packages/pipeline/lib/evaluation/metrics.mjs",
+        "packages/pipeline/lib/pipeline/browser-qa.mjs",
+        "packages/pipeline/lib/pipeline/context-envelope.mjs",
+        "packages/pipeline/lib/pipeline/evaluation-contract.mjs",
+        "packages/pipeline/lib/pipeline/evaluation-redaction.mjs",
+        "packages/pipeline/lib/pipeline/investigation-contracts.mjs",
+        "packages/pipeline/lib/pipeline/planning-review-reducer.mjs",
+        "packages/pipeline/lib/pipeline/ship-closure-projections.mjs",
+        "packages/pipeline/lib/pipeline/ship-closure-reducer.mjs",
+        "packages/pipeline/lib/pipeline/ship-closure.mjs",
+        "packages/pipeline/scripts/inventory-operate-surfaces.mjs",
+        "packages/pipeline/tests/dashboard/dashboard-review-display-workspace.test.mjs",
+        "packages/pipeline/tests/pipeline/ship-closure.test.mjs",
+        "packages/pipeline/tests/schema/evaluation-contracts.test.mjs",
+        "packages/pipeline/tests/schema/release-ledger-contracts.test.mjs",
+        "packages/protocol/lib/dashboard/operate-review-payload-safety.mjs",
+        "packages/protocol/src/compat/live-evidence-v2.mjs",
+        "packages/protocol/src/diagram-authoring-contracts.mjs",
+        "packages/protocol/src/enterprise-contracts.mjs"
+      ],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "useIterableCallbackReturn": "warn"
+          }
+        }
+      }
+    },
+    {
+      // Input sanitizers match control characters by range; BL-110 removes this entry.
+      "includes": [
+        "packages/artifact/lib/artifact/bridge.mjs",
+        "packages/artifact/lib/artifact/diagram/source-map.mjs",
+        "packages/artifact/lib/artifact/ui/bridge-tools.mjs",
+        "packages/design/lib/design/company-publication.mjs",
+        "packages/protocol/src/design-handoff-contracts.mjs",
+        "packages/protocol/src/enterprise-contracts.mjs",
+        "packages/protocol/src/registries.mjs"
+      ],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noControlCharactersInRegex": "warn"
+          }
+        }
+      }
+    },
+    {
+      // Assignments inside expressions need restructuring; BL-110 removes this entry.
+      "includes": [
+        "packages/artifact/lib/artifact/bridge.mjs",
+        "packages/artifact/lib/artifact/bundle.mjs",
+        "packages/design/tests/shell-theme-isolation.browser.test.mjs",
+        "packages/pipeline/conformance/runner.mjs",
+        "packages/pipeline/tests/pipeline/investigation-runtime.test.mjs",
+        "packages/pipeline/tests/sse-client.mjs",
+        "scripts/skills/benchmark-release.mjs",
+        "scripts/skills/evaluate-model-release.mjs"
+      ],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noAssignInExpressions": "warn"
+          }
+        }
+      }
+    },
+    {
+      // Throws inside finally replace the in-flight error; BL-109 fixes these and removes this entry.
+      "includes": [
+        "packages/artifact/lib/artifact/diagram/authoring/exports.mjs",
+        "packages/design/lib/design-engine/artifact-adapter.mjs",
+        "packages/pipeline/lib/pipeline/ship-closure-persistence.mjs"
+      ],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noUnsafeFinally": "warn"
+          }
+        }
+      }
+    },
+    {
+      // A local named `escape` shadows the global; BL-110 renames it and removes this entry.
+      "includes": ["packages/pipeline/lib/dashboard/server.mjs"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noShadowRestrictedNames": "warn"
+          }
+        }
+      }
+    },
+    {
+      // `frame.src = frame.src` reloads the iframe; BL-110 replaces the idiom and removes this entry.
+      "includes": ["packages/artifact/tests/viewport-gestures.test.mjs"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noSelfAssign": "warn"
+          }
+        }
+      }
+    }
+  ]
+}
