@@ -1,0 +1,160 @@
+{
+  "kind": "diagram-fidelity-report",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.6.0",
+  "documentVersion": "1.0.0",
+  "digestAlgorithm": "sha256",
+  "canonicalization": "rfc8785",
+  "diagramId": "one-feature",
+  "sourceFormat": "planr-diagram",
+  "targetFormat": "excalidraw",
+  "status": "editable",
+  "interpreted": [
+    {
+      "source": "node:you",
+      "targetId": "you",
+      "construct": "node"
+    },
+    {
+      "source": "node:agent",
+      "targetId": "agent",
+      "construct": "node"
+    },
+    {
+      "source": "node:repo",
+      "targetId": "repo",
+      "construct": "node"
+    },
+    {
+      "source": "node:cli",
+      "targetId": "cli",
+      "construct": "node"
+    },
+    {
+      "source": "node:github",
+      "targetId": "github",
+      "construct": "node"
+    },
+    {
+      "source": "relation:m1",
+      "targetId": "m1",
+      "construct": "relation"
+    },
+    {
+      "source": "relation:m2",
+      "targetId": "m2",
+      "construct": "relation"
+    },
+    {
+      "source": "relation:m3",
+      "targetId": "m3",
+      "construct": "relation"
+    },
+    {
+      "source": "relation:m4",
+      "targetId": "m4",
+      "construct": "relation"
+    },
+    {
+      "source": "relation:m5",
+      "targetId": "m5",
+      "construct": "relation"
+    },
+    {
+      "source": "relation:m6",
+      "targetId": "m6",
+      "construct": "relation"
+    },
+    {
+      "source": "relation:m7",
+      "targetId": "m7",
+      "construct": "relation"
+    },
+    {
+      "source": "relation:m8",
+      "targetId": "m8",
+      "construct": "relation"
+    },
+    {
+      "source": "relation:m9",
+      "targetId": "m9",
+      "construct": "relation"
+    },
+    {
+      "source": "relation:m10",
+      "targetId": "m10",
+      "construct": "relation"
+    },
+    {
+      "source": "relation:m11",
+      "targetId": "m11",
+      "construct": "relation"
+    },
+    {
+      "source": "relation:m12",
+      "targetId": "m12",
+      "construct": "relation"
+    },
+    {
+      "source": "relation:m13",
+      "targetId": "m13",
+      "construct": "relation"
+    },
+    {
+      "source": "relation:m14",
+      "targetId": "m14",
+      "construct": "relation"
+    },
+    {
+      "source": "relation:m15",
+      "targetId": "m15",
+      "construct": "relation"
+    },
+    {
+      "source": "relation:m16",
+      "targetId": "m16",
+      "construct": "relation"
+    },
+    {
+      "source": "relation:m17",
+      "targetId": "m17",
+      "construct": "relation"
+    },
+    {
+      "source": "event:e-specify",
+      "targetId": "e-specify",
+      "construct": "phase"
+    },
+    {
+      "source": "event:e-plan",
+      "targetId": "e-plan",
+      "construct": "phase"
+    },
+    {
+      "source": "event:e-ship",
+      "targetId": "e-ship",
+      "construct": "phase"
+    },
+    {
+      "source": "event:e-land",
+      "targetId": "e-land",
+      "construct": "phase"
+    },
+    {
+      "source": "event:e-operate",
+      "targetId": "e-operate",
+      "construct": "phase"
+    },
+    {
+      "source": "emphasis:m9",
+      "targetId": "m9",
+      "construct": "emphasis"
+    }
+  ],
+  "omitted": [],
+  "notes": [
+    "The native scene projection preserves participants, lifelines, phases, ordered messages, notes, and generated chronology geometry.",
+    "Free-form scene edits become scene-owned and do not claim semantic round-trip equivalence."
+  ],
+  "documentDigest": "sha256:b44b1f0d336287693ba78617b4c92ee8b7bfda909ee133f633f36996551e7e16"
+}

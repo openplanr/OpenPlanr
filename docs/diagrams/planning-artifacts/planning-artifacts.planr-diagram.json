@@ -7,8 +7,8 @@
   "canonicalization": "rfc8785",
   "diagramId": "planning-artifacts",
   "title": "OpenPlanr planning artifacts",
-  "summary": "Which skill writes each planning file under .planr/, and where the deterministic planr CLI validates and syncs them.",
-  "audience": "mixed",
+  "summary": "What the skills write under .planr/ in your repository, and where the deterministic planr CLI validates those files and keeps your tracker in step.",
+  "audience": "engineer",
   "grammar": {
     "id": "architecture",
     "version": "1.0.0"
@@ -18,7 +18,7 @@
     "detailTier": "balanced"
   },
   "theme": {
-    "themeId": "openplanr-default",
+    "themeId": "openplanr",
     "mode": "auto"
   },
   "source": {
@@ -29,51 +29,51 @@
   "nodes": [
     {
       "id": "spec-skill",
-      "label": "planr-spec",
+      "label": "spec",
       "kind": "secondary-item",
-      "description": "Shapes intent into a measurable specification.",
+      "description": "Shapes intent into a measurable specification, asking only the questions that change the outcome.",
       "semanticPosition": null
     },
     {
       "id": "plan-skill",
-      "label": "planr-plan",
+      "label": "plan",
       "kind": "secondary-item",
-      "description": "Decomposes the specification into user stories and tasks.",
+      "description": "Decomposes the specification into user stories and tasks. It never starts implementation on its own.",
       "semanticPosition": null
     },
     {
       "id": "ship-skill",
-      "label": "planr-ship",
+      "label": "ship",
       "kind": "secondary-item",
-      "description": "Implements one task and appends provenance.",
+      "description": "Implements one task with the plan read first, verifies it, and records the result.",
       "semanticPosition": null
     },
     {
       "id": "spec",
-      "label": "Specification",
+      "label": "Specification\nwhat done means",
       "kind": "primary-item",
-      "description": "SPEC-001: goals, scope, acceptance criteria.",
+      "description": "Goals, scope, and acceptance criteria, grounded in the current repository.",
       "semanticPosition": null
     },
     {
-      "id": "stories",
-      "label": "User stories",
+      "id": "plan",
+      "label": "Stories and tasks\nread by ship first",
       "kind": "primary-item",
-      "description": "US-001…: user value with acceptance criteria and Gherkin sidecars.",
+      "description": "User stories carry value and acceptance criteria; tasks carry the files to create, modify, and preserve, and a definition of done. The agent reads them before it changes code.",
       "semanticPosition": null
     },
     {
-      "id": "tasks",
-      "label": "Tasks",
+      "id": "provenance",
+      "label": "Provenance log\neach task shipped",
       "kind": "primary-item",
-      "description": "T-001…: Create/Modify/Preserve file lists and a definition of done.",
+      "description": "Every task implemented and verified is recorded in .planr/provenance.jsonl.",
       "semanticPosition": null
     },
     {
       "id": "cli",
-      "label": "planr CLI",
+      "label": "planr CLI\nvalidate · render · sync",
       "kind": "primary-item",
-      "description": "Validates, renders, and syncs planning files; never calls a model.",
+      "description": "Deterministic: validates planning files, renders diagrams and reports, and syncs trackers. It never calls a model.",
       "semanticPosition": null
     },
     {
@@ -103,56 +103,64 @@
     {
       "id": "r2",
       "from": "plan-skill",
-      "to": "stories",
+      "to": "plan",
       "kind": "flow",
       "label": "writes",
       "weight": null
     },
     {
       "id": "r3",
-      "from": "plan-skill",
-      "to": "tasks",
+      "from": "ship-skill",
+      "to": "provenance",
       "kind": "flow",
-      "label": "writes",
+      "label": "appends",
       "weight": null
     },
     {
       "id": "r4",
-      "from": "ship-skill",
-      "to": "tasks",
-      "kind": "dependency",
-      "label": "reads",
+      "from": "spec",
+      "to": "cli",
+      "kind": "flow",
+      "label": null,
       "weight": null
     },
     {
       "id": "r5",
-      "from": "cli",
-      "to": "tasks",
-      "kind": "dependency",
-      "label": "validates",
+      "from": "plan",
+      "to": "cli",
+      "kind": "flow",
+      "label": "validated offline,\nnever by a model",
       "weight": null
     },
     {
       "id": "r6",
-      "from": "cli",
-      "to": "github",
+      "from": "provenance",
+      "to": "cli",
       "kind": "flow",
-      "label": "syncs",
+      "label": null,
       "weight": null
     },
     {
       "id": "r7",
       "from": "cli",
+      "to": "github",
+      "kind": "flow",
+      "label": "kept in step\noptional",
+      "weight": null
+    },
+    {
+      "id": "r8",
+      "from": "cli",
       "to": "linear",
       "kind": "flow",
-      "label": "syncs",
+      "label": "kept in step\noptional",
       "weight": null
     }
   ],
   "groups": [
     {
       "id": "agent",
-      "label": "Skills in your coding agent",
+      "label": "Your coding agent · writes the plan into your repository, you review it like code",
       "members": [
         "spec-skill",
         "plan-skill",
@@ -161,48 +169,48 @@
     },
     {
       "id": "repo",
-      "label": ".planr/ in your repository",
+      "label": "Under .planr/",
       "members": [
         "spec",
-        "stories",
-        "tasks"
+        "plan",
+        "provenance"
       ]
     },
     {
       "id": "trackers",
-      "label": "Optional trackers",
+      "label": "Your tracker",
       "members": [
         "github",
         "linear"
       ]
     }
   ],
+  "emphasis": [
+    {
+      "targetId": "plan",
+      "level": "primary"
+    }
+  ],
+  "accessibility": {
+    "title": "OpenPlanr planning artifacts",
+    "description": "The spec, plan, and ship skills run inside your coding agent. Spec writes the specification, plan writes the user stories and tasks that ship reads before it changes code, and ship appends each shipped task to the provenance log. All of them live under .planr/ in your repository, written by the agent and reviewed like code. The planr CLI validates those files offline, never by a model, and keeps GitHub Issues or Linear in step.",
+    "readingOrder": [
+      "spec-skill",
+      "plan-skill",
+      "ship-skill",
+      "spec",
+      "plan",
+      "provenance",
+      "cli",
+      "github",
+      "linear"
+    ]
+  },
   "lanes": [],
   "events": [],
   "series": [],
   "axes": [],
   "sets": [],
   "annotations": [],
-  "emphasis": [
-    {
-      "targetId": "tasks",
-      "level": "primary"
-    }
-  ],
-  "accessibility": {
-    "title": "OpenPlanr planning artifacts",
-    "description": "The planr-spec, planr-plan, and planr-ship skills run inside the coding agent and write the specification, user stories, and tasks under .planr/ in the repository. The planr CLI validates those files and syncs them with GitHub Issues or Linear.",
-    "readingOrder": [
-      "spec-skill",
-      "plan-skill",
-      "ship-skill",
-      "spec",
-      "stories",
-      "tasks",
-      "cli",
-      "github",
-      "linear"
-    ]
-  },
-  "documentDigest": "sha256:467f71dbc42804d5ac1169acbc69e66c32b7ebd77c9f29b74eeda812b1cfe475"
+  "documentDigest": "sha256:16fcc182a85facadc0f092dbe36f97cde2659461ee6f27dc0872370df831a6a7"
 }

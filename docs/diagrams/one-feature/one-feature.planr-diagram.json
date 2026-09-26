@@ -1,0 +1,282 @@
+{
+  "kind": "planr-diagram",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.6.0",
+  "documentVersion": "1.0.0",
+  "digestAlgorithm": "sha256",
+  "canonicalization": "rfc8785",
+  "diagramId": "one-feature",
+  "title": "One feature, end to end",
+  "summary": "Passwordless sign-in from request to readout: who acts at each step when you, your coding agent, the planr CLI, and GitHub share one delivery loop. The specification id and the story and task counts are illustrative.",
+  "audience": "engineer",
+  "grammar": {
+    "id": "sequence",
+    "version": "1.0.0"
+  },
+  "layout": {
+    "direction": "left-right",
+    "detailTier": "balanced"
+  },
+  "theme": {
+    "themeId": "openplanr",
+    "mode": "auto"
+  },
+  "source": {
+    "format": "english",
+    "path": null,
+    "digest": null
+  },
+  "nodes": [
+    {
+      "id": "you",
+      "label": "You",
+      "kind": "primary-item",
+      "description": "You invoke every skill by name and run every merge yourself.",
+      "semanticPosition": null
+    },
+    {
+      "id": "agent",
+      "label": "Your coding agent",
+      "kind": "primary-item",
+      "description": "Claude Code, Codex, or Cursor running the OpenPlanr skills. No second model is involved.",
+      "semanticPosition": null
+    },
+    {
+      "id": "repo",
+      "label": "Your repository",
+      "kind": "primary-item",
+      "description": "Plans under .planr/ beside the source code and tests, versioned together.",
+      "semanticPosition": null
+    },
+    {
+      "id": "cli",
+      "label": "planr CLI",
+      "kind": "primary-item",
+      "description": "Deterministic validation, rendering, and sync. It never calls a model.",
+      "semanticPosition": null
+    },
+    {
+      "id": "github",
+      "label": "GitHub",
+      "kind": "primary-item",
+      "description": "Pull requests, CI, and review. Issues sync is optional.",
+      "semanticPosition": null
+    }
+  ],
+  "relations": [
+    {
+      "id": "m1",
+      "from": "you",
+      "to": "agent",
+      "kind": "message",
+      "label": "/planr:spec \"Add passwordless sign-in for existing accounts\"",
+      "weight": null
+    },
+    {
+      "id": "m2",
+      "from": "agent",
+      "to": "you",
+      "kind": "message",
+      "label": "asks only the questions that change the outcome",
+      "weight": null
+    },
+    {
+      "id": "m3",
+      "from": "agent",
+      "to": "repo",
+      "kind": "message",
+      "label": "writes SPEC-004 under .planr/specs/",
+      "weight": null
+    },
+    {
+      "id": "m4",
+      "from": "you",
+      "to": "agent",
+      "kind": "message",
+      "label": "/planr:plan",
+      "weight": null
+    },
+    {
+      "id": "m5",
+      "from": "agent",
+      "to": "repo",
+      "kind": "message",
+      "label": "writes 3 user stories and 6 tasks: acceptance criteria and file-level change lists",
+      "weight": null
+    },
+    {
+      "id": "m6",
+      "from": "you",
+      "to": "cli",
+      "kind": "message",
+      "label": "planr sync",
+      "weight": null
+    },
+    {
+      "id": "m7",
+      "from": "cli",
+      "to": "repo",
+      "kind": "message",
+      "label": "validates and repairs cross-references, offline, never by a model",
+      "weight": null
+    },
+    {
+      "id": "m8",
+      "from": "you",
+      "to": "agent",
+      "kind": "message",
+      "label": "/planr:ship, one task",
+      "weight": null
+    },
+    {
+      "id": "m9",
+      "from": "agent",
+      "to": "repo",
+      "kind": "message",
+      "label": "reads the plan first, implements and verifies the task, records provenance",
+      "weight": null
+    },
+    {
+      "id": "m10",
+      "from": "you",
+      "to": "github",
+      "kind": "message",
+      "label": "opens one PR per task",
+      "weight": null
+    },
+    {
+      "id": "m11",
+      "from": "github",
+      "to": "you",
+      "kind": "message",
+      "label": "CI and review",
+      "weight": null
+    },
+    {
+      "id": "m12",
+      "from": "you",
+      "to": "agent",
+      "kind": "message",
+      "label": "/planr:land",
+      "weight": null
+    },
+    {
+      "id": "m13",
+      "from": "agent",
+      "to": "you",
+      "kind": "message",
+      "label": "release readiness and the exact merge commands; the merge stays yours",
+      "weight": null
+    },
+    {
+      "id": "m14",
+      "from": "you",
+      "to": "github",
+      "kind": "message",
+      "label": "merge",
+      "weight": null
+    },
+    {
+      "id": "m15",
+      "from": "you",
+      "to": "agent",
+      "kind": "message",
+      "label": "/planr:release, then /planr:operate",
+      "weight": null
+    },
+    {
+      "id": "m16",
+      "from": "agent",
+      "to": "repo",
+      "kind": "message",
+      "label": "classifies what shipped, writes the release entry",
+      "weight": null
+    },
+    {
+      "id": "m17",
+      "from": "agent",
+      "to": "you",
+      "kind": "message",
+      "label": "operate readout: decisions, actions, risks, and evidence for the next spec",
+      "weight": null
+    }
+  ],
+  "events": [
+    {
+      "id": "e-specify",
+      "label": "Specify",
+      "order": 0,
+      "at": null
+    },
+    {
+      "id": "e-plan",
+      "label": "Plan",
+      "order": 1,
+      "at": null
+    },
+    {
+      "id": "e-ship",
+      "label": "Ship, one task per PR",
+      "order": 2,
+      "at": null
+    },
+    {
+      "id": "e-land",
+      "label": "Land",
+      "order": 3,
+      "at": null
+    },
+    {
+      "id": "e-operate",
+      "label": "Release and operate",
+      "order": 4,
+      "at": null
+    }
+  ],
+  "emphasis": [
+    {
+      "targetId": "m9",
+      "level": "primary"
+    }
+  ],
+  "accessibility": {
+    "title": "One feature, end to end",
+    "description": "You ask the coding agent for a specification for passwordless sign-in; it asks only the questions that change the outcome and writes the specification under .planr/. You ask for a plan; it writes user stories and tasks, and the planr CLI validates the cross-references offline. You ship one task at a time: the agent reads the plan first, implements and verifies the task, and records provenance; you open one pull request per task, GitHub runs CI and review, land prepares the exact merge commands, and you merge. Release writes the release entry and operate returns a readout that becomes evidence for the next specification.",
+    "readingOrder": [
+      "you",
+      "agent",
+      "repo",
+      "cli",
+      "github",
+      "e-specify",
+      "m1",
+      "m2",
+      "m3",
+      "e-plan",
+      "m4",
+      "m5",
+      "m6",
+      "m7",
+      "e-ship",
+      "m8",
+      "m9",
+      "m10",
+      "m11",
+      "e-land",
+      "m12",
+      "m13",
+      "m14",
+      "e-operate",
+      "m15",
+      "m16",
+      "m17"
+    ]
+  },
+  "groups": [],
+  "lanes": [],
+  "series": [],
+  "axes": [],
+  "sets": [],
+  "annotations": [],
+  "documentDigest": "sha256:6d92fb17337e4476f564323407e668dac07c38edc14d57ab201b3615db747a5a"
+}

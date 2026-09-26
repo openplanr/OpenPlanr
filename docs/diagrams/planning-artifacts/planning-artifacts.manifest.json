@@ -8,7 +8,7 @@
   "diagramId": "planning-artifacts",
   "source": {
     "path": "diagrams/planning-artifacts/planning-artifacts.planr-diagram.json",
-    "digest": "sha256:8822f1c5284399cac7b5e04ee0a8d8ca32b4f76cb251577d78fe24b98237de64"
+    "digest": "sha256:198e1d266987c1f1c1017d5b78d889ae4bcf50dd5f4f35f9cf51e554494b1871"
   },
   "registry": {
     "path": "registry/v1.6.0/diagram-grammars.json",
@@ -21,14 +21,14 @@
     "version": "1.3.0"
   },
   "theme": {
-    "id": "openplanr-default",
+    "id": "openplanr",
     "version": "1.0.0"
   },
   "outputs": [
     {
       "path": "diagrams/planning-artifacts/planning-artifacts.assets.json",
       "mediaType": "application/vnd.openplanr.diagram-assets+json",
-      "digest": "sha256:3cd34a2d7757bf0ee7db0308d7351ce35a441f1377b6a93befd243e10aebcfd6",
+      "digest": "sha256:1a0e53f1737351b8627e7f6b20941838201c1d6bf88088dd70cac3856a458082",
       "fidelity": "render-only"
     },
     {
@@ -46,33 +46,33 @@
     {
       "path": "diagrams/planning-artifacts/planning-artifacts.html",
       "mediaType": "text/html; charset=utf-8",
-      "digest": "sha256:26f4e79db933a1f3586e253849e24a9a2f6545d380e37c9bc4f973951799fb98",
+      "digest": "sha256:38e7cba4995b09be20246c1bfc3555d0eb3b5d68d5f3f263725324b3dd4c1521",
       "fidelity": "render-only"
     },
     {
       "path": "diagrams/planning-artifacts/planning-artifacts.planr-diagram.json",
       "mediaType": "application/vnd.openplanr.diagram+json",
-      "digest": "sha256:8822f1c5284399cac7b5e04ee0a8d8ca32b4f76cb251577d78fe24b98237de64",
+      "digest": "sha256:198e1d266987c1f1c1017d5b78d889ae4bcf50dd5f4f35f9cf51e554494b1871",
       "fidelity": "editable"
     },
     {
       "path": "diagrams/planning-artifacts/planning-artifacts.png",
       "mediaType": "image/png",
-      "digest": "sha256:e249b98bdd89018de7f227dad07a53ce0a67c3daae85d59410777bb3889457a9",
+      "digest": "sha256:b5a62b83efb53f3b77220f75707fefcae7474d2b72e4ea2ea1a267eeae7cf15f",
       "fidelity": "render-only"
     },
     {
       "path": "diagrams/planning-artifacts/planning-artifacts.quality.json",
       "mediaType": "application/vnd.openplanr.diagram-quality+json",
-      "digest": "sha256:3898abf9d4ec767cb272f8bc6481ce658c417ea0d49bf63c7e2a125bbf246298",
+      "digest": "sha256:cdabaa54a224f2d51f943719a90839ff9f8a6df687867f766d8669afe7e0b358",
       "fidelity": "render-only"
     },
     {
       "path": "diagrams/planning-artifacts/planning-artifacts.svg",
       "mediaType": "image/svg+xml; charset=utf-8",
-      "digest": "sha256:76d3a73867f9bb9d4bfa274ae94e883ef06b751efbce6aec981f0faf325bcca6",
+      "digest": "sha256:24d4ee303e47f4f46bdebd5ee947330529ff159a66a61fb35489af1023ca7f0e",
       "fidelity": "render-only"
     }
   ],
-  "documentDigest": "sha256:aa0304c1d354325c8d70f47abcbd8ab85ac3b3f52f5ab3675b1a2c7c8a3feeb6"
+  "documentDigest": "sha256:9cff009f6dbf80880c85aea3511e9e119b065a843d75f3272afe5cdf503934b5"
 }

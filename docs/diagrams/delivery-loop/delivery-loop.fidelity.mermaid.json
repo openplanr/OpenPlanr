@@ -1,0 +1,23 @@
+{
+  "kind": "diagram-fidelity-report",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.6.0",
+  "documentVersion": "1.0.0",
+  "digestAlgorithm": "sha256",
+  "canonicalization": "rfc8785",
+  "diagramId": "delivery-loop",
+  "sourceFormat": "planr-diagram",
+  "targetFormat": "mermaid",
+  "status": "partial",
+  "interpreted": [],
+  "omitted": [
+    {
+      "source": "architecture",
+      "reason": "Production export is not implemented for the architecture semantic grammar; registry capability is partial."
+    }
+  ],
+  "notes": [
+    "SVG, HTML, and PNG remain the canonical render projections."
+  ],
+  "documentDigest": "sha256:4c9422b103904745ac75d13fa21679cdbad7c5e204a4e29741f9c3770b39217b"
+}

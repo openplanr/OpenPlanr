@@ -5,18 +5,18 @@
   "documentVersion": "1.0.0",
   "digestAlgorithm": "sha256",
   "canonicalization": "rfc8785",
-  "diagramId": "planning-artifacts",
+  "diagramId": "delivery-loop",
   "status": "pass",
   "checks": [
     {
       "id": "item-budget",
       "status": "pass",
-      "message": "9 primary items; 12 allowed for balanced."
+      "message": "11 primary items; 12 allowed for balanced."
     },
     {
       "id": "label-length",
       "status": "pass",
-      "message": "Longest label is 36 characters."
+      "message": "Longest label is 65 characters."
     },
     {
       "id": "crossings",
@@ -26,7 +26,7 @@
     {
       "id": "fan-in",
       "status": "pass",
-      "message": "Maximum fan-in is 3; 6 allowed."
+      "message": "Maximum fan-in is 2; 6 allowed."
     },
     {
       "id": "contrast",
@@ -46,7 +46,7 @@
     {
       "id": "geometry-present",
       "status": "pass",
-      "message": "9 semantic boxes and 8 relations rendered."
+      "message": "11 semantic boxes and 12 relations rendered."
     },
     {
       "id": "node-overlap",
@@ -101,7 +101,7 @@
     {
       "id": "png-decoded",
       "status": "pass",
-      "message": "PNG decoded at 1068×1058 (55814 bytes)."
+      "message": "PNG decoded at 1532×1290 (91180 bytes)."
     },
     {
       "id": "offline-runtime",
@@ -110,5 +110,5 @@
     }
   ],
   "splitPlan": null,
-  "documentDigest": "sha256:78d235bda229be26a63f9a9aa97154db8dc73c545bc06bb182ca7d30e25ac231"
+  "documentDigest": "sha256:ce0741a28c5d8da1f8b071bcbf5e7039109be7b28a89d3348c66813aea6d6d2e"
 }

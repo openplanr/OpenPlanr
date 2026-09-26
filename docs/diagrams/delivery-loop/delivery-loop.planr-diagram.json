@@ -1,0 +1,264 @@
+{
+  "kind": "planr-diagram",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.6.0",
+  "documentVersion": "1.0.0",
+  "digestAlgorithm": "sha256",
+  "canonicalization": "rfc8785",
+  "diagramId": "delivery-loop",
+  "title": "The OpenPlanr delivery loop",
+  "summary": "How a request becomes shipped code: skills you invoke inside your coding agent write plans beside the code, the planr CLI validates and syncs them, and review and operate skills return evidence for the next request.",
+  "audience": "engineer",
+  "grammar": {
+    "id": "architecture",
+    "version": "1.0.0"
+  },
+  "layout": {
+    "direction": "top-down",
+    "detailTier": "balanced"
+  },
+  "theme": {
+    "themeId": "openplanr",
+    "mode": "auto"
+  },
+  "source": {
+    "format": "english",
+    "path": null,
+    "digest": null
+  },
+  "nodes": [
+    {
+      "id": "you",
+      "label": "You\na feature, a bug, a question\nin Claude Code, Codex, or Cursor",
+      "kind": "primary-item",
+      "description": "Every step is a skill you invoke by name in Claude Code, Codex, or Cursor. The agent never chains plan and ship on its own.",
+      "semanticPosition": null
+    },
+    {
+      "id": "spec",
+      "label": "spec\nmeasurable specification",
+      "kind": "secondary-item",
+      "description": "Shapes vague intent into a measurable specification grounded in the repository, asking only the questions that change the outcome.",
+      "semanticPosition": null
+    },
+    {
+      "id": "plan",
+      "label": "plan\nstories, tasks, change lists",
+      "kind": "secondary-item",
+      "description": "Decomposes the specification into user stories and tasks with acceptance criteria and file-level change lists. Plan ends with a Ship handoff; it never starts implementation.",
+      "semanticPosition": null
+    },
+    {
+      "id": "ship",
+      "label": "ship\none task, verified",
+      "kind": "secondary-item",
+      "description": "Implements one task in the repository with the plan read first, runs the checks it discovers, and records provenance.",
+      "semanticPosition": null
+    },
+    {
+      "id": "land",
+      "label": "land\nrelease readiness",
+      "kind": "secondary-item",
+      "description": "Assesses release readiness and prepares the exact landing sequence. It never merges, publishes, or deploys for you.",
+      "semanticPosition": null
+    },
+    {
+      "id": "planr",
+      "label": ".planr/ plans\nversioned and reviewed like code",
+      "kind": "primary-item",
+      "description": "Specifications, user stories, tasks, and provenance, versioned in your repository and reviewed like code.",
+      "semanticPosition": null
+    },
+    {
+      "id": "code",
+      "label": "Source code and tests",
+      "kind": "primary-item",
+      "description": "Changed one task at a time and verified before the change is reported complete.",
+      "semanticPosition": null
+    },
+    {
+      "id": "cli",
+      "label": "planr CLI\nvalidate · render · sync",
+      "kind": "primary-item",
+      "description": "Deterministic: stores and validates planning files, renders diagrams and reports, syncs trackers, and diagnoses installations. It never calls a model.",
+      "semanticPosition": null
+    },
+    {
+      "id": "review",
+      "label": "Review skills\nartifact · design · browser-qa",
+      "kind": "secondary-item",
+      "description": "Artifact review boards, design review, and browser-backed QA against real routes, forms, and viewports.",
+      "semanticPosition": null
+    },
+    {
+      "id": "trackers",
+      "label": "GitHub Issues · Linear\noptional",
+      "kind": "secondary-item",
+      "description": "Two-way sync targets. OpenPlanr does not replace your issue tracker.",
+      "semanticPosition": null
+    },
+    {
+      "id": "operate",
+      "label": "Operate readouts\nevidence for the next request",
+      "kind": "secondary-item",
+      "description": "A decision and action brief across seven executive lenses, built from what actually shipped.",
+      "semanticPosition": null
+    }
+  ],
+  "relations": [
+    {
+      "id": "you-spec",
+      "from": "you",
+      "to": "spec",
+      "kind": "flow",
+      "label": null,
+      "weight": null
+    },
+    {
+      "id": "you-plan",
+      "from": "you",
+      "to": "plan",
+      "kind": "flow",
+      "label": null,
+      "weight": null
+    },
+    {
+      "id": "you-ship",
+      "from": "you",
+      "to": "ship",
+      "kind": "flow",
+      "label": null,
+      "weight": null
+    },
+    {
+      "id": "you-land",
+      "from": "you",
+      "to": "land",
+      "kind": "flow",
+      "label": null,
+      "weight": null
+    },
+    {
+      "id": "spec-planr",
+      "from": "spec",
+      "to": "planr",
+      "kind": "flow",
+      "label": "writes the spec",
+      "weight": null
+    },
+    {
+      "id": "plan-planr",
+      "from": "plan",
+      "to": "planr",
+      "kind": "flow",
+      "label": "writes the plan",
+      "weight": null
+    },
+    {
+      "id": "ship-code",
+      "from": "ship",
+      "to": "code",
+      "kind": "flow",
+      "label": "implements one task\nplan read first",
+      "weight": null
+    },
+    {
+      "id": "land-code",
+      "from": "land",
+      "to": "code",
+      "kind": "flow",
+      "label": "readiness\nbefore merge",
+      "weight": null
+    },
+    {
+      "id": "planr-cli",
+      "from": "planr",
+      "to": "cli",
+      "kind": "flow",
+      "label": "validated offline,\nnever by a model",
+      "weight": null
+    },
+    {
+      "id": "cli-trackers",
+      "from": "cli",
+      "to": "trackers",
+      "kind": "flow",
+      "label": "kept in step",
+      "weight": null
+    },
+    {
+      "id": "code-review",
+      "from": "code",
+      "to": "review",
+      "kind": "flow",
+      "label": "QA and review",
+      "weight": null
+    },
+    {
+      "id": "review-operate",
+      "from": "review",
+      "to": "operate",
+      "kind": "flow",
+      "label": "evidence",
+      "weight": null
+    }
+  ],
+  "groups": [
+    {
+      "id": "agent",
+      "label": "Your coding agent",
+      "members": [
+        "spec",
+        "plan",
+        "ship",
+        "land"
+      ]
+    },
+    {
+      "id": "repo",
+      "label": "Your repository",
+      "members": [
+        "planr",
+        "code"
+      ]
+    },
+    {
+      "id": "loop",
+      "label": "Review and operate",
+      "members": [
+        "review",
+        "operate"
+      ]
+    }
+  ],
+  "emphasis": [
+    {
+      "targetId": "planr",
+      "level": "primary"
+    }
+  ],
+  "accessibility": {
+    "title": "The OpenPlanr delivery loop",
+    "description": "You invoke the spec, plan, ship, and land skills inside your coding agent. Spec and plan write the plans under .planr/ in your repository; ship reads the plan first and implements one task in the source code; land assesses release readiness before you merge. The planr CLI validates the planning files offline, never by a model, and keeps GitHub Issues or Linear in step. Review skills check the change, and operate readouts return the evidence for the next request.",
+    "readingOrder": [
+      "you",
+      "spec",
+      "plan",
+      "ship",
+      "land",
+      "planr",
+      "code",
+      "cli",
+      "review",
+      "trackers",
+      "operate"
+    ]
+  },
+  "lanes": [],
+  "events": [],
+  "series": [],
+  "axes": [],
+  "sets": [],
+  "annotations": [],
+  "documentDigest": "sha256:7d525e1d94b103cb00392afa066d07a5e648ea847ab7203b0eb1d434ed0fe200"
+}
