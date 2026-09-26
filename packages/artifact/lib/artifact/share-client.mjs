@@ -483,7 +483,7 @@ function parseShortLink(source) {
   return Object.freeze({ origin: url.origin, id: match[1], keyFragment: key });
 }
 
-/** Async transport adapter designed to be injected directly into T-008 import. */
+/** Async transport adapter designed to be injected directly into the review import. */
 export async function decodeReviewLink(
   source,
   { pasteClient, fetchImpl, crypto, ...codecOptions } = {},

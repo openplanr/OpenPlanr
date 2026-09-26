@@ -10,7 +10,7 @@
  * Every call here is billed to the caller's OpenAI account, so the CLI reaches
  * this module only behind an explicit `--provider openai`.
  *
- * Hard rule 5: images are written to a tmp path first; the CALLER cp's to the
+ * Images are written to a tmp path first; the CALLER cp's to the
  * final dir. 429s surface as err.code='RATE_LIMITED' so the variant subagent
  * can do its ≤3 retries. `fetchImpl` is injectable — unit tests never touch
  * the network.
@@ -213,7 +213,7 @@ export async function extractAttributes(imagePath, opts = {}) {
   }
 }
 
-/** Vision quality gate (hard rule 10): judge the PNG against its brief. */
+/** Vision quality gate: judge the PNG against its brief. */
 export async function checkQuality(imagePath, brief, opts = {}) {
   const { apiKey, model = DEFAULT_MODEL, fetchImpl = fetch, readFile } = opts;
   if (!apiKey) throw new Error('checkQuality (openai) requires an API key');

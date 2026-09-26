@@ -14,7 +14,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createDefaultConfig } from '../../src/services/config-service.js';
 
 /**
- * FR5/FR6 Trap-A proof: the offer, its escalating snooze, and its permanent
+ * Trap-A proof: the offer, its escalating snooze, and its permanent
  * never-ask are exercised through *real* `planr` subprocesses that read and
  * write an on-disk `upgrade-state.json` — not an in-memory fixture — and the
  * offer/snooze/never-ask state is proven to persist across two separate process
@@ -111,7 +111,7 @@ beforeAll(() => {
     }),
   );
 
-  // A stub `npm` (via T-003's OPENPLANR_NPM_BIN seam) that records every argv it
+  // A stub `npm` (via the OPENPLANR_NPM_BIN seam) that records every argv it
   // is asked to run into OPENPLANR_NPM_LOG — the observable proof the CLI-owned
   // half was actually executed by the offer's "upgrade now" path.
   fakeNpm = join(root, 'fake-npm.cjs');
@@ -191,7 +191,7 @@ describe('inline upgrade offer through a real preAction subprocess', () => {
     });
     expect(first.status, first.stderr || first.stdout).toBe(0);
     expect(first.stdout).toContain(OFFER_MARKER);
-    // FR6 Trap E: the exact reversal command is stated.
+    // Trap E: the exact reversal command is stated.
     expect(first.stdout).toContain('planr config set-upgrade-policy --ask-again');
     expect(JSON.parse(readFileSync(statePath, 'utf8')).neverAsk).toBe(true);
 

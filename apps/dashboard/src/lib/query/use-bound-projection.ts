@@ -99,7 +99,7 @@ function sameRouteBinding(left: DashboardQueryIdentity, right: DashboardQueryIde
 }
 
 /**
- * Presentation coordinator around the certified T-008 query and SSE transports. It never applies
+ * Presentation coordinator around the certified query and SSE transports. It never applies
  * patch values: a patch is only an invalidation signal and always reconciles with one full read.
  */
 export function createBoundProjectionController() {

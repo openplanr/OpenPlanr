@@ -1492,7 +1492,7 @@ describe('legacy Cursor cleanup', () => {
   });
 });
 
-// FR4: `setup` is the install path for every runtime, so a mid-apply failure must
+// `setup` is the install path for every runtime, so a mid-apply failure must
 // never leave a partially-wired install reporting success — and, per Trap E, must not
 // silently leave partial state behind either. When the Claude plugin apply fails after
 // owned files were already written, applySetup restores them from the backup it took
@@ -1598,7 +1598,7 @@ describe('applySetup rollback on plugin failure', () => {
   });
 });
 
-// FR3: the non-guided `setup` preview must report what it skipped and why, not only in
+// The non-guided `setup` preview must report what it skipped and why, not only in
 // the guided wizard. This runs the real CLI as a subprocess (through the repo's tsx
 // loader, so it exercises the current wiring without a stale build) against a
 // fabricated real tuple: `codex` and `cursor` faked onto an isolated PATH with `claude`
@@ -1672,7 +1672,7 @@ describe('setup preview reports skipped runtimes', () => {
 });
 
 // The single warn/fail distinction doctor's lock-drift diagnostic and
-// `planr upgrade status` both rely on (SPEC-006 FR3). These four outcomes are
+// `planr upgrade status` both rely on. These four outcomes are
 // the extracted behaviour; the existing `lock-drift` assertions above are the
 // proof the extraction preserved doctor's own output.
 describe('classifyComponentDrift', () => {

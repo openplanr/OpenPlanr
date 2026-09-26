@@ -1,5 +1,5 @@
 /**
- * Provider auth resolution (hard rule 7 — paid-for lessons encoded):
+ * Provider auth resolution (paid-for lessons encoded):
  *
  *   1. ~/.planr/credentials.json  { "openai_api_key": "sk-…" }
  *   2. OPENAI_API_KEY env var — and if that exact key ALSO appears in the cwd's

@@ -1,6 +1,6 @@
 /**
  * Board daemon v2 — a persistent localhost HTTP server, INDEPENDENT of the
- * agent (hard rule 14): the board keeps working if the agent dies, and the
+ * agent: the board keeps working if the agent dies, and the
  * agent copes with a dead daemon by re-`board`ing the same dir.
  *
  * Endpoints

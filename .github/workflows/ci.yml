@@ -48,6 +48,8 @@ jobs:
         run: npm run check:boundaries
       - name: Lint the public documentation
         run: npm run check:docs
+      - name: Lint the source comments
+        run: npm run check:comments
       - name: Lint every participating workspace
         run: npm run lint
       - name: Type-check the hand-written declarations against their modules

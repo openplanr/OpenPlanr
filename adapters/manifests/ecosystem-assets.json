@@ -18,7 +18,7 @@
     },
     {
       "path": "package.json",
-      "digest": "sha256:0bd8dfda8caad2197e95cceddfeee3eac3f1479e7c86575dbb8ade82ed85af87"
+      "digest": "sha256:e61e2d6bdaa4f9d0a4e6e7d8a147b7006beee126e3636c3f5ef509794c5bbc3f"
     },
     {
       "path": "packages/artifact/package.json",
@@ -50,7 +50,7 @@
     },
     {
       "path": "packages/protocol/registries/commands.json",
-      "digest": "sha256:0808f8efe18c7a717788ef075af330ab95694799ec6a7b355fab65a268467fbf"
+      "digest": "sha256:56d4f940bc4d8aaccb05f74774eedd8abc5878943dc15e17e3dd1ac0b6cfd0a4"
     },
     {
       "path": "packages/protocol/registries/output-paths.json",
@@ -132,7 +132,7 @@
     },
     {
       "path": "ecosystem.json",
-      "digest": "sha256:9e70e59a71e828f06a28fe797c7929baa0c1f6174fe973fc1e9ff18fce64fc9c"
+      "digest": "sha256:a77efc61a1c9640e8c17e5173a9b867b02d1731be24a131ab8142dab066ada19"
     },
     {
       "path": "packages/pipeline/.claude-plugin/plugin.json",

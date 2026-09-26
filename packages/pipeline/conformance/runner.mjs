@@ -623,9 +623,9 @@ const globMatch = (dir, pattern) => {
 const isTaskFailureHandoffFile = (basename) =>
   /^error-report\.md$/i.test(basename) || /.+-error-report\.md$/i.test(basename);
 
-// ── native-dispatch (SPEC-014) fixture helpers ───────────────────────────
+// ── native-dispatch fixture helpers ──────────────────────────────────────
 //
-// SPEC-014 reverses the SPEC-013 worktree + DAG-wave scheduler. The DEV phase
+// Native dispatch replaces the worktree + DAG-wave scheduler. The DEV phase
 // now dispatches one Agent call per READY task in a single turn, directly on
 // the shared working tree — no worktree isolation, no file-by-file merge, no
 // `--max-parallel` knob. Ordering is expressed ONLY through the optional
@@ -650,13 +650,13 @@ const isTaskFailureHandoffFile = (basename) =>
 //     fallback both drain all ready work in one user invocation; only an
 //     explicit `--task T-NNN` selector narrows the graph.
 //
-// Determinism (NFR3): within a turn, ready tasks are dispatched id-sorted.
+// Determinism: within a turn, ready tasks are dispatched id-sorted.
 
-/** True iff `dir` is a SPEC-014 native-dispatch fixture (has the sentinel). */
+/** True iff `dir` is a native-dispatch fixture (has the sentinel). */
 const isNativeDispatchFixture = (dir) => existsSync(join(dir, '.native-dispatch-fixture.json'));
 
 // High-contention lock-list (gitignore-style globs). SURFACED AS ADVISORY ONLY
-// (FR9/FR9a) — it never serializes dispatch. Kept in lockstep with the advisory
+// — it never serializes dispatch. Kept in lockstep with the advisory
 // note in procedures/ship-step2-dag-dispatch.md.
 const ND_LOCK_LIST = [
   'package.json',
@@ -719,7 +719,7 @@ const ndReadTask = (taskPath) => {
 };
 
 // Load every seeded T-NNN.md (minus error-report handoffs) into normalized
-// records, id-sorted (NFR3 determinism).
+// records, id-sorted for determinism.
 const ndLoadFixtureTasks = (fixtureDir) => {
   const tasksDir = join(fixtureDir, 'tasks');
   const taskFiles = globMatch(tasksDir, 'T-.*\\.md').filter((x) => !isTaskFailureHandoffFile(x));
@@ -757,7 +757,7 @@ const ndSimulateDispatch = (tasks) => {
 
 // ── ND1 — parallel emission ───────────────────────────────────────────────
 // N independent tasks (no dependsOn) → N Agent calls in ONE turn; no call
-// carries an `isolation` field; no `--max-parallel` is referenced. (FR6/7/8)
+// carries an `isolation` field; no `--max-parallel` is referenced.
 const verifyND1Parallel = (fixtureDir) => {
   let f = 0;
   const fl = (label, detail) => {
@@ -802,14 +802,14 @@ const verifyND1Parallel = (fixtureDir) => {
     fl(`expected ${expEnd.agent_calls_first_turn} Agent calls, got ${firstTurn.length}`);
   }
 
-  // Deterministic id-sorted order (NFR3).
+  // Deterministic id-sorted order.
   if (JSON.stringify(dispatchOrder) === JSON.stringify(expEnd.dispatch_order)) {
     pass(`dispatch order is id-sorted: ${dispatchOrder.join(' → ')}`);
   } else {
     fl('dispatch order not id-sorted', `got ${dispatchOrder.join(' → ')}`);
   }
 
-  // No isolation field anywhere in the task frontmatter (FR8). The fixtures
+  // No isolation field anywhere in the task frontmatter. The fixtures
   // never declare one; assert it stays that way.
   const tasksDir = join(fixtureDir, 'tasks');
   const anyIsolation = globMatch(tasksDir, 'T-.*\\.md')
@@ -826,7 +826,7 @@ const verifyND1Parallel = (fixtureDir) => {
 // ── ND2 — advisory lock-list ──────────────────────────────────────────────
 // Two tasks share a lock-listed path; they STILL dispatch in the same turn
 // (no serialization). The dispatch prompt carries a non-enforcing advisory
-// note. (FR9, FR9a, FR6a)
+// note.
 const verifyND2AdvisoryLockList = (fixtureDir) => {
   let f = 0;
   const fl = (label, detail) => {
@@ -892,7 +892,6 @@ const verifyND2AdvisoryLockList = (fixtureDir) => {
 // ── ND3 — dependsOn ordering ──────────────────────────────────────────────
 // T-002 dependsOn T-001. T-001 dispatches in turn 1; T-002 is NOT ready until
 // T-001 is done, then dispatches in turn 2. Ordering comes ONLY from dependsOn.
-// (FR7, FR10)
 const verifyND3DependsOn = (fixtureDir) => {
   let f = 0;
   const fl = (label, detail) => {
@@ -1501,7 +1500,7 @@ if ((wantVerifyPO || wantVerifyShip) && !projectDir) {
 if (wantVerifyPO || wantVerifyShip) {
   const root = resolve(projectDir);
 
-  // ── SPEC-014 native-dispatch fixtures (ND1–ND4) ────────────────────────
+  // ── native-dispatch fixtures (ND1–ND4) ─────────────────────────────────
   // These carry a `.native-dispatch-fixture.json` sentinel and are NOT full
   // shipped projects, so they bypass detectFixtureMode + the todo-project
   // assertions entirely. They are only meaningful under --verify-ship.

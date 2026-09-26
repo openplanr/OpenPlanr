@@ -13,7 +13,7 @@
     {
       "source": "packages/design/lib/design-engine/auth.mjs",
       "target": "lib/design-engine/auth.mjs",
-      "sha256": "ecd38e086179e23cb43ad1bc175c6cb06fba44fa1874398249791036ed71a8f0",
+      "sha256": "7a6d3d4ece32bd294ca7b59155961c3575213f0a34aea172be8e7bcdd0e5e883",
       "mode": "644"
     },
     {
@@ -37,19 +37,19 @@
     {
       "source": "packages/design/lib/design-engine/canvas-wrap.mjs",
       "target": "lib/design-engine/canvas-wrap.mjs",
-      "sha256": "c511e32d5f23afca6b9b18fbf6364da9e2c087346ac51da07183f694871f20b5",
+      "sha256": "c8acfd3fc24f9a8c2530a2205e0ccdaac5d0d26db8615158a6cdbca088c2295d",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design-engine/cli.mjs",
       "target": "lib/design-engine/cli.mjs",
-      "sha256": "f32896d6b2abeaebc63ebda8c98f8fd2f2caa192bb0e1f8933fcb4c7a4dd2b3e",
+      "sha256": "eaacf3e1b2fe2c39aede89356eabf709c63256344a035cad8eb286cb97d6a170",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design-engine/daemon.mjs",
       "target": "lib/design-engine/daemon.mjs",
-      "sha256": "e8bad8963bb7a8d61165e84f8f86e7e5331104c08d8fad7a346c5dc8e7f74455",
+      "sha256": "8d47227b8c838dbbe36281e17405de4b23c358e862c293400198776ab2d94b34",
       "mode": "644"
     },
     {
@@ -67,19 +67,19 @@
     {
       "source": "packages/design/lib/design-engine/providers/claude-svg.mjs",
       "target": "lib/design-engine/providers/claude-svg.mjs",
-      "sha256": "93180de3faeb6e00ded1681cefb9c2c7c3c0d4cc1d82964eb4057cbe6905307f",
+      "sha256": "e41e8814035b1eeac2d2dcb2a55abf889a1810dfee683c003de2ab36b8be589a",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design-engine/providers/index.mjs",
       "target": "lib/design-engine/providers/index.mjs",
-      "sha256": "bdde751a7dc39cadd0b50fdc02137b768a7c3f81b2d7137a6d8691b674125ca8",
+      "sha256": "201ddc02a0f691914e64632f46f179b28e2bd21e1dd2dd8057b39c8d0df0f5dd",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design-engine/providers/openai.mjs",
       "target": "lib/design-engine/providers/openai.mjs",
-      "sha256": "e0a488d05683383517f48ed80ceb65413fdb26f2c2f82af43846d48d1ab29891",
+      "sha256": "b51e8feef72a3bf65242160a88a4a1ec35e71b655aff82d7b224b22102398283",
       "mode": "644"
     },
     {
@@ -97,7 +97,7 @@
     {
       "source": "packages/design/lib/design-engine/taste.mjs",
       "target": "lib/design-engine/taste.mjs",
-      "sha256": "551356f8f20860e8ac46d1c4e38ea3ea8123f62060d34e9c7e2ce13d6572d220",
+      "sha256": "d48c752705683542c18bed47df53a224695b215a1fb1e1fe4ae5341871e1bb0a",
       "mode": "644"
     },
     {
@@ -235,25 +235,25 @@
     {
       "source": "packages/design/lib/design/index.mjs",
       "target": "lib/design/index.mjs",
-      "sha256": "12d57d444889885ac64406ce03843b1f9cbd0248899fa56f4750bf915e2e0ebd",
+      "sha256": "411bb6494e89552d786636557ff6ed506e35f087c440ada58f6961a6e237645a",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design/interactivity.mjs",
       "target": "lib/design/interactivity.mjs",
-      "sha256": "5dc1536efeec16ead46c4060bb21f623ec3f1a2c9cf648737e0d109529b5402d",
+      "sha256": "00cf40e3f8ffb38d4a6afd6b124886ad58990fb3bdb568e2e350c0efe7bf7c1f",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design/lint.mjs",
       "target": "lib/design/lint.mjs",
-      "sha256": "07e3905d8012686d0f2cc515975b58b0a155ead0aa1c1f2c4fae49ff5471ab76",
+      "sha256": "7bfa27a0badd09659cbcc552a23c21aafc1cef83d25ae03a31e1e6844463e81b",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design/manifest.mjs",
       "target": "lib/design/manifest.mjs",
-      "sha256": "a79a495cf1ae269f14055472b60d76a2852a6611365725fd1aef035199c72cb6",
+      "sha256": "dd74368bad3315bbb75be08585f5cb5f48575040071267f3fbfee8b20151c88b",
       "mode": "644"
     },
     {
@@ -271,7 +271,7 @@
     {
       "source": "packages/design/lib/design/recommend-format.mjs",
       "target": "lib/design/recommend-format.mjs",
-      "sha256": "2e5f7e5c0c6fc3ef6d392c6ea9a5c66057bd0934026798654d1b69059cf54fac",
+      "sha256": "63acf64d0fee350039e2e5bd3300ff40c0e9647bfad398f5923fefc5985522f5",
       "mode": "644"
     },
     {
@@ -295,7 +295,7 @@
     {
       "source": "packages/design/lib/design/screens.mjs",
       "target": "lib/design/screens.mjs",
-      "sha256": "57abd5270f51c3cde1cdbfc9736a4078eb5c7c59a395fe0c3a088f67cea5f3af",
+      "sha256": "13d173eb6725a4d82ee6f441ce49b4eef3e082d1b8df835a8d0362a3ee277c62",
       "mode": "644"
     },
     {
@@ -319,7 +319,7 @@
     {
       "source": "packages/design/lib/design/tokens.mjs",
       "target": "lib/design/tokens.mjs",
-      "sha256": "cb0bbfdb4db8350c052e6a07501973fef7e38dc5fa23c5e8444423e1eaaa0903",
+      "sha256": "56f9b1cff2e083fe86ba87f6b7eac83473bb56175fd7a8b0f0a357779706c665",
       "mode": "644"
     },
     {
@@ -331,7 +331,7 @@
     {
       "source": "packages/design/lib/design/walkthrough-nav.mjs",
       "target": "lib/design/walkthrough-nav.mjs",
-      "sha256": "2dd8c4ba25f2850cf50fbd04c4d8e9e901dbc3f96e2e2da07909369427ff31a3",
+      "sha256": "5e1a28261516fdb3dea114b0d6840c1d8cf39d1c310ba63fc16c3402eb944ec2",
       "mode": "644"
     },
     {

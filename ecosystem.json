@@ -19,7 +19,7 @@
       "packages/integrations",
       "apps/dashboard"
     ],
-    "manifestDigest": "sha256:0bd8dfda8caad2197e95cceddfeee3eac3f1479e7c86575dbb8ade82ed85af87"
+    "manifestDigest": "sha256:e61e2d6bdaa4f9d0a4e6e7d8a147b7006beee126e3636c3f5ef509794c5bbc3f"
   },
   "protocol": {
     "current": "1.8.0",
@@ -137,7 +137,7 @@
   "catalogs": {
     "commands": {
       "path": "packages/protocol/registries/commands.json",
-      "digest": "sha256:0808f8efe18c7a717788ef075af330ab95694799ec6a7b355fab65a268467fbf",
+      "digest": "sha256:56d4f940bc4d8aaccb05f74774eedd8abc5878943dc15e17e3dd1ac0b6cfd0a4",
       "rootCommands": 39,
       "pipelineMachineLeaves": 31,
       "frozenClaudeDocuments": 8,

@@ -207,7 +207,7 @@ export function buildSkillSourceSchemas() {
         ],
         {
           // Component-wise monotone ceiling. A shared module or host overlay may
-          // narrow each component but never widen it; T-002 enforces the graph
+          // narrow each component but never widen it; the graph build enforces the
           // narrowing, this shape only fixes the lattice domains.
           repositoryAccess: {
             enum: ['declared-paths', 'read-only', 'none'],
@@ -250,7 +250,7 @@ export function buildSkillSourceSchemas() {
       }),
       sourceMapRange: closed(['startByte', 'endByte', 'owner'], {
         // UTF-8 byte offsets; startByte inclusive, endByte exclusive. Ordering,
-        // gap-free, non-overlapping coverage is a T-002 execution check.
+        // gap-free, non-overlapping coverage is an execution check, not a schema one.
         startByte: { type: 'integer', minimum: 0 },
         endByte: { type: 'integer', minimum: 1 },
         owner: { $ref: '#/$defs/sourceMapOwner' },

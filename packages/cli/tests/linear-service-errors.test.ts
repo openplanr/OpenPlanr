@@ -1,5 +1,5 @@
 /**
- * Error-path unit tests for `linear-service` (EPIC-004, review H2).
+ * Error-path unit tests for `linear-service`.
  *
  * These lock in three security/safety-relevant behaviors that were added
  * during the post-review hardening pass:

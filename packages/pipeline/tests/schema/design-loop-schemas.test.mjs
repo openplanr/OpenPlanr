@@ -88,7 +88,7 @@ test('design-feedback: bad intent, missing comment, unknown key all fail', () =>
   );
 });
 
-// SPEC-017: the extended collaborative shape round-trips through the schema —
+// The extended collaborative shape round-trips through the schema —
 // an authors[] roster plus per-item author / stable id / status / threaded replies.
 test('design-feedback: a full attributed collaborative record validates', () => {
   const attributed = {
@@ -144,7 +144,7 @@ test('design-feedback: a full attributed collaborative record validates', () => 
   assert.equal(validate(attributed, feedbackSchema).length, 0);
 });
 
-// SPEC-017 backward compatibility: a file from the previous (unattributed) board version —
+// Backward compatibility: a file from the previous (unattributed) board version —
 // no authors[], no per-pin id/author/status/replies — still validates so an older record
 // loads cleanly. (The board normalizes such items to "Anonymous" at load time.)
 test('design-feedback: a legacy attributed-but-id-less record fails id/author require, but a fully legacy file with attribution stays valid', () => {

@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 const root = fileURLToPath(new URL('../../../..', import.meta.url));
 const read = (path) => readFileSync(join(root, path), 'utf8');
 
-// SPEC-007's one-time extraction accounting belonged to the retired command
+// The one-time extraction accounting belonged to the retired command
 // router. Keep the legacy procedure guardrails and verify the active package's
 // authorization guidance and executable preview behavior instead of historical
 // line equality. Integrations' portable-sync/linear-failure-paths suites own

@@ -5,7 +5,7 @@
  *
  * The original v0.13.0 behavior dead-ended: it aborted preflight and told the
  * user to re-run with `--from describe`. That defeats the whole point of the
- * interactive flow (SPEC-015's "ask, don't fabricate"). The correct rule:
+ * interactive flow ("ask, don't fabricate"). The correct rule:
  *
  *   - an **interactive** run ASKS the user how to source the screens (clarify)
  *   - only a **headless** run (both `--format` and `--from` supplied, and not

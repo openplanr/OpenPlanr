@@ -43,7 +43,7 @@ export function daemonDir(env = process.env) {
   return join(planrHome(env), 'design-daemon');
 }
 
-/** Scoped .gitignore content for any engine-created artifact dir (hard rule 13). */
+/** Scoped .gitignore content for any engine-created artifact dir. */
 export const ARTIFACT_GITIGNORE = `# Written by the planr design-loop engine. Exploration artifacts are regenerable
 # and stay out of version control; only APPROVED outputs are copied into the repo.
 *

@@ -73,7 +73,7 @@ function printPreview(preview: Awaited<ReturnType<typeof previewSetup>>): void {
     display.line(`  ${diagnostic.status.toUpperCase()} ${diagnostic.message}`);
     if (diagnostic.fix) display.line(`       Fix: ${diagnostic.fix}`);
   }
-  // FR3: setup must report what it detected, what it wired, AND what it skipped and
+  // Setup must report what it detected, what it wired, AND what it skipped and
   // why — in the non-guided (flag-driven) path too, not only in the guided wizard's
   // `printRuntimeDetection`. A runtime dropped because the run defaulted to user
   // scope (`scopeIncompatibleRuntimes`) or because it is not installed

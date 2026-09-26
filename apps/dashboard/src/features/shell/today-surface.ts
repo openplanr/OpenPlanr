@@ -16,7 +16,7 @@ export type TodayPresentation = Readonly<{
 
 /**
  * Legacy payload projection is intentionally unreachable. Today now renders
- * only through the parser-branded, T-036 verified display-envelope path.
+ * only through the parser-branded, verified display-envelope path.
  */
 export function projectValidatedOperateTodaySurface(
   _value: unknown,

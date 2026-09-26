@@ -1,5 +1,5 @@
 /**
- * Taste memory (hard rule 11): per-project profile updated on BOTH approve and
+ * Taste memory: per-project profile updated on BOTH approve and
  * reject. Confidence is stored RAW; the 5%/week decay is computed AT READ TIME
  * (0.95^weeks since last_seen) and never persisted back. Conflicts between the
  * profile and a fresh brief are FLAGGED, never silently resolved.
@@ -104,7 +104,7 @@ export function updateTaste(
 }
 
 /**
- * Flag profile↔brief conflicts (hard rule 11): a high-confidence preference the
+ * Flag profile↔brief conflicts: a high-confidence preference the
  * new brief contradicts. Returns human sentences; the loop SHOWS them and asks —
  * it never silently overrides either side.
  */
