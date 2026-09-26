@@ -53,6 +53,16 @@ or an initialized `.planr/` project; setup never treats your home directory as a
 project. Existing files are backed up byte for byte under `~/.planr/backups/`, and
 only OpenPlanr-managed marker blocks are ever replaced.
 
+In Claude Code you can install the same plugin from the public OpenPlanr marketplace
+instead of `planr setup --runtime claude`. Use one path, not both:
+
+```text
+/plugin marketplace add openplanr/marketplace
+/plugin install planr@openplanr
+```
+
+Several skills call the `planr` CLI, so keep the CLI from step 1 installed.
+
 Restart the coding agent after setup so it loads the new skills.
 
 ## 3. Initialize the project
