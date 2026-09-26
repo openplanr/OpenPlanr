@@ -31,6 +31,7 @@ import {
   projectedSkillName,
   renderNamespacedSkill,
 } from './host-invocations.mjs';
+import { renderClaudePluginReadme } from './plugin-readme.mjs';
 import { resourceBytes } from './resource-bytes.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -40,10 +41,10 @@ if (!['--write', '--check'].includes(option) || process.argv.length !== 3) {
   process.exit(2);
 }
 const mode = option.slice(2);
-// Host packages ship inside the CLI package, so their manifests carry its version.
-const pluginVersion = JSON.parse(
-  readFileSync(resolve(root, 'packages/cli/package.json'), 'utf8'),
-).version;
+// Host packages ship inside the CLI package, so their manifests carry its version and links.
+const cliPackage = JSON.parse(readFileSync(resolve(root, 'packages/cli/package.json'), 'utf8'));
+const pluginVersion = cliPackage.version;
+const repositoryUrl = cliPackage.repository.url.replace(/^git\+/u, '').replace(/\.git$/u, '');
 const registry = readSkillSourceRegistry({ repoRoot: root });
 const skillIds = registry.skills.map(({ skillId }) => skillId);
 const outputs = new Map();
@@ -387,10 +388,23 @@ add(
   'dist/plugins/claude/openplanr/.claude-plugin/plugin.json',
   json({
     name: HOST_PLUGIN_NAME,
+    displayName: 'OpenPlanr',
     version: pluginVersion,
     description: 'Host-native OpenPlanr planning, delivery, review, design, and operating skills.',
     author: { name: 'AsemDevs' },
+    homepage: cliPackage.homepage,
+    repository: repositoryUrl,
     license: 'MIT',
+    keywords: ['planning', 'specification', 'delivery', 'code-review', 'design'],
+  }),
+);
+add(
+  'dist/plugins/claude/openplanr/README.md',
+  renderClaudePluginReadme({
+    repoRoot: root,
+    skillCount: skillRows.length,
+    roleCount: roleRows.length,
+    pluginVersion,
   }),
 );
 add(
