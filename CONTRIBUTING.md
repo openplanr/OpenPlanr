@@ -98,6 +98,10 @@ npm test
 npm run verify
 ```
 
+`npm run lint` is the formatting and lint gate: Biome runs from the root `biome.jsonc`
+over every workspace, and CI fails on any error it reports. `npm run lint:fix` applies
+its safe fixes and `npm run format` its formatting.
+
 In a clean verification checkout, run `git diff --exit-code HEAD --` after
 generation and after the build. Ignored local distributions may be created, but
 tracked files must reproduce without changes. During development, review and
