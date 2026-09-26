@@ -645,6 +645,8 @@ export const LABEL_EDGE_DISTANCE = 28;
 // Height of the strip at the top of a group or lane frame that holds its title;
 // the quality report reserves the same strip.
 export const CONTAINER_TITLE_BAND = 34;
+// Half the width of the strip along a container border that labels keep clear of.
+const FRAME_BORDER_HALF_WIDTH = 1;
 
 function distanceToSegment([px, py], [x1, y1], [x2, y2]) {
   const dx = x2 - x1;
@@ -836,6 +838,22 @@ function straightenRoute(points, across, source, target, { sourceShared, targetS
   return null;
 }
 
+/** The four edges of a container frame, as thin strips a label must not cross. */
+function frameBorders({ x, y, width, height }) {
+  const half = FRAME_BORDER_HALF_WIDTH;
+  return [
+    { x: x - half, y: y - half, width: width + 2 * half, height: 2 * half },
+    { x: x - half, y: y + height - half, width: width + 2 * half, height: 2 * half },
+    { x: x - half, y: y - half, width: 2 * half, height: height + 2 * half },
+    { x: x + width - half, y: y - half, width: 2 * half, height: height + 2 * half },
+  ];
+}
+
+/** Whether a label box crosses a container border instead of lying inside or outside it. */
+export function labelStraddlesFrame(label, frame) {
+  return frameBorders(frame).some((border) => rectanglesOverlap(label, border));
+}
+
 /** Each group's frame around its member boxes, before relations are routed. */
 function boxFrames(document, boxes) {
   return document.groups.flatMap((group) => {
@@ -899,15 +917,14 @@ function graphEdges(
 ) {
   const boxIndex = new Map(boxes.map((box) => [box.id, box]));
   const envelopes = boxEnvelopes(document, boxes);
-  // Labels keep off container title bands as well as nodes.
+  // Labels keep off nodes, container title bands, and container borders.
+  const containers = [...boxFrames(document, boxes).map(({ frame }) => frame), ...lanes];
   const blockers = [
     ...boxes,
-    ...[...boxFrames(document, boxes).map(({ frame }) => frame), ...lanes].map((frame) => ({
-      x: frame.x,
-      y: frame.y,
-      width: frame.width,
-      height: CONTAINER_TITLE_BAND,
-    })),
+    ...containers.flatMap((frame) => [
+      { x: frame.x, y: frame.y, width: frame.width, height: CONTAINER_TITLE_BAND },
+      ...frameBorders(frame),
+    ]),
   ];
   const envelope = (box) => envelopes.get(box.id);
   const laneOffset = (layer, framed) =>
@@ -1079,14 +1096,26 @@ function graphEdges(
               ? targetLane - label.width - LABEL_TARGET_CLEARANCE
               : targetLane + LABEL_TARGET_CLEARANCE,
         };
+        // A relation that crosses a group boundary labels only its run between
+        // the frames, so the label never sits on a frame border.
+        const dropStart = framed
+          ? sign > 0
+            ? extent(source).x + extent(source).width
+            : extent(source).x
+          : x1;
+        const approachEnd = framed
+          ? sign > 0
+            ? extent(target).x
+            : extent(target).x + extent(target).width
+          : x2;
         const onDrop = {
           ...size,
-          x: (x1 + targetLane) / 2 - label.width / 2,
+          x: (dropStart + targetLane) / 2 - label.width / 2,
           y: y1 - label.height - LABEL_TARGET_CLEARANCE,
         };
         const onApproach = {
           ...size,
-          x: (sourceLane + x2) / 2 - label.width / 2,
+          x: (sourceLane + approachEnd) / 2 - label.width / 2,
           y: y2 - label.height - LABEL_TARGET_CLEARANCE,
         };
         const dropFirst = {
@@ -1209,15 +1238,25 @@ function graphEdges(
               ? targetLane - label.height - LABEL_TARGET_CLEARANCE
               : targetLane + LABEL_TARGET_CLEARANCE,
         };
+        const dropStart = framed
+          ? sign > 0
+            ? extent(source).y + extent(source).height
+            : extent(source).y
+          : y1;
+        const approachEnd = framed
+          ? sign > 0
+            ? extent(target).y
+            : extent(target).y + extent(target).height
+          : y2;
         const onDrop = {
           ...size,
           x: x1 - label.width / 2,
-          y: (y1 + targetLane) / 2 - label.height / 2,
+          y: (dropStart + targetLane) / 2 - label.height / 2,
         };
         const onApproach = {
           ...size,
           x: x2 - label.width / 2,
-          y: (sourceLane + y2) / 2 - label.height / 2,
+          y: (sourceLane + approachEnd) / 2 - label.height / 2,
         };
         const dropFirst = {
           lane: x1,

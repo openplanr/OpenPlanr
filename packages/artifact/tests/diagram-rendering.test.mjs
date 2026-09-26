@@ -180,7 +180,11 @@ function directedRing(size, direction = 'left-right') {
   });
 }
 
-function requestLoop(direction = 'top-down', themeId = 'openplanr-default') {
+function requestLoop(
+  direction = 'top-down',
+  themeId = 'openplanr-default',
+  { stackedGroups = false } = {},
+) {
   const node = (id, label) => ({
     id,
     label,
@@ -221,9 +225,9 @@ function requestLoop(direction = 'top-down', themeId = 'openplanr-default') {
       flow('request', 'spec'),
       flow('request', 'plan'),
       flow('request', 'ship'),
-      flow('spec', 'plans', 'writes'),
-      flow('plan', 'plans', 'writes'),
-      flow('ship', 'code', 'implements'),
+      flow('spec', 'plans', stackedGroups ? 'writes\nthe spec' : 'writes'),
+      flow('plan', 'plans', stackedGroups ? 'writes\nthe plan' : 'writes'),
+      flow('ship', 'code', stackedGroups ? 'implements\none task' : 'implements'),
       flow('plans', 'cli', 'validated'),
       flow('code', 'review'),
       flow('review', 'operate'),
@@ -231,6 +235,7 @@ function requestLoop(direction = 'top-down', themeId = 'openplanr-default') {
     ],
     groups: [
       { id: 'agent', label: 'Skills your coding agent runs', members: ['spec', 'plan', 'ship'] },
+      ...(stackedGroups ? [{ id: 'repo', label: 'Repository', members: ['plans', 'code'] }] : []),
     ],
     accessibility: {
       title: 'Request loop',
@@ -1115,6 +1120,62 @@ test('a group title keeps clear of the connectors that cross its title band', ()
     assert.ok(crossings.length > 0, `${themeId}: connectors cross the band`);
     for (const x of crossings) assert.ok(x < start || x > end, `${themeId}: title over x=${x}`);
   }
+});
+
+test('a relation label that leaves a group sits clear of the group frame', () => {
+  for (const themeId of ['openplanr-default', 'openplanr']) {
+    const rendered = renderDiagramOutputs(
+      requestLoop('top-down', themeId, { stackedGroups: true }),
+    );
+    assert.equal(rendered.quality.status, 'pass', themeId);
+    const inside = (label, frame) =>
+      label.x >= frame.x &&
+      label.y >= frame.y &&
+      label.x + label.width <= frame.x + frame.width &&
+      label.y + label.height <= frame.y + frame.height;
+    const apart = (label, frame) =>
+      label.x + label.width <= frame.x ||
+      label.x >= frame.x + frame.width ||
+      label.y + label.height <= frame.y ||
+      label.y >= frame.y + frame.height;
+    for (const label of rendered.scene.labelBounds) {
+      for (const frame of rendered.scene.groups) {
+        assert.ok(
+          inside(label, frame) || apart(label, frame),
+          `${themeId}: ${label.id} straddles the ${frame.id} frame`,
+        );
+      }
+    }
+  }
+});
+
+test('quality fails a relation label that straddles a group or lane frame', () => {
+  const document = connectedFlowchart();
+  const rendered = renderDiagramOutputs(document);
+  const label = rendered.scene.labelBounds[0];
+  const report = (container) =>
+    createRenderQualityReport(document, {
+      scene: { ...rendered.scene, ...container },
+      png: rendered.png,
+      svgValidation: { ok: true, contrastRatio: 21 },
+    });
+  const check = (result) => result.checks.find(({ id }) => id === 'label-frame-overlap').status;
+  const frame = (y, height) => ({
+    id: 'frame',
+    label: 'Frame',
+    x: label.x - 40,
+    y,
+    width: label.width + 80,
+    height,
+    emphasis: null,
+  });
+  assert.equal(check(rendered.quality), 'pass');
+  const across = frame(label.y - 200, 200 + label.height / 2);
+  assert.equal(check(report({ groups: [across] })), 'fail');
+  assert.equal(report({ groups: [across] }).status, 'invalid');
+  assert.equal(check(report({ lanes: [across] })), 'fail');
+  assert.equal(check(report({ groups: [frame(label.y - 200, 300 + label.height)] })), 'pass');
+  assert.equal(check(report({ groups: [frame(label.y - 200, 190)] })), 'pass');
 });
 
 test('schema failures name the invalid field in structured diagnostics', () => {

@@ -697,7 +697,7 @@
     {
       "source": "packages/artifact/lib/artifact/diagram/rendering/layout.mjs",
       "target": "lib/artifact/diagram/rendering/layout.mjs",
-      "sha256": "9cad1a46103b4758ef6fa3d134d4e70f94c5d22296f1c434f29774d4b44d5ea9",
+      "sha256": "7b59210d2c290a01933a38a389d45db78bf3d302e7d31151569dd12fae32b55d",
       "mode": "644"
     },
     {
@@ -709,7 +709,7 @@
     {
       "source": "packages/artifact/lib/artifact/diagram/rendering/reports.mjs",
       "target": "lib/artifact/diagram/rendering/reports.mjs",
-      "sha256": "5bc5644b791485ddf208861d41546de801e185d9804feee2ad4f847d0691846a",
+      "sha256": "3efc74dd88e9bab51701b0f54096c571bafd05df5cbc4a55c79828266affce52",
       "mode": "644"
     },
     {
