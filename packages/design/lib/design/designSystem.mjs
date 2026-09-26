@@ -19,8 +19,15 @@ import { join } from 'node:path';
 export const DS_PACKAGE_FILES = ['manifest.json', 'tokens.css', 'brand.md', 'components.md'];
 
 const THEME_FILES = [
-  'globals.css', 'app/globals.css', 'src/globals.css', 'src/index.css', 'app/index.css',
-  'tailwind.config.js', 'tailwind.config.ts', 'theme.css', 'src/styles/theme.css',
+  'globals.css',
+  'app/globals.css',
+  'src/globals.css',
+  'src/index.css',
+  'app/index.css',
+  'tailwind.config.js',
+  'tailwind.config.ts',
+  'theme.css',
+  'src/styles/theme.css',
 ];
 
 /**
@@ -28,7 +35,12 @@ const THEME_FILES = [
  * tested decision core the fs resolver and the preflight gate both rely on).
  * @returns {{ found: boolean, source: 'package'|'design-md'|'theme'|'stack'|'none' }}
  */
-export function designSystemStatus({ hasPackage = false, hasDesignMd = false, hasTheme = false, hasStackTokens = false } = {}) {
+export function designSystemStatus({
+  hasPackage = false,
+  hasDesignMd = false,
+  hasTheme = false,
+  hasStackTokens = false,
+} = {}) {
   if (hasPackage) return { found: true, source: 'package' };
   if (hasDesignMd) return { found: true, source: 'design-md' };
   if (hasTheme) return { found: true, source: 'theme' };
@@ -50,11 +62,24 @@ export function resolveDesignSystem({ dir, projectRoot = '.' } = {}) {
   let hasStackTokens = false;
   try {
     const stack = readFileSync(join(projectRoot, 'input/tech/stack.md'), 'utf-8');
-    hasStackTokens = /ComponentLibrary|FrontendFramework|design ?system|tailwind|shadcn/i.test(stack);
-  } catch { /* no stack file — fine */ }
+    hasStackTokens = /ComponentLibrary|FrontendFramework|design ?system|tailwind|shadcn/i.test(
+      stack,
+    );
+  } catch {
+    /* no stack file — fine */
+  }
 
   const status = designSystemStatus({ hasPackage, hasDesignMd, hasTheme, hasStackTokens });
-  const out = { ...status, dir: dir || null, tokens: [], themes: [], fonts: [], brand: false, components: false, tokensCss: null };
+  const out = {
+    ...status,
+    dir: dir || null,
+    tokens: [],
+    themes: [],
+    fonts: [],
+    brand: false,
+    components: false,
+    tokensCss: null,
+  };
 
   if (hasPackage) {
     try {
@@ -62,7 +87,9 @@ export function resolveDesignSystem({ dir, projectRoot = '.' } = {}) {
       out.tokens = Array.isArray(m.tokens) ? m.tokens : [];
       out.themes = Array.isArray(m.themes) ? m.themes : [];
       out.fonts = Array.isArray(m.fonts) ? m.fonts : [];
-    } catch { /* malformed manifest — still report the package exists */ }
+    } catch {
+      /* malformed manifest — still report the package exists */
+    }
     out.brand = existsSync(join(dir, 'brand.md'));
     out.components = existsSync(join(dir, 'components.md'));
     out.tokensCss = existsSync(join(dir, 'tokens.css')) ? join(dir, 'tokens.css') : null;

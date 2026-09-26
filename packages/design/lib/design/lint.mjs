@@ -34,20 +34,41 @@ import { contrastRatio, AA_NORMAL } from './contrast.mjs';
 const SPACING_PROP =
   /^(padding|margin|gap|row-gap|column-gap|inset|top|right|bottom|left)(-(top|right|bottom|left|block|inline)(-(start|end))?)?$/;
 
-const SIZING_PROP = /^(width|height|min-width|min-height|max-width|max-height|padding|margin|font-size|gap)/;
+const SIZING_PROP =
+  /^(width|height|min-width|min-height|max-width|max-height|padding|margin|font-size|gap)/;
 
 // v0.18.0 token-adherence (Atlas `_adherence.oxlintrc.json` model).
-const COLOR_PROP = /^(color|background|background-color|border(-(top|right|bottom|left))?-color|outline-color|fill|stroke|caret-color|text-decoration-color)$/;
+const COLOR_PROP =
+  /^(color|background|background-color|border(-(top|right|bottom|left))?-color|outline-color|fill|stroke|caret-color|text-decoration-color)$/;
 const COLOR_LITERAL = /#[0-9a-fA-F]{3,8}\b|rgba?\([^)]*\)|oklch\([^)]*\)/gi;
 const SYSTEM_FONTS = new Set([
-  'inherit', 'initial', 'sans-serif', 'serif', 'monospace', 'system-ui', 'ui-sans-serif', 'ui-monospace',
-  'ui-serif', '-apple-system', 'blinkmacsystemfont', 'segoe ui', 'roboto', 'helvetica neue', 'helvetica',
-  'arial', 'sfmono-regular', 'sf mono', 'menlo', 'consolas', 'liberation mono', 'cursive',
+  'inherit',
+  'initial',
+  'sans-serif',
+  'serif',
+  'monospace',
+  'system-ui',
+  'ui-sans-serif',
+  'ui-monospace',
+  'ui-serif',
+  '-apple-system',
+  'blinkmacsystemfont',
+  'segoe ui',
+  'roboto',
+  'helvetica neue',
+  'helvetica',
+  'arial',
+  'sfmono-regular',
+  'sf mono',
+  'menlo',
+  'consolas',
+  'liberation mono',
+  'cursive',
 ]);
 
 /** All raw color literals used as a value (hex/rgb/oklch); [] for a var()/gradient. */
 function literalColors(value) {
-  return /gradient/i.test(value) ? [] : (value.match(COLOR_LITERAL) || []);
+  return /gradient/i.test(value) ? [] : value.match(COLOR_LITERAL) || [];
 }
 /** The first resolvable literal color in a value, or null (var/gradient/none). */
 function firstColor(value) {
@@ -57,7 +78,10 @@ function firstColor(value) {
 }
 /** First font family in a font-family/font value, lowercased + unquoted. */
 function firstFontFamily(value) {
-  const first = value.split(',')[0].trim().replace(/^["']|["']$/g, '');
+  const first = value
+    .split(',')[0]
+    .trim()
+    .replace(/^["']|["']$/g, '');
   return first ? first.toLowerCase() : null;
 }
 /** Decls grouped per block (so color + background can be paired for a contrast check). */
@@ -65,7 +89,8 @@ function declBlocks(html) {
   const blocks = [];
   for (const m of html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/gi))
     for (const b of cssDeclBlocks(m[1])) blocks.push(declsFromBlock(b));
-  for (const m of html.matchAll(/style\s*=\s*(["'])([\s\S]*?)\1/gi)) blocks.push(declsFromBlock(m[2]));
+  for (const m of html.matchAll(/style\s*=\s*(["'])([\s\S]*?)\1/gi))
+    blocks.push(declsFromBlock(m[2]));
   return blocks;
 }
 
@@ -108,8 +133,17 @@ function cssDeclBlocks(css) {
   let depth = 0;
   let buf = '';
   for (const ch of clean) {
-    if (ch === '{') { depth += 1; buf = ''; continue; }
-    if (ch === '}') { if (depth >= 1) blocks.push(buf); depth -= 1; buf = ''; continue; }
+    if (ch === '{') {
+      depth += 1;
+      buf = '';
+      continue;
+    }
+    if (ch === '}') {
+      if (depth >= 1) blocks.push(buf);
+      depth -= 1;
+      buf = '';
+      continue;
+    }
     if (depth >= 1) buf += ch;
   }
   return blocks;
@@ -183,8 +217,12 @@ export function lintDesign(html, opts = {}) {
         const onScale = scale?.length ? scale.includes(Math.abs(px)) : isOnSpacingScale(px);
         if (!onScale) {
           errors.push({
-            rule: 'spacing-off-grid', level: 'error', prop: d.prop, value: `${px}px`,
-            suggestion: `${nearestSpacing(px)}px`, where: d.where,
+            rule: 'spacing-off-grid',
+            level: 'error',
+            prop: d.prop,
+            value: `${px}px`,
+            suggestion: `${nearestSpacing(px)}px`,
+            where: d.where,
             message: `${d.prop}: ${px}px is off the 4-point grid (${d.where}) → use ${nearestSpacing(px)}px`,
           });
         }
@@ -194,7 +232,11 @@ export function lintDesign(html, opts = {}) {
     if (COLOR_PROP.test(d.prop)) {
       for (const lit of literalColors(d.value)) {
         warnings.push({
-          rule: 'color-not-token', level: 'warn', prop: d.prop, value: lit, where: d.where,
+          rule: 'color-not-token',
+          level: 'warn',
+          prop: d.prop,
+          value: lit,
+          where: d.where,
           message: `${d.prop}: ${lit} is a raw color — use a design-system token via var(--…)`,
         });
       }
@@ -205,7 +247,10 @@ export function lintDesign(html, opts = {}) {
       const allowed = new Set(designSystem.fonts.map((f) => String(f.family || '').toLowerCase()));
       if (fam && !allowed.has(fam) && !SYSTEM_FONTS.has(fam)) {
         warnings.push({
-          rule: 'font-not-token', level: 'warn', value: fam, where: d.where,
+          rule: 'font-not-token',
+          level: 'warn',
+          value: fam,
+          where: d.where,
           message: `font "${fam}" is not in the design system (${[...allowed].join(', ') || 'none'})`,
         });
       }
@@ -223,7 +268,11 @@ export function lintDesign(html, opts = {}) {
     const ratio = contrastRatio(fg, back);
     if (ratio != null && ratio < AA_NORMAL) {
       errors.push({
-        rule: 'contrast-below-aa', level: 'error', value: `${ratio.toFixed(1)}:1`, fg, bg: back,
+        rule: 'contrast-below-aa',
+        level: 'error',
+        value: `${ratio.toFixed(1)}:1`,
+        fg,
+        bg: back,
         message: `text/background contrast ${ratio.toFixed(1)}:1 is below AA 4.5:1 (${fg} on ${back})`,
       });
     }
@@ -271,7 +320,11 @@ export function lintCanvasData(data, { frames } = {}) {
 function extractCanvasData(html) {
   const m = /(?:var\s+DATA\s*=|__CANVAS_DATA\s*=)\s*(\{[\s\S]*?\})\s*;/.exec(html);
   if (!m) return null;
-  try { return JSON.parse(m[1]); } catch { return null; }
+  try {
+    return JSON.parse(m[1]);
+  } catch {
+    return null;
+  }
 }
 
 // ── CLI ────────────────────────────────────────────────────────────────────
@@ -292,7 +345,9 @@ if (isMain) {
   let emptyParsed = false;
   for (const file of files) {
     let html;
-    try { html = readFileSync(file, 'utf-8'); } catch (e) {
+    try {
+      html = readFileSync(file, 'utf-8');
+    } catch (e) {
       console.error(`✗ cannot read ${file}: ${e.message}`);
       totalErrors += 1;
       continue;
@@ -309,17 +364,21 @@ if (isMain) {
     const allErrors = [...res.errors, ...frame.errors];
     totalErrors += allErrors.length;
 
-    console.log(`\n${file} — ${res.declarations} declaration(s), ${allErrors.length} error(s), ${res.warnings.length} warning(s)`);
+    console.log(
+      `\n${file} — ${res.declarations} declaration(s), ${allErrors.length} error(s), ${res.warnings.length} warning(s)`,
+    );
     for (const e of allErrors) console.log(`  ✗ [${e.rule}] ${e.message}`);
     for (const w of res.warnings) console.log(`  ⚠ [${w.rule}] ${w.message}`);
     if (res.declarations === 0) {
       emptyParsed = true;
-      console.log(`  ⚠ [no-styles-parsed] 0 CSS declarations found — point at COMPILED CSS, or wrap raw CSS as <style>…</style>${expectStyles ? ' (fails --expect-styles)' : ''}`);
+      console.log(
+        `  ⚠ [no-styles-parsed] 0 CSS declarations found — point at COMPILED CSS, or wrap raw CSS as <style>…</style>${expectStyles ? ' (fails --expect-styles)' : ''}`,
+      );
     } else if (!allErrors.length && !res.warnings.length) {
       console.log('  ✓ clean');
     }
   }
   // Exit: 1 = real lint errors; 3 = --expect-styles but a file parsed nothing
   // (distinct so "checked nothing" can't read as a pass); 0 = clean.
-  process.exit(totalErrors ? 1 : (expectStyles && emptyParsed ? 3 : 0));
+  process.exit(totalErrors ? 1 : expectStyles && emptyParsed ? 3 : 0);
 }

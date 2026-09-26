@@ -24,7 +24,8 @@ function parseSchemaReference(name, version) {
 export function loadSchema(name, version = undefined) {
   if (typeof name === 'string' && name.includes('/')) {
     const [qualifiedVersion, qualifiedName, ...rest] = name.split('/');
-    if (rest.length > 0 || version !== undefined) throw new Error(`invalid schema reference: ${name}`);
+    if (rest.length > 0 || version !== undefined)
+      throw new Error(`invalid schema reference: ${name}`);
     return loadSchema(qualifiedName, qualifiedVersion);
   }
   const { cleanName, versions } = parseSchemaReference(name, version);
@@ -50,9 +51,7 @@ export function validate(data, schemaName, version = undefined) {
 export function assertValid(data, schemaName, version = undefined) {
   const errs = validate(data, schemaName, version);
   if (errs.length > 0) {
-    throw new Error(
-      `invalid ${schemaName}: ${errs.map((e) => `${e.path} ${e.rule}`).join('; ')}`,
-    );
+    throw new Error(`invalid ${schemaName}: ${errs.map((e) => `${e.path} ${e.rule}`).join('; ')}`);
   }
   return data;
 }

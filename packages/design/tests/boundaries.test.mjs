@@ -8,12 +8,11 @@ import { checkPackageBoundaries } from '../../../scripts/domains/boundary-check.
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
 test('Design imports only artifact, protocol, and Node built-ins', () => {
-  assert.deepEqual(checkPackageBoundaries(packageRoot, {
-    sourceDirectories: ['lib'],
-    allowedBare: [
-      /^node:/u,
-      /^@openplanr\/artifact(?:\/|$)/u,
-      /^@openplanr\/protocol(?:\/|$)/u,
-    ],
-  }), []);
+  assert.deepEqual(
+    checkPackageBoundaries(packageRoot, {
+      sourceDirectories: ['lib'],
+      allowedBare: [/^node:/u, /^@openplanr\/artifact(?:\/|$)/u, /^@openplanr\/protocol(?:\/|$)/u],
+    }),
+    [],
+  );
 });

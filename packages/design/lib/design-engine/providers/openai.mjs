@@ -44,10 +44,15 @@ export function assertImageSize(size) {
   const m = /^(\d+)x(\d+)$/.exec(String(size));
   const width = m ? Number(m[1]) : 0;
   const height = m ? Number(m[2]) : 0;
-  const valid = width > 0 && height > 0
-    && width % SIZE_STEP === 0 && height % SIZE_STEP === 0
-    && width <= SIZE_MAX_EDGE && height <= SIZE_MAX_EDGE
-    && width / height <= SIZE_MAX_ASPECT && height / width <= SIZE_MAX_ASPECT;
+  const valid =
+    width > 0 &&
+    height > 0 &&
+    width % SIZE_STEP === 0 &&
+    height % SIZE_STEP === 0 &&
+    width <= SIZE_MAX_EDGE &&
+    height <= SIZE_MAX_EDGE &&
+    width / height <= SIZE_MAX_ASPECT &&
+    height / width <= SIZE_MAX_ASPECT;
   if (!valid) {
     throw new Error(
       `invalid image size "${size}": use auto, 1024x1024, 1024x1536, 1536x1024, or WIDTHxHEIGHT ` +
@@ -118,7 +123,8 @@ export async function generateVariant(brief, opts = {}) {
     tmpDir = tmpdir(),
     readFile,
   } = opts;
-  if (!apiKey) throw new Error('openai provider requires an API key (run setup, or use claude-svg)');
+  if (!apiKey)
+    throw new Error('openai provider requires an API key (run setup, or use claude-svg)');
   assertImageSize(size);
   assertImageQuality(quality);
 
@@ -164,7 +170,10 @@ export async function iterate(session, feedbackText, opts = {}) {
 /** Vision attribute extraction for the taste profile (taste-update on a PNG). */
 export async function extractAttributes(imagePath, opts = {}) {
   const { apiKey, model = DEFAULT_MODEL, fetchImpl = fetch, readFile } = opts;
-  if (!apiKey) throw new Error('extractAttributes (openai) requires an API key — pass attributes via flags instead');
+  if (!apiKey)
+    throw new Error(
+      'extractAttributes (openai) requires an API key — pass attributes via flags instead',
+    );
   const read = readFile ?? (await import('node:fs')).readFileSync;
   const b64 = Buffer.from(read(imagePath)).toString('base64');
   const response = await callResponses(
@@ -193,7 +202,12 @@ export async function extractAttributes(imagePath, opts = {}) {
   try {
     const out = JSON.parse(m[0]);
     const arr = (v) => (Array.isArray(v) ? v.map(String) : []);
-    return { fonts: arr(out.fonts), colors: arr(out.colors), layouts: arr(out.layouts), aesthetics: arr(out.aesthetics) };
+    return {
+      fonts: arr(out.fonts),
+      colors: arr(out.colors),
+      layouts: arr(out.layouts),
+      aesthetics: arr(out.aesthetics),
+    };
   } catch {
     return { fonts: [], colors: [], layouts: [], aesthetics: [] };
   }
@@ -233,7 +247,10 @@ export async function checkQuality(imagePath, brief, opts = {}) {
   if (!m) return { pass: false, issues: ['quality check returned no parseable verdict'] };
   try {
     const verdict = JSON.parse(m[0]);
-    return { pass: Boolean(verdict.pass), issues: Array.isArray(verdict.issues) ? verdict.issues : [] };
+    return {
+      pass: Boolean(verdict.pass),
+      issues: Array.isArray(verdict.issues) ? verdict.issues : [],
+    };
   } catch {
     return { pass: false, issues: ['quality check verdict was not valid JSON'] };
   }

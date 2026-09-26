@@ -6,7 +6,21 @@ export interface DesignPlanHandoff {
   authority: 'prepare-plan';
   handoff: { id: string; version: number; contentDigest: string };
   subject: string;
-  invocations: { claudeCode: string; codex: string; chatgpt: string; cursor: string; fallback: string };
-  effects: { planningFilesWritten: false; agentDispatched: false; shipStarted: false; gitChanged: false };
+  invocations: {
+    claudeCode: string;
+    codex: string;
+    chatgpt: string;
+    cursor: string;
+    fallback: string;
+  };
+  effects: {
+    planningFilesWritten: false;
+    agentDispatched: false;
+    shipStarted: false;
+    gitChanged: false;
+  };
 }
-export declare function prepareDesignPlanHandoff(handoff: DesignImplementationHandoff, options?: { subject?: string }): Readonly<DesignPlanHandoff>;
+export declare function prepareDesignPlanHandoff(
+  handoff: DesignImplementationHandoff,
+  options?: { subject?: string },
+): Readonly<DesignPlanHandoff>;

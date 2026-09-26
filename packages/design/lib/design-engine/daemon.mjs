@@ -38,12 +38,16 @@
 import { createServer } from 'node:http';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import {
-  chmodSync, existsSync, lstatSync, mkdirSync, readFileSync, statSync, writeFileSync,
+  chmodSync,
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  readFileSync,
+  statSync,
+  writeFileSync,
 } from 'node:fs';
 import { createRequire } from 'node:module';
-import {
-  basename, dirname, extname, join, resolve,
-} from 'node:path';
+import { basename, dirname, extname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { daemonDir } from './paths.mjs';
@@ -56,14 +60,17 @@ import {
 import { MIME } from '../design/mime-types.mjs';
 import { resolveContainedRealPath, serveStaticFile } from '../design/path-util.mjs';
 import {
-  clampPin, assertValidFeedback, mergeFeedback, normalizeLegacy, isDeleteMarker,
-  artifactReviewToDesignFeedback, designFeedbackToArtifactReview,
-  FEEDBACK_FILE, PENDING_FILE,
+  clampPin,
+  assertValidFeedback,
+  mergeFeedback,
+  normalizeLegacy,
+  isDeleteMarker,
+  artifactReviewToDesignFeedback,
+  designFeedbackToArtifactReview,
+  FEEDBACK_FILE,
+  PENDING_FILE,
 } from './feedback.mjs';
-import {
-  DESIGN_BOARD_ENVELOPE_FILE,
-  DESIGN_BOARD_SOURCES_FILE,
-} from './board.mjs';
+import { DESIGN_BOARD_ENVELOPE_FILE, DESIGN_BOARD_SOURCES_FILE } from './board.mjs';
 import {
   createArtifactBridgeNonce,
   prepareArtifactDocument,
@@ -78,7 +85,10 @@ import {
 // Shared server-lifecycle primitives live in server-util.mjs (used by both this daemon and the
 // dashboard server). Re-exported here for back-compat with importers that reach for them on daemon.
 export {
-  writePidFile, readPidFile, isProcessAlive, isPortInUse,
+  writePidFile,
+  readPidFile,
+  isProcessAlive,
+  isPortInUse,
 } from './server-util.mjs';
 
 /**
@@ -103,8 +113,12 @@ function readControlToken(env = process.env) {
   const path = controlTokenPath(env);
   try {
     const entry = lstatSync(path);
-    if (!entry.isFile() || entry.isSymbolicLink()
-      || (process.platform !== 'win32' && (entry.mode & 0o077))) return null;
+    if (
+      !entry.isFile() ||
+      entry.isSymbolicLink() ||
+      (process.platform !== 'win32' && entry.mode & 0o077)
+    )
+      return null;
     const token = readFileSync(path, 'utf8').trim();
     return CONTROL_TOKEN.test(token) ? token : null;
   } catch {
@@ -127,7 +141,9 @@ function ensureControlToken(env = process.env) {
     if (error?.code !== 'EEXIST') throw error;
     const raced = readControlToken(env);
     if (raced) return raced;
-    throw new Error('The design daemon control token is invalid; remove the private daemon state before retrying.');
+    throw new Error(
+      'The design daemon control token is invalid; remove the private daemon state before retrying.',
+    );
   }
 }
 
@@ -139,7 +155,10 @@ function hasControlToken(req, token) {
 
 export function daemonControlHeaders(env = process.env) {
   const token = readControlToken(env);
-  if (!token) throw new Error('The design daemon control token is unavailable. Start the daemon before using its control API.');
+  if (!token)
+    throw new Error(
+      'The design daemon control token is unavailable. Start the daemon before using its control API.',
+    );
   return Object.freeze({ 'x-openplanr-daemon-token': token });
 }
 
@@ -148,10 +167,11 @@ const json = (res, code, body) => {
   res.end(JSON.stringify(body));
 };
 
-const readBody = (req) => readRequestBody(req, {
-  maxBytes: MAX_BODY_SIZE,
-  encoding: 'utf8',
-});
+const readBody = (req) =>
+  readRequestBody(req, {
+    maxBytes: MAX_BODY_SIZE,
+    encoding: 'utf8',
+  });
 
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const require = createRequire(import.meta.url);
@@ -184,7 +204,10 @@ export function createDaemon({ env = process.env, fetchImpl = globalThis.fetch }
     const reg = loadRegistry();
     let changed = false;
     for (const [id, dir] of Object.entries(reg)) {
-      if (!existsSync(dir) || !/--[a-f0-9]{16,}$/.test(id)) { delete reg[id]; changed = true; }
+      if (!existsSync(dir) || !/--[a-f0-9]{16,}$/.test(id)) {
+        delete reg[id];
+        changed = true;
+      }
     }
     if (changed) saveRegistry(reg);
   })();
@@ -194,7 +217,10 @@ export function createDaemon({ env = process.env, fetchImpl = globalThis.fetch }
   const mutex = new Map(); // boardId → promise chain
   const locked = (id, fn) => {
     const tail = (mutex.get(id) ?? Promise.resolve()).then(fn, fn);
-    mutex.set(id, tail.catch(() => {}));
+    mutex.set(
+      id,
+      tail.catch(() => {}),
+    );
     return tail;
   };
 
@@ -279,11 +305,19 @@ export function createDaemon({ env = process.env, fetchImpl = globalThis.fetch }
       const seen = new Set();
       const sources = [];
       for (const source of value.sources) {
-        if (!source || typeof source !== 'object' || Array.isArray(source)
-          || !artifactIds.has(source.artifactId) || seen.has(source.artifactId)
-          || !['svg', 'png', 'html'].includes(source.kind)
-          || typeof source.src !== 'string' || source.src.length < 1 || source.src.length > 512
-          || source.src.includes('\0')) continue;
+        if (
+          !source ||
+          typeof source !== 'object' ||
+          Array.isArray(source) ||
+          !artifactIds.has(source.artifactId) ||
+          seen.has(source.artifactId) ||
+          !['svg', 'png', 'html'].includes(source.kind) ||
+          typeof source.src !== 'string' ||
+          source.src.length < 1 ||
+          source.src.length > 512 ||
+          source.src.includes('\0')
+        )
+          continue;
         const expected = source.kind === 'svg' ? '.svg' : source.kind === 'png' ? '.png' : '.html';
         if (extname(source.src).toLowerCase() !== expected) continue;
         const resolved = resolveContainedRealPath(dir, source.src).realPath;
@@ -306,11 +340,21 @@ export function createDaemon({ env = process.env, fetchImpl = globalThis.fetch }
 
   const artifactReviewFor = (id, dir, envelope, stored = readStored(dir)) => {
     const feedback = stored ?? {
-      schema_version: '1.0.0', boardId: id, publishedAt: new Date(0).toISOString(),
-      regenerated: false, ratings: {}, comments: {}, authors: [], pins: [],
+      schema_version: '1.0.0',
+      boardId: id,
+      publishedAt: new Date(0).toISOString(),
+      regenerated: false,
+      ratings: {},
+      comments: {},
+      authors: [],
+      pins: [],
     };
-    const artifactIdByVariant = Object.fromEntries(envelope.artifacts.map(({ id: artifactId }) => [artifactId, artifactId]));
-    const viewportByArtifact = Object.fromEntries(envelope.artifacts.map(({ id: artifactId, viewport }) => [artifactId, viewport]));
+    const artifactIdByVariant = Object.fromEntries(
+      envelope.artifacts.map(({ id: artifactId }) => [artifactId, artifactId]),
+    );
+    const viewportByArtifact = Object.fromEntries(
+      envelope.artifacts.map(({ id: artifactId, viewport }) => [artifactId, viewport]),
+    );
     return designFeedbackToArtifactReview(feedback, {
       reviewOf: digestArtifactEnvelope(envelope),
       artifactId: envelope.viewer.activeArtifactId,
@@ -408,7 +452,7 @@ export function createDaemon({ env = process.env, fetchImpl = globalThis.fetch }
 
       if (req.method === 'POST' && url.pathname === '/api/boards') {
         if (!internal) return json(res, 403, { error: 'daemon control authentication required' });
-        const { id, dir } = JSON.parse(await readBody(req) || '{}');
+        const { id, dir } = JSON.parse((await readBody(req)) || '{}');
         if (!id || !dir) return json(res, 400, { error: 'id and dir required' });
         if (!existsSync(join(dir, 'board.html'))) {
           return json(res, 400, { error: `no board.html in ${dir}` });
@@ -475,9 +519,11 @@ export function createDaemon({ env = process.env, fetchImpl = globalThis.fetch }
           if (req.method === 'PUT' && parts[3] === 'artifact-review') {
             const envelope = readEnvelope(dir);
             if (!envelope) return json(res, 404, { error: 'artifact envelope unavailable' });
-            const value = JSON.parse(await readBody(req) || '{}');
+            const value = JSON.parse((await readBody(req)) || '{}');
             const review = value.review ?? value;
-            try { validateArtifactReview(review); } catch (error) {
+            try {
+              validateArtifactReview(review);
+            } catch (error) {
               return json(res, 400, { error: error.message });
             }
             if (review.reviewOf !== digestArtifactEnvelope(envelope)) {
@@ -501,19 +547,30 @@ export function createDaemon({ env = process.env, fetchImpl = globalThis.fetch }
               const item = byId.get(pin.id);
               if (item) presence.broadcast(id, 'feedback:update', { item });
             }
-            return json(res, 200, { ok: true, feedback, review: artifactReviewFor(id, dir, envelope, feedback) });
+            return json(res, 200, {
+              ok: true,
+              feedback,
+              review: artifactReviewFor(id, dir, envelope, feedback),
+            });
           }
           if (req.method === 'POST' && parts[3] === 'pastes') {
-            const value = JSON.parse(await readBody(req) || '{}');
+            const value = JSON.parse((await readBody(req)) || '{}');
             const allowed = ['schemaVersion', 'operation', 'iv', 'ciphertext', 'ttl'];
-            if (!value || typeof value !== 'object' || Array.isArray(value)
-              || Object.keys(value).some((key) => !allowed.includes(key))
-              || value.schemaVersion !== '1.0.0' || value.operation !== 'create'
-              || !['1d', '7d', '30d'].includes(value.ttl)
-              || typeof value.iv !== 'string' || typeof value.ciphertext !== 'string') {
+            if (
+              !value ||
+              typeof value !== 'object' ||
+              Array.isArray(value) ||
+              Object.keys(value).some((key) => !allowed.includes(key)) ||
+              value.schemaVersion !== '1.0.0' ||
+              value.operation !== 'create' ||
+              !['1d', '7d', '30d'].includes(value.ttl) ||
+              typeof value.iv !== 'string' ||
+              typeof value.ciphertext !== 'string'
+            ) {
               return json(res, 400, { error: 'invalid encrypted paste request' });
             }
-            if (typeof fetchImpl !== 'function') return json(res, 503, { error: 'share service unavailable' });
+            if (typeof fetchImpl !== 'function')
+              return json(res, 503, { error: 'share service unavailable' });
             try {
               const remote = await fetchImpl('https://share.openplanr.dev/api/v1/pastes', {
                 method: 'POST',
@@ -521,7 +578,9 @@ export function createDaemon({ env = process.env, fetchImpl = globalThis.fetch }
                 body: JSON.stringify(Object.fromEntries(allowed.map((key) => [key, value[key]]))),
                 redirect: 'error',
               });
-              const body = await remote.json().catch(() => ({ error: 'share service returned malformed JSON' }));
+              const body = await remote
+                .json()
+                .catch(() => ({ error: 'share service returned malformed JSON' }));
               return json(res, remote.ok ? 200 : remote.status, body);
             } catch {
               return json(res, 503, { error: 'share service unavailable' });
@@ -531,7 +590,11 @@ export function createDaemon({ env = process.env, fetchImpl = globalThis.fetch }
             let progress = {};
             const p = join(dir, 'progress.json');
             if (existsSync(p)) {
-              try { progress = JSON.parse(readFileSync(p, 'utf-8')); } catch { progress = { parseError: true }; }
+              try {
+                progress = JSON.parse(readFileSync(p, 'utf-8'));
+              } catch {
+                progress = { parseError: true };
+              }
             }
             return json(res, 200, { ...progress, reloadGen: reloadGen.get(id) ?? 0 });
           }
@@ -562,7 +625,8 @@ export function createDaemon({ env = process.env, fetchImpl = globalThis.fetch }
 
             // Announce the grown roster to the other clients (the joiner doesn't get its own join).
             for (const other of clients) {
-              if (other !== client) presence.write(other.res, 'presence:join', { roster: presence.roster(id) });
+              if (other !== client)
+                presence.write(other.res, 'presence:join', { roster: presence.roster(id) });
             }
 
             req.on('close', () => {
@@ -584,7 +648,7 @@ export function createDaemon({ env = process.env, fetchImpl = globalThis.fetch }
             return json(res, 200, stored ?? { authors: [], items: [] });
           }
           if (req.method === 'POST' && parts[3] === 'feedback') {
-            const body = JSON.parse(await readBody(req) || '{}');
+            const body = JSON.parse((await readBody(req)) || '{}');
             const kind = body.kind === 'pending' ? 'pending' : 'submit';
             const raw = body.feedback ?? {};
             // a contribution may carry DELETE MARKERS ({ id, author, deleted:true })
@@ -602,7 +666,10 @@ export function createDaemon({ env = process.env, fetchImpl = globalThis.fetch }
             // malformed body is rejected up front and never reaches the durable file.
             const contribution = normalizeLegacy(raw);
             // Validate a marker-free view: delete markers are deliberately not schema-shaped pins.
-            const validatable = { ...contribution, pins: (contribution.pins ?? []).filter((p) => !isDeleteMarker(p)) };
+            const validatable = {
+              ...contribution,
+              pins: (contribution.pins ?? []).filter((p) => !isDeleteMarker(p)),
+            };
             try {
               assertValidFeedback(validatable);
             } catch (e) {
@@ -646,7 +713,10 @@ export function createDaemon({ env = process.env, fetchImpl = globalThis.fetch }
             // This runs inside the POST handler so connected clients see the update within the
             // request's lifetime (~1s). No connected clients → a silent no-op.
             const mergedByKey = new Map(
-              (Array.isArray(result?.pins) ? result.pins : []).map((p) => [`${p.id} ${p.author}`, p]),
+              (Array.isArray(result?.pins) ? result.pins : []).map((p) => [
+                `${p.id} ${p.author}`,
+                p,
+              ]),
             );
             for (const cp of Array.isArray(contribution.pins) ? contribution.pins : []) {
               const item = mergedByKey.get(`${cp.id} ${cp.author}`);
@@ -662,7 +732,11 @@ export function createDaemon({ env = process.env, fetchImpl = globalThis.fetch }
         }
 
         const boardBase = `/boards/${encodeURIComponent(id)}/`;
-        if ((req.method === 'GET' || req.method === 'HEAD') && parts.length === 3 && parts[2] === 'runtime.js') {
+        if (
+          (req.method === 'GET' || req.method === 'HEAD') &&
+          parts.length === 3 &&
+          parts[2] === 'runtime.js'
+        ) {
           const nonce = bridgeNonces.get(id) ?? createArtifactBridgeNonce();
           bridgeNonces.set(id, nonce);
           const source = renderArtifactParentRuntime({
@@ -678,10 +752,14 @@ export function createDaemon({ env = process.env, fetchImpl = globalThis.fetch }
           });
           return res.end(req.method === 'HEAD' ? undefined : source);
         }
-        if ((req.method === 'GET' || req.method === 'HEAD') && parts.length === 3
-          && ['stage.js', 'design-adapter.js'].includes(parts[2])) {
+        if (
+          (req.method === 'GET' || req.method === 'HEAD') &&
+          parts.length === 3 &&
+          ['stage.js', 'design-adapter.js'].includes(parts[2])
+        ) {
           const path = parts[2] === 'stage.js' ? artifactStageRuntimePath : designBoardAdapterPath;
-          if (!existsSync(path)) return json(res, 503, { error: 'generated board runtime unavailable' });
+          if (!existsSync(path))
+            return json(res, 503, { error: 'generated board runtime unavailable' });
           const source = readFileSync(path);
           res.writeHead(200, {
             'content-type': 'text/javascript; charset=utf-8',
@@ -691,9 +769,15 @@ export function createDaemon({ env = process.env, fetchImpl = globalThis.fetch }
           });
           return res.end(req.method === 'HEAD' ? undefined : source);
         }
-        if ((req.method === 'GET' || req.method === 'HEAD') && parts.length === 4 && parts[2] === 'artifacts') {
+        if (
+          (req.method === 'GET' || req.method === 'HEAD') &&
+          parts.length === 4 &&
+          parts[2] === 'artifacts'
+        ) {
           const envelope = readEnvelope(dir);
-          const artifact = envelope?.artifacts.find(({ id: artifactId }) => artifactId === decodeURIComponent(parts[3]));
+          const artifact = envelope?.artifacts.find(
+            ({ id: artifactId }) => artifactId === decodeURIComponent(parts[3]),
+          );
           if (!artifact) return json(res, 404, { error: 'artifact unavailable' });
           const nonce = bridgeNonces.get(id) ?? createArtifactBridgeNonce();
           bridgeNonces.set(id, nonce);
@@ -717,11 +801,17 @@ export function createDaemon({ env = process.env, fetchImpl = globalThis.fetch }
           });
           return res.end(req.method === 'HEAD' ? undefined : source);
         }
-        if ((req.method === 'GET' || req.method === 'HEAD') && parts.length === 5
-          && parts[2] === 'exports' && parts[4] === 'source') {
+        if (
+          (req.method === 'GET' || req.method === 'HEAD') &&
+          parts.length === 5 &&
+          parts[2] === 'exports' &&
+          parts[4] === 'source'
+        ) {
           const artifactId = decodeURIComponent(parts[3]);
-          const source = readSources(dir).find((candidate) => candidate.artifactId === artifactId
-            && ['svg', 'png'].includes(candidate.kind));
+          const source = readSources(dir).find(
+            (candidate) =>
+              candidate.artifactId === artifactId && ['svg', 'png'].includes(candidate.kind),
+          );
           if (!source) return json(res, 404, { error: 'design source unavailable' });
           const bytes = readFileSync(source.path);
           const downloadName = `openplanr-${artifactId.replace(/[^A-Za-z0-9._-]+/g, '_')}.${source.kind}`;
@@ -772,7 +862,11 @@ export async function findRunningDaemon({ env = process.env, fetchImpl = fetch }
   const port = Number(readFileSync(portFile, 'utf-8').trim());
   if (!Number.isSafeInteger(port) || port < 1 || port > 65535) return null;
   let headers;
-  try { headers = daemonControlHeaders(env); } catch { return null; }
+  try {
+    headers = daemonControlHeaders(env);
+  } catch {
+    return null;
+  }
   try {
     const res = await fetchImpl(`http://127.0.0.1:${port}/health`, {
       headers,
@@ -781,11 +875,11 @@ export async function findRunningDaemon({ env = process.env, fetchImpl = fetch }
     if (res.ok) {
       const health = await res.json().catch(() => ({}));
       if (
-        health?.ok === true
-        && health.kind === DAEMON_KIND
-        && Number.isSafeInteger(health.pid)
-        && health.pid > 0
-        && Number.isSafeInteger(health.version)
+        health?.ok === true &&
+        health.kind === DAEMON_KIND &&
+        Number.isSafeInteger(health.pid) &&
+        health.pid > 0 &&
+        Number.isSafeInteger(health.version)
       ) {
         return {
           authenticated: true,
@@ -809,20 +903,29 @@ export async function findRunningDaemon({ env = process.env, fetchImpl = fetch }
  */
 export async function killRunningDaemon(running) {
   if (
-    !running
-    || running.authenticated !== true
-    || running.kind !== DAEMON_KIND
-    || !Number.isSafeInteger(running.pid)
-    || running.pid <= 0
-    || running.pid === process.pid
-  ) return false;
-  try { process.kill(running.pid); } catch { return false; }
+    !running ||
+    running.authenticated !== true ||
+    running.kind !== DAEMON_KIND ||
+    !Number.isSafeInteger(running.pid) ||
+    running.pid <= 0 ||
+    running.pid === process.pid
+  )
+    return false;
+  try {
+    process.kill(running.pid);
+  } catch {
+    return false;
+  }
   await new Promise((r) => setTimeout(r, 200));
   return true;
 }
 
 // CLI entry: `node daemon.mjs --serve [port]`
-if (process.argv[1] && import.meta.url.endsWith(process.argv[1].split('/').pop()) && process.argv.includes('--serve')) {
+if (
+  process.argv[1] &&
+  import.meta.url.endsWith(process.argv[1].split('/').pop()) &&
+  process.argv.includes('--serve')
+) {
   const portArg = Number(process.argv[process.argv.indexOf('--serve') + 1]) || 0;
   const daemon = createDaemon();
   daemon.listen(portArg).then((port) => {

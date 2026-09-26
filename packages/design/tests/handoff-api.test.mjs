@@ -15,44 +15,123 @@ import { designReviewPath, startDesignReview } from '../lib/design/review.mjs';
 
 async function fixture(t) {
   const root = mkdtempSync(join(tmpdir(), 'openplanr-handoff-http-'));
-  const { file, document } = designFixture(root, { count: 1, frames: [{ id: 'desktop', label: 'Desktop', width: 1440, height: 1024 }] });
-  document.brief.text = 'PRIVATE_BRIEF_MARKER'; atomicJson(file, document);
+  const { file, document } = designFixture(root, {
+    count: 1,
+    frames: [{ id: 'desktop', label: 'Desktop', width: 1440, height: 1024 }],
+  });
+  document.brief.text = 'PRIVATE_BRIEF_MARKER';
+  atomicJson(file, document);
   writeFileSync(join(root, 'unrelated-owner-material.txt'), 'UNRELATED_PRIVATE_MATERIAL');
-  const context = emptyReviewContext(document); context.brief.purpose = 'Review workspace discoverability.'; context.brief.requests = ['Is the primary action clear?'];
+  const context = emptyReviewContext(document);
+  context.brief.purpose = 'Review workspace discoverability.';
+  context.brief.requests = ['Is the primary action clear?'];
   atomicJson(join(root, 'review-context.json'), context);
   const env = { ...process.env, PLANR_HOME: join(root, 'private-test-home') };
   await renderDesignDocument(file);
-  const server = await startDesignReview(file, { env, noOpen: true, clock: () => new Date('2026-09-21T12:00:00.000Z') });
-  t.after(async () => { await server.close(); rmSync(root, { recursive: true, force: true }); });
+  const server = await startDesignReview(file, {
+    env,
+    noOpen: true,
+    clock: () => new Date('2026-09-21T12:00:00.000Z'),
+  });
+  t.after(async () => {
+    await server.close();
+    rmSync(root, { recursive: true, force: true });
+  });
   const origin = new URL(server.url).origin;
   const headers = { 'content-type': 'application/json', 'x-openplanr-design': '1', origin };
   const request = async (route, input, override = {}) => {
-    const response = await fetch(`${server.url}api/${route}`, input === undefined ? override : { method: 'POST', headers, body: JSON.stringify(input), ...override });
-    const raw = await response.text(); let value; try { value = JSON.parse(raw); } catch { value = raw; }
+    const response = await fetch(
+      `${server.url}api/${route}`,
+      input === undefined
+        ? override
+        : { method: 'POST', headers, body: JSON.stringify(input), ...override },
+    );
+    const raw = await response.text();
+    let value;
+    try {
+      value = JSON.parse(raw);
+    } catch {
+      value = raw;
+    }
     return { status: response.status, value, raw, headers: response.headers };
   };
-  const seed = ({ comment = 'Make Continue easier to find.', overall = '', reply = false } = {}) => {
-    const current = currentDesign(file), reviewOf = digestArtifactEnvelope(current.envelope);
-    const review = { schemaVersion: '1.0.0', reviewId: 'owner-local-review', reviewOf, decision: 'pending', overall, pins: [{ id: 'primary-action', artifactId: current.entries[0].artifactId,
-      author: { name: 'Morgan', id: 'morgan-one' }, comment, intent: 'improve', status: 'open', region: { x: 0.1, y: 0.2, w: 0, h: 0 }, viewport: { width: 1440, height: 1024 },
-      createdAt: '2026-09-10T10:00:00Z', updatedAt: '2026-09-10T10:00:00Z', replies: reply ? [{ id: 'reply-one', author: { name: 'Morgan', id: 'morgan-two' }, comment: 'Also consider keyboard access.', createdAt: '2026-09-10T10:01:00Z' }] : [] }] };
-    writeArtifactReviewState(designReviewPath(file, env), createReviewLedger({ artifactId: 'operations', currentReviewOf: reviewOf, reviews: [{ review, stale: false }] }));
+  const seed = ({
+    comment = 'Make Continue easier to find.',
+    overall = '',
+    reply = false,
+  } = {}) => {
+    const current = currentDesign(file),
+      reviewOf = digestArtifactEnvelope(current.envelope);
+    const review = {
+      schemaVersion: '1.0.0',
+      reviewId: 'owner-local-review',
+      reviewOf,
+      decision: 'pending',
+      overall,
+      pins: [
+        {
+          id: 'primary-action',
+          artifactId: current.entries[0].artifactId,
+          author: { name: 'Morgan', id: 'morgan-one' },
+          comment,
+          intent: 'improve',
+          status: 'open',
+          region: { x: 0.1, y: 0.2, w: 0, h: 0 },
+          viewport: { width: 1440, height: 1024 },
+          createdAt: '2026-09-10T10:00:00Z',
+          updatedAt: '2026-09-10T10:00:00Z',
+          replies: reply
+            ? [
+                {
+                  id: 'reply-one',
+                  author: { name: 'Morgan', id: 'morgan-two' },
+                  comment: 'Also consider keyboard access.',
+                  createdAt: '2026-09-10T10:01:00Z',
+                },
+              ]
+            : [],
+        },
+      ],
+    };
+    writeArtifactReviewState(
+      designReviewPath(file, env),
+      createReviewLedger({
+        artifactId: 'operations',
+        currentReviewOf: reviewOf,
+        reviews: [{ review, stale: false }],
+      }),
+    );
   };
   return { root, file, document, context, env, server, origin, headers, request, seed };
 }
 
 test('handoff HTTP endpoints require the local owner capability plus same-origin JSON write headers', async (t) => {
-  const f = await fixture(t), initial = currentDesign(f.file);
+  const f = await fixture(t),
+    initial = currentDesign(f.file);
   const input = { action: 'draft', revision: initial.revision, version: 0 };
   const studioResponse = await fetch(f.server.url);
   assert.equal(studioResponse.status, 200);
-  assert.match(studioResponse.headers.get('permissions-policy'), /(?:^|,\s*)fullscreen=\(self\)(?:,|$)/, 'Only the trusted top-level studio may present fullscreen');
+  assert.match(
+    studioResponse.headers.get('permissions-policy'),
+    /(?:^|,\s*)fullscreen=\(self\)(?:,|$)/,
+    'Only the trusted top-level studio may present fullscreen',
+  );
   await studioResponse.arrayBuffer();
-  for (const route of ['design-experience', 'design-handoff-readiness', 'design-handoff', 'design-implementation-handoff', 'design-revisions']) {
+  for (const route of [
+    'design-experience',
+    'design-handoff-readiness',
+    'design-handoff',
+    'design-implementation-handoff',
+    'design-revisions',
+  ]) {
     const url = new URL(`api/${route}`, f.server.url);
-    const segments = url.pathname.split('/'); segments[3] = 'A'.repeat(43); url.pathname = segments.join('/');
-    const denied = await fetch(url); assert.equal(denied.status, 404);
-    const body = await denied.text(); assert.doesNotMatch(body, /PRIVATE_BRIEF_MARKER|discoverability|contentHash|ownerPublicKey/);
+    const segments = url.pathname.split('/');
+    segments[3] = 'A'.repeat(43);
+    url.pathname = segments.join('/');
+    const denied = await fetch(url);
+    assert.equal(denied.status, 404);
+    const body = await denied.text();
+    assert.doesNotMatch(body, /PRIVATE_BRIEF_MARKER|discoverability|contentHash|ownerPublicKey/);
     assert.equal((await fetch(`${f.origin}/api/${route}`)).status, 404);
   }
   for (const headers of [
@@ -60,125 +139,355 @@ test('handoff HTTP endpoints require the local owner capability plus same-origin
     { 'x-openplanr-design': '1', 'content-type': 'text/plain', origin: f.origin },
     { ...f.headers, origin: 'https://outside.example' },
     { ...f.headers, origin: 'null' },
-  ]) assert.equal((await f.request('design-handoff', input, { headers })).status, 403);
+  ])
+    assert.equal((await f.request('design-handoff', input, { headers })).status, 403);
   assert.equal((await f.request('design-handoff')).value.draft, null);
   const created = await f.request('design-handoff', input);
-  assert.equal(created.status, 200); assert.equal(created.value.draft.status, 'draft');
+  assert.equal(created.status, 200);
+  assert.equal(created.value.draft.status, 'draft');
   assert.equal((await f.request('design-experience')).value.capabilities.owner, true);
 });
 
 test('HTTP handoff writers conflict, approval requires exact reviewed content, and revisions preserve approved snapshots', async (t) => {
-  const f = await fixture(t); f.seed(); const revision = currentDesign(f.file).revision;
+  const f = await fixture(t);
+  f.seed();
+  const revision = currentDesign(f.file).revision;
   let result = await f.request('design-handoff', { action: 'draft', revision, version: 0 });
   assert.equal(result.status, 200);
   const original = result.value.draft.content.openQuestions[0].text;
-  const content = structuredClone(result.value.draft.content); content.summary = 'Clarify the primary action.';
+  const content = structuredClone(result.value.draft.content);
+  content.summary = 'Clarify the primary action.';
   content.openQuestions[0].refinement = 'Use a strong primary button and a descriptive label.';
-  const writes = await Promise.all([1, 2].map(() => f.request('design-handoff', { action: 'update', revision, version: 1, content })));
-  assert.deepEqual(writes.map(value => value.status).sort(), [200, 409]);
-  result = await f.request('design-handoff'); let draft = result.value.draft;
-  assert.equal(draft.content.openQuestions[0].text, original, 'Refinement must not replace the reviewer quotation');
-  assert.equal((await f.request('design-handoff', { action: 'approve', revision, version: draft.version, contentHash: 'b'.repeat(64) })).status, 409);
-  assert.equal((await f.request('design-handoff', { action: 'approve', revision: 'b'.repeat(64), version: draft.version, contentHash: draft.contentHash })).status, 409);
-  result = await f.request('design-handoff', { action: 'approve', revision, version: draft.version, contentHash: draft.contentHash });
-  assert.equal(result.status, 200); assert.equal(result.value.current, true); assert.equal(result.value.draft.status, 'approved'); draft = result.value.draft;
-  const archive = join(f.root, '.design/handoff-approvals', `${draft.contentHash}.json`), archived = readFileSync(archive, 'utf8');
+  const writes = await Promise.all(
+    [1, 2].map(() =>
+      f.request('design-handoff', { action: 'update', revision, version: 1, content }),
+    ),
+  );
+  assert.deepEqual(writes.map((value) => value.status).sort(), [200, 409]);
+  result = await f.request('design-handoff');
+  let draft = result.value.draft;
+  assert.equal(
+    draft.content.openQuestions[0].text,
+    original,
+    'Refinement must not replace the reviewer quotation',
+  );
+  assert.equal(
+    (
+      await f.request('design-handoff', {
+        action: 'approve',
+        revision,
+        version: draft.version,
+        contentHash: 'b'.repeat(64),
+      })
+    ).status,
+    409,
+  );
+  assert.equal(
+    (
+      await f.request('design-handoff', {
+        action: 'approve',
+        revision: 'b'.repeat(64),
+        version: draft.version,
+        contentHash: draft.contentHash,
+      })
+    ).status,
+    409,
+  );
+  result = await f.request('design-handoff', {
+    action: 'approve',
+    revision,
+    version: draft.version,
+    contentHash: draft.contentHash,
+  });
+  assert.equal(result.status, 200);
+  assert.equal(result.value.current, true);
+  assert.equal(result.value.draft.status, 'approved');
+  draft = result.value.draft;
+  const archive = join(f.root, '.design/handoff-approvals', `${draft.contentHash}.json`),
+    archived = readFileSync(archive, 'utf8');
   f.seed({ overall: 'New unresolved company policy question.' });
-  result = await f.request('design-handoff'); assert.equal(result.value.current, false);
-  assert.equal((await f.request('design-handoff', { action: 'approve', revision, version: draft.version, contentHash: draft.contentHash })).status, 409);
+  result = await f.request('design-handoff');
+  assert.equal(result.value.current, false);
+  assert.equal(
+    (
+      await f.request('design-handoff', {
+        action: 'approve',
+        revision,
+        version: draft.version,
+        contentHash: draft.contentHash,
+      })
+    ).status,
+    409,
+  );
   result = await f.request('design-handoff', { action: 'draft', revision, version: draft.version });
-  assert.equal(result.status, 200); assert.equal(result.value.draft.status, 'draft'); assert.equal(readFileSync(archive, 'utf8'), archived);
+  assert.equal(result.status, 200);
+  assert.equal(result.value.draft.status, 'draft');
+  assert.equal(readFileSync(archive, 'utf8'), archived);
   assert.match(result.value.draft.markdown, /New unresolved company policy question/);
   assert.equal(readdirSync(join(f.root, '.design/handoff-approvals')).length, 1);
 });
 
 test('authenticated history returns allowlisted immutable bundles and isolated comparison sources', async (t) => {
-  const f = await fixture(t), before = currentDesign(f.file);
-  const source = join(f.root, 'source/screen-1.html'); writeFileSync(source, readFileSync(source, 'utf8').replace('12 active tasks', '13 active tasks'));
-  await renderDesignDocument(f.file); const after = currentDesign(f.file);
+  const f = await fixture(t),
+    before = currentDesign(f.file);
+  const source = join(f.root, 'source/screen-1.html');
+  writeFileSync(source, readFileSync(source, 'utf8').replace('12 active tasks', '13 active tasks'));
+  await renderDesignDocument(f.file);
+  const after = currentDesign(f.file);
   assert.notEqual(after.revision, before.revision);
-  const history = await f.request('design-revisions'); assert.equal(history.status, 200); assert.equal(history.value.revisions.length, 2);
-  const old = await f.request('design-revisions', { revision: before.revision }); assert.equal(old.status, 200);
-  const { comparisonSources, ...bundle } = old.value; assertDesignReviewBundle(bundle);
-  assert.equal(bundle.revision, before.revision); assert.match(bundle.envelope.artifacts[0].html, /12 active tasks/); assert.doesNotMatch(bundle.envelope.artifacts[0].html, /13 active tasks/);
-  assert.doesNotMatch(old.raw, /PRIVATE_BRIEF_MARKER|UNRELATED_PRIVATE_MATERIAL|ownerPrivateKey|ownerAuth|sourceDigests/);
+  const history = await f.request('design-revisions');
+  assert.equal(history.status, 200);
+  assert.equal(history.value.revisions.length, 2);
+  const old = await f.request('design-revisions', { revision: before.revision });
+  assert.equal(old.status, 200);
+  const { comparisonSources, ...bundle } = old.value;
+  assertDesignReviewBundle(bundle);
+  assert.equal(bundle.revision, before.revision);
+  assert.match(bundle.envelope.artifacts[0].html, /12 active tasks/);
+  assert.doesNotMatch(bundle.envelope.artifacts[0].html, /13 active tasks/);
+  assert.doesNotMatch(
+    old.raw,
+    /PRIVATE_BRIEF_MARKER|UNRELATED_PRIVATE_MATERIAL|ownerPrivateKey|ownerAuth|sourceDigests/,
+  );
   assert.ok(!old.raw.includes(f.root));
-  for (const html of Object.values(comparisonSources)) { assert.match(html, /Content-Security-Policy/); assert.match(html, /connect-src 'none'/); assert.match(html, /form-action 'none'/); assert.match(html, /injectedScript\?\.remove/); }
+  for (const html of Object.values(comparisonSources)) {
+    assert.match(html, /Content-Security-Policy/);
+    assert.match(html, /connect-src 'none'/);
+    assert.match(html, /form-action 'none'/);
+    assert.match(html, /injectedScript\?\.remove/);
+  }
   assert.equal(Object.keys(comparisonSources).length, before.entries.length);
-  const unauthorized = await f.request('design-revisions', { revision: before.revision }, { headers: { 'content-type': 'application/json' } }); assert.equal(unauthorized.status, 403);
+  const unauthorized = await f.request(
+    'design-revisions',
+    { revision: before.revision },
+    { headers: { 'content-type': 'application/json' } },
+  );
+  assert.equal(unauthorized.status, 403);
   for (const revision of ['../current', '../unrelated-owner-material.txt', 'not-a-revision']) {
-    const invalid = await f.request('design-revisions', { revision }); assert.equal(invalid.status, 400); assert.doesNotMatch(invalid.raw, /UNRELATED_PRIVATE_MATERIAL/);
+    const invalid = await f.request('design-revisions', { revision });
+    assert.equal(invalid.status, 400);
+    assert.doesNotMatch(invalid.raw, /UNRELATED_PRIVATE_MATERIAL/);
   }
 });
 
 test('implementation handoff endpoints compose, approve, version, compare, revoke, export, and import one exact portable package', async (t) => {
-  const f = await fixture(t), current = currentDesign(f.file);
-  const sourcePath = 'source/screen-1.html', source = readFileSync(join(f.root, sourcePath));
-  const sha = value => `sha256:${createHash('sha256').update(value).digest('hex')}`;
+  const f = await fixture(t),
+    current = currentDesign(f.file);
+  const sourcePath = 'source/screen-1.html',
+    source = readFileSync(join(f.root, sourcePath));
+  const sha = (value) => `sha256:${createHash('sha256').update(value).digest('hex')}`;
   writeFileSync(join(f.root, 'design-spec.md'), '# Complete design specification\n');
-  atomicJson(join(f.root, '.design/verification', `${current.revision}.json`), { status: 'verified', revision: current.revision });
-  let review = await f.request('design-handoff', { action: 'draft', revision: current.revision, version: 0 });
-  const reviewContent = structuredClone(review.value.draft.content); reviewContent.summary = 'The current design is ready for implementation planning.';
-  review = await f.request('design-handoff', { action: 'update', revision: current.revision, version: review.value.draft.version, content: reviewContent });
-  review = await f.request('design-handoff', { action: 'approve', revision: current.revision, version: review.value.draft.version, contentHash: review.value.draft.contentHash });
+  atomicJson(join(f.root, '.design/verification', `${current.revision}.json`), {
+    status: 'verified',
+    revision: current.revision,
+  });
+  let review = await f.request('design-handoff', {
+    action: 'draft',
+    revision: current.revision,
+    version: 0,
+  });
+  const reviewContent = structuredClone(review.value.draft.content);
+  reviewContent.summary = 'The current design is ready for implementation planning.';
+  review = await f.request('design-handoff', {
+    action: 'update',
+    revision: current.revision,
+    version: review.value.draft.version,
+    content: reviewContent,
+  });
+  review = await f.request('design-handoff', {
+    action: 'approve',
+    revision: current.revision,
+    version: review.value.draft.version,
+    contentHash: review.value.draft.contentHash,
+  });
   assert.equal(review.status, 200, JSON.stringify(review.value));
   const readiness = await f.request('design-handoff-readiness');
-  assert.equal(readiness.status, 200, JSON.stringify(readiness.value)); assert.equal(readiness.value.readiness.status, 'ready');
+  assert.equal(readiness.status, 200, JSON.stringify(readiness.value));
+  assert.equal(readiness.value.readiness.status, 'ready');
   const packageInput = {
-    id: 'operations-implementation', version: 1, title: 'Operations implementation package',
-    sources: [{ id: 'screen-one', kind: 'screen', path: sourcePath, revision: `sha256:${current.revision}`, digest: sha(source) }],
-    requirements: [{ kind: 'behavior', statement: 'Keep the operations summary visible.', sourceRefs: ['screen-one'], verification: ['The summary is visible at the desktop frame.'] }],
+    id: 'operations-implementation',
+    version: 1,
+    title: 'Operations implementation package',
+    sources: [
+      {
+        id: 'screen-one',
+        kind: 'screen',
+        path: sourcePath,
+        revision: `sha256:${current.revision}`,
+        digest: sha(source),
+      },
+    ],
+    requirements: [
+      {
+        kind: 'behavior',
+        statement: 'Keep the operations summary visible.',
+        sourceRefs: ['screen-one'],
+        verification: ['The summary is visible at the desktop frame.'],
+      },
+    ],
   };
   const initial = await f.request('design-implementation-handoff');
-  assert.equal(initial.status, 200, JSON.stringify(initial.value)); assert.equal(initial.value.draft, null); assert.equal(initial.value.approvalPreview.available, false);
+  assert.equal(initial.status, 200, JSON.stringify(initial.value));
+  assert.equal(initial.value.draft, null);
+  assert.equal(initial.value.approvalPreview.available, false);
   assert.equal(initial.value.proposal.id, 'operations-implementation');
-  assert.equal(initial.value.proposal.sources.some(source => source.kind === 'design-specification'), true);
-  assert.equal(initial.value.proposal.requirements.some(requirement => requirement.kind === 'accessibility'), true);
-  assert.equal(initial.value.proposal.sources.every(source => !source.path.startsWith('/') && !source.path.includes(f.root)), true);
-  assert.equal(initial.value.proposal.requirements.every(requirement => requirement.sourceRefs.every(reference => initial.value.proposal.sources.some(source => source.id === reference))), true);
-  assert.equal((await f.request('design-implementation-handoff', { action: 'draft', package: packageInput }, { headers: { 'content-type': 'application/json', origin: f.origin } })).status, 403);
-  let result = await f.request('design-implementation-handoff', { action: 'draft', package: packageInput });
-  assert.equal(result.status, 200); assert.equal(result.value.draft.status, 'draft');
+  assert.equal(
+    initial.value.proposal.sources.some((source) => source.kind === 'design-specification'),
+    true,
+  );
+  assert.equal(
+    initial.value.proposal.requirements.some((requirement) => requirement.kind === 'accessibility'),
+    true,
+  );
+  assert.equal(
+    initial.value.proposal.sources.every(
+      (source) => !source.path.startsWith('/') && !source.path.includes(f.root),
+    ),
+    true,
+  );
+  assert.equal(
+    initial.value.proposal.requirements.every((requirement) =>
+      requirement.sourceRefs.every((reference) =>
+        initial.value.proposal.sources.some((source) => source.id === reference),
+      ),
+    ),
+    true,
+  );
+  assert.equal(
+    (
+      await f.request(
+        'design-implementation-handoff',
+        { action: 'draft', package: packageInput },
+        { headers: { 'content-type': 'application/json', origin: f.origin } },
+      )
+    ).status,
+    403,
+  );
+  let result = await f.request('design-implementation-handoff', {
+    action: 'draft',
+    package: packageInput,
+  });
+  assert.equal(result.status, 200);
+  assert.equal(result.value.draft.status, 'draft');
   const requirementId = result.value.draft.requirements[0].id;
   assert.match(requirementId, /^REQ-[0-9]{3,}$/u);
-  assert.equal((await f.request('design-implementation-handoff')).value.draft.requirements[0].id, requirementId);
+  assert.equal(
+    (await f.request('design-implementation-handoff')).value.draft.requirements[0].id,
+    requirementId,
+  );
   const preview = (await f.request('design-implementation-handoff')).value.approvalPreview;
-  assert.equal(preview.available, true); assert.equal(preview.summary.effect, 'Prepare Plan'); assert.equal(preview.summary.requirementCount, 1); assert.doesNotMatch(JSON.stringify(preview.summary), /sha256:|contentDigest/u);
+  assert.equal(preview.available, true);
+  assert.equal(preview.summary.effect, 'Prepare Plan');
+  assert.equal(preview.summary.requirementCount, 1);
+  assert.doesNotMatch(JSON.stringify(preview.summary), /sha256:|contentDigest/u);
   result = await f.request('design-implementation-handoff', { action: 'export' });
-  assert.equal(result.status, 200); assert.match(result.value.package.markdown, new RegExp(requirementId, 'u'));
-  const imported = await f.request('design-implementation-handoff', { action: 'import', package: result.value.package });
-  assert.equal(imported.status, 200); assert.equal(imported.value.draft.contentDigest, JSON.parse(result.value.package.json).contentDigest);
-  const approveRequest = { action: 'approve', requestId: 'approve-operations-v1', expectedVersion: imported.value.draft.version, expectedContentDigest: imported.value.draft.contentDigest };
-  const approvals = await Promise.all([f.request('design-implementation-handoff', approveRequest), f.request('design-implementation-handoff', approveRequest)]);
-  assert.deepEqual(approvals.map(value => value.status), [200, 200]);
+  assert.equal(result.status, 200);
+  assert.match(result.value.package.markdown, new RegExp(requirementId, 'u'));
+  const imported = await f.request('design-implementation-handoff', {
+    action: 'import',
+    package: result.value.package,
+  });
+  assert.equal(imported.status, 200);
+  assert.equal(
+    imported.value.draft.contentDigest,
+    JSON.parse(result.value.package.json).contentDigest,
+  );
+  const approveRequest = {
+    action: 'approve',
+    requestId: 'approve-operations-v1',
+    expectedVersion: imported.value.draft.version,
+    expectedContentDigest: imported.value.draft.contentDigest,
+  };
+  const approvals = await Promise.all([
+    f.request('design-implementation-handoff', approveRequest),
+    f.request('design-implementation-handoff', approveRequest),
+  ]);
+  assert.deepEqual(
+    approvals.map((value) => value.status),
+    [200, 200],
+  );
   assert.equal(approvals[0].value.package.status, 'approved');
   assert.equal(approvals[0].value.package.approval.actorId, 'local-owner');
   assert.equal(approvals[0].value.package.approval.approvedAt, '2026-09-21T12:00:00.000Z');
   assert.equal(approvals[0].value.package.approval.authority, 'prepare-plan');
-  assert.ok(approvals.some(value => value.value.repeated === true));
+  assert.ok(approvals.some((value) => value.value.repeated === true));
   let lifecycle = await f.request('design-implementation-handoff');
-  assert.equal(lifecycle.value.history.length, 1); assert.equal(lifecycle.value.events.length, 1); assert.equal(lifecycle.value.current.status, 'approved');
-  const continuation = await f.request('design-implementation-handoff', { action: 'continue-to-plan', subject: 'SPEC-014' });
-  assert.equal(continuation.status, 200); assert.equal(continuation.value.handoff.invocations.codex, '$planr:plan SPEC-014');
+  assert.equal(lifecycle.value.history.length, 1);
+  assert.equal(lifecycle.value.events.length, 1);
+  assert.equal(lifecycle.value.current.status, 'approved');
+  const continuation = await f.request('design-implementation-handoff', {
+    action: 'continue-to-plan',
+    subject: 'SPEC-014',
+  });
+  assert.equal(continuation.status, 200);
+  assert.equal(continuation.value.handoff.invocations.codex, '$planr:plan SPEC-014');
   assert.equal(continuation.value.handoff.invocations.claudeCode, '/planr:plan SPEC-014');
-  assert.deepEqual(continuation.value.handoff.effects, { planningFilesWritten: false, agentDispatched: false, shipStarted: false, gitChanged: false });
-  assert.equal((await f.request('design-implementation-handoff', { ...approveRequest, requestId: 'stale-second-tab', expectedContentDigest: sha('stale') })).status, 409);
+  assert.deepEqual(continuation.value.handoff.effects, {
+    planningFilesWritten: false,
+    agentDispatched: false,
+    shipStarted: false,
+    gitChanged: false,
+  });
+  assert.equal(
+    (
+      await f.request('design-implementation-handoff', {
+        ...approveRequest,
+        requestId: 'stale-second-tab',
+        expectedContentDigest: sha('stale'),
+      })
+    ).status,
+    409,
+  );
 
   const regeneratedInput = structuredClone(packageInput);
-  regeneratedInput.requirements[0].statement = 'Keep the operations summary and pending count visible.';
-  const regenerated = await f.request('design-implementation-handoff', { action: 'regenerate', requestId: 'regenerate-operations-v2', package: regeneratedInput });
-  assert.equal(regenerated.status, 200, JSON.stringify(regenerated.value)); assert.equal(regenerated.value.draft.version, 2); assert.equal(regenerated.value.supersession.current.status, 'superseded');
+  regeneratedInput.requirements[0].statement =
+    'Keep the operations summary and pending count visible.';
+  const regenerated = await f.request('design-implementation-handoff', {
+    action: 'regenerate',
+    requestId: 'regenerate-operations-v2',
+    package: regeneratedInput,
+  });
+  assert.equal(regenerated.status, 200, JSON.stringify(regenerated.value));
+  assert.equal(regenerated.value.draft.version, 2);
+  assert.equal(regenerated.value.supersession.current.status, 'superseded');
   const comparison = await f.request('design-implementation-handoff', {
     action: 'compare',
-    left: { id: approvals[0].value.package.id, version: 1, contentDigest: approvals[0].value.package.contentDigest },
+    left: {
+      id: approvals[0].value.package.id,
+      version: 1,
+      contentDigest: approvals[0].value.package.contentDigest,
+    },
     right: 'draft',
   });
-  assert.equal(comparison.status, 200); assert.equal(comparison.value.comparison.changed, true);
-  const approvedV2 = await f.request('design-implementation-handoff', { action: 'approve', requestId: 'approve-operations-v2', expectedVersion: 2, expectedContentDigest: regenerated.value.draft.contentDigest });
-  assert.equal(approvedV2.status, 200); assert.equal(approvedV2.value.current.version, 2);
-  const revoked = await f.request('design-implementation-handoff', { action: 'revoke', requestId: 'revoke-operations-v2', expectedVersion: 2, expectedContentDigest: approvedV2.value.package.contentDigest, reason: 'The implementation scope changed.' });
-  assert.equal(revoked.status, 200); assert.equal(revoked.value.current.status, 'revoked');
+  assert.equal(comparison.status, 200);
+  assert.equal(comparison.value.comparison.changed, true);
+  const approvedV2 = await f.request('design-implementation-handoff', {
+    action: 'approve',
+    requestId: 'approve-operations-v2',
+    expectedVersion: 2,
+    expectedContentDigest: regenerated.value.draft.contentDigest,
+  });
+  assert.equal(approvedV2.status, 200);
+  assert.equal(approvedV2.value.current.version, 2);
+  const revoked = await f.request('design-implementation-handoff', {
+    action: 'revoke',
+    requestId: 'revoke-operations-v2',
+    expectedVersion: 2,
+    expectedContentDigest: approvedV2.value.package.contentDigest,
+    reason: 'The implementation scope changed.',
+  });
+  assert.equal(revoked.status, 200);
+  assert.equal(revoked.value.current.status, 'revoked');
   lifecycle = await f.request('design-implementation-handoff');
-  assert.equal(lifecycle.value.history.length, 2); assert.equal(lifecycle.value.current.status, 'revoked');
-  assert.equal((await f.request('design-implementation-handoff', { action: 'continue-to-plan', subject: 'SPEC-014' })).status, 409);
+  assert.equal(lifecycle.value.history.length, 2);
+  assert.equal(lifecycle.value.current.status, 'revoked');
+  assert.equal(
+    (
+      await f.request('design-implementation-handoff', {
+        action: 'continue-to-plan',
+        subject: 'SPEC-014',
+      })
+    ).status,
+    409,
+  );
 });

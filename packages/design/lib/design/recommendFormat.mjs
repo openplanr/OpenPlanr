@@ -20,8 +20,18 @@ export const DESIGN_FORMATS = Object.freeze(['prototype', 'walkthrough', 'canvas
 
 /** Words in a brief that signal exploratory (non-linear) intent. */
 export const EXPLORATORY_KEYWORDS = Object.freeze([
-  'option', 'options', 'concept', 'concepts', 'explore', 'exploration',
-  'variant', 'variants', 'moodboard', 'brainstorm', 'compare', 'comparison',
+  'option',
+  'options',
+  'concept',
+  'concepts',
+  'explore',
+  'exploration',
+  'variant',
+  'variants',
+  'moodboard',
+  'brainstorm',
+  'compare',
+  'comparison',
 ]);
 
 /**
@@ -46,13 +56,17 @@ export function recommendFormat({ screenCount = 0, intentText = '' } = {}) {
   if (n <= 2) {
     return {
       format: 'prototype',
-      reason: n === 0
-        ? 'no screens resolved yet → a single prototype page to react to'
-        : `${n} screen${n === 1 ? '' : 's'} → a single prototype page fits better than a gallery`,
+      reason:
+        n === 0
+          ? 'no screens resolved yet → a single prototype page to react to'
+          : `${n} screen${n === 1 ? '' : 's'} → a single prototype page fits better than a gallery`,
     };
   }
   if (isExploratory(intentText)) {
-    return { format: 'canvas', reason: `${n} screens + exploratory intent → an Explore board (canvas)` };
+    return {
+      format: 'canvas',
+      reason: `${n} screens + exploratory intent → an Explore board (canvas)`,
+    };
   }
   return { format: 'walkthrough', reason: `${n} screens in a flow → a click-through Walkthrough` };
 }

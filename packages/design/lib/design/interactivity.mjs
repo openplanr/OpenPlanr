@@ -42,7 +42,8 @@ export function decideThinSpec({ screenCount = 0, from = '', format = '' } = {})
   if (isHeadless({ format, from })) {
     return {
       action: 'abort',
-      reason: 'no screens and headless (both flags set, source is not describe) — cannot prompt; pass --from describe',
+      reason:
+        'no screens and headless (both flags set, source is not describe) — cannot prompt; pass --from describe',
     };
   }
   return {

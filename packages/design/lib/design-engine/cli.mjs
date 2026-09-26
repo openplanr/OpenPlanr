@@ -20,7 +20,13 @@
  */
 
 import {
-  chmodSync, copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync,
+  chmodSync,
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  writeFileSync,
 } from 'node:fs';
 import { join, resolve, basename, dirname } from 'node:path';
 import { spawn } from 'node:child_process';
@@ -28,7 +34,14 @@ import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
 
 import { resolveAuth } from './auth.mjs';
-import { credentialsPath, planrHome, projectDesignsDir, sessionDirName, tasteProfilePath, ARTIFACT_GITIGNORE } from './paths.mjs';
+import {
+  credentialsPath,
+  planrHome,
+  projectDesignsDir,
+  sessionDirName,
+  tasteProfilePath,
+  ARTIFACT_GITIGNORE,
+} from './paths.mjs';
 import { DEFAULT_PROVIDER, resolveProvider } from './providers/index.mjs';
 import * as openai from './providers/openai.mjs';
 import { sheetContract, contractInstructions, validateSheet } from './providers/claudeSvg.mjs';
@@ -39,10 +52,21 @@ import {
   renderBoardHtml,
 } from './board.mjs';
 import { createDesignBoardArtifactEnvelope } from './artifact-adapter.mjs';
-import { daemonControlHeaders, findRunningDaemon, DAEMON_VERSION, createDaemon, killRunningDaemon } from './daemon.mjs';
+import {
+  daemonControlHeaders,
+  findRunningDaemon,
+  DAEMON_VERSION,
+  createDaemon,
+  killRunningDaemon,
+} from './daemon.mjs';
 import { publicBoardId } from './board-token.mjs';
 import { loadProfile, saveProfile, updateTaste, detectConflicts } from './taste.mjs';
-import { imageDimensions, buildImageCanvasData, wrapInCanvas, discoverVariants } from './canvas-wrap.mjs';
+import {
+  imageDimensions,
+  buildImageCanvasData,
+  wrapInCanvas,
+  discoverVariants,
+} from './canvas-wrap.mjs';
 import { parseArgs } from '../design/cli-parser.mjs';
 
 const here = fileURLToPath(import.meta.url);
@@ -67,8 +91,17 @@ function materializeCanvasArtifact(sessionDir, variantId, imageFile, label) {
   try {
     const shellHtml = readFileSync(join(TEMPLATES_DIR, 'canvas-shell.html'), 'utf8');
     const dims = imageDimensions(join(sessionDir, imageFile));
-    const data = buildImageCanvasData({ variantId, label, src: imageFile, width: dims.width, height: dims.height });
-    writeFileSync(join(sessionDir, `variant-${variantId}.html`), wrapInCanvas({ shellHtml, data, title: label }));
+    const data = buildImageCanvasData({
+      variantId,
+      label,
+      src: imageFile,
+      width: dims.width,
+      height: dims.height,
+    });
+    writeFileSync(
+      join(sessionDir, `variant-${variantId}.html`),
+      wrapInCanvas({ shellHtml, data, title: label }),
+    );
     const vendorDir = join(sessionDir, 'vendor');
     mkdirSync(vendorDir, { recursive: true });
     for (const f of CANVAS_VENDOR) {
@@ -76,14 +109,19 @@ function materializeCanvasArtifact(sessionDir, variantId, imageFile, label) {
       if (!existsSync(dest)) copyFileSync(join(TEMPLATES_DIR, 'vendor', f), dest);
     }
   } catch (e) {
-    errLine(`⚠ canvas wrap skipped for variant ${variantId} (${e.message}) — board shows the bare image`);
+    errLine(
+      `⚠ canvas wrap skipped for variant ${variantId} (${e.message}) — board shows the bare image`,
+    );
   }
 }
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 const out = (obj) => process.stdout.write(`${JSON.stringify(obj, null, 2)}\n`);
 const errLine = (s) => process.stderr.write(`${s}\n`);
-const fail = (msg, code = 1) => { errLine(`✗ ${msg}`); process.exit(code); };
+const fail = (msg, code = 1) => {
+  errLine(`✗ ${msg}`);
+  process.exit(code);
+};
 
 function ensureArtifactDir(dir) {
   mkdirSync(dir, { recursive: true });
@@ -122,12 +160,16 @@ function openaiOptions(args, apiKey) {
 // opt-in as generation: a resolved key alone never selects openai.
 function requireOpenAIOptIn(args, what, alternative) {
   if (args.provider !== 'openai') {
-    fail(`${what} calls OpenAI (billed to your OpenAI account) — pass --provider openai to opt in, or ${alternative}`);
+    fail(
+      `${what} calls OpenAI (billed to your OpenAI account) — pass --provider openai to opt in, or ${alternative}`,
+    );
   }
   const auth = resolveAuth({ cwd: process.cwd() });
   for (const w of auth.warnings) errLine(`⚠ ${w}`);
   if (!auth.apiKey) {
-    fail('--provider openai needs an API key: run `planr-design setup` (stores it with mode 0600) or export OPENAI_API_KEY');
+    fail(
+      '--provider openai needs an API key: run `planr-design setup` (stores it with mode 0600) or export OPENAI_API_KEY',
+    );
   }
   return auth;
 }
@@ -152,21 +194,34 @@ async function promptHidden(question) {
 // ── commands ────────────────────────────────────────────────────────────────
 
 async function cmdSetup(args) {
-  const key = args.key ? String(args.key) : await promptHidden('Paste your OpenAI API key (input hidden):');
+  const key = args.key
+    ? String(args.key)
+    : await promptHidden('Paste your OpenAI API key (input hidden):');
   if (!key || !key.startsWith('sk-')) fail('that does not look like an OpenAI key (sk-…)');
 
   const credsFile = credentialsPath();
   mkdirSync(planrHome(), { recursive: true });
   let creds = {};
-  if (existsSync(credsFile)) { try { creds = JSON.parse(readFileSync(credsFile, 'utf-8')); } catch { creds = {}; } }
+  if (existsSync(credsFile)) {
+    try {
+      creds = JSON.parse(readFileSync(credsFile, 'utf-8'));
+    } catch {
+      creds = {};
+    }
+  }
   creds.openai_api_key = key;
   writeFileSync(credsFile, `${JSON.stringify(creds, null, 2)}\n`);
   chmodSync(credsFile, 0o600);
   errLine(`✓ key stored in ${credsFile} (0600). It will never be echoed.`);
 
-  if (args['no-smoke']) { out({ ok: true, stored: true, smoke: 'skipped' }); return; }
+  if (args['no-smoke']) {
+    out({ ok: true, stored: true, smoke: 'skipped' });
+    return;
+  }
 
-  errLine('Running a real smoke generation (one 1024x1024 low-quality image, billed to your OpenAI account) so you see the key work before a full run…');
+  errLine(
+    'Running a real smoke generation (one 1024x1024 low-quality image, billed to your OpenAI account) so you see the key work before a full run…',
+  );
   const t0 = Date.now();
   const smokeDir = ensureArtifactDir(join(projectDesignsDir('_smoke'), sessionDirName('smoke')));
   const { imagePath, responseId, bytes } = await openai.generateVariant(
@@ -175,7 +230,12 @@ async function cmdSetup(args) {
   );
   const outputPath = join(smokeDir, 'smoke.png');
   copyFileSync(imagePath, outputPath); // tmp → final (hard rule 5)
-  let session = createSession({ id: 'smoke', provider: 'openai', target: 'smoke', brief: 'smoke test' });
+  let session = createSession({
+    id: 'smoke',
+    provider: 'openai',
+    target: 'smoke',
+    brief: 'smoke test',
+  });
   session = appendRound(session, { outputPath, responseId });
   saveSession(smokeDir, 'smoke', session);
   const proof = {
@@ -219,7 +279,8 @@ async function cmdDoctor(args) {
     dryRun: { provider: 'claude-svg', pass: dryRun.pass, issues: dryRun.issues, cost: '$0' },
     home: planrHome(),
   };
-  if (args.json) process.stdout.write(`${JSON.stringify(report)}\n`); else out(report);
+  if (args.json) process.stdout.write(`${JSON.stringify(report)}\n`);
+  else out(report);
 }
 
 async function cmdGenerate(args) {
@@ -229,11 +290,16 @@ async function cmdGenerate(args) {
   const sessionDir = resolveSessionDir(args);
   const auth = resolveAuth({ cwd: process.cwd() });
   for (const w of auth.warnings) errLine(`⚠ ${w}`);
-  const { name, provider, degraded, reason } = resolveProvider({ requested: args.provider || 'auto', auth });
+  const { name, provider, degraded, reason } = resolveProvider({
+    requested: args.provider || 'auto',
+    auth,
+  });
   if (degraded) errLine(`provider: ${name} (${reason})`);
   // claude-svg authors from the brief alone; a reference image would otherwise be dropped silently.
   if (name === 'claude-svg' && args['from-image']) {
-    fail('a reference image (--from / --from-image) needs the openai provider — pass --provider openai (billed to your OpenAI account), or drop the image and let claude-svg author from the brief');
+    fail(
+      'a reference image (--from / --from-image) needs the openai provider — pass --provider openai (billed to your OpenAI account), or drop the image and let claude-svg author from the brief',
+    );
   }
 
   if (name === 'claude-svg') {
@@ -263,12 +329,27 @@ async function cmdGenerate(args) {
   // render the variant onto the real DesignCanvas (board shows it pannable)
   materializeCanvasArtifact(sessionDir, variant, `variant-${variant}.png`, target);
 
-  let session = loadSession(sessionDir, variant)
-    ?? createSession({ id: `${basename(sessionDir)}-${variant}`, provider: name, target, project: args.project || '', brief });
+  let session =
+    loadSession(sessionDir, variant) ??
+    createSession({
+      id: `${basename(sessionDir)}-${variant}`,
+      provider: name,
+      target,
+      project: args.project || '',
+      brief,
+    });
   session = appendRound(session, { outputPath, responseId, brief });
   saveSession(sessionDir, variant, session);
 
-  out({ ok: true, provider: name, variant, outputPath, responseId, bytes, elapsed: `${((Date.now() - t0) / 1000).toFixed(1)}s` });
+  out({
+    ok: true,
+    provider: name,
+    variant,
+    outputPath,
+    responseId,
+    bytes,
+    elapsed: `${((Date.now() - t0) / 1000).toFixed(1)}s`,
+  });
 }
 
 async function cmdVariants(args) {
@@ -280,7 +361,12 @@ async function cmdVariants(args) {
       await cmdGenerate({ ...args, variant });
       results.push({ variant, ok: true });
     } catch (e) {
-      results.push({ variant, ok: false, error: e.message, rateLimited: e.code === 'RATE_LIMITED' });
+      results.push({
+        variant,
+        ok: false,
+        error: e.message,
+        rateLimited: e.code === 'RATE_LIMITED',
+      });
     }
   }
   out({ ok: results.every((r) => r.ok), results });
@@ -295,7 +381,8 @@ async function cmdIterate(args) {
   const variant = String(args.variant || 'A');
   const feedback = args.feedback || fail('--feedback required');
   const sessionDir = resolveSessionDir(args);
-  const session = loadSession(sessionDir, variant) ?? fail(`no session-${variant}.json in ${sessionDir}`);
+  const session =
+    loadSession(sessionDir, variant) ?? fail(`no session-${variant}.json in ${sessionDir}`);
 
   if (session.provider === 'claude-svg') {
     // The agent edits the SVG itself; the engine records the round for lineage.
@@ -316,9 +403,15 @@ async function cmdIterate(args) {
   const auth = resolveAuth({ cwd: process.cwd() });
   for (const w of auth.warnings) errLine(`⚠ ${w}`);
   if (!auth.apiKey) {
-    fail('iterate on an openai session needs the API key that created it (billed to your OpenAI account): run `planr-design setup` or export OPENAI_API_KEY');
+    fail(
+      'iterate on an openai session needs the API key that created it (billed to your OpenAI account): run `planr-design setup` or export OPENAI_API_KEY',
+    );
   }
-  const { imagePath, responseId, bytes } = await openai.iterate(session, feedback, openaiOptions(args, auth.apiKey));
+  const { imagePath, responseId, bytes } = await openai.iterate(
+    session,
+    feedback,
+    openaiOptions(args, auth.apiKey),
+  );
   const round = session.outputPaths.length + 1;
   const outputPath = join(sessionDir, `variant-${variant}-v${round}.png`);
   copyFileSync(imagePath, outputPath);
@@ -358,10 +451,18 @@ async function cmdRecord(args) {
   // (re)render the variant onto the real DesignCanvas so the board shows it pannable.
   // The board's stage shows the canonical `variant-{X}.svg` (edited in place on iterate);
   // re-wrap it so the canvas reflects the latest round.
-  const mainImage = [`variant-${variant}.svg`, `variant-${variant}.png`].find((f) => existsSync(join(sessionDir, f)))
-    || basename(resolve(file));
+  const mainImage =
+    [`variant-${variant}.svg`, `variant-${variant}.png`].find((f) =>
+      existsSync(join(sessionDir, f)),
+    ) || basename(resolve(file));
   materializeCanvasArtifact(sessionDir, variant, mainImage, session.target);
-  out({ ok: true, provider: 'claude-svg', variant, rounds: session.outputPaths.length, sessionFile: join(sessionDir, `session-${variant}.json`) });
+  out({
+    ok: true,
+    provider: 'claude-svg',
+    variant,
+    rounds: session.outputPaths.length,
+    sessionFile: join(sessionDir, `session-${variant}.json`),
+  });
 }
 
 async function cmdCheck(args) {
@@ -375,7 +476,10 @@ async function cmdCheck(args) {
   }
   const brief = args.brief || fail('--brief required for image checks');
   const auth = requireOpenAIOptIn(args, 'an image quality check', 'check an svg ($0)');
-  const verdict = await openai.checkQuality(file, brief, { apiKey: auth.apiKey, model: stringFlag(args, 'model') });
+  const verdict = await openai.checkQuality(file, brief, {
+    apiKey: auth.apiKey,
+    model: stringFlag(args, 'model'),
+  });
   out({ ok: true, provider: 'openai', ...verdict });
   process.exitCode = verdict.pass ? 0 : 2;
 }
@@ -389,14 +493,20 @@ async function ensureDaemon() {
   // outlives the agent; we only recycle it across a version change.)
   await killRunningDaemon(running);
   const daemonPath = join(here, '..', 'daemon.mjs');
-  const child = spawn(process.execPath, [daemonPath, '--serve'], { detached: true, stdio: ['ignore', 'ignore', 'pipe'] });
+  const child = spawn(process.execPath, [daemonPath, '--serve'], {
+    detached: true,
+    stdio: ['ignore', 'ignore', 'pipe'],
+  });
   const port = await new Promise((resolvePort, reject) => {
     let buf = '';
     const timer = setTimeout(() => reject(new Error('daemon did not start within 5s')), 5000);
     child.stderr.on('data', (c) => {
       buf += c;
       const m = buf.match(/DAEMON_PORT: (\d+)/);
-      if (m) { clearTimeout(timer); resolvePort(Number(m[1])); }
+      if (m) {
+        clearTimeout(timer);
+        resolvePort(Number(m[1]));
+      }
     });
   });
   child.stderr.destroy();
@@ -448,8 +558,9 @@ async function cmdBoard(args) {
   if (args.variants) {
     variants = JSON.parse(args.variants);
   } else if (mode === 'review') {
-    const artifact = ['finalized.html', 'canvas.html'].find((f) => existsSync(join(dir, f)))
-      ?? fail(`no finalized.html / canvas.html in ${dir}`);
+    const artifact =
+      ['finalized.html', 'canvas.html'].find((f) => existsSync(join(dir, f))) ??
+      fail(`no finalized.html / canvas.html in ${dir}`);
     variants = [{ id: 'artifact', label: artifact, src: artifact, type: 'html' }];
   } else {
     // One stage artifact per variant letter, preferring the canvas wrapper
@@ -462,7 +573,11 @@ async function cmdBoard(args) {
   let feedback;
   const feedbackPath = join(dir, 'feedback.json');
   if (existsSync(feedbackPath)) {
-    try { feedback = JSON.parse(readFileSync(feedbackPath, 'utf8')); } catch { /* daemon exposes the invalid record */ }
+    try {
+      feedback = JSON.parse(readFileSync(feedbackPath, 'utf8'));
+    } catch {
+      /* daemon exposes the invalid record */
+    }
   }
   const envelope = await createDesignBoardArtifactEnvelope({
     sessionDir: dir,
@@ -471,13 +586,17 @@ async function cmdBoard(args) {
     title,
     feedback,
   });
-  writeFileSync(join(dir, DESIGN_BOARD_ENVELOPE_FILE), `${JSON.stringify(envelope)}\n`, { mode: 0o600 });
+  writeFileSync(join(dir, DESIGN_BOARD_ENVELOPE_FILE), `${JSON.stringify(envelope)}\n`, {
+    mode: 0o600,
+  });
   const sources = variants.map((variant) => {
     const direct = /\.(?:svg|png)$/i.test(variant.src) ? variant.src : null;
-    const original = direct ?? [
-      `variant-${variant.id}.svg`,
-      `variant-${variant.id}.png`,
-    ].find((name) => existsSync(join(dir, name))) ?? variant.src;
+    const original =
+      direct ??
+      [`variant-${variant.id}.svg`, `variant-${variant.id}.png`].find((name) =>
+        existsSync(join(dir, name)),
+      ) ??
+      variant.src;
     return {
       artifactId: variant.id,
       src: original,
@@ -489,7 +608,10 @@ async function cmdBoard(args) {
     `${JSON.stringify({ schemaVersion: '1.0.0', sources }, null, 2)}\n`,
     { mode: 0o600 },
   );
-  writeFileSync(join(dir, 'board.html'), renderBoardHtml({ boardId: id, title, mode, variants, envelope }));
+  writeFileSync(
+    join(dir, 'board.html'),
+    renderBoardHtml({ boardId: id, title, mode, variants, envelope }),
+  );
   const port = await ensureDaemon();
   const reg = await fetch(`http://127.0.0.1:${port}/api/boards`, {
     method: 'POST',
@@ -519,22 +641,32 @@ async function cmdFeedback(args) {
   const slug = String(args.id || basename(dir));
   const id = publicBoardId(slug, dir); // reuses the board's existing capability token
 
-  const targeted = typeof args.pins === 'string'
-    ? args.pins.split(',').map((s) => s.trim()).filter(Boolean) : null;
+  const targeted =
+    typeof args.pins === 'string'
+      ? args.pins
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : null;
   const allOpen = Boolean(args['all-open']);
   if (targeted && allOpen) fail('feedback resolve: pass --pins OR --all-open, not both');
   if (!targeted && !allOpen) fail('feedback resolve: pass --pins <id,…> or --all-open');
 
   const running = await findRunningDaemon();
   if (!running) {
-    fail('feedback resolve: no board daemon running — start one (`cli.mjs daemon --serve`) and re-serve the board first');
+    fail(
+      'feedback resolve: no board daemon running — start one (`cli.mjs daemon --serve`) and re-serve the board first',
+    );
   }
   const base = `http://127.0.0.1:${running.port}/boards/${encodeURIComponent(id)}/api/feedback`;
 
   // GET the durable record so id + author (the merge key) come straight from the store.
   const controlHeaders = daemonControlHeaders();
-  const stored = await fetch(base, { headers: controlHeaders }).then((r) => r.json()).catch(() => null);
-  if (!stored) fail(`feedback resolve: could not read feedback for board "${id}" (is it registered?)`);
+  const stored = await fetch(base, { headers: controlHeaders })
+    .then((r) => r.json())
+    .catch(() => null);
+  if (!stored)
+    fail(`feedback resolve: could not read feedback for board "${id}" (is it registered?)`);
   const pins = Array.isArray(stored.pins) ? stored.pins : [];
 
   const candidates = targeted ? pins.filter((p) => targeted.includes(p.id)) : pins;
@@ -544,7 +676,9 @@ async function cmdFeedback(args) {
   const alreadyResolved = candidates.filter((p) => p.status === 'resolved').map((p) => p.id);
 
   if (toResolve.length) {
-    const authors = [...new Set(toResolve.map((p) => p.author).filter(Boolean))].map((name) => ({ name }));
+    const authors = [...new Set(toResolve.map((p) => p.author).filter(Boolean))].map((name) => ({
+      name,
+    }));
     const contribution = {
       schema_version: '1.0.0',
       boardId: id,
@@ -559,9 +693,11 @@ async function cmdFeedback(args) {
       method: 'POST',
       headers: { 'content-type': 'application/json', ...controlHeaders },
       body: JSON.stringify({ kind: 'submit', feedback: contribution }),
-    }).then((r) => r.json().then((b) => ({ ok: r.ok, error: b && b.error })))
+    })
+      .then((r) => r.json().then((b) => ({ ok: r.ok, error: b && b.error })))
       .catch((e) => ({ ok: false, error: String(e?.message ?? e) }));
-    if (!res.ok || res.error) fail(`feedback resolve: daemon rejected the update — ${res.error || 'request failed'}`);
+    if (!res.ok || res.error)
+      fail(`feedback resolve: daemon rejected the update — ${res.error || 'request failed'}`);
   }
 
   out({ ok: true, boardId: id, resolved: toResolve.map((p) => p.id), alreadyResolved, missing });
@@ -587,7 +723,8 @@ async function cmdTaste(args) {
   }
 
   if (sub === 'approved' || sub === 'rejected') {
-    const artifact = args._[2] || fail(`usage: taste ${sub} <artifact> --project <p> [--fonts a,b …]`);
+    const artifact =
+      args._[2] || fail(`usage: taste ${sub} <artifact> --project <p> [--fonts a,b …]`);
     let attributes = {
       fonts: (args.fonts || '').split(',').filter(Boolean),
       colors: (args.colors || '').split(',').filter(Boolean),
@@ -596,12 +733,24 @@ async function cmdTaste(args) {
     };
     const flagged = Object.values(attributes).some((a) => a.length > 0);
     if (!flagged && artifact.endsWith('.png')) {
-      const auth = requireOpenAIOptIn(args, 'vision attribute extraction', 'pass --fonts/--colors/--layouts/--aesthetics');
+      const auth = requireOpenAIOptIn(
+        args,
+        'vision attribute extraction',
+        'pass --fonts/--colors/--layouts/--aesthetics',
+      );
       errLine('no attribute flags — vision-extracting from the PNG…');
-      attributes = await openai.extractAttributes(artifact, { apiKey: auth.apiKey, model: stringFlag(args, 'model') });
+      attributes = await openai.extractAttributes(artifact, {
+        apiKey: auth.apiKey,
+        model: stringFlag(args, 'model'),
+      });
     }
     const profile = loadProfile(path);
-    const next = updateTaste(profile, { verdict: sub, attributes, sessionId: args.session || basename(artifact), artifact });
+    const next = updateTaste(profile, {
+      verdict: sub,
+      attributes,
+      sessionId: args.session || basename(artifact),
+      artifact,
+    });
     saveProfile(path, next);
     out({ ok: true, verdict: sub, attributes, path });
     return;

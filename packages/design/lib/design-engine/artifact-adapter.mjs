@@ -19,10 +19,7 @@ import {
 import { basename, extname, isAbsolute, join, resolve } from 'node:path';
 
 import { bundleArtifact } from '@openplanr/artifact/bundle.mjs';
-import {
-  createArtifactEnvelope,
-  digestArtifactEnvelope,
-} from '@openplanr/artifact/envelope.mjs';
+import { createArtifactEnvelope, digestArtifactEnvelope } from '@openplanr/artifact/envelope.mjs';
 import { escapeHtml } from '../design/escape.mjs';
 import { ARTIFACT_ERROR_CODES, PipelineError } from '@openplanr/protocol/errors';
 import { discoverVariants, imageDimensions } from './canvas-wrap.mjs';
@@ -98,13 +95,17 @@ function assertShareSafeMetadata(value, label, root, sensitiveValues = []) {
   if (inspected.length > 512) {
     throw adapterError(ARTIFACT_ERROR_CODES.INPUT_INVALID, `${label} exceeds 512 characters.`);
   }
-  const containsMachinePath = inspected.includes(root)
-    || /(?:^|[^A-Za-z0-9._-])\/(?:Users|home|private|Volumes)\/[A-Za-z0-9._-]+\//.test(inspected)
-    || /[A-Za-z]:\\(?:Users|Documents and Settings)\\/i.test(inspected);
-  const containsRemote = /(?:git@|ssh:\/\/|git(?:\+ssh)?:\/\/)[^\s"']+|https?:\/\/[^\s"']+\.git(?:\b|$)/i.test(inspected);
-  const containsSensitiveValue = sensitiveValues.some((item) => (
-    typeof item === 'string' && item.length >= 4 && inspected.includes(item)
-  ));
+  const containsMachinePath =
+    inspected.includes(root) ||
+    /(?:^|[^A-Za-z0-9._-])\/(?:Users|home|private|Volumes)\/[A-Za-z0-9._-]+\//.test(inspected) ||
+    /[A-Za-z]:\\(?:Users|Documents and Settings)\\/i.test(inspected);
+  const containsRemote =
+    /(?:git@|ssh:\/\/|git(?:\+ssh)?:\/\/)[^\s"']+|https?:\/\/[^\s"']+\.git(?:\b|$)/i.test(
+      inspected,
+    );
+  const containsSensitiveValue = sensitiveValues.some(
+    (item) => typeof item === 'string' && item.length >= 4 && inspected.includes(item),
+  );
   if (containsMachinePath || containsRemote || containsSensitiveValue) {
     throw adapterError(
       ARTIFACT_ERROR_CODES.REDACTION,
@@ -231,14 +232,11 @@ export function resolveDesignBoardVariants({
     );
   }
 
-  const resolvedVariants = sources.map((variant, index) => (
-    normalizeVariant(variant, index, root, sensitiveValues)
-  ));
+  const resolvedVariants = sources.map((variant, index) =>
+    normalizeVariant(variant, index, root, sensitiveValues),
+  );
   if (new Set(resolvedVariants.map(({ id }) => id)).size !== resolvedVariants.length) {
-    throw adapterError(
-      ARTIFACT_ERROR_CODES.INPUT_INVALID,
-      'Design variant ids must be unique.',
-    );
+    throw adapterError(ARTIFACT_ERROR_CODES.INPUT_INVALID, 'Design variant ids must be unique.');
   }
   return { mode: normalizedMode, variants: resolvedVariants };
 }
@@ -303,12 +301,18 @@ export async function bundleDesignBoardVariants({
   sensitiveValues = [],
 } = {}) {
   const root = resolveSessionRoot(sessionDir);
-  const resolved = resolveDesignBoardVariants({ sessionDir: root, mode, variants, sensitiveValues });
+  const resolved = resolveDesignBoardVariants({
+    sessionDir: root,
+    mode,
+    variants,
+    sensitiveValues,
+  });
   const fileLimit = normalizeLimit(maxFiles, DESIGN_BOARD_MAX_FILES, 'maxFiles');
   const byteLimit = normalizeLimit(maxBytes, DESIGN_BOARD_MAX_BYTES, 'maxBytes');
-  const reviewTitle = title === undefined
-    ? undefined
-    : assertShareSafeMetadata(String(title), 'Design review title', root, sensitiveValues);
+  const reviewTitle =
+    title === undefined
+      ? undefined
+      : assertShareSafeMetadata(String(title), 'Design review title', root, sensitiveValues);
 
   let fileCount = 0;
   let inputBytes = 0;
@@ -381,7 +385,8 @@ export async function createDesignBoardArtifactEnvelope(options = {}) {
   const bundled = await bundleDesignBoardVariants(options);
   const activeArtifactId = options.activeArtifactId ?? bundled.artifacts[0].id;
   const viewer = {
-    mode: bundled.mode === 'review' ? 'single' : (bundled.artifacts.length > 1 ? 'variants' : 'single'),
+    mode:
+      bundled.mode === 'review' ? 'single' : bundled.artifacts.length > 1 ? 'variants' : 'single',
     activeArtifactId,
     presentation: 'canvas',
   };
