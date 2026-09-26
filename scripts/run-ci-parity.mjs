@@ -20,6 +20,7 @@ const JOBS = [
       ['npm', ['run', 'check:boundaries']],
       ['npm', ['run', 'check:docs']],
       ['npm', ['run', 'lint']],
+      ['npm', ['run', 'typecheck:declarations']],
       ['npm', ['run', 'build']],
       ['git', ['diff', '--exit-code', 'HEAD', '--']],
       ['npm', ['run', 'check:diagrams']],

@@ -50,6 +50,8 @@ jobs:
         run: npm run check:docs
       - name: Lint every participating workspace
         run: npm run lint
+      - name: Type-check the hand-written declarations against their modules
+        run: npm run typecheck:declarations
       - name: Build in dependency order without tracked drift
         run: |
           npm run build

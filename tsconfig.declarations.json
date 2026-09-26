@@ -1,0 +1,29 @@
+{
+  // Checks the hand-written .d.mts declarations against the .mjs they describe.
+  // Only *.mjs are included: a .d.mts matched beside its .mjs would replace it as
+  // the program root and leave the implementation unchecked. Files opt in with
+  // `// @ts-check`. Exports bind to their declaration with
+  // `@type {typeof import('./x.d.mts').name}`, so the body is checked against the
+  // declared signature; a validator whose declared input is `unknown` and whose
+  // body duck-types it binds its result with `@returns {ReturnType<...>}` instead.
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": false,
+    "noEmit": true,
+    "strict": true,
+    "noImplicitAny": false,
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["node"],
+    "skipLibCheck": false,
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": [
+    "packages/artifact/lib/artifact/ui/**/*.mjs",
+    "packages/artifact/lib/artifact/diagram/editor/**/*.mjs",
+    "packages/protocol/src/**/*.mjs"
+  ],
+  "exclude": ["**/generated/**"]
+}
