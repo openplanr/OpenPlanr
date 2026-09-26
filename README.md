@@ -106,8 +106,8 @@ wrote, renders it, and keeps trackers in step.
 </p>
 
 The plan is a file in your repository that you review like code, and the agent reads it before
-it changes code. `ship` implements one task at a time, verified, so you can open one PR per
-task, and the CLI validates the planning files offline, never by a model.
+it changes code. `ship` implements one task at a time, verified and small enough to review as
+one pull request, and the CLI validates the planning files offline, never by a model.
 
 ## Capabilities
 
