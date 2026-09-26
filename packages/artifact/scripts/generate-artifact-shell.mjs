@@ -126,12 +126,16 @@ export function renderArtifactShellAssetManifest(assets) {
  * Output stays readable and unmapped on purpose: consumers and tests match on the
  * emitted source, and the hosted surfaces minify in their own build. Third-party
  * license headers stay in place; any esbuild warning fails the build.
+ * `entry` resolves against `projectRoot`; `banner` names the calling generator.
  */
-function bundleBrowserEntry(entry, { globalName, projectRoot = root } = {}) {
+export function bundleBrowserEntry(
+  entry,
+  { globalName, projectRoot = root, banner = ARTIFACT_SHELL_BUNDLE_BANNER } = {},
+) {
   const result = buildSync({
     absWorkingDir: projectRoot,
     entryPoints: [entry],
-    banner: { js: ARTIFACT_SHELL_BUNDLE_BANNER },
+    banner: { js: banner },
     bundle: true,
     charset: 'utf8',
     format: 'iife',

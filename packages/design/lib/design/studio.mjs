@@ -5,8 +5,6 @@ import { renderDesignStudioMarkup } from './studio-render.mjs';
 
 export { DESIGN_STUDIO_ASSETS, DESIGN_STUDIO_VERSION } from './studio-render.mjs';
 
-import { renderDesignReviewExportSource } from './review-export.mjs';
-
 const templateRoot = new URL('../../templates/studio/', import.meta.url);
 
 /** Stable review identities are independent of presentation and render revision. */
@@ -56,12 +54,7 @@ export function renderDesignStudio(input = {}, options = {}) {
       style: ['studio.css', 'enhancements.css', 'handoff-center.css']
         .map((file) => readFileSync(new URL(file, templateRoot), 'utf8'))
         .join('\n'),
-      runtime:
-        renderDesignReviewExportSource() +
-        '\n' +
-        ['studio.js', 'enhancements.js', 'handoff-center.js']
-          .map((file) => readFileSync(new URL(file, templateRoot), 'utf8'))
-          .join('\n'),
+      runtime: readFileSync(new URL('studio.js', templateRoot), 'utf8'),
     },
   );
 }

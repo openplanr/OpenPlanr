@@ -4,6 +4,7 @@ import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { renderArtifactStageRuntimeAsset } from '../../packages/artifact/scripts/generate-artifact-shell.mjs';
+import { renderDesignStudioRuntimeAsset } from '../../packages/design/scripts/generate-design-studio.mjs';
 import { resourceBytes } from './resource-bytes.mjs';
 
 export const DESIGN_SKILL_IDS = Object.freeze([
@@ -41,14 +42,22 @@ export async function buildDesignSkillResources({
   const require = createRequire(resolve(root, 'packages/artifact/package.json'));
   const { build } = require('esbuild');
   const logical = (absolute) => relative(root, absolute).split(sep).join('/');
-  // The stage runtime is an untracked output of a later generator step, so it is rendered
-  // from source here instead of read from disk.
+  // The stage and studio runtimes are untracked outputs of later generator steps, so they
+  // are rendered from source here instead of read from disk.
   const stageRuntimePath = resolve(root, 'packages/artifact/templates/artifact-review-stage.js');
+  const studioRuntimePath = resolve(root, 'packages/design/templates/studio/studio.js');
   const renderedAssets = new Map([
     [
       stageRuntimePath,
       Buffer.from(
         renderArtifactStageRuntimeAsset({ projectRoot: resolve(root, 'packages/artifact') }),
+        'utf8',
+      ),
+    ],
+    [
+      studioRuntimePath,
+      Buffer.from(
+        renderDesignStudioRuntimeAsset({ projectRoot: resolve(root, 'packages/design') }),
         'utf8',
       ),
     ],
@@ -71,6 +80,7 @@ export async function buildDesignSkillResources({
     resolve(root, 'packages/protocol/registry/artifact-theme.json'),
     resolve(root, 'packages/protocol/package.json'),
     stageRuntimePath,
+    studioRuntimePath,
     ...files(resolve(root, 'packages/design/templates/studio')),
     ...extraAssets.map((path) => resolve(root, path)),
   ];

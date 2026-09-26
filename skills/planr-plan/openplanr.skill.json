@@ -122,29 +122,7 @@
       ]
     },
     {
-      "path": "scripts/runtime/packages/design/templates/studio/enhancements.js",
-      "kind": "asset",
-      "executable": false,
-      "hosts": [
-        "claude-code",
-        "codex",
-        "chatgpt",
-        "cursor"
-      ]
-    },
-    {
       "path": "scripts/runtime/packages/design/templates/studio/handoff-center.css",
-      "kind": "asset",
-      "executable": false,
-      "hosts": [
-        "claude-code",
-        "codex",
-        "chatgpt",
-        "cursor"
-      ]
-    },
-    {
-      "path": "scripts/runtime/packages/design/templates/studio/handoff-center.js",
       "kind": "asset",
       "executable": false,
       "hosts": [

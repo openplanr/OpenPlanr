@@ -70,6 +70,13 @@ export const GENERATOR_STEPS = Object.freeze([
     ]),
   }),
   Object.freeze({
+    id: 'design-studio',
+    required: true,
+    candidates: Object.freeze([
+      command('packages/design/scripts/generate-design-studio.mjs', [], ['--check']),
+    ]),
+  }),
+  Object.freeze({
     id: 'operate-artifact-design-public-projections',
     required: true,
     candidates: Object.freeze([

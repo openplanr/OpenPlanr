@@ -167,3 +167,7 @@ CLAUDE.md
 # reviewed contract is lib/artifact/ui/generated/artifact-shell-assets.json.
 /packages/artifact/templates/*.js
 /packages/artifact/templates/design/*.js
+
+# esbuild bundle written by packages/design/scripts/generate-design-studio.mjs from
+# packages/design/lib/design/ui; the pipeline projection manifest records its digest.
+/packages/design/templates/studio/studio.js

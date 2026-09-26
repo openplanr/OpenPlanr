@@ -16,10 +16,6 @@ import {
 const cliRequire = createRequire(new URL('../../cli/package.json', import.meta.url));
 const { JSDOM } = cliRequire('jsdom');
 const runtime = readFileSync(new URL('../templates/studio/studio.js', import.meta.url), 'utf8');
-const enhancements = readFileSync(
-  new URL('../templates/studio/enhancements.js', import.meta.url),
-  'utf8',
-);
 
 function fixture({ count = 3, title = 'Fieldwork operations' } = {}) {
   const document = {
@@ -118,10 +114,7 @@ async function mount({ data = fixture(), options = {}, stored = null, experience
   await stage.ready;
   for (let index = 0; index < 20 && !window.__openPlanrDesignStudio; index += 1) await delay(10);
   assert.ok(window.__openPlanrDesignStudio, 'studio boots after artifact stage');
-  if (experience) {
-    window.eval(enhancements);
-    await delay(20);
-  }
+  if (experience) await delay(20);
   return {
     ...data,
     window,
@@ -807,8 +800,15 @@ test('owner handoff keeps source quotes immutable and requires saving refinement
     },
   });
   try {
-    await value.window.__openPlanrDesignExperience.handoff();
     const document = value.documentNode;
+    value.window.__openPlanrDesignHandoffCenter.open('review');
+    await delay(10);
+    const reviewDecisions = [...document.querySelectorAll('.design-handoff-center button')].find(
+      (button) => button.textContent === 'Review and approve decisions',
+    );
+    assert.ok(reviewDecisions, 'the Handoff Center review step opens the review handoff');
+    reviewDecisions.click();
+    await delay(10);
     assert.equal(document.querySelector('blockquote').textContent, source.text);
     const refinement = document.querySelector('[aria-label="Accepted changes: p1"]');
     refinement.value = 'Use a clear verb and keep the action above the fold.';

@@ -6,9 +6,7 @@ export const DESIGN_STUDIO_ASSETS = Object.freeze({
   style: 'templates/studio/studio.css',
   runtime: 'templates/studio/studio.js',
   enhancementsStyle: 'templates/studio/enhancements.css',
-  enhancementsRuntime: 'templates/studio/enhancements.js',
   handoffCenterStyle: 'templates/studio/handoff-center.css',
-  handoffCenterRuntime: 'templates/studio/handoff-center.js',
 });
 
 /** Self-contained so the same preference is applied before local/hosted paint. */

@@ -163,7 +163,7 @@
     {
       "source": "packages/design/lib/design/document.mjs",
       "target": "lib/design/document.mjs",
-      "sha256": "b113a76a385eb442daae91a82a6165fa6e349e304ec0d9ea10b6a33034df407d",
+      "sha256": "6d94472b5f51b31e0b7a8bd688254c6e706957070bb877e90682720b2e6db808",
       "mode": "644"
     },
     {
@@ -307,19 +307,43 @@
     {
       "source": "packages/design/lib/design/studio-render.mjs",
       "target": "lib/design/studio-render.mjs",
-      "sha256": "698250b99c2761a65bad8e0f1e73085e5445f082dda87f56186ab42ae163daf4",
+      "sha256": "ce26633d873fbca1506cf615271b2be68f1d7b3e96a7df8d664c74be477609a0",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design/studio.mjs",
       "target": "lib/design/studio.mjs",
-      "sha256": "ae1a890447b26d203ba0053729372f7a3a85970b586f44a7b4b53eea75c875f0",
+      "sha256": "b5b0740f3b654e73f2a81911316cd5be5e21119e697399a912e0f168af6da644",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design/tokens.mjs",
       "target": "lib/design/tokens.mjs",
       "sha256": "56f9b1cff2e083fe86ba87f6b7eac83473bb56175fd7a8b0f0a357779706c665",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design/ui/enhancements.mjs",
+      "target": "lib/design/ui/enhancements.mjs",
+      "sha256": "e2766bc7de2ee33f088a8a189e72926709ea854f885374e113625e2dd94ce33f",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design/ui/handoff-center.mjs",
+      "target": "lib/design/ui/handoff-center.mjs",
+      "sha256": "a9696be41a695167f740317e9eb370508f694bfcf6fcabd0c1846aaf210b62dd",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design/ui/studio-runtime.mjs",
+      "target": "lib/design/ui/studio-runtime.mjs",
+      "sha256": "97b22d20ffc79f624b5213217ad11d21a291946d0030938edf76aae4f32b812d",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design/ui/studio.mjs",
+      "target": "lib/design/ui/studio.mjs",
+      "sha256": "b7ad6a2c19409d2dec6eb4ca380f34c1ea8cbd355733fcee5f8ba33a85fefbef",
       "mode": "644"
     },
     {
@@ -413,21 +437,9 @@
       "mode": "644"
     },
     {
-      "source": "packages/design/templates/studio/enhancements.js",
-      "target": "templates/studio/enhancements.js",
-      "sha256": "e967e9a622018a3bfdd52751ecfa6e842dbbf1922f573f3395a2bf29ca028589",
-      "mode": "644"
-    },
-    {
       "source": "packages/design/templates/studio/handoff-center.css",
       "target": "templates/studio/handoff-center.css",
       "sha256": "2f972f98d16723fd19989df349f6342e6eae951820e53ca84f310b433ef83b48",
-      "mode": "644"
-    },
-    {
-      "source": "packages/design/templates/studio/handoff-center.js",
-      "target": "templates/studio/handoff-center.js",
-      "sha256": "012f648cf3936be649ac5f4935412a91489c8f90e076400dc19fbc6ebbf38b21",
       "mode": "644"
     },
     {
@@ -451,7 +463,7 @@
     {
       "source": "packages/design/templates/studio/studio.js",
       "target": "templates/studio/studio.js",
-      "sha256": "9875850ff7fbf2f8cd34578dffe0a327609e1fc7e5158e63167b0bd43c4a9dad",
+      "sha256": "8e0ae7d5ddbb058f4b3f7a0876ce8259dd247358c40ce666763e9001b3bc5338",
       "mode": "644"
     }
   ]
