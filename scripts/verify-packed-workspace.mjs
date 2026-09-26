@@ -3,7 +3,6 @@
 import * as childProcess from 'node:child_process';
 import * as crypto from 'node:crypto';
 import * as fs from 'node:fs';
-import { createRequire } from 'node:module';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -18,6 +17,7 @@ import {
   packedWorkspaceProofDigest,
   parseNpmPackJson,
 } from '../packages/pipeline/lib/ecosystem/packed-workspace-proof.mjs';
+import { browserExecutable } from '../tests/support/browser-launcher.mjs';
 
 // Public CLI/pipeline projections remain self-contained during this migration.
 // Protocol is now public, but a new dependency on it is not authorized here.
@@ -231,10 +231,8 @@ function cleanEnvironment(home) {
   const environment = {
     ...process.env,
     CI: '1',
-    // Keep only the test browser binary outside the otherwise isolated home.
-    OPENPLANR_PROOF_CHROMIUM_EXECUTABLE: createRequire(
-      path.join(protocolSourceRoot, 'package.json'),
-    )('playwright').chromium.executablePath(),
+    // The isolated home hides Playwright's browser cache, so the proof pins the binary here.
+    OPENPLANR_PROOF_CHROMIUM_EXECUTABLE: browserExecutable('chromium'),
     FORCE_COLOR: '0',
     HOME: home,
     // Host-runtime deprecation warnings can embed a different process ID for
