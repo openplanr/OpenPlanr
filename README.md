@@ -78,6 +78,14 @@ on Windows). OpenPlanr requires Node.js 20 or later. The
 [getting started guide](docs/getting-started.md) covers scopes, what setup writes, and how to
 undo it.
 
+In Claude Code you can install the plugin from the public marketplace instead of running
+`planr setup --runtime claude`. Several skills call the `planr` CLI, so install it first:
+
+```text
+/plugin marketplace add openplanr/marketplace
+/plugin install planr@openplanr
+```
+
 ## How it works
 
 ```mermaid
