@@ -238,5 +238,7 @@ follows the [code of conduct](CODE_OF_CONDUCT.md).
 
 OpenPlanr is [MIT licensed](LICENSE). The name and logo are covered by the
 [trademark policy](TRADEMARKS.md); the boundary between this repository and the hosted service
-is described in [COMMERCIAL.md](COMMERCIAL.md). Maintained by
-[Asem Abdo](https://github.com/AsemDevs) and contributors.
+is described in [COMMERCIAL.md](COMMERCIAL.md).
+
+Founded and maintained by Asem Abdo
+([GitHub](https://github.com/AsemDevs) · [LinkedIn](https://www.linkedin.com/in/asemabdo/)).
