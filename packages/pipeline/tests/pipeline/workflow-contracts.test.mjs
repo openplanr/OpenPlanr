@@ -51,6 +51,15 @@ test('hostile sandbox certification covers Chromium Firefox and WebKit', () => {
   );
 
   const blocks = workflow.split(/\n(?= {6}- | {2}\S)/);
+  const studio = blocks.find((block) => block.includes('diagram-studio.browser.test.mjs'));
+  assert.ok(studio, 'a workflow step must run the studio, pin and frame-budget suites');
+  for (const suite of ['diagram-studio', 'pin-stability', 'frame-budget']) {
+    assert.match(studio, new RegExp(`packages/artifact/tests/${suite}\\.browser\\.test\\.mjs`));
+  }
+  assert.match(studio, /PLANR_BROWSER_TESTS: '1'/);
+  assert.match(studio, /PLANR_BROWSER_ENGINE: \$\{\{ matrix\.browser \}\}/);
+  assert.doesNotMatch(studio, /^\s+if:/m, 'the studio suites must run on every matrix engine');
+
   const report = blocks.find((block) => block.startsWith('  report:'));
   assert.ok(report, 'a failed nightly run must be reported');
   assert.match(report, /needs: hostile-sandbox/);
