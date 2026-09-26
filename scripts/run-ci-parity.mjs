@@ -9,11 +9,13 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const cli = resolve(root, 'packages/cli');
 
 // Mirrors .github/workflows/ci.yml; keep the two in step when a job changes.
-// CI's "Prepare generated runtime" step precedes every job but quality, whose own
-// steps generate and build; it runs once per invocation here.
+// CI's "Build generated outputs" job runs these steps once and the test jobs restore its
+// outputs; here they run once per invocation, and not at all after quality.
 const PREPARE_GENERATED_RUNTIME = [
   ['npm', ['run', 'generate']],
+  ['git', ['diff', '--exit-code', 'HEAD', '--']],
   ['npm', ['run', 'build']],
+  ['git', ['diff', '--exit-code', 'HEAD', '--']],
 ];
 const JOBS = [
   {
