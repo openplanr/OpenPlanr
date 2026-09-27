@@ -1581,7 +1581,7 @@ export function reduceShipClosure(current, suppliedEvent, runtime = {}) {
       );
     }
     const priorRecord = state.browserQaRecords.find(
-      ({ candidateRevision }) => candidate.revision === event.record.candidateRevision,
+      ({ candidateRevision }) => candidateRevision === event.record.candidateRevision,
     );
     if (priorRecord) {
       if (priorRecord.recordDigest !== event.record.recordDigest)
