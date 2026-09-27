@@ -10,18 +10,28 @@ import type {
   DiagramEditorView,
 } from '../diagram/editor/index.mjs';
 import type {
-  DiagramEditorHostAction,
-  DiagramEditorHostPanel,
-  mountDiagramEditor,
-} from './diagram-editor.d.mts';
+  DiagramEditorColorScheme,
+  DiagramEditorHostConfig,
+  DiagramEditorHostOptions,
+  DiagramEditorLabels,
+} from './diagram-editor-host.mjs';
+import type {
+  DiagramEditorControls,
+  DiagramEditorDom,
+  DiagramEditorSkeleton,
+} from './diagram-editor-template.mjs';
 
 /** Internal contracts between the regions of one mounted editor; not a public API. */
 
-export type DiagramEditorHostOptions = NonNullable<
-  Parameters<typeof mountDiagramEditor>[0]['host']
->;
-export type DiagramEditorLabels = Required<NonNullable<DiagramEditorHostOptions['labels']>>;
-export type DiagramEditorColorScheme = 'light' | 'dark' | null;
+export type {
+  DiagramEditorColorScheme,
+  DiagramEditorControls,
+  DiagramEditorDom,
+  DiagramEditorHostConfig,
+  DiagramEditorHostOptions,
+  DiagramEditorLabels,
+  DiagramEditorSkeleton,
+};
 export type DiagramEditorTool = 'select' | 'pan';
 export type DiagramEditorRail = 'left' | 'right';
 export type DiagramEditorLeftTab = 'outline' | 'shapes';
@@ -34,82 +44,6 @@ export interface DiagramEditorDraftRefusal {
   ok: false;
   status: 'property-draft';
 }
-
-/** Host options after validation. */
-export interface DiagramEditorHostConfig {
-  labels: DiagramEditorLabels;
-  actions: DiagramEditorHostAction[];
-  panels: DiagramEditorHostPanel[];
-  reviewEnabled: boolean;
-  colorScheme: DiagramEditorColorScheme;
-}
-/** Throws a TypeError naming the first invalid option. */
-export declare function readHostOptions(host: DiagramEditorHostOptions): DiagramEditorHostConfig;
-export declare function colorSchemeOf(value: unknown): DiagramEditorColorScheme;
-/** The host's save-state wording, or null to keep the editor's own. */
-export declare function hostSaveLabel(
-  host: DiagramEditorHostOptions,
-  state: DiagramEditorState,
-): string | null;
-
-/** Static nodes of the editor chrome; none is replaced while the editor is mounted. */
-export interface DiagramEditorSkeleton {
-  shell: HTMLElement;
-  bar: HTMLElement;
-  barStart: HTMLElement;
-  barCenter: HTMLElement;
-  barEnd: HTMLElement;
-  mark: HTMLElement;
-  title: HTMLElement;
-  subtitle: HTMLElement;
-  saveState: HTMLElement;
-  moreWrap: HTMLElement;
-  work: HTMLElement;
-  drawerBackdrop: HTMLButtonElement;
-  left: HTMLElement;
-  leftTabs: HTMLElement;
-  closeOutline: HTMLButtonElement;
-  outlinePane: HTMLElement;
-  shapesPane: HTMLElement;
-  stageRegion: HTMLElement;
-  stage: HTMLElement;
-  svg: SVGSVGElement;
-  world: SVGGElement;
-  overlays: SVGGElement;
-  empty: HTMLElement;
-  canvasTools: HTMLElement;
-  footer: HTMLElement;
-  right: HTMLElement;
-  rightTabs: HTMLElement;
-  closeProperties: HTMLButtonElement;
-  rightContent: HTMLElement;
-  propertiesPane: HTMLElement;
-  reviewPane: HTMLElement;
-  alert: HTMLElement;
-  announcer: HTMLElement;
-  dialogLayer: HTMLElement;
-}
-/** Controls added to the skeleton once the host options are known. */
-export interface DiagramEditorControls {
-  hostPanes: Map<string, HTMLElement>;
-  moreButton: HTMLButtonElement;
-  moreMenu: HTMLElement;
-  zoomValue: HTMLOutputElement;
-}
-export type DiagramEditorDom = DiagramEditorSkeleton & DiagramEditorControls;
-export declare function renderEditorSkeleton(
-  doc: Document,
-  scopedId: (name: string) => string,
-): DiagramEditorSkeleton;
-export declare function renderEditorControls(
-  doc: Document,
-  dom: DiagramEditorSkeleton,
-  options: {
-    scopedId: (name: string) => string;
-    actions: DiagramEditorHostAction[];
-    panels: DiagramEditorHostPanel[];
-  },
-): DiagramEditorControls;
 
 /** Breakpoint tiers measured from the shell's own width. */
 export interface DiagramEditorLayout {

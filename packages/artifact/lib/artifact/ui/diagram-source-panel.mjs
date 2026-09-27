@@ -278,10 +278,10 @@ export function mountDiagramSourcePanel({
     const importing = next === 'import';
     importSection.hidden = !importing;
     exportSection.hidden = importing;
-    for (const [tab, selected] of [
+    for (const [tab, selected] of /** @type {Array<[HTMLButtonElement, boolean]>} */ ([
       [importTab, importing],
       [exportTab, !importing],
-    ]) {
+    ])) {
       tab.setAttribute('aria-selected', String(selected));
       tab.tabIndex = selected ? 0 : -1;
       if (selected && focus) tab.focus();
@@ -624,7 +624,9 @@ export function mountDiagramSourcePanel({
         : sourceLineRange(displayedSource, item.line);
       textarea.focus();
       textarea.setSelectionRange(range.start, Math.max(range.start, range.end));
-      for (const row of result.querySelectorAll('[data-object-id]'))
+      for (const row of /** @type {NodeListOf<HTMLElement>} */ (
+        result.querySelectorAll('[data-object-id]')
+      ))
         row.dataset.affected = String((item.elementIds ?? []).includes(row.dataset.objectId));
       if (item.elementIds?.length) onNavigateElements([...item.elementIds]);
     } else if (action === 'source-export-preview') showExport();

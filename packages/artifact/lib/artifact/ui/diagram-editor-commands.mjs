@@ -14,6 +14,7 @@ import {
 import { downloadJson } from './diagram-editor-dom.mjs';
 
 /** @typedef {import('../diagram/editor/index.mjs').DiagramEditorState} DiagramEditorState */
+/** @typedef {import('./diagram-editor-actions.mjs').DiagramObjectKind} DiagramObjectKind */
 /** @typedef {import('@openplanr/protocol/diagram-authoring-contracts').DiagramAuthoringBundle} DiagramAuthoringBundle */
 /**
  * One dispatched action with the state it was dispatched against.
@@ -362,7 +363,7 @@ export function createEditorCommands(ctx) {
       'create',
       ({ state, bundle, value }) => {
         const { stage } = dom;
-        const kind = value,
+        const kind = /** @type {DiagramObjectKind} */ (value),
           at = ctx.canvas.worldPoint({ x: stage.clientWidth / 2, y: stage.clientHeight / 2 });
         const existing = bundle.presentation.elements
           .map((item) => item.bounds)

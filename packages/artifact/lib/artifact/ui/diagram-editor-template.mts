@@ -1,24 +1,97 @@
-// @ts-check
-import { button, element, iconButton } from './diagram-editor-dom.mjs';
+import type {
+  DiagramEditorHostAction,
+  DiagramEditorHostPanel,
+  DiagramEditorIconName,
+} from './diagram-editor.mjs';
+import {
+  button,
+  type ElementAttributes,
+  element,
+  type IconButtonOptions,
+  iconButton,
+} from './diagram-editor-dom.mjs';
+
+/** Static nodes of the editor chrome; none is replaced while the editor is mounted. */
+export interface DiagramEditorSkeleton {
+  shell: HTMLElement;
+  bar: HTMLElement;
+  barStart: HTMLElement;
+  barCenter: HTMLElement;
+  barEnd: HTMLElement;
+  mark: HTMLElement;
+  title: HTMLElement;
+  subtitle: HTMLElement;
+  saveState: HTMLElement;
+  moreWrap: HTMLElement;
+  work: HTMLElement;
+  drawerBackdrop: HTMLButtonElement;
+  left: HTMLElement;
+  leftTabs: HTMLElement;
+  closeOutline: HTMLButtonElement;
+  outlinePane: HTMLElement;
+  shapesPane: HTMLElement;
+  stageRegion: HTMLElement;
+  stage: HTMLElement;
+  svg: SVGSVGElement;
+  world: SVGGElement;
+  overlays: SVGGElement;
+  empty: HTMLElement;
+  canvasTools: HTMLElement;
+  footer: HTMLElement;
+  right: HTMLElement;
+  rightTabs: HTMLElement;
+  closeProperties: HTMLButtonElement;
+  rightContent: HTMLElement;
+  propertiesPane: HTMLElement;
+  reviewPane: HTMLElement;
+  alert: HTMLElement;
+  announcer: HTMLElement;
+  dialogLayer: HTMLElement;
+}
+/** Controls added to the skeleton once the host options are known. */
+export interface DiagramEditorControls {
+  hostPanes: Map<string, HTMLElement>;
+  moreButton: HTMLButtonElement;
+  moreMenu: HTMLElement;
+  zoomValue: HTMLOutputElement;
+}
+export type DiagramEditorDom = DiagramEditorSkeleton & DiagramEditorControls;
+interface EditorControlsOptions {
+  scopedId: (name: string) => string;
+  actions: DiagramEditorHostAction[];
+  panels: DiagramEditorHostPanel[];
+}
+interface CommandButtonOptions {
+  title?: string;
+  icon?: DiagramEditorIconName;
+  className?: string;
+}
 
 const SVG = 'http://www.w3.org/2000/svg';
 
-/**
- * Build the static editor chrome: toolbar groups, both rails, the stage and the live regions.
- * @type {typeof import('./diagram-editor-context.d.mts').renderEditorSkeleton}
- */
-export function renderEditorSkeleton(doc, scopedId) {
-  const node = (tag, attributes, ...children) => {
+/** Build the static editor chrome: toolbar groups, both rails, the stage and the live regions. */
+export function renderEditorSkeleton(
+  doc: Document,
+  scopedId: (name: string) => string,
+): DiagramEditorSkeleton {
+  const node = <Tag extends keyof HTMLElementTagNameMap>(
+    tag: Tag,
+    attributes: ElementAttributes,
+    ...children: Array<Node | string>
+  ) => {
     const created = element(doc, tag, attributes);
     created.append(...children);
     return created;
   };
-  const svgNode = (tag, attributes) => {
+  const svgNode = <Tag extends keyof SVGElementTagNameMap>(
+    tag: Tag,
+    attributes: Record<string, string>,
+  ) => {
     const created = doc.createElementNS(SVG, tag);
     for (const [name, value] of Object.entries(attributes)) created.setAttribute(name, value);
     return created;
   };
-  const group = (label) =>
+  const group = (label: string) =>
     node('div', { className: 'de-command-group', role: 'group', 'aria-label': label });
 
   const barStart = group('Document navigation'),
@@ -54,7 +127,7 @@ export function renderEditorSkeleton(doc, scopedId) {
     tabindex: '-1',
     hidden: true,
   });
-  const tabPanel = (className, name, hidden = false) =>
+  const tabPanel = (className: string, name: string, hidden = false) =>
     node('div', {
       className: `${className} de-tabpanel`,
       id: scopedId(`${name}-pane`),
@@ -203,12 +276,13 @@ export function renderEditorSkeleton(doc, scopedId) {
   };
 }
 
-/**
- * Add the toolbar commands, host actions, overflow menu, canvas tools and host panel panes.
- * @type {typeof import('./diagram-editor-context.d.mts').renderEditorControls}
- */
-export function renderEditorControls(doc, dom, { scopedId, actions, panels }) {
-  const hostPanes = new Map(
+/** Add the toolbar commands, host actions, overflow menu, canvas tools and host panel panes. */
+export function renderEditorControls(
+  doc: Document,
+  dom: DiagramEditorSkeleton,
+  { scopedId, actions, panels }: EditorControlsOptions,
+): DiagramEditorControls {
+  const hostPanes = new Map<string, HTMLElement>(
     panels.map((panel) => {
       const pane = element(doc, 'div', {
         className: 'de-host-pane de-tabpanel',
@@ -221,19 +295,12 @@ export function renderEditorControls(doc, dom, { scopedId, actions, panels }) {
       return [panel.id, pane];
     }),
   );
-  /**
-   * @param {HTMLElement} container
-   * @param {string} label
-   * @param {string} visible
-   * @param {string} action
-   * @param {{ title?: string; icon?: import('./diagram-editor.d.mts').DiagramEditorIconName; className?: string }} [options]
-   */
   const commandButton = (
-    container,
-    label,
-    visible,
-    action,
-    { title = label, icon, className = '' } = {},
+    container: HTMLElement,
+    label: string,
+    visible: string,
+    action: string,
+    { title = label, icon, className = '' }: CommandButtonOptions = {},
   ) => {
     const node = iconButton(doc, label, action, {
       title,
@@ -242,7 +309,8 @@ export function renderEditorControls(doc, dom, { scopedId, actions, panels }) {
       labelClassName: 'de-button-label',
       className: ['de-icon-button', className].filter(Boolean).join(' '),
     });
-    if (visible) node.querySelector('.de-button-label').textContent = visible;
+    // A visible label means iconButton rendered the label span.
+    if (visible) (node.querySelector('.de-button-label') as Element).textContent = visible;
     container.append(node);
     return node;
   };
@@ -296,9 +364,14 @@ export function renderEditorControls(doc, dom, { scopedId, actions, panels }) {
       button(doc, name, action, { role: 'menuitem', className: 'de-menu-item', tabindex: '-1' }),
     );
   dom.moreWrap.append(moreMenu);
-  const toolGroup = (label) =>
+  const toolGroup = (label: string) =>
     element(doc, 'div', { className: 'de-canvas-tool-group', role: 'group', 'aria-label': label });
-  const canvasButton = (container, label, action, options = {}) => {
+  const canvasButton = (
+    container: HTMLElement,
+    label: string,
+    action: string,
+    options: IconButtonOptions = {},
+  ) => {
     const node = options.icon
       ? iconButton(doc, label, action, { ...options, labelClassName: 'de-control-label' })
       : button(doc, label, action, options);

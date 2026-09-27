@@ -1,12 +1,44 @@
-// @ts-check
+import type { DiagramEditorIconName } from './diagram-editor.mjs';
+
 /** Small DOM helpers keep authored labels out of HTML strings. */
 const SVG = 'http://www.w3.org/2000/svg';
 
-/** @typedef {import('./diagram-editor.d.mts').DiagramEditorIconName} DiagramEditorIconName */
-/** @typedef {[string, Record<string, string | number>]} IconPrimitive */
+type IconPrimitive = [string, Record<string, string | number>];
 
-const ICONS = Object.freeze(
-  /** @satisfies {Record<DiagramEditorIconName, IconPrimitive[]>} */ ({
+/** `className` sets the property; `true` adds an empty attribute; nullish or false adds none. */
+export interface ElementAttributes {
+  className?: string;
+  [attribute: string]: unknown;
+}
+interface IconOptions {
+  size?: number;
+  className?: string;
+  label?: string;
+}
+export interface IconButtonOptions extends ElementAttributes {
+  icon?: DiagramEditorIconName;
+  iconOnly?: boolean;
+  labelClassName?: string;
+}
+export interface FieldOptions extends ElementAttributes {
+  type?: string;
+  choices?: Array<string | [string, string]>;
+  multiline?: boolean;
+}
+/** The control `field` renders: a select with choices, a textarea when multiline, else an input. */
+export interface FieldControl extends HTMLElement {
+  get value(): string;
+  /** The control converts an assigned value to text. */
+  set value(value: unknown);
+  /** Present on an input only. */
+  checked?: boolean;
+  disabled: boolean;
+  readonly type: string;
+}
+
+// biome-ignore format: bundles keep this multi-line argument; hugging it would change their bytes.
+const ICONS: Readonly<Record<string, IconPrimitive[]>> = Object.freeze(
+  {
     panel: [['path', { d: 'M4 4h16v16H4zM9 4v16' }]],
     undo: [['path', { d: 'M9 7H4v-5M4 7l4-4M4 7h9a7 7 0 1 1-6.1 10.4' }]],
     redo: [['path', { d: 'M15 7h5v-5M20 7l-4-4M20 7h-9a7 7 0 1 0 6.1 10.4' }]],
@@ -152,38 +184,52 @@ const ICONS = Object.freeze(
     ],
     'kind-connector': [['path', { d: 'M5 19 19 5M12 5h7v7' }]],
     'kind-annotation': [['path', { d: 'M5 6h14M12 6v12' }]],
-  }),
+  } satisfies Record<DiagramEditorIconName, IconPrimitive[]>,
 );
 
-export function element(document, tag, attributes = {}, text) {
+export function element<Tag extends keyof HTMLElementTagNameMap>(
+  document: Document,
+  tag: Tag,
+  attributes: ElementAttributes = {},
+  text?: string,
+): HTMLElementTagNameMap[Tag] {
   const node = document.createElement(tag);
   for (const [name, value] of Object.entries(attributes)) {
     if (value === undefined || value === null || value === false) continue;
-    if (name === 'className') node.className = value;
+    // ElementAttributes types className as text; Object.entries loses that per-key type.
+    if (name === 'className') node.className = value as string;
     else node.setAttribute(name, value === true ? '' : String(value));
   }
   if (text !== undefined) node.textContent = text;
   return node;
 }
 /** Editor-dispatched control; a null action leaves the button to its own click handler. */
-export function button(document, text, action, options = {}) {
+export function button(
+  document: Document,
+  text: string,
+  action: string | null,
+  options: ElementAttributes = {},
+): HTMLButtonElement {
   return element(document, 'button', { type: 'button', 'data-action': action, ...options }, text);
 }
 
 /** Whether the editor icon set includes this name. */
-export const hasIcon = (name) => Object.hasOwn(ICONS, name);
-
-/** The form control, button, editable region or dialog containing an element, if any. */
-export const focusable = (element) =>
-  element?.closest('input,textarea,select,button,[contenteditable="true"],[role="dialog"]');
+export const hasIcon = (name: string): boolean => Object.hasOwn(ICONS, name);
 
 /**
- * Render a dependency-free icon from static SVG primitives.
- * @param {Document} document
- * @param {string} name
- * @param {{ size?: number; className?: string; label?: string }} [options]
+ * The form control, button, editable region or dialog containing an element, if any.
+ * Callers pass the targets of editor pointer and key events, which are elements.
  */
-export function icon(document, name, { size = 16, className = 'de-icon', label } = {}) {
+// biome-ignore format: bundles keep this one-line call; wrapping would change their bytes.
+export const focusable = (element: EventTarget | null | undefined) =>
+  (element as Element | null | undefined)?.closest('input,textarea,select,button,[contenteditable="true"],[role="dialog"]');
+
+/** Render a dependency-free icon from static SVG primitives. */
+export function icon(
+  document: Document,
+  name: string,
+  { size = 16, className = 'de-icon', label }: IconOptions = {},
+): SVGSVGElement {
   const definition = ICONS[name];
   if (!definition) throw new Error(`Unknown editor icon: ${name}`);
   const svg = document.createElementNS(SVG, 'svg');
@@ -210,19 +256,13 @@ export function icon(document, name, { size = 16, className = 'de-icon', label }
   return svg;
 }
 
-/**
- * Create an accessible editor button with a static icon and optional visible label.
- * @param {Document} document
- * @param {string} label
- * @param {string} action
- * @param {{
- *   icon?: DiagramEditorIconName;
- *   iconOnly?: boolean;
- *   labelClassName?: string;
- *   [attribute: string]: unknown;
- * }} [options]
- */
-export function iconButton(document, label, action, options = {}) {
+/** Create an accessible editor button with a static icon and optional visible label. */
+export function iconButton(
+  document: Document,
+  label: string,
+  action: string | null,
+  options: IconButtonOptions = {},
+): HTMLButtonElement {
   const {
     icon: iconName,
     iconOnly = false,
@@ -239,26 +279,16 @@ export function iconButton(document, label, action, options = {}) {
   if (!iconOnly) control.append(element(document, 'span', { className: labelClassName }, label));
   return control;
 }
-/**
- * @param {Document} document
- * @param {string} name
- * @param {unknown} value
- * @param {{
- *   type?: string;
- *   choices?: Array<string | [string, string]>;
- *   multiline?: boolean;
- *   [attribute: string]: unknown;
- * }} [options]
- */
 export function field(
-  document,
-  name,
-  value,
-  { type = 'text', choices, multiline = false, ...attributes } = {},
-) {
+  document: Document,
+  name: string,
+  value: unknown,
+  { type = 'text', choices, multiline = false, ...attributes }: FieldOptions = {},
+): { label: HTMLLabelElement; input: FieldControl } {
   const label = element(document, 'label', { className: 'de-field' });
   label.append(element(document, 'span', {}, name));
-  const input = element(document, choices ? 'select' : multiline ? 'textarea' : 'input', {
+  // biome-ignore format: bundles keep these one-line arguments; wrapping would change their bytes.
+  const input: FieldControl = element(document, choices ? 'select' : multiline ? 'textarea' : 'input', {
     'aria-label': name,
     ...(!choices && !multiline ? { type } : {}),
     ...attributes,
@@ -273,8 +303,9 @@ export function field(
   label.append(input);
   return { label, input };
 }
-export function downloadJson(document, value, filename) {
-  const window = document.defaultView;
+export function downloadJson(document: Document, value: unknown, filename: string): void {
+  // The editor only mounts in a document with a window.
+  const window = document.defaultView as Window & typeof globalThis;
   const url = window.URL.createObjectURL(
     new window.Blob([JSON.stringify(value, null, 2)], {
       type: 'application/json',

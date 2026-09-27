@@ -78,7 +78,7 @@ export function createEditorDialogs(ctx) {
     dialogLayer.append(panel);
     dialog = panel;
     ctx.chrome.setBackgroundInert(true);
-    panel.querySelector('button,input,select')?.focus();
+    /** @type {HTMLElement | null} */ (panel.querySelector('button,input,select'))?.focus();
     return panel;
   }
   function cancelDialog(state) {
