@@ -167,6 +167,68 @@ function fixture() {
   return { projectDir, service, adapter, host, prepare, inspect, dispatch };
 }
 
+async function initializedCustody(): Promise<LandingReceiptCustodyV1> {
+  const projectDir = realpathSync(mkdtempSync(path.join(tmpdir(), 'openplanr-landing-custody-')));
+  roots.push(projectDir);
+  const custody = new LandingReceiptCustodyV1({
+    root: path.join(projectDir, '.planr', 'landing'),
+    now: () => Date.parse('2026-08-25T10:00:00.001Z'),
+  });
+  await custody.initialize({
+    feature: 'landing-test',
+    receiptHash,
+    plan: {
+      planId,
+      planHash: hash('d'),
+      candidateDigest: hash('7'),
+      currentTargetHash: targetHash,
+      repositories: [{ repositoryKey: 'project', head: '9'.repeat(40) }],
+    },
+    baseRecords: [],
+  });
+  return custody;
+}
+
+function intentRequest(id: string, sequence: number, previousHash: `sha256:${string}` | null) {
+  return {
+    kind: 'landing-intent-cas',
+    planHash: hash('d'),
+    runId: `lrun_${'a'.repeat(32)}`,
+    operationId,
+    requestHash: hash(id),
+    targetBeforeHash: targetHash,
+    intentEventHash: hash(id),
+    attemptIdentity: `latm_${id.repeat(32)}`,
+    expectedJournalHead: { sequence: sequence - 1, hash: previousHash },
+    confirmation: { issuedAt: '2026-08-25T10:00:00.000Z' },
+    events: [{ sequence, timestamp: '2026-08-25T10:00:00.000Z', eventHash: hash(id) }],
+  };
+}
+
+/** Commits one intent and its outcome, storing a landing receipt with the given status. */
+async function settleLanding(custody: LandingReceiptCustodyV1, status: string) {
+  const acknowledgement = await custody.commitIntent(planId, intentRequest('b', 1, null));
+  const landingReceipt = { status, receiptHash: hash('f') };
+  await custody.commitOutcome(planId, {
+    kind: 'landing-outcome-cas',
+    commitId: acknowledgement.commitId,
+    dispatcherId: acknowledgement.dispatcherId,
+    expectedJournalHead: acknowledgement.journalHead,
+    events: [{ sequence: 2, timestamp: '2026-08-25T10:00:00.002Z', eventHash: hash('2') }],
+    phaseReceipt: {
+      operationId,
+      receiptHash: hash('1'),
+      targetBeforeHash: targetHash,
+      targetAfterHash: null,
+    },
+    confirmation: { issuedAt: '2026-08-25T10:00:00.000Z' },
+    evidenceRecords: [],
+    evidenceContexts: {},
+    landingReceipt,
+  });
+  return landingReceipt;
+}
+
 describe('LandingServiceV1', () => {
   it('prepares, shows, and reads status without effects in separate landing custody', async () => {
     const current = fixture();
@@ -264,4 +326,23 @@ describe('LandingServiceV1', () => {
       custody.commitIntent(planId, { ...request, requestHash: hash('e') }),
     ).rejects.toMatchObject({ code: 'E_LANDING_CUSTODY_CONFLICT' });
   });
+
+  it('supersedes a recovery_required receipt when the recovery intent is committed', async () => {
+    const custody = await initializedCustody();
+    await settleLanding(custody, 'recovery_required');
+    await custody.commitIntent(planId, intentRequest('e', 3, hash('2')));
+    const stored = await custody.read(planId);
+    expect(stored.landingReceipt).toBeNull();
+    expect(stored.pendingIntent).toMatchObject({ requestHash: hash('e') });
+  });
+
+  it.each(['landed', 'blocked', 'uncertain'])(
+    'keeps a %s landing receipt when another intent is committed',
+    async (status) => {
+      const custody = await initializedCustody();
+      const receipt = await settleLanding(custody, status);
+      await custody.commitIntent(planId, intentRequest('e', 3, hash('2')));
+      expect((await custody.read(planId)).landingReceipt).toEqual(receipt);
+    },
+  );
 });

@@ -399,6 +399,9 @@ export class LandingReceiptCustodyV1 {
         ...currentBody,
         events,
         journalHead: persistedHead,
+        // A recovery intent ends the recovery_required state, so that receipt no longer holds.
+        landingReceipt:
+          current.landingReceipt?.status === 'recovery_required' ? null : current.landingReceipt,
         pendingIntent: {
           ...pendingBody,
           pendingIntentHash: sha256CanonicalJson(pendingBody),
