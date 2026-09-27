@@ -48,7 +48,7 @@ type DashboardStarter = (options: {
   getOperatingPlanningGateway?: () => OperatePlanningGateway;
 }) => DashboardHandle;
 
-const PIPELINE_ROOT_MODULE = 'planr-pipeline';
+const PIPELINE_DASHBOARD_MODULE = 'planr-pipeline/dashboard';
 const OPERATE_CLIENT_MODULE = '../../services/operate/client.js';
 const OPERATE_GATEWAY_MODULE = '../../services/operate/command-gateway.js';
 const OPERATE_PACKET_MODULE = '../../services/operate/assignment-packet-service.js';
@@ -185,7 +185,7 @@ export type StartedOperateDashboard = {
 };
 
 async function installedDashboardStarter(): Promise<DashboardStarter> {
-  const installed = (await import(PIPELINE_ROOT_MODULE)) as unknown as {
+  const installed = (await import(PIPELINE_DASHBOARD_MODULE)) as unknown as {
     startDashboard?: DashboardStarter;
   };
   if (typeof installed.startDashboard !== 'function') {

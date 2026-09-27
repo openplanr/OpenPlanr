@@ -27,7 +27,6 @@ import {
   runtimeHandoff,
   startShip,
   startInvestigation,
-  startDashboard,
   showLanding,
 } from '../lib/pipeline/index.mjs';
 import {
@@ -227,6 +226,7 @@ try {
     output(runSyncAudit({ projectRoot: process.cwd() }));
   } else if (command === 'dashboard') {
     const options = closedArguments({ '--port': 'value', '--no-watch': 'boolean', '--json': 'boolean' }, { maxPositionals: 0 });
+    const { startDashboard } = await import('planr-pipeline/dashboard');
     const dashboard = startDashboard({ planrDir: join(process.cwd(), '.planr'), watch: !options.has('--no-watch'), planningActorId: 'dashboard-local' });
     const requestedPort = Number(options.get('--port')) || Number(process.env.DASHBOARD_PORT) || 7473;
     const port = await dashboard.listen(requestedPort);
