@@ -1,5 +1,5 @@
 // @ts-check
-const hasOwn = (value, key) => Object.prototype.hasOwnProperty.call(value, key);
+const hasOwn = (value, key) => Object.hasOwn(value, key);
 
 function assertUnicodeScalarString(value, path) {
   for (let index = 0; index < value.length; index += 1) {
@@ -65,7 +65,7 @@ export function canonicalizeJson(value) {
   return serialize(value, '$', new Set());
 }
 
-const SHA256_K = new Uint32Array([
+const SHA256_K = /* @__PURE__ */ new Uint32Array([
   0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
   0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
   0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
@@ -176,4 +176,45 @@ export function verifyDocumentDigest(value) {
   const actual = copy.documentDigest;
   delete copy.documentDigest;
   return actual === sha256Jcs(copy);
+}
+
+/**
+ * Freeze a value and every nested object reached through an unfrozen parent.
+ * @type {typeof import('./canonical-json.d.mts').deepFreeze}
+ */
+export function deepFreeze(value) {
+  if (value && typeof value === 'object' && !Object.isFrozen(value)) {
+    for (const nested of Object.values(value)) deepFreeze(nested);
+    Object.freeze(value);
+  }
+  return value;
+}
+
+function assertPlainDataAt(value, label, depth, seen) {
+  if (depth > 64) throw new TypeError(`${label} exceeds the maximum nesting depth.`);
+  if (value === null || ['string', 'boolean'].includes(typeof value)) return;
+  if (typeof value === 'number' && Number.isFinite(value)) return;
+  if (typeof value !== 'object' || seen.has(value))
+    throw new TypeError(`${label} must be finite, acyclic JSON.`);
+  if (!Array.isArray(value) && ![Object.prototype, null].includes(Object.getPrototypeOf(value)))
+    throw new TypeError(`${label} must contain only plain JSON objects.`);
+  seen.add(value);
+  for (const [key, descriptor] of Object.entries(Object.getOwnPropertyDescriptors(value))) {
+    if (
+      ['__proto__', 'prototype', 'constructor'].includes(key) ||
+      !Object.hasOwn(descriptor, 'value')
+    )
+      throw new TypeError(`${label} contains a forbidden property.`);
+    assertPlainDataAt(descriptor.value, label, depth + 1, seen);
+  }
+  seen.delete(value);
+}
+
+/**
+ * Throw a TypeError whose message starts with `label` unless the value is finite, acyclic,
+ * plain JSON data made of data properties and nested at most 64 levels deep.
+ * @type {typeof import('./canonical-json.d.mts').assertPlainData}
+ */
+export function assertPlainData(value, label) {
+  assertPlainDataAt(value, label, 0, new Set());
 }

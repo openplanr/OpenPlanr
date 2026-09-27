@@ -96,13 +96,13 @@
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/canonical-json.mjs",
       "target": "lib/protocol/canonical-json.mjs",
-      "sha256": "68e7a0667bc4bbb269efd988291921dcd5f0a2ebd5f8a2e2e9030a4386034b20",
+      "sha256": "7dc837c82f0bb950047e50060f080124c5f415c0c29c7d8ca49244a5f2c92d3e",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/contracts.mjs",
       "target": "lib/protocol/contracts.mjs",
-      "sha256": "ae322fa382fe9e005ab38e3358c7bd721f8993faeecf5e0b796becac03fb1082",
+      "sha256": "ebe70b5f03926033e0402f476b9d65178f374c77cc7a17f6e4e68bd9e1d3cad6",
       "mode": "644"
     },
     {
@@ -120,7 +120,7 @@
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/design-handoff-contracts.mjs",
       "target": "lib/protocol/design-handoff-contracts.mjs",
-      "sha256": "74579fd14c4e825cec785a19a43e4fb41a7399d387ec05cbe5809c4c1f01dfec",
+      "sha256": "f8badd90327bbbd48a46769ff7b3fe20d6472d586f68e5088e3a956d1226d849",
       "mode": "644"
     },
     {
@@ -144,7 +144,7 @@
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/diagram-authoring-contracts.mjs",
       "target": "lib/protocol/diagram-authoring-contracts.mjs",
-      "sha256": "40945b9ddc8e2adf677c42846b8e4e5b0a047911fcdb10eeb54a0f02e9661633",
+      "sha256": "71fb5e1bd5b26be22c73937166001b5ca48616dcef46018cc688ff6d226bf714",
       "mode": "644"
     },
     {
@@ -162,7 +162,7 @@
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/enterprise-contracts.mjs",
       "target": "lib/protocol/enterprise-contracts.mjs",
-      "sha256": "22edf2af8bfc622bc02d9b9ac575c834e19d8d9395d33a99ec8a852054c9c698",
+      "sha256": "502997c4914ae9ebe8cf601b5b7dc55c470780978200f37ab1b542920d178280",
       "mode": "644"
     },
     {
@@ -192,7 +192,7 @@
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/jcs.mjs",
       "target": "lib/protocol/jcs.mjs",
-      "sha256": "68e7a0667bc4bbb269efd988291921dcd5f0a2ebd5f8a2e2e9030a4386034b20",
+      "sha256": "7dc837c82f0bb950047e50060f080124c5f415c0c29c7d8ca49244a5f2c92d3e",
       "mode": "644"
     },
     {

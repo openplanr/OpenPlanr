@@ -417,7 +417,7 @@
         },
         {
           "path": "skills/design/scripts/design.mjs",
-          "digest": "sha256:024389376e79b86be3eebdeb658d34917d7ef7b71ec7a29a072e76a6bd8fe0ef"
+          "digest": "sha256:7f045dab7ae162b0aa4bb588b93122ce1a972f98adc6bf73f547a1b53cd77192"
         },
         {
           "path": "skills/design/schemas/design-document.schema.json",
@@ -433,7 +433,7 @@
         },
         {
           "path": "skills/design/scripts/runtime/packages/artifact/templates/artifact-review-stage.js",
-          "digest": "sha256:032e62f9add2b01836785c910f53e181906baea31897e9886208c88e868b791e"
+          "digest": "sha256:b6bb5676c36f45e4a9e49202424e4f9f7d65125e6ee036629dc7c0610ed74023"
         },
         {
           "path": "skills/design/scripts/runtime/packages/design/templates/studio/enhancements.css",
@@ -610,7 +610,7 @@
         },
         {
           "path": "skills/design-loop/scripts/design.mjs",
-          "digest": "sha256:024389376e79b86be3eebdeb658d34917d7ef7b71ec7a29a072e76a6bd8fe0ef"
+          "digest": "sha256:7f045dab7ae162b0aa4bb588b93122ce1a972f98adc6bf73f547a1b53cd77192"
         },
         {
           "path": "skills/design-loop/schemas/design-document.schema.json",
@@ -626,7 +626,7 @@
         },
         {
           "path": "skills/design-loop/scripts/runtime/packages/artifact/templates/artifact-review-stage.js",
-          "digest": "sha256:032e62f9add2b01836785c910f53e181906baea31897e9886208c88e868b791e"
+          "digest": "sha256:b6bb5676c36f45e4a9e49202424e4f9f7d65125e6ee036629dc7c0610ed74023"
         },
         {
           "path": "skills/design-loop/scripts/runtime/packages/design/templates/studio/enhancements.css",
@@ -803,7 +803,7 @@
         },
         {
           "path": "skills/design-review/scripts/design.mjs",
-          "digest": "sha256:024389376e79b86be3eebdeb658d34917d7ef7b71ec7a29a072e76a6bd8fe0ef"
+          "digest": "sha256:7f045dab7ae162b0aa4bb588b93122ce1a972f98adc6bf73f547a1b53cd77192"
         },
         {
           "path": "skills/design-review/schemas/design-document.schema.json",
@@ -819,7 +819,7 @@
         },
         {
           "path": "skills/design-review/scripts/runtime/packages/artifact/templates/artifact-review-stage.js",
-          "digest": "sha256:032e62f9add2b01836785c910f53e181906baea31897e9886208c88e868b791e"
+          "digest": "sha256:b6bb5676c36f45e4a9e49202424e4f9f7d65125e6ee036629dc7c0610ed74023"
         },
         {
           "path": "skills/design-review/scripts/runtime/packages/design/templates/studio/enhancements.css",
@@ -1130,7 +1130,7 @@
         },
         {
           "path": "skills/plan/scripts/design.mjs",
-          "digest": "sha256:024389376e79b86be3eebdeb658d34917d7ef7b71ec7a29a072e76a6bd8fe0ef"
+          "digest": "sha256:7f045dab7ae162b0aa4bb588b93122ce1a972f98adc6bf73f547a1b53cd77192"
         },
         {
           "path": "skills/plan/schemas/design-document.schema.json",
@@ -1146,7 +1146,7 @@
         },
         {
           "path": "skills/plan/scripts/runtime/packages/artifact/templates/artifact-review-stage.js",
-          "digest": "sha256:032e62f9add2b01836785c910f53e181906baea31897e9886208c88e868b791e"
+          "digest": "sha256:b6bb5676c36f45e4a9e49202424e4f9f7d65125e6ee036629dc7c0610ed74023"
         },
         {
           "path": "skills/plan/scripts/runtime/packages/design/templates/studio/enhancements.css",

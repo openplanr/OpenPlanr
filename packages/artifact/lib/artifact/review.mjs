@@ -10,6 +10,7 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { dirname } from 'node:path';
+import { deepFreeze } from '@openplanr/protocol/canonical-json';
 import { ARTIFACT_ERROR_CODES, PipelineError } from '@openplanr/protocol/errors';
 import {
   createArtifactEnvelope,
@@ -40,12 +41,6 @@ function finalEntry(path, fs = { lstatSync }) {
 
 function clone(value) {
   return structuredClone(value);
-}
-
-function deepFreeze(value) {
-  if (!value || typeof value !== 'object' || Object.isFrozen(value)) return value;
-  for (const child of Object.values(value)) deepFreeze(child);
-  return Object.freeze(value);
 }
 
 function canonicalObject(value) {

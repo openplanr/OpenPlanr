@@ -1,8 +1,11 @@
 // @ts-check
-import { canonicalizeJson, sha256Hex, sha256Jcs } from './canonical-json.mjs';
+import { canonicalizeJson, deepFreeze, sha256Hex, sha256Jcs } from './canonical-json.mjs';
 import { DIAGRAM_REGISTRIES } from './generated/diagram-registries.mjs';
 import { LEGACY_DIAGRAM_DOCUMENT_SCHEMA } from './generated/legacy-diagram-schema.mjs';
 import { validateJson } from './json-schema.mjs';
+
+/** @typedef {import('./diagram-authoring-contracts.d.mts').DiagramAuthoringCapability} DiagramAuthoringCapability */
+/** @typedef {import('./diagram-authoring-contracts.d.mts').DiagramAuthoringContractKind} DiagramAuthoringContractKind */
 
 /**
  * Portable, inert data contracts. Validation confers no authorization or readiness.
@@ -11,13 +14,6 @@ import { validateJson } from './json-schema.mjs';
 export const DIAGRAM_AUTHORING_PROTOCOL_VERSION = '1.13.0';
 /** @type {typeof import('./diagram-authoring-contracts.d.mts').DIAGRAM_AUTHORING_CONTRACT_VERSION} */
 export const DIAGRAM_AUTHORING_CONTRACT_VERSION = '1.0.0';
-const deepFreeze = (value) => {
-  if (value && typeof value === 'object' && !Object.isFrozen(value)) {
-    Object.values(value).forEach(deepFreeze);
-    Object.freeze(value);
-  }
-  return value;
-};
 /** @type {typeof import('./diagram-authoring-contracts.d.mts').DIAGRAM_EDIT_OPERATION_CLASSES} */
 export const DIAGRAM_EDIT_OPERATION_CLASSES = deepFreeze([
   'insert-elements',
@@ -467,7 +463,9 @@ const schemas = {
 export const DIAGRAM_AUTHORING_SCHEMAS = deepFreeze(schemas);
 /** @type {typeof import('./diagram-authoring-contracts.d.mts').DIAGRAM_AUTHORING_CONTRACT_FILES} */
 export const DIAGRAM_AUTHORING_CONTRACT_FILES = deepFreeze(
-  Object.fromEntries(Object.keys(schemas).map((name) => [name, `${name}.schema.json`])),
+  /** @type {Record<DiagramAuthoringContractKind, string>} */ (
+    Object.fromEntries(Object.keys(schemas).map((name) => [name, `${name}.schema.json`]))
+  ),
 );
 const mermaidConstructs = [
   [
@@ -597,27 +595,29 @@ export const DIAGRAM_AUTHORING_CAPABILITIES = deepFreeze({
   protocolVersion: '1.13.0',
   version: '1.0.0',
   liveCollaboration: false,
-  profiles: profileIds.map((grammarId) => ({
-    grammarId,
-    authoring: true,
-    primitives: [
-      'node',
-      'relation',
-      'group',
-      ...(grammarId === 'process' || grammarId === 'swimlane' ? ['lane'] : []),
-      'annotation',
-      'emphasis',
-    ],
-    nodeKinds: [...semanticKinds],
-    relationKinds: [...relationKinds],
-    operations: [...DIAGRAM_EDIT_OPERATION_CLASSES],
-    mermaid: {
-      mode: 'copy',
-      certificationVersion: 'flowchart-copy-v1',
-      constructs: mermaidConstructs.map((entry) => ({ ...entry })),
-      linkedSource: false,
-    },
-  })),
+  profiles: /** @type {DiagramAuthoringCapability[]} */ (
+    profileIds.map((grammarId) => ({
+      grammarId,
+      authoring: true,
+      primitives: [
+        'node',
+        'relation',
+        'group',
+        ...(grammarId === 'process' || grammarId === 'swimlane' ? ['lane'] : []),
+        'annotation',
+        'emphasis',
+      ],
+      nodeKinds: [...semanticKinds],
+      relationKinds: [...relationKinds],
+      operations: [...DIAGRAM_EDIT_OPERATION_CLASSES],
+      mermaid: {
+        mode: 'copy',
+        certificationVersion: 'flowchart-copy-v1',
+        constructs: mermaidConstructs.map((entry) => ({ ...entry })),
+        linkedSource: false,
+      },
+    }))
+  ),
   unsupportedGrammars: DIAGRAM_REGISTRIES['diagram-grammars.json'].grammars
     .map((entry) => entry.grammarId)
     .filter((value) => !profileIds.includes(value)),

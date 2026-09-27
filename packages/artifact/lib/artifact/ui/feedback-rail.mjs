@@ -5,6 +5,7 @@
  * share them.
  */
 
+import { deepFreeze as deepFreezeArtifactReview } from '@openplanr/protocol/canonical-json';
 import { annotationDomIds } from './annotations.mjs';
 
 export const ARTIFACT_REVIEW_CHANGE_EVENT = 'planr:artifact-review-change';
@@ -61,11 +62,7 @@ function clonePlain(value) {
   return clone;
 }
 
-export function deepFreezeArtifactReview(value) {
-  if (!value || typeof value !== 'object' || Object.isFrozen(value)) return value;
-  for (const entry of Object.values(value)) deepFreezeArtifactReview(entry);
-  return Object.freeze(value);
-}
+export { deepFreezeArtifactReview };
 
 export function cloneFrozenArtifactReview(review) {
   return deepFreezeArtifactReview(clonePlain(review));

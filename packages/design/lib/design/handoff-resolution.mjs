@@ -1,4 +1,4 @@
-import { canonicalizeJson, sha256Hex } from '@openplanr/protocol/canonical-json';
+import { assertPlainData, canonicalizeJson, sha256Hex } from '@openplanr/protocol/canonical-json';
 
 const OUTCOMES = new Set(['accepted', 'open', 'blocking', 'deferred', 'declined']);
 const CATEGORIES = new Set(['question', 'suggestion', 'change-request', 'blocker']);
@@ -11,28 +11,8 @@ const revisionOf = (pin) => pin.revisionId ?? pin.reviewId;
 const keyOf = (pin) => `${revisionOf(pin)}:${pin.id}`;
 const compare = (left, right) => left.localeCompare(right, 'en');
 
-function assertPlainData(value, depth = 0, seen = new Set()) {
-  if (depth > 64) throw new TypeError('Review resolution data exceeds the maximum nesting depth.');
-  if (value === null || ['string', 'boolean'].includes(typeof value)) return;
-  if (typeof value === 'number' && Number.isFinite(value)) return;
-  if (typeof value !== 'object' || seen.has(value))
-    throw new TypeError('Review resolution data must be finite, acyclic JSON.');
-  if (!Array.isArray(value) && ![Object.prototype, null].includes(Object.getPrototypeOf(value)))
-    throw new TypeError('Review resolution data must contain only plain JSON objects.');
-  seen.add(value);
-  for (const [key, descriptor] of Object.entries(Object.getOwnPropertyDescriptors(value))) {
-    if (
-      ['__proto__', 'prototype', 'constructor'].includes(key) ||
-      !Object.hasOwn(descriptor, 'value')
-    )
-      throw new TypeError('Review resolution data contains a forbidden property.');
-    assertPlainData(descriptor.value, depth + 1, seen);
-  }
-  seen.delete(value);
-}
-
 const clone = (value) => {
-  assertPlainData(value);
+  assertPlainData(value, 'Review resolution data');
   return JSON.parse(canonicalizeJson(value));
 };
 

@@ -3,7 +3,7 @@ import {
   assertOperateExperienceArtifactV2,
   assertProtocolArtifact,
 } from '../protocol/contracts.mjs';
-import { sha256Jcs } from '../protocol/jcs.mjs';
+import { deepFreeze, sha256Jcs } from '../protocol/jcs.mjs';
 import {
   assertOperateReviewWorkspacePayloadSafeV1,
   classifyOperateReviewUnsafeTextV1,
@@ -67,14 +67,6 @@ function fail(code, message, context = {}) {
 
 function clone(value) {
   return structuredClone(value);
-}
-
-function deepFreeze(value) {
-  if (value && typeof value === 'object' && !Object.isFrozen(value)) {
-    for (const nested of Object.values(value)) deepFreeze(nested);
-    Object.freeze(value);
-  }
-  return value;
 }
 
 function without(value, field) {
