@@ -805,7 +805,7 @@
     {
       "source": "packages/artifact/lib/artifact/internal/board-token.mjs",
       "target": "lib/artifact/internal/board-token.mjs",
-      "sha256": "7ebe32bb25565fb4c82e8c73ef86981886900973f23781de0c10cc10200fe27c",
+      "sha256": "f5343b3f08dcd0bcfc202d82005d530c41b2e9db77dc8564841b02e53c5458be",
       "mode": "644"
     },
     {
@@ -859,7 +859,7 @@
     {
       "source": "packages/artifact/lib/artifact/internal/server-util.mjs",
       "target": "lib/artifact/internal/server-util.mjs",
-      "sha256": "5f8421571e8055db9fa4b467c451277637749dd033fb6048c367162c8ad9859c",
+      "sha256": "985bb5da84ee1168eea50532cba2b21738bd867b5b4c23591030d9efc02efb38",
       "mode": "644"
     },
     {

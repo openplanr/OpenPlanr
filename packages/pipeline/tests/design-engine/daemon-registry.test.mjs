@@ -87,8 +87,10 @@ const register = (port, env, dir) =>
   });
 
 for (const [label, bytes, reason] of [
-  ['truncated', `{\n  "${BOARD_ID}": "/tmp/planr-board`, /JSON/],
-  ['non-map', '["legacy-slug"]\n', /expected an object mapping board ids to directories/],
+  ['truncated', `{\n  "${BOARD_ID}": "/tmp/planr-board`, /^it is not valid JSON\. /],
+  // V8 quotes the ten characters before an unexpected token, here the end of the board token.
+  ['token-quoting', `{"${BOARD_ID}":x}`, /^it is not valid JSON\. /],
+  ['non-map', '["legacy-slug"]\n', /^expected an object mapping board ids to directories\. /],
 ]) {
   test(`daemon startup sets a ${label} registry aside intact and reports it`, async (t) => {
     const { env, stateDir, boardDir, regPath } = isolatedState(t);
@@ -110,6 +112,7 @@ for (const [label, bytes, reason] of [
     const prefix = `The design board registry ${regPath} is invalid: `;
     assert.ok(notice.includes(prefix), `notice names the registry: ${notice}`);
     assert.match(notice.slice(notice.indexOf(prefix) + prefix.length), reason);
+    assert.equal(notice.includes('b'.repeat(8)), false, `notice quotes no board token: ${notice}`);
     assert.ok(notice.includes(quarantinePath), `notice names the preserved copy: ${notice}`);
 
     assert.equal((await register(port, env, boardDir)).status, 200);

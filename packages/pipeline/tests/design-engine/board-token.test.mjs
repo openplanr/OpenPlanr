@@ -1,5 +1,13 @@
 import assert from 'node:assert/strict';
-import { existsSync, mkdtempSync, readdirSync, rmSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
@@ -48,3 +56,44 @@ test('publicBoardId is slug--token (capability URL key)', () => {
     for (const d of [home, dir]) rmSync(d, { recursive: true, force: true });
   }
 });
+
+const OTHER_TOKEN = '314159265358979323846264';
+for (const [label, bytes] of [
+  ['truncated', Buffer.from(`{\n  "/proj/a": "${OTHER_TOKEN}",\n  "/proj/b": "bbbb`)],
+  // V8 quotes the ten characters before an unexpected token, here the end of OTHER_TOKEN.
+  ['token-quoting', Buffer.from(`{"/proj/a":"${OTHER_TOKEN}","b":x}`)],
+  [
+    'not UTF-8',
+    Buffer.concat([
+      Buffer.from(`{"/proj/a": "${OTHER_TOKEN}", "/proj/`),
+      Buffer.from([0xff]),
+      Buffer.from('": "bbbb"}'),
+    ]),
+  ],
+]) {
+  test(`an unreadable token store (${label}) is left unchanged and the error quotes none of it`, () => {
+    const home = mkdtempSync(join(tmpdir(), 'planr-tok-home-'));
+    const env = { PLANR_HOME: home };
+    const dir = mkdtempSync(join(tmpdir(), 'planr-tok-c-'));
+    const stateDir = join(home, 'design-daemon');
+    const store = join(stateDir, 'tokens.json');
+    mkdirSync(stateDir, { recursive: true });
+    writeFileSync(store, bytes);
+    try {
+      let error;
+      try {
+        ensureBoardToken(dir, { env });
+      } catch (caught) {
+        error = caught;
+      }
+      assert.deepEqual(readFileSync(store), bytes, 'every other board keeps its token');
+      assert.equal(
+        error?.message,
+        `The design board token store ${store} is unreadable: it is not valid JSON. It was left unchanged; repair it, or move it aside so every board gets a new URL, then retry.`,
+      );
+      assert.doesNotMatch(error.message.replace(store, ''), /\d/, 'no token characters');
+    } finally {
+      for (const d of [home, dir]) rmSync(d, { recursive: true, force: true });
+    }
+  });
+}

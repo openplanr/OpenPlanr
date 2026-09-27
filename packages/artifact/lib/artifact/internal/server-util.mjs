@@ -53,7 +53,7 @@ export function writePrivateJsonState(path, value, { mode = 0o600 } = {}) {
   mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
   const temporary = `${path}.${process.pid}.${randomBytes(8).toString('hex')}.tmp`;
   try {
-    writeFileSync(temporary, `${JSON.stringify(value, null, 2)}\n`, { mode });
+    writeFileSync(temporary, `${JSON.stringify(value, null, 2)}\n`, { mode, flag: 'wx' });
     renameSync(temporary, path);
   } finally {
     rmSync(temporary, { force: true });

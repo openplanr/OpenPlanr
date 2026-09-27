@@ -13,10 +13,11 @@
  */
 
 import { randomBytes, timingSafeEqual } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
 import { daemonDir } from './paths.mjs';
+import { writePrivateJsonState } from './server-util.mjs';
 
 /** A valid token: lowercase hex, ≥16 chars (we mint 24 = 96 bits). */
 const TOKEN_RE = /^[a-f0-9]{16,}$/;
@@ -64,9 +65,17 @@ export function timingSafeTokenEqual(left, right) {
   return leftBytes.byteLength === rightBytes.byteLength && timingSafeEqual(leftBytes, rightBytes);
 }
 
+function unreadableTokenStore(path, reason, cause) {
+  return new Error(
+    `The design board token store ${path} is unreadable: ${reason}. It was left unchanged; repair it, or move it aside so every board gets a new URL, then retry.`,
+    { cause },
+  );
+}
+
 /**
  * Read or mint the capability token for a board dir. Stable per dir: the same
  * dir always resolves to the same token until the store is cleared.
+ * An unreadable store throws and is never rewritten, so other boards keep their tokens.
  *
  * @param {string} dir absolute (or resolvable) board directory
  * @param {{ env?: NodeJS.ProcessEnv }} [opts]
@@ -77,18 +86,28 @@ export function ensureBoardToken(dir, { env = process.env } = {}) {
   const store = join(stateDir, 'tokens.json');
   const key = resolve(dir);
 
-  let tokens = {};
+  let bytes;
   try {
-    if (existsSync(store)) tokens = JSON.parse(readFileSync(store, 'utf-8')) || {};
-  } catch {
-    tokens = {};
+    bytes = readFileSync(store);
+  } catch (error) {
+    if (error?.code !== 'ENOENT') throw unreadableTokenStore(store, error.code, error);
   }
+  let tokens = {};
+  if (bytes) {
+    try {
+      tokens = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
+    } catch {
+      // A parse message quotes the file, which holds other boards' tokens.
+      throw unreadableTokenStore(store, 'it is not valid JSON');
+    }
+  }
+  if (!tokens || typeof tokens !== 'object' || Array.isArray(tokens))
+    throw unreadableTokenStore(store, 'expected an object mapping board directories to tokens');
   if (TOKEN_RE.test(tokens[key] || '')) return tokens[key];
 
   const token = mintCapabilityToken({ bytes: 12, encoding: 'hex' });
   tokens[key] = token;
-  mkdirSync(stateDir, { recursive: true });
-  writeFileSync(store, `${JSON.stringify(tokens, null, 2)}\n`, { mode: 0o600 });
+  writePrivateJsonState(store, tokens);
   return token;
 }
 

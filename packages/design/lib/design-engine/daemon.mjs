@@ -70,7 +70,7 @@ export {
  * daemon running stale code and restart it instead of reusing it forever. A
  * daemon started before this field existed reports no version → treated as stale.
  */
-export const DAEMON_VERSION = 5;
+export const DAEMON_VERSION = 6;
 
 /** Cap on a request body (bytes) — a feedback round is small; this bounds memory per request. */
 const MAX_BODY_SIZE = 5_000_000;
@@ -79,6 +79,7 @@ const DAEMON_LOG_FILE = 'daemon.log';
 const DAEMON_KIND = 'openplanr-design-daemon';
 const CONTROL_TOKEN = /^[a-f0-9]{64}$/u;
 const REGISTRY_INVALID = 'E_DESIGN_REGISTRY_INVALID';
+const FEEDBACK_UNREADABLE = 'E_DESIGN_FEEDBACK_UNREADABLE';
 
 function controlTokenPath(env = process.env) {
   return join(daemonDir(env), CONTROL_TOKEN_FILE);
@@ -201,8 +202,9 @@ function readRegistry(path) {
   let registry;
   try {
     registry = JSON.parse(text);
-  } catch (error) {
-    throw invalidRegistry(path, error.message, error);
+  } catch {
+    // A parse message quotes the file, and board ids carry capability tokens.
+    throw invalidRegistry(path, 'it is not valid JSON');
   }
   if (
     !registry ||
@@ -212,6 +214,16 @@ function readRegistry(path) {
   )
     throw invalidRegistry(path, 'expected an object mapping board ids to directories');
   return registry;
+}
+
+function unreadableFeedback(path, reason, cause) {
+  return Object.assign(
+    new Error(
+      `The design board feedback ${path} is unreadable: ${reason}. It was left unchanged; repair it or move it aside, then retry.`,
+      { cause },
+    ),
+    { code: FEEDBACK_UNREADABLE },
+  );
 }
 
 function quarantineRegistry(path, error) {
@@ -422,16 +434,30 @@ export function createDaemon({ env = process.env, fetchImpl = globalThis.fetch }
   /**
    * read the durable feedback record for a board and normalize it so every pin
    * carries an author + stable id (legacy/unattributed files load as "Anonymous"). Returns
-   * null when the file is absent or unparseable — callers decide the empty/fallback shape.
+   * null when the file is absent; an unreadable file throws so no writer replaces its pins.
    */
   const readStored = (dir) => {
     const file = join(dir, FEEDBACK_FILE);
-    if (!existsSync(file)) return null;
+    let bytes;
     try {
-      return normalizeLegacy(JSON.parse(readFileSync(file, 'utf-8')));
-    } catch {
-      return null;
+      bytes = readFileSync(file);
+    } catch (error) {
+      if (error?.code === 'ENOENT') return null;
+      throw unreadableFeedback(file, error.code, error);
     }
+    let stored;
+    try {
+      stored = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
+    } catch {
+      // A parse message quotes the file, so only a fixed reason is reported.
+      throw unreadableFeedback(file, 'it is not valid JSON');
+    }
+    if (!stored || typeof stored !== 'object' || Array.isArray(stored))
+      throw unreadableFeedback(file, 'expected a feedback object');
+    for (const field of ['pins', 'authors'])
+      if (Object.hasOwn(stored, field) && !Array.isArray(stored[field]))
+        throw unreadableFeedback(file, `${field} is not an array`);
+    return normalizeLegacy(stored);
   };
 
   /**
@@ -457,7 +483,7 @@ export function createDaemon({ env = process.env, fetchImpl = globalThis.fetch }
       } catch {
         return; // refuse to write an invalid durable record
       }
-      writeFileSync(join(dir, FEEDBACK_FILE), `${JSON.stringify(merged, null, 2)}\n`);
+      writePrivateJsonState(join(dir, FEEDBACK_FILE), merged);
       // The pending round is now folded into the durable store. Empty it (rather than delete)
       // so a stale round can never be double-applied, while keeping the file's existence intact.
       writeFileSync(pendingPath, `${JSON.stringify({ pins: [], authors: [] }, null, 2)}\n`);
@@ -512,7 +538,9 @@ export function createDaemon({ env = process.env, fetchImpl = globalThis.fetch }
         // confirm the mutex-guarded merge path is active for this board and fold any
         // leftover pending round into the durable store (non-destructively) on (re-)register.
         announceMutexPath(id);
-        reconcilePending(id, registry[id]);
+        reconcilePending(id, registry[id]).catch((error) =>
+          process.stderr.write(`[feedback] ${error.message}\n`),
+        );
         return json(res, 200, { ok: true, url: `/boards/${encodeURIComponent(id)}/` });
       }
 
@@ -584,10 +612,12 @@ export function createDaemon({ env = process.env, fetchImpl = globalThis.fetch }
                   boardId: id,
                 });
                 assertValidFeedback(feedback);
-                writeFileSync(join(dir, FEEDBACK_FILE), `${JSON.stringify(feedback, null, 2)}\n`);
+                writePrivateJsonState(join(dir, FEEDBACK_FILE), feedback);
               });
             } catch (error) {
-              return json(res, 400, { error: error.message });
+              return json(res, error?.code === FEEDBACK_UNREADABLE ? 500 : 400, {
+                error: error.message,
+              });
             }
             const byId = new Map(feedback.pins.map((pin) => [pin.id, pin]));
             for (const pin of review.pins) {
@@ -746,7 +776,7 @@ export function createDaemon({ env = process.env, fetchImpl = globalThis.fetch }
                 const stored = readStored(dir) ?? {};
                 const merged = mergeFeedback(stored, contribution);
                 assertValidFeedback(merged);
-                writeFileSync(join(dir, FEEDBACK_FILE), `${JSON.stringify(merged, null, 2)}\n`);
+                writePrivateJsonState(join(dir, FEEDBACK_FILE), merged);
                 result = merged;
               });
             } catch (e) {
