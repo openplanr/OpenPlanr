@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { Script } from 'node:vm';
 import { buildSync } from 'esbuild';
 import {
   ARTIFACT_SHELL_ASSET_PATHS,
@@ -200,15 +201,34 @@ export function renderDiagramOwnerRuntimeAsset({ projectRoot = root } = {}) {
   return bundleBrowserEntry('lib/artifact/ui/diagram-owner-studio.mjs', { projectRoot });
 }
 
+/**
+ * Returns a bundled guard unchanged, or throws unless it is one strict IIFE: an import would add
+ * page globals ahead of it, and an export is a syntax error that keeps the guard from running.
+ */
+function assertClassicGuardScript(name, source) {
+  const path = `lib/artifact/ui/sandbox/${name}.mjs`;
+  if (
+    !source.startsWith(`// ${path}\n(() => {\n  "use strict";\n`) ||
+    !source.endsWith('\n})();\n')
+  ) {
+    throw new Error(`${path} must bundle to one strict IIFE with no imports or exports.`);
+  }
+  new Script(source, { filename: path });
+  return source;
+}
+
 /** Render the module bridge.mjs reads the worker, frame and host guard scripts from. */
 export function renderArtifactSandboxGuards({ projectRoot = root } = {}) {
   const guard = (name) =>
     JSON.stringify(
-      bundleBrowserEntry(`lib/artifact/ui/sandbox/${name}.mjs`, {
-        format: 'esm',
-        banner: '',
-        projectRoot,
-      }),
+      assertClassicGuardScript(
+        name,
+        bundleBrowserEntry(`lib/artifact/ui/sandbox/${name}.mjs`, {
+          format: 'esm',
+          banner: '',
+          projectRoot,
+        }),
+      ),
     );
   return [
     ARTIFACT_SHELL_BUNDLE_BANNER,

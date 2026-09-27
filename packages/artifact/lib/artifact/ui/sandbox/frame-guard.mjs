@@ -250,7 +250,7 @@
       throw blocked();
     });
   } catch {
-    // Location members are unforgeable in some engines; the shell's navigation recovery still applies.
+    // location.assign and location.replace are unforgeable own members this never reaches; the shell's navigation recovery covers them.
   }
   try {
     navigation?.addEventListener('navigate', (event) => {

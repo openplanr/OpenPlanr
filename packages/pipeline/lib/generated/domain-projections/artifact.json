@@ -355,7 +355,7 @@
     {
       "source": "packages/artifact/lib/artifact/bridge.mjs",
       "target": "lib/artifact/bridge.mjs",
-      "sha256": "c23a4eb4c11b7e8779bb226c8c6cc4b9d278fdb966939924f50ff011825d3a3c",
+      "sha256": "ef7980aca7c40fdc5c9ecfd3b58b53ffe63e448c9ebce5a76895319e7f8be6ed",
       "mode": "644"
     },
     {
@@ -1099,7 +1099,7 @@
     {
       "source": "packages/artifact/lib/artifact/ui/sandbox/frame-guard.mjs",
       "target": "lib/artifact/ui/sandbox/frame-guard.mjs",
-      "sha256": "97df9199e5fe41976af78358ccf1269cf067dae5f4dd42e56a509fb3d35b11e5",
+      "sha256": "4218c8f158f9d97d8d1001bb8ca7123a712c05350535f3f4458a10fefd9f6b6c",
       "mode": "644"
     },
     {
@@ -1393,7 +1393,7 @@
     {
       "source": "packages/artifact/scripts/generate-artifact-shell.mjs",
       "target": "scripts/generate-artifact-shell.mjs",
-      "sha256": "2178471b6741edb65a84e3555d5ec2061bc65fb94bc8486e93c8e5dce2044ae3",
+      "sha256": "33010094ab9629af602437ea2034d48763305adbcab7fd4037e1971060de3ac4",
       "mode": "644"
     },
     {

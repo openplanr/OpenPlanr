@@ -235,10 +235,8 @@ const SANDBOX_GUARD_LIMITS = Object.freeze({
  * disagree. One pass over the template, so text a value brings in is never read as a placeholder.
  */
 function sandboxGuardFiller(name, template, keys) {
-  const found = new Set(template.match(/__PLANR_SANDBOX_[A-Z_]+__/gu));
-  const unfilled = [...found].filter(
-    (placeholder) => !keys.some((key) => key.startsWith(placeholder)),
-  );
+  const pattern = new RegExp(keys.join('|'), 'gu');
+  const unfilled = [...new Set(template.replace(pattern, '').match(/__PLANR_SANDBOX_[A-Z_]+__/gu))];
   const missing = keys.filter((key) => !template.includes(key));
   if (unfilled.length > 0 || missing.length > 0) {
     throw pipelineError(
@@ -246,8 +244,16 @@ function sandboxGuardFiller(name, template, keys) {
       `The generated ${name} does not match bridge.mjs (unfilled: ${unfilled.join(', ') || 'none'}; missing: ${missing.join(', ') || 'none'}). Run npm run generate.`,
     );
   }
-  const pattern = new RegExp(keys.join('|'), 'gu');
-  return (values) => template.replace(pattern, (key) => values[key]);
+  return (values) =>
+    template.replace(pattern, (key) => {
+      if (typeof values[key] !== 'string') {
+        throw pipelineError(
+          ARTIFACT_ERROR_CODES.BRIDGE_INVALID,
+          `The ${name} needs a string for ${key}; received ${typeof values[key]}.`,
+        );
+      }
+      return values[key];
+    });
 }
 
 const fillFrameGuard = sandboxGuardFiller('frame guard', ARTIFACT_FRAME_GUARD_TEMPLATE, [
