@@ -26,7 +26,9 @@ function run(projectDir: string, args: string[], input?: string): SpawnSyncRetur
 
 function quickFiles(created: TestProject): string[] {
   const root = path.join(created.dir, created.config.outputPaths.agile, 'quick');
-  return readdirSync(root).map((entry) => path.join(root, entry));
+  return readdirSync(root)
+    .filter((entry) => entry.endsWith('.md'))
+    .map((entry) => path.join(root, entry));
 }
 
 function machineFailure(result: SpawnSyncReturns<string>) {

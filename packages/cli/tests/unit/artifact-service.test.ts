@@ -167,6 +167,13 @@ describe('listArtifacts', () => {
     const result = await listArtifacts('/project', config, 'feature');
     expect(result.map((r) => r.id)).toEqual(['FEAT-001', 'FEAT-002', 'FEAT-003']);
   });
+
+  it('lists ids past 999 after the three-digit ones', async () => {
+    mockListFiles.mockResolvedValue(['FEAT-1000-b.md', 'FEAT-999-a.md', 'FEAT-1001-c.md']);
+
+    const result = await listArtifacts('/project', config, 'feature');
+    expect(result.map((r) => r.id)).toEqual(['FEAT-999', 'FEAT-1000', 'FEAT-1001']);
+  });
 });
 
 describe('readArtifact', () => {
