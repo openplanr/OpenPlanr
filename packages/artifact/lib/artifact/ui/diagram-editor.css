@@ -1016,6 +1016,21 @@ body.planr-diagram-owner-page #diagram-owner-editor {
   stroke: var(--de-primary);
 }
 
+/* A selected connector is traced in the accent on its own route, and its arrowheads follow. */
+.planr-diagram-editor .de-canvas svg .de-selection-route {
+  fill: none;
+  stroke: var(--de-primary);
+}
+
+.planr-diagram-editor
+  .de-canvas
+  svg
+  [data-collection="relations"][data-selected="true"]
+  marker
+  > path {
+  fill: var(--de-primary);
+}
+
 .planr-diagram-editor :is(.de-resize-handle, .de-bend-handle) {
   fill: var(--de-panel);
   stroke: var(--de-primary);
