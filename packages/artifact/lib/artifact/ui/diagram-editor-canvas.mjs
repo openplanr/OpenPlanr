@@ -5,7 +5,7 @@ import {
   renderAuthoredSceneElement,
 } from '../diagram/authoring/renderer.mjs';
 import { resolveDiagramSceneElement } from '../diagram/authoring/scene.mjs';
-import { moveOrthogonalBend } from './diagram-editor-actions.mjs';
+import { displayName, moveOrthogonalBend } from './diagram-editor-actions.mjs';
 import { bundleOf, errText } from './diagram-editor-commands.mjs';
 import { focusable } from './diagram-editor-dom.mjs';
 
@@ -169,7 +169,6 @@ export function createEditorCanvas(ctx) {
         const replacement = doc.importNode(rendered, true);
         replacement.setAttribute('tabindex', '-1');
         replacement.setAttribute('role', 'img');
-        replacement.setAttribute('aria-label', scene.label || scene.kind);
         const old = elementNodes.get(id);
         if (old) old.replaceWith(replacement);
         else world.append(replacement);
@@ -177,6 +176,9 @@ export function createEditorCanvas(ctx) {
         renderSignatures.set(id, signature);
       }
       const node = elementNodes.get(id);
+      // A connector is named by its endpoints, so its name can change without a redraw.
+      const name = displayName(byId, id);
+      if (node.getAttribute('aria-label') !== name) node.setAttribute('aria-label', name);
       node.dataset.selected = String(selection.has(id));
       node.classList.toggle('de-selected', selection.has(id));
     }
@@ -194,6 +196,18 @@ export function createEditorCanvas(ctx) {
     renderOverlays(state, bundle, selection);
     ctx.chrome.render(state);
   }
+  /** @param {string} tag @param {Record<string, string | number>} attributes */
+  function svgElement(tag, attributes) {
+    const node = doc.createElementNS(SVG, tag);
+    for (const [name, value] of Object.entries(attributes)) node.setAttribute(name, String(value));
+    return node;
+  }
+  /** A handle drawn small inside a larger transparent target that takes the pointer. */
+  function handleGroup(attributes, parts) {
+    const group = svgElement('g', { class: 'de-handle', ...attributes });
+    group.append(...parts);
+    return group;
+  }
   function renderOverlays(state, bundle, selection) {
     overlays.replaceChildren();
     const scale = state.view.camera.scale,
@@ -202,17 +216,16 @@ export function createEditorCanvas(ctx) {
       const geometry = session.geometry(id),
         rect = geometry?.bounds ?? geometry?.labelBounds;
       if (rect) {
-        const box = doc.createElementNS(SVG, 'rect');
-        for (const [key, value] of Object.entries({
-          x: rect.x,
-          y: rect.y,
-          width: rect.width,
-          height: rect.height,
-        }))
-          box.setAttribute(key, String(value));
-        box.setAttribute('class', 'de-selection-box');
-        box.setAttribute('stroke-width', String(1.5 / scale));
-        box.setAttribute('pointer-events', 'none');
+        // Drawn 4px outside the bounds, so every shape's own outline stays visible inside it.
+        const box = svgElement('rect', {
+          x: rect.x - 4 / scale,
+          y: rect.y - 4 / scale,
+          width: rect.width + 8 / scale,
+          height: rect.height + 8 / scale,
+          class: 'de-selection-box',
+          'stroke-width': 2 / scale,
+          'pointer-events': 'none',
+        });
         overlays.append(box);
         if (
           selection.size === 1 &&
@@ -220,31 +233,34 @@ export function createEditorCanvas(ctx) {
           byPlacement.get(id)?.bounds &&
           !byPlacement.get(id).locks.size
         ) {
-          const handle = doc.createElementNS(SVG, 'rect');
-          const size = 10 / scale;
-          handle.setAttribute('x', String(rect.x + rect.width - size / 2));
-          handle.setAttribute('y', String(rect.y + rect.height - size / 2));
-          handle.setAttribute('width', String(size));
-          handle.setAttribute('height', String(size));
-          handle.setAttribute('rx', String(2 / scale));
-          handle.setAttribute('class', 'de-resize-handle');
-          handle.setAttribute('data-handle', 'resize');
-          handle.setAttribute('data-handle-id', id);
-          overlays.append(handle);
+          const [x, y] = [rect.x + rect.width + 4 / scale, rect.y + rect.height + 4 / scale];
+          const square = (size, attributes) =>
+            svgElement('rect', {
+              x: x - size / 2,
+              y: y - size / 2,
+              width: size,
+              height: size,
+              ...attributes,
+            });
+          overlays.append(
+            handleGroup({ 'data-handle': 'resize', 'data-handle-id': id }, [
+              square(24 / scale, { class: 'de-handle-hit' }),
+              square(8 / scale, { class: 'de-resize-handle', 'stroke-width': 1.5 / scale }),
+            ]),
+          );
         }
       }
       if (geometry?.points?.length && ctx.editable(state))
         for (let index = 1; index < geometry.points.length - 1; index++) {
-          const point = geometry.points[index],
-            handle = doc.createElementNS(SVG, 'circle');
-          handle.setAttribute('cx', String(point.x));
-          handle.setAttribute('cy', String(point.y));
-          handle.setAttribute('r', String(5 / scale));
-          handle.setAttribute('class', 'de-bend-handle');
-          handle.setAttribute('data-handle', 'bend');
-          handle.setAttribute('data-index', String(index));
-          handle.setAttribute('data-handle-id', id);
-          overlays.append(handle);
+          const point = geometry.points[index];
+          const circle = (radius, attributes) =>
+            svgElement('circle', { cx: point.x, cy: point.y, r: radius, ...attributes });
+          overlays.append(
+            handleGroup({ 'data-handle': 'bend', 'data-index': index, 'data-handle-id': id }, [
+              circle(12 / scale, { class: 'de-handle-hit' }),
+              circle(4 / scale, { class: 'de-bend-handle', 'stroke-width': 1.5 / scale }),
+            ]),
+          );
         }
     }
     if (drag?.type === 'marquee') {

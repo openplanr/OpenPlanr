@@ -2,7 +2,7 @@
 import { getDiagramAuthoringCapability } from '@openplanr/protocol/diagram-authoring-contracts';
 import { elementIndex } from '../diagram/authoring/model.mjs';
 import { displayName, quantity } from './diagram-editor-actions.mjs';
-import { button, element } from './diagram-editor-dom.mjs';
+import { button, element, icon } from './diagram-editor-dom.mjs';
 import { hostSaveLabel } from './diagram-editor-host.mjs';
 
 const DRAWER_MAX_WIDTH = 1100;
@@ -199,6 +199,11 @@ export function createEditorChrome(ctx) {
       dom.canvasTools.querySelector('[data-action="snap"]')
     );
     snapControl?.setAttribute('aria-pressed', String(state.view.snap));
+    // The icon states the snap setting too, so the neutral toggle does not rely on its fill alone.
+    if (snapControl && snapControl.dataset.active !== String(state.view.snap))
+      snapControl
+        .querySelector('.de-icon')
+        ?.replaceWith(icon(doc, state.view.snap ? 'snap' : 'snap-off'));
     if (snapControl) snapControl.dataset.active = String(state.view.snap);
     dom.zoomValue.textContent = Math.round(state.view.camera.scale * 100) + '%';
     for (const [action, disabled] of Object.entries({

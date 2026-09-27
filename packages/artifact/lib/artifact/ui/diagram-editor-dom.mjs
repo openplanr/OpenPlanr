@@ -26,6 +26,10 @@ const ICONS = Object.freeze(
       ],
     ],
     snap: [['path', { d: 'M5 4v7a7 7 0 0 0 14 0V4M5 8h4M15 8h4M5 4h4v4H5zM15 4h4v4h-4z' }]],
+    'snap-off': [
+      ['path', { d: 'M5 4v7a7 7 0 0 0 14 0V4M5 8h4M15 8h4M5 4h4v4H5zM15 4h4v4h-4z' }],
+      ['path', { d: 'M3 3l18 18' }],
+    ],
     fit: [['path', { d: 'M9 4H4v5M15 4h5v5M20 15v5h-5M9 20H4v-5' }]],
     search: [
       ['circle', { cx: 10.5, cy: 10.5, r: 6.5 }],
@@ -117,6 +121,7 @@ const ICONS = Object.freeze(
       ],
     ],
     plus: [['path', { d: 'M12 5v14M5 12h14' }]],
+    minus: [['path', { d: 'M5 12h14' }]],
     'arrow-up': [['path', { d: 'M12 20V4M6 10l6-6 6 6' }]],
     'arrow-down': [['path', { d: 'M12 4v16M6 14l6 6 6-6' }]],
     mark: [

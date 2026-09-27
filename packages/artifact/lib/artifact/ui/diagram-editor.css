@@ -945,6 +945,7 @@ body.planr-diagram-owner-page #diagram-owner-editor {
 
 /* Canvas and viewport controls */
 .planr-diagram-editor .de-stage {
+  position: relative;
   min-width: 0;
   min-height: 0;
   overflow: hidden;
@@ -1008,21 +1009,30 @@ body.planr-diagram-owner-page #diagram-owner-editor {
   cursor: pointer;
 }
 
-.planr-diagram-editor .de-canvas svg .de-selected > :is(rect, ellipse, path) {
-  filter: drop-shadow(0 0 4px var(--de-primary));
-}
-
 .planr-diagram-editor .de-selection-box {
   fill: none;
   stroke: var(--de-primary);
-  stroke-dasharray: 5 4;
 }
 
 .planr-diagram-editor :is(.de-resize-handle, .de-bend-handle) {
-  fill: var(--de-primary);
-  stroke: var(--de-bg);
-  stroke-width: 1;
+  fill: var(--de-panel);
+  stroke: var(--de-primary);
+  pointer-events: none;
+}
+
+/* The small handle sits inside a 24px transparent target that takes the pointer. */
+.planr-diagram-editor .de-handle-hit {
+  fill: transparent;
+  stroke: none;
+  pointer-events: all;
+}
+
+.planr-diagram-editor [data-handle="resize"] {
   cursor: nwse-resize;
+}
+
+.planr-diagram-editor [data-handle="bend"] {
+  cursor: move;
 }
 
 .planr-diagram-editor .de-marquee {
@@ -1031,10 +1041,11 @@ body.planr-diagram-owner-page #diagram-owner-editor {
   stroke-dasharray: 4 3;
 }
 
+/* A ring rather than a border keeps the bar at 36px tools plus 4px padding: 44px. */
 .planr-diagram-editor .de-canvas-tools {
   position: absolute;
   z-index: 4;
-  bottom: var(--de-space-4);
+  bottom: var(--de-space-6);
   left: 50%;
   max-width: calc(100% - var(--de-space-6));
   overflow: auto hidden;
@@ -1042,10 +1053,12 @@ body.planr-diagram-owner-page #diagram-owner-editor {
   align-items: center;
   gap: var(--de-space-1);
   padding: var(--de-space-1);
-  border: 1px solid var(--de-rule);
+  border: 0;
   border-radius: var(--de-radius-md);
   background: color-mix(in srgb, var(--de-chrome) 95%, transparent);
-  box-shadow: var(--de-shadow-md);
+  box-shadow:
+    0 0 0 1px var(--de-rule),
+    var(--de-shadow-md);
   scrollbar-width: none;
   transform: translateX(-50%);
   backdrop-filter: blur(16px);
@@ -1065,6 +1078,7 @@ body.planr-diagram-owner-page #diagram-owner-editor {
 }
 
 .planr-diagram-editor .de-canvas-tools button {
+  min-width: var(--de-control-height);
   min-height: var(--de-control-height);
   border-color: transparent;
   background: transparent;
@@ -1083,9 +1097,27 @@ body.planr-diagram-owner-page #diagram-owner-editor {
   background: var(--de-raised);
 }
 
-.planr-diagram-editor .de-canvas-tools button[aria-pressed="true"] {
-  color: var(--de-primary);
-  background: var(--de-primary-soft);
+/* The pressed mode tool is the canvas's one accent control. */
+.planr-diagram-editor
+  .de-canvas-tools
+  :is([data-action="select-tool"], [data-action="pan-tool"])[aria-pressed="true"] {
+  color: var(--de-primary-text);
+  background: var(--de-primary);
+}
+
+.planr-diagram-editor
+  .de-canvas-tools
+  :is([data-action="select-tool"], [data-action="pan-tool"])[aria-pressed="true"]:hover:not(
+    :disabled
+  ) {
+  color: var(--de-primary-hover-text);
+  background: var(--de-primary-hover);
+}
+
+/* Snap is a setting rather than a mode: neutral when on, and its icon changes with it. */
+.planr-diagram-editor .de-canvas-tools [data-action="snap"][aria-pressed="true"] {
+  color: var(--de-text);
+  background: var(--de-raised);
 }
 
 .planr-diagram-editor :is(.de-zoom-value, .de-zoom-label) {
@@ -1143,6 +1175,25 @@ body.planr-diagram-owner-page #diagram-owner-editor {
   background: var(--de-chrome);
   font-size: var(--de-text-xs);
   line-height: var(--de-leading-xs);
+}
+
+/* Status without an action floats as a caption, so the canvas runs to the bottom edge. A footer
+ * that offers Retry save or Compare revisions stays a bar. */
+.planr-diagram-editor .de-stage-footer:not(:has(button)) {
+  position: absolute;
+  z-index: 3;
+  right: var(--de-space-3);
+  bottom: var(--de-space-1);
+  left: var(--de-space-3);
+  min-height: 0;
+  padding: 0;
+  display: block;
+  overflow: hidden;
+  border: 0;
+  background: transparent;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  pointer-events: none;
 }
 
 /* Inspector */
@@ -1844,7 +1895,11 @@ body.planr-diagram-owner-page #diagram-owner-editor {
 }
 
 .planr-diagram-editor[data-layout~="compact"] .de-canvas-tools {
-  bottom: var(--de-space-3);
+  bottom: var(--de-space-8);
+}
+
+.planr-diagram-editor[data-layout~="compact"] .de-stage-footer:not(:has(button)) {
+  bottom: var(--de-space-2);
 }
 
 .planr-diagram-editor[data-layout~="compact"] .de-canvas-tools button {

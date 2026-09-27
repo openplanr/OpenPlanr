@@ -1613,6 +1613,142 @@ test(
 );
 
 test(
+  'canvas selection is an outset outline with small handles on large targets',
+  options,
+  async (t) => {
+    const { page } = await fixture(t, { bundle: makeBundle('process') });
+    // Geometry in screen pixels, without the stroke that some engines add to client rects.
+    const box = (locator) =>
+      locator.evaluate((node) => {
+        const shape = node.getBBox(),
+          matrix = node.getScreenCTM();
+        return {
+          x: matrix.a * shape.x + matrix.e,
+          y: matrix.d * shape.y + matrix.f,
+          width: shape.width * matrix.a,
+          height: shape.height * matrix.d,
+        };
+      });
+    const near = (actual, expected, message) =>
+      assert.ok(Math.abs(actual - expected) < 0.75, `${message}: ${actual} is not ${expected}`);
+    await select(page, 'node-a');
+    const scale = await page.evaluate(
+      () => Number(document.querySelector('.de-zoom-value').textContent.replace('%', '')) / 100,
+    );
+    const outline = page.locator('.de-selection-box');
+    assert.equal(await outline.count(), 1);
+    const style = await outline.evaluate((node) => ({
+      dash: getComputedStyle(node).strokeDasharray,
+      width: Number(node.getAttribute('stroke-width')),
+    }));
+    assert.equal(style.dash, 'none', 'The selection outline is solid');
+    near(style.width * scale, 2, 'The outline is 2px on screen');
+    const shape = await box(drawing(page, 'node-a').locator('rect').first());
+    const drawn = await box(outline);
+    near(shape.x - drawn.x, 4, 'The outline sits 4px outside the left edge');
+    near(drawn.x + drawn.width - (shape.x + shape.width), 4, 'and outside the right edge');
+    assert.equal(
+      await drawing(page, 'node-a').evaluate((node) =>
+        [...node.querySelectorAll('*')].some((part) => getComputedStyle(part).filter !== 'none'),
+      ),
+      false,
+      'A selected shape has no glow',
+    );
+    const resize = page.locator('[data-handle="resize"][data-handle-id="node-a"]');
+    near(
+      (await box(resize.locator('.de-resize-handle'))).width,
+      8,
+      'The resize handle is drawn 8px',
+    );
+    near((await box(resize.locator('.de-handle-hit'))).width, 24, 'and takes the pointer on 24px');
+
+    await select(page, 'edge-a');
+    await page.getByRole('button', { name: 'Add bend', exact: true }).click();
+    await settle(page);
+    const bend = page.locator('[data-handle="bend"][data-handle-id="edge-a"]').first();
+    near((await box(bend.locator('.de-bend-handle'))).width, 8, 'A bend handle is drawn at r4');
+    near((await box(bend.locator('.de-handle-hit'))).width, 24, 'and takes the pointer at r12');
+  },
+);
+
+test(
+  'canvas tools sit in a 44px bar with one accent mode and a neutral Snap',
+  options,
+  async (t) => {
+    const { page } = await fixture(t, { bundle: makeBundle('process') });
+    const tools = page.locator('.de-canvas-tools');
+    const shell = page.locator('.planr-diagram-editor');
+    const token = (name) =>
+      shell.evaluate((node, property) => {
+        const probe = document.createElement('span');
+        probe.style.color = getComputedStyle(node).getPropertyValue(property);
+        document.body.append(probe);
+        const value = getComputedStyle(probe).color;
+        probe.remove();
+        return value;
+      }, name);
+    assert.equal(await tools.evaluate((node) => node.getBoundingClientRect().height), 44);
+    const buttons = await tools.getByRole('button').evaluateAll((items) =>
+      items.map((item) => {
+        const rect = item.getBoundingClientRect();
+        return { name: item.getAttribute('aria-label'), width: rect.width, height: rect.height };
+      }),
+    );
+    assert.ok(
+      buttons.every((item) => item.height === 36 && item.width >= 36),
+      `Every tool is at least 36px square: ${JSON.stringify(buttons)}`,
+    );
+    for (const name of ['Zoom out', 'Zoom in']) {
+      const zoom = page.getByRole('button', { name, exact: true });
+      assert.equal(await zoom.textContent(), '', `${name} is an icon`);
+      assert.equal(await zoom.locator('svg').count(), 1);
+      assert.deepEqual(
+        await zoom.evaluate((node) => [node.offsetWidth, node.offsetHeight]),
+        [36, 36],
+      );
+    }
+    const colours = (name) =>
+      page
+        .getByRole('button', { name, exact: true })
+        .evaluate((node) => [getComputedStyle(node).color, getComputedStyle(node).backgroundColor]);
+    assert.deepEqual(
+      await colours('Select'),
+      [await token('--de-primary-text'), await token('--de-primary')],
+      'The pressed mode tool is solid accent',
+    );
+    const snap = page.getByRole('button', { name: 'Snap', exact: true });
+    const snapIcon = () => snap.locator('svg path').count();
+    assert.equal(await snap.getAttribute('aria-pressed'), 'true');
+    assert.deepEqual(
+      await colours('Snap'),
+      [await token('--de-text'), await token('--de-raised')],
+      'Snap on is neutral',
+    );
+    const onPaths = await snapIcon();
+    await snap.click();
+    assert.equal(await snap.getAttribute('aria-pressed'), 'false');
+    assert.equal(await snapIcon(), onPaths + 1, 'Snap off adds a slash to its icon');
+
+    const caption = await page.locator('.de-stage-footer').evaluate((node) => {
+      const style = getComputedStyle(node);
+      const stage = node.closest('.de-stage').getBoundingClientRect();
+      const canvas = node.closest('.de-stage').querySelector('.de-canvas').getBoundingClientRect();
+      return {
+        position: style.position,
+        fontSize: style.fontSize,
+        border: style.borderTopWidth,
+        canvasToBottom: Math.round(stage.bottom - canvas.bottom),
+      };
+    });
+    assert.deepEqual(
+      caption,
+      { position: 'absolute', fontSize: '11px', border: '0px', canvasToBottom: 0 },
+      'The status caption floats over a canvas that runs to the bottom edge',
+    );
+  },
+);
+
+test(
   'canvas tools expose mode and snapping state with visible zoom feedback',
   options,
   async (t) => {
@@ -1805,6 +1941,14 @@ test(
       'Selected: Start → Process · 5 objects',
     );
     assert.deepEqual(await exposedIds(page), [], 'Connector selected');
+    assert.equal(
+      await page
+        .locator('[data-editor-svg] [data-collection="relations"][role="img"]')
+        .first()
+        .getAttribute('aria-label'),
+      'Start → Process',
+      'The canvas names an unlabelled connector as the outline does',
+    );
     assert.deepEqual(await deletionCopy('Delete…'), [
       'Delete 1 connector? This can be undone before another conflicting change.',
       'Connector: Start → Process',
