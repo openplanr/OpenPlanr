@@ -1,7 +1,7 @@
 // @ts-check
 import { getDiagramAuthoringCapability } from '@openplanr/protocol/diagram-authoring-contracts';
 import { elementIndex } from '../diagram/authoring/model.mjs';
-import { displayName } from './diagram-editor-actions.mjs';
+import { displayName, kindName } from './diagram-editor-actions.mjs';
 import { errText } from './diagram-editor-commands.mjs';
 import { button, element, field, icon } from './diagram-editor-dom.mjs';
 
@@ -165,6 +165,7 @@ export function createEditorOutline(ctx) {
       type: 'search',
       placeholder: 'Search objects',
     });
+    search.label.append(icon(doc, 'search', { className: 'de-icon de-search-icon' }));
     outlinePane.append(search.label);
     const list = element(doc, 'div', {
       className: 'de-outline-list',
@@ -185,23 +186,14 @@ export function createEditorOutline(ctx) {
       if (!entry) return;
       const members = (entry.value.members ?? []).filter((member) => indexed.has(member)),
         collapsed = members.length > 0 && collapsedGroups.has(id);
-      const name = displayName(indexed, id);
+      const name = displayName(indexed, id),
+        kind = kindName(entry);
       const wrapper = element(doc, 'div', {
         className: 'de-outline-item',
         'data-id': id,
         'data-parent-id': parentId,
-        'data-search-text': name.toLowerCase(),
+        'data-search-text': `${name} ${kind}`.toLowerCase(),
       });
-      const kind =
-        entry.collection === 'relations'
-          ? 'Connector'
-          : entry.collection === 'lanes'
-            ? 'Lane'
-            : entry.collection === 'groups'
-              ? 'Group'
-              : entry.collection === 'annotations'
-                ? 'Note'
-                : (entry.value.kind ?? 'Shape');
       const choose = button(doc, '', 'select-id', {
         role: 'treeitem',
         'data-id': id,
@@ -243,8 +235,11 @@ export function createEditorOutline(ctx) {
         twisty,
         kindIcon,
         element(doc, 'span', { className: 'de-outline-label' }, name),
-        element(doc, 'span', { className: 'de-outline-meta', 'aria-hidden': 'true' }, kind),
       );
+      if (kind.toLowerCase() !== name.toLowerCase())
+        choose.append(
+          element(doc, 'span', { className: 'de-outline-meta', 'aria-hidden': 'true' }, kind),
+        );
       wrapper.append(choose);
       list.append(wrapper);
       if (!collapsed)

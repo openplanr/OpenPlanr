@@ -6,16 +6,20 @@ import {
   parentIndex,
   semanticFields,
 } from '../diagram/authoring/model.mjs';
-import { displayName, moveOrthogonalBend, propertyTransaction } from './diagram-editor-actions.mjs';
+import {
+  arrangedPlacements,
+  COLLECTION_NAMES,
+  displayName,
+  moveOrthogonalBend,
+  NODE_NAMES,
+  propertyTransaction,
+  quantity,
+} from './diagram-editor-actions.mjs';
 import { button, element, field, icon, iconButton } from './diagram-editor-dom.mjs';
 
-const COLLECTION_LABELS = Object.freeze({
-  nodes: 'Node',
-  relations: 'Connection',
-  annotations: 'Annotation',
-  groups: 'Group',
-  lanes: 'Lane',
-});
+/** Select options that show a stored value in sentence case: "data-store" reads "Data store". */
+const labelled = (...values) =>
+  values.map((value) => [value, value[0].toUpperCase() + value.slice(1).replaceAll('-', ' ')]);
 
 function cleanController(root) {
   return {
@@ -38,7 +42,7 @@ function cleanController(root) {
   };
 }
 
-function inspectorHeader(document, { kicker, title, reference, description }) {
+function inspectorHeader(document, { kicker, title, description }) {
   const header = element(document, 'header', {
     className: 'de-inspector-header',
   });
@@ -50,16 +54,38 @@ function inspectorHeader(document, { kicker, title, reference, description }) {
   if (description)
     identity.append(element(document, 'p', { className: 'de-inspector-description' }, description));
   header.append(identity);
-  if (reference)
-    header.append(
-      element(
-        document,
-        'code',
-        { className: 'de-inspector-reference', title: reference },
-        reference,
-      ),
-    );
   return header;
+}
+
+/** An internal id, readable and copyable, for the Advanced section only. */
+function referenceRow(document, reference, act) {
+  const row = element(document, 'div', { className: 'de-inspector-reference' });
+  const copy = button(document, 'Copy', null, { 'aria-label': 'Copy reference' });
+  copy.onclick = () => act('copy-reference', reference);
+  row.append(
+    element(document, 'span', {}, 'Reference'),
+    element(document, 'code', {}, reference),
+    copy,
+  );
+  return row;
+}
+
+/** A flat group of controls under a sentence-case heading. */
+function inspectorGroup(document, title) {
+  const group = element(document, 'section', { className: 'de-inspector-group' });
+  group.append(element(document, 'h3', {}, title));
+  return group;
+}
+
+/** A muted line under a control that says why it is disabled. */
+function disabledReason(document) {
+  return element(document, 'p', { className: 'de-inspector-reason', hidden: true });
+}
+/** Disable `control` and show `text` while there is a reason; a read-only view shows none. */
+function explain(control, reason, text, editable) {
+  control.disabled = !editable || !!text;
+  reason.textContent = text;
+  reason.hidden = !editable || !text;
 }
 
 function inspectorSection(document, title, { iconName, open = false, className = '' } = {}) {
@@ -137,7 +163,6 @@ export function renderDiagramProperties({
       inspectorHeader(document, {
         kicker: 'Diagram',
         title: 'Diagram details',
-        reference: bundle.diagramId,
         description: bundle.document.title,
       }),
     );
@@ -173,6 +198,9 @@ export function renderDiagramProperties({
     changeTitle.onclick = () => act('update-title', title.input.value);
     overview.body.append(changeTitle);
     root.append(overview.details);
+    const advanced = inspectorSection(document, 'Advanced', { iconName: 'advanced' });
+    advanced.body.append(referenceRow(document, bundle.diagramId, act));
+    root.append(advanced.details);
     onDirtyChange?.(false);
     return cleanController(root);
   }
@@ -191,7 +219,7 @@ export function renderDiagramProperties({
   const look = appearanceFields(place);
   root.append(
     inspectorHeader(document, {
-      kicker: `${COLLECTION_LABELS[entry.collection] ?? 'Object'} properties`,
+      kicker: `${COLLECTION_NAMES[entry.collection] ?? 'Object'} properties`,
       title: displayName(byId, id),
     }),
   );
@@ -229,7 +257,7 @@ export function renderDiagramProperties({
       maxlength: 4000,
     });
     add(content.body, 'Semantic role', sem.kind, {
-      choices: ['process', 'start', 'end', 'decision', 'data-store', 'component'],
+      choices: Object.entries(NODE_NAMES),
     });
   }
   form.append(content.details);
@@ -281,7 +309,7 @@ export function renderDiagramProperties({
       iconName: 'route',
       open: true,
     });
-    const choices = bundle.document.nodes.map((node) => [node.id, node.label]);
+    const choices = bundle.document.nodes.map((node) => [node.id, displayName(byId, node.id)]);
     add(connection.body, 'From', sem.from, { choices });
     add(connection.body, 'To', sem.to, { choices });
     add(connection.body, 'Direction', sem.direction, {
@@ -292,21 +320,21 @@ export function renderDiagramProperties({
       ],
     });
     add(connection.body, 'Relationship', sem.kind, {
-      choices: ['association', 'dependency', 'flow', 'message', 'transition'],
+      choices: labelled('association', 'dependency', 'flow', 'message', 'transition'),
     });
     add(connection.body, 'Routing', geom.route.strategy, {
-      choices: ['straight', 'orthogonal'],
+      choices: labelled('straight', 'orthogonal'),
       disabled: !editable || place.locks.route,
     });
     const endpointGrid = element(document, 'div', {
       className: 'de-field-grid',
     });
     add(endpointGrid, 'Start side', geom.route.from.side, {
-      choices: ['top', 'right', 'bottom', 'left'],
+      choices: labelled('top', 'right', 'bottom', 'left'),
       disabled: !editable || place.locks.route,
     });
     add(endpointGrid, 'End side', geom.route.to.side, {
-      choices: ['top', 'right', 'bottom', 'left'],
+      choices: labelled('top', 'right', 'bottom', 'left'),
       disabled: !editable || place.locks.route,
     });
     connection.body.append(endpointGrid);
@@ -367,13 +395,13 @@ export function renderDiagramProperties({
     iconName: 'appearance',
   });
   add(appearance.body, 'Fill', look.appearance.fill, {
-    choices: ['surface', 'accent', 'success', 'warning', 'danger', 'transparent'],
+    choices: labelled('surface', 'accent', 'success', 'warning', 'danger', 'transparent'),
   });
   add(appearance.body, 'Stroke', look.appearance.stroke, {
-    choices: ['default', 'accent', 'muted', 'danger', 'none'],
+    choices: labelled('default', 'accent', 'muted', 'danger', 'none'),
   });
   add(appearance.body, 'Line style', look.appearance.strokeStyle, {
-    choices: ['solid', 'dashed', 'dotted'],
+    choices: labelled('solid', 'dashed', 'dotted'),
   });
   add(appearance.body, 'Font size', look.appearance.fontSize, {
     type: 'number',
@@ -386,7 +414,8 @@ export function renderDiagramProperties({
     const structure = inspectorSection(document, 'Structure', {
       iconName: 'structure',
     });
-    if (entry.collection !== 'relations') appendParentControl(structure.body, ids);
+    if (entry.collection !== 'relations')
+      structure.body.append(...parentOperation(document, { bundle, byId, ids, editable, act }));
     if (['groups', 'lanes'].includes(entry.collection)) appendMembers(structure.body);
     form.append(structure.details);
   }
@@ -422,29 +451,20 @@ export function renderDiagramProperties({
   });
   const metadata = element(document, 'dl', { className: 'de-inspector-meta' });
   metadata.append(
-    element(document, 'dt', {}, 'Reference'),
-    element(document, 'dd', {}, id),
     element(document, 'dt', {}, 'Object type'),
-    element(document, 'dd', {}, COLLECTION_LABELS[entry.collection] ?? entry.collection),
+    element(document, 'dd', {}, COLLECTION_NAMES[entry.collection] ?? entry.collection),
     element(document, 'dt', {}, 'Grammar'),
     element(document, 'dd', {}, bundle.document.grammar.id),
   );
-  advanced.body.append(metadata);
+  advanced.body.append(referenceRow(document, id, act), metadata);
   form.append(advanced.details);
 
-  const danger = element(document, 'section', {
-    className: 'de-inspector-danger',
-    'aria-labelledby': 'de-danger-title',
-  });
-  danger.append(element(document, 'h3', { id: 'de-danger-title' }, 'Danger zone'));
-  danger.append(
-    iconButton(document, 'Delete selection…', 'delete', {
-      icon: 'trash',
-      className: 'de-danger',
+  form.append(
+    button(document, 'Delete…', 'delete', {
+      className: 'de-inspector-delete',
       disabled: !editable,
     }),
   );
-  form.append(danger);
 
   const footer = element(document, 'footer', {
     className: 'de-inspector-footer',
@@ -601,32 +621,6 @@ export function renderDiagramProperties({
     });
   }
 
-  function appendParentControl(target, selectedIds) {
-    const parents = parentIndex(bundle.document),
-      current = parents.get(selectedIds[0]) ?? '';
-    const choices = [
-      ['', 'Diagram root'],
-      ...[...bundle.document.groups, ...bundle.document.lanes]
-        .filter((item) => !selectedIds.includes(item.id))
-        .map((item) => [item.id, item.label]),
-    ];
-    const operation = element(document, 'div', {
-      className: 'de-inspector-operation',
-    });
-    const parent = field(document, 'Parent', current, {
-      choices,
-      disabled: !editable,
-    });
-    operation.append(parent.label);
-    const move = iconButton(document, 'Move to parent', null, {
-      icon: 'parent',
-      disabled: !editable,
-    });
-    move.onclick = () => act('reparent', parent.input.value || null);
-    operation.append(move);
-    target.append(operation);
-  }
-
   function appendMembers(target) {
     target.append(element(document, 'h3', { className: 'de-inspector-subheading' }, 'Members'));
     const members = element(document, 'ul', {
@@ -681,94 +675,118 @@ function renderMultiSelection({ document, root, bundle, ids, byId, editable, act
     inspectorHeader(document, {
       kicker: 'Multiple selection',
       title: `${ids.length} objects selected`,
-      reference: `${ids.length} references`,
       description: selectedLabels.join(', '),
     }),
   );
-  const arrange = inspectorSection(document, 'Arrange', {
-    iconName: 'arrange',
-    open: true,
-  });
-  actionRow(document, arrange.body, [
-    ['Align left', 'align-left', 'arrange', { disabled: !editable }],
-    ['Align top', 'align-top', 'arrange', { disabled: !editable }],
-    ['Align centers', 'align-center', 'arrange', { disabled: !editable }],
-    ['Distribute horizontally', 'distribute-horizontal', 'arrange', { disabled: !editable }],
-    ['Distribute vertically', 'distribute-vertical', 'arrange', { disabled: !editable }],
-  ]);
-  root.append(arrange.details);
-  const structure = inspectorSection(document, 'Structure', {
-    iconName: 'structure',
-    open: true,
-  });
-  actionRow(document, structure.body, [
-    ['Group selection', 'group', 'group', { disabled: !editable }],
-    ['Ungroup selection', 'ungroup', 'ungroup', { disabled: !editable }],
-    ['Connect selection', 'connect', 'connect', { disabled: !editable }],
-  ]);
-  appendMultiParentControl(structure.body);
-  root.append(structure.details);
-  const clipboard = inspectorSection(document, 'Clipboard', {
-    iconName: 'copy',
-  });
-  actionRow(document, clipboard.body, [
-    ['Copy', 'copy', 'copy', { disabled: !editable }],
-    ['Paste', 'paste', 'copy', { disabled: !editable }],
-    ['Duplicate', 'duplicate', 'duplicate', { disabled: !editable }],
-  ]);
-  root.append(clipboard.details);
-  const constraints = inspectorSection(document, 'Constraints', {
-    iconName: 'constraints',
-  });
-  actionRow(document, constraints.body, [
-    ['Lock selection', 'lock', 'lock', { disabled: !editable }],
-    ['Unlock selection', 'unlock', 'unlock', { disabled: !editable }],
-  ]);
-  root.append(constraints.details);
-  const advanced = inspectorSection(document, 'Advanced', {
-    iconName: 'advanced',
-  });
-  advanced.body.append(
-    element(document, 'p', { className: 'de-reference' }, `References: ${ids.join(', ')}`),
+  // Short visible labels fit equal columns in the rail; the full phrase stays the accessible name,
+  // which also lets the inspector restore focus to the button after it re-renders.
+  const group = (title, items) => {
+    const section = inspectorGroup(document, title);
+    actionRow(
+      document,
+      section,
+      items.map(([visible, action, name = visible]) => [
+        visible,
+        action,
+        null,
+        { 'aria-label': name, disabled: !editable },
+      ]),
+    );
+    root.append(section);
+    return section;
+  };
+  const arranged = arrangedPlacements(bundle, ids).length;
+  // Each group's buttons share one precondition, so one reason line serves the row.
+  const requireArranged = (section, minimum, text) => {
+    const reason = disabledReason(document);
+    for (const control of section.querySelectorAll('button'))
+      explain(control, reason, arranged < minimum ? text : '', editable);
+    section.append(reason);
+  };
+  requireArranged(
+    group('Align', [
+      ['Left', 'align-left', 'Align left'],
+      ['Center', 'align-center', 'Align centers'],
+      ['Top', 'align-top', 'Align top'],
+    ]),
+    2,
+    'Select at least two shapes or containers to align.',
   );
-  root.append(advanced.details);
-  const danger = element(document, 'section', {
-    className: 'de-inspector-danger',
-    'aria-labelledby': 'de-multi-danger-title',
-  });
-  danger.append(element(document, 'h3', { id: 'de-multi-danger-title' }, 'Danger zone'));
-  danger.append(
-    iconButton(document, 'Delete selection…', 'delete', {
-      icon: 'trash',
-      className: 'de-danger',
+  requireArranged(
+    group('Distribute', [
+      ['Horizontal', 'distribute-horizontal', 'Distribute horizontally'],
+      ['Vertical', 'distribute-vertical', 'Distribute vertically'],
+    ]),
+    3,
+    'Select at least three shapes or containers to distribute.',
+  );
+  const structure = group('Structure', [
+    ['Group', 'group', 'Group selection'],
+    ['Ungroup', 'ungroup', 'Ungroup selection'],
+    ['Connect', 'connect', 'Connect selection'],
+  ]);
+  const ungroupReason = disabledReason(document);
+  explain(
+    structure.querySelector('[data-action="ungroup"]'),
+    ungroupReason,
+    ids.every((id) => ['groups', 'lanes'].includes(byId.get(id).collection))
+      ? ''
+      : 'Only groups and lanes can be ungrouped.',
+    editable,
+  );
+  structure.append(
+    ungroupReason,
+    ...parentOperation(document, { bundle, byId, ids, editable, act }),
+  );
+  group('Clipboard', [
+    ['Copy', 'copy'],
+    ['Paste', 'paste'],
+    ['Duplicate', 'duplicate'],
+  ]);
+  group('Lock', [
+    ['Lock', 'lock', 'Lock selection'],
+    ['Unlock', 'unlock', 'Unlock selection'],
+  ]);
+  root.append(
+    button(document, `Delete ${quantity(ids.length, 'object')}…`, 'delete', {
+      className: 'de-inspector-delete',
       disabled: !editable,
     }),
   );
-  root.append(danger);
+}
 
-  function appendMultiParentControl(target) {
-    const parents = parentIndex(bundle.document),
-      current = parents.get(ids[0]) ?? '';
-    const choices = [
-      ['', 'Diagram root'],
-      ...[...bundle.document.groups, ...bundle.document.lanes]
-        .filter((item) => !ids.includes(item.id))
-        .map((item) => [item.id, item.label]),
-    ];
-    const operation = element(document, 'div', {
-      className: 'de-inspector-operation',
-    });
-    const parent = field(document, 'Parent', current, {
-      choices,
-      disabled: !editable,
-    });
-    operation.append(parent.label);
-    const move = iconButton(document, 'Move to parent', null, {
-      icon: 'parent',
-      disabled: !editable,
-    });
-    move.onclick = () => act('reparent', parent.input.value || null);
-    operation.append(move);
-    target.append(operation);
-  }
+/** Parent select and Move button; Move is disabled, with its reason, while it cannot apply. */
+function parentOperation(document, { bundle, byId, ids, editable, act }) {
+  const parents = parentIndex(bundle.document);
+  const choices = [
+    ['', 'Diagram root'],
+    ...[...bundle.document.groups, ...bundle.document.lanes]
+      .filter((item) => !ids.includes(item.id))
+      .map((item) => [item.id, displayName(byId, item.id)]),
+  ];
+  const operation = element(document, 'div', {
+    className: 'de-inspector-operation',
+  });
+  const parent = field(document, 'Parent', parents.get(ids[0]) ?? '', {
+    choices,
+    disabled: !editable,
+  });
+  const move = iconButton(document, 'Move to parent', null, { icon: 'parent' });
+  const reason = disabledReason(document);
+  const refresh = () =>
+    explain(
+      move,
+      reason,
+      ids.some((id) => byId.get(id).collection === 'relations')
+        ? 'Connectors cannot become container members.'
+        : ids.every((id) => (parents.get(id) ?? '') === parent.input.value)
+          ? 'Choose a different parent to move.'
+          : '',
+      editable,
+    );
+  parent.input.addEventListener('change', refresh);
+  refresh();
+  move.onclick = () => act('reparent', parent.input.value || null);
+  operation.append(parent.label, move);
+  return [operation, reason];
 }

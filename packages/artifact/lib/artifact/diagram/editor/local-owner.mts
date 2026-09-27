@@ -174,7 +174,7 @@ function ownerPage({
   grammar: DiagramAuthoringProfile;
 }) {
   const config = embedJson({ diagramId: slug, title, grammar });
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="referrer" content="no-referrer"><meta name="color-scheme" content="light dark"><title>${escapeHtml(title)} · OpenPlanr Diagram Editor</title><link rel="stylesheet" href="editor.css"></head><body class="planr-diagram-owner-page"><main id="diagram-owner-editor" aria-label="Diagram editor"><p role="status">Opening local diagram…</p></main><script type="application/json" id="diagram-owner-data">${config}</script><script src="runtime.js" defer></script></body></html>`;
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="referrer" content="no-referrer"><meta name="color-scheme" content="light dark"><title>${escapeHtml(title)} · OpenPlanr Diagram Editor</title><link rel="stylesheet" href="artifact-theme.css"><link rel="stylesheet" href="editor.css"></head><body class="planr-diagram-owner-page"><main id="diagram-owner-editor" aria-label="Diagram editor"><p role="status">Opening local diagram…</p></main><script type="application/json" id="diagram-owner-data">${config}</script><script src="runtime.js" defer></script></body></html>`;
 }
 
 /**
@@ -218,7 +218,8 @@ export function createDiagramLocalOwnerAdapter({
       if (
         ['GET', 'HEAD'].includes(req.method) &&
         (segments.length === 0 ||
-          (segments.length === 1 && ['runtime.js', 'editor.css'].includes(segments[0])))
+          (segments.length === 1 &&
+            ['runtime.js', 'artifact-theme.css', 'editor.css'].includes(segments[0])))
       ) {
         if (req.headers['transfer-encoding'] || Number(req.headers['content-length'] ?? 0) !== 0)
           return rejected(
@@ -240,6 +241,17 @@ export function createDiagramLocalOwnerAdapter({
             asset: 'runtime',
             body: readFileSync(
               new URL('../../../../templates/diagram-owner.js', import.meta.url),
+              'utf8',
+            ),
+          };
+        // The theme supplies the editor's colour hooks, so the local studio matches hosted pages.
+        if (segments[0] === 'artifact-theme.css')
+          return {
+            status: 200,
+            kind: 'asset',
+            asset: 'stylesheet',
+            body: readFileSync(
+              new URL('../../ui/generated/artifact-theme.css', import.meta.url),
               'utf8',
             ),
           };

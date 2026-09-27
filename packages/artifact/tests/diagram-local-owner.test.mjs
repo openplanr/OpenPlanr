@@ -161,6 +161,11 @@ test('owner page and packaged assets are capability scoped with safe types and n
   assert.equal(page.headers['x-frame-options'], 'DENY');
   assert.match(page.headers['cache-control'], /no-store/u);
   assert.match(page.text, /id="diagram-owner-editor"/u);
+  assert.match(
+    page.text,
+    /<link rel="stylesheet" href="artifact-theme.css"><link rel="stylesheet" href="editor.css">/u,
+    'the theme loads before the editor stylesheet that reads its hooks',
+  );
   assert.equal(page.text.includes('<img'), false);
   assert.equal(page.text.includes(root), false);
   assert.equal(page.text.includes(makeBundle().bundleDigest), false);
@@ -175,6 +180,7 @@ test('owner page and packaged assets are capability scoped with safe types and n
   assert.equal(redirect.headers.location, new URL(owner.baseUrl).pathname);
   for (const [asset, mediaType] of [
     ['runtime.js', 'text/javascript'],
+    ['artifact-theme.css', 'text/css'],
     ['editor.css', 'text/css'],
   ]) {
     const response = await request(`${owner.baseUrl}${asset}`);
@@ -194,6 +200,11 @@ test('owner page and packaged assets are capability scoped with safe types and n
       403,
     );
   }
+  assert.match(
+    (await request(`${owner.baseUrl}artifact-theme.css`)).text,
+    /--planr-color-danger: #c53f4f;/u,
+    'the owner serves the generated artifact theme',
+  );
   for (const path of ['other.js', 'editor.css/nested', 'api/runtime.js'])
     assert.equal((await request(`${owner.baseUrl}${path}`)).status, 404);
   assert.equal(
@@ -278,7 +289,7 @@ test('review capability and HTTP registration cannot acquire owner read or write
   ]) {
     assert.equal((await request(`${base}api/read`, { headers: owner.headers })).status, 404);
     if (base.includes('/o/')) {
-      for (const asset of ['', 'runtime.js', 'editor.css'])
+      for (const asset of ['', 'runtime.js', 'artifact-theme.css', 'editor.css'])
         assert.equal((await request(base + asset)).status, 404);
     }
     assert.equal(

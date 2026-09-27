@@ -421,6 +421,27 @@ export function createEditorCommands(ctx) {
         }
       },
     ],
+    [
+      'copy-reference',
+      ({ value }) => {
+        if (typeof value !== 'string')
+          throw new TypeError(`copy-reference expects the reference text, not ${typeof value}.`);
+        const system = doc.defaultView?.navigator.clipboard;
+        if (!system) {
+          report(
+            'Clipboard access is unavailable here. Select the reference and copy it manually.',
+          );
+          return;
+        }
+        system.writeText(value).then(
+          () => notice('Reference copied.'),
+          (error) => {
+            const reason = error instanceof Error ? error.message : String(error);
+            report(`The reference could not be copied: ${reason}`);
+          },
+        );
+      },
+    ],
     ['paste', ({ bundle }) => duplicate(bundle, clipboard?.ids ?? [], clipboard)],
     ['duplicate', ({ bundle, ids }) => duplicate(bundle, ids, null)],
     ['lock', ({ bundle, ids }) => void submit(lockedSelection(bundle, ids, true))],
@@ -513,6 +534,11 @@ export function createEditorCommands(ctx) {
     handler?.({ action, state, bundle, ids, value, options });
   }
   function click(event) {
+    // The bar is inert under an open drawer, so a click on it reaches the shell itself.
+    if (event.target === dom.shell) {
+      ctx.chrome.closeDrawers();
+      return;
+    }
     const target = event.target.closest('[data-action]');
     if (!target || target.closest(FOREIGN_ACTION_SCOPE)) return;
     if (ctx.chrome.overflowOpen() && !target.closest('.de-more-wrap'))
