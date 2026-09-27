@@ -314,9 +314,10 @@ body.planr-diagram-owner-page #diagram-owner-editor {
   background: var(--de-raised);
 }
 
+/* :where() adds no specificity, so the shared button hover rule still outranks this reset. */
 .planr-diagram-editor
   :is(.de-command-group, .de-toolbar-group, .de-bar-group)
-  > button:not(.de-primary) {
+  > button:where(:not(.de-primary)) {
   border-color: transparent;
   background: transparent;
   box-shadow: none;

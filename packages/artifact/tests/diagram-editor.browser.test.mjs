@@ -413,6 +413,24 @@ test(
         `${colorScheme}: Delete is outlined, not filled`,
       );
       assert.ok(contrast(remove.text, remove.background) >= 4.5, `${colorScheme} Delete text`);
+      for (const action of ['undo', 'layout']) {
+        const command = `.de-bar [data-action="${action}"]`;
+        await page
+          .getByLabel('Diagram canvas', { exact: true })
+          .hover({ position: { x: 8, y: 8 } });
+        const rest = await probe(command);
+        await page.locator(command).hover();
+        const hovered = await probe(command);
+        assert.ok(
+          hovered.background[3] > 0,
+          `${colorScheme}: a hovered ${action} button has a fill`,
+        );
+        assert.notDeepEqual(
+          hovered.background,
+          rest.background,
+          `${colorScheme}: hovering ${action} changes its fill`,
+        );
+      }
     }
 
     const inspector = page.locator('.de-right-content');
