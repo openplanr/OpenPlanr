@@ -1613,6 +1613,54 @@ test(
 );
 
 test(
+  'dialogs keep their actions in a right-aligned footer over the theme scrim',
+  options,
+  async (t) => {
+    const { page } = await fixture(t, { bundle: makeBundle('process') });
+    await select(page, 'node-b');
+    const layout = () =>
+      page.getByRole('dialog', { name: 'Delete selection' }).evaluate((node) => {
+        const box = node.getBoundingClientRect();
+        const heading = getComputedStyle(node.querySelector('h2'));
+        const actions = node.querySelector('.de-dialog-actions');
+        const layer = getComputedStyle(node.parentElement);
+        return {
+          width: box.width,
+          padding: getComputedStyle(node).paddingTop,
+          heading: `${heading.fontSize}/${heading.lineHeight}`,
+          actions: [...actions.querySelectorAll('button')].map((button) => button.textContent),
+          rightInset: Math.round(
+            box.right - actions.lastElementChild.getBoundingClientRect().right,
+          ),
+          scrim: layer.backgroundColor,
+          blur: layer.backdropFilter,
+        };
+      });
+    for (const [colorScheme, scrim] of [
+      ['light', 'rgba(23, 25, 29, 0.4)'],
+      ['dark', 'rgba(5, 6, 8, 0.64)'],
+    ]) {
+      await page.emulateMedia({ colorScheme });
+      await page.getByRole('button', { name: 'Delete…', exact: true }).click();
+      assert.deepEqual(
+        await layout(),
+        {
+          width: 560,
+          padding: '20px',
+          heading: '16px/24px',
+          actions: ['Cancel', 'Delete'],
+          rightInset: 21,
+          scrim,
+          blur: 'none',
+        },
+        `${colorScheme}: the footer ends at the dialog's padding and the scrim is not blurred`,
+      );
+      await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+    }
+  },
+);
+
+test(
   'canvas selection is an outset outline with small handles on large targets',
   options,
   async (t) => {
