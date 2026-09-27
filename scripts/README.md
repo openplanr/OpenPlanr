@@ -16,7 +16,7 @@ through the root `package.json`; use the root lockfile.
 | `migration/` | Executable legacy contract preservation checks |
 | `prepare-publication.mjs` | Validate and pack one reviewed public release; does not publish |
 
-Temporary diagnostics, one-time migration tools, ADRs, checklists and run receipts
-belong in ignored `.planr/`. Build output and local distributions live in ignored
+Temporary diagnostics, one-time migration tools, checklists and run receipts
+belong in ignored `.planr/`; architecture decision records live in `docs/adr/`. Build output and local distributions live in ignored
 `dist/` and `release/`. Neither scripts nor CI may require those private planning
 records. Hosted deployment tooling is owned by the private web repository.
