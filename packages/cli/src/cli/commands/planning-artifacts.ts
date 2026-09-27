@@ -19,6 +19,7 @@ import { writeFile } from '../../utils/fs.js';
 import { display, logger } from '../../utils/logger.js';
 import { parseMarkdown } from '../../utils/markdown.js';
 import { CliBoundaryError } from '../error-boundary.js';
+import { requireArtifactId } from '../helpers/artifact-id.js';
 import { registerSprintRefinementCommands } from './sprint-refinement.js';
 
 type PlanningType = Extract<
@@ -34,6 +35,16 @@ const templates: Record<PlanningType, string> = {
   quick: 'quick/quick-task.md.hbs',
   backlog: 'backlog/backlog-item.md.hbs',
   sprint: 'sprints/sprint.md.hbs',
+};
+
+const idExamples: Record<PlanningType, string> = {
+  epic: 'EPIC-001',
+  feature: 'FEAT-001',
+  story: 'US-001',
+  task: 'TASK-001',
+  quick: 'QT-001',
+  backlog: 'BL-001',
+  sprint: 'SPRINT-001',
 };
 
 function planningInputError(
@@ -403,6 +414,7 @@ function registerCommon(
     .argument('<id>')
     .description(`Print one ${type} artifact`)
     .action(async (id: string) => {
+      requireArtifactId(id, 'id', idExamples[type]);
       const projectDir = program.opts().projectDir as string;
       const raw = await readArtifactRaw(projectDir, await loadConfig(projectDir), type, id);
       if (!raw) throw new Error(`${type} ${id} was not found.`);
@@ -417,6 +429,7 @@ function registerCommon(
     .option('--owner <owner>')
     .option('--title <title>')
     .action(async (id: string, options: { status?: string; owner?: string; title?: string }) => {
+      requireArtifactId(id, 'id', idExamples[type]);
       const fields = Object.fromEntries(
         Object.entries(options).filter(([, value]) => value !== undefined),
       );

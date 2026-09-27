@@ -6,6 +6,8 @@
  * Body changes target specific ## headings or exact text matches.
  */
 
+import { escapeRegExp } from '../utils/escape-regexp.js';
+
 export interface BodyChange {
   type: 'replaceSection' | 'replaceText';
   heading?: string;
@@ -35,8 +37,7 @@ export function applyRefineDeltas(
       const body = result.slice(closeIdx);
 
       for (const [key, value] of Object.entries(frontmatterChanges)) {
-        const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const pattern = new RegExp(`^${escapedKey}:\\s*.*$`, 'm');
+        const pattern = new RegExp(`^${escapeRegExp(key)}:\\s*.*$`, 'm');
         const replacement = `${key}: ${yamlEscapeValue(value)}`;
         if (pattern.test(frontmatter)) {
           frontmatter = frontmatter.replace(pattern, () => replacement);
@@ -59,7 +60,7 @@ export function applyRefineDeltas(
     for (const change of bodyChanges) {
       if (change.type === 'replaceSection' && change.heading && change.newContent !== undefined) {
         const headingPattern = new RegExp(
-          `(^|\\n)(##\\s+${change.heading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\n)`,
+          `(^|\\n)(##\\s+${escapeRegExp(change.heading)}\\s*\\n)`,
           'i',
         );
         const match = headingPattern.exec(body);

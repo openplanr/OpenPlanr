@@ -1,5 +1,9 @@
-const BEGIN_RE = (name: string) => new RegExp(`^<!--\\s*##planr-${name}:begin##[^>]*-->\\s*$`, 'm');
-const END_RE = (name: string) => new RegExp(`^<!--\\s*##planr-${name}:end##\\s*-->\\s*$`, 'm');
+import { escapeRegExp } from './escape-regexp.js';
+
+const BEGIN_RE = (name: string) =>
+  new RegExp(`^<!--\\s*##planr-${escapeRegExp(name)}:begin##[^>]*-->\\s*$`, 'm');
+const END_RE = (name: string) =>
+  new RegExp(`^<!--\\s*##planr-${escapeRegExp(name)}:end##\\s*-->\\s*$`, 'm');
 
 function beginMarker(name: string): string {
   return `<!-- ##planr-${name}:begin## (managed by planr CLI; preserve hand-edits outside this block) -->`;

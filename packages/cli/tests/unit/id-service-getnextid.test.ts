@@ -64,4 +64,11 @@ describe('getNextId', () => {
     expect(regex.test('EPIC-001-slug.md')).toBe(true);
     expect(regex.test('FEAT-001-slug.md')).toBe(false);
   });
+
+  it('matches a configured prefix literally, never as a pattern', async () => {
+    mockListFiles.mockResolvedValue(['A.B-001-kept.md', 'AXB-002-decoy.md']);
+    await expect(getNextId('/fake/dir', 'A.B')).resolves.toBe('A.B-002');
+    mockListFiles.mockResolvedValue([]);
+    await expect(getNextId('/fake/dir', 'Q(')).resolves.toBe('Q(-001');
+  });
 });

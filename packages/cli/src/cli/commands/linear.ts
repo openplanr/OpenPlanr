@@ -37,6 +37,7 @@ import {
   promptStandaloneProject,
 } from '../../services/prompt-service.js';
 import { display, logger } from '../../utils/logger.js';
+import { requireArtifactId } from '../helpers/artifact-id.js';
 
 /**
  * Parse the `--as <strategy>` CLI flag value. Accepted forms:
@@ -471,6 +472,7 @@ export function registerLinearCommand(program: Command) {
           team?: string;
         },
       ) => {
+        requireArtifactId(artifactId, 'artifactId', 'EPIC-001');
         const projectDir = program.opts().projectDir as string;
         let config: OpenPlanrConfig;
         try {

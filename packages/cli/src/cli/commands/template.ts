@@ -6,16 +6,20 @@
  * saved from existing task lists.
  */
 
+import { realpath, rm } from 'node:fs/promises';
 import path from 'node:path';
 import chalk from 'chalk';
 import type { Command } from 'commander';
 import type { OpenPlanrConfig } from '../../models/types.js';
 import { createArtifact, readArtifactRaw } from '../../services/artifact-service.js';
+import { atomicWriteFile } from '../../services/atomic-write-service.js';
 import { loadConfig } from '../../services/config-service.js';
 import { promptConfirm, promptText } from '../../services/prompt-service.js';
 import { getTemplatesDir } from '../../utils/constants.js';
-import { ensureDir, fileExists, listFiles, readFile, writeFile } from '../../utils/fs.js';
+import { ensureDir, fileExists, listFiles, readFile } from '../../utils/fs.js';
 import { display, logger } from '../../utils/logger.js';
+import { CliBoundaryError } from '../error-boundary.js';
+import { requireArtifactId } from '../helpers/artifact-id.js';
 
 interface TaskTemplate {
   name: string;
@@ -197,6 +201,7 @@ export function registerTemplateCommand(program: Command) {
     .argument('<taskId>', 'task ID to save as template (e.g., TASK-001, QT-003)')
     .option('-n, --name <name>', 'template name (lowercase, hyphenated)')
     .action(async (taskId: string, opts) => {
+      requireArtifactId(taskId, 'taskId', 'TASK-001');
       const projectDir = program.opts().projectDir as string;
       const config = await loadConfig(projectDir);
 
@@ -214,8 +219,9 @@ export function registerTemplateCommand(program: Command) {
         return;
       }
 
-      const templateName =
-        opts.name || (await promptText('Template name (lowercase, hyphenated):'));
+      const templateName = requireTemplateName(
+        opts.name || (await promptText('Template name (lowercase, hyphenated):')),
+      );
       const description = await promptText('Brief description:');
 
       // Parse tasks from the markdown
@@ -246,7 +252,10 @@ export function registerTemplateCommand(program: Command) {
       const customDir = path.join(projectDir, config.outputPaths.agile, 'templates');
       await ensureDir(customDir);
       const filePath = path.join(customDir, `${templateName}.json`);
-      await writeFile(filePath, `${JSON.stringify(templateData, null, 2)}\n`);
+      await atomicWriteFile(
+        await customTemplateFile(projectDir, config, templateName),
+        `${JSON.stringify(templateData, null, 2)}\n`,
+      );
 
       logger.success(`Saved template "${templateName}"`);
       logger.dim(`  ${filePath}`);
@@ -263,13 +272,16 @@ export function registerTemplateCommand(program: Command) {
     .description('Delete a custom template')
     .argument('<name>', 'template name')
     .action(async (name: string) => {
+      requireTemplateName(name);
       const projectDir = program.opts().projectDir as string;
       const config = await loadConfig(projectDir);
 
       const customDir = path.join(projectDir, config.outputPaths.agile, 'templates');
-      const filePath = path.join(customDir, `${name}.json`);
+      const filePath = (await fileExists(customDir))
+        ? await customTemplateFile(projectDir, config, name)
+        : undefined;
 
-      if (!(await fileExists(filePath))) {
+      if (!filePath || !(await fileExists(filePath))) {
         logger.error(`Custom template "${name}" not found. Only custom templates can be deleted.`);
         return;
       }
@@ -280,7 +292,6 @@ export function registerTemplateCommand(program: Command) {
         return;
       }
 
-      const { rm } = await import('node:fs/promises');
       await rm(filePath);
       logger.success(`Deleted template "${name}"`);
     });
@@ -289,6 +300,44 @@ export function registerTemplateCommand(program: Command) {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+/** Lowercase words joined by single hyphens, like the built-in templates: never a path. */
+const TEMPLATE_NAME = /^(?=.{1,64}$)[a-z0-9]+(?:-[a-z0-9]+)*$/u;
+
+function requireTemplateName(name: string): string {
+  if (TEMPLATE_NAME.test(name)) return name;
+  throw new CliBoundaryError(
+    'E_TEMPLATE_NAME_INVALID',
+    `A template name must be lowercase words joined by hyphens, such as rest-endpoint, in at most 64 characters; received ${JSON.stringify(name)}.`,
+  );
+}
+
+/**
+ * The file of custom template `name` in the templates directory of the planning root.
+ * Refuses a templates directory that resolves anywhere but directly inside the real planning
+ * root, so no write or delete follows a link out of it.
+ */
+async function customTemplateFile(
+  projectDir: string,
+  config: OpenPlanrConfig,
+  name: string,
+): Promise<string> {
+  const planningRoot = path.join(projectDir, config.outputPaths.agile);
+  const realRoot = await realpath(planningRoot);
+  const directory = await realpath(path.join(planningRoot, 'templates'));
+  const file = path.join(directory, `${requireTemplateName(name)}.json`);
+  if (path.dirname(directory) !== realRoot || path.dirname(file) !== directory) {
+    throw new CliBoundaryError(
+      'E_TEMPLATE_DIR_OUTSIDE',
+      'The templates directory resolves outside the planning directory, so no template is written or deleted through it.',
+      {
+        recovery:
+          'Replace the linked templates directory with a real directory in the planning directory.',
+      },
+    );
+  }
+  return file;
+}
 
 async function loadBuiltInTemplates(): Promise<TaskTemplate[]> {
   const dir = path.join(getTemplatesDir(), 'task-templates');

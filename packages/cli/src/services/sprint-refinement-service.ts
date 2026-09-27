@@ -20,6 +20,7 @@ import {
 } from '../models/sprint-refinement-schema.js';
 import type { ArtifactType, OpenPlanrConfig } from '../models/types.js';
 import { isValidStatus, VALID_STATUSES } from '../utils/constants.js';
+import { escapeRegExp } from '../utils/escape-regexp.js';
 import { fileExists, readFile } from '../utils/fs.js';
 import {
   findArtifactTypeById,
@@ -235,7 +236,7 @@ export function upsertFrontmatter(raw: string, fields: Record<string, unknown>):
   for (const [key, value] of Object.entries({ ...fields, updated: today() })) {
     if (value === undefined) continue;
     const line = `${key}: ${yamlValue(value)}`;
-    const keyPattern = new RegExp(`^${key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}:`, 'u');
+    const keyPattern = new RegExp(`^${escapeRegExp(key)}:`, 'u');
     const at = lines.findIndex((entry, index) => index > 0 && keyPattern.test(entry));
     if (at === -1) {
       lines.push(line);

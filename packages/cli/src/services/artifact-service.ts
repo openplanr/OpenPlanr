@@ -1,5 +1,6 @@
 import path from 'node:path';
 import type { ArtifactFrontmatter, ArtifactType, OpenPlanrConfig } from '../models/types.js';
+import { escapeRegExp } from '../utils/escape-regexp.js';
 import { ensureDir, listFiles, readFile, writeFile } from '../utils/fs.js';
 import { logger } from '../utils/logger.js';
 import { parseMarkdown } from '../utils/markdown.js';
@@ -20,6 +21,11 @@ const ARTIFACT_DIR_MAP: Record<string, string> = {
   adr: 'adrs',
   checklist: 'checklists',
 };
+
+/** Match the file of artifact `id` followed by a slug: `EPIC-001-my-title.md`, never `EPIC-0011-x.md`. */
+function artifactFilePattern(id: string): RegExp {
+  return new RegExp(`^${escapeRegExp(id)}-.*\\.md$`);
+}
 
 /** Return the directory path for a given artifact type relative to the agile output root. */
 export function getArtifactDir(config: OpenPlanrConfig, type: ArtifactType): string {
@@ -112,7 +118,7 @@ export async function readArtifact(
   id: string,
 ): Promise<{ data: ArtifactFrontmatter; content: string; filePath: string } | null> {
   const dir = path.join(projectDir, getArtifactDir(config, type));
-  const files = await listFiles(dir, new RegExp(`^${id}-.*\\.md$`));
+  const files = await listFiles(dir, artifactFilePattern(id));
   if (files.length === 0) return null;
 
   const filePath = path.join(dir, files[0]);
@@ -144,7 +150,7 @@ export async function readArtifactRaw(
   id: string,
 ): Promise<string | null> {
   const dir = path.join(projectDir, getArtifactDir(config, type));
-  const files = await listFiles(dir, new RegExp(`^${id}-.*\\.md$`));
+  const files = await listFiles(dir, artifactFilePattern(id));
   if (files.length === 0) return null;
 
   return readFile(path.join(dir, files[0]));
@@ -169,7 +175,7 @@ export async function updateArtifact(
   { skipValidation = false }: { skipValidation?: boolean } = {},
 ): Promise<void> {
   const dir = path.join(projectDir, getArtifactDir(config, type));
-  const files = await listFiles(dir, new RegExp(`^${id}-.*\\.md$`));
+  const files = await listFiles(dir, artifactFilePattern(id));
   if (files.length === 0) throw new Error(`Artifact ${id} not found.`);
 
   const filePath = path.join(dir, files[0]);
@@ -235,8 +241,7 @@ export async function updateArtifactFields(
   const body = raw.slice(closeIdx);
 
   for (const [key, value] of Object.entries(allFields)) {
-    const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const pattern = new RegExp(`^${escapedKey}:\\s*.*$`, 'm');
+    const pattern = new RegExp(`^${escapeRegExp(key)}:\\s*.*$`, 'm');
     const replacement = `${key}: ${yamlEscape(value)}`;
 
     if (pattern.test(frontmatter)) {
@@ -267,9 +272,7 @@ export async function resolveArtifactFilename(
   id: string,
 ): Promise<string> {
   const dir = path.join(projectDir, getArtifactDir(config, type));
-  // Match files starting with the ID followed by a slug: "EPIC-001-my-title.md"
-  // The regex anchors to ^ to avoid matching "EPIC-0011-..." when looking for "EPIC-001"
-  const files = await listFiles(dir, new RegExp(`^${id}-.*\\.md$`));
+  const files = await listFiles(dir, artifactFilePattern(id));
   if (files.length > 0) return files[0].replace(/\.md$/, '');
   return id;
 }

@@ -32,7 +32,9 @@ import {
   verifyGitHubRepo,
 } from '../../services/github-service.js';
 import { promptSelect } from '../../services/prompt-service.js';
+import { escapeRegExp } from '../../utils/escape-regexp.js';
 import { display, logger } from '../../utils/logger.js';
+import { requireArtifactId } from '../helpers/artifact-id.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -40,8 +42,7 @@ import { display, logger } from '../../utils/logger.js';
 
 /** Inject or update a `githubIssue` field in raw artifact frontmatter. */
 function setFrontmatterField(raw: string, field: string, value: string | number): string {
-  const escaped = field.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const fieldRegex = new RegExp(`^${escaped}:.*\\n`, 'm');
+  const fieldRegex = new RegExp(`^${escapeRegExp(field)}:.*\\n`, 'm');
   if (fieldRegex.test(raw)) {
     return raw.replace(fieldRegex, `${field}: ${value}\n`);
   }
@@ -198,6 +199,7 @@ export function registerGitHubCommand(program: Command) {
     .option('--epic <epicId>', 'push all artifacts under an epic')
     .option('--all', 'push all artifacts across all types')
     .action(async (artifactId: string | undefined, opts: { epic?: string; all?: boolean }) => {
+      if (artifactId) requireArtifactId(artifactId, 'artifactId', 'TASK-001');
       const projectDir = program.opts().projectDir as string;
       const config = await loadConfig(projectDir);
 
