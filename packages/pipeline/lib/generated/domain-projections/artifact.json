@@ -355,7 +355,7 @@
     {
       "source": "packages/artifact/lib/artifact/bridge.mjs",
       "target": "lib/artifact/bridge.mjs",
-      "sha256": "319f3c8fd44e82a67620e7f1bdf1f9032ed0cd39d4f4de011619dc6d20e5bc24",
+      "sha256": "ef7980aca7c40fdc5c9ecfd3b58b53ffe63e448c9ebce5a76895319e7f8be6ed",
       "mode": "644"
     },
     {
@@ -1079,6 +1079,12 @@
       "mode": "644"
     },
     {
+      "source": "packages/artifact/lib/artifact/ui/generated/sandbox-guards.mjs",
+      "target": "lib/artifact/ui/generated/sandbox-guards.mjs",
+      "sha256": "e40b6f066771c7e3b637a3e3746ae2c60f5e829f67a5aa460dc8fea91e4493ac",
+      "mode": "644"
+    },
+    {
       "source": "packages/artifact/lib/artifact/ui/hosted-viewer.mjs",
       "target": "lib/artifact/ui/hosted-viewer.mjs",
       "sha256": "b0997d3a6ef9e0bdb8ada2e2b2d39db6b9d6bba98fa1d2d33bcd31e1685161f2",
@@ -1088,6 +1094,24 @@
       "source": "packages/artifact/lib/artifact/ui/renderers.mjs",
       "target": "lib/artifact/ui/renderers.mjs",
       "sha256": "524524ec93fe9bda8a0fba97675473cb6ff74b828d9445455d72c974cb393161",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/ui/sandbox/frame-guard.mjs",
+      "target": "lib/artifact/ui/sandbox/frame-guard.mjs",
+      "sha256": "4218c8f158f9d97d8d1001bb8ca7123a712c05350535f3f4458a10fefd9f6b6c",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/ui/sandbox/host-guard.mjs",
+      "target": "lib/artifact/ui/sandbox/host-guard.mjs",
+      "sha256": "81b9ab1b8610cf73b2e2c0eece8f63aad02602e9d0594e92f285895cef949034",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/ui/sandbox/worker-guard.mjs",
+      "target": "lib/artifact/ui/sandbox/worker-guard.mjs",
+      "sha256": "8f3f15980d1321c6c5fc7292378466fa2ecb3d91c560c62f7cd84a0e52dadfb1",
       "mode": "644"
     },
     {
@@ -1369,7 +1393,7 @@
     {
       "source": "packages/artifact/scripts/generate-artifact-shell.mjs",
       "target": "scripts/generate-artifact-shell.mjs",
-      "sha256": "6594920c3b511a1f415041648bffb25ad1c3b4ca65349b840b985440152dd56c",
+      "sha256": "33010094ab9629af602437ea2034d48763305adbcab7fd4037e1971060de3ac4",
       "mode": "644"
     },
     {

@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { Script } from 'node:vm';
 import { buildSync } from 'esbuild';
 import {
   ARTIFACT_SHELL_ASSET_PATHS,
@@ -23,10 +24,14 @@ export const GENERATED_ARTIFACT_THEME_TARGETS = Object.freeze({
   'lib/artifact/ui/generated/artifact-theme.json': 'json',
 });
 
+/** The sandbox guards as source strings for bridge.mjs; not a hosted shell asset. */
+export const ARTIFACT_SANDBOX_GUARDS_PATH = 'lib/artifact/ui/generated/sandbox-guards.mjs';
+
 export const GENERATED_ARTIFACT_SHELL_TARGETS = Object.freeze({
   ...GENERATED_ARTIFACT_THEME_TARGETS,
   [ARTIFACT_SHELL_ASSET_PATHS.template]: 'html',
   [ARTIFACT_SHELL_ASSET_PATHS.manifest]: 'manifest',
+  [ARTIFACT_SANDBOX_GUARDS_PATH]: 'module',
 });
 
 export const ARTIFACT_SHELL_BUNDLE_BANNER =
@@ -128,10 +133,11 @@ export function renderArtifactShellAssetManifest(assets) {
  * license headers stay in place; any esbuild warning fails the build. The empty
  * tsconfig stops a tsconfig.json on disk (its `strict`) from changing the output.
  * `entry` resolves against `projectRoot`; `banner` names the calling generator.
+ * `format: 'esm'` leaves an entry that is itself one IIFE unwrapped, keeping its directive.
  */
 export function bundleBrowserEntry(
   entry,
-  { globalName, projectRoot = root, banner = ARTIFACT_SHELL_BUNDLE_BANNER } = {},
+  { format = 'iife', globalName, projectRoot = root, banner = ARTIFACT_SHELL_BUNDLE_BANNER } = {},
 ) {
   const result = buildSync({
     absWorkingDir: projectRoot,
@@ -139,7 +145,7 @@ export function bundleBrowserEntry(
     banner: { js: banner },
     bundle: true,
     charset: 'utf8',
-    format: 'iife',
+    format,
     globalName,
     legalComments: 'inline',
     logLevel: 'warning',
@@ -195,7 +201,45 @@ export function renderDiagramOwnerRuntimeAsset({ projectRoot = root } = {}) {
   return bundleBrowserEntry('lib/artifact/ui/diagram-owner-studio.mjs', { projectRoot });
 }
 
-/** Render every byte that local and hosted shell consumers synchronize. */
+/**
+ * Returns a bundled guard unchanged, or throws unless it is one strict IIFE: an import would add
+ * page globals ahead of it, and an export is a syntax error that keeps the guard from running.
+ */
+function assertClassicGuardScript(name, source) {
+  const path = `lib/artifact/ui/sandbox/${name}.mjs`;
+  if (
+    !source.startsWith(`// ${path}\n(() => {\n  "use strict";\n`) ||
+    !source.endsWith('\n})();\n')
+  ) {
+    throw new Error(`${path} must bundle to one strict IIFE with no imports or exports.`);
+  }
+  new Script(source, { filename: path });
+  return source;
+}
+
+/** Render the module bridge.mjs reads the worker, frame and host guard scripts from. */
+export function renderArtifactSandboxGuards({ projectRoot = root } = {}) {
+  const guard = (name) =>
+    JSON.stringify(
+      assertClassicGuardScript(
+        name,
+        bundleBrowserEntry(`lib/artifact/ui/sandbox/${name}.mjs`, {
+          format: 'esm',
+          banner: '',
+          projectRoot,
+        }),
+      ),
+    );
+  return [
+    ARTIFACT_SHELL_BUNDLE_BANNER,
+    `export const ARTIFACT_WORKER_GUARD_SOURCE = ${guard('worker-guard')};`,
+    `export const ARTIFACT_FRAME_GUARD_TEMPLATE = ${guard('frame-guard')};`,
+    `export const ARTIFACT_HOST_GUARD_TEMPLATE = ${guard('host-guard')};`,
+    '',
+  ].join('\n');
+}
+
+/** Render every generated shell file; the manifest lists those hosted consumers synchronize. */
 export function renderArtifactShellAssets({ registryPath, projectRoot = root } = {}) {
   const theme = loadArtifactTheme(registryPath ? { registryPath } : undefined);
   const assets = {
@@ -210,6 +254,7 @@ export function renderArtifactShellAssets({ registryPath, projectRoot = root } =
   return {
     ...assets,
     [ARTIFACT_SHELL_ASSET_PATHS.manifest]: renderArtifactShellAssetManifest(assets),
+    [ARTIFACT_SANDBOX_GUARDS_PATH]: renderArtifactSandboxGuards({ projectRoot }),
   };
 }
 
