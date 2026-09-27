@@ -31,7 +31,10 @@ export interface DiagramLocalOwnerTransport extends DiagramEditorTransport {
   >;
   recover(identity?: { transactionId?: string; fingerprint?: string }): Promise<unknown>;
 }
-/** The fetch subset the transport calls; the platform fetch satisfies it. */
+/**
+ * The fetch subset the transport calls. lib.dom types a finished read's value as
+ * `T | undefined`, wider than `DiagramOwnerHttpResponse` allows, so the platform default is cast.
+ */
 type DiagramOwnerFetch = (
   url: string,
   options: {

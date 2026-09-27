@@ -637,7 +637,7 @@
     {
       "source": "packages/artifact/lib/artifact/diagram/editor/transport.d.mts",
       "target": "lib/artifact/diagram/editor/transport.d.mts",
-      "sha256": "8e0240dd0d3825558b0928235dd06eaba1c10611dbcf77e0ceeb8c84ab34cf06",
+      "sha256": "cc12518838e82c5a590fc5b22518f35f2a500bf5e53cf6c046f9e35f1b0d15ec",
       "mode": "644"
     },
     {
