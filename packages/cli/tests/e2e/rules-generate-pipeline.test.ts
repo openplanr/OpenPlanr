@@ -1,12 +1,13 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { resolvePipelinePackageRoot } from '../helpers/pipeline-package-root.js';
 
 const CLI = resolve('src/cli/index.ts');
-const TSX_CLI = resolve('node_modules/tsx/dist/cli.mjs');
+const TSX_CLI = createRequire(import.meta.url).resolve('tsx/cli');
 const PIPELINE_ROOT = resolvePipelinePackageRoot();
 const run = (args: string, opts?: { cwd?: string; env?: Record<string, string> }) =>
   execFileSync(process.execPath, [TSX_CLI, CLI, ...args.trim().split(/\s+/)], {

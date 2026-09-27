@@ -1,0 +1,121 @@
+name: Push regenerated Dependabot outputs
+
+# workflow_run always runs this file as it is on main, so a pull request cannot change these
+# steps. They never run npm, Node or a script from the pull request: they check the upload of
+# dependabot-regenerate.yml against the fixed manifest list, write those bytes into a checkout
+# of the regenerated Dependabot commit and push one fast-forward commit with this job's
+# GITHUB_TOKEN. The workflow runs that push triggers wait for approval on the pull request.
+
+on:
+  workflow_run:
+    workflows: ['Regenerate Dependabot outputs']
+    types: [completed]
+    branches: ['dependabot/npm_and_yarn/**']
+
+concurrency:
+  group: dependabot-regenerate-push-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: false
+
+permissions: {}
+
+env:
+  # The only files this workflow writes. Keep identical to dependabot-regenerate.yml.
+  REGENERATED_PATHS: |-
+    adapters/manifests/canonical-skills.json
+    adapters/manifests/codex-plugin-content.json
+    adapters/manifests/ecosystem-assets.json
+    adapters/manifests/generated-assets.json
+    ecosystem.json
+
+jobs:
+  push:
+    name: Push regenerated tracked outputs
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.path == '.github/workflows/dependabot-regenerate.yml' &&
+      github.event.workflow_run.actor.login == 'dependabot[bot]' &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
+      startsWith(github.event.workflow_run.head_branch, 'dependabot/npm_and_yarn/')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: read
+      contents: write
+      pull-requests: read
+    env:
+      HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+      HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+      RUN_ID: ${{ github.event.workflow_run.id }}
+    steps:
+      - name: Download the upload for the current Dependabot head
+        id: download
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          open="$(gh api -X GET "repos/$GITHUB_REPOSITORY/pulls" -f state=open -f head="$GITHUB_REPOSITORY_OWNER:$HEAD_BRANCH" \
+            --jq '[.[] | select(.user.login == "dependabot[bot]" and .head.repo.full_name == env.GITHUB_REPOSITORY and .head.sha == env.HEAD_SHA)] | length')"
+          if [ "$open" != 1 ]; then
+            echo "::notice::No open Dependabot pull request has $HEAD_BRANCH at $HEAD_SHA; the run for its current head pushes instead."
+            exit 0
+          fi
+          artifact="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/artifacts" \
+            --jq '.artifacts[] | select(.name == "regenerated-outputs") | .id')"
+          if [ -z "$artifact" ]; then
+            echo "::notice::Run $RUN_ID reproduced every tracked output; nothing to push."
+            exit 0
+          fi
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$artifact/zip" > "$RUNNER_TEMP/regenerated.zip"
+          echo "archive=$RUNNER_TEMP/regenerated.zip" >> "$GITHUB_OUTPUT"
+      - if: steps.download.outputs.archive != ''
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      # The upload comes from a job that ran the updated dependencies, so it is untrusted: only
+      # the listed manifests are read from it, each once, as bytes under a size limit, and only
+      # over tracked regular files.
+      - name: Write the listed manifests from the upload
+        if: steps.download.outputs.archive != ''
+        env:
+          ARCHIVE: ${{ steps.download.outputs.archive }}
+          # 2 MiB, several times the largest custody manifest.
+          MANIFEST_BYTE_LIMIT: 2097152
+        run: |
+          set -o pipefail
+          : "${REGENERATED_PATHS:?an empty list would let grep accept every member}"
+          members="$(unzip -Z1 "$ARCHIVE" | sed '/\/$/d')"
+          unexpected="$(printf '%s\n' "$members" | grep -vxF -- "$REGENERATED_PATHS")" || [ $? -eq 1 ]
+          repeated="$(printf '%s\n' "$members" | sort | uniq -d)"
+          if [ -z "$members" ] || [ -n "$unexpected" ] || [ -n "$repeated" ]; then
+            echo "::error::The regenerated-outputs upload of run $RUN_ID may hold only the custody manifests, each once; it holds:"
+            echo "$members"
+            exit 1
+          fi
+          while IFS= read -r path; do
+            if [ "$(git ls-files --stage -- "$path" | cut -c1-6)" != 100644 ]; then
+              echo "::error::$path is not a tracked regular file at $HEAD_SHA, so the upload cannot replace it."
+              exit 1
+            fi
+          done <<< "$members"
+          # Measure the bytes written, not the sizes the archive declares.
+          while IFS= read -r path; do
+            unzip -p "$ARCHIVE" "$path" > "$path"
+            size="$(wc -c < "$path")"
+            if [ "$size" -gt "$MANIFEST_BYTE_LIMIT" ]; then
+              echo "::error::$path in the upload of run $RUN_ID is $size bytes, over the $MANIFEST_BYTE_LIMIT-byte limit."
+              exit 1
+            fi
+          done <<< "$members"
+      # [dependabot skip] lets Dependabot keep rebasing over this commit; each rebase starts a
+      # new regeneration.
+      - name: Push one fast-forward commit to the Dependabot branch
+        if: steps.download.outputs.archive != ''
+        run: |
+          if git diff --quiet; then
+            echo "::notice::The upload matches $HEAD_SHA; nothing to push."
+            exit 0
+          fi
+          git diff --stat
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+            commit --all --quiet -m 'build(deps): regenerate the custody manifests' -m '[dependabot skip]'
+          git push origin "HEAD:refs/heads/$HEAD_BRANCH"

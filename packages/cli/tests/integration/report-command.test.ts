@@ -1,11 +1,12 @@
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 const CLI = resolve('src/cli/index.ts');
-const TSX = resolve('node_modules/tsx/dist/cli.mjs');
+const TSX = createRequire(import.meta.url).resolve('tsx/cli');
 
 function runPlanr(args: string[], cwd: string) {
   return spawnSync(process.execPath, [TSX, CLI, ...args], {
