@@ -1,5 +1,24 @@
-// @ts-check
+import type { DiagramEditorTool } from './diagram-editor-canvas.mjs';
 import { focusable } from './diagram-editor-dom.mjs';
+import type { DiagramEditorContext } from './diagram-editor-regions.mjs';
+
+export interface DiagramEditorKeyboard {
+  keydown(event: KeyboardEvent): void;
+  focusin(event: FocusEvent): void;
+  keyup(event: KeyboardEvent): void;
+}
+export type DiagramEditorShortcut =
+  | { type: 'temporary-pan' }
+  | { type: 'tool'; tool: DiagramEditorTool }
+  | { type: 'command'; action: 'save' | 'undo' | 'redo' | 'copy' | 'paste' | 'delete' }
+  | { type: 'nudge'; dx: number; dy: number; delta: number };
+interface ShortcutContext {
+  selection: boolean;
+  clipboard: boolean;
+  editable: boolean;
+}
+/** A key event from a control or row inside the editor. */
+type ElementKeyEvent = KeyboardEvent & { target: HTMLElement };
 
 const DIALOG_CONTROLS =
   'button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),[tabindex="0"]';
@@ -8,23 +27,18 @@ const PANEL_CONTROLS =
 const ARROWS = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
 const TREE_KEYS = ['ArrowDown', 'ArrowUp', 'Home', 'End', 'ArrowRight', 'ArrowLeft'];
 
-/**
- * Focusable controls inside a container that are rendered and not hidden, inert or aria-hidden.
- * @param {Element} container
- * @param {string} selector
- * @returns {HTMLElement[]}
- */
-const visibleControls = (container, selector) =>
-  [.../** @type {NodeListOf<HTMLElement>} */ (container.querySelectorAll(selector))].filter(
+/** Focusable controls inside a container that are rendered and not hidden, inert or aria-hidden. */
+const visibleControls = (container: Element, selector: string): HTMLElement[] =>
+  [...container.querySelectorAll<HTMLElement>(selector)].filter(
     (control) =>
       !control.closest('[hidden],[inert],[aria-hidden="true"]') && control.getClientRects().length,
   );
 
-/**
- * Resolve an editor shortcut from a key event, or null when the key is not an editor shortcut.
- * @type {typeof import('./diagram-editor-context.d.mts').editorShortcut}
- */
-export function editorShortcut(event, { selection, clipboard, editable }) {
+/** Resolve an editor shortcut from a key event, or null when the key is not an editor shortcut. */
+export function editorShortcut(
+  event: Pick<KeyboardEvent, 'key' | 'metaKey' | 'ctrlKey' | 'shiftKey'>,
+  { selection, clipboard, editable }: ShortcutContext,
+): DiagramEditorShortcut | null {
   const modifier = event.metaKey || event.ctrlKey;
   if (event.key === ' ') return { type: 'temporary-pan' };
   const key = event.key.toLowerCase();
@@ -45,17 +59,14 @@ export function editorShortcut(event, { selection, clipboard, editable }) {
   return null;
 }
 
-/**
- * Document key handling: modal and drawer focus containment, menu, tab and tree navigation, shortcuts.
- * @type {typeof import('./diagram-editor-context.d.mts').createEditorKeyboard}
- */
-export function createEditorKeyboard(ctx) {
+/** Document key handling: modal and drawer focus containment, menu, tab and tree navigation, shortcuts. */
+export function createEditorKeyboard(ctx: DiagramEditorContext): DiagramEditorKeyboard {
   const { doc, dom, chrome, dialogs, canvas, outline, inspector, commands } = ctx;
   const { shell, stage, moreButton, moreMenu, leftTabs, rightTabs, outlinePane } = dom;
   const drawerPanel = () => (chrome.railOpen('left') ? dom.left : dom.right);
   const anyRailOpen = () => chrome.railOpen('left') || chrome.railOpen('right');
 
-  function wrapDialogFocus(event) {
+  function wrapDialogFocus(event: KeyboardEvent) {
     const dialog = dialogs.active();
     if (!dialog || event.key !== 'Tab') return false;
     const controls = visibleControls(dialog, DIALOG_CONTROLS);
@@ -74,7 +85,7 @@ export function createEditorKeyboard(ctx) {
     }
     return false;
   }
-  function cycleDrawerFocus(event) {
+  function cycleDrawerFocus(event: ElementKeyEvent) {
     if (
       dialogs.active() ||
       event.key !== 'Tab' ||
@@ -98,7 +109,7 @@ export function createEditorKeyboard(ctx) {
     controls[next].focus({ preventScroll: true });
     return true;
   }
-  function dismissLayers(event) {
+  function dismissLayers(event: KeyboardEvent) {
     if (dialogs.active() && event.key === 'Escape') {
       event.preventDefault();
       commands.act('cancel-dialog');
@@ -115,22 +126,16 @@ export function createEditorKeyboard(ctx) {
     }
     return false;
   }
-  function navigateMenu(event) {
+  function navigateMenu(event: ElementKeyEvent) {
     if (event.target === moreButton && ['ArrowDown', 'ArrowUp'].includes(event.key)) {
       event.preventDefault();
       chrome.setOverflow(true);
-      const items = [
-        .../** @type {NodeListOf<HTMLElement>} */ (moreMenu.querySelectorAll('[role="menuitem"]')),
-      ];
+      const items = [...moreMenu.querySelectorAll<HTMLElement>('[role="menuitem"]')];
       (event.key === 'ArrowUp' ? items.at(-1) : items[0])?.focus();
       return true;
     }
     if (chrome.overflowOpen() && event.target.matches?.('[role="menuitem"]')) {
-      const items = [
-          .../** @type {NodeListOf<HTMLElement>} */ (
-            moreMenu.querySelectorAll('[role="menuitem"]:not(:disabled)')
-          ),
-        ],
+      const items = [...moreMenu.querySelectorAll<HTMLElement>('[role="menuitem"]:not(:disabled)')],
         index = items.indexOf(event.target);
       let next = -1;
       if (event.key === 'ArrowDown') next = (index + 1) % items.length;
@@ -145,14 +150,15 @@ export function createEditorKeyboard(ctx) {
     }
     return false;
   }
-  function navigateTabs(event) {
+  function navigateTabs(event: ElementKeyEvent) {
     if (
       !event.target.matches?.('[role="tab"]') ||
       !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)
     )
       return false;
-    const list = event.target.closest('[role="tablist"]'),
-      tabs = [...list.querySelectorAll('[role="tab"]')],
+    // Every tab sits in a tablist.
+    const list = event.target.closest('[role="tablist"]') as Element,
+      tabs = [...list.querySelectorAll<HTMLElement>('[role="tab"]')],
       index = tabs.indexOf(event.target);
     const next =
       event.key === 'Home'
@@ -165,18 +171,17 @@ export function createEditorKeyboard(ctx) {
     event.preventDefault();
     const target = tabs[next],
       action = target.dataset.action;
+    // Right-rail tabs carry the id of the pane they show.
     if (list === leftTabs) {
       outline.showTab(action === 'outline-tab' ? 'outline' : 'shapes');
       chrome.render(ctx.current(), { force: true });
       target.isConnected
         ? target.focus()
-        : /** @type {HTMLElement | null} */ (
-            leftTabs.querySelector('[aria-selected="true"]')
-          )?.focus();
-    } else if (list === rightTabs) inspector.showTab(target.dataset.tab, { focus: true });
+        : leftTabs.querySelector<HTMLElement>('[aria-selected="true"]')?.focus();
+    } else if (list === rightTabs) inspector.showTab(target.dataset.tab as string, { focus: true });
     return true;
   }
-  function closeTransient(event) {
+  function closeTransient(event: KeyboardEvent) {
     if (event.key === 'Escape' && ctx.layout.drawer() && anyRailOpen()) {
       event.preventDefault();
       chrome.closeDrawers();
@@ -194,7 +199,7 @@ export function createEditorKeyboard(ctx) {
     }
     return false;
   }
-  function navigateTree(event) {
+  function navigateTree(event: ElementKeyEvent) {
     if (
       !event.target.matches?.('[role="treeitem"][data-action="select-id"]') ||
       !TREE_KEYS.includes(event.key) ||
@@ -205,11 +210,9 @@ export function createEditorKeyboard(ctx) {
     )
       return false;
     event.preventDefault();
-    const rows = [
-        .../** @type {NodeListOf<HTMLElement>} */ (
-          outlinePane.querySelectorAll('[role="treeitem"]')
-        ),
-      ].filter((row) => !row.closest('[hidden]')),
+    const rows = [...outlinePane.querySelectorAll<HTMLElement>('[role="treeitem"]')].filter(
+        (row) => !row.closest('[hidden]'),
+      ),
       row = event.target,
       index = rows.indexOf(row),
       expanded = row.getAttribute('aria-expanded');
@@ -217,23 +220,22 @@ export function createEditorKeyboard(ctx) {
     else if (event.key === 'ArrowUp') outline.focusRow(rows[index - 1]);
     else if (event.key === 'Home') outline.focusRow(rows[0]);
     else if (event.key === 'End') outline.focusRow(rows.at(-1));
+    // A row with aria-expanded is a group or lane, which carries its id.
     else if (event.key === 'ArrowRight') {
-      if (expanded === 'false') outline.toggleGroup(row.dataset.id);
+      if (expanded === 'false') outline.toggleGroup(row.dataset.id as string);
       else if (expanded === 'true') outline.focusRow(rows[index + 1]);
-    } else if (expanded === 'true') outline.toggleGroup(row.dataset.id);
+    } else if (expanded === 'true') outline.toggleGroup(row.dataset.id as string);
     else {
-      const parentId = row.closest('.de-outline-item')?.dataset.parentId;
+      const parentId = row.closest<HTMLElement>('.de-outline-item')?.dataset.parentId;
       outline.focusRow(
         parentId
-          ? /** @type {HTMLElement | null} */ (
-              outlinePane.querySelector('[role="treeitem"][data-id="' + parentId + '"]')
-            )
+          ? outlinePane.querySelector<HTMLElement>('[role="treeitem"][data-id="' + parentId + '"]')
           : null,
       );
     }
     return true;
   }
-  function selectAdditive(event) {
+  function selectAdditive(event: ElementKeyEvent) {
     if (
       !event.target.matches?.('[data-action="select-id"]') ||
       !(event.shiftKey || event.metaKey || event.ctrlKey) ||
@@ -244,7 +246,7 @@ export function createEditorKeyboard(ctx) {
     commands.act('select-id', event.target.dataset.id, { additive: true, fromOutline: true });
     return true;
   }
-  function runShortcut(event) {
+  function runShortcut(event: KeyboardEvent) {
     const state = ctx.current(),
       ids = state.view.selection;
     const shortcut = editorShortcut(event, {
@@ -285,22 +287,25 @@ export function createEditorKeyboard(ctx) {
     navigateTree,
     selectAdditive,
   ];
-  function keydown(event) {
-    if (wrapDialogFocus(event) || cycleDrawerFocus(event)) return;
-    if (!shell.contains(event.target) && !canvas.dragging() && !dialogs.active()) return;
-    for (const step of navigation) if (step(event)) return;
+  // Key events reach the document from its focused element; the steps below match editor controls.
+  function keydown(event: KeyboardEvent) {
+    if (wrapDialogFocus(event) || cycleDrawerFocus(event as ElementKeyEvent)) return;
+    if (!shell.contains(event.target as Node) && !canvas.dragging() && !dialogs.active()) return;
+    for (const step of navigation) if (step(event as ElementKeyEvent)) return;
     if (focusable(event.target) && event.target !== stage) return;
     runShortcut(event);
   }
-  function focusin(event) {
+  function focusin(event: FocusEvent) {
     if (dialogs.active() || !ctx.layout.drawer() || dom.drawerBackdrop.hidden || !anyRailOpen())
       return;
     const panel = drawerPanel();
     // Host controls outside the editor stay reachable while a drawer is open.
-    if (!panel || panel.contains(event.target) || !shell.contains(event.target)) return;
+    // Focus events target the element that took focus.
+    // biome-ignore format: bundles keep this one-line statement; wrapping would change their bytes.
+    if (!panel || panel.contains(event.target as Node) || !shell.contains(event.target as Node)) return;
     (visibleControls(panel, PANEL_CONTROLS)[0] ?? panel).focus({ preventScroll: true });
   }
-  function keyup(event) {
+  function keyup(event: KeyboardEvent) {
     if (event.key === ' ') canvas.setTemporaryPan(false);
   }
   return { keydown, focusin, keyup };

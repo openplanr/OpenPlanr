@@ -1,9 +1,48 @@
-// @ts-check
 import { getDiagramAuthoringCapability } from '@openplanr/protocol/diagram-authoring-contracts';
 import { elementIndex } from '../diagram/authoring/model.mjs';
+import type { DiagramEditorState } from '../diagram/editor/index.mjs';
 import { displayName, quantity } from './diagram-editor-actions.mjs';
 import { button, element, icon } from './diagram-editor-dom.mjs';
 import { hostSaveLabel } from './diagram-editor-host.mjs';
+import type { DiagramEditorContext } from './diagram-editor-regions.mjs';
+
+/** Breakpoint tiers measured from the shell's own width. */
+export interface DiagramEditorLayout {
+  drawer(): boolean;
+  compact(): boolean;
+  /** Re-measure the shell; true when the layout tier changed. */
+  measure(): boolean;
+}
+export type DiagramEditorRail = 'left' | 'right';
+interface RenderOptions {
+  force?: boolean;
+}
+interface RailOptions {
+  focusPanel?: boolean;
+  restoreFocus?: boolean;
+}
+interface OverflowOptions {
+  focus?: boolean;
+  restoreFocus?: boolean;
+}
+interface PanelFocusOptions {
+  focusPanel?: boolean;
+  focusTarget?: HTMLElement | null;
+}
+export interface DiagramEditorChrome {
+  /** Re-render the chrome; panels rebuild only when their stamp changed, or always with `force`. */
+  render(state: DiagramEditorState, options?: RenderOptions): void;
+  setRail(side: DiagramEditorRail, open: boolean, options?: RailOptions): void;
+  closeDrawers(options?: { restoreFocus?: boolean }): void;
+  setOverflow(open: boolean, options?: OverflowOptions): void;
+  setBackgroundInert(inert: boolean): void;
+  /** Keep the start card hidden for the rest of this mount, even if the canvas empties again. */
+  dismissEmpty(): void;
+  railOpen(side: DiagramEditorRail): boolean;
+  overflowOpen(): boolean;
+  resize(): void;
+  pointerDownOutside(event: PointerEvent): void;
+}
 
 const DRAWER_MAX_WIDTH = 1100;
 const COMPACT_MAX_WIDTH = 700;
@@ -12,17 +51,16 @@ const NARROW_MAX_WIDTH = 420;
 /**
  * Breakpoints follow the shell's own width, so a host sidebar or a narrow embed gets the
  * matching chrome; the window is only a stand-in until the shell has a measurable width.
- * @type {typeof import('./diagram-editor-context.d.mts').createEditorLayout}
  */
-export function createEditorLayout(shell, win) {
-  let shellWidth = null;
+export function createEditorLayout(shell: HTMLElement, win: Window): DiagramEditorLayout {
+  let shellWidth: number | null = null;
   const layoutWidth = () => shellWidth ?? win.innerWidth;
   const drawer = () => layoutWidth() <= DRAWER_MAX_WIDTH;
   const compact = () => layoutWidth() <= COMPACT_MAX_WIDTH;
   const measure = () => {
     const width = shell.getBoundingClientRect().width;
     if (width > 0) shellWidth = width;
-    const tiers = [];
+    const tiers: string[] = [];
     if (drawer()) tiers.push('drawer');
     if (compact()) tiers.push('compact');
     if (layoutWidth() <= NARROW_MAX_WIDTH) tiers.push('narrow');
@@ -35,45 +73,44 @@ export function createEditorLayout(shell, win) {
   return { drawer, compact, measure };
 }
 
-/**
- * Toolbar state, rails and drawers, the overflow menu, footer, empty state and resizing.
- * @type {typeof import('./diagram-editor-context.d.mts').createEditorChrome}
- */
-export function createEditorChrome(ctx) {
+/** Toolbar state, rails and drawers, the overflow menu, footer, empty state and resizing. */
+export function createEditorChrome(ctx: DiagramEditorContext): DiagramEditorChrome {
   const { doc, dom, layout } = ctx;
   const { shell, bar, stage, stageRegion, drawerBackdrop, moreButton, moreMenu } = dom;
   const drawerLayout = layout.drawer,
     compactLayout = layout.compact;
   let leftOpen = !drawerLayout(),
     rightOpen = !drawerLayout();
-  let drawerOpener = null,
+  let drawerOpener: HTMLButtonElement | null = null,
     overflowOpen = false,
-    overflowOpener = null,
+    overflowOpener: HTMLElement | SVGElement | null = null,
     modalBackgroundInert = false,
     emptyDismissed = false,
     controlsStamp = '',
-    lastCanvas = null,
-    lastBreakpoint = null;
-  /** @param {string} action */
-  const barControl = (action) =>
-    /** @type {HTMLButtonElement | null} */ (bar.querySelector(`[data-action="${action}"]`));
+    lastCanvas: { width: number; height: number } | null = null,
+    lastBreakpoint: string | null = null;
+  const barControl = (action: string) =>
+    bar.querySelector<HTMLButtonElement>(`[data-action="${action}"]`);
 
-  function setOverflow(open, { focus = false, restoreFocus = true } = {}) {
+  function setOverflow(
+    open: boolean,
+    { focus = false, restoreFocus = true }: OverflowOptions = {},
+  ) {
     if (overflowOpen === open) return;
     overflowOpen = open;
     moreMenu.hidden = !open;
     moreButton.setAttribute('aria-expanded', String(open));
     if (open) {
-      overflowOpener = doc.activeElement;
-      if (focus)
-        /** @type {HTMLElement | null} */ (moreMenu.querySelector('[role="menuitem"]'))?.focus();
+      // The focused element of an HTML document is an HTML or SVG element.
+      overflowOpener = doc.activeElement as HTMLElement | SVGElement | null;
+      if (focus) moreMenu.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
     } else {
       const target = restoreFocus && overflowOpener?.isConnected ? overflowOpener : null;
       overflowOpener = null;
       target?.focus({ preventScroll: true });
     }
   }
-  function toggleInert(node, inert) {
+  function toggleInert(node: HTMLElement, inert: boolean) {
     if (inert) {
       node.setAttribute('inert', '');
       node.setAttribute('aria-hidden', 'true');
@@ -89,12 +126,11 @@ export function createEditorChrome(ctx) {
     toggleInert(bar, modalBackgroundInert || drawerOpen);
     toggleInert(stageRegion, modalBackgroundInert || drawerOpen);
   }
-  function setBackgroundInert(inert) {
+  function setBackgroundInert(inert: boolean) {
     modalBackgroundInert = inert;
     synchronizeBackgroundInteractivity();
   }
-  /** @param {{ focusPanel?: boolean; focusTarget?: HTMLElement | null }} [options] */
-  function syncPanelState({ focusPanel = false, focusTarget = null } = {}) {
+  function syncPanelState({ focusPanel = false, focusTarget = null }: PanelFocusOptions = {}) {
     const drawer = drawerLayout();
     const { left, right } = dom;
     dom.closeOutline.hidden = !drawer;
@@ -103,10 +139,10 @@ export function createEditorChrome(ctx) {
     shell.dataset.rightOpen = String(rightOpen);
     // Open the destination before moving focus. A rail is made inert only after
     // focus has left it, avoiding a transient focused descendant of an inert tree.
-    for (const [node, open] of /** @type {Array<[HTMLElement, boolean]>} */ ([
+    for (const [node, open] of [
       [left, leftOpen],
       [right, rightOpen],
-    ])) {
+    ] satisfies Array<[HTMLElement, boolean]>) {
       if (open) {
         node.setAttribute('aria-hidden', 'false');
         node.removeAttribute('inert');
@@ -123,16 +159,16 @@ export function createEditorChrome(ctx) {
     if (focusTarget?.isConnected) focusTarget.focus({ preventScroll: true });
     else if (focusPanel) {
       const target = leftOpen
-        ? dom.leftTabs.querySelector('[role="tab"][aria-selected="true"]')
+        ? dom.leftTabs.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')
         : rightOpen
-          ? dom.rightTabs.querySelector('[role="tab"][aria-selected="true"]')
+          ? dom.rightTabs.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')
           : null;
-      /** @type {HTMLElement | null} */ (target)?.focus({ preventScroll: true });
+      target?.focus({ preventScroll: true });
     }
-    for (const [node, open] of /** @type {Array<[HTMLElement, boolean]>} */ ([
+    for (const [node, open] of [
       [left, leftOpen],
       [right, rightOpen],
-    ])) {
+    ] satisfies Array<[HTMLElement, boolean]>) {
       if (!open) {
         node.setAttribute('aria-hidden', 'true');
         node.setAttribute('inert', '');
@@ -140,7 +176,11 @@ export function createEditorChrome(ctx) {
     }
     synchronizeBackgroundInteractivity();
   }
-  function setRail(side, open, { focusPanel = false, restoreFocus = true } = {}) {
+  function setRail(
+    side: DiagramEditorRail,
+    open: boolean,
+    { focusPanel = false, restoreFocus = true }: RailOptions = {},
+  ) {
     const drawer = drawerLayout();
     const control = barControl(side === 'left' ? 'outline' : 'properties');
     if (open && drawer) {
@@ -156,7 +196,7 @@ export function createEditorChrome(ctx) {
     syncPanelState({ focusPanel: open && (focusPanel || drawer), focusTarget });
     if (!leftOpen && !rightOpen) drawerOpener = null;
   }
-  function closeDrawers({ restoreFocus = true } = {}) {
+  function closeDrawers({ restoreFocus = true }: { restoreFocus?: boolean } = {}) {
     if (!drawerLayout()) return;
     const focusTarget = restoreFocus && drawerOpener?.isConnected ? drawerOpener : null;
     leftOpen = false;
@@ -165,7 +205,7 @@ export function createEditorChrome(ctx) {
     syncPanelState({ focusTarget });
     drawerOpener = null;
   }
-  function renderChrome(state) {
+  function renderChrome(state: DiagramEditorState) {
     const { editable, readOnly } = ctx;
     const bundle = state.bundle;
     dom.title.textContent = bundle?.document.title ?? 'Diagram unavailable';
@@ -188,16 +228,14 @@ export function createEditorChrome(ctx) {
     shell.dataset.mode = ctx.mode;
     syncPanelState();
     const tool = ctx.canvas.tool();
-    for (const control of /** @type {NodeListOf<HTMLElement>} */ (
-      dom.canvasTools.querySelectorAll('[data-action="select-tool"],[data-action="pan-tool"]')
+    for (const control of dom.canvasTools.querySelectorAll<HTMLElement>(
+      '[data-action="select-tool"],[data-action="pan-tool"]',
     )) {
       const active = control.dataset.action === tool + '-tool';
       control.setAttribute('aria-pressed', String(active));
       control.dataset.active = String(active);
     }
-    const snapControl = /** @type {HTMLElement | null} */ (
-      dom.canvasTools.querySelector('[data-action="snap"]')
-    );
+    const snapControl = dom.canvasTools.querySelector<HTMLElement>('[data-action="snap"]');
     snapControl?.setAttribute('aria-pressed', String(state.view.snap));
     // The icon states the snap setting too, so the neutral toggle does not rely on its fill alone.
     if (snapControl && snapControl.dataset.active !== String(state.view.snap))
@@ -224,9 +262,7 @@ export function createEditorChrome(ctx) {
       if (control) control.disabled = disabled;
     }
     for (const entry of ctx.config.actions) {
-      const control = /** @type {HTMLButtonElement | null} */ (
-        bar.querySelector('[data-host-action="' + entry.id + '"]')
-      );
+      const control = bar.querySelector<HTMLButtonElement>('[data-host-action="' + entry.id + '"]');
       if (!control) throw new TypeError(`Host action ${entry.id} has no toolbar control.`);
       control.hidden = !!entry.hidden?.(state);
       control.disabled = !!entry.disabled?.(state);
@@ -274,7 +310,7 @@ export function createEditorChrome(ctx) {
       empty.append(guide);
     }
   }
-  function renderFooter(state) {
+  function renderFooter(state: DiagramEditorState) {
     const { footer } = dom;
     footer.replaceChildren();
     if (!state.bundle) {
@@ -331,7 +367,7 @@ export function createEditorChrome(ctx) {
     const layoutChanged = layout.measure();
     const breakpoint = drawerLayout() ? 'drawer' : 'desktop';
     const breakpointChanged = !!lastBreakpoint && lastBreakpoint !== breakpoint;
-    let focusAfterRender = null;
+    let focusAfterRender: HTMLElement | null = null;
     if (breakpointChanged && breakpoint === 'drawer') {
       const active = doc.activeElement;
       const focusTarget = dom.left.contains(active)
@@ -380,12 +416,13 @@ export function createEditorChrome(ctx) {
     render(ctx.current(), { force: true });
     focusAfterRender?.focus({ preventScroll: true });
   }
-  function render(state, { force = false } = {}) {
+  function render(state: DiagramEditorState, { force = false }: RenderOptions = {}) {
     if (force) controlsStamp = '';
     renderChrome(state);
   }
-  function pointerDownOutside(event) {
-    if (overflowOpen && !event.target.closest?.('.de-more-wrap'))
+  function pointerDownOutside(event: PointerEvent) {
+    // Pointer events target elements.
+    if (overflowOpen && !(event.target as Element).closest?.('.de-more-wrap'))
       setOverflow(false, { restoreFocus: false });
   }
   return {

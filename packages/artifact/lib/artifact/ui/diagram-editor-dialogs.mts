@@ -1,6 +1,7 @@
-// @ts-check
-import { compileDiagramCommand } from '../diagram/authoring/index.mjs';
+import type { DiagramAuthoringBundle } from '@openplanr/protocol/diagram-authoring-contracts';
+import { compileDiagramCommand, type DiagramCommandResult } from '../diagram/authoring/index.mjs';
 import { elementIndex } from '../diagram/authoring/model.mjs';
+import type { DiagramEditorState } from '../diagram/editor/index.mjs';
 import { mountDiagramConflicts } from './diagram-conflicts.mjs';
 import {
   connector,
@@ -10,27 +11,44 @@ import {
   quantity,
 } from './diagram-editor-actions.mjs';
 import { bundleOf, errText, safeAction } from './diagram-editor-commands.mjs';
-import { button, element, field } from './diagram-editor-dom.mjs';
+import { button, element, type FieldControl, field } from './diagram-editor-dom.mjs';
+import type { DiagramEditorContext } from './diagram-editor-regions.mjs';
 import { mountDiagramSourcePanel } from './diagram-source-panel.mjs';
+
+export interface DiagramEditorDialogs {
+  active(): HTMLElement | null;
+  close(options?: { restoreFocus?: boolean }): void;
+  /** Close the open dialog, cancelling any gesture it previewed. */
+  cancel(state: DiagramEditorState): void;
+  openSourcePanel(options?: { tab?: 'import' | 'export' }): boolean;
+  openDelete(): void;
+  confirmDelete(ids: string[]): void;
+  openConnect(): void;
+  confirmConnect(): void;
+  openLayout(lane?: 'horizontal' | 'vertical' | null): void;
+  previewLayout(state: DiagramEditorState, bundle: DiagramAuthoringBundle, ids: string[]): void;
+  applyLayout(): void;
+  cancelLayout(): void;
+  showJson(title: string, value: unknown): void;
+  compareRevisions(): void;
+  dispose(): void;
+}
 
 const EMPTY_CALLBACK = () => {};
 
-/**
- * The modal dialog layer: one dialog at a time, background inert while open, focus restored on close.
- * @type {typeof import('./diagram-editor-context.d.mts').createEditorDialogs}
- */
-export function createEditorDialogs(ctx) {
+/** The modal dialog layer: one dialog at a time, background inert while open, focus restored on close. */
+export function createEditorDialogs(ctx: DiagramEditorContext): DiagramEditorDialogs {
   const { doc, win, session, dom } = ctx;
   const { shell, stage, dialogLayer } = dom;
   const current = ctx.current,
     report = ctx.report;
-  let dialog = null,
-    dialogOpener = null,
-    sourceMount = null,
-    sourceDraft = null,
-    conflictMount = null;
+  let dialog: HTMLElement | null = null,
+    dialogOpener: HTMLElement | SVGElement | null = null,
+    sourceMount: ReturnType<typeof mountDiagramSourcePanel> | null = null,
+    sourceDraft: string | null = null,
+    conflictMount: ReturnType<typeof mountDiagramConflicts> | null = null;
 
-  function closeDialog({ restoreFocus = true } = {}) {
+  function closeDialog({ restoreFocus = true }: { restoreFocus?: boolean } = {}) {
     if (!dialog) return;
     const target = restoreFocus
       ? dialogOpener?.isConnected && shell.contains(dialogOpener)
@@ -56,15 +74,18 @@ export function createEditorDialogs(ctx) {
     }
   }
   /** The dialog's buttons, right-aligned in one footer row. */
-  function actions(...controls) {
+  function actions(...controls: HTMLElement[]) {
     const row = element(doc, 'div', { className: 'de-dialog-actions' });
     row.append(...controls);
     return row;
   }
-  function openDialog(name, content) {
+  function openDialog(name: string, content?: HTMLElement) {
     closeDialog({ restoreFocus: false });
     const trigger = ctx.commands.trigger();
-    const active = trigger?.isConnected ? trigger : doc.activeElement;
+    // The focused element of an HTML document is an HTML or SVG element.
+    const active = trigger?.isConnected
+      ? trigger
+      : (doc.activeElement as HTMLElement | SVGElement | null);
     ctx.chrome.setOverflow(false, { restoreFocus: false });
     dialogOpener = active?.closest?.('.de-more-menu') ? dom.moreButton : active;
     const panel = element(doc, 'section', {
@@ -78,15 +99,14 @@ export function createEditorDialogs(ctx) {
     dialogLayer.append(panel);
     dialog = panel;
     ctx.chrome.setBackgroundInert(true);
-    /** @type {HTMLElement | null} */ (panel.querySelector('button,input,select'))?.focus();
+    panel.querySelector<HTMLElement>('button,input,select')?.focus();
     return panel;
   }
-  function cancelDialog(state) {
+  function cancelDialog(state: DiagramEditorState) {
     if (state.gesture) session.cancelGesture('cancel-dialog');
     closeDialog();
   }
-  /** @param {{ tab?: 'import' | 'export' }} [options] */
-  function openSourcePanel({ tab: initialTab = 'import' } = {}) {
+  function openSourcePanel({ tab: initialTab = 'import' }: { tab?: 'import' | 'export' } = {}) {
     const state = current();
     if (!state.bundle || !ctx.inspector.guardDraft()) return false;
     report('');
@@ -179,8 +199,9 @@ export function createEditorDialogs(ctx) {
     );
     openDialog('Delete selection', body).dataset.impact = JSON.stringify(impact);
   }
-  function confirmDelete(ids) {
-    const impact = JSON.parse(dialog.dataset.impact);
+  function confirmDelete(ids: string[]) {
+    // Confirm Delete is dispatched from the open delete dialog, which holds its impact.
+    const impact = JSON.parse((dialog as HTMLElement).dataset.impact as string);
     const result = ctx.commands.submit({ type: 'delete', ids, confirmedImpact: impact });
     if (result.ok) {
       ctx.commands.select([], { force: true });
@@ -198,8 +219,8 @@ export function createEditorDialogs(ctx) {
     const body = element(doc, 'div'),
       ids = state.view.selection,
       index = elementIndex(diagram);
-    /** @type {Array<[string, string]>} */
-    const choices = nodes.map((node) => [node.id, displayName(index, node.id)]);
+    // biome-ignore format: bundles keep this one-line array; wrapping would change their bytes.
+    const choices: Array<[string, string]> = nodes.map((node) => [node.id, displayName(index, node.id)]);
     const from = field(
       doc,
       'From',
@@ -226,15 +247,16 @@ export function createEditorDialogs(ctx) {
     openDialog('Connect objects', body);
   }
   function confirmConnect() {
-    const from = dialog.querySelector('[aria-label="From"]').value,
-      to = dialog.querySelector('[aria-label="To"]').value,
-      label = dialog.querySelector('[aria-label="Connector label"]').value;
+    // Create Connector is dispatched from the open connect dialog and its three fields.
+    // biome-ignore format: bundles keep this one-line declaration list; wrapping would change their bytes.
+    const from = ((dialog as HTMLElement).querySelector('[aria-label="From"]') as FieldControl).value,
+      to = ((dialog as HTMLElement).querySelector('[aria-label="To"]') as FieldControl).value,
+      label = ((dialog as HTMLElement).querySelector('[aria-label="Connector label"]') as FieldControl).value;
     const command = connector(from, to, label);
     const result = ctx.commands.submit(command, [command.elements[0].value.id]);
     if (result.ok) closeDialog();
   }
-  /** @param {'horizontal' | 'vertical' | null} [lane] */
-  function layoutDialog(lane = null) {
+  function layoutDialog(lane: 'horizontal' | 'vertical' | null = null) {
     const body = element(doc, 'div');
     body.append(
       element(
@@ -271,23 +293,26 @@ export function createEditorDialogs(ctx) {
     const panel = openDialog('Layout preview', body);
     if (lane) panel.dataset.lane = lane;
   }
-  function previewLayout(state, bundle, ids) {
+  function previewLayout(state: DiagramEditorState, bundle: DiagramAuthoringBundle, ids: string[]) {
     if (state.gesture) session.cancelGesture('new-layout');
     const start = session.beginGesture();
     if (!start.ok) {
       report(errText(start));
       return;
     }
-    let preview;
-    if (dialog.dataset.lane) {
+    // Preview Layout is dispatched from the open layout dialog, whose lane is a layoutDialog direction.
+    let preview: DiagramCommandResult | null;
+    if ((dialog as HTMLElement).dataset.lane) {
       const laneId = ids[0],
-        direction = dialog.dataset.lane;
+        direction = (dialog as HTMLElement).dataset.lane as 'horizontal' | 'vertical';
       preview = safeAction(
         () => session.previewGesture(laneArrangementCommand(bundle, laneId, direction)),
         report,
       );
     } else {
-      const scope = dialog.querySelector('[aria-label="Arrange"]').value;
+      const scope = (
+        (dialog as HTMLElement).querySelector('[aria-label="Arrange"]') as FieldControl
+      ).value;
       const targets = (
         scope === 'all' ? bundle.presentation.elements.map((item) => item.elementId) : ids
       ).filter((id) => !bundle.document.relations.some((relation) => relation.id === id));
@@ -298,19 +323,17 @@ export function createEditorDialogs(ctx) {
       session.cancelGesture('invalid-layout');
       return;
     }
-    dialog
-      .querySelector('[data-action="preview-layout"]')
-      .replaceWith(button(doc, 'Apply layout', 'apply-layout', { className: 'de-primary' }));
-    dialog
-      .querySelector('.de-dialog-actions')
-      .before(
-        element(
-          doc,
-          'p',
-          { className: 'de-muted' },
-          'Preview only · No changes saved. Apply as one undoable edit.',
-        ),
-      );
+    (
+      (dialog as HTMLElement).querySelector('[data-action="preview-layout"]') as HTMLElement
+    ).replaceWith(button(doc, 'Apply layout', 'apply-layout', { className: 'de-primary' }));
+    ((dialog as HTMLElement).querySelector('.de-dialog-actions') as HTMLElement).before(
+      element(
+        doc,
+        'p',
+        { className: 'de-muted' },
+        'Preview only · No changes saved. Apply as one undoable edit.',
+      ),
+    );
   }
   function applyLayout() {
     const result = session.completeGesture();
@@ -324,7 +347,7 @@ export function createEditorDialogs(ctx) {
     session.cancelGesture('cancel-layout');
     closeDialog();
   }
-  function showJson(title, value) {
+  function showJson(title: string, value: unknown) {
     const pre = element(
       doc,
       'pre',

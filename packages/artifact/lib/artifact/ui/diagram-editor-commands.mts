@@ -1,46 +1,93 @@
-// @ts-check
+import type {
+  DiagramAuthoringBundle,
+  DiagramEditTransaction,
+  DiagramPlacement,
+} from '@openplanr/protocol/diagram-authoring-contracts';
+import type { DiagramCommand, DiagramCommandResult } from '../diagram/authoring/index.mjs';
 import { appearanceFields, clone, geometryFields, snapshot } from '../diagram/authoring/model.mjs';
-import { copyDiagramSelection } from '../diagram/editor/clipboard.mjs';
+import {
+  copyDiagramSelection,
+  type DiagramSelectionClipboard,
+} from '../diagram/editor/clipboard.mjs';
+import type { DiagramEditorSession, DiagramEditorState } from '../diagram/editor/index.mjs';
 import {
   addOrthogonalDetour,
   arrangementCommand,
   createObject,
+  type DiagramEditorPoint,
+  type DiagramObjectKind,
   duplicateSelection,
   freshId,
   placement,
   processTemplate,
   transaction,
 } from './diagram-editor-actions.mjs';
+import type { DiagramEditorTool } from './diagram-editor-canvas.mjs';
+import type { DiagramEditorRail } from './diagram-editor-chrome.mjs';
 import { downloadJson } from './diagram-editor-dom.mjs';
+import type { DiagramEditorContext } from './diagram-editor-regions.mjs';
 
-/** @typedef {import('../diagram/editor/index.mjs').DiagramEditorState} DiagramEditorState */
-/** @typedef {import('./diagram-editor-actions.mjs').DiagramObjectKind} DiagramObjectKind */
-/** @typedef {import('@openplanr/protocol/diagram-authoring-contracts').DiagramAuthoringBundle} DiagramAuthoringBundle */
-/**
- * One dispatched action with the state it was dispatched against.
- * @typedef {object} CommandInput
- * @property {string} action
- * @property {DiagramEditorState} state
- * @property {DiagramAuthoringBundle} bundle
- * @property {string[]} ids
- * @property {unknown} value
- * @property {{ additive?: boolean; fromOutline?: boolean }} options
- */
-/** @typedef {(input: CommandInput) => void} CommandHandler */
+/** An edit refused because the inspector holds unapplied property changes. */
+export interface DiagramEditorDraftRefusal {
+  ok: false;
+  status: 'property-draft';
+}
+interface ActionOptions {
+  additive?: boolean;
+  fromOutline?: boolean;
+}
+export interface DiagramEditorCommands {
+  /** Run one `data-action`; unknown actions do nothing. */
+  act(action: string, value?: unknown, options?: ActionOptions): void;
+  select(
+    ids: string[],
+    options?: { force?: boolean },
+  ): ReturnType<DiagramEditorSession['setView']> | DiagramEditorDraftRefusal;
+  submit(
+    command: DiagramCommand,
+    selectIds?: string[],
+  ): DiagramCommandResult | DiagramEditorDraftRefusal;
+  submitTransaction(
+    value: DiagramEditTransaction,
+    options?: { allowDirty?: boolean },
+  ): DiagramCommandResult | DiagramEditorDraftRefusal;
+  useTool(tool: DiagramEditorTool, state: DiagramEditorState): void;
+  /** The control whose click is being dispatched, or null outside a click. */
+  trigger(): HTMLElement | null;
+  hasClipboard(): boolean;
+  click(event: MouseEvent): void;
+}
+/** One dispatched action with the state it was dispatched against. */
+interface CommandInput {
+  action: string;
+  state: DiagramEditorState;
+  bundle: DiagramAuthoringBundle;
+  ids: string[];
+  value: unknown;
+  options: ActionOptions;
+}
+type CommandHandler = (input: CommandInput) => void;
+/** The value the inspector dispatches with reparent: a parent id, or null for the diagram root. */
+type ParentId = string | null;
+/** A result or error whose diagnostics or message explain a failure. */
+interface Explained {
+  ok?: boolean;
+  diagnostics?: ReadonlyArray<{ detail: string }>;
+  message?: string;
+}
 
 /** Surfaces that dispatch their own clicks; actions inside them never reach the editor. */
 const FOREIGN_ACTION_SCOPE = '.de-host-pane,.de-review-slot,.de-conflict,.de-source-panel';
 const ROUTE_ACTIONS = new Set(['add-bend', 'remove-bend', 'reset-route', 'position-label']);
 
-/** @returns {string} */
-export const errText = (result) =>
+export const errText = (result: Explained | null | undefined): string =>
   result?.diagnostics
     ?.map((item) => item.detail)
     .filter(Boolean)
     .join(' ') ||
   result?.message ||
   'The change could not be applied.';
-export const safeAction = (fn, report) => {
+export const safeAction = <Result,>(fn: () => Result, report: (message: string) => void) => {
   try {
     return fn();
   } catch (error) {
@@ -48,52 +95,49 @@ export const safeAction = (fn, report) => {
     return null;
   }
 };
-/** @param {DiagramEditorState} state */
-export const bundleOf = (state) => {
+export const bundleOf = (state: DiagramEditorState) => {
   if (!state.bundle) throw new TypeError('The editor has no readable diagram.');
   return state.bundle;
 };
-/**
- * @param {DiagramAuthoringBundle} bundle
- * @param {string} id
- */
-const placementOf = (bundle, id) => {
+const placementOf = (bundle: DiagramAuthoringBundle, id: string) => {
   const placement = bundle.presentation.elements.find((item) => item.elementId === id);
   if (!placement) throw new TypeError(`Element ${id} has no placement.`);
   return placement;
 };
-/** @returns {import('./diagram-editor-context.d.mts').DiagramEditorDraftRefusal} */
-const draftRefusal = () => ({ ok: false, status: 'property-draft' });
-function lockedSelection(bundle, ids, next) {
-  const changes = ids
-    .map((id) => bundle.presentation.elements.find((item) => item.elementId === id))
-    .filter(Boolean)
-    .map((item) => {
-      const before = appearanceFields(item),
-        after = clone(before);
-      if (item.bounds) {
-        after.locks.position = next;
-        after.locks.size = next;
-      }
-      if (item.route) after.locks.route = next;
-      return { elementId: item.elementId, before, after };
-    });
+const draftRefusal = (): DiagramEditorDraftRefusal => ({ ok: false, status: 'property-draft' });
+function lockedSelection(
+  bundle: DiagramAuthoringBundle,
+  ids: string[],
+  next: boolean,
+): DiagramCommand {
+  // The filter keeps the selected objects that have a placement.
+  const changes = (
+    ids
+      .map((id) => bundle.presentation.elements.find((item) => item.elementId === id))
+      .filter(Boolean) as DiagramPlacement[]
+  ).map((item) => {
+    const before = appearanceFields(item),
+      after = clone(before);
+    if (item.bounds) {
+      after.locks.position = next;
+      after.locks.size = next;
+    }
+    if (item.route) after.locks.route = next;
+    return { elementId: item.elementId, before, after };
+  });
   return { type: 'appearance', changes };
 }
 
-/**
- * Edit primitives, save, and the action table that every `data-action` control dispatches through.
- * @type {typeof import('./diagram-editor-context.d.mts').createEditorCommands}
- */
-export function createEditorCommands(ctx) {
+/** Edit primitives, save, and the action table that every `data-action` control dispatches through. */
+export function createEditorCommands(ctx: DiagramEditorContext): DiagramEditorCommands {
   const { doc, session, dom } = ctx;
   const current = ctx.current,
     report = ctx.report,
     notice = ctx.notice;
-  let clipboard = null,
-    actionTrigger = null;
+  let clipboard: DiagramSelectionClipboard | null = null,
+    actionTrigger: HTMLElement | null = null;
 
-  const select = (ids, { force = false } = {}) => {
+  const select = (ids: string[], { force = false }: { force?: boolean } = {}) => {
     const next = [...new Set(ids)],
       previous = current().view.selection;
     const changed =
@@ -111,7 +155,7 @@ export function createEditorCommands(ctx) {
     }
     return result;
   };
-  const submit = (command, selectIds) => {
+  const submit = (command: DiagramCommand, selectIds?: string[]) => {
     if (ctx.inspector.dirty()) {
       ctx.inspector.guardDraft();
       return draftRefusal();
@@ -125,7 +169,10 @@ export function createEditorCommands(ctx) {
     if (selectIds?.length) select(selectIds);
     return result;
   };
-  const submitTransaction = (value, { allowDirty = false } = {}) => {
+  const submitTransaction = (
+    value: DiagramEditTransaction,
+    { allowDirty = false }: { allowDirty?: boolean } = {},
+  ) => {
     if (!allowDirty && ctx.inspector.dirty()) {
       ctx.inspector.guardDraft();
       return draftRefusal();
@@ -164,18 +211,18 @@ export function createEditorCommands(ctx) {
       notice('Diagram saved.');
     }
   }
-  function useTool(next, state) {
+  function useTool(next: DiagramEditorTool, state: DiagramEditorState) {
     ctx.canvas.setTool(next);
     ctx.chrome.render(state, { force: true });
     notice(next === 'select' ? 'Select mode' : 'Pan mode');
   }
-  function toggleRail(side, action) {
+  function toggleRail(side: DiagramEditorRail, action: 'toggle' | 'close') {
     const open = ctx.chrome.railOpen(side);
     ctx.chrome.setRail(side, action === 'close' ? false : !open, {
       focusPanel: action === 'toggle' && !open,
     });
   }
-  function editRoute({ action, bundle, ids, value }) {
+  function editRoute({ action, bundle, ids, value }: CommandInput) {
     const id = ids[0],
       place = placementOf(bundle, id),
       before = geometryFields(place),
@@ -196,7 +243,7 @@ export function createEditorCommands(ctx) {
       after.route.points.splice(Number(value) + 1, 1);
       if (
         after.route.points.some(
-          (point, index, all) =>
+          (point: DiagramEditorPoint, index: number, all: DiagramEditorPoint[]) =>
             index > 0 && point.x !== all[index - 1].x && point.y !== all[index - 1].y,
         )
       ) {
@@ -214,30 +261,28 @@ export function createEditorCommands(ctx) {
     }
     submit({ type: 'geometry', changes: [{ elementId: id, before, after }] });
   }
-  function arrange({ action, bundle, ids }) {
+  function arrange({ action, bundle, ids }: CommandInput) {
     const command = safeAction(() => arrangementCommand(bundle, ids, action), report);
     if (command) submit(command);
   }
 
-  /**
-   * Actions that run even when the session has no readable diagram.
-   * @type {Map<string, (input: { state: DiagramEditorState }) => void>}
-   */
-  const handlersWithoutBundle = new Map([
+  /** Actions that run even when the session has no readable diagram. */
+  const handlersWithoutBundle = new Map<string, (input: { state: DiagramEditorState }) => void>([
     [
       'host-action',
       ({ state }) => {
         const entry = ctx.config.actions.find(
           (item) => item.id === actionTrigger?.dataset.hostAction,
         );
-        if (entry && !actionTrigger.disabled)
-          entry.onSelect({ session, state, trigger: actionTrigger });
+        // A host action is dispatched from its toolbar button.
+        if (entry && !(actionTrigger as HTMLButtonElement).disabled)
+          entry.onSelect({ session, state, trigger: actionTrigger as HTMLButtonElement });
       },
     ],
     ['cancel-dialog', ({ state }) => ctx.dialogs.cancel(state)],
   ]);
-  /** @type {Map<string, CommandHandler>} */
-  const handlers = new Map([
+  // biome-ignore format: bundles keep the reparent entry on one line; wrapping it would change their bytes.
+  const handlers = new Map<string, CommandHandler>([
     [
       'toggle-group',
       () => {
@@ -363,7 +408,8 @@ export function createEditorCommands(ctx) {
       'create',
       ({ state, bundle, value }) => {
         const { stage } = dom;
-        const kind = /** @type {DiagramObjectKind} */ (value),
+        // The shape palette dispatches its own data-kind values.
+        const kind = value as DiagramObjectKind,
           at = ctx.canvas.worldPoint({ x: stage.clientWidth / 2, y: stage.clientHeight / 2 });
         const existing = bundle.presentation.elements
           .map((item) => item.bounds)
@@ -474,7 +520,7 @@ export function createEditorCommands(ctx) {
       },
     ],
     ['ungroup', ({ ids }) => void submit({ type: 'ungroup', ids })],
-    ['reparent', ({ ids, value }) => void submit({ type: 'reparent', ids, parentId: value })],
+    ['reparent', ({ ids, value }) => void submit({ type: 'reparent', ids, parentId: value as ParentId })],
     ['lane-up', ({ bundle, ids }) => moveLane(bundle, ids, -1)],
     ['lane-down', ({ bundle, ids }) => moveLane(bundle, ids, 1)],
     [
@@ -486,43 +532,47 @@ export function createEditorCommands(ctx) {
         session.setView({ collapsedGroups: [...collapsed] });
       },
     ],
-    ...[...ROUTE_ACTIONS].map(
-      (action) => /** @type {[string, CommandHandler]} */ ([action, editRoute]),
-    ),
+    ...[...ROUTE_ACTIONS].map((action): [string, CommandHandler] => [action, editRoute]),
   ]);
-  function selectObject({ ids, value, options }) {
+  function selectObject({ ids, value, options }: CommandInput) {
+    // Outline rows and member buttons dispatch an object id.
     const selected = options.additive
-      ? ids.includes(value)
+      ? ids.includes(value as string)
         ? ids.filter((id) => id !== value)
-        : [...ids, value]
-      : [value];
+        : [...ids, value as string]
+      : [value as string];
     const result = select(selected);
     if (result.ok) {
       const outlineItem = options.fromOutline
-        ? [...dom.outlinePane.querySelectorAll('[data-action="select-id"]')].find(
-            (item) => /** @type {HTMLElement} */ (item).dataset.id === value,
+        ? [...dom.outlinePane.querySelectorAll<HTMLElement>('[data-action="select-id"]')].find(
+            (item) => item.dataset.id === value,
           )
         : null;
-      /** @type {HTMLElement} */ (outlineItem ?? dom.stage).focus();
+      (outlineItem ?? dom.stage).focus();
     }
   }
-  function duplicate(bundle, ids, copied) {
+  function duplicate(
+    bundle: DiagramAuthoringBundle,
+    ids: string[],
+    copied: DiagramSelectionClipboard | null,
+  ) {
     const result = duplicateSelection(bundle, ids, copied);
     if (!result?.ok) {
       report(errText(result));
       return;
     }
-    const submitted = submitTransaction(result.transaction);
+    // A pasted selection always compiles to a transaction.
+    const submitted = submitTransaction(result.transaction as DiagramEditTransaction);
     if (submitted.ok) select(result.selectedIds);
   }
-  function moveLane(bundle, ids, delta) {
+  function moveLane(bundle: DiagramAuthoringBundle, ids: string[], delta: number) {
     const order = [...bundle.document.laneOrder],
       index = order.indexOf(ids[0]);
     if (index < 0 || index + delta < 0 || index + delta >= order.length) return;
     [order[index], order[index + delta]] = [order[index + delta], order[index]];
     submit({ type: 'reorder-lanes', ids: order });
   }
-  function act(action, value, options = {}) {
+  function act(action: string, value?: unknown, options: ActionOptions = {}) {
     const state = current(),
       bundle = state.bundle,
       ids = state.view.selection;
@@ -534,13 +584,14 @@ export function createEditorCommands(ctx) {
       (action.startsWith('align-') || action.startsWith('distribute-') ? arrange : undefined);
     handler?.({ action, state, bundle, ids, value, options });
   }
-  function click(event) {
+  function click(event: MouseEvent) {
     // The bar is inert under an open drawer, so a click on it reaches the shell itself.
     if (event.target === dom.shell) {
       ctx.chrome.closeDrawers();
       return;
     }
-    const target = event.target.closest('[data-action]');
+    // Click events target elements.
+    const target = (event.target as Element).closest<HTMLElement>('[data-action]');
     if (!target || target.closest(FOREIGN_ACTION_SCOPE)) return;
     if (ctx.chrome.overflowOpen() && !target.closest('.de-more-wrap'))
       ctx.chrome.setOverflow(false, { restoreFocus: false });
@@ -554,7 +605,8 @@ export function createEditorCommands(ctx) {
           fromOutline: true,
         });
       else if (action === 'select-member') act(action, target.dataset.member);
-      else act(action);
+      // The target matched [data-action].
+      else act(action as string);
     } finally {
       actionTrigger = null;
     }

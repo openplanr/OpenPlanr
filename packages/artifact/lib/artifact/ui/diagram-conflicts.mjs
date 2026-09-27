@@ -1,7 +1,15 @@
 import { diffDiagramBundles } from '../diagram/authoring/index.mjs';
 import { button, downloadJson, element } from './diagram-editor-dom.mjs';
 
-/** One comparison surface for local and company adapters. Choices never auto-save. */
+/**
+ * One comparison surface for local and company adapters. Choices never auto-save.
+ * @param {{
+ *   root: HTMLElement;
+ *   session: import('../diagram/editor/index.mjs').DiagramEditorSession;
+ *   onClose?: () => void;
+ *   onError?: (failure: import('../diagram/authoring/index.mjs').DiagramKernelFailure) => void;
+ * }} options
+ */
 export function mountDiagramConflicts({ root, session, onClose = () => {}, onError = () => {} }) {
   const document = root.ownerDocument;
   const state = session.getState(),

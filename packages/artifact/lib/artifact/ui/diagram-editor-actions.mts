@@ -34,7 +34,6 @@ import {
   pasteDiagramSelection,
 } from '../diagram/editor/clipboard.mjs';
 import type { DiagramEditorFailure } from '../diagram/editor/session.mjs';
-import type { DiagramEditorPoint as Point } from './diagram-editor-context.d.mts';
 
 /** A shape the editor can create: a node kind, a note, a container or a lane. */
 export type DiagramObjectKind =
@@ -47,6 +46,12 @@ type CreateCommand = Extract<DiagramCommand, { type: 'create' }>;
 type GeometryCommand = Extract<DiagramCommand, { type: 'geometry' }>;
 type GeometryChange = GeometryCommand['changes'][number];
 type GeometryOperation = Extract<DiagramEditOperation, { type: 'set-geometry' }>;
+/** A point in diagram coordinates. */
+export interface DiagramEditorPoint {
+  x: number;
+  y: number;
+}
+type Point = DiagramEditorPoint;
 /** A placement with bounds: a shape, container or lane, not a connector. */
 export type BoundedPlacement = DiagramPlacement & { bounds: DiagramBounds };
 /** The fields the inspector edits; each is applied only when present. */
