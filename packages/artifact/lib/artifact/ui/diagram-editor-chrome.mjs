@@ -1,5 +1,7 @@
 // @ts-check
 import { getDiagramAuthoringCapability } from '@openplanr/protocol/diagram-authoring-contracts';
+import { elementIndex } from '../diagram/authoring/model.mjs';
+import { displayName, quantity } from './diagram-editor-actions.mjs';
 import { button, element } from './diagram-editor-dom.mjs';
 import { hostSaveLabel } from './diagram-editor-host.mjs';
 
@@ -48,6 +50,7 @@ export function createEditorChrome(ctx) {
     overflowOpen = false,
     overflowOpener = null,
     modalBackgroundInert = false,
+    emptyDismissed = false,
     controlsStamp = '',
     lastCanvas = null,
     lastBreakpoint = null;
@@ -246,7 +249,7 @@ export function createEditorChrome(ctx) {
     ctx.inspector.updateCommandState(state);
     const { empty } = dom;
     const hasContent = bundle && bundle.presentation.elements.length > 0;
-    empty.hidden = hasContent || !editable(state);
+    empty.hidden = hasContent || !editable(state) || emptyDismissed;
     if (!empty.hidden) {
       empty.replaceChildren(
         element(doc, 'h2', {}, 'Create your diagram'),
@@ -303,18 +306,21 @@ export function createEditorChrome(ctx) {
           'This diagram grammar is available for inspection only. Editing is not certified.',
         ),
       );
-    else
+    else {
+      const { selection } = state.view;
+      const selected =
+        selection.length === 1
+          ? `Selected: ${displayName(elementIndex(state.bundle.document), selection[0])}`
+          : `${selection.length} selected`;
       footer.append(
         element(
           doc,
           'span',
           {},
-          state.view.selection.length +
-            ' selected · ' +
-            state.bundle.presentation.elements.length +
-            ' objects',
+          `${selected} · ${quantity(state.bundle.presentation.elements.length, 'object')}`,
         ),
       );
+    }
   }
   function resize() {
     const layoutChanged = layout.measure();
@@ -383,6 +389,9 @@ export function createEditorChrome(ctx) {
     closeDrawers,
     setOverflow,
     setBackgroundInert,
+    dismissEmpty() {
+      emptyDismissed = true;
+    },
     railOpen: (side) => (side === 'left' ? leftOpen : rightOpen),
     overflowOpen: () => overflowOpen,
     resize,

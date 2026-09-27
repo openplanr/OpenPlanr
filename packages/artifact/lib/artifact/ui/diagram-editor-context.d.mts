@@ -131,6 +131,8 @@ export interface DiagramEditorChrome {
   closeDrawers(options?: { restoreFocus?: boolean }): void;
   setOverflow(open: boolean, options?: { focus?: boolean; restoreFocus?: boolean }): void;
   setBackgroundInert(inert: boolean): void;
+  /** Keep the start card hidden for the rest of this mount, even if the canvas empties again. */
+  dismissEmpty(): void;
   railOpen(side: DiagramEditorRail): boolean;
   overflowOpen(): boolean;
   resize(): void;

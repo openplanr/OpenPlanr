@@ -1371,6 +1371,12 @@ body.planr-diagram-owner-page #diagram-owner-editor {
   font-weight: 450;
 }
 
+/* Default placeholder greys ignore the theme and miss 4.5:1 (WebKit's is 2.35:1 on white). */
+.planr-diagram-editor .de-field :is(input, textarea)::placeholder {
+  color: var(--de-muted);
+  opacity: 1;
+}
+
 .planr-diagram-editor .de-field :is(input, textarea, select):hover:not(:disabled) {
   border-color: var(--de-rule-strong);
 }

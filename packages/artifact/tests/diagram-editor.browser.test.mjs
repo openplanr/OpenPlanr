@@ -106,6 +106,24 @@ async function expandInspectorSection(page, name) {
   if (!(await section.evaluate((node) => node.open))) await summary.click();
   return section;
 }
+/** Rendered text, field values and accessible labels in the editor that contain an object id. */
+function exposedIds(page) {
+  return page.evaluate(() => {
+    const id = /[a-z]+-[0-9a-f]{8}-/u;
+    const shell = document.querySelector('.planr-diagram-editor');
+    const found = [];
+    const text = document.createTreeWalker(shell, NodeFilter.SHOW_TEXT);
+    for (let node = text.nextNode(); node; node = text.nextNode())
+      if (id.test(node.data) && node.parentElement.checkVisibility()) found.push(node.data);
+    for (const element of shell.querySelectorAll('*')) {
+      if (!element.checkVisibility()) continue;
+      for (const name of ['aria-label', 'title', 'placeholder'])
+        if (id.test(element.getAttribute(name) ?? '')) found.push(element.getAttribute(name));
+      if (element.matches('input, textarea') && id.test(element.value)) found.push(element.value);
+    }
+    return found;
+  });
+}
 
 // The shell and every read/save below are served by the actual scoped owner.
 // Test assertions inspect observable controls, SVG, and persisted paired content.
@@ -1075,7 +1093,7 @@ test(
     await page.keyboard.press('Home');
     assert.equal(await focused('Operations'), true);
 
-    await row('Complete').click();
+    await row('Complete, Connector').click();
     const selection = await page.getByRole('treeitem', { selected: true }).allTextContents();
     await row('Operations').locator('[data-action="toggle-group"]').click();
     assert.equal(await row('Operations').getAttribute('aria-expanded'), 'false');
@@ -1366,5 +1384,80 @@ test(
       'Backdrop close restores focus to the drawer trigger',
     );
     assert.deepEqual(await read(), original, 'View preferences do not create content revisions');
+  },
+);
+
+test('Start blank closes the start card for the rest of the session', options, async (t) => {
+  const { page } = await fixture(t);
+  const card = page.locator('.de-empty');
+  await card.getByRole('heading', { name: 'Create your diagram', exact: true }).waitFor();
+  await card.getByRole('button', { name: 'Start blank', exact: true }).click();
+  await settle(page);
+  assert.equal(await card.isHidden(), true, 'Start blank closes the card');
+  assert.equal(
+    await page.getByRole('tab', { name: 'Shapes', exact: true }).getAttribute('aria-selected'),
+    'true',
+    'Start blank opens the shape palette',
+  );
+  await page.getByRole('tab', { name: 'Outline', exact: true }).click();
+  assert.equal(await card.isHidden(), true, 'A later render keeps the card closed');
+  await create(page, 'process');
+  await page.getByRole('button', { name: 'Undo', exact: true }).click();
+  await settle(page);
+  assert.equal(await page.locator('[data-editor-svg] [data-element-id]').count(), 0);
+  assert.equal(await card.isHidden(), true, 'An empty canvas after an edit keeps the card closed');
+});
+
+test(
+  'unlabelled connectors are named by their endpoints and Apply keeps them unlabelled',
+  options,
+  async (t) => {
+    const { page, read } = await fixture(t);
+    await page.getByRole('button', { name: 'Use process template', exact: true }).click();
+    await settle(page);
+    assert.deepEqual(await exposedIds(page), [], 'Template with its three shapes selected');
+    const dialog = page.getByRole('dialog', { name: 'Delete selection' });
+    const deletionCopy = async () => {
+      await page.getByRole('button', { name: 'Delete selection…', exact: true }).click();
+      await dialog.waitFor();
+      const copy = await dialog.locator('p').allTextContents();
+      assert.deepEqual(await exposedIds(page), [], 'Delete confirmation');
+      await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+      return copy;
+    };
+    assert.deepEqual(await deletionCopy(), [
+      'Delete 5 objects, including 2 connectors? This can be undone before another conflicting change.',
+      'Connectors: Start → Process, Process → End',
+    ]);
+
+    await page.getByRole('treeitem', { name: 'Start → Process, Connector', exact: true }).click();
+    await page.getByRole('heading', { name: 'Start → Process', exact: true }).waitFor();
+    const label = page.getByLabel('Label', { exact: true });
+    assert.equal(await label.inputValue(), '', 'The Label field holds only a stored label');
+    assert.equal(await label.getAttribute('placeholder'), 'Start → Process');
+    assert.equal(
+      await page.locator('.de-stage-footer').textContent(),
+      'Selected: Start → Process · 5 objects',
+    );
+    assert.deepEqual(await exposedIds(page), [], 'Connector selected');
+    assert.deepEqual(await deletionCopy(), [
+      'Delete 1 connector? This can be undone before another conflicting change.',
+      'Connector: Start → Process',
+    ]);
+
+    await page.getByLabel('Direction', { exact: true }).selectOption('both');
+    await page.getByRole('button', { name: 'Apply properties', exact: true }).click();
+    await settle(page);
+    assert.equal(await label.inputValue(), '', 'Apply does not turn the name into a label');
+    assert.deepEqual(await exposedIds(page), [], 'After Apply');
+    await save(page);
+    const saved = await read();
+    const node = (name) => saved.document.nodes.find((item) => item.label === name).id;
+    const relation = saved.document.relations.find((item) => item.direction === 'both');
+    assert.deepEqual(
+      [relation.from, relation.to, relation.label],
+      [node('Start'), node('Process'), null],
+    );
+    assert.equal(await drawing(page, relation.id).locator('text').count(), 0, 'No label is drawn');
   },
 );

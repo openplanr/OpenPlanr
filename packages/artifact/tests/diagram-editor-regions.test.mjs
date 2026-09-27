@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { makeBundle } from '../../../tests/protocol/fixtures/diagram-authoring.mjs';
+import { elementIndex } from '../lib/artifact/diagram/authoring/model.mjs';
+import { displayName, quantity } from '../lib/artifact/ui/diagram-editor-actions.mjs';
 import { createEditorCommands } from '../lib/artifact/ui/diagram-editor-commands.mjs';
 import { colorSchemeOf, readHostOptions } from '../lib/artifact/ui/diagram-editor-host.mjs';
 import { editorShortcut } from '../lib/artifact/ui/diagram-editor-keyboard.mjs';
@@ -185,4 +187,32 @@ test('edits wait for unapplied properties to be applied or reverted', () => {
   commands.act('lock');
   assert.deepEqual(calls, [['guardDraft']]);
   assert.deepEqual(commands.select(['node-b']), { ok: false, status: 'property-draft' });
+});
+
+test('objects are named by their label, a connector by its endpoints, else by their kind', () => {
+  const bundle = makeBundle('process');
+  const name = (id) => displayName(elementIndex(bundle.document), id);
+  const ids = ['node-a', 'edge-a', 'group-a', 'note-a'];
+  assert.deepEqual(ids.map(name), [
+    'Café ☕',
+    'Complete',
+    'Checkout service',
+    'Keep the operation idempotent.',
+  ]);
+  bundle.document.relations[0].label = null;
+  assert.equal(name('edge-a'), 'Café ☕ → Done');
+  bundle.document.nodes[0].label = ' ';
+  bundle.document.groups[0].label = '';
+  bundle.document.annotations[0].text = '';
+  assert.deepEqual(ids.map(name), ['Process', 'Process → Done', 'Group', 'Note']);
+  assert.throws(() => name('node-z'), /Diagram object node-z is not in this document/);
+  bundle.document.nodes.pop();
+  assert.throws(() => name('edge-a'), /Connector edge-a ends at node-b/);
+});
+
+test('counts agree with their noun', () => {
+  assert.deepEqual(
+    [quantity(0, 'object'), quantity(1, 'object'), quantity(2, 'connector')],
+    ['0 objects', '1 object', '2 connectors'],
+  );
 });
