@@ -24,4 +24,14 @@ describe('parseId', () => {
     expect(parseId('epic-001')).toBeNull();
     expect(parseId('')).toBeNull();
   });
+
+  it('parses ids past 999, which the generators emit with four or more digits', () => {
+    expect(parseId('SPEC-1000')).toEqual({ prefix: 'SPEC', num: 1000 });
+  });
+
+  it('rejects ids carrying regular-expression or path syntax', () => {
+    for (const hostile of ['.*', '(', 'US-001.*', 'US-001-', 'US', '../US-001', 'US-001/x']) {
+      expect(parseId(hostile)).toBeNull();
+    }
+  });
 });

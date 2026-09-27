@@ -16,6 +16,7 @@
 
 import { parseTaskMarkdown } from '../agents/task-parser.js';
 import type { ArtifactType, OpenPlanrConfig } from '../models/types.js';
+import { escapeRegExp } from '../utils/escape-regexp.js';
 import { logger } from '../utils/logger.js';
 import { listArtifacts, readArtifact, readArtifactRaw } from './artifact-service.js';
 import { listSpecs } from './spec-service.js';
@@ -275,7 +276,7 @@ async function enrichGithub(items: DeliveryItem[], warnings: string[]): Promise<
     const { pullRequests, warning } = await fetchRecentPullRequests({ days: 3650, limit: 300 });
     if (warning) warnings.push(`--github: ${warning}`);
     for (const i of items) {
-      const idRe = new RegExp(`\\b${i.id}\\b`, 'i');
+      const idRe = new RegExp(`\\b${escapeRegExp(i.id)}\\b`, 'i');
       const pr = pullRequests.find((p) => idRe.test(p.title));
       if (pr)
         i.github = { ...(i.github ?? {}), pr: { number: pr.number, merged: pr.mergedAt != null } };

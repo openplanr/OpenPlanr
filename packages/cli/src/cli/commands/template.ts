@@ -16,6 +16,7 @@ import { promptConfirm, promptText } from '../../services/prompt-service.js';
 import { getTemplatesDir } from '../../utils/constants.js';
 import { ensureDir, fileExists, listFiles, readFile, writeFile } from '../../utils/fs.js';
 import { display, logger } from '../../utils/logger.js';
+import { requireArtifactId } from '../helpers/artifact-id.js';
 
 interface TaskTemplate {
   name: string;
@@ -197,6 +198,7 @@ export function registerTemplateCommand(program: Command) {
     .argument('<taskId>', 'task ID to save as template (e.g., TASK-001, QT-003)')
     .option('-n, --name <name>', 'template name (lowercase, hyphenated)')
     .action(async (taskId: string, opts) => {
+      requireArtifactId(taskId, 'taskId', 'TASK-001');
       const projectDir = program.opts().projectDir as string;
       const config = await loadConfig(projectDir);
 

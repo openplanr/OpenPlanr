@@ -10,6 +10,7 @@ import { findArtifactTypeById, updateArtifactFields } from '../../services/artif
 import { loadConfig } from '../../services/config-service.js';
 import { isValidStatus, VALID_STATUSES } from '../../utils/constants.js';
 import { logger } from '../../utils/logger.js';
+import { requireArtifactId } from '../helpers/artifact-id.js';
 import { applyBulkCheckboxes, resolveBulkStatusIntent } from '../helpers/bulk-checkbox-update.js';
 
 export function registerUpdateCommand(program: Command) {
@@ -37,6 +38,7 @@ export function registerUpdateCommand(program: Command) {
           allPending?: boolean;
         },
       ) => {
+        for (const id of ids) requireArtifactId(id, 'ids', 'TASK-001');
         const projectDir = program.opts().projectDir as string;
         const config = await loadConfig(projectDir);
 

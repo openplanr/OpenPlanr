@@ -10,6 +10,7 @@ import type {
   ReportLintResult,
   StakeholderReportType,
 } from '../models/types.js';
+import { escapeRegExp } from '../utils/escape-regexp.js';
 import { countEvidenceAnchors } from './evidence-service.js';
 
 const DEFAULT_VAGUE: ReportLinterConfig['vaguePhrases'] = [
@@ -53,7 +54,7 @@ export function validateReportMarkdown(
     if (!rule.enabled) continue;
     if (rule.id === 'weekly-structure' && reportType === 'weekly' && rule.requireSections) {
       for (const h of rule.requireSections) {
-        const re = new RegExp(`^##\\s+.*${escapeRe(h)}.*$`, 'im');
+        const re = new RegExp(`^##\\s+.*${escapeRegExp(h)}.*$`, 'im');
         if (!re.test(markdown)) {
           findings.push({
             severity: 'warning',
@@ -100,10 +101,6 @@ export function validateReportMarkdown(
   const errors = findings.filter((f) => f.severity === 'error');
   const ok = errors.length === 0;
   return { ok, findings, coaching };
-}
-
-function escapeRe(s: string): string {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 /** Coaching stub for recurring patterns — stateless in OSS build */

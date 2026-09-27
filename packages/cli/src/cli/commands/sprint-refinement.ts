@@ -13,6 +13,7 @@ import {
   SprintRefinementError,
 } from '../../services/sprint-refinement-service.js';
 import { display, logger } from '../../utils/logger.js';
+import { requireArtifactId } from '../helpers/artifact-id.js';
 
 type ReadInput = (source: string) => Promise<Record<string, unknown>>;
 
@@ -104,6 +105,7 @@ export function registerSprintRefinementCommands(
     .requiredOption('--data <path>', 'refinement JSON document, or - for stdin')
     .option('--json', 'emit one machine-readable result')
     .action(async (id: string, options: { data: string; json?: boolean }) => {
+      requireArtifactId(id, 'id', 'SPRINT-001');
       const projectDir = projectDirOf();
       const config = await loadConfig(projectDir);
       const document = await readInput(options.data);
@@ -118,6 +120,8 @@ export function registerSprintRefinementCommands(
     .description('Show what moved between two refinement documents')
     .option('--json', 'emit one machine-readable result')
     .action(async (from: string, to: string, options: { json?: boolean }) => {
+      requireArtifactId(from, 'from', 'SPRINT-001');
+      requireArtifactId(to, 'to', 'SPRINT-002');
       const projectDir = projectDirOf();
       const config = await loadConfig(projectDir);
       const [before, after] = await Promise.all([
@@ -142,6 +146,7 @@ export function registerSprintRefinementCommands(
     .description('Close the sprint and record its leftovers for the next refinement')
     .option('--json', 'emit one machine-readable result')
     .action(async (id: string, options: { json?: boolean }) => {
+      requireArtifactId(id, 'id', 'SPRINT-001');
       const projectDir = projectDirOf();
       const config = await loadConfig(projectDir);
       const result = await closeSprint(projectDir, config, id);
@@ -168,6 +173,7 @@ export function registerSprintRefinementCommands(
           json?: boolean;
         },
       ) => {
+        requireArtifactId(id, 'id', 'SPRINT-001');
         const projectDir = projectDirOf();
         const config = await loadConfig(projectDir);
         const result = await applyRefinement(projectDir, config, id, {

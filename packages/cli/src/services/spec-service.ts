@@ -31,6 +31,7 @@ import { randomUUID } from 'node:crypto';
 import fsPromises from 'node:fs/promises';
 import path from 'node:path';
 import type { ArtifactFrontmatter, OpenPlanrConfig } from '../models/types.js';
+import { escapeRegExp } from '../utils/escape-regexp.js';
 import { ensureDir, fileExists, listFiles, readFile, writeFile } from '../utils/fs.js';
 import { logger } from '../utils/logger.js';
 import { parseMarkdown, toMarkdownWithFrontmatter } from '../utils/markdown.js';
@@ -97,8 +98,7 @@ export async function resolveSpecDir(
 
   const fs = await import('node:fs/promises');
   const entries = await fs.readdir(specsRoot, { withFileTypes: true });
-  const escapedId = specId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const re = new RegExp(`^${escapedId}-(.+)$`);
+  const re = new RegExp(`^${escapeRegExp(specId)}-(.+)$`);
   for (const entry of entries) {
     if (!entry.isDirectory()) continue;
     const m = entry.name.match(re);
@@ -223,7 +223,7 @@ export async function createSpec(
     } catch {
       // specs/ may not exist yet — fine
     }
-    const slugRe = new RegExp(`^[A-Z]+-\\d{3,}-${slug.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`);
+    const slugRe = new RegExp(`^[A-Z]+-\\d{3,}-${escapeRegExp(slug)}$`);
     const collision = entries.find((e) => e.isDirectory() && slugRe.test(e.name));
     if (collision) {
       throw new Error(
@@ -287,7 +287,7 @@ export async function nextSpecId(specsRoot: string, prefix: string): Promise<str
   } catch {
     return `${prefix}-001`;
   }
-  const re = new RegExp(`^${prefix}-(\\d{3,})-`);
+  const re = new RegExp(`^${escapeRegExp(prefix)}-(\\d{3,})-`);
   let maximum = 0;
   for (const e of entries) {
     if (!e.isDirectory()) continue;
@@ -491,13 +491,8 @@ export async function prepareOperatingSpecDraft(
   await ensureDir(specsRoot);
   const fs = await import('node:fs/promises');
   const entries = await fs.readdir(specsRoot, { withFileTypes: true });
-  const escapedSlug = slug.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  if (
-    entries.some(
-      (entry) =>
-        entry.isDirectory() && new RegExp(`^[A-Z]+-\\d{3,}-${escapedSlug}$`).test(entry.name),
-    )
-  ) {
+  const slugPattern = new RegExp(`^[A-Z]+-\\d{3,}-${escapeRegExp(slug)}$`);
+  if (entries.some((entry) => entry.isDirectory() && slugPattern.test(entry.name))) {
     throw Object.assign(new Error('An existing SPEC already uses this canonical planning slug.'), {
       code: 'E_OPERATE_PLANNING_CONFLICT',
     });
@@ -635,8 +630,7 @@ function updateSpecFrontmatter(raw: string, fields: Partial<Record<string, unkno
   const body = raw.slice(closeIdx);
 
   for (const [key, value] of Object.entries(fields)) {
-    const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const pattern = new RegExp(`^${escapedKey}:\\s*.*$`, 'm');
+    const pattern = new RegExp(`^${escapeRegExp(key)}:\\s*.*$`, 'm');
     const replacement = `${key}: ${formatYamlValue(value)}`;
     if (pattern.test(frontmatter)) {
       frontmatter = frontmatter.replace(pattern, () => replacement);
@@ -2212,8 +2206,7 @@ export function validateProfessionalSpecDocument(content: string): string[] {
   const outcome = sections.get('Outcome & Measurement');
   if (outcome) {
     for (const label of ['Statement', 'Measure', 'Target', 'Timeframe']) {
-      const escaped = label.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
-      if (!new RegExp(`^\\*\\*${escaped}:\\*\\*\\s+\\S.{7,}$`, 'mu').test(outcome)) {
+      if (!new RegExp(`^\\*\\*${escapeRegExp(label)}:\\*\\*\\s+\\S.{7,}$`, 'mu').test(outcome)) {
         issues.push(`Professional specification Outcome must include an explicit ${label}.`);
       }
     }

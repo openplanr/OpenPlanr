@@ -10,6 +10,7 @@
 
 import { type ParsedSubtask, parseTaskMarkdown } from '../../agents/task-parser.js';
 import type { Epic, Feature, OpenPlanrConfig, UserStory } from '../../models/types.js';
+import { escapeRegExp } from '../../utils/escape-regexp.js';
 import { readArtifact, readArtifactRaw } from '../artifact-service.js';
 
 /** Convert an unknown frontmatter value to an optional string at the type boundary. */
@@ -156,8 +157,7 @@ export function buildStandaloneArtifactBody(raw: string, id: string): string {
   body = body.replace(/^\s*\r?\n/, '').trimStart();
   // Strip a single top-level `# <ID>:...` or `# <anything>` heading at the
   // start of the body, plus the blank line that typically follows it.
-  const escapedId = id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const titleHeadingRegex = new RegExp(`^#\\s+(?:${escapedId}:\\s*)?.*\\r?\\n(?:\\r?\\n)?`);
+  const titleHeadingRegex = new RegExp(`^#\\s+(?:${escapeRegExp(id)}:\\s*)?.*\\r?\\n(?:\\r?\\n)?`);
   body = body.replace(titleHeadingRegex, '');
   return body.trimEnd();
 }

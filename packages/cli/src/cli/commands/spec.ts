@@ -52,6 +52,7 @@ import {
 } from '../../services/spec-service.js';
 import { display, logger } from '../../utils/logger.js';
 import { CliBoundaryError } from '../error-boundary.js';
+import { requireArtifactId } from '../helpers/artifact-id.js';
 
 function professionalSpecInputError(
   code: string,
@@ -328,6 +329,7 @@ export function registerSpecCommand(program: Command) {
     .option('--file <path|->', 'read one bounded professional specification JSON object')
     .option('--json', 'emit one machine-readable result', false)
     .action(async (specId: string, opts: { file?: string; json?: boolean }) => {
+      requireArtifactId(specId, 'specId', 'SPEC-001');
       const projectDir = program.opts().projectDir as string;
       const config = await loadConfig(projectDir);
 
@@ -417,6 +419,7 @@ export function registerSpecCommand(program: Command) {
     .description('Print a spec + its decomposition tree (stories, tasks)')
     .argument('<specId>', 'spec ID (e.g., SPEC-001)')
     .action(async (specId: string) => {
+      requireArtifactId(specId, 'specId', 'SPEC-001');
       const projectDir = program.opts().projectDir as string;
       const config = await loadConfig(projectDir);
       const spec = await readSpec(projectDir, config, specId);
@@ -473,6 +476,7 @@ export function registerSpecCommand(program: Command) {
     .description('Decomposition state across all specs (or one spec if --spec specified)')
     .argument('[specId]', 'optional spec ID to scope output')
     .action(async (specId?: string) => {
+      if (specId) requireArtifactId(specId, 'specId', 'SPEC-001');
       const projectDir = program.opts().projectDir as string;
       const config = await loadConfig(projectDir);
 
@@ -516,6 +520,7 @@ export function registerSpecCommand(program: Command) {
     .description('Remove a spec entirely (rm -rf of its self-contained directory)')
     .argument('<specId>', 'spec ID (e.g., SPEC-001)')
     .action(async (specId: string) => {
+      requireArtifactId(specId, 'specId', 'SPEC-001');
       const projectDir = program.opts().projectDir as string;
       const config = await loadConfig(projectDir);
 
@@ -548,6 +553,7 @@ export function registerSpecCommand(program: Command) {
     .argument('<specId>', 'spec ID (e.g., SPEC-001)')
     .option('--files <paths...>', 'one or more PNG files to attach')
     .action(async (specId: string, opts: { files?: string[] }) => {
+      requireArtifactId(specId, 'specId', 'SPEC-001');
       const projectDir = program.opts().projectDir as string;
       const config = await loadConfig(projectDir);
 
@@ -586,6 +592,7 @@ export function registerSpecCommand(program: Command) {
     .description('Validate that a spec is ready and print the pipeline handoff command')
     .argument('<specId>', 'spec ID (e.g., SPEC-001)')
     .action(async (specId: string) => {
+      requireArtifactId(specId, 'specId', 'SPEC-001');
       const projectDir = program.opts().projectDir as string;
       const config = await loadConfig(projectDir);
 
@@ -622,6 +629,7 @@ export function registerSpecCommand(program: Command) {
     .argument('[specId]', 'optional spec ID to scope; otherwise scans all specs')
     .option('--dry-run', 'report findings without writing any fixes', false)
     .action(async (specId: string | undefined, opts: { dryRun?: boolean }) => {
+      if (specId) requireArtifactId(specId, 'specId', 'SPEC-001');
       const projectDir = program.opts().projectDir as string;
       const config = await loadConfig(projectDir);
 
