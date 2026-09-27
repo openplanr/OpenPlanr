@@ -339,6 +339,112 @@ test(
 );
 
 test(
+  'Save, Delete, the rail headers and canvas labels stay readable in both color schemes',
+  options,
+  async (t) => {
+    const { page } = await fixture(t, {
+      bundle: makeBundle('process'),
+      viewport: { width: 1440, height: 700 },
+    });
+    const contrast = (foreground, background) => {
+      const luminance = (rgb) => {
+        const [r, g, b] = rgb.slice(0, 3).map((value) => {
+          value /= 255;
+          return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+        });
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+      };
+      const [light, dark] = [luminance(foreground), luminance(background)].sort((a, b) => b - a);
+      return (light + 0.05) / (dark + 0.05);
+    };
+    const probe = (selector) =>
+      page
+        .locator(selector)
+        .first()
+        .evaluate((element) => {
+          const canvas = document.createElement('canvas').getContext('2d');
+          const rgba = (value) => {
+            canvas.clearRect(0, 0, 1, 1);
+            canvas.fillStyle = value;
+            canvas.fillRect(0, 0, 1, 1);
+            return [...canvas.getImageData(0, 0, 1, 1).data];
+          };
+          const shell = getComputedStyle(element.closest('.planr-diagram-editor'));
+          const style = getComputedStyle(element);
+          return {
+            text: rgba(style.color),
+            background: rgba(style.backgroundColor),
+            opacity: Number(style.opacity),
+            primary: rgba(shell.getPropertyValue('--de-primary').trim()),
+            danger: rgba(shell.getPropertyValue('--de-danger').trim()),
+          };
+        });
+    const save = '.de-bar [data-action="save"]';
+    const schemes = ['light', 'dark'];
+    for (const colorScheme of schemes) {
+      await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
+      await settle(page);
+      assert.equal(await page.locator(save).isDisabled(), true);
+      const clean = await probe(save);
+      assert.equal(clean.opacity, 0.5, `${colorScheme}: a clean Save is a neutral ghost`);
+      assert.equal(clean.background[3], 0, `${colorScheme}: a clean Save has no fill`);
+    }
+
+    await select(page, 'node-a');
+    await page.getByLabel('Diagram canvas', { exact: true }).focus();
+    await page.keyboard.press('ArrowRight');
+    await settle(page);
+    for (const colorScheme of schemes) {
+      await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
+      await settle(page);
+      assert.equal(await page.locator(save).isEnabled(), true);
+      const pending = await probe(save);
+      assert.deepEqual(
+        pending.background,
+        pending.primary,
+        `${colorScheme}: pending edits give Save the primary fill`,
+      );
+      assert.ok(contrast(pending.text, pending.background) >= 4.5, `${colorScheme} Save text`);
+      const remove = await probe('.de-danger');
+      assert.deepEqual(remove.text, remove.danger, `${colorScheme}: Delete text is danger red`);
+      assert.notDeepEqual(
+        remove.background,
+        remove.danger,
+        `${colorScheme}: Delete is outlined, not filled`,
+      );
+      assert.ok(contrast(remove.text, remove.background) >= 4.5, `${colorScheme} Delete text`);
+    }
+
+    const inspector = page.locator('.de-right-content');
+    assert.ok(
+      await inspector.evaluate((node) => node.scrollHeight > node.clientHeight),
+      'The single-object inspector overflows at this height',
+    );
+    await inspector.evaluate((node) => {
+      node.scrollTop = node.scrollHeight;
+    });
+    await settle(page);
+    const [left, right] = await page.locator('.de-panel-header').evaluateAll((headers) =>
+      headers.map((header) => {
+        const box = header.getBoundingClientRect();
+        return { height: box.height, bottom: box.bottom };
+      }),
+    );
+    assert.equal(left.height, 44);
+    assert.deepEqual(right, left, 'Both rail headers keep one height and bottom edge');
+
+    const fonts = await page
+      .locator('[data-editor-svg] text')
+      .first()
+      .evaluate((label) => ({
+        label: getComputedStyle(label).fontFamily,
+        editor: getComputedStyle(label.closest('.planr-diagram-editor')).fontFamily,
+      }));
+    assert.equal(fonts.label, fonts.editor, 'Canvas labels use the editor font stack');
+  },
+);
+
+test(
   'new containers and lanes sit directly on the themed canvas without an opaque page wrapper',
   options,
   async (t) => {
