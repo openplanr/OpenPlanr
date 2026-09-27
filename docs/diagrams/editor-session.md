@@ -51,7 +51,7 @@ A hosted shell adapts the same editor through `host` instead of forking it:
   first time a panel opens; the cleanup it returns runs on dispose. `properties`
   and `review` are reserved ids.
 
-A session that can read but not write opens as a read-only view: Undo, Redo, Arrange,
+A session that can read but not write opens as a read-only view: Undo, Redo, Auto layout,
 Save and the Shapes tab are not offered, Mermaid copies open on export, and the save
 state shows `labels.readOnly`, for example the shared revision's name.
 

@@ -267,7 +267,7 @@ test(
   async (t) => {
     const page = await hostedFixture(t, { capabilities: { read: true, write: false } });
     assert.equal(await saveState(page).textContent(), 'Revision 8 · Read only');
-    for (const name of ['Undo', 'Redo', 'Layout', 'Save diagram']) {
+    for (const name of ['Undo', 'Redo', 'Save diagram']) {
       assert.equal(
         await page.getByRole('button', { name, exact: true }).isVisible(),
         false,
@@ -292,6 +292,11 @@ test(
       'Objects can still be inspected',
     );
     await page.getByRole('button', { name: 'More', exact: true }).click();
+    assert.equal(
+      await page.getByRole('menuitem', { name: 'Auto layout…', exact: true }).isVisible(),
+      false,
+      'Auto layout is not offered',
+    );
     await page.getByRole('menuitem', { name: 'Mermaid copies', exact: true }).click();
     assert.equal(
       await page

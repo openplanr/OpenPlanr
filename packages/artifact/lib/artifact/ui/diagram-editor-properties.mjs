@@ -458,7 +458,6 @@ export function renderDiagramProperties({
     {
       type: 'submit',
       className: 'de-primary',
-      'aria-label': 'Apply properties',
       disabled: true,
     },
     'Apply changes',
