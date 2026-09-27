@@ -31,8 +31,8 @@ const NODE_AXIS = /^\$\{\{\s*matrix\.([\w-]+)\s*\}\}$/u;
 
 /**
  * Derives the local run of every Workspace CI job on one Node major version.
- * Throws on a job or step shape it cannot reproduce, so a new CI step fails here instead of
- * being left out of the local run.
+ * Throws on a job or step shape it cannot reproduce, except in the build job: that job only
+ * contributes its bare `npm run` lines, and its other steps are not checked.
  */
 export function planLocalCi(workflow, nodeMajor) {
   for (const key of ['env', 'defaults']) {
