@@ -1115,6 +1115,8 @@ Default rules cover vague language, evidence density (URLs / `#issue` refs), and
 }
 ```
 
+Each `pattern` is a case-insensitive regular expression. A pattern that does not compile, or that can match empty text (such as `(soon)?` or a lone `\b`), fails config loading with `E_CONFIG_INVALID` naming the field and the pattern.
+
 ---
 
 ### `planr context`

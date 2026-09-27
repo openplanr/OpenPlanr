@@ -79,9 +79,8 @@ export function validateReportMarkdown(
   }
 
   for (const v of cfg.vaguePhrases) {
-    const re = new RegExp(v.pattern, 'gi');
-    let m: RegExpExecArray | null = re.exec(markdown);
-    while (m) {
+    const matches = [...markdown.matchAll(new RegExp(v.pattern, 'gi'))];
+    for (const m of matches.filter(([text]) => text !== '')) {
       findings.push({
         severity: 'info',
         ruleId: 'vague-language',
@@ -94,7 +93,6 @@ export function validateReportMarkdown(
         message: `Try: ${v.alternatives.slice(0, 2).join(' · ')}`,
         educational: v.hint,
       });
-      m = re.exec(markdown);
     }
   }
 
