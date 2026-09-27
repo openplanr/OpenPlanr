@@ -172,8 +172,11 @@ entries.sort((a, b) => a.target.localeCompare(b.target));
 
 const expectedTargets = new Set(entries.map((entry) => entry.target));
 
+// Dotfiles such as .DS_Store are local noise, not contracts; the check also runs in trees without .git.
 const protocolDashboardFiles = new Set(
-  walk(resolve(workspaceRoot, 'packages/protocol/lib/dashboard')).map(({ path }) => path),
+  walk(resolve(workspaceRoot, 'packages/protocol/lib/dashboard'))
+    .map(({ path }) => path)
+    .filter((path) => !path.split('/').some((segment) => segment.startsWith('.'))),
 );
 const unownedDashboardFiles = [...protocolDashboardFiles].filter(
   (path) =>
