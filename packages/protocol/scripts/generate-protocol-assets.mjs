@@ -21,6 +21,7 @@ import {
   REVIEW_EXPERIENCE_SCHEMAS,
 } from '../src/review-experience-contracts.mjs';
 import { DESIGN_WORKSPACE_SCHEMAS } from '../src/workspace-contracts.mjs';
+import { projectDashboardContract } from './dashboard-contract-projection.mjs';
 import {
   buildDiagramAuthoringRegistries,
   buildDiagramAuthoringSchemas,
@@ -225,23 +226,10 @@ const dashboardRuntimeContracts = [
   'operate-review-display-workspace-contract.mjs',
 ];
 for (const name of dashboardRuntimeContracts) {
-  const projected = read(`lib/dashboard/${name}`).replace(
-    /from '\.\.\/\.\.\/src\/([\w-]+\.mjs)'/gu,
-    (_specifier, file) => {
-      if (!projectionFiles.has(file)) {
-        throw new Error(
-          `lib/dashboard/${name} imports src/${file}, which has no pipeline lib/protocol projection.`,
-        );
-      }
-      return `from '../protocol/${file}'`;
-    },
+  expected.set(
+    `projections/pipeline/lib/dashboard/${name}`,
+    projectDashboardContract(name, read(`lib/dashboard/${name}`), projectionFiles),
   );
-  if (/['"]\.\.\/\.\.\//u.test(projected)) {
-    throw new Error(
-      `lib/dashboard/${name} still references a path outside the pipeline package after projection.`,
-    );
-  }
-  expected.set(`projections/pipeline/lib/dashboard/${name}`, projected);
 }
 
 function walk(root, prefix = '') {
