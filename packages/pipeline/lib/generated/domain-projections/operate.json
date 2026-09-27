@@ -145,7 +145,7 @@
     {
       "source": "packages/operate/lib/operate/evidence-v2.d.mts",
       "target": "lib/operate/evidence-v2.d.mts",
-      "sha256": "7315c34a6195e7c3514a46ad805aa38eedfb78247a244e2cda935fdfe043eea6",
+      "sha256": "0cb70e5c0837a910abe8270f1116d53e4a041334298dad321365c80be6351896",
       "mode": "644"
     },
     {
@@ -289,7 +289,7 @@
     {
       "source": "packages/operate/lib/operate/intelligence-router-v2.d.mts",
       "target": "lib/operate/intelligence-router-v2.d.mts",
-      "sha256": "8e2ccfec93128cc5dbe505f0509932022954d4578fe3004852590abf247a3a8c",
+      "sha256": "01c88e65225393198195d166db11ab43849f62be2fa361d0bebee23e4e4aee93",
       "mode": "644"
     },
     {
@@ -349,7 +349,7 @@
     {
       "source": "packages/operate/lib/operate/operating-snapshots-v2.d.mts",
       "target": "lib/operate/operating-snapshots-v2.d.mts",
-      "sha256": "1966fb30eff031c8714424a89b4897dfd5b8bb4befb71c5220f2fa64ecb6b4b2",
+      "sha256": "72fa44b0e3bdf50ef5e931038c1138cc8dd5a8e4d2059f7fd928f950c6ff3152",
       "mode": "644"
     },
     {
@@ -475,7 +475,7 @@
     {
       "source": "packages/operate/lib/operate/runtime-foundation.d.mts",
       "target": "lib/operate/runtime-foundation.d.mts",
-      "sha256": "631f4073b5ded2d3d869edc2a0650476a0415520203906e60da1aac28e450fb5",
+      "sha256": "03f2be0636e7eb082df73722fd8428a63015f24e005ea99edf893cb2887a74bb",
       "mode": "644"
     },
     {

@@ -11,7 +11,7 @@ import ts from 'typescript';
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
 /** Packages whose every typed export is held to its runtime module. */
-export const DECLARED_EXPORT_PACKAGES = Object.freeze(['packages/artifact']);
+export const DECLARED_EXPORT_PACKAGES = Object.freeze(['packages/artifact', 'packages/pipeline']);
 
 const posix = (path) => path.split(sep).join('/');
 const isTypeScriptSource = (path) => path.endsWith('.mts') && !path.endsWith('.d.mts');

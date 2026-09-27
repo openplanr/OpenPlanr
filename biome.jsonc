@@ -28,7 +28,9 @@
       "!packages/pipeline/lib/design",
       "!packages/pipeline/lib/design-engine",
       "!packages/pipeline/lib/operate",
-      "!packages/pipeline/lib/protocol",
+      // The rest of lib/protocol is a git-ignored projection; these two are hand-maintained and unformatted.
+      "!packages/pipeline/lib/protocol/index.d.ts",
+      "!packages/pipeline/lib/protocol/loader.mjs",
       "!packages/pipeline/scripts/generate-artifact-shell.mjs",
       "!conformance/packed-surface-baseline.json",
       // Test inputs and recorded outputs keep their own bytes.
@@ -115,10 +117,7 @@
     },
     {
       // Hand-written declarations still use `any`; BL-110 (after BL-078) removes this entry.
-      "includes": [
-        "packages/pipeline/lib/pipeline/index.d.mts",
-        "packages/protocol/src/task-contracts.d.mts"
-      ],
+      "includes": ["packages/protocol/src/task-contracts.d.mts"],
       "linter": {
         "rules": {
           "suspicious": {

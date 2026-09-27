@@ -170,7 +170,7 @@
       "path": "lib/operate/runtime-foundation.d.mts",
       "kind": "declaration",
       "legacySha256": "661445ec536b64daabb043faaf056873b2cdd97cba7397be6c0a2a0dbbf99ccd",
-      "sha256": "631f4073b5ded2d3d869edc2a0650476a0415520203906e60da1aac28e450fb5",
+      "sha256": "03f2be0636e7eb082df73722fd8428a63015f24e005ea99edf893cb2887a74bb",
       "custody": "canonical-operate-domain-projection",
       "source": "packages/operate/lib/operate/runtime-foundation.d.mts"
     },
@@ -213,6 +213,22 @@
       "sha256": "ae322fa382fe9e005ab38e3358c7bd721f8993faeecf5e0b796becac03fb1082",
       "custody": "canonical-protocol-projection",
       "source": "packages/protocol/projections/pipeline/lib/protocol/contracts.mjs"
+    },
+    {
+      "path": "lib/protocol/index.d.ts",
+      "kind": "declaration",
+      "legacySha256": "1ef305ff4c57e25cb8603cef04300b651e5a77613fa00a40d879d22edd4811f6",
+      "sha256": "24373ee6f88044d58395345fd5480620390f2779ea70c3d1653884f6f07b5595",
+      "custody": "canonical-protocol-projection",
+      "source": "packages/protocol/projections/pipeline/lib/protocol/index.d.ts"
+    },
+    {
+      "path": "lib/protocol/live-evidence-v2.d.mts",
+      "kind": "declaration",
+      "legacySha256": "4334bddc973acd2588da9f95ad3b544ea25411d1ab5865828c0fad2f5c3616ea",
+      "sha256": "4c691ef95c9854bc4318b30012fd7149ea3ab69bbc3a99778fc61a8c5d631cc3",
+      "custody": "canonical-protocol-projection",
+      "source": "packages/protocol/projections/pipeline/lib/protocol/live-evidence-v2.d.mts"
     },
     {
       "path": "lib/protocol/live-evidence-v2.mjs",

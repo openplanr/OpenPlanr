@@ -9,7 +9,7 @@ export interface OperatingSnapshotManifestV2 {
   domainContract: { apiDomainId: string; id: string; version: string };
   sourceArtifactIds: readonly string[];
   evidenceRefIds?: readonly string[];
-  sourceRevisions?: readonly Array<{
+  sourceRevisions?: ReadonlyArray<{
     sourceArtifactId: string;
     revision: string;
     evidenceRefIds?: readonly string[];

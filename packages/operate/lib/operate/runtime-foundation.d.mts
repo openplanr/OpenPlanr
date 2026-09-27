@@ -32,6 +32,7 @@ import type {
   OperatingEvidenceEdgeV2,
   OperatingEvidenceGraphV2,
   OperatingEvidenceRefV2,
+  OperatingEvidenceRequirementV2,
   OperatingEvidenceResolutionV2,
   OperatingExecutionReceiptProofV2,
   OperatingExecutionResultV2,
@@ -563,7 +564,7 @@ export interface OperatingStateSnapshotMaterializationRequestV2 {
   domainContract: { apiDomainId: string; id: string; version: string };
   sourceArtifactIds: readonly string[];
   evidenceRefIds?: readonly string[];
-  sourceRevisions?: readonly Array<{
+  sourceRevisions?: ReadonlyArray<{
     sourceArtifactId: string;
     revision: string;
     evidenceRefIds?: readonly string[];
@@ -652,6 +653,44 @@ export function planOperatingRuntimeIntelligenceBoardV2(
   draft: OperatingRuntimeIntelligenceBoardDraftV2,
   options?: { initialState?: OperatingRuntimeStateV2; replayHook?: NoModelReplayHookV2 },
 ): OperatingRuntimeIntelligenceBoardResultV2;
+
+export interface OperatingIntelligenceInputBundleMaterializationResultV2 {
+  readonly state: OperatingRuntimeStateV2;
+  readonly bundle: OperatingIntelligenceInputBundleV2;
+  readonly artifact: OperatingArtifactV2;
+  readonly assignment: OperatingAssignmentV2;
+  readonly events: readonly OperatingEventV2[];
+  readonly replayed: boolean;
+  readonly rawBytes: Uint8Array;
+}
+
+/** Capture the input bundle of one role the deterministic intelligence board selects. */
+export function materializeOperatingIntelligenceInputBundleV2(
+  request: {
+    cycleId: string;
+    snapshotId: string;
+    stateId: string;
+    deltaId: string;
+    focus: readonly string[];
+    domainDescriptor: OperateDomainRegistrationV2;
+    decisionOwnerActorId: string;
+    roleId: string;
+  },
+  draft: { timestamp: string; correlationId: string },
+  options: {
+    initialState?: OperatingRuntimeStateV2;
+    artifactStore: OperatingArtifactByteStoreV2;
+    /** Evidence is issued to the role only when this returns true. */
+    authorizeEvidence?: (input: {
+      role: Readonly<{ roleId: string }>;
+      requirement: OperatingEvidenceRequirementV2;
+      evidenceRef: OperatingEvidenceRefV2;
+      artifact: OperatingArtifactV2 | undefined;
+    }) => boolean;
+    replayHook?: NoModelReplayHookV2;
+    stageArtifact?: boolean;
+  },
+): OperatingIntelligenceInputBundleMaterializationResultV2;
 
 export interface OperatingDecisionLedgerMaterializationDraftV2 {
   eventId: string;

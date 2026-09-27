@@ -522,8 +522,8 @@ test('Operate 2.0 development package installs the clean typed contract without 
     );
   }
   const rootDeclarations = readFileSync(join(installedPackage, 'lib/pipeline/index.d.mts'), 'utf8');
-  assert.match(rootDeclarations, /export \* from '\.\.\/protocol\/live-evidence-v2\.d\.mts';/u);
-  assert.match(rootDeclarations, /export \* from '\.\/landing-contract\.d\.mts';/u);
+  assert.match(rootDeclarations, /export \* from '\.\.\/protocol\/live-evidence-v2\.mjs';/u);
+  assert.match(rootDeclarations, /export \* from '\.\/landing-contract\.mjs';/u);
   const currentRuntimeCustody = [
     ...DASHBOARD_PROTOCOL_CUSTODY,
     ...PROFESSIONAL_REVIEW_PACKAGE_CUSTODY,
@@ -737,7 +737,10 @@ test('Operate 2.0 development package installs the clean typed contract without 
         assert.match(declarations, new RegExp(`\\b${symbol}\\b`));
     }
     if (subpath.endsWith('evidence-v2')) {
-      assert.match(declarations, /export \* from '\.\/evidence-registry-v2\.mjs'/);
+      assert.match(
+        declarations,
+        /export \{[^}]*\bcreateOperateEvidenceRegistryV2\b[^}]*\} from '\.\/evidence-registry-v2\.mjs';/,
+      );
       assert.match(declarations, /dispatchOperateEvidenceResolverV2/);
     }
     if (subpath.endsWith('evidence-materialization-v2')) {
