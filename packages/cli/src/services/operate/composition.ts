@@ -1,3 +1,11 @@
+/**
+ * Typed adapter over the installed planr-pipeline Operate subpaths (runtime, extensions, domains,
+ * experience, Planning bridge, evidence, executive board, measurement): replay, reduction,
+ * scheduling, materializations, authority checks and experience projection behind one class.
+ * Entry points: `createOperateComposition`, `loadOperateCompositionModules`, `OperateComposition`.
+ * Only public package subpaths are loaded; state custody belongs to the client and `store.ts`.
+ */
+
 import { createHash } from 'node:crypto';
 import type {
   OperatingAssignmentClaimV2,

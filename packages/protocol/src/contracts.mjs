@@ -1,4 +1,13 @@
 // @ts-check
+/**
+ * Protocol artifact schema registry and validation: resolves each kind and version to its packaged
+ * JSON Schema, validates artifacts against it with references confined to `schemas/`, and exports
+ * the Operate 2.0 vocabularies compiled from the contract catalog, which it checks on load.
+ * Entry points: `validateProtocolArtifact`, `assertProtocolArtifact`, `resolveProtocolSchema`,
+ * `listProtocolSchemas`, `PROTOCOL_SCHEMA_REGISTRY`. The schema evaluator is `json-schema.mjs`;
+ * 1.13.0 diagram authoring kinds are validated by `diagram-authoring-contracts.mjs`.
+ */
+
 import { readFileSync } from 'node:fs';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';

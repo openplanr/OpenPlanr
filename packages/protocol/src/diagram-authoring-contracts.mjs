@@ -1,4 +1,13 @@
 // @ts-check
+/**
+ * Diagram authoring contracts (Protocol 1.13.0): closed schemas for documents, presentations,
+ * bundles, edit transactions, source maps, fidelity reports, manifests, proposals and publication
+ * state, with accessor-safe inspection, digests, cross-reference checks and the capability catalog.
+ * Entry points: `validateDiagramAuthoringArtifact`, `assertDiagramAuthoringArtifact`,
+ * `DIAGRAM_AUTHORING_CAPABILITIES`, `inspectLegacyDiagramDocument`. Applying edits and rendering
+ * belong to the artifact package's `diagram/authoring` modules.
+ */
+
 import { canonicalizeJson, deepFreeze, sha256Hex, sha256Jcs } from './canonical-json.mjs';
 import { DIAGRAM_REGISTRIES } from './generated/diagram-registries.mjs';
 import { LEGACY_DIAGRAM_DOCUMENT_SCHEMA } from './generated/legacy-diagram-schema.mjs';

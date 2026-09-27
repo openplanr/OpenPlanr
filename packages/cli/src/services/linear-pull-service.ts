@@ -1,20 +1,9 @@
 /**
- * Linear → OpenPlanr pull-direction sync.
- *
- * Two concerns consolidated here because both are strictly pull and share
- * the same client lifecycle and auth surface:
- *
- *   1. **Workflow-status sync**: for Features and Stories with a stored
- *      `linearIssueId`, fetch the current Linear workflow state name and
- *      write OpenPlanr `status` frontmatter when mapped.
- *
- *   2. **Task checkbox sync**: bidirectional 3-way merge between local
- *      TASK markdown and Linear TaskList issue description bodies.
- *      Pull-side lives here; push-side lives in `linear-push-service.ts`.
- *
- * Keeping them in one module reduces call-site noise for
- * `planr linear sync` and gives the next reader one file to understand
- * everything that pulls state from Linear.
+ * Linear reconciliation behind `planr linear sync` and `tasklist-sync`: three-way merges the
+ * workflow status of linked Features, Stories, Quick tasks and Backlog items, and task checkboxes
+ * against their Linear task-list issue bodies, writing the winning side locally or to Linear.
+ * Entry points: `syncLinearStatusIntoArtifacts`, `runLinearTaskCheckboxSync`.
+ * Creating and updating Linear issues from artifacts belongs to `linear-push-service.ts`.
  */
 
 import type { LinearClient } from '@linear/sdk';

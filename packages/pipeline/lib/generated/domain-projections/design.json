@@ -43,7 +43,7 @@
     {
       "source": "packages/design/lib/design-engine/daemon.mjs",
       "target": "lib/design-engine/daemon.mjs",
-      "sha256": "d8a5c1fdbb63943b879bc71891f955731b8788bad3e6061faddd791e1905a477",
+      "sha256": "9a5c9223e9ae69c34243ff842d383e30c687d94b3cc884fdd28b186d62e041a5",
       "mode": "644"
     },
     {

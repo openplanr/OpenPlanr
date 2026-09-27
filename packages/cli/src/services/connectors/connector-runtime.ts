@@ -1,3 +1,12 @@
+/**
+ * Live evidence connector runtime: checks a bounded request against the frozen provider registry
+ * and consent, calls the provider through a credential-scoped transport, journals each step in
+ * checkpoint custody and submits accepted results through the injected Operate bridge.
+ * Entry points: `createConnectorRuntimeV2` (`providers`, `preview`, `status`, `collect`) and
+ * `createBoundedFetchConnectorTransportV2`. Adapters, credentials and checkpoints belong to
+ * `connector-registry.ts`, `credential-custody.ts` and `checkpoint-custody.ts`.
+ */
+
 import { createHash } from 'node:crypto';
 import { lookup } from 'node:dns/promises';
 import { isIP } from 'node:net';

@@ -43,13 +43,13 @@
     {
       "source": "packages/operate/lib/operate/authorization-v2.mjs",
       "target": "lib/operate/authorization-v2.mjs",
-      "sha256": "976332ec777cb2433aa0d90f157563e21035dde80169a16b3637eb07e80ad0f0",
+      "sha256": "a337b6b7725af337adf1541a04f344b3376e5dcbe736db71ab0894e621eb8e2c",
       "mode": "644"
     },
     {
       "source": "packages/operate/lib/operate/contracts/compiler.mjs",
       "target": "lib/operate/contracts/compiler.mjs",
-      "sha256": "780938ef0c18c6ebd116dff9b07ca9bd65105df6e3b39a445ea2c3c612ebe05a",
+      "sha256": "09fe449dc221acea8416e1c67ddf3d7ed65ac72211d9c4fd6380fa8570d237bc",
       "mode": "644"
     },
     {

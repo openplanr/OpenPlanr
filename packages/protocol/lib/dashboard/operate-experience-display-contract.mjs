@@ -1,3 +1,12 @@
+/**
+ * Closed Operate display contracts: validates display surfaces, Cycle and Action workspaces and
+ * executive-board and recovery surfaces against schema, route binding, semantic invariants and
+ * content hash, issues them hash-stamped and frozen, and validates command previews.
+ * Entry points: the `validate*V1`, `assert*V1` and `issue*V1` families, for example
+ * `issueOperateExperienceDisplaySurfaceV1` and `assertOperateExperiencePreviewV1`.
+ * Payloads come from planr-pipeline's `operate-experience-reader.mjs`.
+ */
+
 import { validateJson } from '../../src/json-schema.mjs';
 import {
   contentHash,

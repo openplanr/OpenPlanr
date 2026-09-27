@@ -1,3 +1,12 @@
+/**
+ * CLI bridge to the planr-pipeline artifact API: loads it from the installed package, prepares
+ * HTML, design and diagram artifact envelopes, opens browser URLs (capability URLs through a
+ * one-shot loopback handoff), and keeps live-room and share secrets in owner-only files.
+ * Entry points: `loadArtifactPipeline`, `prepareArtifactEnvelope`, `openArtifactSecretUrl`,
+ * `createLiveReviewRoomWithSecretCustody`, `reserveArtifactSecretExport`.
+ * Bundling, encryption and review sessions belong to planr-pipeline.
+ */
+
 import { spawn } from 'node:child_process';
 import { createHash, randomBytes } from 'node:crypto';
 import {

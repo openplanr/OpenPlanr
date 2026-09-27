@@ -1,38 +1,10 @@
 /**
- * Board daemon v2 — a persistent localhost HTTP server, INDEPENDENT of the
- * agent: the board keeps working if the agent dies, and the
- * agent copes with a dead daemon by re-`board`ing the same dir.
- *
- * Endpoints
- *   GET  /health                       → { ok, kind, pid, version, boards | registryError }
- *   GET  /                             → board index
- *   POST /api/boards                   → { id, dir } register (dir must hold board.html)
- *   GET  /boards/<id>/                 → the board HTML
- *   GET  /boards/<id>/<file>           → static asset from the board dir (traversal-guarded)
- *   GET  /boards/<id>/api/progress     → progress.json + reloadGen
- *   GET  /boards/<id>/api/feedback     → the durable feedback record (normalizeLegacy'd), or
- *                                        { authors: [], items: [] } when no file exists yet
- *   POST /boards/<id>/api/feedback     → { kind: submit|pending, feedback } → MERGES (never
- *                                        overwrites) into the durable store under the board mutex
- *   POST /boards/<id>/api/reload       → bump reloadGen (board polls it and swaps HTML in-tab)
- *
- * durable, multi-author feedback (load + merge persistence path).
- * The feedback file is the single source of truth; the board is a live projection of it.
- *   - GET loads + normalizes the durable record so a refresh/re-serve never starts empty.
- *   - POST reads the current durable file, mergeFeedback()s the contribution in, and writes
- *     the result — all serialized on the per-board mutex so one author's submit can never
- *     wipe another author's (or an earlier) pins. The raw request body is never written verbatim.
- *   - A "pending" round is reconciled INTO the durable store (not consumed-and-deleted), so
- *     the destructive feedback-pending.json delete that dropped data is gone.
- *
- * PROGRESS IS A FILE (documented decision): the agent writes progress.json next
- * to board.html; the daemon only reads it. Same philosophy as the feedback
- * handshake — the agent side stays dumb, file-driven, and crash-safe.
- *
- * A per-board MUTEX serializes feedback-writes vs reload-bumps so a reload can
- * never interleave with a half-written feedback file.
- *
- * State: <planrHome>/design-daemon/{port,boards.json,daemon.log}. Localhost only.
+ * Design board daemon: a persistent loopback HTTP server that outlives the agent. It serves each
+ * registered board under a capability URL with its envelope, review, progress and live feedback
+ * routes, and merges feedback into the board's durable file under a per-board lock.
+ * Entry points: `createDaemon`, `findRunningDaemon`, `killRunningDaemon`, `daemonControlHeaders`;
+ * run as `node daemon.mjs --serve [port]`. State lives in `<planrHome>/design-daemon/`; starting
+ * the daemon belongs to `cli.mjs`, the feedback merge rules to `feedback.mjs`.
  */
 
 import { randomBytes, timingSafeEqual } from 'node:crypto';

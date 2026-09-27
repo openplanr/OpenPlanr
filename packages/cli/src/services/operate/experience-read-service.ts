@@ -1,3 +1,12 @@
+/**
+ * Operate experience reads for the CLI client: projects the access-screened experience view and
+ * the actor's allowed actions for one Cycle, and issues the Cycle, Action, recovery,
+ * executive-board and audit display surfaces and command previews through the installed reader.
+ * Entry points: `readOperateExperience`, `readOperateCycleWorkspace`, `readOperateActionWorkspace`,
+ * `readOperateAuditDisplay`, `createOperateExperiencePreview`. Surface selection belongs to
+ * planr-pipeline's `operate-experience-reader`.
+ */
+
 import { evaluateOperatingApprovalSetV2 } from 'planr-pipeline/operate/approvals-v2';
 import {
   deriveOperateAuthorityAllowedActionsV2,

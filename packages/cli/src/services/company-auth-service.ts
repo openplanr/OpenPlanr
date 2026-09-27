@@ -1,3 +1,12 @@
+/**
+ * Company service sign-in for the CLI: discovers the service's auth configuration, runs the browser
+ * authorization-code flow with PKCE and a loopback callback, refreshes and revokes tokens, and
+ * records manual developer tokens; `PLANR_COMPANY_TOKEN` overrides any stored sign-in.
+ * Entry points: `loginCompany`, `resolveCompanyAccessToken`, `logoutCompany`,
+ * `storeCompanyManualToken`, and `createCompanyAuth` for injected storage, credentials and fetch.
+ * Sign-in records belong to `company-auth-store.ts`, secrets to `credentials-service.ts`.
+ */
+
 import { spawn } from 'node:child_process';
 import { createHash, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import { createServer } from 'node:http';

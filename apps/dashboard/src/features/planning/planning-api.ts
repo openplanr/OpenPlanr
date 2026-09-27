@@ -1,3 +1,12 @@
+/**
+ * Planning transport for the dashboard: fetches the graph and node detail over the actor-bound
+ * HTTP API, parses their closed envelopes and live SSE events with hash checks, and reconciles
+ * snapshots and patches, asking for a refetch on a gap, reordering or divergence.
+ * Entry points: `fetchPlanningGraph`, `fetchPlanningDetail`, `connectPlanningSse`,
+ * `createPlanningSseReconciler`, `parsePlanningGraphEnvelope`, `parsePlanningLiveEvent`.
+ * Presentation selectors belong to `planning-model.ts`.
+ */
+
 import { deepFreeze, sha256Jcs } from '@openplanr/protocol/canonical-json';
 import { DashboardValidationError } from '../../lib/api/validation.js';
 import type {

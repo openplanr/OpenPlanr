@@ -1,3 +1,11 @@
+/**
+ * Project-local Operate store under `.planr/operate/state`: commits runtime state as immutable
+ * generations behind a `CURRENT` pointer, custody anchor and head journal under a lock, and loads,
+ * inspects and restores them through a pure replay. It detects corruption, not a consistent
+ * same-user rewrite (`OPERATE_INTEGRITY_BOUNDARY`). Entry point: `createOperateStore` (`load`,
+ * `commit`, `inspect`, `restore`, `clearStaleLock`); the layout belongs to `storage-layout.ts`.
+ */
+
 import { createHash, randomUUID } from 'node:crypto';
 import {
   mkdir,

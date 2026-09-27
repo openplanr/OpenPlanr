@@ -1,3 +1,11 @@
+/**
+ * `planr upgrade`: reconciles the installed CLI, bundled pipeline and host plugin with the
+ * published compatible set (npm `latest`, cached, short fetch timeout), upgrades the CLI half
+ * with verify-after-install and restore, runs crossed migrations and prescribes the plugin
+ * commands for the user to run. Entry points: `reconcileInstalledTuple`, `planCliUpgrade`,
+ * `executeCliHalfUpgrade`. It never changes the host plugin itself.
+ */
+
 import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';

@@ -1,4 +1,13 @@
 // @ts-check
+/**
+ * Enterprise collaboration contracts (Protocol 1.12.0): closed schemas and validators for access
+ * context, revisions, review threads, change proposals, evidence, sync state and agent handoffs,
+ * plus a fail-closed access policy, escaped handoff Markdown and semantic document diffs.
+ * Entry points: `assertEnterpriseContract`, `authorizeEnterpriseAccess`, `createEnterpriseHandoff`,
+ * `diffEnterpriseDocuments`, `applyEnterpriseOperations`. Identity verification, current grants
+ * and atomic revision writes belong to the caller's storage adapter.
+ */
+
 import { canonicalizeJson, deepFreeze, sha256Hex } from './canonical-json.mjs';
 import { validateJson } from './json-schema.mjs';
 

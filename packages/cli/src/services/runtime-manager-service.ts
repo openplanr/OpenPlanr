@@ -1,3 +1,11 @@
+/**
+ * Runtime adapter manager behind `planr setup`, `planr doctor` and `planr runtime`: previews and
+ * applies project or user installs of the OpenPlanr skills for Claude Code, Codex and Cursor,
+ * records owned files in `<planrHome>/runtime/state.json` with per-project backups, and diagnoses
+ * drift. Entry points: `previewSetup`, `applySetup`, `rollbackRuntime`, `removeRuntime`,
+ * `runtimeDoctor`. Host plugin commands belong to the `claude-plugin` and `codex-plugin` services.
+ */
+
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import {
