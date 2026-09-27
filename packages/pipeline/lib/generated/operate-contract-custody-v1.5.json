@@ -223,6 +223,14 @@
       "source": "packages/protocol/projections/pipeline/lib/protocol/index.d.ts"
     },
     {
+      "path": "lib/protocol/live-evidence-v2.d.mts",
+      "kind": "declaration",
+      "legacySha256": "4334bddc973acd2588da9f95ad3b544ea25411d1ab5865828c0fad2f5c3616ea",
+      "sha256": "4c691ef95c9854bc4318b30012fd7149ea3ab69bbc3a99778fc61a8c5d631cc3",
+      "custody": "canonical-protocol-projection",
+      "source": "packages/protocol/projections/pipeline/lib/protocol/live-evidence-v2.d.mts"
+    },
+    {
       "path": "lib/protocol/live-evidence-v2.mjs",
       "kind": "validator",
       "legacySha256": "0af4b276e296388511e1ee943264eff63da863f9e1298a8b7d4d47fefd4d4e9b",
