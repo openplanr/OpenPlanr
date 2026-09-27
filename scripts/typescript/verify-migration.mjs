@@ -608,11 +608,16 @@ const hashAt = (tree, path) => {
   return existsSync(absolute) ? sha256(readFileSync(absolute)) : null;
 };
 
-function classify({ root, baseTree, path, isMigratedDeclaration }) {
+/**
+ * Compare one path across the base and head trees. `isNewDeclaration` marks the generated
+ * declaration of a source migrated in this change that had none at the base.
+ */
+export function classify({ root, baseTree, path, isMigratedDeclaration, isNewDeclaration }) {
   const before = hashAt(baseTree, path);
   const after = hashAt(root, path);
   if (before === after) return { path, status: 'byte-identical', hash: after };
-  if (before === null) return { path, status: 'added', hash: after };
+  if (before === null)
+    return { path, status: isNewDeclaration ? 'new declaration' : 'added', hash: after };
   if (after === null) return { path, status: 'removed', hash: before };
   if (path.startsWith(`${PROJECTION_MANIFESTS}/`)) return { path, status: 'manifest', hash: after };
   if (isJavaScript(path)) {
@@ -691,7 +696,7 @@ function proveSource(root, entry) {
 }
 
 /** Proof 1: hash every bundle and projected file in both trees. */
-function compareTrees(root, baseTree, migratedDeclarations) {
+function compareTrees(root, baseTree, migratedDeclarations, newDeclarations) {
   const bundlePaths = [...new Set([...listBundles(baseTree), ...listBundles(root)])].sort();
   const baseProjection = listProjectedFiles(baseTree);
   const headProjection = listProjectedFiles(root);
@@ -700,18 +705,18 @@ function compareTrees(root, baseTree, migratedDeclarations) {
     .sort();
   return {
     bundles: bundlePaths.map((path) =>
-      classify({ root, baseTree, path, isMigratedDeclaration: false }),
+      classify({ root, baseTree, path, isMigratedDeclaration: false, isNewDeclaration: false }),
     ),
-    projected: projectedPaths.map((path) =>
-      classify({
+    projected: projectedPaths.map((path) => {
+      const source = headProjection.sources.get(path) ?? baseProjection.sources.get(path) ?? '';
+      return classify({
         root,
         baseTree,
         path,
-        isMigratedDeclaration: migratedDeclarations.has(
-          headProjection.sources.get(path) ?? baseProjection.sources.get(path) ?? '',
-        ),
-      }),
-    ),
+        isMigratedDeclaration: migratedDeclarations.has(source),
+        isNewDeclaration: newDeclarations.has(source),
+      });
+    }),
   };
 }
 
@@ -722,6 +727,7 @@ export function verifyMigration({ root = repositoryRoot, baseRef }) {
   const modules = [];
   const declarations = [];
   const migratedDeclarations = new Set();
+  const newDeclarations = new Set();
   for (const entry of migratedSources({ root, baseRef: baseSha })) {
     if (entry.migratedBefore) {
       modules.push({ path: entry.module, status: 'migrated before base' });
@@ -731,12 +737,13 @@ export function verifyMigration({ root = repositoryRoot, baseRef }) {
     modules.push(proof.module);
     declarations.push(proof.declaration);
     if (entry.baseDeclaration !== null) migratedDeclarations.add(entry.declaration);
+    else newDeclarations.add(entry.declaration);
     failures.push(...proof.failures);
   }
   const base = regenerateBaseTree({ root, baseSha });
   let trees;
   try {
-    trees = compareTrees(root, base.tree, migratedDeclarations);
+    trees = compareTrees(root, base.tree, migratedDeclarations, newDeclarations);
   } finally {
     rmSync(base.scratch, { recursive: true, force: true });
   }
@@ -796,7 +803,7 @@ function renderBundles(bundles) {
 
 function renderProjected(projected, reviewed) {
   const lines = [
-    `Projected files (${projected.length}): ${tierCounts(projected)}, ${count(projected, 'regenerated')} regenerated from migrated sources, ${count(projected, 'manifest')} manifests, ${reviewed.length} to review`,
+    `Projected files (${projected.length}): ${tierCounts(projected)}, ${count(projected, 'regenerated')} regenerated from migrated sources, ${count(projected, 'new declaration')} new declarations of migrated sources, ${count(projected, 'manifest')} manifests, ${reviewed.length} to review`,
     ...projected.filter((entry) => entry.status !== 'byte-identical').flatMap(row),
   ];
   if (reviewed.length > 0)

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -7,6 +7,7 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import {
+  classify,
   compareDeclarations,
   compareJavaScript,
   compareTokens,
@@ -125,6 +126,25 @@ test('identifier normalization does not apply where with or eval makes scope dyn
   const result = tierOf(dynamic, dynamic.replaceAll('check3', 'check22'));
   assert.equal(result.tier, 'different');
   assert.match(result.reason, /with or a direct eval/u);
+});
+
+test('a projected declaration absent at the base is new only for a migrated source', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'openplanr-verify-migration-'));
+  try {
+    const baseTree = join(directory, 'base');
+    const headTree = join(directory, 'head');
+    const path = 'packages/pipeline/lib/artifact/ui/panel.d.mts';
+    mkdirSync(dirname(join(headTree, path)), { recursive: true });
+    mkdirSync(baseTree);
+    writeFileSync(join(headTree, path), 'export declare const panel: number;\n');
+    const statusOf = (isNewDeclaration) =>
+      classify({ root: headTree, baseTree, path, isMigratedDeclaration: false, isNewDeclaration })
+        .status;
+    assert.equal(statusOf(true), 'new declaration');
+    assert.equal(statusOf(false), 'added');
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
 });
 
 test('token identity ignores comments and layout and fails on one changed token', () => {
