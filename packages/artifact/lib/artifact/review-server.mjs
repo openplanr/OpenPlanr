@@ -67,6 +67,8 @@ const TITLE_LIMIT = 512;
 const THEME_VALUES = new Set(['auto', 'light', 'dark']);
 const localServers = new Map();
 
+// No frame-ancestors: each blob: artifact frame inherits this policy, and WebKit applies an
+// inherited frame-ancestors to the frame's own load. X-Frame-Options: DENY keeps the shell unframeable.
 const PARENT_CSP = [
   "default-src 'none'",
   "style-src 'unsafe-inline' data: blob:",
@@ -81,7 +83,6 @@ const PARENT_CSP = [
   "manifest-src 'none'",
   "form-action 'none'",
   "base-uri 'none'",
-  "frame-ancestors 'none'",
 ].join('; ');
 
 const PERMISSIONS_POLICY = [
