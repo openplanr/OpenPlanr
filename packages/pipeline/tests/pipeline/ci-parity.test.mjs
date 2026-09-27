@@ -100,3 +100,51 @@ test('a CI step the local run cannot reproduce fails the plan instead of being d
   gated.jobs.quality.if = "github.event_name == 'push'";
   assert.throws(() => planLocalCi(gated, 24), /quality runs under if: .*cannot evaluate/u);
 });
+
+// Follows `npm run <script>` aliases in && chains down to the commands they run.
+function leaves(scripts, script) {
+  assert.ok(Object.hasOwn(scripts, script), `missing script ${script}`);
+  return scripts[script].split(/\s*&&\s*/u).flatMap((command) => {
+    const alias = /^npm run ([a-z][\w:-]*)$/u.exec(command);
+    return alias ? leaves(scripts, alias[1]) : [command];
+  });
+}
+
+test('every workspace npm test runs exactly the commands Workspace CI runs for it', () => {
+  const commands = planLocalCi(workflow, 24).jobs.flatMap(({ instances }) =>
+    instances.flatMap(({ steps }) =>
+      steps.flatMap(({ script, workingDirectory }) =>
+        script.split('\n').map((line) => ({ line: line.trim(), workingDirectory })),
+      ),
+    ),
+  );
+  for (const { line, workingDirectory } of commands) {
+    if (workingDirectory === '.') continue;
+    assert.match(
+      line,
+      /^npm run [a-z][\w:-]*(?: -- --shard=\d+\/\d+)?$/u,
+      `${workingDirectory} CI commands must name a workspace script so npm test can run them`,
+    );
+  }
+  const { workspaces } = JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf8'));
+  for (const path of workspaces) {
+    const { name, scripts } = JSON.parse(readFileSync(resolve(root, path, 'package.json'), 'utf8'));
+    const ci = commands.flatMap(({ line, workingDirectory }) => {
+      if (line === `npm test --workspace=${name}`) return ['test'];
+      const run = /^npm run ([a-z][\w:-]*)(?: --workspace=(\S+))?(?: -- --shard=\d+\/\d+)?$/u.exec(
+        line,
+      );
+      if (!run) return [];
+      const [, script, workspace] = run;
+      return workspace === name || (workspace === undefined && workingDirectory === path)
+        ? [script]
+        : [];
+    });
+    assert.ok(ci.length > 0, `Workspace CI runs no tests for ${path}`);
+    assert.deepEqual(
+      new Set(leaves(scripts, 'test')),
+      new Set(ci.flatMap((script) => leaves(scripts, script))),
+      path,
+    );
+  }
+});

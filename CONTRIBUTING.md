@@ -98,6 +98,11 @@ npm test
 npm run verify
 ```
 
+Each workspace's `npm test` runs the same test commands its Workspace CI jobs run, so
+`npm test --workspace=<package name>` from the root runs the tests CI runs for a change
+inside that directory. The CLI's runs the suite CI splits into six shards, then the heavy,
+Operate boundary and runtime integrity suites, each in its own process.
+
 `npm run lint` is the formatting and lint gate: Biome runs from the root `biome.jsonc`
 over every workspace, and CI fails on any error it reports. `npm run lint:fix` applies
 its safe fixes and `npm run format` its formatting.
