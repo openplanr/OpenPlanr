@@ -1,32 +1,143 @@
-// @ts-check
-import { getDiagramAuthoringCapability } from '@openplanr/protocol/diagram-authoring-contracts';
+import {
+  type DiagramAuthoringBundle,
+  getDiagramAuthoringCapability,
+} from '@openplanr/protocol/diagram-authoring-contracts';
+import type {
+  DiagramEditorEvent,
+  DiagramEditorSession,
+  DiagramEditorState,
+} from '../diagram/editor/index.mjs';
 import { createEditorCanvas } from './diagram-editor-canvas.mjs';
 import { createEditorChrome, createEditorLayout } from './diagram-editor-chrome.mjs';
 import { createEditorCommands } from './diagram-editor-commands.mjs';
 import { createEditorDialogs } from './diagram-editor-dialogs.mjs';
 import { icon } from './diagram-editor-dom.mjs';
-import { colorSchemeOf, readHostOptions } from './diagram-editor-host.mjs';
+import {
+  colorSchemeOf,
+  type DiagramEditorHostOptions,
+  readHostOptions,
+} from './diagram-editor-host.mjs';
 import { createEditorInspector } from './diagram-editor-inspector.mjs';
 import { createEditorKeyboard } from './diagram-editor-keyboard.mjs';
 import { createEditorOutline } from './diagram-editor-outline.mjs';
+import type { DiagramEditorContext } from './diagram-editor-regions.mjs';
 import { renderEditorControls, renderEditorSkeleton } from './diagram-editor-template.mjs';
 
-/** @typedef {import('./diagram-editor-context.d.mts').DiagramEditorContext} DiagramEditorContext */
+/** Every icon the editor can render; hosts may use any of them on actions and panels. */
+export type DiagramEditorIconName =
+  | 'panel'
+  | 'undo'
+  | 'redo'
+  | 'save'
+  | 'more'
+  | 'select'
+  | 'pan'
+  | 'snap'
+  | 'snap-off'
+  | 'fit'
+  | 'search'
+  | 'properties'
+  | 'review'
+  | 'copy'
+  | 'duplicate'
+  | 'lock'
+  | 'unlock'
+  | 'trash'
+  | 'arrange'
+  | 'group'
+  | 'ungroup'
+  | 'connect'
+  | 'parent'
+  | 'route'
+  | 'content'
+  | 'geometry'
+  | 'appearance'
+  | 'structure'
+  | 'constraints'
+  | 'advanced'
+  | 'plus'
+  | 'minus'
+  | 'arrow-up'
+  | 'arrow-down'
+  | 'mark'
+  | 'chevron'
+  | 'share'
+  | 'history'
+  | 'kind-container'
+  | 'kind-lane'
+  | 'kind-lane-vertical'
+  | 'kind-terminal'
+  | 'kind-process'
+  | 'kind-decision'
+  | 'kind-store'
+  | 'kind-component'
+  | 'kind-connector'
+  | 'kind-annotation';
+
+/** A command added by the host after Save. Lowercase ids; hooks re-run whenever the editor state changes. */
+export interface DiagramEditorHostAction {
+  id: string;
+  label: string;
+  icon?: DiagramEditorIconName;
+  primary?: boolean;
+  disabled?: (state: DiagramEditorState) => boolean;
+  hidden?: (state: DiagramEditorState) => boolean;
+  onSelect(context: {
+    session: DiagramEditorSession;
+    state: DiagramEditorState;
+    trigger: HTMLButtonElement;
+  }): void;
+}
+
+/** A right-panel tab owned by the host, mounted the first time it opens. `properties` and `review` are reserved ids. */
+export interface DiagramEditorHostPanel {
+  id: string;
+  label: string;
+  /** Checked against the icon set at mount; the tab itself renders the label only. */
+  icon?: DiagramEditorIconName;
+  hidden?: (state: DiagramEditorState) => boolean;
+  mount(options: {
+    /** Clicks inside this element never reach the editor's action dispatcher, so host controls may carry `data-action`. */
+    root: HTMLElement;
+    session: DiagramEditorSession;
+    select: (ids: string[]) => unknown;
+    close: () => void;
+  }): (() => void) | null | void;
+}
+interface MountOptions {
+  root: HTMLElement;
+  session: DiagramEditorSession;
+  host?: DiagramEditorHostOptions;
+}
+/** The handle a host keeps for one mounted editor. */
+interface MountedEditor {
+  dispose(): void;
+  refresh(bundle: DiagramAuthoringBundle): ReturnType<DiagramEditorSession['refresh']>;
+  openSourcePanel(options?: { tab?: 'import' | 'export' }): boolean;
+  getState(): DiagramEditorState;
+  /** Pass null to follow the operating system again. */
+  setColorScheme(scheme: 'light' | 'dark' | null): void;
+  /** Open a right-panel tab by id; returns false when it is unavailable. */
+  openPanel(id: string): boolean;
+  /** Re-evaluate host action and panel hooks after host data changes. */
+  refreshHost(): void;
+}
 
 const ID_PREFIX = 'diagram';
 let mountCount = 0;
-/** @param {Document} document */
-const windowOf = (document) => {
+const windowOf = (document: Document) => {
   const view = document.defaultView;
   if (!view) throw new TypeError('Mount needs a root inside a live document.');
   return view;
 };
 
 /**
- * Browser-safe, framework-neutral UI. The supplied session remains owned by its host.
- * @type {typeof import('./diagram-editor.d.mts').mountDiagramEditor}
+ * Mount the same browser-safe editor in local and company owner shells.
+ * The editor sizes its chrome from its own root, not the window, and prefixes every element id
+ * per mount so several editors can share one document; hosts must not depend on those ids.
+ * The supplied session remains owned by its host.
  */
-export function mountDiagramEditor({ root, session, host = {} }) {
+export function mountDiagramEditor({ root, session, host = {} }: MountOptions): MountedEditor {
   if (!root || !session || typeof session.getState !== 'function')
     throw new TypeError('Mount needs one root and one editor session.');
   const config = readHostOptions(host);
@@ -37,7 +148,7 @@ export function mountDiagramEditor({ root, session, host = {} }) {
   // The first editor keeps the historical ids; later mounts take a suffix so two can share a document.
   mountCount += 1;
   const idPrefix = mountCount === 1 ? ID_PREFIX : `${ID_PREFIX}-${mountCount}`;
-  const scopedId = (name) => `${idPrefix}-${name}`;
+  const scopedId = (name: string) => `${idPrefix}-${name}`;
   const mode = 'edit';
   let disposed = false,
     resizeFrame = 0,
@@ -65,7 +176,7 @@ export function mountDiagramEditor({ root, session, host = {} }) {
     }),
   };
 
-  const notice = (message) => {
+  const notice = (message: string) => {
     win.cancelAnimationFrame(announcementFrame);
     if (message === lastAnnouncement) {
       dom.announcer.textContent = '';
@@ -75,32 +186,33 @@ export function mountDiagramEditor({ root, session, host = {} }) {
     } else dom.announcer.textContent = message;
     lastAnnouncement = message;
   };
-  const report = (message) => {
+  const report = (message: string) => {
     dom.alert.hidden = !message;
     dom.alert.textContent = message || '';
     if (message) notice(message);
   };
-  const editable = (state) =>
+  // The capability lookup returns null for a missing grammar id, as when access changed.
+  const editable = (state: DiagramEditorState) =>
     mode === 'edit' &&
     !layout.compact() &&
     state.capabilities.read &&
     state.capabilities.write &&
     state.saveState !== 'access-changed' &&
-    !!getDiagramAuthoringCapability(state.bundle?.document.grammar.id);
-  const readOnly = (state) => state.capabilities.read && !state.capabilities.write;
-  const displayed = (state) => state.gesture?.bundle ?? state.bundle;
+    !!getDiagramAuthoringCapability(state.bundle?.document.grammar.id as string);
+  const readOnly = (state: DiagramEditorState) =>
+    state.capabilities.read && !state.capabilities.write;
+  const displayed = (state: DiagramEditorState) => state.gesture?.bundle ?? state.bundle;
   const prefersDark = () => (hostScheme ? hostScheme === 'dark' : !!colorScheme?.matches);
 
   // Every region is assigned before a getter is read: regions call each other only from
   // handlers, and the keyboard, which reads them when created, is created last.
-  /** @type {DiagramEditorContext['chrome']} */ let chrome;
-  /** @type {DiagramEditorContext['outline']} */ let outline;
-  /** @type {DiagramEditorContext['inspector']} */ let inspector;
-  /** @type {DiagramEditorContext['canvas']} */ let canvas;
-  /** @type {DiagramEditorContext['dialogs']} */ let dialogs;
-  /** @type {DiagramEditorContext['commands']} */ let commands;
-  /** @type {DiagramEditorContext} */
-  const ctx = {
+  let chrome: DiagramEditorContext['chrome'];
+  let outline: DiagramEditorContext['outline'];
+  let inspector: DiagramEditorContext['inspector'];
+  let canvas: DiagramEditorContext['canvas'];
+  let dialogs: DiagramEditorContext['dialogs'];
+  let commands: DiagramEditorContext['commands'];
+  const ctx: DiagramEditorContext = {
     doc,
     win,
     session,
@@ -154,7 +266,7 @@ export function mountDiagramEditor({ root, session, host = {} }) {
   };
   const resize =
     typeof win.ResizeObserver === 'function' ? new win.ResizeObserver(scheduleResize) : null;
-  const onSession = (event) => {
+  const onSession = (event: DiagramEditorEvent) => {
     if (disposed) return;
     canvas.draw(event);
   };

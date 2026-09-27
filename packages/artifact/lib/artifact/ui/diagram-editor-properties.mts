@@ -20,10 +20,10 @@ import {
   displayName,
   moveOrthogonalBend,
   NODE_NAMES,
+  type DiagramEditorPoint as Point,
   propertyTransaction,
   quantity,
 } from './diagram-editor-actions.mjs';
-import type { DiagramEditorPoint as Point } from './diagram-editor-context.d.mts';
 import {
   button,
   type ElementAttributes,

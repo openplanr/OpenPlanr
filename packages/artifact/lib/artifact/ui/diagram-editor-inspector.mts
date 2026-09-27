@@ -1,25 +1,44 @@
-// @ts-check
+import type { DiagramEditTransaction } from '@openplanr/protocol/diagram-authoring-contracts';
+import type { DiagramEditorState } from '../diagram/editor/index.mjs';
 import { button, element } from './diagram-editor-dom.mjs';
 import { renderDiagramProperties } from './diagram-editor-properties.mjs';
+import type { DiagramEditorContext } from './diagram-editor-regions.mjs';
+
+export interface DiagramEditorInspector {
+  tab(): string;
+  showTab(next: string, options?: { focus?: boolean }): void;
+  panes(): Map<string, HTMLElement>;
+  render(state: DiagramEditorState): void;
+  /** Whether the properties form holds unapplied changes. */
+  dirty(): boolean;
+  /** False, with the draft surfaced to the user, when unapplied changes block another edit. */
+  guardDraft(): boolean;
+  applyDraft(): Promise<boolean>;
+  updateCommandState(state?: DiagramEditorState, dirty?: boolean): void;
+  dispose(): void;
+}
+/** A properties controller as the inspector reads it; it tolerates a missing member. */
+interface PropertiesDraft {
+  readonly dirty?: boolean | (() => boolean);
+  apply?(): { ok?: boolean } | false | Promise<{ ok?: boolean } | false>;
+  focus?(): void;
+}
 
 const PROPERTY_DRAFT_MESSAGE = 'Apply or revert property changes before selecting another object.';
 
-/**
- * The right rail: Properties, Review and host panel tabs, and the unapplied property draft.
- * @type {typeof import('./diagram-editor-context.d.mts').createEditorInspector}
- */
-export function createEditorInspector(ctx) {
+/** The right rail: Properties, Review and host panel tabs, and the unapplied property draft. */
+export function createEditorInspector(ctx: DiagramEditorContext): DiagramEditorInspector {
   const { doc, win, session, dom, config } = ctx;
   const { rightTabs, propertiesPane, reviewPane, hostPanes } = dom;
-  const hostPanelCleanups = new Map();
+  const hostPanelCleanups = new Map<string, (() => void) | null>();
   let rightTab = 'properties',
-    propertyController = null,
+    propertyController: PropertiesDraft | null = null,
     propertiesDirty = false,
     propertiesStamp = '',
     propertiesSelection = '',
     propertyRefreshQueued = false,
     reviewMounted = false,
-    reviewCleanup = null;
+    reviewCleanup: (() => void) | null = null;
 
   const controllerIsDirty = () => {
     if (!propertyController) return propertiesDirty;
@@ -29,13 +48,14 @@ export function createEditorInspector(ctx) {
         : propertyController.dirty;
     return value === undefined ? propertiesDirty : !!value;
   };
-  const updateCommandState = (state = ctx.current(), dirty = controllerIsDirty()) => {
+  const updateCommandState = (
+    state: DiagramEditorState = ctx.current(),
+    dirty: boolean = controllerIsDirty(),
+  ) => {
     propertiesDirty = !!dirty;
     dom.shell.dataset.propertyDirty = String(propertiesDirty);
     const status = state.saveState;
-    const saveControl = /** @type {HTMLButtonElement | null} */ (
-      dom.bar.querySelector('[data-action="save"]')
-    );
+    const saveControl = dom.bar.querySelector<HTMLButtonElement>('[data-action="save"]');
     if (saveControl)
       saveControl.disabled =
         !ctx.editable(state) ||
@@ -54,7 +74,7 @@ export function createEditorInspector(ctx) {
       renderRight(ctx.current());
     });
   }
-  const handlePropertyDirty = (dirty) => {
+  const handlePropertyDirty = (dirty: boolean) => {
     const wasDirty = propertiesDirty;
     updateCommandState(ctx.current(), dirty);
     if (wasDirty && !dirty) {
@@ -71,23 +91,20 @@ export function createEditorInspector(ctx) {
     return false;
   };
   function rightPanes() {
-    /** @type {Array<[string, HTMLElement]>} */
-    const panes = [['properties', propertiesPane]];
+    const panes: Array<[string, HTMLElement]> = [['properties', propertiesPane]];
     if (config.reviewEnabled) panes.push(['review', reviewPane]);
     return new Map([...panes, ...hostPanes]);
   }
-  function setRightTab(next, { focus = false } = {}) {
+  function setRightTab(next: string, { focus = false }: { focus?: boolean } = {}) {
     const panes = rightPanes(),
-      shown = [
-        .../** @type {NodeListOf<HTMLElement>} */ (rightTabs.querySelectorAll('[role="tab"]')),
-      ].map((node) => node.dataset.tab);
+      shown = [...rightTabs.querySelectorAll<HTMLElement>('[role="tab"]')].map(
+        (node) => node.dataset.tab,
+      );
     if (!panes.has(next) || (shown.length && !shown.includes(next))) next = 'properties';
     rightTab = next;
     for (const [id, pane] of panes) pane.hidden = id !== next;
     if (!config.reviewEnabled) reviewPane.hidden = true;
-    for (const tabNode of /** @type {NodeListOf<HTMLElement>} */ (
-      rightTabs.querySelectorAll('[role="tab"]')
-    )) {
+    for (const tabNode of rightTabs.querySelectorAll<HTMLElement>('[role="tab"]')) {
       const selected = tabNode.dataset.tab === next;
       tabNode.setAttribute('aria-selected', String(selected));
       tabNode.tabIndex = selected ? 0 : -1;
@@ -96,7 +113,7 @@ export function createEditorInspector(ctx) {
     if (next === 'review' && !reviewMounted) mountReview();
     if (hostPanes.has(next) && !hostPanelCleanups.has(next)) mountHostPanel(next);
   }
-  function mountHostPanel(id) {
+  function mountHostPanel(id: string) {
     const panel = config.panels.find((item) => item.id === id),
       root = hostPanes.get(id);
     if (!panel || !root) throw new TypeError(`Host panel ${id} has no pane in this editor.`);
@@ -124,7 +141,7 @@ export function createEditorInspector(ctx) {
         element(doc, 'p', { className: 'de-muted' }, config.labels.reviewUnavailable),
       );
   }
-  function renderRight(state) {
+  function renderRight(state: DiagramEditorState) {
     rightTabs.replaceChildren();
     const tabs = [
       ['Properties', 'properties', 'properties-tab'],
@@ -165,7 +182,7 @@ export function createEditorInspector(ctx) {
     const focused = propertiesPane.contains(doc.activeElement)
       ? doc.activeElement?.getAttribute('aria-label')
       : null;
-    const submitPropertiesTransaction = (value) => {
+    const submitPropertiesTransaction = (value: DiagramEditTransaction) => {
       const result = ctx.commands.submitTransaction(value, { allowDirty: true });
       if (result?.ok) {
         propertiesStamp = '';
@@ -185,9 +202,7 @@ export function createEditorInspector(ctx) {
     propertiesDirty = controllerIsDirty();
     updateCommandState(state);
     if (focused && !propertiesPane.contains(doc.activeElement))
-      /** @type {HTMLElement | null} */ (
-        propertiesPane.querySelector('[aria-label="' + focused + '"]')
-      )?.focus();
+      propertiesPane.querySelector<HTMLElement>('[aria-label="' + focused + '"]')?.focus();
   }
   async function applyPropertiesDraft() {
     if (!controllerIsDirty()) return true;
@@ -195,7 +210,7 @@ export function createEditorInspector(ctx) {
     const form = propertiesPane.querySelector('form');
     if (form && !form.checkValidity()) {
       form.reportValidity();
-      /** @type {HTMLElement | null} */ (form.querySelector(':invalid'))?.focus();
+      form.querySelector<HTMLElement>(':invalid')?.focus();
       return false;
     }
     if (!controller?.apply) {

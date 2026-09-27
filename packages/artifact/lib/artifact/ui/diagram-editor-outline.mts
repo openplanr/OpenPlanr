@@ -1,11 +1,28 @@
-// @ts-check
-import { getDiagramAuthoringCapability } from '@openplanr/protocol/diagram-authoring-contracts';
+import {
+  type DiagramAuthoringNode,
+  type DiagramSemanticEntry,
+  getDiagramAuthoringCapability,
+} from '@openplanr/protocol/diagram-authoring-contracts';
 import { elementIndex } from '../diagram/authoring/model.mjs';
+import type { DiagramEditorState } from '../diagram/editor/index.mjs';
+import type { DiagramEditorIconName } from './diagram-editor.mjs';
 import { displayName, kindName } from './diagram-editor-actions.mjs';
 import { errText } from './diagram-editor-commands.mjs';
 import { button, element, field, icon } from './diagram-editor-dom.mjs';
+import type { DiagramEditorContext } from './diagram-editor-regions.mjs';
 
-const ACTION_LABELS = {
+export type DiagramEditorLeftTab = 'outline' | 'shapes';
+export interface DiagramEditorOutline {
+  tab(): DiagramEditorLeftTab;
+  showTab(next: DiagramEditorLeftTab, options?: { focus?: boolean }): void;
+  /** Choose the tab the next render shows without touching the DOM. */
+  preferTab(next: DiagramEditorLeftTab): void;
+  render(state: DiagramEditorState): void;
+  toggleGroup(id: string): void;
+  focusRow(row: HTMLElement | null | undefined): void;
+}
+
+const ACTION_LABELS: Record<string, string> = {
   process: 'process',
   start: 'start',
   end: 'end',
@@ -17,7 +34,7 @@ const ACTION_LABELS = {
   'horizontal-lane': 'horizontal lane',
   'vertical-lane': 'vertical lane',
 };
-const KIND_ICONS = Object.freeze({
+const KIND_ICONS: Readonly<Record<string, DiagramEditorIconName>> = Object.freeze({
   process: 'kind-process',
   start: 'kind-terminal',
   end: 'kind-terminal',
@@ -29,7 +46,8 @@ const KIND_ICONS = Object.freeze({
   'vertical-lane': 'kind-lane-vertical',
   annotation: 'kind-annotation',
 });
-const outlineIcon = (entry) =>
+// Groups and lanes share one entry type, so the checks below cannot narrow the last branch to a node.
+const outlineIcon = (entry: DiagramSemanticEntry) =>
   entry.collection === 'relations'
     ? 'kind-connector'
     : entry.collection === 'lanes'
@@ -38,33 +56,27 @@ const outlineIcon = (entry) =>
         ? 'kind-container'
         : entry.collection === 'annotations'
           ? 'kind-annotation'
-          : (KIND_ICONS[entry.value.kind] ?? 'kind-process');
+          : (KIND_ICONS[(entry.value as DiagramAuthoringNode).kind] ?? 'kind-process');
 
-/**
- * The left rail: Outline and Shapes tabs, the object tree and the shape palette.
- * @type {typeof import('./diagram-editor-context.d.mts').createEditorOutline}
- */
-export function createEditorOutline(ctx) {
+/** The left rail: Outline and Shapes tabs, the object tree and the shape palette. */
+export function createEditorOutline(ctx: DiagramEditorContext): DiagramEditorOutline {
   const { doc, session } = ctx;
   const { leftTabs, outlinePane, shapesPane } = ctx.dom;
-  /** @type {'outline' | 'shapes'} */
-  let tab = 'outline';
+  let tab: DiagramEditorLeftTab = 'outline';
 
-  function setLeftTab(next, { focus = false } = {}) {
+  function setLeftTab(next: DiagramEditorLeftTab, { focus = false }: { focus?: boolean } = {}) {
     tab = next;
     const outlineSelected = next === 'outline';
     outlinePane.hidden = !outlineSelected;
     shapesPane.hidden = outlineSelected;
-    for (const tabNode of /** @type {NodeListOf<HTMLElement>} */ (
-      leftTabs.querySelectorAll('[role="tab"]')
-    )) {
+    for (const tabNode of leftTabs.querySelectorAll<HTMLElement>('[role="tab"]')) {
       const selected = tabNode.dataset.action === (outlineSelected ? 'outline-tab' : 'shapes-tab');
       tabNode.setAttribute('aria-selected', String(selected));
       tabNode.tabIndex = selected ? 0 : -1;
       if (selected && focus) tabNode.focus({ preventScroll: true });
     }
   }
-  function toggleGroup(id) {
+  function toggleGroup(id: string) {
     const collapsed = new Set(ctx.current().view.collapsedGroups);
     if (collapsed.has(id)) collapsed.delete(id);
     else collapsed.add(id);
@@ -73,18 +85,18 @@ export function createEditorOutline(ctx) {
       ctx.report(errText(result));
       return;
     }
-    focusOutlineRow(outlinePane.querySelector('[role="treeitem"][data-id="' + id + '"]'));
+    focusOutlineRow(
+      outlinePane.querySelector<HTMLElement>('[role="treeitem"][data-id="' + id + '"]'),
+    );
   }
-  function focusOutlineRow(row) {
+  function focusOutlineRow(row: HTMLElement | null | undefined) {
     if (!row) return;
-    for (const item of /** @type {NodeListOf<HTMLElement>} */ (
-      outlinePane.querySelectorAll('[role="treeitem"]')
-    ))
+    for (const item of outlinePane.querySelectorAll<HTMLElement>('[role="treeitem"]'))
       item.tabIndex = -1;
     row.tabIndex = 0;
     row.focus();
   }
-  function renderLeft(state) {
+  function renderLeft(state: DiagramEditorState) {
     const { editable, readOnly } = ctx;
     leftTabs.replaceChildren();
     if (readOnly(state)) tab = 'outline';
@@ -112,8 +124,7 @@ export function createEditorOutline(ctx) {
       element(doc, 'p', { className: 'de-muted' }, 'Add a shape, then refine it in the inspector.'),
     );
     const capability = getDiagramAuthoringCapability(state.bundle.document.grammar.id);
-    /** @type {Array<[string, string[]]>} */
-    const groups = [
+    const groups: Array<[string, string[]]> = [
       ['Flow', ['process', 'start', 'end', 'decision', 'data-store', 'component']],
       ['Structure', ['container', 'horizontal-lane', 'vertical-lane']],
       ['Notes', ['annotation']],
@@ -182,10 +193,16 @@ export function createEditorOutline(ctx) {
       );
     const collapsedGroups = new Set(state.view.collapsedGroups);
     // Each row draws its own guide segments: a continuing rule per open ancestor branch, then a tee or an elbow.
-    function itemFor(id, depth = 0, trail = [], last = true, parentId = null) {
+    function itemFor(
+      id: string,
+      depth = 0,
+      trail: boolean[] = [],
+      last = true,
+      parentId: string | null = null,
+    ) {
       const entry = indexed.get(id);
       if (!entry) return;
-      const members = (entry.value.members ?? []).filter((member) => indexed.has(member)),
+      const members = (entry.value.members ?? []).filter((member: string) => indexed.has(member)),
         collapsed = members.length > 0 && collapsedGroups.has(id);
       const name = displayName(indexed, id),
         kind = kindName(entry);
@@ -244,7 +261,7 @@ export function createEditorOutline(ctx) {
       wrapper.append(choose);
       list.append(wrapper);
       if (!collapsed)
-        members.forEach((child, index) => {
+        members.forEach((child: string, index: number) => {
           itemFor(child, depth + 1, [...trail, last], index === members.length - 1, id);
         });
     }
@@ -259,19 +276,18 @@ export function createEditorOutline(ctx) {
     );
     search.input.addEventListener('input', () => {
       const query = search.input.value.toLowerCase().trim(),
-        items = /** @type {Array<HTMLElement & { dataset: { searchText: string } }>} */ ([
-          ...list.querySelectorAll('.de-outline-item'),
-        ]),
+        items = [...list.querySelectorAll<HTMLElement>('.de-outline-item')],
         keep = new Set();
       if (query)
+        // itemFor sets data-search-text on every outline item.
         for (const item of items)
-          if (item.dataset.searchText.includes(query))
+          if ((item.dataset.searchText as string).includes(query))
             for (
-              let node = /** @type {HTMLElement | null} */ (item);
+              let node: HTMLElement | null = item;
               node;
               node = node.dataset.parentId
-                ? /** @type {HTMLElement | null} */ (
-                    list.querySelector('.de-outline-item[data-id="' + node.dataset.parentId + '"]')
+                ? list.querySelector<HTMLElement>(
+                    '.de-outline-item[data-id="' + node.dataset.parentId + '"]',
                   )
                 : null
             )

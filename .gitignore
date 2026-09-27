@@ -162,16 +162,8 @@ CLAUDE.md
 # Compiled by scripts/typescript/compile-sources.mjs from the .mts beside each file.
 /packages/artifact/lib/artifact/diagram/editor/*.mjs
 /packages/artifact/lib/artifact/diagram/editor/*.d.mts
-/packages/artifact/lib/artifact/ui/diagram-editor-actions.mjs
-/packages/artifact/lib/artifact/ui/diagram-editor-actions.d.mts
-/packages/artifact/lib/artifact/ui/diagram-editor-dom.mjs
-/packages/artifact/lib/artifact/ui/diagram-editor-dom.d.mts
-/packages/artifact/lib/artifact/ui/diagram-editor-host.mjs
-/packages/artifact/lib/artifact/ui/diagram-editor-host.d.mts
-/packages/artifact/lib/artifact/ui/diagram-editor-properties.mjs
-/packages/artifact/lib/artifact/ui/diagram-editor-properties.d.mts
-/packages/artifact/lib/artifact/ui/diagram-editor-template.mjs
-/packages/artifact/lib/artifact/ui/diagram-editor-template.d.mts
+/packages/artifact/lib/artifact/ui/diagram-editor*.mjs
+/packages/artifact/lib/artifact/ui/diagram-editor*.d.mts
 
 # esbuild bundle written by packages/design/scripts/generate-design-studio.mjs from
 # packages/design/lib/design/ui; the pipeline projection manifest records its digest.
