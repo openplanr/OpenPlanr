@@ -1,7 +1,15 @@
 import assert from 'node:assert/strict';
 import { execFile, spawn } from 'node:child_process';
 import { once } from 'node:events';
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { test } from 'node:test';
@@ -168,4 +176,51 @@ test('board relays the daemon notice that sets an invalid registry aside', async
   assert.ok(stderr.includes(notice), stderr);
   assert.ok(stderr.indexOf(notice) < stderr.indexOf('BOARD_URL: '), stderr);
   assert.doesNotMatch(stderr, /DAEMON_PORT/);
+});
+
+test('a daemon started by board keeps serving after the command exits and the daemon logs', async (t) => {
+  const fixture = boardFixture(t);
+  const first = await runCli(['board', '--dir', fixture.boardDir], fixture.env);
+  const started = await runCli(['daemon', '--status'], fixture.env);
+  assert.equal(started.running, true, 'the daemon board started is still running');
+  assert.equal(started.port, first.port);
+
+  // Registering another board makes the daemon write its per-board notice to stderr.
+  const secondDir = join(fixture.boardDir, 'second');
+  mkdirSync(secondDir);
+  writeFileSync(
+    join(secondDir, 'variant-A.svg'),
+    '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"/>',
+  );
+  const second = await runCli(['board', '--dir', secondDir], fixture.env);
+  assert.equal(second.port, first.port, 'the second board reuses the daemon');
+  const log = readFileSync(join(fixture.stateDir, 'daemon.log'), 'utf8');
+  assert.ok(
+    log.includes(`[feedback] mutex-guarded merge path active for board ${second.boardId}\n`),
+    log,
+  );
+
+  const after = await runCli(['daemon', '--status'], fixture.env);
+  assert.equal(after.running, true, 'the daemon survives its stderr writes');
+  assert.equal(after.pid, started.pid);
+  for (const { url } of [first, second]) {
+    const response = await fetch(url);
+    assert.equal(response.status, 200, url);
+    assert.match(response.headers.get('content-type') ?? '', /^text\/html/);
+  }
+});
+
+test('a respawned daemon keeps the previous daemon log', async (t) => {
+  const fixture = boardFixture(t);
+  const logPath = join(fixture.stateDir, 'daemon.log');
+  const first = await runCli(['board', '--dir', fixture.boardDir], fixture.env);
+  const firstLog = readFileSync(logPath, 'utf8');
+  assert.ok(firstLog.startsWith(`DAEMON_PORT: ${first.port}\n`), firstLog);
+  if (process.platform !== 'win32') assert.equal(statSync(logPath).mode & 0o777, 0o600);
+
+  assert.equal(await killRunningDaemon(await findRunningDaemon({ env: fixture.env })), true);
+  const second = await runCli(['board', '--dir', fixture.boardDir], fixture.env);
+  assert.notEqual(second.port, first.port);
+  assert.equal(readFileSync(`${logPath}.1`, 'utf8'), firstLog);
+  assert.ok(readFileSync(logPath, 'utf8').startsWith(`DAEMON_PORT: ${second.port}\n`));
 });

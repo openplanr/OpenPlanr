@@ -28,7 +28,9 @@ and the other keeps working — re-run `board` on the same dir and nothing is lo
 
 `lib/design-engine/daemon.mjs` — a persistent localhost HTTP server. State lives in
 `~/.planr/design-daemon/` (`port` + `boards.json`). Discovery: read the port file, confirm
-`GET /health`. The CLI's `board` command auto-starts it (detached) when absent.
+`GET /health`. The CLI's `board` command auto-starts it (detached) when absent; that daemon
+writes its stderr to `daemon.log` in the same directory, and the previous daemon's log is kept
+as `daemon.log.1`.
 
 | Route | Method | Purpose |
 |---|---|---|

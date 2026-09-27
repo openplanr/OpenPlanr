@@ -32,7 +32,7 @@
  * A per-board MUTEX serializes feedback-writes vs reload-bumps so a reload can
  * never interleave with a half-written feedback file.
  *
- * State: <planrHome>/design-daemon/{port,boards.json}. Localhost only.
+ * State: <planrHome>/design-daemon/{port,boards.json,daemon.log}. Localhost only.
  */
 
 import { randomBytes, timingSafeEqual } from 'node:crypto';
@@ -41,6 +41,7 @@ import {
   existsSync,
   lstatSync,
   mkdirSync,
+  openSync,
   readFileSync,
   renameSync,
   statSync,
@@ -102,6 +103,7 @@ export const DAEMON_VERSION = 5;
 /** Cap on a request body (bytes) — a feedback round is small; this bounds memory per request. */
 const MAX_BODY_SIZE = 5_000_000;
 const CONTROL_TOKEN_FILE = 'control-token';
+const DAEMON_LOG_FILE = 'daemon.log';
 const DAEMON_KIND = 'openplanr-design-daemon';
 const CONTROL_TOKEN = /^[a-f0-9]{64}$/u;
 const REGISTRY_INVALID = 'E_DESIGN_REGISTRY_INVALID';
@@ -127,10 +129,15 @@ function readControlToken(env = process.env) {
   }
 }
 
-function ensureControlToken(env = process.env) {
+function ensureStateDir(env) {
   const stateDir = daemonDir(env);
   mkdirSync(stateDir, { recursive: true, mode: 0o700 });
   if (process.platform !== 'win32') chmodSync(stateDir, 0o700);
+  return stateDir;
+}
+
+function ensureControlToken(env = process.env) {
+  ensureStateDir(env);
   const existing = readControlToken(env);
   if (existing) return existing;
   const path = controlTokenPath(env);
@@ -152,6 +159,23 @@ function hasControlToken(req, token) {
   const presented = req.headers?.['x-openplanr-daemon-token'];
   if (typeof presented !== 'string' || !CONTROL_TOKEN.test(presented)) return false;
   return timingSafeEqual(Buffer.from(presented), Buffer.from(token));
+}
+
+/**
+ * Open a fresh stderr log for a detached daemon; the caller closes the read-write descriptor.
+ * The previous log is kept as `daemon.log.1` so the reason a daemon died survives the respawn.
+ */
+export function openDaemonLog(env = process.env) {
+  const path = join(ensureStateDir(env), DAEMON_LOG_FILE);
+  try {
+    renameSync(path, `${path}.1`);
+  } catch (error) {
+    if (error?.code !== 'ENOENT')
+      throw new Error(`Cannot keep the previous design daemon log ${path}: ${error.message}`, {
+        cause: error,
+      });
+  }
+  return { path, fd: openSync(path, 'w+', 0o600) };
 }
 
 export function daemonControlHeaders(env = process.env) {

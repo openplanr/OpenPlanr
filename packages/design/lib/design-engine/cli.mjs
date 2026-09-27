@@ -23,15 +23,19 @@
 import { spawn } from 'node:child_process';
 import {
   chmodSync,
+  closeSync,
   copyFileSync,
   existsSync,
+  fstatSync,
   mkdirSync,
   readdirSync,
   readFileSync,
+  readSync,
   writeFileSync,
 } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 import { createInterface } from 'node:readline';
+import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from '../design/cli-parser.mjs';
 import { createDesignBoardArtifactEnvelope } from './artifact-adapter.mjs';
@@ -54,6 +58,7 @@ import {
   daemonControlHeaders,
   findRunningDaemon,
   killRunningDaemon,
+  openDaemonLog,
 } from './daemon.mjs';
 import {
   ARTIFACT_GITIGNORE,
@@ -488,34 +493,43 @@ async function cmdCheck(args) {
 const reusableDaemon = (running) =>
   Boolean(running) && running.version === DAEMON_VERSION && !running.registryError;
 
-/**
- * Resolve the port a spawned daemon prints, relaying its earlier stderr lines; reject with its
- * exit status and stderr when it exits or stalls first.
- */
-function waitForDaemonPort(child, daemonPath) {
-  return new Promise((resolvePort, reject) => {
-    let output = '';
-    const failStart = (reason) => {
-      clearTimeout(timer);
-      reject(new Error(`daemon ${daemonPath} ${reason}: ${output.trim() || 'no stderr output'}`));
-    };
-    const timer = setTimeout(() => failStart('did not report its port within 5s'), 5000);
-    child.stderr.setEncoding('utf8');
-    child.stderr.on('data', (chunk) => {
-      output += chunk;
-      const match = /^DAEMON_PORT: (\d+)\r?\n/m.exec(output);
-      if (!match) return;
-      clearTimeout(timer);
-      process.stderr.write(output.slice(0, match.index));
-      resolvePort(Number(match[1]));
+/** The daemon log so far, read by position so the child's shared write offset stays put. */
+function readDaemonLog(log) {
+  try {
+    const bytes = Buffer.alloc(fstatSync(log.fd).size);
+    return bytes.subarray(0, readSync(log.fd, bytes, 0, bytes.length, 0)).toString('utf8');
+  } catch (error) {
+    throw new Error(`Cannot read the design daemon log ${log.path}: ${error.message}`, {
+      cause: error,
     });
-    child.once('error', (error) => failStart(`could not be spawned (${error.message})`));
-    child.once('close', (code, signal) =>
-      failStart(
-        `exited with ${signal ? `signal ${signal}` : `code ${code}`} before reporting its port`,
-      ),
-    );
+  }
+}
+
+/**
+ * Resolve the port a spawned daemon logs, relaying the lines it logged first; reject with its
+ * exit status and log when it exits or stalls first.
+ */
+async function waitForDaemonPort(child, daemonPath, log) {
+  let ended = null;
+  child.once('error', (error) => {
+    ended ??= `could not be spawned (${error.message})`;
   });
+  child.once('exit', (code, signal) => {
+    ended ??= `exited with ${signal ? `signal ${signal}` : `code ${code}`} before reporting its port`;
+  });
+  const deadline = Date.now() + 5000;
+  for (;;) {
+    const output = readDaemonLog(log);
+    const match = /^DAEMON_PORT: (\d+)\r?\n/m.exec(output);
+    if (match && !ended) {
+      process.stderr.write(output.slice(0, match.index));
+      return Number(match[1]);
+    }
+    const reason = ended ?? (Date.now() > deadline ? 'did not report its port within 5s' : null);
+    if (reason)
+      throw new Error(`daemon ${daemonPath} ${reason}: ${output.trim() || 'no stderr output'}`);
+    await delay(20);
+  }
 }
 
 async function ensureDaemon() {
@@ -528,14 +542,20 @@ async function ensureDaemon() {
   // across a version change or a registry fault.)
   await killRunningDaemon(running);
   const daemonPath = join(here, '..', 'daemon.mjs');
-  const child = spawn(process.execPath, [daemonPath, '--serve'], {
-    detached: true,
-    stdio: ['ignore', 'ignore', 'pipe'],
-  });
-  const port = await waitForDaemonPort(child, daemonPath);
-  child.stderr.destroy();
-  child.unref(); // daemon outlives the agent
-  return port;
+  // A pipe to this short-lived command would close when it exits, and the daemon's next
+  // stderr write would then fail with EPIPE and stop it, so the daemon writes to a log file.
+  const log = openDaemonLog();
+  try {
+    const child = spawn(process.execPath, [daemonPath, '--serve'], {
+      detached: true,
+      stdio: ['ignore', 'ignore', log.fd],
+    });
+    const port = await waitForDaemonPort(child, daemonPath, log);
+    child.unref(); // daemon outlives the agent
+    return port;
+  } finally {
+    closeSync(log.fd);
+  }
 }
 
 // `daemon` — manage the long-running board daemon directly. In a sandboxed agent runtime a
