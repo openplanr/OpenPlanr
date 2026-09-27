@@ -775,7 +775,7 @@
     {
       "source": "packages/artifact/lib/artifact/diagram/source-map.mjs",
       "target": "lib/artifact/diagram/source-map.mjs",
-      "sha256": "cf54ddb1178fa34faeca15ed7a6c56655b077682adf2e135a4f03e8add7ff226",
+      "sha256": "c0fcbd80c792bf5a13fa180908c43f2b3ec1dd850522871cec337b8e5d4b09e9",
       "mode": "644"
     },
     {
@@ -1165,7 +1165,7 @@
     {
       "source": "packages/artifact/lib/artifact/ui/generated/artifact-shell-assets.json",
       "target": "lib/artifact/ui/generated/artifact-shell-assets.json",
-      "sha256": "24c3b468025dbf56d1788a8dfb4d437b1af6988562e6e890404492cb2aa85c42",
+      "sha256": "79801b7884d97eb63a41256bebfd265672adc46d685ceeb195f22d4f72097cc3",
       "mode": "644"
     },
     {
@@ -1525,7 +1525,7 @@
     {
       "source": "packages/artifact/templates/diagram-owner.js",
       "target": "templates/diagram-owner.js",
-      "sha256": "aaa6e123d65450110b060c0ead9a6b79374396b08dc64f4aa3851d1a38ab18ad",
+      "sha256": "7b6726f0b16a2209c3f4bee4e8fc458ad6d391e0940069c4207db9ca2d19a60d",
       "mode": "644"
     },
     {
