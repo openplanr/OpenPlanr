@@ -597,3 +597,211 @@ ownerTest(
     assert.equal(notStarted.state.reconciliations, 1);
   },
 );
+
+function recoveryLanding(kind) {
+  const executor = structuredClone(fixture.executor);
+  const governed = { ...structuredClone(fixture.governed), effectClass: 'external-effect' };
+  const rollbackPlan = {
+    ...structuredClone(operating['operating-rollback-plan']),
+    operationId: governed.operationId,
+    effectClass: governed.effectClass,
+    executor: structuredClone(governed.executor),
+    capability: structuredClone(governed.capability),
+    eligibility: 'eligible',
+  };
+  const rollbackResult = {
+    ...structuredClone(operating['operating-rollback-result']),
+    originalOperationId: governed.operationId,
+    rollbackPlanId: rollbackPlan.rollbackPlanId,
+    effectClass: governed.effectClass,
+    executor: structuredClone(governed.executor),
+    capability: structuredClone(governed.capability),
+  };
+  const registration = (id) =>
+    fixture.operationRegistry.operations.find(({ operationId }) => operationId === id);
+  const containment = {
+    policyHash: digest('deploy-containment'),
+    state: 'preconfirmed',
+    stopPromotion: true,
+    stopNewTraffic: true,
+    isolateFailedTarget: true,
+    retainLastKnownGood: true,
+    trafficStateHash: digest('traffic-contained'),
+    residualStateHash: digest('residual-contained'),
+    expiresAt: '2026-08-25T10:30:00.000Z',
+    consequences: ['The failed target remains isolated.'],
+    recoveryChoices: ['rollback', 'forward-fix'],
+    authority: 'containment-only',
+  };
+  const deploy = {
+    ...structuredClone(fixture.operation),
+    registryOperationId: 'deploy',
+    registrationHash: registration('deploy').registrationHash,
+    kind: 'deploy',
+    effectClass: registration('deploy').effectClass,
+    recoveryClass: registration('deploy').recoveryClass,
+    inputDigest: digest({
+      action: governed.action,
+      target: governed.target,
+      capability: governed.capability,
+    }),
+    operateBindings: [
+      recordRef('operating-governed-operation', governed, governed.operationId),
+      recordRef('operating-rollback-plan', rollbackPlan, rollbackPlan.rollbackPlanId),
+    ],
+    containment,
+  };
+  const recovery = {
+    ...structuredClone(fixture.operation),
+    operationId: `lop_${'2'.padStart(32, '0')}`,
+    registryOperationId: kind,
+    registrationHash: registration(kind).registrationHash,
+    kind,
+    dependsOn: [deploy.operationId],
+    effectClass: registration(kind).effectClass,
+    recoveryClass: registration(kind).recoveryClass,
+    inputDigest: digest({ executor, rollbackPlan, rollbackResult }),
+    operateBindings: [
+      recordRef('operating-rollback-plan', rollbackPlan, rollbackPlan.rollbackPlanId),
+      recordRef('operating-rollback-result', rollbackResult, rollbackResult.rollbackResultId),
+    ],
+  };
+  const plan = prepareLanding({
+    closureInspection: fixture.closureInspection,
+    currentTargetHash: deploy.targetBeforeHash,
+    operations: [deploy, recovery],
+    baseRecords: [executor, governed, rollbackPlan, rollbackResult],
+    operationRegistry: fixture.operationRegistry,
+    createdAt: '2026-08-25T10:00:00.000Z',
+    expiresAt: '2026-08-25T11:00:00.000Z',
+  });
+  const { trafficStateHash, residualStateHash } = containment;
+  const containedResult = {
+    status: 'recovery_required',
+    targetAfterHash: null,
+    completedAt: '2026-08-25T10:00:00.002Z',
+    evidenceRecords: [],
+    evidenceContexts: {},
+    canary: null,
+    containment: {
+      policyHash: containment.policyHash,
+      applied: true,
+      stopPromotion: true,
+      stopNewTraffic: true,
+      failedTargetIsolated: true,
+      lastKnownGoodRetained: true,
+      trafficStateHash,
+      residualStateHash,
+      appliedAt: '2026-08-25T10:00:00.002Z',
+    },
+    recovery: {
+      state: 'recovery_required',
+      trafficStateHash,
+      residualStateHash,
+      expiresAt: containment.expiresAt,
+      consequences: structuredClone(containment.consequences),
+      choices: structuredClone(containment.recoveryChoices),
+      defaultChoice: null,
+      authority: 'none',
+    },
+  };
+  return { plan, deploy, recovery, containment, containedResult };
+}
+
+ownerTest(
+  'a blocked or uncertain rollback or compensate is journaled and resumes to its stored outcome',
+  ['confirm', 'confirm', 'confirm', 'confirm', 'confirm', 'confirm'],
+  async () => {
+    for (const kind of ['rollback', 'compensate']) {
+      const { plan, deploy, recovery, containment, containedResult } = recoveryLanding(kind);
+      const contained = memoryHost(plan, { dispatchResult: containedResult });
+      const required = await advanceLanding({
+        host: contained.host,
+        plan,
+        operationId: deploy.operationId,
+        now: '2026-08-25T10:00:00.000Z',
+      });
+      assert.equal(required.state, 'recovery_required');
+
+      const blockedRun = memoryHost(plan, {
+        state: structuredClone(contained.state),
+        dispatchResult: {
+          status: 'blocked',
+          targetAfterHash: null,
+          completedAt: '2026-08-25T10:00:00.002Z',
+          evidenceRecords: [],
+          evidenceContexts: {},
+          canary: null,
+          containment: null,
+          recovery: null,
+        },
+      });
+      const blocked = await advanceLanding({
+        host: blockedRun.host,
+        plan,
+        operationId: recovery.operationId,
+        now: '2026-08-25T10:00:00.000Z',
+      });
+      assert.equal(blocked.state, 'blocked', kind);
+      assert.equal(blocked.phaseReceipt.status, 'blocked');
+      assert.equal(blocked.landingReceipt.status, 'blocked');
+      assert.equal(blocked.landingReceipt.trafficStateHash, containment.trafficStateHash);
+      const [confirmed, , outcome] = blockedRun.state.events.slice(-3);
+      assert.deepEqual([confirmed.type, outcome.type], ['recovery.confirmed', 'phase.blocked']);
+      assert.equal(confirmed.residualStateHash, containment.residualStateHash);
+      assert.equal(outcome.residualStateHash, null);
+      const blockedReplay = await advanceLanding({
+        host: blockedRun.host,
+        plan,
+        operationId: recovery.operationId,
+        now: '2026-08-25T10:20:00.000Z',
+      });
+      assert.equal(blockedReplay.replayed, true);
+      assert.equal(blockedReplay.landingReceipt.receiptHash, blocked.landingReceipt.receiptHash);
+      assert.equal(blockedRun.state.dispatches, 2);
+
+      const interrupted = memoryHost(plan, {
+        state: structuredClone(contained.state),
+        dispatchThrows: true,
+      });
+      await assert.rejects(
+        advanceLanding({
+          host: interrupted.host,
+          plan,
+          operationId: recovery.operationId,
+          now: '2026-08-25T10:00:00.000Z',
+        }),
+        errorCode('E_LANDING_RECONCILIATION_PENDING'),
+      );
+      const resumed = memoryHost(plan, {
+        state: interrupted.state,
+        reconcileResult: {
+          disposition: 'unknown',
+          targetAfterHash: null,
+          completedAt: '2026-08-25T10:00:00.002Z',
+        },
+      });
+      const uncertain = await advanceLanding({
+        host: resumed.host,
+        plan,
+        operationId: recovery.operationId,
+        now: '2026-08-25T10:20:00.000Z',
+      });
+      assert.equal(uncertain.state, 'uncertain', kind);
+      assert.equal(uncertain.phaseReceipt.status, 'uncertain');
+      assert.equal(uncertain.landingReceipt.status, 'uncertain');
+      assert.equal(resumed.state.events.at(-1).type, 'phase.uncertain');
+      assert.equal(resumed.state.pendingIntent, null);
+      const uncertainReplay = await advanceLanding({
+        host: resumed.host,
+        plan,
+        operationId: recovery.operationId,
+        now: '2026-08-25T10:30:00.000Z',
+      });
+      assert.equal(uncertainReplay.replayed, true);
+      assert.equal(uncertainReplay.state, 'uncertain');
+      assert.equal(resumed.state.dispatches, 2, 'resume reconciles without redispatching');
+      assert.equal(resumed.state.reconciliations, 2);
+    }
+  },
+);

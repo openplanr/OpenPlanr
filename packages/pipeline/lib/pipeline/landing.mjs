@@ -1843,6 +1843,7 @@ function createOutcomeEvents({ resultToken, snapshot }) {
         : ['failed', 'blocked'].includes(result.status)
           ? 'blocked'
           : 'uncertain';
+    const recoveryOutcome = ['recovery.succeeded', 'recovery.failed'].includes(type);
     const recoveryIntent = advance.eventsToPersist.at(-1);
     append({
       type,
@@ -1850,8 +1851,8 @@ function createOutcomeEvents({ resultToken, snapshot }) {
       toState,
       actor: { kind: 'runtime', id: acknowledgement.dispatcherId },
       targetStateHash: targetAfterHash,
-      trafficStateHash: recoveryOperation ? recoveryIntent.trafficStateHash : null,
-      residualStateHash: recoveryOperation ? recoveryIntent.residualStateHash : null,
+      trafficStateHash: recoveryOutcome ? recoveryIntent.trafficStateHash : null,
+      residualStateHash: recoveryOutcome ? recoveryIntent.residualStateHash : null,
       timestamp: result.completedAt,
     });
     if (result.status === 'succeeded') {

@@ -317,6 +317,8 @@ export function memoryHost(plan, options = {}) {
       assert.deepEqual(request.expectedJournalHead, snapshot().journalHead);
       state.intentCommits += 1;
       state.events.push(...structuredClone(request.events));
+      // A recovery intent supersedes the stored recovery_required receipt.
+      state.landingReceipt = null;
       state.startedAt ??= request.events[0].timestamp;
       const acknowledgement = {
         commitId: 'commit-1',
