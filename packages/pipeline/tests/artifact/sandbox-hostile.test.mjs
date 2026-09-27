@@ -322,12 +322,15 @@ test('parent runtime sends nonce-free challenges and keeps the nonce closure-pri
     nonce,
   });
   assert.doesNotThrow(() => new Function(runtime));
-  assert.match(runtime, /type:'bridge\.challenge',artifactId:artifact\.id,requestId:id/);
-  assert.doesNotMatch(runtime, /type:'bridge\.challenge'[^}]*nonce/);
+  assert.match(
+    runtime,
+    /type:\s*(['"])bridge\.challenge\1,\s*artifactId:\s*artifact\.id,\s*requestId:\s*id\b/,
+  );
+  assert.doesNotMatch(runtime, /type:\s*(['"])bridge\.challenge\1[^}]*nonce/);
   assert.match(runtime, /pendingChallenge/);
-  assert.match(runtime, /exportPng:target/);
-  assert.match(runtime, /type!=='export\.result'/);
-  assert.match(runtime, /frame\.setAttribute\('csp'/);
+  assert.match(runtime, /exportPng:\s*\(?target\b/);
+  assert.match(runtime, /type\s*!==\s*(['"])export\.result\1/);
+  assert.match(runtime, /frame\.setAttribute\(\s*(['"])csp\1/);
   assert.doesNotMatch(runtime, /globalThis\.[A-Za-z0-9_]*nonce/i);
 });
 
@@ -603,7 +606,7 @@ test('real browser keeps dynamic artifacts useful while hostile capabilities fai
   const watchdogUrl = await page.evaluate(
     ({ csp, probeUrl }) => {
       const escaped = csp.replaceAll('&', '&amp;').replaceAll('"', '&quot;');
-      const html = `<!doctype html><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${escaped}"><img src="${probeUrl}?watchdog"><script>fetch(${JSON.stringify(probeUrl)}).catch(()=>{})<\/script>`;
+      const html = `<!doctype html><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${escaped}"><img src="${probeUrl}?watchdog"><script>fetch(${JSON.stringify(probeUrl)}).catch(()=>{})</script>`;
       const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
       globalThis.__planrWatchdogUrl = url;
       return url;

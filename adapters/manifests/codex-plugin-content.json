@@ -417,7 +417,7 @@
         },
         {
           "path": "skills/design/scripts/design.mjs",
-          "digest": "sha256:145b53e0692029f092b99c8160105a9b6c27a05143b22cbd95ed2d32aa592c93"
+          "digest": "sha256:f2e7abaf1d67ae695c2e34d79a1da08448ee99e1a5d555b7f876879c2cdb0ff4"
         },
         {
           "path": "skills/design/schemas/design-document.schema.json",
@@ -610,7 +610,7 @@
         },
         {
           "path": "skills/design-loop/scripts/design.mjs",
-          "digest": "sha256:145b53e0692029f092b99c8160105a9b6c27a05143b22cbd95ed2d32aa592c93"
+          "digest": "sha256:f2e7abaf1d67ae695c2e34d79a1da08448ee99e1a5d555b7f876879c2cdb0ff4"
         },
         {
           "path": "skills/design-loop/schemas/design-document.schema.json",
@@ -803,7 +803,7 @@
         },
         {
           "path": "skills/design-review/scripts/design.mjs",
-          "digest": "sha256:145b53e0692029f092b99c8160105a9b6c27a05143b22cbd95ed2d32aa592c93"
+          "digest": "sha256:f2e7abaf1d67ae695c2e34d79a1da08448ee99e1a5d555b7f876879c2cdb0ff4"
         },
         {
           "path": "skills/design-review/schemas/design-document.schema.json",
@@ -1130,7 +1130,7 @@
         },
         {
           "path": "skills/plan/scripts/design.mjs",
-          "digest": "sha256:145b53e0692029f092b99c8160105a9b6c27a05143b22cbd95ed2d32aa592c93"
+          "digest": "sha256:f2e7abaf1d67ae695c2e34d79a1da08448ee99e1a5d555b7f876879c2cdb0ff4"
         },
         {
           "path": "skills/plan/schemas/design-document.schema.json",
