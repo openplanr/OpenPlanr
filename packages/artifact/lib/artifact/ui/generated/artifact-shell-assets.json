@@ -23,8 +23,8 @@
   "assets": [
     {
       "path": "lib/artifact/ui/generated/artifact-theme.css",
-      "bytes": 2734,
-      "sha256": "4e53d421dcb37532eeb6373b1d86babb9afe7e43bd988c7c930e5b7fdb794514",
+      "bytes": 2847,
+      "sha256": "0e1a886e6efa4dec7e3d82784a65e70c607ca32d5edb946dd99991e28326cbc6",
       "budget": {
         "bytes": 4096,
         "gzipBytes": 1024
@@ -32,8 +32,8 @@
     },
     {
       "path": "lib/artifact/ui/generated/artifact-theme.json",
-      "bytes": 1446,
-      "sha256": "c3c79c71d5e594bd1c18647f85a1482b3fa805fc7cb76c8b86da6fc28fa45693",
+      "bytes": 1565,
+      "sha256": "6cf3548040d555d2f2618ba14345e73ca59c5b7f77d66119f49b0d62a55fa2ea",
       "budget": {
         "bytes": 2048,
         "gzipBytes": 1024
@@ -41,8 +41,8 @@
     },
     {
       "path": "templates/artifact-review-shell.html",
-      "bytes": 56871,
-      "sha256": "e3d4096921c3c00d1de2f711b0b6864e39aca02fda46d86282a4000b8382abb5",
+      "bytes": 56991,
+      "sha256": "1de2e40058d421bc35c5efc85f42e17909e540fde12c64cf6338df8377236af3",
       "budget": {
         "bytes": 68608,
         "gzipBytes": 13312

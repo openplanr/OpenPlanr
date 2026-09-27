@@ -624,7 +624,7 @@
       "lifecycle": "active",
       "authorityClass": "planning-write",
       "source": "skills/planr-design/openplanr.skill.json",
-      "sourceDigest": "sha256:f766320e0acf0d321f996ad6b3115a2e7d4d386b10d760de1ba056b2b3b1e735",
+      "sourceDigest": "sha256:36772da092a70a0e83f331723926d9dd58fa82d3b81d112179dfb3d7ab60bc1f",
       "triggerPolicy": {
         "include": [
           "Create an initial product design direction",
@@ -685,7 +685,7 @@
       "lifecycle": "active",
       "authorityClass": "planning-write",
       "source": "skills/planr-design-loop/openplanr.skill.json",
-      "sourceDigest": "sha256:3e1c445f7e16605852ca252e13f4be26152ca536c4c3a0411ad30e3f2568579b",
+      "sourceDigest": "sha256:56dc09a795ee2a2cfb98b4a2f023f8fe83d044a7e5a4778d906c78116ba78bd5",
       "triggerPolicy": {
         "include": [
           "Explore multiple design directions or variants",
@@ -746,7 +746,7 @@
       "lifecycle": "active",
       "authorityClass": "review-evidence",
       "source": "skills/planr-design-review/openplanr.skill.json",
-      "sourceDigest": "sha256:0344f576cc93658bcd7265fbac08908d08f4ef4d9aa05b6fdfed63a249e51632",
+      "sourceDigest": "sha256:2dbcbfe72ca6092a1eb3adc5782d314b04211f64ac64833aa2191265267d319f",
       "triggerPolicy": {
         "include": [
           "Review or critique an existing OpenPlanr design",
@@ -1179,7 +1179,7 @@
       "lifecycle": "active",
       "authorityClass": "planning-write",
       "source": "skills/planr-plan/openplanr.skill.json",
-      "sourceDigest": "sha256:5d747d2be313ac2e06534936043744f663939e8d72644c31936daa42f2bc500c",
+      "sourceDigest": "sha256:1f83ec18d867ab0e02d687a1b83398c2a527585b9f369fee1c3dc86f16731f05",
       "triggerPolicy": {
         "include": [
           "Decompose a specification into user stories and implementation tasks",
@@ -1664,5 +1664,5 @@
     }
   ],
   "compatibilityAliases": [],
-  "documentDigest": "sha256:63f0c16bcbca6cdf811e606835e91c2474f37122903e4e84d43a357159d58786"
+  "documentDigest": "sha256:c3d21e258e9630322375aa3ed8495c758a72bcfce366cfe8b51efd6b6d8b82b8"
 }

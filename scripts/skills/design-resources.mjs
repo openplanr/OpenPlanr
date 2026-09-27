@@ -64,9 +64,10 @@ export async function buildDesignSkillResources({
   ]);
   const assetPaths = [
     resolve(root, 'packages/protocol/schemas/v1.0.0/design-manifest.schema.json'),
-    ...['artifact-envelope', 'artifact-review', 'artifact-paste', 'artifact-theme'].map((name) =>
+    ...['artifact-envelope', 'artifact-review', 'artifact-paste'].map((name) =>
       resolve(root, `packages/protocol/schemas/v1.1.0/${name}.schema.json`),
     ),
+    resolve(root, 'packages/protocol/schemas/v1.14.0/artifact-theme.schema.json'),
     resolve(root, 'packages/protocol/schemas/v1.9.0/design-document.schema.json'),
     ...[
       'design-review-workspace',
@@ -77,7 +78,7 @@ export async function buildDesignSkillResources({
     ].map((name) => resolve(root, `packages/protocol/schemas/v1.9.0/${name}.schema.json`)),
     ...files(resolve(root, 'packages/protocol/schemas/v1.10.0')),
     ...files(resolve(root, 'packages/protocol/schemas/v1.11.0')),
-    resolve(root, 'packages/protocol/registry/artifact-theme.json'),
+    resolve(root, 'packages/protocol/registries/artifact-theme.json'),
     resolve(root, 'packages/protocol/package.json'),
     stageRuntimePath,
     studioRuntimePath,

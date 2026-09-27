@@ -48,8 +48,8 @@ body.planr-diagram-owner-page #diagram-owner-editor {
   --de-text: var(--planr-color-text, #15191d);
   --de-muted: var(--planr-color-text-muted, #66717a);
   --de-faint: #89939b;
-  --de-primary: var(--planr-color-primary, #087f73);
-  --de-primary-hover: #066c63;
+  --de-primary: var(--planr-color-primary, #237a72);
+  --de-primary-hover: #1b5f59;
   --de-primary-hover-text: var(--de-primary-text);
   --de-primary-soft: #e2f4f1;
   --de-primary-text: var(--planr-color-on-primary, #fff);
@@ -93,7 +93,7 @@ body.planr-diagram-owner-page #diagram-owner-editor {
     --de-primary-hover: color-mix(in srgb, var(--de-primary) 45%, var(--de-bg));
     --de-primary-hover-text: #f2f5f7;
     --de-primary-soft: #123630;
-    --de-primary-text: var(--planr-color-on-primary, #07100f);
+    --de-primary-text: var(--planr-color-on-primary, #07110f);
     --de-danger: var(--planr-color-danger, #fb7185);
     --de-danger-soft: #35151d;
     --de-warning: #f5c451;
@@ -120,7 +120,7 @@ body.planr-diagram-owner-page #diagram-owner-editor {
   --de-primary-hover: color-mix(in srgb, var(--de-primary) 45%, var(--de-bg));
   --de-primary-hover-text: #f2f5f7;
   --de-primary-soft: #123630;
-  --de-primary-text: var(--planr-color-on-primary, #07100f);
+  --de-primary-text: var(--planr-color-on-primary, #07110f);
   --de-danger: var(--planr-color-danger, #fb7185);
   --de-danger-soft: #35151d;
   --de-warning: #f5c451;
@@ -1985,8 +1985,8 @@ body.planr-diagram-owner-page #diagram-owner-editor {
   --de-rule-strong: #c4ced4;
   --de-text: var(--planr-color-text, #15191d);
   --de-muted: var(--planr-color-text-muted, #66717a);
-  --de-primary: var(--planr-color-primary, #087f73);
-  --de-primary-hover: #066c63;
+  --de-primary: var(--planr-color-primary, #237a72);
+  --de-primary-hover: #1b5f59;
   --de-primary-hover-text: var(--de-primary-text);
   --de-primary-soft: #e2f4f1;
   --de-primary-text: var(--planr-color-on-primary, #fff);
@@ -2033,7 +2033,7 @@ body.planr-diagram-owner-page #diagram-owner-editor {
     --de-primary-hover: color-mix(in srgb, var(--de-primary) 45%, var(--de-panel));
     --de-primary-hover-text: #f2f5f7;
     --de-primary-soft: #123630;
-    --de-primary-text: var(--planr-color-on-primary, #07100f);
+    --de-primary-text: var(--planr-color-on-primary, #07110f);
     --de-danger: var(--planr-color-danger, #fb7185);
     --de-shadow-sm: 0 1px 2px rgb(0 0 0 / 24%);
   }
@@ -2212,7 +2212,11 @@ body.planr-diagram-owner-page #diagram-owner-editor {
   background: transparent;
 }
 
-:is(.planr-diagram-editor, .planr-diagram-source-panel) .de-source-tabs [aria-selected="true"] {
+/* The generic hover fill under accent text is 4.34:1, so a selected tab keeps its fill on hover. */
+:is(.planr-diagram-editor, .planr-diagram-source-panel) .de-source-tabs [aria-selected="true"],
+:is(.planr-diagram-editor, .planr-diagram-source-panel)
+  .de-source-tabs
+  [aria-selected="true"]:hover:not(:disabled) {
   border-color: var(--de-primary);
   color: var(--de-primary);
   background: var(--de-primary-soft);

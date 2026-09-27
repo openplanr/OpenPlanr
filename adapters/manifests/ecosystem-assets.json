@@ -6,7 +6,7 @@
   "inputs": [
     {
       "path": "adapters/manifests/generated-assets.json",
-      "digest": "sha256:3525da12b24fcc3c848dbd4c37545d5d4086c16cd0b4dcf41ae700c42a16344f"
+      "digest": "sha256:e445699af7fa562a63a6665191a4d3552d3c45a2c19a5b21db4c2caae487cfea"
     },
     {
       "path": "apps/dashboard/package.json",
@@ -70,7 +70,7 @@
     },
     {
       "path": "packages/protocol/registries/skills.json",
-      "digest": "sha256:83d39e2da7584482f1bf0da18464049425f0c6887f7cc1cdaab7b56a4e556c28"
+      "digest": "sha256:8065c78b208fbf28e2d313ff33b2aee374b5084ab106358d3b8d3681f36afd3a"
     },
     {
       "path": "packages/protocol/registries/task-kinds.json",
@@ -102,11 +102,11 @@
     },
     {
       "path": "scripts/marketplace/generate-ecosystem.mjs",
-      "digest": "sha256:23d4711fcab1c05e79a7f9e2cce9747ab503bd0957dfcde3a83217df6043a5a8"
+      "digest": "sha256:67a6067ce0c0f1f52428f1fd3b6375375a22a5201ae3a405430432fa7303468c"
     },
     {
       "path": "scripts/marketplace/openplanr-ecosystem.schema.json",
-      "digest": "sha256:a8541e38bacf5d3cc5b4ade9eceb060f350333aba17dc0a95ec98c0e4344d472"
+      "digest": "sha256:7a8f2bdf0dcd68084f76a3887d6c946f9d12b9024ff7763fc6efc714271a0269"
     }
   ],
   "outputs": [
@@ -120,7 +120,7 @@
     },
     {
       "path": "adapters/manifests/codex-plugin-content.json",
-      "digest": "sha256:a429d413395641c2c5d634ae4460da22548f6893074cb24f6e2d30f9223772cd"
+      "digest": "sha256:80b3c86fbbe4c2e6104ffb526d4869adc6c48b69aeedf04d93267a5ab9359b46"
     },
     {
       "path": "docs/generated/adapters.md",
@@ -136,7 +136,7 @@
     },
     {
       "path": "ecosystem.json",
-      "digest": "sha256:c39902b10e18fdeca26ea4f0380ac80ea701cb8eca902d37787f7e8511b7eb3a"
+      "digest": "sha256:3f46054d84969c3666ada4fa687f7f6668cbdfde1177b662b8d6d5f6d21b9e9d"
     },
     {
       "path": "packages/pipeline/.claude-plugin/plugin.json",

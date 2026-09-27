@@ -363,13 +363,14 @@
             "byVersion": {
               "type": "object",
               "additionalProperties": false,
-              "required": ["v1.5.0", "v1.6.0", "v1.7.0", "v1.8.0", "v1.13.0"],
+              "required": ["v1.5.0", "v1.6.0", "v1.7.0", "v1.8.0", "v1.13.0", "v1.14.0"],
               "properties": {
                 "v1.5.0": { "$ref": "#/$defs/count" },
                 "v1.6.0": { "$ref": "#/$defs/count" },
                 "v1.7.0": { "$ref": "#/$defs/count" },
                 "v1.8.0": { "$ref": "#/$defs/count" },
-                "v1.13.0": { "$ref": "#/$defs/count" }
+                "v1.13.0": { "$ref": "#/$defs/count" },
+                "v1.14.0": { "$ref": "#/$defs/count" }
               }
             }
           }
@@ -387,6 +388,7 @@
         "protocol16Catalogs",
         "protocol17Catalogs",
         "protocol113Catalogs",
+        "protocol114Catalogs",
         "capturedEvaluationContracts"
       ],
       "properties": {
@@ -396,6 +398,7 @@
         "protocol16Catalogs": { "$ref": "#/$defs/countedDirectory" },
         "protocol17Catalogs": { "$ref": "#/$defs/countedDirectory" },
         "protocol113Catalogs": { "$ref": "#/$defs/countedDirectory" },
+        "protocol114Catalogs": { "$ref": "#/$defs/countedDirectory" },
         "capturedEvaluationContracts": {
           "type": "object",
           "additionalProperties": false,

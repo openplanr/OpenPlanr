@@ -21,6 +21,7 @@
   --planr-color-text-muted: #9999b8;
   --planr-color-primary: #5eead4;
   --planr-color-primary-strong: #2dd4bf;
+  --planr-color-on-primary: #07110f;
   --planr-color-warning: #f59e0b;
   --planr-color-danger: #f87171;
   --planr-color-on-danger: #08080c;
@@ -40,8 +41,9 @@
   --planr-color-rule: #dfe3ea;
   --planr-color-text: #171722;
   --planr-color-text-muted: #65657d;
-  --planr-color-primary: #087f73;
-  --planr-color-primary-strong: #06665d;
+  --planr-color-primary: #237a72;
+  --planr-color-primary-strong: #1b5f59;
+  --planr-color-on-primary: #ffffff;
   --planr-color-warning: #a85f00;
   --planr-color-danger: #c53f4f;
   --planr-color-on-danger: #ffffff;
@@ -63,8 +65,9 @@
     --planr-color-rule: #dfe3ea;
     --planr-color-text: #171722;
     --planr-color-text-muted: #65657d;
-    --planr-color-primary: #087f73;
-    --planr-color-primary-strong: #06665d;
+    --planr-color-primary: #237a72;
+    --planr-color-primary-strong: #1b5f59;
+    --planr-color-on-primary: #ffffff;
     --planr-color-warning: #a85f00;
     --planr-color-danger: #c53f4f;
     --planr-color-on-danger: #ffffff;

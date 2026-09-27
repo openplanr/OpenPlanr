@@ -95,6 +95,11 @@ These schemas use `schemaVersion: "1.0.0"` for their own payload format while
 living in the additive Protocol v1.1 capability namespace. They are not SPEC,
 story, or task frontmatter and do not alter existing Protocol v1.0 artifacts.
 
+Review-shell tokens are generated from the Protocol 1.14 successor theme,
+[`../../schemas/v1.14.0/artifact-theme.schema.json`](../../schemas/v1.14.0/artifact-theme.schema.json)
+and `registry/v1.14.0/artifact-theme.json`, which add an `onPrimary` text colour
+to each palette.
+
 Operate Runtime contracts live under
 [`../../schemas/v2.0.0/`](../../schemas/v2.0.0/). They are the current
 development foundation. A v2 runtime accepts only its declared v2 contract

@@ -32,7 +32,7 @@ test('the installed package doctor accepts a package release bump without source
     'lib/ecosystem',
     'lib/pipeline/index.mjs',
     'lib/protocol/jcs.mjs',
-    'registry/artifact-theme.json',
+    'registry/v1.14.0/artifact-theme.json',
     'schemas',
     'scripts/doctor.mjs',
     'templates/artifact-review-shell.html',

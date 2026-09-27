@@ -446,6 +446,7 @@ async function buildOutputs() {
       'v1.7.0',
       'v1.8.0',
       'v1.13.0',
+      'v1.14.0',
       'v2.0.0',
     ].map((version) => [
       version,
@@ -497,12 +498,19 @@ async function buildOutputs() {
     'E_ECOSYSTEM_SCHEMA_SUCCESSORS_113',
     'Protocol 1.13 authoring schema count drifted.',
   );
+  assertEqual(
+    schemaCounts['v1.14.0'],
+    1,
+    'E_ECOSYSTEM_SCHEMA_SUCCESSORS_114',
+    'Protocol 1.14 artifact theme schema count drifted.',
+  );
   const additiveSchemaCount =
     schemaCounts['v1.5.0'] +
     schemaCounts['v1.6.0'] +
     schemaCounts['v1.7.0'] +
     schemaCounts['v1.8.0'] +
-    schemaCounts['v1.13.0'];
+    schemaCounts['v1.13.0'] +
+    schemaCounts['v1.14.0'];
   const legacyRegistryPaths = listFiles('packages/protocol/registry').filter((path) =>
     path.endsWith('.json'),
   );
@@ -541,11 +549,15 @@ async function buildOutputs() {
   const protocol113CatalogPaths = protocolCatalogPaths.filter((path) =>
     path.endsWith('/diagram-authoring-capabilities.json'),
   );
+  const protocol114CatalogPaths = protocolCatalogPaths.filter((path) =>
+    path.endsWith('/artifact-theme.json'),
+  );
   const protocol15CatalogPaths = protocolCatalogPaths.filter(
     (path) =>
       !v16CatalogFileNames.has(path.split('/').at(-1)) &&
       !v17CatalogFileNames.has(path.split('/').at(-1)) &&
-      !protocol113CatalogPaths.includes(path),
+      !protocol113CatalogPaths.includes(path) &&
+      !protocol114CatalogPaths.includes(path),
   );
   assertEqual(
     protocol15CatalogPaths.length,
@@ -578,6 +590,18 @@ async function buildOutputs() {
     'E_ECOSYSTEM_PROTOCOL113_CATALOG',
     'Authoring catalog version drifted.',
   );
+  assertEqual(
+    protocol114CatalogPaths.length,
+    1,
+    'E_ECOSYSTEM_PROTOCOL114_CATALOG_COUNT',
+    'Protocol 1.14 artifact theme catalog count drifted.',
+  );
+  assertEqual(
+    readJson(protocol114CatalogPaths[0]).protocolVersion,
+    '1.14.0',
+    'E_ECOSYSTEM_PROTOCOL114_CATALOG',
+    'Artifact theme catalog version drifted.',
+  );
 
   const artifactShellPath =
     'packages/artifact/lib/artifact/ui/generated/artifact-shell-assets.json';
@@ -603,7 +627,7 @@ async function buildOutputs() {
     },
     protocol: {
       current: '1.8.0',
-      additiveVersions: ['1.5.0', '1.6.0', '1.7.0', '1.8.0', '1.13.0'],
+      additiveVersions: ['1.5.0', '1.6.0', '1.7.0', '1.8.0', '1.13.0', '1.14.0'],
       supportedReaders: [
         '1.0.x',
         '1.1.x',
@@ -615,6 +639,7 @@ async function buildOutputs() {
         '1.7.x',
         '1.8.x',
         '1.13.x',
+        '1.14.x',
         '2.0.x',
       ],
     },
@@ -701,6 +726,7 @@ async function buildOutputs() {
           'v1.7.0': schemaCounts['v1.7.0'],
           'v1.8.0': schemaCounts['v1.8.0'],
           'v1.13.0': schemaCounts['v1.13.0'],
+          'v1.14.0': schemaCounts['v1.14.0'],
         },
       },
       total: schemaPaths.length,
@@ -712,7 +738,8 @@ async function buildOutputs() {
           protocol15CatalogPaths.length +
           protocol16CatalogPaths.length +
           protocol17CatalogPaths.length +
-          protocol113CatalogPaths.length,
+          protocol113CatalogPaths.length +
+          protocol114CatalogPaths.length,
         path: 'packages/protocol/registries',
       },
       protocol15Catalogs: {
@@ -729,6 +756,10 @@ async function buildOutputs() {
       },
       protocol113Catalogs: {
         count: protocol113CatalogPaths.length,
+        path: 'packages/protocol/registries',
+      },
+      protocol114Catalogs: {
+        count: protocol114CatalogPaths.length,
         path: 'packages/protocol/registries',
       },
       capturedEvaluationContracts: {

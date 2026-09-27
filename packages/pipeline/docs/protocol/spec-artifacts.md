@@ -288,7 +288,7 @@ The canonical schemas are:
 | [`artifact-envelope.schema.json`](../../schemas/v1.1.0/artifact-envelope.schema.json) | Ordered, self-contained HTML artifacts, viewport/color-scheme state, viewer mode, and optional review. |
 | [`artifact-review.schema.json`](../../schemas/v1.1.0/artifact-review.schema.json) | Immutable review identity, verdict, overall feedback, normalized pins, stable anchors, authors, threads, and timestamps. |
 | [`artifact-paste.schema.json`](../../schemas/v1.1.0/artifact-paste.schema.json) | Strict request/response/storage shapes for encrypted, expiring short links. |
-| [`artifact-theme.schema.json`](../../schemas/v1.1.0/artifact-theme.schema.json) | Canonical tokens used to generate local and hosted review-shell assets. |
+| [`artifact-theme.schema.json`](../../schemas/v1.14.0/artifact-theme.schema.json) | Canonical tokens used to generate local and hosted review-shell assets. The Protocol 1.14 schema succeeds the v1.1 one and adds an `onPrimary` text colour. |
 
 `reviewOf` is a SHA-256 digest of the canonical envelope identity: its
 `schemaVersion`, ordered `artifacts`, and `viewer`, excluding `review`. Each
