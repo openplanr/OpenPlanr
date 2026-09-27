@@ -84,6 +84,12 @@ const PROTOCOL_TARGETS = Object.freeze({
   'operating-planning-contracts': 'lib/protocol/operating-planning-contracts.mjs',
 });
 
+// Protocol keeps canonical registries flat in registries/; scripts/protocol/project-protocol.mjs
+// files each one under its protocol version in the pipeline.
+const PROTOCOL_REGISTRY_TARGETS = Object.freeze({
+  'artifact-theme.json': 'registry/v1.14.0/artifact-theme.json',
+});
+
 function usage(message = '') {
   if (message) process.stderr.write(`${message}\n\n`);
   process.stderr.write(
@@ -163,7 +169,10 @@ function projectedSpecifier(specifier, targetRelativeFile) {
     return `planr-pipeline/registry/${specifier.slice('@openplanr/protocol/registry/'.length)}`;
   }
   if (specifier.startsWith('@openplanr/protocol/registries/')) {
-    return `planr-pipeline/registries/${specifier.slice('@openplanr/protocol/registries/'.length)}`;
+    const file = specifier.slice('@openplanr/protocol/registries/'.length);
+    if (!Object.hasOwn(PROTOCOL_REGISTRY_TARGETS, file))
+      throw new Error(`No pipeline projection for protocol registry ${specifier}`);
+    return `planr-pipeline/${PROTOCOL_REGISTRY_TARGETS[file]}`;
   }
   if (specifier.startsWith('@openplanr/protocol/')) {
     const subpath = specifier.slice('@openplanr/protocol/'.length);

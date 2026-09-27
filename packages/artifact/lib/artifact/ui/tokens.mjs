@@ -6,10 +6,10 @@ import { contrastRatio } from '../internal/contrast.mjs';
 
 const require = createRequire(import.meta.url);
 export const ARTIFACT_THEME_REGISTRY_PATH = require.resolve(
-  '@openplanr/protocol/registry/artifact-theme.json',
+  '@openplanr/protocol/registries/artifact-theme.json',
 );
 export const ARTIFACT_THEME_SCHEMA_PATH = require.resolve(
-  '@openplanr/protocol/schemas/v1.1.0/artifact-theme.schema.json',
+  '@openplanr/protocol/schemas/v1.14.0/artifact-theme.schema.json',
 );
 
 export const ARTIFACT_THEME_ERROR_CODES = Object.freeze({
@@ -54,6 +54,7 @@ export const COLOR_KEYS = Object.freeze([
   'textMuted',
   'primary',
   'primaryStrong',
+  'onPrimary',
   'warning',
   'danger',
   'onDanger',
@@ -74,6 +75,8 @@ const AA_PAIRS = Object.freeze([
   ['textMuted', 'panel'],
   ['primary', 'background'],
   ['primaryStrong', 'background'],
+  ['onPrimary', 'primary'],
+  ['onPrimary', 'primaryStrong'],
   ['warning', 'background'],
   ['danger', 'background'],
   ['onDanger', 'danger'],
@@ -202,7 +205,9 @@ function pick(source, keys) {
 export function normalizeArtifactTheme(theme) {
   validateArtifactTheme(theme);
   return {
+    kind: theme.kind,
     schemaVersion: theme.schemaVersion,
+    protocolVersion: theme.protocolVersion,
     name: theme.name,
     typography: pick(theme.typography, TYPOGRAPHY_KEYS),
     layout: pick(theme.layout, LAYOUT_KEYS),

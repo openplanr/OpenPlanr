@@ -28,7 +28,8 @@
       "1.6.0",
       "1.7.0",
       "1.8.0",
-      "1.13.0"
+      "1.13.0",
+      "1.14.0"
     ],
     "supportedReaders": [
       "1.0.x",
@@ -41,6 +42,7 @@
       "1.7.x",
       "1.8.x",
       "1.13.x",
+      "1.14.x",
       "2.0.x"
     ]
   },
@@ -240,7 +242,7 @@
     },
     "skills": {
       "path": "packages/protocol/registries/skills.json",
-      "digest": "sha256:83d39e2da7584482f1bf0da18464049425f0c6887f7cc1cdaab7b56a4e556c28",
+      "digest": "sha256:8065c78b208fbf28e2d313ff33b2aee374b5084ab106358d3b8d3681f36afd3a",
       "count": 27,
       "ids": [
         "planr-artifact",
@@ -337,7 +339,7 @@
     ],
     "generatedAssets": {
       "path": "adapters/manifests/generated-assets.json",
-      "digest": "sha256:3525da12b24fcc3c848dbd4c37545d5d4086c16cd0b4dcf41ae700c42a16344f",
+      "digest": "sha256:e445699af7fa562a63a6665191a4d3552d3c45a2c19a5b21db4c2caae487cfea",
       "count": 1759
     }
   },
@@ -358,16 +360,17 @@
       "count": 3
     },
     "additive": {
-      "count": 61,
+      "count": 62,
       "byVersion": {
         "v1.5.0": 13,
         "v1.6.0": 19,
         "v1.7.0": 16,
         "v1.8.0": 3,
-        "v1.13.0": 10
+        "v1.13.0": 10,
+        "v1.14.0": 1
       }
     },
-    "total": 262
+    "total": 263
   },
   "registries": {
     "preserved": {
@@ -375,7 +378,7 @@
       "path": "packages/protocol/registry"
     },
     "canonicalCatalogs": {
-      "count": 13,
+      "count": 14,
       "path": "packages/protocol/registries"
     },
     "protocol15Catalogs": {
@@ -391,6 +394,10 @@
       "path": "packages/protocol/registries"
     },
     "protocol113Catalogs": {
+      "count": 1,
+      "path": "packages/protocol/registries"
+    },
+    "protocol114Catalogs": {
       "count": 1,
       "path": "packages/protocol/registries"
     },
@@ -413,7 +420,7 @@
   "generatedSurfaces": {
     "artifactShell": {
       "path": "packages/artifact/lib/artifact/ui/generated/artifact-shell-assets.json",
-      "digest": "sha256:ce3d81dd9164a044e208dc00b716d1899bf401819a3ecd12de27dc698af08632",
+      "digest": "sha256:03804c75f738c448ead5347efe1f309b32bbc048e7bebf9c22be5050446b2462",
       "shellVersion": "1.2.1",
       "assetCount": 7
     },

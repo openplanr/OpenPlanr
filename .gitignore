@@ -152,6 +152,7 @@ CLAUDE.md
 /packages/pipeline/lib/protocol/diagram-authoring-contracts.d.mts
 /packages/pipeline/lib/protocol/generated/legacy-diagram-schema.mjs
 /packages/pipeline/registry/v1.13.0/diagram-authoring-capabilities.json
+/packages/pipeline/registry/v1.14.0/artifact-theme.json
 
 # esbuild bundles written by packages/artifact/scripts/generate-artifact-shell.mjs; the
 # reviewed contract is lib/artifact/ui/generated/artifact-shell-assets.json.

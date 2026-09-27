@@ -47,6 +47,16 @@ new contracts. Validation does not apply edits or grant hosted access.
 See the [authoring contract guide](../../docs/diagrams/authoring-contracts.md) for
 content boundaries, digest coverage and legacy compatibility.
 
+## Artifact theme
+
+Protocol 1.14 adds `registries/artifact-theme.json` and its schema,
+`schemas/v1.14.0/artifact-theme.schema.json`. It succeeds the byte-preserved
+`registry/artifact-theme.json`: it names itself with `kind`, `schemaVersion: "1.1.0"`
+and `protocolVersion`, uses the brand teal on light (`#237a72`, strong `#1b5f59`),
+and adds an `onPrimary` text colour to both palettes. The artifact package
+generates its review theme CSS and JSON from it. The preserved registry keeps its
+original values.
+
 ## Design document contract
 
 The additive `schemas/v1.9.0/design-document.schema.json` defines stable design,

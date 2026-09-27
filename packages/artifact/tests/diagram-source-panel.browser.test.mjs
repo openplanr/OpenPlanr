@@ -208,7 +208,7 @@ test('the exported source panel mounts in a minimal company host through the dec
       background: 'rgb(250, 251, 252)',
       color: 'rgb(21, 25, 29)',
       inputBackground: 'rgb(255, 255, 255)',
-      primaryBackground: 'rgb(8, 127, 115)',
+      primaryBackground: 'rgb(35, 122, 114)',
       panelDisplay: 'grid',
       bodyMargin: '23px',
     },

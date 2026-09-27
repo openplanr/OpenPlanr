@@ -21,6 +21,10 @@ import {
   REVIEW_EXPERIENCE_SCHEMAS,
 } from '../src/review-experience-contracts.mjs';
 import { DESIGN_WORKSPACE_SCHEMAS } from '../src/workspace-contracts.mjs';
+import {
+  buildArtifactThemeRegistries,
+  buildArtifactThemeSchemas,
+} from './artifact-theme-definitions.mjs';
 import { projectDashboardContract } from './dashboard-contract-projection.mjs';
 import {
   buildDiagramAuthoringRegistries,
@@ -81,6 +85,11 @@ for (const [name, value] of Object.entries(ENTERPRISE_SCHEMAS))
 for (const [name, value] of buildDiagramAuthoringSchemas())
   expected.set(`schemas/v1.13.0/${name}`, json(value));
 for (const [name, value] of buildDiagramAuthoringRegistries())
+  expected.set(`registries/${name}`, json(value));
+
+for (const [name, value] of buildArtifactThemeSchemas())
+  expected.set(`schemas/v1.14.0/${name}`, json(value));
+for (const [name, value] of buildArtifactThemeRegistries())
   expected.set(`registries/${name}`, json(value));
 
 const registries = Object.fromEntries(buildRegistries());
@@ -246,7 +255,7 @@ function walk(root, prefix = '') {
 }
 
 const originalSchemaFiles = walk(join(packageRoot, 'schemas')).filter(
-  ({ key }) => !/^v1\.(?:[5-9]|10|11|12|13)\.0\//u.test(key) && key.endsWith('.json'),
+  ({ key }) => !/^v1\.(?:[5-9]|10|11|12|13|14)\.0\//u.test(key) && key.endsWith('.json'),
 );
 const originalRegistryFiles = walk(join(packageRoot, 'registry')).filter(({ key }) =>
   key.endsWith('.json'),

@@ -1003,7 +1003,7 @@
     {
       "source": "packages/artifact/lib/artifact/ui/diagram-editor.css",
       "target": "lib/artifact/ui/diagram-editor.css",
-      "sha256": "d69b770354923280debade56f41ec2388580270872f8d944a56843cdac3d14d1",
+      "sha256": "6dae6b0229927288374f06e5dcac0dbd79dfce5e71e8037c1d7632d573734411",
       "mode": "644"
     },
     {
@@ -1063,19 +1063,19 @@
     {
       "source": "packages/artifact/lib/artifact/ui/generated/artifact-shell-assets.json",
       "target": "lib/artifact/ui/generated/artifact-shell-assets.json",
-      "sha256": "ce3d81dd9164a044e208dc00b716d1899bf401819a3ecd12de27dc698af08632",
+      "sha256": "03804c75f738c448ead5347efe1f309b32bbc048e7bebf9c22be5050446b2462",
       "mode": "644"
     },
     {
       "source": "packages/artifact/lib/artifact/ui/generated/artifact-theme.css",
       "target": "lib/artifact/ui/generated/artifact-theme.css",
-      "sha256": "4e53d421dcb37532eeb6373b1d86babb9afe7e43bd988c7c930e5b7fdb794514",
+      "sha256": "0e1a886e6efa4dec7e3d82784a65e70c607ca32d5edb946dd99991e28326cbc6",
       "mode": "644"
     },
     {
       "source": "packages/artifact/lib/artifact/ui/generated/artifact-theme.json",
       "target": "lib/artifact/ui/generated/artifact-theme.json",
-      "sha256": "c3c79c71d5e594bd1c18647f85a1482b3fa805fc7cb76c8b86da6fc28fa45693",
+      "sha256": "6cf3548040d555d2f2618ba14345e73ca59c5b7f77d66119f49b0d62a55fa2ea",
       "mode": "644"
     },
     {
@@ -1099,7 +1099,7 @@
     {
       "source": "packages/artifact/lib/artifact/ui/shell.mjs",
       "target": "lib/artifact/ui/shell.mjs",
-      "sha256": "a22c97e99b71ccd04ed7c645a5ee8071c57f29263c502a86c1ff2ebc59e670d6",
+      "sha256": "a52d2542a49391314aba97df6bde0c2e8fe61867f9f801654fc9e28e045bd447",
       "mode": "644"
     },
     {
@@ -1123,7 +1123,7 @@
     {
       "source": "packages/artifact/lib/artifact/ui/tokens.mjs",
       "target": "lib/artifact/ui/tokens.mjs",
-      "sha256": "b0ea19a26dcf7930ff2f2879282430b828d4146d19eca5c63d3e9b8f8b7dc44c",
+      "sha256": "a2acb056549b1b0d2bb08094139b9ea17b902933f077871f811f2cbef4db600d",
       "mode": "644"
     },
     {
@@ -1375,13 +1375,13 @@
     {
       "source": "packages/artifact/templates/artifact-review-preview.html",
       "target": "templates/artifact-review-preview.html",
-      "sha256": "5a322d8237f5806f3fe1dcdedb4a373c00c289604916527bece1f6240c4b6be4",
+      "sha256": "a51bf7352e6c6e77acbc440e17b3b04a852826cfb1b95fc537371fee503754ee",
       "mode": "644"
     },
     {
       "source": "packages/artifact/templates/artifact-review-shell.html",
       "target": "templates/artifact-review-shell.html",
-      "sha256": "e3d4096921c3c00d1de2f711b0b6864e39aca02fda46d86282a4000b8382abb5",
+      "sha256": "1de2e40058d421bc35c5efc85f42e17909e540fde12c64cf6338df8377236af3",
       "mode": "644"
     },
     {

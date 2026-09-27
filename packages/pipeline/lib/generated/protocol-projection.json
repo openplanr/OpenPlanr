@@ -322,6 +322,12 @@
       "mode": "644"
     },
     {
+      "source": "packages/protocol/registries/artifact-theme.json",
+      "target": "registry/v1.14.0/artifact-theme.json",
+      "sha256": "6cf3548040d555d2f2618ba14345e73ca59c5b7f77d66119f49b0d62a55fa2ea",
+      "mode": "644"
+    },
+    {
       "source": "packages/protocol/registries/commands.json",
       "target": "registry/v1.5.0/commands.json",
       "sha256": "3ce6813dac4b0624e7d1f24f7088e6e2da77026412b1f5cf6c2e9377342af321",
@@ -354,7 +360,7 @@
     {
       "source": "packages/protocol/registries/skills.json",
       "target": "registry/v1.5.0/skills.json",
-      "sha256": "83d39e2da7584482f1bf0da18464049425f0c6887f7cc1cdaab7b56a4e556c28",
+      "sha256": "8065c78b208fbf28e2d313ff33b2aee374b5084ab106358d3b8d3681f36afd3a",
       "mode": "644"
     },
     {
@@ -817,6 +823,12 @@
       "source": "packages/protocol/schemas/v1.13.0/diagram-source-map.schema.json",
       "target": "schemas/v1.13.0/diagram-source-map.schema.json",
       "sha256": "ee134485fd02f5c42c79cf1940106adcefdcdacfd4e00ff6e11f169668ffef63",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.14.0/artifact-theme.schema.json",
+      "target": "schemas/v1.14.0/artifact-theme.schema.json",
+      "sha256": "1742be23b045154ebb260c87edbc28c101f7c2e3ef498ddde86ee0b4ffef7b0a",
       "mode": "644"
     },
     {

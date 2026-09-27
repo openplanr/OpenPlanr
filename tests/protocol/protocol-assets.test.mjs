@@ -54,6 +54,7 @@ test('all 180 schemas and 12 registries preserve exact source bytes and modes', 
     'v1.11.0',
     'v1.12.0',
     'v1.13.0',
+    'v1.14.0',
   ]);
   const schemas = walk(join(protocol, 'schemas')).filter(
     ({ key }) => !additiveVersions.has(key.split('/')[0]) && key.endsWith('.json'),

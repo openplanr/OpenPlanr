@@ -802,7 +802,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .planr-share-result button[data-planr-copy-state="copied"], .planr-toolbar-action[data-planr-copy-state="copied"] {
   border-color: var(--planr-color-primary);
   background: color-mix(in srgb, var(--planr-color-primary) 12%, transparent);
-  color: var(--planr-color-primary);
+  color: var(--planr-color-primary-strong);
   animation: planr-copy-confirm var(--planr-motion-base);
 }
 .planr-share-result button[data-planr-copy-state="copied"]::before, .planr-toolbar-action[data-planr-copy-state="copied"]::before { background: var(--planr-color-primary); color: var(--planr-color-background); content: '✓'; }

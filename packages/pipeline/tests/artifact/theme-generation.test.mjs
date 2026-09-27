@@ -24,8 +24,8 @@ import {
 } from '../../scripts/generate-artifact-shell.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
-const registryPath = join(root, 'registry', 'artifact-theme.json');
-const schemaPath = join(root, 'schemas', 'v1.1.0', 'artifact-theme.schema.json');
+const registryPath = join(root, 'registry', 'v1.14.0', 'artifact-theme.json');
+const schemaPath = join(root, 'schemas', 'v1.14.0', 'artifact-theme.schema.json');
 const canonical = JSON.parse(readFileSync(registryPath, 'utf8'));
 const schema = JSON.parse(readFileSync(schemaPath, 'utf8'));
 const temporaryRoots = [];
@@ -45,7 +45,7 @@ afterEach(() => {
   while (temporaryRoots.length > 0) rmSync(temporaryRoots.pop(), { recursive: true, force: true });
 });
 
-test('canonical registry satisfies the strict Protocol v1.1 theme schema', () => {
+test('canonical registry satisfies the strict Protocol 1.14 theme schema', () => {
   assert.deepEqual(validateJson(canonical, schema), []);
   assert.deepEqual(loadArtifactTheme(), normalizeArtifactTheme(canonical));
 });
