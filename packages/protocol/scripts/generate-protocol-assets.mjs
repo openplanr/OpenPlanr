@@ -21,6 +21,7 @@ import {
   REVIEW_EXPERIENCE_SCHEMAS,
 } from '../src/review-experience-contracts.mjs';
 import { DESIGN_WORKSPACE_SCHEMAS } from '../src/workspace-contracts.mjs';
+import { projectDashboardContract } from './dashboard-contract-projection.mjs';
 import {
   buildDiagramAuthoringRegistries,
   buildDiagramAuthoringSchemas,
@@ -214,6 +215,22 @@ const projectionFiles = new Map([
 ]);
 for (const [name, value] of projectionFiles)
   expected.set(`projections/pipeline/lib/protocol/${name}`, value);
+
+// The pipeline has no src/; its dashboard contracts import the lib/protocol projection instead.
+const dashboardRuntimeContracts = [
+  'closed-json-contract.mjs',
+  'operate-experience-audit-display-contract.mjs',
+  'operate-experience-display-contract.mjs',
+  'operate-experience-surface-contract.mjs',
+  'operate-review-contract.mjs',
+  'operate-review-display-workspace-contract.mjs',
+];
+for (const name of dashboardRuntimeContracts) {
+  expected.set(
+    `projections/pipeline/lib/dashboard/${name}`,
+    projectDashboardContract(name, read(`lib/dashboard/${name}`), projectionFiles),
+  );
+}
 
 function walk(root, prefix = '') {
   const values = [];

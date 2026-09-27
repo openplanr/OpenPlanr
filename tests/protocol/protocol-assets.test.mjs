@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import test from 'node:test';
 
+import { projectDashboardContract } from '../../packages/protocol/scripts/dashboard-contract-projection.mjs';
 import {
   canonicalizeJson,
   sha256Hex,
@@ -161,6 +162,42 @@ test('generation check is deterministic and package exports are explicit', () =>
       `${path} must remain browser-safe`,
     );
   }
+});
+
+test('dashboard contract projection rewrites src imports and names each import it cannot', () => {
+  const projected = new Set(['json-schema.mjs']);
+  assert.equal(
+    projectDashboardContract(
+      'example.mjs',
+      "import { validateJson } from '../../src/json-schema.mjs';\n",
+      projected,
+    ),
+    "import { validateJson } from '../protocol/json-schema.mjs';\n",
+  );
+  assert.throws(
+    () =>
+      projectDashboardContract(
+        'example.mjs',
+        "import { missing } from '../../src/missing.mjs';\n",
+        projected,
+      ),
+    {
+      message:
+        'lib/dashboard/example.mjs imports src/missing.mjs, which has no pipeline lib/protocol projection.',
+    },
+  );
+  assert.throws(
+    () =>
+      projectDashboardContract(
+        'example.mjs',
+        "import { liveEvidence } from '../../src/compat/live-evidence-v2.mjs';\n",
+        projected,
+      ),
+    {
+      message:
+        'lib/dashboard/example.mjs still references ../../src/compat/live-evidence-v2.mjs, a path outside the pipeline package after projection.',
+    },
+  );
 });
 
 test('the Protocol root exposes v1.6 contracts while the Node validator subpath stays narrow', async () => {
