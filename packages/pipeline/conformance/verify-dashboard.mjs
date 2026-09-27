@@ -87,6 +87,7 @@ assert.ok(packageJson.files.includes('schemas/'), 'package files must include sc
 
 const requiredExports = [
   '.',
+  './dashboard',
   './dashboard/operate-experience-reader',
   './dashboard/operate-experience-audit-display-contract',
   './dashboard/resolve-packaged-dashboard-root',
@@ -111,9 +112,15 @@ const packageRootImport =
 assert.equal(typeof packageRootImport, 'string', 'package root must expose an import target');
 const publicModule = await import(pathToFileURL(join(root, packageRootImport)).href);
 assert.equal(
-  typeof publicModule.startDashboard,
+  Object.hasOwn(publicModule, 'startDashboard'),
+  false,
+  'package root must not export startDashboard; planr-pipeline/dashboard does',
+);
+const dashboardEntry = await import('planr-pipeline/dashboard');
+assert.equal(
+  typeof dashboardEntry.startDashboard,
   'function',
-  'public package root must export startDashboard',
+  'dashboard export must expose startDashboard',
 );
 
 const verifiedJson = await import('planr-pipeline/dashboard/verified-json');

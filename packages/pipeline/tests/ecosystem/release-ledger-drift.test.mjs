@@ -130,7 +130,7 @@ function createPackedWorkspaceProof(workspaceRoot, custody) {
           checkValidation: 'passed',
         },
         exportKeys: Object.keys(pipeline.exports).length,
-        rootSymbols: 229,
+        rootSymbols: 228,
         retiredPipelineOperate: { absenceContracts: 80, removedPaths: 34 },
       },
     },

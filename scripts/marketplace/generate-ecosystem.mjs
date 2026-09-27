@@ -366,7 +366,7 @@ async function buildOutputs() {
   const pipelineRootSymbols = Object.keys(rootModule).length;
   assertEqual(
     pipelineRootSymbols,
-    229,
+    228,
     'E_ECOSYSTEM_PIPELINE_ROOT_SYMBOLS',
     'Public pipeline root-symbol parity drifted.',
   );

@@ -16,7 +16,7 @@ const pipeline = new URL('../../packages/pipeline/', import.meta.url);
 
 test('the static packed compatibility floor retains actual export names and symbols', async () => {
   assert.equal(baseline.baselineExportKeys.length, 37);
-  assert.equal(baseline.baselineRootSymbols.length, 229);
+  assert.equal(baseline.baselineRootSymbols.length, 228);
   assert.equal(baseline.baselineVersion, '0.44.0');
   assert.match(baseline.sourceCatalogDigest, /^sha256:[a-f0-9]{64}$/u);
   const manifest = JSON.parse(readFileSync(new URL('package.json', pipeline), 'utf8'));

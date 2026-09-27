@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { realpathSync } from 'node:fs';
 import { join } from 'node:path';
-import { startDashboard } from 'planr-pipeline';
+import { startDashboard } from 'planr-pipeline/dashboard';
 import { buildOperatingReviewBoundSubmissionV1 } from 'planr-pipeline/operate/runtime-v2';
 import { sha256Jcs } from 'planr-pipeline/protocol';
 import {
