@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.2639.3
+### Patch Changes
+
+- 49834b5: The generated Claude Code plugin now ships a `README.md` beside `plugin.json`, rendered from a template with the current skill and agent counts and the plugin version, so the plugin folder meets the Anthropic plugin directory's README requirement. `plugin.json` also carries `displayName`, `homepage`, `repository`, and `keywords`.
+- cce5e94: Company sign-in, credential refresh and binding operations no longer fail with `ENOENT` when another process releases its lock at the moment this one inspects it; the lock is retried instead.
+- d7db287: The Operate client's Assignment submission, governed Action and experience read transactions run from their own service modules under `dist/services/operate/`. `planr operate` behaviour and the exports of `services/operate/client.js` are unchanged.
+- 696cb31: Recording a `rejected` or `deferred` Action approval through `operate.action.approve` now commits the decision and moves the Action to `rejected` or `deferred`. Previously the command failed with `STATE_TRANSITION_INVALID` ("operating-event: $ matched 0/57 branches") because the follow-up Action Event carried no reason, and the Action stayed `proposed`.
+
 ## 2.2639.2
 ### Patch Changes
 
