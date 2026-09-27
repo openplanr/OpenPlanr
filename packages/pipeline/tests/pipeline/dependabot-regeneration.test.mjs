@@ -114,6 +114,17 @@ test('the push runs from main after a Dependabot regeneration and never runs its
   assert.match(scripts, /\[dependabot skip\]/u);
 });
 
+test('the push takes each manifest once and caps the bytes it writes', () => {
+  const scripts = runScripts(push).join('\n');
+  assert.match(scripts, /\| sort \| uniq -d\)"/u, 'the push must reject a repeated member');
+  assert.match(
+    scripts,
+    /unzip -p "\$ARCHIVE" "\$path" > "\$path"\n\s+size="\$\(wc -c < "\$path"\)"\n\s+if \[ "\$size" -gt "\$MANIFEST_BYTE_LIMIT" \]/u,
+    'the push must measure each manifest it writes against the limit',
+  );
+  assert.match(push, /^ {10}MANIFEST_BYTE_LIMIT: [1-9]\d*$/mu, 'the push must set a byte limit');
+});
+
 test('no run script interpolates an expression', () => {
   for (const [file, text] of [
     [REGENERATE, regenerate],

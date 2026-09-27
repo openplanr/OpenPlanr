@@ -72,18 +72,22 @@ jobs:
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
       # The upload comes from a job that ran the updated dependencies, so it is untrusted: only
-      # the listed manifests are read from it, as bytes, and only over tracked regular files.
+      # the listed manifests are read from it, each once, as bytes under a size limit, and only
+      # over tracked regular files.
       - name: Write the listed manifests from the upload
         if: steps.download.outputs.archive != ''
         env:
           ARCHIVE: ${{ steps.download.outputs.archive }}
+          # 2 MiB, several times the largest custody manifest.
+          MANIFEST_BYTE_LIMIT: 2097152
         run: |
           set -o pipefail
           : "${REGENERATED_PATHS:?an empty list would let grep accept every member}"
           members="$(unzip -Z1 "$ARCHIVE" | sed '/\/$/d')"
           unexpected="$(printf '%s\n' "$members" | grep -vxF -- "$REGENERATED_PATHS")" || [ $? -eq 1 ]
-          if [ -z "$members" ] || [ -n "$unexpected" ]; then
-            echo "::error::The regenerated-outputs upload of run $RUN_ID may hold only the custody manifests; it holds:"
+          repeated="$(printf '%s\n' "$members" | sort | uniq -d)"
+          if [ -z "$members" ] || [ -n "$unexpected" ] || [ -n "$repeated" ]; then
+            echo "::error::The regenerated-outputs upload of run $RUN_ID may hold only the custody manifests, each once; it holds:"
             echo "$members"
             exit 1
           fi
@@ -93,8 +97,14 @@ jobs:
               exit 1
             fi
           done <<< "$members"
+          # Measure the bytes written, not the sizes the archive declares.
           while IFS= read -r path; do
             unzip -p "$ARCHIVE" "$path" > "$path"
+            size="$(wc -c < "$path")"
+            if [ "$size" -gt "$MANIFEST_BYTE_LIMIT" ]; then
+              echo "::error::$path in the upload of run $RUN_ID is $size bytes, over the $MANIFEST_BYTE_LIMIT-byte limit."
+              exit 1
+            fi
           done <<< "$members"
       # [dependabot skip] lets Dependabot keep rebasing over this commit; each rebase starts a
       # new regeneration.
