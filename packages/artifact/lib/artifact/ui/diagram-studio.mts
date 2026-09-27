@@ -6,7 +6,7 @@
  */
 
 import { clientSelectionToNormalized, mountArtifactAnnotations } from './annotations.mjs';
-import { mountArtifactFeedbackRail } from './feedback-rail.mjs';
+import { type ArtifactReviewInput, mountArtifactFeedbackRail } from './feedback-rail.mjs';
 
 /** A drawing element as diagram-review.mjs describes it in the page data. */
 interface StudioItem {
@@ -29,7 +29,7 @@ interface StudioConfig {
   artifact: { id: string; title: string; viewport: { width: number; height: number } };
   items: StudioItem[];
   relations?: Array<{ id: string; from: string; to: string }>;
-  review: unknown;
+  review: ArtifactReviewInput | null;
   reviewOf: string;
   base: string;
   diagramId: string;
@@ -86,7 +86,8 @@ type StudioAnnotations = NonNullable<ReturnType<typeof mountArtifactAnnotations>
 type TargetedEvent<E extends Event> = E & { target: Element };
 type StageAction =
   | { type: 'set-review-mode'; reviewMode: string }
-  | { type: 'set-rail-open'; railOpen: boolean };
+  | { type: 'set-rail-open'; railOpen: boolean }
+  | { type: 'set-active'; artifactId: string };
 interface StudioCamera {
   x: number;
   y: number;
