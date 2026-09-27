@@ -1,17 +1,24 @@
 import assert from 'node:assert/strict';
-import { execFile } from 'node:child_process';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { execFile, spawn } from 'node:child_process';
+import { once } from 'node:events';
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { test } from 'node:test';
+import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 
-import { createDaemon } from '../../lib/design-engine/daemon.mjs';
+import {
+  createDaemon,
+  findRunningDaemon,
+  killRunningDaemon,
+} from '../../lib/design-engine/daemon.mjs';
 
 const execFileP = promisify(execFile);
 const here = dirname(fileURLToPath(import.meta.url));
 const CLI = join(here, '..', '..', 'lib', 'design-engine', 'cli.mjs');
+const DAEMON = join(here, '..', '..', 'lib', 'design-engine', 'daemon.mjs');
 
 // Run `cli.mjs <args>` and return parsed stdout JSON. Async (NOT execFileSync) on purpose: the
 // in-process daemon below answers /health on this same event loop, so a synchronous child would
@@ -51,4 +58,114 @@ test('cli daemon --status / --serve: discovers and reuses a running daemon', asy
   } finally {
     rmSync(home, { recursive: true, force: true });
   }
+});
+
+function boardFixture(t) {
+  const home = mkdtempSync(join(tmpdir(), 'planr-daemoncmd-'));
+  const boardDir = mkdtempSync(join(tmpdir(), 'planr-daemoncmd-board-'));
+  writeFileSync(
+    join(boardDir, 'variant-A.svg'),
+    '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"/>',
+  );
+  const env = { ...process.env, PLANR_HOME: home };
+  const children = [];
+  t.after(async () => {
+    await killRunningDaemon(await findRunningDaemon({ env }));
+    for (const child of children) if (child.exitCode === null && !child.signalCode) child.kill();
+    rmSync(home, { recursive: true, force: true });
+    rmSync(boardDir, { recursive: true, force: true });
+  });
+  return { env, boardDir, children, stateDir: join(home, 'design-daemon') };
+}
+
+// A separate process, so the CLI can stop it without signalling the test runner.
+async function startDaemonProcess({ env, children }) {
+  const child = spawn(process.execPath, [DAEMON, '--serve'], {
+    env,
+    stdio: ['ignore', 'ignore', 'pipe'],
+  });
+  children.push(child);
+  const exited = once(child, 'exit');
+  let output = '';
+  child.stderr.setEncoding('utf8');
+  const port = await new Promise((resolvePort, reject) => {
+    child.stderr.on('data', (chunk) => {
+      output += chunk;
+      const match = /^DAEMON_PORT: (\d+)\n/m.exec(output);
+      if (match) resolvePort(Number(match[1]));
+    });
+    exited.then(([code, signal]) =>
+      reject(new Error(`daemon exited (${code ?? signal}) before its port: ${output}`)),
+    );
+  });
+  return { child, port, exited };
+}
+
+test('board replaces a daemon whose registry turned invalid instead of starting a second one', async (t) => {
+  const fixture = boardFixture(t);
+  const first = await startDaemonProcess(fixture);
+  const regPath = join(fixture.stateDir, 'boards.json');
+  const truncated = `{"stale--${'a'.repeat(24)}": "/tmp/pla`;
+  writeFileSync(regPath, truncated);
+
+  const identified = await findRunningDaemon({ env: fixture.env });
+  assert.equal(identified?.pid, first.child.pid, 'health still identifies the running daemon');
+  assert.equal(identified.port, first.port);
+  assert.ok(
+    identified.registryError.startsWith(`The design board registry ${regPath} is invalid: `),
+    identified.registryError,
+  );
+
+  const board = await runCli(['board', '--dir', fixture.boardDir], fixture.env);
+  const stopped = await Promise.race([first.exited, delay(5000, 'running', { ref: false })]);
+  assert.deepEqual(stopped, [null, 'SIGTERM'], 'board stopped the first daemon');
+  assert.notEqual(board.port, first.port, 'board registered on a fresh daemon');
+
+  const preserved = readdirSync(fixture.stateDir).filter((name) =>
+    name.startsWith('boards.json.corrupt-'),
+  );
+  assert.equal(preserved.length, 1);
+  assert.equal(readFileSync(join(fixture.stateDir, preserved[0]), 'utf8'), truncated);
+  assert.deepEqual(Object.keys(JSON.parse(readFileSync(regPath, 'utf8'))), [board.boardId]);
+});
+
+test('board fails at once with the daemon exit code and error when the daemon cannot start', async (t) => {
+  const fixture = boardFixture(t);
+  const regPath = join(fixture.stateDir, 'boards.json');
+  mkdirSync(regPath, { recursive: true });
+
+  await assert.rejects(
+    execFileP(process.execPath, [CLI, 'board', '--dir', fixture.boardDir], {
+      env: fixture.env,
+      encoding: 'utf-8',
+    }),
+    (error) => {
+      assert.equal(error.code, 1);
+      assert.match(
+        error.stderr,
+        /daemon .*daemon\.mjs exited with code 1 before reporting its port: /,
+      );
+      assert.ok(
+        error.stderr.includes(`Cannot read the design board registry ${regPath}: EISDIR`),
+        error.stderr,
+      );
+      return true;
+    },
+  );
+});
+
+test('board relays the daemon notice that sets an invalid registry aside', async (t) => {
+  const fixture = boardFixture(t);
+  mkdirSync(fixture.stateDir, { recursive: true });
+  const regPath = join(fixture.stateDir, 'boards.json');
+  writeFileSync(regPath, '["legacy-slug"]\n');
+
+  const { stderr } = await execFileP(process.execPath, [CLI, 'board', '--dir', fixture.boardDir], {
+    env: fixture.env,
+    encoding: 'utf-8',
+  });
+  const notice = `[design-daemon] The design board registry ${regPath} is invalid: expected an object mapping board ids to directories. Preserved it as ${regPath}.corrupt-`;
+  assert.ok(stderr.includes(notice), stderr);
+  assert.ok(stderr.indexOf(notice) < stderr.indexOf('BOARD_URL: '), stderr);
+  assert.doesNotMatch(stderr, /DAEMON_PORT/);
 });

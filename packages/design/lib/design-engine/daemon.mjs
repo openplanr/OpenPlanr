@@ -4,7 +4,7 @@
  * agent copes with a dead daemon by re-`board`ing the same dir.
  *
  * Endpoints
- *   GET  /health                       → { ok, pid, boards }
+ *   GET  /health                       → { ok, kind, pid, version, boards | registryError }
  *   GET  /                             → board index
  *   POST /api/boards                   → { id, dir } register (dir must hold board.html)
  *   GET  /boards/<id>/                 → the board HTML
@@ -42,6 +42,7 @@ import {
   lstatSync,
   mkdirSync,
   readFileSync,
+  renameSync,
   statSync,
   writeFileSync,
 } from 'node:fs';
@@ -78,6 +79,7 @@ import {
   closeHttpServer,
   listenLoopback,
   readRequestBody,
+  writePrivateJsonState,
 } from './server-util.mjs';
 
 // Shared server-lifecycle primitives live in server-util.mjs (used by both this daemon and the
@@ -95,13 +97,14 @@ export {
  * daemon running stale code and restart it instead of reusing it forever. A
  * daemon started before this field existed reports no version → treated as stale.
  */
-export const DAEMON_VERSION = 4;
+export const DAEMON_VERSION = 5;
 
 /** Cap on a request body (bytes) — a feedback round is small; this bounds memory per request. */
 const MAX_BODY_SIZE = 5_000_000;
 const CONTROL_TOKEN_FILE = 'control-token';
 const DAEMON_KIND = 'openplanr-design-daemon';
 const CONTROL_TOKEN = /^[a-f0-9]{64}$/u;
+const REGISTRY_INVALID = 'E_DESIGN_REGISTRY_INVALID';
 
 function controlTokenPath(env = process.env) {
   return join(daemonDir(env), CONTROL_TOKEN_FILE);
@@ -181,24 +184,74 @@ const designBoardAdapterPath = join(
   'design-board-adapter.js',
 );
 
+function invalidRegistry(path, reason, cause) {
+  return Object.assign(
+    new Error(`The design board registry ${path} is invalid: ${reason}.`, { cause }),
+    { code: REGISTRY_INVALID },
+  );
+}
+
+/** Read the board registry; a missing file is an empty registry, anything else unreadable throws. */
+function readRegistry(path) {
+  let text;
+  try {
+    text = readFileSync(path, 'utf8');
+  } catch (error) {
+    if (error?.code === 'ENOENT') return {};
+    throw new Error(`Cannot read the design board registry ${path}: ${error.message}`, {
+      cause: error,
+    });
+  }
+  let registry;
+  try {
+    registry = JSON.parse(text);
+  } catch (error) {
+    throw invalidRegistry(path, error.message, error);
+  }
+  if (
+    !registry ||
+    typeof registry !== 'object' ||
+    Array.isArray(registry) ||
+    Object.values(registry).some((dir) => typeof dir !== 'string')
+  )
+    throw invalidRegistry(path, 'expected an object mapping board ids to directories');
+  return registry;
+}
+
+function quarantineRegistry(path, error) {
+  const quarantinePath = `${path}.corrupt-${new Date().toISOString().replace(/[:.]/g, '-')}`;
+  try {
+    renameSync(path, quarantinePath);
+  } catch (renameError) {
+    const message = `${error.message} Moving it to ${quarantinePath} failed: ${renameError.message}`;
+    throw new Error(message, { cause: renameError });
+  }
+  process.stderr.write(
+    `[design-daemon] ${error.message} Preserved it as ${quarantinePath}; starting with an empty registry. Run the board command again to re-register each board.\n`,
+  );
+}
+
 export function createDaemon({ env = process.env, fetchImpl = globalThis.fetch } = {}) {
   const stateDir = daemonDir(env);
   const controlToken = ensureControlToken(env);
   const registryPath = join(stateDir, 'boards.json');
 
-  const loadRegistry = () => {
-    try {
-      return existsSync(registryPath) ? JSON.parse(readFileSync(registryPath, 'utf-8')) : {};
-    } catch {
-      return {};
-    }
-  };
-  const saveRegistry = (r) => writeFileSync(registryPath, `${JSON.stringify(r, null, 2)}\n`);
+  const loadRegistry = () => readRegistry(registryPath);
+  const saveRegistry = (r) => writePrivateJsonState(registryPath, r);
 
   // Startup hygiene: prune the registry so it never serves a vanished dir or a
   // legacy entry that predates capability tokens (which would leak across projects).
   (() => {
-    const reg = loadRegistry();
+    let reg;
+    try {
+      reg = loadRegistry();
+    } catch (error) {
+      if (error?.code !== REGISTRY_INVALID) throw error;
+      // Every `board` call re-registers its board, so an invalid registry is set aside intact
+      // rather than failing every board command until someone repairs the file by hand.
+      quarantineRegistry(registryPath, error);
+      reg = {};
+    }
     let changed = false;
     for (const [id, dir] of Object.entries(reg)) {
       if (!existsSync(dir) || !/--[a-f0-9]{16,}$/.test(id)) {
@@ -427,13 +480,14 @@ export function createDaemon({ env = process.env, fetchImpl = globalThis.fetch }
 
       if (req.method === 'GET' && url.pathname === '/health') {
         if (!internal) return json(res, 403, { error: 'daemon control authentication required' });
-        return json(res, 200, {
-          ok: true,
-          kind: DAEMON_KIND,
-          pid: process.pid,
-          version: DAEMON_VERSION,
-          boards: Object.keys(loadRegistry()).length,
-        });
+        const health = { ok: true, kind: DAEMON_KIND, pid: process.pid, version: DAEMON_VERSION };
+        // Identity must survive a bad registry so ensureDaemon restarts this daemon, not orphans it.
+        try {
+          health.boards = Object.keys(loadRegistry()).length;
+        } catch (error) {
+          health.registryError = error.message;
+        }
+        return json(res, 200, health);
       }
 
       if (req.method === 'GET' && url.pathname === '/') {
@@ -884,6 +938,7 @@ export async function findRunningDaemon({ env = process.env, fetchImpl = fetch }
           port,
           pid: health.pid,
           version: health.version,
+          registryError: typeof health.registryError === 'string' ? health.registryError : null,
         };
       }
     }

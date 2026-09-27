@@ -32,7 +32,7 @@ and the other keeps working — re-run `board` on the same dir and nothing is lo
 
 | Route | Method | Purpose |
 |---|---|---|
-| `/health` | GET | `{ ok, pid, boards }` |
+| `/health` | GET | `{ ok, kind, pid, version, boards }`, or `registryError` in place of `boards` when the registry cannot be read |
 | `/` | GET | board index |
 | `/api/boards` | POST | register `{ id, dir }` (dir must contain `board.html`) |
 | `/boards/<id>/` | GET | the board HTML |

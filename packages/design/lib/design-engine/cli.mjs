@@ -484,31 +484,55 @@ async function cmdCheck(args) {
   process.exitCode = verdict.pass ? 0 : 2;
 }
 
+/** A daemon on this code whose registry reads cleanly; a restart sets an invalid registry aside. */
+const reusableDaemon = (running) =>
+  Boolean(running) && running.version === DAEMON_VERSION && !running.registryError;
+
+/**
+ * Resolve the port a spawned daemon prints, relaying its earlier stderr lines; reject with its
+ * exit status and stderr when it exits or stalls first.
+ */
+function waitForDaemonPort(child, daemonPath) {
+  return new Promise((resolvePort, reject) => {
+    let output = '';
+    const failStart = (reason) => {
+      clearTimeout(timer);
+      reject(new Error(`daemon ${daemonPath} ${reason}: ${output.trim() || 'no stderr output'}`));
+    };
+    const timer = setTimeout(() => failStart('did not report its port within 5s'), 5000);
+    child.stderr.setEncoding('utf8');
+    child.stderr.on('data', (chunk) => {
+      output += chunk;
+      const match = /^DAEMON_PORT: (\d+)\r?\n/m.exec(output);
+      if (!match) return;
+      clearTimeout(timer);
+      process.stderr.write(output.slice(0, match.index));
+      resolvePort(Number(match[1]));
+    });
+    child.once('error', (error) => failStart(`could not be spawned (${error.message})`));
+    child.once('close', (code, signal) =>
+      failStart(
+        `exited with ${signal ? `signal ${signal}` : `code ${code}`} before reporting its port`,
+      ),
+    );
+  });
+}
+
 async function ensureDaemon() {
   const running = await findRunningDaemon();
-  if (running && running.version === DAEMON_VERSION) return running.port;
+  if (reusableDaemon(running)) return running.port;
   // A daemon is already running but on stale code (older/absent version) — e.g.
-  // it predates the non-enumerating index. Reusing it would keep serving the old
-  // behaviour, so stop it and spawn a fresh one. (Rule 14 still holds: the daemon
-  // outlives the agent; we only recycle it across a version change.)
+  // it predates the non-enumerating index — or its registry no longer reads. Reusing it
+  // would keep serving the old behaviour or failing every board route, so stop it and spawn
+  // a fresh one. (Rule 14 still holds: the daemon outlives the agent; we only recycle it
+  // across a version change or a registry fault.)
   await killRunningDaemon(running);
   const daemonPath = join(here, '..', 'daemon.mjs');
   const child = spawn(process.execPath, [daemonPath, '--serve'], {
     detached: true,
     stdio: ['ignore', 'ignore', 'pipe'],
   });
-  const port = await new Promise((resolvePort, reject) => {
-    let buf = '';
-    const timer = setTimeout(() => reject(new Error('daemon did not start within 5s')), 5000);
-    child.stderr.on('data', (c) => {
-      buf += c;
-      const m = buf.match(/DAEMON_PORT: (\d+)/);
-      if (m) {
-        clearTimeout(timer);
-        resolvePort(Number(m[1]));
-      }
-    });
-  });
+  const port = await waitForDaemonPort(child, daemonPath);
   child.stderr.destroy();
   child.unref(); // daemon outlives the agent
   return port;
@@ -528,12 +552,12 @@ async function cmdDaemon(args) {
       port: running ? running.port : null,
       pid: running ? running.pid : null,
       version: running ? running.version : null,
-      current: Boolean(running) && running.version === DAEMON_VERSION,
+      current: reusableDaemon(running),
     });
     return;
   }
   // --serve (default): reuse a healthy, current-version daemon; otherwise boot one and stay up.
-  if (running && running.version === DAEMON_VERSION) {
+  if (reusableDaemon(running)) {
     errLine(`DAEMON_PORT: ${running.port}`); // the agent parses this exact line
     out({ ok: true, reused: true, port: running.port });
     return;
