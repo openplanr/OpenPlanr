@@ -1,5 +1,10 @@
 # @openplanr/protocol
 
+## 0.7.1
+### Patch Changes
+
+- ec8b895: The shipped command registry carries the new digest of the `planr github` command source.
+
 ## 0.7.0
 ### Minor Changes
 
