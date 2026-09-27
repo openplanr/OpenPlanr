@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import {
   existsSync,
   mkdirSync,
@@ -15,16 +16,24 @@ import { join, relative } from 'node:path';
 import { test } from 'node:test';
 
 import {
+  attestBrowserQaEvidence,
+  createTrustedBrowserQaRuntimeHost,
+} from '../../lib/pipeline/browser-qa-custody.mjs';
+import {
   advanceShip,
   assertShipClosure,
+  classifyShipRisk,
   finalizeShipClosure,
   getShipClosure,
+  prepareBrowserQa,
   preparePlan,
   prepareShip,
+  recordBrowserQa,
   reopenShip,
   runShipGates,
   startShip,
 } from '../../lib/pipeline/index.mjs';
+import { createShipClosure } from '../../lib/pipeline/ship-closure.mjs';
 import { sha256Jcs } from '../../lib/protocol/jcs.mjs';
 
 function git(root, ...args) {
@@ -180,6 +189,79 @@ function passWithoutCorrection(
   };
 }
 
+function browserQaEvidence(root, feature, runId) {
+  const now = new Date().toISOString();
+  const session = {
+    kind: 'browser-qa-session',
+    schemaVersion: '1.0.0',
+    sessionId: `bqs_${'b'.repeat(32)}`,
+    suppliedAt: now,
+    expiresAt: new Date(Date.parse(now) + 30 * 60 * 1000).toISOString(),
+    signedIn: false,
+    custody: 'external-ephemeral',
+    persisted: false,
+  };
+  const preview = prepareBrowserQa({
+    projectRoot: root,
+    feature,
+    runId,
+    runtimeHost: createTrustedBrowserQaRuntimeHost({
+      hostId: 'playwright-host',
+      hostVersion: '1.0.0',
+    }),
+    session,
+    now,
+  });
+  const noEvents = Buffer.from('[]');
+  const eventEvidence = {
+    failureCount: 0,
+    evidenceDigest: `sha256:${createHash('sha256').update(noEvents).digest('hex')}`,
+  };
+  const result = {
+    kind: 'browser-qa-result',
+    schemaVersion: '1.0.0',
+    candidateDigest: preview.candidateDigest,
+    requirementDigest: preview.requirementDigest,
+    status: 'passed',
+    signedIn: false,
+    sessionId: null,
+    origin: 'http://127.0.0.1:7473',
+    routeIds: ['review'],
+    formIds: [],
+    viewports: [{ id: 'mobile', width: 320, height: 800, horizontalOverflow: false }],
+    accessibility: eventEvidence,
+    console: eventEvidence,
+    network: eventEvidence,
+    screenshots: [],
+    traces: [],
+    failures: [],
+  };
+  const attestation = attestBrowserQaEvidence({
+    capability: preview.runtimeCapability,
+    result,
+    artifacts: {
+      accessibility: noEvents,
+      console: noEvents,
+      network: noEvents,
+      screenshots: [],
+      traces: [],
+    },
+    now,
+  });
+  return { result, session, attestation };
+}
+
+function recordBrowserQaEvidence(root, feature, runId, evidence) {
+  return recordBrowserQa({
+    projectRoot: root,
+    feature,
+    runId,
+    expectedGeneration: getShipClosure({ projectRoot: root, feature, runId }).generation,
+    ...evidence,
+    now: new Date().toISOString(),
+  });
+}
+
 test('one correction closes through one targeted review and immutable receipt', () => {
   const { root, prepared } = project();
   const preview = prepareShip({
@@ -323,6 +405,113 @@ test('one correction closes through one targeted review and immutable receipt', 
       }),
     (error) => error.code === 'E_SHIP_TERMINAL',
   );
+});
+
+test('a corrected candidate records its own browser QA evidence and closes PASS', () => {
+  const feature = 'browser-correction';
+  const { root } = project(feature);
+  const runId = `ship_${'c'.repeat(32)}`;
+  const planDigest = sha256Jcs('browser-correction-plan');
+  createShipClosure({
+    projectRoot: root,
+    prepared: prepareShip({ projectRoot: root, feature, humanReviewConfirmed: true }),
+    runtime: 'codex',
+    runId,
+    planningReview: {
+      receiptHash: sha256Jcs('browser-correction-planning-receipt'),
+      planDigest,
+      ownerDecisionDigest: sha256Jcs('browser-correction-owner-decision'),
+    },
+    riskClassification: classifyShipRisk({
+      subjectDigest: planDigest,
+      changedPaths: [],
+      browserSurfaces: ['ui'],
+      contractChanges: false,
+      migrationChanges: false,
+      permissionEffects: false,
+      dataWrites: false,
+      performanceBudgets: false,
+      explicitRisks: [],
+    }),
+  });
+  writeFileSync(join(root, 'src', 'app.js'), 'export const value = 1;\n');
+  let result = advanceShip({ projectRoot: root, feature, runId, event: taskCompleted(0) });
+  result = advanceShip({ projectRoot: root, feature, runId, event: openReview(result.generation) });
+  const initialEvidence = browserQaEvidence(root, feature, runId);
+  recordBrowserQaEvidence(root, feature, runId, initialEvidence);
+  runShipGates({ projectRoot: root, feature, runId, phase: 'initial' });
+  let state = getShipClosure({ projectRoot: root, feature, runId });
+  result = advanceShip({
+    projectRoot: root,
+    feature,
+    runId,
+    event: closeReview(state, { phase: 'initial', findings: [finding()] }),
+  });
+  assert.equal(result.state, 'correction_required');
+  state = getShipClosure({ projectRoot: root, feature, runId });
+  const findingIds = state.reviews[0].findings.map(({ id }) => id);
+
+  writeFileSync(join(root, 'src', 'app.js'), 'export const value = 2;\n');
+  result = advanceShip({
+    projectRoot: root,
+    feature,
+    runId,
+    event: {
+      type: 'correction.registered',
+      expectedGeneration: result.generation,
+      impact: {
+        summary: 'Correct the value.',
+        findingIds,
+        paths: [path('src/app.js')],
+        affectedGateIds: ['browser-qa', 'build-1', 'test-1'],
+      },
+    },
+  });
+  assert.equal(result.candidateRevision, 2);
+  advanceShip({ projectRoot: root, feature, runId, event: openReview(result.generation) });
+  assert.throws(() => recordBrowserQaEvidence(root, feature, runId, initialEvidence), {
+    code: 'E_BROWSER_QA_RESULT_FOREIGN',
+  });
+  const corrected = recordBrowserQaEvidence(
+    root,
+    feature,
+    runId,
+    browserQaEvidence(root, feature, runId),
+  );
+  assert.deepEqual(
+    corrected.browserQaRecords.map(({ candidateRevision }) => candidateRevision),
+    [1, 2],
+  );
+  assert.throws(
+    () => recordBrowserQaEvidence(root, feature, runId, browserQaEvidence(root, feature, runId)),
+    { code: 'E_BROWSER_QA_REPLAY_DIVERGED' },
+  );
+
+  const targetedGates = runShipGates({ projectRoot: root, feature, runId, phase: 'targeted' });
+  assert.equal(
+    targetedGates.evidence.find(({ gateId }) => gateId === 'browser-qa').status,
+    'passed',
+  );
+  state = getShipClosure({ projectRoot: root, feature, runId });
+  result = advanceShip({
+    projectRoot: root,
+    feature,
+    runId,
+    event: closeReview(state, {
+      phase: 'targeted',
+      reviewedFindingIds: findingIds,
+      findings: findingIds.map((id) =>
+        finding({
+          id,
+          disposition: 'resolved',
+          evidence: 'The corrected value now satisfies the exact acceptance behavior.',
+        }),
+      ),
+    }),
+  });
+  assert.equal(result.state, 'ready_for_final');
+  runShipGates({ projectRoot: root, feature, runId, phase: 'final' });
+  assert.equal(finalizeShipClosure({ projectRoot: root, feature, runId }).state, 'passed');
 });
 
 test('targeted blocking findings terminate and arbitrary late reviews cannot mint revisions', () => {
