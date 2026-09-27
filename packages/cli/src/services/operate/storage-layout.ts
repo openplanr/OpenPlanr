@@ -1,3 +1,11 @@
+/**
+ * Operate storage layout under `.planr/operate`: inspects it, creates the private `state`,
+ * `packets`, `projections` and `archive` directories, and migrates legacy `operate-v2` or older
+ * storage after a replay-verified proof and archive, with interrupted-run recovery and rollback.
+ * Entry points: `inspectOperateStorage`, `ensureOperateStorageLayout`, `migrateOperateStorage`,
+ * `rollbackOperateStorageMigration`. Reading and committing runtime state belongs to `store.ts`.
+ */
+
 import { createHash, randomUUID } from 'node:crypto';
 import {
   chmod,

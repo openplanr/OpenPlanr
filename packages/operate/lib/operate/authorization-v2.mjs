@@ -1,3 +1,12 @@
+/**
+ * Pure Operate authority guard for the governed tools, Review submit and Action approve, execute
+ * and rollback: checks actor, capabilities, policy, approvals, operation binding and replay,
+ * preconditions, executor and rollback from explicit context and returns an explained decision.
+ * Entry points: `evaluateOperateAuthorityV2`, `assertOperateAuthorityV2`,
+ * `deriveOperateAuthorityAllowedActionsV2`, `assertOperatingActionAuthorityTupleV2`.
+ * It performs no I/O; running an allowed operation belongs to `governed-execution-v2.mjs`.
+ */
+
 import { deepFreeze, sha256Jcs } from '@openplanr/protocol/canonical-json';
 import { assertProtocolArtifact } from '@openplanr/protocol/contracts';
 import { PipelineError } from '@openplanr/protocol/errors';

@@ -1,3 +1,12 @@
+/**
+ * Pure Operate Review workspace projection: binds a pending Review read or terminal receipt to its
+ * actor-screened experience view and builds the redacted workspace payload, and derives the
+ * snapshot-wide truth summary every dashboard surface carries verbatim.
+ * Entry points: `buildOperateReviewWorkspacePayloadV1`, `deriveOperateSharedTruthSummaryV1`.
+ * Display integrity belongs to `operate-review-display-workspace-contract.mjs`, text screening to
+ * `operate-review-payload-safety.mjs`, whose assertion this module re-exports.
+ */
+
 import { PipelineError } from '../pipeline/errors.mjs';
 import {
   assertOperateExperienceArtifactV2,

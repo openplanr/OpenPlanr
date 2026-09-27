@@ -1,3 +1,11 @@
+/**
+ * Executor-facing Assignment packets: claims an Operate Assignment and writes a packet under
+ * `.planr/operate/packets/` with the assignment, rubric, schema catalog, evidence matrix and result
+ * template, then validates and submits the executor's result and swaps in its receipt atomically.
+ * Entry points: `createOperateAssignmentPacketService` (`prepare`, `validate`, `submit`,
+ * `recoverAbandoned`). Claims, preflight and acceptance go through the Operate client.
+ */
+
 import { createHash, randomUUID } from 'node:crypto';
 import {
   lstat,

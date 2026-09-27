@@ -1,5 +1,12 @@
 #!/usr/bin/env node
 
+/**
+ * planr-pipeline doctor: checks the Node engine, package identity and Protocol assets, the artifact
+ * surface, the ecosystem and workspace layout, the local design and dashboard daemons and project
+ * `.env` keys; `--release` adds a release audit and `--fix` removes stale daemon state.
+ * Run as `planr-pipeline doctor [--versions-only] [--strict] [--json]`; exits 1 when a check fails.
+ */
+
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, rmSync } from 'node:fs';

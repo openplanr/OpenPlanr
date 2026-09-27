@@ -1,3 +1,12 @@
+/**
+ * Company service synchronization for local artifacts: previews and publishes a file as a company
+ * artifact revision, then pushes, pulls, adopts diagram revisions and previews and applies change
+ * proposals through a binding kept, with its previews and backups, under `.local/company/`.
+ * Entry points: `previewCompanyPublication`, `publishCompanyPreview`, `pushCompanyBinding`,
+ * `pullCompanyBinding`, `applyCompanyProposal`, `companyBindingStatus`, `companyApi`.
+ * Sign-in belongs to `company-auth-service.ts`, diagram adoption to `diagram-authoring-service.ts`.
+ */
+
 import { createHash, randomUUID } from 'node:crypto';
 import {
   link,

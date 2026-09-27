@@ -1,3 +1,12 @@
+/**
+ * Operate contract compiler: validates the JSON Operate registry (contracts, roles and rubrics,
+ * guards, transitions, operations, errors and domain vocabularies) and compiles it into the sorted,
+ * frozen catalog behind `OPERATE_CONTRACT_CATALOG_V2`, or into that catalog module's source text.
+ * Entry points: `compileOperateContractRegistry`, `renderOperateContractCatalogModule`,
+ * `OperateContractCompileError`. It imports nothing; reading the registry and writing the catalog
+ * belong to planr-pipeline's `scripts/generate-operate-contracts.mjs`.
+ */
+
 const IDENTIFIER = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/u;
 const LIFECYCLE_STATE = /^[a-z][a-z0-9]*(?:[-_][a-z0-9]+)*$/u;
 const OPERATION = /^operate\.[a-z][a-z0-9]*(?:\.[a-z][a-z0-9]*)*$/u;

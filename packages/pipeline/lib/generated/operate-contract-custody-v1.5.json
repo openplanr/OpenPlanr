@@ -66,7 +66,7 @@
       "path": "lib/dashboard/operate-review-workspace-projection-v2.mjs",
       "kind": "validator",
       "legacySha256": "7c3c506e44a6cbc9ac0f2788347effedd9772a3c969f12c5c8995639e4698151",
-      "sha256": "47165feb7eec832e3402c9468bd1de122c2d8aed32388c48f0561f03ab209e16",
+      "sha256": "42b3ecec8aed6b42e0d0803c2c22d886ac80bece8c3feea7fe644a69b8c4f05d",
       "custody": "canonical-protocol-dashboard-runtime",
       "source": "packages/protocol/lib/dashboard/operate-review-workspace-projection-v2.mjs"
     },
@@ -74,7 +74,7 @@
       "path": "lib/operate/contracts/compiler.mjs",
       "kind": "compiler",
       "legacySha256": "15fc1f46f40ce671c7a078c37c264a105cc03e076d988b397872f14f01e2a27f",
-      "sha256": "780938ef0c18c6ebd116dff9b07ca9bd65105df6e3b39a445ea2c3c612ebe05a",
+      "sha256": "09fe449dc221acea8416e1c67ddf3d7ed65ac72211d9c4fd6380fa8570d237bc",
       "custody": "canonical-operate-domain-projection",
       "source": "packages/operate/lib/operate/contracts/compiler.mjs"
     },
@@ -210,7 +210,7 @@
       "path": "lib/protocol/contracts.mjs",
       "kind": "validator",
       "legacySha256": "410d6f3bce30402f00948a750bd93cdc85541337e548dcb8f138ea924ef6e03e",
-      "sha256": "ebe70b5f03926033e0402f476b9d65178f374c77cc7a17f6e4e68bd9e1d3cad6",
+      "sha256": "8e6f0dea5e353b5bad932b9835f7d2a7549c1b52c8f624d91e1ffe99489fa345",
       "custody": "canonical-protocol-projection",
       "source": "packages/protocol/projections/pipeline/lib/protocol/contracts.mjs"
     },

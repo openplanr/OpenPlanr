@@ -1,3 +1,11 @@
+/**
+ * CLI Operate client: dispatches the public `operate.*` tools (Cycles, Assignments, Reviews,
+ * governed Actions, experience, Planning handoff, recovery) over the project store, rebuilding
+ * state by Event replay on each request, and serves display reads, measurement and live evidence.
+ * Entry points: `createOperateClient` (`dispatch`, `measurement` and the `read*` display reads).
+ * Per-operation logic lives in `./client/`; durable storage belongs to `store.ts`.
+ */
+
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import {

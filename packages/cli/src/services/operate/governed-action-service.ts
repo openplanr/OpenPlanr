@@ -1,3 +1,11 @@
+/**
+ * Governed Action lifecycle for the Operate client: records a human or rollback approval for the
+ * exact current Action, executes an approved contained Action and issues its terminal verification
+ * Assignment, and rolls a completed Action back against its approved plan and process-local target.
+ * Entry points: `approveOperateAction`, `executeOperateAction`, `rollbackOperateAction`. The
+ * execution journal and recovery runtime come from planr-pipeline's governed execution subpaths.
+ */
+
 import { createHash } from 'node:crypto';
 import {
   assertOperatingApprovalRequirementIntegrityV2,

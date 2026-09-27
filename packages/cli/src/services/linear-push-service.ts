@@ -1,6 +1,9 @@
 /**
- * `planr linear push` — map Epic → Linear Project, Feature → top-level
- * project issue, Story and TaskList → sub-issues of the feature issue.
+ * `planr linear push`: creates or updates the Linear entities for one artifact and its scope. An
+ * Epic maps to a project, milestone or label by its strategy, Features to project issues with
+ * Stories and task lists as sub-issues, and Quick tasks and Backlog items stand alone or join
+ * their Epic. Entry point: `runLinearPush`. Scope loading, bodies and plans live in `./linear/`,
+ * API calls in `linear-service.ts`; pulling state back belongs to `linear-pull-service.ts`.
  */
 
 import type { LinearClient } from '@linear/sdk';

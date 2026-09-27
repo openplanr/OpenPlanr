@@ -1,3 +1,11 @@
+/**
+ * Operate command gateway for the dashboard: issues actor-bound sessions, turns runtime-issued
+ * allowed actions into opaque references, previews one command and runs it at most once on a
+ * matching confirmation; callers never supply grants, targets or payloads.
+ * Entry points: `createOperateCommandGateway` (`issueSession`, `preview`, `confirm`) and
+ * `createOperateClientCommandRuntime`. Session capabilities belong to `session-capability.ts`.
+ */
+
 import { randomBytes } from 'node:crypto';
 import {
   assertOperatingReviewBoundSubmissionV1,

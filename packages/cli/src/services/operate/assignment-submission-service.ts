@@ -1,3 +1,12 @@
+/**
+ * Assignment result acceptance for the Operate client: accepts a submitted result in the
+ * replay-safe mutation lane and commits its follow-on work in the same generation, from the
+ * decision ledger and Action verification to the executive board review and verification outcomes.
+ * Entry points: `submitOperateAssignment`, `acceptOperateLiveEvidenceSubmission`,
+ * `liveEvidenceSubmissionPreparation`. Staging and validating a result belong to
+ * `assignment-lifecycle-service.ts`.
+ */
+
 import { createHash } from 'node:crypto';
 import {
   assertAcceptedLiveEvidenceBridgeV2,

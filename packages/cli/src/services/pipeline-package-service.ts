@@ -1,3 +1,11 @@
+/**
+ * Locates the installed planr-pipeline package for the CLI, loads its guided-interaction
+ * validators, and verifies explicit digest-bound pipeline and landing package handoffs and the
+ * exports each must provide, without consulting any other installed copy.
+ * Entry points: `resolvePipelinePackage`, `resolveGuidedInteractionValidators`,
+ * `verifyPipelinePackageHandoff`, `verifyLandingPackageHandoff`.
+ */
+
 import { createHash } from 'node:crypto';
 import { existsSync, lstatSync, readdirSync, readFileSync, realpathSync } from 'node:fs';
 import { createRequire } from 'node:module';

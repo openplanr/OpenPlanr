@@ -1,4 +1,12 @@
 #!/usr/bin/env node
+/**
+ * Release journey proof: builds and packs OpenPlanr and the planr-pipeline candidate, installs both
+ * into a disposable prefix and home, then drives one Operate Cycle through the installed `planr`,
+ * from setup through Advisor, Challenger and Chair submissions to the owner Review, exports and a
+ * dashboard probe, using only the executor-facing prepare, validate and submit commands.
+ * Run as `npm run verify:release-journey`; exits 1 on a failed assertion, 2 when it cannot run.
+ */
+
 import { execFileSync, spawn } from 'node:child_process';
 import {
   mkdirSync,
@@ -13,12 +21,6 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { isPathInside, resolvePipelineCandidateSourceRoot } from './release-package-input.mjs';
-
-/**
- * Runs the complete public Operate candidate journey against packed OpenPlanr
- * and packed planr-pipeline bytes. It uses only the executor-facing
- * prepare -> validate -> submit workflow and exact owner Review choices.
- */
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const ADVISOR_ROLE_IDS = new Set([

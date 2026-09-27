@@ -1,3 +1,12 @@
+/**
+ * Operate experience reader for the dashboard server: loads the actor-bound experience projection,
+ * rebinds it to an access-safe transport view, and selects surfaces and composes the Cycle, Review,
+ * Action, recovery and executive-board workspaces without resolving evidence or granting authority.
+ * Entry points: `readOperateExperienceProjection`, `buildOperateExperienceTransportView`,
+ * `selectOperateExperienceSurface` and the other `selectOperate*` selectors. Integrity hashes and
+ * closed validation belong to the `operate-*-contract.mjs` display contracts.
+ */
+
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 

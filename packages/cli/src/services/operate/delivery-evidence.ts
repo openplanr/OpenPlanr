@@ -1,3 +1,11 @@
+/**
+ * Planning delivery evidence for Operate: checks a SPEC's closed operating origin and artifact
+ * custody, its PLAN and SHIP run receipts and current SHIP closure receipt, then builds the
+ * delivery evidence and ingests it against the original verification-plan Event.
+ * Entry points: `ingestPlanningDeliveryEvidence`, `validateShipClosureDeliveryEvidence`,
+ * `requireCurrentReceiptCustody`. The evidence record comes from planr-pipeline's Planning bridge.
+ */
+
 import { createHash } from 'node:crypto';
 import { lstat, readdir, readFile, realpath } from 'node:fs/promises';
 import path from 'node:path';

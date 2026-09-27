@@ -1,3 +1,12 @@
+/**
+ * Stored SHIP closure lifecycle under a feature's `.ship/`: creates a run with frozen tasks,
+ * reviewers and gates, applies events under a lock with replay checks, runs phase gates,
+ * finalizes it into a receipt, reopens receipts, and inspects a PASS receipt for landing.
+ * Entry points: `createShipClosure`, `advanceStoredShipClosure`, `runStoredShipGates`,
+ * `finalizeStoredShipClosure`, `inspectStoredShipClosureForLanding`. Event reduction belongs
+ * to `ship-closure-reducer.mjs`, paths and locks to `ship-closure-persistence.mjs`.
+ */
+
 import { spawnSync } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
 import { existsSync, lstatSync, readdirSync, readFileSync, unlinkSync } from 'node:fs';
