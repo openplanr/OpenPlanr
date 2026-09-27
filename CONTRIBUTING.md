@@ -128,11 +128,15 @@ the version pull request merges.
 Record failed or unavailable checks honestly. Do not update fixtures simply to
 hide a regression, or make an unsupported compatibility claim from one local run.
 
-Before pushing a branch that touches several packages, `npm run verify:ci` runs the
-same commands as the Workspace CI jobs, in order, on your Node version (`--only` and
-`--skip` take job ids from `--list`). It is slower than `npm run verify` and catches
-the suites `verify` does not run: workspace lint, the full CLI test tree, the heavy and
-Operate suites, and the package tests of every workspace.
+Before pushing a branch that touches several packages, `npm run verify:ci` reads
+`.github/workflows/ci.yml` and runs each job's commands, in order, on your Node version
+(`--only` and `--skip` take the workflow's job ids, which `--list` prints). It runs the
+build job's `npm run generate` and `npm run build` once in place of restoring its outputs,
+runs every matrix entry in turn, and runs a job with a Node matrix once: its entry for your
+Node, else its entry for the build job's Node, so `compatibility` runs only on Node 20 or
+22. It is slower than `npm run verify` and catches the suites `verify` does not run:
+workspace lint, the full CLI test tree, the heavy and Operate suites, and the package tests
+of every workspace.
 
 ### Browser tests
 

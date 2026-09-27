@@ -3,6 +3,8 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { load } from 'js-yaml';
+import { planLocalCi } from '../../../../scripts/run-ci-parity.mjs';
 
 const root = fileURLToPath(new URL('../../../../', import.meta.url));
 const pipeline = resolve(root, 'packages/pipeline');
@@ -99,13 +101,13 @@ test('ecosystem tests already exercise release reconciliation and installed cont
 });
 
 test('local CI parity runs the same pipeline entrypoints as Workspace CI', () => {
-  const local = read('scripts/run-ci-parity.mjs');
-  const pipelineJob = /id: 'pipeline',([\s\S]*?)\n  \},/u.exec(local)?.[1];
-  assert.ok(pipelineJob, 'Local parity must retain the pipeline job');
-  const localEntrypoints = [...pipelineJob.matchAll(/^\s+'([a-z][a-z0-9:-]+)',?\s*$/gmu)].map(
-    ([, script]) => script,
+  const pipelineJob = planLocalCi(load(workflow), 24).jobs.find(
+    ({ id }) => id === 'pipeline-tests',
   );
-  assert.deepEqual(localEntrypoints, entrypoints);
+  assert.ok(pipelineJob, 'Local parity must retain the pipeline job');
+  assert.deepEqual(
+    pipelineJob.instances.map(({ steps }) => steps.map(({ script }) => script)),
+    entrypoints.map((script) => [`npm run ${script} --workspace=planr-pipeline`]),
+  );
   assert.doesNotMatch(workflow, /check:preservation/u);
-  assert.doesNotMatch(local, /check:preservation/u);
 });
