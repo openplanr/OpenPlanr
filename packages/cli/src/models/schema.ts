@@ -1,10 +1,36 @@
 import { z } from 'zod';
+import { messageOf } from '../utils/error-message.js';
 
 export const targetCLISchema = z.enum(['cursor', 'claude', 'codex']);
 export const codingAgentSchema = z.enum(['claude', 'cursor', 'codex']);
 
+/** Texts probed for an empty match: an empty string, and a word between spaces for boundary patterns. */
+const EMPTY_MATCH_PROBES = ['', ' a '];
+
+/** A phrase pattern that compiles with the linter's flags and cannot match empty text. */
+const vaguePhrasePatternSchema = z.string().superRefine((pattern, ctx) => {
+  let phrase: RegExp;
+  try {
+    phrase = new RegExp(pattern, 'gi');
+  } catch (error) {
+    ctx.addIssue({
+      code: 'custom',
+      message: `${JSON.stringify(pattern)} is not a valid regular expression: ${messageOf(error)}`,
+    });
+    return;
+  }
+  if (
+    EMPTY_MATCH_PROBES.some((probe) => [...probe.matchAll(phrase)].some(([text]) => text === ''))
+  ) {
+    ctx.addIssue({
+      code: 'custom',
+      message: `${JSON.stringify(pattern)} can match empty text; a phrase pattern must match at least one character`,
+    });
+  }
+});
+
 export const vaguePhraseRuleSchema = z.object({
-  pattern: z.string(),
+  pattern: vaguePhrasePatternSchema,
   alternatives: z.array(z.string()),
   hint: z.string().optional(),
 });

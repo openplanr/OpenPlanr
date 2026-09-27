@@ -85,6 +85,49 @@ describe('loadConfig', () => {
   });
 });
 
+describe('loadConfig report-linter phrase patterns', () => {
+  async function loadWithPattern(pattern: string): Promise<unknown> {
+    mockFileExists.mockResolvedValue(true);
+    mockReadFile.mockResolvedValue(
+      JSON.stringify({
+        ...validConfig,
+        reportLinter: { rules: [], vaguePhrases: [{ pattern, alternatives: ['by Friday'] }] },
+      }),
+    );
+    return loadConfig('/project').catch((caught: unknown) => caught);
+  }
+
+  it('rejects a pattern that is not a regular expression, citing the config path and the pattern', async () => {
+    const error = await loadWithPattern('(unclosed');
+
+    expect(error).toMatchObject({ name: 'ConfigInvalidError', code: 'E_CONFIG_INVALID' });
+    expect((error as Error).message).toContain(join('/project', '.planr', 'config.json'));
+    expect((error as Error).message).toContain(
+      'reportLinter.vaguePhrases.0.pattern: "(unclosed" is not a valid regular expression',
+    );
+  });
+
+  it('rejects a pattern that can match empty text, citing the config path and the pattern', async () => {
+    for (const pattern of ['(soon)?', 'x*', '\\b']) {
+      const error = await loadWithPattern(pattern);
+
+      expect(error).toMatchObject({ name: 'ConfigInvalidError', code: 'E_CONFIG_INVALID' });
+      expect((error as Error).message).toContain(join('/project', '.planr', 'config.json'));
+      expect((error as Error).message).toContain(
+        `reportLinter.vaguePhrases.0.pattern: ${JSON.stringify(pattern)} can match empty text`,
+      );
+    }
+  });
+
+  it('accepts a phrase pattern that always matches text', async () => {
+    const config = await loadWithPattern('\\b(almost done|mostly done)\\b');
+
+    expect(config).toMatchObject({
+      reportLinter: { vaguePhrases: [{ alternatives: ['by Friday'] }] },
+    });
+  });
+});
+
 describe('saveConfig', () => {
   it('writes pretty-printed JSON with trailing newline', async () => {
     // biome-ignore lint/suspicious/noExplicitAny: test passes partial config intentionally

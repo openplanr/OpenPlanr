@@ -22,6 +22,17 @@ describe('report-linter-service', () => {
     expect(res.findings.filter((f) => f.ruleId === 'weekly-structure')).toHaveLength(0);
   });
 
+  it('reports each phrase once and finishes when a pattern can match empty text', () => {
+    const res = validateReportMarkdown('Ship soon, then soon again.', 'weekly', {
+      rules: [],
+      vaguePhrases: [{ pattern: '(soon)?', alternatives: ['by Friday'] }],
+    });
+    expect(res.findings.map((f) => [f.message, f.span])).toEqual([
+      ['Vague or low-signal phrase: "soon".', { start: 5, end: 9 }],
+      ['Vague or low-signal phrase: "soon".', { start: 16, end: 20 }],
+    ]);
+  });
+
   it('respects empty rules and vaguePhrases arrays (disables defaults)', () => {
     const res = validateReportMarkdown('We almost done with things.', 'weekly', {
       rules: [],
