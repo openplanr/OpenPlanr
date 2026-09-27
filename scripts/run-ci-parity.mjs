@@ -2,7 +2,7 @@
 // Run the Workspace CI job commands locally, in order, on the current Node version.
 // Usage: node scripts/run-ci-parity.mjs [--only <id,...>] [--skip <id,...>] [--list]
 import { spawnSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { readFileSync, realpathSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { load } from 'js-yaml';
@@ -343,6 +343,9 @@ function main(args) {
   return state.results.some((result) => result.status === 'failed') ? 1 : 0;
 }
 
-if (resolve(process.argv[1] ?? '') === fileURLToPath(import.meta.url)) {
+if (
+  process.argv[1] &&
+  realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))
+) {
   process.exitCode = main(process.argv.slice(2));
 }
