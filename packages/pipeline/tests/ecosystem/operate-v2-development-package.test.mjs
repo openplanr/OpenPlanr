@@ -522,8 +522,8 @@ test('Operate 2.0 development package installs the clean typed contract without 
     );
   }
   const rootDeclarations = readFileSync(join(installedPackage, 'lib/pipeline/index.d.mts'), 'utf8');
-  assert.match(rootDeclarations, /export \* from '\.\.\/protocol\/live-evidence-v2\.d\.mts';/u);
-  assert.match(rootDeclarations, /export \* from '\.\/landing-contract\.d\.mts';/u);
+  assert.match(rootDeclarations, /export \* from '\.\.\/protocol\/live-evidence-v2\.mjs';/u);
+  assert.match(rootDeclarations, /export \* from '\.\/landing-contract\.mjs';/u);
   const currentRuntimeCustody = [
     ...DASHBOARD_PROTOCOL_CUSTODY,
     ...PROFESSIONAL_REVIEW_PACKAGE_CUSTODY,
