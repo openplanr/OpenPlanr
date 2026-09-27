@@ -1,4 +1,10 @@
-// @ts-check
+import type {
+  DiagramAuthoringBundle,
+  DiagramAuthoringValidationError,
+  DiagramBounds,
+  DiagramPlacement,
+  DiagramSemanticEntry,
+} from '@openplanr/protocol/diagram-authoring-contracts';
 import {
   clone,
   elementIndex,
@@ -7,29 +13,129 @@ import {
 } from '../authoring/model.mjs';
 import { resolveDiagramSceneElement } from '../authoring/scene.mjs';
 
+export interface DiagramGeometryCamera {
+  x: number;
+  y: number;
+  scale: number;
+}
+export interface DiagramGeometryRecord {
+  id: string;
+  collection: DiagramSemanticEntry['collection'];
+  bounds: DiagramBounds | null;
+  points: Array<{ x: number; y: number }>;
+  labelBounds: DiagramBounds | null;
+  zIndex: number;
+  order: number;
+}
+export interface DiagramGeometryHit {
+  id: string;
+  collection: DiagramSemanticEntry['collection'];
+  kind: 'bounds' | 'segment' | 'label';
+  /** Distance from the pointer in screen pixels. */
+  distance: number;
+  zIndex: number;
+}
+export interface DiagramGeometryFailure {
+  ok: false;
+  diagnostics: DiagramAuthoringValidationError[];
+}
+export interface DiagramGeometryStats {
+  entries: number;
+  primitives: number;
+  cells: number;
+  overflowPrimitives: number;
+  fullBuilds: number;
+  updates: number;
+  validations: number;
+  validatedElements: number;
+  metadataEntriesScanned: number;
+  geometryResolved: number;
+  lastUpdateResolved: number;
+  lastUpdateRemoved: number;
+  lastMetadataEntriesScanned: number;
+  queries: number;
+  lastQueryCandidates: number;
+  lastQueryChecks: number;
+  lastQueryCells: number;
+  lastQueryOverflow: number;
+}
+export interface DiagramGeometryIndex {
+  /** Validate a revision, then refresh affected geometry and its dependencies. Equal revisions are no-ops. */
+  update(
+    bundle: DiagramAuthoringBundle,
+    affectedIds: string[],
+  ):
+    | { ok: true; updatedIds: string[]; removedIds: string[]; diagnostics: [] }
+    | DiagramGeometryFailure;
+  /** x/y and optional tolerance (default 6) are screen pixels; screen = world * scale + camera offset. */
+  query(input: { x: number; y: number; tolerance?: number; camera: DiagramGeometryCamera }):
+    | {
+        ok: true;
+        hits: DiagramGeometryHit[];
+        world: { x: number; y: number };
+        tolerance: number;
+        diagnostics: [];
+      }
+    | DiagramGeometryFailure;
+  /** Detached world geometry suitable for controls, without access to internal cache storage. */
+  get(id: string): DiagramGeometryRecord | null;
+  stats(): DiagramGeometryStats;
+}
+
+interface Point {
+  x: number;
+  y: number;
+}
+interface CellRange {
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+}
+/** Only groups and lanes carry members; the index reads them from every entry. */
+type IndexedEntry = DiagramSemanticEntry & { value: { members?: string[] } };
+type EmphasisLevel = DiagramAuthoringBundle['document']['emphasis'][number]['level'];
+interface GeometryMetadata {
+  byId: Map<string, IndexedEntry>;
+  placements: Map<string, DiagramPlacement>;
+  order: Map<string, number>;
+  emphasis: Map<string, EmphasisLevel>;
+  signatures: Map<string, string>;
+  children: Map<string, string[]>;
+  incident: Map<string, Set<string>>;
+}
+type GeometryDependencies = Pick<GeometryMetadata, 'signatures' | 'children' | 'incident'>;
+type Primitive = { id: string; bounds: DiagramBounds; cells: string[] | null } & (
+  | { kind: 'bounds' | 'label' }
+  | { kind: 'segment'; start: Point; end: Point }
+);
+type GeometryQuery = Parameters<DiagramGeometryIndex['query']>[0];
+// Map lookups asserted with `as` read keys this module inserted or checked first; the
+// assertion keeps the emitted code identical to the JavaScript it replaces.
+
 const CELL_SIZE = 256;
 const MAX_PRIMITIVE_CELLS = 16;
 const MAX_QUERY_CELLS = 4096;
 const MAX_QUERY_PRIMITIVES = 20000;
-/** @type {(rule: string, detail: string, path?: string) => import('./geometry-index.d.mts').DiagramGeometryFailure} */
-const fail = (rule, detail, path = '$.geometry') => ({
+const fail = (rule: string, detail: string, path = '$.geometry'): DiagramGeometryFailure => ({
   ok: false,
   diagnostics: [{ path, rule, detail }],
 });
-const cellRange = (bounds) => ({
+const cellRange = (bounds: DiagramBounds): CellRange => ({
   left: Math.floor(bounds.x / CELL_SIZE),
   right: Math.floor((bounds.x + bounds.width) / CELL_SIZE),
   top: Math.floor(bounds.y / CELL_SIZE),
   bottom: Math.floor((bounds.y + bounds.height) / CELL_SIZE),
 });
-const cellCount = (range) => (range.right - range.left + 1) * (range.bottom - range.top + 1);
-const cellKey = (x, y) => `${x},${y}`;
-const rectDistance = (point, bounds) =>
+const cellCount = (range: CellRange) =>
+  (range.right - range.left + 1) * (range.bottom - range.top + 1);
+const cellKey = (x: number, y: number) => `${x},${y}`;
+const rectDistance = (point: Point, bounds: DiagramBounds) =>
   Math.hypot(
     Math.max(bounds.x - point.x, 0, point.x - bounds.x - bounds.width),
     Math.max(bounds.y - point.y, 0, point.y - bounds.y - bounds.height),
   );
-function segmentDistance(point, start, end) {
+function segmentDistance(point: Point, start: Point, end: Point) {
   const dx = end.x - start.x,
     dy = end.y - start.y,
     squared = dx * dx + dy * dy;
@@ -39,13 +145,13 @@ function segmentDistance(point, start, end) {
       : Math.max(0, Math.min(1, ((point.x - start.x) * dx + (point.y - start.y) * dy) / squared));
   return Math.hypot(point.x - start.x - t * dx, point.y - start.y - t * dy);
 }
-function metadata(bundle) {
-  const byId = elementIndex(bundle.document);
-  const placements = new Map(),
-    signatures = new Map(),
-    order = new Map(),
-    children = new Map(),
-    incident = new Map();
+function metadata(bundle: DiagramAuthoringBundle): GeometryMetadata {
+  const byId: Map<string, IndexedEntry> = elementIndex(bundle.document);
+  const placements = new Map<string, DiagramPlacement>(),
+    signatures = new Map<string, string>(),
+    order = new Map<string, number>(),
+    children = new Map<string, string[]>(),
+    incident = new Map<string, Set<string>>();
   const emphasis = new Map(bundle.document.emphasis.map((value) => [value.targetId, value.level]));
   bundle.presentation.elements.forEach((value, index) => {
     placements.set(value.elementId, value);
@@ -57,17 +163,17 @@ function metadata(bundle) {
     if (entry.collection === 'relations')
       for (const endpoint of [entry.value.from, entry.value.to]) {
         if (!incident.has(endpoint)) incident.set(endpoint, new Set());
-        incident.get(endpoint).add(id);
+        (incident.get(endpoint) as Set<string>).add(id);
       }
   }
   return { byId, placements, order, emphasis, signatures, children, incident };
 }
-function resolveGeometry(data, id) {
+function resolveGeometry(data: GeometryMetadata, id: string): DiagramGeometryRecord {
   const element = resolveDiagramSceneElement(
-    data.byId.get(id),
-    data.placements.get(id),
+    data.byId.get(id) as IndexedEntry,
+    data.placements.get(id) as DiagramPlacement,
     data.placements,
-    data.order.get(id),
+    data.order.get(id) as number,
     data.emphasis.get(id) ?? null,
   );
   return {
@@ -80,19 +186,8 @@ function resolveGeometry(data, id) {
     order: element.order,
   };
 }
-/**
- * @typedef {{
- *   id: string;
- *   kind: 'bounds' | 'label' | 'segment';
- *   bounds: import('@openplanr/protocol/diagram-authoring-contracts').DiagramBounds;
- *   start?: { x: number; y: number };
- *   end?: { x: number; y: number };
- *   cells: string[] | null;
- * }} Primitive
- */
-function primitives(record) {
-  /** @type {Primitive[]} */
-  const result = [];
+function primitives(record: DiagramGeometryRecord) {
+  const result: Primitive[] = [];
   if (record.bounds)
     result.push({ id: record.id, kind: 'bounds', bounds: record.bounds, cells: null });
   if (record.labelBounds)
@@ -116,11 +211,15 @@ function primitives(record) {
   }
   return result;
 }
-function affectedClosure(ids, oldData, nextData) {
+function affectedClosure(
+  ids: Iterable<string>,
+  oldData: GeometryDependencies,
+  nextData: GeometryDependencies,
+) {
   const result = new Set(ids),
     pending = [...result];
   while (pending.length) {
-    const id = pending.pop();
+    const id = pending.pop() as string;
     for (const data of [oldData, nextData])
       for (const child of data.children.get(id) ?? [])
         if (!result.has(child)) {
@@ -133,11 +232,11 @@ function affectedClosure(ids, oldData, nextData) {
       for (const edge of data.incident.get(id) ?? []) result.add(edge);
   return result;
 }
-/**
- * @returns {import('./geometry-index.d.mts').DiagramGeometryFailure
- *   | { ok: true; world: { x: number; y: number }; radius: number; range: ReturnType<typeof cellRange>; scale: number }}
- */
-function readQuery(input) {
+function readQuery(
+  input: GeometryQuery,
+):
+  | DiagramGeometryFailure
+  | { ok: true; world: Point; radius: number; range: CellRange; scale: number } {
   const diagnostics = inspectPlainData(input);
   if (diagnostics.length) return { ok: false, diagnostics };
   if (
@@ -193,18 +292,19 @@ function readQuery(input) {
 /**
  * Cached world geometry. Query converts screen coordinates through one camera;
  * no query validates the bundle, resolves scene geometry, or reads browser DOM.
- * @type {typeof import('./geometry-index.d.mts').createDiagramGeometryIndex}
  */
-export function createDiagramGeometryIndex(bundle) {
+export function createDiagramGeometryIndex(
+  bundle: DiagramAuthoringBundle,
+): { ok: true; index: DiagramGeometryIndex; diagnostics: [] } | DiagramGeometryFailure {
   const checked = validateAuthoringBundle(bundle);
   if (!checked.ok) return checked;
   const diagramId = bundle.diagramId;
   const initial = metadata(bundle);
   let digest = bundle.bundleDigest;
-  const records = new Map(),
-    buckets = new Map(),
-    overflow = new Set(),
-    members = new Map();
+  const records = new Map<string, DiagramGeometryRecord>(),
+    buckets = new Map<string, Set<Primitive>>(),
+    overflow = new Set<Primitive>(),
+    members = new Map<string, Primitive[]>();
   const work = {
     fullBuilds: 1,
     updates: 0,
@@ -222,12 +322,12 @@ export function createDiagramGeometryIndex(bundle) {
     lastQueryOverflow: 0,
   };
   let primitiveCount = 0;
-  function remove(id) {
+  function remove(id: string) {
     for (const primitive of members.get(id) ?? []) {
       if (primitive.cells === null) overflow.delete(primitive);
       else
         for (const key of primitive.cells) {
-          const bucket = buckets.get(key);
+          const bucket = buckets.get(key) as Set<Primitive>;
           bucket.delete(primitive);
           if (!bucket.size) buckets.delete(key);
         }
@@ -236,7 +336,7 @@ export function createDiagramGeometryIndex(bundle) {
     records.delete(id);
     members.delete(id);
   }
-  function insert(record) {
+  function insert(record: DiagramGeometryRecord) {
     const values = primitives(record);
     for (const primitive of values) {
       const range = cellRange(primitive.bounds);
@@ -250,7 +350,7 @@ export function createDiagramGeometryIndex(bundle) {
             const key = cellKey(x, y);
             primitive.cells.push(key);
             if (!buckets.has(key)) buckets.set(key, new Set());
-            buckets.get(key).add(primitive);
+            (buckets.get(key) as Set<Primitive>).add(primitive);
           }
       }
       primitiveCount++;
@@ -263,13 +363,15 @@ export function createDiagramGeometryIndex(bundle) {
   work.lastUpdateResolved = records.size;
   // Only detached signatures and dependency IDs survive this call. Mutable caller
   // objects cannot later change the cached geometry or the previous dependency set.
-  let data = {
+  let data: GeometryDependencies = {
     signatures: initial.signatures,
     children: initial.children,
     incident: initial.incident,
   };
-  /** @type {import('./geometry-index.d.mts').DiagramGeometryIndex['update']} */
-  function update(nextBundle, affectedIds) {
+  function update(
+    nextBundle: DiagramAuthoringBundle,
+    affectedIds: string[],
+  ): ReturnType<DiagramGeometryIndex['update']> {
     const checked = validateAuthoringBundle(nextBundle);
     work.validations++;
     if (!checked.ok) return checked;
@@ -302,8 +404,8 @@ export function createDiagramGeometryIndex(bundle) {
     if (affectedIds.some((id) => !nextData.signatures.has(id) && !data.signatures.has(id)))
       return fail('affected-ids', 'Affected IDs must exist in the current or next diagram.');
     const closure = affectedClosure(changed, data, nextData);
-    const nextRecords = [],
-      removedIds = [];
+    const nextRecords: DiagramGeometryRecord[] = [],
+      removedIds: string[] = [];
     for (const id of closure) {
       if (nextData.byId.has(id)) nextRecords.push(resolveGeometry(nextData, id));
       else if (records.has(id)) removedIds.push(id);
@@ -312,7 +414,8 @@ export function createDiagramGeometryIndex(bundle) {
     for (const record of nextRecords) insert(record);
     // Array insertions/deletions shift draw-order positions without changing
     // shape or route geometry. Refresh that scalar metadata without resolving.
-    for (const [id, order] of nextData.order) records.get(id).order = order;
+    // biome-ignore format: bundles keep this one-line layout; wrapping would change their bytes.
+    for (const [id, order] of nextData.order) (records.get(id) as DiagramGeometryRecord).order = order;
     data = {
       signatures: nextData.signatures,
       children: nextData.children,
@@ -332,8 +435,7 @@ export function createDiagramGeometryIndex(bundle) {
       diagnostics: [],
     };
   }
-  /** @type {import('./geometry-index.d.mts').DiagramGeometryIndex['query']} */
-  function query(input) {
+  function query(input: GeometryQuery): ReturnType<DiagramGeometryIndex['query']> {
     work.queries++;
     work.lastQueryCandidates = 0;
     work.lastQueryChecks = 0;
@@ -341,7 +443,7 @@ export function createDiagramGeometryIndex(bundle) {
     work.lastQueryOverflow = 0;
     const query = readQuery(input);
     if (!query.ok) return query;
-    const candidates = new Set();
+    const candidates = new Set<Primitive>();
     for (let x = query.range.left; x <= query.range.right; x++)
       for (let y = query.range.top; y <= query.range.bottom; y++) {
         work.lastQueryCells++;
@@ -363,8 +465,8 @@ export function createDiagramGeometryIndex(bundle) {
           'Too many long primitives occupy this selection region; narrow the view before precise selection.',
         );
     }
-    const hitById = new Map(),
-      visited = new Set();
+    const hitById = new Map<string, DiagramGeometryHit>(),
+      visited = new Set<string>();
     const priority = { bounds: 0, segment: 1, label: 2 };
     for (const primitive of candidates) {
       visited.add(primitive.id);
@@ -374,7 +476,7 @@ export function createDiagramGeometryIndex(bundle) {
           ? segmentDistance(query.world, primitive.start, primitive.end)
           : rectDistance(query.world, primitive.bounds);
       if (distance > query.radius) continue;
-      const record = records.get(primitive.id);
+      const record = records.get(primitive.id) as DiagramGeometryRecord;
       const hit = {
         id: primitive.id,
         collection: record.collection,
@@ -395,7 +497,8 @@ export function createDiagramGeometryIndex(bundle) {
       (a, b) =>
         b.zIndex - a.zIndex ||
         a.distance - b.distance ||
-        records.get(b.id).order - records.get(a.id).order ||
+        (records.get(b.id) as DiagramGeometryRecord).order -
+          (records.get(a.id) as DiagramGeometryRecord).order ||
         (a.id < b.id ? -1 : a.id > b.id ? 1 : 0),
     );
     return { ok: true, hits, world: query.world, tolerance: query.radius, diagnostics: [] };

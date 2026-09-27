@@ -19,7 +19,7 @@
       "packages/integrations",
       "apps/dashboard"
     ],
-    "manifestDigest": "sha256:a9b8e81b52c0b0af6216dd86a2550f7eaca1c5b0b173b9be8c66aa5af88adc75"
+    "manifestDigest": "sha256:f73e23154c4c9ccfb2cf58e9725dabcef58c67cbdf47e184cbcde7ff052ddb08"
   },
   "protocol": {
     "current": "1.8.0",

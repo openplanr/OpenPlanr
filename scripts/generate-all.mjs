@@ -56,6 +56,11 @@ export const GENERATOR_STEPS = Object.freeze([
     ]),
   }),
   Object.freeze({
+    id: 'typescript-sources',
+    required: true,
+    candidates: Object.freeze([command('scripts/typescript/compile-sources.mjs', [], ['--check'])]),
+  }),
+  Object.freeze({
     id: 'artifact-shell',
     required: true,
     candidates: Object.freeze([

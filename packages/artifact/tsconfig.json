@@ -1,0 +1,21 @@
+{
+  // Type-checks the TypeScript sources under lib/. scripts/typescript/compile-sources.mjs reads
+  // this file and emits the .mjs and .d.mts beside each source; those outputs are gitignored.
+  // allowJs types the imports of modules that are still JavaScript.
+  "compilerOptions": {
+    "strict": true,
+    "noEmit": true,
+    "allowJs": true,
+    "checkJs": false,
+    "verbatimModuleSyntax": true,
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["node"],
+    "newLine": "lf",
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": ["lib/**/*.mts"],
+  "exclude": ["lib/**/*.d.mts"]
+}

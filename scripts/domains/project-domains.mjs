@@ -242,6 +242,10 @@ function atomicWrite(path, bytes, mode) {
   chmodSync(path, mode);
 }
 
+// A TypeScript source ships as the .mjs and .d.mts compiled beside it. Shipping the source
+// too would let a consumer's compiler resolve `./x.mjs` to `x.mts` and check it as its own.
+const isTypeScriptSource = (path) => path.endsWith('.mts') && !path.endsWith('.d.mts');
+
 function collectEntries(domains, targetRoot) {
   const entries = [];
   for (const domain of domains) {
@@ -250,6 +254,12 @@ function collectEntries(domains, targetRoot) {
       if (!existsSync(sourceRoot))
         throw new Error(`Missing canonical source: ${projection.source}`);
       for (const child of walkFiles(sourceRoot)) {
+        if (isTypeScriptSource(child)) {
+          const compiled = join(projection.source, child.replace(/\.mts$/u, '.mjs'));
+          if (!existsSync(resolve(workspaceRoot, compiled)))
+            throw new Error(`Missing compiled ${compiled}; run npm run generate first.`);
+          continue;
+        }
         const sourcePath = child ? join(sourceRoot, child) : sourceRoot;
         const targetRelative = child ? join(projection.target, child) : projection.target;
         const targetPath = resolve(targetRoot, targetRelative);

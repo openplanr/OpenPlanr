@@ -18,7 +18,7 @@
     },
     {
       "path": "package.json",
-      "digest": "sha256:a9b8e81b52c0b0af6216dd86a2550f7eaca1c5b0b173b9be8c66aa5af88adc75"
+      "digest": "sha256:f73e23154c4c9ccfb2cf58e9725dabcef58c67cbdf47e184cbcde7ff052ddb08"
     },
     {
       "path": "packages/artifact/package.json",
@@ -136,7 +136,7 @@
     },
     {
       "path": "ecosystem.json",
-      "digest": "sha256:dd9c3350bef8be81fdea776dda24193e4edd7419dbf3770280483dd5df15c58f"
+      "digest": "sha256:c4c96915a11620d4bd8a09a8a5801efe55b8f492f7ce23daafbb99a583c1aa74"
     },
     {
       "path": "packages/pipeline/.claude-plugin/plugin.json",

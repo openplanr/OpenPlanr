@@ -8,6 +8,7 @@ const expectedOrder = [
   'protocol-catalogs',
   'protocol-public-projection',
   'dashboard-contracts',
+  'typescript-sources',
   'artifact-shell',
   'diagram-assets',
   'design-studio',
