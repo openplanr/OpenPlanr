@@ -77,6 +77,14 @@ npm run check:generated
 npm run check:boundaries
 ```
 
+The custody manifests digest every workspace `package.json`, so Dependabot npm updates
+leave them stale. `dependabot-regenerate.yml` regenerates them on the pull request with a
+read-only token and no secrets. `dependabot-regenerate-push.yml` then runs from `main`,
+takes only the five custody manifests from that upload and pushes them as one commit.
+Workflow runs started by that push wait for approval: approve them on the pull request
+before reviewing it. If regeneration changes any other tracked path, the check fails and
+the branch needs a hand regeneration.
+
 When changing CLI registration, refresh its command catalog after building:
 
 ```bash

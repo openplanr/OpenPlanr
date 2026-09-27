@@ -1,0 +1,81 @@
+name: Regenerate Dependabot outputs
+
+# The custody manifests digest every workspace package.json, so a Dependabot npm update leaves
+# them stale and fails the generated-output checks. This workflow runs the bumped dependencies
+# to regenerate them, so it holds a read-only token and no secrets, and only uploads the
+# changed manifests. dependabot-regenerate-push.yml runs from main, validates the upload and
+# pushes it; nothing in that workflow executes code from the pull request.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - '**/package.json'
+      - 'package-lock.json'
+
+concurrency:
+  group: dependabot-regenerate-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # Keep identical to dependabot-regenerate-push.yml, which enforces it.
+  REGENERATED_PATHS: |-
+    adapters/manifests/canonical-skills.json
+    adapters/manifests/codex-plugin-content.json
+    adapters/manifests/ecosystem-assets.json
+    adapters/manifests/generated-assets.json
+    ecosystem.json
+
+jobs:
+  regenerate:
+    name: Regenerate tracked outputs
+    if: >-
+      github.actor == 'dependabot[bot]' &&
+      github.event.pull_request.user.login == 'dependabot[bot]' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      startsWith(github.head_ref, 'dependabot/npm_and_yarn/')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install the root lockfile
+        run: npm ci
+      - name: Regenerate tracked outputs
+        run: npm run generate
+      - name: Collect the regenerated manifests
+        id: collect
+        run: |
+          set -o pipefail
+          changed="$( { git diff --name-only HEAD --; git ls-files --others --exclude-standard; } | sort -u)"
+          if [ -z "$changed" ]; then
+            echo "::notice::npm run generate reproduced every tracked output; nothing to push."
+            exit 0
+          fi
+          unexpected="$(printf '%s\n' "$changed" | grep -vxF -- "$REGENERATED_PATHS")" || [ $? -eq 1 ]
+          if [ -n "$unexpected" ]; then
+            echo "::error::npm run generate changed paths outside the custody manifests, which are not pushed automatically. Regenerate and review them by hand:"
+            echo "$unexpected"
+            exit 1
+          fi
+          while IFS= read -r path; do
+            mkdir -p "$RUNNER_TEMP/regenerated/$(dirname "$path")"
+            cp -- "$path" "$RUNNER_TEMP/regenerated/$path"
+          done <<< "$changed"
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+      - if: steps.collect.outputs.changed == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: regenerated-outputs
+          path: ${{ runner.temp }}/regenerated
+          if-no-files-found: error
+          retention-days: 1
