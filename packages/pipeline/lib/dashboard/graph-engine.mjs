@@ -18,6 +18,7 @@ import { spawnSync } from 'node:child_process';
 import { dirname } from 'node:path';
 
 import { validate } from '../design/schema-loader.mjs';
+import { deepFreeze } from '../protocol/jcs.mjs';
 import { readGraph, readNode } from './graph-reader.mjs';
 
 /** Lowest planr CLI version that emits the graph/status --json the dashboard consumes. */
@@ -240,12 +241,6 @@ function clonePlainJson(value, path = '$') {
   if (bytes > MAX_GRAPH_BYTES)
     throw new TypeError('Planning graph exceeds the public response limit.');
   return result;
-}
-
-function deepFreeze(value) {
-  if (value === null || typeof value !== 'object' || Object.isFrozen(value)) return value;
-  for (const nested of Object.values(value)) deepFreeze(nested);
-  return Object.freeze(value);
 }
 
 function validNodeId(value) {

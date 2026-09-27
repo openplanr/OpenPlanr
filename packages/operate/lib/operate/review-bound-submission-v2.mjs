@@ -1,4 +1,4 @@
-import { sha256Jcs } from '@openplanr/protocol/canonical-json';
+import { deepFreeze, sha256Jcs } from '@openplanr/protocol/canonical-json';
 import { assertProtocolArtifact } from '@openplanr/protocol/contracts';
 import { PipelineError } from '@openplanr/protocol/errors';
 
@@ -29,14 +29,6 @@ function fail(message, context = {}) {
 
 function clone(value) {
   return structuredClone(value);
-}
-
-function deepFreeze(value) {
-  if (value && typeof value === 'object' && !Object.isFrozen(value)) {
-    for (const nested of Object.values(value)) deepFreeze(nested);
-    Object.freeze(value);
-  }
-  return value;
 }
 
 function exactKeys(value, expected) {

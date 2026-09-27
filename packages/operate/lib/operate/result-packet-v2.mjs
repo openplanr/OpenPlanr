@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { basename, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { deepFreeze } from '@openplanr/protocol/canonical-json';
 
 import {
   deriveOperatingChairLedgerIdV2,
@@ -62,14 +63,6 @@ const PROFILE_FIELDS = Object.freeze({
 
 function clone(value) {
   return structuredClone(value);
-}
-
-function deepFreeze(value) {
-  if (value && typeof value === 'object' && !Object.isFrozen(value)) {
-    for (const child of Object.values(value)) deepFreeze(child);
-    Object.freeze(value);
-  }
-  return value;
 }
 
 function assertIntelligenceAssignment(assignment) {

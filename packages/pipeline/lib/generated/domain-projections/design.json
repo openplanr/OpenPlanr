@@ -187,7 +187,7 @@
     {
       "source": "packages/design/lib/design/handoff-resolution.mjs",
       "target": "lib/design/handoff-resolution.mjs",
-      "sha256": "6e9798093a847e8009f78bbcce4c7bb84e71b509bf6c7c8c9e20ec74e1e02b72",
+      "sha256": "93ac5a3145f800b05a03198ae8d45d866ab314cea16aab42aeee0e41243fcc44",
       "mode": "644"
     },
     {

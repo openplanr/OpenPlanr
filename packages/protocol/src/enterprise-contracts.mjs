@@ -1,5 +1,5 @@
 // @ts-check
-import { canonicalizeJson, sha256Hex } from './canonical-json.mjs';
+import { canonicalizeJson, deepFreeze, sha256Hex } from './canonical-json.mjs';
 import { validateJson } from './json-schema.mjs';
 
 /** @type {typeof import('./enterprise-contracts.d.mts').ENTERPRISE_CONTRACT_VERSION} */
@@ -372,14 +372,6 @@ export const ENTERPRISE_SCHEMAS = deepFreeze({
   'enterprise-agent-handoff': ENTERPRISE_AGENT_HANDOFF_SCHEMA,
 });
 
-function deepFreeze(value) {
-  if (value && typeof value === 'object' && !Object.isFrozen(value)) {
-    for (const nested of Object.values(value)) deepFreeze(nested);
-    Object.freeze(value);
-  }
-  return value;
-}
-
 const unsafeKeys = new Set(['__proto__', 'prototype', 'constructor']);
 function assertPlainData(value, depth = 0, seen = new Set()) {
   if (depth > 64) throw new TypeError('Enterprise data exceeds the maximum nesting depth.');
@@ -624,6 +616,7 @@ const noCapabilities = Object.freeze([]);
 export function enterpriseProjectCapabilities(role) {
   return projectCapabilities[role] ?? noCapabilities;
 }
+/** @type {Readonly<Record<'owner' | 'admin' | 'member', readonly import('./enterprise-contracts.d.mts').EnterpriseAction[]>>} */
 const organizationCapabilities = deepFreeze({
   owner: [
     'organization.manage',

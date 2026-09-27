@@ -1,4 +1,4 @@
-import { sha256Jcs } from '@openplanr/protocol/canonical-json';
+import { deepFreeze, sha256Jcs } from '@openplanr/protocol/canonical-json';
 import { assertProtocolArtifact } from '@openplanr/protocol/contracts';
 import { PipelineError } from '@openplanr/protocol/errors';
 import { OPERATE_CONTRACT_CATALOG_V2 } from '@openplanr/protocol/operate-contract-catalog-v2';
@@ -86,14 +86,6 @@ const AUTHORITY_CONTEXT_FIELDS = Object.freeze([
 
 function clone(value) {
   return value === undefined ? undefined : structuredClone(value);
-}
-
-function deepFreeze(value) {
-  if (value && typeof value === 'object' && !Object.isFrozen(value)) {
-    for (const nested of Object.values(value)) deepFreeze(nested);
-    Object.freeze(value);
-  }
-  return value;
 }
 
 function isolateContext(context) {

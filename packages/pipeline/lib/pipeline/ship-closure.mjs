@@ -3,7 +3,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { existsSync, lstatSync, readdirSync, readFileSync, unlinkSync } from 'node:fs';
 import { join, relative } from 'node:path';
 
-import { sha256Jcs } from '../protocol/jcs.mjs';
+import { deepFreeze, sha256Jcs } from '../protocol/jcs.mjs';
 import { assertBrowserQaRecordedEventAuthority } from './browser-qa.mjs';
 import { PipelineError } from './errors.mjs';
 import { projectPipelineOperatingOriginCorrelation } from './operate-origin.mjs';
@@ -58,14 +58,6 @@ function digestBytes(value) {
 
 function clone(value) {
   return structuredClone(value);
-}
-
-function deepFreeze(value) {
-  if (value && typeof value === 'object' && !Object.isFrozen(value)) {
-    for (const nested of Object.values(value)) deepFreeze(nested);
-    Object.freeze(value);
-  }
-  return value;
 }
 
 function posix(value) {

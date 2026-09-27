@@ -1,5 +1,5 @@
 // @ts-check
-import { canonicalizeJson, sha256Hex } from './canonical-json.mjs';
+import { assertPlainData, canonicalizeJson, deepFreeze, sha256Hex } from './canonical-json.mjs';
 import { validateJson } from './json-schema.mjs';
 
 /** @type {typeof import('./design-handoff-contracts.d.mts').DESIGN_HANDOFF_PROTOCOL_VERSION} */
@@ -272,34 +272,6 @@ export const DESIGN_HANDOFF_SCHEMAS = deepFreeze({
   'design-planning-lineage': DESIGN_PLANNING_LINEAGE_SCHEMA,
 });
 
-function deepFreeze(value) {
-  if (value && typeof value === 'object' && !Object.isFrozen(value)) {
-    for (const nested of Object.values(value)) deepFreeze(nested);
-    Object.freeze(value);
-  }
-  return value;
-}
-
-function assertPlainData(value, depth = 0, seen = new Set()) {
-  if (depth > 64) throw new TypeError('Design handoff data exceeds the maximum nesting depth.');
-  if (value === null || ['string', 'boolean'].includes(typeof value)) return;
-  if (typeof value === 'number' && Number.isFinite(value)) return;
-  if (typeof value !== 'object' || seen.has(value))
-    throw new TypeError('Design handoff data must be finite, acyclic JSON.');
-  if (!Array.isArray(value) && ![Object.prototype, null].includes(Object.getPrototypeOf(value)))
-    throw new TypeError('Design handoff data must contain only plain JSON objects.');
-  seen.add(value);
-  for (const [key, descriptor] of Object.entries(Object.getOwnPropertyDescriptors(value))) {
-    if (
-      ['__proto__', 'prototype', 'constructor'].includes(key) ||
-      !Object.hasOwn(descriptor, 'value')
-    )
-      throw new TypeError('Design handoff data contains a forbidden property.');
-    assertPlainData(descriptor.value, depth + 1, seen);
-  }
-  seen.delete(value);
-}
-
 function distinct(items, select, label) {
   const values = items.map(select);
   if (new Set(values).size !== values.length) throw new TypeError(`Duplicate ${label}.`);
@@ -329,7 +301,7 @@ export function assertDesignHandoffContract(value, schemaOrName) {
   const schema =
     typeof schemaOrName === 'string' ? DESIGN_HANDOFF_SCHEMAS[schemaOrName] : schemaOrName;
   if (!schema) throw new TypeError('Unknown design handoff contract.');
-  assertPlainData(value);
+  assertPlainData(value, 'Design handoff data');
   canonicalizeJson(value);
   const errors = validateJson(value, schema);
   if (errors.length)

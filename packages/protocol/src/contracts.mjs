@@ -2,6 +2,7 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { deepFreeze } from './canonical-json.mjs';
 import { DESIGN_HANDOFF_CONTRACT_FILES } from './design-handoff-contracts.mjs';
 import {
   DIAGRAM_AUTHORING_CONTRACT_FILES,
@@ -931,14 +932,6 @@ export function assertOperateIntelligencePlanContractV2(value) {
 
 const schemaCache = new Map();
 const canonicalSchemaPrefix = 'https://openplanr.dev/';
-
-function deepFreeze(value) {
-  if (value && typeof value === 'object' && !Object.isFrozen(value)) {
-    for (const nested of Object.values(value)) deepFreeze(nested);
-    Object.freeze(value);
-  }
-  return value;
-}
 
 // Validation reads the cached schema in place, so the cache must be immutable.
 function loadSchema(path) {

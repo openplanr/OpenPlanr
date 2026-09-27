@@ -43,7 +43,7 @@
     {
       "source": "packages/operate/lib/operate/authorization-v2.mjs",
       "target": "lib/operate/authorization-v2.mjs",
-      "sha256": "a5129737320b64d6b46571a6280d8c5936f834bca0bd6b395c89668ab428110e",
+      "sha256": "976332ec777cb2433aa0d90f157563e21035dde80169a16b3637eb07e80ad0f0",
       "mode": "644"
     },
     {
@@ -451,7 +451,7 @@
     {
       "source": "packages/operate/lib/operate/result-packet-v2.mjs",
       "target": "lib/operate/result-packet-v2.mjs",
-      "sha256": "cc849379b10301f2d5fd84824378de8bd232896eb5faae7580e0a7bf365ab742",
+      "sha256": "bfcdf400eca2a4ee10ef618edb4570f9f4a878197ba8c5233687f757d950b51a",
       "mode": "644"
     },
     {
@@ -463,7 +463,7 @@
     {
       "source": "packages/operate/lib/operate/review-bound-submission-v2.mjs",
       "target": "lib/operate/review-bound-submission-v2.mjs",
-      "sha256": "5b6789a2b003a51c9a97985703087b22ed62b2321bfef1bff62839d2e346b5e4",
+      "sha256": "b46d90381eaaccfc04b5dd2f58a73c4fe154736c164b446696379422e65bf534",
       "mode": "644"
     },
     {

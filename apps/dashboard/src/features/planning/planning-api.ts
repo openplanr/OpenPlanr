@@ -1,4 +1,4 @@
-import { sha256Jcs } from '@openplanr/protocol/canonical-json';
+import { deepFreeze, sha256Jcs } from '@openplanr/protocol/canonical-json';
 import { DashboardValidationError } from '../../lib/api/validation.js';
 import type {
   DashboardEventHead,
@@ -257,14 +257,6 @@ function plainJson(value: unknown, path: string): unknown {
     }
   };
   return visit(value, path, 0);
-}
-
-function deepFreeze<T>(value: T): Readonly<T> {
-  if (value !== null && typeof value === 'object' && !Object.isFrozen(value)) {
-    for (const nested of Object.values(value)) deepFreeze(nested);
-    Object.freeze(value);
-  }
-  return value;
 }
 
 function exactString(value: unknown, path: string, pattern: RegExp): string {
