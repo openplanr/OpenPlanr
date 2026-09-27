@@ -1,5 +1,18 @@
 # @openplanr/protocol
 
+## 0.7.0
+### Minor Changes
+
+- c7c15dc: Protocol 1.14 adds a successor artifact theme: `registries/artifact-theme.json` with `schemas/v1.14.0/artifact-theme.schema.json`. It uses the brand teal on light (#237a72, strong #1b5f59) and adds an `onPrimary` text colour to both palettes (#ffffff light, #07110f dark). The byte-preserved `registry/artifact-theme.json` and its v1.1.0 schema are unchanged. The generated review theme CSS and JSON now come from the successor and also set `--planr-color-on-primary`, so the light review shell and Diagram Studio use the brand teal. The diagram editor's built-in light accent and Save hover use the same values. White on the light accent rises from 4.89:1 to 5.12:1; the dark accent is unchanged. A selected Mermaid source tab keeps its fill on hover, and the review shell's Copied state uses the strong accent, so their text reaches 4.5:1 (it was 4.14:1 and 3.74:1).
+
+### Patch Changes
+
+- c373710: The shipped command registry carries the new digests of the CLI command files that now validate artifact ids and template names.
+- c8ef5f5: `planr operate dashboard` and `planr-pipeline dashboard` now load `startDashboard` from `planr-pipeline/dashboard` instead of the deprecated package-root alias. Behavior is unchanged; the command registry and its projection record the two changed command sources.
+- 2d3aa3f: The remaining source modules over 800 lines open with a short comment that names what the module owns and its entry points, and three module comments that misdescribed their files now match the code. Only comments change: code, exports and behaviour are unchanged, and the bundled dashboard assets differ only in their source-derived build id.
+- 504bce4: Source modules over 800 lines open with a short comment that names what the module owns and its entry points, and several stale comments now match the code. Only comments change: code, exports and behaviour are unchanged, and the bundled dashboard assets differ only in their source-derived build id.
+- 711e17f: `@openplanr/protocol/canonical-json` exports `deepFreeze` and `assertPlainData(value, label)`. The Protocol contracts, the Operate, artifact and design runtimes and the dashboard now use them instead of their own copies; what is frozen, what is rejected and every error message are unchanged.
+
 ## 0.6.2
 ### Patch Changes
 
