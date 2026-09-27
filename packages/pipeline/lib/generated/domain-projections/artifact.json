@@ -991,7 +991,7 @@
     {
       "source": "packages/artifact/lib/artifact/ui/diagram-editor.css",
       "target": "lib/artifact/ui/diagram-editor.css",
-      "sha256": "f72a042579b8b6e88cded39e99ae9e9c39144dfe372e0f44aab9ae478e58bef3",
+      "sha256": "aa9b71bc17f59bfc2e156a6faa2e3ec5d464b3b27a65702a3ea8add03e31ffb8",
       "mode": "644"
     },
     {

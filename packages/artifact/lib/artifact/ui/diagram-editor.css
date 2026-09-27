@@ -53,7 +53,7 @@ body.planr-diagram-owner-page #diagram-owner-editor {
   --de-primary-hover-text: var(--de-primary-text);
   --de-primary-soft: #e2f4f1;
   --de-primary-text: var(--planr-color-on-primary, #fff);
-  --de-danger: #b4233c;
+  --de-danger: var(--planr-color-danger, #b4233c);
   --de-danger-soft: #fff0f2;
   --de-warning: #9a6700;
   --de-shadow-sm: 0 1px 2px rgb(16 24 40 / 6%);
@@ -94,7 +94,7 @@ body.planr-diagram-owner-page #diagram-owner-editor {
     --de-primary-hover-text: #f2f5f7;
     --de-primary-soft: #123630;
     --de-primary-text: var(--planr-color-on-primary, #07100f);
-    --de-danger: #fb7185;
+    --de-danger: var(--planr-color-danger, #fb7185);
     --de-danger-soft: #35151d;
     --de-warning: #f5c451;
     --de-shadow-sm: 0 1px 2px rgb(0 0 0 / 24%);
@@ -121,7 +121,7 @@ body.planr-diagram-owner-page #diagram-owner-editor {
   --de-primary-hover-text: #f2f5f7;
   --de-primary-soft: #123630;
   --de-primary-text: var(--planr-color-on-primary, #07100f);
-  --de-danger: #fb7185;
+  --de-danger: var(--planr-color-danger, #fb7185);
   --de-danger-soft: #35151d;
   --de-warning: #f5c451;
   --de-shadow-sm: 0 1px 2px rgb(0 0 0 / 24%);
@@ -201,9 +201,13 @@ body.planr-diagram-owner-page #diagram-owner-editor {
 }
 
 .planr-diagram-editor .de-danger {
+  border-color: color-mix(in srgb, var(--de-danger) 46%, var(--de-rule));
+  color: var(--de-danger);
+}
+
+.planr-diagram-editor .de-danger:hover:not(:disabled) {
   border-color: var(--de-danger);
-  color: #fff;
-  background: var(--de-danger);
+  background: var(--de-danger-soft);
 }
 
 .planr-diagram-editor .de-icon {
@@ -310,7 +314,10 @@ body.planr-diagram-owner-page #diagram-owner-editor {
   background: var(--de-raised);
 }
 
-.planr-diagram-editor :is(.de-command-group, .de-toolbar-group, .de-bar-group) > button {
+/* :where() adds no specificity, so the shared button hover rule still outranks this reset. */
+.planr-diagram-editor
+  :is(.de-command-group, .de-toolbar-group, .de-bar-group)
+  > button:where(:not(.de-primary)) {
   border-color: transparent;
   background: transparent;
   box-shadow: none;
@@ -418,10 +425,10 @@ body.planr-diagram-owner-page #diagram-owner-editor {
 }
 
 .planr-diagram-editor .de-bar .de-primary:disabled {
-  opacity: 1;
-  border-color: color-mix(in srgb, var(--de-primary) 32%, var(--de-rule));
-  color: color-mix(in srgb, var(--de-primary) 68%, var(--de-muted));
-  background: color-mix(in srgb, var(--de-primary) 14%, var(--de-raised));
+  opacity: 0.5;
+  border-color: transparent;
+  color: var(--de-text);
+  background: transparent;
   box-shadow: none;
 }
 
@@ -645,9 +652,10 @@ body.planr-diagram-owner-page #diagram-owner-editor {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex: none;
   gap: 10px;
-  min-height: 44px;
-  padding: 6px 8px;
+  height: 44px;
+  padding: 0 12px;
   border-bottom: 1px solid var(--de-rule);
   background: color-mix(in srgb, var(--de-panel) 96%, transparent);
   backdrop-filter: blur(12px);
@@ -1016,6 +1024,11 @@ body.planr-diagram-owner-page #diagram-owner-editor {
   height: 100%;
   display: block;
   user-select: none;
+}
+
+/* The renderer's font-family="Inter" has no fallback where Inter is not installed. */
+.planr-diagram-editor .de-canvas svg text {
+  font-family: inherit;
 }
 
 .planr-diagram-editor .de-canvas svg [data-element-id] {
@@ -1971,7 +1984,7 @@ body.planr-diagram-owner-page #diagram-owner-editor {
   --de-primary-hover-text: var(--de-primary-text);
   --de-primary-soft: #e2f4f1;
   --de-primary-text: var(--planr-color-on-primary, #fff);
-  --de-danger: #b4233c;
+  --de-danger: var(--planr-color-danger, #b4233c);
   --de-shadow-sm: 0 1px 2px rgb(16 24 40 / 6%);
   width: 100%;
   min-width: 0;
@@ -2015,7 +2028,7 @@ body.planr-diagram-owner-page #diagram-owner-editor {
     --de-primary-hover-text: #f2f5f7;
     --de-primary-soft: #123630;
     --de-primary-text: var(--planr-color-on-primary, #07100f);
-    --de-danger: #fb7185;
+    --de-danger: var(--planr-color-danger, #fb7185);
     --de-shadow-sm: 0 1px 2px rgb(0 0 0 / 24%);
   }
 }
