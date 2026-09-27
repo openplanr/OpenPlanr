@@ -305,6 +305,52 @@ test('copy export reports unrepresentable authored content while leaving bundle 
   assert.deepEqual(first.bundle, original);
 });
 
+test('copy export escapes click, href, quotes and brackets so its preview reads the same labels', () => {
+  const first = preview(
+    'flowchart TB\nsubgraph G[Group]\nA[One]\nB{Two}\nend\nC[(Three)]\nA -->|go| B\nB --- C\n',
+  );
+  assert.equal(first.ok, true, JSON.stringify(first.diagnostics));
+  const labelled = structuredClone(first.bundle);
+  const labels = {
+    a: 'Please click here',
+    b: 'Open the HREF  list',
+    c: 'Say "hi" [then] (wave) {now} ]) #35; C:\\temp',
+    g: 'Group: click to open',
+  };
+  for (const node of labelled.document.nodes) node.label = labels[node.id];
+  labelled.document.groups[0].label = labels.g;
+  const [go, association] = labelled.document.relations;
+  go.label = 'click "next" [step]';
+  association.label = 'see href docs';
+  const copy = exportMermaidCopy(sealBundle(labelled));
+  assert.equal(copy.ok, true, JSON.stringify(copy.diagnostics));
+  assert.equal(copy.fidelity.semantic, 'lossless', JSON.stringify(copy.fidelity.losses));
+
+  const again = preview(copy.text);
+  assert.equal(again.ok, true, JSON.stringify(again.diagnostics));
+  assert.deepEqual(
+    Object.fromEntries(again.bundle.document.nodes.map((node) => [node.id, node.label])),
+    { a: labels.a, b: labels.b, c: labels.c },
+  );
+  assert.equal(again.bundle.document.groups[0].label, labels.g);
+  assert.deepEqual(
+    again.bundle.document.relations.map(({ from, to, label }) => [from, to, label]),
+    [
+      ['a', 'b', go.label],
+      ['b', 'c', association.label],
+    ],
+  );
+  assert.equal(copy.text.includes('\\'), false, 'Mermaid labels have no backslash escapes');
+
+  const handWritten = preview('flowchart TB\nA[#34;quoted#34; #35;1]\nB["Step #1;"]\n');
+  assert.equal(handWritten.ok, true, JSON.stringify(handWritten.diagnostics));
+  assert.deepEqual(
+    handWritten.bundle.document.nodes.map((node) => node.label),
+    ['"quoted" #1', 'Step #1;'],
+    'decimal entity codes decode except control characters',
+  );
+});
+
 test('real Chromium and Node run the same pure converter without providers or fetch', {
   timeout: 90_000,
 }, async () => {

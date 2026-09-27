@@ -86,6 +86,28 @@ function sourceLines(text) {
   return lines;
 }
 
+// Mermaid decodes entity codes such as `#34;` in labels; control-character codes stay literal.
+function decodeEntities(value) {
+  return value.replace(/#(\d+);/gu, (entity, digits) => {
+    const code = Number(digits);
+    return code < 0x20 || code > 0x10ffff || (code >= 0xd800 && code <= 0xdfff)
+      ? entity
+      : String.fromCodePoint(code);
+  });
+}
+
+// Mermaid has no backslash escapes: `"`, `\` and a `#` that starts an entity become entity codes.
+// So does the first letter of click or href after whitespace, which the preview rejects.
+function mermaidLabel(value) {
+  const escaped = value
+    .replace(/["\\]|#(?=\w+;)/gu, (character) => `#${character.codePointAt(0)};`)
+    .replace(
+      /(?<=\s)(?:click|href)(?=\s)/giu,
+      (word) => `#${word.codePointAt(0)};${word.slice(1)}`,
+    );
+  return `"${escaped}"`;
+}
+
 function parseLabel(raw, fallback) {
   if (raw === undefined) return fallback;
   const value = raw.trim();
@@ -93,12 +115,12 @@ function parseLabel(raw, fallback) {
   if (value.startsWith('"')) {
     if (!value.endsWith('"')) return null;
     try {
-      return plain(value, fallback);
+      return decodeEntities(plain(value, fallback));
     } catch {
       return null;
     }
   }
-  return value;
+  return decodeEntities(value);
 }
 
 function nodeExpression(raw) {
@@ -1041,14 +1063,14 @@ export function exportMermaidCopy(bundle) {
   const placements = new Map(bundle.presentation.elements.map((item) => [item.elementId, item]));
   const unsafeLabel = (value) => UNSAFE_LABEL.test(value) || UNSAFE_TEXT.test(value);
   const safeLabel = (value, id) => {
-    if (!unsafeLabel(value)) return JSON.stringify(value);
+    if (!unsafeLabel(value)) return mermaidLabel(value);
     lost(
       'semantic',
       'unsafe-label',
       [id],
       `Element ${id} has text that cannot safely be emitted as certified Mermaid.`,
     );
-    return JSON.stringify('Label omitted in Mermaid copy');
+    return mermaidLabel('Label omitted in Mermaid copy');
   };
   const nodeText = (node) => {
     const shape = placements.get(node.id)?.appearance.shape;
@@ -1112,7 +1134,7 @@ export function exportMermaidCopy(bundle) {
     const label =
       edge.label === null || edge.label.includes('|') || unsafeLabel(edge.label)
         ? ''
-        : `|${JSON.stringify(edge.label)}|`;
+        : `|${mermaidLabel(edge.label)}|`;
     lines.push(`  ${names.get(edge.from)} ${op}${label} ${names.get(edge.to)}`);
   }
   if (bundle.document.lanes.length)
