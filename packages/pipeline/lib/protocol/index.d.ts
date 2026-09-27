@@ -1,3 +1,6 @@
+// A .d.ts file without an export declaration exports every top-level declaration.
+export {};
+
 export type JsonPrimitive = string | number | boolean | null;
 export type JsonValue = JsonPrimitive | JsonValue[] | { [key: string]: JsonValue };
 
@@ -252,7 +255,7 @@ export interface OperatingAssignmentIntelligenceContextV2 {
   decisionOwnerActorId: string;
 }
 
-interface OperatingAssignmentBaseV2 {
+export interface OperatingAssignmentBaseV2 {
   kind: 'operating-assignment';
   schemaVersion: '1.0.0';
   protocolVersion: '2.0.0';
@@ -285,7 +288,7 @@ interface OperatingAssignmentBaseV2 {
   completedAt: string | null;
 }
 
-interface OperatingIntelligenceAssignmentBaseV2 extends OperatingAssignmentBaseV2 {
+export interface OperatingIntelligenceAssignmentBaseV2 extends OperatingAssignmentBaseV2 {
   roleVersion: string;
   analysisRubric: OperateAnalysisRubricV2;
   analysisProfile: OperatingAnalysisProfileV2;
@@ -662,7 +665,7 @@ export interface OperatingAdvisorProfileInsightV2 {
   localAnalysisId: string; title: string; statement: string; claimIds: string[]; measurementIds: string[];
   riskIds: string[]; alternativeIds: string[]; evidenceRefIds: string[]; absenceIds: string[];
 }
-type OperatingAdvisorProfileAnalysisV2 = {
+export type OperatingAdvisorProfileAnalysisV2 = {
   profileId: 'strategy-finance' | 'technology-risk' | 'product-activation' | 'growth-market' | 'operations-customer' | 'software-delivery';
   executiveQuestionAnswers: OperatingAdvisorQuestionAnswerV2[];
 } & Record<string, OperatingAdvisorProfileInsightV2[] | OperatingAdvisorProfileInsightV2 | null | string | OperatingAdvisorQuestionAnswerV2[]>;
@@ -1519,7 +1522,7 @@ export interface OperatingReviewReceiptReplayProjectionV2 {
   boundSubmission?: OperateReviewBoundSubmissionV1;
 }
 
-interface OperatingEventReplayEntryBaseV2 {
+export interface OperatingEventReplayEntryBaseV2 {
   eventId: string;
   eventHash: string;
   payloadHash: string;
@@ -2189,6 +2192,22 @@ export const RELEASE_LEDGER_CONTRACT_KINDS_V1: readonly [
   'release-ledger-receipt',
   'ecosystem-manifest',
 ];
+export const EVALUATION_CONTRACT_KINDS_V1: readonly [
+  'evaluation-scenario',
+  'evaluation-corpus',
+  'evaluation-fixture',
+  'evaluation-host-profile',
+  'evaluation-host-profile-registry',
+  'evaluation-grader-registration',
+  'evaluation-grader-registry',
+  'evaluation-budget',
+  'evaluation-gate-policy',
+  'evaluation-observation',
+  'evaluation-run-result',
+  'evaluation-aggregate-report',
+  'evaluation-waiver',
+  'skill-certification-receipt',
+];
 export const OPERATE_ROLE_MANDATES_V2: readonly OperateRoleMandateV2[];
 export const OPERATE_EXTENSION_CONTRACT_KINDS_V2: readonly [
   'agent-runtime-manifest',
@@ -2330,6 +2349,10 @@ export function loadReleaseLedgerContract(
   kind: typeof RELEASE_LEDGER_CONTRACT_KINDS_V1[number],
   options: { protocolVersion: '1.3.0' },
 ): ProtocolSchemaContract;
+export function loadEvaluationContract(
+  kind: typeof EVALUATION_CONTRACT_KINDS_V1[number],
+  options: { protocolVersion: '1.4.0' },
+): ProtocolSchemaContract;
 export function loadOperateExtensionContract(
   kind: typeof OPERATE_EXTENSION_CONTRACT_KINDS_V2[number],
   options: { protocolVersion: '2.0.0' },
@@ -2436,7 +2459,19 @@ export function assertOperateGovernedExtensionRegistrationV2<T>(
   value: T,
 ): T;
 export function canonicalizeJson(value: JsonValue): string;
-export function sha256Jcs(value: JsonValue): string;
+export function sha256Jcs(value: JsonValue): `sha256:${string}`;
+export interface PlanningIssue {
+  path: string;
+  rule: string;
+  detail: string;
+}
+export function normalizePlanningTask<T extends Record<string, unknown>>(
+  value: T,
+): T & { reviewRisks: string[]; browserSurfaces: string[]; acceptanceRefs: string[] };
+export function validatePlanningAcceptanceCoverage(
+  stories: ReadonlyArray<Record<string, unknown>>,
+  tasks: ReadonlyArray<Record<string, unknown>>,
+): PlanningIssue[];
 
 /**
  * Operating trace-matrix types.
@@ -2472,7 +2507,7 @@ export interface OperatingTraceLocatorV2<TKind extends OperatingTraceNodeKindV2 
   readonly cycleId: string;
 }
 
-interface OperatingTraceNodeBaseV2<
+export interface OperatingTraceNodeBaseV2<
   TKind extends OperatingTraceNodeKindV2,
   TProof extends OperatingTraceProofStateV2,
 > {
@@ -2503,7 +2538,7 @@ export interface OperatingTraceEndpointV2<TKind extends OperatingTraceNodeKindV2
   readonly id: string;
 }
 
-interface OperatingTraceEdgeBaseV2<
+export interface OperatingTraceEdgeBaseV2<
   TRelation extends OperatingTraceRelationV2,
   TFrom extends OperatingTraceNodeKindV2,
   TTo extends OperatingTraceNodeKindV2,
@@ -2597,7 +2632,7 @@ export interface OperatingExecutiveBoardSeatBindingV2 {
   readonly absenceId: string | null;
 }
 
-interface OperatingExecutiveBoardBaseV2 {
+export interface OperatingExecutiveBoardBaseV2 {
   readonly kind: 'operating-executive-board';
   readonly schemaVersion: '1.0.0';
   readonly protocolVersion: '2.0.0';

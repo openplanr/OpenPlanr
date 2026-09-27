@@ -9,7 +9,17 @@ import type {
   OperateEvidenceScopeBindingV2,
 } from './evidence-registry-v2.mjs';
 
-export * from './evidence-registry-v2.mjs';
+export {
+  createOperateEvidenceRegistryV2,
+  findOperateEvidenceProviderRegistrationV2,
+  findOperateEvidenceResolverRegistrationV2,
+  OPEN_REFERENCE_EVIDENCE_REGISTRY_V2,
+  type OperateEvidenceDispatchPreparationV2,
+  type OperateEvidenceRegistryV2,
+  type OperateEvidenceScopeBindingV2,
+  OperatingEvidenceRegistryErrorV2,
+  prepareOperateEvidenceDispatchV2,
+} from './evidence-registry-v2.mjs';
 
 export interface OperateEvidenceUnavailableDispatchV2 {
   readonly status: 'unavailable';

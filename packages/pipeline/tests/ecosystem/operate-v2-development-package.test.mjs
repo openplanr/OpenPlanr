@@ -737,7 +737,10 @@ test('Operate 2.0 development package installs the clean typed contract without 
         assert.match(declarations, new RegExp(`\\b${symbol}\\b`));
     }
     if (subpath.endsWith('evidence-v2')) {
-      assert.match(declarations, /export \* from '\.\/evidence-registry-v2\.mjs'/);
+      assert.match(
+        declarations,
+        /export \{[^}]*\bcreateOperateEvidenceRegistryV2\b[^}]*\} from '\.\/evidence-registry-v2\.mjs';/,
+      );
       assert.match(declarations, /dispatchOperateEvidenceResolverV2/);
     }
     if (subpath.endsWith('evidence-materialization-v2')) {
