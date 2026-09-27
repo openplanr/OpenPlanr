@@ -1003,7 +1003,7 @@
     {
       "source": "packages/artifact/lib/artifact/ui/diagram-editor.css",
       "target": "lib/artifact/ui/diagram-editor.css",
-      "sha256": "6dae6b0229927288374f06e5dcac0dbd79dfce5e71e8037c1d7632d573734411",
+      "sha256": "6acc681cbcf0a7420a3fe488010e949d181a578bb14758d6b4c3e16d0caaaa0f",
       "mode": "644"
     },
     {
