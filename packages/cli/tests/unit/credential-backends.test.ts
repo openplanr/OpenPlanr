@@ -1,12 +1,16 @@
 import { execFile, spawn } from 'node:child_process';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { createCipheriv, randomBytes, scryptSync } from 'node:crypto';
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { readdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { afterAll, describe, expect, it } from 'vitest';
-import { EncryptedFileBackend } from '../../src/services/credential-backends.js';
+import {
+  EncryptedFileBackend,
+  LegacyPlaintextBackend,
+} from '../../src/services/credential-backends.js';
 import { withCredentialWriteLock } from '../../src/services/credential-write-lock.js';
 
 /**
@@ -129,6 +133,102 @@ describe('strict rotating credential storage', () => {
       await expect(strict.setStrict('company', 'new-token')).rejects.toThrow('preserved');
       await expect(strict.deleteStrict('company')).rejects.toThrow('preserved');
       expect(await readFile(file, 'utf8')).toBe('interrupted ciphertext');
+    } finally {
+      rmSync(isolated, { recursive: true, force: true });
+    }
+  });
+});
+
+/** Every message along an error's cause chain. */
+function messageChain(error: unknown): string {
+  const messages: string[] = [];
+  for (let current = error; current instanceof Error; current = current.cause) {
+    messages.push(current.message);
+  }
+  return messages.join('\n');
+}
+
+/** Encrypt `payload` the way the backend does, so a test can store content the API never writes. */
+function writeEncryptedPayload(planrDir: string, payload: string): void {
+  const salt = randomBytes(16);
+  writeFileSync(join(planrDir, '.credential-salt'), salt.toString('hex'));
+  const key = scryptSync(TEST_PASSPHRASE, salt, 32, { N: 16384, r: 8, p: 1 });
+  const iv = randomBytes(12);
+  const cipher = createCipheriv('aes-256-gcm', key, iv);
+  const data = Buffer.concat([cipher.update(payload, 'utf8'), cipher.final()]);
+  writeFileSync(
+    join(planrDir, 'credentials.enc'),
+    JSON.stringify({
+      version: 2,
+      kdf: 'scrypt',
+      iv: iv.toString('hex'),
+      tag: cipher.getAuthTag().toString('hex'),
+      data: data.toString('hex'),
+    }),
+  );
+}
+
+describe('credential documents are validated where they are read', () => {
+  it('refuses a decrypted payload with a non-string value, naming the field and never the secret', async () => {
+    const isolated = mkdtempSync(join(tmpdir(), 'credential-payload-shape-'));
+    try {
+      writeEncryptedPayload(isolated, JSON.stringify({ linear: 42, company: 'secret-token' }));
+      const store = new EncryptedFileBackend(isolated, { passphrase: TEST_PASSPHRASE });
+      const failure = await store.getStrict('company').then(
+        () => null,
+        (error: unknown) => error,
+      );
+      expect(failure).toMatchObject({
+        message: 'The encrypted credential store cannot be read. Existing contents were preserved.',
+        cause: {
+          code: 'E_EXTERNAL_JSON_INVALID',
+          message: `The decrypted payload of ${join(isolated, 'credentials.enc')} has an unexpected shape: linear: Invalid input: expected string, received number`,
+        },
+      });
+      expect(messageChain(failure)).not.toContain('secret-token');
+      await expect(store.get('company')).resolves.toBeUndefined();
+      expect(existsSync(join(isolated, 'credentials.enc.bak'))).toBe(true);
+    } finally {
+      rmSync(isolated, { recursive: true, force: true });
+    }
+  });
+
+  it('refuses an envelope with a missing or mistyped field, naming the file and the field', async () => {
+    const isolated = mkdtempSync(join(tmpdir(), 'credential-envelope-shape-'));
+    try {
+      const file = join(isolated, 'credentials.enc');
+      writeFileSync(file, JSON.stringify({ version: 2, iv: 5, tag: 'aa' }));
+      const store = new EncryptedFileBackend(isolated, { passphrase: TEST_PASSPHRASE });
+      await expect(store.getStrict('company')).rejects.toMatchObject({
+        cause: {
+          message: `${file} has an unexpected shape: iv: Invalid input: expected string, received number; data: Invalid input: expected string, received undefined`,
+        },
+      });
+    } finally {
+      rmSync(isolated, { recursive: true, force: true });
+    }
+  });
+
+  it('reads a legacy plaintext file and throws, rather than returning nothing, when it is off-schema', async () => {
+    const isolated = mkdtempSync(join(tmpdir(), 'credential-legacy-shape-'));
+    try {
+      const file = join(isolated, 'credentials.json');
+      const legacy = new LegacyPlaintextBackend(file);
+      writeFileSync(file, JSON.stringify({ linear: 'lin-token' }));
+      await expect(legacy.loadAll()).resolves.toEqual({ linear: 'lin-token' });
+
+      writeFileSync(file, JSON.stringify({ linear: 42 }));
+      await expect(legacy.loadAll()).rejects.toThrow(
+        `${file} has an unexpected shape: linear: Invalid input: expected string, received number`,
+      );
+
+      writeFileSync(file, '{"linear": lin_api_secret}');
+      const failure = await legacy.loadAll().then(
+        () => null,
+        (error: unknown) => error,
+      );
+      expect(failure).toMatchObject({ message: `${file} is not valid JSON.` });
+      expect(messageChain(failure)).not.toContain('lin_api_secret');
     } finally {
       rmSync(isolated, { recursive: true, force: true });
     }

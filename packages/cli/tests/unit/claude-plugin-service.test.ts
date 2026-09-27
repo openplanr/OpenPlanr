@@ -198,4 +198,32 @@ describe('Claude plugin integration', () => {
     );
     expect(command).toBe('claude plugin marketplace add /opt/openplanr/lib/host-packages/claude');
   });
+
+  it('reports off-schema Claude output as an inspection error naming the command and field', () => {
+    const marketplaceRoot = mkdtempSync(join(tmpdir(), 'openplanr-claude-shape-'));
+    roots.push(marketplaceRoot);
+    mkdirSync(join(marketplaceRoot, '.claude-plugin'), { recursive: true });
+    writeFileSync(
+      join(marketplaceRoot, '.claude-plugin', 'marketplace.json'),
+      `${JSON.stringify({
+        name: 'openplanr-local',
+        plugins: [{ name: 'planr', version: '0.1.0', source: './openplanr' }],
+      })}\n`,
+    );
+    const outputs: Record<string, string> = {
+      'plugin marketplace list --json': '[{"name":"openplanr-local"}]',
+      'plugin list --json': '[{"id":"planr@openplanr-local","enabled":"yes"}]',
+    };
+    const runner: ClaudeCommandRunner = (args) =>
+      args[0] === '--version' ? result('2.1.0\n') : result(outputs[args.join(' ')] ?? '');
+
+    expect(inspectBundledClaudePluginIntegration(marketplaceRoot, runner).error).toBe(
+      'claude plugin list --json has an unexpected shape: 0.enabled: Invalid input: expected boolean, received string | (root): Invalid input: expected object, received array',
+    );
+
+    outputs['plugin marketplace list --json'] = 'Update available\n[]';
+    expect(inspectBundledClaudePluginIntegration(marketplaceRoot, runner).error).toMatch(
+      /^claude plugin marketplace list --json is not valid JSON: /u,
+    );
+  });
 });

@@ -3,7 +3,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
   ClaudeCommandRunner,
   ClaudePluginOperation,
@@ -21,6 +21,7 @@ import {
   summarizeChangelogBetween,
   type UpgradeReconciliation,
 } from '../../src/services/upgrade-service.js';
+import { setVerbose } from '../../src/utils/logger.js';
 
 const cliVersion = JSON.parse(readFileSync(resolve('package.json'), 'utf8')).version as string;
 const [cliMajor, cliMinor] = cliVersion.split('.').map(Number);
@@ -180,6 +181,35 @@ describe('reconcileInstalledTuple', () => {
     // verdict, it does not blind the CLI to what is installed.
     expect(result.installed).toEqual({ cli: cliVersion, skills: '1.24.0', pipeline: null });
     expect(elapsed).toBeLessThan(2_000);
+  });
+
+  it('ignores an off-schema published manifest without caching it, and says why under --verbose', async () => {
+    const lines: string[] = [];
+    const log = vi.spyOn(console, 'log').mockImplementation((...args: unknown[]) => {
+      lines.push(args.map(String).join(' '));
+    });
+    setVerbose(true);
+    try {
+      const document = {
+        components: {
+          cli: { version: 5 },
+          pipeline: { version: '0.39.0' },
+          skills: { version: '1.24.0' },
+        },
+      };
+      const result = await reconcileInstalledTuple('/tmp/project', {
+        claudeCommandRunner: makeRunner({ skills: '1.24.0' }),
+        fetchImpl: (async () => new Response(JSON.stringify(document))) as typeof fetch,
+      });
+      expect(result.status).toBe('unknown');
+      expect(result.ecosystemSource).toBe('unavailable');
+      expect(lines.join('\n')).toContain(
+        `${DEFAULT_ECOSYSTEM_SOURCE} has an unexpected shape: components.cli.version: Invalid input: expected string, received number`,
+      );
+    } finally {
+      setVerbose(false);
+      log.mockRestore();
+    }
   });
 
   it('abandons a hung network within the hard timeout instead of blocking', async () => {

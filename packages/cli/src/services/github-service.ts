@@ -11,6 +11,7 @@ import { writeFile as fsWriteFile, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
+import { z } from 'zod';
 import { which } from '../agents/utils.js';
 import type {
   ArtifactFrontmatter,
@@ -18,6 +19,7 @@ import type {
   GitHubCommitSummary,
   GitHubPullRequestSummary,
 } from '../models/types.js';
+import { parseExternalJson } from '../utils/external-json.js';
 import { logger } from '../utils/logger.js';
 import { parseMarkdown } from '../utils/markdown.js';
 
@@ -34,6 +36,52 @@ export interface GitHubIssue {
   url: string;
   labels: Array<{ name: string }>;
 }
+
+const issueSchema: z.ZodType<GitHubIssue> = z.object({
+  number: z.number(),
+  title: z.string(),
+  state: z.string(),
+  url: z.string(),
+  labels: z.array(z.object({ name: z.string() })),
+});
+
+const commitsSchema = z.array(
+  z.object({
+    sha: z.string(),
+    commit: z.object({
+      message: z.string(),
+      author: z.object({ date: z.string().optional() }).nullish(),
+    }),
+    author: z.object({ login: z.string().optional() }).nullish(),
+    html_url: z.string(),
+  }),
+);
+
+const pullRequestsSchema = z.array(
+  z.object({
+    number: z.number(),
+    title: z.string(),
+    state: z.string(),
+    html_url: z.string(),
+    user: z.object({ login: z.string().optional() }).nullish(),
+    updated_at: z.string(),
+    merged_at: z.string().nullable(),
+  }),
+);
+
+const issueTypesSchema = z.object({
+  data: z
+    .object({
+      repository: z
+        .object({
+          issueTypes: z
+            .object({ nodes: z.array(z.object({ id: z.string(), name: z.string() })) })
+            .nullish(),
+        })
+        .nullish(),
+    })
+    .nullish(),
+});
 
 // ---------------------------------------------------------------------------
 // Label & type mapping
@@ -143,9 +191,8 @@ async function gh(args: string[]): Promise<string> {
   }
 }
 
-async function ghJSON<T>(args: string[]): Promise<T> {
-  const output = await gh(args);
-  return JSON.parse(output) as T;
+async function ghJSON<T>(args: string[], schema: z.ZodType<T>): Promise<T> {
+  return parseExternalJson(await gh(args), schema, `gh ${args.slice(0, 2).join(' ')}`);
 }
 
 /** Write content to a temp file, run a callback, then clean up. */
@@ -170,12 +217,10 @@ async function withTempFile<T>(content: string, fn: (filePath: string) => Promis
 export async function verifyGitHubRepo(): Promise<{ owner: string; repo: string }> {
   const ghPath = await ensureGhCli();
   await ensureGhAuth(ghPath);
-  const repoInfo = await ghJSON<{ nameWithOwner: string }>([
-    'repo',
-    'view',
-    '--json',
-    'nameWithOwner',
-  ]);
+  const repoInfo = await ghJSON(
+    ['repo', 'view', '--json', 'nameWithOwner'],
+    z.object({ nameWithOwner: z.string() }),
+  );
   const [owner, repo] = repoInfo.nameWithOwner.split('/');
   return { owner, repo };
 }
@@ -448,13 +493,10 @@ export async function updateIssue(
  * Get a GitHub issue by number.
  */
 export async function getIssue(issueNumber: number): Promise<GitHubIssue> {
-  return ghJSON<GitHubIssue>([
-    'issue',
-    'view',
-    String(issueNumber),
-    '--json',
-    'number,title,state,url,labels',
-  ]);
+  return ghJSON(
+    ['issue', 'view', String(issueNumber), '--json', 'number,title,state,url,labels'],
+    issueSchema,
+  );
 }
 
 /**
@@ -465,18 +507,21 @@ export async function listPlanrIssues(
   limit = 200,
 ): Promise<GitHubIssue[]> {
   const labels = Object.values(TYPE_LABELS).join(',');
-  return ghJSON<GitHubIssue[]>([
-    'issue',
-    'list',
-    '--label',
-    labels,
-    '--state',
-    state,
-    '--json',
-    'number,title,state,url,labels',
-    '--limit',
-    String(limit),
-  ]);
+  return ghJSON(
+    [
+      'issue',
+      'list',
+      '--label',
+      labels,
+      '--state',
+      state,
+      '--json',
+      'number,title,state,url,labels',
+      '--limit',
+      String(limit),
+    ],
+    z.array(issueSchema),
+  );
 }
 
 /**
@@ -485,11 +530,11 @@ export async function listPlanrIssues(
 export async function ensureMilestone(title: string): Promise<string> {
   // Check if milestone already exists
   try {
-    const milestones = await ghJSON<Array<{ title: string }>>([
-      'api',
-      'repos/{owner}/{repo}/milestones',
-    ]);
-    if (Array.isArray(milestones) && milestones.some((m) => m.title === title)) {
+    const milestones = await ghJSON(
+      ['api', 'repos/{owner}/{repo}/milestones'],
+      z.array(z.object({ title: z.string() })),
+    );
+    if (milestones.some((m) => m.title === title)) {
       return title;
     }
   } catch (err) {
@@ -571,10 +616,9 @@ export async function fetchIssueTypes(
 
   try {
     const query = `query { repository(owner: "${owner}", name: "${repo}") { issueTypes(first: 20) { nodes { id name } } } }`;
-    const result = await gh(['api', 'graphql', '-f', `query=${query}`]);
-    const parsed = JSON.parse(result);
-    const nodes = parsed?.data?.repository?.issueTypes?.nodes;
-    if (Array.isArray(nodes)) {
+    const parsed = await ghJSON(['api', 'graphql', '-f', `query=${query}`], issueTypesSchema);
+    const nodes = parsed.data?.repository?.issueTypes?.nodes;
+    if (nodes) {
       const types: Record<string, string> = {};
       for (const node of nodes) {
         types[node.name] = node.id;
@@ -612,8 +656,10 @@ export async function setIssueType(
     }
 
     // Get the issue's node ID
-    const issueData = await gh(['issue', 'view', String(issueNumber), '--json', 'id']);
-    const { id: issueNodeId } = JSON.parse(issueData);
+    const { id: issueNodeId } = await ghJSON(
+      ['issue', 'view', String(issueNumber), '--json', 'id'],
+      z.object({ id: z.string() }),
+    );
 
     // Set the issue type
     await gh([
@@ -649,18 +695,13 @@ export async function fetchRecentCommits(args: {
     await verifyGitHubRepo();
     const since = isoDaysAgo(args.days);
     const perPage = Math.min(args.limit, 100);
-    const raw = await gh([
-      'api',
-      `repos/{owner}/{repo}/commits?per_page=${perPage}&since=${encodeURIComponent(since)}`,
-    ]);
-    const parsed = JSON.parse(raw) as Array<{
-      sha: string;
-      commit: { message: string; author?: { date?: string } };
-      author?: { login?: string };
-      html_url: string;
-    }>;
-    if (!Array.isArray(parsed))
-      return { commits: [], warning: 'Unexpected commits response from GitHub.' };
+    const parsed = await ghJSON(
+      [
+        'api',
+        `repos/{owner}/{repo}/commits?per_page=${perPage}&since=${encodeURIComponent(since)}`,
+      ],
+      commitsSchema,
+    );
 
     const commits: GitHubCommitSummary[] = parsed.map((c) => ({
       sha: c.sha,
@@ -691,21 +732,13 @@ export async function fetchRecentPullRequests(args: {
     await verifyGitHubRepo();
     const sinceMs = Date.now() - args.days * 86_400_000;
     const perPage = Math.min(args.limit, 100);
-    const raw = await gh([
-      'api',
-      `repos/{owner}/{repo}/pulls?state=all&sort=updated&direction=desc&per_page=${perPage}`,
-    ]);
-    const parsed = JSON.parse(raw) as Array<{
-      number: number;
-      title: string;
-      state: string;
-      html_url: string;
-      user?: { login?: string };
-      updated_at: string;
-      merged_at: string | null;
-    }>;
-    if (!Array.isArray(parsed))
-      return { pullRequests: [], warning: 'Unexpected PR response from GitHub.' };
+    const parsed = await ghJSON(
+      [
+        'api',
+        `repos/{owner}/{repo}/pulls?state=all&sort=updated&direction=desc&per_page=${perPage}`,
+      ],
+      pullRequestsSchema,
+    );
 
     const pullRequests: GitHubPullRequestSummary[] = [];
     for (const p of parsed) {

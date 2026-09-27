@@ -3,6 +3,7 @@ import path from 'node:path';
 import { configSchema } from '../models/schema.js';
 import type { OpenPlanrConfig } from '../models/types.js';
 import { CONFIG_FILENAME } from '../utils/constants.js';
+import { describeSchemaIssues } from '../utils/external-json.js';
 import { fileExists, readFile, writeFile } from '../utils/fs.js';
 import { logger } from '../utils/logger.js';
 
@@ -48,14 +49,9 @@ export async function loadConfig(projectDir: string): Promise<OpenPlanrConfig> {
   const parsed = JSON.parse(raw);
   const result = configSchema.safeParse(parsed);
   if (!result.success) {
-    // Name every failing field with its path, so the message says what failed and
-    // where — not just that validation happened.
-    const problems = result.error.issues
-      .map((issue) => `${issue.path.join('.') || '(root)'}: ${issue.message}`)
-      .join('; ');
     throw new ConfigInvalidError(
       'E_CONFIG_INVALID',
-      `${configPath} does not satisfy the OpenPlanr config schema — ${problems}`,
+      `${configPath} does not satisfy the OpenPlanr config schema — ${describeSchemaIssues(result.error)}`,
       'Add the field(s) named above, or re-create the file with `planr init`.',
     );
   }
