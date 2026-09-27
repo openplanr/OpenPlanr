@@ -55,6 +55,12 @@ export function createEditorDialogs(ctx) {
       win.queueMicrotask(restore);
     }
   }
+  /** The dialog's buttons, right-aligned in one footer row. */
+  function actions(...controls) {
+    const row = element(doc, 'div', { className: 'de-dialog-actions' });
+    row.append(...controls);
+    return row;
+  }
   function openDialog(name, content) {
     closeDialog({ restoreFocus: false });
     const trigger = ctx.commands.trigger();
@@ -166,8 +172,10 @@ export function createEditorDialogs(ctx) {
       );
     }
     body.append(
-      button(doc, 'Cancel', 'cancel-dialog'),
-      button(doc, 'Delete', 'confirm-delete', { className: 'de-danger' }),
+      actions(
+        button(doc, 'Cancel', 'cancel-dialog'),
+        button(doc, 'Delete', 'confirm-delete', { className: 'de-danger' }),
+      ),
     );
     openDialog('Delete selection', body).dataset.impact = JSON.stringify(impact);
   }
@@ -210,8 +218,10 @@ export function createEditorDialogs(ctx) {
       from.label,
       to.label,
       label.label,
-      button(doc, 'Cancel', 'cancel-dialog'),
-      button(doc, 'Create connector', 'confirm-connect', { className: 'de-primary' }),
+      actions(
+        button(doc, 'Cancel', 'cancel-dialog'),
+        button(doc, 'Create connector', 'confirm-connect', { className: 'de-primary' }),
+      ),
     );
     openDialog('Connect objects', body);
   }
@@ -253,8 +263,10 @@ export function createEditorDialogs(ctx) {
         ),
       );
     body.append(
-      button(doc, 'Cancel layout', 'cancel-layout'),
-      button(doc, 'Preview layout', 'preview-layout', { className: 'de-primary' }),
+      actions(
+        button(doc, 'Cancel layout', 'cancel-layout'),
+        button(doc, 'Preview layout', 'preview-layout', { className: 'de-primary' }),
+      ),
     );
     const panel = openDialog('Layout preview', body);
     if (lane) panel.dataset.lane = lane;
@@ -289,14 +301,16 @@ export function createEditorDialogs(ctx) {
     dialog
       .querySelector('[data-action="preview-layout"]')
       .replaceWith(button(doc, 'Apply layout', 'apply-layout', { className: 'de-primary' }));
-    dialog.append(
-      element(
-        doc,
-        'p',
-        { className: 'de-muted' },
-        'Preview only · No changes saved. Apply as one undoable edit.',
-      ),
-    );
+    dialog
+      .querySelector('.de-dialog-actions')
+      .before(
+        element(
+          doc,
+          'p',
+          { className: 'de-muted' },
+          'Preview only · No changes saved. Apply as one undoable edit.',
+        ),
+      );
   }
   function applyLayout() {
     const result = session.completeGesture();
@@ -318,7 +332,7 @@ export function createEditorDialogs(ctx) {
       JSON.stringify(value, null, 2),
     );
     const body = element(doc, 'div');
-    body.append(pre, button(doc, 'Close', 'cancel-dialog'));
+    body.append(pre, actions(button(doc, 'Close', 'cancel-dialog')));
     openDialog(title, body);
   }
   function compareRevisions() {

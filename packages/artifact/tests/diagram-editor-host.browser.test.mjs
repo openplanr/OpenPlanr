@@ -455,6 +455,34 @@ test(
   },
 );
 
+test('a narrow embed keeps the More menu and dialogs inside the editor', options, async (t) => {
+  const page = await hostedFixture(t);
+  await page.evaluate(() =>
+    Object.assign(document.querySelector('#host-editor').style, {
+      width: '600px',
+      height: '480px',
+      marginLeft: '200px',
+    }),
+  );
+  await page.locator('.planr-diagram-editor[data-layout~="compact"]').waitFor();
+  const host = await page.locator('#host-editor').boundingBox();
+  const bar = await page.locator('.de-bar').boundingBox();
+  await page.getByRole('button', { name: 'More', exact: true }).click();
+  const menu = await page.getByRole('menu', { name: 'Diagram options', exact: true }).boundingBox();
+  assert.equal(
+    Math.round(host.x + host.width - (menu.x + menu.width)),
+    8,
+    'The menu hangs 8px inside the editor, not the window',
+  );
+  assert.ok(menu.x >= host.x && menu.y >= bar.y + bar.height, 'and below the command bar');
+  await page.getByRole('menuitem', { name: 'Mermaid copies', exact: true }).click();
+  const dialog = await page.getByRole('dialog').boundingBox();
+  assert.ok(
+    dialog.y >= bar.y + bar.height - 0.5 && dialog.y + dialog.height <= host.y + host.height + 0.5,
+    `The dialog fits the 480px editor, not the window: ${JSON.stringify(dialog)}`,
+  );
+});
+
 test('host controls inside a host panel never reach the editor dispatcher', options, async (t) => {
   const page = await hostedFixture(t);
   await page.getByRole('tab', { name: 'Revisions', exact: true }).click();

@@ -93,7 +93,7 @@ body.planr-diagram-owner-page #diagram-owner-editor {
   --de-danger: var(--planr-color-danger, #b4233c);
   --de-danger-soft: var(--planr-color-danger-soft, #fff0f2);
   --de-warning: var(--planr-color-warning, #9a6700);
-  --de-scrim: var(--planr-color-scrim, rgb(3 6 10 / 72%));
+  --de-scrim: var(--planr-color-scrim, rgb(23 25 29 / 40%));
   --de-shadow-sm: var(--planr-shadow-sm, 0 1px 2px rgb(16 24 40 / 6%));
   --de-shadow-md: var(
     --planr-shadow-md,
@@ -145,6 +145,7 @@ body.planr-diagram-owner-page #diagram-owner-editor {
     --de-danger: var(--planr-color-danger, #fb7185);
     --de-danger-soft: var(--planr-color-danger-soft, #35151d);
     --de-warning: var(--planr-color-warning, #f5c451);
+    --de-scrim: var(--planr-color-scrim, rgb(5 6 8 / 64%));
     --de-shadow-sm: var(--planr-shadow-sm, 0 1px 2px rgb(0 0 0 / 24%));
     --de-shadow-md: var(
       --planr-shadow-md,
@@ -181,6 +182,7 @@ body.planr-diagram-owner-page #diagram-owner-editor {
   --de-danger: var(--planr-color-danger, #fb7185);
   --de-danger-soft: var(--planr-color-danger-soft, #35151d);
   --de-warning: var(--planr-color-warning, #f5c451);
+  --de-scrim: var(--planr-color-scrim, rgb(5 6 8 / 64%));
   --de-shadow-sm: var(--planr-shadow-sm, 0 1px 2px rgb(0 0 0 / 24%));
   --de-shadow-md: var(--planr-shadow-md, 0 14px 36px rgb(0 0 0 / 38%), 0 2px 8px rgb(0 0 0 / 28%));
   --de-shadow-lg: var(--planr-shadow-lg, 0 26px 70px rgb(0 0 0 / 56%), 0 8px 20px rgb(0 0 0 / 34%));
@@ -1668,12 +1670,12 @@ body.planr-diagram-owner-page #diagram-owner-editor {
   place-items: center;
   padding: var(--de-space-5);
   background: var(--de-scrim);
-  backdrop-filter: blur(3px);
 }
 
+/* Heights follow the editor, not the window, because a host can embed it in a short region. */
 .planr-diagram-editor .de-dialog {
-  width: min(680px, 100%);
-  max-height: min(750px, calc(100dvh - 2 * var(--de-space-5)));
+  width: min(560px, 100%);
+  max-height: min(750px, 100%);
   overflow: auto;
   padding: var(--de-space-5);
   border: 1px solid var(--de-rule);
@@ -1682,9 +1684,22 @@ body.planr-diagram-owner-page #diagram-owner-editor {
   box-shadow: var(--de-shadow-lg);
 }
 
+.planr-diagram-editor .de-dialog > h2 {
+  font-size: var(--de-text-lg);
+  line-height: var(--de-leading-lg);
+}
+
 .planr-diagram-editor .de-dialog > button,
 .planr-diagram-editor .de-dialog > div > button {
   margin: var(--de-space-2) var(--de-space-2) 0 0;
+}
+
+.planr-diagram-editor .de-dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--de-space-2);
+  margin-top: var(--de-space-5);
 }
 
 .planr-diagram-editor .de-dialog .de-source-view {
@@ -1734,14 +1749,12 @@ body.planr-diagram-owner-page #diagram-owner-editor {
  * "desktop". A 200% browser zoom on a desktop naturally enters the drawer layout. */
 .planr-diagram-editor[data-layout~="drawer"] {
   --de-right-width: min(288px, calc(100% - 48px));
-  --de-drawer-scrim: rgb(3 6 10 / 58%);
-  --de-drawer-blur: blur(1px);
+  --de-drawer-scrim: var(--de-scrim);
 }
 
 /* The inspector acts on the canvas beside it, so its drawer leaves the canvas undimmed. */
 .planr-diagram-editor[data-layout~="drawer"][data-right-open="true"] {
   --de-drawer-scrim: transparent;
-  --de-drawer-blur: none;
 }
 
 .planr-diagram-editor[data-layout~="drawer"] .de-bar {
@@ -1804,7 +1817,6 @@ body.planr-diagram-owner-page #diagram-owner-editor {
   background: var(--de-drawer-scrim);
   box-shadow: none;
   cursor: default;
-  backdrop-filter: var(--de-drawer-blur);
 }
 
 /* The bar is inert under an open drawer and sits outside the backdrop, so it takes the same layer.
@@ -1816,7 +1828,6 @@ body.planr-diagram-owner-page #diagram-owner-editor {
   inset: 0;
   background: var(--de-drawer-scrim);
   content: "";
-  backdrop-filter: var(--de-drawer-blur);
 }
 
 /* Editing intentionally ends at 700px; 701px remains the first authoring width. */
@@ -1923,10 +1934,15 @@ body.planr-diagram-owner-page #diagram-owner-editor {
   line-height: var(--de-leading-lg);
 }
 
+/* The menu hangs from the bar, so it stays inside a narrow embed wherever the window is. */
+.planr-diagram-editor[data-layout~="compact"] .de-more-wrap {
+  position: static;
+}
+
 .planr-diagram-editor[data-layout~="compact"] .de-more-menu {
-  position: fixed;
   top: calc(var(--de-bar-height) + var(--de-space-2));
   right: var(--de-space-2);
+  max-width: calc(100% - var(--de-space-4));
 }
 
 .planr-diagram-editor[data-layout~="compact"] .de-dialog-layer:not(:empty) {
@@ -1936,7 +1952,7 @@ body.planr-diagram-owner-page #diagram-owner-editor {
 
 .planr-diagram-editor[data-layout~="compact"] .de-dialog {
   width: 100%;
-  max-height: calc(100dvh - var(--de-bar-height) - var(--de-space-4));
+  max-height: calc(100% - var(--de-bar-height));
   padding: var(--de-space-4);
   border-radius: var(--de-radius-lg) var(--de-radius-lg) var(--de-radius-sm) var(--de-radius-sm);
 }
@@ -2185,7 +2201,7 @@ body.planr-diagram-owner-page #diagram-owner-editor {
 
 .planr-diagram-editor .de-source-dialog {
   width: min(1040px, 100%);
-  max-height: calc(100dvh - var(--de-space-8));
+  max-height: 100%;
 }
 
 :is(.planr-diagram-editor, .planr-diagram-source-panel) .de-source-panel,
