@@ -149,6 +149,7 @@ test('startArtifactReview returns a private tokenized session and serves only me
   assert.equal(shell.headers['x-content-type-options'], 'nosniff');
   assert.equal(shell.headers['x-dns-prefetch-control'], 'off');
   assert.equal(shell.headers['x-frame-options'], 'DENY');
+  assert.doesNotMatch(shell.headers['content-security-policy'], /frame-ancestors/);
   assert.match(shell.headers['content-security-policy'], /script-src 'self' 'unsafe-inline'/);
   assert.match(shell.headers['content-security-policy'], /connect-src 'self'/);
   assert.match(shell.headers['content-security-policy'], /frame-src blob:/);
