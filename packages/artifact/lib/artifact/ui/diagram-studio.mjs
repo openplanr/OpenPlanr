@@ -1,3 +1,10 @@
+/**
+ * Diagram review studio in the browser: camera, navigator, element details, group collapse,
+ * connection focus, presentation chapters, and pinned comments saved through `PUT api/review`.
+ * Entry point: `mountDiagramStudio`, run on load by the `templates/diagram-studio.js` bundle.
+ * Page markup comes from `diagram-review.mjs`; editing belongs to `diagram-owner-studio.mjs`.
+ */
+
 import { clientSelectionToNormalized, mountArtifactAnnotations } from './annotations.mjs';
 import { mountArtifactFeedbackRail } from './feedback-rail.mjs';
 

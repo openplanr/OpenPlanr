@@ -1,3 +1,10 @@
+/**
+ * Open reference CapabilityProvider, PolicyProvider and Executor implementations: the two Executor
+ * hosts inspect, execute, roll back and reconcile only branded in-memory targets.
+ * Entry points: `OPEN_REFERENCE_PROJECT_EXECUTOR_HOST_V2`, `createDisposableLocalProjectTargetV2`,
+ * `createOpenReferenceCapabilityAvailabilityV2`, `resolveOpenReferenceExecutorHostV2`.
+ */
+
 import { sha256Jcs } from '@openplanr/protocol/canonical-json';
 import {
   assertProtocolArtifact,

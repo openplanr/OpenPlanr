@@ -1,3 +1,10 @@
+/**
+ * Pipeline engine facade: resolves a feature's planning artifacts and SHIP config under a project
+ * root, then drives PLAN, Planning review, SHIP closure, browser-QA and investigation runs.
+ * Entry points: `preparePlan`, `completePlan`, `startShip`, `advanceShip`, `finalizeShipClosure`,
+ * and the `*PlanReview*`, `*Investigation*` and `validateGuided*` export families.
+ */
+
 import { randomUUID } from 'node:crypto';
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, relative, resolve } from 'node:path';

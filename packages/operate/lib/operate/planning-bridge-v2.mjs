@@ -1,3 +1,10 @@
+/**
+ * Operate-to-Planning bridge: binds Action delivery routes and builds the Decision-to-SPEC records.
+ * Entry points: `buildOperatingPlanningProposalV1`, `confirmOperatingPlanningProposalV1`,
+ * `createOperatingDeliveryRouteV1`, `createOperatingOriginV1`, `buildOperatingDeliveryEvidenceV1`.
+ * SPEC and origin-file writes belong to the CLI's `spec-operating-origin-service.ts`.
+ */
+
 import { sha256Jcs } from '@openplanr/protocol/canonical-json';
 import {
   assertOperateExperienceArtifactV2,

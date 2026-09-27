@@ -1,3 +1,10 @@
+/**
+ * Artifact review stage: loads sandboxed artifact frames, reduces view, review-mode, zoom, rail and
+ * theme state, and mounts the feedback rail, annotations, share dialog and hosted viewer.
+ * Entry points: `mountArtifactStage` (also run on load), `reduceArtifactStageState`.
+ * Hosts inject artifact sources and the frame bridge via `__OPENPLANR_ARTIFACT_STAGE_OPTIONS__`.
+ */
+
 import { clientSelectionToNormalized, mountArtifactAnnotations } from './annotations.mjs';
 import { mountArtifactFeedbackRail } from './feedback-rail.mjs';
 import { mountHostedArtifactViewer } from './hosted-viewer.mjs';

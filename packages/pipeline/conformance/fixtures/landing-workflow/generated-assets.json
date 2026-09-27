@@ -7,7 +7,7 @@
   "assets": [
     {
       "path": "lib/pipeline/landing.mjs",
-      "digest": "sha256:9b377ede1f923247e6ceb85bd48db2eeba4dc3e12497fa70a69526fd58f72713"
+      "digest": "sha256:09d602c75e0c1abc4d3d7dce2cae0641cb8403840598630d9af5c482bf7e0914"
     },
     {
       "path": "lib/pipeline/landing.d.mts",

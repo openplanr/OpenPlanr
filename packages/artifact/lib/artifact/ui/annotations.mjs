@@ -1,3 +1,10 @@
+/**
+ * Artifact comment annotations: turns pointer selections into normalized regions, anchors them to
+ * elements through the frame bridge, and renders the pin markers and the new-comment composer.
+ * Entry points: `mountArtifactAnnotations`, `clientSelectionToNormalized`, `annotationDomIds`.
+ * Review state stays in the injected `feedback-rail.mjs` controller; new pins go through `add-pin`.
+ */
+
 export const ARTIFACT_ANNOTATION_EVENTS = Object.freeze({
   draft: 'planr:artifact-annotation-draft',
   focus: 'planr:artifact-annotation-focus',

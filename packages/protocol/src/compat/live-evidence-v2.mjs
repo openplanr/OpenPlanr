@@ -1,3 +1,10 @@
+/**
+ * Live-evidence contracts: validates provider registrations, consent, ingestion and its accepted
+ * Artifact bridge, reduces connector checkpoints and measurement schedules, and evaluates Outcomes.
+ * Entry points: `assertOperatingLiveEvidenceIngestionV2`, `assertAcceptedLiveEvidenceBridgeV2`,
+ * `reduceOperatingConnectorCheckpointV2`, `reduceOperatingMeasurementScheduleV2`.
+ */
+
 import { sha256Jcs } from '../canonical-json.mjs';
 import { assertProtocolArtifact } from '../contracts.mjs';
 

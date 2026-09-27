@@ -1,3 +1,10 @@
+/**
+ * Operate runtime core: compiled guards, checkpoint validation and hash-chained Event transactions.
+ * Entry points: `createEmptyOperatingRuntimeStateV2`, `reduceOperatingRuntimeEventsV2`,
+ * `acceptOperatingAssignmentSubmissionV2`, and the `materialize*V2` and `record*V2` transactions.
+ * Event handlers belong to `runtime-event-reducer-v2.mjs` and `runtime-foundation/*-events.mjs`.
+ */
+
 import { createHash } from 'node:crypto';
 
 import {
@@ -8817,14 +8824,13 @@ export function preflightOperatingAssignmentResultV2(
 }
 
 /**
- * Reference transaction for the bounded Phase 1 direct-submit path.
+ * Reference transaction for accepting one Assignment submission.
  *
- * The raw bytes are decoded and staged only in local variables. All validation,
- * immutable Artifact construction, Event construction, and projection reduction
- * finishes before a new state is returned, so an exception cannot expose a
- * partially accepted projection. A durable store implements the corresponding
- * raw-byte staging/promotion around this pure contract; it must not add paths,
- * caller idempotency keys, or a second acceptance route.
+ * The raw bytes are decoded into a local buffer. All validation, immutable Artifact
+ * construction, Event construction, and projection reduction finishes before a new state is
+ * returned, so an exception cannot expose a partially accepted projection. An optional
+ * `artifactStore` receives the raw bytes through `stageRaw` only after that reduction succeeds;
+ * a durable store must not add paths, caller idempotency keys, or a second acceptance route.
  */
 export function acceptOperatingAssignmentSubmissionV2(
   request,

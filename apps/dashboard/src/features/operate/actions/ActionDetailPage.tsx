@@ -1,4 +1,11 @@
 /* biome-ignore-all lint/suspicious/noArrayIndexKey: canonical arrays retain owner order and duplicate identities by contract. */
+/**
+ * Operate Action detail route: renders one owner-verified Action with its results, outcome and
+ * learnings, and runs its governed controls through preview, confirmation and reconciliation.
+ * Entry point: `ActionDetailPage` (props `ActionDetailPageProps`).
+ * Model verification belongs to `action-model.ts`, command transport to `action-actions.ts`.
+ */
+
 import { sha256Jcs } from '@openplanr/protocol/canonical-json';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {

@@ -1,4 +1,11 @@
 /* biome-ignore-all lint/suspicious/noArrayIndexKey: canonical proposal arrays retain owner order by contract. */
+/**
+ * Operate Action Planning handoff route: for a `planning-work` Action, previews a canonical SPEC
+ * draft, lets the human edit its framing, confirms one shaping SPEC draft and shows its receipt.
+ * Entry point: `PlanningHandoffPage` (props `PlanningHandoffPageProps`).
+ * Transport belongs to `planning-actions.ts`, proposal validation to `planning-handoff-model.ts`.
+ */
+
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { serializeDashboardRoute } from '../../../app/router.js';
 import {

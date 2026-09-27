@@ -1,3 +1,10 @@
+/**
+ * Intelligence router: turns a validated Delta and immutable snapshot into an intelligence plan
+ * that selects Advisor, Challenger and Chair seats, with input bundles and Assignment intents.
+ * Entry points: `planOperatingIntelligenceBoardV2`, `assertOperatingIntelligencePlanV2`.
+ * Event recording belongs to `planOperatingRuntimeIntelligenceBoardV2` in runtime-foundation.mjs.
+ */
+
 import { sha256Jcs } from '@openplanr/protocol/canonical-json';
 import {
   assertOperateIntelligencePlanContractV2,

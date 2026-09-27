@@ -1,3 +1,10 @@
+/**
+ * Governed recovery: runs the separately authorized exact-baseline rollback of a reversible
+ * execution and classifies an unfinished dispatch without redispatching it.
+ * Entry points: `createOperatingGovernedRecoveryRuntimeV2`, `buildOperatingRollbackPlanV2`,
+ * `recordOperatingRollbackPlanV2`, `reconcileOperatingGovernedDispatchV2`.
+ */
+
 import { canonicalizeJson, sha256Jcs } from '@openplanr/protocol/canonical-json';
 import { assertProtocolArtifact } from '@openplanr/protocol/contracts';
 import { PipelineError } from '@openplanr/protocol/errors';

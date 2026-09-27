@@ -1,3 +1,10 @@
+/**
+ * Approval authority for governed Actions: builds and checks the requirements a policy evaluation
+ * declares, records party decisions, evaluates quorum and consumes approvals into one operation.
+ * Entry points: `evaluateOperatingApprovalSetV2`, `createOperatingApprovalRequirementV2`,
+ * `createOperatingApprovalRecordV2`, `createOperatingActionReviewV2`, and the `assert*V2` checks.
+ */
+
 import { sha256Jcs } from '@openplanr/protocol/canonical-json';
 import { assertProtocolArtifact } from '@openplanr/protocol/contracts';
 import { PipelineError } from '@openplanr/protocol/errors';

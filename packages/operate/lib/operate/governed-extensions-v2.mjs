@@ -1,3 +1,10 @@
+/**
+ * Governed extension registry: validates and selects CapabilityProvider, PolicyProvider and
+ * Executor registrations, and builds contained Executor fingerprints, envelopes and host bindings.
+ * Entry points: `OPEN_REFERENCE_OPERATE_GOVERNED_EXTENSIONS_V2`, `selectOperateExecutorV2`,
+ * `createTrustedExecutorBindingV2`, `createContainedExecutorInputEnvelopeV2`.
+ */
+
 import { sha256Jcs } from '@openplanr/protocol/canonical-json';
 import {
   assertProtocolArtifact,

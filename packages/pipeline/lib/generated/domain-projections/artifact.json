@@ -361,7 +361,7 @@
     {
       "source": "packages/artifact/lib/artifact/bundle.mjs",
       "target": "lib/artifact/bundle.mjs",
-      "sha256": "f3c0724308a2a2d0a29bf95783776e46a973245f9514df019a371cca014462ae",
+      "sha256": "64d96ff4f1fcc6aba71d137b8b04c8fde8d48ae3598e7fafec310239aa76acee",
       "mode": "644"
     },
     {
@@ -625,7 +625,7 @@
     {
       "source": "packages/artifact/lib/artifact/diagram/editor/session.d.mts",
       "target": "lib/artifact/diagram/editor/session.d.mts",
-      "sha256": "65067b677c6273e9bbb1e55d380682a2c08c0f5119f6503df5f88f0b1587695e",
+      "sha256": "4ba185e45dab89e2ea847a070e21c6cdbb1827ce3ff1252afa02faf2e2ded226",
       "mode": "644"
     },
     {
@@ -733,7 +733,7 @@
     {
       "source": "packages/artifact/lib/artifact/diagram/rendering/layout.mjs",
       "target": "lib/artifact/diagram/rendering/layout.mjs",
-      "sha256": "7b59210d2c290a01933a38a389d45db78bf3d302e7d31151569dd12fae32b55d",
+      "sha256": "3ae6ebfc02901016cda5f954edee4764f421a1fb53d5fe03c17ba19d6169ea0b",
       "mode": "644"
     },
     {
@@ -775,7 +775,7 @@
     {
       "source": "packages/artifact/lib/artifact/diagram/source-map.mjs",
       "target": "lib/artifact/diagram/source-map.mjs",
-      "sha256": "17733f9ff3f3ae7b9cdf2cb6e4514349b481c1b0f5620863e5302a310e4ac118",
+      "sha256": "cf54ddb1178fa34faeca15ed7a6c56655b077682adf2e135a4f03e8add7ff226",
       "mode": "644"
     },
     {
@@ -853,13 +853,13 @@
     {
       "source": "packages/artifact/lib/artifact/live-room-integrity.mjs",
       "target": "lib/artifact/live-room-integrity.mjs",
-      "sha256": "ac9e06894a1774402b8f0607eecc44f7e49a75c603692151ff82690c56b53265",
+      "sha256": "44a9d4613829292cf215a5052be5715614bc0d320783766f41f5634e91782459",
       "mode": "644"
     },
     {
       "source": "packages/artifact/lib/artifact/live-room.mjs",
       "target": "lib/artifact/live-room.mjs",
-      "sha256": "6804118a82f67eaa51e9cc8edb3b16f519448245024ef25702b2fbe66667366c",
+      "sha256": "0bef64bddd18f662414921fa9b7d8e2d0a160307b6e8c83b3686142069717970",
       "mode": "644"
     },
     {
@@ -877,7 +877,7 @@
     {
       "source": "packages/artifact/lib/artifact/review-server.mjs",
       "target": "lib/artifact/review-server.mjs",
-      "sha256": "1318dbb8c99b2f9da832d9dfa21233666a8d0885f82aef1f2c3328ed12632bce",
+      "sha256": "21f97b0d5602c6c676eecb6361f1bf4ddc2197bfc2a68f1b48f453088a8f885c",
       "mode": "644"
     },
     {
@@ -895,7 +895,7 @@
     {
       "source": "packages/artifact/lib/artifact/ui/annotations.mjs",
       "target": "lib/artifact/ui/annotations.mjs",
-      "sha256": "3ba5bd0d2bc5852794e59ea509f9625bc370b85ecb6146d823e1c4413b9a114b",
+      "sha256": "f8a33f59909461e7690492c90efca89fb0359d069ecacd33d76f7eb0f6f78b4d",
       "mode": "644"
     },
     {
@@ -1033,7 +1033,7 @@
     {
       "source": "packages/artifact/lib/artifact/ui/diagram-studio.mjs",
       "target": "lib/artifact/ui/diagram-studio.mjs",
-      "sha256": "ae0fcde00c53a3b0e6451275a683c6e7259d5255e12426c59a4bdd7062f6f950",
+      "sha256": "403f33ffe2a1585d5f8511811bc7d49f9dd07429ee20ca20eb74294dd33139ef",
       "mode": "644"
     },
     {
@@ -1081,13 +1081,13 @@
     {
       "source": "packages/artifact/lib/artifact/ui/share-dialog.mjs",
       "target": "lib/artifact/ui/share-dialog.mjs",
-      "sha256": "660fceb624f76dcb9c378ad6d87d127c542c14a8a25c70e18424e76d75bc1188",
+      "sha256": "cacb731fad59d3ac218a6e6d268177d1115f5ba4e9663b48b168427847226d5a",
       "mode": "644"
     },
     {
       "source": "packages/artifact/lib/artifact/ui/shell.mjs",
       "target": "lib/artifact/ui/shell.mjs",
-      "sha256": "03bf00d19570059e9bcca03c8f791f0c7e463c8801f8ec5b84c1b2f584def4e5",
+      "sha256": "a22c97e99b71ccd04ed7c645a5ee8071c57f29263c502a86c1ff2ebc59e670d6",
       "mode": "644"
     },
     {
@@ -1105,7 +1105,7 @@
     {
       "source": "packages/artifact/lib/artifact/ui/stage.mjs",
       "target": "lib/artifact/ui/stage.mjs",
-      "sha256": "b6b91e8d7a304c32378aa7a1932c1e534f8b18169e6dea19f821d9a196837ebb",
+      "sha256": "7578cfdfc8f332aaf42b72ed4e3e60b0a92ffbf226bda3ecf2f70012121eae62",
       "mode": "644"
     },
     {

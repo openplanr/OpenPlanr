@@ -1,3 +1,10 @@
+/**
+ * Operate trace matrix: builds and validates one Cycle's bounded, access-safe lineage graph, from
+ * requirements, seats and Assignments through Claims and Decisions to Actions and Outcomes.
+ * Entry points (`planr-pipeline/operate/trace-matrix-v2`): `buildOperatingTraceMatrixV2`,
+ * `assertOperatingTraceMatrixV2`, `deriveOperatingOmittedRoleAbsenceIdV2`.
+ */
+
 import { sha256Jcs } from '@openplanr/protocol/canonical-json';
 import { assertProtocolArtifact } from '@openplanr/protocol/contracts';
 import { PipelineError } from '@openplanr/protocol/errors';

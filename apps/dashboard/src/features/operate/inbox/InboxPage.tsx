@@ -1,3 +1,10 @@
+/**
+ * Operate Inbox route: renders the owner-verified Inbox by category or as one requested item,
+ * and runs each item's governed transition through preview, confirmation and reconciliation.
+ * Entry point: `InboxPage` (props `InboxPageProps`).
+ * Model verification belongs to `inbox-model.ts`, command transport to `inbox-actions.ts`.
+ */
+
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   ActionStateBadge,

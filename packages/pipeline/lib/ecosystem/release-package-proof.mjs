@@ -1,3 +1,10 @@
+/**
+ * Release package proofs: deterministic repack, archive-to-source parity, export targets,
+ * installed export probes, packaged doc links, and git inventories of the coordinated candidate.
+ * Entry points: `createPackagePayloadProof`, `createEcosystemCandidateProof`, `releaseProofDigests`
+ * (read by `release-ledger.mjs`); `scripts/verify-release-package.mjs` packs and installs.
+ */
+
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { lstatSync, readdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';

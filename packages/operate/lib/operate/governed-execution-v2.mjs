@@ -1,3 +1,10 @@
+/**
+ * At-most-once execution journal for an approved Action: commits the Assignment, one-use grant
+ * and dispatch intent through a compare-and-swap checkpoint before the contained effect, then
+ * records one accepted terminal result. Entry points: `createOperatingGovernedExecutionRuntimeV2`,
+ * `executeOperatingGovernedActionV2`. Rollback belongs to `governed-recovery-v2.mjs`.
+ */
+
 import { canonicalizeJson, sha256Jcs } from '@openplanr/protocol/canonical-json';
 import { assertProtocolArtifact } from '@openplanr/protocol/contracts';
 import { PipelineError } from '@openplanr/protocol/errors';
@@ -1106,7 +1113,7 @@ function materializeTerminalResult({
   // Protocol v2 checkpoints created before integrated execution lifecycles did
   // not necessarily contain a verification plan or an approved Cycle. Preserve
   // their replayability while making the complete lifecycle mandatory whenever
-  // all Phase 5 authority records are present.
+  // the approved Action, approved Cycle and verification plan are all present.
   if (sourceAction?.state === 'approved' && sourceCycle?.state === 'approved' && verificationPlan) {
     const terminalOperation = {
       ...clone(operation),
@@ -1265,7 +1272,8 @@ function materializeTerminalResult({
 
 /**
  * Owns one serializable journal backed by a caller-supplied durable CAS store.
- * No contained host call is reachable until dispatch ownership is committed.
+ * No contained effect is reachable until dispatch ownership is committed; the authorized
+ * target inspection runs before that commit.
  */
 export function createOperatingGovernedExecutionRuntimeV2({
   initialState,

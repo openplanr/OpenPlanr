@@ -1,3 +1,10 @@
+/**
+ * Operating Delta: derives the evidence-backed change between an immutable snapshot and its prior
+ * snapshot, if any, from source revisions and metrics to stale evidence and Decisions to revisit.
+ * Entry points: `deriveOperatingDeltaV2`, `assertOperatingDeltaV2`,
+ * `classifyOperatingDeltaMaterialityV2`; `runtime-foundation.mjs` emits the `delta.derived` Event.
+ */
+
 import { sha256Jcs } from '@openplanr/protocol/canonical-json';
 import { assertProtocolArtifact } from '@openplanr/protocol/contracts';
 import { PipelineError } from '@openplanr/protocol/errors';

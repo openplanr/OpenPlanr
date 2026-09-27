@@ -1,3 +1,10 @@
+/**
+ * Dashboard runtime composition root: binds the current route to exact owner-issued Planning and
+ * Operate reads, projects each into a `DashboardProductState` and refetches root reads on SSE.
+ * Entry point: `useDashboardRuntimeComposition`. Transport and validators belong to the
+ * `./runtime/*` facades.
+ */
+
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as operateComposition from './runtime/operate/index.js';
 import * as planningComposition from './runtime/planning/index.js';

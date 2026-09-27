@@ -1,3 +1,10 @@
+/**
+ * Deterministic Operate runtime Event reducer: verifies Event identity, applies Assignment and
+ * `artifact.created` Events, and routes every other type through the Event registry.
+ * Entry point: `createOperatingRuntimeEventReducerV2`, returning `reduceOperatingRuntimeEventsV2`.
+ * runtime-foundation.mjs injects the domain handlers, Event hashing and state materialization.
+ */
+
 import { sha256Jcs } from '@openplanr/protocol/canonical-json';
 import { assertProtocolArtifact } from '@openplanr/protocol/contracts';
 import { OPERATE_CONTRACT_CATALOG_V2 } from '@openplanr/protocol/operate-contract-catalog-v2';

@@ -283,7 +283,7 @@
     {
       "source": "packages/design/lib/design/review.mjs",
       "target": "lib/design/review.mjs",
-      "sha256": "1ad03dabd01b04e09ef6869db2214b855f5dd7bb3a819bacce02a88cb4f7eab1",
+      "sha256": "e6afdec9be33c5ca66d2c32c18b793b74e798322236f241ed2cd0b8a8991c99c",
       "mode": "644"
     },
     {
@@ -325,7 +325,7 @@
     {
       "source": "packages/design/lib/design/ui/enhancements.mjs",
       "target": "lib/design/ui/enhancements.mjs",
-      "sha256": "e2766bc7de2ee33f088a8a189e72926709ea854f885374e113625e2dd94ce33f",
+      "sha256": "56a9b53706d143bc2d2d1bbe4413a4e065b50f06731d1f2c0e837e54fe7559e5",
       "mode": "644"
     },
     {

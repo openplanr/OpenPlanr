@@ -21,8 +21,9 @@
  * This runner ships with two small in-file parsers/validators rather than
  * vendoring a third-party dependency. Rationale:
  *
- *   - This codebase has no `package.json` and the maintainer audit (Bucket
- *     1.2) treats "zero third-party deps" as a load-bearing invariant.
+ *   - planr-pipeline declares esbuild, parse5, pako and @noble/hashes, but
+ *     the runner imports only Node built-ins and the dependency-free
+ *     `lib/design/cli-parser.mjs`, so it needs none of them installed.
  *   - The YAML surface we care about is restricted to frontmatter blocks
  *     and short fenced YAML inside markdown — a fraction of YAML 1.2.
  *   - The JSON Schema surface used by `schemas/v1.0.0/*.json` is bounded:

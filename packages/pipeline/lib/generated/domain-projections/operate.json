@@ -25,7 +25,7 @@
     {
       "source": "packages/operate/lib/operate/approvals-v2.mjs",
       "target": "lib/operate/approvals-v2.mjs",
-      "sha256": "e5cad4dbd5c770d2afa27feaa5293014ca8284590c23033f7b6ea6f6848102ad",
+      "sha256": "41784237c73b89a8b4fe355446f3b4a7f6a192b40f571c2d0c87965e990d2dc6",
       "mode": "644"
     },
     {
@@ -109,7 +109,7 @@
     {
       "source": "packages/operate/lib/operate/evidence-materialization-v2.mjs",
       "target": "lib/operate/evidence-materialization-v2.mjs",
-      "sha256": "899f061c6f9bb8f3f18360a1a4a8f019d73d1e5e4474ce167647c85469455fb3",
+      "sha256": "af4c182e99474f6f7bb0838768c2c126da8d0e4abf832409a7eec13265020e51",
       "mode": "644"
     },
     {
@@ -205,7 +205,7 @@
     {
       "source": "packages/operate/lib/operate/experience-projection-v2.mjs",
       "target": "lib/operate/experience-projection-v2.mjs",
-      "sha256": "c58d66512778fae73a4fdb534133e8cfe07169d33754e8b76714a474da751983",
+      "sha256": "2d7064d9dcf71ff4a7ec465ad526fa30293990c0e776a83c0710f39f501f60bc",
       "mode": "644"
     },
     {
@@ -217,7 +217,7 @@
     {
       "source": "packages/operate/lib/operate/extensions-v2.mjs",
       "target": "lib/operate/extensions-v2.mjs",
-      "sha256": "31570981cb37cdf3e88bdd8e948722e35656d1343fa66b52b09c76d0d036f49e",
+      "sha256": "86970d398fbe9cf7ee3b378dd79a4aa36822a2960bf9ed24fcb472053f86c9f9",
       "mode": "644"
     },
     {
@@ -229,7 +229,7 @@
     {
       "source": "packages/operate/lib/operate/governed-execution-v2.mjs",
       "target": "lib/operate/governed-execution-v2.mjs",
-      "sha256": "411789a35ab1b293df2f06eb960167c4b213e638f404fc23a34592dfed0071b9",
+      "sha256": "03bb824bb23c68cf04feac8eeff2a8541d93ed281bab8831052bb5be0f6c7d0d",
       "mode": "644"
     },
     {
@@ -241,7 +241,7 @@
     {
       "source": "packages/operate/lib/operate/governed-extensions-v2.mjs",
       "target": "lib/operate/governed-extensions-v2.mjs",
-      "sha256": "e5bb44c1dab8a126a69273e187a29faa8125a5348b187b251a8c2ce717f80ddf",
+      "sha256": "8b2ba1f5be5da4b3e38856d5d8fa57b783bf8be5838f531420a563c68a9a831b",
       "mode": "644"
     },
     {
@@ -253,7 +253,7 @@
     {
       "source": "packages/operate/lib/operate/governed-recovery-v2.mjs",
       "target": "lib/operate/governed-recovery-v2.mjs",
-      "sha256": "b4cbd9503f6455955711b57ef836d49c49b779d091bd285a794dcefe460ddfd1",
+      "sha256": "b8f60662afe675a08785558de40d64b26d227fbcab0934688e16d963a92be4f1",
       "mode": "644"
     },
     {
@@ -265,7 +265,7 @@
     {
       "source": "packages/operate/lib/operate/intelligence-ledger-v2.mjs",
       "target": "lib/operate/intelligence-ledger-v2.mjs",
-      "sha256": "2d66ef5eb315fb89eefa78cc984e63973269ce3c8a32b0fdfd1603b3b6340940",
+      "sha256": "caec7aac53bda543f7c9d4a0e10855f8a80589ef2dbc60788ba9cdb37df5169e",
       "mode": "644"
     },
     {
@@ -283,7 +283,7 @@
     {
       "source": "packages/operate/lib/operate/intelligence-result-validator-v2.mjs",
       "target": "lib/operate/intelligence-result-validator-v2.mjs",
-      "sha256": "f8e5fc0ed1d30506ac97d361a90347fff4d35a102a77cea0c28a715e7f22d893",
+      "sha256": "3e5d998aa05e64138aabadaf75484a8f81bb901eb2032231a8dccc094d73d0bd",
       "mode": "644"
     },
     {
@@ -295,7 +295,7 @@
     {
       "source": "packages/operate/lib/operate/intelligence-router-v2.mjs",
       "target": "lib/operate/intelligence-router-v2.mjs",
-      "sha256": "73f8e6a1d73918ded6a04436e822e9143226ffa2b72b4ee4f4c08a3a589d0c2a",
+      "sha256": "f67669915bde7527534aae5db0b65a530e022ad0afe277f85a57c1252bf33ca4",
       "mode": "644"
     },
     {
@@ -307,7 +307,7 @@
     {
       "source": "packages/operate/lib/operate/operating-delta-v2.mjs",
       "target": "lib/operate/operating-delta-v2.mjs",
-      "sha256": "7c75fccecce7339f3cff21398fd8e02b537a108dbac828e906631b223e07a0da",
+      "sha256": "1b0492b3e17308c2c687a7a2cc63a6a772924dd192c4be8c9032a1eae67e1451",
       "mode": "644"
     },
     {
@@ -415,7 +415,7 @@
     {
       "source": "packages/operate/lib/operate/planning-bridge-v2.mjs",
       "target": "lib/operate/planning-bridge-v2.mjs",
-      "sha256": "41f887619fa00742a2eaa153c038bb58415b69537f88bd4b11f755013b2e14bd",
+      "sha256": "f443f6b0f2346800eaeb59244272489ada0805bacb9b0349050b55a45f46fdcc",
       "mode": "644"
     },
     {
@@ -439,7 +439,7 @@
     {
       "source": "packages/operate/lib/operate/reference-governed-executors-v2.mjs",
       "target": "lib/operate/reference-governed-executors-v2.mjs",
-      "sha256": "d8b35ba4c73270acded0dc044f9b1b6f0e2fae13332f4e99dcae8f51cf5af308",
+      "sha256": "ce45a93a947100c760e69021aaf118d7429652827c66e3b3229afba4abb594db",
       "mode": "644"
     },
     {
@@ -469,7 +469,7 @@
     {
       "source": "packages/operate/lib/operate/runtime-event-reducer-v2.mjs",
       "target": "lib/operate/runtime-event-reducer-v2.mjs",
-      "sha256": "e666bf6334ecec5d52dc866109b8eed1a08b3d1e837db1a7b693cf6fdde88751",
+      "sha256": "0736a3fed80efe3632a46aa2d77de6239e1b3ec3e33b8eee079370d35e6d759c",
       "mode": "644"
     },
     {
@@ -481,7 +481,7 @@
     {
       "source": "packages/operate/lib/operate/runtime-foundation.mjs",
       "target": "lib/operate/runtime-foundation.mjs",
-      "sha256": "012eef8708e38aaf9b78f7a99e57c98866ec2afcb7c64763d397fd3aea2b5604",
+      "sha256": "269900d1d00bad59f7688114baae8ce60d7dfa2070cfe73f2f43fda0192f5a62",
       "mode": "644"
     },
     {
@@ -553,7 +553,7 @@
     {
       "source": "packages/operate/lib/operate/scheduler-v2.mjs",
       "target": "lib/operate/scheduler-v2.mjs",
-      "sha256": "de5afe3f9f6f7351d09ded1f31aecddf610999826b5ce6f2f5dc2483786a6d29",
+      "sha256": "57e9a563a83626070f4f77d5af871b955d99830e7c10bf91a6970a8c561ca4ec",
       "mode": "644"
     },
     {
@@ -565,7 +565,7 @@
     {
       "source": "packages/operate/lib/operate/trace-matrix-v2.mjs",
       "target": "lib/operate/trace-matrix-v2.mjs",
-      "sha256": "43229623c6fe0560ad70bf314ae881c4859b69a10fe32ecb326b98f0a4d9f7d7",
+      "sha256": "dc10005db3709e027cc736d9e894437d2851bf7d7dcf3bc1e123dd57651132e9",
       "mode": "644"
     }
   ]

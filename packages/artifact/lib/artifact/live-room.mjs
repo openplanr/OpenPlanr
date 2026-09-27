@@ -1,3 +1,10 @@
+/**
+ * Live review room client: prepares, commits, recovers and hydrates client-encrypted rooms on the
+ * live review service, and builds, encrypts, appends and reduces their review events.
+ * Entry points: `prepareLiveReviewRoom`, `commitLiveReviewRoom`, `hydrateLiveReviewRoom` and the
+ * `*LiveRoomRecoveryBundle` pair; signatures and chain checks belong to `live-room-integrity.mjs`.
+ */
+
 import { ARTIFACT_ERROR_CODES, PipelineError } from '@openplanr/protocol/errors';
 import {
   ARTIFACT_COMPRESSED_LIMIT,
@@ -846,7 +853,7 @@ export async function decryptLiveRoomEvent(record, { key, roomId, reviewOf, cryp
   return normalized;
 }
 
-/** Deterministically reduce append-only ciphertext events into the existing review shape. */
+/** Deterministically reduce decrypted append-only room events into the existing review shape. */
 export function reduceLiveRoomEvents({ roomId, reviewOf, events = [], reviewId = roomId } = {}) {
   validateId(roomId);
   validateDigest(reviewOf);

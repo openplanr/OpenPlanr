@@ -1,3 +1,10 @@
+/**
+ * Closed validators for the skill-evaluation contracts, from scenarios to certification receipts.
+ * Entry points: `assertEvaluationScenario`, `assertEvaluationWaiver`, `assertEvaluationGatePolicy`,
+ * `assertSkillCertificationReceipt`, the other `assertEvaluation*` validators and `EVALUATION_*`.
+ * Scoring a run against the gate policy belongs to `lib/evaluation/gates.mjs`.
+ */
+
 import { PipelineError } from './errors.mjs';
 import { assertEvaluationIdentity } from './evaluation-identity.mjs';
 import {

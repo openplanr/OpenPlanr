@@ -1,3 +1,10 @@
+/**
+ * Release ledger: builds and validates the digest-bound ledger, the compatibility claims derived
+ * from its rows and the verification receipts, and checks the ecosystem manifest against them.
+ * Entry points: `releaseLedgerRowsFromProofs`, `buildReleaseLedger`, `buildReleaseLedgerReceipt`,
+ * `assertEcosystemManifestProjection`. Byte-level proofs belong to `release-package-proof.mjs`.
+ */
+
 import { sha256Jcs } from '../protocol/jcs.mjs';
 import { RELEASE_REPOSITORY_KEYS, releaseProofDigests } from './release-package-proof.mjs';
 

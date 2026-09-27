@@ -1,3 +1,10 @@
+/**
+ * Evidence materialization: resolves one evidence candidate into a resolution and, when resolved,
+ * an evidence-snapshot Artifact, EvidenceRef and evidence edges; raw bytes stay out of Events.
+ * Entry points: `buildOperatingEvidenceMaterializationV2`, `readOperatingArtifactRawBytesV2`,
+ * `validateOperatingEvidenceSourcePayloadV2`; Events and state belong to `runtime-foundation.mjs`.
+ */
+
 import { createHash } from 'node:crypto';
 import { sha256Jcs } from '@openplanr/protocol/canonical-json';
 import { assertProtocolArtifact } from '@openplanr/protocol/contracts';

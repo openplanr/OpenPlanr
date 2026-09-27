@@ -1,3 +1,10 @@
+/**
+ * Pure SHIP closure reducer: applies task, review, correction and browser-QA events, phase-gate
+ * evidence and finalization, and validates closures, terminal receipts and reopen lineage.
+ * Entry points: `reduceShipClosure`, `recordShipGateEvidence`, `terminalizeShipClosure`,
+ * `assertClosure`; candidate capture, clocks, locks and gate runs belong to `ship-closure.mjs`.
+ */
+
 import { createHash } from 'node:crypto';
 
 import { validateProtocolArtifact } from '../protocol/contracts.mjs';

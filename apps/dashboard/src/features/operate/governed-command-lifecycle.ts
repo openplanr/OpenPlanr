@@ -1,3 +1,10 @@
+/**
+ * Governed command custody for dashboard Operate routes: binds an exact route identity, issues a
+ * session, previews and confirms one command at a time, and locks after an uncertain outcome.
+ * Entry points: `createGovernedCommandLifecycle` for the Action, Inbox and Review adapters;
+ * `createGovernedAdapterLifecycle` and `exactGovernedSession` for the Planning adapter.
+ */
+
 import { assertOperateExperiencePreviewV1 } from '@openplanr/protocol/schemas/v1.2.0/operate-experience-display-surface.mjs';
 import { parseDashboardRoute } from '../../app/router.js';
 import {

@@ -1,3 +1,10 @@
+/**
+ * Signed live review room protocol: ECDSA P-256 owner and reviewer signers, room descriptors, and
+ * event records hash-chained by sequence and bound to their ciphertext and plaintext digests.
+ * Entry points: `createLiveRoomSigner`, `createSignedLiveRoomEvent`, `verifyLiveRoomEventChain`,
+ * `normalizeLiveRoomDescriptor`. Room transport and review reduction belong to `live-room.mjs`.
+ */
+
 import { ARTIFACT_ERROR_CODES, PipelineError } from '@openplanr/protocol/errors';
 import { base64UrlToBytes, bytesToBase64Url } from './codec.mjs';
 import { decryptArtifactPayload } from './crypto.mjs';

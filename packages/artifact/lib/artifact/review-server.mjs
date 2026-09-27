@@ -1,3 +1,10 @@
+/**
+ * Loopback artifact review server and its per-port daemon state: registers review sessions over a
+ * bearer-token control API, plus in-process owner sessions, and serves each under capability URLs.
+ * Entry points: `startArtifactReview`, `exportArtifactReviewSession`, `createArtifactReviewServer`.
+ * Review ledger storage and locking belong to `review.mjs`.
+ */
+
 import { existsSync, lstatSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { dirname, join } from 'node:path';

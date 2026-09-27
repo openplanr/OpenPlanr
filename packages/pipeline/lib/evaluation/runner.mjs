@@ -1,3 +1,10 @@
+/**
+ * Skill evaluation runner: grades each contract-valid scenario through its journeys and returns
+ * the sealed run result, aggregate report, per-skill certification receipts and a verdict.
+ * Entry points: `runEvaluation`, `loadEvaluationInputs`.
+ * Writing run artifacts to disk belongs to `report.mjs` (`writeLocalRun`, `writeCiReports`).
+ */
+
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 

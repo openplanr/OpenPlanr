@@ -1,3 +1,10 @@
+/**
+ * Intelligence result validation: beyond the closed schema, checks Advisor, Challenger and Chair
+ * results for runtime custody, issued Evidence, role-local identities and cross-result references.
+ * Entry points: `validateOperatingIntelligenceResultV2` (throws) and
+ * `preflightOperatingIntelligenceResultV2` (JSON-pointer issues); other schemas pass through.
+ */
+
 import { sha256Jcs } from '@openplanr/protocol/canonical-json';
 import { assertProtocolArtifact, validateProtocolArtifact } from '@openplanr/protocol/contracts';
 import { PipelineError } from '@openplanr/protocol/errors';
