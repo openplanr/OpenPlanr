@@ -4,8 +4,54 @@ export const ARTIFACT_THUMBNAIL_MAX_DATA_URL = 256 * 1024;
 export const ARTIFACT_VIEWPORT_ZOOM_MAX_DELTA = 1000;
 export const ARTIFACT_VIEWPORT_PAN_MAX_DELTA = 1000;
 
+/** An artifact viewport in CSS pixels. */
+interface Viewport {
+  width: number;
+  height: number;
+}
+/** A gesture value awaiting its animation frame: a zoom or a pan, accumulated. */
+interface PendingGesture {
+  x?: number;
+  y?: number;
+  deltaX?: number;
+  deltaY?: number;
+}
+type GestureWindow = Window & typeof globalThis;
+/** A bridge result message, already checked for source, origin, nonce and request. */
+interface BridgeMessage {
+  type?: unknown;
+  inspection?: unknown;
+  reason?: unknown;
+  dataUrl?: unknown;
+  width?: unknown;
+  height?: unknown;
+  label?: unknown;
+}
+/** An inspection anchor: the element's `data-planr-id` and optional screen. */
+interface InspectionAnchor {
+  planrId: string;
+  screen?: string;
+}
+interface InspectionRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+interface InspectionAccessibility {
+  role: string;
+  ariaLabel: string;
+  alt: string;
+  tabIndex: number;
+  disabled: boolean;
+}
+/** An element that may have a tab index. */
+type Focusable = Element & { tabIndex?: number };
+/** A cloned node the capture restyles; only inputs and textareas have a value. */
+type CaptureTarget = Element & { value?: string };
+
 /** Validate only after the sender's source, origin, nonce and identity are checked. */
-export function normalizeArtifactViewportZoom(value, viewport) {
+export function normalizeArtifactViewportZoom(value: unknown, viewport: Viewport) {
   if (
     !value ||
     typeof value !== 'object' ||
@@ -29,7 +75,8 @@ export function normalizeArtifactViewportZoom(value, viewport) {
     )
   )
     return null;
-  const { x, y, deltaY } = value;
+  // The checks above admit only plain objects with these three finite numbers.
+  const { x, y, deltaY } = value as { x: number; y: number; deltaY: number };
   if (
     !Number.isFinite(viewport?.width) ||
     !Number.isFinite(viewport?.height) ||
@@ -48,7 +95,7 @@ export function normalizeArtifactViewportZoom(value, viewport) {
   return Object.freeze({ x, y, deltaY });
 }
 
-export function normalizeArtifactViewportPan(value) {
+export function normalizeArtifactViewportPan(value: unknown) {
   if (
     !value ||
     typeof value !== 'object' ||
@@ -72,7 +119,8 @@ export function normalizeArtifactViewportPan(value) {
     )
   )
     return null;
-  const { deltaX, deltaY } = value;
+  // The checks above admit only plain objects with these two finite numbers.
+  const { deltaX, deltaY } = value as { deltaX: number; deltaY: number };
   if (
     (!deltaX && !deltaY) ||
     Math.abs(deltaX) > ARTIFACT_VIEWPORT_PAN_MAX_DELTA ||
@@ -83,28 +131,33 @@ export function normalizeArtifactViewportPan(value) {
 }
 
 /** Opt-in host camera gestures; install before product scripts, without exposing the emitter. */
-export function createArtifactViewportGestures(window, emit) {
+export function createArtifactViewportGestures(
+  window: GestureWindow,
+  emit: (type: string, value: PendingGesture) => void,
+) {
   const add = window.addEventListener.bind(window),
     remove = window.removeEventListener.bind(window);
   const schedule = window.setTimeout.bind(window),
     cancel = window.clearTimeout.bind(window);
   const prevent = window.Event.prototype.preventDefault,
     stop = window.Event.prototype.stopImmediatePropagation;
-  const getter = (prototype, name) => Object.getOwnPropertyDescriptor(prototype, name)?.get;
+  // The DOM defines these accessors; a missing one throws inside the wheel handler's try.
+  const getter = <T,>(prototype: object, name: string) =>
+    Object.getOwnPropertyDescriptor(prototype, name)?.get as (this: Event) => T;
   const native = {
-    x: getter(window.MouseEvent.prototype, 'clientX'),
-    y: getter(window.MouseEvent.prototype, 'clientY'),
-    ctrl: getter(window.MouseEvent.prototype, 'ctrlKey'),
-    meta: getter(window.MouseEvent.prototype, 'metaKey'),
-    shift: getter(window.MouseEvent.prototype, 'shiftKey'),
-    deltaX: getter(window.WheelEvent.prototype, 'deltaX'),
-    deltaY: getter(window.WheelEvent.prototype, 'deltaY'),
-    mode: getter(window.WheelEvent.prototype, 'deltaMode'),
+    x: getter<number>(window.MouseEvent.prototype, 'clientX'),
+    y: getter<number>(window.MouseEvent.prototype, 'clientY'),
+    ctrl: getter<boolean>(window.MouseEvent.prototype, 'ctrlKey'),
+    meta: getter<boolean>(window.MouseEvent.prototype, 'metaKey'),
+    shift: getter<boolean>(window.MouseEvent.prototype, 'shiftKey'),
+    deltaX: getter<number>(window.WheelEvent.prototype, 'deltaX'),
+    deltaY: getter<number>(window.WheelEvent.prototype, 'deltaY'),
+    mode: getter<number>(window.WheelEvent.prototype, 'deltaMode'),
   };
   let enabled = false,
     disposed = false,
     timer = 0,
-    pending = null,
+    pending: PendingGesture | null = null,
     pendingType = '';
   const clear = () => {
     if (timer) cancel(timer);
@@ -120,9 +173,15 @@ export function createArtifactViewportGestures(window, emit) {
     pendingType = '';
     if (enabled && !disposed && value) emit(type, value);
   };
-  const wheel = (event) => {
+  const wheel = (event: WheelEvent) => {
     if (!enabled || disposed || !event.isTrusted || !event.cancelable) return;
-    let x, y, deltaX, deltaY, mode, zooming, shift;
+    let x: number,
+      y: number,
+      deltaX: number,
+      deltaY: number,
+      mode: number,
+      zooming: boolean,
+      shift: boolean;
     try {
       x = native.x.call(event);
       y = native.y.call(event);
@@ -139,8 +198,8 @@ export function createArtifactViewportGestures(window, emit) {
     const scaleY = mode === 1 ? 16 : mode === 2 ? window.innerHeight : 1;
     deltaX *= scaleX;
     deltaY *= scaleY;
-    let type;
-    let value;
+    let type: string;
+    let value: object | null;
     if (zooming) {
       type = 'viewport.zoom';
       deltaY = Math.max(
@@ -203,7 +262,7 @@ export function createArtifactViewportGestures(window, emit) {
   add('wheel', wheel, { capture: true, passive: false });
   add('pagehide', destroy, { once: true });
   return Object.freeze({
-    setEnabled(value) {
+    setEnabled(value: unknown) {
       if (disposed || typeof value !== 'boolean') return false;
       enabled = value;
       if (!value) clear();
@@ -243,36 +302,39 @@ export const ARTIFACT_INSPECTION_PROPERTIES = Object.freeze([
   'box-sizing',
 ]);
 
-export function normalizeArtifactInspection(value, viewport) {
-  const plain = (entry) =>
+export function normalizeArtifactInspection(value: unknown, viewport: Viewport) {
+  const plain = (entry: unknown) =>
     entry &&
     typeof entry === 'object' &&
     !Array.isArray(entry) &&
     [Object.prototype, null].includes(Object.getPrototypeOf(entry));
-  const own = (entry, key) => {
+  const own = (entry: unknown, key: string): unknown => {
     const descriptor = plain(entry) ? Object.getOwnPropertyDescriptor(entry, key) : null;
     return descriptor && Object.hasOwn(descriptor, 'value') ? descriptor.value : undefined;
   };
-  const exact = (entry, keys) =>
+  // plain() admits only objects, which Object.keys requires.
+  const exact = (entry: unknown, keys: readonly string[]) =>
     plain(entry) &&
-    Object.keys(entry).length === keys.length &&
-    Object.keys(entry).every((key) => keys.includes(key));
+    Object.keys(entry as object).length === keys.length &&
+    Object.keys(entry as object).every((key) => keys.includes(key));
   if (!exact(value, ['tagName', 'anchor', 'rect', 'viewport', 'styles', 'accessibility']))
     return null;
+  // Each part is typed as the shape the checks below require before any member is read.
   const tagName = own(value, 'tagName');
-  const anchor = own(value, 'anchor');
-  const rect = own(value, 'rect');
-  const size = own(value, 'viewport');
-  const styles = own(value, 'styles');
-  const accessibility = own(value, 'accessibility');
+  const anchor = own(value, 'anchor') as InspectionAnchor | null;
+  const rect = own(value, 'rect') as InspectionRect;
+  const size = own(value, 'viewport') as Viewport;
+  const styles = own(value, 'styles') as Record<string, string>;
+  const accessibility = own(value, 'accessibility') as InspectionAccessibility;
   if (typeof tagName !== 'string' || !/^[a-z][a-z0-9-]{0,63}$/.test(tagName)) return null;
   if (!exact(size, ['width', 'height']) || !exact(rect, ['x', 'y', 'width', 'height'])) return null;
+  // Number.isInteger and typeof on a call do not narrow the next call's result.
   if (
-    !['width', 'height'].every(
+    !(['width', 'height'] satisfies Array<keyof Viewport>).every(
       (key) =>
         Number.isInteger(own(size, key)) &&
-        own(size, key) >= 1 &&
-        own(size, key) <= 16384 &&
+        (own(size, key) as number) >= 1 &&
+        (own(size, key) as number) <= 16384 &&
         own(size, key) === viewport?.[key],
     )
   )
@@ -282,7 +344,7 @@ export function normalizeArtifactInspection(value, viewport) {
       (key) =>
         typeof own(rect, key) === 'number' &&
         Number.isFinite(own(rect, key)) &&
-        own(rect, key) >= 0,
+        (own(rect, key) as number) >= 0,
     )
   )
     return null;
@@ -315,8 +377,8 @@ export function normalizeArtifactInspection(value, viewport) {
     !['role', 'ariaLabel', 'alt'].every(
       (key) =>
         typeof own(accessibility, key) === 'string' &&
-        own(accessibility, key).length <= 256 &&
-        !/[\u0000-\u001f\u007f]/.test(own(accessibility, key)),
+        (own(accessibility, key) as string).length <= 256 &&
+        !/[\u0000-\u001f\u007f]/.test(own(accessibility, key) as string),
     ) ||
     !Number.isInteger(own(accessibility, 'tabIndex')) ||
     accessibility.tabIndex < -1 ||
@@ -334,7 +396,7 @@ export function normalizeArtifactInspection(value, viewport) {
   });
 }
 
-export function normalizeArtifactThumbnail(value) {
+export function normalizeArtifactThumbnail(value: unknown) {
   if (
     !value ||
     typeof value !== 'object' ||
@@ -346,7 +408,13 @@ export function normalizeArtifactThumbnail(value) {
     )
   )
     return null;
-  const { dataUrl, width, height, label } = value;
+  // The integer checks run before the bounds, which read width and height as numbers.
+  const { dataUrl, width, height, label } = value as {
+    dataUrl: unknown;
+    width: number;
+    height: number;
+    label: unknown;
+  };
   if (
     typeof dataUrl !== 'string' ||
     dataUrl.length > ARTIFACT_THUMBNAIL_MAX_DATA_URL ||
@@ -366,9 +434,13 @@ export function normalizeArtifactThumbnail(value) {
 }
 
 /** Call only after validating message source, origin, nonce, artifact and pending request. */
-export function normalizeArtifactBridgeToolResult(requestType, message, viewport) {
+export function normalizeArtifactBridgeToolResult(
+  requestType: string,
+  message: BridgeMessage,
+  viewport: Viewport,
+) {
   const base = ['channel', 'schemaVersion', 'type', 'nonce', 'artifactId', 'requestId'];
-  const exact = (keys) =>
+  const exact = (keys: string[]) =>
     message &&
     typeof message === 'object' &&
     !Array.isArray(message) &&
@@ -409,7 +481,7 @@ export function normalizeArtifactBridgeToolResult(requestType, message, viewport
 }
 
 /** Instantiate before authored scripts run, so DOM methods cannot be substituted. */
-export function createArtifactBridgeTools(document, window) {
+export function createArtifactBridgeTools(document: Document, window: GestureWindow) {
   const fromPoint = document.elementFromPoint.bind(document);
   const query = document.querySelectorAll.bind(document);
   const attr = window.Element.prototype.getAttribute;
@@ -423,21 +495,22 @@ export function createArtifactBridgeTools(document, window) {
   const serialize = window.XMLSerializer.prototype.serializeToString;
   const Image = window.Image;
   const Serializer = window.XMLSerializer;
-  const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
-  const get = (element, key) => attr.call(element, key);
-  const validId = (id) => typeof id === 'string' && /^[A-Za-z0-9][A-Za-z0-9._:-]{0,511}$/.test(id);
-  const screen = (element) => {
+  const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+  const get = (element: Element, key: string) => attr.call(element, key);
+  const validId = (id: unknown) =>
+    typeof id === 'string' && /^[A-Za-z0-9][A-Za-z0-9._:-]{0,511}$/.test(id);
+  const screen = (element: Element) => {
     const owner = closest.call(element, '[data-planr-screen]');
     const value = owner && get(owner, 'data-planr-screen');
     return typeof value === 'string' && /^[^\u0000-\u001f\u007f]{1,128}$/.test(value)
       ? value
       : undefined;
   };
-  const clean = (value) =>
+  const clean = (value: unknown) =>
     String(value || '')
       .replace(/[\u0000-\u001f\u007f]/g, ' ')
       .slice(0, 256);
-  const inspectElement = (element) => {
+  const inspectElement = (element: unknown) => {
     if (!(element instanceof window.Element)) return null;
     const tagName = element.localName;
     if (typeof tagName !== 'string' || !/^[a-z][a-z0-9-]{0,63}$/.test(tagName)) return null;
@@ -451,11 +524,12 @@ export function createArtifactBridgeTools(document, window) {
     const anchorScreen = owner && screen(owner);
     const style = computed(element);
     const styles = Object.fromEntries(
-      ARTIFACT_INSPECTION_PROPERTIES.map((key) => {
+      ARTIFACT_INSPECTION_PROPERTIES.map((key): [string, string] => {
         const value = clean(style.getPropertyValue(key));
         return [key, /(?:url\s*\(|https?:|file:)/i.test(value) ? '' : value];
       }),
     );
+    // An element outside HTML and SVG has no tabIndex, which counts as 0.
     return {
       tagName,
       anchor: validId(planrId)
@@ -473,14 +547,14 @@ export function createArtifactBridgeTools(document, window) {
         role: clean(get(element, 'role')),
         ariaLabel: clean(get(element, 'aria-label')),
         alt: clean(get(element, 'alt')),
-        tabIndex: clamp(Number(element.tabIndex) || 0, -1, 32767),
+        tabIndex: clamp(Number((element as Focusable).tabIndex) || 0, -1, 32767),
         disabled: get(element, 'disabled') !== null || get(element, 'aria-disabled') === 'true',
       },
     };
   };
   let capturing = false;
   return Object.freeze({
-    inspectAt(x, y) {
+    inspectAt(x: number, y: number) {
       if (
         !Number.isFinite(x) ||
         !Number.isFinite(y) ||
@@ -492,7 +566,7 @@ export function createArtifactBridgeTools(document, window) {
         return null;
       return inspectElement(fromPoint(x, y));
     },
-    inspect(anchor) {
+    inspect(anchor: { planrId?: unknown; screen?: unknown } | null | undefined) {
       if (
         !anchor ||
         !validId(anchor.planrId) ||
@@ -516,7 +590,7 @@ export function createArtifactBridgeTools(document, window) {
     async thumbnail() {
       if (capturing) throw new Error('Thumbnail capture is busy.');
       capturing = true;
-      let image;
+      let image: HTMLImageElement | undefined;
       try {
         const deadline = Date.now() + 2400;
         const width = window.innerWidth,
@@ -532,7 +606,9 @@ export function createArtifactBridgeTools(document, window) {
           throw new Error('Thumbnail dimensions are unavailable.');
         let count = 0,
           contentSize = 0;
-        const cloneStyled = (source) => {
+        // A cloned text or comment node is typed as an element; element members are read only
+        // after a nodeType 1 check.
+        const cloneStyled = (source: Element): Node => {
           if (++count > 4000 || Date.now() > deadline)
             throw new Error('Thumbnail capture limit exceeded.');
           if (
@@ -540,7 +616,7 @@ export function createArtifactBridgeTools(document, window) {
             (source.nodeType === 1 && ['SCRIPT', 'STYLE', 'LINK', 'META'].includes(source.tagName))
           )
             return document.createTextNode('');
-          const target = cloneNode.call(source, false);
+          const target = cloneNode.call(source, false) as CaptureTarget;
           if (source.nodeType === 1) {
             const styles = computed(source);
             let css = '';
@@ -563,8 +639,8 @@ export function createArtifactBridgeTools(document, window) {
             }
             if (source.tagName === 'CANVAS') {
               try {
-                const replacement = create('img');
-                replacement.src = source.toDataURL('image/png');
+                const replacement = create('img') as HTMLImageElement;
+                replacement.src = (source as HTMLCanvasElement).toDataURL('image/png');
                 setAttribute.call(replacement, 'style', css);
                 return replacement;
               } catch {}
@@ -572,10 +648,10 @@ export function createArtifactBridgeTools(document, window) {
           }
           if (source.nodeType !== 1 || source.tagName !== 'TEXTAREA')
             for (let child = source.firstChild; child; child = child.nextSibling)
-              append.call(target, cloneStyled(child));
+              append.call(target, cloneStyled(child as Element));
           return target;
         };
-        const clone = cloneStyled(document.documentElement);
+        const clone = cloneStyled(document.documentElement) as Element;
         setAttribute.call(clone, 'xmlns', 'http://www.w3.org/1999/xhtml');
         const markup = serialize.call(new Serializer(), clone);
         if (markup.length > 4 * 1024 * 1024) throw new Error('Thumbnail markup limit exceeded.');
@@ -599,25 +675,29 @@ export function createArtifactBridgeTools(document, window) {
           markup +
           '</foreignObject></svg>';
         image = new Image();
-        await new Promise((resolve, reject) => {
+        // The executor cannot see the assignment above narrow the image.
+        await new Promise<void>((resolve, reject) => {
           const timer = setTimeout(
             () => reject(new Error('Thumbnail capture timed out.')),
             Math.max(1, deadline - Date.now()),
           );
-          image.onload = () => {
+          (image as HTMLImageElement).onload = () => {
             clearTimeout(timer);
             resolve();
           };
-          image.onerror = () => {
+          (image as HTMLImageElement).onerror = () => {
             clearTimeout(timer);
             reject(new Error('Thumbnail rendering unavailable.'));
           };
-          image.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+          (image as HTMLImageElement).src =
+            'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
         });
-        const canvas = create('canvas');
+        const canvas = create('canvas') as HTMLCanvasElement;
         canvas.width = outputWidth;
         canvas.height = outputHeight;
-        canvas.getContext('2d').drawImage(image, 0, 0, outputWidth, outputHeight);
+        // A new canvas has a 2D context; a failure rejects the capture.
+        // biome-ignore format: bundles keep this one-line call; wrapping would change their bytes.
+        (canvas.getContext('2d') as CanvasRenderingContext2D).drawImage(image, 0, 0, outputWidth, outputHeight);
         const dataUrl = canvas.toDataURL('image/png');
         if (dataUrl.length > ARTIFACT_THUMBNAIL_MAX_DATA_URL)
           throw new Error('Thumbnail output limit exceeded.');

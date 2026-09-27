@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 
-import { validateJson } from '@openplanr/protocol/json-schema';
+import { type JsonSchemaDiagnostic, validateJson } from '@openplanr/protocol/json-schema';
 import { contrastRatio } from '../internal/contrast.mjs';
 
 const require = createRequire(import.meta.url);
@@ -24,7 +24,9 @@ export const ARTIFACT_THEME_ERROR_CODES = Object.freeze({
 });
 
 export class ArtifactThemeError extends Error {
-  constructor(code, message, details = {}) {
+  declare code: string;
+  declare details: Record<string, unknown>;
+  constructor(code: string, message: string, details: Record<string, unknown> = {}) {
     super(message);
     this.name = 'ArtifactThemeError';
     this.code = code;
@@ -65,6 +67,17 @@ export const COLOR_KEYS = Object.freeze([
   'onImprove',
 ]);
 
+/** The canonical artifact-review theme: typography, layout tokens and dark and light colors. */
+export interface ArtifactTheme {
+  kind: string;
+  schemaVersion: string;
+  protocolVersion: string;
+  name: string;
+  typography: Record<string, string>;
+  layout: Record<string, number>;
+  themes: Record<string, Record<string, string>>;
+}
+
 const AA_PAIRS = Object.freeze([
   ['text', 'background'],
   ['text', 'chrome'],
@@ -85,19 +98,21 @@ const AA_PAIRS = Object.freeze([
   ['onImprove', 'primaryStrong'],
 ]);
 
-function readJson(path, label) {
+/** Parse a JSON file as `T`; the caller validates the value it declares. */
+function readJson<T>(path: string, label: string): T {
   try {
     return JSON.parse(readFileSync(path, 'utf8'));
   } catch (error) {
+    // readFileSync and JSON.parse throw errors.
     throw new ArtifactThemeError(
       ARTIFACT_THEME_ERROR_CODES.PARSE,
-      `Unable to parse ${label}: ${error.message}`,
+      `Unable to parse ${label}: ${(error as Error).message}`,
       { path },
     );
   }
 }
 
-function schemaCode(issue) {
+function schemaCode(issue: JsonSchemaDiagnostic) {
   if (issue.rule === 'required') return ARTIFACT_THEME_ERROR_CODES.TOKEN_MISSING;
   if (issue.rule === 'additionalProperties') return ARTIFACT_THEME_ERROR_CODES.TOKEN_UNKNOWN;
   if (issue.rule === 'pattern') return ARTIFACT_THEME_ERROR_CODES.FORMAT;
@@ -106,7 +121,7 @@ function schemaCode(issue) {
   return ARTIFACT_THEME_ERROR_CODES.SCHEMA;
 }
 
-function assertSchema(theme, schema) {
+function assertSchema(theme: unknown, schema: unknown) {
   const issues = validateJson(theme, schema);
   if (issues.length === 0) return;
   const first = issues[0];
@@ -117,7 +132,7 @@ function assertSchema(theme, schema) {
   );
 }
 
-function assertLayout(layout) {
+function assertLayout(layout: ArtifactTheme['layout']) {
   if (layout.toolbarHeight !== 48 || layout.reviewRailWidth !== 344) {
     throw new ArtifactThemeError(
       ARTIFACT_THEME_ERROR_CODES.LAYOUT,
@@ -126,7 +141,8 @@ function assertLayout(layout) {
     );
   }
 
-  const radii = ['radiusSmall', 'radiusMedium', 'radiusLarge'].map((key) => [key, layout[key]]);
+  // biome-ignore format: bundles keep this one-line call; wrapping would change their bytes.
+  const radii = ['radiusSmall', 'radiusMedium', 'radiusLarge'].map((key): [string, number] => [key, layout[key]]);
   const invalidRadius = radii.find(
     ([, value]) => !Number.isInteger(value) || value < 0 || value > 32,
   );
@@ -146,7 +162,7 @@ function assertLayout(layout) {
   }
 }
 
-function assertMotion(layout) {
+function assertMotion(layout: ArtifactTheme['layout']) {
   for (const token of ['motionFastMs', 'motionBaseMs']) {
     const value = layout[token];
     if (!Number.isInteger(value) || value < 120 || value > 200) {
@@ -166,7 +182,7 @@ function assertMotion(layout) {
   }
 }
 
-function assertContrast(themes) {
+function assertContrast(themes: ArtifactTheme['themes']) {
   for (const themeName of THEME_NAMES) {
     const colors = themes[themeName];
     for (const [foreground, background] of AA_PAIRS) {
@@ -188,7 +204,7 @@ function assertContrast(themes) {
  * cross-token WCAG requirements that the dependency-free schema validator
  * intentionally does not model.
  */
-export function validateArtifactTheme(theme, { schema } = {}) {
+export function validateArtifactTheme(theme: ArtifactTheme, { schema }: { schema?: unknown } = {}) {
   const contract = schema ?? readJson(ARTIFACT_THEME_SCHEMA_PATH, 'artifact theme schema');
   assertSchema(theme, contract);
   assertLayout(theme.layout);
@@ -197,12 +213,12 @@ export function validateArtifactTheme(theme, { schema } = {}) {
   return theme;
 }
 
-function pick(source, keys) {
+function pick<T>(source: Record<string, T>, keys: readonly string[]) {
   return Object.fromEntries(keys.map((key) => [key, source[key]]));
 }
 
 /** Return a fresh registry value with canonical key ordering. */
-export function normalizeArtifactTheme(theme) {
+export function normalizeArtifactTheme(theme: ArtifactTheme): ArtifactTheme {
   validateArtifactTheme(theme);
   return {
     kind: theme.kind,
@@ -220,23 +236,26 @@ export function normalizeArtifactTheme(theme) {
 export function loadArtifactTheme({
   registryPath = ARTIFACT_THEME_REGISTRY_PATH,
   schemaPath = ARTIFACT_THEME_SCHEMA_PATH,
+}: {
+  registryPath?: string;
+  schemaPath?: string;
 } = {}) {
-  const registry = readJson(registryPath, 'artifact theme registry');
+  const registry = readJson<ArtifactTheme>(registryPath, 'artifact theme registry');
   const schema = readJson(schemaPath, 'artifact theme schema');
   validateArtifactTheme(registry, { schema });
   return normalizeArtifactTheme(registry);
 }
 
-function kebab(value) {
+function kebab(value: string) {
   return value.replace(/[A-Z]/g, (match) => `-${match.toLowerCase()}`);
 }
 
-function colorVariables(colors) {
+function colorVariables(colors: Record<string, string>) {
   return COLOR_KEYS.map((key) => `  --planr-color-${kebab(key)}: ${colors[key]};`).join('\n');
 }
 
 /** Render portable, newline-normalized CSS derived only from validated tokens. */
-export function renderArtifactThemeCss(theme) {
+export function renderArtifactThemeCss(theme: ArtifactTheme) {
   const value = normalizeArtifactTheme(theme);
   const { typography, layout, themes } = value;
   const foundations = [
@@ -282,6 +301,6 @@ export function renderArtifactThemeCss(theme) {
 }
 
 /** Render a portable JSON payload with canonical ordering and one final LF. */
-export function renderArtifactThemeJson(theme) {
+export function renderArtifactThemeJson(theme: ArtifactTheme) {
   return `${JSON.stringify(normalizeArtifactTheme(theme), null, 2)}\n`;
 }

@@ -6,7 +6,7 @@
  */
 
 import { clientSelectionToNormalized, mountArtifactAnnotations } from './annotations.mjs';
-import { mountArtifactFeedbackRail } from './feedback-rail.mjs';
+import { type ArtifactReviewInput, mountArtifactFeedbackRail } from './feedback-rail.mjs';
 import { mountHostedArtifactViewer } from './hosted-viewer.mjs';
 import { mountArtifactShareDialog } from './share-dialog.mjs';
 import { publishArtifactStage } from './stage-mount.mjs';
@@ -44,7 +44,145 @@ const STATUSES = Object.freeze([
   'unsupported-browser',
 ]);
 
-const STATUS_COPY = Object.freeze({
+/** A stage artifact's metadata, as the stage payload embeds it. */
+interface StageArtifact {
+  id: string;
+  title: string;
+  sha256: string;
+  viewport: { width: number; height: number };
+  colorScheme: string;
+}
+/** The stage state: its artifacts, the view and review modes, zoom, rail, theme and status. */
+export interface ArtifactStageState {
+  readonly schemaVersion: '1.0.0';
+  readonly artifacts: readonly StageArtifact[];
+  readonly activeArtifactId: string;
+  readonly comparisonArtifactId: string;
+  readonly viewMode: string;
+  readonly presentation: string;
+  readonly reviewMode: string;
+  readonly zoom: number;
+  readonly railOpen: boolean;
+  readonly theme: string;
+  readonly status: string;
+}
+/** A stage action; the reducer validates every value it reads. */
+export type ArtifactStageAction =
+  | { type: 'set-active' | 'set-comparison'; artifactId?: string }
+  | { type: 'set-view-mode'; viewMode?: unknown }
+  | { type: 'set-review-mode'; reviewMode?: unknown }
+  | { type: 'set-zoom'; zoom?: unknown }
+  | { type: 'zoom-by'; delta?: unknown }
+  | { type: 'set-rail-open'; railOpen?: unknown }
+  | { type: 'toggle-rail' | 'cycle-theme' }
+  | { type: 'set-theme'; theme?: unknown }
+  | { type: 'set-status'; status?: unknown };
+/** An empty action, which leaves the state unchanged. */
+type NoAction = Record<string, never>;
+type RequestedArtifact = string | { id?: unknown } | null | undefined;
+/** The embedded stage payload, before the stage validates it. */
+interface StagePayloadInput {
+  artifacts?: unknown;
+  viewer?: { activeArtifactId?: RequestedArtifact; mode?: unknown; presentation?: unknown } | null;
+}
+/** The embedded shell model fields the stage state starts from. */
+interface ShellModelInput {
+  activeArtifact?: RequestedArtifact;
+  activeArtifactId?: RequestedArtifact;
+  comparisonArtifact?: RequestedArtifact;
+  comparisonArtifactId?: RequestedArtifact;
+  status?: unknown;
+  viewMode?: unknown;
+  presentation?: unknown;
+  reviewMode?: unknown;
+  zoom?: unknown;
+  railOpen?: unknown;
+  theme?: unknown;
+}
+type StatusCopyTable = Readonly<Record<string, Readonly<{ title: string; detail: string }>>>;
+/** An element's client bounds in CSS pixels. */
+interface ClientBounds {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+/** A pointer position; `x` and `y` take precedence over an event's `clientX` and `clientY`. */
+interface ClientPoint {
+  x?: number;
+  y?: number;
+  clientX?: number;
+  clientY?: number;
+}
+type StageWindow = Window & typeof globalThis;
+/** A host's source object that carries the artifact HTML. */
+type HtmlSource = { html?: string };
+/** An artifact frame, matched by its `data-planr-artifact-frame`; the bridge attaches to it. */
+type StageFrame = HTMLIFrameElement & {
+  __openPlanrBridge?: unknown;
+  dataset: { planrArtifactFrame: string };
+};
+/** An artifact panel, matched by its `data-artifact-id`. */
+type ArtifactPanel = HTMLElement & { dataset: { artifactId: string } };
+/** An error with the code the stage maps to the unsupported-browser status. */
+type Coded = Error & { code?: string };
+type FeedbackRail = ReturnType<typeof mountArtifactFeedbackRail>;
+type Annotations = NonNullable<ReturnType<typeof mountArtifactAnnotations>>;
+/** An annotation layer, matched by its `data-planr-annotation-layer`. */
+type LayerElement = HTMLElement & { dataset: { planrAnnotationLayer: string } };
+/** A frame's measured document layout, which the bridge validates before it dispatches. */
+type LayoutEvent = CustomEvent<{ width: number; height: number }>;
+type ShareDialog = NonNullable<ReturnType<typeof mountArtifactShareDialog>>;
+type HostedViewer = NonNullable<ReturnType<typeof mountHostedArtifactViewer>>;
+/** Resolves an artifact's HTML: text, an object with `html`, a Blob or bytes. */
+type ResolveArtifactSource = (
+  artifact: StageArtifact,
+  context: { frame: StageFrame; getState(): ArtifactStageState; signal: AbortSignal | undefined },
+) => unknown;
+/** A bridge client attaches to a frame and may return a detach function. */
+interface StageBridgeClient {
+  attach?(context: {
+    artifact: StageArtifact;
+    frame: StageFrame;
+    getState(): ArtifactStageState;
+  }): (() => void) | void;
+}
+/** One frame's load: its promise, settle functions, abort signal and last use. */
+interface FrameLoad {
+  status: string;
+  used: number;
+  cancelled: boolean;
+  abort: { signal: AbortSignal | undefined; abort(): void };
+  promise: Promise<string>;
+  resolve(artifactId: string): void;
+  reject(reason: unknown): void;
+  unlisten(): void;
+  detach?(): void;
+  requireTrust?: boolean;
+  sourceUrl?: string;
+}
+/** The embedded review state: the artifact digest and any saved review. */
+interface ReviewConfig {
+  reviewOf?: string;
+  review?: ArtifactReviewInput | null;
+}
+/** Stage options: the host's source resolver and bridge, and the review, share and hosted options. */
+interface StageOptions {
+  document?: Document;
+  window?: StageWindow;
+  resolveArtifactSource?: ResolveArtifactSource;
+  sourceTransport?: string;
+  bridgeClient?: StageBridgeClient | null;
+  onState?: (state: ArtifactStageState) => void;
+  review?: Parameters<typeof mountArtifactFeedbackRail>[0];
+  share?: Parameters<typeof mountArtifactShareDialog>[0];
+  hosted?: Parameters<typeof mountHostedArtifactViewer>[0];
+}
+type StageGlobal = typeof globalThis & { __OPENPLANR_ARTIFACT_STAGE_OPTIONS__?: StageOptions };
+/** An event whose target is an element. */
+type TargetedEvent<E extends Event> = E & { target: Element };
+
+const STATUS_COPY: StatusCopyTable = Object.freeze({
   empty: Object.freeze({
     title: 'No artifact content',
     detail: 'Choose a bundled HTML artifact to begin this review.',
@@ -75,23 +213,24 @@ const STATUS_COPY = Object.freeze({
   }),
 });
 
-function member(value, allowed, fallback) {
-  return allowed.includes(value) ? value : fallback;
+function member<T>(value: unknown, allowed: readonly T[], fallback: T) {
+  // includes accepts only its element type and does not narrow; a listed value is a member.
+  return allowed.includes(value as T) ? (value as T) : fallback;
 }
 
-function finite(value, fallback = 0) {
+function finite(value: unknown, fallback = 0) {
   return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 }
 
-function clamp(value, min, max) {
+function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
-function normalized(value) {
+function normalized(value: unknown) {
   return Math.round(clamp(finite(value), 0, 1) * 1_000_000) / 1_000_000;
 }
 
-function artifactMetadata(artifact) {
+function artifactMetadata(artifact: StageArtifact) {
   return Object.freeze({
     id: artifact.id,
     title: artifact.title,
@@ -101,37 +240,49 @@ function artifactMetadata(artifact) {
   });
 }
 
-function requestedArtifactId(value) {
+function requestedArtifactId(value: RequestedArtifact) {
   if (typeof value === 'string') return value;
   return typeof value?.id === 'string' ? value.id : '';
 }
 
-function availableId(artifacts, requested, fallback = '') {
+function availableId<R extends string | undefined>(
+  artifacts: readonly StageArtifact[],
+  requested: R,
+  fallback = '',
+) {
   return artifacts.some(({ id }) => id === requested) ? requested : fallback;
 }
 
-function comparisonIdFor(artifacts, activeArtifactId, requested = '') {
+function comparisonIdFor(
+  artifacts: readonly StageArtifact[],
+  activeArtifactId: string,
+  requested: string | undefined = '',
+) {
   if (requested !== activeArtifactId && artifacts.some(({ id }) => id === requested))
     return requested;
   return artifacts.find(({ id }) => id !== activeArtifactId)?.id ?? '';
 }
 
-function normalizeViewMode(value, artifactCount) {
+function normalizeViewMode(value: unknown, artifactCount: number) {
   if (artifactCount < 2) return 'single';
   return member(value, VIEW_MODES, 'variants');
 }
 
 export function resolveArtifactPresentation(
-  value,
-  { viewMode = 'single', artifactCount = 1 } = {},
+  value: unknown,
+  { viewMode = 'single', artifactCount = 1 }: { viewMode?: string; artifactCount?: number } = {},
 ) {
-  if (PRESENTATIONS.includes(value)) return value;
+  // includes accepts only its element type; a listed value is a presentation.
+  if (PRESENTATIONS.includes(value as string)) return value as string;
   return artifactCount > 1 || viewMode === 'variants' || viewMode === 'split'
     ? 'canvas'
     : 'document';
 }
 
-export function createArtifactStageState(payload = {}, shellModel = {}) {
+export function createArtifactStageState(
+  payload: StagePayloadInput | null = {},
+  shellModel: ShellModelInput = {},
+): ArtifactStageState {
   const artifacts = Object.freeze(
     (Array.isArray(payload?.artifacts) ? payload.artifacts : []).map(artifactMetadata),
   );
@@ -158,6 +309,7 @@ export function createArtifactStageState(payload = {}, shellModel = {}) {
     shellModel.presentation ?? payload?.viewer?.presentation,
     { viewMode, artifactCount: artifacts.length },
   );
+  // Number.isInteger does not narrow its argument to a number.
   return Object.freeze({
     schemaVersion: '1.0.0',
     artifacts,
@@ -167,7 +319,9 @@ export function createArtifactStageState(payload = {}, shellModel = {}) {
     presentation,
     reviewMode: member(shellModel.reviewMode, REVIEW_MODES, 'interact'),
     zoom: clamp(
-      Number.isInteger(shellModel.zoom) ? shellModel.zoom : ARTIFACT_STAGE_LIMITS.defaultZoom,
+      Number.isInteger(shellModel.zoom)
+        ? (shellModel.zoom as number)
+        : ARTIFACT_STAGE_LIMITS.defaultZoom,
       ARTIFACT_STAGE_LIMITS.minZoom,
       ARTIFACT_STAGE_LIMITS.maxZoom,
     ),
@@ -178,11 +332,14 @@ export function createArtifactStageState(payload = {}, shellModel = {}) {
   });
 }
 
-function nextState(state, changes) {
+function nextState(state: ArtifactStageState, changes: Partial<ArtifactStageState>) {
   return Object.freeze({ ...state, ...changes });
 }
 
-export function reduceArtifactStageState(state, action = {}) {
+export function reduceArtifactStageState(
+  state: ArtifactStageState,
+  action: ArtifactStageAction | NoAction = {},
+): ArtifactStageState {
   switch (action.type) {
     case 'set-active': {
       const id = availableId(state.artifacts, action.artifactId);
@@ -243,7 +400,9 @@ export function reduceArtifactStageState(state, action = {}) {
   }
 }
 
-export function visibleArtifactIds(state) {
+export function visibleArtifactIds(
+  state: Pick<ArtifactStageState, 'activeArtifactId' | 'comparisonArtifactId' | 'viewMode'>,
+) {
   if (!state.activeArtifactId) return Object.freeze([]);
   if (state.viewMode === 'split' && state.comparisonArtifactId) {
     return Object.freeze([state.activeArtifactId, state.comparisonArtifactId]);
@@ -251,7 +410,7 @@ export function visibleArtifactIds(state) {
   return Object.freeze([state.activeArtifactId]);
 }
 
-function assertRect(rect) {
+function assertRect(rect: ClientBounds | null | undefined) {
   if (
     !rect ||
     !Number.isFinite(rect.left) ||
@@ -265,7 +424,7 @@ function assertRect(rect) {
   }
 }
 
-export function clientPointToNormalized(rect, point) {
+export function clientPointToNormalized(rect: ClientBounds, point: ClientPoint) {
   assertRect(rect);
   return Object.freeze({
     x: normalized((finite(point?.x ?? point?.clientX) - rect.left) / rect.width),
@@ -273,7 +432,7 @@ export function clientPointToNormalized(rect, point) {
   });
 }
 
-export function normalizedPointToClient(rect, point) {
+export function normalizedPointToClient(rect: ClientBounds, point: { x?: number; y?: number }) {
   assertRect(rect);
   return Object.freeze({
     x: rect.left + normalized(point?.x) * rect.width,
@@ -281,13 +440,14 @@ export function normalizedPointToClient(rect, point) {
   });
 }
 
-function parseDataScript(document, id) {
+/** Parse an embedded JSON script as `T`; the stage validates what it reads. */
+function parseDataScript<T>(document: Document, id: string): T {
   const node = document.getElementById(id);
   if (!node) throw new Error(`Missing artifact shell data: ${id}`);
   return JSON.parse(node.textContent ?? 'null');
 }
 
-function isEditableTarget(target) {
+function isEditableTarget(target: (EventTarget & { ownerDocument?: Document | null }) | null) {
   const HTMLElement = target?.ownerDocument?.defaultView?.HTMLElement;
   return Boolean(
     HTMLElement &&
@@ -296,12 +456,12 @@ function isEditableTarget(target) {
   );
 }
 
-function stageArtifactById(state, id) {
+function stageArtifactById(state: ArtifactStageState, id: string) {
   return state.artifacts.find((artifact) => artifact.id === id) ?? null;
 }
 
-function updateStatus(document, state) {
-  const statusPanel = document.querySelector('.planr-stage-status');
+function updateStatus(document: Document, state: ArtifactStageState) {
+  const statusPanel = document.querySelector<HTMLElement>('.planr-stage-status');
   const surface = document.querySelector('.planr-stage-surface');
   if (!statusPanel || !surface) return;
   const ready = state.status === 'ready';
@@ -318,13 +478,15 @@ function updateStatus(document, state) {
   }
 }
 
-function emit(root, window, type, detail) {
+function emit(root: EventTarget, window: StageWindow, type: string, detail: unknown) {
   root.dispatchEvent(new window.CustomEvent(type, { detail, bubbles: true }));
 }
 
-async function htmlForSource(window, source) {
+// An object source is read for an `html` string only.
+async function htmlForSource(window: StageWindow, source: unknown) {
   if (typeof source === 'string' && source.trimStart().startsWith('<')) return source;
-  if (source && typeof source === 'object' && typeof source.html === 'string') return source.html;
+  // biome-ignore format: bundles keep this one-line statement; wrapping would change their bytes.
+  if (source && typeof source === 'object' && typeof (source as HtmlSource).html === 'string') return (source as HtmlSource).html;
   if (source instanceof window.Blob) return source.text();
   if (source instanceof window.ArrayBuffer) return new window.TextDecoder().decode(source);
   if (window.ArrayBuffer.isView(source)) {
@@ -335,9 +497,11 @@ async function htmlForSource(window, source) {
   return null;
 }
 
+// Without a DOM the window default is missing and the check below returns null; the hoisted
+// functions cannot see that check, so the default is typed as present.
 export function mountArtifactStage({
   document = globalThis.document,
-  window = document?.defaultView,
+  window = document?.defaultView as StageWindow,
   resolveArtifactSource,
   sourceTransport = 'blob',
   bridgeClient,
@@ -345,17 +509,18 @@ export function mountArtifactStage({
   review: reviewOptions = {},
   share: shareOptions = {},
   hosted: hostedOptions = {},
-} = {}) {
+}: StageOptions = {}) {
   if (!document || !window) return null;
-  const root = document.querySelector('.planr-shell');
+  // The hoisted functions below cannot see the null check that follows.
+  const root = document.querySelector('.planr-shell') as HTMLElement;
   if (!root) return null;
   if (!['blob', 'srcdoc'].includes(sourceTransport)) {
     throw new TypeError('Artifact source transport must be blob or srcdoc.');
   }
 
-  let payload;
-  let shellModel;
-  let reviewConfig;
+  let payload: StagePayloadInput;
+  let shellModel: ShellModelInput;
+  let reviewConfig: ReviewConfig;
   try {
     payload = parseDataScript(document, 'planr-artifact-stage-payload');
     shellModel = parseDataScript(document, 'planr-artifact-shell-model');
@@ -366,42 +531,49 @@ export function mountArtifactStage({
     reviewConfig = { reviewOf: '0'.repeat(64), review: null };
   }
 
-  let state;
+  let state: ArtifactStageState;
   try {
     state = createArtifactStageState(payload, shellModel);
   } catch {
     state = createArtifactStageState({}, { status: 'invalid' });
   }
 
-  const frames = new Map(
-    [...document.querySelectorAll('[data-planr-artifact-frame]')].map((frame) => [
+  const frames = new Map<string, StageFrame>(
+    [...document.querySelectorAll<StageFrame>('[data-planr-artifact-frame]')].map((frame) => [
       frame.dataset.planrArtifactFrame,
       frame,
     ]),
   );
-  const panels = new Map(
-    [...document.querySelectorAll('.planr-artifact-panel[data-artifact-id]')].map((panel) => [
+  // biome-ignore format: bundles keep this call's layout; wrapping would change their bytes.
+  const panels = new Map<string, ArtifactPanel>(
+    [...document.querySelectorAll<ArtifactPanel>('.planr-artifact-panel[data-artifact-id]')].map((panel) => [
       panel.dataset.artifactId,
       panel,
     ]),
   );
-  const documentLayouts = new Map();
-  const cleanup = [];
+  const documentLayouts = new Map<string, Readonly<{ width: number; height: number }>>();
+  const cleanup: Array<() => void> = [];
   // Trusted presentation hosts may opt into a bounded set of live documents.
   // The artifact contract remains metadata-only and eager hosts are unchanged.
   const frameBudget = root.dataset.planrFrameBudget === '3' ? 3 : null;
-  const frameLoads = new Map();
+  const frameLoads = new Map<string, FrameLoad>();
   let frameUse = 0;
-  let frameQueue = Promise.resolve();
+  let frameQueue: Promise<unknown> = Promise.resolve();
   let disposed = false;
   for (const frame of frames.values()) frame.dataset.planrFrameState = 'unloaded';
 
-  function listen(target, type, handler, options) {
-    target.addEventListener(type, handler, options);
-    cleanup.push(() => target.removeEventListener(type, handler, options));
+  // addEventListener types a listener by event name, which a name passed through loses.
+  function listen<E extends Event>(
+    target: EventTarget,
+    type: string,
+    handler: (event: E) => void,
+    options?: boolean | AddEventListenerOptions,
+  ) {
+    target.addEventListener(type, handler as EventListener, options);
+    cleanup.push(() => target.removeEventListener(type, handler as EventListener, options));
   }
 
-  function render({ announce = false } = {}) {
+  function render({ announce = false }: { announce?: boolean } = {}) {
     const visible = new Set(visibleArtifactIds(state));
     root.dataset.planrView = state.viewMode;
     root.dataset.planrReviewMode = state.reviewMode;
@@ -411,12 +583,13 @@ export function mountArtifactStage({
     document.documentElement.dataset.planrPresentation = state.presentation;
     document.documentElement.dataset.planrTheme = state.theme;
 
-    const grid = document.querySelector('.planr-frame-grid');
-    const surface = document.querySelector('.planr-stage-surface');
-    const tablist = document.querySelector('.planr-variants');
+    const grid = document.querySelector<HTMLElement>('.planr-frame-grid');
+    const surface = document.querySelector<HTMLElement>('.planr-stage-surface');
+    const tablist = document.querySelector<HTMLElement>('.planr-variants');
     const rail = document.getElementById('planr-review-rail');
     const feedbackButton = document.querySelector('[data-planr-action="feedback"]');
-    const addCommentButton = document.querySelector('[data-planr-action="add-comment"]');
+    // biome-ignore format: bundles keep this one-line call; wrapping would change their bytes.
+    const addCommentButton = document.querySelector<HTMLButtonElement>('[data-planr-action="add-comment"]');
     const themeButton = document.querySelector('[data-planr-action="theme"]');
     const statusSlot = document.querySelector('[data-planr-slot="status"]');
     const metadata = document.querySelector('.planr-title-block > span');
@@ -459,18 +632,18 @@ export function mountArtifactStage({
     if (breadcrumb)
       breadcrumb.textContent = `ARTIFACT / ${(activeArtifact?.title ?? 'Artifact').toUpperCase()}`;
 
-    for (const button of document.querySelectorAll('[data-planr-view]')) {
+    for (const button of document.querySelectorAll<HTMLButtonElement>('[data-planr-view]')) {
       const mode = button.dataset.planrView;
       button.setAttribute('aria-pressed', String(mode === state.viewMode));
       button.disabled = state.artifacts.length < 2 && mode !== 'single';
     }
-    for (const button of document.querySelectorAll('[data-planr-mode]')) {
+    for (const button of document.querySelectorAll<HTMLElement>('[data-planr-mode]')) {
       button.setAttribute('aria-pressed', String(button.dataset.planrMode === state.reviewMode));
     }
     for (const button of document.querySelectorAll('[data-planr-action="zoom-reset"]')) {
       button.textContent = `${state.zoom}%`;
     }
-    for (const tab of document.querySelectorAll('[role="tab"][data-artifact-id]')) {
+    for (const tab of document.querySelectorAll<HTMLElement>('[role="tab"][data-artifact-id]')) {
       const selected = tab.dataset.artifactId === state.activeArtifactId;
       tab.setAttribute('aria-selected', String(selected));
       tab.tabIndex = selected ? 0 : -1;
@@ -487,7 +660,7 @@ export function mountArtifactStage({
       );
       const frame = frames.get(id);
       const frameReady = frameBudget === null || frame?.dataset.planrFrameState === 'ready';
-      const annotationLayer = panel.querySelector('[data-planr-annotation-layer]');
+      const annotationLayer = panel.querySelector<HTMLElement>('[data-planr-annotation-layer]');
       if (frame) {
         frame.tabIndex =
           isVisible && frameReady && state.status === 'ready' && state.reviewMode === 'interact'
@@ -525,24 +698,24 @@ export function mountArtifactStage({
     if (announce) emit(root, window, ARTIFACT_STAGE_EVENTS.change, state);
   }
 
-  function dispatch(action, { announce = true } = {}) {
+  function dispatch(action: ArtifactStageAction, { announce = true }: { announce?: boolean } = {}) {
     const previous = state;
     state = reduceArtifactStageState(state, action);
     if (state !== previous) render({ announce });
     return state;
   }
 
-  function setActiveFromTab(tab, { focus = false } = {}) {
+  function setActiveFromTab(tab: HTMLElement, { focus = false }: { focus?: boolean } = {}) {
     dispatch({ type: 'set-active', artifactId: tab.dataset.artifactId });
     if (focus) tab.focus();
   }
 
-  function onClick(event) {
+  function onClick(event: TargetedEvent<MouseEvent>) {
     const target = event.target.closest?.('button');
     if (!target) return;
     if (target.hasAttribute('data-planr-close-feedback')) {
       dispatch({ type: 'set-rail-open', railOpen: false });
-      document.querySelector('[data-planr-action="feedback"]')?.focus();
+      document.querySelector<HTMLElement>('[data-planr-action="feedback"]')?.focus();
       return;
     }
     if (target.dataset.planrView) {
@@ -579,16 +752,17 @@ export function mountArtifactStage({
         break;
       }
       case 'more': {
-        const menu = target.closest('.planr-more')?.querySelector('.planr-more-menu');
+        const menu = target.closest('.planr-more')?.querySelector<HTMLElement>('.planr-more-menu');
         if (!menu) break;
         const open = menu.hidden;
         menu.hidden = !open;
         target.setAttribute('aria-expanded', String(open));
-        if (open) menu.querySelector('[role="menuitem"]')?.focus();
+        if (open) menu.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
         break;
       }
       case 'sharing-options':
-        target.closest('.planr-more-menu').hidden = true;
+        // The sharing-options item sits in the more menu.
+        (target.closest('.planr-more-menu') as HTMLElement).hidden = true;
         document
           .querySelector('[data-planr-action="more"]')
           ?.setAttribute('aria-expanded', 'false');
@@ -602,7 +776,7 @@ export function mountArtifactStage({
     }
   }
 
-  function onKeyDown(event) {
+  function onKeyDown(event: TargetedEvent<KeyboardEvent>) {
     if (event.defaultPrevented) return;
     if (!event.altKey && !event.ctrlKey && !event.metaKey && !isEditableTarget(event.target)) {
       if (event.key.toLowerCase() === 'i') {
@@ -612,35 +786,35 @@ export function mountArtifactStage({
       if (event.key.toLowerCase() === 'c') {
         if (!root.hasAttribute('data-planr-room-comments-paused')) {
           dispatch({ type: 'set-review-mode', reviewMode: 'comment' });
-          document.querySelector('[data-planr-action="add-comment"]')?.focus();
+          document.querySelector<HTMLElement>('[data-planr-action="add-comment"]')?.focus();
         }
         return;
       }
       if (event.key === 'Escape') {
-        const more = document.querySelector('.planr-more-menu:not([hidden])');
+        const more = document.querySelector<HTMLElement>('.planr-more-menu:not([hidden])');
         if (more) {
           more.hidden = true;
-          const trigger = document.querySelector('[data-planr-action="more"]');
+          const trigger = document.querySelector<HTMLElement>('[data-planr-action="more"]');
           trigger?.setAttribute('aria-expanded', 'false');
           trigger?.focus();
           return;
         }
         if (state.presentation === 'document' && state.reviewMode === 'comment') {
           dispatch({ type: 'set-review-mode', reviewMode: 'interact' });
-          document.querySelector('[data-planr-action="add-comment"]')?.focus();
+          document.querySelector<HTMLElement>('[data-planr-action="add-comment"]')?.focus();
           return;
         }
         if (state.railOpen) {
           dispatch({ type: 'set-rail-open', railOpen: false });
-          document.querySelector('[data-planr-action="feedback"]')?.focus();
+          document.querySelector<HTMLElement>('[data-planr-action="feedback"]')?.focus();
           return;
         }
       }
     }
 
-    const tab = event.target.closest?.('[role="tab"][data-artifact-id]');
+    const tab = event.target.closest?.<HTMLElement>('[role="tab"][data-artifact-id]');
     if (!tab || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
-    const tabs = [...document.querySelectorAll('[role="tab"][data-artifact-id]')];
+    const tabs = [...document.querySelectorAll<HTMLElement>('[role="tab"][data-artifact-id]')];
     const index = tabs.indexOf(tab);
     if (index < 0) return;
     event.preventDefault();
@@ -653,7 +827,7 @@ export function mountArtifactStage({
     setActiveFromTab(tabs[nextIndex], { focus: true });
   }
 
-  function emitSelection(layer, start, end = start) {
+  function emitSelection(layer: LayerElement, start: ClientPoint, end: ClientPoint = start) {
     if (state.reviewMode !== 'comment' || state.status !== 'ready') return;
     const artifactId = layer.dataset.planrAnnotationLayer;
     if (!visibleArtifactIds(state).includes(artifactId)) return;
@@ -674,10 +848,10 @@ export function mountArtifactStage({
     }
   }
 
-  for (const layer of document.querySelectorAll('[data-planr-annotation-layer]')) {
-    let selection = null;
-    let selectionPreview = null;
-    listen(layer, 'pointerdown', (event) => {
+  for (const layer of document.querySelectorAll<LayerElement>('[data-planr-annotation-layer]')) {
+    let selection: { pointerId: number; start: { x: number; y: number } } | null = null;
+    let selectionPreview: HTMLSpanElement | null = null;
+    listen(layer, 'pointerdown', (event: PointerEvent) => {
       if (event.button !== 0 || state.reviewMode !== 'comment' || state.status !== 'ready') return;
       if (event.target !== layer) return;
       event.preventDefault();
@@ -688,7 +862,7 @@ export function mountArtifactStage({
       selectionPreview.setAttribute('aria-hidden', 'true');
       layer.append(selectionPreview);
     });
-    listen(layer, 'pointermove', (event) => {
+    listen(layer, 'pointermove', (event: PointerEvent) => {
       if (!selection || selection.pointerId !== event.pointerId || !selectionPreview) return;
       const region = clientSelectionToNormalized(layer.getBoundingClientRect(), selection.start, {
         x: event.clientX,
@@ -699,14 +873,14 @@ export function mountArtifactStage({
       selectionPreview.style.width = `${region.w * 100}%`;
       selectionPreview.style.height = `${region.h * 100}%`;
     });
-    listen(layer, 'pointercancel', (event) => {
+    listen(layer, 'pointercancel', (event: PointerEvent) => {
       if (!selection || selection.pointerId !== event.pointerId) return;
       layer.releasePointerCapture?.(event.pointerId);
       selection = null;
       selectionPreview?.remove();
       selectionPreview = null;
     });
-    listen(layer, 'pointerup', (event) => {
+    listen(layer, 'pointerup', (event: PointerEvent) => {
       if (!selection || selection.pointerId !== event.pointerId) return;
       const start = selection.start;
       layer.releasePointerCapture?.(event.pointerId);
@@ -715,7 +889,7 @@ export function mountArtifactStage({
       selectionPreview = null;
       emitSelection(layer, start, { x: event.clientX, y: event.clientY });
     });
-    listen(layer, 'keydown', (event) => {
+    listen(layer, 'keydown', (event: KeyboardEvent) => {
       if (!['Enter', ' '].includes(event.key)) return;
       if (event.target !== layer) return;
       event.preventDefault();
@@ -727,7 +901,7 @@ export function mountArtifactStage({
     });
   }
   for (const [artifactId, frame] of frames) {
-    listen(frame, ARTIFACT_STAGE_EVENTS.layout, (event) => {
+    listen(frame, ARTIFACT_STAGE_EVENTS.layout, (event: LayoutEvent) => {
       if (state.presentation !== 'document') return;
       const width = event.detail?.width;
       const height = event.detail?.height;
@@ -751,8 +925,8 @@ export function mountArtifactStage({
   }
   listen(root, 'click', onClick);
   listen(document, 'keydown', onKeyDown);
-  listen(document, 'click', (event) => {
-    const more = document.querySelector('.planr-more-menu:not([hidden])');
+  listen(document, 'click', (event: TargetedEvent<MouseEvent>) => {
+    const more = document.querySelector<HTMLElement>('.planr-more-menu:not([hidden])');
     if (!more || event.target.closest?.('.planr-more')) return;
     more.hidden = true;
     document.querySelector('[data-planr-action="more"]')?.setAttribute('aria-expanded', 'false');
@@ -779,18 +953,18 @@ export function mountArtifactStage({
   render();
 
   let readyPromise = Promise.resolve(state);
-  let feedbackController = null;
-  let annotationController = null;
-  let shareController = null;
-  let hostedController = null;
+  let feedbackController: FeedbackRail | null = null;
+  let annotationController: Annotations | null = null;
+  let shareController: ShareDialog | null = null;
+  let hostedController: HostedViewer | null = null;
   const controller = Object.freeze({
     frameBudget,
     ensureFrames,
     getLoadedArtifactIds: () =>
       [...frameLoads].filter(([, record]) => record.status === 'ready').map(([id]) => id),
     getState: () => state,
-    getFrame: (artifactId) => frames.get(artifactId) ?? null,
-    getPanel: (artifactId) => panels.get(artifactId) ?? null,
+    getFrame: (artifactId: string) => frames.get(artifactId) ?? null,
+    getPanel: (artifactId: string) => panels.get(artifactId) ?? null,
     get review() {
       return feedbackController;
     },
@@ -808,8 +982,9 @@ export function mountArtifactStage({
     },
     dispatch,
     destroy() {
-      if (['creating', 'ambiguous'].includes(shareController?.getState?.().phase)) {
-        shareController.destroy?.();
+      // Only a mounted share dialog reports a creating or ambiguous phase.
+      if (['creating', 'ambiguous'].includes(shareController?.getState?.().phase as string)) {
+        (shareController as ShareDialog).destroy?.();
         return false;
       }
       disposed = true;
@@ -860,13 +1035,16 @@ export function mountArtifactStage({
     return error;
   }
 
-  function frameStatus(artifactId, status) {
+  function frameStatus(artifactId: string, status: string) {
     const frame = frames.get(artifactId);
     if (frame) frame.dataset.planrFrameState = status;
     if (!disposed) emit(root, window, 'planr:artifact-frame-state', { artifactId, status });
   }
 
-  function releaseFrame(artifactId, { status = 'unloaded', error = cancelledFrame() } = {}) {
+  function releaseFrame(
+    artifactId: string,
+    { status = 'unloaded', error = cancelledFrame() }: { status?: string; error?: unknown } = {},
+  ) {
     const record = frameLoads.get(artifactId);
     if (!record) return;
     frameLoads.delete(artifactId);
@@ -875,7 +1053,8 @@ export function mountArtifactStage({
     record.unlisten?.();
     record.detach?.();
     record.reject(error);
-    const frame = frames.get(artifactId);
+    // A frame load exists only for a known frame.
+    const frame = frames.get(artifactId) as StageFrame;
     // Detach before navigating the old frame, so its bridge cannot recover the
     // intentionally retired document or authenticate a subsequent document.
     frame.removeAttribute('srcdoc');
@@ -898,7 +1077,7 @@ export function mountArtifactStage({
     frameStatus(artifactId, status);
   }
 
-  function assignArtifactSource(artifact) {
+  function assignArtifactSource(artifact: StageArtifact) {
     if (disposed) return Promise.reject(cancelledFrame());
     const existing = frameLoads.get(artifact.id);
     if (existing) {
@@ -917,6 +1096,7 @@ export function mountArtifactStage({
     }
     const frame = frames.get(artifact.id);
     if (!frame) return Promise.reject(new Error(`Missing artifact frame: ${artifact.id}`));
+    // The promise, its settle functions and unlisten are attached next.
     const record = {
       status: 'loading',
       used: ++frameUse,
@@ -925,14 +1105,14 @@ export function mountArtifactStage({
         typeof window.AbortController === 'function'
           ? new window.AbortController()
           : { signal: undefined, abort() {} },
-    };
+    } as FrameLoad;
     record.promise = new Promise((resolve, reject) => {
       record.resolve = resolve;
       record.reject = reject;
     });
     frameLoads.set(artifact.id, record);
     const current = () => !disposed && !record.cancelled && frameLoads.get(artifact.id) === record;
-    const fail = (error) => {
+    const fail = (error: unknown) => {
       if (current()) releaseFrame(artifact.id, { status: 'error', error });
     };
     const timer =
@@ -960,8 +1140,9 @@ export function mountArtifactStage({
       ready();
     };
     const onError = () => fail(new Error(`Artifact frame failed: ${artifact.id}`));
+    // clearTimeout ignores the null timer of an unbudgeted stage.
     record.unlisten = () => {
-      window.clearTimeout(timer);
+      window.clearTimeout(timer as number);
       frame.removeEventListener('load', onLoad);
       frame.removeEventListener('error', onError);
       frame.removeEventListener('planr:artifact-bridge-ready', ready);
@@ -969,15 +1150,16 @@ export function mountArtifactStage({
     frameStatus(artifact.id, 'loading');
     if (!current()) return record.promise;
     // Source preparation can be asynchronous; it cannot revive an evicted frame.
+    // Frames load only after the stage checked that resolveArtifactSource is a function.
     void (async () => {
-      const source = await resolveArtifactSource(artifact, {
+      const source = await (resolveArtifactSource as ResolveArtifactSource)(artifact, {
         frame,
         getState: () => state,
         signal: record.abort.signal,
       });
       if (!current()) return;
       if (typeof window.TextDecoder !== 'function') {
-        const error = new Error('UTF-8 decoding support is required for artifact sources.');
+        const error: Coded = new Error('UTF-8 decoding support is required for artifact sources.');
         error.code = 'E_ARTIFACT_BROWSER_UNSUPPORTED';
         throw error;
       }
@@ -1014,7 +1196,7 @@ export function mountArtifactStage({
           typeof window.URL?.createObjectURL !== 'function' ||
           typeof window.Blob !== 'function'
         ) {
-          const error = new Error('Blob URL support is required for artifact sources.');
+          const error: Coded = new Error('Blob URL support is required for artifact sources.');
           error.code = 'E_ARTIFACT_BROWSER_UNSUPPORTED';
           throw error;
         }
@@ -1031,7 +1213,7 @@ export function mountArtifactStage({
     return record.promise;
   }
 
-  function ensureFrames(artifactIds) {
+  function ensureFrames(artifactIds: readonly string[]) {
     if (disposed) return Promise.reject(cancelledFrame());
     if (
       !Array.isArray(artifactIds) ||
@@ -1045,8 +1227,10 @@ export function mountArtifactStage({
         new RangeError(`At most ${frameBudget} artifact frames may be requested together.`),
       );
     }
+    // Every requested id names a known frame, and every frame has its artifact.
+    // biome-ignore format: bundles keep this one-line call; wrapping would change their bytes.
     if (frameBudget === null)
-      return Promise.all(requested.map((id) => assignArtifactSource(stageArtifactById(state, id))));
+      return Promise.all(requested.map((id) => assignArtifactSource(stageArtifactById(state, id) as StageArtifact)));
     const run = async () => {
       if (disposed) throw cancelledFrame();
       for (const id of requested) {
@@ -1060,7 +1244,7 @@ export function mountArtifactStage({
             releaseFrame(candidates[0][0]);
           }
         }
-        await assignArtifactSource(stageArtifactById(state, id));
+        await assignArtifactSource(stageArtifactById(state, id) as StageArtifact);
       }
       return requested;
     };
@@ -1101,12 +1285,13 @@ export function mountArtifactStage({
   return controller;
 }
 
-export function bootstrapArtifactStage(document = globalThis.document, options = {}) {
-  return mountArtifactStage({ ...options, document, window: document?.defaultView });
+// Without a DOM the window is missing and the mount returns null.
+export function bootstrapArtifactStage(document = globalThis.document, options: StageOptions = {}) {
+  return mountArtifactStage({ ...options, document, window: document?.defaultView as StageWindow });
 }
 
 if (typeof document !== 'undefined') {
-  const options = globalThis.__OPENPLANR_ARTIFACT_STAGE_OPTIONS__ ?? {};
+  const options = (globalThis as StageGlobal).__OPENPLANR_ARTIFACT_STAGE_OPTIONS__ ?? {};
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => bootstrapArtifactStage(document, options), {
       once: true,

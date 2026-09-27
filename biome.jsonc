@@ -177,7 +177,7 @@
       "includes": [
         "packages/artifact/lib/artifact/bridge.mjs",
         "packages/artifact/lib/artifact/diagram/source-map.mjs",
-        "packages/artifact/lib/artifact/ui/bridge-tools.mjs",
+        "packages/artifact/lib/artifact/ui/bridge-tools.mts",
         "packages/design/lib/design/company-publication.mjs",
         "packages/protocol/src/design-handoff-contracts.mjs",
         "packages/protocol/src/enterprise-contracts.mjs",
