@@ -50,6 +50,7 @@ import {
   updateSpecFields,
   validateSpecForPromotion,
 } from '../../services/spec-service.js';
+import { messageOf } from '../../utils/error-message.js';
 import { display, logger } from '../../utils/logger.js';
 import { CliBoundaryError } from '../error-boundary.js';
 import { requireArtifactId } from '../helpers/artifact-id.js';
@@ -314,7 +315,7 @@ export function registerSpecCommand(program: Command) {
         display.line(`  - Create stories and tasks:    invoke planr-plan for ${id}`);
         display.line(`  - Review the tree:              planr spec show ${id}`);
       } catch (err) {
-        logger.error((err as Error).message);
+        logger.error(messageOf(err));
         process.exit(1);
       }
     });
@@ -579,7 +580,7 @@ export function registerSpecCommand(program: Command) {
           `The host-native planr-plan skill can analyze these PNGs into design/design-spec.md.`,
         );
       } catch (err) {
-        logger.error((err as Error).message);
+        logger.error(messageOf(err));
         process.exit(1);
       }
     });
@@ -688,7 +689,7 @@ export function registerSpecCommand(program: Command) {
           `Summary: ${opts.dryRun ? 'would fix' : 'fixed'} ${totalFixed}, warnings ${totalWarnings}.`,
         );
       } catch (err) {
-        logger.error((err as Error).message);
+        logger.error(messageOf(err));
         process.exit(1);
       }
     });

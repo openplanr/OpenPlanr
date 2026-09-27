@@ -21,13 +21,33 @@ program
   .option('--no-interactive', 'skip interactive prompts')
   .option('-y, --yes', 'auto-accept all prompts (alias for --no-interactive)');
 
+/** The command whose action is running; unset until parsing succeeds. */
+let actionCommand: Command | undefined;
+
+/** Whether this invocation asked for machine-readable output. */
+function jsonRequested(): boolean {
+  // A parse failure leaves no option values, so only the raw `--json` token can decide.
+  if (!actionCommand) return process.argv.includes('--json');
+  for (let command: Command | null = actionCommand; command; command = command.parent) {
+    if (command.opts().json === true) return true;
+  }
+  return false;
+}
+
+/** The top-level command, such as `upgrade` or `story`, that `command` belongs to. */
+function topLevelCommandOf(command: Command): Command {
+  let current = command;
+  while (current.parent && current.parent !== program) current = current.parent;
+  return current;
+}
+
 program.exitOverride();
 program.configureOutput({
   writeOut(value) {
     process.stdout.write(value);
   },
   writeErr(value) {
-    if (!process.argv.includes('--json')) process.stderr.write(value);
+    if (!jsonRequested()) process.stderr.write(value);
   },
 });
 
@@ -41,11 +61,13 @@ async function loadUpgradeConfig(projectDir: string): Promise<OpenPlanrConfig | 
   }
 }
 
-program.hook('preAction', async () => {
-  if (program.opts().verbose && !process.argv.includes('--json')) {
+program.hook('preAction', async (_program, command) => {
+  actionCommand = command;
+  const json = jsonRequested();
+  if (program.opts().verbose && !json) {
     setVerbose(true);
   }
-  if (!program.opts().interactive || program.opts().yes || process.argv.includes('--json')) {
+  if (!program.opts().interactive || program.opts().yes || json) {
     setNonInteractive(true);
   }
   // Offer an available upgrade where the user already is. This is the
@@ -56,7 +78,7 @@ program.hook('preAction', async () => {
   // corrupted. A durable snooze/never-ask inside `maybeOfferUpgrade`
   // short-circuits before any reconcile, so a command that already declined pays
   // no network cost; `maybeOfferUpgrade` fails open and never throws.
-  if (!process.argv.includes('upgrade') && upgradeOfferReachable()) {
+  if (topLevelCommandOf(command).name() !== 'upgrade' && upgradeOfferReachable()) {
     const projectDir = program.opts().projectDir as string;
     const config = await loadUpgradeConfig(projectDir);
     await maybeOfferUpgrade(projectDir, config);
@@ -66,8 +88,9 @@ program.hook('preAction', async () => {
 registerCliCommands(program, version);
 
 program.parseAsync(process.argv).catch((err) => {
+  const json = jsonRequested();
   if (err instanceof CommanderError) {
-    if (process.argv.includes('--json')) {
+    if (json) {
       display.line(
         JSON.stringify(
           toCliFailureEnvelope({
@@ -80,8 +103,9 @@ program.parseAsync(process.argv).catch((err) => {
     process.exitCode = err.exitCode;
     return;
   }
+  logger.debug('The command failed:', err);
   if (err instanceof ConfigNotFoundError) {
-    if (process.argv.includes('--json')) {
+    if (json) {
       display.line(
         JSON.stringify(
           toCliFailureEnvelope(err, {
@@ -107,7 +131,7 @@ program.parseAsync(process.argv).catch((err) => {
     String(err?.code).startsWith('E_')
   ) {
     const value = toCliFailureEnvelope(err);
-    if (process.argv.includes('--json')) display.line(JSON.stringify(value));
+    if (json) display.line(JSON.stringify(value));
     else {
       logger.error(`${value.code}: ${value.problem}`);
       for (const diagnostic of value.diagnostics ?? []) {
@@ -119,7 +143,7 @@ program.parseAsync(process.argv).catch((err) => {
     return;
   }
   const value = toCliFailureEnvelope(err);
-  if (process.argv.includes('--json')) display.line(JSON.stringify(value));
+  if (json) display.line(JSON.stringify(value));
   else logger.error(`${value.code}: ${value.problem}`);
   process.exitCode = 1;
 });

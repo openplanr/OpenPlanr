@@ -236,6 +236,16 @@ describe('inline upgrade offer through a real preAction subprocess', () => {
     expect(result.stdout.indexOf(OFFER_MARKER)).toBeLessThan(result.stdout.indexOf(COMMAND_MARKER));
   }, 120_000);
 
+  it('still surfaces the offer when an argument is merely the word upgrade', () => {
+    const result = run(['search', 'upgrade'], {
+      OPENPLANR_HOME: join(root, 'home-upgrade-argument'),
+      OPENPLANR_UPGRADE_OFFER_CHOICE: 'not-now',
+    });
+    expect(result.status, result.stderr || result.stdout).toBe(0);
+    expect(result.stdout).toContain(OFFER_MARKER);
+    expect(result.stdout).toContain('No artifacts match "upgrade"');
+  }, 120_000);
+
   it('never surfaces the offer for the `upgrade` command itself (no double-prompt)', () => {
     const home = join(root, 'home-upgrade-cmd');
     const result = run(['upgrade', 'status', '--json'], {

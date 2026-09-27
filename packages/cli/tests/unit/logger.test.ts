@@ -53,6 +53,29 @@ describe('logger.debug', () => {
     expect(output).toContain('[DEBUG]');
     expect(output).toContain('visible message');
   });
+
+  it("prints an error's stack followed by every cause it wraps", () => {
+    setVerbose(true);
+    const root = new Error('ENOENT: no such file');
+    logger.debug(
+      'The command failed:',
+      new Error('outer', { cause: new Error('middle', { cause: root }) }),
+    );
+    const output = mockLogOutput();
+    expect(output).toMatch(/\[DEBUG\] The command failed: Error: outer\n\s+at /u);
+    expect(output).toContain('\nCaused by: Error: middle\n');
+    expect(output).toContain('\nCaused by: Error: ENOENT: no such file');
+  });
+
+  it('ends a self-referencing cause chain and prints a non-Error cause as text', () => {
+    setVerbose(true);
+    const looped = new Error('looped');
+    looped.cause = looped;
+    logger.debug('first', looped);
+    logger.debug('second', new Error('wrapper', { cause: 'thrown text' }));
+    expect(mockLogOutput(0).match(/Error: looped/gu)).toHaveLength(1);
+    expect(mockLogOutput(1)).toContain('\nCaused by: thrown text');
+  });
 });
 
 describe('logger standard methods', () => {

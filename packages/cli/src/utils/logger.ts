@@ -48,6 +48,19 @@ export function createSpinner(message: string): Spinner {
   };
 }
 
+/** The stack of `error`, then the stack of each cause it wraps. */
+function describeError(error: Error): string {
+  const lines: string[] = [];
+  const seen = new Set<unknown>();
+  for (let current: unknown = error; current !== undefined; ) {
+    if (seen.has(current)) break;
+    seen.add(current);
+    lines.push(current instanceof Error ? (current.stack ?? current.message) : String(current));
+    current = current instanceof Error ? current.cause : undefined;
+  }
+  return lines.join('\nCaused by: ');
+}
+
 export function setVerbose(enabled: boolean): void {
   verboseEnabled = enabled;
 }
@@ -79,7 +92,7 @@ export const logger = {
     if (verboseEnabled) {
       const extra =
         args.length > 0
-          ? ` ${args.map((a) => (a instanceof Error ? (a.stack ?? a.message) : String(a))).join(' ')}`
+          ? ` ${args.map((a) => (a instanceof Error ? describeError(a) : String(a))).join(' ')}`
           : '';
       out(chalk.gray(`[DEBUG] ${msg}${extra}`));
     }

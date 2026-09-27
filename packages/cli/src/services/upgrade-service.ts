@@ -233,7 +233,8 @@ async function fetchManifestText(
   if (!/^https?:\/\//i.test(location)) {
     try {
       return await readFile(location, 'utf8');
-    } catch {
+    } catch (error) {
+      logger.debug(`Could not read the compatibility manifest at ${location}`, error);
       return null;
     }
   }
@@ -242,6 +243,9 @@ async function fetchManifestText(
   let timer: ReturnType<typeof setTimeout> | undefined;
   const timeout = new Promise<null>((resolve) => {
     timer = setTimeout(() => {
+      logger.debug(
+        `The compatibility manifest request to ${location} timed out after ${timeoutMs}ms`,
+      );
       controller.abort();
       resolve(null);
     }, timeoutMs);
@@ -249,9 +253,17 @@ async function fetchManifestText(
   const attempt = (async (): Promise<string | null> => {
     try {
       const response = await fetchImpl(location, { signal: controller.signal });
-      if (!response.ok) return null;
+      if (!response.ok) {
+        logger.debug(
+          `The compatibility manifest request to ${location} returned HTTP ${response.status}`,
+        );
+        return null;
+      }
       return await response.text();
-    } catch {
+    } catch (error) {
+      if (!controller.signal.aborted) {
+        logger.debug(`The compatibility manifest request to ${location} failed`, error);
+      }
       return null;
     }
   })();

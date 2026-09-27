@@ -31,6 +31,7 @@ import { randomUUID } from 'node:crypto';
 import fsPromises from 'node:fs/promises';
 import path from 'node:path';
 import type { ArtifactFrontmatter, OpenPlanrConfig } from '../models/types.js';
+import { messageOf } from '../utils/error-message.js';
 import { escapeRegExp } from '../utils/escape-regexp.js';
 import { ensureDir, fileExists, listFiles, readFile, writeFile } from '../utils/fs.js';
 import { logger } from '../utils/logger.js';
@@ -155,7 +156,7 @@ export async function listSpecs(
       if (typeof parsed.data.title === 'string') title = parsed.data.title;
       if (typeof parsed.data.status === 'string') status = parsed.data.status;
     } catch (err) {
-      logger.debug(`Failed to parse spec ${id} frontmatter: ${(err as Error).message}`);
+      logger.debug(`Failed to parse spec ${id} frontmatter: ${messageOf(err)}`);
     }
 
     const stories = await listSpecStories(specDir);
@@ -583,7 +584,7 @@ export async function readSpec(
     return { id: specId, slug, specDir, specFile, data: parsed.data, content: parsed.content };
   } catch (err) {
     logger.warn(
-      `Skipping spec ${specId}: frontmatter parse error.\n  ${specFile}\n  ${(err as Error).message}`,
+      `Skipping spec ${specId}: frontmatter parse error.\n  ${specFile}\n  ${messageOf(err)}`,
     );
     return null;
   }

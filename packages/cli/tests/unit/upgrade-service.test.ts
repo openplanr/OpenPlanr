@@ -228,6 +228,46 @@ describe('reconcileInstalledTuple', () => {
     expect(elapsed).toBeLessThan(2_000);
   });
 
+  it('says under --verbose why the manifest is unavailable', async () => {
+    const lines: string[] = [];
+    const log = vi.spyOn(console, 'log').mockImplementation((...args: unknown[]) => {
+      lines.push(args.map(String).join(' '));
+    });
+    const missing = join(root, 'missing-ecosystem.json');
+    const claudeCommandRunner = makeRunner({ skills: '1.24.0' });
+    setVerbose(true);
+    try {
+      await reconcileInstalledTuple('/tmp/project', {
+        claudeCommandRunner,
+        fetchImpl: (async () => new Response('', { status: 503 })) as typeof fetch,
+      });
+      await reconcileInstalledTuple('/tmp/project', {
+        claudeCommandRunner,
+        fetchImpl: async () => {
+          throw new Error('getaddrinfo ENOTFOUND registry.npmjs.org');
+        },
+      });
+      await reconcileInstalledTuple('/tmp/project', {
+        claudeCommandRunner,
+        fetchImpl: () => new Promise<Response>(() => {}),
+        timeoutMs: 50,
+      });
+      process.env.OPENPLANR_ECOSYSTEM_SOURCE = missing;
+      await reconcileInstalledTuple('/tmp/project', { claudeCommandRunner });
+    } finally {
+      setVerbose(false);
+      log.mockRestore();
+    }
+    const output = lines.join('\n');
+    const request = `The compatibility manifest request to ${DEFAULT_ECOSYSTEM_SOURCE}`;
+    expect(output).toContain(`${request} returned HTTP 503`);
+    expect(output).toContain(`${request} failed Error: getaddrinfo ENOTFOUND registry.npmjs.org`);
+    expect(output).toContain(`${request} timed out after 50ms`);
+    expect(output).toContain(
+      `Could not read the compatibility manifest at ${missing} Error: ENOENT`,
+    );
+  });
+
   it('serves a fresh cache without touching the network within the TTL', async () => {
     const published = manifest({
       cliVersion,
