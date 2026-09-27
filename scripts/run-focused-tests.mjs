@@ -32,6 +32,7 @@ const steps = Object.freeze([
       'tests/ecosystem-root/publication-custody.test.mjs',
       'tests/ecosystem-root/packed-surface-baseline.test.mjs',
       'tests/ecosystem-root/source-comments.test.mjs',
+      'tests/ecosystem-root/verify-migration.test.mjs',
     ],
   },
   {

@@ -10,6 +10,7 @@ through the root `package.json`; use the root lockfile.
 | `dashboard/` | Build and verify the bundled local dashboard |
 | `skills/` | Author, validate, generate, evaluate and package current host skills |
 | `check-*.mjs`, `lib/` | Dependency, composition and release-policy checks |
+| `typescript/` | Compile `.mts` sources, check declared exports, prove a migration group behaviour-neutral against a base ref |
 | `run-focused-tests.mjs`, `workspace-command.mjs` | Repeatable workspace verification |
 | `verify-packed-workspace*.mjs` | Isolated public-package install proof |
 | `migration/` | Executable legacy contract preservation checks |
