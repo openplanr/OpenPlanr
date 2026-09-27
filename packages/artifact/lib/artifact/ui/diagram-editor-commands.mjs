@@ -334,7 +334,7 @@ export function createEditorCommands(ctx) {
     [
       'blank',
       ({ state }) => {
-        dom.empty.hidden = true;
+        ctx.chrome.dismissEmpty();
         ctx.outline.preferTab('shapes');
         ctx.chrome.render(state, { force: true });
       },
@@ -348,12 +348,13 @@ export function createEditorCommands(ctx) {
           y: stage.clientHeight / 2,
         });
         const command = processTemplate({ x: Math.round(at.x), y: Math.round(at.y) });
-        submit(
+        const result = submit(
           command,
           command.elements
             .filter((item) => item.collection === 'nodes')
             .map((item) => item.value.id),
         );
+        if (result.ok) ctx.chrome.dismissEmpty();
         ctx.canvas.fit();
       },
     ],
@@ -378,6 +379,7 @@ export function createEditorCommands(ctx) {
         });
         const result = submit(command, [command.elements[0].value.id]);
         if (result.ok) {
+          ctx.chrome.dismissEmpty();
           if (state.view.camera.fit) ctx.canvas.fit();
           stage.focus();
         }

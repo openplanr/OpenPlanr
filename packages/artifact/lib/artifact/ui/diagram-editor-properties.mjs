@@ -6,7 +6,7 @@ import {
   parentIndex,
   semanticFields,
 } from '../diagram/authoring/model.mjs';
-import { labelOf, moveOrthogonalBend, propertyTransaction } from './diagram-editor-actions.mjs';
+import { displayName, moveOrthogonalBend, propertyTransaction } from './diagram-editor-actions.mjs';
 import { button, element, field, icon, iconButton } from './diagram-editor-dom.mjs';
 
 const COLLECTION_LABELS = Object.freeze({
@@ -192,8 +192,7 @@ export function renderDiagramProperties({
   root.append(
     inspectorHeader(document, {
       kicker: `${COLLECTION_LABELS[entry.collection] ?? 'Object'} properties`,
-      title: labelOf(entry.value),
-      reference: id,
+      title: displayName(byId, id),
     }),
   );
 
@@ -218,7 +217,12 @@ export function renderDiagramProperties({
     iconName: 'content',
     open: true,
   });
-  add(content.body, 'Label', labelOf(entry.value), { maxlength: 500 });
+  // Apply writes this field back, so a derived name is only ever a placeholder.
+  const storedLabel = entry.value.label ?? entry.value.text ?? '';
+  add(content.body, 'Label', storedLabel, {
+    maxlength: 500,
+    placeholder: storedLabel ? null : displayName(byId, id),
+  });
   if (entry.collection === 'nodes') {
     add(content.body, 'Description', sem.description, {
       multiline: true,
@@ -635,7 +639,7 @@ export function renderDiagramProperties({
         className: 'de-inspector-member',
       });
       item.append(
-        button(document, labelOf(byId.get(member).value), 'select-member', {
+        button(document, displayName(byId, member), 'select-member', {
           'data-member': member,
         }),
       );
@@ -673,7 +677,7 @@ export function renderDiagramProperties({
 }
 
 function renderMultiSelection({ document, root, bundle, ids, byId, editable, act }) {
-  const selectedLabels = ids.slice(0, 8).map((id) => labelOf(byId.get(id).value));
+  const selectedLabels = ids.slice(0, 8).map((id) => displayName(byId, id));
   root.append(
     inspectorHeader(document, {
       kicker: 'Multiple selection',

@@ -1,7 +1,14 @@
 // @ts-check
 import { compileDiagramCommand } from '../diagram/authoring/index.mjs';
+import { elementIndex } from '../diagram/authoring/model.mjs';
 import { mountDiagramConflicts } from './diagram-conflicts.mjs';
-import { connector, freshId, laneArrangementCommand } from './diagram-editor-actions.mjs';
+import {
+  connector,
+  displayName,
+  freshId,
+  laneArrangementCommand,
+  quantity,
+} from './diagram-editor-actions.mjs';
 import { bundleOf, errText, safeAction } from './diagram-editor-commands.mjs';
 import { button, element, field } from './diagram-editor-dom.mjs';
 import { mountDiagramSourcePanel } from './diagram-source-panel.mjs';
@@ -126,28 +133,38 @@ export function createEditorDialogs(ctx) {
       report(errText(preview));
       return;
     }
+    const objects = impact.elementIds.length,
+      connectors = impact.relationIds.length;
+    const scope = !connectors
+      ? quantity(objects, 'object')
+      : connectors === objects
+        ? quantity(connectors, 'connector')
+        : `${quantity(objects, 'object')}, including ${quantity(connectors, 'connector')}`;
     const body = element(doc, 'div');
     body.append(
       element(
         doc,
         'p',
         {},
-        'Delete ' +
-          impact.elementIds.length +
-          ' object(s), including ' +
-          impact.relationIds.length +
-          ' connector(s)? This can be undone before another conflicting change.',
+        `Delete ${scope}? This can be undone before another conflicting change.`,
       ),
     );
-    if (impact.relationIds.length)
+    if (connectors) {
+      const index = elementIndex(state.bundle.document),
+        removed = new Set(impact.relationIds);
+      // Impact ids are sorted by id, which says nothing to a reader; use document order.
+      const names = state.bundle.document.relations
+        .filter((relation) => removed.has(relation.id))
+        .map((relation) => displayName(index, relation.id));
       body.append(
         element(
           doc,
           'p',
           { className: 'de-muted' },
-          'Connectors: ' + impact.relationIds.join(', '),
+          `${connectors === 1 ? 'Connector' : 'Connectors'}: ${names.join(', ')}`,
         ),
       );
+    }
     body.append(
       button(doc, 'Cancel', 'cancel-dialog'),
       button(doc, 'Delete', 'confirm-delete', { className: 'de-danger' }),

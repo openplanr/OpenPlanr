@@ -12,8 +12,55 @@ import {
 } from '../diagram/authoring/model.mjs';
 import { copyDiagramSelection, pasteDiagramSelection } from '../diagram/editor/clipboard.mjs';
 
+const NODE_NAMES = Object.freeze({
+  process: 'Process',
+  start: 'Start',
+  end: 'End',
+  decision: 'Decision',
+  'data-store': 'Data store',
+  component: 'Component',
+});
+const COLLECTION_NAMES = Object.freeze({
+  nodes: 'Shape',
+  relations: 'Connector',
+  groups: 'Group',
+  lanes: 'Lane',
+  annotations: 'Note',
+});
+const ownName = ({ collection, value }) => {
+  const text = collection === 'annotations' ? value.text : value.label;
+  return typeof text === 'string' && text.trim() ? text : null;
+};
+const kindName = ({ collection, value }) =>
+  (collection === 'nodes' ? NODE_NAMES[value.kind] : null) ?? COLLECTION_NAMES[collection];
+
 export const freshId = (prefix = 'edit') => `${prefix}-${globalThis.crypto.randomUUID()}`;
-export const labelOf = (value) => value.label ?? value.text ?? value.id;
+/**
+ * The name an object shows in the editor: its label or text, "From → To" for an unlabelled
+ * connector, else its kind. Internal ids never become names.
+ * @param {ReturnType<typeof elementIndex>} index
+ * @param {string} id
+ * @returns {string}
+ */
+export function displayName(index, id) {
+  const entry = index.get(id);
+  if (!entry) throw new TypeError(`Diagram object ${id} is not in this document.`);
+  const own = ownName(entry);
+  if (own) return own;
+  if (entry.collection !== 'relations') return kindName(entry);
+  const [from, to] = [entry.value.from, entry.value.to].map((end) => {
+    const node = index.get(end);
+    if (!node)
+      throw new TypeError(`Connector ${id} ends at ${end}, which is not in this document.`);
+    return ownName(node) ?? kindName(node);
+  });
+  return `${from} → ${to}`;
+}
+/**
+ * A count with its noun: "1 connector", "2 connectors".
+ * @type {(count: number, noun: string) => string}
+ */
+export const quantity = (count, noun) => `${count} ${noun}${count === 1 ? '' : 's'}`;
 export const transaction = (bundle, operations) => ({
   kind: 'diagram-edit-transaction',
   schemaVersion: '1.0.0',
@@ -63,15 +110,7 @@ export function createObject(kind, position) {
       kind === 'vertical-lane' ? { width: 240, height: 480 } : { width: 540, height: 240 },
     );
   } else {
-    const names = {
-      process: 'Process',
-      start: 'Start',
-      end: 'End',
-      decision: 'Decision',
-      'data-store': 'Data store',
-      component: 'Component',
-    };
-    value = { id, label: names[kind], kind, description: null };
+    value = { id, label: NODE_NAMES[kind], kind, description: null };
     shape =
       {
         start: 'ellipse',

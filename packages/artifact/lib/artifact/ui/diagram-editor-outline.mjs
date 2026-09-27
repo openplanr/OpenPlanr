@@ -1,7 +1,7 @@
 // @ts-check
 import { getDiagramAuthoringCapability } from '@openplanr/protocol/diagram-authoring-contracts';
 import { elementIndex } from '../diagram/authoring/model.mjs';
-import { labelOf } from './diagram-editor-actions.mjs';
+import { displayName } from './diagram-editor-actions.mjs';
 import { errText } from './diagram-editor-commands.mjs';
 import { button, element, field, icon } from './diagram-editor-dom.mjs';
 
@@ -185,11 +185,12 @@ export function createEditorOutline(ctx) {
       if (!entry) return;
       const members = (entry.value.members ?? []).filter((member) => indexed.has(member)),
         collapsed = members.length > 0 && collapsedGroups.has(id);
+      const name = displayName(indexed, id);
       const wrapper = element(doc, 'div', {
         className: 'de-outline-item',
         'data-id': id,
         'data-parent-id': parentId,
-        'data-search-text': labelOf(entry.value).toLowerCase(),
+        'data-search-text': name.toLowerCase(),
       });
       const kind =
         entry.collection === 'relations'
@@ -204,7 +205,8 @@ export function createEditorOutline(ctx) {
       const choose = button(doc, '', 'select-id', {
         role: 'treeitem',
         'data-id': id,
-        'aria-label': labelOf(entry.value),
+        // A connector's name alone does not say it is one; the visible row shows its kind.
+        'aria-label': entry.collection === 'relations' ? `${name}, ${kind}` : name,
         'aria-level': String(depth + 1),
         'aria-selected': String(state.view.selection.includes(id)),
         'aria-expanded': members.length ? String(!collapsed) : null,
@@ -240,7 +242,7 @@ export function createEditorOutline(ctx) {
         guides,
         twisty,
         kindIcon,
-        element(doc, 'span', { className: 'de-outline-label' }, labelOf(entry.value)),
+        element(doc, 'span', { className: 'de-outline-label' }, name),
         element(doc, 'span', { className: 'de-outline-meta', 'aria-hidden': 'true' }, kind),
       );
       wrapper.append(choose);
