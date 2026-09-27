@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -43,6 +43,14 @@ function isolatedEnv() {
   const home = mkdtempSync(join(tmpdir(), 'planr-hostile-browser-'));
   homes.add(home);
   return { ...process.env, PLANR_HOME: home };
+}
+
+// The Git marker stops review-state resolution here instead of at the enclosing checkout.
+function isolatedProject(env) {
+  const project = join(env.PLANR_HOME, 'project');
+  mkdirSync(join(project, '.git'), { recursive: true });
+  writeFileSync(join(project, '.git', 'HEAD'), 'ref: refs/heads/main\n');
+  return project;
 }
 
 function bridgeMessage(nonce, overrides = {}) {
@@ -449,9 +457,11 @@ test('real browser keeps dynamic artifacts useful while hostile capabilities fai
     ],
     viewer: { mode: 'variants', activeArtifactId: 'main' },
   });
+  const env = isolatedEnv();
   review = await startArtifactReview({
     envelope,
-    env: isolatedEnv(),
+    env,
+    cwd: isolatedProject(env),
     noOpen: true,
   });
 

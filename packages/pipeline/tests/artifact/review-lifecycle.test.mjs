@@ -234,12 +234,22 @@ test('stable merge is idempotent, deterministic, conflict-safe, and preserves di
 });
 
 test('transport-neutral import redacts decoder inputs and stale review details', async () => {
+  const project = temporary('planr-review-stale-project-');
+  mkdirSync(join(project, '.git'));
+  writeFileSync(join(project, '.git', 'HEAD'), 'ref: refs/heads/main\n');
+  const env = { ...process.env, PLANR_HOME: temporary('planr-review-stale-home-') };
   const current = envelope();
   const currentDigest = digestArtifactEnvelope(current);
   const staleDigest = digestArtifactEnvelope(envelope('<!doctype html><p>Old</p>'));
   const source = 'https://share.openplanr.dev/p/private#k=SECRET';
   await assert.rejects(
-    importArtifactReview({ sources: source, currentEnvelope: current, persist: false }),
+    importArtifactReview({
+      sources: source,
+      currentEnvelope: current,
+      cwd: project,
+      env,
+      persist: false,
+    }),
     (error) =>
       error.code === ARTIFACT_ERROR_CODES.REVIEW_DECODER_REQUIRED &&
       !JSON.stringify(error).includes('SECRET'),
@@ -248,6 +258,8 @@ test('transport-neutral import redacts decoder inputs and stale review details',
     importArtifactReview({
       sources: source,
       currentEnvelope: current,
+      cwd: project,
+      env,
       persist: false,
       decodeSource: async () => {
         throw new Error(`leak ${source}`);
@@ -262,6 +274,8 @@ test('transport-neutral import redacts decoder inputs and stale review details',
     importArtifactReview({
       sources: review(staleDigest),
       currentEnvelope: current,
+      cwd: project,
+      env,
       persist: false,
     }),
     (error) =>
@@ -273,6 +287,8 @@ test('transport-neutral import redacts decoder inputs and stale review details',
   const accepted = await importArtifactReview({
     sources: review(staleDigest),
     currentEnvelope: current,
+    cwd: project,
+    env,
     persist: false,
     allowStale: true,
   });
@@ -286,14 +302,12 @@ test('transport-neutral import redacts decoder inputs and stale review details',
   const retained = await importArtifactReview({
     sources: staleLedger,
     currentEnvelope: current,
+    cwd: project,
+    env,
     persist: false,
   });
   assert.equal(retained.reviewState.reviews[0].stale, true, 'source ledger audit label survives');
 
-  const project = temporary('planr-review-stale-project-');
-  mkdirSync(join(project, '.git'));
-  writeFileSync(join(project, '.git', 'HEAD'), 'ref: refs/heads/main\n');
-  const env = { ...process.env, PLANR_HOME: temporary('planr-review-stale-home-') };
   await importArtifactReview({
     sources: review(currentDigest),
     currentEnvelope: current,
