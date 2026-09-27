@@ -205,9 +205,13 @@ test('document presentation uses authenticated natural sizing, outer scrolling, 
     </script></body></html>`,
   };
   const envelope = createArtifactEnvelope({ artifacts: [artifact] });
+  const project = join(home, 'project');
+  mkdirSync(join(project, '.git'), { recursive: true });
+  writeFileSync(join(project, '.git', 'HEAD'), 'ref: refs/heads/main\n');
   const review = await startArtifactReview({
     envelope,
     env: { ...process.env, PLANR_HOME: home },
+    cwd: project,
     noOpen: true,
   });
   const browser = await launchBrowser({ engine: 'chromium' });

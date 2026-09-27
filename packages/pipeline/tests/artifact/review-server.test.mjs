@@ -39,6 +39,14 @@ function isolatedEnv(overrides = {}) {
   return { ...process.env, PLANR_HOME: home, ...overrides };
 }
 
+// The Git marker stops review-state resolution here instead of at the enclosing checkout.
+function isolatedProject(env) {
+  const project = join(env.PLANR_HOME, 'project');
+  mkdirSync(join(project, '.git'), { recursive: true });
+  writeFileSync(join(project, '.git', 'HEAD'), 'ref: refs/heads/main\n');
+  return project;
+}
+
 function envelope({ html, artifacts } = {}) {
   return createArtifactEnvelope({
     artifacts: artifacts ?? [
@@ -111,6 +119,7 @@ test('startArtifactReview returns a private tokenized session and serves only me
   const review = await startArtifactReview({
     envelope: envelope(),
     env,
+    cwd: isolatedProject(env),
     title: 'Checkout security review',
     theme: 'dark',
     openUrl: async (url) => opened.push(url),
@@ -215,6 +224,7 @@ test('no-open and SSH sessions suppress browser launch and provide serializable 
   const noOpen = await startArtifactReview({
     envelope: envelope(),
     env: localEnv,
+    cwd: isolatedProject(localEnv),
     noOpen: true,
     openUrl: async () => {
       calls++;
@@ -229,6 +239,7 @@ test('no-open and SSH sessions suppress browser launch and provide serializable 
   const ssh = await startArtifactReview({
     envelope: envelope(),
     env: sshEnv,
+    cwd: isolatedProject(sshEnv),
     openUrl: async () => {
       calls++;
     },
@@ -252,6 +263,7 @@ test('browser launch failures are nonfatal, redacted, and leave a closable sessi
   const review = await startArtifactReview({
     envelope: envelope(),
     env,
+    cwd: isolatedProject(env),
     openUrl: async () => {
       throw new Error(secret);
     },
@@ -268,6 +280,7 @@ test('browser launch failures are nonfatal, redacted, and leave a closable sessi
 
 test('explicit free ports bind exactly and invalid ports fail with a named error', async () => {
   const env = isolatedEnv();
+  const cwd = isolatedProject(env);
   const reservation = createNetServer();
   await new Promise((resolveListen, reject) => {
     reservation.once('error', reject);
@@ -281,6 +294,7 @@ test('explicit free ports bind exactly and invalid ports fail with a named error
   const review = await startArtifactReview({
     envelope: envelope(),
     env,
+    cwd,
     noOpen: true,
     port: explicitPort,
   });
@@ -293,14 +307,15 @@ test('explicit free ports bind exactly and invalid ports fail with a named error
   await waitFor(() => !artifactReviewServerStateExists(explicitPort, env));
 
   await assert.rejects(
-    startArtifactReview({ envelope: envelope(), env, noOpen: true, port: 65_536 }),
+    startArtifactReview({ envelope: envelope(), env, cwd, noOpen: true, port: 65_536 }),
     (error) => error.code === ARTIFACT_ERROR_CODES.LOOPBACK_BIND,
   );
 });
 
 test('every session route is capability gated and Host/origin/path confusion fails closed', async () => {
   const env = isolatedEnv();
-  const review = await startArtifactReview({ envelope: envelope(), env, noOpen: true });
+  const cwd = isolatedProject(env);
+  const review = await startArtifactReview({ envelope: envelope(), env, cwd, noOpen: true });
   const parts = urlParts(review.url);
   const wrongToken = 'A'.repeat(43);
 
@@ -343,7 +358,8 @@ test('every session route is capability gated and Host/origin/path confusion fai
 
 test('control endpoints require the private token and enforce byte-counted body limits', async () => {
   const env = isolatedEnv();
-  const review = await startArtifactReview({ envelope: envelope(), env, noOpen: true });
+  const cwd = isolatedProject(env);
+  const review = await startArtifactReview({ envelope: envelope(), env, cwd, noOpen: true });
   const { port } = urlParts(review.url);
   const state = JSON.parse(readFileSync(artifactReviewStatePath(0, env), 'utf8'));
 
@@ -376,6 +392,7 @@ test('control endpoints require the private token and enforce byte-counted body 
 
 test('control transport accepts the worst-case JSON expansion of a valid 10 MiB artifact', async () => {
   const env = isolatedEnv();
+  const cwd = isolatedProject(env);
   const maximum = 10 * 1024 * 1024;
   const prefix = '<!doctype html><html><head></head><body><pre>';
   const suffix = '</pre></body></html>';
@@ -390,16 +407,17 @@ test('control transport accepts the worst-case JSON expansion of a valid 10 MiB 
   );
   assert.ok(serializedBytes > 60 * 1024 * 1024, 'fixture exercises six-byte JSON escapes');
   assert.ok(serializedBytes <= ARTIFACT_REVIEW_MAX_CONTROL_BYTES);
-  const review = await startArtifactReview({ envelope: maximumEnvelope, env, noOpen: true });
+  const review = await startArtifactReview({ envelope: maximumEnvelope, env, cwd, noOpen: true });
   assert.equal(review.ok, true);
   await review.close();
 });
 
 test('concurrent starts share one daemon and the last close cannot race a new registration', async () => {
   const env = isolatedEnv();
+  const cwd = isolatedProject(env);
   const [first, second] = await Promise.all([
-    startArtifactReview({ envelope: envelope(), env, noOpen: true }),
-    startArtifactReview({ envelope: envelope(), env, noOpen: true }),
+    startArtifactReview({ envelope: envelope(), env, cwd, noOpen: true }),
+    startArtifactReview({ envelope: envelope(), env, cwd, noOpen: true }),
   ]);
   assert.equal(first.port, second.port);
   assert.notEqual(first.sessionId, second.sessionId);
@@ -408,7 +426,7 @@ test('concurrent starts share one daemon and the last close cannot race a new re
   const firstClose = await first.close();
   assert.equal(firstClose.remaining, 1);
   const closingLast = second.close();
-  const replacement = await startArtifactReview({ envelope: envelope(), env, noOpen: true });
+  const replacement = await startArtifactReview({ envelope: envelope(), env, cwd, noOpen: true });
   await closingLast;
   assert.equal((await request(replacement.port, new URL(replacement.url).pathname)).status, 200);
   await replacement.close();
@@ -416,6 +434,7 @@ test('concurrent starts share one daemon and the last close cannot race a new re
 
 test('legacy locks fail closed until explicitly cleared while a foreign occupied port is never killed', async (t) => {
   const env = isolatedEnv();
+  const cwd = isolatedProject(env);
   const statePath = artifactReviewStatePath(0, env);
   const stateDir = join(env.PLANR_HOME, 'artifact-daemon');
   mkdirSync(stateDir, { recursive: true });
@@ -435,7 +454,7 @@ test('legacy locks fail closed until explicitly cleared while a foreign occupied
   writeFileSync(lockPath, JSON.stringify({ pid: 999_999_999, owner: 'dead', createdAt: 0 }));
   chmodSync(lockPath, 0o600);
   await assert.rejects(
-    startArtifactReview({ envelope: envelope(), env, noOpen: true }),
+    startArtifactReview({ envelope: envelope(), env, cwd, noOpen: true }),
     (error) => error.code === 'E_START_LOCK_LEGACY',
   );
   assert.equal(
@@ -443,7 +462,7 @@ test('legacy locks fail closed until explicitly cleared while a foreign occupied
     JSON.stringify({ pid: 999_999_999, owner: 'dead', createdAt: 0 }),
   );
   rmSync(lockPath);
-  const recovered = await startArtifactReview({ envelope: envelope(), env, noOpen: true });
+  const recovered = await startArtifactReview({ envelope: envelope(), env, cwd, noOpen: true });
   assert.notEqual(recovered.port, 65534);
   assert.equal((await request(recovered.port, '/health')).status, 200);
   await recovered.close();
@@ -456,7 +475,7 @@ test('legacy locks fail closed until explicitly cleared while a foreign occupied
   t.after(() => new Promise((resolveClose) => foreign.close(resolveClose)));
   const foreignPort = foreign.address().port;
   await assert.rejects(
-    startArtifactReview({ envelope: envelope(), env, noOpen: true, port: foreignPort }),
+    startArtifactReview({ envelope: envelope(), env, cwd, noOpen: true, port: foreignPort }),
     (error) => error.code === ARTIFACT_ERROR_CODES.PORT_IN_USE,
   );
   assert.equal(foreign.listening, true, 'foreign listener remains alive');
