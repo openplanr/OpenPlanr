@@ -35,8 +35,6 @@ export {
   verifySignedLiveRoomEvent,
 } from '../artifact/index.mjs';
 export { exportArtifactReviewSession, startArtifactReview } from '../artifact/review-server.mjs';
-/** @deprecated Import `startDashboard` from `planr-pipeline/dashboard`; this root alias loads the dashboard server eagerly. */
-export { startDashboard } from '../dashboard/index.mjs';
 export {
   assertProtocolArtifact,
   listProtocolSchemas,

@@ -1,4 +1,3 @@
-import type { DashboardServer, DashboardServerOptions } from '../dashboard/index.mjs';
 import type { OperatingOriginV1, ProtocolValidationError } from '../protocol/index.js';
 import type { ShipClosureLandingInspection } from './landing.mjs';
 
@@ -179,8 +178,6 @@ export * from './ship-risk.mjs';
 export function completePlan(options?: Record<string, unknown>): unknown;
 export function nextShipBatch(tasks: unknown[]): unknown;
 export function runSyncAudit(options?: Record<string, unknown>): unknown;
-/** @deprecated Import `startDashboard` from `planr-pipeline/dashboard`; the root export loads the dashboard server eagerly. */
-export function startDashboard(options?: DashboardServerOptions): DashboardServer;
 /** Resolves after the design engine CLI exits; the child process runs synchronously. */
 export function runDesignCommand(
   args?: readonly string[],

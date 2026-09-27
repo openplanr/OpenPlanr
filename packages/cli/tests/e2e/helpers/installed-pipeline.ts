@@ -189,22 +189,24 @@ export async function installPackedPipeline(): Promise<PackedPipelineInstall> {
     const installedManifest = JSON.parse(
       readFileSync(join(packageRoot, 'package.json'), 'utf8'),
     ) as { exports?: Record<string, unknown> };
-    const publicExport = installedManifest.exports?.['.'];
-    const publicEntry =
-      typeof publicExport === 'string'
-        ? publicExport
-        : publicExport && typeof publicExport === 'object'
-          ? ((publicExport as Record<string, unknown>).import ??
-            (publicExport as Record<string, unknown>).default)
+    const dashboardExport = installedManifest.exports?.['./dashboard'];
+    const dashboardEntry =
+      typeof dashboardExport === 'string'
+        ? dashboardExport
+        : dashboardExport && typeof dashboardExport === 'object'
+          ? ((dashboardExport as Record<string, unknown>).import ??
+            (dashboardExport as Record<string, unknown>).default)
           : undefined;
-    if (typeof publicEntry !== 'string') {
-      throw new Error('Installed planr-pipeline has no public package-root export.');
+    if (typeof dashboardEntry !== 'string') {
+      throw new Error('Installed planr-pipeline has no ./dashboard export.');
     }
-    const publicModule = (await import(pathToFileURL(resolve(packageRoot, publicEntry)).href)) as {
+    const dashboardModule = (await import(
+      pathToFileURL(resolve(packageRoot, dashboardEntry)).href
+    )) as {
       startDashboard?: unknown;
     };
-    if (typeof publicModule.startDashboard !== 'function') {
-      throw new Error('Installed planr-pipeline does not export startDashboard.');
+    if (typeof dashboardModule.startDashboard !== 'function') {
+      throw new Error('Installed planr-pipeline/dashboard does not export startDashboard.');
     }
 
     return Object.freeze({
@@ -212,7 +214,7 @@ export async function installPackedPipeline(): Promise<PackedPipelineInstall> {
       handoff,
       packageRoot,
       sourceRoot: source,
-      startDashboard: publicModule.startDashboard as StartDashboard,
+      startDashboard: dashboardModule.startDashboard as StartDashboard,
       cleanup: () => rmSync(temporaryRoot, { recursive: true, force: true }),
     });
   } catch (error) {

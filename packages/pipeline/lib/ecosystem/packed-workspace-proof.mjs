@@ -473,7 +473,7 @@ function assertInstalledSurface(proof, custody) {
   }
   if (
     full?.exportKeys !== custody.ecosystem.publicCompatibility?.pipelineExportKeys ||
-    full?.rootSymbols !== 229 ||
+    full?.rootSymbols !== 228 ||
     full?.diagram?.galleryCount !== PACKED_WORKSPACE_DIAGRAM_GRAMMAR_COUNT ||
     full?.diagram?.renderValidation !== 'passed' ||
     full?.diagram?.checkValidation !== 'passed' ||

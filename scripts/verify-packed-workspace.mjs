@@ -896,7 +896,7 @@ export function readPackedSurfaceBaseline() {
     baseline.schemaVersion !== '1.0.0' ||
     baseline.package !== 'planr-pipeline' ||
     !distinctStrings(baseline.baselineExportKeys, 37) ||
-    !distinctStrings(baseline.baselineRootSymbols, 229) ||
+    !distinctStrings(baseline.baselineRootSymbols, 228) ||
     !distinctStrings(baseline.protocolAssets?.originalRegistryPaths, 12) ||
     !distinctStrings(baseline.protocolAssets?.successorRegistryPaths, 12) ||
     !distinctStrings(baseline.protocolAssets?.successorSchemaPaths, 48)
@@ -1315,7 +1315,7 @@ function main() {
 
     const packedSurfaceBaseline = readPackedSurfaceBaseline();
     const expectedRootSymbols = [...packedSurfaceBaseline.baselineRootSymbols].sort();
-    pass(report, 'baseline.public-surface', { exportKeys: 37, rootSymbols: 229 });
+    pass(report, 'baseline.public-surface', { exportKeys: 37, rootSymbols: 228 });
 
     workspace = fs.mkdtempSync(path.join(os.tmpdir(), 'openplanr-packed-proof-'));
     const home = path.join(workspace, 'home');

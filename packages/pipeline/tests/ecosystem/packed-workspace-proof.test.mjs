@@ -81,7 +81,7 @@ function fixture() {
         exact: true,
       },
     },
-    publicCompatibility: { pipelineExportKeys: 40, pipelineRootSymbols: 229 },
+    publicCompatibility: { pipelineExportKeys: 40, pipelineRootSymbols: 228 },
   });
 
   const packageCustody = {
@@ -138,7 +138,7 @@ function fixture() {
           checkValidation: 'passed',
         },
         exportKeys: 40,
-        rootSymbols: 229,
+        rootSymbols: 228,
         retiredPipelineOperate: { absenceContracts: 80, removedPaths: 34 },
       },
       cliOnly: {
@@ -217,7 +217,7 @@ test('a proof from sibling package bytes cannot satisfy current workspace custod
 test('a digest-mismatched packed-workspace proof is rejected', () => {
   const { root, proof, packageCustody } = fixture();
   try {
-    proof.installs.full.rootSymbols = 228;
+    proof.installs.full.rootSymbols = 227;
     assert.throws(
       () => assertPackedWorkspaceProof({ proof, workspaceRoot: root, packageCustody }),
       { code: 'E_PACKED_WORKSPACE_PROOF_DIGEST' },

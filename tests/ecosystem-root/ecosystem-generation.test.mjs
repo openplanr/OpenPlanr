@@ -55,7 +55,7 @@ test('local ecosystem derives component versions and preserved public parity in-
     ecosystem.publicCompatibility.pipelineExportKeys,
     Object.keys(json('packages/pipeline/package.json').exports).length,
   );
-  assert.equal(ecosystem.publicCompatibility.pipelineRootSymbols, 229);
+  assert.equal(ecosystem.publicCompatibility.pipelineRootSymbols, 228);
   assert.deepEqual(ecosystem.binaries.cli, {
     planr: './bin/planr.js',
     openplanr: './bin/planr.js',
