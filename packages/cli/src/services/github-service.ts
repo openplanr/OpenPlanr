@@ -30,18 +30,27 @@ const execFileAsync = promisify(execFile);
 // Types
 // ---------------------------------------------------------------------------
 
+/** Issue state normalized from the `OPEN`, `CLOSED` or `MERGED` (a pull request) that `gh` reports. */
+export type GitHubIssueState = 'open' | 'closed';
+
 export interface GitHubIssue {
   number: number;
   title: string;
-  state: string;
+  state: GitHubIssueState;
   url: string;
   labels: Array<{ name: string }>;
 }
 
+const issueStateSchema = z
+  .string()
+  .toLowerCase()
+  .pipe(z.enum(['open', 'closed', 'merged']))
+  .transform((state): GitHubIssueState => (state === 'merged' ? 'closed' : state));
+
 const issueSchema: z.ZodType<GitHubIssue> = z.object({
   number: z.number(),
   title: z.string(),
-  state: z.string(),
+  state: issueStateSchema,
   url: z.string(),
   labels: z.array(z.object({ name: z.string() })),
 });
@@ -114,12 +123,12 @@ const ARTIFACT_TO_ISSUE_TYPE: Record<string, string> = {
   feature: 'Feature',
 };
 
-const ISSUE_STATE_TO_STATUS: Record<string, string> = {
+const ISSUE_STATE_TO_STATUS: Record<GitHubIssueState, string> = {
   open: 'pending',
   closed: 'done',
 };
 
-const STATUS_TO_ISSUE_STATE: Record<string, string> = {
+const STATUS_TO_ISSUE_STATE: Record<string, GitHubIssueState> = {
   pending: 'open',
   'in-progress': 'open',
   done: 'closed',
@@ -467,7 +476,7 @@ export async function createIssue(
  */
 export async function updateIssue(
   issueNumber: number,
-  opts: { title?: string; body?: string; state?: string },
+  opts: { title?: string; body?: string; state?: GitHubIssueState },
 ): Promise<void> {
   if (opts.title || opts.body) {
     const editArgs = ['issue', 'edit', String(issueNumber)];
@@ -564,14 +573,14 @@ export async function ensureMilestone(title: string): Promise<string> {
 /**
  * Map GitHub issue state to artifact status.
  */
-export function issueStateToStatus(state: string): string {
-  return ISSUE_STATE_TO_STATUS[state] || 'pending';
+export function issueStateToStatus(state: GitHubIssueState): string {
+  return ISSUE_STATE_TO_STATUS[state];
 }
 
 /**
  * Map artifact status to GitHub issue state.
  */
-export function statusToIssueState(status: string): string {
+export function statusToIssueState(status: string): GitHubIssueState {
   return STATUS_TO_ISSUE_STATE[status] || 'open';
 }
 
