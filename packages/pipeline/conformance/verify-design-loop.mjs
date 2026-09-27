@@ -67,7 +67,6 @@ for (const rel of [
   'procedures/design-loop-step2-variants.md',
   'procedures/design-loop-step3-board.md',
   'procedures/design-loop-step4-approve.md',
-  'procedures/design-review-loop.md',
   'lib/design-engine/cli.mjs',
   'lib/design-engine/daemon.mjs',
   'lib/design-engine/board.mjs',

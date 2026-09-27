@@ -7,7 +7,7 @@
     {
       "source": "packages/design/lib/design-engine/artifact-adapter.mjs",
       "target": "lib/design-engine/artifact-adapter.mjs",
-      "sha256": "403fdb1f1bdcfc6a8d7b148729f08d42cc6967315318882c73e918a81c2759dd",
+      "sha256": "69858e44cbf00193197a12319683a48ac567c9ea5cfef2abe1003395e1be2e9e",
       "mode": "644"
     },
     {
@@ -35,15 +35,9 @@
       "mode": "644"
     },
     {
-      "source": "packages/design/lib/design-engine/canvas-wrap.mjs",
-      "target": "lib/design-engine/canvas-wrap.mjs",
-      "sha256": "c8acfd3fc24f9a8c2530a2205e0ccdaac5d0d26db8615158a6cdbca088c2295d",
-      "mode": "644"
-    },
-    {
       "source": "packages/design/lib/design-engine/cli.mjs",
       "target": "lib/design-engine/cli.mjs",
-      "sha256": "685e25065c35fe4ee2676ef50310a77dc3e4e871a85f0c5fc9c0fc705fc2aed4",
+      "sha256": "b54de4ab79c987cf379e21fa6438f0380cae332059c35032dbeff9acd03d1e4e",
       "mode": "644"
     },
     {
@@ -368,66 +362,6 @@
       "source": "packages/design/lib/design/workspace-feedback.mjs",
       "target": "lib/design/workspace-feedback.mjs",
       "sha256": "495c78ea28cfc25d6be51ae915c963ef19b0a7f9690dffcd1cd940eff135f5d2",
-      "mode": "644"
-    },
-    {
-      "source": "packages/design/templates/design/canvas-shell.html",
-      "target": "templates/design/canvas-shell.html",
-      "sha256": "d24ac6bc33053dbc69b4f5ed6005c0cb8f4c582a5616fcac80cd58b530d1d0e5",
-      "mode": "644"
-    },
-    {
-      "source": "packages/design/templates/design/DesignCanvas.jsx",
-      "target": "templates/design/DesignCanvas.jsx",
-      "sha256": "27617a3f6553c2c4d6a492b57fab0b97bf5a9844ea1c87f8d26b8e49ffd69c54",
-      "mode": "644"
-    },
-    {
-      "source": "packages/design/templates/design/prototype-shell.html",
-      "target": "templates/design/prototype-shell.html",
-      "sha256": "e3f8d42dc4d1846ca3f676bc1c232554d2ef8408fd50ae89b032873e8194f2cb",
-      "mode": "644"
-    },
-    {
-      "source": "packages/design/templates/design/README.md",
-      "target": "templates/design/README.md",
-      "sha256": "9dfdcda4bf4d97d3dce787cf783e10cb988e27cc18809c592bcc06508232b800",
-      "mode": "644"
-    },
-    {
-      "source": "packages/design/templates/design/vendor/DesignCanvas.js",
-      "target": "templates/design/vendor/DesignCanvas.js",
-      "sha256": "7612fd76df23b99bf0527cc366001646ae9852c5d19d198ff7fab68d3ce32209",
-      "mode": "644"
-    },
-    {
-      "source": "packages/design/templates/design/vendor/fetch-vendor.mjs",
-      "target": "templates/design/vendor/fetch-vendor.mjs",
-      "sha256": "f040d51a3284a9daa7331a220822b1fb58dfb2ca4523bb2b83344d279bdfe30d",
-      "mode": "644"
-    },
-    {
-      "source": "packages/design/templates/design/vendor/pretext.js",
-      "target": "templates/design/vendor/pretext.js",
-      "sha256": "c85e755d86d33718e66978d18a2733eb5d11cf44747f58846bd390ed0d6f24e7",
-      "mode": "644"
-    },
-    {
-      "source": "packages/design/templates/design/vendor/react-dom.production.min.js",
-      "target": "templates/design/vendor/react-dom.production.min.js",
-      "sha256": "35f4f974f4b2bcd44da73963347f8952e341f83909e4498227d4e26b98f66f0d",
-      "mode": "644"
-    },
-    {
-      "source": "packages/design/templates/design/vendor/react.production.min.js",
-      "target": "templates/design/vendor/react.production.min.js",
-      "sha256": "d949f1c3687aedadcedac85261865f29b17cd273997e7f6b2bfc53b2f9d4c4dd",
-      "mode": "644"
-    },
-    {
-      "source": "packages/design/templates/design/walkthrough-shell.html",
-      "target": "templates/design/walkthrough-shell.html",
-      "sha256": "7630f80e73c6dc147b44bca6695caed94afe5c8a537c5b7bb04c13b1fb4583a4",
       "mode": "644"
     },
     {

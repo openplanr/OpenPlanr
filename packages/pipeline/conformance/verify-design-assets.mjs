@@ -6,8 +6,9 @@
  * runner.mjs, which drives feat-todo through a live agent). This asserts the
  * SHIPPED design assets are intact and the tested core behaves:
  *   1. packaged procedures, templates and renderer helpers present
- *   2. renderer shells present with their GENERATOR markers
- *   3. vendored runtime present; the compiled canvas parses + registers globals
+ *   2. the retired template renderer is not shipped: the /design generate, handoff and review
+ *      procedures, the prototype and walkthrough shells, Pretext and the React canvas
+ *   3. design-loop variants reach the board as their own images
  *   4. the design manifest schema accepts the golden valid fixture, rejects the invalid
  *   5. the screen resolver + format-recommendation rule agree on the fixture spec
  *   6. the escaping helpers neutralize a hostile string (XSS regression, S1)
@@ -15,8 +16,16 @@
  * Exit 0 = all pass; non-zero = at least one failure.
  */
 
-import { execFileSync } from 'node:child_process';
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import {
+  existsSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
+import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -39,6 +48,7 @@ import {
   resolveDesignSystem,
   resolveScreens,
 } from '../lib/design/index.mjs';
+import { createDesignBoardArtifactEnvelope } from '../lib/design-engine/artifact-adapter.mjs';
 import { validate } from './json-schema-validate.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -62,8 +72,6 @@ log('orchestration:');
 for (const rel of [
   'procedures/design-step0-preflight.md',
   'procedures/design-step1-clarify.md',
-  'procedures/design-step2-generate.md',
-  'procedures/design-step3-spec-and-handoff.md',
   'procedures/design-detect-nudge.md',
   'lib/design/index.mjs',
   'lib/design/tokens.mjs',
@@ -79,94 +87,73 @@ for (const rel of [
 ])
   assert(existsSync(join(root, rel)), rel);
 
-// 2 — renderer shells + their markers
-log('\nrenderer shells:');
-const shells = {
-  'templates/design/prototype-shell.html': ['GENERATOR:screen', 'pretext.js'],
-  'templates/design/walkthrough-shell.html': ['GENERATOR:screens', 'data-nav-mode', 'wt-counter'],
-  'templates/design/canvas-shell.html': ['GENERATOR:data', 'dc-viewonly', 'DesignCanvas.js'],
-};
-for (const [rel, needles] of Object.entries(shells)) {
-  const p = join(root, rel);
-  assert(existsSync(p), rel);
-  for (const n of needles) assert(fileHas(p, n), `${rel} contains "${n}"`);
-}
-
-// 3 — vendored runtime + compiled canvas
-log('\nvendored runtime:');
+// 2 — the retired template renderer is not shipped
+log('\nretired template renderer:');
 for (const rel of [
+  'procedures/design-step2-generate.md',
+  'procedures/design-step3-spec-and-handoff.md',
+  'procedures/design-review-loop.md',
+  'templates/design/README.md',
+  'templates/design/prototype-shell.html',
+  'templates/design/walkthrough-shell.html',
   'templates/design/vendor/pretext.js',
+  'templates/design/canvas-shell.html',
+  'templates/design/DesignCanvas.jsx',
   'templates/design/vendor/react.production.min.js',
   'templates/design/vendor/react-dom.production.min.js',
   'templates/design/vendor/DesignCanvas.js',
-  'templates/design/DesignCanvas.jsx',
+  'templates/design/vendor/fetch-vendor.mjs',
+  'lib/design-engine/canvas-wrap.mjs',
 ])
-  assert(
-    existsSync(join(root, rel)) && readFileSync(join(root, rel)).length > 0,
-    `${rel} (non-empty)`,
-  );
+  assert(!existsSync(join(root, rel)), `${rel} is not shipped`);
 
-const canvasJs = join(root, 'templates/design/vendor/DesignCanvas.js');
-assert(
-  fileHas(canvasJs, 'React.createElement'),
-  'DesignCanvas.js is compiled (React.createElement)',
-);
-assert(fileHas(canvasJs, 'Object.assign(window'), 'DesignCanvas.js registers globals');
-assert(
-  fileHas(canvasJs, 'data-planr-id') && fileHas(canvasJs, 'data-planr-screen'),
-  'DesignCanvas.js emits declarative Planr artboard + screen anchors',
-);
-assert(
-  fileHas(canvasJs, 'data-dc-slot') && fileHas(canvasJs, 'data-dc-section'),
-  'DesignCanvas.js preserves legacy canvas slot + section attributes',
-);
+// 3a — design-loop variants reach the board as their own images
+log('\ndesign-loop board variants:');
+const boardSession = mkdtempSync(join(tmpdir(), 'planr-design-assets-'));
 try {
-  execFileSync('node', ['--check', canvasJs], { stdio: 'pipe' });
-  ok('DesignCanvas.js passes node --check');
-} catch (e) {
-  bad('DesignCanvas.js passes node --check', String(e.stderr || e.message).split('\n')[0]);
+  const png = Buffer.alloc(24);
+  png.writeUInt32BE(0x89504e47, 0);
+  png.writeUInt32BE(1536, 16);
+  png.writeUInt32BE(1024, 20);
+  writeFileSync(join(boardSession, 'variant-A.png'), png);
+  writeFileSync(
+    join(boardSession, 'variant-B.svg'),
+    '<svg xmlns="http://www.w3.org/2000/svg"></svg>',
+  );
+  const { artifacts } = await createDesignBoardArtifactEnvelope({
+    sessionDir: boardSession,
+    mode: 'loop',
+  });
+  const [pngVariant, svgVariant] = artifacts;
+  assert(
+    pngVariant?.viewport.width === 1536 && pngVariant.viewport.height === 1024,
+    'a PNG variant is framed at its own size (1536×1024)',
+  );
+  assert(
+    svgVariant?.viewport.width === 1440 && svgVariant.viewport.height === 1024,
+    'an image without a readable size is framed at desktop 1440×1024, not a 260×480 phone card',
+  );
+  assert(
+    artifacts.length === 2 &&
+      artifacts.every(({ id, html }) =>
+        html.includes(`<img data-planr-id="design-variant-${id}" src="data:image/`),
+      ),
+    'each variant shows its own image under one stable Planr anchor (design-variant-<id>)',
+  );
+  assert(
+    artifacts.every(({ html }) => !/<script|vendor\//i.test(html)),
+    'variant documents need no script runtime and load nothing from vendor/',
+  );
+} finally {
+  rmSync(boardSession, { recursive: true, force: true });
 }
 
-// 3b — desktop artboard sizing + front-loaded app context (v0.15.1)
-log('\ndesktop sizing + app context (v0.15.1):');
-assert(
-  fileHas(canvasJs, '1440') && fileHas(canvasJs, '1024'),
-  'DesignCanvas default artboard is desktop (1440×1024), not a 260×480 phone card',
-);
-assert(
-  fileHas(join(root, 'templates/design/DesignCanvas.jsx'), 'width = 1440'),
-  'DesignCanvas.jsx source default width is desktop (1440)',
-);
-assert(
-  fileHas(join(root, 'templates/design/DesignCanvas.jsx'), 'focused ? undefined : planrAnchorId'),
-  'focused canvas artboards expose one stable anchor in the live DOM',
-);
-assert(
-  fileHas(canvasJs, '/ height, 1)') && !fileHas(canvasJs, '/ height, 2)'),
-  'canvas focus overlay caps scale at 1:1 (never enlarges a desktop screen past real size — the zoom fix)',
-);
+// 3b — front-loaded app context (v0.15.1)
+log('\napp context (v0.15.1):');
 const preflight = join(root, 'procedures/design-step0-preflight.md');
 assert(
   fileHas(preflight, 'APP_CTX') && fileHas(preflight, 'VIEWPORT_W'),
   'preflight A.3.5 front-loads APP_CTX + VIEWPORT_W (read the project once, up front)',
-);
-const generate = join(root, 'procedures/design-step2-generate.md');
-assert(
-  fileHas(generate, 'VIEWPORT_W'),
-  'generate C.0/C.4 author at VIEWPORT_W (real desktop width)',
-);
-
-// Host skill guidance is verified by the installed skill workflow tests.
-// This package retains the renderer and explicit artifact handoff procedures.
-const designHandoff = join(root, 'procedures/design-step3-spec-and-handoff.md');
-assert(
-  fileHas(designHandoff, 'planr artifact share') && fileHas(designHandoff, 'planr artifact import'),
-  'design handoff advertises explicit artifact Share + returned-review import',
-);
-assert(
-  fileHas(designHandoff, 'never publishes or uploads') &&
-    fileHas(designHandoff, 'Do not invoke Share automatically'),
-  'design completion never publishes or shares automatically',
 );
 
 // 3c — token scale + deterministic linter (v0.16.0)
@@ -192,15 +179,8 @@ assert(
     false,
   'lintCanvasData FAILS an off-canonical artboard (1440×760)',
 );
-// the framework dogfoods its own grid — generated files inherit shell CSS, so the shells must be clean
-for (const shell of ['prototype-shell.html', 'walkthrough-shell.html', 'canvas-shell.html']) {
-  assert(
-    lintDesign(readFileSync(join(root, 'templates/design', shell), 'utf-8')).ok,
-    `${shell} is lint-clean (shells obey the 4-point grid)`,
-  );
-}
 
-// 3d — responsive breakpoint frames + device toggle (v0.17.0)
+// 3d — responsive breakpoint frames (v0.17.0)
 log('\nresponsive breakpoint frames (v0.17.0):');
 assert(isCanonicalFrame({ w: 834, h: 1194 }), 'tablet frame 834×1194 is canonical');
 assert(
@@ -211,26 +191,6 @@ assert(
   RESPONSIVE_FRAMES.length === 3 &&
     RESPONSIVE_FRAMES.map((f) => f.name).join() === 'desktop,tablet,mobile',
   'RESPONSIVE_FRAMES = desktop → tablet → mobile',
-);
-const genDoc = readFileSync(join(root, 'procedures/design-step2-generate.md'), 'utf-8');
-assert(
-  /@container/.test(genDoc) && /container-type/.test(genDoc),
-  'generate guidance uses container queries + container-type (not media queries)',
-);
-assert(/834|tablet/i.test(genDoc), 'generate guidance names the tablet breakpoint frame');
-assert(
-  fileHas(join(root, 'templates/design/prototype-shell.html'), 'dv-bar') &&
-    fileHas(join(root, 'templates/design/prototype-shell.html'), 'container-type'),
-  'prototype shell has the device toggle + a container-query viewport',
-);
-assert(
-  fileHas(join(root, 'templates/design/walkthrough-shell.html'), 'data-w="834px"') &&
-    fileHas(join(root, 'templates/design/walkthrough-shell.html'), 'container-type'),
-  'walkthrough shell has the device toggle + container-query frames',
-);
-assert(
-  fileHas(join(root, 'templates/design/canvas-shell.html'), 'DATA.css'),
-  'canvas shell injects the shared stylesheet (DATA.css) for breakpoint frames',
 );
 
 // 3e — design system layer + adherence (v0.18.0)
@@ -274,11 +234,6 @@ const preflightDoc = readFileSync(join(root, 'procedures/design-step0-preflight.
 assert(
   /A\.3\.6/.test(preflightDoc) && /design system/i.test(preflightDoc),
   'preflight A.3.6 no-system gate present (generate / existing / describe)',
-);
-assert(
-  fileHas(join(root, 'procedures/design-step2-generate.md'), 'contrast-below-aa') &&
-    fileHas(join(root, 'procedures/design-step2-generate.md'), 'tokens.css'),
-  'generate step links the DS tokens.css + enforces the contrast gate',
 );
 
 // 4 — manifest schema vs golden fixtures
@@ -365,7 +320,6 @@ const SCAN_ROOTS = [
   'CHANGELOG.md',
 ];
 const SCAN_SKIP = [
-  'templates/design/vendor', // attributed third-party runtime (React, the reflow lib)
   'conformance/verify-design-assets.mjs', // this guard (fragment-assembled)
 ];
 const TEXT_EXT = /\.(md|mjs|js|jsx|html|json|tpl|css|feature|yml|yaml)$/;

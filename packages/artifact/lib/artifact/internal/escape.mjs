@@ -1,13 +1,12 @@
 /**
  * HTML / JSON escaping helpers for design-artifact generation.
  *
- * The design generator interpolates spec-derived text (screen names, copy,
- * field labels) into generated HTML and into JSON embedded in inline
- * `<script>` blocks (DesignCanvas artboard data, the `.design-canvas.state.json`
- * sidecar). That text is user-controlled, so every interpolation MUST pass
- * through one of these helpers. Otherwise a screen titled
- * `</script><img src=x onerror=alert(1)>` becomes stored XSS the moment the
- * artifact is opened in a browser.
+ * Renderers interpolate spec-derived text (screen names, copy, field labels)
+ * into generated HTML and into JSON embedded in inline `<script>` blocks (the
+ * design studio payload, the artifact stage payload). That text is
+ * user-controlled, so every interpolation MUST pass through one of these
+ * helpers. Otherwise a screen titled `</script><img src=x onerror=alert(1)>`
+ * becomes stored XSS the moment the artifact is opened in a browser.
  *
  * Rule of thumb:
  *   - text or attribute value inside HTML   → escapeHtml()

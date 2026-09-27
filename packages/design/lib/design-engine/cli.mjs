@@ -33,12 +33,12 @@ import {
   readSync,
   writeFileSync,
 } from 'node:fs';
-import { basename, dirname, join, resolve } from 'node:path';
+import { basename, join, resolve } from 'node:path';
 import { createInterface } from 'node:readline';
 import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from '../design/cli-parser.mjs';
-import { createDesignBoardArtifactEnvelope } from './artifact-adapter.mjs';
+import { createDesignBoardArtifactEnvelope, discoverVariants } from './artifact-adapter.mjs';
 import { resolveAuth } from './auth.mjs';
 import {
   DESIGN_BOARD_ENVELOPE_FILE,
@@ -46,12 +46,6 @@ import {
   renderBoardHtml,
 } from './board.mjs';
 import { publicBoardId } from './board-token.mjs';
-import {
-  buildImageCanvasData,
-  discoverVariants,
-  imageDimensions,
-  wrapInCanvas,
-} from './canvas-wrap.mjs';
 import {
   createDaemon,
   DAEMON_VERSION,
@@ -75,50 +69,6 @@ import { appendRound, createSession, loadSession, saveSession } from './session.
 import { detectConflicts, loadProfile, saveProfile, updateTaste } from './taste.mjs';
 
 const here = fileURLToPath(import.meta.url);
-// templates/design lives at the plugin root (cli.mjs is at lib/design-engine/).
-const TEMPLATES_DIR = join(dirname(here), '..', '..', 'templates', 'design');
-// The three vendored runtime files a DesignCanvas needs at view time.
-const CANVAS_VENDOR = ['react.production.min.js', 'react-dom.production.min.js', 'DesignCanvas.js'];
-
-/**
- * Render a loop variant image (svg/png) into the same DesignCanvas the review
- * board uses: write a sibling `variant-{X}.html` next to the image and copy the
- * vendor runtime into the session dir (idempotent). The board's `type:'html'`
- * path then shows the variant as a real pan/zoom canvas. Best-effort — a failure
- * leaves the bare image in place so the board still falls back to image/svg.
- *
- * @param {string} sessionDir
- * @param {string} variantId   the variant letter (also the canvas slot id)
- * @param {string} imageFile   basename of the variant image in sessionDir
- * @param {string} [label]
- */
-function materializeCanvasArtifact(sessionDir, variantId, imageFile, label) {
-  try {
-    const shellHtml = readFileSync(join(TEMPLATES_DIR, 'canvas-shell.html'), 'utf8');
-    const dims = imageDimensions(join(sessionDir, imageFile));
-    const data = buildImageCanvasData({
-      variantId,
-      label,
-      src: imageFile,
-      width: dims.width,
-      height: dims.height,
-    });
-    writeFileSync(
-      join(sessionDir, `variant-${variantId}.html`),
-      wrapInCanvas({ shellHtml, data, title: label }),
-    );
-    const vendorDir = join(sessionDir, 'vendor');
-    mkdirSync(vendorDir, { recursive: true });
-    for (const f of CANVAS_VENDOR) {
-      const dest = join(vendorDir, f);
-      if (!existsSync(dest)) copyFileSync(join(TEMPLATES_DIR, 'vendor', f), dest);
-    }
-  } catch (e) {
-    errLine(
-      `⚠ canvas wrap skipped for variant ${variantId} (${e.message}) — board shows the bare image`,
-    );
-  }
-}
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 const out = (obj) => process.stdout.write(`${JSON.stringify(obj, null, 2)}\n`);
@@ -331,8 +281,6 @@ async function cmdGenerate(args) {
   });
   const outputPath = join(sessionDir, `variant-${variant}.png`);
   copyFileSync(imagePath, outputPath); // tmp → final
-  // render the variant onto the real DesignCanvas (board shows it pannable)
-  materializeCanvasArtifact(sessionDir, variant, `variant-${variant}.png`, target);
 
   let session =
     loadSession(sessionDir, variant) ??
@@ -453,14 +401,6 @@ async function cmdRecord(args) {
     brief: brief || undefined,
   });
   saveSession(sessionDir, variant, session);
-  // (re)render the variant onto the real DesignCanvas so the board shows it pannable.
-  // The board's stage shows the canonical `variant-{X}.svg` (edited in place on iterate);
-  // re-wrap it so the canvas reflects the latest round.
-  const mainImage =
-    [`variant-${variant}.svg`, `variant-${variant}.png`].find((f) =>
-      existsSync(join(sessionDir, f)),
-    ) || basename(resolve(file));
-  materializeCanvasArtifact(sessionDir, variant, mainImage, session.target);
   out({
     ok: true,
     provider: 'claude-svg',
@@ -607,9 +547,6 @@ async function cmdBoard(args) {
       fail(`no finalized.html / canvas.html in ${dir}`);
     variants = [{ id: 'artifact', label: artifact, src: artifact, type: 'html' }];
   } else {
-    // One stage artifact per variant letter, preferring the canvas wrapper
-    // (variant-X.html) over the bare image so the board shows each variant
-    // pannable — degrading to the source image for legacy sessions.
     variants = discoverVariants(readdirSync(dir));
     if (variants.length === 0) fail(`no variant-*.{png,svg,html} files in ${dir}`);
   }

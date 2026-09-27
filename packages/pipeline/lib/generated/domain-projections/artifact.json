@@ -817,7 +817,7 @@
     {
       "source": "packages/artifact/lib/artifact/internal/escape.mjs",
       "target": "lib/artifact/internal/escape.mjs",
-      "sha256": "9983d578a23485fd2230ba09086c603ce22366fb2aec9c45b659c2e8195f54e3",
+      "sha256": "bb4ea84b77ec5c6c70a0e3feef82eaa2ba402ad23285239b6ff383095194880d",
       "mode": "644"
     },
     {
