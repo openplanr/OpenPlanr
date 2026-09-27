@@ -2,177 +2,350 @@
 // Run the Workspace CI job commands locally, in order, on the current Node version.
 // Usage: node scripts/run-ci-parity.mjs [--only <id,...>] [--skip <id,...>] [--list]
 import { spawnSync } from 'node:child_process';
+import { readFileSync, realpathSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { load } from 'js-yaml';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const cli = resolve(root, 'packages/cli');
+const WORKFLOW_PATH = '.github/workflows/ci.yml';
 
-// Mirrors .github/workflows/ci.yml; keep the two in step when a job changes.
-// CI's "Build generated outputs" job runs these steps once and the test jobs restore its
-// outputs; here they run once per invocation, and not at all after quality. Drift checks
-// stay in quality so a targeted job still runs on a tree with uncommitted edits.
-const PREPARE_GENERATED_RUNTIME = [
-  ['npm', ['run', 'generate']],
-  ['npm', ['run', 'build']],
-];
-const JOBS = [
-  {
-    id: 'quality',
-    title: 'generated, boundary, lint, and build verification',
-    steps: [
-      ['npm', ['run', 'generate']],
-      ['git', ['diff', '--exit-code', 'HEAD', '--']],
-      ['npm', ['run', 'check:generated']],
-      ['npm', ['run', 'check:boundaries']],
-      ['npm', ['run', 'check:docs']],
-      ['npm', ['run', 'check:comments']],
-      ['npm', ['run', 'lint']],
-      ['npm', ['run', 'typecheck:declarations']],
-      ['npm', ['run', 'build']],
-      ['git', ['diff', '--exit-code', 'HEAD', '--']],
-      ['npm', ['run', 'check:diagrams']],
-      ['npm', ['run', 'test:focused']],
-    ],
-  },
-  {
-    id: 'supporting',
-    title: 'supporting package tests',
-    prepare: true,
-    steps: [
-      '@openplanr/protocol',
-      '@openplanr/operate',
-      '@openplanr/artifact',
-      '@openplanr/integrations',
-      '@openplanr/skill-runtime',
-      '@openplanr/dashboard-app',
-    ].map((workspace) => ['npm', ['test', `--workspace=${workspace}`]]),
-  },
-  {
-    id: 'design',
-    title: 'design package tests',
-    prepare: true,
-    steps: [['npm', ['test', '--workspace=@openplanr/design']]],
-  },
-  {
-    id: 'pipeline',
-    title: 'pipeline suites',
-    prepare: true,
-    steps: [
-      'test:surface',
-      'test:orchestration:runtime',
-      'test:orchestration:ecosystem',
-      'test:orchestration:pipeline',
-    ].map((script) => ['npm', ['run', script, '--workspace=planr-pipeline']]),
-  },
-  {
-    id: 'cli',
-    title: 'CLI tests (all shards, Operate boundary and runtime integrity)',
-    cwd: cli,
-    prepare: true,
-    steps: [['npx', ['--no-install', 'vitest', 'run', '--maxWorkers=1']]],
-  },
-  {
-    id: 'cli-heavy',
-    title: 'CLI heavy tests',
-    cwd: cli,
-    prepare: true,
-    steps: [
-      ['npm', ['run', 'test:heavy']],
-      [
-        'npx',
-        [
-          '--no-install',
-          'vitest',
-          'run',
-          'tests/integration/operate-lifecycle.test.ts',
-          'tests/integration/dashboard-operate-cycles.test.ts',
-          '--maxWorkers=1',
-          '--testTimeout=600000',
-        ],
-      ],
-    ],
-  },
-  {
-    id: 'packed',
-    title: 'packed public-package proof',
-    prepare: true,
-    steps: [['npm', ['run', 'verify:packed:strict']]],
-  },
-];
+const JOB_KEYS = new Set([
+  'name',
+  'needs',
+  'if',
+  'strategy',
+  'runs-on',
+  'timeout-minutes',
+  'steps',
+]);
+const STRATEGY_KEYS = new Set(['fail-fast', 'matrix']);
+const STEP_KEYS = new Set(['name', 'uses', 'with', 'run', 'env', 'working-directory']);
+const CONSUMER_IF = /^\$\{\{\s*!cancelled\(\)\s*\}\}$/u;
+const RUNNER_ACTIONS = /^actions\/(?:checkout|setup-node|upload-artifact|download-artifact)@/u;
+// Runner provisioning that a contributor's checkout already has after the CONTRIBUTING setup.
+const RUNNER_SETUP = /^(?:npm ci|npm exec --workspace=\S+ -- playwright install\b.*)$/u;
+const RESTORE = /^tar -xzmf "\$RUNNER_TEMP\/build-outputs\.tgz"$/u;
+const MATRIX_EXPRESSION = /\$\{\{\s*matrix\.([\w-]+)\s*\}\}/gu;
+const NODE_AXIS = /^\$\{\{\s*matrix\.([\w-]+)\s*\}\}$/u;
 
-const args = process.argv.slice(2);
-const list = (name) => {
-  const index = args.indexOf(name);
-  return index === -1
-    ? null
-    : new Set(
-        args[index + 1]
-          .split(',')
-          .map((entry) => entry.trim())
-          .filter(Boolean),
-      );
-};
-const only = list('--only');
-const skip = list('--skip') ?? new Set();
-if (args.includes('--list')) {
-  for (const job of JOBS) console.log(`${job.id.padEnd(12)} ${job.title}`);
-  process.exit(0);
-}
-for (const id of [...(only ?? []), ...skip]) {
-  if (!JOBS.some((job) => job.id === id)) throw new Error(`Unknown CI job id: ${id}`);
-}
-
-const results = [];
-const startedAt = Date.now();
-let runtimePrepared = false;
-for (const job of JOBS) {
-  if ((only && !only.has(job.id)) || skip.has(job.id)) {
-    results.push({ id: job.id, status: 'skipped' });
-    continue;
+/**
+ * Derives the local run of every Workspace CI job on one Node major version.
+ * Throws on a job or step shape it cannot reproduce, except in the build job: that job only
+ * contributes its bare `npm run` lines, and its other steps are not checked.
+ */
+export function planLocalCi(workflow, nodeMajor) {
+  for (const key of ['env', 'defaults']) {
+    if (workflow[key] !== undefined) {
+      throw new Error(`${WORKFLOW_PATH} sets workflow-level ${key}, which the local run ignores`);
+    }
   }
-  console.log(`\n=== ${job.id}: ${job.title} ===`);
-  const jobStart = Date.now();
-  let failure = null;
-  const steps = [
-    ...(job.prepare && !runtimePrepared
-      ? PREPARE_GENERATED_RUNTIME.map((step) => [...step, root])
-      : []),
-    ...job.steps,
-  ];
-  for (const [command, commandArgs, cwd = job.cwd ?? root] of steps) {
-    console.log(`$ ${command} ${commandArgs.join(' ')}`);
-    const run = spawnSync(command, commandArgs, {
-      cwd,
+  const entries = Object.entries(workflow.jobs ?? {});
+  const producers = entries.filter(([, job]) => (job.steps ?? []).some(uploadsBuildOutputs));
+  if (producers.length !== 1) {
+    throw new Error(
+      `${WORKFLOW_PATH} must have exactly one job that uploads build-outputs; found ${producers.length}`,
+    );
+  }
+  const [[producer, producerJob]] = producers;
+  const context = {
+    producer,
+    buildNode: setupNodeVersion(producer, producerJob),
+    nodeMajor: String(nodeMajor),
+    // The build job's npm commands stand in for restoring its outputs. Its drift checks stay
+    // in quality so a targeted job still runs on a tree with uncommitted edits.
+    prepare: producerJob.steps
+      .flatMap((step) => (step.run ?? '').split('\n'))
+      .map((line) => line.trim())
+      .filter((line) => /^npm run [a-z][\w:-]*$/u.test(line)),
+  };
+  return {
+    producer,
+    buildNode: context.buildNode,
+    prepare: context.prepare,
+    jobs: entries.filter(([id]) => id !== producer).map(([id, job]) => planJob(id, job, context)),
+  };
+}
+
+function uploadsBuildOutputs(step) {
+  return (
+    step.uses?.startsWith('actions/upload-artifact@') === true &&
+    step.with?.name === 'build-outputs'
+  );
+}
+
+function setupNodeVersion(id, job) {
+  const setups = job.steps.filter((step) => step.uses?.startsWith('actions/setup-node@'));
+  const version = setups[0]?.with?.['node-version'];
+  if (setups.length !== 1 || version === undefined) {
+    throw new Error(`${id} must set node-version in exactly one setup-node step`);
+  }
+  return String(version);
+}
+
+function requireKnownKeys(label, object, known) {
+  for (const key of Object.keys(object ?? {})) {
+    if (!known.has(key)) throw new Error(`${label} sets ${key}, which the local run ignores`);
+  }
+}
+
+function planJob(id, job, context) {
+  requireKnownKeys(id, job, JOB_KEYS);
+  requireKnownKeys(`${id} strategy`, job.strategy, STRATEGY_KEYS);
+  const needs = [job.needs ?? []].flat();
+  if (needs.some((need) => need !== context.producer)) {
+    throw new Error(
+      `${id} needs ${needs.join(', ')}; the local run orders jobs only after the build`,
+    );
+  }
+  if (job.if !== undefined && !CONSUMER_IF.test(job.if)) {
+    throw new Error(`${id} runs under if: ${job.if}, which the local run cannot evaluate`);
+  }
+  const all = expandMatrix(id, job.strategy?.matrix).map((matrix) =>
+    planInstance(id, job, matrix, context.producer),
+  );
+  const nodeAxis = NODE_AXIS.exec(setupNodeVersion(id, job))?.[1];
+  const lines = all[0].steps.flatMap(({ script }) => script.split('\n').map((line) => line.trim()));
+  return {
+    id,
+    consumer: all[0].consumer,
+    coversPrepare: context.prepare.every((command) => lines.includes(command)),
+    ciNodes: [...new Set(all.map(({ node }) => node))],
+    instances: nodeAxis ? selectNode(all, nodeAxis, context) : all,
+  };
+}
+
+// A Node-matrix job runs once locally: its entry for this Node, else its entry for the Node
+// the build job uses. A job with neither, such as a compatibility check, is reported instead.
+function selectNode(instances, axis, { nodeMajor, buildNode }) {
+  const groups = new Map();
+  for (const instance of instances) {
+    const key = JSON.stringify(Object.entries(instance.matrix).filter(([name]) => name !== axis));
+    groups.set(key, [...(groups.get(key) ?? []), instance]);
+  }
+  return [...groups.values()].flatMap((group) => {
+    const selected =
+      group.find(({ node }) => node === nodeMajor) ?? group.find(({ node }) => node === buildNode);
+    return selected ? [selected] : [];
+  });
+}
+
+function expandMatrix(id, matrix) {
+  if (matrix === undefined) return [{}];
+  const { include, exclude, ...axes } = matrix;
+  const names = Object.keys(axes);
+  if (exclude !== undefined || (include !== undefined && names.length > 0)) {
+    throw new Error(
+      `${id} combines matrix axes with include or exclude, which the local run does not expand`,
+    );
+  }
+  const combinations =
+    include !== undefined
+      ? include.map((entry) => ({ ...entry }))
+      : names.reduce(
+          (partial, name) => {
+            if (!Array.isArray(axes[name])) {
+              throw new Error(`${id} matrix axis ${name} is not a list`);
+            }
+            return partial.flatMap((combination) =>
+              axes[name].map((value) => ({ ...combination, [name]: value })),
+            );
+          },
+          [{}],
+        );
+  if (combinations.length === 0) throw new Error(`${id} matrix expands to no entries`);
+  return combinations;
+}
+
+// Runner steps provision CI and are not repeated locally; restore marks a build consumer.
+function stepRole(step, label, producer) {
+  requireKnownKeys(label, step, STEP_KEYS);
+  if (step.uses !== undefined) {
+    if (!RUNNER_ACTIONS.test(step.uses)) {
+      throw new Error(`${label} uses ${step.uses}, which cannot run locally`);
+    }
+    return 'runner';
+  }
+  if (typeof step.run !== 'string') throw new Error(`${label} has neither run nor uses`);
+  const run = step.run.trim();
+  if (step.env?.BUILD_RESULT === `\${{ needs.${producer}.result }}` || RUNNER_SETUP.test(run)) {
+    return 'runner';
+  }
+  return RESTORE.test(run) ? 'restore' : 'local';
+}
+
+function planInstance(id, job, matrix, producer) {
+  const where = Object.keys(matrix).length > 0 ? `${id} ${JSON.stringify(matrix)}` : id;
+  const steps = job.steps.map((step, index) => {
+    const label = `${where} step ${index + 1}${step.name ? ` (${step.name})` : ''}`;
+    return { step, label, role: stepRole(step, label, producer) };
+  });
+  return {
+    name: substitute(job.name ?? id, matrix, `${where} name`),
+    node: substitute(setupNodeVersion(id, job), matrix, `${where} node-version`),
+    matrix,
+    consumer: steps.some(({ role }) => role === 'restore'),
+    steps: steps
+      .filter(({ role }) => role === 'local')
+      .map(({ step, label }) => ({
+        name: step.name ?? step.run.trim(),
+        script: substitute(step.run.trim(), matrix, label),
+        workingDirectory: substitute(step['working-directory'] ?? '.', matrix, label),
+        env: Object.fromEntries(
+          Object.entries(step.env ?? {}).map(([name, value]) => [
+            name,
+            substitute(value, matrix, label),
+          ]),
+        ),
+      })),
+  };
+}
+
+function substitute(text, matrix, where) {
+  const value = String(text).replace(MATRIX_EXPRESSION, (_expression, key) => {
+    if (!Object.hasOwn(matrix, key)) {
+      throw new Error(`${where} references matrix.${key}, which its matrix does not define`);
+    }
+    return String(matrix[key]);
+  });
+  if (value.includes('${{')) {
+    throw new Error(`${where} uses a GitHub expression the local run cannot evaluate: ${value}`);
+  }
+  return value;
+}
+
+function notOnThisNode(job, nodeMajor) {
+  return `CI runs ${job.id} on Node ${job.ciNodes.join(', ')}, not Node ${nodeMajor}`;
+}
+
+function selection(args, jobs, nodeMajor) {
+  const list = (name) => {
+    const index = args.indexOf(name);
+    return index === -1
+      ? null
+      : new Set(
+          args[index + 1]
+            .split(',')
+            .map((entry) => entry.trim())
+            .filter(Boolean),
+        );
+  };
+  const only = list('--only');
+  const skip = list('--skip') ?? new Set();
+  for (const id of [...(only ?? []), ...skip]) {
+    if (!jobs.some((job) => job.id === id)) {
+      throw new Error(
+        `Unknown CI job id: ${id}; ${WORKFLOW_PATH} defines ${jobs.map((job) => job.id).join(', ')}`,
+      );
+    }
+  }
+  for (const job of jobs) {
+    if (only?.has(job.id) && job.instances.length === 0) {
+      throw new Error(notOnThisNode(job, nodeMajor));
+    }
+  }
+  return (job) => (only === null || only.has(job.id)) && !skip.has(job.id);
+}
+
+function runSteps(steps) {
+  for (const step of steps) {
+    const directory = step.workingDirectory === '.' ? '' : ` (in ${step.workingDirectory})`;
+    console.log(`-- ${step.name}${directory}`);
+    for (const line of step.script.split('\n')) console.log(`$ ${line}`);
+    const run = spawnSync('bash', ['-e', '-c', step.script], {
+      cwd: resolve(root, step.workingDirectory),
       stdio: 'inherit',
-      env: { ...process.env, CI: '1' },
+      env: { ...process.env, ...step.env, CI: '1' },
     });
-    if (run.status !== 0) {
-      failure = `${command} ${commandArgs.join(' ')} exited with ${run.status ?? run.signal}`;
+    if (run.error) {
+      throw new Error(`Could not start bash for "${step.name}": ${run.error.message}`, {
+        cause: run.error,
+      });
+    }
+    if (run.status !== 0) return `${step.name} exited with ${run.status ?? run.signal}`;
+  }
+  return null;
+}
+
+function runJob(job, plan, state) {
+  for (const instance of job.instances) {
+    const label = `${job.id}: ${instance.name}`;
+    console.log(`\n=== ${label} ===`);
+    const startedAt = Date.now();
+    const prepare =
+      job.consumer && !state.prepared
+        ? plan.prepare.map((script) => ({
+            name: `Prepare the ${plan.producer} job outputs`,
+            script,
+            workingDirectory: '.',
+            env: {},
+          }))
+        : [];
+    const failure = runSteps([...prepare, ...instance.steps]);
+    state.results.push({
+      label,
+      status: failure ? 'failed' : 'passed',
+      seconds: Math.round((Date.now() - startedAt) / 1000),
+      failure,
+    });
+    if (failure) return false;
+    if (job.consumer || job.coversPrepare) state.prepared = true;
+  }
+  return true;
+}
+
+function printList(plan, nodeMajor) {
+  for (const job of plan.jobs) {
+    if (job.instances.length === 0) {
+      console.log(`${job.id.padEnd(28)} (${notOnThisNode(job, nodeMajor)})`);
+    }
+    for (const instance of job.instances) console.log(`${job.id.padEnd(28)} ${instance.name}`);
+  }
+}
+
+function printSummary(results, startedAt) {
+  console.log('\n=== verify:ci summary ===');
+  for (const result of results) {
+    console.log(
+      `${result.status.padEnd(8)} ${result.label}${result.seconds ? ` (${result.seconds}s)` : ''}${result.failure ? ` — ${result.failure}` : ''}`,
+    );
+  }
+  const ran = results.filter((result) => result.seconds !== undefined);
+  console.log(
+    `${ran.length} job(s) ran in ${Math.round((Date.now() - startedAt) / 1000)}s on Node ${process.version}.`,
+  );
+}
+
+function main(args) {
+  const nodeMajor = Number(process.versions.node.split('.')[0]);
+  const plan = planLocalCi(load(readFileSync(resolve(root, WORKFLOW_PATH), 'utf8')), nodeMajor);
+  if (args.includes('--list')) {
+    printList(plan, nodeMajor);
+    return 0;
+  }
+  const selected = selection(args, plan.jobs, nodeMajor);
+  const state = { prepared: false, results: [] };
+  const startedAt = Date.now();
+  for (const job of plan.jobs) {
+    if (!selected(job)) {
+      state.results.push({ label: job.id, status: 'skipped' });
+    } else if (job.instances.length === 0) {
+      state.results.push({
+        label: job.id,
+        status: 'not run',
+        failure: notOnThisNode(job, nodeMajor),
+      });
+    } else if (!runJob(job, plan, state)) {
       break;
     }
   }
-  if (!failure) runtimePrepared = true;
-  results.push({
-    id: job.id,
-    status: failure ? 'failed' : 'passed',
-    seconds: Math.round((Date.now() - jobStart) / 1000),
-    failure,
-  });
-  if (failure) break;
+  printSummary(state.results, startedAt);
+  return state.results.some((result) => result.status === 'failed') ? 1 : 0;
 }
 
-console.log('\n=== verify:ci summary ===');
-for (const result of results) {
-  console.log(
-    `${result.status.padEnd(8)} ${result.id}${result.seconds ? ` (${result.seconds}s)` : ''}${result.failure ? ` — ${result.failure}` : ''}`,
-  );
+if (
+  process.argv[1] &&
+  realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))
+) {
+  process.exitCode = main(process.argv.slice(2));
 }
-const ran = results.filter((result) => result.status !== 'skipped');
-const failed = results.find((result) => result.status === 'failed');
-console.log(
-  `${ran.length} job(s) ran in ${Math.round((Date.now() - startedAt) / 1000)}s on Node ${process.version}; CI also runs the compatibility matrix on Node 20 and 22.`,
-);
-if (failed) process.exit(1);
-const notRun = JOBS.filter((job) => !ran.some((result) => result.id === job.id));
-if (notRun.length) console.log(`Not run: ${notRun.map((job) => job.id).join(', ')}`);
