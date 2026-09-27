@@ -8,12 +8,25 @@
 import { digestArtifactEnvelope } from '../envelope.mjs';
 import { embedJson, escapeHtml } from '../internal/escape.mjs';
 import {
+  type ArtifactShellInput,
   normalizeArtifactShellModel,
   renderArtifactShellMarkup,
   renderArtifactShellModelData,
 } from './renderers.mjs';
 import { createArtifactStagePayload } from './stage-payload.mjs';
-import { loadArtifactTheme, renderArtifactThemeCss } from './tokens.mjs';
+import { type ArtifactTheme, loadArtifactTheme, renderArtifactThemeCss } from './tokens.mjs';
+
+/** The theme to render with, by default the canonical registry, and the stage runtime URL. */
+interface ShellDocumentOptions {
+  theme?: ArtifactTheme;
+  stageRuntimeUrl?: string;
+}
+/** A shell document's input: the model's input plus the envelope fields the review state reads. */
+interface ShellDocumentInput extends ArtifactShellInput {
+  envelope?:
+    | (NonNullable<ArtifactShellInput['envelope']> & { schemaVersion?: unknown; review?: unknown })
+    | null;
+}
 
 export const ARTIFACT_SHELL_VERSION = '1.2.1';
 export const ARTIFACT_SHELL_ASSET_PATHS = Object.freeze({
@@ -1005,8 +1018,8 @@ export const DEFAULT_ARTIFACT_SHELL_INPUT = Object.freeze({
 });
 
 export function renderArtifactShellDocument(
-  input = DEFAULT_ARTIFACT_SHELL_INPUT,
-  { theme, stageRuntimeUrl = './artifact-review-stage.js' } = {},
+  input: ShellDocumentInput = DEFAULT_ARTIFACT_SHELL_INPUT,
+  { theme, stageRuntimeUrl = './artifact-review-stage.js' }: ShellDocumentOptions = {},
 ) {
   const model = normalizeArtifactShellModel(input);
   const canonicalTheme = theme ?? loadArtifactTheme();
@@ -1048,6 +1061,6 @@ ${shellMarkup}
 `;
 }
 
-export function renderArtifactShellTemplate({ theme } = {}) {
+export function renderArtifactShellTemplate({ theme }: { theme?: ArtifactTheme } = {}) {
   return renderArtifactShellDocument(DEFAULT_ARTIFACT_SHELL_INPUT, { theme });
 }

@@ -223,6 +223,10 @@ interface FeedbackRailOptions extends ReviewControllerOptions {
   controller?: ArtifactReviewController;
   onSelectPin?(pinId: string): void;
   presentation?: ArtifactFeedbackPresentation;
+  /** Passed by the review stage and ignored. */
+  stageController?: unknown;
+  /** Passed by the review stage and ignored. */
+  artifacts?: unknown;
 }
 /** Saved rail drafts, validated as they are restored. */
 export interface ArtifactFeedbackDraftsInput {

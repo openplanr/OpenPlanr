@@ -917,9 +917,15 @@
       "mode": "644"
     },
     {
+      "source": "packages/artifact/lib/artifact/ui/bridge-tools.d.mts",
+      "target": "lib/artifact/ui/bridge-tools.d.mts",
+      "sha256": "b3636872056f2ffec12b52a2bedfd2eef85d75effd7832d802139f0e4fca2159",
+      "mode": "644"
+    },
+    {
       "source": "packages/artifact/lib/artifact/ui/bridge-tools.mjs",
       "target": "lib/artifact/ui/bridge-tools.mjs",
-      "sha256": "7b49c5138496888783e5d346b75a774de92c91d3392aefdd1418eb27132454a4",
+      "sha256": "ad5137575aa96024d2c400db75a62b6fa1c1bbee4ba1dc0b2447462cc9609e3f",
       "mode": "644"
     },
     {
@@ -1165,7 +1171,7 @@
     {
       "source": "packages/artifact/lib/artifact/ui/feedback-rail.d.mts",
       "target": "lib/artifact/ui/feedback-rail.d.mts",
-      "sha256": "051cdbb25c5997268317bc11c59d44fd8bc3a1d9fc494240971fafc97672c327",
+      "sha256": "82d72fca1c24a668d97485f054794db7c341f9eff8d4cf65a9bbba2910713305",
       "mode": "644"
     },
     {
@@ -1211,9 +1217,15 @@
       "mode": "644"
     },
     {
+      "source": "packages/artifact/lib/artifact/ui/renderers.d.mts",
+      "target": "lib/artifact/ui/renderers.d.mts",
+      "sha256": "98be44ef696131a1bb7068208fa5ae6fec7df3a55f588643f4977bbcf11d5104",
+      "mode": "644"
+    },
+    {
       "source": "packages/artifact/lib/artifact/ui/renderers.mjs",
       "target": "lib/artifact/ui/renderers.mjs",
-      "sha256": "524524ec93fe9bda8a0fba97675473cb6ff74b828d9445455d72c974cb393161",
+      "sha256": "896ce544d8cca4480b1c782e75721dbff6332606ded2c2da0fad64630b3b2dd5",
       "mode": "644"
     },
     {
@@ -1247,9 +1259,15 @@
       "mode": "644"
     },
     {
+      "source": "packages/artifact/lib/artifact/ui/shell.d.mts",
+      "target": "lib/artifact/ui/shell.d.mts",
+      "sha256": "194f1a5ce5bf3392c72397f2b23921a8f78f48e2511b076cc336a3cd11c6366f",
+      "mode": "644"
+    },
+    {
       "source": "packages/artifact/lib/artifact/ui/shell.mjs",
       "target": "lib/artifact/ui/shell.mjs",
-      "sha256": "a52d2542a49391314aba97df6bde0c2e8fe61867f9f801654fc9e28e045bd447",
+      "sha256": "269ce0601f6362b8cdf41091849369e238c9819d8638b425277c2ed2361170cb",
       "mode": "644"
     },
     {
@@ -1277,15 +1295,27 @@
       "mode": "644"
     },
     {
+      "source": "packages/artifact/lib/artifact/ui/stage.d.mts",
+      "target": "lib/artifact/ui/stage.d.mts",
+      "sha256": "7685d289f9aafe9df19e806b9598de3f03a192dac9cdde18c42b10da6cdb5f40",
+      "mode": "644"
+    },
+    {
       "source": "packages/artifact/lib/artifact/ui/stage.mjs",
       "target": "lib/artifact/ui/stage.mjs",
-      "sha256": "7578cfdfc8f332aaf42b72ed4e3e60b0a92ffbf226bda3ecf2f70012121eae62",
+      "sha256": "da0a3f6866651e9dd3d925c0c06c554326d07f728633f63c5743677251e35a4b",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/ui/tokens.d.mts",
+      "target": "lib/artifact/ui/tokens.d.mts",
+      "sha256": "8095d5eea93364b6da956333f3fcfa364375cb6ba482eabbcf0b7021c2e0085b",
       "mode": "644"
     },
     {
       "source": "packages/artifact/lib/artifact/ui/tokens.mjs",
       "target": "lib/artifact/ui/tokens.mjs",
-      "sha256": "a2acb056549b1b0d2bb08094139b9ea17b902933f077871f811f2cbef4db600d",
+      "sha256": "539e12cfe131f8c2505ee56a2aa62c55381dbbb4367176ce27d6cb88db461468",
       "mode": "644"
     },
     {

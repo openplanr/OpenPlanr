@@ -14,9 +14,50 @@ export const ARTIFACT_SHELL_STATES = Object.freeze([
 export const ARTIFACT_VIEW_MODES = Object.freeze(['single', 'variants', 'split']);
 export const ARTIFACT_REVIEW_MODES = Object.freeze(['interact', 'comment']);
 export const ARTIFACT_SHELL_THEMES = Object.freeze(['auto', 'light', 'dark']);
-export const ARTIFACT_PRESENTATIONS = Object.freeze(['document', 'canvas']);
+export const ARTIFACT_PRESENTATIONS = Object.freeze(['document', 'canvas'] as const);
 
-const STATUS_COPY = Object.freeze({
+/** How the shell presents its artifacts: one scrolling document or a zoomable canvas. */
+export type ArtifactPresentation = (typeof ARTIFACT_PRESENTATIONS)[number];
+/** An envelope artifact as supplied; the shell reads only its metadata. */
+interface ShellArtifactInput {
+  id?: unknown;
+  title?: unknown;
+  kind?: unknown;
+  viewport?: { width?: unknown; height?: unknown } | null;
+  colorScheme?: unknown;
+}
+/** A viewer as supplied; unknown values fall back. */
+interface ShellViewerInput {
+  mode?: unknown;
+  activeArtifactId?: string | { id?: unknown } | null;
+  comparisonArtifactId?: unknown;
+  reviewMode?: unknown;
+  status?: unknown;
+  presentation?: unknown;
+}
+/** Shell settings as supplied; unknown values fall back. */
+interface ShellSettingsInput {
+  title?: unknown;
+  privacy?: unknown;
+  theme?: unknown;
+  zoom?: unknown;
+  feedbackCount?: unknown;
+  railOpen?: unknown;
+  reviewMode?: unknown;
+  status?: unknown;
+  presentation?: unknown;
+}
+/** The shell's input: an envelope's artifacts and viewer, and shell settings. */
+export interface ArtifactShellInput {
+  envelope?: { artifacts?: unknown; viewer?: ShellViewerInput | null } | null;
+  viewer?: ShellViewerInput | null;
+  shell?: ShellSettingsInput | null;
+}
+/** The metadata-only model the shell renders. */
+export type ArtifactShellModel = ReturnType<typeof normalizeArtifactShellModel>;
+type StatusCopyTable = Readonly<Record<string, Readonly<{ title: string; detail: string }>>>;
+
+const STATUS_COPY: StatusCopyTable = Object.freeze({
   empty: Object.freeze({
     title: 'No artifact content',
     detail: 'Choose a bundled HTML artifact to begin this review.',
@@ -47,38 +88,47 @@ const STATUS_COPY = Object.freeze({
   }),
 });
 
-const PRIVACY_LABELS = Object.freeze({
+const PRIVACY_LABELS: Readonly<Record<string, string>> = Object.freeze({
   local: 'Local review',
   fragment: 'Private fragment',
   'encrypted-short': 'Encrypted short link',
 });
 
-function plainText(value, fallback = '') {
+function plainText(value: unknown, fallback = '') {
   if (typeof value === 'string') return value;
   if (typeof value === 'number' && Number.isFinite(value)) return String(value);
   return fallback;
 }
 
-function member(value, allowed, fallback) {
-  return allowed.includes(value) ? value : fallback;
+function member<T>(value: unknown, allowed: readonly T[], fallback: T) {
+  // includes accepts only its element type and does not narrow; a listed value is a member.
+  return allowed.includes(value as T) ? (value as T) : fallback;
 }
 
-function nonNegativeInteger(value, fallback = 0) {
-  return Number.isInteger(value) && value >= 0 ? value : fallback;
+// Number.isInteger does not narrow its argument to a number.
+function nonNegativeInteger(value: unknown, fallback = 0) {
+  return Number.isInteger(value) && (value as number) >= 0 ? (value as number) : fallback;
 }
 
-function viewportDimension(value, fallback) {
-  return Number.isInteger(value) && value > 0 && value <= 16_384 ? value : fallback;
+function viewportDimension(value: unknown, fallback: number) {
+  return Number.isInteger(value) && (value as number) > 0 && (value as number) <= 16_384
+    ? (value as number)
+    : fallback;
 }
 
 /** Resolve runtime presentation without mutating or upgrading stored envelopes. */
-export function resolveArtifactPresentation(value, { mode = 'single', artifactCount = 1 } = {}) {
-  if (ARTIFACT_PRESENTATIONS.includes(value)) return value;
+export function resolveArtifactPresentation(
+  value: unknown,
+  { mode = 'single', artifactCount = 1 }: { mode?: string; artifactCount?: number } = {},
+): ArtifactPresentation {
+  // includes accepts only its element type and does not narrow; a listed value is a presentation.
+  // biome-ignore format: bundles keep this one-line statement; wrapping would change their bytes.
+  if (ARTIFACT_PRESENTATIONS.includes(value as ArtifactPresentation)) return value as ArtifactPresentation;
   return artifactCount > 1 || mode === 'variants' || mode === 'split' ? 'canvas' : 'document';
 }
 
-function normalizeArtifact(value, index) {
-  const artifact = value && typeof value === 'object' ? value : {};
+function normalizeArtifact(value: ShellArtifactInput | null | undefined, index: number) {
+  const artifact: ShellArtifactInput = value && typeof value === 'object' ? value : {};
   const id = plainText(artifact.id, `artifact-${index + 1}`) || `artifact-${index + 1}`;
   return Object.freeze({
     id,
@@ -89,7 +139,7 @@ function normalizeArtifact(value, index) {
       width: viewportDimension(artifact.viewport?.width, 1440),
       height: viewportDimension(artifact.viewport?.height, 900),
     }),
-    colorScheme: member(artifact.colorScheme, ['light', 'dark'], 'light'),
+    colorScheme: member<'light' | 'dark'>(artifact.colorScheme, ['light', 'dark'], 'light'),
   });
 }
 
@@ -98,16 +148,18 @@ function normalizeArtifact(value, index) {
  * review content are intentionally excluded so they cannot be interpolated
  * into the parent document or executable source.
  */
-export function normalizeArtifactShellModel(input = {}) {
-  const source = input && typeof input === 'object' ? input : {};
-  const envelope = source.envelope && typeof source.envelope === 'object' ? source.envelope : {};
-  const viewer =
+export function normalizeArtifactShellModel(input: ArtifactShellInput | null = {}) {
+  const source: ArtifactShellInput = input && typeof input === 'object' ? input : {};
+  const envelope: NonNullable<ArtifactShellInput['envelope']> =
+    source.envelope && typeof source.envelope === 'object' ? source.envelope : {};
+  const viewer: ShellViewerInput =
     source.viewer && typeof source.viewer === 'object'
       ? source.viewer
       : envelope.viewer && typeof envelope.viewer === 'object'
         ? envelope.viewer
         : {};
-  const shell = source.shell && typeof source.shell === 'object' ? source.shell : {};
+  const shell: ShellSettingsInput =
+    source.shell && typeof source.shell === 'object' ? source.shell : {};
   const artifacts = Object.freeze(
     (Array.isArray(envelope.artifacts) ? envelope.artifacts : []).map(normalizeArtifact),
   );
@@ -169,7 +221,7 @@ export function normalizeArtifactShellModel(input = {}) {
   });
 }
 
-function activeMetadata(model) {
+function activeMetadata(model: ArtifactShellModel) {
   const artifact = model.activeArtifact;
   if (!artifact) return 'HTML · 1440×900';
   return `${artifact.kind.toUpperCase()} · ${artifact.viewport.width}×${artifact.viewport.height}`;
@@ -180,7 +232,7 @@ export function renderPlanrMark() {
   return '<span class="planr-mark" aria-hidden="true"><svg viewBox="0 0 160 160" focusable="false"><g transform="rotate(-45 80 80)"><path d="M125 50A52 52 0 1 0 125 110" fill="none" stroke="currentColor" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/><rect x="127" y="71" width="18" height="18" rx="3" fill="currentColor"/></g></svg></span>';
 }
 
-export function renderArtifactToolbar(model) {
+export function renderArtifactToolbar(model: ArtifactShellModel) {
   const interact = model.reviewMode === 'interact';
   const canvas = model.presentation === 'canvas';
   return `<header class="planr-toolbar">
@@ -193,8 +245,8 @@ ${canvas ? `  <button class="planr-toolbar-action" type="button" data-planr-acti
 </header>`;
 }
 
-function actionIcon(name) {
-  const paths = {
+function actionIcon(name: string) {
+  const paths: Record<string, string> = {
     comment:
       '<path d="M12 20a8 8 0 1 0-7.1-4.3L4 20l4.3-.9A8 8 0 0 0 12 20Z"/><path d="M12 8v8M8 12h8"/>',
     comments:
@@ -205,11 +257,11 @@ function actionIcon(name) {
   return `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">${paths[name]}</svg>`;
 }
 
-function commentsLabel(count) {
+function commentsLabel(count: number) {
   return `${count} ${count === 1 ? 'comment' : 'comments'}`;
 }
 
-export function renderDocumentActionRail(model) {
+export function renderDocumentActionRail(model: ArtifactShellModel) {
   return `<nav class="planr-floating-actions" aria-label="Review actions">
   <button type="button" data-planr-action="add-comment" aria-label="Add comment" aria-keyshortcuts="C" aria-pressed="${model.reviewMode === 'comment'}" data-planr-tooltip="Add comment (C)">${actionIcon('comment')}</button>
   <button type="button" data-planr-action="feedback" aria-label="${commentsLabel(model.feedbackCount)}" aria-controls="planr-review-rail" aria-expanded="${model.railOpen}" data-planr-tooltip="Comments">${actionIcon('comments')}<span class="planr-count" aria-hidden="true">${model.feedbackCount}</span></button>
@@ -229,12 +281,12 @@ export function renderDocumentCommentsScrim() {
   return '<button class="planr-comments-scrim" type="button" data-planr-comments-scrim data-planr-close-feedback aria-label="Close comments" tabindex="-1"></button>';
 }
 
-function renderViewButton(mode, model, disabled = false) {
+function renderViewButton(mode: string, model: ArtifactShellModel, disabled = false) {
   const label = mode[0].toUpperCase() + mode.slice(1);
   return `<button type="button" data-planr-view="${mode}" aria-pressed="${model.viewMode === mode}"${disabled ? ' disabled' : ''}>${label}</button>`;
 }
 
-export function renderArtifactVariantControls(model) {
+export function renderArtifactVariantControls(model: ArtifactShellModel) {
   const hasVariants = model.artifacts.length > 1;
   const tabs = model.artifacts
     .map((artifact, index) => {
@@ -249,14 +301,14 @@ export function renderArtifactVariantControls(model) {
 </div>`;
 }
 
-function visibleArtifactIndexes(model) {
+function visibleArtifactIndexes(model: ArtifactShellModel) {
   if (model.viewMode === 'split' && model.comparisonArtifact) {
     return new Set([model.activeIndex, model.comparisonIndex]);
   }
   return new Set(model.activeArtifact ? [model.activeIndex] : []);
 }
 
-export function renderArtifactPanels(model) {
+export function renderArtifactPanels(model: ArtifactShellModel) {
   const visible = visibleArtifactIndexes(model);
   const unavailable = model.status !== 'ready';
   return model.artifacts
@@ -274,7 +326,7 @@ export function renderArtifactPanels(model) {
     .join('');
 }
 
-export function renderArtifactStatus(model) {
+export function renderArtifactStatus(model: ArtifactShellModel) {
   const ready = model.status === 'ready';
   const copy = model.statusCopy ?? { title: '', detail: '' };
   return `<div class="planr-stage-status" role="status" aria-live="polite" aria-atomic="true"${ready ? ' hidden' : ''}>
@@ -282,7 +334,7 @@ export function renderArtifactStatus(model) {
 </div>`;
 }
 
-export function renderArtifactStage(model) {
+export function renderArtifactStage(model: ArtifactShellModel) {
   const unavailable = model.status !== 'ready';
   const breadcrumb = model.activeArtifact?.title ?? 'Artifact';
   return `<main class="planr-stage" aria-label="Artifact review stage">
@@ -296,7 +348,7 @@ ${
 </main>`;
 }
 
-export function renderArtifactRail(model) {
+export function renderArtifactRail(model: ArtifactShellModel) {
   const closed = !model.railOpen;
   return `<aside class="planr-review-rail" id="planr-review-rail" aria-label="Review comments"${closed ? ' inert aria-hidden="true"' : ''}>
   <header><h2>Review comments</h2><div class="planr-review-header-actions"><div class="planr-review-metrics" aria-label="Review metrics"><span data-planr-metric="open">0 open</span><span class="planr-count" data-planr-metric="total" aria-label="${commentsLabel(model.feedbackCount)}">${model.feedbackCount}</span></div><button class="planr-rail-close" type="button" data-planr-close-feedback aria-label="Close comments">×</button></div></header>
@@ -348,7 +400,7 @@ export function renderHostedArtifactViewerSlot() {
 </section>`;
 }
 
-export function renderArtifactShellMarkup(model) {
+export function renderArtifactShellMarkup(model: ArtifactShellModel) {
   return `<div class="planr-shell" data-planr-presentation="${model.presentation}" data-planr-view="${model.viewMode}" data-planr-review-mode="${model.reviewMode}" data-planr-state="${model.status}" data-planr-rail-open="${model.railOpen}">
   ${
     model.presentation === 'canvas'
@@ -362,6 +414,6 @@ ${renderHostedArtifactViewerSlot()}
 <div class="planr-visually-hidden" role="status" aria-live="polite" aria-atomic="true" data-planr-slot="review-announcer"></div>`;
 }
 
-export function renderArtifactShellModelData(model) {
+export function renderArtifactShellModelData(model: ArtifactShellModel) {
   return embedJson(model);
 }
