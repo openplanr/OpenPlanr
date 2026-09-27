@@ -1,14 +1,65 @@
-// @ts-check
+import type { DiagramAuthoringBundle } from '@openplanr/protocol/diagram-authoring-contracts';
+import type { DiagramEditorTransport, DiagramEditorTransportFailure } from './session.mjs';
+
+export interface DiagramOwnerHttpResponse {
+  ok: boolean;
+  status: number;
+  headers: { get(name: string): string | null };
+  body: {
+    getReader(): {
+      read(): Promise<{ done: false; value: Uint8Array } | { done: true; value?: undefined }>;
+      cancel(): Promise<void>;
+      releaseLock(): void;
+    };
+  } | null;
+}
+export interface DiagramLocalOwnerReadMetadata {
+  diagramId: string;
+  /** Opaque namespace from the authenticated owner, safe for a recovery storage key. */
+  recoveryScope: string;
+  capabilities: { read: boolean; write: boolean };
+}
+export interface DiagramLocalOwnerTransport extends DiagramEditorTransport {
+  read(): Promise<
+    | ({
+        ok: true;
+        status: 'ready';
+        bundle: DiagramAuthoringBundle;
+      } & DiagramLocalOwnerReadMetadata)
+    | ({ ok: true; status: 'absent' } & DiagramLocalOwnerReadMetadata)
+    | DiagramEditorTransportFailure
+  >;
+  recover(identity?: { transactionId?: string; fingerprint?: string }): Promise<unknown>;
+}
 /**
- * Same-origin loopback adapter. A URL is a capability: never persist it in recovery.
- * @type {typeof import('./index.d.mts').createDiagramLocalOwnerTransport}
+ * The fetch subset the transport calls. lib.dom types a finished read's value as
+ * `T | undefined`, wider than `DiagramOwnerHttpResponse` allows, so the platform default is cast.
  */
+type DiagramOwnerFetch = (
+  url: string,
+  options: {
+    method: string;
+    credentials: 'omit';
+    redirect: 'error';
+    cache: 'no-store';
+    headers: Record<string, string>;
+    body?: string;
+  },
+) => Promise<DiagramOwnerHttpResponse>;
+interface DiagramLocalOwnerTransportOptions {
+  apiBase: string;
+  fetch?: DiagramOwnerFetch;
+  origin?: string;
+  maxResponseBytes?: number;
+}
+
+/** Same-origin loopback adapter. A URL is a capability: never persist it in recovery. */
 export function createDiagramLocalOwnerTransport({
   apiBase,
-  fetch: request = globalThis.fetch,
+  fetch: request = globalThis.fetch as DiagramOwnerFetch,
   origin = globalThis.location?.origin,
   maxResponseBytes = 64 * 1024 * 1024,
-}) {
+}: DiagramLocalOwnerTransportOptions): DiagramLocalOwnerTransport {
   const base = new URL(apiBase);
   if (
     base.protocol !== 'http:' ||
@@ -30,7 +81,8 @@ export function createDiagramLocalOwnerTransport({
     maxResponseBytes > 64 * 1024 * 1024
   )
     throw new TypeError('Invalid owner response byte limit.');
-  async function call(action, body) {
+  // Each endpoint names its declared response; the session validates every field it reads.
+  async function call<Result>(action: string, body?: unknown): Promise<Result> {
     const response = await request(new URL(action, base).href, {
       method: body === undefined ? 'GET' : 'POST',
       credentials: 'omit',
@@ -64,10 +116,11 @@ export function createDiagramLocalOwnerTransport({
     } finally {
       reader.releaseLock();
     }
-    const result = JSON.parse(text);
+    const result: unknown = JSON.parse(text);
     if (!result || typeof result !== 'object' || Array.isArray(result))
       throw new Error('Owner returned an invalid response.');
-    return { ...result, ...(!response.ok ? { ok: false, httpStatus: response.status } : {}) };
+    // biome-ignore format: bundles keep this one-line object; wrapping would change their bytes.
+    return { ...result, ...(!response.ok ? { ok: false, httpStatus: response.status } : {}) } as Result;
   }
   return {
     read: () => call('read'),

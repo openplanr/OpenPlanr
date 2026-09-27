@@ -23,7 +23,6 @@
   },
   "include": [
     "packages/artifact/lib/artifact/ui/**/*.mjs",
-    "packages/artifact/lib/artifact/diagram/editor/**/*.mjs",
     "packages/artifact/lib/**/*.mts",
     "packages/protocol/src/**/*.mjs"
   ],

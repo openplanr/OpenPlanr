@@ -131,7 +131,7 @@
       // Iterable callbacks that return values need rewriting; BL-110 removes this entry.
       "includes": [
         "packages/artifact/lib/artifact/diagram/authoring/commands.mjs",
-        "packages/artifact/lib/artifact/diagram/editor/session.mjs",
+        "packages/artifact/lib/artifact/diagram/editor/session.mts",
         "packages/artifact/lib/artifact/diagram/rendering/layout.mjs",
         "packages/artifact/lib/artifact/diagram/router.mjs",
         "packages/artifact/lib/artifact/review.mjs",

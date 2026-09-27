@@ -3,8 +3,9 @@
 // The base tree is rebuilt from `git archive` with a copy of this checkout's node_modules and
 // regenerated, then three proofs run:
 //   1. every templates/**/*.js bundle and every projected planr-pipeline file hashes the same;
-//      a bundle that differs only in comments or layout passes when it is token-identical and is
-//      reported as such;
+//      a JavaScript file that differs passes as "comment-only" when it is token-identical, or as
+//      "identifier-normalized" when it is token-identical once every function-local binding is
+//      renamed to a canonical name, and the report names the tier;
 //   2. each compiled .mjs is token-identical to the tracked .mjs it replaced at the base, after
 //      esbuild re-emits both as ESM (comments and layout dropped, exports gathered into one list);
 //   3. each generated .d.mts exports the same names and kinds as the hand-written declaration it
@@ -109,17 +110,215 @@ export function normalizeTokens(code, esbuild, { format } = {}) {
   }).code;
 }
 
+function textDifference(left, right) {
+  let offset = 0;
+  while (offset < left.length && left[offset] === right[offset]) offset += 1;
+  const context = (text) => JSON.stringify(text.slice(Math.max(0, offset - 40), offset + 40));
+  return { offset, before: context(left), after: context(right) };
+}
+
 export function compareTokens(before, after, esbuild, options = {}) {
   const left = normalizeTokens(before, esbuild, options);
   const right = normalizeTokens(after, esbuild, options);
   if (left === right) return { identical: true, normalizedBytes: right.length };
-  let offset = 0;
-  while (offset < left.length && left[offset] === right[offset]) offset += 1;
-  const context = (text) => JSON.stringify(text.slice(Math.max(0, offset - 40), offset + 40));
   return {
     identical: false,
     normalizedBytes: right.length,
-    firstDifference: { offset, before: context(left), after: context(right) },
+    firstDifference: textDifference(left, right),
+  };
+}
+
+const Kind = ts.SyntaxKind;
+const opensLocalScope = (node) => ts.isFunctionLike(node) || ts.isClassStaticBlockDeclaration(node);
+
+/**
+ * How an identifier token enters the canonical stream: a `key` keeps its text (property names,
+ * labels, import and export names), a `binding` resolves to its declaration, and a `shorthand`
+ * is both, so it is expanded to `key: binding` (`key as binding` in an import).
+ */
+function identifierRole(node) {
+  const parent = node.parent;
+  switch (parent.kind) {
+    case Kind.PropertyAccessExpression:
+    case Kind.PropertyAssignment:
+    case Kind.MethodDeclaration:
+    case Kind.PropertyDeclaration:
+    case Kind.GetAccessor:
+    case Kind.SetAccessor:
+    case Kind.MetaProperty:
+    case Kind.ImportAttribute:
+      return parent.name === node ? 'key' : 'binding';
+    case Kind.ShorthandPropertyAssignment:
+      return parent.name === node ? 'shorthand' : 'binding';
+    case Kind.BindingElement:
+      if (parent.propertyName === node) return 'key';
+      return parent.propertyName ||
+        parent.dotDotDotToken ||
+        parent.parent.kind !== Kind.ObjectBindingPattern
+        ? 'binding'
+        : 'shorthand';
+    case Kind.ImportSpecifier:
+      if (parent.propertyName === node) return 'key';
+      return parent.propertyName ? 'binding' : 'shorthand';
+    case Kind.ExportSpecifier:
+    case Kind.NamespaceExport:
+    case Kind.LabeledStatement:
+    case Kind.BreakStatement:
+    case Kind.ContinueStatement:
+      return 'key';
+    default:
+      return 'binding';
+  }
+}
+
+const usesDynamicScope = (node) =>
+  node.kind === Kind.WithStatement ||
+  (ts.isCallExpression(node) &&
+    ts.isIdentifier(node.expression) &&
+    node.expression.text === 'eval');
+
+function parseJavaScript(code, fileName) {
+  const source = ts.createSourceFile(
+    fileName,
+    code,
+    { languageVersion: ts.ScriptTarget.Latest, jsDocParsingMode: ts.JSDocParsingMode.ParseNone },
+    true,
+    ts.ScriptKind.JS,
+  );
+  const options = { allowJs: true, noLib: true, noResolve: true, noEmit: true, types: [] };
+  const host = ts.createCompilerHost(options);
+  host.getSourceFile = (name) => (name === fileName ? source : undefined);
+  host.fileExists = (name) => name === fileName;
+  host.readFile = (name) => (name === fileName ? code : undefined);
+  const program = ts.createProgram({ rootNames: [fileName], options, host });
+  const syntax = program.getSyntacticDiagnostics(source);
+  if (syntax.length > 0)
+    throw new MigrationProofError(
+      'E_MIGRATION_PARSE',
+      `Parsing ${fileName} for identifier normalization failed:\n${formatDiagnostics(syntax, repositoryRoot)}`,
+    );
+  return { source, checker: program.getTypeChecker() };
+}
+
+/**
+ * The tokens of `code` with every binding declared inside a function renamed to `#<n>`, numbered
+ * by first occurrence; each reference resolves to its binding by TypeScript's scope rules, so a
+ * rebound or captured name changes the stream. Top-level bindings (script globals, module
+ * imports and exports) and unresolved names keep their text. Returns null when `with` or a
+ * direct `eval` makes scope dynamic.
+ * A renamed function or class also changes its runtime `.name`, as esbuild's own renaming does.
+ */
+export function canonicalTokens(code, fileName = 'normalized.js') {
+  const { source, checker } = parseJavaScript(code, fileName);
+  const isLocal = (symbol) =>
+    (symbol?.declarations?.length ?? 0) > 0 &&
+    symbol.declarations.every(
+      (declaration) =>
+        declaration.getSourceFile() === source &&
+        ts.findAncestor(declaration.parent, opensLocalScope) !== undefined,
+    );
+  const indexBySymbol = new Map();
+  const stream = { tokens: [], labels: [], names: [] };
+  const push = (token, label = token) => {
+    stream.tokens.push(token);
+    stream.labels.push(label);
+  };
+  const pushBinding = (symbol, text) => {
+    if (!isLocal(symbol)) {
+      push(text);
+      return;
+    }
+    if (!indexBySymbol.has(symbol)) {
+      indexBySymbol.set(symbol, stream.names.length);
+      stream.names.push(text);
+    }
+    const index = indexBySymbol.get(symbol);
+    push(`#${index}`, `${text}#${index}`);
+  };
+  const pushIdentifier = (node) => {
+    const role = identifierRole(node);
+    if (role === 'key') push(node.text);
+    else if (role === 'binding') pushBinding(checker.getSymbolAtLocation(node), node.text);
+    else {
+      const parent = node.parent;
+      push(node.text);
+      push(parent.kind === Kind.ImportSpecifier ? 'as' : ':');
+      pushBinding(
+        parent.kind === Kind.ShorthandPropertyAssignment
+          ? checker.getShorthandAssignmentValueSymbol(parent)
+          : checker.getSymbolAtLocation(node),
+        node.text,
+      );
+    }
+  };
+  let dynamicScope = false;
+  const visit = (node) => {
+    if (usesDynamicScope(node)) dynamicScope = true;
+    if (node.kind === Kind.Identifier) {
+      pushIdentifier(node);
+      return;
+    }
+    const children = node.getChildren(source);
+    for (const child of children) visit(child);
+    if (children.length === 0) {
+      const text = node.getText(source);
+      if (text) push(text);
+    }
+  };
+  visit(source);
+  return dynamicScope ? null : stream;
+}
+
+const tokenWindow = (stream, index) =>
+  JSON.stringify(stream.labels.slice(Math.max(0, index - 8), index + 8).join(' '));
+
+/** Distinct `[before, after]` names of the bindings the canonical renaming paired. */
+function renamedBindings(before, after) {
+  const pairs = new Map();
+  before.names.forEach((name, index) => {
+    const other = after.names[index];
+    if (name !== other) pairs.set(`${name}\0${other}`, [name, other]);
+  });
+  return [...pairs.values()];
+}
+
+export const ACCEPTED_TIERS = Object.freeze([
+  'byte-identical',
+  'comment-only',
+  'identifier-normalized',
+]);
+
+/**
+ * The most specific tier that proves two versions of a JavaScript file equivalent:
+ * `byte-identical`, `comment-only` (token-identical) or `identifier-normalized` (token-identical
+ * after canonical renaming of function-local bindings). Anything else is `different`, with the
+ * first difference of the most permissive comparison that applied.
+ */
+export function compareJavaScript(before, after, esbuild, options = {}) {
+  if (before === after) return { tier: 'byte-identical' };
+  const left = normalizeTokens(before, esbuild, options);
+  const right = normalizeTokens(after, esbuild, options);
+  if (left === right) return { tier: 'comment-only' };
+  const base = canonicalTokens(left, 'base.js');
+  const head = canonicalTokens(right, 'head.js');
+  if (!base || !head)
+    return {
+      tier: 'different',
+      reason: 'identifier normalization does not apply to code that uses with or a direct eval',
+      firstDifference: textDifference(left, right),
+    };
+  const length = Math.max(base.tokens.length, head.tokens.length);
+  let index = 0;
+  while (index < length && base.tokens[index] === head.tokens[index]) index += 1;
+  if (index === length)
+    return { tier: 'identifier-normalized', renamed: renamedBindings(base, head) };
+  return {
+    tier: 'different',
+    firstDifference: {
+      token: index,
+      before: tokenWindow(base, index),
+      after: tokenWindow(head, index),
+    },
   };
 }
 
@@ -412,12 +611,12 @@ const hashAt = (tree, path) => {
 function classify({ root, baseTree, path, isMigratedDeclaration }) {
   const before = hashAt(baseTree, path);
   const after = hashAt(root, path);
-  if (before === after) return { path, status: 'identical', hash: after };
+  if (before === after) return { path, status: 'byte-identical', hash: after };
   if (before === null) return { path, status: 'added', hash: after };
   if (after === null) return { path, status: 'removed', hash: before };
   if (path.startsWith(`${PROJECTION_MANIFESTS}/`)) return { path, status: 'manifest', hash: after };
   if (isJavaScript(path)) {
-    const tokens = compareTokens(
+    const comparison = compareJavaScript(
       readFileSync(resolve(baseTree, path), 'utf8'),
       readFileSync(resolve(root, path), 'utf8'),
       esbuildFor(root, resolve(root, path)),
@@ -425,9 +624,11 @@ function classify({ root, baseTree, path, isMigratedDeclaration }) {
     );
     return {
       path,
-      status: tokens.identical ? 'token-identical' : 'different',
+      status: comparison.tier,
       hash: after,
-      firstDifference: tokens.firstDifference,
+      renamed: comparison.renamed,
+      reason: comparison.reason,
+      firstDifference: comparison.firstDifference,
     };
   }
   if (isDeclaration(path) && isMigratedDeclaration)
@@ -435,8 +636,8 @@ function classify({ root, baseTree, path, isMigratedDeclaration }) {
   return { path, status: 'different', hash: after };
 }
 
-const describeDifference = ({ offset, before, after }) =>
-  `(offset ${offset}): ${before} vs ${after}`;
+const describeDifference = ({ offset, token, before, after }) =>
+  `(${token === undefined ? `offset ${offset}` : `token ${token}`}): ${before} vs ${after}`;
 
 /** Proofs 2 and 3 for one migrated source: its compiled module and generated declaration. */
 function proveSource(root, entry) {
@@ -540,9 +741,9 @@ export function verifyMigration({ root = repositoryRoot, baseRef }) {
     rmSync(base.scratch, { recursive: true, force: true });
   }
   for (const bundle of trees.bundles)
-    if (!['identical', 'token-identical'].includes(bundle.status))
+    if (!ACCEPTED_TIERS.includes(bundle.status))
       failures.push(
-        `bundle ${bundle.path} is ${bundle.status}${bundle.firstDifference ? ` ${describeDifference(bundle.firstDifference)}` : ''}`,
+        `bundle ${bundle.path} is ${bundle.status}${bundle.reason ? ` (${bundle.reason})` : ''}${bundle.firstDifference ? ` ${describeDifference(bundle.firstDifference)}` : ''}`,
       );
   const reviewed = trees.projected.filter((entry) =>
     ['different', 'added', 'removed'].includes(entry.status),
@@ -560,8 +761,14 @@ export function verifyMigration({ root = repositoryRoot, baseRef }) {
 }
 
 const count = (entries, status) => entries.filter((entry) => entry.status === status).length;
-const row = (entry) =>
-  `  ${entry.status.padEnd(16)} ${(entry.hash ?? '').slice(0, 12).padEnd(12)} ${entry.path}`;
+const tierCounts = (entries) =>
+  [...ACCEPTED_TIERS, 'different'].map((tier) => `${count(entries, tier)} ${tier}`).join(', ');
+const row = (entry) => [
+  `  ${entry.status.padEnd(21)} ${(entry.hash ?? '').slice(0, 12).padEnd(12)} ${entry.path}`,
+  ...(entry.renamed ?? []).map(
+    ([before, after]) => `  ${''.padEnd(34)} renamed local ${before} -> ${after}`,
+  ),
+];
 
 function renderModules(modules) {
   return [
@@ -584,18 +791,13 @@ function renderDeclarations(declarations) {
 }
 
 function renderBundles(bundles) {
-  const identical = count(bundles, 'identical');
-  const tokens = count(bundles, 'token-identical');
-  return [
-    `Bundles (${bundles.length}): ${identical} byte-identical, ${tokens} token-identical, ${bundles.length - identical - tokens} different`,
-    ...bundles.map(row),
-  ];
+  return [`Bundles (${bundles.length}): ${tierCounts(bundles)}`, ...bundles.flatMap(row)];
 }
 
 function renderProjected(projected, reviewed) {
   const lines = [
-    `Projected files (${projected.length}): ${count(projected, 'identical')} identical, ${count(projected, 'token-identical')} token-identical, ${count(projected, 'regenerated')} regenerated from migrated sources, ${count(projected, 'manifest')} manifests, ${reviewed.length} to review`,
-    ...projected.filter((entry) => entry.status !== 'identical').map(row),
+    `Projected files (${projected.length}): ${tierCounts(projected)}, ${count(projected, 'regenerated')} regenerated from migrated sources, ${count(projected, 'manifest')} manifests, ${reviewed.length} to review`,
+    ...projected.filter((entry) => entry.status !== 'byte-identical').flatMap(row),
   ];
   if (reviewed.length > 0)
     lines.push(

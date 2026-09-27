@@ -13,7 +13,7 @@ import {
 } from './diagram-editor-actions.mjs';
 import { downloadJson } from './diagram-editor-dom.mjs';
 
-/** @typedef {import('../diagram/editor/index.d.mts').DiagramEditorState} DiagramEditorState */
+/** @typedef {import('../diagram/editor/index.mjs').DiagramEditorState} DiagramEditorState */
 /** @typedef {import('@openplanr/protocol/diagram-authoring-contracts').DiagramAuthoringBundle} DiagramAuthoringBundle */
 /**
  * One dispatched action with the state it was dispatched against.

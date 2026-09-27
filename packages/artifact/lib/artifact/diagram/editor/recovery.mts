@@ -1,14 +1,41 @@
-// @ts-check
 import { inspectPlainData } from '../authoring/model.mjs';
+
+export interface DiagramEditorRecoveryStatus {
+  mode: 'available' | 'memory-only';
+  warning: string | null;
+}
+export interface DiagramEditorRecovery {
+  load(): unknown | null;
+  save(draft: unknown): { ok: boolean } & DiagramEditorRecoveryStatus;
+  clear(): { ok: boolean } & DiagramEditorRecoveryStatus;
+  status(): DiagramEditorRecoveryStatus;
+}
+interface DiagramEditorRecoveryOptions {
+  /** Supply sessionStorage or a storage adapter; do not store owner URLs/tokens. */
+  storage?: {
+    getItem(key: string): string | null;
+    setItem(key: string, value: string): unknown;
+    removeItem(key: string): unknown;
+  } | null;
+  /** Use the scope returned by the authenticated local owner, never unverified document input. */
+  scope: { sessionId: string; diagramId: string };
+  maxBytes?: number;
+}
+/** A stored entry as parsed, before any field is trusted. */
+interface StoredRecovery {
+  version?: unknown;
+  scope?: { sessionId?: unknown; diagramId?: unknown } | null;
+  draft?: unknown;
+}
 
 const MAX_RECOVERY_BYTES = 2 * 1024 * 1024;
 const scopePart = /^[a-zA-Z0-9_-]{1,160}$/u;
 
-/**
- * Recovery is a bounded convenience, never an acknowledgement or authority.
- * @type {typeof import('./index.d.mts').createDiagramEditorRecovery}
- */
-export function createDiagramEditorRecovery({ storage, scope, maxBytes = MAX_RECOVERY_BYTES }) {
+/** Recovery is a bounded convenience, never an acknowledgement or authority. */
+export function createDiagramEditorRecovery(
+  // biome-ignore format: bundles keep this one-line pattern; wrapping would change their bytes.
+  { storage, scope, maxBytes = MAX_RECOVERY_BYTES }: DiagramEditorRecoveryOptions,
+): DiagramEditorRecovery {
   if (!scope || !scopePart.test(scope.sessionId) || !scopePart.test(scope.diagramId))
     throw new TypeError('Recovery requires a verified owner session and diagram scope.');
   if (!Number.isInteger(maxBytes) || maxBytes < 1 || maxBytes > MAX_RECOVERY_BYTES)
@@ -16,16 +43,11 @@ export function createDiagramEditorRecovery({ storage, scope, maxBytes = MAX_REC
   const boundScope = { sessionId: scope.sessionId, diagramId: scope.diagramId };
   const key = `openplanr:diagram-editor:1:${boundScope.sessionId}:${boundScope.diagramId}`;
   let quarantined = false;
-  /** @type {import('./index.d.mts').DiagramEditorRecoveryStatus['mode']} */
-  let mode = storage ? 'available' : 'memory-only';
+  let mode: DiagramEditorRecoveryStatus['mode'] = storage ? 'available' : 'memory-only';
   let warning = storage
     ? null
     : 'Pending edits survive only in this open session; recovery storage is unavailable.';
-  /**
-   * @param {string} message
-   * @returns {{ ok: false } & import('./index.d.mts').DiagramEditorRecoveryStatus}
-   */
-  const unavailable = (message) => {
+  const unavailable = (message: string): { ok: false } & DiagramEditorRecoveryStatus => {
     mode = 'memory-only';
     warning = message;
     return { ok: false, mode, warning };
@@ -43,7 +65,7 @@ export function createDiagramEditorRecovery({ storage, scope, maxBytes = MAX_REC
           new TextEncoder().encode(raw).length > maxBytes
         )
           throw new Error('Recovery exceeds its size limit.');
-        const value = JSON.parse(raw);
+        const value: StoredRecovery | null = JSON.parse(raw);
         if (
           inspectPlainData(value).length ||
           value?.version !== 1 ||
