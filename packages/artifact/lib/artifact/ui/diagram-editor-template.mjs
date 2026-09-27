@@ -309,9 +309,13 @@ export function renderEditorControls(doc, dom, { scopedId, actions, panels }) {
   canvasButton(modes, 'Select', 'select-tool', { icon: 'select', 'aria-pressed': 'true' });
   canvasButton(modes, 'Pan', 'pan-tool', { icon: 'pan', 'aria-pressed': 'false' });
   const snapping = toolGroup('Snapping');
-  canvasButton(snapping, 'Snap', 'snap', { icon: 'snap', 'aria-pressed': 'false' });
+  canvasButton(snapping, 'Snap', 'snap', { icon: 'snap-off', 'aria-pressed': 'false' });
   const zoomTools = toolGroup('Zoom');
-  canvasButton(zoomTools, '−', 'zoom-out', { 'aria-label': 'Zoom out' });
+  canvasButton(zoomTools, 'Zoom out', 'zoom-out', {
+    icon: 'minus',
+    iconOnly: true,
+    className: 'de-icon-button',
+  });
   const zoomValue = element(
     doc,
     'output',
@@ -319,7 +323,11 @@ export function renderEditorControls(doc, dom, { scopedId, actions, panels }) {
     '100%',
   );
   zoomTools.append(zoomValue);
-  canvasButton(zoomTools, '+', 'zoom-in', { 'aria-label': 'Zoom in' });
+  canvasButton(zoomTools, 'Zoom in', 'zoom-in', {
+    icon: 'plus',
+    iconOnly: true,
+    className: 'de-icon-button',
+  });
   canvasButton(zoomTools, 'Fit', 'fit', { icon: 'fit' });
   dom.canvasTools.append(modes, snapping, zoomTools);
   return { hostPanes, moreButton, moreMenu, zoomValue };
