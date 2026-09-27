@@ -46,6 +46,26 @@ const DOMAIN_PROJECTIONS = Object.freeze({
   ]),
 });
 
+// Targets a domain no longer projects. A checkout that pulls the new manifest never sees them in
+// its previous manifest, so they are removed by name as well.
+const RETIRED_TARGETS = Object.freeze({
+  design: Object.freeze([
+    'lib/design-engine/canvas-wrap.mjs',
+    'templates/design/DesignCanvas.jsx',
+    'templates/design/README.md',
+    'templates/design/canvas-shell.html',
+    'templates/design/prototype-shell.html',
+    'templates/design/vendor/DesignCanvas.js',
+    'templates/design/vendor/fetch-vendor.mjs',
+    'templates/design/vendor/pretext.js',
+    'templates/design/vendor/react-dom.production.min.js',
+    'templates/design/vendor/react.production.min.js',
+    'templates/design/walkthrough-shell.html',
+    'templates/studio/enhancements.js',
+    'templates/studio/handoff-center.js',
+  ]),
+});
+
 const PROTOCOL_TARGETS = Object.freeze({
   errors: 'lib/protocol/errors.mjs',
   'canonical-json': 'lib/protocol/canonical-json.mjs',
@@ -308,7 +328,11 @@ function main() {
     let changed = 0;
     const currentTargets = new Set(entries.map((entry) => entry.target));
     for (const domain of options.domains) {
-      for (const staleTarget of previousManifestTargets(options.target, domain)) {
+      const staleTargets = new Set([
+        ...previousManifestTargets(options.target, domain),
+        ...(RETIRED_TARGETS[domain] ?? []),
+      ]);
+      for (const staleTarget of staleTargets) {
         if (currentTargets.has(staleTarget)) continue;
         const stalePath = resolve(options.target, staleTarget);
         const containment = relative(options.target, stalePath);
