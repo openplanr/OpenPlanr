@@ -1,5 +1,6 @@
 import YAML from 'yaml';
 import type { ArtifactType } from '../models/types.js';
+import { messageOf } from '../utils/error-message.js';
 import { parseTaskCheckboxLines } from '../utils/markdown.js';
 
 export class ArtifactInvariantError extends Error {
@@ -39,7 +40,7 @@ export function validateArtifactBytes(
   try {
     afterData = YAML.parse(fmMatch[1]) ?? {};
   } catch (e) {
-    return { ok: false, reason: `frontmatter YAML invalid: ${(e as Error).message}` };
+    return { ok: false, reason: `frontmatter YAML invalid: ${messageOf(e)}` };
   }
 
   const beforeFmMatch = FRONTMATTER_RE.exec(before);

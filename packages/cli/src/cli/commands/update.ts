@@ -9,6 +9,7 @@ import type { Command } from 'commander';
 import { findArtifactTypeById, updateArtifactFields } from '../../services/artifact-service.js';
 import { loadConfig } from '../../services/config-service.js';
 import { isValidStatus, VALID_STATUSES } from '../../utils/constants.js';
+import { messageOf } from '../../utils/error-message.js';
 import { logger } from '../../utils/logger.js';
 import { requireArtifactId } from '../helpers/artifact-id.js';
 import { applyBulkCheckboxes, resolveBulkStatusIntent } from '../helpers/bulk-checkbox-update.js';
@@ -52,7 +53,7 @@ export function registerUpdateCommand(program: Command) {
             allPending: opts.allPending,
           });
         } catch (err) {
-          logger.error((err as Error).message);
+          logger.error(messageOf(err));
           process.exit(1);
           return;
         }
@@ -87,7 +88,7 @@ export function registerUpdateCommand(program: Command) {
                 });
                 logger.success(`Updated ${id}: status=${intent.bulkStatus}`);
               } catch (err) {
-                logger.error(`Failed to update ${id}: ${(err as Error).message}`);
+                logger.error(`Failed to update ${id}: ${messageOf(err)}`);
                 hasError = true;
               }
               continue;
@@ -103,7 +104,7 @@ export function registerUpdateCommand(program: Command) {
               const checkboxNote = result.flippedAny ? ' (subtasks flipped)' : '';
               logger.success(`Updated ${id}: status=${result.status}${checkboxNote}`);
             } catch (err) {
-              logger.error(`Failed to update ${id}: ${(err as Error).message}`);
+              logger.error(`Failed to update ${id}: ${messageOf(err)}`);
               hasError = true;
             }
             continue;
@@ -154,7 +155,7 @@ export function registerUpdateCommand(program: Command) {
               .join(', ');
             logger.success(`Updated ${id}: ${fieldSummary}`);
           } catch (err) {
-            logger.error(`Failed to update ${id}: ${(err as Error).message}`);
+            logger.error(`Failed to update ${id}: ${messageOf(err)}`);
             hasError = true;
           }
         }

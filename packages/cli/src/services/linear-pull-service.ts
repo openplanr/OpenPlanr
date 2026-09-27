@@ -22,6 +22,7 @@ import { reconcileStatus } from '../../lib/integrations.mjs';
 import type { ParsedSubtask } from '../agents/task-parser.js';
 import { parseTaskMarkdown } from '../agents/task-parser.js';
 import type { BacklogStatus, OpenPlanrConfig, TaskStatus } from '../models/types.js';
+import { messageOf } from '../utils/error-message.js';
 import { isVerbose, logger } from '../utils/logger.js';
 import {
   applyTaskCheckboxStateMap,
@@ -448,7 +449,7 @@ export async function syncLinearStatusIntoArtifacts(
           });
         } catch (err) {
           logger.warn(
-            `linear sync: push-back failed for ${t.type} ${t.id} (${(err as Error).message}) — local frontmatter unchanged, will retry on next sync.`,
+            `linear sync: push-back failed for ${t.type} ${t.id} (${messageOf(err)}) — local frontmatter unchanged, will retry on next sync.`,
           );
           summary.pushFailures++;
           continue;

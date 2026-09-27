@@ -3,6 +3,7 @@ import { mkdtemp, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { messageOf } from '../utils/error-message.js';
 import { resolvePipelinePackage } from './pipeline-package-service.js';
 import { inspectRuntimeProjectContext } from './runtime-manager/inventory.js';
 
@@ -274,7 +275,7 @@ function readQuality(artifacts: Array<{ path: string }>): {
   try {
     report = JSON.parse(readFileSync(file.path, 'utf8')) as { status?: unknown; checks?: unknown };
   } catch (error) {
-    return unusable(`unreadable: ${(error as Error).message}`);
+    return unusable(`unreadable: ${messageOf(error)}`);
   }
   if (report.status !== 'pass' && report.status !== 'warning' && report.status !== 'invalid') {
     return unusable(`unknown status ${JSON.stringify(report.status)}`);

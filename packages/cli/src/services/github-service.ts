@@ -19,6 +19,7 @@ import type {
   GitHubCommitSummary,
   GitHubPullRequestSummary,
 } from '../models/types.js';
+import { messageOf } from '../utils/error-message.js';
 import { parseExternalJson } from '../utils/external-json.js';
 import { logger } from '../utils/logger.js';
 import { parseMarkdown } from '../utils/markdown.js';
@@ -716,7 +717,7 @@ export async function fetchRecentCommits(args: {
     logger.debug('fetchRecentCommits failed', err);
     return {
       commits: [],
-      warning: `Could not load commits: ${(err as Error).message}`,
+      warning: `Could not load commits: ${messageOf(err)}`,
     };
   }
 }
@@ -760,7 +761,7 @@ export async function fetchRecentPullRequests(args: {
     logger.debug('fetchRecentPullRequests failed', err);
     return {
       pullRequests: [],
-      warning: `Could not load pull requests: ${(err as Error).message}`,
+      warning: `Could not load pull requests: ${messageOf(err)}`,
     };
   }
 }
@@ -773,6 +774,6 @@ export async function validateRepoAccessible(): Promise<{ ok: boolean; message: 
     await verifyGitHubRepo();
     return { ok: true, message: 'GitHub repository is reachable.' };
   } catch (err) {
-    return { ok: false, message: (err as Error).message };
+    return { ok: false, message: messageOf(err) };
   }
 }

@@ -3,6 +3,7 @@
  */
 
 import type { DistributionResult, OpenPlanrConfig } from '../models/types.js';
+import { messageOf } from '../utils/error-message.js';
 import { createIssue, ensureLabel } from './github-service.js';
 
 const SLACK_TEXT_MAX = 12000;
@@ -38,7 +39,7 @@ export async function pushReportAsGitHubIssue(args: {
     return {
       channel: 'github_issue',
       ok: false,
-      message: (err as Error).message,
+      message: messageOf(err),
     };
   }
 }
@@ -102,7 +103,7 @@ export async function pushReportToSlack(
     return {
       channel: 'slack',
       ok: false,
-      message: `Slack request failed: ${(err as Error).message}`,
+      message: `Slack request failed: ${messageOf(err)}`,
     };
   }
 }

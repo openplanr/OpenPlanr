@@ -5,6 +5,7 @@
 
 import { readFile } from 'node:fs/promises';
 import type { VoiceStandupSession } from '../models/types.js';
+import { messageOf } from '../utils/error-message.js';
 import { formatStandupMarkdown, parseStandupTranscript } from './standup-parser.js';
 
 export async function loadTranscriptFromFile(path: string): Promise<VoiceStandupSession> {
@@ -15,7 +16,7 @@ export async function loadTranscriptFromFile(path: string): Promise<VoiceStandup
     return {
       status: 'error',
       transcript: '',
-      errorMessage: (err as Error).message,
+      errorMessage: messageOf(err),
     };
   }
 }

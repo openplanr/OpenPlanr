@@ -9,6 +9,7 @@ import type {
   StakeholderReportFormat,
   StakeholderReportType,
 } from '../models/types.js';
+import { messageOf } from '../utils/error-message.js';
 import { ensureDir, writeFile } from '../utils/fs.js';
 import { logger } from '../utils/logger.js';
 import { type BuildContextOptions, buildStakeholderReportContext } from './context-pack-service.js';
@@ -40,9 +41,7 @@ export async function generateStakeholderReportMarkdown(
     );
   } catch (err) {
     logger.debug('report template render failed', err);
-    throw new Error(
-      `Failed to render report template "${templatePath}": ${(err as Error).message}`,
-    );
+    throw new Error(`Failed to render report template "${templatePath}": ${messageOf(err)}`);
   }
 }
 

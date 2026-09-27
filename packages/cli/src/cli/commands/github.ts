@@ -32,6 +32,7 @@ import {
   verifyGitHubRepo,
 } from '../../services/github-service.js';
 import { promptSelect } from '../../services/prompt-service.js';
+import { messageOf } from '../../utils/error-message.js';
 import { escapeRegExp } from '../../utils/escape-regexp.js';
 import { display, logger } from '../../utils/logger.js';
 import { requireArtifactId } from '../helpers/artifact-id.js';
@@ -208,7 +209,7 @@ export function registerGitHubCommand(program: Command) {
       try {
         repoInfo = await verifyGitHubRepo();
       } catch (e) {
-        logger.error((e as Error).message);
+        logger.error(messageOf(e));
         process.exit(1);
       }
 
@@ -279,7 +280,7 @@ export function registerGitHubCommand(program: Command) {
             else updated++;
           }
         } catch (e) {
-          logger.error(`  Failed to push ${id}: ${(e as Error).message}`);
+          logger.error(`  Failed to push ${id}: ${messageOf(e)}`);
         }
       }
 
@@ -304,7 +305,7 @@ export function registerGitHubCommand(program: Command) {
       try {
         repoInfo = await verifyGitHubRepo();
       } catch (e) {
-        logger.error((e as Error).message);
+        logger.error(messageOf(e));
         process.exit(1);
       }
 
@@ -393,7 +394,7 @@ export function registerGitHubCommand(program: Command) {
             });
           }
         } catch (e) {
-          logger.error(`  Failed to sync ${artifact.id}: ${(e as Error).message}`);
+          logger.error(`  Failed to sync ${artifact.id}: ${messageOf(e)}`);
         }
       }
 
@@ -465,7 +466,7 @@ export function registerGitHubCommand(program: Command) {
       try {
         await verifyGitHubRepo();
       } catch (e) {
-        logger.error((e as Error).message);
+        logger.error(messageOf(e));
         process.exit(1);
       }
 

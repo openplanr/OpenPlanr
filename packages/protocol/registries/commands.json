@@ -440,7 +440,7 @@
       "ownerPackage": "openplanr",
       "source": {
         "path": "packages/cli/src/cli/commands/github.ts",
-        "digest": "sha256:aaf2d292687c8fe35296fced2931cf57ec75a9450d734abd65946d84bb7daa46"
+        "digest": "sha256:27e650bf69db7a3081c62682f502790c07e7be54d4827b67a6fc8e1f9cbab47f"
       },
       "authorityClass": "workflow",
       "machineJson": false,
@@ -797,7 +797,7 @@
       "ownerPackage": "openplanr",
       "source": {
         "path": "packages/cli/src/cli/commands/spec.ts",
-        "digest": "sha256:9a0a6738ff2d42523aa8f05000ebb3b4aea0f88976e7ed6c25026b163b58693a"
+        "digest": "sha256:bbf42397ddcb184bf692a8a87b5c49ac30b9ee7e30fc1f1d204e0338ea27135c"
       },
       "authorityClass": "workflow",
       "machineJson": false,
@@ -944,7 +944,7 @@
       "ownerPackage": "openplanr",
       "source": {
         "path": "packages/cli/src/cli/commands/update.ts",
-        "digest": "sha256:e176ab43b9177e7a7217734aa8950cba4903aedd7b9b501b646d2adad2603d08"
+        "digest": "sha256:0eb24c97914c8c86ae23506334e905f58b2b4d5b3f363b24e177122824ec18d4"
       },
       "authorityClass": "workflow",
       "machineJson": false,
@@ -1948,5 +1948,5 @@
       ]
     }
   ],
-  "documentDigest": "sha256:0c09d9cef8162ef9c9ea60054ba44b7345a8a76f49710a91f2a3b29037e0a90d"
+  "documentDigest": "sha256:1276c532e1be62e2a9e1c725ca9249b794b98f5ddf999c2d1ade9cff3feec3b1"
 }
