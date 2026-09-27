@@ -4,6 +4,12 @@
   "generator": "scripts/protocol/project-protocol.mjs",
   "entries": [
     {
+      "source": "packages/protocol/projections/pipeline/lib/dashboard/closed-json-contract.mjs",
+      "target": "lib/dashboard/closed-json-contract.mjs",
+      "sha256": "ac5b8f21d4b7f0c3c7087add9b16ae63f679f89c19d8ebe8da9b23ddc5250bb7",
+      "mode": "644"
+    },
+    {
       "source": "packages/protocol/lib/dashboard/generated/operate-schema-token-codec.mjs",
       "target": "lib/dashboard/generated/operate-schema-token-codec.mjs",
       "sha256": "dfd8f5bf819dd6cc84085472116ee43ce47c8a376830599b043bfbeacc64c86a",
@@ -16,9 +22,21 @@
       "mode": "644"
     },
     {
+      "source": "packages/protocol/projections/pipeline/lib/dashboard/operate-experience-audit-display-contract.mjs",
+      "target": "lib/dashboard/operate-experience-audit-display-contract.mjs",
+      "sha256": "ab473b018b6d432d62d6a1bdf802cb9cd95d6b3c13286657b462fbd18e1c1669",
+      "mode": "644"
+    },
+    {
       "source": "packages/protocol/lib/dashboard/operate-experience-display-contract.d.mts",
       "target": "lib/dashboard/operate-experience-display-contract.d.mts",
       "sha256": "b565a480f2c2dc7bd4fba7e0a1fe15d8008d202aea8298fd9b583059d1387333",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/projections/pipeline/lib/dashboard/operate-experience-display-contract.mjs",
+      "target": "lib/dashboard/operate-experience-display-contract.mjs",
+      "sha256": "e78c9a222824e2e5fb8109282c23226b85f8916a26b9afcf277a3fff26c629f2",
       "mode": "644"
     },
     {
@@ -28,9 +46,33 @@
       "mode": "644"
     },
     {
+      "source": "packages/protocol/projections/pipeline/lib/dashboard/operate-experience-surface-contract.mjs",
+      "target": "lib/dashboard/operate-experience-surface-contract.mjs",
+      "sha256": "acc6ee177751d2e9a1e2f3abf7baf717935697cdd076fb683b9c8ecc18d4042e",
+      "mode": "644"
+    },
+    {
       "source": "packages/protocol/lib/dashboard/operate-review-contract.d.mts",
       "target": "lib/dashboard/operate-review-contract.d.mts",
       "sha256": "0d871983b8b2ad0561b063f29ab75525e89d10531293f1cd4df49d8360cd0dc2",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/projections/pipeline/lib/dashboard/operate-review-contract.mjs",
+      "target": "lib/dashboard/operate-review-contract.mjs",
+      "sha256": "9446721b7591b3286fd9e9c756f22d8f76d52f18931c8d277e690769370ae9ae",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/lib/dashboard/operate-review-display-workspace-contract.d.mts",
+      "target": "lib/dashboard/operate-review-display-workspace-contract.d.mts",
+      "sha256": "6cff9b4af4360ad1eedfa6abf8db93d28056e2bfc9a9ff7b5f1141db2265c0cf",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/projections/pipeline/lib/dashboard/operate-review-display-workspace-contract.mjs",
+      "target": "lib/dashboard/operate-review-display-workspace-contract.mjs",
+      "sha256": "b352568d883656bdb6e204eb5e811c7cbcf7400f80899a3b088d3483386e25ee",
       "mode": "644"
     },
     {

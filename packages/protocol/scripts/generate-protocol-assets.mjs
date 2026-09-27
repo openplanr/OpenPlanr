@@ -215,6 +215,35 @@ const projectionFiles = new Map([
 for (const [name, value] of projectionFiles)
   expected.set(`projections/pipeline/lib/protocol/${name}`, value);
 
+// The pipeline has no src/; its dashboard contracts import the lib/protocol projection instead.
+const dashboardRuntimeContracts = [
+  'closed-json-contract.mjs',
+  'operate-experience-audit-display-contract.mjs',
+  'operate-experience-display-contract.mjs',
+  'operate-experience-surface-contract.mjs',
+  'operate-review-contract.mjs',
+  'operate-review-display-workspace-contract.mjs',
+];
+for (const name of dashboardRuntimeContracts) {
+  const projected = read(`lib/dashboard/${name}`).replace(
+    /from '\.\.\/\.\.\/src\/([\w-]+\.mjs)'/gu,
+    (_specifier, file) => {
+      if (!projectionFiles.has(file)) {
+        throw new Error(
+          `lib/dashboard/${name} imports src/${file}, which has no pipeline lib/protocol projection.`,
+        );
+      }
+      return `from '../protocol/${file}'`;
+    },
+  );
+  if (/['"]\.\.\/\.\.\//u.test(projected)) {
+    throw new Error(
+      `lib/dashboard/${name} still references a path outside the pipeline package after projection.`,
+    );
+  }
+  expected.set(`projections/pipeline/lib/dashboard/${name}`, projected);
+}
+
 function walk(root, prefix = '') {
   const values = [];
   for (const name of readdirSync(root, { withFileTypes: true }).sort((a, b) =>

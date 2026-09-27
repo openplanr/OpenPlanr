@@ -37,6 +37,7 @@ const DASHBOARD_CONTRACT_FILES = new Set([
   'operate-experience-display-contract.d.mts',
   'operate-experience-surface-contract.d.mts',
   'operate-review-contract.d.mts',
+  'operate-review-display-workspace-contract.d.mts',
   'operate-review-payload-safety.d.mts',
   'operate-review-payload-safety.mjs',
   'operate-review-workspace-projection-v2.d.mts',
@@ -56,6 +57,11 @@ const mappings = Object.freeze([
     target: 'lib/dashboard',
     rejectExtras: false,
     include: (path) => DASHBOARD_CONTRACT_FILES.has(path),
+  }),
+  Object.freeze({
+    source: 'packages/protocol/projections/pipeline/lib/dashboard',
+    target: 'lib/dashboard',
+    rejectExtras: false,
   }),
   Object.freeze({
     source: 'packages/protocol/registries',
