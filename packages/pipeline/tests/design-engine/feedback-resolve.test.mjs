@@ -212,6 +212,32 @@ test('feedback resolve: unknown pin id is a non-fatal no-op (reported as missing
   }
 });
 
+test('feedback resolve: an unreadable feedback file fails with its error, not as missing pins', async () => {
+  const s = await setup();
+  try {
+    const feedbackPath = join(s.boardDir, 'feedback.json');
+    const truncated = '{"pins": [{"id": "a1b2c3d4e5f6", "comment": "keep me"';
+    writeFileSync(feedbackPath, truncated);
+    await assert.rejects(
+      runCli(
+        ['feedback', 'resolve', '--dir', s.boardDir, '--id', s.slug, '--pins', 'a1b2c3d4e5f6'],
+        s.env,
+      ),
+      (error) => {
+        assert.equal(error.code, 1);
+        assert.ok(
+          error.stderr.includes(`The design board feedback ${feedbackPath} is unreadable: `),
+          error.stderr,
+        );
+        return true;
+      },
+    );
+    assert.equal(readFileSync(feedbackPath, 'utf8'), truncated);
+  } finally {
+    await s.teardown();
+  }
+});
+
 test('daemon control and browser mutation boundaries reject unauthenticated and cross-origin calls', async () => {
   const s = await setup();
   try {

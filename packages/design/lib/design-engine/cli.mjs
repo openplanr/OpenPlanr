@@ -22,7 +22,6 @@
 
 import { spawn } from 'node:child_process';
 import {
-  chmodSync,
   closeSync,
   copyFileSync,
   existsSync,
@@ -65,6 +64,7 @@ import {
 import { contractInstructions, sheetContract, validateSheet } from './providers/claude-svg.mjs';
 import { DEFAULT_PROVIDER, resolveProvider } from './providers/index.mjs';
 import * as openai from './providers/openai.mjs';
+import { writePrivateJsonState } from './server-util.mjs';
 import { appendRound, createSession, loadSession, saveSession } from './session.mjs';
 import { detectConflicts, loadProfile, saveProfile, updateTaste } from './taste.mjs';
 
@@ -155,18 +155,29 @@ async function cmdSetup(args) {
   if (!key || !key.startsWith('sk-')) fail('that does not look like an OpenAI key (sk-…)');
 
   const credsFile = credentialsPath();
-  mkdirSync(planrHome(), { recursive: true });
+  // Other tools keep their own keys in this file, so only a missing file starts empty.
+  const unreadable = (reason) =>
+    fail(
+      `${credsFile} is unreadable (${reason}); it was left unchanged. Repair it or move it aside, then retry.`,
+    );
+  let stored;
+  try {
+    stored = readFileSync(credsFile);
+  } catch (error) {
+    if (error?.code !== 'ENOENT') unreadable(error.code);
+  }
   let creds = {};
-  if (existsSync(credsFile)) {
+  if (stored) {
     try {
-      creds = JSON.parse(readFileSync(credsFile, 'utf-8'));
+      creds = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(stored));
     } catch {
-      creds = {};
+      // A parse message quotes the file, which holds API keys.
+      unreadable('not valid JSON');
     }
   }
+  if (!creds || typeof creds !== 'object' || Array.isArray(creds)) unreadable('not a JSON object');
   creds.openai_api_key = key;
-  writeFileSync(credsFile, `${JSON.stringify(creds, null, 2)}\n`);
-  chmodSync(credsFile, 0o600);
+  writePrivateJsonState(credsFile, creds);
   errLine(`✓ key stored in ${credsFile} (0600). It will never be echoed.`);
 
   if (args['no-smoke']) {
@@ -648,6 +659,7 @@ async function cmdFeedback(args) {
     .catch(() => null);
   if (!stored)
     fail(`feedback resolve: could not read feedback for board "${id}" (is it registered?)`);
+  if (stored.error) fail(`feedback resolve: ${stored.error}`);
   const pins = Array.isArray(stored.pins) ? stored.pins : [];
 
   const candidates = targeted ? pins.filter((p) => targeted.includes(p.id)) : pins;
