@@ -68,8 +68,8 @@
     },
     {
       "path": "templates/diagram-owner.js",
-      "bytes": 564958,
-      "sha256": "30e3feaee69847cd8f2160d3242b71cb59b0a79918416bb2cf78f476cbf5e7a8",
+      "bytes": 564790,
+      "sha256": "aaa6e123d65450110b060c0ead9a6b79374396b08dc64f4aa3851d1a38ab18ad",
       "budget": {
         "bytes": 649216,
         "gzipBytes": 133120

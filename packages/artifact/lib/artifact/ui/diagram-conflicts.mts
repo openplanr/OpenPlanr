@@ -1,16 +1,31 @@
-import { diffDiagramBundles } from '../diagram/authoring/index.mjs';
+import type { DiagramAuthoringBundle } from '@openplanr/protocol/diagram-authoring-contracts';
+import {
+  type DiagramFieldChange,
+  type DiagramJsonValue,
+  type DiagramKernelFailure,
+  diffDiagramBundles,
+} from '../diagram/authoring/index.mjs';
+import type { DiagramEditorSession } from '../diagram/editor/index.mjs';
 import { button, downloadJson, element } from './diagram-editor-dom.mjs';
 
-/**
- * One comparison surface for local and company adapters. Choices never auto-save.
- * @param {{
- *   root: HTMLElement;
- *   session: import('../diagram/editor/index.mjs').DiagramEditorSession;
- *   onClose?: () => void;
- *   onError?: (failure: import('../diagram/authoring/index.mjs').DiagramKernelFailure) => void;
- * }} options
- */
-export function mountDiagramConflicts({ root, session, onClose = () => {}, onError = () => {} }) {
+interface ConflictOptions {
+  root: HTMLElement;
+  session: DiagramEditorSession;
+  onClose?: () => void;
+  onError?: (failure: DiagramKernelFailure) => void;
+}
+/** One changed field and its value in the base, the current revision and the draft. */
+interface ComparisonRow {
+  dimension: 'semantic' | 'presentation';
+  change: DiagramFieldChange;
+  base: DiagramJsonValue;
+  current: DiagramJsonValue;
+  draft: DiagramJsonValue;
+}
+
+/** One comparison surface for local and company adapters. Choices never auto-save. */
+// biome-ignore format: bundles keep this one-line pattern; wrapping would change their bytes.
+export function mountDiagramConflicts({ root, session, onClose = () => {}, onError = () => {} }: ConflictOptions) {
   const document = root.ownerDocument;
   const state = session.getState(),
     comparison = state.comparison;
@@ -30,17 +45,17 @@ export function mountDiagramConflicts({ root, session, onClose = () => {}, onErr
       'The saved diagram changed. Your draft is retained. Compare changes before choosing what to keep.',
     ),
   );
-  const rows = new Map();
+  const rows = new Map<string, ComparisonRow>();
   for (const [side, value] of [
     ['current', current],
     ['draft', pending],
-  ]) {
+  ] satisfies Array<['current' | 'draft', DiagramAuthoringBundle]>) {
     const diff = diffDiagramBundles(base, value);
     if (!diff.ok) {
       onError(diff);
       return { dispose() {} };
     }
-    for (const dimension of ['semantic', 'presentation'])
+    for (const dimension of ['semantic', 'presentation'] satisfies ComparisonRow['dimension'][])
       for (const change of diff[dimension]) {
         const key = JSON.stringify([dimension, change.collection, change.elementId, change.path]);
         if (!rows.has(key))
@@ -51,7 +66,8 @@ export function mountDiagramConflicts({ root, session, onClose = () => {}, onErr
             current: change.before,
             draft: change.before,
           });
-        rows.get(key)[side] = change.after;
+        // The branch above set the row when it was missing.
+        (rows.get(key) as ComparisonRow)[side] = change.after;
       }
   }
   const table = element(document, 'table');
@@ -62,7 +78,7 @@ export function mountDiagramConflicts({ root, session, onClose = () => {}, onErr
   thead.append(header);
   table.append(thead);
   const tbody = element(document, 'tbody');
-  const readable = (value) =>
+  const readable = (value: DiagramJsonValue) =>
     value === null
       ? 'Removed / absent'
       : typeof value === 'object'
@@ -78,7 +94,7 @@ export function mountDiagramConflicts({ root, session, onClose = () => {}, onErr
         `${row.dimension === 'semantic' ? 'Meaning' : 'Layout'} · ${row.change.elementId ?? 'Diagram'} · ${row.change.path.join('.') || row.change.collection}`,
       ),
     );
-    for (const side of ['base', 'current', 'draft'])
+    for (const side of ['base', 'current', 'draft'] satisfies Array<'base' | 'current' | 'draft'>)
       tr.append(element(document, 'td', {}, readable(row[side])));
     tbody.append(tr);
   }
@@ -128,8 +144,9 @@ export function mountDiagramConflicts({ root, session, onClose = () => {}, onErr
   confirmation.append(confirm, cancel);
   panel.append(confirmation);
   root.replaceChildren(panel);
-  const click = (event) => {
-    const target = event.target.closest('[data-action]');
+  const click = (event: MouseEvent) => {
+    // Click events target elements.
+    const target = (event.target as Element).closest<HTMLElement>('[data-action]');
     if (!target || !panel.contains(target)) return;
     const action = target.dataset.action;
     if (action === 'keep-draft') onClose();

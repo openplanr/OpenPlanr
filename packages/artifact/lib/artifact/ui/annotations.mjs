@@ -211,6 +211,17 @@ function createIntentPicker(document) {
 /**
  * Mount the transient annotation UI. Persistence/export belongs to the engine;
  * this controller only dispatches schema-shaped mutations to reviewController.
+ * @param {{
+ *   document?: Document;
+ *   window?: Window & typeof globalThis;
+ *   root?: HTMLElement;
+ *   stageController?: object;
+ *   reviewController?: object;
+ *   onFocusPin?: (pin: {
+ *     anchor?: { planrId?: string } | null;
+ *     region: { x: number; y: number; w: number; h: number };
+ *   }) => void;
+ * }} [options]
  */
 export function mountArtifactAnnotations({
   document = globalThis.document,
