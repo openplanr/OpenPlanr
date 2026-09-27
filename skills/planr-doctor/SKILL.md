@@ -10,6 +10,16 @@ Run `planr doctor` with the requested flags. Prefer `--json` for diagnosis.
 Preview every repair; package installation, version changes, provenance recovery,
 and deletion always require explicit confirmation.
 
+## OpenPlanr home
+
+`PLANR_HOME` names the user-level state directory, `~/.planr` by default: runtime
+installs, backups, daemon state and design sessions live there. `OPENPLANR_HOME` is
+deprecated; with `PLANR_HOME` unset it still resolves to `$OPENPLANR_HOME/.planr` and
+prints one warning, and when both are set `PLANR_HOME` wins. Two stores do not follow
+it: CLI credentials and company sign-in stay in `~/.planr`, and design share custody
+uses `~/.openplanr/design-shares` when neither variable is set. When state seems to be
+missing, check which variable is set.
+
 ## Driving an upgrade
 
 `planr upgrade` moves only half of an OpenPlanr upgrade — the npm CLI. The other

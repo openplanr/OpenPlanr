@@ -24,6 +24,8 @@
       "!packages/cli/lib/host-packages",
       "!packages/cli/lib/integrations.mjs",
       "!packages/cli/lib/integrations.d.mts",
+      "!packages/cli/lib/planr-home.mjs",
+      "!packages/cli/lib/planr-home.d.mts",
       "!packages/pipeline/lib/artifact",
       "!packages/pipeline/lib/design",
       "!packages/pipeline/lib/design-engine",

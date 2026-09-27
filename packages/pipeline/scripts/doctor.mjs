@@ -3,10 +3,10 @@
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, rmSync } from 'node:fs';
-import { homedir } from 'node:os';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { planrHome } from '../lib/artifact/internal/planr-home.mjs';
 import { renderLedgerVersionProjection } from '../lib/ecosystem/release-ledger.mjs';
 import {
   discoverEcosystemRepositories,
@@ -142,7 +142,7 @@ function gitIgnored(absPath, base = root) {
 }
 
 function checkLocalhostHealth(id, label, dirName) {
-  const stateDir = join(process.env.PLANR_HOME || join(homedir(), '.planr'), dirName);
+  const stateDir = join(planrHome(), dirName);
   const portFile = join(stateDir, 'port');
   if (!existsSync(portFile)) {
     ok(

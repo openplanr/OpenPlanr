@@ -10,9 +10,9 @@ import {
 } from 'node:fs';
 import type { FileHandle } from 'node:fs/promises';
 import { mkdir, open, readFile, rename, rm, unlink, writeFile } from 'node:fs/promises';
-import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { planrHome, userHome } from '../../lib/planr-home.mjs';
 import { spliceManagedBlock } from '../utils/splice-managed-block.js';
 import {
   applyBundledClaudePluginIntegration,
@@ -223,11 +223,7 @@ function projectKey(projectDir: string): string {
 }
 
 export function runtimeRoot(): string {
-  return path.join(userHome(), '.planr', 'runtime');
-}
-
-function userHome(): string {
-  return process.env.OPENPLANR_HOME ?? os.homedir();
+  return path.join(planrHome(), 'runtime');
 }
 
 function statePath(): string {
@@ -239,7 +235,7 @@ function codexSkillsRoot(): string {
 }
 
 function backupsRoot(): string {
-  return path.join(userHome(), '.planr', 'backups');
+  return path.join(planrHome(), 'backups');
 }
 
 function projectBackupsRoot(projectDir: string): string {
@@ -3049,6 +3045,8 @@ export async function runtimeDoctor(
   if (provenanceDiagnostic) diagnostics.push(provenanceDiagnostic);
 
   if (pipeline) {
+    // The child gets the resolved home only, so it does not repeat the OPENPLANR_HOME warning.
+    const { OPENPLANR_HOME: _deprecatedHome, ...inheritedEnvironment } = process.env;
     const result = spawnSync(
       process.execPath,
       [
@@ -3061,7 +3059,7 @@ export async function runtimeDoctor(
         cwd: projectDir,
         encoding: 'utf8',
         windowsHide: true,
-        env: { ...process.env, PLANR_HOME: path.join(userHome(), '.planr') },
+        env: { ...inheritedEnvironment, PLANR_HOME: planrHome() },
       },
     );
     try {

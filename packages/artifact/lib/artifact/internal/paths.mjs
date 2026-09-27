@@ -8,15 +8,13 @@
  *   ~/.planr/design-daemon/                       ← daemon port + board registry
  *
  * Only APPROVED outputs are copied into the repo by the loop procedures.
- * `PLANR_HOME` overrides `~/.planr` (tests + sandboxes).
+ * `PLANR_HOME` overrides `~/.planr` (tests + sandboxes); planr-home.mjs resolves it.
  */
 
-import { homedir } from 'node:os';
 import { join } from 'node:path';
+import { planrHome } from './planr-home.mjs';
 
-export function planrHome(env = process.env) {
-  return env.PLANR_HOME && env.PLANR_HOME.trim() ? env.PLANR_HOME : join(homedir(), '.planr');
-}
+export { planrHome };
 
 export function credentialsPath(env = process.env) {
   return join(planrHome(env), 'credentials.json');

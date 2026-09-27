@@ -835,7 +835,19 @@
     {
       "source": "packages/artifact/lib/artifact/internal/paths.mjs",
       "target": "lib/artifact/internal/paths.mjs",
-      "sha256": "bb8c3b66818e829262aa6165d7444667e9d84e469a57dfff6d9a337e46343f5e",
+      "sha256": "539f369c819c20f16bcc89a95d69eca38f42d53f33712087d5bb8ef0957f4d9f",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/internal/planr-home.d.mts",
+      "target": "lib/artifact/internal/planr-home.d.mts",
+      "sha256": "b99d4a98f23217c46db26870e3e0525e111cb2ee2f01d513e5549611db055cff",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/internal/planr-home.mjs",
+      "target": "lib/artifact/internal/planr-home.mjs",
+      "sha256": "32a969be4b0e96eee72d2e336ad71863874785358a9945a502e9f38f06def6c0",
       "mode": "644"
     },
     {
