@@ -78,8 +78,8 @@ export async function listArtifacts(
   const files = await listFiles(dir, /\.md$/);
   const results: Array<{ id: string; title: string; filename: string }> = [];
 
-  for (const filename of files.sort()) {
-    const match = filename.match(/^([A-Z]+-\d{3})-(.+)\.md$/);
+  for (const filename of files.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))) {
+    const match = filename.match(/^([A-Z]+-\d{3,})-(.+)\.md$/);
     if (match) {
       results.push({
         id: match[1],

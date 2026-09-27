@@ -1,24 +1,35 @@
+import { readdir, writeFile } from 'node:fs/promises';
+import path from 'node:path';
 import { escapeRegExp } from '../utils/escape-regexp.js';
-import { listFiles } from '../utils/fs.js';
+import { ensureDir } from '../utils/fs.js';
 
-/** Return the next available sequential ID (e.g. "FEAT-004") for the given prefix in a directory. */
+/** Holds one empty file per issued ID, so the ID of a removed artifact is never issued again. */
+const ISSUED_IDS_DIR = '.issued-ids';
+
+/**
+ * Reserve the next sequential ID (e.g. "FEAT-004") for `prefix` in `dir`, one past the highest
+ * artifact file or reservation. Reserving is an exclusive create, so concurrent callers never share an ID.
+ */
 export async function getNextId(dir: string, prefix: string): Promise<string> {
-  const pattern = new RegExp(`^${escapeRegExp(prefix)}-(\\d{3})`);
-  const files = await listFiles(dir, pattern);
-  const usedNums = new Set<number>();
-  for (const file of files) {
-    const match = file.match(pattern);
-    if (match) {
-      usedNums.add(parseInt(match[1], 10));
+  const issuedDir = path.join(dir, ISSUED_IDS_DIR);
+  await ensureDir(issuedDir);
+  const pattern = new RegExp(`^${escapeRegExp(prefix)}-(\\d{3,})`);
+  let next = 1;
+  for (const directory of [dir, issuedDir]) {
+    for (const entry of await readdir(directory, { withFileTypes: true })) {
+      const match = entry.isDirectory() ? null : pattern.exec(entry.name);
+      if (match) next = Math.max(next, Number.parseInt(match[1], 10) + 1);
     }
   }
-  // Find the first available gap starting from 1
-  let next = 1;
-  while (usedNums.has(next)) {
-    next++;
+  for (; ; next++) {
+    const id = `${prefix}-${String(next).padStart(3, '0')}`;
+    try {
+      await writeFile(path.join(issuedDir, id), '', { flag: 'wx' });
+      return id;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
+    }
   }
-  const nextNum = next.toString().padStart(3, '0');
-  return `${prefix}-${nextNum}`;
 }
 
 /** Parse an artifact ID string (e.g. "FEAT-002", "FEAT-1204") into its prefix and numeric parts. */
