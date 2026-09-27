@@ -109,10 +109,11 @@ export async function buildDesignSkillResources({
                 `new URL(${JSON.stringify(`./runtime/${logical(path)}`)}, import.meta.url).href`,
               );
             // These are asset lookups, not JS dependencies; Node package resolution
-            // cannot be used once the utility is moved away from node_modules.
+            // cannot be used once the utility is moved away from node_modules. A module
+            // compiled from TypeScript names its local require `require2`.
             let hasAssetLookup = false;
             contents = contents.replace(
-              /require\.resolve\(\s*['"]@openplanr\/protocol\/([^'"]+)['"]\s*,?\s*\)/gu,
+              /require\d*\.resolve\(\s*['"]@openplanr\/protocol\/([^'"]+)['"]\s*,?\s*\)/gu,
               (_match, asset) => {
                 hasAssetLookup = true;
                 return `__planrAssetFile(new URL(${JSON.stringify(`./runtime/packages/protocol/${asset}`)}, import.meta.url))`;
