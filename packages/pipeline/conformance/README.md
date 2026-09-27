@@ -21,12 +21,12 @@ part of `npm test`):
 node conformance/verify-design-assets.mjs
 ```
 
-It asserts the shipped orchestration files, the two renderer shells + their `GENERATOR:`
-markers, the vendored `pretext.js` runtime, that the retired React canvas is not shipped and
-design-loop variants reach the board as their own images, the `design-manifest` schema
-against golden fixtures, the screen-resolver + format-recommendation rule on
-`fixture-design/SPEC-900-design-sample.md`, and the XSS-escaping regression. The
-operator-driven fixture for a live `/design` run lives in `fixture-design/`.
+It asserts the shipped orchestration files and design-system templates, that the retired
+template renderer is not shipped (the `/design` generate, handoff and review procedures, the
+prototype and walkthrough shells, Pretext and the React canvas), that design-loop variants
+reach the board as their own images, the `design-manifest` schema against golden fixtures,
+the screen-resolver + format-recommendation rule on `fixture-design/SPEC-900-design-sample.md`,
+and the XSS-escaping regression.
 
 ## Quick start
 

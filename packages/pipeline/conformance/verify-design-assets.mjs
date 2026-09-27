@@ -6,9 +6,9 @@
  * runner.mjs, which drives feat-todo through a live agent). This asserts the
  * SHIPPED design assets are intact and the tested core behaves:
  *   1. packaged procedures, templates and renderer helpers present
- *   2. renderer shells present with their GENERATOR markers
- *   3. vendored runtime present; the retired React canvas is not shipped, and design-loop
- *      variants reach the board as their own images
+ *   2. the retired template renderer is not shipped: the /design generate, handoff and review
+ *      procedures, the prototype and walkthrough shells, Pretext and the React canvas
+ *   3. design-loop variants reach the board as their own images
  *   4. the design manifest schema accepts the golden valid fixture, rejects the invalid
  *   5. the screen resolver + format-recommendation rule agree on the fixture spec
  *   6. the escaping helpers neutralize a hostile string (XSS regression, S1)
@@ -72,8 +72,6 @@ log('orchestration:');
 for (const rel of [
   'procedures/design-step0-preflight.md',
   'procedures/design-step1-clarify.md',
-  'procedures/design-step2-generate.md',
-  'procedures/design-step3-spec-and-handoff.md',
   'procedures/design-detect-nudge.md',
   'lib/design/index.mjs',
   'lib/design/tokens.mjs',
@@ -89,26 +87,16 @@ for (const rel of [
 ])
   assert(existsSync(join(root, rel)), rel);
 
-// 2 — renderer shells + their markers
-log('\nrenderer shells:');
-const shells = {
-  'templates/design/prototype-shell.html': ['GENERATOR:screen', 'pretext.js'],
-  'templates/design/walkthrough-shell.html': ['GENERATOR:screens', 'data-nav-mode', 'wt-counter'],
-};
-for (const [rel, needles] of Object.entries(shells)) {
-  const p = join(root, rel);
-  assert(existsSync(p), rel);
-  for (const n of needles) assert(fileHas(p, n), `${rel} contains "${n}"`);
-}
-
-// 3 — vendored runtime; the React canvas is retired
-log('\nvendored runtime:');
-const pretext = join(root, 'templates/design/vendor/pretext.js');
-assert(
-  existsSync(pretext) && readFileSync(pretext).length > 0,
-  'templates/design/vendor/pretext.js (non-empty)',
-);
+// 2 — the retired template renderer is not shipped
+log('\nretired template renderer:');
 for (const rel of [
+  'procedures/design-step2-generate.md',
+  'procedures/design-step3-spec-and-handoff.md',
+  'procedures/design-review-loop.md',
+  'templates/design/README.md',
+  'templates/design/prototype-shell.html',
+  'templates/design/walkthrough-shell.html',
+  'templates/design/vendor/pretext.js',
   'templates/design/canvas-shell.html',
   'templates/design/DesignCanvas.jsx',
   'templates/design/vendor/react.production.min.js',
@@ -117,7 +105,7 @@ for (const rel of [
   'templates/design/vendor/fetch-vendor.mjs',
   'lib/design-engine/canvas-wrap.mjs',
 ])
-  assert(!existsSync(join(root, rel)), `${rel} is not shipped (the React canvas is retired)`);
+  assert(!existsSync(join(root, rel)), `${rel} is not shipped`);
 
 // 3a — design-loop variants reach the board as their own images
 log('\ndesign-loop board variants:');
@@ -167,24 +155,6 @@ assert(
   fileHas(preflight, 'APP_CTX') && fileHas(preflight, 'VIEWPORT_W'),
   'preflight A.3.5 front-loads APP_CTX + VIEWPORT_W (read the project once, up front)',
 );
-const generate = join(root, 'procedures/design-step2-generate.md');
-assert(
-  fileHas(generate, 'VIEWPORT_W'),
-  'generate C.0/C.4 author at VIEWPORT_W (real desktop width)',
-);
-
-// Host skill guidance is verified by the installed skill workflow tests.
-// This package retains the renderer and explicit artifact handoff procedures.
-const designHandoff = join(root, 'procedures/design-step3-spec-and-handoff.md');
-assert(
-  fileHas(designHandoff, 'planr artifact share') && fileHas(designHandoff, 'planr artifact import'),
-  'design handoff advertises explicit artifact Share + returned-review import',
-);
-assert(
-  fileHas(designHandoff, 'never publishes or uploads') &&
-    fileHas(designHandoff, 'Do not invoke Share automatically'),
-  'design completion never publishes or shares automatically',
-);
 
 // 3c — token scale + deterministic linter (v0.16.0)
 log('\ntoken scale + design linter (v0.16.0):');
@@ -209,15 +179,8 @@ assert(
     false,
   'lintCanvasData FAILS an off-canonical artboard (1440×760)',
 );
-// the framework dogfoods its own grid — generated files inherit shell CSS, so the shells must be clean
-for (const shell of ['prototype-shell.html', 'walkthrough-shell.html']) {
-  assert(
-    lintDesign(readFileSync(join(root, 'templates/design', shell), 'utf-8')).ok,
-    `${shell} is lint-clean (shells obey the 4-point grid)`,
-  );
-}
 
-// 3d — responsive breakpoint frames + device toggle (v0.17.0)
+// 3d — responsive breakpoint frames (v0.17.0)
 log('\nresponsive breakpoint frames (v0.17.0):');
 assert(isCanonicalFrame({ w: 834, h: 1194 }), 'tablet frame 834×1194 is canonical');
 assert(
@@ -228,22 +191,6 @@ assert(
   RESPONSIVE_FRAMES.length === 3 &&
     RESPONSIVE_FRAMES.map((f) => f.name).join() === 'desktop,tablet,mobile',
   'RESPONSIVE_FRAMES = desktop → tablet → mobile',
-);
-const genDoc = readFileSync(join(root, 'procedures/design-step2-generate.md'), 'utf-8');
-assert(
-  /@container/.test(genDoc) && /container-type/.test(genDoc),
-  'generate guidance uses container queries + container-type (not media queries)',
-);
-assert(/834|tablet/i.test(genDoc), 'generate guidance names the tablet breakpoint frame');
-assert(
-  fileHas(join(root, 'templates/design/prototype-shell.html'), 'dv-bar') &&
-    fileHas(join(root, 'templates/design/prototype-shell.html'), 'container-type'),
-  'prototype shell has the device toggle + a container-query viewport',
-);
-assert(
-  fileHas(join(root, 'templates/design/walkthrough-shell.html'), 'data-w="834px"') &&
-    fileHas(join(root, 'templates/design/walkthrough-shell.html'), 'container-type'),
-  'walkthrough shell has the device toggle + container-query frames',
 );
 
 // 3e — design system layer + adherence (v0.18.0)
@@ -287,11 +234,6 @@ const preflightDoc = readFileSync(join(root, 'procedures/design-step0-preflight.
 assert(
   /A\.3\.6/.test(preflightDoc) && /design system/i.test(preflightDoc),
   'preflight A.3.6 no-system gate present (generate / existing / describe)',
-);
-assert(
-  fileHas(join(root, 'procedures/design-step2-generate.md'), 'contrast-below-aa') &&
-    fileHas(join(root, 'procedures/design-step2-generate.md'), 'tokens.css'),
-  'generate step links the DS tokens.css + enforces the contrast gate',
 );
 
 // 4 — manifest schema vs golden fixtures
@@ -378,7 +320,6 @@ const SCAN_ROOTS = [
   'CHANGELOG.md',
 ];
 const SCAN_SKIP = [
-  'templates/design/vendor', // attributed third-party runtime (the Pretext reflow lib)
   'conformance/verify-design-assets.mjs', // this guard (fragment-assembled)
 ];
 const TEXT_EXT = /\.(md|mjs|js|jsx|html|json|tpl|css|feature|yml|yaml)$/;

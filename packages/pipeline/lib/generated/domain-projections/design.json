@@ -365,30 +365,6 @@
       "mode": "644"
     },
     {
-      "source": "packages/design/templates/design/prototype-shell.html",
-      "target": "templates/design/prototype-shell.html",
-      "sha256": "e3f8d42dc4d1846ca3f676bc1c232554d2ef8408fd50ae89b032873e8194f2cb",
-      "mode": "644"
-    },
-    {
-      "source": "packages/design/templates/design/README.md",
-      "target": "templates/design/README.md",
-      "sha256": "cce97a35d3d78713cb2577a03b497a0f6b2ba4ad83a22d731a2213b54bd571cf",
-      "mode": "644"
-    },
-    {
-      "source": "packages/design/templates/design/vendor/pretext.js",
-      "target": "templates/design/vendor/pretext.js",
-      "sha256": "c85e755d86d33718e66978d18a2733eb5d11cf44747f58846bd390ed0d6f24e7",
-      "mode": "644"
-    },
-    {
-      "source": "packages/design/templates/design/walkthrough-shell.html",
-      "target": "templates/design/walkthrough-shell.html",
-      "sha256": "7630f80e73c6dc147b44bca6695caed94afe5c8a537c5b7bb04c13b1fb4583a4",
-      "mode": "644"
-    },
-    {
       "source": "packages/design/templates/studio/enhancements.css",
       "target": "templates/studio/enhancements.css",
       "sha256": "df58a7ee4ffcadac780d3170abbeb00cfecb1f42db692ba62eb6f66a251bd0ea",

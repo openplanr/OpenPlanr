@@ -42,7 +42,6 @@ const DOMAIN_PROJECTIONS = Object.freeze({
   design: Object.freeze([
     Object.freeze({ source: 'packages/design/lib/design', target: 'lib/design' }),
     Object.freeze({ source: 'packages/design/lib/design-engine', target: 'lib/design-engine' }),
-    Object.freeze({ source: 'packages/design/templates/design', target: 'templates/design' }),
     Object.freeze({ source: 'packages/design/templates/studio', target: 'templates/studio' }),
   ]),
 });
