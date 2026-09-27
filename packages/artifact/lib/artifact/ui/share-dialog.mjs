@@ -1,3 +1,10 @@
+/**
+ * Artifact share dialog: a phase reducer and modal UI for live-room, fragment and short-link
+ * sharing, including owner-key custody before a live room exists and receipts for created URLs.
+ * Entry points: `mountArtifactShareDialog`, `reduceArtifactShareDialog` and the share constants.
+ * Encryption and upload run in injected host handlers (`share-client.mjs` for design boards).
+ */
+
 export const ARTIFACT_SHARE_FRAGMENT_LIMIT = 8_000;
 
 export const ARTIFACT_SHARE_TTLS = Object.freeze({

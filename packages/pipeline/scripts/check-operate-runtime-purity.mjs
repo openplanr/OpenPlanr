@@ -1,5 +1,12 @@
 #!/usr/bin/env node
 
+/**
+ * Purity gate over the planr-pipeline pack: refuses private planning material, machine paths,
+ * symlinks, non-registry dependencies, escaping imports and vendor model names in portable assets.
+ * Entry points: `checkOperateRuntimePurity`, `packOperateV2DevelopmentSnapshot`.
+ * Run as `node scripts/check-operate-runtime-purity.mjs [--root <dir>] [--pack-clean <out-dir>]`.
+ */
+
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import {
@@ -26,10 +33,6 @@ const DEVELOPMENT_PROJECTION_MANIFESTS = Object.freeze([
   'lib/generated/domain-projections/operate.json',
 ]);
 
-// A clean development package is assembled from committed source plus this
-// explicit Operate development overlay. This keeps private planning and
-// unrelated dirty files out of the package without implying a release
-// candidate, tag, or publish operation.
 export const UNIFIED_DASHBOARD_PROTOCOL_PATHS = Object.freeze([
   'schemas/v1.2.0/dashboard-bootstrap.schema.json',
   'lib/dashboard/server.mjs',
@@ -37,6 +40,10 @@ export const UNIFIED_DASHBOARD_PROTOCOL_PATHS = Object.freeze([
   'lib/protocol/loader.mjs',
 ]);
 
+// A clean development package is assembled from committed source plus this
+// explicit Operate development overlay. This keeps private planning and
+// unrelated dirty files out of the package without implying a release
+// candidate, tag, or publish operation.
 const OPERATE_V2_DEVELOPMENT_OVERLAYS = Object.freeze([
   'CHANGELOG.md',
   'README.md',

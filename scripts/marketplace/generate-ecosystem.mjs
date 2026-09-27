@@ -1,5 +1,12 @@
 #!/usr/bin/env node
 
+/**
+ * Local ecosystem generator: builds `ecosystem.json`, the Claude plugin and marketplace manifests
+ * and `docs/generated/*.md` from workspace manifests, Protocol registries and adapter manifests,
+ * failing on release or parity drift; `ecosystem-assets.json` records the output digests.
+ * Run as `node scripts/marketplace/generate-ecosystem.mjs --write` or `--check` (fails if stale).
+ */
+
 import { createHash } from 'node:crypto';
 import {
   chmodSync,

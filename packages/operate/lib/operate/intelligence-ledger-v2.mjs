@@ -1,3 +1,10 @@
+/**
+ * Decision-ledger materialization: validates a Chair ledger against its intelligence plan and
+ * accepted role Artifacts, then derives the Claim, Risk, Finding and Decision records.
+ * Entry points: `buildOperatingDecisionLedgerMaterializationV2`,
+ * `decodeOperatingIntelligenceArtifactBodyV2`, `projectOperatingAcceptedIntelligenceOutputV2`.
+ */
+
 import { sha256Jcs } from '@openplanr/protocol/canonical-json';
 import {
   assertOperateIntelligencePlanContractV2,

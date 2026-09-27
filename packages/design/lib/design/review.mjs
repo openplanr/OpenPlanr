@@ -1,3 +1,10 @@
+/**
+ * Local design review: runs the artifact review server for a design with the `design-*` API routes
+ * (studio state, handoffs, revisions, sharing, export) and reads, exports and resolves review pins.
+ * Entry points: `startDesignReview`, `readDesignFeedback`, `exportDesignReview`, `saveDesignState`.
+ * Sessions and `api/review` persistence belong to `@openplanr/artifact/review-server.mjs`.
+ */
+
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import {

@@ -1,3 +1,10 @@
+/**
+ * Landing runtime: binds a plan to a current passed SHIP receipt, reports status from its Event
+ * journal, and advances one owner-confirmed operation through the host's intent and outcome CAS.
+ * Entry points: `prepareLanding`, `bindLandingPlan`, `landingStatus`, `showLanding`,
+ * `advanceLanding`. Record validation and Event reduction belong to `landing-contract.mjs`.
+ */
+
 import { createHash, randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';

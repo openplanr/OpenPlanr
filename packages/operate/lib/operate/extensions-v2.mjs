@@ -1,3 +1,10 @@
+/**
+ * Public Operate extension registry: validates and indexes domain, agent-runtime and
+ * signal-provider declarations. Entry points: `OPEN_REFERENCE_OPERATE_EXTENSIONS_V2`,
+ * `canonicalizeOperateExtensionRegistryV2`, `findOperateDomainRegistrationV2`. Evidence and
+ * governed entries are validated by `evidence-registry-v2.mjs` and `governed-extensions-v2.mjs`.
+ */
+
 import {
   assertOperateRoleOutputContractV2,
   assertProtocolArtifact,

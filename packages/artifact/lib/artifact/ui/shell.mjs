@@ -1,3 +1,10 @@
+/**
+ * Artifact review shell: renders the HTML document with its Content-Security-Policy, theme and
+ * structural CSS, shell markup, and the embedded model, stage payload and review state.
+ * Entry points: `renderArtifactShellDocument`, `renderArtifactShellTemplate`, `ARTIFACT_SHELL_CSS`.
+ * Markup comes from `renderers.mjs`; browser behavior from the `stage.mjs` bundle it references.
+ */
+
 import { digestArtifactEnvelope } from '../envelope.mjs';
 import { embedJson, escapeHtml } from '../internal/escape.mjs';
 import {
@@ -18,9 +25,9 @@ export const ARTIFACT_SHELL_ASSET_PATHS = Object.freeze({
 });
 
 /**
- * Structural shell CSS. Every color, type, radius, duration, and desktop
- * layout constant comes from the validated theme registry variables rendered
- * by tokens.mjs; this source deliberately contains no copied color literals.
+ * Structural shell CSS. Colors, font families, and most radii and durations come from the
+ * validated theme registry variables rendered by tokens.mjs; font sizes stay literal, and this
+ * source deliberately contains no copied color literals.
  */
 export const ARTIFACT_SHELL_CSS = `
 * { box-sizing: border-box; }

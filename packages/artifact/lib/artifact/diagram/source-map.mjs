@@ -1,3 +1,10 @@
+/**
+ * Mermaid flowchart copy interchange: previews certified flowchart source as a sealed authoring
+ * bundle with a byte-range source map and fidelity report, and exports a canonical Mermaid copy.
+ * Entry points: `previewMermaidCopy`, `adoptMermaidCopy`, `exportMermaidCopy`.
+ * Bundle sealing and validation belong to `authoring/model.mjs`.
+ */
+
 import { sha256Hex } from '@openplanr/protocol/canonical-json';
 import { validateDiagramAuthoringArtifact } from '@openplanr/protocol/diagram-authoring-contracts';
 import {

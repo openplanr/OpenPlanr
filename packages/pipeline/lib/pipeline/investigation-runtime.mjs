@@ -1,3 +1,10 @@
+/**
+ * Stored investigation lifecycle: keeps diagnose and fix runs and content-addressed receipts in a
+ * feature's `.investigation/` behind a lock and runs commands on an engine-issued read-only host.
+ * Entry points: `startStoredInvestigation` and the other `*StoredInvestigation` steps,
+ * `readInvestigationReceipt`, and `issueInvestigationFixStartCapability` for owner-approved fixes.
+ */
+
 import { createHash, randomUUID } from 'node:crypto';
 import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';

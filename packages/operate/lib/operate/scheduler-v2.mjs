@@ -1,3 +1,10 @@
+/**
+ * Pure Assignment scheduler: validates in-Cycle dependency graphs and derives release and
+ * Challenger terminal intents. Entry points: `deriveOperatingAssignmentReleaseIntentsV2`,
+ * `validateOperatingAssignmentGraphV2`, `deriveOperatingIntelligenceAssignmentIdV2`.
+ * `scheduleOperatingRuntimeEventsV2` in runtime-foundation.mjs turns intents into Events.
+ */
+
 import { sha256Jcs } from '@openplanr/protocol/canonical-json';
 import {
   assertOperateIntelligencePlanContractV2,

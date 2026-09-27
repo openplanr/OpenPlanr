@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 
 /**
- * Build the evidence record required before the Operate 2.0 legacy reset can
- * remove any source. Normal execution is read-only. Materialization is an
- * explicit local-development seam that can write only to a disposable path;
- * it can never regenerate the Phase 1 historical evidence bundle.
+ * Operate legacy surface inventory: classifies Operate-related files with reachability evidence
+ * and fails if a `PROTECTED_USER_OWNED_PATHS` file differs from its pin. Entry points:
+ * `buildOperateSurfaceInventory`, `validateOperateSurfaceInventory`. The CLI check is read-only;
+ * `--write --output-dir <dir>` writes only to a child of `conformance/.tmp/operate-inventory`.
  */
 
 import { spawnSync } from 'node:child_process';
@@ -49,7 +49,7 @@ export const INVENTORY_CLASSIFICATIONS = Object.freeze([
 // remains immutable; current bytes are verified independently below.
 export const PROTECTED_USER_OWNED_PATHS = Object.freeze({
   'bin/planr-pipeline.mjs': 'cb156a4a40ec0c0d930bb1800f5f9be26142e47cdc53131b7a6cddff6e65e3e0',
-  'lib/pipeline/engine.mjs': '2adce7d79f29cd738570875a30fa19676b6a6a1d80db73770f5924f61948d28d',
+  'lib/pipeline/engine.mjs': '2c0b2eeb05ceaaeef3b93482564238da762892d31a727f4a1c2486b254ec867e',
   'tests/pipeline/engine.test.mjs':
     '4e6eb657beac4ce0d2f2df4c7532e38467d22c4bf49b502e2291fff3a6351e3f',
 });

@@ -1,3 +1,10 @@
+/**
+ * Operate experience projection: reconstructs one access-safe actor/scope view from durable state.
+ * Entry points: `buildOperateExperienceViewV2`, `createOperateExperiencePreviewV1`,
+ * `createOperateExperienceReplayCheckpointV2`, `rankOperateAttentionV2` and live-patch helpers.
+ * Parity rules check state against Event history; `runtime-event-reducer-v2.mjs` reduces Events.
+ */
+
 import { sha256Jcs } from '@openplanr/protocol/canonical-json';
 import {
   assertOperateExperienceArtifactV2,

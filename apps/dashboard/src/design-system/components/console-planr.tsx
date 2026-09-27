@@ -3,12 +3,11 @@ import { Badge, type BadgeTone, CommandHint } from './console-core.js';
 import { PcIcon, type PcIconName } from './console-icon.js';
 import './planr-console.css';
 
-/*
- * Planr-domain components, ported 1:1 from the design system: the two status vocabularies
- * (ArtifactStatus for the graph, StateBadge for the Operate protocol), work-item and
- * capability labels, the read-only governed action card, the dependency graph with its
- * outline peer, the activity timeline, sprint progress, and the page helpers every screen
- * shares. Everything renders only what it is given.
+/**
+ * Planr-domain console components: artifact-status dots, governed-action and execution-result
+ * badges, work-item and capability labels, the read-only governed action card, the dependency
+ * graph with its outline view, sprint progress and page helpers. Components hold no state.
+ * Entry points: `WorkItemChip`, `ArtifactStatus`, `StateBadge`, `DependencyGraph`, `Absent`.
  */
 
 // ---------------------------------------------------------------- ArtifactStatus

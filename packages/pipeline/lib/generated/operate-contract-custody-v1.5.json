@@ -114,7 +114,7 @@
       "path": "lib/operate/experience-projection-v2.mjs",
       "kind": "projection",
       "legacySha256": "acbe5a6261e95fe690f193d74f659a511e323986733ce1754436e24f854f6d58",
-      "sha256": "c58d66512778fae73a4fdb534133e8cfe07169d33754e8b76714a474da751983",
+      "sha256": "2d7064d9dcf71ff4a7ec465ad526fa30293990c0e776a83c0710f39f501f60bc",
       "custody": "canonical-operate-domain-projection",
       "source": "packages/operate/lib/operate/experience-projection-v2.mjs"
     },
@@ -130,7 +130,7 @@
       "path": "lib/operate/extensions-v2.mjs",
       "kind": "extension",
       "legacySha256": "4aa8ee52437bf7b3734a91b2f4f887191333e7c2bf710aa1595bc29fc4fd94f2",
-      "sha256": "31570981cb37cdf3e88bdd8e948722e35656d1343fa66b52b09c76d0d036f49e",
+      "sha256": "86970d398fbe9cf7ee3b378dd79a4aa36822a2960bf9ed24fcb472053f86c9f9",
       "custody": "canonical-operate-domain-projection",
       "source": "packages/operate/lib/operate/extensions-v2.mjs"
     },
@@ -146,7 +146,7 @@
       "path": "lib/operate/planning-bridge-v2.mjs",
       "kind": "projection",
       "legacySha256": "218754a1ac2ad7dc8106728eeb778e2b41727a15417c1aa54a263ca251363487",
-      "sha256": "41f887619fa00742a2eaa153c038bb58415b69537f88bd4b11f755013b2e14bd",
+      "sha256": "f443f6b0f2346800eaeb59244272489ada0805bacb9b0349050b55a45f46fdcc",
       "custody": "canonical-operate-domain-projection",
       "source": "packages/operate/lib/operate/planning-bridge-v2.mjs"
     },
@@ -178,7 +178,7 @@
       "path": "lib/operate/runtime-foundation.mjs",
       "kind": "projection",
       "legacySha256": "75d880b14d0304f71e7ba9ec33c20ca1ac0e48656d3492b62ff8f7dedd079f4e",
-      "sha256": "012eef8708e38aaf9b78f7a99e57c98866ec2afcb7c64763d397fd3aea2b5604",
+      "sha256": "269900d1d00bad59f7688114baae8ce60d7dfa2070cfe73f2f43fda0192f5a62",
       "custody": "canonical-operate-domain-projection",
       "source": "packages/operate/lib/operate/runtime-foundation.mjs"
     },
@@ -186,7 +186,7 @@
       "path": "lib/operate/trace-matrix-v2.mjs",
       "kind": "projection",
       "legacySha256": "00ebc696df061226b1912e77050274fddf82c0b5982a939945ef0436a995a06b",
-      "sha256": "43229623c6fe0560ad70bf314ae881c4859b69a10fe32ecb326b98f0a4d9f7d7",
+      "sha256": "dc10005db3709e027cc736d9e894437d2851bf7d7dcf3bc1e123dd57651132e9",
       "custody": "canonical-operate-domain-projection",
       "source": "packages/operate/lib/operate/trace-matrix-v2.mjs"
     },
@@ -202,7 +202,7 @@
       "path": "lib/pipeline/landing-contract.mjs",
       "kind": "validator",
       "legacySha256": "58199ab8d81d8ac3c8781dd46be33a9255be706757ec72737f3bf049a31f261c",
-      "sha256": "8de053c09e755cea2e32ff4169e0dc0c6ace1a52d2981c66051e86ef2bcd8dea",
+      "sha256": "d7428dc39b70d334960fc1f2eff60042f7c1b1fd7535a3f60f40dca5dfc74c79",
       "custody": "pipeline-owned-source",
       "source": "packages/pipeline/lib/pipeline/landing-contract.mjs"
     },
@@ -218,7 +218,7 @@
       "path": "lib/protocol/live-evidence-v2.mjs",
       "kind": "validator",
       "legacySha256": "0af4b276e296388511e1ee943264eff63da863f9e1298a8b7d4d47fefd4d4e9b",
-      "sha256": "62fc22b84feadb48ae56d9dad2f870b2731293e9e053960b1d78e08ceefc5919",
+      "sha256": "2f08d221b717f36810dd68b3097fb0fe88b29cae4edf700c5d93d33b4d159938",
       "custody": "canonical-protocol-projection",
       "source": "packages/protocol/projections/pipeline/lib/protocol/live-evidence-v2.mjs"
     },

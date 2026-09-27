@@ -1,12 +1,10 @@
 import { canonicalDashboardHref } from '../../app/router.js';
 
 /**
- * Pure Planning presentation selectors.
- *
- * The transport adapter owns parsing, binding, revision checks, and live-event
- * reconciliation. This module only projects already-validated, read-only graph
- * data for the Planning screens. It does not fetch, persist, reduce canonical
- * lifecycle state, or manufacture authority.
+ * Pure Planning presentation selectors over validated graph data (filter, sort, group, search,
+ * sprint, activity, detail) and the route-subject codec behind Planning detail links.
+ * Entry points: `planningDisplayId`, `planningDetailHref`, `planningNodeIdFromRouteSubject`.
+ * Fetching, envelope parsing and live-event reconciliation belong to `planning-api.ts`.
  */
 
 export type PlanningArtifactType =

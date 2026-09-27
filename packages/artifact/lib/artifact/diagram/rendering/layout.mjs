@@ -1,3 +1,10 @@
+/**
+ * Diagram scene layout: arranges a semantic diagram as grid, layered-graph, lane or sequence
+ * geometry with routed, labelled relations, group frames and notes, within the viewport budget.
+ * Entry points: `layoutDiagram`, `wrapDiagramLabel`, and label and route predicates shared with
+ * `reports.mjs`. Authoring-bundle layout previews belong to `../authoring/layout.mjs`.
+ */
+
 import { DIAGRAM_ERROR_CODES, diagramFail } from '../errors.mjs';
 import {
   diagramMetrics,

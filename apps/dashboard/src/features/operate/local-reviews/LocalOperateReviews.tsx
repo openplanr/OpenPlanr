@@ -1,3 +1,10 @@
+/**
+ * Read-only Operate console for completed local reviews, shown when the bootstrap has no Operate
+ * query root: polls `/api/operate/local-reviews` and renders Operate routes from those records.
+ * Entry point: `LocalOperateReviews` (props `route`, `origin`), mounted by `UnifiedShell`.
+ * Issues GET reads only; approval and execution belong to the governed Operate routes.
+ */
+
 import { Fragment, type ReactNode, useEffect, useMemo, useState } from 'react';
 import type { ParsedDashboardRoute } from '../../../app/router.js';
 import {

@@ -1,5 +1,12 @@
 #!/usr/bin/env node
 
+/**
+ * Packed-workspace proof: packs `openplanr`, `planr-pipeline` and `@openplanr/protocol`, checks
+ * payload purity, verifies full and CLI-only consumer installs and prints a JSON proof report.
+ * Run as `npm run verify:packed` (CI runs it via `verify:packed:strict`); exits 1 on failure.
+ * Exports `readPackedSurfaceBaseline`, `assertPackedSurfaceCompatibility`, `countProtocolAssets`.
+ */
+
 import * as childProcess from 'node:child_process';
 import * as crypto from 'node:crypto';
 import * as fs from 'node:fs';

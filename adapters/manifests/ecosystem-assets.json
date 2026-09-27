@@ -102,7 +102,7 @@
     },
     {
       "path": "scripts/marketplace/generate-ecosystem.mjs",
-      "digest": "sha256:a72735da4746a9a7f12415d56c2d6d42c6c08aa4e7fe86ce054996c5e8b0ac90"
+      "digest": "sha256:23d4711fcab1c05e79a7f9e2cce9747ab503bd0957dfcde3a83217df6043a5a8"
     },
     {
       "path": "scripts/marketplace/openplanr-ecosystem.schema.json",
@@ -136,7 +136,7 @@
     },
     {
       "path": "ecosystem.json",
-      "digest": "sha256:24f26b3611a423c11423e8b693b634800be29cf01420b1f0a2bd3aca96e678c4"
+      "digest": "sha256:8f70a7e12dff7c36ffb7aaa9f61af9e0dade5f0b9752109c0d9bde183c718d26"
     },
     {
       "path": "packages/pipeline/.claude-plugin/plugin.json",

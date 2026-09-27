@@ -1,3 +1,10 @@
+/**
+ * Skill evaluation journey drivers: deterministic trigger routing, CLI envelopes in both output
+ * modes, a loopback browser surface, packed-archive installs and a disposable recovery store.
+ * Entry points: `runHostJourney`, `runCliJourney`, `runBrowserJourney`, `runPackedInstallJourney`,
+ * `runRecoveryJourney`; turning results into observations and verdicts belongs to `runner.mjs`.
+ */
+
 import { spawnSync } from 'node:child_process';
 import { lstatSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';

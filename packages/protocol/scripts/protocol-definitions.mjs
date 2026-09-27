@@ -1,3 +1,10 @@
+/**
+ * Protocol 1.5.0 canonical definitions: the JSON Schemas and the role, task-kind, rule, command,
+ * skill, output and output-path registries; each registry carries its canonical `documentDigest`.
+ * Entry points: `buildSchemas`, `buildRegistries`, `ROOT_COMMAND_SLUGS`.
+ * Writing and drift-checking the generated files belongs to `generate-protocol-assets.mjs`.
+ */
+
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';

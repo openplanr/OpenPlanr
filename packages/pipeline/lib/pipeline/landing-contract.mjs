@@ -1,3 +1,10 @@
+/**
+ * Landing record contracts: schema, self-hash and custody validation for the operation registry,
+ * plan, confirmation, Event, phase receipt and landing receipt, and the Landing Event reducer.
+ * Entry points: `assertLandingPlan`, `assertLandingConfirmation`, `assertLandingPhaseReceipt`,
+ * `assertLandingReceipt`, `reduceLandingEvents`. Record construction belongs to `landing.mjs`.
+ */
+
 import { assertProtocolArtifact } from '../protocol/contracts.mjs';
 import { sha256Jcs } from '../protocol/jcs.mjs';
 import {

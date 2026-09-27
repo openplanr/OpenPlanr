@@ -1,7 +1,8 @@
 /**
- * Review experience. Trusted shell UI only; authored screens remain opaque sandboxes.
- * Adapter hooks: loadExperience, listRevisions, loadRevision, prepareComparisonSource,
- * loadHandoff, updateHandoff, updateReviewMetadata. All hooks are optional and fail visibly.
+ * Design review experience on a mounted studio and stage: reviewer profile and theme, comment
+ * filters, types and dispositions, element inspection, minimap, revision comparison, review export.
+ * Entry point: `mountDesignEnhancements`, which also mounts the owner Handoff Center.
+ * Hooks come from `__OPENPLANR_DESIGN_STUDIO_OPTIONS__`; authored screens remain opaque sandboxes.
  */
 
 import { createDesignReviewExport, serializeDesignReviewExport } from '../review-export.mjs';

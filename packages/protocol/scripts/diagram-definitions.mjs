@@ -1,3 +1,10 @@
+/**
+ * Protocol 1.6.0 diagram definitions: the grammar and semantic-pattern catalogs, their registry
+ * schemas, and the schemas for diagram documents, manifests, reports, references and bindings.
+ * Entry points: `buildDiagramSchemas`, `buildDiagramRegistries`. Runtime consumers read the copy
+ * that `generate-protocol-assets.mjs` writes to `src/generated/diagram-registries.mjs`.
+ */
+
 import { withDocumentDigest } from '../src/canonical-json.mjs';
 import {
   DIAGRAM_V16_CONTRACT_FILES,

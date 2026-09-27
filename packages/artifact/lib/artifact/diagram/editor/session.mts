@@ -1,3 +1,10 @@
+/**
+ * Diagram editor session: holds a diagram's draft, pending transactions, gestures, undo and redo,
+ * conflict comparison and refresh recovery, and saves through an injected owner transport.
+ * Entry points: `createDiagramEditorSession` and `openDiagramEditorSession`, re-exported by the
+ * `diagram-editor` subpath. Command compilation and bundle validation belong to `../authoring`.
+ */
+
 import type {
   DiagramAuthoringBundle,
   DiagramAuthoringValidationError,
