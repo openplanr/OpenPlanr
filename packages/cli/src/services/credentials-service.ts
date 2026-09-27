@@ -7,8 +7,8 @@
  * 3. Encrypted file (~/.planr/credentials.enc) with AES-256-GCM
  * 4. undefined (caller decides how to handle)
  *
- * Keys are automatically migrated from the legacy plaintext
- * ~/.planr/credentials.json on first access.
+ * The CLI's own keys are migrated out of the legacy plaintext
+ * ~/.planr/credentials.json on first access; entries other tools keep there stay.
  */
 
 import { logger } from '../utils/logger.js';
@@ -39,11 +39,23 @@ function readEnvKey(provider: string): string | undefined {
 // Migration
 // ---------------------------------------------------------------------------
 
+/** Keys the CLI stores credentials under; older `planr config set-key` wrote `anthropic` and `openai`. */
+const CLI_CREDENTIAL_KEYS = new Set(['linear', 'anthropic', 'openai']);
+const CLI_CREDENTIAL_PREFIXES = ['company:', 'company-oauth:'];
+
+/** Other tools keep entries in the legacy file too, such as the design engine's `openai_api_key`. */
+function isCliCredential(provider: string): boolean {
+  return (
+    CLI_CREDENTIAL_KEYS.has(provider) ||
+    CLI_CREDENTIAL_PREFIXES.some((prefix) => provider.startsWith(prefix))
+  );
+}
+
 let migrationDone = false;
 
 /**
- * Migrate credentials from legacy plaintext file to the preferred backend.
- * Runs once per process, transparently on first key resolution.
+ * Move the CLI's own entries from the legacy plaintext file to the preferred backend, once per
+ * process on the first key resolution. Other entries stay; the file goes only when none remain.
  */
 export async function migrateCredentials(): Promise<boolean> {
   if (migrationDone) return false;
@@ -55,20 +67,20 @@ export async function migrateCredentials(): Promise<boolean> {
     if (!(await legacyBackend.exists())) return false;
 
     const credentials = await legacyBackend.loadAll();
-    const providers = Object.keys(credentials);
-    if (providers.length === 0) {
-      await legacyBackend.remove();
-      return false;
-    }
+    const owned = Object.keys(credentials).filter(isCliCredential);
+    const others = Object.fromEntries(
+      Object.entries(credentials).filter(([provider]) => !isCliCredential(provider)),
+    );
+    if (owned.length === 0 && Object.keys(others).length > 0) return false;
 
     // Migrate each key to the best available backend
-    for (const provider of providers) {
+    for (const provider of owned) {
       await saveCredential(provider, credentials[provider]);
     }
 
-    // Remove the plaintext file only after all keys migrated successfully
-    await legacyBackend.remove();
-    return true;
+    // Rewrite the plaintext file only after all keys migrated successfully
+    await legacyBackend.keepOnly(others);
+    return owned.length > 0;
   } catch (err) {
     logger.debug('Credential migration failed', err);
     // Migration failed — reset flag so it retries next time

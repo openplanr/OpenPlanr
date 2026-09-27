@@ -4,11 +4,11 @@
  * Three backends in order of preference:
  * 1. OS Keychain (macOS Keychain, Windows Credential Manager, Linux Secret Service)
  * 2. Encrypted file (~/.planr/credentials.enc) using AES-256-GCM
- * 3. Legacy plaintext file (~/.planr/credentials.json) — read-only, for migration
+ * 3. Legacy plaintext file (~/.planr/credentials.json) — shared with other tools, for migration
  */
 
 import crypto from 'node:crypto';
-import { access, mkdir, open, readFile, rename, unlink, writeFile } from 'node:fs/promises';
+import { access, mkdir, open, readFile, rename, rm, unlink, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { z } from 'zod';
@@ -330,7 +330,7 @@ export class EncryptedFileBackend implements CredentialBackend {
 }
 
 // ---------------------------------------------------------------------------
-// 3. Legacy Plaintext Backend (read-only, for migration)
+// 3. Legacy Plaintext Backend (for migration)
 // ---------------------------------------------------------------------------
 
 const LEGACY_FILE = path.join(PLANR_DIR, 'credentials.json');
@@ -360,6 +360,25 @@ export class LegacyPlaintextBackend {
     } catch (err) {
       logger.debug('Failed to remove legacy credentials file', err);
       // Ignore if already gone
+    }
+  }
+
+  /** Keeps only `entries`: deletes the file when none remain, else replaces it atomically at 0600. */
+  async keepOnly(entries: Record<string, string>): Promise<void> {
+    if (Object.keys(entries).length === 0) return this.remove();
+    const temporary = `${this.file}.${crypto.randomUUID()}.tmp`;
+    try {
+      const handle = await open(temporary, 'wx', 0o600);
+      try {
+        await handle.writeFile(`${JSON.stringify(entries, null, 2)}\n`, 'utf8');
+        await handle.sync();
+      } finally {
+        await handle.close();
+      }
+      await rename(temporary, this.file);
+    } catch (error) {
+      await rm(temporary, { force: true });
+      throw error;
     }
   }
 }
