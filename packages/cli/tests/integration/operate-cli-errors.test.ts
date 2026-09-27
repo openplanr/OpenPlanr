@@ -1,11 +1,12 @@
 import { type SpawnSyncReturns, spawnSync } from 'node:child_process';
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 const CLI = path.resolve('src/cli/index.ts');
-const TSX = path.resolve('node_modules/tsx/dist/cli.mjs');
+const TSX = createRequire(import.meta.url).resolve('tsx/cli');
 const temporaryRoots: string[] = [];
 
 function temporaryProject(): string {

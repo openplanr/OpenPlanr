@@ -1,6 +1,7 @@
 import { spawn, spawnSync } from 'node:child_process';
 import { lstatSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
+import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -8,7 +9,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { resolvePipelinePackageRoot } from '../helpers/pipeline-package-root.js';
 
 const CLI = resolve('src/cli/index.ts');
-const TSX = resolve('node_modules/tsx/dist/cli.mjs');
+const TSX = createRequire(import.meta.url).resolve('tsx/cli');
 const pipelineRoot = resolvePipelinePackageRoot();
 const tempDirs: string[] = [];
 

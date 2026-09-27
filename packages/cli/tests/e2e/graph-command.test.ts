@@ -1,9 +1,10 @@
 import { execFileSync } from 'node:child_process';
+import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const CLI = resolve('src/cli/index.ts');
-const TSX = resolve('node_modules/tsx/dist/cli.mjs');
+const TSX = createRequire(import.meta.url).resolve('tsx/cli');
 const fixtureRoot = resolve('tests/fixtures/graph-project');
 
 describe('planr graph', () => {

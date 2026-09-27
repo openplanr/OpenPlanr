@@ -1,11 +1,12 @@
 import { type SpawnSyncReturns, spawnSync } from 'node:child_process';
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createTestProject, type TestProject } from '../helpers/test-project.js';
 
 const CLI = path.resolve('src/cli/index.ts');
-const TSX = path.resolve('node_modules/tsx/dist/cli.mjs');
+const TSX = createRequire(import.meta.url).resolve('tsx/cli');
 const projects: TestProject[] = [];
 
 async function project(): Promise<TestProject> {
