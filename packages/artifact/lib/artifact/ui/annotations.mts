@@ -5,6 +5,13 @@
  * Review state stays in the injected `feedback-rail.mjs` controller; new pins go through `add-pin`.
  */
 
+import type {
+  ArtifactReviewAnchor,
+  ArtifactReviewPin,
+  ArtifactReviewRegion,
+  ArtifactReviewViewport,
+} from './feedback-rail.mjs';
+
 export const ARTIFACT_ANNOTATION_EVENTS = Object.freeze({
   draft: 'planr:artifact-annotation-draft',
   focus: 'planr:artifact-annotation-focus',
@@ -18,19 +25,184 @@ export const ARTIFACT_ANNOTATION_LIMITS = Object.freeze({
 
 const INTENTS = Object.freeze(['fix', 'improve', 'question']);
 
-function finite(value, fallback = 0) {
+type Anchor = ArtifactReviewAnchor;
+type Region = ArtifactReviewRegion;
+type Viewport = ArtifactReviewViewport;
+type Draft = ArtifactAnnotationDraft;
+type ComposerTarget = ArtifactAnnotationTarget;
+type DraftSnapshot = ArtifactAnnotationDraftSnapshot;
+type CloseOptions = ArtifactAnnotationCloseOptions;
+/** An element's client bounds in CSS pixels. */
+interface ClientBounds {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+/** A pointer position; `x` and `y` take precedence over an event's `clientX` and `clientY`. */
+interface ClientPoint {
+  x?: number;
+  y?: number;
+  clientX?: number;
+  clientY?: number;
+}
+/** An anchor element's bounds in artifact viewport pixels. */
+interface AnchorRect {
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+}
+/** The element under a point, as the frame bridge reports it. */
+interface HitAnchor {
+  planrId?: unknown;
+  screen?: unknown;
+  rect?: AnchorRect;
+}
+/** An anchor resolved to its current bounds in the frame. */
+interface ResolvedAnchor {
+  rect: { x?: number; y?: number; width: number; height: number };
+  viewport?: Viewport;
+}
+/** The frame bridge the annotations resolve anchors through. */
+interface AnnotationBridge {
+  resolve(planrId: string, screen?: string): PromiseLike<ResolvedAnchor | null>;
+  hitTest?(x: number, y: number): PromiseLike<HitAnchor | null> | HitAnchor | null;
+}
+type BridgeFrame = HTMLIFrameElement & { __openPlanrBridge?: AnnotationBridge };
+/** A pin's marker, optional region outline and anchor request state. */
+interface PinRecord {
+  button: HTMLButtonElement;
+  region: HTMLSpanElement | null;
+  pin: ArtifactReviewPin;
+  geometryKey: string | null;
+  pending: object | null;
+  requestedAt: number;
+}
+/** A comment being composed; resolving its anchor rewrites the region relative to it. */
+export interface ArtifactAnnotationDraft {
+  artifactId: string;
+  region: Readonly<Region>;
+  viewport: Readonly<Viewport>;
+  variant: string;
+  anchor: Readonly<Anchor> | null;
+  displayRegion: Readonly<Region>;
+}
+/** Where a new comment points: a stage region selection or a restored draft. */
+export interface ArtifactAnnotationTarget {
+  artifactId: string;
+  region: Region;
+  viewport: Viewport;
+  variant?: unknown;
+}
+/** A suspended composer: its target, fields and caret, for the review it was written against. */
+export type ArtifactAnnotationDraftSnapshot = Readonly<
+  ArtifactAnnotationDraft & {
+    reviewOf: string | null;
+    identity: string;
+    fields: Record<string, string>;
+    comment: string;
+    intent: string;
+    selectionStart: number | null;
+    selectionEnd: number | null;
+    selectionDirection: 'forward' | 'backward' | 'none';
+  }
+>;
+/** A host field in the composer whose value a snapshot keeps under its draft key. */
+type DraftField = HTMLElement & { value?: unknown; dataset: { planrDraftKey: string } };
+/** An element that may take focus. */
+type FocusTarget = Element & { focus?(options?: FocusOptions): void };
+/** The add-pin action the composer dispatches; the review controller adds the author. */
+interface AddPinAction {
+  type: 'add-pin';
+  pin: {
+    artifactId: string;
+    region: Readonly<Region>;
+    viewport: Readonly<Viewport>;
+    variant: string;
+    anchor?: Readonly<Anchor>;
+    intent: string | undefined;
+    comment: string;
+  };
+}
+/** A review as the annotations read it. */
+interface AnnotationReview {
+  reviewOf?: string;
+  pins?: readonly ArtifactReviewPin[];
+}
+/** A review state that carries the review, or is the review itself. */
+type AnnotationReviewState = AnnotationReview & { review?: AnnotationReview | null };
+/** The review controller the annotations read pins from and add pins through. */
+interface AnnotationReviewController {
+  getReview?(): AnnotationReview | null;
+  getState?(): AnnotationReviewState | null;
+  getReviewOf?(): string | null | undefined;
+  getIdentity?(): { name?: unknown } | null;
+  setIdentity?(identity: { name: string }): unknown;
+  selectPin?(pinId: string): unknown;
+  dispatch(action: AddPinAction): AnnotationReviewState | null | undefined;
+}
+/** The stage state the annotations read; a single-artifact stage may omit the view fields. */
+interface AnnotationStageState {
+  status: string;
+  activeArtifactId: string;
+  comparisonArtifactId?: string | null;
+  viewMode?: string;
+  presentation?: string;
+  reviewMode: string;
+  artifacts: ReadonlyArray<{ id: string; viewport: Viewport }>;
+}
+/** The stage the annotations follow and steer. */
+interface AnnotationStage {
+  getState(): AnnotationStageState;
+  dispatch(
+    action:
+      | { type: 'set-active'; artifactId: string }
+      | { type: 'set-rail-open'; railOpen: boolean },
+  ): unknown;
+}
+type AnnotationWindow = Window & typeof globalThis & { __openPlanrArtifactAnnotations?: object };
+/** The annotation layer's document, stage and review controller. */
+interface AnnotationOptions {
+  document?: Document;
+  window?: AnnotationWindow;
+  root?: HTMLElement;
+  stageController: AnnotationStage;
+  reviewController: AnnotationReviewController;
+  onFocusPin?: (pin: ArtifactReviewPin) => void;
+}
+/** No options: without a stage and a review controller nothing mounts. */
+type NoOptions = Record<string, never>;
+/** A new element's class, text and attributes; nullish attributes are skipped. */
+interface MakeOptions {
+  className?: string;
+  textContent?: string;
+  attributes?: Record<string, unknown>;
+}
+/** Whether closing the composer returns focus and keeps the draft to restore. */
+export interface ArtifactAnnotationCloseOptions {
+  restoreFocus?: boolean;
+  preserveDraft?: boolean;
+}
+/** An event whose target is an element. */
+type TargetedEvent<E extends Event> = E & { target: Element };
+type RegionEvent = CustomEvent<ComposerTarget>;
+type PinFocusEvent = CustomEvent<{ target?: string; pinId: string } | null>;
+type ReviewSelectEvent = CustomEvent<{ source?: string; pinId?: unknown } | null>;
+
+function finite(value: unknown, fallback = 0) {
   return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 }
 
-function clamp(value, min = 0, max = 1) {
+function clamp(value: unknown, min = 0, max = 1) {
   return Math.min(max, Math.max(min, finite(value)));
 }
 
-function normalized(value) {
+function normalized(value: unknown) {
   return Math.round(clamp(value) * 1_000_000) / 1_000_000;
 }
 
-function assertRect(rect) {
+function assertRect(rect: ClientBounds | null | undefined) {
   if (
     !rect ||
     !Number.isFinite(rect.left) ||
@@ -49,10 +221,10 @@ function assertRect(rect) {
  * geometry. A click intentionally serializes with zero width and height.
  */
 export function clientSelectionToNormalized(
-  rect,
-  start,
-  end = start,
-  { dragThreshold = ARTIFACT_ANNOTATION_LIMITS.dragThreshold } = {},
+  rect: ClientBounds,
+  start: ClientPoint,
+  end: ClientPoint = start,
+  { dragThreshold = ARTIFACT_ANNOTATION_LIMITS.dragThreshold }: { dragThreshold?: number } = {},
 ) {
   assertRect(rect);
   const startX = clamp(
@@ -81,7 +253,7 @@ export function clientSelectionToNormalized(
 }
 
 /** The bridge samples a point inside the frozen artifact viewport. */
-export function artifactAnchorPoint(region, viewport) {
+export function artifactAnchorPoint(region: Region, viewport: Viewport) {
   const width = Number.isInteger(viewport?.width) && viewport.width > 0 ? viewport.width : 1;
   const height = Number.isInteger(viewport?.height) && viewport.height > 0 ? viewport.height : 1;
   return Object.freeze({
@@ -90,8 +262,8 @@ export function artifactAnchorPoint(region, viewport) {
   });
 }
 
-export function annotationStyle(region) {
-  const percent = (value) => `${Math.round(clamp(value) * 1_000_000) / 10_000}%`;
+export function annotationStyle(region: Region) {
+  const percent = (value: number) => `${Math.round(clamp(value) * 1_000_000) / 10_000}%`;
   return Object.freeze({
     left: percent(region?.x),
     top: percent(region?.y),
@@ -101,7 +273,11 @@ export function annotationStyle(region) {
 }
 
 /** Convert a viewport-normalized region into coordinates relative to a stable anchor. */
-export function viewportRegionToAnchorRegion(region, viewport, anchorRect) {
+export function viewportRegionToAnchorRegion(
+  region: Region,
+  viewport: Viewport,
+  anchorRect: AnchorRect | null | undefined,
+) {
   const width = Number.isInteger(viewport?.width) && viewport.width > 0 ? viewport.width : 1;
   const height = Number.isInteger(viewport?.height) && viewport.height > 0 ? viewport.height : 1;
   const anchorWidth = Math.max(1, finite(anchorRect?.width, 1));
@@ -121,7 +297,11 @@ export function viewportRegionToAnchorRegion(region, viewport, anchorRect) {
 }
 
 /** Project an anchor-relative persisted region back into the frozen artifact viewport. */
-export function anchorRegionToViewportRegion(region, viewport, anchorRect) {
+export function anchorRegionToViewportRegion(
+  region: Region,
+  viewport: Viewport,
+  anchorRect: AnchorRect | null | undefined,
+) {
   const width = Number.isInteger(viewport?.width) && viewport.width > 0 ? viewport.width : 1;
   const height = Number.isInteger(viewport?.height) && viewport.height > 0 ? viewport.height : 1;
   const anchorWidth = Math.max(0, finite(anchorRect?.width));
@@ -134,7 +314,7 @@ export function anchorRegionToViewportRegion(region, viewport, anchorRect) {
   });
 }
 
-function domToken(value) {
+function domToken(value: unknown) {
   const source = String(value);
   let token = '';
   for (let index = 0; index < source.length; index += 1) {
@@ -143,7 +323,7 @@ function domToken(value) {
   return token;
 }
 
-export function annotationDomIds(pinId) {
+export function annotationDomIds(pinId: string) {
   const suffix = domToken(pinId);
   return Object.freeze({
     pin: `planr-pin-${suffix}`,
@@ -151,11 +331,15 @@ export function annotationDomIds(pinId) {
   });
 }
 
-function text(value, max = ARTIFACT_ANNOTATION_LIMITS.maxCommentLength) {
+function text(value: unknown, max: number = ARTIFACT_ANNOTATION_LIMITS.maxCommentLength) {
   return typeof value === 'string' ? value.trim().slice(0, max) : '';
 }
 
-function make(document, tag, { className, textContent, attributes = {} } = {}) {
+function make<K extends keyof HTMLElementTagNameMap>(
+  document: Document,
+  tag: K,
+  { className, textContent, attributes = {} }: MakeOptions = {},
+) {
   const node = document.createElement(tag);
   if (className) node.className = className;
   if (textContent !== undefined) node.textContent = textContent;
@@ -165,7 +349,7 @@ function make(document, tag, { className, textContent, attributes = {} } = {}) {
   return node;
 }
 
-function setRegionStyle(node, region) {
+function setRegionStyle(node: HTMLElement, region: Region) {
   const style = annotationStyle(region);
   if (node.style.left !== style.left) node.style.left = style.left;
   if (node.style.top !== style.top) node.style.top = style.top;
@@ -175,19 +359,19 @@ function setRegionStyle(node, region) {
   }
 }
 
-function announce(document, value) {
+function announce(document: Document, value: string) {
   const node = document.querySelector('[data-planr-slot="review-announcer"]');
   if (node) node.textContent = value;
 }
 
-function identityName(reviewController) {
+function identityName(reviewController: AnnotationReviewController) {
   return text(
     reviewController?.getIdentity?.()?.name,
     ARTIFACT_ANNOTATION_LIMITS.maxIdentityLength,
   );
 }
 
-function createIntentPicker(document) {
+function createIntentPicker(document: Document) {
   const group = make(document, 'div', {
     className: 'planr-intent-picker',
     attributes: { role: 'radiogroup', 'aria-label': 'Feedback intent' },
@@ -211,41 +395,38 @@ function createIntentPicker(document) {
 /**
  * Mount the transient annotation UI. Persistence/export belongs to the engine;
  * this controller only dispatches schema-shaped mutations to reviewController.
- * @param {{
- *   document?: Document;
- *   window?: Window & typeof globalThis;
- *   root?: HTMLElement;
- *   stageController?: object;
- *   reviewController?: object;
- *   onFocusPin?: (pin: {
- *     anchor?: { planrId?: string } | null;
- *     region: { x: number; y: number; w: number; h: number };
- *   }) => void;
- * }} [options]
  */
+// Without a DOM the window and root defaults are missing and the check below returns null; the
+// hoisted functions cannot see that check, so the defaults are typed as present.
 export function mountArtifactAnnotations({
   document = globalThis.document,
-  window = document?.defaultView,
-  root = document?.querySelector?.('.planr-shell'),
+  window = document?.defaultView as AnnotationWindow,
+  root = document?.querySelector?.('.planr-shell') as HTMLElement,
   stageController,
   reviewController,
   onFocusPin,
-} = {}) {
+}: AnnotationOptions | NoOptions = {}) {
   if (!document || !window || !root || !stageController || !reviewController) return null;
-  const cleanup = [];
-  let draft = null;
-  let suspendedDraft = null;
+  const cleanup: Array<() => void> = [];
+  let draft: Draft | null = null;
+  let suspendedDraft: DraftSnapshot | null = null;
   let draftToken = 0;
-  let draftFieldCleanup = null;
-  let composerLayoutCleanup = null;
-  let composerReturnFocus = null;
-  const pinRecords = new Map();
-  const anchorRequests = new Map();
+  let draftFieldCleanup: (() => void) | null = null;
+  let composerLayoutCleanup: (() => void) | null = null;
+  let composerReturnFocus: FocusTarget | null = null;
+  const pinRecords = new Map<HTMLElement, Map<string, PinRecord>>();
+  const anchorRequests = new Map<BridgeFrame, number>();
   let destroyed = false;
 
-  function listen(target, type, handler, options) {
-    target.addEventListener(type, handler, options);
-    cleanup.push(() => target.removeEventListener(type, handler, options));
+  // addEventListener types a listener by event name, which a name passed through loses.
+  function listen<E extends Event>(
+    target: EventTarget,
+    type: string,
+    handler: (event: E) => void,
+    options?: boolean | AddEventListenerOptions,
+  ) {
+    target.addEventListener(type, handler as EventListener, options);
+    cleanup.push(() => target.removeEventListener(type, handler as EventListener, options));
   }
 
   function review() {
@@ -256,23 +437,23 @@ export function mountArtifactAnnotations({
     );
   }
 
-  function layerFor(artifactId) {
+  function layerFor(artifactId: string) {
     return (
-      [...document.querySelectorAll('[data-planr-annotation-layer]')].find(
+      [...document.querySelectorAll<HTMLElement>('[data-planr-annotation-layer]')].find(
         (node) => node.dataset.planrAnnotationLayer === artifactId,
       ) ?? null
     );
   }
 
-  function frameFor(artifactId) {
+  function frameFor(artifactId: string) {
     return (
-      [...document.querySelectorAll('[data-planr-artifact-frame]')].find(
+      [...document.querySelectorAll<BridgeFrame>('[data-planr-artifact-frame]')].find(
         (node) => node.dataset.planrArtifactFrame === artifactId,
       ) ?? null
     );
   }
 
-  function focusThread(pinId) {
+  function focusThread(pinId: string) {
     const pin = review()?.pins?.find((item) => item.id === pinId);
     if (!pin) return;
     reviewController.selectPin?.(pinId);
@@ -284,7 +465,7 @@ export function mountArtifactAnnotations({
     queueMicrotask(() => document.getElementById(annotationDomIds(pinId).thread)?.focus());
   }
 
-  function focusPin(pinId) {
+  function focusPin(pinId: string) {
     const pin = review()?.pins?.find((item) => item.id === pinId);
     if (!pin) return;
     reviewController.selectPin?.(pinId);
@@ -309,7 +490,7 @@ export function mountArtifactAnnotations({
     });
   }
 
-  function pinGeometryKey(pin) {
+  function pinGeometryKey(pin: ArtifactReviewPin) {
     // Reusing a pin id in another revision must not reuse its old geometry.
     return JSON.stringify([
       reviewController.getReviewOf?.() ?? review()?.reviewOf,
@@ -320,7 +501,7 @@ export function mountArtifactAnnotations({
     ]);
   }
 
-  function setPinPosition(record, region) {
+  function setPinPosition(record: PinRecord, region: Region) {
     const point = { x: region.x + region.w / 2, y: region.y + region.h / 2, w: 0, h: 0 };
     setRegionStyle(record.button, point);
     if (record.region) setRegionStyle(record.region, region);
@@ -328,12 +509,12 @@ export function mountArtifactAnnotations({
     if (record.region?.hidden) record.region.hidden = false;
   }
 
-  function hidePin(record) {
+  function hidePin(record: PinRecord) {
     if (!record.button.hidden) record.button.hidden = true;
     if (record.region && !record.region.hidden) record.region.hidden = true;
   }
 
-  function removePin(record) {
+  function removePin(record: PinRecord) {
     record.pending = null;
     record.button.remove();
     record.region?.remove();
@@ -342,8 +523,8 @@ export function mountArtifactAnnotations({
   function refreshAnchors() {
     if (destroyed) return;
     const now = window.performance.now();
-    const frames = new Map(
-      [...document.querySelectorAll('[data-planr-artifact-frame]')].map((frame) => [
+    const frames = new Map<string | undefined, BridgeFrame>(
+      [...document.querySelectorAll<BridgeFrame>('[data-planr-artifact-frame]')].map((frame) => [
         frame.dataset.planrArtifactFrame,
         frame,
       ]),
@@ -356,7 +537,9 @@ export function mountArtifactAnnotations({
       .sort((a, b) => a.requestedAt - b.requestedAt);
     for (const record of records) {
       if (record.pending || now - record.requestedAt < 200 || !record.button.isConnected) continue;
-      const frame = frames.get(record.pin.artifactId);
+      // A missing frame has no bridge, which the check below skips; the filter above kept only
+      // anchored pins.
+      const frame = frames.get(record.pin.artifactId) as BridgeFrame;
       const bridge = frame?.__openPlanrBridge;
       if (
         !bridge?.resolve ||
@@ -372,7 +555,7 @@ export function mountArtifactAnnotations({
       record.requestedAt = now;
       anchorRequests.set(frame, (anchorRequests.get(frame) ?? 0) + 1);
       Promise.resolve()
-        .then(() => bridge.resolve(pin.anchor.planrId, pin.anchor.screen))
+        .then(() => bridge.resolve((pin.anchor as Anchor).planrId, (pin.anchor as Anchor).screen))
         .then((anchor) => {
           // A delayed response cannot move a revised/deleted pin or a newly
           // loaded frame. Existing positions stay put while the request runs.
@@ -411,8 +594,9 @@ export function mountArtifactAnnotations({
 
   function renderPins() {
     if (destroyed) return;
-    const pins = Array.isArray(review()?.pins) ? review().pins : [];
-    const layers = new Set(document.querySelectorAll('[data-planr-annotation-layer]'));
+    // Array.isArray checked the pins of the same review.
+    const pins = Array.isArray(review()?.pins) ? (review() as Required<AnnotationReview>).pins : [];
+    const layers = new Set(document.querySelectorAll<HTMLElement>('[data-planr-annotation-layer]'));
     for (const [layer, records] of pinRecords) {
       if (layers.has(layer)) continue;
       for (const record of records.values()) removePin(record);
@@ -424,7 +608,7 @@ export function mountArtifactAnnotations({
         records = new Map();
         pinRecords.set(layer, records);
       }
-      const current = new Set();
+      const current = new Set<string>();
       for (const [index, pin] of pins.entries()) {
         if (pin.artifactId !== layer.dataset.planrAnnotationLayer) continue;
         current.add(pin.id);
@@ -503,14 +687,14 @@ export function mountArtifactAnnotations({
     refreshAnchors();
   }
 
-  function closeComposer({ restoreFocus = false, preserveDraft = false } = {}) {
+  function closeComposer({ restoreFocus = false, preserveDraft = false }: CloseOptions = {}) {
     const snapshot = preserveDraft ? snapshotDraft() : null;
     draftFieldCleanup?.();
     draftFieldCleanup = null;
     composerLayoutCleanup?.();
     composerLayoutCleanup = null;
     const activeLayer = draft ? layerFor(draft.artifactId) : null;
-    const composer = root.querySelector('[data-planr-annotation-composer]');
+    const composer = root.querySelector<HTMLElement>('[data-planr-annotation-composer]');
     try {
       if (composer?.matches(':popover-open')) composer.hidePopover();
     } catch {
@@ -533,16 +717,16 @@ export function mountArtifactAnnotations({
     composerReturnFocus = null;
   }
 
-  async function resolveAnchor(token, candidate) {
+  async function resolveAnchor(token: number, candidate: Draft) {
     const frame = frameFor(candidate.artifactId);
     const point = artifactAnchorPoint(candidate.region, candidate.viewport);
-    let result = null;
+    let result: HitAnchor | null = null;
     try {
       const anchor = frame?.__openPlanrBridge?.hitTest?.(point.x, point.y);
       if (anchor) {
         result = await Promise.race([
           anchor,
-          new Promise((resolve) => window.setTimeout(() => resolve(null), 800)),
+          new Promise<null>((resolve) => window.setTimeout(() => resolve(null), 800)),
         ]);
       }
     } catch {
@@ -559,7 +743,7 @@ export function mountArtifactAnnotations({
   }
 
   function positionComposer() {
-    const composer = root.querySelector('[data-planr-annotation-composer]');
+    const composer = root.querySelector<HTMLElement>('[data-planr-annotation-composer]');
     const layer = draft && layerFor(draft.artifactId);
     if (!composer || !layer) return;
     const visual = window.visualViewport;
@@ -575,9 +759,16 @@ export function mountArtifactAnnotations({
     composer.style.width = `${Math.min(360, availableWidth)}px`;
     composer.style.maxHeight = `${Math.min(620, availableHeight)}px`;
     const bounds = layer.getBoundingClientRect();
+    // A layer is looked up only for a draft, so the draft exists here.
     const point = {
-      x: bounds.left + clamp(draft.displayRegion.x + draft.displayRegion.w / 2) * bounds.width,
-      y: bounds.top + clamp(draft.displayRegion.y + draft.displayRegion.h / 2) * bounds.height,
+      x:
+        bounds.left +
+        clamp((draft as Draft).displayRegion.x + (draft as Draft).displayRegion.w / 2) *
+          bounds.width,
+      y:
+        bounds.top +
+        clamp((draft as Draft).displayRegion.y + (draft as Draft).displayRegion.h / 2) *
+          bounds.height,
     };
     const size = composer.getBoundingClientRect();
     const width = Math.min(size.width || 360, availableWidth),
@@ -590,7 +781,10 @@ export function mountArtifactAnnotations({
     composer.style.top = `${clamp(point.y + 16, viewport.y + margin, viewport.y + viewport.height - height - margin)}px`;
   }
 
-  function openComposer(detail, { restoredDraft = null } = {}) {
+  function openComposer(
+    detail: ComposerTarget,
+    { restoredDraft = null }: { restoredDraft?: DraftSnapshot | null } = {},
+  ) {
     const opener = document.activeElement;
     closeComposer();
     composerReturnFocus = opener;
@@ -687,20 +881,21 @@ export function mountArtifactAnnotations({
     observer?.observe(composer);
     composerLayoutCleanup = () => observer?.disconnect();
 
-    let selectedIntent = 'fix';
-    listen(intentPicker, 'click', (event) => {
-      const button = event.target.closest?.('[data-planr-intent]');
-      if (!button || !INTENTS.includes(button.dataset.planrIntent)) return;
+    let selectedIntent: string | undefined = 'fix';
+    // includes accepts only its element type; a button without an intent is not listed.
+    listen(intentPicker, 'click', (event: TargetedEvent<MouseEvent>) => {
+      const button = event.target.closest?.<HTMLElement>('[data-planr-intent]');
+      if (!button || !INTENTS.includes(button.dataset.planrIntent as string)) return;
       selectedIntent = button.dataset.planrIntent;
-      for (const option of intentPicker.querySelectorAll('[data-planr-intent]')) {
+      for (const option of intentPicker.querySelectorAll<HTMLElement>('[data-planr-intent]')) {
         option.setAttribute('aria-checked', String(option === button));
         option.tabIndex = option === button ? 0 : -1;
       }
     });
-    listen(intentPicker, 'keydown', (event) => {
+    listen(intentPicker, 'keydown', (event: KeyboardEvent) => {
       if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(event.key))
         return;
-      const options = [...intentPicker.querySelectorAll('[data-planr-intent]')];
+      const options = [...intentPicker.querySelectorAll<HTMLElement>('[data-planr-intent]')];
       const current = options.findIndex((option) => option.getAttribute('aria-checked') === 'true');
       const delta = ['ArrowRight', 'ArrowDown'].includes(event.key) ? 1 : -1;
       const nextIndex =
@@ -714,15 +909,16 @@ export function mountArtifactAnnotations({
       options[nextIndex].focus();
     });
     listen(close, 'click', () => closeComposer({ restoreFocus: true }));
+    // The composer was built above with its cancel button.
     listen(
-      composer.querySelector('[data-planr-composer-cancel]'),
+      composer.querySelector('[data-planr-composer-cancel]') as HTMLButtonElement,
       'click',
       () => {
         closeComposer({ restoreFocus: true });
       },
       { once: true },
     );
-    listen(composer, 'keydown', (event) => {
+    listen(composer, 'keydown', (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.preventDefault();
         event.stopPropagation();
@@ -748,7 +944,7 @@ export function mountArtifactAnnotations({
       }
       reviewController.setIdentity?.({ name: author });
       const existingIds = new Set(review()?.pins?.map(({ id }) => id) ?? []);
-      const action = {
+      const action: AddPinAction = {
         type: 'add-pin',
         pin: {
           artifactId: draft.artifactId,
@@ -779,7 +975,7 @@ export function mountArtifactAnnotations({
       identity.value = restoredDraft.identity;
       comment.value = restoredDraft.comment;
       selectedIntent = restoredDraft.intent;
-      for (const option of intentPicker.querySelectorAll('[data-planr-intent]')) {
+      for (const option of intentPicker.querySelectorAll<HTMLElement>('[data-planr-intent]')) {
         const selected = option.dataset.planrIntent === selectedIntent;
         option.setAttribute('aria-checked', String(selected));
         option.tabIndex = selected ? 0 : -1;
@@ -801,7 +997,7 @@ export function mountArtifactAnnotations({
           ),
       );
       if (fields.size) {
-        let timer;
+        let timer: number | undefined;
         const observer = new window.MutationObserver(restoreFields);
         const finish = () => {
           observer.disconnect();
@@ -812,7 +1008,7 @@ export function mountArtifactAnnotations({
             finish();
             return;
           }
-          for (const field of composer.querySelectorAll('[data-planr-draft-key]')) {
+          for (const field of composer.querySelectorAll<DraftField>('[data-planr-draft-key]')) {
             const key = field.dataset.planrDraftKey;
             if (!fields.has(key) || typeof field.value !== 'string') continue;
             field.value = fields.get(key);
@@ -829,36 +1025,38 @@ export function mountArtifactAnnotations({
     } else void resolveAnchor(token, draft);
   }
 
-  function snapshotDraft() {
+  function snapshotDraft(): DraftSnapshot | null {
     const composer = document.querySelector('[data-planr-annotation-composer]');
     if (!draft || !composer) return suspendedDraft;
-    const comment = composer.querySelector('[data-planr-composer-comment]');
+    // The composer is built with its comment and identity fields.
+    const comment = composer.querySelector('[data-planr-composer-comment]') as HTMLTextAreaElement;
     return Object.freeze({
       ...draft,
       reviewOf: reviewController.getReviewOf?.() ?? review()?.reviewOf ?? null,
-      identity: composer.querySelector('[data-planr-composer-identity]').value,
+      identity: (composer.querySelector('[data-planr-composer-identity]') as HTMLInputElement)
+        .value,
       fields: Object.fromEntries(
-        [...composer.querySelectorAll('[data-planr-draft-key]')]
+        [...composer.querySelectorAll<DraftField>('[data-planr-draft-key]')]
           .slice(0, 32)
           .filter(
             (field) => field.dataset.planrDraftKey.length <= 128 && typeof field.value === 'string',
           )
-          .map((field) => [
+          .map((field): [string, string] => [
             field.dataset.planrDraftKey,
-            field.value.slice(0, ARTIFACT_ANNOTATION_LIMITS.maxCommentLength),
+            (field.value as string).slice(0, ARTIFACT_ANNOTATION_LIMITS.maxCommentLength),
           ]),
       ),
       comment: comment.value,
       intent:
-        composer.querySelector('[data-planr-intent][aria-checked="true"]')?.dataset.planrIntent ??
-        'fix',
+        composer.querySelector<HTMLElement>('[data-planr-intent][aria-checked="true"]')?.dataset
+          .planrIntent ?? 'fix',
       selectionStart: comment.selectionStart,
       selectionEnd: comment.selectionEnd,
       selectionDirection: comment.selectionDirection,
     });
   }
 
-  function restoreDraft(snapshot) {
+  function restoreDraft(snapshot: DraftSnapshot | null | undefined) {
     if (
       !snapshot ||
       snapshot.reviewOf !== (reviewController.getReviewOf?.() ?? review()?.reviewOf ?? null)
@@ -871,13 +1069,13 @@ export function mountArtifactAnnotations({
       !artifact ||
       artifact.viewport.width !== snapshot.viewport?.width ||
       artifact.viewport.height !== snapshot.viewport?.height ||
-      !['x', 'y', 'w', 'h'].every(
+      !(['x', 'y', 'w', 'h'] satisfies Array<keyof Region>).every(
         (key) =>
           Number.isFinite(snapshot.region?.[key]) &&
           snapshot.region[key] >= 0 &&
           snapshot.region[key] <= 1,
       ) ||
-      !['x', 'y', 'w', 'h'].every(
+      !(['x', 'y', 'w', 'h'] satisfies Array<keyof Region>).every(
         (key) =>
           Number.isFinite(snapshot.displayRegion?.[key]) &&
           snapshot.displayRegion[key] >= 0 &&
@@ -901,7 +1099,7 @@ export function mountArtifactAnnotations({
     listen(window.visualViewport, 'resize', positionComposer);
     listen(window.visualViewport, 'scroll', positionComposer);
   }
-  listen(root, 'planr:artifact-region', (event) => openComposer(event.detail));
+  listen(root, 'planr:artifact-region', (event: RegionEvent) => openComposer(event.detail));
   listen(root, 'planr:stage-change', () => {
     const state = stageController.getState();
     const visible =
@@ -934,11 +1132,11 @@ export function mountArtifactAnnotations({
   listen(root, 'planr:artifact-review-change', renderPins);
   const anchorRefresh = window.setInterval(refreshAnchors, 250);
   cleanup.push(() => window.clearInterval(anchorRefresh));
-  listen(root, ARTIFACT_ANNOTATION_EVENTS.focus, (event) => {
+  listen(root, ARTIFACT_ANNOTATION_EVENTS.focus, (event: PinFocusEvent) => {
     if (event.detail?.target === 'pin') focusPin(event.detail.pinId);
     if (event.detail?.target === 'thread') focusThread(event.detail.pinId);
   });
-  listen(root, 'planr:artifact-review-select', (event) => {
+  listen(root, 'planr:artifact-review-select', (event: ReviewSelectEvent) => {
     if (event.detail?.source === 'thread' && typeof event.detail?.pinId === 'string') {
       focusPin(event.detail.pinId);
     }

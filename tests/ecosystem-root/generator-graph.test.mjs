@@ -4,11 +4,11 @@ import test from 'node:test';
 import { GENERATOR_STEPS, resolveGeneratorPlan } from '../../scripts/generate-all.mjs';
 
 const expectedOrder = [
+  'typescript-sources',
   'skill-role-host-adapters',
   'protocol-catalogs',
   'protocol-public-projection',
   'dashboard-contracts',
-  'typescript-sources',
   'artifact-shell',
   'diagram-assets',
   'design-studio',

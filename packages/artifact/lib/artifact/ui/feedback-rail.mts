@@ -29,46 +29,274 @@ export const ARTIFACT_REVIEW_DECISIONS = Object.freeze([
   'pending',
   'approved',
   'changes_requested',
-]);
-export const ARTIFACT_REVIEW_INTENTS = Object.freeze(['fix', 'improve', 'question']);
-export const ARTIFACT_REVIEW_STATUSES = Object.freeze(['open', 'addressed', 'resolved']);
+] as const);
+export const ARTIFACT_REVIEW_INTENTS = Object.freeze(['fix', 'improve', 'question'] as const);
+export const ARTIFACT_REVIEW_STATUSES = Object.freeze(['open', 'addressed', 'resolved'] as const);
+
+export type ArtifactReviewDecision = (typeof ARTIFACT_REVIEW_DECISIONS)[number];
+export type ArtifactReviewIntent = (typeof ARTIFACT_REVIEW_INTENTS)[number];
+export type ArtifactReviewStatus = (typeof ARTIFACT_REVIEW_STATUSES)[number];
+/** A review author: the reviewer's display name and optional stable id. */
+export interface ArtifactReviewAuthor {
+  id?: string;
+  name: string;
+}
+export interface ArtifactReviewReply {
+  id: string;
+  author: ArtifactReviewAuthor;
+  comment: string;
+  createdAt: string;
+}
+/** An artifact viewport in CSS pixels. */
+export interface ArtifactReviewViewport {
+  width: number;
+  height: number;
+}
+/** A pin's region, normalized to its artifact viewport or to its anchor element. */
+export interface ArtifactReviewRegion {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+/** The element a pin is anchored to, when the frame bridge resolved one. */
+export interface ArtifactReviewAnchor {
+  planrId: string;
+  screen?: string;
+}
+export interface ArtifactReviewPin {
+  id: string;
+  author: ArtifactReviewAuthor;
+  artifactId: string;
+  variant?: string;
+  region: ArtifactReviewRegion;
+  viewport: ArtifactReviewViewport;
+  anchor?: ArtifactReviewAnchor;
+  intent: ArtifactReviewIntent;
+  status: ArtifactReviewStatus;
+  comment: string;
+  replies: ArtifactReviewReply[];
+  createdAt: string;
+  updatedAt: string;
+}
+/** A Protocol v1.1 artifact review, normalized and deep-frozen. */
+export interface ArtifactReview {
+  schemaVersion: '1.0.0';
+  reviewId: string;
+  reviewOf: string;
+  decision: ArtifactReviewDecision;
+  overall: string;
+  createdAt?: string;
+  updatedAt?: string;
+  pins: ArtifactReviewPin[];
+}
+/** A review author as supplied: a name, an author object, or nothing. */
+type IdentityInput = string | { name?: unknown; id?: unknown } | null | undefined;
+/** A reply as supplied, before validation. */
+interface ReplyInput {
+  id?: unknown;
+  author?: IdentityInput;
+  comment?: unknown;
+  createdAt?: unknown;
+}
+/** A pin as supplied, before validation. */
+interface PinInput {
+  id?: unknown;
+  author?: IdentityInput;
+  artifactId?: unknown;
+  variant?: unknown;
+  region?: { x?: unknown; y?: unknown; w?: unknown; h?: unknown } | null;
+  viewport?: { width?: unknown; height?: unknown } | null;
+  anchor?: { planrId?: unknown; screen?: unknown } | null;
+  intent?: unknown;
+  status?: unknown;
+  comment?: unknown;
+  replies?: unknown;
+  createdAt?: unknown;
+  updatedAt?: unknown;
+}
+/** A review as supplied, before validation. */
+export interface ArtifactReviewInput {
+  schemaVersion?: unknown;
+  reviewId?: unknown;
+  reviewOf?: unknown;
+  decision?: unknown;
+  overall?: unknown;
+  pins?: unknown;
+  createdAt?: unknown;
+  updatedAt?: unknown;
+}
+/** A review action; the reducer validates every field it reads. */
+export type ArtifactReviewAction =
+  | { type: 'add-pin'; pin?: PinInput | null; author?: IdentityInput }
+  | {
+      type: 'add-reply';
+      pinId: unknown;
+      id?: unknown;
+      comment: unknown;
+      createdAt?: unknown;
+      author?: IdentityInput;
+    }
+  | { type: 'set-status'; pinId: unknown; status: unknown }
+  | { type: 'set-overall'; overall: unknown }
+  | { type: 'set-decision'; decision: unknown };
+/** Creates an id for a new review, pin or reply. */
+type CreateId = (kind: string) => unknown;
+/** Returns the current time as an ISO-8601 string or a Date. */
+type Clock = () => unknown;
+interface BoundedOptions {
+  min?: number;
+  max?: number;
+  trim?: boolean;
+  pattern?: RegExp;
+}
+interface ReviewCreation {
+  reviewId?: unknown;
+  reviewOf?: unknown;
+  createId?: CreateId;
+}
+/** A review controller's initial review, artifact digest, local identity and id and time sources. */
+interface ReviewControllerOptions {
+  initialReview?: ArtifactReviewInput | null;
+  reviewOf?: string;
+  reviewId?: string;
+  identity?: IdentityInput;
+  createId?: CreateId;
+  now?: Clock;
+}
+/** A review controller's state: the review, the local identity and the selected pin. */
+export interface ArtifactReviewControllerState {
+  review: ArtifactReview | null;
+  identity: ArtifactReviewAuthor | null;
+  activePinId: string | null;
+}
+/** What changed: the identity, the review (with the action type), or the selection. */
+export interface ArtifactReviewChange {
+  type: string;
+  action?: string;
+}
+type ReviewListener = (state: ArtifactReviewControllerState, change: ArtifactReviewChange) => void;
+/** A new element's class, text and attributes; nullish attributes are skipped. */
+interface ElementOptions {
+  className?: string;
+  text?: string;
+  attributes?: Record<string, unknown>;
+}
+/** How the rail presents one thread; a host's `describePin` adds to it. */
+interface ThreadDescription {
+  intentLabel?: unknown;
+  unread?: boolean;
+  compact?: boolean;
+  replyLimit?: number;
+  commentExpanded?: boolean;
+  replyExpanded?: boolean;
+}
+/** How the rail filters, pages, labels and decorates its threads. */
+export interface ArtifactFeedbackPresentation {
+  filterPin?(pin: ArtifactReviewPin, state: ArtifactReviewControllerState): unknown;
+  filterKey?: unknown;
+  pageSize?: number;
+  emptyMessage?: unknown;
+  compact?: boolean;
+  replyLimit?: number;
+  describePin?(
+    pin: ArtifactReviewPin,
+    state: ArtifactReviewControllerState,
+  ): ThreadDescription | undefined;
+  decorateThread?(thread: {
+    element: HTMLElement;
+    pin: ArtifactReviewPin;
+    state: ArtifactReviewControllerState;
+    document: Document;
+  }): void;
+  onThreadOpen?(pinId: string, state: ArtifactReviewControllerState): void;
+}
+type PinFilter = NonNullable<ArtifactFeedbackPresentation['filterPin']>;
+export type ArtifactReviewController = ReturnType<typeof createArtifactReviewController>;
+/** A mounted feedback rail. */
+export type ArtifactFeedbackRail = ReturnType<typeof mountArtifactFeedbackRail>;
+/** The rail's root, its review controller or the options to create one, and its presentation. */
+interface FeedbackRailOptions extends ReviewControllerOptions {
+  root?: HTMLElement;
+  document?: Document;
+  window?: (Window & typeof globalThis) | null;
+  controller?: ArtifactReviewController;
+  onSelectPin?(pinId: string): void;
+  presentation?: ArtifactFeedbackPresentation;
+}
+/** Saved rail drafts, validated as they are restored. */
+export interface ArtifactFeedbackDraftsInput {
+  reviewOf?: unknown;
+  identity?: unknown;
+  replies?: Record<string, unknown> | null;
+  expandedReplies?: unknown;
+  fields?: Record<string, unknown> | null;
+  overall?: { value?: unknown; dirty?: unknown } | null;
+}
+/** A reply form, which carries the id of its pin. */
+type ReplyForm = HTMLFormElement & { dataset: { planrReplyForm: string } };
+/** A host field in a thread whose value the drafts keep under its draft key. */
+type DraftField = HTMLElement & { value?: unknown; dataset: { planrDraftKey: string } };
+/** The focused rail element; only a form control has a name and a selection. */
+type FocusedControl = HTMLElement & {
+  name?: string;
+  selectionStart?: number | null;
+  selectionEnd?: number | null;
+  selectionDirection?: string | null;
+};
+/** A focus target; a text control also restores its selection. */
+type FocusRestoreTarget = HTMLElement & {
+  setSelectionRange?(start?: number | null, end?: number | null, direction?: string | null): void;
+};
+type FormControl = HTMLButtonElement | HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
+/** An event whose target is an element. */
+type TargetedEvent<E extends Event, T extends Element = Element> = E & { target: T };
+type ReviewSelectEvent = CustomEvent<{ source?: unknown; pinId?: unknown } | null>;
+/** A caught value as the rail reads it. */
+type Thrown = { message?: string } | null | undefined;
 
 const REVIEW_OF_RE = /^[a-f0-9]{64}$/;
 
 export class ArtifactReviewStateError extends Error {
-  constructor(code, message) {
+  declare code: string;
+  constructor(code: string, message: string) {
     super(message);
     this.name = 'ArtifactReviewStateError';
     this.code = code;
   }
 }
 
-function invalid(message) {
+function invalid(message: string): never {
   throw new ArtifactReviewStateError('E_ARTIFACT_REVIEW_INVALID', message);
 }
 
-function identityRequired() {
+function identityRequired(): never {
   throw new ArtifactReviewStateError(
     'E_ARTIFACT_REVIEW_IDENTITY_REQUIRED',
     'Enter your name before adding a comment.',
   );
 }
 
-function clonePlain(value) {
+function clonePlain(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(clonePlain);
   if (!value || typeof value !== 'object') return value;
-  const clone = {};
+  const clone: Record<string, unknown> = {};
   for (const [key, entry] of Object.entries(value)) clone[key] = clonePlain(entry);
   return clone;
 }
 
 export { deepFreezeArtifactReview };
 
-export function cloneFrozenArtifactReview(review) {
-  return deepFreezeArtifactReview(clonePlain(review));
+export function cloneFrozenArtifactReview<T>(review: T) {
+  // A clone of plain data has the type of its source.
+  return deepFreezeArtifactReview(clonePlain(review) as T);
 }
 
-function boundedString(value, label, { min = 0, max, trim = false, pattern } = {}) {
+function boundedString(
+  value: unknown,
+  label: string,
+  { min = 0, max, trim = false, pattern }: BoundedOptions = {},
+) {
   if (typeof value !== 'string') invalid(`${label} must be a string.`);
   const normalized = trim ? value.trim() : value;
   if (normalized.length < min || (max !== undefined && normalized.length > max)) {
@@ -78,17 +306,18 @@ function boundedString(value, label, { min = 0, max, trim = false, pattern } = {
   return normalized;
 }
 
-function optionalString(value, label, options) {
+function optionalString(value: unknown, label: string, options: BoundedOptions) {
   if (value === undefined) return undefined;
   return boundedString(value, label, options);
 }
 
-function enumValue(value, values, label) {
-  if (!values.includes(value)) invalid(`${label} must be one of: ${values.join(', ')}.`);
-  return value;
+function enumValue<T extends string>(value: unknown, values: readonly T[], label: string) {
+  // includes accepts only its element type and does not narrow; a listed value is a member.
+  if (!values.includes(value as T)) invalid(`${label} must be one of: ${values.join(', ')}.`);
+  return value as T;
 }
 
-function isoTimestamp(value, label) {
+function isoTimestamp(value: unknown, label: string) {
   const timestamp = value instanceof Date ? value.toISOString() : value;
   if (
     typeof timestamp !== 'string' ||
@@ -100,7 +329,7 @@ function isoTimestamp(value, label) {
   return timestamp;
 }
 
-function dependencyTimestamp(now) {
+function dependencyTimestamp(now: Clock) {
   return isoTimestamp(now(), 'now()');
 }
 
@@ -108,7 +337,11 @@ function defaultNow() {
   return new Date().toISOString();
 }
 
-export function createSecureArtifactReviewId(cryptoProvider = globalThis.crypto) {
+export function createSecureArtifactReviewId(
+  cryptoProvider: Partial<
+    Pick<Crypto, 'randomUUID' | 'getRandomValues'>
+  > | null = globalThis.crypto,
+) {
   const randomUuid = cryptoProvider?.randomUUID?.();
   if (randomUuid) return randomUuid;
   const bytes = new Uint8Array(16);
@@ -129,7 +362,7 @@ function defaultCreateId() {
   return createSecureArtifactReviewId();
 }
 
-function dependencyId(createId, kind) {
+function dependencyId(createId: CreateId, kind: string) {
   return boundedString(createId(kind), `${kind} id`, {
     min: 1,
     max: ARTIFACT_REVIEW_LIMITS.id,
@@ -137,7 +370,7 @@ function dependencyId(createId, kind) {
   });
 }
 
-function uniqueDependencyId(createId, kind, existingIds) {
+function uniqueDependencyId(createId: CreateId, kind: string, existingIds: Set<string>) {
   for (let attempt = 0; attempt < 100; attempt += 1) {
     const candidate = dependencyId(createId, kind);
     if (!existingIds.has(candidate)) return candidate;
@@ -148,12 +381,24 @@ function uniqueDependencyId(createId, kind, existingIds) {
   );
 }
 
-export function normalizeArtifactReviewIdentity(value, { allowEmpty = false } = {}) {
+export function normalizeArtifactReviewIdentity(
+  value: IdentityInput,
+  options?: { allowEmpty?: false },
+): ArtifactReviewAuthor;
+export function normalizeArtifactReviewIdentity(
+  value: IdentityInput,
+  options: { allowEmpty: boolean },
+): ArtifactReviewAuthor | null;
+export function normalizeArtifactReviewIdentity(
+  value: IdentityInput,
+  { allowEmpty = false }: { allowEmpty?: boolean } = {},
+): ArtifactReviewAuthor | null {
   if (value === null || value === undefined || value === '') {
     if (allowEmpty) return null;
     identityRequired();
   }
-  const source = typeof value === 'string' ? { name: value } : value;
+  const source: { name?: unknown; id?: unknown } =
+    typeof value === 'string' ? { name: value } : value;
   if (!source || typeof source !== 'object' || Array.isArray(source)) identityRequired();
   const name = boundedString(source.name, 'author.name', {
     min: 1,
@@ -168,11 +413,11 @@ export function normalizeArtifactReviewIdentity(value, { allowEmpty = false } = 
   return deepFreezeArtifactReview(id === undefined ? { name } : { id, name });
 }
 
-function normalizeRegion(region) {
+function normalizeRegion(region: PinInput['region']) {
   if (!region || typeof region !== 'object' || Array.isArray(region)) {
     invalid('pin.region must be an object.');
   }
-  const unit = (value, label) => {
+  const unit = (value: unknown, label: string) => {
     if (typeof value !== 'number' || !Number.isFinite(value)) invalid(`${label} must be finite.`);
     return Math.round(Math.min(1, Math.max(0, value)) * 1_000_000) / 1_000_000;
   };
@@ -183,15 +428,20 @@ function normalizeRegion(region) {
   return { x, y, w, h };
 }
 
-function normalizeViewport(viewport) {
+function normalizeViewport(viewport: PinInput['viewport']) {
   if (!viewport || typeof viewport !== 'object' || Array.isArray(viewport)) {
     invalid('pin.viewport must be an object.');
   }
-  const dimension = (value, label) => {
-    if (!Number.isInteger(value) || value < 1 || value > ARTIFACT_REVIEW_LIMITS.viewport) {
+  // Number.isInteger does not narrow its argument to a number.
+  const dimension = (value: unknown, label: string) => {
+    if (
+      !Number.isInteger(value) ||
+      (value as number) < 1 ||
+      (value as number) > ARTIFACT_REVIEW_LIMITS.viewport
+    ) {
       invalid(`${label} must be an integer from 1 through ${ARTIFACT_REVIEW_LIMITS.viewport}.`);
     }
-    return value;
+    return value as number;
   };
   return {
     width: dimension(viewport.width, 'pin.viewport.width'),
@@ -199,7 +449,7 @@ function normalizeViewport(viewport) {
   };
 }
 
-function normalizeAnchor(anchor) {
+function normalizeAnchor(anchor: PinInput['anchor']) {
   if (anchor === undefined || anchor === null) return undefined;
   if (typeof anchor !== 'object' || Array.isArray(anchor)) invalid('pin.anchor must be an object.');
   const planrId = boundedString(anchor.planrId, 'pin.anchor.planrId', {
@@ -215,7 +465,7 @@ function normalizeAnchor(anchor) {
   return screen === undefined ? { planrId } : { planrId, screen };
 }
 
-function normalizeReply(reply, label = 'reply') {
+function normalizeReply(reply: ReplyInput | null | undefined, label = 'reply') {
   if (!reply || typeof reply !== 'object' || Array.isArray(reply))
     invalid(`${label} must be an object.`);
   return {
@@ -234,12 +484,15 @@ function normalizeReply(reply, label = 'reply') {
   };
 }
 
-function compareTimestampThenId(left, right) {
+function compareTimestampThenId(
+  left: { createdAt: string; id: string },
+  right: { createdAt: string; id: string },
+) {
   const byTime = left.createdAt.localeCompare(right.createdAt);
   return byTime === 0 ? left.id.localeCompare(right.id) : byTime;
 }
 
-function normalizePin(pin, label = 'pin') {
+function normalizePin(pin: PinInput | null | undefined, label = 'pin') {
   if (!pin || typeof pin !== 'object' || Array.isArray(pin)) invalid(`${label} must be an object.`);
   if (!Array.isArray(pin.replies) || pin.replies.length > ARTIFACT_REVIEW_LIMITS.replies) {
     invalid(`${label}.replies must contain no more than ${ARTIFACT_REVIEW_LIMITS.replies} items.`);
@@ -250,7 +503,7 @@ function normalizePin(pin, label = 'pin') {
   const replyIds = new Set(replies.map(({ id }) => id));
   if (replyIds.size !== replies.length) invalid(`${label}.replies must have unique ids.`);
 
-  const normalized = {
+  const normalized: ArtifactReviewPin = {
     id: boundedString(pin.id, `${label}.id`, {
       min: 1,
       max: ARTIFACT_REVIEW_LIMITS.id,
@@ -286,7 +539,9 @@ function normalizePin(pin, label = 'pin') {
   return normalized;
 }
 
-export function normalizeArtifactReview(review) {
+export function normalizeArtifactReview(
+  review: ArtifactReviewInput | null | undefined,
+): ArtifactReview {
   if (!review || typeof review !== 'object' || Array.isArray(review)) {
     invalid('Artifact review must be an object.');
   }
@@ -297,7 +552,7 @@ export function normalizeArtifactReview(review) {
   const pinIds = new Set(pins.map(({ id }) => id));
   if (pinIds.size !== pins.length) invalid('review.pins must have unique ids.');
 
-  const normalized = {
+  const normalized: ArtifactReview = {
     schemaVersion: enumValue(review.schemaVersion, ['1.0.0'], 'review.schemaVersion'),
     reviewId: boundedString(review.reviewId, 'review.reviewId', {
       min: 1,
@@ -322,7 +577,8 @@ export function normalizeArtifactReview(review) {
   return deepFreezeArtifactReview(normalized);
 }
 
-export function createArtifactReview({ reviewId, reviewOf, createId = defaultCreateId } = {}) {
+// biome-ignore format: bundles keep this one-line parameter pattern; wrapping would change their bytes.
+export function createArtifactReview({ reviewId, reviewOf, createId = defaultCreateId }: ReviewCreation = {}) {
   const normalizedReviewId =
     reviewId === undefined
       ? dependencyId(createId, 'review')
@@ -345,11 +601,11 @@ export function createArtifactReview({ reviewId, reviewOf, createId = defaultCre
   });
 }
 
-function replacePin(review, pin) {
+function replacePin(review: ArtifactReview, pin: ArtifactReviewPin) {
   return review.pins.map((candidate) => (candidate.id === pin.id ? pin : candidate));
 }
 
-function findPin(review, pinId) {
+function findPin(review: ArtifactReview, pinId: unknown) {
   const normalizedId = boundedString(pinId, 'pinId', {
     min: 1,
     max: ARTIFACT_REVIEW_LIMITS.id,
@@ -365,7 +621,11 @@ function findPin(review, pinId) {
   return pin;
 }
 
-function preserveOptionalReviewTimestamps(review, next, timestamp) {
+function preserveOptionalReviewTimestamps(
+  review: ArtifactReview,
+  next: ArtifactReview,
+  timestamp: string,
+) {
   if (review.createdAt !== undefined) next.createdAt = review.createdAt;
   if (review.updatedAt !== undefined) next.updatedAt = timestamp;
   return next;
@@ -377,23 +637,24 @@ function preserveOptionalReviewTimestamps(review, next, timestamp) {
  * authored actions so identity never becomes a top-level protocol field.
  */
 export function reduceArtifactReview(
-  review,
-  action,
-  { createId = defaultCreateId, now = defaultNow } = {},
+  review: ArtifactReviewInput | null | undefined,
+  action: ArtifactReviewAction,
+  { createId = defaultCreateId, now = defaultNow }: { createId?: CreateId; now?: Clock } = {},
 ) {
   const current = normalizeArtifactReview(review);
   if (!action || typeof action !== 'object' || Array.isArray(action))
     invalid('Review action must be an object.');
   const timestamp = dependencyTimestamp(now);
-  let next;
+  let next: ArtifactReview;
 
+  // An action outside the union reaches the default case at runtime.
   switch (action.type) {
     case 'add-pin': {
       if (current.pins.length >= ARTIFACT_REVIEW_LIMITS.pins) {
         invalid(`A review can contain at most ${ARTIFACT_REVIEW_LIMITS.pins} pins.`);
       }
       const author = normalizeArtifactReviewIdentity(action.author);
-      const pinInput = action.pin && typeof action.pin === 'object' ? action.pin : {};
+      const pinInput: PinInput = action.pin && typeof action.pin === 'object' ? action.pin : {};
       const pinId =
         pinInput.id === undefined
           ? uniqueDependencyId(createId, 'pin', new Set(current.pins.map(({ id }) => id)))
@@ -507,7 +768,7 @@ export function reduceArtifactReview(
     default:
       throw new ArtifactReviewStateError(
         'E_ARTIFACT_REVIEW_ACTION_UNKNOWN',
-        `Unknown artifact review action: ${String(action.type)}`,
+        `Unknown artifact review action: ${String((action as { type?: unknown }).type)}`,
       );
   }
 
@@ -521,7 +782,7 @@ export function createArtifactReviewController({
   identity = null,
   createId = defaultCreateId,
   now = defaultNow,
-} = {}) {
+}: ReviewControllerOptions = {}) {
   let review =
     initialReview === null || initialReview === undefined
       ? null
@@ -533,9 +794,9 @@ export function createArtifactReviewController({
     );
   }
   let localIdentity = normalizeArtifactReviewIdentity(identity, { allowEmpty: true });
-  let activePinId = null;
+  let activePinId: string | null = null;
   let destroyed = false;
-  const listeners = new Set();
+  const listeners = new Set<ReviewListener>();
 
   const assertAlive = () => {
     if (destroyed) {
@@ -551,14 +812,14 @@ export function createArtifactReviewController({
     return review;
   };
 
-  const getState = () =>
+  const getState = (): ArtifactReviewControllerState =>
     deepFreezeArtifactReview({
       review,
       identity: localIdentity,
       activePinId,
     });
 
-  const notify = (change) => {
+  const notify = (change: ArtifactReviewChange) => {
     const state = getState();
     for (const listener of [...listeners]) listener(state, deepFreezeArtifactReview({ ...change }));
   };
@@ -571,13 +832,13 @@ export function createArtifactReviewController({
     getIdentity() {
       return localIdentity;
     },
-    setIdentity(value) {
+    setIdentity(value: IdentityInput) {
       assertAlive();
       localIdentity = normalizeArtifactReviewIdentity(value, { allowEmpty: true });
       notify({ type: 'identity' });
       return localIdentity;
     },
-    dispatch(action) {
+    dispatch(action: ArtifactReviewAction) {
       assertAlive();
       const authored = action?.type === 'add-pin' || action?.type === 'add-reply';
       const nextAction =
@@ -593,7 +854,7 @@ export function createArtifactReviewController({
       notify({ type: 'review', action: nextAction.type });
       return review;
     },
-    replaceReview(value) {
+    replaceReview(value: ArtifactReviewInput | null | undefined) {
       assertAlive();
       const next = value === null || value === undefined ? null : normalizeArtifactReview(value);
       if (next && reviewOf !== undefined && next.reviewOf !== reviewOf) {
@@ -607,7 +868,7 @@ export function createArtifactReviewController({
       notify({ type: 'review-replaced' });
       return review;
     },
-    selectPin(pinId) {
+    selectPin(pinId: unknown) {
       assertAlive();
       if (pinId === null || pinId === undefined) {
         activePinId = null;
@@ -617,7 +878,7 @@ export function createArtifactReviewController({
       notify({ type: 'selection' });
       return activePinId;
     },
-    subscribe(listener) {
+    subscribe(listener: ReviewListener) {
       assertAlive();
       if (typeof listener !== 'function') invalid('Review subscriber must be a function.');
       listeners.add(listener);
@@ -636,7 +897,11 @@ export function createArtifactReviewController({
   return Object.freeze(controller);
 }
 
-function createElement(document, tagName, { className, text, attributes = {} } = {}) {
+function createElement<K extends keyof HTMLElementTagNameMap>(
+  document: Document,
+  tagName: K,
+  { className, text, attributes = {} }: ElementOptions = {},
+) {
   const element = document.createElement(tagName);
   if (className) element.className = className;
   if (text !== undefined) element.textContent = text;
@@ -646,16 +911,16 @@ function createElement(document, tagName, { className, text, attributes = {} } =
   return element;
 }
 
-export function artifactReviewThreadDomId(pinId) {
+export function artifactReviewThreadDomId(pinId: string) {
   return annotationDomIds(pinId).thread;
 }
 
-function displayTimestamp(timestamp) {
+function displayTimestamp(timestamp: string) {
   const canonical = new Date(timestamp).toISOString();
   return `${canonical.slice(0, 10)} ${canonical.slice(11, 16)} UTC`;
 }
 
-function renderReply(document, reply) {
+function renderReply(document: Document, reply: ArtifactReviewReply) {
   const item = createElement(document, 'li', {
     className: 'planr-reply',
     attributes: { 'data-planr-reply-id': reply.id },
@@ -671,7 +936,7 @@ function renderReply(document, reply) {
   return item;
 }
 
-function renderReplyForm(document, pin, expanded = false) {
+function renderReplyForm(document: Document, pin: ArtifactReviewPin, expanded = false) {
   const fieldId = `${annotationDomIds(pin.id).thread}-reply`;
   const wrapper = createElement(document, 'div', { className: 'planr-reply-editor' });
   const toggle = createElement(document, 'button', {
@@ -748,7 +1013,12 @@ function renderReplyForm(document, pin, expanded = false) {
   return wrapper;
 }
 
-function renderThread(document, pin, active, description = {}) {
+function renderThread(
+  document: Document,
+  pin: ArtifactReviewPin,
+  active: boolean,
+  description: ThreadDescription = {},
+) {
   const intentLabel =
     typeof description.intentLabel === 'string'
       ? description.intentLabel.slice(0, 128)
@@ -849,14 +1119,15 @@ function renderThread(document, pin, active, description = {}) {
       }),
     );
   if (pin.replies.length) article.append(replies);
+  // renderReplyForm built the editor with its toggle.
   if (description.compact) {
-    lifecycle.append(editor.querySelector('[data-planr-reply-toggle]'));
+    lifecycle.append(editor.querySelector('[data-planr-reply-toggle]') as HTMLButtonElement);
     article.append(lifecycle, editor);
   } else article.append(lifecycle, editor);
   return article;
 }
 
-function decisionCopy(decision) {
+function decisionCopy(decision: string | undefined) {
   if (decision === 'approved') return 'Review approved';
   if (decision === 'changes_requested') return 'Changes requested';
   return 'Decision pending';
@@ -866,15 +1137,6 @@ function decisionCopy(decision) {
  * Mount the rail into renderer-owned slots. All reviewer strings enter the DOM
  * through `textContent` (form controls use their `value` property); HTML
  * parsing is never used.
- * @param {{
- *   root: HTMLElement;
- *   document?: Document;
- *   window?: Window & typeof globalThis;
- *   initialReview?: unknown;
- *   reviewOf?: string;
- *   presentation?: object;
- *   [option: string]: unknown;
- * }} options
  */
 export function mountArtifactFeedbackRail({
   root,
@@ -889,14 +1151,14 @@ export function mountArtifactFeedbackRail({
   now = defaultNow,
   onSelectPin,
   presentation: initialPresentation = {},
-} = {}) {
+}: FeedbackRailOptions = {}) {
   if (!root || !document || !window) invalid('A browser root, document, and window are required.');
-  const slot = root.querySelector('[data-planr-slot="feedback-rail"]');
-  const identityInput = root.querySelector('[data-planr-reviewer-name]');
-  const identityStatus = root.querySelector('[data-planr-identity-status]');
-  const overall = root.querySelector('#planr-overall-note');
+  const slot = root.querySelector<HTMLElement>('[data-planr-slot="feedback-rail"]');
+  const identityInput = root.querySelector<HTMLInputElement>('[data-planr-reviewer-name]');
+  const identityStatus = root.querySelector<HTMLElement>('[data-planr-identity-status]');
+  const overall = root.querySelector<HTMLTextAreaElement>('#planr-overall-note');
   const decisionStatus = root.querySelector('[data-planr-slot="decision-status"]');
-  const decisionButtons = [...root.querySelectorAll('[data-planr-decision]')];
+  const decisionButtons = [...root.querySelectorAll<HTMLElement>('[data-planr-decision]')];
   if (!slot || !identityInput || !overall || !decisionStatus || decisionButtons.length === 0) {
     invalid('Artifact feedback renderer slots are missing.');
   }
@@ -913,24 +1175,26 @@ export function mountArtifactFeedbackRail({
       now,
     });
   let destroyed = false;
-  let presentation = { ...initialPresentation };
-  const replyDrafts = new Map();
-  const expandedReplies = new Set();
-  const expandedHistory = new Map(),
-    expandedComments = new Set();
+  let presentation: ArtifactFeedbackPresentation = { ...initialPresentation };
+  const replyDrafts = new Map<string, string>();
+  const expandedReplies = new Set<string>();
+  const expandedHistory = new Map<string, number>(),
+    expandedComments = new Set<string>();
+  // Number.isInteger does not narrow its argument to a number.
   let visibleLimit = Number.isInteger(initialPresentation.pageSize)
-    ? initialPresentation.pageSize
+    ? (initialPresentation.pageSize as number)
     : Infinity;
-  const extraDrafts = new Map();
+  const extraDrafts = new Map<string, string>();
   let overallDirty = false;
   let composing = false;
   let renderQueued = false;
+  // renderReplyForm names each reply form's textarea `reply`.
   const captureDrafts = () => {
-    for (const form of slot.querySelectorAll('[data-planr-reply-form]')) {
-      const field = form.elements.namedItem('reply');
+    for (const form of slot.querySelectorAll<ReplyForm>('[data-planr-reply-form]')) {
+      const field = form.elements.namedItem('reply') as HTMLTextAreaElement | null;
       if (field) replyDrafts.set(form.dataset.planrReplyForm, field.value);
     }
-    for (const field of slot.querySelectorAll('[data-planr-draft-key]')) {
+    for (const field of slot.querySelectorAll<DraftField>('[data-planr-draft-key]')) {
       if (typeof field.value === 'string')
         extraDrafts.set(field.dataset.planrDraftKey, field.value);
     }
@@ -953,10 +1217,11 @@ export function mountArtifactFeedbackRail({
         detail: snapshotDrafts(),
       }),
     );
+  // The rail's focusable content is HTML.
   const focusDescriptor = () => {
-    const element = document.activeElement;
+    const element = document.activeElement as FocusedControl | null;
     if (!element || !slot.contains(element)) return null;
-    const thread = element.closest('[data-planr-pin-id]');
+    const thread = element.closest<HTMLElement>('[data-planr-pin-id]');
     return {
       id: element.id,
       pinId: thread?.dataset.planrPinId,
@@ -970,22 +1235,23 @@ export function mountArtifactFeedbackRail({
       direction: element.selectionDirection,
     };
   };
-  const restoreFocus = (descriptor) => {
+  // A pin id is never empty, so a thread lookup yields an element or null.
+  const restoreFocus = (descriptor: ReturnType<typeof focusDescriptor>) => {
     if (!descriptor) return;
-    const thread =
-      descriptor.pinId && document.getElementById(artifactReviewThreadDomId(descriptor.pinId));
-    const target =
+    const thread = (descriptor.pinId &&
+      document.getElementById(artifactReviewThreadDomId(descriptor.pinId))) as HTMLElement | null;
+    const target: FocusRestoreTarget | undefined =
       (descriptor.id && document.getElementById(descriptor.id)) ||
       (descriptor.draftKey &&
-        [...slot.querySelectorAll('[data-planr-draft-key]')].find(
+        [...slot.querySelectorAll<DraftField>('[data-planr-draft-key]')].find(
           (field) => field.dataset.planrDraftKey === descriptor.draftKey,
         )) ||
       (descriptor.action &&
-        [...(thread?.querySelectorAll('[data-planr-thread-action]') ?? [])].find(
+        [...(thread?.querySelectorAll<HTMLElement>('[data-planr-thread-action]') ?? [])].find(
           (button) => button.dataset.planrThreadAction === descriptor.action,
         )) ||
-      (descriptor.showPin && thread?.querySelector('[data-planr-thread-focus]')) ||
-      [...(thread?.querySelectorAll('button,input,select,textarea') ?? [])].find(
+      (descriptor.showPin && thread?.querySelector<HTMLElement>('[data-planr-thread-focus]')) ||
+      [...(thread?.querySelectorAll<FormControl>('button,input,select,textarea') ?? [])].find(
         (field) => field.tagName === descriptor.tag && field.name === descriptor.name,
       );
     target?.focus?.({ preventScroll: true });
@@ -993,21 +1259,22 @@ export function mountArtifactFeedbackRail({
       target?.setSelectionRange?.(descriptor.start, descriptor.end, descriptor.direction);
   };
 
-  const showError = (error) => {
-    const target = root.querySelector('#planr-review-error');
+  // A caught value may be any thrown value; only an optional message is read.
+  const showError = (error: unknown) => {
+    const target = root.querySelector<HTMLElement>('#planr-review-error');
     if (!target) return;
-    target.textContent = error?.message ?? String(error);
+    target.textContent = (error as Thrown)?.message ?? String(error);
     target.hidden = false;
   };
 
   const clearError = () => {
-    const target = root.querySelector('#planr-review-error');
+    const target = root.querySelector<HTMLElement>('#planr-review-error');
     if (!target) return;
     target.textContent = '';
     target.hidden = true;
   };
 
-  const announce = (message) => {
+  const announce = (message: string) => {
     decisionStatus.textContent = message;
     const live =
       root.parentElement?.querySelector('[data-planr-slot="review-announcer"]') ??
@@ -1015,7 +1282,7 @@ export function mountArtifactFeedbackRail({
     if (live) live.textContent = message;
   };
 
-  const updateCounts = (pins) => {
+  const updateCounts = (pins: readonly ArtifactReviewPin[]) => {
     const label = `${pins.length} ${pins.length === 1 ? 'comment' : 'comments'}`;
     for (const count of root.querySelectorAll(
       '[data-planr-action="feedback"] .planr-count, .planr-review-rail > header .planr-count',
@@ -1023,28 +1290,33 @@ export function mountArtifactFeedbackRail({
       count.textContent = String(pins.length);
       count.setAttribute('aria-label', label);
     }
-    const commentsButton = root.querySelector('[data-planr-action="feedback"]');
+    const commentsButton = root.querySelector<HTMLElement>('[data-planr-action="feedback"]');
     commentsButton?.setAttribute('aria-label', commentsButton.dataset.planrReviewLabel || label);
     if (commentsButton?.dataset.planrReviewLabel)
       commentsButton.setAttribute('aria-description', label);
   };
 
-  const render = ({ capture = true } = {}) => {
+  const render = ({ capture = true }: { capture?: boolean } = {}) => {
     if (composing) {
       renderQueued = true;
       return;
     }
     if (capture) captureDrafts();
     const focus = focusDescriptor();
-    const scroll = [];
-    for (let node = slot; node && root.contains(node); node = node.parentElement)
+    const scroll: Array<[HTMLElement, number, number]> = [];
+    for (
+      let node: HTMLElement | null = slot;
+      node && root.contains(node);
+      node = node.parentElement
+    )
       scroll.push([node, node.scrollTop, node.scrollLeft]);
     const state = controller.getState();
     const { review, activePinId } = state;
     const allPins = review?.pins ?? [];
+    // The callback cannot see the filterPin check on the reassignable presentation.
     const pins =
       typeof presentation.filterPin === 'function'
-        ? allPins.filter((pin) => presentation.filterPin(pin, state))
+        ? allPins.filter((pin) => (presentation.filterPin as PinFilter)(pin, state))
         : allPins;
     const activeIndex = pins.findIndex((pin) => pin.id === activePinId);
     // A selected pin beyond the loaded page is one extra card, never thousands.
@@ -1077,10 +1349,12 @@ export function mountArtifactFeedbackRail({
           replyExpanded: expandedReplies.has(pin.id),
         });
         presentation.decorateThread?.({ element: thread, pin, state, document });
-        const reply = thread.querySelector('[name="reply"]');
-        if (replyDrafts.has(pin.id)) reply.value = replyDrafts.get(pin.id);
-        thread.querySelector('.planr-reply-send').disabled = !reply.value.trim();
-        for (const field of thread.querySelectorAll('[data-planr-draft-key]')) {
+        // renderThread built the reply textarea and send button; has() checked the draft.
+        const reply = thread.querySelector('[name="reply"]') as HTMLTextAreaElement;
+        if (replyDrafts.has(pin.id)) reply.value = replyDrafts.get(pin.id) as string;
+        (thread.querySelector('.planr-reply-send') as HTMLButtonElement).disabled =
+          !reply.value.trim();
+        for (const field of thread.querySelectorAll<DraftField>('[data-planr-draft-key]')) {
           if (extraDrafts.has(field.dataset.planrDraftKey))
             field.value = extraDrafts.get(field.dataset.planrDraftKey);
         }
@@ -1125,13 +1399,13 @@ export function mountArtifactFeedbackRail({
       openMetric.textContent = `${allPins.filter(({ status }) => status !== 'resolved').length} open`;
   };
 
-  const focusThread = (pinId) => {
+  const focusThread = (pinId: string) => {
     const thread = document.getElementById(artifactReviewThreadDomId(pinId));
     thread?.focus({ preventScroll: true });
     thread?.scrollIntoView?.({ block: 'nearest' });
   };
 
-  const emitReview = (review) => {
+  const emitReview = (review: ArtifactReview) => {
     const detail = cloneFrozenArtifactReview(review);
     root.dispatchEvent(
       new window.CustomEvent(ARTIFACT_REVIEW_CHANGE_EVENT, {
@@ -1148,7 +1422,7 @@ export function mountArtifactFeedbackRail({
       emitReview(state.review);
   });
 
-  const onInput = (event) => {
+  const onInput = (event: TargetedEvent<Event, HTMLInputElement>) => {
     if (event.target !== identityInput) return;
     try {
       controller.setIdentity(event.target.value ? { name: event.target.value } : null);
@@ -1165,10 +1439,14 @@ export function mountArtifactFeedbackRail({
     }
   };
 
-  const setReplyExpanded = (pinId, expanded, { focus = false } = {}) => {
+  const setReplyExpanded = (
+    pinId: string,
+    expanded: boolean,
+    { focus = false }: { focus?: boolean } = {},
+  ) => {
     const thread = document.getElementById(artifactReviewThreadDomId(pinId));
-    const form = thread?.querySelector('[data-planr-reply-form]');
-    const toggle = thread?.querySelector('[data-planr-reply-toggle]');
+    const form = thread?.querySelector<ReplyForm>('[data-planr-reply-form]');
+    const toggle = thread?.querySelector<HTMLElement>('[data-planr-reply-toggle]');
     if (!form || !toggle) return;
     if (expanded) expandedReplies.add(pinId);
     else expandedReplies.delete(pinId);
@@ -1176,12 +1454,14 @@ export function mountArtifactFeedbackRail({
     toggle.setAttribute('aria-expanded', String(expanded));
     toggle.textContent = expanded ? '− Reply' : '+ Reply';
     toggle.title = expanded ? 'Collapse reply' : 'Reply to this comment';
+    // biome-ignore format: bundles keep this one-line call; wrapping would change their bytes.
     if (focus)
-      (expanded ? form.elements.namedItem('reply') : toggle).focus({ preventScroll: true });
+      (expanded ? (form.elements.namedItem('reply') as HTMLTextAreaElement) : toggle).focus({ preventScroll: true });
     emitDraftChange();
   };
-  const onKeyDown = (event) => {
-    const form = event.target?.closest?.('[data-planr-reply-form]');
+  // A keydown inside the slot targets one of its elements; each reply form has its textarea.
+  const onKeyDown = (event: KeyboardEvent) => {
+    const form = (event.target as Element)?.closest?.<ReplyForm>('[data-planr-reply-form]');
     if (!form || event.isComposing) return;
     if (event.key === 'Escape') {
       event.preventDefault();
@@ -1189,11 +1469,12 @@ export function mountArtifactFeedbackRail({
       setReplyExpanded(form.dataset.planrReplyForm, false, { focus: true });
     } else if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
       event.preventDefault();
-      if (form.elements.namedItem('reply').value.trim()) form.requestSubmit();
+      // biome-ignore format: bundles keep this one-line statement; wrapping would change their bytes.
+      if ((form.elements.namedItem('reply') as HTMLTextAreaElement).value.trim()) form.requestSubmit();
     }
   };
 
-  const emitSelection = (pinId) => {
+  const emitSelection = (pinId: string) => {
     controller.selectPin(pinId);
     root.dispatchEvent(
       new window.CustomEvent(ARTIFACT_REVIEW_SELECT_EVENT, {
@@ -1204,41 +1485,42 @@ export function mountArtifactFeedbackRail({
     onSelectPin?.(pinId);
   };
 
-  const onClick = (event) => {
+  // Each control a click matches carries the attribute its selector names.
+  const onClick = (event: TargetedEvent<MouseEvent>) => {
     if (event.target.closest?.('[data-planr-threads-more]')) {
       visibleLimit += presentation.pageSize || 40;
       render();
       return;
     }
-    const historyToggle = event.target.closest?.('[data-planr-history-expand]');
+    const historyToggle = event.target.closest?.<HTMLElement>('[data-planr-history-expand]');
     if (historyToggle) {
-      const id = historyToggle.dataset.planrHistoryExpand;
+      const id = historyToggle.dataset.planrHistoryExpand as string;
       expandedHistory.set(id, (expandedHistory.get(id) || 2) + 20);
       render();
       return;
     }
-    const commentToggle = event.target.closest?.('[data-planr-comment-expand]');
+    const commentToggle = event.target.closest?.<HTMLElement>('[data-planr-comment-expand]');
     if (commentToggle) {
-      const id = commentToggle.dataset.planrCommentExpand;
+      const id = commentToggle.dataset.planrCommentExpand as string;
       if (expandedComments.has(id)) expandedComments.delete(id);
       else expandedComments.add(id);
       render();
       return;
     }
-    const replyToggle = event.target?.closest?.('[data-planr-reply-toggle]');
+    const replyToggle = event.target?.closest?.<HTMLElement>('[data-planr-reply-toggle]');
     if (replyToggle) {
       setReplyExpanded(
-        replyToggle.dataset.planrReplyToggle,
+        replyToggle.dataset.planrReplyToggle as string,
         replyToggle.getAttribute('aria-expanded') !== 'true',
         { focus: true },
       );
       return;
     }
-    const action = event.target?.closest?.('[data-planr-thread-action]');
-    const focus = event.target?.closest?.('[data-planr-thread-focus]');
+    const action = event.target?.closest?.<HTMLElement>('[data-planr-thread-action]');
+    const focus = event.target?.closest?.<HTMLElement>('[data-planr-thread-focus]');
     if (action) {
       try {
-        const pinId = action.dataset.planrPinId;
+        const pinId = action.dataset.planrPinId as string;
         controller.dispatch({
           type: 'set-status',
           pinId,
@@ -1254,14 +1536,15 @@ export function mountArtifactFeedbackRail({
       }
       return;
     }
-    if (focus) emitSelection(focus.dataset.planrThreadFocus);
+    if (focus) emitSelection(focus.dataset.planrThreadFocus as string);
   };
 
-  const onSubmit = (event) => {
-    const form = event.target?.closest?.('[data-planr-reply-form]');
+  // A submit inside the slot targets one of its forms; each reply form has its textarea.
+  const onSubmit = (event: SubmitEvent) => {
+    const form = (event.target as Element)?.closest?.<ReplyForm>('[data-planr-reply-form]');
     if (!form) return;
     event.preventDefault();
-    const textarea = form.elements.namedItem('reply');
+    const textarea = form.elements.namedItem('reply') as HTMLTextAreaElement;
     const comment = textarea.value;
     if (!comment.trim()) return;
     const wasExpanded = expandedReplies.has(form.dataset.planrReplyForm);
@@ -1301,9 +1584,10 @@ export function mountArtifactFeedbackRail({
     }
   };
 
-  const onDecision = (event) => {
+  // The listener sits on a decision button.
+  const onDecision = (event: MouseEvent) => {
     try {
-      const selected = event.currentTarget.dataset.planrDecision;
+      const selected = (event.currentTarget as HTMLElement).dataset.planrDecision;
       const decision = controller.getReview()?.decision === selected ? 'pending' : selected;
       controller.dispatch({ type: 'set-decision', decision });
       announce(decisionCopy(decision));
@@ -1313,7 +1597,7 @@ export function mountArtifactFeedbackRail({
     }
   };
 
-  const onSelect = (event) => {
+  const onSelect = (event: ReviewSelectEvent) => {
     if (event.detail?.source === 'thread' || typeof event.detail?.pinId !== 'string') return;
     try {
       controller.selectPin(event.detail.pinId);
@@ -1323,9 +1607,11 @@ export function mountArtifactFeedbackRail({
     }
   };
 
-  let lastOpened = null;
-  const onThreadOpen = (event) => {
-    const thread = event.target.closest?.('.planr-thread[data-planr-pin-id]');
+  let lastOpened: string | null = null;
+  // A focus or click inside the slot targets one of its elements.
+  const onThreadOpen = (event: Event) => {
+    // biome-ignore format: bundles keep this one-line call; wrapping would change their bytes.
+    const thread = (event.target as Element).closest?.<HTMLElement>('.planr-thread[data-planr-pin-id]');
     if (!thread || !slot.contains(thread)) return;
     const pin = controller
       .getReview()
@@ -1341,12 +1627,13 @@ export function mountArtifactFeedbackRail({
       }),
     );
   };
-  const onDraftInput = (event) => {
-    const form = event.target.closest?.('[data-planr-reply-form]');
+  // An input inside the slot targets one of its elements; renderReplyForm built each reply form.
+  const onDraftInput = (event: Event) => {
+    const form = (event.target as Element).closest?.<ReplyForm>('[data-planr-reply-form]');
     if (form)
-      form.querySelector('.planr-reply-send').disabled = !form.elements
-        .namedItem('reply')
-        .value.trim();
+      (form.querySelector('.planr-reply-send') as HTMLButtonElement).disabled = !(
+        form.elements.namedItem('reply') as HTMLTextAreaElement
+      ).value.trim();
     emitDraftChange();
   };
   const onOverallInput = () => {
@@ -1369,13 +1656,15 @@ export function mountArtifactFeedbackRail({
   slot.addEventListener('compositionstart', onCompositionStart);
   slot.addEventListener('compositionend', onCompositionEnd);
   overall.addEventListener('input', onOverallInput);
-  identityInput.addEventListener('input', onInput);
-  slot.addEventListener('click', onClick);
+  // onInput and onClick read their target as the elements the rail rendered; onSelect reads the
+  // detail of the select event the stage dispatches.
+  identityInput.addEventListener('input', onInput as EventListener);
+  slot.addEventListener('click', onClick as EventListener);
   slot.addEventListener('submit', onSubmit);
   slot.addEventListener('keydown', onKeyDown);
   overall.addEventListener('change', onOverallChange);
   for (const button of decisionButtons) button.addEventListener('click', onDecision);
-  root.addEventListener(ARTIFACT_REVIEW_SELECT_EVENT, onSelect);
+  root.addEventListener(ARTIFACT_REVIEW_SELECT_EVENT, onSelect as EventListener);
   render();
 
   return Object.freeze({
@@ -1383,12 +1672,13 @@ export function mountArtifactFeedbackRail({
     getReview: () => controller.getReview(),
     getState: () => controller.getState(),
     getIdentity: () => controller.getIdentity(),
-    setIdentity: (value) => controller.setIdentity(value),
-    dispatch: (action) => controller.dispatch(action),
-    replaceReview: (review) => controller.replaceReview(review),
-    selectPin: (pinId) => controller.selectPin(pinId),
+    setIdentity: (value: IdentityInput) => controller.setIdentity(value),
+    dispatch: (action: ArtifactReviewAction) => controller.dispatch(action),
+    replaceReview: (review: ArtifactReviewInput | null | undefined) =>
+      controller.replaceReview(review),
+    selectPin: (pinId: unknown) => controller.selectPin(pinId),
     render,
-    setPresentation(options = {}) {
+    setPresentation(options: ArtifactFeedbackPresentation = {}) {
       if (
         options.filterKey !== presentation.filterKey ||
         (options.pageSize !== undefined && options.pageSize !== presentation.pageSize)
@@ -1399,7 +1689,7 @@ export function mountArtifactFeedbackRail({
     },
     snapshotDrafts,
     getReviewOf: () => controller.getReview()?.reviewOf ?? reviewOf,
-    restoreDrafts(snapshot) {
+    restoreDrafts(snapshot: ArtifactFeedbackDraftsInput | null | undefined) {
       const digest = controller.getReview()?.reviewOf ?? reviewOf;
       if (!snapshot || snapshot.reviewOf !== digest) return false;
       // Identity notifications synchronously render and capture current fields.
@@ -1447,13 +1737,13 @@ export function mountArtifactFeedbackRail({
       slot.removeEventListener('compositionstart', onCompositionStart);
       slot.removeEventListener('compositionend', onCompositionEnd);
       overall.removeEventListener('input', onOverallInput);
-      identityInput.removeEventListener('input', onInput);
-      slot.removeEventListener('click', onClick);
+      identityInput.removeEventListener('input', onInput as EventListener);
+      slot.removeEventListener('click', onClick as EventListener);
       slot.removeEventListener('submit', onSubmit);
       slot.removeEventListener('keydown', onKeyDown);
       overall.removeEventListener('change', onOverallChange);
       for (const button of decisionButtons) button.removeEventListener('click', onDecision);
-      root.removeEventListener(ARTIFACT_REVIEW_SELECT_EVENT, onSelect);
+      root.removeEventListener(ARTIFACT_REVIEW_SELECT_EVENT, onSelect as EventListener);
       if (ownsController) controller.destroy();
     },
   });

@@ -14,9 +14,65 @@ export const HOSTED_ARTIFACT_VIEWER_STATES = Object.freeze([
   'unsupported-browser',
   'network-error',
   'room-closed',
-]);
+] as const);
 
-export const HOSTED_ARTIFACT_STATE_COPY = Object.freeze({
+/** A hosted viewer state. */
+export type HostedArtifactViewerStatus = (typeof HOSTED_ARTIFACT_VIEWER_STATES)[number];
+type HostedTransport = 'fragment' | 'short' | 'room';
+/** The copy a state shows; `action` labels the retry control when the state can retry. */
+interface HostedStateCopy {
+  readonly title: string;
+  readonly detail: string;
+  readonly action: string;
+}
+type HostedStateCopyTable = Readonly<Partial<Record<HostedArtifactViewerStatus, HostedStateCopy>>>;
+/** A short link's or live room's identifiers and capabilities. */
+interface KeyedRequest {
+  id: string;
+  key: string;
+  write?: string;
+  owner?: string;
+  manage?: string;
+}
+/** The request a parsed location resolves to, kept on the state. */
+type HostedRequest =
+  | { transport: 'fragment'; version: 'v1'; payload: string }
+  | ({ transport: 'short' | 'room' } & KeyedRequest);
+/** A state update; freezeState fills the fields it omits. */
+interface HostedStateInput {
+  status: HostedArtifactViewerStatus;
+  transport?: HostedTransport;
+  request?: HostedRequest;
+  envelope?: unknown;
+}
+type Details = Record<string, unknown>;
+/** A parsed hosted URL, or the state its malformation maps to. */
+type HostedLocation =
+  | Readonly<{ ok: false; status: HostedArtifactViewerStatus; details: Readonly<Details> }>
+  | Readonly<{ ok: true; transport: 'fragment'; version: 'v1'; payload: string }>
+  | Readonly<{ ok: true; transport: 'short' | 'room' } & KeyedRequest>;
+type LocationInput = string | { pathname?: unknown; hash?: unknown } | null | undefined;
+/** A thrown value as the viewer classifies it. */
+interface HostedErrorLike {
+  code?: unknown;
+  name?: unknown;
+}
+/** The mount options; decoding, decryption and loading are injected by the host. */
+interface HostedViewerOptions {
+  document?: Document;
+  window?: HostedViewerWindow | null;
+  enabled?: boolean;
+  location?: LocationInput;
+  decodeFragment?: (fragment: Readonly<{ version: 'v1'; payload: string }>) => unknown;
+  loadShort?: (request: Readonly<{ id: string; key: string }>) => unknown;
+  loadRoom?: (request: Readonly<KeyedRequest>) => unknown;
+  onEnvelope?: (envelope: unknown, context: Readonly<{ transport: HostedTransport }>) => unknown;
+  supportsTransport?: (transport: HostedTransport) => boolean;
+  fragmentLimit?: number;
+}
+type HostedViewerWindow = Window & typeof globalThis & { __openPlanrHostedArtifactViewer?: object };
+
+export const HOSTED_ARTIFACT_STATE_COPY: HostedStateCopyTable = Object.freeze({
   'empty-hash': Object.freeze({
     title: 'Open a private review link',
     detail: 'This page needs a complete OpenPlanr fragment or encrypted short-link URL.',
@@ -76,7 +132,9 @@ export const HOSTED_ARTIFACT_STATE_COPY = Object.freeze({
 });
 
 export class HostedArtifactViewerError extends Error {
-  constructor(code, message, details = {}) {
+  declare code: string;
+  declare details: Readonly<Record<string, unknown>>;
+  constructor(code: string, message: string, details: Record<string, unknown> = {}) {
     super(message);
     this.name = 'HostedArtifactViewerError';
     this.code = code;
@@ -84,18 +142,21 @@ export class HostedArtifactViewerError extends Error {
   }
 }
 
-function freezeState(value) {
+function freezeState(value: HostedStateInput) {
   const status = HOSTED_ARTIFACT_VIEWER_STATES.includes(value.status) ? value.status : 'idle';
+  // includes accepts only its element type; an absent transport is not listed.
   return Object.freeze({
     status,
-    transport: ['fragment', 'short', 'room'].includes(value.transport) ? value.transport : null,
+    transport: ['fragment', 'short', 'room'].includes(value.transport as string)
+      ? value.transport
+      : null,
     request: value.request ? Object.freeze({ ...value.request }) : null,
     envelope: value.envelope ?? null,
     retryable: status === 'network-error',
   });
 }
 
-function locationParts(location) {
+function locationParts(location: LocationInput) {
   if (typeof location === 'string') {
     const parsed = new URL(location, 'https://share.openplanr.dev/');
     return { pathname: parsed.pathname, hash: parsed.hash };
@@ -106,15 +167,15 @@ function locationParts(location) {
   };
 }
 
-function malformed(status, details = {}) {
+function malformed(status: HostedArtifactViewerStatus, details: Details = {}) {
   return Object.freeze({ ok: false, status, details: Object.freeze(details) });
 }
 
 /** Parse only the public URL shape; decoding, decryption, and I/O are injected. */
 export function parseHostedArtifactLocation(
-  location,
-  { fragmentLimit = ARTIFACT_SHARE_FRAGMENT_LIMIT } = {},
-) {
+  location: LocationInput,
+  { fragmentLimit = ARTIFACT_SHARE_FRAGMENT_LIMIT }: { fragmentLimit?: number } = {},
+): HostedLocation {
   const { pathname, hash } = locationParts(location);
   const shortMatch = pathname.match(/^\/p\/([A-Za-z0-9_-]{1,128})\/?$/);
   if (shortMatch) {
@@ -173,7 +234,9 @@ export function parseHostedArtifactLocation(
   return Object.freeze({ ok: true, transport: 'fragment', version: 'v1', payload });
 }
 
-export function hostedArtifactStateForError(error) {
+export function hostedArtifactStateForError(
+  error: HostedErrorLike | null | undefined,
+): HostedArtifactViewerStatus {
   const code = typeof error?.code === 'string' ? error.code : '';
   if (['E_ARTIFACT_BROWSER_UNSUPPORTED', 'E_ARTIFACT_CODEC_UNSUPPORTED'].includes(code)) {
     return 'unsupported-browser';
@@ -228,11 +291,11 @@ export function hostedArtifactStateForError(error) {
   return 'malformed-payload';
 }
 
-function setCopy(document, status) {
+function setCopy(document: Document, status: HostedArtifactViewerStatus) {
   const copy = HOSTED_ARTIFACT_STATE_COPY[status] ?? { title: '', detail: '', action: '' };
   const title = document.querySelector('[data-planr-hosted-title]');
   const detail = document.querySelector('[data-planr-hosted-detail]');
-  const action = document.querySelector('[data-planr-hosted-retry]');
+  const action = document.querySelector<HTMLElement>('[data-planr-hosted-retry]');
   if (title) title.textContent = copy.title;
   if (detail) detail.textContent = copy.detail;
   if (action) {
@@ -252,13 +315,14 @@ export function mountHostedArtifactViewer({
   onEnvelope,
   supportsTransport = () => true,
   fragmentLimit = ARTIFACT_SHARE_FRAGMENT_LIMIT,
-} = {}) {
+}: HostedViewerOptions = {}) {
   if (!enabled || !document || !window) return null;
-  const slot = document.querySelector('[data-planr-hosted-viewer]');
+  // The hoisted functions below cannot see the null check that follows.
+  const slot = document.querySelector('[data-planr-hosted-viewer]') as HTMLElement;
   if (!slot) return null;
   let state = freezeState({ status: 'idle' });
   let generation = 0;
-  const cleanup = [];
+  const cleanup: Array<() => void> = [];
 
   function render() {
     const visible = !['idle', 'ready'].includes(state.status);
@@ -268,7 +332,7 @@ export function mountHostedArtifactViewer({
     setCopy(document, state.status);
   }
 
-  function setState(next) {
+  function setState(next: HostedStateInput) {
     state = freezeState(next);
     render();
     return state;
@@ -277,7 +341,7 @@ export function mountHostedArtifactViewer({
   async function load() {
     const parsed = parseHostedArtifactLocation(location, { fragmentLimit });
     if (!parsed.ok) return setState({ status: parsed.status });
-    const request =
+    const request: HostedRequest =
       parsed.transport === 'fragment'
         ? { transport: 'fragment', version: parsed.version, payload: parsed.payload }
         : {
@@ -335,8 +399,9 @@ export function mountHostedArtifactViewer({
         await onEnvelope(envelope, Object.freeze({ transport: parsed.transport }));
     } catch (error) {
       if (sequence !== generation) return state;
+      // A catch binding is unknown; the classifier reads only an optional code and name.
       setState({
-        status: hostedArtifactStateForError(error),
+        status: hostedArtifactStateForError(error as HostedErrorLike),
         transport: parsed.transport,
         request,
       });
@@ -344,8 +409,10 @@ export function mountHostedArtifactViewer({
     return state;
   }
 
-  function onClick(event) {
-    if (!event.target.closest?.('[data-planr-hosted-retry]') || !state.retryable) return;
+  function onClick(event: MouseEvent) {
+    // A click inside the slot targets one of its elements.
+    // biome-ignore format: bundles keep this one-line statement; wrapping would change their bytes.
+    if (!(event.target as Element).closest?.('[data-planr-hosted-retry]') || !state.retryable) return;
     void load();
   }
   slot.addEventListener('click', onClick);

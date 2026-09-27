@@ -13,7 +13,7 @@ export const ARTIFACT_SHARE_TTLS = Object.freeze({
   '30d': Object.freeze({ label: '30 days', milliseconds: 2_592_000_000 }),
 });
 
-export const ARTIFACT_SHARE_TRANSPORTS = Object.freeze(['live', 'fragment', 'short']);
+export const ARTIFACT_SHARE_TRANSPORTS = Object.freeze(['live', 'fragment', 'short'] as const);
 
 const PHASES = Object.freeze([
   'idle',
@@ -25,7 +25,7 @@ const PHASES = Object.freeze([
   'ambiguous',
   'created',
   'error',
-]);
+] as const);
 const LIVE_ROOM_ID_RE = /^[A-Za-z0-9_-]{16,128}$/;
 const LIVE_ROOM_SECRET_RE = /^[A-Za-z0-9_-]{43}$/;
 const LIVE_ROOM_KEY_ID_RE = /^sha256:[a-f0-9]{64}$/;
@@ -33,8 +33,193 @@ const LIVE_ROOM_REVIEW_RE = /^[a-f0-9]{64}$/;
 const BASE64URL_RE = /^[A-Za-z0-9_-]+$/;
 const OWNER_SECRET_MAX_BYTES = 64 * 1024;
 
+/** A share link lifetime. */
+export type ArtifactShareTtl = keyof typeof ARTIFACT_SHARE_TTLS;
+/** A live review room, a private URL fragment or an encrypted short link. */
+export type ArtifactShareTransport = (typeof ARTIFACT_SHARE_TRANSPORTS)[number];
+/** A share dialog phase. */
+export type ArtifactSharePhase = (typeof PHASES)[number];
+type Awaitable<T> = T | PromiseLike<T>;
+/** A live room owner's public key. */
+interface OwnerKey {
+  algorithm: string;
+  encoding: string;
+  keyId: string;
+  value: string;
+}
+/** A host's owner signer; `value` or `publicKey` carries its public key. */
+interface OwnerSigner {
+  role: string;
+  algorithm: string;
+  encoding: string;
+  keyId: string;
+  value?: string;
+  publicKey?: string;
+  sign(bytes: Uint8Array): unknown;
+}
+/** An owner signer's exported secret, the file custody saves. */
+interface OwnerSecret {
+  schemaVersion: string;
+  kind: string;
+  role: string;
+  algorithm: string;
+  keyId: string;
+  publicKey: string;
+  privateKey: string;
+}
+/** A prepared live room; its URLs and owner signer are non-enumerable, so JSON omits them. */
+interface PreparedRoom {
+  schemaVersion: string;
+  kind: string;
+  protocolVersion: string;
+  id: string;
+  roomId: string;
+  reviewOf: string;
+  ttl: string;
+  ownerKey: OwnerKey;
+  url: string;
+  ownerUrl: string;
+  manageUrl: string;
+  ownerSigner: OwnerSigner;
+}
+/** A prepared room's recovery bundle, which carries the owner secret. */
+interface RoomRecovery extends Omit<PreparedRoom, 'ownerSigner'> {
+  ownerSigner: OwnerSecret;
+}
+/** A host's owner custody: a prepared room and its recovery bundle, or a signer and its secret. */
+type OwnerCustodyInput =
+  | { prepared: PreparedRoom; recovery: RoomRecovery; signer?: undefined; secret?: undefined }
+  | { signer: OwnerSigner; secret: OwnerSecret; prepared?: undefined; recovery?: undefined };
+/** What room creation binds: the prepared room, or else the owner signer, which has no `kind`. */
+type OwnerCredential = PreparedRoom | (OwnerSigner & { kind?: undefined; ownerSigner?: undefined });
+/** Validated custody: the credential room creation binds and the file saved for the owner. */
+interface OwnerCustody {
+  readonly credential: OwnerCredential;
+  readonly signer: OwnerSigner;
+  readonly serialized: string;
+  readonly filename: string;
+}
+/** The file handed to the owner before a live room exists. */
+type CustodyFile = Readonly<{ filename: string; serialized: string }>;
+/** A save confirmation: `true`, or a receipt with `saved: true`. */
+type CustodySaved = boolean | { saved?: boolean } | null | undefined;
+/** The owner custody steps establishArtifactOwnerCustody runs. */
+interface OwnerCustodySteps {
+  prepareOwnerCustody?: () => Awaitable<OwnerCustodyInput>;
+  saveOwnerCustody?: (file: CustodyFile) => Awaitable<CustodySaved>;
+}
+/** A live room's reviewer, owner-verdict and management URLs. */
+interface LiveResultUrls {
+  url: string;
+  ownerUrl: string;
+  manageUrl: string;
+}
+/** A share preview's measured sizes, before validation. */
+interface SharePreviewInput {
+  fragmentLength?: unknown;
+  compressedBytes?: unknown;
+  ciphertextBytes?: unknown;
+}
+/** A created share as the host reports it, before validation. */
+interface ShareCreated {
+  url?: unknown;
+  ownerUrl?: unknown;
+  manageUrl?: unknown;
+  deletionToken?: unknown;
+  expiresAt?: unknown;
+  ownerSigner?: unknown;
+}
+/** A created share with the transport the dialog chose. */
+interface ShareResultInput extends ShareCreated {
+  transport: ArtifactShareTransport;
+}
+/** A dialog state to freeze; freezeState normalizes every field. */
+interface ShareDialogStateInput {
+  open: boolean;
+  phase: ArtifactSharePhase;
+  transport: ArtifactShareTransport;
+  ttl: ArtifactShareTtl;
+  preview: SharePreviewInput | null;
+  ownerCustodyEstablished: boolean;
+  result: ShareResultInput | null;
+  error: string;
+}
+/** A new dialog state's preview and lifetime. */
+interface ShareStateOptions {
+  preview?: SharePreviewInput | null;
+  ttl?: ArtifactShareTtl;
+}
+/** A share dialog action. */
+export type ArtifactShareDialogAction =
+  | { type: 'open' | 'close' | 'preview-start' | 'custody-start' | 'custody-ready' }
+  | { type: 'create-start' }
+  | { type: 'preview-ready'; preview: SharePreviewInput | null }
+  | { type: 'select-transport'; transport: unknown }
+  | { type: 'set-ttl'; ttl: string }
+  | { type: 'create-success'; result: ShareResultInput }
+  | { type: 'failure'; ambiguous?: boolean; ownerCustodyEstablished?: boolean; error?: unknown };
+/** An empty action, which leaves the state unchanged. */
+type NoAction = Record<string, never>;
+/** The share request a host prepares a preview for. */
+type SharePreparation = Readonly<{ review: unknown; fragmentLimit: number }>;
+/** The share a host creates; a live room also carries a non-enumerable credential. */
+type ShareCreation = Readonly<{
+  review: unknown;
+  preview: ArtifactSharePreview | null;
+  transport: ArtifactShareTransport;
+  ttl: ArtifactShareTtl | undefined;
+  confirmed: boolean;
+  prepared?: PreparedRoom;
+  ownerSigner?: OwnerSigner;
+}>;
+type PrepareShare = (request: SharePreparation) => Awaitable<SharePreviewInput | null>;
+type PrepareOwnerCustody = (
+  request: Readonly<{ review: unknown; ttl: ArtifactShareTtl }>,
+) => Awaitable<OwnerCustodyInput>;
+type CreateShare = (request: ShareCreation) => Awaitable<ShareCreated | null>;
+/** The host's share handlers; a transport is offered only when its handlers exist. */
+export interface ArtifactShareHandlers {
+  prepareShare?: PrepareShare;
+  prepareOwnerCustody?: PrepareOwnerCustody;
+  saveOwnerCustody?: (file: CustodyFile) => Awaitable<CustodySaved>;
+  createShare?: CreateShare;
+  supportedTransports?: readonly ArtifactShareTransport[];
+}
+/** The stage fields the dialog reads: the review it shares. */
+interface ShareStage {
+  readonly review?: { getReview?(): unknown } | null;
+}
+type ShareWindow = Window & typeof globalThis & { __openPlanrArtifactShare?: object };
+/** Share dialog options: the host's handlers and the document and stage it mounts on. */
+interface ShareDialogOptions extends ArtifactShareHandlers {
+  document?: Document;
+  window?: ShareWindow;
+  root?: Element;
+  stageController?: ShareStage | null;
+  unavailableReason?: unknown;
+  copyText?: (value: string) => unknown;
+  existingRoom?: boolean;
+  existingShareUrl?: string | null | (() => string | null | undefined);
+  now?: () => Date;
+}
+/** A validated share preview. */
+export type ArtifactSharePreview = ReturnType<typeof normalizeArtifactSharePreview>;
+/** The share dialog's frozen state. */
+export type ArtifactShareDialogState = ReturnType<typeof freezeState>;
+/** A validated share receipt. */
+type ShareResult = ReturnType<typeof frozenResult>;
+/** An event whose target is an element. */
+type TargetedEvent<E extends Event> = E & { target: Element };
+/** A caught value as the dialog reads it. */
+type Thrown =
+  | { message?: string; name?: string; details?: { effect?: unknown } }
+  | null
+  | undefined;
+
 export class ArtifactShareUiError extends Error {
-  constructor(code, message, details = {}) {
+  declare code: string;
+  declare details: Readonly<Record<string, unknown>>;
+  constructor(code: string, message: string, details: Record<string, unknown> = {}) {
     super(message);
     this.name = 'ArtifactShareUiError';
     this.code = code;
@@ -42,37 +227,40 @@ export class ArtifactShareUiError extends Error {
   }
 }
 
-function member(value, allowed, fallback) {
-  return allowed.includes(value) ? value : fallback;
+function member<T extends string>(value: unknown, allowed: readonly T[], fallback: T) {
+  // includes accepts only its element type and does not narrow; a listed value is a member.
+  return allowed.includes(value as T) ? (value as T) : fallback;
 }
 
-function count(value, name) {
-  if (!Number.isInteger(value) || value < 0) {
+function count(value: unknown, name: string) {
+  // Number.isInteger does not narrow its argument to a number.
+  if (!Number.isInteger(value) || (value as number) < 0) {
     throw new ArtifactShareUiError(
       'E_ARTIFACT_SHARE_PREVIEW_INVALID',
       `${name} must be a non-negative integer.`,
       { field: name },
     );
   }
-  return value;
+  return value as number;
 }
 
-function text(value, fallback = '') {
+function text(value: unknown, fallback = '') {
   return typeof value === 'string' ? value : fallback;
 }
 
-function record(value) {
+/** Whether `value` is a non-null object that is not an array. */
+function record(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
-function exactKeys(value, expected) {
+function exactKeys(value: unknown, expected: readonly string[]) {
   return (
     record(value) &&
     JSON.stringify(Object.keys(value).sort()) === JSON.stringify([...expected].sort())
   );
 }
 
-function exactLoopback(hostname) {
+function exactLoopback(hostname: string) {
   return (
     hostname === 'localhost' ||
     hostname === '127.0.0.1' ||
@@ -81,8 +269,8 @@ function exactLoopback(hostname) {
   );
 }
 
-function parseLiveResultUrl(value, capability) {
-  let url;
+function parseLiveResultUrl(value: string, capability: string) {
+  let url: URL;
   try {
     url = new URL(value);
   } catch {
@@ -121,7 +309,7 @@ function parseLiveResultUrl(value, capability) {
   });
 }
 
-function validateLiveResultUrls({ url, ownerUrl, manageUrl }) {
+function validateLiveResultUrls({ url, ownerUrl, manageUrl }: LiveResultUrls) {
   const reviewer = parseLiveResultUrl(url, 'w');
   const owner = parseLiveResultUrl(ownerUrl, 'o');
   const management = parseLiveResultUrl(manageUrl, 'm');
@@ -141,7 +329,7 @@ function validateLiveResultUrls({ url, ownerUrl, manageUrl }) {
   }
 }
 
-function normalizeOwnerCustody(value) {
+function normalizeOwnerCustody(value: OwnerCustodyInput | null | undefined): OwnerCustody {
   if (record(value?.prepared) && record(value?.recovery)) {
     const { prepared, recovery } = value;
     if (
@@ -234,6 +422,7 @@ function normalizeOwnerCustody(value) {
     );
   }
   const { signer, secret } = value;
+  // The base64url test rejects a signer without a public key before its length is read.
   if (
     signer.role !== 'owner' ||
     typeof signer.sign !== 'function' ||
@@ -241,8 +430,8 @@ function normalizeOwnerCustody(value) {
     signer.encoding !== 'spki-base64url' ||
     !LIVE_ROOM_KEY_ID_RE.test(signer.keyId ?? '') ||
     !BASE64URL_RE.test(signer.value ?? signer.publicKey ?? '') ||
-    (signer.value ?? signer.publicKey).length < 64 ||
-    (signer.value ?? signer.publicKey).length > 512
+    ((signer.value ?? signer.publicKey) as string).length < 64 ||
+    ((signer.value ?? signer.publicKey) as string).length > 512
   ) {
     throw new ArtifactShareUiError(
       'E_ARTIFACT_SHARE_OWNER_CUSTODY_INVALID',
@@ -293,7 +482,11 @@ function normalizeOwnerCustody(value) {
   });
 }
 
-function defaultSaveOwnerCustody(document, window, { filename, serialized }) {
+function defaultSaveOwnerCustody(
+  document: Document,
+  window: ShareWindow,
+  { filename, serialized }: CustodyFile,
+) {
   if (
     typeof window?.Blob !== 'function' ||
     typeof window?.URL?.createObjectURL !== 'function' ||
@@ -319,10 +512,11 @@ function defaultSaveOwnerCustody(document, window, { filename, serialized }) {
     anchor.click();
     anchor.remove();
   } catch (error) {
+    // A catch binding is unknown; only an optional name is read.
     throw new ArtifactShareUiError(
       'E_ARTIFACT_SHARE_OWNER_CUSTODY_UNAVAILABLE',
       'The private owner key could not be handed to the browser download manager. No room was created.',
-      { cause: error?.name },
+      { cause: (error as Thrown)?.name },
     );
   } finally {
     window.setTimeout(() => window.URL.revokeObjectURL(blobUrl), 0);
@@ -333,7 +527,7 @@ function defaultSaveOwnerCustody(document, window, { filename, serialized }) {
 export async function establishArtifactOwnerCustody({
   prepareOwnerCustody,
   saveOwnerCustody,
-} = {}) {
+}: OwnerCustodySteps = {}) {
   if (typeof prepareOwnerCustody !== 'function' || typeof saveOwnerCustody !== 'function') {
     throw new ArtifactShareUiError(
       'E_ARTIFACT_SHARE_OWNER_CUSTODY_REQUIRED',
@@ -347,7 +541,8 @@ export async function establishArtifactOwnerCustody({
       serialized: custody.serialized,
     }),
   );
-  if (saved !== true && saved?.saved !== true) {
+  // A false or missing confirmation has no receipt to read.
+  if (saved !== true && (saved as { saved?: boolean } | null)?.saved !== true) {
     throw new ArtifactShareUiError(
       'E_ARTIFACT_SHARE_OWNER_CUSTODY_UNAVAILABLE',
       'Private owner-key custody was not confirmed. No room was created.',
@@ -356,7 +551,7 @@ export async function establishArtifactOwnerCustody({
   return custody.credential;
 }
 
-function frozenResult(value) {
+function frozenResult(value: ShareResultInput | null | undefined) {
   if (
     !value ||
     typeof value !== 'object' ||
@@ -402,8 +597,8 @@ function frozenResult(value) {
   });
 }
 
-export function normalizeArtifactSharePreview(value = {}) {
-  const preview = value && typeof value === 'object' ? value : {};
+export function normalizeArtifactSharePreview(value: SharePreviewInput | null = {}) {
+  const preview: SharePreviewInput = value && typeof value === 'object' ? value : {};
   const fragmentLength = count(preview.fragmentLength, 'fragmentLength');
   return Object.freeze({
     fragmentLength,
@@ -413,7 +608,7 @@ export function normalizeArtifactSharePreview(value = {}) {
   });
 }
 
-function freezeState(value) {
+function freezeState(value: ShareDialogStateInput) {
   return Object.freeze({
     open: Boolean(value.open),
     phase: member(value.phase, PHASES, 'idle'),
@@ -426,7 +621,7 @@ function freezeState(value) {
   });
 }
 
-export function createArtifactShareDialogState({ preview, ttl = '7d' } = {}) {
+export function createArtifactShareDialogState({ preview, ttl = '7d' }: ShareStateOptions = {}) {
   const normalizedPreview = preview ? normalizeArtifactSharePreview(preview) : null;
   return freezeState({
     open: false,
@@ -440,7 +635,10 @@ export function createArtifactShareDialogState({ preview, ttl = '7d' } = {}) {
   });
 }
 
-export function reduceArtifactShareDialog(state, action = {}) {
+export function reduceArtifactShareDialog(
+  state: ArtifactShareDialogState | null | undefined,
+  action: ArtifactShareDialogAction | NoAction = {},
+): ArtifactShareDialogState {
   const current = state ?? createArtifactShareDialogState();
   if (current.phase === 'created' && action.type !== 'close') return current;
   if (
@@ -507,7 +705,10 @@ export function reduceArtifactShareDialog(state, action = {}) {
           });
     }
     case 'set-ttl': {
-      const ttl = Object.hasOwn(ARTIFACT_SHARE_TTLS, action.ttl) ? action.ttl : current.ttl;
+      // Object.hasOwn does not narrow; an own key of the table is a lifetime.
+      const ttl = Object.hasOwn(ARTIFACT_SHARE_TTLS, action.ttl)
+        ? (action.ttl as ArtifactShareTtl)
+        : current.ttl;
       return ttl === current.ttl
         ? current
         : freezeState({ ...current, ttl, result: null, error: '' });
@@ -545,29 +746,32 @@ export function reduceArtifactShareDialog(state, action = {}) {
   }
 }
 
-export function artifactShareExpiry(ttl, now = new Date()) {
+export function artifactShareExpiry(
+  ttl: ArtifactShareTtl,
+  now: Date | string | number = new Date(),
+) {
   const choice = ARTIFACT_SHARE_TTLS[ttl] ?? ARTIFACT_SHARE_TTLS['7d'];
   const base = now instanceof Date ? now.getTime() : new Date(now).getTime();
   if (!Number.isFinite(base)) throw new TypeError('Share expiry requires a valid date.');
   return new Date(base + choice.milliseconds).toISOString();
 }
 
-export function formatArtifactShareBytes(value) {
+export function formatArtifactShareBytes(value: unknown) {
   const bytes = count(value, 'bytes');
   if (bytes < 1_000) return `${bytes} B`;
   if (bytes < 1_000_000) return `${(bytes / 1_000).toFixed(bytes >= 10_000 ? 0 : 1)} KB`;
   return `${(bytes / 1_000_000).toFixed(1)} MB`;
 }
 
-function focusableElements(dialog) {
+function focusableElements(dialog: HTMLElement) {
   return [
-    ...dialog.querySelectorAll(
+    ...dialog.querySelectorAll<HTMLElement>(
       'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [href], [tabindex]:not([tabindex="-1"])',
     ),
   ].filter((element) => !element.hidden && !element.closest('[hidden]'));
 }
 
-function defaultCopy(window, value) {
+function defaultCopy(window: ShareWindow, value: string) {
   if (typeof window?.navigator?.clipboard?.writeText !== 'function') {
     throw new ArtifactShareUiError(
       'E_ARTIFACT_SHARE_CLIPBOARD_UNAVAILABLE',
@@ -577,7 +781,7 @@ function defaultCopy(window, value) {
   return window.navigator.clipboard.writeText(value);
 }
 
-function reviewForShare(stageController) {
+function reviewForShare(stageController: ShareStage | null | undefined) {
   return stageController?.review?.getReview?.() ?? null;
 }
 
@@ -587,7 +791,7 @@ export function artifactShareCapabilities({
   prepareOwnerCustody,
   createShare,
   supportedTransports,
-} = {}) {
+}: ArtifactShareHandlers = {}) {
   const canCreate = typeof prepareShare === 'function' && typeof createShare === 'function';
   return Object.freeze(
     ARTIFACT_SHARE_TRANSPORTS.filter(
@@ -600,10 +804,12 @@ export function artifactShareCapabilities({
   );
 }
 
+// Without a DOM the defaults are missing and the check below returns null; the dialog's hoisted
+// functions cannot see that check, so the defaults are typed as present.
 export function mountArtifactShareDialog({
   document = globalThis.document,
-  window = document?.defaultView,
-  root = document?.querySelector?.('.planr-shell'),
+  window = document?.defaultView as ShareWindow,
+  root = document?.querySelector?.('.planr-shell') as Element,
   stageController,
   prepareShare,
   prepareOwnerCustody,
@@ -615,11 +821,12 @@ export function mountArtifactShareDialog({
   existingRoom = false,
   existingShareUrl = null,
   now = () => new Date(),
-} = {}) {
+}: ShareDialogOptions = {}) {
   if (!document || !window || !root) return null;
-  const backdrop = document.querySelector('[data-planr-share-dialog]');
-  const dialog = backdrop?.querySelector('[role="dialog"]');
-  const trigger = root.querySelector('[data-planr-action="share"]');
+  // The hoisted functions below cannot see the null check that follows.
+  const backdrop = document.querySelector('[data-planr-share-dialog]') as HTMLElement;
+  const dialog = backdrop?.querySelector('[role="dialog"]') as HTMLElement;
+  const trigger = root.querySelector('[data-planr-action="share"]') as HTMLElement;
   if (!backdrop || !dialog || !trigger) return null;
 
   let state = createArtifactShareDialogState();
@@ -632,27 +839,29 @@ export function mountArtifactShareDialog({
   const unavailable =
     text(unavailableReason) ||
     'Sharing is not configured in this viewer. Open the review with an updated OpenPlanr installation that supports sharing.';
-  let returnFocus = null;
+  let returnFocus: HTMLElement | null = null;
   let generation = 0;
-  let pendingOwnerCustody = null;
-  const copyResetTimers = new Map();
-  const cleanup = [];
+  let pendingOwnerCustody: OwnerCredential | null = null;
+  const copyResetTimers = new Map<HTMLElement, number>();
+  const cleanup: Array<() => void> = [];
   const handlers = {
     prepareShare: typeof prepareShare === 'function' ? prepareShare : null,
     prepareOwnerCustody: typeof prepareOwnerCustody === 'function' ? prepareOwnerCustody : null,
     saveOwnerCustody:
       typeof saveOwnerCustody === 'function'
         ? saveOwnerCustody
-        : (value) => defaultSaveOwnerCustody(document, window, value),
+        : (value: CustodyFile) => defaultSaveOwnerCustody(document, window, value),
     createShare: typeof createShare === 'function' ? createShare : null,
-    copyText: typeof copyText === 'function' ? copyText : (value) => defaultCopy(window, value),
+    copyText:
+      typeof copyText === 'function' ? copyText : (value: string) => defaultCopy(window, value),
   };
   const stableShareUrl =
     typeof existingShareUrl === 'function' ? existingShareUrl : () => existingShareUrl;
 
-  function supports(transport) {
+  function supports(transport: unknown) {
+    // includes accepts only its element type; an unlisted value is not supported.
     return (
-      capabilities.includes(transport) &&
+      capabilities.includes(transport as ArtifactShareTransport) &&
       (transport !== 'fragment' || state.preview?.fragmentEligible !== false)
     );
   }
@@ -665,17 +874,23 @@ export function mountArtifactShareDialog({
     }
   }
 
-  function listen(target, type, handler, options) {
-    target.addEventListener(type, handler, options);
-    cleanup.push(() => target.removeEventListener(type, handler, options));
+  // addEventListener types a listener by event name, which a name passed through loses.
+  function listen<E extends Event>(
+    target: EventTarget,
+    type: string,
+    handler: (event: E) => void,
+    options?: boolean | AddEventListenerOptions,
+  ) {
+    target.addEventListener(type, handler as EventListener, options);
+    cleanup.push(() => target.removeEventListener(type, handler as EventListener, options));
   }
 
-  function announce(message) {
+  function announce(message: string) {
     const live = dialog.querySelector('[data-planr-share-status]');
     if (live) live.textContent = message;
   }
 
-  function resetCopyButton(button) {
+  function resetCopyButton(button: HTMLElement) {
     const timer = copyResetTimers.get(button);
     if (timer) window.clearTimeout(timer);
     copyResetTimers.delete(button);
@@ -685,7 +900,7 @@ export function mountArtifactShareDialog({
     else button.textContent = button.dataset.planrCopyLabel ?? button.textContent;
   }
 
-  function showCopyState(button, stateValue) {
+  function showCopyState(button: HTMLElement | null, stateValue: 'copied' | 'error') {
     if (!button) return;
     const label = button.querySelector?.('.planr-action-label');
     if (!button.dataset.planrCopyLabel) {
@@ -703,7 +918,7 @@ export function mountArtifactShareDialog({
   }
 
   function resetCopyButtons() {
-    for (const button of dialog.querySelectorAll('[data-planr-copy-state]'))
+    for (const button of dialog.querySelectorAll<HTMLElement>('[data-planr-copy-state]'))
       resetCopyButton(button);
   }
 
@@ -724,7 +939,7 @@ export function mountArtifactShareDialog({
       announce('Live review URL copied. This remains the same collaboration room.');
     } catch (error) {
       showCopyState(trigger, 'error');
-      announce(error?.message ?? 'Review URL could not be copied.');
+      announce((error as Thrown)?.message ?? 'Review URL could not be copied.');
     }
   }
 
@@ -738,7 +953,10 @@ export function mountArtifactShareDialog({
     dialog.dataset.planrSharePhase = state.phase;
     dialog.dataset.planrShareSelected = state.transport;
 
-    for (const button of dialog.querySelectorAll('[data-planr-share-transport]')) {
+    // Every transport button holds its receipt-size label; includes accepts only its element
+    // type, and an unlisted transport is not offered.
+    // biome-ignore format: bundles keep this one-line call; wrapping would change their bytes.
+    for (const button of dialog.querySelectorAll<HTMLButtonElement>('[data-planr-share-transport]')) {
       const transport = button.dataset.planrShareTransport;
       const selected = transport === state.transport;
       button.hidden = state.phase === 'created';
@@ -754,13 +972,14 @@ export function mountArtifactShareDialog({
           'created',
         ].includes(state.phase) || !supports(transport);
       button.setAttribute('aria-disabled', String(button.disabled));
-      button.title = capabilities.includes(transport)
+      button.title = capabilities.includes(transport as ArtifactShareTransport)
         ? ''
         : transport === 'live' && capabilities.length
           ? 'Live review requires this host to provide private owner-key custody. Choose an available snapshot option.'
           : unavailable;
       if (transport === 'live')
-        button.querySelector('.planr-share-receipt-size').textContent = capabilities.includes(
+        // biome-ignore format: bundles keep this statement's layout; wrapping would change their bytes.
+        (button.querySelector('.planr-share-receipt-size') as Element).textContent = capabilities.includes(
           'live',
         )
           ? 'Default'
@@ -785,7 +1004,7 @@ export function mountArtifactShareDialog({
           : state.phase === 'previewing'
             ? 'Calculating…'
             : 'Size unavailable';
-    const threshold = dialog.querySelector('[data-planr-share-threshold]');
+    const threshold = dialog.querySelector<HTMLElement>('[data-planr-share-threshold]');
     if (threshold) {
       threshold.hidden = !capabilities.includes('fragment');
       threshold.textContent =
@@ -796,13 +1015,13 @@ export function mountArtifactShareDialog({
             : 'Preparing the snapshot size before sharing.';
     }
 
-    const ttlRow = dialog.querySelector('[data-planr-share-ttl-row]');
+    const ttlRow = dialog.querySelector<HTMLElement>('[data-planr-share-ttl-row]');
     if (ttlRow)
       ttlRow.hidden =
         state.phase === 'created' ||
         !supports(state.transport) ||
         !['live', 'short'].includes(state.transport);
-    const ttlSelect = dialog.querySelector('[data-planr-share-ttl]');
+    const ttlSelect = dialog.querySelector<HTMLSelectElement>('[data-planr-share-ttl]');
     if (ttlSelect) {
       ttlSelect.value = state.ttl;
       ttlSelect.disabled = [
@@ -814,7 +1033,7 @@ export function mountArtifactShareDialog({
       ].includes(state.phase);
     }
     const expiry = artifactShareExpiry(state.ttl, now());
-    const expiryNode = dialog.querySelector('[data-planr-share-expiry]');
+    const expiryNode = dialog.querySelector<HTMLTimeElement>('[data-planr-share-expiry]');
     if (expiryNode) {
       expiryNode.dateTime = expiry;
       expiryNode.textContent = new Intl.DateTimeFormat('en', {
@@ -825,7 +1044,7 @@ export function mountArtifactShareDialog({
       }).format(new Date(expiry));
     }
 
-    const primary = dialog.querySelector('[data-planr-share-confirm]');
+    const primary = dialog.querySelector<HTMLButtonElement>('[data-planr-share-confirm]');
     if (primary) {
       primary.hidden = state.phase === 'created';
       primary.disabled =
@@ -855,14 +1074,14 @@ export function mountArtifactShareDialog({
                     ? 'Create encrypted link'
                     : 'Copy private link';
     }
-    for (const closeControl of dialog.querySelectorAll(
+    for (const closeControl of dialog.querySelectorAll<HTMLButtonElement>(
       '[data-planr-share-close], [data-planr-share-cancel]',
     )) {
       const closeBlocked = state.phase === 'creating' || state.phase === 'ambiguous';
       closeControl.disabled = closeBlocked;
       closeControl.setAttribute('aria-disabled', String(closeBlocked));
     }
-    const custody = dialog.querySelector('[data-planr-share-owner-custody]');
+    const custody = dialog.querySelector<HTMLElement>('[data-planr-share-owner-custody]');
     if (custody)
       custody.hidden = state.transport !== 'live' || !supports('live') || state.phase === 'created';
     const custodyStatus = dialog.querySelector('[data-planr-share-owner-custody-status]');
@@ -870,23 +1089,23 @@ export function mountArtifactShareDialog({
       custodyStatus.textContent = state.ownerCustodyEstablished
         ? 'Full recovery bundle handed to the browser. It contains the three scoped URLs and owner key; no room exists until you confirm creation.'
         : 'No room will be created until the full private recovery bundle is downloaded successfully.';
-    const receipt = dialog.querySelector('[data-planr-share-result]');
+    const receipt = dialog.querySelector<HTMLElement>('[data-planr-share-result]');
     if (receipt) receipt.hidden = state.phase !== 'created' || !state.result;
-    const resultUrl = dialog.querySelector('[data-planr-share-url]');
+    const resultUrl = dialog.querySelector<HTMLInputElement>('[data-planr-share-url]');
     if (resultUrl) resultUrl.value = state.result?.url ?? '';
-    const owner = dialog.querySelector('[data-planr-share-owner]');
+    const owner = dialog.querySelector<HTMLElement>('[data-planr-share-owner]');
     if (owner) owner.hidden = !state.result?.ownerUrl;
-    const ownerUrl = dialog.querySelector('[data-planr-share-owner-url]');
+    const ownerUrl = dialog.querySelector<HTMLInputElement>('[data-planr-share-owner-url]');
     if (ownerUrl) ownerUrl.value = state.result?.ownerUrl ?? '';
-    const manage = dialog.querySelector('[data-planr-share-manage]');
+    const manage = dialog.querySelector<HTMLElement>('[data-planr-share-manage]');
     if (manage) manage.hidden = !state.result?.manageUrl;
-    const manageUrl = dialog.querySelector('[data-planr-share-manage-url]');
+    const manageUrl = dialog.querySelector<HTMLInputElement>('[data-planr-share-manage-url]');
     if (manageUrl) manageUrl.value = state.result?.manageUrl ?? '';
-    const deletion = dialog.querySelector('[data-planr-share-deletion]');
+    const deletion = dialog.querySelector<HTMLElement>('[data-planr-share-deletion]');
     if (deletion) deletion.hidden = !state.result?.deletionToken;
     const deletionToken = dialog.querySelector('[data-planr-share-deletion-token]');
     if (deletionToken) deletionToken.textContent = state.result?.deletionToken ?? '';
-    const error = dialog.querySelector('[data-planr-share-error]');
+    const error = dialog.querySelector<HTMLElement>('[data-planr-share-error]');
     if (error) {
       error.hidden = !state.error;
       error.textContent = state.error;
@@ -905,12 +1124,14 @@ export function mountArtifactShareDialog({
     // A new preview must stay in the loading phase even when the default changes.
     state = reduceArtifactShareDialog(state, { type: 'preview-start' });
     render();
-    dialog.querySelector('[data-planr-share-close]')?.focus();
+    dialog.querySelector<HTMLElement>('[data-planr-share-close]')?.focus();
     const request = ++generation;
+    // A transport is offered only when its handlers exist, so any capability means prepareShare
+    // exists; preview-ready then sets the preview.
     try {
       if (!capabilities.length)
         throw new ArtifactShareUiError('E_ARTIFACT_SHARE_HANDLER_REQUIRED', unavailable);
-      const preview = await handlers.prepareShare(
+      const preview = await (handlers.prepareShare as PrepareShare)(
         Object.freeze({
           review: reviewForShare(stageController),
           fragmentLimit: ARTIFACT_SHARE_FRAGMENT_LIMIT,
@@ -926,13 +1147,15 @@ export function mountArtifactShareDialog({
         );
       render();
       announce(
-        capabilities.includes('fragment') && state.preview.fragmentEligible
+        capabilities.includes('fragment') &&
+          (state.preview as ArtifactSharePreview).fragmentEligible
           ? 'Private fragment is available. Nothing will be uploaded.'
           : 'Review prepared. Choose an available sharing option.',
       );
     } catch (error) {
       if (request !== generation || !state.open) return state;
-      state = reduceArtifactShareDialog(state, { type: 'failure', error: error?.message });
+      // biome-ignore format: bundles keep this one-line object; wrapping would change their bytes.
+      state = reduceArtifactShareDialog(state, { type: 'failure', error: (error as Thrown)?.message });
       render();
       announce(state.error);
     }
@@ -968,10 +1191,11 @@ export function mountArtifactShareDialog({
     if (transport === 'live' && !state.ownerCustodyEstablished) {
       state = reduceArtifactShareDialog(state, { type: 'custody-start' });
       render();
+      // The live transport is offered only when prepareOwnerCustody exists.
       try {
         const custody = await establishArtifactOwnerCustody({
           prepareOwnerCustody: () =>
-            handlers.prepareOwnerCustody(
+            (handlers.prepareOwnerCustody as PrepareOwnerCustody)(
               Object.freeze({
                 review: reviewForShare(stageController),
                 ttl: state.ttl,
@@ -992,7 +1216,7 @@ export function mountArtifactShareDialog({
         state = reduceArtifactShareDialog(state, {
           type: 'failure',
           ownerCustodyEstablished: false,
-          error: error?.message,
+          error: (error as Thrown)?.message,
         });
         render();
         announce(state.error);
@@ -1012,6 +1236,7 @@ export function mountArtifactShareDialog({
     }
     state = reduceArtifactShareDialog(state, { type: 'create-start' });
     render();
+    // A supported transport has createShare, and create-success sets the result.
     try {
       const input = {
         review: reviewForShare(stageController),
@@ -1033,7 +1258,7 @@ export function mountArtifactShareDialog({
           });
         }
       }
-      const result = await handlers.createShare(Object.freeze(input));
+      const result = await (handlers.createShare as CreateShare)(Object.freeze(input));
       if (request !== generation || !state.open) return state;
       if (transport === 'live' && result?.ownerSigner !== pendingOwnerSigner()) {
         throw new ArtifactShareUiError(
@@ -1056,7 +1281,7 @@ export function mountArtifactShareDialog({
             : 'Private fragment copied. Nothing was uploaded.',
       );
       try {
-        await handlers.copyText(state.result.url);
+        await handlers.copyText((state.result as ShareResult).url);
         announce(
           transport === 'live'
             ? 'Live review URL copied. Keep the downloaded owner key with the separate owner-verdict URL.'
@@ -1073,13 +1298,13 @@ export function mountArtifactShareDialog({
       }
     } catch (error) {
       if (request !== generation || !state.open) return state;
-      const ambiguous = transport === 'live' && error?.details?.effect === 'ambiguous';
+      const ambiguous = transport === 'live' && (error as Thrown)?.details?.effect === 'ambiguous';
       if (transport === 'live' && !ambiguous) clearPendingOwnerSigner();
       state = reduceArtifactShareDialog(state, {
         type: 'failure',
         ambiguous,
         ownerCustodyEstablished: transport === 'live' && Boolean(pendingOwnerCustody),
-        error: error?.message,
+        error: (error as Thrown)?.message,
       });
       render();
       announce(state.error);
@@ -1087,7 +1312,7 @@ export function mountArtifactShareDialog({
     return state;
   }
 
-  async function copy(value, successMessage, button) {
+  async function copy(value: string | undefined, successMessage: string, button: HTMLElement) {
     if (!value) return;
     try {
       await handlers.copyText(value);
@@ -1096,7 +1321,8 @@ export function mountArtifactShareDialog({
     } catch (error) {
       showCopyState(button, 'error');
       announce(
-        error?.message ?? 'The value could not be copied. The share receipt remains visible.',
+        (error as Thrown)?.message ??
+          'The value could not be copied. The share receipt remains visible.',
       );
     }
   }
@@ -1120,7 +1346,7 @@ export function mountArtifactShareDialog({
   } else {
     listen(trigger, 'click', open);
   }
-  listen(backdrop, 'click', (event) => {
+  listen(backdrop, 'click', (event: TargetedEvent<MouseEvent>) => {
     const button = event.target.closest?.('button');
     if (!button) return;
     if (
@@ -1176,7 +1402,7 @@ export function mountArtifactShareDialog({
       void copy(state.result?.deletionToken, 'One-time deletion token copied.', button);
     }
   });
-  const ttlSelect = dialog.querySelector('[data-planr-share-ttl]');
+  const ttlSelect = dialog.querySelector<HTMLSelectElement>('[data-planr-share-ttl]');
   if (ttlSelect)
     listen(ttlSelect, 'change', () => {
       if (['custody-ready', 'creating', 'ambiguous', 'created'].includes(state.phase)) {
@@ -1190,7 +1416,7 @@ export function mountArtifactShareDialog({
   listen(
     document,
     'keydown',
-    (event) => {
+    (event: KeyboardEvent) => {
       if (!state.open) return;
       if (event.key === 'Escape') {
         event.preventDefault();
@@ -1199,12 +1425,13 @@ export function mountArtifactShareDialog({
       }
       if (event.key !== 'Tab') return;
       const focusable = focusableElements(dialog);
+      // A non-empty list has a last element.
       if (focusable.length === 0) return;
       const first = focusable[0];
       const last = focusable.at(-1);
       if (event.shiftKey && document.activeElement === first) {
         event.preventDefault();
-        last.focus();
+        (last as HTMLElement).focus();
       } else if (!event.shiftKey && document.activeElement === last) {
         event.preventDefault();
         first.focus();
@@ -1219,7 +1446,7 @@ export function mountArtifactShareDialog({
     open,
     close,
     confirm,
-    dispatch(action) {
+    dispatch(action: ArtifactShareDialogAction) {
       if (action.type === 'select-transport' && !supports(action.transport)) return state;
       state = reduceArtifactShareDialog(state, action);
       render();

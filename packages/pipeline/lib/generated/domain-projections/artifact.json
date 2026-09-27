@@ -905,9 +905,15 @@
       "mode": "644"
     },
     {
+      "source": "packages/artifact/lib/artifact/ui/annotations.d.mts",
+      "target": "lib/artifact/ui/annotations.d.mts",
+      "sha256": "ac769befb7d2e7c9ae937fd774219a842e4cdabf030134c997620b3944720f68",
+      "mode": "644"
+    },
+    {
       "source": "packages/artifact/lib/artifact/ui/annotations.mjs",
       "target": "lib/artifact/ui/annotations.mjs",
-      "sha256": "4c14742904ff828d2e08dac105f224ae0405b784296a8a34919753b3a0b1fc71",
+      "sha256": "74a502f00e6dabb7b93e2e97bd1d6b6e0d65f54431ca2ced6bf062fbaf6e12f3",
       "mode": "644"
     },
     {
@@ -1135,7 +1141,7 @@
     {
       "source": "packages/artifact/lib/artifact/ui/diagram-studio.d.mts",
       "target": "lib/artifact/ui/diagram-studio.d.mts",
-      "sha256": "636ce4437c7387c7c94e8686318a1cf18ef5b9d48deebc9c08d2f9268e6a135f",
+      "sha256": "864b19754539f10f2db3aef10d669ed78bfa7a679f44a1285c06460b52c59d76",
       "mode": "644"
     },
     {
@@ -1157,9 +1163,15 @@
       "mode": "644"
     },
     {
+      "source": "packages/artifact/lib/artifact/ui/feedback-rail.d.mts",
+      "target": "lib/artifact/ui/feedback-rail.d.mts",
+      "sha256": "051cdbb25c5997268317bc11c59d44fd8bc3a1d9fc494240971fafc97672c327",
+      "mode": "644"
+    },
+    {
       "source": "packages/artifact/lib/artifact/ui/feedback-rail.mjs",
       "target": "lib/artifact/ui/feedback-rail.mjs",
-      "sha256": "9ef73799ec40f3cf579fabbae8bf475e47ab18d3ea0b59ec770f8ac953c10aff",
+      "sha256": "1807d4824c6c5ad751edcf365ba139aca4d0be10ba003682fb36e8003a0a4287",
       "mode": "644"
     },
     {
@@ -1187,9 +1199,15 @@
       "mode": "644"
     },
     {
+      "source": "packages/artifact/lib/artifact/ui/hosted-viewer.d.mts",
+      "target": "lib/artifact/ui/hosted-viewer.d.mts",
+      "sha256": "8305f9d8788ea631d4692df4066902f67d4697fc4697f45425dace422eef03f7",
+      "mode": "644"
+    },
+    {
       "source": "packages/artifact/lib/artifact/ui/hosted-viewer.mjs",
       "target": "lib/artifact/ui/hosted-viewer.mjs",
-      "sha256": "b0997d3a6ef9e0bdb8ada2e2b2d39db6b9d6bba98fa1d2d33bcd31e1685161f2",
+      "sha256": "c1289675f620a31422e87dcb367a4198a04390eb60f81d1d70708c3417a8c5b3",
       "mode": "644"
     },
     {
@@ -1217,9 +1235,15 @@
       "mode": "644"
     },
     {
+      "source": "packages/artifact/lib/artifact/ui/share-dialog.d.mts",
+      "target": "lib/artifact/ui/share-dialog.d.mts",
+      "sha256": "3c11f6d3328b93f4338c7b86726f0a011eb5248ac4567080f1b99d92627fddcd",
+      "mode": "644"
+    },
+    {
       "source": "packages/artifact/lib/artifact/ui/share-dialog.mjs",
       "target": "lib/artifact/ui/share-dialog.mjs",
-      "sha256": "cacb731fad59d3ac218a6e6d268177d1115f5ba4e9663b48b168427847226d5a",
+      "sha256": "141e4a22fc7e39906b070059fb1d3cc5a56f5a886de4cc2a0df4f786024a09ce",
       "mode": "644"
     },
     {
@@ -1229,15 +1253,27 @@
       "mode": "644"
     },
     {
+      "source": "packages/artifact/lib/artifact/ui/stage-mount.d.mts",
+      "target": "lib/artifact/ui/stage-mount.d.mts",
+      "sha256": "62d3d63175ff6bebc5001808b59c19c1fe6514b7b572e8640983c61948d5a894",
+      "mode": "644"
+    },
+    {
       "source": "packages/artifact/lib/artifact/ui/stage-mount.mjs",
       "target": "lib/artifact/ui/stage-mount.mjs",
-      "sha256": "a535d2838a968b259e5b4ee450cf93eaf0362fde5a690efd4b4355634adfc2f7",
+      "sha256": "b2c7f9c870de3120b904c8941824773e5c423f6b5a8a514f33231d5c8db37832",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/ui/stage-payload.d.mts",
+      "target": "lib/artifact/ui/stage-payload.d.mts",
+      "sha256": "1b9a2ca60d5eac253a319ac01fffec0046087565d6960524d9fcb4d3b9d2aec6",
       "mode": "644"
     },
     {
       "source": "packages/artifact/lib/artifact/ui/stage-payload.mjs",
       "target": "lib/artifact/ui/stage-payload.mjs",
-      "sha256": "2e3c41109bb8702a9f9542c4d03ecdf63ad9daad75a702fa6a1411f9ab35d38e",
+      "sha256": "81d7a9ed4062ce2f474cbd912f62f83926cfd7802d00f3589b908f8e9e235bc9",
       "mode": "644"
     },
     {
