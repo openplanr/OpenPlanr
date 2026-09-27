@@ -22,6 +22,7 @@ import {
   createIssue,
   ensureLabel,
   ensureMilestone,
+  type GitHubIssueState,
   getIssue,
   getIssueTypeForArtifact,
   getLabelForType,
@@ -350,7 +351,7 @@ export function registerGitHubCommand(program: Command) {
       const conflicts: Array<{
         id: string;
         localStatus: string;
-        remoteState: string;
+        remoteState: GitHubIssueState;
         issueNumber: number;
       }> = [];
 
@@ -490,7 +491,7 @@ export function registerGitHubCommand(program: Command) {
           const issueNumber = data?.data.githubIssue as number | undefined;
 
           if (issueNumber) {
-            let issueState = '';
+            let issueState: GitHubIssueState | 'error';
             try {
               const issue = await getIssue(issueNumber);
               issueState = issue.state;
@@ -500,8 +501,9 @@ export function registerGitHubCommand(program: Command) {
             }
 
             const inSync =
-              issueStateToStatus(issueState) === status ||
-              statusToIssueState(status) === issueState;
+              issueState !== 'error' &&
+              (issueStateToStatus(issueState) === status ||
+                statusToIssueState(status) === issueState);
             const syncIcon = inSync ? chalk.green('✓') : chalk.red('✗');
 
             display.line(
