@@ -1,66 +1,256 @@
-// @ts-check
+import type {
+  DiagramAuthoringBundle,
+  DiagramAuthoringValidationError,
+  DiagramEditTransaction,
+} from '@openplanr/protocol/diagram-authoring-contracts';
 import {
   compileDiagramCommand,
   createConditionalInverse,
+  type DiagramBundleDiff,
+  type DiagramCommand,
+  type DiagramCommandResult,
+  type DiagramConditionalInverse,
+  type DiagramEditImpact,
+  type DiagramEditPreview,
+  type DiagramKernelFailure,
+  type DiagramPreviewResult,
   diffDiagramBundles,
   previewAutomaticLayout,
   previewDiagramTransaction,
   validateAuthoringBundle,
 } from '../authoring/index.mjs';
 import { clone, inspectPlainData, same, snapshot } from '../authoring/model.mjs';
-import { createDiagramGeometryIndex } from './geometry-index.mjs';
+import type { DiagramStoreBasis, DiagramStoreReceipt } from '../authoring/store.mjs';
+import { createDiagramGeometryIndex, type DiagramGeometryIndex } from './geometry-index.mjs';
+import type { DiagramEditorRecovery, DiagramEditorRecoveryStatus } from './recovery.mjs';
 
-/** @typedef {import('./index.d.mts').DiagramEditorSession} Session */
-/** @typedef {import('./index.d.mts').DiagramEditorTransport} Transport */
-/** @typedef {import('./index.d.mts').DiagramEditorBatchTransport} BatchTransport */
-/** @typedef {import('@openplanr/protocol/diagram-authoring-contracts').DiagramAuthoringBundle} DiagramAuthoringBundle */
-/** @typedef {import('@openplanr/protocol/diagram-authoring-contracts').DiagramEditTransaction} DiagramEditTransaction */
-/** @typedef {import('@openplanr/protocol/diagram-authoring-contracts').DiagramAuthoringValidationError} DiagramAuthoringValidationError */
-/**
- * The draft persist() stores; restore() verifies every field before trusting it.
- * @typedef {{
- *   base: DiagramAuthoringBundle;
- *   initialization: string | null;
- *   transactions: DiagramEditTransaction[];
- *   uncertain?: { count: number; batchId: string };
- * }} RecoveryRecord
- */
+export interface DiagramEditorFailure {
+  ok: false;
+  diagnostics: DiagramAuthoringValidationError[];
+}
+export interface DiagramEditorTransportFailure {
+  ok: false;
+  status?: string;
+  httpStatus?: number;
+  diagnostics?: DiagramAuthoringValidationError[];
+}
+export interface DiagramEditorTransport {
+  read(): Promise<
+    | { ok: true; status: 'ready'; bundle: DiagramAuthoringBundle }
+    | { ok: true; status: 'absent' }
+    | DiagramEditorTransportFailure
+  >;
+  initialize(
+    bundle: DiagramAuthoringBundle,
+    identity: { transactionId: string },
+  ): Promise<DiagramEditorSaveAcknowledgement | DiagramEditorTransportFailure>;
+  commit(
+    transaction: DiagramEditTransaction,
+  ): Promise<DiagramEditorSaveAcknowledgement | DiagramEditorTransportFailure>;
+}
+export interface DiagramEditorSaveAcknowledgement {
+  ok: true;
+  status: 'saved';
+  bundle: DiagramAuthoringBundle;
+  receipt: Pick<DiagramStoreReceipt, 'transactionId' | 'result'>;
+  replayed?: boolean;
+}
+export interface DiagramEditorSaveBatch {
+  /** Identical when the same pending prefix is resent after an unconfirmed save. */
+  batchId: string;
+  initialization: { bundle: DiagramAuthoringBundle; transactionId: string } | null;
+  /** The last acknowledged bundle, or null while the diagram is being initialized. */
+  base: DiagramAuthoringBundle | null;
+  transactions: DiagramEditTransaction[];
+  /** The complete bundle expected after this batch. */
+  result: DiagramAuthoringBundle;
+}
+export interface DiagramEditorBatchAcknowledgement {
+  ok: true;
+  status: 'saved';
+  bundle: DiagramAuthoringBundle;
+  receipt: { batchId: string; result: DiagramStoreBasis };
+  replayed?: boolean;
+}
+/** Hosted transport that acknowledges each save as one request. */
+export interface DiagramEditorBatchTransport {
+  read: DiagramEditorTransport['read'];
+  saveBatch(
+    batch: DiagramEditorSaveBatch,
+  ): Promise<DiagramEditorBatchAcknowledgement | DiagramEditorTransportFailure>;
+}
+export interface DiagramEditorView {
+  camera: { x: number; y: number; scale: number; fit: 'all' | 'width' | null };
+  selection: string[];
+  collapsedGroups: string[];
+  trace: string[];
+  snap: boolean;
+}
+export type DiagramEditorSaveState =
+  | 'saved'
+  | 'unsaved'
+  | 'saving'
+  | 'offline'
+  | 'conflict'
+  | 'access-changed';
+export interface DiagramEditorState {
+  bundle: DiagramAuthoringBundle | null;
+  acknowledged: DiagramStoreBasis | null;
+  pendingCount: number;
+  needsInitialization: boolean;
+  saveState: DiagramEditorSaveState;
+  capabilities: { read: boolean; write: boolean };
+  view: DiagramEditorView;
+  gesture: {
+    transactionId: string;
+    basis: string;
+    diagnostics: DiagramAuthoringValidationError[];
+    bundle: DiagramAuthoringBundle | null;
+  } | null;
+  canUndo: boolean;
+  canRedo: boolean;
+  comparison: {
+    base: DiagramAuthoringBundle;
+    bundle: DiagramAuthoringBundle;
+    diff: DiagramBundleDiff | DiagramEditorFailure;
+  } | null;
+  diagnostics: DiagramAuthoringValidationError[];
+  recovery: DiagramEditorRecoveryStatus;
+  disposed: boolean;
+}
+export interface DiagramEditorEvent {
+  type: string;
+  affectedIds: string[];
+  revision: string;
+  saveState: DiagramEditorSaveState;
+}
+export interface DiagramEditorSession {
+  getState(): DiagramEditorState;
+  submit(command: DiagramCommand, options?: { transactionId?: string }): DiagramCommandResult;
+  submitTransaction(transaction: DiagramEditTransaction): DiagramCommandResult;
+  /** Adopt a certified complete copy only while this is a new, empty, unsaved diagram. */
+  adoptInitialCopy(
+    bundle: DiagramAuthoringBundle,
+  ): { ok: true; bundle: DiagramAuthoringBundle } | DiagramEditorFailure;
+  beginGesture(options?: { transactionId?: string }): { ok: true } | DiagramEditorFailure;
+  /** Delta commands are always relative to the gesture's original content. */
+  previewGesture(command: DiagramCommand): DiagramCommandResult;
+  previewLayout(options: {
+    targetIds: string[];
+    columns?: number;
+    gap?: number;
+  }): DiagramPreviewResult;
+  completeGesture(): DiagramCommandResult;
+  cancelGesture(reason?: string): { ok: true; cancelled: boolean; reason?: string };
+  undo(options?: { transactionId?: string }): DiagramCommandResult;
+  redo(options?: { transactionId?: string }): DiagramCommandResult;
+  /** A conflict failure carries the comparison of the authoritative revision with the draft. */
+  refresh(bundle: DiagramAuthoringBundle):
+    | { ok: true; changed: boolean }
+    | (DiagramEditorFailure & {
+        comparison?:
+          | ({ ok: true; impact: DiagramEditImpact } & DiagramBundleDiff)
+          | DiagramKernelFailure;
+      });
+  save(): Promise<
+    | { ok: true; status: DiagramEditorSaveState; bundle?: DiagramAuthoringBundle | null }
+    | (DiagramEditorFailure & { status?: DiagramEditorSaveState })
+  >;
+  setView(patch: Partial<DiagramEditorView>): { ok: true } | DiagramEditorFailure;
+  query(input: {
+    x: number;
+    y: number;
+    tolerance?: number;
+  }): ReturnType<DiagramGeometryIndex['query']>;
+  geometry(id: string): ReturnType<DiagramGeometryIndex['get']>;
+  geometryStats(): ReturnType<DiagramGeometryIndex['stats']>;
+  subscribe(listener: (event: DiagramEditorEvent) => void): () => void;
+  setCapabilities(capabilities: { read: boolean; write: boolean }): void;
+  /** Explicitly discard the pending draft after the caller offers comparison/export. */
+  useAuthoritative(): { ok: true } | DiagramEditorFailure;
+  dispose(): void;
+}
+export interface DiagramEditorOptions {
+  bundle: DiagramAuthoringBundle;
+  /** Set only after reading this bundle from the authoritative owner. Defaults to false. */
+  acknowledged?: boolean;
+  transport?: DiagramEditorTransport | DiagramEditorBatchTransport | null;
+  recovery?: DiagramEditorRecovery | null;
+  nextTransactionId?: () => string;
+  capabilities?: { read: boolean; write: boolean };
+  /** Keep this identity's recovery copy when access is lost; the host clears it on sign-out. Defaults to false. */
+  retainRecoveryOnAccessLoss?: boolean;
+}
+type DiagramEditorOpenOptions = Omit<
+  DiagramEditorOptions,
+  'bundle' | 'acknowledged' | 'transport'
+> & {
+  transport: DiagramEditorTransport | DiagramEditorBatchTransport;
+  create?: DiagramAuthoringBundle;
+};
 
-/** @type {(rule: string, detail: string) => import('./index.d.mts').DiagramEditorFailure} */
-const fail = (rule, detail) => ({ ok: false, diagnostics: [{ path: '$session', rule, detail }] });
-/**
- * @param {Transport | BatchTransport} transport
- * @returns {transport is BatchTransport}
- */
-const batching = (transport) =>
+/** The draft persist() stores; restore() verifies every field before trusting it. */
+interface RecoveryRecord {
+  base: DiagramAuthoringBundle;
+  initialization: string | null;
+  transactions: DiagramEditTransaction[];
+  uncertain?: { count: number; batchId: string };
+}
+interface PendingEdit {
+  transaction: DiagramEditTransaction;
+  bundle: DiagramAuthoringBundle;
+  inverse: DiagramConditionalInverse;
+}
+interface Gesture {
+  transactionId: string;
+  basis: string;
+  preview: DiagramEditPreview | null;
+  diagnostics: DiagramAuthoringValidationError[];
+}
+/** A save response or thrown owner error, as far as failure handling reads it. */
+interface SaveOutcome {
+  ok?: boolean;
+  status?: string;
+  httpStatus?: number;
+  diagnostics?: DiagramAuthoringValidationError[];
+}
+/** An error a transport throws; only these fields are read. */
+interface ThrownSaveError {
+  httpStatus?: number;
+  details?: { diagnostics?: DiagramAuthoringValidationError[] };
+}
+type SaveResult = Awaited<ReturnType<DiagramEditorSession['save']>>;
+type SaveFailure = DiagramEditorFailure & { status: DiagramEditorSaveState };
+
+// biome-ignore format: bundles keep this one-line object; wrapping would change their bytes.
+const fail = (rule: string, detail: string): DiagramEditorFailure => ({ ok: false, diagnostics: [{ path: '$session', rule, detail }] });
+const batching = (
+  transport: DiagramEditorTransport | DiagramEditorBatchTransport,
+): transport is DiagramEditorBatchTransport =>
   'saveBatch' in transport && typeof transport.saveBatch === 'function';
-/** @param {ReturnType<typeof diffDiagramBundles>} diff */
-const affectedIds = (diff) => {
+const affectedIds = (diff: ReturnType<typeof diffDiagramBundles>) => {
   if (!diff.ok)
     throw new TypeError(diff.diagnostics[0]?.detail ?? 'The diagram comparison failed.');
   return diff.impact.affectedIds;
 };
 const defaultId = () => `edit-${globalThis.crypto.randomUUID()}`;
-const validId = (value) =>
+const validId = (value: unknown) =>
   typeof value === 'string' &&
   value.length <= 128 &&
   /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/u.test(value);
 const MAX_PENDING = 100;
 const MAX_HISTORY = 100;
-const idOf = (bundle) => bundle.bundleDigest;
-const validBundle = (value) => {
+const idOf = (bundle: DiagramAuthoringBundle) => bundle.bundleDigest;
+const validBundle = (value: unknown): DiagramAuthoringBundle => {
   const result = validateAuthoringBundle(value);
   if (!result.ok) throw new TypeError(result.diagnostics[0].detail);
   return clone(value);
 };
 /** Stable for the same pending prefix, so an unconfirmed batch is retried with the same identity. */
-const batchIdFor = (initialization, transactions) =>
+const batchIdFor = (initialization: string | null, transactions: DiagramEditTransaction[]) =>
   `batch-${transactions.length}-${transactions.at(-1)?.transactionId ?? initialization}`;
 
-/**
- * Framework-neutral content session. View state never enters a saved bundle.
- * @type {typeof import('./index.d.mts').createDiagramEditorSession}
- */
+/** Framework-neutral content session. View state never enters a saved bundle. */
 export function createDiagramEditorSession({
   bundle,
   acknowledged = false,
@@ -69,42 +259,41 @@ export function createDiagramEditorSession({
   nextTransactionId = defaultId,
   capabilities = { read: true, write: true },
   retainRecoveryOnAccessLoss = false,
-}) {
+}: DiagramEditorOptions): DiagramEditorSession {
   let current = validBundle(bundle);
-  let base = clone(current);
-  let saved = acknowledged ? clone(current) : null;
+  let base: DiagramAuthoringBundle = clone(current);
+  let saved: DiagramAuthoringBundle | null = acknowledged ? clone(current) : null;
   let initialization = acknowledged ? null : nextTransactionId();
   if (initialization !== null && !validId(initialization))
     throw new TypeError('Initialization needs a valid transaction identity.');
-  let pending = [];
-  let undo = [];
-  let redo = [];
-  let gesture = null;
-  let comparison = null;
-  let diagnostics = [];
-  /** @type {import('./index.d.mts').DiagramEditorSaveState} */
-  let saveState = acknowledged ? 'saved' : 'unsaved';
+  let pending: PendingEdit[] = [];
+  let undo: DiagramConditionalInverse[] = [];
+  let redo: DiagramConditionalInverse[] = [];
+  let gesture: Gesture | null = null;
+  let comparison: DiagramAuthoringBundle | null = null;
+  let diagnostics: DiagramAuthoringValidationError[] = [];
+  let saveState: DiagramEditorSaveState = acknowledged ? 'saved' : 'unsaved';
   let capability = { read: capabilities.read === true, write: capabilities.write === true };
   let disposed = false;
   let epoch = 0;
-  let saving = null;
+  let saving: Promise<SaveResult> | null = null;
   // A sent batch whose outcome is unknown; the next save resends exactly this prefix first.
-  let uncertain = null;
-  const listeners = new Set();
+  let uncertain: { count: number; batchId: string } | null = null;
+  const listeners = new Set<(event: DiagramEditorEvent) => void>();
   const usedIds = new Set(initialization ? [initialization] : []);
-  let view = {
+  let view: DiagramEditorView = {
     camera: { x: 0, y: 0, scale: 1, fit: 'all' },
     selection: [],
     collapsedGroups: [],
     trace: [],
     snap: true,
   };
-  let recoveryWarning = null;
+  let recoveryWarning: string | null = null;
   const indexResult = createDiagramGeometryIndex(current);
   if (!indexResult.ok) throw new TypeError(indexResult.diagnostics[0].detail);
   const geometry = indexResult.index;
 
-  function emit(type, affectedIds = []) {
+  function emit(type: string, affectedIds: string[] = []) {
     if (disposed) return;
     const event = { type, affectedIds: [...affectedIds], revision: idOf(current), saveState };
     for (const listener of [...listeners]) {
@@ -141,11 +330,11 @@ export function createDiagramEditorSession({
     view.trace = view.trace.filter((id) => ids.has(id));
     view.collapsedGroups = view.collapsedGroups.filter((id) => containers.has(id));
   }
-  function updateGeometry(next, ids) {
+  function updateGeometry(next: DiagramAuthoringBundle, ids: string[]) {
     const result = geometry.update(next, ids);
     if (!result.ok) throw new Error(result.diagnostics[0].detail);
   }
-  function accept(preview, history = 'edit') {
+  function accept(preview: DiagramCommandResult, history = 'edit'): DiagramCommandResult {
     if (!preview.ok || !preview.transaction) return preview;
     if (idOf(preview.bundle) === idOf(current))
       return { ok: true, changed: false, transaction: null };
@@ -173,12 +362,15 @@ export function createDiagramEditorSession({
     emit('content', preview.impact.affectedIds);
     return clone(preview);
   }
-  function checkIdentity(transactionId) {
+  function checkIdentity(transactionId: string) {
     return validId(transactionId) && !usedIds.has(transactionId)
       ? null
       : fail('transaction-id', 'Each new edit needs a fresh transaction identity.');
   }
-  function submit(command, options = {}) {
+  function submit(
+    command: DiagramCommand,
+    options: { transactionId?: string } = {},
+  ): DiagramCommandResult {
     const blocked = guard();
     if (blocked) return blocked;
     if (gesture) return fail('gesture-active', 'Finish or cancel the gesture before another edit.');
@@ -187,14 +379,15 @@ export function createDiagramEditorSession({
     if (invalid) return invalid;
     return accept(compileDiagramCommand(current, command, { transactionId }));
   }
-  function submitTransaction(transaction) {
+  function submitTransaction(transaction: DiagramEditTransaction): DiagramCommandResult {
     const blocked = guard();
     if (blocked) return blocked;
     if (gesture) return fail('gesture-active', 'Finish or cancel the gesture before another edit.');
     return accept(previewDiagramTransaction(current, transaction));
   }
-  /** @type {Session['adoptInitialCopy']} */
-  function adoptInitialCopy(bundle) {
+  function adoptInitialCopy(
+    bundle: DiagramAuthoringBundle,
+  ): ReturnType<DiagramEditorSession['adoptInitialCopy']> {
     const blocked = guard();
     if (blocked) return blocked;
     const isEmpty =
@@ -240,8 +433,7 @@ export function createDiagramEditorSession({
     emit('refresh', affectedIds);
     return { ok: true, bundle: clone(current) };
   }
-  /** @type {Session['cancelGesture']} */
-  function cancelGesture(reason = 'cancel') {
+  function cancelGesture(reason = 'cancel'): ReturnType<DiagramEditorSession['cancelGesture']> {
     if (!gesture) return { ok: true, cancelled: false };
     const affected = gesture.preview?.impact.affectedIds ?? [];
     gesture = null;
@@ -249,8 +441,10 @@ export function createDiagramEditorSession({
     emit('gesture-cancel', affected);
     return { ok: true, cancelled: true, reason };
   }
-  /** @type {Session['beginGesture']} */
-  function beginGesture({ transactionId = nextTransactionId() } = {}) {
+  function beginGesture(
+    // biome-ignore format: bundles keep this one-line pattern; wrapping would change their bytes.
+    { transactionId = nextTransactionId() }: { transactionId?: string } = {},
+  ): ReturnType<DiagramEditorSession['beginGesture']> {
     const blocked = guard();
     if (blocked) return blocked;
     if (gesture) return fail('gesture-active', 'Finish or cancel the current gesture first.');
@@ -260,16 +454,18 @@ export function createDiagramEditorSession({
     emit('gesture-start');
     return { ok: true };
   }
-  function setPreview(preview) {
-    const previous = gesture.preview?.impact.affectedIds ?? [];
-    gesture.preview = preview.ok && preview.transaction ? preview : null;
-    gesture.diagnostics = preview.ok ? [] : clone(preview.diagnostics);
-    const affected = [...new Set([...previous, ...(gesture.preview?.impact.affectedIds ?? [])])];
-    updateGeometry(gesture.preview?.bundle ?? current, affected);
+  // Callers start a gesture first, so these assertions name that invariant.
+  function setPreview<Result extends DiagramCommandResult>(preview: Result): Result {
+    const previous = (gesture as Gesture).preview?.impact.affectedIds ?? [];
+    (gesture as Gesture).preview = preview.ok && preview.transaction ? preview : null;
+    (gesture as Gesture).diagnostics = preview.ok ? [] : clone(preview.diagnostics);
+    // biome-ignore format: bundles keep this one-line array; wrapping would change their bytes.
+    const affected = [...new Set([...previous, ...((gesture as Gesture).preview?.impact.affectedIds ?? [])])];
+    updateGeometry((gesture as Gesture).preview?.bundle ?? current, affected);
     emit('gesture-preview', affected);
     return clone(preview);
   }
-  function previewGesture(command) {
+  function previewGesture(command: DiagramCommand): DiagramCommandResult {
     const blocked = guard();
     if (blocked) return blocked;
     if (!gesture) return fail('no-gesture', 'Start a gesture before previewing it.');
@@ -277,7 +473,9 @@ export function createDiagramEditorSession({
       compileDiagramCommand(current, command, { transactionId: gesture.transactionId }),
     );
   }
-  function previewLayout(options) {
+  function previewLayout(
+    options: Parameters<DiagramEditorSession['previewLayout']>[0],
+  ): DiagramPreviewResult {
     const blocked = guard();
     if (blocked) return blocked;
     if (!gesture) return fail('no-gesture', 'Start a gesture before previewing layout.');
@@ -285,7 +483,7 @@ export function createDiagramEditorSession({
       previewAutomaticLayout(current, { ...options, transactionId: gesture.transactionId }),
     );
   }
-  function completeGesture() {
+  function completeGesture(): DiagramCommandResult {
     const blocked = guard();
     if (blocked) return blocked;
     if (!gesture) return fail('no-gesture', 'No gesture is pending.');
@@ -302,14 +500,20 @@ export function createDiagramEditorSession({
     if (!result.ok) updateGeometry(current, preview.impact.affectedIds);
     return result;
   }
-  function compensate(source, target, transactionId) {
+  function compensate(
+    source: DiagramConditionalInverse[],
+    target: DiagramConditionalInverse[],
+    transactionId: string,
+  ): DiagramCommandResult {
     const blocked = guard();
     if (blocked) return blocked;
     if (gesture) return fail('gesture-active', 'Finish or cancel the gesture before undo or redo.');
     if (comparison)
       return fail('conflict', 'Compare the authoritative revision before undo or redo.');
     if (!source.length) return { ok: true, changed: false, transaction: null };
-    const inverse = createConditionalInverse(current, source.at(-1), { transactionId });
+    // The length check above guarantees a last entry.
+    // biome-ignore format: bundles keep these one-line arguments; wrapping would change their bytes.
+    const inverse = createConditionalInverse(current, source.at(-1) as DiagramConditionalInverse, { transactionId });
     if (!inverse.ok) {
       diagnostics = clone(inverse.diagnostics);
       emit('undo-conflict');
@@ -325,8 +529,9 @@ export function createDiagramEditorSession({
     }
     return result;
   }
-  /** @type {Session['refresh']} */
-  function refresh(authoritative) {
+  function refresh(
+    authoritative: DiagramAuthoringBundle,
+  ): ReturnType<DiagramEditorSession['refresh']> {
     const blocked = disposed || !capability.read;
     if (blocked) return fail('access-changed', 'This session cannot read a revision.');
     const validation = validateAuthoringBundle(authoritative);
@@ -362,7 +567,11 @@ export function createDiagramEditorSession({
     emit('refresh', touched);
     return { ok: true, changed: true };
   }
-  function acknowledge(result, expected, transactionId) {
+  function acknowledge(
+    result: DiagramEditorSaveAcknowledgement | DiagramEditorTransportFailure,
+    expected: DiagramAuthoringBundle,
+    transactionId: string,
+  ) {
     if (
       !result?.ok ||
       result.status !== 'saved' ||
@@ -377,7 +586,7 @@ export function createDiagramEditorSession({
     if (comparison && idOf(comparison) === idOf(expected)) comparison = null;
     return true;
   }
-  async function failureState(result) {
+  async function failureState(result: SaveOutcome): Promise<SaveFailure> {
     diagnostics = clone(
       result?.diagnostics ?? [
         {
@@ -391,8 +600,8 @@ export function createDiagramEditorSession({
     // A client rejection committed nothing, so the next save may rebatch; unknown outcomes keep the exact batch.
     if (
       Number.isInteger(status) &&
-      status >= 400 &&
-      status < 500 &&
+      (status as number) >= 400 &&
+      (status as number) < 500 &&
       status !== 408 &&
       status !== 429
     )
@@ -413,7 +622,11 @@ export function createDiagramEditorSession({
     } else saveState = 'offline';
     return { ok: false, status: saveState, diagnostics: clone(diagnostics) };
   }
-  function acknowledgeBatch(result, expected, batchId) {
+  function acknowledgeBatch(
+    result: DiagramEditorBatchAcknowledgement | DiagramEditorTransportFailure,
+    expected: DiagramAuthoringBundle,
+    batchId: string,
+  ) {
     if (
       !result?.ok ||
       result.status !== 'saved' ||
@@ -428,15 +641,19 @@ export function createDiagramEditorSession({
     if (comparison && idOf(comparison) === idOf(expected)) comparison = null;
     return true;
   }
-  /** @param {BatchTransport} owner */
-  async function performBatches(owner, live, count) {
+  async function performBatches(
+    owner: DiagramEditorBatchTransport,
+    live: () => boolean,
+    count: number,
+  ): Promise<SaveResult | null> {
     const sizes =
       uncertain && uncertain.count <= count ? [uncertain.count, count - uncertain.count] : [count];
     for (const size of sizes) {
       const items = pending.slice(0, size);
       if (!initialization && !items.length) continue;
-      const expected = clone(items.length ? items.at(-1).bundle : base);
-      const batch = {
+      // A non-empty prefix has a last entry.
+      const expected = clone(items.length ? (items.at(-1) as PendingEdit).bundle : base);
+      const batch: DiagramEditorSaveBatch = {
         batchId: batchIdFor(
           initialization,
           items.map((item) => item.transaction),
@@ -469,13 +686,16 @@ export function createDiagramEditorSession({
         'acknowledged',
         items
           .flatMap((item) => item.inverse.changes.semantic.map((change) => change.elementId))
-          .filter(Boolean),
+          .filter(Boolean) as string[],
       );
     }
     return null;
   }
-  /** @param {Transport | BatchTransport} owner */
-  async function performSave(owner, runEpoch, count) {
+  async function performSave(
+    owner: DiagramEditorTransport | DiagramEditorBatchTransport,
+    runEpoch: number,
+    count: number,
+  ): Promise<SaveResult> {
     const live = () => !disposed && epoch === runEpoch && capability.read && capability.write;
     if (!live()) return fail('disposed', 'This session is closed.');
     try {
@@ -484,7 +704,7 @@ export function createDiagramEditorSession({
         if (failure) return failure;
       } else if (initialization) {
         const requestId = initialization;
-        const expected = clone(base);
+        const expected: DiagramAuthoringBundle = clone(base);
         const result = await owner.initialize(clone(expected), { transactionId: requestId });
         if (!live())
           return fail(
@@ -515,7 +735,9 @@ export function createDiagramEditorSession({
           persist();
           emit(
             'acknowledged',
-            item.inverse.changes.semantic.map((change) => change.elementId).filter(Boolean),
+            item.inverse.changes.semantic
+              .map((change) => change.elementId)
+              .filter(Boolean) as string[],
           );
         }
       if (!live()) return fail('disposed', 'This session is closed.');
@@ -524,10 +746,7 @@ export function createDiagramEditorSession({
       return { ok: true, status: saveState, bundle: clone(saved) };
     } catch (error) {
       if (!live()) return fail('disposed', 'This session is closed.');
-      const thrown =
-        /** @type {{ httpStatus?: number; details?: { diagnostics?: DiagramAuthoringValidationError[] } } | null | undefined} */ (
-          error
-        );
+      const thrown = error as ThrownSaveError | null | undefined;
       return await failureState({
         ok: false,
         httpStatus: thrown?.httpStatus,
@@ -547,7 +766,7 @@ export function createDiagramEditorSession({
       }
     }
   }
-  function save() {
+  function save(): Promise<SaveResult> {
     const blocked = guard();
     if (blocked) return Promise.resolve(blocked);
     if (saving) return saving;
@@ -572,8 +791,7 @@ export function createDiagramEditorSession({
     emit('save');
     return settled;
   }
-  /** @type {Session['setView']} */
-  function setView(patch) {
+  function setView(patch: Partial<DiagramEditorView>): ReturnType<DiagramEditorSession['setView']> {
     if (disposed || !capability.read)
       return fail('access-changed', 'This session cannot update view state.');
     if (
@@ -609,7 +827,8 @@ export function createDiagramEditorSession({
   }
   function restore() {
     if (!recovery || !capability.read) return;
-    const record = /** @type {RecoveryRecord | null} */ (recovery.load());
+    // Every field is checked below before the record is applied.
+    const record = recovery.load() as RecoveryRecord | null;
     if (!record) return;
     try {
       if (
@@ -635,8 +854,8 @@ export function createDiagramEditorSession({
               )))
       )
         throw new Error('Invalid recovery.');
-      let draft = clone(record.base);
-      const entries = [];
+      let draft: DiagramAuthoringBundle = clone(record.base);
+      const entries: PendingEdit[] = [];
       const ids = new Set(record.initialization ? [record.initialization] : []);
       for (const transaction of record.transactions) {
         const preview = previewDiagramTransaction(draft, transaction);
@@ -794,11 +1013,11 @@ export function createDiagramEditorSession({
   };
 }
 
-/**
- * Owner transport is injected; creation and editing never need a company account.
- * @type {typeof import('./index.d.mts').openDiagramEditorSession}
- */
-export async function openDiagramEditorSession({ transport, create, ...options }) {
+/** Owner transport is injected; creation and editing never need a company account. */
+export async function openDiagramEditorSession(
+  // biome-ignore format: bundles keep this one-line pattern; wrapping would change their bytes.
+  { transport, create, ...options }: DiagramEditorOpenOptions,
+): Promise<DiagramEditorSession> {
   const result = await transport.read();
   if (result?.ok && result.status === 'ready')
     return createDiagramEditorSession({

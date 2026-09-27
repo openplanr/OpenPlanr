@@ -1,20 +1,28 @@
-// @ts-check
+import type { DiagramAuthoringBundle } from '@openplanr/protocol/diagram-authoring-contracts';
 import { processTemplate } from '../../ui/diagram-editor-actions.mjs';
 import { compileDiagramCommand, validateAuthoringBundle } from '../authoring/index.mjs';
 import { clone, failure, sealBundle } from '../authoring/model.mjs';
+import type { DiagramEditorFailure } from './session.mjs';
 
-const meta = (kind) => ({ kind, schemaVersion: '1.0.0', protocolVersion: '1.13.0' });
+interface DiagramEditorDraftOptions {
+  diagramId: string;
+  title: string;
+  grammar?: 'flowchart' | 'process' | 'swimlane' | 'architecture';
+  template?: 'process' | DiagramAuthoringBundle | null;
+}
+
+const meta = (kind: string) => ({ kind, schemaVersion: '1.0.0', protocolVersion: '1.13.0' });
 const NAMED_TEMPLATES = Object.freeze({ process: () => processTemplate({ x: 80, y: 160 }) });
 /**
  * Create an unsaved blank diagram, or adopt a named or validated template as new identity.
- * @type {typeof import('./index.d.mts').createDiagramEditorDraft}
+ * A named template starts from the editor's own shapes.
  */
 export function createDiagramEditorDraft({
   diagramId,
   title,
   grammar = 'flowchart',
   template = null,
-}) {
+}: DiagramEditorDraftOptions): { ok: true; bundle: DiagramAuthoringBundle } | DiagramEditorFailure {
   if (typeof template === 'string') {
     if (!Object.hasOwn(NAMED_TEMPLATES, template))
       return failure('$.template', 'template', `Unknown diagram template: ${template}.`);

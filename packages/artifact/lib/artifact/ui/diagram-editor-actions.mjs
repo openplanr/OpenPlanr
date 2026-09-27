@@ -133,7 +133,7 @@ export function processTemplate(position) {
   };
 }
 /**
- * @returns {import('../diagram/editor/index.d.mts').DiagramEditorFailure
+ * @returns {import('../diagram/editor/index.mjs').DiagramEditorFailure
  *   | (import('../diagram/authoring/index.d.mts').DiagramCommandResult & { selectedIds: string[] })}
  */
 export function duplicateSelection(bundle, ids, copied = null) {
