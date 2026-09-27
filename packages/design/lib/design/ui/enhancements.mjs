@@ -845,6 +845,8 @@ export function mountDesignEnhancements({ payload, studio: designStudio, stage: 
       if (saving || !available()) return;
       saving = true;
       try {
+        // The server finds a comment only in the saved review, so a new one must be saved first.
+        await studio.flush();
         for (const [pinId, category] of Object.entries(outbox)) {
           const body = {
             action: 'category',

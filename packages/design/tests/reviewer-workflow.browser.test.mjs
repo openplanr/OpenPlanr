@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdir, mkdtemp, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
@@ -464,6 +464,79 @@ test(`reviewer workflow stays focused, compact and usable with large discussions
       assert.deepEqual(errors, []);
       await context.close();
     }
+  } finally {
+    await browser?.close();
+    await review?.close();
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test(`a new owner comment saves its type without a sync error (${engine})`, {
+  timeout: 90000,
+}, async () => {
+  const root = await mkdtemp(join(tmpdir(), 'openplanr-comment-type-'));
+  let browser, review;
+  try {
+    const { file } = designFixture(root, { count: 3, variants: 2 });
+    await renderDesignDocument(file);
+    const target = currentDesign(file).entries.find(
+      (entry) =>
+        entry.screenId === 'screen-1' && entry.variantId === 'A' && entry.frameId === 'desktop',
+    );
+    review = await startDesignReview(file, {
+      env: { ...process.env, PLANR_HOME: join(root, 'home') },
+      port: 0,
+    });
+    browser = await launchBrowser({ engine });
+    const page = await browser.newPage({ viewport: { width: 1600, height: 1000 } });
+    page.setDefaultTimeout(8000);
+    const errors = [];
+    page.on('pageerror', (error) => errors.push(error.message));
+    const isTypeSave = (response) =>
+      response.url().endsWith('/api/design-handoff') && response.request().method() === 'POST';
+    const typeSaves = [];
+    page.on('response', (response) => {
+      if (isTypeSave(response)) typeSaves.push(response.status());
+    });
+    await page.goto(review.url, { waitUntil: 'domcontentloaded', timeout: 30000 });
+    await page.locator('[data-design-ready="true"]').waitFor();
+
+    await page.locator('[data-planr-mode="comment"]').click();
+    await page
+      .locator(`[data-planr-annotation-layer="${target.artifactId}"]`)
+      .click({ position: { x: 100, y: 120 } });
+    await page
+      .locator('[data-planr-annotation-composer]')
+      .getByRole('radio', { name: 'Request change', exact: true })
+      .click();
+    await page.locator('[data-planr-composer-identity]').fill('Asem');
+    await page.locator('[data-planr-composer-comment]').fill('Make the primary action stand out.');
+    const saved = page.waitForResponse(isTypeSave);
+    await page.locator('[data-planr-composer-submit]').click();
+    assert.equal((await saved).status(), 200, 'the first type save finds the new comment');
+
+    await page.waitForFunction(
+      () => window.__openPlanrDesignExperience.getState().metadata.version === 1,
+    );
+    const [pinId] = await page.evaluate(() =>
+      window.__openPlanrArtifactStage.review.getState().review.pins.map(({ id }) => id),
+    );
+    const stored = JSON.parse(await readFile(join(root, '.design/review-metadata.json'), 'utf8'));
+    assert.deepEqual(
+      Object.values(stored.byRevision).map(({ categories }) => categories[pinId]),
+      ['change-request'],
+      'the comment type is stored with the review',
+    );
+    assert.equal(
+      await page.getByRole('button', { name: 'Retry pending categories', exact: true }).isVisible(),
+      false,
+    );
+    assert.equal(
+      await page.locator('[data-experience-status]', { hasText: 'waiting to sync' }).count(),
+      0,
+    );
+    assert.deepEqual(typeSaves, [200]);
+    assert.deepEqual(errors, []);
   } finally {
     await browser?.close();
     await review?.close();
