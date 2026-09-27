@@ -1,3 +1,9 @@
+import type {
+  DiagramAppearance,
+  DiagramAuthoringBundle,
+  DiagramEditTransaction,
+  DiagramPlacement,
+} from '@openplanr/protocol/diagram-authoring-contracts';
 import {
   appearanceFields,
   clone,
@@ -6,6 +12,8 @@ import {
   parentIndex,
   semanticFields,
 } from '../diagram/authoring/model.mjs';
+import type { DiagramEditorState } from '../diagram/editor/index.mjs';
+import type { DiagramEditorIconName } from './diagram-editor.mjs';
 import {
   arrangedPlacements,
   COLLECTION_NAMES,
@@ -15,13 +23,73 @@ import {
   propertyTransaction,
   quantity,
 } from './diagram-editor-actions.mjs';
-import { button, element, field, icon, iconButton } from './diagram-editor-dom.mjs';
+import type { DiagramEditorPoint as Point } from './diagram-editor-context.d.mts';
+import {
+  button,
+  type ElementAttributes,
+  element,
+  type FieldControl,
+  type FieldOptions,
+  field,
+  icon,
+  iconButton,
+} from './diagram-editor-dom.mjs';
+
+type PropertiesAct = (action: string, value?: unknown) => void;
+/** What the inspector reads from a submitted property transaction. */
+interface PropertiesResult {
+  ok: boolean;
+  skipped?: boolean;
+}
+/** The inspector's handle on the properties form it asked for. */
+export interface DiagramPropertiesController {
+  readonly dirty: boolean;
+  apply(): PropertiesResult;
+  revert(): PropertiesResult;
+  focus(): void;
+}
+interface DiagramPropertiesOptions {
+  root: HTMLElement;
+  state: DiagramEditorState;
+  editable: boolean;
+  act: PropertiesAct;
+  submitTransaction: (transaction: DiagramEditTransaction) => PropertiesResult;
+  onDirtyChange?: (dirty: boolean) => void;
+}
+interface InspectorHeading {
+  kicker: string;
+  title: string;
+  description?: string;
+}
+interface SectionOptions {
+  iconName?: string;
+  open?: boolean;
+  className?: string;
+}
+type ActionItem = [
+  label: string,
+  action: string | null,
+  iconName: DiagramEditorIconName | null,
+  attributes?: ElementAttributes,
+];
+/** The selected objects and how to act on them. */
+interface Inspection {
+  bundle: DiagramAuthoringBundle;
+  byId: ReturnType<typeof elementIndex>;
+  ids: string[];
+  editable: boolean;
+  act: PropertiesAct;
+}
+interface SelectionView extends Inspection {
+  document: Document;
+  root: HTMLElement;
+}
 
 /** Select options that show a stored value in sentence case: "data-store" reads "Data store". */
-const labelled = (...values) =>
+const labelled = (...values: string[]): Array<[string, string]> =>
   values.map((value) => [value, value[0].toUpperCase() + value.slice(1).replaceAll('-', ' ')]);
 
-function cleanController(root) {
+function cleanController(root: HTMLElement): DiagramPropertiesController {
   return {
     get dirty() {
       return false;
@@ -34,7 +102,7 @@ function cleanController(root) {
     },
     focus() {
       root
-        .querySelector(
+        .querySelector<HTMLElement>(
           'input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled])',
         )
         ?.focus();
@@ -42,7 +110,7 @@ function cleanController(root) {
   };
 }
 
-function inspectorHeader(document, { kicker, title, description }) {
+function inspectorHeader(document: Document, { kicker, title, description }: InspectorHeading) {
   const header = element(document, 'header', {
     className: 'de-inspector-header',
   });
@@ -58,7 +126,7 @@ function inspectorHeader(document, { kicker, title, description }) {
 }
 
 /** An internal id, readable and copyable, for the Advanced section only. */
-function referenceRow(document, reference, act) {
+function referenceRow(document: Document, reference: string, act: PropertiesAct) {
   const row = element(document, 'div', { className: 'de-inspector-reference' });
   const copy = button(document, 'Copy', null, { 'aria-label': 'Copy reference' });
   copy.onclick = () => act('copy-reference', reference);
@@ -71,24 +139,28 @@ function referenceRow(document, reference, act) {
 }
 
 /** A flat group of controls under a sentence-case heading. */
-function inspectorGroup(document, title) {
+function inspectorGroup(document: Document, title: string) {
   const group = element(document, 'section', { className: 'de-inspector-group' });
   group.append(element(document, 'h3', {}, title));
   return group;
 }
 
 /** A muted line under a control that says why it is disabled. */
-function disabledReason(document) {
+function disabledReason(document: Document) {
   return element(document, 'p', { className: 'de-inspector-reason', hidden: true });
 }
 /** Disable `control` and show `text` while there is a reason; a read-only view shows none. */
-function explain(control, reason, text, editable) {
+function explain(control: HTMLButtonElement, reason: HTMLElement, text: string, editable: boolean) {
   control.disabled = !editable || !!text;
   reason.textContent = text;
   reason.hidden = !editable || !text;
 }
 
-function inspectorSection(document, title, { iconName, open = false, className = '' } = {}) {
+function inspectorSection(
+  document: Document,
+  title: string,
+  { iconName, open = false, className = '' }: SectionOptions = {},
+) {
   const details = element(document, 'details', {
     className: ['de-inspector-section', className].filter(Boolean).join(' '),
     ...(open ? { open: true } : {}),
@@ -105,7 +177,12 @@ function inspectorSection(document, title, { iconName, open = false, className =
   return { details, body };
 }
 
-function actionRow(document, target, items, { className = '' } = {}) {
+function actionRow(
+  document: Document,
+  target: HTMLElement,
+  items: ActionItem[],
+  { className = '' }: { className?: string } = {},
+) {
   const row = element(document, 'div', {
     className: ['de-actions', 'de-inspector-action-row', className].filter(Boolean).join(' '),
   });
@@ -128,7 +205,7 @@ export function renderDiagramProperties({
   act,
   submitTransaction,
   onDirtyChange,
-}) {
+}: DiagramPropertiesOptions): DiagramPropertiesController {
   const document = root.ownerDocument;
   const bundle = state.bundle;
   const ids = state.view.selection;
@@ -213,7 +290,8 @@ export function renderDiagramProperties({
 
   const id = ids[0];
   const entry = byId.get(id);
-  const place = placements.get(id);
+  // Every object in a validated bundle has a placement.
+  const place = placements.get(id) as DiagramPlacement;
   const sem = semanticFields(entry.collection, entry.value);
   const geom = geometryFields(place);
   const look = appearanceFields(place);
@@ -228,9 +306,9 @@ export function renderDiagramProperties({
     className: 'de-properties-form de-inspector-form',
     'aria-label': 'Object properties',
   });
-  const inputs = new Map();
-  const trackedInputs = new Set();
-  const add = (target, name, value, options = {}) => {
+  const inputs = new Map<string, FieldControl>();
+  const trackedInputs = new Set<FieldControl>();
+  const add = (target: HTMLElement, name: string, value: unknown, options: FieldOptions = {}) => {
     const item = field(document, name, value, {
       disabled: !editable,
       ...options,
@@ -309,7 +387,8 @@ export function renderDiagramProperties({
       iconName: 'route',
       open: true,
     });
-    const choices = bundle.document.nodes.map((node) => [node.id, displayName(byId, node.id)]);
+    // biome-ignore format: bundles keep this one-line array; wrapping would change their bytes.
+    const choices: Array<[string, string]> = bundle.document.nodes.map((node) => [node.id, displayName(byId, node.id)]);
     add(connection.body, 'From', sem.from, { choices });
     add(connection.body, 'To', sem.to, { choices });
     add(connection.body, 'Direction', sem.direction, {
@@ -343,11 +422,11 @@ export function renderDiagramProperties({
     });
     bends.append(element(document, 'legend', {}, 'Bend points'));
     const points = geom.route.mode === 'manual' ? geom.route.points.slice(1, -1) : [];
-    points.forEach((point, index) => {
+    points.forEach((point: Point, index: number) => {
       const row = element(document, 'div', {
         className: 'de-field-grid de-bend-row',
       });
-      for (const key of ['x', 'y'])
+      for (const key of ['x', 'y'] satisfies Array<keyof Point>)
         add(row, `Bend ${index + 1} ${key.toUpperCase()}`, point[key], {
           type: 'number',
           disabled: !editable || place.locks.route,
@@ -488,7 +567,7 @@ export function renderDiagramProperties({
 
   let dirty = false;
   let initialValues = captureValues();
-  const setDirty = (value) => {
+  const setDirty = (value: boolean) => {
     if (dirty === value) return;
     dirty = value;
     applyButton.disabled = !editable || !dirty;
@@ -509,18 +588,20 @@ export function renderDiagramProperties({
   };
   const revert = () => {
     for (const [input, value] of initialValues) {
-      if (input.type === 'checkbox') input.checked = value;
+      // inputValue captured a checkbox's checked state.
+      if (input.type === 'checkbox') input.checked = value as boolean;
       else input.value = value;
     }
     setDirty(false);
     return { ok: true };
   };
   const focus = () => [...trackedInputs].find((input) => !input.disabled)?.focus();
+  // Set.has accepts only the element type; any other target is simply not tracked.
   form.addEventListener('input', (event) => {
-    if (trackedInputs.has(event.target)) refreshDirty();
+    if (trackedInputs.has(event.target as FieldControl)) refreshDirty();
   });
   form.addEventListener('change', (event) => {
-    if (trackedInputs.has(event.target)) refreshDirty();
+    if (trackedInputs.has(event.target as FieldControl)) refreshDirty();
   });
   form.addEventListener('submit', (event) => {
     event.preventDefault();
@@ -539,32 +620,35 @@ export function renderDiagramProperties({
     focus,
   };
 
-  function inputValue(input) {
+  function inputValue(input: FieldControl) {
     return input.type === 'checkbox' ? input.checked : input.value;
   }
   function captureValues() {
-    return new Map([...trackedInputs].map((input) => [input, inputValue(input)]));
+    // biome-ignore format: bundles keep this one-line call; wrapping would change their bytes.
+    return new Map<FieldControl, string | boolean | undefined>([...trackedInputs].map((input) => [input, inputValue(input)]));
   }
 
   function buildPropertyTransaction() {
     const nextSem = clone(sem),
       nextGeom = clone(geom),
       nextLook = clone(look);
-    const value = (name) => inputs.get(name)?.value;
-    const number = (name) => Number(value(name));
+    const value = (name: string) => inputs.get(name)?.value;
+    const number = (name: string) => Number(value(name));
     if (entry.collection === 'annotations') nextSem.text = value('Label');
     else nextSem.label = value('Label') || (entry.collection === 'relations' ? null : '');
     if (entry.collection === 'nodes') {
       nextSem.description = value('Description') || null;
       nextSem.kind = value('Semantic role');
-      nextLook.appearance.shape = {
-        process: 'rectangle',
-        start: 'ellipse',
-        end: 'ellipse',
-        decision: 'diamond',
-        'data-store': 'cylinder',
-        component: 'rounded-rectangle',
-      }[nextSem.kind];
+      nextLook.appearance.shape = (
+        {
+          process: 'rectangle',
+          start: 'ellipse',
+          end: 'ellipse',
+          decision: 'diamond',
+          'data-store': 'cylinder',
+          component: 'rounded-rectangle',
+        } as Record<string, DiagramAppearance['shape']>
+      )[nextSem.kind];
     }
     if (nextGeom.bounds)
       for (const [name, key] of [
@@ -583,7 +667,7 @@ export function renderDiagramProperties({
       nextGeom.route.from.side = value('Start side');
       nextGeom.route.to.side = value('End side');
       if (nextGeom.route.mode === 'manual')
-        nextGeom.route.points.slice(1, -1).forEach((_, index) => {
+        nextGeom.route.points.slice(1, -1).forEach((_: Point, index: number) => {
           const original = geom.route.points[index + 1],
             x = number(`Bend ${index + 1} X`),
             y = number(`Bend ${index + 1} Y`);
@@ -613,15 +697,16 @@ export function renderDiagramProperties({
       ['Lock size', 'size'],
       ['Lock route', 'route'],
     ])
-      if (inputs.has(name)) nextLook.locks[key] = inputs.get(name).checked;
-    return propertyTransaction(bundle, id, {
+      if (inputs.has(name)) nextLook.locks[key] = (inputs.get(name) as FieldControl).checked;
+    // The form this builds from exists only when the state has a bundle.
+    return propertyTransaction(bundle as DiagramAuthoringBundle, id, {
       semantic: nextSem,
       geometry: nextGeom,
       appearance: nextLook,
     });
   }
 
-  function appendMembers(target) {
+  function appendMembers(target: HTMLElement) {
     target.append(element(document, 'h3', { className: 'de-inspector-subheading' }, 'Members'));
     const members = element(document, 'ul', {
       className: 'de-inspector-member-list',
@@ -669,7 +754,7 @@ export function renderDiagramProperties({
   }
 }
 
-function renderMultiSelection({ document, root, bundle, ids, byId, editable, act }) {
+function renderMultiSelection({ document, root, bundle, ids, byId, editable, act }: SelectionView) {
   const selectedLabels = ids.slice(0, 8).map((id) => displayName(byId, id));
   root.append(
     inspectorHeader(document, {
@@ -680,7 +765,7 @@ function renderMultiSelection({ document, root, bundle, ids, byId, editable, act
   );
   // Short visible labels fit equal columns in the rail; the full phrase stays the accessible name,
   // which also lets the inspector restore focus to the button after it re-renders.
-  const group = (title, items) => {
+  const group = (title: string, items: Array<[visible: string, action: string, name?: string]>) => {
     const section = inspectorGroup(document, title);
     actionRow(
       document,
@@ -697,7 +782,7 @@ function renderMultiSelection({ document, root, bundle, ids, byId, editable, act
   };
   const arranged = arrangedPlacements(bundle, ids).length;
   // Each group's buttons share one precondition, so one reason line serves the row.
-  const requireArranged = (section, minimum, text) => {
+  const requireArranged = (section: HTMLElement, minimum: number, text: string) => {
     const reason = disabledReason(document);
     for (const control of section.querySelectorAll('button'))
       explain(control, reason, arranged < minimum ? text : '', editable);
@@ -726,8 +811,9 @@ function renderMultiSelection({ document, root, bundle, ids, byId, editable, act
     ['Connect', 'connect', 'Connect selection'],
   ]);
   const ungroupReason = disabledReason(document);
+  // The Structure group above rendered the ungroup button.
   explain(
-    structure.querySelector('[data-action="ungroup"]'),
+    structure.querySelector('[data-action="ungroup"]') as HTMLButtonElement,
     ungroupReason,
     ids.every((id) => ['groups', 'lanes'].includes(byId.get(id).collection))
       ? ''
@@ -756,13 +842,13 @@ function renderMultiSelection({ document, root, bundle, ids, byId, editable, act
 }
 
 /** Parent select and Move button; Move is disabled, with its reason, while it cannot apply. */
-function parentOperation(document, { bundle, byId, ids, editable, act }) {
+function parentOperation(document: Document, { bundle, byId, ids, editable, act }: Inspection) {
   const parents = parentIndex(bundle.document);
-  const choices = [
+  const choices: Array<[string, string]> = [
     ['', 'Diagram root'],
     ...[...bundle.document.groups, ...bundle.document.lanes]
       .filter((item) => !ids.includes(item.id))
-      .map((item) => [item.id, displayName(byId, item.id)]),
+      .map((item): [string, string] => [item.id, displayName(byId, item.id)]),
   ];
   const operation = element(document, 'div', {
     className: 'de-inspector-operation',

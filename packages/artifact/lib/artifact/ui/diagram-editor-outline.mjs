@@ -112,6 +112,7 @@ export function createEditorOutline(ctx) {
       element(doc, 'p', { className: 'de-muted' }, 'Add a shape, then refine it in the inspector.'),
     );
     const capability = getDiagramAuthoringCapability(state.bundle.document.grammar.id);
+    /** @type {Array<[string, string[]]>} */
     const groups = [
       ['Flow', ['process', 'start', 'end', 'decision', 'data-store', 'component']],
       ['Structure', ['container', 'horizontal-lane', 'vertical-lane']],
@@ -258,16 +259,20 @@ export function createEditorOutline(ctx) {
     );
     search.input.addEventListener('input', () => {
       const query = search.input.value.toLowerCase().trim(),
-        items = [...list.querySelectorAll('.de-outline-item')],
+        items = /** @type {Array<HTMLElement & { dataset: { searchText: string } }>} */ ([
+          ...list.querySelectorAll('.de-outline-item'),
+        ]),
         keep = new Set();
       if (query)
         for (const item of items)
           if (item.dataset.searchText.includes(query))
             for (
-              let node = item;
+              let node = /** @type {HTMLElement | null} */ (item);
               node;
               node = node.dataset.parentId
-                ? list.querySelector('.de-outline-item[data-id="' + node.dataset.parentId + '"]')
+                ? /** @type {HTMLElement | null} */ (
+                    list.querySelector('.de-outline-item[data-id="' + node.dataset.parentId + '"]')
+                  )
                 : null
             )
               keep.add(node);

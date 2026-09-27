@@ -1,4 +1,22 @@
-import { compileDiagramCommand } from '../diagram/authoring/index.mjs';
+import type {
+  DiagramAppearance,
+  DiagramAuthoringBundle,
+  DiagramAuthoringNode,
+  DiagramAuthoringNodeKind,
+  DiagramBounds,
+  DiagramEditOperation,
+  DiagramEditTransaction,
+  DiagramGeometry,
+  DiagramGeometryLocks,
+  DiagramPlacement,
+  DiagramSemanticEntry,
+  DiagramSemanticUpdate,
+} from '@openplanr/protocol/diagram-authoring-contracts';
+import {
+  compileDiagramCommand,
+  type DiagramCommand,
+  type DiagramCommandResult,
+} from '../diagram/authoring/index.mjs';
 import {
   appearanceFields,
   clone,
@@ -10,9 +28,35 @@ import {
   semanticFields,
   snapshot,
 } from '../diagram/authoring/model.mjs';
-import { copyDiagramSelection, pasteDiagramSelection } from '../diagram/editor/clipboard.mjs';
+import {
+  copyDiagramSelection,
+  type DiagramSelectionClipboard,
+  pasteDiagramSelection,
+} from '../diagram/editor/clipboard.mjs';
+import type { DiagramEditorFailure } from '../diagram/editor/session.mjs';
+import type { DiagramEditorPoint as Point } from './diagram-editor-context.d.mts';
 
-export const NODE_NAMES = Object.freeze({
+/** A shape the editor can create: a node kind, a note, a container or a lane. */
+export type DiagramObjectKind =
+  | DiagramAuthoringNodeKind
+  | 'annotation'
+  | 'container'
+  | 'horizontal-lane'
+  | 'vertical-lane';
+type CreateCommand = Extract<DiagramCommand, { type: 'create' }>;
+type GeometryCommand = Extract<DiagramCommand, { type: 'geometry' }>;
+type GeometryChange = GeometryCommand['changes'][number];
+type GeometryOperation = Extract<DiagramEditOperation, { type: 'set-geometry' }>;
+/** A placement with bounds: a shape, container or lane, not a connector. */
+export type BoundedPlacement = DiagramPlacement & { bounds: DiagramBounds };
+/** The fields the inspector edits; each is applied only when present. */
+export interface DiagramPropertyChanges {
+  semantic?: DiagramSemanticUpdate['after'];
+  geometry?: DiagramGeometry;
+  appearance?: { appearance: DiagramAppearance; locks: DiagramGeometryLocks };
+}
+
+export const NODE_NAMES: Readonly<Record<string, string>> = Object.freeze({
   process: 'Process',
   start: 'Start',
   end: 'End',
@@ -20,34 +64,27 @@ export const NODE_NAMES = Object.freeze({
   'data-store': 'Data store',
   component: 'Component',
 });
-export const COLLECTION_NAMES = Object.freeze({
+export const COLLECTION_NAMES: Readonly<Record<string, string>> = Object.freeze({
   nodes: 'Shape',
   relations: 'Connector',
   groups: 'Group',
   lanes: 'Lane',
   annotations: 'Note',
 });
-const ownName = ({ collection, value }) => {
+const ownName = ({ collection, value }: DiagramSemanticEntry) => {
   const text = collection === 'annotations' ? value.text : value.label;
   return typeof text === 'string' && text.trim() ? text : null;
 };
-/**
- * The kind an object shows in the editor: a node's shape kind, else its collection's name.
- * @param {{ collection: string; value: { kind?: string } }} entry
- * @returns {string}
- */
-export const kindName = ({ collection, value }) =>
+/** The kind an object shows in the editor: a node's shape kind, else its collection's name. */
+export const kindName = ({ collection, value }: DiagramSemanticEntry): string =>
   (collection === 'nodes' ? NODE_NAMES[value.kind] : null) ?? COLLECTION_NAMES[collection];
 
 export const freshId = (prefix = 'edit') => `${prefix}-${globalThis.crypto.randomUUID()}`;
 /**
  * The name an object shows in the editor: its label or text, "From → To" for an unlabelled
  * connector, else its kind. Internal ids never become names.
- * @param {ReturnType<typeof elementIndex>} index
- * @param {string} id
- * @returns {string}
  */
-export function displayName(index, id) {
+export function displayName(index: Map<string, DiagramSemanticEntry>, id: string): string {
   const entry = index.get(id);
   if (!entry) throw new TypeError(`Diagram object ${id} is not in this document.`);
   const own = ownName(entry);
@@ -61,12 +98,13 @@ export function displayName(index, id) {
   });
   return `${from} → ${to}`;
 }
-/**
- * A count with its noun: "1 connector", "2 connectors".
- * @type {(count: number, noun: string) => string}
- */
-export const quantity = (count, noun) => `${count} ${noun}${count === 1 ? '' : 's'}`;
-export const transaction = (bundle, operations) => ({
+/** A count with its noun: "1 connector", "2 connectors". */
+export const quantity = (count: number, noun: string) =>
+  `${count} ${noun}${count === 1 ? '' : 's'}`;
+export const transaction = (
+  bundle: DiagramAuthoringBundle,
+  operations: DiagramEditOperation[],
+): DiagramEditTransaction => ({
   kind: 'diagram-edit-transaction',
   schemaVersion: '1.0.0',
   protocolVersion: '1.13.0',
@@ -76,7 +114,11 @@ export const transaction = (bundle, operations) => ({
   operations,
   undoOf: null,
 });
-export function placement(id, shape, bounds) {
+export function placement(
+  id: string,
+  shape: DiagramAppearance['shape'],
+  bounds: DiagramBounds | null,
+): DiagramPlacement {
   return {
     elementId: id,
     bounds,
@@ -95,13 +137,13 @@ export function placement(id, shape, bounds) {
     locks: { position: false, size: false, route: false },
   };
 }
-export function createObject(kind, position) {
+export function createObject(kind: DiagramObjectKind, position: Point): CreateCommand {
   const id = freshId(kind === 'horizontal-lane' || kind === 'vertical-lane' ? 'lane' : kind);
   const { x, y } = position;
   const bounds = { x, y, width: 160, height: 72 };
-  let collection = 'nodes',
-    value,
-    shape = 'rectangle';
+  let collection: DiagramSemanticEntry['collection'] = 'nodes',
+    value: DiagramSemanticEntry['value'],
+    shape: DiagramAppearance['shape'] = 'rectangle';
   if (kind === 'annotation') {
     collection = 'annotations';
     value = { id, text: 'Add a note', targetId: null };
@@ -115,25 +157,28 @@ export function createObject(kind, position) {
       kind === 'vertical-lane' ? { width: 240, height: 480 } : { width: 540, height: 240 },
     );
   } else {
-    value = { id, label: NODE_NAMES[kind], kind, description: null };
+    // Lane kinds took the branch above, so kind is a node kind here.
+    value = { id, label: NODE_NAMES[kind], kind, description: null } as DiagramAuthoringNode;
     shape =
-      {
-        start: 'ellipse',
-        end: 'ellipse',
-        decision: 'diamond',
-        'data-store': 'cylinder',
-        component: 'rounded-rectangle',
-      }[kind] ?? 'rectangle';
+      (
+        {
+          start: 'ellipse',
+          end: 'ellipse',
+          decision: 'diamond',
+          'data-store': 'cylinder',
+          component: 'rounded-rectangle',
+        } as Partial<Record<string, DiagramAppearance['shape']>>
+      )[kind] ?? 'rectangle';
     if (kind === 'decision') bounds.height = 100;
   }
+  // Each branch above sets a value of its collection's type.
   return {
     type: 'create',
-    elements: [{ collection, value }],
+    elements: [{ collection, value } as DiagramSemanticEntry],
     presentation: [placement(id, shape, bounds)],
   };
 }
-/** @returns {Extract<import('../diagram/authoring/index.d.mts').DiagramCommand, { type: 'create' }>} */
-export function connector(from, to, label = '') {
+export function connector(from: string, to: string, label = ''): CreateCommand {
   const id = freshId('connector');
   const entry = placement(id, 'connector', null);
   entry.route = {
@@ -162,8 +207,7 @@ export function connector(from, to, label = '') {
     presentation: [entry],
   };
 }
-/** @returns {Extract<import('../diagram/authoring/index.d.mts').DiagramCommand, { type: 'create' }>} */
-export function processTemplate(position) {
+export function processTemplate(position: Point): CreateCommand {
   const start = createObject('start', position),
     process = createObject('process', { x: position.x + 240, y: position.y }),
     end = createObject('end', { x: position.x + 480, y: position.y });
@@ -176,12 +220,14 @@ export function processTemplate(position) {
     presentation: parts.flatMap((part) => part.presentation),
   };
 }
-/**
- * @returns {import('../diagram/editor/index.mjs').DiagramEditorFailure
- *   | (import('../diagram/authoring/index.d.mts').DiagramCommandResult & { selectedIds: string[] })}
- */
-export function duplicateSelection(bundle, ids, copied = null) {
-  const result = copied ? { ok: true, value: copied } : copyDiagramSelection(bundle, ids);
+export function duplicateSelection(
+  bundle: DiagramAuthoringBundle,
+  ids: string[],
+  copied: DiagramSelectionClipboard | null = null,
+): DiagramEditorFailure | (DiagramCommandResult & { selectedIds: string[] }) {
+  const result: ReturnType<typeof copyDiagramSelection> = copied
+    ? { ok: true, value: copied }
+    : copyDiagramSelection(bundle, ids);
   if (!result.ok) return result;
   const idMap = Object.fromEntries(result.value.ids.map((id) => [id, freshId('copy')]));
   const preview = pasteDiagramSelection(bundle, result.value, {
@@ -192,21 +238,28 @@ export function duplicateSelection(bundle, ids, copied = null) {
   });
   return { ...preview, selectedIds: ids.filter((id) => idMap[id]).map((id) => idMap[id]) };
 }
-export function propertyTransaction(bundle, id, { semantic, geometry, appearance }) {
+export function propertyTransaction(
+  bundle: DiagramAuthoringBundle,
+  id: string,
+  { semantic, geometry, appearance }: DiagramPropertyChanges,
+): DiagramEditTransaction {
   const entry = elementIndex(bundle.document).get(id);
-  const current = bundle.presentation.elements.find((item) => item.elementId === id);
-  const operations = [];
+  // Every object in a validated bundle has a placement.
+  // biome-ignore format: bundles keep this one-line call; wrapping would change their bytes.
+  const current = bundle.presentation.elements.find((item) => item.elementId === id) as DiagramPlacement;
+  const operations: DiagramEditOperation[] = [];
   if (semantic)
+    // The caller builds `semantic` from this entry's own semantic fields.
     operations.push({
       type: 'update-semantics',
       collection: entry.collection,
       elementId: id,
       before: semanticFields(entry.collection, entry.value),
       after: semantic,
-    });
+    } as DiagramSemanticUpdate);
   if (geometry) {
     const before = geometryFields(current);
-    let changes = [{ elementId: id, before, after: geometry }];
+    let changes: GeometryChange[] = [{ elementId: id, before, after: geometry }];
     if (
       before.bounds &&
       geometry.bounds &&
@@ -223,7 +276,9 @@ export function propertyTransaction(bundle, id, { semantic, geometry, appearance
         { transactionId: freshId() },
       );
       if (moved.ok && moved.transaction) {
-        changes = moved.transaction.operations.flatMap((operation) => operation.changes ?? []);
+        // A move compiles to geometry operations only.
+        // biome-ignore format: bundles keep this one-line call; wrapping would change their bytes.
+        changes = moved.transaction.operations.flatMap((operation) => (operation as GeometryOperation).changes ?? []);
         const target = changes.find((change) => change.elementId === id);
         if (target)
           target.after = {
@@ -244,11 +299,12 @@ export function propertyTransaction(bundle, id, { semantic, geometry, appearance
     });
   return transaction(bundle, operations);
 }
-/**
- * Compose existing move previews into one transaction, preserving container descendants.
- * @returns {import('../diagram/authoring/index.d.mts').DiagramCommand}
- */
-export function arrangementCommand(bundle, ids, mode) {
+/** Compose existing move previews into one transaction, preserving container descendants. */
+export function arrangementCommand(
+  bundle: DiagramAuthoringBundle,
+  ids: string[],
+  mode: string,
+): GeometryCommand {
   const boxes = arrangedPlacements(bundle, ids);
   if (boxes.length < 2) throw new Error('Select at least two shapes or containers.');
   const horizontal = mode.endsWith('horizontal');
@@ -257,8 +313,9 @@ export function arrangementCommand(bundle, ids, mode) {
   const ordered = [...boxes].sort(
     (a, b) => a.bounds[horizontal ? 'x' : 'y'] - b.bounds[horizontal ? 'x' : 'y'],
   );
+  // At least two boxes remain, so the last one exists.
   const first = ordered[0].bounds,
-    last = ordered.at(-1).bounds;
+    last = (ordered.at(-1) as BoundedPlacement).bounds;
   const totalSize = ordered.reduce(
     (sum, item) => sum + item.bounds[horizontal ? 'width' : 'height'],
     0,
@@ -267,7 +324,7 @@ export function arrangementCommand(bundle, ids, mode) {
     ((horizontal ? last.x + last.width - first.x : last.y + last.height - first.y) - totalSize) /
     (boxes.length - 1);
   let offset = horizontal ? first.x : first.y;
-  const changes = new Map();
+  const changes = new Map<string, GeometryChange>();
   for (const item of mode.startsWith('distribute') ? ordered : boxes) {
     const bounds = item.bounds;
     let dx = 0,
@@ -288,7 +345,9 @@ export function arrangementCommand(bundle, ids, mode) {
     );
     if (!preview.ok) throw new Error(preview.diagnostics[0].detail);
     for (const op of preview.transaction?.operations ?? [])
-      for (const change of op.changes ?? []) changes.set(change.elementId, change);
+      // A move compiles to geometry operations only.
+      // biome-ignore format: bundles keep this one-line loop; wrapping would change their bytes.
+      for (const change of (op as GeometryOperation).changes ?? []) changes.set(change.elementId, change);
   }
   return { type: 'geometry', changes: [...changes.values()] };
 }
@@ -296,7 +355,10 @@ export function arrangementCommand(bundle, ids, mode) {
  * The placements Align and Distribute move: selected objects with bounds whose container is not
  * also selected, since moving a container already moves its members.
  */
-export function arrangedPlacements(bundle, ids) {
+export function arrangedPlacements(
+  bundle: DiagramAuthoringBundle,
+  ids: string[],
+): BoundedPlacement[] {
   const parents = parentIndex(bundle.document),
     selected = new Set(ids);
   const roots = ids.filter((id) => {
@@ -308,24 +370,30 @@ export function arrangedPlacements(bundle, ids) {
     return true;
   });
   const placements = new Map(bundle.presentation.elements.map((item) => [item.elementId, item]));
-  return roots.map((id) => placements.get(id)).filter((item) => item?.bounds);
+  // The filter keeps only placements that have bounds.
+  return roots.map((id) => placements.get(id)).filter((item) => item?.bounds) as BoundedPlacement[];
 }
-/** @returns {import('../diagram/authoring/index.d.mts').DiagramCommand} */
-export function laneArrangementCommand(bundle, laneId, direction) {
+export function laneArrangementCommand(
+  bundle: DiagramAuthoringBundle,
+  laneId: string,
+  direction: 'horizontal' | 'vertical',
+): GeometryCommand {
   const lane = [...bundle.document.lanes, ...bundle.document.groups].find(
     (item) => item.id === laneId,
   );
   if (!lane) throw new Error('Select a lane or container.');
   const byId = new Map(bundle.presentation.elements.map((item) => [item.elementId, item]));
-  const container = byId.get(laneId),
+  // Every lane and container has a placement with bounds.
+  const container = byId.get(laneId) as BoundedPlacement,
     before = geometryFields(container),
     horizontal = direction === 'horizontal';
   let x = container.bounds.x + 24,
     y = container.bounds.y + 48,
     cross = 0;
-  const changes = new Map();
+  const changes = new Map<string, GeometryChange>();
   for (const member of lane.members) {
-    const bounds = byId.get(member).bounds;
+    // Every member has a placement.
+    const bounds = (byId.get(member) as DiagramPlacement).bounds;
     if (!bounds) continue;
     const preview = compileDiagramCommand(
       bundle,
@@ -336,13 +404,15 @@ export function laneArrangementCommand(bundle, laneId, direction) {
     // must see the resized parent and moved children together, so derive deltas only.
     if (preview.ok)
       for (const op of preview.transaction?.operations ?? [])
-        for (const change of op.changes ?? []) changes.set(change.elementId, change);
+        // biome-ignore format: bundles keep this one-line loop; wrapping would change their bytes.
+        for (const change of (op as GeometryOperation).changes ?? []) changes.set(change.elementId, change);
     else {
       const moved = new Set(descendants(bundle.document, [member]));
       for (const edge of bundle.document.relations)
         if (moved.has(edge.from) && moved.has(edge.to)) moved.add(edge.id);
       for (const id of moved) {
-        const old = geometryFields(byId.get(id)),
+        // Every descendant and connector of a member has a placement.
+        const old = geometryFields(byId.get(id) as DiagramPlacement),
           next = clone(old),
           dx = x - bounds.x,
           dy = y - bounds.y;
@@ -355,7 +425,7 @@ export function laneArrangementCommand(bundle, laneId, direction) {
           next.label.y += dy;
         }
         if (next.route?.mode === 'manual')
-          next.route.points = next.route.points.map((p) => ({ x: p.x + dx, y: p.y + dy }));
+          next.route.points = next.route.points.map((p: Point) => ({ x: p.x + dx, y: p.y + dy }));
         changes.set(id, { elementId: id, before: old, after: next });
       }
     }
@@ -371,7 +441,7 @@ export function laneArrangementCommand(bundle, laneId, direction) {
 }
 
 /** Insert a visible Manhattan detour into the longest existing segment. */
-export function addOrthogonalDetour(points) {
+export function addOrthogonalDetour(points: Point[]): Point[] {
   if (points.length < 2) throw new Error('The connector needs two attached endpoints.');
   const lengths = points
     .slice(1)
@@ -396,7 +466,12 @@ export function addOrthogonalDetour(points) {
 }
 
 /** Move one corner while retaining its orthogonal neighbors and fixed endpoints. */
-export function moveOrthogonalBend(points, index, dx, dy) {
+export function moveOrthogonalBend(
+  points: Point[],
+  index: number,
+  dx: number,
+  dy: number,
+): Point[] {
   if (index <= 0 || index >= points.length - 1) throw new Error('Only an interior bend can move.');
   const next = points.map((point) => ({ ...point }));
   const before = points[index - 1],
