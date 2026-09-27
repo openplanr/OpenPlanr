@@ -11,6 +11,7 @@ import { randomUUID } from 'node:crypto';
 import {
   existsSync,
   readdirSync,
+  readFileSync,
   realpathSync,
   statSync,
   unlinkSync,
@@ -22,7 +23,6 @@ import { bundleArtifact } from '@openplanr/artifact/bundle.mjs';
 import { createArtifactEnvelope, digestArtifactEnvelope } from '@openplanr/artifact/envelope.mjs';
 import { ARTIFACT_ERROR_CODES, PipelineError } from '@openplanr/protocol/errors';
 import { escapeHtml } from '../design/escape.mjs';
-import { discoverVariants, imageDimensions } from './canvas-wrap.mjs';
 import { designFeedbackToArtifactReview } from './feedback.mjs';
 
 export const DESIGN_BOARD_MAX_FILES = 1_000;
@@ -170,6 +170,71 @@ function normalizeVariant(variant, index, root, sensitiveValues) {
     ...(variant.viewport === undefined ? {} : { viewport: variant.viewport }),
     ...(variant.colorScheme === undefined ? {} : { colorScheme: variant.colorScheme }),
   };
+}
+
+/** Desktop frame used when an image's size cannot be read. */
+const FALLBACK = Object.freeze({ width: 1440, height: 1024 });
+
+/**
+ * Pixel size of an SVG (viewBox, else width and height) or a PNG (IHDR), so the board frames
+ * an image variant at its own aspect; the desktop frame when the size cannot be read.
+ *
+ * @param {string} filePath
+ * @returns {{ width: number, height: number }}
+ */
+export function imageDimensions(filePath) {
+  try {
+    if (/\.svg$/i.test(filePath)) {
+      const svg = readFileSync(filePath, 'utf8');
+      const open = svg.slice(0, svg.indexOf('>') >= 0 ? svg.indexOf('>') + 1 : 4096);
+      const tag = /<svg[\s\S]*?>/i.exec(svg);
+      const head = tag ? tag[0] : open;
+      const vb = /viewBox\s*=\s*["']\s*[-\d.]+[ ,]+[-\d.]+[ ,]+([\d.]+)[ ,]+([\d.]+)/i.exec(head);
+      if (vb) return round(Number(vb[1]), Number(vb[2]));
+      const w = /\bwidth\s*=\s*["']?\s*([\d.]+)/i.exec(head);
+      const h = /\bheight\s*=\s*["']?\s*([\d.]+)/i.exec(head);
+      if (w && h) return round(Number(w[1]), Number(h[1]));
+    } else if (/\.png$/i.test(filePath)) {
+      const buf = readFileSync(filePath);
+      // PNG: 8-byte signature, then the IHDR chunk (length+type+W+H…); width is a
+      // big-endian uint32 at offset 16, height at offset 20.
+      if (buf.length >= 24 && buf.readUInt32BE(0) === 0x89504e47) {
+        return round(buf.readUInt32BE(16), buf.readUInt32BE(20));
+      }
+    }
+  } catch {
+    /* unreadable — fall through to the default frame */
+  }
+  return { ...FALLBACK };
+}
+
+function round(w, h) {
+  const W = Math.max(1, Math.round(w));
+  const H = Math.max(1, Math.round(h));
+  return { width: W, height: H };
+}
+
+/** The file a variant letter shows when the session holds several: HTML, then SVG, then PNG. */
+const VARIANT_RANK = Object.freeze({ html: 3, svg: 2, image: 1 });
+
+/**
+ * One board variant per letter from a session's `variant-*.{png,svg,html}` files, in A..Z order.
+ *
+ * @param {string[]} fileNames  directory listing (basenames)
+ * @returns {Array<{ id: string, label: string, src: string, type: 'html'|'svg'|'image' }>}
+ */
+export function discoverVariants(fileNames) {
+  const byLetter = new Map();
+  for (const f of fileNames) {
+    const m = /^variant-([A-Z])\.(png|svg|html)$/.exec(f);
+    if (!m) continue;
+    const type = m[2] === 'html' ? 'html' : m[2] === 'png' ? 'image' : 'svg';
+    const prev = byLetter.get(m[1]);
+    if (!prev || VARIANT_RANK[type] > VARIANT_RANK[prev.type]) {
+      byLetter.set(m[1], { id: m[1], label: f, src: f, type });
+    }
+  }
+  return [...byLetter.keys()].sort().map((k) => byLetter.get(k));
 }
 
 /**

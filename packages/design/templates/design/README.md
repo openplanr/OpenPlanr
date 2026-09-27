@@ -9,9 +9,8 @@ visual design artifacts. Paired with the tested helpers in [`lib/design/`](../..
 |------|--------|-----------|-------|
 | `prototype-shell.html` | prototype | vanilla + Pretext | one interactive screen |
 | `walkthrough-shell.html` | walkthrough | vanilla + Pretext | grouped sidebar gallery; **both nav modes** — anchor-scroll (≤8 screens) and lazy screen-switching (>8), auto-selected by [`chooseWalkthroughNav`](../../lib/design/walkthrough-nav.mjs) |
-| `canvas-shell.html` | canvas | React (vendored) | Figma-like pan/zoom board; **export + view-only** when opened without a host bridge |
 
-Each shell has `<!-- GENERATOR:* -->` markers (title, fonts, tokens, screens/data,
+Each shell has `<!-- GENERATOR:* -->` markers (title, fonts, tokens, screens,
 layout). The generator fills them and copies the needed `vendor/` files alongside the
 output so the artifact is self-contained and offline.
 
@@ -20,20 +19,8 @@ output so the artifact is self-contained and offline.
 | File | Source / pin | Committed? |
 |------|--------------|-----------|
 | `pretext.js` | 30KB Pretext text-reflow runtime, vendored (text reflow / computed heights) | yes |
-| `react.production.min.js` | React 18.3.1 UMD (SRI-pinned) | yes |
-| `react-dom.production.min.js` | ReactDOM 18.3.1 UMD (SRI-pinned) | yes |
-| `DesignCanvas.js` | compiled from `DesignCanvas.jsx` (classic JSX runtime) | yes |
-| `DesignCanvas.jsx` | canvas source (kept as readable reference) | yes (in parent dir) |
 
-The runtime is **committed** so a generated canvas opens offline with zero setup. To
-upgrade a pin or re-verify integrity:
-
-```bash
-node templates/design/vendor/fetch-vendor.mjs
-```
-
-That re-fetches React (verifying SRI — a mismatch aborts without writing) and recompiles
-`DesignCanvas.jsx → vendor/DesignCanvas.js` with esbuild.
+The runtime is **committed** so a generated artifact opens offline with zero setup.
 
 ## Security (mandatory)
 

@@ -140,16 +140,10 @@ CLAUDE.md
 /packages/pipeline/templates/artifact-review-preview.html
 /packages/pipeline/templates/artifact-review-shell.html
 /packages/pipeline/templates/artifact-review-stage.js
-/packages/pipeline/templates/design/DesignCanvas.jsx
 /packages/pipeline/templates/design/README.md
-/packages/pipeline/templates/design/canvas-shell.html
 /packages/pipeline/templates/design/design-board-adapter.js
 /packages/pipeline/templates/design/prototype-shell.html
-/packages/pipeline/templates/design/vendor/DesignCanvas.js
-/packages/pipeline/templates/design/vendor/fetch-vendor.mjs
 /packages/pipeline/templates/design/vendor/pretext.js
-/packages/pipeline/templates/design/vendor/react-dom.production.min.js
-/packages/pipeline/templates/design/vendor/react.production.min.js
 /packages/pipeline/templates/design/walkthrough-shell.html
 /packages/pipeline/templates/diagram-owner.js
 /packages/pipeline/templates/diagram-studio.js
