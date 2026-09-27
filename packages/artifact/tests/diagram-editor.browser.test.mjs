@@ -262,7 +262,7 @@ test(
       'An identical message is cleared before it is announced again',
     );
 
-    const deleteButton = page.getByRole('button', { name: 'Delete selection…', exact: true });
+    const deleteButton = page.getByRole('button', { name: 'Delete…', exact: true });
     await deleteButton.focus();
     const opener = await deleteButton.elementHandle();
     await deleteButton.click();
@@ -389,12 +389,22 @@ test(
           };
           const shell = getComputedStyle(element.closest('.planr-diagram-editor'));
           const style = getComputedStyle(element);
+          let surface = [255, 255, 255, 255];
+          for (let node = element; node; node = node.parentElement) {
+            const fill = rgba(getComputedStyle(node).backgroundColor);
+            if (fill[3] === 255) {
+              surface = fill;
+              break;
+            }
+          }
           return {
             text: rgba(style.color),
             background: rgba(style.backgroundColor),
+            surface,
             opacity: Number(style.opacity),
             primary: rgba(shell.getPropertyValue('--de-primary').trim()),
             danger: rgba(shell.getPropertyValue('--de-danger').trim()),
+            themeDanger: shell.getPropertyValue('--planr-color-danger').trim(),
           };
         });
     const save = '.de-bar [data-action="save"]';
@@ -423,14 +433,28 @@ test(
         `${colorScheme}: pending edits give Save the primary fill`,
       );
       assert.ok(contrast(pending.text, pending.background) >= 4.5, `${colorScheme} Save text`);
-      const remove = await probe('.de-danger');
-      assert.deepEqual(remove.text, remove.danger, `${colorScheme}: Delete text is danger red`);
+      const entry = await probe('.de-properties-pane [data-action="delete"]');
       assert.notDeepEqual(
-        remove.background,
-        remove.danger,
-        `${colorScheme}: Delete is outlined, not filled`,
+        entry.text,
+        entry.danger,
+        `${colorScheme}: Delete… in the inspector is neutral`,
       );
-      assert.ok(contrast(remove.text, remove.background) >= 4.5, `${colorScheme} Delete text`);
+      assert.ok(contrast(entry.text, entry.background) >= 4.5, `${colorScheme} Delete… text`);
+      await page.locator('.de-properties-pane [data-action="delete"]').click();
+      const remove = await probe('.de-dialog .de-danger');
+      assert.equal(
+        remove.themeDanger,
+        { light: '#c53f4f', dark: '#f87171' }[colorScheme],
+        `${colorScheme}: the local studio loads the artifact theme`,
+      );
+      assert.deepEqual(
+        remove.text,
+        remove.danger,
+        `${colorScheme}: the confirmation is danger red`,
+      );
+      assert.equal(remove.background[3], 0, `${colorScheme}: the confirmation is outlined only`);
+      assert.ok(contrast(remove.text, remove.surface) >= 4.5, `${colorScheme} Delete text`);
+      await page.getByRole('button', { name: 'Cancel', exact: true }).click();
       for (const action of ['undo', 'more']) {
         const command = `.de-bar [data-action="${action}"]`;
         await page
@@ -532,6 +556,290 @@ test(
   },
 );
 
+test('no inspector label truncates in the 288px rail', options, async (t) => {
+  const { page } = await fixture(t, { bundle: makeBundle('process') });
+  assert.equal(
+    await page.locator('.de-right').evaluate((rail) => rail.getBoundingClientRect().width),
+    288,
+  );
+  const outlineRow = (id) => page.locator(`[data-action=select-id][data-id="${id}"]`);
+  // Every section is opened so each control is laid out at the rail width.
+  const clipped = () =>
+    page.locator('.de-right-content').evaluate((content) => {
+      for (const details of content.querySelectorAll('details')) details.open = true;
+      return [
+        content,
+        ...content.querySelectorAll(
+          'button, summary, h2, h3, label > span, legend, .de-inspector-reason',
+        ),
+      ]
+        .filter((node) => node.checkVisibility() && node.scrollWidth > node.clientWidth)
+        .map(
+          (node) =>
+            `${node.textContent.trim().slice(0, 40)}: ${node.scrollWidth} > ${node.clientWidth}`,
+        );
+    });
+  assert.deepEqual(await clipped(), [], 'Diagram details');
+  for (const [state, ids] of [
+    ['Lane', ['lane-a']],
+    ['Group', ['group-a']],
+    ['Shape', ['node-a']],
+    ['Connector', ['edge-a']],
+    ['Two shapes', ['node-a', 'node-b']],
+    ['A shape and a connector', ['node-a', 'edge-a']],
+  ]) {
+    for (const [index, id] of ids.entries())
+      await outlineRow(id).click({ modifiers: index ? ['Shift'] : [] });
+    await settle(page);
+    assert.deepEqual(await clipped(), [], state);
+  }
+});
+
+test(
+  'multiple selection is flat, explains unavailable actions and deletes inline',
+  options,
+  async (t) => {
+    const { page, read } = await fixture(t, { bundle: makeBundle('process') });
+    const pane = page.locator('.de-properties-pane');
+    const outlineRow = (id) => page.locator(`[data-action=select-id][data-id="${id}"]`);
+    await outlineRow('node-a').click();
+    await outlineRow('node-b').click({ modifiers: ['Shift'] });
+    await page.getByRole('heading', { name: '2 objects selected', exact: true }).waitFor();
+    assert.equal(await pane.locator('details').count(), 0, 'Multiple selection has no accordions');
+    assert.deepEqual(await pane.locator('h3').allTextContents(), [
+      'Align',
+      'Distribute',
+      'Structure',
+      'Clipboard',
+      'Lock',
+    ]);
+    const align = await pane
+      .locator('.de-inspector-group')
+      .first()
+      .getByRole('button')
+      .evaluateAll((buttons) =>
+        buttons.map((button) => ({
+          label: button.textContent,
+          name: button.getAttribute('aria-label'),
+          width: button.getBoundingClientRect().width,
+        })),
+      );
+    assert.deepEqual(
+      align.map(({ label, name }) => [label, name]),
+      [
+        ['Left', 'Align left'],
+        ['Center', 'Align centers'],
+        ['Top', 'Align top'],
+      ],
+    );
+    assert.ok(
+      align.every(({ width }) => Math.abs(width - align[0].width) < 0.5),
+      'Align buttons share their row equally',
+    );
+    assert.equal(
+      await page.getByRole('button', { name: 'Align left', exact: true }).isEnabled(),
+      true,
+    );
+    assert.equal(
+      await page.getByRole('button', { name: 'Distribute horizontally', exact: true }).isDisabled(),
+      true,
+      'Two objects cannot be distributed',
+    );
+    await pane
+      .getByText('Select at least three shapes or containers to distribute.', { exact: true })
+      .waitFor();
+    assert.equal(
+      await page.getByRole('button', { name: 'Ungroup selection', exact: true }).isDisabled(),
+      true,
+    );
+    await pane.getByText('Only groups and lanes can be ungrouped.', { exact: true }).waitFor();
+    assert.equal(
+      await page.getByRole('button', { name: 'Move to parent', exact: true }).isEnabled(),
+      true,
+      'The shapes have different parents, so moving them changes the diagram',
+    );
+    assert.equal(await pane.getByText('Danger zone').count(), 0);
+    assert.equal(await pane.locator('.de-inspector-header code').count(), 0);
+    await page.getByRole('button', { name: 'Delete 2 objects…', exact: true }).waitFor();
+
+    await outlineRow('edge-a').click({ modifiers: ['Shift'] });
+    await page.getByRole('heading', { name: '3 objects selected', exact: true }).waitFor();
+    assert.equal(
+      await page.getByRole('button', { name: 'Move to parent', exact: true }).isDisabled(),
+      true,
+    );
+    await pane.getByText('Connectors cannot become container members.', { exact: true }).waitFor();
+
+    await outlineRow('node-b').click();
+    await page.getByRole('heading', { name: 'Done', exact: true }).waitFor();
+    await page.getByRole('button', { name: 'Delete…', exact: true }).waitFor();
+    await expandInspectorSection(page, 'Structure');
+    const move = page.getByRole('button', { name: 'Move to parent', exact: true });
+    const reason = pane.getByText('Choose a different parent to move.', { exact: true });
+    assert.equal(await move.isDisabled(), true, 'Done is already in Operations');
+    await reason.waitFor();
+    await page.getByLabel('Parent', { exact: true }).selectOption('');
+    assert.equal(await move.isEnabled(), true);
+    assert.equal(await reason.isHidden(), true);
+    await move.click();
+    await save(page);
+    assert.deepEqual((await read()).document.lanes.find((lane) => lane.id === 'lane-a').members, [
+      'group-a',
+    ]);
+
+    await page.evaluate(() => {
+      window.__copied = [];
+      Object.defineProperty(navigator, 'clipboard', {
+        configurable: true,
+        value: { writeText: async (text) => void window.__copied.push(text) },
+      });
+    });
+    await expandInspectorSection(page, 'Advanced');
+    await page.getByRole('button', { name: 'Copy reference', exact: true }).click();
+    await page.waitForFunction(
+      () => document.querySelector('.de-announcer')?.textContent === 'Reference copied.',
+    );
+    assert.deepEqual(await page.evaluate(() => window.__copied), ['node-b']);
+  },
+);
+
+test(
+  'selected outline rows keep ink text and show a kind only when it adds to the label',
+  options,
+  async (t) => {
+    const { page } = await fixture(t, { bundle: makeBundle('process') });
+    await create(page, 'process');
+    await page.getByRole('tab', { name: 'Outline', exact: true }).click();
+    const rows = await page.locator('.de-outline-list [role="treeitem"]').evaluateAll((items) =>
+      items.map((item) => {
+        const style = (selector) => {
+          const node = item.querySelector(selector);
+          return node && getComputedStyle(node);
+        };
+        const shell = getComputedStyle(item.closest('.planr-diagram-editor'));
+        const token = (name) => {
+          const probe = document.createElement('span');
+          probe.style.color = shell.getPropertyValue(name);
+          document.body.append(probe);
+          const value = getComputedStyle(probe).color;
+          probe.remove();
+          return value;
+        };
+        return {
+          label: item.querySelector('.de-outline-label').textContent,
+          kind: item.querySelector('.de-outline-meta')?.textContent ?? null,
+          selected: item.getAttribute('aria-selected') === 'true',
+          top: item.getBoundingClientRect().top,
+          bottom: item.getBoundingClientRect().bottom,
+          ink: style('.de-outline-label').color === token('--de-text'),
+          chip: style('.de-outline-kind').backgroundColor === token('--de-primary'),
+        };
+      }),
+    );
+    assert.deepEqual(
+      rows.map(({ label, kind }) => [label, kind]),
+      [
+        ['Operations', 'Lane'],
+        ['Checkout service', 'Group'],
+        ['Café ☕', 'Process'],
+        ['Done', 'End'],
+        ['Complete', 'Connector'],
+        ['Keep the operation idempotent.', 'Note'],
+        ['Process', null],
+      ],
+    );
+    const selected = rows.filter((row) => row.selected);
+    assert.deepEqual(
+      selected.map(({ label, ink, chip }) => ({ label, ink, chip })),
+      [{ label: 'Process', ink: true, chip: true }],
+      'The new shape is selected with ink text and a solid accent kind chip',
+    );
+    assert.ok(
+      rows.slice(1).every((row, index) => Math.round(row.top - rows[index].bottom) === 2),
+      'Rows are separated by 2px',
+    );
+    const search = await page.getByLabel('Find in diagram', { exact: true }).evaluate((input) => ({
+      icon: !!input.parentElement.querySelector('svg.de-search-icon'),
+      background: getComputedStyle(input).backgroundImage,
+    }));
+    assert.deepEqual(search, { icon: true, background: 'none' });
+  },
+);
+
+test('endpoint and parent pickers name objects as the outline does', options, async (t) => {
+  const { page } = await fixture(t, { bundle: makeBundle('process') });
+  const outlineRow = (id) => page.locator(`[data-action=select-id][data-id="${id}"]`);
+  const choicesOf = (scope, name) =>
+    scope
+      .getByLabel(name, { exact: true })
+      .evaluate((select) => [...select.options].map((option) => option.textContent));
+  await outlineRow('node-b').click();
+  await apply(page, { Label: '' });
+  await outlineRow('group-a').click();
+  await apply(page, { Label: '' });
+
+  await outlineRow('edge-a').click();
+  assert.deepEqual(
+    await choicesOf(page, 'From'),
+    ['Café ☕', 'End'],
+    'A cleared label shows the kind',
+  );
+  assert.deepEqual(await choicesOf(page, 'To'), ['Café ☕', 'End']);
+  await outlineRow('node-b').click();
+  await expandInspectorSection(page, 'Structure');
+  assert.deepEqual(await choicesOf(page, 'Parent'), ['Diagram root', 'Group', 'Operations']);
+
+  await outlineRow('node-a').click();
+  await outlineRow('node-b').click({ modifiers: ['Shift'] });
+  await page.getByRole('button', { name: 'Connect selection', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Connect objects' });
+  assert.deepEqual(await choicesOf(dialog, 'From'), ['Café ☕', 'End']);
+  assert.deepEqual(await choicesOf(dialog, 'To'), ['Café ☕', 'End']);
+});
+
+test('a click on the inert command bar closes an open drawer', options, async (t) => {
+  const { page } = await fixture(t, {
+    bundle: makeBundle('process'),
+    viewport: { width: 1024, height: 768 },
+  });
+  const shell = page.locator('.planr-diagram-editor');
+  const open = (side) => shell.getAttribute(`data-${side}-open`);
+  // A pointer click, because the inert bar control itself can no longer be targeted.
+  const clickBar = async (action) => {
+    const box = await page.locator(`.de-bar [data-action="${action}"]`).boundingBox();
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+    await settle(page);
+  };
+  const layers = () =>
+    page.evaluate(() => ({
+      bar: getComputedStyle(document.querySelector('.de-bar'), '::after').backgroundColor,
+      backdrop: getComputedStyle(document.querySelector('.de-drawer-backdrop')).backgroundColor,
+    }));
+  assert.match(await shell.getAttribute('data-layout'), /drawer/u);
+
+  await page.locator('.de-bar [data-action="outline"]').click();
+  assert.equal(await open('left'), 'true');
+  const outline = await layers();
+  assert.equal(outline.bar, outline.backdrop, 'The bar is dimmed with the canvas');
+  assert.notEqual(outline.bar, 'rgba(0, 0, 0, 0)');
+  await clickBar('save');
+  assert.equal(await open('left'), 'false', 'A click on the dimmed bar closes the outline');
+
+  await page.locator('.de-bar [data-action="properties"]').click();
+  assert.equal(await open('right'), 'true');
+  const inspector = await layers();
+  assert.equal(inspector.bar, inspector.backdrop, 'The bar matches the undimmed canvas');
+  await clickBar('properties');
+  assert.equal(await open('right'), 'false', 'The pressed Inspector toggle closes its drawer');
+  assert.equal(
+    await page
+      .locator('.de-bar [data-action="properties"]')
+      .evaluate((control) => control === document.activeElement),
+    true,
+    'Focus returns to the toggle that opened the drawer',
+  );
+});
+
 test(
   'new containers and lanes sit directly on the themed canvas without an opaque page wrapper',
   options,
@@ -589,7 +897,6 @@ test(
     const { page, read } = await fixture(t, { bundle });
     await select(page, 'node-a');
     await select(page, 'node-b', true);
-    await expandInspectorSection(page, 'Clipboard');
     await page.getByRole('button', { name: 'Duplicate', exact: true }).click();
     await save(page);
     const copied = await read();
@@ -613,7 +920,7 @@ test(
     await page.getByRole('alert').filter({ hasText: /lock/iu }).waitFor();
     assert.equal((await read()).bundleDigest, locked.bundleDigest);
     await page.locator('[data-action=select-id][data-id=node-b]').click();
-    await page.getByRole('button', { name: 'Delete selection…', exact: true }).click();
+    await page.getByRole('button', { name: 'Delete…', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: /delete/iu });
     await dialog.waitFor();
     assert.match(await dialog.textContent(), /edge-a|Complete/u);
@@ -622,7 +929,7 @@ test(
       'Opening deletion preview does not delete',
     );
     await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
-    await page.getByRole('button', { name: 'Delete selection…', exact: true }).click();
+    await page.getByRole('button', { name: 'Delete…', exact: true }).click();
     await dialog.getByRole('button', { name: 'Delete', exact: true }).click();
     await save(page);
     const deleted = await read();
@@ -1158,15 +1465,19 @@ test(
     );
     await row('Operations').locator('[data-action="toggle-group"]').click();
 
-    await page.getByLabel('Find in diagram', { exact: true }).fill('café');
-    const visible = await page
-      .locator('.de-outline-item:not([hidden]) > [role="treeitem"]')
-      .evaluateAll((items) => items.map((item) => item.getAttribute('aria-label')));
+    const search = page.getByLabel('Find in diagram', { exact: true });
+    const visible = () =>
+      page
+        .locator('.de-outline-item:not([hidden]) > [role="treeitem"]')
+        .evaluateAll((items) => items.map((item) => item.getAttribute('aria-label')));
+    await search.fill('café');
     assert.deepEqual(
-      visible,
+      await visible(),
       ['Operations', 'Checkout service', 'Café ☕'],
       'A match keeps its containers visible',
     );
+    await search.fill('connector');
+    assert.deepEqual(await visible(), ['Complete, Connector'], 'A kind finds its objects');
   },
 );
 
@@ -1471,15 +1782,15 @@ test(
     await settle(page);
     assert.deepEqual(await exposedIds(page), [], 'Template with its three shapes selected');
     const dialog = page.getByRole('dialog', { name: 'Delete selection' });
-    const deletionCopy = async () => {
-      await page.getByRole('button', { name: 'Delete selection…', exact: true }).click();
+    const deletionCopy = async (entry) => {
+      await page.getByRole('button', { name: entry, exact: true }).click();
       await dialog.waitFor();
       const copy = await dialog.locator('p').allTextContents();
       assert.deepEqual(await exposedIds(page), [], 'Delete confirmation');
       await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
       return copy;
     };
-    assert.deepEqual(await deletionCopy(), [
+    assert.deepEqual(await deletionCopy('Delete 3 objects…'), [
       'Delete 5 objects, including 2 connectors? This can be undone before another conflicting change.',
       'Connectors: Start → Process, Process → End',
     ]);
@@ -1494,7 +1805,7 @@ test(
       'Selected: Start → Process · 5 objects',
     );
     assert.deepEqual(await exposedIds(page), [], 'Connector selected');
-    assert.deepEqual(await deletionCopy(), [
+    assert.deepEqual(await deletionCopy('Delete…'), [
       'Delete 1 connector? This can be undone before another conflicting change.',
       'Connector: Start → Process',
     ]);

@@ -12,7 +12,7 @@ import {
 } from '../diagram/authoring/model.mjs';
 import { copyDiagramSelection, pasteDiagramSelection } from '../diagram/editor/clipboard.mjs';
 
-const NODE_NAMES = Object.freeze({
+export const NODE_NAMES = Object.freeze({
   process: 'Process',
   start: 'Start',
   end: 'End',
@@ -20,7 +20,7 @@ const NODE_NAMES = Object.freeze({
   'data-store': 'Data store',
   component: 'Component',
 });
-const COLLECTION_NAMES = Object.freeze({
+export const COLLECTION_NAMES = Object.freeze({
   nodes: 'Shape',
   relations: 'Connector',
   groups: 'Group',
@@ -31,7 +31,12 @@ const ownName = ({ collection, value }) => {
   const text = collection === 'annotations' ? value.text : value.label;
   return typeof text === 'string' && text.trim() ? text : null;
 };
-const kindName = ({ collection, value }) =>
+/**
+ * The kind an object shows in the editor: a node's shape kind, else its collection's name.
+ * @param {{ collection: string; value: { kind?: string } }} entry
+ * @returns {string}
+ */
+export const kindName = ({ collection, value }) =>
   (collection === 'nodes' ? NODE_NAMES[value.kind] : null) ?? COLLECTION_NAMES[collection];
 
 export const freshId = (prefix = 'edit') => `${prefix}-${globalThis.crypto.randomUUID()}`;
@@ -244,18 +249,7 @@ export function propertyTransaction(bundle, id, { semantic, geometry, appearance
  * @returns {import('../diagram/authoring/index.d.mts').DiagramCommand}
  */
 export function arrangementCommand(bundle, ids, mode) {
-  const parents = parentIndex(bundle.document),
-    selected = new Set(ids);
-  const roots = ids.filter((id) => {
-    let parent = parents.get(id);
-    while (parent) {
-      if (selected.has(parent)) return false;
-      parent = parents.get(parent);
-    }
-    return true;
-  });
-  const placements = new Map(bundle.presentation.elements.map((item) => [item.elementId, item]));
-  const boxes = roots.map((id) => placements.get(id)).filter((item) => item?.bounds);
+  const boxes = arrangedPlacements(bundle, ids);
   if (boxes.length < 2) throw new Error('Select at least two shapes or containers.');
   const horizontal = mode.endsWith('horizontal');
   if (mode.startsWith('distribute') && boxes.length < 3)
@@ -297,6 +291,24 @@ export function arrangementCommand(bundle, ids, mode) {
       for (const change of op.changes ?? []) changes.set(change.elementId, change);
   }
   return { type: 'geometry', changes: [...changes.values()] };
+}
+/**
+ * The placements Align and Distribute move: selected objects with bounds whose container is not
+ * also selected, since moving a container already moves its members.
+ */
+export function arrangedPlacements(bundle, ids) {
+  const parents = parentIndex(bundle.document),
+    selected = new Set(ids);
+  const roots = ids.filter((id) => {
+    let parent = parents.get(id);
+    while (parent) {
+      if (selected.has(parent)) return false;
+      parent = parents.get(parent);
+    }
+    return true;
+  });
+  const placements = new Map(bundle.presentation.elements.map((item) => [item.elementId, item]));
+  return roots.map((id) => placements.get(id)).filter((item) => item?.bounds);
 }
 /** @returns {import('../diagram/authoring/index.d.mts').DiagramCommand} */
 export function laneArrangementCommand(bundle, laneId, direction) {

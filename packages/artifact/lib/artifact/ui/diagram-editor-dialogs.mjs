@@ -181,25 +181,29 @@ export function createEditorDialogs(ctx) {
   }
   function connectDialog() {
     const state = current(),
-      nodes = bundleOf(state).document.nodes;
+      diagram = bundleOf(state).document,
+      nodes = diagram.nodes;
     if (nodes.length < 2) {
       report('Create at least two nodes to connect.');
       return;
     }
     const body = element(doc, 'div'),
-      ids = state.view.selection;
+      ids = state.view.selection,
+      index = elementIndex(diagram);
+    /** @type {Array<[string, string]>} */
+    const choices = nodes.map((node) => [node.id, displayName(index, node.id)]);
     const from = field(
       doc,
       'From',
       ids.find((id) => nodes.some((node) => node.id === id)) ?? nodes[0].id,
-      { choices: nodes.map((node) => [node.id, node.label]) },
+      { choices },
     );
     const to = field(
       doc,
       'To',
       ids.find((id) => nodes.some((node) => node.id === id && node.id !== from.input.value)) ??
         nodes[nodes.length - 1].id,
-      { choices: nodes.map((node) => [node.id, node.label]) },
+      { choices },
     );
     const label = field(doc, 'Connector label', '');
     body.append(

@@ -257,9 +257,19 @@ body.planr-diagram-owner-page #diagram-owner-editor {
   background: var(--de-primary-hover);
 }
 
+/* A disabled primary action reads as any disabled button, never as a faded call to action. */
+.planr-diagram-editor .de-primary:disabled {
+  border-color: var(--de-rule);
+  color: var(--de-text);
+  background: var(--de-raised);
+  box-shadow: none;
+}
+
+/* No fill: the theme's light red is 4.46:1 on the raised button fill but 4.84:1 on a panel. */
 .planr-diagram-editor .de-danger {
   border-color: color-mix(in srgb, var(--de-danger) 46%, var(--de-rule));
   color: var(--de-danger);
+  background: transparent;
 }
 
 .planr-diagram-editor .de-danger:hover:not(:disabled) {
@@ -325,14 +335,13 @@ body.planr-diagram-owner-page #diagram-owner-editor {
   box-shadow: 0 1px 0 rgb(0 0 0 / 2%);
 }
 
-.planr-diagram-editor
-  :is(.de-bar-start, .de-bar-end, .de-toolbar-zone, .de-command-group, .de-bar-actions) {
+.planr-diagram-editor :is(.de-bar-start, .de-bar-end, .de-command-group) {
   min-width: 0;
   display: flex;
   align-items: center;
 }
 
-.planr-diagram-editor :is(.de-bar-start, .de-bar-actions) {
+.planr-diagram-editor .de-bar-start {
   gap: var(--de-space-1);
 }
 
@@ -342,21 +351,19 @@ body.planr-diagram-owner-page #diagram-owner-editor {
   display: none;
 }
 
-.planr-diagram-editor :is(.de-bar-end, .de-bar-actions) {
+.planr-diagram-editor .de-bar-end {
   justify-content: flex-end;
   gap: var(--de-space-1);
 }
 
-.planr-diagram-editor :is(.de-command-group, .de-toolbar-group, .de-bar-group) {
+.planr-diagram-editor .de-command-group {
   display: inline-flex;
   align-items: center;
   gap: var(--de-space-1);
 }
 
 /* :where() adds no specificity, so the shared button hover rule still outranks this reset. */
-.planr-diagram-editor
-  :is(.de-command-group, .de-toolbar-group, .de-bar-group)
-  > button:where(:not(.de-primary)) {
+.planr-diagram-editor .de-command-group > button:where(:not(.de-primary)) {
   border-color: transparent;
   background: transparent;
   box-shadow: none;
@@ -437,24 +444,6 @@ body.planr-diagram-owner-page #diagram-owner-editor {
   color: var(--de-danger);
 }
 
-.planr-diagram-editor .de-bar-actions {
-  overflow: visible;
-}
-
-.planr-diagram-editor .de-bar-actions > button,
-.planr-diagram-editor .de-bar-end > button {
-  border-color: transparent;
-  background: transparent;
-  box-shadow: none;
-}
-
-.planr-diagram-editor .de-bar-actions > .de-primary,
-.planr-diagram-editor .de-bar-end > .de-primary {
-  border-color: var(--de-primary);
-  background: var(--de-primary);
-  box-shadow: var(--de-shadow-sm);
-}
-
 .planr-diagram-editor .de-bar .de-primary:disabled {
   opacity: 0.5;
   border-color: transparent;
@@ -464,22 +453,20 @@ body.planr-diagram-owner-page #diagram-owner-editor {
 }
 
 /* A pressed toggle is neutral; the accent stays reserved for Save, selection and focus. */
-.planr-diagram-editor :is(.de-bar-start, .de-bar-actions, .de-bar-end) button[aria-pressed="true"],
-.planr-diagram-editor
-  :is(.de-bar-start, .de-bar-actions, .de-bar-end)
-  button[aria-expanded="true"] {
+.planr-diagram-editor :is(.de-bar-start, .de-bar-end) button[aria-pressed="true"],
+.planr-diagram-editor :is(.de-bar-start, .de-bar-end) button[aria-expanded="true"] {
   border-color: var(--de-rule);
   color: var(--de-text);
   background: var(--de-raised);
 }
 
 /* Anchored command overflow */
-.planr-diagram-editor :is(.de-more-wrap, .de-overflow-wrap) {
+.planr-diagram-editor .de-more-wrap {
   position: relative;
   display: inline-flex;
 }
 
-.planr-diagram-editor :is(.de-more-menu, .de-overflow-menu) {
+.planr-diagram-editor .de-more-menu {
   position: absolute;
   z-index: 30;
   top: calc(100% + var(--de-space-2));
@@ -494,7 +481,7 @@ body.planr-diagram-owner-page #diagram-owner-editor {
   box-shadow: var(--de-shadow-lg);
 }
 
-.planr-diagram-editor :is(.de-more-menu, .de-overflow-menu) button,
+.planr-diagram-editor .de-more-menu button,
 .planr-diagram-editor .de-menu-item {
   width: 100%;
   min-height: var(--de-control-height);
@@ -508,7 +495,7 @@ body.planr-diagram-owner-page #diagram-owner-editor {
   text-align: left;
 }
 
-.planr-diagram-editor :is(.de-more-menu, .de-overflow-menu) button:hover:not(:disabled),
+.planr-diagram-editor .de-more-menu button:hover:not(:disabled),
 .planr-diagram-editor .de-menu-item:hover:not(:disabled),
 .planr-diagram-editor .de-menu-item[data-active="true"] {
   border-color: transparent;
@@ -689,8 +676,7 @@ body.planr-diagram-owner-page #diagram-owner-editor {
   padding: 0;
 }
 
-.planr-diagram-editor .de-panel-header,
-.planr-diagram-editor .de-selection-header {
+.planr-diagram-editor .de-panel-header {
   position: sticky;
   z-index: 3;
   top: 0;
@@ -715,11 +701,9 @@ body.planr-diagram-owner-page #diagram-owner-editor {
 
 .planr-diagram-editor h3 {
   margin: var(--de-space-4) 0 var(--de-space-2);
-  font-size: var(--de-text-xs);
+  font-size: var(--de-text-sm);
   font-weight: var(--de-weight-strong);
-  line-height: var(--de-leading-xs);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  line-height: var(--de-leading-sm);
 }
 
 .planr-diagram-editor p {
@@ -731,14 +715,10 @@ body.planr-diagram-owner-page #diagram-owner-editor {
   font-weight: var(--de-weight-strong);
 }
 
-.planr-diagram-editor :is(.de-muted, .de-reference) {
+.planr-diagram-editor .de-muted {
   color: var(--de-muted);
   font-size: var(--de-text-xs);
   line-height: var(--de-leading-xs);
-}
-
-.planr-diagram-editor .de-reference {
-  overflow-wrap: anywhere;
 }
 
 /* Outline and shape library */
@@ -749,22 +729,26 @@ body.planr-diagram-owner-page #diagram-owner-editor {
   border: 1px solid var(--de-input-border);
   border-radius: var(--de-radius-sm);
   color: var(--de-text);
-  background:
-    linear-gradient(45deg, transparent 47%, var(--de-muted) 48% 53%, transparent 54%) 18px 21px /
-    6px 6px no-repeat,
-    radial-gradient(
-      circle at 9px 10px,
-      transparent 5px,
-      var(--de-muted) 5.5px 6.5px,
-      transparent 7px
-    )
-    8px 8px / 17px 17px no-repeat,
-    var(--de-input);
+  background: var(--de-input);
+}
+
+/* The magnifier shares the input's grid cell, so it sits inside the field without positioning. */
+.planr-diagram-editor .de-field:has(> .de-search-icon) > input {
+  grid-area: 2 / 1;
+}
+
+.planr-diagram-editor .de-search-icon {
+  grid-area: 2 / 1;
+  align-self: center;
+  margin-inline-start: var(--de-space-3);
+  color: var(--de-muted);
+  pointer-events: none;
 }
 
 .planr-diagram-editor .de-outline-list {
   --de-guide: color-mix(in srgb, var(--de-muted) 50%, var(--de-panel));
   display: grid;
+  gap: 2px;
   margin: var(--de-space-3) calc(var(--de-space-1) * -1) 0;
 }
 
@@ -793,15 +777,12 @@ body.planr-diagram-owner-page #diagram-owner-editor {
   background: var(--de-raised);
 }
 
-.planr-diagram-editor .de-outline-item button[aria-selected="true"] {
-  color: var(--de-primary);
-  background: var(--de-primary-soft);
+/* Text stays ink on the selection fill: accent text on a soft accent fill misses 4.5:1. */
+.planr-diagram-editor .de-outline-item button[aria-selected="true"],
+.planr-diagram-editor .de-outline-item button[aria-selected="true"]:hover:not(:disabled) {
+  color: var(--de-text);
+  background: color-mix(in srgb, var(--de-primary) 12%, transparent);
   font-weight: var(--de-weight-medium);
-}
-
-.planr-diagram-editor .de-outline-item button[aria-selected="true"] .de-outline-kind {
-  border-color: var(--de-primary);
-  color: var(--de-primary);
 }
 
 .planr-diagram-editor .de-outline-guides {
@@ -862,25 +843,6 @@ body.planr-diagram-owner-page #diagram-owner-editor {
   visibility: hidden;
 }
 
-.planr-diagram-editor .de-outline-icon,
-.planr-diagram-editor .de-shape-icon {
-  width: 20px;
-  height: 20px;
-  flex: 0 0 auto;
-  display: grid;
-  place-items: center;
-  border: 1px solid var(--de-rule);
-  border-radius: var(--de-radius-xs);
-  color: var(--de-muted);
-  background: var(--de-chrome);
-}
-
-.planr-diagram-editor .de-outline-copy {
-  min-width: 0;
-  display: grid;
-  flex: 1 1 auto;
-}
-
 .planr-diagram-editor .de-outline-kind {
   width: 20px;
   height: 20px;
@@ -902,12 +864,6 @@ body.planr-diagram-owner-page #diagram-owner-editor {
   white-space: nowrap;
 }
 
-.planr-diagram-editor .de-outline-copy > span:first-child {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .planr-diagram-editor .de-outline-meta {
   margin-inline-start: var(--de-space-2);
   color: var(--de-muted);
@@ -916,14 +872,14 @@ body.planr-diagram-owner-page #diagram-owner-editor {
   font-weight: var(--de-weight-regular);
 }
 
-.planr-diagram-editor :is(.de-shape-groups, .de-shape-library) {
-  display: grid;
-  gap: var(--de-space-4);
+.planr-diagram-editor .de-outline-item button[aria-selected="true"] .de-outline-kind {
+  border-color: var(--de-primary);
+  color: var(--de-primary-text);
+  background: var(--de-primary);
 }
 
-.planr-diagram-editor .de-shape-group {
-  display: grid;
-  gap: var(--de-space-2);
+.planr-diagram-editor .de-outline-item button[aria-selected="true"] .de-outline-meta {
+  color: var(--de-text);
 }
 
 .planr-diagram-editor .de-shape-section {
@@ -938,15 +894,6 @@ body.planr-diagram-owner-page #diagram-owner-editor {
 
 .planr-diagram-editor .de-shape-section:first-child {
   margin-top: 0;
-}
-
-.planr-diagram-editor .de-shape-group-title {
-  color: var(--de-muted);
-  font-size: var(--de-text-2xs);
-  font-weight: var(--de-weight-strong);
-  line-height: var(--de-leading-2xs);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
 }
 
 .planr-diagram-editor .de-shape-grid {
@@ -1237,8 +1184,9 @@ body.planr-diagram-owner-page #diagram-owner-editor {
   gap: 2px;
 }
 
+/* The eyebrow is the editor's only uppercase text. */
 .planr-diagram-editor .de-inspector-kicker {
-  color: var(--de-primary);
+  color: var(--de-muted);
   font-size: var(--de-text-2xs);
   font-weight: var(--de-weight-strong);
   line-height: var(--de-leading-2xs);
@@ -1269,19 +1217,31 @@ body.planr-diagram-owner-page #diagram-owner-editor {
 }
 
 .planr-diagram-editor .de-inspector-reference {
-  max-width: 82px;
-  overflow: hidden;
-  flex: 0 0 auto;
-  padding: 2px var(--de-space-1);
-  border: 1px solid var(--de-rule);
-  border-radius: var(--de-radius-xs);
-  color: var(--de-muted);
-  background: var(--de-raised);
-  font-family: var(--de-font-mono);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--de-space-1) var(--de-space-2);
+  margin-bottom: var(--de-space-3);
+}
+
+.planr-diagram-editor .de-inspector-reference > :is(span, code) {
   font-size: var(--de-text-xs);
   line-height: var(--de-leading-xs);
-  text-overflow: ellipsis;
-  white-space: nowrap;
+}
+
+.planr-diagram-editor .de-inspector-reference > span {
+  color: var(--de-muted);
+  font-weight: var(--de-weight-medium);
+}
+
+.planr-diagram-editor .de-inspector-reference > code {
+  grid-column: 1;
+  overflow-wrap: anywhere;
+  font-family: var(--de-font-mono);
+}
+
+.planr-diagram-editor .de-inspector-reference > button {
+  grid-area: 1 / 2 / 3;
 }
 
 .planr-diagram-editor .de-properties-form {
@@ -1294,41 +1254,33 @@ body.planr-diagram-owner-page #diagram-owner-editor {
   flex: 1 1 auto;
 }
 
-.planr-diagram-editor :is(.de-property-section, .de-properties-section, .de-inspector-section) {
+.planr-diagram-editor .de-inspector-section {
   margin: 0;
   border: 0;
   border-bottom: 1px solid var(--de-rule);
   background: transparent;
 }
 
-.planr-diagram-editor
-  details:is(.de-property-section, .de-properties-section, .de-inspector-section)
-  > summary {
+.planr-diagram-editor details.de-inspector-section > summary {
   min-height: var(--de-control-height);
   display: flex;
   align-items: center;
   gap: var(--de-space-2);
   padding: var(--de-space-2) var(--de-space-3);
   color: var(--de-text);
-  font-size: var(--de-text-xs);
+  font-size: var(--de-text-sm);
   font-weight: var(--de-weight-strong);
-  line-height: var(--de-leading-xs);
-  letter-spacing: 0.035em;
+  line-height: var(--de-leading-sm);
   list-style: none;
-  text-transform: uppercase;
   cursor: pointer;
   user-select: none;
 }
 
-.planr-diagram-editor
-  details:is(.de-property-section, .de-properties-section, .de-inspector-section)
-  > summary::-webkit-details-marker {
+.planr-diagram-editor details.de-inspector-section > summary::-webkit-details-marker {
   display: none;
 }
 
-.planr-diagram-editor
-  details:is(.de-property-section, .de-properties-section, .de-inspector-section)
-  > summary::after {
+.planr-diagram-editor details.de-inspector-section > summary::after {
   width: 8px;
   height: 8px;
   margin-left: auto;
@@ -1339,35 +1291,20 @@ body.planr-diagram-owner-page #diagram-owner-editor {
   transition: transform 120ms ease;
 }
 
-.planr-diagram-editor
-  details:is(.de-property-section, .de-properties-section, .de-inspector-section)[open]
-  > summary::after {
+.planr-diagram-editor details.de-inspector-section[open] > summary::after {
   transform: rotate(225deg) translate(-2px, -1px);
 }
 
-.planr-diagram-editor
-  :is(
-    .de-property-section-body,
-    .de-properties-section-body,
-    .de-inspector-section-body,
-    .de-section-body
-  ) {
-  padding: 2px var(--de-space-3) var(--de-space-3);
+.planr-diagram-editor .de-inspector-section-body {
+  padding: 0 var(--de-space-3) var(--de-space-4);
+}
+
+.planr-diagram-editor .de-inspector-section-body > :last-child {
+  margin-bottom: 0;
 }
 
 .planr-diagram-editor .de-inspector-section-summary .de-icon {
   color: var(--de-muted);
-}
-
-.planr-diagram-editor .de-inspector-section[open] > .de-inspector-section-summary .de-icon {
-  color: var(--de-primary);
-}
-
-.planr-diagram-editor :is(.de-property-group, .de-property-block) {
-  display: grid;
-  gap: var(--de-space-3);
-  padding: var(--de-space-3);
-  border-bottom: 1px solid var(--de-rule);
 }
 
 .planr-diagram-editor .de-field {
@@ -1447,15 +1384,20 @@ body.planr-diagram-owner-page #diagram-owner-editor {
   grid-row: 1;
 }
 
+/* Rows are spaced by the grid gap, so a grid that ends a section leaves no extra field margin. */
 .planr-diagram-editor .de-field-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0 var(--de-space-2);
+  gap: var(--de-space-3) var(--de-space-2);
+  margin-bottom: var(--de-space-3);
+}
+
+.planr-diagram-editor .de-field-grid > .de-field {
+  margin-bottom: 0;
 }
 
 .planr-diagram-editor .de-field-grid > button {
   align-self: end;
-  margin-bottom: var(--de-space-3);
 }
 
 .planr-diagram-editor .de-properties-form fieldset {
@@ -1503,7 +1445,7 @@ body.planr-diagram-owner-page #diagram-owner-editor {
   margin: var(--de-space-3) 0 var(--de-space-2);
 }
 
-.planr-diagram-editor :is(.de-properties-footer, .de-apply-bar, .de-inspector-footer) {
+.planr-diagram-editor .de-inspector-footer {
   position: sticky;
   z-index: 4;
   bottom: 0;
@@ -1526,7 +1468,7 @@ body.planr-diagram-owner-page #diagram-owner-editor {
   border-top-color: color-mix(in srgb, var(--de-primary) 48%, var(--de-rule));
 }
 
-.planr-diagram-editor :is(.de-properties-footer, .de-apply-bar, .de-inspector-footer) .de-primary {
+.planr-diagram-editor .de-inspector-footer .de-primary {
   min-width: 0;
 }
 
@@ -1534,52 +1476,45 @@ body.planr-diagram-owner-page #diagram-owner-editor {
   width: 100%;
 }
 
-.planr-diagram-editor :is(.de-actions, .de-action-group, .de-inspector-actions) {
+.planr-diagram-editor .de-actions {
   display: flex;
   flex-wrap: wrap;
   gap: var(--de-space-2);
   margin: var(--de-space-2) 0 var(--de-space-4);
 }
 
-.planr-diagram-editor .de-inspector-action-row {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
+/* Equal-width buttons; one whose label would not fit wraps to a new line instead of truncating. */
 .planr-diagram-editor .de-inspector-action-row > button {
-  min-width: 0;
+  min-width: max-content;
   display: flex;
+  flex: 1 1 0;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: center;
   gap: var(--de-space-2);
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
-.planr-diagram-editor .de-inspector-action-row > button .de-control-label {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.planr-diagram-editor .de-inspector-group {
+  padding: 0 var(--de-space-3);
 }
 
-.planr-diagram-editor .de-action-group {
-  padding: var(--de-space-3);
+.planr-diagram-editor .de-inspector-group > .de-inspector-action-row {
   margin: 0;
-  border-bottom: 1px solid var(--de-rule);
 }
 
-.planr-diagram-editor .de-action-group > button {
-  flex: 1 1 calc(50% - var(--de-space-1));
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.planr-diagram-editor .de-inspector-group > .de-inspector-operation {
+  margin-top: var(--de-space-3);
 }
 
-.planr-diagram-editor :is(.de-member-list, .de-members) {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--de-space-1);
-  margin: var(--de-space-2) 0 var(--de-space-3);
+.planr-diagram-editor .de-inspector-reason {
+  margin: var(--de-space-1) 0 0;
+  color: var(--de-muted);
+  font-size: var(--de-text-xs);
+  line-height: var(--de-leading-xs);
+}
+
+.planr-diagram-editor .de-inspector-delete {
+  align-self: flex-start;
+  margin: var(--de-space-6) var(--de-space-3) var(--de-space-4);
 }
 
 .planr-diagram-editor .de-inspector-member-list {
@@ -1629,54 +1564,10 @@ body.planr-diagram-owner-page #diagram-owner-editor {
   white-space: nowrap;
 }
 
-.planr-diagram-editor :is(.de-member-list, .de-members) button {
-  min-height: var(--de-control-height-sm);
-  padding: var(--de-space-1) var(--de-space-2);
-  border-radius: var(--de-radius-xs);
-  color: var(--de-muted);
-  background: var(--de-raised);
-  box-shadow: none;
-  font-size: var(--de-text-xs);
-  line-height: var(--de-leading-xs);
-}
-
-.planr-diagram-editor :is(.de-danger-zone, .de-destructive-actions) {
-  margin-top: var(--de-space-3);
-  padding: var(--de-space-3);
-  border-top: 1px solid color-mix(in srgb, var(--de-danger) 32%, var(--de-rule));
-  background: var(--de-danger-soft);
-}
-
-.planr-diagram-editor .de-inspector-danger {
-  margin-top: auto;
-  padding: var(--de-space-3);
-  border-top: 1px solid color-mix(in srgb, var(--de-danger) 32%, var(--de-rule));
-  background: var(--de-danger-soft);
-}
-
-.planr-diagram-editor .de-inspector-danger h3 {
-  margin: 0 0 var(--de-space-2);
-  color: var(--de-danger);
-}
-
-.planr-diagram-editor .de-inspector-danger button {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--de-space-2);
-}
-
 .planr-diagram-editor .de-inspector-empty {
   margin: 0;
   padding: var(--de-space-4) var(--de-space-3);
   color: var(--de-muted);
-}
-
-.planr-diagram-editor :is(.de-danger-zone, .de-destructive-actions) button:not(.de-danger) {
-  color: var(--de-danger);
-  border-color: color-mix(in srgb, var(--de-danger) 38%, var(--de-rule));
-  background: transparent;
 }
 
 /* Drawers and overlays */
@@ -1792,6 +1683,14 @@ body.planr-diagram-owner-page #diagram-owner-editor {
  * "desktop". A 200% browser zoom on a desktop naturally enters the drawer layout. */
 .planr-diagram-editor[data-layout~="drawer"] {
   --de-right-width: min(288px, calc(100% - 48px));
+  --de-drawer-scrim: rgb(3 6 10 / 58%);
+  --de-drawer-blur: blur(1px);
+}
+
+/* The inspector acts on the canvas beside it, so its drawer leaves the canvas undimmed. */
+.planr-diagram-editor[data-layout~="drawer"][data-right-open="true"] {
+  --de-drawer-scrim: transparent;
+  --de-drawer-blur: none;
 }
 
 .planr-diagram-editor[data-layout~="drawer"] .de-bar {
@@ -1851,17 +1750,22 @@ body.planr-diagram-owner-page #diagram-owner-editor {
   display: block;
   border: 0;
   border-radius: 0;
-  background: rgb(3 6 10 / 58%);
+  background: var(--de-drawer-scrim);
   box-shadow: none;
   cursor: default;
-  backdrop-filter: blur(1px);
+  backdrop-filter: var(--de-drawer-blur);
 }
 
-/* The inspector acts on the canvas beside it, so its drawer leaves the canvas undimmed. */
-.planr-diagram-editor[data-layout~="drawer"][data-right-open="true"]
-.de-drawer-backdrop:not([hidden]) {
-  background: transparent;
-  backdrop-filter: none;
+/* The bar is inert under an open drawer and sits outside the backdrop, so it takes the same layer.
+ * A click on it lands on the shell, which closes the drawer as a backdrop click does. */
+.planr-diagram-editor[data-layout~="drawer"]:is([data-left-open="true"], [data-right-open="true"])
+.de-bar::after {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  background: var(--de-drawer-scrim);
+  content: "";
+  backdrop-filter: var(--de-drawer-blur);
 }
 
 /* Editing intentionally ends at 700px; 701px remains the first authoring width. */
@@ -1887,11 +1791,11 @@ body.planr-diagram-owner-page #diagram-owner-editor {
   white-space: nowrap;
 }
 
-.planr-diagram-editor[data-layout~="compact"] :is(.de-bar-actions, .de-bar-end) {
+.planr-diagram-editor[data-layout~="compact"] .de-bar-end {
   gap: 2px;
 }
 
-.planr-diagram-editor[data-layout~="compact"] :is(.de-bar-actions, .de-bar-end) button {
+.planr-diagram-editor[data-layout~="compact"] .de-bar-end button {
   min-width: var(--de-control-height);
   min-height: var(--de-control-height);
 }
@@ -1912,7 +1816,7 @@ body.planr-diagram-owner-page #diagram-owner-editor {
 }
 
 .planr-diagram-editor[data-layout~="compact"]
-  :is(.de-bar-actions, .de-bar-end)
+  .de-bar-end
   :is([data-action="undo"], [data-action="redo"], [data-action="layout"], [data-action="save"]) {
   display: none;
 }
@@ -1964,7 +1868,7 @@ body.planr-diagram-owner-page #diagram-owner-editor {
   line-height: var(--de-leading-lg);
 }
 
-.planr-diagram-editor[data-layout~="compact"] :is(.de-more-menu, .de-overflow-menu) {
+.planr-diagram-editor[data-layout~="compact"] .de-more-menu {
   position: fixed;
   top: calc(var(--de-bar-height) + var(--de-space-2));
   right: var(--de-space-2);
@@ -2156,7 +2060,7 @@ body.planr-diagram-owner-page #diagram-owner-editor {
   line-height: var(--de-leading-sm);
 }
 
-.planr-diagram-source-panel :is(.de-muted, .de-reference) {
+.planr-diagram-source-panel .de-muted {
   color: var(--de-muted);
   font-size: var(--de-text-xs);
   line-height: var(--de-leading-xs);
@@ -2521,15 +2425,7 @@ body.planr-diagram-owner-page #diagram-owner-editor {
   }
 
   .planr-diagram-editor
-    :is(
-      .de-bar,
-      .de-panel-header,
-      .de-selection-header,
-      .de-canvas-tools,
-      .de-more-menu,
-      .de-overflow-menu,
-      .de-dialog
-    ) {
+    :is(.de-bar, .de-panel-header, .de-canvas-tools, .de-more-menu, .de-dialog) {
     backdrop-filter: none;
   }
 
