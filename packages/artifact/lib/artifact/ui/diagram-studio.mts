@@ -8,35 +8,131 @@
 import { clientSelectionToNormalized, mountArtifactAnnotations } from './annotations.mjs';
 import { mountArtifactFeedbackRail } from './feedback-rail.mjs';
 
+/** A drawing element as diagram-review.mjs describes it in the page data. */
+interface StudioItem {
+  id: string;
+  kind: string;
+  label: string;
+  x: number;
+  y: number;
+  description?: string | null;
+  semanticKind?: string;
+  members?: string[];
+  targetId?: string;
+  from?: string;
+  to?: string;
+  fromLabel?: string;
+  toLabel?: string;
+}
+/** The `diagram-studio-data` payload diagram-review.mjs embeds in the page. */
+interface StudioConfig {
+  artifact: { id: string; title: string; viewport: { width: number; height: number } };
+  items: StudioItem[];
+  relations?: Array<{ id: string; from: string; to: string }>;
+  review: unknown;
+  reviewOf: string;
+  base: string;
+  diagramId: string;
+}
+interface Rect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+/** The anchor adapter annotations.mjs reads from the drawing element. */
+interface DrawingBridge {
+  hitTest(x: number, y: number): { planrId: string; screen: string; rect: Rect } | null;
+  resolve(
+    id: string,
+  ): { planrId: string; rect: Rect; viewport: { width: number; height: number } } | null;
+}
+/** An item under the pointer with its drawn bounds. */
+interface ItemHit {
+  item: StudioItem;
+  index: number;
+  rect: Rect;
+}
+interface Point {
+  x: number;
+  y: number;
+}
+type Gesture =
+  | { type: 'pinch'; distance: number; scale: number; diagramX: number; diagramY: number }
+  | {
+      type: 'comment' | 'pan';
+      start: Point;
+      x: number;
+      y: number;
+      client: Point;
+      item: ItemHit | null;
+    };
+/** The review the feedback rail announces after each change. */
+type ReviewChange = CustomEvent<{ pins: unknown[] }>;
+/** A review pin as the studio's rail and annotation callbacks read it. */
+interface StudioPin {
+  intent: string;
+  anchor?: { planrId?: string } | null;
+  region: { x: number; y: number; w: number; h: number };
+}
+/** The handle the studio publishes on its window for tests and hosts. */
+interface DiagramStudio {
+  destroy(): void;
+}
+type StudioWindow = Window & typeof globalThis & { __openPlanrDiagramStudio?: DiagramStudio };
+type BridgeHost = HTMLElement & { __openPlanrBridge?: DrawingBridge };
+type StudioAnnotations = NonNullable<ReturnType<typeof mountArtifactAnnotations>>;
+/** An editor event that targets an element. */
+type TargetedEvent<E extends Event> = E & { target: Element };
+type StageAction =
+  | { type: 'set-review-mode'; reviewMode: string }
+  | { type: 'set-rail-open'; railOpen: boolean };
+interface StudioCamera {
+  x: number;
+  y: number;
+  scale: number;
+  fit: 'all' | 'width' | null;
+}
+
 /** One camera owns all diagram coordinates. No scroll-sized wrappers or frames. */
-export function mountDiagramStudio(document = globalThis.document) {
-  const window = document.defaultView;
-  const root = document.querySelector('.diagram-shell');
-  const config = JSON.parse(document.getElementById('diagram-studio-data').textContent);
-  const canvas = root.querySelector('.diagram-canvas');
-  const surface = root.querySelector('.diagram-scene');
-  const drawing = root.querySelector('.diagram-drawing');
+export function mountDiagramStudio(document: Document = globalThis.document) {
+  // The studio page renders every element this function queries, and it runs in a window.
+  const window = document.defaultView as StudioWindow;
+  const root = document.querySelector('.diagram-shell') as HTMLElement;
+  // diagram-review.mjs embeds the page data, which the local review server serves.
+  // biome-ignore format: bundles keep this one-line call; wrapping would change their bytes.
+  const config: StudioConfig = JSON.parse((document.getElementById('diagram-studio-data') as HTMLElement).textContent as string);
+  const canvas = root.querySelector('.diagram-canvas') as HTMLElement;
+  const surface = root.querySelector('.diagram-scene') as HTMLElement;
+  const drawing = root.querySelector('.diagram-drawing') as BridgeHost;
   const { width, height } = config.artifact.viewport;
-  const camera = { x: 0, y: 0, scale: 1, fit: 'all' };
+  const camera: StudioCamera = { x: 0, y: 0, scale: 1, fit: 'all' };
   const state = {
     status: 'ready',
     activeArtifactId: config.artifact.id,
     artifacts: [config.artifact],
     reviewMode: 'interact',
   };
-  const cleanup = [];
-  const listen = (target, event, handler, options) => {
-    target.addEventListener(event, handler, options);
-    cleanup.push(() => target.removeEventListener(event, handler, options));
+  const cleanup: Array<() => void> = [];
+  // addEventListener types a listener by event name, which a name passed through loses.
+  const listen = <E extends Event>(
+    target: EventTarget,
+    event: string,
+    handler: (event: E) => void,
+    options?: boolean | AddEventListenerOptions,
+  ) => {
+    target.addEventListener(event, handler as EventListener, options);
+    cleanup.push(() => target.removeEventListener(event, handler as EventListener, options));
   };
   let paintId = 0,
     space = false,
-    gesture = null,
-    annotations;
+    gesture: Gesture | null = null,
+    annotations: StudioAnnotations;
   let selectedIndex = -1,
     connectionFocus = false,
     presentationIndex = 0;
-  const intentLabels = { fix: 'Change request', improve: 'Suggestion', question: 'Question' };
+  // biome-ignore format: bundles keep this one-line object; wrapping would change their bytes.
+  const intentLabels: Record<string, string> = { fix: 'Change request', improve: 'Suggestion', question: 'Question' };
   const semanticAttributes = [
     'data-item-id',
     'data-relation-id',
@@ -46,12 +142,16 @@ export function mountDiagramStudio(document = globalThis.document) {
     'data-annotation-id',
     'data-scene-id',
   ];
+  // biome-ignore format: bundles keep this one-line call; wrapping would change their bytes.
   const drawingElements = [
-    ...drawing.querySelectorAll(semanticAttributes.map((attribute) => `[${attribute}]`).join(',')),
+    ...drawing.querySelectorAll<SVGGraphicsElement>(semanticAttributes.map((attribute) => `[${attribute}]`).join(',')),
   ];
+  // Each element matched a selector for one of these attributes, so the lookup finds one.
   const elementIndex = new Map(
     drawingElements.map((element) => [
-      semanticAttributes.map((attribute) => element.getAttribute(attribute)).find(Boolean),
+      semanticAttributes
+        .map((attribute) => element.getAttribute(attribute))
+        .find(Boolean) as string,
       element,
     ]),
   );
@@ -59,13 +159,14 @@ export function mountDiagramStudio(document = globalThis.document) {
   const groups = new Map(
     config.items.filter((item) => item.kind === 'Group').map((item) => [item.id, item]),
   );
-  const groupMembers = new Map();
-  const collapsedGroups = new Set();
-  let groupHiddenIds = new Set();
-  function resolveGroupMembers(id, trail = new Set()) {
-    if (groupMembers.has(id)) return groupMembers.get(id);
+  const groupMembers = new Map<string, Set<string>>();
+  const collapsedGroups = new Set<string>();
+  let groupHiddenIds = new Set<string>();
+  function resolveGroupMembers(id: string, trail = new Set<string>()): Set<string> {
+    // has-then-get: the member set was stored above.
+    if (groupMembers.has(id)) return groupMembers.get(id) as Set<string>;
     if (trail.has(id)) return new Set();
-    const members = new Set();
+    const members = new Set<string>();
     trail.add(id);
     for (const member of groups.get(id)?.members ?? []) {
       members.add(member);
@@ -77,7 +178,7 @@ export function mountDiagramStudio(document = globalThis.document) {
     return members;
   }
   for (const id of groups.keys()) resolveGroupMembers(id);
-  function elementBounds(id) {
+  function elementBounds(id: string) {
     const element = elementIndex.get(id);
     if (!element) return null;
     const bounds = element.getBBox();
@@ -88,20 +189,22 @@ export function mountDiagramStudio(document = globalThis.document) {
       height: Math.max(8, bounds.height + 8),
     };
   }
-  function hitItem(x, y) {
+  function hitItem(x: number, y: number) {
+    // The filter keeps only items with bounds.
     return (
-      config.items
-        .map((item, index) => ({ item, index, rect: elementBounds(item.id) }))
-        .filter(
-          ({ item, rect }) =>
-            !groupHiddenIds.has(item.id) &&
-            rect &&
-            x >= rect.x &&
-            x <= rect.x + rect.width &&
-            y >= rect.y &&
-            y <= rect.y + rect.height,
-        )
-        .sort((a, b) => a.rect.width * a.rect.height - b.rect.width * b.rect.height)[0] ?? null
+      (
+        config.items
+          .map((item, index) => ({ item, index, rect: elementBounds(item.id) }))
+          .filter(
+            ({ item, rect }) =>
+              !groupHiddenIds.has(item.id) &&
+              rect &&
+              x >= rect.x &&
+              x <= rect.x + rect.width &&
+              y >= rect.y &&
+              y <= rect.y + rect.height,
+          ) as ItemHit[]
+      ).sort((a, b) => a.rect.width * a.rect.height - b.rect.width * b.rect.height)[0] ?? null
     );
   }
   // Adapt native SVG geometry to the existing stable annotation contract. No
@@ -119,47 +222,47 @@ export function mountDiagramStudio(document = globalThis.document) {
       return rect ? { planrId: id, rect, viewport: config.artifact.viewport } : null;
     },
   };
-  const pointers = new Map();
-  const saveState = root.querySelector('[data-save-state]');
-  let pendingReview = null,
+  const pointers = new Map<number, Point>();
+  const saveState = root.querySelector('[data-save-state]') as HTMLButtonElement;
+  let pendingReview: ReviewChange['detail'] | null = null,
     saving = false,
     failed = false;
-  const status = (text) => {
-    root.querySelector('[data-canvas-status]').textContent = text;
+  const status = (text: string) => {
+    (root.querySelector('[data-canvas-status]') as HTMLElement).textContent = text;
   };
   const emit = () =>
     root.dispatchEvent(new window.CustomEvent('planr:stage-change', { detail: { ...state } }));
-  const setMode = (mode) => {
+  const setMode = (mode: string) => {
     state.reviewMode = mode;
     root.dataset.planrReviewMode = mode;
-    root
-      .querySelector('[data-action=pan]')
-      .setAttribute('aria-pressed', String(mode === 'interact'));
-    root
-      .querySelector('[data-action=comment]')
-      .setAttribute('aria-pressed', String(mode === 'comment'));
+    // biome-ignore format: bundles keep this one-line call; wrapping would change their bytes.
+    (root.querySelector('[data-action=pan]') as HTMLElement).setAttribute('aria-pressed', String(mode === 'interact'));
+    // biome-ignore format: bundles keep this one-line call; wrapping would change their bytes.
+    (root.querySelector('[data-action=comment]') as HTMLElement).setAttribute('aria-pressed', String(mode === 'comment'));
     status(
       mode === 'comment' ? 'Click or drag an area to comment · Esc to pan' : 'Drag anywhere to pan',
     );
     emit();
   };
-  function setRail(open) {
+  function setRail(open: boolean) {
     root.dataset.planrRailOpen = String(open);
-    root.querySelector('[data-action=review]').setAttribute('aria-expanded', String(open));
-    const rail = document.getElementById('planr-review-rail');
+    // biome-ignore format: bundles keep this one-line call; wrapping would change their bytes.
+    (root.querySelector('[data-action=review]') as HTMLElement).setAttribute('aria-expanded', String(open));
+    const rail = document.getElementById('planr-review-rail') as HTMLElement;
     rail.inert = !open;
     rail.setAttribute('aria-hidden', String(!open));
     if (open && window.innerWidth <= 700) setOutline(false);
   }
-  function setOutline(open) {
+  function setOutline(open: boolean) {
     root.dataset.outlineOpen = String(open);
-    root.querySelector('[data-action=outline]').setAttribute('aria-expanded', String(open));
-    document.getElementById('diagram-outline').inert = !open;
+    // biome-ignore format: bundles keep this one-line call; wrapping would change their bytes.
+    (root.querySelector('[data-action=outline]') as HTMLElement).setAttribute('aria-expanded', String(open));
+    (document.getElementById('diagram-outline') as HTMLElement).inert = !open;
     if (open && window.innerWidth <= 700) setRail(false);
   }
   const stage = {
     getState: () => state,
-    dispatch(action) {
+    dispatch(action: StageAction) {
       if (action.type === 'set-review-mode') setMode(action.reviewMode);
       if (action.type === 'set-rail-open') setRail(action.railOpen);
     },
@@ -168,7 +271,8 @@ export function mountDiagramStudio(document = globalThis.document) {
     paintId = 0;
     surface.style.transform = `translate(${camera.x}px,${camera.y}px) scale(${camera.scale})`;
     surface.style.setProperty('--diagram-inverse-zoom', String(1 / camera.scale));
-    root.querySelector('[data-zoom]').textContent = `${Math.round(camera.scale * 100)}%`;
+    (root.querySelector('[data-zoom]') as HTMLElement).textContent =
+      `${Math.round(camera.scale * 100)}%`;
   }
   const paint = () => {
     if (!paintId) paintId = window.requestAnimationFrame(draw);
@@ -182,7 +286,7 @@ export function mountDiagramStudio(document = globalThis.document) {
     const whole = Math.min(availableWidth / width, availableHeight / height);
     return whole < 0.6 && availableWidth / width > whole * 1.5 ? 'width' : 'all';
   }
-  function fit(mode = 'all') {
+  function fit(mode: 'all' | 'width' = 'all') {
     camera.fit = mode;
     const availableWidth = Math.max(1, canvas.clientWidth - 48);
     const availableHeight = Math.max(1, canvas.clientHeight - 116);
@@ -196,7 +300,7 @@ export function mountDiagramStudio(document = globalThis.document) {
     camera.y = mode === 'width' ? 24 : 24 + (availableHeight - height * camera.scale) / 2;
     paint();
   }
-  function zoom(scale, x = canvas.clientWidth / 2, y = (canvas.clientHeight - 80) / 2) {
+  function zoom(scale: number, x = canvas.clientWidth / 2, y = (canvas.clientHeight - 80) / 2) {
     const next = Math.max(0.04, Math.min(4, scale));
     const ratio = next / camera.scale;
     camera.x = x - (x - camera.x) * ratio;
@@ -205,7 +309,7 @@ export function mountDiagramStudio(document = globalThis.document) {
     camera.fit = null;
     paint();
   }
-  function focusPoint(x, y, scale = Math.max(0.8, camera.scale)) {
+  function focusPoint(x: number, y: number, scale = Math.max(0.8, camera.scale)) {
     camera.fit = null;
     camera.scale = Math.min(2, scale);
     camera.x = canvas.clientWidth / 2 - x * camera.scale;
@@ -214,7 +318,7 @@ export function mountDiagramStudio(document = globalThis.document) {
     canvas.scrollLeft = 0;
     paint();
   }
-  function focusBounds(bounds) {
+  function focusBounds(bounds: Rect | null) {
     if (!bounds) {
       fit();
       return;
@@ -258,9 +362,11 @@ export function mountDiagramStudio(document = globalThis.document) {
   if (chapters.length === 0) chapters.push({ id: 'overview', label: 'Overview', bounds: null });
 
   function updateOutlineFilter() {
-    const value = root.querySelector('[data-search]').value.trim().toLocaleLowerCase();
+    const value = (root.querySelector('[data-search]') as HTMLInputElement).value
+      .trim()
+      .toLocaleLowerCase();
     let count = 0;
-    root.querySelectorAll('[data-item-index]').forEach((button) => {
+    root.querySelectorAll<HTMLElement>('[data-item-index]').forEach((button) => {
       const item = config.items[Number(button.dataset.itemIndex)];
       const matches = [item.label, item.id, item.description, item.kind]
         .filter(Boolean)
@@ -270,7 +376,7 @@ export function mountDiagramStudio(document = globalThis.document) {
       button.hidden = groupHiddenIds.has(item.id) || !matches;
       if (!button.hidden) count++;
     });
-    root.querySelector('[data-search-empty]').hidden = count > 0;
+    (root.querySelector('[data-search-empty]') as HTMLElement).hidden = count > 0;
   }
   function applyGroupVisibility() {
     groupHiddenIds = new Set();
@@ -290,7 +396,7 @@ export function mountDiagramStudio(document = globalThis.document) {
     }
     updateOutlineFilter();
   }
-  function expandForItem(id) {
+  function expandForItem(id: string) {
     let changed = false;
     for (const groupId of [...collapsedGroups]) {
       if (groupMembers.get(groupId)?.has(id)) {
@@ -310,26 +416,29 @@ export function mountDiagramStudio(document = globalThis.document) {
       compact: true,
       pageSize: 30,
       replyLimit: 2,
-      describePin: (pin) => ({ intentLabel: intentLabels[pin.intent] }),
-      decorateThread({ element, pin }) {
+      describePin: (pin: StudioPin) => ({ intentLabel: intentLabels[pin.intent] }),
+      decorateThread({ element, pin }: { element: HTMLElement; pin: StudioPin }) {
         if (!pin.anchor?.planrId) return;
-        const item = config.items[itemIndex.get(pin.anchor.planrId)];
+        // An id missing from this revision indexes as undefined and yields no item.
+        const item = config.items[itemIndex.get(pin.anchor.planrId) as number];
         const target = document.createElement('p');
         target.className = 'diagram-thread-target';
         target.textContent = item
           ? `${item.kind}: ${item.label}`
           : 'Target unavailable in this revision';
-        element.querySelector('header').after(target);
+        (element.querySelector('header') as HTMLElement).after(target);
       },
     },
   });
   listen(root, 'planr:artifact-annotation-draft', () => {
     root
-      .querySelectorAll('[data-planr-annotation-composer] [data-planr-intent]')
+      .querySelectorAll<HTMLElement>('[data-planr-annotation-composer] [data-planr-intent]')
       .forEach((button) => {
-        button.textContent = intentLabels[button.dataset.planrIntent];
+        // Every intent button carries its intent.
+        button.textContent = intentLabels[button.dataset.planrIntent as string];
       });
   });
+  // The studio passes every option mountArtifactAnnotations requires, so it returns a controller.
   annotations = mountArtifactAnnotations({
     root,
     document,
@@ -350,7 +459,7 @@ export function mountDiagramStudio(document = globalThis.document) {
         rect ? rect.y + y * rect.height : y * height,
       );
     },
-  });
+  }) as StudioAnnotations;
 
   async function save() {
     if (saving || !pendingReview) return;
@@ -381,9 +490,10 @@ export function mountDiagramStudio(document = globalThis.document) {
     saving = false;
     if (!failed) saveState.textContent = 'Comments saved on this computer';
   }
-  listen(root, 'planr:artifact-review-change', (event) => {
+  listen(root, 'planr:artifact-review-change', (event: ReviewChange) => {
     pendingReview = event.detail;
-    root.querySelector('[data-comment-count]').textContent = String(event.detail.pins.length);
+    // biome-ignore format: bundles keep this one-line call; wrapping would change their bytes.
+    (root.querySelector('[data-comment-count]') as HTMLElement).textContent = String(event.detail.pins.length);
     void save();
   });
   listen(saveState, 'click', () => {
@@ -392,7 +502,7 @@ export function mountDiagramStudio(document = globalThis.document) {
   listen(window, 'online', () => {
     if (failed) void save();
   });
-  listen(window, 'beforeunload', (event) => {
+  listen(window, 'beforeunload', (event: BeforeUnloadEvent) => {
     if (pendingReview || saving) {
       event.preventDefault();
       event.returnValue = '';
@@ -414,37 +524,39 @@ export function mountDiagramStudio(document = globalThis.document) {
       if (id === item?.id) element.dataset.selected = 'true';
       element.toggleAttribute('data-dimmed', connectionFocus && !connected.has(id));
     }
-    root
-      .querySelector('[data-action=connections]')
-      .setAttribute('aria-pressed', String(connectionFocus));
+    // biome-ignore format: bundles keep this one-line call; wrapping would change their bytes.
+    (root.querySelector('[data-action=connections]') as HTMLElement).setAttribute('aria-pressed', String(connectionFocus));
   }
-  function selectItem(index, { focus = true } = {}) {
+  function selectItem(index: number, { focus = true }: { focus?: boolean } = {}) {
     const item = config.items[index];
     if (!item) return;
     expandForItem(item.id);
     selectedIndex = index;
     root
-      .querySelectorAll('[data-item-index]')
+      .querySelectorAll<HTMLElement>('[data-item-index]')
       .forEach((button) =>
         button.setAttribute('aria-current', String(Number(button.dataset.itemIndex) === index)),
       );
-    const details = root.querySelector('[data-element-details]');
+    const details = root.querySelector('[data-element-details]') as HTMLElement;
     details.hidden = false;
-    details.querySelector('[data-element-label]').textContent = item.label;
-    details.querySelector('[data-element-kind]').textContent = item.semanticKind ?? item.kind;
-    details.querySelector('[data-element-id]').textContent = item.id;
-    details.querySelector('[data-element-description]').textContent =
+    (details.querySelector('[data-element-label]') as HTMLElement).textContent = item.label;
+    (details.querySelector('[data-element-kind]') as HTMLElement).textContent =
+      item.semanticKind ?? item.kind;
+    (details.querySelector('[data-element-id]') as HTMLElement).textContent = item.id;
+    (details.querySelector('[data-element-description]') as HTMLElement).textContent =
       item.description || 'No supporting description provided.';
-    details.querySelector('[data-element-endpoints]').textContent = item.from
+    (details.querySelector('[data-element-endpoints]') as HTMLElement).textContent = item.from
       ? `${item.fromLabel} → ${item.toLabel}`
       : '';
-    const groupToggle = root.querySelector('[data-action=toggle-group]');
+    const groupToggle = root.querySelector('[data-action=toggle-group]') as HTMLButtonElement;
     groupToggle.hidden = item.kind !== 'Group';
     groupToggle.textContent = collapsedGroups.has(item.id)
       ? 'Expand group details'
       : 'Collapse group details';
     groupToggle.setAttribute('aria-pressed', String(collapsedGroups.has(item.id)));
-    root.querySelector('[data-action=connections]').disabled = !(config.relations ?? []).some(
+    (root.querySelector('[data-action=connections]') as HTMLButtonElement).disabled = !(
+      config.relations ?? []
+    ).some(
       (relation) => relation.id === item.id || relation.from === item.id || relation.to === item.id,
     );
     updateSelection();
@@ -454,31 +566,32 @@ export function mountDiagramStudio(document = globalThis.document) {
     }
     status(item.label);
   }
-  const search = root.querySelector('[data-search]');
+  const search = root.querySelector('[data-search]') as HTMLInputElement;
   listen(search, 'input', updateOutlineFilter);
-  listen(search, 'keydown', (event) => {
+  listen(search, 'keydown', (event: KeyboardEvent) => {
     if (event.key === 'Enter') {
-      const first = root.querySelector('[data-item-index]:not([hidden])');
+      const first = root.querySelector<HTMLElement>('[data-item-index]:not([hidden])');
       if (first) selectItem(Number(first.dataset.itemIndex));
     }
   });
 
-  function showChapter(index) {
+  function showChapter(index: number) {
     presentationIndex = Math.max(0, Math.min(chapters.length - 1, index));
     const chapter = chapters[presentationIndex];
-    root.querySelector('[data-chapter-label]').textContent = chapter.label;
-    root.querySelector('[data-chapter-progress]').textContent =
+    (root.querySelector('[data-chapter-label]') as HTMLElement).textContent = chapter.label;
+    (root.querySelector('[data-chapter-progress]') as HTMLElement).textContent =
       `${presentationIndex + 1} of ${chapters.length}`;
-    root.querySelector('[data-action=previous-chapter]').disabled = presentationIndex === 0;
-    root.querySelector('[data-action=next-chapter]').disabled =
+    (root.querySelector('[data-action=previous-chapter]') as HTMLButtonElement).disabled =
+      presentationIndex === 0;
+    (root.querySelector('[data-action=next-chapter]') as HTMLButtonElement).disabled =
       presentationIndex === chapters.length - 1;
     focusBounds(chapter.bounds);
     status(`Chapter ${presentationIndex + 1} of ${chapters.length} · ${chapter.label}`);
   }
   function resetPresentation() {
     root.dataset.present = 'false';
-    root.querySelector('[data-presentation-nav]').hidden = true;
-    const button = root.querySelector('[data-action=present]');
+    (root.querySelector('[data-presentation-nav]') as HTMLElement).hidden = true;
+    const button = root.querySelector('[data-action=present]') as HTMLButtonElement;
     button.textContent = 'Present';
     button.setAttribute('aria-pressed', 'false');
     fit();
@@ -487,8 +600,8 @@ export function mountDiagramStudio(document = globalThis.document) {
     const active = root.dataset.present !== 'true';
     root.dataset.present = String(active);
     setRail(false);
-    root.querySelector('[data-presentation-nav]').hidden = !active;
-    const button = root.querySelector('[data-action=present]');
+    (root.querySelector('[data-presentation-nav]') as HTMLElement).hidden = !active;
+    const button = root.querySelector('[data-action=present]') as HTMLButtonElement;
     button.textContent = active ? 'Exit presentation' : 'Present';
     button.setAttribute('aria-pressed', String(active));
     try {
@@ -503,7 +616,7 @@ export function mountDiagramStudio(document = globalThis.document) {
   listen(document, 'fullscreenchange', () => {
     if (!document.fullscreenElement && root.dataset.present === 'true') resetPresentation();
   });
-  const actions = {
+  const actions: Record<string, () => void> = {
     pan: () => setMode('interact'),
     comment: () => setMode('comment'),
     'zoom-in': () => zoom(camera.scale * 1.2),
@@ -543,7 +656,7 @@ export function mountDiagramStudio(document = globalThis.document) {
     selectedIndex = -1;
     connectionFocus = false;
     updateSelection();
-    root.querySelector('[data-element-details]').hidden = true;
+    (root.querySelector('[data-element-details]') as HTMLElement).hidden = true;
     root
       .querySelectorAll('[aria-current=true]')
       .forEach((element) => element.removeAttribute('aria-current'));
@@ -565,26 +678,27 @@ export function mountDiagramStudio(document = globalThis.document) {
       },
     });
   };
-  listen(root, 'click', (event) => {
-    const button = event.target.closest('[data-action]');
-    if (button) actions[button.dataset.action]?.();
-    const item = event.target.closest('[data-item-index]');
+  listen(root, 'click', (event: TargetedEvent<MouseEvent>) => {
+    const button = event.target.closest<HTMLElement>('[data-action]');
+    // The matched element carries its data-action.
+    if (button) actions[button.dataset.action as string]?.();
+    const item = event.target.closest<HTMLElement>('[data-item-index]');
     if (item) selectItem(Number(item.dataset.itemIndex));
     if (event.target.closest('[data-planr-close-feedback]')) {
       setRail(false);
-      root.querySelector('[data-action=review]').focus();
+      (root.querySelector('[data-action=review]') as HTMLElement).focus();
     }
     if (!event.target.closest('.diagram-export'))
-      root.querySelector('.diagram-export').open = false;
+      (root.querySelector('.diagram-export') as HTMLDetailsElement).open = false;
   });
-  function point(event) {
+  function point(event: MouseEvent) {
     const rect = canvas.getBoundingClientRect();
     return { x: event.clientX - rect.left, y: event.clientY - rect.top };
   }
   function resetGesture() {
     pointers.clear();
     gesture = null;
-    root.querySelector('[data-selection]').hidden = true;
+    (root.querySelector('[data-selection]') as HTMLElement).hidden = true;
     delete canvas.dataset.dragging;
   }
   function beginPinch() {
@@ -597,9 +711,9 @@ export function mountDiagramStudio(document = globalThis.document) {
       diagramX: (center.x - camera.x) / camera.scale,
       diagramY: (center.y - camera.y) / camera.scale,
     };
-    root.querySelector('[data-selection]').hidden = true;
+    (root.querySelector('[data-selection]') as HTMLElement).hidden = true;
   }
-  listen(canvas, 'pointerdown', (event) => {
+  listen(canvas, 'pointerdown', (event: TargetedEvent<PointerEvent>) => {
     if (
       event.target.closest('button,a,input,.diagram-canvas-tools,.planr-pin') ||
       ![0, 1].includes(event.button)
@@ -629,7 +743,7 @@ export function mountDiagramStudio(document = globalThis.document) {
     };
     if (!comment) canvas.dataset.dragging = 'true';
   });
-  listen(canvas, 'pointermove', (event) => {
+  listen(canvas, 'pointermove', (event: PointerEvent) => {
     if (!pointers.has(event.pointerId)) return;
     pointers.set(event.pointerId, point(event));
     if (!gesture) return;
@@ -657,7 +771,7 @@ export function mountDiagramStudio(document = globalThis.document) {
         x: event.clientX,
         y: event.clientY,
       });
-      const selection = root.querySelector('[data-selection]');
+      const selection = root.querySelector('[data-selection]') as HTMLElement;
       selection.hidden = false;
       Object.assign(selection.style, {
         left: `${region.x * 100}%`,
@@ -667,7 +781,7 @@ export function mountDiagramStudio(document = globalThis.document) {
       });
     }
   });
-  listen(canvas, 'pointerup', (event) => {
+  listen(canvas, 'pointerup', (event: PointerEvent) => {
     if (!pointers.has(event.pointerId)) return;
     if (
       gesture?.type === 'pan' &&
@@ -694,7 +808,7 @@ export function mountDiagramStudio(document = globalThis.document) {
     resetGesture();
   });
   listen(canvas, 'pointercancel', resetGesture);
-  listen(canvas, 'lostpointercapture', (event) => {
+  listen(canvas, 'lostpointercapture', (event: PointerEvent) => {
     if (pointers.has(event.pointerId)) resetGesture();
   });
   listen(window, 'blur', () => {
@@ -704,7 +818,7 @@ export function mountDiagramStudio(document = globalThis.document) {
   listen(
     canvas,
     'wheel',
-    (event) => {
+    (event: TargetedEvent<WheelEvent>) => {
       if (event.target.closest('.diagram-canvas-tools')) return;
       event.preventDefault();
       const p = point(event);
@@ -720,7 +834,7 @@ export function mountDiagramStudio(document = globalThis.document) {
     },
     { passive: false },
   );
-  listen(document, 'keydown', (event) => {
+  listen(document, 'keydown', (event: TargetedEvent<KeyboardEvent>) => {
     if (
       event.target.closest(
         'input,textarea,select,[contenteditable=true],.planr-annotation-composer',
@@ -750,7 +864,7 @@ export function mountDiagramStudio(document = globalThis.document) {
       event.preventDefault();
       space = true;
     }
-    const keys = {
+    const keys: Record<string, string> = {
       f: 'fit',
       0: 'fit',
       w: 'width',
@@ -770,7 +884,7 @@ export function mountDiagramStudio(document = globalThis.document) {
     if (key === 'escape') {
       resetGesture();
       setMode('interact');
-      root.querySelector('.diagram-export').open = false;
+      (root.querySelector('.diagram-export') as HTMLDetailsElement).open = false;
       if (root.dataset.present === 'true') void present();
     }
     if (document.activeElement === canvas && key.startsWith('arrow')) {
@@ -781,7 +895,7 @@ export function mountDiagramStudio(document = globalThis.document) {
       paint();
     }
   });
-  listen(document, 'keyup', (event) => {
+  listen(document, 'keyup', (event: KeyboardEvent) => {
     if (event.key === ' ') space = false;
   });
   let lastWidth = canvas.clientWidth,

@@ -2,6 +2,24 @@ import { parseFragment } from 'parse5';
 import { DIAGRAM_ADAPTIVE_STYLE_PATTERN } from '../diagram/rendering/theme.mjs';
 import { escapeHtml } from '../internal/escape.mjs';
 
+/** The parse5 node fields the sanitizer reads; text and element nodes carry different ones. */
+interface MarkupNode {
+  nodeName: string;
+  tagName?: string;
+  namespaceURI?: string;
+  value?: string;
+  attrs?: Array<{ name: string; value: string; namespace?: string; prefix?: string }>;
+  childNodes?: MarkupNode[];
+}
+/** A labelled drawing element the studio lists and focuses. */
+export interface DiagramSvgItem {
+  id: string;
+  label: string;
+  kind: 'Section' | 'Group' | 'Lane' | 'Connection' | 'Note' | 'Item';
+  x: number;
+  y: number;
+}
+
 const TAGS = new Set([
   'svg',
   'g',
@@ -69,23 +87,25 @@ const ATTRS = new Set([
   'data-lane-id',
   'data-scene-id',
 ]);
-const key = (value) => `diagram-content-${value}`;
-const fail = () => {
+const key = (value: string) => `diagram-content-${value}`;
+const fail: () => never = () => {
   throw new Error('Diagram SVG contains unsupported or active markup. Rerender it with OpenPlanr.');
 };
-const attrs = (node) =>
+const attrs = (node: MarkupNode) =>
   Object.fromEntries((node.attrs ?? []).map((attr) => [attr.name, attr.value]));
-const text = (node) =>
-  node.nodeName === '#text' ? node.value : (node.childNodes ?? []).map(text).join(' ');
-const number = (value, fallback = 0) => (Number.isFinite(Number(value)) ? Number(value) : fallback);
+// A text node always carries its value.
+const text = (node: MarkupNode): string =>
+  node.nodeName === '#text' ? (node.value as string) : (node.childNodes ?? []).map(text).join(' ');
+// biome-ignore format: bundles keep this one-line arrow; wrapping would change their bytes.
+const number = (value: unknown, fallback = 0) => (Number.isFinite(Number(value)) ? Number(value) : fallback);
 
 /** Rebuild a passive SVG allowlist before it enters the trusted parent DOM.
  * Use the verified output, so scene-owned edits and older renders keep their pixels. */
-export function prepareDiagramSvg(bytes) {
+export function prepareDiagramSvg(bytes: string) {
   if (Buffer.byteLength(bytes, 'utf8') > 10 * 1024 * 1024) fail();
   const fragment = parseFragment(bytes);
-  const roots = fragment.childNodes.filter(
-    (node) => node.nodeName !== '#text' || node.value.trim(),
+  const roots: MarkupNode[] = fragment.childNodes.filter(
+    (node: MarkupNode) => node.nodeName !== '#text' || (node.value as string).trim(),
   );
   if (roots.length !== 1 || roots[0].tagName !== 'svg') fail();
   const root = roots[0],
@@ -98,9 +118,9 @@ export function prepareDiagramSvg(bytes) {
     dimensions.slice(2).some((value) => value <= 0 || value > 16384)
   )
     fail();
-  const items = [];
+  const items: DiagramSvgItem[] = [];
   let nodes = 0;
-  function serialize(node, depth = 0) {
+  function serialize(node: MarkupNode, depth = 0): string {
     if (++nodes > 50000 || depth > 64) fail();
     if (node.nodeName === '#text') return escapeHtml(node.value);
     // Only the renderer's own dark-scheme remap is passive. A stylesheet inside
@@ -115,7 +135,9 @@ export function prepareDiagramSvg(bytes) {
         fail();
       return '';
     }
-    if (!TAGS.has(node.tagName) || node.namespaceURI !== 'http://www.w3.org/2000/svg') fail();
+    // Set.has accepts only its element type; a text node has no tag and fails the check.
+    // biome-ignore format: bundles keep this one-line statement; wrapping would change their bytes.
+    if (!TAGS.has(node.tagName as string) || node.namespaceURI !== 'http://www.w3.org/2000/svg') fail();
     const values = attrs(node);
     const fields = (node.attrs ?? []).map((attr) => {
       if (!ATTRS.has(attr.name) || (attr.namespace && attr.name !== 'xmlns') || attr.prefix) fail();
@@ -143,11 +165,15 @@ export function prepareDiagramSvg(bytes) {
       text(node).trim().replace(/\s+/g, ' ') ||
       (identity === 'data-relation-id' ? `Connection ${values[identity]}` : '');
     if (identity && label) {
+      // includes accepts only its element type; a child without a tag simply does not match.
+      // biome-ignore format: bundles keep this one-line call; wrapping would change their bytes.
       const shape =
-        (node.childNodes ?? []).find((child) => ['rect', 'line', 'path'].includes(child.tagName)) ??
+        (node.childNodes ?? []).find((child) => ['rect', 'line', 'path'].includes(child.tagName as string)) ??
         node;
       const geometry = attrs(shape);
-      const pathPoints = geometry.d?.match(/-?\d+(?:\.\d+)?/g)?.map(Number);
+      // The `?.length` checks below also handle a missing path; TypeScript rejects comparing
+      // undefined with a number, which JavaScript evaluates to false.
+      const pathPoints = geometry.d?.match(/-?\d+(?:\.\d+)?/g)?.map(Number) as number[];
       const x =
         shape.tagName === 'path' && pathPoints?.length >= 4
           ? (pathPoints[0] + pathPoints[2]) / 2
@@ -180,7 +206,7 @@ export function prepareDiagramSvg(bytes) {
     return `<${node.tagName} ${fields.join(' ')}>${(node.childNodes ?? []).map((child) => serialize(child, depth + 1)).join('')}</${node.tagName}>`;
   }
   const svg = serialize(root);
-  const order = { Section: 0, Group: 1, Item: 2, Connection: 3, Note: 4 };
+  const order: Record<string, number> = { Section: 0, Group: 1, Item: 2, Connection: 3, Note: 4 };
   items.sort((a, b) => order[a.kind] - order[b.kind]);
   return { svg, scene: { width: dimensions[2], height: dimensions[3] }, items };
 }

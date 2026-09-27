@@ -1,17 +1,33 @@
+import type {
+  DiagramAuthoringBundle,
+  DiagramAuthoringProfile,
+} from '@openplanr/protocol/diagram-authoring-contracts';
 import { createDiagramEditorDraft } from '../diagram/editor/draft.mjs';
 import { createDiagramEditorRecovery } from '../diagram/editor/recovery.mjs';
-import { createDiagramEditorSession } from '../diagram/editor/session.mjs';
+import {
+  createDiagramEditorSession,
+  type DiagramEditorSession,
+} from '../diagram/editor/session.mjs';
 import { createDiagramLocalOwnerTransport } from '../diagram/editor/transport.mjs';
 import { mountDiagramEditor } from './diagram-editor.mjs';
 
+/** The `diagram-owner-data` payload local-owner.mts embeds in the owner page. */
+interface OwnerPageConfig {
+  diagramId: string;
+  title: string;
+  grammar: DiagramAuthoringProfile;
+}
+type OwnerFetch = NonNullable<Parameters<typeof createDiagramLocalOwnerTransport>[0]['fetch']>;
+
 /** Thin owner host: authenticate before reading recovery; one shared editor owns interaction. */
-export async function mountDiagramOwnerStudio(document = globalThis.document) {
-  const window = document.defaultView;
+export async function mountDiagramOwnerStudio(document: Document = globalThis.document) {
+  // The owner page runs in a window.
+  const window = document.defaultView as Window & typeof globalThis;
   const root = document.getElementById('diagram-owner-editor');
   if (!root) return null;
   let disposed = false,
-    session,
-    mount;
+    session: DiagramEditorSession | undefined,
+    mount: ReturnType<typeof mountDiagramEditor> | undefined;
   const dispose = () => {
     if (disposed) return;
     disposed = true;
@@ -21,11 +37,14 @@ export async function mountDiagramOwnerStudio(document = globalThis.document) {
   };
   window.addEventListener('pagehide', dispose, { once: true });
   try {
-    const config = JSON.parse(document.getElementById('diagram-owner-data').textContent);
+    // local-owner.mts serves this page with its data; the owner checks every edit it receives.
+    // biome-ignore format: bundles keep this one-line call; wrapping would change their bytes.
+    const config: OwnerPageConfig = JSON.parse((document.getElementById('diagram-owner-data') as HTMLElement).textContent as string);
+    // lib.dom types a finished read's value as `T | undefined`, wider than the transport declares.
     const transport = createDiagramLocalOwnerTransport({
       apiBase: new URL('api/', window.location.href).href,
       origin: window.location.origin,
-      fetch: window.fetch.bind(window),
+      fetch: window.fetch.bind(window) as OwnerFetch,
     });
     const authoritative = await transport.read();
     if (disposed) return null;
@@ -41,7 +60,7 @@ export async function mountDiagramOwnerStudio(document = globalThis.document) {
     }
     // A blocked sessionStorage getter must not prevent editing in memory. The
     // opaque scope comes only from the authenticated owner, never page content.
-    let storage;
+    let storage: Storage | undefined;
     try {
       storage = window.sessionStorage;
     } catch {
@@ -51,7 +70,8 @@ export async function mountDiagramOwnerStudio(document = globalThis.document) {
       storage,
       scope: { sessionId: authoritative.recoveryScope, diagramId: authoritative.diagramId },
     });
-    let bundle = authoritative.bundle;
+    // A ready read carries the bundle; an absent read replaces it with a new draft below.
+    let bundle = (authoritative as { bundle: DiagramAuthoringBundle }).bundle;
     if (authoritative.status === 'absent') {
       const draft = createDiagramEditorDraft({
         diagramId: authoritative.diagramId,

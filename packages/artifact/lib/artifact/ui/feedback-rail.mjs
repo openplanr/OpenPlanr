@@ -866,6 +866,15 @@ function decisionCopy(decision) {
  * Mount the rail into renderer-owned slots. All reviewer strings enter the DOM
  * through `textContent` (form controls use their `value` property); HTML
  * parsing is never used.
+ * @param {{
+ *   root: HTMLElement;
+ *   document?: Document;
+ *   window?: Window & typeof globalThis;
+ *   initialReview?: unknown;
+ *   reviewOf?: string;
+ *   presentation?: object;
+ *   [option: string]: unknown;
+ * }} options
  */
 export function mountArtifactFeedbackRail({
   root,

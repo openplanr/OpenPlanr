@@ -1,23 +1,57 @@
-// @ts-check
+import type {
+  DiagramAuthoringBundle,
+  DiagramFidelityReport,
+} from '@openplanr/protocol/diagram-authoring-contracts';
 import {
   adoptMermaidCopy,
   exportMermaidCopy,
+  type MermaidCopyDiagnostic,
+  type MermaidCopyPreview,
   previewMermaidCopy,
   renderAuthoredDiagramSvg,
 } from '../diagram/authoring/index.mjs';
+import type { DiagramEditorSession } from '../diagram/editor/index.mjs';
 import { button, element } from './diagram-editor-dom.mjs';
+
+export interface DiagramSourcePanelController {
+  focus(): void;
+  selectTab(tab: 'import' | 'export', options?: { focus?: boolean }): void;
+  getSource(): string;
+  dispose(): void;
+}
+
+export interface DiagramSourcePanelOptions {
+  /**
+   * Host element for the panel. Standalone hosts receive the scoped
+   * `planr-diagram-source-panel` class and must load `diagram-editor.css`.
+   */
+  root: HTMLElement;
+  session: Pick<DiagramEditorSession, 'getState' | 'adoptInitialCopy'>;
+  /** Exact source bytes decoded as UTF-8. CRLF is retained until the author edits. */
+  source?: string;
+  initialTab?: 'import' | 'export';
+  onSourceChange?: (source: string) => void;
+  onBeforeAdopt?: () => boolean;
+  onNavigateElements?: (elementIds: string[]) => void;
+  onAdopt?: (bundle: DiagramAuthoringBundle) => void;
+  onClose?: () => void;
+  onReport?: (message: string) => void;
+}
+/** A preview or export diagnostic; `detail` covers a kernel diagnostic in the same list. */
+type SourceDiagnostic = MermaidCopyDiagnostic & { detail?: string };
 
 const MAX_SOURCE_BYTES = 65_536;
 const SOURCE_LIMIT_MESSAGE = 'This source exceeds the 64 KiB import limit.';
 const EMPTY_CALLBACK = () => {};
 const ID_PREFIX = 'diagram-source';
 let mountCount = 0;
-const safeName = (name) => name.replace(/[^a-z0-9_-]/giu, '-').slice(0, 80) || 'diagram';
-const fidelityName = (value) =>
+const safeName = (name: string) => name.replace(/[^a-z0-9_-]/giu, '-').slice(0, 80) || 'diagram';
+const fidelityName = (value: string) =>
   value === 'lossless' ? 'Preserved' : value === 'partial' ? 'Partial' : 'Unsupported';
 
-function download(document, bytes, type, name) {
-  const window = document.defaultView;
+function download(document: Document, bytes: string, type: string, name: string) {
+  // The panel only mounts in a document with a window.
+  const window = document.defaultView as Window & typeof globalThis;
   const url = window.URL.createObjectURL(new window.Blob([bytes], { type }));
   const link = element(document, 'a', { href: url, download: name });
   document.body.append(link);
@@ -26,7 +60,7 @@ function download(document, bytes, type, name) {
   window.setTimeout(() => window.URL.revokeObjectURL(url), 1000);
 }
 
-function sourceOffset(source, displayedSource, byteOffset) {
+function sourceOffset(source: string, displayedSource: string, byteOffset: number) {
   const bytes = new TextEncoder().encode(source);
   const prefix = new TextDecoder('utf-8', { ignoreBOM: true }).decode(
     bytes.subarray(0, byteOffset),
@@ -48,8 +82,8 @@ function sourceOffset(source, displayedSource, byteOffset) {
   return displayedIndex;
 }
 
-function sourceLineRange(source, lineNumber) {
-  const ranges = [];
+function sourceLineRange(source: string, lineNumber: number | undefined) {
+  const ranges: Array<{ start: number; end: number }> = [];
   let start = 0;
   for (let index = 0; index < source.length; index++) {
     if (source[index] !== '\r' && source[index] !== '\n') continue;
@@ -61,7 +95,7 @@ function sourceLineRange(source, lineNumber) {
   return ranges[Math.max(0, Math.min(ranges.length - 1, (lineNumber ?? 1) - 1))];
 }
 
-function fidelity(document, report) {
+function fidelity(document: Document, report: DiagramFidelityReport) {
   const wrap = element(document, 'div', {
     className: 'de-source-fidelity',
     'aria-label': 'Copy fidelity',
@@ -70,7 +104,7 @@ function fidelity(document, report) {
     ['Meaning', 'semantic'],
     ['Authored layout', 'presentation'],
     ['Original source text', 'sourceText'],
-  ]) {
+  ] satisfies Array<[string, 'semantic' | 'presentation' | 'sourceText']>) {
     const row = element(document, 'div', {
       className: 'de-source-fidelity-row',
     });
@@ -92,10 +126,7 @@ function fidelity(document, report) {
   return wrap;
 }
 
-/**
- * One inert copy-interchange panel shared by local and company editor hosts.
- * @type {typeof import('./diagram-source-panel.d.mts').mountDiagramSourcePanel}
- */
+/** Mount the host-neutral Mermaid copy panel used by local and company owner shells. */
 export function mountDiagramSourcePanel({
   root,
   session,
@@ -107,7 +138,7 @@ export function mountDiagramSourcePanel({
   onAdopt = EMPTY_CALLBACK,
   onClose,
   onReport = EMPTY_CALLBACK,
-}) {
+}: DiagramSourcePanelOptions): DiagramSourcePanelController {
   if (
     !root?.ownerDocument ||
     !session ||
@@ -126,10 +157,10 @@ export function mountDiagramSourcePanel({
   // The first panel keeps the historical ids; later mounts take a suffix so two can share a document.
   mountCount += 1;
   const idPrefix = mountCount === 1 ? ID_PREFIX : `${ID_PREFIX}-${mountCount}`;
-  const scopedId = (name) => `${idPrefix}-${name}`;
+  const scopedId = (name: string) => `${idPrefix}-${name}`;
   const wrap = element(document, 'div', { className: 'de-source-panel' });
   root.replaceChildren(wrap);
-  let preview = null;
+  let preview: MermaidCopyPreview | null = null;
   let acknowledgement = false;
   let disposed = false;
   let uploadGeneration = 0;
@@ -157,7 +188,7 @@ export function mountDiagramSourcePanel({
   const sourceEditor = element(document, 'div', {
     className: 'de-source-editor',
   });
-  const sourceWithinLimit = (value) =>
+  const sourceWithinLimit = (value: string) =>
     value.length <= MAX_SOURCE_BYTES &&
     new TextEncoder().encode(value).byteLength <= MAX_SOURCE_BYTES;
   const updateLines = () => {
@@ -196,7 +227,7 @@ export function mountDiagramSourcePanel({
     panelError.textContent = '';
     onReport('');
   }
-  function showError(message) {
+  function showError(message: string) {
     panelError.textContent = message;
     panelError.hidden = false;
     onReport(message);
@@ -274,14 +305,14 @@ export function mountDiagramSourcePanel({
   if (typeof onClose === 'function') footer.append(button(document, 'Close', 'source-close'));
   wrap.append(tabs, panelError, importSection, exportSection);
   if (footer.childElementCount) wrap.append(footer);
-  function selectTab(next, { focus = false } = {}) {
+  function selectTab(next: 'import' | 'export', { focus = false }: { focus?: boolean } = {}) {
     const importing = next === 'import';
     importSection.hidden = !importing;
     exportSection.hidden = importing;
-    for (const [tab, selected] of /** @type {Array<[HTMLButtonElement, boolean]>} */ ([
+    for (const [tab, selected] of [
       [importTab, importing],
       [exportTab, !importing],
-    ])) {
+    ] satisfies Array<[HTMLButtonElement, boolean]>) {
       tab.setAttribute('aria-selected', String(selected));
       tab.tabIndex = selected ? 0 : -1;
       if (selected && focus) tab.focus();
@@ -304,7 +335,10 @@ export function mountDiagramSourcePanel({
     selectTab(next === importTab ? 'import' : 'export', { focus: true });
   });
 
-  function invalidate(nextSource, { invalidateUpload = true } = {}) {
+  function invalidate(
+    nextSource: string,
+    { invalidateUpload = true }: { invalidateUpload?: boolean } = {},
+  ) {
     if (invalidateUpload) {
       uploadGeneration++;
       uploadPending = false;
@@ -377,7 +411,10 @@ export function mountDiagramSourcePanel({
     }
     if (generation === uploadGeneration) upload.value = '';
   });
-  function diagnosticList(items, { navigable = true } = {}) {
+  function diagnosticList(
+    items: SourceDiagnostic[],
+    { navigable = true }: { navigable?: boolean } = {},
+  ) {
     const list = element(document, 'ol', {
       className: 'de-source-diagnostics',
       'aria-label': 'Source diagnostics',
@@ -432,7 +469,7 @@ export function mountDiagramSourcePanel({
       showError(status.textContent);
       return;
     }
-    const options = {
+    const options: NonNullable<Parameters<typeof previewMermaidCopy>[1]> = {
       diagramId: bundle.diagramId,
       title: bundle.document.title,
     };
@@ -577,8 +614,9 @@ export function mountDiagramSourcePanel({
     exportResult.dataset.mermaidText = copy.text;
     exportResult.dataset.bundleDigest = bundle.bundleDigest;
   }
-  const click = (event) => {
-    const target = event.target.closest('[data-action]');
+  const click = (event: MouseEvent) => {
+    // Click events target elements.
+    const target = (event.target as Element).closest<HTMLElement>('[data-action]');
     if (!target || !wrap.contains(target)) return;
     const action = target.dataset.action;
     if (action === 'source-import-tab' || action === 'source-export-tab') {
@@ -624,10 +662,10 @@ export function mountDiagramSourcePanel({
         : sourceLineRange(displayedSource, item.line);
       textarea.focus();
       textarea.setSelectionRange(range.start, Math.max(range.start, range.end));
-      for (const row of /** @type {NodeListOf<HTMLElement>} */ (
-        result.querySelectorAll('[data-object-id]')
-      ))
-        row.dataset.affected = String((item.elementIds ?? []).includes(row.dataset.objectId));
+      // The selector matched each row's data-object-id.
+      for (const row of result.querySelectorAll<HTMLElement>('[data-object-id]'))
+        // biome-ignore format: bundles keep this one-line call; wrapping would change their bytes.
+        row.dataset.affected = String((item.elementIds ?? []).includes(row.dataset.objectId as string));
       if (item.elementIds?.length) onNavigateElements([...item.elementIds]);
     } else if (action === 'source-export-preview') showExport();
     else if (action === 'source-download-mermaid') {
@@ -637,7 +675,8 @@ export function mountDiagramSourcePanel({
         return;
       }
       if (state.bundle.bundleDigest !== exportResult.dataset.bundleDigest) {
-        target.disabled = true;
+        // The download action belongs to the export result's button.
+        (target as HTMLButtonElement).disabled = true;
         showError('The diagram changed. Preview the Mermaid export again before downloading it.');
         return;
       }
