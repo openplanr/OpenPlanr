@@ -978,7 +978,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:7f045dab7ae162b0aa4bb588b93122ce1a972f98adc6bf73f547a1b53cd77192"
+          "digest": "sha256:1de8a8820c00cfffa6f6162d43efb8c2a190c4fa09b5730e88312332d0049502"
         },
         {
           "path": "schemas/design-document.schema.json",
@@ -1540,7 +1540,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:7f045dab7ae162b0aa4bb588b93122ce1a972f98adc6bf73f547a1b53cd77192"
+          "digest": "sha256:1de8a8820c00cfffa6f6162d43efb8c2a190c4fa09b5730e88312332d0049502"
         },
         {
           "path": "schemas/design-document.schema.json",
@@ -2102,7 +2102,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:7f045dab7ae162b0aa4bb588b93122ce1a972f98adc6bf73f547a1b53cd77192"
+          "digest": "sha256:1de8a8820c00cfffa6f6162d43efb8c2a190c4fa09b5730e88312332d0049502"
         },
         {
           "path": "schemas/design-document.schema.json",
@@ -2621,7 +2621,7 @@
       "source": "skills/planr-doctor/openplanr.skill.json",
       "entrypoint": "skills/planr-doctor/SKILL.md",
       "description": "Diagnose OpenPlanr CLI, pipeline, runtime-adapter, installation, and lock health. Use when setup, discovery, versions, generated assets, or runtime behavior seems wrong.",
-      "sourceDigest": "sha256:f18e014243412cfdda22555be2e09f5e28bf5a7ef543c8b016f6af4854683b1a",
+      "sourceDigest": "sha256:afa88f2eec60a49729f40f0722b43fe6642c13478673bcf53304833637b10f31",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -2959,7 +2959,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:7f045dab7ae162b0aa4bb588b93122ce1a972f98adc6bf73f547a1b53cd77192"
+          "digest": "sha256:1de8a8820c00cfffa6f6162d43efb8c2a190c4fa09b5730e88312332d0049502"
         },
         {
           "path": "schemas/design-document.schema.json",

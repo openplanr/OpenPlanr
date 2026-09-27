@@ -1,10 +1,10 @@
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
-import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { planrHome } from '../artifact/internal/planr-home.mjs';
 import { PipelineError } from './errors.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -100,12 +100,7 @@ function resolvedAdapter(id, source, available, projectRoot, { strictRuntimeLock
 }
 
 function readActiveRuntime(projectRoot) {
-  const statePath = join(
-    process.env.OPENPLANR_HOME ?? homedir(),
-    '.planr',
-    'runtime',
-    'state.json',
-  );
+  const statePath = join(planrHome(), 'runtime', 'state.json');
   if (!existsSync(statePath)) return null;
   try {
     const state = JSON.parse(readFileSync(statePath, 'utf8'));

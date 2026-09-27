@@ -36,6 +36,7 @@ function buildCheckout(version) {
     'docs/compatibility-matrix.md',
     'docs/protocol',
     'input/tech/stack.md',
+    'lib/artifact/internal/planr-home.mjs',
     'lib/ecosystem',
     'lib/protocol/jcs.mjs',
     'schemas/v1.0.0',

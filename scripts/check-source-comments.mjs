@@ -38,6 +38,8 @@ const EXCLUDED_PREFIXES = [
   'packages/cli/lib/host-packages',
   'packages/cli/lib/integrations.mjs',
   'packages/cli/lib/integrations.d.mts',
+  'packages/cli/lib/planr-home.mjs',
+  'packages/cli/lib/planr-home.d.mts',
   'packages/cli/tests/e2e/baselines',
   'packages/cli/tests/fixtures',
   'packages/pipeline/conformance/expected',

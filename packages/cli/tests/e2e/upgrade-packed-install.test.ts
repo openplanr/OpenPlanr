@@ -72,7 +72,7 @@ function isolatedEnvironment(
   return {
     ...process.env,
     HOME: join(root, 'home'),
-    OPENPLANR_HOME: join(root, 'home', '.planr'),
+    PLANR_HOME: join(root, 'home', '.planr'),
     OPENPLANR_PIPELINE_ROOT: '',
     OPENPLANR_ECOSYSTEM_SOURCE: ecosystemFixture,
     NO_COLOR: '1',
@@ -339,7 +339,7 @@ describe('packed planr upgrade apply', () => {
       {
         // A dedicated home so this run reads the apply fixture fresh rather than
         // the aligned manifest the `status` scenario cached under the shared home.
-        OPENPLANR_HOME: join(root, 'home-apply', '.planr'),
+        PLANR_HOME: join(root, 'home-apply', '.planr'),
         OPENPLANR_ECOSYSTEM_SOURCE: applyEcosystem,
         OPENPLANR_NPM_BIN: fakeNpm,
         OPENPLANR_FAKE_PKG_JSON: join(packageRoot, 'package.json'),
@@ -441,7 +441,7 @@ describe('packed planr upgrade apply', () => {
     );
 
     const result = run(['upgrade', 'apply', '--yes', '--json'], {
-      OPENPLANR_HOME: join(root, 'home-migrate', '.planr'),
+      PLANR_HOME: join(root, 'home-migrate', '.planr'),
       OPENPLANR_ECOSYSTEM_SOURCE: crossingEcosystem,
       OPENPLANR_NPM_BIN: fakeNpm,
       OPENPLANR_FAKE_PKG_JSON: pkgPath,

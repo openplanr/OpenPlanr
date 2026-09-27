@@ -295,7 +295,7 @@
     {
       "source": "packages/design/lib/design/share.mjs",
       "target": "lib/design/share.mjs",
-      "sha256": "d23335cd1ea5ef987740023325a7cb14dd32b21342520e499b1c25c583438662",
+      "sha256": "6a28bb17e1aa0ee7f9412d351f1715b5b7e3299923d74e041973c047dcf49188",
       "mode": "644"
     },
     {

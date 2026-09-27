@@ -19,6 +19,7 @@ import { homedir } from 'node:os';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { digestArtifactEnvelope } from '@openplanr/artifact/envelope.mjs';
 import { resolveArtifactReviewDestination } from '@openplanr/artifact/import.mjs';
+import { configuredPlanrHome } from '@openplanr/artifact/internal/planr-home.mjs';
 import { acquireStartLock } from '@openplanr/artifact/internal/server-util.mjs';
 import { createReviewLedger } from '@openplanr/artifact/merge.mjs';
 import {
@@ -46,9 +47,7 @@ function custodyLocation(file, options = {}, { allowMissing = false } = {}) {
   const root = resolve(
     options.custodyRoot ??
       join(
-        env.PLANR_HOME ||
-          env.OPENPLANR_HOME ||
-          join(realpathSync(env.HOME || homedir()), '.openplanr'),
+        configuredPlanrHome(env) ?? join(realpathSync(env.HOME || homedir()), '.openplanr'),
         'design-shares',
       ),
   );
@@ -74,7 +73,7 @@ function custodyLocation(file, options = {}, { allowMissing = false } = {}) {
         !isAbsolute(within)))
   )
     throw new Error(
-      'Design owner credentials must be stored outside the project. Set OPENPLANR_HOME to a private user-level directory.',
+      'Design owner credentials must be stored outside the project. Set PLANR_HOME to a private user-level directory.',
     );
   return { root, path, current };
 }

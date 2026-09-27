@@ -94,6 +94,16 @@ const sharedSkillResources = Object.freeze([
     destination: 'packages/cli/lib/integrations.d.mts',
     executable: false,
   },
+  {
+    source: 'packages/artifact/lib/artifact/internal/planr-home.mjs',
+    destination: 'packages/cli/lib/planr-home.mjs',
+    executable: false,
+  },
+  {
+    source: 'packages/artifact/lib/artifact/internal/planr-home.d.mts',
+    destination: 'packages/cli/lib/planr-home.d.mts',
+    executable: false,
+  },
   ...operateAdvisorDestinations.map((skillId) => ({
     source: 'skills/shared/operate-advisor-contract.md',
     destination: `skills/${skillId}/references/operate-advisor-contract.md`,
