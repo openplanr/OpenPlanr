@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.2639.5
+### Patch Changes
+
+- 7ea63db: Creating an artifact (`planr backlog add`, `planr epic create` and the other create commands) no longer reissues the id of a removed item, continues past 999 (`FEAT-1000`), gives concurrent runs different ids, and ignores `SPRINT-NNN/` notes folders; issued ids are recorded as empty files in each artifact folder's `.issued-ids/`, which belongs in version control with the rest of `.planr/`. `planr <type> list` now shows ids past 999, in numeric order.
+- ec8b895: `planr github sync` now reads the upper-case issue states `gh` reports, so pull no longer resets artifacts linked to closed issues to `pending`, push closes or reopens only the issues whose state differs, and the default direction reports a conflict only where the two sides disagree. An issue number that names a merged pull request counts as closed, and `planr github status` marks an issue it could not fetch as out of sync.
+- cea5634: Landing custody now clears a stored `recovery_required` receipt when the rollback or compensate intent is committed, so a landing host built on it can dispatch the recovery instead of failing with `LANDING_BINDING_MISMATCH`.
+- 2e5d794: A `reportLinter.vaguePhrases[].pattern` in `.planr/config.json` that is not a valid regular expression, or that can match empty text such as `(soon)?`, now fails config loading with `E_CONFIG_INVALID` naming the field and the pattern. Before, `planr report`, `planr report-linter` and `planr voice` failed with a raw `SyntaxError` or looped until the process ran out of memory.
+
 ## 2.2639.4
 ### Patch Changes
 

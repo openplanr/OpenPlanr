@@ -1,5 +1,20 @@
 # @openplanr/design
 
+## 0.3.3
+### Patch Changes
+
+- 5bd33fc: The design board no longer overwrites a board's `feedback.json` or the board token store `tokens.json` when it cannot read one: the file is kept, so earlier pins and other boards' URLs survive, and the board, the board command and `feedback resolve` report an error that names the file, without quoting it, and says how to recover. `planr-design setup` likewise leaves an unreadable `credentials.json` in place instead of replacing it, creates the file and a missing `~/.planr` owner-only from the start, and running daemons restart on the next board command (daemon version 6).
+- b6d7fdb: A new comment on a local design review no longer shows "Its type is waiting to sync" and a "Retry pending categories" button: the studio now saves the comment before its type, so the type is stored on the first try.
+- Updated dependencies [5bd33fc]
+- Updated dependencies [d45f022]
+- Updated dependencies [e6a0333]
+- Updated dependencies [2c85b80]
+- Updated dependencies [ede4a77]
+- Updated dependencies [ec8b895]
+- Updated dependencies [b26c196]
+  - @openplanr/artifact@0.5.5
+  - @openplanr/protocol@0.7.1
+
 ## 0.3.2
 ### Patch Changes
 
