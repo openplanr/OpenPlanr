@@ -72,7 +72,7 @@ body.planr-diagram-owner-page #diagram-owner-editor {
 .planr-diagram-editor {
   --de-bar-height: 56px;
   --de-left-width: 224px;
-  --de-right-width: 320px;
+  --de-right-width: 288px;
   --de-bg: var(--planr-color-background, #f4f6f8);
   --de-chrome: var(--planr-color-chrome, #fff);
   --de-panel: var(--planr-color-panel, #fafbfc);
@@ -316,24 +316,17 @@ body.planr-diagram-owner-page #diagram-owner-editor {
   min-width: 0;
   min-height: var(--de-bar-height);
   display: grid;
-  grid-template-columns: minmax(190px, 1fr) auto minmax(280px, 1fr);
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: var(--de-space-3);
-  padding: 0 var(--de-space-3);
+  padding: 0 var(--de-space-4);
   border-bottom: 1px solid var(--de-rule);
   background: color-mix(in srgb, var(--de-chrome) 96%, transparent);
   box-shadow: 0 1px 0 rgb(0 0 0 / 2%);
 }
 
 .planr-diagram-editor
-  :is(
-    .de-bar-start,
-    .de-bar-center,
-    .de-bar-end,
-    .de-toolbar-zone,
-    .de-command-group,
-    .de-bar-actions
-  ) {
+  :is(.de-bar-start, .de-bar-end, .de-toolbar-zone, .de-command-group, .de-bar-actions) {
   min-width: 0;
   display: flex;
   align-items: center;
@@ -343,16 +336,9 @@ body.planr-diagram-owner-page #diagram-owner-editor {
   gap: var(--de-space-1);
 }
 
-.planr-diagram-editor .de-bar-center {
-  justify-content: center;
-  gap: var(--de-space-1);
-}
-
-.planr-diagram-editor[data-read-only="true"] .de-bar-center {
-  visibility: hidden;
-}
-
-.planr-diagram-editor[data-read-only="true"] .de-bar-end [data-action="save"] {
+.planr-diagram-editor[data-read-only="true"]
+  .de-bar
+  :is([data-action="undo"], [data-action="redo"], [data-action="layout"], [data-action="save"]) {
   display: none;
 }
 
@@ -364,11 +350,7 @@ body.planr-diagram-owner-page #diagram-owner-editor {
 .planr-diagram-editor :is(.de-command-group, .de-toolbar-group, .de-bar-group) {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
-  padding: 2px;
-  border: 1px solid var(--de-rule);
-  border-radius: var(--de-radius-sm);
-  background: var(--de-raised);
+  gap: var(--de-space-1);
 }
 
 /* :where() adds no specificity, so the shared button hover rule still outranks this reset. */
@@ -435,32 +417,24 @@ body.planr-diagram-owner-page #diagram-owner-editor {
 .planr-diagram-editor .de-save-state {
   min-width: 0;
   flex: 0 0 auto;
-  padding: 2px var(--de-space-2);
-  border: 1px solid var(--de-rule);
-  border-radius: var(--de-radius-xs);
+  margin-inline-end: var(--de-space-2);
   color: var(--de-muted);
-  background: var(--de-chrome);
   font-size: var(--de-text-xs);
   font-weight: var(--de-weight-medium);
   line-height: var(--de-leading-xs);
-  text-align: center;
+  white-space: nowrap;
 }
 
-.planr-diagram-editor .de-save-state[data-state="saved"] {
-  border-color: color-mix(in srgb, var(--de-primary) 30%, var(--de-rule));
-  color: var(--de-primary);
-  background: var(--de-primary-soft);
+.planr-diagram-editor .de-save-state[data-state="unsaved"] {
+  color: var(--de-text);
 }
 
-.planr-diagram-editor
-  .de-save-state:is(
-    [data-state="offline"],
-    [data-state="conflict"],
-    [data-state="access-changed"]
-  ) {
-  border-color: color-mix(in srgb, var(--de-danger) 40%, var(--de-rule));
+.planr-diagram-editor .de-save-state[data-state="offline"] {
+  color: var(--de-warning);
+}
+
+.planr-diagram-editor .de-save-state:is([data-state="conflict"], [data-state="access-changed"]) {
   color: var(--de-danger);
-  background: var(--de-danger-soft);
 }
 
 .planr-diagram-editor .de-bar-actions {
@@ -489,13 +463,14 @@ body.planr-diagram-owner-page #diagram-owner-editor {
   box-shadow: none;
 }
 
-.planr-diagram-editor :is(.de-bar-actions, .de-bar-center, .de-bar-end) button[aria-pressed="true"],
+/* A pressed toggle is neutral; the accent stays reserved for Save, selection and focus. */
+.planr-diagram-editor :is(.de-bar-start, .de-bar-actions, .de-bar-end) button[aria-pressed="true"],
 .planr-diagram-editor
-  :is(.de-bar-actions, .de-bar-center, .de-bar-end)
+  :is(.de-bar-start, .de-bar-actions, .de-bar-end)
   button[aria-expanded="true"] {
-  border-color: color-mix(in srgb, var(--de-primary) 45%, var(--de-rule));
-  color: var(--de-primary);
-  background: var(--de-primary-soft);
+  border-color: var(--de-rule);
+  color: var(--de-text);
+  background: var(--de-raised);
 }
 
 /* Anchored command overflow */
@@ -632,34 +607,47 @@ body.planr-diagram-owner-page #diagram-owner-editor {
   box-shadow: inset 0 -2px var(--de-primary);
 }
 
+/* Rail headers hold underline tabs that fill the header height. */
 .planr-diagram-editor .de-panel-header > .de-panel-tabs {
-  min-height: 32px;
-  align-items: center;
-  flex: 0 0 auto;
-  gap: 1px;
-  padding: 2px;
-  border: 1px solid var(--de-rule);
-  border-radius: var(--de-radius-sm);
-  background: var(--de-raised);
+  min-width: 0;
+  min-height: 0;
+  align-self: stretch;
+  align-items: stretch;
+  flex: 1 1 auto;
+  gap: var(--de-space-4);
+  padding: 0;
+  border: 0;
+  background: transparent;
 }
 
 .planr-diagram-editor .de-panel-header > .de-panel-tabs button {
-  min-height: var(--de-control-height-sm);
-  padding: var(--de-space-1) var(--de-space-2);
-  border-radius: var(--de-radius-xs);
-  box-shadow: none;
-}
-
-.planr-diagram-editor .de-panel-header > .de-panel-tabs button[aria-selected="true"] {
-  color: var(--de-text);
-  background: var(--de-chrome);
-  box-shadow: var(--de-shadow-sm);
-}
-
-.planr-diagram-editor .de-panel-header > .de-panel-tabs .de-panel-close {
-  min-width: var(--de-control-height-sm);
-  flex: 0 0 var(--de-control-height-sm);
+  min-height: 0;
+  flex: 0 0 auto;
   padding: 0;
+  border: 0;
+  border-radius: 0;
+}
+
+.planr-diagram-editor .de-panel-header > .de-panel-tabs button:hover:not(:disabled) {
+  background: transparent;
+}
+
+/* A lone tab names the rail rather than offering a choice. */
+.planr-diagram-editor .de-panel-header > .de-panel-tabs button:only-child {
+  color: var(--de-text);
+  box-shadow: none;
+  cursor: default;
+}
+
+/* Full-bleed tabs, rows, menu items and summaries keep their focus ring inside their own box. */
+.planr-diagram-editor
+:is(
+  .de-panel-header > .de-panel-tabs button,
+  .de-outline-item button,
+  .de-menu-item,
+  details > summary
+):focus-visible {
+  outline-offset: -2px;
 }
 
 .planr-diagram-editor :is(.de-rail-tabs, .de-right-tabs) .de-close-rail {
@@ -716,41 +704,6 @@ body.planr-diagram-owner-page #diagram-owner-editor {
   border-bottom: 1px solid var(--de-rule);
   background: color-mix(in srgb, var(--de-panel) 96%, transparent);
   backdrop-filter: blur(12px);
-}
-
-.planr-diagram-editor .de-panel-title {
-  min-width: 0;
-  display: grid;
-  gap: 1px;
-}
-
-.planr-diagram-editor .de-panel-title:is(strong, h2) {
-  overflow: hidden;
-  margin: 0;
-  font-size: var(--de-text-sm);
-  font-weight: var(--de-weight-strong);
-  line-height: var(--de-leading-sm);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.planr-diagram-editor .de-panel-title :is(strong, h2) {
-  overflow: hidden;
-  margin: 0;
-  font-size: var(--de-text-sm);
-  font-weight: var(--de-weight-strong);
-  line-height: var(--de-leading-sm);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.planr-diagram-editor .de-panel-title small {
-  overflow: hidden;
-  color: var(--de-muted);
-  font-size: var(--de-text-xs);
-  line-height: var(--de-leading-xs);
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .planr-diagram-editor h2 {
@@ -1838,13 +1791,11 @@ body.planr-diagram-owner-page #diagram-owner-editor {
  * "compact" at 700px and below, "narrow" at 420px and below (tokens accumulate), otherwise
  * "desktop". A 200% browser zoom on a desktop naturally enters the drawer layout. */
 .planr-diagram-editor[data-layout~="drawer"] {
-  --de-right-width: min(336px, calc(100% - 48px));
+  --de-right-width: min(288px, calc(100% - 48px));
 }
 
 .planr-diagram-editor[data-layout~="drawer"] .de-bar {
-  grid-template-columns: minmax(160px, 1fr) auto minmax(190px, 1fr);
   gap: var(--de-space-2);
-  padding-inline: var(--de-space-3);
 }
 
 .planr-diagram-editor[data-layout~="drawer"] .de-button-label[data-responsive="hide"] {
@@ -1906,6 +1857,13 @@ body.planr-diagram-owner-page #diagram-owner-editor {
   backdrop-filter: blur(1px);
 }
 
+/* The inspector acts on the canvas beside it, so its drawer leaves the canvas undimmed. */
+.planr-diagram-editor[data-layout~="drawer"][data-right-open="true"]
+.de-drawer-backdrop:not([hidden]) {
+  background: transparent;
+  backdrop-filter: none;
+}
+
 /* Editing intentionally ends at 700px; 701px remains the first authoring width. */
 .planr-diagram-editor[data-layout~="compact"] {
   --de-bar-height: 56px;
@@ -1916,10 +1874,6 @@ body.planr-diagram-owner-page #diagram-owner-editor {
   grid-template-columns: minmax(0, 1fr) auto;
   gap: var(--de-space-2);
   padding-inline: var(--de-space-2);
-}
-
-.planr-diagram-editor[data-layout~="compact"] .de-bar-center {
-  display: none;
 }
 
 .planr-diagram-editor[data-layout~="compact"] .de-identity small {

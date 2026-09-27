@@ -22,7 +22,7 @@ export function renderEditorSkeleton(doc, scopedId) {
     node('div', { className: 'de-command-group', role: 'group', 'aria-label': label });
 
   const barStart = group('Document navigation'),
-    barCenter = group('History and arrangement'),
+    barCenter = group('History'),
     barEnd = group('Save and inspect');
   const mark = node('span', { className: 'de-mark', 'aria-hidden': 'true' }),
     title = node('strong', { className: 'de-title' }),
@@ -43,8 +43,7 @@ export function renderEditorSkeleton(doc, scopedId) {
         node('div', { className: 'de-identity' }, title, subtitle),
       ),
     ),
-    node('div', { className: 'de-bar-center' }, barCenter),
-    node('div', { className: 'de-bar-end' }, saveState, barEnd, moreWrap),
+    node('div', { className: 'de-bar-end' }, saveState, barCenter, barEnd, moreWrap),
   );
 
   const drawerBackdrop = node('button', {
@@ -81,13 +80,7 @@ export function renderEditorSkeleton(doc, scopedId) {
       id: scopedId('outline-panel'),
       'aria-label': 'Diagram outline and shapes',
     },
-    node(
-      'div',
-      { className: 'de-panel-header' },
-      node('strong', { className: 'de-panel-title' }, 'Objects'),
-      leftTabs,
-      closeOutline,
-    ),
+    node('div', { className: 'de-panel-header' }, leftTabs, closeOutline),
     node('div', { className: 'de-left-content' }, outlinePane, shapesPane),
   );
 
@@ -151,13 +144,7 @@ export function renderEditorSkeleton(doc, scopedId) {
       id: scopedId('inspector-panel'),
       'aria-label': 'Diagram properties and review',
     },
-    node(
-      'div',
-      { className: 'de-panel-header' },
-      node('strong', { className: 'de-panel-title' }, 'Inspector'),
-      rightTabs,
-      closeProperties,
-    ),
+    node('div', { className: 'de-panel-header' }, rightTabs, closeProperties),
     rightContent,
   );
 
@@ -259,7 +246,7 @@ export function renderEditorControls(doc, dom, { scopedId, actions, panels }) {
     container.append(node);
     return node;
   };
-  commandButton(dom.barStart, 'Outline', 'Outline', 'outline', {
+  commandButton(dom.barStart, 'Outline', '', 'outline', {
     title: 'Show or hide outline',
     icon: 'panel',
   });
@@ -271,7 +258,10 @@ export function renderEditorControls(doc, dom, { scopedId, actions, panels }) {
     title: 'Redo · Ctrl or Command Shift Z',
     icon: 'redo',
   });
-  commandButton(dom.barCenter, 'Layout', 'Arrange', 'layout', { icon: 'arrange' });
+  commandButton(dom.barEnd, 'Inspector', 'Inspector', 'properties', {
+    title: 'Show or hide the inspector',
+    icon: 'properties',
+  });
   commandButton(dom.barEnd, 'Save diagram', 'Save', 'save', {
     title: 'Save diagram · Ctrl or Command S',
     icon: 'save',
@@ -284,10 +274,6 @@ export function renderEditorControls(doc, dom, { scopedId, actions, panels }) {
     });
     control.dataset.hostAction = entry.id;
   }
-  commandButton(dom.barEnd, 'Properties', 'Inspector', 'properties', {
-    title: 'Show or hide properties',
-    icon: 'properties',
-  });
   const moreButton = commandButton(dom.moreWrap, 'More', '', 'more', { icon: 'more' });
   moreButton.setAttribute('aria-haspopup', 'menu');
   moreButton.setAttribute('aria-expanded', 'false');
@@ -300,6 +286,7 @@ export function renderEditorControls(doc, dom, { scopedId, actions, panels }) {
     hidden: true,
   });
   for (const [name, action] of [
+    ['Auto layout…', 'layout'],
     ['Mermaid copies', 'source-panel'],
     ['Show source', 'show-source'],
     ['Show revision', 'show-revision'],

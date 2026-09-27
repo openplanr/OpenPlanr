@@ -49,7 +49,7 @@ test('two real owner pages compare base, current and pending edits without overw
   async function rename(page, label) {
     await page.locator('[data-editor-svg] [data-element-id="node-b"]').click();
     await page.getByLabel('Label', { exact: true }).fill(label);
-    await page.getByRole('button', { name: 'Apply properties', exact: true }).click();
+    await page.getByRole('button', { name: 'Apply changes', exact: true }).click();
   }
   await rename(pending, 'My pending change');
   await rename(current, 'Another author confirmed');

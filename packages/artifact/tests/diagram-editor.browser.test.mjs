@@ -82,7 +82,7 @@ async function save(page) {
 async function apply(page, fields) {
   for (const [name, value] of Object.entries(fields))
     await page.getByLabel(name, { exact: true }).fill(String(value));
-  await page.getByRole('button', { name: 'Apply properties', exact: true }).click();
+  await page.getByRole('button', { name: 'Apply changes', exact: true }).click();
   await settle(page);
 }
 async function create(page, name) {
@@ -175,7 +175,7 @@ test(
     await page.getByLabel('Label', { exact: true }).focus();
     await page.keyboard.press('ControlOrMeta+A');
     await page.keyboard.type('Version V H');
-    await page.getByRole('button', { name: 'Apply properties', exact: true }).focus();
+    await page.getByRole('button', { name: 'Apply changes', exact: true }).focus();
     await page.keyboard.press('Space');
     await save(page);
     assert.equal(
@@ -431,7 +431,7 @@ test(
         `${colorScheme}: Delete is outlined, not filled`,
       );
       assert.ok(contrast(remove.text, remove.background) >= 4.5, `${colorScheme} Delete text`);
-      for (const action of ['undo', 'layout']) {
+      for (const action of ['undo', 'more']) {
         const command = `.de-bar [data-action="${action}"]`;
         await page
           .getByLabel('Diagram canvas', { exact: true })
@@ -477,6 +477,58 @@ test(
         editor: getComputedStyle(label.closest('.planr-diagram-editor')).fontFamily,
       }));
     assert.equal(fonts.label, fonts.editor, 'Canvas labels use the editor font stack');
+  },
+);
+
+test(
+  'the command bar is one right-aligned cluster whose names match their visible labels',
+  options,
+  async (t) => {
+    const { page } = await fixture(t, { bundle: makeBundle('process') });
+    const bar = await page.locator('.de-bar').evaluate((node) => {
+      const box = node.getBoundingClientRect();
+      const controls = [...node.querySelectorAll('button, .de-save-state')].filter(
+        (element) =>
+          !element.closest('[role="menu"]') &&
+          element.checkVisibility() &&
+          element.getBoundingClientRect().width > 0,
+      );
+      const rects = controls.map((element) => element.getBoundingClientRect());
+      return {
+        left: Math.min(...rects.map((rect) => rect.left)) - box.left,
+        right: box.right - Math.max(...rects.map((rect) => rect.right)),
+        order: controls.map((element) => element.dataset.action ?? 'save-state'),
+        names: controls
+          .filter((element) => element.matches('button'))
+          .map((element) => ({
+            name: element.getAttribute('aria-label') ?? element.textContent.trim(),
+            label: (element.querySelector('.de-button-label')?.textContent ?? '').trim(),
+          })),
+      };
+    });
+    assert.deepEqual(bar.order, [
+      'outline',
+      'save-state',
+      'undo',
+      'redo',
+      'properties',
+      'save',
+      'more',
+    ]);
+    assert.equal(bar.left, 16, 'The outline toggle sits on the 16px gutter');
+    assert.equal(bar.right, 16, 'More sits on the 16px gutter');
+    for (const { name, label } of bar.names)
+      if (label) assert.ok(name.startsWith(label), `${name} is named by its visible label`);
+
+    assert.equal(await page.locator('.de-panel-title').count(), 0, 'Rail headers hold tabs only');
+    const underline = await page
+      .locator('.de-left [role="tab"][aria-selected="true"]')
+      .evaluate((tab) => getComputedStyle(tab).boxShadow);
+    assert.match(underline, /inset/u, 'The selected rail tab is underlined');
+
+    await page.getByRole('button', { name: 'More', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'Auto layout…', exact: true }).click();
+    await page.getByRole('button', { name: 'Preview layout', exact: true }).waitFor();
   },
 );
 
@@ -552,7 +604,7 @@ test(
     await page.locator('[data-action=select-id][data-id=node-a]').click();
     await expandInspectorSection(page, 'Constraints');
     await page.getByRole('checkbox', { name: 'Lock position', exact: true }).check();
-    await page.getByRole('button', { name: 'Apply properties', exact: true }).click();
+    await page.getByRole('button', { name: 'Apply changes', exact: true }).click();
     await save(page);
     const locked = await read();
     assert.equal(await page.getByLabel('X', { exact: true }).isDisabled(), true);
@@ -596,7 +648,7 @@ test(
     await expandInspectorSection(page, 'Appearance');
     await page.getByLabel('Line style', { exact: true }).selectOption('dashed');
     await page.getByLabel('Routing', { exact: true }).selectOption('orthogonal');
-    await page.getByRole('button', { name: 'Apply properties', exact: true }).click();
+    await page.getByRole('button', { name: 'Apply changes', exact: true }).click();
     await save(page);
     let saved = await read();
     assert.equal(saved.document.relations[0].direction, 'both');
@@ -749,7 +801,8 @@ test(
     await page.getByRole('button', { name: 'Redo', exact: true }).click();
     await save(page);
     assert.deepEqual((await read()).presentation, moved.presentation);
-    await page.getByRole('button', { name: 'Layout', exact: true }).click();
+    await page.getByRole('button', { name: 'More', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'Auto layout…', exact: true }).click();
     await page.getByRole('button', { name: 'Preview layout', exact: true }).click();
     assert.deepEqual(
       (await read()).presentation,
@@ -922,7 +975,7 @@ test(
     await page.keyboard.press('Escape');
 
     const inspector = page.locator('#diagram-inspector-panel');
-    await page.getByRole('button', { name: 'Properties', exact: true }).click();
+    await page.getByRole('button', { name: 'Inspector', exact: true }).click();
     await page.locator('.de-drawer-backdrop').waitFor();
     assert.equal(await inspector.evaluate((node) => node.contains(document.activeElement)), true);
     await assertFocusContained(inspector);
@@ -1128,6 +1181,7 @@ test('command menu is anchored, keyboard navigable, and restores focus', options
   await menu.waitFor();
   assert.equal(await trigger.getAttribute('aria-expanded'), 'true');
   assert.deepEqual(await menu.getByRole('menuitem').allTextContents(), [
+    'Auto layout…',
     'Mermaid copies',
     'Show source',
     'Show revision',
@@ -1135,14 +1189,14 @@ test('command menu is anchored, keyboard navigable, and restores focus', options
   ]);
   assert.equal(
     await page
-      .getByRole('menuitem', { name: 'Mermaid copies', exact: true })
+      .getByRole('menuitem', { name: 'Auto layout…', exact: true })
       .evaluate((node) => node === document.activeElement),
     true,
   );
   await page.keyboard.press('ArrowDown');
   assert.equal(
     await page
-      .getByRole('menuitem', { name: 'Show source', exact: true })
+      .getByRole('menuitem', { name: 'Mermaid copies', exact: true })
       .evaluate((node) => node === document.activeElement),
     true,
   );
@@ -1156,7 +1210,7 @@ test('command menu is anchored, keyboard navigable, and restores focus', options
   await page.keyboard.press('Home');
   assert.equal(
     await page
-      .getByRole('menuitem', { name: 'Mermaid copies', exact: true })
+      .getByRole('menuitem', { name: 'Auto layout…', exact: true })
       .evaluate((node) => node === document.activeElement),
     true,
   );
@@ -1201,7 +1255,7 @@ test(
     await page.keyboard.press('ArrowLeft');
     assert.equal(await propertiesTab.evaluate((node) => node === document.activeElement), true);
 
-    const inspectorTrigger = page.getByRole('button', { name: 'Properties', exact: true });
+    const inspectorTrigger = page.getByRole('button', { name: 'Inspector', exact: true });
     await inspectorTrigger.click();
     assert.equal(await inspectorTrigger.getAttribute('aria-expanded'), 'false');
     assert.equal(
@@ -1241,7 +1295,7 @@ test(
       'Saved from command bar',
     );
     assert.equal(
-      await page.getByRole('button', { name: 'Apply properties', exact: true }).isDisabled(),
+      await page.getByRole('button', { name: 'Apply changes', exact: true }).isDisabled(),
       true,
     );
   },
@@ -1446,7 +1500,7 @@ test(
     ]);
 
     await page.getByLabel('Direction', { exact: true }).selectOption('both');
-    await page.getByRole('button', { name: 'Apply properties', exact: true }).click();
+    await page.getByRole('button', { name: 'Apply changes', exact: true }).click();
     await settle(page);
     assert.equal(await label.inputValue(), '', 'Apply does not turn the name into a label');
     assert.deepEqual(await exposedIds(page), [], 'After Apply');
