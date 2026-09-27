@@ -3,7 +3,8 @@
 One repository holds every OpenPlanr component. Three workspaces publish to npm;
 the rest are private MIT source whose implementations are projected into the public
 packages at generation time, so a published tarball never resolves an unpublished
-workspace at runtime.
+workspace at runtime. The [architecture decision records](../adr/README.md) explain this
+projection model, subpath versioning and the fan-in limits below.
 
 ```mermaid
 %%{init: {"theme":"base","themeVariables":{"fontFamily":"DM Sans, ui-sans-serif, system-ui, sans-serif","fontSize":"14px","primaryColor":"#5EEAD4","primaryTextColor":"#08080C","primaryBorderColor":"#237A72","secondaryColor":"#F5F7F7","secondaryTextColor":"#08080C","secondaryBorderColor":"#237A72","tertiaryColor":"#F5F7F7","tertiaryTextColor":"#08080C","tertiaryBorderColor":"#237A72","lineColor":"#237A72","textColor":"#08080C","edgeLabelBackground":"#F5F7F7","clusterBkg":"#F5F7F7","clusterBorder":"#237A72","noteBkgColor":"#F5F7F7","noteTextColor":"#08080C","noteBorderColor":"#237A72"}}}%%
