@@ -3,6 +3,9 @@ import { existsSync, readFileSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { z } from 'zod';
+import { parseExternalJson } from '../utils/external-json.js';
+import { logger } from '../utils/logger.js';
 import {
   type ClaudeCommandRunner,
   type ClaudePluginOperation,
@@ -114,25 +117,36 @@ function ecosystemCachePath(): string {
   return path.join(runtimeRoot(), 'ecosystem-cache.json');
 }
 
-interface RawPublishedDocument {
-  components?: {
-    cli?: EcosystemComponent;
-    pipeline?: EcosystemComponent;
-    skills?: EcosystemComponent;
-    marketplace?: EcosystemComponent;
-  };
-  name?: string;
-  version?: string;
-  optionalDependencies?: Record<string, string>;
-  dependencies?: Record<string, string>;
-}
+const publishedComponentSchema = z.object({
+  version: z.string().optional(),
+  cliRange: z.string().optional(),
+  pipelineRange: z.string().optional(),
+});
+
+const publishedDocumentSchema = z.object({
+  components: z
+    .object({
+      cli: publishedComponentSchema.optional(),
+      pipeline: publishedComponentSchema.optional(),
+      skills: publishedComponentSchema.optional(),
+      marketplace: publishedComponentSchema.optional(),
+    })
+    .optional(),
+  name: z.string().optional(),
+  version: z.string().optional(),
+  optionalDependencies: z.record(z.string(), z.string()).optional(),
+  dependencies: z.record(z.string(), z.string()).optional(),
+});
+
+type RawPublishedDocument = z.infer<typeof publishedDocumentSchema>;
 
 /** Narrow the raw published JSON to the compatibility components we reconcile. */
-function parseComponents(text: string): EcosystemComponents | null {
+function parseComponents(text: string, location: string): EcosystemComponents | null {
   try {
-    const data = JSON.parse(text) as RawPublishedDocument;
+    const data = parseExternalJson(text, publishedDocumentSchema, location);
     return parseTupleManifest(data) ?? parseRegistryDocument(data);
-  } catch {
+  } catch (error) {
+    logger.debug('Ignoring the published compatibility manifest', error);
     return null;
   }
 }
@@ -172,7 +186,7 @@ function parseRegistryDocument(data: RawPublishedDocument): EcosystemComponents 
   };
 }
 
-function pickRange(component: EcosystemComponent): {
+function pickRange(component: { cliRange?: string; pipelineRange?: string }): {
   cliRange?: string;
   pipelineRange?: string;
 } {
@@ -260,8 +274,9 @@ async function loadEcosystem(
 
   const fetchImpl = options.fetchImpl ?? fetch;
   const timeoutMs = options.timeoutMs ?? DEFAULT_FETCH_TIMEOUT_MS;
-  const text = await fetchManifestText(ecosystemSourceLocation(), fetchImpl, timeoutMs);
-  const fetched = text ? parseComponents(text) : null;
+  const location = ecosystemSourceLocation();
+  const text = await fetchManifestText(location, fetchImpl, timeoutMs);
+  const fetched = text ? parseComponents(text, location) : null;
   if (fetched) {
     await writeCache(fetched, now);
     return { components: fetched, source: 'network' };

@@ -1,6 +1,8 @@
 import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, realpathSync } from 'node:fs';
 import path from 'node:path';
+import { z } from 'zod';
+import { parseExternalJson } from '../utils/external-json.js';
 
 export type CodexCommandRunner = (args: string[]) => {
   status: number | null;
@@ -51,7 +53,32 @@ function canonicalRoot(value: string): string {
   }
 }
 
-function output<T>(runner: CodexCommandRunner, args: string[]): T {
+const marketplaceListSchema = z.object({
+  marketplaces: z
+    .array(
+      z.object({
+        name: z.string().optional(),
+        root: z.string().optional(),
+        marketplaceSource: z.object({ source: z.string().optional() }).optional(),
+      }),
+    )
+    .optional(),
+});
+
+const installedRowSchema = z.object({
+  pluginId: z.string().optional(),
+  name: z.string().optional(),
+  marketplaceName: z.string().optional(),
+  version: z.string().optional(),
+  enabled: z.boolean().optional(),
+});
+
+const pluginListSchema = z.union([
+  z.array(installedRowSchema),
+  z.object({ installed: z.array(installedRowSchema).optional() }),
+]);
+
+function output<T>(runner: CodexCommandRunner, args: string[], schema: z.ZodType<T>): T {
   const result = runner(args);
   if (result.error || result.status !== 0) {
     throw new Error(
@@ -60,13 +87,11 @@ function output<T>(runner: CodexCommandRunner, args: string[]): T {
         `codex ${args.join(' ')} exited ${result.status}`,
     );
   }
-  return JSON.parse(result.stdout) as T;
+  return parseExternalJson(result.stdout, schema, `codex ${args.join(' ')}`);
 }
 
-function installedRows(value: unknown): Array<Record<string, unknown>> {
-  if (Array.isArray(value)) return value as Array<Record<string, unknown>>;
-  const installed = (value as { installed?: unknown } | null)?.installed;
-  return Array.isArray(installed) ? (installed as Array<Record<string, unknown>>) : [];
+function installedRows(value: z.infer<typeof pluginListSchema>) {
+  return Array.isArray(value) ? value : (value.installed ?? []);
 }
 
 export function inspectCodexPluginIntegration(
@@ -123,13 +148,11 @@ export function inspectCodexPluginIntegration(
       error: version.error?.message || version.stderr.trim() || 'Codex is unavailable.',
     };
   try {
-    const listedMarketplaces = output<{
-      marketplaces?: Array<{
-        name?: string;
-        root?: string;
-        marketplaceSource?: { source?: string };
-      }>;
-    }>(runner, ['plugin', 'marketplace', 'list', '--json']);
+    const listedMarketplaces = output(
+      runner,
+      ['plugin', 'marketplace', 'list', '--json'],
+      marketplaceListSchema,
+    );
     const configured = (listedMarketplaces.marketplaces ?? []).find(
       ({ name }) => name === marketplaceName,
     );
@@ -143,7 +166,7 @@ export function inspectCodexPluginIntegration(
           `Codex marketplace ${marketplaceName} points to ${configuredRoot}, not ${expectedRoot}.`,
         );
     }
-    const installed = installedRows(output<unknown>(runner, ['plugin', 'list', '--json']));
+    const installed = installedRows(output(runner, ['plugin', 'list', '--json'], pluginListSchema));
     const selected = installed.find(
       (row) =>
         row.pluginId === pluginId ||
@@ -258,7 +281,7 @@ export function applyCodexPluginIntegration(
         : operation.kind === 'install'
           ? ['plugin', 'add', operation.id, '--json']
           : ['plugin', 'remove', operation.id, '--json'];
-    output(runner, args);
+    output(runner, args, z.unknown());
   }
   return { operations: inspection.operations, restartRequired: inspection.operations.length > 0 };
 }

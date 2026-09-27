@@ -11,6 +11,8 @@ import crypto from 'node:crypto';
 import { access, mkdir, open, readFile, rename, unlink, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import { z } from 'zod';
+import { parseExternalJson } from '../utils/external-json.js';
 import { logger } from '../utils/logger.js';
 import { withCredentialWriteLock } from './credential-write-lock.js';
 
@@ -146,13 +148,17 @@ async function getSalt(planrDir: string, saltFile: string): Promise<Buffer> {
   return salt;
 }
 
-interface EncryptedEnvelope {
-  version?: 1 | 2;
-  kdf?: 'scrypt';
-  iv: string;
-  tag: string;
-  data: string;
-}
+const envelopeSchema = z.object({
+  version: z.literal([1, 2]).optional(),
+  kdf: z.literal('scrypt').optional(),
+  iv: z.string(),
+  tag: z.string(),
+  data: z.string(),
+});
+
+type EncryptedEnvelope = z.infer<typeof envelopeSchema>;
+
+const credentialsSchema = z.record(z.string(), z.string());
 
 function encrypt(plaintext: string, key: Buffer): EncryptedEnvelope {
   const iv = crypto.randomBytes(12);
@@ -218,19 +224,21 @@ export class EncryptedFileBackend implements CredentialBackend {
 
     try {
       const raw = await readFile(this.encryptedFile, 'utf-8');
-      const envelope: EncryptedEnvelope = JSON.parse(raw);
+      const envelope = parseExternalJson(raw, envelopeSchema, this.encryptedFile);
       const salt = await getSalt(this.planrDir, this.saltFile);
       const key =
         envelope.version === 2 ? deriveKey(this.requirePassphrase(), salt) : deriveLegacyKey(salt);
-      const json = decrypt(envelope, key);
-      const value = JSON.parse(json) as Record<string, string>;
-      if (!value || typeof value !== 'object' || Array.isArray(value))
-        throw new Error('invalid credential payload');
-      return value;
+      return parseExternalJson(
+        decrypt(envelope, key),
+        credentialsSchema,
+        `The decrypted payload of ${this.encryptedFile}`,
+        { secret: true },
+      );
     } catch (err) {
       if (strict)
         throw new Error(
           'The encrypted credential store cannot be read. Existing contents were preserved.',
+          { cause: err },
         );
       logger.debug('Failed to decrypt credentials file', err);
       // Backup corrupted/unreadable file before it gets overwritten by a
@@ -328,25 +336,27 @@ export class EncryptedFileBackend implements CredentialBackend {
 const LEGACY_FILE = path.join(PLANR_DIR, 'credentials.json');
 
 export class LegacyPlaintextBackend {
-  async exists(): Promise<boolean> {
-    return pathExists(LEGACY_FILE);
+  private readonly file: string;
+
+  constructor(file = LEGACY_FILE) {
+    this.file = file;
   }
 
-  async loadAll(): Promise<Record<string, string>> {
-    if (!(await pathExists(LEGACY_FILE))) return {};
+  async exists(): Promise<boolean> {
+    return pathExists(this.file);
+  }
 
-    try {
-      const raw = await readFile(LEGACY_FILE, 'utf-8');
-      return JSON.parse(raw) as Record<string, string>;
-    } catch (err) {
-      logger.debug('Failed to parse legacy credentials file', err);
-      return {};
-    }
+  /** Throws on unreadable or off-schema content so migration keeps the file instead of deleting it. */
+  async loadAll(): Promise<Record<string, string>> {
+    if (!(await pathExists(this.file))) return {};
+    return parseExternalJson(await readFile(this.file, 'utf-8'), credentialsSchema, this.file, {
+      secret: true,
+    });
   }
 
   async remove(): Promise<void> {
     try {
-      await unlink(LEGACY_FILE);
+      await unlink(this.file);
     } catch (err) {
       logger.debug('Failed to remove legacy credentials file', err);
       // Ignore if already gone

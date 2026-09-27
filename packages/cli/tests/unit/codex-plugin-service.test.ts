@@ -246,4 +246,31 @@ describe('Codex plugin integration', () => {
     expect(inspection.operations).toEqual([]);
     expect(inspection.ready).toBe(false);
   });
+
+  it('reports off-schema Codex output as an inspection error naming the command and field', () => {
+    const state = runnerState({ configured: true, installed: true });
+    const runner: CodexCommandRunner = (args) =>
+      args.join(' ') === 'plugin list --json'
+        ? {
+            status: 0,
+            stderr: '',
+            stdout: '{"installed":[{"pluginId":"planr@openplanr-pipeline-local","version":1}]}',
+          }
+        : state.runner(args);
+    try {
+      const inspection = inspectCodexPluginIntegration(
+        state.fixture,
+        'unified-plugin',
+        'unified-plugin',
+        runner,
+      );
+      expect(inspection.ready).toBe(false);
+      expect(inspection.operations).toEqual([]);
+      expect(inspection.error).toBe(
+        'codex plugin list --json has an unexpected shape: (root): Invalid input: expected array, received object | installed.0.version: Invalid input: expected string, received number',
+      );
+    } finally {
+      rmSync(state.fixture, { recursive: true, force: true });
+    }
+  });
 });

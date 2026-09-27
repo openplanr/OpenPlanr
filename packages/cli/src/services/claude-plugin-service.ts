@@ -1,6 +1,8 @@
 import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
+import { z } from 'zod';
+import { parseExternalJson } from '../utils/external-json.js';
 
 export const OPENPLANR_CLAUDE_PLUGIN = 'planr';
 
@@ -60,21 +62,22 @@ export interface ClaudeCommandResult {
 
 export type ClaudeCommandRunner = (args: string[]) => ClaudeCommandResult;
 
-interface MarketplaceEntry {
-  name?: string;
-  source?: string;
-  repo?: string;
-  path?: string;
-  installLocation?: string;
-}
+const marketplaceListSchema = z.array(z.object({ name: z.string().optional() }));
 
-interface InstalledPlugin {
-  id?: string;
-  version?: string;
-  scope?: string;
-  enabled?: boolean;
-  installPath?: string;
-}
+const installedPluginSchema = z.object({
+  id: z.string().optional(),
+  version: z.string().optional(),
+  scope: z.string().optional(),
+  enabled: z.boolean().optional(),
+  installPath: z.string().optional(),
+});
+
+type InstalledPlugin = z.infer<typeof installedPluginSchema>;
+
+const pluginListSchema = z.union([
+  z.array(installedPluginSchema),
+  z.object({ installed: z.array(installedPluginSchema).optional() }),
+]);
 
 /**
  * `OPENPLANR_CLAUDE_BIN` is a test seam of the same shape as `upgrade-service.ts`'s
@@ -103,12 +106,12 @@ function defaultRunner(args: string[]): ClaudeCommandResult {
   };
 }
 
-function parseJson<T>(result: ClaudeCommandResult): T {
+function parseJson<T>(result: ClaudeCommandResult, schema: z.ZodType<T>, command: string): T {
   if (result.error || result.status !== 0) {
     const detail = result.error?.message || result.stderr.trim() || `exit ${result.status}`;
     throw new Error(detail);
   }
-  return JSON.parse(result.stdout) as T;
+  return parseExternalJson(result.stdout, schema, command);
 }
 
 function installedPlugins(value: InstalledPlugin[] | { installed?: InstalledPlugin[] }) {
@@ -293,12 +296,16 @@ export function inspectBundledClaudePluginIntegration(
   }
   try {
     const desired = bundledMarketplace(marketplaceRoot);
-    const marketplaces = parseJson<MarketplaceEntry[]>(
+    const marketplaces = parseJson(
       runner(['plugin', 'marketplace', 'list', '--json']),
+      marketplaceListSchema,
+      'claude plugin marketplace list --json',
     );
     const installed = installedPlugins(
-      parseJson<InstalledPlugin[] | { installed?: InstalledPlugin[] }>(
+      parseJson(
         runner(['plugin', 'list', '--json']),
+        pluginListSchema,
+        'claude plugin list --json',
       ),
     );
     const configured = marketplaces.find(({ name }) => name === desired.name);

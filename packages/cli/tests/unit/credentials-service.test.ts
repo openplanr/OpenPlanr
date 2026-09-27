@@ -26,9 +26,14 @@ vi.mock('../../src/services/credential-backends.js', () => ({
   },
 }));
 
-import { encryptedFileBackend, keychainBackend } from '../../src/services/credential-backends.js';
+import {
+  encryptedFileBackend,
+  keychainBackend,
+  legacyBackend,
+} from '../../src/services/credential-backends.js';
 import {
   _resetMigration,
+  migrateCredentials,
   readStoredCredential,
   removeStoredCredential,
   resolveApiKey,
@@ -136,5 +141,16 @@ describe('rotating credential writes', () => {
     await expect(saveRecordedCredential('company-oauth:fixture', 'rotated')).resolves.toBe(
       'encrypted-file',
     );
+  });
+});
+
+describe('legacy plaintext migration', () => {
+  it('keeps a legacy file it cannot read instead of deleting it as empty', async () => {
+    vi.mocked(legacyBackend.exists).mockResolvedValueOnce(true);
+    vi.mocked(legacyBackend.loadAll).mockRejectedValueOnce(
+      new Error('credentials.json has an unexpected shape'),
+    );
+    await expect(migrateCredentials()).resolves.toBe(false);
+    expect(legacyBackend.remove).not.toHaveBeenCalled();
   });
 });
