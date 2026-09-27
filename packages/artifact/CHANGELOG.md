@@ -1,5 +1,19 @@
 # @openplanr/artifact
 
+## 0.5.4
+### Patch Changes
+
+- c7c15dc: Protocol 1.14 adds a successor artifact theme: `registries/artifact-theme.json` with `schemas/v1.14.0/artifact-theme.schema.json`. It uses the brand teal on light (#237a72, strong #1b5f59) and adds an `onPrimary` text colour to both palettes (#ffffff light, #07110f dark). The byte-preserved `registry/artifact-theme.json` and its v1.1.0 schema are unchanged. The generated review theme CSS and JSON now come from the successor and also set `--planr-color-on-primary`, so the light review shell and Diagram Studio use the brand teal. The diagram editor's built-in light accent and Save hover use the same values. White on the light accent rises from 4.89:1 to 5.12:1; the dark accent is unchanged. A selected Mermaid source tab keeps its fill on hover, and the review shell's Copied state uses the strong accent, so their text reaches 4.5:1 (it was 4.14:1 and 3.74:1).
+- ef26405: Diagram editor: the command bar is one right-aligned cluster on a 16px gutter, in this order: the save state as plain 11px text in its tone colour, Undo, Redo, Inspector, Save, host actions and More. Arrange moves into More as "Auto layout…", the outline toggle is icon-only, and pressed toggles use a neutral fill instead of the accent. Both rail headers hold only underline tabs (Outline and Shapes; Properties, Review and host panels); the "Objects" and "Inspector" title rows are gone. Accessible names match the visible labels: the inspector toggle is "Inspector" (was "Properties") and the apply button is "Apply changes" (was "Apply properties"). Full-bleed tabs, outline rows, menu items and section summaries draw their focus ring inside their own box. The right rail is 288px wide (was 320px), and in the drawer layout the inspector no longer dims or blurs the canvas it edits.
+- f3ca81f: Diagram editor: type, spacing, control heights and corner radii come from one token scale. Text uses 10, 11, 12, 14, 16 and 20px with integer line heights and weights 400, 500 and 600; the base text moves from 13px to 12/18px. Buttons, fields, outline rows, menu items and section headers are 36px tall (44px on phones), spacing sits on a 4px grid, and radii are 4, 8, 12 and 14px. Field borders reach 3:1 (#858e99 light, #5e6875 dark; they were 1.33:1 and 1.39:1), and every editor input's placeholder uses the muted text colour. Hosts can set `--planr-color-{interactive,input,input-border,rule-strong,primary-soft,danger-soft,warning,scrim}`, `--planr-radius-{small,medium,large}`, `--planr-font-mono` and `--planr-shadow-{sm,md,lg}`; unset, the editor keeps its own values.
+- Updated dependencies [c7c15dc]
+- Updated dependencies [c373710]
+- Updated dependencies [c8ef5f5]
+- Updated dependencies [2d3aa3f]
+- Updated dependencies [504bce4]
+- Updated dependencies [711e17f]
+  - @openplanr/protocol@0.7.0
+
 ## 0.5.3
 ### Patch Changes
 
