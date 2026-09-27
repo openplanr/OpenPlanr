@@ -43,6 +43,12 @@ const DASHBOARD_CONTRACT_FILES = new Set([
   'operate-review-workspace-projection-v2.d.mts',
 ]);
 
+// Not projected: packages/pipeline/scripts/generate-dashboard-surface-schema-data.mjs writes these.
+const PIPELINE_OWNED_DASHBOARD_FILES = new Set([
+  'generated/operate-experience-surface-schema-data.mjs',
+  'generated/operate-review-schema-data.mjs',
+]);
+
 const mappings = Object.freeze([
   Object.freeze({
     source: 'packages/protocol/projections/pipeline/lib/protocol',
@@ -165,6 +171,28 @@ for (const mapping of mappings) {
 entries.sort((a, b) => a.target.localeCompare(b.target));
 
 const expectedTargets = new Set(entries.map((entry) => entry.target));
+
+const protocolDashboardFiles = new Set(
+  walk(resolve(workspaceRoot, 'packages/protocol/lib/dashboard')).map(({ path }) => path),
+);
+const unownedDashboardFiles = [...protocolDashboardFiles].filter(
+  (path) =>
+    !expectedTargets.has(`lib/dashboard/${path}`) && !PIPELINE_OWNED_DASHBOARD_FILES.has(path),
+);
+if (unownedDashboardFiles.length > 0) {
+  throw new Error(
+    `packages/protocol/lib/dashboard files are neither projected into planr-pipeline lib/dashboard nor listed in PIPELINE_OWNED_DASHBOARD_FILES: ${unownedDashboardFiles.join(', ')}. Project each through DASHBOARD_CONTRACT_FILES, or through dashboardRuntimeContracts in packages/protocol/scripts/generate-protocol-assets.mjs when it imports ../../src/, instead of copying it into the pipeline.`,
+  );
+}
+const staleOwnedDashboardFiles = [...PIPELINE_OWNED_DASHBOARD_FILES].filter(
+  (path) => !protocolDashboardFiles.has(path) || expectedTargets.has(`lib/dashboard/${path}`),
+);
+if (staleOwnedDashboardFiles.length > 0) {
+  throw new Error(
+    `PIPELINE_OWNED_DASHBOARD_FILES lists files that packages/protocol/lib/dashboard does not have or that are also projected: ${staleOwnedDashboardFiles.join(', ')}.`,
+  );
+}
+
 const drift = [];
 for (const entry of entries) {
   if (!existsSync(entry.targetPath) || lstatSync(entry.targetPath).isSymbolicLink()) {
