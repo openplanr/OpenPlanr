@@ -1720,6 +1720,128 @@ test(
 );
 
 test(
+  'a selected connector is traced in the accent along its route, with or without a label or bends',
+  options,
+  async (t) => {
+    const { page } = await fixture(t);
+    await page.getByRole('button', { name: 'Use process template', exact: true }).click();
+    await settle(page);
+    const contrast = (foreground, background) => {
+      const luminance = (color) =>
+        color
+          .match(/[\d.]+/gu)
+          .slice(0, 3)
+          .map((value) => Number(value) / 255)
+          .map((value) => (value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4))
+          .reduce((sum, value, index) => sum + value * [0.2126, 0.7152, 0.0722][index], 0);
+      const [light, dark] = [luminance(foreground), luminance(background)].sort((a, b) => b - a);
+      return (light + 0.05) / (dark + 0.05);
+    };
+    // Every accent stroke that runs the length of the connector's drawn route, in screen pixels.
+    const traces = () =>
+      page.locator('[data-editor-svg]').evaluate((svg, id) => {
+        const shell = svg.closest('.planr-diagram-editor');
+        const probe = document.createElement('span');
+        probe.style.color = getComputedStyle(shell).getPropertyValue('--de-primary');
+        shell.append(probe);
+        const accent = getComputedStyle(probe).color;
+        probe.remove();
+        const connector = svg.querySelector(`[data-element-id="${id}"]`);
+        const route = connector.querySelector(':scope > path');
+        const onScreen = (node) => {
+          const shape = node.getBBox(),
+            matrix = node.getScreenCTM();
+          return {
+            x: matrix.a * shape.x + matrix.e,
+            y: matrix.d * shape.y + matrix.f,
+            width: shape.width * matrix.a,
+            height: shape.height * matrix.d,
+            scale: matrix.a,
+          };
+        };
+        const drawn = onScreen(route);
+        const label = connector.querySelector('text');
+        const along = [...svg.querySelectorAll('path, polyline, line, rect')]
+          .filter((node) => node !== route && node.checkVisibility())
+          .filter((node) => getComputedStyle(node).stroke === accent)
+          .map((node) => ({ node, box: onScreen(node), style: getComputedStyle(node) }))
+          .filter(
+            ({ box }) =>
+              Math.abs(box.x - drawn.x) <= 1 &&
+              Math.abs(box.y - drawn.y) <= 1 &&
+              Math.abs(box.width - drawn.width) <= 1 &&
+              Math.abs(box.height - drawn.height) <= 1,
+          );
+        return {
+          selected: connector.dataset.selected,
+          canvas: getComputedStyle(svg.closest('.de-canvas')).backgroundColor,
+          accent,
+          arrowhead: getComputedStyle(connector.querySelector('marker path')).fill,
+          traces: along.map(({ node, box, style }) => ({
+            width: Number.parseFloat(style.strokeWidth) * box.scale,
+            dash: style.strokeDasharray,
+            filter: style.filter,
+            underLabel:
+              !label || !!(node.compareDocumentPosition(label) & Node.DOCUMENT_POSITION_FOLLOWING),
+          })),
+        };
+      }, id);
+    const assertTraced = async (state) => {
+      for (const colorScheme of ['light', 'dark']) {
+        await page.emulateMedia({ colorScheme });
+        await settle(page);
+        const measured = await traces();
+        assert.equal(
+          measured.selected,
+          'true',
+          `${state}, ${colorScheme}: the connector is selected`,
+        );
+        assert.equal(
+          measured.traces.length,
+          1,
+          `${state}, ${colorScheme}: one accent trace runs the route`,
+        );
+        const [trace] = measured.traces;
+        assert.ok(trace.width >= 2, `${state}, ${colorScheme}: the trace is ${trace.width}px wide`);
+        assert.equal(trace.dash, 'none', `${state}, ${colorScheme}: the trace is solid`);
+        assert.equal(trace.filter, 'none', `${state}, ${colorScheme}: the trace has no glow`);
+        assert.ok(trace.underLabel, `${state}, ${colorScheme}: the label paints over the trace`);
+        assert.equal(
+          measured.arrowhead,
+          measured.accent,
+          `${state}, ${colorScheme}: the arrowhead`,
+        );
+        assert.ok(
+          contrast(measured.accent, measured.canvas) >= 3,
+          `${state}, ${colorScheme}: ${measured.accent} on ${measured.canvas} reaches 3:1`,
+        );
+      }
+      await page.emulateMedia({ colorScheme: 'light' });
+    };
+
+    const connector = page.getByRole('treeitem', {
+      name: 'Start → Process, Connector',
+      exact: true,
+    });
+    const id = await connector.getAttribute('data-id');
+    await connector.click();
+    await settle(page);
+    await assertTraced('Unlabelled and unbent');
+
+    await page.getByLabel('Label', { exact: true }).fill('Submit');
+    await page.getByRole('button', { name: 'Apply changes', exact: true }).click();
+    await settle(page);
+    await page.getByRole('button', { name: 'Add bend', exact: true }).click();
+    await settle(page);
+    await assertTraced('Labelled with bends');
+
+    await page.getByRole('treeitem', { name: 'Process', exact: true }).click();
+    await settle(page);
+    assert.deepEqual((await traces()).traces, [], 'The trace leaves with the selection');
+  },
+);
+
+test(
   'canvas tools sit in a 44px bar with one accent mode and a neutral Snap',
   options,
   async (t) => {

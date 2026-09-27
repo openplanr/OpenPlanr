@@ -242,6 +242,7 @@ export function createEditorCanvas(ctx: DiagramEditorContext): DiagramEditorCanv
       if (node.getAttribute('aria-label') !== name) node.setAttribute('aria-label', name);
       node.dataset.selected = String(selection.has(id));
       node.classList.toggle('de-selected', selection.has(id));
+      if (source?.collection === 'relations') traceRoute(node, selection.has(id), camera.scale);
     }
     // Keep stable primitives; reordering moves only nodes whose source order changed.
     if (event.type === 'content' || event.type === 'refresh' || forceAll) {
@@ -261,6 +262,28 @@ export function createEditorCanvas(ctx: DiagramEditorContext): DiagramEditorCanv
     const node = doc.createElementNS(SVG, tag);
     for (const [name, value] of Object.entries(attributes)) node.setAttribute(name, String(value));
     return node;
+  }
+  /**
+   * Trace a selected connector's route in the accent inside its own group, so its label still
+   * paints on top; one screen pixel wider than the line and never under 2px.
+   */
+  function traceRoute(node: SVGElement, selected: boolean, scale: number) {
+    const route = node.querySelector(':scope > path'),
+      existing = node.querySelector(':scope > .de-selection-route');
+    if (!selected || !route) {
+      existing?.remove();
+      return;
+    }
+    const trace =
+      existing ?? svgElement('path', { class: 'de-selection-route', 'pointer-events': 'none' });
+    if (!existing) route.after(trace);
+    for (const name of ['d', 'stroke-dasharray', 'stroke-linecap']) {
+      const value = route.getAttribute(name);
+      if (value === null) trace.removeAttribute(name);
+      else trace.setAttribute(name, value);
+    }
+    const width = Number(route.getAttribute('stroke-width')) || 0;
+    trace.setAttribute('stroke-width', String(Math.max(width + 1 / scale, 2 / scale)));
   }
   /** A handle drawn small inside a larger transparent target that takes the pointer. */
   function handleGroup(attributes: Record<string, string | number>, parts: SVGElement[]) {
