@@ -2,7 +2,7 @@
 name: planr-cpo-review
 description: "Produce a grounded product and activation review for an Operate cycle. Use when customer value, activation, prioritization, or adoption needs a CPO lens."
 license: MIT
-allowed-tools: "Read, Grep, Glob, Bash(git log:*), Bash(git show:*), Bash(git diff:*), Write"
+allowed-tools: "Read, Grep, Glob, Bash(git log:*), Bash(git show:*), Bash(git diff:*), Edit(./.planr/operate/**)"
 ---
 
 # CPO review (`product-activation`)

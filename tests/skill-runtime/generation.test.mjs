@@ -127,9 +127,49 @@ test('the Claude plugin ships a directory-ready README and discovery metadata', 
   const manifest = JSON.parse(read('dist/plugins/claude/openplanr/.claude-plugin/plugin.json'));
   assert.ok(readme.includes(manifest.version), 'README names the plugin version');
   assert.equal(manifest.displayName, 'OpenPlanr');
-  assert.ok(URL.canParse(manifest.homepage), manifest.homepage);
-  assert.ok(URL.canParse(manifest.repository), manifest.repository);
+  assert.equal(manifest.author.name, 'OpenPlanr');
+  for (const field of [
+    'homepage',
+    'repository',
+    'privacyPolicyUrl',
+    'termsOfServiceUrl',
+    'supportUrl',
+    'documentationUrl',
+  ])
+    assert.ok(URL.canParse(manifest[field]), `${field}: ${manifest[field]}`);
   assert.ok(Array.isArray(manifest.keywords) && manifest.keywords.length > 0);
+  const icon = read('dist/plugins/claude/openplanr/.claude-plugin/icon.svg');
+  assert.match(icon, /^<svg [^>]*viewBox="0 0 (\d+) \1"/u, 'the icon is a square SVG');
+  assert.equal(
+    read('packages/cli/lib/host-packages/claude/openplanr/.claude-plugin/icon.svg'),
+    icon,
+  );
+});
+
+test('the Claude plugin stays within the plugin directory limits', () => {
+  const pluginRoot = resolve(root, 'dist/plugins/claude/openplanr');
+  const files = readdirSync(pluginRoot, { recursive: true, withFileTypes: true })
+    .filter((entry) => entry.isFile())
+    .map((entry) => join(entry.parentPath, entry.name));
+  assert.ok(files.length <= 512, `${files.length} files; the directory reviews more than 512`);
+  for (const file of files)
+    if (!/\.(?:png|jpe?g|gif|webp|svg|woff2?|ttf|otf)$/u.test(file))
+      assert.ok(
+        readFileSync(file).length < 256 * 1024,
+        `${file} reaches the directory's 256 KiB per-file review limit`,
+      );
+  for (const skillId of skillIds) {
+    const skill = read(
+      `dist/plugins/claude/openplanr/skills/${projectedSkillName(skillId)}/SKILL.md`,
+    );
+    const allowed = skill.match(/^allowed-tools:\s*"([^"]*)"/mu)?.[1] ?? '';
+    for (const grant of allowed.split(',').map((tool) => tool.trim()))
+      assert.doesNotMatch(
+        grant,
+        /^(?:Write|Edit|MultiEdit)$/u,
+        `${skillId} grants unscoped ${grant}`,
+      );
+  }
 });
 
 test('Plan, Spec, and Ship are host-native and independent of CLI or provider credentials', () => {

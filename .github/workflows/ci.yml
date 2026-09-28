@@ -32,6 +32,9 @@ jobs:
         run: |
           npm run generate
           git diff --exit-code HEAD --
+      # Same pin as openplanr/marketplace's check, so the release PR there cannot fail first.
+      - name: Validate the Claude plugin as the plugin directory's CLI does
+        run: npx --yes @anthropic-ai/claude-code@2.1.284 plugin validate --strict dist/plugins/claude/openplanr
       - name: Build in dependency order without tracked drift
         run: |
           npm run build
