@@ -144,10 +144,10 @@ CLAUDE.md
 /packages/pipeline/templates/diagram-owner.js
 /packages/pipeline/templates/diagram-studio.js
 /packages/pipeline/templates/studio/
-/skills/planr-design-loop/scripts/design.mjs
-/skills/planr-design-review/scripts/design.mjs
-/skills/planr-design/scripts/design.mjs
-/skills/planr-plan/scripts/design.mjs
+/skills/planr-design-loop/scripts/design*.mjs
+/skills/planr-design-review/scripts/design*.mjs
+/skills/planr-design/scripts/design*.mjs
+/skills/planr-plan/scripts/design*.mjs
 /packages/pipeline/lib/protocol/diagram-authoring-contracts.mjs
 /packages/pipeline/lib/protocol/diagram-authoring-contracts.d.mts
 /packages/pipeline/lib/protocol/generated/legacy-diagram-schema.mjs

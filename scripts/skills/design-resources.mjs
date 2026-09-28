@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { dirname, join, relative, resolve, sep } from 'node:path';
+import { basename, dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { renderArtifactStageRuntimeAsset } from '../../packages/artifact/scripts/generate-artifact-shell.mjs';
@@ -12,6 +12,27 @@ export const DESIGN_SKILL_IDS = Object.freeze([
   'planr-design-loop',
   'planr-design-review',
 ]);
+
+/** The Claude plugin directory holds any non-image file of 256 KiB or more for manual review. */
+const MAX_RESOURCE_BYTES = 256 * 1024;
+
+/**
+ * Modules split into their own files so no part of the helper reaches MAX_RESOURCE_BYTES.
+ * Matched against the bundle's inputs, so hoisted and nested installs resolve alike.
+ */
+const CHUNK_BOUNDARIES = Object.freeze([
+  ['parse5-parser', 'node_modules/parse5/dist/parser/index.js'],
+  ['parse5-tokenizer', 'node_modules/parse5/dist/tokenizer/index.js'],
+  ['entities', 'node_modules/entities/dist/decode.js'],
+  ['artifact-shell', 'packages/artifact/lib/artifact/ui/shell.mjs'],
+  ['sandbox-guards', 'packages/artifact/lib/artifact/ui/generated/sandbox-guards.mjs'],
+  ['review', 'packages/design/lib/design/review.mjs'],
+  ['share', 'packages/design/lib/design/share.mjs'],
+  ['handoff', 'packages/design/lib/design/handoff.mjs'],
+  ['document', 'packages/design/lib/design/document.mjs'],
+]);
+
+const CHUNK_OUTDIR = 'design-bundle';
 
 function files(directory) {
   return readdirSync(directory, { withFileTypes: true })
@@ -30,7 +51,8 @@ function files(directory) {
 /**
  * Build one portable utility and the files it reads. Semantic providers and native
  * build executables never enter the release unit. Runtime assets retain logical
- * package-relative locations while executable modules are bundled into one file.
+ * package-relative locations while executable modules are bundled into `design.mjs`
+ * and flat sibling chunks that it imports.
  */
 export async function buildDesignSkillResources({
   repoRoot,
@@ -85,10 +107,8 @@ export async function buildDesignSkillResources({
     ...files(resolve(root, 'packages/design/templates/studio')),
     ...extraAssets.map((path) => resolve(root, path)),
   ];
-  const result = await build({
+  const options = {
     absWorkingDir: root,
-    entryPoints: [entry],
-    outfile: 'design.mjs',
     bundle: true,
     platform: 'node',
     format: 'esm',
@@ -126,6 +146,34 @@ export async function buildDesignSkillResources({
         },
       },
     ],
+  };
+  const closure = await build({ ...options, entryPoints: [entry], outfile: 'design.mjs' });
+  const closureInputs = Object.keys(closure.metafile.inputs);
+  // Without compiled output esbuild falls back to TypeScript sources, which the
+  // `.mjs`-only rewrite above skips, leaving package lookups that fail once installed.
+  const typescript = closureInputs.filter((path) => /\.[cm]?ts$/u.test(path));
+  if (typescript.length)
+    throw new Error(
+      `Design utility bundles TypeScript sources; run node scripts/typescript/compile-sources.mjs first: ${typescript.join(', ')}`,
+    );
+  const boundaries = CHUNK_BOUNDARIES.map(([id, suffix]) => {
+    const matches = closureInputs.filter((path) => path === suffix || path.endsWith(`/${suffix}`));
+    if (matches.length !== 1)
+      throw new Error(
+        `Design chunk boundary ${suffix} matched ${matches.length} bundle inputs; update CHUNK_BOUNDARIES.`,
+      );
+    return { id, input: matches[0] };
+  });
+  const result = await build({
+    ...options,
+    entryPoints: [
+      { in: entry, out: 'design' },
+      ...boundaries.map(({ id, input }) => ({ in: resolve(root, input), out: `boundary-${id}` })),
+    ],
+    splitting: true,
+    outdir: CHUNK_OUTDIR,
+    outExtension: { '.js': '.mjs' },
+    chunkNames: 'chunk-[hash]',
   });
   const dependencyPaths = Object.keys(result.metafile.inputs);
   const forbidden = dependencyPaths.filter((path) =>
@@ -137,21 +185,60 @@ export async function buildDesignSkillResources({
     throw new Error(
       `Design utility contains nonportable runtime dependencies: ${forbidden.join(', ')}`,
     );
-  const unresolved =
-    result.metafile.outputs['design.mjs']?.imports?.filter(
-      ({ external, path }) => external && !path.startsWith('node:'),
-    ) ?? [];
+  const outputs = result.metafile.outputs;
+  const designKey = `${CHUNK_OUTDIR}/design.mjs`;
+  // `utility.mjs` detects direct execution by comparing its own URL, so it must stay in the entry file.
+  if (!outputs[designKey]?.inputs[logical(entry)])
+    throw new Error(`Design utility entry ${logical(entry)} left ${designKey}.`);
+  // Boundary entries compile to re-export stubs that nothing imports; ship only the entry's closure.
+  const kept = [designKey];
+  const unresolved = [];
+  for (let index = 0; index < kept.length; index += 1)
+    for (const { path, external } of outputs[kept[index]].imports) {
+      if (path.startsWith('node:')) continue;
+      if (external) unresolved.push(path);
+      else if (!kept.includes(path)) kept.push(path);
+    }
   if (unresolved.length)
-    throw new Error(
-      `Design utility has external runtime dependencies: ${unresolved.map(({ path }) => path).join(', ')}`,
-    );
-  const resources = [
-    {
-      path: 'scripts/design.mjs',
+    throw new Error(`Design utility has external runtime dependencies: ${unresolved.join(', ')}`);
+  const names = new Map();
+  for (const key of kept) {
+    if (dirname(key) !== CHUNK_OUTDIR) throw new Error(`Design chunk ${key} is not flat.`);
+    if (key === designKey) {
+      names.set(key, 'design.mjs');
+      continue;
+    }
+    const chunkInputs = Object.keys(outputs[key].inputs).sort();
+    const owners = boundaries
+      .filter(({ input }) => chunkInputs.includes(input))
+      .map(({ id }) => id);
+    const stem = owners.length
+      ? owners.join('-')
+      : basename(chunkInputs[0])
+          .replace(/\.[^.]+$/u, '')
+          .replace(/[^a-z0-9]+/giu, '-');
+    names.set(key, `design-${stem.toLowerCase()}.mjs`);
+  }
+  if (new Set(names.values()).size !== names.size)
+    throw new Error(`Design chunk names collide: ${[...names.values()].join(', ')}`);
+  const contents = new Map(result.outputFiles.map((file) => [logical(file.path), file.text]));
+  const scripts = kept.map((key) => {
+    let text = contents.get(key);
+    for (const [from, to] of names) text = text.replaceAll(`./${basename(from)}`, `./${to}`);
+    if (/chunk-[A-Z0-9]{8}\.mjs/u.test(text))
+      throw new Error(`Design chunk ${names.get(key)} still imports a hashed chunk name.`);
+    return {
+      path: `scripts/${names.get(key)}`,
       kind: 'script',
-      executable: true,
-      bytes: resourceBytes(result.outputFiles[0].contents),
-    },
+      executable: key === designKey,
+      bytes: resourceBytes(text),
+    };
+  });
+  const bundledInputs = [...new Set(kept.flatMap((key) => Object.keys(outputs[key].inputs)))];
+  const resources = [
+    ...scripts.sort((a, b) =>
+      a.executable === b.executable ? a.path.localeCompare(b.path) : a.executable ? -1 : 1,
+    ),
     {
       path: 'schemas/design-document.schema.json',
       kind: 'schema',
@@ -175,7 +262,7 @@ export async function buildDesignSkillResources({
       bytes: renderedAssets.get(absolute) ?? readFileSync(absolute),
     });
   const dependencyRoots = new Set();
-  for (const path of dependencyPaths) {
+  for (const path of bundledInputs) {
     const normalized = path.replaceAll('\\', '/');
     const marker = normalized.lastIndexOf('node_modules/');
     if (marker === -1) continue;
@@ -199,5 +286,10 @@ export async function buildDesignSkillResources({
       ),
     });
   }
+  const oversized = resources.filter(({ bytes }) => bytes.length >= MAX_RESOURCE_BYTES);
+  if (oversized.length)
+    throw new Error(
+      `Design resources reach the ${MAX_RESOURCE_BYTES}-byte directory review limit: ${oversized.map(({ path, bytes }) => `${path} (${bytes.length} B)`).join(', ')}`,
+    );
   return resources;
 }

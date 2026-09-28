@@ -978,7 +978,103 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:ddfb2d5791eca8381984bd7ae73604fb85f086db0f6e6861253c8ef7e425dc08"
+          "digest": "sha256:ab33412cab749120e07359983f85bcb64038026844c06ff9f464c4f371d6d6ca"
+        },
+        {
+          "path": "scripts/design-artifact-shell.mjs",
+          "kind": "script",
+          "executable": false,
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "digest": "sha256:9245a86f8e3f20f6ec4c705d1364d2d6d3e639b34a7d41162769a0f490dd39df"
+        },
+        {
+          "path": "scripts/design-document.mjs",
+          "kind": "script",
+          "executable": false,
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "digest": "sha256:7e15b9f9e9afd29be2a2558fad9e57b5df85e494a586180d5afe23015cdbcfb7"
+        },
+        {
+          "path": "scripts/design-entities.mjs",
+          "kind": "script",
+          "executable": false,
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "digest": "sha256:376ec35d0f184deac31b639f2c0918e6b0f165e19984ed1c89ba2cfad6af9b80"
+        },
+        {
+          "path": "scripts/design-parse5-parser.mjs",
+          "kind": "script",
+          "executable": false,
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "digest": "sha256:a9bfeecae4d31155a6935455c82ea8348da25f8585216b531d00c6599b8196e4"
+        },
+        {
+          "path": "scripts/design-parse5-tokenizer.mjs",
+          "kind": "script",
+          "executable": false,
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "digest": "sha256:f655474fb8d0bed732f01ace5b67102f849b73cb40831a57f1fb7b61180fbde9"
+        },
+        {
+          "path": "scripts/design-review-handoff.mjs",
+          "kind": "script",
+          "executable": false,
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "digest": "sha256:1d04e0d821738f3934fb3fbd314b161fb557f4459cf2da2d1921c99d27d7d861"
+        },
+        {
+          "path": "scripts/design-sandbox-guards.mjs",
+          "kind": "script",
+          "executable": false,
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "digest": "sha256:dcc7aa1971da47018a198bfe7520c05e3e5ba21fe2d9c8fffcaad882ded5bbbb"
+        },
+        {
+          "path": "scripts/design-share.mjs",
+          "kind": "script",
+          "executable": false,
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "digest": "sha256:b10d7ce9cdb3eb48b9aca803e4d2ecc4f8e477e91f4a0c6a3ae17a1f7985aa06"
         },
         {
           "path": "schemas/design-document.schema.json",
@@ -1540,7 +1636,103 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:ddfb2d5791eca8381984bd7ae73604fb85f086db0f6e6861253c8ef7e425dc08"
+          "digest": "sha256:ab33412cab749120e07359983f85bcb64038026844c06ff9f464c4f371d6d6ca"
+        },
+        {
+          "path": "scripts/design-artifact-shell.mjs",
+          "kind": "script",
+          "executable": false,
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "digest": "sha256:9245a86f8e3f20f6ec4c705d1364d2d6d3e639b34a7d41162769a0f490dd39df"
+        },
+        {
+          "path": "scripts/design-document.mjs",
+          "kind": "script",
+          "executable": false,
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "digest": "sha256:7e15b9f9e9afd29be2a2558fad9e57b5df85e494a586180d5afe23015cdbcfb7"
+        },
+        {
+          "path": "scripts/design-entities.mjs",
+          "kind": "script",
+          "executable": false,
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "digest": "sha256:376ec35d0f184deac31b639f2c0918e6b0f165e19984ed1c89ba2cfad6af9b80"
+        },
+        {
+          "path": "scripts/design-parse5-parser.mjs",
+          "kind": "script",
+          "executable": false,
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "digest": "sha256:a9bfeecae4d31155a6935455c82ea8348da25f8585216b531d00c6599b8196e4"
+        },
+        {
+          "path": "scripts/design-parse5-tokenizer.mjs",
+          "kind": "script",
+          "executable": false,
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "digest": "sha256:f655474fb8d0bed732f01ace5b67102f849b73cb40831a57f1fb7b61180fbde9"
+        },
+        {
+          "path": "scripts/design-review-handoff.mjs",
+          "kind": "script",
+          "executable": false,
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "digest": "sha256:1d04e0d821738f3934fb3fbd314b161fb557f4459cf2da2d1921c99d27d7d861"
+        },
+        {
+          "path": "scripts/design-sandbox-guards.mjs",
+          "kind": "script",
+          "executable": false,
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "digest": "sha256:dcc7aa1971da47018a198bfe7520c05e3e5ba21fe2d9c8fffcaad882ded5bbbb"
+        },
+        {
+          "path": "scripts/design-share.mjs",
+          "kind": "script",
+          "executable": false,
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "digest": "sha256:b10d7ce9cdb3eb48b9aca803e4d2ecc4f8e477e91f4a0c6a3ae17a1f7985aa06"
         },
         {
           "path": "schemas/design-document.schema.json",
@@ -2102,7 +2294,103 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:ddfb2d5791eca8381984bd7ae73604fb85f086db0f6e6861253c8ef7e425dc08"
+          "digest": "sha256:ab33412cab749120e07359983f85bcb64038026844c06ff9f464c4f371d6d6ca"
+        },
+        {
+          "path": "scripts/design-artifact-shell.mjs",
+          "kind": "script",
+          "executable": false,
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "digest": "sha256:9245a86f8e3f20f6ec4c705d1364d2d6d3e639b34a7d41162769a0f490dd39df"
+        },
+        {
+          "path": "scripts/design-document.mjs",
+          "kind": "script",
+          "executable": false,
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "digest": "sha256:7e15b9f9e9afd29be2a2558fad9e57b5df85e494a586180d5afe23015cdbcfb7"
+        },
+        {
+          "path": "scripts/design-entities.mjs",
+          "kind": "script",
+          "executable": false,
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "digest": "sha256:376ec35d0f184deac31b639f2c0918e6b0f165e19984ed1c89ba2cfad6af9b80"
+        },
+        {
+          "path": "scripts/design-parse5-parser.mjs",
+          "kind": "script",
+          "executable": false,
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "digest": "sha256:a9bfeecae4d31155a6935455c82ea8348da25f8585216b531d00c6599b8196e4"
+        },
+        {
+          "path": "scripts/design-parse5-tokenizer.mjs",
+          "kind": "script",
+          "executable": false,
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "digest": "sha256:f655474fb8d0bed732f01ace5b67102f849b73cb40831a57f1fb7b61180fbde9"
+        },
+        {
+          "path": "scripts/design-review-handoff.mjs",
+          "kind": "script",
+          "executable": false,
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "digest": "sha256:1d04e0d821738f3934fb3fbd314b161fb557f4459cf2da2d1921c99d27d7d861"
+        },
+        {
+          "path": "scripts/design-sandbox-guards.mjs",
+          "kind": "script",
+          "executable": false,
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "digest": "sha256:dcc7aa1971da47018a198bfe7520c05e3e5ba21fe2d9c8fffcaad882ded5bbbb"
+        },
+        {
+          "path": "scripts/design-share.mjs",
+          "kind": "script",
+          "executable": false,
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "digest": "sha256:b10d7ce9cdb3eb48b9aca803e4d2ecc4f8e477e91f4a0c6a3ae17a1f7985aa06"
         },
         {
           "path": "schemas/design-document.schema.json",
@@ -2959,7 +3247,103 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:ddfb2d5791eca8381984bd7ae73604fb85f086db0f6e6861253c8ef7e425dc08"
+          "digest": "sha256:ab33412cab749120e07359983f85bcb64038026844c06ff9f464c4f371d6d6ca"
+        },
+        {
+          "path": "scripts/design-artifact-shell.mjs",
+          "kind": "script",
+          "executable": false,
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "digest": "sha256:9245a86f8e3f20f6ec4c705d1364d2d6d3e639b34a7d41162769a0f490dd39df"
+        },
+        {
+          "path": "scripts/design-document.mjs",
+          "kind": "script",
+          "executable": false,
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "digest": "sha256:7e15b9f9e9afd29be2a2558fad9e57b5df85e494a586180d5afe23015cdbcfb7"
+        },
+        {
+          "path": "scripts/design-entities.mjs",
+          "kind": "script",
+          "executable": false,
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "digest": "sha256:376ec35d0f184deac31b639f2c0918e6b0f165e19984ed1c89ba2cfad6af9b80"
+        },
+        {
+          "path": "scripts/design-parse5-parser.mjs",
+          "kind": "script",
+          "executable": false,
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "digest": "sha256:a9bfeecae4d31155a6935455c82ea8348da25f8585216b531d00c6599b8196e4"
+        },
+        {
+          "path": "scripts/design-parse5-tokenizer.mjs",
+          "kind": "script",
+          "executable": false,
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "digest": "sha256:f655474fb8d0bed732f01ace5b67102f849b73cb40831a57f1fb7b61180fbde9"
+        },
+        {
+          "path": "scripts/design-review-handoff.mjs",
+          "kind": "script",
+          "executable": false,
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "digest": "sha256:1d04e0d821738f3934fb3fbd314b161fb557f4459cf2da2d1921c99d27d7d861"
+        },
+        {
+          "path": "scripts/design-sandbox-guards.mjs",
+          "kind": "script",
+          "executable": false,
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "digest": "sha256:dcc7aa1971da47018a198bfe7520c05e3e5ba21fe2d9c8fffcaad882ded5bbbb"
+        },
+        {
+          "path": "scripts/design-share.mjs",
+          "kind": "script",
+          "executable": false,
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "digest": "sha256:b10d7ce9cdb3eb48b9aca803e4d2ecc4f8e477e91f4a0c6a3ae17a1f7985aa06"
         },
         {
           "path": "schemas/design-document.schema.json",
