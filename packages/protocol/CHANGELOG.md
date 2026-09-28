@@ -1,5 +1,11 @@
 # @openplanr/protocol
 
+## 0.7.2
+### Patch Changes
+
+- 74fd3a5: The bundled design helper in the design, design-loop, design-review and plan skills now ships as `scripts/design.mjs` plus flat sibling `scripts/design-*.mjs` modules, each under 256 KiB and unminified, so the Claude Code plugin meets the plugin directory's per-file size limit. Commands, flags and output are unchanged. The skill registry and the pipeline's protocol projection carry the new resource digests.
+- b6a77c6: The `planr-sync` skill's bundled helper no longer talks to Linear or reads `PLANR_LINEAR_TOKEN`. Linear synchronization runs through the host's Linear connector or the `planr linear` CLI, which stores its own token. To migrate, run `planr linear init` once, audit with `planr linear sync --dry-run`, and create or update issues with `planr linear push <artifact-id>`. `sync.mjs linear …` now exits with `E_SYNC_USAGE` and names these commands. GitHub and local reconciliation are unchanged and still need no CLI.
+
 ## 0.7.1
 ### Patch Changes
 
