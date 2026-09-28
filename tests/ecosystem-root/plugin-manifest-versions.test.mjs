@@ -40,6 +40,18 @@ test('host plugin manifests and local marketplaces carry the CLI package version
   );
 });
 
+test('repository and host plugin manifests share one identity', () => {
+  const repository = json('.claude-plugin/plugin.json');
+  for (const path of [
+    'dist/plugins/claude/openplanr/.claude-plugin/plugin.json',
+    'dist/plugins/openai/openplanr/.codex-plugin/plugin.json',
+  ]) {
+    const manifest = json(path);
+    for (const field of ['name', 'description', 'author', 'license'])
+      assert.deepEqual(manifest[field], repository[field], `${path} ${field}`);
+  }
+});
+
 test('the pipeline plugin manifest carries the pipeline package version', () => {
   const manifest = json('packages/pipeline/.claude-plugin/plugin.json');
   assert.equal(manifest.name, 'planr-pipeline');

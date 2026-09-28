@@ -31,6 +31,7 @@ import {
   PROTOCOL_V18_CONTRACT_FILES,
 } from '../../packages/protocol/src/skill-source-contracts.mjs';
 import { validateWorkspaceManifests } from '../lib/workspace-release-policy.mjs';
+import { PLUGIN_AUTHOR, PLUGIN_DESCRIPTION, PLUGIN_LICENSE } from '../skills/plugin-metadata.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const arguments_ = process.argv.slice(2);
@@ -810,9 +811,9 @@ async function buildOutputs() {
     $schema: 'https://json.schemastore.org/claude-code-plugin.json',
     name: 'planr',
     version: components.cli.version,
-    description: 'Host-native OpenPlanr planning, delivery, review, design, and operating skills.',
-    author: { name: 'AsemDevs' },
-    license: 'MIT',
+    description: PLUGIN_DESCRIPTION,
+    author: PLUGIN_AUTHOR,
+    license: PLUGIN_LICENSE,
   };
   const marketplace = {
     $schema: 'https://json.schemastore.org/claude-code-marketplace.json',

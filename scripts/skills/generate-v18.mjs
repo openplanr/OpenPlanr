@@ -31,6 +31,13 @@ import {
   projectedSkillName,
   renderNamespacedSkill,
 } from './host-invocations.mjs';
+import {
+  CLAUDE_PLUGIN_ICON,
+  CLAUDE_PLUGIN_LISTING,
+  PLUGIN_AUTHOR,
+  PLUGIN_DESCRIPTION,
+  PLUGIN_LICENSE,
+} from './plugin-metadata.mjs';
 import { renderClaudePluginReadme } from './plugin-readme.mjs';
 import { resourceBytes } from './resource-bytes.mjs';
 
@@ -388,25 +395,31 @@ add(
   json({
     name: HOST_PLUGIN_NAME,
     version: pluginVersion,
-    description: 'Host-native OpenPlanr planning, delivery, review, design, and operating skills.',
-    author: { name: 'AsemDevs' },
-    license: 'MIT',
+    description: PLUGIN_DESCRIPTION,
+    author: PLUGIN_AUTHOR,
+    license: PLUGIN_LICENSE,
     skills: './skills/',
   }),
 );
+const { displayName, keywords, ...listingLinks } = CLAUDE_PLUGIN_LISTING;
 add(
   'dist/plugins/claude/openplanr/.claude-plugin/plugin.json',
   json({
     name: HOST_PLUGIN_NAME,
-    displayName: 'OpenPlanr',
+    displayName,
     version: pluginVersion,
-    description: 'Host-native OpenPlanr planning, delivery, review, design, and operating skills.',
-    author: { name: 'AsemDevs' },
+    description: PLUGIN_DESCRIPTION,
+    author: PLUGIN_AUTHOR,
     homepage: cliPackage.homepage,
     repository: repositoryUrl,
-    license: 'MIT',
-    keywords: ['planning', 'specification', 'delivery', 'code-review', 'design'],
+    license: PLUGIN_LICENSE,
+    keywords,
+    ...listingLinks,
   }),
+);
+add(
+  'dist/plugins/claude/openplanr/.claude-plugin/icon.svg',
+  readFileSync(resolve(root, CLAUDE_PLUGIN_ICON)),
 );
 add(
   'dist/plugins/claude/openplanr/README.md',

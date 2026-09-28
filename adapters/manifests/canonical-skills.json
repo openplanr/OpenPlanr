@@ -147,7 +147,7 @@
       "source": "skills/planr-ceo-review/openplanr.skill.json",
       "entrypoint": "skills/planr-ceo-review/SKILL.md",
       "description": "Produce a grounded strategy and finance review for an Operate cycle. Use when direction, runway, margin, investment, or cost of delay needs a CEO lens.",
-      "sourceDigest": "sha256:ca35c07838f1eb1897432d1e619fcb3965bf36fdfa82df1dfea2c942af838aa8",
+      "sourceDigest": "sha256:e43a1029894eccd60a4ad280decd549e86d6a1f345de7c25c78dac3d7a62d36a",
       "resources": [
         {
           "path": "references/operate-advisor-contract.md",
@@ -244,7 +244,7 @@
       "source": "skills/planr-chair-review/openplanr.skill.json",
       "entrypoint": "skills/planr-chair-review/SKILL.md",
       "description": "Synthesize an Operate cycle into a prioritized decision queue and action plan. Use after specialist reviews when leadership needs one coherent brief.",
-      "sourceDigest": "sha256:a77f3dda036f8a5ff34124522fde9a38594ed372dce48e6cf10a6b3da8039c00",
+      "sourceDigest": "sha256:ca4e392fd2956e1774aba3acf9bd9329002071b77fba7dbc22a5942e4ce6d8c6",
       "resources": [
         {
           "path": "scripts/validate-note.mjs",
@@ -329,7 +329,7 @@
       "source": "skills/planr-challenger-review/openplanr.skill.json",
       "entrypoint": "skills/planr-challenger-review/SKILL.md",
       "description": "Challenge an Operate cycle's claims, alternatives, downside, and confidence. Use when assumptions or executive consensus need an independent stress test.",
-      "sourceDigest": "sha256:4ecdbd1100102b88091d2df9f911d61102091b0d3cc039a42691abf6dff45c88",
+      "sourceDigest": "sha256:205705be33cde36f20ccfe3ebf3528f85a4d74534ced6c1c6c8facd9875101fe",
       "resources": [
         {
           "path": "scripts/validate-note.mjs",
@@ -414,7 +414,7 @@
       "source": "skills/planr-cmo-review/openplanr.skill.json",
       "entrypoint": "skills/planr-cmo-review/SKILL.md",
       "description": "Produce a grounded market and growth review for an Operate cycle. Use when acquisition, positioning, demand, retention, or missing measurement needs a CMO lens.",
-      "sourceDigest": "sha256:c65e022240e380f2afcf72270d784f3076465fb4e59b26bcd713179a917189a3",
+      "sourceDigest": "sha256:1ad6b0ca75a7205f81d5eeeaff0bf276e0d757caf57cb2c39afe9533212c963c",
       "resources": [
         {
           "path": "references/operate-advisor-contract.md",
@@ -511,7 +511,7 @@
       "source": "skills/planr-coo-review/openplanr.skill.json",
       "entrypoint": "skills/planr-coo-review/SKILL.md",
       "description": "Produce a grounded operations and customer-health review for an Operate cycle. Use when readiness, service delivery, capacity, or customer health needs a COO lens.",
-      "sourceDigest": "sha256:a0626fef30b983cb097d898e34e85fb82edfc8496d19b8fe74c1089483ad7e2b",
+      "sourceDigest": "sha256:e14e1d8ac217e10df9ee91107c303aeadb2c75496499e4c757bfd9fa7086cc0f",
       "resources": [
         {
           "path": "references/operate-advisor-contract.md",
@@ -608,7 +608,7 @@
       "source": "skills/planr-cpo-review/openplanr.skill.json",
       "entrypoint": "skills/planr-cpo-review/SKILL.md",
       "description": "Produce a grounded product and activation review for an Operate cycle. Use when customer value, activation, prioritization, or adoption needs a CPO lens.",
-      "sourceDigest": "sha256:d9e3b4bce8bee4ca9ee050707e3f723f1b20555ba04489b0b49f7edbe59b4f1c",
+      "sourceDigest": "sha256:19c93ad41a8760217f1853da4fe211d363fbaa4a40b22b4dc54b8bf4b46e74eb",
       "resources": [
         {
           "path": "references/operate-advisor-contract.md",
@@ -705,7 +705,7 @@
       "source": "skills/planr-cto-review/openplanr.skill.json",
       "entrypoint": "skills/planr-cto-review/SKILL.md",
       "description": "Produce a grounded technology and delivery-risk review for an Operate cycle. Use when architecture, reliability, security, or execution risk needs a CTO lens.",
-      "sourceDigest": "sha256:208fef162e40bc07f25374373bfa1312f272134e7d0094bfb1e1627b5fa79893",
+      "sourceDigest": "sha256:8173890bbc2a79a0f7df28f1206b58ad62a346868e42bfcbc2465cc6f63d0b7c",
       "resources": [
         {
           "path": "references/operate-advisor-contract.md",

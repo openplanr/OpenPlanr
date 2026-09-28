@@ -2,7 +2,7 @@
 name: planr-chair-review
 description: "Synthesize an Operate cycle into a prioritized decision queue and action plan. Use after specialist reviews when leadership needs one coherent brief."
 license: MIT
-allowed-tools: "Read, Grep, Glob, Write"
+allowed-tools: "Read, Grep, Glob, Edit(./.planr/operate/**)"
 ---
 
 # Chair synthesis (`chair`)

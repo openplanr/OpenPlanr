@@ -6,7 +6,7 @@
   "inputs": [
     {
       "path": "adapters/manifests/generated-assets.json",
-      "digest": "sha256:224bc607a87dcc0856e665d96d077f21a82bdfa5097f518ae76d1865611462d7"
+      "digest": "sha256:2caf42b5da1bc17ee842ac92eb5eb15596d5b2160dc0cfd5fa7c74de1d162a03"
     },
     {
       "path": "apps/dashboard/package.json",
@@ -102,7 +102,7 @@
     },
     {
       "path": "scripts/marketplace/generate-ecosystem.mjs",
-      "digest": "sha256:cabdebf28eda2c0efbd1b6d210ef7aac4fdb1b9fd86aff4fdd61db2bfa3c3c05"
+      "digest": "sha256:9eb3a6a7d679462314dc8a87dc644695cc2f10257b1656d371fd2e011f72b5a9"
     },
     {
       "path": "scripts/marketplace/openplanr-ecosystem.schema.json",
@@ -116,11 +116,11 @@
     },
     {
       "path": ".claude-plugin/plugin.json",
-      "digest": "sha256:d82b470c25beeb4f2f87c34b87a58f97fc4386ca5d7a93ab81076d7f172f6d8f"
+      "digest": "sha256:d66d3fd11243c004a6fe7a0981cbcce5af39286cbe096f87d15199d0fc6dc72c"
     },
     {
       "path": "adapters/manifests/codex-plugin-content.json",
-      "digest": "sha256:8c4cc4310ffe469bf7db8a4d8d1e9662e0584337c05f55722462c6610b25a15c"
+      "digest": "sha256:43648c31f8fcf14e228bc7db0b94836933bc8bae0112300b182d7a726a3d7741"
     },
     {
       "path": "docs/generated/adapters.md",
@@ -136,7 +136,7 @@
     },
     {
       "path": "ecosystem.json",
-      "digest": "sha256:1f147432201c8334c8e17ea10e5c7612e6d6b3ed352f8dc6a32dc853c1b0feba"
+      "digest": "sha256:da21d4e6bf6131b0a15fd19fd5bba1a374ad87dd8add9204c667cf58f991f376"
     },
     {
       "path": "packages/pipeline/.claude-plugin/plugin.json",
