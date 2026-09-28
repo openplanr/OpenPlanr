@@ -133,6 +133,94 @@
       ]
     },
     {
+      "path": "scripts/design-artifact-shell.mjs",
+      "kind": "script",
+      "executable": false,
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ]
+    },
+    {
+      "path": "scripts/design-document.mjs",
+      "kind": "script",
+      "executable": false,
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ]
+    },
+    {
+      "path": "scripts/design-entities.mjs",
+      "kind": "script",
+      "executable": false,
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ]
+    },
+    {
+      "path": "scripts/design-parse5-parser.mjs",
+      "kind": "script",
+      "executable": false,
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ]
+    },
+    {
+      "path": "scripts/design-parse5-tokenizer.mjs",
+      "kind": "script",
+      "executable": false,
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ]
+    },
+    {
+      "path": "scripts/design-review-handoff.mjs",
+      "kind": "script",
+      "executable": false,
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ]
+    },
+    {
+      "path": "scripts/design-sandbox-guards.mjs",
+      "kind": "script",
+      "executable": false,
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ]
+    },
+    {
+      "path": "scripts/design-share.mjs",
+      "kind": "script",
+      "executable": false,
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ]
+    },
+    {
       "path": "schemas/design-document.schema.json",
       "kind": "schema",
       "executable": false,

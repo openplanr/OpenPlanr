@@ -513,6 +513,35 @@ test('design runtime bundling and release archives preserve binary assets withou
     resources.length < 200,
     'portable closure fits the frozen skill-package resource limit',
   );
+  for (const { path, bytes } of resources)
+    assert.ok(bytes.length < 256 * 1024, `${path} stays under the plugin directory's file limit`);
+  assert.deepEqual(
+    resources.filter(({ executable }) => executable).map(({ path }) => path),
+    ['scripts/design.mjs'],
+  );
+  const scripts = new Set(
+    resources.filter(({ path }) => path.startsWith('scripts/design')).map(({ path }) => path),
+  );
+  for (const path of scripts)
+    for (const [, imported] of resourceBytes(
+      resources.find((resource) => resource.path === path).bytes,
+    )
+      .toString('utf8')
+      .matchAll(/from "\.\/([^"]+)"/gu))
+      assert.ok(scripts.has(`scripts/${imported}`), `${path} imports shipped ${imported}`);
+});
+
+test('every installed design helper loads its split modules outside the source checkout', () => {
+  const directory = realpathSync(mkdtempSync(join(tmpdir(), 'openplanr-design-modules-')));
+  try {
+    for (const host of ['openai', 'claude'])
+      for (const skillId of [...DESIGN_SKILL_IDS, 'planr-plan']) {
+        const help = run(install(join(directory, host), skillId, host), directory, ['--help']);
+        assert.match(help.usage, /^design\.mjs /u, `${host} ${skillId}`);
+      }
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
 });
 
 test('isolated Design and Plan installations preserve explicit review handoff approval and freshness', () => {
