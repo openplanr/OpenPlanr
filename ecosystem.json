@@ -139,7 +139,7 @@
   "catalogs": {
     "commands": {
       "path": "packages/protocol/registries/commands.json",
-      "digest": "sha256:a0bbfcf09b3df74a45172878c83252cc1755aec2f06ae768a87c365485f9a8cc",
+      "digest": "sha256:d5161f3756d75dc31bc70432af14b8491cc5f9d222454d77492a479f6e09940a",
       "rootCommands": 39,
       "pipelineMachineLeaves": 31,
       "frozenClaudeDocuments": 8,
@@ -339,7 +339,7 @@
     ],
     "generatedAssets": {
       "path": "adapters/manifests/generated-assets.json",
-      "digest": "sha256:2caf42b5da1bc17ee842ac92eb5eb15596d5b2160dc0cfd5fa7c74de1d162a03",
+      "digest": "sha256:fc55856430d25f2b967a2d2634acb82110c951cf7a0716d2a052d20f2f95dde5",
       "count": 1953
     }
   },

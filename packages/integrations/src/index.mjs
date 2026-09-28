@@ -1,9 +1,7 @@
 export {
   executeGitHubOperations,
-  executeLinearOperations,
   IntegrationError,
   inspectGitHub,
-  inspectLinear,
   isLikelyLinearIssueId,
   reconcileStatus,
   runPortableSync,

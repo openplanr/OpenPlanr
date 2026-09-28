@@ -37,8 +37,9 @@ The same skills ship for Codex and Cursor through the `openplanr` package.
   read and write files in your repository.
 - The planning dashboard and local artifact reviews bind to loopback only.
 - Only when you ask:
-  - `sync` reconciles planning files with GitHub Issues through `gh`, or with Linear by sending
-    the `PLANR_LINEAR_TOKEN` you set to `api.linear.app`. Writes need `--apply`.
+  - `sync` reconciles planning files with GitHub Issues through `gh` (writes need `--apply`),
+    or with Linear through your Linear connector or the `planr linear` CLI, which keeps its own
+    token.
   - `artifact` and the design skills share an encrypted review through `share.openplanr.dev`.
   - The CLI's optional design engine calls OpenAI only when you select its OpenAI provider and
     supply your own key.

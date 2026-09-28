@@ -7,7 +7,6 @@ import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 
 const execFileAsync = promisify(execFile);
-const LINEAR_ENDPOINT = 'https://api.linear.app/graphql';
 const LINEAR_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 const LINEAR_IDENTIFIER = /^[A-Z][A-Z0-9]+-\d+$/u;
 
@@ -102,100 +101,6 @@ export async function executeGitHubOperations(
   return { provider: 'github', applied: true, results };
 }
 
-async function linearRequest(query, variables, token, fetchImpl = fetch) {
-  if (!token)
-    throw new IntegrationError('E_LINEAR_CREDENTIAL', 'Linear credentials are unavailable.');
-  let response;
-  let payload;
-  try {
-    response = await fetchImpl(LINEAR_ENDPOINT, {
-      method: 'POST',
-      headers: { authorization: token, 'content-type': 'application/json' },
-      body: JSON.stringify({ query, variables }),
-    });
-    payload = await response.json();
-  } catch (error) {
-    throw new IntegrationError('E_LINEAR_API', 'Linear synchronization transport failed.', {
-      cause: String(error?.message ?? error),
-    });
-  }
-  if (!response.ok || !payload || typeof payload !== 'object' || payload.errors?.length) {
-    throw new IntegrationError('E_LINEAR_API', 'Linear rejected the synchronization request.', {
-      status: response.status,
-      errors: payload?.errors,
-    });
-  }
-  return payload.data;
-}
-
-function requireLinearMutationResult(data, field) {
-  const result = data?.[field];
-  const issue = result?.issue;
-  if (
-    result?.success !== true ||
-    !issue ||
-    typeof issue.id !== 'string' ||
-    typeof issue.identifier !== 'string' ||
-    typeof issue.url !== 'string'
-  ) {
-    throw new IntegrationError(
-      'E_LINEAR_API',
-      `Linear ${field} did not confirm a successful issue mutation.`,
-      {
-        field,
-        success: result?.success ?? null,
-      },
-    );
-  }
-  return issue;
-}
-
-export async function inspectLinear({ token = process.env.PLANR_LINEAR_TOKEN } = {}) {
-  const data = await linearRequest('query OpenPlanrViewer { viewer { id name email } }', {}, token);
-  return { provider: 'linear', viewer: data.viewer };
-}
-
-export async function executeLinearOperations(
-  operations,
-  { token = process.env.PLANR_LINEAR_TOKEN, apply = false } = {},
-) {
-  if (!Array.isArray(operations))
-    throw new IntegrationError('E_SYNC_INPUT', 'Linear operations must be an array.');
-  if (!apply) return { provider: 'linear', applied: false, operations };
-  const results = [];
-  for (const operation of operations) {
-    if (operation.action === 'create' && operation.teamId) {
-      const data = await linearRequest(
-        'mutation OpenPlanrCreate($input: IssueCreateInput!) { issueCreate(input: $input) { success issue { id identifier url } } }',
-        {
-          input: { teamId: operation.teamId, title: operation.title, description: operation.body },
-        },
-        token,
-      );
-      results.push({ action: 'create', ...requireLinearMutationResult(data, 'issueCreate') });
-      continue;
-    }
-    if (operation.action === 'update' && isLikelyLinearIssueId(operation.id)) {
-      const data = await linearRequest(
-        'mutation OpenPlanrUpdate($id: String!, $input: IssueUpdateInput!) { issueUpdate(id: $id, input: $input) { success issue { id identifier url } } }',
-        {
-          id: operation.id,
-          input: { title: operation.title, description: operation.body, stateId: operation.state },
-        },
-        token,
-      );
-      results.push({ action: 'update', ...requireLinearMutationResult(data, 'issueUpdate') });
-      continue;
-    }
-    throw new IntegrationError(
-      'E_SYNC_OPERATION',
-      'Unsupported Linear synchronization operation.',
-      { operation },
-    );
-  }
-  return { provider: 'linear', applied: true, results };
-}
-
 async function readJsonInput(value, stdin) {
   if (value) return JSON.parse(await readFile(resolve(value), 'utf8'));
   let bytes = '';
@@ -226,7 +131,7 @@ function parseArgs(argv) {
 
 export async function runPortableSync(
   argv = process.argv.slice(2),
-  { cwd = process.cwd(), env = process.env, stdin = process.stdin, stdout = process.stdout } = {},
+  { cwd = process.cwd(), stdin = process.stdin, stdout = process.stdout } = {},
 ) {
   const args = parseArgs(argv);
   let result;
@@ -238,17 +143,15 @@ export async function runPortableSync(
       cwd,
       apply: args.apply,
     });
-  } else if (args.provider === 'linear' && args.action === 'inspect') {
-    result = await inspectLinear({ token: env.PLANR_LINEAR_TOKEN });
-  } else if (args.provider === 'linear' && args.action === 'sync') {
-    result = await executeLinearOperations(await readJsonInput(args.input, stdin), {
-      token: env.PLANR_LINEAR_TOKEN,
-      apply: args.apply,
-    });
+  } else if (args.provider === 'linear') {
+    throw new IntegrationError(
+      'E_SYNC_USAGE',
+      'Linear synchronization runs through a Linear connector or the planr CLI (planr linear push, planr linear sync).',
+    );
   } else {
     throw new IntegrationError(
       'E_SYNC_USAGE',
-      'Usage: sync.mjs <local|github|linear> <inspect|sync> [--input path] [--apply]',
+      'Usage: sync.mjs <local|github> <inspect|sync> [--input path] [--apply]',
     );
   }
   stdout.write(`${JSON.stringify(result, null, 2)}\n`);
