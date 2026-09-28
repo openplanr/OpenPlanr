@@ -4155,7 +4155,7 @@
       "source": "skills/planr-sync/openplanr.skill.json",
       "entrypoint": "skills/planr-sync/SKILL.md",
       "description": "Audit OpenPlanr planning artifacts for graph and protocol drift. Use when statuses, references, schemas, or generated planning views may be inconsistent.",
-      "sourceDigest": "sha256:09779a70133a14e31a2673e98237e74408cfe34eae9218fffa01a86e8e9290f5",
+      "sourceDigest": "sha256:d221d3afd1ee109efcab194fb33c4340856f513c9bc96de513e5758d23ebb2fb",
       "resources": [
         {
           "path": "scripts/sync.mjs",
@@ -4167,7 +4167,7 @@
             "cursor"
           ],
           "executable": true,
-          "digest": "sha256:42fb430add6e96c73a8d1c5ea5df7a6ce0bdffc20b9c375eff9333c6c741b308"
+          "digest": "sha256:005397d703d8df70f346a789d15c665a44329449418b39e807bb0dff927153da"
         },
         {
           "path": "agents/openai.yaml",

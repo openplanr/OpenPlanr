@@ -10,10 +10,8 @@ export interface SyncOperation {
   id?: string;
   title?: string;
   body?: string;
-  state?: string;
   labels?: string[];
   projectId?: string;
-  teamId?: string;
 }
 export declare class IntegrationError extends Error {
   readonly code: string;
@@ -30,18 +28,10 @@ export declare function executeGitHubOperations(
   operations: SyncOperation[],
   options?: { cwd?: string; apply?: boolean },
 ): Promise<Record<string, unknown>>;
-export declare function inspectLinear(options?: {
-  token?: string;
-}): Promise<Record<string, unknown>>;
-export declare function executeLinearOperations(
-  operations: SyncOperation[],
-  options?: { token?: string; apply?: boolean },
-): Promise<Record<string, unknown>>;
 export declare function runPortableSync(
   argv?: string[],
   options?: {
     cwd?: string;
-    env?: NodeJS.ProcessEnv;
     stdin?: NodeJS.ReadableStream;
     stdout?: NodeJS.WritableStream;
   },

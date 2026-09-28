@@ -1581,7 +1581,7 @@
       "assets": [
         {
           "path": "skills/sync/SKILL.md",
-          "digest": "sha256:53698324b62f43b672ce8fe1654c526c96fb202e313442f09c6fc1e72268677e"
+          "digest": "sha256:06048f24128098919931db60272e0e14fe51bcbeba4b499db587e3b89d7bb3b9"
         },
         {
           "path": "skills/sync/openplanr.skill.json",
@@ -1589,7 +1589,7 @@
         },
         {
           "path": "skills/sync/scripts/sync.mjs",
-          "digest": "sha256:42fb430add6e96c73a8d1c5ea5df7a6ce0bdffc20b9c375eff9333c6c741b308"
+          "digest": "sha256:005397d703d8df70f346a789d15c665a44329449418b39e807bb0dff927153da"
         },
         {
           "path": "skills/sync/agents/openai.yaml",

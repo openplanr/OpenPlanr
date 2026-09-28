@@ -13,7 +13,7 @@ const read = (path) => readFileSync(join(root, path), 'utf8');
 // router. Keep the legacy procedure guardrails and verify the active package's
 // authorization guidance and executable preview behavior instead of historical
 // line equality. Integrations' portable-sync/linear-failure-paths suites own
-// conflict resolution and provider mutation responses.
+// conflict resolution, GitHub mutation responses and Linear routing.
 test('the retained legacy procedure keeps its branch and outward-action guardrails', () => {
   const procedure = read('packages/pipeline/procedures/sync-workflow.md');
   assert.match(procedure, /Operate on the canonical branch/);
@@ -57,26 +57,44 @@ for (const [surface, entrypoint, helper] of surfaces) {
       /If credentials are unavailable, complete local reconciliation\s+and report only the external step that could not run/,
     );
     assert.match(guidance, /Return aligned, locally repairable, conflict, and unavailable counts/);
-    assert.match(guidance, /OpenPlanr CLI is never required/);
+    assert.match(guidance, /Local and GitHub work never require the OpenPlanr CLI/);
+    assert.match(guidance, /planr linear sync --dry-run/);
     assert.doesNotMatch(guidance, /procedures\/sync-workflow\.md|commands\/sync\.md/);
   });
 
-  for (const provider of ['github', 'linear']) {
-    test(`${surface}: ${provider} synchronization previews without credentials or installed tools`, (t) => {
-      const project = mkdtempSync(join(tmpdir(), 'openplanr-sync-preview-'));
-      t.after(() => rmSync(project, { recursive: true, force: true }));
-      const operations = [{ action: 'create', title: 'Preview only', teamId: 'fixture-team' }];
-      const result = spawnSync(process.execPath, [join(root, helper), provider, 'sync'], {
-        cwd: project,
-        encoding: 'utf8',
-        input: JSON.stringify(operations),
-        // A regression cannot reach installed tools or inherit provider secrets.
-        env: { PATH: '', PLANR_LINEAR_TOKEN: '' },
-        timeout: 5_000,
-      });
-      assert.equal(result.status, 0, result.stderr || result.error?.message);
-      assert.deepEqual(JSON.parse(result.stdout), { provider, applied: false, operations });
-      assert.deepEqual(readdirSync(project), [], 'preview must not write project files');
+  test(`${surface}: github synchronization previews without credentials or installed tools`, (t) => {
+    const project = mkdtempSync(join(tmpdir(), 'openplanr-sync-preview-'));
+    t.after(() => rmSync(project, { recursive: true, force: true }));
+    const operations = [{ action: 'create', title: 'Preview only' }];
+    const result = spawnSync(process.execPath, [join(root, helper), 'github', 'sync'], {
+      cwd: project,
+      encoding: 'utf8',
+      input: JSON.stringify(operations),
+      // A regression cannot reach installed tools or inherit provider secrets.
+      env: { PATH: '' },
+      timeout: 5_000,
     });
-  }
+    assert.equal(result.status, 0, result.stderr || result.error?.message);
+    assert.deepEqual(JSON.parse(result.stdout), {
+      provider: 'github',
+      applied: false,
+      operations,
+    });
+    assert.deepEqual(readdirSync(project), [], 'preview must not write project files');
+  });
+
+  test(`${surface}: the helper sends Linear to a connector or the planr CLI`, (t) => {
+    const project = mkdtempSync(join(tmpdir(), 'openplanr-sync-linear-'));
+    t.after(() => rmSync(project, { recursive: true, force: true }));
+    const result = spawnSync(process.execPath, [join(root, helper), 'linear', 'sync'], {
+      cwd: project,
+      encoding: 'utf8',
+      input: '[]',
+      env: { PATH: '', PLANR_LINEAR_TOKEN: 'must-not-be-read' },
+      timeout: 5_000,
+    });
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /^E_SYNC_USAGE: .*planr linear push, planr linear sync/u);
+    assert.deepEqual(readdirSync(project), []);
+  });
 }

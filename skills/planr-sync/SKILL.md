@@ -7,16 +7,27 @@ license: MIT
 # Planr Sync
 
 Reconcile local planning artifacts and, when requested, GitHub or Linear state.
-Reason about conflicts in this active session; deterministic mapping and transport
-may use a host connector or the packaged [sync helper](scripts/sync.mjs). The optional
-OpenPlanr CLI is never required by the skill.
+Reason about conflicts in this active session; deterministic mapping and GitHub
+transport may use a host connector or the packaged [sync helper](scripts/sync.mjs).
+Local and GitHub work never require the OpenPlanr CLI.
 
 Resolution order:
 
 1. use a host-native GitHub or Linear connector when available;
-2. otherwise use the packaged deterministic helper;
-3. optionally use the equivalent `planr github`, `planr linear`, or `planr sync`
-   terminal utility when the user has installed it.
+2. otherwise, for GitHub, use the packaged deterministic helper;
+3. otherwise, for Linear, use the `planr linear` terminal utility when the user has
+   installed it; `planr github` and `planr sync` are optional equivalents for the rest.
+
+Linear through the CLI:
+
+- the user runs `planr linear init` in a terminal once; it prompts for a personal
+  access token, which the CLI stores;
+- audit with `planr linear sync --dry-run`, which reads Linear without writing;
+- before a real `planr linear sync`, ask how conflicts should resolve and pass
+  `--on-conflict local` or `--on-conflict linear`; without a prompt it favors Linear;
+- `planr linear push <artifact-id>` creates or updates Linear issues; preview with
+  `--dry-run`. Quick tasks and backlog items need `linear.standaloneProjectId` in the
+  project config when no terminal prompt is available.
 
 Audit is read-only by default. Apply local changes only when the request asks for
 reconciliation, and push remote changes only when the request asks for external
