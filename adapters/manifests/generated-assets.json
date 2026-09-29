@@ -6,7 +6,7 @@
   "assets": [
     {
       "path": "adapters/manifests/canonical-skills.json",
-      "digest": "sha256:9612c5651d57ce1ab2ce66335564b6c12edceb29e622caedcc350cb6073cd3f3",
+      "digest": "sha256:cf366abffbc9ee974227ef041fe49dd4ab8efb50a7398e32b4f4244c2a5153cb",
       "generated": false
     },
     {
@@ -31,7 +31,7 @@
     },
     {
       "path": "dist/plugins/claude/openplanr/.openplanr-content.json",
-      "digest": "sha256:5dc5fc95ff89ec70d7158cfacd9bc2a0e49e8ea7ba58bccd41f4bb5d0f6c94e0",
+      "digest": "sha256:31691e8d901ab7b710483098d905c8dc28174e78672d4eddf1bdafe386dfd6e8",
       "generated": true
     },
     {
@@ -261,7 +261,7 @@
     },
     {
       "path": "dist/plugins/claude/openplanr/skills/ceo-review/SKILL.md",
-      "digest": "sha256:9c51ceb66d20f49ca417da1213441d4824cba8206d88f33b2481ed6eea51a399",
+      "digest": "sha256:fb25892b6a1226d3a22881327083a9f883428cc16d059f28e782d9533e46d02c",
       "generated": true
     },
     {
@@ -311,7 +311,7 @@
     },
     {
       "path": "dist/plugins/claude/openplanr/skills/challenger-review/SKILL.md",
-      "digest": "sha256:7eb97bc94201cd9aff3751430437ea116b15a8d1347269ce3b0cbbd9cbf0d8c7",
+      "digest": "sha256:e45f867a3b4e3e6db11f1e8c8851830286a166b8097b8fdfdd7aabf885b846cd",
       "generated": true
     },
     {
@@ -341,7 +341,7 @@
     },
     {
       "path": "dist/plugins/claude/openplanr/skills/cmo-review/SKILL.md",
-      "digest": "sha256:31112e8deae357bbde9d51d9707400f63e16563bf08f4774acb52e2f5ccdfa2a",
+      "digest": "sha256:dba38caa522b5b2950b8411a6f54586c77181e77a5e804084c5325599e459cf2",
       "generated": true
     },
     {
@@ -371,7 +371,7 @@
     },
     {
       "path": "dist/plugins/claude/openplanr/skills/coo-review/SKILL.md",
-      "digest": "sha256:8d6b132b39e41d249961602e002035f4748f1ad4299984952f00d6b16485a678",
+      "digest": "sha256:6803af22180794e1e90a41cfc6d5ae292a089e3ac952c28ed6421e6bb80eccd1",
       "generated": true
     },
     {
@@ -401,7 +401,7 @@
     },
     {
       "path": "dist/plugins/claude/openplanr/skills/cpo-review/SKILL.md",
-      "digest": "sha256:77d2f464f9102515ab842fc5afe76feae7a12c9ecde150c2392a599b50186cf4",
+      "digest": "sha256:46edf7f1f4a52e988280cc38f45c4c0f7814a91726e9ac33a13bda19d6288d60",
       "generated": true
     },
     {
@@ -431,7 +431,7 @@
     },
     {
       "path": "dist/plugins/claude/openplanr/skills/cto-review/SKILL.md",
-      "digest": "sha256:7addd0afdd7a17032f24c54c11dfc80beef516f0d7d90dfa11392a9556245b1e",
+      "digest": "sha256:24bd606cb4f5d942efb935ed5be88a49c8fc736dfe90ce0ae85843dfc0fa1504",
       "generated": true
     },
     {
@@ -3056,7 +3056,7 @@
     },
     {
       "path": "dist/plugins/openai/openplanr/.openplanr-content.json",
-      "digest": "sha256:2f44c42867de3b58b027391c19c94ac5a975eb2d7c1c9ea13cf3003c68d84f35",
+      "digest": "sha256:5cce7c7bf7ed2eec9c27b435eca1569e550ee5d58ad691fd1d557eac1dec1ccd",
       "generated": true
     },
     {
@@ -3136,7 +3136,7 @@
     },
     {
       "path": "dist/plugins/openai/openplanr/skills/ceo-review/SKILL.md",
-      "digest": "sha256:9c51ceb66d20f49ca417da1213441d4824cba8206d88f33b2481ed6eea51a399",
+      "digest": "sha256:fb25892b6a1226d3a22881327083a9f883428cc16d059f28e782d9533e46d02c",
       "generated": true
     },
     {
@@ -3206,7 +3206,7 @@
     },
     {
       "path": "dist/plugins/openai/openplanr/skills/challenger-review/SKILL.md",
-      "digest": "sha256:7eb97bc94201cd9aff3751430437ea116b15a8d1347269ce3b0cbbd9cbf0d8c7",
+      "digest": "sha256:e45f867a3b4e3e6db11f1e8c8851830286a166b8097b8fdfdd7aabf885b846cd",
       "generated": true
     },
     {
@@ -3246,7 +3246,7 @@
     },
     {
       "path": "dist/plugins/openai/openplanr/skills/cmo-review/SKILL.md",
-      "digest": "sha256:31112e8deae357bbde9d51d9707400f63e16563bf08f4774acb52e2f5ccdfa2a",
+      "digest": "sha256:dba38caa522b5b2950b8411a6f54586c77181e77a5e804084c5325599e459cf2",
       "generated": true
     },
     {
@@ -3286,7 +3286,7 @@
     },
     {
       "path": "dist/plugins/openai/openplanr/skills/coo-review/SKILL.md",
-      "digest": "sha256:8d6b132b39e41d249961602e002035f4748f1ad4299984952f00d6b16485a678",
+      "digest": "sha256:6803af22180794e1e90a41cfc6d5ae292a089e3ac952c28ed6421e6bb80eccd1",
       "generated": true
     },
     {
@@ -3326,7 +3326,7 @@
     },
     {
       "path": "dist/plugins/openai/openplanr/skills/cpo-review/SKILL.md",
-      "digest": "sha256:77d2f464f9102515ab842fc5afe76feae7a12c9ecde150c2392a599b50186cf4",
+      "digest": "sha256:46edf7f1f4a52e988280cc38f45c4c0f7814a91726e9ac33a13bda19d6288d60",
       "generated": true
     },
     {
@@ -3366,7 +3366,7 @@
     },
     {
       "path": "dist/plugins/openai/openplanr/skills/cto-review/SKILL.md",
-      "digest": "sha256:7addd0afdd7a17032f24c54c11dfc80beef516f0d7d90dfa11392a9556245b1e",
+      "digest": "sha256:24bd606cb4f5d942efb935ed5be88a49c8fc736dfe90ce0ae85843dfc0fa1504",
       "generated": true
     },
     {
@@ -4766,7 +4766,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/claude/openplanr/.openplanr-content.json",
-      "digest": "sha256:5dc5fc95ff89ec70d7158cfacd9bc2a0e49e8ea7ba58bccd41f4bb5d0f6c94e0",
+      "digest": "sha256:31691e8d901ab7b710483098d905c8dc28174e78672d4eddf1bdafe386dfd6e8",
       "generated": true
     },
     {
@@ -4996,7 +4996,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/claude/openplanr/skills/ceo-review/SKILL.md",
-      "digest": "sha256:9c51ceb66d20f49ca417da1213441d4824cba8206d88f33b2481ed6eea51a399",
+      "digest": "sha256:fb25892b6a1226d3a22881327083a9f883428cc16d059f28e782d9533e46d02c",
       "generated": true
     },
     {
@@ -5046,7 +5046,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/claude/openplanr/skills/challenger-review/SKILL.md",
-      "digest": "sha256:7eb97bc94201cd9aff3751430437ea116b15a8d1347269ce3b0cbbd9cbf0d8c7",
+      "digest": "sha256:e45f867a3b4e3e6db11f1e8c8851830286a166b8097b8fdfdd7aabf885b846cd",
       "generated": true
     },
     {
@@ -5076,7 +5076,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/claude/openplanr/skills/cmo-review/SKILL.md",
-      "digest": "sha256:31112e8deae357bbde9d51d9707400f63e16563bf08f4774acb52e2f5ccdfa2a",
+      "digest": "sha256:dba38caa522b5b2950b8411a6f54586c77181e77a5e804084c5325599e459cf2",
       "generated": true
     },
     {
@@ -5106,7 +5106,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/claude/openplanr/skills/coo-review/SKILL.md",
-      "digest": "sha256:8d6b132b39e41d249961602e002035f4748f1ad4299984952f00d6b16485a678",
+      "digest": "sha256:6803af22180794e1e90a41cfc6d5ae292a089e3ac952c28ed6421e6bb80eccd1",
       "generated": true
     },
     {
@@ -5136,7 +5136,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/claude/openplanr/skills/cpo-review/SKILL.md",
-      "digest": "sha256:77d2f464f9102515ab842fc5afe76feae7a12c9ecde150c2392a599b50186cf4",
+      "digest": "sha256:46edf7f1f4a52e988280cc38f45c4c0f7814a91726e9ac33a13bda19d6288d60",
       "generated": true
     },
     {
@@ -5166,7 +5166,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/claude/openplanr/skills/cto-review/SKILL.md",
-      "digest": "sha256:7addd0afdd7a17032f24c54c11dfc80beef516f0d7d90dfa11392a9556245b1e",
+      "digest": "sha256:24bd606cb4f5d942efb935ed5be88a49c8fc736dfe90ce0ae85843dfc0fa1504",
       "generated": true
     },
     {
@@ -7791,7 +7791,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/openai/openplanr/.openplanr-content.json",
-      "digest": "sha256:2f44c42867de3b58b027391c19c94ac5a975eb2d7c1c9ea13cf3003c68d84f35",
+      "digest": "sha256:5cce7c7bf7ed2eec9c27b435eca1569e550ee5d58ad691fd1d557eac1dec1ccd",
       "generated": true
     },
     {
@@ -7871,7 +7871,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/openai/openplanr/skills/ceo-review/SKILL.md",
-      "digest": "sha256:9c51ceb66d20f49ca417da1213441d4824cba8206d88f33b2481ed6eea51a399",
+      "digest": "sha256:fb25892b6a1226d3a22881327083a9f883428cc16d059f28e782d9533e46d02c",
       "generated": true
     },
     {
@@ -7941,7 +7941,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/openai/openplanr/skills/challenger-review/SKILL.md",
-      "digest": "sha256:7eb97bc94201cd9aff3751430437ea116b15a8d1347269ce3b0cbbd9cbf0d8c7",
+      "digest": "sha256:e45f867a3b4e3e6db11f1e8c8851830286a166b8097b8fdfdd7aabf885b846cd",
       "generated": true
     },
     {
@@ -7981,7 +7981,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/openai/openplanr/skills/cmo-review/SKILL.md",
-      "digest": "sha256:31112e8deae357bbde9d51d9707400f63e16563bf08f4774acb52e2f5ccdfa2a",
+      "digest": "sha256:dba38caa522b5b2950b8411a6f54586c77181e77a5e804084c5325599e459cf2",
       "generated": true
     },
     {
@@ -8021,7 +8021,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/openai/openplanr/skills/coo-review/SKILL.md",
-      "digest": "sha256:8d6b132b39e41d249961602e002035f4748f1ad4299984952f00d6b16485a678",
+      "digest": "sha256:6803af22180794e1e90a41cfc6d5ae292a089e3ac952c28ed6421e6bb80eccd1",
       "generated": true
     },
     {
@@ -8061,7 +8061,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/openai/openplanr/skills/cpo-review/SKILL.md",
-      "digest": "sha256:77d2f464f9102515ab842fc5afe76feae7a12c9ecde150c2392a599b50186cf4",
+      "digest": "sha256:46edf7f1f4a52e988280cc38f45c4c0f7814a91726e9ac33a13bda19d6288d60",
       "generated": true
     },
     {
@@ -8101,7 +8101,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/openai/openplanr/skills/cto-review/SKILL.md",
-      "digest": "sha256:7addd0afdd7a17032f24c54c11dfc80beef516f0d7d90dfa11392a9556245b1e",
+      "digest": "sha256:24bd606cb4f5d942efb935ed5be88a49c8fc736dfe90ce0ae85843dfc0fa1504",
       "generated": true
     },
     {

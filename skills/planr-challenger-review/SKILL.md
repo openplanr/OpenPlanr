@@ -2,7 +2,7 @@
 name: planr-challenger-review
 description: "Challenge an Operate cycle's claims, alternatives, downside, and confidence. Use when assumptions or executive consensus need an independent stress test."
 license: MIT
-allowed-tools: "Read, Grep, Glob, Bash(git log:*), Bash(git show:*), Bash(git diff:*), Edit(./.planr/operate/**)"
+allowed-tools: "Read, Grep, Glob, Edit(./.planr/operate/**)"
 ---
 
 # Challenger review (`independent-challenge`)

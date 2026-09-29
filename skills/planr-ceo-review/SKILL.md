@@ -2,7 +2,7 @@
 name: planr-ceo-review
 description: "Produce a grounded strategy and finance review for an Operate cycle. Use when direction, runway, margin, investment, or cost of delay needs a CEO lens."
 license: MIT
-allowed-tools: "Read, Grep, Glob, Bash(git log:*), Bash(git show:*), Bash(git diff:*), Edit(./.planr/operate/**)"
+allowed-tools: "Read, Grep, Glob, Edit(./.planr/operate/**)"
 ---
 
 # CEO review (`strategy-finance`)
