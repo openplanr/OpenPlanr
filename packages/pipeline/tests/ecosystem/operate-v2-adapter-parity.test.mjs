@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
@@ -76,10 +76,15 @@ test('OpenAI and Claude package exact canonical Operate skill trees', () => {
       manifest,
       `${skillId}: OpenAI manifest`,
     );
-    assert.deepEqual(
-      readJson(`dist/plugins/claude/openplanr/skills/${hostSkillName}/openplanr.skill.json`),
-      manifest,
-      `${skillId}: Claude manifest`,
+    assert.equal(
+      existsSync(
+        join(
+          WORKSPACE_ROOT,
+          `dist/plugins/claude/openplanr/skills/${hostSkillName}/openplanr.skill.json`,
+        ),
+      ),
+      false,
+      `${skillId}: Claude ships no build manifest`,
     );
 
     for (const resource of manifest.resources.filter(({ kind }) => kind !== 'agent-metadata')) {

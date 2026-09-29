@@ -308,7 +308,8 @@ for (const row of registry.skills) {
     ['claude-code', `dist/plugins/claude/openplanr/skills/${hostSkillName}`],
   ]) {
     add(`${destination}/SKILL.md`, renderNamespacedSkill(packageInfo.markdown, row.skillId));
-    add(`${destination}/openplanr.skill.json`, json(packageInfo.manifest));
+    // The OpenAI package verifier reads the build manifest; Claude never does.
+    if (host === 'codex') add(`${destination}/openplanr.skill.json`, json(packageInfo.manifest));
     for (const resource of hostResources(packageInfo, host)) {
       if (host === 'codex' && resource.path === 'agents/openai.yaml') {
         add(

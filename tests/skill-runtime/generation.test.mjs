@@ -99,11 +99,10 @@ test('generated host distributions contain every canonical skill and nine Claude
       const projected = readFileSync(resolve(plugin, 'skills', hostSkillName, 'SKILL.md'), 'utf8');
       assert.ok(projected.length > 80);
       assert.match(projected, new RegExp(`^name: ${hostSkillName}$`, 'mu'));
-      assert.ok(
-        JSON.parse(
-          readFileSync(resolve(plugin, 'skills', hostSkillName, 'openplanr.skill.json'), 'utf8'),
-        ),
-      );
+      const buildManifest = resolve(plugin, 'skills', hostSkillName, 'openplanr.skill.json');
+      if (host === 'openai') assert.ok(JSON.parse(readFileSync(buildManifest, 'utf8')));
+      else
+        assert.equal(existsSync(buildManifest), false, `${host}/${hostSkillName} build manifest`);
     }
   }
 });
