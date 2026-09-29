@@ -33,7 +33,14 @@ const executable: Record<RuntimeId, string> = {
 };
 
 function detectCommand(command: string): boolean {
-  const result = spawnSync(command, ['--version'], { encoding: 'utf8', windowsHide: true });
+  // The same `OPENPLANR_CLAUDE_BIN` stand-in the Claude plugin inspection runs.
+  const claudeOverride = command === 'claude' ? process.env.OPENPLANR_CLAUDE_BIN?.trim() : '';
+  const result = claudeOverride
+    ? spawnSync(process.execPath, [claudeOverride, '--version'], {
+        encoding: 'utf8',
+        windowsHide: true,
+      })
+    : spawnSync(command, ['--version'], { encoding: 'utf8', windowsHide: true });
   return !result.error && result.status === 0;
 }
 
