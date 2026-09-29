@@ -466,7 +466,7 @@ export function registerQuickCommand(program: Command) {
 export function registerBacklogCommand(program: Command) {
   registerCommon(program, 'backlog', (command) =>
     command
-      .option('-p, --priority <priority>', 'critical, high, medium, or low', 'medium')
+      .option('-p, --priority <priority>', 'critical, high, medium, or low')
       .option('-t, --tag <tags...>')
       .option('--epic <id>'),
   );

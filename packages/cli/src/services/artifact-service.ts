@@ -238,7 +238,7 @@ export async function updateArtifactFields(
   }
 
   let frontmatter = raw.slice(openIdx, closeIdx);
-  const body = raw.slice(closeIdx);
+  let body = raw.slice(closeIdx);
 
   for (const [key, value] of Object.entries(allFields)) {
     const pattern = new RegExp(`^${escapeRegExp(key)}:\\s*.*$`, 'm');
@@ -254,6 +254,13 @@ export async function updateArtifactFields(
       // Insert missing field before the closing ---
       frontmatter += `\n${replacement}`;
     }
+  }
+
+  if (type === 'backlog' && 'priority' in fields) {
+    body = body.replace(
+      /^(## Priority\n)\S+$/m,
+      (_m, heading) => `${heading}${String(fields.priority).toUpperCase()}`,
+    );
   }
 
   const updated = frontmatter + body;
