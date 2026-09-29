@@ -308,7 +308,8 @@ for (const row of registry.skills) {
     ['claude-code', `dist/plugins/claude/openplanr/skills/${hostSkillName}`],
   ]) {
     add(`${destination}/SKILL.md`, renderNamespacedSkill(packageInfo.markdown, row.skillId));
-    add(`${destination}/openplanr.skill.json`, json(packageInfo.manifest));
+    // The OpenAI package verifier reads the build manifest; Claude never does.
+    if (host === 'codex') add(`${destination}/openplanr.skill.json`, json(packageInfo.manifest));
     for (const resource of hostResources(packageInfo, host)) {
       if (host === 'codex' && resource.path === 'agents/openai.yaml') {
         add(
@@ -551,14 +552,14 @@ add(
   'dist/plugins/openai/.claude-plugin/marketplace.json',
   json({
     name: 'openplanr-local',
-    owner: { name: 'AsemDevs' },
+    owner: { name: PLUGIN_AUTHOR.name },
     metadata: { version: pluginVersion, description: 'Generated local OpenPlanr package.' },
     plugins: [
       {
         name: HOST_PLUGIN_NAME,
         source: './openplanr',
         version: pluginVersion,
-        description: 'Host-native OpenPlanr skills for OpenAI coding agents.',
+        description: PLUGIN_DESCRIPTION,
         strict: true,
       },
     ],
@@ -569,14 +570,14 @@ add(
   json({
     $schema: 'https://json.schemastore.org/claude-code-marketplace.json',
     name: 'openplanr-local',
-    owner: { name: 'AsemDevs' },
+    owner: { name: PLUGIN_AUTHOR.name },
     metadata: { version: pluginVersion, description: 'Generated local OpenPlanr package.' },
     plugins: [
       {
         name: HOST_PLUGIN_NAME,
         source: './openplanr',
         version: pluginVersion,
-        description: 'Host-native OpenPlanr skills and role agents for Claude Code.',
+        description: PLUGIN_DESCRIPTION,
         strict: true,
       },
     ],

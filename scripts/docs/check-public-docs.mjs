@@ -98,9 +98,10 @@ const RULES = [
   },
   {
     id: 'skill-count',
-    message: `skill counts must match skills/registry.json (${skillCount})`,
-    pattern: /\b(\d{2}) (?:canonical |OpenPlanr )?skills\b/gu,
-    accept: (match) => Number(match[1]) === skillCount,
+    message: `skill counts must match skills/registry.json (${skillCount}); an "N+ skills" floor must not exceed it`,
+    pattern: /\b(\d{2})(\+?) (?:canonical |OpenPlanr )?skills\b/gu,
+    accept: (match) =>
+      match[2] ? Number(match[1]) <= skillCount : Number(match[1]) === skillCount,
   },
   {
     id: 'hedging-boilerplate',
@@ -162,9 +163,10 @@ for (const file of files) {
 }
 
 const readme = readFileSync(path.join(repoRoot, 'README.md'), 'utf8');
-if (!new RegExp(`\\b${skillCount} skills\\b`, 'u').test(readme)) {
+const readmeSkillFloor = readme.match(/\b(\d+)\+ skills\b/u);
+if (!readmeSkillFloor || Number(readmeSkillFloor[1]) > skillCount) {
   findings.push(
-    `README.md: [skill-count] the README must state the current skill count (${skillCount} skills)`,
+    `README.md: [skill-count] the README must state a skill floor the registry meets ("N+ skills" with N <= ${skillCount})`,
   );
 }
 

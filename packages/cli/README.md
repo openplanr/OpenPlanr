@@ -17,7 +17,7 @@
   <a href="https://github.com/openplanr/OpenPlanr/blob/main/LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-237A72?style=flat-square&labelColor=08080C"></a>
 </p>
 
-OpenPlanr gives your coding agent 27 skills for specifying, planning, reviewing, designing,
+OpenPlanr gives your coding agent 25+ skills for specifying, planning, reviewing, designing,
 diagramming, shipping, and operating work from plans stored in your repository under
 `.planr/`. This package is the deterministic half: the `planr` command that stores and
 validates those files, renders diagrams and reports, installs the skills into each host,

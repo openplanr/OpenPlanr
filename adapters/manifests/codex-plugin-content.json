@@ -69,7 +69,7 @@
       "assets": [
         {
           "path": "skills/ceo-review/SKILL.md",
-          "digest": "sha256:9c51ceb66d20f49ca417da1213441d4824cba8206d88f33b2481ed6eea51a399"
+          "digest": "sha256:fb25892b6a1226d3a22881327083a9f883428cc16d059f28e782d9533e46d02c"
         },
         {
           "path": "skills/ceo-review/openplanr.skill.json",
@@ -147,7 +147,7 @@
       "assets": [
         {
           "path": "skills/challenger-review/SKILL.md",
-          "digest": "sha256:7eb97bc94201cd9aff3751430437ea116b15a8d1347269ce3b0cbbd9cbf0d8c7"
+          "digest": "sha256:e45f867a3b4e3e6db11f1e8c8851830286a166b8097b8fdfdd7aabf885b846cd"
         },
         {
           "path": "skills/challenger-review/openplanr.skill.json",
@@ -184,7 +184,7 @@
       "assets": [
         {
           "path": "skills/cmo-review/SKILL.md",
-          "digest": "sha256:31112e8deae357bbde9d51d9707400f63e16563bf08f4774acb52e2f5ccdfa2a"
+          "digest": "sha256:dba38caa522b5b2950b8411a6f54586c77181e77a5e804084c5325599e459cf2"
         },
         {
           "path": "skills/cmo-review/openplanr.skill.json",
@@ -225,7 +225,7 @@
       "assets": [
         {
           "path": "skills/coo-review/SKILL.md",
-          "digest": "sha256:8d6b132b39e41d249961602e002035f4748f1ad4299984952f00d6b16485a678"
+          "digest": "sha256:6803af22180794e1e90a41cfc6d5ae292a089e3ac952c28ed6421e6bb80eccd1"
         },
         {
           "path": "skills/coo-review/openplanr.skill.json",
@@ -266,7 +266,7 @@
       "assets": [
         {
           "path": "skills/cpo-review/SKILL.md",
-          "digest": "sha256:77d2f464f9102515ab842fc5afe76feae7a12c9ecde150c2392a599b50186cf4"
+          "digest": "sha256:46edf7f1f4a52e988280cc38f45c4c0f7814a91726e9ac33a13bda19d6288d60"
         },
         {
           "path": "skills/cpo-review/openplanr.skill.json",
@@ -307,7 +307,7 @@
       "assets": [
         {
           "path": "skills/cto-review/SKILL.md",
-          "digest": "sha256:7addd0afdd7a17032f24c54c11dfc80beef516f0d7d90dfa11392a9556245b1e"
+          "digest": "sha256:24bd606cb4f5d942efb935ed5be88a49c8fc736dfe90ce0ae85843dfc0fa1504"
         },
         {
           "path": "skills/cto-review/openplanr.skill.json",

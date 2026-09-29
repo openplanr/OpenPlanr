@@ -818,7 +818,7 @@ async function buildOutputs() {
   const marketplace = {
     $schema: 'https://json.schemastore.org/claude-code-marketplace.json',
     name: 'openplanr',
-    owner: { name: 'AsemDevs' },
+    owner: { name: PLUGIN_AUTHOR.name },
     metadata: {
       version: components.cli.version,
       description:
