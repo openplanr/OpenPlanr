@@ -49,10 +49,10 @@
   "components": {
     "cli": {
       "package": "openplanr",
-      "version": "2.2640.0",
+      "version": "2.2640.1",
       "path": "packages/cli",
       "publication": "public",
-      "manifestDigest": "sha256:2a6583988a5aebc8d8108996bdf2f464687189426d42b9649918fd8d92f55199"
+      "manifestDigest": "sha256:69c45e5933deaf245a2926822266bb7039f3620e0fd709fc886c8a7dc1b949d9"
     },
     "pipeline": {
       "package": "planr-pipeline",
@@ -339,7 +339,7 @@
     ],
     "generatedAssets": {
       "path": "adapters/manifests/generated-assets.json",
-      "digest": "sha256:c6e9d83175d62b2fbf5174b8ccfce5f3ce0849ed70c53bc770bb4c2b59f68e5f",
+      "digest": "sha256:974e9077d120a10bcc69ca796bac542a1db905ae291b36efaf50f4e8540e62a2",
       "count": 1899
     }
   },
