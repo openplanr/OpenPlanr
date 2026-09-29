@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.2640.1
+### Patch Changes
+
+- 3e358fc: The Claude Code plugin no longer ships each skill's `openplanr.skill.json` build manifest; the Codex plugin keeps it.
+- 3e358fc: The package README says 25+ skills instead of an exact count.
+- 3e358fc: The local Claude Code and Codex marketplaces name OpenPlanr as their owner and list the plugin with its description.
+- 3e358fc: The Claude Code and Codex plugin manifests now carry the README headline as their description.
+- 3e358fc: The CEO, CTO, CPO, CMO, COO and challenger review skills no longer pre-approve `git log`, `git show` and `git diff`; running them follows your Claude Code permission settings.
+
 ## 2.2640.0
 ### Patch Changes
 

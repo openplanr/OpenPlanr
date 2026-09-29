@@ -6,7 +6,7 @@
   "inputs": [
     {
       "path": "adapters/manifests/generated-assets.json",
-      "digest": "sha256:c6e9d83175d62b2fbf5174b8ccfce5f3ce0849ed70c53bc770bb4c2b59f68e5f"
+      "digest": "sha256:974e9077d120a10bcc69ca796bac542a1db905ae291b36efaf50f4e8540e62a2"
     },
     {
       "path": "apps/dashboard/package.json",
@@ -26,7 +26,7 @@
     },
     {
       "path": "packages/cli/package.json",
-      "digest": "sha256:2a6583988a5aebc8d8108996bdf2f464687189426d42b9649918fd8d92f55199"
+      "digest": "sha256:69c45e5933deaf245a2926822266bb7039f3620e0fd709fc886c8a7dc1b949d9"
     },
     {
       "path": "packages/design/package.json",
@@ -112,15 +112,15 @@
   "outputs": [
     {
       "path": ".claude-plugin/marketplace.json",
-      "digest": "sha256:1ac353a7f3f050b51cc96ba55f3999d5fe924f0f055dbe5fd6cda207306b62ad"
+      "digest": "sha256:2af0b00a390ece938b3c70bc77504090ce35c2098c2fbe5c8cd06def0eb247ac"
     },
     {
       "path": ".claude-plugin/plugin.json",
-      "digest": "sha256:87bffa145f249e6509cc271b14e45577b9ff85dc5e92b33c3ddc61f938cdf6c2"
+      "digest": "sha256:c25c7a3d7ae2bcef573a71509ee4dbc86e4ca8f60d5f4f856a9cc14080b80f1d"
     },
     {
       "path": "adapters/manifests/codex-plugin-content.json",
-      "digest": "sha256:2fc4884cb72009a1cac23b08f13d9197fd6d6daf973f2919c5eb800ae4a81a59"
+      "digest": "sha256:d9b68c892e9c5825cac4354c5e7850bfafc489a4b3ab9480b4c46467b6a2de2d"
     },
     {
       "path": "docs/generated/adapters.md",
@@ -128,7 +128,7 @@
     },
     {
       "path": "docs/generated/ecosystem.md",
-      "digest": "sha256:00592258050d713705c3c8b7f529974996a2fc40a0b8c3197970070eecfe40bc"
+      "digest": "sha256:69add711428142c0911b7567f1aeb0c84bb0f92a58fc5555326d32e200453773"
     },
     {
       "path": "docs/generated/skills.md",
@@ -136,7 +136,7 @@
     },
     {
       "path": "ecosystem.json",
-      "digest": "sha256:bed8b6c49dfeb507ef3beb005a4f1b16d2144768041adf954d5267eb05e4cfb8"
+      "digest": "sha256:52e68bff1482f93a695fb5bb1192ae3bc0f8f5c4d1e15ca76b4134ff43731454"
     },
     {
       "path": "packages/pipeline/.claude-plugin/plugin.json",
