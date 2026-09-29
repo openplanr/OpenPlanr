@@ -16,7 +16,7 @@
     },
     {
       "path": "dist/plugins/claude/.claude-plugin/marketplace.json",
-      "digest": "sha256:785edd18693392f9f31dd96cbf4e26bb457ca5031eeb9b1bc700d5ad4cfbd212",
+      "digest": "sha256:911a4186cf364c6cecc564c35d20aa63be9577a0dd8dcfe87af1961a88555b7a",
       "generated": true
     },
     {
@@ -3181,7 +3181,7 @@
     },
     {
       "path": "dist/plugins/openai/.claude-plugin/marketplace.json",
-      "digest": "sha256:b6a40a64f23d7dd9fc492d406c59f381f8f086e8d8d86ee7158fb7ae883c0936",
+      "digest": "sha256:3566c3f91e53d8e7e584c935fa10fffaf66982dc60b363c44ce86ea994e00043",
       "generated": true
     },
     {
@@ -4886,7 +4886,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/claude/.claude-plugin/marketplace.json",
-      "digest": "sha256:785edd18693392f9f31dd96cbf4e26bb457ca5031eeb9b1bc700d5ad4cfbd212",
+      "digest": "sha256:911a4186cf364c6cecc564c35d20aa63be9577a0dd8dcfe87af1961a88555b7a",
       "generated": true
     },
     {
@@ -8051,7 +8051,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/openai/.claude-plugin/marketplace.json",
-      "digest": "sha256:b6a40a64f23d7dd9fc492d406c59f381f8f086e8d8d86ee7158fb7ae883c0936",
+      "digest": "sha256:3566c3f91e53d8e7e584c935fa10fffaf66982dc60b363c44ce86ea994e00043",
       "generated": true
     },
     {

@@ -1,3 +1,5 @@
+import { PLUGIN_AUTHOR } from '../../skills/plugin-metadata.mjs';
+
 const START = '<!-- plugin-table:start -->';
 const END = '<!-- plugin-table:end -->';
 
@@ -6,7 +8,7 @@ export function renderMarketplaceManifest({ version, description }) {
   return {
     $schema: 'https://json.schemastore.org/claude-code-marketplace.json',
     name: 'openplanr',
-    owner: { name: 'OpenPlanr', url: 'https://github.com/openplanr' },
+    owner: { name: PLUGIN_AUTHOR.name, url: 'https://github.com/openplanr' },
     metadata: {
       version,
       description:
