@@ -836,7 +836,7 @@ test('byte and file limits fail before unbounded graph reads', async (t) => {
       { maxFiles: 0 },
       { maxFiles: 1_001 },
       { maxBytes: Infinity },
-      { maxBytes: 10 * 1024 * 1024 + 1 },
+      { maxBytes: 100 * 1024 * 1024 + 1 },
     ]) {
       await assert.rejects(
         bundleArtifact('index.html', { root, ...options }),
@@ -880,7 +880,7 @@ test('byte and file limits fail before unbounded graph reads', async (t) => {
 
 test('generated output has an immutable hard cap before final serialization', async () => {
   const root = fixture();
-  write(root, 'x.png', Buffer.alloc(10 * 1024, 0xa5));
+  write(root, 'x.png', Buffer.alloc(100 * 1024, 0xa5));
   write(root, 'index.html', Array.from({ length: 1_000 }, () => '<img src="x.png">').join(''));
   await assert.rejects(
     bundleArtifact('index.html', { root, maxOutputBytes: 100 * 1024 * 1024 }),
@@ -891,7 +891,7 @@ test('generated output has an immutable hard cap before final serialization', as
 test('composite rewrite paths reserve the output budget before materializing amplified strings', async (t) => {
   await t.test('srcset candidates reserve before array join', async () => {
     const root = fixture();
-    write(root, 'x.png', Buffer.alloc(10 * 1024, 0xa5));
+    write(root, 'x.png', Buffer.alloc(100 * 1024, 0xa5));
     const srcset = Array.from({ length: 1_000 }, (_, index) => `x.png ${index + 1}w`).join(', ');
     write(root, 'index.html', `<img srcset="${srcset}">`);
     await assert.rejects(
@@ -904,7 +904,7 @@ test('composite rewrite paths reserve the output budget before materializing amp
     'nested SVG attributes reserve before SVG serialization and outer base64',
     async () => {
       const root = fixture();
-      write(root, 'x.png', Buffer.alloc(10 * 1024, 0xa5));
+      write(root, 'x.png', Buffer.alloc(100 * 1024, 0xa5));
       const images = Array.from({ length: 1_000 }, () => '<image href="x.png"/>').join('');
       write(root, 'icon.svg', `<svg xmlns="http://www.w3.org/2000/svg">${images}</svg>`);
       write(root, 'index.html', '<img src="icon.svg">');
@@ -919,7 +919,7 @@ test('composite rewrite paths reserve the output budget before materializing amp
     'esbuild asset placeholders reserve exact CSS multiplicity before substitution',
     async () => {
       const root = fixture();
-      write(root, 'x.png', Buffer.alloc(10 * 1024, 0xa5));
+      write(root, 'x.png', Buffer.alloc(100 * 1024, 0xa5));
       const rules = Array.from(
         { length: 1_000 },
         (_, index) => `.x${index}{background:url("./x.png")}`,

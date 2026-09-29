@@ -380,7 +380,7 @@ export function createDaemon({ env = process.env, fetchImpl = globalThis.fetch }
         if (extname(source.src).toLowerCase() !== expected) continue;
         const resolved = resolveContainedRealPath(dir, source.src).realPath;
         const entry = statSync(resolved);
-        if (!entry.isFile() || entry.size > 10 * 1024 * 1024) continue;
+        if (!entry.isFile() || entry.size > 100 * 1024 * 1024) continue;
         seen.add(source.artifactId);
         sources.push({
           artifactId: source.artifactId,

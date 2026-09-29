@@ -206,8 +206,8 @@ runtime network calls, and every unbundled URI remain rejected.
 The following limits are enforced before rendering or sharing:
 
 - 1,000 unique input files.
-- 10 MiB total decoded input and 10 MiB generated HTML.
-- 5 MiB compressed or encrypted payload.
+- 100 MiB total decoded input and 100 MiB generated HTML.
+- For sharing, 10 MiB uncompressed and 5 MiB compressed or encrypted payload.
 - 8,000 characters for fragment transport.
 
 Remote resources, traversal, symlink escape, unresolved or dynamic imports,
