@@ -1,5 +1,12 @@
 # @openplanr/design
 
+## 0.3.5
+### Patch Changes
+
+- 0fe7327: The design studio, the design board and `planr artifact` reviews now render up to 100 MiB of HTML in total, up from 10 MiB, so a large clickable prototype renders at every frame size. Share links keep their current size limits.
+- Updated dependencies [0fe7327]
+  - @openplanr/artifact@0.5.7
+
 ## 0.3.4
 ### Patch Changes
 
