@@ -13,7 +13,7 @@
       "name": "planr",
       "source": "./dist/plugins/claude/openplanr",
       "version": "2.2640.0",
-      "description": "Host-native OpenPlanr planning, delivery, review, design, and operating skills.",
+      "description": "Close the loop from intent to delivery. Plan, design, build, review, and operate from durable context in your repository.",
       "strict": true
     }
   ]

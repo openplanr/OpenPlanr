@@ -10,7 +10,7 @@
 <p align="center">
   OpenPlanr is the shared delivery loop for product teams and their AI agents.<br>
   Plan, design, build, review, and operate from durable context in your repository:<br>
-  27 skills for Claude Code, Codex, and Cursor, plus the deterministic <code>planr</code> CLI.
+  25+ skills for Claude Code, Codex, and Cursor, plus the deterministic <code>planr</code> CLI.
 </p>
 
 <p align="center">

@@ -1,6 +1,6 @@
 /** Identity shared by the generated Claude, Codex and repository plugin manifests. */
 export const PLUGIN_DESCRIPTION =
-  'Host-native OpenPlanr planning, delivery, review, design, and operating skills.';
+  'Close the loop from intent to delivery. Plan, design, build, review, and operate from durable context in your repository.';
 
 export const PLUGIN_AUTHOR = Object.freeze({ name: 'OpenPlanr', url: 'https://openplanr.dev' });
 

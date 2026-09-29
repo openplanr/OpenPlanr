@@ -6,7 +6,7 @@
   "inputs": [
     {
       "path": "adapters/manifests/generated-assets.json",
-      "digest": "sha256:6ff133d937be2ad7a7d0ee91858cf304f05da6123c14195aefef0674926b2f97"
+      "digest": "sha256:9c401d77399372c155fc6fb356567d2e3db38fa867b675fa48c0d12ce975c9f3"
     },
     {
       "path": "apps/dashboard/package.json",
@@ -112,11 +112,11 @@
   "outputs": [
     {
       "path": ".claude-plugin/marketplace.json",
-      "digest": "sha256:47d1f1b6030adc23aed32b40c7542fb584e1f618b5a0cb8bcfc8e5f81d8bdb86"
+      "digest": "sha256:7d79db383fec2c28a59cdaa02a624391b30963aee92c46f4906f6bb6be25a502"
     },
     {
       "path": ".claude-plugin/plugin.json",
-      "digest": "sha256:5c0384b1b56e29fc09f5082ef567a8369638f59681ce4134278e90f272d8b9cc"
+      "digest": "sha256:87bffa145f249e6509cc271b14e45577b9ff85dc5e92b33c3ddc61f938cdf6c2"
     },
     {
       "path": "adapters/manifests/codex-plugin-content.json",
@@ -136,7 +136,7 @@
     },
     {
       "path": "ecosystem.json",
-      "digest": "sha256:3475a9cfd6500cc1e42ff345c21112a0288e24f736f2ee560a1133a96c259cc1"
+      "digest": "sha256:ac85af8d1c75a579247cd4d0d7a7d0da23b26b6aeca2f7ab68ff740f20bb5967"
     },
     {
       "path": "packages/pipeline/.claude-plugin/plugin.json",
