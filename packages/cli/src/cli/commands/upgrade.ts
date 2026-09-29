@@ -3,18 +3,22 @@ import { isNonInteractive } from '../../services/interactive-state.js';
 import { runPendingMigrations } from '../../services/migration-registry.js';
 import { promptConfirm } from '../../services/prompt-service.js';
 import {
+  printNextSteps,
+  printUpgradeReport,
+  type ReleaseNotesMode,
+} from '../../services/upgrade-report.js';
+import {
   executeCliHalfUpgrade,
-  PLUGIN_HALF_INSTRUCTION,
   planCliUpgrade,
-  pluginHalfPrescription,
   reconcileInstalledTuple,
+  upgradeNextSteps,
 } from '../../services/upgrade-service.js';
 import { display, logger } from '../../utils/logger.js';
 
 /**
  * `planr upgrade` — reconcile the installed tuple against the published
  * compatible set (`status`) and, for the half the CLI owns, perform the npm
- * upgrade while prescribing the plugin half (`apply`).
+ * upgrade, then list the command that updates each installed coding agent (`apply`).
  */
 export function registerUpgradeCommand(program: Command, _cliVersion: string) {
   const upgrade = program
@@ -28,9 +32,10 @@ export function registerUpgradeCommand(program: Command, _cliVersion: string) {
     .action(async (opts) => {
       const projectDir = program.opts().projectDir as string;
       const result = await reconcileInstalledTuple(projectDir);
+      const nextSteps = await upgradeNextSteps(projectDir);
 
       if (opts.json) {
-        display.line(JSON.stringify(result));
+        display.line(JSON.stringify({ ...result, nextSteps }));
       } else {
         logger.heading('OpenPlanr upgrade status');
         display.keyValue('Reconciliation', result.status);
@@ -60,6 +65,7 @@ export function registerUpgradeCommand(program: Command, _cliVersion: string) {
         } else {
           logger.success('The installed tuple matches the published compatible set.');
         }
+        if (nextSteps.length > 0) printNextSteps(nextSteps);
       }
 
       if (result.status === 'incompatible') process.exitCode = 1;
@@ -68,41 +74,36 @@ export function registerUpgradeCommand(program: Command, _cliVersion: string) {
   // ---- apply --------------------------------------------------------------
   upgrade
     .command('apply')
-    .description('Upgrade the npm CLI half and prescribe the exact plugin-half commands to run')
+    .description('Upgrade the OpenPlanr CLI and list the command that updates each coding agent')
     .option('--yes', 'proceed with the upgrade without an interactive confirmation', false)
+    .option('--notes <mode>', "what's new: highlights or full", 'highlights')
     .option('--json', 'machine-readable output', false)
     .action(async (opts) => {
       const projectDir = program.opts().projectDir as string;
+      if (!['highlights', 'full'].includes(opts.notes)) {
+        throw new Error(`--notes must be highlights or full, not "${opts.notes}".`);
+      }
+      const notes = opts.notes as ReleaseNotesMode;
       const reconciliation = await reconcileInstalledTuple(projectDir);
       const plan = planCliUpgrade(reconciliation);
 
-      // Nothing for the CLI half to execute: aligned, unknown, or an incompatibility the
-      // CLI cannot resolve. The last case is not "nothing to do" — it is the plugin half
-      // trailing, and the reason string promises the commands, so they must actually be
-      // printed here. The contract is unmet if this branch reports a promise and no prescription.
+      // Nothing for the CLI to install. The coding agents can still trail it, which is
+      // what an incompatible tuple with a current CLI means, so their commands are listed.
       if (!plan.proceed || !plan.targetCliVersion) {
-        const pluginHalfCommands =
-          reconciliation.status === 'incompatible' ? pluginHalfPrescription() : [];
+        const nextSteps = await upgradeNextSteps(projectDir);
         if (opts.json) {
           display.line(
             JSON.stringify({
               applied: false,
               reason: plan.reason,
-              pluginHalfCommands,
+              nextSteps,
+              pluginHalfCommands: nextSteps.map((step) => step.command),
               reconciliation,
             }),
           );
         } else {
-          logger.heading('OpenPlanr upgrade');
           logger.info(plan.reason);
-          if (pluginHalfCommands.length > 0) {
-            display.blank();
-            display.heading('Plugin half — the upgrade never changes Claude plugins itself');
-            logger.info(PLUGIN_HALF_INSTRUCTION);
-            pluginHalfCommands.forEach((command, index) => {
-              display.numbered(index + 1, command);
-            });
-          }
+          if (nextSteps.length > 0) printNextSteps(nextSteps);
         }
         if (reconciliation.status === 'incompatible') process.exitCode = 1;
         return;
@@ -116,7 +117,6 @@ export function registerUpgradeCommand(program: Command, _cliVersion: string) {
         if (opts.json) {
           display.line(JSON.stringify({ applied: false, reason: message, reconciliation }));
         } else {
-          logger.heading('OpenPlanr upgrade');
           logger.warn(message);
         }
         return;
@@ -141,38 +141,8 @@ export function registerUpgradeCommand(program: Command, _cliVersion: string) {
         migrationRunner: runPendingMigrations,
       });
 
-      if (opts.json) {
-        display.line(JSON.stringify(result));
-      } else {
-        logger.heading('OpenPlanr upgrade');
-        if (result.ok) {
-          logger.success(`CLI upgraded to ${result.installedVersion}.`);
-          if (result.changelogBullets.length > 0) {
-            display.blank();
-            display.heading("What's new");
-            for (const bullet of result.changelogBullets) display.bullet(bullet);
-          } else {
-            logger.dim('No changelog entries were found for this range.');
-          }
-          display.blank();
-          display.heading('Plugin half — the upgrade never changes Claude plugins itself');
-          if (result.pluginHalfCommands.length > 0) {
-            logger.info(PLUGIN_HALF_INSTRUCTION);
-            result.pluginHalfCommands.forEach((command, index) => {
-              display.numbered(index + 1, command);
-            });
-          } else {
-            logger.dim(
-              'No Claude plugin commands were prescribed; run `planr doctor` to confirm the host plugin state.',
-            );
-          }
-        } else {
-          logger.error(result.failure?.message ?? 'The upgrade did not complete.');
-          if (result.restoredTo) {
-            logger.info(`Restored the previous version ${result.restoredTo}.`);
-          }
-        }
-      }
+      if (opts.json) display.line(JSON.stringify(result));
+      else printUpgradeReport(result, notes);
 
       if (!result.ok) process.exitCode = 1;
     });

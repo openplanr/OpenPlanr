@@ -56,8 +56,11 @@ const ALIGNED: UpgradeReconciliation = {
 const OK_UPGRADE: ExecuteCliHalfUpgradeResult = {
   ok: true,
   cliUpgraded: true,
+  previousVersion: '1.22.0',
   installedVersion: '1.23.0',
   changelogBullets: [],
+  releaseNotes: [],
+  nextSteps: [],
   pluginHalfCommands: [],
 };
 

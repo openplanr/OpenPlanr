@@ -1,5 +1,6 @@
 import type { Command } from 'commander';
 import { promptConfirm } from '../../services/prompt-service.js';
+import { joinNames } from '../../services/runtime-change-summary.js';
 import {
   applySetup,
   detectRuntimes,
@@ -11,7 +12,8 @@ import {
   rollbackRuntime,
   runtimeDoctor,
 } from '../../services/runtime-manager-service.js';
-import { display, logger } from '../../utils/logger.js';
+import { display, isVerbose, logger } from '../../utils/logger.js';
+import { printChangedFiles, printRuntimeChanges, printRuntimeFailures } from './runtime-output.js';
 
 function print(value: unknown, json: boolean) {
   if (json) display.line(JSON.stringify(value));
@@ -53,28 +55,34 @@ export function registerRuntimeCommand(program: Command, cliVersion: string) {
           merge: true,
         };
         const preview = await previewSetup(options);
-        if (opts.dryRun) {
-          print(preview, opts.json);
-          return;
-        }
-        if (!opts.json) {
-          display.heading(`OpenPlanr runtime ${operation} preview`);
-          for (const action of preview.actions.filter((item) => item.operation !== 'unchanged')) {
-            display.bullet(`${action.operation} ${action.target}`);
+        const approved = Boolean(opts.yes || program.opts().yes);
+        if (opts.json) {
+          if (opts.dryRun) {
+            print(preview, true);
+            return;
           }
-          for (const runtimeOperation of preview.runtimeOperations) {
-            display.bullet(runtimeOperation.description);
-          }
+        } else if (opts.dryRun || !approved) {
+          logger.heading(`OpenPlanr runtime ${operation}`);
+          printRuntimeChanges(preview, false);
+          if (isVerbose()) printChangedFiles(preview);
+          printRuntimeFailures(preview);
         }
-        if (!opts.yes && !program.opts().yes) {
-          const ok = await promptConfirm(`${operation} the ${runtimeId} adapter?`, true);
+        if (opts.dryRun) return;
+        if (!approved) {
+          const ok = await promptConfirm('Apply these changes?', true);
           if (!ok) return;
         }
         const result = await applySetup(options);
-        print(result, opts.json);
-        if (!opts.json && result.restartRequired) {
-          logger.warn('Restart Claude Code to load the updated OpenPlanr plugins.');
+        if (opts.json) {
+          print(result, true);
+          return;
         }
+        const changed = printRuntimeChanges(result, true)
+          .filter((change) => change.changed)
+          .map((change) => change.host);
+        if (isVerbose()) printChangedFiles(result);
+        printRuntimeFailures(result);
+        if (changed.length > 0) logger.warn(`Restart ${joinNames(changed)} to load the update.`);
       });
   }
 

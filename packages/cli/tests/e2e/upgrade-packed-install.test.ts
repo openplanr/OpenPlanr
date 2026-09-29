@@ -333,12 +333,13 @@ describe('packed planr upgrade apply', () => {
     chmodSync(claudePath, 0o755);
   });
 
-  it('upgrades the real npm half to the target and prescribes — never runs — the plugin half', () => {
+  it('upgrades the real npm half and lists — never runs — the next steps the upgraded CLI plans', () => {
     const result = run(
       ['upgrade', 'apply', '--yes', '--json'],
       {
         // A dedicated home so this run reads the apply fixture fresh rather than
         // the aligned manifest the `status` scenario cached under the shared home.
+        HOME: join(root, 'home-apply'),
         PLANR_HOME: join(root, 'home-apply', '.planr'),
         OPENPLANR_ECOSYSTEM_SOURCE: applyEcosystem,
         OPENPLANR_NPM_BIN: fakeNpm,
@@ -357,6 +358,8 @@ describe('packed planr upgrade apply', () => {
       ok: boolean;
       cliUpgraded: boolean;
       installedVersion: string;
+      nextSteps: Array<{ runtime?: string; host: string; command: string; detail: string }>;
+      nextStepsError?: string;
       pluginHalfCommands: string[];
     };
 
@@ -383,13 +386,19 @@ describe('packed planr upgrade apply', () => {
       }
     }
 
-    // Where the host was reachable (the fake `claude` was invoked), the plugin
-    // half is prescribed with the bundled marketplace refresh first — the exact
-    // commands a user or the companion skill would run.
-    expect(Array.isArray(report.pluginHalfCommands)).toBe(true);
-    if (report.pluginHalfCommands.length > 0) {
-      expect(report.pluginHalfCommands[0]).toBe('claude plugin marketplace update openplanr-local');
-    }
+    // The upgraded package, run as its own process, plans each coding agent's update. The
+    // fake `claude` reports planr@openplanr-local 1.0.0, but this install omits the optional
+    // pipeline that `runtime update` needs, so the plan names that instead of the update.
+    expect(report.nextStepsError).toBeUndefined();
+    expect(report.nextSteps).toEqual([
+      {
+        runtime: 'claude-code',
+        host: 'Claude Code',
+        command: 'planr doctor',
+        detail: expect.stringContaining('The pipeline package is not installed'),
+      },
+    ]);
+    expect(report.pluginHalfCommands).toEqual(['planr doctor']);
   });
 
   // The versioned migration registry must be reachable through the

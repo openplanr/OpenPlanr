@@ -506,7 +506,10 @@ this CLI. Setup never reads `openplanr/marketplace` for versions.
 `planr doctor` checks the installed plugin's version and stable manifest identity
 without mutating Claude Code, and warns about older `openplanr@…` and
 `planr-pipeline@…` plugins. `doctor --fix` never changes plugin packages.
-Restart Claude Code when setup or `runtime update` reports a plugin change.
+`runtime install` and `runtime update` print one line per coding agent with what
+changed and which agent to restart; `--verbose` adds the changed files and
+`--json` prints the full result. Restart Claude Code when setup or `runtime
+update` reports a plugin change.
 Use one Claude Code channel per machine; see
 [installation channels](CROSS_RUNTIME_SETUP.md#installation-channels).
 
@@ -579,7 +582,9 @@ Failures from packet commands are bounded in both human and `--json` output;
 machine output contains `ok`, `code`, and `problem` without stack traces or host
 paths. For setup or command parity failures, run `planr doctor --strict --json`.
 Use `planr upgrade status`, then `planr upgrade apply` when doctor reports an
-incompatible installed CLI. The published compatible set is read from the npm
+incompatible installed CLI. `upgrade apply` prints the new version, up to five
+highlights per release (`--notes full` prints every entry), and the command that
+updates each installed coding agent. The published compatible set is read from the npm
 registry's `latest` CLI document (its version and the exact `planr-pipeline` it
 bundles); `OPENPLANR_ECOSYSTEM_SOURCE` points the check at another URL or file.
 

@@ -1,8 +1,8 @@
 /**
  * `planr upgrade`: reconciles the installed CLI, bundled pipeline and host plugin with the
  * published compatible set (npm `latest`, cached, short fetch timeout), upgrades the CLI half
- * with verify-after-install and restore, runs crossed migrations and prescribes the plugin
- * commands for the user to run. Entry points: `reconcileInstalledTuple`, `planCliUpgrade`,
+ * with verify-after-install and restore, runs crossed migrations and reports the command that
+ * updates each installed coding agent. Entry points: `reconcileInstalledTuple`, `planCliUpgrade`,
  * `executeCliHalfUpgrade`. It never changes the host plugin itself.
  */
 
@@ -16,25 +16,30 @@ import { parseExternalJson } from '../utils/external-json.js';
 import { logger } from '../utils/logger.js';
 import {
   type ClaudeCommandRunner,
-  type ClaudePluginOperation,
-  formatClaudePluginOperationCommand,
   inspectBundledClaudePluginIntegration,
   OPENPLANR_CLAUDE_PLUGIN,
 } from './claude-plugin-service.js';
 import { resolvePipelinePackage } from './pipeline-package-service.js';
 import { readOpenPlanrVersion } from './provenance-service.js';
-import { bundledHostRoot, classifyComponentDrift, runtimeRoot } from './runtime-manager-service.js';
+import { RUNTIME_LABELS, summarizeRuntimeChanges } from './runtime-change-summary.js';
+import {
+  bundledHostRoot,
+  classifyComponentDrift,
+  installedRuntimeScopes,
+  previewSetup,
+  type RuntimeId,
+  RuntimeManagerError,
+  runtimeRoot,
+  type SetupPreview,
+  type SkillInstallMode,
+} from './runtime-manager-service.js';
 
 /**
  * The command that registers the bundled `openplanr-local` marketplace and installs
- * `planr@openplanr-local` from it. Prescribed instead of raw `claude plugin` commands when
+ * `planr@openplanr-local` from it. Prescribed instead of `planr runtime update` when
  * Claude Code has no such marketplace yet, because only setup records the installation.
  */
 export const CLAUDE_PLUGIN_SETUP_COMMAND = 'planr setup --runtime claude --scope user';
-
-/** Shown above the prescribed plugin-half commands by `planr upgrade apply` and the inline offer. */
-export const PLUGIN_HALF_INSTRUCTION =
-  'Run these yourself, in order, or ask the agent to run planr-doctor’s upgrade skill. They bring the plugin `planr setup` installs, `planr@openplanr-local`, up to the version bundled with this CLI:';
 
 /**
  * One component of the published compatibility manifest (`ecosystem.json`'s
@@ -527,8 +532,7 @@ export function planCliUpgrade(reconciliation: UpgradeReconciliation): UpgradePl
     return {
       proceed: false,
       targetCliVersion: null,
-      reason:
-        'The published compatibility manifest is unavailable; no upgrade target can be determined.',
+      reason: 'The latest OpenPlanr version could not be checked; the npm registry is unreachable.',
     };
   }
   const target = published.cli.version;
@@ -536,35 +540,34 @@ export function planCliUpgrade(reconciliation: UpgradeReconciliation): UpgradePl
     return {
       proceed: false,
       targetCliVersion: null,
-      reason:
-        'The installed tuple already matches the published compatible set; nothing to upgrade.',
+      reason: `OpenPlanr ${installed.cli} is up to date.`,
     };
   }
   if (status === 'upgrade-available') {
     return {
       proceed: true,
       targetCliVersion: target,
-      reason: `An upgrade is available: the CLI can move from ${installed.cli} to ${target}.`,
+      reason: `OpenPlanr ${target} is available; ${installed.cli} is installed.`,
     };
   }
   if (status === 'incompatible' && compareStableVersions(installed.cli, target) < 0) {
     return {
       proceed: true,
       targetCliVersion: target,
-      reason: `The tuple is incompatible and the CLI is behind; moving the CLI from ${installed.cli} to ${target}.`,
+      reason: `OpenPlanr ${target} is available, and the installed ${installed.cli} no longer matches its plugins.`,
     };
   }
   if (status === 'incompatible') {
     return {
       proceed: false,
       targetCliVersion: null,
-      reason: `The tuple is incompatible but the CLI (${installed.cli}) is not behind the published ${target}; the plugin half must move — run the prescribed commands below.`,
+      reason: `OpenPlanr ${installed.cli} is current, but a coding agent's plugin is behind it. Run the commands below.`,
     };
   }
   return {
     proceed: false,
     targetCliVersion: null,
-    reason: 'The tuple could not be judged.',
+    reason: 'The installed OpenPlanr version could not be judged.',
   };
 }
 
@@ -651,35 +654,191 @@ export function summarizeChangelogBetween(oldVersion: string, newVersion: string
   return extractChangelogBullets(lines.slice(startIndex + 1, endIndex));
 }
 
+/** One released version's changelog entries. */
+export interface ReleaseNoteSection {
+  version: string;
+  entries: string[];
+}
+
+const CHANGESET_COMMIT_PREFIX = /^(?:\[`?[0-9a-f]{7,40}`?\]\([^)]*\):?|[0-9a-f]{7,40}:)\s+/;
+
+/** `parseReleaseNotes` over the changelog this CLI ships, or nothing when it ships none. */
+export function summarizeReleaseNotes(
+  oldVersion: string,
+  newVersion: string,
+): ReleaseNoteSection[] {
+  const changelogPath = locateChangelog();
+  if (!changelogPath) return [];
+  return parseReleaseNotes(readFileSync(changelogPath, 'utf8'), oldVersion, newVersion);
+}
+
 /**
- * The manifest-refresh guarantee: the marketplace refresh is printed FIRST —
- * "without which the installer reinstalls the stale version." A stable sort keeps
- * every other operation in the order the bundled inspection produced, and each is
- * rendered by `formatClaudePluginOperationCommand` (the same argv setup would run),
- * so the prescription can never drift from what would actually execute. A missing
- * `openplanr-local` marketplace means `planr setup` never ran on this machine, and
- * setup is the one command that both registers it and records the installation.
- * A retired plugin beside it needs `--replace-managed`: setup refuses the removal
- * without the flag, and `--runtime` skips the guided prompt that would offer it.
- * This is a pure formatter — it prints the plugin half, it never runs it.
+ * The changelog entries released after `oldVersion` up to `newVersion`, newest first, without
+ * commit hashes or dependency bumps. Without an `oldVersion` header only the target's own
+ * section is returned.
  */
-export function prescribePluginHalfCommands(
-  operations: ClaudePluginOperation[],
-  marketplaceRoot: string,
-): string[] {
-  if (operations.some((operation) => operation.kind === 'add-marketplace')) {
-    const retiresLegacyPlugin = operations.some((operation) => operation.kind === 'remove');
-    return [
-      retiresLegacyPlugin
-        ? `${CLAUDE_PLUGIN_SETUP_COMMAND} --replace-managed`
-        : CLAUDE_PLUGIN_SETUP_COMMAND,
-    ];
+export function parseReleaseNotes(
+  changelog: string,
+  oldVersion: string,
+  newVersion: string,
+): ReleaseNoteSection[] {
+  const lines = changelog.split(/\r?\n/);
+  const startIndex = lines.findIndex((line) => changelogHeaderMatches(line, newVersion));
+  if (startIndex === -1) return [];
+  const hasOldSection = lines.some((line) => changelogHeaderMatches(line, oldVersion));
+
+  const sections: ReleaseNoteSection[] = [];
+  let entry: string[] | undefined;
+  let skipEntry = false;
+  const closeEntry = () => {
+    if (entry && !skipEntry) sections[sections.length - 1]?.entries.push(entry.join(' '));
+    entry = undefined;
+    skipEntry = false;
+  };
+  for (const line of lines.slice(startIndex)) {
+    const header = /^##\s+\[?([^\]\s]+)\]?$/.exec(line.trim());
+    if (header) {
+      closeEntry();
+      if (header[1] === oldVersion || (!hasOldSection && sections.length > 0)) break;
+      sections.push({ version: header[1], entries: [] });
+      continue;
+    }
+    const item = /^-\s+(.*\S)\s*$/.exec(line);
+    if (item) {
+      closeEntry();
+      const text = item[1].replace(CHANGESET_COMMIT_PREFIX, '');
+      skipEntry = /^Updated dependencies\b/.test(text);
+      entry = [text];
+    } else if (entry && /^\s+\S/.test(line)) {
+      entry.push(line.trim().replace(/^-\s+/, ''));
+    }
   }
-  const rank = (operation: ClaudePluginOperation): number =>
-    operation.kind === 'refresh-marketplace' ? 0 : 1;
-  return [...operations]
-    .sort((a, b) => rank(a) - rank(b))
-    .map((operation) => formatClaudePluginOperationCommand(operation, marketplaceRoot));
+  closeEntry();
+  return sections.filter((section) => section.entries.length > 0);
+}
+
+/**
+ * A command that brings one installed coding agent up to what this CLI bundles.
+ * Without `runtime` it concerns OpenPlanr's own runtime state rather than one agent.
+ */
+export interface UpgradeNextStep {
+  runtime?: RuntimeId;
+  host: string;
+  command: string;
+  detail: string;
+}
+
+const RUNTIME_COMMAND_NAMES: Record<RuntimeId, string> = {
+  'claude-code': 'claude',
+  codex: 'codex',
+  cursor: 'cursor',
+};
+
+function nextStepCommand(
+  runtime: RuntimeId,
+  scope: 'user' | 'project',
+  skillMode: SkillInstallMode | undefined,
+  operations: SetupPreview['runtimeOperations'],
+): string {
+  const claudeKinds = operations
+    .filter((operation) => operation.runtime === 'claude-code')
+    .map((operation) => operation.kind);
+  // Only setup registers the local marketplace and may remove a retired plugin.
+  if (claudeKinds.includes('add-marketplace') || claudeKinds.includes('remove')) {
+    return `${CLAUDE_PLUGIN_SETUP_COMMAND}${claudeKinds.includes('remove') ? ' --replace-managed' : ''} --yes`;
+  }
+  // `runtime update` has no skill-mode flag and would move a unified-plugin install to direct skills.
+  if (runtime === 'codex' && skillMode === 'unified-plugin') {
+    return `planr setup --runtime codex --scope ${scope} --skill-mode unified-plugin --yes`;
+  }
+  return `planr runtime update ${RUNTIME_COMMAND_NAMES[runtime]} --scope ${scope} --yes`;
+}
+
+type NextStepCandidate = Awaited<ReturnType<typeof installedRuntimeScopes>>[number];
+
+/** Recorded installs, plus a Claude plugin installed without a record of it. */
+async function nextStepCandidates(
+  projectDir: string,
+  claudeCommandRunner: ClaudeCommandRunner | undefined,
+): Promise<{ candidates: NextStepCandidate[]; stateError?: RuntimeManagerError }> {
+  let candidates: NextStepCandidate[] = [];
+  let stateError: RuntimeManagerError | undefined;
+  try {
+    candidates = await installedRuntimeScopes(projectDir);
+  } catch (error) {
+    if (!(error instanceof RuntimeManagerError)) throw error;
+    stateError = error;
+  }
+  if (!candidates.some(({ runtime, scope }) => runtime === 'claude-code' && scope === 'user')) {
+    const plugin = inspectBundledHostPlugin(claudeCommandRunner).plugins.find(
+      (entry) => entry.name === OPENPLANR_CLAUDE_PLUGIN,
+    );
+    if (plugin?.installed) candidates.unshift({ runtime: 'claude-code', scope: 'user' });
+  }
+  return { candidates, ...(stateError ? { stateError } : {}) };
+}
+
+/** The step one install needs, or `undefined` when it already matches this CLI. */
+async function planNextStep(
+  { runtime, scope, skillMode }: NextStepCandidate,
+  projectDir: string,
+  claudeCommandRunner: ClaudeCommandRunner | undefined,
+): Promise<UpgradeNextStep | undefined> {
+  const preview = await previewSetup({
+    projectDir,
+    cliVersion: readOpenPlanrVersion(),
+    runtime,
+    scope,
+    dryRun: true,
+    ...(skillMode ? { skillMode } : {}),
+    ...(claudeCommandRunner ? { claudeCommandRunner } : {}),
+  });
+  const change = summarizeRuntimeChanges(preview, {
+    bookkeepingRoot: runtimeRoot(),
+    applied: false,
+  }).find((entry) => entry.runtime === runtime);
+  if (!change?.changed) return undefined;
+  return {
+    runtime,
+    host: change.host,
+    command: nextStepCommand(runtime, scope, skillMode, preview.runtimeOperations),
+    detail: change.summary,
+  };
+}
+
+/**
+ * One command per installed coding agent whose OpenPlanr files or plugin trail this CLI,
+ * planned with the same preview `planr runtime update` applies.
+ */
+export async function upgradeNextSteps(
+  projectDir: string,
+  options: { claudeCommandRunner?: ClaudeCommandRunner } = {},
+): Promise<UpgradeNextStep[]> {
+  const steps: UpgradeNextStep[] = [];
+  const doctorStep = (error: Error, runtime?: RuntimeId) => {
+    if (steps.some((step) => step.detail === error.message)) return;
+    steps.push({
+      ...(runtime ? { runtime } : {}),
+      host: runtime ? RUNTIME_LABELS[runtime] : 'OpenPlanr',
+      command: 'planr doctor',
+      detail: error.message,
+    });
+  };
+  const { candidates, stateError } = await nextStepCandidates(
+    projectDir,
+    options.claudeCommandRunner,
+  );
+  if (stateError) doctorStep(stateError);
+  for (const candidate of candidates) {
+    try {
+      const step = await planNextStep(candidate, projectDir, options.claudeCommandRunner);
+      if (step) steps.push(step);
+    } catch (error) {
+      if (!(error instanceof Error)) throw error;
+      doctorStep(error, candidate.runtime);
+    }
+  }
+  return steps;
 }
 
 /** One migration's outcome as the injected registry runner reports it. */
@@ -703,21 +862,74 @@ export type MigrationRunner = (
   ctx: { projectDir: string },
 ) => Promise<MigrationRunResult[]>;
 
-/**
- * The plugin-half prescription, derived independently of whether the CLI half moved.
- *
- * Two situations need these commands: a completed CLI upgrade, and a tuple where the CLI
- * is already current but the plugins trail (the state every release creates for anyone
- * who upgrades the npm half first). The second path used to reach no prescription at all
- * while its own message promised one. Deriving the commands here means both surfaces read
- * from one place and can never print different instructions for the same machine.
- */
-export function pluginHalfPrescription(claudeCommandRunner?: ClaudeCommandRunner): string[] {
-  const marketplaceRoot = bundledHostRoot('claude');
-  return prescribePluginHalfCommands(
-    inspectBundledClaudePluginIntegration(marketplaceRoot, claudeCommandRunner).operations,
-    marketplaceRoot,
-  );
+/** Runs the OpenPlanr CLI now installed on disk with the given arguments. */
+export type InstalledCliRunner = (args: string[]) => NpmCommandResult;
+
+// After `npm install -g` this process still executes the previous version's modules,
+// so only a fresh process of the same entry point runs the upgraded code.
+function defaultInstalledCliRunner(args: string[]): NpmCommandResult {
+  const entry = process.argv[1];
+  if (!entry) {
+    return {
+      status: null,
+      stdout: '',
+      stderr: '',
+      error: new Error('The entry point of the running CLI is unknown.'),
+    };
+  }
+  const result = spawnSync(process.execPath, [...process.execArgv, entry, ...args], {
+    encoding: 'utf8',
+    windowsHide: true,
+    timeout: 120_000,
+  });
+  return {
+    status: result.status,
+    stdout: result.stdout ?? '',
+    stderr: result.stderr ?? '',
+    ...(result.error ? { error: result.error } : {}),
+  };
+}
+
+const nextStepsReportSchema = z.object({
+  nextSteps: z.array(
+    z.object({
+      runtime: z.enum(['claude-code', 'codex', 'cursor']).optional(),
+      host: z.string(),
+      command: z.string(),
+      detail: z.string(),
+    }),
+  ),
+});
+
+const installedStatusSchema = z.union([
+  nextStepsReportSchema,
+  z.object({ ok: z.literal(false), problem: z.string() }),
+]);
+
+/** The next steps as the upgraded CLI reports them from `planr upgrade status --json`. */
+export function readInstalledCliNextSteps(
+  projectDir: string,
+  runner: InstalledCliRunner = defaultInstalledCliRunner,
+): { nextSteps: UpgradeNextStep[]; error?: string } {
+  const result = runner(['--project-dir', projectDir, 'upgrade', 'status', '--json']);
+  if (result.error) {
+    return { nextSteps: [], error: `The upgraded CLI could not be run: ${result.error.message}.` };
+  }
+  const report = result.stdout.trim().split(/\r?\n/).pop() ?? '';
+  try {
+    const parsed = parseExternalJson(report, installedStatusSchema, 'planr upgrade status --json');
+    if ('nextSteps' in parsed) return { nextSteps: parsed.nextSteps };
+    return {
+      nextSteps: [],
+      error: `The upgraded CLI could not list its next steps: ${parsed.problem}`,
+    };
+  } catch (error) {
+    const detail = result.stderr.trim() || (error instanceof Error ? error.message : String(error));
+    return {
+      nextSteps: [],
+      error: `The upgraded CLI did not report its next steps (exit ${result.status}): ${detail}`,
+    };
+  }
 }
 
 export interface ExecuteCliHalfUpgradeInput {
@@ -725,8 +937,8 @@ export interface ExecuteCliHalfUpgradeInput {
   targetCliVersion: string;
   /** Injectable npm runner; defaults to the real (or `OPENPLANR_NPM_BIN`) npm. */
   npmCommandRunner?: NpmCommandRunner;
-  /** Injectable `claude` runner for the prescription's inspection (hermetic tests). */
-  claudeCommandRunner?: ClaudeCommandRunner;
+  /** Injectable runner for the upgraded CLI; defaults to a new process of this entry point. */
+  installedCliRunner?: InstalledCliRunner;
   /**
    * Migration runner, run after the CLI half verifies. Omitted (no runner)
    * means no migrations are attempted; the `apply` command injects the real
@@ -738,9 +950,15 @@ export interface ExecuteCliHalfUpgradeInput {
 export interface ExecuteCliHalfUpgradeResult {
   ok: boolean;
   cliUpgraded: boolean;
+  previousVersion: string;
   installedVersion: string;
   restoredTo?: string;
   changelogBullets: string[];
+  releaseNotes: ReleaseNoteSection[];
+  releaseNotesError?: string;
+  nextSteps: UpgradeNextStep[];
+  nextStepsError?: string;
+  /** The commands of `nextSteps`, for readers of the older field. */
   pluginHalfCommands: string[];
   /** Per-migration results for every registered migration this upgrade crossed. */
   migrations: MigrationRunResult[];
@@ -780,7 +998,10 @@ export async function executeCliHalfUpgrade(
       ok: false,
       cliUpgraded: false,
       installedVersion: readOpenPlanrVersion(),
+      previousVersion,
       changelogBullets: [],
+      releaseNotes: [],
+      nextSteps: [],
       pluginHalfCommands: [],
       migrations: [],
       failure: {
@@ -806,7 +1027,10 @@ export async function executeCliHalfUpgrade(
       cliUpgraded: false,
       installedVersion: restoredVersion,
       restoredTo: previousVersion,
+      previousVersion,
       changelogBullets: [],
+      releaseNotes: [],
+      nextSteps: [],
       pluginHalfCommands: [],
       migrations: [],
       failure: { step: 'verify', message },
@@ -833,7 +1057,10 @@ export async function executeCliHalfUpgrade(
       ok: false,
       cliUpgraded: true,
       installedVersion: verifiedVersion,
+      previousVersion,
       changelogBullets: [],
+      releaseNotes: [],
+      nextSteps: [],
       pluginHalfCommands: [],
       migrations,
       failure: {
@@ -849,14 +1076,26 @@ export async function executeCliHalfUpgrade(
   // "no entries", not as a failed upgrade (which would misreport a machine that
   // is, in fact, upgraded).
   const changelogBullets = summarizeChangelogBetween(previousVersion, verifiedVersion);
-  const pluginHalfCommands = pluginHalfPrescription(input.claudeCommandRunner);
+  let releaseNotes: ReleaseNoteSection[] = [];
+  let releaseNotesError: string | undefined;
+  try {
+    releaseNotes = summarizeReleaseNotes(previousVersion, verifiedVersion);
+  } catch (error) {
+    releaseNotesError = `The release notes could not be read: ${error instanceof Error ? error.message : String(error)}`;
+  }
+  const next = readInstalledCliNextSteps(input.projectDir, input.installedCliRunner);
 
   return {
     ok: true,
     cliUpgraded: true,
+    previousVersion,
     installedVersion: verifiedVersion,
     changelogBullets,
-    pluginHalfCommands,
+    releaseNotes,
+    ...(releaseNotesError ? { releaseNotesError } : {}),
+    nextSteps: next.nextSteps,
+    ...(next.error ? { nextStepsError: next.error } : {}),
+    pluginHalfCommands: next.nextSteps.map((step) => step.command),
     migrations,
   };
 }

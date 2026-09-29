@@ -2,16 +2,16 @@ import { existsSync, readFileSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { OpenPlanrConfig } from '../models/types.js';
-import { display, logger } from '../utils/logger.js';
+import { logger } from '../utils/logger.js';
 import { saveConfig } from './config-service.js';
 import { isNonInteractive } from './interactive-state.js';
 import { promptSelect } from './prompt-service.js';
 import { runtimeRoot } from './runtime-manager-service.js';
+import { printUpgradeReport } from './upgrade-report.js';
 import {
   type ExecuteCliHalfUpgradeInput,
   type ExecuteCliHalfUpgradeResult,
   executeCliHalfUpgrade,
-  PLUGIN_HALF_INSTRUCTION,
   planCliUpgrade,
   type ReconcileOptions,
   reconcileInstalledTuple,
@@ -336,8 +336,8 @@ async function enableAutoUpgrade(
 
 /**
  * Delegate the CLI-owned half to the upgrade executor and render its result. This
- * re-uses `executeCliHalfUpgrade` verbatim: the offer never re-implements the
- * npm install, the verify-after-write, or the plugin-half prescription.
+ * re-uses `executeCliHalfUpgrade` and `printUpgradeReport` verbatim, so the offer
+ * reads exactly like `planr upgrade apply`.
  */
 async function performUpgrade(
   projectDir: string,
@@ -350,28 +350,5 @@ async function performUpgrade(
   }
   logger.info(`Upgrading the OpenPlanr CLI to ${plan.targetCliVersion}…`);
   const result = await runUpgrade({ projectDir, targetCliVersion: plan.targetCliVersion });
-  renderUpgradeResult(result);
-}
-
-/** Mirror `planr upgrade apply`'s rendering so the inline offer reads identically. */
-function renderUpgradeResult(result: ExecuteCliHalfUpgradeResult): void {
-  if (result.ok) {
-    logger.success(`CLI upgraded to ${result.installedVersion}.`);
-    if (result.changelogBullets.length > 0) {
-      display.blank();
-      display.heading("What's new");
-      for (const bullet of result.changelogBullets) display.bullet(bullet);
-    }
-    if (result.pluginHalfCommands.length > 0) {
-      display.blank();
-      display.heading('Plugin half — the upgrade never changes Claude plugins itself');
-      logger.info(PLUGIN_HALF_INSTRUCTION);
-      result.pluginHalfCommands.forEach((command, index) => {
-        display.numbered(index + 1, command);
-      });
-    }
-  } else {
-    logger.error(result.failure?.message ?? 'The upgrade did not complete.');
-    if (result.restoredTo) logger.info(`Restored the previous version ${result.restoredTo}.`);
-  }
+  printUpgradeReport(result, 'highlights');
 }

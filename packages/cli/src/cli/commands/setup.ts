@@ -14,6 +14,7 @@ import {
   type SkillInstallMode,
 } from '../../services/runtime-manager-service.js';
 import { display, isVerbose, logger } from '../../utils/logger.js';
+import { printRuntimeChanges } from './runtime-output.js';
 
 const runtimeLabels: Record<RuntimeId, string> = {
   'claude-code': 'Claude Code',
@@ -287,13 +288,8 @@ export function registerSetupCommand(program: Command, cliVersion: string) {
       if (opts.json) display.line(JSON.stringify(result));
       else {
         logger.success('Setup complete');
+        printRuntimeChanges(result, true);
         if (result.backupDir) display.keyValue('Backup', result.backupDir);
-        if (result.appliedRuntimeOperations?.length) {
-          display.keyValue(
-            'Coding agents',
-            `${result.appliedRuntimeOperations.length} marketplace/plugin operation(s) applied`,
-          );
-        }
         if (result.restartRequired) {
           logger.warn(
             'Restart the updated coding agent to load the new OpenPlanr discovery content.',

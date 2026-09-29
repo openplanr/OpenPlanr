@@ -152,8 +152,8 @@ planr upgrade apply
   `problem`. The CLI intentionally omits host paths and stacks; author only the
   returned `resultPath` and keep `packetId` unchanged.
 - CLI/skill parity is incompatible: run `planr upgrade status`, then the
-  explicit `planr upgrade apply`, followed by `planr setup` and
-  `planr doctor --strict --json` again.
+  explicit `planr upgrade apply`, then the commands it lists for your coding
+  agents, and `planr doctor --strict --json` again.
 
 ## Offline, remote, and SSH use
 
