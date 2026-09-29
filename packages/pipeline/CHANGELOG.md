@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.55.3
+### Patch Changes
+
+- 0fe7327: The design studio, the design board and `planr artifact` reviews now render up to 100 MiB of HTML in total, up from 10 MiB, so a large clickable prototype renders at every frame size. Share links keep their current size limits.
+
 ## 0.55.2
 ### Patch Changes
 
