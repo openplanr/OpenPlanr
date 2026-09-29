@@ -413,6 +413,28 @@ test('control transport accepts the worst-case JSON expansion of a valid 10 MiB 
   await review.close();
 });
 
+test('control transport accepts a 100 MiB artifact whose JSON escapes double it', async () => {
+  const env = isolatedEnv();
+  const cwd = isolatedProject(env);
+  const maximum = 100 * 1024 * 1024;
+  const prefix = '<!doctype html><html><head></head><body><pre>';
+  const suffix = '</pre></body></html>';
+  const html = `${prefix}${'"'.repeat(maximum - Buffer.byteLength(prefix) - Buffer.byteLength(suffix))}${suffix}`;
+  const maximumEnvelope = envelope({ html });
+  const serializedBytes = Buffer.byteLength(
+    JSON.stringify({
+      envelope: maximumEnvelope,
+      title: 'Maximum valid artifact',
+      theme: 'auto',
+    }),
+  );
+  assert.ok(serializedBytes > 200 * 1024 * 1024, 'fixture exercises two-byte JSON escapes');
+  assert.ok(serializedBytes <= ARTIFACT_REVIEW_MAX_CONTROL_BYTES);
+  const review = await startArtifactReview({ envelope: maximumEnvelope, env, cwd, noOpen: true });
+  assert.equal(review.ok, true);
+  await review.close();
+});
+
 test('concurrent starts share one daemon and the last close cannot race a new registration', async () => {
   const env = isolatedEnv();
   const cwd = isolatedProject(env);

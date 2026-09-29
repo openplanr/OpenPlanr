@@ -7,7 +7,7 @@
     {
       "source": "packages/design/lib/design-engine/artifact-adapter.mjs",
       "target": "lib/design-engine/artifact-adapter.mjs",
-      "sha256": "69858e44cbf00193197a12319683a48ac567c9ea5cfef2abe1003395e1be2e9e",
+      "sha256": "c63932205cbab1d5f5e8f4f803f7690bc3bf089baaf56827954d3aac5e1d8a3e",
       "mode": "644"
     },
     {
@@ -43,7 +43,7 @@
     {
       "source": "packages/design/lib/design-engine/daemon.mjs",
       "target": "lib/design-engine/daemon.mjs",
-      "sha256": "f60e1621d6efe26fc5ae6d1d8b0bb243e760248f9a92ea6071d741ef8f1253f8",
+      "sha256": "a4bc38cf0bf78dc82a53a8ec34f73aeb0301eb897de0085da717000bdbe6ede5",
       "mode": "644"
     },
     {

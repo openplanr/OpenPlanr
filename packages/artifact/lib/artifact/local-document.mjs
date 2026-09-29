@@ -59,7 +59,7 @@ export function bundleLocalDocument({
   source,
   sharedStyles = [],
   screenId,
-  maxBytes = 10 * 1024 * 1024,
+  maxBytes = 100 * 1024 * 1024,
   readSource,
   passive = false,
 }) {

@@ -17,8 +17,8 @@ import { digestArtifact, normalizeUtf8Text } from './envelope.mjs';
 import { isPathContained } from './internal/path-util.mjs';
 
 const DEFAULT_MAX_FILES = 1_000;
-const DEFAULT_MAX_BYTES = 10 * 1024 * 1024;
-const MAX_GENERATED_OUTPUT_BYTES = 10 * 1024 * 1024;
+const DEFAULT_MAX_BYTES = 100 * 1024 * 1024;
+const MAX_GENERATED_OUTPUT_BYTES = 100 * 1024 * 1024;
 const REMOTE_FETCH_TIMEOUT_MS = 15_000;
 const MAX_REMOTE_REDIRECTS = 5;
 const REMOTE_RE = /^(?:https?:|file:|ftp:|wss?:|\/\/)/i;
@@ -1159,7 +1159,7 @@ function artifactDependencyPlugin(context) {
       api.onLoad({ filter: /.*/, namespace: 'openplanr-remote' }, async (args) => {
         try {
           const remote = await context.readRemote(args.path, 'import');
-          let contents = remote.buffer;
+          const contents = remote.buffer;
           if (remote.mediaType === 'image/svg+xml') {
             let markup;
             try {

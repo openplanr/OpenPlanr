@@ -53,10 +53,10 @@ const STAGE_RUNTIME_PATH = join(here, '..', '..', 'templates', 'artifact-review-
 
 export const ARTIFACT_REVIEW_SERVER_VERSION = 1;
 export const ARTIFACT_REVIEW_SERVER_KIND = 'artifact-review';
-// A valid 10 MiB HTML bundle can expand close to sixfold when JSON escapes
-// control characters. Keep the private control transport coherent with the
-// public engine limit instead of rejecting an otherwise valid envelope.
-export const ARTIFACT_REVIEW_MAX_CONTROL_BYTES = 64 * 1024 * 1024;
+// Registration JSON carries the whole envelope. JSON escaping at most doubles
+// HTML without rare control characters, so this covers the 100 MiB engine
+// limit and stays under V8's 512 MiB string cap.
+export const ARTIFACT_REVIEW_MAX_CONTROL_BYTES = 256 * 1024 * 1024;
 export const ARTIFACT_REVIEW_MAX_STATE_BYTES = REVIEW_STATE_MAX_BYTES;
 
 const SESSION_ID_BYTES = 16;

@@ -990,7 +990,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:9245a86f8e3f20f6ec4c705d1364d2d6d3e639b34a7d41162769a0f490dd39df"
+          "digest": "sha256:2612a0ac85e121b9562e6239e3832be64933c89ea5b5739b18b58748d69ac791"
         },
         {
           "path": "scripts/design-document.mjs",
@@ -1002,7 +1002,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:7e15b9f9e9afd29be2a2558fad9e57b5df85e494a586180d5afe23015cdbcfb7"
+          "digest": "sha256:480906730eb79fe8fe0a9d5956f633493bf51cfa587ec600006ff2d58dea54af"
         },
         {
           "path": "scripts/design-entities.mjs",
@@ -1050,7 +1050,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:1d04e0d821738f3934fb3fbd314b161fb557f4459cf2da2d1921c99d27d7d861"
+          "digest": "sha256:3e55cf8003b7f1645c5d9dded0ea206bf02cb6cf44f342815528e687768b0dbc"
         },
         {
           "path": "scripts/design-sandbox-guards.mjs",
@@ -1648,7 +1648,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:9245a86f8e3f20f6ec4c705d1364d2d6d3e639b34a7d41162769a0f490dd39df"
+          "digest": "sha256:2612a0ac85e121b9562e6239e3832be64933c89ea5b5739b18b58748d69ac791"
         },
         {
           "path": "scripts/design-document.mjs",
@@ -1660,7 +1660,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:7e15b9f9e9afd29be2a2558fad9e57b5df85e494a586180d5afe23015cdbcfb7"
+          "digest": "sha256:480906730eb79fe8fe0a9d5956f633493bf51cfa587ec600006ff2d58dea54af"
         },
         {
           "path": "scripts/design-entities.mjs",
@@ -1708,7 +1708,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:1d04e0d821738f3934fb3fbd314b161fb557f4459cf2da2d1921c99d27d7d861"
+          "digest": "sha256:3e55cf8003b7f1645c5d9dded0ea206bf02cb6cf44f342815528e687768b0dbc"
         },
         {
           "path": "scripts/design-sandbox-guards.mjs",
@@ -2306,7 +2306,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:9245a86f8e3f20f6ec4c705d1364d2d6d3e639b34a7d41162769a0f490dd39df"
+          "digest": "sha256:2612a0ac85e121b9562e6239e3832be64933c89ea5b5739b18b58748d69ac791"
         },
         {
           "path": "scripts/design-document.mjs",
@@ -2318,7 +2318,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:7e15b9f9e9afd29be2a2558fad9e57b5df85e494a586180d5afe23015cdbcfb7"
+          "digest": "sha256:480906730eb79fe8fe0a9d5956f633493bf51cfa587ec600006ff2d58dea54af"
         },
         {
           "path": "scripts/design-entities.mjs",
@@ -2366,7 +2366,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:1d04e0d821738f3934fb3fbd314b161fb557f4459cf2da2d1921c99d27d7d861"
+          "digest": "sha256:3e55cf8003b7f1645c5d9dded0ea206bf02cb6cf44f342815528e687768b0dbc"
         },
         {
           "path": "scripts/design-sandbox-guards.mjs",
@@ -3259,7 +3259,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:9245a86f8e3f20f6ec4c705d1364d2d6d3e639b34a7d41162769a0f490dd39df"
+          "digest": "sha256:2612a0ac85e121b9562e6239e3832be64933c89ea5b5739b18b58748d69ac791"
         },
         {
           "path": "scripts/design-document.mjs",
@@ -3271,7 +3271,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:7e15b9f9e9afd29be2a2558fad9e57b5df85e494a586180d5afe23015cdbcfb7"
+          "digest": "sha256:480906730eb79fe8fe0a9d5956f633493bf51cfa587ec600006ff2d58dea54af"
         },
         {
           "path": "scripts/design-entities.mjs",
@@ -3319,7 +3319,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:1d04e0d821738f3934fb3fbd314b161fb557f4459cf2da2d1921c99d27d7d861"
+          "digest": "sha256:3e55cf8003b7f1645c5d9dded0ea206bf02cb6cf44f342815528e687768b0dbc"
         },
         {
           "path": "scripts/design-sandbox-guards.mjs",

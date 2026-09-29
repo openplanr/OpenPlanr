@@ -26,7 +26,7 @@ import { escapeHtml } from '../design/escape.mjs';
 import { designFeedbackToArtifactReview } from './feedback.mjs';
 
 export const DESIGN_BOARD_MAX_FILES = 1_000;
-export const DESIGN_BOARD_MAX_BYTES = 10 * 1024 * 1024;
+export const DESIGN_BOARD_MAX_BYTES = 100 * 1024 * 1024;
 
 const ARTIFACT_ID_RE = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 const MAX_ARTIFACTS = 256;
