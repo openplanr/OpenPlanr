@@ -2629,6 +2629,40 @@ export async function managedRuntimesForProject(projectDir: string): Promise<Run
   return [...(project?.runtimes ?? [])];
 }
 
+/** Coding agents OpenPlanr manages at user scope, then those this project manages at project scope. */
+export async function installedRuntimeScopes(
+  projectDir: string,
+): Promise<Array<{ runtime: RuntimeId; scope: 'user' | 'project'; skillMode?: SkillInstallMode }>> {
+  const state = await loadState();
+  const installed: Array<{
+    runtime: RuntimeId;
+    scope: 'user' | 'project';
+    skillMode?: SkillInstallMode;
+  }> = [];
+  for (const runtime of ['claude-code', 'codex', 'cursor'] as const) {
+    const bundle = state.userBundles?.[runtime];
+    if (bundle) {
+      installed.push({
+        runtime,
+        scope: 'user',
+        ...(bundle.installMode ? { skillMode: bundle.installMode } : {}),
+      });
+    }
+  }
+  const key = projectKey(projectDir);
+  const project = state.projects[key];
+  if (!project) return installed;
+  assertRequestedProjectBinding(projectDir, key, project);
+  for (const runtime of project.runtimes) {
+    const scope =
+      project.runtimeScopes?.[runtime] ?? inferRuntimeScope(project.ownedFiles, runtime);
+    if (scope === 'user') continue;
+    const skillMode = project.skillModes?.[runtime];
+    installed.push({ runtime, scope: 'project', ...(skillMode ? { skillMode } : {}) });
+  }
+  return installed;
+}
+
 export function isOpenPlanrHome(projectDir: string): boolean {
   return canonicalProjectPath(projectDir) === canonicalProjectPath(userHome());
 }
