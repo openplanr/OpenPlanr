@@ -98,9 +98,10 @@ const RULES = [
   },
   {
     id: 'skill-count',
-    message: `skill counts must match skills/registry.json (${skillCount})`,
-    pattern: /\b(\d{2}) (?:canonical |OpenPlanr )?skills\b/gu,
-    accept: (match) => Number(match[1]) === skillCount,
+    message: `skill counts must match skills/registry.json (${skillCount}); an "N+ skills" floor must not exceed it`,
+    pattern: /\b(\d{2})(\+?) (?:canonical |OpenPlanr )?skills\b/gu,
+    accept: (match) =>
+      match[2] ? Number(match[1]) <= skillCount : Number(match[1]) === skillCount,
   },
   {
     id: 'hedging-boilerplate',
