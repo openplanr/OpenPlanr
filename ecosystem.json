@@ -49,17 +49,17 @@
   "components": {
     "cli": {
       "package": "openplanr",
-      "version": "2.2640.3",
+      "version": "2.2640.4",
       "path": "packages/cli",
       "publication": "public",
-      "manifestDigest": "sha256:8812e5ed4e66605fc8a52b5726a401df76c357573bad54056c68b5e4fb7e1ae0"
+      "manifestDigest": "sha256:f4e9083dd2947c51492036d89c18666c46e3d45f6d39649229100c63d570dbb0"
     },
     "pipeline": {
       "package": "planr-pipeline",
-      "version": "0.55.4",
+      "version": "0.55.5",
       "path": "packages/pipeline",
       "publication": "public",
-      "manifestDigest": "sha256:944b55fbca64bd572d619e8b3684bd4d38d63a06fa1e62523fea54228cfe4f50"
+      "manifestDigest": "sha256:248e3bcd2598329272c6b5dbaed53cb1920dbc664ece890024d20eaf7d8184bc"
     },
     "protocol": {
       "package": "@openplanr/protocol",
@@ -84,10 +84,10 @@
     },
     "design": {
       "package": "@openplanr/design",
-      "version": "0.3.6",
+      "version": "0.3.7",
       "path": "packages/design",
       "publication": "private",
-      "manifestDigest": "sha256:44b596f007da63facafa79da9988277221e1236c07d10150bbe7f74aff0c933c"
+      "manifestDigest": "sha256:f127b060c060f3748268ac853a02300e180267b7b99142a237a3f05b04f1a27f"
     },
     "skillRuntime": {
       "package": "@openplanr/skill-runtime",
@@ -114,7 +114,7 @@
   "compatibility": {
     "cliOptionalPipeline": {
       "package": "planr-pipeline",
-      "version": "0.55.4",
+      "version": "0.55.5",
       "exact": true
     },
     "publicArtifacts": {
@@ -323,23 +323,23 @@
     "hosts": [
       {
         "id": "claude-code",
-        "version": "0.55.4",
+        "version": "0.55.5",
         "capabilityLevel": "product"
       },
       {
         "id": "codex",
-        "version": "0.55.4",
+        "version": "0.55.5",
         "capabilityLevel": "workflow"
       },
       {
         "id": "cursor",
-        "version": "0.55.4",
+        "version": "0.55.5",
         "capabilityLevel": "workflow"
       }
     ],
     "generatedAssets": {
       "path": "adapters/manifests/generated-assets.json",
-      "digest": "sha256:6abc67e18f2df546a911e0e10bea4a3c6f5ac723858656e2064af0be0958de99",
+      "digest": "sha256:3d71d185fab248bec51888a5b596f2dc96e9e5248bf1f593d04346e407125c9a",
       "count": 1899
     }
   },

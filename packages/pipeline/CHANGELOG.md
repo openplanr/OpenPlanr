@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.55.5
+### Patch Changes
+
+- fcc1c89: Design Share stores each repeated screen, script and style once and compresses the review before encrypting it, so large designs fit the upload limit. A 13-screen design at three sizes shrank from 19 MiB to 0.24 MiB. Links shared earlier keep opening.
+
 ## 0.55.4
 ### Patch Changes
 
