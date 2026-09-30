@@ -355,7 +355,7 @@
     {
       "source": "packages/design/lib/design/workspace-client.mjs",
       "target": "lib/design/workspace-client.mjs",
-      "sha256": "1bf0aba04c524d5fd5ae58774c57f832e719829e27f8bd7ac5aaf10c40e970a7",
+      "sha256": "8267af3724d2b246f3489cc89822e20ec395ce352dc76347776fe2bb476db75e",
       "mode": "644"
     },
     {

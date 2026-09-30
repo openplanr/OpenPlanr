@@ -167,6 +167,125 @@ async function unseal(value, rawKey, context, limit = DESIGN_WORKSPACE_MAX_BYTES
   );
   return JSON.parse(decoder.decode(plaintext));
 }
+
+const PACKED_BUNDLE_KIND = 'openplanr-design-review-bundle-packed';
+const PACKED_BUNDLE_MAX_BYTES = 128 * 1024 * 1024;
+const SHARED_BLOCK_MIN_LENGTH = 2048;
+const sharedBlockPattern = /(<(script|style)\b[^>]*>)([\s\S]*?)<\/\2\s*>/gi;
+
+async function deflateRaw(bytes) {
+  const stream = new Blob([bytes]).stream().pipeThrough(new CompressionStream('deflate-raw'));
+  return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+async function inflateRaw(bytes, limit) {
+  const reader = new Blob([bytes])
+    .stream()
+    .pipeThrough(new DecompressionStream('deflate-raw'))
+    .getReader();
+  const chunks = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > limit) {
+      await reader.cancel();
+      throw new RangeError('The shared design expands beyond its size limit.');
+    }
+    chunks.push(value);
+  }
+  const inflated = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) {
+    inflated.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return inflated;
+}
+
+/**
+ * Stores each distinct artboard page and each repeated script or style body once, then
+ * deflates. A design at three frame sizes otherwise carries every page three times.
+ */
+export async function packDesignReviewBundle(bundle) {
+  const pages = [];
+  const pageIndex = new Map();
+  const blocks = [];
+  const blockIndex = new Map();
+  const segmentsOf = (html) => {
+    const segments = [];
+    let offset = 0;
+    for (const match of html.matchAll(sharedBlockPattern)) {
+      const body = match[3];
+      if (body.length < SHARED_BLOCK_MIN_LENGTH) continue;
+      const start = match.index + match[1].length;
+      segments.push(html.slice(offset, start));
+      if (!blockIndex.has(body)) blockIndex.set(body, blocks.push(body) - 1);
+      segments.push(blockIndex.get(body));
+      offset = start + body.length;
+    }
+    segments.push(html.slice(offset));
+    return segments;
+  };
+  const artifactPages = [];
+  const artifacts = bundle.envelope.artifacts.map(({ html, ...artifact }) => {
+    if (!pageIndex.has(html)) pageIndex.set(html, pages.push(segmentsOf(html)) - 1);
+    artifactPages.push(pageIndex.get(html));
+    return artifact;
+  });
+  const packed = {
+    bundle: { ...bundle, envelope: { ...bundle.envelope, artifacts } },
+    artifactPages,
+    pages,
+    blocks,
+  };
+  return {
+    kind: PACKED_BUNDLE_KIND,
+    version: 1,
+    data: encodeWorkspaceBytes(await deflateRaw(encoder.encode(JSON.stringify(packed)))),
+  };
+}
+
+/** The bundle a packed share holds, or `value` unchanged when it was shared unpacked. */
+export async function unpackDesignReviewBundle(value, { maxBytes = PACKED_BUNDLE_MAX_BYTES } = {}) {
+  if (value?.kind !== PACKED_BUNDLE_KIND) return value;
+  if (value.version !== 1 || typeof value.data !== 'string')
+    throw new Error('The shared design uses an unsupported packing.');
+  const { bundle, artifactPages, pages, blocks } = JSON.parse(
+    decoder.decode(await inflateRaw(decodeWorkspaceBytes(value.data), maxBytes)),
+  );
+  const invalid = () => new Error('The shared design packing is invalid.');
+  if (
+    !Array.isArray(bundle?.envelope?.artifacts) ||
+    !Array.isArray(pages) ||
+    !Array.isArray(blocks) ||
+    !Array.isArray(artifactPages) ||
+    artifactPages.length !== bundle.envelope.artifacts.length
+  )
+    throw invalid();
+  let expanded = 0;
+  const html = pages.map((segments) => {
+    if (!Array.isArray(segments)) throw invalid();
+    const page = segments
+      .map((segment) => {
+        if (typeof segment === 'string') return segment;
+        if (!Number.isInteger(segment) || typeof blocks[segment] !== 'string') throw invalid();
+        return blocks[segment];
+      })
+      .join('');
+    expanded += page.length;
+    if (expanded > maxBytes)
+      throw new RangeError('The shared design expands beyond its size limit.');
+    return page;
+  });
+  const artifacts = bundle.envelope.artifacts.map((artifact, index) => {
+    const page = html[artifactPages[index]];
+    if (page === undefined) throw invalid();
+    return { ...artifact, html: page };
+  });
+  return { ...bundle, envelope: { ...bundle.envelope, artifacts } };
+}
+
 const keyringContext = (id, epoch) => ({ type: 'keyring', workspaceId: id, epoch });
 const revisionContext = (id, revision) => ({
   type: 'revision',
@@ -216,7 +335,7 @@ async function prepareRevision(custody, bundle) {
     {
       ...header,
       ...(await seal(
-        bundle,
+        await packDesignReviewBundle(bundle),
         decodeWorkspaceBytes(custody.keys[custody.epoch]),
         revisionContext(custody.id, header),
       )),
@@ -426,10 +545,12 @@ export async function decryptWorkspaceRevision(
     throw new Error('The published design signature is invalid.');
   if (!access.keys[revision.epoch]) throw new Error('The access token cannot open this revision.');
   const bundle = assertDesignReviewBundle(
-    await unseal(
-      revision,
-      decodeWorkspaceBytes(access.keys[revision.epoch]),
-      revisionContext(access.id, revision),
+    await unpackDesignReviewBundle(
+      await unseal(
+        revision,
+        decodeWorkspaceBytes(access.keys[revision.epoch]),
+        revisionContext(access.id, revision),
+      ),
     ),
   );
   if (workspaceEnvelopeDigest(bundle.envelope) !== revision.reviewOf)

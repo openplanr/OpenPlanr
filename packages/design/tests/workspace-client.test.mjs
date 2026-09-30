@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { deflateRawSync } from 'node:zlib';
 import { canonicalizeJson, sha256Hex } from '@openplanr/protocol/canonical-json';
 import {
   assertWorkspaceContract,
@@ -14,11 +15,14 @@ import {
   createWorkspaceSigner,
   decryptWorkspaceRevision,
   deriveWorkspaceAuthentication,
+  encodeWorkspaceBytes,
   getWorkspace,
+  packDesignReviewBundle,
   prepareWorkspace,
   prepareWorkspaceEvent,
   prepareWorkspaceMutation,
   readWorkspaceEvents,
+  unpackDesignReviewBundle,
   verifyWorkspaceSignature,
   workspaceEnvelopeDigest,
   workspaceReviewUrl,
@@ -154,6 +158,61 @@ test('recipient unlocks signed revisions; wrong token and content tampering fail
   const revision = server.revisions.get(access.currentRevision);
   server.revisions.set(revision.id, { ...revision, createdAt: '2026-01-01T00:00:00.000Z' });
   await assert.rejects(decryptWorkspaceRevision(access, revision.id, server), /signature/);
+});
+
+test('sharing stores repeated pages and shared blocks once and restores them byte for byte', async () => {
+  const shared = `<script>${'window.app = 1;'.repeat(2000)}</script><style>${'.a{color:red}'.repeat(2000)}</style>`;
+  const value = bundle();
+  value.envelope.artifacts = ['one', 'two', 'three'].flatMap((screen) =>
+    ['desktop', 'tablet', 'phone'].map((frame) => ({
+      id: `${screen}-${frame}`,
+      html: `<!doctype html><html><head>${shared}</head><body><h1>${screen}</h1></body></html>`,
+    })),
+  );
+  const packed = await packDesignReviewBundle(value);
+  assert.ok(JSON.stringify(packed).length * 20 < JSON.stringify(value).length);
+  assert.equal(canonicalizeJson(await unpackDesignReviewBundle(packed)), canonicalizeJson(value));
+
+  const custody = await prepareWorkspace(value);
+  const server = service(custody);
+  await commitWorkspace(custody, server);
+  const access = { id: custody.id, baseUrl: custody.baseUrl, token: custody.token };
+  await getWorkspace(access, server);
+  const opened = await decryptWorkspaceRevision(access, access.currentRevision, server);
+  assert.deepEqual(opened.envelope.artifacts, value.envelope.artifacts);
+});
+
+test('a bundle shared before packing still opens unchanged', async () => {
+  const value = bundle();
+  assert.equal(await unpackDesignReviewBundle(value), value);
+});
+
+test('packed shares that expand too far or reference missing blocks are refused', async () => {
+  const packed = await packDesignReviewBundle(bundle());
+  await assert.rejects(unpackDesignReviewBundle(packed, { maxBytes: 64 }), /size limit/);
+  const forged = (content) => ({
+    kind: 'openplanr-design-review-bundle-packed',
+    version: 1,
+    data: encodeWorkspaceBytes(deflateRawSync(Buffer.from(JSON.stringify(content)))),
+  });
+  const base = {
+    bundle: { ...bundle(), envelope: { ...bundle().envelope, artifacts: [{ id: 'one' }] } },
+  };
+  await assert.rejects(
+    unpackDesignReviewBundle(
+      forged({ ...base, artifactPages: [0], pages: [['<p>', 7]], blocks: [] }),
+    ),
+    /packing is invalid/,
+  );
+  // Small once inflated, but its block references expand past the limit.
+  await assert.rejects(
+    unpackDesignReviewBundle(
+      forged({ ...base, artifactPages: [0], pages: [[0, 0, 0, 0, 0]], blocks: ['x'.repeat(500)] }),
+      { maxBytes: 2000 },
+    ),
+    /size limit/,
+  );
+  await assert.rejects(unpackDesignReviewBundle({ ...packed, version: 2 }), /unsupported packing/);
 });
 
 test('rotation preserves prior revisions and prevents old tokens from future access', async () => {
