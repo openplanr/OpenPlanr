@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { chmod, copyFile, lstat, mkdir, readFile, readdir, realpath } from 'node:fs/promises';
+import { chmod, copyFile, lstat, mkdir, readdir, readFile, realpath } from 'node:fs/promises';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -19,9 +19,13 @@ async function filesBelow(root, directory = root) {
     const path = join(directory, entry.name);
     if (entry.isSymbolicLink())
       throw new HelperSnapshotError('E_DELEGATE_HELPER_UNSAFE', 'Helper contains a symbolic link.');
-    if (entry.isDirectory()) files.push(...await filesBelow(root, path));
+    if (entry.isDirectory()) files.push(...(await filesBelow(root, path)));
     else if (entry.isFile()) files.push(relative(root, path).split(sep).join('/'));
-    else throw new HelperSnapshotError('E_DELEGATE_HELPER_UNSAFE', 'Helper contains an unsupported file.');
+    else
+      throw new HelperSnapshotError(
+        'E_DELEGATE_HELPER_UNSAFE',
+        'Helper contains an unsupported file.',
+      );
   }
   return files.sort();
 }
@@ -56,26 +60,48 @@ export async function snapshotHelper(runPath) {
 }
 
 export async function verifiedHelper(record) {
-  if (!record.helper) return null; // Existing runs predate helper pinning.
+  if (!record.helper) return null; // Read-only compatibility; execution requires an explicit pinned helper.
   const helper = record.helper;
-  if (helper.schemaVersion !== HELPER_SNAPSHOT_VERSION ||
+  if (
+    helper.schemaVersion !== HELPER_SNAPSHOT_VERSION ||
     helper.directory !== join(record.runPath, 'helper') ||
     helper.runnerPath !== join(helper.directory, 'runner.mjs') ||
     helper.integrationPath !== join(helper.directory, 'integrate.mjs') ||
-    !/^[a-f0-9]{64}$/u.test(helper.digest ?? ''))
-    throw new HelperSnapshotError('E_DELEGATE_HELPER_FORMAT', 'Recorded helper identity is invalid.');
-  const physical = await realpath(helper.directory).catch(() => null);
+    !/^[a-f0-9]{64}$/u.test(helper.digest ?? '')
+  )
+    throw new HelperSnapshotError(
+      'E_DELEGATE_HELPER_FORMAT',
+      'Recorded helper identity is invalid.',
+    );
+  let physical;
+  try {
+    physical = await realpath(helper.directory);
+  } catch (error) {
+    throw new HelperSnapshotError(
+      'E_DELEGATE_HELPER_UNSAFE',
+      `Pinned helper cannot be inspected (${error.code ?? 'unknown'}).`,
+    );
+  }
   if (physical !== resolve(helper.directory))
     throw new HelperSnapshotError('E_DELEGATE_HELPER_UNSAFE', 'Pinned helper path has changed.');
   const info = await lstat(physical);
   if (!info.isDirectory() || (info.mode & 0o077) !== 0)
-    throw new HelperSnapshotError('E_DELEGATE_HELPER_UNSAFE', 'Pinned helper directory is not private.');
+    throw new HelperSnapshotError(
+      'E_DELEGATE_HELPER_UNSAFE',
+      'Pinned helper directory is not private.',
+    );
   for (const path of await filesBelow(physical)) {
     const file = await lstat(join(physical, path));
     if ((file.mode & 0o077) !== 0)
-      throw new HelperSnapshotError('E_DELEGATE_HELPER_UNSAFE', 'Pinned helper file is not private.');
+      throw new HelperSnapshotError(
+        'E_DELEGATE_HELPER_UNSAFE',
+        'Pinned helper file is not private.',
+      );
   }
-  if (await digestTree(physical) !== helper.digest)
-    throw new HelperSnapshotError('E_DELEGATE_HELPER_DRIFT', 'Pinned helper changed after preparation.');
+  if ((await digestTree(physical)) !== helper.digest)
+    throw new HelperSnapshotError(
+      'E_DELEGATE_HELPER_DRIFT',
+      'Pinned helper changed after preparation.',
+    );
   return helper;
 }

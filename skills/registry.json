@@ -456,11 +456,20 @@
         "include": [
           "Delegate implementation to another coding agent",
           "Ask a second coding agent to implement while I orchestrate",
-          "Use planr-delegate for this task"
+          "Use planr-delegate for this task",
+          "Have Codex implement this task",
+          "Use Codex to implement this",
+          "Have Claude Code implement this task",
+          "Ask another coding agent to implement this task",
+          "Use another coding agent to build this change"
         ],
         "exclude": [
-          "Implement this task in the active agent",
-          "Ship this change without delegation"
+          "Active host implementation",
+          "Ship this change without delegation",
+          "Review existing code",
+          "Review this code using Codex",
+          "Parallel agents",
+          "Fix the delegate runner in the active agent"
         ],
         "deferTo": []
       },
@@ -851,7 +860,7 @@
       "family": "planning-tools",
       "contribution": "workflows",
       "skillVersion": "1.0.0",
-      "description": "Route a planning, specification, delivery, design, review, diagram, release, or operating request to the best OpenPlanr skill. Use when the right skill is unclear or the request spans several.",
+      "description": "Route a planning, specification, delivery, delegation, design, review, diagram, release, or operating request to the best OpenPlanr skill. Use when the right skill is unclear or the request spans several.",
       "lifecycle": "active",
       "authorityClass": "read-only-view",
       "source": "skills/planr-openplanr/openplanr.skill.json",
@@ -1080,11 +1089,19 @@
           "Build and verify the requested repository change",
           "Ship this",
           "Ship task",
-          "Implement this task"
+          "Implement this task",
+          "Implement this plan with parallel coding agents",
+          "Use native parallel agents to implement this task",
+          "Fix the delegate runner in the active agent"
         ],
         "exclude": [
           "Only plan the work",
-          "Prepare a release without changing code"
+          "Prepare a release without changing code",
+          "Have Codex implement this task",
+          "Use Codex to implement this",
+          "Have Claude Code implement this task",
+          "Ask another coding agent to implement this task",
+          "Use another coding agent to build this change"
         ],
         "deferTo": [
           "planr-land"

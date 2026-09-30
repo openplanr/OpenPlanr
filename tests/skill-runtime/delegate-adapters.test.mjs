@@ -5,13 +5,14 @@ import {
   mkdtemp,
   readFile,
   realpath,
+  rm,
   stat,
   symlink,
   writeFile,
 } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import test from 'node:test';
+import test, { after } from 'node:test';
 import { claudeAdapter } from '../../skills/planr-delegate/scripts/adapters/claude.mjs';
 import { codexAdapter } from '../../skills/planr-delegate/scripts/adapters/codex.mjs';
 import {
@@ -23,6 +24,7 @@ import {
   PROFILE_RENEWAL_WARNING_MS,
   prepareProfile,
   previewProfileCandidate,
+  profileIdentity,
   profileReadiness,
   removeProfile,
 } from '../../skills/planr-delegate/scripts/profiles.mjs';
@@ -30,13 +32,21 @@ import {
 const local = { class: 'local', origin: 'http://127.0.0.1:11434' };
 const external = { class: 'external', origin: 'https://example.invalid' };
 
+const fixtureRoots = new Set();
+after(async () =>
+  Promise.all([...fixtureRoots].map((root) => rm(root, { recursive: true, force: true }))),
+);
+
 async function fixture() {
   const root = await mkdtemp(join(tmpdir(), 'planr-adapter-test-'));
+  fixtureRoots.add(root);
   const executable = join(root, 'delegate-agent');
   const source = [
     '#!/usr/bin/env node',
     'const a=process.argv.slice(2);',
-    "if(a.includes('--help')) { console.log('--print --output-format stream-json --include-partial-messages --verbose --resume --session-id --allowedTools --disallowedTools --json --sandbox resume'); process.exit(0); }",
+    "if(process.env.FAKE_EXPECT_STOCK_CONFIG && a.includes('--output-format') && process.env.CLAUDE_CONFIG_DIR) process.exit(22);",
+    'if(process.env.FAKE_EXPECT_USER && (process.env.USER!==process.env.FAKE_EXPECT_USER || process.env.UNAUTHORIZED_AUTH)) process.exit(21);',
+    "if(a.includes('--help')) { console.log('--print --output-format stream-json --include-partial-messages --verbose --resume --session-id --allowedTools --disallowedTools --restricted --safe-mode --setting-sources --strict-mcp-config --mcp-config --tools --json --sandbox resume'); process.exit(0); }",
     "if(a.includes('--planr-probe')) { const fs=require('node:fs');const marker=require('node:path').join(process.cwd(),'endpoint.txt');const origin=fs.existsSync(marker)?fs.readFileSync(marker,'utf8').trim():process.env.FAKE_ORIGIN || 'http://127.0.0.1:11434'; console.log(JSON.stringify({protocol:'openplanr.delegate.adapter',version:process.env.FAKE_BAD_VERSION ? 9 : 1,capabilities:{implementation:true,structuredResult:true,exactResume:!process.env.FAKE_NO_RESUME},destination:{class:process.env.FAKE_CLASS || 'local',origin}})); process.exit(0); }",
     "let data='';process.stdin.on('data',c=>data+=c);process.stdin.on('end',()=>{",
     'if(process.env.FAKE_HANG) return setInterval(()=>{},1000);',
@@ -45,10 +55,12 @@ async function fixture() {
     "const input=data.trim().startsWith('{') ? JSON.parse(data) : null;",
     "if(process.env.FAKE_CLAUDE_REQUIRE_CAPSULE && a.includes('--output-format')) { const fs=require('node:fs'); const path=require('node:path'); const index=a.indexOf('--add-dir'); if(index<0 || a.filter(x=>x==='--add-dir').length!==1 || a[index+1]!==fs.realpathSync(path.dirname(process.env.FAKE_CLAUDE_REQUIRE_CAPSULE)) || !fs.readFileSync(process.env.FAKE_CLAUDE_REQUIRE_CAPSULE,'utf8').includes('direct request')) process.exit(18); }",
     "if(a.includes('--output-format') && a[a.indexOf('--disallowedTools')+1]!=='Bash') process.exit(19);",
+    "if(a.includes('--output-format') && (!a.includes('--restricted') || !a.includes('--safe-mode') || !a.includes('--strict-mcp-config') || a[a.indexOf('--setting-sources')+1]!=='' || a[a.indexOf('--tools')+1]!=='Read,Edit,Write,Glob,Grep')) process.exit(20);",
     'if(process.env.FAKE_REQUIRE_CAPSULE && input?.capsulePath !== process.env.FAKE_REQUIRE_CAPSULE) process.exit(17);',
     "const session=input?.sessionId || (a.includes('--session-id') ? a[a.indexOf('--session-id')+1] : 'session-1');",
+    "if(process.env.FAKE_CLAUDE_FILE_TEXT && a.includes('--output-format')) { for(let i=0;i<3;i++) console.log(JSON.stringify({type:'user',session_id:session,message:{content:[{type:'tool_result',is_error:false,content:'Documentation example: permission denied'}]}})); }",
     "const result={status:process.env.FAKE_QUESTION ? 'question' : 'completed',sessionId:session,summary:'done',question:{text:'Choose?',options:['A','B']},checks:['test passed'],issues:[]};",
-    "if(process.env.FAKE_CLAUDE_DENIALS && a.includes('--output-format')) { for(let i=0;i<3;i++) console.log(JSON.stringify({type:'user',session_id:session,message:{content:[{type:'tool_result',content:'This command requires approval'}]}})); return; }",
+    "if(process.env.FAKE_CLAUDE_DENIALS && a.includes('--output-format')) { for(let i=0;i<3;i++) console.log(JSON.stringify({type:'user',session_id:session,message:{content:[{type:'tool_result',is_error:true,content:'This command requires approval'}]}})); return; }",
     "if(a.includes('--planr-run') || a.includes('--planr-resume')) return console.log(JSON.stringify({protocol:'openplanr.delegate.adapter',version:1,...result}));",
     "if(process.env.FAKE_CLAUDE_BACKEND_ERROR && a.includes('--output-format')) { console.log(JSON.stringify({type:'result',is_error:true,session_id:session,result:'provider secret should never leak'})); process.exitCode=1; return; }",
     "if(['fence','fence-extra'].includes(process.env.FAKE_CLAUDE_TRAILING_JSON) && a.includes('--output-format')) { const text='Implementation complete.\\n```json\\n'+JSON.stringify(result)+'\\n```'+(process.env.FAKE_CLAUDE_TRAILING_JSON==='fence-extra'?' trailing':''); console.log(JSON.stringify({type:'result',is_error:false,session_id:session,result:text})); return; }",
@@ -168,19 +180,16 @@ test('profile list warns before expiration without silently renewing', async () 
   assert.equal(choice.expiresAt, now + PROFILE_RENEWAL_WARNING_MS - 1000);
 });
 
-test('first-use preview fails closed for unknown Codex endpoint and incompatible generic adapter', async () => {
+test('first-use preview discloses stock Codex and rejects incompatible generic adapter', async () => {
   const f = await fixture();
-  await assert.rejects(
-    previewProfileCandidate(
-      declaration(f, {
-        kind: 'codex',
-        argv: [],
-        allowedEnv: [],
-      }),
-      { cwd: f.root, env: { HOME: f.root, PATH: process.env.PATH } },
-    ),
-    { code: 'E_DESTINATION_UNKNOWN' },
+  const stock = await previewProfileCandidate(
+    declaration(f, { kind: 'codex', argv: [], allowedEnv: [] }),
+    { cwd: f.root, env: { HOME: f.root, PATH: process.env.PATH } },
   );
+  assert.deepEqual(stock.candidate.destination, {
+    class: 'external',
+    origin: 'https://chatgpt.com',
+  });
   await assert.rejects(
     previewProfileCandidate(declaration(f), {
       cwd: f.root,
@@ -216,7 +225,13 @@ test('Claude destination rules work for arbitrary names as well as claude-local'
   assert.equal(JSON.stringify(preview).includes('never-print-this-value'), false);
   await enrollProfile(preview.candidate, { directory: f.directory });
   assert.deepEqual(
-    (await prepareProfile('team-claude', { directory: f.directory, cwd: f.root })).destination,
+    (
+      await prepareProfile('team-claude', {
+        directory: f.directory,
+        cwd: f.root,
+        env: { HOME: f.root, PATH: process.env.PATH },
+      })
+    ).destination,
     local,
   );
 });
@@ -316,7 +331,7 @@ test('generic probe, run and exact resume use argv arrays and structured results
   });
   const prepared = await prepareProfile('test-agent', {
     directory: f.directory,
-    env: { ...process.env, FAKE_REQUIRE_CAPSULE: capsulePath },
+    env: { HOME: f.root, PATH: process.env.PATH, FAKE_REQUIRE_CAPSULE: capsulePath },
   });
   assert.deepEqual(prepared.capabilities, {
     implementation: true,
@@ -345,7 +360,7 @@ test('Codex preserves a validated session ID when a post-thread result is malfor
       profile: { executable: f.executable, argv: [] },
       cwd: f.root,
       prompt: 'safe request',
-      env: { ...process.env, FAKE_CODEX_PROSE: '1' },
+      env: { HOME: f.root, PATH: process.env.PATH, FAKE_CODEX_PROSE: '1' },
     }),
     (error) =>
       error.code === 'E_ADAPTER_RESULT' &&
@@ -364,7 +379,7 @@ test('Codex distinguishes a completed reasoning-only turn from timeout', async (
       profile: { executable: f.executable, argv: [] },
       cwd: f.root,
       prompt: 'safe request',
-      env: { ...process.env, FAKE_CODEX_NO_FINAL: '1' },
+      env: { HOME: f.root, PATH: process.env.PATH, FAKE_CODEX_NO_FINAL: '1' },
     }),
     (error) =>
       error.code === 'E_ADAPTER_NO_FINAL' &&
@@ -378,7 +393,7 @@ test('Codex distinguishes a completed reasoning-only turn from timeout', async (
 test('Codex stops repeated completed commands while retaining its exact session', async () => {
   const f = await fixture();
   const profile = { executable: f.executable, argv: [] };
-  const env = { ...process.env, FAKE_CODEX_REPEAT: '5' };
+  const env = { HOME: f.root, PATH: process.env.PATH, FAKE_CODEX_REPEAT: '5' };
   await assert.rejects(
     codexAdapter.run({ profile, cwd: f.root, prompt: 'safe request', env }),
     (error) =>
@@ -390,7 +405,7 @@ test('Codex stops repeated completed commands while retaining its exact session'
     profile,
     cwd: f.root,
     prompt: 'safe request',
-    env: { ...process.env, FAKE_CODEX_REPEAT: '4' },
+    env: { HOME: f.root, PATH: process.env.PATH, FAKE_CODEX_REPEAT: '4' },
   });
   assert.equal(completed.status, 'completed');
 });
@@ -402,7 +417,7 @@ test('Codex accepts one terminal JSON object after prose but rejects multiple ob
     profile,
     cwd: f.root,
     prompt: 'safe request',
-    env: { ...process.env, FAKE_CODEX_TRAILING_JSON: 'one' },
+    env: { HOME: f.root, PATH: process.env.PATH, FAKE_CODEX_TRAILING_JSON: 'one' },
   });
   assert.equal(accepted.status, 'completed');
   assert.equal(accepted.sessionId, 'session-1');
@@ -410,7 +425,7 @@ test('Codex accepts one terminal JSON object after prose but rejects multiple ob
     profile,
     cwd: f.root,
     prompt: 'safe request',
-    env: { ...process.env, FAKE_CODEX_TRAILING_JSON: 'fence' },
+    env: { HOME: f.root, PATH: process.env.PATH, FAKE_CODEX_TRAILING_JSON: 'fence' },
   });
   assert.equal(fenced.status, 'completed');
   await assert.rejects(
@@ -418,7 +433,7 @@ test('Codex accepts one terminal JSON object after prose but rejects multiple ob
       profile,
       cwd: f.root,
       prompt: 'safe request',
-      env: { ...process.env, FAKE_CODEX_TRAILING_JSON: 'fence-extra' },
+      env: { HOME: f.root, PATH: process.env.PATH, FAKE_CODEX_TRAILING_JSON: 'fence-extra' },
     }),
     (error) => error.code === 'E_ADAPTER_RESULT' && error.sessionId === 'session-1',
   );
@@ -427,7 +442,7 @@ test('Codex accepts one terminal JSON object after prose but rejects multiple ob
       profile,
       cwd: f.root,
       prompt: 'safe request',
-      env: { ...process.env, FAKE_CODEX_TRAILING_JSON: 'two' },
+      env: { HOME: f.root, PATH: process.env.PATH, FAKE_CODEX_TRAILING_JSON: 'two' },
     }),
     (error) => error.code === 'E_ADAPTER_RESULT' && error.sessionId === 'session-1',
   );
@@ -443,7 +458,8 @@ test('Claude accepts one terminal JSON object after prose and retains exact sess
     prompt: 'safe request',
     capsulePath,
     env: {
-      ...process.env,
+      HOME: f.root,
+      PATH: process.env.PATH,
       FAKE_CLAUDE_TRAILING_JSON: 'one',
       FAKE_CLAUDE_REQUIRE_CAPSULE: capsulePath,
     },
@@ -455,7 +471,7 @@ test('Claude accepts one terminal JSON object after prose and retains exact sess
     cwd: f.root,
     prompt: 'safe request',
     capsulePath,
-    env: { ...process.env, FAKE_CLAUDE_TRAILING_JSON: 'fence' },
+    env: { HOME: f.root, PATH: process.env.PATH, FAKE_CLAUDE_TRAILING_JSON: 'fence' },
   });
   assert.equal(fenced.status, 'completed');
   await assert.rejects(
@@ -464,7 +480,7 @@ test('Claude accepts one terminal JSON object after prose and retains exact sess
       cwd: f.root,
       prompt: 'safe request',
       capsulePath,
-      env: { ...process.env, FAKE_CLAUDE_TRAILING_JSON: 'fence-extra' },
+      env: { HOME: f.root, PATH: process.env.PATH, FAKE_CLAUDE_TRAILING_JSON: 'fence-extra' },
     }),
     (error) => error.code === 'E_ADAPTER_RESULT' && error.sessionId === 'session-1',
   );
@@ -474,7 +490,7 @@ test('Claude accepts one terminal JSON object after prose and retains exact sess
       cwd: f.root,
       prompt: 'safe request',
       capsulePath,
-      env: { ...process.env, FAKE_CLAUDE_TRAILING_JSON: 'two' },
+      env: { HOME: f.root, PATH: process.env.PATH, FAKE_CLAUDE_TRAILING_JSON: 'two' },
     }),
     (error) => error.code === 'E_ADAPTER_RESULT' && error.sessionId === 'session-1',
   );
@@ -490,7 +506,7 @@ test('Claude headless permission denials stop promptly without exposing tool out
       prompt: 'Implement the selected task',
       capsulePath,
       sessionId: 'session-1',
-      env: { ...process.env, FAKE_CLAUDE_DENIALS: '1' },
+      env: { HOME: f.root, PATH: process.env.PATH, FAKE_CLAUDE_DENIALS: '1' },
     }),
     (error) =>
       error.code === 'E_ADAPTER_PERMISSION' &&
@@ -512,7 +528,7 @@ test('Claude grants its exact private capsule directory on run and exact-session
   const f = await fixture();
   const capsulePath = await testCapsule(f.root);
   const profile = { executable: f.executable, argv: [] };
-  const env = { ...process.env, FAKE_CLAUDE_REQUIRE_CAPSULE: capsulePath };
+  const env = { HOME: f.root, PATH: process.env.PATH, FAKE_CLAUDE_REQUIRE_CAPSULE: capsulePath };
   const first = await claudeAdapter.run({ profile, cwd: f.root, prompt: 'work', capsulePath, env });
   const second = await claudeAdapter.resume({
     profile,
@@ -571,14 +587,14 @@ test('generic incompatibility, endpoint change, expiry and malformed output fail
   await assert.rejects(
     prepareProfile('test-agent', {
       directory: f.directory,
-      env: { ...process.env, FAKE_BAD_VERSION: '1' },
+      env: { HOME: f.root, PATH: process.env.PATH, FAKE_BAD_VERSION: '1' },
     }),
     { code: 'E_ADAPTER_INCOMPATIBLE' },
   );
   await assert.rejects(
     prepareProfile('test-agent', {
       directory: f.directory,
-      env: { ...process.env, FAKE_NO_RESUME: '1' },
+      env: { HOME: f.root, PATH: process.env.PATH, FAKE_NO_RESUME: '1' },
     }),
     { code: 'E_ADAPTER_INCOMPATIBLE' },
   );
@@ -586,7 +602,8 @@ test('generic incompatibility, endpoint change, expiry and malformed output fail
     prepareProfile('test-agent', {
       directory: f.directory,
       env: {
-        ...process.env,
+        HOME: f.root,
+        PATH: process.env.PATH,
         FAKE_ORIGIN: 'https://example.invalid',
         FAKE_CLASS: 'external',
       },
@@ -596,13 +613,13 @@ test('generic incompatibility, endpoint change, expiry and malformed output fail
   await assert.rejects(
     prepareProfile('test-agent', {
       directory: f.directory,
-      env: { ...process.env, FAKE_ORIGIN: 'not-a-url' },
+      env: { HOME: f.root, PATH: process.env.PATH, FAKE_ORIGIN: 'not-a-url' },
     }),
     { code: 'E_DESTINATION_UNKNOWN' },
   );
   const prepared = await prepareProfile('test-agent', {
     directory: f.directory,
-    env: { ...process.env, FAKE_BAD_RESULT: '1' },
+    env: { HOME: f.root, PATH: process.env.PATH, FAKE_BAD_RESULT: '1' },
   });
   await assert.rejects(prepared.adapter.run({ cwd: f.root, prompt: 'secret prompt' }), {
     code: 'E_ADAPTER_RESULT',
@@ -617,7 +634,7 @@ test('generic structured question, cancellation and output are bounded', async (
   await enrollProfile(declaration(f), { directory: f.directory });
   const question = await prepareProfile('test-agent', {
     directory: f.directory,
-    env: { ...process.env, FAKE_QUESTION: '1' },
+    env: { HOME: f.root, PATH: process.env.PATH, FAKE_QUESTION: '1' },
   });
   assert.deepEqual((await question.adapter.run({ cwd: f.root, prompt: 'work' })).question, {
     text: 'Choose?',
@@ -625,7 +642,7 @@ test('generic structured question, cancellation and output are bounded', async (
   });
   const hanging = await prepareProfile('test-agent', {
     directory: f.directory,
-    env: { ...process.env, FAKE_HANG: '1' },
+    env: { HOME: f.root, PATH: process.env.PATH, FAKE_HANG: '1' },
   });
   const controller = new AbortController();
   const pending = hanging.adapter.run({
@@ -637,7 +654,7 @@ test('generic structured question, cancellation and output are bounded', async (
   await assert.rejects(pending, { code: 'E_ADAPTER_CANCELLED' });
   const flooding = await prepareProfile('test-agent', {
     directory: f.directory,
-    env: { ...process.env, FAKE_FLOOD: '1' },
+    env: { HOME: f.root, PATH: process.env.PATH, FAKE_FLOOD: '1' },
   });
   await assert.rejects(flooding.adapter.run({ cwd: f.root, prompt: 'work' }), {
     code: 'E_ADAPTER_OUTPUT_LIMIT',
@@ -675,6 +692,7 @@ test('claude-local uses existing config directory and compares effective environ
   const prepared = await prepareProfile('claude-local', {
     directory: f.directory,
     cwd: f.root,
+    env: { HOME: f.root, PATH: process.env.PATH },
   });
   assert.equal(prepared.profile.configDir, await realpath(configDir));
   assert.equal(
@@ -684,7 +702,7 @@ test('claude-local uses existing config directory and compares effective environ
   const backendFailure = await prepareProfile('claude-local', {
     directory: f.directory,
     cwd: f.root,
-    env: { ...process.env, FAKE_CLAUDE_BACKEND_ERROR: '1' },
+    env: { HOME: f.root, PATH: process.env.PATH, FAKE_CLAUDE_BACKEND_ERROR: '1' },
   });
   await assert.rejects(
     backendFailure.adapter.run({ cwd: f.root, prompt: 'private task', capsulePath }),
@@ -699,7 +717,7 @@ test('claude-local uses existing config directory and compares effective environ
     prepareProfile('claude-local', {
       directory: f.directory,
       cwd: f.root,
-      env: { ...process.env, ANTHROPIC_BASE_URL: external.origin },
+      env: { HOME: f.root, PATH: process.env.PATH, ANTHROPIC_BASE_URL: external.origin },
     }),
     { code: 'E_DESTINATION_UNKNOWN' },
   );
@@ -708,9 +726,16 @@ test('claude-local uses existing config directory and compares effective environ
     join(f.root, '.claude', 'settings.local.json'),
     JSON.stringify({ env: { ANTHROPIC_BASE_URL: external.origin } }),
   );
-  await assert.rejects(prepareProfile('claude-local', { directory: f.directory, cwd: f.root }), {
-    code: 'E_DESTINATION_UNKNOWN',
-  });
+  assert.deepEqual(
+    (
+      await prepareProfile('claude-local', {
+        directory: f.directory,
+        cwd: f.root,
+        env: { HOME: f.root, PATH: process.env.PATH },
+      })
+    ).destination,
+    local,
+  ); // Project settings are excluded at launch.
   assert.ok(
     !(await readFile(join(f.directory, 'claude-local.json'), 'utf8')).includes(
       'never-print-this-value',
@@ -740,7 +765,7 @@ test('Codex selected provider config determines destination and supports exact r
   const prepared = await prepareProfile('test-agent', {
     directory: f.directory,
     cwd: f.root,
-    env: { ...process.env, CODEX_HOME: configDir },
+    env: { HOME: f.root, PATH: process.env.PATH, CODEX_HOME: configDir },
   });
   assert.deepEqual(prepared.destination, local);
   assert.equal(
@@ -757,9 +782,14 @@ test('Codex selected provider config determines destination and supports exact r
     ).sessionId,
     'session-1',
   );
-  await assert.rejects(prepareProfile('test-agent', { directory: f.directory, cwd: f.root }), {
-    code: 'E_DESTINATION_UNKNOWN',
-  });
+  await assert.rejects(
+    prepareProfile('test-agent', {
+      directory: f.directory,
+      cwd: f.root,
+      env: { HOME: f.root, PATH: process.env.PATH },
+    }),
+    { code: 'E_DESTINATION_CHANGED' },
+  );
   await mkdir(join(f.root, '.codex'));
   await writeFile(
     join(f.root, '.codex', 'config.toml'),
@@ -769,7 +799,7 @@ test('Codex selected provider config determines destination and supports exact r
     prepareProfile('test-agent', {
       directory: f.directory,
       cwd: f.root,
-      env: { ...process.env, CODEX_HOME: configDir },
+      env: { HOME: f.root, PATH: process.env.PATH, CODEX_HOME: configDir },
     }),
     { code: 'E_DESTINATION_UNKNOWN' },
   );
@@ -824,4 +854,156 @@ test('Codex enrollment pins a separate config directory and forwards only named 
     ),
     false,
   );
+});
+
+test('profile renewal retains stable run identity while endpoint or executable changes do not', async () => {
+  const f = await fixture();
+  const first = await enrollProfile(declaration(f), { directory: f.directory, now: 1000 });
+  const renewed = await enrollProfile(declaration(f), { directory: f.directory, now: 2000 });
+  assert.equal(profileIdentity(first), profileIdentity(renewed));
+  assert.equal(
+    (await loadProfile(first.name, { directory: f.directory, now: 3000 })).recordDigest,
+    profileIdentity(first),
+  );
+  assert.notEqual(profileIdentity(first), profileIdentity({ ...renewed, destination: external }));
+  assert.notEqual(
+    profileIdentity(first),
+    profileIdentity({ ...renewed, executable: '/different/agent' }),
+  );
+});
+
+test('Claude stock default is an explicitly disclosed external destination', async () => {
+  const f = await fixture();
+  const result = await previewProfileCandidate(declaration(f, { kind: 'claude', allowedEnv: [] }), {
+    cwd: f.root,
+    env: { HOME: f.root, PATH: process.env.PATH },
+  });
+  assert.deepEqual(result.candidate.destination, {
+    class: 'external',
+    origin: 'https://api.anthropic.com',
+  });
+});
+
+test('Claude unsupported provider truthy values and proxies fail before launch', async () => {
+  const f = await fixture();
+  for (const [key, value] of [
+    ['CLAUDE_CODE_USE_BEDROCK', 'yes'],
+    ['CLAUDE_CODE_USE_VERTEX', '2'],
+    ['CLAUDE_CODE_USE_FOUNDRY', 'enabled'],
+    ['ANTHROPIC_BEDROCK_BASE_URL', local.origin],
+    ['HTTPS_PROXY', 'http://proxy.invalid'],
+  ]) {
+    await assert.rejects(
+      claudeAdapter.probe({
+        profile: { executable: f.executable, argv: [] },
+        cwd: f.root,
+        env: { HOME: f.root, PATH: process.env.PATH, [key]: value },
+      }),
+      (error) =>
+        error.code === 'E_DESTINATION_UNKNOWN' &&
+        error.details.configurationKey === key &&
+        !JSON.stringify(error).includes(value),
+    );
+  }
+});
+
+test('successful file results quoting denial text are not approval denials', async () => {
+  const f = await fixture();
+  const result = await claudeAdapter.run({
+    profile: { executable: f.executable, argv: [] },
+    cwd: f.root,
+    prompt: 'read documentation',
+    capsulePath: await testCapsule(f.root),
+    env: { HOME: f.root, PATH: process.env.PATH, FAKE_CLAUDE_FILE_TEXT: '1' },
+  });
+  assert.equal(result.status, 'completed');
+});
+
+test('profile open and local metadata parse failures retain sanitized causes', async () => {
+  const f = await fixture();
+  await enrollProfile(declaration(f), { directory: f.directory });
+  await rm(join(f.directory, 'test-agent.json'));
+  await symlink(join(f.root, 'missing'), join(f.directory, 'test-agent.json'));
+  await assert.rejects(
+    loadProfile('test-agent', { directory: f.directory }),
+    (error) => error.code === 'E_PROFILE_READ' && error.details.cause === 'ELOOP',
+  );
+  const result = await inspectLocalBackend(
+    { destination: local, argv: [] },
+    {
+      fetchImpl: async () => new Response('not-json', { status: 200 }),
+      env: {},
+    },
+  );
+  assert.equal(result.diagnostic.code, 'E_BACKEND_RESPONSE');
+  assert.equal(result.diagnostic.cause, 'SyntaxError');
+});
+
+test('stock Claude keychain account identity survives the child environment allowlist', async () => {
+  const f = await fixture();
+  const preview = await previewProfileCandidate(
+    declaration(f, {
+      kind: 'claude',
+      allowedEnv: ['FAKE_EXPECT_USER'],
+    }),
+    {
+      cwd: f.root,
+      env: {
+        HOME: f.root,
+        PATH: process.env.PATH,
+        USER: 'fixture-user',
+        FAKE_EXPECT_USER: 'fixture-user',
+        UNAUTHORIZED_AUTH: 'credential-must-remain-withheld',
+      },
+    },
+  );
+  await enrollProfile(preview.candidate, { directory: f.directory });
+  const prepared = await prepareProfile('test-agent', {
+    directory: f.directory,
+    cwd: f.root,
+    env: {
+      HOME: f.root,
+      PATH: process.env.PATH,
+      USER: 'fixture-user',
+      FAKE_EXPECT_USER: 'fixture-user',
+      UNAUTHORIZED_AUTH: 'credential-must-remain-withheld',
+    },
+  });
+  const result = await prepared.adapter.run({
+    cwd: f.root,
+    prompt: 'Implement',
+    capsulePath: await testCapsule(f.root),
+  });
+  assert.equal(result.status, 'completed');
+});
+
+test('stock Claude config directory does not select a separate keychain credential namespace', async () => {
+  const f = await fixture();
+  const configDir = join(f.root, '.claude');
+  await mkdir(configDir);
+  const preview = await previewProfileCandidate(
+    declaration(f, {
+      kind: 'claude',
+      configDir,
+      allowedEnv: ['FAKE_EXPECT_STOCK_CONFIG'],
+    }),
+    { cwd: f.root, env: { HOME: f.root, PATH: process.env.PATH, USER: 'fixture-user' } },
+  );
+  await enrollProfile(preview.candidate, { directory: f.directory });
+  const prepared = await prepareProfile('test-agent', {
+    directory: f.directory,
+    cwd: f.root,
+    env: {
+      HOME: f.root,
+      PATH: process.env.PATH,
+      USER: 'fixture-user',
+      FAKE_EXPECT_STOCK_CONFIG: '1',
+    },
+  });
+  const result = await prepared.adapter.run({
+    cwd: f.root,
+    prompt: 'Implement',
+    capsulePath: await testCapsule(f.root),
+  });
+  assert.equal(result.status, 'completed');
 });

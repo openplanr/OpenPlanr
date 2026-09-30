@@ -229,7 +229,10 @@ describe('runtime setup', () => {
     const expectedNames = readdirSync(bundledOpenAiSkillsRoot).sort();
     const expectedAssets = regularFiles(bundledOpenAiSkillsRoot);
     const installedNames = readdirSync(join(userHome, '.codex', 'skills')).sort();
-    expect(expectedNames).toHaveLength(27);
+    const canonicalSkills = JSON.parse(
+      readFileSync(join(workspaceRoot, 'skills', 'registry.json'), 'utf8'),
+    ) as { skills: Array<{ skillId: string }> };
+    expect(expectedNames).toHaveLength(canonicalSkills.skills.length);
     expect(installedNames).toEqual(expectedNames);
     const state = JSON.parse(
       readFileSync(join(userHome, '.planr', 'runtime', 'state.json'), 'utf8'),
@@ -245,7 +248,7 @@ describe('runtime setup', () => {
     const doctor = await runtimeDoctor(unrelated);
     expect(doctor.diagnostics.find((item) => item.code === 'host-skill-packages')).toMatchObject({
       status: 'pass',
-      message: 'Claude Code, Codex, and Cursor each expose all 27 host-native skills',
+      message: `Claude Code, Codex, and Cursor each expose all ${canonicalSkills.skills.length} host-native skills`,
     });
   });
 

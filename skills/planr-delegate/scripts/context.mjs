@@ -1,4 +1,5 @@
-import { lstat, mkdir, readFile, readdir, realpath, stat, writeFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { lstat, mkdir, readdir, readFile, realpath, stat, writeFile } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 
 export const CAPSULE_SCHEMA_VERSION = '1.0.0';
@@ -9,12 +10,12 @@ const DEFAULT_LIMITS = Object.freeze({
   maxTotalBytes: 16 * 1024 * 1024,
 });
 const SECRET_NAME =
-  /^(?:\.env(?:\..*)?|\.npmrc|\.pypirc|id_(?:rsa|dsa|ecdsa|ed25519)(?:\.pub)?|credentials(?:\.[^.]+)?|service[-_]?account(?:\.[^.]+)?|.*\.(?:pem|p12|pfx|key))$/iu;
+  /^(?:\.env(?:\..*)?|\.envrc|\.netrc|\.git-credentials|\.npmrc|\.pypirc|id_(?:rsa|dsa|ecdsa|ed25519)(?:\.pub)?|credentials(?:\.[^.]+)?|service[-_]?account(?:\.[^.]+)?|.*\.(?:pem|p12|pfx|key|tfvars)(?:\.json)?)$/iu;
 const SECRET_SEGMENT = /^(?:\.ssh|\.aws|\.gnupg|\.kube)$/iu;
 const SECRET_VALUE =
   /-----BEGIN (?:[A-Z ]* )?PRIVATE KEY-----|\bAKIA[0-9A-Z]{16}\b|\bgh[pousr]_[A-Za-z0-9_]{20,}\b|\bgithub_pat_[A-Za-z0-9_]{20,}\b|\bsk-(?:proj-)?[A-Za-z0-9_-]{24,}\b|\bxox[baprs]-[A-Za-z0-9-]{20,}\b|"private_key"\s*:\s*"-----BEGIN/iu;
 const SECRET_ASSIGNMENT =
-  /\b(?:API[_-]?KEY|ACCESS[_-]?TOKEN|AUTH[_-]?TOKEN|CLIENT[_-]?SECRET|PRIVATE[_-]?KEY|PASSWORD|TOKEN|SECRET)["']?\s*[:=]\s*["']?(?!<|\$\{|example|placeholder|your[-_]|process\.env\.|import\.meta\.env\.|Deno\.env\.)[A-Za-z0-9_./+=-]{16,}/iu;
+  /(?:^|[^A-Za-z0-9_])(?:[A-Za-z_][A-Za-z0-9_-]*?)?(?:API[_-]?KEY|ACCESS[_-]?TOKEN|AUTH[_-]?TOKEN|CLIENT[_-]?SECRET|PRIVATE[_-]?KEY|PASSWORD|TOKEN|SECRET(?:[_-]?KEY)?)["']?\s*[:=]\s*["']?(?!<|\$\{|example|placeholder|your[-_]|process\.env(?:\.|\[)|import\.meta\.env(?:\.|\[)|Deno\.env\.|os\.environ|env\.)([A-Za-z0-9_./+=-]{16,})/iu;
 const TASK_ID = /^(?:T|TASK|QT)-\d{3,}$/u;
 const STORY_ID = /^US-\d{3,}$/u;
 const SPEC_ID = /^SPEC-\d{3,}$/u;
@@ -63,9 +64,23 @@ function isSecretPath(path) {
   return parts.some((part) => SECRET_SEGMENT.test(part)) || SECRET_NAME.test(parts.at(-1));
 }
 
-function containsSecret(bytes) {
+export function containsSecret(bytes) {
   const content = bytes.toString('utf8');
   return SECRET_VALUE.test(content) || SECRET_ASSIGNMENT.test(content);
+}
+
+export function assertCredentialFreeText(
+  value,
+  { code = 'E_CAPSULE_SECRET', label = 'Input' } = {},
+) {
+  if (typeof value !== 'string')
+    throw new CapsuleError('E_CAPSULE_INPUT', `${label} must be text.`);
+  if (containsSecret(Buffer.from(value, 'utf8')))
+    throw new CapsuleError(
+      code,
+      `${label} contains credential material; use the enrolled credential environment instead.`,
+    );
+  return value;
 }
 
 function scalar(value) {
@@ -307,16 +322,24 @@ export async function buildContextCapsule({
   }
   for (const raw of selectedFiles) {
     if (!requestedFile(raw).required)
-      throw new CapsuleError('E_CAPSULE_REQUIRED', 'Selected source files are required; use optionalFiles only for genuinely optional context.');
+      throw new CapsuleError(
+        'E_CAPSULE_REQUIRED',
+        'Selected source files are required; use optionalFiles only for genuinely optional context.',
+      );
   }
-  const requiredSelections = new Set(selectedFiles.map((raw) => {
-    const selected = requestedFile(raw);
-    return `${selected.repositoryKey}:${relativePath(selected.path)}`;
-  }));
+  const requiredSelections = new Set(
+    selectedFiles.map((raw) => {
+      const selected = requestedFile(raw);
+      return `${selected.repositoryKey}:${relativePath(selected.path)}`;
+    }),
+  );
   for (const raw of optionalFiles) {
     const selected = requestedFile(raw, false);
     if (requiredSelections.has(`${selected.repositoryKey}:${relativePath(selected.path)}`))
-      throw new CapsuleError('E_CAPSULE_REQUIRED', 'A required source cannot also be listed as optional.');
+      throw new CapsuleError(
+        'E_CAPSULE_REQUIRED',
+        'A required source cannot also be listed as optional.',
+      );
   }
   const bounds = validatedLimits(limits);
   if (request && Buffer.byteLength(request, 'utf8') > bounds.maxFileBytes) {
@@ -385,6 +408,11 @@ export async function buildContextCapsule({
       return optionalOmission({
         code: 'E_CAPSULE_PATH',
         message: `Source escapes its allowed root: ${path}`,
+      });
+    if (isSecretPath(relative(allowed, physical).split(sep).join('/')))
+      return optionalOmission({
+        code: 'E_CAPSULE_SECRET',
+        message: `Secret-like physical source cannot enter the capsule: ${path}`,
       });
     let file;
     try {
@@ -563,13 +591,7 @@ export async function buildContextCapsule({
       for (const dependency of spec.meta.tech_dependencies) {
         if (SPEC_ID.test(dependency))
           await requiredArtifact(dependency, 'spec', 'specification-dependency');
-        else
-          await add({
-            repositoryKey: 'project',
-            path: dependency,
-            required: true,
-            role: 'specification-dependency',
-          });
+        // Other tech_dependencies are informational technology names, not file references.
       }
     }
     const adrIds = new Set(
@@ -604,14 +626,22 @@ export async function buildContextCapsule({
     await addDiscovered(design, 'design-context');
   }
   for (const raw of selectedFiles) await add(requestedFile(raw));
-  const requirementsText = [request, task?.bytes?.toString('utf8'), story?.bytes?.toString('utf8'),
-    spec?.bytes?.toString('utf8')].filter(Boolean).join('\n');
+  const requirementsText = [
+    request,
+    task?.bytes?.toString('utf8'),
+    story?.bytes?.toString('utf8'),
+    spec?.bytes?.toString('utf8'),
+  ]
+    .filter(Boolean)
+    .join('\n');
   for (const raw of optionalFiles) {
     const selection = requestedFile(raw, false);
     if (requirementsText.includes(selection.path))
-      throw new CapsuleError('E_CAPSULE_REQUIRED',
+      throw new CapsuleError(
+        'E_CAPSULE_REQUIRED',
         `A source named in the request or planning requirements cannot be optional: ${selection.path}`,
-        { path: selection.path });
+        { path: selection.path },
+      );
     await add(selection);
   }
 
@@ -650,7 +680,9 @@ export async function buildContextCapsule({
     planning: {
       logicalPath: join(project, '.planr'),
       physicalPath: roots.get('project').planning,
-      linked: Boolean(roots.get('project').planning && roots.get('project').planning !== join(project, '.planr')),
+      linked: Boolean(
+        roots.get('project').planning && roots.get('project').planning !== join(project, '.planr'),
+      ),
       updatePolicy: 'report-only',
     },
     sourceKeys: [...roots.keys()],
@@ -702,7 +734,136 @@ export async function writeContextCapsule(capsule, { directory, repositoryRoot }
       'E_CAPSULE_OUTPUT',
       'A private capsule cannot be written inside the source repository.',
     );
+  const mirror = decodedMirror(capsule);
+  const mirrorRoot = join(physical, 'readable');
+  await mkdir(mirrorRoot, { mode: 0o700 });
+  for (const entry of mirror) {
+    const target = join(mirrorRoot, entry.path);
+    await mkdir(dirname(target), { recursive: true, mode: 0o700 });
+    await writeFile(target, entry.bytes, { flag: 'wx', mode: 0o600 });
+  }
+  capsule.mirror = {
+    version: 1,
+    files: mirror.map(({ path, bytes }) => ({
+      path,
+      bytes: bytes.length,
+      digest: mirrorDigest(bytes),
+    })),
+  };
   const path = join(physical, 'capsule.json');
   await writeFile(path, `${JSON.stringify(capsule)}\n`, { flag: 'wx', mode: 0o600 });
   return path;
+}
+
+function mirrorDigest(bytes) {
+  return createHash('sha256').update(bytes).digest('hex');
+}
+
+function decodedMirror(capsule) {
+  const files = capsule.files.map((file) => {
+    if (!/^[a-z][a-z0-9-]*$/u.test(file.repositoryKey))
+      throw new CapsuleError('E_CAPSULE_MIRROR', 'Invalid repository key in decoded context.');
+    return {
+      path: `${file.repositoryKey}/${relativePath(file.path)}`,
+      bytes: Buffer.from(file.contentBase64, 'base64'),
+    };
+  });
+  files.push({
+    path: 'request.md',
+    bytes: Buffer.from(`${capsule.brief}\n\n${capsule.request ?? ''}\n`, 'utf8'),
+  });
+  files.push({
+    path: 'index.json',
+    bytes: Buffer.from(
+      `${JSON.stringify(
+        {
+          kind: 'openplanr-readable-delegation-context',
+          version: 1,
+          mode: capsule.mode,
+          selector: capsule.selector,
+          request: 'request.md',
+          inventory: capsule.inventory.map((file) => ({
+            ...file,
+            readablePath: `${file.repositoryKey}/${file.path}`,
+          })),
+          omissions: capsule.omissions,
+        },
+        null,
+        2,
+      )}\n`,
+      'utf8',
+    ),
+  });
+  return files;
+}
+
+// The serialized capsule covers this manifest; verify decoded files before any launch.
+export async function validateContextMirror(capsulePath, capsule) {
+  if (!capsule.mirror) return { status: 'not-present', directory: null };
+  const expected = decodedMirror(capsule);
+  const manifest = expected.map(({ path, bytes }) => ({
+    path,
+    bytes: bytes.length,
+    digest: mirrorDigest(bytes),
+  }));
+  if (
+    capsule.mirror.version !== 1 ||
+    JSON.stringify(capsule.mirror.files) !== JSON.stringify(manifest)
+  )
+    throw new CapsuleError(
+      'E_CAPSULE_MIRROR',
+      'Decoded context manifest differs from its capsule.',
+    );
+  const root = join(dirname(capsulePath), 'readable');
+  const observed = [];
+  async function walk(directory, prefix = '') {
+    const folder = await lstat(directory);
+    if (
+      !folder.isDirectory() ||
+      (folder.mode & 0o077) !== 0 ||
+      (process.getuid && folder.uid !== process.getuid())
+    )
+      throw new CapsuleError(
+        'E_CAPSULE_MIRROR',
+        'Decoded context directory is not private or changed.',
+      );
+    for (const entry of await readdir(directory, { withFileTypes: true })) {
+      const path = `${prefix}${entry.name}`;
+      if (entry.isDirectory()) await walk(join(directory, entry.name), `${path}/`);
+      else if (entry.isFile()) {
+        const location = join(directory, entry.name);
+        const item = await lstat(location);
+        if (
+          !item.isFile() ||
+          (item.mode & 0o077) !== 0 ||
+          (process.getuid && item.uid !== process.getuid())
+        )
+          throw new CapsuleError('E_CAPSULE_MIRROR', 'Decoded context file is not private.', {
+            path,
+          });
+        const bytes = await readFile(location);
+        observed.push({ path, bytes: bytes.length, digest: mirrorDigest(bytes) });
+      } else
+        throw new CapsuleError(
+          'E_CAPSULE_MIRROR',
+          'Decoded context must contain only regular files.',
+          { path },
+        );
+    }
+  }
+  try {
+    await walk(root);
+  } catch (error) {
+    if (error instanceof CapsuleError) throw error;
+    throw new CapsuleError('E_CAPSULE_MIRROR', 'Decoded context cannot be read.', {
+      cause: error.code ?? 'unknown',
+    });
+  }
+  const sorted = (values) => values.slice().sort((a, b) => a.path.localeCompare(b.path));
+  if (JSON.stringify(sorted(observed)) !== JSON.stringify(sorted(manifest)))
+    throw new CapsuleError(
+      'E_CAPSULE_MIRROR',
+      'Decoded context was changed, omitted, or extended.',
+    );
+  return { status: 'verified', directory: root, indexPath: join(root, 'index.json') };
 }

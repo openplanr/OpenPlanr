@@ -15,7 +15,7 @@ import {
 
 const capsule = await buildContextCapsule({
   repositoryRoot: '/absolute/source/checkout',
-  taskSelector: 'T-068', // alternatively: request: 'Implement ...'
+  taskSelector: 'T-123', // alternatively: request: 'Implement ...'
   selectedFiles: ['src/related.mjs', { path: 'test/related.test.mjs', required: true }],
   optionalFiles: ['docs/background.md'],
   readOnlyRepositories: [{ repositoryKey: 'contracts', root: '/absolute/other/repo' }],
@@ -35,7 +35,7 @@ The physical `.planr` root may be a trusted symlink to a shared planning store; 
 
 ## Shape and guarantees
 
-The JSON object has `kind: "openplanr-delegation-context-capsule"`, `schemaVersion: "1.0.0"`, `mode`, `selector`, `request`, `brief`, `sourceKeys`, `inventory`, `files`, and `omissions`. In direct-request mode, `request` preserves the complete original request string; it is `null` for task mode. The ordered inventory entries identify `repositoryKey`, relative `path`, `roles`, `required`, and byte count. Each `files` entry contains the same metadata and the **complete original bytes** in `contentBase64`. Consumers decode these bytes; the brief cannot replace them. `omissions` records an optional path, role, and reason code. There is no truncation. A required omission throws before a capsule is returned. The default bounds are 256 files, 2 MiB per file, and 16 MiB total; callers may set positive integer limits.
+The JSON object has `kind: "openplanr-delegation-context-capsule"`, `schemaVersion: "1.0.0"`, `mode`, `selector`, `request`, `brief`, `sourceKeys`, `inventory`, `files`, and `omissions`. In direct-request mode, `request` preserves the complete original request string; it is `null` for task mode. The ordered inventory entries identify `repositoryKey`, relative `path`, `roles`, `required`, and byte count. Each `files` entry contains the same metadata and the **complete original bytes** in `contentBase64`. The helper also writes a decoded, digest-covered file mirror beside `capsule.json` so native Read tools can inspect every selected file without shell decoding. The prompt points at this mirror; the brief cannot replace the original bytes. `omissions` records an optional path, role, and reason code. There is no truncation. A required omission throws before a capsule is returned. The default bounds are 256 files, 2 MiB per file, and 16 MiB total; callers may set positive integer limits.
 
 The capsule file is created exclusively in a fresh private directory with directory mode `0700` and file mode `0600`. The source checkout is never a valid output location, even through a symlink. The orchestrator owns retention and cleanup. It should not log the capsule, source bytes, environment values, or full prompts.
 

@@ -15,6 +15,7 @@
       "apps/*/src/**",
       "apps/*/tests/**",
       "scripts/**",
+      "skills/planr-delegate/scripts/**",
       "tests/**",
       "conformance/**",
       // Generated outputs: edit the canonical sources and run `npm run generate`.
@@ -104,6 +105,7 @@
       // Command-line entry points and conformance runners report through the console.
       "includes": [
         "scripts/**",
+        "skills/planr-delegate/scripts/**",
         "packages/*/scripts/**",
         "packages/*/conformance/**",
         "conformance/**",

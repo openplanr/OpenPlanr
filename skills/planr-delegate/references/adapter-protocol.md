@@ -1,4 +1,4 @@
-# Delegate profile and adapter contract (pilot v1)
+# Delegate profile and adapter contract v1
 
 `planr-delegate` accepts explicitly enrolled, trusted local executables. The profile
 store defaults to `~/.config/openplanr/delegate/profiles`, outside a repository and
@@ -19,8 +19,9 @@ name. For example, the existing `claude-local` enrollment can use the `claude`
 executable with its existing `configDir`; the runner sets `CLAUDE_CONFIG_DIR`.
 For Codex, `configDir` becomes `CODEX_HOME`, so a local provider can use a
 separate configuration without changing the user's normal Codex settings.
-Credentials remain environment values whose names are listed in `allowedEnv`;
-the config may name an `env_key` but must not contain the key's value.
+Credential environment names belong in `allowedEnv`; existing engine auth stores
+remain private engine configuration. Never copy credential values into a profile,
+capsule, run record or ordinary output.
 The name does not assert that inference stays local.
 
 `probe` with a repository root reports readiness for all enrolled profiles.
@@ -44,30 +45,42 @@ an exact `sessionId`. Both return `{status,sessionId,summary,question?,checks,is
 where status is `completed`, `blocked`, or `question`; a question has
 `{text,options?}`. The runner owns prompt construction and run custody.
 
-Claude inspects managed, user, project, and local settings along `cwd` and the
-child environment for `ANTHROPIC_BASE_URL`. Codex inspects the user and project
-config along `cwd`, including selected profiles and `openai_base_url`, plus
-`OPENAI_BASE_URL` in the child environment. Any conflicting endpoint candidate
-fails closed without guessing precedence. Config-altering CLI argv is not
-enrolled for built-ins. Unresolvable defaults and provider-specific routes
-such as Bedrock, Vertex, and Foundry fail closed until this resolver supports
-them. A configured endpoint must exactly match the enrolled origin and class.
-This is deliberately conservative: a product name or profile label does not
-establish a data destination.
+Claude resolves the configured endpoint from supported settings and provider/auth
+environment. Its stock vendor default is `https://api.anthropic.com`, disclosed
+as external. Unmodelled provider routes such as Bedrock, Vertex or Foundry,
+proxy variables and conflicting endpoints fail closed. Signed-in vendor use does
+not mean local inference. Codex similarly resolves the selected provider,
+`OPENAI_BASE_URL` or supported vendor default, then verifies the enrolled origin
+and class. Config-altering CLI argv is not enrolled for built-ins.
 
-Built-ins probe `--help` without a task prompt, then use their structured
-noninteractive output and exact session identifiers. `claude` launches with
-`--print --output-format json` and resumes by `--resume <id>`; `codex exec`
-uses `--json` events and resumes by `exec resume --json <id>`. Both receive the
-task prompt on stdin. No command passes through a shell.
+Built-ins use structured noninteractive output and exact session identifiers.
+Claude runs with restricted safe mode, no repository settings sources, an empty
+strict MCP configuration, and only Read, Edit, Write, Glob and Grep. Bash is also
+explicitly denied. The adapter retains the signed-in engine authentication while
+excluding hooks, API-key helpers and project MCP execution. Codex uses
+`workspace-write`, `approval_policy="never"`, empty `notify`, disabled web search
+and disabled discovered MCP entries, including quoted configuration tables.
+Engine configuration custody is rechecked before dispatch and exact resume;
+repository engine settings changed by a delegate cannot execute on its next turn.
 
-Claude's file tools require explicit access to a capsule outside its working
-directory. The adapter rejects missing, symlinked, public, or non-regular
-capsules and adds only the canonical directory containing that run's
-`capsule.json` via `--add-dir`, on both run and exact-session resume. It does
-not add the parent run or profile directory. This is a tool-access allowance,
-not an OS read-only mount: enrolled executables are trusted, and the runner
-checks the capsule's recorded digest after execution before accepting changes.
+Claude's native file tools receive only the canonical capsule directory through
+`--add-dir`. The capsule includes a digest-covered `readable/index.json` and
+readable mirrors of every selected file, so ignored planning context requires no
+Bash decoding. The adapter validates private regular capsule files and does not
+add parent run/profile directories. This is a tool-access allowance, not an OS
+read-only mount. The runner verifies capsule and mirror integrity after execution.
+
+Codex shell tools run under its engine sandbox, which may permit reading host
+user files beyond the worktree. Provider traffic and shell outbound networking
+follow the selected engine's policy. Generic executables retain their ordinary
+OS read/write/execute/network access. Only trusted profiles are supported; scope
+limits accepted integration, not every operation of an untrusted process.
+
+Prompts travel over stdin and every subprocess uses an argv array without a shell.
+Codex events stream without retaining full command output; the adapter retains
+only session/progress evidence, bounded final text and usage. Timeouts and
+cancellation terminate the tracked process group, not only its direct child.
+Operational results omit source bytes, prompt text and sensitive environment.
 
 ## Generic executable protocol
 

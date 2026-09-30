@@ -1,15 +1,72 @@
 # Observed change review and local integration
 
-The delegate's prose result is never the changed-file authority. After a `completed` run, `reviewDelegateDelta` compares each file in the isolated worktree with its recorded starting state. Selected dirty files are compared with their copied baseline, not HEAD. New files, deletions, executable modes, and symlink states are represented in the observed patch. The orchestrator declares writable `scopePaths` at prepare, separately from `selectedPaths` that copy dirty source files, and inspects `changedPaths`, `changes`, and `violations` before calling `integrateDelegateDelta`. New runs cannot widen the previewed scope during review or apply; older runs without a recorded scope still require explicit `scopePaths` at integration.
+Delegate prose is never changed-file authority. `reviewDelegateDelta` compares the
+worktree with its recorded starting state. Selected dirty files use their copied
+baseline; other tracked paths use Git identity (kind, executable bit and filtered
+content), so unrelated permission bits do not become false drift. Scope cannot
+widen after preparation. Inspect the observed patch, paths and violations.
 
-Integration stops if the worktree committed or staged changes, Preserve paths changed, the source HEAD/index moved, a destination diverged from its pre-run bytes/mode, or an edit falls outside scope. The full preflight runs before any source write. The apply path uses same-directory temporary files and rolls back every applied path on failure. It leaves a conflict report and the isolated worktree available. The helper does not commit, push, open a PR, publish, or deploy.
+## Review and apply
 
-`discoverDelegateChecks` reads task Test Requirements from the capsule, the package scripts, and relevant repository/CI guidance. It accepts simple `npm run` and `node --test` commands only; it never executes a shell fragment from task prose. For a package-scoped change, `apply` can instead take an explicit `checks` array such as `[{"cwd":"packages/artifact","command":"npm run test"}]`. Each command must match a declared package script or a safe `node --test` invocation. Supply checks relevant to the change, including the package's regression suite; an unrelated, known failing root check need not gate the package. Failed checks roll back the source application. The helper reruns failing checks on the restored baseline and labels persistent failures `baseline-failure` separately from new `regression` failures. Both remain visible and block integration until the selected verification set is appropriate. Check output and secrets are omitted from the result.
+Invoke the pinned `integrate.mjs` through Node with `review`, then `apply`, and one
+bounded JSON object on stdin containing `runId`, `runDirectory` and `scopePaths`.
+Review records the patch that may be applied; later worktree changes require a
+new review. A delegate commit or staged change, Preserve violation, destination
+change or out-of-scope edit blocks integration. An unrelated source commit or
+staged path does not itself block an unchanged destination.
 
-Checks have a bounded ten-minute default per command. For a suite known to take longer, pass `timeoutMs` in the `apply` input based on a measured baseline; a timeout is not evidence that the patch failed. Keep following the helper until it returns its integration result.
+`apply` verifies the reviewed patch in a private scratch Git repository seeded
+with the source state and delegate delta. Dependencies are copied there rather
+than linked. Checks and declared generators run with a minimal environment and
+private HOME. They execute delegate-written code; this is credential reduction,
+not an OS sandbox for trusted scripts. The user's source checkout is written only
+after checks pass and destination states are rechecked under an integration lock.
+Concurrent unrelated edits are reported, never restored or deleted by rollback.
 
-When a changed source is bundled into a tracked generated asset, `apply` accepts `generators`, for example `[{"packagePath":"packages/artifact","script":"generate","outputPaths":["packages/artifact/lib/artifact/ui/generated/artifact-shell-assets.json"]}]`. The script must be declared by the changed package. The helper runs it after applying the delegate delta and before checks, observes changed outputs, and includes declared outputs in the accepted diff and rollback set. An undeclared tracked or non-ignored untracked side effect blocks and rolls back. These file checks are an integration boundary, not a filesystem sandbox for a trusted package script; ignored files are outside the recorded diff.
+`discoverDelegateChecks` reads task Test Requirements, declared npm scripts and
+repository/CI guidance. Supported commands are `npm run <declared-script>` and safe
+`node --test <paths>` invocations; shell fragments are rejected. An explicit
+package-scoped `checks` array can select an appropriate verification set, for
+example `[{"cwd":"packages/artifact","command":"npm run test"}]`. Include focused
+and relevant regression checks. Other package managers or languages need an
+explicit supported npm wrapper, or verification stays incomplete.
 
-Successful integration is an uncommitted local diff. The helper records the accepted source states and closes that run as integrated immediately. `status` recovers the final report and reports later drift; repeated close with the same disposition is idempotent. The same run cannot be reapplied or resumed for a further correction after integration. The orchestrator reviews that diff and owns any subsequent landing decision. It must send source and test corrections to the exact delegated session before integration; host-authored changes after integration are separate work. Do not call the integration helper for a question, blocked, crashed, or cancelled run.
+Checks have a ten-minute default per command. Supply `timeoutMs` for a measured
+longer baseline and follow the helper to its result. Check output and environment
+values are omitted. Failed checks block integration; known baseline failures remain
+visible and do not become a pass by selecting zero checks.
 
-The installed package exposes private `node scripts/integrate.mjs review` and `node scripts/integrate.mjs apply` actions. Supply a bounded JSON object on standard input with `runId`, `runDirectory`, and explicit `scopePaths`; `apply` may also receive `checks` and `generators`. The helper reads the private custody and capsule files by exact run ID; command output contains only changed-path, file-kind/mode/size, violation, and check metadata. `review` adds a phase-specific `presentation`; `apply` adds a five-field `report` derived from observed changes and independent checks, including an explicit unverified state when no checks ran. Inspect the actual worktree and baseline before applying. The command does not print source bytes or the capsule.
+A generator must name a declared npm script in a package under `packages/` and
+its exact output paths, for example
+`[{"packagePath":"packages/artifact","script":"generate","outputPaths":["packages/artifact/lib/artifact/ui/generated/artifact-shell-assets.json"]}]`.
+Generated outputs are validated in scratch and included in the reviewed integration
+surface. Undeclared tracked/nonignored side effects block; ignored files are not
+part of the accepted diff. Scratch execution is not filesystem confinement.
+
+## Interrupted writes
+
+Before writing source, the helper atomically records an applying journal with the
+approved paths and before/after states. Writes use same-directory temporaries and
+compare-and-swap against those recorded states. Failure rolls back only paths the
+helper wrote that still match its own written state. It never overwrites a user's
+concurrent save or removes an unrelated new file.
+
+An unresolved journal blocks review, apply and abandonment. The runner's `status`
+and `recover` report it. Resolve it explicitly with the pinned integration helper:
+`recover` accepts `{ "runId": "...", "resolution": "rollback" }` to restore safe
+helper-owned writes, or `resolution: "accept"` only when the complete validated
+patch is present. Conflicting paths remain untouched and visible for inspection.
+
+## Finish
+
+Successful integration closes the exact run as integrated and returns its five-field
+`report`: **Outcome**, **Task**, **Changed**, **Checks**, **Issues**. These fields
+come from observed paths and independent checks; zero checks is explicitly
+unverified. `status` recovers the report and later drift. Repeated close with the
+same disposition is idempotent. Integrated runs cannot apply or resume again.
+
+The result is an uncommitted local diff. The orchestrator sends source/test
+corrections to the exact delegated session before integration; host-authored edits
+afterward are separate work. The helper never commits, pushes, opens a PR,
+publishes or deploys. Planning status is report-only. Worktree cleanup remains a
+separate explicit accepted/abandoned operation.

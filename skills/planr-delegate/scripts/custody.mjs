@@ -146,7 +146,68 @@ export async function captureFileState(root, path) {
   return fileState(await realpath(root), pathName(path));
 }
 
-async function protectedState(root, path) {
+// Canonical integration equality follows Git: content after clean filters and owner exec bit.
+// A captured state may be supplied so hashing never rereads mutable source bytes.
+export async function gitFileState(root, path, state) {
+  pathName(path);
+  const raw = state ?? (await captureFileState(root, path));
+  if (raw.kind === 'absent') return { kind: 'absent' };
+  if (raw.kind === 'symlink') return { kind: 'symlink', target: raw.target };
+  if (raw.kind !== 'file' || typeof raw.contentBase64 !== 'string')
+    throw new CustodyError(
+      'E_CUSTODY_STATE',
+      'Git equality requires captured regular-file bytes.',
+      { path },
+    );
+  const bytes = Buffer.from(raw.contentBase64, 'base64');
+  const hash = await new Promise((resolveHash, reject) => {
+    const child = execFile(
+      'git',
+      ['hash-object', '--stdin', `--path=${path}`],
+      { cwd: root, encoding: 'utf8', maxBuffer: 1024 * 1024 },
+      (error, stdout) => {
+        if (error)
+          reject(
+            new CustodyError('E_CUSTODY_GIT', 'Git content normalization failed.', {
+              operation: 'hash-object',
+              path,
+              exitCode: error.code,
+            }),
+          );
+        else resolveHash(stdout.trim());
+      },
+    );
+    child.stdin.on('error', (error) =>
+      reject(
+        new CustodyError('E_CUSTODY_GIT', 'Git normalization input failed.', {
+          path,
+          cause: error.code ?? 'unknown',
+        }),
+      ),
+    );
+    child.stdin.end(bytes);
+  });
+  return { kind: 'file', executable: Boolean(raw.mode & 0o100), gitDigest: hash };
+}
+
+export function sameGitState(left, right) {
+  return (
+    left.kind === right.kind &&
+    (left.kind === 'absent' ||
+      (left.kind === 'symlink'
+        ? left.target === right.target
+        : left.executable === right.executable && left.gitDigest === right.gitDigest))
+  );
+}
+
+export async function captureEngineConfiguration(root) {
+  const state = {};
+  for (const path of ['.claude', '.codex', '.mcp.json'])
+    state[path] = await protectedState(root, path, { includeIgnored: true });
+  return state;
+}
+
+async function protectedState(root, path, { includeIgnored = false } = {}) {
   const location = await safeLocation(root, path, { allowAbsent: true });
   let entry;
   try {
@@ -162,6 +223,13 @@ async function protectedState(root, path) {
     for (const name of names.sort()) {
       const child = `${relativePath}/${name}`;
       const item = await lstat(join(root, child));
+      if (
+        !includeIgnored &&
+        ((await isIgnored(root, child)) ||
+          (['.DS_Store', 'node_modules'].includes(name) &&
+            !(await git(root, ['ls-files', '--cached', '-z', '--', child])).length))
+      )
+        continue;
       if (item.isDirectory()) {
         children[child] = { kind: 'directory', mode: item.mode & 0o777 };
         await walk(child);
@@ -393,6 +461,7 @@ export async function createWorktreeCustody({
       startingFiles,
       preservePaths: protectedPaths,
       preservedFiles,
+      engineConfiguration: await captureEngineConfiguration(worktreePath),
       readOnlyRepositories: readOnlyRepositories.map(
         ({ repositoryKey, root: otherRoot, selectedContext = [] }) => ({
           repositoryKey,
@@ -416,16 +485,22 @@ export async function validateWorktreeCustody(record) {
     throw new CustodyError('E_CUSTODY_RECORD', 'A custody record is required.');
   const root = await assertRepository(record.worktreePath);
   const violations = [];
-  const source = await assertRepository(record.repositoryRoot);
-  const sourceHead = (await git(source, ['rev-parse', 'HEAD'])).toString('utf8').trim();
-  if (sourceHead !== record.initialHead) violations.push({ code: 'E_CUSTODY_SOURCE_HEAD' });
-  const sourceIndex = await indexState(source);
-  if (sourceIndex !== record.sourceIndex) violations.push({ code: 'E_CUSTODY_SOURCE_INDEX' });
+  await assertRepository(record.repositoryRoot);
+  // Source HEAD/index may advance on unrelated paths; integration checks each destination.
   const head = (await git(root, ['rev-parse', 'HEAD'])).toString('utf8').trim();
   if (head !== record.initialHead)
     violations.push({ code: 'E_CUSTODY_HEAD', expected: record.initialHead, actual: head });
   const currentIndex = await indexState(root);
   if (currentIndex !== record.initialIndex) violations.push({ code: 'E_CUSTODY_INDEX' });
+  if (record.engineConfiguration) {
+    const currentConfiguration = await captureEngineConfiguration(root);
+    for (const path of Object.keys(record.engineConfiguration))
+      if (
+        JSON.stringify(currentConfiguration[path]) !==
+        JSON.stringify(record.engineConfiguration[path])
+      )
+        violations.push({ code: 'E_CUSTODY_ENGINE_CONFIGURATION', path });
+  }
   const currentStatus = await status(root);
   if (currentStatus.stagedPaths.length)
     violations.push({ code: 'E_CUSTODY_STAGED', paths: currentStatus.stagedPaths });
@@ -457,15 +532,47 @@ export async function cleanupWorktreeCustody(record, { disposition } = {}) {
       'Cleanup requires an accepted or abandoned custody record.',
     );
   const root = await assertRepository(record.repositoryRoot);
-  const target = await realpath(record.worktreePath);
+  const target = record.worktreePath;
   if (
-    target !== record.worktreePath ||
+    !isAbsolute(target) ||
+    resolve(target) !== target ||
     basename(target) !== 'worktree' ||
     !basename(dirname(target)).startsWith(`planr-delegate-${record.runId}-`) ||
     within(root, target)
   )
     throw new CustodyError('E_CUSTODY_CLEANUP', 'Custody target is not a managed worktree.');
-  const owner = JSON.parse(await readFile(join(dirname(target), 'ownership.json'), 'utf8'));
+  const listed = (await git(root, ['worktree', 'list', '--porcelain'])).toString('utf8');
+  const registered = listed.split('\n').includes(`worktree ${target}`);
+  let physicalParent;
+  try {
+    physicalParent = await realpath(dirname(target));
+  } catch (error) {
+    if (error.code === 'ENOENT' && !registered)
+      return { removed: target, disposition, alreadyRemoved: true };
+    throw new CustodyError(
+      'E_CUSTODY_CLEANUP',
+      'Managed worktree ownership directory is unavailable.',
+      { cause: error.code ?? error.name },
+    );
+  }
+  if (physicalParent !== dirname(target))
+    throw new CustodyError('E_CUSTODY_CLEANUP', 'Managed worktree ownership directory changed.');
+  let present = true;
+  try {
+    if ((await realpath(target)) !== target)
+      throw new CustodyError('E_CUSTODY_CLEANUP', 'Managed worktree target changed.');
+  } catch (error) {
+    if (error.code === 'ENOENT') present = false;
+    else throw error;
+  }
+  let owner;
+  try {
+    owner = JSON.parse(await readFile(join(physicalParent, 'ownership.json'), 'utf8'));
+  } catch (error) {
+    throw new CustodyError('E_CUSTODY_CLEANUP', 'Managed worktree ownership could not be read.', {
+      cause: error.code ?? error.name,
+    });
+  }
   if (
     owner.runId !== record.runId ||
     owner.custodyToken !== record.custodyToken ||
@@ -473,10 +580,16 @@ export async function cleanupWorktreeCustody(record, { disposition } = {}) {
     owner.worktreePath !== target
   )
     throw new CustodyError('E_CUSTODY_CLEANUP', 'Custody record does not own this worktree.');
-  const listed = (await git(root, ['worktree', 'list', '--porcelain'])).toString('utf8');
-  if (!listed.split('\n').includes(`worktree ${target}`))
-    throw new CustodyError('E_CUSTODY_CLEANUP', 'Worktree is not registered to this repository.');
-  await git(root, ['worktree', 'remove', '--force', '--', target]);
-  await rm(dirname(target), { recursive: true, force: true });
-  return { removed: target, disposition };
+  if (registered) await git(root, ['worktree', 'remove', '--force', '--', target]);
+  else if (present)
+    throw new CustodyError(
+      'E_CUSTODY_CLEANUP',
+      'Present worktree is not registered to this repository.',
+    );
+  await rm(physicalParent, { recursive: true, force: true });
+  return {
+    removed: target,
+    disposition,
+    ...(!present && !registered ? { alreadyRemoved: true } : {}),
+  };
 }

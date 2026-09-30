@@ -42,7 +42,9 @@ Claude Code and `$planr:plan` in Codex). Do not perform the routed work here.
 
 - Explicitly asking another coding agent to implement routes to `planr-delegate`,
   even if the request also says build or Ship. Plain implementation stays with
-  host-native `planr-ship`; merely mentioning an agent is not delegation.
+  host-native `planr-ship`; merely mentioning an agent is not delegation. Native
+  parallel implementation agents remain part of Ship. Asking another agent to
+  review code does not request implementation delegation.
 - PLAN and SHIP are separate user-invoked workflows. Route to one; never chain
   `planr-plan` into `planr-ship` on the user's behalf.
 - When a request spans several skills, route to the earliest step in that

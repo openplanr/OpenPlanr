@@ -15,6 +15,12 @@ test('only an explicit second-agent implementation request selects planr-delegat
     'Delegate implementation to another coding agent',
     'Ask a second coding agent to implement while I orchestrate',
     'Use planr-delegate for this task',
+    'Have Codex implement this task',
+    'Use Codex to implement this',
+    'Have Claude Code implement the requested change',
+    'Ask another coding agent to implement this task',
+    'Ask another coding agent to implement the task and review the diff',
+    'Please use Codex to implement the fix, then review the resulting patch',
   ]) {
     assert.equal(route(request), 'planr-delegate', request);
   }
@@ -24,10 +30,18 @@ test('only an explicit second-agent implementation request selects planr-delegat
     'Implement this task in the active agent',
     'This API delegates authentication to Clerk; fix its redirect bug',
     'Use a native backend role to implement this task',
+    'Ask another agent to review this code',
+    'Review this code using Codex',
+    'Implement this plan with parallel coding agents',
+    'Use native parallel agents to implement this task',
+    'Fix the delegate runner in the active agent',
   ]) {
     assert.notEqual(route(request), 'planr-delegate', request);
   }
   assert.equal(route('Ship this change'), 'planr-ship');
+  assert.equal(route('Implement this plan with parallel coding agents'), 'planr-ship');
+  assert.equal(route('Use native parallel agents to implement this task'), 'planr-ship');
+  assert.equal(route('Fix the delegate runner in the active agent'), 'planr-ship');
   assert.equal(route('Build the requested local code change from this task'), 'planr-ship');
 });
 

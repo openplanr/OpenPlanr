@@ -174,14 +174,11 @@ export function buildStandaloneArtifactBody(raw: string, id: string): string {
  * so Linear issues consistently arrived with just Priority + Tags and
  * nothing else.
  *
- * Also strips the trailing legacy promotion or current close helper,
+ * Also strips the trailing `_Promote to agile hierarchy:..._` helper,
  * which has no value in the Linear issue.
  */
 export function buildBacklogItemBody(bl: { id: string; raw: string }): string {
   const fullBody = buildStandaloneArtifactBody(bl.raw, bl.id);
-  const withoutHelper = fullBody.replace(
-    /\n*---\n+_(?:Promote to agile hierarchy:|Close when done:)[\s\S]*$/,
-    '',
-  );
-  return withoutHelper.trim();
+  const withoutPromoteHint = fullBody.replace(/\n*---\n+_Promote to agile hierarchy:[\s\S]*$/, '');
+  return withoutPromoteHint.trim();
 }

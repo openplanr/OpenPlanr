@@ -4,9 +4,11 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import {
+  assertCredentialFreeText,
   buildContextCapsule,
   previewContextCapsule,
   resolvePlanningArtifact,
+  validateContextMirror,
   writeContextCapsule,
 } from '../../skills/planr-delegate/scripts/context.mjs';
 
@@ -409,4 +411,105 @@ test('selected read-only repository material stays namespaced', async (t) => {
     '{"version":1}\n',
   );
   assert.deepEqual(capsule.sourceKeys, ['project', 'contracts']);
+});
+
+test('decoded context mirror exposes complete ignored task bytes without shell decoding and detects tampering', async (t) => {
+  const root = await fixture(t);
+  const privateRoot = await mkdtemp(join(tmpdir(), 'planr-context-mirror-'));
+  t.after(() => rm(privateRoot, { recursive: true, force: true }));
+  const capsule = await buildContextCapsule({
+    repositoryRoot: root,
+    taskSelector: 'T-068',
+    selectedFiles: ['src/code.bin'],
+  });
+  const path = await writeContextCapsule(capsule, {
+    repositoryRoot: root,
+    directory: join(privateRoot, 'capsule'),
+  });
+  const verified = await validateContextMirror(path, capsule);
+  assert.equal(verified.status, 'verified');
+  const index = JSON.parse(await readFile(verified.indexPath, 'utf8'));
+  assert.equal(
+    index.inventory.find((file) => file.path === taskPath).readablePath,
+    `project/${taskPath}`,
+  );
+  assert.deepEqual(
+    await readFile(join(verified.directory, 'project', taskPath)),
+    await readFile(join(root, taskPath)),
+  );
+  assert.deepEqual(
+    await readFile(join(verified.directory, 'project', 'src/code.bin')),
+    await readFile(join(root, 'src/code.bin')),
+  );
+  await writeFile(join(verified.directory, 'project', taskPath), 'tampered', { mode: 0o600 });
+  await assert.rejects(validateContextMirror(path, capsule), { code: 'E_CAPSULE_MIRROR' });
+  await writeFile(
+    join(verified.directory, 'project', taskPath),
+    await readFile(join(root, taskPath)),
+  );
+  await writeFile(join(verified.directory, 'unexpected.txt'), 'extra', { mode: 0o600 });
+  await assert.rejects(validateContextMirror(path, capsule), { code: 'E_CAPSULE_MIRROR' });
+});
+
+test('technical dependencies remain informational unless they explicitly name a specification', async (t) => {
+  const root = await fixture(t);
+  await put(
+    root,
+    specPath,
+    '---\nid: "SPEC-016"\ntech_dependencies: ["PostgreSQL 15", "Node.js", "React 19"]\n---\n# Spec\n',
+  );
+  const capsule = await buildContextCapsule({ repositoryRoot: root, taskSelector: 'T-068' });
+  assert.equal(
+    capsule.inventory.some((file) => file.roles.includes('specification-dependency')),
+    false,
+  );
+});
+
+test('prefixed and camelCase credentials and physical secret paths cannot enter capsules or corrections', async (t) => {
+  const root = await fixture(t);
+  for (const name of ['DB_PASSWORD', 'STRIPE_SECRET_KEY', 'NPM_TOKEN', 'stripeApiKey']) {
+    const text = `${name}="super-secret-value-123456789"`;
+    assert.throws(() => assertCredentialFreeText(text, { label: 'Correction' }), {
+      code: 'E_CAPSULE_SECRET',
+    });
+    await put(root, 'src/assignment.txt', text);
+    await assert.rejects(
+      buildContextCapsule({
+        repositoryRoot: root,
+        request: 'fix',
+        selectedFiles: ['src/assignment.txt'],
+      }),
+      { code: 'E_CAPSULE_SECRET' },
+    );
+  }
+  for (const name of [
+    '.envrc',
+    '.netrc',
+    '.git-credentials',
+    'settings.tfvars',
+    'settings.tfvars.json',
+  ]) {
+    await put(root, `src/${name}`, 'not visibly secret');
+    await assert.rejects(
+      buildContextCapsule({ repositoryRoot: root, request: 'fix', selectedFiles: [`src/${name}`] }),
+      { code: 'E_CAPSULE_SECRET' },
+    );
+  }
+  await put(root, 'src/.env', 'ordinary text');
+  await symlink(join(root, 'src/.env'), join(root, 'src/innocent.txt'));
+  await assert.rejects(
+    buildContextCapsule({
+      repositoryRoot: root,
+      request: 'fix',
+      selectedFiles: ['src/innocent.txt'],
+    }),
+    { code: 'E_CAPSULE_SECRET' },
+  );
+  for (const text of [
+    'const token = process.env.GITHUB_TOKEN;',
+    'const stripeApiKey = process.env["STRIPE_SECRET_KEY"];',
+    'token = os.environ["TOKEN"]',
+    'const apiKey = import.meta.env.API_KEY;',
+  ])
+    assert.equal(assertCredentialFreeText(text), text);
 });

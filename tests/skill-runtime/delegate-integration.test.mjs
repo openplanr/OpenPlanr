@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { execFile as execFileCallback } from 'node:child_process';
+import { execFile as execFileCallback, spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import {
   chmod,
@@ -17,6 +17,7 @@ import { dirname, join } from 'node:path';
 import { afterEach, test } from 'node:test';
 import { promisify } from 'node:util';
 import { createWorktreeCustody } from '../../skills/planr-delegate/scripts/custody.mjs';
+import { snapshotHelper } from '../../skills/planr-delegate/scripts/helper-snapshot.mjs';
 import {
   delegateIntegrationCommand,
   discoverDelegateChecks,
@@ -261,7 +262,10 @@ test('mid-apply failure rolls back all source paths and retains worktree', async
     run,
     scopePaths: ['tracked.txt', 'nested'],
     checks: [],
-    injectFailureAt: 0,
+    onProgress: async (_path, phase) => {
+      if (phase === 'after')
+        throw Object.assign(new Error('Journal storage unavailable'), { code: 'E_JOURNAL_IO' });
+    },
   });
   assert.equal(result.status, 'blocked');
   assert.equal(await readFile(join(repositoryRoot, 'tracked.txt'), 'utf8'), 'base\n');
@@ -389,6 +393,11 @@ test('installed review command reads private custody but reports only observed m
     },
     { directory: runDirectory },
   );
+  await updateRunRecord(
+    runId,
+    { helper: await snapshotHelper(runPath) },
+    { directory: runDirectory },
+  );
   await writeFile(custodyPath, JSON.stringify(custody), { mode: 0o600 });
   await mkdir(capsuleDirectory, { mode: 0o700 });
   await writeFile(capsulePath, capsuleBytes, { mode: 0o600 });
@@ -439,6 +448,11 @@ async function recordedRun({ base, custody, capsule }) {
       capsuleDigest: createHash('sha256').update(capsuleBytes).digest('hex'),
       status: 'completed',
     },
+    { directory: runDirectory },
+  );
+  await updateRunRecord(
+    runId,
+    { helper: await snapshotHelper(runPath) },
     { directory: runDirectory },
   );
   await writeFile(custodyPath, JSON.stringify(custody), { mode: 0o600 });
@@ -492,6 +506,7 @@ test('scoped checks and declared generation integrate atomically with auditable 
   const { base, custody, repositoryRoot } = fixtureData;
   await writeFile(join(custody.worktreePath, sourcePath), 'delegate\n');
   const { runId, runDirectory } = await recordedRun(fixtureData);
+  await delegateIntegrationCommand('review', { runId, runDirectory, scopePaths: [packagePath] });
   const result = await delegateIntegrationCommand('apply', {
     runId,
     runDirectory,
@@ -678,4 +693,231 @@ test('baseline classification also rolls back side effects from the baseline rer
   await assert.rejects(lstat(join(repositoryRoot, packagePath, 'baseline-stray.txt')), {
     code: 'ENOENT',
   });
+});
+
+test('checks cannot revert concurrent edits or delete a new owner note', async () => {
+  const data = await fixture({
+    files: {
+      'package.json': JSON.stringify({ scripts: { test: 'node check.mjs' } }),
+      'check.mjs': 'await new Promise(r=>setTimeout(r,250));',
+      'other.txt': 'before\n',
+    },
+  });
+  await writeFile(join(data.custody.worktreePath, 'tracked.txt'), 'delegate\n');
+  const integration = integrateDelegateDelta({
+    custody: data.custody,
+    run,
+    scopePaths: ['tracked.txt'],
+    checks: ['npm run test'],
+  });
+  await new Promise((r) => setTimeout(r, 120));
+  await writeFile(join(data.repositoryRoot, 'other.txt'), 'owner edit\n');
+  await writeFile(join(data.repositoryRoot, 'NOTES.md'), 'owner note\n');
+  const result = await integration;
+  assert.equal(result.status, 'completed', JSON.stringify(result));
+  assert.equal(await readFile(join(data.repositoryRoot, 'other.txt'), 'utf8'), 'owner edit\n');
+  assert.equal(await readFile(join(data.repositoryRoot, 'NOTES.md'), 'utf8'), 'owner note\n');
+});
+
+test('source drift during scratch checks preserves owner changes without any partial delta', async () => {
+  const data = await fixture({
+    files: {
+      'package.json': JSON.stringify({ scripts: { test: 'node check.mjs' } }),
+      'check.mjs': 'await new Promise(r=>setTimeout(r,250));',
+    },
+  });
+  await writeFile(join(data.custody.worktreePath, 'tracked.txt'), 'delegate\n');
+  const integration = integrateDelegateDelta({
+    custody: data.custody,
+    run,
+    scopePaths: ['tracked.txt'],
+    checks: ['npm run test'],
+  });
+  await new Promise((r) => setTimeout(r, 120));
+  await writeFile(join(data.repositoryRoot, 'tracked.txt'), 'owner edit\n');
+  const result = await integration;
+  assert.equal(result.code, 'E_INTEGRATION_SOURCE_DRIFT');
+  assert.equal(await readFile(join(data.repositoryRoot, 'tracked.txt'), 'utf8'), 'owner edit\n');
+});
+
+test('physical permissions and unrelated source commits do not cause false drift', async () => {
+  const data = await fixture();
+  await chmod(join(data.repositoryRoot, 'tracked.txt'), 0o664);
+  await writeFile(join(data.custody.worktreePath, 'tracked.txt'), 'delegate\n');
+  await writeFile(join(data.repositoryRoot, 'other.txt'), 'unrelated\n');
+  await git(data.repositoryRoot, 'add', 'other.txt');
+  await git(data.repositoryRoot, 'commit', '-qm', 'unrelated');
+  const result = await integrateDelegateDelta({
+    custody: data.custody,
+    run,
+    scopePaths: ['tracked.txt'],
+    checks: [],
+  });
+  assert.equal(result.status, 'completed', JSON.stringify(result));
+  assert.equal((await lstat(join(data.repositoryRoot, 'tracked.txt'))).mode & 0o777, 0o664);
+});
+
+test('check and generator environments exclude host credentials and settings', async () => {
+  const data = await fixture({
+    files: {
+      'package.json': JSON.stringify({ scripts: { test: 'node check.mjs' } }),
+      'check.mjs':
+        "import assert from 'node:assert/strict';assert.equal(process.env.PLANR_TEST_SECRET,undefined);assert.equal(process.env.NODE_OPTIONS,undefined);assert.notEqual(process.env.HOME," +
+        JSON.stringify(process.env.HOME) +
+        ');',
+    },
+  });
+  await writeFile(join(data.custody.worktreePath, 'tracked.txt'), 'delegate\n');
+  const old = process.env.PLANR_TEST_SECRET;
+  process.env.PLANR_TEST_SECRET = 'private-sentinel';
+  try {
+    const result = await integrateDelegateDelta({
+      custody: data.custody,
+      run,
+      scopePaths: ['tracked.txt'],
+      checks: ['npm run test'],
+    });
+    assert.equal(result.status, 'completed', JSON.stringify(result));
+  } finally {
+    if (old === undefined) delete process.env.PLANR_TEST_SECRET;
+    else process.env.PLANR_TEST_SECRET = old;
+  }
+});
+
+test('apply requires the exact reviewed patch and size preflight leaves source untouched', async () => {
+  const data = await fixture();
+  const { runId, runDirectory } = await recordedRun(data);
+  await writeFile(join(data.custody.worktreePath, 'tracked.txt'), 'first\n');
+  await assert.rejects(
+    delegateIntegrationCommand('apply', {
+      runId,
+      runDirectory,
+      scopePaths: ['tracked.txt'],
+      checks: [],
+    }),
+    { code: 'E_INTEGRATION_REVIEW_REQUIRED' },
+  );
+  await delegateIntegrationCommand('review', { runId, runDirectory, scopePaths: ['tracked.txt'] });
+  await writeFile(join(data.custody.worktreePath, 'tracked.txt'), 'second\n');
+  await assert.rejects(
+    delegateIntegrationCommand('apply', {
+      runId,
+      runDirectory,
+      scopePaths: ['tracked.txt'],
+      checks: [],
+    }),
+    { code: 'E_INTEGRATION_REVIEW_DRIFT' },
+  );
+  assert.equal(await readFile(join(data.repositoryRoot, 'tracked.txt'), 'utf8'), 'base\n');
+  const result = await integrateDelegateDelta({
+    custody: data.custody,
+    run,
+    scopePaths: ['tracked.txt'],
+    checks: [],
+    beforeApply: () => {
+      throw Object.assign(new Error('Record limit'), { code: 'E_RUN_LIMIT' });
+    },
+  });
+  assert.equal(result.code, 'E_RUN_LIMIT');
+  assert.equal(await readFile(join(data.repositoryRoot, 'tracked.txt'), 'utf8'), 'base\n');
+});
+
+test('rollback compares only helper-written paths and preserves a concurrent edit on one of them', async () => {
+  const data = await fixture();
+  await writeFile(join(data.custody.worktreePath, 'tracked.txt'), 'delegate\n');
+  const result = await integrateDelegateDelta({
+    custody: data.custody,
+    run,
+    scopePaths: ['tracked.txt'],
+    checks: [],
+    onProgress: async (_path, phase) => {
+      if (phase !== 'after') return;
+      await writeFile(join(data.repositoryRoot, 'tracked.txt'), 'new owner edit\n');
+      throw Object.assign(new Error('Storage failure'), { code: 'E_IO' });
+    },
+  });
+  assert.equal(result.status, 'blocked');
+  assert.deepEqual(result.rollbackErrors, [
+    { path: 'tracked.txt', code: 'E_INTEGRATION_ROLLBACK_CONFLICT' },
+  ]);
+  assert.equal(
+    await readFile(join(data.repositoryRoot, 'tracked.txt'), 'utf8'),
+    'new owner edit\n',
+  );
+});
+
+test('killed apply is discoverable and explicit recovery rolls back only journaled writes', async () => {
+  const files = Object.fromEntries(
+    Array.from({ length: 36 }, (_, index) => [
+      `batch/file-${String(index).padStart(2, '0')}.txt`,
+      'base\n',
+    ]),
+  );
+  const data = await fixture({ files });
+  for (const path of Object.keys(files))
+    await writeFile(join(data.custody.worktreePath, path), 'delegate\n');
+  const { runId, runDirectory } = await recordedRun(data);
+  await delegateIntegrationCommand('review', { runId, runDirectory, scopePaths: ['batch'] });
+  const record = await readRunRecord(runId, { directory: runDirectory });
+  const childScript = join(data.base, 'interrupt.mjs');
+  await writeFile(
+    childScript,
+    `import {watch} from 'node:fs';import {readFile} from 'node:fs/promises';
+    import {delegateIntegrationCommand} from ${JSON.stringify(new URL('../../skills/planr-delegate/scripts/integrate.mjs', import.meta.url).href)};
+    const file=${JSON.stringify(join(record.runPath, 'record.json'))};
+    let reading=false;
+    const watcher=setInterval(async()=>{if(reading)return;reading=true;try{
+      const record=JSON.parse(await readFile(file,'utf8'));
+      if(record.integration?.status==='applying' && record.integration.cursor>=2)process.kill(process.pid,'SIGKILL');
+    }finally{reading=false;}},2);
+    console.log(JSON.stringify(await delegateIntegrationCommand('apply',${JSON.stringify({ runId, runDirectory, scopePaths: ['batch'], checks: [] })})));clearInterval(watcher);`,
+  );
+  const child = spawn(process.execPath, [childScript], { stdio: ['ignore', 'pipe', 'pipe'] });
+  let errors = '';
+  child.stderr.on('data', (chunk) => (errors += chunk));
+  child.stdout.on('data', (chunk) => (errors += chunk));
+  const exit = await new Promise((resolve, reject) => {
+    child.on('error', reject);
+    child.on('exit', (code, signal) => resolve({ code, signal }));
+  });
+  assert.equal(exit.signal, 'SIGKILL', errors);
+  const interrupted = await readRunRecord(runId, { directory: runDirectory });
+  assert.equal(interrupted.integration.status, 'applying');
+  const status = await delegateRunStatus({ runId, runDirectory });
+  assert.equal(status.phase, 'integration-recovery', JSON.stringify(status));
+  await assert.rejects(
+    delegateIntegrationCommand('review', { runId, runDirectory, scopePaths: ['batch'] }),
+    { code: 'E_RUN_INTEGRATION_RECOVERY' },
+  );
+  await assert.rejects(
+    closeRunRecord(runId, { directory: runDirectory, disposition: 'abandoned' }),
+    { code: 'E_RUN_INTEGRATION_RECOVERY' },
+  );
+  await writeFile(join(data.repositoryRoot, 'NOTES.md'), 'preserved owner note\n');
+  const recovered = await delegateIntegrationCommand('recover', { runId, runDirectory });
+  assert.equal(recovered.recovered, 'rolled-back', JSON.stringify(recovered));
+  for (const path of Object.keys(files))
+    assert.equal(await readFile(join(data.repositoryRoot, path), 'utf8'), 'base\n', path);
+  assert.equal(
+    await readFile(join(data.repositoryRoot, 'NOTES.md'), 'utf8'),
+    'preserved owner note\n',
+  );
+});
+
+test('real run-record preflight rejects oversized final metadata before writing source', async () => {
+  const data = await fixture();
+  await writeFile(join(data.custody.worktreePath, 'tracked.txt'), 'delegate\n');
+  const { runId, runDirectory } = await recordedRun(data);
+  await delegateIntegrationCommand('review', { runId, runDirectory, scopePaths: ['tracked.txt'] });
+  const record = await readRunRecord(runId, { directory: runDirectory });
+  const padding = 'x'.repeat(64 * 1024 - Buffer.byteLength(JSON.stringify(record)) - 100);
+  await updateRunRecord(runId, { padding }, { directory: runDirectory });
+  const result = await delegateIntegrationCommand('apply', {
+    runId,
+    runDirectory,
+    scopePaths: ['tracked.txt'],
+    checks: [],
+  });
+  assert.equal(result.code, 'E_RUN_LIMIT', JSON.stringify(result));
+  assert.equal(await readFile(join(data.repositoryRoot, 'tracked.txt'), 'utf8'), 'base\n');
 });

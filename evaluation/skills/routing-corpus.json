@@ -440,6 +440,66 @@
       "kind": "collision",
       "input": "Build the requested local code change from this task",
       "expectedSkillId": "planr-ship"
+    },
+    {
+      "id": "delegate-codex-request",
+      "kind": "paraphrase",
+      "input": "Have Codex implement this task",
+      "expectedSkillId": "planr-delegate"
+    },
+    {
+      "id": "delegate-codex-fix-review",
+      "kind": "paraphrase",
+      "input": "Please use Codex to implement the fix, then review the resulting patch",
+      "expectedSkillId": "planr-delegate"
+    },
+    {
+      "id": "delegate-claude-paraphrase",
+      "kind": "paraphrase",
+      "input": "Have Claude Code implement the requested change",
+      "expectedSkillId": "planr-delegate"
+    },
+    {
+      "id": "delegate-another-agent",
+      "kind": "paraphrase",
+      "input": "Ask another coding agent to implement this task",
+      "expectedSkillId": "planr-delegate"
+    },
+    {
+      "id": "delegate-implement-review",
+      "kind": "positive",
+      "input": "Ask another coding agent to implement the task and review the diff",
+      "expectedSkillId": "planr-delegate"
+    },
+    {
+      "id": "delegate-native-parallel",
+      "kind": "near-miss",
+      "input": "Implement this plan with parallel coding agents",
+      "expectedSkillId": "planr-ship"
+    },
+    {
+      "id": "delegate-native-roles",
+      "kind": "near-miss",
+      "input": "Use native parallel agents to implement this task",
+      "expectedSkillId": "planr-ship"
+    },
+    {
+      "id": "delegate-review-only",
+      "kind": "near-miss",
+      "input": "Ask another agent to review this code",
+      "forbiddenSkillId": "planr-delegate"
+    },
+    {
+      "id": "delegate-codex-review-only",
+      "kind": "near-miss",
+      "input": "Review this code using Codex",
+      "forbiddenSkillId": "planr-delegate"
+    },
+    {
+      "id": "delegate-meta-fix",
+      "kind": "near-miss",
+      "input": "Fix the delegate runner in the active agent",
+      "expectedSkillId": "planr-ship"
     }
   ]
 }

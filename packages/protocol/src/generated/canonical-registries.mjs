@@ -2263,7 +2263,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "ownerPackage": "planr-pipeline",
         "source": {
           "path": "skills/planr-ship/SKILL.md",
-          "digest": "sha256:36a4f0a53bf112fa662b2c514a4a5811a2049de1af631a998f7449151e20f5ed"
+          "digest": "sha256:a0f26b0dbec2efd0e61b14072baa277e76b52c07cc25cea0cd7d5614df76c9c5"
         },
         "authorityClass": "compatibility-router",
         "machineJson": false,
@@ -3099,7 +3099,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         ]
       }
     ],
-    "documentDigest": "sha256:a4d75669047f457e277d3347a523299acf0d2e083dd003683e5caa017f744ba5"
+    "documentDigest": "sha256:6fa2e7f8416ae2ef7a92fb8116485410d215ab7f287f034bfb8756c6ab2ed168"
   },
   "skills.json": {
     "kind": "skill-catalog",
@@ -3727,16 +3727,25 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "lifecycle": "active",
         "authorityClass": "implementation",
         "source": "skills/planr-delegate/openplanr.skill.json",
-        "sourceDigest": "sha256:d8b3fe12ec694b5c725e8978bdbd3076d355edb67d97e9d5d2f1f8464f16a070",
+        "sourceDigest": "sha256:f96b486deaf304a91d1caafa9038a610d9e8fde2d70f74e8f9edb3b19621fec8",
         "triggerPolicy": {
           "include": [
             "Delegate implementation to another coding agent",
             "Ask a second coding agent to implement while I orchestrate",
-            "Use planr-delegate for this task"
+            "Use planr-delegate for this task",
+            "Have Codex implement this task",
+            "Use Codex to implement this",
+            "Have Claude Code implement this task",
+            "Ask another coding agent to implement this task",
+            "Use another coding agent to build this change"
           ],
           "exclude": [
-            "Implement this task in the active agent",
-            "Ship this change without delegation"
+            "Active host implementation",
+            "Ship this change without delegation",
+            "Review existing code",
+            "Review this code using Codex",
+            "Parallel agents",
+            "Fix the delegate runner in the active agent"
           ],
           "deferTo": []
         },
@@ -4217,7 +4226,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
       {
         "skillId": "planr-openplanr",
         "skillVersion": "1.0.0",
-        "description": "Route a planning, specification, delivery, design, review, diagram, release, or operating request to the best OpenPlanr skill. Use when the right skill is unclear or the request spans several.",
+        "description": "Route a planning, specification, delivery, delegation, design, review, diagram, release, or operating request to the best OpenPlanr skill. Use when the right skill is unclear or the request spans several.",
         "lifecycle": "active",
         "authorityClass": "read-only-view",
         "source": "skills/planr-openplanr/openplanr.skill.json",
@@ -4532,11 +4541,19 @@ export const CANONICAL_REGISTRIES = deepFreeze({
             "Build and verify the requested repository change",
             "Ship this",
             "Ship task",
-            "Implement this task"
+            "Implement this task",
+            "Implement this plan with parallel coding agents",
+            "Use native parallel agents to implement this task",
+            "Fix the delegate runner in the active agent"
           ],
           "exclude": [
             "Only plan the work",
-            "Prepare a release without changing code"
+            "Prepare a release without changing code",
+            "Have Codex implement this task",
+            "Use Codex to implement this",
+            "Have Claude Code implement this task",
+            "Ask another coding agent to implement this task",
+            "Use another coding agent to build this change"
           ],
           "deferTo": [
             "planr-land"
@@ -4828,7 +4845,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
       }
     ],
     "compatibilityAliases": [],
-    "documentDigest": "sha256:ce298de7356e8f4f48d97e3411d68a8ed5981ce9c5245a3408ab32762118b362"
+    "documentDigest": "sha256:5828cc1bbd2b698aa73aab8ba9219b4ccdbecb4f4d62a1de8da5279b67749b76"
   },
   "outputs.json": {
     "kind": "output-catalog",

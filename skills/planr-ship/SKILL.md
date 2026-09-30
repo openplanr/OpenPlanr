@@ -8,8 +8,7 @@ license: MIT
 
 Produce an implementation-complete local repository in this active coding
 session. Landing and release preparation belong to `planr-land`. Ordinary
-Ship stays host-native: do not delegate implementation to a command-line or
-model subprocess. If the user explicitly asks another coding agent to implement,
+Ship stays host-native. Do not delegate implementation to a command-line or model subprocess. If the user explicitly asks another coding agent to implement,
 hand off to `planr-delegate` before implementation. That separate opt-in workflow
 previews the selected context, writable repository, profile, and destination;
 plain Ship never launches its helper. Keep the work local; do not publish or deploy it.

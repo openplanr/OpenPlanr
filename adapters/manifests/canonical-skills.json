@@ -861,7 +861,7 @@
       "source": "skills/planr-delegate/openplanr.skill.json",
       "entrypoint": "skills/planr-delegate/SKILL.md",
       "description": "Delegate one explicitly requested implementation scope to an enrolled local coding agent while the active agent owns context, questions, review, and integration. Use only when the user asks another agent to implement.",
-      "sourceDigest": "sha256:c6c8fee9a12f2e7c7557d412697e2b4166d5a0eb5444ff365180a25086f577c6",
+      "sourceDigest": "sha256:396c700e3b2c003b65385375e24401b34ce5e731347d8c8cdd1475301fe08275",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -883,7 +883,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:f83155e0cf96cefc47ebe060fe787e9b4c5d8a3beb0d1c8e8d5e2d884b82d8af"
+          "digest": "sha256:184a0fafe3623ccdba823e8fcd11cf02804867e0ed9a55e40f04269ec200bd73"
         },
         {
           "path": "references/capsule-contract.md",
@@ -895,7 +895,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:21953f56004471fff84c02390c6c14be2b6d9cb1fe21277f585583eb4a7efef7"
+          "digest": "sha256:19a9c7fec0bc973506c9c85638f316eb019840d97d650f8c9542df8ffdac342b"
         },
         {
           "path": "references/integration-review.md",
@@ -907,7 +907,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:6bb4c4612aee0eb512966bfc8f8c51b94de41179b3365b98e25b7f4bb28cec89"
+          "digest": "sha256:60cfefbc033c1c379b9e35bdea4bfa498a8767ec4fb17284058a665df8b3756f"
         },
         {
           "path": "references/operator-guide.md",
@@ -919,7 +919,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:27bca32fd371871f2315db519916ae6cecb083bd745d350afd5781dbaf3e687e"
+          "digest": "sha256:bb27b345c6cadbefc1cabeeedd7e9575001ee39d7805eca3b0c4fc6791b41377"
         },
         {
           "path": "references/run-handoff.md",
@@ -931,7 +931,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:e21f144b02f681284cfae423f7ce42ec0dd881cfda9dba33526910071b354a1e"
+          "digest": "sha256:53700131b38d6a536ee7bae469bd9e6525e22a94779629b9ffa7b94492f1cb0e"
         },
         {
           "path": "references/worktree-custody.md",
@@ -943,7 +943,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:a41b5c04aece1f6d7ca27f5e351f02a0db20043c334418f7a73fbc735cfc9e50"
+          "digest": "sha256:2ab1d16678b9b4ea5927a441504af7d2fa4f26ccb6763735a276c045223b65fe"
         },
         {
           "path": "scripts/adapters/claude.mjs",
@@ -955,7 +955,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:5986456a7dbf5beff749c92f50bc17a73181192783e387426482465b9958146d"
+          "digest": "sha256:f24290a36c6184fdcef427774114511bf4994db0ebd8b8deba77cf1445e657a2"
         },
         {
           "path": "scripts/adapters/codex.mjs",
@@ -967,7 +967,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:db6ed8ae34a3e80a3f76165122d6ff038786f63501dfcbf799868950d2be0473"
+          "digest": "sha256:a1c58e0909a9c5a22f0a98dbc8a2f013d4ee0bd339f02ca51709a534b5c6653d"
         },
         {
           "path": "scripts/adapters/generic.mjs",
@@ -979,19 +979,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:76b6529b52df2e3bfebaebb760987ebb0f50648df7debb6fb0e10ed9da4885e2"
-        },
-        {
-          "path": "scripts/adapters/opencode-wrapper.mjs",
-          "kind": "script",
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "executable": false,
-          "digest": "sha256:a01e05882cbbb9d3b822bfb65018cd00734540eeafd3fd7182cb912bf0094e9f"
+          "digest": "sha256:57900397a84084ef1ca17e75da0da35617b6fb26eac56ac2bfd952e45e166f6c"
         },
         {
           "path": "scripts/context.mjs",
@@ -1003,7 +991,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:dc735b1887359b9e63739e4b2e5ea44d7638de5ad45edef0490a10085cdfd577"
+          "digest": "sha256:cda592af76b79c91c1c6937070bf5a488a1f165980be23dc8d862090325cd537"
         },
         {
           "path": "scripts/custody.mjs",
@@ -1015,7 +1003,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:2bf29ee719d0ef47f9883fdcf1c82fb31b3bb46be7621e117aa15727d35a37c1"
+          "digest": "sha256:0a3aafa2b029093c11248109e0ae61b824ab56b9d9d0fe36215ab02d4ba3b512"
         },
         {
           "path": "scripts/helper-snapshot.mjs",
@@ -1027,7 +1015,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:7a7fea96e559c78d3989b309bfb06ff26e7470af95589322318c9d6f03311c6b"
+          "digest": "sha256:146430502bb25dda5b31433d574aba41428a93f2f1de67b1a01fdaca3b990832"
         },
         {
           "path": "scripts/integrate.mjs",
@@ -1039,7 +1027,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:71d77aae6eb40196a6405040bbf4b0fef135fb73722212d0b1af9365065f5d38"
+          "digest": "sha256:ecaf910dcd1756e9fd75d479a30570ac5b468e6342cb9762dc6739ea26e8a18d"
         },
         {
           "path": "scripts/presentation.mjs",
@@ -1051,7 +1039,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:81d505b48c3c1504b8c5368dbe76f102154f85d055d88ac96a423b7d814dd70a"
+          "digest": "sha256:c20a7d21cd86575d88c2f9ab3c7f5aefb0e14df951083e73a96ce8d45fc08d12"
         },
         {
           "path": "scripts/profiles.mjs",
@@ -1063,7 +1051,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:abe1a9db628c64774892709a687a16de88c4b0acc8ac1e68cf5488f77673abea"
+          "digest": "sha256:b6e7cb7f652828400faa4c3e8b0c6f18bb24747929732518e74902d31ddb2fb3"
         },
         {
           "path": "scripts/run-record.mjs",
@@ -1075,7 +1063,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:a9ca4786b8914fe9b06f2ce70d3e4bbea2dd627bc70196e2ae1cab495a8c29c5"
+          "digest": "sha256:9f1502244cac69c5830925dc4c0dc54e23b7dff5df6e8f7d752acfa28e134bc0"
         },
         {
           "path": "scripts/runner.mjs",
@@ -1087,7 +1075,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:ce4af5d53a7312151c0c90ef595cfb4ce1e8c5a2a135dbd8d8cb80a126aecd87"
+          "digest": "sha256:e3f9639ae09dc59073605d576bc86f4ac6f54b475384d16554363d0db6a09907"
         }
       ],
       "contracts": {
@@ -3335,7 +3323,7 @@
       "source": "skills/planr-openplanr/openplanr.skill.json",
       "entrypoint": "skills/planr-openplanr/SKILL.md",
       "description": "Route a planning, specification, delivery, delegation, design, review, diagram, release, or operating request to the best OpenPlanr skill. Use when the right skill is unclear or the request spans several.",
-      "sourceDigest": "sha256:148e7ed33a0573edb752e54d1421574614b1413adfb99008d37c9ddc15ccc120",
+      "sourceDigest": "sha256:0b5acc4478291f668bd016b3a6c36ea43c31bce3384771f52d17239f2fb6d827",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -3345,7 +3333,7 @@
             "chatgpt"
           ],
           "executable": false,
-          "digest": "sha256:fe6b691415f300f1ad4a56d69e69dd98f7a8b1488b7887fe2dd1e4537ae896a7"
+          "digest": "sha256:e51a82f202894bf304f3d33585de3a708950d59c6ccdcbfa72b7239a8268df07"
         }
       ],
       "contracts": {
@@ -4185,7 +4173,7 @@
       "source": "skills/planr-ship/openplanr.skill.json",
       "entrypoint": "skills/planr-ship/SKILL.md",
       "description": "Implement an OpenPlanr plan, specification, task, or clearly stated request end to end in the current repository. Use when the user asks to build, implement, fix, finish, or ship local work.",
-      "sourceDigest": "sha256:36a4f0a53bf112fa662b2c514a4a5811a2049de1af631a998f7449151e20f5ed",
+      "sourceDigest": "sha256:a0f26b0dbec2efd0e61b14072baa277e76b52c07cc25cea0cd7d5614df76c9c5",
       "resources": [
         {
           "path": "agents/openai.yaml",

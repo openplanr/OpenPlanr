@@ -190,11 +190,11 @@ async function fakeClaudeProfile({ base, profileDirectory }) {
     [
       '#!/usr/bin/env node',
       'const args = process.argv.slice(2);',
-      "if (args.includes('--help')) { console.log('--print --output-format stream-json --include-partial-messages --verbose --resume --session-id --allowedTools --disallowedTools'); process.exit(0); }",
+      "if (args.includes('--help')) { console.log('--print --output-format stream-json --include-partial-messages --verbose --resume --session-id --allowedTools --disallowedTools --restricted --safe-mode --setting-sources --strict-mcp-config --mcp-config --tools'); process.exit(0); }",
       "const id = args[args.indexOf('--session-id') + 1];",
       "if (!args.includes('--session-id') || !id) process.exit(5);",
       "let input = ''; for await (const chunk of process.stdin) input += chunk;",
-      "if (process.env.FAKE_CLAUDE_PROGRESS) { for (let i = 0; i < 6; i++) { console.log(JSON.stringify({ type: 'stream_event', session_id: id, event: { type: 'message_delta' } })); await new Promise((resolve) => setTimeout(resolve, 60)); } }",
+      "if (process.env.FAKE_CLAUDE_PROGRESS) { for (let i = 0; i < Number(process.env.FAKE_CLAUDE_PROGRESS_COUNT ?? 6); i++) { console.log(JSON.stringify({ type: 'stream_event', session_id: id, event: { type: 'message_delta' } })); await new Promise((resolve) => setTimeout(resolve, Number(process.env.FAKE_CLAUDE_PROGRESS_INTERVAL ?? 60))); } }",
       'if (process.env.FAKE_CLAUDE_DELAY) await new Promise((resolve) => setTimeout(resolve, Number(process.env.FAKE_CLAUDE_DELAY)));',
       "console.log(JSON.stringify({ type: 'result', session_id: id, is_error: false, result: JSON.stringify({ status: 'completed', summary: 'Done' }) }));",
     ].join('\n'),
@@ -208,7 +208,12 @@ async function fakeClaudeProfile({ base, profileDirectory }) {
       executable,
       argv: [],
       configDir,
-      allowedEnv: ['FAKE_CLAUDE_DELAY', 'FAKE_CLAUDE_PROGRESS'],
+      allowedEnv: [
+        'FAKE_CLAUDE_DELAY',
+        'FAKE_CLAUDE_PROGRESS',
+        'FAKE_CLAUDE_PROGRESS_COUNT',
+        'FAKE_CLAUDE_PROGRESS_INTERVAL',
+      ],
       workingDirectory: 'worktree',
       destination: { class: 'local', origin: 'http://127.0.0.1:11434' },
     },
@@ -626,7 +631,7 @@ test('local context capacity is disclosed, rechecked, and blocks before a worktr
   );
   backend.setContextLength(1_000);
   const blocked = await dispatchDelegateRun({ runId: prepared.runId, runDirectory });
-  assert.equal(blocked.status, 'blocked');
+  assert.equal(blocked.status, 'prepared');
   assert.equal(blocked.record.diagnostic.code, 'E_DELEGATE_CONTEXT_CAPACITY');
   await assert.rejects(
     prepareDelegateRun({
@@ -874,7 +879,7 @@ test('destination changes after preview block dispatch and exact-session continu
     runDirectory,
     env: changedEnv,
   });
-  assert.equal(blockedDispatch.status, 'blocked');
+  assert.equal(blockedDispatch.status, 'prepared');
   assert.equal(blockedDispatch.record.diagnostic.code, 'E_DELEGATE_DESTINATION_CHANGED');
   assert.deepEqual(await calls(logPath), []);
 
@@ -895,7 +900,7 @@ test('destination changes after preview block dispatch and exact-session continu
     runDirectory,
     env: changedEnv,
   });
-  assert.equal(blockedResume.status, 'blocked');
+  assert.equal(blockedResume.status, 'question');
   assert.equal(blockedResume.record.diagnostic.code, 'E_DELEGATE_DESTINATION_CHANGED');
   assert.equal(blockedResume.record.backendSessionId, 'session-default');
   assert.deepEqual(
@@ -904,7 +909,7 @@ test('destination changes after preview block dispatch and exact-session continu
   );
 });
 
-test('existing runs remain eligible after profile validation changes field order', async (t) => {
+test('profile renewal and key ordering preserve stable identity while execution fields still gate dispatch', async (t) => {
   const { root, runDirectory, profileDirectory, base } = await fixture(t);
   const { logPath } = await fakeProfile({ base, profileDirectory });
   const profilePath = join(profileDirectory, 'fake.json');
@@ -919,14 +924,10 @@ test('existing runs remain eligible after profile validation changes field order
     request: 'Implement the selected change',
     env: environment(logPath),
   });
-  const profile = await loadProfile('fake', { directory: profileDirectory });
-  const legacyDigest = createHash('sha256').update(JSON.stringify(profile)).digest('hex');
-  const record = await readRunRecord(prepared.runId, { directory: runDirectory });
-  assert.notEqual(record.profileEnrollmentId, legacyDigest);
-  await updateRunRecord(
-    prepared.runId,
-    { profileEnrollmentId: legacyDigest },
-    { directory: runDirectory },
+  const current = JSON.parse(await readFile(profilePath, 'utf8'));
+  await enrollProfile(
+    { ...current, allowedEnv: [...current.allowedEnv].reverse() },
+    { directory: profileDirectory },
   );
 
   const result = await dispatchDelegateRun({
@@ -956,7 +957,7 @@ test('existing runs remain eligible after profile validation changes field order
     runDirectory,
     env: environment(logPath),
   });
-  assert.equal(blocked.status, 'blocked');
+  assert.equal(blocked.status, 'prepared');
   assert.equal(blocked.record.diagnostic.code, 'E_DELEGATE_PROFILE_CHANGED');
 });
 
@@ -986,7 +987,7 @@ test('changed private capsule blocks dispatch and a delegate mutation blocks com
     runDirectory,
     env: environment(logPath),
   });
-  assert.equal(blockedBefore.status, 'blocked');
+  assert.equal(blockedBefore.status, 'prepared');
   assert.equal(blockedBefore.record.diagnostic.code, 'E_DELEGATE_CAPSULE_DRIFT');
   assert.deepEqual(await calls(logPath), []);
 
@@ -1302,13 +1303,17 @@ test('Claude progress keeps a slow run alive while a silent run reaches its idle
     profileDirectory,
     runDirectory,
   };
-  const progressEnv = { ...process.env, FAKE_CLAUDE_PROGRESS: '1' };
+  const progressEnv = {
+    ...process.env,
+    FAKE_CLAUDE_PROGRESS: '1',
+    FAKE_CLAUDE_PROGRESS_INTERVAL: '250',
+  };
   const working = await prepareDelegateRun({ ...common, env: progressEnv });
   const completed = await dispatchDelegateRun({
     runId: working.runId,
     runDirectory,
     env: progressEnv,
-    timeoutMs: 180,
+    timeoutMs: 1000,
   });
   assert.equal(completed.status, 'completed');
   const activeStatus = await delegateRunStatus({ runId: working.runId, runDirectory });
@@ -1316,13 +1321,13 @@ test('Claude progress keeps a slow run alive while a silent run reaches its idle
   assert.ok(Date.parse(activeStatus.lastActivityAt) > Date.parse(completed.record.createdAt));
   assert.ok(Date.parse(activeStatus.idleDeadlineAt) > Date.parse(activeStatus.lastActivityAt));
 
-  const quietEnv = { ...process.env, FAKE_CLAUDE_DELAY: '450' };
+  const quietEnv = { ...process.env, FAKE_CLAUDE_DELAY: '2500' };
   const quiet = await prepareDelegateRun({ ...common, env: quietEnv });
   const blocked = await dispatchDelegateRun({
     runId: quiet.runId,
     runDirectory,
     env: quietEnv,
-    timeoutMs: 180,
+    timeoutMs: 1000,
   });
   assert.equal(blocked.status, 'blocked');
   assert.equal(blocked.record.diagnostic.code, 'E_DELEGATE_TIMEOUT');
@@ -1332,7 +1337,12 @@ test('Claude progress keeps a slow run alive while a silent run reaches its idle
 test('continuous backend activity cannot reset the hard handoff limit', async (t) => {
   const { root, runDirectory, profileDirectory, base } = await fixture(t);
   await fakeClaudeProfile({ base, profileDirectory });
-  const env = { ...process.env, FAKE_CLAUDE_PROGRESS: '1' };
+  const env = {
+    ...process.env,
+    FAKE_CLAUDE_PROGRESS: '1',
+    FAKE_CLAUDE_PROGRESS_COUNT: '30',
+    FAKE_CLAUDE_PROGRESS_INTERVAL: '150',
+  };
   const prepared = await prepareDelegateRun({
     repositoryRoot: root,
     request: 'Change source.txt.',
@@ -1346,7 +1356,7 @@ test('continuous backend activity cannot reset the hard handoff limit', async (t
     runId: prepared.runId,
     runDirectory,
     env,
-    timeoutMs: 100,
+    timeoutMs: 1000,
   });
   assert.equal(outcome.status, 'blocked');
   assert.equal(outcome.record.diagnostic.code, 'E_DELEGATE_TIMEOUT');
@@ -1394,7 +1404,7 @@ test('timeout, cancellation, exit, partial output and restart recovery keep priv
       runId: prepared.runId,
       runDirectory,
       env: environment(logPath, mode),
-      timeoutMs: mode === 'hang' ? 100 : 2000,
+      timeoutMs: mode === 'hang' ? 1000 : 2000,
     });
     assert.equal(outcome.status, 'blocked');
     assert.equal(outcome.record.diagnostic.code, expected);
@@ -1417,7 +1427,7 @@ test('timeout, cancellation, exit, partial output and restart recovery keep priv
     env: environment(logPath),
     signal: controller.signal,
   });
-  assert.equal(cancelledResult.status, 'blocked');
+  assert.equal(cancelledResult.status, 'prepared');
   assert.equal(cancelledResult.record.diagnostic.code, 'E_DELEGATE_CANCELLED');
   const interrupted = await prepareDelegateRun({
     ...common,

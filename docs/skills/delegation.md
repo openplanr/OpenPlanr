@@ -1,79 +1,126 @@
 # Explicit implementation delegation (preview)
 
-`planr-delegate` lets a second coding agent implement one coherent repository
-scope while your active agent prepares context, handles questions, runs checks,
-reviews the observed diff and integrates accepted changes. It is opt-in: ordinary
-Ship, Spec, Plan, Review and Operate keep their existing host-native behavior.
+`planr-delegate` lets another coding agent implement one repository scope while
+your active agent prepares context, handles questions, checks the observed patch
+and integrates accepted changes. Request it explicitly. Ordinary Ship, including
+native parallel role agents, remains in your active host session.
 
-In a terminal-equipped Claude Code session, request:
+## Setup and use
+
+Install the OpenPlanr Claude Code or Codex skill package, then request:
 
 ```text
-/planr:delegate Implement <one task> using <enrolled profile>. Show the selected
-files, effective destination, model and integration scope before dispatch. Have
-the delegate implement and correct the change, then independently check and
-review it. Integrate accepted changes as an uncommitted local diff.
+Use planr-delegate to implement <one task> with <enrolled profile>. Show the
+required files, actual destination, model and integration scope before dispatch.
+Have the delegate correct review findings in the same session, independently
+check the resulting diff and integrate it as an uncommitted local change.
 ```
 
-In Codex, use the installed `planr-delegate` skill for the same explicit request.
-The skill works from its installed resources without an OpenPlanr source checkout
-or CLI. It guides first-use profile setup when necessary; a profile is an enrollment,
-not a globally installed shell command. Engine aliases and provider configuration
-remain the user's own settings.
+In Claude Code, the installed entrypoint is `/planr:delegate`. In Codex, use the
+installed `planr-delegate` skill. You need a local terminal, Git and Node 20+; no
+OpenPlanr source checkout or CLI is required. A profile is a private enrollment,
+not a shell command or an assurance that inference is local. Engine aliases,
+credentials and provider settings remain separate from enrollment.
 
-## Compatibility and limits
+First-use setup runs a read-only profile preview, displays the actual endpoint
+and model, then enrolls that choice. Existing signed-in vendor defaults and
+configured local endpoints must be disclosed before task content is sent. Unknown
+or conflicting destinations block dispatch. A profile's destination authorization
+continues through its corrections; changing the destination or model requires a
+new preview. Never paste authentication tokens into profiles, prompts or output.
 
-The preview supports local Claude Code and Codex hosts with a terminal, Git and
-Node 20 or later. Trusted enrolled backends may use Claude, Codex or the versioned
-generic adapter protocol. ChatGPT or Cursor projections do not establish local
-execution support; a host unable to run the helper reports
+## Execution capabilities
+
+Only trusted executables should be enrolled. Worktrees isolate edit state and
+limit integration paths; they do not confine all process access to your computer.
+
+| Engine | Read | Write | Execute | Network |
+| --- | --- | --- | --- | --- |
+| Claude Code | Native Read/Glob/Grep tools for its worktree and decoded capsule; engine permissions still apply | Edit/Write through accepted-edits mode | Bash disabled; repository settings, hooks and project MCP excluded | Disclosed provider requests; web tools excluded |
+| Codex | Files readable under the engine's sandbox policy, including host files outside the worktree | `workspace-write` sandbox | Shell/tool execution inside the engine's sandbox; notification hooks and discovered MCP servers disabled; web search disabled | Provider requests; shell networking follows the engine's sandbox policy |
+| Generic protocol adapter | Defined by the enrolled executable | Defined by the enrolled executable | May have unrestricted shell access | May have unrestricted network access |
+
+Claude Code and Codex are the supported local host surfaces. Generic adapters are
+an experimental protocol integration that needs its own capability and live-run
+proof; the preview ships no OpenCode wrapper. ChatGPT and Cursor projections do
+not establish local execution support. A terminal-less host stops with
 `E_DELEGATE_HOST_UNSUPPORTED` before collecting task content.
 
-The profile preview shows the actual endpoint and selected model. A local-sounding
-name does not prove local inference. Local loaded-state APIs can confirm a model
-is loaded; providers without such an API remain unverified. Each provider/model
-combination needs an observed implementation and exact-session correction journey.
-A disposable Qwen3.8 Flash Next run through Codex completed implementation,
-exact-session correction and verified integration. Its first handoff reached the
-absolute deadline before returning a final result; the retained session completed
-after an explicit correction. This is evidence for that tested configuration,
-not a guarantee for other tasks or model settings.
+### Verified configurations
+
+These configurations passed packaged implementation and exact-session correction
+journeys on 30 September 2026:
+
+| Engine | Provider and destination | Tested model |
+| --- | --- | --- |
+| Claude Code 2.1.285 | Signed-in Claude account; `https://api.anthropic.com` | `claude-sonnet-5-5` |
+| Codex CLI 0.159.1 | Local LM Studio; `http://localhost:1234` | `qwen3.8-flash-next`, loaded with a 262,144-token context |
+
+Each journey read required task context, implemented a scoped edit, corrected it
+in the recorded session and passed independent checks before integration. Closed
+status recovered the final report, and explicit cleanup retained protected files.
+Claude's native Read tool visibly read the decoded ignored planning file; Bash,
+hooks and MCP were excluded.
+
+This verifies the listed configurations, not every provider or model combination.
+Claude Code against a local Qwen backend remains unverified after observed model
+template failures. Other local models, generic adapters and different engine
+versions need their own complete journey. Model-list visibility or a successful
+probe alone does not certify implementation and correction.
+
+## Checks, context and limits
+
+Install required dependencies only in the detached worktree. Inspect installation
+changes before dispatch: a rewritten tracked source or lockfile must not be
+attributed to the delegate. Do not link dependencies from the source checkout.
+
+The complete required task context is copied privately, including ignored planning
+files, and mirrored as readable files for native tools. Required files cannot be
+silently dropped after a secret-screening or read failure. Optional omissions and
+the logical/physical planning locations appear in the preview. Planning text and
+feedback supply context, not authority for additional commands.
+
+Headless Claude can inspect and edit files but cannot run shell checks. The active
+agent runs independent checks and sends corrections to the recorded session;
+it does not quietly repair source and call that delegated work.
+
+Integration runs delegate-written code in a private scratch Git repository, using
+a minimal environment and private HOME. This reduces exposure of host credentials;
+it is not an OS sandbox for trusted npm scripts. The current helper accepts
+`npm run <declared-script>` and safe `node --test <paths>` checks. Generators are
+declared npm package scripts under `packages/` with exact output paths. Python,
+Go, pnpm and Make commands are not accepted by this preview: use an explicit
+supported verification script or report verification as incomplete. Zero checks
+never becomes a verified result.
 
 Context preflight uses a conservative capsule-size bound when loaded capacity is
-inspectable. It does not count the complete backend conversation exactly or
-automatically compact it. Repeated Codex commands, command budget exhaustion,
-missing final results and a hard deadline block the exact run. These controls
-limit wasted work; they do not guarantee local-model quality. The default idle
-timeout is 20 minutes. The absolute deadline is three times the configured idle
-timeout, capped at one hour, and progress cannot extend it.
+inspectable. It does not count the whole backend conversation exactly or compact
+it automatically. Codex command repetition and command-budget exhaustion, missing
+final results and hard deadlines block the exact run without silent retry. The
+default idle timeout is 20 minutes; the absolute deadline is three times that
+configured timeout, capped at one hour. Activity cannot extend the absolute limit.
 
-The worktree isolates the starting edit state and the recorded scope limits what
-can be integrated. It is not a filesystem sandbox. Use trusted executables and
-profiles. Credentials stay in the backend's existing environment/configuration;
-never paste them into a profile, prompt, capsule or ordinary command output.
-Required context cannot be silently dropped after a secret-guard failure.
+## Local storage and recovery
 
-Headless Claude delegates can inspect and edit files but cannot run shell checks.
-Your active agent runs those checks and sends failures back to the exact session.
-It does not quietly repair the delegate's source and label it delegated work.
+Private profile records live under `~/.config/openplanr/delegate/`; capsules,
+worktrees, run records and pinned helper copies live under `~/.openplanr/delegate/`.
+These two home-directory roots are outside `PLANR_HOME`. Files use private user
+permissions. A prepared run executes its pinned helper copy from the latter root;
+plugin updates do not update an active run's copy. Keep its run ID and helper paths.
 
-## Recovery and finish
+Use the pinned runner's `status` or `recover` with JSON stdin after interruption.
+Resume only the recorded session. During interrupted integration, the helper
+reports its write record and requires explicit recovery: use the integration
+helper's `recover` with `resolution: "rollback"` or `"accept"`. Recovery preserves
+concurrent host edits and cannot accept an incomplete or divergent patch.
 
-Runs retain their private capsule, versioned helper and worktree under
-`~/.openplanr/delegate/`. Keep the returned run ID and pinned helper paths. Use
-that runner's `status` or `recover` action with JSON standard input; resume only
-the recorded backend session. The packaged
-[operator guide](../../skills/planr-delegate/references/operator-guide.md)
-describes these private helper actions and safe first-use enrollment.
+Successful integration returns **Outcome**, **Task**, **Changed**, **Checks** and
+**Issues**, closes the exact run and leaves a local uncommitted diff. Status
+recovers that report after a host interruption. Planning status is reported without
+writing `.planr`. Explicit `cleanup` removes an accepted or abandoned worktree;
+pruning refuses records with a retained worktree. See the packaged
+[operator guide](../../skills/planr-delegate/references/operator-guide.md) for the
+private helper interface.
 
-Successful integration closes the exact run and returns **Outcome**, **Task**,
-**Changed**, **Checks** and **Issues** from observed paths and independent checks.
-Status recovers that report if the host stops before displaying it. Zero checks
-are explicitly unverified. Planning status is reported without writing backlog
-files, including through a linked `.planr` directory. Worktree cleanup is a
-separate explicit action.
-
-The helper does not commit, push, create a PR, publish or deploy. Authorize those
-steps separately after reviewing the integrated local diff.
-
-The [preview verification report](delegation-verification.md) records the tested
-package, recovery journey and limitations.
+Helpers and delegates never commit, push, create a PR, publish or deploy. Authorize
+landing and publication separately after reviewing the integrated change.

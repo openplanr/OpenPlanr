@@ -488,9 +488,7 @@ export function extractBacklogSpec(
   let body = parseMarkdown(raw.trim())
     .content.trim()
     .replace(/^#\s+.*\n+/u, '');
-  body = body
-    .replace(/\n*---\n+_(?:Promote to agile hierarchy:|Close when done:)[\s\S]*$/u, '')
-    .trim();
+  body = body.replace(/\n*---\n+_Promote to agile hierarchy:[\s\S]*$/u, '').trim();
   return body
     ? `Promote backlog item ${blId} ("${title}") into a quick task list.\n\nBacklog spec:\n\n${body}`
     : fallback || title;

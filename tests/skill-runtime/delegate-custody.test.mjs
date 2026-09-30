@@ -8,7 +8,9 @@ import {
   captureFileState,
   cleanupWorktreeCustody,
   createWorktreeCustody,
+  gitFileState,
   planWritableScopes,
+  sameGitState,
   validateWorktreeCustody,
 } from '../../skills/planr-delegate/scripts/custody.mjs';
 
@@ -144,7 +146,7 @@ test('staging and committing are rejected even with a clean final worktree', asy
     assert.equal(committed.changedPaths.length, 0);
   }));
 
-test('source checkout HEAD and index drift are observed', async () =>
+test('unrelated source checkout HEAD and index advances do not block a run', async () =>
   fixture(async ({ root, worktreeParent }) => {
     const record = await createWorktreeCustody({
       repositoryRoot: root,
@@ -153,17 +155,9 @@ test('source checkout HEAD and index drift are observed', async () =>
     });
     await writeFile(join(root, 'unrelated.txt'), 'source staged');
     git(root, 'add', 'unrelated.txt');
-    assert.ok(
-      (await validateWorktreeCustody(record)).violations.some(
-        ({ code }) => code === 'E_CUSTODY_SOURCE_INDEX',
-      ),
-    );
-    git(root, 'commit', '-qm', 'source drift');
-    assert.ok(
-      (await validateWorktreeCustody(record)).violations.some(
-        ({ code }) => code === 'E_CUSTODY_SOURCE_HEAD',
-      ),
-    );
+    assert.equal((await validateWorktreeCustody(record)).valid, true);
+    git(root, 'commit', '-qm', 'source unrelated advance');
+    assert.equal((await validateWorktreeCustody(record)).valid, true);
   }));
 
 test('scope planner orders contract owner first and keeps secondary context read-only', () => {
@@ -271,4 +265,81 @@ test('cleanup is explicit and cannot target an unrelated worktree', async () =>
     await cleanupWorktreeCustody(record, { disposition: 'abandoned' });
     assert.equal((await captureFileState(other.worktreePath, 'changed.txt')).kind, 'file');
     await cleanupWorktreeCustody(other, { disposition: 'abandoned' });
+  }));
+
+test('Git equality ignores nonexec permissions and applies path clean filters', async () =>
+  fixture(async ({ root }) => {
+    await writeFile(join(root, '.gitattributes'), 'changed.txt text eol=lf\n');
+    const original = await captureFileState(root, 'changed.txt');
+    const before = await gitFileState(root, 'changed.txt', original);
+    await chmod(join(root, 'changed.txt'), 0o664);
+    await writeFile(join(root, 'changed.txt'), 'old\r\n');
+    const after = await gitFileState(root, 'changed.txt');
+    assert.equal(sameGitState(before, after), true);
+    await chmod(join(root, 'changed.txt'), 0o600);
+    assert.equal(sameGitState(before, await gitFileState(root, 'changed.txt')), true);
+    await chmod(join(root, 'changed.txt'), 0o755);
+    assert.equal(sameGitState(before, await gitFileState(root, 'changed.txt')), false);
+    assert.equal(
+      sameGitState(
+        { kind: 'symlink', target: 'changed.txt', mode: 0o777 },
+        { kind: 'symlink', target: 'changed.txt', mode: 0o755 },
+      ),
+      true,
+    );
+  }));
+
+test('engine configuration changes are refused even when untracked or ignored', async () =>
+  fixture(async ({ root, worktreeParent }) => {
+    const record = await createWorktreeCustody({
+      repositoryRoot: root,
+      capsule: capsule(['changed.txt']),
+      worktreeParent,
+    });
+    await mkdir(join(record.worktreePath, '.claude'));
+    await writeFile(join(record.worktreePath, '.claude', 'settings.json'), '{"hooks":{}}');
+    const check = await validateWorktreeCustody(record);
+    assert.ok(
+      check.violations.some(
+        (item) => item.code === 'E_CUSTODY_ENGINE_CONFIGURATION' && item.path === '.claude',
+      ),
+    );
+  }));
+
+test('Preserve ignores ignored dependency caches but still detects actual new files', async () =>
+  fixture(async ({ root, worktreeParent }) => {
+    await mkdir(join(root, 'preserved'));
+    await writeFile(join(root, 'preserved', 'code.txt'), 'stable');
+    await writeFile(join(root, '.gitignore'), 'preserved/node_modules/\n');
+    git(root, 'add', '.');
+    git(root, 'commit', '-qm', 'tracked directory');
+    const record = await createWorktreeCustody({
+      repositoryRoot: root,
+      capsule: capsule(['changed.txt'], ['preserved']),
+      worktreeParent,
+    });
+    await mkdir(join(record.worktreePath, 'preserved', 'node_modules'));
+    await writeFile(join(record.worktreePath, 'preserved', 'node_modules', 'cache.json'), 'cache');
+    await writeFile(join(record.worktreePath, 'preserved', '.DS_Store'), 'junk');
+    assert.equal((await validateWorktreeCustody(record)).valid, true);
+    await writeFile(join(record.worktreePath, 'preserved', 'new-code.txt'), 'changed');
+    assert.equal((await validateWorktreeCustody(record)).valid, false);
+  }));
+
+test('interrupted worktree cleanup unregisters missing targets and repeated cleanup is safe', async () =>
+  fixture(async ({ root, worktreeParent }) => {
+    const record = await createWorktreeCustody({
+      repositoryRoot: root,
+      capsule: capsule(['changed.txt']),
+      worktreeParent,
+    });
+    await rm(record.worktreePath, { recursive: true });
+    assert.ok(git(root, 'worktree', 'list', '--porcelain').includes(record.worktreePath));
+    await cleanupWorktreeCustody(record, { disposition: 'abandoned' });
+    assert.equal(git(root, 'worktree', 'list', '--porcelain').includes(record.worktreePath), false);
+    assert.deepEqual(await cleanupWorktreeCustody(record, { disposition: 'abandoned' }), {
+      removed: record.worktreePath,
+      disposition: 'abandoned',
+      alreadyRemoved: true,
+    });
   }));

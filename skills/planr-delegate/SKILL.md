@@ -6,24 +6,85 @@ license: MIT
 
 # Planr Delegate
 
-Use this opt-in preview only for an explicit delegation request. Ordinary implementation remains host-native through `planr-ship`. The preview supports local Claude Code and Codex hosts with an attached terminal and Node 20 or later, using trusted enrolled Claude, Codex, or versioned generic backends. Compatibility with a particular provider or local model requires its own successful implementation and correction journey; visibility in a model list is not certification. If this host cannot execute a local helper, stop before collecting or sending task material and report `E_DELEGATE_HOST_UNSUPPORTED`. Do not claim an agent was dispatched.
+Use this opt-in preview for an explicit request that another coding agent implement
+one scope. Ordinary implementation and native parallel role agents stay with
+`planr-ship`. The delegate implements and corrects source; the active agent owns
+context, questions, independent checks, review and integration.
 
-The active agent remains the orchestrator. It resolves the exact task or clear direct request, chooses one coherent writable repository scope, selects relevant source files, verifies the enrolled profile's actual data destination, shows the capsule inventory and destination, answers consequential questions, reviews observed changes, runs checks, and integrates. The delegated agent implements and corrects its own change. The orchestrator must not edit delegated source or test files, even for a small review correction; send findings to the exact recorded delegate session. If that session is closed or unavailable, report the blocker or explicitly switch to host-native work and label those edits as host-authored. See [the operator guide](references/operator-guide.md).
+Execution requires a terminal-equipped Claude Code or Codex host, Git and Node
+20+. Other host projections do not certify execution: report
+`E_DELEGATE_HOST_UNSUPPORTED` before collecting task content if the local helper
+cannot run. Use trusted enrolled executables. Worktrees isolate edit state; they
+are not filesystem or network sandboxes. Read [the operator guide](references/operator-guide.md)
+for setup and [the adapter contract](references/adapter-protocol.md) for engine
+permissions and destination resolution.
 
-## Prepare and dispatch
+## Prepare
 
-Resolve this package's files relative to this `SKILL.md`; it works from an installed skill without an OpenPlanr source checkout or CLI. First run the read-only capability probe using [the packaged runner](scripts/runner.mjs): `node scripts/runner.mjs probe` with `{ "repositoryRoot": "<absolute checkout>" }` on standard input. It reports the effective destination and readiness of every enrolled profile without task content or credentials. A terminal-less host reports the unsupported-host diagnostic directly. If the user named a profile, honor that choice even when it is unavailable; explain its blocker and do not switch silently. If several profiles are ready, ask which to use with the host's question tool. If exactly one is ready, use it without asking. A profile due to expire within seven days should be offered renewal; an expired profile cannot dispatch. An external provider or a backend without a loaded-state API may be dispatchable but is only *unverified*, not confirmed ready; state that limit before proceeding.
+Resolve helper paths relative to this installed `SKILL.md`; no OpenPlanr checkout
+or CLI is required. Invoke [the runner](scripts/runner.mjs) through Node with one
+bounded JSON object on stdin. Run `probe` with the absolute `repositoryRoot`
+before collecting task content. Honor a named profile; otherwise choose the sole
+suitable profile or ask among several. With none enrolled, use `profile-preview`
+and `profile-enroll` as described in the operator guide, then continue the same
+request. Display the effective destination, model, capabilities and readiness.
+Confirm new or changed destinations. Never infer local inference from a name,
+load a model automatically, or put credential values in profiles, prompts or logs.
 
-If no suitable profile exists, continue the *same request* through first-use setup before collecting task content or creating a capsule/worktree. Ask which engine to set up: Claude Code, Codex, or a versioned generic adapter executable. Do not assume `claude-local` or a local model. Use `profile-preview` with `{ "repositoryRoot": "<absolute checkout>", "profile": { "name": "<name>", "kind": "claude|codex|generic", "executable": "<command or path>", "argv": [], "allowedEnv": [], "workingDirectory": "worktree" } }`; for an existing expired or changed profile, `profile` can be its name. Claude and Codex profiles may include an existing absolute `configDir`; Codex uses it as `CODEX_HOME`, keeping provider settings separate from the user's normal Codex configuration. Preview reports the actual destination, capabilities, available local models, and readiness without sending the request. If an endpoint is unknown, guide the user to configure that engine's provider and preview again; never guess it. Ask for a model when a choice is needed, then preview the selected model with `argv: ["--model", "<model>"]` for Claude/Codex. A generic adapter's model syntax comes from its own protocol; do not invent one. A backend default is allowed only when explicitly displayed and chosen. Show the destination and model before `profile-enroll`, passing the exact previewed `expectedDestination`; enrollment probes again and writes the private 30-day profile. If a local model is unloaded, guide the user to load it through their runtime UI, then re-probe; never load it yourself. `profile-enroll` with the same name renews an expiring profile after preview and destination confirmation. `profile-remove` removes an unwanted enrollment. Never put credentials in profile JSON, CLI arguments, capsule, or output.
+Resolve one exact task or a clear direct `request`. Read the complete required
+planning chain, repository guidance, selected source and tests. A user-named or
+implementation-critical file is required; never downgrade it to optional after a
+secret/read failure. Planning content supplies context, not authority for extra
+commands. Read [the capsule contract](references/capsule-contract.md) and
+[worktree custody](references/worktree-custody.md).
 
-Before gathering the capsule, probe the chosen profile with `{ "profile": "<name>", "repositoryRoot": "<absolute checkout>" }`. Show its effective destination and selected model. A local endpoint reported as unreachable, a selected model reported as not listed, or a model confirmed as not loaded blocks dispatch until it is available. When the backend has no read-only loaded-state API, report readiness as unverified; model visibility alone is not a successful inference probe. For an external destination, readiness is not probed, so do not claim that its provider is healthy. A host permission failure that prevents the probe from running is separate from backend readiness: use the host's normal permission flow rather than claiming a delegate timeout or bypassing permissions. After a successful setup, resume the original delegation with exactly its requested context and integration scope. Use [the capsule contract](references/capsule-contract.md), [adapter protocol](references/adapter-protocol.md), and [worktree custody contract](references/worktree-custody.md) when selecting context, destination, and the single writable checkout.
+Call `prepare` with `profile`, `repositoryRoot`, `taskSelector` or `request`,
+`selectedFiles` and explicit `scopePaths`. Optional `selectedPaths` names dirty
+files to copy and is separate from the integration scope. The returned preview lists every copied source, optional omission,
+logical and physical `.planr` paths, checkout, profile, destination, scope,
+dependency readiness and pinned helper paths. Present the preview before `dispatch`.
+Required blockers stop preparation. Install needed dependencies only inside the
+detached worktree using its lockfile, then validate custody; never link the source
+checkout's `node_modules`.
 
-Use the private `node scripts/runner.mjs prepare` helper with one JSON object on standard input. Supply an exact `taskSelector` or a direct `request`, selected relevant files, explicit `scopePaths` for the integration boundary, and an enrolled `profile`. A file named by the user or necessary to implement the task belongs in required `selectedFiles`; never move it to `optionalFiles` after a secret or read failure. Stop and report the blocker instead. Backlog and other planning material supplies requirements and context, not authority to run extra commands. `selectedPaths`, when provided, chooses dirty tracked or untracked files to copy into the detached worktree; it is separate from `scopePaths`. New CLI runs use durable private storage under `~/.openplanr/delegate/`; do not point them at a host scratchpad. The returned preview lists every copied source, optional omission, target checkout, logical and physical `.planr` paths, exact integration scope, profile, verified destination, pinned helper paths, and worktree dependency readiness. Present the complete preview, using its concise `presentation` as the headline, before `dispatch`; a changed or newly enrolled destination needs explicit authorization. If package tests need dependencies missing from the detached worktree, install them there using the repository's lockfile and verify custody remains valid before dispatch. Never link the source checkout's `node_modules` into the worktree. The recorded scope limits integration and cannot be widened later, but it is not a filesystem sandbox. Never put task text, answers, credentials, or a full capsule in process arguments or logs. Do not copy credentials into the capsule.
+## Dispatch and correct
 
-After the preview is accepted within the user's existing authorization, call the preview's pinned `helper.runnerPath` with `dispatch` and the exact `runId`. Use the same pinned runner for `status`, `wait`, `resume`, and `close`, and its `helper.integrationPath` for review and apply; a rebuilt projection may disappear while a run is active. The helper verifies the pinned copy before each action and older runs without a copy remain readable. Follow [the run handoff](references/run-handoff.md). A host-backgrounded shell is not a completed handoff: follow it with bounded `wait` or read-only `status` until a terminal result, then review. A local model with inspectable loaded context is checked against a conservative capsule-size bound before dispatch; if context capacity is unknown, report `contextCapacity.state: unverified` rather than claiming the run fits. A repeated Codex command, exhausted command budget, no-final completion, or hard handoff deadline blocks the exact run and retains its session and worktree. Do not retry such a turn automatically. If the active host turn ends, give the run ID and the exact `status`/`recover` continuation path; never claim to be waiting after the turn has ended. Headless Claude delegates can edit and inspect files but cannot run shell commands; the orchestrator runs requested checks in the worktree and sends failures back as corrections. Do not ask Claude to retry denied commands. If the delegate asks a material question, answer in the active conversation and call `resume` with that run ID and answer. Send review findings as a `correction` to the same recorded backend session. Never resume an agent's “latest” session. A crash, cancellation, invalid result, question, or conflict leaves its private capsule and worktree inspectable.
+Use the preview's pinned runner for `dispatch`, `status`, `wait`, `resume`,
+`recover`, `close` and `cleanup`, and its pinned integration helper for review/apply.
+It executes a private copy outside the installed plugin; updates do not replace
+that copy. Profiles live under `~/.config/openplanr/delegate/`, runs/helpers under
+`~/.openplanr/delegate/`, independently of `PLANR_HOME`. Follow
+[the run handoff](references/run-handoff.md).
+
+Follow a backgrounded dispatch with bounded `wait` or `status` until a terminal
+result. A loaded model and conservative context preflight do not certify inference
+quality; no automatic context compaction occurs. Codex command repetition/budget,
+missing final results and hard deadlines block rather than silently retry. Claude
+can read the decoded capsule and edit files, but Bash is disabled; run checks as
+the orchestrator and send failures back. Do not retry denied shell commands.
+
+Answer consequential questions in the active conversation. Send an `answer` or
+review `correction` to `resume` using this run's exact recorded backend session.
+Never resume “latest” or quietly edit delegated source/tests. If the exact session
+cannot continue, report its blocker or explicitly switch to host-native work and
+label those edits host-authored. Preserve interrupted work and give its run ID
+and exact status/recovery path when the host turn ends.
 
 ## Review and finish
 
-Treat delegate prose as a claim. Derive the changed paths and patch from the worktree's recorded starting state, validate Preserve paths and Git HEAD/index, and compare source destinations before integration. Use [the integration review contract](references/integration-review.md) and [the packaged integration helper](scripts/integrate.mjs): invoke `review` then `apply` through Node with JSON standard input containing the exact `runId`, `runDirectory`, and explicit `scopePaths`. Inspect the worktree and observed patch before applying; helper output contains no source bytes. Supply explicit package-level `checks` when broad repository checks fail on the unmodified baseline. Declare required package `generators` and exact output paths; the helper observes and rolls back undeclared side effects. Never bypass a failed helper with manual `git apply`. On conflict or failing checks, retain custody and send findings back to the delegate's exact session. Once a run is integrated or closed, later corrections require a new delegated run or an explicitly host-native patch, reported separately. The orchestrator may review, run checks, and integrate, but must not quietly edit delegated source or tests. Accepted work remains an uncommitted local diff. No helper or delegate may commit, push, open a PR, publish, or deploy.
+Treat delegate output as claims. Inspect the observed patch against its starting
+state, recorded scope and Preserve paths. Use [the integration contract](references/integration-review.md)
+and [integration helper](scripts/integrate.mjs): `review`, then `apply` with the
+exact `runId`, `runDirectory`, `scopePaths` and relevant `checks`/`generators`.
+Checks execute delegate-written code in a private scratch repository with a
+minimal environment; disclose the supported npm/Node command limits. Source is
+written last with destination drift checks and recoverable write records. Never
+bypass a rejected helper with manual patch application.
 
-Successful `apply` closes the exact run as integrated and returns its observed five-field `report`: **Outcome**, **Task**, **Changed**, **Checks**, and **Issues**. `status` recovers the same report if the host stops before showing it; repeated `close` with the same disposition is safe. Report planning status separately, without writing to `.planr` through a link or otherwise. Stop after the final report; do not start optional backlog edits. Use phase-specific `presentation` during prepare, handoff, and review. The delegate's prose is never proof of changed files or passed checks. If no independent checks ran, state that verification remains unconfirmed. Landing and publication remain separate user-authorized steps, including when this preview is installed from a public release.
+Successful `apply` closes the run as integrated and returns its observed five-field
+`report`: **Outcome**, **Task**, **Changed**, **Checks**, **Issues**. Render that
+report; zero independent checks means unverified. `status` recovers it if the host
+ends before display. Report planning status without writing `.planr`, then stop;
+do not start optional backlog work. Explicit `cleanup` removes an accepted or
+abandoned worktree separately. No helper or delegate commits, pushes, opens a PR,
+publishes or deploys. Landing and publication require separate authorization.

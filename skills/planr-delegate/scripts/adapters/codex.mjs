@@ -29,7 +29,10 @@ function tomlString(source, key, section = '') {
   for (const line of source.split(/\r?\n/u)) {
     const heading = /^\s*\[([^\]]+)\]\s*(?:#.*)?$/u.exec(line);
     if (heading) {
-      active = heading[1];
+      active = heading[1].replace(
+        /"([^"]+)"|'([^']+)'/gu,
+        (_match, double, single) => double ?? single,
+      );
       continue;
     }
     if (active !== section) continue;
@@ -41,7 +44,10 @@ function tomlString(source, key, section = '') {
 
 function ancestorDirectories(cwd) {
   if (!cwd || !isAbsolute(cwd)) {
-    throw new AdapterError('E_DESTINATION_UNKNOWN', 'Codex worktree directory is required to inspect project config.');
+    throw new AdapterError(
+      'E_DESTINATION_UNKNOWN',
+      'Codex worktree directory is required to inspect project config.',
+    );
   }
   const directories = [];
   for (let cursor = resolve(cwd); ; cursor = dirname(cursor)) {
@@ -54,7 +60,10 @@ function ancestorDirectories(cwd) {
 function uniqueScalar(values, label) {
   const unique = [...new Set(values.filter(Boolean))];
   if (unique.length > 1) {
-    throw new AdapterError('E_DESTINATION_UNKNOWN', `Codex ${label} conflicts across configuration layers.`);
+    throw new AdapterError(
+      'E_DESTINATION_UNKNOWN',
+      `Codex ${label} conflicts across configuration layers.`,
+    );
   }
   return unique[0];
 }
@@ -64,37 +73,88 @@ export async function resolveCodexDestination(_profile, env, cwd) {
   if (!isAbsolute(root)) {
     throw new AdapterError('E_DESTINATION_UNKNOWN', 'Codex configuration directory is unknown.');
   }
-  const paths = [join(root, 'config.toml'), ...ancestorDirectories(cwd).map((path) => join(path, '.codex', 'config.toml'))];
-  const configs = (await Promise.all([...new Set(paths)].map(readConfig))).filter((value) => value !== null);
+  const paths = [
+    join(root, 'config.toml'),
+    ...ancestorDirectories(cwd).map((path) => join(path, '.codex', 'config.toml')),
+  ];
+  const configs = (await Promise.all([...new Set(paths)].map(readConfig))).filter(
+    (value) => value !== null,
+  );
   if (env.CODEX_PROFILE) {
-    throw new AdapterError('E_DESTINATION_UNKNOWN', 'Codex environment profile override is not inspectable.');
+    throw new AdapterError(
+      'E_DESTINATION_UNKNOWN',
+      'Codex environment profile override is not inspectable.',
+    );
   }
-  const selectedProfile = uniqueScalar(configs.map((config) => tomlString(config, 'profile')), 'profile selection');
-  if (selectedProfile && !configs.some((config) => config.includes(`[profiles.${selectedProfile}]`))) {
+  const selectedProfile = uniqueScalar(
+    configs.map((config) => tomlString(config, 'profile')),
+    'profile selection',
+  );
+  if (
+    selectedProfile &&
+    !configs.some((config) => config.includes(`[profiles.${selectedProfile}]`))
+  ) {
     throw new AdapterError('E_DESTINATION_UNKNOWN', 'Selected Codex profile is not inspectable.');
   }
-  const provider = uniqueScalar(configs.flatMap((config) => [
-    tomlString(config, 'model_provider'),
-    selectedProfile ? tomlString(config, 'model_provider', `profiles.${selectedProfile}`) : undefined,
-  ]), 'model provider');
-  const providerUrls = provider ? configs.map((config) => tomlString(config, 'base_url', `model_providers.${provider}`)) : [];
-  if (provider && !providerUrls.some(Boolean)) {
-    throw new AdapterError('E_DESTINATION_UNKNOWN', 'Selected Codex provider has no inspectable base_url.');
+  const provider = uniqueScalar(
+    configs.flatMap((config) => [
+      tomlString(config, 'model_provider'),
+      selectedProfile
+        ? tomlString(config, 'model_provider', `profiles.${selectedProfile}`)
+        : undefined,
+    ]),
+    'model provider',
+  );
+  const providerUrls = provider
+    ? configs.map((config) => tomlString(config, 'base_url', `model_providers.${provider}`))
+    : [];
+  if (provider && provider !== 'openai' && !providerUrls.some(Boolean)) {
+    throw new AdapterError(
+      'E_DESTINATION_UNKNOWN',
+      'Selected Codex provider has no inspectable base_url.',
+    );
   }
   const endpoints = [
     ...providerUrls,
     ...configs.flatMap((config) => [
       tomlString(config, 'openai_base_url'),
-      selectedProfile ? tomlString(config, 'openai_base_url', `profiles.${selectedProfile}`) : undefined,
+      selectedProfile
+        ? tomlString(config, 'openai_base_url', `profiles.${selectedProfile}`)
+        : undefined,
     ]),
     env.OPENAI_BASE_URL,
   ].filter(Boolean);
   if (!endpoints.length) {
-    throw new AdapterError('E_DESTINATION_UNKNOWN', 'Codex effective endpoint is unknown; configure a provider base_url before enrollment.');
+    // Signed-in Codex uses the ChatGPT backend; API-key auth uses OpenAI API.
+    // Inspect auth mode only, never return tokens or auth source bytes.
+    let authentication = null;
+    try {
+      authentication = JSON.parse(await readFile(join(root, 'auth.json'), 'utf8'));
+    } catch (error) {
+      if (error.code !== 'ENOENT')
+        throw new AdapterError(
+          'E_DESTINATION_UNKNOWN',
+          'Codex authentication mode could not be inspected.',
+        );
+    }
+    const apiKey = Boolean(
+      env.OPENAI_API_KEY ||
+        authentication?.auth_mode === 'apikey' ||
+        authentication?.OPENAI_API_KEY,
+    );
+    endpoints.push(apiKey ? 'https://api.openai.com' : 'https://chatgpt.com/backend-api/codex');
   }
   const destinations = endpoints.map(destinationFromEndpoint);
-  if (destinations.some((candidate) => candidate.class !== destinations[0].class || candidate.origin !== destinations[0].origin)) {
-    throw new AdapterError('E_DESTINATION_UNKNOWN', 'Codex configuration layers disagree on data destination.');
+  if (
+    destinations.some(
+      (candidate) =>
+        candidate.class !== destinations[0].class || candidate.origin !== destinations[0].origin,
+    )
+  ) {
+    throw new AdapterError(
+      'E_DESTINATION_UNKNOWN',
+      'Codex configuration layers disagree on data destination.',
+    );
   }
   return destinations[0];
 }
@@ -104,108 +164,166 @@ function safeUsage(value) {
   const fields = ['input_tokens', 'cached_input_tokens', 'output_tokens'];
   const usage = {};
   for (const field of fields) {
-    if (Number.isSafeInteger(value[field]) && value[field] >= 0)
-      usage[field] = value[field];
+    if (Number.isSafeInteger(value[field]) && value[field] >= 0) usage[field] = value[field];
   }
   return Object.keys(usage).length ? usage : null;
-}
-
-function parseCodexEvents(output, expectedSessionId) {
-  let sessionId;
-  let message;
-  let completed = false;
-  let usage = null;
-  try {
-    for (const line of output.split(/\r?\n/u)) {
-      if (!line.trim()) continue;
-      const event = parseJson(line);
-      if (!event || typeof event !== 'object' || Array.isArray(event)) {
-        throw new AdapterError('E_ADAPTER_RESULT', 'Codex returned an invalid event.');
-      }
-      if (event.type === 'thread.started') {
-        if (typeof event.thread_id !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,199}$/u.test(event.thread_id) || (sessionId && sessionId !== event.thread_id)) {
-          throw new AdapterError('E_ADAPTER_SESSION', 'Codex emitted an invalid or inconsistent session identifier.');
-        }
-        sessionId = event.thread_id;
-      }
-      if (event.type === 'item.completed' && event.item?.type === 'agent_message') {
-        message = event.item.text;
-      }
-      if (event.type === 'turn.completed') {
-        completed = true;
-        usage = safeUsage(event.usage);
-      }
-      if (event.type === 'turn.failed') {
-        throw new AdapterError('E_ADAPTER_RESULT', 'Codex reported a failed turn.');
-      }
-    }
-    if (completed && sessionId && !message) {
-      const error = new AdapterError('E_ADAPTER_NO_FINAL', 'Codex completed without a final agent message.');
-      error.usage = usage;
-      error.completionEvidence = 'turn-completed-no-final';
-      throw error;
-    }
-    if (!completed || !sessionId || !message) {
-      throw new AdapterError('E_ADAPTER_RESULT', 'Codex did not return a complete structured result.');
-    }
-    if (expectedSessionId && expectedSessionId !== sessionId) {
-      throw new AdapterError('E_ADAPTER_SESSION', 'Codex resumed a different session.');
-    }
-    return { ...normalizeResult({ ...extractTerminalJsonObject(message), sessionId }),
-      usage, completionEvidence: 'turn-completed-with-final' };
-  } catch (error) {
-    if (error instanceof AdapterError) {
-      if (sessionId) error.sessionId = sessionId;
-      if (completed) {
-        error.usage ??= usage;
-        error.completionEvidence ??= 'turn-completed-invalid-final';
-      }
-    }
-    throw error;
-  }
 }
 
 const MAX_IDENTICAL_COMMANDS = 5;
 const MAX_COMMANDS_PER_TURN = 120;
 
-function sessionObserver(onSessionId, expectedSessionId, onActivity) {
-  let seen;
+// Streaming state is bounded independently of total command output. An identical
+// command is a loop even when its result contains changing elapsed-time text.
+function codexEvents(onSessionId, expectedSessionId, onActivity) {
+  let sessionId;
+  let message;
+  let completed = false;
+  let usage = null;
   let previousCommand = null;
   let identicalCommands = 0;
   let commandCount = 0;
-  return async (line) => {
-    const event = parseJson(line);
-    if (!event || typeof event !== 'object' || Array.isArray(event)) {
-      throw new AdapterError('E_ADAPTER_RESULT', 'Codex emitted an invalid event.');
+  const annotate = (error) => {
+    if (sessionId) error.sessionId = sessionId;
+    if (completed) {
+      error.usage ??= usage;
+      error.completionEvidence ??= 'turn-completed-invalid-final';
     }
-    if (event.type === 'thread.started') {
-      const id = event.thread_id;
-      if (typeof id !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,199}$/u.test(id) ||
-        (seen && seen !== id) || (expectedSessionId && expectedSessionId !== id)) {
-        throw new AdapterError('E_ADAPTER_SESSION', 'Codex emitted a different or invalid session identifier.');
-      }
-      seen = id;
-      await onSessionId?.(id);
-    }
-    if (event.type === 'item.completed' && event.item?.type === 'command_execution') {
-      commandCount += 1;
-      // Hash only the observable command and result. Never persist source, output, or credentials.
-      const fingerprint = createHash('sha256').update(JSON.stringify([
-        event.item.command, event.item.aggregated_output, event.item.exit_code,
-      ])).digest('hex');
-      identicalCommands = fingerprint === previousCommand ? identicalCommands + 1 : 1;
-      previousCommand = fingerprint;
-      if (identicalCommands >= MAX_IDENTICAL_COMMANDS || commandCount > MAX_COMMANDS_PER_TURN) {
-        const error = new AdapterError('E_ADAPTER_STALLED', 'Codex repeated a completed command or exceeded its command budget.');
-        error.sessionId = seen;
-        throw error;
-      }
-    } else if (event.type === 'item.completed' && event.item?.type === 'file_change') {
-      previousCommand = null;
-      identicalCommands = 0;
-    }
-    await onActivity?.();
+    return error;
   };
+  return {
+    async observe(line) {
+      try {
+        const event = parseJson(line);
+        if (!event || typeof event !== 'object' || Array.isArray(event))
+          throw new AdapterError('E_ADAPTER_RESULT', 'Codex returned an invalid event.');
+        if (event.type === 'thread.started') {
+          const id = event.thread_id;
+          if (
+            typeof id !== 'string' ||
+            !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,199}$/u.test(id) ||
+            (sessionId && sessionId !== id) ||
+            (expectedSessionId && expectedSessionId !== id)
+          )
+            throw new AdapterError(
+              'E_ADAPTER_SESSION',
+              'Codex emitted a different or invalid session identifier.',
+            );
+          sessionId = id;
+          await onSessionId?.(id);
+        }
+        if (event.type === 'item.completed' && event.item?.type === 'agent_message') {
+          if (typeof event.item.text !== 'string' || Buffer.byteLength(event.item.text) > 64 * 1024)
+            throw new AdapterError('E_ADAPTER_RESULT', 'Codex final message exceeded its limit.');
+          message = event.item.text;
+        }
+        if (event.type === 'item.completed' && event.item?.type === 'command_execution') {
+          commandCount += 1;
+          const fingerprint = createHash('sha256').update(String(event.item.command)).digest('hex');
+          identicalCommands = fingerprint === previousCommand ? identicalCommands + 1 : 1;
+          previousCommand = fingerprint;
+          if (identicalCommands >= MAX_IDENTICAL_COMMANDS || commandCount > MAX_COMMANDS_PER_TURN)
+            throw new AdapterError(
+              'E_ADAPTER_STALLED',
+              'Codex repeated a completed command or exceeded its command budget.',
+            );
+        } else if (event.type === 'item.completed' && event.item?.type === 'file_change') {
+          previousCommand = null;
+          identicalCommands = 0;
+        }
+        if (event.type === 'turn.completed') {
+          completed = true;
+          usage = safeUsage(event.usage);
+        }
+        if (event.type === 'turn.failed')
+          throw new AdapterError('E_ADAPTER_RESULT', 'Codex reported a failed turn.');
+        await onActivity?.();
+      } catch (error) {
+        throw annotate(error);
+      }
+    },
+    finish() {
+      try {
+        if (completed && sessionId && !message) {
+          const error = new AdapterError(
+            'E_ADAPTER_NO_FINAL',
+            'Codex completed without a final agent message.',
+          );
+          error.usage = usage;
+          error.completionEvidence = 'turn-completed-no-final';
+          throw error;
+        }
+        if (!completed || !sessionId || !message)
+          throw new AdapterError(
+            'E_ADAPTER_RESULT',
+            'Codex did not return a complete structured result.',
+          );
+        return {
+          ...normalizeResult({ ...extractTerminalJsonObject(message), sessionId }),
+          usage,
+          completionEvidence: 'turn-completed-with-final',
+        };
+      } catch (error) {
+        throw annotate(error);
+      }
+    },
+  };
+}
+
+async function executionOverrides(env, cwd) {
+  const root = env.CODEX_HOME ?? join(env.HOME ?? '', '.codex');
+  const paths = [
+    join(root, 'config.toml'),
+    ...ancestorDirectories(cwd).map((directory) => join(directory, '.codex', 'config.toml')),
+  ];
+  const configs = (await Promise.all([...new Set(paths)].map(readConfig))).filter(Boolean);
+  const servers = new Map();
+  for (const config of configs) {
+    const names = new Set();
+    for (const line of config.split(/\r?\n/u)) {
+      const match =
+        /^\s*\[mcp_servers\.(?:"([^"\\]+)"|'([^']+)'|([A-Za-z0-9_-]+))(?:\.[^\]]+)?\]\s*(?:#.*)?$/u.exec(
+          line,
+        );
+      if (match) names.add(match[1] ?? match[2] ?? match[3]);
+      else if (/^\s*(?:\[|mcp_servers\s*=).*mcp_servers/u.test(line))
+        throw new AdapterError(
+          'E_ADAPTER_CONFIG',
+          'Codex MCP configuration uses an uninspectable table form.',
+        );
+    }
+    for (const name of names) {
+      const section = `mcp_servers.${name}`;
+      const command = tomlString(config, 'command', section);
+      const url = tomlString(config, 'url', section);
+      const transports = servers.get(name) ?? new Set();
+      if (command !== undefined) transports.add('stdio');
+      if (url !== undefined) transports.add('http');
+      servers.set(name, transports);
+    }
+  }
+  if ([...servers.values()].some((transports) => transports.size !== 1))
+    throw new AdapterError(
+      'E_ADAPTER_CONFIG',
+      'Codex MCP server transport is missing or conflicts across configuration layers.',
+    );
+  // Codex splits override paths on dots without decoding quoted segments. A
+  // nonempty TOML map preserves literal server names. Inert matching transports
+  // also make ancestor entries valid when this configDir does not load them.
+  // An empty map alone merges without removing existing servers.
+  const disabledServers = [...servers]
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(
+      ([name, transports]) =>
+        `${JSON.stringify(name)}={enabled=false,${transports.has('stdio') ? 'command=""' : 'url="http://127.0.0.1:9/mcp"'}}`,
+    );
+  const settings = [
+    'approval_policy="never"',
+    'sandbox_mode="workspace-write"',
+    'notify=[]',
+    'web_search="disabled"',
+    ...(disabledServers.length ? [`mcp_servers={${disabledServers.join(',')}}`] : []),
+  ];
+  return settings.flatMap((value) => ['-c', value]);
 }
 
 export const codexAdapter = Object.freeze({
@@ -213,28 +331,85 @@ export const codexAdapter = Object.freeze({
   async probe({ profile, cwd, env, signal, timeoutMs }) {
     const destination = await resolveCodexDestination(profile, env, cwd);
     const output = await invokeProcess(profile.executable, [...profile.argv, 'exec', '--help'], {
-      env, signal,
+      env,
+      signal,
       timeoutMs: Math.min(timeoutMs ?? 10_000, 10_000),
       maxOutputBytes: 128 * 1024,
     });
     if (!['--json', 'resume', '--sandbox'].every((flag) => output.includes(flag))) {
-      throw new AdapterError('E_ADAPTER_INCOMPATIBLE', 'Codex executable lacks tools, JSON events, or exact resume.');
+      throw new AdapterError(
+        'E_ADAPTER_INCOMPATIBLE',
+        'Codex executable lacks tools, JSON events, or exact resume.',
+      );
     }
     return { capabilities: CAPABILITIES, destination };
   },
-  async run({ profile, cwd, prompt, onSessionId, onActivity, env, signal, timeoutMs }) {
-    const output = await invokeProcess(profile.executable, [...profile.argv, 'exec', '--json', '--sandbox', 'workspace-write', '-'], {
-      cwd, env, input: prompt, signal, timeoutMs, onStdoutLine: sessionObserver(onSessionId, undefined, onActivity),
-    });
-    return parseCodexEvents(output);
+  async run({ profile, cwd, prompt, onSessionId, onActivity, onProcess, env, signal, timeoutMs }) {
+    const events = codexEvents(onSessionId, undefined, onActivity);
+    await invokeProcess(
+      profile.executable,
+      [
+        ...profile.argv,
+        'exec',
+        '--json',
+        '--sandbox',
+        'workspace-write',
+        ...(await executionOverrides(env, cwd)),
+        '-',
+      ],
+      {
+        cwd,
+        env,
+        input: prompt,
+        signal,
+        timeoutMs,
+        onProcess,
+        onStdoutLine: events.observe,
+        retainStdout: false,
+        maxOutputBytes: 8 * 1024 * 1024,
+      },
+    );
+    return events.finish();
   },
-  async resume({ profile, cwd, prompt, sessionId, onSessionId, onActivity, env, signal, timeoutMs }) {
+  async resume({
+    profile,
+    cwd,
+    prompt,
+    sessionId,
+    onSessionId,
+    onActivity,
+    onProcess,
+    env,
+    signal,
+    timeoutMs,
+  }) {
     if (typeof sessionId !== 'string' || !sessionId.trim()) {
       throw new AdapterError('E_ADAPTER_SESSION', 'Exact Codex session identifier is required.');
     }
-    const output = await invokeProcess(profile.executable, [...profile.argv, 'exec', 'resume', '--json', '-c', 'sandbox_mode="workspace-write"', sessionId, '-'], {
-      cwd, env, input: prompt, signal, timeoutMs, onStdoutLine: sessionObserver(onSessionId, sessionId, onActivity),
-    });
-    return parseCodexEvents(output, sessionId);
+    const events = codexEvents(onSessionId, sessionId, onActivity);
+    await invokeProcess(
+      profile.executable,
+      [
+        ...profile.argv,
+        'exec',
+        'resume',
+        '--json',
+        ...(await executionOverrides(env, cwd)),
+        sessionId,
+        '-',
+      ],
+      {
+        cwd,
+        env,
+        input: prompt,
+        signal,
+        timeoutMs,
+        onProcess,
+        onStdoutLine: events.observe,
+        retainStdout: false,
+        maxOutputBytes: 8 * 1024 * 1024,
+      },
+    );
+    return events.finish();
   },
 });
