@@ -47,9 +47,28 @@ export interface DiagramSharedReviewController {
   updateReview(review: ArtifactReviewInput | null): void;
   setReadOnly(value: boolean): void;
 }
+/** Scene items with each connection named by its endpoints when it has no label of its own. */
+function displayItems(scene: DiagramReviewBundle['scene']) {
+  const labels = new Map(scene.items.map((item) => [item.id, item.label]));
+  const relations = new Map(scene.relations.map((relation) => [relation.id, relation]));
+  return scene.items.map((item) => {
+    const relation = relations.get(item.id);
+    if (!relation) return item;
+    const fromLabel = labels.get(relation.from) || relation.from;
+    const toLabel = labels.get(relation.to) || relation.to;
+    return {
+      ...item,
+      label: relation.label || `${fromLabel} → ${toLabel}`,
+      from: relation.from,
+      to: relation.to,
+      fromLabel,
+      toLabel,
+    };
+  });
+}
 function legacyMarkup(bundle: DiagramReviewBundle) {
   const scene = bundle.scene;
-  const links = scene.items
+  const links = displayItems(scene)
     .map(
       (item, index) =>
         `<button type="button" data-item-index="${index}"><span>${escapeHtml(item.kind)}</span>${escapeHtml(item.label)}</button>`,
@@ -57,8 +76,8 @@ function legacyMarkup(bundle: DiagramReviewBundle) {
     .join('');
   return `<div class="planr-shell diagram-shell" data-planr-review-mode="interact" data-planr-rail-open="false" data-outline-open="true">
   <header class="planr-toolbar diagram-toolbar"><button class="planr-toolbar-action" type="button" data-action="outline" aria-expanded="true" aria-controls="diagram-outline">Navigator</button><div class="planr-brand"><span class="planr-title-block"><strong>${escapeHtml(bundle.title)}</strong><span class="diagram-subtitle">${escapeHtml(bundle.grammar ?? 'Diagram')} · Read only</span></span></div><nav data-presentation-nav hidden><button data-action="previous-chapter">←</button><strong data-chapter-label>Overview</strong><span data-chapter-progress></span><button data-action="next-chapter">→</button></nav><button data-save-state disabled hidden></button><button class="planr-toolbar-action" data-action="present" aria-pressed="false">Present</button><button class="planr-toolbar-action" data-action="review" aria-expanded="false">Discussion <span data-comment-count>0</span></button><button class="planr-toolbar-action" data-shared-history>Revisions</button><details class="diagram-export"><summary>Export</summary><div class="diagram-export-menu"><button data-export="svg">SVG</button><button data-export="png">PNG</button><button data-export="feedback-json">Feedback JSON</button><button data-export="feedback-md">Feedback Markdown</button></div></details></header>
-  <div class="diagram-workspace"><aside id="diagram-outline" class="diagram-outline" aria-label="Diagram navigator"><div class="diagram-overview"><p>${escapeHtml(bundle.summary ?? '')}</p></div><section class="diagram-element-details" data-element-details hidden><header><strong data-element-kind></strong><button data-action="close-details">×</button></header><h2 data-element-label></h2><p data-element-endpoints></p><p data-element-description></p><details><summary>Element reference</summary><code data-element-id></code></details><button data-action="toggle-group" hidden>Collapse group</button><button data-action="comment-element">Comment on element</button><button data-action="connections">Focus connections</button></section><label class="diagram-search">Find in diagram<input type="search" data-search placeholder="Search labels…"></label><nav>${links}<p data-search-empty hidden>No matching labels.</p></nav></aside>
-  <main class="diagram-canvas" tabindex="0" aria-label="Diagram canvas"><div class="diagram-scene" style="width:${scene.width}px;height:${scene.height}px"><div class="diagram-drawing">${scene.svg}</div><div class="planr-annotation-layer" data-planr-annotation-layer="${escapeHtml(bundle.diagramId)}"></div><div data-selection class="planr-region-selection" hidden></div></div><div class="diagram-canvas-tools" role="toolbar"><button data-action="pan" aria-pressed="true">Pan</button><button data-action="comment" aria-pressed="false">Comment</button><button data-action="zoom-out">−</button><button data-action="actual" data-zoom>100%</button><button data-action="zoom-in">+</button><button data-action="fit">Fit</button><button data-action="width">Fit width</button></div><div data-canvas-status role="status"></div></main>
+  <div class="diagram-workspace"><aside id="diagram-outline" class="diagram-outline" aria-label="Diagram navigator"><div class="diagram-overview"><p>${escapeHtml(bundle.summary ?? '')}</p></div><section class="diagram-element-details" data-element-details hidden aria-label="Selected element"><header><strong data-element-kind></strong><button type="button" data-action="close-details" aria-label="Clear selected element">×</button></header><h2 data-element-label></h2><p data-element-endpoints></p><p data-element-description></p><details><summary>Element reference</summary><code data-element-id></code></details><div><button type="button" data-action="toggle-group" aria-pressed="false" hidden>Collapse group details</button><button type="button" data-action="comment-element">Comment on element</button><button type="button" data-action="connections" aria-pressed="false">Focus connections</button></div></section><label class="diagram-search">Find in diagram<input type="search" data-search placeholder="Search labels…"></label><nav aria-label="Diagram elements">${links}<p data-search-empty hidden>No matching labels.</p></nav></aside>
+  <main class="diagram-canvas" tabindex="0" aria-label="Diagram canvas"><div class="diagram-scene" style="width:${scene.width}px;height:${scene.height}px"><div class="diagram-drawing">${scene.svg}</div><div class="planr-annotation-layer" data-planr-annotation-layer="${escapeHtml(bundle.diagramId)}" aria-label="Diagram annotations"></div><div data-selection class="planr-region-selection" hidden></div></div><div class="diagram-canvas-tools" role="toolbar" aria-label="Diagram tools"><div><button type="button" data-action="pan" aria-pressed="true" title="Pan (V)">Pan</button><button type="button" data-action="comment" aria-pressed="false" title="Add comment (C)">Comment</button></div><div><button type="button" data-action="zoom-out" aria-label="Zoom out">−</button><button type="button" data-action="actual" data-zoom title="Actual size (1)">100%</button><button type="button" data-action="zoom-in" aria-label="Zoom in">+</button></div><div><button type="button" data-action="fit" title="Fit diagram (F)">Fit</button><button type="button" data-action="width" title="Fit width (W)">Fit width</button></div></div><div class="diagram-canvas-status" role="status" data-canvas-status>Drag anywhere to pan</div></main>
   ${renderArtifactRail({ railOpen: false, feedbackCount: 0 } as Parameters<typeof renderArtifactRail>[0])}</div><p class="planr-visually-hidden" data-planr-announcer aria-live="polite"></p></div>`;
 }
 /** Native scene review, with the same legacy camera or read-only authored editor as the owner. */
@@ -328,7 +347,7 @@ export function mountDiagramSharedReview({
         title: bundle.title,
         viewport: { width: bundle.scene.width, height: bundle.scene.height },
       },
-      items: bundle.scene.items,
+      items: displayItems(bundle.scene),
       relations: bundle.scene.relations,
       review: host.initialReview ?? null,
       reviewOf: host.reviewOf,

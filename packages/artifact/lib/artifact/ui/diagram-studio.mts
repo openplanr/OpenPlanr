@@ -595,11 +595,12 @@ export function mountDiagramStudio(
     (details.querySelector('[data-element-kind]') as HTMLElement).textContent =
       item.semanticKind ?? item.kind;
     (details.querySelector('[data-element-id]') as HTMLElement).textContent = item.id;
-    (details.querySelector('[data-element-description]') as HTMLElement).textContent =
-      item.description || 'No supporting description provided.';
-    (details.querySelector('[data-element-endpoints]') as HTMLElement).textContent = item.from
-      ? `${item.fromLabel} → ${item.toLabel}`
-      : '';
+    const description = details.querySelector('[data-element-description]') as HTMLElement;
+    description.textContent = item.description ?? '';
+    description.hidden = !item.description;
+    const endpoints = details.querySelector('[data-element-endpoints]') as HTMLElement;
+    endpoints.textContent = item.from ? `${item.fromLabel} → ${item.toLabel}` : '';
+    endpoints.hidden = !item.from;
     const groupToggle = root.querySelector('[data-action=toggle-group]') as HTMLButtonElement;
     groupToggle.hidden = item.kind !== 'Group';
     groupToggle.textContent = collapsedGroups.has(item.id)
