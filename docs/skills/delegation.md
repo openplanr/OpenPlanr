@@ -73,6 +73,8 @@ probe alone does not certify implementation and correction. Cursor Agent file ed
 and exact-session correction were exercised, but startup hook and MCP isolation
 remain unverified. Cursor engine enrollment stays unsupported until that boundary
 is proven; installing the Cursor skill projection does not enable it.
+`CURSOR_CONFIG_DIR` redirects CLI settings, not every hook, plugin or MCP startup
+source. Tool permission deny rules do not establish startup isolation.
 
 ### Claude Code with local Qwen
 

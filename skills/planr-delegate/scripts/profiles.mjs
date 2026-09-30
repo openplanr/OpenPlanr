@@ -66,7 +66,7 @@ function validateProfileFields(input) {
   if (kind === 'cursor')
     throw new AdapterError(
       'E_DELEGATE_ENGINE_UNSUPPORTED',
-      'Cursor CLI delegation is not verified. Use a supported Claude Code or Codex enrollment; a Cursor skill projection does not certify its engine.',
+      'Cursor CLI delegation requires verified startup isolation for hooks, plugins and MCP. Use Claude Code or Codex until that boundary is supported.',
     );
   if (!ADAPTERS[kind]) throw new AdapterError('E_PROFILE_INVALID', 'Unsupported adapter kind.');
   if (

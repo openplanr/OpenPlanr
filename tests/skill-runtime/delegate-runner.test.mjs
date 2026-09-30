@@ -1610,22 +1610,43 @@ test('setup inspection separates real npm lifecycle edits, freezes acknowledged 
   assert.equal(await readFile(join(root, 'source.txt'), 'utf8'), 'corrected by generic adapter\n');
 });
 
-test('Cursor engine enrollment reports its support boundary without sending task data', async (t) => {
-  const { root, profileDirectory } = await fixture(t);
-  await assert.rejects(
-    delegateRunnerCommand('profile-preview', {
-      repositoryRoot: root,
-      profileDirectory,
-      profile: {
-        name: 'cursor',
-        kind: 'cursor',
-        executable: 'agent',
-        argv: [],
-        allowedEnv: [],
-        workingDirectory: 'worktree',
-      },
-    }),
-    (error) => error.code === 'E_DELEGATE_ENGINE_UNSUPPORTED',
+test('Cursor enrollment refuses startup before executing the engine or collecting task data', async (t) => {
+  const { base, root, runDirectory, profileDirectory } = await fixture(t);
+  const marker = join(base, 'cursor-started');
+  const executable = join(base, 'cursor.mjs');
+  await writeFile(
+    executable,
+    `#!${process.execPath}
+import {writeFileSync} from 'node:fs';writeFileSync(${JSON.stringify(marker)}, 'started');
+`,
+    { mode: 0o700 },
   );
+  const profile = {
+    name: 'cursor',
+    kind: 'cursor',
+    executable,
+    argv: [],
+    allowedEnv: [],
+    workingDirectory: 'worktree',
+  };
+  const unsupported = (error) => {
+    assert.equal(error.code, 'E_DELEGATE_ENGINE_UNSUPPORTED');
+    assert.match(error.message, /startup isolation for hooks, plugins and MCP/u);
+    return true;
+  };
+  await assert.rejects(
+    delegateRunnerCommand('profile-preview', { repositoryRoot: root, profileDirectory, profile }),
+    unsupported,
+  );
+  await assert.rejects(
+    enrollProfile(
+      { ...profile, destination: { class: 'external', origin: 'https://api2.cursor.sh' } },
+      { directory: profileDirectory },
+    ),
+    unsupported,
+  );
+  await assert.rejects(stat(marker), (error) => error.code === 'ENOENT');
   assert.deepEqual(await readdir(profileDirectory), []);
+  assert.deepEqual(await readdir(runDirectory), []);
+  assert.equal(await readFile(join(root, 'source.txt'), 'utf8'), 'starting text\n');
 });

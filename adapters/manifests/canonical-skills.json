@@ -1051,7 +1051,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:24ee6f07449a41c8fa951028671f5bc06042247dc6ec5a00da8b0d208388f78c"
+          "digest": "sha256:65dd27c131e8f1ee054d09cccad693b63420508fff2e23cf9a3be8bcbaeba141"
         },
         {
           "path": "scripts/run-record.mjs",
