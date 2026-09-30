@@ -686,6 +686,28 @@ export async function buildContextCapsule({
       updatePolicy: 'report-only',
     },
     sourceKeys: [...roots.keys()],
+    readingOrder: [...inventory]
+      .sort((a, b) => {
+        const rank = (entry) =>
+          !entry.required
+            ? 3
+            : entry.roles.includes('repository-instructions')
+              ? 0
+              : entry.roles.some((role) =>
+                    [
+                      'task',
+                      'story',
+                      'specification',
+                      'acceptance-gherkin',
+                      'architecture-decision',
+                      'dependency',
+                    ].includes(role),
+                  )
+                ? 1
+                : 2;
+        return rank(a) - rank(b);
+      })
+      .map(({ repositoryKey, path }) => `${repositoryKey}/${path}`),
   };
 }
 
@@ -787,6 +809,7 @@ function decodedMirror(capsule) {
             readablePath: `${file.repositoryKey}/${file.path}`,
           })),
           omissions: capsule.omissions,
+          ...(capsule.readingOrder ? { readingOrder: capsule.readingOrder } : {}),
         },
         null,
         2,

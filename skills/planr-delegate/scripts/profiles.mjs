@@ -63,6 +63,11 @@ function validateProfileFields(input) {
   }
   const { name, kind, executable, argv, allowedEnv, workingDirectory, configDir } = input;
   profilePath(name);
+  if (kind === 'cursor')
+    throw new AdapterError(
+      'E_DELEGATE_ENGINE_UNSUPPORTED',
+      'Cursor CLI delegation is not verified. Use a supported Claude Code or Codex enrollment; a Cursor skill projection does not certify its engine.',
+    );
   if (!ADAPTERS[kind]) throw new AdapterError('E_PROFILE_INVALID', 'Unsupported adapter kind.');
   if (
     typeof executable !== 'string' ||

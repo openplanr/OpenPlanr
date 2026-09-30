@@ -35,6 +35,7 @@ import {
   delegateRunStatus,
   dispatchDelegateRun,
   prepareDelegateRun,
+  probeDelegateHost,
   readDelegateCustody,
   recoverDelegateRun,
   resumeDelegateRun,
@@ -1119,6 +1120,18 @@ test('initial and resume prompts require one JSON result while omitting capsule 
     env: environment(logPath),
   });
   assert.equal(completed.status, 'completed');
+  assert.equal(completed.record.executionTiming.attempts, 2);
+  assert.equal(completed.record.executionTiming.last.phase, 'delegate-correction');
+  assert.equal(completed.record.executionTiming.last.status, 'completed');
+  assert.ok(
+    completed.record.executionTiming.durationMs >= completed.record.executionTiming.last.durationMs,
+  );
+  const timedStatus = await delegateRunStatus({
+    runId: prepared.runId,
+    runDirectory,
+  });
+  assert.deepEqual(timedStatus.timings.execution, completed.record.executionTiming);
+  assert.ok(timedStatus.timings.preparation.durationMs >= 0);
   const invocations = await calls(logPath);
   assert.deepEqual(
     invocations.map(({ operation }) => operation),
@@ -1446,4 +1459,173 @@ test('timeout, cancellation, exit, partial output and restart recovery keep priv
   const operationalText = `${await readFile(join(runDirectory, interrupted.runId, 'record.json'), 'utf8')}\n${await readFile(logPath, 'utf8')}`;
   assert.ok(!operationalText.includes('private credential text'));
   assert.ok(!operationalText.includes('Interrupted request'));
+});
+
+test('host preflight diagnoses missing Git and empty repositories before creating task state', async (t) => {
+  const { base, root, runDirectory, profileDirectory } = await fixture(t);
+  const host = await probeDelegateHost({
+    repositoryRoot: root,
+    env: { PATH: join(base, 'missing') },
+  });
+  assert.equal(host.ready, false);
+  assert.equal(host.git.ready, false);
+  const empty = join(base, 'empty');
+  await mkdir(empty);
+  git(empty, 'init', '-q');
+  assert.equal((await probeDelegateHost({ repositoryRoot: empty })).repository.ready, false);
+  await assert.rejects(
+    prepareDelegateRun({
+      repositoryRoot: empty,
+      profile: 'missing',
+      request: 'Do not collect this request',
+      runDirectory,
+      profileDirectory,
+    }),
+    (error) => error.code === 'E_DELEGATE_PREREQUISITE',
+  );
+  assert.deepEqual(await readdir(runDirectory), []);
+  assert.deepEqual(await readdir(profileDirectory), []);
+});
+
+test('setup inspection separates real npm lifecycle edits, freezes acknowledged paths and preserves exact resume', async (t) => {
+  const { base, root, runDirectory, profileDirectory } = await fixture(t);
+  await put(root, '.gitignore', 'node_modules/\n');
+  await put(root, 'package-lock.json', '{"lockfileVersion":3}\n');
+  await put(
+    root,
+    'setup.cjs',
+    "require('node:fs').writeFileSync('package-lock.json', '{\"lockfileVersion\":3,\"setup\":true}\\n');\n",
+  );
+  await put(
+    root,
+    'package.json',
+    JSON.stringify({
+      name: 'setup-fixture',
+      version: '1.0.0',
+      scripts: { postinstall: 'node setup.cjs', test: 'node --test check.mjs' },
+    }),
+  );
+  await put(
+    root,
+    'check.mjs',
+    "import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';assert.match(readFileSync('source.txt','utf8'),/corrected/);\n",
+  );
+  git(root, 'add', '.');
+  git(root, 'commit', '-qm', 'setup fixture');
+  const backend = await modelServer(t);
+  await fakeProfile({ base, profileDirectory, origin: backend.origin });
+  const prepared = await prepareDelegateRun({
+    repositoryRoot: root,
+    request: 'Update source.txt.',
+    selectedFiles: ['source.txt'],
+    scopePaths: ['source.txt'],
+    profile: 'fake',
+    runDirectory,
+    profileDirectory,
+  });
+  const { runId, worktreePath } = prepared.record;
+  assert.equal(
+    await readFile(join(worktreePath, 'package-lock.json'), 'utf8'),
+    '{"lockfileVersion":3}\n',
+  );
+  // Execute a real lifecycle script; the helper itself never installs dependencies.
+  execFileSync('npm', ['run', 'postinstall'], { cwd: worktreePath, stdio: 'pipe' });
+  const input = {
+    runId,
+    runDirectory,
+    env: {
+      ...process.env,
+      FAKE_LOG_PATH: join(base, 'adapter-calls.jsonl'),
+      FAKE_MODE: 'edit-worktree',
+    },
+  };
+  const refused = await delegateRunnerCommand('dispatch', input);
+  assert.equal(refused.record.diagnostic.code, 'E_DELEGATE_SETUP_UNACKNOWLEDGED');
+  const preview = await delegateRunnerCommand('setup-preview', input);
+  assert.deepEqual(preview.paths, ['package-lock.json']);
+  assert.equal(JSON.stringify(preview).includes('lockfileVersion'), false);
+  await assert.rejects(
+    delegateRunnerCommand('setup-accept', { ...input, expectedDigest: 'wrong' }),
+    (error) => error.code === 'E_DELEGATE_SETUP_DRIFT',
+  );
+  const accepted = await delegateRunnerCommand('setup-accept', {
+    ...input,
+    expectedDigest: preview.digest,
+  });
+  assert.equal(accepted.accepted, true);
+  assert.equal(await readFile(join(root, 'package-lock.json'), 'utf8'), '{"lockfileVersion":3}\n');
+  const dispatched = await delegateRunnerCommand('dispatch', input);
+  assert.equal(dispatched.status, 'completed');
+  await assert.rejects(
+    delegateRunnerCommand('setup-accept', { ...input, expectedDigest: preview.digest }),
+    (error) => error.code === 'E_DELEGATE_SETUP_STATE',
+  );
+  const corrected = await delegateRunnerCommand('resume', {
+    ...input,
+    correction: 'Correct source.txt.',
+  });
+  assert.equal(corrected.status, 'completed');
+  assert.equal(corrected.record.backendSessionId, dispatched.record.backendSessionId);
+  const reviewed = await delegateIntegrationCommand('review', {
+    runId,
+    runDirectory,
+    scopePaths: ['source.txt'],
+  });
+  assert.deepEqual(reviewed.changedPaths, ['source.txt']);
+  const custody = await readDelegateCustody(input);
+  assert.equal(
+    custody.startingFiles['source.txt'].contentBase64,
+    Buffer.from('starting text\n').toString('base64'),
+  );
+  await writeFile(join(worktreePath, 'package-lock.json'), 'delegate touched setup');
+  const blocked = await delegateRunnerCommand('resume', { ...input, correction: 'Continue.' });
+  assert.equal(blocked.record.diagnostic.code, 'E_DELEGATE_CUSTODY_DRIFT');
+  assert.ok(
+    blocked.record.diagnostic.details.violations.some((v) => v.code === 'E_CUSTODY_SETUP_CHANGED'),
+  );
+  await writeFile(
+    join(worktreePath, 'package-lock.json'),
+    Buffer.from(custody.setupFiles['package-lock.json'].contentBase64, 'base64'),
+  );
+  assert.equal(
+    (
+      await delegateRunnerCommand('resume', {
+        ...input,
+        correction: 'Confirm the source correction.',
+      })
+    ).status,
+    'completed',
+  );
+  const integrated = await delegateIntegrationCommand('apply', {
+    runId,
+    runDirectory,
+    scopePaths: ['source.txt'],
+    checks: [{ command: 'npm run test', cwd: '.' }],
+  });
+  assert.equal(integrated.status, 'completed');
+  assert.deepEqual(integrated.changedPaths, ['source.txt']);
+  assert.equal(await readFile(join(root, 'package-lock.json'), 'utf8'), '{"lockfileVersion":3}\n');
+  assert.equal((await delegateRunnerCommand('status', input)).setup.paths[0], 'package-lock.json');
+
+  assert.equal(await readFile(join(root, 'source.txt'), 'utf8'), 'corrected by generic adapter\n');
+});
+
+test('Cursor engine enrollment reports its support boundary without sending task data', async (t) => {
+  const { root, profileDirectory } = await fixture(t);
+  await assert.rejects(
+    delegateRunnerCommand('profile-preview', {
+      repositoryRoot: root,
+      profileDirectory,
+      profile: {
+        name: 'cursor',
+        kind: 'cursor',
+        executable: 'agent',
+        argv: [],
+        allowedEnv: [],
+        workingDirectory: 'worktree',
+      },
+    }),
+    (error) => error.code === 'E_DELEGATE_ENGINE_UNSUPPORTED',
+  );
+  assert.deepEqual(await readdir(profileDirectory), []);
 });

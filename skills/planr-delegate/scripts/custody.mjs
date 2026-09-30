@@ -480,6 +480,55 @@ export async function createWorktreeCustody({
   }
 }
 
+export async function headFileState(root, path, revision) {
+  const output = await git(root, ['ls-tree', '-z', revision, '--', path]);
+  const line = output
+    .toString('utf8')
+    .split('\0')
+    .find((entry) => entry.endsWith(`\t${path}`));
+  if (!line) return { kind: 'absent' };
+  const match = /^(100644|100755|120000) blob ([a-f0-9]+)\t(.+)$/u.exec(line);
+  if (!match || match[3] !== path)
+    throw new CustodyError('E_INTEGRATION_TREE', 'Unsupported Git tree entry.', { path });
+  const bytes = await git(root, ['cat-file', 'blob', match[2]]);
+  if (match[1] === '120000')
+    return { kind: 'symlink', mode: 0o777, target: bytes.toString('utf8') };
+  return {
+    kind: 'file',
+    mode: match[1] === '100755' ? 0o755 : 0o644,
+    bytes: bytes.length,
+    contentBase64: bytes.toString('base64'),
+  };
+}
+
+// Dependency setup has its own baseline. It never changes source custody.
+export async function inspectWorktreeSetup(record) {
+  const current = await validateWorktreeCustody(record);
+  if (!current.valid)
+    throw new CustodyError('E_CUSTODY_SETUP', 'Setup changed protected custody.', {
+      violations: current.violations,
+    });
+  const files = {};
+  const paths = [
+    ...new Set([...current.changedPaths, ...Object.keys(record.startingFiles ?? {})]),
+  ].sort();
+  for (const path of paths) {
+    const before =
+      record.setupFiles?.[path] ??
+      record.startingFiles?.[path] ??
+      (await headFileState(record.worktreePath, path, record.initialHead));
+    const after = await captureFileState(record.worktreePath, path);
+    if (
+      !sameGitState(
+        await gitFileState(record.worktreePath, path, before),
+        await gitFileState(record.worktreePath, path, after),
+      )
+    )
+      files[path] = after;
+  }
+  return { files, digest: digest(Buffer.from(JSON.stringify(files))) };
+}
+
 export async function validateWorktreeCustody(record) {
   if (!record || record.kind !== 'openplanr-delegation-worktree-custody')
     throw new CustodyError('E_CUSTODY_RECORD', 'A custody record is required.');
@@ -517,6 +566,16 @@ export async function validateWorktreeCustody(record) {
     }
     if (JSON.stringify(now) !== JSON.stringify(record.preservedFiles[path]))
       violations.push({ code: 'E_CUSTODY_PRESERVE', path });
+  }
+  for (const [path, expected] of Object.entries(record.setupFiles ?? {})) {
+    const current = await captureFileState(root, path);
+    if (
+      !sameGitState(
+        await gitFileState(root, path, expected),
+        await gitFileState(root, path, current),
+      )
+    )
+      violations.push({ code: 'E_CUSTODY_SETUP_CHANGED', path });
   }
   return { valid: violations.length === 0, violations, changedPaths: currentStatus.changedPaths };
 }

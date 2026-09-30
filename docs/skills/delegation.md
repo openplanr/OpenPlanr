@@ -49,11 +49,13 @@ not establish local execution support. A terminal-less host stops with
 ### Verified configurations
 
 These configurations passed packaged implementation and exact-session correction
-journeys on 30 September 2026:
+journeys on 30 September and 1 October 2026:
 
 | Engine | Provider and destination | Tested model |
 | --- | --- | --- |
 | Claude Code 2.1.285 | Signed-in Claude account; `https://api.anthropic.com` | `claude-sonnet-5-5` |
+| Claude Code 2.1.286 | Signed-in Claude account; `https://api.anthropic.com` | Backend default, observed `claude-opus-5-5`; no override |
+| Codex CLI 0.159.1 | Signed-in ChatGPT account; `https://chatgpt.com` | Configured default `gpt-6.1-sol` |
 | Claude Code 2.1.286 | Local LM Studio; `http://localhost:1234`, with the per-model template repair below | `qwen3.8-flash-next`, Unsloth IQ4_XS GGUF, loaded with a 262,144-token context |
 | Codex CLI 0.159.1 | Local LM Studio; `http://localhost:1234` | `qwen3.8-flash-next`, loaded with a 262,144-token context |
 
@@ -67,7 +69,10 @@ This verifies the listed configurations, not every provider or model combination
 The unmodified tested Qwen template rejects Claude's later system messages; the
 local Claude verification includes the per-model repair below. Other local models,
 generic adapters and different engine versions need their own complete journey. Model-list visibility or a successful
-probe alone does not certify implementation and correction.
+probe alone does not certify implementation and correction. Cursor Agent file edits
+and exact-session correction were exercised, but startup hook and MCP isolation
+remain unverified. Cursor engine enrollment stays unsupported until that boundary
+is proven; installing the Cursor skill projection does not enable it.
 
 ### Claude Code with local Qwen
 
@@ -99,8 +104,9 @@ backend before resuming that session; do not switch providers or silently retry.
 ## Checks, context and limits
 
 Install required dependencies only in the detached worktree. Inspect installation
-changes before dispatch: a rewritten tracked source or lockfile must not be
-attributed to the delegate. Do not link dependencies from the source checkout.
+changes with `setup-preview` and accept their digest using `setup-accept` before
+dispatch. These host-authored paths remain outside the delegate patch and are
+frozen during execution. Unacknowledged changes stop dispatch. Do not link dependencies from the source checkout.
 
 The complete required task context is copied privately, including ignored planning
 files, and mirrored as readable files for native tools. Required files cannot be
@@ -114,8 +120,9 @@ it does not quietly repair source and call that delegated work.
 
 Integration runs delegate-written code in a private scratch Git repository, using
 a minimal environment and private HOME. This reduces exposure of host credentials;
-it is not an OS sandbox for trusted npm scripts. The current helper accepts
-`npm run <declared-script>` and safe `node --test <paths>` checks. Generators are
+it is not an OS sandbox for trusted npm scripts. The helper accepts ordered npm build preparation,
+`npm run <declared-script> -- <safe-test-paths>` and `node --test <paths>` checks.
+Each attempt retains private commands, exits, durations and baseline evidence. Generators are
 declared npm package scripts under `packages/` with exact output paths. Python,
 Go, pnpm and Make commands are not accepted by this preview: use an explicit
 supported verification script or report verification as incomplete. Zero checks

@@ -943,3 +943,243 @@ test('real run-record preflight rejects oversized final metadata before writing 
   assert.equal(result.code, 'E_RUN_LIMIT', JSON.stringify(result));
   assert.equal(await readFile(join(data.repositoryRoot, 'tracked.txt'), 'utf8'), 'base\n');
 });
+
+async function compiledFixture() {
+  const data = await fixture({
+    files: {
+      '.gitignore': 'node_modules/\ndist/\n',
+      'packages/library/package.json': JSON.stringify({
+        scripts: { build: 'node build.mjs' },
+      }),
+      'packages/library/value.txt': 'base',
+      'packages/library/build.mjs':
+        "import{mkdirSync,readFileSync,writeFileSync}from'node:fs';mkdirSync('dist',{recursive:true});writeFileSync('dist/value.txt',readFileSync('value.txt'));",
+      'packages/client/package.json': JSON.stringify({
+        scripts: { test: 'node check.mjs' },
+      }),
+      'packages/client/check.mjs':
+        "import{readFileSync}from'node:fs';const v=readFileSync('node_modules/library/dist/value.txt','utf8');if(process.argv[2]!=='tests/focused.test.mjs'||v!==readFileSync('../library/value.txt','utf8'))process.exit(2);if(process.argv.includes('tests/regression.test.mjs')&&v==='candidate')process.exit(3);",
+    },
+  });
+  await mkdir(join(data.repositoryRoot, 'packages/client/node_modules'), {
+    recursive: true,
+  });
+  await symlink('../../library', join(data.repositoryRoot, 'packages/client/node_modules/library'));
+  await writeFile(join(data.custody.worktreePath, 'packages/library/value.txt'), 'candidate');
+  return data;
+}
+const buildSteps = [{ cwd: 'packages/library', command: 'npm run build' }];
+const focusedCheck = [
+  {
+    cwd: 'packages/client',
+    command: 'npm run test',
+    args: ['--', 'tests/focused.test.mjs'],
+  },
+];
+
+test('scratch prepares workspace builds and package-local dependencies before a focused check', async () => {
+  const data = await compiledFixture();
+  const { runId, runDirectory } = await recordedRun(data);
+  await delegateIntegrationCommand('review', {
+    runId,
+    runDirectory,
+    scopePaths: ['packages/library/value.txt'],
+  });
+  const result = await delegateIntegrationCommand('apply', {
+    runId,
+    runDirectory,
+    scopePaths: ['packages/library/value.txt'],
+    preparation: buildSteps,
+    checks: focusedCheck,
+  });
+  assert.equal(result.status, 'completed', JSON.stringify(result));
+  assert.equal(result.verification.preparation[0].status, 'passed');
+  assert.equal(result.checks[0].exitCode, 0);
+  assert.ok(result.checks[0].durationMs >= 0);
+  assert.ok(Date.parse(result.checks[0].finishedAt) >= Date.parse(result.checks[0].startedAt));
+  assert.equal(
+    await readFile(join(data.repositoryRoot, 'packages/library/value.txt'), 'utf8'),
+    'candidate',
+  );
+  await assert.rejects(lstat(join(data.repositoryRoot, 'packages/library/dist')), {
+    code: 'ENOENT',
+  });
+  const evidence = JSON.parse(await readFile(result.verification.evidencePath, 'utf8'));
+  assert.equal((await lstat(result.verification.evidencePath)).mode & 0o077, 0);
+  assert.equal(evidence.status, 'completed');
+  assert.deepEqual(
+    evidence.phases.map(({ phase }) => phase),
+    ['scratch-preparation', 'build-preparation', 'checks', 'source-write'],
+  );
+  for (const phase of evidence.phases) assert.ok(phase.durationMs >= 0);
+  const status = await delegateRunStatus({ runId, runDirectory });
+  assert.deepEqual(status.verification, evidence);
+  assert.match(status.report.Checks, /passed, [0-9.]+s/u);
+  await new Promise((resolve) => setTimeout(resolve, 25));
+  assert.equal((await delegateRunStatus({ runId, runDirectory })).elapsedMs, status.elapsedMs);
+  // An accepted integration remains authoritative if a process ended before final timing persisted.
+  await updateRunRecord(
+    runId,
+    {
+      verification: {
+        ...evidence,
+        status: 'running',
+        phase: 'source-write',
+        process: { pid: 2147483647, started: 'exited', source: 'ps' },
+      },
+    },
+    { directory: runDirectory },
+  );
+  const recovered = await delegateRunStatus({ runId, runDirectory });
+  assert.equal(recovered.phase, 'integrated');
+  assert.equal(recovered.nextAction, status.nextAction);
+});
+
+test('fresh rebuilt baseline identifies regressions and keeps failed evidence after a successful retry', async () => {
+  const data = await compiledFixture();
+  const { runId, runDirectory } = await recordedRun(data);
+  const input = {
+    runId,
+    runDirectory,
+    scopePaths: ['packages/library/value.txt'],
+    preparation: buildSteps,
+  };
+  await delegateIntegrationCommand('review', input);
+  const failed = await delegateIntegrationCommand('apply', {
+    ...input,
+    checks: [
+      {
+        cwd: 'packages/client',
+        command: 'npm run test',
+        args: ['--', 'tests/focused.test.mjs', 'tests/regression.test.mjs'],
+      },
+    ],
+  });
+  assert.equal(failed.code, 'E_INTEGRATION_CHECKS', JSON.stringify(failed));
+  assert.equal(failed.checks[0].classification, 'regression');
+  assert.equal(failed.checks[0].baseline.exitCode, 0);
+  assert.deepEqual(
+    failed.verification.preparation.map(({ target }) => target),
+    ['candidate', 'baseline'],
+  );
+  const priorBytes = await readFile(failed.verification.evidencePath);
+  assert.equal(
+    await readFile(join(data.repositoryRoot, 'packages/library/value.txt'), 'utf8'),
+    'base',
+  );
+  await assert.rejects(delegateIntegrationCommand('apply', { ...input, checks: [] }), {
+    code: 'E_INTEGRATION_CHECKS_REQUIRED',
+  });
+  await writeFile(join(data.custody.worktreePath, 'packages/library/value.txt'), 'corrected');
+  await delegateIntegrationCommand('review', input);
+  const accepted = await delegateIntegrationCommand('apply', {
+    ...input,
+    checks: [
+      {
+        cwd: 'packages/client',
+        command: 'npm run test',
+        args: ['--', 'tests/focused.test.mjs', 'tests/regression.test.mjs'],
+      },
+    ],
+  });
+  assert.equal(accepted.status, 'completed', JSON.stringify(accepted));
+  assert.equal(accepted.verification.attempt, 2);
+  assert.notEqual(accepted.verification.evidencePath, failed.verification.evidencePath);
+  assert.deepEqual(await readFile(failed.verification.evidencePath), priorBytes);
+});
+
+test('failed or mutating preparation blocks before checks and source writes', async () => {
+  for (const script of [
+    'process.exit(4)',
+    "require('fs').writeFileSync('tracked.txt','setup mutation')",
+  ]) {
+    const data = await fixture({
+      files: {
+        'package.json': JSON.stringify({
+          scripts: { build: `node -e "${script}"`, test: 'node -e ""' },
+        }),
+      },
+    });
+    await writeFile(join(data.custody.worktreePath, 'tracked.txt'), 'delegate\n');
+    const { runId, runDirectory } = await recordedRun(data);
+    const input = {
+      runId,
+      runDirectory,
+      scopePaths: ['tracked.txt'],
+      preparation: ['npm run build'],
+      checks: ['npm run test'],
+    };
+    await delegateIntegrationCommand('review', input);
+    const result = await delegateIntegrationCommand('apply', input);
+    assert.equal(result.status, 'blocked');
+    assert.ok(
+      ['E_INTEGRATION_PREPARATION', 'E_INTEGRATION_PREPARATION_SIDE_EFFECT'].includes(result.code),
+      JSON.stringify(result),
+    );
+    assert.deepEqual(result.checks, []);
+    assert.equal(result.verification.status, 'blocked');
+    assert.equal(await readFile(join(data.repositoryRoot, 'tracked.txt'), 'utf8'), 'base\n');
+  }
+});
+
+test('focused selection rejects flags, traversal and shell fragments before executing', async () => {
+  const data = await compiledFixture();
+  for (const args of [
+    ['--', '../outside.test.mjs'],
+    ['--', '--config=secret'],
+    ['--', 'test;touch'],
+    ['--', '/tmp/outside.test.mjs'],
+  ]) {
+    await assert.rejects(
+      integrateDelegateDelta({
+        custody: data.custody,
+        run,
+        scopePaths: ['packages/library/value.txt'],
+        checks: [{ cwd: 'packages/client', command: 'npm run test', args }],
+      }),
+      { code: 'E_INTEGRATION_CHECK_SELECTION' },
+    );
+  }
+});
+
+test('absolute dependency links cannot escape into the owner checkout from scratch', async () => {
+  const data = await compiledFixture();
+  await rm(join(data.repositoryRoot, 'packages/client/node_modules/library'));
+  await symlink(
+    join(data.repositoryRoot, 'packages/library'),
+    join(data.repositoryRoot, 'packages/client/node_modules/library'),
+  );
+  const result = await integrateDelegateDelta({
+    custody: data.custody,
+    run,
+    scopePaths: ['packages/library/value.txt'],
+    preparation: buildSteps,
+    checks: focusedCheck,
+  });
+  assert.equal(result.code, 'E_INTEGRATION_DEPENDENCY_LINK', JSON.stringify(result));
+  assert.equal(
+    await readFile(join(data.repositoryRoot, 'packages/library/value.txt'), 'utf8'),
+    'base',
+  );
+});
+
+test('interrupted verification is visible without claiming a completed check', async () => {
+  const data = await fixture();
+  const { runId, runDirectory } = await recordedRun(data);
+  await updateRunRecord(
+    runId,
+    {
+      verification: {
+        status: 'running',
+        phase: 'checks',
+        process: { pid: 2147483647, started: 'exited', source: 'ps' },
+        checks: [],
+      },
+    },
+    { directory: runDirectory },
+  );
+  const status = await delegateRunStatus({ runId, runDirectory });
+  assert.equal(status.phase, 'verification-interrupted');
+  assert.equal(status.verificationProcessState, 'exited');
+  assert.match(status.nextAction, /ended before its final evidence/u);
+});

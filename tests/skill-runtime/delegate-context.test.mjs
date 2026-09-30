@@ -513,3 +513,44 @@ test('prefixed and camelCase credentials and physical secret paths cannot enter 
   ])
     assert.equal(assertCredentialFreeText(text), text);
 });
+
+test('reading order prioritizes requirements without removing or truncating any required source', async (t) => {
+  const root = await fixture(t);
+  await put(root, 'background.md', 'Optional background\n');
+  const capsule = await buildContextCapsule({
+    repositoryRoot: root,
+    taskSelector: 'T-068',
+    selectedFiles: ['src/code.bin'],
+    optionalFiles: ['background.md'],
+  });
+  assert.equal(capsule.readingOrder[0], 'project/AGENTS.md');
+  assert.ok(
+    capsule.readingOrder.indexOf(`project/${taskPath}`) <
+      capsule.readingOrder.indexOf('project/src/code.bin'),
+  );
+  assert.equal(capsule.readingOrder.at(-1), 'project/background.md');
+  assert.deepEqual(
+    new Set(capsule.readingOrder),
+    new Set(capsule.inventory.map(({ repositoryKey, path }) => `${repositoryKey}/${path}`)),
+  );
+  const parent = await mkdtemp(join(tmpdir(), 'planr-reading-test-'));
+  t.after(() => rm(parent, { recursive: true, force: true }));
+  const path = await writeContextCapsule(capsule, {
+    repositoryRoot: root,
+    directory: join(parent, 'capsule'),
+  });
+  const index = JSON.parse(await readFile(join(parent, 'capsule/readable/index.json'), 'utf8'));
+  assert.deepEqual(index.readingOrder, capsule.readingOrder);
+  assert.deepEqual(
+    await readFile(join(parent, 'capsule/readable/project/src/code.bin')),
+    await readFile(join(root, 'src/code.bin')),
+  );
+  assert.equal((await validateContextMirror(path, capsule)).status, 'verified');
+  // Historical capsules keep the original mirror shape and remain verifiable.
+  delete capsule.readingOrder;
+  const legacy = await writeContextCapsule(capsule, {
+    repositoryRoot: root,
+    directory: join(parent, 'legacy'),
+  });
+  assert.equal((await validateContextMirror(legacy, capsule)).status, 'verified');
+});

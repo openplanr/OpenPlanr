@@ -38,3 +38,20 @@ Task Preserve paths are extracted from the capsule's full task frontmatter. Call
 `captureFileState(root,path)` reads one safe relative path for later integration; it rejects symlink escape. A failed preparation retains its newly created run directory for diagnosis. Questions, cancellation, crash, blocked result, failed validation, and merge conflicts never trigger cleanup automatically. `cleanupWorktreeCustody` requires an explicit `accepted` or `abandoned` disposition, verifies the registered managed worktree path, then removes only that worktree. Keep custody records private; they contain copies of selected source bytes. `CustodyError` never includes file content.
 
 The runner exposes explicit `cleanup` for accepted or abandoned runs, preserving private records until retention pruning. `prune` refuses a remaining managed worktree; failed/blocked/questioning runs are never cleaned automatically.
+
+## Dependency setup checkpoint
+
+After dependency installation, use the pinned runner's `setup-preview` with
+`runId` and `runDirectory`. Inspect the worktree changes, then pass that result's
+`digest` as `expectedDigest` to `setup-accept`. The preview returns only paths,
+file types and sizes; source bytes remain private. A stale digest fails without
+accepting changes. Setup records are permitted only before the first dispatch,
+never during correction or after execution.
+
+The original source and worktree baseline remain intact. An additional private
+setup snapshot records host-authored dependency changes. Dispatch refuses any
+other tracked or nonignored edit. Setup-owned paths are frozen: later edits fail
+custody and cannot enter the delegated patch. If a task must modify such a path,
+review setup separately in source and prepare a new run. Ignored dependencies
+need no checkpoint, and the helper never installs packages or runs lifecycle
+scripts automatically. `status` identifies the accepted setup paths separately.
