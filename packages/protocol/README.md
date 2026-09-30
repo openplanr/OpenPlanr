@@ -57,6 +57,19 @@ and adds an `onPrimary` text colour to both palettes. The artifact package
 generates its review theme CSS and JSON from it. The preserved registry keeps its
 original values.
 
+## Diagram review contracts
+
+Protocol 1.15 adds the browser-safe `@openplanr/protocol/diagram-review-contracts`
+export with diagram review bundle and feedback validators, workspace record
+validation and TypeScript types. Its additive `schemas/v1.15.0/` family contains
+`diagram-review-bundle.schema.json`, `diagram-review-feedback.schema.json`,
+`diagram-review-workspace.schema.json`, `diagram-workspace-create.schema.json`,
+`diagram-workspace-revision.schema.json` and `diagram-workspace-event.schema.json`.
+These contracts use payload `schemaVersion: "1.0.0"`. Review bundles preserve the
+published scene and revision identity without original source bytes or private
+provenance; feedback remains bound to that revision. Validation grants no hosted
+access and does not edit or publish diagrams. Earlier schema families are unchanged.
+
 ## Design document contract
 
 The additive `schemas/v1.9.0/design-document.schema.json` defines stable design,

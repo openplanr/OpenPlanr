@@ -188,7 +188,7 @@
       "ownerPackage": "openplanr",
       "source": {
         "path": "packages/cli/src/cli/commands/artifact.ts",
-        "digest": "sha256:708f51ac3c0ef40a35e4af231b790775f12d69592a80c5de92d82d852e435a53"
+        "digest": "sha256:628b64e8a1efda1f0e4899cdc3144c256dce5ce4bcff3c1f6d9a25c3d9a4cbe7"
       },
       "authorityClass": "workflow",
       "machineJson": false,
@@ -1948,5 +1948,5 @@
       ]
     }
   ],
-  "documentDigest": "sha256:0c77982ea0134b2148417b54cd0110095aeb84f2aa05813e46970d93771c7996"
+  "documentDigest": "sha256:9f34ed8942c28ac6d0cd4bfd3234c50ea8a4d72954a89df6e3596f3cc8e56be2"
 }

@@ -4,6 +4,7 @@ import test from 'node:test';
 import { GENERATOR_STEPS, resolveGeneratorPlan } from '../../scripts/generate-all.mjs';
 
 const expectedOrder = [
+  'diagram-review-font',
   'typescript-sources',
   'skill-role-host-adapters',
   'protocol-catalogs',

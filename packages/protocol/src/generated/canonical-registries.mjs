@@ -1339,7 +1339,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "ownerPackage": "openplanr",
         "source": {
           "path": "packages/cli/src/cli/commands/artifact.ts",
-          "digest": "sha256:708f51ac3c0ef40a35e4af231b790775f12d69592a80c5de92d82d852e435a53"
+          "digest": "sha256:628b64e8a1efda1f0e4899cdc3144c256dce5ce4bcff3c1f6d9a25c3d9a4cbe7"
         },
         "authorityClass": "workflow",
         "machineJson": false,
@@ -3099,7 +3099,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         ]
       }
     ],
-    "documentDigest": "sha256:0c77982ea0134b2148417b54cd0110095aeb84f2aa05813e46970d93771c7996"
+    "documentDigest": "sha256:9f34ed8942c28ac6d0cd4bfd3234c50ea8a4d72954a89df6e3596f3cc8e56be2"
   },
   "skills.json": {
     "kind": "skill-catalog",
@@ -3113,11 +3113,11 @@ export const CANONICAL_REGISTRIES = deepFreeze({
       {
         "skillId": "planr-artifact",
         "skillVersion": "1.0.0",
-        "description": "Open, share, import, or export an OpenPlanr HTML artifact review. Use when feedback must move between a local artifact and its review board.",
+        "description": "Open, share, import, or export an OpenPlanr diagram, design, or HTML artifact review. Use when feedback must move between a local artifact and its review board.",
         "lifecycle": "active",
         "authorityClass": "read-only-view",
         "source": "skills/planr-artifact/openplanr.skill.json",
-        "sourceDigest": "sha256:08ad4b7dcdfe70e63a319dcb78ff6c53f0086391f6d6d45094a793fe4d9c41ce",
+        "sourceDigest": "sha256:2df9ace1397aedb3beaec79f822f16aac84cdf7f7ffe3cccabf3cd10bffbb352",
         "triggerPolicy": {
           "include": [
             "Open or share an HTML artifact review",
@@ -3910,7 +3910,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "lifecycle": "active",
         "authorityClass": "artifact-authoring",
         "source": "skills/planr-diagram/openplanr.skill.json",
-        "sourceDigest": "sha256:1d8b8127914dd7a637ea475257c109a72544f860ddf5ec40c3a78563831a9906",
+        "sourceDigest": "sha256:806f3c53d56199e00cfa19d27eaf9a8a0ca397692de46948313b7da1f728dd47",
         "triggerPolicy": {
           "include": [
             "Create a professional diagram from English intent or Mermaid",
@@ -4767,7 +4767,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
       }
     ],
     "compatibilityAliases": [],
-    "documentDigest": "sha256:2d736dd0b8671ccb3bcc78ad28edab4d201d1fd3705c599d442b1fc317da1881"
+    "documentDigest": "sha256:e3f61d71a05a268294055de033e2ec2d44bfb7b05a95a18b6607ded3eb61e37b"
   },
   "outputs.json": {
     "kind": "output-catalog",

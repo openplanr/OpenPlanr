@@ -1,0 +1,134 @@
+@import "./generated/artifact-theme.css";
+@import "./diagram-studio.css";
+@import "./diagram-editor.css";
+.diagram-shared-review {
+  position: relative;
+  height: 100%;
+  min-height: 480px;
+  overflow: hidden;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  --planr-toolbar-height: 60px;
+  --planr-color-border: var(--planr-color-rule);
+  --planr-color-canvas: var(--planr-color-stage);
+  --planr-color-accent: var(--planr-color-primary);
+  --planr-font-body: Inter, ui-sans-serif, system-ui, sans-serif;
+  --planr-font-display: Inter, ui-sans-serif, system-ui, sans-serif;
+}
+.diagram-shared-review .diagram-shell {
+  height: 100%;
+  min-height: 0;
+}
+.diagram-shared-review * {
+  box-sizing: border-box;
+}
+.diagram-shared-review [hidden] {
+  display: none !important;
+}
+:where(.diagram-shared-review) :where(button:not(.planr-pin), summary) {
+  font: inherit;
+  background: var(--planr-color-panel);
+  color: var(--planr-color-text);
+  border: 1px solid var(--planr-color-border);
+  border-radius: 7px;
+  padding: 7px 10px;
+}
+.diagram-shared-review button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+:where(.diagram-shared-review) :focus-visible {
+  outline: 3px solid var(--planr-color-accent);
+  outline-offset: 2px;
+}
+:where(.diagram-shared-review .planr-toolbar) {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  gap: 8px;
+  border-bottom: 1px solid var(--planr-color-border);
+  z-index: 40;
+}
+:where(.diagram-shared-review .planr-review-rail) {
+  overflow: auto;
+  background: var(--planr-color-panel);
+  color: var(--planr-color-text);
+  border-left: 1px solid var(--planr-color-border);
+  padding: 16px;
+}
+.diagram-shared-review .planr-review-rail header {
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  align-items: center;
+}
+/* Match the canonical shell header while leaving native overrides authoritative. */
+:where(.diagram-shared-review .planr-review-metrics) {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+:where(.diagram-shared-review .planr-review-header-actions) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+:where(.diagram-shared-review .planr-count) {
+  min-width: 18px;
+  height: 18px;
+  display: inline-grid;
+  place-items: center;
+  padding-inline: 4px;
+  border-radius: 999px;
+  background: var(--planr-color-raised);
+  color: var(--planr-color-text-muted);
+  font: 10px / 1 var(--planr-font-mono);
+}
+.diagram-shared-review .planr-review-rail h2 {
+  font-size: 16px;
+}
+.diagram-shared-review .planr-domain-rail {
+  display: block;
+}
+:where(.diagram-shared-review) :where(input, textarea) {
+  max-width: 100%;
+  font: inherit;
+  background: var(--planr-color-panel);
+  color: var(--planr-color-text);
+  border: 1px solid var(--planr-color-border);
+  border-radius: 7px;
+  padding: 8px;
+}
+.diagram-shared-review .diagram-drawing text,
+.diagram-shared-review .diagram-drawing tspan {
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif !important;
+}
+.diagram-shared-review .planr-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+}
+.diagram-shared-history {
+  position: absolute;
+  z-index: 20;
+  top: 60px;
+  right: 0;
+  bottom: 0;
+  width: min(360px, 100%);
+  overflow: auto;
+  padding: 20px;
+  background: var(--planr-color-panel);
+  color: var(--planr-color-text);
+  border-left: 1px solid var(--planr-color-border);
+}
+@media (max-width: 700px) {
+  .diagram-shared-review {
+    min-height: 360px;
+  }
+}
+
+.diagram-shared-review[data-comment-mode="true"] [data-editor-svg] {
+  cursor: crosshair;
+}

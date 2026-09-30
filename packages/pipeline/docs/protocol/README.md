@@ -100,6 +100,14 @@ Review-shell tokens are generated from the Protocol 1.14 successor theme,
 and `registry/v1.14.0/artifact-theme.json`, which add an `onPrimary` text colour
 to each palette.
 
+Protocol 1.15 adds native diagram review schemas under
+[`../../schemas/v1.15.0/`](../../schemas/v1.15.0/): diagram review bundles,
+revision-bound feedback, review workspace metadata, workspace creation, revisions
+and events. Import their browser-safe validators and TypeScript types from
+`@openplanr/protocol/diagram-review-contracts`. Their payload format remains
+`schemaVersion: "1.0.0"`; they do not change earlier schema families or grant
+publication or hosted access.
+
 Operate Runtime contracts live under
 [`../../schemas/v2.0.0/`](../../schemas/v2.0.0/). They are the current
 development foundation. A v2 runtime accepts only its declared v2 contract

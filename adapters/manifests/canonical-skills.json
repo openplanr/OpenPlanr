@@ -39,8 +39,8 @@
       "version": "1.0.0",
       "source": "skills/planr-artifact/openplanr.skill.json",
       "entrypoint": "skills/planr-artifact/SKILL.md",
-      "description": "Open, share, import, or export an OpenPlanr HTML artifact review. Use when feedback must move between a local artifact and its review board.",
-      "sourceDigest": "sha256:0535101f32acb72fb1b80caf1375a521d9e17f966d44dfe8b4ed6e90c47d55d6",
+      "description": "Open, share, import, or export an OpenPlanr diagram, design, or HTML artifact review. Use when feedback must move between a local artifact and its review board.",
+      "sourceDigest": "sha256:66bebf72dfa7f2a52c4bc0f146c6240290414b47383fdce4dc1526720935b9a3",
       "resources": [
         {
           "path": "references/design-sharing.md",
@@ -74,7 +74,19 @@
             "chatgpt"
           ],
           "executable": false,
-          "digest": "sha256:0d25acf6c715bc6c0ad42f9cb6b2280041844b81f6a6b1b83b28ba0224c9ae5c"
+          "digest": "sha256:d2b3d02608b9fad29802553632990d360442f36d513c18b91d25bf7e35098b4d"
+        },
+        {
+          "path": "references/diagram-sharing.md",
+          "kind": "reference",
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "executable": false,
+          "digest": "sha256:343e5e6d67e9ec120e5c8095f909e4f18d17afd9f669d9725ab9a99be850d9f7"
         }
       ],
       "contracts": {
@@ -990,7 +1002,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:2612a0ac85e121b9562e6239e3832be64933c89ea5b5739b18b58748d69ac791"
+          "digest": "sha256:214b52aeafbf1996df76d3e2a8ff140240bec7aa477a798402e1f8af6ddac0ee"
         },
         {
           "path": "scripts/design-document.mjs",
@@ -1050,7 +1062,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:3e55cf8003b7f1645c5d9dded0ea206bf02cb6cf44f342815528e687768b0dbc"
+          "digest": "sha256:fcd27c05fd75fee7f40fee0241c1df4181d079d17d54fdf597af26135d65fc3e"
         },
         {
           "path": "scripts/design-sandbox-guards.mjs",
@@ -1074,7 +1086,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:11de427bd02b89fdf6df5b3d8eaffa7c2025ab841712c7dfc0da6e5a3e41ca36"
+          "digest": "sha256:6febde24a1fa6b29001a166c1997d759163dc79b2ff2a9a98094b0bb8aa81cda"
         },
         {
           "path": "schemas/design-document.schema.json",
@@ -1158,7 +1170,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:6923307acbdba81a4bcd1d24e5ed1553dc49b6f0a656222f397d36fd34afe265"
+          "digest": "sha256:c1afe8271c85ca7523aa520daf093c24a653f9fe6e08caffd56391a8b592c206"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/share.js",
@@ -1206,7 +1218,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:bb969da90f0482f19b3afc21b4b35e4c00efff42c69ec61d9c5c07395e2bfd69"
+          "digest": "sha256:dc32c52ec90b1b8e9db3a0c3cadf1a655e305e7577932c0ef366b80a0f67c320"
         },
         {
           "path": "scripts/runtime/packages/protocol/registries/artifact-theme.json",
@@ -1648,7 +1660,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:2612a0ac85e121b9562e6239e3832be64933c89ea5b5739b18b58748d69ac791"
+          "digest": "sha256:214b52aeafbf1996df76d3e2a8ff140240bec7aa477a798402e1f8af6ddac0ee"
         },
         {
           "path": "scripts/design-document.mjs",
@@ -1708,7 +1720,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:3e55cf8003b7f1645c5d9dded0ea206bf02cb6cf44f342815528e687768b0dbc"
+          "digest": "sha256:fcd27c05fd75fee7f40fee0241c1df4181d079d17d54fdf597af26135d65fc3e"
         },
         {
           "path": "scripts/design-sandbox-guards.mjs",
@@ -1732,7 +1744,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:11de427bd02b89fdf6df5b3d8eaffa7c2025ab841712c7dfc0da6e5a3e41ca36"
+          "digest": "sha256:6febde24a1fa6b29001a166c1997d759163dc79b2ff2a9a98094b0bb8aa81cda"
         },
         {
           "path": "schemas/design-document.schema.json",
@@ -1816,7 +1828,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:6923307acbdba81a4bcd1d24e5ed1553dc49b6f0a656222f397d36fd34afe265"
+          "digest": "sha256:c1afe8271c85ca7523aa520daf093c24a653f9fe6e08caffd56391a8b592c206"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/share.js",
@@ -1864,7 +1876,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:bb969da90f0482f19b3afc21b4b35e4c00efff42c69ec61d9c5c07395e2bfd69"
+          "digest": "sha256:dc32c52ec90b1b8e9db3a0c3cadf1a655e305e7577932c0ef366b80a0f67c320"
         },
         {
           "path": "scripts/runtime/packages/protocol/registries/artifact-theme.json",
@@ -2306,7 +2318,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:2612a0ac85e121b9562e6239e3832be64933c89ea5b5739b18b58748d69ac791"
+          "digest": "sha256:214b52aeafbf1996df76d3e2a8ff140240bec7aa477a798402e1f8af6ddac0ee"
         },
         {
           "path": "scripts/design-document.mjs",
@@ -2366,7 +2378,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:3e55cf8003b7f1645c5d9dded0ea206bf02cb6cf44f342815528e687768b0dbc"
+          "digest": "sha256:fcd27c05fd75fee7f40fee0241c1df4181d079d17d54fdf597af26135d65fc3e"
         },
         {
           "path": "scripts/design-sandbox-guards.mjs",
@@ -2390,7 +2402,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:11de427bd02b89fdf6df5b3d8eaffa7c2025ab841712c7dfc0da6e5a3e41ca36"
+          "digest": "sha256:6febde24a1fa6b29001a166c1997d759163dc79b2ff2a9a98094b0bb8aa81cda"
         },
         {
           "path": "schemas/design-document.schema.json",
@@ -2474,7 +2486,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:6923307acbdba81a4bcd1d24e5ed1553dc49b6f0a656222f397d36fd34afe265"
+          "digest": "sha256:c1afe8271c85ca7523aa520daf093c24a653f9fe6e08caffd56391a8b592c206"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/share.js",
@@ -2522,7 +2534,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:bb969da90f0482f19b3afc21b4b35e4c00efff42c69ec61d9c5c07395e2bfd69"
+          "digest": "sha256:dc32c52ec90b1b8e9db3a0c3cadf1a655e305e7577932c0ef366b80a0f67c320"
         },
         {
           "path": "scripts/runtime/packages/protocol/registries/artifact-theme.json",
@@ -2822,7 +2834,7 @@
       "source": "skills/planr-diagram/openplanr.skill.json",
       "entrypoint": "skills/planr-diagram/SKILL.md",
       "description": "Create, edit, inspect, verify, or rerender professional offline diagrams. Use for architecture, process, sequence, data, state, or relationship visuals from intent or source.",
-      "sourceDigest": "sha256:ddc1060e45fb8240d21136e80d70136d2b035feb8b20865947b142b0a68e0d45",
+      "sourceDigest": "sha256:898211dd84cbc0718aa34c6624a5fc6e3dfd998e5d9094c0d166ca32efbc95fd",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -2869,6 +2881,18 @@
           ],
           "executable": false,
           "digest": "sha256:ff8179545fb8aa017acff90cca81896b295682beacc53a82dac8a32f4fb1e005"
+        },
+        {
+          "path": "references/diagram-sharing.md",
+          "kind": "reference",
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "executable": false,
+          "digest": "sha256:343e5e6d67e9ec120e5c8095f909e4f18d17afd9f669d9725ab9a99be850d9f7"
         }
       ],
       "contracts": {
@@ -3259,7 +3283,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:2612a0ac85e121b9562e6239e3832be64933c89ea5b5739b18b58748d69ac791"
+          "digest": "sha256:214b52aeafbf1996df76d3e2a8ff140240bec7aa477a798402e1f8af6ddac0ee"
         },
         {
           "path": "scripts/design-document.mjs",
@@ -3319,7 +3343,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:3e55cf8003b7f1645c5d9dded0ea206bf02cb6cf44f342815528e687768b0dbc"
+          "digest": "sha256:fcd27c05fd75fee7f40fee0241c1df4181d079d17d54fdf597af26135d65fc3e"
         },
         {
           "path": "scripts/design-sandbox-guards.mjs",
@@ -3343,7 +3367,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:11de427bd02b89fdf6df5b3d8eaffa7c2025ab841712c7dfc0da6e5a3e41ca36"
+          "digest": "sha256:6febde24a1fa6b29001a166c1997d759163dc79b2ff2a9a98094b0bb8aa81cda"
         },
         {
           "path": "schemas/design-document.schema.json",
@@ -3427,7 +3451,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:6923307acbdba81a4bcd1d24e5ed1553dc49b6f0a656222f397d36fd34afe265"
+          "digest": "sha256:c1afe8271c85ca7523aa520daf093c24a653f9fe6e08caffd56391a8b592c206"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/share.js",
@@ -3475,7 +3499,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:bb969da90f0482f19b3afc21b4b35e4c00efff42c69ec61d9c5c07395e2bfd69"
+          "digest": "sha256:dc32c52ec90b1b8e9db3a0c3cadf1a655e305e7577932c0ef366b80a0f67c320"
         },
         {
           "path": "scripts/runtime/packages/protocol/registries/artifact-theme.json",

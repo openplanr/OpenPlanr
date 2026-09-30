@@ -63,6 +63,7 @@ export declare function resolveOperateExperienceSchemaV2(
   kind: string,
   options?: { protocolVersion?: string },
 ): ResolvedProtocolSchema;
+/** Includes closed diagram review kinds at exact Protocol 1.15.0. */
 export declare function validateProtocolArtifact(
   kind: string,
   value: unknown,

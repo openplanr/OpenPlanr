@@ -34,6 +34,11 @@ const REVERSE_DIRECTIONS = {
 };
 const UNSAFE_TEXT = /%%\{|<\s*(?:script|iframe|foreignObject)\b|javascript:|https?:\/\//iu;
 const UNSAFE_LABEL = /[\u0000-\u001f]/u;
+const MERMAID_KEYWORDS = new Set(
+  ['click', 'href', 'end', 'style', 'class', 'classDef', 'linkStyle', 'subgraph', 'direction'].map(
+    (keyword) => keyword.toLowerCase(),
+  ),
+);
 const SEMANTIC_EDIT_LOSS =
   'Semantic content changed after this source correspondence was captured.';
 const ENCODER = new TextEncoder();
@@ -1037,6 +1042,11 @@ export function exportMermaidCopy(bundle) {
       ),
     );
   };
+  const baseNames = new Set();
+  for (const entry of [...bundle.document.nodes, ...bundle.document.groups]) {
+    const n = ids.get(entry.id) ?? entry.id.replace(/-/gu, '_');
+    baseNames.add(n);
+  }
   const names = new Map(),
     occupied = new Set();
   for (const entry of [...bundle.document.nodes, ...bundle.document.groups]) {
@@ -1054,8 +1064,28 @@ export function exportMermaidCopy(bundle) {
           [entry.id],
         ),
       );
-    names.set(entry.id, name);
-    occupied.add(name);
+    if (MERMAID_KEYWORDS.has(name.toLowerCase())) {
+      const original = name;
+      let candidate = name;
+      while (
+        MERMAID_KEYWORDS.has(candidate.toLowerCase()) ||
+        baseNames.has(candidate) ||
+        occupied.has(candidate)
+      ) {
+        candidate = `${candidate}_`;
+      }
+      lost(
+        'semantic',
+        'keyword-id-renamed',
+        [entry.id],
+        `Element ${entry.id} uses Mermaid keyword "${original}" as ID; renamed to "${candidate}".`,
+      );
+      names.set(entry.id, candidate);
+      occupied.add(candidate);
+    } else {
+      names.set(entry.id, name);
+      occupied.add(name);
+    }
   }
   const byParent = new Map();
   for (const group of bundle.document.groups)

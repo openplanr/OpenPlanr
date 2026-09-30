@@ -1,7 +1,8 @@
 # Artifact review and private sharing
 
-`planr artifact` turns a project-local HTML file into a loopback-only review
-session with comments, pins, threads, and Approve or Request changes decisions.
+`planr artifact` opens native diagrams, authored designs, and HTML artifacts for
+local review or explicit encrypted sharing. Generic HTML sessions support
+comments, pins, threads, and Approve or Request changes decisions.
 JavaScript inside the artifact remains interactive in an opaque-origin,
 network-blocked sandbox.
 
@@ -44,6 +45,41 @@ layout bridge provides natural outer-page scrolling and full-document pins.
 This is private artifact review, not standalone website hosting. Publishing a
 top-level website would require a separate isolated artifact origin and is not
 part of this command.
+
+## Native diagram sharing
+
+```bash
+planr artifact open ./diagrams/handover/handover.manifest.json
+planr artifact share ./diagrams/handover/handover.manifest.json --yes --no-open
+planr artifact publish ./diagrams/handover/handover.manifest.json --yes
+planr artifact sync ./diagrams/handover/handover.manifest.json
+```
+
+An authored `diagrams/<slug>/<slug>.planr-diagram-bundle.json` is also accepted.
+Sharing publishes the selected diagram's native scene without converting its
+format or rerunning layout. The creation preview shows its title, source
+revision, publication contents, destination and retention. Original source
+bytes, local paths and private provenance are excluded.
+
+Each diagram has a stable `/diagram/<id>` URL and a separate reviewer access
+token. Use the local studio's **Share diagram** dialog to copy them separately.
+Owner custody is kept privately outside the repository. Ordinary command output
+contains no tokens or signing keys; `--secret-output` explicitly exports recovery
+to a new private file. Reviews last until revoked or deleted and remain available
+while the owner's laptop is offline.
+
+Local edits remain unpublished until **Publish revision** or `artifact publish`.
+Comments are tied to their published revision and element or scene position.
+Earlier revisions stay readable but accept no new comments. Synchronization
+imports feedback into the local ledger without modifying diagram content.
+Reviewers can use outline/search, inspection, pan/zoom, Fit, Present, Discussion,
+Revisions, and SVG/PNG or feedback export. The native shell loads its packaged
+font before reporting readiness and preserves wide diagrams without an HTML
+wrapper viewport.
+
+An incompatible installed runtime or hosted service produces a compatibility
+error. There is no automatic HTML fallback. To share an HTML snapshot, export
+HTML first and explicitly use the generic snapshot route.
 
 ## Private links
 

@@ -150,6 +150,11 @@ CLAUDE.md
 /skills/planr-plan/scripts/design*.mjs
 /packages/pipeline/lib/protocol/diagram-authoring-contracts.mjs
 /packages/pipeline/lib/protocol/diagram-authoring-contracts.d.mts
+/packages/pipeline/lib/protocol/diagram-review-contracts.mjs
+/packages/pipeline/lib/protocol/diagram-review-contracts.d.mts
+/packages/pipeline/lib/protocol/canonical-json.d.mts
+/packages/pipeline/lib/protocol/browser-contracts.mjs
+/packages/pipeline/lib/protocol/browser-contracts.d.mts
 /packages/pipeline/lib/protocol/generated/legacy-diagram-schema.mjs
 /packages/pipeline/registry/v1.13.0/diagram-authoring-capabilities.json
 /packages/pipeline/registry/v1.14.0/artifact-theme.json

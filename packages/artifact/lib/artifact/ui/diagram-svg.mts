@@ -65,6 +65,15 @@ const ATTRS = new Set([
   'stroke-dasharray',
   'opacity',
   'marker-end',
+  'marker-start',
+  'stroke-linecap',
+  'data-element-id',
+  'data-collection',
+  'data-semantic-kind',
+  'data-shape',
+  'data-z-index',
+  'data-emphasis',
+  'data-direction',
   'markerWidth',
   'markerHeight',
   'refX',
@@ -101,8 +110,11 @@ const number = (value: unknown, fallback = 0) => (Number.isFinite(Number(value))
 
 /** Rebuild a passive SVG allowlist before it enters the trusted parent DOM.
  * Use the verified output, so scene-owned edits and older renders keep their pixels. */
-export function prepareDiagramSvg(bytes: string) {
-  if (Buffer.byteLength(bytes, 'utf8') > 10 * 1024 * 1024) fail();
+export function prepareDiagramSvg(
+  bytes: string,
+  { allowOffset = false }: { allowOffset?: boolean } = {},
+) {
+  if (new TextEncoder().encode(bytes).byteLength > 10 * 1024 * 1024) fail();
   const fragment = parseFragment(bytes);
   const roots: MarkupNode[] = fragment.childNodes.filter(
     (node: MarkupNode) => node.nodeName !== '#text' || (node.value as string).trim(),
@@ -113,8 +125,8 @@ export function prepareDiagramSvg(bytes: string) {
   if (
     dimensions?.length !== 4 ||
     dimensions.some((value) => !Number.isFinite(value)) ||
-    dimensions[0] !== 0 ||
-    dimensions[1] !== 0 ||
+    (!allowOffset && (dimensions[0] !== 0 || dimensions[1] !== 0)) ||
+    dimensions.slice(0, 2).some((value) => Math.abs(value) > 16384) ||
     dimensions.slice(2).some((value) => value <= 0 || value > 16384)
   )
     fail();
@@ -145,7 +157,10 @@ export function prepareDiagramSvg(bytes: string) {
       let value = attr.value;
       if (attr.name === 'id') value = key(value);
       if (attr.name === 'aria-labelledby') value = value.split(/\s+/).map(key).join(' ');
-      if (['fill', 'stroke', 'marker-end'].includes(attr.name) && /url\s*\(/i.test(value)) {
+      if (
+        ['fill', 'stroke', 'marker-end', 'marker-start'].includes(attr.name) &&
+        /url\s*\(/i.test(value)
+      ) {
         const match = /^url\(#([A-Za-z0-9_.:-]+)\)$/.exec(value);
         if (!match) fail();
         value = `url(#${key(match[1])})`;

@@ -10,6 +10,8 @@ import {
 } from '../diagram/editor/session.mjs';
 import { createDiagramLocalOwnerTransport } from '../diagram/editor/transport.mjs';
 import { mountDiagramEditor } from './diagram-editor.mjs';
+import { ensureDiagramFont } from './diagram-font.mjs';
+import { mountDiagramShareControl } from './diagram-share-control.mjs';
 
 /** The `diagram-owner-data` payload local-owner.mts embeds in the owner page. */
 interface OwnerPageConfig {
@@ -27,11 +29,13 @@ export async function mountDiagramOwnerStudio(document: Document = globalThis.do
   if (!root) return null;
   let disposed = false,
     session: DiagramEditorSession | undefined,
-    mount: ReturnType<typeof mountDiagramEditor> | undefined;
+    mount: ReturnType<typeof mountDiagramEditor> | undefined,
+    share: ReturnType<typeof mountDiagramShareControl> | undefined;
   const dispose = () => {
     if (disposed) return;
     disposed = true;
     window.removeEventListener('pagehide', dispose);
+    share?.dispose();
     mount?.dispose();
     session?.dispose();
   };
@@ -88,10 +92,27 @@ export async function mountDiagramOwnerStudio(document: Document = globalThis.do
       capabilities: authoritative.capabilities,
       acknowledged: authoritative.status === 'ready',
     });
+    await ensureDiagramFont(document);
+    if (disposed) return null;
+    share = mountDiagramShareControl({
+      root,
+      apiBase: new URL('api/share', window.location.href).href,
+    });
     mount = mountDiagramEditor({
       root,
       session,
       host: {
+        actions: [
+          {
+            id: 'share-diagram',
+            label: 'Share diagram',
+            disabled: (state) =>
+              state.saveState !== 'saved' || state.pendingCount > 0 || state.needsInitialization,
+            onSelect: () => {
+              void share?.open();
+            },
+          },
+        ],
         async readCurrent() {
           const current = await transport.read();
           if (

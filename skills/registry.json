@@ -9,7 +9,7 @@
       "family": "artifact",
       "contribution": "workflows",
       "skillVersion": "1.0.0",
-      "description": "Open, share, import, or export an OpenPlanr HTML artifact review. Use when feedback must move between a local artifact and its review board.",
+      "description": "Open, share, import, or export an OpenPlanr diagram, design, or HTML artifact review. Use when feedback must move between a local artifact and its review board.",
       "lifecycle": "active",
       "authorityClass": "read-only-view",
       "source": "skills/planr-artifact/openplanr.skill.json",

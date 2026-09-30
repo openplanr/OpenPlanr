@@ -14,6 +14,13 @@ const command = (script, writeArguments, checkArguments = [...writeArguments, '-
   });
 
 export const GENERATOR_STEPS = Object.freeze([
+  Object.freeze({
+    id: 'diagram-review-font',
+    required: true,
+    candidates: Object.freeze([
+      command('packages/artifact/scripts/generate-diagram-review-font.mjs', [], ['--check']),
+    ]),
+  }),
   // First: the skill resources bundle the artifact stage, which imports compiled modules.
   Object.freeze({
     id: 'typescript-sources',

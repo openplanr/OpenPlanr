@@ -1,6 +1,6 @@
 ---
 name: planr-artifact
-description: Open, share, import, or export an OpenPlanr HTML artifact review. Use when feedback must move between a local artifact and its review board.
+description: Open, share, import, or export an OpenPlanr diagram, design, or HTML artifact review. Use when feedback must move between a local artifact and its review board.
 license: MIT
 ---
 
@@ -14,7 +14,15 @@ relaunch the active coding agent from inside this skill.
    Generic artifacts default to the edge-to-edge `document` presentation. Use
    `--presentation canvas` only for an explicitly spatial or zoomable review,
    or `--presentation document` to force the reading surface.
-2. Sharing is always explicit. Run `planr artifact share <file>` only after the
+2. For a diagram manifest or authored bundle, read
+   [diagram-sharing.md](references/diagram-sharing.md). `planr artifact share
+   <manifest-or-bundle>` creates a native permanent encrypted review with a stable
+   URL and a separately entered access token. Use the local **Share diagram**
+   dialog to copy it. Publish only an explicitly requested update with `planr
+   artifact publish <manifest-or-bundle>`; synchronize feedback with `planr
+   artifact sync <manifest-or-bundle>`. Verify the actual shared native canvas,
+   fonts and source revision before describing the hosted result as verified.
+   Sharing is always explicit. Run `planr artifact share <file>` only after the
    user asks to share. Before sharing or publishing a design document, read
    [design-sharing.md](references/design-sharing.md) and author or refresh its
    sibling `review-context.json` in this active host session. Ground the welcome
@@ -43,8 +51,10 @@ relaunch the active coding agent from inside this skill.
 Local review is loopback-only. Opening, approving, finishing, or importing an
 artifact never publishes it automatically.
 
-The CLI bundles complete local HTML/CSS/JavaScript before review or sharing and
-runs it inside an invisible opaque-origin sandbox. This is private review, not
+For generic HTML, the CLI bundles complete local HTML/CSS/JavaScript before
+review or sharing and runs it inside an invisible opaque-origin sandbox. Native
+diagram reviews mount only validated passive SVG or a read-only authoring
+projection; sharing never grants source-edit permission. This is private review, not
 standalone website hosting; never describe a review URL as deploying the source
 artifact.
 

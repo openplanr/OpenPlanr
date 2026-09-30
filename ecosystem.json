@@ -29,7 +29,8 @@
       "1.7.0",
       "1.8.0",
       "1.13.0",
-      "1.14.0"
+      "1.14.0",
+      "1.15.0"
     ],
     "supportedReaders": [
       "1.0.x",
@@ -43,6 +44,7 @@
       "1.8.x",
       "1.13.x",
       "1.14.x",
+      "1.15.x",
       "2.0.x"
     ]
   },
@@ -59,14 +61,14 @@
       "version": "0.55.5",
       "path": "packages/pipeline",
       "publication": "public",
-      "manifestDigest": "sha256:248e3bcd2598329272c6b5dbaed53cb1920dbc664ece890024d20eaf7d8184bc"
+      "manifestDigest": "sha256:234ce6fca4de1a4207de248d2c446b0620db7cc4a4b887da8a4214fcbbec6785"
     },
     "protocol": {
       "package": "@openplanr/protocol",
       "version": "0.7.3",
       "path": "packages/protocol",
       "publication": "public",
-      "manifestDigest": "sha256:bb969da90f0482f19b3afc21b4b35e4c00efff42c69ec61d9c5c07395e2bfd69"
+      "manifestDigest": "sha256:dc32c52ec90b1b8e9db3a0c3cadf1a655e305e7577932c0ef366b80a0f67c320"
     },
     "operate": {
       "package": "@openplanr/operate",
@@ -80,7 +82,7 @@
       "version": "0.5.8",
       "path": "packages/artifact",
       "publication": "private",
-      "manifestDigest": "sha256:54e51bd7c3f2ba042ea497ad4eb7bea8b8dc2eba860eee7fa3043fdedd580741"
+      "manifestDigest": "sha256:0ac1947108fe27e60b1015d408b7681de66e828e1cf1f93703420f83deb21e04"
     },
     "design": {
       "package": "@openplanr/design",
@@ -133,13 +135,13 @@
     }
   },
   "publicCompatibility": {
-    "pipelineExportKeys": 47,
+    "pipelineExportKeys": 51,
     "pipelineRootSymbols": 228
   },
   "catalogs": {
     "commands": {
       "path": "packages/protocol/registries/commands.json",
-      "digest": "sha256:15184f71d689004643988ce37148c8b3d8c530b8df1b06b4a560ac11e3e8be9d",
+      "digest": "sha256:a90a40c7d6317232a37271f5129e6ec41fea93b2259cb44f94b2dd3226276ba2",
       "rootCommands": 39,
       "pipelineMachineLeaves": 31,
       "frozenClaudeDocuments": 8,
@@ -242,7 +244,7 @@
     },
     "skills": {
       "path": "packages/protocol/registries/skills.json",
-      "digest": "sha256:8f3551c9b83df65d075bcf7e0b9244b594536135873df43ced8462400ba1b503",
+      "digest": "sha256:cc990e1b47e7ae89629343967bd4d3479582e18f8e6bd73f7f6593650c9baedc",
       "count": 27,
       "ids": [
         "planr-artifact",
@@ -339,8 +341,8 @@
     ],
     "generatedAssets": {
       "path": "adapters/manifests/generated-assets.json",
-      "digest": "sha256:3d71d185fab248bec51888a5b596f2dc96e9e5248bf1f593d04346e407125c9a",
-      "count": 1899
+      "digest": "sha256:ab5aa249ac1206ffc37ca1162db9de6e971bbca59088db4f9e26df95cef4bc37",
+      "count": 1911
     }
   },
   "schemas": {
@@ -360,17 +362,18 @@
       "count": 3
     },
     "additive": {
-      "count": 62,
+      "count": 68,
       "byVersion": {
         "v1.5.0": 13,
         "v1.6.0": 19,
         "v1.7.0": 16,
         "v1.8.0": 3,
         "v1.13.0": 10,
-        "v1.14.0": 1
+        "v1.14.0": 1,
+        "v1.15.0": 6
       }
     },
-    "total": 263
+    "total": 269
   },
   "registries": {
     "preserved": {
@@ -420,7 +423,7 @@
   "generatedSurfaces": {
     "artifactShell": {
       "path": "packages/artifact/lib/artifact/ui/generated/artifact-shell-assets.json",
-      "digest": "sha256:abc5e9b81c19740fae5c15d1d8819d9f176c8c87abf58042d4c20619de5ece5a",
+      "digest": "sha256:c9654073078e470cf1186b05e3db04c385b4db0d57cf2d2eabedcbdadf218af0",
       "shellVersion": "1.2.1",
       "assetCount": 7
     },

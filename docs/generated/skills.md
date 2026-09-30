@@ -5,14 +5,14 @@ This catalog is generated from the canonical routing registry and the installed-
 
 ## `planr-artifact`
 
-Open, share, import, or export an OpenPlanr HTML artifact review. Use when feedback must move between a local artifact and its review board.
+Open, share, import, or export an OpenPlanr diagram, design, or HTML artifact review. Use when feedback must move between a local artifact and its review board.
 
 - Select for: Open or share an HTML artifact review; Import artifact feedback and export the reviewed artifact.
 - Defer for: Review source code changes; Create a product interface design.
 - Invocation from the plugin: `$planr:artifact` in Codex/ChatGPT; `/planr:artifact` in Claude Code.
 - Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
 - Aliases: none.
-- Packaged support: `references/design-sharing.md`, `references/company-review.md`.
+- Packaged support: `references/design-sharing.md`, `references/company-review.md`, `references/diagram-sharing.md`.
 
 ## `planr-browser-qa`
 
@@ -155,7 +155,7 @@ Create, edit, inspect, verify, or rerender professional offline diagrams. Use fo
 - Invocation from the plugin: `$planr:diagram` in Codex/ChatGPT; `/planr:diagram` in Claude Code.
 - Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
 - Aliases: none.
-- Packaged support: `references/diagram-document.md`, `references/diagram-fidelity.md`, `references/diagram-intent-to-ir.md`.
+- Packaged support: `references/diagram-document.md`, `references/diagram-fidelity.md`, `references/diagram-intent-to-ir.md`, `references/diagram-sharing.md`.
 
 ## `planr-doctor`
 

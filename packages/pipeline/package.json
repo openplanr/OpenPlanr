@@ -191,6 +191,19 @@
     "./diagram-owner": {
       "types": "./lib/artifact/diagram/editor/local-owner.d.mts",
       "import": "./lib/artifact/diagram/editor/local-owner.mjs"
+    },
+    "./diagram-shared-review": {
+      "types": "./lib/artifact/ui/diagram-shared-review.d.mts",
+      "import": "./lib/artifact/ui/diagram-shared-review.mjs"
+    },
+    "./diagram-shared-review.css": "./lib/artifact/ui/diagram-shared-review.css",
+    "./diagram-review-bundle": {
+      "types": "./lib/artifact/diagram/review-bundle.d.mts",
+      "import": "./lib/artifact/diagram/review-bundle.mjs"
+    },
+    "./diagram-sharing": {
+      "types": "./lib/artifact/diagram/share.d.mts",
+      "import": "./lib/artifact/diagram/share.mjs"
     }
   },
   "bin": {

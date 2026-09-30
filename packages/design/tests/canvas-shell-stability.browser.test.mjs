@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
@@ -10,6 +10,74 @@ import { startDesignReview } from '../lib/design/review.mjs';
 import { designFixture } from './design-fixture.mjs';
 
 const engine = browserEngine();
+
+async function assertHeaderPixels(page, before, after, details) {
+  if (after.equals(before)) return;
+  const { sameSize, changedPixels, maxChannelDifference, width, height } = await page.evaluate(
+    async (images) => {
+      const [expected, actual] = await Promise.all(
+        images.map(async (image) => {
+          const bytes = Uint8Array.from(atob(image), (character) => character.charCodeAt(0));
+          const bitmap = await createImageBitmap(new Blob([bytes], { type: 'image/png' }));
+          const canvas = document.createElement('canvas');
+          canvas.width = bitmap.width;
+          canvas.height = bitmap.height;
+          const context = canvas.getContext('2d', { willReadFrequently: true });
+          context.drawImage(bitmap, 0, 0);
+          bitmap.close();
+          return context.getImageData(0, 0, canvas.width, canvas.height);
+        }),
+      );
+      const sameSize = expected.width === actual.width && expected.height === actual.height;
+      let changedPixels = 0,
+        maxChannelDifference = 0;
+      for (let index = 0; index < Math.min(expected.data.length, actual.data.length); index += 4) {
+        let changed = false;
+        for (let channel = 0; channel < 4; channel++) {
+          const difference = Math.abs(
+            expected.data[index + channel] - actual.data[index + channel],
+          );
+          changed ||= difference !== 0;
+          maxChannelDifference = Math.max(maxChannelDifference, difference);
+        }
+        if (changed) changedPixels++;
+      }
+      return {
+        sameSize,
+        changedPixels,
+        maxChannelDifference,
+        width: expected.width,
+        height: expected.height,
+      };
+    },
+    [before.toString('base64'), after.toString('base64')],
+  );
+  // Chromium can rerasterize a few antialiased SVG edge pixels without changing
+  // the shell: a captured failure differed at 8/60,000 pixels by at most 4/255.
+  // Both caps are required; meaningful color changes or repaint areas still fail.
+  const allowedPixels = Math.floor(width * height * 0.0002);
+  if (sameSize && changedPixels <= allowedPixels && maxChannelDifference <= 4) return;
+  const evidence = await mkdtemp(join(tmpdir(), 'openplanr-header-mismatch-'));
+  await Promise.all([
+    writeFile(join(evidence, 'before.png'), before),
+    writeFile(join(evidence, 'after.png'), after),
+    writeFile(
+      join(evidence, 'state.json'),
+      JSON.stringify(
+        {
+          ...details,
+          sameSize,
+          changedPixels,
+          allowedPixels,
+          maxChannelDifference,
+        },
+        null,
+        2,
+      ),
+    ),
+  ]);
+  assert.fail(`Canvas zoom changed header pixels; evidence: ${evidence}`);
+}
 
 test(`canvas zoom preserves shell geometry, minimap focus and frame identity (${engine})`, {
   timeout: 90000,
@@ -125,6 +193,19 @@ test(`canvas zoom preserves shell geometry, minimap focus and frame identity (${
       // right-side actions can update independently of the camera.
       const header = await page.locator('.design-toolbar').boundingBox();
       const headerClip = { ...header, width: Math.min(1000, header.width) };
+      const headerState = () =>
+        page.evaluate(() => ({
+          markup: ['.design-toolbar-leading', '.design-view-picker']
+            .map((selector) => document.querySelector(selector).outerHTML)
+            .join(''),
+          focus: document.activeElement.outerHTML,
+          hover: [...document.querySelectorAll(':hover')].map((node) => node.className),
+          animations: document.getAnimations().map((animation) => ({
+            playState: animation.playState,
+            target: animation.effect?.target?.className,
+          })),
+        }));
+      const stateBefore = await headerState();
       const headerBefore = await page.screenshot({ clip: headerClip });
       for (const action of ['in', 'in', 'out', 'out'])
         await page.locator(`[data-design-zoom="${action}"]`).click();
@@ -136,11 +217,10 @@ test(`canvas zoom preserves shell geometry, minimap focus and frame identity (${
         () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
       );
       const headerAfter = await page.screenshot({ clip: headerClip });
-      assert.deepEqual(
-        headerAfter,
-        headerBefore,
-        'Canvas zoom does not repaint the header with different pixels',
-      );
+      const stateAfter = await headerState();
+      assert.equal(stateAfter.markup, stateBefore.markup, 'Zoom preserves header controls');
+      assert.equal(stateAfter.focus, stateBefore.focus, 'Zoom restores the original minimap focus');
+      await assertHeaderPixels(page, headerBefore, headerAfter, { url, stateBefore, stateAfter });
       const scroll = await page.locator('.planr-stage-scroll').boundingBox();
       await page.mouse.move(scroll.x + 8, scroll.y + 20);
       await page.keyboard.down('Control');

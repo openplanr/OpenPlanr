@@ -6,7 +6,7 @@
   "inputs": [
     {
       "path": "adapters/manifests/generated-assets.json",
-      "digest": "sha256:3d71d185fab248bec51888a5b596f2dc96e9e5248bf1f593d04346e407125c9a"
+      "digest": "sha256:ab5aa249ac1206ffc37ca1162db9de6e971bbca59088db4f9e26df95cef4bc37"
     },
     {
       "path": "apps/dashboard/package.json",
@@ -22,7 +22,7 @@
     },
     {
       "path": "packages/artifact/package.json",
-      "digest": "sha256:54e51bd7c3f2ba042ea497ad4eb7bea8b8dc2eba860eee7fa3043fdedd580741"
+      "digest": "sha256:0ac1947108fe27e60b1015d408b7681de66e828e1cf1f93703420f83deb21e04"
     },
     {
       "path": "packages/cli/package.json",
@@ -42,15 +42,15 @@
     },
     {
       "path": "packages/pipeline/package.json",
-      "digest": "sha256:248e3bcd2598329272c6b5dbaed53cb1920dbc664ece890024d20eaf7d8184bc"
+      "digest": "sha256:234ce6fca4de1a4207de248d2c446b0620db7cc4a4b887da8a4214fcbbec6785"
     },
     {
       "path": "packages/protocol/package.json",
-      "digest": "sha256:bb969da90f0482f19b3afc21b4b35e4c00efff42c69ec61d9c5c07395e2bfd69"
+      "digest": "sha256:dc32c52ec90b1b8e9db3a0c3cadf1a655e305e7577932c0ef366b80a0f67c320"
     },
     {
       "path": "packages/protocol/registries/commands.json",
-      "digest": "sha256:15184f71d689004643988ce37148c8b3d8c530b8df1b06b4a560ac11e3e8be9d"
+      "digest": "sha256:a90a40c7d6317232a37271f5129e6ec41fea93b2259cb44f94b2dd3226276ba2"
     },
     {
       "path": "packages/protocol/registries/output-paths.json",
@@ -70,7 +70,7 @@
     },
     {
       "path": "packages/protocol/registries/skills.json",
-      "digest": "sha256:8f3551c9b83df65d075bcf7e0b9244b594536135873df43ced8462400ba1b503"
+      "digest": "sha256:cc990e1b47e7ae89629343967bd4d3479582e18f8e6bd73f7f6593650c9baedc"
     },
     {
       "path": "packages/protocol/registries/task-kinds.json",
@@ -102,11 +102,11 @@
     },
     {
       "path": "scripts/marketplace/generate-ecosystem.mjs",
-      "digest": "sha256:27e7a5016a1440c4122752c08af6530e0cc4d1734c656bb01acc2dc32631b14a"
+      "digest": "sha256:59b2bb7ec5d29ad6f62fea83f8187f1c14caea2435e923aa4e14bd37c09231bb"
     },
     {
       "path": "scripts/marketplace/openplanr-ecosystem.schema.json",
-      "digest": "sha256:7a8f2bdf0dcd68084f76a3887d6c946f9d12b9024ff7763fc6efc714271a0269"
+      "digest": "sha256:ea0cda00f04d83a36a14f86fff24e560db0a17d5e09d417b7a5684f2a082c670"
     }
   ],
   "outputs": [
@@ -120,7 +120,7 @@
     },
     {
       "path": "adapters/manifests/codex-plugin-content.json",
-      "digest": "sha256:68293c39cea63c2153bba22a92c903e79cdf865f544e0d5572ff398b26da09f1"
+      "digest": "sha256:dc3c9f06f34ee549c73ec582c473da502ca7d185b7d09c83addcc613015eae71"
     },
     {
       "path": "docs/generated/adapters.md",
@@ -128,15 +128,15 @@
     },
     {
       "path": "docs/generated/ecosystem.md",
-      "digest": "sha256:6613533116c00ab2e9fb8413c7f5b0086b3ad4d14bb9a5243ac7bf6eb2fc5191"
+      "digest": "sha256:75c332c3c858638f3c0fe5176261610f6a2a13da2a7c3f736a7105532224e93f"
     },
     {
       "path": "docs/generated/skills.md",
-      "digest": "sha256:593a1ec3822dd3a8738e125721191bfbfe4a10c6efd4ed60e4d6f9b1967e5a7e"
+      "digest": "sha256:68c812d86a6f395b815abfe63ed529f421303a796a81d328e6e1f9582f4ec68c"
     },
     {
       "path": "ecosystem.json",
-      "digest": "sha256:fa5d0b4e6122cbffc3508a729aca360bac291683d267207f3a7eb7eba6d78ee1"
+      "digest": "sha256:b802e4ca3110e7f50de86fbddec6b6470d810011e2ff5e1520bf1b1aeb675b77"
     },
     {
       "path": "packages/pipeline/.claude-plugin/plugin.json",

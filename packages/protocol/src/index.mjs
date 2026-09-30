@@ -6,7 +6,9 @@ export {
   PROTOCOL_V18_CONTRACTS,
   PROTOCOL_V111_CONTRACTS,
   PROTOCOL_V113_CONTRACTS,
+  PROTOCOL_V115_CONTRACTS,
   protocolAssetUrl,
+  validateDiagramReviewArtifact,
 } from './browser-contracts.mjs';
 export {
   canonicalizeJson,
@@ -25,6 +27,7 @@ export {
   diagramContractUrl,
   getDiagramGrammar,
 } from './diagram-contracts.mjs';
+export * from './diagram-review-contracts.mjs';
 export * from './enterprise-contracts.mjs';
 export {
   ARTIFACT_ERROR_CODES,

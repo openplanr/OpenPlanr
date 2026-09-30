@@ -351,6 +351,44 @@ test('copy export escapes click, href, quotes and brackets so its preview reads 
   );
 });
 
+test('keyword node IDs are renamed in export so its own preview accepts the copy', () => {
+  for (const keyword of [
+    'click',
+    'href',
+    'end',
+    'style',
+    'class',
+    'classDef',
+    'linkStyle',
+    'subgraph',
+    'direction',
+    'Click',
+    'LINKSTYLE',
+  ]) {
+    const id = keyword.toLowerCase();
+    const first = preview(`flowchart TB\n${keyword}[Label]\nA[One]\nA --> ${keyword}\n`);
+    assert.equal(first.ok, true, `${keyword}: ${JSON.stringify(first.diagnostics)}`);
+    const reversed = structuredClone(first.bundle);
+    reversed.document.relations[0].from = id;
+    reversed.document.relations[0].to = 'a';
+    const copy = exportMermaidCopy(sealBundle(reversed));
+    assert.equal(copy.ok, true, `${keyword}: ${JSON.stringify(copy.diagnostics)}`);
+    assert.equal(copy.fidelity.semantic, 'partial', keyword);
+    assert.equal(
+      copy.fidelity.losses.filter(({ code }) => code === 'keyword-id-renamed').length,
+      1,
+      keyword,
+    );
+    const again = preview(copy.text);
+    assert.equal(again.ok, true, `${keyword}: ${JSON.stringify(again.diagnostics)}`);
+    assert.deepEqual(
+      again.bundle.document.relations.map(({ from, to }) => ({ from, to })),
+      [{ from: id, to: 'a' }],
+      keyword,
+    );
+  }
+});
+
 test('real Chromium and Node run the same pure converter without providers or fetch', {
   timeout: 90_000,
 }, async () => {

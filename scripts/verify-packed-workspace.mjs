@@ -698,6 +698,16 @@ try {
     const exported = await exportAuthoredDiagram(reopened.bundle, options);
     if (!exported.ok || !(await verifyAuthoredDiagramExports(reopened.bundle, options)).ok) throw new Error('Packed authored export failed: ' + JSON.stringify(exported));
     if (fs.readFileSync(path.join(exported.directory, 'diagram.png')).byteLength < 32) throw new Error('Packed PNG was not rasterized');
+    const { prepareDiagramShareBundle } = await import('planr-pipeline/diagram-review-bundle');
+    const reviewContracts = await import('@openplanr/protocol/diagram-review-contracts');
+    const reviewShell = await import('planr-pipeline/diagram-shared-review');
+    const shareBundle = await prepareDiagramShareBundle(path.join(authoredRoot, 'diagrams', authored.diagramId, authored.diagramId + '.planr-diagram-bundle.json'));
+    reviewContracts.assertDiagramReviewBundle(shareBundle);
+    if (typeof reviewShell.mountDiagramSharedReview !== 'function' || shareBundle.authored.originalSource !== null || shareBundle.authored.sourceMap !== null || shareBundle.authored.presentation.elements[0].bounds.x !== 20) {
+      throw new Error('Packed native review projection or shell lost its source boundary or saved geometry');
+    }
+    if (!fs.existsSync(require.resolve('planr-pipeline/diagram-shared-review.css'))) throw new Error('Packed review stylesheet is missing');
+
     const editorApi = await import('planr-pipeline/diagram-editor');
     if (typeof editorApi.mountDiagramSourcePanel !== 'function') throw new Error('Packed source-panel export is missing');
     const editor = await editorApi.openDiagramEditorSession({ transport: restarted });
