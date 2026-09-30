@@ -74,7 +74,7 @@
             "chatgpt"
           ],
           "executable": false,
-          "digest": "sha256:0d25acf6c715bc6c0ad42f9cb6b2280041844b81f6a6b1b83b28ba0224c9ae5c"
+          "digest": "sha256:d2b3d02608b9fad29802553632990d360442f36d513c18b91d25bf7e35098b4d"
         },
         {
           "path": "references/diagram-sharing.md",

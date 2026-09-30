@@ -35,7 +35,7 @@
         },
         {
           "path": "skills/artifact/agents/openai.yaml",
-          "digest": "sha256:f80080e799f0fff56c402d644c78d67374e1fa3b0f1d0ee7a44d8abdf1dc91d1"
+          "digest": "sha256:d63dc215894de3afb5c44fea2bcccc2a1438fb6d74b57395c99b132ad5bc68f8"
         },
         {
           "path": "skills/artifact/references/diagram-sharing.md",

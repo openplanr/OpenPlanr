@@ -3113,7 +3113,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
       {
         "skillId": "planr-artifact",
         "skillVersion": "1.0.0",
-        "description": "Open, share, import, or export an OpenPlanr HTML artifact review. Use when feedback must move between a local artifact and its review board.",
+        "description": "Open, share, import, or export an OpenPlanr diagram, design, or HTML artifact review. Use when feedback must move between a local artifact and its review board.",
         "lifecycle": "active",
         "authorityClass": "read-only-view",
         "source": "skills/planr-artifact/openplanr.skill.json",
@@ -4767,7 +4767,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
       }
     ],
     "compatibilityAliases": [],
-    "documentDigest": "sha256:06d65628a22614baa3a5e0276a0fddc1bcdd66ba2c6154148f997f2cf965a01f"
+    "documentDigest": "sha256:e3f61d71a05a268294055de033e2ec2d44bfb7b05a95a18b6607ded3eb61e37b"
   },
   "outputs.json": {
     "kind": "output-catalog",

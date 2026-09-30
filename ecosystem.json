@@ -244,7 +244,7 @@
     },
     "skills": {
       "path": "packages/protocol/registries/skills.json",
-      "digest": "sha256:ca9f8fd6e5fb5446b94f171d85f1b8bb388c7b923f42663550bc44d0900fb4e8",
+      "digest": "sha256:cc990e1b47e7ae89629343967bd4d3479582e18f8e6bd73f7f6593650c9baedc",
       "count": 27,
       "ids": [
         "planr-artifact",
@@ -341,7 +341,7 @@
     ],
     "generatedAssets": {
       "path": "adapters/manifests/generated-assets.json",
-      "digest": "sha256:d8c55b924e9bb4d862c7a6c20781278e574909a160417e276a24b772b7c3a5a5",
+      "digest": "sha256:ab5aa249ac1206ffc37ca1162db9de6e971bbca59088db4f9e26df95cef4bc37",
       "count": 1911
     }
   },

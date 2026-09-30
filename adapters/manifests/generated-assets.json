@@ -6,7 +6,7 @@
   "assets": [
     {
       "path": "adapters/manifests/canonical-skills.json",
-      "digest": "sha256:79f6c732a50648475ee2fedf8e6878ea7c13b7b6a47d945d651886ad0eb69ba9",
+      "digest": "sha256:e0ae574a12802656ddc90c1132be5b5be65fa8be327a8323fbcf5112e064df35",
       "generated": false
     },
     {
@@ -3076,12 +3076,12 @@
     },
     {
       "path": "dist/plugins/openai/openplanr/.openplanr-content.json",
-      "digest": "sha256:972d7b16831ce439dbdaae54f7d466fbd6de2704596e308e35780f7bc79fa902",
+      "digest": "sha256:85c0d263fa2610bbbb5fc37c9b1e6b959ee16a7b71064d3335a02d8f611ed0f5",
       "generated": true
     },
     {
       "path": "dist/plugins/openai/openplanr/skills/artifact/agents/openai.yaml",
-      "digest": "sha256:f80080e799f0fff56c402d644c78d67374e1fa3b0f1d0ee7a44d8abdf1dc91d1",
+      "digest": "sha256:d63dc215894de3afb5c44fea2bcccc2a1438fb6d74b57395c99b132ad5bc68f8",
       "generated": true
     },
     {
@@ -4776,7 +4776,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/capability-map.json",
-      "digest": "sha256:9fcfe9e219cb25e9ad44f9a86a86f7480617332fd75f4f7f27d9c9cd82f653de",
+      "digest": "sha256:38b7400881a9f06a1a5fbef4a251b2085f7f63e8b99cc06e94aa040a70f5d87c",
       "generated": true
     },
     {
@@ -7841,12 +7841,12 @@
     },
     {
       "path": "packages/cli/lib/host-packages/openai/openplanr/.openplanr-content.json",
-      "digest": "sha256:972d7b16831ce439dbdaae54f7d466fbd6de2704596e308e35780f7bc79fa902",
+      "digest": "sha256:85c0d263fa2610bbbb5fc37c9b1e6b959ee16a7b71064d3335a02d8f611ed0f5",
       "generated": true
     },
     {
       "path": "packages/cli/lib/host-packages/openai/openplanr/skills/artifact/agents/openai.yaml",
-      "digest": "sha256:f80080e799f0fff56c402d644c78d67374e1fa3b0f1d0ee7a44d8abdf1dc91d1",
+      "digest": "sha256:d63dc215894de3afb5c44fea2bcccc2a1438fb6d74b57395c99b132ad5bc68f8",
       "generated": true
     },
     {

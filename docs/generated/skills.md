@@ -5,7 +5,7 @@ This catalog is generated from the canonical routing registry and the installed-
 
 ## `planr-artifact`
 
-Open, share, import, or export an OpenPlanr HTML artifact review. Use when feedback must move between a local artifact and its review board.
+Open, share, import, or export an OpenPlanr diagram, design, or HTML artifact review. Use when feedback must move between a local artifact and its review board.
 
 - Select for: Open or share an HTML artifact review; Import artifact feedback and export the reviewed artifact.
 - Defer for: Review source code changes; Create a product interface design.
