@@ -16,7 +16,7 @@
     },
     {
       "path": "dist/plugins/claude/.claude-plugin/marketplace.json",
-      "digest": "sha256:c93da50899036360839511b01d4e06c71bb0c1bdf4cb1206cd4dd42244331349",
+      "digest": "sha256:630ec271b084d0bbaf490dbc8bd6173f69caae63c38db7e87a617677534f87db",
       "generated": true
     },
     {
@@ -26,12 +26,12 @@
     },
     {
       "path": "dist/plugins/claude/openplanr/.claude-plugin/plugin.json",
-      "digest": "sha256:535bb2a979a2226c38395acbee1628d8151f7c7559585ac2f8d145410999a21a",
+      "digest": "sha256:2e9e06eeebcdb4be8cfbcb3f30616ba20c0e55df02e6c6eefdf3ec2fe795630a",
       "generated": true
     },
     {
       "path": "dist/plugins/claude/openplanr/.openplanr-content.json",
-      "digest": "sha256:94fef7227865d740601b9877327b1ae962339a9bbfc2e3ddf749040f258af6ea",
+      "digest": "sha256:cd09b23f320a6ff94702cc4f766c58b51c219a71af598dc93a619752818ff3e9",
       "generated": true
     },
     {
@@ -81,7 +81,7 @@
     },
     {
       "path": "dist/plugins/claude/openplanr/README.md",
-      "digest": "sha256:68ef4ac080559079bedc2faeef39db8a5a5da9208cbcacc5fea4af1658fd68f5",
+      "digest": "sha256:994d6f85fafa6338737f6aca7c86b3cf19f4d26fab74092cf1107fa16adc6eb2",
       "generated": true
     },
     {
@@ -1636,12 +1636,12 @@
     },
     {
       "path": "dist/plugins/cursor/openplanr/.openplanr-content.json",
-      "digest": "sha256:f119a412c3608062cfeeb5949a42abe5a2e096a36468fb268592b5a6f5ec3a5f",
+      "digest": "sha256:f554a822783ec9e4f582ed6aa141b64cf11d0bd77889f688a7c975a9225c3195",
       "generated": true
     },
     {
       "path": "dist/plugins/cursor/openplanr/manifest.json",
-      "digest": "sha256:571d188adcc7af134ee3502493644074c47add0b4c7f931bafc1d355341bb613",
+      "digest": "sha256:b35be542d86514ce10ebc6d5341639adabbc097f83a05cbc20614962dba760de",
       "generated": true
     },
     {
@@ -3066,17 +3066,17 @@
     },
     {
       "path": "dist/plugins/openai/.claude-plugin/marketplace.json",
-      "digest": "sha256:984c9b24cf77afafc9c18e91257b05905221f62d354804712ea3338df3069f2b",
+      "digest": "sha256:6da14e35a1a6f187599c752881e658036a229479143f19b1a5796f882a994996",
       "generated": true
     },
     {
       "path": "dist/plugins/openai/openplanr/.codex-plugin/plugin.json",
-      "digest": "sha256:c280c4d7ce2c28c9cd384d594e28ca666171502724ec1a87de3f4b4e2244aa14",
+      "digest": "sha256:acf770c29ce4ed49dfcd062f1cfe7d520220529de4f5f1d51b831cfc1c24808a",
       "generated": true
     },
     {
       "path": "dist/plugins/openai/openplanr/.openplanr-content.json",
-      "digest": "sha256:93195883828f143eca0766db456ea7f8907736984ba5a3846fea9636a94f5c30",
+      "digest": "sha256:77971023073ed4d9ef382d61a12dc8b29bb59c23917adbeafb3b056a7270168e",
       "generated": true
     },
     {
@@ -4771,17 +4771,17 @@
     },
     {
       "path": "packages/cli/lib/host-packages/adapter-registry.json",
-      "digest": "sha256:591f0a0fce27c8093d5de3391a01130e4da4e5c59979bebba8fb82c946281cb1",
+      "digest": "sha256:dd437cf6fdd8cf52d38e642f26d233ffec807cf783ac5b59206b9778c7a9e86c",
       "generated": true
     },
     {
       "path": "packages/cli/lib/host-packages/capability-map.json",
-      "digest": "sha256:43017e2e9db825eabcae4bf85b5ed14dc6a28af05f6501abfd873e95d131e8c2",
+      "digest": "sha256:18b114555fb1dfbcdcea96a17d19586f153c5599cc8a0701142d5fe17757995c",
       "generated": true
     },
     {
       "path": "packages/cli/lib/host-packages/claude/.claude-plugin/marketplace.json",
-      "digest": "sha256:c93da50899036360839511b01d4e06c71bb0c1bdf4cb1206cd4dd42244331349",
+      "digest": "sha256:630ec271b084d0bbaf490dbc8bd6173f69caae63c38db7e87a617677534f87db",
       "generated": true
     },
     {
@@ -4791,12 +4791,12 @@
     },
     {
       "path": "packages/cli/lib/host-packages/claude/openplanr/.claude-plugin/plugin.json",
-      "digest": "sha256:535bb2a979a2226c38395acbee1628d8151f7c7559585ac2f8d145410999a21a",
+      "digest": "sha256:2e9e06eeebcdb4be8cfbcb3f30616ba20c0e55df02e6c6eefdf3ec2fe795630a",
       "generated": true
     },
     {
       "path": "packages/cli/lib/host-packages/claude/openplanr/.openplanr-content.json",
-      "digest": "sha256:94fef7227865d740601b9877327b1ae962339a9bbfc2e3ddf749040f258af6ea",
+      "digest": "sha256:cd09b23f320a6ff94702cc4f766c58b51c219a71af598dc93a619752818ff3e9",
       "generated": true
     },
     {
@@ -4846,7 +4846,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/claude/openplanr/README.md",
-      "digest": "sha256:68ef4ac080559079bedc2faeef39db8a5a5da9208cbcacc5fea4af1658fd68f5",
+      "digest": "sha256:994d6f85fafa6338737f6aca7c86b3cf19f4d26fab74092cf1107fa16adc6eb2",
       "generated": true
     },
     {
@@ -6401,12 +6401,12 @@
     },
     {
       "path": "packages/cli/lib/host-packages/cursor/openplanr/.openplanr-content.json",
-      "digest": "sha256:f119a412c3608062cfeeb5949a42abe5a2e096a36468fb268592b5a6f5ec3a5f",
+      "digest": "sha256:f554a822783ec9e4f582ed6aa141b64cf11d0bd77889f688a7c975a9225c3195",
       "generated": true
     },
     {
       "path": "packages/cli/lib/host-packages/cursor/openplanr/manifest.json",
-      "digest": "sha256:571d188adcc7af134ee3502493644074c47add0b4c7f931bafc1d355341bb613",
+      "digest": "sha256:b35be542d86514ce10ebc6d5341639adabbc097f83a05cbc20614962dba760de",
       "generated": true
     },
     {
@@ -7831,17 +7831,17 @@
     },
     {
       "path": "packages/cli/lib/host-packages/openai/.claude-plugin/marketplace.json",
-      "digest": "sha256:984c9b24cf77afafc9c18e91257b05905221f62d354804712ea3338df3069f2b",
+      "digest": "sha256:6da14e35a1a6f187599c752881e658036a229479143f19b1a5796f882a994996",
       "generated": true
     },
     {
       "path": "packages/cli/lib/host-packages/openai/openplanr/.codex-plugin/plugin.json",
-      "digest": "sha256:c280c4d7ce2c28c9cd384d594e28ca666171502724ec1a87de3f4b4e2244aa14",
+      "digest": "sha256:acf770c29ce4ed49dfcd062f1cfe7d520220529de4f5f1d51b831cfc1c24808a",
       "generated": true
     },
     {
       "path": "packages/cli/lib/host-packages/openai/openplanr/.openplanr-content.json",
-      "digest": "sha256:93195883828f143eca0766db456ea7f8907736984ba5a3846fea9636a94f5c30",
+      "digest": "sha256:77971023073ed4d9ef382d61a12dc8b29bb59c23917adbeafb3b056a7270168e",
       "generated": true
     },
     {
