@@ -35,6 +35,12 @@
       ]
     },
     {
+      "id": "planr-delegate",
+      "source": "skills/planr-delegate/openplanr.skill.json",
+      "authorityClass": "implementation",
+      "utilityRequirements": []
+    },
+    {
       "id": "planr-design",
       "source": "skills/planr-design/openplanr.skill.json",
       "authorityClass": "planning-write",

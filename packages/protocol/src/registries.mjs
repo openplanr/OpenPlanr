@@ -115,6 +115,7 @@ const EXPECTED_SKILLS = Object.freeze([
   'planr-cpo-review',
   'planr-cto-review',
   'planr-dashboard',
+  'planr-delegate',
   'planr-design',
   'planr-design-loop',
   'planr-design-review',

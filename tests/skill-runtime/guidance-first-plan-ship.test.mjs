@@ -43,6 +43,12 @@ test('Ship guides local completion without process machinery', () => {
     ship,
     /Return the existing five fields:[\s\S]*Outcome[\s\S]*Task[\s\S]*Changed[\s\S]*Checks[\s\S]*Issues/u,
   );
+  assert.match(ship, /Ordinary\s+Ship stays host-native/iu);
+  assert.match(
+    ship,
+    /explicitly asks another coding agent to implement,[\s\S]*hand off to `planr-delegate`/iu,
+  );
+  assert.match(ship, /plain Ship never launches its helper/u);
   assert.match(ship, /Next: planr-land/u);
 });
 

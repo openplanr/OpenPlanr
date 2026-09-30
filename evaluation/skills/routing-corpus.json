@@ -422,6 +422,24 @@
       "input": "Use $planr-sprint before the cut",
       "expectedSkillId": "planr-sprint",
       "expectedReason": "explicit-name"
+    },
+    {
+      "id": "delegate-external-agent",
+      "kind": "positive",
+      "input": "Delegate implementation to another coding agent",
+      "expectedSkillId": "planr-delegate"
+    },
+    {
+      "id": "delegate-explicit-skill",
+      "kind": "positive",
+      "input": "Use planr-delegate for this task",
+      "expectedSkillId": "planr-delegate"
+    },
+    {
+      "id": "delegate-ordinary-ship",
+      "kind": "collision",
+      "input": "Build the requested local code change from this task",
+      "expectedSkillId": "planr-ship"
     }
   ]
 }

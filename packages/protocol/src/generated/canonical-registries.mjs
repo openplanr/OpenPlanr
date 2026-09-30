@@ -2263,7 +2263,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "ownerPackage": "planr-pipeline",
         "source": {
           "path": "skills/planr-ship/SKILL.md",
-          "digest": "sha256:649272ea8cad3096012acaa9ec16a3ce6288f557e404fedbe9646aefb3b2c8ba"
+          "digest": "sha256:36a4f0a53bf112fa662b2c514a4a5811a2049de1af631a998f7449151e20f5ed"
         },
         "authorityClass": "compatibility-router",
         "machineJson": false,
@@ -3099,7 +3099,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         ]
       }
     ],
-    "documentDigest": "sha256:9f34ed8942c28ac6d0cd4bfd3234c50ea8a4d72954a89df6e3596f3cc8e56be2"
+    "documentDigest": "sha256:a4d75669047f457e277d3347a523299acf0d2e083dd003683e5caa017f744ba5"
   },
   "skills.json": {
     "kind": "skill-catalog",
@@ -3718,6 +3718,67 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         ],
         "certificationRefs": [
           "evaluation/skills/migrations/planr-dashboard.json"
+        ]
+      },
+      {
+        "skillId": "planr-delegate",
+        "skillVersion": "0.1.0",
+        "description": "Delegate one explicitly requested implementation scope to an enrolled local coding agent while the active agent owns context, questions, review, and integration. Use only when the user asks another agent to implement.",
+        "lifecycle": "active",
+        "authorityClass": "implementation",
+        "source": "skills/planr-delegate/openplanr.skill.json",
+        "sourceDigest": "sha256:d8b3fe12ec694b5c725e8978bdbd3076d355edb67d97e9d5d2f1f8464f16a070",
+        "triggerPolicy": {
+          "include": [
+            "Delegate implementation to another coding agent",
+            "Ask a second coding agent to implement while I orchestrate",
+            "Use planr-delegate for this task"
+          ],
+          "exclude": [
+            "Implement this task in the active agent",
+            "Ship this change without delegation"
+          ],
+          "deferTo": []
+        },
+        "contracts": {
+          "inputs": [],
+          "outputs": [
+            {
+              "id": "implementation-result",
+              "version": "1.0.0"
+            }
+          ]
+        },
+        "cliRequirements": [],
+        "ruleIds": [
+          "R3",
+          "R5"
+        ],
+        "contributionManifestRefs": [
+          "packages/skill-runtime/contributions/workflows.json"
+        ],
+        "hosts": [
+          {
+            "host": "claude-code",
+            "entrypoint": "/planr:delegate",
+            "path": "dist/plugins/claude/openplanr/skills/delegate/SKILL.md"
+          },
+          {
+            "host": "codex",
+            "entrypoint": "$planr:delegate",
+            "path": "dist/plugins/openai/openplanr/skills/delegate/SKILL.md"
+          },
+          {
+            "host": "cursor",
+            "entrypoint": "planr-delegate",
+            "path": "dist/plugins/cursor/openplanr/rules/planr-delegate.mdc"
+          }
+        ],
+        "testRefs": [
+          "tests/protocol/skill-catalog.test.mjs"
+        ],
+        "certificationRefs": [
+          "evaluation/skills/migrations/planr-delegate.json"
         ]
       },
       {
@@ -4767,7 +4828,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
       }
     ],
     "compatibilityAliases": [],
-    "documentDigest": "sha256:e3f61d71a05a268294055de033e2ec2d44bfb7b05a95a18b6607ded3eb61e37b"
+    "documentDigest": "sha256:ce298de7356e8f4f48d97e3411d68a8ed5981ce9c5245a3408ab32762118b362"
   },
   "outputs.json": {
     "kind": "output-catalog",

@@ -1,0 +1,681 @@
+import assert from 'node:assert/strict';
+import { execFile as execFileCallback } from 'node:child_process';
+import { createHash } from 'node:crypto';
+import {
+  chmod,
+  lstat,
+  mkdir,
+  mkdtemp,
+  readFile,
+  realpath,
+  rm,
+  symlink,
+  writeFile,
+} from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
+import { afterEach, test } from 'node:test';
+import { promisify } from 'node:util';
+import { createWorktreeCustody } from '../../skills/planr-delegate/scripts/custody.mjs';
+import {
+  delegateIntegrationCommand,
+  discoverDelegateChecks,
+  integrateDelegateDelta,
+  reviewDelegateDelta,
+} from '../../skills/planr-delegate/scripts/integrate.mjs';
+import {
+  handoffPresentation,
+  implementationReport,
+  preparationPresentation,
+  reviewPresentation,
+} from '../../skills/planr-delegate/scripts/presentation.mjs';
+import {
+  closeRunRecord,
+  createRunRecord,
+  readRunRecord,
+  updateRunRecord,
+} from '../../skills/planr-delegate/scripts/run-record.mjs';
+import {
+  delegateRunnerCommand,
+  delegateRunStatus,
+  resumeDelegateRun,
+} from '../../skills/planr-delegate/scripts/runner.mjs';
+
+const execFile = promisify(execFileCallback);
+const roots = [];
+async function git(cwd, ...args) {
+  return execFile('git', args, { cwd });
+}
+async function fixture({ dirty = false, preservePaths = [], files = {} } = {}) {
+  const base = await mkdtemp(join(tmpdir(), 'planr-integrate-test-'));
+  roots.push(base);
+  const repositoryRoot = join(base, 'source');
+  const worktreeParent = join(base, 'worktrees');
+  await mkdir(repositoryRoot);
+  await mkdir(worktreeParent);
+  await git(repositoryRoot, 'init', '-q');
+  await git(repositoryRoot, 'config', 'user.name', 'OpenPlanr Test');
+  await git(repositoryRoot, 'config', 'user.email', 'test@openplanr.dev');
+  await writeFile(join(repositoryRoot, 'tracked.txt'), 'base\n');
+  await writeFile(join(repositoryRoot, 'keep.txt'), 'preserve\n');
+  for (const [path, content] of Object.entries(files)) {
+    await mkdir(dirname(join(repositoryRoot, path)), { recursive: true });
+    await writeFile(join(repositoryRoot, path), content);
+  }
+  await git(repositoryRoot, 'add', '.');
+  await git(repositoryRoot, 'commit', '-qm', 'base');
+  const selectedPaths = [];
+  if (dirty) {
+    await writeFile(join(repositoryRoot, 'tracked.txt'), 'selected dirty\n');
+    await writeFile(join(repositoryRoot, 'untracked.txt'), 'selected untracked\n');
+    selectedPaths.push('tracked.txt', 'untracked.txt');
+  }
+  const capsule = {
+    kind: 'openplanr-delegation-context-capsule',
+    inventory: selectedPaths.map((path) => ({
+      repositoryKey: 'project',
+      path,
+      roles: ['selected-source'],
+    })),
+    files: [],
+  };
+  const custody = await createWorktreeCustody({
+    repositoryRoot,
+    worktreeParent,
+    capsule,
+    selectedPaths,
+    preservePaths,
+  });
+  return { base, repositoryRoot, custody, capsule };
+}
+afterEach(async () => {
+  for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true });
+});
+const run = { status: 'completed', changedFiles: ['fabricated.txt'] };
+
+test('presentation distinguishes delegate claims, observed changes, checks, and blocked integration', () => {
+  const preview = preparationPresentation({
+    selector: 'T-071',
+    inventory: [{ path: 'source.txt' }],
+    omissions: [],
+    writableRepository: '/private/tmp/source',
+    profile: 'claude-local',
+    destination: { class: 'local', origin: 'http://127.0.0.1:1234' },
+  });
+  assert.equal(preview.phase, 'preview');
+  assert.equal(preview.destination.origin, 'http://127.0.0.1:1234');
+  assert.match(handoffPresentation({ status: 'completed' }).headline, /still required/u);
+  assert.equal(
+    handoffPresentation({ status: 'question', result: { question: { text: 'Which API?' } } })
+      .question.text,
+    'Which API?',
+  );
+  assert.match(
+    reviewPresentation({ ready: true, changedPaths: ['source.txt'], violations: [] }).headline,
+    /nothing has been integrated/u,
+  );
+  const accepted = implementationReport(
+    {
+      status: 'completed',
+      changedPaths: ['source.txt'],
+      checks: [{ command: 'npm test', status: 'passed' }],
+      violations: [],
+    },
+    'T-071',
+  );
+  assert.deepEqual(Object.keys(accepted), ['Outcome', 'Task', 'Changed', 'Checks', 'Issues']);
+  assert.match(accepted.Outcome, /uncommitted local diff/u);
+  assert.equal(accepted.Task, 'Task T-071');
+  assert.match(accepted.Checks, /1\/1 independent/u);
+  const blocked = implementationReport(
+    {
+      status: 'blocked',
+      changedPaths: ['source.txt'],
+      checks: [{ command: 'npm test', status: 'failed', exitCode: 1 }],
+      violations: [{ code: 'E_INTEGRATION_PRESERVE', path: 'source.txt' }],
+      code: 'E_INTEGRATION_CHECKS',
+      rollbackErrors: [{ path: 'source.txt', code: 'E_ROLLBACK' }],
+      nextAction: 'Send findings to the same delegate session.',
+    },
+    null,
+  );
+  assert.equal(blocked.Task, 'Direct request');
+  assert.match(blocked.Changed, /not accepted/u);
+  assert.match(blocked.Issues, /E_INTEGRATION_PRESERVE: source.txt/u);
+  assert.match(blocked.Issues, /npm test failed \(exit 1\)/u);
+  assert.match(blocked.Issues, /Recovery needed: source.txt \(E_ROLLBACK\)/u);
+  const timedOut = implementationReport(
+    {
+      status: 'blocked',
+      changedPaths: ['source.txt'],
+      checks: [{ command: 'npm run test', status: 'timed-out', timeoutMs: 120000 }],
+      code: 'E_INTEGRATION_CHECK_TIMEOUT',
+      nextAction: 'Retry with a measured timeoutMs.',
+    },
+    null,
+  );
+  assert.match(timedOut.Issues, /timed out after 120000 ms/u);
+  assert.doesNotMatch(timedOut.Issues, /fails before applying this delta/u);
+  const unverified = implementationReport({ status: 'completed', changedPaths: [] }, null);
+  assert.match(unverified.Checks, /No independent checks ran/u);
+});
+
+test('observed patch excludes selected dirty baseline and ignores delegate claims', async () => {
+  const { custody } = await fixture({ dirty: true });
+  await writeFile(join(custody.worktreePath, 'tracked.txt'), 'selected dirty\ndelegate edit\n');
+  await writeFile(
+    join(custody.worktreePath, 'untracked.txt'),
+    'selected untracked\ndelegate edit\n',
+  );
+  await writeFile(join(custody.worktreePath, 'new.txt'), 'new\n');
+  const review = await reviewDelegateDelta({
+    custody,
+    run,
+    scopePaths: ['tracked.txt', 'untracked.txt', 'new.txt'],
+  });
+  assert.equal(review.ready, true);
+  assert.deepEqual(review.changedPaths, ['new.txt', 'tracked.txt', 'untracked.txt']);
+  assert.equal(
+    Buffer.from(
+      review.changes.find((item) => item.path === 'tracked.txt').before.contentBase64,
+      'base64',
+    ).toString(),
+    'selected dirty\n',
+  );
+  assert.equal(review.changedPaths.includes('fabricated.txt'), false);
+});
+
+test('preserve, scope, source drift, staged, and committed changes block without source writes', async () => {
+  const cases = [
+    {
+      name: 'preserve',
+      mutate: async ({ custody }) => writeFile(join(custody.worktreePath, 'keep.txt'), 'changed\n'),
+      scopePaths: ['keep.txt'],
+    },
+    {
+      name: 'scope',
+      mutate: async ({ custody }) =>
+        writeFile(join(custody.worktreePath, 'tracked.txt'), 'changed\n'),
+      scopePaths: ['other.txt'],
+    },
+    {
+      name: 'source drift',
+      mutate: async ({ custody, repositoryRoot }) => {
+        await writeFile(join(custody.worktreePath, 'tracked.txt'), 'changed\n');
+        await writeFile(join(repositoryRoot, 'tracked.txt'), 'source moved\n');
+      },
+      scopePaths: ['tracked.txt'],
+    },
+    {
+      name: 'staged',
+      mutate: async ({ custody }) => {
+        await writeFile(join(custody.worktreePath, 'tracked.txt'), 'changed\n');
+        await git(custody.worktreePath, 'add', 'tracked.txt');
+      },
+      scopePaths: ['tracked.txt'],
+    },
+    {
+      name: 'committed',
+      mutate: async ({ custody }) => {
+        await writeFile(join(custody.worktreePath, 'tracked.txt'), 'changed\n');
+        await git(
+          custody.worktreePath,
+          '-c',
+          'user.name=Test',
+          '-c',
+          'user.email=test@example.com',
+          'commit',
+          '-qam',
+          'delegate committed',
+        );
+      },
+      scopePaths: ['tracked.txt'],
+    },
+  ];
+  for (const scenario of cases) {
+    const input = await fixture({ preservePaths: ['keep.txt'] });
+    await scenario.mutate(input);
+    const expected = await readFile(join(input.repositoryRoot, 'tracked.txt'), 'utf8');
+    const result = await integrateDelegateDelta({
+      custody: input.custody,
+      run,
+      scopePaths: scenario.scopePaths,
+      checks: [],
+    });
+    assert.equal(result.status, 'blocked', scenario.name);
+    assert.equal(
+      await readFile(join(input.repositoryRoot, 'tracked.txt'), 'utf8'),
+      expected,
+      scenario.name,
+    );
+  }
+});
+
+test('mid-apply failure rolls back all source paths and retains worktree', async () => {
+  const { custody, repositoryRoot } = await fixture();
+  await writeFile(join(custody.worktreePath, 'tracked.txt'), 'delegate\n');
+  await mkdir(join(custody.worktreePath, 'nested'));
+  await writeFile(join(custody.worktreePath, 'nested', 'new.txt'), 'new\n');
+  const result = await integrateDelegateDelta({
+    custody,
+    run,
+    scopePaths: ['tracked.txt', 'nested'],
+    checks: [],
+    injectFailureAt: 0,
+  });
+  assert.equal(result.status, 'blocked');
+  assert.equal(await readFile(join(repositoryRoot, 'tracked.txt'), 'utf8'), 'base\n');
+  assert.equal(await readFile(join(custody.worktreePath, 'tracked.txt'), 'utf8'), 'delegate\n');
+  await assert.rejects(lstat(join(repositoryRoot, 'nested')), { code: 'ENOENT' });
+});
+
+test('safe mode, deletion, and new-file delta applies as uncommitted diff after independent checks', async () => {
+  const { custody, repositoryRoot } = await fixture({
+    files: {
+      'package.json': JSON.stringify({
+        scripts: {
+          'test:focused': 'node -e "process.exit(0)"',
+          'check:boundaries': 'node -e "process.exit(0)"',
+        },
+      }),
+    },
+  });
+  await writeFile(join(custody.worktreePath, 'tracked.txt'), 'delegate\n');
+  await chmod(join(custody.worktreePath, 'tracked.txt'), 0o755);
+  await rm(join(custody.worktreePath, 'keep.txt'));
+  await writeFile(join(custody.worktreePath, 'new.txt'), 'new\n');
+  const checks = await discoverDelegateChecks({ repositoryRoot, changedPaths: ['tracked.txt'] });
+  assert.ok(checks.some((check) => check.kind === 'focused'));
+  assert.ok(checks.some((check) => check.kind === 'regression'));
+  const result = await integrateDelegateDelta({
+    custody,
+    run,
+    scopePaths: ['tracked.txt', 'keep.txt', 'new.txt'],
+    checks,
+  });
+  assert.equal(result.status, 'completed', JSON.stringify(result.violations));
+  assert.equal(
+    result.checks.every((check) => check.status === 'passed'),
+    true,
+  );
+  assert.equal(await readFile(join(repositoryRoot, 'tracked.txt'), 'utf8'), 'delegate\n');
+  const { stdout } = await git(repositoryRoot, 'status', '--short');
+  assert.match(stdout, /tracked\.txt/u);
+  assert.match(stdout, /new\.txt/u);
+  assert.match(stdout, /keep\.txt/u);
+});
+
+test('failed check rolls back source and reports independent finding', async () => {
+  const { custody, repositoryRoot } = await fixture({
+    files: {
+      'package.json': JSON.stringify({ scripts: { 'test:fail': 'node -e "process.exit(1)"' } }),
+    },
+  });
+  await writeFile(join(custody.worktreePath, 'tracked.txt'), 'delegate\n');
+  const result = await integrateDelegateDelta({
+    custody,
+    run,
+    scopePaths: ['tracked.txt'],
+    checks: ['npm run test:fail'],
+  });
+  assert.equal(result.status, 'blocked');
+  assert.equal(result.checks[0].status, 'failed');
+  assert.equal(result.checks[0].classification, 'baseline-failure');
+  assert.equal(await readFile(join(repositoryRoot, 'tracked.txt'), 'utf8'), 'base\n');
+});
+
+test('timed-out check rolls back without labeling the patch a regression or retrying the baseline', async () => {
+  const { custody, repositoryRoot } = await fixture({
+    files: {
+      'package.json': JSON.stringify({
+        scripts: { 'test:slow': 'node -e "setTimeout(() => {}, 300)"' },
+      }),
+    },
+  });
+  await writeFile(join(custody.worktreePath, 'tracked.txt'), 'delegate\n');
+  const result = await integrateDelegateDelta({
+    custody,
+    run,
+    scopePaths: ['tracked.txt'],
+    checks: ['npm run test:slow'],
+    timeoutMs: 20,
+  });
+  assert.equal(result.status, 'blocked');
+  assert.equal(result.code, 'E_INTEGRATION_CHECK_TIMEOUT');
+  assert.equal(result.checks[0].status, 'timed-out');
+  assert.equal(result.checks[0].classification, undefined);
+  assert.match(result.nextAction, /timeoutMs/u);
+  assert.equal(await readFile(join(repositoryRoot, 'tracked.txt'), 'utf8'), 'base\n');
+});
+
+test('unsafe delegated symlink is reported as a conflict without touching source', async () => {
+  const { custody, repositoryRoot } = await fixture();
+  await symlink('/etc/passwd', join(custody.worktreePath, 'escape.txt'));
+  const result = await integrateDelegateDelta({
+    custody,
+    run,
+    scopePaths: ['escape.txt'],
+    checks: [],
+  });
+  assert.equal(result.status, 'blocked');
+  assert.ok(
+    result.violations.some((violation) => violation.code === 'E_INTEGRATION_UNSAFE_WORKTREE_PATH'),
+  );
+  await assert.rejects(lstat(join(repositoryRoot, 'escape.txt')), { code: 'ENOENT' });
+});
+
+test('installed review command reads private custody but reports only observed metadata', async () => {
+  const { base, custody, repositoryRoot, capsule } = await fixture();
+  await writeFile(join(custody.worktreePath, 'tracked.txt'), 'private delegate edit\n');
+  const runDirectory = join(base, 'runs');
+  await mkdir(runDirectory, { mode: 0o700 });
+  const runId = custody.runId;
+  const runPath = join(await realpath(runDirectory), runId);
+  const custodyPath = join(runPath, 'custody.json');
+  const capsuleDirectory = join(runPath, 'capsule');
+  const capsulePath = join(capsuleDirectory, 'capsule.json');
+  const capsuleBytes = Buffer.from(JSON.stringify(capsule));
+  const capsuleDigest = createHash('sha256').update(capsuleBytes).digest('hex');
+  await createRunRecord(
+    {
+      runId,
+      runPath,
+      repositoryRoot: custody.repositoryRoot,
+      worktreePath: custody.worktreePath,
+      custodyPath,
+      capsulePath,
+      capsuleDigest,
+      status: 'completed',
+    },
+    { directory: runDirectory },
+  );
+  await writeFile(custodyPath, JSON.stringify(custody), { mode: 0o600 });
+  await mkdir(capsuleDirectory, { mode: 0o700 });
+  await writeFile(capsulePath, capsuleBytes, { mode: 0o600 });
+  const result = await delegateIntegrationCommand('review', {
+    runId,
+    runDirectory,
+    scopePaths: ['tracked.txt'],
+  });
+  assert.equal(result.ready, true);
+  assert.deepEqual(result.changedPaths, ['tracked.txt']);
+  assert.equal(JSON.stringify(result).includes('private delegate edit'), false);
+  await writeFile(capsulePath, Buffer.concat([capsuleBytes, Buffer.from(' ')]), { mode: 0o600 });
+  const blockedReview = await delegateIntegrationCommand('review', {
+    runId,
+    runDirectory,
+    scopePaths: ['tracked.txt'],
+  });
+  assert.equal(blockedReview.ready, false);
+  assert.equal(blockedReview.violations[0].code, 'E_DELEGATE_CAPSULE_DRIFT');
+  const blockedApply = await delegateIntegrationCommand('apply', {
+    runId,
+    runDirectory,
+    scopePaths: ['tracked.txt'],
+  });
+  assert.equal(blockedApply.status, 'blocked');
+  assert.equal(blockedApply.code, 'E_DELEGATE_CAPSULE_DRIFT');
+  assert.equal(blockedApply.report.Task, 'Task unavailable');
+  assert.match(blockedApply.report.Issues, /E_DELEGATE_CAPSULE_DRIFT/u);
+  assert.equal(await readFile(join(repositoryRoot, 'tracked.txt'), 'utf8'), 'base\n');
+});
+
+async function recordedRun({ base, custody, capsule }) {
+  const runDirectory = join(base, 'runs');
+  await mkdir(runDirectory, { mode: 0o700 });
+  const runId = custody.runId;
+  const runPath = join(await realpath(runDirectory), runId);
+  const custodyPath = join(runPath, 'custody.json');
+  const capsulePath = join(runPath, 'capsule', 'capsule.json');
+  const capsuleBytes = Buffer.from(JSON.stringify(capsule));
+  await createRunRecord(
+    {
+      runId,
+      runPath,
+      repositoryRoot: custody.repositoryRoot,
+      worktreePath: custody.worktreePath,
+      custodyPath,
+      capsulePath,
+      capsuleDigest: createHash('sha256').update(capsuleBytes).digest('hex'),
+      status: 'completed',
+    },
+    { directory: runDirectory },
+  );
+  await writeFile(custodyPath, JSON.stringify(custody), { mode: 0o600 });
+  await mkdir(dirname(capsulePath), { mode: 0o700 });
+  await writeFile(capsulePath, capsuleBytes, { mode: 0o600 });
+  return { runId, runDirectory };
+}
+
+test('recorded integration scope cannot be widened after dispatch', async () => {
+  const data = await fixture();
+  const { custody, repositoryRoot } = data;
+  await writeFile(join(custody.worktreePath, 'tracked.txt'), 'delegate\n');
+  const { runId, runDirectory } = await recordedRun(data);
+  await updateRunRecord(
+    runId,
+    { integrationScopePaths: ['tracked.txt'] },
+    { directory: runDirectory },
+  );
+  await assert.rejects(
+    delegateIntegrationCommand('apply', {
+      runId,
+      runDirectory,
+      scopePaths: ['keep.txt'],
+      checks: [],
+    }),
+    { code: 'E_INTEGRATION_SCOPE_WIDENED' },
+  );
+  const reviewed = await delegateIntegrationCommand('review', { runId, runDirectory });
+  assert.equal(reviewed.ready, true);
+  assert.deepEqual(reviewed.changedPaths, ['tracked.txt']);
+  assert.equal(await readFile(join(repositoryRoot, 'tracked.txt'), 'utf8'), 'base\n');
+});
+
+test('scoped checks and declared generation integrate atomically with auditable provenance', async () => {
+  const packagePath = 'packages/widget';
+  const sourcePath = `${packagePath}/source.txt`;
+  const outputPath = `${packagePath}/generated.txt`;
+  const generator =
+    "node -e \"const fs=require('fs');fs.writeFileSync('generated.txt',fs.readFileSync('source.txt'))\"";
+  const check =
+    "node -e \"process.exit(require('fs').readFileSync('generated.txt','utf8')===require('fs').readFileSync('source.txt','utf8')?0:1)\"";
+  const fixtureData = await fixture({
+    files: {
+      [`${packagePath}/package.json`]: JSON.stringify({
+        scripts: { generate: generator, test: check },
+      }),
+      [sourcePath]: 'base\n',
+      [outputPath]: 'base\n',
+    },
+  });
+  const { base, custody, repositoryRoot } = fixtureData;
+  await writeFile(join(custody.worktreePath, sourcePath), 'delegate\n');
+  const { runId, runDirectory } = await recordedRun(fixtureData);
+  const result = await delegateIntegrationCommand('apply', {
+    runId,
+    runDirectory,
+    scopePaths: [packagePath],
+    checks: [{ command: 'npm run test', cwd: packagePath }],
+    generators: [{ packagePath, script: 'generate', outputPaths: [outputPath] }],
+  });
+  assert.equal(result.status, 'completed', JSON.stringify(result));
+  assert.deepEqual(result.changedPaths, [sourcePath, outputPath]);
+  assert.deepEqual(result.generatedPaths, [outputPath]);
+  assert.equal(result.checks[0].status, 'passed');
+  assert.equal(await readFile(join(repositoryRoot, outputPath), 'utf8'), 'delegate\n');
+  const recorded = await readRunRecord(runId, { directory: runDirectory });
+  assert.equal(recorded.status, 'closed');
+  assert.equal(recorded.disposition, 'integrated');
+  assert.deepEqual(recorded.integration.delegatePaths, [sourcePath]);
+  assert.deepEqual(recorded.integration.generatedPaths, [outputPath]);
+  assert.equal(
+    JSON.stringify(await delegateRunStatus({ runId, runDirectory })).includes('delegate\n'),
+    false,
+  );
+  assert.equal((await delegateRunStatus({ runId, runDirectory })).phase, 'integrated');
+  assert.deepEqual((await delegateRunStatus({ runId, runDirectory })).report, result.report);
+  assert.deepEqual(
+    (await delegateRunnerCommand('status', { runId, runDirectory })).report,
+    result.report,
+  );
+  assert.deepEqual(
+    (
+      await delegateRunnerCommand('close', {
+        runId,
+        runDirectory,
+        disposition: 'integrated',
+      })
+    ).report,
+    result.report,
+  );
+  await assert.rejects(
+    delegateIntegrationCommand('apply', {
+      runId,
+      runDirectory,
+      scopePaths: [packagePath],
+      checks: [],
+    }),
+    { code: 'E_INTEGRATION_ALREADY_APPLIED' },
+  );
+  await assert.rejects(resumeDelegateRun({ runId, runDirectory, correction: 'More work' }), {
+    code: 'E_DELEGATE_ALREADY_INTEGRATED',
+  });
+  await writeFile(join(repositoryRoot, sourcePath), 'host correction\n');
+  assert.deepEqual((await delegateRunStatus({ runId, runDirectory })).integration.driftPaths, [
+    sourcePath,
+  ]);
+  await writeFile(join(repositoryRoot, sourcePath), 'delegate\n');
+  const closedAt = (
+    await closeRunRecord(runId, { disposition: 'integrated', directory: runDirectory })
+  ).closedAt;
+  assert.equal(
+    (await closeRunRecord(runId, { disposition: 'integrated', directory: runDirectory })).closedAt,
+    closedAt,
+  );
+  await assert.rejects(
+    closeRunRecord(runId, { disposition: 'abandoned', directory: runDirectory }),
+    { code: 'E_RUN_CLOSE' },
+  );
+  assert.equal((await delegateRunStatus({ runId, runDirectory })).phase, 'integrated');
+  assert.equal(base.length > 0, true);
+});
+
+test('generator side effects outside declared outputs roll back both generated and delegate files', async () => {
+  const packagePath = 'packages/widget';
+  const sourcePath = `${packagePath}/source.txt`;
+  const outputPath = `${packagePath}/generated.txt`;
+  const generator =
+    "node -e \"const fs=require('fs');fs.writeFileSync('generated.txt','changed');fs.writeFileSync('stray.txt','unlisted')\"";
+  const { custody, repositoryRoot } = await fixture({
+    files: {
+      [`${packagePath}/package.json`]: JSON.stringify({ scripts: { generate: generator } }),
+      [sourcePath]: 'base\n',
+      [outputPath]: 'base\n',
+    },
+  });
+  await writeFile(join(custody.worktreePath, sourcePath), 'delegate\n');
+  const result = await integrateDelegateDelta({
+    custody,
+    run,
+    scopePaths: [packagePath],
+    checks: [],
+    generators: [{ packagePath, script: 'generate', outputPaths: [outputPath] }],
+  });
+  assert.equal(result.status, 'blocked');
+  assert.equal(result.code, 'E_INTEGRATION_GENERATOR_SCOPE');
+  assert.equal(await readFile(join(repositoryRoot, sourcePath), 'utf8'), 'base\n');
+  assert.equal(await readFile(join(repositoryRoot, outputPath), 'utf8'), 'base\n');
+  await assert.rejects(lstat(join(repositoryRoot, packagePath, 'stray.txt')), { code: 'ENOENT' });
+});
+
+test('unsafe explicit check and dirty generated destination block before source writes', async () => {
+  const packagePath = 'packages/widget';
+  const sourcePath = `${packagePath}/source.txt`;
+  const outputPath = `${packagePath}/generated.txt`;
+  const { custody, repositoryRoot } = await fixture({
+    files: {
+      [`${packagePath}/package.json`]: JSON.stringify({
+        scripts: { generate: 'node -e ""', test: 'node -e ""' },
+      }),
+      [sourcePath]: 'base\n',
+      [outputPath]: 'base\n',
+    },
+  });
+  await writeFile(join(custody.worktreePath, sourcePath), 'delegate\n');
+  await assert.rejects(
+    integrateDelegateDelta({
+      custody,
+      run,
+      scopePaths: [packagePath],
+      checks: ['npm run test; touch secret'],
+    }),
+    { code: 'E_INTEGRATION_CHECK_SELECTION' },
+  );
+  await writeFile(join(repositoryRoot, outputPath), 'user work\n');
+  await assert.rejects(
+    integrateDelegateDelta({
+      custody,
+      run,
+      scopePaths: [packagePath],
+      checks: [],
+      generators: [{ packagePath, script: 'generate', outputPaths: [outputPath] }],
+    }),
+    (error) => ['E_INTEGRATION_GENERATOR_DRIFT', 'E_INTEGRATION_SOURCE_DRIFT'].includes(error.code),
+  );
+  assert.equal(await readFile(join(repositoryRoot, sourcePath), 'utf8'), 'base\n');
+  assert.equal(await readFile(join(repositoryRoot, outputPath), 'utf8'), 'user work\n');
+});
+
+test('a check that writes repository files cannot silently become delegated output', async () => {
+  const packagePath = 'packages/widget';
+  const sourcePath = `${packagePath}/source.txt`;
+  const { custody, repositoryRoot } = await fixture({
+    files: {
+      [`${packagePath}/package.json`]: JSON.stringify({
+        scripts: {
+          'test:mutate': "node -e \"require('fs').writeFileSync('stray.txt','from check')\"",
+        },
+      }),
+      [sourcePath]: 'base\n',
+    },
+  });
+  await writeFile(join(custody.worktreePath, sourcePath), 'delegate\n');
+  const result = await integrateDelegateDelta({
+    custody,
+    run,
+    scopePaths: [packagePath],
+    checks: [{ command: 'npm run test:mutate', cwd: packagePath }],
+  });
+  assert.equal(result.status, 'blocked');
+  assert.equal(result.code, 'E_INTEGRATION_CHECK_SIDE_EFFECT');
+  assert.equal(await readFile(join(repositoryRoot, sourcePath), 'utf8'), 'base\n');
+  await assert.rejects(lstat(join(repositoryRoot, packagePath, 'stray.txt')), { code: 'ENOENT' });
+});
+
+test('baseline classification also rolls back side effects from the baseline rerun', async () => {
+  const packagePath = 'packages/widget';
+  const sourcePath = `${packagePath}/source.txt`;
+  const script =
+    "node -e \"const fs=require('fs');if(fs.readFileSync('source.txt','utf8')==='base\\n')fs.writeFileSync('baseline-stray.txt','side effect');process.exit(1)\"";
+  const { custody, repositoryRoot } = await fixture({
+    files: {
+      [`${packagePath}/package.json`]: JSON.stringify({ scripts: { test: script } }),
+      [sourcePath]: 'base\n',
+    },
+  });
+  await writeFile(join(custody.worktreePath, sourcePath), 'delegate\n');
+  const result = await integrateDelegateDelta({
+    custody,
+    run,
+    scopePaths: [packagePath],
+    checks: [{ command: 'npm run test', cwd: packagePath }],
+  });
+  assert.equal(result.status, 'blocked');
+  assert.equal(result.code, 'E_INTEGRATION_BASELINE_SIDE_EFFECT');
+  assert.equal(result.checks[0].classification, 'unverified');
+  assert.equal(await readFile(join(repositoryRoot, sourcePath), 'utf8'), 'base\n');
+  await assert.rejects(lstat(join(repositoryRoot, packagePath, 'baseline-stray.txt')), {
+    code: 'ENOENT',
+  });
+});

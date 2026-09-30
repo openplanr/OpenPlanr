@@ -5,10 +5,10 @@
   "plugin": "planr",
   "version": "2.2640.4",
   "skillRoot": "./skills/",
-  "canonicalSkillCount": 27,
+  "canonicalSkillCount": 28,
   "compatibilityAliasCount": 0,
-  "skillCount": 27,
-  "assetCount": 338,
+  "skillCount": 28,
+  "assetCount": 359,
   "skills": [
     {
       "skillId": "planr-artifact",
@@ -361,6 +361,99 @@
         {
           "path": "skills/dashboard/agents/openai.yaml",
           "digest": "sha256:0688429a1c40c5f5ba0c51301b6b1e5601b9ae2dfc994569c86482466d0751fd"
+        }
+      ]
+    },
+    {
+      "skillId": "planr-delegate",
+      "projectedName": "delegate",
+      "invocation": "$planr:delegate",
+      "description": "Delegate one explicitly requested implementation scope to an enrolled local coding agent while the active agent owns context, questions, review, and integration. Use only when the user asks another agent to implement.",
+      "entrypoint": "skills/delegate/SKILL.md",
+      "assets": [
+        {
+          "path": "skills/delegate/SKILL.md",
+          "digest": "sha256:ab4a4bb6612ef363b21be608043f5a17a100bbdc05b98b1d020ef3d0fe1fff5b"
+        },
+        {
+          "path": "skills/delegate/openplanr.skill.json",
+          "digest": "sha256:d8b3fe12ec694b5c725e8978bdbd3076d355edb67d97e9d5d2f1f8464f16a070"
+        },
+        {
+          "path": "skills/delegate/agents/openai.yaml",
+          "digest": "sha256:787a30246eb5bd36f2e3a036607af2458e520092822b3f734a190667f46afb4b"
+        },
+        {
+          "path": "skills/delegate/references/adapter-protocol.md",
+          "digest": "sha256:f83155e0cf96cefc47ebe060fe787e9b4c5d8a3beb0d1c8e8d5e2d884b82d8af"
+        },
+        {
+          "path": "skills/delegate/references/capsule-contract.md",
+          "digest": "sha256:21953f56004471fff84c02390c6c14be2b6d9cb1fe21277f585583eb4a7efef7"
+        },
+        {
+          "path": "skills/delegate/references/integration-review.md",
+          "digest": "sha256:6bb4c4612aee0eb512966bfc8f8c51b94de41179b3365b98e25b7f4bb28cec89"
+        },
+        {
+          "path": "skills/delegate/references/operator-guide.md",
+          "digest": "sha256:27bca32fd371871f2315db519916ae6cecb083bd745d350afd5781dbaf3e687e"
+        },
+        {
+          "path": "skills/delegate/references/run-handoff.md",
+          "digest": "sha256:e21f144b02f681284cfae423f7ce42ec0dd881cfda9dba33526910071b354a1e"
+        },
+        {
+          "path": "skills/delegate/references/worktree-custody.md",
+          "digest": "sha256:a41b5c04aece1f6d7ca27f5e351f02a0db20043c334418f7a73fbc735cfc9e50"
+        },
+        {
+          "path": "skills/delegate/scripts/adapters/claude.mjs",
+          "digest": "sha256:5986456a7dbf5beff749c92f50bc17a73181192783e387426482465b9958146d"
+        },
+        {
+          "path": "skills/delegate/scripts/adapters/codex.mjs",
+          "digest": "sha256:db6ed8ae34a3e80a3f76165122d6ff038786f63501dfcbf799868950d2be0473"
+        },
+        {
+          "path": "skills/delegate/scripts/adapters/generic.mjs",
+          "digest": "sha256:76b6529b52df2e3bfebaebb760987ebb0f50648df7debb6fb0e10ed9da4885e2"
+        },
+        {
+          "path": "skills/delegate/scripts/adapters/opencode-wrapper.mjs",
+          "digest": "sha256:a01e05882cbbb9d3b822bfb65018cd00734540eeafd3fd7182cb912bf0094e9f"
+        },
+        {
+          "path": "skills/delegate/scripts/context.mjs",
+          "digest": "sha256:dc735b1887359b9e63739e4b2e5ea44d7638de5ad45edef0490a10085cdfd577"
+        },
+        {
+          "path": "skills/delegate/scripts/custody.mjs",
+          "digest": "sha256:2bf29ee719d0ef47f9883fdcf1c82fb31b3bb46be7621e117aa15727d35a37c1"
+        },
+        {
+          "path": "skills/delegate/scripts/helper-snapshot.mjs",
+          "digest": "sha256:7a7fea96e559c78d3989b309bfb06ff26e7470af95589322318c9d6f03311c6b"
+        },
+        {
+          "path": "skills/delegate/scripts/integrate.mjs",
+          "digest": "sha256:71d77aae6eb40196a6405040bbf4b0fef135fb73722212d0b1af9365065f5d38"
+        },
+        {
+          "path": "skills/delegate/scripts/presentation.mjs",
+          "digest": "sha256:81d505b48c3c1504b8c5368dbe76f102154f85d055d88ac96a423b7d814dd70a"
+        },
+        {
+          "path": "skills/delegate/scripts/profiles.mjs",
+          "digest": "sha256:abe1a9db628c64774892709a687a16de88c4b0acc8ac1e68cf5488f77673abea"
+        },
+        {
+          "path": "skills/delegate/scripts/run-record.mjs",
+          "digest": "sha256:a9ca4786b8914fe9b06f2ce70d3e4bbea2dd627bc70196e2ae1cab495a8c29c5"
+        },
+        {
+          "path": "skills/delegate/scripts/runner.mjs",
+          "digest": "sha256:ce4af5d53a7312151c0c90ef595cfb4ce1e8c5a2a135dbd8d8cb80a126aecd87"
         }
       ]
     },
@@ -1147,12 +1240,12 @@
       "skillId": "planr-openplanr",
       "projectedName": "openplanr",
       "invocation": "$planr:openplanr",
-      "description": "Route a planning, specification, delivery, design, review, diagram, release, or operating request to the best OpenPlanr skill. Use when the right skill is unclear or the request spans several.",
+      "description": "Route a planning, specification, delivery, delegation, design, review, diagram, release, or operating request to the best OpenPlanr skill. Use when the right skill is unclear or the request spans several.",
       "entrypoint": "skills/openplanr/SKILL.md",
       "assets": [
         {
           "path": "skills/openplanr/SKILL.md",
-          "digest": "sha256:f1e2daabc532519e6e9b83e49bddae8948d234bdf1be0e858528c2d0ecf65bc5"
+          "digest": "sha256:94097dcdc55cfc4759f0422763e2017cfd2fad5ad440d306ca57b291244c7cfc"
         },
         {
           "path": "skills/openplanr/openplanr.skill.json",
@@ -1477,7 +1570,7 @@
       "assets": [
         {
           "path": "skills/ship/SKILL.md",
-          "digest": "sha256:fdf8113b3f5564d5ddd5a4d93d47ec2994c3e8fefa94fa37bc1e5efbe6798c9c"
+          "digest": "sha256:f717556a27707b331cef59d3f1610e74c0a565506026e677d0f1619b8849364d"
         },
         {
           "path": "skills/ship/openplanr.skill.json",

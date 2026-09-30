@@ -1,0 +1,6 @@
+interface:
+  display_name: "Planr Delegate"
+  short_description: "Delegate one explicitly requested implementation scope to an…"
+  default_prompt: "Use $planr-delegate to delegate one explicitly requested implementation scope to an enrolled local coding agent while the active agent owns context, questions, review, and integration. Use only when the user asks another agent to implement."
+policy:
+  allow_implicit_invocation: true

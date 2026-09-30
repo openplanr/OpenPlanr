@@ -111,6 +111,29 @@ Learning records accept concise redacted notes only, live below
 `.planr/runtime/skill-learning.jsonl`, and cannot target canonical skill sources.
 Raw prompts, artifact bodies, credentials, and secrets are rejected or removed.
 
+## Explicit implementation delegation
+
+Spec, Plan, Review, Design, Operate, and ordinary Ship remain work of the active
+host agent. A user may explicitly ask a second coding agent to implement one
+coherent task; only then does the router select `planr-delegate`. Its packaged
+local helper builds a private context capsule and an isolated writable worktree.
+Before dispatch, the orchestrator shows the selected files, writable repository,
+enrolled profile, and effective data destination. The delegated agent implements;
+the active agent handles questions, reviews observed changes, runs independent
+checks, and integrates an uncommitted local diff. A profile name does not prove
+local inference, and a worktree is not a security sandbox.
+
+This opt-in handoff is separate from ordinary `planr-ship`; neither a plain Ship
+request nor a Plan result launches another model process. The opt-in preview supports
+local Claude Code and Codex hosts with a terminal and explicitly enrolled trusted
+profiles. On first use, the skill previews the chosen engine's effective destination
+and model without task content, guides private enrollment when needed, then
+continues the same request. It never loads a model or changes provider settings
+silently. Provider/model compatibility is verified per implementation and correction
+journey, not inferred from a model list. See [delegation](delegation.md) for the
+preview's supported execution boundary, recovery and limitations. Landing and
+publication require separate authorization.
+
 ## Effect boundary
 
 Operation classification is diagnostic routing, not a second permission system.

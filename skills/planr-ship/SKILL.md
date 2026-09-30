@@ -7,9 +7,12 @@ license: MIT
 # Planr Ship
 
 Produce an implementation-complete local repository in this active coding
-session. Landing and release preparation belong to `planr-land`. Do not
-delegate implementation to a command-line or model subprocess.
-Keep the work local; do not publish or deploy it.
+session. Landing and release preparation belong to `planr-land`. Ordinary
+Ship stays host-native: do not delegate implementation to a command-line or
+model subprocess. If the user explicitly asks another coding agent to implement,
+hand off to `planr-delegate` before implementation. That separate opt-in workflow
+previews the selected context, writable repository, profile, and destination;
+plain Ship never launches its helper. Keep the work local; do not publish or deploy it.
 
 ## Resolve the task and context
 
@@ -42,8 +45,9 @@ Use the host's read, edit, shell, browser, and test capabilities. When native
 agents are available, dispatch only the applicable frontend, backend, database,
 QA, DevOps, and documentation roles inside this session. Give each role its
 owned outcome, relevant context paths, and explicit file coordination boundary.
-Run independent work in parallel. When native agents are unavailable, perform
-the same lenses sequentially in the active agent.
+Run independent work in parallel. Host-native role agents remain part of this
+Ship session and do not invoke the separate `planr-delegate` helper. When native
+agents are unavailable, perform the same lenses sequentially in the active agent.
 
 Integrate the complete change, then verify behavior. `reviewRisks` and
 `browserSurfaces` select useful checks; empty arrays are normal and neither field

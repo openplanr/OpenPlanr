@@ -141,7 +141,7 @@
   "catalogs": {
     "commands": {
       "path": "packages/protocol/registries/commands.json",
-      "digest": "sha256:a90a40c7d6317232a37271f5129e6ec41fea93b2259cb44f94b2dd3226276ba2",
+      "digest": "sha256:b3e5d72edfcc1566bf9c5aa139c4fd4ffef1793d87830008161b4b1abfdc9d76",
       "rootCommands": 39,
       "pipelineMachineLeaves": 31,
       "frozenClaudeDocuments": 8,
@@ -244,8 +244,8 @@
     },
     "skills": {
       "path": "packages/protocol/registries/skills.json",
-      "digest": "sha256:cc990e1b47e7ae89629343967bd4d3479582e18f8e6bd73f7f6593650c9baedc",
-      "count": 27,
+      "digest": "sha256:918916bc59b22e96426d58ff6d007ee1779397cf2b272ad9461f918d1411c219",
+      "count": 28,
       "ids": [
         "planr-artifact",
         "planr-browser-qa",
@@ -257,6 +257,7 @@
         "planr-cpo-review",
         "planr-cto-review",
         "planr-dashboard",
+        "planr-delegate",
         "planr-design",
         "planr-design-loop",
         "planr-design-review",
@@ -276,7 +277,7 @@
         "planr-sync"
       ],
       "aliases": [],
-      "membershipDigest": "sha256:aa63fe0371528151b33947cb90c1bffc171ced22a956b836b104dabae387d816"
+      "membershipDigest": "sha256:6696af3853f6ee5b399bf54bc079fc53320eafe7375a69b0abba2b58d9d1ed26"
     },
     "roles": {
       "path": "packages/protocol/registries/roles.json",
@@ -341,8 +342,8 @@
     ],
     "generatedAssets": {
       "path": "adapters/manifests/generated-assets.json",
-      "digest": "sha256:ab5aa249ac1206ffc37ca1162db9de6e971bbca59088db4f9e26df95cef4bc37",
-      "count": 1911
+      "digest": "sha256:53d826fafde7e2012e0fe0970c18229ca573bda8e54ae99b20d0618fada72221",
+      "count": 2029
     }
   },
   "schemas": {

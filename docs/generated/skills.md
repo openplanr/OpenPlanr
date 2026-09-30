@@ -113,6 +113,17 @@ Start or inspect the loopback-only OpenPlanr planning dashboard. Use when the us
 - Aliases: none.
 - Packaged support: none; the skill is intentionally single-file.
 
+## `planr-delegate`
+
+Delegate one explicitly requested implementation scope to an enrolled local coding agent while the active agent owns context, questions, review, and integration. Use only when the user asks another agent to implement.
+
+- Select for: Delegate implementation to another coding agent; Ask a second coding agent to implement while I orchestrate; Use planr-delegate for this task.
+- Defer for: Implement this task in the active agent; Ship this change without delegation.
+- Invocation from the plugin: `$planr:delegate` in Codex/ChatGPT; `/planr:delegate` in Claude Code.
+- Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
+- Aliases: none.
+- Packaged support: `references/adapter-protocol.md`, `references/capsule-contract.md`, `references/integration-review.md`, `references/operator-guide.md`, `references/run-handoff.md`, `references/worktree-custody.md`, and 12 packaged schema, script, and runtime resources.
+
 ## `planr-design`
 
 Design a polished product interface through adaptive consultation, a shared canvas/prototype/walkthrough studio, and an implementation-ready specification. Use for a new design or an existing interface that needs a coherent direction.

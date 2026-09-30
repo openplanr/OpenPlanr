@@ -81,6 +81,25 @@ describe('extractBacklogSpec', () => {
     expect(spec).not.toContain('Close when done');
   });
 
+  it('strips the supported close hint from newly created backlog items', () => {
+    const raw = [
+      '---',
+      'id: "BL-012"',
+      'title: "New helper"',
+      '---',
+      '',
+      '# BL-012: New helper',
+      '',
+      'Real spec content.',
+      '',
+      '---',
+      '_Close when done: `planr backlog update BL-012 --status closed`_',
+    ].join('\n');
+    const spec = extractBacklogSpec(raw, 'BL-012', 'New helper', 'fallback');
+    expect(spec).toContain('Real spec content.');
+    expect(spec).not.toContain('Close when done');
+  });
+
   it('falls back to the description when the raw body is empty', () => {
     const raw = ['---', 'id: "BL-020"', 'title: "Empty body"', '---', ''].join('\n');
 

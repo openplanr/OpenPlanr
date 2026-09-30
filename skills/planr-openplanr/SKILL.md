@@ -1,6 +1,6 @@
 ---
 name: planr-openplanr
-description: Route a planning, specification, delivery, design, review, diagram, release, or operating request to the best OpenPlanr skill. Use when the right skill is unclear or the request spans several.
+description: Route a planning, specification, delivery, delegation, design, review, diagram, release, or operating request to the best OpenPlanr skill. Use when the right skill is unclear or the request spans several.
 license: MIT
 ---
 
@@ -18,6 +18,7 @@ Claude Code and `$planr:plan` in Codex). Do not perform the routed work here.
 | Turn a vague idea or requirement into a measurable specification | `planr-spec` |
 | Break a specification or intent into stories and tasks | `planr-plan` |
 | Check a plan before implementation starts | `planr-plan-review` |
+| Ask another coding agent to implement a task while the active agent orchestrates | `planr-delegate` |
 | Build, fix, finish, or ship local work | `planr-ship` |
 | Find the root cause of a bug, regression, or odd behavior | `planr-investigate` |
 | Test the running application in a real browser | `planr-browser-qa` |
@@ -39,6 +40,9 @@ Claude Code and `$planr:plan` in Codex). Do not perform the routed work here.
 
 ## Boundaries
 
+- Explicitly asking another coding agent to implement routes to `planr-delegate`,
+  even if the request also says build or Ship. Plain implementation stays with
+  host-native `planr-ship`; merely mentioning an agent is not delegation.
 - PLAN and SHIP are separate user-invoked workflows. Route to one; never chain
   `planr-plan` into `planr-ship` on the user's behalf.
 - When a request spans several skills, route to the earliest step in that

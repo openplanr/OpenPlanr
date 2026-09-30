@@ -81,7 +81,7 @@ async function writeBacklogItem(
     `status: "${opts.status ?? 'open'}"`,
   ];
   if (opts.linearIssueId) fm.push(`linearIssueId: "${opts.linearIssueId}"`);
-  const body = `---\n${fm.join('\n')}\n---\n\n# ${id}: ${id} title\n\n## Priority\nHIGH\n\n## Tags\n\n- feature\n- dx\n\n## Description\nBacklog item description text.\n\n## Acceptance Criteria\n- AC line 1\n- AC line 2\n\n## Notes\nSome notes.\n\n---\n_Promote to agile hierarchy: \`planr backlog promote ${id} --story\` or \`planr backlog promote ${id} --quick\`_\n_Close when done: \`planr backlog close ${id}\`_\n`;
+  const body = `---\n${fm.join('\n')}\n---\n\n# ${id}: ${id} title\n\n## Priority\nHIGH\n\n## Tags\n\n- feature\n- dx\n\n## Description\nBacklog item description text.\n\n## Acceptance Criteria\n- AC line 1\n- AC line 2\n\n## Notes\nSome notes.\n\n---\n_Close when done: \`planr backlog update ${id} --status closed\`_\n`;
   await writeFile(join(dir, '.planr', 'backlog', `${id}-test.md`), body);
 }
 

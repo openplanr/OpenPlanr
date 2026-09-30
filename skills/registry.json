@@ -443,6 +443,48 @@
       ]
     },
     {
+      "skillId": "planr-delegate",
+      "family": "implementation",
+      "contribution": "workflows",
+      "skillVersion": "0.1.0",
+      "description": "Delegate one explicitly requested implementation scope to an enrolled local coding agent while the active agent owns context, questions, review, and integration. Use only when the user asks another agent to implement.",
+      "lifecycle": "active",
+      "authorityClass": "implementation",
+      "source": "skills/planr-delegate/openplanr.skill.json",
+      "baseline": "skills/planr-delegate/SKILL.md",
+      "triggerPolicy": {
+        "include": [
+          "Delegate implementation to another coding agent",
+          "Ask a second coding agent to implement while I orchestrate",
+          "Use planr-delegate for this task"
+        ],
+        "exclude": [
+          "Implement this task in the active agent",
+          "Ship this change without delegation"
+        ],
+        "deferTo": []
+      },
+      "contracts": {
+        "inputs": [],
+        "outputs": [
+          {
+            "id": "implementation-result",
+            "version": "1.0.0"
+          }
+        ]
+      },
+      "cliRequirements": [],
+      "ruleIds": [
+        "R3",
+        "R5"
+      ],
+      "certification": {
+        "migration": "evaluation/skills/migrations/planr-delegate.json",
+        "matchingFamily": "implementation"
+      },
+      "utilityRequirements": []
+    },
+    {
       "skillId": "planr-design",
       "family": "design",
       "contribution": "workflows",
