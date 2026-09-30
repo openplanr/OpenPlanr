@@ -18,6 +18,18 @@ For a user-selected local LM Studio Codex setup, its separate `configDir/config.
 
 When there is no confirmed-ready profile but an enrolled profile is dispatchable with unverified backend health, explain that limit. Select the sole suitable choice or ask among several; do not force unnecessary re-enrollment.
 
+## Provider template compatibility
+
+Claude Code may send system reminders after user and tool turns. A local model
+template that requires every system message to be first can reject an otherwise
+valid handoff. `E_ADAPTER_MODEL_TEMPLATE` reports this without raw provider text;
+retain the run and repair the backend before exact-session resume. Do not drop,
+reorder or rewrite messages in the skill. Use the provider's per-model settings
+and preserve the original tool and reasoning syntax. LM Studio's documented
+`CLAUDE_CODE_ATTRIBUTION_HEADER=0` setting is forwarded from the existing Claude
+configuration; it does not itself repair message ordering. A visible loaded model
+or successful probe is insufficient: verify implementation and correction.
+
 ## One run
 
 1. Resolve exactly one `.planr` task or a direct request. Select the full requirements and relevant code/tests for a private capsule. Repair missing required artifacts before dispatch; review optional omissions. Read [capsule-contract.md](capsule-contract.md).

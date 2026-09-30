@@ -54,6 +54,7 @@ journeys on 30 September 2026:
 | Engine | Provider and destination | Tested model |
 | --- | --- | --- |
 | Claude Code 2.1.285 | Signed-in Claude account; `https://api.anthropic.com` | `claude-sonnet-5-5` |
+| Claude Code 2.1.286 | Local LM Studio; `http://localhost:1234`, with the per-model template repair below | `qwen3.8-flash-next`, Unsloth IQ4_XS GGUF, loaded with a 262,144-token context |
 | Codex CLI 0.159.1 | Local LM Studio; `http://localhost:1234` | `qwen3.8-flash-next`, loaded with a 262,144-token context |
 
 Each journey read required task context, implemented a scoped edit, corrected it
@@ -63,10 +64,37 @@ Claude's native Read tool visibly read the decoded ignored planning file; Bash,
 hooks and MCP were excluded.
 
 This verifies the listed configurations, not every provider or model combination.
-Claude Code against a local Qwen backend remains unverified after observed model
-template failures. Other local models, generic adapters and different engine
-versions need their own complete journey. Model-list visibility or a successful
+The unmodified tested Qwen template rejects Claude's later system messages; the
+local Claude verification includes the per-model repair below. Other local models,
+generic adapters and different engine versions need their own complete journey. Model-list visibility or a successful
 probe alone does not certify implementation and correction.
+
+### Claude Code with local Qwen
+
+Use the existing local Claude configuration and explicitly enroll the loaded model.
+An older enrollment pinned to another model stays unchanged for its retained runs;
+create a new profile for the new model. LM Studio's [Claude Code setup](https://lmstudio.ai/docs/integrations/claude-code)
+recommends `CLAUDE_CODE_ATTRIBUTION_HEADER=0`; the adapter preserves that setting.
+
+The tested Qwen GGUF template merges leading system messages but rejects later
+ones. Claude Code sends later system reminders during normal execution. In LM
+Studio's [per-model prompt template](https://lmstudio.ai/docs/app/advanced/prompt-template),
+back up the existing template, and replace only its later-system exception with:
+
+```jinja
+{{- '<|im_start|>system\n' + content + '<|im_end|>\n' }}
+```
+
+Keep the surrounding system/developer branch, leading-message handling, tools and
+reasoning syntax unchanged. This retains each reminder in its original position;
+deleting the exception alone silently loses it, and moving reminders to the front
+changes the cached conversation prefix. Reload the model and verify edits plus an
+exact-session correction. This is a backend configuration repair; the skill does
+not rewrite messages, override templates or run a translation proxy.
+
+`E_ADAPTER_MODEL_TEMPLATE` identifies a rejected chat template without exposing
+provider text. The blocked run retains its exact session and worktree. Repair the
+backend before resuming that session; do not switch providers or silently retry.
 
 ## Checks, context and limits
 

@@ -720,10 +720,19 @@ test('checks cannot revert concurrent edits or delete a new owner note', async (
 });
 
 test('source drift during scratch checks preserves owner changes without any partial delta', async () => {
+  const gate = await mkdtemp(join(tmpdir(), 'planr-check-gate-'));
+  roots.push(gate);
+  const started = join(gate, 'started');
+  const release = join(gate, 'release');
   const data = await fixture({
     files: {
       'package.json': JSON.stringify({ scripts: { test: 'node check.mjs' } }),
-      'check.mjs': 'await new Promise(r=>setTimeout(r,250));',
+      'check.mjs': `import {writeFile,readFile} from 'node:fs/promises';
+        await writeFile(${JSON.stringify(started)},'ready');
+        const deadline=Date.now()+10000;
+        while(true){try{await readFile(${JSON.stringify(release)});break;}
+          catch(error){if(error.code!=='ENOENT'||Date.now()>deadline)throw error;}
+          await new Promise(r=>setTimeout(r,10));}`,
     },
   });
   await writeFile(join(data.custody.worktreePath, 'tracked.txt'), 'delegate\n');
@@ -733,8 +742,21 @@ test('source drift during scratch checks preserves owner changes without any par
     scopePaths: ['tracked.txt'],
     checks: ['npm run test'],
   });
-  await new Promise((r) => setTimeout(r, 120));
-  await writeFile(join(data.repositoryRoot, 'tracked.txt'), 'owner edit\n');
+  try {
+    const deadline = Date.now() + 10000;
+    while (true) {
+      try {
+        await readFile(started);
+        break;
+      } catch (error) {
+        if (error.code !== 'ENOENT' || Date.now() > deadline) throw error;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    await writeFile(join(data.repositoryRoot, 'tracked.txt'), 'owner edit\n');
+  } finally {
+    await writeFile(release, 'continue');
+  }
   const result = await integration;
   assert.equal(result.code, 'E_INTEGRATION_SOURCE_DRIFT');
   assert.equal(await readFile(join(data.repositoryRoot, 'tracked.txt'), 'utf8'), 'owner edit\n');

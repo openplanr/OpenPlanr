@@ -62,6 +62,8 @@ async function fixture() {
     "const result={status:process.env.FAKE_QUESTION ? 'question' : 'completed',sessionId:session,summary:'done',question:{text:'Choose?',options:['A','B']},checks:['test passed'],issues:[]};",
     "if(process.env.FAKE_CLAUDE_DENIALS && a.includes('--output-format')) { for(let i=0;i<3;i++) console.log(JSON.stringify({type:'user',session_id:session,message:{content:[{type:'tool_result',is_error:true,content:'This command requires approval'}]}})); return; }",
     "if(a.includes('--planr-run') || a.includes('--planr-resume')) return console.log(JSON.stringify({protocol:'openplanr.delegate.adapter',version:1,...result}));",
+    "if(process.env.FAKE_CLAUDE_TEMPLATE_ERROR && a.includes('--output-format')) { const text='provider secret never-print-this: Jinja Exception: System message must be at the beginning.'; console.log(JSON.stringify({type:'result',is_error:true,session_id:session,...(process.env.FAKE_CLAUDE_TEMPLATE_ERROR==='errors'?{errors:[text]}:{result:text})})); process.exitCode=1; return; }",
+    "if(process.env.FAKE_EXPECT_ATTRIBUTION && a.includes('--output-format') && (process.env.CLAUDE_CODE_ATTRIBUTION_HEADER!==process.env.FAKE_EXPECT_ATTRIBUTION || process.env.UNAUTHORIZED_AUTH)) process.exit(27);",
     "if(process.env.FAKE_CLAUDE_BACKEND_ERROR && a.includes('--output-format')) { console.log(JSON.stringify({type:'result',is_error:true,session_id:session,result:'provider secret should never leak'})); process.exitCode=1; return; }",
     "if(['fence','fence-extra'].includes(process.env.FAKE_CLAUDE_TRAILING_JSON) && a.includes('--output-format')) { const text='Implementation complete.\\n```json\\n'+JSON.stringify(result)+'\\n```'+(process.env.FAKE_CLAUDE_TRAILING_JSON==='fence-extra'?' trailing':''); console.log(JSON.stringify({type:'result',is_error:false,session_id:session,result:text})); return; }",
     "if(process.env.FAKE_CLAUDE_TRAILING_JSON && a.includes('--output-format')) { const prefix=process.env.FAKE_CLAUDE_TRAILING_JSON==='two' ? '{\\\"status\\\":\\\"blocked\\\"}\\n' : 'Implementation complete.\\n'; console.log(JSON.stringify({type:'result',is_error:false,session_id:session,result:prefix+JSON.stringify(result)})); return; }",
@@ -1004,6 +1006,55 @@ test('stock Claude config directory does not select a separate keychain credenti
     cwd: f.root,
     prompt: 'Implement',
     capsulePath: await testCapsule(f.root),
+  });
+  assert.equal(result.status, 'completed');
+});
+
+test('Claude identifies provider template failures without disclosing text and retains the exact session', async () => {
+  const f = await fixture();
+  const capsulePath = await testCapsule(f.root);
+  for (const field of ['result', 'errors']) {
+    await assert.rejects(
+      claudeAdapter.run({
+        profile: { executable: f.executable, argv: [] },
+        cwd: f.root,
+        prompt: 'private task',
+        capsulePath,
+        sessionId: 'exact-session',
+        env: { HOME: f.root, PATH: process.env.PATH, FAKE_CLAUDE_TEMPLATE_ERROR: field },
+      }),
+      (error) => {
+        assert.equal(error.code, 'E_ADAPTER_MODEL_TEMPLATE');
+        assert.equal(error.sessionId, 'exact-session');
+        assert.equal(JSON.stringify(error).includes('never-print-this'), false);
+        assert.equal(error.message.includes('private task'), false);
+        return true;
+      },
+    );
+  }
+});
+
+test('Claude preserves the local provider attribution setting while isolating other user settings', async () => {
+  const f = await fixture();
+  const { mkdir } = await import('node:fs/promises');
+  const configDir = join(f.root, 'local-config');
+  await mkdir(configDir);
+  await writeFile(
+    join(configDir, 'settings.json'),
+    JSON.stringify({
+      env: {
+        ANTHROPIC_BASE_URL: local.origin,
+        CLAUDE_CODE_ATTRIBUTION_HEADER: '0',
+        UNAUTHORIZED_AUTH: 'never-forward',
+      },
+    }),
+  );
+  const result = await claudeAdapter.run({
+    profile: { executable: f.executable, argv: [], configDir },
+    cwd: f.root,
+    prompt: 'Implement',
+    capsulePath: await testCapsule(f.root),
+    env: { HOME: f.root, PATH: process.env.PATH, FAKE_EXPECT_ATTRIBUTION: '0' },
   });
   assert.equal(result.status, 'completed');
 });

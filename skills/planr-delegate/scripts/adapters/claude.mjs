@@ -93,6 +93,7 @@ const CONFIG_ENV = new Set([
   'ANTHROPIC_DEFAULT_HAIKU_MODEL',
   'ANTHROPIC_DEFAULT_SONNET_MODEL',
   'ANTHROPIC_DEFAULT_OPUS_MODEL',
+  'CLAUDE_CODE_ATTRIBUTION_HEADER',
   'LM_API_TOKEN',
   'LM_STUDIO_API_KEY',
 ]);
@@ -217,9 +218,23 @@ function parseClaudeOutput(envelope, expectedSessionId, exitCode = 0) {
       : null;
   try {
     if (envelope.is_error === true) {
+      // Classify known template failures without storing or returning provider text.
+      const messages = [
+        envelope.result,
+        ...(Array.isArray(envelope.errors) ? envelope.errors.slice(0, 10) : []),
+      ];
+      const templateFailure = messages.some(
+        (message) =>
+          typeof message === 'string' &&
+          /System message must be at the beginning\.|Jinja (?:Exception|Error)/iu.test(
+            message.slice(0, 32 * 1024),
+          ),
+      );
       throw new AdapterError(
-        'E_ADAPTER_BACKEND_UNAVAILABLE',
-        'Claude backend could not complete the run.',
+        templateFailure ? 'E_ADAPTER_MODEL_TEMPLATE' : 'E_ADAPTER_BACKEND_UNAVAILABLE',
+        templateFailure
+          ? 'The backend chat template rejected the conversation. Fix the provider model template before resuming this exact session.'
+          : 'Claude backend could not complete the run.',
       );
     }
     if (exitCode !== 0 || envelope.type !== 'result' || !observedSession) {
