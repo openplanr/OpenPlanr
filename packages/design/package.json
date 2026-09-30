@@ -1,6 +1,6 @@
 {
   "name": "@openplanr/design",
-  "version": "0.3.6",
+  "version": "0.3.7",
   "private": true,
   "type": "module",
   "description": "Canonical OpenPlanr design helpers and design-loop engine",
