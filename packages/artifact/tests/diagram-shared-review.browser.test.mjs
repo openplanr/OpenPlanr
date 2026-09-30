@@ -177,11 +177,35 @@ test(
     assert.ok((await page.locator('[data-item-index]:visible').count()) > 0);
     await page.evaluate((id) => window.__review.select(id), bundle.scene.items[0].id);
     assert.equal(await page.locator('[data-element-id]').textContent(), bundle.scene.items[0].id);
+    assert.deepEqual(
+      await page.evaluate(() => ({
+        status: getComputedStyle(document.querySelector('[data-canvas-status]')).position,
+        actionsGrouped: Boolean(
+          document.querySelector('.diagram-element-details > div [data-action="comment-element"]'),
+        ),
+      })),
+      { status: 'absolute', actionsGrouped: true },
+    );
     await page.setViewportSize({ width: 390, height: 780 });
     await page.evaluate(() => window.__review.fit());
     assert.equal(await page.evaluate(() => document.fonts.check('400 14px Inter')), true);
   },
 );
+
+test('an unlabeled connection is named by its endpoints in the navigator', options, async (t) => {
+  const { page, bundle, reload } = await fixture(t, { legacy: true });
+  const [relation] = bundle.scene.relations;
+  relation.label = '';
+  await reload();
+  const label = (id) => bundle.scene.items.find((item) => item.id === id).label;
+  const index = bundle.scene.items.findIndex((item) => item.id === relation.id);
+  assert.ok(index >= 0, 'The connection is listed in the navigator');
+  assert.ok(
+    (await page.locator(`[data-item-index="${index}"]`).textContent()).endsWith(
+      `${label(relation.from)} → ${label(relation.to)}`,
+    ),
+  );
+});
 
 test(
   'standalone legacy pins retain canonical scene geometry and Discussion counts across revision remount, mobile resize and reload',
