@@ -6,7 +6,7 @@
   "inputs": [
     {
       "path": "adapters/manifests/generated-assets.json",
-      "digest": "sha256:82695956047e3d10e0a024108bc540660d3aa0e1fbccbe6748578d85b0087298"
+      "digest": "sha256:c095d8f8b167e97eafa70605816f78ba691a1a8d171d468d770ed5ca88d168fc"
     },
     {
       "path": "apps/dashboard/package.json",
@@ -22,15 +22,15 @@
     },
     {
       "path": "packages/artifact/package.json",
-      "digest": "sha256:4841948349bd9b03a0e58a4126beb34e79b4eb60b6eef99d8f630267a4f301c6"
+      "digest": "sha256:1001c3475c07a852299792e954b6d8bc69edd0dc9f226e90f42ef2deb02f211a"
     },
     {
       "path": "packages/cli/package.json",
-      "digest": "sha256:d35d5aa7c72128a15a802d7ac86ee3723a10833f6661cadc2cc8201f2dff6fc1"
+      "digest": "sha256:6eaf208c651453b1c7abcc654f6e701165d8951d6240556a166f89b077608210"
     },
     {
       "path": "packages/design/package.json",
-      "digest": "sha256:d8473aafb991090d79f1ba10950bedb022e0a214f0b3810f75c0450f0a981517"
+      "digest": "sha256:102a971e8f71bec8b50fcd39fc8bcac766559c9d495a6c45f7cb37c02488e4f6"
     },
     {
       "path": "packages/integrations/package.json",
@@ -42,7 +42,7 @@
     },
     {
       "path": "packages/pipeline/package.json",
-      "digest": "sha256:202ef93e5e0294089b33cfc9d43751c2bbb89b40c9a27685fe86223d61e0648f"
+      "digest": "sha256:7fd0b304539b13bf17ea832564f19e2139d40448229261fc192d88eb891d00e8"
     },
     {
       "path": "packages/protocol/package.json",
@@ -112,23 +112,23 @@
   "outputs": [
     {
       "path": ".claude-plugin/marketplace.json",
-      "digest": "sha256:f903d6450a4dedccbd702097e29730344bfe5426494675602942d63c97ac5cc3"
+      "digest": "sha256:a252939b0f690221be6d4b23587508a88043680d9fcd1f6396698cbbe59c2f00"
     },
     {
       "path": ".claude-plugin/plugin.json",
-      "digest": "sha256:95adb0529be001aae4499c1a9b4c33802c485d1f604abb6b568790c909f1a8dc"
+      "digest": "sha256:e7854f51ec6d97798c44aa8a53febaa2ef08101904ef43d22482b1351790cc32"
     },
     {
       "path": "adapters/manifests/codex-plugin-content.json",
-      "digest": "sha256:dac336ac27ed617356453b66f85bfeb078aa591d681f30c921a95fadba920c7b"
+      "digest": "sha256:0418f9eb15b0f8e3bfb42a2ef69c925facf16981014eefddad9ad5706cdf30a7"
     },
     {
       "path": "docs/generated/adapters.md",
-      "digest": "sha256:6f9978aa16f4afdf64d1e14a30ba96c4fada0fb0dcd68298a1b61dc2d2f9dcba"
+      "digest": "sha256:d557a8dc391a9238a582c21e6b891d24172531037bdb96c2f341999e43672c2f"
     },
     {
       "path": "docs/generated/ecosystem.md",
-      "digest": "sha256:663dc26243d13806e7e03a73532f4c4ae56736602fa728874426113262374b72"
+      "digest": "sha256:4c27d6523330e202d7ec074399908f38b782bab316093ccf85025a0e4f534b4d"
     },
     {
       "path": "docs/generated/skills.md",
@@ -136,11 +136,11 @@
     },
     {
       "path": "ecosystem.json",
-      "digest": "sha256:dee68971c1bbaa4f10d541f98e5756cbae4434acc363a17dc7aa78b86c142513"
+      "digest": "sha256:6499071a3d2674777bd25e6e9e1bc4deda72a8f3ca7396a4a6c905052e18077c"
     },
     {
       "path": "packages/pipeline/.claude-plugin/plugin.json",
-      "digest": "sha256:9cbc3d60c466b387179cc5e1f054c7b75a129df57ee1c484c070ec174780d133"
+      "digest": "sha256:6afa1c8322c04b2b939c41254dd2fffde9dd390f12d667ce0e07eaf0772967f5"
     }
   ]
 }

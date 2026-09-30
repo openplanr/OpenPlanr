@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-plugin.json",
   "name": "planr",
-  "version": "2.2640.5",
+  "version": "2.2640.6",
   "description": "Close the loop from intent to delivery. Plan, design, build, review, and operate from durable context in your repository.",
   "author": {
     "name": "OpenPlanr",

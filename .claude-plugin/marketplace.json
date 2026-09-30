@@ -5,14 +5,14 @@
     "name": "OpenPlanr"
   },
   "metadata": {
-    "version": "2.2640.5",
+    "version": "2.2640.6",
     "description": "Local-only OpenPlanr integration marketplace. Generate host packages before installation."
   },
   "plugins": [
     {
       "name": "planr",
       "source": "./dist/plugins/claude/openplanr",
-      "version": "2.2640.5",
+      "version": "2.2640.6",
       "description": "Close the loop from intent to delivery. Plan, design, build, review, and operate from durable context in your repository.",
       "strict": true
     }
