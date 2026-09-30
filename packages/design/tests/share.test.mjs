@@ -15,6 +15,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { launchBrowser } from '../../../tests/support/browser-launcher.mjs';
+import { contrastRatio } from '../lib/design/contrast.mjs';
 import { renderDesignDocument } from '../lib/design/document.mjs';
 import { readDesignFeedback, startDesignReview } from '../lib/design/review.mjs';
 import {
@@ -368,7 +369,12 @@ test('recovery restores matching authority without overwriting another workspace
   const output = join(root, 'recovery.json');
   await exportDesignShareRecovery(file, { ...options, output });
   const restoredOptions = { ...options, custodyRoot: join(root, '..', 'second-machine') };
-  const restored = await importDesignShareRecovery(file, { ...restoredOptions, input: output });
+  const recoveryAlias = join(root, '..', 'recovery-input-alias');
+  symlinkSync(root, recoveryAlias);
+  const restored = await importDesignShareRecovery(file, {
+    ...restoredOptions,
+    input: join(recoveryAlias, 'recovery.json'),
+  });
   assert.equal(restored.id, record().custody.id);
   assert.equal(getDesignShareStatus(file, restoredOptions).id, restored.id);
   const invalid = JSON.parse(readFileSync(output, 'utf8'));
@@ -440,6 +446,57 @@ test('Share design completes in the real browser without generic missing-handler
     true,
   );
   assert.deepEqual(errors, []);
+});
+
+test('Share design primary action remains readable during hover, focus and press in both themes', {
+  timeout: 30000,
+}, async (t) => {
+  const { file, options, state } = await fixture(t);
+  const session = await startDesignReview(file, { env: options.env });
+  t.after(() => session.close());
+  const browser = await launchBrowser({ engine: 'chromium' });
+  t.after(() => browser.close());
+  const page = await browser.newPage();
+  await page.goto(session.url);
+  page.setDefaultTimeout(5000);
+  await page.locator('[data-design-ready="true"]').waitFor();
+  await page.getByRole('button', { name: 'Share design', exact: true }).click();
+  const action = page.getByRole('button', { name: 'Create shared review', exact: true });
+  await action.waitFor();
+  const checkContrast = async (theme, interaction) => {
+    const colors = await action.evaluate((button) => {
+      const css = getComputedStyle(button);
+      return { color: css.color, background: css.backgroundColor, opacity: css.opacity };
+    });
+    const ratio = contrastRatio(colors.color, colors.background);
+    assert.ok(ratio >= 4.5, `${theme} ${interaction} contrast: ${ratio}`);
+    assert.equal(colors.opacity, '1');
+  };
+  for (const theme of ['light', 'dark']) {
+    await page
+      .locator('html')
+      .evaluate((root, value) => root.setAttribute('data-planr-theme', value), theme);
+    await page.mouse.move(0, 0);
+    await checkContrast(theme, 'rest');
+    await action.hover();
+    await checkContrast(theme, 'hover');
+    await page.mouse.down();
+    await checkContrast(theme, 'pressed');
+    const bounds = await page.locator('.design-share-dialog').boundingBox();
+    await page.mouse.move(bounds.x + 8, bounds.y + 8);
+    await page.mouse.up();
+    await page.getByRole('button', { name: 'Close sharing', exact: true }).focus();
+    await page.keyboard.press('Tab');
+    assert.equal(
+      await action.evaluate(
+        (button) => button === document.activeElement && button.matches(':focus-visible'),
+      ),
+      true,
+      await page.evaluate(() => document.activeElement.outerHTML),
+    );
+    await checkContrast(theme, 'keyboard focus');
+  }
+  assert.equal(state.requests.length, 0, 'Inspecting the preview never publishes a review');
 });
 
 test('definite publication conflict preserves intent and allows an authenticated retry', async (t) => {

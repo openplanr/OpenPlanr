@@ -352,6 +352,10 @@ async function buildOutputs() {
     './diagram-editor',
     './diagram-editor.css',
     './diagram-owner',
+    './diagram-review-bundle',
+    './diagram-shared-review',
+    './diagram-shared-review.css',
+    './diagram-sharing',
   ].sort();
   const actualExports = Object.keys(pipelineManifest.exports ?? {}).sort();
   assertEqual(
@@ -448,6 +452,7 @@ async function buildOutputs() {
       'v1.8.0',
       'v1.13.0',
       'v1.14.0',
+      'v1.15.0',
       'v2.0.0',
     ].map((version) => [
       version,
@@ -505,13 +510,20 @@ async function buildOutputs() {
     'E_ECOSYSTEM_SCHEMA_SUCCESSORS_114',
     'Protocol 1.14 artifact theme schema count drifted.',
   );
+  assertEqual(
+    schemaCounts['v1.15.0'],
+    6,
+    'E_ECOSYSTEM_SCHEMA_SUCCESSORS_115',
+    'Protocol 1.15 diagram review schema count drifted.',
+  );
   const additiveSchemaCount =
     schemaCounts['v1.5.0'] +
     schemaCounts['v1.6.0'] +
     schemaCounts['v1.7.0'] +
     schemaCounts['v1.8.0'] +
     schemaCounts['v1.13.0'] +
-    schemaCounts['v1.14.0'];
+    schemaCounts['v1.14.0'] +
+    schemaCounts['v1.15.0'];
   const legacyRegistryPaths = listFiles('packages/protocol/registry').filter((path) =>
     path.endsWith('.json'),
   );
@@ -628,7 +640,7 @@ async function buildOutputs() {
     },
     protocol: {
       current: '1.8.0',
-      additiveVersions: ['1.5.0', '1.6.0', '1.7.0', '1.8.0', '1.13.0', '1.14.0'],
+      additiveVersions: ['1.5.0', '1.6.0', '1.7.0', '1.8.0', '1.13.0', '1.14.0', '1.15.0'],
       supportedReaders: [
         '1.0.x',
         '1.1.x',
@@ -641,6 +653,7 @@ async function buildOutputs() {
         '1.8.x',
         '1.13.x',
         '1.14.x',
+        '1.15.x',
         '2.0.x',
       ],
     },
@@ -728,6 +741,7 @@ async function buildOutputs() {
           'v1.8.0': schemaCounts['v1.8.0'],
           'v1.13.0': schemaCounts['v1.13.0'],
           'v1.14.0': schemaCounts['v1.14.0'],
+          'v1.15.0': schemaCounts['v1.15.0'],
         },
       },
       total: schemaPaths.length,

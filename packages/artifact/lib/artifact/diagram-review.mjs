@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { digestBytes } from './diagram/custody/bytes.mjs';
 import { createDiagramArtifactEnvelope } from './diagram/integration.mjs';
+import { createDiagramShareLocalHandler } from './diagram/share-local.mjs';
 import { digestArtifactEnvelope } from './envelope.mjs';
 import { resolveArtifactReviewDestination } from './import.mjs';
 import { embedJson, escapeHtml } from './internal/escape.mjs';
@@ -202,7 +203,7 @@ export function renderDiagramStudio(prepared, { base = './', review = null } = {
     .join('');
   return `<!doctype html><html lang="en" data-planr-theme="auto"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="referrer" content="no-referrer"><meta name="color-scheme" content="light dark"><title>${escapeHtml(document.title)} · OpenPlanr Diagram Studio</title><style>${renderArtifactThemeCss(loadArtifactTheme())}${ARTIFACT_SHELL_CSS}${css()}</style></head>
 <body><div class="planr-shell diagram-shell" data-planr-diagram-studio="2" data-planr-review-mode="interact" data-planr-rail-open="false" data-outline-open="true">
-<header class="planr-toolbar diagram-toolbar"><button class="planr-toolbar-action diagram-outline-toggle" type="button" data-action="outline" aria-expanded="true" aria-controls="diagram-outline" aria-label="Toggle navigator" title="Navigator (N)"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button><div class="planr-brand" aria-label="OpenPlanr Diagram Studio">${renderPlanrMark()}<span class="planr-title-block"><strong title="${escapeHtml(document.title)}">${escapeHtml(document.title)}</strong><span class="diagram-subtitle"><span class="diagram-subtitle-grammar">${escapeHtml(grammar)}</span> · ${counts.items} items · ${counts.connections} connections</span></span></div><nav class="diagram-presentation-nav" data-presentation-nav aria-label="Presentation chapters" hidden><button type="button" data-action="previous-chapter" aria-label="Previous chapter">←</button><div><strong data-chapter-label>Overview</strong><span data-chapter-progress>1 of 1</span></div><button type="button" data-action="next-chapter" aria-label="Next chapter">→</button></nav><span class="planr-toolbar-spacer" aria-hidden="true"></span><button class="diagram-save" type="button" role="status" data-save-state disabled title="Comments are stored on this computer, next to the rendered diagram">Saved on this computer</button><div class="diagram-header-actions"><button class="planr-toolbar-action" type="button" data-action="present" aria-pressed="false" title="Present (P)">Present</button><button class="planr-toolbar-action" type="button" data-action="review" aria-expanded="false" aria-controls="planr-review-rail">Comments <span class="planr-count" data-comment-count>${model.feedbackCount}</span></button><details class="diagram-export"><summary class="planr-toolbar-action planr-share">Export</summary><div class="diagram-export-menu"><strong>Drawing</strong>${links.map(([key, label]) => `<a href="${escapeHtml(base)}download/${key}" download>${label}</a>`).join('')}<strong>Review</strong><a href="${escapeHtml(base)}api/diagram-feedback" download="${escapeHtml(document.diagramId)}.review.json">Agent handoff · JSON</a><a href="${escapeHtml(base)}api/diagram-feedback.md" download="${escapeHtml(document.diagramId)}.review.md">Comments · Markdown</a></div></details></div></header>
+<header class="planr-toolbar diagram-toolbar"><button class="planr-toolbar-action diagram-outline-toggle" type="button" data-action="outline" aria-expanded="true" aria-controls="diagram-outline" aria-label="Toggle navigator" title="Navigator (N)"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button><div class="planr-brand" aria-label="OpenPlanr Diagram Studio">${renderPlanrMark()}<span class="planr-title-block"><strong title="${escapeHtml(document.title)}">${escapeHtml(document.title)}</strong><span class="diagram-subtitle"><span class="diagram-subtitle-grammar">${escapeHtml(grammar)}</span> · ${counts.items} items · ${counts.connections} connections</span></span></div><nav class="diagram-presentation-nav" data-presentation-nav aria-label="Presentation chapters" hidden><button type="button" data-action="previous-chapter" aria-label="Previous chapter">←</button><div><strong data-chapter-label>Overview</strong><span data-chapter-progress>1 of 1</span></div><button type="button" data-action="next-chapter" aria-label="Next chapter">→</button></nav><span class="planr-toolbar-spacer" aria-hidden="true"></span><button class="diagram-save" type="button" role="status" data-save-state disabled title="Comments are stored on this computer, next to the rendered diagram">Saved on this computer</button><div class="diagram-header-actions"><button class="planr-toolbar-action" type="button" data-action="share-diagram">Share diagram</button><button class="planr-toolbar-action" type="button" data-action="present" aria-pressed="false" title="Present (P)">Present</button><button class="planr-toolbar-action" type="button" data-action="review" aria-expanded="false" aria-controls="planr-review-rail">Comments <span class="planr-count" data-comment-count>${model.feedbackCount}</span></button><details class="diagram-export"><summary class="planr-toolbar-action planr-share">Export</summary><div class="diagram-export-menu"><strong>Drawing</strong>${links.map(([key, label]) => `<a href="${escapeHtml(base)}download/${key}" download>${label}</a>`).join('')}<strong>Review</strong><a href="${escapeHtml(base)}api/diagram-feedback" download="${escapeHtml(document.diagramId)}.review.json">Agent handoff · JSON</a><a href="${escapeHtml(base)}api/diagram-feedback.md" download="${escapeHtml(document.diagramId)}.review.md">Comments · Markdown</a></div></details></div></header>
 <div class="diagram-workspace"><aside id="diagram-outline" class="diagram-outline" aria-label="Diagram navigator"><div class="diagram-overview"><span class="diagram-type">${escapeHtml(grammar)}</span><p>${escapeHtml(document.summary)}</p></div><section class="diagram-element-details" data-element-details hidden aria-label="Selected element"><header><strong data-element-kind></strong><button type="button" data-action="close-details" aria-label="Clear selected element">×</button></header><h2 data-element-label></h2><p data-element-endpoints></p><p data-element-description></p><details><summary>Element reference</summary><code data-element-id></code></details><div><button type="button" data-action="toggle-group" aria-pressed="false" hidden>Collapse group details</button><button type="button" data-action="comment-element">Comment on element</button><button type="button" data-action="connections" aria-pressed="false">Focus connections</button></div></section><label class="diagram-search">Find in diagram<input type="search" placeholder="Search labels…" data-search></label><nav aria-label="Diagram elements">${navigator}<p data-search-empty hidden>No matching labels.</p></nav><footer><details class="diagram-legend"><summary>How to read this diagram</summary><p>${document.grammar.id === 'sequence' ? 'Boxes are participants. Dashed vertical lines are lifelines; messages follow time from top to bottom. Sections mark journey stages.' : 'Boxes are items. Solid arrows are flows; dashed arrows are dependencies. Select an item to inspect its direct connections.'}</p><p>Highlighted items are selected; dimmed items are outside the focused connections. Collapsed groups keep the layout and hide their detail. Focus never changes exported content.</p></details><span>Drag to pan · Click an element for details · Pinch or ⌘/Ctrl + scroll to zoom</span></footer></aside>
 <main class="diagram-canvas" aria-label="Diagram canvas" tabindex="0"><div class="diagram-scene" style="width:${scene.width}px;height:${scene.height}px"><div class="diagram-drawing">${svg}</div><div class="planr-annotation-layer" data-planr-annotation-layer="${escapeHtml(document.diagramId)}" aria-label="Diagram annotations"></div><div class="planr-region-selection" data-selection hidden></div></div><div class="diagram-canvas-tools" role="toolbar" aria-label="Diagram tools"><div><button type="button" data-action="pan" aria-pressed="true" title="Pan (V)">Pan</button><button type="button" data-action="comment" aria-pressed="false" title="Add comment (C)">Comment</button></div><div><button type="button" data-action="zoom-out" aria-label="Zoom out">−</button><button type="button" data-action="actual" data-zoom title="Actual size (1)">100%</button><button type="button" data-action="zoom-in" aria-label="Zoom in">+</button></div><div><button type="button" data-action="fit" title="Fit diagram (F)">Fit</button><button type="button" data-action="width" title="Fit width (W)">Fit width</button></div></div><div class="diagram-canvas-status" role="status" data-canvas-status>Drag anywhere to pan</div></main>
 ${renderArtifactRail(model)}</div><p class="planr-visually-hidden" aria-live="polite" data-planr-announcer></p></div>
@@ -217,12 +218,42 @@ export async function startDiagramReview(
   const rendered = prepared.drawing;
   const studio = { ...prepared, ...rendered };
   const reviewKey = `${prepared.document.diagramId}-diagram`;
+  const handleShare = createDiagramShareLocalHandler(file, { env });
   const server = createArtifactReviewServer({
     env,
     renderDocument: ({ model, base }) =>
       renderDiagramStudio(studio, { base, review: model.envelope.review }),
     renderRuntime: () => runtime(),
     async handleSessionRequest({ req, res, segments, session, head }) {
+      if (
+        ['GET', 'HEAD'].includes(req.method) &&
+        segments.length === 4 &&
+        segments[3] === 'diagram-font.ttf'
+      ) {
+        const bytes = await readFile(new URL('./ui/generated/diagram-font.ttf', import.meta.url));
+        res.writeHead(200, {
+          'content-type': 'font/ttf',
+          'cache-control': 'no-store',
+          'x-content-type-options': 'nosniff',
+          'cross-origin-resource-policy': 'same-origin',
+        });
+        res.end(head ? undefined : bytes);
+        return true;
+      }
+      const shared = await handleShare({
+        req,
+        segments: segments.slice(3),
+        origin: `http://127.0.0.1:${req.socket.localPort}`,
+      });
+      if (shared) {
+        res.writeHead(shared.status, {
+          'content-type': 'application/json; charset=utf-8',
+          'cache-control': 'no-store',
+          'x-content-type-options': 'nosniff',
+        });
+        res.end(JSON.stringify(shared.body));
+        return true;
+      }
       if (!['GET', 'HEAD'].includes(req.method)) return false;
       if (
         segments.length === 5 &&

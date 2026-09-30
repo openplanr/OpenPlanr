@@ -1,0 +1,157 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.15.0/diagram-review-feedback.schema.json",
+  "x-openplanr-contract": {
+    "id": "diagram-review-feedback",
+    "version": "1.15.0"
+  },
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "comment"
+        },
+        "author": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "reviewOf": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "commentId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "body": {
+          "type": "string",
+          "maxLength": 8192,
+          "minLength": 1
+        },
+        "target": {
+          "type": "object",
+          "properties": {
+            "elementId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160
+            },
+            "x": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "y": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          },
+          "required": [],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "kind",
+        "author",
+        "reviewOf",
+        "createdAt",
+        "commentId",
+        "body",
+        "target"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "reply"
+        },
+        "author": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "reviewOf": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "commentId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "body": {
+          "type": "string",
+          "maxLength": 8192,
+          "minLength": 1
+        },
+        "parentId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        }
+      },
+      "required": [
+        "kind",
+        "author",
+        "reviewOf",
+        "createdAt",
+        "commentId",
+        "body",
+        "parentId"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "resolve"
+        },
+        "author": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "reviewOf": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "commentId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "resolved": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "kind",
+        "author",
+        "reviewOf",
+        "createdAt",
+        "commentId",
+        "resolved"
+      ],
+      "additionalProperties": false
+    }
+  ]
+}

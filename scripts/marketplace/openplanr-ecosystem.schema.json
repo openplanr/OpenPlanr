@@ -23,26 +23,46 @@
     "generatedSurfaces"
   ],
   "properties": {
-    "kind": { "const": "openplanr-ecosystem" },
-    "schemaVersion": { "const": "1.0.0" },
-    "releaseState": { "const": "local-candidate" },
-    "repositoryIntent": { "const": "openplanr/OpenPlanr" },
-    "remoteState": { "const": "not-queried" },
+    "kind": {
+      "const": "openplanr-ecosystem"
+    },
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "releaseState": {
+      "const": "local-candidate"
+    },
+    "repositoryIntent": {
+      "const": "openplanr/OpenPlanr"
+    },
+    "remoteState": {
+      "const": "not-queried"
+    },
     "workspace": {
       "type": "object",
       "additionalProperties": false,
       "required": ["package", "version", "private", "workspaces", "manifestDigest"],
       "properties": {
-        "package": { "const": "openplanr-workspace" },
-        "version": { "$ref": "#/$defs/semver" },
-        "private": { "const": true },
+        "package": {
+          "const": "openplanr-workspace"
+        },
+        "version": {
+          "$ref": "#/$defs/semver"
+        },
+        "private": {
+          "const": true
+        },
         "workspaces": {
           "type": "array",
           "minItems": 1,
           "uniqueItems": true,
-          "items": { "$ref": "#/$defs/relativePath" }
+          "items": {
+            "$ref": "#/$defs/relativePath"
+          }
         },
-        "manifestDigest": { "$ref": "#/$defs/digest" }
+        "manifestDigest": {
+          "$ref": "#/$defs/digest"
+        }
       }
     },
     "protocol": {
@@ -50,18 +70,25 @@
       "additionalProperties": false,
       "required": ["current", "additiveVersions", "supportedReaders"],
       "properties": {
-        "current": { "$ref": "#/$defs/semver" },
+        "current": {
+          "$ref": "#/$defs/semver"
+        },
         "additiveVersions": {
           "type": "array",
           "minItems": 1,
           "uniqueItems": true,
-          "items": { "$ref": "#/$defs/semver" }
+          "items": {
+            "$ref": "#/$defs/semver"
+          }
         },
         "supportedReaders": {
           "type": "array",
           "minItems": 1,
           "uniqueItems": true,
-          "items": { "type": "string", "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.x$" }
+          "items": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.x$"
+          }
         }
       }
     },
@@ -83,73 +110,127 @@
         "cli": {
           "$ref": "#/$defs/component",
           "properties": {
-            "package": { "const": "openplanr" },
-            "path": { "const": "packages/cli" },
-            "publication": { "const": "public" }
+            "package": {
+              "const": "openplanr"
+            },
+            "path": {
+              "const": "packages/cli"
+            },
+            "publication": {
+              "const": "public"
+            }
           }
         },
         "pipeline": {
           "$ref": "#/$defs/component",
           "properties": {
-            "package": { "const": "planr-pipeline" },
-            "path": { "const": "packages/pipeline" },
-            "publication": { "const": "public" }
+            "package": {
+              "const": "planr-pipeline"
+            },
+            "path": {
+              "const": "packages/pipeline"
+            },
+            "publication": {
+              "const": "public"
+            }
           }
         },
         "protocol": {
           "$ref": "#/$defs/component",
           "properties": {
-            "package": { "const": "@openplanr/protocol" },
-            "path": { "const": "packages/protocol" },
-            "publication": { "const": "public" }
+            "package": {
+              "const": "@openplanr/protocol"
+            },
+            "path": {
+              "const": "packages/protocol"
+            },
+            "publication": {
+              "const": "public"
+            }
           }
         },
         "operate": {
           "$ref": "#/$defs/component",
           "properties": {
-            "package": { "const": "@openplanr/operate" },
-            "path": { "const": "packages/operate" },
-            "publication": { "const": "private" }
+            "package": {
+              "const": "@openplanr/operate"
+            },
+            "path": {
+              "const": "packages/operate"
+            },
+            "publication": {
+              "const": "private"
+            }
           }
         },
         "artifact": {
           "$ref": "#/$defs/component",
           "properties": {
-            "package": { "const": "@openplanr/artifact" },
-            "path": { "const": "packages/artifact" },
-            "publication": { "const": "private" }
+            "package": {
+              "const": "@openplanr/artifact"
+            },
+            "path": {
+              "const": "packages/artifact"
+            },
+            "publication": {
+              "const": "private"
+            }
           }
         },
         "design": {
           "$ref": "#/$defs/component",
           "properties": {
-            "package": { "const": "@openplanr/design" },
-            "path": { "const": "packages/design" },
-            "publication": { "const": "private" }
+            "package": {
+              "const": "@openplanr/design"
+            },
+            "path": {
+              "const": "packages/design"
+            },
+            "publication": {
+              "const": "private"
+            }
           }
         },
         "skillRuntime": {
           "$ref": "#/$defs/component",
           "properties": {
-            "package": { "const": "@openplanr/skill-runtime" },
-            "path": { "const": "packages/skill-runtime" },
-            "publication": { "const": "private" }
+            "package": {
+              "const": "@openplanr/skill-runtime"
+            },
+            "path": {
+              "const": "packages/skill-runtime"
+            },
+            "publication": {
+              "const": "private"
+            }
           }
         },
         "integrations": {
           "$ref": "#/$defs/component",
           "properties": {
-            "package": { "const": "@openplanr/integrations" },
-            "path": { "const": "packages/integrations" },
-            "publication": { "const": "private" }
+            "package": {
+              "const": "@openplanr/integrations"
+            },
+            "path": {
+              "const": "packages/integrations"
+            },
+            "publication": {
+              "const": "private"
+            }
           }
         },
         "dashboard": {
           "$ref": "#/$defs/component",
           "properties": {
-            "package": { "const": "@openplanr/dashboard-app" },
-            "path": { "const": "apps/dashboard" },
-            "publication": { "const": "private" }
+            "package": {
+              "const": "@openplanr/dashboard-app"
+            },
+            "path": {
+              "const": "apps/dashboard"
+            },
+            "publication": {
+              "const": "private"
+            }
           }
         }
       }
@@ -164,9 +245,15 @@
           "additionalProperties": false,
           "required": ["package", "version", "exact"],
           "properties": {
-            "package": { "const": "planr-pipeline" },
-            "version": { "$ref": "#/$defs/semver" },
-            "exact": { "const": true }
+            "package": {
+              "const": "planr-pipeline"
+            },
+            "version": {
+              "$ref": "#/$defs/semver"
+            },
+            "exact": {
+              "const": true
+            }
           }
         },
         "publicArtifacts": {
@@ -174,8 +261,12 @@
           "additionalProperties": false,
           "required": ["selfContained", "privateWorkspaceDependenciesAllowed"],
           "properties": {
-            "selfContained": { "const": true },
-            "privateWorkspaceDependenciesAllowed": { "const": false }
+            "selfContained": {
+              "const": true
+            },
+            "privateWorkspaceDependenciesAllowed": {
+              "const": false
+            }
           }
         }
       }
@@ -190,9 +281,15 @@
           "additionalProperties": false,
           "required": ["planr", "openplanr", "opr"],
           "properties": {
-            "planr": { "const": "./bin/planr.js" },
-            "openplanr": { "const": "./bin/planr.js" },
-            "opr": { "const": "./bin/planr.js" }
+            "planr": {
+              "const": "./bin/planr.js"
+            },
+            "openplanr": {
+              "const": "./bin/planr.js"
+            },
+            "opr": {
+              "const": "./bin/planr.js"
+            }
           }
         },
         "pipeline": {
@@ -200,7 +297,9 @@
           "additionalProperties": false,
           "required": ["planr-pipeline"],
           "properties": {
-            "planr-pipeline": { "const": "bin/planr-pipeline.mjs" }
+            "planr-pipeline": {
+              "const": "bin/planr-pipeline.mjs"
+            }
           }
         }
       }
@@ -210,8 +309,12 @@
       "additionalProperties": false,
       "required": ["pipelineExportKeys", "pipelineRootSymbols"],
       "properties": {
-        "pipelineExportKeys": { "$ref": "#/$defs/count" },
-        "pipelineRootSymbols": { "$ref": "#/$defs/count" }
+        "pipelineExportKeys": {
+          "$ref": "#/$defs/count"
+        },
+        "pipelineRootSymbols": {
+          "$ref": "#/$defs/count"
+        }
       }
     },
     "catalogs": {
@@ -231,16 +334,28 @@
             "negativeContracts"
           ],
           "properties": {
-            "path": { "$ref": "#/$defs/relativePath" },
-            "digest": { "$ref": "#/$defs/digest" },
-            "rootCommands": { "$ref": "#/$defs/count" },
-            "pipelineMachineLeaves": { "$ref": "#/$defs/count" },
-            "frozenClaudeDocuments": { "$ref": "#/$defs/count" },
+            "path": {
+              "$ref": "#/$defs/relativePath"
+            },
+            "digest": {
+              "$ref": "#/$defs/digest"
+            },
+            "rootCommands": {
+              "$ref": "#/$defs/count"
+            },
+            "pipelineMachineLeaves": {
+              "$ref": "#/$defs/count"
+            },
+            "frozenClaudeDocuments": {
+              "$ref": "#/$defs/count"
+            },
             "negativeContracts": {
               "type": "array",
               "minItems": 1,
               "maxItems": 64,
-              "items": { "$ref": "#/$defs/negativeContract" }
+              "items": {
+                "$ref": "#/$defs/negativeContract"
+              }
             }
           }
         },
@@ -249,17 +364,30 @@
           "additionalProperties": false,
           "required": ["path", "digest", "count", "ids", "aliases", "membershipDigest"],
           "properties": {
-            "path": { "$ref": "#/$defs/relativePath" },
-            "digest": { "$ref": "#/$defs/digest" },
-            "count": { "$ref": "#/$defs/count" },
+            "path": {
+              "$ref": "#/$defs/relativePath"
+            },
+            "digest": {
+              "$ref": "#/$defs/digest"
+            },
+            "count": {
+              "$ref": "#/$defs/count"
+            },
             "ids": {
               "type": "array",
               "minItems": 1,
               "uniqueItems": true,
-              "items": { "$ref": "#/$defs/planrId" }
+              "items": {
+                "$ref": "#/$defs/planrId"
+              }
             },
-            "aliases": { "type": "array", "maxItems": 0 },
-            "membershipDigest": { "$ref": "#/$defs/digest" }
+            "aliases": {
+              "type": "array",
+              "maxItems": 0
+            },
+            "membershipDigest": {
+              "$ref": "#/$defs/digest"
+            }
           }
         },
         "roles": {
@@ -267,30 +395,55 @@
           "additionalProperties": false,
           "required": ["path", "digest", "count", "ids", "aliases"],
           "properties": {
-            "path": { "$ref": "#/$defs/relativePath" },
-            "digest": { "$ref": "#/$defs/digest" },
-            "count": { "$ref": "#/$defs/count" },
+            "path": {
+              "$ref": "#/$defs/relativePath"
+            },
+            "digest": {
+              "$ref": "#/$defs/digest"
+            },
+            "count": {
+              "$ref": "#/$defs/count"
+            },
             "ids": {
               "type": "array",
               "minItems": 1,
               "uniqueItems": true,
-              "items": { "$ref": "#/$defs/planrId" }
+              "items": {
+                "$ref": "#/$defs/planrId"
+              }
             },
-            "aliases": { "type": "array", "maxItems": 0 }
+            "aliases": {
+              "type": "array",
+              "maxItems": 0
+            }
           }
         },
-        "rules": { "$ref": "#/$defs/countedFile" },
-        "taskKinds": { "$ref": "#/$defs/countedFile" },
-        "outputs": { "$ref": "#/$defs/countedFile" },
+        "rules": {
+          "$ref": "#/$defs/countedFile"
+        },
+        "taskKinds": {
+          "$ref": "#/$defs/countedFile"
+        },
+        "outputs": {
+          "$ref": "#/$defs/countedFile"
+        },
         "outputPaths": {
           "type": "object",
           "additionalProperties": false,
           "required": ["path", "digest", "count", "outputCatalogDigest"],
           "properties": {
-            "path": { "$ref": "#/$defs/relativePath" },
-            "digest": { "$ref": "#/$defs/digest" },
-            "count": { "$ref": "#/$defs/count" },
-            "outputCatalogDigest": { "$ref": "#/$defs/digest" }
+            "path": {
+              "$ref": "#/$defs/relativePath"
+            },
+            "digest": {
+              "$ref": "#/$defs/digest"
+            },
+            "count": {
+              "$ref": "#/$defs/count"
+            },
+            "outputCatalogDigest": {
+              "$ref": "#/$defs/digest"
+            }
           }
         }
       }
@@ -300,7 +453,9 @@
       "additionalProperties": false,
       "required": ["registry", "hosts", "generatedAssets"],
       "properties": {
-        "registry": { "$ref": "#/$defs/digestedFile" },
+        "registry": {
+          "$ref": "#/$defs/digestedFile"
+        },
         "hosts": {
           "type": "array",
           "minItems": 1,
@@ -310,13 +465,21 @@
             "additionalProperties": false,
             "required": ["id", "version", "capabilityLevel"],
             "properties": {
-              "id": { "$ref": "#/$defs/identifier" },
-              "version": { "$ref": "#/$defs/semver" },
-              "capabilityLevel": { "enum": ["artifact", "workflow", "product"] }
+              "id": {
+                "$ref": "#/$defs/identifier"
+              },
+              "version": {
+                "$ref": "#/$defs/semver"
+              },
+              "capabilityLevel": {
+                "enum": ["artifact", "workflow", "product"]
+              }
             }
           }
         },
-        "generatedAssets": { "$ref": "#/$defs/countedFile" }
+        "generatedAssets": {
+          "$ref": "#/$defs/countedFile"
+        }
       }
     },
     "schemas": {
@@ -329,18 +492,32 @@
           "additionalProperties": false,
           "required": ["count", "distribution"],
           "properties": {
-            "count": { "$ref": "#/$defs/count" },
+            "count": {
+              "$ref": "#/$defs/count"
+            },
             "distribution": {
               "type": "object",
               "additionalProperties": false,
               "required": ["v1.0.0", "v1.1.0", "v1.2.0", "v1.3.0", "v1.4.0", "v2.0.0"],
               "properties": {
-                "v1.0.0": { "$ref": "#/$defs/count" },
-                "v1.1.0": { "$ref": "#/$defs/count" },
-                "v1.2.0": { "$ref": "#/$defs/count" },
-                "v1.3.0": { "$ref": "#/$defs/count" },
-                "v1.4.0": { "$ref": "#/$defs/count" },
-                "v2.0.0": { "$ref": "#/$defs/count" }
+                "v1.0.0": {
+                  "$ref": "#/$defs/count"
+                },
+                "v1.1.0": {
+                  "$ref": "#/$defs/count"
+                },
+                "v1.2.0": {
+                  "$ref": "#/$defs/count"
+                },
+                "v1.3.0": {
+                  "$ref": "#/$defs/count"
+                },
+                "v1.4.0": {
+                  "$ref": "#/$defs/count"
+                },
+                "v2.0.0": {
+                  "$ref": "#/$defs/count"
+                }
               }
             }
           }
@@ -350,8 +527,12 @@
           "additionalProperties": false,
           "required": ["protocolVersion", "count"],
           "properties": {
-            "protocolVersion": { "$ref": "#/$defs/semver" },
-            "count": { "$ref": "#/$defs/count" }
+            "protocolVersion": {
+              "$ref": "#/$defs/semver"
+            },
+            "count": {
+              "$ref": "#/$defs/count"
+            }
           }
         },
         "additive": {
@@ -359,23 +540,42 @@
           "additionalProperties": false,
           "required": ["count", "byVersion"],
           "properties": {
-            "count": { "$ref": "#/$defs/count" },
+            "count": {
+              "$ref": "#/$defs/count"
+            },
             "byVersion": {
               "type": "object",
               "additionalProperties": false,
-              "required": ["v1.5.0", "v1.6.0", "v1.7.0", "v1.8.0", "v1.13.0", "v1.14.0"],
+              "required": ["v1.5.0", "v1.6.0", "v1.7.0", "v1.8.0", "v1.13.0", "v1.14.0", "v1.15.0"],
               "properties": {
-                "v1.5.0": { "$ref": "#/$defs/count" },
-                "v1.6.0": { "$ref": "#/$defs/count" },
-                "v1.7.0": { "$ref": "#/$defs/count" },
-                "v1.8.0": { "$ref": "#/$defs/count" },
-                "v1.13.0": { "$ref": "#/$defs/count" },
-                "v1.14.0": { "$ref": "#/$defs/count" }
+                "v1.5.0": {
+                  "$ref": "#/$defs/count"
+                },
+                "v1.6.0": {
+                  "$ref": "#/$defs/count"
+                },
+                "v1.7.0": {
+                  "$ref": "#/$defs/count"
+                },
+                "v1.8.0": {
+                  "$ref": "#/$defs/count"
+                },
+                "v1.13.0": {
+                  "$ref": "#/$defs/count"
+                },
+                "v1.14.0": {
+                  "$ref": "#/$defs/count"
+                },
+                "v1.15.0": {
+                  "$ref": "#/$defs/count"
+                }
               }
             }
           }
         },
-        "total": { "$ref": "#/$defs/count" }
+        "total": {
+          "$ref": "#/$defs/count"
+        }
       }
     },
     "registries": {
@@ -392,28 +592,53 @@
         "capturedEvaluationContracts"
       ],
       "properties": {
-        "preserved": { "$ref": "#/$defs/countedDirectory" },
-        "canonicalCatalogs": { "$ref": "#/$defs/countedDirectory" },
-        "protocol15Catalogs": { "$ref": "#/$defs/countedDirectory" },
-        "protocol16Catalogs": { "$ref": "#/$defs/countedDirectory" },
-        "protocol17Catalogs": { "$ref": "#/$defs/countedDirectory" },
-        "protocol113Catalogs": { "$ref": "#/$defs/countedDirectory" },
-        "protocol114Catalogs": { "$ref": "#/$defs/countedDirectory" },
+        "preserved": {
+          "$ref": "#/$defs/countedDirectory"
+        },
+        "canonicalCatalogs": {
+          "$ref": "#/$defs/countedDirectory"
+        },
+        "protocol15Catalogs": {
+          "$ref": "#/$defs/countedDirectory"
+        },
+        "protocol16Catalogs": {
+          "$ref": "#/$defs/countedDirectory"
+        },
+        "protocol17Catalogs": {
+          "$ref": "#/$defs/countedDirectory"
+        },
+        "protocol113Catalogs": {
+          "$ref": "#/$defs/countedDirectory"
+        },
+        "protocol114Catalogs": {
+          "$ref": "#/$defs/countedDirectory"
+        },
         "capturedEvaluationContracts": {
           "type": "object",
           "additionalProperties": false,
           "required": ["lifecycle", "hostProfiles", "graders"],
           "properties": {
-            "lifecycle": { "const": "byte-preserved" },
+            "lifecycle": {
+              "const": "byte-preserved"
+            },
             "hostProfiles": {
               "type": "object",
               "additionalProperties": false,
               "required": ["path", "digest", "registryId", "count"],
               "properties": {
-                "path": { "$ref": "#/$defs/relativePath" },
-                "digest": { "$ref": "#/$defs/digest" },
-                "registryId": { "type": "string", "pattern": "^ehpr_[a-f0-9]{32}$" },
-                "count": { "$ref": "#/$defs/count" }
+                "path": {
+                  "$ref": "#/$defs/relativePath"
+                },
+                "digest": {
+                  "$ref": "#/$defs/digest"
+                },
+                "registryId": {
+                  "type": "string",
+                  "pattern": "^ehpr_[a-f0-9]{32}$"
+                },
+                "count": {
+                  "$ref": "#/$defs/count"
+                }
               }
             },
             "graders": {
@@ -421,10 +646,19 @@
               "additionalProperties": false,
               "required": ["path", "digest", "registryId", "count"],
               "properties": {
-                "path": { "$ref": "#/$defs/relativePath" },
-                "digest": { "$ref": "#/$defs/digest" },
-                "registryId": { "type": "string", "pattern": "^egrr_[a-f0-9]{32}$" },
-                "count": { "$ref": "#/$defs/count" }
+                "path": {
+                  "$ref": "#/$defs/relativePath"
+                },
+                "digest": {
+                  "$ref": "#/$defs/digest"
+                },
+                "registryId": {
+                  "type": "string",
+                  "pattern": "^egrr_[a-f0-9]{32}$"
+                },
+                "count": {
+                  "$ref": "#/$defs/count"
+                }
               }
             }
           }
@@ -441,10 +675,18 @@
           "additionalProperties": false,
           "required": ["path", "digest", "shellVersion", "assetCount"],
           "properties": {
-            "path": { "$ref": "#/$defs/relativePath" },
-            "digest": { "$ref": "#/$defs/digest" },
-            "shellVersion": { "$ref": "#/$defs/semver" },
-            "assetCount": { "$ref": "#/$defs/count" }
+            "path": {
+              "$ref": "#/$defs/relativePath"
+            },
+            "digest": {
+              "$ref": "#/$defs/digest"
+            },
+            "shellVersion": {
+              "$ref": "#/$defs/semver"
+            },
+            "assetCount": {
+              "$ref": "#/$defs/count"
+            }
           }
         },
         "landingWorkflow": {
@@ -464,12 +706,24 @@
                 "authority"
               ],
               "properties": {
-                "path": { "$ref": "#/$defs/relativePath" },
-                "digest": { "$ref": "#/$defs/digest" },
-                "workflowId": { "$ref": "#/$defs/planrId" },
-                "workflowVersion": { "$ref": "#/$defs/semver" },
-                "catalogHash": { "$ref": "#/$defs/digest" },
-                "authority": { "const": "none" }
+                "path": {
+                  "$ref": "#/$defs/relativePath"
+                },
+                "digest": {
+                  "$ref": "#/$defs/digest"
+                },
+                "workflowId": {
+                  "$ref": "#/$defs/planrId"
+                },
+                "workflowVersion": {
+                  "$ref": "#/$defs/semver"
+                },
+                "catalogHash": {
+                  "$ref": "#/$defs/digest"
+                },
+                "authority": {
+                  "const": "none"
+                }
               }
             },
             "generatedAssets": {
@@ -477,10 +731,18 @@
               "additionalProperties": false,
               "required": ["path", "digest", "assetCount", "workflowCatalogDigest"],
               "properties": {
-                "path": { "$ref": "#/$defs/relativePath" },
-                "digest": { "$ref": "#/$defs/digest" },
-                "assetCount": { "$ref": "#/$defs/count" },
-                "workflowCatalogDigest": { "$ref": "#/$defs/digest" }
+                "path": {
+                  "$ref": "#/$defs/relativePath"
+                },
+                "digest": {
+                  "$ref": "#/$defs/digest"
+                },
+                "assetCount": {
+                  "$ref": "#/$defs/count"
+                },
+                "workflowCatalogDigest": {
+                  "$ref": "#/$defs/digest"
+                }
               }
             }
           }
@@ -489,8 +751,14 @@
     }
   },
   "$defs": {
-    "count": { "type": "integer", "minimum": 0 },
-    "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
     "semver": {
       "type": "string",
       "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-((?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)(?:\\.(?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*))*))?(?:\\+([0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*))?$"
@@ -517,11 +785,22 @@
       "additionalProperties": false,
       "required": ["package", "version", "path", "publication", "manifestDigest"],
       "properties": {
-        "package": { "type": "string", "minLength": 1 },
-        "version": { "$ref": "#/$defs/semver" },
-        "path": { "$ref": "#/$defs/relativePath" },
-        "publication": { "enum": ["public", "private"] },
-        "manifestDigest": { "$ref": "#/$defs/digest" }
+        "package": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "$ref": "#/$defs/semver"
+        },
+        "path": {
+          "$ref": "#/$defs/relativePath"
+        },
+        "publication": {
+          "enum": ["public", "private"]
+        },
+        "manifestDigest": {
+          "$ref": "#/$defs/digest"
+        }
       }
     },
     "digestedFile": {
@@ -529,8 +808,12 @@
       "additionalProperties": false,
       "required": ["path", "digest"],
       "properties": {
-        "path": { "$ref": "#/$defs/relativePath" },
-        "digest": { "$ref": "#/$defs/digest" }
+        "path": {
+          "$ref": "#/$defs/relativePath"
+        },
+        "digest": {
+          "$ref": "#/$defs/digest"
+        }
       }
     },
     "countedFile": {
@@ -538,9 +821,15 @@
       "additionalProperties": false,
       "required": ["path", "digest", "count"],
       "properties": {
-        "path": { "$ref": "#/$defs/relativePath" },
-        "digest": { "$ref": "#/$defs/digest" },
-        "count": { "$ref": "#/$defs/count" }
+        "path": {
+          "$ref": "#/$defs/relativePath"
+        },
+        "digest": {
+          "$ref": "#/$defs/digest"
+        },
+        "count": {
+          "$ref": "#/$defs/count"
+        }
       }
     },
     "countedDirectory": {
@@ -548,8 +837,12 @@
       "additionalProperties": false,
       "required": ["count", "path"],
       "properties": {
-        "count": { "$ref": "#/$defs/count" },
-        "path": { "$ref": "#/$defs/relativePath" }
+        "count": {
+          "$ref": "#/$defs/count"
+        },
+        "path": {
+          "$ref": "#/$defs/relativePath"
+        }
       }
     },
     "negativeContract": {
@@ -563,26 +856,39 @@
         "testRefs"
       ],
       "properties": {
-        "negativeContractId": { "$ref": "#/$defs/identifier" },
+        "negativeContractId": {
+          "$ref": "#/$defs/identifier"
+        },
         "forbiddenArgvPrefix": {
           "type": "array",
           "minItems": 1,
           "maxItems": 16,
-          "items": { "type": "string", "minLength": 1 }
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
         },
         "forbiddenPaths": {
           "type": "array",
           "maxItems": 64,
           "uniqueItems": true,
-          "items": { "$ref": "#/$defs/relativePath" }
+          "items": {
+            "$ref": "#/$defs/relativePath"
+          }
         },
-        "reason": { "type": "string", "minLength": 1, "pattern": "\\S" },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
         "testRefs": {
           "type": "array",
           "minItems": 1,
           "maxItems": 64,
           "uniqueItems": true,
-          "items": { "$ref": "#/$defs/relativePath" }
+          "items": {
+            "$ref": "#/$defs/relativePath"
+          }
         }
       }
     }

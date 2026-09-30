@@ -40,3 +40,22 @@ viewers and the rasterizer reject.
 
 Run `npm run generate:diagram` after changing a diagram definition and
 `npm run check:diagram && npm test` before integration.
+
+## Native encrypted diagram reviews
+
+The `diagram/review-bundle` builder projects verified manifests and authored
+bundles into a whitelisted review scene. Geometry and connections remain intact;
+source bytes, local paths and private provenance are excluded. The portable
+`diagram-shared-review` shell mounts the native canvas or the existing read-only
+editor after the packaged Inter font is ready.
+
+`diagram/share` owns private local custody and explicit publication. One diagram
+has one stable `/diagram/<id>` URL with a separate reviewer token. Reviewers can
+comment on the current published revision, inspect earlier revisions, and export
+SVG, PNG and feedback. Feedback synchronization writes a local review ledger;
+it does not change the diagram or execute comments.
+
+The artifact package owns the reusable encrypted workspace and custody
+primitives. Design sharing remains a compatibility façade with its original
+routes, storage and cryptographic domain. Diagram workspaces use a separate
+domain and `/api/v1/diagram-workspaces` routes.

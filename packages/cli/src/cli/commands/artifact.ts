@@ -21,8 +21,10 @@ import {
   runDesignShareAction,
 } from '../../services/design-artifact-service.js';
 import {
-  isDiagramManifestFile,
+  isDiagramShareFile,
   openDiagramArtifact,
+  previewDiagramShare,
+  runDiagramShareAction,
 } from '../../services/diagram-artifact-service.js';
 import { isNonInteractive } from '../../services/interactive-state.js';
 import { promptConfirm } from '../../services/prompt-service.js';
@@ -143,7 +145,7 @@ async function openArtifact(program: Command, file: string, options: OpenOptions
     }
     return;
   }
-  if (isDiagramManifestFile(input)) {
+  if (isDiagramShareFile(input)) {
     const session = await openDiagramArtifact(input, {
       port: port(options.port),
       noOpen: options.open === false,
@@ -209,6 +211,15 @@ async function openArtifact(program: Command, file: string, options: OpenOptions
 
 async function shareArtifact(program: Command, file: string, options: ShareOptions): Promise<void> {
   const designInput = resolveInput(program, file);
+  if (isDiagramShareFile(designInput)) {
+    if (options.ttl !== undefined || options.snapshot || options.short)
+      throw new ArtifactCommandError(
+        'E_ARTIFACT_INPUT_INVALID',
+        'Diagrams use permanent token-protected sharing. Export HTML first to create a generic snapshot; --ttl and --short apply only to generic artifacts.',
+      );
+    await runPersistentSharing(program, file, options, 'share');
+    return;
+  }
   if (isDesignDocumentFile(designInput)) {
     if (options.ttl !== undefined)
       throw new ArtifactCommandError(
@@ -220,7 +231,7 @@ async function shareArtifact(program: Command, file: string, options: ShareOptio
         'E_ARTIFACT_INPUT_INVALID',
         'Design documents use persistent token-protected sharing. Export HTML first to create a generic snapshot.',
       );
-    await runDesignSharing(program, file, options, 'share');
+    await runPersistentSharing(program, file, options, 'share');
     return;
   }
   if (options.short && !options.snapshot) {
@@ -519,55 +530,73 @@ async function importArtifactReviews(
   }
 }
 
-async function runDesignSharing(
+async function runPersistentSharing(
   program: Command,
   file: string,
   options: ShareOptions,
   action: 'share' | 'publish' | 'sync',
 ): Promise<void> {
   const input = resolveInput(program, file);
-  if (!isDesignDocumentFile(input))
+  const diagram = isDiagramShareFile(input);
+  if (!diagram && !isDesignDocumentFile(input))
     throw new ArtifactCommandError(
       'E_ARTIFACT_INPUT_INVALID',
-      'This operation requires a design-document.json file.',
+      'This operation requires a design document, diagram manifest, or authored diagram bundle.',
     );
+  const noun = diagram ? 'diagram' : 'design';
+  const sharing = diagram ? runDiagramShareAction : runDesignShareAction;
+  let expectedRevision: string | undefined;
+  if (diagram && action !== 'sync') {
+    const preview = await previewDiagramShare(input);
+    expectedRevision = preview.localRevision;
+    if (!options.json) {
+      display.keyValue('Diagram', preview.title);
+      display.keyValue('Destination', preview.destination);
+      display.keyValue('Source revision', preview.source.digest);
+      display.keyValue(
+        'Contents',
+        `${preview.scene.items.length} elements, ${preview.scene.relations.length} connections`,
+      );
+      display.keyValue('Retention', 'Until revoked or deleted');
+    }
+  }
   if (action !== 'sync' && !confirmed(program, options.yes)) {
     if (isNonInteractive())
       throw new ArtifactCommandError(
         'E_ARTIFACT_CONFIRMATION_REQUIRED',
-        'Publishing an encrypted design requires confirmation.',
+        `Publishing an encrypted ${noun} requires confirmation.`,
         'Rerun with --yes.',
       );
     if (
       !(await promptConfirm(
         action === 'share'
-          ? 'Publish an encrypted design review until you revoke or delete it?'
-          : 'Publish this revision to the existing design review link?',
+          ? `Publish an encrypted ${noun} review until you revoke or delete it?`
+          : `Publish this revision to the existing ${noun} review link?`,
         true,
       ))
     )
       return;
   }
-  const result = await runDesignShareAction(input, action);
+  const result = await sharing(input, action, diagram ? { expectedRevision } : {});
   if (options.secretOutput)
-    await runDesignShareAction(input, 'recovery', {
+    await sharing(input, 'recovery', {
       output: path.resolve(projectDir(program), options.secretOutput),
     });
   if (options.json) display.line(JSON.stringify(result));
   else {
     logger.success(
       action === 'sync'
-        ? 'Design feedback synchronized'
+        ? `${diagram ? 'Diagram' : 'Design'} feedback synchronized`
         : action === 'publish'
-          ? 'Design revision published'
-          : 'Design review shared',
+          ? `${diagram ? 'Diagram' : 'Design'} revision published`
+          : `${diagram ? 'Diagram' : 'Design'} review shared`,
     );
     if (result.url) display.keyValue('Review link', result.url);
     if (result.publishedRevision) display.keyValue('Revision', result.publishedRevision);
     if (result.reviewPath) display.keyValue('Feedback', result.reviewPath);
     if (action !== 'sync')
       logger.dim(
-        'Owner credentials are saved privately. Open the local studio’s Share design dialog to copy the reviewer access token.',
+        `Owner credentials are saved privately. Open the local studio’s Share ${noun} dialog to copy the reviewer access token.`,
       );
   }
   if (action === 'share' && options.open !== false && result.url) await openExternalUrl(result.url);
@@ -614,7 +643,7 @@ export function registerArtifactCommand(program: Command): void {
   const artifact = addOpenOptions(
     program
       .command('artifact [file]')
-      .description('Review, share, import, and export HTML artifacts'),
+      .description('Review, share, import, and export diagrams, designs, and HTML artifacts'),
   );
   artifact.enablePositionalOptions();
   artifact.action(async (file: string | undefined, _options: OpenOptions, command: Command) => {
@@ -626,7 +655,9 @@ export function registerArtifactCommand(program: Command): void {
   });
 
   addOpenOptions(
-    artifact.command('open <file>').description('Open a local HTML review session'),
+    artifact
+      .command('open <file>')
+      .description('Open a local diagram, design, or HTML review session'),
   ).action((file: string, _options: OpenOptions, command: Command) =>
     openArtifact(program, file, command.optsWithGlobals<OpenOptions>()),
   );
@@ -655,7 +686,7 @@ export function registerArtifactCommand(program: Command): void {
 
   artifact
     .command('share <file>')
-    .description('Create an encrypted live review room')
+    .description('Share a native diagram, design, or generic HTML review')
     .option('--title <title>', 'review title')
     .option('--root <asset-root>', 'root for local artifact dependencies')
     .option('--presentation <presentation>', 'auto, document, or canvas', 'auto')
@@ -675,13 +706,13 @@ export function registerArtifactCommand(program: Command): void {
       .command(`${action} <file>`)
       .description(
         action === 'publish'
-          ? 'Publish a new revision to a shared design review'
-          : 'Synchronize hosted design feedback',
+          ? 'Publish a new revision to a shared diagram or design review'
+          : 'Synchronize hosted diagram or design feedback',
       )
       .option('--yes', 'confirm encrypted publication non-interactively', false)
       .option('--json', 'emit machine-readable output', false)
       .action((file: string, _options: ShareOptions, command: Command) =>
-        runDesignSharing(program, file, command.optsWithGlobals<ShareOptions>(), action),
+        runPersistentSharing(program, file, command.optsWithGlobals<ShareOptions>(), action),
       );
   }
 

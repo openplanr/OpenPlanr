@@ -3,8 +3,10 @@ import {
   PROTOCOL_V16_CONTRACTS,
   PROTOCOL_V111_CONTRACTS,
   PROTOCOL_V113_CONTRACTS,
+  PROTOCOL_V115_CONTRACTS,
   protocolAssetUrl,
   validateDiagramAuthoringBundle,
+  validateDiagramReviewArtifact,
 } from '@openplanr/protocol';
 import * as nodeContracts from '@openplanr/protocol/contracts';
 
@@ -33,3 +35,11 @@ const authoringIssues: { path: string; rule: string; detail: string }[] =
 void authoringContracts;
 void authoringUrl;
 void authoringIssues;
+
+const reviewContracts: Readonly<Record<string, string>> = PROTOCOL_V115_CONTRACTS;
+const reviewUrl: URL = protocolAssetUrl('diagram-review-bundle', { protocolVersion: '1.15.0' });
+const reviewIssues: { path: string; rule: string; detail: string }[] =
+  validateDiagramReviewArtifact('diagram-review-bundle', {});
+void reviewContracts;
+void reviewUrl;
+void reviewIssues;

@@ -54,6 +54,17 @@
         "cursor"
       ],
       "executable": false
+    },
+    {
+      "path": "references/diagram-sharing.md",
+      "kind": "reference",
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ],
+      "executable": false
     }
   ]
 }

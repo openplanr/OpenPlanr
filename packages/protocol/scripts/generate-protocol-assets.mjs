@@ -15,6 +15,7 @@ import { fileURLToPath } from 'node:url';
 import { sha256Hex } from '../src/canonical-json.mjs';
 import { DESIGN_DOCUMENT_SCHEMA } from '../src/design-contracts.mjs';
 import { DESIGN_HANDOFF_SCHEMAS } from '../src/design-handoff-contracts.mjs';
+import { DIAGRAM_REVIEW_SCHEMAS } from '../src/diagram-review-contracts.mjs';
 import { ENTERPRISE_SCHEMAS } from '../src/enterprise-contracts.mjs';
 import {
   DESIGN_REVIEW_METADATA_PAYLOAD_V11_SCHEMA,
@@ -91,6 +92,9 @@ for (const [name, value] of buildArtifactThemeSchemas())
   expected.set(`schemas/v1.14.0/${name}`, json(value));
 for (const [name, value] of buildArtifactThemeRegistries())
   expected.set(`registries/${name}`, json(value));
+
+for (const [name, value] of Object.entries(DIAGRAM_REVIEW_SCHEMAS))
+  expected.set(`schemas/v1.15.0/${name}.schema.json`, json(value));
 
 const registries = Object.fromEntries(buildRegistries());
 expected.set(
@@ -174,6 +178,17 @@ function read(path) {
 
 const projectionFiles = new Map([
   ['errors.mjs', read('src/errors.mjs')],
+  ['browser-contracts.d.mts', read('src/browser-contracts.d.mts')],
+  [
+    'browser-contracts.mjs',
+    read('src/browser-contracts.mjs').replace(
+      'new URL(`../schemas/v${protocolVersion}/${filename}`, import.meta.url)',
+      'new URL(`../../schemas/v${protocolVersion}/${filename}`, import.meta.url)',
+    ),
+  ],
+  ['diagram-review-contracts.mjs', read('src/diagram-review-contracts.mjs')],
+  ['diagram-review-contracts.d.mts', read('src/diagram-review-contracts.d.mts')],
+  ['canonical-json.d.mts', read('src/canonical-json.d.mts')],
   ['canonical-json.mjs', read('src/canonical-json.mjs')],
   ['jcs.mjs', read('src/canonical-json.mjs')],
   ['json-schema.mjs', read('src/json-schema.mjs')],
@@ -255,7 +270,7 @@ function walk(root, prefix = '') {
 }
 
 const originalSchemaFiles = walk(join(packageRoot, 'schemas')).filter(
-  ({ key }) => !/^v1\.(?:[5-9]|10|11|12|13|14)\.0\//u.test(key) && key.endsWith('.json'),
+  ({ key }) => !/^v1\.(?:[5-9]|10|11|12|13|14|15)\.0\//u.test(key) && key.endsWith('.json'),
 );
 const originalRegistryFiles = walk(join(packageRoot, 'registry')).filter(({ key }) =>
   key.endsWith('.json'),

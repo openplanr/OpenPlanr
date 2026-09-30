@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import type { IncomingMessage } from 'node:http';
+import { join } from 'node:path';
 import type {
   DiagramAuthoringBundle,
   DiagramAuthoringProfile,
@@ -15,11 +16,13 @@ import {
   type DiagramStoreSaveResult,
   type DiagramStoreUnknown,
 } from '../authoring/store.mjs';
+import { createDiagramShareLocalHandler } from '../share-local.mjs';
 import { createDiagramEditorDraft } from './draft.mjs';
 
 export interface DiagramLocalOwnerOptions {
   root: string;
   slug: string;
+  env?: Record<string, string | undefined>;
   /** Initial blank title; saved document content always wins. */
   title?: string;
   /** Initial blank authoring grammar, default process. */
@@ -38,7 +41,12 @@ export interface DiagramLocalOwnerAdapter {
   }): Promise<
     | false
     | { status: number; body: Record<string, unknown> }
-    | { status: number; kind: 'asset'; asset: 'document' | 'runtime' | 'stylesheet'; body: string }
+    | {
+        status: number;
+        kind: 'asset';
+        asset: 'document' | 'runtime' | 'stylesheet' | 'font';
+        body: string | Buffer;
+      }
   >;
 }
 export interface DiagramOwnerHandle {
@@ -189,6 +197,7 @@ export function createDiagramLocalOwnerAdapter({
   grammar = 'process',
   maxRequestBytes = DIAGRAM_OWNER_MAX_REQUEST_BYTES,
   storeOptions = {},
+  env = process.env,
 }: DiagramLocalOwnerOptions): DiagramLocalOwnerAdapter {
   if (
     !Number.isSafeInteger(maxRequestBytes) ||
@@ -207,6 +216,10 @@ export function createDiagramLocalOwnerAdapter({
   if (!draft.ok)
     throw new TypeError('The initial diagram title or authoring grammar is not supported.');
   const store = createDiagramAuthoringStore({ ...storeOptions, root, slug });
+  const handleShare = createDiagramShareLocalHandler(
+    join(root, 'diagrams', slug, `${slug}.planr-diagram-bundle.json`),
+    { env },
+  );
   return Object.freeze({
     capabilities: CAPABILITIES,
     async handleRequest({
@@ -219,7 +232,9 @@ export function createDiagramLocalOwnerAdapter({
         ['GET', 'HEAD'].includes(req.method) &&
         (segments.length === 0 ||
           (segments.length === 1 &&
-            ['runtime.js', 'artifact-theme.css', 'editor.css'].includes(segments[0])))
+            ['runtime.js', 'artifact-theme.css', 'editor.css', 'diagram-font.ttf'].includes(
+              segments[0],
+            )))
       ) {
         if (req.headers['transfer-encoding'] || Number(req.headers['content-length'] ?? 0) !== 0)
           return rejected(
@@ -233,6 +248,13 @@ export function createDiagramLocalOwnerAdapter({
             kind: 'asset',
             asset: 'document',
             body: ownerPage({ slug, title, grammar }),
+          };
+        if (segments[0] === 'diagram-font.ttf')
+          return {
+            status: 200,
+            kind: 'asset',
+            asset: 'font',
+            body: readFileSync(new URL('../../ui/generated/diagram-font.ttf', import.meta.url)),
           };
         if (segments[0] === 'runtime.js')
           return {
@@ -262,6 +284,8 @@ export function createDiagramLocalOwnerAdapter({
           body: readFileSync(new URL('../../ui/diagram-editor.css', import.meta.url), 'utf8'),
         };
       }
+      const shared = await handleShare({ req, segments, origin });
+      if (shared) return shared;
       const action = segments.length === 2 && segments[0] === 'api' ? segments[1] : '';
       if (!Object.hasOwn(METHODS, action) || !METHODS[action].includes(req.method)) return false;
       const headerValues = req.headersDistinct?.[DIAGRAM_OWNER_HEADER];
@@ -397,6 +421,7 @@ export async function startDiagramOwner({
     grammar,
     maxRequestBytes,
     storeOptions,
+    env,
   });
   const server = createArtifactReviewServer({ env });
   const registration = server.registerOwnerSession(adapter);

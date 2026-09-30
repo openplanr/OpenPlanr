@@ -1,5 +1,12 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -14,11 +21,22 @@ import { designFixture } from './design-fixture.mjs';
 // no dependency on the external web source tree or its development tools.
 const webRoot = process.env.OPENPLANR_WEB_ROOT;
 const remoteBase = process.env.OPENPLANR_SHARE_TEST_BASE;
+async function enterHostedReview(page) {
+  const welcome = page.getByRole('dialog', { name: 'Welcome to this review', exact: true });
+  await welcome.waitFor();
+  await welcome.getByRole('button', { name: 'Explore freely', exact: true }).click();
+  await page.getByRole('textbox', { name: 'Reviewer name', exact: true }).fill('Company reviewer');
+  await page.getByRole('button', { name: 'Continue to review', exact: true }).click();
+  await welcome.waitFor({ state: 'hidden' });
+}
 test('local Share UI publishes a permanent review usable by another browser after local shutdown', {
   skip: !webRoot,
   timeout: 150_000,
 }, async (t) => {
   const webRequire = createRequire(join(webRoot, 'package.json'));
+  const shareRoot = existsSync(join(webRoot, 'apps/share/src/index.ts'))
+    ? join(webRoot, 'apps/share')
+    : join(webRoot, 'share');
   const { Miniflare } = webRequire('miniflare');
   const { build } = webRequire('esbuild');
   const temporary = realpathSync(mkdtempSync(join(tmpdir(), 'design-company-review-')));
@@ -44,7 +62,7 @@ test('local Share UI publishes a permanent review usable by another browser afte
     baseUrl = remote.origin;
   } else {
     const built = await build({
-      entryPoints: [join(webRoot, 'share/src/index.ts')],
+      entryPoints: [join(shareRoot, 'src/index.ts')],
       bundle: true,
       write: false,
       format: 'esm',
@@ -70,7 +88,7 @@ test('local Share UI publishes a permanent review usable by another browser afte
           const path = new URL(request.url).pathname;
           if (path.includes('..')) return new Response('', { status: 404 });
           try {
-            return new Response(readFileSync(join(webRoot, 'share/public', path)), {
+            return new Response(readFileSync(join(shareRoot, 'public', path)), {
               headers: { 'content-type': path.endsWith('.js') ? 'text/javascript' : 'text/html' },
             });
           } catch {
@@ -142,6 +160,7 @@ test('local Share UI publishes a permanent review usable by another browser afte
   await recipient.getByLabel('Access token', { exact: true }).fill(token);
   await recipient.getByRole('button', { name: 'Open design', exact: true }).click();
   await recipient.locator('[data-design-ready="true"]').waitFor({ timeout: 25000 });
+  await enterHostedReview(recipient);
   await recipient.getByRole('button', { name: 'Prototype', exact: true }).click();
   const target = currentDesign(file).entries.find(
     (entry) => entry.screenId === 'screen-1' && entry.frameId === 'desktop',
@@ -157,29 +176,33 @@ test('local Share UI publishes a permanent review usable by another browser afte
   const frameElement = recipient.locator(
     `iframe[data-planr-artifact-frame="${target.artifactId}"]`,
   );
+  await recipient.evaluate(
+    () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+  );
   const frameRect = await frameElement.boundingBox();
-  const frameSize = await frameElement.evaluate((frame) => ({
-    width: frame.clientWidth,
-    height: frame.clientHeight,
-  }));
   const buttonPoint = await saveButton.evaluate((button) => {
     const r = button.getBoundingClientRect();
     return {
       x: r.x + r.width / 2,
       y: r.y + r.height / 2,
+      width: innerWidth,
+      height: innerHeight,
       hit:
         document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)?.closest('button') ===
         button,
     };
   });
   const mousePoint = {
-    x: frameRect.x + (buttonPoint.x * frameRect.width) / frameSize.width,
-    y: frameRect.y + (buttonPoint.y * frameRect.height) / frameSize.height,
+    x: frameRect.x + (buttonPoint.x * frameRect.width) / buttonPoint.width,
+    y: frameRect.y + (buttonPoint.y * frameRect.height) / buttonPoint.height,
   };
   assert.equal(buttonPoint.hit, true);
   assert.equal(
-    await recipient.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.tagName, mousePoint),
-    'IFRAME',
+    await frameElement.evaluate(
+      (frame, { x, y }) => document.elementFromPoint(x, y) === frame,
+      mousePoint,
+    ),
+    true,
   );
   await recipient.mouse.click(mousePoint.x, mousePoint.y).catch(async (error) => {
     await recipient.screenshot({ path: '/tmp/openplanr-hosted-source-failure.png' });
@@ -205,19 +228,37 @@ test('local Share UI publishes a permanent review usable by another browser afte
       cause: error,
     });
   });
-  await product.getByRole('button', { name: 'Saved', exact: true }).waitFor();
+  await product
+    .getByRole('button', { name: 'Saved', exact: true })
+    .waitFor()
+    .catch(async (error) => {
+      await recipient.screenshot({ path: '/tmp/openplanr-hosted-pointer-failure.png' });
+      const current = await frameElement.boundingBox();
+      const camera = await recipient.evaluate(
+        () => window.__openPlanrDesignStudio.getState().camera,
+      );
+      throw new Error(
+        `Hosted source click: ${JSON.stringify({ frameRect, current, buttonPoint, mousePoint, camera, failures })}`,
+        { cause: error },
+      );
+    });
   await recipient.getByRole('button', { name: 'Annotate', exact: true }).click();
   await recipient
     .locator(`[data-planr-annotation-layer="${target.artifactId}"]`)
     .click({ position: { x: 100, y: 120 } });
-  await recipient.locator('[data-planr-composer-identity]').fill('Company reviewer');
+  const composerIdentity = recipient.locator('[data-planr-composer-identity]');
+  if (await composerIdentity.isVisible()) await composerIdentity.fill('Company reviewer');
   await recipient
     .locator('[data-planr-composer-comment]')
     .fill('Keep this action visible on small screens.');
   await recipient.locator('[data-planr-composer-submit]').click();
   await recipient.getByText('Feedback saved', { exact: true }).waitFor({ timeout: 15000 });
-  await recipient.getByPlaceholder('Add a reply…').fill('The existing interaction works well.');
-  await recipient.getByRole('button', { name: 'Reply', exact: true }).click();
+  await recipient.locator('.planr-reply-toggle').first().click();
+  await recipient
+    .locator('[data-planr-reply-form] textarea')
+    .first()
+    .fill('The existing interaction works well.');
+  await recipient.getByRole('button', { name: 'Send reply', exact: true }).click();
   await recipient.getByText('Feedback saved', { exact: true }).waitFor({ timeout: 15000 });
   await syncDesignShare(file, { env });
   let feedback = readDesignFeedback(file, env);
@@ -272,6 +313,7 @@ test('local Share UI publishes a permanent review usable by another browser afte
   await offlineRecipient.getByLabel('Access token', { exact: true }).fill(token);
   await offlineRecipient.getByRole('button', { name: 'Open design', exact: true }).click();
   await offlineRecipient.locator('[data-design-ready="true"]').waitFor({ timeout: 25000 });
+  await enterHostedReview(offlineRecipient);
   await manageDesignShare(file, 'revoke', { env });
   await offlineRecipient
     .getByText('Access changed. Enter the current token to continue.', { exact: true })

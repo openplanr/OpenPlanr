@@ -1,20 +1,6 @@
 /** Local owner adapter for persistent, encrypted design review workspaces. */
 
-import { randomBytes } from 'node:crypto';
-import {
-  chmodSync,
-  closeSync,
-  existsSync,
-  fsyncSync,
-  lstatSync,
-  mkdirSync,
-  openSync,
-  readFileSync,
-  realpathSync,
-  renameSync,
-  unlinkSync,
-  writeFileSync,
-} from 'node:fs';
+import { existsSync, mkdirSync, realpathSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { digestArtifactEnvelope } from '@openplanr/artifact/envelope.mjs';
@@ -22,6 +8,11 @@ import { resolveArtifactReviewDestination } from '@openplanr/artifact/import.mjs
 import { configuredPlanrHome } from '@openplanr/artifact/internal/planr-home.mjs';
 import { acquireStartLock } from '@openplanr/artifact/internal/server-util.mjs';
 import { createReviewLedger } from '@openplanr/artifact/merge.mjs';
+import {
+  ensurePrivateDirectory,
+  readCustody,
+  writeCustody,
+} from '@openplanr/artifact/owner-custody.mjs';
 import {
   readArtifactReviewState,
   withArtifactReviewLock,
@@ -77,70 +68,18 @@ function custodyLocation(file, options = {}, { allowMissing = false } = {}) {
     );
   return { root, path, current };
 }
-function ensurePrivateDirectory(root) {
-  for (let path = root; dirname(path) !== path; path = dirname(path)) {
-    if (existsSync(path) && lstatSync(path).isSymbolicLink())
-      throw new Error('Design custody directory must not contain symbolic links.');
-  }
-  mkdirSync(root, { recursive: true, mode: 0o700 });
-  const stat = lstatSync(root);
-  if (!stat.isDirectory() || stat.isSymbolicLink())
-    throw new Error('Design custody must use a private local directory.');
-  if (process.platform !== 'win32') chmodSync(root, 0o700);
-}
-function readCustody(path) {
-  if (!existsSync(path)) return null;
-  const stat = lstatSync(path);
-  if (
-    !stat.isFile() ||
-    stat.isSymbolicLink() ||
-    (process.platform !== 'win32' && stat.mode & 0o077)
-  )
-    throw new Error('Design owner custody must be a private 0600 file.');
-  const record = JSON.parse(readFileSync(path, 'utf8'));
-  if (record.kind !== FORMAT || record.schemaVersion !== '1.0.0' || !record.custody)
-    throw new Error('Design owner custody is invalid.');
-  return record;
-}
-function writeCustody(path, record) {
-  const temp = `${path}.${randomBytes(8).toString('hex')}.tmp`;
-  const fd = openSync(temp, 'wx', 0o600);
-  try {
-    writeFileSync(fd, `${JSON.stringify(record)}\n`);
-    fsyncSync(fd);
-  } finally {
-    closeSync(fd);
-  }
-  try {
-    renameSync(temp, path);
-    if (process.platform !== 'win32') {
-      chmodSync(path, 0o600);
-      const directory = openSync(dirname(path), 'r');
-      try {
-        fsyncSync(directory);
-      } finally {
-        closeSync(directory);
-      }
-    }
-  } catch (error) {
-    try {
-      unlinkSync(temp);
-    } catch {}
-    throw error;
-  }
-}
 async function withCustody(file, options, action) {
   const location = custodyLocation(file, options);
-  ensurePrivateDirectory(location.root);
+  ensurePrivateDirectory(location.root, { label: 'Design' });
   const unlock = await acquireStartLock(`${location.path}.lock`);
   try {
-    let record = readCustody(location.path);
+    let record = readCustody(location.path, { label: 'Design', format: FORMAT });
     return await action({
       ...location,
       record,
       save(value = record) {
         record = value;
-        writeCustody(location.path, value);
+        writeCustody(location.path, value, { label: 'Design' });
       },
     });
   } finally {
@@ -220,7 +159,7 @@ const safeStatus = (record, current) => ({
 
 export function getDesignShareStatus(file, options = {}) {
   const { path, current } = custodyLocation(file, options);
-  return safeStatus(readCustody(path), current);
+  return safeStatus(readCustody(path, { label: 'Design', format: FORMAT }), current);
 }
 export async function shareDesign(file, options = {}) {
   return withCustody(file, options, async ({ record, current, save }) => {
@@ -371,7 +310,11 @@ export async function exportDesignShareRecovery(file, { output, ...options } = {
 /** Restore owner authority on a second machine without putting secrets in argv. */
 export async function importDesignShareRecovery(file, { input, ...options } = {}) {
   if (!input) throw new Error('Recovery restore requires --input <private recovery file>.');
-  const recovered = readCustody(resolve(input));
+  const recovered = readCustody(resolve(input), {
+    label: 'Design',
+    format: FORMAT,
+    recoveryInput: true,
+  });
   if (!recovered) throw new Error('Recovery file could not be found.');
   const custody = recovered.custody;
   workspace.workspaceReviewUrl(custody);

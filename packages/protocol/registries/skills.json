@@ -14,7 +14,7 @@
       "lifecycle": "active",
       "authorityClass": "read-only-view",
       "source": "skills/planr-artifact/openplanr.skill.json",
-      "sourceDigest": "sha256:08ad4b7dcdfe70e63a319dcb78ff6c53f0086391f6d6d45094a793fe4d9c41ce",
+      "sourceDigest": "sha256:2df9ace1397aedb3beaec79f822f16aac84cdf7f7ffe3cccabf3cd10bffbb352",
       "triggerPolicy": {
         "include": [
           "Open or share an HTML artifact review",
@@ -807,7 +807,7 @@
       "lifecycle": "active",
       "authorityClass": "artifact-authoring",
       "source": "skills/planr-diagram/openplanr.skill.json",
-      "sourceDigest": "sha256:1d8b8127914dd7a637ea475257c109a72544f860ddf5ec40c3a78563831a9906",
+      "sourceDigest": "sha256:806f3c53d56199e00cfa19d27eaf9a8a0ca397692de46948313b7da1f728dd47",
       "triggerPolicy": {
         "include": [
           "Create a professional diagram from English intent or Mermaid",
@@ -1664,5 +1664,5 @@
     }
   ],
   "compatibilityAliases": [],
-  "documentDigest": "sha256:2d736dd0b8671ccb3bcc78ad28edab4d201d1fd3705c599d442b1fc317da1881"
+  "documentDigest": "sha256:06d65628a22614baa3a5e0276a0fddc1bcdd66ba2c6154148f997f2cf965a01f"
 }

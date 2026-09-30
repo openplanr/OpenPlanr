@@ -590,15 +590,25 @@ bundles); `OPENPLANR_ECOSYSTEM_SOURCE` points the check at another URL or file.
 
 ### `planr artifact`
 
-Open, share, import, and export universal HTML review sessions:
+Open, share, import, and export native diagrams, designs, and HTML reviews:
 
 ```bash
 planr artifact <file>
 planr artifact open <file> [--title <title>] [--root <asset-root>] [--theme auto|light|dark] [--presentation auto|document|canvas] [--port <port>] [--no-open] [--json]
 planr artifact share <file> [--title <title>] [--root <asset-root>] [--presentation auto|document|canvas] [--snapshot] [--short] [--ttl 1d|7d|30d] [--secret-output <private-file>] [--no-open] [--json] [--yes]
-planr artifact import <review-url>... [--output <path>] [--allow-stale] [--json] [--yes]
+planr artifact publish <diagram-manifest|diagram-bundle|design-document> [--yes] [--json]
+planr artifact sync <diagram-manifest|diagram-bundle|design-document> [--json]
+planr artifact import --secret-input <private-file|-> [--output <path>] [--allow-stale] [--json] [--yes]
 planr artifact export <session-id> [--format json|markdown] [--output <path>]
 ```
+
+Diagram manifests and authoring bundles share directly to one permanent native
+review per stable `/diagram/<id>` link, with a separate reviewer access token.
+The local studio's **Share diagram** dialog copies the link and token separately.
+Owner credentials stay privately outside the repository. Publish revisions
+explicitly; `sync` imports revision-bound feedback without changing the diagram.
+Native diagram sharing does not accept `--snapshot`, `--short`, or `--ttl`;
+export HTML first to choose the generic snapshot transport.
 
 When `--root` is omitted, the artifact file's directory is the asset root. This
 makes `planr artifact share /absolute/path/to/artifact.html` work without

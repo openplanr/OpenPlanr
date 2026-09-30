@@ -33,7 +33,12 @@
     "./diagram-owner": {
       "types": "./lib/artifact/diagram/editor/local-owner.d.mts",
       "import": "./lib/artifact/diagram/editor/local-owner.mjs"
-    }
+    },
+    "./diagram-shared-review": {
+      "types": "./lib/artifact/ui/diagram-shared-review.d.mts",
+      "import": "./lib/artifact/ui/diagram-shared-review.mjs"
+    },
+    "./diagram-shared-review.css": "./lib/artifact/ui/diagram-shared-review.css"
   },
   "files": [
     "lib/",

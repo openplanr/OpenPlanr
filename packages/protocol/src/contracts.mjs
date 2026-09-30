@@ -11,6 +11,7 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { PROTOCOL_V115_CONTRACTS, validateDiagramReviewArtifact } from './browser-contracts.mjs';
 import { deepFreeze } from './canonical-json.mjs';
 import { DESIGN_HANDOFF_CONTRACT_FILES } from './design-handoff-contracts.mjs';
 import {
@@ -231,6 +232,10 @@ const foundationPaths = {
 // Authoring successors are additive; preserve every legacy diagram registration.
 for (const [kind, filename] of Object.entries(DIAGRAM_AUTHORING_CONTRACT_FILES)) {
   foundationPaths[kind] = { ...foundationPaths[kind], '1.13.0': `schemas/v1.13.0/${filename}` };
+}
+
+for (const [kind, filename] of Object.entries(PROTOCOL_V115_CONTRACTS)) {
+  foundationPaths[kind] = { ...foundationPaths[kind], '1.15.0': `schemas/v1.15.0/${filename}` };
 }
 
 function compiledOperatePaths() {
@@ -1193,6 +1198,13 @@ function guidedQuestionnaireCompatibilityErrors(value) {
 
 /** @type {typeof import('./contracts.d.mts').validateProtocolArtifact} */
 export function validateProtocolArtifact(kind, value, { protocolVersion } = {}) {
+  if (Object.hasOwn(PROTOCOL_V115_CONTRACTS, kind)) {
+    // Review transport envelopes do not carry a Protocol version. Do not read
+    // arbitrary input properties while selecting the dedicated safety preflight.
+    const version = inferredVersion(kind, {}, protocolVersion);
+    sharedProtocolSchema(kind, version);
+    return validateDiagramReviewArtifact(kind, value, { protocolVersion: version });
+  }
   const authoringKind = Object.hasOwn(DIAGRAM_AUTHORING_CONTRACT_FILES, kind);
   let versionInput = value;
   if (authoringKind && (!protocolVersion || protocolVersion === '1.13.0')) {
@@ -1215,11 +1227,12 @@ export function validateProtocolArtifact(kind, value, { protocolVersion } = {}) 
   if (version === '1.13.0' && authoringKind) {
     return validateDiagramAuthoringArtifact(kind, value);
   }
-  const resolved = sharedProtocolSchema(kind, version);
+  return validateGenericArtifact(kind, value, sharedProtocolSchema(kind, version));
+}
+function validateGenericArtifact(kind, value, resolved) {
   const errors = validateResolvedArtifact(value, resolved);
-  if (kind === 'guided-questionnaire' && version === '1.2.0') {
+  if (kind === 'guided-questionnaire' && resolved.protocolVersion === '1.2.0')
     errors.push(...guidedQuestionnaireCompatibilityErrors(value));
-  }
   return errors;
 }
 

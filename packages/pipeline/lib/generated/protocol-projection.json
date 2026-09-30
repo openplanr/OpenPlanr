@@ -94,6 +94,24 @@
       "mode": "644"
     },
     {
+      "source": "packages/protocol/projections/pipeline/lib/protocol/browser-contracts.d.mts",
+      "target": "lib/protocol/browser-contracts.d.mts",
+      "sha256": "bf78046ca41f544783391710566a2907601610734085b1c35b167a35461d37d7",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/projections/pipeline/lib/protocol/browser-contracts.mjs",
+      "target": "lib/protocol/browser-contracts.mjs",
+      "sha256": "e5f3bf7b8d8d8e0344f8a088a7b42297d1b7f8ea3e7050f46a9e46d892a9cc10",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/projections/pipeline/lib/protocol/canonical-json.d.mts",
+      "target": "lib/protocol/canonical-json.d.mts",
+      "sha256": "d50829162f6817a8f381268b88f4b2b1518af2605b3e52cdc1ab1c9e365870e6",
+      "mode": "644"
+    },
+    {
       "source": "packages/protocol/projections/pipeline/lib/protocol/canonical-json.mjs",
       "target": "lib/protocol/canonical-json.mjs",
       "sha256": "7dc837c82f0bb950047e50060f080124c5f415c0c29c7d8ca49244a5f2c92d3e",
@@ -102,7 +120,7 @@
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/contracts.mjs",
       "target": "lib/protocol/contracts.mjs",
-      "sha256": "8e6f0dea5e353b5bad932b9835f7d2a7549c1b52c8f624d91e1ffe99489fa345",
+      "sha256": "980ec5ae30423e8cc6bec23de5ee0fb47e02cbf81ecf8c8966330bbc592aaba0",
       "mode": "644"
     },
     {
@@ -151,6 +169,18 @@
       "source": "packages/protocol/projections/pipeline/lib/protocol/diagram-contracts.mjs",
       "target": "lib/protocol/diagram-contracts.mjs",
       "sha256": "f5c1fea3eb52db8187baf834aa2c147aaacf8c8b100a078ae1b9adc707bb0f0c",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/projections/pipeline/lib/protocol/diagram-review-contracts.d.mts",
+      "target": "lib/protocol/diagram-review-contracts.d.mts",
+      "sha256": "8d4b0d5634f5ded723b6be47c8264dcd39e6d2fbb8625ed62196e51887ed2bbf",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/projections/pipeline/lib/protocol/diagram-review-contracts.mjs",
+      "target": "lib/protocol/diagram-review-contracts.mjs",
+      "sha256": "7478f7d4c97acbf4fe0cf6db587a7f40ee6e8e9222a712c42f8d67f1fb2bcd46",
       "mode": "644"
     },
     {
@@ -330,7 +360,7 @@
     {
       "source": "packages/protocol/registries/commands.json",
       "target": "registry/v1.5.0/commands.json",
-      "sha256": "15184f71d689004643988ce37148c8b3d8c530b8df1b06b4a560ac11e3e8be9d",
+      "sha256": "a90a40c7d6317232a37271f5129e6ec41fea93b2259cb44f94b2dd3226276ba2",
       "mode": "644"
     },
     {
@@ -360,7 +390,7 @@
     {
       "source": "packages/protocol/registries/skills.json",
       "target": "registry/v1.5.0/skills.json",
-      "sha256": "8f3551c9b83df65d075bcf7e0b9244b594536135873df43ced8462400ba1b503",
+      "sha256": "ca9f8fd6e5fb5446b94f171d85f1b8bb388c7b923f42663550bc44d0900fb4e8",
       "mode": "644"
     },
     {
@@ -829,6 +859,42 @@
       "source": "packages/protocol/schemas/v1.14.0/artifact-theme.schema.json",
       "target": "schemas/v1.14.0/artifact-theme.schema.json",
       "sha256": "1742be23b045154ebb260c87edbc28c101f7c2e3ef498ddde86ee0b4ffef7b0a",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.15.0/diagram-review-bundle.schema.json",
+      "target": "schemas/v1.15.0/diagram-review-bundle.schema.json",
+      "sha256": "b5585ab7c0d10a8b413ffb84884573233578e613fbcce0f0e4cf14847f137042",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.15.0/diagram-review-feedback.schema.json",
+      "target": "schemas/v1.15.0/diagram-review-feedback.schema.json",
+      "sha256": "33cff09ab09a83095a477a3786eebd1ef30683781b570e8e8cfe441cc645b60a",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.15.0/diagram-review-workspace.schema.json",
+      "target": "schemas/v1.15.0/diagram-review-workspace.schema.json",
+      "sha256": "3dda1818076f1efda3e20f01b29e39f01f92e7ba3e9c4a80fc8404f1e63d5c14",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.15.0/diagram-workspace-create.schema.json",
+      "target": "schemas/v1.15.0/diagram-workspace-create.schema.json",
+      "sha256": "f39696c6f4dcff9cdd8b7644142e759a12b8f586273210cc61582e1f54804425",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.15.0/diagram-workspace-event.schema.json",
+      "target": "schemas/v1.15.0/diagram-workspace-event.schema.json",
+      "sha256": "2a39381e3d0bcd6acebea5258df02aea406dae6a828b557477737dd61c9de430",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.15.0/diagram-workspace-revision.schema.json",
+      "target": "schemas/v1.15.0/diagram-workspace-revision.schema.json",
+      "sha256": "8e8e1cf8c8ef136d88a33912db19b065a46a93176424b612dff157da9c3d3562",
       "mode": "644"
     },
     {

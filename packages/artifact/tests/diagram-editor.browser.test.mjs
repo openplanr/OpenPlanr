@@ -537,8 +537,14 @@ test(
       'redo',
       'properties',
       'save',
+      'host-action',
       'more',
     ]);
+    assert.equal(
+      await page.getByRole('button', { name: 'Share diagram', exact: true }).count(),
+      1,
+      'The local owner exposes native sharing beside Save',
+    );
     assert.equal(bar.left, 16, 'The outline toggle sits on the 16px gutter');
     assert.equal(bar.right, 16, 'More sits on the 16px gutter');
     for (const { name, label } of bar.names)

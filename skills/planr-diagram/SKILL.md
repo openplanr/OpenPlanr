@@ -103,5 +103,18 @@ review pins remain bound to the verified diagram set. Treat an omitted Mermaid
 or Excalidraw projection as a supported fidelity outcome only when the command
 result explains why.
 
+## Share the native canvas
+
+When the user asks to share, read
+[diagram-sharing.md](references/diagram-sharing.md). Use `planr artifact share
+<manifest-or-bundle>` or the local **Share diagram** dialog. Preserve the exact
+selected diagram and revision; do not substitute its generated HTML wrapper.
+The review has one stable link and a separate access token, and remains available
+while the local studio is stopped. Reviewers inspect and comment; the owner edits
+locally and explicitly publishes a revision with `planr artifact publish
+<manifest-or-bundle>`. Bring feedback back with `planr artifact sync
+<manifest-or-bundle>` without treating it as execution authority. Verify the
+actual hosted canvas, font readiness and revision before claiming it is correct.
+
 Report the selected grammar, manifest path, emitted files, validation status,
 editable source, fidelity or omissions, and the clearest next action.

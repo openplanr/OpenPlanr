@@ -74,12 +74,15 @@ test('catalog, schema, role, skill, and adapter membership is exact', () => {
     'v1.8.0': Object.keys(PROTOCOL_V18_CONTRACT_FILES).length + 1,
     'v1.13.0': 10,
     'v1.14.0': 1,
+    'v1.15.0': 6,
   };
   assert.equal(ecosystem.protocol.current, '1.8.0');
   assert.ok(ecosystem.protocol.additiveVersions.includes('1.13.0'));
   assert.ok(ecosystem.protocol.supportedReaders.includes('1.13.x'));
   assert.ok(ecosystem.protocol.additiveVersions.includes('1.14.0'));
   assert.ok(ecosystem.protocol.supportedReaders.includes('1.14.x'));
+  assert.ok(ecosystem.protocol.additiveVersions.includes('1.15.0'));
+  assert.ok(ecosystem.protocol.supportedReaders.includes('1.15.x'));
   assert.equal(ecosystem.catalogs.commands.rootCommands, commands.inventory.rootCommandModules);
   assert.equal(ecosystem.catalogs.commands.frozenClaudeDocuments, 8);
   assert.equal(ecosystem.catalogs.skills.count, skills.skills.length);

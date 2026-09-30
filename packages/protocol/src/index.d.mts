@@ -4,6 +4,7 @@ export * from './design-handoff-contracts.mjs';
 export * from './design-publication-contracts.mjs';
 export * from './diagram-authoring-contracts.mjs';
 export * from './diagram-contracts.mjs';
+export * from './diagram-review-contracts.mjs';
 export * from './enterprise-contracts.mjs';
 export * from './errors.mjs';
 export * from './json-schema.mjs';

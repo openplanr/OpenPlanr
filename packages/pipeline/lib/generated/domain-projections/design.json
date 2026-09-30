@@ -295,7 +295,7 @@
     {
       "source": "packages/design/lib/design/share.mjs",
       "target": "lib/design/share.mjs",
-      "sha256": "6a28bb17e1aa0ee7f9412d351f1715b5b7e3299923d74e041973c047dcf49188",
+      "sha256": "c42bc7af9bfee0b74c8320a8abb5398214f83c47a7d891320408b01e0b7e4e53",
       "mode": "644"
     },
     {
@@ -355,7 +355,7 @@
     {
       "source": "packages/design/lib/design/workspace-client.mjs",
       "target": "lib/design/workspace-client.mjs",
-      "sha256": "8267af3724d2b246f3489cc89822e20ec395ce352dc76347776fe2bb476db75e",
+      "sha256": "fcce105e70e57f40d55e5b4bdc081821aacf3e91c0cfacb21025e74d86bd853b",
       "mode": "644"
     },
     {
@@ -379,7 +379,7 @@
     {
       "source": "packages/design/templates/studio/share.css",
       "target": "templates/studio/share.css",
-      "sha256": "6923307acbdba81a4bcd1d24e5ed1553dc49b6f0a656222f397d36fd34afe265",
+      "sha256": "c1afe8271c85ca7523aa520daf093c24a653f9fe6e08caffd56391a8b592c206",
       "mode": "644"
     },
     {

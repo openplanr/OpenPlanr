@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import { request as httpRequest } from 'node:http';
 import { tmpdir } from 'node:os';
@@ -15,6 +16,7 @@ import {
   createDiagramLocalOwnerAdapter,
   startDiagramOwner,
 } from '../lib/artifact/diagram/editor/local-owner.mjs';
+import { DIAGRAM_FONT } from '../lib/artifact/diagram/rendering/png.mjs';
 import { createArtifactEnvelope } from '../lib/artifact/envelope.mjs';
 import { createArtifactReviewServer } from '../lib/artifact/review-server.mjs';
 
@@ -595,4 +597,25 @@ test('an aborted JSON request releases its handler and leaves later owner reads 
     (await post(owner, 'commit', { transaction: makeTransaction(bundle) })).value.status,
     'saved',
   );
+});
+
+test('the owner serves only its scoped, pinned diagram font as a binary asset', async (t) => {
+  const { owner } = await ownerFor(t);
+  const response = await fetch(`${owner.baseUrl}diagram-font.ttf`);
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('content-type'), 'font/ttf');
+  const bytes = Buffer.from(await response.arrayBuffer());
+  assert.equal(`sha256:${createHash('sha256').update(bytes).digest('hex')}`, DIAGRAM_FONT.digest);
+  assert.equal((await request(`${owner.baseUrl}diagram-font.ttf`, { method: 'HEAD' })).text, '');
+  assert.equal(
+    (
+      await request(`${owner.baseUrl}diagram-font.ttf`, {
+        headers: { origin: 'https://other.test' },
+      })
+    ).status,
+    403,
+  );
+  const path = new URL(owner.baseUrl);
+  path.pathname = path.pathname.replace(/\/[^/]+\/$/u, '/invalid-capability/');
+  assert.equal((await request(`${path.href}diagram-font.ttf`)).status, 404);
 });
