@@ -3,7 +3,7 @@
   "schemaVersion": "2.0.0",
   "protocolVersion": "1.8.0",
   "plugin": "planr",
-  "version": "2.2640.4",
+  "version": "2.2640.5",
   "skillRoot": "./skills/",
   "canonicalSkillCount": 27,
   "compatibilityAliasCount": 0,
@@ -497,7 +497,7 @@
         },
         {
           "path": "skills/design/scripts/runtime/packages/protocol/package.json",
-          "digest": "sha256:dc32c52ec90b1b8e9db3a0c3cadf1a655e305e7577932c0ef366b80a0f67c320"
+          "digest": "sha256:f852e8672da74901a7fc3819c10abf37e27744ea40ec9af4c807be1fdbc9ad7c"
         },
         {
           "path": "skills/design/scripts/runtime/packages/protocol/registries/artifact-theme.json",
@@ -722,7 +722,7 @@
         },
         {
           "path": "skills/design-loop/scripts/runtime/packages/protocol/package.json",
-          "digest": "sha256:dc32c52ec90b1b8e9db3a0c3cadf1a655e305e7577932c0ef366b80a0f67c320"
+          "digest": "sha256:f852e8672da74901a7fc3819c10abf37e27744ea40ec9af4c807be1fdbc9ad7c"
         },
         {
           "path": "skills/design-loop/scripts/runtime/packages/protocol/registries/artifact-theme.json",
@@ -947,7 +947,7 @@
         },
         {
           "path": "skills/design-review/scripts/runtime/packages/protocol/package.json",
-          "digest": "sha256:dc32c52ec90b1b8e9db3a0c3cadf1a655e305e7577932c0ef366b80a0f67c320"
+          "digest": "sha256:f852e8672da74901a7fc3819c10abf37e27744ea40ec9af4c807be1fdbc9ad7c"
         },
         {
           "path": "skills/design-review/scripts/runtime/packages/protocol/registries/artifact-theme.json",
@@ -1310,7 +1310,7 @@
         },
         {
           "path": "skills/plan/scripts/runtime/packages/protocol/package.json",
-          "digest": "sha256:dc32c52ec90b1b8e9db3a0c3cadf1a655e305e7577932c0ef366b80a0f67c320"
+          "digest": "sha256:f852e8672da74901a7fc3819c10abf37e27744ea40ec9af4c807be1fdbc9ad7c"
         },
         {
           "path": "skills/plan/scripts/runtime/packages/protocol/registries/artifact-theme.json",
