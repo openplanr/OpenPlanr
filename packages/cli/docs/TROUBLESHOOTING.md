@@ -9,10 +9,24 @@ planr doctor --json
 planr setup --dry-run
 ```
 
-`doctor --fix` previews owned generated-file repairs and stale OpenPlanr daemon
-state. It asks once, rechecks daemon health, and removes only OpenPlanr-owned state;
-it never kills a process. Package installation, version changes, provenance
-recovery, credential changes, and unrelated deletion remain explicit gates.
+`doctor --fix` preserves each managed coding agent's saved installation scope and
+Codex discovery choice. It previews generated-file repairs, managed native plugin
+operations and stale OpenPlanr daemon state, then asks once before applying them.
+File changes are grouped by agent; `--verbose` shows every path and `--json` saves
+the exact repair preview, whether it was applied, and whether a host restart is needed.
+Use `--yes` only after reviewing the proposed repairs.
+
+Repairs use the plugin bundled with the running CLI, without upgrading the CLI or
+changing credentials. Doctor also compares the cached plugin payload with the bundled files, so a current
+version with missing skills still needs repair. Native plugin commands remove stale managed registrations,
+including an old enabled identity omitted from the current marketplace listing.
+Unrelated registrations and modified owned files require explicit resolution. Restart
+the affected agent after a plugin change; doctor checks registration and owned assets,
+so it cannot prove that an already-open host has reloaded its live skill list.
+Failed native plugin inspection blocks setup and repair before managed files change;
+resolve the reported configuration or CLI problem, then retry.
+A healthy second repair makes no changes. Daemon cleanup rechecks health and never
+kills a process. CLI package upgrades and provenance recovery remain separate actions.
 
 An unavailable runtime is informational unless setup or the project lock
 actually selected it. A selected runtime that disappears remains a warning.
@@ -44,7 +58,7 @@ Review and confirm the listed marketplace and plugin operations, then restart
 Claude Code. Setup serves the unified `planr` plugin from a generated local
 marketplace (`openplanr-local`). Older `openplanr` or `planr-pipeline` plugins from
 the public marketplace are reported as legacy and never removed silently; confirm
-the unified plugin works, then remove them from Claude Code.
+the OpenPlanr plugin works, then remove them from Claude Code.
 
 Setup backups live under `~/.planr/backups/<project-hash>/<timestamp>/`. Machine
 state and paths live under `~/.planr/runtime/state.json`; the committed project

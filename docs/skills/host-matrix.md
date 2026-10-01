@@ -11,7 +11,7 @@ host-native projections. Generated files are outputs, not alternate sources.
 | Structured questions | native question when available | native composer question when available | Composer chat | terminal/headless resolver |
 | On-demand content | relative packaged references | relative packaged references | generated rule references | package-relative references |
 | UI metadata | plugin manifest | `.codex-plugin/plugin.json` and `agents/openai.yaml` | rule frontmatter | adapter manifest |
-| Recommended install | unified plugin | unified plugin | project rule | exact npm package |
+| Recommended install | OpenPlanr plugin | OpenPlanr plugin | Project rules | Installed CLI package |
 
 Host profiles may change supported syntax, invocation wording, metadata, and
 question surfaces. They may not change the OpenPlanr context, workflow, output

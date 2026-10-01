@@ -161,8 +161,8 @@ See [authoring and verifying diagrams](docs/diagrams/authoring.md).
 
 | Host | Install | Invoke | Notes |
 | --- | --- | --- | --- |
-| Claude Code | `planr setup --runtime claude --scope user` | `/planr:<skill>` | Unified `planr` plugin; `ship` dispatches 9 role agents |
-| Codex | `planr setup --runtime codex --scope user --skill-mode unified-plugin` | `$planr:<skill>` | Unified plugin; `--skill-mode direct` installs bare-named skills instead |
+| Claude Code | `planr setup --runtime claude --scope user` | `/planr:<skill>` | OpenPlanr plugin; `ship` dispatches 9 role agents |
+| Codex | `planr setup --runtime codex --scope user --skill-mode unified-plugin` | `$planr:<skill>` | OpenPlanr plugin; `--skill-mode direct` installs individual skills instead |
 | Cursor | `planr setup --runtime cursor --scope project` | mention the `planr-<skill>` rule | Project rules under `.cursor/rules/` |
 
 `planr rules generate` adds an `## OpenPlanr capabilities` section to `CLAUDE.md` or `AGENTS.md`

@@ -24,7 +24,12 @@ const HOST_AND_CHANGELOG = (root) => [
 
 const ROOTS = [
   { path: '.', recursive: false, extensions: ['.md'] },
-  { path: 'docs', recursive: true, extensions: ['.md'], exclude: ['docs/generated'] },
+  {
+    path: 'docs',
+    recursive: true,
+    extensions: ['.md'],
+    exclude: ['docs/generated', 'docs/verification'],
+  },
   { path: '.github', recursive: true, extensions: ['.md', '.yml'], exclude: ['.github/workflows'] },
   {
     path: 'packages/cli',

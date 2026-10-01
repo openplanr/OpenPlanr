@@ -53,7 +53,7 @@ describe('summarizeRuntimeChanges', () => {
         runtime: 'claude-code',
         host: 'Claude Code',
         changed: true,
-        summary: 'planr plugin 2.6.0 → 2.2640.2',
+        summary: 'OpenPlanr plugin 2.6.0 → 2.2640.2',
       },
       { runtime: 'codex', host: 'Codex', changed: true, summary: '3 files updated, 1 added' },
       { runtime: 'cursor', host: 'Cursor', changed: false, summary: 'already up to date' },
@@ -65,7 +65,7 @@ describe('summarizeRuntimeChanges', () => {
       { ...plan, runtimes: [...plan.runtimes] },
       { bookkeepingRoot, applied: false },
     );
-    expect(claude.summary).toBe('planr plugin 2.6.0 → 2.2640.2');
+    expect(claude.summary).toBe('OpenPlanr plugin 2.6.0 → 2.2640.2');
     expect(codex.summary).toBe('3 files to update, 1 to add');
   });
 

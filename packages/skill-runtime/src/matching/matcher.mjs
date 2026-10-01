@@ -39,7 +39,7 @@ const TOKEN_EXPANSIONS = Object.freeze({
   deploy: ['deployment', 'publish'],
   roadmap: ['plan', 'planning'],
   build: ['implement', 'implementation'],
-  coding: ['code', 'implementation'],
+  coding: ['code'],
   marketing: ['market', 'growth'],
   customers: ['customer'],
   exec: ['executive', 'operate'],
@@ -157,8 +157,20 @@ function scoreDocument(input, inputTokens, document, weights) {
     ...document.exclude.map((tokens) => overlapScore(inputTokens, tokens, weights)),
   );
   const explicit = hasExplicitName(input, document.skill.skillId, document.aliases) ? 1 : 0;
+  // Mentioning a coding agent is not a request to change source. Keep explicit
+  // skill names available, but require an implementation action for semantic
+  // implementation routing (for example, a review-only request has none).
+  const implementationAction =
+    /\b(?:implement(?:ation|ing|ed|s)?|build(?:ing|s)?|fix(?:es|ed|ing)?|finish(?:es|ed|ing)?|ship(?:ped|ping|s)?)\b/iu.test(
+      input,
+    );
+  const eligible = document.skill.authorityClass !== 'implementation' || implementationAction;
   const raw =
-    explicit > 0 ? 1 : Math.max(include, description * 0.72) * (exclusion >= 0.72 ? 0.15 : 1);
+    explicit > 0
+      ? 1
+      : eligible
+        ? Math.max(include, description * 0.72) * (exclusion >= 0.72 ? 0.15 : 1)
+        : 0;
   return {
     skillId: document.skill.skillId,
     family: document.skill.family,

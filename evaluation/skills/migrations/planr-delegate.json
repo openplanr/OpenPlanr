@@ -1,0 +1,21 @@
+{
+  "kind": "openplanr-skill-adoption-report",
+  "schemaVersion": "1.0.0",
+  "skillId": "planr-delegate",
+  "family": "implementation",
+  "source": {
+    "format": "new-canonical-skill",
+    "entrypoint": "skills/planr-delegate/SKILL.md"
+  },
+  "successor": {
+    "sourceFormat": "package-v1",
+    "path": "skills/planr-delegate/openplanr.skill.json",
+    "version": "0.1.0"
+  },
+  "classification": "new",
+  "intendedChanges": [
+    "Add an explicit, opt-in, local delegated implementation workflow while preserving ordinary host-native Ship.",
+    "Package capsule, profile, custody, runner, integration, and operator resources for installed Claude Code and Codex projections.",
+    "Expose an opt-in preview only; require separate authorization for landing and publication."
+  ]
+}

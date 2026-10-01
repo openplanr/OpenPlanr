@@ -18,8 +18,11 @@ planr setup
 planr doctor
 ```
 
-The full pipeline is the default. Use `planr setup --minimal` for dedicated
-planning only, or `npx openplanr@latest setup` without a global install.
+Setup configures the OpenPlanr skills bundled with the installed CLI. Your coding
+agent runs planning, design, review and implementation workflows. Use
+`npx openplanr@latest setup` without a global install. The compatibility option
+`--minimal` skips agent integration and changes no setup files; the installed CLI
+already provides planning utilities.
 
 ## Preview, apply, and migrate
 
@@ -31,19 +34,23 @@ planr doctor
 
 Guided setup detects Claude Code, Codex, and Cursor, explains unavailable shell
 commands, and prompts for the agents and scope to configure. User scope is the
-default. Cursor currently requires project scope. Project writes require a Git
+default. OpenPlanr's current Cursor integration uses project rules and requires project
+scope; this is an integration limitation, not a limitation of Cursor's native
+skill support. Project writes require a Git
 worktree or initialized `.planr` project; setup will never treat `$HOME` as a
 project automatically.
 
-Setup prints a compact change summary before mutation; use `--verbose` for
-every target. Existing files are copied byte-for-byte to
+Setup previews the OpenPlanr version, selected agents, per-agent destinations,
+and files to add, update or remove. File counts include bundled references,
+scripts and role agents; they are not counts of separate workflows. Use
+`--verbose` for every target and the bundled component version. Existing files are copied byte-for-byte to
 `~/.planr/backups/` with hashes and a migration manifest. Only managed marker
 blocks are replaced; content outside those blocks is preserved.
 
 When Claude Code is selected at user scope, the preview includes the marketplace
 and plugin operations. Confirmed setup writes a generated local marketplace
-(`openplanr-local`) from the installed package and installs or updates the unified
-`planr` plugin from it, so the plugin always matches the CLI version. Setup never
+(`openplanr-local`) from the installed package and installs or updates the OpenPlanr
+plugin (`planr@openplanr-local`) from it, so the plugin always matches the CLI version. Setup never
 reads the remote `openplanr/marketplace` for versions. The piped installer never
 does this on its own. Restart Claude Code when setup says a plugin changed.
 
@@ -80,21 +87,28 @@ Installing or updating one adapter is additive: it keeps every other managed
 adapter and preserves each adapter's existing scope. For example, adding Codex
 at user scope does not widen an existing project-only Cursor installation.
 
-Full setup installs the portable planning and pipeline assets for the selected
-runtime. `planr doctor` reports managed-file drift and runtime availability.
+Setup installs the bundled OpenPlanr skills and supporting assets for the selected
+coding agents. `planr doctor` reports managed-file drift and runtime availability.
 
 ## Codex skill modes
 
-Codex has three delivery modes, chosen with `--skill-mode`:
+The wizard uses product names; existing `--skill-mode` values remain compatible:
 
-- `unified-plugin` (recommended): one `planr` plugin registered through Codex's plugin
+- **OpenPlanr plugin** (`unified-plugin`, recommended): one `planr` plugin registered through Codex's plugin
   marketplace; skills are invoked as `$planr:<skill>`.
-- `direct`: every skill installed separately under `~/.codex/skills/<name>/` and invoked
-  by its bare name, for example `$spec`.
-- `project-rule`: skills installed into the current project only.
+- **Individual skills** (`direct`): skills and their support files installed under
+  `~/.codex/skills/<name>/`, invoked by their installed names, such as `$planr-spec`.
+- **Project skills** (`project-rule`): skills and their support files installed under
+  `.agents/skills/` in the current project only.
 
-Every installed asset is digest-verified. Switching modes previews the managed
-retirements; add `--replace-managed` only after reviewing them.
+Every installed asset is digest-verified. Switching from individual Codex skills
+to the plugin backs up and removes only the recorded OpenPlanr-owned files from
+`~/.codex/skills/`. Modified or unknown content is preserved and reported as a
+conflict. The plugin comes from the installed CLI; it is not downloaded from an
+unrelated marketplace. Selecting both scopes also installs project skills.
+Guided setup asks once to confirm the listed replacement and apply setup. For
+non-interactive use, review `--dry-run --verbose`, then add `--replace-managed`.
+Use `planr runtime rollback` to restore the previous file state.
 
 ## Operate cycles
 
@@ -180,9 +194,12 @@ absolute paths remain in the user runtime state and backups.
   `$HOME`, but only when their recorded ownership hashes still match.
 - `doctor --fix` can remove unreachable design/dashboard daemon state after a
   preview and second health check; it never kills or inspects unrelated processes.
-- `doctor` detects stale or malformed Claude plugins read-only. `doctor --fix`
-  does not install or update them; use the explicit runtime update command it
-  prints.
+- `doctor` inspects native plugin state read-only. `doctor --fix` previews managed
+  plugin repair through native commands using the bundle in the running CLI. It
+  preserves saved installation scopes and the Codex discovery choice, backs up
+  owned-file changes, and requires confirmation before retiring managed identities.
+  Unrelated plugins and owner-modified files are preserved. Restart the affected
+  host when requested; file and registration health does not prove live discovery.
 - Credentials are not written to runtime locks or provenance.
 - Doctor redacts secrets and only fixes owned files after preview.
 - Provenance is append-only. Recovery requires an explicit event rather than

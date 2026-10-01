@@ -495,7 +495,7 @@ describe('executeCliHalfUpgrade', () => {
       runtime: 'claude-code',
       host: 'Claude Code',
       command: 'planr runtime update claude --scope user --yes',
-      detail: `planr plugin 1.0.0 → ${cliVersion}`,
+      detail: `OpenPlanr plugin 1.0.0 → ${cliVersion}`,
     };
     const installedCli = recordingNpm(() => ({
       status: 0,
@@ -633,7 +633,7 @@ describe('upgradeNextSteps', () => {
       'planr runtime update claude --scope user --yes',
     ]);
     expect(steps[0]).toMatchObject({ runtime: 'claude-code', host: 'Claude Code' });
-    expect(steps[0].detail).toContain(`planr plugin 1.0.0 → ${bundledPlanrVersion()}`);
+    expect(steps[0].detail).toContain(`OpenPlanr plugin 1.0.0 → ${bundledPlanrVersion()}`);
     expect(claude.calls.some(isMutatingClaudeCall)).toBe(false);
   });
 
@@ -672,7 +672,7 @@ describe('upgradeNextSteps', () => {
     const steps = await upgradeNextSteps(root, {
       claudeCommandRunner: makeRunner({ skills: version }),
     });
-    expect(steps.map((step) => step.detail)).toEqual([`repair the planr plugin ${version}`]);
+    expect(steps.map((step) => step.detail)).toEqual([`repair the OpenPlanr plugin ${version}`]);
   });
 
   it('lists nothing when Claude Code is absent and no coding agent is recorded', async () => {
@@ -913,7 +913,7 @@ process.exit(0);
     // The promise in the reason string must be kept by the same invocation.
     expect(output).toContain("a coding agent's plugin is behind it. Run the commands below.");
     expect(output).toContain('1. planr runtime update claude --scope user --yes');
-    expect(output).toContain('Claude Code: planr plugin 1.25.0 → ');
+    expect(output).toContain('Claude Code: OpenPlanr plugin 1.25.0 → ');
     expect(output).toContain('Then restart Claude Code and check with `planr upgrade status`.');
     // The advice never names the retired remote plugins setup itself marks as legacy.
     expect(output).not.toContain('openplanr@openplanr');

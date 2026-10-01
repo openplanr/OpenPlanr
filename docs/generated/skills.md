@@ -113,6 +113,17 @@ Start or inspect the loopback-only OpenPlanr planning dashboard. Use when the us
 - Aliases: none.
 - Packaged support: none; the skill is intentionally single-file.
 
+## `planr-delegate`
+
+Coordinate an explicitly requested implementation with Claude Code, Codex or Cursor, then independently review and integrate its observed changes. Use when the user asks another coding agent to implement.
+
+- Select for: Delegate implementation to another coding agent; Ask a second coding agent to implement while I orchestrate; Use planr-delegate for this task; Have Codex implement this task; Use Codex to implement this; Have Claude Code implement this task; Ask another coding agent to implement this task; Use another coding agent to build this change.
+- Defer for: Active host implementation; Ship this change without delegation; Review existing code; Review this code using Codex; Parallel agents; Fix the delegate runner in the active agent.
+- Invocation from the plugin: `$planr:delegate` in Codex/ChatGPT; `/planr:delegate` in Claude Code.
+- Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
+- Aliases: none.
+- Packaged support: `references/adapter-protocol.md`, `references/capsule-contract.md`, `references/integration-review.md`, `references/operator-guide.md`, `references/run-handoff.md`, `references/worktree-custody.md`, and 23 packaged schema, script, and runtime resources.
+
 ## `planr-design`
 
 Design a polished product interface through adaptive consultation, a shared canvas/prototype/walkthrough studio, and an implementation-ready specification. Use for a new design or an existing interface that needs a coherent direction.
@@ -192,7 +203,7 @@ Assess release readiness and prepare or inspect an OpenPlanr landing sequence. U
 
 ## `planr-openplanr`
 
-Route a planning, specification, delivery, design, review, diagram, release, or operating request to the best OpenPlanr skill. Use when the right skill is unclear or the request spans several.
+Route a planning, specification, delivery, delegation, design, review, diagram, release, or operating request to the best OpenPlanr skill. Use when the right skill is unclear or the request spans several.
 
 - Select for: Choose which OpenPlanr skill should handle a request; Route a mixed or unclear planning, delivery, design, or operating request.
 - Defer for: Perform the routed work itself; Answer a question unrelated to OpenPlanr workflows.
@@ -249,8 +260,8 @@ Choose and maintain a product's versioning scheme, classify shipped changes, and
 
 Implement an OpenPlanr plan, specification, task, or clearly stated request end to end in the current repository. Use when the user asks to build, implement, fix, finish, or ship local work.
 
-- Select for: Implement a plan, specification, task, fix, or clearly stated local request; Build and verify the requested repository change; Ship this; Ship task; Implement this task.
-- Defer for: Only plan the work; Prepare a release without changing code.
+- Select for: Implement a plan, specification, task, fix, or clearly stated local request; Build and verify the requested repository change; Ship this; Ship task; Implement this task; Implement this plan with parallel coding agents; Use native parallel agents to implement this task; Fix the delegate runner in the active agent.
+- Defer for: Only plan the work; Prepare a release without changing code; Have Codex implement this task; Use Codex to implement this; Have Claude Code implement this task; Ask another coding agent to implement this task; Use another coding agent to build this change.
 - Invocation from the plugin: `$planr:ship` in Codex/ChatGPT; `/planr:ship` in Claude Code.
 - Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
 - Aliases: none.

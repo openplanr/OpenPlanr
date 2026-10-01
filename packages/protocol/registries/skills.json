@@ -618,6 +618,76 @@
       ]
     },
     {
+      "skillId": "planr-delegate",
+      "skillVersion": "0.1.0",
+      "description": "Coordinate an explicitly requested implementation with Claude Code, Codex or Cursor, then independently review and integrate its observed changes. Use when the user asks another coding agent to implement.",
+      "lifecycle": "active",
+      "authorityClass": "implementation",
+      "source": "skills/planr-delegate/openplanr.skill.json",
+      "sourceDigest": "sha256:52f82f86a292386fffd9809cbf0d307bf220cda7b5eb5195264e4260d9ce2b45",
+      "triggerPolicy": {
+        "include": [
+          "Delegate implementation to another coding agent",
+          "Ask a second coding agent to implement while I orchestrate",
+          "Use planr-delegate for this task",
+          "Have Codex implement this task",
+          "Use Codex to implement this",
+          "Have Claude Code implement this task",
+          "Ask another coding agent to implement this task",
+          "Use another coding agent to build this change"
+        ],
+        "exclude": [
+          "Active host implementation",
+          "Ship this change without delegation",
+          "Review existing code",
+          "Review this code using Codex",
+          "Parallel agents",
+          "Fix the delegate runner in the active agent"
+        ],
+        "deferTo": []
+      },
+      "contracts": {
+        "inputs": [],
+        "outputs": [
+          {
+            "id": "implementation-result",
+            "version": "1.0.0"
+          }
+        ]
+      },
+      "cliRequirements": [],
+      "ruleIds": [
+        "R3",
+        "R5"
+      ],
+      "contributionManifestRefs": [
+        "packages/skill-runtime/contributions/workflows.json"
+      ],
+      "hosts": [
+        {
+          "host": "claude-code",
+          "entrypoint": "/planr:delegate",
+          "path": "dist/plugins/claude/openplanr/skills/delegate/SKILL.md"
+        },
+        {
+          "host": "codex",
+          "entrypoint": "$planr:delegate",
+          "path": "dist/plugins/openai/openplanr/skills/delegate/SKILL.md"
+        },
+        {
+          "host": "cursor",
+          "entrypoint": "planr-delegate",
+          "path": "dist/plugins/cursor/openplanr/rules/planr-delegate.mdc"
+        }
+      ],
+      "testRefs": [
+        "tests/protocol/skill-catalog.test.mjs"
+      ],
+      "certificationRefs": [
+        "evaluation/skills/migrations/planr-delegate.json"
+      ]
+    },
+    {
       "skillId": "planr-design",
       "skillVersion": "2.1.0",
       "description": "Design a polished product interface through adaptive consultation, a shared canvas/prototype/walkthrough studio, and an implementation-ready specification. Use for a new design or an existing interface that needs a coherent direction.",
@@ -1053,7 +1123,7 @@
     {
       "skillId": "planr-openplanr",
       "skillVersion": "1.0.0",
-      "description": "Route a planning, specification, delivery, design, review, diagram, release, or operating request to the best OpenPlanr skill. Use when the right skill is unclear or the request spans several.",
+      "description": "Route a planning, specification, delivery, delegation, design, review, diagram, release, or operating request to the best OpenPlanr skill. Use when the right skill is unclear or the request spans several.",
       "lifecycle": "active",
       "authorityClass": "read-only-view",
       "source": "skills/planr-openplanr/openplanr.skill.json",
@@ -1368,11 +1438,19 @@
           "Build and verify the requested repository change",
           "Ship this",
           "Ship task",
-          "Implement this task"
+          "Implement this task",
+          "Implement this plan with parallel coding agents",
+          "Use native parallel agents to implement this task",
+          "Fix the delegate runner in the active agent"
         ],
         "exclude": [
           "Only plan the work",
-          "Prepare a release without changing code"
+          "Prepare a release without changing code",
+          "Have Codex implement this task",
+          "Use Codex to implement this",
+          "Have Claude Code implement this task",
+          "Ask another coding agent to implement this task",
+          "Use another coding agent to build this change"
         ],
         "deferTo": [
           "planr-land"
@@ -1664,5 +1742,5 @@
     }
   ],
   "compatibilityAliases": [],
-  "documentDigest": "sha256:e3f61d71a05a268294055de033e2ec2d44bfb7b05a95a18b6607ded3eb61e37b"
+  "documentDigest": "sha256:65e297e6cf1e1da3bc25c44416ab57590af0c9bcf5a3d0fa65328e2191d4e534"
 }

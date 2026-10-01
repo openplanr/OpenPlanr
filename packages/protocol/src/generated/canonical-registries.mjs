@@ -1465,7 +1465,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "ownerPackage": "openplanr",
         "source": {
           "path": "packages/cli/src/cli/commands/doctor.ts",
-          "digest": "sha256:bcb11a8eeef9d5b22eb33290f81753b38383a20b46abed60594875d1c4c7f524"
+          "digest": "sha256:0ae8facb43f4aa45d3905dc77890669dfd0d73540a3f27e60abfc5b0d1190fca"
         },
         "authorityClass": "workflow",
         "machineJson": false,
@@ -1927,7 +1927,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "ownerPackage": "openplanr",
         "source": {
           "path": "packages/cli/src/cli/commands/setup.ts",
-          "digest": "sha256:22b9a95849234b00b3b8c6586e98dfceeb7c0d2db7bea37829486b3aa3c0c824"
+          "digest": "sha256:763a914da03d01561293ed45b5324e088ef2d7bb2421e0602c0f2ef74636d3b1"
         },
         "authorityClass": "workflow",
         "machineJson": false,
@@ -2263,7 +2263,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "ownerPackage": "planr-pipeline",
         "source": {
           "path": "skills/planr-ship/SKILL.md",
-          "digest": "sha256:649272ea8cad3096012acaa9ec16a3ce6288f557e404fedbe9646aefb3b2c8ba"
+          "digest": "sha256:a0f26b0dbec2efd0e61b14072baa277e76b52c07cc25cea0cd7d5614df76c9c5"
         },
         "authorityClass": "compatibility-router",
         "machineJson": false,
@@ -3099,7 +3099,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         ]
       }
     ],
-    "documentDigest": "sha256:9f34ed8942c28ac6d0cd4bfd3234c50ea8a4d72954a89df6e3596f3cc8e56be2"
+    "documentDigest": "sha256:b841cc9e064439cea4a319d2927b2d3c3e39695b53070e3d45a00e39ded6e850"
   },
   "skills.json": {
     "kind": "skill-catalog",
@@ -3721,6 +3721,76 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         ]
       },
       {
+        "skillId": "planr-delegate",
+        "skillVersion": "0.1.0",
+        "description": "Coordinate an explicitly requested implementation with Claude Code, Codex or Cursor, then independently review and integrate its observed changes. Use when the user asks another coding agent to implement.",
+        "lifecycle": "active",
+        "authorityClass": "implementation",
+        "source": "skills/planr-delegate/openplanr.skill.json",
+        "sourceDigest": "sha256:52f82f86a292386fffd9809cbf0d307bf220cda7b5eb5195264e4260d9ce2b45",
+        "triggerPolicy": {
+          "include": [
+            "Delegate implementation to another coding agent",
+            "Ask a second coding agent to implement while I orchestrate",
+            "Use planr-delegate for this task",
+            "Have Codex implement this task",
+            "Use Codex to implement this",
+            "Have Claude Code implement this task",
+            "Ask another coding agent to implement this task",
+            "Use another coding agent to build this change"
+          ],
+          "exclude": [
+            "Active host implementation",
+            "Ship this change without delegation",
+            "Review existing code",
+            "Review this code using Codex",
+            "Parallel agents",
+            "Fix the delegate runner in the active agent"
+          ],
+          "deferTo": []
+        },
+        "contracts": {
+          "inputs": [],
+          "outputs": [
+            {
+              "id": "implementation-result",
+              "version": "1.0.0"
+            }
+          ]
+        },
+        "cliRequirements": [],
+        "ruleIds": [
+          "R3",
+          "R5"
+        ],
+        "contributionManifestRefs": [
+          "packages/skill-runtime/contributions/workflows.json"
+        ],
+        "hosts": [
+          {
+            "host": "claude-code",
+            "entrypoint": "/planr:delegate",
+            "path": "dist/plugins/claude/openplanr/skills/delegate/SKILL.md"
+          },
+          {
+            "host": "codex",
+            "entrypoint": "$planr:delegate",
+            "path": "dist/plugins/openai/openplanr/skills/delegate/SKILL.md"
+          },
+          {
+            "host": "cursor",
+            "entrypoint": "planr-delegate",
+            "path": "dist/plugins/cursor/openplanr/rules/planr-delegate.mdc"
+          }
+        ],
+        "testRefs": [
+          "tests/protocol/skill-catalog.test.mjs"
+        ],
+        "certificationRefs": [
+          "evaluation/skills/migrations/planr-delegate.json"
+        ]
+      },
+      {
         "skillId": "planr-design",
         "skillVersion": "2.1.0",
         "description": "Design a polished product interface through adaptive consultation, a shared canvas/prototype/walkthrough studio, and an implementation-ready specification. Use for a new design or an existing interface that needs a coherent direction.",
@@ -4156,7 +4226,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
       {
         "skillId": "planr-openplanr",
         "skillVersion": "1.0.0",
-        "description": "Route a planning, specification, delivery, design, review, diagram, release, or operating request to the best OpenPlanr skill. Use when the right skill is unclear or the request spans several.",
+        "description": "Route a planning, specification, delivery, delegation, design, review, diagram, release, or operating request to the best OpenPlanr skill. Use when the right skill is unclear or the request spans several.",
         "lifecycle": "active",
         "authorityClass": "read-only-view",
         "source": "skills/planr-openplanr/openplanr.skill.json",
@@ -4471,11 +4541,19 @@ export const CANONICAL_REGISTRIES = deepFreeze({
             "Build and verify the requested repository change",
             "Ship this",
             "Ship task",
-            "Implement this task"
+            "Implement this task",
+            "Implement this plan with parallel coding agents",
+            "Use native parallel agents to implement this task",
+            "Fix the delegate runner in the active agent"
           ],
           "exclude": [
             "Only plan the work",
-            "Prepare a release without changing code"
+            "Prepare a release without changing code",
+            "Have Codex implement this task",
+            "Use Codex to implement this",
+            "Have Claude Code implement this task",
+            "Ask another coding agent to implement this task",
+            "Use another coding agent to build this change"
           ],
           "deferTo": [
             "planr-land"
@@ -4767,7 +4845,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
       }
     ],
     "compatibilityAliases": [],
-    "documentDigest": "sha256:e3f61d71a05a268294055de033e2ec2d44bfb7b05a95a18b6607ded3eb61e37b"
+    "documentDigest": "sha256:65e297e6cf1e1da3bc25c44416ab57590af0c9bcf5a3d0fa65328e2191d4e534"
   },
   "outputs.json": {
     "kind": "output-catalog",

@@ -1,0 +1,6 @@
+interface:
+  display_name: "Planr Delegate"
+  short_description: "Coordinate an explicitly requested implementation with Claude…"
+  default_prompt: "Use $planr-delegate to coordinate an explicitly requested implementation with Claude Code, Codex or Cursor, then independently review and integrate its observed changes. Use when the user asks another coding agent to implement."
+policy:
+  allow_implicit_invocation: true

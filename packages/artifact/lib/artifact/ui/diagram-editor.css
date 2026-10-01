@@ -2525,3 +2525,11 @@ body.planr-diagram-owner-page #diagram-owner-editor {
     outline-offset: -2px;
   }
 }
+
+/* Match neutral rendered shapes without changing saved semantic or custom fills. */
+.planr-diagram-editor
+  [data-world]
+  :is([data-collection="nodes"], [data-collection="annotations"])
+  > rect[fill="#f8fafc"] {
+  fill: #e2e8f0;
+}

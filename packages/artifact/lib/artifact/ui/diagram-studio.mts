@@ -122,6 +122,19 @@ export function mountDiagramStudio(
   const surface = root.querySelector('.diagram-scene') as HTMLElement;
   const drawing = root.querySelector('.diagram-drawing') as BridgeHost;
   const { width, height } = config.artifact.viewport;
+  // The export's unlabelled page rectangle is presentation, not a diagram element.
+  // Hide its paint in the live canvas; keep export bytes, geometry and anchors intact.
+  const pageBackground = [...drawing.querySelectorAll<SVGRectElement>(':scope > svg > rect')].find(
+    (rect) =>
+      [...rect.attributes].every((attr) =>
+        ['x', 'y', 'width', 'height', 'fill'].includes(attr.name),
+      ) &&
+      Number(rect.getAttribute('x') ?? 0) === 0 &&
+      Number(rect.getAttribute('y') ?? 0) === 0 &&
+      Number(rect.getAttribute('width')) === width &&
+      Number(rect.getAttribute('height')) === height,
+  );
+  if (pageBackground) pageBackground.dataset.canvasBackground = '';
   const camera: StudioCamera = { x: 0, y: 0, scale: 1, fit: 'all' };
   const state = {
     status: 'ready',

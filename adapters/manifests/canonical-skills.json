@@ -14,6 +14,7 @@
     "planr-cpo-review",
     "planr-cto-review",
     "planr-dashboard",
+    "planr-delegate",
     "planr-design",
     "planr-design-loop",
     "planr-design-review",
@@ -853,6 +854,390 @@
           "optional": true
         }
       ]
+    },
+    {
+      "id": "planr-delegate",
+      "version": "0.1.0",
+      "source": "skills/planr-delegate/openplanr.skill.json",
+      "entrypoint": "skills/planr-delegate/SKILL.md",
+      "description": "Coordinate an explicitly requested implementation with Claude Code, Codex or Cursor, then independently review and integrate its observed changes. Use when the user asks another coding agent to implement.",
+      "sourceDigest": "sha256:78e72ab2bda33d6d9652bef7f05d57150c726985d24c7aafdaff15a1a2e3f2b8",
+      "resources": [
+        {
+          "path": "agents/openai.yaml",
+          "kind": "agent-metadata",
+          "hosts": [
+            "codex",
+            "chatgpt"
+          ],
+          "executable": false,
+          "digest": "sha256:274e79b6a4b671bc7110b46ac23bbcd7918766750f4b80671864b61c4fe03c43"
+        },
+        {
+          "path": "references/adapter-protocol.md",
+          "kind": "reference",
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "executable": false,
+          "digest": "sha256:b59e6164746fc04b8bc348a5da8eaf4ff4374207f9fe4316dd17c50194786984"
+        },
+        {
+          "path": "references/capsule-contract.md",
+          "kind": "reference",
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "executable": false,
+          "digest": "sha256:12e0f01caa24a22f7c03ae1174d221b259a2fd4763539963db6c8654d63d8b28"
+        },
+        {
+          "path": "references/integration-review.md",
+          "kind": "reference",
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "executable": false,
+          "digest": "sha256:4ed5dceda80d3dfa3027793a472a408cb9dd5a847e251a3dfa3c5cca509b9f7b"
+        },
+        {
+          "path": "references/operator-guide.md",
+          "kind": "reference",
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "executable": false,
+          "digest": "sha256:e8c0984fa8224855d8cb15c78e7163c122447f4060f87c2714e3513c4498bdf6"
+        },
+        {
+          "path": "references/run-handoff.md",
+          "kind": "reference",
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "executable": false,
+          "digest": "sha256:6468f7fa3ddf8d561f08c4d8a368564958c21f88777b33bb6e482c9180d997b2"
+        },
+        {
+          "path": "references/worktree-custody.md",
+          "kind": "reference",
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "executable": false,
+          "digest": "sha256:8e78648690cfa1d786af5383aec0d567955ad8bd173a96558fac339a2efedae2"
+        },
+        {
+          "path": "scripts/adapters/claude.mjs",
+          "kind": "script",
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "executable": false,
+          "digest": "sha256:871d5c04298e633226e1df33642da15645c3dd777230f19ec5a8c32bc6641cfb"
+        },
+        {
+          "path": "scripts/adapters/codex.mjs",
+          "kind": "script",
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "executable": false,
+          "digest": "sha256:2751b7da45baddbf217cca5673c4bce8d5d627828f2bee42008c60a5740afd41"
+        },
+        {
+          "path": "scripts/adapters/generic.mjs",
+          "kind": "script",
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "executable": false,
+          "digest": "sha256:88dd22bbd59a678e88c80a9f344c8478f6a60a6d8e38109496f4df7ce5488ed8"
+        },
+        {
+          "path": "scripts/context.mjs",
+          "kind": "script",
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "executable": false,
+          "digest": "sha256:a611af4a3542a5cd1c928b2a3a07a80f51598482a3beb5aede3e66ee3a13fb3f"
+        },
+        {
+          "path": "scripts/custody.mjs",
+          "kind": "script",
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "executable": false,
+          "digest": "sha256:ed50565a28b24db9e5febd71b5f656f0d73cae8158f8f7430569e620abf88018"
+        },
+        {
+          "path": "scripts/helper-snapshot.mjs",
+          "kind": "script",
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "executable": false,
+          "digest": "sha256:146430502bb25dda5b31433d574aba41428a93f2f1de67b1a01fdaca3b990832"
+        },
+        {
+          "path": "scripts/integrate.mjs",
+          "kind": "script",
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "executable": false,
+          "digest": "sha256:45372038ee72614f81b1d146431ea6e841882f581e05c4486b8871d47d84d86b"
+        },
+        {
+          "path": "scripts/presentation.mjs",
+          "kind": "script",
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "executable": false,
+          "digest": "sha256:91b227053cfd0c6a2ebec33ec3be8303f98b172ef67f77575c9448c9abdb3463"
+        },
+        {
+          "path": "scripts/profiles.mjs",
+          "kind": "script",
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "executable": false,
+          "digest": "sha256:0d61cba289e498a5f12ae8f5cfcb3dfa76d8af9f1e77d89e9fb69a23fd94a342"
+        },
+        {
+          "path": "scripts/run-record.mjs",
+          "kind": "script",
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "executable": false,
+          "digest": "sha256:73eb79f4a2da7d1016356cc7098f36388934a66f4d14e0d8007349d624bb2abf"
+        },
+        {
+          "path": "scripts/runner.mjs",
+          "kind": "script",
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "executable": false,
+          "digest": "sha256:c26dc34b4867e337731d747fd3224e730c407567bb625538ee84918fbe5dcdc8"
+        },
+        {
+          "path": "scripts/run-contract.mjs",
+          "kind": "script",
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "executable": false,
+          "digest": "sha256:9118f4701e0e61ab186cba4da2cb97804310c6c314d96066ee9457e35f526252"
+        },
+        {
+          "path": "scripts/run-preflight.mjs",
+          "kind": "script",
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "executable": false,
+          "digest": "sha256:dd980ebb39c298f48f3bc40b9e1d8f5255376d7143b46c680f1f3f9c04db4871"
+        },
+        {
+          "path": "scripts/run-preparation.mjs",
+          "kind": "script",
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "executable": false,
+          "digest": "sha256:cd18116ca9494c57f3f5277986d2cbcf5fb0d1f8d65996593484be74d31a8fa5"
+        },
+        {
+          "path": "scripts/run-execution.mjs",
+          "kind": "script",
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "executable": false,
+          "digest": "sha256:cd36e97bff182125b9ab99da49864f553f1eb51da2a8a5163465b409205e615a"
+        },
+        {
+          "path": "scripts/run-lifecycle.mjs",
+          "kind": "script",
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "executable": false,
+          "digest": "sha256:a15194204561f1efd268496d0e3e83c4be27220eaa81b8b242483b9a2a85218a"
+        },
+        {
+          "path": "scripts/integration-files.mjs",
+          "kind": "script",
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "executable": false,
+          "digest": "sha256:0630912abe3992664b50012fb36dd6dec26f741449800ab6a6c421def219424e"
+        },
+        {
+          "path": "scripts/integration-checks.mjs",
+          "kind": "script",
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "executable": false,
+          "digest": "sha256:28da3e3ead865d923a75d4b111028e69c9e8bc72c83348067300d54ac8d37d05"
+        },
+        {
+          "path": "scripts/integration-transaction.mjs",
+          "kind": "script",
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "executable": false,
+          "digest": "sha256:c3914e4fdb6e12258b209178fca07ffc39e2f5376c770a27aa9a1858c5d833ed"
+        },
+        {
+          "path": "scripts/adapters/capsule.mjs",
+          "kind": "script",
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "executable": false,
+          "digest": "sha256:ef2087fa2e505c97cc413ed038645a8def0618647de0d10afb9944762b0495a6"
+        },
+        {
+          "path": "scripts/adapters/cursor.mjs",
+          "kind": "script",
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "executable": false,
+          "digest": "sha256:d60f5d259ae5ccb230be384e697d13d27b65b2a4c907f7afa7ee4bf1a5afaf15"
+        },
+        {
+          "path": "scripts/adapters/native.mjs",
+          "kind": "script",
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "executable": false,
+          "digest": "sha256:eef4266f70ee89c9ed07cd2878bb660dabd4ff49faba91002fd458463980d888"
+        },
+        {
+          "path": "scripts/backend-diagnostics.mjs",
+          "kind": "script",
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "executable": false,
+          "digest": "sha256:71f99ef24bc58f047f75bfb12ce587a495c2cedada97745da076dc21ffaab33d"
+        }
+      ],
+      "contracts": {
+        "inputs": [],
+        "outputs": [
+          {
+            "id": "implementation-result",
+            "version": "1.0.0"
+          }
+        ]
+      },
+      "ruleIds": [
+        "R3",
+        "R5"
+      ],
+      "contribution": "workflows",
+      "authorityClass": "implementation",
+      "utilityRequirements": []
     },
     {
       "id": "planr-design",
@@ -3081,8 +3466,8 @@
       "version": "1.0.0",
       "source": "skills/planr-openplanr/openplanr.skill.json",
       "entrypoint": "skills/planr-openplanr/SKILL.md",
-      "description": "Route a planning, specification, delivery, design, review, diagram, release, or operating request to the best OpenPlanr skill. Use when the right skill is unclear or the request spans several.",
-      "sourceDigest": "sha256:fe7904747aedfd992fa35330109585228fbbc0fb3c8ff6dbed3b3509d5d7665b",
+      "description": "Route a planning, specification, delivery, delegation, design, review, diagram, release, or operating request to the best OpenPlanr skill. Use when the right skill is unclear or the request spans several.",
+      "sourceDigest": "sha256:0b5acc4478291f668bd016b3a6c36ea43c31bce3384771f52d17239f2fb6d827",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -3092,7 +3477,7 @@
             "chatgpt"
           ],
           "executable": false,
-          "digest": "sha256:fe6b691415f300f1ad4a56d69e69dd98f7a8b1488b7887fe2dd1e4537ae896a7"
+          "digest": "sha256:e51a82f202894bf304f3d33585de3a708950d59c6ccdcbfa72b7239a8268df07"
         }
       ],
       "contracts": {
@@ -3932,7 +4317,7 @@
       "source": "skills/planr-ship/openplanr.skill.json",
       "entrypoint": "skills/planr-ship/SKILL.md",
       "description": "Implement an OpenPlanr plan, specification, task, or clearly stated request end to end in the current repository. Use when the user asks to build, implement, fix, finish, or ship local work.",
-      "sourceDigest": "sha256:649272ea8cad3096012acaa9ec16a3ce6288f557e404fedbe9646aefb3b2c8ba",
+      "sourceDigest": "sha256:a0f26b0dbec2efd0e61b14072baa277e76b52c07cc25cea0cd7d5614df76c9c5",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -4232,5 +4617,5 @@
       ]
     }
   ],
-  "membershipDigest": "sha256:aa63fe0371528151b33947cb90c1bffc171ced22a956b836b104dabae387d816"
+  "membershipDigest": "sha256:6696af3853f6ee5b399bf54bc079fc53320eafe7375a69b0abba2b58d9d1ed26"
 }

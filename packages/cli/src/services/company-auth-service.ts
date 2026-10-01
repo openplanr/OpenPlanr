@@ -668,7 +668,7 @@ export function createCompanyAuth(dependencies: AuthDependencies = {}) {
       if (existing && existing.status !== 'signed-out' && existing.status !== 'manual')
         return reject(
           'E_COMPANY_AUTH_EXISTS',
-          'A sign-in already exists or needs recovery. Run company logout before signing in with another account or organization.',
+          'Sign out first with `planr company logout`, then sign in again.',
         );
       const config = await discovery(origin);
       const verifier = randomBytes(32).toString('base64url');

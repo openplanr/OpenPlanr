@@ -32,7 +32,7 @@ function describeOperation(
   operation: ClaudePluginOperation | CodexPluginOperation,
   applied: boolean,
 ): string {
-  const plugin = `${operation.id.split('@')[0]} plugin`;
+  const plugin = 'OpenPlanr plugin';
   const versions = operation.runtime === 'claude-code' ? operation : undefined;
   const { currentVersion, targetVersion } = versions ?? {};
   if (operation.kind === 'update' && currentVersion && targetVersion) {
