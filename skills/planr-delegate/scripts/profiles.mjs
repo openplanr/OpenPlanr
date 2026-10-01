@@ -1,8 +1,20 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { constants } from 'node:fs';
-import { lstat, mkdir, open, readdir, realpath, rename, rm, stat } from 'node:fs/promises';
+import {
+  access,
+  lstat,
+  mkdir,
+  open,
+  readdir,
+  readFile,
+  realpath,
+  rename,
+  rm,
+  stat,
+  writeFile,
+} from 'node:fs/promises';
 import { homedir } from 'node:os';
-import { dirname, isAbsolute, join } from 'node:path';
+import { delimiter, dirname, isAbsolute, join } from 'node:path';
 import { claudeAdapter } from './adapters/claude.mjs';
 import { codexAdapter } from './adapters/codex.mjs';
 import { cursorAdapter } from './adapters/cursor.mjs';
@@ -13,8 +25,12 @@ import {
   validateDestination,
 } from './adapters/generic.mjs';
 
+import { inspectLocalBackend, profileReadiness } from './backend-diagnostics.mjs';
+
+export { inspectLocalBackend, profileReadiness } from './backend-diagnostics.mjs';
+
 export { AdapterError };
-export const PROFILE_VERSION = 1;
+export const PROFILE_VERSION = 2;
 export const PROFILE_LIFETIME_MS = 30 * 24 * 60 * 60 * 1000;
 export const PROFILE_RENEWAL_WARNING_MS = 7 * 24 * 60 * 60 * 1000;
 export const MAX_PROFILE_BYTES = 16 * 1024;
@@ -63,13 +79,12 @@ function validateProfileFields(input) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) {
     throw new AdapterError('E_PROFILE_INVALID', 'Profile declaration must be an object.');
   }
-  const { name, kind, executable, argv, allowedEnv, workingDirectory, configDir } = input;
+  const { kind, executable, configDir } = input;
+  const name = input.name ?? `native-${kind}`;
+  const argv = input.argv ?? (input.model ? ['--model', input.model] : []);
+  const allowedEnv = input.allowedEnv ?? [];
+  const workingDirectory = input.workingDirectory ?? 'worktree';
   profilePath(name);
-  if (kind === 'cursor' && input.trustNativeConfiguration !== true)
-    throw new AdapterError(
-      'E_ADAPTER_CONFIGURATION',
-      'Cursor requires explicit trustNativeConfiguration: true after reviewing its inherited hooks, plugins and MCP.',
-    );
   if (!ADAPTERS[kind]) throw new AdapterError('E_PROFILE_INVALID', 'Unsupported adapter kind.');
   if (
     typeof executable !== 'string' ||
@@ -146,32 +161,29 @@ function validateProfileFields(input) {
 
 function validateProfile(input, now = Date.now(), enrollment = false, allowExpired = false) {
   const fields = validateProfileFields(input);
-  const destination = validateDestination(input.destination);
-  if (!enrollment) {
-    if (
-      input.version !== PROFILE_VERSION ||
-      !Number.isSafeInteger(input.enrolledAt) ||
-      !Number.isSafeInteger(input.expiresAt) ||
-      input.expiresAt <= input.enrolledAt ||
-      input.expiresAt - input.enrolledAt > PROFILE_LIFETIME_MS
-    )
-      throw new AdapterError(
-        'E_PROFILE_INVALID',
-        'Profile enrollment metadata is invalid; inspect and re-enroll it.',
-      );
-    if (!allowExpired && input.expiresAt <= now)
-      throw new AdapterError(
-        'E_PROFILE_EXPIRED',
-        'Profile enrollment expired; renew the same profile before retrying this run.',
-        { name: fields.name, expiresAt: input.expiresAt },
-      );
-  }
+  const generic = fields.kind === 'generic';
+  const version = enrollment ? (generic ? 1 : PROFILE_VERSION) : input.version;
+  if (![1, 2].includes(version))
+    throw new AdapterError('E_PROFILE_INVALID', 'Unsupported private profile version.');
+  if (
+    generic &&
+    !enrollment &&
+    (!Number.isSafeInteger(input.expiresAt) || (!allowExpired && input.expiresAt <= now))
+  )
+    throw new AdapterError('E_PROFILE_EXPIRED', 'Experimental generic enrollment expired.');
   return {
-    version: PROFILE_VERSION,
+    version,
     ...fields,
-    destination,
-    enrolledAt: enrollment ? now : input.enrolledAt,
-    expiresAt: enrollment ? now + PROFILE_LIFETIME_MS : input.expiresAt,
+    ...(generic
+      ? {
+          destination: validateDestination(input.destination),
+          enrolledAt: enrollment ? now : input.enrolledAt,
+          expiresAt: enrollment ? now + PROFILE_LIFETIME_MS : input.expiresAt,
+        }
+      : {
+          ...(input.destination ? { destination: input.destination } : {}),
+          ...(version === 1 ? { enrolledAt: input.enrolledAt, expiresAt: input.expiresAt } : {}),
+        }),
   };
 }
 
@@ -192,6 +204,18 @@ export async function enrollProfile(input, { directory, now = Date.now() } = {})
     throw new AdapterError('E_PROFILE_SIZE', 'Profile exceeds its private record limit.');
   }
   const path = profilePath(profile.name, directory);
+  const existing = await lstat(path).catch((error) => {
+    if (error.code !== 'ENOENT') throw error;
+    return null;
+  });
+  if (existing && profile.kind !== 'generic') {
+    const prior = JSON.parse(await readFile(path, 'utf8'));
+    if (prior.version === 1)
+      throw new AdapterError(
+        'E_PROFILE_EXISTS',
+        'Legacy profiles are preserved. Use a new optional profile name.',
+      );
+  }
   await ensureDirectory(dirname(path));
   const temp = join(dirname(path), `.${profile.name}-${randomUUID()}.tmp`);
   const handle = await open(temp, 'wx', 0o600);
@@ -286,7 +310,7 @@ export function profileIdentity(profile) {
         workingDirectory: fields.workingDirectory,
         configDir: fields.configDir ?? null,
         ...(fields.trustNativeConfiguration ? { trustNativeConfiguration: true } : {}),
-        destination: validateDestination(profile.destination),
+        destination: profile.destination ?? { class: 'native-managed', origin: 'native-managed' },
       }),
     )
     .digest('hex');
@@ -318,9 +342,15 @@ function profileSummary(profile, now) {
     kind: profile.kind,
     destination: profile.destination,
     selectedModel: selectedModel(profile),
-    status: profile.expiresAt <= now ? 'expired' : 'enrolled',
-    expiresAt: profile.expiresAt,
-    renewalRecommended: profile.expiresAt - now <= PROFILE_RENEWAL_WARNING_MS,
+    status:
+      profile.kind === 'generic' ? (profile.expiresAt <= now ? 'expired' : 'enrolled') : 'saved',
+    ...(profile.kind === 'generic'
+      ? {
+          expiresAt: profile.expiresAt,
+          renewalRecommended: profile.expiresAt - now <= PROFILE_RENEWAL_WARNING_MS,
+        }
+      : {}),
+    version: profile.version,
   };
 }
 
@@ -352,244 +382,6 @@ export async function listProfiles({ directory, now = Date.now() } = {}) {
   return choices.sort((a, b) => a.name.localeCompare(b.name));
 }
 
-async function localProbeToken(profile, env) {
-  const direct = env.LM_STUDIO_API_KEY ?? env.LM_API_TOKEN ?? env.ANTHROPIC_AUTH_TOKEN;
-  if (
-    typeof direct === 'string' &&
-    direct.length > 0 &&
-    direct.length < 4096 &&
-    !/[\r\n]/u.test(direct)
-  )
-    return direct;
-  if (profile.kind !== 'claude' || !profile.configDir) return null;
-  try {
-    const path = join(profile.configDir, 'settings.json');
-    if ((await stat(path)).size > 64 * 1024)
-      throw new AdapterError(
-        'E_PROFILE_SIZE',
-        'Local authentication settings exceed the inspection limit.',
-      );
-    const settings = JSON.parse(
-      await open(path, constants.O_RDONLY | constants.O_NOFOLLOW).then(async (handle) => {
-        try {
-          return await handle.readFile('utf8');
-        } finally {
-          await handle.close();
-        }
-      }),
-    );
-    const token = settings?.env?.LM_API_TOKEN ?? settings?.env?.ANTHROPIC_AUTH_TOKEN;
-    return typeof token === 'string' &&
-      token.length > 0 &&
-      token.length < 4096 &&
-      !/[\r\n]/u.test(token)
-      ? token
-      : null;
-  } catch (error) {
-    if (error.code === 'ENOENT') return null;
-    if (error instanceof AdapterError) throw error;
-    throw new AdapterError(
-      'E_PROFILE_CONFIG_READ',
-      'Local authentication settings could not be read.',
-      { cause: error.code ?? error.name },
-    );
-  }
-}
-
-async function boundedJson(response) {
-  if (!response.ok || !response.body)
-    throw new AdapterError('E_BACKEND_RESPONSE', 'Backend did not return a model JSON response.', {
-      httpStatus: response.status,
-    });
-  const reader = response.body.getReader();
-  const chunks = [];
-  let size = 0;
-  try {
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      size += value.byteLength;
-      if (size > 64 * 1024) {
-        await reader.cancel();
-        throw new AdapterError(
-          'E_BACKEND_RESPONSE_SIZE',
-          'Backend model metadata exceeds the inspection limit.',
-        );
-      }
-      chunks.push(value);
-    }
-    return JSON.parse(Buffer.concat(chunks).toString('utf8'));
-  } catch (error) {
-    if (error instanceof AdapterError) throw error;
-    throw new AdapterError(
-      'E_BACKEND_RESPONSE',
-      'Backend model metadata could not be parsed or read.',
-      { cause: error.code ?? error.name },
-    );
-  }
-}
-
-export async function inspectLocalBackend(
-  profile,
-  { fetchImpl = fetch, timeoutMs = 2000, env = process.env } = {},
-) {
-  const selectedModel =
-    profile.argv[0] === '--model' || profile.argv[0] === '-m' ? profile.argv[1] : null;
-  if (profile.destination.class !== 'local') {
-    return { status: 'not-checked', modelStatus: 'not-checked', selectedModel, visibleModels: [] };
-  }
-  if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 5000) {
-    throw new AdapterError(
-      'E_PROFILE_INVALID',
-      'Backend probe timeout must be at most five seconds.',
-    );
-  }
-  const token = await localProbeToken(profile, env);
-  let response;
-  try {
-    response = await fetchImpl(new URL('/v1/models', profile.destination.origin), {
-      method: 'GET',
-      ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
-      signal: AbortSignal.timeout(timeoutMs),
-      redirect: 'error',
-    });
-  } catch (error) {
-    return {
-      status: 'unreachable',
-      modelStatus: 'unknown',
-      selectedModel,
-      visibleModels: [],
-      diagnostic: { code: 'E_BACKEND_UNREACHABLE', cause: error.code ?? error.name },
-    };
-  }
-  if (response.status === 401 || response.status === 403) {
-    return {
-      status: 'authentication-required',
-      modelStatus: 'unknown',
-      selectedModel,
-      visibleModels: [],
-    };
-  }
-  if (!response.ok || !response.body) {
-    return { status: 'reachable', modelStatus: 'unverified', selectedModel, visibleModels: [] };
-  }
-  let parsed;
-  try {
-    parsed = await boundedJson(response);
-  } catch (error) {
-    return {
-      status: 'reachable',
-      modelStatus: 'unverified',
-      selectedModel,
-      visibleModels: [],
-      diagnostic: { code: error.code, ...error.details },
-    };
-  }
-  if (!Array.isArray(parsed?.data)) {
-    return { status: 'reachable', modelStatus: 'unverified', selectedModel, visibleModels: [] };
-  }
-  const visibleModels = parsed.data
-    .map((entry) => entry?.id)
-    .filter((id) => typeof id === 'string' && id.length <= 256)
-    .slice(0, 32);
-  let loadStatus = 'unverified';
-  let contextLength = null;
-  let diagnostic;
-  if (selectedModel && visibleModels.includes(selectedModel)) {
-    try {
-      const nativeResponse = await fetchImpl(
-        new URL('/api/v1/models', profile.destination.origin),
-        {
-          method: 'GET',
-          ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
-          signal: AbortSignal.timeout(timeoutMs),
-          redirect: 'error',
-        },
-      );
-      const native = await boundedJson(nativeResponse);
-      if (Array.isArray(native?.models)) {
-        const model = native.models.find(
-          (entry) =>
-            entry?.key === selectedModel ||
-            entry?.loaded_instances?.some((instance) => instance?.id === selectedModel),
-        );
-        if (model && Array.isArray(model.loaded_instances)) {
-          loadStatus = model.loaded_instances.length ? 'loaded' : 'not-loaded';
-          const capacities = model.loaded_instances
-            .map((instance) => instance?.config?.context_length)
-            .filter((value) => Number.isSafeInteger(value) && value > 0 && value <= 4_194_304);
-          if (capacities.length === model.loaded_instances.length && capacities.length)
-            contextLength = Math.min(...capacities);
-        }
-      }
-    } catch (error) {
-      diagnostic = {
-        code: error.code ?? 'E_BACKEND_NATIVE_UNAVAILABLE',
-        cause: error.code ? undefined : error.name,
-        ...error.details,
-      };
-    }
-  }
-  return {
-    status: 'reachable',
-    selectedModel,
-    modelStatus: selectedModel
-      ? visibleModels.includes(selectedModel)
-        ? 'visible'
-        : 'not-listed'
-      : 'unspecified',
-    loadStatus,
-    contextLength,
-    visibleModels,
-    ...(diagnostic ? { diagnostic } : {}),
-  };
-}
-
-export function profileReadiness(destination, backend) {
-  if (destination.class !== 'local') {
-    return {
-      state: 'unverified',
-      dispatchable: true,
-      nextAction: 'External provider health is not checked by this probe.',
-    };
-  }
-  if (backend.status === 'unreachable') {
-    return {
-      state: 'server-unreachable',
-      dispatchable: false,
-      nextAction: 'Start the enrolled local model server and probe again.',
-    };
-  }
-  if (backend.status === 'authentication-required') {
-    return {
-      state: 'authentication-required',
-      dispatchable: false,
-      nextAction:
-        'Provide the local server token through an allowed environment variable, then probe again.',
-    };
-  }
-  if (backend.modelStatus === 'not-listed') {
-    return {
-      state: 'model-unavailable',
-      dispatchable: false,
-      nextAction: 'Make the selected model available or enroll a different model.',
-    };
-  }
-  if (backend.loadStatus === 'not-loaded') {
-    return {
-      state: 'model-not-loaded',
-      dispatchable: false,
-      nextAction: 'Load the selected model in its local runtime and probe again.',
-    };
-  }
-  if (backend.loadStatus === 'loaded') return { state: 'ready', dispatchable: true };
-  return {
-    state: 'unverified',
-    dispatchable: true,
-    nextAction: 'Model load state could not be confirmed; dispatch may still fail.',
-  };
-}
-
 export async function inspectEnrolledBackend(profile, { env = process.env } = {}) {
   return inspectLocalBackend(profile, { env: childEnvironment(profile, env) });
 }
@@ -609,13 +401,18 @@ export async function previewProfileCandidate(
   const raw = adapterFor(profile.kind);
   const effectiveEnv = childEnvironment(profile, env);
   const found = await raw.probe({ profile, cwd, env: effectiveEnv, signal, timeoutMs });
-  if (!Object.keys(CAPABILITIES).every((key) => found.capabilities?.[key] === true)) {
+  if (
+    !(
+      profile.kind === 'generic' ? Object.keys(CAPABILITIES) : ['implementation', 'exactResume']
+    ).every((key) => found.capabilities?.[key] === true)
+  ) {
     throw new AdapterError(
       'E_ADAPTER_INCOMPATIBLE',
       'Agent lacks required implementation and exact-resume capabilities.',
     );
   }
-  const destination = validateDestination(found.destination);
+  const destination =
+    profile.kind === 'generic' ? validateDestination(found.destination) : found.destination;
   const backend = await inspectLocalBackend({ ...profile, destination }, { env: effectiveEnv });
   return {
     candidate: { ...profile, destination },
@@ -623,7 +420,10 @@ export async function previewProfileCandidate(
     capabilities: found.capabilities,
     ...(found.executionPolicy ? { executionPolicy: found.executionPolicy } : {}),
     backend,
-    readiness: profileReadiness(destination, backend),
+    readiness:
+      profile.kind === 'generic'
+        ? profileReadiness(destination, backend)
+        : nativeReadiness(destination, backend),
     ...(existing ? { enrollment: profileSummary(existing, now) } : {}),
   };
 }
@@ -648,7 +448,7 @@ export async function removeProfile(name, { directory } = {}) {
 }
 
 function childEnvironment(profile, source) {
-  const output = {};
+  const output = profile.kind === 'generic' ? {} : { ...source };
   for (const key of [...BASE_ENV, ...profile.allowedEnv]) {
     if (typeof source[key] === 'string') output[key] = source[key];
   }
@@ -663,57 +463,158 @@ export function adapterFor(kind) {
   return adapter;
 }
 
-export async function prepareProfile(nameOrProfile, options = {}) {
-  const { directory, cwd, env = process.env, signal, timeoutMs, now = Date.now() } = options;
-  let profile;
-  if (typeof nameOrProfile === 'string') {
-    profile = await loadProfile(nameOrProfile, { directory, now });
-  } else {
-    const requested = validateProfile(nameOrProfile, now);
-    profile = await loadProfile(requested.name, { directory, now });
-    if (profileIdentity(profile) !== profileIdentity(requested)) {
-      throw new AdapterError(
-        'E_PROFILE_CHANGED',
-        'Persisted profile changed; inspect and re-enroll it.',
-      );
+export async function discoverNativeEngines(env = process.env) {
+  const engines = [];
+  for (const [kind, command] of [
+    ['claude', 'claude'],
+    ['codex', 'codex'],
+    ['cursor', 'agent'],
+  ]) {
+    for (const folder of (env.PATH ?? '').split(delimiter).filter(isAbsolute)) {
+      const executable = join(folder, process.platform === 'win32' ? `${command}.exe` : command);
+      try {
+        await access(executable, constants.X_OK);
+        if (!(await stat(executable)).isFile()) continue;
+        engines.push({ kind, executable, supported: true });
+        break;
+      } catch (error) {
+        if (!['ENOENT', 'ENOTDIR', 'EACCES', 'ELOOP'].includes(error.code)) throw error;
+      }
     }
   }
+  return engines;
+}
+
+export function nativeReadiness(destination, backend) {
+  const diagnostic = profileReadiness(destination, backend);
+  return {
+    ...diagnostic,
+    dispatchable: true,
+    diagnosticOnly: true,
+    ...(destination.class === 'native-managed'
+      ? {
+          state: 'native-managed',
+          nextAction: 'Provider routing and authentication are managed by the native CLI.',
+        }
+      : {}),
+  };
+}
+
+export async function prepareProfile(choice, options = {}) {
+  const {
+    directory,
+    cwd,
+    env = process.env,
+    signal,
+    timeoutMs,
+    engine,
+    model,
+    configDir,
+  } = options;
+  let declaration;
+  if (typeof choice === 'string')
+    declaration = await loadProfile(choice, { directory, allowExpired: true });
+  else if (choice) declaration = choice;
+  else {
+    const available = await discoverNativeEngines(env);
+    let selected = engine;
+    let saved = null;
+    if (!selected) {
+      try {
+        const selectionPath = join(profileDirectory(directory), '.selection.json');
+        const details = await lstat(selectionPath);
+        if (!details.isFile() || details.mode & 0o077 || details.size > 64 * 1024)
+          throw new AdapterError('E_PROFILE_READ', 'Saved engine choice is unsafe or oversized.');
+        saved = JSON.parse(await readFile(selectionPath, 'utf8'));
+        if (saved.version !== 2 || !['claude', 'codex', 'cursor'].includes(saved.engine))
+          throw new AdapterError('E_PROFILE_READ', 'Saved engine choice is unsupported.');
+        selected = saved.engine;
+      } catch (error) {
+        if (error.code !== 'ENOENT')
+          throw new AdapterError('E_PROFILE_READ', 'Saved engine choice cannot be read.');
+      }
+    }
+    const found = selected
+      ? available.find((item) => item.kind === selected)
+      : available.length === 1
+        ? available[0]
+        : null;
+    if (!found)
+      throw new AdapterError(
+        available.length ? 'E_ENGINE_AMBIGUOUS' : 'E_ENGINE_UNAVAILABLE',
+        selected
+          ? 'The selected native CLI is unavailable. Install or select it explicitly.'
+          : 'Select one installed native engine.',
+        { engines: available.map((item) => item.kind) },
+      );
+    declaration = saved?.profile
+      ? {
+          ...(await loadProfile(saved.profile, { directory, allowExpired: true })),
+          ...(saved.model ? { argv: ['--model', saved.model] } : {}),
+          ...(saved.configDir ? { configDir: saved.configDir } : {}),
+        }
+      : {
+          ...found,
+          name: `native-${found.kind}`,
+          version: 2,
+          ...((model ?? saved?.model) ? { argv: ['--model', model ?? saved.model] } : {}),
+          ...((configDir ?? saved?.configDir) ? { configDir: configDir ?? saved.configDir } : {}),
+        };
+  }
+  if (engine && declaration.kind !== engine)
+    throw new AdapterError('E_PROFILE_CHANGED', 'Explicit engine and profile disagree.');
+  if (declaration.kind === 'generic' && (model !== undefined || configDir !== undefined))
+    throw new AdapterError(
+      'E_PROFILE_CHANGED',
+      'Generic model/configuration options belong to its declared protocol.',
+    );
+  // Per-run choices override optional saved defaults without rewriting the profile.
+  if (declaration.kind !== 'generic')
+    declaration = {
+      ...declaration,
+      ...(model !== undefined ? { argv: ['--model', model] } : {}),
+      ...(configDir !== undefined ? { configDir } : {}),
+    };
+  const fields = validateProfileFields(declaration);
+  const native = fields.kind !== 'generic';
+  const profile = native ? { ...fields, version: 2 } : validateProfile(declaration);
+  if (profile.configDir) profile.configDir = await canonicalConfigDir(profile.configDir);
   const raw = adapterFor(profile.kind);
   const effectiveEnv = childEnvironment(profile, env);
-  const verify = async (runCwd = cwd, runSignal = signal, runTimeoutMs = timeoutMs) => {
-    const found = await raw.probe({
-      profile,
-      cwd: runCwd,
-      env: effectiveEnv,
-      signal: runSignal,
-      timeoutMs: runTimeoutMs,
-    });
+  const found = await raw.probe({ profile, cwd, env: effectiveEnv, signal, timeoutMs });
+  if (
+    !(native ? ['implementation', 'exactResume'] : Object.keys(CAPABILITIES)).every(
+      (key) => found.capabilities?.[key] === true,
+    )
+  )
+    throw new AdapterError(
+      'E_ADAPTER_INCOMPATIBLE',
+      'Agent lacks implementation or exact continuation.',
+    );
+  if (
+    !native &&
+    (found.destination.class !== profile.destination.class ||
+      found.destination.origin !== profile.destination.origin)
+  )
+    throw new AdapterError('E_DESTINATION_CHANGED', 'Experimental generic destination changed.');
+  profile.destination = found.destination;
+  Object.defineProperty(profile, 'recordDigest', { value: profileIdentity(profile) });
+  async function verifyGeneric(args) {
+    const current = await raw.probe({ ...args, profile, env: effectiveEnv });
     if (
-      found.destination.class !== profile.destination.class ||
-      found.destination.origin !== profile.destination.origin
-    ) {
-      throw new AdapterError(
-        'E_DESTINATION_CHANGED',
-        'Agent data destination changed; inspect and re-enroll the profile.',
-      );
-    }
-    if (!Object.keys(CAPABILITIES).every((key) => found.capabilities?.[key] === true)) {
-      throw new AdapterError(
-        'E_ADAPTER_INCOMPATIBLE',
-        'Agent lacks required implementation and exact-resume capabilities.',
-      );
-    }
-    return found;
-  };
-  const found = await verify();
+      current.destination.class !== profile.destination.class ||
+      current.destination.origin !== profile.destination.origin
+    )
+      throw new AdapterError('E_DESTINATION_CHANGED', 'Experimental generic destination changed.');
+  }
   const adapter = Object.freeze({
     kind: raw.kind,
     async run(args) {
-      await verify(args.cwd, args.signal, args.timeoutMs);
+      if (!native) await verifyGeneric(args);
       return raw.run({ ...args, profile, env: effectiveEnv });
     },
     async resume(args) {
-      await verify(args.cwd, args.signal, args.timeoutMs);
+      if (!native) await verifyGeneric(args);
       return raw.resume({ ...args, profile, env: effectiveEnv });
     },
   });
@@ -724,4 +625,23 @@ export async function prepareProfile(nameOrProfile, options = {}) {
     adapter,
     ...(found.executionPolicy ? { executionPolicy: found.executionPolicy } : {}),
   };
+}
+
+export async function saveEngineChoice(engine, { directory, profile, model, configDir } = {}) {
+  if (!['claude', 'codex', 'cursor'].includes(engine)) return;
+  const root = profileDirectory(directory);
+  await ensureDirectory(root);
+  const temp = join(root, `.selection-${randomUUID()}.tmp`);
+  await writeFile(
+    temp,
+    JSON.stringify({
+      version: 2,
+      engine,
+      ...(profile ? { profile } : {}),
+      ...(model ? { model } : {}),
+      ...(configDir ? { configDir } : {}),
+    }),
+    { flag: 'wx', mode: 0o600 },
+  );
+  await rename(temp, join(root, '.selection.json'));
 }

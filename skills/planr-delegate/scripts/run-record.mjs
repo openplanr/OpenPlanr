@@ -16,7 +16,7 @@ import { join, resolve, sep } from 'node:path';
 import { promisify } from 'node:util';
 import { captureFileState } from './custody.mjs';
 
-export const RUN_RECORD_SCHEMA_VERSION = '1.0.0';
+export const RUN_RECORD_SCHEMA_VERSION = '2.0.0';
 export const MAX_RUN_RECORD_BYTES = 64 * 1024;
 export const CLOSED_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -65,7 +65,7 @@ function encoded(record) {
   if (
     !record ||
     record.kind !== 'openplanr-delegation-run' ||
-    record.schemaVersion !== RUN_RECORD_SCHEMA_VERSION ||
+    !['1.0.0', RUN_RECORD_SCHEMA_VERSION].includes(record.schemaVersion) ||
     !RUN_ID.test(record.runId ?? '')
   ) {
     throw new RunRecordError('E_RUN_FORMAT', 'Invalid delegated run record.');

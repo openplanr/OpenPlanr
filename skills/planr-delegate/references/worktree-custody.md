@@ -1,57 +1,25 @@
-# Delegation worktree custody v1
+# Worktree and context custody
 
-`custody.mjs` is the internal Node 20+ worktree helper. It owns one writable Git repository per run. It is not a filesystem or network sandbox; only explicitly enrolled, trusted local agent profiles may use it. No custody operation commits, publishes, or deploys.
+One run owns one detached worktree outside the user's checkout. Copy only selected
+dirty state, preserving starting bytes, deletion and the Git executable bit. Full
+required ignored planning and repository instructions live in the readable capsule.
+The source checkout and unrelated worktrees remain independent.
 
-## API
+Custody records bind the run, worktree ownership, starting HEAD/index, selected
+source state and Preserve paths. Commits, staging, Preserve changes, scope violations
+and destination conflicts block acceptance. Integration scope constrains accepted
+changes; it does not sandbox every native tool operation. Native tools, hooks,
+plugins and MCP run under the native harness's permissions and trusted configuration.
 
-```js
-import {
-  planWritableScopes,
-  createWorktreeCustody,
-  validateWorktreeCustody,
-  captureFileState,
-  cleanupWorktreeCustody,
-} from './custody.mjs';
+Preparation happens once in the owned worktree. Its tracked changes are attributed
+and join the candidate; no manual digest acceptance or immutable setup-path list is
+needed. Ignored dependencies/build/cache outputs are ordinary worktree outputs.
 
-const custody = await createWorktreeCustody({
-  repositoryRoot: '/absolute/source/checkout',
-  capsule,                         // from context.mjs
-  selectedPaths: ['src/related.js'], // optional; defaults to project selected-source inventory
-  preservePaths: ['src/protected'], // repository policy; task Preserve is read from capsule
-  readOnlyRepositories: [],         // each must explicitly say writable: false
-  worktreeParent: '/private/per-user/runs',
-  runId: 'run-123',
-});
-const validation = await validateWorktreeCustody(custody);
-// Explicit only, after accepted integration or abandonment:
-await cleanupWorktreeCustody(custody, { disposition: 'accepted' });
-```
+Successful native integration removes only the owned worktree by checking its
+ownership token and Git registration. Retention can be requested before dispatch.
+Failures/interruption retain custody. The private run keeps context, accepted patch,
+verification evidence, report and exact native session reference after cleanup.
+Old runs continue through their pinned helper; never broaden their policy or migrate
+their records automatically.
 
-`planWritableScopes({repositories,contractOwnerKey})` returns one scope per writable repository, with the contract owner first. Each scope has exactly one `writableRepository` and only selected `readOnlyRepositories` with `selectedContext`. It never creates a combined multi-repository writable run. The runner must still verify each selected read-only context file when building that run's capsule.
-
-`createWorktreeCustody` requires an existing worktree parent outside the source repository. It creates a unique detached Git worktree under a new `planr-delegate-*` directory. It only copies explicitly selected project source files, including dirty tracked and nonignored untracked bytes, executable mode, and tracked deletions. Selected paths must stay within the repository and, when a capsule is supplied, must appear in its project `selected-source` inventory. Ignored untracked files and symlink escapes are rejected. Unrelated source-checkout changes and ignored `.planr` material are untouched. The original planning material is carried separately in the private context capsule.
-
-The returned serializable custody record contains `repositoryRoot`, `worktreePath`, `initialHead`, SHA-256 fingerprints of the initial worktree and source Git indexes (`initialIndex`, `sourceIndex`), `selectedPaths`, `sourceFiles`, `startingFiles`, `preservePaths`, and `preservedFiles`. `sourceFiles` and `startingFiles` map selected paths to an `absent`, `file`, or `symlink` state. File states include mode, byte length, digest, and exact `contentBase64`; symlink states include the target string. Unlisted starting paths retain their `initialHead` state. These fingerprints are internal custody data, not user-facing gates.
-
-Task Preserve paths are extracted from the capsule's full task frontmatter. Caller-supplied repository-policy paths are added. `preservedFiles` records the file or directory tree at start, including file type, mode, content digest, symlink target digest, and absence. `validateWorktreeCustody(record)` returns `{valid,violations,changedPaths}`. Violations identify worktree HEAD/index drift, staged paths, or Preserve changes. Source HEAD/index movement is information; integration checks the actual destination paths against their recorded baseline. A clean final worktree does not hide a delegate commit because HEAD changed. The runner must stop on any violation and leave the worktree available for review.
-
-`captureFileState(root,path)` reads one safe relative path for later integration; it rejects symlink escape. A failed preparation retains its newly created run directory for diagnosis. Questions, cancellation, crash, blocked result, failed validation, and merge conflicts never trigger cleanup automatically. `cleanupWorktreeCustody` requires an explicit `accepted` or `abandoned` disposition, verifies the registered managed worktree path, then removes only that worktree. Keep custody records private; they contain copies of selected source bytes. `CustodyError` never includes file content.
-
-The runner exposes explicit `cleanup` for accepted or abandoned runs, preserving private records until retention pruning. `prune` refuses a remaining managed worktree; failed/blocked/questioning runs are never cleaned automatically.
-
-## Dependency setup checkpoint
-
-After dependency installation, use the pinned runner's `setup-preview` with
-`runId` and `runDirectory`. Inspect the worktree changes, then pass that result's
-`digest` as `expectedDigest` to `setup-accept`. The preview returns only paths,
-file types and sizes; source bytes remain private. A stale digest fails without
-accepting changes. Setup records are permitted only before the first dispatch,
-never during correction or after execution.
-
-The original source and worktree baseline remain intact. An additional private
-setup snapshot records host-authored dependency changes. Dispatch refuses any
-other tracked or nonignored edit. Setup-owned paths are frozen: later edits fail
-custody and cannot enter the delegated patch. If a task must modify such a path,
-review setup separately in source and prepare a new run. Ignored dependencies
-need no checkpoint, and the helper never installs packages or runs lifecycle
-scripts automatically. `status` identifies the accepted setup paths separately.
+Guarded integration keeps original directory entries for recovery and for writers holding the old inode. If Git metadata is on a different filesystem, private ignored write custody stays beside the destination and its location is recorded in the Git metadata before the first source write. Recovery validates that location inside the checkout. Existing metadata-based custody and pinned legacy helpers remain readable.

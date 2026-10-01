@@ -1,7 +1,7 @@
-import { mkdtemp, readFile, realpath, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join, resolve, sep } from 'node:path';
+import { readFile, realpath } from 'node:fs/promises';
+import { isAbsolute, join, resolve, sep } from 'node:path';
 import { invokeProcess } from './adapters/generic.mjs';
+import { assertCredentialFreeText } from './context.mjs';
 import { captureFileState, gitFileState, headFileState, sameGitState } from './custody.mjs';
 import {
   covers,
@@ -47,76 +47,101 @@ function parseCheck(raw) {
   return null;
 }
 
-export async function resolveSelectedChecks(repositoryRoot, supplied, capsule, changedPaths) {
-  if (supplied === undefined)
-    return discoverDelegateChecks({ repositoryRoot, capsule, changedPaths });
-  if (!Array.isArray(supplied) || supplied.length > 16)
+export async function resolveSelectedChecks(repositoryRoot, supplied, { legacy = false } = {}) {
+  // Discovery is advice. Only the parent's explicit structured selection executes.
+  if (supplied === undefined) return [];
+  if (!Array.isArray(supplied) || supplied.length > 32)
     throw new IntegrationError(
       'E_INTEGRATION_CHECK_SELECTION',
-      'Choose at most 16 explicit checks.',
+      'Select at most 32 structured commands.',
     );
+  const root = await realpath(repositoryRoot);
   const checks = [];
-  for (const entry of supplied) {
-    const text =
-      typeof entry === 'string'
-        ? entry
-        : Array.isArray(entry?.args)
-          ? [entry.command, ...entry.args].join(' ')
-          : entry?.command;
-    const cwd = typeof entry === 'string' ? '.' : (entry?.cwd ?? '.');
-    const check = parseCheck(text);
-    if (!check || (cwd !== '.' && (typeof cwd !== 'string' || !/^[A-Za-z0-9_./-]+$/u.test(cwd))))
-      throw new IntegrationError(
-        'E_INTEGRATION_CHECK_SELECTION',
-        'Checks must be simple npm run or node --test commands with a safe package directory.',
+  for (let entry of supplied) {
+    if (legacy) {
+      const parsed = parseCheck(
+        typeof entry === 'string' ? entry : [entry.command, ...(entry.args ?? [])].join(' '),
       );
-    const relativeCwd = cwd === '.' ? '.' : safePath(cwd);
-    let physical;
-    try {
-      physical = await realpath(resolve(repositoryRoot, relativeCwd));
-    } catch (error) {
-      throw new IntegrationError(
-        'E_INTEGRATION_CHECK_SELECTION',
-        'Selected check directory could not be inspected.',
-        { path: relativeCwd, causeCode: error.code ?? 'E_DIRECTORY_INSPECTION' },
-      );
+      if (!parsed)
+        throw new IntegrationError(
+          'E_INTEGRATION_CHECK_SELECTION',
+          'Experimental protocol v1 checks require a declared npm script or relative Node test.',
+        );
+      entry = {
+        executable: parsed.command,
+        args: parsed.args,
+        cwd: entry?.cwd ?? '.',
+        kind: parsed.kind,
+      };
     }
+    const executable = entry?.executable;
+    const args = entry?.args;
     if (
-      !physical ||
-      (physical !== repositoryRoot && !physical.startsWith(`${repositoryRoot}${sep}`))
+      !entry ||
+      typeof executable !== 'string' ||
+      !executable ||
+      executable.length > 512 ||
+      /[\r\n\0]/u.test(executable) ||
+      !Array.isArray(args) ||
+      args.length > 128 ||
+      args.some((arg) => typeof arg !== 'string' || arg.length > 4096 || /[\0]/u.test(arg))
     )
       throw new IntegrationError(
         'E_INTEGRATION_CHECK_SELECTION',
-        'Check directory must be inside the target checkout.',
+        'Use { executable, args, cwd, timeoutMs? }; shell command strings are not accepted.',
       );
-    if (check.command === 'npm') {
-      let scripts;
-      try {
-        scripts = JSON.parse(await readFile(join(physical, 'package.json'), 'utf8')).scripts ?? {};
-      } catch (error) {
+    assertCredentialFreeText(JSON.stringify({ executable, args }), {
+      code: 'E_INTEGRATION_CHECK_SELECTION',
+      label: 'Command arguments',
+    });
+    const cwd = entry.cwd ?? '.';
+    if (typeof cwd !== 'string' || isAbsolute(cwd) || cwd.includes('\0'))
+      throw new IntegrationError(
+        'E_INTEGRATION_CHECK_SELECTION',
+        'Command cwd must resolve inside the candidate.',
+      );
+    const physical = await realpath(resolve(root, cwd)).catch((error) => {
+      throw new IntegrationError(
+        'E_INTEGRATION_CHECK_SELECTION',
+        'Command directory cannot be inspected.',
+        { path: cwd, causeCode: error.code },
+      );
+    });
+    if (physical !== root && !physical.startsWith(`${root}${sep}`))
+      throw new IntegrationError(
+        'E_INTEGRATION_CHECK_SELECTION',
+        'Command cwd escapes the candidate.',
+      );
+    if (
+      entry.timeoutMs !== undefined &&
+      (!Number.isSafeInteger(entry.timeoutMs) ||
+        entry.timeoutMs < 1 ||
+        entry.timeoutMs > 4 * 3600000)
+    )
+      throw new IntegrationError(
+        'E_INTEGRATION_CHECK_SELECTION',
+        'Command deadline must be between 1 ms and 4 hours.',
+      );
+    if (legacy && executable === 'npm') {
+      const manifest = JSON.parse(await readFile(join(physical, 'package.json'), 'utf8'));
+      if (typeof manifest.scripts?.[args[1]] !== 'string')
         throw new IntegrationError(
           'E_INTEGRATION_CHECK_SELECTION',
-          'Selected npm check has no readable package manifest.',
-          { path: join(relativeCwd, 'package.json'), causeCode: error.code ?? 'E_MANIFEST_PARSE' },
-        );
-      }
-      if (typeof scripts[check.args[1]] !== 'string')
-        throw new IntegrationError(
-          'E_INTEGRATION_CHECK_SELECTION',
-          'Selected npm check is not declared by its package.',
+          'Legacy npm script is not declared.',
         );
     }
-    checks.push({ ...check, cwd: relativeCwd });
+    const check = {
+      executable,
+      command: executable,
+      args: [...args],
+      cwd,
+      kind: entry.kind ?? 'focused',
+      ...(entry.timeoutMs ? { timeoutMs: entry.timeoutMs } : {}),
+    };
+    if (!checks.some((other) => JSON.stringify(other) === JSON.stringify(check)))
+      checks.push(check);
   }
-  return checks.filter(
-    (check, index, all) =>
-      all.findIndex(
-        (other) =>
-          other.cwd === check.cwd &&
-          other.command === check.command &&
-          other.args.join(' ') === check.args.join(' '),
-      ) === index,
-  );
+  return checks;
 }
 
 export async function discoverDelegateChecks({
@@ -175,26 +200,24 @@ export async function discoverDelegateChecks({
   );
 }
 
-export function executionEnvironment(home) {
-  const env = {
-    PATH: process.env.PATH ?? '/usr/local/bin:/usr/bin:/bin',
-    HOME: home,
-    TMPDIR: home,
-    LANG: 'C.UTF-8',
-    CI: '1',
-    GIT_CONFIG_NOSYSTEM: '1',
-    GIT_CONFIG_GLOBAL: '/dev/null',
-    npm_config_cache: join(home, 'npm-cache'),
-    npm_config_userconfig: join(home, '.npmrc'),
-  };
-  if (process.platform === 'win32') {
-    for (const key of ['SystemRoot', 'COMSPEC', 'PATHEXT'])
-      if (process.env[key]) env[key] = process.env[key];
-  }
-  return env;
+export function executionEnvironment() {
+  // Parent-selected checks run under the parent host's normal execution controls.
+  return { ...process.env };
 }
 
-async function executeCheck(root, check, timeoutMs, home, signal) {
+function privateDiagnostic(text) {
+  const bounded = Buffer.from(text ?? '')
+    .subarray(-4096)
+    .toString('utf8');
+  try {
+    assertCredentialFreeText(bounded, { label: 'Check output' });
+    return bounded;
+  } catch {
+    return 'Output omitted because it contained credential material.';
+  }
+}
+
+async function executeCheck(root, check, timeoutMs, home, signal, onProcess) {
   const start = Date.now();
   const startedAt = new Date(start).toISOString();
   const timing = () => ({
@@ -204,34 +227,45 @@ async function executeCheck(root, check, timeoutMs, home, signal) {
   });
   const command = `${check.cwd && check.cwd !== '.' ? `${check.cwd}: ` : ''}${[check.command, ...check.args].join(' ')}`;
   try {
+    if (check.executable) await resolveSelectedChecks(root, [check]);
     const result = await invokeProcess(check.command, check.args, {
       cwd: resolve(root, check.cwd ?? '.'),
-      timeoutMs,
+      timeoutMs: check.timeoutMs ?? timeoutMs,
       env: executionEnvironment(home),
       signal,
-      retainStdout: false,
-      onStdoutLine: () => {},
+      onProcess,
+      retainStdout: true,
+      captureStderr: true,
       withExitCode: true,
       maxOutputBytes: 8 * 1024 * 1024,
     });
     return {
       command,
+      executable: check.executable ?? check.command,
+      args: check.args,
+      cwd: check.cwd ?? '.',
       kind: check.kind,
       status: result.exitCode === 0 ? 'passed' : 'failed',
       exitCode: result.exitCode,
       signal: result.signal,
+      ...(result.exitCode ? { diagnostic: privateDiagnostic(result.output) } : {}),
       ...timing(),
     };
   } catch (error) {
     const timedOut = error.code === 'E_ADAPTER_TIMEOUT';
     return {
       command,
+      executable: check.executable ?? check.command,
+      args: check.args,
+      cwd: check.cwd ?? '.',
       kind: check.kind,
       status: timedOut ? 'timed-out' : 'failed',
       code: error.code ?? 'E_INTEGRATION_CHECK',
       exitCode: error.details?.exitCode ?? null,
       signal: error.details?.signal ?? null,
-      ...(timedOut ? { timeoutMs } : {}),
+      diagnostic: privateDiagnostic(error.details?.output ?? error.message),
+      processTerminationConfirmed: error.processTerminationConfirmed !== false,
+      ...(timedOut ? { timeoutMs: check.timeoutMs ?? timeoutMs } : {}),
       ...timing(),
     };
   }
@@ -244,29 +278,24 @@ export async function runDelegateChecks({
   home,
   signal,
   onResult,
+  onProcess,
   stopOnFailure = false,
 } = {}) {
-  const ownedHome = home ? null : await mkdtemp(join(tmpdir(), 'planr-check-home-'));
-  try {
-    const results = [];
-    for (const check of checks) {
-      if (signal?.aborted)
-        throw new IntegrationError('E_INTEGRATION_INTERRUPTED', 'Integration was interrupted.');
-      const result = await executeCheck(
-        repositoryRoot,
-        check,
-        timeoutMs,
-        home ?? ownedHome,
-        signal,
-      );
-      results.push(result);
-      await onResult?.(result, results);
-      if (stopOnFailure && result.status !== 'passed') break;
-    }
-    return results;
-  } finally {
-    if (ownedHome) await rm(ownedHome, { recursive: true, force: true });
+  const results = [];
+  for (const check of checks) {
+    if (signal?.aborted)
+      throw new IntegrationError('E_INTEGRATION_INTERRUPTED', 'Integration was interrupted.');
+    const result = await executeCheck(repositoryRoot, check, timeoutMs, home, signal, onProcess);
+    if (result.processTerminationConfirmed !== false) await onProcess?.(null);
+    results.push(result);
+    await onResult?.(result, results);
+    if (
+      result.processTerminationConfirmed === false ||
+      (stopOnFailure && result.status !== 'passed')
+    )
+      break;
   }
+  return results;
 }
 
 export async function resolveSelectedGenerators(
@@ -386,7 +415,9 @@ export async function runGenerator(root, generator, timeoutMs) {
     timeoutMs ?? 120000,
     generator.home,
     generator.signal,
+    generator.onProcess,
   );
+  if (result.processTerminationConfirmed !== false) await generator.onProcess?.(null);
   const candidates = new Set([...beforePaths, ...(await workingPaths(root))]);
   const changes = [];
   for (const path of candidates) {

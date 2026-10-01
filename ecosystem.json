@@ -54,7 +54,7 @@
       "version": "2.2640.6",
       "path": "packages/cli",
       "publication": "public",
-      "manifestDigest": "sha256:6eaf208c651453b1c7abcc654f6e701165d8951d6240556a166f89b077608210"
+      "manifestDigest": "sha256:46db1b5afc75752c0e8d4720a28055775708391e7010e8c331b697432b69575c"
     },
     "pipeline": {
       "package": "planr-pipeline",
@@ -141,7 +141,7 @@
   "catalogs": {
     "commands": {
       "path": "packages/protocol/registries/commands.json",
-      "digest": "sha256:cdd67e51af21d036543122cf5b08870f4bf6ce4a154e12779fae75cde10f2a5d",
+      "digest": "sha256:e486b08f2d56b185cfd037183061fc1e4ff9c37a714f6986b032b12731c78878",
       "rootCommands": 39,
       "pipelineMachineLeaves": 31,
       "frozenClaudeDocuments": 8,
@@ -244,7 +244,7 @@
     },
     "skills": {
       "path": "packages/protocol/registries/skills.json",
-      "digest": "sha256:f20e91eda2d590b6433a2aa1b4654b40c240f6576308af47a288abe512a55535",
+      "digest": "sha256:13dc34d1e2bab6ba76b91404a91d233f310a265815bdb71b7954be1a02e9e0ab",
       "count": 28,
       "ids": [
         "planr-artifact",
@@ -342,8 +342,8 @@
     ],
     "generatedAssets": {
       "path": "adapters/manifests/generated-assets.json",
-      "digest": "sha256:da5c2d0c43e08ae188d661d90745ae2ca6f48911862e36396cf405bc787468b2",
-      "count": 2083
+      "digest": "sha256:2240ecdef7eb650634eecad04b513452cfd7900b662df752a9d57683844177f5",
+      "count": 2095
     }
   },
   "schemas": {
@@ -424,7 +424,7 @@
   "generatedSurfaces": {
     "artifactShell": {
       "path": "packages/artifact/lib/artifact/ui/generated/artifact-shell-assets.json",
-      "digest": "sha256:e7a555b8aaa7e27e2bb969042551a046f4b048e9cb16db84640a67fdde53fe2c",
+      "digest": "sha256:b60135205d362740ae29953aa459d6b8e7636ae15f85f38c9622e4bc56b12943",
       "shellVersion": "1.2.1",
       "assetCount": 7
     },

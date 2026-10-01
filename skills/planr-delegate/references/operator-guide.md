@@ -1,47 +1,81 @@
-# Planr Delegate operator guide
+# Native onboarding and private helper inputs
 
-Planr Delegate is an opt-in preview and an explicit exception to ordinary host-native Ship. Use it when a user specifically wants another coding agent to implement one scope while you orchestrate. A plain build, fix, or `planr-ship` request stays in the active agent. Do not launch a model through the OpenPlanr utility CLI. The preview supports terminal-equipped local Claude Code, Codex and Cursor hosts; a packaged projection on another surface does not certify execution there. Each provider/model combination needs a successful implementation and exact-session correction before it is treated as verified.
+Run `node <installed-skill>/scripts/runner.mjs <action>` with one JSON object on
+stdin. The helper is private skill infrastructure, not a public `planr` command.
 
-## Host and profile preflight
+`probe` accepts `repositoryRoot` and optionally `engine` or `profile`. It discovers
+`claude`, `codex` and Cursor's `agent` on PATH and checks compatible native event
+streaming and exact continuation. Authenticate with the selected CLI's normal
+login flow; OpenPlanr does not copy authentication tokens into its records.
+Terminal-less hosts return an actionable unsupported-host diagnostic.
 
-The installed Claude Code, Codex or Cursor projection must have a local terminal, Node 20+, and the packaged runner linked from the main skill. Run its read-only `probe` with the absolute repository root before collecting task data. It reports Node/Git readiness, whether the repository has a commit, installed engine paths, and every enrolled profile with destination, model, expiration warning, and readiness. Missing prerequisites block preparation before collecting task content. Discovery does not execute, install or enroll an engine. Honor an explicit profile choice; otherwise ask when several profiles are ready, and use the sole ready profile without a question. Use the host's question tool when available, with the actual choices. A profile's model is part of its enrollment; changing it requires re-enrollment and a fresh destination preview. When `hostCapabilities.localExecution` is false or the terminal cannot run the helper, return `E_DELEGATE_HOST_UNSUPPORTED` and stop before preparing a capsule. Unsupported host surfaces do not gain local execution by merely installing the skill text.
+Native selection order is explicit engine/profile, saved choice, sole installed
+engine, then a question if ambiguous. Missing CLIs are not installed automatically.
+A provider hidden behind native configuration is shown as **native-managed**.
+Do not infer local inference from a profile name or invent an endpoint.
 
-If there is no suitable profile, ask which engine to set up and continue the original delegation request after setup. Construct a profile declaration for `claude`, `codex`, `cursor`, or a versioned `generic` adapter and pass it to the private `profile-preview` action with `repositoryRoot`. That action discovers the executable's actual endpoint, capabilities, and visible local models without sending task content or creating run state. An existing profile name can be previewed for renewal. Do not select a model from the engine label or assume local inference. If several models are available, ask which one to enroll; for built-ins, preview again with `argv: ["--model", "<choice>"]`. If the user chooses a backend default, display that choice and use `allowBackendDefault: true` at enrollment. Confirm the previewed destination, then call `profile-enroll` with the same declaration and `expectedDestination`; it probes again before writing. If an endpoint is unknown, guide the user to configure the engine and preview again. If the model is unloaded, guide them to load it in the runtime UI, then re-probe. Do not load models, change provider configuration, or switch profiles on the user's behalf. `profile-remove` can delete an unwanted enrollment. Expiration warns during the last seven days; renewal is an explicit preview and enrollment under the same name.
+## Prepare a run
 
-Only an explicitly enrolled, trusted profile is eligible. A profile names its executable, environment allowlist, and real destination; `claude-local` is one possible Claude profile, not a shell alias or proof of local inference. Every Claude profile follows the same configuration checks. Probe the chosen profile with its name and target repository root before creating a capsule. The helper checks the effective endpoint against enrollment and checks a local server with bounded, read-only model-list requests. An unreachable server, authentication-required response, unavailable selected model, or model confirmed as not loaded blocks prepare and dispatch. For LM Studio, the native model list can confirm loaded instances; on other backends a visible model can be reported only as unverified, and an inference call may still fail. External endpoint health is also unverified. A new or changed destination must be shown and authorized. Never log credentials, capsule bytes, or a full prompt. The worktree isolates edits but is not a security sandbox.
+```json
+{
+  "repositoryRoot": "/absolute/project",
+  "engine": "codex",
+  "request": "Implement the requested change and run the relevant checks.",
+  "selectedFiles": ["src/example.ts", "tests/example.test.ts"],
+  "scopePaths": ["src/example.ts", "tests/example.test.ts"],
+  "retainWorktree": false
+}
+```
 
-Native Cursor uses the installed `agent` executable and its existing signed-in account. Set `kind: "cursor"`, `argv: []` for the backend default (or `["--model", "<choice>"]`), `allowedEnv: []`, `workingDirectory: "worktree"`, and `trustNativeConfiguration: true` only after showing the preview's `executionPolicy`. This trust includes native user, project, enterprise/team and plugin hooks plus MCP; they may execute or send data beyond the displayed Cursor API origin. The adapter pins sandbox enabled and Auto-review without force, yolo, automatic MCP approval or latest-session resume. It does not copy login credentials or change global settings. A missing login returns `E_ADAPTER_AUTHENTICATION`: run `agent login` in the normal terminal and preview again. Older CLIs missing capsule access or structured print return `E_ADAPTER_INCOMPATIBLE`. Claude/Codex isolation promises do not apply to Cursor.
+`taskSelector` can replace `request` when an exact planning task exists.
+`selectedPaths` separately chooses dirty files to copy; other checkout edits remain
+untouched. `preservePaths` adds immutable paths. The returned preview includes the
+complete context inventory, owned worktree, configuration trust and pinned helper.
+Use its runner/integration paths for this run even after a package update.
 
-Claude Code's Auto mode classifier belongs to the host, not the delegate runner. If it returns no verdict and refuses the shell command, no helper or model probe has run. Switch to the host's normal manual permission mode or accepted-edits mode and retry the same read-only probe; do not interpret that host error as a model failure or use bypass-permissions mode. Do not restart or discard a saved run while diagnosing either failure.
+`prepare-worktree` accepts `runId` and `commands`, for example:
 
-For first-use setup, discover the selected engine's executable on `PATH` before preview. The declaration uses a user-chosen stable `name`, `kind`, executable path or command, `argv: []`, `allowedEnv` containing *names only*, and `workingDirectory: "worktree"`. For a nondefault Claude Code configuration, set `configDir` to its existing absolute directory; do not copy or edit that directory. Codex can use an absolute `configDir` for a separate `CODEX_HOME`; the helper validates user configuration and excludes repository hooks/MCP settings from execution. Explicitly allowed endpoint variables must agree with the enrollment. The configured provider may name a credential environment variable, but never store its value in the profile, config, or capsule. If no executable exists, report the missing installation. Stock signed-in Claude Code and Codex configurations use their disclosed vendor defaults; unknown or unmodelled provider routes block with a configuration diagnostic rather than an invented destination. The adapter protocol defines the additional probe and resume contract for a generic executable.
+```json
+{
+  "runId": "returned-run-id",
+  "commands": [
+    {"executable": "npm", "args": ["ci"], "cwd": "."},
+    {"executable": "npm", "args": ["run", "build:dependencies"], "cwd": "."}
+  ]
+}
+```
 
-For a user-selected local LM Studio Codex setup, its separate `configDir/config.toml` can set `model_provider = "openplanr_lm_studio"` and `[model_providers.openplanr_lm_studio]` with `base_url = "http://localhost:1234/v1"`, `env_key = "LM_STUDIO_API_KEY"`, `requires_openai_auth = false`, and `wire_api = "responses"`. Use a custom provider ID rather than overriding a Codex built-in ID. Enroll `LM_STUDIO_API_KEY` as an allowed *name* and select the model in profile `argv`. The launching host must supply the token value in its environment; a local 401/403 preview reports `authentication-required` until it does. This configuration example is for that explicit endpoint choice, not a default for all Codex users.
+Select prerequisites from the repository; this example is not a universal setup
+recipe. Successful preparation is recorded once. Failed preparation is retryable.
+Tracked preparation changes remain part of the review candidate.
 
-When there is no confirmed-ready profile but an enrolled profile is dispatchable with unverified backend health, explain that limit. Select the sole suitable choice or ask among several; do not force unnecessary re-enrollment.
+## Optional profiles
 
-## Provider template compatibility
+A native profile is a convenience for a pinned model or alternate configuration:
 
-Claude Code may send system reminders after user and tool turns. A local model
-template that requires every system message to be first can reject an otherwise
-valid handoff. `E_ADAPTER_MODEL_TEMPLATE` reports this without raw provider text;
-retain the run and repair the backend before exact-session resume. Do not drop,
-reorder or rewrite messages in the skill. Use the provider's per-model settings
-and preserve the original tool and reasoning syntax. LM Studio's documented
-`CLAUDE_CODE_ATTRIBUTION_HEADER=0` setting is forwarded from the existing Claude
-configuration; it does not itself repair message ordering. A visible loaded model
-or successful probe is insufficient: verify implementation and correction.
+```json
+{
+  "name": "local-model",
+  "kind": "claude",
+  "executable": "/absolute/path/to/claude",
+  "argv": ["--model", "explicit-model-id"],
+  "configDir": "/absolute/existing/configuration"
+}
+```
 
-## One run
+Use `profile-preview`, then `profile-enroll` to save a private v2 profile. It has
+no renewal period. Do not put credential values in arguments or records. Native
+configuration/environment is inherited, including trusted hooks, plugins and MCP.
+The profile's explicit model stays pinned; an empty model selection preserves the
+native default/automatic routing. Observed models are reported when events expose them.
 
-1. Resolve exactly one `.planr` task or a direct request. Select the full requirements and relevant code/tests for a private capsule. Repair missing required artifacts before dispatch; review optional omissions. Read [capsule-contract.md](capsule-contract.md).
-2. Select exactly one writable Git repository and one coherent scope. If several repositories need changes, plan separate contract-owner-first runs with selected read-only context from the other repositories. Read [worktree-custody.md](worktree-custody.md).
-3. Call the packaged runner's `prepare` action with a JSON object on standard input, including explicit `scopePaths`. This is the integration boundary; optional `selectedPaths` instead names dirty source files to copy into the worktree. Let the run use default durable storage under `~/.openplanr/delegate/`. Present its file inventory, meaningful omissions, target checkout, exact integration scope, profile, verified destination, and worktree dependency readiness. If package tests need dependencies, install them inside the detached worktree using its lockfile before dispatch, then inspect installation changes with `setup-preview`. Accept only the inspected digest with `setup-accept` before dispatch. Setup-owned paths are excluded from integration and cannot be edited by the delegate; if implementation needs the same path, prepare again from a separately reviewed source setup. Do not symlink the source checkout's `node_modules` into the worktree. Scope paths do not sandbox the delegate's filesystem access and cannot be widened at integration. Do not silently change scope or destination.
-4. Call `dispatch` using the returned exact `runId`. Follow a backgrounded host shell with bounded `wait` or `status`; dispatch alone is not completion. A result is `completed`, `blocked`, or a structured question. Headless Claude's shell tool is disabled; run requested checks yourself in the worktree and send failures through exact-session corrections. Repeated approval denials become a bounded blocker instead of extending the run indefinitely. For a question, ask the user only when the decision matters, then pass its answer to `resume`. Review corrections also go through `resume` with the same recorded backend session. Read [run-handoff.md](run-handoff.md).
-5. Review the actual worktree delta against its starting snapshot, scope, Preserve, worktree HEAD/index, and destination drift. Invoke the packaged integration helper through Node with `review`, then `apply`, passing a bounded JSON object on standard input with `runId`, `runDirectory`, and explicit `scopePaths`. Select package-level `checks` when broader checks have unrelated baseline failures; declare any package `generators` and exact output paths. The helper verifies the reviewed patch, regenerates declared outputs and runs checks in a private scratch Git repository with a minimal environment. It writes source last with destination compare-and-swap and a recovery journal; rollback only restores unchanged helper-owned writes, preserving concurrent host edits. Inspect the patch in the retained worktree; the helper prints metadata, not source bytes. Send failures to the same delegated session for correction. Do not manually apply a failed patch or edit delegated source/tests. Integrate only the reviewed delta as an uncommitted local diff. Read [integration-review.md](integration-review.md).
+Existing v1 profile files remain unchanged. They can supply an explicit selection
+for a new native v2 run; retained runs still use their original pinned helper and
+policy. Saving over a legacy native profile is refused; use a new optional name.
+Experimental generic adapters retain their versioned enrollment/protocol.
 
-The private command interface is `node scripts/runner.mjs probe|profile-preview|profile-enroll|profile-remove|prepare|setup-preview|setup-accept|dispatch|resume|status|wait|recover|close|cleanup|prune` with one bounded JSON object on standard input. Its output is one JSON result; errors are machine-readable on standard error. `prepare`, `dispatch`, and `resume` include a phase-specific `presentation`; use it to explain what is ready, still pending, or blocked without treating a delegate completion as integration. `status` and bounded `wait` are read-only and never expose capsule bytes or raw model output. Use `recover` after interruption, with an explicit `runDirectory` to inspect a retained run stored in a nondefault directory. Use integration `recover` with `resolution: "rollback"` or `"accept"` for a pending write journal before further integration or abandonment. Explicit runner `cleanup` removes a worktree after acceptance or abandonment; `prune` refuses a retained worktree. Successful `apply` closes that exact run as integrated; use explicit `close` only for abandonment or to repeat an existing disposition safely. Blocked and questioning runs remain inspectable. The helper is packaged with this skill and is not a public `planr` command.
+Local server/model/authentication probes are diagnostic and send no task content.
+Template failures require fixing the backend itself. OpenPlanr does not rewrite
+messages/templates, load models automatically or silently change providers.
 
-The integration helper's `apply` result includes a deterministic five-field `report`: **Outcome**, **Task**, **Changed**, **Checks**, and **Issues**. Render it directly, adding only verified context. Its Changed field comes from the worktree delta and declared generator outputs; its Checks field comes from independent executions; zero checks are explicitly unverified. The delegate implements; the orchestrator reviews and integrates. A completed delegate message alone is not a verified outcome. Once integrated, `status` shows the accepted paths and any later source drift, and the run rejects a second `apply` or `resume`. Later host-authored corrections must be called out as separate work. No run commits, opens a PR, publishes, or deploys. Those actions belong to a separate user-authorized landing workflow.
-
-The preview accepts npm-script and safe `node --test` checks only; package generators must live under `packages/`. Disclose this before applying in a repository with Python, Go, pnpm or Make verification. Profiles live under `~/.config/openplanr/delegate/` and run/helper state under `~/.openplanr/delegate/`, independent of `PLANR_HOME`. Active pinned helpers are not replaced by plugin updates.
+If a native CLI uses read-only permissions for non-interactive runs, delegation reports attention rather than enabling writes. Resolve access in that CLI’s own configuration or explicitly authorized exact-session invocation, then continue the recorded session. Model summaries are never sufficient evidence of implementation.

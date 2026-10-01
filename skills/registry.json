@@ -447,7 +447,7 @@
       "family": "implementation",
       "contribution": "workflows",
       "skillVersion": "0.1.0",
-      "description": "Delegate one explicitly requested implementation scope to an enrolled local coding agent while the active agent owns context, questions, review, and integration. Use only when the user asks another agent to implement.",
+      "description": "Coordinate an explicitly requested implementation with Claude Code, Codex or Cursor, then independently review and integrate its observed changes. Use when the user asks another coding agent to implement.",
       "lifecycle": "active",
       "authorityClass": "implementation",
       "source": "skills/planr-delegate/openplanr.skill.json",

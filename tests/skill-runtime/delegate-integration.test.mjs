@@ -801,12 +801,12 @@ test('physical permissions and unrelated source commits do not cause false drift
   assert.equal((await lstat(join(data.repositoryRoot, 'tracked.txt'))).mode & 0o777, 0o664);
 });
 
-test('check and generator environments exclude host credentials and settings', async () => {
+test('parent-selected checks inherit the parent host environment without storing its credentials', async () => {
   const data = await fixture({
     files: {
       'package.json': JSON.stringify({ scripts: { test: 'node check.mjs' } }),
       'check.mjs':
-        "import assert from 'node:assert/strict';assert.equal(process.env.PLANR_TEST_SECRET,undefined);assert.equal(process.env.NODE_OPTIONS,undefined);assert.notEqual(process.env.HOME," +
+        "import assert from 'node:assert/strict';assert.equal(process.env.PLANR_TEST_SECRET,'private-sentinel');assert.equal(process.env.HOME," +
         JSON.stringify(process.env.HOME) +
         ');',
     },

@@ -318,6 +318,28 @@
         "cursor"
       ],
       "executable": false
+    },
+    {
+      "path": "scripts/adapters/native.mjs",
+      "kind": "script",
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ],
+      "executable": false
+    },
+    {
+      "path": "scripts/backend-diagnostics.mjs",
+      "kind": "script",
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ],
+      "executable": false
     }
   ]
 }

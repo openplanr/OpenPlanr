@@ -6,7 +6,7 @@ import { invokeProcess } from './adapters/generic.mjs';
 import { buildContextCapsule, previewContextCapsule, writeContextCapsule } from './context.mjs';
 import { createWorktreeCustody } from './custody.mjs';
 import { snapshotHelper } from './helper-snapshot.mjs';
-import { prepareProfile } from './profiles.mjs';
+import { prepareProfile, saveEngineChoice } from './profiles.mjs';
 import {
   blocked,
   DelegateRunError,
@@ -147,6 +147,10 @@ export async function prepareDelegateRun({
   scopePaths,
   preservePaths = [],
   profile,
+  engine,
+  model,
+  configDir,
+  retainWorktree = false,
   profileDirectory,
   runDirectory = defaultRunDirectory(),
   worktreeParent,
@@ -177,13 +181,17 @@ export async function prepareDelegateRun({
   }
   // Eligibility is checked before any worktree is created or backend is called.
   const prepared = await prepareProfile(profile, {
+    engine,
+    model,
+    configDir,
     directory: profileDirectory,
     cwd: root,
     env,
     signal,
     timeoutMs,
   });
-  await assertBackendReady(prepared);
+
+  if (prepared.profile.kind === 'generic') await assertBackendReady(prepared);
   const capsule = await buildContextCapsule({
     repositoryRoot: root,
     taskSelector,
@@ -193,12 +201,14 @@ export async function prepareDelegateRun({
     readOnlyRepositories,
   });
   const integrationScopePaths = scopePaths === undefined ? null : integrationPaths(scopePaths);
-  const identity = profileIdentity(prepared);
+  let identity = profileIdentity(prepared);
   const runId = randomUUID();
   const runPath = join(privateDirectory, runId);
   await createRunRecord(
     {
       runId,
+      nativeSelection: prepared.profile.kind !== 'generic' ? prepared.profile : null,
+      retainWorktree,
       status: 'preparing',
       createdAt: new Date(preparationStartedAt).toISOString(),
       mode: capsule.mode,
@@ -260,6 +270,7 @@ export async function prepareDelegateRun({
       readOnlyRepositories: readOnlyRepositories.map((source) => ({ ...source, writable: false })),
       worktreeParent: custodyParent,
       runId,
+      native: prepared.profile.kind !== 'generic',
     });
     const custodyPath = join(runPath, 'custody.json');
     await updateRunRecord(
@@ -282,7 +293,7 @@ export async function prepareDelegateRun({
     }
     await writeFile(custodyPath, custodyBytes, { flag: 'wx', mode: 0o600 });
     await updateRunRecord(runId, { custodyPath }, { directory: privateDirectory });
-    const worktreeProfile = await prepareProfile(identity.name, {
+    const worktreeProfile = await prepareProfile(prepared.profile, {
       directory: profileDirectory,
       cwd: custody.worktreePath,
       env,
@@ -291,16 +302,28 @@ export async function prepareDelegateRun({
     });
     const worktreeIdentity = profileIdentity(worktreeProfile);
     if (
-      worktreeIdentity.enrollmentId !== identity.enrollmentId ||
-      worktreeIdentity.destination.class !== identity.destination.class ||
-      worktreeIdentity.destination.origin !== identity.destination.origin
+      prepared.profile.kind === 'generic' &&
+      (worktreeIdentity.enrollmentId !== identity.enrollmentId ||
+        worktreeIdentity.destination.class !== identity.destination.class ||
+        worktreeIdentity.destination.origin !== identity.destination.origin)
     ) {
       throw new DelegateRunError(
         'E_DELEGATE_DESTINATION_CHANGED',
-        'Effective destination changed in the detached worktree; inspect and re-enroll before dispatch.',
+        'Native routing differs in the owned worktree. Inspect its configuration and prepare a new preview.',
         runId,
       );
     }
+    identity = worktreeIdentity;
+    await updateRunRecord(
+      runId,
+      {
+        nativeSelection:
+          worktreeProfile.profile.kind !== 'generic' ? worktreeProfile.profile : null,
+        profileEnrollmentId: identity.enrollmentId,
+        destination: identity.destination,
+      },
+      { directory: privateDirectory },
+    );
     const worktreeDependencies = await inspectWorktreeDependencies(custody.worktreePath);
     if (worktreeDependencies.state === 'unsafe-link-or-path')
       throw new DelegateRunError(
@@ -308,6 +331,12 @@ export async function prepareDelegateRun({
         'Worktree dependency path is not a private real directory.',
         runId,
       );
+    await saveEngineChoice(worktreeProfile.profile.kind, {
+      directory: profileDirectory,
+      ...(typeof profile === 'string' ? { profile } : {}),
+      model: worktreeProfile.profile.argv[1],
+      configDir: worktreeProfile.profile.configDir,
+    });
     const ready = await updateRunRecord(
       runId,
       {
@@ -333,6 +362,11 @@ export async function prepareDelegateRun({
       worktreePath: custody.worktreePath,
       profile: identity.name,
       backend: identity.backend,
+      modelSelection: worktreeProfile.profile.argv[1] ?? 'native default/automatic',
+      provider:
+        identity.destination.class === 'native-managed'
+          ? 'native-managed'
+          : identity.destination.origin,
       destination: identity.destination,
       contextCapacity: capacity,
       worktreeDependencies,

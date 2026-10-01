@@ -62,9 +62,9 @@ test('Claude and Codex installed routers and Ship expose only the opt-in handoff
     const delegate = read(`${base}/delegate/SKILL.md`);
     assert.match(router, /Ask another coding agent to implement[^\n]*`planr-delegate`/u);
     assert.match(ship, /plain Ship never launches its helper/u);
-    assert.match(delegate, /returned preview lists every copied source, optional omission/u);
-    assert.match(delegate, /logical and physical `\.planr` paths/u);
-    assert.match(delegate, /before `dispatch`/u);
+    assert.match(delegate, /context inventory once before/u);
+    assert.match(delegate, /including required\s+ignored planning files/u);
+    assert.match(delegate, /before\s+`dispatch`/u);
   }
 });
 

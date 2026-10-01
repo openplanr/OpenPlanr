@@ -1,4 +1,5 @@
-// Dispatch and correct the exact enrolled session under one locked, bounded run.
+// Dispatch and continue one exact native session; the CLI owns its implementation loop.
+
 import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 import { AdapterError } from './adapters/generic.mjs';
@@ -11,6 +12,7 @@ import {
   sessionId,
   timeout,
 } from './run-contract.mjs';
+import { recoverOwnedProcesses } from './run-lifecycle.mjs';
 import { capsuleIntegrity, eligible } from './run-preflight.mjs';
 import {
   defaultRunDirectory,
@@ -33,13 +35,17 @@ const SAFE_ADAPTER_DIAGNOSTICS = Object.freeze({
   E_ADAPTER_OUTPUT_LIMIT:
     'Adapter output exceeded its private size limit; inspect the retained worktree.',
   E_ADAPTER_PERMISSION:
-    'The headless delegate repeatedly attempted tools requiring approval; inspect its retained worktree and permissions.',
+    'Native permission needs attention. Resolve it in the native configuration, then continue this exact session; permissions are never weakened automatically.',
   E_ADAPTER_RESULT:
-    'Adapter returned no complete structured result; inspect backend availability and the retained worktree.',
-  E_ADAPTER_STALLED:
-    'Delegate repeated completed commands or exceeded its command budget; inspect the retained session and worktree before correction.',
-  E_ADAPTER_NO_FINAL:
-    'Codex completed without a final result; inspect the retained exact session and worktree before correction.',
+    'Native execution ended without terminal evidence; inspect the exact session and retained worktree.',
+  E_ADAPTER_MODEL_TEMPLATE:
+    'The local backend rejected its chat template. Fix the backend configuration and continue the same session; OpenPlanr does not rewrite messages or templates.',
+  E_ADAPTER_AUTHENTICATION:
+    'Authenticate the selected native CLI/provider in your normal terminal, then continue the same session.',
+  E_ADAPTER_QUOTA:
+    'The native provider reported a quota or rate limit. Retry this exact session when capacity is available.',
+  E_ADAPTER_MODEL_UNAVAILABLE:
+    'The explicitly selected model is unavailable. Make it available before continuing; no fallback was selected.',
 });
 
 const STRUCTURED_RESULT_INSTRUCTIONS = [
@@ -62,80 +68,47 @@ function runPrompt(record) {
           `Keep implementation changes within the declared integration boundary: ${record.integrationScopePaths.join(', ')}.`,
         ]
       : []),
-    'Do not stage, commit, publish, or deploy. Ask a structured question when a material decision is missing.',
-    STRUCTURED_RESULT_INSTRUCTIONS,
+    'Do not stage, commit, publish, or deploy. Surface missing decisions and native permission requests to the parent.',
+    ...(record.backend === 'generic'
+      ? [STRUCTURED_RESULT_INSTRUCTIONS]
+      : [
+          'Investigate, implement, run relevant builds/tests and correct failures. Return your normal summary of changes, checks and remaining issues.',
+        ]),
   ].join('\n');
 }
 
 async function boundedCall(call, { signal, timeoutMs, onActivity }) {
-  if (signal?.aborted) {
-    throw new DelegateRunError('E_DELEGATE_CANCELLED', 'Delegate run was cancelled.');
-  }
-  const idleMs = timeout(timeoutMs);
+  if (signal?.aborted)
+    throw new DelegateRunError('E_DELEGATE_CANCELLED', 'Delegate was cancelled.');
   const controller = new AbortController();
-  let idleTimer;
-  let hardTimer;
-  let cancel;
-  let resetIdle;
-  let running;
-  const interrupted = new Promise((_, reject) => {
-    cancel = () => {
-      controller.abort();
-      reject(new DelegateRunError('E_DELEGATE_CANCELLED', 'Delegate run was cancelled.'));
-    };
-    resetIdle = () => {
-      clearTimeout(idleTimer);
-      idleTimer = setTimeout(() => {
-        reject(
-          new DelegateRunError(
-            'E_DELEGATE_TIMEOUT',
-            'Delegate stopped emitting progress before its idle limit.',
-          ),
-        );
-        controller.abort();
-      }, idleMs);
-    };
-    if (signal?.aborted) cancel();
-    else signal?.addEventListener('abort', cancel, { once: true });
-    resetIdle();
-    hardTimer = setTimeout(() => {
-      reject(
-        new DelegateRunError('E_DELEGATE_TIMEOUT', 'Delegate reached its absolute safety limit.'),
-      );
-      controller.abort();
-    }, hardLimit(timeoutMs));
-  });
-  const activity = async () => {
-    if (controller.signal.aborted) return;
-    resetIdle();
-    await onActivity?.();
-  };
-  let outcome;
-  let failure;
-  running = Promise.resolve().then(() => {
-    if (controller.signal.aborted)
-      throw new DelegateRunError('E_DELEGATE_CANCELLED', 'Delegate run was cancelled.');
-    return call(controller.signal, activity);
-  });
+  const cancel = () => controller.abort(signal?.reason);
+  signal?.addEventListener('abort', cancel, { once: true });
+  const deadline = timeout(timeoutMs);
+  let expired = false;
+  const timer =
+    deadline === null
+      ? null
+      : setTimeout(() => {
+          expired = true;
+          controller.abort();
+        }, deadline);
   try {
-    outcome = await Promise.race([running, interrupted]);
+    return await call(controller.signal, onActivity);
   } catch (error) {
-    failure = error;
+    if (expired) {
+      const deadline = new DelegateRunError(
+        'E_DELEGATE_TIMEOUT',
+        'The explicit run deadline elapsed.',
+      );
+      deadline.processTerminationConfirmed = error.processTerminationConfirmed;
+      deadline.ownedProcess = error.ownedProcess;
+      throw deadline;
+    }
+    throw error;
   } finally {
-    clearTimeout(idleTimer);
-    clearTimeout(hardTimer);
+    clearTimeout(timer);
     signal?.removeEventListener('abort', cancel);
   }
-  // Cancellation is complete only after the adapter has stopped its process group.
-  if (controller.signal.aborted) {
-    try {
-      await running;
-    } catch (error) {
-      failure ??= error;
-    }
-  }
-  if (failure) throw failure;
-  return outcome;
 }
 
 function executionDiagnostic(error) {
@@ -231,11 +204,12 @@ async function executeAttempt(
       activePid: process.pid,
       hostProcess: await processIdentity(),
       delegateProcess: null,
+      delegateTerminationConfirmed: true,
       diagnostic: null,
       lastActivityAt: new Date(startedAt).toISOString(),
       activityEvidence: 'dispatch',
-      idleDeadlineAt: new Date(startedAt + idleMs).toISOString(),
-      hardDeadlineAt: new Date(startedAt + hardLimit(timeoutMs)).toISOString(),
+      idleDeadlineAt: null,
+      hardDeadlineAt: idleMs === null ? null : new Date(startedAt + idleMs).toISOString(),
       ...(reservedSession
         ? { backendSessionId: reservedSession, sessionEvidence: 'reserved' }
         : {}),
@@ -258,7 +232,11 @@ async function executeAttempt(
     );
   };
   const onProcess = async (identity) => {
-    await updateRunRecord(record.runId, { delegateProcess: identity }, { directory });
+    await updateRunRecord(
+      record.runId,
+      { delegateProcess: identity, delegateTerminationConfirmed: false },
+      { directory },
+    );
   };
   let result;
   try {
@@ -282,16 +260,17 @@ async function executeAttempt(
       {
         signal,
         timeoutMs,
-        onActivity: async () => {
+        onActivity: async (progress) => {
           const now = Date.now();
-          if (now - lastPersistedActivity < 5_000) return;
+          if (progress?.phase !== 'attention' && now - lastPersistedActivity < 5_000) return;
           lastPersistedActivity = now;
           await updateRunRecord(
             record.runId,
             {
               lastActivityAt: new Date(now).toISOString(),
               activityEvidence: 'backend-event',
-              idleDeadlineAt: new Date(now + idleMs).toISOString(),
+              nativeProgress: progress ?? null,
+              idleDeadlineAt: null,
             },
             { directory },
           );
@@ -316,6 +295,14 @@ async function executeAttempt(
       diagnostic.code,
       diagnostic.message,
       knownSession,
+    );
+    retained = await updateRunRecord(
+      record.runId,
+      {
+        delegateTerminationConfirmed: error.processTerminationConfirmed !== false,
+        ...(error.ownedProcess ? { delegateProcess: error.ownedProcess } : {}),
+      },
+      { directory },
     );
     if (error?.usage || error?.completionEvidence) {
       retained = await updateRunRecord(
@@ -377,17 +364,23 @@ async function finishExecution(record, result, { directory, expectedSession, ret
     {
       status: accepted.status,
       activePid: null,
+      delegateTerminationConfirmed: true,
       backendSessionId: accepted.sessionId,
       sessionEvidence: 'confirmed',
       observedUsage: accepted.usage ?? null,
       completionEvidence: accepted.completionEvidence ?? 'structured-result',
+      nativeSummary: accepted.summary,
+      observedModel: accepted.observedModel ?? null,
+      nativeWarnings: accepted.warnings ?? [],
       question,
       reportedBlocker: accepted.status === 'blocked' ? accepted.summary.slice(0, 1024) : null,
       diagnostic:
         accepted.status === 'blocked'
           ? {
-              code: 'E_DELEGATE_BLOCKED',
-              message: 'Delegate reported a blocker; inspect its summary and worktree.',
+              code: accepted.diagnosticCode ?? 'E_DELEGATE_BLOCKED',
+              message:
+                SAFE_ADAPTER_DIAGNOSTICS[accepted.diagnosticCode] ??
+                'Delegate reported a blocker; inspect its summary and worktree.',
             }
           : null,
     },
@@ -404,7 +397,10 @@ async function dispatchRun({
   signal,
   timeoutMs,
 } = {}) {
-  const record = await readRunRecord(runId, { directory: runDirectory });
+  const record = await recoverOwnedProcesses(
+    await readRunRecord(runId, { directory: runDirectory }),
+    runDirectory,
+  );
   assertExecutionReady(record);
   if (record.status !== 'prepared') {
     throw new DelegateRunError('E_DELEGATE_STATE', 'Only a prepared run can dispatch.', runId);
@@ -444,7 +440,10 @@ async function resumeRun({
   signal,
   timeoutMs,
 } = {}) {
-  const record = await readRunRecord(runId, { directory: runDirectory });
+  const record = await recoverOwnedProcesses(
+    await readRunRecord(runId, { directory: runDirectory }),
+    runDirectory,
+  );
   assertExecutionReady(record);
   if (record.integration?.status === 'applied') {
     throw new DelegateRunError(
@@ -457,7 +456,7 @@ async function resumeRun({
     throw new DelegateRunError('E_DELEGATE_INPUT', 'Provide one answer or correction.', runId);
   }
   if (
-    (answer && record.status !== 'question') ||
+    (answer && !['question', 'blocked'].includes(record.status)) ||
     (correction && !['completed', 'blocked'].includes(record.status))
   ) {
     throw new DelegateRunError('E_DELEGATE_STATE', 'Run is not ready for this handoff.', runId);
@@ -502,7 +501,7 @@ async function resumeRun({
     env,
     signal,
     timeoutMs,
-    prompt: `${answer ? 'Answer to your question' : 'Review correction'} for the same run and session:\n${handoff}\n\n${STRUCTURED_RESULT_INSTRUCTIONS}`,
+    prompt: `${answer ? 'Answer / permission resolution' : 'Review correction'} for the same run and session:\n${handoff}${record.backend === 'generic' ? `\n\n${STRUCTURED_RESULT_INSTRUCTIONS}` : ''}`,
     resume: true,
   });
 }

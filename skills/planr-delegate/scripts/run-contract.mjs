@@ -4,12 +4,6 @@ import { isAbsolute, sep } from 'node:path';
 import { assertCredentialFreeText } from './context.mjs';
 import { updateRunRecord } from './run-record.mjs';
 
-const DEFAULT_TIMEOUT_MS = 20 * 60 * 1000;
-
-const MAX_TIMEOUT_MS = 60 * 60 * 1000;
-
-const MAX_RUN_DURATION_MS = 60 * 60 * 1000;
-
 const MAX_HANDOFF_TEXT = 4096;
 
 export const MAX_CUSTODY_BYTES = 64 * 1024 * 1024;
@@ -90,18 +84,17 @@ export function sessionId(value) {
 }
 
 export function timeout(value) {
-  const duration = value ?? DEFAULT_TIMEOUT_MS;
-  if (!Number.isSafeInteger(duration) || duration < 1 || duration > MAX_TIMEOUT_MS) {
+  if (value === undefined || value === null) return null;
+  if (!Number.isSafeInteger(value) || value < 1 || value > 4 * 3600000)
     throw new DelegateRunError(
       'E_DELEGATE_TIMEOUT',
-      'Run timeout must be between 1 ms and 1 hour.',
+      'Explicit deadline must be between 1 ms and 4 hours.',
     );
-  }
-  return duration;
+  return value;
 }
 
-export function hardLimit(timeoutMs) {
-  return Math.min(MAX_RUN_DURATION_MS, timeout(timeoutMs) * 3);
+export function hardLimit(value) {
+  return timeout(value);
 }
 
 function destinationIdentity(destination) {

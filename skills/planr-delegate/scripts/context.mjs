@@ -15,7 +15,11 @@ const SECRET_SEGMENT = /^(?:\.ssh|\.aws|\.gnupg|\.kube)$/iu;
 const SECRET_VALUE =
   /-----BEGIN (?:[A-Z ]* )?PRIVATE KEY-----|\bAKIA[0-9A-Z]{16}\b|\bgh[pousr]_[A-Za-z0-9_]{20,}\b|\bgithub_pat_[A-Za-z0-9_]{20,}\b|\bsk-(?:proj-)?[A-Za-z0-9_-]{24,}\b|\bxox[baprs]-[A-Za-z0-9-]{20,}\b|"private_key"\s*:\s*"-----BEGIN/iu;
 const SECRET_ASSIGNMENT =
-  /(?:^|[^A-Za-z0-9_])(?:[A-Za-z_][A-Za-z0-9_-]*?)?(?:API[_-]?KEY|ACCESS[_-]?TOKEN|AUTH[_-]?TOKEN|CLIENT[_-]?SECRET|PRIVATE[_-]?KEY|PASSWORD|TOKEN|SECRET(?:[_-]?KEY)?)["']?\s*[:=]\s*["']?(?!<|\$\{|example|placeholder|your[-_]|process\.env(?:\.|\[)|import\.meta\.env(?:\.|\[)|Deno\.env\.|os\.environ|env\.)([A-Za-z0-9_./+=-]{16,})/iu;
+  /(?:^|[^A-Za-z0-9_])(?:[A-Za-z_][A-Za-z0-9_-]*?)?(?:API[_-]?KEY|ACCESS[_-]?TOKEN|AUTH[_-]?TOKEN|CLIENT[_-]?SECRET|PRIVATE[_-]?KEY|PASSWORD|TOKEN|SECRET(?:[_-]?KEY)?)["']?\s*[:=]\s*(["'`])((?:(?!\1|\$\{)[^\r\n\\]|\\.){16,})\1/giu;
+const SECRET_CONFIG_ASSIGNMENT =
+  /^[ \t]*(?:export[ \t]+)?(?:[A-Za-z_][A-Za-z0-9_-]*?)?(?:API[_-]?KEY|ACCESS[_-]?TOKEN|AUTH[_-]?TOKEN|CLIENT[_-]?SECRET|PRIVATE[_-]?KEY|PASSWORD|TOKEN|SECRET(?:[_-]?KEY)?)[ \t]*[:=][ \t]*(?!process\.env(?:\.|\[)|import\.meta\.env(?:\.|\[)|Deno\.env\.|os\.environ|env\.)([^\s"'`#()\[\]{}$]{16,})[ \t]*(?:#[^\r\n]*)?\r?$/gimu;
+const CREDENTIAL_PLACEHOLDER =
+  /^(?:example(?:[-_].*)?|placeholder(?:[-_].*)?|your[-_].*|(?:change|replace)[-_]me(?:[-_].*)?|(?:dummy|fake|mock|test|never[-_]return)[-_](?:api[-_]?key|access[-_]?token|auth[-_]?token|client[-_]?secret|password|token|secret(?:[-_]?key)?))$/iu;
 const TASK_ID = /^(?:T|TASK|QT)-\d{3,}$/u;
 const STORY_ID = /^US-\d{3,}$/u;
 const SPEC_ID = /^SPEC-\d{3,}$/u;
@@ -66,7 +70,12 @@ function isSecretPath(path) {
 
 export function containsSecret(bytes) {
   const content = bytes.toString('utf8');
-  return SECRET_VALUE.test(content) || SECRET_ASSIGNMENT.test(content);
+  if (SECRET_VALUE.test(content)) return true;
+  for (const match of content.matchAll(SECRET_ASSIGNMENT))
+    if (!CREDENTIAL_PLACEHOLDER.test(match[2])) return true;
+  for (const match of content.matchAll(SECRET_CONFIG_ASSIGNMENT))
+    if (!CREDENTIAL_PLACEHOLDER.test(match[1])) return true;
+  return false;
 }
 
 export function assertCredentialFreeText(
@@ -78,7 +87,7 @@ export function assertCredentialFreeText(
   if (containsSecret(Buffer.from(value, 'utf8')))
     throw new CapsuleError(
       code,
-      `${label} contains credential material; use the enrolled credential environment instead.`,
+      `${label} contains credential material; use native configuration or credential environment references instead.`,
     );
   return value;
 }

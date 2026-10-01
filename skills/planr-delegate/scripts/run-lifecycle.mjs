@@ -2,6 +2,7 @@
 import { setTimeout as delay } from 'node:timers/promises';
 import { terminateProcessGroup } from './adapters/generic.mjs';
 import { cleanupWorktreeCustody } from './custody.mjs';
+import { treeIdentity } from './integration-files.mjs';
 import { implementationReport, runStatusPresentation } from './presentation.mjs';
 import { blocked, DelegateRunError, sessionId } from './run-contract.mjs';
 import { custodyAt } from './run-preflight.mjs';
@@ -33,9 +34,70 @@ async function executionProcessState(record) {
   return 'exited';
 }
 
+export async function recoverOwnedProcesses(record, runDirectory) {
+  if (record.delegateTerminationConfirmed === false) {
+    if (['running', 'resuming'].includes(record.status)) {
+      const state = await executionProcessState(record);
+      if (state === 'alive' || state === 'unknown')
+        throw new DelegateRunError('E_RUN_LOCKED', 'The owned delegate is still running.');
+    }
+    if (!record.delegateProcess)
+      throw new DelegateRunError(
+        'E_DELEGATE_PROCESS',
+        'Native termination is unconfirmed and its process identity is unavailable. Inspect the retained run before continuing.',
+      );
+    await terminateProcessGroup(record.delegateProcess);
+    record = await updateRunRecord(
+      record.runId,
+      {
+        delegateProcess: null,
+        delegateTerminationConfirmed: true,
+      },
+      { directory: runDirectory },
+    );
+  }
+  for (const [field, host] of [
+    ['verification', record.verification?.process],
+    ['preparation', record.preparationHost],
+  ]) {
+    const identity =
+      field === 'verification' ? record.verification?.commandProcess : record.preparationProcess;
+    if (!identity) continue;
+    const state = await processIdentityState(host);
+    const finished =
+      field === 'verification'
+        ? record.verification?.status === 'blocked'
+        : ['failed', 'interrupted'].includes(record.preparationProvenance?.status);
+    if (!finished && !['exited', 'reused'].includes(state))
+      throw new DelegateRunError('E_RUN_LOCKED', 'An owned parent command is still running.');
+    await terminateProcessGroup(identity);
+    const changes =
+      field === 'verification'
+        ? {
+            verification: {
+              ...record.verification,
+              commandProcess: null,
+              status: 'blocked',
+              code: 'E_INTEGRATION_INTERRUPTED',
+            },
+          }
+        : {
+            preparationProcess: null,
+            preparationProvenance: { ...record.preparationProvenance, status: 'interrupted' },
+          };
+    record = await updateRunRecord(record.runId, changes, { directory: runDirectory });
+  }
+  return record;
+}
+
 export async function recoverDelegateRun({ runId, runDirectory = defaultRunDirectory() } = {}) {
   return withRunTransitionLock(runId, { directory: runDirectory }, async () => {
-    const record = await readRunRecord(runId, { directory: runDirectory });
+    let record = await readRunRecord(runId, { directory: runDirectory });
+    if (['running', 'resuming', 'preparing'].includes(record.status)) {
+      const state = await executionProcessState(record);
+      if (state === 'alive' || state === 'unknown') return record;
+    }
+    record = await recoverOwnedProcesses(record, runDirectory);
     if (['applying', 'interrupted'].includes(record.integration?.status)) return record;
     if (!['running', 'resuming', 'preparing'].includes(record.status)) return record;
     const state = await executionProcessState(record);
@@ -51,6 +113,35 @@ export async function recoverDelegateRun({ runId, runDirectory = defaultRunDirec
   });
 }
 
+export async function cleanupAcceptedWorktree(record, runDirectory) {
+  if (record.cleanup?.status === 'removed') return record.cleanup;
+  const disposition = record.disposition === 'integrated' ? 'accepted' : 'abandoned';
+  if (record.status !== 'closed')
+    throw new DelegateRunError(
+      'E_DELEGATE_CLEANUP',
+      'Only closed runs may remove their owned worktree.',
+    );
+  await recoverOwnedProcesses(record, runDirectory);
+  if (record.delegateProcess) await terminateProcessGroup(record.delegateProcess);
+  const result = await cleanupWorktreeCustody(await custodyAt(record, runDirectory), {
+    disposition,
+    beforeRemove: async (target) => {
+      if (
+        record.nativeSelection &&
+        record.integration?.worktreeIdentity &&
+        (await treeIdentity(target)) !== record.integration.worktreeIdentity
+      )
+        throw new DelegateRunError(
+          'E_DELEGATE_CLEANUP_DRIFT',
+          'Owned worktree changed after acceptance; retain it for inspection.',
+        );
+    },
+  });
+  const cleanup = { ...result, status: 'removed', at: new Date().toISOString() };
+  await updateRunRecord(record.runId, { cleanup }, { directory: runDirectory });
+  return cleanup;
+}
+
 export async function cleanupDelegateRun({
   runId,
   disposition,
@@ -58,21 +149,12 @@ export async function cleanupDelegateRun({
 } = {}) {
   return withRunTransitionLock(runId, { directory: runDirectory }, async () => {
     const record = await readRunRecord(runId, { directory: runDirectory });
-    const expected = record.disposition === 'integrated' ? 'accepted' : 'abandoned';
-    if (record.status !== 'closed' || disposition !== expected)
+    if (disposition !== (record.disposition === 'integrated' ? 'accepted' : 'abandoned'))
       throw new DelegateRunError(
         'E_DELEGATE_CLEANUP',
-        'Cleanup requires a closed run and its matching accepted or abandoned disposition.',
-        runId,
+        'Cleanup disposition does not match this run.',
       );
-    if (record.cleanup?.status === 'removed') return record.cleanup;
-    if (record.delegateProcess) await terminateProcessGroup(record.delegateProcess);
-    const result = await cleanupWorktreeCustody(await custodyAt(record, runDirectory), {
-      disposition,
-    });
-    const cleanup = { ...result, status: 'removed', at: new Date().toISOString() };
-    await updateRunRecord(runId, { cleanup }, { directory: runDirectory });
-    return cleanup;
+    return cleanupAcceptedWorktree(record, runDirectory);
   });
 }
 
@@ -115,6 +197,12 @@ export async function delegateRunStatus({ runId, runDirectory = defaultRunDirect
     verification: record.verification ?? null,
     verificationProcessState,
     lastActivityAt: record.lastActivityAt ?? record.updatedAt,
+    inactivityMs: Math.max(0, Date.now() - Date.parse(record.lastActivityAt ?? record.updatedAt)),
+    nativeProgress: record.nativeProgress ?? null,
+    preparationProvenance: record.preparationProvenance ?? null,
+    nativeSummary: record.nativeSummary ?? null,
+    observedModel: record.observedModel ?? null,
+    nativeWarnings: record.nativeWarnings ?? [],
     activityEvidence: record.activityEvidence ?? 'record',
     idleDeadlineAt: record.idleDeadlineAt ?? null,
     hardDeadlineAt: record.hardDeadlineAt ?? null,
@@ -157,6 +245,8 @@ export async function delegateRunStatus({ runId, runDirectory = defaultRunDirect
           delegatePaths: record.integration.delegatePaths,
           generatedPaths: record.integration.generatedPaths,
           checks: record.integration.checks,
+          verified: record.integration.verified ?? false,
+          reviewOnlyReason: record.integration.reviewOnlyReason ?? null,
           preparation: record.integration.preparation ?? [],
           driftPaths: integrationCheck.driftPaths,
           ...(integrationCheck.inspectionFailures
@@ -175,6 +265,10 @@ export async function delegateRunStatus({ runId, runDirectory = defaultRunDirect
               status: 'completed',
               changedPaths: record.integration.changedPaths,
               checks: record.integration.checks,
+              nativeWarnings: record.nativeWarnings ?? [],
+              cleanup: record.cleanup,
+              verified: record.integration.verified ?? false,
+              reviewOnlyReason: record.integration.reviewOnlyReason ?? null,
             },
             record.selector,
           ),

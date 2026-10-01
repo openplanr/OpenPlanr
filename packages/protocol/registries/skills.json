@@ -620,11 +620,11 @@
     {
       "skillId": "planr-delegate",
       "skillVersion": "0.1.0",
-      "description": "Delegate one explicitly requested implementation scope to an enrolled local coding agent while the active agent owns context, questions, review, and integration. Use only when the user asks another agent to implement.",
+      "description": "Coordinate an explicitly requested implementation with Claude Code, Codex or Cursor, then independently review and integrate its observed changes. Use when the user asks another coding agent to implement.",
       "lifecycle": "active",
       "authorityClass": "implementation",
       "source": "skills/planr-delegate/openplanr.skill.json",
-      "sourceDigest": "sha256:a3a6184f2fdfe3bef5a95930d3cec3ba15460b839a36cb05a15abd7bce2fbf47",
+      "sourceDigest": "sha256:52f82f86a292386fffd9809cbf0d307bf220cda7b5eb5195264e4260d9ce2b45",
       "triggerPolicy": {
         "include": [
           "Delegate implementation to another coding agent",
@@ -1742,5 +1742,5 @@
     }
   ],
   "compatibilityAliases": [],
-  "documentDigest": "sha256:10444d88c08733a36bb4a07c273495d4e12ce6e6e40e643c000447ea81dc5cc4"
+  "documentDigest": "sha256:65e297e6cf1e1da3bc25c44416ab57590af0c9bcf5a3d0fa65328e2191d4e534"
 }

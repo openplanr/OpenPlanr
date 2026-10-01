@@ -36,9 +36,11 @@ import {
   git,
   IntegrationError,
   putState,
+  putStateGuarded,
   rollbackWritten,
   safePath,
   sameState,
+  treeIdentity,
   workingSnapshot,
 } from './integration-files.mjs';
 import {
@@ -98,7 +100,9 @@ export async function reviewDelegateDelta({
   const protectedPaths = [...(custody.preservePaths ?? []), ...preservePaths].map((entry) =>
     safePath(typeof entry === 'string' ? entry : entry.path),
   );
-  const custodyCheck = await validateWorktreeCustody(custody);
+  const custodyCheck = await validateWorktreeCustody(custody, {
+    native: Boolean(run.nativeSelection),
+  });
   const violations = [
     ...(custodyCheck.violations ?? []).map((violation) =>
       typeof violation === 'string'
@@ -109,7 +113,7 @@ export async function reviewDelegateDelta({
   const changes = [];
   for (const path of await candidatePaths(custody)) {
     const before =
-      custody.setupFiles?.[path] ??
+      (!run.nativeSelection ? custody.setupFiles?.[path] : null) ??
       custody.startingFiles?.[path] ??
       (await headFileState(custody.worktreePath, path, custody.initialHead));
     let after;
@@ -155,7 +159,17 @@ export async function reviewDelegateDelta({
       )
     )
       violations.push({ code: 'E_INTEGRATION_SOURCE_DRIFT', path });
-    changes.push({ path, before, after, sourceBefore: sourceNow });
+    changes.push({
+      path,
+      before,
+      after,
+      sourceBefore: sourceNow,
+      origin: run.verificationMutations?.includes(path)
+        ? 'parent-verification'
+        : run.preparationProvenance?.paths?.includes(path)
+          ? 'preparation-and-delegate'
+          : 'delegate',
+    });
   }
   return {
     ready: violations.length === 0,
@@ -253,6 +267,64 @@ async function createScratch(source) {
   }
 }
 
+async function integrationCandidate(custody, review) {
+  const sourceIdentity = await treeIdentity(custody.repositoryRoot);
+  const projectedSource = await treeIdentity(
+    custody.repositoryRoot,
+    new Map(review.changes.map((change) => [change.path, change.after])),
+  );
+  if (projectedSource === (await treeIdentity(custody.worktreePath)))
+    return {
+      root: custody.worktreePath,
+      base: null,
+      sourceIdentity,
+      identity: projectedSource,
+      kind: 'prepared-worktree',
+    };
+  // Owner edits elsewhere make the prepared worktree stale. Copy only in this case.
+  const candidate = await createScratch(custody.worktreePath);
+  // Preserve the prepared build/cache outputs as well as installed dependencies.
+  await cp(custody.worktreePath, candidate.root, {
+    recursive: true,
+    verbatimSymlinks: true,
+    filter: (path) => path !== join(custody.worktreePath, '.git'),
+  });
+  const sourcePaths = (
+    await git(
+      custody.repositoryRoot,
+      'ls-files',
+      '-z',
+      '--cached',
+      '--others',
+      '--exclude-standard',
+    )
+  )
+    .toString('utf8')
+    .split('\0')
+    .filter(Boolean);
+  const candidatePaths = (
+    await git(candidate.root, 'ls-files', '-z', '--cached', '--others', '--exclude-standard')
+  )
+    .toString('utf8')
+    .split('\0')
+    .filter(Boolean);
+  for (const path of new Set([...sourcePaths, ...candidatePaths]))
+    await putState(
+      candidate.root,
+      safePath(path),
+      await captureFileState(custody.repositoryRoot, path),
+      randomUUID(),
+    );
+  for (const change of review.changes)
+    await putState(candidate.root, change.path, change.after, randomUUID());
+  return {
+    ...candidate,
+    sourceIdentity,
+    identity: await treeIdentity(candidate.root),
+    kind: 'fresh-candidate',
+  };
+}
+
 export async function checkoutLock(root) {
   const path = join(
     tmpdir(),
@@ -322,16 +394,28 @@ async function generateCandidate({
   phase,
   generatorRuns,
   generatedPaths,
+  retainMutation,
+  onProcess,
 }) {
   for (const generator of generators) {
     const result = await phase('generation', () =>
-      runGenerator(scratch.root, { ...generator, home: scratch.home, signal: signal }, timeoutMs),
+      runGenerator(
+        scratch.root,
+        { ...generator, home: scratch.home, signal, onProcess },
+        timeoutMs,
+      ),
     );
     generatorRuns.push({
       packagePath: generator.packagePath,
       script: generator.script,
       ...result.result,
     });
+    if (result.result.processTerminationConfirmed === false)
+      throw new IntegrationError(
+        'E_INTEGRATION_PROCESS',
+        'An owned generator process could not be stopped. Recover it before inspecting or accepting the candidate.',
+      );
+    await retainMutation?.(scratch, result.changes);
     if (!result.passed)
       throw new IntegrationError('E_INTEGRATION_GENERATION', 'A declared generator failed.', {
         results: [result.result],
@@ -356,13 +440,19 @@ async function generateCandidate({
   }
 }
 
-async function compareWithBaseline(results, selectedChecks, target, { phase, timeoutMs, signal }) {
+async function compareWithBaseline(
+  results,
+  selectedChecks,
+  target,
+  { phase, timeoutMs, signal, onProcess },
+) {
   const beforeBaseline = await workingSnapshot(target.root);
   const failing = selectedChecks.filter((_check, index) => results[index]?.status === 'failed');
   const baseline = await phase('baseline-checks', () =>
     runDelegateChecks({
       repositoryRoot: target.root,
       checks: failing,
+      onProcess,
       timeoutMs,
       home: target.home,
       signal: signal,
@@ -411,16 +501,17 @@ async function writeChanges({ root, changes, signal, onProgress, applied, create
   for (const change of changes) {
     if (signal.aborted)
       throw new IntegrationError('E_INTEGRATION_INTERRUPTED', 'Integration was interrupted.');
-    if (!sameState(await captureFileState(root, change.path), change.sourceBefore))
-      throw new IntegrationError(
-        'E_INTEGRATION_SOURCE_DRIFT',
-        'A destination changed during source writes.',
-        { path: change.path },
-      );
     // The journal records all intended states before this first write, including crash recovery.
     await onProgress?.(change.path, 'before');
+    await putStateGuarded(
+      root,
+      change.path,
+      change.after,
+      change.sourceBefore,
+      change.writeId,
+      createdDirectories,
+    );
     applied.push(change);
-    await putState(root, change.path, change.after, randomUUID(), createdDirectories);
     await onProgress?.(change.path, 'after');
   }
 }
@@ -436,12 +527,15 @@ export async function integrateDelegateDelta({
   generators,
   timeoutMs,
   reviewedDigest,
+  baselineComparison = false,
+  reviewOnlyReason,
   onVerification,
   beforeApply,
   onProgress,
   onAccepted,
   onRolledBack,
 } = {}) {
+  const native = Boolean(run.nativeSelection);
   const review = await reviewDelegateDelta({ custody, run, scopePaths, preservePaths });
   if (!review.ready)
     return {
@@ -459,16 +553,21 @@ export async function integrateDelegateDelta({
   const interrupt = () => controller.abort();
   process.once('SIGINT', interrupt);
   process.once('SIGTERM', interrupt);
-  let scratch, baselineScratch;
+  let scratch, baselineScratch, worktreeBefore, worktreeIdentity;
   const verification = {
     status: 'running',
-    phase: 'scratch-preparation',
+    phase: 'candidate-selection',
+    candidateIdentity: patchDigest(review),
     startedAt: new Date().toISOString(),
     phases: [],
     preparation: [],
     checks: [],
   };
   const progress = () => onVerification?.(verification);
+  const onProcess = async (identity) => {
+    verification.commandProcess = identity;
+    await progress();
+  };
   async function phase(name, operation) {
     verification.phase = name;
     const step = { phase: name, startedAt: new Date().toISOString() };
@@ -482,6 +581,46 @@ export async function integrateDelegateDelta({
       await progress();
     }
   }
+  async function assertCandidateIdentity() {
+    if (native && (await treeIdentity(scratch.root)) !== scratch.identity)
+      throw new IntegrationError(
+        'E_INTEGRATION_CANDIDATE_STALE',
+        'The selected candidate changed. Review the actual files before verification or acceptance.',
+      );
+  }
+  async function retainVerificationMutation(target, effects) {
+    if (!native || !effects.length) return;
+    verification.mutatedPaths = [
+      ...new Set([...(verification.mutatedPaths ?? []), ...effects.map((effect) => effect.path)]),
+    ];
+    if (target.kind !== 'fresh-candidate') return;
+    verification.retainedCandidate = true;
+    for (const { path } of effects) {
+      const before =
+        worktreeBefore.get(path) ??
+        (await headFileState(custody.worktreePath, path, custody.initialHead));
+      if (!sameState(await captureFileState(custody.worktreePath, path), before))
+        throw new IntegrationError(
+          'E_INTEGRATION_CANDIDATE_STALE',
+          'Owned worktree changed during verification; preserve the fresh candidate for inspection.',
+          { path },
+        );
+    }
+    for (const { path } of effects) {
+      const before =
+        worktreeBefore.get(path) ??
+        (await headFileState(custody.worktreePath, path, custody.initialHead));
+      await putStateGuarded(
+        custody.worktreePath,
+        path,
+        await captureFileState(target.root, path),
+        before,
+        randomUUID(),
+      );
+    }
+    verification.mutationsReturnedToWorktree = true;
+    verification.retainedCandidate = false;
+  }
   async function prepareScratch(target, steps, targetName) {
     const before = await workingSnapshot(target.root);
     const results = await runDelegateChecks({
@@ -490,23 +629,30 @@ export async function integrateDelegateDelta({
       timeoutMs,
       home: target.home,
       signal: controller.signal,
+      onProcess,
       stopOnFailure: true,
       onResult: async (result) => {
         verification.preparation.push({ ...result, target: targetName });
         await progress();
       },
     });
+    if (results.some((result) => result.processTerminationConfirmed === false))
+      throw new IntegrationError(
+        'E_INTEGRATION_PROCESS',
+        'An owned preparation process could not be stopped.',
+      );
     const effects = await changedSinceSnapshot(target.root, before);
     if (effects.length) {
+      await retainVerificationMutation(target, effects);
       review.violations.push(
         ...effects.map(({ path }) => ({
-          code: 'E_INTEGRATION_PREPARATION_SIDE_EFFECT',
+          code: native ? 'E_INTEGRATION_REVIEW_DRIFT' : 'E_INTEGRATION_PREPARATION_SIDE_EFFECT',
           path,
         })),
       );
       throw new IntegrationError(
-        'E_INTEGRATION_PREPARATION_SIDE_EFFECT',
-        'Preparation changed tracked or nonignored files; declare generation separately.',
+        native ? 'E_INTEGRATION_REVIEW_DRIFT' : 'E_INTEGRATION_PREPARATION_SIDE_EFFECT',
+        'Preparation changed reviewable files. Inspect the updated candidate and review again.',
       );
     }
     if (results.some(({ status }) => status !== 'passed'))
@@ -524,15 +670,6 @@ export async function integrateDelegateDelta({
     failureCode,
     rollbackErrors = [];
   try {
-    const selectedChecks = await resolveSelectedChecks(
-      custody.repositoryRoot,
-      checks,
-      capsule,
-      delegatePaths,
-    );
-    const selectedPreparation = (
-      await resolveSelectedChecks(custody.repositoryRoot, preparation ?? [], capsule, delegatePaths)
-    ).map((step) => ({ ...step, kind: 'preparation' }));
     const protectedPaths = [...(custody.preservePaths ?? []), ...(preservePaths ?? [])].map(
       (entry) => safePath(typeof entry === 'string' ? entry : entry.path),
     );
@@ -544,12 +681,38 @@ export async function integrateDelegateDelta({
       protectedPaths,
     );
     await assertSafeChanges(custody.repositoryRoot, review.changes);
-    scratch = await phase('scratch-preparation', () => createScratch(custody.repositoryRoot));
-    for (const change of review.changes)
-      await putState(scratch.root, change.path, change.after, randomUUID());
-    await phase('build-preparation', () =>
-      prepareScratch(scratch, selectedPreparation, 'candidate'),
+    if (native) {
+      worktreeBefore = await workingSnapshot(custody.worktreePath);
+      worktreeIdentity = await treeIdentity(custody.worktreePath);
+    }
+    scratch = await phase(native ? 'candidate-selection' : 'scratch-preparation', () =>
+      native ? integrationCandidate(custody, review) : createScratch(custody.repositoryRoot),
     );
+    if (!native)
+      for (const change of review.changes)
+        await putState(scratch.root, change.path, change.after, randomUUID());
+    const selectedChecks = await resolveSelectedChecks(scratch.root, checks, { legacy: !native });
+    const selectedPreparation = (
+      await resolveSelectedChecks(scratch.root, preparation ?? [], { legacy: !native })
+    ).map((step) => ({ ...step, kind: 'preparation' }));
+    if (
+      native &&
+      !selectedChecks.length &&
+      (typeof reviewOnlyReason !== 'string' || !reviewOnlyReason.trim())
+    )
+      throw new IntegrationError(
+        'E_INTEGRATION_CHECKS_REQUIRED',
+        'Select applicable independent commands or provide a reviewOnlyReason. Zero checks remains unverified.',
+      );
+    verification.candidateIdentity = scratch.identity;
+    verification.candidatePath = scratch.root;
+    verification.candidateKind = scratch.kind;
+    verification.reviewOnlyReason = selectedChecks.length ? null : reviewOnlyReason;
+    await assertCandidateIdentity();
+    if (selectedPreparation.length)
+      await phase('build-preparation', () =>
+        prepareScratch(scratch, selectedPreparation, 'candidate'),
+      );
     await generateCandidate({
       scratch,
       generators: selectedGenerators,
@@ -560,8 +723,16 @@ export async function integrateDelegateDelta({
       phase,
       generatorRuns,
       generatedPaths,
+      retainMutation: native ? retainVerificationMutation : null,
+      onProcess,
     });
+    if (native && generatedPaths.length)
+      throw new IntegrationError(
+        'E_INTEGRATION_REVIEW_DRIFT',
+        'Generated files changed the candidate. Review the resulting files before accepting.',
+      );
     const beforeChecks = await workingSnapshot(scratch.root);
+    await assertCandidateIdentity();
     results = await phase('checks', () =>
       runDelegateChecks({
         repositoryRoot: scratch.root,
@@ -569,25 +740,32 @@ export async function integrateDelegateDelta({
         timeoutMs,
         home: scratch.home,
         signal: controller.signal,
+        onProcess,
         onResult: async (_result, current) => {
           verification.checks = [...current];
           await progress();
         },
       }),
     );
+    if (results.some((result) => result.processTerminationConfirmed === false))
+      throw new IntegrationError(
+        'E_INTEGRATION_PROCESS',
+        'An owned check process could not be stopped. Recover it before verification or acceptance.',
+      );
     const checkEffects = await changedSinceSnapshot(scratch.root, beforeChecks);
     if (checkEffects.length) {
+      await retainVerificationMutation(scratch, checkEffects);
       review.violations.push(
         ...checkEffects.map(({ path }) => ({ code: 'E_INTEGRATION_CHECK_SIDE_EFFECT', path })),
       );
       throw new IntegrationError(
-        'E_INTEGRATION_CHECK_SIDE_EFFECT',
-        'A check modified scratch repository files.',
+        native ? 'E_INTEGRATION_REVIEW_DRIFT' : 'E_INTEGRATION_CHECK_SIDE_EFFECT',
+        'Verification changed reviewable files. Inspect this candidate and review again.',
       );
     }
     if (results.some((result) => result.status === 'timed-out'))
       throw new IntegrationError('E_INTEGRATION_CHECK_TIMEOUT', 'An independent check timed out.');
-    if (results.some((result) => result.status === 'failed')) {
+    if (results.some((result) => result.status === 'failed') && (!native || baselineComparison)) {
       // Rebuild a fresh source baseline; candidate build outputs must not influence classification.
       baselineScratch = await phase('baseline-preparation', async () => {
         const target = await createScratch(custody.repositoryRoot);
@@ -596,7 +774,7 @@ export async function integrateDelegateDelta({
         for (const generator of selectedGenerators) {
           const generated = await runGenerator(
             target.root,
-            { ...generator, home: target.home, signal: controller.signal },
+            { ...generator, home: target.home, signal: controller.signal, onProcess },
             timeoutMs,
           );
           if (
@@ -614,6 +792,7 @@ export async function integrateDelegateDelta({
         phase,
         timeoutMs,
         signal: controller.signal,
+        onProcess,
       });
       results = comparison.results;
       const effects = comparison.effects;
@@ -628,6 +807,22 @@ export async function integrateDelegateDelta({
         'Independent checks failed.',
       );
     }
+    if (results.some((result) => result.status !== 'passed'))
+      throw new IntegrationError(
+        'E_INTEGRATION_CHECKS',
+        'Independent checks failed. Baseline comparison is an explicit diagnostic action.',
+      );
+    await assertCandidateIdentity();
+    if (native && (await treeIdentity(custody.worktreePath)) !== worktreeIdentity)
+      throw new IntegrationError(
+        'E_INTEGRATION_CANDIDATE_STALE',
+        'Owned worktree changed during verification; retain it for review.',
+      );
+    if (native && (await treeIdentity(custody.repositoryRoot)) !== scratch.sourceIdentity)
+      throw new IntegrationError(
+        'E_INTEGRATION_CANDIDATE_STALE',
+        'The source checkout changed while verification ran. Review the actual candidate again.',
+      );
     if (controller.signal.aborted)
       throw new IntegrationError('E_INTEGRATION_INTERRUPTED', 'Integration was interrupted.');
     await assertSafeChanges(custody.repositoryRoot, review.changes);
@@ -643,6 +838,10 @@ export async function integrateDelegateDelta({
       checks: results,
       generators: generatorRuns,
       preparation: verification.preparation,
+      candidateIdentity: verification.candidateIdentity,
+      ...(native ? { worktreeIdentity } : {}),
+      verified: results.length > 0 && results.every((result) => result.status === 'passed'),
+      reviewOnlyReason: verification.reviewOnlyReason,
     };
     verification.phase = 'source-write';
     verification.phases.push({
@@ -650,7 +849,9 @@ export async function integrateDelegateDelta({
       startedAt: new Date().toISOString(),
     });
     await progress();
+    for (const change of review.changes) change.writeId = randomUUID();
     await beforeApply?.({ ...accepted, changes: review.changes });
+    await assertCandidateIdentity();
     await writeChanges({
       root: custody.repositoryRoot,
       changes: review.changes,
@@ -659,6 +860,17 @@ export async function integrateDelegateDelta({
       applied,
       createdDirectories,
     });
+    await assertCandidateIdentity();
+    if (native && (await treeIdentity(custody.worktreePath)) !== worktreeIdentity)
+      throw new IntegrationError(
+        'E_INTEGRATION_CANDIDATE_STALE',
+        'Owned worktree changed before acceptance; retain it for review.',
+      );
+    if (native && (await treeIdentity(custody.repositoryRoot)) !== scratch.identity)
+      throw new IntegrationError(
+        'E_INTEGRATION_SOURCE_DRIFT',
+        'The resulting checkout differs from the verified candidate. Retain concurrent edits and review again.',
+      );
     await onAccepted?.(accepted);
     return {
       status: 'completed',
@@ -666,10 +878,12 @@ export async function integrateDelegateDelta({
       checks: results,
       generatedPaths,
       generators: generatorRuns,
-      nextAction: 'Review the uncommitted local diff; worktree cleanup is a separate action.',
+      nextAction:
+        'Review the uncommitted local diff. The owned worktree is removed unless retention was requested.',
     };
   } catch (error) {
     failureCode = error.code ?? 'E_INTEGRATION_APPLY';
+    if (verification.commandProcess && scratch?.base) verification.retainedCandidate = true;
     if (
       [
         'E_INTEGRATION_CHECK_SELECTION',
@@ -679,9 +893,14 @@ export async function integrateDelegateDelta({
     )
       throw error;
     failureCode = error.code ?? 'E_INTEGRATION_APPLY';
-    if (error.details?.path)
-      review.violations.push({ code: failureCode, path: error.details.path });
+    if (error.details?.path) review.violations.push({ code: failureCode, ...error.details });
     rollbackErrors = await rollbackWritten(custody.repositoryRoot, applied, randomUUID());
+    if (error.details?.published)
+      rollbackErrors.push({
+        path: error.details.path,
+        retainedPath: error.details.retainedPath,
+        code: 'E_INTEGRATION_ROLLBACK_CONFLICT',
+      });
     for (const directory of createdDirectories.reverse()) {
       try {
         await rmdir(directory);
@@ -699,11 +918,14 @@ export async function integrateDelegateDelta({
       generatedPaths,
       generators: generatorRuns,
       rollbackErrors,
-      nextAction: rollbackErrors.length
-        ? 'Resolve the integration journal conflicts before continuing.'
-        : failureCode === 'E_INTEGRATION_CHECK_TIMEOUT'
-          ? 'Retry apply with a measured timeoutMs.'
-          : 'Send the findings to the same delegate session for correction; the worktree remains available.',
+      nextAction:
+        failureCode === 'E_INTEGRATION_PROCESS'
+          ? 'Recover the recorded owned parent command before checks, continuation or cleanup.'
+          : rollbackErrors.length
+            ? 'Resolve the integration journal conflicts before continuing.'
+            : failureCode === 'E_INTEGRATION_CHECK_TIMEOUT'
+              ? 'Retry apply with a measured timeoutMs.'
+              : 'Send the findings to the same delegate session for correction; the worktree remains available.',
     };
   } finally {
     process.removeListener('SIGINT', interrupt);
@@ -714,6 +936,8 @@ export async function integrateDelegateDelta({
         step.durationMs = Date.parse(step.finishedAt) - Date.parse(step.startedAt);
       }
     }
+    if (verification.commandProcess)
+      verification.retainedCandidatePaths = [scratch?.root, baselineScratch?.root].filter(Boolean);
     verification.status = failureCode ? 'blocked' : 'completed';
     verification.phase = failureCode ? 'blocked' : 'integrated';
     verification.finishedAt = new Date().toISOString();
@@ -724,8 +948,10 @@ export async function integrateDelegateDelta({
     try {
       await progress();
     } finally {
-      if (scratch) await rm(scratch.base, { recursive: true, force: true });
-      if (baselineScratch) await rm(baselineScratch.base, { recursive: true, force: true });
+      if (scratch?.base && !verification.retainedCandidate)
+        await rm(scratch.base, { recursive: true, force: true });
+      if (baselineScratch && !verification.commandProcess)
+        await rm(baselineScratch.base, { recursive: true, force: true });
       await release();
     }
   }

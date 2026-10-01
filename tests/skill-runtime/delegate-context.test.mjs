@@ -6,6 +6,7 @@ import test from 'node:test';
 import {
   assertCredentialFreeText,
   buildContextCapsule,
+  containsSecret,
   previewContextCapsule,
   resolvePlanningArtifact,
   validateContextMirror,
@@ -512,6 +513,100 @@ test('prefixed and camelCase credentials and physical secret paths cannot enter 
     'const apiKey = import.meta.env.API_KEY;',
   ])
     assert.equal(assertCredentialFreeText(text), text);
+});
+
+test('credential detection distinguishes complete literals from source expressions', async (t) => {
+  const root = await fixture(t);
+  const source = [
+    'const secret = readArtifactSecretInput(inputPath);',
+    'const token = provider.credentials.accessToken;',
+    'const clientSecret = options.authentication.clientSecret;',
+    'const apiKey = await readConfiguredApiKey();',
+    'token: readConfiguredAccessToken(),',
+    'secret = readArtifactSecretInput(inputPath)',
+    'const token = process.env.GITHUB_TOKEN;',
+    'const stripeApiKey = process.env["STRIPE_SECRET_KEY"];',
+    'const apiKey = import.meta.env.API_KEY;',
+    'token = os.environ["TOKEN"]',
+    'token = process.env.GITHUB_TOKEN',
+    'token = import.meta.env.API_KEY',
+    'token = env.GITHUB_ACCESS_TOKEN',
+    'const secret = `$' + '{process.env.CLIENT_SECRET}`;',
+    "const status = { accessToken: 'never-return-token' };",
+    'const status = { accessToken: "mock-access-token" };',
+  ].join('\n');
+  assert.equal(assertCredentialFreeText(source), source);
+  await put(root, 'src/provider.mjs', source);
+  const capsule = await buildContextCapsule({
+    repositoryRoot: root,
+    request: 'Review provider behavior.',
+    selectedFiles: ['src/provider.mjs'],
+  });
+  assert.deepEqual(
+    Buffer.from(copied(capsule, 'src/provider.mjs').contentBase64, 'base64'),
+    Buffer.from(source),
+  );
+
+  for (const text of [
+    'const token = "super-secret-value-123456789";',
+    'const PASSWORD = "ReviewFixturePassword123!";',
+    "const clientSecret = 'Synthetic-Credential-123!@#$%^&*()';",
+    'PASSWORD=Synthetic-Credential-123!@%&*',
+    '{"client_secret":"synthetic credential with spaces!"}',
+    "const secret = 'super-secret-value-123456789';",
+    'const apiKey = `super-secret-value-123456789`;',
+    '{"accessToken":"super-secret-value-123456789"}',
+    'CLIENT_SECRET=super-secret-value-123456789',
+    'export API_KEY=super-secret-value-123456789 # private',
+    '  password: super-secret-value-123456789\r\n',
+    'token = super-secret-value-123456789',
+    'const token = "never-return-token"; const secret = "super-secret-value-123456789";',
+    'TOKEN=never-return-token\nCLIENT_SECRET=super-secret-value-123456789\n',
+  ]) {
+    assert.equal(containsSecret(Buffer.from(text)), true, text);
+    assert.throws(() => assertCredentialFreeText(text), { code: 'E_CAPSULE_SECRET' });
+  }
+});
+
+test('dummy literals do not exempt recognizable credentials or credential files', async (t) => {
+  const root = await fixture(t);
+  for (const text of [
+    'const token = "example-value-for-documentation";',
+    'const token = "placeholder-access-token";',
+    'const token = "your-access-token-here";',
+    'const token = "never-return-token";',
+    'const token = "test-access-token";',
+    'ACCESS_TOKEN=never-return-token',
+    'JWT_SECRET=change-me-in-production',
+    'CLIENT_SECRET=replace-me-before-use',
+  ])
+    assert.equal(containsSecret(Buffer.from(text)), false, text);
+
+  for (const value of [
+    `ghp_${'A'.repeat(30)}`,
+    `github_pat_${'A'.repeat(30)}`,
+    `sk-proj-${'A'.repeat(30)}`,
+    `xoxb-${'A'.repeat(30)}`,
+    `AKIA${'A'.repeat(16)}`,
+    '-----BEGIN PRIVATE KEY-----',
+  ]) {
+    const text = `const token = "example-${value}";`;
+    assert.equal(containsSecret(Buffer.from(text)), true);
+    await put(root, 'src/fixture.test.mjs', text);
+    await rejectCode(
+      buildContextCapsule({
+        repositoryRoot: root,
+        request: 'Review the test.',
+        selectedFiles: ['src/fixture.test.mjs'],
+      }),
+      'E_CAPSULE_SECRET',
+    );
+  }
+  await put(root, 'src/.env', 'ACCESS_TOKEN=never-return-token\n');
+  await rejectCode(
+    buildContextCapsule({ repositoryRoot: root, request: 'fix', selectedFiles: ['src/.env'] }),
+    'E_CAPSULE_SECRET',
+  );
 });
 
 test('reading order prioritizes requirements without removing or truncating any required source', async (t) => {

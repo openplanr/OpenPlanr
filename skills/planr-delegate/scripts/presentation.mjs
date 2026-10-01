@@ -36,6 +36,9 @@ export function preparationPresentation(preview) {
     worktreeDependencies: preview.worktreeDependencies,
     timing: preview.preparationTiming ?? null,
     profile: preview.profile,
+    backend: preview.backend,
+    modelSelection: preview.modelSelection,
+    provider: preview.provider,
     destination: preview.destination,
     ...(preview.executionPolicy ? { executionPolicy: preview.executionPolicy } : {}),
     nextAction:
@@ -92,6 +95,10 @@ export function implementationReport(result, selector) {
     ({ status }) => status !== 'passed',
   );
   const issues = [
+    ...(result.nativeWarnings ?? []),
+    ...(result.cleanup?.status === 'failed'
+      ? ['Owned worktree cleanup failed; integration remains accepted']
+      : []),
     ...(result.violations ?? []).map(({ code, path }) => (path ? `${code}: ${path}` : code)),
     ...(result.code ? [result.code] : []),
     ...failed.map(({ command, status, exitCode, timeoutMs, classification }) =>
@@ -100,7 +107,12 @@ export function implementationReport(result, selector) {
         : `${command} failed${exitCode == null ? '' : ` (exit ${exitCode})`}${classification === 'baseline-failure' ? '; also fails before applying this delta' : classification === 'regression' ? '; passes before applying this delta' : ''}`,
     ),
     ...(result.rollbackErrors ?? []).map(({ path, code }) => `Recovery needed: ${path} (${code})`),
-    ...(checks.length === 0 ? ['Verification incomplete: no independent checks ran'] : []),
+    ...(checks.length === 0
+      ? [
+          'Verification incomplete: no independent checks ran',
+          ...(result.reviewOnlyReason ? [result.reviewOnlyReason] : []),
+        ]
+      : []),
   ];
   return {
     Outcome: accepted

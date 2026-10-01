@@ -1,5 +1,6 @@
-import { spawn } from 'node:child_process';
+import { execFile as execFileCallback, spawn } from 'node:child_process';
 import { StringDecoder } from 'node:string_decoder';
+import { promisify } from 'node:util';
 import { processIdentity, processIdentityState } from '../run-record.mjs';
 
 export const ADAPTER_PROTOCOL = 'openplanr.delegate.adapter';
@@ -31,17 +32,32 @@ export async function terminateProcessGroup(identity, { graceMs = 100 } = {}) {
       'Delegate process identity cannot be verified for cancellation.',
     );
   const target = process.platform === 'win32' ? identity.pid : -(identity.pgid ?? identity.pid);
-  const send = (signal) => {
+  const send = async (signal) => {
     try {
       process.kill(target, signal);
     } catch (error) {
-      if (error.code !== 'ESRCH') throw error;
+      if (error.code === 'ESRCH') return;
+      if (error.code === 'EPERM' && process.platform !== 'win32') {
+        // macOS can report EPERM for a group consisting only of zombies.
+        // Ignore it only after proving there are no live writers in that group.
+        const { stdout } = await promisify(execFileCallback)('ps', ['-axo', 'pgid=,stat='], {
+          timeout: 5000,
+          maxBuffer: 1024 * 1024,
+        });
+        const members = stdout
+          .trim()
+          .split('\n')
+          .map((line) => line.trim().split(/\s+/u))
+          .filter(([group]) => Number(group) === -target);
+        if (members.every(([, status]) => status.startsWith('Z'))) return;
+      }
+      throw error;
     }
   };
-  send('SIGTERM');
+  await send('SIGTERM');
   await new Promise((resolve) => setTimeout(resolve, graceMs));
   const after = await processIdentityState(identity);
-  if (after !== 'reused') send('SIGKILL');
+  if (after !== 'reused') await send('SIGKILL');
 }
 
 // Task text uses stdin; each line is bounded and observed with stream backpressure.
@@ -61,7 +77,10 @@ export function invokeProcess(executable, args, options = {}) {
   } = options;
   if (!Array.isArray(args) || args.some((arg) => typeof arg !== 'string'))
     throw new AdapterError('E_ADAPTER_ARGUMENTS', 'Adapter arguments must be an array of strings.');
-  if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 4 * 3_600_000)
+  if (
+    timeoutMs !== null &&
+    (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 4 * 3_600_000)
+  )
     throw new AdapterError('E_ADAPTER_TIMEOUT', 'Adapter timeout is outside the allowed range.');
   if (!retainStdout && typeof onStdoutLine !== 'function')
     throw new AdapterError('E_ADAPTER_ARGUMENTS', 'Streaming output requires a line observer.');
@@ -91,6 +110,10 @@ export function invokeProcess(executable, args, options = {}) {
     let failure = null;
     let identity = null;
     let launchWork = Promise.resolve();
+    let spawnedResolve;
+    const spawned = new Promise((resolve) => {
+      spawnedResolve = resolve;
+    });
     let stopping = null;
     let settled = false;
     const finish = (error, value) => {
@@ -104,6 +127,9 @@ export function invokeProcess(executable, args, options = {}) {
     const stop = (error) => {
       failure ??= error;
       stopping ??= (async () => {
+        if (!(await spawned)) return;
+        await launchWork;
+        if (!Number.isSafeInteger(child.pid) || child.pid < 1) return;
         const leader = identity ?? (await processIdentity(child.pid));
         if (leader) await terminateProcessGroup({ ...leader, pgid: child.pid });
       })();
@@ -127,19 +153,26 @@ export function invokeProcess(executable, args, options = {}) {
         throw new AdapterError('E_ADAPTER_OUTPUT_LIMIT', 'Adapter event exceeded its limit.');
     };
     const abort = () => stop(new AdapterError('E_ADAPTER_CANCELLED', 'Adapter run was cancelled.'));
-    const timer = setTimeout(
-      () => stop(new AdapterError('E_ADAPTER_TIMEOUT', 'Adapter exceeded its time limit.')),
-      timeoutMs,
-    );
+    const timer =
+      timeoutMs === null
+        ? null
+        : setTimeout(
+            () => stop(new AdapterError('E_ADAPTER_TIMEOUT', 'Adapter exceeded its time limit.')),
+            timeoutMs,
+          );
     signal?.addEventListener('abort', abort, { once: true });
     child.on('error', (error) => {
+      spawnedResolve(false);
       const reported = new AdapterError('E_ADAPTER_LAUNCH', 'Adapter executable could not start.');
       reported.details = { reason: error.code ?? 'unknown' };
       finish(reported);
     });
     child.on('spawn', () => {
       launchWork = (async () => {
-        identity = onProcess ? await processIdentity(child.pid) : null;
+        identity = await processIdentity(child.pid);
+        // Very short commands can exit before inspection; their spawned group is
+        // still owned and must be drained before candidate acceptance.
+        identity ??= { pid: child.pid, started: new Date().toISOString(), source: 'owned-spawn' };
         if (identity) {
           identity = { ...identity, pgid: child.pid };
           await onProcess?.(identity);
@@ -147,6 +180,7 @@ export function invokeProcess(executable, args, options = {}) {
         if (signal?.aborted) abort();
         if (!failure) child.stdin.end(input);
       })().catch(stop);
+      spawnedResolve(true);
     });
     child.stdout.on('data', (chunk) => {
       if (retainStdout) bytes += chunk.length;
@@ -173,6 +207,9 @@ export function invokeProcess(executable, args, options = {}) {
         else stderr.push(chunk);
       });
     } else child.stderr.resume();
+    child.on('exit', () => {
+      stopping ??= launchWork.then(() => (identity ? terminateProcessGroup(identity) : undefined));
+    });
     child.on('close', (code, exitSignal) => {
       void (async () => {
         await launchWork;
@@ -180,19 +217,29 @@ export function invokeProcess(executable, args, options = {}) {
         await consumeLines(decoder.end(), true);
         if (stopping) await stopping;
         else if (identity) await terminateProcessGroup(identity);
+        const output = Buffer.concat([...stdout, ...stderr]).toString('utf8');
         if (failure) {
+          failure.details = {
+            ...failure.details,
+            output: output.slice(-4096),
+            exitCode: code,
+            signal: exitSignal,
+          };
           finish(failure);
           return;
         }
         if (code !== 0 && !withExitCode) {
           const error = new AdapterError('E_ADAPTER_EXIT', 'Adapter exited unsuccessfully.');
-          error.details = { exitCode: code, signal: exitSignal };
+          error.details = { exitCode: code, signal: exitSignal, output: output.slice(-4096) };
           finish(error);
         } else {
-          const output = Buffer.concat([...stdout, ...stderr]).toString('utf8');
           finish(null, withExitCode ? { output, exitCode: code, signal: exitSignal } : output);
         }
-      })().catch((error) => finish(error));
+      })().catch((error) => {
+        error.processTerminationConfirmed = false;
+        error.ownedProcess = identity;
+        finish(error);
+      });
     });
     // EPIPE is expected if an engine exits before consuming stdin; other errors
     // are surfaced rather than silently discarding broken communication.

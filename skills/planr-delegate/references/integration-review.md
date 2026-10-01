@@ -1,100 +1,68 @@
-# Observed change review and local integration
+# Independent verification and safe integration
 
-Delegate prose is never changed-file authority. `reviewDelegateDelta` compares the
-worktree with its recorded starting state. Selected dirty files use their copied
-baseline; other tracked paths use Git identity (kind, executable bit and filtered
-content), so unrelated permission bits do not become false drift. Scope cannot
-widen after preparation. Inspect the observed patch, paths and violations.
+Use the run's pinned `integrate.mjs` with one JSON input. Native completion is an
+execution fact; summaries and claimed tests are evidence to inspect, not acceptance.
+Stop execution before parent checks. `review` derives the patch from actual files,
+checks scope/Preserve and Git custody, and binds its internal identity. `apply`
+requires that reviewed candidate and leaves an uncommitted diff.
 
-## Review and apply
-
-Invoke the pinned `integrate.mjs` through Node with `review`, then `apply`, and one
-bounded JSON object on stdin containing `runId`, `runDirectory` and `scopePaths`.
-Review records the patch that may be applied; later worktree changes require a
-new review. A delegate commit or staged change, Preserve violation, destination
-change or out-of-scope edit blocks integration. An unrelated source commit or
-staged path does not itself block an unchanged destination.
-
-`apply` verifies the reviewed patch in a private scratch Git repository seeded
-with the source state and delegate delta. Root and package-local dependencies are copied there; relative workspace links
-resolve within scratch, and escaping dependency links block. Checks and declared generators run with a minimal environment and
-private HOME. They execute delegate-written code; this is credential reduction,
-not an OS sandbox for trusted scripts. The user's source checkout is written only
-after checks pass and destination states are rechecked under an integration lock.
-Concurrent unrelated edits are reported, never restored or deleted by rollback.
-
-`discoverDelegateChecks` reads task Test Requirements, declared npm scripts and
-repository/CI guidance. Supported commands are `npm run <declared-script> [-- <relative-test-files>...]` and safe
-`node --test <paths>` invocations; shell fragments are rejected. An explicit
-package-scoped `checks` array can select an appropriate verification set, for
-example `[{"cwd":"packages/artifact","command":"npm run test"}]`. Include focused
-and relevant regression checks. File selectors may also be supplied as an `args` array after `--`; flags, shell
-fragments, absolute paths and traversal are rejected. Other package managers or languages need an
-explicit supported npm wrapper, or verification stays incomplete.
-
-Use `preparation` for ordered, declared npm build scripts required by the selected
-checks. These execute after the reviewed delta is seeded into scratch and before
-checks; they may produce ignored build files but cannot change tracked or
-nonignored files. Generation of reviewed source remains a separate `generators`
-operation. Preparation stops on its first failure. No dependency installation or
-lifecycle script is inferred or run automatically.
-
-For example, build the needed library and test only the selected package:
+## Commands selected by the parent
 
 ```json
 {
-  "preparation": [{"cwd":"packages/library","command":"npm run build"}],
-  "checks": [{"cwd":"packages/client","command":"npm run test","args":["--","tests/focused.test.mjs"]}]
+  "runId": "returned-run-id",
+  "checks": [
+    {"executable": "npm", "args": ["exec", "vitest", "run", "tests/example.test.ts"], "cwd": "packages/example"},
+    {"executable": "python3", "args": ["-m", "unittest", "tests.test_example"], "cwd": ".", "timeoutMs": 120000}
+  ]
 }
 ```
 
-The orchestrator selects actual dependency order from repository manifests and
-build guidance. Failed candidate checks rerun against a separate source baseline
-with the same preparation; candidate build outputs are never reused there.
+Executable/argument arrays support repository tools such as npm/pnpm, focused
+Vitest, Python, Go and Make without shell-string parsing. Working directories must
+resolve inside the candidate. Select commands from the task and repository guidance;
+comments or delegate prose cannot independently authorize them. Checks inherit the
+parent host's normal execution controls and configuration. They are not an OpenPlanr
+OS sandbox. Arguments, exits, timings and bounded private failure diagnostics are
+saved separately from native-agent check claims.
 
-Checks have a ten-minute default per command. Supply `timeoutMs` for a measured
-longer baseline and follow the helper to its result. Check output and environment
-values are omitted. Failed checks block integration; known baseline failures remain
-visible and do not become a pass by selecting zero checks.
+Verification normally runs in the prepared owned worktree. Ordinary ignored
+build/cache outputs are allowed. If preparation, a check or generation changes
+reviewable source/tests/configuration/generated files, the old review is invalid:
+inspect the updated candidate and review again before acceptance. If the source
+checkout makes the prepared tree stale, verification uses a fresh candidate only
+when needed, retaining the original native session/worktree.
 
-Each scratch verification attempt saves its own private `verification-<id>.json` under the run.
-It records preparation, commands, exit codes, start/finish times, durations and
-baseline results, without command output or environment values. `status` exposes
-the current phase and latest evidence; earlier attempt files remain available.
-A failed verification cannot be bypassed by retrying with `checks: []`. Choose
-appropriate checks and retain the failed evidence when narrowing the scope.
+Failed checks keep the candidate blocked. `baselineComparison: true` explicitly
+requests a relevant failed-check comparison; it is diagnostic and cannot turn a
+failure into acceptance. Earlier attempt evidence remains private. Narrowing a
+previously failed check set requires `checkSelectionReason`. With no applicable
+automated check, `reviewOnlyReason` allows explicitly unverified review-only
+integration; zero checks never produces a verified outcome.
 
-A generator must name a declared npm script in a package under `packages/` and
-its exact output paths, for example
-`[{"packagePath":"packages/artifact","script":"generate","outputPaths":["packages/artifact/lib/artifact/ui/generated/artifact-shell-assets.json"]}]`.
-Generated outputs are validated in scratch and included in the reviewed integration
-surface. Undeclared tracked/nonignored side effects block; ignored files are not
-part of the accepted diff. Scratch execution is not filesystem confinement.
+## Checkout protection and recovery
 
-## Interrupted writes
+The integration lock, scope/Preserve checks, reviewed patch identity, destination
+compare-and-swap and recovery journal protect checkout writes. Concurrent user
+edits are never overwritten or rolled back. A source change during checks requires
+reviewing the actual candidate again. The journal records intended states before
+the first source write and recovery touches only helper-written paths that still
+match those states.
 
-Before writing source, the helper atomically records an applying journal with the
-approved paths and before/after states. Writes use same-directory temporaries and
-compare-and-swap against those recorded states. Failure rolls back only paths the
-helper wrote that still match its own written state. It never overwrites a user's
-concurrent save or removes an unrelated new file.
+An interrupted source write must use `recover` with rollback (default) or accept
+after inspecting every journaled path. Keep conflicting user edits. Do not bypass
+a rejected helper by manually applying its patch.
 
-An unresolved journal blocks review, apply and abandonment. The runner's `status`
-and `recover` report it. Resolve it explicitly with the pinned integration helper:
-`recover` accepts `{ "runId": "...", "resolution": "rollback" }` to restore safe
-helper-owned writes, or `resolution: "accept"` only when the complete validated
-patch is present. Conflicting paths remain untouched and visible for inspection.
+Successful native integration closes the exact run, saves evidence/report and
+removes only its owned worktree unless retained. `status` recovers the five-field
+report after cleanup. Planning writes, commits, PR landing, publication and
+deployment are outside this helper.
 
-## Finish
+Experimental generic protocol-v1 adapters and older pinned helpers retain their
+original check interface and lifecycle; native v2 does not expand their permissions.
 
-Successful integration closes the exact run as integrated and returns its five-field
-`report`: **Outcome**, **Task**, **Changed**, **Checks**, **Issues**. These fields
-come from observed paths and independent checks; zero checks is explicitly
-unverified. `status` recovers the report and later drift. Repeated close with the
-same disposition is idempotent. Integrated runs cannot apply or resume again.
+Destination publication claims the existing directory entry and compares its bytes before exclusive creation of the replacement. Concurrent replacements block integration. Claimed originals remain in private write custody (Git metadata, or destination-local custody when volumes differ) for crash recovery and writers holding an old inode; conflicts report their retained paths. Rollback uses the same guard and cannot discard a changed claimed original.
 
-The result is an uncommitted local diff. The orchestrator sends source/test
-corrections to the exact delegated session before integration; host-authored edits
-afterward are separate work. The helper never commits, pushes, opens a PR,
-publishes or deploys. Planning status is report-only. Worktree cleanup remains a
-separate explicit accepted/abandoned operation.
+Candidate identity is checked across verification and acceptance; a changed owned worktree is retained instead of automatically removed. Guarded writes validate parent-directory identities as well as final entries. The parent host provides filesystem containment: these checks are conflict detection, not an OS sandbox against processes that deliberately rename ancestors between syscalls. Process custody stops the owned process group; intentionally detached services and processes outside that group remain the native harness/operator responsibility. Independent commands must finish their work before returning success.
+
+Native interruption recovery validates the complete checkout against the journaled candidate identity before accepting saved verification. Cleanup validates accepted worktree contents after ownership reads, just before removal; an already absent owned worktree can still be unregistered. Concurrent editor saves detected at either boundary retain their files and require review or recovery.

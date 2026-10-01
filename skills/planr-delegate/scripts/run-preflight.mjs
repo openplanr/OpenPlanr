@@ -1,9 +1,10 @@
 // Validate retained context, enrollment and host setup before a delegate can execute.
-import { createHash, randomUUID } from 'node:crypto';
-import { lstat, readFile, realpath, rename, writeFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { lstat, readFile, realpath, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { validateContextMirror } from './context.mjs';
 import { inspectWorktreeSetup, validateWorktreeCustody } from './custody.mjs';
+import { resolveSelectedChecks, runDelegateChecks } from './integration-checks.mjs';
 import { inspectEnrolledBackend, prepareProfile } from './profiles.mjs';
 import {
   DelegateRunError,
@@ -12,8 +13,10 @@ import {
   profileMatches,
   SHA256,
 } from './run-contract.mjs';
+import { recoverOwnedProcesses } from './run-lifecycle.mjs';
 import {
   defaultRunDirectory,
+  processIdentity,
   readRunRecord,
   updateRunRecord,
   withRunTransitionLock,
@@ -157,7 +160,7 @@ export async function validateDelegateCapsule({
 export async function eligible(record, { runDirectory, profileDirectory, env, signal, timeoutMs }) {
   let prepared;
   try {
-    prepared = await prepareProfile(record.profileName, {
+    prepared = await prepareProfile(record.nativeSelection ?? record.profileName, {
       directory: profileDirectory ?? record.profileDirectory,
       cwd: record.worktreePath,
       env,
@@ -202,11 +205,11 @@ export async function eligible(record, { runDirectory, profileDirectory, env, si
       record.runId,
     );
   }
-  await assertBackendReady(prepared, record.runId);
+  if (!record.nativeSelection) await assertBackendReady(prepared, record.runId);
   const custody = await custodyAt(record, runDirectory);
   let check;
   try {
-    check = await validateWorktreeCustody(custody);
+    check = await validateWorktreeCustody(custody, { native: Boolean(record.nativeSelection) });
   } catch (error) {
     throw new DelegateRunError(
       'E_DELEGATE_CUSTODY',
@@ -223,7 +226,7 @@ export async function eligible(record, { runDirectory, profileDirectory, env, si
       { violations: check.violations },
     );
   }
-  if (record.status === 'prepared') {
+  if (record.status === 'prepared' && !record.nativeSelection) {
     const setup = await inspectWorktreeSetup(custody);
     if (Object.keys(setup.files).length)
       throw new DelegateRunError(
@@ -233,6 +236,30 @@ export async function eligible(record, { runDirectory, profileDirectory, env, si
         { paths: Object.keys(setup.files) },
       );
   }
+  if (record.nativeSelection && record.status === 'prepared' && !record.preparationProvenance) {
+    const delta = await inspectWorktreeSetup(custody, { native: true });
+    const provenance = {
+      status: 'observed',
+      paths: Object.keys(delta.files),
+      attribution: 'parent preparation; tracked changes join the candidate',
+      at: new Date().toISOString(),
+    };
+    await writeFile(
+      join(record.runPath, 'preparation.json'),
+      JSON.stringify({ ...provenance, files: delta.files }),
+      { mode: 0o600 },
+    );
+    await updateRunRecord(
+      record.runId,
+      { preparationProvenance: provenance },
+      { directory: runDirectory },
+    );
+  }
+  if (record.preparationProvenance?.status === 'failed')
+    throw new DelegateRunError(
+      'E_DELEGATE_PREPARATION',
+      'Preparation failed. Fix the recorded prerequisite and retry prepare-worktree.',
+    );
   const capacity = await contextCapacity(record, prepared, env);
   await updateRunRecord(record.runId, { contextCapacity: capacity }, { directory: runDirectory });
   const capsuleCheck = await capsuleIntegrity(record, runDirectory);
@@ -257,66 +284,77 @@ export async function contextCapacity(record, prepared, env) {
   // UTF-8 bytes are a conservative upper bound for capsule text tokens. Leave room
   // for the host's instructions, tool schemas, conversation, and model output.
   const reserveTokens = Math.max(4096, Math.ceil(modelContextTokens / 4));
-  if (capsuleBytes + reserveTokens > modelContextTokens)
+  if (!record.nativeSelection && capsuleBytes + reserveTokens > modelContextTokens)
     throw new DelegateRunError(
       'E_DELEGATE_CONTEXT_CAPACITY',
       'The required capsule exceeds a conservative bound for the loaded model context; use a larger context or narrow the task before dispatch.',
       record.runId,
     );
-  return { state: 'within-conservative-bound', capsuleBytes, modelContextTokens, reserveTokens };
+  return {
+    state:
+      capsuleBytes + reserveTokens > modelContextTokens
+        ? 'context-pressure-diagnostic'
+        : 'within-conservative-bound',
+    capsuleBytes,
+    modelContextTokens,
+    reserveTokens,
+  };
 }
 
-export async function checkpointSetup(
-  action,
-  { runId, runDirectory = defaultRunDirectory(), expectedDigest } = {},
-) {
+export async function prepareOwnedWorktree({
+  runId,
+  runDirectory = defaultRunDirectory(),
+  commands = [],
+} = {}) {
   return withRunTransitionLock(runId, { directory: runDirectory }, async () => {
-    const record = await readRunRecord(runId, { directory: runDirectory });
-    if (record.status !== 'prepared' || record.backendSessionId || record.executionTiming)
+    const record = await recoverOwnedProcesses(
+      await readRunRecord(runId, { directory: runDirectory }),
+      runDirectory,
+    );
+    if (record.status !== 'prepared' || record.backendSessionId || !record.nativeSelection)
       throw new DelegateRunError(
         'E_DELEGATE_SETUP_STATE',
-        'Setup checkpoints are only allowed before first dispatch.',
-        runId,
+        'Prepare dependencies before the first native dispatch.',
       );
-    const custody = await custodyAt(record, runDirectory);
-    const delta = await inspectWorktreeSetup(custody);
-    const paths = Object.keys(delta.files);
-    const preview = {
+    if (record.preparationProvenance?.status === 'passed') return record.preparationProvenance;
+    const started = Date.now();
+    const selected = await resolveSelectedChecks(record.worktreePath, commands);
+    await updateRunRecord(
       runId,
-      digest: delta.digest,
-      paths,
-      files: paths.map((path) => ({
-        path,
-        kind: delta.files[path].kind,
-        bytes: delta.files[path].bytes ?? 0,
-      })),
-      attribution:
-        'host-authored setup; excluded from delegate integration; immutable during execution',
-    };
-    if (action === 'setup-preview') return preview;
-    if (expectedDigest !== delta.digest)
-      throw new DelegateRunError(
-        'E_DELEGATE_SETUP_DRIFT',
-        'Setup changed since inspection; preview again.',
-        runId,
-      );
-    const bytes = Buffer.from(JSON.stringify({ ...(custody.setupFiles ?? {}), ...delta.files }));
-    if (bytes.length > MAX_CUSTODY_BYTES)
-      throw new DelegateRunError(
-        'E_DELEGATE_SETUP',
-        'Setup snapshot exceeds its private size limit.',
-        runId,
-      );
-    const temporary = join(record.runPath, `setup-${randomUUID()}.tmp`);
-    await writeFile(temporary, bytes, { flag: 'wx', mode: 0o600 });
-    await rename(temporary, join(record.runPath, 'setup.json'));
-    const setup = {
-      paths: Object.keys(JSON.parse(bytes.toString('utf8'))),
-      digest: createHash('sha256').update(bytes).digest('hex'),
+      { preparationProvenance: { status: 'running', startedAt: new Date().toISOString() } },
+      { directory: runDirectory },
+    );
+    const results = await runDelegateChecks({
+      repositoryRoot: record.worktreePath,
+      checks: selected,
+      onProcess: async (identity) =>
+        updateRunRecord(
+          runId,
+          { preparationProcess: identity, preparationHost: await processIdentity() },
+          { directory: runDirectory },
+        ),
+      stopOnFailure: true,
+    });
+    const custody = await custodyAt(record, runDirectory);
+    const delta = await inspectWorktreeSetup(custody, { native: true });
+    const provenance = {
+      status: results.every((result) => result.status === 'passed') ? 'passed' : 'failed',
+      paths: Object.keys(delta.files),
+      checks: results,
+      durationMs: Date.now() - started,
+      attribution: 'parent preparation; tracked changes join the scoped candidate',
       at: new Date().toISOString(),
-      attribution: preview.attribution,
     };
-    await updateRunRecord(runId, { setup }, { directory: runDirectory });
-    return { ...preview, accepted: true, setup };
+    await writeFile(
+      join(record.runPath, 'preparation.json'),
+      JSON.stringify({ ...provenance, files: delta.files }),
+      { mode: 0o600 },
+    );
+    await updateRunRecord(
+      runId,
+      { preparationProvenance: provenance },
+      { directory: runDirectory },
+    );
+    return provenance;
   });
 }

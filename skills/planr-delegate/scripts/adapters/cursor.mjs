@@ -1,47 +1,18 @@
-import { isAbsolute } from 'node:path';
+import { realpath } from 'node:fs/promises';
+import { resolve } from 'node:path';
 import { capsuleDirectory } from './capsule.mjs';
+import { AdapterError, invokeProcess, parseJson } from './generic.mjs';
 import {
-  AdapterError,
-  CAPABILITIES,
-  destinationFromEndpoint,
-  extractTerminalJsonObject,
-  invokeProcess,
-  normalizeResult,
-  parseJson,
-} from './generic.mjs';
+  knownDestination,
+  NATIVE_CAPABILITIES,
+  NATIVE_EXECUTION_POLICY,
+  nativeTurn,
+} from './native.mjs';
 
-export const CURSOR_EXECUTION_POLICY = Object.freeze({
-  configuration: 'trusted-native',
-  sandbox: 'enabled',
-  approval: 'auto-review',
-  extensions:
-    'Inherited Cursor hooks, plugins and MCP may execute and make additional network requests under the native configuration.',
-});
+export const CURSOR_EXECUTION_POLICY = NATIVE_EXECUTION_POLICY;
 
-function executionConfiguration(profile, env) {
-  if (profile.trustNativeConfiguration !== true)
-    throw new AdapterError(
-      'E_ADAPTER_CONFIGURATION',
-      'Cursor requires explicit trustNativeConfiguration: true after reviewing its inherited hooks, plugins and MCP.',
-    );
-  if (!env.HOME || !isAbsolute(env.HOME))
-    throw new AdapterError(
-      'E_ADAPTER_CONFIGURATION',
-      'Cursor requires its normal signed-in home directory.',
-    );
-  for (const [key, value] of Object.entries(env)) {
-    if (value && /^(?:(?:HTTPS?|ALL)_PROXY|https?_proxy|all_proxy|NODE_USE_ENV_PROXY)$/u.test(key))
-      throw new AdapterError(
-        'E_DESTINATION_UNKNOWN',
-        'Cursor proxy routing requires a separately supported configuration.',
-        { configurationKey: key },
-      );
-  }
-  const endpoint = env.CURSOR_API_ENDPOINT ?? 'https://api2.cursor.sh';
-  const destination = destinationFromEndpoint(endpoint);
-  if (new URL(endpoint).pathname !== '/')
-    throw new AdapterError('E_DESTINATION_UNKNOWN', 'Cursor API endpoint must be an origin.');
-  return { destination, endpoint: destination.origin };
+function executionConfiguration(env) {
+  return { destination: knownDestination(env.CURSOR_API_ENDPOINT) };
 }
 
 function checkedSession(id, previous, expected) {
@@ -69,10 +40,13 @@ function assistantText(event) {
   return text;
 }
 
-function streamObserver(expectedSessionId, onSessionId, onActivity) {
+function streamObserver(cwd, expectedSessionId, onSessionId, onActivity) {
   let sessionId = null;
   let terminal = null;
   let finalText = null;
+  let model = null;
+  const rejectedCommands = new Set();
+  const commandByCall = new Map();
   return {
     async onLine(line) {
       const event = parseJson(line);
@@ -91,26 +65,65 @@ function streamObserver(expectedSessionId, onSessionId, onActivity) {
       // Without partial streaming, each assistant event is one complete message.
       // The result envelope concatenates progress text, so use the last message
       // after the last tool call and require a successful terminal envelope.
-      if (event.type === 'tool_call') finalText = null;
+      if (event.type === 'system' && event.subtype === 'init' && typeof event.model === 'string')
+        model = event.model;
+      if (event.type === 'tool_call') {
+        finalText = null;
+        const call = event.tool_call?.shellToolCall;
+        const id = event.tool_call?.toolCallId;
+        if (call?.args?.command && id) commandByCall.set(id, call.args);
+        const operation = commandByCall.get(id);
+        const command = call?.result?.rejected?.command ?? operation?.command;
+        const directory = call?.result?.rejected?.workingDirectory ?? operation?.workingDirectory;
+        let location = resolve(cwd, directory || '.');
+        if (command) {
+          try {
+            location = await realpath(location);
+          } catch (error) {
+            if (error.code !== 'ENOENT') throw error;
+          }
+        }
+        const key = command ? JSON.stringify([command, location]) : id;
+        if (call?.result?.rejected) rejectedCommands.add(key ?? 'shell');
+        if (call?.result?.success && key) rejectedCommands.delete(key);
+        if (event.subtype === 'completed') commandByCall.delete(id);
+      }
       if (event.type === 'assistant') finalText = assistantText(event);
       if (event.type === 'result') terminal = event;
-      await onActivity?.();
+      const permission =
+        rejectedCommands.size > 0 ||
+        /permission|approval|denied/iu.test(
+          JSON.stringify(event.error ?? (event.is_error ? event.result : '')),
+        );
+      await onActivity?.({
+        phase: permission ? 'attention' : 'native-execution',
+        ...(permission ? { code: 'E_ADAPTER_PERMISSION' } : {}),
+      });
     },
     result(exitCode) {
       try {
-        if (
-          !terminal ||
-          exitCode !== 0 ||
-          terminal.is_error !== false ||
-          terminal.subtype !== 'success' ||
-          !sessionId ||
-          terminal.session_id !== sessionId
-        )
-          throw new AdapterError(
-            exitCode !== 0 ? 'E_ADAPTER_EXIT' : 'E_ADAPTER_RESULT',
-            'Cursor did not return a successful structured result.',
-          );
-        const result = normalizeResult({ ...extractTerminalJsonObject(finalText), sessionId });
+        const result = nativeTurn({
+          terminal: terminal
+            ? {
+                type: 'result',
+                success: terminal.is_error === false && terminal.subtype === 'success',
+              }
+            : null,
+          sessionId,
+          expectedSessionId,
+          exitCode,
+          summary: finalText ?? terminal?.result,
+          errorText: JSON.stringify([
+            terminal?.error ?? '',
+            terminal?.is_error ? terminal?.result : '',
+          ]),
+          usage: terminal?.usage,
+          model,
+        });
+        if (rejectedCommands.size || terminal?.permission_denials?.length) {
+          result.status = 'blocked';
+          result.diagnosticCode = 'E_ADAPTER_PERMISSION';
+        }
         return result;
       } catch (error) {
         if (sessionId && error instanceof AdapterError) error.sessionId = sessionId;
@@ -134,8 +147,8 @@ async function execute({
   timeoutMs,
 }) {
   const directory = await capsuleDirectory(capsulePath);
-  const { endpoint } = executionConfiguration(profile, env);
-  const observer = streamObserver(sessionId, onSessionId, onActivity);
+
+  const observer = streamObserver(cwd, sessionId, onSessionId, onActivity);
   const { exitCode } = await invokeProcess(
     profile.executable,
     [
@@ -143,16 +156,11 @@ async function execute({
       '--print',
       '--output-format',
       'stream-json',
-      '--auto-review',
-      '--sandbox',
-      'enabled',
       '--trust',
       '--workspace',
       cwd,
       '--add-dir',
       directory,
-      '--endpoint',
-      endpoint,
       ...(sessionId ? ['--resume', sessionId] : []),
     ],
     {
@@ -160,7 +168,7 @@ async function execute({
       env,
       input: prompt,
       signal,
-      timeoutMs,
+      timeoutMs: timeoutMs ?? null,
       onProcess,
       withExitCode: true,
       retainStdout: false,
@@ -173,7 +181,7 @@ async function execute({
 export const cursorAdapter = Object.freeze({
   kind: 'cursor',
   async probe({ profile, cwd, env, signal, timeoutMs }) {
-    const { destination, endpoint } = executionConfiguration(profile, env);
+    const { destination } = executionConfiguration(env);
     const options = {
       cwd,
       env,
@@ -183,34 +191,29 @@ export const cursorAdapter = Object.freeze({
     };
     const help = await invokeProcess(profile.executable, ['--help'], options);
     if (
-      ![
-        '--print',
-        '--output-format',
-        'stream-json',
-        '--resume',
-        '--auto-review',
-        '--sandbox',
-        '--workspace',
-        '--add-dir',
-        '--endpoint',
-      ].every((flag) => help.includes(flag))
+      !['--print', '--output-format', 'stream-json', '--resume', '--workspace', '--add-dir'].every(
+        (flag) => help.includes(flag),
+      )
     )
       throw new AdapterError(
         'E_ADAPTER_INCOMPATIBLE',
-        'Cursor CLI lacks structured print, exact resume, sandbox or capsule access; update the native agent CLI.',
+        'Cursor CLI lacks structured print, exact resume or capsule access; update the native agent CLI.',
       );
-    const output = await invokeProcess(
-      profile.executable,
-      ['--endpoint', endpoint, 'status', '--format', 'json'],
-      { ...options, maxOutputBytes: 16 * 1024 },
-    );
+    const output = await invokeProcess(profile.executable, ['status', '--format', 'json'], {
+      ...options,
+      maxOutputBytes: 16 * 1024,
+    });
     const auth = parseJson(output, 'E_ADAPTER_AUTHENTICATION');
     if (auth.isAuthenticated !== true)
       throw new AdapterError(
         'E_ADAPTER_AUTHENTICATION',
         'Run agent login in your normal terminal, then preview the same Cursor profile again.',
       );
-    return { capabilities: CAPABILITIES, destination, executionPolicy: CURSOR_EXECUTION_POLICY };
+    return {
+      capabilities: NATIVE_CAPABILITIES,
+      destination,
+      executionPolicy: CURSOR_EXECUTION_POLICY,
+    };
   },
   run: execute,
   async resume(args) {

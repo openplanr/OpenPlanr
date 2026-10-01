@@ -366,6 +366,7 @@ export async function createWorktreeCustody({
   readOnlyRepositories = [],
   worktreeParent,
   runId = randomUUID(),
+  native = false,
 } = {}) {
   if (
     !repositoryRoot ||
@@ -379,7 +380,16 @@ export async function createWorktreeCustody({
       'Provide one writable root and only explicitly read-only secondary repositories.',
     );
   const root = await assertRepository(repositoryRoot);
-  const paths = [...new Set((selectedPaths ?? selectedFromCapsule(capsule)).map(pathName))].sort();
+  let paths = [...new Set((selectedPaths ?? selectedFromCapsule(capsule)).map(pathName))].sort();
+  if (native && !selectedPaths) {
+    const ignored = await Promise.all(
+      paths.map(async (path) => [
+        path,
+        !(await tracked(root, path)) && (await isIgnored(root, path)),
+      ]),
+    );
+    paths = ignored.filter(([, ignored]) => !ignored).map(([path]) => path);
+  }
   if (selectedPaths && capsule) {
     const allowed = new Set(selectedFromCapsule(capsule));
     if (paths.some((path) => !allowed.has(path)))
@@ -473,7 +483,7 @@ export async function createWorktreeCustody({
       startingFiles,
       preservePaths: protectedPaths,
       preservedFiles,
-      engineConfiguration: await captureEngineConfiguration(worktreePath),
+      ...(native ? {} : { engineConfiguration: await captureEngineConfiguration(worktreePath) }),
       readOnlyRepositories: readOnlyRepositories.map(
         ({ repositoryKey, root: otherRoot, selectedContext = [] }) => ({
           repositoryKey,
@@ -514,8 +524,8 @@ export async function headFileState(root, path, revision) {
 }
 
 // Dependency setup has its own baseline. It never changes source custody.
-export async function inspectWorktreeSetup(record) {
-  const current = await validateWorktreeCustody(record);
+export async function inspectWorktreeSetup(record, options = {}) {
+  const current = await validateWorktreeCustody(record, options);
   if (!current.valid)
     throw new CustodyError('E_CUSTODY_SETUP', 'Setup changed protected custody.', {
       violations: current.violations,
@@ -541,7 +551,7 @@ export async function inspectWorktreeSetup(record) {
   return { files, digest: digest(Buffer.from(JSON.stringify(files))) };
 }
 
-export async function validateWorktreeCustody(record) {
+export async function validateWorktreeCustody(record, { native = false } = {}) {
   if (!record || record.kind !== 'openplanr-delegation-worktree-custody')
     throw new CustodyError('E_CUSTODY_RECORD', 'A custody record is required.');
   const root = await assertRepository(record.worktreePath);
@@ -553,7 +563,7 @@ export async function validateWorktreeCustody(record) {
     violations.push({ code: 'E_CUSTODY_HEAD', expected: record.initialHead, actual: head });
   const currentIndex = await indexState(root);
   if (currentIndex !== record.initialIndex) violations.push({ code: 'E_CUSTODY_INDEX' });
-  if (record.engineConfiguration) {
+  if (!native && record.engineConfiguration) {
     const currentConfiguration = await captureEngineConfiguration(root);
     for (const path of Object.keys(record.engineConfiguration))
       if (
@@ -592,7 +602,7 @@ export async function validateWorktreeCustody(record) {
   return { valid: violations.length === 0, violations, changedPaths: currentStatus.changedPaths };
 }
 
-export async function cleanupWorktreeCustody(record, { disposition } = {}) {
+export async function cleanupWorktreeCustody(record, { disposition, beforeRemove } = {}) {
   if (
     !record ||
     record.kind !== 'openplanr-delegation-worktree-custody' ||
@@ -651,8 +661,11 @@ export async function cleanupWorktreeCustody(record, { disposition } = {}) {
     owner.worktreePath !== target
   )
     throw new CustodyError('E_CUSTODY_CLEANUP', 'Custody record does not own this worktree.');
-  if (registered) await git(root, ['worktree', 'remove', '--force', '--', target]);
-  else if (present)
+  if (registered) {
+    // Validate accepted contents after ownership reads, immediately before native removal.
+    if (present) await beforeRemove?.(target);
+    await git(root, ['worktree', 'remove', '--force', '--', target]);
+  } else if (present)
     throw new CustodyError(
       'E_CUSTODY_CLEANUP',
       'Present worktree is not registered to this repository.',

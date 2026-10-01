@@ -115,14 +115,14 @@ Start or inspect the loopback-only OpenPlanr planning dashboard. Use when the us
 
 ## `planr-delegate`
 
-Delegate one explicitly requested implementation scope to an enrolled local coding agent while the active agent owns context, questions, review, and integration. Use only when the user asks another agent to implement.
+Coordinate an explicitly requested implementation with Claude Code, Codex or Cursor, then independently review and integrate its observed changes. Use when the user asks another coding agent to implement.
 
 - Select for: Delegate implementation to another coding agent; Ask a second coding agent to implement while I orchestrate; Use planr-delegate for this task; Have Codex implement this task; Use Codex to implement this; Have Claude Code implement this task; Ask another coding agent to implement this task; Use another coding agent to build this change.
 - Defer for: Active host implementation; Ship this change without delegation; Review existing code; Review this code using Codex; Parallel agents; Fix the delegate runner in the active agent.
 - Invocation from the plugin: `$planr:delegate` in Codex/ChatGPT; `/planr:delegate` in Claude Code.
 - Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
 - Aliases: none.
-- Packaged support: `references/adapter-protocol.md`, `references/capsule-contract.md`, `references/integration-review.md`, `references/operator-guide.md`, `references/run-handoff.md`, `references/worktree-custody.md`, and 21 packaged schema, script, and runtime resources.
+- Packaged support: `references/adapter-protocol.md`, `references/capsule-contract.md`, `references/integration-review.md`, `references/operator-guide.md`, `references/run-handoff.md`, `references/worktree-custody.md`, and 23 packaged schema, script, and runtime resources.
 
 ## `planr-design`
 

@@ -15,6 +15,7 @@ import {
   enrollProfile,
   inspectEnrolledBackend,
   listProfiles,
+  nativeReadiness,
   prepareProfile,
   previewProfileCandidate,
   profileReadiness,
@@ -28,7 +29,7 @@ import {
   recoverDelegateRun,
   waitDelegateRun,
 } from './run-lifecycle.mjs';
-import { checkpointSetup } from './run-preflight.mjs';
+import { prepareOwnedWorktree } from './run-preflight.mjs';
 import { prepareDelegateRun, probeDelegateHost } from './run-preparation.mjs';
 import {
   closeRunRecord,
@@ -96,7 +97,7 @@ function probeFailure(error) {
 }
 
 async function probedChoice(choice, cwd, directory) {
-  if (choice.status !== 'enrolled') {
+  if (!['enrolled', 'saved'].includes(choice.status)) {
     return {
       ...choice,
       readiness:
@@ -117,7 +118,10 @@ async function probedChoice(choice, cwd, directory) {
   try {
     const prepared = await prepareProfile(choice.name, { directory, cwd });
     const backend = await inspectEnrolledBackend(prepared.profile);
-    const readiness = profileReadiness(prepared.destination, backend);
+    const readiness =
+      prepared.profile.kind === 'generic'
+        ? profileReadiness(prepared.destination, backend)
+        : nativeReadiness(prepared.destination, backend);
     return {
       ...choice,
       destination: prepared.destination,
@@ -161,8 +165,11 @@ async function probeCommand(input) {
     host: await probeDelegateHost({ repositoryRoot: cwd }),
     profiles: cwd ? await probeChoices(profiles, cwd, input.profileDirectory) : profiles,
   };
-  if (input.profile !== undefined) {
-    if (typeof input.profile !== 'string' || !input.repositoryRoot) {
+  if (input.profile !== undefined || input.engine !== undefined) {
+    if (
+      (input.profile !== undefined && typeof input.profile !== 'string') ||
+      !input.repositoryRoot
+    ) {
       throw new DelegateRunError(
         'E_DELEGATE_INPUT',
         'Selected profile probe requires a profile name and repository root.',
@@ -170,10 +177,14 @@ async function probeCommand(input) {
     }
     const prepared = await prepareProfile(input.profile, {
       directory: input.profileDirectory,
+      engine: input.engine,
       cwd: await realpath(input.repositoryRoot),
     });
     const backend = await inspectEnrolledBackend(prepared.profile);
-    const readiness = profileReadiness(prepared.destination, backend);
+    const readiness =
+      prepared.profile.kind === 'generic'
+        ? profileReadiness(prepared.destination, backend)
+        : nativeReadiness(prepared.destination, backend);
     result.selected = {
       name: prepared.profile.name,
       kind: prepared.profile.kind,
@@ -212,33 +223,41 @@ async function previewProfileCommand(input) {
 }
 
 async function enrollProfileCommand(input) {
-  if (!input.repositoryRoot || !input.expectedDestination) {
+  if (!input.repositoryRoot) {
     throw new DelegateRunError(
       'E_DELEGATE_INPUT',
       'Profile enrollment requires a repository root and confirmed destination.',
     );
   }
-  const expected = validateDestination(input.expectedDestination);
+  const expected = input.expectedDestination ?? {
+    class: 'native-managed',
+    origin: 'native-managed',
+  };
   const preview = await previewProfileCandidate(input.profile, {
     directory: input.profileDirectory,
     cwd: await realpath(input.repositoryRoot),
   });
   if (
-    preview.candidate.destination.class !== expected.class ||
-    preview.candidate.destination.origin !== expected.origin
+    preview.candidate.kind === 'generic' &&
+    (preview.candidate.destination.class !== expected.class ||
+      preview.candidate.destination.origin !== expected.origin)
   ) {
     throw new DelegateRunError(
       'E_DESTINATION_CHANGED',
       'Effective destination differs from the confirmed destination; inspect it before enrollment.',
     );
   }
-  if (!preview.backend.selectedModel && input.allowBackendDefault !== true) {
+  if (
+    preview.candidate.kind === 'generic' &&
+    !preview.backend.selectedModel &&
+    input.allowBackendDefault !== true
+  ) {
     throw new DelegateRunError(
       'E_PROFILE_MODEL_CHOICE',
       'Select a model or explicitly choose the backend default before enrollment.',
     );
   }
-  if (preview.readiness.state === 'model-unavailable') {
+  if (preview.candidate.kind === 'generic' && preview.readiness.state === 'model-unavailable') {
     throw new DelegateRunError(
       'E_DELEGATE_MODEL_UNAVAILABLE',
       'Selected local model is not visible; choose an available model before enrollment.',
@@ -353,10 +372,9 @@ const COMMANDS = Object.freeze({
   'profile-enroll': enrollProfileCommand,
   'profile-remove': removeProfileCommand,
   prepare: prepareCommand,
+  'prepare-worktree': prepareOwnedWorktree,
   dispatch: (input) => executionCommand('dispatch', input),
   resume: (input) => executionCommand('resume', input),
-  'setup-preview': (input) => checkpointSetup('setup-preview', input),
-  'setup-accept': (input) => checkpointSetup('setup-accept', input),
   recover: async (input) => publicRecordView(await recoverDelegateRun(input)),
   status: delegateRunStatus,
   wait: waitDelegateRun,
@@ -380,6 +398,7 @@ export async function delegateRunnerCommand(action, input = {}) {
       'wait',
       'close',
       'cleanup',
+      'prepare-worktree',
       'setup-preview',
       'setup-accept',
     ].includes(action) &&
