@@ -1238,18 +1238,7 @@ test('stale checkout recovery serializes competing applies despite slow identity
     join(lock, 'owner.json'),
     JSON.stringify({ ...(await processIdentity()), started: 'stale' }),
   );
-  const bin = join(base, 'bin'),
-    marker = join(base, 'inspection-started');
-  await mkdir(bin);
-  await writeFile(
-    join(bin, 'ps'),
-    '#!/bin/sh\nif [ "$2" = "' +
-      process.pid +
-      '" ] && [ "$DELEGATE_TEST_SLOW_PS" = "1" ]; then /usr/bin/touch "' +
-      marker +
-      '"; /bin/sleep 0.2; fi\nexec /bin/ps "$@"\n',
-  );
-  await chmod(join(bin, 'ps'), 0o700);
+  const marker = join(base, 'inspection-started');
   const script = join(base, 'contender.mjs');
   await writeFile(
     script,
@@ -1258,7 +1247,14 @@ test('stale checkout recovery serializes competing applies despite slow identity
         new URL('../../skills/planr-delegate/scripts/integration-transaction.mjs', import.meta.url)
           .href,
       ) +
-      '; try { const release = await checkoutLock(' +
+      '; import {writeFileSync} from "node:fs"; const originalKill = process.kill.bind(process);' +
+      // Delay the native liveness probe inside this child, independent of /proc versus ps.
+      'process.kill = (pid, signal) => { if (pid === ' +
+      process.pid +
+      ' && process.env.DELEGATE_TEST_SLOW_IDENTITY === "1") { writeFileSync(' +
+      JSON.stringify(marker) +
+      ', "started"); Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 200); } return originalKill(pid, signal); };' +
+      ' try { const release = await checkoutLock(' +
       JSON.stringify(root) +
       '); console.log("acquired"); await new Promise(r => process.stdin.once("data", r)); await release(); } catch (error) { console.log(error.code); }',
   );
@@ -1267,8 +1263,7 @@ test('stale checkout recovery serializes competing applies despite slow identity
     const child = spawn(process.execPath, [script], {
       env: {
         ...process.env,
-        PATH: bin + ':' + process.env.PATH,
-        DELEGATE_TEST_SLOW_PS: slow ? '1' : '0',
+        DELEGATE_TEST_SLOW_IDENTITY: slow ? '1' : '0',
       },
     });
     children.push(child);
