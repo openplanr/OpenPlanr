@@ -4,6 +4,7 @@ import {
   appendFileSync,
   chmodSync,
   copyFileSync,
+  cpSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -22,17 +23,31 @@ import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { ClaudeCommandRunner } from '../../src/services/claude-plugin-service.js';
 import {
-  applySetup,
+  applySetup as applyRuntimeSetup,
   classifyComponentDrift,
   cleanupHomeProjectInstall,
   inspectProjectContext,
   previewHomeProjectCleanup,
-  previewSetup,
+  previewSetup as previewRuntimeSetup,
   removeRuntime,
   rollbackRuntime,
   runtimeDoctor,
+  type SetupOptions,
 } from '../../src/services/runtime-manager-service.js';
 import { resolvePipelinePackageRoot } from '../helpers/pipeline-package-root.js';
+
+// File ownership tests do not consult or mutate the developer's native plugin installation.
+// Native integration cases opt in through their explicit injected command runner.
+function setupOptions(options: SetupOptions): SetupOptions {
+  return {
+    ...options,
+    manageExternalRuntimes:
+      options.manageExternalRuntimes ??
+      Boolean(options.codexCommandRunner || options.claudeCommandRunner),
+  };
+}
+const applySetup = (options: SetupOptions) => applyRuntimeSetup(setupOptions(options));
+const previewSetup = (options: SetupOptions) => previewRuntimeSetup(setupOptions(options));
 
 let root: string;
 let projectDir: string;
@@ -100,6 +115,369 @@ afterEach(() => {
 });
 
 describe('runtime setup', () => {
+  it.each(['codex', 'claude-code'] as const)(
+    'does not write setup state when %s native plugin inspection fails',
+    async (runtime) => {
+      const runner = () => ({ status: 1, stdout: '', stderr: 'Native plugin state unavailable' });
+      const options = {
+        projectDir,
+        cliVersion,
+        runtime,
+        scope: 'user' as const,
+        skillMode: 'unified-plugin' as const,
+        ...(runtime === 'codex' ? { codexCommandRunner: runner } : { claudeCommandRunner: runner }),
+      };
+      const preview = await previewSetup(options);
+      expect(preview.runtimeDiagnostics.some((entry) => entry.status === 'fail')).toBe(true);
+      await expect(applySetup(options)).rejects.toMatchObject({
+        code:
+          runtime === 'codex'
+            ? 'E_CODEX_PLUGIN_INSPECTION_FAILED'
+            : 'E_CLAUDE_PLUGIN_INSPECTION_FAILED',
+      });
+      expect(existsSync(join(userHome, '.planr', 'runtime', 'state.json'))).toBe(false);
+      expect(existsSync(join(userHome, '.planr', 'runtime', 'setup.lock'))).toBe(false);
+    },
+  );
+  it('keeps project-only Codex setup separate from native user plugin configuration', async () => {
+    const nativeCalls: string[][] = [];
+    const options = {
+      projectDir,
+      cliVersion,
+      runtime: 'codex' as const,
+      scope: 'project' as const,
+      codexCommandRunner: (args: string[]) => {
+        nativeCalls.push(args);
+        return { status: 1, stdout: '', stderr: 'Unrelated global plugin configuration' };
+      },
+    };
+    const preview = await previewSetup(options);
+    expect(preview.runtimeOperations).toEqual([]);
+    expect(preview.runtimeDiagnostics).toEqual([]);
+    expect(preview.actions.every((action) => action.scope === 'project')).toBe(true);
+    await applySetup(options);
+    expect(nativeCalls).toEqual([]);
+    expect(existsSync(join(projectDir, '.agents', 'skills', 'plan', 'SKILL.md'))).toBe(true);
+  });
+
+  it('preserves plugin discovery through stale-daemon repair and converges without direct assets', async () => {
+    let pluginInstalled = false;
+    let legacyEnabled = false;
+    let marketplaceConfigured = false;
+    const nativeCalls: string[][] = [];
+    const hostRoot = join(workspaceRoot, 'packages', 'cli', 'lib', 'host-packages', 'openai');
+    const marketplace = JSON.parse(
+      readFileSync(join(hostRoot, '.claude-plugin', 'marketplace.json'), 'utf8'),
+    );
+    const pluginId = `planr@${marketplace.name}`;
+    const legacyId = `openplanr@${marketplace.name}`;
+    const configPath = join(userHome, '.codex', 'config.toml');
+    const writeNativeConfig = () => {
+      mkdirSync(join(configPath, '..'), { recursive: true });
+      writeFileSync(
+        configPath,
+        `[plugins."unrelated@custom"]\nenabled = true\n${pluginInstalled ? `[plugins."${pluginId}"]\nenabled = true\n` : ''}${legacyEnabled ? `[plugins."${legacyId}"]\nenabled = true\n` : ''}`,
+      );
+    };
+    const codexCommandRunner = (args: string[]) => {
+      nativeCalls.push(args);
+      if (args[0] === '--version') return { status: 0, stdout: 'codex 0.159.1', stderr: '' };
+      if (args.join(' ') === 'plugin marketplace list --json')
+        return {
+          status: 0,
+          stderr: '',
+          stdout: JSON.stringify({
+            marketplaces: marketplaceConfigured ? [{ name: marketplace.name, root: hostRoot }] : [],
+          }),
+        };
+      if (args.join(' ') === 'plugin list --json')
+        return {
+          status: 0,
+          stderr: '',
+          stdout: JSON.stringify(
+            pluginInstalled
+              ? [
+                  {
+                    pluginId,
+                    name: 'planr',
+                    marketplaceName: marketplace.name,
+                    version: marketplace.plugins[0].version,
+                    installed: true,
+                    enabled: true,
+                  },
+                ]
+              : [],
+          ),
+        };
+      if (args.slice(0, 3).join(' ') === 'plugin marketplace add') marketplaceConfigured = true;
+      if (args.slice(0, 2).join(' ') === 'plugin add') {
+        pluginInstalled = true;
+        cpSync(
+          join(hostRoot, 'openplanr'),
+          join(
+            userHome,
+            '.codex',
+            'plugins',
+            'cache',
+            marketplace.name,
+            'planr',
+            marketplace.plugins[0].version,
+          ),
+          { recursive: true },
+        );
+      }
+      if (args.slice(0, 2).join(' ') === 'plugin remove' && args[2] === legacyId)
+        legacyEnabled = false;
+      writeNativeConfig();
+      return { status: 0, stdout: '{}', stderr: '' };
+    };
+    await applySetup({
+      projectDir,
+      cliVersion,
+      runtime: 'codex',
+      scope: 'user',
+      skillMode: 'unified-plugin',
+      codexCommandRunner,
+    });
+    legacyEnabled = true;
+    writeNativeConfig();
+    const dashboardState = join(userHome, '.planr', 'dashboard-daemon');
+    mkdirSync(dashboardState, { recursive: true });
+    writeFileSync(join(dashboardState, 'port'), 'invalid\n');
+    const diagnosis = await runtimeDoctor(projectDir, {
+      pipelineRepair: 'preview',
+      codexCommandRunner,
+    });
+    expect(diagnosis.repairs).toHaveLength(1);
+    expect(
+      diagnosis.diagnostics.find((entry) => entry.code === 'runtime-codex-install-mode')?.status,
+    ).toBe('warn');
+    const repairOptions = {
+      projectDir,
+      cliVersion,
+      runtimes: ['codex' as const],
+      scope: 'user' as const,
+      preserveExistingScopes: true,
+      replaceManaged: true,
+      codexCommandRunner,
+    };
+    const preview = await previewSetup(repairOptions);
+    expect(preview.skillModes.codex).toBe('unified-plugin');
+    expect(preview.actions.every((action) => !action.target.includes('/.codex/skills/'))).toBe(
+      true,
+    );
+    expect(preview.runtimeOperations).toContainEqual(
+      expect.objectContaining({ kind: 'remove', id: legacyId }),
+    );
+    await runtimeDoctor(projectDir, { pipelineRepair: 'apply', codexCommandRunner });
+    const applied = await applySetup(repairOptions);
+    expect(applied.restartRequired).toBe(true);
+    expect(readFileSync(configPath, 'utf8')).toContain('unrelated@custom');
+    expect(existsSync(join(userHome, '.codex', 'skills', 'plan', 'SKILL.md'))).toBe(false);
+    const second = await previewSetup(repairOptions);
+    expect(second.runtimeOperations).toEqual([]);
+    expect(second.actions.every((action) => action.operation === 'unchanged')).toBe(true);
+    expect(
+      (await runtimeDoctor(projectDir, { pipelineRepair: 'preview', codexCommandRunner })).repairs,
+    ).toEqual([]);
+    expect(nativeCalls.some((args) => args[2] === 'unrelated@custom')).toBe(false);
+  });
+
+  it('retains the saved discovery choice and mixed scopes when repairing from another directory', async () => {
+    await applySetup({
+      projectDir,
+      cliVersion,
+      runtimes: ['claude-code', 'codex', 'cursor'],
+      scope: 'both',
+      skillMode: 'unified-plugin',
+      manageExternalRuntimes: false,
+    });
+    const mixed = await previewSetup({
+      projectDir,
+      cliVersion,
+      runtimes: ['claude-code', 'codex', 'cursor'],
+      scope: 'user',
+      preserveExistingScopes: true,
+      manageExternalRuntimes: false,
+    });
+    expect(mixed.runtimeScopes).toEqual({
+      'claude-code': 'both',
+      codex: 'both',
+      cursor: 'project',
+    });
+    expect(mixed.skillModes.codex).toBe('unified-plugin');
+    const outside = join(root, 'outside');
+    mkdirSync(outside);
+    const outsideOptions = {
+      projectDir: outside,
+      cliVersion,
+      runtimes: ['claude-code', 'codex'] as const,
+      scope: 'user' as const,
+      preserveExistingScopes: true,
+      manageExternalRuntimes: false,
+    };
+    const outsidePreview = await previewSetup({
+      ...outsideOptions,
+      runtimes: [...outsideOptions.runtimes],
+    });
+    expect(outsidePreview.runtimeScopes).toEqual({ 'claude-code': 'user', codex: 'user' });
+    expect(outsidePreview.skillModes.codex).toBe('unified-plugin');
+    await applySetup({ ...outsideOptions, runtimes: [...outsideOptions.runtimes] });
+    expect(existsSync(join(outside, '.agents'))).toBe(false);
+    const original = await previewSetup({
+      projectDir,
+      cliVersion,
+      runtimes: ['claude-code', 'codex', 'cursor'],
+      scope: 'user',
+      preserveExistingScopes: true,
+      manageExternalRuntimes: false,
+    });
+    expect(original.runtimeScopes).toEqual(mixed.runtimeScopes);
+    expect(original.actions.every((action) => action.operation === 'unchanged')).toBe(true);
+  });
+
+  it.each(['direct', 'project-rule'] as const)(
+    'preserves saved %s mode through repair',
+    async (skillMode) => {
+      const scope = skillMode === 'direct' ? 'user' : 'project';
+      await applySetup({
+        projectDir,
+        cliVersion,
+        runtime: 'codex',
+        scope,
+        skillMode,
+        manageExternalRuntimes: false,
+      });
+      const repaired = await applySetup({
+        projectDir,
+        cliVersion,
+        runtime: 'codex',
+        scope: 'user',
+        preserveExistingScopes: true,
+        manageExternalRuntimes: false,
+      });
+      expect(repaired.skillModes.codex).toBe(skillMode);
+      expect(repaired.runtimeScopes.codex).toBe(scope);
+      expect(repaired.actions.every((action) => action.operation === 'unchanged')).toBe(true);
+    },
+  );
+
+  it.each(['codex', 'claude-code'] as const)(
+    'preserves modified %s project skills during repair',
+    async (runtime) => {
+      await applySetup({
+        projectDir,
+        cliVersion,
+        runtime,
+        scope: 'project',
+        manageExternalRuntimes: false,
+      });
+      const target =
+        runtime === 'codex'
+          ? join(projectDir, '.agents', 'skills', 'plan', 'SKILL.md')
+          : join(projectDir, '.claude', 'skills', 'plan', 'SKILL.md');
+      const custom = `${readFileSync(target, 'utf8')}\nOwner customization: preserve this.\n`;
+      writeFileSync(target, custom);
+      const repair = {
+        projectDir,
+        cliVersion,
+        runtime,
+        scope: 'user' as const,
+        preserveExistingScopes: true,
+        manageExternalRuntimes: false,
+      };
+      await expect(previewSetup(repair)).rejects.toMatchObject({ code: 'E_MIGRATION_CONFLICT' });
+      await expect(applySetup(repair)).rejects.toMatchObject({ code: 'E_MIGRATION_CONFLICT' });
+      expect(readFileSync(target, 'utf8')).toBe(custom);
+    },
+  );
+
+  it('retains independent user plugin and project-rule modes without changing a healthy lock', async () => {
+    await applySetup({
+      projectDir,
+      cliVersion,
+      runtime: 'codex',
+      scope: 'user',
+      skillMode: 'unified-plugin',
+      manageExternalRuntimes: false,
+    });
+    await applySetup({
+      projectDir,
+      cliVersion,
+      runtime: 'codex',
+      scope: 'project',
+      skillMode: 'project-rule',
+      manageExternalRuntimes: false,
+    });
+    const lockPath = join(projectDir, '.planr', 'runtime-lock.json');
+    const before = readFileSync(lockPath);
+    const repair = {
+      projectDir,
+      cliVersion,
+      runtimes: ['codex' as const],
+      scope: 'user' as const,
+      preserveExistingScopes: true,
+      manageExternalRuntimes: false,
+    };
+    const preview = await previewSetup(repair);
+    expect(preview.skillModes.codex).toBe('unified-plugin');
+    expect(preview.projectSkillModes?.codex).toBe('project-rule');
+    expect(preview.runtimeScopes.codex).toBe('project');
+    expect(preview.userScopeRuntimes).toEqual(['codex']);
+    expect(preview.actions.every((action) => action.operation === 'unchanged')).toBe(true);
+    const userMarker = join(userHome, '.planr', 'runtime', 'adapters', 'codex.json');
+    unlinkSync(userMarker);
+    await applySetup(repair);
+    const state = JSON.parse(
+      readFileSync(join(userHome, '.planr', 'runtime', 'state.json'), 'utf8'),
+    );
+    expect(state.userBundles.codex.installMode).toBe('unified-plugin');
+    expect(state.projects[canonicalProjectKey(projectDir)].skillModes.codex).toBe('project-rule');
+    expect(state.projects[canonicalProjectKey(projectDir)].runtimeScopes.codex).toBe('project');
+    expect(readFileSync(lockPath).equals(before)).toBe(true);
+    expect(
+      (await previewSetup(repair)).actions.every((action) => action.operation === 'unchanged'),
+    ).toBe(true);
+  });
+
+  it('preserves global direct skills while installing separate project skills', async () => {
+    await applySetup({
+      projectDir,
+      cliVersion,
+      runtime: 'codex',
+      scope: 'user',
+      skillMode: 'direct',
+      manageExternalRuntimes: false,
+    });
+    const target = join(userHome, '.codex', 'skills', 'plan', 'SKILL.md');
+    const before = readFileSync(target);
+    const installed = await applySetup({
+      projectDir,
+      cliVersion,
+      runtime: 'codex',
+      scope: 'project',
+      skillMode: 'project-rule',
+      manageExternalRuntimes: false,
+    });
+    expect(
+      installed.actions.every(
+        (action) => action.scope === 'project' && action.operation !== 'retire',
+      ),
+    ).toBe(true);
+    expect(readFileSync(target).equals(before)).toBe(true);
+    const repair = await previewSetup({
+      projectDir,
+      cliVersion,
+      runtime: 'codex',
+      scope: 'user',
+      preserveExistingScopes: true,
+      manageExternalRuntimes: false,
+    });
+    expect(repair.skillModes.codex).toBe('direct');
+    expect(repair.projectSkillModes?.codex).toBe('project-rule');
+    expect(repair.actions.every((action) => action.operation === 'unchanged')).toBe(true);
+  });
+
   it('rejects a symlinked runtime-backup parent without writing external bytes', async () => {
     const external = join(root, 'external-backups');
     mkdirSync(join(userHome, '.planr'), { recursive: true });
@@ -426,12 +804,44 @@ describe('runtime setup', () => {
     expect(inspectProjectContext(nested)).toMatchObject({ valid: true, reason: 'git' });
   });
 
-  it('rejects project writes outside Git and initialized Planr projects', async () => {
+  it('gives Cursor project recovery without an unsupported user-scope alternative', async () => {
     const arbitrary = join(root, 'arbitrary');
     mkdirSync(arbitrary);
-    await expect(
-      previewSetup({ projectDir: arbitrary, cliVersion, runtime: 'cursor', scope: 'project' }),
-    ).rejects.toMatchObject({ code: 'E_PROJECT_CONTEXT_REQUIRED' });
+    const options = { projectDir: arbitrary, cliVersion, runtime: 'cursor' as const };
+    await expect(previewSetup({ ...options, scope: 'user' })).rejects.toMatchObject({
+      code: 'E_SCOPE_UNSUPPORTED',
+      recovery: expect.stringContaining('Change into your project'),
+    });
+    for (const runtimes of [['cursor'], ['codex', 'cursor']] as const) {
+      const error = await previewSetup({
+        ...options,
+        runtimes: [...runtimes],
+        scope: 'project',
+      }).catch((error) => error);
+      expect(error).toMatchObject({
+        code: 'E_PROJECT_CONTEXT_REQUIRED',
+        recovery: expect.stringContaining('planr init'),
+      });
+      expect(error.recovery).not.toContain('--scope user');
+    }
+    expect(existsSync(join(arbitrary, '.planr'))).toBe(false);
+  });
+
+  it('offers user scope only when the selected integration supports it', async () => {
+    const arbitrary = join(root, 'arbitrary');
+    mkdirSync(arbitrary);
+    const options = {
+      projectDir: arbitrary,
+      cliVersion,
+      runtime: 'codex' as const,
+      scope: 'project' as const,
+    };
+    const supported = await previewSetup(options).catch((error) => error);
+    expect(supported.recovery).toContain('--scope user');
+    const projectOnly = await previewSetup({ ...options, skillMode: 'project-rule' }).catch(
+      (error) => error,
+    );
+    expect(projectOnly.recovery).not.toContain('--scope user');
   });
 
   it('cleans only recorded project-scoped files from a legacy home installation', async () => {
@@ -492,6 +902,21 @@ describe('runtime setup', () => {
     expect(readFileSync(agents, 'utf8')).toContain('# Hand-written before');
     expect(readFileSync(agents, 'utf8')).toContain('# Hand-written after');
     expect(readFileSync(agents, 'utf8')).not.toContain('managed policy');
+  });
+
+  it('keeps minimal setup a no-op outside project context', async () => {
+    const arbitrary = join(root, 'cli-only');
+    mkdirSync(arbitrary);
+    const preview = await previewSetup({
+      projectDir: arbitrary,
+      cliVersion,
+      runtime: 'cursor',
+      scope: 'project',
+      minimal: true,
+    });
+    expect(preview.actions).toEqual([]);
+    expect(preview.runtimeOperations).toEqual([]);
+    expect(existsSync(join(arbitrary, '.planr'))).toBe(false);
   });
 
   it('can add the full pipeline after a minimal planning-only setup', async () => {
@@ -1059,6 +1484,7 @@ describe('runtime setup', () => {
       cliVersion,
       runtime: 'codex',
       scope: 'both',
+      manageExternalRuntimes: false,
     });
     const manifest = JSON.parse(
       readFileSync(join(setup.backupDir as string, 'migration-manifest.json'), 'utf8'),

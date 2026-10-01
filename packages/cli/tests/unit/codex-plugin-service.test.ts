@@ -1,13 +1,26 @@
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
   applyCodexPluginIntegration,
   type CodexCommandRunner,
   inspectCodexPluginIntegration,
 } from '../../src/services/codex-plugin-service.js';
+
+let nativeHome: string;
+let previousCodexHome: string | undefined;
+beforeEach(() => {
+  previousCodexHome = process.env.CODEX_HOME;
+  nativeHome = mkdtempSync(path.join(tmpdir(), 'openplanr-codex-config-'));
+  process.env.CODEX_HOME = nativeHome;
+});
+afterEach(() => {
+  if (previousCodexHome === undefined) delete process.env.CODEX_HOME;
+  else process.env.CODEX_HOME = previousCodexHome;
+  rmSync(nativeHome, { recursive: true, force: true });
+});
 
 function hostPackageFixture(): string {
   const root = mkdtempSync(path.join(tmpdir(), 'openplanr-codex-marketplace-'));
@@ -245,6 +258,181 @@ describe('Codex plugin integration', () => {
     expect(inspection.duplicates).toEqual(['openplanr@legacy']);
     expect(inspection.operations).toEqual([]);
     expect(inspection.ready).toBe(false);
+  });
+
+  it('repairs an enabled legacy registration omitted from the current marketplace inventory', () => {
+    const state = runnerState({ configured: true, installed: true });
+    writeFileSync(
+      path.join(nativeHome, 'config.toml'),
+      `
+# A quoted multiline value is not a plugin table.
+notes = """[plugins."planr@unrelated"] enabled = true"""
+[plugins."openplanr@openplanr-pipeline-local"]
+enabled = true
+[plugins."unrelated@custom"]
+enabled = true
+`,
+    );
+    const inspection = inspectCodexPluginIntegration(
+      state.fixture,
+      'unified-plugin',
+      'unified-plugin',
+      state.runner,
+    );
+    expect(inspection.ready).toBe(false);
+    expect(inspection.duplicates).toEqual(['openplanr@openplanr-pipeline-local']);
+    expect(inspection.operations).toEqual([
+      expect.objectContaining({ kind: 'remove', id: 'openplanr@openplanr-pipeline-local' }),
+    ]);
+    applyCodexPluginIntegration(state.fixture, inspection, state.runner);
+    expect(state.calls).toContainEqual([
+      'plugin',
+      'remove',
+      'openplanr@openplanr-pipeline-local',
+      '--json',
+    ]);
+    expect(state.calls.some((args) => args.includes('unrelated@custom'))).toBe(false);
+  });
+
+  it('does not count a current plugin as ready while legacy removal remains pending', () => {
+    const state = runnerState({ configured: true, installed: true, managedLegacy: true });
+    const inspection = inspectCodexPluginIntegration(
+      state.fixture,
+      'unified-plugin',
+      'unified-plugin',
+      state.runner,
+    );
+    expect(inspection.ready).toBe(false);
+    expect(inspection.operations.map(({ kind }) => kind)).toEqual(['remove']);
+    applyCodexPluginIntegration(state.fixture, inspection, state.runner);
+    expect(
+      inspectCodexPluginIntegration(
+        state.fixture,
+        'unified-plugin',
+        'unified-plugin',
+        state.runner,
+      ),
+    ).toMatchObject({ ready: true, operations: [] });
+  });
+
+  it('repairs disabled current discovery using native remove and install operations', () => {
+    const state = runnerState({ configured: true, installed: true });
+    writeFileSync(
+      path.join(nativeHome, 'config.toml'),
+      '[plugins."planr@openplanr-pipeline-local"]\nenabled = false\n',
+    );
+    const inspection = inspectCodexPluginIntegration(
+      state.fixture,
+      'unified-plugin',
+      'unified-plugin',
+      state.runner,
+    );
+    expect(inspection.ready).toBe(false);
+    expect(inspection.installed).toBe(false);
+    expect(inspection.operations.map(({ kind }) => kind)).toEqual(['remove', 'install']);
+  });
+
+  it('does not confuse an available uninstalled plugin with installed discovery', () => {
+    const state = runnerState({ configured: true });
+    const runner: CodexCommandRunner = (args) =>
+      args.join(' ') === 'plugin list --json'
+        ? {
+            status: 0,
+            stderr: '',
+            stdout: JSON.stringify([
+              {
+                pluginId: 'planr@openplanr-pipeline-local',
+                name: 'planr',
+                marketplaceName: 'openplanr-pipeline-local',
+                version: '0.1.0',
+                enabled: true,
+                installed: false,
+              },
+            ]),
+          }
+        : state.runner(args);
+    const inspection = inspectCodexPluginIntegration(
+      state.fixture,
+      'unified-plugin',
+      undefined,
+      runner,
+    );
+    expect(inspection).toMatchObject({ ready: false, installed: false });
+    expect(inspection.operations.map(({ kind }) => kind)).toEqual(['install']);
+  });
+
+  it('preserves direct mode by retiring its conflicting managed plugins', () => {
+    const state = runnerState({ configured: true, installed: true, managedLegacy: true });
+    const inspection = inspectCodexPluginIntegration(
+      state.fixture,
+      'direct',
+      'direct',
+      state.runner,
+    );
+    expect(inspection.ready).toBe(false);
+    expect(inspection.operations.map(({ id }) => id)).toEqual([
+      'planr@openplanr-pipeline-local',
+      'openplanr@openplanr-pipeline-local',
+    ]);
+    applyCodexPluginIntegration(state.fixture, inspection, state.runner);
+    expect(
+      inspectCodexPluginIntegration(state.fixture, 'direct', 'direct', state.runner),
+    ).toMatchObject({ ready: true, operations: [] });
+  });
+
+  it('repairs a same-version plugin whose cached skill payload is incomplete', () => {
+    const state = runnerState({ configured: true, installed: true });
+    const packaged = path.join(state.fixture, 'plugins', 'openplanr');
+    mkdirSync(path.join(packaged, 'skills', 'plan'), { recursive: true });
+    mkdirSync(path.join(packaged, 'skills', 'ship'), { recursive: true });
+    writeFileSync(path.join(packaged, 'skills', 'plan', 'SKILL.md'), 'plan skill');
+    writeFileSync(path.join(packaged, 'skills', 'ship', 'SKILL.md'), 'ship skill');
+    const cache = path.join(
+      nativeHome,
+      'plugins',
+      'cache',
+      'openplanr-pipeline-local',
+      'planr',
+      '0.1.0',
+    );
+    mkdirSync(path.join(cache, 'skills', 'plan'), { recursive: true });
+    writeFileSync(path.join(cache, 'skills', 'plan', 'SKILL.md'), 'plan skill');
+    const inspection = inspectCodexPluginIntegration(
+      state.fixture,
+      'unified-plugin',
+      'unified-plugin',
+      state.runner,
+    );
+    expect(inspection).toMatchObject({
+      ready: false,
+      installedVersion: '0.1.0',
+      payloadCurrent: false,
+    });
+    expect(inspection.operations.map(({ kind }) => kind)).toEqual(['remove', 'install']);
+    expect(inspection.operations[0].description).toContain('incomplete');
+    cpSync(packaged, cache, { recursive: true });
+    expect(
+      inspectCodexPluginIntegration(
+        state.fixture,
+        'unified-plugin',
+        'unified-plugin',
+        state.runner,
+      ),
+    ).toMatchObject({ ready: true, operations: [], payloadCurrent: true });
+  });
+
+  it('keeps malformed native configuration private and schedules no mutations', () => {
+    const state = runnerState({ configured: true, installed: true });
+    writeFileSync(path.join(nativeHome, 'config.toml'), 'private_key = "do-not-leak');
+    const inspection = inspectCodexPluginIntegration(
+      state.fixture,
+      'unified-plugin',
+      'unified-plugin',
+      state.runner,
+    );
+    expect(inspection.error).toContain('Repair its TOML');
+    expect(inspection.error).not.toContain('do-not-leak');
+    expect(inspection.operations).toEqual([]);
   });
 
   it('reports off-schema Codex output as an inspection error naming the command and field', () => {

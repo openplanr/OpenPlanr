@@ -131,6 +131,10 @@ export interface SetupOptions {
   manageExternalRuntimes?: boolean;
   /** Codex discovery layout; Claude and Cursor retain their native fixed modes. */
   skillMode?: SkillInstallMode;
+  /** Saved project discovery choice when repair also maintains a separate user bundle. */
+  projectSkillMode?: SkillInstallMode;
+  /** Recorded user installations repaired alongside existing project scopes. */
+  userScopeRuntimes?: RuntimeId[];
   /** Permit replacement of only manifest-owned content when changing modes. */
   replaceManaged?: boolean;
   /** Injectable Claude command boundary for deterministic runtime integration tests. */
@@ -155,6 +159,8 @@ export interface SetupPreview {
    */
   commandPrefix: CommandPrefix;
   skillModes: Partial<Record<RuntimeId, SkillInstallMode>>;
+  projectSkillModes?: Partial<Record<RuntimeId, SkillInstallMode>>;
+  userScopeRuntimes?: RuntimeId[];
   detectedRuntimes: RuntimeId[];
   unavailableRuntimes: RuntimeId[];
   scopeIncompatibleRuntimes: RuntimeId[];
@@ -1065,8 +1071,8 @@ function normalizeInstallScope(
   if (requested === 'user' && !supportsUser) {
     throw new RuntimeManagerError(
       'E_SCOPE_UNSUPPORTED',
-      `${adapter.id} does not support user-scope installation.`,
-      `Run \`planr runtime install ${adapter.id} --scope project\`.`,
+      `OpenPlanr's ${adapter.id} integration currently requires project scope.`,
+      `Change into your project, then run \`planr setup --runtime ${adapter.id} --scope project\`. To initialize a new project there, run \`planr init\` first.`,
     );
   }
   if (requested === 'project' && !supportsProject) {
@@ -1087,18 +1093,24 @@ function inferRuntimeScope(files: OwnedFile[], runtime: RuntimeId): InstallScope
   return hasUser && hasProject ? 'both' : hasUser ? 'user' : 'project';
 }
 
-function skillInstallMode(runtime: RuntimeId, options: SetupOptions): SkillInstallMode {
+function skillInstallMode(
+  runtime: RuntimeId,
+  options: SetupOptions,
+  scope?: 'project',
+): SkillInstallMode {
   if (runtime === 'claude-code') return 'unified-plugin';
   if (runtime === 'cursor') return 'project-rule';
+  if (scope === 'project' && options.projectSkillMode) return options.projectSkillMode;
   return options.skillMode ?? (options.scope === 'project' ? 'project-rule' : 'direct');
 }
 
 function skillInstallModes(
   runtimes: RuntimeId[],
   options: SetupOptions,
+  scope?: 'project',
 ): Partial<Record<RuntimeId, SkillInstallMode>> {
   return Object.fromEntries(
-    runtimes.map((runtime) => [runtime, skillInstallMode(runtime, options)]),
+    runtimes.map((runtime) => [runtime, skillInstallMode(runtime, options, scope)]),
   );
 }
 
@@ -1149,7 +1161,7 @@ function buildRuntimeLock(
       installScope,
     };
   });
-  const skillModes = skillInstallModes(runtimes, options);
+  const skillModes = skillInstallModes(runtimes, options, 'project');
   const components = {
     cli: options.cliVersion,
     pipeline: pipelineVersion,
@@ -1210,7 +1222,7 @@ function buildActions(
     throw new RuntimeManagerError(
       'E_VERSION_UNAVAILABLE',
       `Installed pipeline ${version} does not match requested ${options.version}.`,
-      `Install planr-pipeline@${options.version} and rerun setup.`,
+      `Install an OpenPlanr CLI release that bundles workflow assets ${options.version}, then rerun setup.`,
     );
   }
   const actions: FileAction[] = [];
@@ -1221,7 +1233,8 @@ function buildActions(
       throw new RuntimeManagerError('E_ADAPTER_MISSING', `Adapter ${runtime} is absent.`);
     const scope = normalizeInstallScope(adapter, runtimeScopes[runtime] ?? options.scope ?? 'user');
     const installUser =
-      (scope === 'user' || scope === 'both') && adapter.installScopes.includes('user');
+      (scope === 'user' || scope === 'both' || options.userScopeRuntimes?.includes(runtime)) &&
+      adapter.installScopes.includes('user');
     const installProject =
       (scope === 'project' || scope === 'both') && adapter.installScopes.includes('project');
     let skillAssets: BundledHostAsset[];
@@ -1462,27 +1475,21 @@ function planUserBundleTransition(
   }) as { retired: OwnedFile[] };
 }
 
-/**
- * Applies the Codex bundle's adopt-only-if-identical ownership rule to the four
- * project-scoped Cursor professional assets. Unknown bytes are user-owned, while
- * recorded assets may advance only when their current bytes still match state.
- */
-function assertCursorProfessionalSkillTransition(
+/** Preserve modified or unknown professional project assets for every coding agent. */
+function assertProfessionalSkillTransition(
   state: RuntimeState,
   projectDir: string,
   actions: readonly FileAction[],
 ): void {
   const desired = actions.filter(
-    (action) =>
-      action.runtime === 'cursor' &&
-      action.scope === 'project' &&
-      action.custody === 'professional-skill',
+    (action) => action.scope === 'project' && action.custody === 'professional-skill',
   );
   if (desired.length === 0) return;
   const tracked = new Map(
-    (state.projects[projectKey(projectDir)]?.ownedFiles ?? [])
-      .filter((file) => file.runtime === 'cursor')
-      .map((file) => [path.resolve(file.target), file]),
+    (state.projects[projectKey(projectDir)]?.ownedFiles ?? []).map((file) => [
+      path.resolve(file.target),
+      file,
+    ]),
   );
   for (const action of desired) {
     assertMutableOwnedTarget(action.target, projectDir, 'E_MIGRATION_CONFLICT');
@@ -1491,8 +1498,8 @@ function assertCursorProfessionalSkillTransition(
     if (metadata.isSymbolicLink() || !metadata.isFile()) {
       throw new RuntimeManagerError(
         'E_MIGRATION_CONFLICT',
-        `Refusing to replace non-file Cursor professional skill target ${action.target}.`,
-        'Preserve or move the existing entry outside the managed Cursor rules directory before rerunning setup.',
+        `Refusing to replace non-file professional skill target ${action.target}.`,
+        'Preserve or move the existing entry outside the managed skill directory before rerunning setup.',
       );
     }
     const currentHash = ownershipHash(readFileSync(action.target), action.kind, action.marker);
@@ -1501,7 +1508,7 @@ function assertCursorProfessionalSkillTransition(
       if (currentHash !== owned.hash) {
         throw new RuntimeManagerError(
           'E_MIGRATION_CONFLICT',
-          `Refusing to replace modified managed Cursor professional skill ${action.target}.`,
+          `Refusing to replace modified managed professional skill ${action.target}.`,
           'Preserve the modified file or restore the last managed bytes before rerunning setup.',
         );
       }
@@ -1716,18 +1723,27 @@ export async function previewSetup(options: SetupOptions): Promise<SetupPreview>
     );
   }
   const projectContext = inspectProjectContext(options.projectDir);
-  if ((scope === 'project' || scope === 'both') && !projectContext.valid) {
-    throw new RuntimeManagerError(
-      'E_PROJECT_CONTEXT_REQUIRED',
-      `Project-scoped setup requires a Git worktree or initialized OpenPlanr project; ${projectContext.path} is neither.`,
-      'Change into a project, run `planr init`, or use `planr setup --scope user`.',
-    );
-  }
   let selectedRuntimes = options.minimal
     ? []
     : options.runtimes
       ? [...new Set(options.runtimes)]
       : chooseRuntimes(options.runtime ?? 'auto');
+  if (!options.minimal && (scope === 'project' || scope === 'both') && !projectContext.valid) {
+    const canUseUserScope =
+      !options.minimal &&
+      selectedRuntimes.length > 0 &&
+      selectedRuntimes.every((runtime) =>
+        listRuntimeAdapters()
+          .find((adapter) => adapter.id === runtime)
+          ?.installScopes.includes('user'),
+      ) &&
+      options.skillMode !== 'project-rule';
+    throw new RuntimeManagerError(
+      'E_PROJECT_CONTEXT_REQUIRED',
+      `Project-scoped setup requires a Git worktree or initialized OpenPlanr project; ${projectContext.path} is neither.`,
+      `Change into your project and rerun this command, or run \`planr init\` here to initialize one.${canUseUserScope ? ' To install across projects instead, rerun this command with --scope user.' : ''}`,
+    );
+  }
   let scopeIncompatibleRuntimes: RuntimeId[] = [];
   if (!options.minimal && (options.runtime ?? 'auto') === 'auto' && !options.runtimes) {
     const adapters = listRuntimeAdapters();
@@ -1756,6 +1772,17 @@ export async function previewSetup(options: SetupOptions): Promise<SetupPreview>
       runtimeScopes[runtime] =
         project?.runtimeScopes?.[runtime] ?? inferRuntimeScope(project?.ownedFiles ?? [], runtime);
     }
+    if (options.preserveExistingScopes) {
+      const userScopeRuntimes = selectedRuntimes.filter((runtime) => state.userBundles?.[runtime]);
+      for (const runtime of userScopeRuntimes) runtimeScopes[runtime] ??= 'user';
+      const savedMode = state.userBundles?.codex?.installMode ?? project?.skillModes?.codex;
+      options = {
+        ...options,
+        userScopeRuntimes,
+        skillMode: options.skillMode ?? savedMode,
+        projectSkillMode: project?.skillModes?.codex,
+      };
+    }
     runtimes = [...new Set([...existing, ...runtimes])];
   }
   if (!options.preserveExistingScopes) {
@@ -1783,7 +1810,11 @@ export async function previewSetup(options: SetupOptions): Promise<SetupPreview>
           'Use --scope project or --scope both.',
         );
       }
-      if (mode !== 'project-rule' && !['user', 'both'].includes(codexScope)) {
+      if (
+        mode !== 'project-rule' &&
+        !['user', 'both'].includes(codexScope) &&
+        !options.userScopeRuntimes?.includes('codex')
+      ) {
         throw new RuntimeManagerError(
           'E_SKILL_MODE_SCOPE',
           `Codex ${mode} mode requires user or both scope.`,
@@ -1809,16 +1840,19 @@ export async function previewSetup(options: SetupOptions): Promise<SetupPreview>
     );
   const transitionState = needsTransitionState ? await loadState() : undefined;
   if (transitionState) {
-    assertCursorProfessionalSkillTransition(transitionState, options.projectDir, actions);
+    assertProfessionalSkillTransition(transitionState, options.projectDir, actions);
   }
-  const userBundleTransition = runtimes.includes('codex')
+  const userBundleTransition = actions.some(
+    (action) => action.runtime === 'codex' && action.scope === 'user',
+  )
     ? planUserBundleTransition(transitionState as RuntimeState, actions)
     : { retired: [] };
   const manageClaudePlugins =
     options.manageExternalRuntimes !== false &&
     !options.minimal &&
     runtimes.includes('claude-code') &&
-    ['user', 'both'].includes(runtimeScopes['claude-code'] ?? scope) &&
+    (['user', 'both'].includes(runtimeScopes['claude-code'] ?? scope) ||
+      options.userScopeRuntimes?.includes('claude-code')) &&
     (Boolean(options.claudeCommandRunner) ||
       detectRuntimes().some((runtime) => runtime.runtime === 'claude-code' && runtime.installed));
   const claudeInspection = manageClaudePlugins
@@ -1869,6 +1903,9 @@ export async function previewSetup(options: SetupOptions): Promise<SetupPreview>
     transitionState?.projects[projectKey(options.projectDir)]?.skillModes?.codex;
   const manageCodexPlugin = Boolean(
     codexMode &&
+      codexMode !== 'project-rule' &&
+      (['user', 'both'].includes(runtimeScopes.codex ?? scope) ||
+        options.userScopeRuntimes?.includes('codex')) &&
       options.manageExternalRuntimes !== false &&
       (detectRuntimes().some((runtime) => runtime.runtime === 'codex' && runtime.installed) ||
         options.codexCommandRunner),
@@ -1894,7 +1931,13 @@ export async function previewSetup(options: SetupOptions): Promise<SetupPreview>
         runtime: 'codex',
         status: 'warn',
         message: `Duplicate OpenPlanr Codex plugin discovery detected: ${codexInspection.duplicates.join(', ')}`,
-        fix: 'Remove or disable the unrelated duplicate after confirming which installation should remain active.',
+        fix: codexInspection.duplicates.every((id) =>
+          codexInspection.operations.some(
+            (operation) => operation.kind === 'remove' && operation.id === id,
+          ),
+        )
+          ? 'Confirm the listed managed plugin removals to keep the saved discovery choice.'
+          : 'Remove or disable the unrelated duplicate after confirming which installation should remain active.',
       });
     } else if (codexInspection.ready) {
       runtimeDiagnostics.push({
@@ -1906,7 +1949,8 @@ export async function previewSetup(options: SetupOptions): Promise<SetupPreview>
       runtimeDiagnostics.push({
         runtime: 'codex',
         status: 'warn',
-        message: `Codex will switch to ${codexMode} discovery after confirmation`,
+        message:
+          'Codex integration will change after confirmation; see the plugin and file changes above',
       });
     }
   }
@@ -1914,8 +1958,8 @@ export async function previewSetup(options: SetupOptions): Promise<SetupPreview>
     runtimeDiagnostics.push({
       runtime: 'codex',
       status: 'warn',
-      message: `${userBundleTransition.retired.length} manifest-owned direct Codex asset(s) will be retired`,
-      fix: 'Rerun with --replace-managed after reviewing this dry-run.',
+      message: `${userBundleTransition.retired.length} OpenPlanr-managed individual Codex skill files will be backed up and removed`,
+      fix: 'Review these removals, then confirm guided setup or rerun with --replace-managed.',
     });
   }
   return {
@@ -1924,6 +1968,10 @@ export async function previewSetup(options: SetupOptions): Promise<SetupPreview>
     minimal: Boolean(options.minimal),
     commandPrefix,
     skillModes: skillInstallModes(runtimes, options),
+    ...(options.projectSkillMode
+      ? { projectSkillModes: skillInstallModes(runtimes, options, 'project') }
+      : {}),
+    ...(options.userScopeRuntimes?.length ? { userScopeRuntimes: options.userScopeRuntimes } : {}),
     runtimes,
     runtimeScopes,
     scope,
@@ -1960,7 +2008,9 @@ export async function previewSetup(options: SetupOptions): Promise<SetupPreview>
       })),
     ],
     runtimeOperations: [
-      ...(claudeInspection?.operations ?? []),
+      ...(options.preserveExistingScopes && claudeInspection?.ready
+        ? []
+        : (claudeInspection?.operations ?? [])),
       ...(codexInspection?.operations ?? []),
     ],
     runtimeDiagnostics,
@@ -1976,6 +2026,23 @@ export async function applySetup(options: SetupOptions): Promise<
 > {
   const preview = await previewSetup(options);
   if (options.dryRun || options.minimal) return preview;
+  const inspectionFailure = preview.runtimeDiagnostics.find((entry) => entry.status === 'fail');
+  if (inspectionFailure) {
+    throw new RuntimeManagerError(
+      inspectionFailure.runtime === 'codex'
+        ? 'E_CODEX_PLUGIN_INSPECTION_FAILED'
+        : 'E_CLAUDE_PLUGIN_INSPECTION_FAILED',
+      inspectionFailure.message,
+      inspectionFailure.fix,
+    );
+  }
+  // Use the same saved discovery choice that produced the preview, including during repair.
+  options = {
+    ...options,
+    skillMode: preview.skillModes.codex ?? options.skillMode,
+    projectSkillMode: preview.projectSkillModes?.codex ?? options.projectSkillMode,
+    userScopeRuntimes: preview.userScopeRuntimes ?? options.userScopeRuntimes,
+  };
   assertApprovedTargetCustody(
     runtimeRoot(),
     runtimeRoot(),
@@ -2010,8 +2077,10 @@ export async function applySetup(options: SetupOptions): Promise<
       state.userBundles?.codex?.installMode ??
       (state.userBundles?.codex ? 'direct' : undefined) ??
       state.projects[projectKey(options.projectDir)]?.skillModes?.codex;
-    assertCursorProfessionalSkillTransition(state, options.projectDir, actions);
-    const transition = preview.runtimes.includes('codex')
+    assertProfessionalSkillTransition(state, options.projectDir, actions);
+    const transition = actions.some(
+      (action) => action.runtime === 'codex' && action.scope === 'user',
+    )
       ? planUserBundleTransition(state, actions)
       : { retired: [] };
     const replacesPlugin = preview.runtimeOperations.some(
@@ -2143,7 +2212,7 @@ export async function applySetup(options: SetupOptions): Promise<
         backupManifestHash: backupManifestIdentity(backup.manifest),
         runtimes: preview.runtimes,
         runtimeScopes: preview.runtimeScopes,
-        skillModes: preview.skillModes,
+        skillModes: preview.projectSkillModes ?? preview.skillModes,
         ...(preview.runtimes.length === 1 ? { activeRuntime: preview.runtimes[0] } : {}),
         ownedFiles: owned.filter((file) => file.scope === 'project'),
       };
@@ -2726,6 +2795,7 @@ export async function runtimeDoctor(
   options: {
     pipelineRepair?: 'preview' | 'apply';
     claudeCommandRunner?: ClaudeCommandRunner;
+    codexCommandRunner?: CodexCommandRunner;
   } = {},
 ): Promise<{
   ok: boolean;
@@ -3033,12 +3103,16 @@ export async function runtimeDoctor(
   if (managedFileDiagnostic) diagnostics.push(managedFileDiagnostic);
 
   const codexBundle = state.userBundles?.codex;
-  if (detectRuntimes().some((runtime) => runtime.runtime === 'codex' && runtime.installed)) {
+  if (
+    options.codexCommandRunner ||
+    detectedRuntimes.some((runtime) => runtime.runtime === 'codex' && runtime.installed)
+  ) {
     const configuredMode = codexBundle?.installMode ?? installed?.skillModes?.codex ?? 'direct';
     const inspection = inspectCodexPluginIntegration(
       bundledHostRoot('openai'),
       configuredMode,
       configuredMode,
+      options.codexCommandRunner,
     );
     const directSkillFiles =
       codexBundle?.ownedFiles.filter((file) => pathIsWithin(file.target, codexSkillsRoot()))
@@ -3056,11 +3130,13 @@ export async function runtimeDoctor(
         status: inspection.ready ? 'pass' : 'warn',
         message: inspection.ready
           ? `Codex ${configuredMode} discovery is current`
-          : `Codex ${configuredMode} discovery has ${inspection.operations.length} pending repair operation(s)`,
+          : inspection.operations.length > 0
+            ? `Codex ${configuredMode} discovery needs repair: ${inspection.operations.map((operation) => operation.description).join('; ')}`
+            : `Codex ${configuredMode} discovery has conflicting enabled registrations: ${inspection.duplicates.join(', ')}`,
         ...(inspection.ready
           ? {}
           : {
-              fix: 'Run `planr setup --runtime codex --dry-run`, then apply the reviewed repair.',
+              fix: 'Run `planr doctor --fix` to preview repairs while preserving your saved discovery choice.',
             }),
       });
       if ((directSkillFiles > 0 && inspection.installed) || inspection.duplicates.length > 0) {

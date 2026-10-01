@@ -1,7 +1,9 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync, realpathSync } from 'node:fs';
+import { existsSync, lstatSync, readdirSync, readFileSync, realpathSync } from 'node:fs';
 import path from 'node:path';
+import { parse } from 'smol-toml';
 import { z } from 'zod';
+import { userHome } from '../../lib/planr-home.mjs';
 import { parseExternalJson } from '../utils/external-json.js';
 
 export type CodexCommandRunner = (args: string[]) => {
@@ -28,6 +30,7 @@ export interface CodexPluginInspection {
   installedVersion: string | null;
   duplicates: string[];
   operations: CodexPluginOperation[];
+  payloadCurrent?: boolean;
   error?: string;
 }
 
@@ -71,6 +74,7 @@ const installedRowSchema = z.object({
   marketplaceName: z.string().optional(),
   version: z.string().optional(),
   enabled: z.boolean().optional(),
+  installed: z.boolean().optional(),
 });
 
 const pluginListSchema = z.union([
@@ -92,6 +96,79 @@ function output<T>(runner: CodexCommandRunner, args: string[], schema: z.ZodType
 
 function installedRows(value: z.infer<typeof pluginListSchema>) {
   return Array.isArray(value) ? value : (value.installed ?? []);
+}
+
+/** Native marketplace listings can omit enabled registrations whose old identity was retired. */
+function configuredPluginRows(): z.infer<typeof installedRowSchema>[] {
+  const configPath = path.join(
+    process.env.CODEX_HOME || path.join(userHome(), '.codex'),
+    'config.toml',
+  );
+  if (!existsSync(configPath)) return [];
+  let config: Record<string, unknown>;
+  try {
+    config = parse(readFileSync(configPath, 'utf8'));
+  } catch {
+    // Parser diagnostics can include private configuration values; report only the location.
+    throw new Error(
+      `Could not read Codex plugin registrations from ${configPath}. Repair its TOML before retrying.`,
+    );
+  }
+  const plugins = config.plugins;
+  if (!plugins || typeof plugins !== 'object' || Array.isArray(plugins)) return [];
+  return Object.entries(plugins).flatMap(([pluginId, value]) => {
+    const [name, marketplaceName, extra] = pluginId.split('@');
+    if (extra || !marketplaceName || ![HOST_PLUGIN_NAME, LEGACY_HOST_PLUGIN_NAME].includes(name))
+      return [];
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return [];
+    const enabled = 'enabled' in value ? value.enabled : undefined;
+    if (typeof enabled !== 'boolean') return [];
+    return [{ pluginId, name, marketplaceName, enabled, installed: true }];
+  });
+}
+
+function pluginPayloadCurrent(
+  hostPackageRoot: string,
+  source: unknown,
+  marketplaceName: string,
+  version: string,
+): boolean | undefined {
+  const relativeSource =
+    typeof source === 'string'
+      ? source
+      : source && typeof source === 'object' && 'path' in source
+        ? source.path
+        : undefined;
+  if (
+    typeof relativeSource !== 'string' ||
+    !relativeSource.startsWith('./') ||
+    relativeSource.split('/').includes('..')
+  )
+    return undefined;
+  const packaged = path.join(hostPackageRoot, relativeSource);
+  if (!existsSync(packaged)) return undefined;
+  const nativeHome = process.env.CODEX_HOME || path.join(userHome(), '.codex');
+  const cache = path.join(nativeHome, 'plugins', 'cache', marketplaceName, HOST_PLUGIN_NAME);
+  const cached = existsSync(path.join(cache, version))
+    ? path.join(cache, version)
+    : path.join(cache, 'local');
+  const matches = (directory: string): boolean =>
+    readdirSync(directory, { withFileTypes: true }).every((entry) => {
+      const expected = path.join(directory, entry.name);
+      if (entry.isDirectory()) return matches(expected);
+      if (!entry.isFile()) return false;
+      const actual = path.join(cached, path.relative(packaged, expected));
+      return (
+        existsSync(actual) &&
+        lstatSync(actual).isFile() &&
+        readFileSync(actual).equals(readFileSync(expected))
+      );
+    });
+  try {
+    return matches(packaged);
+  } catch {
+    return false;
+  }
 }
 
 export function inspectCodexPluginIntegration(
@@ -117,7 +194,7 @@ export function inspectCodexPluginIntegration(
   }
   const marketplace = JSON.parse(readFileSync(marketplacePath, 'utf8')) as {
     name: string;
-    plugins: Array<{ name: string; version: string }>;
+    plugins: Array<{ name: string; version: string; source?: unknown }>;
   };
   const plugin = marketplace.plugins.find(({ name }) => name === HOST_PLUGIN_NAME);
   const marketplaceName = marketplace.name;
@@ -166,7 +243,24 @@ export function inspectCodexPluginIntegration(
           `Codex marketplace ${marketplaceName} points to ${configuredRoot}, not ${expectedRoot}.`,
         );
     }
-    const installed = installedRows(output(runner, ['plugin', 'list', '--json'], pluginListSchema));
+    const listed = installedRows(output(runner, ['plugin', 'list', '--json'], pluginListSchema));
+    const registrations = configuredPluginRows();
+    const installed = listed
+      .filter((row) => row.installed !== false)
+      .map((row) => {
+        const id = row.pluginId ?? `${row.name}@${row.marketplaceName}`;
+        const registration = registrations.find((entry) => entry.pluginId === id);
+        return registration ? { ...registration, ...row, enabled: registration.enabled } : row;
+      });
+    for (const registration of registrations) {
+      if (
+        !installed.some(
+          (row) => (row.pluginId ?? `${row.name}@${row.marketplaceName}`) === registration.pluginId,
+        )
+      ) {
+        installed.push(registration);
+      }
+    }
     const selected = installed.find(
       (row) =>
         row.pluginId === pluginId ||
@@ -183,12 +277,19 @@ export function inspectCodexPluginIntegration(
         (row) =>
           [HOST_PLUGIN_NAME, LEGACY_HOST_PLUGIN_NAME].includes(String(row.name)) &&
           row.enabled !== false &&
-          row.pluginId !== pluginId &&
-          !managedLegacy.includes(row),
+          (row.pluginId ?? `${row.name}@${row.marketplaceName}`) !== pluginId,
       )
       .map((row) => String(row.pluginId ?? `${row.name}@${row.marketplaceName}`))
       .sort();
     const installedVersion = selected?.version ? String(selected.version) : null;
+    const payloadCurrent = selected
+      ? pluginPayloadCurrent(hostPackageRoot, plugin.source, marketplaceName, plugin.version)
+      : undefined;
+    const needsInstall =
+      !selected ||
+      installedVersion !== plugin.version ||
+      selected.enabled === false ||
+      payloadCurrent === false;
     const operations: CodexPluginOperation[] = [];
     if (desiredMode === 'unified-plugin') {
       if (!configured)
@@ -199,15 +300,18 @@ export function inspectCodexPluginIntegration(
           scope: 'user',
           description: `Add the packaged Codex marketplace ${marketplaceName}`,
         });
-      if (selected && installedVersion !== plugin.version)
+      if (selected && needsInstall)
         operations.push({
           runtime: 'codex',
           kind: 'remove',
           id: pluginId,
           scope: 'user',
-          description: `Replace stale Codex plugin ${pluginId} ${installedVersion}`,
+          description:
+            payloadCurrent === false
+              ? `Repair incomplete Codex plugin ${pluginId} ${plugin.version}`
+              : `Replace stale or disabled Codex plugin ${pluginId} ${installedVersion}`,
         });
-      if (!selected || installedVersion !== plugin.version)
+      if (needsInstall)
         operations.push({
           runtime: 'codex',
           kind: 'install',
@@ -225,14 +329,16 @@ export function inspectCodexPluginIntegration(
           description: `Retire legacy Codex plugin ${id} after installing ${pluginId}`,
         });
       }
-    } else if (selected && previousMode === 'unified-plugin') {
-      operations.push({
-        runtime: 'codex',
-        kind: 'remove',
-        id: pluginId,
-        scope: 'user',
-        description: `Retire the managed Codex plugin before switching to ${desiredMode}`,
-      });
+    } else {
+      for (const row of [...(selected ? [selected] : []), ...managedLegacy]) {
+        operations.push({
+          runtime: 'codex',
+          kind: 'remove',
+          id: String(row.pluginId ?? `${row.name}@${row.marketplaceName}`),
+          scope: 'user',
+          description: `Retire the managed Codex plugin ${previousMode === 'unified-plugin' ? 'before switching to' : 'to preserve'} ${desiredMode} discovery`,
+        });
+      }
     }
     return {
       available: true,
@@ -241,16 +347,20 @@ export function inspectCodexPluginIntegration(
           ? Boolean(
               configured &&
                 selected &&
+                selected.enabled !== false &&
+                payloadCurrent !== false &&
+                operations.length === 0 &&
                 installedVersion === plugin.version &&
                 duplicates.length === 0,
             )
-          : !selected && duplicates.length === 0,
+          : !selected && duplicates.length === 0 && operations.length === 0,
       marketplaceName,
       pluginId,
-      installed: Boolean(selected),
+      installed: Boolean(selected && selected.enabled !== false),
       installedVersion,
       duplicates,
       operations,
+      ...(payloadCurrent === undefined ? {} : { payloadCurrent }),
     };
   } catch (cause) {
     return {

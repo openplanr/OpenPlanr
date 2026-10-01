@@ -1,6 +1,8 @@
+import path from 'node:path';
 import type { Command } from 'commander';
 import { isNonInteractive } from '../../services/interactive-state.js';
 import { promptCheckbox, promptConfirm, promptSelect } from '../../services/prompt-service.js';
+import { RUNTIME_LABELS as runtimeLabels } from '../../services/runtime-change-summary.js';
 import {
   applySetup,
   detectRuntimes,
@@ -11,15 +13,16 @@ import {
   type RuntimeChoice,
   type RuntimeId,
   RuntimeManagerError,
+  runtimeRoot,
   type SkillInstallMode,
 } from '../../services/runtime-manager-service.js';
 import { display, isVerbose, logger } from '../../utils/logger.js';
 import { printRuntimeChanges } from './runtime-output.js';
 
-const runtimeLabels: Record<RuntimeId, string> = {
-  'claude-code': 'Claude Code',
-  codex: 'Codex',
-  cursor: 'Cursor',
+const skillModeLabels: Record<SkillInstallMode, string> = {
+  'unified-plugin': 'OpenPlanr plugin',
+  direct: 'Individual skills',
+  'project-rule': 'Project skills',
 };
 
 function printRuntimeDetection(): void {
@@ -32,43 +35,100 @@ function printRuntimeDetection(): void {
       );
   }
   display.blank();
-  logger.dim('OpenPlanr configures coding agents; it does not install them.');
+  logger.dim('Setup adds OpenPlanr skills to your coding agents. Your agents run the workflows.');
 }
 
-function printPreview(preview: Awaited<ReturnType<typeof previewSetup>>): void {
+function inside(target: string, directory: string): boolean {
+  const relative = path.relative(directory, target);
+  return (
+    relative === '' ||
+    (!relative.startsWith(`..${path.sep}`) && relative !== '..' && !path.isAbsolute(relative))
+  );
+}
+
+function printDestinations(preview: Awaited<ReturnType<typeof previewSetup>>): void {
+  display.line('  Destinations:');
+  for (const runtime of [...preview.runtimes, 'core'] as const) {
+    for (const scope of ['user', 'project'] as const) {
+      const targets = preview.actions
+        .filter(
+          (action) =>
+            action.runtime === runtime &&
+            action.scope === scope &&
+            !inside(action.target, runtimeRoot()),
+        )
+        .map((action) => action.target);
+      if (targets.length === 0) continue;
+      let directory = path.dirname(targets[0]);
+      while (targets.some((target) => !inside(target, directory)))
+        directory = path.dirname(directory);
+      display.bullet(
+        `${runtime === 'core' ? 'Project compatibility record' : runtimeLabels[runtime]} (${scope === 'user' ? 'across projects' : 'this project'}): ${directory}`,
+      );
+    }
+  }
+}
+
+function printPreview(preview: Awaited<ReturnType<typeof previewSetup>>, cliVersion: string): void {
   logger.heading('OpenPlanr setup preview');
-  display.keyValue('Runtimes', preview.runtimes.join(', ') || 'planning only');
-  display.keyValue('Scope', preview.scope);
-  display.keyValue('Pipeline', preview.pipelineVersion ?? 'omitted');
-  if (preview.skillModes.codex) display.keyValue('Codex skills', preview.skillModes.codex);
-  display.keyValue('Skill names', 'canonical planr-*');
+  display.keyValue('OpenPlanr', cliVersion);
+  if (preview.minimal) {
+    display.line('  Agent integration skipped; no setup files will be changed.');
+    display.line(
+      '  The installed CLI already provides planning utilities. Use `planr init` in your project.',
+    );
+    return;
+  }
+  display.keyValue(
+    'Coding agents',
+    preview.runtimes.map((runtime) => runtimeLabels[runtime]).join(', '),
+  );
+  display.keyValue(
+    'Install in',
+    preview.scope === 'both'
+      ? 'Across projects and this project'
+      : preview.scope === 'user'
+        ? 'Across projects'
+        : 'This project',
+  );
+  if (preview.skillModes.codex)
+    display.keyValue('Codex integration', skillModeLabels[preview.skillModes.codex]);
+  printRuntimeChanges(preview, false);
+  display.blank();
+  display.line('  File changes (skills, agents and supporting assets):');
   for (const scope of ['user', 'project'] as const) {
     const actions = preview.actions.filter(
       (action) => action.scope === scope && action.operation !== 'unchanged',
     );
     const creates = actions.filter((action) => action.operation === 'create').length;
     const updates = actions.filter((action) => action.operation === 'update').length;
+    const retirements = actions.filter((action) => action.operation === 'retire').length;
     display.keyValue(
       `${scope === 'user' ? 'User' : 'Project'} scope`,
-      `${creates} create, ${updates} update`,
+      `${creates} to add, ${updates} to update, ${retirements} to remove`,
     );
   }
+  display.blank();
+  printDestinations(preview);
+  if (
+    preview.runtimeScopes['claude-code'] === 'user' ||
+    preview.runtimeScopes['claude-code'] === 'both'
+  )
+    display.bullet('Claude Code: register the bundled OpenPlanr plugin');
+  if (preview.skillModes.codex === 'unified-plugin')
+    display.bullet('Codex: register the bundled OpenPlanr plugin');
+  display.bullet(`OpenPlanr installation records: ${runtimeRoot()}`);
+  display.blank();
+  display.line('  Existing files are backed up before replacement. Unmanaged files are preserved.');
+  display.line(
+    '  Setup installs agent integrations; it does not run a workflow or change application code.',
+  );
   if (isVerbose()) {
-    display.blank();
-    for (const action of preview.actions) {
+    if (preview.pipelineVersion)
+      display.keyValue('Bundled workflow assets', preview.pipelineVersion);
+    for (const action of preview.actions)
       display.bullet(`${action.operation.padEnd(9)} ${action.target}`);
-    }
-  }
-  if (preview.runtimeOperations.length > 0) {
-    display.blank();
-    for (const runtime of ['claude-code', 'codex'] as const) {
-      const operations = preview.runtimeOperations.filter(
-        (operation) => operation.runtime === runtime,
-      );
-      if (operations.length === 0) continue;
-      display.line(`  ${runtimeLabels[runtime]} runtime:`);
-      for (const operation of operations) display.bullet(operation.description);
-    }
+    for (const operation of preview.runtimeOperations) display.bullet(operation.description);
   }
   for (const diagnostic of preview.runtimeDiagnostics.filter((item) => item.status !== 'pass')) {
     display.line(`  ${diagnostic.status.toUpperCase()} ${diagnostic.message}`);
@@ -102,7 +162,7 @@ function printPreview(preview: Awaited<ReturnType<typeof previewSetup>>): void {
 export function registerSetupCommand(program: Command, cliVersion: string) {
   program
     .command('setup')
-    .description('Detect runtimes and install or migrate OpenPlanr runtime adapters')
+    .description('Set up OpenPlanr skills for your coding agents')
     .option('--runtime <runtime>', 'auto, claude, codex, cursor, or all')
     .option('--scope <scope>', 'user, project, or both')
     .option('--skill-mode <mode>', 'Codex skill delivery: direct, unified-plugin, or project-rule')
@@ -111,7 +171,7 @@ export function registerSetupCommand(program: Command, cliVersion: string) {
       'replace only manifest-owned OpenPlanr discovery content when switching modes',
       false,
     )
-    .option('--minimal', 'planning-only setup; do not install the pipeline', false)
+    .option('--minimal', 'skip agent integrations; keep using the installed CLI', false)
     .option('--version <version>', 'pin the pipeline and adapter version')
     .option('--dry-run', 'preview exact changes without writing', false)
     .option('--yes', 'apply without an interactive confirmation', false)
@@ -123,8 +183,11 @@ export function registerSetupCommand(program: Command, cliVersion: string) {
         opts.runtime === undefined &&
         opts.scope === undefined &&
         opts.skillMode === undefined &&
-        !opts.minimal;
-      let minimal = Boolean(opts.minimal);
+        !opts.minimal &&
+        !opts.yes &&
+        !program.opts().yes &&
+        !opts.json;
+      const minimal = Boolean(opts.minimal);
       let scope = (opts.scope as InstallScope | undefined) ?? 'user';
       let runtimes: RuntimeId[] | undefined;
       let skillMode = opts.skillMode as SkillInstallMode | undefined;
@@ -132,53 +195,38 @@ export function registerSetupCommand(program: Command, cliVersion: string) {
       if (guided) {
         logger.heading('Welcome to OpenPlanr');
         printRuntimeDetection();
-        const mode = await promptSelect(
-          'What would you like to install?',
-          [
-            {
-              name: 'Full workflow — planning + PO → Design → Review → DEV → QA',
-              value: 'full',
-            },
-            { name: 'Planning only', value: 'minimal' },
-          ],
-          'full',
-        );
-        minimal = mode === 'minimal';
-        if (!minimal) {
-          const detected = detectRuntimes().filter((item) => item.installed);
-          const adapters = listRuntimeAdapters();
-          if (detected.length === 0) {
-            throw new RuntimeManagerError(
-              'E_RUNTIME_NOT_FOUND',
-              'No supported coding agent was detected.',
-              'Install or enable Claude Code, Codex, or Cursor, then rerun setup.',
-            );
-          }
-          runtimes = await promptCheckbox(
-            'Which detected coding agents should OpenPlanr configure?',
-            detected.map((item) => ({
-              name: `${runtimeLabels[item.runtime]} (${item.command})${
-                adapters
-                  .find((adapter) => adapter.id === item.runtime)
-                  ?.installScopes.includes('user')
-                  ? ''
-                  : ' — project scope required'
-              }`,
-              value: item.runtime,
-              checked:
-                adapters
-                  .find((adapter) => adapter.id === item.runtime)
-                  ?.installScopes.includes('user') ?? false,
-            })),
+        const detected = detectRuntimes().filter((item) => item.installed);
+        const adapters = listRuntimeAdapters();
+        if (detected.length === 0) {
+          throw new RuntimeManagerError(
+            'E_RUNTIME_NOT_FOUND',
+            'No supported coding agent was detected.',
+            'Install or enable Claude Code, Codex, or Cursor, then rerun setup.',
           );
-          if (runtimes.length === 0) {
-            logger.warn('No coding agents selected; setup cancelled.');
-            return;
-          }
+        }
+        runtimes = await promptCheckbox(
+          'Which detected coding agents should OpenPlanr configure?',
+          detected.map((item) => ({
+            name: `${runtimeLabels[item.runtime]} (${item.command})${
+              adapters
+                .find((adapter) => adapter.id === item.runtime)
+                ?.installScopes.includes('user')
+                ? ''
+                : ' — project scope required'
+            }`,
+            value: item.runtime,
+            checked:
+              adapters
+                .find((adapter) => adapter.id === item.runtime)
+                ?.installScopes.includes('user') ?? false,
+          })),
+        );
+        if (runtimes.length === 0) {
+          logger.warn('No coding agents selected; setup cancelled.');
+          return;
         }
 
         const context = inspectProjectContext(projectDir);
-        const adapters = listRuntimeAdapters();
         const requiresProject =
           !minimal &&
           (runtimes ?? []).some(
@@ -199,12 +247,12 @@ export function registerSetupCommand(program: Command, cliVersion: string) {
         }
         const scopeChoices: Array<{ name: string; value: InstallScope }> = [];
         if (!requiresProject) {
-          scopeChoices.push({ name: 'User scope — available across projects', value: 'user' });
+          scopeChoices.push({ name: 'Across projects — on this computer', value: 'user' });
         }
         if (context.valid) {
           scopeChoices.push(
             { name: `Current project — ${context.path}`, value: 'project' },
-            { name: `Both user and current project — ${context.path}`, value: 'both' },
+            { name: `Across projects and this project — ${context.path}`, value: 'both' },
           );
         }
         scope = await promptSelect(
@@ -217,19 +265,25 @@ export function registerSetupCommand(program: Command, cliVersion: string) {
           if (scope === 'user' || scope === 'both') {
             choices.push(
               {
-                name: 'Unified plugin — one OpenPlanr suite entry (recommended)',
+                name: 'OpenPlanr plugin — all skills in one plugin (recommended)',
                 value: 'unified-plugin',
               },
-              { name: 'Direct skills — individually managed skill directories', value: 'direct' },
+              { name: 'Individual skills — available across projects', value: 'direct' },
             );
           }
-          if (scope === 'project' || scope === 'both')
-            choices.push({ name: 'Project rule — current project only', value: 'project-rule' });
-          skillMode = await promptSelect(
-            'How should Codex discover OpenPlanr skills?',
-            choices,
-            choices[0].value,
-          );
+          if (scope === 'project')
+            choices.push({
+              name: 'Project skills — available in this project only',
+              value: 'project-rule',
+            });
+          skillMode =
+            choices.length === 1
+              ? choices[0].value
+              : await promptSelect(
+                  'How should Codex discover OpenPlanr skills?',
+                  choices,
+                  choices[0].value,
+                );
         }
       }
 
@@ -247,28 +301,28 @@ export function registerSetupCommand(program: Command, cliVersion: string) {
       };
       const preview = await previewSetup(options);
       if (opts.json) {
-        if (opts.dryRun) {
+        if (opts.dryRun || minimal) {
           display.line(JSON.stringify(preview));
           return;
         }
-      } else printPreview(preview);
-      if (opts.dryRun) return;
-      if (
-        guided &&
-        preview.runtimeDiagnostics.some(
-          (diagnostic) =>
-            diagnostic.message.includes('manifest-owned direct Codex asset') ||
-            diagnostic.message.includes('Legacy Claude plugin installation'),
-        )
-      ) {
-        options.replaceManaged = await promptConfirm(
-          'Replace only the existing OpenPlanr-managed discovery files?',
+      } else printPreview(preview, cliVersion);
+      if (opts.dryRun || minimal) return;
+      let replacementConfirmed = false;
+      const replacesManagedContent =
+        preview.actions.some(
+          (action) =>
+            action.runtime === 'codex' && action.scope === 'user' && action.operation === 'retire',
+        ) || preview.runtimeOperations.some((operation) => operation.kind === 'remove');
+      if (guided && replacesManagedContent && !options.replaceManaged) {
+        replacementConfirmed = await promptConfirm(
+          'Back up and replace the listed OpenPlanr-managed files and plugins, then apply setup?',
           true,
         );
-        if (!options.replaceManaged) {
-          logger.warn('Setup cancelled; existing Codex discovery content was preserved.');
+        if (!replacementConfirmed) {
+          logger.warn('Setup cancelled; existing integrations were preserved.');
           return;
         }
+        options.replaceManaged = true;
       }
       if (!opts.yes && !program.opts().yes && isNonInteractive()) {
         throw new RuntimeManagerError(
@@ -278,7 +332,10 @@ export function registerSetupCommand(program: Command, cliVersion: string) {
         );
       }
       const confirmed =
-        opts.yes || program.opts().yes || (await promptConfirm('Apply these changes?', true));
+        opts.yes ||
+        program.opts().yes ||
+        replacementConfirmed ||
+        (await promptConfirm('Apply setup?', true));
       if (!confirmed) {
         if (opts.json) display.line(JSON.stringify({ ok: false, action: 'cancelled' }));
         else logger.warn('Setup cancelled; no files were changed.');
@@ -300,8 +357,9 @@ export function registerSetupCommand(program: Command, cliVersion: string) {
         display.line('  planr doctor');
         display.blank();
         display.line('Start:');
-        display.line('  planr init');
-        display.line('  Invoke $planr:plan in your active coding agent.');
+        if (preview.projectContext.reason !== 'planr')
+          display.line('  In your project, run: planr init');
+        display.line('  Open your coding agent and ask OpenPlanr to plan your feature.');
       }
     });
 }

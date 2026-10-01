@@ -495,11 +495,13 @@ planr runtime rollback
 planr doctor --strict
 ```
 
-Interactive setup guides workflow, runtime, and scope selection. User scope is
+Interactive setup guides coding-agent and scope selection. It installs the OpenPlanr skills bundled with the CLI. User scope is
 the default; project scope requires a Git worktree or initialized OpenPlanr
 project. Setup previews mutations, backs up existing bytes, preserves content
 outside managed markers, writes `.planr/runtime-lock.json` only for project
-installations, and is idempotent. `--minimal` keeps only the dedicated planning CLI.
+installations, and is idempotent. `--minimal` skips agent integration and writes no setup files; the installed CLI already provides planning utilities.
+
+The preview shows the OpenPlanr version, affected agents, actual destinations, plugin operations, and files to add, update and remove. The Codex choices are OpenPlanr plugin, Individual skills and Project skills; existing `--skill-mode` values remain compatible. The current OpenPlanr Cursor integration requires project scope. Recovery guidance points to a valid project setup path.
 
 For user-scoped Claude Code setup, the preview also lists the Claude plugin
 operations. After confirmation, setup registers the generated local marketplace
@@ -508,7 +510,13 @@ installs or updates `planr@openplanr-local` from it, so the plugin always matche
 this CLI. Setup never reads `openplanr/marketplace` for versions.
 `planr doctor` checks the installed plugin's version and stable manifest identity
 without mutating Claude Code, and warns about older `openplanr@…` and
-`planr-pipeline@…` plugins. `doctor --fix` never changes plugin packages.
+`planr-pipeline@…` plugins. `doctor --fix` preserves saved scopes and discovery
+mode while previewing owned-file, managed native plugin and stale-daemon repairs.
+It asks once before applying the displayed changes using the current CLI's bundled
+plugin. File repairs are grouped by agent; `--verbose` includes paths, and `--json`
+includes the exact repair preview and restart requirement. Restart the affected
+host to reload discovery after a native plugin change. Unrelated plugins and
+modified owned files are not silently removed.
 `runtime install` and `runtime update` print one line per coding agent with what
 changed and which agent to restart; `--verbose` adds the changed files and
 `--json` prints the full result. Restart Claude Code when setup or `runtime
