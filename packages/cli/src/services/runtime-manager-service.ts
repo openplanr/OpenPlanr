@@ -1903,7 +1903,6 @@ export async function previewSetup(options: SetupOptions): Promise<SetupPreview>
     transitionState?.projects[projectKey(options.projectDir)]?.skillModes?.codex;
   const manageCodexPlugin = Boolean(
     codexMode &&
-      codexMode !== 'project-rule' &&
       (['user', 'both'].includes(runtimeScopes.codex ?? scope) ||
         options.userScopeRuntimes?.includes('codex')) &&
       options.manageExternalRuntimes !== false &&

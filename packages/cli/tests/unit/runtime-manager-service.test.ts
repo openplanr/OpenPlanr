@@ -160,6 +160,62 @@ describe('runtime setup', () => {
     expect(existsSync(join(projectDir, '.agents', 'skills', 'plan', 'SKILL.md'))).toBe(true);
   });
 
+  it('retires the user plugin when switching both scopes to project skills', async () => {
+    await applySetup({
+      projectDir,
+      cliVersion,
+      runtime: 'codex',
+      scope: 'user',
+      skillMode: 'unified-plugin',
+      manageExternalRuntimes: false,
+    });
+    const hostRoot = join(workspaceRoot, 'packages', 'cli', 'lib', 'host-packages', 'openai');
+    const marketplace = JSON.parse(
+      readFileSync(join(hostRoot, '.claude-plugin', 'marketplace.json'), 'utf8'),
+    );
+    const pluginId = `planr@${marketplace.name}`;
+    let installed = true;
+    const nativeCalls: string[][] = [];
+    const codexCommandRunner = (args: string[]) => {
+      nativeCalls.push(args);
+      if (args[0] === '--version') return { status: 0, stdout: 'codex 0.159.1', stderr: '' };
+      if (args.join(' ') === 'plugin marketplace list --json')
+        return { status: 0, stdout: JSON.stringify({ marketplaces: [] }), stderr: '' };
+      if (args.join(' ') === 'plugin list --json')
+        return {
+          status: 0,
+          stdout: JSON.stringify(installed ? [{ pluginId, installed: true, enabled: true }] : []),
+          stderr: '',
+        };
+      if (args.slice(0, 2).join(' ') === 'plugin remove' && args[2] === pluginId) installed = false;
+      return { status: 0, stdout: '{}', stderr: '' };
+    };
+    const transition = {
+      projectDir,
+      cliVersion,
+      runtime: 'codex' as const,
+      scope: 'both' as const,
+      skillMode: 'project-rule' as const,
+      replaceManaged: true,
+      codexCommandRunner,
+    };
+    const preview = await previewSetup(transition);
+    expect(preview.runtimeOperations).toContainEqual(
+      expect.objectContaining({ runtime: 'codex', kind: 'remove', id: pluginId, scope: 'user' }),
+    );
+    await applySetup(transition);
+    expect(installed).toBe(false);
+    expect(nativeCalls).toContainEqual(['plugin', 'remove', pluginId, '--json']);
+    const state = JSON.parse(
+      readFileSync(join(userHome, '.planr', 'runtime', 'state.json'), 'utf8'),
+    );
+    expect(state.userBundles.codex.installMode).toBe('project-rule');
+    expect(state.projects[canonicalProjectKey(projectDir)].skillModes.codex).toBe('project-rule');
+    const repair = await previewSetup({ ...transition, preserveExistingScopes: true });
+    expect(repair.runtimeOperations).toEqual([]);
+    expect(repair.runtimeDiagnostics.every((entry) => entry.status === 'pass')).toBe(true);
+  });
+
   it('preserves plugin discovery through stale-daemon repair and converges without direct assets', async () => {
     let pluginInstalled = false;
     let legacyEnabled = false;
