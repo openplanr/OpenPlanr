@@ -104,6 +104,13 @@ test(
   async (t) => {
     const { page, bundle, authored } = await fixture(t);
     assert.equal(await page.evaluate(() => document.fonts.check('400 14px Inter')), true);
+    assert.equal(
+      await page
+        .locator('[data-element-id="node-a"] rect')
+        .first()
+        .evaluate((rect) => getComputedStyle(rect).fill),
+      'rgb(226, 232, 240)',
+    );
     const geometry = await page
       .locator('[data-element-id="node-a"] rect')
       .first()
@@ -164,6 +171,18 @@ test(
   options,
   async (t) => {
     const { page, bundle } = await fixture(t, { legacy: true });
+    const paint = await page.evaluate(() => ({
+      scene: getComputedStyle(document.querySelector('.diagram-scene')).backgroundColor,
+      shadow: getComputedStyle(document.querySelector('.diagram-scene')).boxShadow,
+      page: getComputedStyle(document.querySelector('[data-canvas-background]')).fill,
+      shape: getComputedStyle(document.querySelector('[data-item-id] > rect')).fill,
+    }));
+    assert.deepEqual(paint, {
+      scene: 'rgba(0, 0, 0, 0)',
+      shadow: 'none',
+      page: 'rgba(0, 0, 0, 0)',
+      shape: 'rgb(226, 232, 240)',
+    });
     const bounds = await page.evaluate(() => {
       const scene = document.querySelector('.diagram-scene').getBoundingClientRect(),
         canvas = document.querySelector('.diagram-canvas').getBoundingClientRect();
@@ -470,6 +489,13 @@ test(
     await page.goto(owner.url);
     await page.locator('[data-owner-ready="true"]').waitFor();
     assert.equal(await page.evaluate(() => document.fonts.check('400 14px Inter')), true);
+    assert.equal(
+      await page
+        .locator('[data-element-id="node-a"] rect')
+        .first()
+        .evaluate((rect) => getComputedStyle(rect).fill),
+      'rgb(226, 232, 240)',
+    );
     await page.locator('[data-host-action="share-diagram"]').click();
     await page
       .getByRole('dialog', { name: 'Share diagram' })

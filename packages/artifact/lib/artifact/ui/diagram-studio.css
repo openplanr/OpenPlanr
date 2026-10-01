@@ -353,9 +353,7 @@
   left: 0;
   top: 0;
   transform-origin: 0 0;
-  box-shadow: 0 2px 14px color-mix(in srgb, var(--planr-color-text) 16%, transparent);
-  background: white;
-  border-radius: 2px;
+  background: transparent;
 }
 .diagram-drawing,
 .diagram-drawing > svg {
@@ -365,6 +363,13 @@
 }
 .diagram-drawing {
   pointer-events: none;
+}
+.diagram-drawing > svg > [data-canvas-background] {
+  fill: transparent;
+}
+/* Neutral default shapes need a stronger fill against the continuous canvas. */
+.diagram-drawing :is([data-item-id], [data-annotation-id]) > rect[fill="#f8fafc"] {
+  fill: #e2e8f0;
 }
 .diagram-drawing text {
   font-family:

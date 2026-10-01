@@ -77,8 +77,8 @@
     },
     {
       "path": "templates/diagram-studio.js",
-      "bytes": 129233,
-      "sha256": "1ac3ee35fe95b3e8032e125c61b9359e08e8db599feb25cdcee483da79a457e1",
+      "bytes": 129712,
+      "sha256": "a8be8ddd14169ca9dca76356180001b0ca10cdfec20530ca7f2b3170932ccd41",
       "budget": {
         "bytes": 140288,
         "gzipBytes": 31744

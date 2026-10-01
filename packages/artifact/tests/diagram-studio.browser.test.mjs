@@ -151,7 +151,19 @@ test('native diagram fits the full scene, pans over content, zooms at the pointe
   const { page } = await fixture(t);
   assert.equal(await page.locator('iframe').count(), 0);
   assert.equal(await page.locator('.diagram-drawing > svg').count(), 1);
-  let initial = await geometry(page);
+  const paint = await page.evaluate(() => ({
+    scene: getComputedStyle(document.querySelector('.diagram-scene')).backgroundColor,
+    shadow: getComputedStyle(document.querySelector('.diagram-scene')).boxShadow,
+    page: getComputedStyle(document.querySelector('[data-canvas-background]')).fill,
+    shape: getComputedStyle(document.querySelector('[data-item-id] > rect')).fill,
+  }));
+  assert.deepEqual(paint, {
+    scene: 'rgba(0, 0, 0, 0)',
+    shadow: 'none',
+    page: 'rgba(0, 0, 0, 0)',
+    shape: 'rgb(226, 232, 240)',
+  });
+  const initial = await geometry(page);
   assert.ok(
     initial.scene.left >= initial.canvas.left && initial.scene.right <= initial.canvas.right,
   );
@@ -180,7 +192,7 @@ test('native diagram fits the full scene, pans over content, zooms at the pointe
   await page.mouse.wheel(0, -90);
   await page.keyboard.up('Control');
   await settled(page);
-  let zoomed = await geometry(page);
+  const zoomed = await geometry(page);
   assert.ok(zoomed.zoom > moved.zoom);
   const ax = (x - moved.scene.x) / moved.scene.width,
     ay = (y - moved.scene.y) / moved.scene.height;
