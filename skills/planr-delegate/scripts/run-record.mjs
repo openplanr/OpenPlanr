@@ -161,15 +161,25 @@ export async function verifyIntegrationState(record) {
   if (record.integration?.status !== 'applied' || !record.integration.states)
     return { recorded: false, driftPaths: [] };
   const driftPaths = [];
+  const inspectionFailures = [];
   for (const [path, expected] of Object.entries(record.integration.states)) {
     try {
       const actual = compactIntegrationState(await captureFileState(record.repositoryRoot, path));
       if (JSON.stringify(actual) !== JSON.stringify(expected)) driftPaths.push(path);
-    } catch {
+    } catch (error) {
       driftPaths.push(path);
+      inspectionFailures.push({
+        path,
+        code: error.code ?? error.name,
+        cause: error.details?.cause ?? error.code ?? error.name,
+      });
     }
   }
-  return { recorded: true, driftPaths };
+  return {
+    recorded: true,
+    driftPaths,
+    ...(inspectionFailures.length ? { inspectionFailures } : {}),
+  };
 }
 
 export async function closeRunRecord(runId, { disposition, directory } = {}) {

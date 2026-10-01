@@ -159,6 +159,9 @@ export async function delegateRunStatus({ runId, runDirectory = defaultRunDirect
           checks: record.integration.checks,
           preparation: record.integration.preparation ?? [],
           driftPaths: integrationCheck.driftPaths,
+          ...(integrationCheck.inspectionFailures
+            ? { inspectionFailures: integrationCheck.inspectionFailures }
+            : {}),
         }
       : unresolvedIntegration
         ? { ...record.integration }

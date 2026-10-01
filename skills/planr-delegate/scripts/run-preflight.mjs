@@ -207,11 +207,12 @@ export async function eligible(record, { runDirectory, profileDirectory, env, si
   let check;
   try {
     check = await validateWorktreeCustody(custody);
-  } catch {
+  } catch (error) {
     throw new DelegateRunError(
       'E_DELEGATE_CUSTODY',
       'Worktree custody could not be inspected.',
       record.runId,
+      { cause: error.code ?? error.name, ...error.details },
     );
   }
   if (check?.valid !== true) {

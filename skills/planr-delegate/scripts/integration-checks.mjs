@@ -40,14 +40,7 @@ function parseCheck(raw) {
   if (
     words[0] === 'node' &&
     words[1] === '--test' &&
-    words
-      .slice(2)
-      .every(
-        (part) =>
-          /^[A-Za-z0-9_./*-]+$/u.test(part) &&
-          !part.split('/').includes('..') &&
-          !part.startsWith('-'),
-      ) &&
+    words.slice(2).every(safeCheckArgument) &&
     words.length > 2
   )
     return { command: 'node', args: words.slice(1), kind: 'focused' };

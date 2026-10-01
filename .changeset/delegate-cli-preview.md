@@ -2,4 +2,6 @@
 "openplanr": patch
 ---
 
-Add the opt-in implementation delegation skill to the bundled Claude Code and Codex packages. The preview discloses destinations and required context, retains exact-session recovery state and pins helpers across plugin updates. Independent review and checks precede conflict-safe local integration. Ordinary Ship remains host-native; no public delegate CLI command is added.
+Bundle the opt-in implementation delegation preview for native Claude Code, Codex and Cursor. Disclose the destination before sending required context, retain exact-session correction and recover final reports. Cursor requires explicit trust in its inherited native configuration; Claude and Codex keep their isolated execution policies. Ordinary Ship remains host-native, and no public delegate CLI command is added.
+
+Prepare dependencies before focused scratch checks, preserve verification evidence and show phase timings. Serialize checkout-lock recovery and use journaled, conflict-safe integration that preserves concurrent edits. Validate relative test paths and metadata size before source writes, retain concrete error causes, and expose explicit worktree cleanup.

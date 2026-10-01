@@ -6,7 +6,7 @@
   "assets": [
     {
       "path": "adapters/manifests/canonical-skills.json",
-      "digest": "sha256:be570d4175c6f023056dad7b36f21e5ce1928718af4f423f76d69ef28cc070ce",
+      "digest": "sha256:a31afc1b5ff9835fd2925f4f485d9244dcb493a66336adc75e3776edb1f53759",
       "generated": false
     },
     {
@@ -31,7 +31,7 @@
     },
     {
       "path": "dist/plugins/claude/openplanr/.openplanr-content.json",
-      "digest": "sha256:7153db4d4b176971d21951de67effcf0345576e4f529b49450171b44fdd90342",
+      "digest": "sha256:13de724e8716d0bb272d44578e28ad339157a9376f9ccfa2b526d71692fe074f",
       "generated": true
     },
     {
@@ -506,7 +506,7 @@
     },
     {
       "path": "dist/plugins/claude/openplanr/skills/delegate/scripts/custody.mjs",
-      "digest": "sha256:183145f3deb6d32786596a466490fab2d5df92b8245273d4ce1b821c1bbe9b70",
+      "digest": "sha256:92e1c8699c9a9429ba6e729514d980693a099bb2bbaeae9d9f414c82dcfb0273",
       "generated": true
     },
     {
@@ -516,12 +516,12 @@
     },
     {
       "path": "dist/plugins/claude/openplanr/skills/delegate/scripts/integrate.mjs",
-      "digest": "sha256:6df3224cd4c7b025f18b3e81818fd2fe194e34e633de62df10914b80d2e07f39",
+      "digest": "sha256:ca1e1dfcfac13be90892dfece5001092697e56ddbaf203c95a4b2ab6f18605de",
       "generated": true
     },
     {
       "path": "dist/plugins/claude/openplanr/skills/delegate/scripts/integration-checks.mjs",
-      "digest": "sha256:a03a535c313dc5583402013cbd47d9fbf7e60a112b7513af1af8a1c28b25db06",
+      "digest": "sha256:c253952cde6bb6ae3e93c1e25764cf8eb6fda07c5896e3f959cfe7f5b0a47392",
       "generated": true
     },
     {
@@ -531,7 +531,7 @@
     },
     {
       "path": "dist/plugins/claude/openplanr/skills/delegate/scripts/integration-transaction.mjs",
-      "digest": "sha256:852fe883bb05a3545819242262217456b4b3677a1a0e8d2c38b4679a86b232f5",
+      "digest": "sha256:f3f99dc5dc0e25581ecc9d256f934a08f4023bd24c6e1176c572afffb719ebbc",
       "generated": true
     },
     {
@@ -556,22 +556,22 @@
     },
     {
       "path": "dist/plugins/claude/openplanr/skills/delegate/scripts/run-lifecycle.mjs",
-      "digest": "sha256:4bd5a41139ef9b80a138ab7fcee33ec4fea109111f034af65fdeb43ba2594bd1",
+      "digest": "sha256:3d75bb48fceaed14a84137da93654c1198ca949ccefb845d77d2250f88a0fde4",
       "generated": true
     },
     {
       "path": "dist/plugins/claude/openplanr/skills/delegate/scripts/run-preflight.mjs",
-      "digest": "sha256:11c6b1c94c27c173a63c0ef02e8c04046922dade91da5c59e7a79f0c19ee39fe",
+      "digest": "sha256:7670aac9352e6af3cc684e09b0b5704280199313b87bd279a379348202be9594",
       "generated": true
     },
     {
       "path": "dist/plugins/claude/openplanr/skills/delegate/scripts/run-preparation.mjs",
-      "digest": "sha256:fec6bd1f6bac52a879d3b1a0c53f88a6fd7e2a630a26bdf87c5b609010bbfef2",
+      "digest": "sha256:6b13541dadeccb57478cc828d5ed688abb4155110fb806308eaaf4356412a5b0",
       "generated": true
     },
     {
       "path": "dist/plugins/claude/openplanr/skills/delegate/scripts/run-record.mjs",
-      "digest": "sha256:9f1502244cac69c5830925dc4c0dc54e23b7dff5df6e8f7d752acfa28e134bc0",
+      "digest": "sha256:e058a0c78f05ecefd22a87b63ae7bddd55b416c66b21e918cb98ee5dec8bd97d",
       "generated": true
     },
     {
@@ -1776,7 +1776,7 @@
     },
     {
       "path": "dist/plugins/cursor/openplanr/.openplanr-content.json",
-      "digest": "sha256:70459586bd501b9891379ca0f2ad46ee0b6c185a02a420e951108ce38287d08f",
+      "digest": "sha256:7e40002dd2d1ec4392f44aa638600d3199f1127c9a1a615c6ad09637286cf251",
       "generated": true
     },
     {
@@ -2081,7 +2081,7 @@
     },
     {
       "path": "dist/plugins/cursor/openplanr/rules/planr-delegate/scripts/custody.mjs",
-      "digest": "sha256:183145f3deb6d32786596a466490fab2d5df92b8245273d4ce1b821c1bbe9b70",
+      "digest": "sha256:92e1c8699c9a9429ba6e729514d980693a099bb2bbaeae9d9f414c82dcfb0273",
       "generated": true
     },
     {
@@ -2091,12 +2091,12 @@
     },
     {
       "path": "dist/plugins/cursor/openplanr/rules/planr-delegate/scripts/integrate.mjs",
-      "digest": "sha256:6df3224cd4c7b025f18b3e81818fd2fe194e34e633de62df10914b80d2e07f39",
+      "digest": "sha256:ca1e1dfcfac13be90892dfece5001092697e56ddbaf203c95a4b2ab6f18605de",
       "generated": true
     },
     {
       "path": "dist/plugins/cursor/openplanr/rules/planr-delegate/scripts/integration-checks.mjs",
-      "digest": "sha256:a03a535c313dc5583402013cbd47d9fbf7e60a112b7513af1af8a1c28b25db06",
+      "digest": "sha256:c253952cde6bb6ae3e93c1e25764cf8eb6fda07c5896e3f959cfe7f5b0a47392",
       "generated": true
     },
     {
@@ -2106,7 +2106,7 @@
     },
     {
       "path": "dist/plugins/cursor/openplanr/rules/planr-delegate/scripts/integration-transaction.mjs",
-      "digest": "sha256:852fe883bb05a3545819242262217456b4b3677a1a0e8d2c38b4679a86b232f5",
+      "digest": "sha256:f3f99dc5dc0e25581ecc9d256f934a08f4023bd24c6e1176c572afffb719ebbc",
       "generated": true
     },
     {
@@ -2131,22 +2131,22 @@
     },
     {
       "path": "dist/plugins/cursor/openplanr/rules/planr-delegate/scripts/run-lifecycle.mjs",
-      "digest": "sha256:4bd5a41139ef9b80a138ab7fcee33ec4fea109111f034af65fdeb43ba2594bd1",
+      "digest": "sha256:3d75bb48fceaed14a84137da93654c1198ca949ccefb845d77d2250f88a0fde4",
       "generated": true
     },
     {
       "path": "dist/plugins/cursor/openplanr/rules/planr-delegate/scripts/run-preflight.mjs",
-      "digest": "sha256:11c6b1c94c27c173a63c0ef02e8c04046922dade91da5c59e7a79f0c19ee39fe",
+      "digest": "sha256:7670aac9352e6af3cc684e09b0b5704280199313b87bd279a379348202be9594",
       "generated": true
     },
     {
       "path": "dist/plugins/cursor/openplanr/rules/planr-delegate/scripts/run-preparation.mjs",
-      "digest": "sha256:fec6bd1f6bac52a879d3b1a0c53f88a6fd7e2a630a26bdf87c5b609010bbfef2",
+      "digest": "sha256:6b13541dadeccb57478cc828d5ed688abb4155110fb806308eaaf4356412a5b0",
       "generated": true
     },
     {
       "path": "dist/plugins/cursor/openplanr/rules/planr-delegate/scripts/run-record.mjs",
-      "digest": "sha256:9f1502244cac69c5830925dc4c0dc54e23b7dff5df6e8f7d752acfa28e134bc0",
+      "digest": "sha256:e058a0c78f05ecefd22a87b63ae7bddd55b416c66b21e918cb98ee5dec8bd97d",
       "generated": true
     },
     {
@@ -3356,7 +3356,7 @@
     },
     {
       "path": "dist/plugins/openai/openplanr/.openplanr-content.json",
-      "digest": "sha256:02d1a16b5dac7aa3ddd7b79da11ea975858ec211a604bc01dc8b3f2d7bd2049c",
+      "digest": "sha256:57d926fa31b16447d1bc24ad9bdcc2be1089e920bd0bd73d6a8b061c8060a215",
       "generated": true
     },
     {
@@ -3761,7 +3761,7 @@
     },
     {
       "path": "dist/plugins/openai/openplanr/skills/delegate/scripts/custody.mjs",
-      "digest": "sha256:183145f3deb6d32786596a466490fab2d5df92b8245273d4ce1b821c1bbe9b70",
+      "digest": "sha256:92e1c8699c9a9429ba6e729514d980693a099bb2bbaeae9d9f414c82dcfb0273",
       "generated": true
     },
     {
@@ -3771,12 +3771,12 @@
     },
     {
       "path": "dist/plugins/openai/openplanr/skills/delegate/scripts/integrate.mjs",
-      "digest": "sha256:6df3224cd4c7b025f18b3e81818fd2fe194e34e633de62df10914b80d2e07f39",
+      "digest": "sha256:ca1e1dfcfac13be90892dfece5001092697e56ddbaf203c95a4b2ab6f18605de",
       "generated": true
     },
     {
       "path": "dist/plugins/openai/openplanr/skills/delegate/scripts/integration-checks.mjs",
-      "digest": "sha256:a03a535c313dc5583402013cbd47d9fbf7e60a112b7513af1af8a1c28b25db06",
+      "digest": "sha256:c253952cde6bb6ae3e93c1e25764cf8eb6fda07c5896e3f959cfe7f5b0a47392",
       "generated": true
     },
     {
@@ -3786,7 +3786,7 @@
     },
     {
       "path": "dist/plugins/openai/openplanr/skills/delegate/scripts/integration-transaction.mjs",
-      "digest": "sha256:852fe883bb05a3545819242262217456b4b3677a1a0e8d2c38b4679a86b232f5",
+      "digest": "sha256:f3f99dc5dc0e25581ecc9d256f934a08f4023bd24c6e1176c572afffb719ebbc",
       "generated": true
     },
     {
@@ -3811,22 +3811,22 @@
     },
     {
       "path": "dist/plugins/openai/openplanr/skills/delegate/scripts/run-lifecycle.mjs",
-      "digest": "sha256:4bd5a41139ef9b80a138ab7fcee33ec4fea109111f034af65fdeb43ba2594bd1",
+      "digest": "sha256:3d75bb48fceaed14a84137da93654c1198ca949ccefb845d77d2250f88a0fde4",
       "generated": true
     },
     {
       "path": "dist/plugins/openai/openplanr/skills/delegate/scripts/run-preflight.mjs",
-      "digest": "sha256:11c6b1c94c27c173a63c0ef02e8c04046922dade91da5c59e7a79f0c19ee39fe",
+      "digest": "sha256:7670aac9352e6af3cc684e09b0b5704280199313b87bd279a379348202be9594",
       "generated": true
     },
     {
       "path": "dist/plugins/openai/openplanr/skills/delegate/scripts/run-preparation.mjs",
-      "digest": "sha256:fec6bd1f6bac52a879d3b1a0c53f88a6fd7e2a630a26bdf87c5b609010bbfef2",
+      "digest": "sha256:6b13541dadeccb57478cc828d5ed688abb4155110fb806308eaaf4356412a5b0",
       "generated": true
     },
     {
       "path": "dist/plugins/openai/openplanr/skills/delegate/scripts/run-record.mjs",
-      "digest": "sha256:9f1502244cac69c5830925dc4c0dc54e23b7dff5df6e8f7d752acfa28e134bc0",
+      "digest": "sha256:e058a0c78f05ecefd22a87b63ae7bddd55b416c66b21e918cb98ee5dec8bd97d",
       "generated": true
     },
     {
@@ -5226,7 +5226,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/claude/openplanr/.openplanr-content.json",
-      "digest": "sha256:7153db4d4b176971d21951de67effcf0345576e4f529b49450171b44fdd90342",
+      "digest": "sha256:13de724e8716d0bb272d44578e28ad339157a9376f9ccfa2b526d71692fe074f",
       "generated": true
     },
     {
@@ -5701,7 +5701,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/claude/openplanr/skills/delegate/scripts/custody.mjs",
-      "digest": "sha256:183145f3deb6d32786596a466490fab2d5df92b8245273d4ce1b821c1bbe9b70",
+      "digest": "sha256:92e1c8699c9a9429ba6e729514d980693a099bb2bbaeae9d9f414c82dcfb0273",
       "generated": true
     },
     {
@@ -5711,12 +5711,12 @@
     },
     {
       "path": "packages/cli/lib/host-packages/claude/openplanr/skills/delegate/scripts/integrate.mjs",
-      "digest": "sha256:6df3224cd4c7b025f18b3e81818fd2fe194e34e633de62df10914b80d2e07f39",
+      "digest": "sha256:ca1e1dfcfac13be90892dfece5001092697e56ddbaf203c95a4b2ab6f18605de",
       "generated": true
     },
     {
       "path": "packages/cli/lib/host-packages/claude/openplanr/skills/delegate/scripts/integration-checks.mjs",
-      "digest": "sha256:a03a535c313dc5583402013cbd47d9fbf7e60a112b7513af1af8a1c28b25db06",
+      "digest": "sha256:c253952cde6bb6ae3e93c1e25764cf8eb6fda07c5896e3f959cfe7f5b0a47392",
       "generated": true
     },
     {
@@ -5726,7 +5726,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/claude/openplanr/skills/delegate/scripts/integration-transaction.mjs",
-      "digest": "sha256:852fe883bb05a3545819242262217456b4b3677a1a0e8d2c38b4679a86b232f5",
+      "digest": "sha256:f3f99dc5dc0e25581ecc9d256f934a08f4023bd24c6e1176c572afffb719ebbc",
       "generated": true
     },
     {
@@ -5751,22 +5751,22 @@
     },
     {
       "path": "packages/cli/lib/host-packages/claude/openplanr/skills/delegate/scripts/run-lifecycle.mjs",
-      "digest": "sha256:4bd5a41139ef9b80a138ab7fcee33ec4fea109111f034af65fdeb43ba2594bd1",
+      "digest": "sha256:3d75bb48fceaed14a84137da93654c1198ca949ccefb845d77d2250f88a0fde4",
       "generated": true
     },
     {
       "path": "packages/cli/lib/host-packages/claude/openplanr/skills/delegate/scripts/run-preflight.mjs",
-      "digest": "sha256:11c6b1c94c27c173a63c0ef02e8c04046922dade91da5c59e7a79f0c19ee39fe",
+      "digest": "sha256:7670aac9352e6af3cc684e09b0b5704280199313b87bd279a379348202be9594",
       "generated": true
     },
     {
       "path": "packages/cli/lib/host-packages/claude/openplanr/skills/delegate/scripts/run-preparation.mjs",
-      "digest": "sha256:fec6bd1f6bac52a879d3b1a0c53f88a6fd7e2a630a26bdf87c5b609010bbfef2",
+      "digest": "sha256:6b13541dadeccb57478cc828d5ed688abb4155110fb806308eaaf4356412a5b0",
       "generated": true
     },
     {
       "path": "packages/cli/lib/host-packages/claude/openplanr/skills/delegate/scripts/run-record.mjs",
-      "digest": "sha256:9f1502244cac69c5830925dc4c0dc54e23b7dff5df6e8f7d752acfa28e134bc0",
+      "digest": "sha256:e058a0c78f05ecefd22a87b63ae7bddd55b416c66b21e918cb98ee5dec8bd97d",
       "generated": true
     },
     {
@@ -6971,7 +6971,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/cursor/openplanr/.openplanr-content.json",
-      "digest": "sha256:70459586bd501b9891379ca0f2ad46ee0b6c185a02a420e951108ce38287d08f",
+      "digest": "sha256:7e40002dd2d1ec4392f44aa638600d3199f1127c9a1a615c6ad09637286cf251",
       "generated": true
     },
     {
@@ -7276,7 +7276,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/cursor/openplanr/rules/planr-delegate/scripts/custody.mjs",
-      "digest": "sha256:183145f3deb6d32786596a466490fab2d5df92b8245273d4ce1b821c1bbe9b70",
+      "digest": "sha256:92e1c8699c9a9429ba6e729514d980693a099bb2bbaeae9d9f414c82dcfb0273",
       "generated": true
     },
     {
@@ -7286,12 +7286,12 @@
     },
     {
       "path": "packages/cli/lib/host-packages/cursor/openplanr/rules/planr-delegate/scripts/integrate.mjs",
-      "digest": "sha256:6df3224cd4c7b025f18b3e81818fd2fe194e34e633de62df10914b80d2e07f39",
+      "digest": "sha256:ca1e1dfcfac13be90892dfece5001092697e56ddbaf203c95a4b2ab6f18605de",
       "generated": true
     },
     {
       "path": "packages/cli/lib/host-packages/cursor/openplanr/rules/planr-delegate/scripts/integration-checks.mjs",
-      "digest": "sha256:a03a535c313dc5583402013cbd47d9fbf7e60a112b7513af1af8a1c28b25db06",
+      "digest": "sha256:c253952cde6bb6ae3e93c1e25764cf8eb6fda07c5896e3f959cfe7f5b0a47392",
       "generated": true
     },
     {
@@ -7301,7 +7301,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/cursor/openplanr/rules/planr-delegate/scripts/integration-transaction.mjs",
-      "digest": "sha256:852fe883bb05a3545819242262217456b4b3677a1a0e8d2c38b4679a86b232f5",
+      "digest": "sha256:f3f99dc5dc0e25581ecc9d256f934a08f4023bd24c6e1176c572afffb719ebbc",
       "generated": true
     },
     {
@@ -7326,22 +7326,22 @@
     },
     {
       "path": "packages/cli/lib/host-packages/cursor/openplanr/rules/planr-delegate/scripts/run-lifecycle.mjs",
-      "digest": "sha256:4bd5a41139ef9b80a138ab7fcee33ec4fea109111f034af65fdeb43ba2594bd1",
+      "digest": "sha256:3d75bb48fceaed14a84137da93654c1198ca949ccefb845d77d2250f88a0fde4",
       "generated": true
     },
     {
       "path": "packages/cli/lib/host-packages/cursor/openplanr/rules/planr-delegate/scripts/run-preflight.mjs",
-      "digest": "sha256:11c6b1c94c27c173a63c0ef02e8c04046922dade91da5c59e7a79f0c19ee39fe",
+      "digest": "sha256:7670aac9352e6af3cc684e09b0b5704280199313b87bd279a379348202be9594",
       "generated": true
     },
     {
       "path": "packages/cli/lib/host-packages/cursor/openplanr/rules/planr-delegate/scripts/run-preparation.mjs",
-      "digest": "sha256:fec6bd1f6bac52a879d3b1a0c53f88a6fd7e2a630a26bdf87c5b609010bbfef2",
+      "digest": "sha256:6b13541dadeccb57478cc828d5ed688abb4155110fb806308eaaf4356412a5b0",
       "generated": true
     },
     {
       "path": "packages/cli/lib/host-packages/cursor/openplanr/rules/planr-delegate/scripts/run-record.mjs",
-      "digest": "sha256:9f1502244cac69c5830925dc4c0dc54e23b7dff5df6e8f7d752acfa28e134bc0",
+      "digest": "sha256:e058a0c78f05ecefd22a87b63ae7bddd55b416c66b21e918cb98ee5dec8bd97d",
       "generated": true
     },
     {
@@ -8551,7 +8551,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/openai/openplanr/.openplanr-content.json",
-      "digest": "sha256:02d1a16b5dac7aa3ddd7b79da11ea975858ec211a604bc01dc8b3f2d7bd2049c",
+      "digest": "sha256:57d926fa31b16447d1bc24ad9bdcc2be1089e920bd0bd73d6a8b061c8060a215",
       "generated": true
     },
     {
@@ -8956,7 +8956,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/openai/openplanr/skills/delegate/scripts/custody.mjs",
-      "digest": "sha256:183145f3deb6d32786596a466490fab2d5df92b8245273d4ce1b821c1bbe9b70",
+      "digest": "sha256:92e1c8699c9a9429ba6e729514d980693a099bb2bbaeae9d9f414c82dcfb0273",
       "generated": true
     },
     {
@@ -8966,12 +8966,12 @@
     },
     {
       "path": "packages/cli/lib/host-packages/openai/openplanr/skills/delegate/scripts/integrate.mjs",
-      "digest": "sha256:6df3224cd4c7b025f18b3e81818fd2fe194e34e633de62df10914b80d2e07f39",
+      "digest": "sha256:ca1e1dfcfac13be90892dfece5001092697e56ddbaf203c95a4b2ab6f18605de",
       "generated": true
     },
     {
       "path": "packages/cli/lib/host-packages/openai/openplanr/skills/delegate/scripts/integration-checks.mjs",
-      "digest": "sha256:a03a535c313dc5583402013cbd47d9fbf7e60a112b7513af1af8a1c28b25db06",
+      "digest": "sha256:c253952cde6bb6ae3e93c1e25764cf8eb6fda07c5896e3f959cfe7f5b0a47392",
       "generated": true
     },
     {
@@ -8981,7 +8981,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/openai/openplanr/skills/delegate/scripts/integration-transaction.mjs",
-      "digest": "sha256:852fe883bb05a3545819242262217456b4b3677a1a0e8d2c38b4679a86b232f5",
+      "digest": "sha256:f3f99dc5dc0e25581ecc9d256f934a08f4023bd24c6e1176c572afffb719ebbc",
       "generated": true
     },
     {
@@ -9006,22 +9006,22 @@
     },
     {
       "path": "packages/cli/lib/host-packages/openai/openplanr/skills/delegate/scripts/run-lifecycle.mjs",
-      "digest": "sha256:4bd5a41139ef9b80a138ab7fcee33ec4fea109111f034af65fdeb43ba2594bd1",
+      "digest": "sha256:3d75bb48fceaed14a84137da93654c1198ca949ccefb845d77d2250f88a0fde4",
       "generated": true
     },
     {
       "path": "packages/cli/lib/host-packages/openai/openplanr/skills/delegate/scripts/run-preflight.mjs",
-      "digest": "sha256:11c6b1c94c27c173a63c0ef02e8c04046922dade91da5c59e7a79f0c19ee39fe",
+      "digest": "sha256:7670aac9352e6af3cc684e09b0b5704280199313b87bd279a379348202be9594",
       "generated": true
     },
     {
       "path": "packages/cli/lib/host-packages/openai/openplanr/skills/delegate/scripts/run-preparation.mjs",
-      "digest": "sha256:fec6bd1f6bac52a879d3b1a0c53f88a6fd7e2a630a26bdf87c5b609010bbfef2",
+      "digest": "sha256:6b13541dadeccb57478cc828d5ed688abb4155110fb806308eaaf4356412a5b0",
       "generated": true
     },
     {
       "path": "packages/cli/lib/host-packages/openai/openplanr/skills/delegate/scripts/run-record.mjs",
-      "digest": "sha256:9f1502244cac69c5830925dc4c0dc54e23b7dff5df6e8f7d752acfa28e134bc0",
+      "digest": "sha256:e058a0c78f05ecefd22a87b63ae7bddd55b416c66b21e918cb98ee5dec8bd97d",
       "generated": true
     },
     {

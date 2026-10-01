@@ -350,3 +350,32 @@ test('interrupted worktree cleanup unregisters missing targets and repeated clea
       alreadyRemoved: true,
     });
   }));
+
+test('ignore inspection failures retain the Git cause and cannot masquerade as a non-match', async () =>
+  fixture(async ({ base, root, worktreeParent }) => {
+    await writeFile(join(root, 'untracked.txt'), 'selected');
+    const bin = join(base, 'bin');
+    await mkdir(bin);
+    await writeFile(
+      join(bin, 'git'),
+      '#!/bin/sh\nif [ "$1" = check-ignore ]; then exit 128; fi\nexec /usr/bin/git "$@"\n',
+      { mode: 0o700 },
+    );
+    const module = new URL('../../skills/planr-delegate/scripts/custody.mjs', import.meta.url).href;
+    const input = { repositoryRoot: root, worktreeParent, capsule: capsule(['untracked.txt']) };
+    const script =
+      'import {createWorktreeCustody} from ' +
+      JSON.stringify(module) +
+      ';try {await createWorktreeCustody(' +
+      JSON.stringify(input) +
+      ');console.log("{}")} catch(error) {console.log(JSON.stringify({code:error.code,details:error.details}))}';
+    const result = JSON.parse(
+      execFileSync(process.execPath, ['--input-type=module', '-e', script], {
+        env: { ...process.env, PATH: bin + ':' + process.env.PATH },
+        encoding: 'utf8',
+      }),
+    );
+    assert.equal(result.code, 'E_CUSTODY_GIT');
+    assert.deepEqual(result.details, { operation: 'check-ignore', exitCode: 128 });
+    assert.deepEqual(await readdir(worktreeParent), []);
+  }));

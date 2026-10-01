@@ -24,6 +24,7 @@ import {
   integrateDelegateDelta,
   reviewDelegateDelta,
 } from '../../skills/planr-delegate/scripts/integrate.mjs';
+import { checkoutLock } from '../../skills/planr-delegate/scripts/integration-transaction.mjs';
 import {
   handoffPresentation,
   implementationReport,
@@ -32,9 +33,12 @@ import {
 } from '../../skills/planr-delegate/scripts/presentation.mjs';
 import {
   closeRunRecord,
+  compactIntegrationState,
   createRunRecord,
+  processIdentity,
   readRunRecord,
   updateRunRecord,
+  verifyIntegrationState,
 } from '../../skills/planr-delegate/scripts/run-record.mjs';
 import {
   delegateRunnerCommand,
@@ -159,6 +163,24 @@ test('presentation distinguishes delegate claims, observed changes, checks, and 
   assert.doesNotMatch(timedOut.Issues, /fails before applying this delta/u);
   const unverified = implementationReport({ status: 'completed', changedPaths: [] }, null);
   assert.match(unverified.Checks, /No independent checks ran/u);
+});
+
+test('accepted-state inspection reports filesystem causes instead of hiding them as content drift', async () => {
+  const { base, repositoryRoot } = await fixture();
+  await mkdir(join(base, 'outside'));
+  await writeFile(join(base, 'outside', 'private.txt'), 'private');
+  await symlink(join(base, 'outside'), join(repositoryRoot, 'escape'));
+  const result = await verifyIntegrationState({
+    repositoryRoot,
+    integration: {
+      status: 'applied',
+      states: { 'escape/private.txt': { kind: 'file', mode: 0o644, digest: 'missing' } },
+    },
+  });
+  assert.deepEqual(result.driftPaths, ['escape/private.txt']);
+  assert.deepEqual(result.inspectionFailures, [
+    { path: 'escape/private.txt', code: 'E_CUSTODY_PATH', cause: 'E_CUSTODY_PATH' },
+  ]);
 });
 
 test('observed patch excludes selected dirty baseline and ignores delegate claims', async () => {
@@ -1142,6 +1164,25 @@ test('focused selection rejects flags, traversal and shell fragments before exec
   }
 });
 
+test('Node check selectors cannot run absolute files outside scratch', async () => {
+  const data = await compiledFixture();
+  for (const checks of [
+    ['node --test /tmp/outside.test.mjs'],
+    [{ command: 'node', args: ['--test', '/tmp/outside.test.mjs'] }],
+  ]) {
+    await assert.rejects(
+      integrateDelegateDelta({
+        custody: data.custody,
+        run,
+        scopePaths: ['packages/library/value.txt'],
+        checks,
+      }),
+      { code: 'E_INTEGRATION_CHECK_SELECTION' },
+    );
+    assert.equal(await readFile(join(data.repositoryRoot, 'tracked.txt'), 'utf8'), 'base\n');
+  }
+});
+
 test('absolute dependency links cannot escape into the owner checkout from scratch', async () => {
   const data = await compiledFixture();
   await rm(join(data.repositoryRoot, 'packages/client/node_modules/library'));
@@ -1182,4 +1223,140 @@ test('interrupted verification is visible without claiming a completed check', a
   assert.equal(status.phase, 'verification-interrupted');
   assert.equal(status.verificationProcessState, 'exited');
   assert.match(status.nextAction, /ended before its final evidence/u);
+});
+
+test('stale checkout recovery serializes competing applies despite slow identity inspection', async () => {
+  const base = await mkdtemp(join(tmpdir(), 'delegate-checkout-lock-'));
+  roots.push(base);
+  const root = join(base, 'source');
+  const lock = join(
+    tmpdir(),
+    'planr-integration-lock-' + createHash('sha256').update(root).digest('hex'),
+  );
+  await mkdir(lock, { mode: 0o700 });
+  await writeFile(
+    join(lock, 'owner.json'),
+    JSON.stringify({ ...(await processIdentity()), started: 'stale' }),
+  );
+  const bin = join(base, 'bin'),
+    marker = join(base, 'inspection-started');
+  await mkdir(bin);
+  await writeFile(
+    join(bin, 'ps'),
+    '#!/bin/sh\nif [ "$2" = "' +
+      process.pid +
+      '" ] && [ "$DELEGATE_TEST_SLOW_PS" = "1" ]; then /usr/bin/touch "' +
+      marker +
+      '"; /bin/sleep 0.2; fi\nexec /bin/ps "$@"\n',
+  );
+  await chmod(join(bin, 'ps'), 0o700);
+  const script = join(base, 'contender.mjs');
+  await writeFile(
+    script,
+    'import {checkoutLock} from ' +
+      JSON.stringify(
+        new URL('../../skills/planr-delegate/scripts/integration-transaction.mjs', import.meta.url)
+          .href,
+      ) +
+      '; try { const release = await checkoutLock(' +
+      JSON.stringify(root) +
+      '); console.log("acquired"); await new Promise(r => process.stdin.once("data", r)); await release(); } catch (error) { console.log(error.code); }',
+  );
+  const children = [];
+  function launch(slow) {
+    const child = spawn(process.execPath, [script], {
+      env: {
+        ...process.env,
+        PATH: bin + ':' + process.env.PATH,
+        DELEGATE_TEST_SLOW_PS: slow ? '1' : '0',
+      },
+    });
+    children.push(child);
+    const exit = new Promise((resolve, reject) => {
+      child.once('error', reject);
+      child.once('exit', (code) => resolve(code));
+    });
+    const ready = new Promise((resolve, reject) => {
+      let output = '';
+      child.stdout.on('data', (chunk) => {
+        output += chunk;
+        if (output.includes('\n')) resolve(output.trim());
+      });
+      child.stderr.on('data', (chunk) => reject(new Error(String(chunk))));
+      child.once('error', reject);
+    });
+    return { ready, exit };
+  }
+  try {
+    const slow = launch(true);
+    const deadline = Date.now() + 5000;
+    while (true) {
+      try {
+        await lstat(marker);
+        break;
+      } catch (error) {
+        if (error.code !== 'ENOENT') throw error;
+      }
+      assert.ok(Date.now() < deadline, 'stale owner inspection started');
+      await new Promise((resolve) => setTimeout(resolve, 5));
+    }
+    const fast = launch(false);
+    const outcomes = await Promise.all([slow.ready, fast.ready]);
+    assert.deepEqual(outcomes.sort(), ['E_INTEGRATION_LOCKED', 'acquired']);
+    for (const child of children) child.stdin.end('release');
+    assert.deepEqual(await Promise.all([slow.exit, fast.exit]), [0, 0]);
+    const release = await checkoutLock(root);
+    await release();
+  } finally {
+    for (const child of children) if (child.exitCode === null) child.kill('SIGKILL');
+    await rm(lock, { recursive: true, force: true });
+    await rm(lock + '-transitions', { recursive: true, force: true });
+  }
+});
+
+test('size preflight includes verification evidence added during apply before any source journal', async () => {
+  const files = Object.fromEntries(
+    Array.from({ length: 16 }, (_, i) => [
+      'batch/' + String(i).padStart(2, '0') + '-' + 'name'.repeat(24) + '.txt',
+      'base\n',
+    ]),
+  );
+  const data = await fixture({ files });
+  for (const path of Object.keys(files))
+    await writeFile(join(data.custody.worktreePath, path), 'delegate\n');
+  const { runId, runDirectory } = await recordedRun(data);
+  await delegateIntegrationCommand('review', { runId, runDirectory, scopePaths: ['batch'] });
+  const record = await readRunRecord(runId, { directory: runDirectory });
+  const review = await reviewDelegateDelta({ custody: data.custody, run, scopePaths: ['batch'] });
+  const integration = {
+    status: 'applied',
+    delegatePaths: review.changedPaths,
+    generatedPaths: [],
+    changedPaths: review.changedPaths,
+    states: Object.fromEntries(
+      review.changes.map(({ path, after }) => [path, compactIntegrationState(after)]),
+    ),
+    checks: [],
+    generators: [],
+    preparation: [],
+  };
+  const final = {
+    ...record,
+    integration,
+    status: 'closed',
+    disposition: 'integrated',
+    closedAt: new Date().toISOString(),
+  };
+  const padding = 'x'.repeat(64 * 1024 - Buffer.byteLength(JSON.stringify(final)) - 512);
+  await updateRunRecord(runId, { padding }, { directory: runDirectory });
+  const result = await delegateIntegrationCommand('apply', {
+    runId,
+    runDirectory,
+    scopePaths: ['batch'],
+    checks: [],
+  });
+  assert.equal(result.code, 'E_RUN_LIMIT');
+  await assert.rejects(lstat(join(record.runPath, 'integration-journal.json')), { code: 'ENOENT' });
+  for (const path of Object.keys(files))
+    assert.equal(await readFile(join(data.repositoryRoot, path), 'utf8'), 'base\n');
 });

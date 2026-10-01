@@ -68,6 +68,8 @@ export async function probeDelegateHost({ repositoryRoot, env = process.env } = 
   };
   let gitReady = false;
   let repository = null;
+  let gitDiagnostic = null;
+  const discoveryDiagnostics = [];
   try {
     gitReady = (await invokeProcess('git', ['--version'], options)).exitCode === 0;
     if (gitReady && repositoryRoot) {
@@ -80,8 +82,14 @@ export async function probeDelegateHost({ repositoryRoot, env = process.env } = 
           (await realpath(root.output.trim())) === repositoryRoot,
       };
     }
-  } catch {
-    repository = repositoryRoot ? { ready: false } : null;
+  } catch (error) {
+    if (
+      !(typeof error.code === 'string' && error.code.startsWith('E_ADAPTER_')) &&
+      error.code !== 'ENOENT'
+    )
+      throw error;
+    gitDiagnostic = { code: error.code, cause: error.details?.reason ?? error.code };
+    repository = repositoryRoot ? { ready: false, diagnostic: gitDiagnostic } : null;
   }
   const engines = [];
   for (const [kind, command] of [
@@ -103,17 +111,28 @@ export async function probeDelegateHost({ repositoryRoot, env = process.env } = 
           supported: true,
         });
         break;
-      } catch {
-        /* Not installed at this PATH entry. Discovery does not execute it. */
+      } catch (error) {
+        if (['ENOENT', 'ENOTDIR'].includes(error.code)) continue;
+        if (['EACCES', 'ELOOP'].includes(error.code)) {
+          discoveryDiagnostics.push({ kind, code: error.code });
+          continue;
+        }
+        throw new DelegateRunError(
+          'E_DELEGATE_DISCOVERY',
+          'Installed engine could not be inspected.',
+          null,
+          { kind, cause: error.code ?? error.name },
+        );
       }
     }
   }
   return {
     ready: nodeReady && gitReady,
     node: { ready: nodeReady, minimumMajor: 20 },
-    git: { ready: gitReady },
+    git: { ready: gitReady, ...(gitDiagnostic ? { diagnostic: gitDiagnostic } : {}) },
     repository,
     engines,
+    ...(discoveryDiagnostics.length ? { discoveryDiagnostics } : {}),
   };
 }
 

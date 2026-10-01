@@ -58,7 +58,7 @@ async function git(root, args, { allowFailure = false } = {}) {
     });
     return stdout;
   } catch (error) {
-    if (allowFailure) return null;
+    if (allowFailure && error.code === 1) return null;
     throw new CustodyError('E_CUSTODY_GIT', `Git operation failed: ${args[0]}`, {
       operation: args[0],
       exitCode: error.code,
@@ -95,8 +95,20 @@ async function safeLocation(root, path, { allowAbsent = false } = {}) {
       throw error;
     }
     if (item.isSymbolicLink()) {
-      const physical = await realpath(current).catch(() => null);
-      if (!physical || !within(root, physical))
+      let physical;
+      try {
+        physical = await realpath(current);
+      } catch (error) {
+        throw new CustodyError(
+          'E_CUSTODY_PATH',
+          'Selected symlink target could not be inspected.',
+          {
+            path,
+            cause: error.code ?? error.name,
+          },
+        );
+      }
+      if (!within(root, physical))
         throw new CustodyError('E_CUSTODY_PATH', `Selected path has a symlink escape: ${path}`, {
           path,
         });
@@ -399,6 +411,7 @@ export async function createWorktreeCustody({
   const sourceIndex = await indexState(root);
   const sourceFiles = {};
   for (const path of paths) {
+    const state = await fileState(root, path);
     const registered = await tracked(root, path);
     if (!registered && (await isIgnored(root, path)))
       throw new CustodyError(
@@ -406,7 +419,6 @@ export async function createWorktreeCustody({
         `Ignored untracked path cannot be selected: ${path}`,
         { path },
       );
-    const state = await fileState(root, path);
     if (!registered && state.kind === 'absent')
       throw new CustodyError(
         'E_CUSTODY_PATH',

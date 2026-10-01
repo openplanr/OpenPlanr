@@ -306,8 +306,9 @@ async function integrationCommandLocked(action, input, record) {
     timeoutMs: input.timeoutMs,
     reviewedDigest: record.reviewedPatch.digest,
     beforeApply: async ({ changes, ...accepted }) => {
+      const current = await readRunRecord(record.runId, { directory: input.runDirectory });
       assertRunRecordFits({
-        ...record,
+        ...current,
         integration: { status: 'applied', ...accepted },
         status: 'closed',
         disposition: 'integrated',

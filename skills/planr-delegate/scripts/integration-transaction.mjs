@@ -41,7 +41,12 @@ import {
   sameState,
   workingSnapshot,
 } from './integration-files.mjs';
-import { compactIntegrationState, processIdentity, processIdentityState } from './run-record.mjs';
+import {
+  acquireRunTransitionLock,
+  compactIntegrationState,
+  processIdentity,
+  processIdentityState,
+} from './run-record.mjs';
 
 const execFile = promisify(execFileCallback);
 
@@ -253,24 +258,58 @@ export async function checkoutLock(root) {
     tmpdir(),
     `planr-integration-lock-${createHash('sha256').update(root).digest('hex')}`,
   );
+  // Serialize stale recovery with the same crash-safe acquisition used by runs.
+  // Keep the checkout owner file so retained helpers still observe an active apply.
+  const transitions = `${path}-transitions`;
+  await mkdir(join(transitions, 'checkout'), { recursive: true, mode: 0o700 });
+  let releaseTransition;
   try {
-    await mkdir(path, { mode: 0o700 });
+    releaseTransition = await acquireRunTransitionLock('checkout', { directory: transitions });
   } catch (error) {
-    if (error.code !== 'EEXIST') throw error;
-    const owner = JSON.parse(await readFile(join(path, 'owner.json'), 'utf8'));
-    if (!['exited', 'reused'].includes(await processIdentityState(owner)))
+    if (error.code === 'E_RUN_LOCKED')
       throw new IntegrationError(
         'E_INTEGRATION_LOCKED',
         'Another integration holds this checkout.',
       );
-    await rm(path, { recursive: true });
-    await mkdir(path, { mode: 0o700 });
+    throw error;
   }
-  await writeFile(join(path, 'owner.json'), JSON.stringify(await processIdentity()), {
-    flag: 'wx',
-    mode: 0o600,
-  });
-  return () => rm(path, { recursive: true });
+  const token = randomUUID();
+  try {
+    try {
+      await mkdir(path, { mode: 0o700 });
+    } catch (error) {
+      if (error.code !== 'EEXIST') throw error;
+      const owner = JSON.parse(await readFile(join(path, 'owner.json'), 'utf8'));
+      if (!['exited', 'reused'].includes(await processIdentityState(owner)))
+        throw new IntegrationError(
+          'E_INTEGRATION_LOCKED',
+          'Another integration holds this checkout.',
+        );
+      await rm(path, { recursive: true });
+      await mkdir(path, { mode: 0o700 });
+    }
+    await writeFile(
+      join(path, 'owner.json'),
+      JSON.stringify({ ...(await processIdentity()), token }),
+      {
+        flag: 'wx',
+        mode: 0o600,
+      },
+    );
+  } catch (error) {
+    await releaseTransition();
+    throw error;
+  }
+  return async () => {
+    try {
+      const owner = JSON.parse(await readFile(join(path, 'owner.json'), 'utf8'));
+      if (owner.token !== token)
+        throw new IntegrationError('E_INTEGRATION_LOCKED', 'Checkout lock ownership changed.');
+      await rm(path, { recursive: true });
+    } finally {
+      await releaseTransition();
+    }
+  };
 }
 
 async function generateCandidate({

@@ -1469,6 +1469,7 @@ test('host preflight diagnoses missing Git and empty repositories before creatin
   });
   assert.equal(host.ready, false);
   assert.equal(host.git.ready, false);
+  assert.deepEqual(host.git.diagnostic, { code: 'E_ADAPTER_LAUNCH', cause: 'ENOENT' });
   const empty = join(base, 'empty');
   await mkdir(empty);
   git(empty, 'init', '-q');
@@ -1649,4 +1650,15 @@ import {writeFileSync} from 'node:fs';writeFileSync(${JSON.stringify(marker)}, '
   assert.deepEqual(await readdir(profileDirectory), []);
   assert.deepEqual(await readdir(runDirectory), []);
   assert.equal(await readFile(join(root, 'source.txt'), 'utf8'), 'starting text\n');
+});
+
+test('onboarding distinguishes inaccessible engines from missing PATH entries', async (t) => {
+  const { base, root } = await fixture(t);
+  const bin = join(base, 'engine-bin');
+  await mkdir(bin);
+  await writeFile(join(bin, 'claude'), '#!/bin/sh\nexit 0\n', { mode: 0o600 });
+  const result = await probeDelegateHost({ repositoryRoot: root, env: { PATH: bin } });
+  assert.equal(result.git.ready, false);
+  assert.deepEqual(result.discoveryDiagnostics, [{ kind: 'claude', code: 'EACCES' }]);
+  assert.deepEqual(result.engines, []);
 });
