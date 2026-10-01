@@ -4,6 +4,7 @@ import {
   logoutCompany,
   storeCompanyManualToken,
 } from '../../services/company-auth-service.js';
+import { CompanySyncError } from '../../services/company-common.js';
 import {
   adoptCompanyDiagramRevision,
   applyCompanyProposal,
@@ -20,9 +21,17 @@ import {
   pushCompanyBinding,
   resolveCompanyOrigin,
 } from '../../services/company-sync-service.js';
+import { logger } from '../../utils/logger.js';
 
 function print(value: unknown) {
   process.stdout.write(JSON.stringify(value, null, 2) + '\n');
+}
+function printSignIn(result: Awaited<ReturnType<typeof loginCompany>>, json?: boolean) {
+  if (json) return print(result);
+  logger.success('Signed in to OpenPlanr.');
+  if (result.credentialStorage === 'encrypted-file') logger.warn(result.notice);
+  if (result.environmentOverride)
+    logger.warn('PLANR_COMPANY_TOKEN is set and overrides this sign-in.');
 }
 function printPublicationPreview(
   result:
@@ -65,43 +74,63 @@ export function registerCompanyCommand(program: Command) {
     .option('--timeout <seconds>', 'time allowed to complete browser sign-in', '300')
     .option('--json', 'structured result')
     .description('Sign in through the browser with renewable, organization-scoped authorization')
-    .action(async (options: { apiUrl?: string; open: boolean; timeout: string }) => {
-      const timeout = Number(options.timeout);
-      if (!Number.isInteger(timeout) || timeout < 1 || timeout > 600)
-        throw new Error('Sign-in timeout must be between 1 and 600 seconds.');
-      const controller = new AbortController();
-      const cancel = () => controller.abort();
-      process.once('SIGINT', cancel);
-      process.once('SIGTERM', cancel);
-      try {
-        print(
-          await loginCompany(resolveCompanyOrigin(options.apiUrl), {
+    .action(
+      async (options: { apiUrl?: string; open: boolean; timeout: string; json?: boolean }) => {
+        const timeout = Number(options.timeout);
+        if (!Number.isInteger(timeout) || timeout < 1 || timeout > 600)
+          throw new Error('Sign-in timeout must be between 1 and 600 seconds.');
+        const controller = new AbortController();
+        const cancel = () => controller.abort();
+        process.once('SIGINT', cancel);
+        process.once('SIGTERM', cancel);
+        try {
+          const result = await loginCompany(resolveCompanyOrigin(options.apiUrl), {
             open: options.open,
             timeoutMs: timeout * 1000,
             signal: controller.signal,
             onAuthorization: (url) => {
-              process.stderr.write(`Complete company sign-in on this computer:\n${url}\n`);
+              process.stderr.write(`Open this link to sign in:\n${url}\n`);
             },
-          }),
-        );
-      } finally {
-        process.removeListener('SIGINT', cancel);
-        process.removeListener('SIGTERM', cancel);
-      }
-    });
+          });
+          printSignIn(result, options.json);
+        } catch (error) {
+          if (
+            !options.json &&
+            error instanceof CompanySyncError &&
+            error.code === 'E_COMPANY_AUTH_EXISTS'
+          ) {
+            logger.info(error.message);
+            process.exitCode = 1;
+            return;
+          }
+          throw error;
+        } finally {
+          process.removeListener('SIGINT', cancel);
+          process.removeListener('SIGTERM', cancel);
+        }
+      },
+    );
   company
     .command('logout')
     .option('--api-url <origin>', 'company API HTTPS origin override')
     .option('--local-only', 'forget local sign-in without requesting remote token revocation')
     .option('--json', 'structured result')
     .description('Revoke saved OAuth tokens and remove local company sign-in')
-    .action(async (options: { apiUrl?: string; localOnly?: boolean }) =>
-      print(
-        await logoutCompany(resolveCompanyOrigin(options.apiUrl), {
-          localOnly: options.localOnly,
-        }),
-      ),
-    );
+    .action(async (options: { apiUrl?: string; localOnly?: boolean; json?: boolean }) => {
+      const result = await logoutCompany(resolveCompanyOrigin(options.apiUrl), {
+        localOnly: options.localOnly,
+      });
+      if (options.json) return print(result);
+      if (
+        result.credentialCleanup === 'confirmed' &&
+        (result.revocation === 'confirmed' || result.revocation === 'no-session') &&
+        !result.environmentOverride
+      )
+        logger.success('Signed out of OpenPlanr.');
+      else logger.warn(result.notice);
+      if (result.environmentOverride && !result.notice.includes('PLANR_COMPANY_TOKEN'))
+        logger.warn('PLANR_COMPANY_TOKEN remains set. Unset it to finish signing out.');
+    });
   company
     .command('connect')
     .description(

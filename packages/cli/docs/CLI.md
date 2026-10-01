@@ -70,7 +70,10 @@ headless session, print the authorization URL instead of launching it:
 planr company login --no-open --timeout 300
 ```
 
-Structured output is available for automation:
+Successful sign-in and sign-out show a short confirmation. To switch accounts,
+run `planr company logout` before signing in again. Recovery and cleanup warnings
+remain visible. Structured output with status details and error codes is available
+for automation:
 
 ```bash
 planr company login --json
