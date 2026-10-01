@@ -1610,7 +1610,7 @@ test('setup inspection separates real npm lifecycle edits, freezes acknowledged 
   assert.equal(await readFile(join(root, 'source.txt'), 'utf8'), 'corrected by generic adapter\n');
 });
 
-test('Cursor enrollment refuses startup before executing the engine or collecting task data', async (t) => {
+test('Cursor native trust must be explicit before executing the engine or collecting task data', async (t) => {
   const { base, root, runDirectory, profileDirectory } = await fixture(t);
   const marker = join(base, 'cursor-started');
   const executable = join(base, 'cursor.mjs');
@@ -1630,8 +1630,8 @@ import {writeFileSync} from 'node:fs';writeFileSync(${JSON.stringify(marker)}, '
     workingDirectory: 'worktree',
   };
   const unsupported = (error) => {
-    assert.equal(error.code, 'E_DELEGATE_ENGINE_UNSUPPORTED');
-    assert.match(error.message, /startup isolation for hooks, plugins and MCP/u);
+    assert.equal(error.code, 'E_ADAPTER_CONFIGURATION');
+    assert.match(error.message, /trustNativeConfiguration/u);
     return true;
   };
   await assert.rejects(

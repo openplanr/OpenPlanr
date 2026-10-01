@@ -6,7 +6,7 @@
   "inputs": [
     {
       "path": "adapters/manifests/generated-assets.json",
-      "digest": "sha256:b6380de2c1365ba0a84560d1be2de9a3284a686ca337d6aa2603dc0dce943828"
+      "digest": "sha256:b9d0755f1b4376f98537599a3af4586b3456f061ab3f60005d161caa05487bd6"
     },
     {
       "path": "apps/dashboard/package.json",
@@ -70,7 +70,7 @@
     },
     {
       "path": "packages/protocol/registries/skills.json",
-      "digest": "sha256:8edca42899d64e2dff632a131fa36081ea8587a326afdad74ec3b1aa999f36b4"
+      "digest": "sha256:f20e91eda2d590b6433a2aa1b4654b40c240f6576308af47a288abe512a55535"
     },
     {
       "path": "packages/protocol/registries/task-kinds.json",
@@ -120,7 +120,7 @@
     },
     {
       "path": "adapters/manifests/codex-plugin-content.json",
-      "digest": "sha256:748b130b5b444aa48b0c29323372fb7a46528fe021678919d4c876c9f51e6761"
+      "digest": "sha256:7f5ee6a09c2289a88c776cbab228ddf06e60fcf77dda72b51af629aaebfee3af"
     },
     {
       "path": "docs/generated/adapters.md",
@@ -132,11 +132,11 @@
     },
     {
       "path": "docs/generated/skills.md",
-      "digest": "sha256:e225e7c4466780e6347cf4ae3d40d638d34269fb8f837887cce55a4e81b999c6"
+      "digest": "sha256:19683fc04b18cc6e4e7a9699cad9ca72509e1e17f01ae1c34d4ee1da376ce3f8"
     },
     {
       "path": "ecosystem.json",
-      "digest": "sha256:b7dd4bfad2b88455bd205fd0539094faf3eb6cb3e86845969777e786348eb443"
+      "digest": "sha256:6acc1993b75d75c0281c7831793fccfbdb8818adcbd79fb2e5d5ef0649b16aa2"
     },
     {
       "path": "packages/pipeline/.claude-plugin/plugin.json",

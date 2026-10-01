@@ -121,6 +121,7 @@ async function probedChoice(choice, cwd, directory) {
     return {
       ...choice,
       destination: prepared.destination,
+      ...(prepared.executionPolicy ? { executionPolicy: prepared.executionPolicy } : {}),
       backend,
       readiness,
       ready: readiness.state === 'ready' ? true : readiness.dispatchable ? null : false,
@@ -176,6 +177,7 @@ async function probeCommand(input) {
     result.selected = {
       name: prepared.profile.name,
       kind: prepared.profile.kind,
+      ...(prepared.executionPolicy ? { executionPolicy: prepared.executionPolicy } : {}),
       destination: prepared.destination,
       selectedModel: backend.selectedModel ?? null,
       backend,
@@ -202,6 +204,7 @@ async function previewProfileCommand(input) {
     destination: preview.candidate.destination,
     previousDestination: preview.previousDestination,
     capabilities: preview.capabilities,
+    ...(preview.executionPolicy ? { executionPolicy: preview.executionPolicy } : {}),
     backend: preview.backend,
     readiness: preview.readiness,
     ...(preview.enrollment ? { enrollment: preview.enrollment } : {}),

@@ -8,7 +8,7 @@
   "canonicalSkillCount": 28,
   "compatibilityAliasCount": 0,
   "skillCount": 28,
-  "assetCount": 366,
+  "assetCount": 368,
   "skills": [
     {
       "skillId": "planr-artifact",
@@ -373,11 +373,11 @@
       "assets": [
         {
           "path": "skills/delegate/SKILL.md",
-          "digest": "sha256:6b68691e3e2d10350fb535933eaef027d1723d469a72ddfc4c7506e810bc4de6"
+          "digest": "sha256:9aa7b031e9f01fc89960fdd27e043237fdf3b686b45b02d534db5607e7efcb1e"
         },
         {
           "path": "skills/delegate/openplanr.skill.json",
-          "digest": "sha256:81e29680434106d129d1bae6fdc4a1ada67934831bde6fe7b27e315940685c20"
+          "digest": "sha256:a3a6184f2fdfe3bef5a95930d3cec3ba15460b839a36cb05a15abd7bce2fbf47"
         },
         {
           "path": "skills/delegate/agents/openai.yaml",
@@ -385,7 +385,7 @@
         },
         {
           "path": "skills/delegate/references/adapter-protocol.md",
-          "digest": "sha256:184a0fafe3623ccdba823e8fcd11cf02804867e0ed9a55e40f04269ec200bd73"
+          "digest": "sha256:a3906c99c7821b754afd4e01e894d7b5a006616e8d0206ee1a19e4204a81a733"
         },
         {
           "path": "skills/delegate/references/capsule-contract.md",
@@ -397,7 +397,7 @@
         },
         {
           "path": "skills/delegate/references/operator-guide.md",
-          "digest": "sha256:b5493b1cb3f53fe6f05f7e072d32e63cb1aaf085cbd08a7f17de96271907290e"
+          "digest": "sha256:f12b9cfede395a844d65560bf21a1ddeb937cf8151a0c8fbbe8a7476d8cafe7f"
         },
         {
           "path": "skills/delegate/references/run-handoff.md",
@@ -409,7 +409,7 @@
         },
         {
           "path": "skills/delegate/scripts/adapters/claude.mjs",
-          "digest": "sha256:12136be092940962c799467d3f2083993aab47571d7a897470abaea86699a24e"
+          "digest": "sha256:90b574ed1a5b37e40d434a0f28282ec77b21cdddc7e53f17f35eab7b00b08da1"
         },
         {
           "path": "skills/delegate/scripts/adapters/codex.mjs",
@@ -425,7 +425,7 @@
         },
         {
           "path": "skills/delegate/scripts/custody.mjs",
-          "digest": "sha256:75689b67064634d1e03a2200d7c389650b6958b2004706f9d297c6b46283caff"
+          "digest": "sha256:183145f3deb6d32786596a466490fab2d5df92b8245273d4ce1b821c1bbe9b70"
         },
         {
           "path": "skills/delegate/scripts/helper-snapshot.mjs",
@@ -437,11 +437,11 @@
         },
         {
           "path": "skills/delegate/scripts/presentation.mjs",
-          "digest": "sha256:b054d05d186ebf581c23fb3eaa18d9775d1560c2b8a94455cbd78b84a68d254f"
+          "digest": "sha256:8cadfe68ff20a6b69d7bf708fcf2eb33eff54ff61da194ee9859ed771920b0cb"
         },
         {
           "path": "skills/delegate/scripts/profiles.mjs",
-          "digest": "sha256:65dd27c131e8f1ee054d09cccad693b63420508fff2e23cf9a3be8bcbaeba141"
+          "digest": "sha256:aeda625b8ddc5f9fbe237fcc0177ccab9d1e83a9812d6279511710b82af11f4d"
         },
         {
           "path": "skills/delegate/scripts/run-record.mjs",
@@ -449,7 +449,7 @@
         },
         {
           "path": "skills/delegate/scripts/runner.mjs",
-          "digest": "sha256:ff29e2ddbefc67616ac02d3ba44d38a28c7d2dd6a98fabceebe52348b4e92725"
+          "digest": "sha256:a57f9e2589fc367a9932adbb72028d3c5551e753d3e1edce6b44ad4a3c543288"
         },
         {
           "path": "skills/delegate/scripts/run-contract.mjs",
@@ -461,7 +461,7 @@
         },
         {
           "path": "skills/delegate/scripts/run-preparation.mjs",
-          "digest": "sha256:2528ff459db7f8db75c9ca96e22270bdccd01e532ab8dee322ddccc85fbbe2d8"
+          "digest": "sha256:fec6bd1f6bac52a879d3b1a0c53f88a6fd7e2a630a26bdf87c5b609010bbfef2"
         },
         {
           "path": "skills/delegate/scripts/run-execution.mjs",
@@ -482,6 +482,14 @@
         {
           "path": "skills/delegate/scripts/integration-transaction.mjs",
           "digest": "sha256:852fe883bb05a3545819242262217456b4b3677a1a0e8d2c38b4679a86b232f5"
+        },
+        {
+          "path": "skills/delegate/scripts/adapters/capsule.mjs",
+          "digest": "sha256:ef2087fa2e505c97cc413ed038645a8def0618647de0d10afb9944762b0495a6"
+        },
+        {
+          "path": "skills/delegate/scripts/adapters/cursor.mjs",
+          "digest": "sha256:0dd08aa1e35043ee99d91c7d930c938dd5ce6b305ee07c88a5502cdf32a3b60f"
         }
       ]
     },

@@ -18,7 +18,8 @@ it through Node with one JSON object on stdin; no OpenPlanr checkout or CLI is
 required. Run `probe` before collecting task content. It checks Node 20+, Git,
 the repository, installed engines and enrolled profiles. Claude Code and Codex
 can use their existing signed-in cloud account or an explicitly configured local
-provider. Cursor engine execution is not certified by its skill projection.
+provider. Native Cursor uses its signed-in `agent` CLI with explicitly trusted
+configuration; disclose its inherited hooks, plugins and MCP before enrollment.
 A terminal-less host returns `E_DELEGATE_HOST_UNSUPPORTED`.
 
 Honor a named profile; otherwise use the sole suitable profile or ask among

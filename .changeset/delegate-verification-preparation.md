@@ -11,5 +11,3 @@ Check Node/Git prerequisites and discover installed engines before collecting ta
 Separate run preparation, execution and recovery from command routing, and separate integration checks and file transactions while preserving pinned run helpers.
 
 Allow each engine to use its permitted tools to inspect readable context. Claude shell restrictions remain in its adapter instead of blocking Codex file inspection through a shared prompt.
-
-Explain the missing Cursor startup-isolation capability before engine execution or task collection. Cursor enrollment remains unsupported.

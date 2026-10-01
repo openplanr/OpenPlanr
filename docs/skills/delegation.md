@@ -38,11 +38,12 @@ limit integration paths; they do not confine all process access to your computer
 | --- | --- | --- | --- | --- |
 | Claude Code | Native Read/Glob/Grep tools for its worktree and decoded capsule; engine permissions still apply | Edit/Write through accepted-edits mode | Bash disabled; repository settings, hooks and project MCP excluded | Disclosed provider requests; web tools excluded |
 | Codex | Files readable under the engine's sandbox policy, including host files outside the worktree | `workspace-write` sandbox | Shell/tool execution inside the engine's sandbox; notification hooks and discovered MCP servers disabled; web search disabled | Provider requests; shell networking follows the engine's sandbox policy |
+| Cursor Agent | Native file tools for the worktree and capsule; engine policy applies | Native tools with the sandbox enabled | Auto-review; inherited trusted hooks, plugins and MCP remain active | Enrolled Cursor API plus requests permitted by the native configuration and extensions |
 | Generic protocol adapter | Defined by the enrolled executable | Defined by the enrolled executable | May have unrestricted shell access | May have unrestricted network access |
 
-Claude Code and Codex are the supported local host surfaces. Generic adapters are
+Claude Code, Codex and terminal-equipped Cursor are supported local host surfaces. Generic adapters are
 an experimental protocol integration that needs its own capability and live-run
-proof; the preview ships no OpenCode wrapper. ChatGPT and Cursor projections do
+proof; the preview ships no OpenCode wrapper. A ChatGPT projection does
 not establish local execution support. A terminal-less host stops with
 `E_DELEGATE_HOST_UNSUPPORTED` before collecting task content.
 
@@ -58,6 +59,7 @@ journeys on 30 September and 1 October 2026:
 | Codex CLI 0.159.1 | Signed-in ChatGPT account; `https://chatgpt.com` | Configured default `gpt-6.1-sol` |
 | Claude Code 2.1.286 | Local LM Studio; `http://localhost:1234`, with the per-model template repair below | `qwen3.8-flash-next`, Unsloth IQ4_XS GGUF, loaded with a 262,144-token context |
 | Codex CLI 0.159.1 | Local LM Studio; `http://localhost:1234` | `qwen3.8-flash-next`, loaded with a 262,144-token context |
+| Cursor Agent 2026.09.28-64d2043 | Signed-in Cursor account; `https://api2.cursor.sh`; explicitly trusted native configuration | Native backend default; no model override |
 
 Each journey read required task context, implemented a scoped edit, corrected it
 in the recorded session and passed independent checks before integration. Closed
@@ -68,13 +70,14 @@ hooks and MCP were excluded.
 This verifies the listed configurations, not every provider or model combination.
 The unmodified tested Qwen template rejects Claude's later system messages; the
 local Claude verification includes the per-model repair below. Other local models,
-generic adapters and different engine versions need their own complete journey. Model-list visibility or a successful
-probe alone does not certify implementation and correction. Cursor Agent file edits
-and exact-session correction were exercised, but startup hook and MCP isolation
-remain unverified. Cursor engine enrollment stays unsupported until that boundary
-is proven; installing the Cursor skill projection does not enable it.
-`CURSOR_CONFIG_DIR` redirects CLI settings, not every hook, plugin or MCP startup
-source. Tool permission deny rules do not establish startup isolation.
+generic adapters and different engine versions need their own complete journey. Model-list visibility or a successful probe alone does not certify implementation
+and correction. Native Cursor requires an explicit `trustNativeConfiguration: true`
+enrollment after inspecting its execution-policy preview. It inherits the ordinary
+signed-in CLI's trusted hooks, plugins, MCP and managed team configuration, which
+may execute and make additional requests. The adapter pins the sandbox and
+Auto-review without force/yolo or automatic MCP approval. It preserves native
+login and never changes global configuration. Its advertised boundary differs
+from the isolated Claude/Codex adapters.
 
 ### Claude Code with local Qwen
 

@@ -9,7 +9,7 @@ destination and stores the profile, or renews one with the same name. `profile-r
 removes it. The runner warns in the last seven days and never renews automatically.
 Never put credentials in a profile or a capsule.
 
-Profile fields are `name`, `kind` (`claude`, `codex`, `generic`), `executable`,
+Profile fields are `name`, `kind` (`claude`, `codex`, `cursor`, `generic`), `executable`,
 `argv` (string array), `allowedEnv` (environment variable names only),
 `workingDirectory: "worktree"`, and `destination: {class, origin}`. An origin is
 an HTTPS origin or an HTTP loopback origin. A `local` class requires loopback;
@@ -81,6 +81,25 @@ Codex events stream without retaining full command output; the adapter retains
 only session/progress evidence, bounded final text and usage. Timeouts and
 cancellation terminate the tracked process group, not only its direct child.
 Operational results omit source bytes, prompt text and sensitive environment.
+
+## Native Cursor
+
+Cursor uses the normal signed-in `agent` CLI. Its profile requires
+`trustNativeConfiguration: true`; the preview's `executionPolicy` discloses that
+user/project hooks, plugins, managed team configuration and MCP remain active.
+These extensions can execute and make additional requests beyond the enrolled
+Cursor API origin. This is a trusted native configuration, not the isolated
+Claude/Codex configuration. The adapter never edits global settings or copies
+credentials.
+
+The adapter pins `--sandbox enabled`, `--auto-review`, the exact worktree and
+private capsule root, and the enrolled API endpoint. It uses stdin with
+`--print --output-format stream-json`, persists the observed session, and resumes
+only with `--resume <exact-id>`. No force/yolo or automatic MCP approval is used.
+A successful native terminal envelope and a valid final assistant JSON message
+are both required. Progress, tool output and concatenated envelope text are
+discarded. Repository `.cursor`, `.claude`, `.codex` and `.mcp.json` configuration
+is covered by worktree custody and cannot change before a subsequent turn.
 
 ## Generic executable protocol
 

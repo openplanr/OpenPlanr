@@ -202,7 +202,7 @@ export function sameGitState(left, right) {
 
 export async function captureEngineConfiguration(root) {
   const state = {};
-  for (const path of ['.claude', '.codex', '.mcp.json'])
+  for (const path of ['.claude', '.codex', '.cursor', '.mcp.json'])
     state[path] = await protectedState(root, path, { includeIgnored: true });
   return state;
 }

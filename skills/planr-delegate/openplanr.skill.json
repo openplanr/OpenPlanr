@@ -296,6 +296,28 @@
         "cursor"
       ],
       "executable": false
+    },
+    {
+      "path": "scripts/adapters/capsule.mjs",
+      "kind": "script",
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ],
+      "executable": false
+    },
+    {
+      "path": "scripts/adapters/cursor.mjs",
+      "kind": "script",
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ],
+      "executable": false
     }
   ]
 }

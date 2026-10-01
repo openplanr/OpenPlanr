@@ -296,9 +296,16 @@ test('engine configuration changes are refused even when untracked or ignored', 
       capsule: capsule(['changed.txt']),
       worktreeParent,
     });
+    await mkdir(join(record.worktreePath, '.cursor'));
+    await writeFile(join(record.worktreePath, '.cursor', 'hooks.json'), '{"hooks":{}}');
     await mkdir(join(record.worktreePath, '.claude'));
     await writeFile(join(record.worktreePath, '.claude', 'settings.json'), '{"hooks":{}}');
     const check = await validateWorktreeCustody(record);
+    assert.ok(
+      check.violations.some(
+        (item) => item.code === 'E_CUSTODY_ENGINE_CONFIGURATION' && item.path === '.cursor',
+      ),
+    );
     assert.ok(
       check.violations.some(
         (item) => item.code === 'E_CUSTODY_ENGINE_CONFIGURATION' && item.path === '.claude',

@@ -100,14 +100,7 @@ export async function probeDelegateHost({ repositoryRoot, env = process.env } = 
         engines.push({
           kind,
           executable,
-          supported: kind !== 'cursor',
-          ...(kind === 'cursor'
-            ? {
-                code: 'E_DELEGATE_ENGINE_UNSUPPORTED',
-                nextAction:
-                  'Use Claude Code or Codex until Cursor implementation, exact resume and isolated permissions are verified.',
-              }
-            : {}),
+          supported: true,
         });
         break;
       } catch {
@@ -312,6 +305,7 @@ export async function prepareDelegateRun({
     );
     const preview = {
       ...previewContextCapsule(capsule),
+      ...(prepared.executionPolicy ? { executionPolicy: prepared.executionPolicy } : {}),
       runId,
       writableRepository: root,
       selectedPaths: custody.selectedPaths,

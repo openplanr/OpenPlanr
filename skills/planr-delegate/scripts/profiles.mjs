@@ -5,6 +5,7 @@ import { homedir } from 'node:os';
 import { dirname, isAbsolute, join } from 'node:path';
 import { claudeAdapter } from './adapters/claude.mjs';
 import { codexAdapter } from './adapters/codex.mjs';
+import { cursorAdapter } from './adapters/cursor.mjs';
 import {
   AdapterError,
   CAPABILITIES,
@@ -22,6 +23,7 @@ const BASE_ENV = ['PATH', 'HOME', 'USER', 'TMPDIR', 'LANG', 'LC_ALL'];
 const ADAPTERS = Object.freeze({
   claude: claudeAdapter,
   codex: codexAdapter,
+  cursor: cursorAdapter,
   generic: genericAdapter,
 });
 const PROFILE_NAME = /^[a-z][a-z0-9-]{0,63}$/u;
@@ -63,10 +65,10 @@ function validateProfileFields(input) {
   }
   const { name, kind, executable, argv, allowedEnv, workingDirectory, configDir } = input;
   profilePath(name);
-  if (kind === 'cursor')
+  if (kind === 'cursor' && input.trustNativeConfiguration !== true)
     throw new AdapterError(
-      'E_DELEGATE_ENGINE_UNSUPPORTED',
-      'Cursor CLI delegation requires verified startup isolation for hooks, plugins and MCP. Use Claude Code or Codex until that boundary is supported.',
+      'E_ADAPTER_CONFIGURATION',
+      'Cursor requires explicit trustNativeConfiguration: true after reviewing its inherited hooks, plugins and MCP.',
     );
   if (!ADAPTERS[kind]) throw new AdapterError('E_PROFILE_INVALID', 'Unsupported adapter kind.');
   if (
@@ -137,6 +139,7 @@ function validateProfileFields(input) {
     argv: [...argv],
     allowedEnv: [...new Set(allowedEnv)],
     workingDirectory,
+    ...(kind === 'cursor' ? { trustNativeConfiguration: true } : {}),
     ...(configDir ? { configDir } : {}),
   };
 }
@@ -282,6 +285,7 @@ export function profileIdentity(profile) {
         allowedEnv: fields.allowedEnv.slice().sort(),
         workingDirectory: fields.workingDirectory,
         configDir: fields.configDir ?? null,
+        ...(fields.trustNativeConfiguration ? { trustNativeConfiguration: true } : {}),
         destination: validateDestination(profile.destination),
       }),
     )
@@ -617,6 +621,7 @@ export async function previewProfileCandidate(
     candidate: { ...profile, destination },
     previousDestination: existing?.destination ?? null,
     capabilities: found.capabilities,
+    ...(found.executionPolicy ? { executionPolicy: found.executionPolicy } : {}),
     backend,
     readiness: profileReadiness(destination, backend),
     ...(existing ? { enrollment: profileSummary(existing, now) } : {}),
@@ -712,5 +717,11 @@ export async function prepareProfile(nameOrProfile, options = {}) {
       return raw.resume({ ...args, profile, env: effectiveEnv });
     },
   });
-  return { profile, destination: found.destination, capabilities: found.capabilities, adapter };
+  return {
+    profile,
+    destination: found.destination,
+    capabilities: found.capabilities,
+    adapter,
+    ...(found.executionPolicy ? { executionPolicy: found.executionPolicy } : {}),
+  };
 }

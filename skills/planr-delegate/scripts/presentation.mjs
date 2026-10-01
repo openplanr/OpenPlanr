@@ -37,6 +37,7 @@ export function preparationPresentation(preview) {
     timing: preview.preparationTiming ?? null,
     profile: preview.profile,
     destination: preview.destination,
+    ...(preview.executionPolicy ? { executionPolicy: preview.executionPolicy } : {}),
     nextAction:
       'Review required sources, optional omissions, planning location, integration scope, and destination before dispatch.',
   };
