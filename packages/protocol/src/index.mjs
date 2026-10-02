@@ -31,6 +31,7 @@ export {
 } from './diagram-contracts.mjs';
 export * from './diagram-review-contracts.mjs';
 export * from './enterprise-contracts.mjs';
+export * from './enterprise-resource-contracts.mjs';
 export {
   ARTIFACT_ERROR_CODES,
   PIPELINE_ERROR_CODES,

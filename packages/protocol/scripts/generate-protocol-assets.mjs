@@ -16,14 +16,16 @@ import { DESIGN_DOCUMENT_SCHEMA } from '../src/design-contracts.mjs';
 import { DESIGN_HANDOFF_SCHEMAS } from '../src/design-handoff-contracts.mjs';
 import { DIAGRAM_REVIEW_SCHEMAS } from '../src/diagram-review-contracts.mjs';
 import { ENTERPRISE_SCHEMAS } from '../src/enterprise-contracts.mjs';
-import { LARGE_OBJECT_SCHEMAS } from '../src/large-object-contracts.mjs';
 import {
   DESIGN_REVIEW_BUNDLE_V12_SCHEMA,
   DESIGN_REVIEW_METADATA_PAYLOAD_V11_SCHEMA,
   REVIEW_EXPERIENCE_SCHEMAS,
 } from '../src/review-experience-contracts.mjs';
 import { DESIGN_WORKSPACE_SCHEMAS } from '../src/workspace-contracts.mjs';
-import { buildSharedArtifactEnvelopeSchema } from './artifact-envelope-definitions.mjs';
+import {
+  buildArtifactEnvelopeMetadataSchemas,
+  buildSharedArtifactEnvelopeSchema,
+} from './artifact-envelope-definitions.mjs';
 import {
   buildArtifactThemeRegistries,
   buildArtifactThemeSchemas,
@@ -107,8 +109,14 @@ expected.set(
   json(DESIGN_REVIEW_BUNDLE_V12_SCHEMA),
 );
 
-for (const [name, value] of Object.entries(LARGE_OBJECT_SCHEMAS))
-  expected.set(`schemas/v1.17.0/${name}.schema.json`, json(value));
+const envelopeMetadataPath = 'src/generated/artifact-envelope-metadata.mjs';
+const envelopeMetadataSource = [
+  '// Generated from canonical Protocol inline/shared envelope schemas. Do not edit.',
+  "import { deepFreeze } from '../canonical-json.mjs';",
+  `export const ARTIFACT_ENVELOPE_METADATA_SCHEMAS = deepFreeze(${JSON.stringify(buildArtifactEnvelopeMetadataSchemas(), null, 2)});`,
+  '',
+].join('\n');
+expected.set(envelopeMetadataPath, envelopeMetadataSource);
 
 const registries = Object.fromEntries(buildRegistries());
 expected.set(
@@ -193,6 +201,8 @@ function read(path) {
 const projectionFiles = new Map([
   ...[
     'bounded-json-data',
+    'enterprise-contract-validation',
+    'enterprise-resource-contracts',
     'large-object-contracts',
     'large-object-limits',
     'studio-presentation-contracts',
@@ -225,6 +235,7 @@ const projectionFiles = new Map([
   ['diagram-authoring-contracts.mjs', read('src/diagram-authoring-contracts.mjs')],
   ['diagram-authoring-contracts.d.mts', read('src/diagram-authoring-contracts.d.mts')],
   ['generated/legacy-diagram-schema.mjs', expected.get('src/generated/legacy-diagram-schema.mjs')],
+  ['generated/artifact-envelope-metadata.mjs', envelopeMetadataSource],
   ['design-contracts.mjs', read('src/design-contracts.mjs')],
   ['design-publication-contracts.mjs', read('src/design-publication-contracts.mjs')],
   ['design-publication-contracts.d.mts', read('src/design-publication-contracts.d.mts')],
@@ -346,6 +357,22 @@ if (existsSync(preservationPath) && !refreshPreservation) {
   mkdirSync(dirname(preservationPath), { recursive: true });
   writeFileSync(preservationPath, json(currentPreservation));
 }
+
+// Bootstrap the exact inert metadata projection only after preservation checks.
+// Never execute an ambient or drifted generated module while checking custody.
+const envelopeMetadataAbsolute = join(packageRoot, envelopeMetadataPath);
+const metadataMatches =
+  existsSync(envelopeMetadataAbsolute) &&
+  readFileSync(envelopeMetadataAbsolute, 'utf8') === envelopeMetadataSource;
+if (check && !metadataMatches)
+  throw new Error(`Generated Protocol assets drifted:\n- ${envelopeMetadataPath}`);
+if (!check && !metadataMatches) {
+  mkdirSync(dirname(envelopeMetadataAbsolute), { recursive: true });
+  writeFileSync(envelopeMetadataAbsolute, envelopeMetadataSource);
+}
+const { LARGE_OBJECT_SCHEMAS } = await import('../src/large-object-contracts.mjs');
+for (const [name, value] of Object.entries(LARGE_OBJECT_SCHEMAS))
+  expected.set(`schemas/v1.17.0/${name}.schema.json`, json(value));
 
 const drift = [];
 for (const [path, content] of expected) {

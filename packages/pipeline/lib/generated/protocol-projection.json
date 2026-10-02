@@ -196,6 +196,18 @@
       "mode": "644"
     },
     {
+      "source": "packages/protocol/projections/pipeline/lib/protocol/enterprise-contract-validation.d.mts",
+      "target": "lib/protocol/enterprise-contract-validation.d.mts",
+      "sha256": "ef6c9d07633b1a90dff1951999f75285cf9145fc9de1a064b9fe3a7209754fc1",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/projections/pipeline/lib/protocol/enterprise-contract-validation.mjs",
+      "target": "lib/protocol/enterprise-contract-validation.mjs",
+      "sha256": "9babc91d29f576ce85fbc17232bdcbc42fd4289d0b97a0d784100bf6799d8a70",
+      "mode": "644"
+    },
+    {
       "source": "packages/protocol/projections/pipeline/lib/protocol/enterprise-contracts.d.mts",
       "target": "lib/protocol/enterprise-contracts.d.mts",
       "sha256": "bbbe4e977ee1dd8850e63e1b656120a911b55cfdd0ccd162cbdacadbece413e4",
@@ -204,13 +216,31 @@
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/enterprise-contracts.mjs",
       "target": "lib/protocol/enterprise-contracts.mjs",
-      "sha256": "d6ef39eb211eda8eb39527759d61cd6a3e68495cc80f94a468538ffe6b7bc1d5",
+      "sha256": "04a29c5a60c92a2b40c34d877bcf3583ebb9779456c6117a47ac7ffbd94231bd",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/projections/pipeline/lib/protocol/enterprise-resource-contracts.d.mts",
+      "target": "lib/protocol/enterprise-resource-contracts.d.mts",
+      "sha256": "705af14038683464b8a8d3091816f06a525628d5bcf1249d085eed873b7b428e",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/projections/pipeline/lib/protocol/enterprise-resource-contracts.mjs",
+      "target": "lib/protocol/enterprise-resource-contracts.mjs",
+      "sha256": "bf91d37d98ae10be9c9a5eb72549ae381a194d874a97d6275b7ba3b8c0a0ea58",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/errors.mjs",
       "target": "lib/protocol/errors.mjs",
       "sha256": "49c41e1e5c13b5dc5cbe0ee426b03fb9d076de78c6bf99d4824f9b7f2d8a214f",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/projections/pipeline/lib/protocol/generated/artifact-envelope-metadata.mjs",
+      "target": "lib/protocol/generated/artifact-envelope-metadata.mjs",
+      "sha256": "e3ac101ea3e1fbf10a21b66e5e780e1cef70a941dd3b05d4574b88313488fe66",
       "mode": "644"
     },
     {
@@ -252,7 +282,7 @@
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/large-object-contracts.mjs",
       "target": "lib/protocol/large-object-contracts.mjs",
-      "sha256": "3eaa8bccebb2297fddddb16fd66766ff905aad007267005d377a5b876d52824e",
+      "sha256": "f6b076addc2269a4aaca3e3d07c2d4722bff3d5c70887d927a78d42b49319d2d",
       "mode": "644"
     },
     {
@@ -1102,9 +1132,39 @@
       "mode": "644"
     },
     {
+      "source": "packages/protocol/schemas/v1.17.0/enterprise-agent-handoff.schema.json",
+      "target": "schemas/v1.17.0/enterprise-agent-handoff.schema.json",
+      "sha256": "be59508e1c8045af36c374a912176c1c426ef22282c6ce74b3b585931c76be64",
+      "mode": "644"
+    },
+    {
       "source": "packages/protocol/schemas/v1.17.0/enterprise-artifact-revision.schema.json",
       "target": "schemas/v1.17.0/enterprise-artifact-revision.schema.json",
       "sha256": "2796eff86573920734e05f77c4fc24b0d24995209d36ee598ce8c3311c50897c",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.17.0/enterprise-change-proposal.schema.json",
+      "target": "schemas/v1.17.0/enterprise-change-proposal.schema.json",
+      "sha256": "b93160d2fca55f3ff7840d524e81b2d975006f1f7028483ff7f01fe5c49f7a50",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.17.0/enterprise-evidence-reference.schema.json",
+      "target": "schemas/v1.17.0/enterprise-evidence-reference.schema.json",
+      "sha256": "d538e26682134f0ba3a62330cd7b0fe4a8e066e4b9e2c6f66d44f04963e7b483",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.17.0/enterprise-review-thread.schema.json",
+      "target": "schemas/v1.17.0/enterprise-review-thread.schema.json",
+      "sha256": "86f7443499ed248483d61f8f9f602b1c7e54c7091e19e60e615ee291bb81cfea",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.17.0/enterprise-sync-state.schema.json",
+      "target": "schemas/v1.17.0/enterprise-sync-state.schema.json",
+      "sha256": "f7bff4594b179c04a03b6e4cdc841862f1369a3d95fecec97a6f126fdd20ad11",
       "mode": "644"
     },
     {

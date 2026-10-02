@@ -1,13 +1,17 @@
 import { readFileSync } from 'node:fs';
 
-/** Add shared source references without altering the published inline envelope schema. */
-export function buildSharedArtifactEnvelopeSchema() {
-  const schema = JSON.parse(
+function readInlineEnvelopeSchema() {
+  return JSON.parse(
     readFileSync(
       new URL('../schemas/v1.1.0/artifact-envelope.schema.json', import.meta.url),
       'utf8',
     ),
   );
+}
+
+/** Add shared source references without altering the published inline envelope schema. */
+export function buildSharedArtifactEnvelopeSchema() {
+  const schema = readInlineEnvelopeSchema();
   schema.$id = 'https://openplanr.dev/schemas/v1.16.0/artifact-envelope.schema.json';
   schema.title = 'OpenPlanr shared-source artifact envelope';
   schema['x-openplanr-contract'] = { id: 'artifact-envelope', version: '1.16.0' };
@@ -36,4 +40,16 @@ export function buildSharedArtifactEnvelopeSchema() {
     },
   };
   return schema;
+}
+
+/** Browser-safe metadata projections derive from the exact inline/shared schema ownership. */
+export function buildArtifactEnvelopeMetadataSchemas() {
+  return [readInlineEnvelopeSchema(), buildSharedArtifactEnvelopeSchema()].map((full) => {
+    const projection = structuredClone(full);
+    const collection = full.properties.schemaVersion.const === '1.1.0' ? 'sources' : 'artifacts';
+    const source = projection.properties[collection].items;
+    delete source.properties.html;
+    source.required = source.required.filter((key) => key !== 'html');
+    return projection;
+  });
 }

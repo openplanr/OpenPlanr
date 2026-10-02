@@ -1,16 +1,15 @@
 /** Additive Protocol 1.17 contracts for bounded, resumable encrypted resources. */
-import inlineEnvelopeSchema from '../schemas/v1.1.0/artifact-envelope.schema.json' with {
-  type: 'json',
-};
-import sharedEnvelopeSchema from '../schemas/v1.16.0/artifact-envelope.schema.json' with {
-  type: 'json',
-};
 import { assertLargeObjectData } from './bounded-json-data.mjs';
 import { canonicalizeJson } from './canonical-json.mjs';
 import {
   assertEnterpriseContract,
   ENTERPRISE_ARTIFACT_REVISION_SCHEMA,
 } from './enterprise-contracts.mjs';
+import {
+  assertEnterpriseResourceContract,
+  ENTERPRISE_RESOURCE_SCHEMAS,
+} from './enterprise-resource-contracts.mjs';
+import { ARTIFACT_ENVELOPE_METADATA_SCHEMAS } from './generated/artifact-envelope-metadata.mjs';
 import { SHARING_SECURITY_SCHEMAS } from './sharing-security-contracts.mjs';
 import {
   DIAGRAM_AUTHORING_BUNDLE_V11_SCHEMA,
@@ -302,6 +301,7 @@ export const WORKSPACE_ROTATION_V2_SCHEMA = schema('workspace-rotation-v2', {
   signature,
 });
 export const LARGE_OBJECT_SCHEMAS = Object.freeze({
+  ...ENTERPRISE_RESOURCE_SCHEMAS,
   ...SHARING_SECURITY_SCHEMAS,
   'diagram-authoring-bundle': DIAGRAM_AUTHORING_BUNDLE_V11_SCHEMA,
   'diagram-edit-transaction': DIAGRAM_EDIT_TRANSACTION_V11_SCHEMA,
@@ -330,7 +330,9 @@ export function assertLargeObjectContract(value, kind) {
   const errors = validateJson(value, selected);
   if (errors.length) throw new TypeError(`Invalid ${kind}: ${errors[0].path} ${errors[0].detail}`);
   const byteLength = new TextEncoder().encode(canonicalizeJson(value)).byteLength;
-  if (kind === 'enterprise-artifact-revision') {
+  if (Object.hasOwn(ENTERPRISE_RESOURCE_SCHEMAS, kind)) {
+    return assertEnterpriseResourceContract(value, kind);
+  } else if (kind === 'enterprise-artifact-revision') {
     assertEnterpriseContract(value, ENTERPRISE_ARTIFACT_REVISION_V11_SCHEMA);
     if (value.id === value.parentRevisionId)
       throw new TypeError('A revision cannot be its own parent.');
@@ -449,18 +451,10 @@ export function assertLargeObjectContract(value, kind) {
 
 // These are metadata projections of immutable published contracts. HTML is validated
 // separately after selected resources pass authenticated digest and size checks.
-const metadataEnvelopeSchemas = [inlineEnvelopeSchema, sharedEnvelopeSchema].map((full) => {
-  const projection = structuredClone(full);
-  const source =
-    projection.properties[full.properties.schemaVersion.const === '1.1.0' ? 'sources' : 'artifacts']
-      .items;
-  delete source.properties.html;
-  source.required = source.required.filter((key) => key !== 'html');
-  return projection;
-});
 export function assertArtifactEnvelopeMetadata(value) {
+  assertLargeObjectData(value);
   const shared = value?.schemaVersion === '1.1.0';
-  const errors = validateJson(value, metadataEnvelopeSchemas[shared ? 1 : 0]);
+  const errors = validateJson(value, ARTIFACT_ENVELOPE_METADATA_SCHEMAS[shared ? 1 : 0]);
   if (errors.length) throw new TypeError('Invalid artifact envelope metadata.');
   const ids = new Set(value.artifacts.map((item) => item.id));
   if (ids.size !== value.artifacts.length || !ids.has(value.viewer.activeArtifactId))
