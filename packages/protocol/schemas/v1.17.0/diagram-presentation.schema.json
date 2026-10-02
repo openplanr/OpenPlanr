@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.17.0/diagram-presentation.schema.json",
+  "x-openplanr-contract": {
+    "id": "diagram-presentation",
+    "version": "1.17.0"
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "schemaVersion",
+    "palette",
+    "theme",
+    "fontFamily"
+  ],
+  "properties": {
+    "kind": {
+      "const": "openplanr-diagram-presentation"
+    },
+    "schemaVersion": {
+      "const": "2.0.0"
+    },
+    "palette": {
+      "const": "openplanr-brand-v2"
+    },
+    "theme": {
+      "enum": [
+        "light",
+        "dark"
+      ]
+    },
+    "fontFamily": {
+      "const": "Inter"
+    }
+  }
+}

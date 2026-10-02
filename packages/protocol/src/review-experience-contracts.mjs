@@ -84,6 +84,25 @@ bundleV11.required.push('reviewContext', 'contextDigest', 'fingerprints');
 /** @type {typeof import('./review-experience-contracts.d.mts').DESIGN_REVIEW_BUNDLE_V11_SCHEMA} */
 export const DESIGN_REVIEW_BUNDLE_V11_SCHEMA = bundleV11;
 
+const bundleV12 = /** @type {MutableSchema} */ (structuredClone(DESIGN_REVIEW_BUNDLE_V11_SCHEMA));
+bundleV12.$id = 'https://openplanr.dev/schemas/v1.16.0/design-review-bundle.schema.json';
+bundleV12['x-openplanr-contract'] = { id: 'design-review-bundle', version: '1.16.0' };
+Object.assign(bundleV12.properties, {
+  schemaVersion: { const: '1.2.0' },
+  envelope: {
+    type: 'object',
+    required: ['schemaVersion', 'sources', 'artifacts', 'viewer'],
+    properties: { schemaVersion: { const: '1.1.0' } },
+  },
+  entries: {
+    .../** @type {Record<string, unknown>} */ (bundleV12.properties.entries),
+    maxItems: 4096,
+  },
+  fingerprints: list(DESIGN_FINGERPRINT_SCHEMA, 4096),
+});
+/** @type {typeof import('./review-experience-contracts.d.mts').DESIGN_REVIEW_BUNDLE_V12_SCHEMA} */
+export const DESIGN_REVIEW_BUNDLE_V12_SCHEMA = bundleV12;
+
 const item = closed(
   {
     pinId: id,
@@ -218,11 +237,13 @@ export function assertDesignReviewMetadata(value) {
 export function assertDesignReviewBundle(value) {
   assertReviewExperience(
     value,
-    value?.schemaVersion === '1.1.0'
-      ? DESIGN_REVIEW_BUNDLE_V11_SCHEMA
-      : DESIGN_REVIEW_BUNDLE_SCHEMA,
+    value?.schemaVersion === '1.2.0'
+      ? DESIGN_REVIEW_BUNDLE_V12_SCHEMA
+      : value?.schemaVersion === '1.1.0'
+        ? DESIGN_REVIEW_BUNDLE_V11_SCHEMA
+        : DESIGN_REVIEW_BUNDLE_SCHEMA,
   );
-  if (value.schemaVersion === '1.1.0') {
+  if (['1.1.0', '1.2.0'].includes(value.schemaVersion)) {
     if (
       value.reviewContext.designId !== value.design.id ||
       value.contextDigest !== sha256Hex(canonicalizeJson(value.reviewContext))

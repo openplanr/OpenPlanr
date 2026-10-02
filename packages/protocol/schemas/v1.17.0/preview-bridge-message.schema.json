@@ -1,0 +1,197 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.17.0/preview-bridge-message.schema.json",
+  "x-openplanr-contract": {
+    "id": "preview-bridge-message",
+    "version": "1.17.0"
+  },
+  "oneOf": [
+    {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "$id": "https://openplanr.dev/schemas/v1.17.0/preview-bridge-ready.schema.json",
+      "x-openplanr-contract": {
+        "id": "preview-bridge-ready",
+        "version": "1.17.0"
+      },
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "schemaVersion": {
+          "const": "1.0.0"
+        },
+        "channel": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{43}$"
+        },
+        "type": {
+          "const": "ready"
+        },
+        "viewId": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "channel",
+        "type",
+        "viewId"
+      ]
+    },
+    {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "$id": "https://openplanr.dev/schemas/v1.17.0/preview-bridge-navigate.schema.json",
+      "x-openplanr-contract": {
+        "id": "preview-bridge-navigate",
+        "version": "1.17.0"
+      },
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "schemaVersion": {
+          "const": "1.0.0"
+        },
+        "channel": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{43}$"
+        },
+        "type": {
+          "const": "navigate"
+        },
+        "viewId": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        },
+        "screenId": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "channel",
+        "type",
+        "viewId",
+        "screenId"
+      ]
+    },
+    {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "$id": "https://openplanr.dev/schemas/v1.17.0/preview-bridge-select.schema.json",
+      "x-openplanr-contract": {
+        "id": "preview-bridge-select",
+        "version": "1.17.0"
+      },
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "schemaVersion": {
+          "const": "1.0.0"
+        },
+        "channel": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{43}$"
+        },
+        "type": {
+          "const": "select"
+        },
+        "viewId": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        },
+        "elementId": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "channel",
+        "type",
+        "viewId",
+        "elementId"
+      ]
+    },
+    {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "$id": "https://openplanr.dev/schemas/v1.17.0/preview-bridge-state.schema.json",
+      "x-openplanr-contract": {
+        "id": "preview-bridge-state",
+        "version": "1.17.0"
+      },
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "schemaVersion": {
+          "const": "1.0.0"
+        },
+        "channel": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{43}$"
+        },
+        "type": {
+          "const": "state"
+        },
+        "viewId": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        },
+        "state": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "session": {
+              "type": "object"
+            },
+            "forms": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "session",
+            "forms"
+          ]
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "channel",
+        "type",
+        "viewId",
+        "state"
+      ]
+    },
+    {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "$id": "https://openplanr.dev/schemas/v1.17.0/preview-bridge-failed.schema.json",
+      "x-openplanr-contract": {
+        "id": "preview-bridge-failed",
+        "version": "1.17.0"
+      },
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "schemaVersion": {
+          "const": "1.0.0"
+        },
+        "channel": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{43}$"
+        },
+        "type": {
+          "const": "failed"
+        },
+        "viewId": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "channel",
+        "type",
+        "viewId"
+      ]
+    }
+  ]
+}

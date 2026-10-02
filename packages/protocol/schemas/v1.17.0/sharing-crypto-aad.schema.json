@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.17.0/sharing-crypto-aad.schema.json",
+  "x-openplanr-contract": {
+    "id": "sharing-crypto-aad",
+    "version": "1.17.0"
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "const": "2.0.0"
+    },
+    "purpose": {
+      "enum": [
+        "artifact-paste",
+        "room-envelope",
+        "room-event"
+      ]
+    },
+    "objectId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{16,128}$"
+    },
+    "recordId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._:-]{1,128}$"
+    }
+  },
+  "required": [
+    "version",
+    "purpose",
+    "objectId",
+    "recordId"
+  ]
+}

@@ -7,6 +7,8 @@ export {
   PROTOCOL_V111_CONTRACTS,
   PROTOCOL_V113_CONTRACTS,
   PROTOCOL_V115_CONTRACTS,
+  PROTOCOL_V116_CONTRACTS,
+  PROTOCOL_V117_CONTRACTS,
   protocolAssetUrl,
   validateDiagramReviewArtifact,
 } from './browser-contracts.mjs';
@@ -37,6 +39,7 @@ export {
   ProtocolError,
 } from './errors.mjs';
 export { validate, validateJson } from './json-schema.mjs';
+export * from './large-object-contracts.mjs';
 export {
   normalizePlanningTask,
   validatePlanningAcceptanceCoverage,
@@ -53,6 +56,25 @@ export {
   routeLegacyTask,
   validateCanonicalRegistries,
 } from './registries.mjs';
+export * from './sharing-security-contracts.mjs';
+
+export {
+  assertDiagramPresentation as assertDiagramReviewPresentation,
+  assertDiagramReviewBundleV11,
+  assertVersionedDiagramAuthoringBundle,
+  assertVersionedDiagramEditTransaction,
+  assertVersionedDiagramReviewBundle,
+  DIAGRAM_AUTHORING_BUNDLE_V11_SCHEMA,
+  DIAGRAM_EDIT_TRANSACTION_V11_SCHEMA,
+  DIAGRAM_PRESENTATION_SCHEMA,
+  DIAGRAM_REVIEW_BUNDLE_V11_SCHEMA,
+  legacyDiagramAuthoringProjection,
+  normalizeDiagramPresentation,
+  validateVersionedDiagramAuthoringBundle,
+  validateVersionedDiagramEditTransaction,
+  versionedDiagramAuthoringBundleDigest,
+  versionedDiagramReviewBundleDigest,
+} from './studio-presentation-contracts.mjs';
 export {
   assertTaskManifestSemantics,
   assertTaskOutputSemantics,

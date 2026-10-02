@@ -11,17 +11,19 @@ import {
 } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-
 import { sha256Hex } from '../src/canonical-json.mjs';
 import { DESIGN_DOCUMENT_SCHEMA } from '../src/design-contracts.mjs';
 import { DESIGN_HANDOFF_SCHEMAS } from '../src/design-handoff-contracts.mjs';
 import { DIAGRAM_REVIEW_SCHEMAS } from '../src/diagram-review-contracts.mjs';
 import { ENTERPRISE_SCHEMAS } from '../src/enterprise-contracts.mjs';
+import { LARGE_OBJECT_SCHEMAS } from '../src/large-object-contracts.mjs';
 import {
+  DESIGN_REVIEW_BUNDLE_V12_SCHEMA,
   DESIGN_REVIEW_METADATA_PAYLOAD_V11_SCHEMA,
   REVIEW_EXPERIENCE_SCHEMAS,
 } from '../src/review-experience-contracts.mjs';
 import { DESIGN_WORKSPACE_SCHEMAS } from '../src/workspace-contracts.mjs';
+import { buildSharedArtifactEnvelopeSchema } from './artifact-envelope-definitions.mjs';
 import {
   buildArtifactThemeRegistries,
   buildArtifactThemeSchemas,
@@ -95,6 +97,18 @@ for (const [name, value] of buildArtifactThemeRegistries())
 
 for (const [name, value] of Object.entries(DIAGRAM_REVIEW_SCHEMAS))
   expected.set(`schemas/v1.15.0/${name}.schema.json`, json(value));
+
+expected.set(
+  'schemas/v1.16.0/artifact-envelope.schema.json',
+  json(buildSharedArtifactEnvelopeSchema()),
+);
+expected.set(
+  'schemas/v1.16.0/design-review-bundle.schema.json',
+  json(DESIGN_REVIEW_BUNDLE_V12_SCHEMA),
+);
+
+for (const [name, value] of Object.entries(LARGE_OBJECT_SCHEMAS))
+  expected.set(`schemas/v1.17.0/${name}.schema.json`, json(value));
 
 const registries = Object.fromEntries(buildRegistries());
 expected.set(
@@ -177,6 +191,19 @@ function read(path) {
 }
 
 const projectionFiles = new Map([
+  ...[
+    'bounded-json-data',
+    'large-object-contracts',
+    'large-object-limits',
+    'studio-presentation-contracts',
+    'sharing-security-contracts',
+  ].flatMap((name) => [
+    [
+      `${name}.mjs`,
+      read(`src/${name}.mjs`).replaceAll("from '../schemas/", "from '../../schemas/"),
+    ],
+    [`${name}.d.mts`, read(`src/${name}.d.mts`)],
+  ]),
   ['errors.mjs', read('src/errors.mjs')],
   ['browser-contracts.d.mts', read('src/browser-contracts.d.mts')],
   [
@@ -270,10 +297,10 @@ function walk(root, prefix = '') {
 }
 
 const originalSchemaFiles = walk(join(packageRoot, 'schemas')).filter(
-  ({ key }) => !/^v1\.(?:[5-9]|10|11|12|13|14|15)\.0\//u.test(key) && key.endsWith('.json'),
+  ({ key }) => !/^v1\.(?:[5-9]|10|11|12|13|14|15|16|17)\.0\//u.test(key) && key.endsWith('.json'),
 );
-const originalRegistryFiles = walk(join(packageRoot, 'registry')).filter(({ key }) =>
-  key.endsWith('.json'),
+const originalRegistryFiles = walk(join(packageRoot, 'registry')).filter(
+  ({ key }) => !key.startsWith('v1.17.0/') && key.endsWith('.json'),
 );
 if (originalSchemaFiles.length !== 180 || originalRegistryFiles.length !== 12) {
   throw new Error(

@@ -67,6 +67,9 @@ const RETIRED_TARGETS = Object.freeze({
 });
 
 const PROTOCOL_TARGETS = Object.freeze({
+  'large-object-contracts': 'lib/protocol/large-object-contracts.mjs',
+  'sharing-security-contracts': 'lib/protocol/sharing-security-contracts.mjs',
+  'studio-presentation-contracts': 'lib/protocol/studio-presentation-contracts.mjs',
   errors: 'lib/protocol/errors.mjs',
   'canonical-json': 'lib/protocol/canonical-json.mjs',
   'json-schema': 'lib/protocol/json-schema.mjs',

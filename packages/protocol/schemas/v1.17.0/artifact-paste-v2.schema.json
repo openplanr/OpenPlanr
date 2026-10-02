@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.17.0/artifact-paste-v2.schema.json",
+  "x-openplanr-contract": {
+    "id": "artifact-paste-v2",
+    "version": "1.17.0"
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "const": "2.0.0"
+    },
+    "operation": {
+      "const": "create"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{16,128}$"
+    },
+    "creationId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{43}$"
+    },
+    "ttl": {
+      "enum": [
+        "1d",
+        "7d",
+        "30d"
+      ]
+    },
+    "iv": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{16}$"
+    },
+    "ciphertext": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]+$",
+      "minLength": 22,
+      "maxLength": 6990507
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "operation",
+    "id",
+    "creationId",
+    "ttl",
+    "iv",
+    "ciphertext"
+  ]
+}

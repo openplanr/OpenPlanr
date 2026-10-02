@@ -639,6 +639,11 @@ export function getDiagramAuthoringCapability(grammarId) {
 }
 
 const error = (path, rule, detail) => ({ path, rule, detail });
+// Only this module's detached, recursively frozen copies carry inert-data provenance.
+// A caller's Object.freeze() or claimed digest never enters either cache.
+const immutableDataProofs = new WeakMap();
+const immutableDigests = new WeakMap();
+const immutableCanonical = new WeakMap();
 // Descriptors are inspected before values; neither validation nor hashing invokes accessors.
 function inspectData(value) {
   const issues = [];
@@ -671,6 +676,17 @@ function inspectData(value) {
     }
     if (typeof current !== 'object') {
       issues.push(error(path, 'plain-data', 'Only JSON data is accepted.'));
+      return;
+    }
+    const proof = immutableDataProofs.get(current);
+    if (
+      proof &&
+      count + proof.values - 1 <= DIAGRAM_AUTHORING_LIMITS.values &&
+      textSize + proof.text <= DIAGRAM_AUTHORING_LIMITS.textCodeUnits &&
+      depth + proof.height <= DIAGRAM_AUTHORING_LIMITS.depth
+    ) {
+      count += proof.values - 1;
+      textSize += proof.text;
       return;
     }
     const proto = Object.getPrototypeOf(current);
@@ -734,17 +750,174 @@ function inspectData(value) {
   }
   return issues;
 }
+/**
+ * Internal snapshot boundary. The copy is inspected completely before any proof is recorded.
+ * @param {unknown} value
+ * @param {import('./diagram-authoring-contracts.d.mts').DiagramAuthoringBundle | null} previous
+ */
+export function copyImmutableDiagramData(value, previous = null) {
+  assertData(value);
+  const ancestors = new Set();
+  let copiedValues = 0;
+  function copyData(current, depth) {
+    if (++copiedValues > DIAGRAM_AUTHORING_LIMITS.values || depth > DIAGRAM_AUTHORING_LIMITS.depth)
+      throw new TypeError('Copy exceeds portable resource limits.');
+    if (!current || typeof current !== 'object') return current;
+    if (immutableDataProofs.has(current)) return current;
+    if (ancestors.has(current)) throw new TypeError('Cyclic copy is not accepted.');
+    ancestors.add(current);
+    const result = Array.isArray(current) ? [] : {};
+    const descriptors = Object.getOwnPropertyDescriptors(current);
+    for (const key of Reflect.ownKeys(descriptors)) {
+      const descriptor = descriptors[/** @type {string} */ (key)];
+      if (!Object.hasOwn(descriptor, 'value'))
+        throw new TypeError('Accessor copy is not accepted.');
+      if (Array.isArray(current) && key === 'length') {
+        result.length = descriptor.value;
+        continue;
+      }
+      Object.defineProperty(result, key, {
+        value: copyData(descriptor.value, depth + 1),
+        enumerable: descriptor.enumerable,
+        configurable: true,
+        writable: true,
+      });
+    }
+    ancestors.delete(current);
+    return result;
+  }
+  let copy = copyData(value, 0);
+  assertData(copy);
+  if (previous && immutableDataProofs.has(previous)) {
+    // Inspected descendants can stay shared; reuse must never mutate an owned frozen root.
+    if (immutableDataProofs.has(copy)) copy = Array.isArray(copy) ? [...copy] : { ...copy };
+    for (const field of ['document', 'originalSource', 'sourceMap'])
+      if (
+        copy[field] !== previous[field] &&
+        JSON.stringify(copy[field]) === JSON.stringify(previous[field])
+      )
+        copy[field] = previous[field];
+    if (copy.presentation?.elements && previous.presentation?.elements) {
+      const placements = new Map(
+        previous.presentation.elements.map((item) => [item.elementId, item]),
+      );
+      copy.presentation = {
+        ...copy.presentation,
+        elements: copy.presentation.elements.map((item) => {
+          const old = placements.get(item.elementId);
+          return old && (old === item || JSON.stringify(old) === JSON.stringify(item)) ? old : item;
+        }),
+      };
+    }
+  }
+  freezeImmutableOwnedData(copy);
+  return copy;
+}
+// Call only for values constructed here from inspected copies and immutable descendants.
+function freezeImmutableOwnedData(current) {
+  if (!current || typeof current !== 'object')
+    return { values: 1, text: typeof current === 'string' ? current.length : 0, height: 0 };
+  const retained = immutableDataProofs.get(current);
+  if (retained) return retained;
+  const proof = { values: 1, text: 0, height: 0 };
+  for (const child of Object.values(current)) {
+    const part = freezeImmutableOwnedData(child);
+    proof.values += part.values;
+    proof.text += part.text;
+    proof.height = Math.max(proof.height, part.height + 1);
+  }
+  Object.freeze(current);
+  immutableDataProofs.set(current, proof);
+  return proof;
+}
+export function immutableDiagramDataUsage(value) {
+  const proof = value && typeof value === 'object' ? immutableDataProofs.get(value) : null;
+  return proof ? { ...proof } : null;
+}
+function rememberImmutableDigest(value, field, digest) {
+  immutableDigests.set(value, new Map([[field, digest]]));
+  return value;
+}
+/** Seal an inspected private draft. Every memoized hash was computed from these exact immutable bytes. */
+export function sealImmutableDiagramData(value, previous = null) {
+  const draft = copyImmutableDiagramData(value, previous);
+  const semanticDigest = diagramDocumentDigest(draft.document);
+  const document =
+    draft.document.documentDigest === semanticDigest
+      ? draft.document
+      : rememberImmutableDigest(
+          { ...draft.document, documentDigest: semanticDigest },
+          'documentDigest',
+          semanticDigest,
+        );
+  freezeImmutableOwnedData(document);
+  const sourceMap = draft.sourceMap ? { ...draft.sourceMap, semanticDigest } : null;
+  freezeImmutableOwnedData(sourceMap);
+  const presentationDraft = { ...draft.presentation, semanticDigest };
+  freezeImmutableOwnedData(presentationDraft);
+  const presentationDigest = diagramPresentationDigest(presentationDraft);
+  const presentation = rememberImmutableDigest(
+    { ...presentationDraft, presentationDigest },
+    'presentationDigest',
+    presentationDigest,
+  );
+  freezeImmutableOwnedData(presentation);
+  const bundleDraft = { ...draft, document, presentation, sourceMap };
+  freezeImmutableOwnedData(bundleDraft);
+  const bundleDigest = diagramAuthoringBundleDigest(bundleDraft);
+  const bundle = rememberImmutableDigest(
+    { ...bundleDraft, bundleDigest },
+    'bundleDigest',
+    bundleDigest,
+  );
+  freezeImmutableOwnedData(bundle);
+  return bundle;
+}
 function assertData(value) {
   const issues = inspectData(value);
   if (issues.length) throw new TypeError(`${issues[0].path}: ${issues[0].rule}`);
 }
+/** Inspect inert authoring data with the existing aggregate limits, without copying it.
+ * @type {typeof import('./diagram-authoring-contracts.d.mts').assertDiagramData}
+ */
+export function assertDiagramData(value) {
+  assertData(value);
+  return value;
+}
+// Called only on private inspected immutable descendants plus the owned digest-exclusion root.
+function canonicalImmutableData(value) {
+  if (!value || typeof value !== 'object') return canonicalizeJson(value);
+  const known = immutableDataProofs.has(value);
+  const cached = known ? immutableCanonical.get(value) : undefined;
+  if (cached !== undefined) return cached;
+  const text = Array.isArray(value)
+    ? '[' + value.map(canonicalImmutableData).join(',') + ']'
+    : '{' +
+      Object.keys(value)
+        .sort()
+        .map((key) => canonicalizeJson(key) + ':' + canonicalImmutableData(value[key]))
+        .join(',') +
+      '}';
+  // Bound per-record caching; do not retain another whole document/bundle string for each revision.
+  if (known && text.length <= 16384) immutableCanonical.set(value, text);
+  return text;
+}
 function digestExcluding(value, field) {
+  const proof = value && typeof value === 'object' && immutableDataProofs.has(value);
+  const retained = proof ? immutableDigests.get(value)?.get(field) : undefined;
+  if (retained) return retained;
   assertData(value);
   if (!value || typeof value !== 'object' || Array.isArray(value))
     throw new TypeError('Digest input must be an object.');
   const input = { ...value };
   delete input[field];
-  return sha256Jcs(input);
+  const digest = proof ? `sha256:${sha256Hex(canonicalImmutableData(input))}` : sha256Jcs(input);
+  if (proof) {
+    const cache = immutableDigests.get(value) ?? new Map();
+    cache.set(field, digest);
+    immutableDigests.set(value, cache);
+  }
+  return digest;
 }
 /** @type {typeof import('./diagram-authoring-contracts.d.mts').diagramDocumentDigest} */
 export const diagramDocumentDigest = (value) => digestExcluding(value, 'documentDigest');
