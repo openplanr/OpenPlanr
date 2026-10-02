@@ -15,7 +15,7 @@ export const DESIGN_STUDIO_BUNDLE_BANNER =
  * Raise one deliberately, keeping about 20% headroom over the measured size.
  */
 export const DESIGN_STUDIO_ASSET_BUDGETS = Object.freeze({
-  'templates/studio/studio.js': Object.freeze({ bytes: 267_264, gzipBytes: 61_440 }),
+  'templates/studio/studio.js': Object.freeze({ bytes: 1_400_000, gzipBytes: 260_000 }),
 });
 
 export class DesignStudioGenerationError extends Error {
@@ -28,10 +28,11 @@ export class DesignStudioGenerationError extends Error {
 }
 
 /** Bundle the studio, review experience and Handoff Center into one classic script. */
-export function renderDesignStudioRuntimeAsset({ projectRoot = root } = {}) {
+export function renderDesignStudioRuntimeAsset({ projectRoot = root, onInputs } = {}) {
   return bundleBrowserEntry('lib/design/ui/studio-runtime.mjs', {
     projectRoot,
     banner: DESIGN_STUDIO_BUNDLE_BANNER,
+    onInputs,
   });
 }
 

@@ -9,7 +9,7 @@ import ts from 'typescript';
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
 /** Workspaces whose tsconfig.json compiles .mts sources to the .mjs and .d.mts beside them. */
-export const TYPESCRIPT_PROJECTS = Object.freeze(['packages/artifact']);
+export const TYPESCRIPT_PROJECTS = Object.freeze(['packages/artifact', 'packages/design']);
 
 // Declaration paths resolve under this directory and map back beside their sources; nothing
 // is written there. An in-place emit would collide with the JavaScript modules allowJs reads.
@@ -70,17 +70,29 @@ function readProject(root, project) {
  * esbuild keeps the source's line layout, so a bundle built from this output matches one
  * built from the equivalent hand-written JavaScript; tsc's printer would reflow it.
  */
+function rewriteTsxImports(text, source) {
+  return text.replace(/(['"])(\.{1,2}\/[^'"]+)\.js\1/gu, (match, quote, path) =>
+    existsSync(resolve(dirname(source.fileName), `${path}.tsx`))
+      ? `${quote}${path}.mjs${quote}`
+      : match,
+  );
+}
+
 function emitJavaScript(projectRoot, source) {
   const { transformSync } = createRequire(resolve(projectRoot, 'package.json'))('esbuild');
-  return transformSync(source.text, {
-    sourcefile: source.fileName,
-    loader: 'ts',
-    format: 'esm',
-    target: 'es2022',
-    charset: 'utf8',
-    legalComments: 'inline',
-    tsconfigRaw: { compilerOptions: { verbatimModuleSyntax: true } },
-  }).code;
+  return rewriteTsxImports(
+    transformSync(source.text, {
+      sourcefile: source.fileName,
+      loader: source.fileName.endsWith('.tsx') ? 'tsx' : 'ts',
+      jsx: 'automatic',
+      format: 'esm',
+      target: 'es2022',
+      charset: 'utf8',
+      legalComments: 'inline',
+      tsconfigRaw: { compilerOptions: { verbatimModuleSyntax: true } },
+    }).code,
+    source,
+  );
 }
 
 function compileProject(root, project) {
@@ -106,16 +118,19 @@ function compileProject(root, project) {
   const outputs = {};
   for (const source of sources) {
     const banner = `${TYPESCRIPT_OUTPUT_BANNER} ${basename(source.fileName)}\n`;
-    const target = posix(relative(root, source.fileName)).replace(/\.mts$/u, '');
+    const target = posix(relative(root, source.fileName)).replace(/\.(?:mts|tsx)$/u, '');
     outputs[`${target}.mjs`] = `${banner}${emitJavaScript(projectRoot, source)}`;
     const result = program.emit(source, (fileName, text) => {
-      if (resolve(projectRoot, relative(emitRoot, fileName)) !== resolve(root, `${target}.d.mts`))
+      if (
+        resolve(projectRoot, relative(emitRoot, fileName)).replace(/\.d\.ts$/u, '.d.mts') !==
+        resolve(root, `${target}.d.mts`)
+      )
         throw new TypeScriptSourceError(
           'E_TYPESCRIPT_EMIT',
           `Unexpected declaration output ${fileName} for ${target}.mts.`,
           { source: `${target}.mts` },
         );
-      outputs[`${target}.d.mts`] = `${banner}${text}`;
+      outputs[`${target}.d.mts`] = `${banner}${rewriteTsxImports(text, source)}`;
     });
     if (result.emitSkipped || !outputs[`${target}.d.mts`]) {
       throw new TypeScriptSourceError(

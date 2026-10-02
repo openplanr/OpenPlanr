@@ -30,6 +30,7 @@ type HostedStateCopyTable = Readonly<Partial<Record<HostedArtifactViewerStatus, 
 interface KeyedRequest {
   id: string;
   key: string;
+  readCapability?: string;
   write?: string;
   owner?: string;
   manage?: string;
@@ -196,6 +197,7 @@ export function parseHostedArtifactLocation(
   if (roomMatch) {
     const params = new URLSearchParams(hash.slice(1));
     const key = params.get('k');
+    const readCapability = params.get('r');
     const write = params.get('w');
     const owner = params.get('o');
     const manage = params.get('m');
@@ -204,6 +206,11 @@ export function parseHostedArtifactLocation(
       !key ||
       !/^[A-Za-z0-9_-]{43}$/.test(key) ||
       authority.length > 1 ||
+      (readCapability !== null &&
+        (!/^[A-Za-z0-9_-]{43}$/.test(readCapability) ||
+          params.size !== 2 + authority.length ||
+          [...params.keys()].some((name) => !['k', 'r', 'w', 'o', 'm'].includes(name)) ||
+          new Set(params.keys()).size !== params.size)) ||
       (write && !/^[A-Za-z0-9_-]{43}$/.test(write)) ||
       (owner && !/^[A-Za-z0-9_-]{43}$/.test(owner)) ||
       (manage && !/^[A-Za-z0-9_-]{43}$/.test(manage))
@@ -215,6 +222,7 @@ export function parseHostedArtifactLocation(
       transport: 'room',
       id: roomMatch[1],
       key,
+      ...(readCapability ? { readCapability } : {}),
       ...(write ? { write } : {}),
       ...(owner ? { owner } : {}),
       ...(manage ? { manage } : {}),
@@ -348,6 +356,7 @@ export function mountHostedArtifactViewer({
             transport: parsed.transport,
             id: parsed.id,
             key: parsed.key,
+            ...(parsed.readCapability ? { readCapability: parsed.readCapability } : {}),
             ...(parsed.write ? { write: parsed.write } : {}),
             ...(parsed.owner ? { owner: parsed.owner } : {}),
             ...(parsed.manage ? { manage: parsed.manage } : {}),
@@ -382,6 +391,7 @@ export function mountHostedArtifactViewer({
                     Object.freeze({
                       id: parsed.id,
                       key: parsed.key,
+                      ...(parsed.readCapability ? { readCapability: parsed.readCapability } : {}),
                       ...(parsed.write ? { write: parsed.write } : {}),
                       ...(parsed.owner ? { owner: parsed.owner } : {}),
                       ...(parsed.manage ? { manage: parsed.manage } : {}),

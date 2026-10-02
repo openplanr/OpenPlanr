@@ -354,17 +354,13 @@ test('two editors in one document keep unique ids and independent drawers', opti
       },
     });
   });
-  // Marker ids inside the drawing come from the shared renderer and repeat when one diagram is
-  // drawn twice; the chrome ids are the editor's own.
   const ids = await page.evaluate(() =>
-    [...document.querySelectorAll('[id]')]
-      .filter((node) => !node.closest('[data-editor-svg]'))
-      .map((node) => node.id),
+    [...document.querySelectorAll('[id]')].map((node) => node.id),
   );
   assert.equal(
     new Set(ids).size,
     ids.length,
-    `Every chrome id is unique; duplicates: ${ids.filter((id, index) => ids.indexOf(id) !== index).join(', ')}`,
+    `Every chrome and drawing id is unique; duplicates: ${ids.filter((id, index) => ids.indexOf(id) !== index).join(', ')}`,
   );
   assert.equal(await page.locator('#host-editor #diagram-outline-panel').count(), 1);
   assert.equal(await page.locator('#second-editor #diagram-2-outline-panel').count(), 1);

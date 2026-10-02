@@ -7,8 +7,8 @@ import { test } from 'node:test';
 import { pathToFileURL } from 'node:url';
 import { browserEngine, launchBrowser } from '../../../tests/support/browser-launcher.mjs';
 import { renderDesignDocument } from '../lib/design/document.mjs';
-import { startDesignReview } from '../lib/design/review.mjs';
 import { designFixture } from './design-fixture.mjs';
+import { startDesignReview } from './studio-http-fixture.mjs';
 
 const engine = browserEngine();
 
@@ -277,25 +277,29 @@ test(`walkthrough navigation stays painted, preserves product state and handles 
         `${host}/reduced motion`,
         { animated: false },
       );
-      assert.deepEqual(
-        await page.evaluate(() =>
-          window.__walkthroughFrames.map((record) => ({
-            sameNode: record.frame.isConnected,
-            sameWindow: record.frame.contentWindow === record.window,
-            sameSource:
-              record.frame.getAttribute('src') === record.src &&
-              record.frame.getAttribute('srcdoc') === record.srcdoc,
-            loads: record.loads,
-          })),
-        ),
-        Array.from({ length: 4 }, () => ({
-          sameNode: true,
-          sameWindow: true,
-          sameSource: true,
-          loads: 0,
+      const documents = await page.evaluate(() =>
+        window.__walkthroughFrames.map((record) => ({
+          sameNode: record.frame.isConnected,
+          sameWindow: record.frame.contentWindow === record.window,
+          initiallyLoaded: Boolean(record.src || record.srcdoc),
+          sameSource:
+            record.frame.getAttribute('src') === record.src &&
+            record.frame.getAttribute('srcdoc') === record.srcdoc,
+          loads: record.loads,
         })),
-        `${host}: transitions preserve existing iframe identities without cloning or reloading`,
       );
+      for (const document of documents) {
+        assert.equal(document.sameNode, true, `${host}: navigation keeps each artboard node`);
+        assert.equal(document.sameWindow, true, `${host}: navigation never clones a product frame`);
+        if (document.initiallyLoaded) {
+          assert.equal(document.sameSource, true, `${host}: retained product sources stay intact`);
+          assert.equal(
+            document.loads,
+            0,
+            `${host}: returning to a retained screen never reloads it`,
+          );
+        } else assert.ok(document.loads <= 1, `${host}: a new screen loads on demand only once`);
+      }
       const evidence = process.env.OPENPLANR_WALKTHROUGH_EVIDENCE_DIR;
       if (evidence) {
         mkdirSync(evidence, { recursive: true });

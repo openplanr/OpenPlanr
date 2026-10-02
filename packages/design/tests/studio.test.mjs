@@ -72,10 +72,16 @@ function fixture({ count = 3, title = 'Fieldwork operations' } = {}) {
   return { document, envelope, entries };
 }
 
-async function mount({ data = fixture(), options = {}, stored = null, experience = false } = {}) {
+async function mount({
+  data = fixture(),
+  options = {},
+  stored = null,
+  experience = false,
+  hash = '',
+} = {}) {
   const html = renderDesignStudio(data);
   const dom = new JSDOM(html, {
-    url: 'http://127.0.0.1/review/studio/',
+    url: `http://127.0.0.1/review/studio/${hash}`,
     runScripts: 'outside-only',
     pretendToBeVisual: true,
   });
@@ -105,6 +111,7 @@ async function mount({ data = fixture(), options = {}, stored = null, experience
   const stage = mountArtifactStage({
     document: window.document,
     window,
+    frameBudget: null,
     async resolveArtifactSource(artifact, { frame }) {
       setTimeout(() => frame.dispatchEvent(new window.Event('load')), 0);
       return data.envelope.artifacts.find(({ id }) => id === artifact.id).html;
@@ -112,6 +119,7 @@ async function mount({ data = fixture(), options = {}, stored = null, experience
   });
   window.eval(runtime);
   await stage.ready;
+  await stage.ensureFrames(data.entries.map((entry) => entry.artifactId));
   for (let index = 0; index < 20 && !window.__openPlanrDesignStudio; index += 1) await delay(10);
   assert.ok(window.__openPlanrDesignStudio, 'studio boots after artifact stage');
   if (experience) await delay(20);
@@ -446,6 +454,7 @@ test('walkthroughs do not truncate beyond eight screens and reject unknown navig
     app.studio.setView('walkthrough');
     for (let index = 1; index < 12; index += 1)
       app.documentNode.querySelector('[data-design-step-change="1"]').click();
+    await delay(500);
     assert.equal(app.studio.getState().screenId, 'screen-12');
     assert.equal(app.documentNode.querySelector('[data-design-step]').textContent, 'Step 12 of 12');
     assert.equal(app.documentNode.querySelector('[data-design-step-change="1"]').disabled, true);
@@ -550,6 +559,149 @@ test('save failure keeps an unsaved draft visible and never reports success', as
     assert.equal(draft.unsaved, true);
     assert.equal(draft.state.ratings.editorial, 2);
     assert.match(app.documentNode.querySelector('.design-notice').textContent, /another window/);
+  } finally {
+    app.close();
+  }
+});
+
+test('personal sync notices dismiss without losing the draft and stay dismissed until recovery', async () => {
+  let failing = true;
+  const saves = [];
+  const app = await mount({
+    options: {
+      savePersonalState: async (state) => {
+        saves.push(state);
+        if (failing) throw new Error('offline');
+        return { stateVersion: saves.length };
+      },
+      saveState: async () => {
+        throw Object.assign(new Error('conflict'), { conflict: true });
+      },
+    },
+  });
+  try {
+    const document = app.documentNode;
+    const notice = document.querySelector('.design-notice');
+    const dismiss = notice.querySelector('[data-design-dismiss-notice]');
+    app.studio.setView('prototype');
+    await app.studio.flush();
+    assert.equal(notice.hidden, false);
+    assert.match(notice.textContent, /Canvas preferences could not be synchronized/);
+    assert.equal(dismiss.getAttribute('aria-label'), 'Dismiss notification');
+    dismiss.focus();
+    dismiss.click();
+    assert.equal(notice.hidden, true);
+    assert.equal(
+      document.activeElement,
+      document.querySelector('button[data-design-view="prototype"]'),
+    );
+    assert.equal(app.studio.getSaveState().personalPending, true);
+    const draft = () =>
+      JSON.parse(app.window.localStorage.getItem('openplanr.design-studio.fieldwork'));
+    assert.equal(draft().personalPending, true);
+    assert.equal(draft().state.view, 'prototype');
+
+    app.studio.setView('walkthrough');
+    await app.studio.flush();
+    assert.equal(notice.hidden, true, 'the same failed sync cannot reopen a dismissed notice');
+    assert.equal(draft().state.view, 'walkthrough');
+    failing = false;
+    await app.studio.flush();
+    assert.equal(app.studio.getSaveState().personalPending, false);
+    assert.equal(draft().personalPending, false);
+    failing = true;
+    app.studio.setView('prototype');
+    await app.studio.flush();
+    assert.equal(notice.hidden, false, 'a new failure after recovery is shown');
+    dismiss.click();
+
+    document.querySelector('[data-design-rating="2"]').click();
+    await app.studio.flush();
+    assert.equal(
+      notice.hidden,
+      false,
+      'a dismissed preference warning never hides a review conflict',
+    );
+    assert.match(notice.textContent, /another window/);
+    dismiss.click();
+    assert.equal(app.studio.getSaveState().dirty, true);
+    assert.equal(draft().unsaved, true);
+    assert.equal(draft().state.ratings.editorial, 2);
+    assert.equal(document.querySelector('[data-design-save-state]').textContent, 'Save conflict');
+  } finally {
+    app.close();
+  }
+});
+
+test('successful preference retry clears the visible failure notice', async () => {
+  let failing = true;
+  const app = await mount({
+    options: {
+      savePersonalState: async () => {
+        if (failing) throw new Error('offline');
+        return { stateVersion: 1 };
+      },
+    },
+  });
+  try {
+    app.studio.setView('prototype');
+    await app.studio.flush();
+    const notice = app.documentNode.querySelector('.design-notice');
+    assert.equal(notice.hidden, false);
+    failing = false;
+    await app.studio.flush();
+    assert.equal(notice.hidden, true);
+    assert.equal(app.studio.getSaveState().personalPending, false);
+  } finally {
+    app.close();
+  }
+});
+
+test('dismissing a comment-save failure keeps the unsaved review and retry clears it', async () => {
+  const app = await mount({ options: { reviewUrl: '/review' } });
+  let failing = true;
+  app.window.fetch = async () => ({
+    ok: !failing,
+    status: failing ? 503 : 200,
+    json: async () => (failing ? { message: 'Unavailable' } : {}),
+  });
+  try {
+    app.stage.review.setIdentity({ name: 'Rae' });
+    app.stage.review.dispatch({
+      type: 'add-pin',
+      pin: {
+        artifactId: app.entries[0].artifactId,
+        viewport: { width: 1280, height: 800 },
+        region: { x: 0.2, y: 0.3, w: 0, h: 0 },
+        intent: 'improve',
+        comment: 'Clarify the next action.',
+      },
+    });
+    await app.studio.flush();
+    const notice = app.documentNode.querySelector('.design-notice');
+    assert.equal(notice.hidden, false);
+    assert.match(notice.textContent, /Comments could not be saved/);
+    notice.querySelector('[data-design-dismiss-notice]').click();
+    const draft = JSON.parse(
+      app.window.localStorage.getItem('openplanr.design-studio.fieldwork.review'),
+    );
+    assert.equal(draft.unsaved, true);
+    assert.equal(draft.review.pins[0].comment, 'Clarify the next action.');
+    assert.equal(app.studio.getSaveState().dirty, true);
+    assert.equal(
+      app.documentNode.querySelector('[data-design-save-state]').textContent,
+      'Comments unsaved',
+    );
+    await app.studio.flush();
+    assert.equal(notice.hidden, true);
+    failing = false;
+    await app.studio.flush();
+    assert.equal(app.studio.getSaveState().dirty, false);
+    assert.equal(
+      JSON.parse(app.window.localStorage.getItem('openplanr.design-studio.fieldwork.review'))
+        .unsaved,
+      false,
+    );
   } finally {
     app.close();
   }
@@ -832,5 +984,61 @@ test('owner handoff keeps source quotes immutable and requires saving refinement
     assert.equal(find('Approve handoff').disabled, true);
   } finally {
     value.close();
+  }
+});
+
+test('search and journey filtering retain the selected screen without altering source frames', async () => {
+  const data = fixture({ count: 12 });
+  data.document.flows = [
+    { id: 'review', title: 'Review journey', screens: ['screen-2', 'screen-3'] },
+  ];
+  const f = await mount({ data });
+  try {
+    const search = f.documentNode.querySelector('[data-design-screen-search]');
+    const group = f.documentNode.querySelector('[data-design-screen-group]');
+    search.value = 'Screen 2';
+    search.dispatchEvent(new f.window.Event('input'));
+    assert.deepEqual(
+      [...f.documentNode.querySelectorAll('[data-design-screen]')]
+        .filter((e) => !e.hidden)
+        .map((e) => e.dataset.designScreen),
+      ['screen-2'],
+    );
+    group.value = 'review';
+    group.dispatchEvent(new f.window.Event('change'));
+    assert.equal(f.documentNode.querySelector('[data-design-search-empty]').hidden, true);
+    search.value = 'no match';
+    search.dispatchEvent(new f.window.Event('input'));
+    assert.equal(f.documentNode.querySelector('[data-design-search-empty]').hidden, false);
+    assert.equal(f.studio.getState().screenId, 'screen-1');
+    assert.equal(f.documentNode.querySelectorAll('iframe').length, data.entries.length);
+  } finally {
+    f.close();
+  }
+});
+
+test('actual size and focus preserve source geometry while non-secret deep links restore selection', async () => {
+  const f = await mount({ hash: '#screen=screen-2&frame=mobile&direction=compact&view=prototype' });
+  try {
+    assert.equal(f.studio.getState().screenId, 'screen-2');
+    assert.equal(f.studio.getState().frameId, 'mobile');
+    assert.equal(f.studio.getState().variantId, 'compact');
+    f.documentNode.querySelector('[data-design-actual-size]').click();
+    assert.equal(f.studio.getState().zoom, 1);
+    assert.equal(f.studio.getState().inspectionScale, 'actual');
+    f.documentNode.querySelector('[data-design-focus]').click();
+    assert.equal(f.studio.getState().navOpen, false);
+    assert.equal(f.studio.getState().reviewOpen, false);
+    f.documentNode.querySelector('[data-design-screen="screen-3"]').click();
+    assert.match(f.window.location.hash, /screen=screen-3/);
+    assert.doesNotMatch(f.window.location.hash, /token|capability|auth/);
+    f.window.history.back();
+    await delay(40);
+    assert.equal(f.studio.getState().screenId, 'screen-2');
+    assert.equal(f.studio.getState().frameId, 'mobile');
+    f.documentNode.querySelector('[data-design-fit]').click();
+    assert.equal(f.studio.getState().inspectionScale, 'fit');
+  } finally {
+    f.close();
   }
 });

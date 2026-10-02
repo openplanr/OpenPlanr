@@ -70,6 +70,7 @@ async function fixture(t, { legacy = false } = {}) {
       'diagram-editor.css',
       'diagram-studio.css',
       'diagram-shared-review.css',
+      'studio-shell.css',
     ])
       await page.addStyleTag({
         content: readFileSync(
@@ -274,20 +275,30 @@ test(
           mobile: innerWidth <= 700,
         };
       });
-      assert.equal(bounds.position, 'absolute');
-      assert.ok(Math.abs(bounds.rail.right - bounds.workspace.right) < 1);
-      assert.ok(Math.abs(bounds.rail.top - bounds.workspace.top) < 1);
-      assert.ok(Math.abs(bounds.rail.bottom - bounds.workspace.bottom) < 1);
+      if (bounds.mobile) {
+        assert.equal(bounds.position, 'static');
+        const dialog = await page.locator('.studio-panel-dialog').boundingBox();
+        assert.ok(dialog.height >= 750, 'Mobile review uses a full-height controlled dialog');
+        assert.ok(
+          Math.abs(bounds.canvas.right - bounds.workspace.right) < 1,
+          'Mobile canvas keeps its full width',
+        );
+        await page.keyboard.press('Escape');
+        assert.equal(await page.locator('.studio-panel-dialog').count(), 0);
+      } else {
+        assert.equal(bounds.position, 'absolute');
+        assert.ok(Math.abs(bounds.rail.right - bounds.workspace.right) < 1);
+        assert.ok(Math.abs(bounds.rail.top - bounds.workspace.top) < 1);
+        assert.ok(Math.abs(bounds.rail.bottom - bounds.workspace.bottom) < 1);
+        assert.ok(
+          Math.abs(bounds.canvas.right - bounds.rail.left) < 1,
+          'Desktop review reserves its rail width',
+        );
+      }
       assert.ok(Math.abs(bounds.canvas.top - bounds.workspace.top) < 1);
       assert.ok(Math.abs(bounds.canvas.height - bounds.workspace.height) < 1);
-      assert.ok(
-        Math.abs(
-          bounds.canvas.right - (bounds.mobile ? bounds.workspace.right : bounds.rail.left),
-        ) < 1,
-        'Discussion reserves desktop width and overlays the full-height mobile canvas',
-      );
       const exportCount = await page.evaluate(() => window.__exports.length);
-      await page.locator('.diagram-export summary').click();
+      await page.locator('[data-studio-export-menu]').click();
       const svgExport = page.locator('[data-export="svg"]');
       const box = await svgExport.boundingBox();
       const hit = await page.evaluate(
@@ -299,7 +310,7 @@ test(
       await svgExport.click();
       assert.equal(await page.evaluate(() => window.__exports.length), exportCount + 1);
       assert.equal(await page.evaluate(() => window.__exports.at(-1)), 'svg');
-      await page.locator('.diagram-export summary').click();
+      if (bounds.mobile) await page.locator('[data-action=review]').click();
       const metrics = await page.evaluate(() => {
         const open = document.querySelector('[data-planr-metric="open"]'),
           total = document.querySelector('[data-planr-metric="total"]');
@@ -310,7 +321,8 @@ test(
       });
       assert.equal(metrics.gap, 6);
       assert.equal(metrics.countDisplay, 'grid');
-      await page.locator('[data-action="review"]').click();
+      if (bounds.mobile) await page.keyboard.press('Escape');
+      else await page.locator('[data-action="review"]').click();
     }
     await assertDiscussionBounds();
     await page.locator('[data-action="present"]').click();

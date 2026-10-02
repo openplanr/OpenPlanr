@@ -1,8 +1,8 @@
+import type { DiagramPlacement } from '@openplanr/protocol/diagram-authoring-contracts';
 import type {
-  DiagramAuthoringBundle,
-  DiagramEditTransaction,
-  DiagramPlacement,
-} from '@openplanr/protocol/diagram-authoring-contracts';
+  VersionedDiagramAuthoringBundle as DiagramAuthoringBundle,
+  VersionedDiagramEditTransaction as DiagramEditTransaction,
+} from '@openplanr/protocol/studio-presentation-contracts';
 import type { DiagramCommand, DiagramCommandResult } from '../diagram/authoring/index.mjs';
 import { appearanceFields, clone, geometryFields, snapshot } from '../diagram/authoring/model.mjs';
 import {
@@ -227,6 +227,10 @@ export function createEditorCommands(ctx: DiagramEditorContext): DiagramEditorCo
       place = placementOf(bundle, id),
       before = geometryFields(place),
       after = clone(before);
+    if (!after.route) {
+      report('Select a connector with a route.');
+      return;
+    }
     const points = session.geometry(id)?.points ?? [];
     if (action === 'reset-route') {
       after.route.mode = 'automatic';
@@ -448,6 +452,7 @@ export function createEditorCommands(ctx: DiagramEditorContext): DiagramEditorCo
           accessibility: bundle.document.accessibility,
         };
         const after = clone(before);
+        if (typeof value !== 'string') return;
         after.title = value;
         after.accessibility.title = value;
         submitTransaction(

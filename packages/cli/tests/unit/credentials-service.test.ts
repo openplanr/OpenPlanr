@@ -1,3 +1,8 @@
+import { spawn } from 'node:child_process';
+import { chmod, mkdtemp, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
+import { setTimeout as delay } from 'node:timers/promises';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../src/services/credential-backends.js', () => ({
@@ -20,9 +25,11 @@ vi.mock('../../src/services/credential-backends.js', () => ({
     delete: vi.fn().mockResolvedValue(false),
   },
   legacyBackend: {
+    prepareHome: vi.fn().mockResolvedValue(undefined),
     exists: vi.fn().mockResolvedValue(false),
-    loadAll: vi.fn().mockResolvedValue({}),
+    loadAllPrepared: vi.fn().mockResolvedValue({}),
     remove: vi.fn().mockResolvedValue(undefined),
+    keepOnly: vi.fn().mockResolvedValue(undefined),
   },
 }));
 
@@ -147,10 +154,82 @@ describe('rotating credential writes', () => {
 describe('legacy plaintext migration', () => {
   it('keeps a legacy file it cannot read instead of deleting it as empty', async () => {
     vi.mocked(legacyBackend.exists).mockResolvedValueOnce(true);
-    vi.mocked(legacyBackend.loadAll).mockRejectedValueOnce(
+    vi.mocked(legacyBackend.loadAllPrepared).mockRejectedValueOnce(
       new Error('credentials.json has an unexpected shape'),
     );
     await expect(migrateCredentials()).resolves.toBe(false);
     expect(legacyBackend.remove).not.toHaveBeenCalled();
   });
 });
+
+it('serializes CLI migration with a separate Design setup process without losing either owner', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'planr-credential-race-'));
+  await chmod(directory, 0o700);
+  const credentials = join(directory, 'credentials.json');
+  await writeFile(
+    credentials,
+    JSON.stringify({ linear: 'mock-linear', openai_api_key: 'sk-old-fixture', retained: 'keep' }),
+    { mode: 0o600 },
+  );
+  vi.stubEnv('PLANR_HOME', directory);
+  vi.mocked(legacyBackend.exists).mockResolvedValueOnce(true);
+  vi.mocked(legacyBackend.loadAllPrepared).mockImplementationOnce(async () =>
+    JSON.parse(await readFile(credentials, 'utf8')),
+  );
+  vi.mocked(legacyBackend.keepOnly).mockImplementationOnce(async (value) => {
+    await writeFile(credentials, JSON.stringify(value), { mode: 0o600 });
+  });
+  let child: ReturnType<typeof spawn> | undefined;
+  let completion: Promise<number | null> | undefined;
+  vi.mocked(encryptedFileBackend.set).mockImplementationOnce(async () => {
+    child = spawn(
+      process.execPath,
+      [
+        resolve('../pipeline/lib/design-engine/cli.mjs'),
+        'setup',
+        '--key',
+        'sk-test-owner-only',
+        '--no-smoke',
+      ],
+      {
+        env: { ...process.env, PLANR_HOME: directory },
+        stdio: 'ignore',
+      },
+    );
+    completion = new Promise((resolveExit, reject) => {
+      child?.once('error', reject);
+      child?.once('close', resolveExit);
+    });
+    const writerDirectory = join(directory, '.legacy-credential-writers');
+    const deadline = Date.now() + 4000;
+    while (
+      !(await readdir(writerDirectory)).some(
+        (name) => name.startsWith(`${child?.pid}-`) && name.endsWith('.json'),
+      )
+    ) {
+      if (Date.now() >= deadline)
+        throw new Error('Design setup did not join the shared credential queue.');
+      await delay(20);
+    }
+    // Keep migration suspended while the other process attempts its full read/modify/write.
+    await delay(80);
+    expect(child.exitCode).toBeNull();
+    expect(JSON.parse(await readFile(credentials, 'utf8')).openai_api_key).toBe('sk-old-fixture');
+  });
+  try {
+    expect(await migrateCredentials()).toBe(true);
+    expect(await completion).toBe(0);
+    expect(JSON.parse(await readFile(credentials, 'utf8'))).toEqual({
+      openai_api_key: 'sk-test-owner-only',
+      retained: 'keep',
+    });
+    expect((await stat(credentials)).mode & 0o777).toBe(0o600);
+    expect(encryptedFileBackend.set).toHaveBeenCalledWith('linear', 'mock-linear');
+  } finally {
+    if (child && child.exitCode === null) {
+      child.kill();
+      await completion?.catch(() => {});
+    }
+    await rm(directory, { recursive: true, force: true });
+  }
+}, 10000);

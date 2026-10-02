@@ -3,14 +3,17 @@ import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'n
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
+import { resolveArtifactHtml } from '@openplanr/artifact/envelope.mjs';
 import {
   currentDesign,
   prepareDesignDocument,
   renderDesignDocument,
+  standaloneDesignHtml,
 } from '../lib/design/document.mjs';
-import { saveDesignState, startDesignReview } from '../lib/design/review.mjs';
+import { saveDesignState } from '../lib/design/review.mjs';
 import { verifyDesignDocument } from '../lib/design/utility.mjs';
 import { designFixture } from './design-fixture.mjs';
+import { fetch, startDesignReview } from './studio-http-fixture.mjs';
 
 function fixture(t, options) {
   const root = mkdtempSync(join(tmpdir(), 'planr-design-'));
@@ -22,7 +25,12 @@ test('one authored source generates all views and recoverable revision snapshots
   const { root, file } = fixture(t);
   const prepared = prepareDesignDocument(file);
   assert.equal(prepared.envelope.artifacts.length, 4);
-  assert.equal(prepared.envelope.artifacts[0].html, prepared.envelope.artifacts[1].html);
+  assert.equal(prepared.envelope.sources.length, 2);
+  assert.equal(prepared.envelope.artifacts[0].sourceId, prepared.envelope.artifacts[1].sourceId);
+  assert.equal(
+    resolveArtifactHtml(prepared.envelope, prepared.envelope.artifacts[0]),
+    resolveArtifactHtml(prepared.envelope, prepared.envelope.artifacts[1]),
+  );
   const rendered = await renderDesignDocument(file);
   for (const path of Object.values(rendered.views)) {
     const html = readFileSync(path, 'utf8');
@@ -109,4 +117,53 @@ test('studio uses durable artifact server, health checks, and conflicting state 
   const reuse = await startDesignReview(file, { env });
   assert.equal(reuse.url, session.url);
   assert.equal(reuse.reused, true);
+});
+
+test('a 93-screen board stores sources once across five responsive widths and portable exports', (t) => {
+  const frames = [390, 768, 1024, 1280, 1440].map((width) => ({
+    id: `width-${width}`,
+    label: `${width}px`,
+    width,
+    height: 1024,
+  }));
+  const { file } = fixture(t, { count: 93, frames });
+  const prepared = prepareDesignDocument(file);
+  assert.equal(prepared.entries.length, 465);
+  assert.equal(prepared.envelope.sources.length, 93);
+  assert.equal(prepared.envelope.artifacts.length, 465);
+  assert.equal(new Set(prepared.entries.map((entry) => entry.artifactId)).size, 465);
+  for (const screen of prepared.document.screens) {
+    const views = prepared.entries.filter((entry) => entry.screenId === screen.id);
+    assert.deepEqual(
+      views.map((entry) => entry.frameId),
+      frames.map((frame) => frame.id),
+    );
+    assert.equal(
+      new Set(
+        views.map(
+          (entry) => prepared.envelope.artifacts.find((a) => a.id === entry.artifactId).sourceId,
+        ),
+      ).size,
+      1,
+    );
+  }
+  const portable = standaloneDesignHtml(prepared);
+  const scripts = [...portable.matchAll(/src="data:text\/javascript;base64,([^" ]+)"/gu)]
+    .map((match) => Buffer.from(match[1], 'base64').toString('utf8'))
+    .join('\n');
+  assert.match(scripts, /inlineArtifactSources/);
+  assert.equal(
+    (scripts.match(/12 active tasks/gu) ?? []).length,
+    93,
+    'portable pool embeds each source once, not once per viewport',
+  );
+});
+
+test('source-count limits fail before source bundling with a linked-board recovery message', (t) => {
+  const { root, file } = fixture(t, { count: 129, variants: 2 });
+  rmSync(join(root, 'source'), { recursive: true });
+  assert.throws(
+    () => prepareDesignDocument(file),
+    /258 screen sources.*Split it into linked boards/u,
+  );
 });

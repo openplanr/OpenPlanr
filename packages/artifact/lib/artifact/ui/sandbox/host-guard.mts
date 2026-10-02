@@ -1,3 +1,50 @@
+import type * as Tools from '../bridge-tools.mjs';
+
+declare const __PLANR_SANDBOX_CONTRACT__: {
+  channel: string;
+  schemaVersion: string;
+  artifactId: string;
+  nonce: string;
+  parentOrigin: string;
+};
+declare const __PLANR_SANDBOX_BRIDGE_TOOLS__: unknown;
+declare const __PLANR_SANDBOX_WORKER_GUARD__: string;
+declare const __PLANR_SANDBOX_CONFIG__: {
+  channel: string;
+  schemaVersion: string;
+  nonce: string;
+  frameCsp: string;
+  sourceTransport: 'blob' | 'srcdoc';
+  frameBudget?: number;
+  readyEvent: string;
+  viewportZoomEvent: string;
+  viewportPanEvent: string;
+  layoutEvent: string;
+  anchorEvent: string;
+  navigationEvent: string;
+  inlineSources?: Record<string, { html: string; artifactIdToken: string }>;
+  inlineArtifactSources?: Record<string, string>;
+  inlineArtifacts?: Record<string, string>;
+  artifactBaseUrl: string;
+  stageRuntimeUrl: string;
+  adapterRuntimeUrl?: string;
+};
+declare const __PLANR_SANDBOX_EXPORT_MAX_EDGE__: number;
+declare const __PLANR_SANDBOX_EXPORT_MAX_DATA_URL__: number;
+declare const __PLANR_SANDBOX_LAYOUT_MAX_WIDTH__: number;
+declare const __PLANR_SANDBOX_LAYOUT_MAX_HEIGHT__: number;
+declare const createArtifactBridgeTools: typeof Tools.createArtifactBridgeTools;
+declare const createArtifactViewportGestures: typeof Tools.createArtifactViewportGestures;
+declare const normalizeArtifactBridgeToolResult: typeof Tools.normalizeArtifactBridgeToolResult;
+declare const normalizeArtifactViewportZoom: typeof Tools.normalizeArtifactViewportZoom;
+declare const normalizeArtifactViewportPan: typeof Tools.normalizeArtifactViewportPan;
+declare const ARTIFACT_BRIDGE_OPERATION_TIMEOUTS: typeof Tools.ARTIFACT_BRIDGE_OPERATION_TIMEOUTS;
+declare const importScripts: (...urls: string[]) => void;
+type GuardAttachInput = {
+  artifact: { id: string; viewport: { width: number; height: number } };
+  frame: HTMLIFrameElement & { __openPlanrBridge?: unknown };
+  getState?: () => { presentation?: string } | null;
+};
 // The review shell's side of the artifact bridge: loads each frame, authenticates it with a
 // challenge and validates its messages. Bundled into
 // lib/artifact/ui/generated/sandbox-guards.mjs; bridge.mjs replaces each __PLANR_SANDBOX_*__
@@ -11,18 +58,21 @@
     crypto.randomUUID?.() ||
     'request-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2);
   const bridgeClient = {
-    attach({ artifact, frame, getState }) {
-      const pending = new Map();
+    attach({ artifact, frame, getState }: GuardAttachInput) {
+      const pending = new Map<
+        string,
+        { resolve: (value: unknown) => void; timer: ReturnType<typeof setTimeout>; type: string }
+      >();
       let windowStart = performance.now(),
         messageCount = 0;
-      let immutableSource = '',
+      let immutableSource: '' | { type: 'srcdoc' | 'url'; value: string } = '',
         trustedLoad = false,
         recovering = false,
         navigationAttempts = 0,
         failedClosed = false;
       let inertSource = '';
-      let pendingChallenge = null;
-      let measuredLayout = null;
+      let pendingChallenge: { id: string; timer: ReturnType<typeof setTimeout> } | null = null;
+      let measuredLayout: { width: number; height: number } | null = null;
       let viewportGesturesEnabled = false,
         disposed = false;
       const syncViewportGestures = () => {
@@ -39,32 +89,32 @@
             '*',
           );
       };
-      const plain = (value) => {
+      const plain = (value: unknown): value is Record<string, unknown> => {
         if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
         const prototype = Object.getPrototypeOf(value);
         return prototype === Object.prototype || prototype === null;
       };
-      const own = (value, key) => {
+      const own = (value: unknown, key: string) => {
         const descriptor = plain(value) ? Object.getOwnPropertyDescriptor(value, key) : null;
         return descriptor && Object.hasOwn(descriptor, 'value') ? descriptor.value : undefined;
       };
-      const exact = (value, keys) =>
+      const exact = (value: unknown, keys: string[]) =>
         plain(value) &&
         Object.keys(value).length === keys.length &&
-        Object.keys(value).every((key) => keys.includes(key));
-      const validText = (value, max) =>
+        Object.keys(value).every((key: string) => keys.includes(key));
+      const validText = (value: unknown, max: number): value is string =>
         typeof value === 'string' && value.length > 0 && value.length <= max;
-      const validId = (value) =>
+      const validId = (value: unknown): value is string =>
         validText(value, 512) && /^[A-Za-z0-9][A-Za-z0-9._:-]{0,511}$/.test(value);
-      const validScreen = (value) =>
+      const validScreen = (value: unknown) =>
         // biome-ignore lint/suspicious/noControlCharactersInRegex: a screen name must not contain control characters.
         typeof value === 'string' && /^[^\u0000-\u001f\u007f]{1,128}$/.test(value);
-      const validRequestId = (value) =>
+      const validRequestId = (value: unknown): value is string =>
         validText(value, 128) && /^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$/.test(value);
-      const validNumber = (value) => typeof value === 'number' && Number.isFinite(value);
+      const validNumber = (value: unknown) => typeof value === 'number' && Number.isFinite(value);
       const originalPointerEvents = frame.style.pointerEvents;
       const originalInert = frame.inert;
-      const quarantine = (active) => {
+      const quarantine = (active: boolean) => {
         frame.inert = active ? true : originalInert;
         frame.style.pointerEvents = active ? 'none' : originalPointerEvents;
         if (active) frame.setAttribute('aria-busy', 'true');
@@ -73,7 +123,7 @@
       };
       frame.setAttribute('csp', config.frameCsp);
       quarantine(true);
-      const receive = (event) => {
+      const receive = (event: MessageEvent) => {
         if (event.source !== frame.contentWindow || event.origin !== 'null') return;
         const now = performance.now();
         if (now - windowStart > 1000) {
@@ -197,7 +247,9 @@
         const receivedRequestId = own(data, 'requestId');
         if (!trustedLoad || !validRequestId(receivedRequestId) || !pending.has(receivedRequestId))
           return;
-        const settle = pending.get(receivedRequestId);
+        const settle = pending.get(receivedRequestId) as NonNullable<
+          ReturnType<typeof pending.get>
+        >;
         if (['inspect.point', 'inspect.anchor', 'thumbnail.request'].includes(settle.type)) {
           const result = normalizeArtifactBridgeToolResult(settle.type, data, artifact.viewport);
           if (!result.valid) return;
@@ -309,7 +361,7 @@
           !exact(viewport, ['width', 'height']) ||
           !validId(anchor?.planrId) ||
           (anchor.screen !== undefined && !validScreen(anchor.screen)) ||
-          !['x', 'y', 'width', 'height'].every((key) => validNumber(rect?.[key])) ||
+          !['x', 'y', 'width', 'height'].every((key: string) => validNumber(rect?.[key])) ||
           viewport?.width !== frozen.width ||
           viewport?.height !== frozen.height ||
           rect.x < 0 ||
@@ -448,17 +500,18 @@
         challengeCurrentDocument();
       };
       frame.addEventListener('load', onFrameLoad);
-      const send = (type, payload = {}) =>
+      const send = (type: string, payload = {}) =>
         new Promise((resolve) => {
           if (!trustedLoad || pending.size >= 32) {
             resolve(null);
             return;
           }
           const id = requestId();
+          // biome-ignore format: Preserve the exact compiled security guard bytes during the typed-source migration.
           const timer = setTimeout(() => {
             pending.delete(id);
             resolve(null);
-          }, ARTIFACT_BRIDGE_OPERATION_TIMEOUTS[type] || 750);
+          }, (ARTIFACT_BRIDGE_OPERATION_TIMEOUTS as Partial<Record<string,number>>)[type] || 750);
           pending.set(id, { resolve, timer, type });
           frame.contentWindow?.postMessage(
             {
@@ -474,26 +527,27 @@
         });
       Object.defineProperty(frame, '__openPlanrBridge', {
         value: Object.freeze({
-          setViewportGestures: (enabled) => {
+          getPrototypeNonce: () => (trustedLoad && !disposed ? config.nonce : null),
+          setViewportGestures: (enabled: boolean) => {
             if (typeof enabled !== 'boolean' || disposed) return false;
             if (enabled === viewportGesturesEnabled) return true;
             viewportGesturesEnabled = enabled;
             syncViewportGestures();
             return true;
           },
-          hitTest: (x, y) =>
+          hitTest: (x: number, y: number) =>
             Number.isFinite(x) && Number.isFinite(y)
               ? send('anchor.hit-test', { x, y })
               : Promise.resolve(null),
-          resolve: (planrId, screen) =>
+          resolve: (planrId: string, screen: string | undefined) =>
             validText(planrId, 512)
               ? send('anchor.resolve', { planrId, ...(screen ? { screen } : {}) })
               : Promise.resolve(null),
-          inspectAt: (x, y) =>
+          inspectAt: (x: number, y: number) =>
             Number.isFinite(x) && Number.isFinite(y) && x >= 0 && y >= 0
               ? send('inspect.point', { x, y })
               : Promise.resolve(null),
-          inspect: (anchor) =>
+          inspect: (anchor: { planrId: string; screen?: string }) =>
             validId(anchor?.planrId) && (anchor.screen === undefined || validScreen(anchor.screen))
               ? send('inspect.anchor', {
                   planrId: anchor.planrId,
@@ -501,7 +555,7 @@
                 })
               : Promise.resolve(null),
           thumbnail: () => send('thumbnail.request'),
-          exportPng: (target) =>
+          exportPng: (target: 'screen' | 'full') =>
             ['screen', 'full'].includes(target)
               ? send('export.request', { target })
               : Promise.resolve(null),
@@ -531,8 +585,34 @@
       };
     },
   };
-  globalThis.__OPENPLANR_ARTIFACT_STAGE_OPTIONS__ = Object.freeze({
-    async resolveArtifactSource(artifact) {
+  (
+    globalThis as typeof globalThis & { __OPENPLANR_ARTIFACT_STAGE_OPTIONS__?: unknown }
+  ).__OPENPLANR_ARTIFACT_STAGE_OPTIONS__ = Object.freeze({
+    sourceTransport: config.sourceTransport,
+    ...(config.frameBudget === undefined ? {} : { frameBudget: config.frameBudget }),
+    async resolveArtifactSource(artifact: { id: string }) {
+      if (config.inlineSources) {
+        const sourceId = config.inlineArtifactSources?.[artifact.id];
+        const source = Object.hasOwn(config.inlineSources, sourceId ?? '')
+          ? config.inlineSources[sourceId as string]
+          : null;
+        if (
+          !source ||
+          typeof source.html !== 'string' ||
+          typeof source.artifactIdToken !== 'string' ||
+          source.html.split(source.artifactIdToken).length !== 2
+        )
+          throw new Error('Artifact source unavailable');
+        return new Blob(
+          [
+            source.html.replace(
+              source.artifactIdToken,
+              `"artifactId":${JSON.stringify(artifact.id)}`,
+            ),
+          ],
+          { type: 'text/html' },
+        );
+      }
       if (config.inlineArtifacts) {
         const html = config.inlineArtifacts[artifact.id];
         if (typeof html !== 'string') throw new Error('Artifact source unavailable');
@@ -553,7 +633,7 @@
       return new Blob([await response.arrayBuffer()], { type: 'text/html' });
     },
     bridgeClient,
-    onState(state) {
+    onState(state: unknown) {
       dispatchEvent(new CustomEvent('planr:artifact-state', { detail: state }));
     },
   });

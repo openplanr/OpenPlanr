@@ -91,6 +91,11 @@ test('host options are validated in a fixed order and filled with local defaults
       }),
     /unknown icon: rocket/,
   );
+  for (const id of ['outline', 'shapes', 'more', 'canvas', 'inspector'])
+    assert.throws(
+      () => readHostOptions({ panels: [{ id, label: id, mount() {} }] }),
+      /unique lowercase id/,
+    );
   assert.equal(colorSchemeOf(undefined), null);
   assert.throws(() => colorSchemeOf('sepia'), /received "sepia"/);
 });

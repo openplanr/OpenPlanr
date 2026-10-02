@@ -7,7 +7,7 @@
     {
       "source": "packages/design/lib/design-engine/artifact-adapter.mjs",
       "target": "lib/design-engine/artifact-adapter.mjs",
-      "sha256": "c63932205cbab1d5f5e8f4f803f7690bc3bf089baaf56827954d3aac5e1d8a3e",
+      "sha256": "251ef6c1cf04437edcae4d2731a37b2208ef626a0f8643af55eb59a12cf09d4d",
       "mode": "644"
     },
     {
@@ -37,13 +37,13 @@
     {
       "source": "packages/design/lib/design-engine/cli.mjs",
       "target": "lib/design-engine/cli.mjs",
-      "sha256": "ce3e09678bd505a34e2e2a2bd64bd7558757fe8f3d1ef965db3b4d9ea0c13aa5",
+      "sha256": "b3f306be1637e6ea87b7b440fec3a3e136ef2c99a5a6efa29c9a72cc54051d4b",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design-engine/daemon.mjs",
       "target": "lib/design-engine/daemon.mjs",
-      "sha256": "a4bc38cf0bf78dc82a53a8ec34f73aeb0301eb897de0085da717000bdbe6ede5",
+      "sha256": "40bd4958f8d54f957982a0722fbdf66419f9edaae7ab186ed261c9a6085a69e2",
       "mode": "644"
     },
     {
@@ -109,13 +109,13 @@
     {
       "source": "packages/design/lib/design/company-publication.mjs",
       "target": "lib/design/company-publication.mjs",
-      "sha256": "36d0f6d4152ff5c50f037e0f7845e3a7f168108d2684ea07b541a70932908d83",
+      "sha256": "be60996d6205ddff40cfd3bef67db944397786c72f8078c9298ba83fbd0ef2eb",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design/context.mjs",
       "target": "lib/design/context.mjs",
-      "sha256": "942c9cd1b6361d34d9c4c78e18ec00d103e4aa0fbb3b66bba5b273a72260ab32",
+      "sha256": "09f00d40fa1d4d92ca14955081f016e32d577b1fd26e94ee150b65df7eca037e",
       "mode": "644"
     },
     {
@@ -157,13 +157,19 @@
     {
       "source": "packages/design/lib/design/document.mjs",
       "target": "lib/design/document.mjs",
-      "sha256": "6d94472b5f51b31e0b7a8bd688254c6e706957070bb877e90682720b2e6db808",
+      "sha256": "ef3c3effdd0bdb561c4f017727f0abd4be412b62028a78048c89cc1eb95858ab",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design/escape.mjs",
       "target": "lib/design/escape.mjs",
       "sha256": "676d9b4fca80521d970e0b046ab99b7f608f4b0462c5c6e835173f9b0ea5e2c5",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design/feedback-import.mjs",
+      "target": "lib/design/feedback-import.mjs",
+      "sha256": "7c0a120c2c55ea54f65bd9e32b4109929acdd2293d2d6635ebd6cbc7cc705022",
       "mode": "644"
     },
     {
@@ -229,7 +235,7 @@
     {
       "source": "packages/design/lib/design/index.mjs",
       "target": "lib/design/index.mjs",
-      "sha256": "411bb6494e89552d786636557ff6ed506e35f087c440ada58f6961a6e237645a",
+      "sha256": "d033126ee18717922f8329a741a53a6ff67d7c0b9d59df0f16471a44bd4c0448",
       "mode": "644"
     },
     {
@@ -277,7 +283,7 @@
     {
       "source": "packages/design/lib/design/review.mjs",
       "target": "lib/design/review.mjs",
-      "sha256": "e6afdec9be33c5ca66d2c32c18b793b74e798322236f241ed2cd0b8a8991c99c",
+      "sha256": "252073bf4dbb577e213ed322ab6d206659075581734bf85ac687d14216e5c4fa",
       "mode": "644"
     },
     {
@@ -295,19 +301,25 @@
     {
       "source": "packages/design/lib/design/share.mjs",
       "target": "lib/design/share.mjs",
-      "sha256": "c42bc7af9bfee0b74c8320a8abb5398214f83c47a7d891320408b01e0b7e4e53",
+      "sha256": "1007aa5012991b9ded95b3844a4bf94a19ac0fcee219592c8283caa9a07fd369",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design/studio-lifecycle.mjs",
+      "target": "lib/design/studio-lifecycle.mjs",
+      "sha256": "912e6db27c827bae6bb652ae0fd79adb3800eaa944b1566cb49f78b340c424a3",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design/studio-render.mjs",
       "target": "lib/design/studio-render.mjs",
-      "sha256": "ce26633d873fbca1506cf615271b2be68f1d7b3e96a7df8d664c74be477609a0",
+      "sha256": "69385f2d2e3c9398055124b003ae4de35ad3b9c3f3807c45f6c56fe78ce40918",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design/studio.mjs",
       "target": "lib/design/studio.mjs",
-      "sha256": "b5b0740f3b654e73f2a81911316cd5be5e21119e697399a912e0f168af6da644",
+      "sha256": "9fe19eebd21de5b4d49735b97131bafd6a96cba48ab69e29f5f02754a458db59",
       "mode": "644"
     },
     {
@@ -319,13 +331,25 @@
     {
       "source": "packages/design/lib/design/ui/enhancements.mjs",
       "target": "lib/design/ui/enhancements.mjs",
-      "sha256": "30592a78c1217b5d0955616370b02a091d03661c90c8f813d23dbaf32d118f55",
+      "sha256": "8172716d5bcfd3af86ad825d5c75b1c5988e812e47046ea881a96a010574b70f",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design/ui/handoff-center.mjs",
       "target": "lib/design/ui/handoff-center.mjs",
       "sha256": "a9696be41a695167f740317e9eb370508f694bfcf6fcabd0c1846aaf210b62dd",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design/ui/studio-chrome.d.mts",
+      "target": "lib/design/ui/studio-chrome.d.mts",
+      "sha256": "7561a8873e14d31d2af043cb673bd4593658155e1671d70a47ec6d129d4fb252",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design/ui/studio-chrome.mjs",
+      "target": "lib/design/ui/studio-chrome.mjs",
+      "sha256": "f77033f6f12a058daa58f3db768f16b03ef13b94cd68987253dc42c6f071fc90",
       "mode": "644"
     },
     {
@@ -337,13 +361,13 @@
     {
       "source": "packages/design/lib/design/ui/studio.mjs",
       "target": "lib/design/ui/studio.mjs",
-      "sha256": "b7ad6a2c19409d2dec6eb4ca380f34c1ea8cbd355733fcee5f8ba33a85fefbef",
+      "sha256": "7c03a8d2626beb2ccb08023dd64226f0b6c3e8772f1c707b03961e081512fd85",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design/utility.mjs",
       "target": "lib/design/utility.mjs",
-      "sha256": "dced57f485f30d3f0b2661525fd1e2009766da99cbc3883bd6ea065121c8b006",
+      "sha256": "1af8e386d37ef6669bbf017b73c0cdba7eb6fb4a6fa15863cc27da32f3e4421c",
       "mode": "644"
     },
     {
@@ -355,7 +379,7 @@
     {
       "source": "packages/design/lib/design/workspace-client.mjs",
       "target": "lib/design/workspace-client.mjs",
-      "sha256": "fcce105e70e57f40d55e5b4bdc081821aacf3e91c0cfacb21025e74d86bd853b",
+      "sha256": "d42af9219b644853752082d66175976defb309a15429cf62fb236b9af29e37a1",
       "mode": "644"
     },
     {
@@ -385,19 +409,19 @@
     {
       "source": "packages/design/templates/studio/share.js",
       "target": "templates/studio/share.js",
-      "sha256": "fb84152fecc65758e999baae03472874c38c14ce98fb4dbad5c7ef67a80aad5e",
+      "sha256": "3be9bf9b8810a1eed5b22f05af33721e6a50d2a814d3d4309d1592b386f80c4f",
       "mode": "644"
     },
     {
       "source": "packages/design/templates/studio/studio.css",
       "target": "templates/studio/studio.css",
-      "sha256": "c7c58b1602368d8a27872c7618714b9246a6bc24fb1cb513aa6ae917c2858d1e",
+      "sha256": "0dbd4b536d6f62890b8120882fd77c66aaabf5cfe22ee7b3b9fa6a76da21f33d",
       "mode": "644"
     },
     {
       "source": "packages/design/templates/studio/studio.js",
       "target": "templates/studio/studio.js",
-      "sha256": "85f8b084457aaa172025fb878b64059782cb976f72451b207c7bc40e8c982bb8",
+      "sha256": "e648c2a4c3ee5bb3cf9abea1080112226de3576e16dcf855b179c59cb540a4c0",
       "mode": "644"
     }
   ]

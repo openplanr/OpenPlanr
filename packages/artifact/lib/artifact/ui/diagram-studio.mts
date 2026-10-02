@@ -9,6 +9,7 @@ import { clientSelectionToNormalized, mountArtifactAnnotations } from './annotat
 import { ensureDiagramFont } from './diagram-font.mjs';
 import { mountDiagramShareControl } from './diagram-share-control.mjs';
 import { type ArtifactReviewInput, mountArtifactFeedbackRail } from './feedback-rail.mjs';
+import { mountDiagramStudioChrome, mountStudioPanelDialogs } from './studio-shell-mount.mjs';
 
 /** A drawing element as diagram-review.mjs describes it in the page data. */
 interface StudioItem {
@@ -62,7 +63,7 @@ interface Point {
 type Gesture =
   | { type: 'pinch'; distance: number; scale: number; diagramX: number; diagramY: number }
   | {
-      type: 'comment' | 'pan';
+      type: 'comment' | 'pan' | 'inspect';
       start: Point;
       x: number;
       y: number;
@@ -73,6 +74,9 @@ type Gesture =
 type ReviewChange = CustomEvent<{ pins: unknown[] }>;
 /** A review pin as the studio's rail and annotation callbacks read it. */
 interface StudioPin {
+  id: string;
+  comment: string;
+  author: { name: string; id?: string };
   intent: string;
   anchor?: { planrId?: string } | null;
   region: { x: number; y: number; w: number; h: number };
@@ -81,9 +85,17 @@ interface StudioPin {
 interface DiagramStudio {
   destroy(): void;
 }
+export interface DiagramCommentSubmission {
+  operationId: string;
+  target: { elementId?: string; x?: number; y?: number };
+  comment: string;
+  author: { name: string; id?: string };
+  intent: string;
+}
 export interface DiagramStudioHost {
   saveReview?: (review: unknown) => Promise<void>;
   onComment?: (target: { elementId?: string; x?: number; y?: number }) => void;
+  onSubmitComment?: (value: DiagramCommentSubmission) => Promise<void>;
   onSelect?: (id: string) => void;
   readOnly?: boolean;
   savedLabel?: string;
@@ -243,7 +255,11 @@ export function mountDiagramStudio(
     hitTest(x, y) {
       const match = hitItem(x, y);
       return match
-        ? { planrId: match.item.id, screen: config.artifact.id, rect: match.rect }
+        ? {
+            planrId: match.item.id,
+            screen: config.artifact.id,
+            rect: host.sceneCoordinates ? { x: 0, y: 0, ...config.artifact.viewport } : match.rect,
+          }
         : null;
     },
     resolve(id) {
@@ -258,7 +274,26 @@ export function mountDiagramStudio(
     },
   };
   const pointers = new Map<number, Point>();
+  const chrome = mountDiagramStudioChrome({ root, title: config.artifact.title });
+  cleanup.push(() => chrome.destroy());
+  let shellWidth = root.getBoundingClientRect().width || root.clientWidth || window.innerWidth;
+  const measureShell = () => {
+    shellWidth = root.getBoundingClientRect().width || root.clientWidth || shellWidth;
+    root.dataset.studioLayout = shellWidth <= 700 ? 'compact' : 'wide';
+    root.dataset.studioDensity = shellWidth <= 1000 ? 'narrow' : 'wide';
+  };
+  measureShell();
+  const shellResize = new window.ResizeObserver(measureShell);
+  shellResize.observe(root);
+  cleanup.push(() => shellResize.disconnect());
+  const compact = () => shellWidth <= 700;
   const saveState = root.querySelector('[data-save-state]') as HTMLButtonElement;
+  const deliveredPins = new Set(
+    ((Array.isArray(config.review?.pins) ? config.review.pins : []) as StudioPin[]).map(
+      (pin) => pin.id,
+    ),
+  );
+  let applyingRemoteReview = false;
   let pendingReview: ReviewChange['detail'] | null = null,
     saving = false,
     failed = false;
@@ -268,14 +303,23 @@ export function mountDiagramStudio(
   const emit = () =>
     root.dispatchEvent(new window.CustomEvent('planr:stage-change', { detail: { ...state } }));
   const setMode = (mode: string) => {
-    state.reviewMode = host.readOnly && mode === 'comment' ? 'interact' : mode;
+    mode = ['interact', 'comment', 'inspect'].includes(mode) ? mode : 'interact';
+    mode = host.readOnly && mode === 'comment' ? 'interact' : mode;
+    state.reviewMode = mode;
     root.dataset.planrReviewMode = mode;
     // biome-ignore format: bundles keep this one-line call; wrapping would change their bytes.
     (root.querySelector('[data-action=pan]') as HTMLElement).setAttribute('aria-pressed', String(mode === 'interact'));
     // biome-ignore format: bundles keep this one-line call; wrapping would change their bytes.
     (root.querySelector('[data-action=comment]') as HTMLElement).setAttribute('aria-pressed', String(mode === 'comment'));
+    root
+      .querySelector('[data-action=inspect]')
+      ?.setAttribute('aria-pressed', String(mode === 'inspect'));
     status(
-      mode === 'comment' ? 'Click or drag an area to comment · Esc to pan' : 'Drag anywhere to pan',
+      mode === 'comment'
+        ? 'Click or drag an area to comment · Esc to pan'
+        : mode === 'inspect'
+          ? 'Select an element to inspect · Esc to interact'
+          : 'Drag anywhere to pan',
     );
     emit();
   };
@@ -286,14 +330,14 @@ export function mountDiagramStudio(
     const rail = root.querySelector('#planr-review-rail') as HTMLElement;
     rail.inert = !open;
     rail.setAttribute('aria-hidden', String(!open));
-    if (open && window.innerWidth <= 700) setOutline(false);
+    if (open && compact()) setOutline(false);
   }
   function setOutline(open: boolean) {
     root.dataset.outlineOpen = String(open);
     // biome-ignore format: bundles keep this one-line call; wrapping would change their bytes.
     (root.querySelector('[data-action=outline]') as HTMLElement).setAttribute('aria-expanded', String(open));
     (root.querySelector('#diagram-outline') as HTMLElement).inert = !open;
-    if (open && window.innerWidth <= 700) setRail(false);
+    if (open && compact()) setRail(false);
   }
   const stage = {
     getState: () => state,
@@ -477,17 +521,17 @@ export function mountDiagramStudio(
         displayRegion: { x: number; y: number; w: number; h: number };
       }>,
     ) => {
-      if (host.onComment) {
-        const draft = event.detail;
-        annotations.closeComposer();
-        if (!host.readOnly)
-          host.onComment({
-            ...(draft.anchor?.planrId ? { elementId: draft.anchor.planrId } : {}),
-            x: draft.displayRegion.x + draft.displayRegion.w / 2,
-            y: draft.displayRegion.y + draft.displayRegion.h / 2,
-          });
-        setRail(true);
-        return;
+      if (!host.readOnly && host.onComment) {
+        const target = event.detail;
+        host.onComment({
+          ...(target.anchor?.planrId
+            ? { elementId: target.anchor.planrId }
+            : selectedIndex >= 0
+              ? { elementId: config.items[selectedIndex].id }
+              : {}),
+          x: target.displayRegion.x + target.displayRegion.w / 2,
+          y: target.displayRegion.y + target.displayRegion.h / 2,
+        });
       }
       root
         .querySelectorAll<HTMLElement>('[data-planr-annotation-composer] [data-planr-intent]')
@@ -533,7 +577,23 @@ export function mountDiagramStudio(
       pendingReview = null;
       try {
         if (host.saveReview) await host.saveReview(review);
-        else {
+        else if (host.onSubmitComment) {
+          for (const pin of review.pins as StudioPin[]) {
+            if (deliveredPins.has(pin.id)) continue;
+            await host.onSubmitComment({
+              operationId: pin.id,
+              target: {
+                ...(pin.anchor?.planrId ? { elementId: pin.anchor.planrId } : {}),
+                x: pin.region.x + pin.region.w / 2,
+                y: pin.region.y + pin.region.h / 2,
+              },
+              comment: pin.comment,
+              author: pin.author,
+              intent: pin.intent,
+            });
+            deliveredPins.add(pin.id);
+          }
+        } else {
           const response = await window.fetch(`${config.base}api/review`, {
             method: 'PUT',
             headers: { 'content-type': 'application/json' },
@@ -556,7 +616,12 @@ export function mountDiagramStudio(
   listen(root, 'planr:artifact-review-change', (event: ReviewChange) => {
     // biome-ignore format: bundles keep this one-line call; wrapping would change their bytes.
     (root.querySelector('[data-comment-count]') as HTMLElement).textContent = String(event.detail.pins.length);
-    if (host.readOnly || (host.onComment && !host.saveReview)) return;
+    if (
+      applyingRemoteReview ||
+      host.readOnly ||
+      (host.onComment && !host.saveReview && !host.onSubmitComment)
+    )
+      return;
     pendingReview = event.detail;
     void save();
   });
@@ -627,7 +692,7 @@ export function mountDiagramStudio(
     );
     updateSelection();
     if (focus) {
-      if (window.innerWidth <= 700) setOutline(false);
+      if (compact()) setOutline(false);
       focusPoint(item.x, item.y);
     }
     status(item.label);
@@ -658,7 +723,7 @@ export function mountDiagramStudio(
     root.dataset.present = 'false';
     (root.querySelector('[data-presentation-nav]') as HTMLElement).hidden = true;
     const button = root.querySelector('[data-action=present]') as HTMLButtonElement;
-    button.textContent = 'Present';
+    if (root.dataset.studioFramework !== 'react') button.textContent = 'Present';
     button.setAttribute('aria-pressed', 'false');
     fit();
   }
@@ -668,7 +733,8 @@ export function mountDiagramStudio(
     setRail(false);
     (root.querySelector('[data-presentation-nav]') as HTMLElement).hidden = !active;
     const button = root.querySelector('[data-action=present]') as HTMLButtonElement;
-    button.textContent = active ? 'Exit presentation' : 'Present';
+    if (root.dataset.studioFramework !== 'react')
+      button.textContent = active ? 'Exit presentation' : 'Present';
     button.setAttribute('aria-pressed', String(active));
     try {
       if (active && root.requestFullscreen) await root.requestFullscreen();
@@ -685,6 +751,7 @@ export function mountDiagramStudio(
   const actions: Record<string, () => void> = {
     pan: () => setMode('interact'),
     comment: () => setMode('comment'),
+    inspect: () => setMode('inspect'),
     'zoom-in': () => zoom(camera.scale * 1.2),
     'zoom-out': () => zoom(camera.scale / 1.2),
     fit: () => fit(),
@@ -730,11 +797,6 @@ export function mountDiagramStudio(
   actions['comment-element'] = () => {
     const item = config.items[selectedIndex];
     if (!item || host.readOnly) return;
-    if (host.onComment) {
-      host.onComment({ elementId: item.id, x: item.x / width, y: item.y / height });
-      setRail(true);
-      return;
-    }
     const rect = elementBounds(item.id);
     if (!rect) return;
     annotations.openComposer({
@@ -805,14 +867,18 @@ export function mountDiagramStudio(
       event.button === 0 &&
       event.target.closest('.diagram-scene');
     gesture = {
-      type: comment ? 'comment' : 'pan',
+      type: comment
+        ? 'comment'
+        : state.reviewMode === 'inspect' && !space && event.button === 0
+          ? 'inspect'
+          : 'pan',
       start: p,
       x: camera.x,
       y: camera.y,
       client: { x: event.clientX, y: event.clientY },
       item: hitItem((p.x - camera.x) / camera.scale, (p.y - camera.y) / camera.scale),
     };
-    if (!comment) canvas.dataset.dragging = 'true';
+    if (gesture.type === 'pan') canvas.dataset.dragging = 'true';
   });
   listen(canvas, 'pointermove', (event: PointerEvent) => {
     if (!pointers.has(event.pointerId)) return;
@@ -855,13 +921,13 @@ export function mountDiagramStudio(
   listen(canvas, 'pointerup', (event: PointerEvent) => {
     if (!pointers.has(event.pointerId)) return;
     if (
-      gesture?.type === 'pan' &&
+      (gesture?.type === 'pan' || gesture?.type === 'inspect') &&
       gesture.item &&
       !space &&
       Math.hypot(event.clientX - gesture.client.x, event.clientY - gesture.client.y) < 4
     ) {
       selectItem(gesture.item.index, { focus: false });
-      if (window.innerWidth <= 700) setOutline(true);
+      if (compact() || gesture.type === 'inspect') setOutline(true);
     }
     if (gesture?.type === 'comment' && pointers.size === 1) {
       const region = clientSelectionToNormalized(surface.getBoundingClientRect(), gesture.client, {
@@ -907,6 +973,7 @@ export function mountDiagramStudio(
   );
   listen(document, 'keydown', (event: TargetedEvent<KeyboardEvent>) => {
     if (
+      document.querySelector('[role=dialog][data-state=open]') ||
       event.target.closest(
         'input,textarea,select,[contenteditable=true],.planr-annotation-composer',
       ) ||
@@ -944,6 +1011,7 @@ export function mountDiagramStudio(
       '=': 'zoom-in',
       '-': 'zoom-out',
       c: 'comment',
+      i: 'inspect',
       v: 'pan',
       n: 'outline',
       p: 'present',
@@ -984,7 +1052,21 @@ export function mountDiagramStudio(
     lastHeight = h;
   });
   resize.observe(canvas);
-  setOutline(window.innerWidth > 700);
+  setOutline(!compact());
+  const panels = mountStudioPanelDialogs({
+    root,
+    breakpoint: 700,
+    closePanel(side) {
+      if (side === 'left') setOutline(false);
+      else setRail(false);
+      root
+        .querySelector<HTMLElement>(
+          side === 'left' ? '[data-action=outline]' : '[data-action=review]',
+        )
+        ?.focus();
+    },
+  });
+  cleanup.push(() => panels.destroy());
   fit(initialFit());
   draw();
   let destroyed = false;
@@ -996,8 +1078,14 @@ export function mountDiagramStudio(
       if (index !== undefined) selectItem(index);
     },
     updateReview(review: ArtifactReviewInput | null) {
-      feedback.replaceReview(review);
-      annotations.render();
+      applyingRemoteReview = true;
+      try {
+        feedback.replaceReview(review);
+        for (const pin of feedback.getReview()?.pins ?? []) deliveredPins.add(pin.id);
+        annotations.render();
+      } finally {
+        applyingRemoteReview = false;
+      }
     },
     focusPoint,
     feedback,

@@ -263,6 +263,7 @@ export function createEditorKeyboard(ctx: DiagramEditorContext): DiagramEditorKe
       return;
     }
     if (shortcut.type === 'tool') {
+      // biome-ignore lint/correctness/useHookAtTopLevel: This imperative editor command selects a tool; it is not a React hook.
       commands.useTool(shortcut.tool, state);
       return;
     }

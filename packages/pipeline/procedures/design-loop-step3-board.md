@@ -14,7 +14,7 @@
 2. Serve the board. The daemon is a long-running server that must OUTLIVE the short-lived
    `board` command — a sandboxed agent runtime reaps a detached child when the launching command
    exits, so bring the daemon up as a tracked **background task** first, then register the board:
-   - `node "$PLUG/lib/design-engine/cli.mjs" daemon --status` → if `running:true`, skip the next bullet.
+   - `node "$PLUG/lib/design-engine/cli.mjs" daemon --status` → if `current:true`, skip the next bullet.
    - else launch as a **background task** and wait for `DAEMON_PORT:`:
      `node "$PLUG/lib/design-engine/cli.mjs" daemon --serve`
    - `node "$PLUG/lib/design-engine/cli.mjs" board --dir <ABS_SESSION_DIR> --id <PROJECT>-<TARGET>`
@@ -29,7 +29,7 @@ share transport.
 
 ## D.2 — The blocking wait
 
-Issue the mandatory `AskUserQuestion` (enforcement per `design-step1-clarify.md`) with the
+Use the host’s native question surface with chat fallback (see `design-loop-step1-gate.md`) and include the
 URL in the question text:
 
 > Your design board is live: **<BOARD_URL>**

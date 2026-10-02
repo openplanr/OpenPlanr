@@ -8,14 +8,15 @@
     "allowJs": true,
     "checkJs": false,
     "verbatimModuleSyntax": true,
+    "jsx": "react-jsx",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "target": "ES2022",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "types": ["node"],
+    "types": ["node", "react", "react-dom"],
     "newLine": "lf",
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["lib/**/*.mts"],
+  "include": ["lib/**/*.mts", "lib/**/*.tsx"],
   "exclude": ["lib/**/*.d.mts"]
 }

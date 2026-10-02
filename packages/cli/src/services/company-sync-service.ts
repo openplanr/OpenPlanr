@@ -21,6 +21,8 @@ import {
 } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import type { CompanyResourceManifest } from 'planr-pipeline/resource-contracts';
+import { LARGE_OBJECT_LIMITS } from '../../lib/resource-limits.mjs';
 import { resolveCompanyAccessToken } from './company-auth-service.js';
 import { CompanySyncError, normalizeCompanyOrigin, releasedLock } from './company-common.js';
 import {
@@ -47,6 +49,7 @@ const id = (value: unknown): string =>
   /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(value)
     ? value
     : fail('E_COMPANY_ID', 'Invalid company resource identifier.');
+const MAX_SERIALIZED_RESOURCE_BYTES = LARGE_OBJECT_LIMITS.decodedBytes * 6;
 const MAX_BYTES = 1024 * 1024;
 const MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
 export interface CompanyPreview {
@@ -67,6 +70,9 @@ export interface CompanyPreview {
   revisionId?: string;
   organizationId?: string;
   sourceType?: 'design-document';
+  transport?: 'resources-v2';
+  uploadRevisionId?: string;
+  remoteContentDigest?: string;
   sourceFiles?: string[];
   sourceDigests?: Record<string, string>;
   designSummary?: {
@@ -162,7 +168,7 @@ function assertSafeRelativePath(relative: string): void {
       'Select a repository-relative artifact file, excluding secrets and internal state.',
     );
 }
-async function safeFile(root: string, relative: string): Promise<string> {
+async function safeFile(root: string, relative: string, maximum = MAX_BYTES): Promise<string> {
   assertSafeRelativePath(relative);
   const base = await realpath(root);
   let current = base;
@@ -173,14 +179,20 @@ async function safeFile(root: string, relative: string): Promise<string> {
       return fail('E_COMPANY_SCOPE', 'Artifact paths must not contain symbolic links.');
   }
   const stat = await lstat(current);
-  if (!stat.isFile() || stat.size > MAX_BYTES)
-    return fail('E_COMPANY_SIZE', 'Select a regular artifact file no larger than 1 MiB.');
+  if (!stat.isFile() || stat.size > maximum)
+    return fail(
+      'E_COMPANY_SIZE',
+      `Select a regular artifact file no larger than ${Math.ceil(maximum / 1048576)} MiB.`,
+    );
   return current;
 }
-async function readArtifactFile(file: string): Promise<string> {
+async function readArtifactFile(file: string, maximum = MAX_BYTES): Promise<string> {
   const bytes = await readFile(file);
-  if (bytes.byteLength > MAX_BYTES)
-    return fail('E_COMPANY_SIZE', 'Artifact exceeds the 1 MiB publication limit.');
+  if (bytes.byteLength > maximum)
+    return fail(
+      'E_COMPANY_SIZE',
+      `Artifact exceeds the ${Math.ceil(maximum / 1048576)} MiB input limit.`,
+    );
   try {
     return new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(bytes);
   } catch (cause) {
@@ -291,11 +303,20 @@ async function loadState(root: string, section: string, key: string): Promise<Co
     ) ||
     !Number.isSafeInteger(data.byteLength) ||
     data.byteLength < 0 ||
-    data.byteLength > MAX_BYTES ||
+    data.byteLength >
+      (data.transport === 'resources-v2' ? MAX_SERIALIZED_RESOURCE_BYTES : MAX_BYTES) ||
     typeof data.createdAt !== 'string' ||
     !Number.isFinite(Date.parse(data.createdAt))
   )
     return fail('E_COMPANY_STATE', 'Invalid or unsupported publication preview.');
+  if (
+    data.transport !== undefined &&
+    (data.transport !== 'resources-v2' ||
+      data.sourceType !== 'design-document' ||
+      (data.remoteContentDigest !== undefined &&
+        !/^sha256:[a-f0-9]{64}$/.test(String(data.remoteContentDigest))))
+  )
+    return fail('E_COMPANY_STATE', 'Invalid resource publication custody.');
   if (data.sourceType !== undefined) {
     if (
       data.sourceType !== 'design-document' ||
@@ -321,6 +342,7 @@ async function loadState(root: string, section: string, key: string): Promise<Co
     );
   }
   normalizeCompanyOrigin(data.apiUrl);
+  if (data.uploadRevisionId !== undefined) id(data.uploadRevisionId);
   id(data.projectId);
   if (data.artifactId !== undefined) {
     id(data.artifactId);
@@ -485,6 +507,7 @@ interface PreparedCompanyContent {
   content: string;
   contentType: string;
   sourceType?: 'design-document';
+  transport?: 'resources-v2';
   sourceFiles?: string[];
   sourceDigests?: Record<string, string>;
   designSummary?: CompanyPreview['designSummary'];
@@ -492,7 +515,7 @@ interface PreparedCompanyContent {
 }
 type PrepareDesignPublication = (
   file: string,
-  options: { maxBytes: number },
+  options: { maxBytes: number; resourceTransport?: boolean },
 ) => Promise<{
   content: string;
   sourceFiles: string[];
@@ -506,10 +529,11 @@ type PrepareDesignPublication = (
 }>;
 async function prepareCompanyContent(
   root: string,
-  source: Pick<CompanyPreview, 'filePath' | 'kind' | 'sourceType'>,
+  source: Pick<CompanyPreview, 'filePath' | 'kind' | 'sourceType' | 'transport'>,
   detectDesign = false,
 ): Promise<PreparedCompanyContent> {
-  const file = await safeFile(root, source.filePath);
+  const maximum = source.kind === 'design' ? LARGE_OBJECT_LIMITS.decodedBytes : MAX_BYTES;
+  const file = await safeFile(root, source.filePath, maximum);
   const extension = path.extname(file).toLowerCase();
   const contentType = (
     {
@@ -521,7 +545,7 @@ async function prepareCompanyContent(
   )[extension];
   if (!contentType)
     return fail('E_COMPANY_TYPE', 'Publish a JSON, Markdown, SVG, or HTML artifact.');
-  const original = await readArtifactFile(file);
+  const original = await readArtifactFile(file, maximum);
   checkContent(original);
   if (source.kind === 'diagram' && extension === '.json') {
     let parsed: unknown;
@@ -575,14 +599,18 @@ async function prepareCompanyContent(
       'E_COMPANY_DESIGN_RUNTIME',
       'The resolved pipeline does not provide design publication. Run planr doctor to inspect the installed runtime.',
     );
-  const prepared = await prepareDesign(file, { maxBytes: MAX_BYTES });
+  const resourceTransport = detectDesign || source.transport === 'resources-v2';
+  const prepared = await prepareDesign(file, {
+    maxBytes: resourceTransport ? LARGE_OBJECT_LIMITS.decodedBytes : MAX_BYTES,
+    resourceTransport,
+  });
   if (
     typeof prepared.content !== 'string' ||
     !Array.isArray(prepared.sourceFiles) ||
     !prepared.sourceFiles.length ||
     !prepared.sourceDigests ||
     prepared.byteLength !== Buffer.byteLength(prepared.content) ||
-    prepared.byteLength > MAX_BYTES
+    prepared.byteLength > (resourceTransport ? MAX_SERIALIZED_RESOURCE_BYTES : MAX_BYTES)
   )
     return fail(
       'E_COMPANY_DESIGN_RUNTIME',
@@ -593,7 +621,7 @@ async function prepareCompanyContent(
     assertSafeRelativePath(relative);
     const repositoryPath = path.posix.join(path.posix.dirname(source.filePath), relative);
     assertSafeRelativePath(repositoryPath);
-    const resolved = await safeFile(root, repositoryPath);
+    const resolved = await safeFile(root, repositoryPath, LARGE_OBJECT_LIMITS.decodedBytes);
     const bytes = await readFile(resolved);
     const digest = createHash('sha256').update(bytes).digest('hex');
     if (digest !== prepared.sourceDigests[relative])
@@ -618,6 +646,7 @@ async function prepareCompanyContent(
     content: prepared.content,
     contentType: 'application/json',
     sourceType: 'design-document',
+    ...(resourceTransport ? { transport: 'resources-v2' as const } : {}),
     sourceFiles: Object.keys(sourceDigests).sort(),
     sourceDigests,
     designSummary: {
@@ -718,6 +747,7 @@ type CompanyRequestOptions = {
   body?: unknown;
   idempotencyKey?: string;
   token?: string;
+  bytes?: Uint8Array;
 };
 async function companyResponse(
   apiUrl: string,
@@ -742,14 +772,22 @@ async function companyResponse(
     Authorization: `Bearer ${token}`,
     Accept: 'application/json',
   };
+  if (options.body !== undefined && options.bytes !== undefined)
+    return fail('E_COMPANY_INPUT', 'Choose one request body.');
   if (options.body !== undefined) headers['Content-Type'] = 'application/json';
+  if (options.bytes !== undefined) headers['Content-Type'] = 'application/octet-stream';
   if (options.idempotencyKey) headers['Idempotency-Key'] = options.idempotencyKey;
   let response: Response;
   try {
     response = await fetch(origin + route, {
       method: options.method ?? 'GET',
       headers,
-      body: options.body === undefined ? undefined : JSON.stringify(options.body),
+      body:
+        options.bytes === undefined
+          ? options.body === undefined
+            ? undefined
+            : JSON.stringify(options.body)
+          : new Uint8Array(options.bytes).buffer,
       redirect: 'error',
       signal: AbortSignal.timeout(15000),
     });
@@ -769,7 +807,12 @@ async function companyResponse(
         response = await fetch(origin + route, {
           method: options.method ?? 'GET',
           headers,
-          body: options.body === undefined ? undefined : JSON.stringify(options.body),
+          body:
+            options.bytes === undefined
+              ? options.body === undefined
+                ? undefined
+                : JSON.stringify(options.body)
+              : new Uint8Array(options.bytes).buffer,
           redirect: 'error',
           signal: AbortSignal.timeout(15000),
         });
@@ -880,26 +923,48 @@ export async function publishCompanyPreview(root: string, previewId: string) {
       await saveState(root, 'previews', preview.id, preview);
     }
     if (!preview.revisionId) {
-      const result = await companyApi<{
-        revision: {
-          id: string;
-          organizationId: string;
-          projectId: string;
-          artifactId: string;
-          parentRevisionId: null;
-          contentDigest: string;
-        };
-      }>(preview.apiUrl, `${base}/${id(preview.artifactId)}/revisions`, {
-        method: 'POST',
-        body: { baseRevisionId: null, content, contentType: preview.contentType },
-        idempotencyKey: preview.id + '-publish',
-      });
+      let result: {
+        revision: Pick<
+          CompanyRemoteRevision,
+          | 'id'
+          | 'organizationId'
+          | 'projectId'
+          | 'artifactId'
+          | 'parentRevisionId'
+          | 'contentDigest'
+        >;
+      };
+      if (preview.transport === 'resources-v2') {
+        result = await publishCompanyResources(
+          root,
+          preview,
+          content,
+          preview.id + '-publish',
+          null,
+        );
+      } else {
+        result = await companyApi<{
+          revision: {
+            id: string;
+            organizationId: string;
+            projectId: string;
+            artifactId: string;
+            parentRevisionId: null;
+            contentDigest: string;
+          };
+        }>(preview.apiUrl, `${base}/${id(preview.artifactId)}/revisions`, {
+          method: 'POST',
+          body: { baseRevisionId: null, content, contentType: preview.contentType },
+          idempotencyKey: preview.id + '-publish',
+        });
+      }
       if (
         result?.revision?.organizationId !== preview.organizationId ||
         result.revision.projectId !== preview.projectId ||
         result.revision.artifactId !== preview.artifactId ||
         result.revision.parentRevisionId !== null ||
-        result.revision.contentDigest !== preview.contentDigest
+        result.revision.contentDigest !==
+          (preview.transport ? preview.remoteContentDigest : preview.contentDigest)
       )
         return fail(
           'E_COMPANY_RESPONSE',
@@ -981,7 +1046,8 @@ export async function companyBindingStatus(root: string, bindingId: string) {
 
 interface CompanyRemoteRevision {
   kind: 'openplanr-enterprise-artifact-revision';
-  schemaVersion: '1.0.0';
+  schemaVersion: '1.0.0' | '1.1.0';
+  contentReference?: { transport: 'resources-v2'; manifestSha256: string };
   id: string;
   organizationId: string;
   projectId: string;
@@ -1042,7 +1108,10 @@ async function assertRemoteRevision(
 ): Promise<CompanyRemoteRevision> {
   const runtime = await enterpriseRuntime();
   try {
-    runtime.assertEnterpriseRevision(revision);
+    if ((revision as CompanyRemoteRevision)?.schemaVersion === '1.1.0') {
+      const { assertLargeObjectContract } = await companyResourceContracts();
+      assertLargeObjectContract(revision, 'enterprise-artifact-revision');
+    } else runtime.assertEnterpriseRevision(revision);
   } catch (cause) {
     return fail(
       'E_COMPANY_RESPONSE',
@@ -1057,8 +1126,10 @@ async function assertRemoteRevision(
     selected.artifactId !== binding.artifactId
   )
     return fail('E_COMPANY_SCOPE', 'The revision belongs to a different publication scope.');
-  if (selected.byteLength > MAX_BYTES)
-    return fail('E_COMPANY_SIZE', 'The remote revision exceeds the 1 MiB retrieval limit.');
+  if (
+    selected.byteLength > (selected.contentReference ? LARGE_OBJECT_LIMITS.decodedBytes : MAX_BYTES)
+  )
+    return fail('E_COMPANY_SIZE', 'The remote revision exceeds its declared transport limit.');
   return selected;
 }
 async function findRemoteRevision(
@@ -1099,6 +1170,52 @@ async function remoteRevisionContent(
   binding: CompanyBinding,
   revision: CompanyRemoteRevision,
 ): Promise<string> {
+  if (revision.contentReference?.transport === 'resources-v2') {
+    const { assertLargeObjectContract, canonicalizeJson } = await companyResourceContracts();
+    const route = `${companyArtifactRoute(binding)}/revisions/${id(revision.id)}`;
+    const manifest = await companyApi<CompanyResourceManifest>(binding.apiUrl, `${route}/manifest`);
+    assertLargeObjectContract(manifest, 'company-resource-manifest');
+    if (
+      hash(canonicalizeJson(manifest)) !== revision.contentReference.manifestSha256 ||
+      manifest.contentDigest !== revision.contentDigest ||
+      manifest.byteLength !== revision.byteLength ||
+      manifest.organizationId !== binding.organizationId ||
+      manifest.projectId !== binding.projectId ||
+      manifest.artifactId !== binding.artifactId ||
+      manifest.revisionId !== revision.id
+    )
+      return fail(
+        'E_COMPANY_INTEGRITY',
+        'The resource manifest does not match the authorized revision.',
+      );
+    const { openCompanyResourcePack } = await companyResourceRuntime();
+    let opened: Awaited<ReturnType<typeof openCompanyResourcePack>>;
+    try {
+      opened = await openCompanyResourcePack(manifest, {
+        fetchChunk: async (index: number) => {
+          const response = await companyResponse(binding.apiUrl, `${route}/chunks/${index}`);
+          return await readCompanyBytes(response, LARGE_OBJECT_LIMITS.chunkBytes);
+        },
+      });
+    } catch (cause) {
+      return fail(
+        'E_COMPANY_INTEGRITY',
+        'The company resource catalog or chunk is corrupt. Retry the authorized revision.',
+        cause,
+      );
+    }
+    try {
+      return canonicalizeJson(await opened.loadBundle());
+    } catch (cause) {
+      return fail(
+        'E_COMPANY_INTEGRITY',
+        'The company resource content is corrupt. Retry the authorized revision.',
+        cause,
+      );
+    } finally {
+      opened.dispose();
+    }
+  }
   const response = await companyResponse(
     binding.apiUrl,
     `${companyArtifactRoute(binding)}/content?revisionId=${id(revision.id)}`,
@@ -1449,8 +1566,13 @@ export async function pullCompanyBinding(root: string, bindingId: string) {
       if (
         !info.isFile() ||
         info.isSymbolicLink() ||
-        info.size > MAX_BYTES ||
-        hash(await readArtifactFile(contentPath)) !== revision.contentDigest
+        info.size > (revision.contentReference ? MAX_SERIALIZED_RESOURCE_BYTES : MAX_BYTES) ||
+        hash(
+          await readArtifactFile(
+            contentPath,
+            revision.contentReference ? MAX_SERIALIZED_RESOURCE_BYTES : MAX_BYTES,
+          ),
+        ) !== hash(content)
       )
         return fail(
           'E_COMPANY_STATE',
@@ -1473,6 +1595,8 @@ export async function pullCompanyBinding(root: string, bindingId: string) {
       contentType: revision.contentType,
       byteLength: revision.byteLength,
       contentPath: path.relative(await realpath(root), contentPath),
+      reconstructedContentDigest: hash(content),
+      reconstructedByteLength: Buffer.byteLength(content),
       retrievedAt: new Date().toISOString(),
       contentTrust: 'untrusted',
       bindingAdvanced: false,
@@ -1966,10 +2090,17 @@ export async function previewCompanyPush(root: string, bindingId: string) {
     const prepared = await prepareCompanyContent(root, binding);
     const { content, warnings: _warnings, ...source } = prepared;
     checkContent(content);
-    if (Buffer.byteLength(content) > MAX_BYTES)
-      return fail('E_COMPANY_SIZE', 'Artifact exceeds the 1 MiB publication limit.');
+    if (
+      Buffer.byteLength(content) > (prepared.transport ? MAX_SERIALIZED_RESOURCE_BYTES : MAX_BYTES)
+    )
+      return fail('E_COMPANY_SIZE', 'Artifact exceeds its declared publication transport limit.');
+    const {
+      uploadRevisionId: _oldUpload,
+      remoteContentDigest: _oldRemoteDigest,
+      ...acceptedBinding
+    } = binding;
     const preview: CompanyPushPreview = {
-      ...binding,
+      ...acceptedBinding,
       ...source,
       contentDigest: hash(content),
       localContentDigest: hash(content),
@@ -2069,24 +2200,45 @@ export async function pushCompanyBinding(root: string, bindingId: string) {
     }
     const replayed = Boolean(preview.publishedRevisionId);
     if (!preview.publishedRevisionId) {
-      const result = await companyApi<{
-        revision: {
-          id: string;
-          organizationId: string;
-          projectId: string;
-          artifactId: string;
-          parentRevisionId: string;
-          contentDigest: string;
-        };
-      }>(
-        binding.apiUrl,
-        `/v1/projects/${id(binding.projectId)}/artifacts/${id(binding.artifactId)}/revisions`,
-        {
-          method: 'POST',
-          body: { baseRevisionId: preview.revisionId, content, contentType: binding.contentType },
-          idempotencyKey: preview.operationId,
-        },
-      );
+      let result: {
+        revision: Pick<
+          CompanyRemoteRevision,
+          | 'id'
+          | 'organizationId'
+          | 'projectId'
+          | 'artifactId'
+          | 'parentRevisionId'
+          | 'contentDigest'
+        >;
+      };
+      if (preview.transport === 'resources-v2') {
+        result = await publishCompanyResources(
+          root,
+          preview,
+          content,
+          preview.operationId,
+          preview.revisionId,
+        );
+      } else {
+        result = await companyApi<{
+          revision: {
+            id: string;
+            organizationId: string;
+            projectId: string;
+            artifactId: string;
+            parentRevisionId: string;
+            contentDigest: string;
+          };
+        }>(
+          binding.apiUrl,
+          `/v1/projects/${id(binding.projectId)}/artifacts/${id(binding.artifactId)}/revisions`,
+          {
+            method: 'POST',
+            body: { baseRevisionId: preview.revisionId, content, contentType: binding.contentType },
+            idempotencyKey: preview.operationId,
+          },
+        );
+      }
       const revision = result?.revision;
       if (
         !revision ||
@@ -2094,7 +2246,8 @@ export async function pushCompanyBinding(root: string, bindingId: string) {
         revision.projectId !== binding.projectId ||
         revision.artifactId !== binding.artifactId ||
         revision.parentRevisionId !== preview.revisionId ||
-        revision.contentDigest !== preview.contentDigest ||
+        revision.contentDigest !==
+          (preview.transport ? preview.remoteContentDigest : preview.contentDigest) ||
         revision.id === preview.revisionId
       )
         return fail(
@@ -2119,4 +2272,262 @@ export async function pushCompanyBinding(root: string, bindingId: string) {
         : 'The reviewed artifact revision is published. Proposal acknowledgement and feedback resolution remain separate actions.',
     };
   });
+}
+
+type CompanyResourceContracts = Pick<
+  typeof import('planr-pipeline/resource-contracts'),
+  'assertLargeObjectContract' | 'canonicalizeJson'
+>;
+/** Load optional validation only for an actual resource operation, never CLI registration. */
+async function companyResourceContracts(): Promise<CompanyResourceContracts> {
+  const resolved = resolvePipelinePackage(true);
+  if (!resolved)
+    return fail(
+      'E_COMPANY_RUNTIME',
+      'The resource publication runtime is unavailable. Run planr doctor.',
+    );
+  try {
+    const contracts = await import(
+      pathToFileURL(path.join(resolved.root, 'lib/protocol/large-object-contracts.mjs')).href
+    );
+    if (
+      typeof contracts.assertLargeObjectContract !== 'function' ||
+      typeof contracts.canonicalizeJson !== 'function'
+    )
+      throw new TypeError('Resource contracts are incomplete.');
+    return contracts as CompanyResourceContracts;
+  } catch (cause) {
+    return fail(
+      'E_COMPANY_RUNTIME',
+      'The installed resource publication contracts are unavailable. Run planr doctor.',
+      cause,
+    );
+  }
+}
+
+/** Load the installed canonical packer/spool; private custody is never a shell command. */
+type CompanyResourceRuntime = Pick<
+  typeof import('../../../artifact/lib/artifact/resource-pack.mjs'),
+  'packCompanyResourceBundle' | 'openCompanyResourcePack'
+> &
+  Pick<
+    typeof import('../../../artifact/lib/artifact/upload-spool.mjs'),
+    'persistPreparedUploadSpool' | 'preparedUploadChunkReader'
+  > & { readPreparedUploadRequest(directory: string): unknown };
+async function companyResourceRuntime(): Promise<CompanyResourceRuntime> {
+  const resolved = resolvePipelinePackage(true);
+  if (!resolved)
+    return fail(
+      'E_COMPANY_RUNTIME',
+      'The resource publication runtime is unavailable. Run planr doctor.',
+    );
+  const moduleUrl = (name: string) =>
+    pathToFileURL(path.join(resolved.root, 'lib/artifact', name)).href;
+  const runtime = {
+    ...(await import(moduleUrl('resource-pack.mjs'))),
+    ...(await import(moduleUrl('upload-spool.mjs'))),
+  };
+  for (const name of [
+    'packCompanyResourceBundle',
+    'openCompanyResourcePack',
+    'persistPreparedUploadSpool',
+    'preparedUploadChunkReader',
+    'readPreparedUploadRequest',
+  ])
+    if (typeof runtime[name] !== 'function')
+      return fail(
+        'E_COMPANY_RUNTIME',
+        'The installed resource publication helper is incomplete. Run planr doctor.',
+      );
+  return runtime as CompanyResourceRuntime;
+}
+async function readCompanyBytes(response: Response, maximum: number): Promise<Uint8Array> {
+  if (Number(response.headers.get('content-length')) > maximum) {
+    await response.body?.cancel();
+    return fail('E_COMPANY_RESPONSE', 'The resource response exceeded its size limit.');
+  }
+  const reader = response.body?.getReader();
+  if (!reader) return new Uint8Array();
+  const chunks: Uint8Array[] = [];
+  let length = 0;
+  try {
+    for (;;) {
+      const part = await reader.read();
+      if (part.done) break;
+      length += part.value.byteLength;
+      if (length > maximum)
+        return fail('E_COMPANY_RESPONSE', 'The resource response exceeded its size limit.');
+      chunks.push(part.value);
+    }
+  } catch (error) {
+    await reader.cancel().catch(() => {});
+    throw error;
+  } finally {
+    reader.releaseLock();
+  }
+  const bytes = new Uint8Array(length);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return bytes;
+}
+async function publishCompanyResources(
+  root: string,
+  preview: CompanyPreview,
+  content: string,
+  operationId: string,
+  baseRevisionId: string | null,
+): Promise<{ revision: CompanyRemoteRevision }> {
+  const runtime = await companyResourceRuntime();
+  const { assertLargeObjectContract, canonicalizeJson } = await companyResourceContracts();
+  const uploadRoot = await safeStateDirectory(root, 'uploads');
+  const directory = path.join(uploadRoot, id(operationId));
+  let recovered = true;
+  let body: {
+    schemaVersion: '2.0.0';
+    operationId: string;
+    baseRevisionId: string | null;
+    manifest: CompanyResourceManifest;
+  };
+  try {
+    await lstat(path.join(directory, 'request.json'));
+    const recoveredRequest = runtime.readPreparedUploadRequest(directory);
+    assertLargeObjectContract(recoveredRequest, 'company-resource-upload-prepare');
+    body = recoveredRequest as typeof body;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+    recovered = false;
+    const packed = await runtime.packCompanyResourceBundle(JSON.parse(content), {
+      organizationId: id(preview.organizationId),
+      projectId: id(preview.projectId),
+      artifactId: id(preview.artifactId),
+      revisionId: randomUUID(),
+    });
+    body = { schemaVersion: '2.0.0', operationId, baseRevisionId, manifest: packed.manifest };
+    await runtime.persistPreparedUploadSpool(body, packed.chunks, directory);
+  }
+  if (
+    body.operationId !== operationId ||
+    body.baseRevisionId !== baseRevisionId ||
+    body.manifest.organizationId !== preview.organizationId ||
+    body.manifest.projectId !== preview.projectId ||
+    body.manifest.artifactId !== preview.artifactId
+  )
+    return fail(
+      'E_COMPANY_STATE',
+      'The recovered upload belongs to a different reviewed operation.',
+    );
+  const readChunk = runtime.preparedUploadChunkReader(directory, body);
+  // Fully validate durable custody before the first service request, including recovered chunks.
+  for (const part of body.manifest.chunks) await readChunk(part.index);
+  if (
+    (preview.uploadRevisionId !== undefined &&
+      preview.uploadRevisionId !== body.manifest.revisionId) ||
+    (preview.remoteContentDigest !== undefined &&
+      preview.remoteContentDigest !== body.manifest.contentDigest)
+  )
+    return fail(
+      'E_COMPANY_STATE',
+      'The recovered upload differs from the saved publication identity.',
+    );
+  if (recovered) {
+    const opened = await runtime.openCompanyResourcePack(body.manifest, { fetchChunk: readChunk });
+    try {
+      // Compare the reviewed logical source with the authenticated catalog. Large
+      // inline designs may reconstruct as source pools without changing their content.
+      await opened.assertMatchesBundle(JSON.parse(content));
+    } catch (error) {
+      return fail(
+        'E_COMPANY_STATE',
+        'The recovered upload differs from the reviewed source bytes.',
+        error,
+      );
+    } finally {
+      opened.dispose();
+    }
+  }
+  preview.uploadRevisionId = body.manifest.revisionId;
+  preview.remoteContentDigest = body.manifest.contentDigest;
+  await saveState(
+    root,
+    baseRevisionId === null ? 'previews' : 'push-previews',
+    preview.id,
+    preview,
+  );
+  const capabilities = await companyApi<{
+    publicationTransports?: string[];
+    limits?: { chunkBytes: number; decodedBytes: number; catalogBytes: number; chunks: number };
+  }>(preview.apiUrl, '/v1/capabilities');
+  if (
+    !Array.isArray(capabilities.publicationTransports) ||
+    !capabilities.publicationTransports.includes('resources-v2') ||
+    capabilities.limits?.chunkBytes !== LARGE_OBJECT_LIMITS.chunkBytes ||
+    capabilities.limits.decodedBytes !== LARGE_OBJECT_LIMITS.decodedBytes ||
+    capabilities.limits.catalogBytes !== LARGE_OBJECT_LIMITS.catalogBytes ||
+    capabilities.limits.chunks !== 128
+  )
+    return fail(
+      'E_COMPANY_COMPATIBILITY',
+      'This company service needs the resource publication update before it can accept this design. The prepared upload is saved for retry.',
+    );
+  const route = `${companyArtifactRoute(preview as CompanyBinding)}/uploads/${id(operationId)}`;
+  const status = await companyApi<{
+    status: 'prepared' | 'committed';
+    receivedChunks: Array<{ index: number; sha256: string; byteLength: number }>;
+    receipt?: unknown;
+  }>(preview.apiUrl, route, { method: 'PUT', body });
+  assertLargeObjectContract(status, 'company-resource-upload-status');
+  if (status.status !== 'committed') {
+    for (const part of body.manifest.chunks) {
+      const received = status.receivedChunks.find((item) => item.index === part.index);
+      if (received && (received.sha256 !== part.sha256 || received.byteLength !== part.byteLength))
+        return fail(
+          'E_COMPANY_INTEGRITY',
+          'The service upload status differs from the exact prepared bytes.',
+        );
+      if (!received)
+        await companyApi(preview.apiUrl, `${route}/chunks/${part.index}`, {
+          method: 'PUT',
+          bytes: await readChunk(part.index),
+        });
+    }
+  }
+  const result = await companyApi<{ receipt: unknown; revision: CompanyRemoteRevision }>(
+    preview.apiUrl,
+    `${route}/commit`,
+    { method: 'POST', body: { manifestSha256: hash(canonicalizeJson(body.manifest)) } },
+  );
+  assertLargeObjectContract(result.receipt, 'company-resource-upload-receipt');
+  assertLargeObjectContract(result.revision, 'enterprise-artifact-revision');
+  const receipt = result.receipt as {
+    operationId: string;
+    manifestSha256: string;
+    revisionId: string;
+    contentDigest: string;
+    organizationId: string;
+    projectId: string;
+    artifactId: string;
+  };
+  if (
+    receipt.operationId !== operationId ||
+    receipt.manifestSha256 !== hash(canonicalizeJson(body.manifest)) ||
+    receipt.revisionId !== body.manifest.revisionId ||
+    receipt.contentDigest !== body.manifest.contentDigest ||
+    receipt.organizationId !== preview.organizationId ||
+    receipt.projectId !== preview.projectId ||
+    receipt.artifactId !== preview.artifactId ||
+    result.revision.id !== receipt.revisionId ||
+    result.revision.parentRevisionId !== baseRevisionId ||
+    result.revision.contentDigest !== body.manifest.contentDigest ||
+    result.revision.byteLength !== body.manifest.byteLength ||
+    result.revision.contentType !== body.manifest.contentType ||
+    result.revision.contentReference?.manifestSha256 !== receipt.manifestSha256 ||
+    result.revision.organizationId !== receipt.organizationId ||
+    result.revision.projectId !== receipt.projectId ||
+    result.revision.artifactId !== receipt.artifactId
+  )
+    return fail('E_COMPANY_INTEGRITY', 'The commit receipt differs from the prepared publication.');
+  return result;
 }

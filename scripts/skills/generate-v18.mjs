@@ -29,6 +29,7 @@ import {
   HOST_PLUGIN_NAME,
   namespacedInvocation,
   projectedSkillName,
+  renderCursorSkillBody,
   renderNamespacedSkill,
 } from './host-invocations.mjs';
 import {
@@ -111,6 +112,16 @@ const sharedSkillResources = Object.freeze([
     destination: 'packages/cli/lib/planr-home.d.mts',
     executable: false,
   },
+  ...['mjs', 'd.mts'].map((extension) => ({
+    source: `packages/protocol/src/large-object-limits.${extension}`,
+    destination: `packages/cli/lib/resource-limits.${extension}`,
+    executable: false,
+  })),
+  ...['mjs', 'd.mts'].map((extension) => ({
+    source: `packages/artifact/lib/artifact/internal/credential-writer.${extension}`,
+    destination: `packages/cli/lib/credential-writer.${extension}`,
+    executable: false,
+  })),
   ...operateAdvisorDestinations.map((skillId) => ({
     source: 'skills/shared/operate-advisor-contract.md',
     destination: `skills/${skillId}/references/operate-advisor-contract.md`,
@@ -326,7 +337,11 @@ for (const row of registry.skills) {
     }
   }
 
-  const cursorBody = packageInfo.markdown.replace(/^---[\s\S]*?---\s*/u, '');
+  const cursorBody = renderCursorSkillBody(
+    packageInfo.markdown,
+    row.skillId,
+    hostResources(packageInfo, 'cursor'),
+  );
   add(
     `dist/plugins/cursor/openplanr/rules/${row.skillId}.mdc`,
     `---\ndescription: ${JSON.stringify(parsed.fields.description)}\nalwaysApply: false\n---\n\n${cursorBody}`,

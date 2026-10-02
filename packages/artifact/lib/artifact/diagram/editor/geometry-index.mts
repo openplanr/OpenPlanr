@@ -1,10 +1,10 @@
 import type {
-  DiagramAuthoringBundle,
   DiagramAuthoringValidationError,
   DiagramBounds,
   DiagramPlacement,
   DiagramSemanticEntry,
 } from '@openplanr/protocol/diagram-authoring-contracts';
+import type { VersionedDiagramAuthoringBundle as DiagramAuthoringBundle } from '@openplanr/protocol/studio-presentation-contracts';
 import {
   clone,
   elementIndex,
@@ -508,7 +508,10 @@ export function createDiagramGeometryIndex(
     index: {
       update,
       query,
-      get: (id) => (records.has(id) ? clone(records.get(id)) : null),
+      get: (id) => {
+        const record = records.get(id);
+        return record ? clone(record) : null;
+      },
       stats: () => ({
         ...work,
         entries: records.size,

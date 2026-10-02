@@ -19,9 +19,21 @@ export function namespacedInvocation(skillId, host) {
 export function renderNamespacedSkill(markdown, skillId) {
   const projectedName = projectedSkillName(skillId);
   return String(markdown)
-    .replace(new RegExp(`^name:\\s*[\"']?${skillId}[\"']?\\s*$`, 'mu'), `name: ${projectedName}`)
+    .replace(new RegExp(`^name:\\s*["']?${skillId}["']?\\s*$`, 'mu'), `name: ${projectedName}`)
     .replace(/\/openplanr:planr-([a-z0-9-]+)/gu, '/planr:$1')
     .replace(/\/planr-([a-z0-9-]+)/gu, '/planr:$1')
     .replace(/\$openplanr:planr-([a-z0-9-]+)/gu, '$planr:$1')
     .replace(/\$planr-([a-z0-9-]+)/gu, '$planr:$1');
+}
+
+/** Cursor keeps each rule beside its resource folder, one level above the canonical skill body. */
+export function renderCursorSkillBody(markdown, skillId, resources) {
+  const paths = new Set(resources.map((resource) => resource.path));
+  return String(markdown)
+    .replace(/^---[\s\S]*?---\s*/u, '')
+    .replace(/\]\(([^)]+)\)/gu, (match, target) => {
+      const [path, suffix = ''] = target.split(/(?=[?#])/u, 2);
+      const relative = path.replace(/^\.\//u, '');
+      return paths.has(relative) ? `](${skillId}/${relative}${suffix})` : match;
+    });
 }

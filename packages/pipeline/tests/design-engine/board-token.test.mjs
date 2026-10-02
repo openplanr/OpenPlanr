@@ -77,8 +77,8 @@ for (const [label, bytes] of [
     const dir = mkdtempSync(join(tmpdir(), 'planr-tok-c-'));
     const stateDir = join(home, 'design-daemon');
     const store = join(stateDir, 'tokens.json');
-    mkdirSync(stateDir, { recursive: true });
-    writeFileSync(store, bytes);
+    mkdirSync(stateDir, { recursive: true, mode: 0o700 });
+    writeFileSync(store, bytes, { mode: 0o600 });
     try {
       let error;
       try {

@@ -379,7 +379,10 @@ test('phone layout has usable controls, one viewport, and 16px input fields', {
       .locator('[data-planr-reviewer-name]')
       .evaluate((el) => parseFloat(getComputedStyle(el).fontSize))) >= 16,
   );
-  await page.locator('[data-planr-close-feedback]').click();
+  await page
+    .getByRole('dialog', { name: 'Review', exact: true })
+    .getByRole('button', { name: 'Close review', exact: true })
+    .click();
   await page.setViewportSize({ width: 844, height: 390 });
   await page.locator('[data-action=fit]').click();
   await settled(page);
@@ -437,7 +440,7 @@ test('primary controls preserve readable contrast through hover, press, open and
   skip: !enabled,
 }, async (t) => {
   const { page } = await fixture(t);
-  const exportButton = page.locator('.diagram-export summary');
+  const exportButton = page.locator('[data-studio-export-menu]');
   const pan = page.locator('[data-action=pan]');
   const read = async (locator, label) => {
     const colors = await locator.evaluate((el) => {
@@ -465,7 +468,7 @@ test('primary controls preserve readable contrast through hover, press, open and
     await page.mouse.down();
     await read(exportButton, `${theme} export pressed`);
     await page.mouse.up();
-    assert.equal(await page.locator('.diagram-export').getAttribute('open'), '');
+    assert.equal(await exportButton.getAttribute('aria-expanded'), 'true');
     await page.mouse.move(400, 80);
     await read(exportButton, `${theme} export open`);
     await exportButton.press('Escape');
@@ -482,4 +485,61 @@ test('primary controls preserve readable contrast through hover, press, open and
     await read(page.locator('[data-action=review]'), `${theme} open comments`);
     await page.locator('[data-planr-close-feedback]').click();
   }
+});
+
+test('read-only Studio uses its constrained host width for responsive controls and dialogs', {
+  skip: !enabled,
+}, async (t) => {
+  const { page } = await fixture(t, { width: 1440, height: 950 });
+  await page.evaluate(() =>
+    Object.assign(document.querySelector('.diagram-shell').style, {
+      width: '600px',
+      height: '700px',
+      marginLeft: '200px',
+    }),
+  );
+  await page.waitForSelector('.diagram-shell[data-studio-layout="compact"]');
+  const navigator = page.locator('[data-action="outline"]');
+  if ((await navigator.getAttribute('aria-expanded')) === 'true') await navigator.click();
+  await navigator.click();
+  const dialog = page.getByRole('dialog', { name: 'Screens', exact: true });
+  await dialog.waitFor();
+  const root = await page.locator('.diagram-shell').boundingBox();
+  const bounds = await dialog.boundingBox();
+  assert.ok(
+    bounds.x >= root.x && bounds.x + bounds.width <= root.x + root.width + 1,
+    `The navigator fits its host instead of the 1440px window: ${JSON.stringify({ root, bounds })}`,
+  );
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(() => document.activeElement?.matches('[data-action="outline"]'));
+  await page.locator('[data-action="review"]').click();
+  await page.getByRole('dialog', { name: 'Review', exact: true }).waitFor();
+  assert.equal(await navigator.getAttribute('aria-expanded'), 'false');
+});
+
+test('Inspect is a keyboard-accessible active mode that selects semantic details without panning', {
+  skip: !enabled,
+}, async (t) => {
+  const { page } = await fixture(t);
+  await page.locator('.diagram-canvas').focus();
+  await page.keyboard.press('i');
+  assert.equal(await page.locator('[data-action=inspect]').getAttribute('aria-pressed'), 'true');
+  assert.equal(await page.locator('[data-action=pan]').getAttribute('aria-pressed'), 'false');
+  assert.equal(
+    await page.locator('.diagram-shell').getAttribute('data-planr-review-mode'),
+    'inspect',
+  );
+  const before = (await geometry(page)).transform;
+  const item = await page.locator('[data-item-id="actor-0"]').boundingBox();
+  await page.mouse.move(item.x + item.width / 2, item.y + item.height / 2);
+  await page.mouse.down();
+  await page.mouse.up();
+  assert.equal(await page.locator('[data-element-id]').textContent(), 'actor-0');
+  assert.equal((await geometry(page)).transform, before, 'Inspection keeps the camera stable');
+  assert.equal(await page.locator('[data-planr-annotation-composer]').count(), 0);
+  await page.locator('[data-action=comment]').click();
+  assert.equal(await page.locator('[data-action=inspect]').getAttribute('aria-pressed'), 'false');
+  await page.keyboard.press('Escape');
+  assert.equal(await page.locator('[data-action=pan]').getAttribute('aria-pressed'), 'true');
+  assert.equal(await page.locator('[data-action=comment]').getAttribute('aria-pressed'), 'false');
 });

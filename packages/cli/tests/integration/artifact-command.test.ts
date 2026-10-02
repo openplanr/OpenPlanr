@@ -358,7 +358,50 @@ describe('planr artifact and retired pipeline facade', { timeout: 30_000 }, () =
     let divergentRetry = false;
     const server = createServer(async (request, response) => {
       try {
-        if (request.method !== 'POST' || request.url !== '/api/v1/rooms') {
+        const readId = /^\/api\/v2\/rooms\/([A-Za-z0-9_-]+)\?cursor=0$/u.exec(
+          request.url ?? '',
+        )?.[1];
+        if (request.method === 'GET' && readId) {
+          const stored = logicalRooms.get(readId);
+          if (!stored) {
+            response.writeHead(404).end('{}');
+            return;
+          }
+          const body = JSON.parse(stored) as Record<string, unknown>;
+          expect(request.headers.authorization).toBe(`Bearer ${String(body.readCapability)}`);
+          response.writeHead(200, { 'content-type': 'application/json' }).end(
+            JSON.stringify({
+              version: 'v3',
+              cursor: 0,
+              sequence: 0,
+              eventBytes: 2,
+              nextCursor: null,
+              descriptor: {
+                schemaVersion: '3.0.0',
+                protocolVersion: '3.0.0',
+                roomId: readId,
+                reviewCommitment: body.reviewCommitment,
+                ownerKey: body.ownerKey,
+                capabilities: {
+                  read: 'room-read',
+                  reviewer: 'reviewer-write',
+                  owner: 'owner-verdict',
+                  management: 'room-management',
+                },
+                createdAt: '2026-08-23T00:00:00.000Z',
+              },
+              iv: body.iv,
+              ciphertext: body.ciphertext,
+              expiresAt: '2099-08-30T00:00:00.000Z',
+              commentsEnabled: true,
+              events: [],
+              generation: 0,
+              head: `sha256:${'0'.repeat(64)}`,
+            }),
+          );
+          return;
+        }
+        if (request.method !== 'POST' || request.url !== '/api/v2/rooms') {
           response.writeHead(404).end('{}');
           return;
         }
@@ -378,14 +421,15 @@ describe('planr artifact and retired pipeline facade', { timeout: 30_000 }, () =
         response.writeHead(201, { 'content-type': 'application/json' }).end(
           JSON.stringify({
             id: roomId,
-            expiresAt: '2026-08-30T00:00:00.000Z',
+            expiresAt: '2099-08-30T00:00:00.000Z',
             descriptor: {
-              schemaVersion: '2.0.0',
-              protocolVersion: '2.0.0',
+              schemaVersion: '3.0.0',
+              protocolVersion: '3.0.0',
               roomId,
-              reviewOf: body.reviewOf,
+              reviewCommitment: body.reviewCommitment,
               ownerKey: body.ownerKey,
               capabilities: {
+                read: 'room-read',
                 reviewer: 'reviewer-write',
                 owner: 'owner-verdict',
                 management: 'room-management',
@@ -441,21 +485,29 @@ describe('planr artifact and retired pipeline facade', { timeout: 30_000 }, () =
       expect(lstatSync(recoveryPath).mode & 0o777).toBe(0o600);
       const recovery = JSON.parse(readFileSync(recoveryPath, 'utf8')) as Record<string, unknown>;
       expect(recovery).toMatchObject({
+        schemaVersion: '2.0.0',
         kind: 'openplanr-live-room-recovery',
-        roomId: requests[0]?.roomId,
-        reviewOf: requests[0]?.reviewOf,
-        ownerKey: requests[0]?.ownerKey,
-        ownerSigner: expect.objectContaining({
-          kind: 'openplanr-live-room-signer',
-          role: 'owner',
-        }),
+        body: requests[0],
+        key: expect.any(String),
+        reviewOf: expect.any(String),
+        ownerSigner: expect.objectContaining({ kind: 'openplanr-live-room-signer', role: 'owner' }),
       });
       expect(recovery).not.toHaveProperty('ciphertext');
-      expect(recovery).not.toHaveProperty('creationId');
-      const roomId = String(requests[0]?.roomId);
-      expect(recovery.url).toMatch(new RegExp(`/r/${roomId}#k=`));
-      expect(recovery.ownerUrl).toMatch(new RegExp(`/r/${roomId}#k=.*&o=`));
-      expect(recovery.manageUrl).toMatch(new RegExp(`/r/${roomId}#k=.*&m=`));
+      expect(requests[0]).not.toHaveProperty('reviewOf');
+      expect(requests[0]).not.toHaveProperty('key');
+      const roomApi = await import(
+        pathToFileURL(join(pipelineRoot, 'lib/artifact/live-room.mjs')).href
+      );
+      const restored = await roomApi.importLiveRoomRecoveryBundle(recovery);
+      expect(restored.ownerUrl).toContain('&r=');
+      expect(restored.ownerUrl).toContain('&o=');
+      await roomApi.commitLiveReviewRoom(restored);
+      expect(requests).toHaveLength(3);
+      expect(requests[2]).toEqual(requests[0]);
+      expect(logicalRooms.size).toBe(1);
+      const hydrated = await roomApi.hydrateLiveReviewRoom(restored.ownerUrl);
+      expect(hydrated.reviewComplete).toBe(true);
+      expect(hydrated.envelope.artifacts[0].html).toContain('retry safe');
     } finally {
       await new Promise<void>((resolveClose) => server.close(() => resolveClose()));
     }

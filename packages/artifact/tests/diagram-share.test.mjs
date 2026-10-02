@@ -43,6 +43,7 @@ function fixture(t) {
   writeFileSync(file, JSON.stringify(bundle));
   const service = diagramWorkspaceService();
   const options = {
+    transport: '1', // Exact retained legacy transport receipts are the fixture's scope.
     custodyRoot: join(outer, 'private'),
     env: { ...process.env, PLANR_HOME: join(outer, 'home') },
     baseUrl: 'https://share.test',

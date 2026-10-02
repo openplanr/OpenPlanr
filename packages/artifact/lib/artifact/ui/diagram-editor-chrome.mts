@@ -225,7 +225,6 @@ export function createEditorChrome(ctx: DiagramEditorContext): DiagramEditorChro
     dom.saveState.dataset.state = readOnly(state) ? 'read-only' : status;
     shell.dataset.editable = String(editable(state));
     shell.dataset.readOnly = String(readOnly(state));
-    shell.dataset.mode = ctx.mode;
     syncPanelState();
     const tool = ctx.canvas.tool();
     for (const control of dom.canvasTools.querySelectorAll<HTMLElement>(
@@ -276,7 +275,6 @@ export function createEditorChrome(ctx: DiagramEditorContext): DiagramEditorChro
       state.recovery.mode,
       ctx.outline.tab(),
       ctx.inspector.tab(),
-      ctx.mode,
       leftOpen,
       rightOpen,
       compactLayout(),

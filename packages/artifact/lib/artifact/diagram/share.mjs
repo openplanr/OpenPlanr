@@ -10,6 +10,7 @@ import {
   withOwnerCustody,
   writeCustody,
 } from '../owner-custody.mjs';
+import { copyUploadSpool, persistUploadSpool, spoolChunkReader } from '../upload-spool.mjs';
 import { prepareDiagramShareBundle } from './review-bundle.mjs';
 import * as workspace from './workspace-client.mjs';
 import {
@@ -118,11 +119,23 @@ function safeStatus(record, current, options = {}) {
       : {}),
   };
 }
+function uploadOptions(custody, options) {
+  const body =
+    custody.pendingCreate ??
+    (custody.pendingMutation?.action === 'publish' ? custody.pendingMutation.body : null);
+  return {
+    fetchImpl: options.fetchImpl,
+    ...(custody.schemaVersion === '2.0.0' && body
+      ? { readChunk: spoolChunkReader(custody.spoolDirectory, body) }
+      : {}),
+  };
+}
 async function commitMutation(record, save, options) {
   try {
-    return await workspace.commitWorkspaceMutation(record.custody, {
-      fetchImpl: options.fetchImpl,
-    });
+    return await workspace.commitWorkspaceMutation(
+      record.custody,
+      uploadOptions(record.custody, options),
+    );
   } catch (error) {
     if (error.status === 409 && record.custody.pendingMutation) {
       const pending = structuredClone(record.custody.pendingMutation);
@@ -131,7 +144,14 @@ async function commitMutation(record, save, options) {
           fetchImpl: options.fetchImpl,
         });
         if (remote.version > pending.body.expectedVersion) {
-          record.conflictedMutation = { ...pending, localRevision: record.pendingRevision ?? null };
+          record.conflictedMutation = {
+            ...pending,
+            localRevision: record.pendingRevision ?? null,
+            ...(record.custody.spoolDirectory
+              ? { spoolDirectory: record.custody.spoolDirectory }
+              : {}),
+          };
+          delete record.custody.spoolDirectory;
           delete record.custody.pendingMutation;
           delete record.pendingRevision;
           save(record);
@@ -144,11 +164,14 @@ async function commitMutation(record, save, options) {
   }
 }
 export async function getDiagramShareStatus(file, options = {}) {
-  const { path, current } = await locationFor(file, options, true);
-  return safeStatus(readCustody(path, { label: LABEL, format: FORMAT }), current, options);
+  const { path, legacyPath, current } = await locationFor(file, options, true);
+  const record =
+    readCustody(path, { label: LABEL, format: FORMAT }) ??
+    (legacyPath ? readCustody(legacyPath, { label: LABEL, format: FORMAT }) : null);
+  return safeStatus(record, current, options);
 }
 export async function shareDiagram(file, options = {}) {
-  return withCustody(file, options, async ({ record, current, save }) => {
+  return withCustody(file, options, async ({ record, current, save, root }) => {
     assertPreview(current, options);
     if (record?.deleted || record?.revoked)
       throw sharingError(
@@ -157,13 +180,45 @@ export async function shareDiagram(file, options = {}) {
         410,
       );
     if (!record) {
-      const custody = await workspace.prepareWorkspace(current.bundle, {
-        baseUrl:
-          options.baseUrl ??
-          options.env?.OPENPLANR_SHARE_BASE ??
-          process.env.OPENPLANR_SHARE_BASE ??
-          workspace.DIAGRAM_SHARE_BASE_URL,
-      });
+      let transport = options.transport;
+      if (!transport) {
+        try {
+          await workspace.discoverWorkspaceCapabilities({
+            baseUrl:
+              options.baseUrl ??
+              options.env?.OPENPLANR_SHARE_BASE ??
+              process.env.OPENPLANR_SHARE_BASE ??
+              'https://share.openplanr.dev',
+            fetchImpl: options.fetchImpl,
+          });
+          transport = '2';
+        } catch (error) {
+          if (![404, 426].includes(error.status)) throw error;
+          transport = '1';
+        }
+      }
+      let custody;
+      try {
+        custody = await workspace.prepareWorkspace(current.bundle, {
+          transport,
+          baseUrl:
+            options.baseUrl ??
+            options.env?.OPENPLANR_SHARE_BASE ??
+            process.env.OPENPLANR_SHARE_BASE ??
+            workspace.DIAGRAM_SHARE_BASE_URL,
+        });
+      } catch (error) {
+        if (transport === '1' && error.code === 'E_WORKSPACE_PAYLOAD_TOO_LARGE')
+          throw Object.assign(
+            new Error(
+              'This sharing service needs the bounded resource upload upgrade. Retry after the hosted service is updated; your local work is unchanged.',
+            ),
+            { code: 'E_WORKSPACE_TRANSPORT_UNSUPPORTED', status: 426 },
+          );
+        throw error;
+      }
+      if (custody.schemaVersion === '2.0.0')
+        await persistUploadSpool(custody, join(root, 'uploads'));
       record = {
         kind: FORMAT,
         schemaVersion: '1.0.0',
@@ -176,7 +231,7 @@ export async function shareDiagram(file, options = {}) {
       save(record);
     }
     if (record.custody.pendingCreate) {
-      await workspace.commitWorkspace(record.custody, { fetchImpl: options.fetchImpl });
+      await workspace.commitWorkspace(record.custody, uploadOptions(record.custody, options));
       record.publishedRevision = record.pendingRevision;
       delete record.pendingRevision;
       save(record);
@@ -185,7 +240,7 @@ export async function shareDiagram(file, options = {}) {
   });
 }
 export async function publishDiagramShare(file, options = {}) {
-  return withCustody(file, options, async ({ record, current, save }) => {
+  return withCustody(file, options, async ({ record, current, save, root }) => {
     assertPreview(current, options);
     if (!record || record.custody.pendingCreate)
       throw sharingError(
@@ -208,6 +263,8 @@ export async function publishDiagramShare(file, options = {}) {
     if (!record.custody.pendingMutation) {
       await workspace.getWorkspace(record.custody, { fetchImpl: options.fetchImpl });
       await workspace.prepareWorkspaceMutation(record.custody, 'publish', current.bundle);
+      if (record.custody.schemaVersion === '2.0.0')
+        await persistUploadSpool(record.custody, join(root, 'uploads'));
       record.pendingRevision = current.revision;
       save(record);
     }
@@ -233,7 +290,7 @@ function assertManagement(record, action) {
 export async function manageDiagramShare(file, action, options = {}) {
   if (!['access', 'rotate', 'pause', 'resume', 'revoke', 'delete'].includes(action))
     throw sharingError('Unknown diagram sharing action.', 'E_DIAGRAM_SHARE_ACTION', 400);
-  return withCustody(file, options, async ({ record, current, save }) => {
+  return withCustody(file, options, async ({ record, current, save, root }) => {
     assertManagement(record, action);
     if (action === 'access')
       return { ...safeStatus(record, current, options), token: record.custody.token };
@@ -264,7 +321,17 @@ export async function exportDiagramShareRecovery(file, { output, ...options } = 
       options: { ...options, custodyRoot: dirname(target) },
     });
     ensurePrivateDirectory(dirname(target), { label: LABEL, recoveryOutput: true });
-    writeFileSync(target, `${JSON.stringify(record, null, 2)}\n`, { flag: 'wx', mode: 0o600 });
+    const recovery = structuredClone(record);
+    if (
+      record.custody.schemaVersion === '2.0.0' &&
+      (record.custody.pendingCreate || record.custody.pendingMutation?.action === 'publish')
+    ) {
+      const spool = `${target}.upload`;
+      await copyUploadSpool(record.custody, spool);
+      recovery.recoverySpool = basename(spool);
+      recovery.custody.spoolDirectory = spool;
+    }
+    writeFileSync(target, `${JSON.stringify(recovery, null, 2)}\n`, { flag: 'wx', mode: 0o600 });
     return { ok: true, output: target };
   });
 }
@@ -287,7 +354,7 @@ export async function importDiagramShareRecovery(file, { input, ...options } = {
   await workspace.deriveWorkspaceAuthentication(custody.token, custody.id);
   if (!/^[A-Za-z0-9_-]{43}$/u.test(custody.ownerAuth ?? ''))
     throw new Error('Recovery owner capability is invalid.');
-  return withCustody(file, options, async ({ record, current, save }) => {
+  return withCustody(file, options, async ({ record, current, save, root }) => {
     if (recovered.diagramId !== current.id)
       throw new Error('Recovery belongs to a different diagram.');
     if (
@@ -308,6 +375,23 @@ export async function importDiagramShareRecovery(file, { input, ...options } = {
       });
       if (remote.diagramId !== current.id)
         throw new Error('Recovery belongs to a different diagram.');
+    }
+    if (
+      custody.schemaVersion === '2.0.0' &&
+      (custody.pendingCreate || custody.pendingMutation?.action === 'publish')
+    ) {
+      if (recovered.recoverySpool !== `${basename(resolve(input))}.upload`)
+        throw new Error('Pending upload recovery requires its matching binary sidecar.');
+      custody.spoolDirectory = join(dirname(resolve(input)), recovered.recoverySpool);
+      const pending = custody.pendingCreate ?? custody.pendingMutation.body;
+      const destination = join(root, 'uploads', custody.id, pending.operationId);
+      if (existsSync(destination)) {
+        const { spoolChunkReader } = await import('../upload-spool.mjs');
+        const reader = spoolChunkReader(destination, pending);
+        for (const part of pending.manifest.chunks) await reader(part.index);
+      } else await copyUploadSpool(custody, destination);
+      custody.spoolDirectory = destination;
+      delete recovered.recoverySpool;
     }
     recovered.lastEvent = 0;
     delete recovered.reviewPath;

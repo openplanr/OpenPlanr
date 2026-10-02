@@ -1,9 +1,11 @@
 import type {
   DiagramAppearance,
-  DiagramAuthoringBundle,
-  DiagramEditTransaction,
   DiagramPlacement,
 } from '@openplanr/protocol/diagram-authoring-contracts';
+import type {
+  VersionedDiagramAuthoringBundle as DiagramAuthoringBundle,
+  VersionedDiagramEditTransaction as DiagramEditTransaction,
+} from '@openplanr/protocol/studio-presentation-contracts';
 import {
   appearanceFields,
   clone,
@@ -289,10 +291,19 @@ export function renderDiagramProperties({
   }
 
   const id = ids[0];
-  const entry = byId.get(id);
-  // Every object in a validated bundle has a placement.
-  const place = placements.get(id) as DiagramPlacement;
-  const sem = semanticFields(entry.collection, entry.value);
+  const selectedEntry = byId.get(id);
+  const place = placements.get(id);
+  if (!selectedEntry || !place) {
+    root.append(
+      inspectorHeader(document, {
+        kicker: 'Unavailable',
+        title: 'Select an object to inspect',
+      }),
+    );
+    onDirtyChange?.(false);
+    return cleanController(root);
+  }
+  const entry = selectedEntry;
   const geom = geometryFields(place);
   const look = appearanceFields(place);
   root.append(
@@ -324,17 +335,18 @@ export function renderDiagramProperties({
     open: true,
   });
   // Apply writes this field back, so a derived name is only ever a placeholder.
-  const storedLabel = entry.value.label ?? entry.value.text ?? '';
+  const storedLabel =
+    entry.collection === 'annotations' ? entry.value.text : (entry.value.label ?? '');
   add(content.body, 'Label', storedLabel, {
     maxlength: 500,
     placeholder: storedLabel ? null : displayName(byId, id),
   });
   if (entry.collection === 'nodes') {
-    add(content.body, 'Description', sem.description, {
+    add(content.body, 'Description', entry.value.description, {
       multiline: true,
       maxlength: 4000,
     });
-    add(content.body, 'Semantic role', sem.kind, {
+    add(content.body, 'Semantic role', entry.value.kind, {
       choices: Object.entries(NODE_NAMES),
     });
   }
@@ -351,7 +363,7 @@ export function renderDiagramProperties({
       ['Y', 'y'],
       ['Width', 'width'],
       ['Height', 'height'],
-    ]) {
+    ] as const) {
       const lock = ['x', 'y'].includes(key) ? place.locks.position : place.locks.size;
       add(grid, name, geom.bounds[key], {
         type: 'number',
@@ -382,23 +394,23 @@ export function renderDiagramProperties({
     );
   form.append(geometry.details);
 
-  if (entry.collection === 'relations') {
+  if (entry.collection === 'relations' && geom.route) {
     const connection = inspectorSection(document, 'Connection', {
       iconName: 'route',
       open: true,
     });
     // biome-ignore format: bundles keep this one-line array; wrapping would change their bytes.
     const choices: Array<[string, string]> = bundle.document.nodes.map((node) => [node.id, displayName(byId, node.id)]);
-    add(connection.body, 'From', sem.from, { choices });
-    add(connection.body, 'To', sem.to, { choices });
-    add(connection.body, 'Direction', sem.direction, {
+    add(connection.body, 'From', entry.value.from, { choices });
+    add(connection.body, 'To', entry.value.to, { choices });
+    add(connection.body, 'Direction', entry.value.direction, {
       choices: [
         ['forward', 'Forward'],
         ['both', 'Both directions'],
         ['none', 'No arrow'],
       ],
     });
-    add(connection.body, 'Relationship', sem.kind, {
+    add(connection.body, 'Relationship', entry.value.kind, {
       choices: labelled('association', 'dependency', 'flow', 'message', 'transition'),
     });
     add(connection.body, 'Routing', geom.route.strategy, {
@@ -489,12 +501,11 @@ export function renderDiagramProperties({
   });
   form.append(appearance.details);
 
-  if (entry.collection !== 'relations' || ['groups', 'lanes'].includes(entry.collection)) {
+  if (entry.collection !== 'relations') {
     const structure = inspectorSection(document, 'Structure', {
       iconName: 'structure',
     });
-    if (entry.collection !== 'relations')
-      structure.body.append(...parentOperation(document, { bundle, byId, ids, editable, act }));
+    structure.body.append(...parentOperation(document, { bundle, byId, ids, editable, act }));
     if (['groups', 'lanes'].includes(entry.collection)) appendMembers(structure.body);
     form.append(structure.details);
   }
@@ -506,7 +517,7 @@ export function renderDiagramProperties({
     ['Lock position', 'position'],
     ['Lock size', 'size'],
     ['Lock route', 'route'],
-  ]) {
+  ] as const) {
     if (key === 'route' && entry.collection !== 'relations') continue;
     if (key !== 'route' && !geom.bounds) continue;
     add(constraints.body, name, look.locks[key], { type: 'checkbox' });
@@ -629,57 +640,78 @@ export function renderDiagramProperties({
   }
 
   function buildPropertyTransaction() {
-    const nextSem = clone(sem),
-      nextGeom = clone(geom),
+    const nextGeom = clone(geom),
       nextLook = clone(look);
-    const value = (name: string) => inputs.get(name)?.value;
+    const value = (name: string) => inputs.get(name)?.value ?? '';
     const number = (name: string) => Number(value(name));
-    if (entry.collection === 'annotations') nextSem.text = value('Label');
-    else nextSem.label = value('Label') || (entry.collection === 'relations' ? null : '');
-    if (entry.collection === 'nodes') {
-      nextSem.description = value('Description') || null;
-      nextSem.kind = value('Semantic role');
-      nextLook.appearance.shape = (
-        {
-          process: 'rectangle',
-          start: 'ellipse',
-          end: 'ellipse',
-          decision: 'diamond',
-          'data-store': 'cylinder',
-          component: 'rounded-rectangle',
-        } as Record<string, DiagramAppearance['shape']>
-      )[nextSem.kind];
-    }
+    // Selects expose strings; the session validates the complete transaction before
+    // accepting these typed semantic/appearance values.
+    const nextSem = (() => {
+      switch (entry.collection) {
+        case 'annotations': {
+          const next = clone(semanticFields('annotations', entry.value));
+          next.text = value('Label');
+          return next;
+        }
+        case 'nodes': {
+          const next = clone(semanticFields('nodes', entry.value));
+          next.label = value('Label');
+          next.description = value('Description') || null;
+          next.kind = value('Semantic role') as typeof next.kind;
+          nextLook.appearance.shape = (
+            {
+              process: 'rectangle',
+              start: 'ellipse',
+              end: 'ellipse',
+              decision: 'diamond',
+              'data-store': 'cylinder',
+              component: 'rounded-rectangle',
+            } satisfies Record<typeof next.kind, DiagramAppearance['shape']>
+          )[next.kind];
+          return next;
+        }
+        case 'relations': {
+          const next = clone(semanticFields('relations', entry.value));
+          next.label = value('Label') || null;
+          next.from = value('From');
+          next.to = value('To');
+          next.direction = value('Direction') as typeof next.direction;
+          next.kind = value('Relationship') as typeof next.kind;
+          return next;
+        }
+        case 'groups':
+        case 'lanes':
+          return { label: value('Label') };
+      }
+    })();
     if (nextGeom.bounds)
       for (const [name, key] of [
         ['X', 'x'],
         ['Y', 'y'],
         ['Width', 'width'],
         ['Height', 'height'],
-      ])
+      ] as const)
         nextGeom.bounds[key] = number(name);
-    if (entry.collection === 'relations') {
-      nextSem.from = value('From');
-      nextSem.to = value('To');
-      nextSem.direction = value('Direction');
-      nextSem.kind = value('Relationship');
-      nextGeom.route.strategy = value('Routing');
-      nextGeom.route.from.side = value('Start side');
-      nextGeom.route.to.side = value('End side');
-      if (nextGeom.route.mode === 'manual')
-        nextGeom.route.points.slice(1, -1).forEach((_: Point, index: number) => {
-          const original = geom.route.points[index + 1],
+    const route = nextGeom.route,
+      originalRoute = geom.route;
+    if (entry.collection === 'relations' && route && originalRoute) {
+      route.strategy = value('Routing') as typeof route.strategy;
+      route.from.side = value('Start side') as typeof route.from.side;
+      route.to.side = value('End side') as typeof route.to.side;
+      if (route.mode === 'manual')
+        route.points.slice(1, -1).forEach((_: Point, index: number) => {
+          const original = originalRoute.points[index + 1],
             x = number(`Bend ${index + 1} X`),
             y = number(`Bend ${index + 1} Y`);
           if (x === original.x && y === original.y) return;
-          if (nextGeom.route.strategy === 'orthogonal')
-            nextGeom.route.points = moveOrthogonalBend(
-              nextGeom.route.points,
+          if (route.strategy === 'orthogonal')
+            route.points = moveOrthogonalBend(
+              route.points,
               index + 1,
-              x - nextGeom.route.points[index + 1].x,
-              y - nextGeom.route.points[index + 1].y,
+              x - route.points[index + 1].x,
+              y - route.points[index + 1].y,
             );
-          else nextGeom.route.points[index + 1] = { x, y };
+          else route.points[index + 1] = { x, y };
         });
       if (nextGeom.label)
         nextGeom.label = {
@@ -688,16 +720,16 @@ export function renderDiagramProperties({
           width: number('Label width'),
         };
     }
-    nextLook.appearance.fill = value('Fill');
-    nextLook.appearance.stroke = value('Stroke');
-    nextLook.appearance.strokeStyle = value('Line style');
+    nextLook.appearance.fill = value('Fill') as DiagramAppearance['fill'];
+    nextLook.appearance.stroke = value('Stroke') as DiagramAppearance['stroke'];
+    nextLook.appearance.strokeStyle = value('Line style') as DiagramAppearance['strokeStyle'];
     nextLook.appearance.fontSize = number('Font size');
     for (const [name, key] of [
       ['Lock position', 'position'],
       ['Lock size', 'size'],
       ['Lock route', 'route'],
-    ])
-      if (inputs.has(name)) nextLook.locks[key] = (inputs.get(name) as FieldControl).checked;
+    ] as const)
+      if (inputs.has(name)) nextLook.locks[key] = inputs.get(name)?.checked === true;
     // The form this builds from exists only when the state has a bundle.
     return propertyTransaction(bundle as DiagramAuthoringBundle, id, {
       semantic: nextSem,
@@ -707,6 +739,7 @@ export function renderDiagramProperties({
   }
 
   function appendMembers(target: HTMLElement) {
+    if (entry.collection !== 'groups' && entry.collection !== 'lanes') return;
     target.append(element(document, 'h3', { className: 'de-inspector-subheading' }, 'Members'));
     const members = element(document, 'ul', {
       className: 'de-inspector-member-list',
@@ -815,7 +848,7 @@ function renderMultiSelection({ document, root, bundle, ids, byId, editable, act
   explain(
     structure.querySelector('[data-action="ungroup"]') as HTMLButtonElement,
     ungroupReason,
-    ids.every((id) => ['groups', 'lanes'].includes(byId.get(id).collection))
+    ids.every((id) => ['groups', 'lanes'].includes(byId.get(id)?.collection ?? ''))
       ? ''
       : 'Only groups and lanes can be ungrouped.',
     editable,
@@ -863,7 +896,7 @@ function parentOperation(document: Document, { bundle, byId, ids, editable, act 
     explain(
       move,
       reason,
-      ids.some((id) => byId.get(id).collection === 'relations')
+      ids.some((id) => byId.get(id)?.collection === 'relations')
         ? 'Connectors cannot become container members.'
         : ids.every((id) => (parents.get(id) ?? '') === parent.input.value)
           ? 'Choose a different parent to move.'

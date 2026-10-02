@@ -38,7 +38,28 @@
       "types": "./lib/artifact/ui/diagram-shared-review.d.mts",
       "import": "./lib/artifact/ui/diagram-shared-review.mjs"
     },
-    "./diagram-shared-review.css": "./lib/artifact/ui/diagram-shared-review.css"
+    "./diagram-shared-review.css": "./lib/artifact/ui/diagram-shared-review.css",
+    "./studio-shell": {
+      "types": "./lib/artifact/ui/studio-shell.d.mts",
+      "import": "./lib/artifact/ui/studio-shell.mjs"
+    },
+    "./studio-shell.css": "./lib/artifact/ui/studio-shell.css",
+    "./review-outbox": {
+      "types": "./lib/artifact/ui/review-outbox.d.mts",
+      "import": "./lib/artifact/ui/review-outbox.mjs"
+    },
+    "./prototype-state": {
+      "types": "./lib/artifact/ui/prototype-state.d.mts",
+      "import": "./lib/artifact/ui/prototype-state.mjs"
+    },
+    "./resource-pack": {
+      "types": "./lib/artifact/resource-pack.d.mts",
+      "import": "./lib/artifact/resource-pack.mjs"
+    },
+    "./browser-sandbox": {
+      "types": "./lib/artifact/browser-sandbox.d.mts",
+      "import": "./lib/artifact/browser-sandbox.mjs"
+    }
   },
   "files": [
     "lib/",
@@ -57,9 +78,13 @@
     "@expo-google-fonts/inter": "0.4.2",
     "@openplanr/protocol": "0.8.0",
     "@resvg/resvg-js": "2.6.2",
+    "@types/react": "19.2.18",
     "esbuild": "0.28.1",
     "pako": "2.1.0",
-    "parse5": "8.0.1"
+    "parse5": "8.0.1",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "radix-ui": "1.6.7"
   },
   "scripts": {
     "generate": "node scripts/generate-artifact-shell.mjs",

@@ -13,9 +13,10 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 import { launchBrowser } from '../../../tests/support/browser-launcher.mjs';
 import { currentDesign, renderDesignDocument } from '../lib/design/document.mjs';
-import { readDesignFeedback, startDesignReview } from '../lib/design/review.mjs';
+import { readDesignFeedback } from '../lib/design/review.mjs';
 import { manageDesignShare, syncDesignShare } from '../lib/design/share.mjs';
 import { designFixture } from './design-fixture.mjs';
+import { startDesignReview } from './studio-http-fixture.mjs';
 
 // Companion-service acceptance is explicitly opted into. Ordinary installs have
 // no dependency on the external web source tree or its development tools.

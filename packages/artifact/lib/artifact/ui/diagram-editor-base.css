@@ -1,0 +1,2535 @@
+/* Diagram Editor
+ *
+ * The editor is an isolated application shell. Keep every selector below the
+ * .planr-diagram-editor or .planr-diagram-source-panel root so portable
+ * artifacts cannot affect their host.
+ */
+body.planr-diagram-owner-page {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  color-scheme: light dark;
+  font-family: var(
+    --planr-font-body,
+    "DM Sans",
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif
+  );
+}
+
+body.planr-diagram-owner-page #diagram-owner-editor {
+  height: 100dvh;
+  min-height: 0;
+}
+
+/* Type, spacing, size and radius scale shared by the editor and the standalone source panel. */
+:is(.planr-diagram-editor, .planr-diagram-source-panel) {
+  --de-control-height: 36px;
+  --de-control-height-sm: 28px;
+  --de-space-1: 4px;
+  --de-space-2: 8px;
+  --de-space-3: 12px;
+  --de-space-4: 16px;
+  --de-space-5: 20px;
+  --de-space-6: 24px;
+  --de-space-8: 32px;
+  --de-text-2xs: 10px;
+  --de-text-xs: 11px;
+  --de-text-sm: 12px;
+  --de-text-md: 14px;
+  --de-text-lg: 16px;
+  --de-text-xl: 20px;
+  --de-leading-2xs: 14px;
+  --de-leading-xs: 16px;
+  --de-leading-sm: 18px;
+  --de-leading-md: 20px;
+  --de-leading-lg: 24px;
+  --de-leading-xl: 28px;
+  --de-weight-regular: 400;
+  --de-weight-medium: 500;
+  --de-weight-strong: 600;
+  --de-radius-xs: 4px;
+  --de-radius-sm: var(--planr-radius-small, 8px);
+  --de-radius-md: var(--planr-radius-medium, 12px);
+  --de-radius-lg: var(--planr-radius-large, 14px);
+  --de-font-mono: var(
+    --planr-font-mono,
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Monaco,
+    Consolas,
+    monospace
+  );
+}
+
+.planr-diagram-editor {
+  --de-bar-height: 56px;
+  --de-left-width: 224px;
+  --de-right-width: 288px;
+  --de-bg: var(--planr-color-background, #f4f6f8);
+  --de-chrome: var(--planr-color-chrome, #fff);
+  --de-panel: var(--planr-color-panel, #fafbfc);
+  --de-raised: var(--planr-color-raised, #f0f3f5);
+  --de-interactive: var(--planr-color-interactive, #e8edef);
+  --de-input: var(--planr-color-input, #fff);
+  --de-input-border: var(--planr-color-input-border, #858e99);
+  --de-rule: var(--planr-color-rule, #d9e0e4);
+  --de-rule-strong: var(--planr-color-rule-strong, #c4ced4);
+  --de-text: var(--planr-color-text, #15191d);
+  --de-muted: var(--planr-color-text-muted, #66717a);
+  --de-faint: #89939b;
+  --de-primary: var(--planr-color-primary, #237a72);
+  --de-primary-hover: #1b5f59;
+  --de-primary-hover-text: var(--de-primary-text);
+  --de-primary-soft: var(--planr-color-primary-soft, #e2f4f1);
+  --de-primary-text: var(--planr-color-on-primary, #fff);
+  --de-danger: var(--planr-color-danger, #b4233c);
+  --de-danger-soft: var(--planr-color-danger-soft, #fff0f2);
+  --de-warning: var(--planr-color-warning, #9a6700);
+  --de-scrim: var(--planr-color-scrim, rgb(23 25 29 / 40%));
+  --de-shadow-sm: var(--planr-shadow-sm, 0 1px 2px rgb(16 24 40 / 6%));
+  --de-shadow-md: var(
+    --planr-shadow-md,
+    0 12px 32px rgb(16 24 40 / 14%),
+    0 2px 6px rgb(16 24 40 / 7%)
+  );
+  --de-shadow-lg: var(
+    --planr-shadow-lg,
+    0 24px 64px rgb(16 24 40 / 22%),
+    0 6px 18px rgb(16 24 40 / 10%)
+  );
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: var(--de-bar-height) minmax(0, 1fr);
+  color: var(--de-text);
+  background: var(--de-bg);
+  font-family: inherit;
+  font-size: var(--de-text-sm);
+  font-weight: var(--de-weight-regular);
+  line-height: var(--de-leading-sm);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+@media (prefers-color-scheme: dark) {
+  .planr-diagram-editor:not([data-color-scheme="light"]) {
+    --de-bg: var(--planr-color-background, #080b10);
+    --de-chrome: var(--planr-color-chrome, #0d1016);
+    --de-panel: var(--planr-color-panel, #11151d);
+    --de-raised: var(--planr-color-raised, #171c25);
+    --de-interactive: var(--planr-color-interactive, #1c2330);
+    --de-input: var(--planr-color-input, #0b0e14);
+    --de-input-border: var(--planr-color-input-border, #5e6875);
+    --de-rule: var(--planr-color-rule, #252d3a);
+    --de-rule-strong: var(--planr-color-rule-strong, #384354);
+    --de-text: var(--planr-color-text, #f2f5f7);
+    --de-muted: var(--planr-color-text-muted, #9aa5b1);
+    --de-faint: #737f8c;
+    --de-primary: var(--planr-color-primary, #5eead4);
+    --de-primary-hover: color-mix(in srgb, var(--de-primary) 45%, var(--de-bg));
+    --de-primary-hover-text: #f2f5f7;
+    --de-primary-soft: var(--planr-color-primary-soft, #123630);
+    --de-primary-text: var(--planr-color-on-primary, #07110f);
+    --de-danger: var(--planr-color-danger, #fb7185);
+    --de-danger-soft: var(--planr-color-danger-soft, #35151d);
+    --de-warning: var(--planr-color-warning, #f5c451);
+    --de-scrim: var(--planr-color-scrim, rgb(5 6 8 / 64%));
+    --de-shadow-sm: var(--planr-shadow-sm, 0 1px 2px rgb(0 0 0 / 24%));
+    --de-shadow-md: var(
+      --planr-shadow-md,
+      0 14px 36px rgb(0 0 0 / 38%),
+      0 2px 8px rgb(0 0 0 / 28%)
+    );
+    --de-shadow-lg: var(
+      --planr-shadow-lg,
+      0 26px 70px rgb(0 0 0 / 56%),
+      0 8px 20px rgb(0 0 0 / 34%)
+    );
+  }
+}
+
+.planr-diagram-editor[data-color-scheme="dark"] {
+  color-scheme: dark;
+  --de-bg: var(--planr-color-background, #080b10);
+  --de-chrome: var(--planr-color-chrome, #0d1016);
+  --de-panel: var(--planr-color-panel, #11151d);
+  --de-raised: var(--planr-color-raised, #171c25);
+  --de-interactive: var(--planr-color-interactive, #1c2330);
+  --de-input: var(--planr-color-input, #0b0e14);
+  --de-input-border: var(--planr-color-input-border, #5e6875);
+  --de-rule: var(--planr-color-rule, #252d3a);
+  --de-rule-strong: var(--planr-color-rule-strong, #384354);
+  --de-text: var(--planr-color-text, #f2f5f7);
+  --de-muted: var(--planr-color-text-muted, #9aa5b1);
+  --de-faint: #737f8c;
+  --de-primary: var(--planr-color-primary, #5eead4);
+  --de-primary-hover: color-mix(in srgb, var(--de-primary) 45%, var(--de-bg));
+  --de-primary-hover-text: #f2f5f7;
+  --de-primary-soft: var(--planr-color-primary-soft, #123630);
+  --de-primary-text: var(--planr-color-on-primary, #07110f);
+  --de-danger: var(--planr-color-danger, #fb7185);
+  --de-danger-soft: var(--planr-color-danger-soft, #35151d);
+  --de-warning: var(--planr-color-warning, #f5c451);
+  --de-scrim: var(--planr-color-scrim, rgb(5 6 8 / 64%));
+  --de-shadow-sm: var(--planr-shadow-sm, 0 1px 2px rgb(0 0 0 / 24%));
+  --de-shadow-md: var(--planr-shadow-md, 0 14px 36px rgb(0 0 0 / 38%), 0 2px 8px rgb(0 0 0 / 28%));
+  --de-shadow-lg: var(--planr-shadow-lg, 0 26px 70px rgb(0 0 0 / 56%), 0 8px 20px rgb(0 0 0 / 34%));
+}
+
+.planr-diagram-editor[data-color-scheme="light"] {
+  color-scheme: light;
+}
+
+.planr-diagram-editor *,
+.planr-diagram-editor *::before,
+.planr-diagram-editor *::after {
+  box-sizing: border-box;
+}
+
+.planr-diagram-editor [hidden] {
+  display: none !important;
+}
+
+.planr-diagram-editor :is(button, input, select, textarea) {
+  font: inherit;
+}
+
+.planr-diagram-editor button {
+  min-height: var(--de-control-height);
+  padding: var(--de-space-2) var(--de-space-3);
+  border: 1px solid var(--de-rule);
+  border-radius: var(--de-radius-sm);
+  color: var(--de-text);
+  background: var(--de-raised);
+  box-shadow: var(--de-shadow-sm);
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease,
+    box-shadow 120ms ease,
+    transform 120ms ease;
+}
+
+.planr-diagram-editor button:hover:not(:disabled) {
+  border-color: var(--de-rule-strong);
+  background: var(--de-interactive);
+}
+
+.planr-diagram-editor button:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: none;
+}
+
+.planr-diagram-editor button:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.planr-diagram-editor :focus-visible {
+  outline: 2px solid var(--de-primary);
+  outline-offset: 2px;
+}
+
+.planr-diagram-editor .de-primary {
+  border-color: var(--de-primary);
+  color: var(--de-primary-text);
+  background: var(--de-primary);
+  box-shadow: var(--de-shadow-sm);
+  font-weight: var(--de-weight-strong);
+}
+
+.planr-diagram-editor .de-primary:hover:not(:disabled) {
+  border-color: var(--de-primary-hover);
+  color: var(--de-primary-hover-text);
+  background: var(--de-primary-hover);
+}
+
+/* A disabled primary action reads as any disabled button, never as a faded call to action. */
+.planr-diagram-editor .de-primary:disabled {
+  border-color: var(--de-rule);
+  color: var(--de-text);
+  background: var(--de-raised);
+  box-shadow: none;
+}
+
+/* No fill: the theme's light red is 4.46:1 on the raised button fill but 4.84:1 on a panel. */
+.planr-diagram-editor .de-danger {
+  border-color: color-mix(in srgb, var(--de-danger) 46%, var(--de-rule));
+  color: var(--de-danger);
+  background: transparent;
+}
+
+.planr-diagram-editor .de-danger:hover:not(:disabled) {
+  border-color: var(--de-danger);
+  background: var(--de-danger-soft);
+}
+
+.planr-diagram-editor .de-icon {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  display: block;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.planr-diagram-editor .de-icon-button,
+.planr-diagram-editor button[data-icon-only="true"] {
+  min-width: var(--de-control-height);
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--de-space-2);
+}
+
+.planr-diagram-editor .de-icon-button:not(:has(.de-button-label, .de-control-label)),
+.planr-diagram-editor button[data-icon-only="true"] {
+  width: var(--de-control-height);
+}
+
+.planr-diagram-editor .de-icon-button:has(.de-button-label, .de-control-label) {
+  width: auto;
+  padding-inline: var(--de-space-2);
+}
+
+.planr-diagram-editor .de-command-icon {
+  min-width: 16px;
+  display: inline-grid;
+  place-items: center;
+  color: currentColor;
+  font-size: var(--de-text-md);
+  font-weight: var(--de-weight-strong);
+  line-height: 1;
+}
+
+/* Top command bar */
+.planr-diagram-editor .de-bar {
+  position: relative;
+  z-index: 10;
+  min-width: 0;
+  min-height: var(--de-bar-height);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--de-space-3);
+  padding: 0 var(--de-space-4);
+  border-bottom: 1px solid var(--de-rule);
+  background: color-mix(in srgb, var(--de-chrome) 96%, transparent);
+  box-shadow: 0 1px 0 rgb(0 0 0 / 2%);
+}
+
+.planr-diagram-editor :is(.de-bar-start, .de-bar-end, .de-command-group) {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+.planr-diagram-editor .de-bar-start {
+  gap: var(--de-space-1);
+}
+
+.planr-diagram-editor[data-read-only="true"]
+  .de-bar
+  :is([data-action="undo"], [data-action="redo"], [data-action="layout"], [data-action="save"]) {
+  display: none;
+}
+
+.planr-diagram-editor .de-bar-end {
+  justify-content: flex-end;
+  gap: var(--de-space-1);
+}
+
+.planr-diagram-editor .de-command-group {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--de-space-1);
+}
+
+/* :where() adds no specificity, so the shared button hover rule still outranks this reset. */
+.planr-diagram-editor .de-command-group > button:where(:not(.de-primary)) {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+.planr-diagram-editor .de-command-divider {
+  width: 1px;
+  height: 24px;
+  margin: 0 var(--de-space-1);
+  background: var(--de-rule);
+}
+
+.planr-diagram-editor .de-brand {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--de-space-2);
+}
+
+.planr-diagram-editor .de-mark {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--de-rule);
+  border-radius: var(--de-radius-sm);
+  color: var(--de-primary);
+  background: var(--de-raised);
+  box-shadow: var(--de-shadow-sm);
+  font-size: var(--de-text-lg);
+}
+
+.planr-diagram-editor .de-identity {
+  min-width: 0;
+  display: grid;
+}
+
+.planr-diagram-editor .de-title {
+  overflow: hidden;
+  color: var(--de-text);
+  font-size: var(--de-text-md);
+  font-weight: var(--de-weight-strong);
+  line-height: var(--de-leading-md);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.planr-diagram-editor .de-identity small {
+  overflow: hidden;
+  color: var(--de-muted);
+  font-size: var(--de-text-xs);
+  line-height: var(--de-leading-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.planr-diagram-editor .de-save-state {
+  min-width: 0;
+  flex: 0 0 auto;
+  margin-inline-end: var(--de-space-2);
+  color: var(--de-muted);
+  font-size: var(--de-text-xs);
+  font-weight: var(--de-weight-medium);
+  line-height: var(--de-leading-xs);
+  white-space: nowrap;
+}
+
+.planr-diagram-editor .de-save-state[data-state="unsaved"] {
+  color: var(--de-text);
+}
+
+.planr-diagram-editor .de-save-state[data-state="offline"] {
+  color: var(--de-warning);
+}
+
+.planr-diagram-editor .de-save-state:is([data-state="conflict"], [data-state="access-changed"]) {
+  color: var(--de-danger);
+}
+
+.planr-diagram-editor .de-bar .de-primary:disabled {
+  opacity: 0.5;
+  border-color: transparent;
+  color: var(--de-text);
+  background: transparent;
+  box-shadow: none;
+}
+
+/* A pressed toggle is neutral; the accent stays reserved for Save, selection and focus. */
+.planr-diagram-editor :is(.de-bar-start, .de-bar-end) button[aria-pressed="true"],
+.planr-diagram-editor :is(.de-bar-start, .de-bar-end) button[aria-expanded="true"] {
+  border-color: var(--de-rule);
+  color: var(--de-text);
+  background: var(--de-raised);
+}
+
+/* Anchored command overflow */
+.planr-diagram-editor .de-more-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.planr-diagram-editor .de-more-menu {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + var(--de-space-2));
+  right: 0;
+  width: max-content;
+  min-width: 220px;
+  max-width: min(320px, calc(100vw - var(--de-space-6)));
+  padding: var(--de-space-1);
+  border: 1px solid var(--de-rule);
+  border-radius: var(--de-radius-sm);
+  background: var(--de-chrome);
+  box-shadow: var(--de-shadow-lg);
+}
+
+.planr-diagram-editor .de-more-menu button,
+.planr-diagram-editor .de-menu-item {
+  width: 100%;
+  min-height: var(--de-control-height);
+  display: flex;
+  align-items: center;
+  gap: var(--de-space-2);
+  padding: var(--de-space-2);
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  text-align: left;
+}
+
+.planr-diagram-editor .de-more-menu button:hover:not(:disabled),
+.planr-diagram-editor .de-menu-item:hover:not(:disabled),
+.planr-diagram-editor .de-menu-item[data-active="true"] {
+  border-color: transparent;
+  background: var(--de-raised);
+}
+
+.planr-diagram-editor .de-menu-separator {
+  height: 1px;
+  margin: var(--de-space-1) var(--de-space-2);
+  background: var(--de-rule);
+}
+
+/* Three-pane work area */
+.planr-diagram-editor .de-work {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: var(--de-left-width) minmax(0, 1fr) var(--de-right-width);
+}
+
+.planr-diagram-editor :is(.de-left, .de-right) {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: var(--de-panel);
+}
+
+.planr-diagram-editor .de-left {
+  border-right: 1px solid var(--de-rule);
+}
+
+.planr-diagram-editor .de-right {
+  border-left: 1px solid var(--de-rule);
+}
+
+.planr-diagram-editor[data-left-open="false"] .de-work {
+  grid-template-columns: 0 minmax(0, 1fr) var(--de-right-width);
+}
+
+.planr-diagram-editor[data-right-open="false"] .de-work {
+  grid-template-columns: var(--de-left-width) minmax(0, 1fr) 0;
+}
+
+.planr-diagram-editor[data-left-open="false"][data-right-open="false"] .de-work {
+  grid-template-columns: 0 minmax(0, 1fr) 0;
+}
+
+.planr-diagram-editor[data-left-open="false"] .de-left,
+.planr-diagram-editor[data-right-open="false"] .de-right {
+  visibility: hidden;
+  overflow: hidden;
+}
+
+.planr-diagram-editor :is(.de-rail-tabs, .de-right-tabs, .de-panel-tabs) {
+  position: relative;
+  z-index: 2;
+  min-height: 44px;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  padding: var(--de-space-2) var(--de-space-2) 0;
+  border-bottom: 1px solid var(--de-rule);
+  background: var(--de-panel);
+}
+
+.planr-diagram-editor :is(.de-rail-tabs, .de-right-tabs, .de-panel-tabs) button {
+  min-width: 0;
+  flex: 1 1 auto;
+  border-color: transparent;
+  border-radius: var(--de-radius-xs) var(--de-radius-xs) 0 0;
+  color: var(--de-muted);
+  background: transparent;
+  box-shadow: none;
+  font-size: var(--de-text-sm);
+  font-weight: var(--de-weight-medium);
+}
+
+.planr-diagram-editor
+  :is(.de-rail-tabs, .de-right-tabs, .de-panel-tabs)
+  button:hover:not(:disabled) {
+  border-color: transparent;
+  color: var(--de-text);
+  background: var(--de-raised);
+}
+
+.planr-diagram-editor
+  :is(.de-rail-tabs, .de-right-tabs, .de-panel-tabs)
+  button[aria-selected="true"] {
+  color: var(--de-text);
+  background: transparent;
+  box-shadow: inset 0 -2px var(--de-primary);
+}
+
+/* Rail headers hold underline tabs that fill the header height. */
+.planr-diagram-editor .de-panel-header > .de-panel-tabs {
+  min-width: 0;
+  min-height: 0;
+  align-self: stretch;
+  align-items: stretch;
+  flex: 1 1 auto;
+  gap: var(--de-space-4);
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.planr-diagram-editor .de-panel-header > .de-panel-tabs button {
+  min-height: 0;
+  flex: 0 0 auto;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+}
+
+.planr-diagram-editor .de-panel-header > .de-panel-tabs button:hover:not(:disabled) {
+  background: transparent;
+}
+
+/* A lone tab names the rail rather than offering a choice. */
+.planr-diagram-editor .de-panel-header > .de-panel-tabs button:only-child {
+  color: var(--de-text);
+  box-shadow: none;
+  cursor: default;
+}
+
+/* Full-bleed tabs, rows, menu items and summaries keep their focus ring inside their own box. */
+.planr-diagram-editor
+:is(
+  .de-panel-header > .de-panel-tabs button,
+  .de-outline-item button,
+  .de-menu-item,
+  details > summary
+):focus-visible {
+  outline-offset: -2px;
+}
+
+.planr-diagram-editor :is(.de-rail-tabs, .de-right-tabs) .de-close-rail {
+  flex: 0 0 var(--de-control-height);
+  padding-inline: 0;
+}
+
+.planr-diagram-editor .de-panel-close {
+  width: var(--de-control-height);
+  min-width: var(--de-control-height);
+  min-height: var(--de-control-height);
+  flex: 0 0 auto;
+  display: none;
+  place-items: center;
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+.planr-diagram-editor :is(.de-left-content, .de-right-content) {
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.planr-diagram-editor :is(.de-left-content, .de-right-content) {
+  flex: 1 1 auto;
+  padding: var(--de-space-3);
+}
+
+.planr-diagram-editor .de-tabpanel {
+  min-height: 100%;
+}
+
+.planr-diagram-editor .de-right-content:has(.de-panel-header),
+.planr-diagram-editor .de-right-content:has(.de-inspector) {
+  padding: 0;
+}
+
+.planr-diagram-editor .de-panel-header {
+  position: sticky;
+  z-index: 3;
+  top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: none;
+  gap: var(--de-space-3);
+  height: 44px;
+  padding: 0 var(--de-space-3);
+  border-bottom: 1px solid var(--de-rule);
+  background: color-mix(in srgb, var(--de-panel) 96%, transparent);
+  backdrop-filter: blur(12px);
+}
+
+.planr-diagram-editor h2 {
+  margin: 0 0 var(--de-space-3);
+  font-size: var(--de-text-md);
+  font-weight: var(--de-weight-strong);
+  line-height: var(--de-leading-md);
+}
+
+.planr-diagram-editor h3 {
+  margin: var(--de-space-4) 0 var(--de-space-2);
+  font-size: var(--de-text-sm);
+  font-weight: var(--de-weight-strong);
+  line-height: var(--de-leading-sm);
+}
+
+.planr-diagram-editor p {
+  margin: var(--de-space-2) 0;
+}
+
+/* Browser defaults render these at 700, outside the editor's three weights. */
+.planr-diagram-editor :is(strong, b, th) {
+  font-weight: var(--de-weight-strong);
+}
+
+.planr-diagram-editor .de-muted {
+  color: var(--de-muted);
+  font-size: var(--de-text-xs);
+  line-height: var(--de-leading-xs);
+}
+
+/* Outline and shape library */
+.planr-diagram-editor .de-left-content :is(input[type="search"], input[aria-label*="Search" i]) {
+  width: 100%;
+  min-height: var(--de-control-height);
+  padding: var(--de-space-2) var(--de-space-2) var(--de-space-2) var(--de-space-8);
+  border: 1px solid var(--de-input-border);
+  border-radius: var(--de-radius-sm);
+  color: var(--de-text);
+  background: var(--de-input);
+}
+
+/* The magnifier shares the input's grid cell, so it sits inside the field without positioning. */
+.planr-diagram-editor .de-field:has(> .de-search-icon) > input {
+  grid-area: 2 / 1;
+}
+
+.planr-diagram-editor .de-search-icon {
+  grid-area: 2 / 1;
+  align-self: center;
+  margin-inline-start: var(--de-space-3);
+  color: var(--de-muted);
+  pointer-events: none;
+}
+
+.planr-diagram-editor .de-outline-list {
+  --de-guide: color-mix(in srgb, var(--de-muted) 50%, var(--de-panel));
+  display: grid;
+  gap: 2px;
+  margin: var(--de-space-3) calc(var(--de-space-1) * -1) 0;
+}
+
+.planr-diagram-editor .de-outline-item {
+  min-width: 0;
+}
+
+.planr-diagram-editor .de-outline-item button {
+  position: relative;
+  width: 100%;
+  min-height: var(--de-control-height);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  padding: 0 var(--de-space-2) 0 var(--de-space-1);
+  border-color: transparent;
+  color: var(--de-text);
+  background: transparent;
+  box-shadow: none;
+  text-align: left;
+  text-overflow: ellipsis;
+}
+
+.planr-diagram-editor .de-outline-item button:hover:not(:disabled) {
+  border-color: transparent;
+  background: var(--de-raised);
+}
+
+/* Text stays ink on the selection fill: accent text on a soft accent fill misses 4.5:1. */
+.planr-diagram-editor .de-outline-item button[aria-selected="true"],
+.planr-diagram-editor .de-outline-item button[aria-selected="true"]:hover:not(:disabled) {
+  color: var(--de-text);
+  background: color-mix(in srgb, var(--de-primary) 12%, transparent);
+  font-weight: var(--de-weight-medium);
+}
+
+.planr-diagram-editor .de-outline-guides {
+  display: flex;
+  flex: 0 0 auto;
+  align-self: stretch;
+}
+
+.planr-diagram-editor .de-guide {
+  position: relative;
+  width: 16px;
+}
+
+.planr-diagram-editor :is(.de-guide-line, .de-guide-tee, .de-guide-elbow)::before {
+  position: absolute;
+  inset: 0 auto 0 8px;
+  border-left: 1px solid var(--de-guide);
+  content: "";
+}
+
+.planr-diagram-editor .de-guide-elbow::before {
+  bottom: 50%;
+}
+
+.planr-diagram-editor :is(.de-guide-tee, .de-guide-elbow)::after {
+  position: absolute;
+  top: 50%;
+  left: 8px;
+  width: 8px;
+  border-top: 1px solid var(--de-guide);
+  content: "";
+}
+
+.planr-diagram-editor .de-outline-twisty {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: var(--de-radius-xs);
+  color: var(--de-muted);
+}
+
+.planr-diagram-editor .de-outline-twisty:hover {
+  color: var(--de-text);
+  background: var(--de-rule);
+}
+
+.planr-diagram-editor .de-outline-twisty svg {
+  transition: transform 0.12s;
+}
+
+.planr-diagram-editor .de-outline-item button[aria-expanded="true"] .de-outline-twisty svg {
+  transform: rotate(90deg);
+}
+
+.planr-diagram-editor .de-outline-leaf {
+  visibility: hidden;
+}
+
+.planr-diagram-editor .de-outline-kind {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  margin: 0 var(--de-space-2) 0 var(--de-space-1);
+  border: 1px solid var(--de-rule);
+  border-radius: var(--de-radius-xs);
+  color: var(--de-muted);
+  background: var(--de-chrome);
+}
+
+.planr-diagram-editor .de-outline-label {
+  min-width: 0;
+  overflow: hidden;
+  flex: 1 1 auto;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.planr-diagram-editor .de-outline-meta {
+  margin-inline-start: var(--de-space-2);
+  color: var(--de-muted);
+  font-size: var(--de-text-xs);
+  line-height: var(--de-leading-xs);
+  font-weight: var(--de-weight-regular);
+}
+
+.planr-diagram-editor .de-outline-item button[aria-selected="true"] .de-outline-kind {
+  border-color: var(--de-primary);
+  color: var(--de-primary-text);
+  background: var(--de-primary);
+}
+
+.planr-diagram-editor .de-outline-item button[aria-selected="true"] .de-outline-meta {
+  color: var(--de-text);
+}
+
+.planr-diagram-editor .de-shape-section {
+  display: grid;
+  gap: var(--de-space-2);
+  margin-top: var(--de-space-4);
+}
+
+.planr-diagram-editor .de-shape-section > h3 {
+  margin: 0;
+}
+
+.planr-diagram-editor .de-shape-section:first-child {
+  margin-top: 0;
+}
+
+.planr-diagram-editor .de-shape-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--de-space-2);
+}
+
+.planr-diagram-editor .de-shape-button {
+  width: 100%;
+  min-height: 64px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--de-space-2);
+  margin: 0;
+  padding: var(--de-space-2);
+  overflow: hidden;
+  border-color: var(--de-rule);
+  background: var(--de-chrome);
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: normal;
+}
+
+.planr-diagram-editor .de-shape-button > span:last-child {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  line-height: var(--de-leading-xs);
+  white-space: normal;
+}
+
+.planr-diagram-editor .de-shape-kind {
+  width: 28px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--de-rule-strong);
+  border-radius: var(--de-radius-xs);
+  color: var(--de-primary);
+  background: var(--de-raised);
+}
+
+.planr-diagram-editor .de-left-content > .de-shape-button + .de-shape-button {
+  margin-top: var(--de-space-2);
+}
+
+/* Canvas and viewport controls */
+.planr-diagram-editor .de-stage {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  background: var(--de-bg);
+}
+
+.planr-diagram-editor .de-canvas {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  color: var(--de-text);
+  background-color: var(--de-bg);
+  background-image: radial-gradient(
+    color-mix(in srgb, var(--de-rule) 74%, transparent) 0.8px,
+    transparent 0.8px
+  );
+  background-position: 0 0;
+  background-size: 24px 24px;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.planr-diagram-editor[data-diagram-theme="paper"] .de-canvas {
+  color: #17202a;
+  background-color: #fff;
+  background-image: radial-gradient(#dfe5ea 0.8px, transparent 0.8px);
+}
+
+.planr-diagram-editor[data-diagram-theme="slate"] .de-canvas {
+  color: #edf2f7;
+  background-color: #17212d;
+  background-image: radial-gradient(#344253 0.8px, transparent 0.8px);
+}
+
+.planr-diagram-editor[data-diagram-theme="midnight"] .de-canvas {
+  color: #f1f5f9;
+  background-color: #0b1015;
+  background-image: radial-gradient(#202d3a 0.8px, transparent 0.8px);
+}
+
+.planr-diagram-editor .de-canvas > svg[data-editor-svg] {
+  width: 100%;
+  height: 100%;
+  display: block;
+  user-select: none;
+}
+
+/* The renderer's font-family="Inter" has no fallback where Inter is not installed. */
+.planr-diagram-editor .de-canvas svg text {
+  font-family: inherit;
+}
+
+.planr-diagram-editor .de-canvas svg [data-element-id] {
+  cursor: move;
+}
+
+.planr-diagram-editor .de-canvas svg [data-collection="relations"] {
+  cursor: pointer;
+}
+
+.planr-diagram-editor .de-selection-box {
+  fill: none;
+  stroke: var(--de-primary);
+}
+
+/* A selected connector is traced in the accent on its own route, and its arrowheads follow. */
+.planr-diagram-editor .de-canvas svg .de-selection-route {
+  fill: none;
+  stroke: var(--de-primary);
+}
+
+.planr-diagram-editor
+  .de-canvas
+  svg
+  [data-collection="relations"][data-selected="true"]
+  marker
+  > path {
+  fill: var(--de-primary);
+}
+
+.planr-diagram-editor :is(.de-resize-handle, .de-bend-handle) {
+  fill: var(--de-panel);
+  stroke: var(--de-primary);
+  pointer-events: none;
+}
+
+/* The small handle sits inside a 24px transparent target that takes the pointer. */
+.planr-diagram-editor .de-handle-hit {
+  fill: transparent;
+  stroke: none;
+  pointer-events: all;
+}
+
+.planr-diagram-editor [data-handle="resize"] {
+  cursor: nwse-resize;
+}
+
+.planr-diagram-editor [data-handle="bend"] {
+  cursor: move;
+}
+
+.planr-diagram-editor .de-marquee {
+  fill: color-mix(in srgb, var(--de-primary) 15%, transparent);
+  stroke: var(--de-primary);
+  stroke-dasharray: 4 3;
+}
+
+/* A ring rather than a border keeps the bar at 36px tools plus 4px padding: 44px. */
+.planr-diagram-editor .de-canvas-tools {
+  position: absolute;
+  z-index: 4;
+  bottom: var(--de-space-6);
+  left: 50%;
+  max-width: calc(100% - var(--de-space-6));
+  overflow: auto hidden;
+  display: flex;
+  align-items: center;
+  gap: var(--de-space-1);
+  padding: var(--de-space-1);
+  border: 0;
+  border-radius: var(--de-radius-md);
+  background: color-mix(in srgb, var(--de-chrome) 95%, transparent);
+  box-shadow:
+    0 0 0 1px var(--de-rule),
+    var(--de-shadow-md);
+  scrollbar-width: none;
+  transform: translateX(-50%);
+  backdrop-filter: blur(16px);
+}
+
+.planr-diagram-editor :is(.de-canvas-tool-group, .de-tool-group, .de-zoom-group) {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.planr-diagram-editor
+  :is(.de-canvas-tool-group, .de-tool-group, .de-zoom-group)
+  + :is(.de-canvas-tool-group, .de-tool-group, .de-zoom-group) {
+  padding-left: var(--de-space-1);
+  border-left: 1px solid var(--de-rule);
+}
+
+.planr-diagram-editor .de-canvas-tools button {
+  min-width: var(--de-control-height);
+  min-height: var(--de-control-height);
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+.planr-diagram-editor .de-canvas-tools button:has(.de-icon) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--de-space-2);
+}
+
+.planr-diagram-editor .de-canvas-tools button:hover:not(:disabled) {
+  border-color: transparent;
+  background: var(--de-raised);
+}
+
+/* The pressed mode tool is the canvas's one accent control. */
+.planr-diagram-editor
+  .de-canvas-tools
+  :is([data-action="select-tool"], [data-action="pan-tool"])[aria-pressed="true"] {
+  color: var(--de-primary-text);
+  background: var(--de-primary);
+}
+
+.planr-diagram-editor
+  .de-canvas-tools
+  :is([data-action="select-tool"], [data-action="pan-tool"])[aria-pressed="true"]:hover:not(
+    :disabled
+  ) {
+  color: var(--de-primary-hover-text);
+  background: var(--de-primary-hover);
+}
+
+/* Snap is a setting rather than a mode: neutral when on, and its icon changes with it. */
+.planr-diagram-editor .de-canvas-tools [data-action="snap"][aria-pressed="true"] {
+  color: var(--de-text);
+  background: var(--de-raised);
+}
+
+.planr-diagram-editor :is(.de-zoom-value, .de-zoom-label) {
+  min-width: 48px;
+  padding: 0 var(--de-space-1);
+  color: var(--de-muted);
+  font-size: var(--de-text-xs);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.planr-diagram-editor .de-empty {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: min(360px, calc(100% - var(--de-space-8)));
+  padding: var(--de-space-6);
+  border: 1px solid var(--de-rule);
+  border-radius: var(--de-radius-lg);
+  background: var(--de-panel);
+  box-shadow: var(--de-shadow-md);
+  transform: translate(-50%, -50%);
+}
+
+.planr-diagram-editor .de-empty h2 {
+  font-size: var(--de-text-xl);
+  line-height: var(--de-leading-xl);
+}
+
+.planr-diagram-editor .de-empty ol {
+  margin: var(--de-space-4) 0 0;
+  padding-left: var(--de-space-5);
+  color: var(--de-muted);
+  font-size: var(--de-text-xs);
+  line-height: var(--de-leading-xs);
+}
+
+.planr-diagram-editor .de-empty button {
+  margin: var(--de-space-2) var(--de-space-1) 0 0;
+}
+
+.planr-diagram-editor .de-mobile-message {
+  display: none;
+}
+
+.planr-diagram-editor .de-stage-footer {
+  min-height: 32px;
+  padding: var(--de-space-1) var(--de-space-3);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--de-space-3);
+  border-top: 1px solid var(--de-rule);
+  color: var(--de-muted);
+  background: var(--de-chrome);
+  font-size: var(--de-text-xs);
+  line-height: var(--de-leading-xs);
+}
+
+/* Status without an action floats as a caption, so the canvas runs to the bottom edge. A footer
+ * that offers Retry save or Compare revisions stays a bar. */
+.planr-diagram-editor .de-stage-footer:not(:has(button)) {
+  position: absolute;
+  z-index: 3;
+  right: var(--de-space-3);
+  bottom: var(--de-space-1);
+  left: var(--de-space-3);
+  min-height: 0;
+  padding: 0;
+  display: block;
+  overflow: hidden;
+  border: 0;
+  background: transparent;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* Inspector */
+.planr-diagram-editor .de-inspector {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.planr-diagram-editor :is(.de-review-pane, .de-host-pane) {
+  padding: var(--de-space-3);
+}
+
+.planr-diagram-editor .de-inspector button:has(> .de-icon) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--de-space-2);
+}
+
+.planr-diagram-editor .de-inspector-header {
+  position: sticky;
+  z-index: 3;
+  top: 0;
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--de-space-3);
+  padding: var(--de-space-3);
+  border-bottom: 1px solid var(--de-rule);
+  background: color-mix(in srgb, var(--de-panel) 96%, transparent);
+  backdrop-filter: blur(12px);
+}
+
+.planr-diagram-editor .de-inspector-identity {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+/* The eyebrow is the editor's only uppercase text. */
+.planr-diagram-editor .de-inspector-kicker {
+  color: var(--de-muted);
+  font-size: var(--de-text-2xs);
+  font-weight: var(--de-weight-strong);
+  line-height: var(--de-leading-2xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.planr-diagram-editor .de-inspector-title {
+  overflow: hidden;
+  margin: 0;
+  color: var(--de-text);
+  font-size: var(--de-text-md);
+  font-weight: var(--de-weight-strong);
+  line-height: var(--de-leading-md);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.planr-diagram-editor .de-inspector-description {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 1px 0 0;
+  color: var(--de-muted);
+  font-size: var(--de-text-xs);
+  line-height: var(--de-leading-xs);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.planr-diagram-editor .de-inspector-reference {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--de-space-1) var(--de-space-2);
+  margin-bottom: var(--de-space-3);
+}
+
+.planr-diagram-editor .de-inspector-reference > :is(span, code) {
+  font-size: var(--de-text-xs);
+  line-height: var(--de-leading-xs);
+}
+
+.planr-diagram-editor .de-inspector-reference > span {
+  color: var(--de-muted);
+  font-weight: var(--de-weight-medium);
+}
+
+.planr-diagram-editor .de-inspector-reference > code {
+  grid-column: 1;
+  overflow-wrap: anywhere;
+  font-family: var(--de-font-mono);
+}
+
+.planr-diagram-editor .de-inspector-reference > button {
+  grid-area: 1 / 2 / 3;
+}
+
+.planr-diagram-editor .de-properties-form {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.planr-diagram-editor .de-inspector-form {
+  flex: 1 1 auto;
+}
+
+.planr-diagram-editor .de-inspector-section {
+  margin: 0;
+  border: 0;
+  border-bottom: 1px solid var(--de-rule);
+  background: transparent;
+}
+
+.planr-diagram-editor details.de-inspector-section > summary {
+  min-height: var(--de-control-height);
+  display: flex;
+  align-items: center;
+  gap: var(--de-space-2);
+  padding: var(--de-space-2) var(--de-space-3);
+  color: var(--de-text);
+  font-size: var(--de-text-sm);
+  font-weight: var(--de-weight-strong);
+  line-height: var(--de-leading-sm);
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+}
+
+.planr-diagram-editor details.de-inspector-section > summary::-webkit-details-marker {
+  display: none;
+}
+
+.planr-diagram-editor details.de-inspector-section > summary::after {
+  width: 8px;
+  height: 8px;
+  margin-left: auto;
+  border-right: 1.5px solid var(--de-muted);
+  border-bottom: 1.5px solid var(--de-muted);
+  content: "";
+  transform: rotate(45deg) translateY(-2px);
+  transition: transform 120ms ease;
+}
+
+.planr-diagram-editor details.de-inspector-section[open] > summary::after {
+  transform: rotate(225deg) translate(-2px, -1px);
+}
+
+.planr-diagram-editor .de-inspector-section-body {
+  padding: 0 var(--de-space-3) var(--de-space-4);
+}
+
+.planr-diagram-editor .de-inspector-section-body > :last-child {
+  margin-bottom: 0;
+}
+
+.planr-diagram-editor .de-inspector-section-summary .de-icon {
+  color: var(--de-muted);
+}
+
+.planr-diagram-editor .de-field {
+  min-width: 0;
+  display: grid;
+  gap: var(--de-space-1);
+  margin: 0 0 var(--de-space-3);
+  color: var(--de-muted);
+  font-size: var(--de-text-xs);
+  font-weight: var(--de-weight-medium);
+  line-height: var(--de-leading-xs);
+}
+
+.planr-diagram-editor .de-field > span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.planr-diagram-editor .de-field :is(input, textarea, select) {
+  width: 100%;
+  min-width: 0;
+  min-height: var(--de-control-height);
+  padding: var(--de-space-2);
+  border: 1px solid var(--de-input-border);
+  border-radius: var(--de-radius-sm);
+  color: var(--de-text);
+  background: var(--de-input);
+  box-shadow: inset 0 1px 0 rgb(0 0 0 / 2%);
+  font-size: var(--de-text-sm);
+  font-weight: var(--de-weight-regular);
+  line-height: var(--de-leading-sm);
+}
+
+/* Default placeholder greys ignore the theme and miss 4.5:1 (WebKit's is 2.35:1 on white). */
+.planr-diagram-editor :is(input, textarea)::placeholder {
+  color: var(--de-muted);
+  opacity: 1;
+}
+
+/* The field border already reaches 3:1, so hover darkens it rather than using the lighter rule. */
+.planr-diagram-editor .de-field :is(input, textarea, select):hover:not(:disabled) {
+  border-color: var(--de-muted);
+}
+
+.planr-diagram-editor .de-field :is(input, textarea, select):focus {
+  border-color: var(--de-primary);
+}
+
+.planr-diagram-editor .de-field textarea {
+  min-height: 76px;
+  resize: vertical;
+}
+
+.planr-diagram-editor .de-field input[type="checkbox"] {
+  width: 16px;
+  min-height: 16px;
+  justify-self: start;
+  margin: 2px 0;
+  accent-color: var(--de-primary);
+}
+
+.planr-diagram-editor .de-field:has(input[type="checkbox"]) {
+  min-height: var(--de-control-height);
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  margin-bottom: var(--de-space-2);
+  padding: var(--de-space-2);
+  border: 1px solid var(--de-rule);
+  border-radius: var(--de-radius-sm);
+  color: var(--de-text);
+  background: var(--de-chrome);
+}
+
+.planr-diagram-editor .de-field:has(input[type="checkbox"]) input {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+/* Rows are spaced by the grid gap, so a grid that ends a section leaves no extra field margin. */
+.planr-diagram-editor .de-field-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--de-space-3) var(--de-space-2);
+  margin-bottom: var(--de-space-3);
+}
+
+.planr-diagram-editor .de-field-grid > .de-field {
+  margin-bottom: 0;
+}
+
+.planr-diagram-editor .de-field-grid > button {
+  align-self: end;
+}
+
+.planr-diagram-editor .de-properties-form fieldset {
+  min-width: 0;
+  margin: var(--de-space-2) 0;
+  padding: var(--de-space-3);
+  border: 1px solid var(--de-rule);
+  border-radius: var(--de-radius-sm);
+}
+
+.planr-diagram-editor .de-properties-form fieldset legend {
+  padding: 0 var(--de-space-1);
+  color: var(--de-muted);
+  font-size: var(--de-text-xs);
+  font-weight: var(--de-weight-strong);
+  line-height: var(--de-leading-xs);
+}
+
+.planr-diagram-editor .de-inspector-operation {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: var(--de-space-2);
+}
+
+.planr-diagram-editor .de-inspector-operation .de-field {
+  margin-bottom: 0;
+}
+
+.planr-diagram-editor :is(.de-inspector-bends, .de-bend-row) {
+  min-width: 0;
+}
+
+.planr-diagram-editor .de-bend-row {
+  align-items: end;
+  padding-bottom: var(--de-space-2);
+  border-bottom: 1px solid var(--de-rule);
+}
+
+.planr-diagram-editor .de-bend-row:last-of-type {
+  border-bottom: 0;
+}
+
+.planr-diagram-editor .de-inspector-subheading {
+  margin: var(--de-space-3) 0 var(--de-space-2);
+}
+
+.planr-diagram-editor .de-inspector-footer {
+  position: sticky;
+  z-index: 4;
+  bottom: 0;
+  margin-top: auto;
+  padding: var(--de-space-2) var(--de-space-3);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--de-space-2);
+  border-top: 1px solid var(--de-rule);
+  background: color-mix(in srgb, var(--de-panel) 96%, transparent);
+  box-shadow: 0 -8px 24px rgb(0 0 0 / 8%);
+  backdrop-filter: blur(12px);
+}
+
+.planr-diagram-editor .de-inspector-footer {
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+.planr-diagram-editor .de-inspector-form[data-dirty="true"] .de-inspector-footer {
+  border-top-color: color-mix(in srgb, var(--de-primary) 48%, var(--de-rule));
+}
+
+.planr-diagram-editor .de-inspector-footer .de-primary {
+  min-width: 0;
+}
+
+.planr-diagram-editor .de-properties-form > .de-primary {
+  width: 100%;
+}
+
+.planr-diagram-editor .de-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--de-space-2);
+  margin: var(--de-space-2) 0 var(--de-space-4);
+}
+
+/* Equal-width buttons; one whose label would not fit wraps to a new line instead of truncating. */
+.planr-diagram-editor .de-inspector-action-row > button {
+  min-width: max-content;
+  display: flex;
+  flex: 1 1 0;
+  align-items: center;
+  justify-content: center;
+  gap: var(--de-space-2);
+}
+
+.planr-diagram-editor .de-inspector-group {
+  padding: 0 var(--de-space-3);
+}
+
+.planr-diagram-editor .de-inspector-group > .de-inspector-action-row {
+  margin: 0;
+}
+
+.planr-diagram-editor .de-inspector-group > .de-inspector-operation {
+  margin-top: var(--de-space-3);
+}
+
+.planr-diagram-editor .de-inspector-reason {
+  margin: var(--de-space-1) 0 0;
+  color: var(--de-muted);
+  font-size: var(--de-text-xs);
+  line-height: var(--de-leading-xs);
+}
+
+.planr-diagram-editor .de-inspector-delete {
+  align-self: flex-start;
+  margin: var(--de-space-6) var(--de-space-3) var(--de-space-4);
+}
+
+.planr-diagram-editor .de-inspector-member-list {
+  display: grid;
+  gap: var(--de-space-1);
+  margin: var(--de-space-2) 0 var(--de-space-3);
+  padding: 0;
+  list-style: none;
+}
+
+.planr-diagram-editor .de-inspector-member {
+  min-width: 0;
+}
+
+.planr-diagram-editor .de-inspector-member button {
+  width: 100%;
+  min-width: 0;
+  justify-content: flex-start;
+  overflow: hidden;
+  border-color: transparent;
+  background: var(--de-raised);
+  box-shadow: none;
+  text-align: left;
+  text-overflow: ellipsis;
+}
+
+.planr-diagram-editor .de-inspector-meta {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--de-space-2) var(--de-space-3);
+  margin: 0;
+  font-size: var(--de-text-xs);
+  line-height: var(--de-leading-xs);
+}
+
+.planr-diagram-editor .de-inspector-meta dt {
+  color: var(--de-muted);
+  font-weight: var(--de-weight-medium);
+}
+
+.planr-diagram-editor .de-inspector-meta dd {
+  min-width: 0;
+  overflow: hidden;
+  margin: 0;
+  font-family: var(--de-font-mono);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.planr-diagram-editor .de-inspector-empty {
+  margin: 0;
+  padding: var(--de-space-4) var(--de-space-3);
+  color: var(--de-muted);
+}
+
+/* Drawers and overlays */
+.planr-diagram-editor .de-drawer-backdrop {
+  display: none;
+}
+
+.planr-diagram-editor .de-alert {
+  position: absolute;
+  z-index: 40;
+  top: calc(var(--de-bar-height) + var(--de-space-3));
+  left: 50%;
+  width: min(640px, calc(100% - var(--de-space-8)));
+  padding: var(--de-space-3);
+  border: 1px solid color-mix(in srgb, var(--de-danger) 55%, var(--de-rule));
+  border-radius: var(--de-radius-sm);
+  color: var(--de-text);
+  background: var(--de-panel);
+  box-shadow: var(--de-shadow-md);
+  transform: translateX(-50%);
+}
+
+.planr-diagram-editor .de-announcer {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.planr-diagram-editor .de-canvas-instructions {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.planr-diagram-editor .de-dialog-layer:not(:empty) {
+  position: absolute;
+  z-index: 60;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: var(--de-space-5);
+  background: var(--de-scrim);
+}
+
+/* Heights follow the editor, not the window, because a host can embed it in a short region. */
+.planr-diagram-editor .de-dialog {
+  width: min(560px, 100%);
+  max-height: min(750px, 100%);
+  overflow: auto;
+  padding: var(--de-space-5);
+  border: 1px solid var(--de-rule);
+  border-radius: var(--de-radius-lg);
+  background: var(--de-panel);
+  box-shadow: var(--de-shadow-lg);
+}
+
+.planr-diagram-editor .de-dialog > h2 {
+  font-size: var(--de-text-lg);
+  line-height: var(--de-leading-lg);
+}
+
+.planr-diagram-editor .de-dialog > button,
+.planr-diagram-editor .de-dialog > div > button {
+  margin: var(--de-space-2) var(--de-space-2) 0 0;
+}
+
+.planr-diagram-editor .de-dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--de-space-2);
+  margin-top: var(--de-space-5);
+}
+
+.planr-diagram-editor .de-dialog .de-source-view {
+  max-height: 55vh;
+  overflow: auto;
+  margin: var(--de-space-3) 0;
+  padding: var(--de-space-3);
+  border: 1px solid var(--de-rule);
+  border-radius: var(--de-radius-sm);
+  background: var(--de-raised);
+  font-family: var(--de-font-mono);
+  font-size: var(--de-text-xs);
+  line-height: var(--de-leading-xs);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.planr-diagram-editor .de-comparison-scroll {
+  max-height: 380px;
+  overflow: auto;
+  border: 1px solid var(--de-rule);
+  border-radius: var(--de-radius-sm);
+}
+
+.planr-diagram-editor .de-conflict table {
+  min-width: 600px;
+  border-collapse: collapse;
+  font-size: var(--de-text-xs);
+  line-height: var(--de-leading-xs);
+}
+
+.planr-diagram-editor .de-conflict :is(th, td) {
+  min-width: 110px;
+  padding: var(--de-space-2);
+  border-bottom: 1px solid var(--de-rule);
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+
+.planr-diagram-editor .de-conflict td {
+  max-width: 190px;
+}
+
+/* The editor measures its own shell and sets data-layout: "drawer" at 1100px and below,
+ * "compact" at 700px and below, "narrow" at 420px and below (tokens accumulate), otherwise
+ * "desktop". A 200% browser zoom on a desktop naturally enters the drawer layout. */
+.planr-diagram-editor[data-layout~="drawer"] {
+  --de-right-width: min(288px, calc(100% - 48px));
+  --de-drawer-scrim: var(--de-scrim);
+}
+
+/* The inspector acts on the canvas beside it, so its drawer leaves the canvas undimmed. */
+.planr-diagram-editor[data-layout~="drawer"][data-right-open="true"] {
+  --de-drawer-scrim: transparent;
+}
+
+.planr-diagram-editor[data-layout~="drawer"] .de-bar {
+  gap: var(--de-space-2);
+}
+
+.planr-diagram-editor[data-layout~="drawer"] .de-button-label[data-responsive="hide"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+.planr-diagram-editor[data-layout~="drawer"] .de-work {
+  display: block;
+  position: relative;
+}
+
+.planr-diagram-editor[data-layout~="drawer"] .de-stage {
+  width: 100%;
+  height: 100%;
+}
+
+.planr-diagram-editor[data-layout~="drawer"] :is(.de-left, .de-right) {
+  position: absolute;
+  z-index: 8;
+  top: 0;
+  bottom: 0;
+  visibility: visible;
+  box-shadow: var(--de-shadow-lg);
+}
+
+.planr-diagram-editor[data-layout~="drawer"] .de-panel-close {
+  display: inline-grid;
+}
+
+.planr-diagram-editor[data-layout~="drawer"] .de-left {
+  left: 0;
+  width: min(288px, calc(100% - 48px));
+}
+
+.planr-diagram-editor[data-layout~="drawer"] .de-right {
+  right: 0;
+  width: var(--de-right-width);
+}
+
+.planr-diagram-editor[data-layout~="drawer"][data-left-open="false"] .de-left,
+.planr-diagram-editor[data-layout~="drawer"][data-right-open="false"] .de-right {
+  display: none;
+}
+
+.planr-diagram-editor[data-layout~="drawer"] .de-drawer-backdrop:not([hidden]) {
+  position: absolute;
+  z-index: 7;
+  inset: 0;
+  display: block;
+  border: 0;
+  border-radius: 0;
+  background: var(--de-drawer-scrim);
+  box-shadow: none;
+  cursor: default;
+}
+
+/* The bar is inert under an open drawer and sits outside the backdrop, so it takes the same layer.
+ * A click on it lands on the shell, which closes the drawer as a backdrop click does. */
+.planr-diagram-editor[data-layout~="drawer"]:is([data-left-open="true"], [data-right-open="true"])
+.de-bar::after {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  background: var(--de-drawer-scrim);
+  content: "";
+}
+
+/* Editing intentionally ends at 700px; 701px remains the first authoring width. */
+.planr-diagram-editor[data-layout~="compact"] {
+  --de-bar-height: 56px;
+  --de-control-height: 44px;
+}
+
+.planr-diagram-editor[data-layout~="compact"] .de-bar {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--de-space-2);
+  padding-inline: var(--de-space-2);
+}
+
+.planr-diagram-editor[data-layout~="compact"] .de-identity small {
+  display: none;
+}
+
+.planr-diagram-editor[data-layout~="compact"] .de-save-state {
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.planr-diagram-editor[data-layout~="compact"] .de-bar-end {
+  gap: 2px;
+}
+
+.planr-diagram-editor[data-layout~="compact"] .de-bar-end button {
+  min-width: var(--de-control-height);
+  min-height: var(--de-control-height);
+}
+
+.planr-diagram-editor[data-layout~="compact"] .de-bar .de-button-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.planr-diagram-editor[data-layout~="compact"] .de-bar .de-icon-button {
+  width: var(--de-control-height);
+  min-width: var(--de-control-height);
+  padding: 0;
+}
+
+.planr-diagram-editor[data-layout~="compact"]
+  .de-bar-end
+  :is([data-action="undo"], [data-action="redo"], [data-action="layout"], [data-action="save"]) {
+  display: none;
+}
+
+.planr-diagram-editor[data-layout~="compact"] :is(.de-left, .de-right) {
+  width: min(100%, 360px);
+}
+
+.planr-diagram-editor[data-layout~="compact"] .de-mobile-message {
+  position: absolute;
+  z-index: 3;
+  top: var(--de-space-3);
+  right: var(--de-space-3);
+  left: var(--de-space-3);
+  display: block;
+  padding: var(--de-space-2) var(--de-space-3);
+  border: 1px solid var(--de-rule);
+  border-radius: var(--de-radius-sm);
+  color: var(--de-muted);
+  background: var(--de-panel);
+  box-shadow: var(--de-shadow-sm);
+  font-size: var(--de-text-xs);
+  line-height: var(--de-leading-xs);
+  text-align: center;
+}
+
+.planr-diagram-editor[data-layout~="compact"] .de-canvas-tools {
+  bottom: var(--de-space-8);
+}
+
+.planr-diagram-editor[data-layout~="compact"] .de-stage-footer:not(:has(button)) {
+  bottom: var(--de-space-2);
+}
+
+.planr-diagram-editor[data-layout~="compact"] .de-canvas-tools button {
+  min-width: var(--de-control-height);
+  min-height: var(--de-control-height);
+}
+
+.planr-diagram-editor[data-layout~="compact"]
+  .de-canvas-tools
+  :is([data-action="select-tool"], [data-action="snap"]) {
+  display: none;
+}
+
+.planr-diagram-editor[data-layout~="compact"] .de-empty {
+  display: none;
+}
+
+.planr-diagram-editor[data-layout~="compact"] .de-field :is(input, textarea, select) {
+  min-height: var(--de-control-height);
+  font-size: var(--de-text-lg);
+  line-height: var(--de-leading-lg);
+}
+
+/* The menu hangs from the bar, so it stays inside a narrow embed wherever the window is. */
+.planr-diagram-editor[data-layout~="compact"] .de-more-wrap {
+  position: static;
+}
+
+.planr-diagram-editor[data-layout~="compact"] .de-more-menu {
+  top: calc(var(--de-bar-height) + var(--de-space-2));
+  right: var(--de-space-2);
+  max-width: calc(100% - var(--de-space-4));
+}
+
+.planr-diagram-editor[data-layout~="compact"] .de-dialog-layer:not(:empty) {
+  align-items: end;
+  padding: var(--de-space-2);
+}
+
+.planr-diagram-editor[data-layout~="compact"] .de-dialog {
+  width: 100%;
+  max-height: calc(100% - var(--de-bar-height));
+  padding: var(--de-space-4);
+  border-radius: var(--de-radius-lg) var(--de-radius-lg) var(--de-radius-sm) var(--de-radius-sm);
+}
+
+.planr-diagram-editor[data-layout~="narrow"] .de-mark {
+  width: 28px;
+  height: 28px;
+}
+
+.planr-diagram-editor[data-layout~="narrow"] .de-title {
+  max-width: 120px;
+}
+
+.planr-diagram-editor[data-layout~="narrow"] .de-save-state {
+  display: none;
+}
+
+.planr-diagram-editor[data-layout~="narrow"] .de-field-grid {
+  grid-template-columns: 1fr;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .planr-diagram-editor *,
+  .planr-diagram-editor *::before,
+  .planr-diagram-editor *::after,
+  .planr-diagram-source-panel *,
+  .planr-diagram-source-panel *::before,
+  .planr-diagram-source-panel *::after {
+    scroll-behavior: auto !important;
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+.planr-diagram-source-panel {
+  --de-chrome: var(--planr-color-chrome, #fff);
+  --de-panel: var(--planr-color-panel, #fafbfc);
+  --de-raised: var(--planr-color-raised, #f0f3f5);
+  --de-interactive: var(--planr-color-interactive, #e8edef);
+  --de-input: var(--planr-color-input, #fff);
+  --de-input-border: var(--planr-color-input-border, #858e99);
+  --de-rule: var(--planr-color-rule, #d9e0e4);
+  --de-rule-strong: var(--planr-color-rule-strong, #c4ced4);
+  --de-text: var(--planr-color-text, #15191d);
+  --de-muted: var(--planr-color-text-muted, #66717a);
+  --de-primary: var(--planr-color-primary, #237a72);
+  --de-primary-hover: #1b5f59;
+  --de-primary-hover-text: var(--de-primary-text);
+  --de-primary-soft: var(--planr-color-primary-soft, #e2f4f1);
+  --de-primary-text: var(--planr-color-on-primary, #fff);
+  --de-danger: var(--planr-color-danger, #b4233c);
+  --de-shadow-sm: var(--planr-shadow-sm, 0 1px 2px rgb(16 24 40 / 6%));
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: var(--de-space-4);
+  border: 1px solid var(--de-rule);
+  border-radius: var(--de-radius-lg);
+  color: var(--de-text);
+  background: var(--de-panel);
+  color-scheme: light dark;
+  font-family: var(
+    --planr-font-body,
+    "DM Sans",
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif
+  );
+  font-size: var(--de-text-sm);
+  font-weight: var(--de-weight-regular);
+  line-height: var(--de-leading-sm);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+@media (prefers-color-scheme: dark) {
+  .planr-diagram-source-panel {
+    --de-chrome: var(--planr-color-chrome, #0d1016);
+    --de-panel: var(--planr-color-panel, #11151d);
+    --de-raised: var(--planr-color-raised, #171c25);
+    --de-interactive: var(--planr-color-interactive, #1c2330);
+    --de-input: var(--planr-color-input, #0b0e14);
+    --de-input-border: var(--planr-color-input-border, #5e6875);
+    --de-rule: var(--planr-color-rule, #252d3a);
+    --de-rule-strong: var(--planr-color-rule-strong, #384354);
+    --de-text: var(--planr-color-text, #f2f5f7);
+    --de-muted: var(--planr-color-text-muted, #9aa5b1);
+    --de-primary: var(--planr-color-primary, #5eead4);
+    --de-primary-hover: color-mix(in srgb, var(--de-primary) 45%, var(--de-panel));
+    --de-primary-hover-text: #f2f5f7;
+    --de-primary-soft: var(--planr-color-primary-soft, #123630);
+    --de-primary-text: var(--planr-color-on-primary, #07110f);
+    --de-danger: var(--planr-color-danger, #fb7185);
+    --de-shadow-sm: var(--planr-shadow-sm, 0 1px 2px rgb(0 0 0 / 24%));
+  }
+}
+
+.planr-diagram-source-panel *,
+.planr-diagram-source-panel *::before,
+.planr-diagram-source-panel *::after {
+  box-sizing: border-box;
+}
+
+.planr-diagram-source-panel [hidden] {
+  display: none !important;
+}
+
+.planr-diagram-source-panel :is(button, input, select, textarea) {
+  font: inherit;
+}
+
+.planr-diagram-source-panel button {
+  min-height: var(--de-control-height);
+  padding: var(--de-space-2) var(--de-space-3);
+  border: 1px solid var(--de-rule);
+  border-radius: var(--de-radius-sm);
+  color: var(--de-text);
+  background: var(--de-raised);
+  box-shadow: var(--de-shadow-sm);
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease,
+    box-shadow 120ms ease,
+    transform 120ms ease;
+}
+
+.planr-diagram-source-panel button:hover:not(:disabled) {
+  border-color: var(--de-rule-strong);
+  background: var(--de-interactive);
+}
+
+.planr-diagram-source-panel button:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: none;
+}
+
+.planr-diagram-source-panel button:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.planr-diagram-source-panel :focus-visible {
+  outline: 2px solid var(--de-primary);
+  outline-offset: 2px;
+}
+
+.planr-diagram-source-panel .de-primary {
+  border-color: var(--de-primary);
+  color: var(--de-primary-text);
+  background: var(--de-primary);
+  font-weight: var(--de-weight-strong);
+}
+
+.planr-diagram-source-panel .de-primary:hover:not(:disabled) {
+  border-color: var(--de-primary-hover);
+  color: var(--de-primary-hover-text);
+  background: var(--de-primary-hover);
+}
+
+.planr-diagram-source-panel :is(h3, h4, p) {
+  margin-top: 0;
+}
+
+.planr-diagram-source-panel h3 {
+  margin-bottom: var(--de-space-2);
+  font-size: var(--de-text-sm);
+  font-weight: var(--de-weight-strong);
+  line-height: var(--de-leading-sm);
+}
+
+.planr-diagram-source-panel .de-muted {
+  color: var(--de-muted);
+  font-size: var(--de-text-xs);
+  line-height: var(--de-leading-xs);
+}
+
+.planr-diagram-source-panel .de-field {
+  min-width: 0;
+  display: grid;
+  gap: var(--de-space-1);
+  margin: 0 0 var(--de-space-3);
+  color: var(--de-muted);
+  font-size: var(--de-text-xs);
+  font-weight: var(--de-weight-medium);
+  line-height: var(--de-leading-xs);
+}
+
+.planr-diagram-source-panel .de-field > span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.planr-diagram-source-panel .de-field :is(input, textarea, select) {
+  width: 100%;
+  min-width: 0;
+  min-height: var(--de-control-height);
+  padding: var(--de-space-2);
+  border: 1px solid var(--de-input-border);
+  border-radius: var(--de-radius-sm);
+  color: var(--de-text);
+  background: var(--de-input);
+  box-shadow: inset 0 1px 0 rgb(0 0 0 / 2%);
+  font-size: var(--de-text-sm);
+  font-weight: var(--de-weight-regular);
+  line-height: var(--de-leading-sm);
+}
+
+.planr-diagram-source-panel .de-field :is(input, textarea, select):hover:not(:disabled) {
+  border-color: var(--de-muted);
+}
+
+.planr-diagram-source-panel .de-field :is(input, textarea, select):focus {
+  border-color: var(--de-primary);
+}
+
+.planr-diagram-source-panel .de-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--de-space-2);
+  margin: var(--de-space-2) 0 var(--de-space-4);
+}
+
+.planr-diagram-source-panel .de-source-view {
+  max-height: 260px;
+  overflow: auto;
+  margin: var(--de-space-3) 0;
+  padding: var(--de-space-3);
+  border: 1px solid var(--de-rule);
+  border-radius: var(--de-radius-sm);
+  background: var(--de-raised);
+  font-family: var(--de-font-mono);
+  font-size: var(--de-text-xs);
+  line-height: var(--de-leading-xs);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.planr-diagram-editor .de-source-dialog {
+  width: min(1040px, 100%);
+  max-height: 100%;
+}
+
+:is(.planr-diagram-editor, .planr-diagram-source-panel) .de-source-panel,
+:is(.planr-diagram-editor, .planr-diagram-source-panel) .de-source-section,
+:is(.planr-diagram-editor, .planr-diagram-source-panel) .de-source-result {
+  display: grid;
+  min-width: 0;
+  gap: var(--de-space-3);
+}
+
+:is(.planr-diagram-editor, .planr-diagram-source-panel) .de-source-section[hidden] {
+  display: none;
+}
+
+:is(.planr-diagram-editor, .planr-diagram-source-panel) .de-source-section > h3,
+:is(.planr-diagram-editor, .planr-diagram-source-panel) .de-source-object-pane h4 {
+  margin: 0;
+}
+
+:is(.planr-diagram-editor, .planr-diagram-source-panel) .de-source-tabs {
+  display: flex;
+  gap: var(--de-space-1);
+  padding-bottom: var(--de-space-2);
+  border-bottom: 1px solid var(--de-rule);
+}
+
+:is(.planr-diagram-editor, .planr-diagram-source-panel) .de-source-tabs [role="tab"] {
+  border-color: transparent;
+  background: transparent;
+}
+
+/* The generic hover fill under accent text is 4.34:1, so a selected tab keeps its fill on hover. */
+:is(.planr-diagram-editor, .planr-diagram-source-panel) .de-source-tabs [aria-selected="true"],
+:is(.planr-diagram-editor, .planr-diagram-source-panel)
+  .de-source-tabs
+  [aria-selected="true"]:hover:not(:disabled) {
+  border-color: var(--de-primary);
+  color: var(--de-primary);
+  background: var(--de-primary-soft);
+}
+
+:is(.planr-diagram-editor, .planr-diagram-source-panel) .de-source-editor {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  min-width: 0;
+}
+
+:is(.planr-diagram-editor, .planr-diagram-source-panel) .de-source-lines {
+  min-width: 4ch;
+  max-height: 180px;
+  margin: 0;
+  overflow: hidden;
+  padding: var(--de-space-2);
+  border: 1px solid var(--de-rule);
+  border-right: 0;
+  border-radius: var(--de-radius-sm) 0 0 var(--de-radius-sm);
+  color: var(--de-muted);
+  background: var(--de-raised);
+  font: var(--de-text-sm) / var(--de-leading-sm) var(--de-font-mono);
+  text-align: right;
+  user-select: none;
+}
+
+:is(.planr-diagram-editor, .planr-diagram-source-panel) .de-source-input {
+  min-height: 180px;
+  resize: vertical;
+  border-radius: 0 var(--de-radius-sm) var(--de-radius-sm) 0;
+  font: var(--de-text-sm) / var(--de-leading-sm) var(--de-font-mono);
+  tab-size: 2;
+}
+
+:is(.planr-diagram-editor, .planr-diagram-source-panel) .de-source-status {
+  margin: 0;
+  padding: var(--de-space-3);
+  border: 1px solid var(--de-rule);
+  border-radius: var(--de-radius-sm);
+  background: var(--de-raised);
+}
+
+:is(.planr-diagram-editor, .planr-diagram-source-panel) .de-source-error {
+  margin: 0;
+  padding: var(--de-space-3);
+  border: 1px solid var(--de-danger);
+  border-radius: var(--de-radius-sm);
+  color: var(--de-danger);
+  background: var(--de-raised);
+}
+
+:is(.planr-diagram-editor, .planr-diagram-source-panel) .de-source-error[hidden] {
+  display: none;
+}
+
+:is(.planr-diagram-editor, .planr-diagram-source-panel) .de-source-formats {
+  display: grid;
+  gap: var(--de-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+:is(.planr-diagram-editor, .planr-diagram-source-panel) .de-source-formats li {
+  padding: var(--de-space-2) var(--de-space-3);
+  border: 1px solid var(--de-rule);
+  border-radius: var(--de-radius-sm);
+  background: var(--de-panel);
+}
+
+:is(.planr-diagram-editor, .planr-diagram-source-panel) .de-source-fidelity {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--de-space-2);
+}
+
+:is(.planr-diagram-editor, .planr-diagram-source-panel) .de-source-fidelity-row {
+  display: grid;
+  gap: var(--de-space-1);
+  padding: var(--de-space-3);
+  border: 1px solid var(--de-rule);
+  border-radius: var(--de-radius-sm);
+  background: var(--de-panel);
+}
+
+:is(.planr-diagram-editor, .planr-diagram-source-panel)
+  .de-source-fidelity-row
+  :is([data-fidelity="partial"], [data-fidelity="unsupported"]) {
+  color: var(--de-danger);
+}
+
+:is(.planr-diagram-editor, .planr-diagram-source-panel) .de-source-losses {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: var(--de-space-3) var(--de-space-3) var(--de-space-3) var(--de-space-8);
+  border: 1px solid var(--de-rule);
+  border-radius: var(--de-radius-sm);
+  background: var(--de-raised);
+}
+
+:is(.planr-diagram-editor, .planr-diagram-source-panel) .de-source-diagnostics {
+  display: grid;
+  gap: var(--de-space-2);
+  margin: 0;
+  padding-left: var(--de-space-6);
+}
+
+:is(.planr-diagram-editor, .planr-diagram-source-panel) .de-source-diagnostics li {
+  overflow-wrap: anywhere;
+}
+
+:is(.planr-diagram-editor, .planr-diagram-source-panel) .de-source-affected {
+  display: block;
+  margin-top: var(--de-space-1);
+}
+
+:is(.planr-diagram-editor, .planr-diagram-source-panel) .de-source-diagnostics button {
+  display: block;
+  max-width: 100%;
+  white-space: normal;
+  text-align: left;
+}
+
+:is(.planr-diagram-editor, .planr-diagram-source-panel) .de-source-proposal {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(220px, 2fr);
+  gap: var(--de-space-3);
+  align-items: start;
+}
+
+:is(.planr-diagram-editor, .planr-diagram-source-panel) .de-source-object-pane {
+  min-width: 0;
+}
+
+:is(.planr-diagram-editor, .planr-diagram-source-panel) .de-source-objects {
+  display: grid;
+  max-height: 260px;
+  margin: var(--de-space-2) 0 0;
+  padding: 0;
+  overflow: auto;
+  list-style: none;
+  gap: var(--de-space-1);
+}
+
+:is(.planr-diagram-editor, .planr-diagram-source-panel) .de-source-objects li {
+  padding: var(--de-space-2);
+  overflow-wrap: anywhere;
+  border: 1px solid var(--de-rule);
+  border-radius: var(--de-radius-sm);
+  background: var(--de-panel);
+}
+
+:is(.planr-diagram-editor, .planr-diagram-source-panel)
+  .de-source-objects
+  li[data-affected="true"] {
+  border-color: var(--de-primary);
+  box-shadow: 0 0 0 1px var(--de-primary);
+}
+
+:is(.planr-diagram-editor, .planr-diagram-source-panel) .de-source-image {
+  width: 100%;
+  max-height: 300px;
+  object-fit: contain;
+  border: 1px solid var(--de-rule);
+  border-radius: var(--de-radius-sm);
+  background: var(--de-chrome);
+}
+
+:is(.planr-diagram-editor, .planr-diagram-source-panel) .de-source-ack {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--de-space-2);
+  padding: var(--de-space-3);
+  border: 1px solid var(--de-rule);
+  border-radius: var(--de-radius-sm);
+  background: var(--de-raised);
+}
+
+:is(.planr-diagram-editor, .planr-diagram-source-panel) .de-source-ack input {
+  margin-top: 3px;
+}
+
+:is(.planr-diagram-editor, .planr-diagram-source-panel) .de-source-result pre {
+  max-height: 260px;
+  overflow: auto;
+}
+
+:is(.planr-diagram-editor, .planr-diagram-source-panel) .de-source-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: var(--de-space-3);
+  border-top: 1px solid var(--de-rule);
+}
+
+.planr-diagram-editor[data-layout~="compact"] .de-source-dialog {
+  padding: var(--de-space-4);
+}
+
+.planr-diagram-editor[data-layout~="compact"] :is(.de-source-proposal, .de-source-fidelity) {
+  grid-template-columns: 1fr;
+}
+
+.planr-diagram-editor[data-layout~="compact"] .de-source-losses {
+  grid-column: auto;
+}
+
+.planr-diagram-editor[data-layout~="compact"] .de-source-input {
+  font-size: var(--de-text-lg);
+}
+
+/* The standalone panel is its own page, so it keeps following the viewport. */
+@media (max-width: 700px) {
+  .planr-diagram-source-panel {
+    padding: var(--de-space-3);
+  }
+
+  .planr-diagram-source-panel .de-actions > button {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  .planr-diagram-source-panel :is(.de-source-proposal, .de-source-fidelity) {
+    grid-template-columns: 1fr;
+  }
+
+  .planr-diagram-source-panel .de-source-losses {
+    grid-column: auto;
+  }
+
+  .planr-diagram-source-panel .de-source-input {
+    font-size: var(--de-text-lg);
+  }
+}
+
+@media (forced-colors: active) {
+  .planr-diagram-editor,
+  .planr-diagram-source-panel {
+    --de-bg: Canvas;
+    --de-chrome: Canvas;
+    --de-panel: Canvas;
+    --de-raised: Canvas;
+    --de-interactive: Highlight;
+    --de-input: Field;
+    --de-input-border: CanvasText;
+    --de-rule: CanvasText;
+    --de-rule-strong: CanvasText;
+    --de-text: CanvasText;
+    --de-muted: CanvasText;
+    --de-primary: Highlight;
+    --de-primary-hover: Highlight;
+    --de-primary-soft: Canvas;
+    --de-primary-text: HighlightText;
+    --de-danger: CanvasText;
+    --de-danger-soft: Canvas;
+  }
+
+  .planr-diagram-editor
+    :is(.de-bar, .de-panel-header, .de-canvas-tools, .de-more-menu, .de-dialog) {
+    backdrop-filter: none;
+  }
+
+  .planr-diagram-editor .de-canvas {
+    background-image: none;
+  }
+
+  .planr-diagram-editor button[aria-pressed="true"],
+  .planr-diagram-editor button[aria-selected="true"] {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+}
+
+/* Match neutral rendered shapes without changing saved semantic or custom fills. */
+.planr-diagram-editor
+  [data-world]
+  :is([data-collection="nodes"], [data-collection="annotations"])
+  > rect[fill="#f8fafc"] {
+  fill: #e2e8f0;
+}

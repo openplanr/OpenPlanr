@@ -7,6 +7,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { makeBundle } from '../../../../tests/protocol/fixtures/diagram-authoring.mjs';
 import { compileDiagramCommand } from '../../../artifact/lib/artifact/diagram/authoring/commands.mjs';
 import { createDiagramAuthoringStore } from '../../../artifact/lib/artifact/diagram/authoring/store.mjs';
+import type {
+  CompanyResourceManifest,
+  CompanyResourceUploadPrepare,
+} from '../../../protocol/src/large-object-contracts.mjs';
 import * as companyAuth from '../../src/services/company-auth-service.js';
 import {
   adoptCompanyDiagramRevision,
@@ -83,7 +87,7 @@ async function installRuntimeFixture() {
   await mkdir(path.join(runtime, 'lib/protocol'), { recursive: true });
   await mkdir(path.join(runtime, 'lib/artifact/diagram'), { recursive: true });
   await mkdir(path.join(runtime, 'lib/artifact/diagram/authoring'), { recursive: true });
-  for (const module of ['enterprise-contracts', 'canonical-json']) {
+  for (const module of ['enterprise-contracts', 'canonical-json', 'large-object-contracts']) {
     const canonical = new URL(`../../../protocol/src/${module}.mjs`, import.meta.url);
     await writeFile(
       path.join(runtime, `lib/protocol/${module}.mjs`),
@@ -140,6 +144,13 @@ async function installDesignRuntimeFixture() {
     path.join(runtime.root, 'lib/design/company-publication.mjs'),
     `export * from ${JSON.stringify(helper.href)};`,
   );
+  for (const name of ['resource-pack', 'upload-spool']) {
+    const helper = new URL(`../../../artifact/lib/artifact/${name}.mjs`, import.meta.url);
+    await writeFile(
+      path.join(runtime.root, `lib/artifact/${name}.mjs`),
+      `export * from ${JSON.stringify(helper.href)};`,
+    );
+  }
   const fixture = await import(
     new URL('../../../design/tests/design-fixture.mjs', import.meta.url).href
   );
@@ -158,17 +169,123 @@ const previewDesign = (filePath: string) =>
     apiUrl: 'https://api.example.com',
     projectId: 'p1',
   });
+function stagedService({
+  lostCommit = false,
+  foreignReceipt = false,
+  corruptChunk = false,
+  supported = true,
+} = {}) {
+  let prepared: CompanyResourceUploadPrepare | undefined;
+  const received: CompanyResourceManifest['chunks'] = [];
+  let receipt: Record<string, unknown> | undefined;
+  let revision: ({ id: string } & Record<string, unknown>) | undefined;
+  let lost = false;
+  const requirePreparation = () => {
+    assert.ok(prepared);
+    return prepared;
+  };
+  const chunkBytes = new Map<number, Uint8Array>();
+  return vi.fn(async (url: string, request: RequestInit) => {
+    if (url.endsWith('/artifacts') && request.method === 'POST') return json({ artifact });
+    if (request.method === 'GET') {
+      if (url.endsWith('/capabilities'))
+        return json({
+          schemaVersion: '1.0.0',
+          publicationTransports: supported ? ['inline-v1', 'resources-v2'] : ['inline-v1'],
+          limits: {
+            chunkBytes: 1048576,
+            decodedBytes: 134217728,
+            catalogBytes: 8388608,
+            chunks: 128,
+          },
+        });
+      if (url.endsWith('/a1')) return json({ artifact, headRevisionId: revision?.id });
+      if (url.includes('/revisions?')) return json({ revisions: [revision], nextCursor: null });
+      if (url.endsWith('/manifest')) return json(requirePreparation().manifest);
+      if (url.includes('/chunks/')) {
+        const saved = chunkBytes.get(Number(url.split('/').at(-1)));
+        assert.ok(saved);
+        const bytes = Uint8Array.from(saved);
+        if (corruptChunk) bytes[0] ^= 1;
+        return new Response(bytes);
+      }
+    }
+    if (url.includes('/uploads/') && request.method === 'PUT' && !url.includes('/chunks/')) {
+      const body = JSON.parse(String(request.body)) as CompanyResourceUploadPrepare;
+      if (prepared) expect(body).toEqual(prepared);
+      else prepared = body;
+      return json({
+        schemaVersion: '2.0.0',
+        operationId: body.operationId,
+        status: receipt ? 'committed' : 'prepared',
+        receivedChunks: received,
+        ...(receipt ? { receipt } : {}),
+      });
+    }
+    if (url.includes('/chunks/')) {
+      const index = Number(url.split('/').at(-1));
+      assert.ok(request.body instanceof ArrayBuffer);
+      const bytes = new Uint8Array(request.body);
+      const part = requirePreparation().manifest.chunks[index];
+      expect(bytes.byteLength).toBe(part.byteLength);
+      expect(createHash('sha256').update(bytes).digest('hex')).toBe(part.sha256);
+      chunkBytes.set(index, bytes);
+      received.push(part);
+      return json({
+        schemaVersion: '2.0.0',
+        operationId: requirePreparation().operationId,
+        status: 'prepared',
+        receivedChunks: received,
+      });
+    }
+    if (url.endsWith('/commit')) {
+      const { canonicalizeJson } = await import('../../../protocol/src/canonical-json.mjs');
+      const m = requirePreparation().manifest;
+      const manifestSha256 = hash(canonicalizeJson(m));
+      expect(JSON.parse(String(request.body))).toEqual({ manifestSha256 });
+      expect(received).toHaveLength(m.chunks.length);
+      revision = {
+        schemaVersion: '1.1.0',
+        protocolVersion: '1.17.0',
+        kind: 'openplanr-enterprise-artifact-revision',
+        id: m.revisionId,
+        organizationId: m.organizationId,
+        projectId: m.projectId,
+        artifactId: m.artifactId,
+        parentRevisionId: requirePreparation().baseRevisionId,
+        contentDigest: m.contentDigest,
+        contentType: m.contentType,
+        byteLength: m.byteLength,
+        createdAt: at,
+        actorId: 'user1',
+        contentReference: { transport: 'resources-v2', manifestSha256 },
+      };
+      receipt = {
+        schemaVersion: '2.0.0',
+        organizationId: m.organizationId,
+        projectId: m.projectId,
+        artifactId: foreignReceipt ? 'foreign' : m.artifactId,
+        operationId: requirePreparation().operationId,
+        revisionId: m.revisionId,
+        manifestSha256,
+        contentDigest: m.contentDigest,
+        status: 'committed',
+        committedAt: at,
+      };
+      if (lostCommit && !lost) {
+        lost = true;
+        throw new Error('lost response');
+      }
+      return json({ revision, receipt });
+    }
+    throw new Error(`Unexpected service request ${request.method} ${url}`);
+  });
+}
 async function publishDesign(filePath: string) {
   const result = await previewDesign(filePath);
-  vi.stubGlobal(
-    'fetch',
-    vi
-      .fn()
-      .mockResolvedValueOnce(json({ artifact }))
-      .mockResolvedValueOnce(json({ revision: firstRevision(result.content) })),
-  );
-  await publishCompanyPreview(root, result.preview.id);
-  return result;
+  vi.stubGlobal('fetch', stagedService());
+  const publication = await publishCompanyPreview(root, result.preview.id);
+  return { ...result, revisionId: publication.revisionId };
 }
 function proposal(
   operations = [{ op: 'set-field', targetId: 'item-a', field: 'label', value: 'Applicant' }],
@@ -510,45 +627,173 @@ describe('complete design company publication', () => {
   it('publishes the exact bundle and reconstructs it for status and compare-and-set updates', async () => {
     const design = await installDesignRuntimeFixture();
     const initial = await publishDesign(design.filePath);
-    expect(JSON.parse(String(vi.mocked(fetch).mock.calls[1][1]?.body))).toEqual({
+    const prepared = JSON.parse(
+      String(
+        vi
+          .mocked(fetch)
+          .mock.calls.find(
+            ([url, request]) => String(url).includes('/uploads/') && request?.method === 'PUT',
+          )?.[1]?.body,
+      ),
+    );
+    expect(prepared).toMatchObject({
+      schemaVersion: '2.0.0',
       baseRevisionId: null,
-      content: initial.content,
-      contentType: 'application/json',
+      manifest: { kind: 'openplanr-company-resource-manifest', projectId: 'p1', artifactId: 'a1' },
     });
+    expect(prepared.manifest.chunks.length).toBeGreaterThan(0);
+    const firstId = prepared.manifest.revisionId;
     const bindingId = initial.preview.id;
     const style = path.join(design.directory, 'source/style.css');
     await writeFile(style, (await readFile(style, 'utf8')) + '\nbutton { border-radius: 6px }');
     vi.stubGlobal(
       'fetch',
-      vi.fn().mockImplementation(async () => json({ artifact, headRevisionId: 'r1' })),
+      vi.fn().mockImplementation(async () => json({ artifact, headRevisionId: firstId })),
     );
     expect((await companyBindingStatus(root, bindingId)).status).toBe('local-changes');
     const update = await previewCompanyPush(root, bindingId);
     expect(update.selectedFiles).toEqual(initial.selectedFiles);
-    const fetcher = vi.fn().mockResolvedValueOnce(
-      json({
-        revision: {
-          ...firstRevision(update.content),
-          id: 'r2',
-          parentRevisionId: 'r1',
-        },
-      }),
-    );
+    const fetcher = stagedService();
     vi.stubGlobal('fetch', fetcher);
     expect((await pushCompanyBinding(root, bindingId)).status).toBe('synchronized');
-    expect(JSON.parse(fetcher.mock.calls[0][1].body)).toEqual({
-      baseRevisionId: 'r1',
-      content: update.content,
-      contentType: 'application/json',
-    });
-    expect(fetcher.mock.calls[0][1].headers['Idempotency-Key']).toBe(update.preview.operationId);
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(json({ artifact, headRevisionId: 'r2' })));
+    const nextPreparation = JSON.parse(
+      fetcher.mock.calls.find(
+        ([url, request]) => url.includes('/uploads/') && request.method === 'PUT',
+      )?.[1].body ?? 'null',
+    );
+    expect(nextPreparation.baseRevisionId).toBe(firstId);
+    expect(nextPreparation.operationId).toBe(update.preview.operationId);
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValue(json({ artifact, headRevisionId: nextPreparation.manifest.revisionId })),
+    );
     expect((await companyBindingStatus(root, bindingId)).status).toBe('synchronized');
+  });
+  it('publishes a synthetic 93-screen five-frame design above the old inline limit', async () => {
+    await installDesignRuntimeFixture();
+    const fixture = await import('../../../design/tests/design-fixture.mjs');
+    const directory = path.join(root, '.planr/designs/large');
+    const design = fixture.designFixture(directory, { count: 93 });
+    design.document.frames = Array.from({ length: 5 }, (_, index) => ({
+      ...design.document.frames[0],
+      id: `frame-${index}`,
+      label: `Frame ${index}`,
+      width: 800 + index * 100,
+      height: 900,
+    }));
+    await writeFile(design.file, JSON.stringify(design.document));
+    const { randomBytes } = await import('node:crypto');
+    for (let index = 1; index <= 93; index++) {
+      const file = path.join(directory, `source/screen-${index}.html`);
+      await writeFile(
+        file,
+        (await readFile(file, 'utf8')) + `<pre>${randomBytes(18000).toString('base64')}</pre>`,
+      );
+    }
+    const initial = await previewDesign('.planr/designs/large/design-document.json');
+    expect(initial.preview.byteLength).toBeGreaterThan(1024 * 1024);
+    expect(JSON.parse(initial.content).entries).toHaveLength(465);
+    vi.stubGlobal('fetch', stagedService());
+    expect((await publishCompanyPreview(root, initial.preview.id)).status).toBe('synchronized');
+    const preparation = JSON.parse(
+      String(
+        vi
+          .mocked(fetch)
+          .mock.calls.find(
+            ([url, request]) => String(url).includes('/uploads/') && request?.method === 'PUT',
+          )?.[1]?.body,
+      ),
+    );
+    expect(preparation.manifest.chunks.length).toBeGreaterThan(1);
+    const screen = path.join(directory, 'source/screen-1.html');
+    await writeFile(screen, (await readFile(screen, 'utf8')) + '<p>Reviewed correction</p>');
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValue(json({ artifact, headRevisionId: preparation.manifest.revisionId })),
+    );
+    await previewCompanyPush(root, initial.preview.id);
+    vi.stubGlobal('fetch', stagedService());
+    expect((await pushCompanyBinding(root, initial.preview.id)).status).toBe('synchronized');
+  });
+  it('reads staged resource revisions and retains authored files and the accepted binding', async () => {
+    const design = await installDesignRuntimeFixture();
+    const initial = await previewDesign(design.filePath);
+    const service = stagedService();
+    vi.stubGlobal('fetch', service);
+    await publishCompanyPreview(root, initial.preview.id);
+    const bindingPath = path.join(root, '.local/company/bindings', initial.preview.id + '.json');
+    const before = await readFile(bindingPath, 'utf8'),
+      source = await readFile(design.file, 'utf8');
+    expect((await previewCompanyPull(root, initial.preview.id)).content).toBe(initial.content);
+    const result = await pullCompanyBinding(root, initial.preview.id);
+    expect(await readFile(result.contentPath, 'utf8')).toBe(initial.content);
+    expect(result.reconstructedContentDigest).toBe(hash(initial.content));
+    expect(await readFile(bindingPath, 'utf8')).toBe(before);
+    expect(await readFile(design.file, 'utf8')).toBe(source);
+  });
+  it('rejects corrupted resource bytes before creating a review copy', async () => {
+    const design = await installDesignRuntimeFixture();
+    const initial = await previewDesign(design.filePath);
+    vi.stubGlobal('fetch', stagedService({ corruptChunk: true }));
+    await publishCompanyPreview(root, initial.preview.id);
+    await expect(previewCompanyPull(root, initial.preview.id)).rejects.toMatchObject({
+      code: 'E_COMPANY_INTEGRITY',
+    });
+  });
+  it('keeps durable prepared bytes when the company service lacks staged publication support', async () => {
+    const design = await installDesignRuntimeFixture();
+    const initial = await previewDesign(design.filePath);
+    const service = stagedService({ supported: false });
+    vi.stubGlobal('fetch', service);
+    await expect(publishCompanyPreview(root, initial.preview.id)).rejects.toMatchObject({
+      code: 'E_COMPANY_COMPATIBILITY',
+    });
+    expect(service.mock.calls.some(([url]) => url.includes('/chunks/'))).toBe(false);
+    const saved = JSON.parse(
+      await readFile(
+        path.join(root, '.local/company/uploads', initial.preview.id + '-publish/request.json'),
+        'utf8',
+      ),
+    );
+    expect(saved.operationId).toBe(initial.preview.id + '-publish');
+    expect(saved.manifest.chunks.length).toBeGreaterThan(0);
+  });
+  it('recovers a lost commit with exact immutable bytes and no repeated chunk uploads', async () => {
+    const design = await installDesignRuntimeFixture();
+    const initial = await previewDesign(design.filePath);
+    const service = stagedService({ lostCommit: true });
+    vi.stubGlobal('fetch', service);
+    await expect(publishCompanyPreview(root, initial.preview.id)).rejects.toMatchObject({
+      code: 'E_COMPANY_UNAVAILABLE',
+    });
+    const count = service.mock.calls.filter(([url]) => url.includes('/chunks/')).length;
+    const result = await publishCompanyPreview(root, initial.preview.id);
+    expect(result.status).toBe('synchronized');
+    expect(service.mock.calls.filter(([url]) => url.includes('/chunks/')).length).toBe(count);
+    expect(service.mock.calls.filter(([url]) => url.endsWith('/commit'))).toHaveLength(2);
+  });
+  it('refuses a foreign commit receipt without accepting the local publication binding', async () => {
+    const design = await installDesignRuntimeFixture();
+    const initial = await previewDesign(design.filePath);
+    vi.stubGlobal('fetch', stagedService({ foreignReceipt: true }));
+    await expect(publishCompanyPreview(root, initial.preview.id)).rejects.toMatchObject({
+      code: 'E_COMPANY_INTEGRITY',
+    });
+    await expect(
+      readFile(path.join(root, '.local/company/bindings', initial.preview.id + '.json')),
+    ).rejects.toMatchObject({ code: 'ENOENT' });
   });
   it('refuses changed referenced content between push preview and push before upload', async () => {
     const design = await installDesignRuntimeFixture();
     const initial = await publishDesign(design.filePath);
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(json({ artifact, headRevisionId: 'r1' })));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(json({ artifact, headRevisionId: initial.revisionId })),
+    );
     await previewCompanyPush(root, initial.preview.id);
     const screen = path.join(design.directory, 'source/screen-1.html');
     await writeFile(
@@ -566,7 +811,10 @@ describe('complete design company publication', () => {
     const design = await installDesignRuntimeFixture();
     const initial = await publishDesign(design.filePath);
     await writeFile(design.file, JSON.stringify(design.document));
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(json({ artifact, headRevisionId: 'r1' })));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(json({ artifact, headRevisionId: initial.revisionId })),
+    );
     const update = await previewCompanyPush(root, initial.preview.id);
     expect(update.status).toBe('preview');
     expect(update.content).toBe(initial.content);
@@ -574,7 +822,10 @@ describe('complete design company publication', () => {
     vi.stubGlobal('fetch', fetcher);
     expect((await pushCompanyBinding(root, initial.preview.id)).status).toBe('unchanged');
     expect(fetcher).not.toHaveBeenCalled();
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(json({ artifact, headRevisionId: 'r1' })));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(json({ artifact, headRevisionId: initial.revisionId })),
+    );
     expect((await companyBindingStatus(root, initial.preview.id)).status).toBe('synchronized');
   });
   it('rejects packaged-design proposal application before reading proposals or writing authored files', async () => {
@@ -1187,7 +1438,7 @@ describe('read-only remote revision retrieval', () => {
       'fetch',
       vi
         .fn()
-        .mockResolvedValueOnce(json({ artifact, headRevisionId: revision.id }))
+        .mockResolvedValueOnce(json({ artifact, headRevisionId: revision?.id }))
         .mockResolvedValueOnce(json({ revisions: [revision], nextCursor: null }))
         .mockResolvedValueOnce(
           new Response(content, {

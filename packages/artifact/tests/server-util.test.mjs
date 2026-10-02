@@ -63,3 +63,40 @@ test('startup lock preserves legacy shared records instead of racing their repla
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+test('startup lock tolerates a writer releasing between stat and read', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'openplanr-released-lock-'));
+  const lock = join(root, 'daemon.lock');
+  try {
+    const firstUnlock = await acquireStartLock(lock);
+    let released = false;
+    const next = await acquireStartLock(lock, {
+      readRecord(path) {
+        if (!released) {
+          released = true;
+          firstUnlock();
+        }
+        return readFileSync(path, 'utf8');
+      },
+    });
+    assert.equal(released, true);
+    next();
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('startup lock preserves malformed writer records', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'openplanr-malformed-lock-'));
+  const lock = join(root, 'daemon.lock');
+  try {
+    const unlock = await acquireStartLock(lock);
+    unlock();
+    const record = join(`${lock}.writers`, `${process.pid}-${'a'.repeat(32)}.json`);
+    writeFileSync(record, '{unfinished');
+    await assert.rejects(acquireStartLock(lock), { code: 'E_START_LOCK_UNSAFE' });
+    assert.equal(readFileSync(record, 'utf8'), '{unfinished');
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});

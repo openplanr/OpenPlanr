@@ -25,6 +25,7 @@ export {
   summarizeDesignSystem,
 } from './design-system.mjs';
 export { embedJson, escapeHtml, hasUnsafeHtml } from './escape.mjs';
+export { importDesignFeedback, readDesignFeedbackImport } from './feedback-import.mjs';
 export {
   canContinueDesignHandoff,
   compileDesignHandoffReadiness,
