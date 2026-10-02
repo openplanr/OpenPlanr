@@ -2,7 +2,7 @@ import { getDiagramAuthoringCapability } from '@openplanr/protocol/diagram-autho
 import { elementIndex } from '../diagram/authoring/model.mjs';
 import type { DiagramEditorState } from '../diagram/editor/index.mjs';
 import { displayName, quantity } from './diagram-editor-actions.mjs';
-import { button, element, icon } from './diagram-editor-dom.mjs';
+import { button, element, icon, visibleMenuItems } from './diagram-editor-dom.mjs';
 import { hostSaveLabel } from './diagram-editor-host.mjs';
 import type { DiagramEditorContext } from './diagram-editor-regions.mjs';
 
@@ -101,9 +101,8 @@ export function createEditorChrome(ctx: DiagramEditorContext): DiagramEditorChro
     moreMenu.hidden = !open;
     moreButton.setAttribute('aria-expanded', String(open));
     if (open) {
-      // The focused element of an HTML document is an HTML or SVG element.
-      overflowOpener = doc.activeElement as HTMLElement | SVGElement | null;
-      if (focus) moreMenu.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
+      overflowOpener = moreButton;
+      if (focus) (visibleMenuItems(moreMenu)[0] ?? moreButton).focus({ preventScroll: true });
     } else {
       const target = restoreFocus && overflowOpener?.isConnected ? overflowOpener : null;
       overflowOpener = null;
