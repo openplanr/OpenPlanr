@@ -771,10 +771,24 @@ describe('complete design company publication', () => {
       code: 'E_COMPANY_UNAVAILABLE',
     });
     const count = service.mock.calls.filter(([url]) => url.includes('/chunks/')).length;
+    const requestFile = path.join(
+      root,
+      '.local/company/uploads',
+      initial.preview.id + '-publish/request.json',
+    );
+    const savedRequest = (await readFile(requestFile, 'utf8')).trim();
     const result = await publishCompanyPreview(root, initial.preview.id);
     expect(result.status).toBe('synchronized');
     expect(service.mock.calls.filter(([url]) => url.includes('/chunks/')).length).toBe(count);
     expect(service.mock.calls.filter(([url]) => url.endsWith('/commit'))).toHaveLength(2);
+    const preparationBytes = service.mock.calls
+      .filter(
+        ([url, request]) =>
+          url.includes('/uploads/') && request.method === 'PUT' && !url.includes('/chunks/'),
+      )
+      .map(([, request]) => String(request.body));
+    expect(preparationBytes).toEqual([savedRequest, savedRequest]);
+    expect((await readFile(requestFile, 'utf8')).trim()).toBe(savedRequest);
   });
   it('refuses a foreign commit receipt without accepting the local publication binding', async () => {
     const design = await installDesignRuntimeFixture();

@@ -2407,6 +2407,9 @@ async function publishCompanyResources(
     });
     body = { schemaVersion: '2.0.0', operationId, baseRevisionId, manifest: packed.manifest };
     await runtime.persistPreparedUploadSpool(body, packed.chunks, directory);
+    // Dispatch the persisted request on the first attempt as well as every retry.
+    body = runtime.readPreparedUploadRequest(directory) as typeof body;
+    assertLargeObjectContract(body, 'company-resource-upload-prepare');
   }
   if (
     body.operationId !== operationId ||
