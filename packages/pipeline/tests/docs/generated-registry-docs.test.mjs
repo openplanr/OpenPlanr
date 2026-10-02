@@ -23,8 +23,9 @@ test('generated adapter documentation describes the Protocol 1.8 host packages',
   assert.match(document, /\| `claude-code` \|/u);
   assert.match(document, /\| `codex` \|/u);
   assert.match(document, /\| `cursor` \|/u);
-  assert.ok(document.includes(`${catalog.skillIds.length} canonical skills`));
-  assert.match(document, /9 host-native role agents/u);
+  assert.match(document, /the canonical skills for OpenAI, Claude Code, and Cursor/u);
+  assert.match(document, /host-native role agents/u);
+  assert.doesNotMatch(document, /\b\d+ (?:canonical skills|host-native role agents)/u);
   assert.match(document, /No generated commands, compatibility aliases/u);
   assert.match(document, /Semantic workflows execute in the active host agent/u);
 });
@@ -43,13 +44,23 @@ test('generated skill documentation covers every canonical skill and its referen
     for (const resource of references) {
       assert.ok(section.includes(`\`${resource.path}\``), `${skill.id}: ${resource.path}`);
     }
+    assert.ok(
+      section.includes(`[resource inventory](../../skills/${skill.id}/openplanr.skill.json)`),
+      `${skill.id}: readable inventory link`,
+    );
+    const inventory = JSON.parse(readWorkspace(`skills/${skill.id}/openplanr.skill.json`));
+    assert.deepEqual(
+      resources.map(({ path }) => path).sort(),
+      inventory.resources
+        .filter(({ kind }) => kind !== 'agent-metadata')
+        .map(({ path }) => path)
+        .sort(),
+      `${skill.id}: complete inventory`,
+    );
+    assert.doesNotMatch(section, /\b\d+ packaged (?:resources|schema)/u);
     const remaining = resources.length - references.length;
     if (remaining > 0) {
-      assert.match(
-        section,
-        new RegExp(`${remaining} packaged (?:schema, script, and runtime )?resources`, 'u'),
-        `${skill.id}: ${remaining} unlisted resources`,
-      );
+      assert.match(section, /packaged validators and runtime support/u, skill.id);
     }
     if (resources.length === 0) {
       assert.match(

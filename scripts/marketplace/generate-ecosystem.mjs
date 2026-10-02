@@ -192,7 +192,7 @@ All host packages are generated from the Protocol ${ecosystem.protocol.current} 
 |---|---:|---|
 ${hosts}
 
-The ignored \`dist/plugins/\` tree contains ${ecosystem.catalogs.skills.count} canonical skills for OpenAI, Claude Code, and Cursor. Claude Code additionally receives ${ecosystem.catalogs.roles.count} host-native role agents. No generated commands, compatibility aliases, pipeline-owned prompt copies, or legacy role aliases are packaged.
+The ignored \`dist/plugins/\` tree contains the canonical skills for OpenAI, Claude Code, and Cursor. Claude Code additionally receives host-native role agents. No generated commands, compatibility aliases, pipeline-owned prompt copies, or legacy role aliases are packaged.
 
 Semantic workflows execute in the active host agent. The optional CLI is limited to deterministic utilities and integrations.
 `;
@@ -218,8 +218,8 @@ Compatibility invariants:
 
 - \`openplanr\` uses the exact optional \`planr-pipeline@${ecosystem.compatibility.cliOptionalPipeline.version}\` dependency.
 - The public pipeline retains ${ecosystem.publicCompatibility.pipelineExportKeys} export keys and ${ecosystem.publicCompatibility.pipelineRootSymbols} root symbols.
-- ${ecosystem.schemas.preserved.count} historical schemas and ${ecosystem.registries.preserved.count} registries remain accounted for; Protocol ${ecosystem.protocol.current} adds ${ecosystem.schemas.successors.count} successor schemas.
-- ${ecosystem.catalogs.commands.rootCommands} root commands, ${ecosystem.catalogs.skills.count} canonical skills, ${ecosystem.catalogs.roles.count} canonical roles, and ${ecosystem.catalogs.outputs.count} output contracts are catalog-bound.
+- Historical schemas and registries remain accounted for; additive Protocol contracts retain versioned readers.
+- Commands, skills, roles, and output contracts are catalog-bound.
 - \`planr\`, \`openplanr\`, and deprecated \`opr\` resolve to one CLI parser.
 - \`planr operate ...\` remains supported; \`planr pipeline operate ...\` and pipeline plugin Operate assets remain retired.
 `;
@@ -230,12 +230,10 @@ Compatibility invariants:
 function renderSupport(support) {
   if (support.length === 0) return 'none; the skill is intentionally single-file';
   const references = support.filter((path) => path.startsWith('references/'));
-  const others = support.length - references.length;
-  if (references.length === 0) return `${support.length} packaged resources`;
+  const hasRuntimeSupport = support.some((path) => !path.startsWith('references/'));
+  if (references.length === 0) return 'packaged validators and runtime support';
   const listed = references.map((path) => `\`${path}\``).join(', ');
-  return others === 0
-    ? listed
-    : `${listed}, and ${others} packaged schema, script, and runtime resources`;
+  return hasRuntimeSupport ? `${listed}, with packaged validators and runtime support` : listed;
 }
 
 function renderSkillCatalog(sourceRegistry, contentManifest) {
@@ -272,7 +270,7 @@ ${skill.description}
 - Invocation from the plugin: \`$planr:${projectedName}\` in Codex/ChatGPT; \`/planr:${projectedName}\` in Claude Code.
 - Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
 - Aliases: none.
-- Packaged support: ${renderSupport(support)}.
+- Packaged support: ${renderSupport(support)}. See the [resource inventory](../../skills/${skill.skillId}/openplanr.skill.json).
 `;
     })
     .join('\n');

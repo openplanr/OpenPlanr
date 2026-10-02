@@ -426,8 +426,6 @@ add(
   'dist/plugins/claude/openplanr/README.md',
   renderClaudePluginReadme({
     repoRoot: root,
-    skillCount: skillRows.length,
-    roleCount: roleRows.length,
     pluginVersion,
   }),
 );

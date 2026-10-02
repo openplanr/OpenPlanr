@@ -118,8 +118,8 @@ test('the Claude plugin ships a directory-ready README and discovery metadata', 
     words >= PLUGIN_README_MINIMUM_WORDS,
     `${readmePath} has ${words} words outside code blocks; need ${PLUGIN_README_MINIMUM_WORDS}`,
   );
-  assert.match(readme, new RegExp(`\\b${skillIds.length} skills\\b`, 'u'));
-  assert.match(readme, new RegExp(`\\b${EXPECTED_ROLE_IDS.length} role agents\\b`, 'u'));
+  assert.match(readme, /skills and specialist\s+agents/u);
+  assert.doesNotMatch(readme, /\b\d+ (?:skills|role agents)\b/u);
   assert.doesNotMatch(readme, /\{\{[A-Z0-9_]+\}\}/u);
   assert.equal(read('packages/cli/lib/host-packages/claude/openplanr/README.md'), readme);
 

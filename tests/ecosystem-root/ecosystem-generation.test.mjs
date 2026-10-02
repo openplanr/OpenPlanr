@@ -247,3 +247,20 @@ test('marketplace generator has no sibling-checkout or machine-specific assumpti
   for (const component of Object.values(json('ecosystem.json').components))
     assert.ok(!component.path.startsWith('../'));
 });
+
+test('skill documentation describes support without duplicating changing resource counts', () => {
+  const catalog = readFileSync(resolve(root, 'docs/generated/skills.md'), 'utf8');
+  const supportLines = catalog.split('\n').filter((line) => line.startsWith('- Packaged support:'));
+  assert.ok(supportLines.length > 0);
+  for (const line of supportLines) {
+    assert.doesNotMatch(line, /\b\d+ packaged (?:resources|schema)/u);
+    assert.match(
+      line,
+      /\[resource inventory\]\(\.\.\/\.\.\/skills\/planr-[a-z-]+\/openplanr\.skill\.json\)/u,
+    );
+  }
+  const ledger = readFileSync(resolve(root, 'docs/generated/ecosystem.md'), 'utf8');
+  assert.doesNotMatch(ledger, /\b\d+ (?:root commands|canonical skills|successor schemas)/u);
+  const adapters = readFileSync(resolve(root, 'docs/generated/adapters.md'), 'utf8');
+  assert.doesNotMatch(adapters, /\b\d+ (?:canonical skills|host-native role agents)/u);
+});
