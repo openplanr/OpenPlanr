@@ -148,9 +148,23 @@ test('a 93-screen board stores sources once across five responsive widths and po
     );
   }
   const portable = standaloneDesignHtml(prepared);
-  const scripts = [...portable.matchAll(/src="data:text\/javascript;base64,([^" ]+)"/gu)]
-    .map((match) => Buffer.from(match[1], 'base64').toString('utf8'))
-    .join('\n');
+  // Large data URLs exceed some RegExp engines' capture stack; scan attribute
+  // boundaries directly while checking the same generated script contents.
+  const prefix = 'src="data:text/javascript;base64,';
+  const scriptSources = [];
+  for (let cursor = 0; ; ) {
+    const start = portable.indexOf(prefix, cursor);
+    if (start < 0) break;
+    const contentStart = start + prefix.length;
+    const end = portable.indexOf('"', contentStart);
+    assert.notEqual(end, -1, 'portable script attributes are complete');
+    const encoded = portable.slice(contentStart, end);
+    assert.ok(encoded.length > 0, 'portable script payloads are nonempty');
+    assert.equal(encoded.indexOf(' '), -1, 'portable script payloads contain no spaces');
+    scriptSources.push(Buffer.from(encoded, 'base64').toString('utf8'));
+    cursor = end + 1;
+  }
+  const scripts = scriptSources.join('\n');
   assert.match(scripts, /inlineArtifactSources/);
   assert.equal(
     (scripts.match(/12 active tasks/gu) ?? []).length,
