@@ -37,6 +37,15 @@ export async function assertPrivateCredentialDirectory(directory: string): Promi
     ancestor = path.join(ancestor, segment);
     const info = await lstat(ancestor);
     if (!info.isDirectory() || info.isSymbolicLink()) throw unsafe();
+    // Only root or the current user may control an ancestor's directory entries.
+    // Shared sticky directories such as /tmp protect entries from other users.
+    // Writable non-sticky ancestors let other users replace a private custody leaf.
+    if (
+      process.platform !== 'win32' &&
+      ((info.uid !== 0 && info.uid !== process.getuid?.()) ||
+        ((info.mode & 0o022) !== 0 && (info.mode & 0o1000) === 0))
+    )
+      throw unsafe();
   }
   const info = await lstat(directory);
   if (

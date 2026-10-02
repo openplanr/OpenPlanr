@@ -1893,7 +1893,7 @@ body.planr-diagram-owner-page #diagram-owner-editor {
 }
 
 .planr-diagram-editor[data-layout~="compact"]
-  .de-bar-end
+  .de-bar
   :is([data-action="undo"], [data-action="redo"], [data-action="layout"], [data-action="save"]) {
   display: none;
 }

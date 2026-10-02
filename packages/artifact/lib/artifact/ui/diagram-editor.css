@@ -1894,7 +1894,7 @@ body.planr-diagram-owner-page #diagram-owner-editor {
 }
 
 .planr-diagram-editor[data-layout~="compact"]
-  .de-bar-end
+  .de-bar
   :is([data-action="undo"], [data-action="redo"], [data-action="layout"], [data-action="save"]) {
   display: none;
 }
@@ -2943,10 +2943,18 @@ body.planr-diagram-owner-page #diagram-owner-editor {
   background: var(--de-panel);
 }
 .planr-diagram-editor[data-studio-framework="react"] .studio-toolbar-leading {
-  min-width: 0;
+  min-width: calc(var(--de-control-height) + 36px);
   flex: 1;
 }
+.planr-diagram-editor[data-studio-framework="react"] .studio-toolbar .de-command-group {
+  flex: none;
+}
+.planr-diagram-editor[data-studio-framework="react"] .studio-toolbar .planr-brand {
+  min-width: 28px;
+  overflow: hidden;
+}
 .planr-diagram-editor[data-studio-framework="react"] .studio-toolbar-trailing {
+  flex: none;
   gap: 8px;
 }
 .planr-diagram-editor[data-studio-framework="react"] .de-title {
@@ -2958,7 +2966,7 @@ body.planr-diagram-owner-page #diagram-owner-editor {
 .planr-diagram-editor[data-studio-framework="react"] .studio-type-badge {
   flex: none;
 }
-.planr-diagram-editor[data-studio-framework="react"][data-layout~="compact"] .design-wordmark {
+.planr-diagram-editor[data-studio-framework="react"][data-layout~="drawer"] .design-wordmark {
   display: none;
 }
 .planr-diagram-editor[data-studio-framework="react"][data-layout~="compact"] .studio-toolbar {

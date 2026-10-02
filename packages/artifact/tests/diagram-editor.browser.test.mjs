@@ -2022,6 +2022,24 @@ test(
           dimensions.scrollWidth <= dimensions.width,
           `${colorScheme} ${viewport.width}px must not overflow`,
         );
+        const coveredControls = await page.locator('.studio-toolbar').evaluate((toolbar) =>
+          [...toolbar.querySelectorAll('button')]
+            .filter((button) => button.checkVisibility())
+            .filter((button) => {
+              const bounds = button.getBoundingClientRect();
+              const hit = document.elementFromPoint(
+                bounds.x + bounds.width / 2,
+                bounds.y + bounds.height / 2,
+              );
+              return !hit || !button.contains(hit);
+            })
+            .map((button) => button.getAttribute('aria-label') ?? button.textContent),
+        );
+        assert.deepEqual(
+          coveredControls,
+          [],
+          `${colorScheme} ${viewport.width}px toolbar controls must receive pointer input`,
+        );
         if (viewport.width === 1440) {
           assert.ok(dimensions.canvas.top <= 60, `Top chrome is ${dimensions.canvas.top}px`);
           assert.ok(

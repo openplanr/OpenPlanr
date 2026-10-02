@@ -24,8 +24,10 @@ export interface CompanyCredentialStore {
 export class CompanyAuthStore {
   readonly directory: string;
   private readonly legacyDirectory: string | undefined;
+  private readonly explicitDirectory: boolean;
 
   constructor(directory?: string) {
+    this.explicitDirectory = directory !== undefined;
     this.directory = directory ?? path.join(planrHome(), 'company-auth');
     this.legacyDirectory =
       directory === undefined ? path.join(homedir(), '.planr', 'company-auth') : undefined;
@@ -65,7 +67,10 @@ export class CompanyAuthStore {
   private async prepare(): Promise<void> {
     const parent = path.dirname(this.directory);
     await mkdir(parent, { recursive: true, mode: 0o700 });
-    for (const directory of [parent, this.directory]) {
+    // An explicit store can live under a shared temporary or otherwise protected parent.
+    // Its own custody leaf remains private; the default home must be private too.
+    const directories = this.explicitDirectory ? [this.directory] : [parent, this.directory];
+    for (const directory of directories) {
       await mkdir(directory, { mode: 0o700 }).catch((error: NodeJS.ErrnoException) => {
         if (error.code !== 'EEXIST') throw error;
       });
