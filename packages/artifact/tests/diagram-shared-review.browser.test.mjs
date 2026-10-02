@@ -160,6 +160,26 @@ test(
     assert.equal(await page.locator('[data-review-pin]').getAttribute('cx'), before);
     await page.evaluate(() => window.__review.setReadOnly(true));
     assert.equal(await page.locator('[data-host-action="pin-comment"]').isDisabled(), true);
+    await page.evaluate(() => window.__review.fit());
+    // Hidden state is written by the camera-driven toolbar refresh, after access changes.
+    await page.waitForFunction(() =>
+      ['pin-comment', 'comment'].every(
+        (id) => document.querySelector(`[data-host-action="${id}"]`)?.hidden === true,
+      ),
+    );
+    for (const action of ['pin-comment', 'comment'])
+      assert.equal(await page.locator(`[data-host-action="${action}"]`).isDisabled(), true);
+    await page.evaluate(() => {
+      window.__review.setReadOnly(false);
+      window.__review.fit();
+    });
+    await page.waitForFunction(() =>
+      ['pin-comment', 'comment'].every(
+        (id) => document.querySelector(`[data-host-action="${id}"]`)?.hidden === false,
+      ),
+    );
+    for (const action of ['pin-comment', 'comment'])
+      assert.equal(await page.locator(`[data-host-action="${action}"]`).isDisabled(), false);
     assert.deepEqual(
       await page.evaluate(() => window.__bundle.authored.presentation.elements),
       authored.presentation.elements,
@@ -226,6 +246,173 @@ test('an unlabeled connection is named by its endpoints in the navigator', optio
     ),
   );
 });
+
+test(
+  'rapid Escape during native fullscreen entry leaves presentation and the window closed',
+  options,
+  async (t) => {
+    const { page } = await fixture(t, { legacy: true });
+    const hasNativeRequest = await page.evaluate(() => {
+      const shell = document.querySelector('.diagram-shell'),
+        requestFullscreen = shell.requestFullscreen;
+      window.__nativePresentation = { requested: 0, pendingAtEscape: false, result: 'unavailable' };
+      window.__nativePresentationSettled = Promise.resolve();
+      if (!requestFullscreen) return false;
+      shell.requestFullscreen = function (...args) {
+        // Invoke the actual browser API; Escape runs before its promise settles.
+        const request = requestFullscreen.apply(this, args);
+        window.__nativePresentation.requested += 1;
+        window.__nativePresentation.pendingAtEscape = !document.fullscreenElement;
+        window.__nativePresentationSettled = request.then(
+          () => {
+            window.__nativePresentation.result = 'entered';
+          },
+          () => {
+            window.__nativePresentation.result = 'rejected';
+          },
+        );
+        shell.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+        return request;
+      };
+      return true;
+    });
+    await page.locator('[data-action="present"]').click();
+    if (!hasNativeRequest) await page.keyboard.press('Escape');
+    await page.evaluate(() => window.__nativePresentationSettled);
+    await page.waitForFunction(
+      () => !document.fullscreenElement && !matchMedia('(display-mode: fullscreen)').matches,
+    );
+    await page.evaluate(
+      () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+    );
+    assert.equal(await page.locator('.diagram-shell').getAttribute('data-present'), 'false');
+    assert.equal(
+      await page.locator('[data-action="present"]').getAttribute('aria-pressed'),
+      'false',
+    );
+    assert.equal(await page.locator('[data-presentation-nav]').isVisible(), false);
+    const native = await page.evaluate(() => window.__nativePresentation);
+    assert.equal(native.requested, hasNativeRequest ? 1 : 0);
+    t.diagnostic(
+      JSON.stringify({ engine: process.env.PLANR_BROWSER_ENGINE ?? 'chromium', ...native }),
+    );
+    await page.setViewportSize({ width: 390, height: 780 });
+    assert.equal(await page.locator('[data-presentation-nav]').isVisible(), false);
+  },
+);
+
+test(
+  'rapid Present during native fullscreen exit retains the latest presentation intent',
+  options,
+  async (t) => {
+    const { page } = await fixture(t, { legacy: true });
+    await page.evaluate(() => {
+      const shell = document.querySelector('.diagram-shell'),
+        requestFullscreen = shell.requestFullscreen;
+      window.__nativePresentation = {
+        requested: 0,
+        exits: 0,
+        entries: [],
+        exitResult: 'unavailable',
+      };
+      window.__nativePresentationRequests = [];
+      window.__nativePresentationExit = Promise.resolve();
+      if (requestFullscreen)
+        shell.requestFullscreen = function (...args) {
+          const request = requestFullscreen.apply(this, args);
+          window.__nativePresentation.requested += 1;
+          window.__nativePresentationRequests.push(
+            request.then(
+              () => window.__nativePresentation.entries.push('entered'),
+              () => window.__nativePresentation.entries.push('rejected'),
+            ),
+          );
+          return request;
+        };
+    });
+    await page.locator('[data-action="present"]').click();
+    await page.evaluate(() => Promise.all(window.__nativePresentationRequests));
+    const enteredNative = await page.evaluate(
+      () => document.fullscreenElement === document.querySelector('.diagram-shell'),
+    );
+    if (enteredNative)
+      await page.evaluate(() => {
+        const shell = document.querySelector('.diagram-shell'),
+          exitFullscreen = document.exitFullscreen;
+        window.__originalNativeExit = exitFullscreen;
+        document.exitFullscreen = function (...args) {
+          // Invoke the actual exit API, then request Present before it settles.
+          const exit = exitFullscreen.apply(this, args);
+          window.__nativePresentation.exits += 1;
+          window.__nativePresentationExit = exit.then(
+            () => {
+              window.__nativePresentation.exitResult = 'exited';
+            },
+            () => {
+              window.__nativePresentation.exitResult = 'rejected';
+            },
+          );
+          shell.dispatchEvent(new KeyboardEvent('keydown', { key: 'p', bubbles: true }));
+          return exit;
+        };
+      });
+    await page.locator('[data-action="present"]').click();
+    if (!enteredNative) await page.keyboard.press('p');
+    await page.evaluate(async () => {
+      await window.__nativePresentationExit;
+      await Promise.all(window.__nativePresentationRequests);
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    });
+    assert.equal(await page.locator('.diagram-shell').getAttribute('data-present'), 'true');
+    assert.equal(
+      await page.locator('[data-action="present"]').getAttribute('aria-pressed'),
+      'true',
+    );
+    assert.equal(await page.locator('[data-presentation-nav]').isVisible(), true);
+    const native = await page.evaluate(() => window.__nativePresentation);
+    assert.equal(native.exits, enteredNative ? 1 : 0);
+    t.diagnostic(
+      JSON.stringify({
+        engine: process.env.PLANR_BROWSER_ENGINE ?? 'chromium',
+        enteredNative,
+        ...native,
+      }),
+    );
+    await page.evaluate(() => {
+      if (window.__originalNativeExit) document.exitFullscreen = window.__originalNativeExit;
+    });
+    if (
+      enteredNative &&
+      !(await page.evaluate(
+        () => document.fullscreenElement === document.querySelector('.diagram-shell'),
+      ))
+    ) {
+      // A rejected reentry keeps the fitted presentation; a fresh click can enter natively.
+      await page.locator('[data-action="present"]').click();
+      await page.locator('[data-action="present"]').click();
+      await page.evaluate(() => Promise.all(window.__nativePresentationRequests));
+      assert.equal(
+        await page.evaluate(
+          () => document.fullscreenElement === document.querySelector('.diagram-shell'),
+        ),
+        true,
+        'A fresh trusted gesture enters native fullscreen before external exit',
+      );
+    }
+    if (enteredNative) await page.evaluate(() => document.exitFullscreen());
+    else await page.locator('[data-action="present"]').click();
+    await page.waitForFunction(
+      () => document.querySelector('.diagram-shell').dataset.present === 'false',
+    );
+    assert.equal(
+      await page.locator('[data-action="present"]').getAttribute('aria-pressed'),
+      'false',
+    );
+    assert.equal(await page.locator('[data-presentation-nav]').isVisible(), false);
+    assert.equal(await page.evaluate(() => document.fullscreenElement), null);
+    t.diagnostic(JSON.stringify({ externalNativeExitExercised: enteredNative }));
+  },
+);
 
 test(
   'standalone legacy pins retain canonical scene geometry and Discussion counts across revision remount, mobile resize and reload',
@@ -316,10 +503,15 @@ test(
           total = document.querySelector('[data-planr-metric="total"]');
         return {
           gap: total.getBoundingClientRect().left - open.getBoundingClientRect().right,
+          cssGap: getComputedStyle(open.parentElement).columnGap,
           countDisplay: getComputedStyle(total).display,
         };
       });
-      assert.equal(metrics.gap, 6);
+      assert.equal(metrics.cssGap, '6px');
+      assert.ok(
+        Math.abs(metrics.gap - 6) <= 1 / 64,
+        'Metric spacing differs only by layout rounding',
+      );
       assert.equal(metrics.countDisplay, 'grid');
       if (bounds.mobile) await page.keyboard.press('Escape');
       else await page.locator('[data-action="review"]').click();
@@ -333,6 +525,13 @@ test(
     await page.keyboard.press('Escape');
     await page.waitForFunction(
       () => document.querySelector('.diagram-shell').dataset.present === 'false',
+    );
+    // The controller flag changes before the native window finishes leaving fullscreen.
+    await page.waitForFunction(
+      () => !document.fullscreenElement && !matchMedia('(display-mode: fullscreen)').matches,
+    );
+    await page.evaluate(
+      () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
     );
     assert.equal(await page.locator('[data-presentation-nav]').isVisible(), false);
     async function assertPinGeometry(pin) {

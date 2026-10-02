@@ -170,6 +170,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
   let pendingScreen = null,
     screenRequest = 0,
     frameDemandTimer = null;
+  let failedSelection = null;
   let frameDemandKey = '';
   let queuedSelection = null;
   let noteScreenId = null;
@@ -204,6 +205,11 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
   function clearNotice(key) {
     dismissedNotices.delete(key);
     if (activeNotice?.key === key) hideNotice();
+  }
+
+  function clearFailedSelection() {
+    if (failedSelection) clearNotice(`preview-load:${failedSelection.artifactId}`);
+    failedSelection = null;
   }
 
   function notice(message, persistent = false, key = message) {
@@ -660,8 +666,8 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
           'aria-current',
           button.dataset.designScreen === state.screenId ? 'page' : 'false',
         );
-      q('[data-design-variant]').value = state.variantId;
-      q('[data-design-frame]').value = state.frameId;
+      q('[data-design-variant]').value = failedSelection?.variantId ?? state.variantId;
+      q('[data-design-frame]').value = failedSelection?.frameId ?? state.frameId;
       if (q('[data-design-compare]')) q('[data-design-compare]').checked = state.compare;
       q('[data-design-screen-title]').textContent =
         state.view === 'canvas' ? design.title : screen.title;
@@ -1010,8 +1016,21 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
     });
   }
 
+  function requestedSelection() {
+    return pendingScreen?.entry ?? queuedSelection?.entry ?? failedSelection ?? state;
+  }
+
+  function requestedEntry(changes = {}) {
+    const requested = requestedSelection();
+    return entryFor(
+      changes.screenId ?? requested.screenId,
+      changes.variantId ?? requested.variantId,
+      changes.frameId ?? requested.frameId,
+    );
+  }
+
   function requestedScreen() {
-    return pendingScreen?.entry.screenId ?? queuedSelection?.entry.screenId ?? state.screenId;
+    return requestedSelection().screenId;
   }
 
   function selectEntry(entry, { save = true, reveal = false, loaded = false } = {}) {
@@ -1021,7 +1040,10 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       !loaded &&
       (pendingScreen || !stage.getLoadedArtifactIds().includes(entry.artifactId))
     ) {
+      // The newest load supersedes an older animation's queued selection.
+      queuedSelection = null;
       if (pendingScreen?.entry.artifactId === entry.artifactId) return true;
+      clearFailedSelection();
       const request = ++screenRequest;
       pendingScreen = { entry };
       root.dataset.designScreenLoading = 'true';
@@ -1038,15 +1060,19 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
         .catch((error) => {
           if (destroyed || request !== screenRequest || error.name === 'AbortError') return;
           pendingScreen = null;
+          failedSelection = entry;
           delete root.dataset.designScreenLoading;
           notice(
             'This screen could not load. Select it again to retry; your review is preserved.',
             true,
+            `preview-load:${entry.artifactId}`,
           );
+          render();
           updateFramePlaceholders();
         });
       return true;
     }
+    clearFailedSelection();
     const sameFrame = entry.frameId === state.frameId && entry.variantId === state.variantId;
     if (walkthroughTransition && state.view === 'walkthrough' && sameFrame) {
       // Coalesce rapid requests instead of cutting an animation halfway or
@@ -1318,7 +1344,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
         render();
         persist();
       } else if (button.dataset.designScreen) {
-        selectEntry(entryFor(button.dataset.designScreen), {
+        selectEntry(requestedEntry({ screenId: button.dataset.designScreen }), {
           reveal: state.view === 'canvas',
         });
       } else if (button.dataset.designNote) {
@@ -1341,7 +1367,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
           0,
           design.screenOrder.length - 1,
         );
-        selectEntry(entryFor(design.screenOrder[index]));
+        selectEntry(requestedEntry({ screenId: design.screenOrder[index] }));
       } else if (button.dataset.designRating) {
         const rating = Number(button.dataset.designRating);
         state.ratings[state.variantId] = rating;
@@ -1370,10 +1396,10 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       } else if (button.dataset.designExport) void exportArtifact(button.dataset.designExport);
     });
     listen(q('[data-design-variant]'), 'change', (event) =>
-      selectEntry(entryFor(state.screenId, event.target.value)),
+      selectEntry(requestedEntry({ variantId: event.target.value })),
     );
     listen(q('[data-design-frame]'), 'change', (event) => {
-      selectEntry(entryFor(state.screenId, state.variantId, event.target.value), {
+      selectEntry(requestedEntry({ frameId: event.target.value }), {
         reveal: state.view === 'canvas',
       });
     });
@@ -1581,7 +1607,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
           0,
           design.screenOrder.length - 1,
         );
-        selectEntry(entryFor(design.screenOrder[index]));
+        selectEntry(requestedEntry({ screenId: design.screenOrder[index] }));
       }
     });
     listen(document, 'keyup', (event) => {
@@ -1979,7 +2005,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
         revision,
         stateVersion,
       }),
-      selectScreen: (screenId) => selectEntry(entryFor(screenId)),
+      selectScreen: (screenId) => selectEntry(requestedEntry({ screenId })),
       selectEntry: (entry) => selectEntry(entry),
       fitSelection: ({ save = true } = {}) => fit({ selection: entryFor(), save }),
       setCamera(camera) {
@@ -2036,6 +2062,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
         destroyed = true;
         ++screenRequest;
         pendingScreen = null;
+        failedSelection = null;
         clearTimeout(frameDemandTimer);
         clearTimeout(saveTimer);
         clearTimeout(reviewTimer);

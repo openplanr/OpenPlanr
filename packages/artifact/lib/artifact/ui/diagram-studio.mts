@@ -719,34 +719,65 @@ export function mountDiagramStudio(
     focusBounds(chapter.bounds);
     status(`Chapter ${presentationIndex + 1} of ${chapters.length} · ${chapter.label}`);
   }
-  function resetPresentation() {
-    root.dataset.present = 'false';
-    (root.querySelector('[data-presentation-nav]') as HTMLElement).hidden = true;
-    const button = root.querySelector('[data-action=present]') as HTMLButtonElement;
-    if (root.dataset.studioFramework !== 'react') button.textContent = 'Present';
-    button.setAttribute('aria-pressed', 'false');
-    fit();
+  let presentationVersion = 0;
+  let nativeExitVersion: number | null = null;
+  let nativeExitPending: Promise<void> | null = null;
+  function exitOwnedFullscreen() {
+    if (nativeExitPending) return nativeExitPending;
+    const version = presentationVersion;
+    nativeExitVersion = version;
+    nativeExitPending = document
+      .exitFullscreen()
+      .catch((error) => {
+        if (nativeExitVersion === version) nativeExitVersion = null;
+        throw error;
+      })
+      .finally(() => {
+        nativeExitPending = null;
+        if (document.fullscreenElement === root && nativeExitVersion === version)
+          nativeExitVersion = null;
+      });
+    return nativeExitPending;
   }
-  async function present() {
-    const active = root.dataset.present !== 'true';
+  function updatePresentation(active: boolean) {
     root.dataset.present = String(active);
-    setRail(false);
     (root.querySelector('[data-presentation-nav]') as HTMLElement).hidden = !active;
     const button = root.querySelector('[data-action=present]') as HTMLButtonElement;
     if (root.dataset.studioFramework !== 'react')
       button.textContent = active ? 'Exit presentation' : 'Present';
     button.setAttribute('aria-pressed', String(active));
+  }
+  function resetPresentation() {
+    presentationVersion += 1;
+    updatePresentation(false);
+    fit();
+  }
+  async function present() {
+    const active = root.dataset.present !== 'true';
+    presentationVersion += 1;
+    updatePresentation(active);
+    setRail(false);
+    if (active) showChapter(0);
+    else fit();
     try {
-      if (active && root.requestFullscreen) await root.requestFullscreen();
-      else if (!active && document.fullscreenElement) await document.exitFullscreen();
+      if (active && (document.fullscreenElement !== root || nativeExitVersion !== null))
+        await root.requestFullscreen?.();
+      else if (!active && document.fullscreenElement === root) await exitOwnedFullscreen();
+      // Escape or disposal can precede completion of the native entry request.
+      if (root.dataset.present !== 'true' && document.fullscreenElement === root)
+        await exitOwnedFullscreen();
     } catch {
       /* The same fitted workspace remains usable when fullscreen is unavailable. */
     }
-    if (active) showChapter(0);
-    else fit();
   }
   listen(document, 'fullscreenchange', () => {
-    if (!document.fullscreenElement && root.dataset.present === 'true') resetPresentation();
+    if (document.fullscreenElement) {
+      if (!nativeExitPending) nativeExitVersion = null;
+      return;
+    }
+    const currentExit = nativeExitVersion === null || nativeExitVersion === presentationVersion;
+    nativeExitVersion = null;
+    if (currentExit && root.dataset.present === 'true') resetPresentation();
   });
   const actions: Record<string, () => void> = {
     pan: () => setMode('interact'),
@@ -1094,6 +1125,9 @@ export function mountDiagramStudio(
     collapsedGroups,
     destroy() {
       destroyed = true;
+      presentationVersion += 1;
+      root.dataset.present = 'false';
+      if (document.fullscreenElement === root) void exitOwnedFullscreen().catch(() => {});
       resize.disconnect();
       window.cancelAnimationFrame(paintId);
       annotations.destroy();

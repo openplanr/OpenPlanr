@@ -442,6 +442,9 @@ test('primary controls preserve readable contrast through hover, press, open and
   const { page } = await fixture(t);
   const exportButton = page.locator('[data-studio-export-menu]');
   const pan = page.locator('[data-action=pan]');
+  // macOS WebKit uses Option-Tab to include every clickable control.
+  const optionTab =
+    process.platform === 'darwin' && page.context().browser().browserType().name() === 'webkit';
   const read = async (locator, label) => {
     const colors = await locator.evaluate((el) => {
       const css = getComputedStyle(el);
@@ -450,6 +453,8 @@ test('primary controls preserve readable contrast through hover, press, open and
         background: css.backgroundColor,
         outline: css.outlineStyle,
         outlineWidth: parseFloat(css.outlineWidth),
+        focused: document.activeElement === el,
+        focusVisible: el.matches(':focus-visible'),
       };
     });
     assert.ok(
@@ -471,10 +476,16 @@ test('primary controls preserve readable contrast through hover, press, open and
     assert.equal(await exportButton.getAttribute('aria-expanded'), 'true');
     await page.mouse.move(400, 80);
     await read(exportButton, `${theme} export open`);
-    await exportButton.press('Escape');
-    await page.keyboard.press('Tab');
-    await page.keyboard.press('Shift+Tab');
+    await page.keyboard.press('Escape');
+    await page.locator('[role=menu]').waitFor({ state: 'detached' });
+    await page.waitForFunction(
+      () => document.activeElement === document.querySelector('[data-studio-export-menu]'),
+    );
+    await page.keyboard.press(optionTab ? 'Alt+Tab' : 'Tab');
+    await page.keyboard.press(optionTab ? 'Alt+Shift+Tab' : 'Shift+Tab');
     const focused = await read(exportButton, `${theme} export keyboard focus`);
+    assert.equal(focused.focused, true);
+    assert.equal(focused.focusVisible, true);
     assert.ok(focused.outlineWidth >= 2 && focused.outline !== 'none');
     await pan.hover();
     await read(pan, `${theme} selected tool hover`);

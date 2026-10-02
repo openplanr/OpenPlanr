@@ -78,6 +78,7 @@ async function mount({
   stored = null,
   experience = false,
   hash = '',
+  stageOptions = {},
 } = {}) {
   const html = renderDesignStudio(data);
   const dom = new JSDOM(html, {
@@ -116,10 +117,11 @@ async function mount({
       setTimeout(() => frame.dispatchEvent(new window.Event('load')), 0);
       return data.envelope.artifacts.find(({ id }) => id === artifact.id).html;
     },
+    ...stageOptions,
   });
   window.eval(runtime);
   await stage.ready;
-  await stage.ensureFrames(data.entries.map((entry) => entry.artifactId));
+  if (!stage.frameBudget) await stage.ensureFrames(data.entries.map((entry) => entry.artifactId));
   for (let index = 0; index < 20 && !window.__openPlanrDesignStudio; index += 1) await delay(10);
   assert.ok(window.__openPlanrDesignStudio, 'studio boots after artifact stage');
   if (experience) await delay(20);
@@ -135,6 +137,376 @@ async function mount({
       window.close();
     },
   };
+}
+
+test('rapid screen, frame, direction and step choices retain the pending identity during real frame loading', {
+  timeout: 30_000,
+}, async () => {
+  const data = fixture({ count: 5 });
+  data.document.defaultView = 'walkthrough';
+  let hold = false;
+  const queued = [],
+    waiters = [],
+    gates = [];
+  const nextSource = () =>
+    queued.length
+      ? Promise.resolve(queued.shift())
+      : new Promise((resolve) => waiters.push(resolve));
+  const f = await mount({
+    data,
+    stageOptions: {
+      frameBudget: 3,
+      resolveArtifactSource(artifact, { frame }) {
+        const html = data.envelope.artifacts.find(({ id }) => id === artifact.id).html;
+        const release = (resolve) => {
+          const window = frame.ownerDocument.defaultView;
+          setTimeout(() => frame.dispatchEvent(new window.Event('load')), 0);
+          resolve(html);
+        };
+        if (!hold) return new Promise(release);
+        return new Promise((resolve) => {
+          let released = false;
+          const gate = {
+            artifactId: artifact.id,
+            release() {
+              if (released) return;
+              released = true;
+              release(resolve);
+            },
+            loaded: new Promise((resolve) =>
+              frame.addEventListener('load', resolve, { once: true }),
+            ),
+          };
+          gates.push(gate);
+          if (waiters.length) waiters.shift()(gate);
+          else queued.push(gate);
+        });
+      },
+    },
+  });
+  try {
+    hold = true;
+    const { documentNode: document, window, studio } = f;
+    document.querySelector('[data-design-screen="screen-2"]').click();
+    const first = await nextSource();
+    assert.equal(first.artifactId, designStudioArtifactId('editorial', 'screen-2', 'desktop'));
+    assert.equal(studio.getState().screenId, 'screen-1', 'The first source is still held');
+    const frame = document.querySelector('[data-design-frame]');
+    frame.value = 'mobile';
+    frame.dispatchEvent(new window.Event('change'));
+    const direction = document.querySelector('[data-design-variant]');
+    direction.value = 'compact';
+    direction.dispatchEvent(new window.Event('change'));
+    document.querySelector('[data-design-screen="screen-3"]').click();
+    document.querySelector('[data-design-step-change="1"]').click();
+    document.body.dispatchEvent(
+      new window.KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }),
+    );
+    const settled = new Promise((resolve) => {
+      const observer = new window.MutationObserver(() => {
+        if (!document.querySelector('[data-design-screen-loading]')) {
+          observer.disconnect();
+          resolve();
+        }
+      });
+      observer.observe(document.documentElement, {
+        attributes: true,
+        subtree: true,
+        attributeFilter: ['data-design-screen-loading'],
+      });
+    });
+    for (let index = 0; index < 5; index++) {
+      const gate = index === 0 ? first : await nextSource();
+      gate.release();
+      await gate.loaded;
+    }
+    await settled;
+    assert.deepEqual(
+      Object.fromEntries(
+        ['screenId', 'variantId', 'frameId'].map((key) => [key, studio.getState()[key]]),
+      ),
+      { screenId: 'screen-3', variantId: 'compact', frameId: 'mobile' },
+      'Every subsequent UI choice changes only the requested dimension',
+    );
+    assert.equal(
+      f.stage.getState().activeArtifactId,
+      designStudioArtifactId('compact', 'screen-3', 'mobile'),
+    );
+    assert.ok(f.stage.getLoadedArtifactIds().length <= 3);
+  } finally {
+    hold = false;
+    for (const gate of gates) gate.release();
+    f.close();
+  }
+});
+
+test('walkthrough queued steps preserve the requested screen when frame and direction change', async () => {
+  const f = await mount({ data: fixture({ count: 5 }) });
+  try {
+    const { documentNode: document, window, studio } = f;
+    studio.setView('walkthrough');
+    document.querySelector('[data-design-screen="screen-2"]').click();
+    assert.ok(document.querySelector('[data-design-transition]'));
+    document.querySelector('[data-design-step-change="1"]').click();
+    document.querySelector('[data-design-step-change="1"]').click();
+    const frame = document.querySelector('[data-design-frame]');
+    frame.value = 'mobile';
+    frame.dispatchEvent(new window.Event('change'));
+    assert.equal(
+      studio.getState().screenId,
+      'screen-4',
+      'Changing the frame preserves the queued screen',
+    );
+    const direction = document.querySelector('[data-design-variant]');
+    direction.value = 'compact';
+    direction.dispatchEvent(new window.Event('change'));
+    document.body.dispatchEvent(
+      new window.KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }),
+    );
+    assert.deepEqual(
+      Object.fromEntries(
+        ['screenId', 'variantId', 'frameId'].map((key) => [key, studio.getState()[key]]),
+      ),
+      { screenId: 'screen-5', variantId: 'compact', frameId: 'mobile' },
+    );
+  } finally {
+    f.close();
+  }
+});
+
+test('finishing an older walkthrough animation cannot replace a newer pending frame choice', {
+  timeout: 30_000,
+}, async () => {
+  const data = fixture();
+  data.document.defaultView = 'walkthrough';
+  const mobileId = designStudioArtifactId('editorial', 'screen-3', 'mobile');
+  let hold = false,
+    releaseSource,
+    sourceStarted;
+  const heldSource = new Promise((resolve) => {
+    sourceStarted = resolve;
+  });
+  const f = await mount({
+    data,
+    stageOptions: {
+      frameBudget: 3,
+      async resolveArtifactSource(artifact, { frame }) {
+        if (hold && artifact.id === mobileId) {
+          await new Promise((resolve) => {
+            releaseSource = resolve;
+            sourceStarted();
+          });
+        }
+        const window = frame.ownerDocument.defaultView;
+        setTimeout(() => frame.dispatchEvent(new window.Event('load')), 0);
+        return data.envelope.artifacts.find(({ id }) => id === artifact.id).html;
+      },
+    },
+  });
+  try {
+    await f.stage.ensureFrames(
+      data.document.screenOrder.map((screenId) =>
+        designStudioArtifactId('editorial', screenId, 'desktop'),
+      ),
+    );
+    const { documentNode: document, window, studio } = f;
+    const animations = [];
+    const shell = document.querySelector('.planr-shell');
+    let started;
+    const animationStarted = new Promise((resolve) => {
+      started = resolve;
+    });
+    window.Element.prototype.animate = (_frames, options) => {
+      let finish;
+      const finished = new Promise((resolve) => {
+        finish = resolve;
+      });
+      animations.push({ finish, options });
+      started();
+      return { finished, cancel: finish };
+    };
+    document.querySelector('[data-design-screen="screen-2"]').click();
+    await animationStarted;
+    assert.equal(shell.dataset.designTransition, 'running');
+    assert.equal(
+      animations[0].options.duration,
+      220,
+      'The normal walkthrough animation is retained',
+    );
+    document.querySelector('[data-design-screen="screen-3"]').click();
+    assert.equal(
+      studio.getState().screenId,
+      'screen-2',
+      'The desktop request is queued behind the animation',
+    );
+    hold = true;
+    const frame = document.querySelector('[data-design-frame]');
+    frame.value = 'mobile';
+    frame.dispatchEvent(new window.Event('change'));
+    await heldSource;
+    const transitionEnded = new Promise((resolve) => {
+      const observer = new window.MutationObserver(() => {
+        if (!document.querySelector('[data-design-transition]')) {
+          observer.disconnect();
+          resolve();
+        }
+      });
+      observer.observe(shell, {
+        attributes: true,
+        attributeFilter: ['data-design-transition'],
+      });
+    });
+    for (const animation of animations) animation.finish();
+    await transitionEnded;
+    assert.ok(
+      document.querySelector('[data-design-screen-loading]'),
+      'The newer mobile source remains pending after the old animation finishes',
+    );
+    const settled = new Promise((resolve) => {
+      const observer = new window.MutationObserver(() => {
+        if (!document.querySelector('[data-design-screen-loading]')) {
+          observer.disconnect();
+          resolve();
+        }
+      });
+      observer.observe(shell, {
+        attributes: true,
+        attributeFilter: ['data-design-screen-loading'],
+      });
+    });
+    releaseSource();
+    await settled;
+    assert.equal(studio.getState().screenId, 'screen-3');
+    assert.equal(
+      studio.getState().frameId,
+      'mobile',
+      'The newest pending frame is not replaced by the older queued desktop',
+    );
+    assert.equal(f.stage.getState().activeArtifactId, mobileId);
+    assert.ok(f.stage.getLoadedArtifactIds().length <= 3);
+  } finally {
+    hold = false;
+    releaseSource?.();
+    f.close();
+  }
+});
+
+for (const nextChoice of ['same screen', 'direction after mode change', 'explicit history']) {
+  test(`failed preview choices retain exact retry identity through ${nextChoice}`, {
+    timeout: 30_000,
+  }, async () => {
+    const data = fixture();
+    data.document.defaultView = 'prototype';
+    const desktopId = designStudioArtifactId('editorial', 'screen-2', 'desktop');
+    const mobileId = designStudioArtifactId('editorial', 'screen-2', 'mobile');
+    const sourceRequests = [];
+    let rejectMobileOnce = false;
+    const f = await mount({
+      data,
+      stageOptions: {
+        frameBudget: 3,
+        async resolveArtifactSource(artifact, { frame }) {
+          sourceRequests.push(artifact.id);
+          if (rejectMobileOnce && artifact.id === mobileId) {
+            rejectMobileOnce = false;
+            throw new Error('Synthetic source unavailable once');
+          }
+          const window = frame.ownerDocument.defaultView;
+          setTimeout(() => frame.dispatchEvent(new window.Event('load')), 0);
+          return data.envelope.artifacts.find(({ id }) => id === artifact.id).html;
+        },
+      },
+    });
+    try {
+      const { documentNode: document, window, studio } = f;
+      const shell = document.querySelector('.planr-shell');
+      const waitForDom = (predicate) => {
+        if (predicate()) return Promise.resolve();
+        return new Promise((resolve) => {
+          const observer = new window.MutationObserver(() => {
+            if (!predicate()) return;
+            observer.disconnect();
+            resolve();
+          });
+          observer.observe(shell, { attributes: true, childList: true, subtree: true });
+        });
+      };
+      const selected = (screenId, frameId, variantId = 'editorial') => {
+        const state = studio.getState();
+        return (
+          !shell.hasAttribute('data-design-screen-loading') &&
+          state.screenId === screenId &&
+          state.frameId === frameId &&
+          state.variantId === variantId
+        );
+      };
+      document.querySelector('[data-design-screen="screen-2"]').click();
+      await waitForDom(() => selected('screen-2', 'desktop'));
+      assert.equal(f.stage.getState().activeArtifactId, desktopId);
+      rejectMobileOnce = true;
+      const framePicker = document.querySelector('[data-design-frame]');
+      framePicker.value = 'mobile';
+      framePicker.dispatchEvent(new window.Event('change'));
+      const notice = document.querySelector('.design-notice');
+      await waitForDom(() => !notice.hidden && !shell.hasAttribute('data-design-screen-loading'));
+      assert.equal(studio.getState().screenId, 'screen-2');
+      assert.equal(
+        studio.getState().frameId,
+        'desktop',
+        'A failed preview does not replace the committed frame',
+      );
+      assert.equal(f.stage.getState().activeArtifactId, desktopId);
+      assert.equal(framePicker.value, 'mobile', 'The picker identifies the failed choice');
+      assert.equal(f.stage.getFrame(mobileId).dataset.planrFrameState, 'error');
+      assert.match(notice.textContent, /Select it again to retry/);
+      const failedRequests = sourceRequests.filter((id) => id === mobileId).length;
+      if (nextChoice === 'same screen') {
+        document.querySelector('[data-design-screen="screen-2"]').click();
+        await f.stage.ensureFrames([desktopId]);
+        assert.equal(
+          sourceRequests.filter((id) => id === mobileId).length,
+          failedRequests + 1,
+          'The same-screen retry loads the failed mobile source',
+        );
+        await waitForDom(() => selected('screen-2', 'mobile'));
+        assert.equal(f.stage.getState().activeArtifactId, mobileId);
+      } else if (nextChoice === 'direction after mode change') {
+        studio.setView('walkthrough');
+        assert.equal(
+          framePicker.value,
+          'mobile',
+          'A mode change preserves the failed frame choice',
+        );
+        const directionPicker = document.querySelector('[data-design-variant]');
+        directionPicker.value = 'compact';
+        directionPicker.dispatchEvent(new window.Event('change'));
+        await f.stage.ensureFrames([desktopId]);
+        const compactMobileId = designStudioArtifactId('compact', 'screen-2', 'mobile');
+        assert.ok(
+          sourceRequests.includes(compactMobileId),
+          'A new direction composes with the failed frame',
+        );
+        await waitForDom(() => selected('screen-2', 'mobile', 'compact'));
+        assert.equal(f.stage.getState().activeArtifactId, compactMobileId);
+      } else {
+        window.location.hash = '#screen=screen-1&frame=desktop&direction=editorial&view=prototype';
+        await waitForDom(() => selected('screen-1', 'desktop'));
+        assert.equal(framePicker.value, 'desktop', 'History selects its explicit frame');
+        assert.equal(notice.hidden, true, 'History clears the obsolete failed-preview notice');
+        document.querySelector('[data-design-screen="screen-2"]').click();
+        await waitForDom(() => selected('screen-2', 'desktop'));
+        assert.equal(
+          sourceRequests.filter((id) => id === mobileId).length,
+          failedRequests,
+          'A new choice does not retry an obsolete failed frame',
+        );
+      }
+      assert.equal(notice.hidden, true);
+      assert.ok(f.stage.getLoadedArtifactIds().length <= 3);
+    } finally {
+      f.close();
+    }
+  });
 }
 
 test('Notes dismisses without losing context and restores keyboard focus', async () => {

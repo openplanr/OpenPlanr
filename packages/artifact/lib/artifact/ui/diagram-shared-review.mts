@@ -260,6 +260,7 @@ export function mountDiagramSharedReview({
             id: 'pin-comment',
             label: 'Annotate point',
             hidden: () => readOnly,
+            disabled: () => readOnly,
             onSelect: () => {
               pinning = true;
               root.dataset.commentMode = 'true';
@@ -270,6 +271,7 @@ export function mountDiagramSharedReview({
             id: 'comment',
             label: 'Annotate',
             hidden: () => readOnly,
+            disabled: () => readOnly,
             onSelect: () => {
               const id = session.getState().view.selection[0];
               const item = bundle.scene.items.find((item) => item.id === id);

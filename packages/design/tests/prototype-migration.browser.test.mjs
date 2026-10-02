@@ -84,12 +84,28 @@ test('standard Studio preserves seven legacy prototype fields and explicitly bou
   await page.waitForSelector('[data-design-ready=true]');
   const entry = (screen) =>
     current.entries.find((item) => item.screenId === screen && item.frameId === 'desktop');
-  const first = page.frameLocator(`[data-planr-artifact-frame="${entry('screen-1').artifactId}"]`);
-  await page.waitForFunction(() =>
-    [...document.querySelectorAll('iframe')].some(
-      (frame) => frame.dataset.planrBridgeTrusted === 'true',
-    ),
-  );
+  const firstId = entry('screen-1').artifactId;
+  const firstElement = page.locator(`[data-planr-artifact-frame="${firstId}"]`);
+  const first = page.frameLocator(`[data-planr-artifact-frame="${firstId}"]`);
+  const waitForSelection = (screenId, frameId) =>
+    page.waitForFunction(
+      ({ screenId, frameId }) => {
+        const state = __openPlanrDesignStudio.getState();
+        const stage = __openPlanrArtifactStage;
+        const frame = stage.getFrame(stage.getState().activeArtifactId);
+        return (
+          state.screenId === screenId &&
+          state.frameId === frameId &&
+          !document.querySelector('[data-design-screen-loading]') &&
+          frame?.dataset.planrFrameState === 'ready' &&
+          frame.dataset.planrBridgeTrusted === 'true'
+        );
+      },
+      { screenId, frameId },
+    );
+  await waitForSelection('screen-1', 'desktop');
+  const originalFrameSource = await firstElement.getAttribute('src');
+  assert.ok(originalFrameSource?.startsWith('blob:'), 'The original authored document is loaded');
   for (const field of fields) await first.locator(`#${field}`).fill(`Edited ${field}`);
   await first.locator('#password').fill('Private field excluded');
   await first.getByRole('button', { name: 'Continue with values', exact: true }).focus();
@@ -128,9 +144,35 @@ test('standard Studio preserves seven legacy prototype fields and explicitly bou
       .getByText(`Edited ${field}`, { exact: true })
       .waitFor();
   await page.locator('[data-design-screen="screen-3"]').click();
+  await waitForSelection('screen-3', 'desktop');
   await page.locator('[data-design-frame]').selectOption('mobile');
+  await waitForSelection('screen-3', 'mobile');
+  await page.waitForFunction((id) => {
+    const frame = document.querySelector(`[data-planr-artifact-frame="${id}"]`);
+    return (
+      frame?.dataset.planrFrameState === 'unloaded' &&
+      !frame.hasAttribute('src') &&
+      !frame.hasAttribute('srcdoc')
+    );
+  }, firstId);
   await page.locator('[data-design-screen="screen-1"]').click();
+  await waitForSelection('screen-1', 'mobile');
   await page.locator('[data-design-frame]').selectOption('desktop');
+  await waitForSelection('screen-1', 'desktop');
+  assert.notEqual(
+    await firstElement.getAttribute('src'),
+    originalFrameSource,
+    'The evicted authored document is remounted with a new source URL',
+  );
+  const remounted = await (await firstElement.elementHandle()).contentFrame();
+  assert.ok(remounted, 'The remounted authored document has a browser frame');
+  // Authentication completes before the asynchronous prototype restore is delivered.
+  await remounted.waitForFunction(
+    (fields) =>
+      fields.every((field) => document.getElementById(field)?.value === `Edited ${field}`),
+    fields,
+    { timeout: 8000 },
+  );
   for (const field of fields)
     assert.equal(await first.locator(`#${field}`).inputValue(), `Edited ${field}`);
   assert.equal(
