@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { load } from 'js-yaml';
 import { buildArtifactEnvelopeMetadataSchemas } from '../../packages/protocol/scripts/artifact-envelope-definitions.mjs';
 import { ARTIFACT_ENVELOPE_METADATA_SCHEMAS } from '../../packages/protocol/src/generated/artifact-envelope-metadata.mjs';
 import { assertArtifactEnvelopeMetadata } from '../../packages/protocol/src/large-object-contracts.mjs';
@@ -13,6 +14,29 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const protocol = join(root, 'packages/protocol');
 const metadataPath = 'src/generated/artifact-envelope-metadata.mjs';
 const node20 = process.env.OPENPLANR_PROTOCOL_NODE20_EXECUTABLE;
+
+test('minimum-runtime CI creates ignored Protocol projections before switching to Node 20.0', () => {
+  const workflow = load(
+    readFileSync(join(root, '.github/workflows/protocol-runtime-floor.yml'), 'utf8'),
+  );
+  const steps = workflow.jobs['node20-floor'].steps;
+  const install = steps.findIndex((step) => step.run === 'npm ci');
+  const generation = steps.findIndex(
+    (step) => step.run === 'node packages/protocol/scripts/generate-protocol-assets.mjs',
+  );
+  const minimum = steps.findIndex((step) => step.with?.['node-version'] === '20.0.0');
+  assert.ok(steps.slice(0, install).some((step) => Number(step.with?.['node-version']) === 24));
+  assert.ok(install >= 0 && generation > install && minimum > generation);
+  assert.ok(
+    steps
+      .slice(minimum + 1)
+      .some(
+        (step) =>
+          step.env?.OPENPLANR_PROTOCOL_NODE20_EXECUTABLE === 'node' &&
+          step.run === 'node --test tests/protocol/protocol-runtime-floor.test.mjs',
+      ),
+  );
+});
 
 function metadata(shared = false) {
   const artifact = {

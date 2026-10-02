@@ -282,7 +282,7 @@
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/large-object-contracts.mjs",
       "target": "lib/protocol/large-object-contracts.mjs",
-      "sha256": "f6b076addc2269a4aaca3e3d07c2d4722bff3d5c70887d927a78d42b49319d2d",
+      "sha256": "930fd2ded54365e02f6c175912e05e9dcb9170f3b64bca463de9dcfd3f052049",
       "mode": "644"
     },
     {
@@ -1140,7 +1140,7 @@
     {
       "source": "packages/protocol/schemas/v1.17.0/enterprise-artifact-revision.schema.json",
       "target": "schemas/v1.17.0/enterprise-artifact-revision.schema.json",
-      "sha256": "2796eff86573920734e05f77c4fc24b0d24995209d36ee598ce8c3311c50897c",
+      "sha256": "adb60aeebc6fdf1cecf474aaa5517e341490a6ab343ce82eaad4a46cc9388a7a",
       "mode": "644"
     },
     {

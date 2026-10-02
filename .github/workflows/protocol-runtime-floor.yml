@@ -26,6 +26,8 @@ jobs:
           cache: npm
       - name: Install dependencies with the development runtime
         run: npm ci
+      - name: Generate owned Protocol projections with the development runtime
+        run: node packages/protocol/scripts/generate-protocol-assets.mjs
       - uses: actions/setup-node@v5
         with:
           node-version: '20.0.0'

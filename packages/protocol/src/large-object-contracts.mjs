@@ -284,7 +284,7 @@ Object.assign(ENTERPRISE_ARTIFACT_REVISION_V11_SCHEMA.properties, {
   byteLength: integer(LARGE_OBJECT_LIMITS.decodedBytes, 1),
   contentReference: closed({ transport: { const: 'resources-v2' }, manifestSha256: digest }),
 });
-ENTERPRISE_ARTIFACT_REVISION_V11_SCHEMA.required.push('contentReference');
+ENTERPRISE_ARTIFACT_REVISION_V11_SCHEMA.required.push('contentReference', 'protocolVersion');
 export const WORKSPACE_MANAGEMENT_V2_SCHEMA = schema('workspace-management-v2', {
   operationId: id,
   expectedVersion: integer(Number.MAX_SAFE_INTEGER, 1),

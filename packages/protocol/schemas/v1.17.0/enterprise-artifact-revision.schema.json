@@ -109,6 +109,7 @@
     "byteLength",
     "createdAt",
     "actorId",
-    "contentReference"
+    "contentReference",
+    "protocolVersion"
   ]
 }

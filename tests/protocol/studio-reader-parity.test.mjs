@@ -600,3 +600,27 @@ test('additive revision reader preserves historical self-parent and strict calen
     });
   }
 });
+
+test('direct staged revision assertions require the exact successor protocol version', () => {
+  for (const protocolVersion of [undefined, '1.12.0', '1.16.0', '9.0.0']) {
+    const value = companyRevision(`_${'R'.repeat(21)}`);
+    if (protocolVersion === undefined) delete value.protocolVersion;
+    else value.protocolVersion = protocolVersion;
+    assert.throws(
+      () => assertLargeObjectContract(value, 'enterprise-artifact-revision'),
+      TypeError,
+    );
+  }
+});
+
+test('generic staged revision readers require the exact successor protocol version', () => {
+  for (const protocolVersion of [undefined, '1.12.0', '1.16.0', '9.0.0']) {
+    const value = companyRevision(`_${'R'.repeat(21)}`);
+    if (protocolVersion === undefined) delete value.protocolVersion;
+    else value.protocolVersion = protocolVersion;
+    assert.ok(validateProtocolArtifact('enterprise-artifact-revision', value, options).length);
+    assert.throws(() => assertProtocolArtifact('enterprise-artifact-revision', value, options), {
+      code: 'E_PROTOCOL_ARTIFACT_INVALID',
+    });
+  }
+});
