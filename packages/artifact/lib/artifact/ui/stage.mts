@@ -192,7 +192,7 @@ interface StageOptions {
   window?: StageWindow;
   resolveArtifactSource?: ResolveArtifactSource;
   sourceTransport?: string;
-  /** Live document limit. Null keeps an explicit eager host, with deadlines and bridge trust. */
+  /** Async preview context limit. Null keeps an explicit eager host, with deadlines and bridge trust. */
   frameBudget?: number | null;
   /** Deadline includes source preparation, document load and authenticated bridge readiness. */
   frameLoadTimeoutMs?: number;
@@ -604,6 +604,24 @@ export function mountArtifactStage({
   }
   const frameDiagnostics = new Map<string, ArtifactFrameDiagnostic>();
   const frameLoads = new Map<string, FrameLoad>();
+  const frameSlots = new Map<string, { host: Node; placeholder: Comment }>();
+  // Dormant frames keep their identities and canvas hosts without an about:blank context.
+  // Already assigned sources and explicit eager hosts retain their existing mounts.
+  if (frameBudget !== null) {
+    for (const [id, frame] of frames) {
+      const host = frame.parentNode;
+      if (
+        !host ||
+        !root.contains(host) ||
+        frame.hasAttribute('src') ||
+        frame.hasAttribute('srcdoc')
+      )
+        continue;
+      const placeholder = document.createComment('Artifact preview');
+      frameSlots.set(id, { host, placeholder });
+      host.replaceChild(placeholder, frame);
+    }
+  }
   let frameUse = 0;
   let frameQueue: Promise<unknown> = Promise.resolve();
   let activationGeneration = 0;
@@ -1202,6 +1220,10 @@ export function mountArtifactStage({
     record.reject(error);
     // A frame load exists only for a known frame.
     const frame = frames.get(artifactId) as StageFrame;
+    const slot = frameSlots.get(artifactId);
+    if (slot && frame.parentNode === slot.host && !slot.placeholder.parentNode) {
+      slot.host.replaceChild(slot.placeholder, frame);
+    }
     // Detach before navigating the old frame, so its bridge cannot recover the
     // intentionally retired document or authenticate a subsequent document.
     frame.removeAttribute('srcdoc');
@@ -1226,7 +1248,19 @@ export function mountArtifactStage({
 
   function assignArtifactSource(artifact: StageArtifact) {
     if (disposed) return Promise.reject(cancelledFrame());
+    const frame = frames.get(artifact.id);
+    if (!frame) return Promise.reject(new Error(`Missing artifact frame: ${artifact.id}`));
+    const slot = frameSlots.get(artifact.id);
     const existing = frameLoads.get(artifact.id);
+    if (
+      slot &&
+      (!slot.host.isConnected ||
+        !root.contains(slot.host) ||
+        (existing?.status === 'ready' && frame.parentNode !== slot.host))
+    ) {
+      releaseFrame(artifact.id);
+      return Promise.reject(cancelledFrame());
+    }
     if (existing) {
       if (
         existing.status === 'ready' &&
@@ -1241,8 +1275,6 @@ export function mountArtifactStage({
         return existing.promise;
       }
     }
-    const frame = frames.get(artifact.id);
-    if (!frame) return Promise.reject(new Error(`Missing artifact frame: ${artifact.id}`));
     // The promise, its settle functions and unlisten are attached next.
     const record = {
       status: 'loading',
@@ -1277,6 +1309,14 @@ export function mountArtifactStage({
     }, frameLoadTimeoutMs);
     let loaded = false;
     const ready = () => {
+      if (
+        current() &&
+        slot &&
+        (!slot.host.isConnected || !root.contains(slot.host) || frame.parentNode !== slot.host)
+      ) {
+        fail(cancelledFrame());
+        return;
+      }
       if (
         !current() ||
         !loaded ||
@@ -1326,6 +1366,18 @@ export function mountArtifactStage({
         );
       }
 
+      if (slot) {
+        if (
+          !slot.host.isConnected ||
+          !root.contains(slot.host) ||
+          slot.placeholder.parentNode !== slot.host ||
+          frame.parentNode
+        ) {
+          throw cancelledFrame();
+        }
+        slot.host.replaceChild(frame, slot.placeholder);
+      }
+
       if (typeof bridgeClient?.attach === 'function') {
         const detach = bridgeClient.attach({
           artifact,
@@ -1333,6 +1385,10 @@ export function mountArtifactStage({
           getState: () => state,
         });
         if (typeof detach === 'function') record.detach = detach;
+        if (!current()) {
+          record.detach?.();
+          return;
+        }
         record.requireTrust = true;
       }
       // Bridge load handlers quarantine each navigation before we check trust.
@@ -1341,6 +1397,12 @@ export function mountArtifactStage({
       frame.addEventListener('planr:artifact-bridge-ready', ready);
       frame.dataset.planrArtifactDigest = artifact.sha256;
       frameStatus(artifact.id, 'loading', 'document');
+      if (!current()) return;
+      if (
+        slot &&
+        (!slot.host.isConnected || !root.contains(slot.host) || frame.parentNode !== slot.host)
+      )
+        throw cancelledFrame();
       if (sourceTransport === 'srcdoc') {
         // Trusted hosts may choose srcdoc to avoid WebKit applying inherited
         // frame-ancestors rules to blob navigations. The existing opaque sandbox

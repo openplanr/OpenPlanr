@@ -37,7 +37,7 @@ for (const transport of ['blob', 'srcdoc']) {
         resolveDir: rootPath,
         contents: `
       import './packages/artifact/lib/artifact/ui/stage.mjs';
-      queueMicrotask(()=>{const stage=window.__openPlanrArtifactStage;window.fixture={stage,peaks:[]};document.querySelector('.planr-shell').addEventListener('planr:artifact-frame-state',()=>fixture.peaks.push(document.querySelectorAll('iframe[srcdoc],iframe[src^="blob:"]').length));stage.ready.then(()=>window.fixture.ready=true)});
+      queueMicrotask(()=>{const stage=window.__openPlanrArtifactStage;window.fixture={stage,peaks:[]};document.querySelector('.planr-shell').addEventListener('planr:artifact-frame-state',()=>fixture.peaks.push(document.querySelectorAll('iframe').length));stage.ready.then(()=>window.fixture.ready=true)});
     `,
       },
       bundle: true,
@@ -107,6 +107,8 @@ for (const transport of ['blob', 'srcdoc']) {
     await page.goto(origin);
     await page.waitForFunction(() => window.fixture?.ready);
     assert.equal(await page.evaluate(() => fixture.stage.frameBudget), 3);
+    assert.equal(await page.locator('iframe').count(), 1);
+    assert.equal(await page.evaluate(() => window.length), 1);
     assert.deepEqual(
       requested,
       ['screen-0'],
@@ -118,7 +120,25 @@ for (const transport of ['blob', 'srcdoc']) {
     );
     await page.evaluate(() => {
       window.firstBridge = fixture.stage.getFrame('screen-0').__openPlanrBridge;
+      window.firstFrame = fixture.stage.getFrame('screen-0');
+      window.firstWindow = window.firstFrame.contentWindow;
     });
+    const firstProduct = page.frameLocator('[data-planr-artifact-frame="screen-0"]');
+    await firstProduct.getByRole('button', { name: 'Product action' }).click();
+    await page.evaluate(() => {
+      fixture.stage.dispatch({ type: 'set-review-mode', reviewMode: 'comment' });
+      fixture.stage.dispatch({ type: 'set-review-mode', reviewMode: 'interact' });
+      fixture.stage.dispatch({ type: 'set-theme', theme: 'dark' });
+    });
+    assert.equal(await firstProduct.getByRole('button', { name: 'Confirmed' }).count(), 1);
+    assert.equal(
+      await page.evaluate(
+        () =>
+          fixture.stage.getFrame('screen-0') === window.firstFrame &&
+          window.firstFrame.contentWindow === window.firstWindow,
+      ),
+      true,
+    );
     for (let i = 1; i < 20; i++) {
       const result = await page.evaluate(async (i) => {
         const stage = fixture.stage;
@@ -128,11 +148,14 @@ for (const transport of ['blob', 'srcdoc']) {
         return {
           loaded: stage.getLoadedArtifactIds().length,
           live: document.querySelectorAll('iframe[srcdoc],iframe[src^="blob:"]').length,
+          connected: document.querySelectorAll('iframe').length,
+          contexts: window.length,
           trusted: frame.dataset.planrBridgeTrusted,
           sandbox: frame.getAttribute('sandbox'),
         };
       }, i);
       assert.ok(result.loaded <= 3 && result.live <= 3);
+      assert.ok(result.connected <= 3 && result.contexts <= 3);
       assert.equal(result.trusted, 'true');
       assert.equal(result.sandbox, 'allow-scripts');
     }
@@ -163,6 +186,8 @@ for (const transport of ['blob', 'srcdoc']) {
       );
       return {
         live: document.querySelectorAll('iframe[srcdoc],iframe[src^="blob:"]').length,
+        connected: document.querySelectorAll('iframe').length,
+        contexts: window.length,
         loaded: stage.getLoadedArtifactIds().length,
         bridges: [...document.querySelectorAll('iframe')].filter((frame) => frame.__openPlanrBridge)
           .length,
@@ -170,7 +195,15 @@ for (const transport of ['blob', 'srcdoc']) {
         peak: Math.max(...fixture.peaks),
       };
     });
-    assert.deepEqual(disposed, { live: 0, loaded: 0, bridges: 0, result: 'AbortError', peak: 3 });
+    assert.deepEqual(disposed, {
+      live: 0,
+      connected: 0,
+      contexts: 0,
+      loaded: 0,
+      bridges: 0,
+      result: 'AbortError',
+      peak: 3,
+    });
     assert.deepEqual(errors, []);
   });
 }

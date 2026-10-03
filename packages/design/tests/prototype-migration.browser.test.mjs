@@ -155,9 +155,10 @@ test('standard Studio preserves seven legacy prototype fields and explicitly bou
   await page.locator('[data-design-frame]').selectOption('mobile');
   await waitForSelection('screen-3', 'mobile');
   await page.waitForFunction((id) => {
-    const frame = document.querySelector(`[data-planr-artifact-frame="${id}"]`);
+    const frame = __openPlanrArtifactStage.getFrame(id);
     return (
       frame?.dataset.planrFrameState === 'unloaded' &&
+      !frame.isConnected &&
       !frame.hasAttribute('src') &&
       !frame.hasAttribute('srcdoc')
     );
@@ -182,7 +183,7 @@ test('standard Studio preserves seven legacy prototype fields and explicitly bou
           frame.__openPlanrBridge.getPrototypeGeneration() !== originalPrototypeGeneration,
       };
     }, firstId),
-    { sameFrame: true, sameWindow: true, sameNonce: true, freshGeneration: true },
+    { sameFrame: true, sameWindow: false, sameNonce: true, freshGeneration: true },
   );
   const remounted = await (await firstElement.elementHandle()).contentFrame();
   assert.ok(remounted, 'The remounted authored document has a browser frame');
@@ -203,6 +204,10 @@ test('standard Studio preserves seven legacy prototype fields and explicitly bou
   assert.ok(
     (await page.locator('iframe[src],iframe[srcdoc]').count()) <= 3,
     'Standard bounded frame budget is retained',
+  );
+  assert.ok(
+    (await page.locator('iframe').count()) <= 3 && (await page.evaluate(() => window.length)) <= 3,
+    'Evicted previews release their native browsing contexts',
   );
   assert.deepEqual(errors, []);
   assert.deepEqual(

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import test from 'node:test';
-import { createArtifactEnvelope } from '../lib/artifact/envelope.mjs';
+import { createArtifactEnvelope, createSharedArtifactEnvelope } from '../lib/artifact/envelope.mjs';
 import { renderArtifactShellDocument } from '../lib/artifact/ui/shell.mjs';
 import { mountArtifactStage } from '../lib/artifact/ui/stage.mjs';
 
@@ -19,6 +19,7 @@ function fixture(
     frameBudget,
     frameLoadTimeoutMs,
     omitResolver = false,
+    assignedSource,
   } = {},
 ) {
   const artifacts = Array.from({ length: count }, (_, i) => ({
@@ -26,16 +27,26 @@ function fixture(
     title: `Screen ${i}`,
     html: `<main>Screen ${i}</main>`,
   }));
-  const envelope = createArtifactEnvelope({
-    artifacts,
-    viewer: { mode: 'single', activeArtifactId: 'screen-0' },
-  });
+  const viewer = { mode: 'single', activeArtifactId: 'screen-0' };
+  const envelope =
+    count > 256
+      ? createSharedArtifactEnvelope({
+          sources: [{ id: 'source', html: '<main>Shared screen</main>' }],
+          artifacts: artifacts.map(({ html: _html, ...artifact }) => ({
+            ...artifact,
+            sourceId: 'source',
+          })),
+          viewer,
+        })
+      : createArtifactEnvelope({ artifacts, viewer });
   const dom = new JSDOM(renderArtifactShellDocument({ envelope }), {
     url: 'http://127.0.0.1/review/',
   });
   const { document } = dom.window,
     root = document.querySelector('.planr-shell');
   dom.window.TextDecoder = TextDecoder;
+  const assignedFrame = document.querySelector('iframe');
+  if (assignedSource) assignedFrame.srcdoc = assignedSource;
   if (budget !== null) root.dataset.planrFrameBudget = budget;
   const sourceRequests = [],
     attachments = [],
@@ -95,6 +106,7 @@ function fixture(
     stage,
     root,
     document,
+    assignedFrame,
     sourceRequests,
     attachments,
     detachments,
@@ -131,6 +143,92 @@ test('bounded startup loads one document and waits for its authenticated bridge'
   }
 });
 
+test('a 465-view catalog retains dormant frame identities and hosts without connected preview contexts', async (t) => {
+  let resolveSource;
+  const f = fixture(t, {
+    count: 465,
+    resolver: (artifact) =>
+      artifact.id === 'screen-0'
+        ? new Promise((resolve) => {
+            resolveSource = resolve;
+          })
+        : '<main>Ready</main>',
+  });
+  const first = f.stage.getFrame('screen-0');
+  const dormant = f.stage.getFrame('screen-464');
+  const host = f.stage.getPanel('screen-464').querySelector('.planr-frame');
+  assert.equal(f.document.querySelectorAll('.planr-artifact-panel').length, 465);
+  assert.equal(f.document.querySelectorAll('.planr-frame').length, 465);
+  assert.equal(f.document.querySelectorAll('iframe').length, 0);
+  assert.equal(dormant.isConnected, false);
+  await flush();
+  resolveSource('<main>Ready</main>');
+  await f.finish('screen-0');
+  await f.stage.ready;
+  const firstWindow = first.contentWindow;
+  for (const action of [
+    { type: 'set-review-mode', reviewMode: 'comment' },
+    { type: 'set-review-mode', reviewMode: 'interact' },
+    { type: 'set-theme', theme: 'dark' },
+  ])
+    f.stage.dispatch(action);
+  assert.equal(f.stage.getFrame('screen-0'), first);
+  assert.equal(first.contentWindow, firstWindow);
+  assert.equal(f.document.querySelectorAll('iframe').length, 1);
+  const demand = f.stage.ensureFrames(['screen-0', 'screen-463', 'screen-464']);
+  await f.finish('screen-463');
+  await f.finish('screen-464');
+  await demand;
+  assert.equal(f.stage.getFrame('screen-464'), dormant);
+  assert.equal(dormant.parentElement, host);
+  assert.equal(f.document.querySelectorAll('iframe').length, 3);
+  f.stage.destroy();
+  assert.equal(f.document.querySelectorAll('iframe').length, 0);
+  assert.equal(f.document.querySelectorAll('.planr-frame').length, 465);
+});
+
+test('a source completing after its frame host is removed cannot reconnect a preview context', async (t) => {
+  let resolveSource;
+  const f = fixture(t, {
+    resolver: (artifact) =>
+      artifact.id === 'screen-8'
+        ? new Promise((resolve) => {
+            resolveSource = resolve;
+          })
+        : '<main>Ready</main>',
+  });
+  await f.finish('screen-0');
+  await f.stage.ready;
+  const frame = f.stage.getFrame('screen-8');
+  const pending = f.stage.ensureFrames(['screen-8']);
+  const cancelled = assert.rejects(pending, { name: 'AbortError' });
+  await flush();
+  f.stage.getPanel('screen-8').querySelector('.planr-frame').remove();
+  resolveSource('<main>Late source</main>');
+  await cancelled;
+  assert.equal(frame.isConnected, false);
+  assert.equal(frame.hasAttribute('srcdoc'), false);
+  assert.equal(frame.__openPlanrBridge, undefined);
+  assert.equal(f.document.querySelectorAll('iframe').length, 1);
+  assert.deepEqual(f.stage.getLoadedArtifactIds(), ['screen-0']);
+});
+
+test('an already assigned legacy frame retains its existing context while source preparation is pending', async (t) => {
+  const f = fixture(t, {
+    assignedSource: '<main>Existing source</main>',
+    resolver: () => new Promise(() => {}),
+  });
+  const frame = f.assignedFrame;
+  const context = frame.contentWindow;
+  await flush();
+  f.stage.dispatch({ type: 'set-review-mode', reviewMode: 'comment' });
+  assert.equal(f.stage.getFrame('screen-0'), frame);
+  assert.equal(frame.isConnected, true);
+  assert.equal(frame.contentWindow, context);
+  assert.equal(frame.srcdoc, '<main>Existing source</main>');
+  assert.equal(f.document.querySelectorAll('iframe').length, 1);
+});
+
 test('bounded demand preparation is sequential, retains LRU documents and detaches evicted bridges', async (t) => {
   const f = fixture(t, { resolver: (artifact) => `<main>${artifact.id}</main>` });
   await f.finish('screen-0');
@@ -150,6 +248,7 @@ test('bounded demand preparation is sequential, retains LRU documents and detach
   const next = f.stage.ensureFrames(['screen-1', 'screen-3']);
   await flush();
   assert.equal(f.stage.getFrame('screen-0').dataset.planrFrameState, 'unloaded');
+  assert.equal(f.stage.getFrame('screen-0').isConnected, false);
   assert.equal(f.stage.getFrame('screen-0').hasAttribute('srcdoc'), false);
   assert.equal(f.stage.getFrame('screen-0').__openPlanrBridge, undefined);
   assert.deepEqual(f.detachments, ['screen-0']);
@@ -213,6 +312,7 @@ test('failed sources release their slot and retry with a new authenticated bridg
   await f.stage.ready;
   await assert.rejects(f.stage.ensureFrames(['screen-1']), /Interrupted source/);
   assert.equal(f.stage.getFrame('screen-1').dataset.planrFrameState, 'error');
+  assert.equal(f.stage.getFrame('screen-1').isConnected, false);
   assert.deepEqual(f.stage.getLoadedArtifactIds(), ['screen-0']);
   fail = false;
   const retry = f.stage.ensureFrames(['screen-1']);
@@ -297,6 +397,7 @@ test('explicit eager hosts retain all-artifact loading but wait for the active a
   const f = fixture(t, { budget: null, frameBudget: null, resolver: () => '<main>Ready</main>' });
   await flush();
   assert.equal(f.stage.frameBudget, null);
+  assert.equal(f.document.querySelectorAll('iframe').length, 9);
   assert.equal(f.sourceRequests.length, 9);
   for (let i = 0; i < 9; i++) f.loaded(`screen-${i}`);
   assert.equal(f.stage.getState().status, 'loading');
@@ -420,6 +521,7 @@ test('a new selection preempts an inactive load instead of waiting for its deadl
   resolveInactive('<main>Late</main>');
   await flush();
   assert.equal(f.stage.getFrame('screen-1').hasAttribute('srcdoc'), false);
+  assert.equal(f.stage.getFrame('screen-1').isConnected, false);
 });
 
 test('returning to a ready screen cancels an unfinished selection and restores stage readiness', async (t) => {

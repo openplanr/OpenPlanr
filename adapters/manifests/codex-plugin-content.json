@@ -634,11 +634,11 @@
         },
         {
           "path": "skills/design/scripts/runtime/packages/artifact/templates/artifact-review-stage.js.part-003",
-          "digest": "sha256:020f30d9994b95783493582a945037a015f71e05866985e03fe7e9d98a1ded4a"
+          "digest": "sha256:3106759999d771cd4c2c9fe49b224694291db556c46896a25c497a77b3f8e9cc"
         },
         {
           "path": "skills/design/scripts/runtime/packages/artifact/templates/artifact-review-stage.js.parts.json",
-          "digest": "sha256:25f80ad5effbd4a6545535c0bff1c26bb95ea2793e43ce24b267556f4ed8331a"
+          "digest": "sha256:aaaf43dbcf8fd25d14ebf32fed431f8ef812d550dce46cc10617fe622a1a5969"
         },
         {
           "path": "skills/design/scripts/runtime/packages/design/package.json",
@@ -935,11 +935,11 @@
         },
         {
           "path": "skills/design-loop/scripts/runtime/packages/artifact/templates/artifact-review-stage.js.part-003",
-          "digest": "sha256:020f30d9994b95783493582a945037a015f71e05866985e03fe7e9d98a1ded4a"
+          "digest": "sha256:3106759999d771cd4c2c9fe49b224694291db556c46896a25c497a77b3f8e9cc"
         },
         {
           "path": "skills/design-loop/scripts/runtime/packages/artifact/templates/artifact-review-stage.js.parts.json",
-          "digest": "sha256:25f80ad5effbd4a6545535c0bff1c26bb95ea2793e43ce24b267556f4ed8331a"
+          "digest": "sha256:aaaf43dbcf8fd25d14ebf32fed431f8ef812d550dce46cc10617fe622a1a5969"
         },
         {
           "path": "skills/design-loop/scripts/runtime/packages/design/package.json",
@@ -1236,11 +1236,11 @@
         },
         {
           "path": "skills/design-review/scripts/runtime/packages/artifact/templates/artifact-review-stage.js.part-003",
-          "digest": "sha256:020f30d9994b95783493582a945037a015f71e05866985e03fe7e9d98a1ded4a"
+          "digest": "sha256:3106759999d771cd4c2c9fe49b224694291db556c46896a25c497a77b3f8e9cc"
         },
         {
           "path": "skills/design-review/scripts/runtime/packages/artifact/templates/artifact-review-stage.js.parts.json",
-          "digest": "sha256:25f80ad5effbd4a6545535c0bff1c26bb95ea2793e43ce24b267556f4ed8331a"
+          "digest": "sha256:aaaf43dbcf8fd25d14ebf32fed431f8ef812d550dce46cc10617fe622a1a5969"
         },
         {
           "path": "skills/design-review/scripts/runtime/packages/design/package.json",
@@ -1675,11 +1675,11 @@
         },
         {
           "path": "skills/plan/scripts/runtime/packages/artifact/templates/artifact-review-stage.js.part-003",
-          "digest": "sha256:020f30d9994b95783493582a945037a015f71e05866985e03fe7e9d98a1ded4a"
+          "digest": "sha256:3106759999d771cd4c2c9fe49b224694291db556c46896a25c497a77b3f8e9cc"
         },
         {
           "path": "skills/plan/scripts/runtime/packages/artifact/templates/artifact-review-stage.js.parts.json",
-          "digest": "sha256:25f80ad5effbd4a6545535c0bff1c26bb95ea2793e43ce24b267556f4ed8331a"
+          "digest": "sha256:aaaf43dbcf8fd25d14ebf32fed431f8ef812d550dce46cc10617fe622a1a5969"
         },
         {
           "path": "skills/plan/scripts/runtime/packages/design/package.json",
