@@ -21,8 +21,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
@@ -65,12 +65,12 @@ jobs:
           fi
       - name: Pack exact public candidates for linked private Studio verification
         run: node scripts/release-train/pack-studio-candidate.mjs "$RUNNER_TEMP/studio-public-candidate"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: studio-public-candidate
           path: ${{ runner.temp }}/studio-public-candidate/
           if-no-files-found: error
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: build-outputs
           path: ${{ runner.temp }}/build-outputs.tgz
@@ -84,7 +84,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: Keep private planning state untracked
         run: |
           tracked="$(git ls-files .planr)"
@@ -93,7 +93,7 @@ jobs:
             echo "$tracked"
             exit 1
           fi
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
@@ -141,8 +141,8 @@ jobs:
             echo "::error::Build generated outputs ended as '$BUILD_RESULT'; this job tests its outputs and cannot run without them."
             exit 1
           fi
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
@@ -150,7 +150,7 @@ jobs:
         run: npm ci
       - name: Install Chromium for portable runtime tests
         run: npm exec --workspace=@openplanr/protocol -- playwright install --with-deps chromium
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: build-outputs
           path: ${{ runner.temp }}
@@ -182,14 +182,14 @@ jobs:
             echo "::error::Build generated outputs ended as '$BUILD_RESULT'; this job tests its outputs and cannot run without them."
             exit 1
           fi
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
       - name: Install the root lockfile
         run: npm ci
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: build-outputs
           path: ${{ runner.temp }}
@@ -227,14 +227,14 @@ jobs:
             echo "::error::Build generated outputs ended as '$BUILD_RESULT'; this job tests its outputs and cannot run without them."
             exit 1
           fi
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
       - name: Install the root lockfile
         run: npm ci
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: build-outputs
           path: ${{ runner.temp }}
@@ -262,14 +262,14 @@ jobs:
             echo "::error::Build generated outputs ended as '$BUILD_RESULT'; this job tests its outputs and cannot run without them."
             exit 1
           fi
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
       - name: Install the root lockfile
         run: npm ci
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: build-outputs
           path: ${{ runner.temp }}
@@ -294,14 +294,14 @@ jobs:
             echo "::error::Build generated outputs ended as '$BUILD_RESULT'; this job tests its outputs and cannot run without them."
             exit 1
           fi
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
       - name: Install the root lockfile
         run: npm ci
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: build-outputs
           path: ${{ runner.temp }}
@@ -334,14 +334,14 @@ jobs:
             echo "::error::Build generated outputs ended as '$BUILD_RESULT'; this job tests its outputs and cannot run without them."
             exit 1
           fi
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
       - name: Install the root lockfile
         run: npm ci
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: build-outputs
           path: ${{ runner.temp }}
@@ -366,14 +366,14 @@ jobs:
             echo "::error::Build generated outputs ended as '$BUILD_RESULT'; this job tests its outputs and cannot run without them."
             exit 1
           fi
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
       - name: Install the root lockfile
         run: npm ci
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: build-outputs
           path: ${{ runner.temp }}
@@ -392,8 +392,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: ${{ matrix.node }}
           cache: npm
@@ -437,8 +437,8 @@ jobs:
             echo "::error::Build generated outputs ended as '$BUILD_RESULT'; this job tests its outputs and cannot run without them."
             exit 1
           fi
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: ${{ matrix.node }}
           cache: npm
@@ -446,7 +446,7 @@ jobs:
         run: npm ci
       - name: Install Chromium for packed Protocol browser verification
         run: npm exec --workspace=@openplanr/protocol -- playwright install --with-deps chromium
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: build-outputs
           path: ${{ runner.temp }}
