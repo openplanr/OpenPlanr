@@ -80,3 +80,66 @@ package results do not certify the final consumer candidate.
 No test uses customer content. Native diagnostics and temporary source-overlay
 checks are distinguished from a successful packaged consumer journey. The legacy
 room expiry transition and service deployment remain separate acceptance steps.
+
+## Compact artifact identity and presentation contrast
+
+The final interface pass reproduced missing artifact identity at phone width:
+Design and Diagram viewers hid both title and type; authoring hid the type. The
+single shared header now preserves the complete type label and a readable
+truncated title. Its existing groups may wrap on narrow phones or enlarged text,
+with the canvas and rails following its actual height. Normal desktop and tablet
+headers retain their compact height. No controller, draft or canvas mount is
+replaced by this stylesheet change.
+
+The same native visual pass confirmed that presentation navigation inherited
+light arrows on native white button faces in dark mode. Foreground and background
+now use the existing theme tokens together; measured active chapter contrast is
+at least 16.65:1 across the recorded presentation cases.
+
+The frozen proposal's four actual-mount regressions passed Chrome, Firefox and
+WebKit, covering 288 measured width/theme/text-size combinations. Text stress
+scales computed toolbar text to 200%; it is not a claim of browser page-zoom
+coverage. Tests retain full badge glyph extent, title truncation, native
+menu/Escape focus, rail placement, actual authoring camera and stable viewer
+DOM/drafts. The regression is wired into the existing browser certification job.
+
+Original phone and contrast failures remain recorded. The first new fixture
+waited for every page animation and timed out on unrelated hidden transitions
+in Firefox and WebKit. Its corrected readiness observes the visible measured
+toolbar and stable geometry/colors within the original seven-second native
+budget; no animation is disabled and the original ninety-second test deadline
+and layout assertions remain. Independent generated-asset regression and owning
+package verification are recorded separately before final candidate adoption.
+The first full owning Artifact suite exposed two additional regressions: the
+authoring canvas began at 61 pixels and the generated review shell exceeded its
+existing raw-byte budget. The stylesheet now places the same visible separator
+inside the toolbar border-box and consolidates repeated React-scoped rules. The
+normal desktop canvas starts at 60 pixels; enlarged phone text may still wrap
+naturally. That precompiler consolidation measured 68,387 bytes against the unchanged 68,608-byte
+limit, and its gzip size also remains within its original budget.
+
+A separate generated-source review replayed the unchanged complete editor and
+host files plus the identity regression in Chrome, Firefox and WebKit: 159 native
+cases and 12 shell tests passed, with no skips. It also measured the retained
+separator and 288 identity layouts. Original budgets, assertions, deadlines and
+controller code stayed unchanged. The original 61-pixel and oversized-shell
+failures, and the consolidation's intermediate title-cascade failure, remain
+retained. This source review is distinct from final CI archives and cold private
+consumer acceptance.
+
+The subsequent full owning focused workflow retained a genuine installed-DOM
+compatibility failure: the parser rejected native CSS nesting. The existing
+source compiler now lowers the readable shared stylesheet to flat, portable CSS
+at its original exported path before shell, skill and package generation. Normal
+source checking detects stale or missing CSS, and the required focused runner
+includes actual parser, emitted-output and source-drift regressions. The readable
+source retains the accepted styles; only derived output is compacted.
+
+Independent replay passed the actual installed 93-source/five-frame workflow,
+51 installed/parser checks, 17 compiler/ownership/shell checks and 159 native
+editor, host and identity cases across Chrome, Firefox and WebKit, without
+skips. The original parser failure remains retained. Missing browser, CLI-build
+and peer-Git prerequisites are recorded separately from product failures. Normal
+owning generation, final CI archives and cold consumer acceptance remain
+separate gates; generated dependency-path labels from isolated proposals are
+never transferred into the owning candidate.
