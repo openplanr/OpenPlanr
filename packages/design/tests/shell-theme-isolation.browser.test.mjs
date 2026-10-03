@@ -7,8 +7,9 @@ import { test } from 'node:test';
 import { pathToFileURL } from 'node:url';
 import { browserEngine, launchBrowser } from '../../../tests/support/browser-launcher.mjs';
 import { renderDesignDocument } from '../lib/design/document.mjs';
-import { startDesignReview } from '../lib/design/review.mjs';
+import { designStudioArtifactId } from '../lib/design/studio.mjs';
 import { designFixture } from './design-fixture.mjs';
+import { startDesignReview } from './studio-http-fixture.mjs';
 
 const engine = browserEngine();
 
@@ -57,58 +58,73 @@ for (const darkBrowser of engine === 'chromium' ? [false, true] : [false]) {
       for (const url of [pathToFileURL(rendered.views.canvas).href, session.url]) {
         await page.goto(url);
         await page.waitForSelector('[data-design-ready="true"]');
-        const frames = page.locator('[data-planr-artifact-frame]');
-        const snapshot = async () => {
-          const result = [];
-          for (const frame of await frames.all()) {
-            const child = await (await frame.elementHandle()).contentFrame();
-            await child.locator('input').waitFor({ state: 'attached' });
-            result.push({
-              backing: await frame.evaluate((el) => getComputedStyle(el).backgroundColor),
-              source: await frame.evaluate(
-                (el) => el.getAttribute('srcdoc') || el.getAttribute('src'),
-              ),
-              product: await child.evaluate(() => ({
-                mount: (window.__themeIsolationMount ??= Math.random()),
-                dark: matchMedia('(prefers-color-scheme:dark)').matches,
-                body: getComputedStyle(document.body).backgroundColor,
-                ink: getComputedStyle(document.body).color,
-                input: getComputedStyle(document.querySelector('input')).backgroundColor,
-                scheme: getComputedStyle(document.documentElement).colorScheme,
-              })),
-            });
+        const schemes = [];
+        for (const screen of document.screens) {
+          await page.locator(`[data-design-screen="${screen.id}"]`).click();
+          await page.waitForFunction(
+            (id) => window.__openPlanrDesignStudio.getState().screenId === id,
+            screen.id,
+          );
+          const selected = await page.evaluate(() => window.__openPlanrDesignStudio.getState());
+          const artifactId = designStudioArtifactId(
+            `${document.id}-${selected.variantId}`,
+            selected.screenId,
+            selected.frameId,
+          );
+          const frame = page.locator(`[data-planr-artifact-frame="${artifactId}"]`);
+          await frame.waitFor();
+          const child = await (await frame.elementHandle()).contentFrame();
+          await child.locator('input').waitFor({ state: 'attached' });
+          const snapshot = async () => ({
+            backing: await frame.evaluate((el) => getComputedStyle(el).backgroundColor),
+            source: await frame.evaluate(
+              (el) => el.getAttribute('srcdoc') || el.getAttribute('src'),
+            ),
+            product: await child.evaluate(() => ({
+              mount: (window.__themeIsolationMount ??= Math.random()),
+              dark: matchMedia('(prefers-color-scheme:dark)').matches,
+              body: getComputedStyle(document.body).backgroundColor,
+              ink: getComputedStyle(document.body).color,
+              input: getComputedStyle(document.querySelector('input')).backgroundColor,
+              scheme: getComputedStyle(document.documentElement).colorScheme,
+            })),
+          });
+          await page.evaluate(() => window.__openPlanrDesignExperience.setTheme('light'));
+          const baseline = await snapshot();
+          schemes.push(baseline.product.scheme);
+          assert.equal(
+            baseline.product.dark,
+            await page.evaluate(() => matchMedia('(prefers-color-scheme:dark)').matches),
+          );
+          for (const view of ['canvas', 'prototype', 'walkthrough']) {
+            await page.evaluate((view) => window.__openPlanrDesignStudio.setView(view), view);
+            for (const theme of ['dark', 'system', 'light']) {
+              await page.evaluate(
+                (theme) => window.__openPlanrDesignExperience.setTheme(theme),
+                theme,
+              );
+              await page.evaluate(
+                () =>
+                  new Promise((resolve) =>
+                    requestAnimationFrame(() => requestAnimationFrame(resolve)),
+                  ),
+              );
+              assert.deepEqual(
+                await snapshot(),
+                baseline,
+                `${screen.id}/${view}/${theme}: active authored colors, controls, media queries and backing remain unchanged`,
+              );
+            }
           }
-          return result;
-        };
-        await page.evaluate(() => window.__openPlanrDesignExperience.setTheme('light'));
-        const baseline = await snapshot();
-        assert.equal(
-          baseline[0].product.dark,
-          await page.evaluate(() => matchMedia('(prefers-color-scheme:dark)').matches),
-        );
-        for (const view of ['canvas', 'prototype', 'walkthrough']) {
-          await page.evaluate((view) => window.__openPlanrDesignStudio.setView(view), view);
-          for (const theme of ['dark', 'system', 'light']) {
-            await page.evaluate(
-              (theme) => window.__openPlanrDesignExperience.setTheme(theme),
-              theme,
-            );
-            await page.evaluate(
-              () =>
-                new Promise((resolve) =>
-                  requestAnimationFrame(() => requestAnimationFrame(resolve)),
-                ),
-            );
-            assert.deepEqual(
-              await snapshot(),
-              baseline,
-              `${view}/${theme}: authored colors, native controls, media queries and transparent backing remain unchanged`,
-            );
-          }
+          assert.ok((await page.locator('iframe[src], iframe[srcdoc]').count()) <= 3);
         }
-        // Product interaction and authored scheme declarations remain intact.
-        assert.equal(baseline[1].product.scheme, 'light');
-        assert.equal(baseline[2].product.scheme, 'dark');
+        assert.equal(schemes[1], 'light');
+        assert.equal(schemes[2], 'dark');
+        await page.locator(`[data-design-screen="${document.screens[0].id}"]`).click();
+        await page.waitForFunction(
+          (id) => window.__openPlanrDesignStudio.getState().screenId === id,
+          document.screens[0].id,
+        );
         await page.evaluate(() => window.__openPlanrDesignStudio.setView('prototype'));
         const action = page
           .frameLocator('[data-planr-artifact-frame]')

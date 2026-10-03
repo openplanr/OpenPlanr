@@ -43,7 +43,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
       - name: Install the root lockfile
         run: npm ci
@@ -63,10 +63,19 @@ jobs:
           PLANR_BROWSER_TESTS: '1'
           PLANR_BROWSER_ENGINE: ${{ matrix.browser }}
       - name: Verify the read-only studio, pin stability and frame budget
-        run: node --test --test-concurrency=1 packages/artifact/tests/diagram-studio.browser.test.mjs packages/artifact/tests/pin-stability.browser.test.mjs packages/artifact/tests/frame-budget.browser.test.mjs
+        run: node --test --test-concurrency=1 packages/artifact/tests/diagram-studio.browser.test.mjs packages/artifact/tests/pin-stability.browser.test.mjs packages/artifact/tests/frame-budget.browser.test.mjs packages/artifact/tests/studio-identity.browser.test.mjs
         env:
           PLANR_BROWSER_TESTS: '1'
           PLANR_BROWSER_ENGINE: ${{ matrix.browser }}
+          PLANR_STUDIO_IDENTITY_EVIDENCE: ${{ runner.temp }}/studio-identity-${{ matrix.browser }}
+      - name: Retain native Studio identity evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: studio-identity-${{ matrix.browser }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/studio-identity-${{ matrix.browser }}
+          retention-days: 7
+          if-no-files-found: warn
 
   report:
     name: Report a failed nightly run

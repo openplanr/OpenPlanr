@@ -12,8 +12,8 @@ import {
 } from '../../../tests/support/browser-launcher.mjs';
 import { emptyReviewContext } from '../lib/design/context.mjs';
 import { renderDesignDocument } from '../lib/design/document.mjs';
-import { startDesignReview } from '../lib/design/review.mjs';
 import { designFixture } from './design-fixture.mjs';
+import { startDesignReview } from './studio-http-fixture.mjs';
 
 const engine = browserEngine();
 const settle = (page) =>

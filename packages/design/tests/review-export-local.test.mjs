@@ -7,14 +7,10 @@ import { digestArtifactEnvelope } from '@openplanr/artifact/envelope.mjs';
 import { createReviewLedger } from '@openplanr/artifact/merge.mjs';
 import { writeArtifactReviewState } from '@openplanr/artifact/review.mjs';
 import { atomicJson, currentDesign, renderDesignDocument } from '../lib/design/document.mjs';
-import {
-  designReviewKey,
-  designReviewPath,
-  exportDesignReview,
-  startDesignReview,
-} from '../lib/design/review.mjs';
+import { designReviewKey, designReviewPath, exportDesignReview } from '../lib/design/review.mjs';
 import { designUtility } from '../lib/design/utility.mjs';
 import { designFixture } from './design-fixture.mjs';
+import { fetch, startDesignReview } from './studio-http-fixture.mjs';
 
 async function fixture(t) {
   const root = mkdtempSync(join(tmpdir(), 'openplanr-export-local-'));

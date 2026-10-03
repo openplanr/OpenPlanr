@@ -1,3 +1,4 @@
+// @ts-check
 import { randomUUID } from 'node:crypto';
 import { constants } from 'node:fs';
 import { link, lstat, mkdir, open, readdir, rename, unlink } from 'node:fs/promises';
@@ -22,6 +23,7 @@ export class DiagramAuthoringStoreError extends Error {
     this.details = details;
   }
 }
+/** @returns {never} */
 const fail = (code, message, details) => {
   throw new DiagramAuthoringStoreError(code, message, details);
 };
@@ -41,12 +43,13 @@ const identifier = (value) => {
  * Observed symlinks and hard-linked files are refused. Node path APIs do not isolate
  * this store from a hostile same-user process replacing ancestor directories.
  */
+/** @type {typeof import('./store.d.mts').createDiagramAuthoringStore} */
 export function createDiagramAuthoringStore({
   root,
   slug,
   maxBundleBytes = DEFAULT_MAX_BYTES,
   faultInjector,
-} = {}) {
+}) {
   if (typeof root !== 'string' || !root.trim() || root.includes('\0'))
     fail('PATH', 'A workspace root is required.');
   const base = resolve(root);
@@ -91,7 +94,8 @@ export function createDiagramAuthoringStore({
       let info;
       try {
         info = await lstat(cursor);
-      } catch (error) {
+      } catch (caughtError) {
+        const error = errorObject(caughtError);
         if (error.code === 'ENOENT' && missing) return null;
         throw error;
       }
@@ -118,7 +122,8 @@ export function createDiagramAuthoringStore({
       try {
         await mkdir(cursor, { mode: 0o700 });
         await flushDirectory(dirname(cursor));
-      } catch (error) {
+      } catch (caughtError) {
+        const error = errorObject(caughtError);
         if (error.code !== 'EEXIST') throw error;
       }
       await inspect(cursor, { directory: true });
@@ -131,9 +136,10 @@ export function createDiagramAuthoringStore({
     try {
       try {
         await handle.sync();
-      } catch (error) {
+      } catch (caughtError) {
+        const error = errorObject(caughtError);
         // Some filesystems do not support directory fsync. Other failures are real.
-        if (!['EINVAL', 'ENOTSUP', 'EISDIR'].includes(error.code)) throw error;
+        if (!['EINVAL', 'ENOTSUP', 'EISDIR'].includes(error.code ?? '')) throw error;
       }
     } finally {
       await handle.close();
@@ -247,7 +253,8 @@ export function createDiagramAuthoringStore({
       try {
         await link(candidate, lockPath);
         acquired = true;
-      } catch (error) {
+      } catch (caughtError) {
+        const error = errorObject(caughtError);
         if (error.code !== 'EEXIST') throw error;
         const previous = await readJson(lockPath, false, 4096, true);
         if (
@@ -260,14 +267,16 @@ export function createDiagramAuthoringStore({
         try {
           process.kill(previous.pid, 0);
           fail('LOCKED', 'Another live process owns this diagram.');
-        } catch (signalError) {
+        } catch (caughtSignalerror) {
+          const signalError = errorObject(caughtSignalerror);
           if (signalError.code !== 'ESRCH') throw signalError;
         }
         // Serialize stale-owner reclamation. Never steal a lock just because it is old.
         try {
           await link(candidate, reclaimPath);
           reclaimed = true;
-        } catch (claimError) {
+        } catch (caughtClaimerror) {
+          const claimError = errorObject(caughtClaimerror);
           if (claimError.code === 'EEXIST')
             fail('LOCKED', 'Another process is recovering this lock.');
           throw claimError;
@@ -279,7 +288,8 @@ export function createDiagramAuthoringStore({
         try {
           await link(candidate, lockPath);
           acquired = true;
-        } catch (claimError) {
+        } catch (caughtClaimerror) {
+          const claimError = errorObject(caughtClaimerror);
           if (claimError.code === 'EEXIST') fail('LOCKED', 'Another process acquired the diagram.');
           throw claimError;
         }
@@ -366,7 +376,7 @@ export function createDiagramAuthoringStore({
             change.path === `diagrams/${slug}/.authoring`
           ),
       );
-      if (!legacy || legacy.sourceChanges.length || changes.length)
+      if (!legacy || legacy.sourceChanges.length || (changes?.length ?? 0))
         fail('COLLISION', 'Existing legacy custody is changed or unowned.');
     }
     await ensureDirectory(metadata);
@@ -382,6 +392,7 @@ export function createDiagramAuthoringStore({
 
   async function loadSnapshot(byteDigest) {
     const bytes = await readBytes(snapshotPath(byteDigest), maxBundleBytes);
+    if (!bytes) fail('CORRUPT', 'Historical snapshot is missing.');
     if (digestBytes(bytes) !== byteDigest) fail('CORRUPT', 'Historical snapshot bytes changed.');
     let bundle;
     try {
@@ -452,7 +463,7 @@ export function createDiagramAuthoringStore({
     )
       fail('CORRUPT', 'Head and receipt identities disagree.');
     const { bundle, bytes: immutableBytes } = await loadSnapshot(head.byteDigest);
-    if (!bytes.equals(immutableBytes))
+    if (!immutableBytes || !bytes.equals(immutableBytes))
       fail('CHANGED', 'Canonical source differs from its immutable snapshot.');
     return {
       ok: true,
@@ -561,6 +572,7 @@ export function createDiagramAuthoringStore({
     return saved(receipt);
   }
 
+  /** @param {{transactionId?:string,fingerprint?:string}} [options] */
   async function recoverInternal({ transactionId, fingerprint } = {}) {
     if (transactionId !== undefined) identifier(transactionId);
     if (fingerprint !== undefined) hex(fingerprint);
@@ -585,6 +597,7 @@ export function createDiagramAuthoringStore({
     return current();
   }
 
+  /** @param {{bundle?:any,transaction?:import('./index.d.mts').DiagramEditTransaction,transactionId?:string,replacement?:boolean,expectedBase?:any}} options */
   async function writeRequest({
     bundle,
     transaction,
@@ -675,7 +688,8 @@ export function createDiagramAuthoringStore({
     try {
       await inject('after-journal');
       return await settle(pending);
-    } catch (error) {
+    } catch (caughtError) {
+      const error = errorObject(caughtError);
       // A durable intent may already have committed. Only recovery can settle it.
       return {
         ok: false,
@@ -697,7 +711,8 @@ export function createDiagramAuthoringStore({
         fail('INVALID', 'Store input must contain inert bounded JSON.', { diagnostics });
       const copy = JSON.parse(JSON.stringify(value));
       return locked(() => operation(copy));
-    } catch (error) {
+    } catch (caughtError) {
+      const error = errorObject(caughtError);
       return Promise.reject(error);
     }
   }
@@ -760,3 +775,8 @@ export function createDiagramAuthoringStore({
 }
 
 export { previewLegacyDiagramDocument, previewLegacyDiagramMigration } from './migration.mjs';
+
+/** @param {unknown} value @returns {NodeJS.ErrnoException & {exportCode?: string}} */
+function errorObject(value) {
+  return value instanceof Error ? value : new Error(String(value));
+}

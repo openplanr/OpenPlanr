@@ -4,20 +4,24 @@ import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'n
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { digestArtifactEnvelope } from '@openplanr/artifact/envelope.mjs';
+import { digestArtifactEnvelope, resolveArtifactHtml } from '@openplanr/artifact/envelope.mjs';
 import { createReviewLedger } from '@openplanr/artifact/merge.mjs';
 import { writeArtifactReviewState } from '@openplanr/artifact/review.mjs';
 import { assertDesignReviewBundle } from '@openplanr/protocol/review-experience-contracts';
 import { emptyReviewContext } from '../lib/design/context.mjs';
 import { atomicJson, currentDesign, renderDesignDocument } from '../lib/design/document.mjs';
-import { designReviewPath, startDesignReview } from '../lib/design/review.mjs';
+import { designReviewPath } from '../lib/design/review.mjs';
 import { designFixture } from './design-fixture.mjs';
+import { fetch, startDesignReview } from './studio-http-fixture.mjs';
 
-async function fixture(t) {
+async function fixture(
+  t,
+  { count = 1, frames = [{ id: 'desktop', label: 'Desktop', width: 1440, height: 1024 }] } = {},
+) {
   const root = mkdtempSync(join(tmpdir(), 'openplanr-handoff-http-'));
   const { file, document } = designFixture(root, {
-    count: 1,
-    frames: [{ id: 'desktop', label: 'Desktop', width: 1440, height: 1024 }],
+    count,
+    frames,
   });
   document.brief.text = 'PRIVATE_BRIEF_MARKER';
   atomicJson(file, document);
@@ -243,20 +247,33 @@ test('authenticated history returns allowlisted immutable bundles and isolated c
   const { comparisonSources, ...bundle } = old.value;
   assertDesignReviewBundle(bundle);
   assert.equal(bundle.revision, before.revision);
-  assert.match(bundle.envelope.artifacts[0].html, /12 active tasks/);
-  assert.doesNotMatch(bundle.envelope.artifacts[0].html, /13 active tasks/);
+  assert.match(
+    resolveArtifactHtml(bundle.envelope, bundle.envelope.artifacts[0]),
+    /12 active tasks/,
+  );
+  assert.doesNotMatch(
+    resolveArtifactHtml(bundle.envelope, bundle.envelope.artifacts[0]),
+    /13 active tasks/,
+  );
   assert.doesNotMatch(
     old.raw,
     /PRIVATE_BRIEF_MARKER|UNRELATED_PRIVATE_MATERIAL|ownerPrivateKey|ownerAuth|sourceDigests/,
   );
   assert.ok(!old.raw.includes(f.root));
-  for (const html of Object.values(comparisonSources)) {
+  assert.deepEqual(comparisonSources, {});
+  const selected = await f.request('design-revisions', {
+    revision: before.revision,
+    artifactIds: [before.entries[0].artifactId],
+  });
+  assert.equal(selected.status, 200);
+  assert.deepEqual(Object.keys(selected.value).sort(), ['comparisonSources', 'revision']);
+  for (const html of Object.values(selected.value.comparisonSources)) {
     assert.match(html, /Content-Security-Policy/);
     assert.match(html, /connect-src 'none'/);
     assert.match(html, /form-action 'none'/);
     assert.match(html, /injectedScript\?\.remove/);
   }
-  assert.equal(Object.keys(comparisonSources).length, before.entries.length);
+  assert.deepEqual(Object.keys(selected.value.comparisonSources), [before.entries[0].artifactId]);
   const unauthorized = await f.request(
     'design-revisions',
     { revision: before.revision },
@@ -490,4 +507,47 @@ test('implementation handoff endpoints compose, approve, version, compare, revok
     ).status,
     409,
   );
+});
+
+test('historical comparisons prepare only selected owned views while preserving the shared pool', async (t) => {
+  const f = await fixture(t, {
+    count: 3,
+    frames: [
+      { id: 'desktop', label: 'Desktop', width: 1440, height: 1024 },
+      { id: 'mobile', label: 'Mobile', width: 390, height: 844 },
+      { id: 'tablet', label: 'Tablet', width: 768, height: 1024 },
+    ],
+  });
+  const current = currentDesign(f.file);
+  const metadata = await f.request('design-revisions', { revision: current.revision });
+  assert.equal(metadata.status, 200);
+  assert.equal(metadata.value.envelope.schemaVersion, '1.1.0');
+  assert.equal(metadata.value.envelope.sources.length, 3);
+  assert.equal(metadata.value.envelope.artifacts.length, 9);
+  assert.deepEqual(metadata.value.comparisonSources, {});
+  const artifactIds = [current.entries[0].artifactId, current.entries[1].artifactId];
+  const selected = await f.request('design-revisions', { revision: current.revision, artifactIds });
+  assert.equal(selected.status, 200);
+  assert.deepEqual(Object.keys(selected.value.comparisonSources), artifactIds);
+  assert.equal(selected.value.envelope, undefined);
+  for (const id of artifactIds) {
+    const html = selected.value.comparisonSources[id];
+    assert.match(html, /connect-src 'none'/);
+    assert.ok(html.includes(`"artifactId":${JSON.stringify(id)}`));
+    assert.ok(!html.includes(`"artifactId":${JSON.stringify(current.entries[2].artifactId)}`));
+  }
+  for (const invalid of [
+    [],
+    artifactIds.concat(current.entries[2].artifactId),
+    [artifactIds[0], artifactIds[0]],
+    ['source-not-a-view'],
+    [42],
+  ]) {
+    const rejected = await f.request('design-revisions', {
+      revision: current.revision,
+      artifactIds: invalid,
+    });
+    assert.equal(rejected.status, 400);
+    assert.equal(rejected.value.comparisonSources, undefined);
+  }
 });

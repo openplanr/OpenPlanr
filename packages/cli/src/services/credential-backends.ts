@@ -1,3 +1,4 @@
+import { planrHome } from '../../lib/planr-home.mjs';
 /**
  * Credential storage backends.
  *
@@ -14,6 +15,7 @@ import path from 'node:path';
 import { z } from 'zod';
 import { parseExternalJson } from '../utils/external-json.js';
 import { logger } from '../utils/logger.js';
+import { migratePrivateCredentialHome } from './credential-home.js';
 import { withCredentialWriteLock } from './credential-write-lock.js';
 
 // ---------------------------------------------------------------------------
@@ -34,7 +36,7 @@ export interface CredentialBackend {
 // Constants
 // ---------------------------------------------------------------------------
 
-const PLANR_DIR = path.join(os.homedir(), '.planr');
+const PLANR_DIR = planrHome();
 const KEYCHAIN_SERVICE = 'planr';
 
 // ---------------------------------------------------------------------------
@@ -190,12 +192,24 @@ export class EncryptedFileBackend implements CredentialBackend {
   private readonly encryptedFile: string;
   private readonly saltFile: string;
   private readonly configuredPassphrase: string | undefined;
+  private readonly legacyDirectory: string | undefined;
 
-  constructor(planrDir = PLANR_DIR, options: { passphrase?: string } = {}) {
+  constructor(planrDir: string | undefined = undefined, options: { passphrase?: string } = {}) {
+    this.legacyDirectory = planrDir === undefined ? path.join(os.homedir(), '.planr') : undefined;
+    planrDir ??= PLANR_DIR;
     this.planrDir = planrDir;
     this.encryptedFile = path.join(planrDir, 'credentials.enc');
     this.saltFile = path.join(planrDir, '.credential-salt');
     this.configuredPassphrase = options.passphrase;
+  }
+
+  private async prepareHome(): Promise<void> {
+    await migratePrivateCredentialHome(
+      this.planrDir,
+      this.legacyDirectory,
+      ['credentials.enc', '.credential-salt'],
+      'encrypted',
+    );
   }
 
   private passphrase(): string | undefined {
@@ -284,10 +298,12 @@ export class EncryptedFileBackend implements CredentialBackend {
   }
 
   async getStrict(provider: string): Promise<string | undefined> {
+    await this.prepareHome();
     return (await this.loadAll(true))[provider];
   }
 
   async setStrict(provider: string, value: string): Promise<void> {
+    await this.prepareHome();
     return withCredentialWriteLock(this.planrDir, async () => {
       const all = await this.loadAll(true);
       all[provider] = value;
@@ -296,6 +312,7 @@ export class EncryptedFileBackend implements CredentialBackend {
   }
 
   async deleteStrict(provider: string): Promise<boolean> {
+    await this.prepareHome();
     return withCredentialWriteLock(this.planrDir, async () => {
       const all = await this.loadAll(true);
       if (!Object.hasOwn(all, provider)) return true;
@@ -306,11 +323,13 @@ export class EncryptedFileBackend implements CredentialBackend {
   }
 
   async get(provider: string): Promise<string | undefined> {
+    await this.prepareHome();
     const all = await this.loadAll();
     return all[provider];
   }
 
   async set(provider: string, value: string): Promise<void> {
+    await this.prepareHome();
     return withCredentialWriteLock(this.planrDir, async () => {
       const all = await this.loadAll(true);
       all[provider] = value;
@@ -319,6 +338,7 @@ export class EncryptedFileBackend implements CredentialBackend {
   }
 
   async delete(provider: string): Promise<boolean> {
+    await this.prepareHome();
     return withCredentialWriteLock(this.planrDir, async () => {
       const all = await this.loadAll(true);
       if (!Object.hasOwn(all, provider)) return false;
@@ -337,17 +357,35 @@ const LEGACY_FILE = path.join(PLANR_DIR, 'credentials.json');
 
 export class LegacyPlaintextBackend {
   private readonly file: string;
+  private readonly legacyDirectory: string | undefined;
 
-  constructor(file = LEGACY_FILE) {
-    this.file = file;
+  constructor(file: string | undefined = undefined) {
+    this.legacyDirectory = file === undefined ? path.join(os.homedir(), '.planr') : undefined;
+    this.file = file ?? LEGACY_FILE;
+  }
+
+  async prepareHome(): Promise<void> {
+    await migratePrivateCredentialHome(
+      path.dirname(this.file),
+      this.legacyDirectory,
+      ['credentials.json'],
+      'legacy',
+    );
   }
 
   async exists(): Promise<boolean> {
+    await this.prepareHome();
     return pathExists(this.file);
   }
 
   /** Throws on unreadable or off-schema content so migration keeps the file instead of deleting it. */
   async loadAll(): Promise<Record<string, string>> {
+    await this.prepareHome();
+    return this.loadAllPrepared();
+  }
+
+  /** Read after prepareHome, including while the caller holds the legacy writer lock. */
+  async loadAllPrepared(): Promise<Record<string, string>> {
     if (!(await pathExists(this.file))) return {};
     return parseExternalJson(await readFile(this.file, 'utf-8'), credentialsSchema, this.file, {
       secret: true,

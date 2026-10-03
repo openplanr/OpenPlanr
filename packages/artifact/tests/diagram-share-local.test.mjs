@@ -22,6 +22,7 @@ async function fixture(t) {
   const service = diagramWorkspaceService();
   const handlerWith = (overrides = {}) =>
     createDiagramShareLocalHandler(file, {
+      transport: '1', // This fixture covers preserved legacy transport behavior.
       custodyRoot: join(root, 'private'),
       env: { ...process.env, PLANR_HOME: join(root, 'home') },
       baseUrl: 'https://share.test',

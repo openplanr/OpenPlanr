@@ -1,3 +1,21 @@
+export {
+  assertLiveRoomV3RecoveryMatchesPreparation,
+  commitLiveRoomV3Append,
+  prepareLiveRoomV3Append,
+} from './live-room-v3.mjs';
+
+import {
+  appendLiveRoomEventV3,
+  commitLiveReviewRoomV3,
+  createLiveRoomV3Client,
+  exportLiveRoomV3Recovery,
+  hydrateLiveReviewRoomV3,
+  importLiveRoomV3Recovery,
+  isLiveRoomV3Preparation,
+  parseLiveRoomV3Link,
+  prepareLiveReviewRoomV3,
+} from './live-room-v3.mjs';
+
 /**
  * Live review room client: prepares, commits, recovers and hydrates client-encrypted rooms on the
  * live review service, and builds, encrypts, appends and reduces their review events.
@@ -6,6 +24,12 @@
  */
 
 import { ARTIFACT_ERROR_CODES, PipelineError } from '@openplanr/protocol/errors';
+import { ROOM_V3_READ_LIMITS } from '@openplanr/protocol/sharing-security-contracts';
+import {
+  ARTIFACT_MAX_SOURCES,
+  ARTIFACT_MAX_VIEWS,
+  ARTIFACT_SHARED_ENVELOPE_VERSION,
+} from './artifact-sources.mjs';
 import {
   ARTIFACT_COMPRESSED_LIMIT,
   bytesToBase64Url,
@@ -253,18 +277,59 @@ function assertEventPayload(kind, payload, reviewOf) {
   throw error(ARTIFACT_ERROR_CODES.ROOM_EVENT_INVALID, 'Live review event kind is invalid.');
 }
 function assertEnvelope(value) {
+  const shared = value?.schemaVersion === ARTIFACT_SHARED_ENVELOPE_VERSION;
   if (
-    !exactKeys(value, ['schemaVersion', 'artifacts', 'viewer'], ['review']) ||
-    value.schemaVersion !== '1.0.0' ||
+    !exactKeys(
+      value,
+      ['schemaVersion', ...(shared ? ['sources'] : []), 'artifacts', 'viewer'],
+      ['review'],
+    ) ||
+    !['1.0.0', ARTIFACT_SHARED_ENVELOPE_VERSION].includes(value.schemaVersion) ||
     !Array.isArray(value.artifacts) ||
     value.artifacts.length < 1 ||
-    value.artifacts.length > 256 ||
+    value.artifacts.length > (shared ? ARTIFACT_MAX_VIEWS : 256) ||
+    (shared &&
+      (!Array.isArray(value.sources) ||
+        !value.sources.length ||
+        value.sources.length > ARTIFACT_MAX_SOURCES)) ||
     !isRecord(value.viewer)
-  ) {
+  )
     throw error(ARTIFACT_ERROR_CODES.ENVELOPE_INVALID, 'Live review artifact envelope is invalid.');
-  }
   return value;
 }
+async function verifiedEnvelopeSources(value, shared, crypto) {
+  const sourceMap = new Map();
+  let totalBytes = 0;
+  for (const source of shared ? value.sources : value.artifacts) {
+    if (!isRecord(source))
+      throw error(ARTIFACT_ERROR_CODES.ENVELOPE_INVALID, 'Live review artifact source is invalid.');
+    const bytes =
+      typeof source?.html === 'string' ? new TextEncoder().encode(source.html).byteLength : 0;
+    totalBytes += bytes;
+    if (
+      (shared && !exactKeys(source, ['id', 'kind', 'sha256', 'html'])) ||
+      !bounded(source.id, 1, 128) ||
+      !ARTIFACT_ID_RE.test(source.id) ||
+      sourceMap.has(source.id) ||
+      source.kind !== 'html' ||
+      !bounded(source.html, 1, Number.MAX_SAFE_INTEGER) ||
+      bytes > MAX_ARTIFACT_HTML_BYTES ||
+      (shared && totalBytes > MAX_ARTIFACT_HTML_BYTES) ||
+      !SHA_RE.test(source.sha256)
+    )
+      throw error(ARTIFACT_ERROR_CODES.ENVELOPE_INVALID, 'Live review artifact source is invalid.');
+    const normalized = source.html.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n');
+    const actual = await sha256Hex(normalized, crypto);
+    if (actual !== source.sha256)
+      throw error(
+        ARTIFACT_ERROR_CODES.DIGEST_MISMATCH,
+        'Live review artifact HTML digest is invalid.',
+      );
+    sourceMap.set(source.id, source);
+  }
+  return sourceMap;
+}
+
 async function digestEnvelope(value, crypto = globalThis.crypto) {
   assertEnvelope(value);
   if (!crypto?.subtle)
@@ -272,18 +337,34 @@ async function digestEnvelope(value, crypto = globalThis.crypto) {
       ARTIFACT_ERROR_CODES.BROWSER_UNSUPPORTED,
       'Web Crypto is required for live review rooms.',
     );
-  const ids = new Set();
+  const shared = value.schemaVersion === ARTIFACT_SHARED_ENVELOPE_VERSION;
+  const sourceMap = await verifiedEnvelopeSources(value, shared, crypto);
+  const ids = new Set(),
+    usedSources = new Set();
   for (const artifact of value.artifacts) {
+    if (!isRecord(artifact))
+      throw error(
+        ARTIFACT_ERROR_CODES.ENVELOPE_INVALID,
+        'Live review artifact envelope is invalid.',
+      );
+    const source = sourceMap.get(shared ? artifact.sourceId : artifact.id);
     if (
-      !exactKeys(artifact, ['id', 'kind', 'title', 'sha256', 'html', 'viewport', 'colorScheme']) ||
+      !exactKeys(artifact, [
+        'id',
+        'kind',
+        'title',
+        'sha256',
+        shared ? 'sourceId' : 'html',
+        'viewport',
+        'colorScheme',
+      ]) ||
       !bounded(artifact.id, 1, 128) ||
       !ARTIFACT_ID_RE.test(artifact.id) ||
       ids.has(artifact.id) ||
       artifact.kind !== 'html' ||
       !bounded(artifact.title, 1, 512) ||
-      !bounded(artifact.html, 1, Number.MAX_SAFE_INTEGER) ||
-      new TextEncoder().encode(artifact.html).byteLength > MAX_ARTIFACT_HTML_BYTES ||
-      !SHA_RE.test(artifact.sha256) ||
+      !source ||
+      source.sha256 !== artifact.sha256 ||
       !exactKeys(artifact.viewport, ['width', 'height']) ||
       !Number.isInteger(artifact.viewport.width) ||
       artifact.viewport.width < 1 ||
@@ -298,17 +379,13 @@ async function digestEnvelope(value, crypto = globalThis.crypto) {
         'Live review artifact envelope is invalid.',
       );
     ids.add(artifact.id);
-    const normalized = artifact.html.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n');
-    const digest = new Uint8Array(
-      await crypto.subtle.digest('SHA-256', new TextEncoder().encode(normalized)),
-    );
-    const actual = [...digest].map((item) => item.toString(16).padStart(2, '0')).join('');
-    if (actual !== artifact.sha256)
-      throw error(
-        ARTIFACT_ERROR_CODES.DIGEST_MISMATCH,
-        'Live review artifact HTML digest is invalid.',
-      );
+    usedSources.add(source.id);
   }
+  if (shared && usedSources.size !== sourceMap.size)
+    throw error(
+      ARTIFACT_ERROR_CODES.ENVELOPE_INVALID,
+      'Live review source pool contains an unreferenced source.',
+    );
   if (
     !exactKeys(value.viewer, ['mode', 'activeArtifactId'], ['presentation']) ||
     !['single', 'variants'].includes(value.viewer.mode) ||
@@ -316,17 +393,15 @@ async function digestEnvelope(value, crypto = globalThis.crypto) {
     !ids.has(value.viewer.activeArtifactId) ||
     (value.viewer.presentation !== undefined &&
       !['document', 'canvas'].includes(value.viewer.presentation))
-  ) {
+  )
     throw error(ARTIFACT_ERROR_CODES.ENVELOPE_INVALID, 'Live review artifact viewer is invalid.');
-  }
   const reviewFree = {
     schemaVersion: value.schemaVersion,
+    ...(shared ? { sources: value.sources } : {}),
     artifacts: value.artifacts,
     viewer: value.viewer,
   };
-  const bytes = new TextEncoder().encode(JSON.stringify(canonical(reviewFree)));
-  const hash = new Uint8Array(await crypto.subtle.digest('SHA-256', bytes));
-  const digest = [...hash].map((item) => item.toString(16).padStart(2, '0')).join('');
+  const digest = await sha256Hex(JSON.stringify(canonical(reviewFree)), crypto);
   if (value.review !== undefined) assertReview(value.review, digest);
   return digest;
 }
@@ -406,11 +481,20 @@ export async function prepareLiveReviewRoom(
   envelope,
   {
     baseUrl = 'https://share.openplanr.dev',
+    protocolVersion = '3.0.0',
     ttl = '7d',
     ownerSigner: suppliedOwnerSigner,
     crypto,
   } = {},
 ) {
+  if (protocolVersion === '3.0.0')
+    return prepareLiveReviewRoomV3(envelope, {
+      baseUrl,
+      ttl,
+      ownerSigner: suppliedOwnerSigner,
+      crypto,
+    });
+  if (protocolVersion !== '2.0.0') throw new TypeError('Unsupported room protocol.');
   assertEnvelope(envelope);
   if (!ARTIFACT_ROOM_TTLS.includes(ttl)) {
     throw error(ARTIFACT_ERROR_CODES.ROOM_INVALID, 'Live review TTL must be 1d, 7d, or 30d.');
@@ -483,6 +567,7 @@ export async function prepareLiveReviewRoom(
 
 /** Explicitly export the pre-effect recovery material selected by the owner. */
 export async function exportLiveRoomRecoveryBundle(prepared) {
+  if (isLiveRoomV3Preparation(prepared)) return exportLiveRoomV3Recovery(prepared);
   const state = liveRoomPreparationState(prepared);
   const ownerSigner = await exportLiveRoomSignerSecret(state.ownerSigner);
   return Object.freeze({
@@ -503,6 +588,8 @@ export async function exportLiveRoomRecoveryBundle(prepared) {
 
 /** Validate an explicitly supplied recovery file and rehydrate its owner signer. */
 export async function importLiveRoomRecoveryBundle(value, { crypto } = {}) {
+  if (value?.schemaVersion === '2.0.0' && value.kind === 'openplanr-live-room-recovery')
+    return importLiveRoomV3Recovery(value);
   if (
     !exactKeys(value, [
       'schemaVersion',
@@ -594,7 +681,9 @@ export async function recoverLiveReviewRoom(value, { client, crypto } = {}) {
   const room = await hydrateLiveReviewRoom(recovered.ownerUrl, { client, crypto });
   if (
     room.descriptor?.roomId !== recovered.roomId ||
-    room.descriptor?.reviewOf !== recovered.reviewOf ||
+    (recovered.protocolVersion === '3.0.0'
+      ? room.descriptor?.reviewCommitment !== recovered.reviewCommitment
+      : room.descriptor?.reviewOf !== recovered.reviewOf) ||
     room.descriptor?.ownerKey?.keyId !== recovered.ownerKey.keyId ||
     room.descriptor?.ownerKey?.value !== recovered.ownerKey.value
   ) {
@@ -609,6 +698,7 @@ export async function recoverLiveReviewRoom(value, { client, crypto } = {}) {
 }
 
 export function parseLiveRoomLink(source) {
+  if (typeof source === 'string' && source.includes('&r=')) return parseLiveRoomV3Link(source);
   const url = normalizeServiceUrl(source, { roomLink: true });
   const room = /^\/r\/([A-Za-z0-9_-]{16,128})\/?$/.exec(url.pathname)?.[1];
   const fragment = new URLSearchParams(url.hash.slice(1));
@@ -853,74 +943,124 @@ export async function decryptLiveRoomEvent(record, { key, roomId, reviewOf, cryp
   return normalized;
 }
 
-/** Deterministically reduce decrypted append-only room events into the existing review shape. */
-export function reduceLiveRoomEvents({ roomId, reviewOf, events = [], reviewId = roomId } = {}) {
+function createRoomReviewProjection(roomId, reviewOf, reviewId, maxBytes = Infinity) {
   validateId(roomId);
   validateDigest(reviewOf);
-  const pins = new Map();
-  const recommendations = new Map();
-  const seen = new Set();
-  let ownerDecision = 'pending';
-  let ownerOverall = '';
-  let snapshot = null;
+  return {
+    roomId,
+    reviewOf,
+    reviewId,
+    maxBytes,
+    pins: new Map(),
+    recommendations: new Map(),
+    seen: new Set(),
+    sizes: new Map(),
+    bytes: 0,
+    ownerDecision: 'pending',
+    ownerOverall: '',
+    snapshot: null,
+    createdAt: undefined,
+    updatedAt: undefined,
+  };
+}
+
+function reserveProjectionValue(state, name, value) {
+  if (!Number.isFinite(state.maxBytes)) return;
+  const bytes = new TextEncoder().encode(canonicalArtifactJson(value)).byteLength;
+  const total = state.bytes - (state.sizes.get(name) ?? 0) + bytes;
+  if (total > state.maxBytes) {
+    throw Object.assign(
+      new RangeError(
+        'The complete room review exceeds its supported projection byte limit. Verified history remains available through bounded reads.',
+      ),
+      { code: 'E_ROOM_PROJECTION_LIMIT' },
+    );
+  }
+  state.sizes.set(name, bytes);
+  state.bytes = total;
+}
+
+function applyRoomReviewEvents(state, events) {
   for (const event of events) {
     const item = createLiveRoomEvent(event);
-    if (item.roomId !== roomId || item.reviewOf !== reviewOf)
+    if (item.roomId !== state.roomId || item.reviewOf !== state.reviewOf) {
       throw error(
         ARTIFACT_ERROR_CODES.DIGEST_MISMATCH,
         'Live review event belongs to another room or artifact.',
       );
-    if (seen.has(item.eventId)) continue;
-    seen.add(item.eventId);
+    }
+    state.createdAt ??= item.createdAt;
+    state.updatedAt = item.createdAt;
+    if (state.seen.has(item.eventId)) continue;
+    state.seen.add(item.eventId);
     if (item.kind === 'pin') {
-      if (!pins.has(item.payload.id)) pins.set(item.payload.id, clone(item.payload));
-      continue;
-    }
-    if (item.kind === 'reply') {
-      const pin = pins.get(item.payload.pinId);
-      if (pin && !pin.replies.some((reply) => reply.id === item.payload.reply.id))
+      if (!state.pins.has(item.payload.id)) {
+        reserveProjectionValue(state, `pin:${item.payload.id}`, item.payload);
+        state.pins.set(item.payload.id, clone(item.payload));
+      }
+    } else if (item.kind === 'reply') {
+      const pin = state.pins.get(item.payload.pinId);
+      if (pin && !pin.replies.some((reply) => reply.id === item.payload.reply.id)) {
+        const next = { ...pin, replies: [...pin.replies, item.payload.reply] };
+        reserveProjectionValue(state, `pin:${pin.id}`, next);
         pin.replies.push(clone(item.payload.reply));
-      continue;
-    }
-    if (item.kind === 'pin_status') {
-      const pin = pins.get(item.payload.pinId);
+      }
+    } else if (item.kind === 'pin_status') {
+      const pin = state.pins.get(item.payload.pinId);
       if (pin) {
+        reserveProjectionValue(state, `pin:${pin.id}`, {
+          ...pin,
+          status: item.payload.status,
+          updatedAt: item.createdAt,
+        });
         pin.status = item.payload.status;
         pin.updatedAt = item.createdAt;
       }
-      continue;
-    }
-    if (item.kind === 'recommendation') {
-      recommendations.set(item.payload.author?.name ?? item.eventId, clone(item.payload));
-      continue;
-    }
-    if (item.kind === 'owner_decision') {
-      ownerDecision = item.payload.decision;
-      if (item.payload.overall !== undefined) ownerOverall = item.payload.overall;
-    }
-    if (
+    } else if (item.kind === 'recommendation') {
+      const author = item.payload.author?.name ?? item.eventId;
+      reserveProjectionValue(state, `recommendation:${author}`, item.payload);
+      state.recommendations.set(author, clone(item.payload));
+    } else if (item.kind === 'owner_decision') {
+      reserveProjectionValue(state, 'owner', item.payload.overall ?? state.ownerOverall);
+      state.ownerDecision = item.payload.decision;
+      if (item.payload.overall !== undefined) state.ownerOverall = item.payload.overall;
+    } else if (
       item.kind === 'review_snapshot' &&
       item.payload.review &&
       typeof item.payload.review === 'object'
-    )
-      snapshot = clone(item.payload.review);
+    ) {
+      reserveProjectionValue(state, 'snapshot', item.payload.review);
+      state.snapshot = clone(item.payload.review);
+    }
   }
-  const createdAt = events[0]?.createdAt ?? new Date(0).toISOString();
-  const updatedAt = events.at(-1)?.createdAt ?? createdAt;
+}
+
+function finishRoomReviewProjection(state) {
+  const createdAt = state.createdAt ?? new Date(0).toISOString();
   const review = Object.freeze(
-    snapshot ?? {
+    state.snapshot ?? {
       schemaVersion: '1.0.0',
-      reviewId,
-      reviewOf,
-      decision: ownerDecision,
-      overall: ownerOverall,
+      reviewId: state.reviewId,
+      reviewOf: state.reviewOf,
+      decision: state.ownerDecision,
+      overall: state.ownerOverall,
       createdAt,
-      updatedAt,
-      pins: [...pins.values()],
+      updatedAt: state.updatedAt ?? createdAt,
+      pins: [...state.pins.values()],
     },
   );
-  return Object.freeze({ review, recommendations: [...recommendations.values()] });
+  return Object.freeze({ review, recommendations: [...state.recommendations.values()] });
 }
+
+/** Deterministically reduce decrypted append-only room events into the existing review shape. */
+export function reduceLiveRoomEvents({ roomId, reviewOf, events = [], reviewId = roomId } = {}) {
+  const state = createRoomReviewProjection(roomId, reviewOf, reviewId);
+  applyRoomReviewEvents(state, events);
+  return finishRoomReviewProjection(state);
+}
+
+// Continuations retain only bounded semantic projection state, never the entire raw history.
+const roomReviewContinuations = new WeakMap();
 
 /** Verify a v2 signed chain before projecting its decrypted semantic events. */
 export async function reduceSignedLiveRoomEvents({
@@ -1152,7 +1292,22 @@ export function createLiveRoomClient({
       ttl = '7d',
       ownerSigner,
       crypto,
+      protocolVersion = '3.0.0',
     } = {}) {
+      if (
+        suppliedPreparation?.protocolVersion === '3.0.0' ||
+        (!suppliedPreparation && protocolVersion === '3.0.0')
+      ) {
+        const prepared =
+          suppliedPreparation ??
+          (await prepareLiveReviewRoomV3(envelope, {
+            baseUrl: base.origin,
+            ttl,
+            ownerSigner,
+            crypto,
+          }));
+        return createLiveRoomV3Client({ baseUrl: base.origin, fetchImpl }).create(prepared);
+      }
       const prepared =
         suppliedPreparation ??
         (await prepareLiveReviewRoom(envelope, {
@@ -1160,6 +1315,7 @@ export function createLiveRoomClient({
           ttl,
           ownerSigner,
           crypto,
+          protocolVersion: '2.0.0',
         }));
       const state = liveRoomPreparationState(prepared);
       if (state.baseOrigin !== base.origin) {
@@ -1260,13 +1416,25 @@ export function createLiveRoomClient({
       });
       return Object.freeze(result);
     },
-    async read(roomId) {
+    async read(roomId, readCapability, options) {
+      if (readCapability)
+        return createLiveRoomV3Client({ baseUrl: base.origin, fetchImpl }).read(
+          roomId,
+          readCapability,
+          options,
+        );
       validateId(roomId);
       return json(`/api/v1/rooms/${encodeURIComponent(roomId)}`, {
         headers: { accept: 'application/json' },
       });
     },
     async append(roomId, capability, { expectedGeneration, record } = {}) {
+      if (record?.schemaVersion === '3.0.0')
+        return createLiveRoomV3Client({ baseUrl: base.origin, fetchImpl }).append(
+          roomId,
+          capability,
+          { expectedGeneration, record },
+        );
       validateId(roomId);
       validateKey(capability, 'Live review event capability');
       if (
@@ -1294,6 +1462,12 @@ export function createLiveRoomClient({
       });
     },
     async manage(roomId, capability, operation) {
+      if (operation?.schemaVersion === '3.0.0')
+        return createLiveRoomV3Client({ baseUrl: base.origin, fetchImpl }).manage(
+          roomId,
+          capability,
+          operation,
+        );
       validateId(roomId);
       validateKey(capability, 'Live review management capability');
       return json(`/api/v1/rooms/${encodeURIComponent(roomId)}/manage`, {
@@ -1306,6 +1480,7 @@ export function createLiveRoomClient({
 }
 
 export async function commitLiveReviewRoom(prepared, options = {}) {
+  if (isLiveRoomV3Preparation(prepared)) return commitLiveReviewRoomV3(prepared, options);
   const state = liveRoomPreparationState(prepared);
   return createLiveRoomClient({
     baseUrl: options.baseUrl ?? state.baseOrigin,
@@ -1327,6 +1502,12 @@ export async function appendLiveRoomEvent(
   } = {},
 ) {
   const parsed = parseLiveRoomLink(link);
+  if (parsed.readCapability)
+    return appendLiveRoomEventV3(link, createLiveRoomEvent(event), {
+      client,
+      signer: suppliedSigner,
+      crypto,
+    });
   const roomValue = await client.read(parsed.roomId);
   if (isLegacyRoomResponse(roomValue)) {
     throw error(
@@ -1377,9 +1558,67 @@ export async function appendLiveRoomEvent(
 }
 export async function hydrateLiveReviewRoom(
   link,
-  { client = createLiveRoomClient({ baseUrl: parseLiveRoomLink(link).origin }), crypto } = {},
+  {
+    client = createLiveRoomClient({ baseUrl: parseLiveRoomLink(link).origin }),
+    crypto,
+    continuation,
+    maxAggregateBytes,
+  } = {},
 ) {
   const parsed = parseLiveRoomLink(link);
+  if (parsed.readCapability) {
+    const retained = continuation ? roomReviewContinuations.get(continuation) : undefined;
+    if (retained?.busy)
+      throw new TypeError('This room projection continuation is already being read.');
+    if (retained) retained.busy = true;
+    let hydrated;
+    try {
+      hydrated = await hydrateLiveReviewRoomV3(link, {
+        client,
+        crypto,
+        continuation,
+        maxAggregateBytes,
+      });
+    } catch (cause) {
+      if (retained) retained.busy = false;
+      throw cause;
+    }
+    const state =
+      retained?.state ??
+      (!continuation
+        ? createRoomReviewProjection(
+            parsed.roomId,
+            hydrated.reviewOf,
+            parsed.roomId,
+            ROOM_V3_READ_LIMITS.projectionBytes,
+          )
+        : null);
+    if (retained) roomReviewContinuations.delete(continuation);
+    if (state) applyRoomReviewEvents(state, hydrated.events);
+    if (!hydrated.complete && state)
+      roomReviewContinuations.set(hydrated.continuation, { state, busy: false });
+    const reviewComplete = hydrated.complete && Boolean(state);
+    const projection = reviewComplete
+      ? finishRoomReviewProjection(state)
+      : {
+          review: null,
+          issues: [
+            {
+              code: 'E_ROOM_READ_CONTINUATION_REQUIRED',
+              reason:
+                'Consume every authenticated history continuation before deriving a complete review.',
+            },
+          ],
+        };
+    return Object.freeze({
+      ...hydrated,
+      ...projection,
+      reviewComplete,
+      mutation: reviewComplete
+        ? hydrated.mutation
+        : { enabled: false, reason: 'history-continuation-required' },
+    });
+  }
   const roomValue = await client.read(parsed.roomId);
   const legacy = isLegacyRoomResponse(roomValue);
   const room = legacy ? roomValue : assertV2RoomResponse(roomValue, parsed.roomId);
@@ -1461,4 +1700,11 @@ export async function hydrateLiveReviewRoom(
   });
 }
 
-export { createLiveRoomSigner, exportLiveRoomSignerSecret, importLiveRoomSignerSecret };
+export { commitLiveRoomV3Management, prepareLiveRoomV3Management } from './live-room-v3.mjs';
+export {
+  assertEnvelope,
+  createLiveRoomSigner,
+  digestEnvelope,
+  exportLiveRoomSignerSecret,
+  importLiveRoomSignerSecret,
+};

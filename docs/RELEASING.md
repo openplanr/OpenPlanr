@@ -23,10 +23,16 @@ npm run verify
 npm run changeset -- status
 ```
 
-OpenPlanr requires Node.js 20 or later. CI verifies Node.js 20, 22, and 24; contributors
-use Node.js 24 (`.nvmrc`). `release-proof.yml` (manual) repeats the immutable package
+Use Node.js 24 (`.nvmrc`) for development. Supported versions are declared in
+[package metadata](../package.json); CI verifies published packages on their supported Node.js 20, 22, and 24 lines. `release-proof.yml` (manual) repeats the immutable package
 proof on all three lines. Do not freeze checks to historical version strings or edit
 old schema versions to match a package bump.
+
+The [published CLI](../packages/cli/package.json) and
+[workspace tooling](../package.json) declare their own dependency compatibility.
+Workspace tooling has a narrower range because of its development dependencies. Standalone
+[Protocol](../packages/protocol/package.json) retains its independent Node.js 20
+import contract. Use the latest supported LTS patch for routine work.
 
 ## Publication gates
 

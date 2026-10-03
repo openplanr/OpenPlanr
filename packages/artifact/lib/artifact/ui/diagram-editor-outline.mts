@@ -3,7 +3,7 @@ import {
   type DiagramSemanticEntry,
   getDiagramAuthoringCapability,
 } from '@openplanr/protocol/diagram-authoring-contracts';
-import { elementIndex } from '../diagram/authoring/model.mjs';
+import { elementIndex, isAuthoringSnapshot } from '../diagram/authoring/model.mjs';
 import type { DiagramEditorState } from '../diagram/editor/index.mjs';
 import type { DiagramEditorIconName } from './diagram-editor.mjs';
 import { displayName, kindName } from './diagram-editor-actions.mjs';
@@ -63,6 +63,8 @@ export function createEditorOutline(ctx: DiagramEditorContext): DiagramEditorOut
   const { doc, session } = ctx;
   const { leftTabs, outlinePane, shapesPane } = ctx.dom;
   let tab: DiagramEditorLeftTab = 'outline';
+  let renderedDocument: object | null = null;
+  let renderedControls = '';
 
   function setLeftTab(next: DiagramEditorLeftTab, { focus = false }: { focus?: boolean } = {}) {
     tab = next;
@@ -98,6 +100,19 @@ export function createEditorOutline(ctx: DiagramEditorContext): DiagramEditorOut
   }
   function renderLeft(state: DiagramEditorState) {
     const { editable, readOnly } = ctx;
+    // Geometry-only revisions reuse an engine-certified immutable semantic root.
+    // Unknown caller sessions never get identity-based rendering reuse.
+    const document =
+      state.bundle && isAuthoringSnapshot(state.bundle) ? state.bundle.document : null;
+    const controls = JSON.stringify([
+      state.view.selection,
+      state.view.collapsedGroups,
+      tab,
+      editable(state),
+      readOnly(state),
+    ]);
+    if (document && renderedDocument === document && renderedControls === controls) return;
+    renderedDocument = null;
     leftTabs.replaceChildren();
     if (readOnly(state)) tab = 'outline';
     for (const [name, action] of readOnly(state)
@@ -202,7 +217,9 @@ export function createEditorOutline(ctx: DiagramEditorContext): DiagramEditorOut
     ) {
       const entry = indexed.get(id);
       if (!entry) return;
-      const members = (entry.value.members ?? []).filter((member: string) => indexed.has(member)),
+      const members = (
+          entry.collection === 'groups' || entry.collection === 'lanes' ? entry.value.members : []
+        ).filter((member: string) => indexed.has(member)),
         collapsed = members.length > 0 && collapsedGroups.has(id);
       const name = displayName(indexed, id),
         kind = kindName(entry);
@@ -298,6 +315,8 @@ export function createEditorOutline(ctx: DiagramEditorContext): DiagramEditorOut
       outlinePane.append(
         element(doc, 'p', { className: 'de-muted' }, 'No objects yet. Use Shapes to create one.'),
       );
+    renderedDocument = document;
+    renderedControls = controls;
   }
   return {
     tab: () => tab,

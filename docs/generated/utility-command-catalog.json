@@ -10,6 +10,18 @@
       "classification": "deterministic-preserved"
     },
     {
+      "path": "server",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "server list",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "server stop",
+      "classification": "deterministic-preserved"
+    },
+    {
       "path": "setup",
       "classification": "deterministic-preserved"
     },

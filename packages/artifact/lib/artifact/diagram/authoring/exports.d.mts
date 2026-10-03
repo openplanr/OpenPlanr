@@ -1,8 +1,8 @@
 import type {
-  DiagramAuthoringBundle,
   DiagramAuthoringManifest,
   DiagramAuthoringValidationError,
 } from '@openplanr/protocol/diagram-authoring-contracts';
+import type { VersionedDiagramAuthoringBundle as DiagramAuthoringBundle } from '@openplanr/protocol/studio-presentation-contracts';
 import type { AuthoredDiagramTheme } from './renderer.mjs';
 import type { AuthoredDiagramScene, DiagramSceneQuality } from './scene.mjs';
 

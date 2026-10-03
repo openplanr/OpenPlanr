@@ -33,9 +33,11 @@ describe('root utility command boundary', () => {
     const activeRoots = new Set(
       catalog.active.map((row: { path: string }) => row.path.split(' ')[0]),
     );
-    expect(activeRoots.size).toBe(35);
+    const boundary = JSON.parse(readFileSync(resolve('command-boundary-source.json'), 'utf8'));
+    expect([...activeRoots].sort()).toEqual(Object.keys(boundary.active).sort());
     expect(activeRoots.has('company')).toBe(true);
     expect(activeRoots.has('dashboard')).toBe(true);
+    expect(activeRoots.has('server')).toBe(true);
     expect(activeRoots.has('operate')).toBe(true);
     expect(activeRoots.has('sync')).toBe(true);
     expect(activeRoots.has('plan')).toBe(false);

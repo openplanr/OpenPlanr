@@ -6,6 +6,7 @@
  */
 
 import { DIAGRAM_ERROR_CODES, diagramFail } from '../errors.mjs';
+import { diagramGraphemes, measureDiagramText } from './text.mjs';
 import {
   diagramMetrics,
   MAX_DIAGRAM_SCENE_EXTENT,
@@ -61,7 +62,7 @@ function semanticItems(document) {
   ];
 }
 
-export function wrapDiagramLabel(label, maximum = CHARACTERS_PER_LINE) {
+export function wrapDiagramLabel(label, maximum = CHARACTERS_PER_LINE, style = {}) {
   const value = String(label).normalize('NFC');
   if (value.length > MAX_VISIBLE_LABEL_CHARACTERS) {
     diagramFail(
@@ -74,6 +75,8 @@ export function wrapDiagramLabel(label, maximum = CHARACTERS_PER_LINE) {
       },
     );
   }
+  const glyph = style.glyph ?? 9;
+  const units = (text) => measureDiagramText(text, { ...style, glyph }) / glyph;
   const lines = [];
   for (const paragraph of value.split(/\r?\n/u)) {
     const words = paragraph.trim().split(/\s+/u).filter(Boolean);
@@ -83,18 +86,25 @@ export function wrapDiagramLabel(label, maximum = CHARACTERS_PER_LINE) {
     }
     let current = '';
     for (const word of words) {
-      if (word.length > Math.max(maximum, UNBREAKABLE_WORD_LENGTH)) {
+      if (units(word) > Math.max(maximum, UNBREAKABLE_WORD_LENGTH)) {
         // Only words no reader would recognise anyway are split mid-glyph.
         if (current) lines.push(current);
-        for (let offset = 0; offset < word.length; offset += maximum)
-          lines.push(word.slice(offset, offset + maximum));
+        let part = '';
+        for (const cluster of diagramGraphemes(word)) {
+          if (part && units(part + cluster) > maximum) {
+            lines.push(part);
+            part = '';
+          }
+          part += cluster;
+        }
+        if (part) lines.push(part);
         current = '';
-      } else if (word.length > maximum) {
+      } else if (units(word) > maximum) {
         if (current) lines.push(current);
         lines.push(word);
         current = '';
       } else if (!current) current = word;
-      else if (`${current} ${word}`.length <= maximum) current = `${current} ${word}`;
+      else if (units(`${current} ${word}`) <= maximum) current = `${current} ${word}`;
       else {
         lines.push(current);
         current = word;
@@ -113,14 +123,16 @@ function nodeLines(
   subtitleWrap = metrics.node.subtitleWrap,
 ) {
   // Wrapping the whole label first enforces the text budget on the label as a whole.
-  const lines = wrapDiagramLabel(label, titleWrap);
+  const lines = wrapDiagramLabel(label, titleWrap, metrics.title);
   if (!metrics.hierarchy) return { lines, titleLines: null };
   const [title, ...detail] = String(label).normalize('NFC').split(/\r?\n/u);
-  const titleLines = wrapDiagramLabel(title, titleWrap);
+  const titleLines = wrapDiagramLabel(title, titleWrap, metrics.title);
   return {
     lines: [
       ...titleLines,
-      ...(detail.length > 0 ? wrapDiagramLabel(detail.join('\n'), subtitleWrap) : []),
+      ...(detail.length > 0
+        ? wrapDiagramLabel(detail.join('\n'), subtitleWrap, metrics.subtitle)
+        : []),
     ],
     titleLines: titleLines.length,
   };
@@ -137,11 +149,11 @@ function textHeight(lines, titleLines, metrics) {
 }
 
 /** The narrowest wrap that keeps the line count of `maximum`, so no line ends as an orphan. */
-function balancedLines(label, maximum) {
-  const lines = wrapDiagramLabel(label, maximum);
+function balancedLines(label, maximum, style) {
+  const lines = wrapDiagramLabel(label, maximum, style);
   let best = lines;
   for (let width = maximum - 1; width > 0 && lines.length > 1; width -= 1) {
-    const next = wrapDiagramLabel(label, width);
+    const next = wrapDiagramLabel(label, width, style);
     if (next.length > lines.length) break;
     best = next;
   }
@@ -152,7 +164,7 @@ function dimensions(lines, titleLines, metrics) {
   const { node } = metrics;
   const widest = Math.max(
     metrics.title.glyph,
-    ...lines.map((line, index) => [...line].length * lineStyle(metrics, titleLines, index).glyph),
+    ...lines.map((line, index) => measureDiagramText(line, lineStyle(metrics, titleLines, index))),
   );
   return {
     width: Math.max(node.minWidth, Math.min(node.maxWidth, widest + 2 * node.paddingX)),
@@ -675,19 +687,25 @@ export function labelAttached(bounds, points) {
   return nearest <= LABEL_EDGE_DISTANCE + Math.max(bounds.width, bounds.height) / 2;
 }
 
-function placeLabel(label, { placements, points }, boxes, allocatedLabelBounds) {
+function placeLabel(label, { placements, points }, boxes, allocatedLabelBounds, routed = []) {
   if (!label.lines.length) return placements[0];
   return (
     placements.find(
-      (bounds) => labelAttached(bounds, points) && labelFits(bounds, boxes, allocatedLabelBounds),
+      (bounds) =>
+        labelAttached(bounds, points) && labelFits(bounds, boxes, allocatedLabelBounds, routed),
     ) ?? placements[0]
   );
 }
 
-function labelFits(bounds, boxes, allocatedLabelBounds) {
+function labelFits(bounds, boxes, allocatedLabelBounds, routed = []) {
   return (
     !rectangleOverlapsBox(bounds, boxes) &&
-    !allocatedLabelBounds.some((allocated) => rectanglesOverlap(bounds, allocated))
+    !allocatedLabelBounds.some((allocated) => rectanglesOverlap(bounds, allocated)) &&
+    !routed.some((edge) =>
+      edge.routePoints
+        .slice(1)
+        .some((point, index) => segmentEntersBox(edge.routePoints[index], point, bounds)),
+    )
   );
 }
 
@@ -743,11 +761,13 @@ function validRoute(
     .find(
       ({ points, placements }) =>
         !routeHitsBoxes(points, boxes, source, target) &&
+        !routeHitsBoxes(points, allocatedLabelBounds, null, null) &&
         !unrelated.some((edge) => routesMerge(points, edge.routePoints)) &&
         (!labelled ||
           placements.some(
             (bounds) =>
-              labelAttached(bounds, points) && labelFits(bounds, blockers, allocatedLabelBounds),
+              labelAttached(bounds, points) &&
+              labelFits(bounds, blockers, allocatedLabelBounds, routed),
           )),
     );
 }
@@ -814,6 +834,76 @@ function feedbackRoutes(source, target, alongX, obstacles, label) {
       placements: alongX ? [onLane, onEntry, nearTarget] : [onEntry, nearTarget, onLane],
     };
   });
+}
+
+/** Last-resort routes can leave and enter through different exterior sides. */
+function exteriorRoutes(source, target, obstacles, label) {
+  const bounds = geometryBounds(obstacles);
+  const clearance = FEEDBACK_CLEARANCE + Math.max(label.width, label.height);
+  const left = bounds.x - clearance,
+    right = bounds.x + bounds.width + clearance;
+  const top = bounds.y - clearance,
+    bottom = bounds.y + bounds.height + clearance;
+  const ports = (box) => [
+    { point: [box.x, box.y + box.height / 2], outer: [left, box.y + box.height / 2], axis: 'x' },
+    {
+      point: [box.x + box.width, box.y + box.height / 2],
+      outer: [right, box.y + box.height / 2],
+      axis: 'x',
+    },
+    { point: [box.x + box.width / 2, box.y], outer: [box.x + box.width / 2, top], axis: 'y' },
+    {
+      point: [box.x + box.width / 2, box.y + box.height],
+      outer: [box.x + box.width / 2, bottom],
+      axis: 'y',
+    },
+  ];
+  const candidates = [];
+  for (const start of ports(source))
+    for (const end of ports(target)) {
+      const corners =
+        start.axis !== end.axis
+          ? [
+              start.axis === 'x'
+                ? [[start.outer[0], end.outer[1]]]
+                : [[end.outer[0], start.outer[1]]],
+            ]
+          : start.axis === 'x'
+            ? [top, bottom].map((y) => [
+                [start.outer[0], y],
+                [end.outer[0], y],
+              ])
+            : [left, right].map((x) => [
+                [x, start.outer[1]],
+                [x, end.outer[1]],
+              ]);
+      for (const middle of corners) {
+        const points = [start.point, start.outer, ...middle, end.outer, end.point];
+        const placements = points.slice(2, -1).flatMap((point, index) => {
+          const previous = points[index + 1];
+          const x = (previous[0] + point[0]) / 2,
+            y = (previous[1] + point[1]) / 2;
+          return [
+            {
+              x: x - label.width / 2,
+              y: y - label.height - 8,
+              width: label.width,
+              height: label.height,
+            },
+            { x: x - label.width / 2, y: y + 8, width: label.width, height: label.height },
+            {
+              x: x - label.width - 8,
+              y: y - label.height / 2,
+              width: label.width,
+              height: label.height,
+            },
+            { x: x + 8, y: y - label.height / 2, width: label.width, height: label.height },
+          ];
+        });
+        candidates.push({ points, placements });
+      }
+    }
+  return candidates;
 }
 
 /**
@@ -962,11 +1052,11 @@ function graphEdges(
   const fanIn = (relation) => (incoming.get(relation.to) ?? 0) > 1;
   const routed = () => [...byId.values()];
   const measureLabel = (text, limit) => {
-    const lines = text ? wrapDiagramLabel(text, limit) : [];
+    const lines = text ? wrapDiagramLabel(text, limit, metrics.label) : [];
     return {
       lines,
       width: lines.length
-        ? Math.max(...lines.map((line) => [...line].length)) * metrics.label.glyph + 24
+        ? Math.max(...lines.map((line) => measureDiagramText(line, metrics.label))) + 24
         : 0,
       height: lines.length ? lines.length * metrics.label.lineHeight + 14 : 0,
     };
@@ -984,6 +1074,20 @@ function graphEdges(
     const label = measureLabel(relation.label, FEEDBACK_LABEL_LIMIT);
     const candidate = validRoute(
       feedbackRoutes(source, target, alongX, obstacles(), label),
+      boxes,
+      source,
+      target,
+      allocatedLabelBounds,
+      label,
+      routed(),
+      blockers,
+    );
+    return candidate ? { ...candidate, label } : undefined;
+  };
+  const routeExterior = (relation, source, target) => {
+    const label = measureLabel(relation.label, FEEDBACK_LABEL_LIMIT);
+    const candidate = validRoute(
+      exteriorRoutes(source, target, obstacles(), label),
       boxes,
       source,
       target,
@@ -1179,13 +1283,13 @@ function graphEdges(
             routed(),
             blockers,
           ) ??
-          (feedback.has(relation.id) && !crossBand
-            ? routeFeedback(relation, source, target, true)
-            : undefined) ??
+          routeFeedback(relation, source, target, true) ??
+          routeFeedback(relation, source, target, false) ??
+          routeExterior(relation, source, target) ??
           candidates[0];
         label = candidate.label ?? label;
         routePoints = candidate.points;
-        const placement = placeLabel(label, candidate, blockers, allocatedLabelBounds);
+        const placement = placeLabel(label, candidate, blockers, allocatedLabelBounds, routed());
         labelX = placement.x + label.width / 2;
         labelY = placement.y;
       } else {
@@ -1319,13 +1423,13 @@ function graphEdges(
             routed(),
             blockers,
           ) ??
-          (feedback.has(relation.id) && !crossBand
-            ? routeFeedback(relation, source, target, false)
-            : undefined) ??
+          routeFeedback(relation, source, target, false) ??
+          routeFeedback(relation, source, target, true) ??
+          routeExterior(relation, source, target) ??
           candidates[0];
         label = candidate.label ?? label;
         routePoints = candidate.points;
-        const placement = placeLabel(label, candidate, blockers, allocatedLabelBounds);
+        const placement = placeLabel(label, candidate, blockers, allocatedLabelBounds, routed());
         labelX = placement.x + label.width / 2;
         labelY = placement.y;
       }
@@ -1346,7 +1450,10 @@ function graphEdges(
             width: label.width,
             height: label.height,
           };
-          if (!label.lines.length || labelFits(moved, blockers, allocatedLabelBounds)) {
+          if (
+            !routeHitsBoxes(straight.points, allocatedLabelBounds, null, null) &&
+            (!label.lines.length || labelFits(moved, blockers, allocatedLabelBounds, routed()))
+          ) {
             routePoints = straight.points;
             if (horizontal) labelY += shift;
             else labelX += shift;
@@ -1423,8 +1530,8 @@ const GROUP_TITLE = Object.freeze({ inset: 18, top: 8, bottom: 34, clearance: 6 
  * corner; then the first gap between crossings that holds the title; then any
  * growth that takes in no other node.
  */
-function placeGroupTitle(frame, edges, boxes, glyph) {
-  const width = [...frame.label].length * glyph;
+function placeGroupTitle(frame, edges, boxes, style) {
+  const width = measureDiagramText(frame.label, style);
   const top = frame.y + GROUP_TITLE.top;
   const bottom = frame.y + GROUP_TITLE.bottom;
   const blocked = edges
@@ -1479,7 +1586,7 @@ function graphGroups(document, boxes, edges, metrics) {
         height: bounds.height + GROUP_PADDING.top + GROUP_PADDING.bottom,
         emphasis: document.emphasis.find(({ targetId }) => targetId === group.id)?.level ?? null,
       };
-      Object.assign(rendered, placeGroupTitle(rendered, edges, boxes, metrics.container.glyph));
+      Object.assign(rendered, placeGroupTitle(rendered, edges, boxes, metrics.container));
       byId.set(group.id, rendered);
       geometry.set(group.id, rendered);
       pending.delete(group.id);
@@ -1497,7 +1604,7 @@ function graphNotes(document, boxes, edges, groups) {
   const right = Math.max(PADDING, ...Array.from(geometry.values(), ({ x, width }) => x + width));
   let y = PADDING;
   return document.annotations.map((annotation) => {
-    const lines = wrapDiagramLabel(annotation.text, 42);
+    const lines = wrapDiagramLabel(annotation.text, 34, { glyph: 9, size: 14 });
     const width = 340;
     const height = lines.length * SEQUENCE_MESSAGE_LINE_HEIGHT + 28;
     const target = annotation.targetId ? geometry.get(annotation.targetId) : null;
@@ -1630,8 +1737,8 @@ function sequenceLayout(document, metrics) {
     );
     const labelLines = relation.label
       ? metrics.message.balance
-        ? balancedLines(relation.label, maximum)
-        : wrapDiagramLabel(relation.label, maximum)
+        ? balancedLines(relation.label, maximum, metrics.message)
+        : wrapDiagramLabel(relation.label, maximum, metrics.message)
       : [];
     const labelWidth =
       labelLines.length === 0
@@ -1639,7 +1746,7 @@ function sequenceLayout(document, metrics) {
         : Math.min(
             Math.max(
               120,
-              Math.max(...labelLines.map((line) => [...line].length)) * metrics.message.glyph + 28,
+              Math.max(...labelLines.map((line) => measureDiagramText(line, metrics.message))) + 28,
             ),
             Math.max(metrics.message.minWidth, Math.abs(x2 - x1) - 24),
           );
@@ -1672,7 +1779,7 @@ function sequenceLayout(document, metrics) {
     const relationNotes = annotations.get(relation.id) ?? [];
     let noteY = messageY + 18;
     for (const annotation of relationNotes) {
-      const lines = wrapDiagramLabel(annotation.text, 48);
+      const lines = wrapDiagramLabel(annotation.text, 34, { glyph: 9, size: 14 });
       const width = 360;
       const height = lines.length * SEQUENCE_MESSAGE_LINE_HEIGHT + 28;
       notes.push({
@@ -1691,7 +1798,7 @@ function sequenceLayout(document, metrics) {
     y = Math.max(messageY + sequence.messageGap, relationNotes.length > 0 ? noteY + 12 : 0);
   }
   for (const annotation of document.annotations.filter(({ targetId }) => boxIndex.has(targetId))) {
-    const lines = wrapDiagramLabel(annotation.text, 48);
+    const lines = wrapDiagramLabel(annotation.text, 34, { glyph: 9, size: 14 });
     const width = 360;
     const height = lines.length * SEQUENCE_MESSAGE_LINE_HEIGHT + 28;
     notes.push({

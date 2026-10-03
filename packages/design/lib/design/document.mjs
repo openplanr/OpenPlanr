@@ -14,9 +14,14 @@ import { dirname, join, resolve } from 'node:path';
 import {
   createArtifactBridgeNonce,
   prepareArtifactDocument,
+  prepareArtifactSourceTemplate,
   renderArtifactParentRuntime,
 } from '@openplanr/artifact/bridge.mjs';
-import { createArtifactEnvelope, digestArtifactEnvelope } from '@openplanr/artifact/envelope.mjs';
+import {
+  createSharedArtifactEnvelope,
+  digestArtifactEnvelope,
+  resolveArtifactHtml,
+} from '@openplanr/artifact/envelope.mjs';
 import { acquireStartLock, isProcessAlive } from '@openplanr/artifact/internal/server-util.mjs';
 import {
   bundleLocalDocument,
@@ -26,11 +31,16 @@ import { assertDesignDocument } from '@openplanr/protocol/design-contracts';
 import { loadReviewContext, reviewDigest, reviewFingerprints } from './context.mjs';
 import { lintDesign } from './lint.mjs';
 import { buildManifest } from './manifest.mjs';
-import { designStudioArtifactId, renderDesignStudio } from './studio.mjs';
+import {
+  designStudioArtifactId,
+  readDesignRuntimeAsset,
+  readDesignStudioRuntime,
+  renderDesignStudio,
+} from './studio.mjs';
 
 export const DESIGN_VIEWS = Object.freeze(['canvas', 'prototype', 'walkthrough']);
 // Bump when renderer/bridge implementation changes outside the hashed runtime assets.
-export const DESIGN_RENDERER_VERSION = '1.2.0';
+export const DESIGN_RENDERER_VERSION = '1.3.0';
 export const hash = (value) => createHash('sha256').update(value).digest('hex');
 export const json = (value) => `${JSON.stringify(value, null, 2)}\n`;
 export function readJson(path, fallback = undefined) {
@@ -118,6 +128,13 @@ export function designSpecPath(root) {
 }
 export function inspectDesignDocument(file, { readSource } = {}) {
   const { path, root, document } = loadDesignDocument(file, { readSource });
+  const ready = document.variants.filter((variant) => variant.status === 'ready').length;
+  const sourceCount = document.screenOrder.length * ready;
+  const viewCount = sourceCount * document.frames.length;
+  if (sourceCount > 256 || viewCount > 4096)
+    throw new RangeError(
+      `This board needs ${sourceCount} screen sources and ${viewCount} viewport references. Split it into linked boards: one board supports 256 sources and 4096 views.`,
+    );
   const sources = new Set(document.assets ?? []);
   if (existsSync(join(root, 'review-context.json'))) sources.add('review-context.json');
   if (document.designSystem?.tokens) sources.add(document.designSystem.tokens);
@@ -164,6 +181,7 @@ export function prepareDesignDocument(file, { readSource, passive = false, maxBy
   const contextDigest = reviewDigest(reviewContext);
   const fingerprints = [];
   const artifacts = [],
+    sources = [],
     entries = [],
     lint = [],
     sourceFiles = new Set(inspected.sources);
@@ -214,6 +232,8 @@ export function prepareDesignDocument(file, { readSource, passive = false, maxBy
         )
           throw new Error(`Screen ${screenId} is missing its declared anchor ${anchor}.`);
       }
+      const sourceId = `source-${hash(`${variant.id}:${screenId}`).slice(0, 32)}`;
+      sources.push({ id: sourceId, kind: 'html', html: bundled.html });
       for (const frame of document.frames) {
         fingerprints.push(
           reviewFingerprints({
@@ -234,7 +254,7 @@ export function prepareDesignDocument(file, { readSource, passive = false, maxBy
           id: artifactId,
           kind: 'html',
           title: `${screen.title} · ${variant.label} · ${frame.label}`,
-          html: bundled.html,
+          sourceId,
           viewport: { width: frame.width, height: frame.height },
           colorScheme: 'light',
         });
@@ -249,7 +269,8 @@ export function prepareDesignDocument(file, { readSource, passive = false, maxBy
   }
   // Keep the storage identity independent of the presentation and selected variant.
   const activeArtifactId = [...artifacts].sort((a, b) => a.id.localeCompare(b.id))[0].id;
-  const envelope = createArtifactEnvelope({
+  const envelope = createSharedArtifactEnvelope({
+    sources,
     artifacts,
     viewer: {
       mode: artifacts.length > 1 ? 'variants' : 'single',
@@ -303,9 +324,11 @@ function stageRuntimeBytes() {
   );
   // This path is replaced with the packaged equivalent in standalone release units.
   try {
-    return readFileSync(stagePath);
+    return readDesignRuntimeAsset(stagePath);
   } catch {
-    return readFileSync(new URL('../../templates/artifact-review-stage.js', import.meta.url));
+    return readDesignRuntimeAsset(
+      new URL('../../templates/artifact-review-stage.js', import.meta.url),
+    );
   }
 }
 
@@ -315,38 +338,93 @@ export function designRendererRevision() {
       version: DESIGN_RENDERER_VERSION,
       stage: hash(stageRuntimeBytes()),
       assets: ['studio.css', 'studio.js', 'enhancements.css', 'handoff-center.css']
-        .filter((name) => existsSync(new URL(`../../templates/studio/${name}`, import.meta.url)))
+        .filter(
+          (name) =>
+            name === 'studio.js' ||
+            existsSync(new URL(`../../templates/studio/${name}`, import.meta.url)),
+        )
         .map((name) =>
-          hash(readFileSync(new URL(`../../templates/studio/${name}`, import.meta.url))),
+          hash(
+            name === 'studio.js'
+              ? readDesignStudioRuntime()
+              : readFileSync(new URL(`../../templates/studio/${name}`, import.meta.url)),
+          ),
         ),
     }),
   );
 }
 
-export function standaloneDesignHtml(prepared, view = prepared.document.defaultView) {
+/** Portable file exports use an opaque file origin. HTTP hosts must supply their exact loopback origin. */
+export function standaloneDesignHtml(
+  prepared,
+  view = prepared.document.defaultView,
+  {
+    parentOrigin = 'null',
+    sourceTransport = parentOrigin === 'null' ? 'blob' : 'srcdoc',
+    prototypeStateAliases,
+  } = {},
+) {
   const nonce = createArtifactBridgeNonce();
-  const artifacts = Object.fromEntries(
-    prepared.envelope.artifacts.map((artifact) => [
-      artifact.id,
-      prepareArtifactDocument({
-        html: artifact.html,
-        artifactId: artifact.id,
-        nonce,
-        parentOrigin: 'null',
-        portable: true,
-        allowLocalForms: true,
-      }).html,
-    ]),
-  );
+  const pool = prepared.envelope.schemaVersion === '1.1.0';
+  const sources = pool
+    ? Object.fromEntries(
+        prepared.envelope.sources.map((source) => [
+          source.id,
+          prepareArtifactSourceTemplate({
+            html: source.html,
+            nonce,
+            parentOrigin,
+            allowLocalForms: true,
+            prototypeState: true,
+            screenId:
+              prepared.entries.find(
+                (entry) =>
+                  prepared.envelope.artifacts.find((artifact) => artifact.id === entry.artifactId)
+                    ?.sourceId === source.id,
+              )?.screenId ?? source.id,
+          }),
+        ]),
+      )
+    : null;
+  const artifacts = pool
+    ? null
+    : Object.fromEntries(
+        prepared.envelope.artifacts.map((artifact) => [
+          artifact.id,
+          prepareArtifactDocument({
+            html: resolveArtifactHtml(prepared.envelope, artifact),
+            artifactId: artifact.id,
+            nonce,
+            parentOrigin,
+            portable: true,
+            allowLocalForms: true,
+            prototypeState: true,
+            screenId:
+              prepared.entries.find((entry) => entry.artifactId === artifact.id)?.screenId ??
+              artifact.id,
+          }).html,
+        ]),
+      );
   const stage = stageRuntimeBytes();
   const stageRuntimeUrl = `data:text/javascript;base64,${Buffer.from(stage).toString('base64')}`;
   const runtime = renderArtifactParentRuntime({
     nonce,
-    parentOrigin: 'null',
-    inlineArtifacts: artifacts,
+    ...(pool
+      ? {
+          inlineSources: sources,
+          inlineArtifactSources: Object.fromEntries(
+            prepared.envelope.artifacts.map((artifact) => [artifact.id, artifact.sourceId]),
+          ),
+        }
+      : { inlineArtifacts: artifacts }),
+    sourceTransport,
+    frameBudget: 3,
     stageRuntimeUrl,
   });
-  const runtimeUrl = `data:text/javascript;base64,${Buffer.from(runtime).toString('base64')}`;
+  const configuredRuntime = prototypeStateAliases
+    ? `globalThis.__OPENPLANR_DESIGN_STUDIO_OPTIONS__=${JSON.stringify({ prototypeStateAliases }).replaceAll('<', '\\u003c')};\n${runtime}`
+    : runtime;
+  const runtimeUrl = `data:text/javascript;base64,${Buffer.from(configuredRuntime).toString('base64')}`;
   const state = { ...prepared.state, view };
   if (state.selectedVariant) state.variantId = state.selectedVariant;
   return renderDesignStudio(

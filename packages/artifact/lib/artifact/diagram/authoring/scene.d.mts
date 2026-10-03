@@ -1,6 +1,5 @@
 import type {
   DiagramAppearance,
-  DiagramAuthoringBundle,
   DiagramAuthoringSnapshot,
   DiagramAuthoringValidationError,
   DiagramBoundaryAttachment,
@@ -10,6 +9,7 @@ import type {
   DiagramRoute,
   DiagramSemanticEntry,
 } from '@openplanr/protocol/diagram-authoring-contracts';
+import type { VersionedDiagramAuthoringBundle as DiagramAuthoringBundle } from '@openplanr/protocol/studio-presentation-contracts';
 
 export interface DiagramSceneDiagnostic extends DiagramAuthoringValidationError {
   elementIds: string[];

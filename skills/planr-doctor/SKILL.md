@@ -15,10 +15,17 @@ and deletion always require explicit confirmation.
 `PLANR_HOME` names the user-level state directory, `~/.planr` by default: runtime
 installs, backups, daemon state and design sessions live there. `OPENPLANR_HOME` is
 deprecated; with `PLANR_HOME` unset it still resolves to `$OPENPLANR_HOME/.planr` and
-prints one warning, and when both are set `PLANR_HOME` wins. Two stores do not follow
-it: CLI credentials and company sign-in stay in `~/.planr`, and design share custody
-uses `~/.openplanr/design-shares` when neither variable is set. When state seems to be
-missing, check which variable is set.
+prints one warning, and when both are set `PLANR_HOME` wins. CLI credentials,
+company sign-in and design share custody honor that home. Existing private design
+share custody under `~/.openplanr/design-shares` is read and safely moved only when
+its canonical destination is absent. Existing destinations are never overwritten.
+When state seems missing, check which variable is set.
+
+Doctor also reports healthy owned local services. Use `planr server list --json`
+to inspect their instance IDs, project and runtime. `planr server stop <instance>`
+authenticates that exact service, drains pending saves and requests shutdown.
+A port or process ID is never shutdown authority; legacy unowned services remain
+untouched.
 
 ## Driving an upgrade
 

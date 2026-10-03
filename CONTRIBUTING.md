@@ -8,8 +8,8 @@ privately as described in [SECURITY.md](SECURITY.md). Participation follows the
 
 ## Development setup
 
-OpenPlanr requires Node.js 20 or later. CI verifies Node.js 20, 22, and 24; contributors
-use Node.js 24 (`.nvmrc`). Run these commands from the repository root:
+Use Node.js 24 (`.nvmrc`) for development. Supported versions are declared in
+[package metadata](package.json); CI verifies published packages on their supported Node.js 20, 22, and 24 lines. Run these commands from the repository root:
 
 ```bash
 npm ci

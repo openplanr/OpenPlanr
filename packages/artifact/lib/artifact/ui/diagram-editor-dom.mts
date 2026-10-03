@@ -224,6 +224,23 @@ export const hasIcon = (name: string): boolean => Object.hasOwn(ICONS, name);
 export const focusable = (element: EventTarget | null | undefined) =>
   (element as Element | null | undefined)?.closest('input,textarea,select,button,[contenteditable="true"],[role="dialog"]');
 
+/** Operable choices in a rendered editor menu, in DOM order. */
+export function visibleMenuItems(menu: HTMLElement): HTMLElement[] {
+  return [
+    ...menu.querySelectorAll<HTMLElement>(
+      '[role="menuitem"]:not(:disabled):not([aria-disabled="true"])',
+    ),
+  ].filter((item) => {
+    const visibility = item.ownerDocument.defaultView?.getComputedStyle(item).visibility;
+    return (
+      visibility !== 'hidden' &&
+      visibility !== 'collapse' &&
+      !item.closest('[hidden],[inert],[aria-hidden="true"]') &&
+      item.getClientRects().length > 0
+    );
+  });
+}
+
 /** Render a dependency-free icon from static SVG primitives. */
 export function icon(
   document: Document,

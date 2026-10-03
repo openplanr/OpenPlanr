@@ -1,3 +1,45 @@
+import type * as Tools from '../bridge-tools.mjs';
+
+declare const __PLANR_SANDBOX_CONTRACT__: {
+  channel: string;
+  schemaVersion: string;
+  artifactId: string;
+  nonce: string;
+  parentOrigin: string;
+};
+declare const __PLANR_SANDBOX_BRIDGE_TOOLS__: unknown;
+declare const __PLANR_SANDBOX_WORKER_GUARD__: string;
+declare const __PLANR_SANDBOX_CONFIG__: {
+  channel: string;
+  schemaVersion: string;
+  nonce: string;
+  frameCsp: string;
+  sourceTransport: 'blob' | 'srcdoc';
+  frameBudget?: number;
+  readyEvent: string;
+  viewportZoomEvent: string;
+  viewportPanEvent: string;
+  layoutEvent: string;
+  anchorEvent: string;
+  navigationEvent: string;
+  inlineSources?: Record<string, { html: string; artifactIdToken: string }>;
+  inlineArtifactSources?: Record<string, string>;
+  inlineArtifacts?: Record<string, string>;
+  artifactBaseUrl: string;
+  stageRuntimeUrl: string;
+  adapterRuntimeUrl?: string;
+};
+declare const __PLANR_SANDBOX_EXPORT_MAX_EDGE__: number;
+declare const __PLANR_SANDBOX_EXPORT_MAX_DATA_URL__: number;
+declare const __PLANR_SANDBOX_LAYOUT_MAX_WIDTH__: number;
+declare const __PLANR_SANDBOX_LAYOUT_MAX_HEIGHT__: number;
+declare const createArtifactBridgeTools: typeof Tools.createArtifactBridgeTools;
+declare const createArtifactViewportGestures: typeof Tools.createArtifactViewportGestures;
+declare const normalizeArtifactBridgeToolResult: typeof Tools.normalizeArtifactBridgeToolResult;
+declare const normalizeArtifactViewportZoom: typeof Tools.normalizeArtifactViewportZoom;
+declare const normalizeArtifactViewportPan: typeof Tools.normalizeArtifactViewportPan;
+declare const ARTIFACT_BRIDGE_OPERATION_TIMEOUTS: typeof Tools.ARTIFACT_BRIDGE_OPERATION_TIMEOUTS;
+declare const importScripts: (...urls: string[]) => void;
 // biome-ignore-all lint/complexity/useArrowFunction: replacement methods stay functions; an arrow has no prototype and fails `new` with a different error, which frame code can observe.
 // First code in every artifact frame: removes network, storage, navigation and clipboard
 // APIs, then answers the review shell over postMessage. Bundled into
@@ -10,7 +52,8 @@
   injectedScript?.remove();
   const contract = __PLANR_SANDBOX_CONTRACT__;
   __PLANR_SANDBOX_BRIDGE_TOOLS__;
-  const inspectionTools = createArtifactBridgeTools(document, globalThis);
+  // biome-ignore format: Preserve the exact compiled security guard bytes during the typed-source migration.
+  const inspectionTools = createArtifactBridgeTools(document, globalThis as Window & typeof globalThis);
   const postToParent = parent.postMessage.bind(parent);
   const elementFromPoint = document.elementFromPoint.bind(document);
   const queryAll = document.querySelectorAll.bind(document);
@@ -35,19 +78,19 @@
   const nativeRevokeObjectURL = URL.revokeObjectURL.bind(URL);
   const workerGuard = __PLANR_SANDBOX_WORKER_GUARD__;
   const blocked = () => new DOMException('Blocked by OpenPlanr artifact sandbox', 'SecurityError');
-  const replace = (owner, key, value) => {
+  const replace = (owner: object, key: string, value: unknown) => {
     try {
       Object.defineProperty(owner, key, { value, writable: false, configurable: false });
     } catch {
       try {
-        owner[key] = value;
+        (owner as Record<string, unknown>)[key] = value;
       } catch {
         // Neither configurable nor writable: skip it; the CSP still applies.
       }
     }
   };
   const reject = () => Promise.reject(blocked());
-  const workerUrls = new Set();
+  const workerUrls = new Set<string>();
   let liveWorkerCount = 0;
   replace(globalThis, 'fetch', reject);
   for (const key of [
@@ -125,17 +168,17 @@
     }
   }
   try {
-    replace(HTMLFormElement.prototype, 'submit', function () {
+    replace(HTMLFormElement.prototype, 'submit', () => {
       throw blocked();
     });
-    replace(HTMLFormElement.prototype, 'requestSubmit', function () {
+    replace(HTMLFormElement.prototype, 'requestSubmit', () => {
       throw blocked();
     });
   } catch {
     // Locked by this engine; form-action 'none' still blocks submission.
   }
   try {
-    replace(Document.prototype, 'open', function () {
+    replace(Document.prototype, 'open', () => {
       throw blocked();
     });
   } catch {
@@ -143,7 +186,7 @@
   }
   try {
     if (typeof nativeDocumentWrite === 'function')
-      replace(Document.prototype, 'write', function (...values) {
+      replace(Document.prototype, 'write', function (this: Document, ...values: string[]) {
         if (this.readyState !== 'loading') throw blocked();
         return nativeDocumentWrite.apply(this, values);
       });
@@ -152,23 +195,28 @@
   }
   try {
     if (typeof nativeDocumentWriteln === 'function')
-      replace(Document.prototype, 'writeln', function (...values) {
+      replace(Document.prototype, 'writeln', function (this: Document, ...values: string[]) {
         if (this.readyState !== 'loading') throw blocked();
         return nativeDocumentWriteln.apply(this, values);
       });
   } catch {
     // Locked by this engine; this is defence in depth and the CSP stays the boundary.
   }
+  // biome-ignore format: Preserve the exact compiled security guard bytes during the typed-source migration.
   try {
     if (typeof nativeExecCommand === 'function')
-      replace(Document.prototype, 'execCommand', function (command, ...args) {
+      replace(Document.prototype, 'execCommand', function (this: Document, command: string, ...args: Parameters<Document['execCommand']> extends [string,...infer Rest] ? Rest : never) {
         if (['copy', 'cut', 'paste'].includes(String(command).toLowerCase())) throw blocked();
         return nativeExecCommand.call(this, command, ...args);
       });
   } catch {
     // Locked by this engine; the capture-phase clipboard listeners still cancel the event.
   }
-  const workerWrapper = (url, options, Shared) => {
+  const workerWrapper = (
+    url: string | URL,
+    options: WorkerOptions | undefined,
+    Shared: boolean,
+  ) => {
     if (liveWorkerCount >= 32) throw blocked();
     const source = String(url);
     if (!/^(?:blob:|data:)/i.test(source)) throw blocked();
@@ -185,7 +233,7 @@
     workerUrls.add(wrapper);
     liveWorkerCount += 1;
     try {
-      const instance = Shared
+      const instance: { terminate?: () => void; port?: MessagePort } = Shared
         ? new NativeSharedWorker(wrapper, options)
         : new NativeWorker(wrapper, options);
       let released = false;
@@ -218,9 +266,15 @@
       throw error;
     }
   };
-  const installWorker = (name, Native, Shared) => {
+  const installWorker = (
+    name: string,
+    Native: typeof Worker | typeof SharedWorker,
+    Shared: boolean,
+  ) => {
     if (typeof Native !== 'function') return;
-    const Wrapped = function (url, options) {
+    // Native Worker APIs are constructors; this wrapper must retain [[Construct]].
+    // biome-ignore lint/complexity/useArrowFunction: Worker replacements must support construction.
+    const Wrapped = function (url: string | URL, options: WorkerOptions | undefined) {
       return workerWrapper(url, options, Shared);
     };
     try {
@@ -243,17 +297,17 @@
     // Absent or locked in this engine; workers still inherit the frame CSP.
   }
   try {
-    replace(Location.prototype, 'assign', function () {
+    replace(Location.prototype, 'assign', () => {
       throw blocked();
     });
-    replace(Location.prototype, 'replace', function () {
+    replace(Location.prototype, 'replace', () => {
       throw blocked();
     });
   } catch {
     // location.assign and location.replace are unforgeable own members this never reaches; the shell's navigation recovery covers them.
   }
   try {
-    navigation?.addEventListener('navigate', (event) => {
+    navigation?.addEventListener('navigate', (event: NavigateEvent) => {
       if (event.cancelable) event.preventDefault();
     });
   } catch {
@@ -261,16 +315,16 @@
   }
   addEventListener(
     'click',
-    (event) => {
-      if (event.target?.closest?.('a,[formaction]')) event.preventDefault();
+    (event: MouseEvent) => {
+      if ((event.target as Element | null)?.closest?.('a,[formaction]')) event.preventDefault();
     },
     true,
   );
-  addEventListener('submit', (event) => event.preventDefault(), true);
+  addEventListener('submit', (event: SubmitEvent) => event.preventDefault(), true);
   for (const type of ['copy', 'cut', 'paste'])
     addEventListener(
       type,
-      (event) => {
+      (event: Event) => {
         event.preventDefault();
         event.stopImmediatePropagation();
       },
@@ -286,41 +340,43 @@
     { once: true },
   );
 
-  const plain = (value) => {
+  const plain = (value: unknown): value is Record<string, unknown> => {
     if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
     const prototype = Object.getPrototypeOf(value);
     return prototype === Object.prototype || prototype === null;
   };
-  const own = (value, key) => {
+  const own = (value: unknown, key: string) => {
     const descriptor = plain(value) ? Object.getOwnPropertyDescriptor(value, key) : null;
     return descriptor && Object.hasOwn(descriptor, 'value') ? descriptor.value : undefined;
   };
-  const exact = (value, keys) =>
+  const exact = (value: unknown, keys: string[]) =>
     plain(value) &&
     Object.keys(value).length === keys.length &&
-    Object.keys(value).every((key) => keys.includes(key));
-  const validText = (value, max) =>
+    Object.keys(value).every((key: string) => keys.includes(key));
+  const validText = (value: unknown, max: number): value is string =>
     typeof value === 'string' && value.length > 0 && value.length <= max;
-  const validId = (value) =>
+  const validId = (value: unknown): value is string =>
     validText(value, 512) && /^[A-Za-z0-9][A-Za-z0-9._:-]{0,511}$/.test(value);
-  const validScreen = (value) =>
+  const validScreen = (value: unknown) =>
     // biome-ignore lint/suspicious/noControlCharactersInRegex: a screen name must not contain control characters.
     typeof value === 'string' && /^[^\u0000-\u001f\u007f]{1,128}$/.test(value);
-  const validRequestId = (value) =>
+  const validRequestId = (value: unknown): value is string =>
     validText(value, 128) && /^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$/.test(value);
-  const validBase = (data, type, keys) =>
+  const validBase = (data: unknown, type: string, keys: string[]) =>
     exact(data, keys) &&
     own(data, 'channel') === contract.channel &&
     own(data, 'schemaVersion') === contract.schemaVersion &&
     own(data, 'type') === type &&
     own(data, 'artifactId') === contract.artifactId &&
     validRequestId(own(data, 'requestId'));
-  const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
-  const closest = (element, selector) => (element ? elementClosest.call(element, selector) : null);
-  const attribute = (element, name) => (element ? elementGetAttribute.call(element, name) : null);
-  const screenFor = (element) =>
+  const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+  const closest = (element: Element | null, selector: string) =>
+    element ? elementClosest.call(element, selector) : null;
+  const attribute = (element: Element | null, name: string) =>
+    element ? elementGetAttribute.call(element, name) : null;
+  const screenFor = (element: Element | null) =>
     attribute(closest(element, '[data-planr-screen]'), 'data-planr-screen') || undefined;
-  const anchorFor = (element) => {
+  const anchorFor = (element: Element | null) => {
     const anchor = closest(element, '[data-planr-id]');
     if (!anchor) return null;
     const planrId = attribute(anchor, 'data-planr-id');
@@ -340,7 +396,7 @@
       viewport: { width, height },
     };
   };
-  const findById = (id, screen) => {
+  const findById = (id: string, screen: string | undefined) => {
     for (const element of queryAll('[data-planr-id]')) {
       if (attribute(element, 'data-planr-id') !== id) continue;
       if (screen !== undefined && screenFor(element) !== screen) continue;
@@ -348,7 +404,7 @@
     }
     return null;
   };
-  const exportTarget = (target) => {
+  const exportTarget = (target: 'screen' | 'full') => {
     if (target === 'full') return { node: document.body, label: 'full' };
     let node = elementFromPoint(innerWidth / 2, innerHeight / 2);
     node =
@@ -362,7 +418,7 @@
       'screen';
     return { node, label };
   };
-  const exportPng = async (target) => {
+  const exportPng = async (target: 'screen' | 'full') => {
     const selected = exportTarget(target),
       node = selected.node;
     const width = Math.ceil(
@@ -382,23 +438,23 @@
     )
       throw new Error('export dimensions are unavailable or too large');
     let count = 0;
-    const cloneStyled = (src) => {
+    const cloneStyled = (src: Node): Node => {
       if (++count > 10000) throw new Error('export node limit exceeded');
-      if (src.nodeType === 8 || (src.nodeType === 1 && src.tagName === 'SCRIPT'))
+      if (src.nodeType === 8 || (src.nodeType === 1 && (src as Element).tagName === 'SCRIPT'))
         return document.createTextNode('');
       const dst = nativeCloneNode.call(src, false);
       if (src.nodeType === 1) {
-        const style = nativeGetComputedStyle(src);
+        const style = nativeGetComputedStyle(src as Element);
         let css = '';
         for (let index = 0; index < style.length; index += 1) {
           const name = style[index];
           css += name + ':' + style.getPropertyValue(name) + ';';
         }
         elementSetAttribute.call(dst, 'style', css + 'animation:none;transition:none;');
-        if (src.tagName === 'CANVAS') {
+        if ((src as Element).tagName === 'CANVAS') {
           try {
             const image = nativeCreateElement.call(document, 'img');
-            image.src = src.toDataURL('image/png');
+            (image as HTMLImageElement).src = (src as HTMLCanvasElement).toDataURL('image/png');
             elementSetAttribute.call(image, 'style', css);
             return image;
           } catch {
@@ -416,8 +472,8 @@
     const clone = cloneStyled(node);
     if (clone.nodeType === 1) {
       elementSetAttribute.call(clone, 'xmlns', 'http://www.w3.org/1999/xhtml');
-      clone.style.boxShadow = 'none';
-      clone.style.borderRadius = '0';
+      (clone as HTMLElement).style.boxShadow = 'none';
+      (clone as HTMLElement).style.borderRadius = '0';
     }
     const markup = nativeSerializeToString.call(new XMLSerializer(), clone);
     if (markup.length > 10 * 1024 * 1024) throw new Error('export markup limit exceeded');
@@ -448,12 +504,19 @@
     await new Promise((resolve, reject) => {
       image.onload = resolve;
       image.onerror = () => reject(new Error('render failed'));
-      image.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+      (image as HTMLImageElement).src =
+        'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
     });
-    const canvas = nativeCreateElement.call(document, 'canvas');
+    const canvas = nativeCreateElement.call(document, 'canvas') as HTMLCanvasElement;
     canvas.width = outputWidth;
     canvas.height = outputHeight;
-    canvas.getContext('2d').drawImage(image, 0, 0, outputWidth, outputHeight);
+    (canvas.getContext('2d') as CanvasRenderingContext2D).drawImage(
+      image,
+      0,
+      0,
+      outputWidth,
+      outputHeight,
+    );
     const dataUrl = canvas.toDataURL('image/png');
     if (typeof dataUrl !== 'string' || dataUrl.length > __PLANR_SANDBOX_EXPORT_MAX_DATA_URL__)
       throw new Error('export PNG limit exceeded');
@@ -464,8 +527,12 @@
       label: String(selected.label).slice(0, 128),
     };
   };
-  const send = (type, requestId, anchor) => {
-    const message = {
+  const send = (
+    type: string,
+    requestId?: string,
+    anchor?: { planrId: string; screen?: string } | null,
+  ) => {
+    const message: Record<string, unknown> = {
       channel: contract.channel,
       schemaVersion: contract.schemaVersion,
       type,
@@ -476,8 +543,8 @@
     if (anchor) message.anchor = anchor;
     postToParent(message, contract.parentOrigin === 'null' ? '*' : contract.parentOrigin);
   };
-  const sendExport = (type, requestId, value) => {
-    const message = {
+  const sendExport = (type: string, requestId: string | undefined, value: unknown) => {
+    const message: Record<string, unknown> = {
       channel: contract.channel,
       schemaVersion: contract.schemaVersion,
       type,
@@ -503,7 +570,7 @@
     ),
   );
   let lastLayout = '';
-  let layoutTimer = 0;
+  let layoutTimer: ReturnType<typeof setTimeout> | 0 = 0;
   const measureLayout = () => {
     layoutTimer = 0;
     const root = document.documentElement,
@@ -565,7 +632,7 @@
   }
   let windowStart = performance.now(),
     messageCount = 0;
-  addEventListener('message', (event) => {
+  addEventListener('message', (event: MessageEvent) => {
     if (event.source !== parent || event.origin !== contract.parentOrigin) return;
     const now = performance.now();
     if (now - windowStart > 1000) {
@@ -601,7 +668,7 @@
       viewportGestures.setEnabled(own(data, 'enabled'));
       return;
     }
-    const toolReply = (type, value = {}) =>
+    const toolReply = (type: string, value: Record<string, unknown> = {}) =>
       postToParent(
         {
           channel: contract.channel,
@@ -668,7 +735,7 @@
       ['screen', 'full'].includes(own(data, 'target'))
     ) {
       exportPng(own(data, 'target'))
-        .then((value) => sendExport('export.result', data.requestId, value))
+        .then((value: unknown) => sendExport('export.result', data.requestId, value))
         .catch((error) => sendExport('export.error', data.requestId, error?.message));
       return;
     }

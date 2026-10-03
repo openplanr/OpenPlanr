@@ -12,6 +12,24 @@ generated as ordinary files without symlinks.
 This workspace is npm-private; its source remains part of the public MIT monorepo.
 Its required runtime is distributed through the public CLI and pipeline packages.
 
+## Shared screen sources
+
+New authored Design Studio boards use an additive envelope format: one canonical
+HTML source per screen and variant, with separate viewport references. Protocol
+1.16 describes `schemaVersion: "1.1.0"` envelopes with up to 256 sources and 4,096
+views; `createSharedArtifactEnvelope()` creates them and `resolveArtifactHtml()`
+reads both shared and legacy inline envelopes. The original `createArtifactEnvelope()`
+continues to emit the byte-compatible inline format. Encryption and transport byte
+budgets are unchanged.
+
+The preview loader prepares only the active selection by default and keeps at most
+three live frames. Each frame must authenticate its bridge before becoming ready.
+Source, document and bridge failures settle within a deadline and expose a retry;
+inactive failures do not block the selected screen. `getFrameDiagnostics()` returns
+phase timings without HTML, local paths or bridge capabilities. Portable exports
+prepare shared sources once, then bind a distinct generated artifact identity for
+each viewport while retaining the opaque frame sandbox.
+
 ## Semantic diagrams
 
 `@openplanr/artifact/diagram` validates Protocol 1.6 semantic diagram documents,
