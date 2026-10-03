@@ -84,6 +84,10 @@
       "types": "./src/enterprise-contracts.d.mts",
       "import": "./src/enterprise-contracts.mjs"
     },
+    "./enterprise-resource-contracts": {
+      "types": "./src/enterprise-resource-contracts.d.mts",
+      "import": "./src/enterprise-resource-contracts.mjs"
+    },
     "./diagram-authoring-contracts": {
       "types": "./src/diagram-authoring-contracts.d.mts",
       "import": "./src/diagram-authoring-contracts.mjs"
@@ -91,6 +95,18 @@
     "./diagram-review-contracts": {
       "types": "./src/diagram-review-contracts.d.mts",
       "import": "./src/diagram-review-contracts.mjs"
+    },
+    "./large-object-contracts": {
+      "types": "./src/large-object-contracts.d.mts",
+      "import": "./src/large-object-contracts.mjs"
+    },
+    "./studio-presentation-contracts": {
+      "types": "./src/studio-presentation-contracts.d.mts",
+      "import": "./src/studio-presentation-contracts.mjs"
+    },
+    "./sharing-security-contracts": {
+      "types": "./src/sharing-security-contracts.d.mts",
+      "import": "./src/sharing-security-contracts.mjs"
     }
   },
   "files": [

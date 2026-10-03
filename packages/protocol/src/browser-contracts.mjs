@@ -1,4 +1,5 @@
 // @ts-check
+
 import { DESIGN_HANDOFF_CONTRACT_FILES } from './design-handoff-contracts.mjs';
 import { DIAGRAM_AUTHORING_CONTRACT_FILES } from './diagram-authoring-contracts.mjs';
 import {
@@ -7,6 +8,7 @@ import {
   assertDiagramWorkspaceContract,
   DIAGRAM_REVIEW_SCHEMAS,
 } from './diagram-review-contracts.mjs';
+import { LARGE_OBJECT_SCHEMAS } from './large-object-contracts.mjs';
 import {
   PROTOCOL_V16_CONTRACT_FILES,
   PROTOCOL_V17_CONTRACT_FILES,
@@ -73,6 +75,18 @@ export function validateDiagramReviewArtifact(kind, value, { protocolVersion = '
   }
 }
 
+/** @type {typeof import('./browser-contracts.d.mts').PROTOCOL_V116_CONTRACTS} */
+export const PROTOCOL_V116_CONTRACTS = Object.freeze({
+  'artifact-envelope': 'artifact-envelope.schema.json',
+  'design-review-bundle': 'design-review-bundle.schema.json',
+});
+
+export const PROTOCOL_V117_CONTRACTS = Object.freeze(
+  Object.fromEntries(
+    Object.keys(LARGE_OBJECT_SCHEMAS).map((kind) => [kind, `${kind}.schema.json`]),
+  ),
+);
+
 const PROTOCOL_CONTRACTS_BY_VERSION = Object.freeze({
   '1.5.0': PROTOCOL_V15_CONTRACTS,
   '1.6.0': PROTOCOL_V16_CONTRACTS,
@@ -81,6 +95,8 @@ const PROTOCOL_CONTRACTS_BY_VERSION = Object.freeze({
   '1.11.0': PROTOCOL_V111_CONTRACTS,
   '1.13.0': PROTOCOL_V113_CONTRACTS,
   '1.15.0': PROTOCOL_V115_CONTRACTS,
+  '1.16.0': PROTOCOL_V116_CONTRACTS,
+  '1.17.0': PROTOCOL_V117_CONTRACTS,
 });
 
 /**

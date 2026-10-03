@@ -22,6 +22,7 @@ import { dirname, relative, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { DIAGRAM_AUTHORING_CONTRACT_FILES } from '../../packages/protocol/src/diagram-authoring-contracts.mjs';
 import { validateJson } from '../../packages/protocol/src/json-schema.mjs';
+import { LARGE_OBJECT_SCHEMAS } from '../../packages/protocol/src/large-object-contracts.mjs';
 
 import {
   DIAGRAM_V16_REGISTRIES,
@@ -451,6 +452,8 @@ async function buildOutputs() {
       'v1.13.0',
       'v1.14.0',
       'v1.15.0',
+      'v1.16.0',
+      'v1.17.0',
       'v2.0.0',
     ].map((version) => [
       version,
@@ -514,6 +517,18 @@ async function buildOutputs() {
     'E_ECOSYSTEM_SCHEMA_SUCCESSORS_115',
     'Protocol 1.15 diagram review schema count drifted.',
   );
+  assertEqual(
+    schemaCounts['v1.16.0'],
+    2,
+    'E_ECOSYSTEM_SCHEMA_SUCCESSORS_116',
+    'Protocol 1.16 shared artifact source schema count drifted.',
+  );
+  assertEqual(
+    schemaCounts['v1.17.0'],
+    Object.keys(LARGE_OBJECT_SCHEMAS).length,
+    'E_ECOSYSTEM_SCHEMA_SUCCESSORS_117',
+    'Protocol 1.17 Studio and sharing schema count drifted.',
+  );
   const additiveSchemaCount =
     schemaCounts['v1.5.0'] +
     schemaCounts['v1.6.0'] +
@@ -521,9 +536,11 @@ async function buildOutputs() {
     schemaCounts['v1.8.0'] +
     schemaCounts['v1.13.0'] +
     schemaCounts['v1.14.0'] +
-    schemaCounts['v1.15.0'];
-  const legacyRegistryPaths = listFiles('packages/protocol/registry').filter((path) =>
-    path.endsWith('.json'),
+    schemaCounts['v1.15.0'] +
+    schemaCounts['v1.16.0'] +
+    schemaCounts['v1.17.0'];
+  const legacyRegistryPaths = listFiles('packages/protocol/registry').filter(
+    (path) => path.endsWith('.json') && !path.includes('/registry/v1.17.0/'),
   );
   assertEqual(
     legacyRegistryPaths.length,
@@ -638,7 +655,17 @@ async function buildOutputs() {
     },
     protocol: {
       current: '1.8.0',
-      additiveVersions: ['1.5.0', '1.6.0', '1.7.0', '1.8.0', '1.13.0', '1.14.0', '1.15.0'],
+      additiveVersions: [
+        '1.5.0',
+        '1.6.0',
+        '1.7.0',
+        '1.8.0',
+        '1.13.0',
+        '1.14.0',
+        '1.15.0',
+        '1.16.0',
+        '1.17.0',
+      ],
       supportedReaders: [
         '1.0.x',
         '1.1.x',
@@ -652,6 +679,8 @@ async function buildOutputs() {
         '1.13.x',
         '1.14.x',
         '1.15.x',
+        '1.16.x',
+        '1.17.x',
         '2.0.x',
       ],
     },
@@ -740,6 +769,8 @@ async function buildOutputs() {
           'v1.13.0': schemaCounts['v1.13.0'],
           'v1.14.0': schemaCounts['v1.14.0'],
           'v1.15.0': schemaCounts['v1.15.0'],
+          'v1.16.0': schemaCounts['v1.16.0'],
+          'v1.17.0': schemaCounts['v1.17.0'],
         },
       },
       total: schemaPaths.length,

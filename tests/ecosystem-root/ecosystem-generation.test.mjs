@@ -6,6 +6,7 @@ import { dirname, resolve } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
+import { LARGE_OBJECT_SCHEMAS } from '../../packages/protocol/src/large-object-contracts.mjs';
 import {
   PROTOCOL_V16_CONTRACT_FILES,
   PROTOCOL_V17_CONTRACT_FILES,
@@ -75,6 +76,8 @@ test('catalog, schema, role, skill, and adapter membership is exact', () => {
     'v1.13.0': 10,
     'v1.14.0': 1,
     'v1.15.0': 6,
+    'v1.16.0': 2,
+    'v1.17.0': Object.keys(LARGE_OBJECT_SCHEMAS).length,
   };
   assert.equal(ecosystem.protocol.current, '1.8.0');
   assert.ok(ecosystem.protocol.additiveVersions.includes('1.13.0'));
@@ -83,6 +86,15 @@ test('catalog, schema, role, skill, and adapter membership is exact', () => {
   assert.ok(ecosystem.protocol.supportedReaders.includes('1.14.x'));
   assert.ok(ecosystem.protocol.additiveVersions.includes('1.15.0'));
   assert.ok(ecosystem.protocol.supportedReaders.includes('1.15.x'));
+  assert.ok(ecosystem.protocol.additiveVersions.includes('1.16.0'));
+  assert.ok(ecosystem.protocol.supportedReaders.includes('1.16.x'));
+  for (const version of ecosystem.protocol.additiveVersions) {
+    const reader = version.replace(/\.0$/u, '.x');
+    assert.ok(
+      ecosystem.protocol.supportedReaders.includes(reader),
+      `Missing reader for ${version}`,
+    );
+  }
   assert.equal(ecosystem.catalogs.commands.rootCommands, commands.inventory.rootCommandModules);
   assert.equal(ecosystem.catalogs.commands.frozenClaudeDocuments, 8);
   assert.equal(ecosystem.catalogs.skills.count, skills.skills.length);

@@ -15,6 +15,7 @@ import { PROTOCOL_V115_CONTRACTS, validateDiagramReviewArtifact } from './browse
 import { deepFreeze } from './canonical-json.mjs';
 import { DESIGN_HANDOFF_CONTRACT_FILES } from './design-handoff-contracts.mjs';
 import {
+  assertDiagramData,
   DIAGRAM_AUTHORING_CONTRACT_FILES,
   validateDiagramAuthoringArtifact,
 } from './diagram-authoring-contracts.mjs';
@@ -23,10 +24,25 @@ import { PipelineError } from './errors.mjs';
 import { OPERATE_CONTRACT_CATALOG_V2 } from './generated/contract-catalog-v2.mjs';
 import { validateJson } from './json-schema.mjs';
 import {
+  assertLargeObjectContract,
+  assertLargeObjectData,
+  LARGE_OBJECT_SCHEMAS,
+} from './large-object-contracts.mjs';
+import {
+  assertSharingSecurityContract,
+  SHARING_SECURITY_SCHEMAS,
+} from './sharing-security-contracts.mjs';
+import {
   PROTOCOL_V16_CONTRACT_FILES,
   PROTOCOL_V17_CONTRACT_FILES,
   PROTOCOL_V18_CONTRACT_FILES,
 } from './skill-source-contracts.mjs';
+import {
+  assertDiagramPresentation,
+  assertDiagramReviewBundleV11,
+  assertVersionedDiagramAuthoringBundle,
+  assertVersionedDiagramEditTransaction,
+} from './studio-presentation-contracts.mjs';
 
 const packageRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -38,9 +54,20 @@ const v18Schema = (kind) => `schemas/v1.8.0/${PROTOCOL_V18_CONTRACT_FILES[kind]}
 
 const foundationPaths = {
   ...Object.fromEntries(
+    Object.keys(LARGE_OBJECT_SCHEMAS).map((name) => [
+      name,
+      { '1.17.0': `schemas/v1.17.0/${name}.schema.json` },
+    ]),
+  ),
+  ...Object.fromEntries(
     Object.keys(ENTERPRISE_SCHEMAS).map((name) => [
       name,
-      { '1.12.0': `schemas/v1.12.0/${name}.schema.json` },
+      {
+        ...(Object.hasOwn(LARGE_OBJECT_SCHEMAS, name)
+          ? { '1.17.0': `schemas/v1.17.0/${name}.schema.json` }
+          : {}),
+        '1.12.0': `schemas/v1.12.0/${name}.schema.json`,
+      },
     ]),
   ),
   'design-document': { '1.9.0': 'schemas/v1.9.0/design-document.schema.json' },
@@ -51,6 +78,7 @@ const foundationPaths = {
   'design-review-bundle': {
     '1.9.0': 'schemas/v1.9.0/design-review-bundle.schema.json',
     '1.10.0': 'schemas/v1.10.0/design-review-bundle.schema.json',
+    '1.16.0': 'schemas/v1.16.0/design-review-bundle.schema.json',
   },
   'design-review-context': { '1.10.0': 'schemas/v1.10.0/design-review-context.schema.json' },
   'design-review-handoff': { '1.10.0': 'schemas/v1.10.0/design-review-handoff.schema.json' },
@@ -111,7 +139,10 @@ const foundationPaths = {
     '1.3.0': 'schemas/v1.3.0/release-compatibility-claim.schema.json',
   },
   'release-ledger-receipt': { '1.3.0': 'schemas/v1.3.0/release-ledger-receipt.schema.json' },
-  'artifact-envelope': { '1.1.0': 'schemas/v1.1.0/artifact-envelope.schema.json' },
+  'artifact-envelope': {
+    '1.1.0': 'schemas/v1.1.0/artifact-envelope.schema.json',
+    '1.16.0': 'schemas/v1.16.0/artifact-envelope.schema.json',
+  },
   'artifact-review': { '1.1.0': 'schemas/v1.1.0/artifact-review.schema.json' },
   'artifact-paste': { '1.1.0': 'schemas/v1.1.0/artifact-paste.schema.json' },
   'artifact-room-event': { '1.1.0': 'schemas/v1.1.0/artifact-room-event.schema.json' },
@@ -1198,6 +1229,10 @@ function guidedQuestionnaireCompatibilityErrors(value) {
 
 /** @type {typeof import('./contracts.d.mts').validateProtocolArtifact} */
 export function validateProtocolArtifact(kind, value, { protocolVersion } = {}) {
+  const studioKind = Object.hasOwn(LARGE_OBJECT_SCHEMAS, kind);
+  if (studioKind && protocolVersion === '1.17.0') {
+    return validateStudioArtifact(kind, value, sharedProtocolSchema(kind, protocolVersion));
+  }
   if (Object.hasOwn(PROTOCOL_V115_CONTRACTS, kind)) {
     // Review transport envelopes do not carry a Protocol version. Do not read
     // arbitrary input properties while selecting the dedicated safety preflight.
@@ -1222,12 +1257,65 @@ export function validateProtocolArtifact(kind, value, { protocolVersion } = {}) 
     if (descriptor && !Object.hasOwn(descriptor, 'value'))
       return validateDiagramAuthoringArtifact(kind, value);
     versionInput = { protocolVersion: descriptor?.value };
+  } else if (studioKind && !protocolVersion) {
+    // New resource envelopes may be hostile objects. Version inference must use
+    // descriptors too; the bounded additive reader owns the safety diagnostic.
+    let descriptor;
+    try {
+      descriptor =
+        value !== null && typeof value === 'object'
+          ? Object.getOwnPropertyDescriptor(value, 'protocolVersion')
+          : undefined;
+    } catch {
+      return invalidStudioData();
+    }
+    if (descriptor && !Object.hasOwn(descriptor, 'value')) return invalidStudioData();
+    versionInput = { protocolVersion: descriptor?.value };
   }
   const version = inferredVersion(kind, versionInput, protocolVersion);
+  if (studioKind && version === '1.17.0') {
+    return validateStudioArtifact(kind, value, sharedProtocolSchema(kind, version));
+  }
   if (version === '1.13.0' && authoringKind) {
     return validateDiagramAuthoringArtifact(kind, value);
   }
   return validateGenericArtifact(kind, value, sharedProtocolSchema(kind, version));
+}
+function invalidStudioData() {
+  return [
+    { path: '$', rule: 'studio-protocol-contract', detail: 'Expected bounded inert JSON data.' },
+  ];
+}
+function validateStudioArtifact(kind, value, resolved) {
+  try {
+    if (
+      [
+        'diagram-authoring-bundle',
+        'diagram-edit-transaction',
+        'diagram-review-bundle',
+        'diagram-presentation',
+      ].includes(kind)
+    )
+      assertDiagramData(value);
+    else assertLargeObjectData(value);
+    const errors = validateResolvedArtifact(value, resolved);
+    if (errors.length) return errors;
+    if (Object.hasOwn(SHARING_SECURITY_SCHEMAS, kind)) assertSharingSecurityContract(value, kind);
+    else if (kind === 'diagram-authoring-bundle') assertVersionedDiagramAuthoringBundle(value);
+    else if (kind === 'diagram-edit-transaction') assertVersionedDiagramEditTransaction(value);
+    else if (kind === 'diagram-review-bundle') assertDiagramReviewBundleV11(value);
+    else if (kind === 'diagram-presentation') assertDiagramPresentation(value);
+    else assertLargeObjectContract(value, kind);
+    return [];
+  } catch (error) {
+    return [
+      {
+        path: '$',
+        rule: 'studio-protocol-contract',
+        detail: error instanceof Error ? error.message : 'Invalid Studio contract data.',
+      },
+    ];
+  }
 }
 function validateGenericArtifact(kind, value, resolved) {
   const errors = validateResolvedArtifact(value, resolved);

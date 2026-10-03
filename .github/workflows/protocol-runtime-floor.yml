@@ -1,0 +1,37 @@
+name: Protocol minimum runtime
+
+on:
+  pull_request:
+    branches: ['**']
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: protocol-runtime-floor-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  node20-floor:
+    name: Protocol imports on Node 20.0.0
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install dependencies with the development runtime
+        run: npm ci
+      - name: Generate owned Protocol projections with the development runtime
+        run: node packages/protocol/scripts/generate-protocol-assets.mjs
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '20.0.0'
+      - name: Verify imports, schema generation and validation on the advertised minimum
+        env:
+          OPENPLANR_PROTOCOL_NODE20_EXECUTABLE: node
+        run: node --test tests/protocol/protocol-runtime-floor.test.mjs

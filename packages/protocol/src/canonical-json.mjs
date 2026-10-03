@@ -65,7 +65,7 @@ export function canonicalizeJson(value) {
   return serialize(value, '$', new Set());
 }
 
-const SHA256_K = /* @__PURE__ */ new Uint32Array([
+const SHA256_K = /* @__PURE__ */ new Int32Array([
   0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
   0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
   0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
@@ -108,7 +108,8 @@ export function sha256Hex(value) {
   let h5 = 0x9b05688c;
   let h6 = 0x1f83d9ab;
   let h7 = 0x5be0cd19;
-  const words = new Uint32Array(64);
+  // Signed words retain the same modulo-2^32 bits without promoting each round to unsigned doubles.
+  const words = new Int32Array(64);
 
   for (let offset = 0; offset < bytes.length; offset += 64) {
     for (let index = 0; index < 16; index += 1) words[index] = view.getUint32(offset + index * 4);
@@ -117,7 +118,7 @@ export function sha256Hex(value) {
         rotr(words[index - 15], 7) ^ rotr(words[index - 15], 18) ^ (words[index - 15] >>> 3);
       const s1 =
         rotr(words[index - 2], 17) ^ rotr(words[index - 2], 19) ^ (words[index - 2] >>> 10);
-      words[index] = (words[index - 16] + s0 + words[index - 7] + s1) >>> 0;
+      words[index] = (words[index - 16] + s0 + words[index - 7] + s1) | 0;
     }
     let a = h0;
     let b = h1;
@@ -130,30 +131,30 @@ export function sha256Hex(value) {
     for (let index = 0; index < 64; index += 1) {
       const s1 = rotr(e, 6) ^ rotr(e, 11) ^ rotr(e, 25);
       const choice = (e & f) ^ (~e & g);
-      const temp1 = (h + s1 + choice + SHA256_K[index] + words[index]) >>> 0;
+      const temp1 = (h + s1 + choice + SHA256_K[index] + words[index]) | 0;
       const s0 = rotr(a, 2) ^ rotr(a, 13) ^ rotr(a, 22);
       const majority = (a & b) ^ (a & c) ^ (b & c);
-      const temp2 = (s0 + majority) >>> 0;
+      const temp2 = (s0 + majority) | 0;
       h = g;
       g = f;
       f = e;
-      e = (d + temp1) >>> 0;
+      e = (d + temp1) | 0;
       d = c;
       c = b;
       b = a;
-      a = (temp1 + temp2) >>> 0;
+      a = (temp1 + temp2) | 0;
     }
-    h0 = (h0 + a) >>> 0;
-    h1 = (h1 + b) >>> 0;
-    h2 = (h2 + c) >>> 0;
-    h3 = (h3 + d) >>> 0;
-    h4 = (h4 + e) >>> 0;
-    h5 = (h5 + f) >>> 0;
-    h6 = (h6 + g) >>> 0;
-    h7 = (h7 + h) >>> 0;
+    h0 = (h0 + a) | 0;
+    h1 = (h1 + b) | 0;
+    h2 = (h2 + c) | 0;
+    h3 = (h3 + d) | 0;
+    h4 = (h4 + e) | 0;
+    h5 = (h5 + f) | 0;
+    h6 = (h6 + g) | 0;
+    h7 = (h7 + h) | 0;
   }
   return [h0, h1, h2, h3, h4, h5, h6, h7]
-    .map((part) => part.toString(16).padStart(8, '0'))
+    .map((part) => (part >>> 0).toString(16).padStart(8, '0'))
     .join('');
 }
 

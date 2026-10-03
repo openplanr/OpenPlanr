@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.17.0/workspace-rotation-v2.schema.json",
+  "x-openplanr-contract": {
+    "id": "workspace-rotation-v2",
+    "version": "1.17.0"
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "operationId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{22,64}$"
+    },
+    "expectedVersion": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "epoch": {
+      "type": "integer",
+      "minimum": 2,
+      "maximum": 9007199254740991
+    },
+    "reviewerAuthHash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "keyring": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "iv": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{16}$"
+        },
+        "ciphertext": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]+$",
+          "maxLength": 65536
+        }
+      },
+      "required": [
+        "iv",
+        "ciphertext"
+      ]
+    },
+    "signature": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{86}$"
+    }
+  },
+  "required": [
+    "operationId",
+    "expectedVersion",
+    "epoch",
+    "reviewerAuthHash",
+    "keyring",
+    "signature"
+  ]
+}

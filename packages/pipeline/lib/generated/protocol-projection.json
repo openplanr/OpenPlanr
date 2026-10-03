@@ -94,15 +94,27 @@
       "mode": "644"
     },
     {
+      "source": "packages/protocol/projections/pipeline/lib/protocol/bounded-json-data.d.mts",
+      "target": "lib/protocol/bounded-json-data.d.mts",
+      "sha256": "f5a8d0c4df7a53e82f23cd6b857810f8cf761b17f6bdcc2d1dc3f0bb35538f60",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/projections/pipeline/lib/protocol/bounded-json-data.mjs",
+      "target": "lib/protocol/bounded-json-data.mjs",
+      "sha256": "743bdbfa245087338d2bed1b8a5bd6c792eb06bba4179eb7fcff5ac011a4130a",
+      "mode": "644"
+    },
+    {
       "source": "packages/protocol/projections/pipeline/lib/protocol/browser-contracts.d.mts",
       "target": "lib/protocol/browser-contracts.d.mts",
-      "sha256": "bf78046ca41f544783391710566a2907601610734085b1c35b167a35461d37d7",
+      "sha256": "d6f5d5702ee90bf64e7ceddb6ce593d3603584634c7cf258b0b36b8e4ad05721",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/browser-contracts.mjs",
       "target": "lib/protocol/browser-contracts.mjs",
-      "sha256": "e5f3bf7b8d8d8e0344f8a088a7b42297d1b7f8ea3e7050f46a9e46d892a9cc10",
+      "sha256": "737ba850973d2611fc6cd3865398afe83511950d06155d7677a9c85b30a6a217",
       "mode": "644"
     },
     {
@@ -114,13 +126,13 @@
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/canonical-json.mjs",
       "target": "lib/protocol/canonical-json.mjs",
-      "sha256": "7dc837c82f0bb950047e50060f080124c5f415c0c29c7d8ca49244a5f2c92d3e",
+      "sha256": "b8078554f91d547de80df7612872560a0ad945af2143aae9dae4e38b4c309e30",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/contracts.mjs",
       "target": "lib/protocol/contracts.mjs",
-      "sha256": "980ec5ae30423e8cc6bec23de5ee0fb47e02cbf81ecf8c8966330bbc592aaba0",
+      "sha256": "4ff7e93c0dd27ec7b8cdb676a364fe002958fd3cd5884f71d33ba29a9d4f9603",
       "mode": "644"
     },
     {
@@ -156,13 +168,13 @@
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/diagram-authoring-contracts.d.mts",
       "target": "lib/protocol/diagram-authoring-contracts.d.mts",
-      "sha256": "5354a39b5580956914b843c2a483e8f79262ed3ce926da6080cff9d67d1d82cc",
+      "sha256": "030563ec79b397af310106d2607c81a8467ab06a8fbfda37801ce2aa133b9c87",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/diagram-authoring-contracts.mjs",
       "target": "lib/protocol/diagram-authoring-contracts.mjs",
-      "sha256": "ed16c1f415314568435e30633d45643f9f1346c1a4537d7043e21ccccea5d51f",
+      "sha256": "3dcaf7c09d312abbfc4e47964c81214702eb8128a91ca2fd1cdcc97a64a35397",
       "mode": "644"
     },
     {
@@ -184,6 +196,18 @@
       "mode": "644"
     },
     {
+      "source": "packages/protocol/projections/pipeline/lib/protocol/enterprise-contract-validation.d.mts",
+      "target": "lib/protocol/enterprise-contract-validation.d.mts",
+      "sha256": "ef6c9d07633b1a90dff1951999f75285cf9145fc9de1a064b9fe3a7209754fc1",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/projections/pipeline/lib/protocol/enterprise-contract-validation.mjs",
+      "target": "lib/protocol/enterprise-contract-validation.mjs",
+      "sha256": "9babc91d29f576ce85fbc17232bdcbc42fd4289d0b97a0d784100bf6799d8a70",
+      "mode": "644"
+    },
+    {
       "source": "packages/protocol/projections/pipeline/lib/protocol/enterprise-contracts.d.mts",
       "target": "lib/protocol/enterprise-contracts.d.mts",
       "sha256": "bbbe4e977ee1dd8850e63e1b656120a911b55cfdd0ccd162cbdacadbece413e4",
@@ -192,13 +216,31 @@
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/enterprise-contracts.mjs",
       "target": "lib/protocol/enterprise-contracts.mjs",
-      "sha256": "d6ef39eb211eda8eb39527759d61cd6a3e68495cc80f94a468538ffe6b7bc1d5",
+      "sha256": "04a29c5a60c92a2b40c34d877bcf3583ebb9779456c6117a47ac7ffbd94231bd",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/projections/pipeline/lib/protocol/enterprise-resource-contracts.d.mts",
+      "target": "lib/protocol/enterprise-resource-contracts.d.mts",
+      "sha256": "705af14038683464b8a8d3091816f06a525628d5bcf1249d085eed873b7b428e",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/projections/pipeline/lib/protocol/enterprise-resource-contracts.mjs",
+      "target": "lib/protocol/enterprise-resource-contracts.mjs",
+      "sha256": "bf91d37d98ae10be9c9a5eb72549ae381a194d874a97d6275b7ba3b8c0a0ea58",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/errors.mjs",
       "target": "lib/protocol/errors.mjs",
       "sha256": "49c41e1e5c13b5dc5cbe0ee426b03fb9d076de78c6bf99d4824f9b7f2d8a214f",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/projections/pipeline/lib/protocol/generated/artifact-envelope-metadata.mjs",
+      "target": "lib/protocol/generated/artifact-envelope-metadata.mjs",
+      "sha256": "e3ac101ea3e1fbf10a21b66e5e780e1cef70a941dd3b05d4574b88313488fe66",
       "mode": "644"
     },
     {
@@ -222,13 +264,37 @@
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/jcs.mjs",
       "target": "lib/protocol/jcs.mjs",
-      "sha256": "7dc837c82f0bb950047e50060f080124c5f415c0c29c7d8ca49244a5f2c92d3e",
+      "sha256": "b8078554f91d547de80df7612872560a0ad945af2143aae9dae4e38b4c309e30",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/json-schema.mjs",
       "target": "lib/protocol/json-schema.mjs",
       "sha256": "3ef52ce3d821952b13a2ebbbb52cb70c2147a708be82cc5c61f009a90dc48a36",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/projections/pipeline/lib/protocol/large-object-contracts.d.mts",
+      "target": "lib/protocol/large-object-contracts.d.mts",
+      "sha256": "0198f65ee5a8f2661cf8e518a0028f3d1aae643d21bf8622d9fc17cf1ee8c39e",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/projections/pipeline/lib/protocol/large-object-contracts.mjs",
+      "target": "lib/protocol/large-object-contracts.mjs",
+      "sha256": "930fd2ded54365e02f6c175912e05e9dcb9170f3b64bca463de9dcfd3f052049",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/projections/pipeline/lib/protocol/large-object-limits.d.mts",
+      "target": "lib/protocol/large-object-limits.d.mts",
+      "sha256": "4be027e389ede1e42ec0108f641f4e33fcb9b702a9a583e5ed4ceecf4b12727a",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/projections/pipeline/lib/protocol/large-object-limits.mjs",
+      "target": "lib/protocol/large-object-limits.mjs",
+      "sha256": "2d0d04ac6ad37ab7bfaa64c777ca9820fe84ab5d86d80cece06f67edecb10f74",
       "mode": "644"
     },
     {
@@ -258,13 +324,37 @@
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/review-experience-contracts.mjs",
       "target": "lib/protocol/review-experience-contracts.mjs",
-      "sha256": "fd94b531005643835ae7ca2715fc01015a5f4f8e88d67ab4b54ae50b48fb760e",
+      "sha256": "da68c8e0b2f1c8ad8359fd1e2d833d0e9aadb4b004f34fbe55a6506328482bb9",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/projections/pipeline/lib/protocol/sharing-security-contracts.d.mts",
+      "target": "lib/protocol/sharing-security-contracts.d.mts",
+      "sha256": "17d27c5d87da5554954e5dea9a4c94e4492d1055d6164bbb46387411fdfdae29",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/projections/pipeline/lib/protocol/sharing-security-contracts.mjs",
+      "target": "lib/protocol/sharing-security-contracts.mjs",
+      "sha256": "992b5b59a26caf350369c5da2bd06e83e06915570beffab086cac32e1bd96fbd",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/skill-source-contracts.mjs",
       "target": "lib/protocol/skill-source-contracts.mjs",
       "sha256": "fed759ae6799756d3f946cb94a12ed76f16a79d610cea392b957a29b361539db",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/projections/pipeline/lib/protocol/studio-presentation-contracts.d.mts",
+      "target": "lib/protocol/studio-presentation-contracts.d.mts",
+      "sha256": "4df0a1037c8297fa878252ce78d34b3590543ce1a22796f171f189deee0998d1",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/projections/pipeline/lib/protocol/studio-presentation-contracts.mjs",
+      "target": "lib/protocol/studio-presentation-contracts.mjs",
+      "sha256": "877a01a02d1784b22a07e7574e8cc3ffb4b47b94b91422792fe4f006dadf4c5c",
       "mode": "644"
     },
     {
@@ -895,6 +985,216 @@
       "source": "packages/protocol/schemas/v1.15.0/diagram-workspace-revision.schema.json",
       "target": "schemas/v1.15.0/diagram-workspace-revision.schema.json",
       "sha256": "8e8e1cf8c8ef136d88a33912db19b065a46a93176424b612dff157da9c3d3562",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.16.0/artifact-envelope.schema.json",
+      "target": "schemas/v1.16.0/artifact-envelope.schema.json",
+      "sha256": "765797b2fe12e57259b1ffdc7dc2bca3884bace5bd7badc850d6150136a3e68b",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.16.0/design-review-bundle.schema.json",
+      "target": "schemas/v1.16.0/design-review-bundle.schema.json",
+      "sha256": "f5616731ad5bb0399514e1cd36f6ffbaf9adaa1b378107b677b857f6312dfa52",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.17.0/artifact-paste-v2.schema.json",
+      "target": "schemas/v1.17.0/artifact-paste-v2.schema.json",
+      "sha256": "95d8486fdfa0f7ab33d79a423713a13a4f79573aaf00d928539c574de3e102be",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.17.0/artifact-room-append-v3.schema.json",
+      "target": "schemas/v1.17.0/artifact-room-append-v3.schema.json",
+      "sha256": "4c3e8b24b472eafd0ce4d2b8f985433380fa069eeffea8587a3f0b7683e15cde",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.17.0/artifact-room-create-v3.schema.json",
+      "target": "schemas/v1.17.0/artifact-room-create-v3.schema.json",
+      "sha256": "88d633ef4a57fabbd7c30e44aac0619b0efeafc690f2d33273d797b02a318a8a",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.17.0/artifact-room-descriptor-v3.schema.json",
+      "target": "schemas/v1.17.0/artifact-room-descriptor-v3.schema.json",
+      "sha256": "7e57fafc880728068ca16872eac4519d2e91795b154eda00730f6d9f031f3efd",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.17.0/artifact-room-event-v3.schema.json",
+      "target": "schemas/v1.17.0/artifact-room-event-v3.schema.json",
+      "sha256": "b9f4b45ca8a6af4bc8ec43cd11ec4c5b7f89fd35ffe0b87babe515938eb13403",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.17.0/artifact-room-management-v3.schema.json",
+      "target": "schemas/v1.17.0/artifact-room-management-v3.schema.json",
+      "sha256": "6f786823e27ee6a34db65ffb1e477c04ddb1b1ea1c8009c0334c2947a8c81777",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.17.0/artifact-room-read-page-v3.schema.json",
+      "target": "schemas/v1.17.0/artifact-room-read-page-v3.schema.json",
+      "sha256": "8cc6899bc85b6d58d5e737f9ca02a34eed2b4f605cf8c8dc6f809de825c6fd3d",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.17.0/company-resource-manifest.schema.json",
+      "target": "schemas/v1.17.0/company-resource-manifest.schema.json",
+      "sha256": "35c6733d9a46cd9dcb818839d945cbcf9968907191471fcdef9096c026106084",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.17.0/company-resource-upload-prepare.schema.json",
+      "target": "schemas/v1.17.0/company-resource-upload-prepare.schema.json",
+      "sha256": "b42302f8420ae82aac62ebe2c918bdbd5c201f2097f68724cb4038df1b9e2fdd",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.17.0/company-resource-upload-receipt.schema.json",
+      "target": "schemas/v1.17.0/company-resource-upload-receipt.schema.json",
+      "sha256": "c4cb4d6b2fd3db2b9e60f4e8c186c8ff912e25f5a300f991611c9887addc093a",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.17.0/company-resource-upload-status.schema.json",
+      "target": "schemas/v1.17.0/company-resource-upload-status.schema.json",
+      "sha256": "7d91554439f0d29277505c158cfe75c566764e4d15eae0d1ed2e541dc4de228f",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.17.0/diagram-authoring-bundle.schema.json",
+      "target": "schemas/v1.17.0/diagram-authoring-bundle.schema.json",
+      "sha256": "95dabb2c20c3360f0593b2615451428ba7a485d74fa08e81fd4ea552ca9ee24c",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.17.0/diagram-edit-transaction.schema.json",
+      "target": "schemas/v1.17.0/diagram-edit-transaction.schema.json",
+      "sha256": "db2ec9eeced8d946d2609fa30122597853dbe8a99883ce43a2f1b762022895bf",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.17.0/diagram-presentation.schema.json",
+      "target": "schemas/v1.17.0/diagram-presentation.schema.json",
+      "sha256": "63887168cc5983b07626ff6029cfd493b1424dbc334ac7dfd85a20ca6bb5466e",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.17.0/diagram-review-bundle.schema.json",
+      "target": "schemas/v1.17.0/diagram-review-bundle.schema.json",
+      "sha256": "80f89856c8912816e036c09dfce0451e9cf94ecbdc569164413876094dcbad42",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.17.0/encrypted-resource-manifest.schema.json",
+      "target": "schemas/v1.17.0/encrypted-resource-manifest.schema.json",
+      "sha256": "a7c90d4ac0525e31725fdab396586270dddd5fceb615c1a8c4610c655c4780d6",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.17.0/encrypted-upload-commit.schema.json",
+      "target": "schemas/v1.17.0/encrypted-upload-commit.schema.json",
+      "sha256": "b68c702c167d40b074242f36a6552f3efc39c9b8f4c688057655737e7e55ae6b",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.17.0/encrypted-upload-prepare.schema.json",
+      "target": "schemas/v1.17.0/encrypted-upload-prepare.schema.json",
+      "sha256": "363961aa13d77d4a6e16614913af2d7990b90ffc58be2f8f8d99c6e5f0f11897",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.17.0/encrypted-upload-receipt.schema.json",
+      "target": "schemas/v1.17.0/encrypted-upload-receipt.schema.json",
+      "sha256": "160a57098529cf58d0458177314317c3f7be71d12b5951f4d43f9d34968dd74b",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.17.0/encrypted-upload-status.schema.json",
+      "target": "schemas/v1.17.0/encrypted-upload-status.schema.json",
+      "sha256": "3ddff03e06402c3593b0299b3dcb6e2922036f21a3b59403b92974240dca2c2f",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.17.0/encrypted-workspace-event-v2.schema.json",
+      "target": "schemas/v1.17.0/encrypted-workspace-event-v2.schema.json",
+      "sha256": "2c07decde75615fba0af2f303eff8f5e2ea9b3472102faa194454fe3ab528640",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.17.0/encrypted-workspace-v2.schema.json",
+      "target": "schemas/v1.17.0/encrypted-workspace-v2.schema.json",
+      "sha256": "937cc2e99d51319504e0a826b90e3d53a517907374ab49f1c3d40689dadc8cba",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.17.0/enterprise-agent-handoff.schema.json",
+      "target": "schemas/v1.17.0/enterprise-agent-handoff.schema.json",
+      "sha256": "be59508e1c8045af36c374a912176c1c426ef22282c6ce74b3b585931c76be64",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.17.0/enterprise-artifact-revision.schema.json",
+      "target": "schemas/v1.17.0/enterprise-artifact-revision.schema.json",
+      "sha256": "adb60aeebc6fdf1cecf474aaa5517e341490a6ab343ce82eaad4a46cc9388a7a",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.17.0/enterprise-change-proposal.schema.json",
+      "target": "schemas/v1.17.0/enterprise-change-proposal.schema.json",
+      "sha256": "b93160d2fca55f3ff7840d524e81b2d975006f1f7028483ff7f01fe5c49f7a50",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.17.0/enterprise-evidence-reference.schema.json",
+      "target": "schemas/v1.17.0/enterprise-evidence-reference.schema.json",
+      "sha256": "d538e26682134f0ba3a62330cd7b0fe4a8e066e4b9e2c6f66d44f04963e7b483",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.17.0/enterprise-review-thread.schema.json",
+      "target": "schemas/v1.17.0/enterprise-review-thread.schema.json",
+      "sha256": "86f7443499ed248483d61f8f9f602b1c7e54c7091e19e60e615ee291bb81cfea",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.17.0/enterprise-sync-state.schema.json",
+      "target": "schemas/v1.17.0/enterprise-sync-state.schema.json",
+      "sha256": "f7bff4594b179c04a03b6e4cdc841862f1369a3d95fecec97a6f126fdd20ad11",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.17.0/preview-bridge-message.schema.json",
+      "target": "schemas/v1.17.0/preview-bridge-message.schema.json",
+      "sha256": "9c268b7f12734e2c46f618041b03cb37df0fd5937a946017d786a265ddfd43c6",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.17.0/resource-catalog.schema.json",
+      "target": "schemas/v1.17.0/resource-catalog.schema.json",
+      "sha256": "7968f60406ed3e9c5030ed18f68c5610cfbd3bd78043b4af4759e5c1a69fd452",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.17.0/sharing-crypto-aad.schema.json",
+      "target": "schemas/v1.17.0/sharing-crypto-aad.schema.json",
+      "sha256": "92122ed04cb670c694215077d1c2e84e1de0ad4ca34fa83e88d402801354c677",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.17.0/workspace-management-v2.schema.json",
+      "target": "schemas/v1.17.0/workspace-management-v2.schema.json",
+      "sha256": "881b8ab1202b80fd3b8f9c47bd9cc0ef748ee2d9d9529ab339cd5164057fcbdb",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.17.0/workspace-rotation-v2.schema.json",
+      "target": "schemas/v1.17.0/workspace-rotation-v2.schema.json",
+      "sha256": "7546c25f4f831e51de6597ee8ca79e08865fe0460ab2f9e0c37f14bc825df3c6",
       "mode": "644"
     },
     {

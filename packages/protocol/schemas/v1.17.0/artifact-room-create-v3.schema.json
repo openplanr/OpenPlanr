@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.17.0/artifact-room-create-v3.schema.json",
+  "x-openplanr-contract": {
+    "id": "artifact-room-create-v3",
+    "version": "1.17.0"
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "const": "3.0.0"
+    },
+    "operation": {
+      "const": "create"
+    },
+    "roomId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{16,128}$"
+    },
+    "creationId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{43}$"
+    },
+    "ttl": {
+      "enum": [
+        "1d",
+        "7d",
+        "30d"
+      ]
+    },
+    "reviewCommitment": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "iv": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{16}$"
+    },
+    "ciphertext": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]+$",
+      "minLength": 22,
+      "maxLength": 6990507
+    },
+    "ownerKey": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "algorithm": {
+          "const": "ECDSA-P256-SHA256"
+        },
+        "encoding": {
+          "const": "spki-base64url"
+        },
+        "keyId": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        },
+        "value": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]+$",
+          "minLength": 86,
+          "maxLength": 342
+        }
+      },
+      "required": [
+        "algorithm",
+        "encoding",
+        "keyId",
+        "value"
+      ]
+    },
+    "readCapability": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{43}$"
+    },
+    "reviewerCapability": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{43}$"
+    },
+    "ownerCapability": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{43}$"
+    },
+    "manageCapability": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{43}$"
+    },
+    "signature": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{86}$"
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "operation",
+    "roomId",
+    "creationId",
+    "ttl",
+    "reviewCommitment",
+    "iv",
+    "ciphertext",
+    "ownerKey",
+    "readCapability",
+    "reviewerCapability",
+    "ownerCapability",
+    "manageCapability",
+    "signature"
+  ]
+}

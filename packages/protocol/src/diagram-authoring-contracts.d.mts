@@ -454,3 +454,15 @@ export declare function summarizeDiagramAuthoringContent(bundle: DiagramAuthorin
   hasVisibleContent: boolean;
 };
 export declare function inspectLegacyDiagramDocument(value: unknown): DiagramLegacyInspection;
+
+/** Internal: detached and recursively frozen inert data, without a semantic validity claim. */
+export declare function copyImmutableDiagramData<T>(value: T, previous?: T | null): T;
+/** Inspect inert authoring data with the existing aggregate limits, without copying it. */
+export declare function assertDiagramData<T>(value: T): T;
+
+/** Internal: seals an inert draft into an immutable copy without claiming semantic validity. */
+export declare function sealImmutableDiagramData<T>(value: T, previous?: T | null): T;
+
+export function immutableDiagramDataUsage(
+  value: unknown,
+): { values: number; text: number; height: number } | null;

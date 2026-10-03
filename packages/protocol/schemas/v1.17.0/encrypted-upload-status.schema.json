@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.17.0/encrypted-upload-status.schema.json",
+  "x-openplanr-contract": {
+    "id": "encrypted-upload-status",
+    "version": "1.17.0"
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "const": "2.0.0"
+    },
+    "workspaceId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{22,64}$"
+    },
+    "operationId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{22,64}$"
+    },
+    "revisionId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{22,64}$"
+    },
+    "manifestSha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "status": {
+      "enum": [
+        "prepared",
+        "committed"
+      ]
+    },
+    "receivedChunks": {
+      "type": "array",
+      "maxItems": 129,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "index": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 128
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "byteLength": {
+            "type": "integer",
+            "minimum": 17,
+            "maximum": 1048576
+          }
+        },
+        "required": [
+          "index",
+          "sha256",
+          "byteLength"
+        ]
+      }
+    },
+    "receipt": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "$id": "https://openplanr.dev/schemas/v1.17.0/encrypted-upload-receipt.schema.json",
+      "x-openplanr-contract": {
+        "id": "encrypted-upload-receipt",
+        "version": "1.17.0"
+      },
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "schemaVersion": {
+          "const": "2.0.0"
+        },
+        "workspaceId": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{22,64}$"
+        },
+        "operationId": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{22,64}$"
+        },
+        "revisionId": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{22,64}$"
+        },
+        "manifestSha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "status": {
+          "const": "committed"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "committedAt": {
+          "type": "string",
+          "format": "date-time",
+          "maxLength": 40
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "workspaceId",
+        "operationId",
+        "revisionId",
+        "manifestSha256",
+        "status",
+        "version",
+        "committedAt"
+      ]
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "workspaceId",
+    "operationId",
+    "revisionId",
+    "manifestSha256",
+    "status",
+    "receivedChunks"
+  ]
+}
