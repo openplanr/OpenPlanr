@@ -428,3 +428,75 @@ for (const surface of ['design', 'diagram', 'presentation', 'authoring']) {
     },
   );
 }
+
+test(
+  'diagram stays compact at the tablet boundary with native fallback font metrics',
+  options,
+  async (t) => {
+    const page = await fixture(t, 'diagram');
+    const observations = [];
+    if (evidenceRoot) mkdirSync(evidenceRoot, { recursive: true });
+    t.after(() => {
+      if (evidenceRoot)
+        writeFileSync(
+          join(evidenceRoot, `${browserEngine()}-diagram-fallback-fonts.json`),
+          `${JSON.stringify(observations, null, 2)}\n`,
+        );
+    });
+    for (const font of ['Arial', 'Verdana', 'Tahoma']) {
+      await page.evaluate((family) => {
+        // These are real native fallback fonts: platform metrics must not turn this header into two rows.
+        for (const property of ['--planr-font-body', '--planr-font-display'])
+          document.documentElement.style.setProperty(property, `"${family}", sans-serif`);
+      }, font);
+      for (const width of [681, 700, 768]) {
+        await page.setViewportSize({ width, height: 900 });
+        for (const theme of ['light', 'dark']) {
+          await page.emulateMedia({ colorScheme: theme === 'light' ? 'dark' : 'light' });
+          await page.evaluate((value) => {
+            document.documentElement.dataset.planrTheme = value;
+          }, theme);
+          await settle(page);
+          const record = { font, width, theme, ...(await observe(page)) };
+          observations.push(record);
+          if (evidenceRoot && width === 681)
+            await page.screenshot({
+              path: join(evidenceRoot, `${browserEngine()}-diagram-681-${font}-${theme}.png`),
+            });
+          const context = `diagram ${width}px ${theme} native ${font}`;
+          assert.equal(record.toolbar.height, 60, `${context}: compact tablet header`);
+          assert.equal(record.badge.value, 'Diagram', context);
+          assert.ok(
+            record.badge.visibleWidth >= record.badge.glyphWidth - 1,
+            `${context}: complete type label is visible`,
+          );
+          assert.equal(record.title.value, title, context);
+          assert.ok(record.title.visibleWidth >= 36, `${context}: title retains useful truncation`);
+          assert.equal(record.bodyOverflow, false, `${context}: no horizontal page overflow`);
+          for (const button of record.buttons) {
+            assert.ok(
+              button.left >= -1 && button.right <= width + 1,
+              `${context}: ${button.label} fits`,
+            );
+            const overlap =
+              Math.min(button.right, record.identity.right) -
+              Math.max(button.left, record.identity.left);
+            assert.ok(
+              overlap <= 1 ||
+                button.bottom <= record.identity.top ||
+                button.top >= record.identity.bottom,
+              `${context}: ${button.label} does not overlap identity`,
+            );
+          }
+          assert.ok(
+            record.stage.top >= record.toolbar.bottom - 1,
+            `${context}: direct canvas remains below header`,
+          );
+          assert.equal(record.canvasRetained, true, `${context}: stable canvas DOM`);
+          assert.equal(record.draftRetained, true, `${context}: stable review draft DOM`);
+          assert.equal(record.draft, 'Pending review draft', context);
+        }
+      }
+    }
+  },
+);

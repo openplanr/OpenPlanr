@@ -523,6 +523,11 @@
     }
   }
 }
+@media (min-width: 681px) and (max-width: 960px) {
+  .diagram-shell[data-studio-framework="react"] .studio-toolbar-trailing {
+    gap: 4px;
+  }
+}
 @media (max-width: 480px) {
   .studio-toolbar .planr-mark {
     display: none;

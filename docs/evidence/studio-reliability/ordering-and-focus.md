@@ -143,3 +143,27 @@ and peer-Git prerequisites are recorded separately from product failures. Normal
 owning generation, final CI archives and cold consumer acceptance remain
 separate gates; generated dependency-path labels from isolated proposals are
 never transferred into the owning candidate.
+
+## Platform font metrics at the tablet boundary
+
+Fresh CI at `d9df77bb` found the same diagram header wrapping at 681 pixels in
+the supporting-package job and Chrome, Firefox and WebKit certification. Its
+83-pixel height failed the original 60-pixel compact-header assertion. The
+Workspace run passed its other 22 jobs; no archive from that failed run was
+adopted. All original engine logs and the native failing geometry are retained.
+
+An ordinary native Verdana fallback reproduced the same wrap locally. The
+correction changes only the diagram action gap to 4 pixels between 681 and 960
+pixels. Full action labels, the complete type badge and useful title truncation
+remain; phone/enlarged-text wrapping and controller mounts are unchanged. A
+new native fallback-font case extends the existing actual-mount fixture without
+changing any earlier assertion or wait. CI now retains engine-specific layout
+observations and screenshots even after failure.
+
+The frozen proposal passed 162 native editor, host and identity cases across
+Chrome, Firefox and WebKit, with no skips, including the new fallback-font
+regression. Compiler, ownership and shell checks passed 17 cases; normal
+generation and its read-only check passed all 15 stages. The resulting shell
+measured 68,544 raw bytes and 13,024 gzip bytes within the unchanged budgets.
+Independent source reviews, owning generation/checks and fresh successful CI
+archives remain separate from this isolated evidence.

@@ -67,6 +67,15 @@ jobs:
         env:
           PLANR_BROWSER_TESTS: '1'
           PLANR_BROWSER_ENGINE: ${{ matrix.browser }}
+          PLANR_STUDIO_IDENTITY_EVIDENCE: ${{ runner.temp }}/studio-identity-${{ matrix.browser }}
+      - name: Retain native Studio identity evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: studio-identity-${{ matrix.browser }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/studio-identity-${{ matrix.browser }}
+          retention-days: 7
+          if-no-files-found: warn
 
   report:
     name: Report a failed nightly run
