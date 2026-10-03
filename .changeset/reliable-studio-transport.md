@@ -10,3 +10,5 @@ Share large designs through resumable, authenticated resource uploads and load o
 CLI credentials and company sign-in metadata now honor `PLANR_HOME`. When the selected home has no prior record, private legacy files are copied without changing the originals; existing destination records stay authoritative. Migration receipts prevent deleted records from being imported again. Unsafe or incomplete records require recovery rather than being treated as absent.
 
 Trusted preview hosts can opt into review selection without remounting the authored prototype or interrupting its local form state, including canonical Diagram element targets. Native taps on passive Diagram SVG select elements while Review is enabled; returning to Interact restores authored behavior.
+
+Keep large canvases responsive across browsers while preserving layout, camera controls and preview state.

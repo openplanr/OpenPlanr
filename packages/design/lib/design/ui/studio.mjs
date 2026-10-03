@@ -819,7 +819,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
     const zoom = String(state.zoom);
     if (grid.style.getPropertyValue('--design-zoom') !== zoom)
       grid.style.setProperty('--design-zoom', zoom);
-    grid.style.transform = `translate3d(${state.camera.x}px, ${state.camera.y}px, 0) scale(${state.zoom})`;
+    grid.style.transform = `translate(${state.camera.x}px, ${state.camera.y}px) scale(${state.zoom})`;
     // Translate a bounded background layer rather than invalidating inherited
     // properties on the entire shell or repainting its full stage background.
     const pixelRatio = window.devicePixelRatio || 1;
