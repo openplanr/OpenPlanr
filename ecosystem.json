@@ -19,7 +19,7 @@
       "packages/integrations",
       "apps/dashboard"
     ],
-    "manifestDigest": "sha256:eec9c6cf156b8cbbf86eb0a4387e34534467755276fff848e79b54bda630b8ac"
+    "manifestDigest": "sha256:7b9d7727bff3a1bed3f4c55d528bb8216baa9a0398f988f5fd4c604677ea94d7"
   },
   "protocol": {
     "current": "1.8.0",
@@ -58,14 +58,14 @@
       "version": "2.2640.6",
       "path": "packages/cli",
       "publication": "public",
-      "manifestDigest": "sha256:46db1b5afc75752c0e8d4720a28055775708391e7010e8c331b697432b69575c"
+      "manifestDigest": "sha256:a20a684f1e6ec9b7ee57cc192647ee52c45d0cf5b74babf98c51b1f9eb496d17"
     },
     "pipeline": {
       "package": "planr-pipeline",
       "version": "0.55.7",
       "path": "packages/pipeline",
       "publication": "public",
-      "manifestDigest": "sha256:ccaa237881596a6166d3c370a108d2afe3657d4852af87ac548e41a5e0e2b921"
+      "manifestDigest": "sha256:94ece5d9363b8a913891cd402447c1214322e4f3d4d0cc2d5096cf0ef6f61754"
     },
     "protocol": {
       "package": "@openplanr/protocol",
@@ -86,14 +86,14 @@
       "version": "0.5.10",
       "path": "packages/artifact",
       "publication": "private",
-      "manifestDigest": "sha256:cc6fa9b9baddc5a20b10c014e01718456ff941c253f29b932fce1d228bd574fe"
+      "manifestDigest": "sha256:1cc2a5f092e2be201574a5cb0c5be984f6195043d6d53643d752b112a7d7e61e"
     },
     "design": {
       "package": "@openplanr/design",
       "version": "0.3.9",
       "path": "packages/design",
       "publication": "private",
-      "manifestDigest": "sha256:102a971e8f71bec8b50fcd39fc8bcac766559c9d495a6c45f7cb37c02488e4f6"
+      "manifestDigest": "sha256:29c2562eba9cbb9be388de69c37fe4986f920b2dfa6793ca07c5b78c1a7ab9d0"
     },
     "skillRuntime": {
       "package": "@openplanr/skill-runtime",
@@ -145,7 +145,7 @@
   "catalogs": {
     "commands": {
       "path": "packages/protocol/registries/commands.json",
-      "digest": "sha256:8cb1487f219c403de7975f8570bf03e9bc167a06170b0f250d77df898520a6b8",
+      "digest": "sha256:3b954999daab81a43782369888e65c7f98e361ef26e8805ff26b6aaade5e8200",
       "rootCommands": 39,
       "pipelineMachineLeaves": 31,
       "frozenClaudeDocuments": 8,
@@ -346,7 +346,7 @@
     ],
     "generatedAssets": {
       "path": "adapters/manifests/generated-assets.json",
-      "digest": "sha256:403c74302d0bdefcffbe6e15a8dcc1e0e0e051cdf9d87558aa03a32a15f36a9b",
+      "digest": "sha256:d81d3b5750524e1e74cdfcf08ce1e3c4e94cbb9ef3c6bd8249367b427ea26b16",
       "count": 2551
     }
   },

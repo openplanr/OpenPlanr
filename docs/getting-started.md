@@ -5,7 +5,7 @@ your coding agent. It takes about five minutes.
 
 ## Requirements
 
-- Node.js 20 or later and npm.
+- a supported Node.js version (see [package metadata](../packages/cli/package.json)) and npm.
 - One coding agent: Claude Code, Codex, or Cursor.
 - A project under Git, or a directory you are willing to initialize.
 

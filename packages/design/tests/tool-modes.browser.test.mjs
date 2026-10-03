@@ -144,15 +144,42 @@ test(`canvas tools are exclusive and interrupted gestures release without a view
       for (const interruption of ['blur', 'lostpointercapture', 'pointercancel', 'tool']) {
         await page.locator(selectors.pan).click();
         await page.mouse.move(area.x + 8, area.y + 20);
+        await page.evaluate(() => {
+          window.fixturePointerDown = null;
+          document.querySelector('.planr-stage-scroll').addEventListener(
+            'pointerdown',
+            (event) => {
+              window.fixturePointerDown = {
+                pointerId: event.pointerId,
+                isTrusted: event.isTrusted,
+              };
+            },
+            { once: true },
+          );
+        });
         await page.mouse.down();
+        const pointerDown = await page.evaluate(() => window.fixturePointerDown);
+        assert.ok(
+          Number.isInteger(pointerDown?.pointerId),
+          'The gesture observes a native pointer ID',
+        );
+        assert.equal(
+          pointerDown.isTrusted,
+          true,
+          'The observed pointerdown comes from the browser',
+        );
         await page.mouse.move(area.x + 50, area.y + 30);
         const before = await page.evaluate(() => window.__openPlanrDesignStudio.getState().camera);
-        await page.evaluate((type) => {
-          const scroll = document.querySelector('.planr-stage-scroll');
-          if (type === 'blur') window.dispatchEvent(new Event('blur'));
-          else if (type === 'tool') document.querySelector('[data-planr-mode="interact"]').click();
-          else scroll.dispatchEvent(new PointerEvent(type, { pointerId: 1 }));
-        }, interruption);
+        await page.evaluate(
+          ({ type, pointerId }) => {
+            const scroll = document.querySelector('.planr-stage-scroll');
+            if (type === 'blur') window.dispatchEvent(new Event('blur'));
+            else if (type === 'tool')
+              document.querySelector('[data-planr-mode="interact"]').click();
+            else scroll.dispatchEvent(new PointerEvent(type, { pointerId }));
+          },
+          { type: interruption, pointerId: pointerDown.pointerId },
+        );
         await page.mouse.move(area.x + 130, area.y + 70);
         await page.mouse.up();
         assert.deepEqual(

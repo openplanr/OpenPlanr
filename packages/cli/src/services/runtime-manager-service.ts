@@ -20,6 +20,11 @@ import type { FileHandle } from 'node:fs/promises';
 import { mkdir, open, readFile, rename, rm, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  CLI_NODE_REMEDIATION,
+  cliNodeVersionMessage,
+  supportsCliNodeVersion,
+} from '../../lib/node-runtime.mjs';
 import { planrHome, userHome } from '../../lib/planr-home.mjs';
 import { spliceManagedBlock } from '../utils/splice-managed-block.js';
 import {
@@ -38,6 +43,11 @@ import {
 } from './codex-plugin-service.js';
 import { resolvePipelinePackage } from './pipeline-package-service.js';
 import { readOpenPlanrVersion } from './provenance-service.js';
+import {
+  type CodexSkillDiscovery,
+  effectiveCodexHome,
+  inspectCodexSkillDiscovery,
+} from './runtime-manager/codex-discovery.js';
 import {
   classifyComponentDrift as classifyRuntimeComponentDrift,
   diagnoseManagedRuntimeFiles,
@@ -127,6 +137,8 @@ export interface SetupOptions {
   merge?: boolean;
   /** Reuse every recorded adapter scope when doctor repairs managed assets. */
   preserveExistingScopes?: boolean;
+  /** A named runtime update may deliberately replace its saved scope. */
+  overrideExistingScope?: boolean;
   /** Disable external runtime package changes for owned-file-only repair flows. */
   manageExternalRuntimes?: boolean;
   /** Codex discovery layout; Claude and Cursor retain their native fixed modes. */
@@ -236,8 +248,27 @@ function projectKey(projectDir: string): string {
   return hash(canonicalProjectPath(projectDir)).slice(0, 16);
 }
 
+/** Canonical native homes select only Codex ownership, never another agent's state. */
+function codexProfileKey(): string | undefined {
+  const selected = effectiveCodexHome();
+  const defaultHome = path.resolve(userHome(), '.codex');
+  return selected === defaultHome ? undefined : hash(selected).slice(0, 16);
+}
+
 export function runtimeRoot(): string {
   return path.join(planrHome(), 'runtime');
+}
+
+function codexRuntimeRoot(nativeHome = effectiveCodexHome()): string {
+  const defaultHome = path.resolve(userHome(), '.codex');
+  return nativeHome === defaultHome
+    ? runtimeRoot()
+    : path.join(runtimeRoot(), 'profiles', `codex-${hash(nativeHome).slice(0, 16)}`);
+}
+
+function codexBookkeepingTarget(target: string, nativeHome: string): boolean {
+  const root = codexRuntimeRoot(nativeHome);
+  return pathIsWithin(target, root) && !pathIsWithin(target, path.join(root, 'profiles'));
 }
 
 function statePath(): string {
@@ -245,7 +276,7 @@ function statePath(): string {
 }
 
 function codexSkillsRoot(): string {
-  return path.join(userHome(), '.codex', 'skills');
+  return path.join(effectiveCodexHome(), 'skills');
 }
 
 function backupsRoot(): string {
@@ -347,7 +378,7 @@ function assertMutableOwnedTarget(target: string, projectDir: string, code: stri
     assertApprovedTargetCustody(
       target,
       codexSkillsRoot(),
-      userHome(),
+      effectiveCodexHome(),
       code,
       'Global Codex bundle ownership',
     );
@@ -639,22 +670,28 @@ function assertUserOwnedTarget(
   file: Pick<OwnedFile, 'runtime' | 'target'>,
   runtime: RuntimeId | 'core',
   code = 'E_RUNTIME_STATE_INVALID',
+  nativeHome = effectiveCodexHome(),
 ): void {
-  if (pathIsWithin(file.target, runtimeRoot())) {
+  const approvedRoot = runtime === 'codex' ? codexRuntimeRoot(nativeHome) : runtimeRoot();
+  if (
+    runtime === 'codex'
+      ? codexBookkeepingTarget(file.target, nativeHome)
+      : pathIsWithin(file.target, approvedRoot)
+  ) {
     assertApprovedTargetCustody(
       file.target,
-      runtimeRoot(),
+      approvedRoot,
       userHome(),
       code,
       'Global runtime ownership',
     );
     return;
   }
-  if (runtime === 'codex' && pathIsWithin(file.target, codexSkillsRoot())) {
+  if (runtime === 'codex' && pathIsWithin(file.target, path.join(nativeHome, 'skills'))) {
     assertApprovedTargetCustody(
       file.target,
-      codexSkillsRoot(),
-      userHome(),
+      path.join(nativeHome, 'skills'),
+      nativeHome,
       code,
       'Global Codex bundle ownership',
     );
@@ -683,17 +720,17 @@ function assertActionCustody(actions: readonly FileAction[], projectDir: string)
   }
 }
 
-function assertRuntimeStateCustody(state: RuntimeState): void {
+function assertRuntimeStateCustody(state: RuntimeState, nativeHome = effectiveCodexHome()): void {
   for (const runtime of ['claude-code', 'codex', 'cursor'] as const) {
     for (const file of state.userBundles?.[runtime]?.ownedFiles ?? []) {
-      assertUserOwnedTarget(file, runtime);
+      assertUserOwnedTarget(file, runtime, 'E_RUNTIME_STATE_INVALID', nativeHome);
     }
   }
   for (const project of Object.values(state.projects)) {
     for (const file of project.ownedFiles) {
       const runtime = file.runtime;
       if (file.scope === 'user' || (runtime !== 'core' && isUserOwnedFile(file, runtime))) {
-        assertUserOwnedTarget(file, runtime);
+        assertUserOwnedTarget(file, runtime, 'E_RUNTIME_STATE_INVALID', nativeHome);
       } else {
         assertApprovedTargetCustody(
           file.target,
@@ -711,13 +748,17 @@ function assertRuntimeStateValue(
   value: unknown,
   code = 'E_RUNTIME_STATE_INVALID',
   allowLegacyProjectKeys = false,
+  nativeHome = effectiveCodexHome(),
+  inspectCustody = true,
 ): RuntimeState {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) {
     throw new RuntimeManagerError(code, 'Runtime ownership state is not one closed object.');
   }
   const state = value as Record<string, unknown>;
   if (
-    Object.keys(state).some((key) => !['projects', 'schemaVersion', 'userBundles'].includes(key)) ||
+    Object.keys(state).some(
+      (key) => !['projects', 'schemaVersion', 'userBundles', 'codexProfiles'].includes(key),
+    ) ||
     !['1.0.0', '2.0.0'].includes(String(state.schemaVersion)) ||
     state.projects === null ||
     typeof state.projects !== 'object' ||
@@ -765,6 +806,7 @@ function assertRuntimeStateValue(
             'backupDir',
             'backupManifestHash',
             'commandPrefix',
+            'codexHome',
             'ownedFiles',
             'projectDir',
             'runtimeScopes',
@@ -778,6 +820,9 @@ function assertRuntimeStateValue(
       (!legacyProjectKeysAllowed && key !== projectKey(canonicalProject)) ||
       canonicalProjects.has(canonicalProject) ||
       typeof record.updatedAt !== 'string' ||
+      (record.codexHome !== undefined &&
+        (typeof record.codexHome !== 'string' ||
+          path.resolve(record.codexHome) !== record.codexHome)) ||
       !Array.isArray(record.runtimes) ||
       record.runtimes.some((runtime) => !runtimeIds.has(runtime as RuntimeId)) ||
       !Array.isArray(record.ownedFiles) ||
@@ -833,26 +878,73 @@ function assertRuntimeStateValue(
       (bundle.installMode !== undefined &&
         !['direct', 'unified-plugin', 'project-rule'].includes(String(bundle.installMode))) ||
       !Array.isArray(bundle.ownedFiles) ||
-      bundle.ownedFiles.some((file) => !assertOwnedFile(file))
+      bundle.ownedFiles.some((file) => !assertOwnedFile(file)) ||
+      (runtime === 'codex' &&
+        bundle.ownedFiles.some((file) => {
+          const target = (file as OwnedFile).target;
+          return (
+            !codexBookkeepingTarget(target, nativeHome) &&
+            !pathIsWithin(target, path.join(nativeHome, 'skills'))
+          );
+        }))
     ) {
       throw new RuntimeManagerError(code, 'Runtime global ownership bundle is invalid.');
     }
   }
+  if (state.codexProfiles !== undefined) {
+    if (
+      !state.codexProfiles ||
+      typeof state.codexProfiles !== 'object' ||
+      Array.isArray(state.codexProfiles)
+    )
+      throw new RuntimeManagerError(code, 'Codex profile ownership is invalid.');
+    for (const [key, candidate] of Object.entries(state.codexProfiles)) {
+      if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate))
+        throw new RuntimeManagerError(code, 'Codex profile ownership is invalid.');
+      const profile = candidate as Record<string, unknown>;
+      if (
+        Object.keys(profile).some((field) => !['home', 'bundle'].includes(field)) ||
+        typeof profile.home !== 'string' ||
+        path.resolve(profile.home) !== profile.home ||
+        hash(profile.home).slice(0, 16) !== key
+      )
+        throw new RuntimeManagerError(code, 'Codex profile identity is invalid.');
+      // Decode every record, but only inspect the selected native home's filesystem.
+      if (profile.bundle !== undefined)
+        assertRuntimeStateValue(
+          { schemaVersion: '2.0.0', projects: {}, userBundles: { codex: profile.bundle } },
+          code,
+          false,
+          profile.home,
+          profile.home === effectiveCodexHome(),
+        );
+    }
+  }
   const decoded = value as RuntimeState;
-  assertRuntimeStateCustody(decoded);
+  if (inspectCustody) assertRuntimeStateCustody(decoded, nativeHome);
   return decoded;
 }
 
-function isUserOwnedFile(file: OwnedFile, runtime: RuntimeId): boolean {
+function isUserOwnedFile(
+  file: OwnedFile,
+  runtime: RuntimeId,
+  nativeHome = effectiveCodexHome(),
+): boolean {
   if (file.scope) return file.scope === 'user';
   if (pathIsWithin(file.target, runtimeRoot())) return true;
-  return runtime === 'codex' && pathIsWithin(file.target, codexSkillsRoot());
+  return runtime === 'codex' && pathIsWithin(file.target, path.join(nativeHome, 'skills'));
 }
 
 function projectUsesUserRuntime(
   project: RuntimeState['projects'][string],
   runtime: RuntimeId,
+  nativeHome = effectiveCodexHome(),
 ): boolean {
+  if (
+    runtime === 'codex' &&
+    (project.codexHome ?? path.resolve(userHome(), '.codex')) !== nativeHome
+  )
+    return false;
   if (!project.runtimes.includes(runtime)) return false;
   const recorded = project.runtimeScopes?.[runtime];
   if (recorded) return recorded === 'user' || recorded === 'both';
@@ -878,12 +970,16 @@ function assertRequestedProjectBinding(
 
 function inferLegacyCodexPrefix(
   project: RuntimeState['projects'][string],
+  nativeHome = effectiveCodexHome(),
 ): CommandPrefix | undefined {
-  if (!projectUsesUserRuntime(project, 'codex')) return undefined;
+  if (!projectUsesUserRuntime(project, 'codex', nativeHome)) return undefined;
   if (project.commandPrefix) return project.commandPrefix;
   const roots = project.ownedFiles
-    .filter((file) => file.runtime === 'codex' && pathIsWithin(file.target, codexSkillsRoot()))
-    .map((file) => path.relative(codexSkillsRoot(), file.target).split(path.sep)[0])
+    .filter(
+      (file) =>
+        file.runtime === 'codex' && pathIsWithin(file.target, path.join(nativeHome, 'skills')),
+    )
+    .map((file) => path.relative(path.join(nativeHome, 'skills'), file.target).split(path.sep)[0])
     .filter(Boolean);
   if (roots.length === 0) return 'namespaced';
   const modes = new Set(roots.map((name) => (name.startsWith('planr-') ? 'namespaced' : 'bare')));
@@ -914,12 +1010,11 @@ export function listRuntimeAdapters(): AdapterRegistryEntry[] {
 }
 
 function assertNodeVersion(): void {
-  const major = Number(process.versions.node.split('.')[0]);
-  if (major < 20) {
+  if (!supportsCliNodeVersion(process.versions.node)) {
     throw new RuntimeManagerError(
       'E_NODE_VERSION',
-      `Node.js 20 or newer is required; found ${process.versions.node}.`,
-      'Install Node.js 20+ and rerun `planr setup`. OpenPlanr will not modify Node.js for you.',
+      cliNodeVersionMessage(process.versions.node),
+      CLI_NODE_REMEDIATION,
     );
   }
 }
@@ -1086,10 +1181,14 @@ function normalizeInstallScope(
   return supportsProject ? 'project' : 'user';
 }
 
-function inferRuntimeScope(files: OwnedFile[], runtime: RuntimeId): InstallScope {
+function inferRuntimeScope(
+  files: OwnedFile[],
+  runtime: RuntimeId,
+  nativeHome = effectiveCodexHome(),
+): InstallScope {
   const owned = files.filter((file) => file.runtime === runtime);
-  const hasUser = owned.some((file) => isUserOwnedFile(file, runtime));
-  const hasProject = owned.some((file) => !isUserOwnedFile(file, runtime));
+  const hasUser = owned.some((file) => isUserOwnedFile(file, runtime, nativeHome));
+  const hasProject = owned.some((file) => !isUserOwnedFile(file, runtime, nativeHome));
   return hasUser && hasProject ? 'both' : hasUser ? 'user' : 'project';
 }
 
@@ -1215,6 +1314,7 @@ function buildActions(
   options: SetupOptions,
   runtimes: RuntimeId[],
   runtimeScopes: Partial<Record<RuntimeId, InstallScope>>,
+  retainedProject?: RuntimeState['projects'][string],
 ): FileAction[] {
   if (options.minimal) return [];
   const { version, registry } = readRegistry();
@@ -1255,13 +1355,7 @@ function buildActions(
             actions.push({
               runtime,
               scope: 'user',
-              target: path.join(
-                userHome(),
-                '.codex',
-                'skills',
-                asset.targetName,
-                asset.relativePath,
-              ),
+              target: path.join(codexSkillsRoot(), asset.targetName, asset.relativePath),
               content: asset.content,
               kind: 'file',
               description: `Install Codex skill asset ${asset.targetName}/${asset.relativePath}`,
@@ -1272,7 +1366,7 @@ function buildActions(
           actions.push({
             runtime,
             scope: 'user',
-            target: path.join(runtimeRoot(), 'install-modes', 'codex.json'),
+            target: path.join(codexRuntimeRoot(), 'install-modes', 'codex.json'),
             content: Buffer.from(
               `${JSON.stringify({ schemaVersion: '1.0.0', runtime, mode, sourceVersion: version }, null, 2)}\n`,
             ),
@@ -1284,7 +1378,11 @@ function buildActions(
       actions.push({
         runtime,
         scope: 'user',
-        target: path.join(runtimeRoot(), 'adapters', `${runtime}.json`),
+        target: path.join(
+          runtime === 'codex' ? codexRuntimeRoot() : runtimeRoot(),
+          'adapters',
+          `${runtime}.json`,
+        ),
         content: runtimeMarker(runtime, version),
         kind: 'file',
         description: `Record ${runtime} adapter installation`,
@@ -1362,9 +1460,11 @@ function buildActions(
     }
   }
 
+  const lockRuntimes = [...new Set([...(retainedProject?.runtimes ?? []), ...runtimes])];
+  const lockScopes = { ...retainedProject?.runtimeScopes, ...runtimeScopes };
   if (
-    runtimes.some((runtime) => {
-      const scope = runtimeScopes[runtime] ?? options.scope ?? 'user';
+    lockRuntimes.some((runtime) => {
+      const scope = lockScopes[runtime] ?? options.scope ?? 'user';
       return scope === 'project' || scope === 'both';
     })
   ) {
@@ -1372,7 +1472,16 @@ function buildActions(
       runtime: 'core',
       scope: 'project',
       target: path.join(options.projectDir, '.planr', 'runtime-lock.json'),
-      content: buildRuntimeLock(options, runtimes, runtimeScopes, registry, version),
+      content: buildRuntimeLock(
+        {
+          ...options,
+          projectSkillMode: options.projectSkillMode ?? retainedProject?.skillModes?.codex,
+        },
+        lockRuntimes,
+        lockScopes,
+        registry,
+        version,
+      ),
       kind: 'file',
       description: 'Write exact runtime compatibility lock',
     });
@@ -1455,6 +1564,42 @@ function inventoryRegularFiles(root: string): string[] {
   });
 }
 
+/** A deliberate scope narrowing retires only unchanged, previously owned project bytes. */
+function planScopeRetirements(
+  options: SetupOptions,
+  project: RuntimeState['projects'][string] | undefined,
+  runtimes: RuntimeId[],
+  actions: FileAction[],
+): FileAction[] {
+  if (!options.overrideExistingScope || options.scope !== 'user' || !project) return [];
+  const retainedTargets = new Set(actions.map((action) => action.target));
+  const candidates = project.ownedFiles.filter(
+    (file) =>
+      !retainedTargets.has(file.target) &&
+      (runtimes.includes(file.runtime as RuntimeId) ||
+        (file.runtime === 'core' && file.target.endsWith('runtime-lock.json'))),
+  );
+  return candidates.flatMap((file) => {
+    assertMutableOwnedTarget(file.target, options.projectDir, 'E_MIGRATION_CONFLICT');
+    if (!existsSync(file.target)) return [];
+    const content = readFileSync(file.target);
+    if (ownershipHash(content, file.kind, file.marker) !== file.hash)
+      throw new RuntimeManagerError(
+        'E_MIGRATION_CONFLICT',
+        `Refusing to retire modified OpenPlanr file ${file.target}.`,
+        'Preserve the hand edits before changing the installation scope.',
+      );
+    return [
+      {
+        ...file,
+        scope: 'project' as const,
+        content,
+        description: 'Retire the previously managed project installation after a scope change',
+      },
+    ];
+  });
+}
+
 function planUserBundleTransition(
   state: RuntimeState,
   actions: FileAction[],
@@ -1525,6 +1670,66 @@ function assertProfessionalSkillTransition(
   }
 }
 
+const defaultCodexBundles = new WeakMap<
+  RuntimeState,
+  NonNullable<RuntimeState['userBundles']>['codex']
+>();
+
+function selectCodexProfile(state: RuntimeState): RuntimeState {
+  const key = codexProfileKey();
+  if (!key) return state;
+  defaultCodexBundles.set(state, state.userBundles?.codex);
+  state.userBundles ??= {};
+  const bundle = state.codexProfiles?.[key]?.bundle;
+  if (bundle) state.userBundles.codex = bundle;
+  else delete state.userBundles.codex;
+  return state;
+}
+
+/** One shared ownership file and setup lock serialize all native profiles. */
+function runtimeStateBytes(state: RuntimeState): Buffer {
+  const key = codexProfileKey();
+  if (!key) return Buffer.from(`${JSON.stringify(state, null, 2)}\n`);
+  if (!defaultCodexBundles.has(state))
+    throw new RuntimeManagerError(
+      'E_RUNTIME_STATE_INVALID',
+      'Codex profile state lost its default bundle.',
+    );
+  const stored = {
+    ...state,
+    userBundles: { ...state.userBundles },
+    codexProfiles: { ...state.codexProfiles },
+  };
+  stored.codexProfiles[key] = {
+    home: effectiveCodexHome(),
+    ...(state.userBundles?.codex ? { bundle: state.userBundles.codex } : {}),
+  };
+  const defaultBundle = defaultCodexBundles.get(state);
+  if (defaultBundle) stored.userBundles.codex = defaultBundle;
+  else delete stored.userBundles.codex;
+  return Buffer.from(`${JSON.stringify(stored, null, 2)}\n`);
+}
+
+function decodeStoredRuntimeState(value: unknown, allowLegacyProjectKeys = false): RuntimeState {
+  const defaultHome = path.resolve(userHome(), '.codex');
+  const state = assertRuntimeStateValue(
+    value,
+    'E_RUNTIME_STATE_INVALID',
+    allowLegacyProjectKeys,
+    defaultHome,
+  );
+  migrateLegacyGlobalRuntimeState(state, {
+    inferRuntimeScope: (files, runtime) => inferRuntimeScope(files, runtime, defaultHome),
+    inferLegacyCodexPrefix: (project) => inferLegacyCodexPrefix(project, defaultHome),
+    isUserOwnedFile: (file, runtime) => isUserOwnedFile(file, runtime, defaultHome),
+    projectKey,
+    conflict: (code, message, recovery) => {
+      throw new RuntimeManagerError(code, message, recovery);
+    },
+  });
+  return assertRuntimeStateValue(selectCodexProfile(state));
+}
+
 async function loadState(): Promise<RuntimeState> {
   assertApprovedTargetCustody(
     statePath(),
@@ -1534,24 +1739,13 @@ async function loadState(): Promise<RuntimeState> {
     'Runtime ownership state',
   );
   try {
-    const state = assertRuntimeStateValue(
+    return decodeStoredRuntimeState(
       JSON.parse(await readFile(statePath(), 'utf8')) as unknown,
-      'E_RUNTIME_STATE_INVALID',
       true,
     );
-    migrateLegacyGlobalRuntimeState(state, {
-      inferRuntimeScope,
-      inferLegacyCodexPrefix,
-      isUserOwnedFile,
-      projectKey,
-      conflict: (code, message, recovery) => {
-        throw new RuntimeManagerError(code, message, recovery);
-      },
-    });
-    return assertRuntimeStateValue(state);
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      return { schemaVersion: '2.0.0', projects: {}, userBundles: {} };
+      return selectCodexProfile({ schemaVersion: '2.0.0', projects: {}, userBundles: {} });
     }
     if (error instanceof RuntimeManagerError) throw error;
     throw new RuntimeManagerError(
@@ -1648,7 +1842,27 @@ async function createBackup(
   return { dir, manifest };
 }
 
-async function restoreBackup(backup: { dir: string; manifest: BackupManifest }): Promise<string[]> {
+function assertRestoreTargetIdentity(
+  entry: BackupEntry,
+  retiredTargets: ReadonlySet<string>,
+): void {
+  const present = existsSync(entry.target);
+  const currentHash = present ? hash(readFileSync(entry.target)) : undefined;
+  const matches = present
+    ? currentHash === entry.beforeHash || currentHash === entry.afterHash
+    : !entry.existed || retiredTargets.has(entry.target);
+  if (!matches)
+    throw new RuntimeManagerError(
+      'E_MIGRATION_CONFLICT',
+      `Concurrent bytes prevent automatic restoration: ${entry.target}.`,
+      'Your current files were preserved. Compare the retained backup before retrying.',
+    );
+}
+
+async function restoreBackup(
+  backup: { dir: string; manifest: BackupManifest },
+  retiredTargets: ReadonlySet<string>,
+): Promise<string[]> {
   const directory = assertBackupDirectoryCustody(
     backup.dir,
     backup.manifest.projectDir,
@@ -1670,6 +1884,7 @@ async function restoreBackup(backup: { dir: string; manifest: BackupManifest }):
   const restoreBytes = new Map<string, Buffer>();
   for (const entry of manifest.files) {
     assertMutableOwnedTarget(entry.target, manifest.projectDir, 'E_RUNTIME_STATE_INVALID');
+    assertRestoreTargetIdentity(entry, retiredTargets);
     if (entry.existed) {
       restoreBytes.set(
         entry.target,
@@ -1772,10 +1987,11 @@ export async function previewSetup(options: SetupOptions): Promise<SetupPreview>
       runtimeScopes[runtime] =
         project?.runtimeScopes?.[runtime] ?? inferRuntimeScope(project?.ownedFiles ?? [], runtime);
     }
+    const savedMode = state.userBundles?.codex?.installMode ?? project?.skillModes?.codex;
+    options = { ...options, skillMode: options.skillMode ?? savedMode };
     if (options.preserveExistingScopes) {
       const userScopeRuntimes = selectedRuntimes.filter((runtime) => state.userBundles?.[runtime]);
       for (const runtime of userScopeRuntimes) runtimeScopes[runtime] ??= 'user';
-      const savedMode = state.userBundles?.codex?.installMode ?? project?.skillModes?.codex;
       options = {
         ...options,
         userScopeRuntimes,
@@ -1783,9 +1999,9 @@ export async function previewSetup(options: SetupOptions): Promise<SetupPreview>
         projectSkillMode: project?.skillModes?.codex,
       };
     }
-    runtimes = [...new Set([...existing, ...runtimes])];
+    if (options.merge) runtimes = [...new Set([...existing, ...runtimes])];
   }
-  if (!options.preserveExistingScopes) {
+  if (!options.preserveExistingScopes || options.overrideExistingScope) {
     for (const runtime of selectedRuntimes) runtimeScopes[runtime] = scope;
   }
   const pipeline = options.minimal ? null : resolvePipelinePackage();
@@ -1824,8 +2040,12 @@ export async function previewSetup(options: SetupOptions): Promise<SetupPreview>
     }
   }
   const commandPrefix = await resolveCommandPrefix(options);
-  const actions = buildActions(options, runtimes, runtimeScopes);
+  const retainedProject = options.preserveExistingScopes
+    ? (await loadState()).projects[projectKey(options.projectDir)]
+    : undefined;
+  const actions = buildActions(options, runtimes, runtimeScopes, retainedProject);
   assertActionCustody(actions, options.projectDir);
+  const scopeRetirements = planScopeRetirements(options, retainedProject, runtimes, actions);
   const retiredProjectRules = planRetiredCursorProjectRules(
     options.projectDir,
     runtimes,
@@ -1998,6 +2218,13 @@ export async function previewSetup(options: SetupOptions): Promise<SetupPreview>
         operation: 'retire' as const,
         description: action.description,
       })),
+      ...scopeRetirements.map((action) => ({
+        runtime: action.runtime,
+        scope: action.scope,
+        target: action.target,
+        operation: 'retire' as const,
+        description: action.description,
+      })),
       ...userBundleTransition.retired.map((file) => ({
         runtime: file.runtime,
         scope: file.scope ?? 'user',
@@ -2064,14 +2291,23 @@ export async function applySetup(options: SetupOptions): Promise<
   let backup: { dir: string; manifest: BackupManifest } | undefined;
   try {
     const commandPrefix = await resolveCommandPrefix(options);
-    const actions = buildActions(options, preview.runtimes, preview.runtimeScopes);
+    const state = await loadState();
+    const retainedProject = options.preserveExistingScopes
+      ? state.projects[projectKey(options.projectDir)]
+      : undefined;
+    const actions = buildActions(options, preview.runtimes, preview.runtimeScopes, retainedProject);
     assertActionCustody(actions, options.projectDir);
+    const scopeRetirements = planScopeRetirements(
+      options,
+      retainedProject,
+      preview.runtimes,
+      actions,
+    );
     const retiredProjectRules = planRetiredCursorProjectRules(
       options.projectDir,
       preview.runtimes,
       preview.runtimeScopes,
     );
-    const state = await loadState();
     const previousCodexMode =
       state.userBundles?.codex?.installMode ??
       (state.userBundles?.codex ? 'direct' : undefined) ??
@@ -2126,6 +2362,7 @@ export async function applySetup(options: SetupOptions): Promise<
       ...changed,
       ...retirementActions,
       ...retiredProjectRules,
+      ...scopeRetirements,
       stateAction,
     ].filter(
       (action, index, list) =>
@@ -2141,6 +2378,7 @@ export async function applySetup(options: SetupOptions): Promise<
       );
     }
 
+    const retiredTargets = new Set<string>();
     try {
       const owned: OwnedFile[] = [];
       for (const action of actions) {
@@ -2165,7 +2403,35 @@ export async function applySetup(options: SetupOptions): Promise<
       }
       for (const retired of transition.retired) {
         assertUserOwnedTarget(retired, 'codex', 'E_RUNTIME_STATE_INVALID');
-        if (existsSync(retired.target)) await unlink(retired.target);
+        if (existsSync(retired.target)) {
+          await unlink(retired.target);
+          retiredTargets.add(retired.target);
+        }
+      }
+      for (const retired of scopeRetirements) {
+        assertMutableOwnedTarget(retired.target, options.projectDir, 'E_MIGRATION_CONFLICT');
+        if (
+          !existsSync(retired.target) ||
+          hash(readFileSync(retired.target)) !== hash(retired.content)
+        )
+          throw new RuntimeManagerError(
+            'E_MIGRATION_CONFLICT',
+            `Managed project bytes changed during scope update: ${retired.target}.`,
+            'The setup transaction restored its pre-setup bytes; inspect the file and rerun.',
+          );
+        if (retired.kind === 'managed-block') {
+          const content = Buffer.from(
+            removeManagedBlock(retired.content.toString('utf8'), retired.marker ?? 'runtime'),
+          );
+          await atomicWrite(retired.target, content);
+          const entry = backup.manifest.files.find(
+            (candidate) => candidate.target === retired.target,
+          );
+          if (entry) entry.afterHash = hash(content);
+        } else {
+          await unlink(retired.target);
+          retiredTargets.add(retired.target);
+        }
       }
       for (const retired of retiredProjectRules) {
         assertMutableOwnedTarget(retired.target, options.projectDir, 'E_MIGRATION_CONFLICT');
@@ -2183,6 +2449,7 @@ export async function applySetup(options: SetupOptions): Promise<
           );
         }
         await unlink(retired.target);
+        retiredTargets.add(retired.target);
       }
 
       const updatedAt = new Date().toISOString();
@@ -2209,13 +2476,28 @@ export async function applySetup(options: SetupOptions): Promise<
         updatedAt,
         backupDir: backup.dir,
         backupManifestHash: backupManifestIdentity(backup.manifest),
-        runtimes: preview.runtimes,
-        runtimeScopes: preview.runtimeScopes,
-        skillModes: preview.projectSkillModes ?? preview.skillModes,
+        runtimes: [...new Set([...(retainedProject?.runtimes ?? []), ...preview.runtimes])],
+        runtimeScopes: { ...retainedProject?.runtimeScopes, ...preview.runtimeScopes },
+        skillModes: {
+          ...retainedProject?.skillModes,
+          ...(preview.projectSkillModes ?? preview.skillModes),
+        },
+        ...(preview.runtimes.includes('codex')
+          ? { codexHome: effectiveCodexHome() }
+          : retainedProject?.codexHome
+            ? { codexHome: retainedProject.codexHome }
+            : {}),
         ...(preview.runtimes.length === 1 ? { activeRuntime: preview.runtimes[0] } : {}),
-        ownedFiles: owned.filter((file) => file.scope === 'project'),
+        ownedFiles: [
+          ...(retainedProject?.ownedFiles ?? []).filter(
+            (file) =>
+              !preview.runtimes.includes(file.runtime as RuntimeId) &&
+              !owned.some((candidate) => candidate.target === file.target),
+          ),
+          ...owned.filter((file) => file.scope === 'project'),
+        ],
       };
-      const stateBytes = Buffer.from(`${JSON.stringify(state, null, 2)}\n`);
+      const stateBytes = runtimeStateBytes(state);
       await atomicWrite(statePath(), stateBytes);
       const stateBackup = backup.manifest.files.find((entry) => entry.target === statePath());
       if (stateBackup) stateBackup.afterHash = hash(stateBytes);
@@ -2312,12 +2594,12 @@ export async function applySetup(options: SetupOptions): Promise<
     } catch (cause) {
       let restored: string[];
       try {
-        restored = await restoreBackup(backup);
+        restored = await restoreBackup(backup, retiredTargets);
       } catch (rollbackCause) {
         throw new RuntimeManagerError(
           'E_SETUP_ROLLBACK_FAILED',
           `Setup failed and automatic restore also failed: ${rollbackCause instanceof Error ? rollbackCause.message : String(rollbackCause)}`,
-          `Restore the exact previous files from ${backup.dir}.`,
+          `Current files were preserved. Compare them with the retained backup at ${backup.dir} before restoring any file.`,
         );
       }
       const detail = cause instanceof Error ? cause.message : String(cause);
@@ -2445,7 +2727,7 @@ export async function rollbackRuntime(
       );
     }
     try {
-      previousState = assertRuntimeStateValue(
+      previousState = decodeStoredRuntimeState(
         JSON.parse(previousStateBytes.toString('utf8')) as unknown,
       );
     } catch (cause) {
@@ -2536,7 +2818,7 @@ export async function rollbackRuntime(
   const previousProject = previousState?.projects?.[key];
   if (previousProject) state.projects[key] = previousProject;
   else delete state.projects[key];
-  await atomicWrite(statePath(), Buffer.from(`${JSON.stringify(state, null, 2)}\n`));
+  await atomicWrite(statePath(), runtimeStateBytes(state));
   return { ok: true, restored, retainedShared };
 }
 
@@ -2671,7 +2953,7 @@ export async function removeRuntime(
     project.ownedFiles = project.ownedFiles.filter((file) => file !== lockFile);
   }
   if (project.runtimes.length === 0 && project.ownedFiles.length === 0) delete state.projects[key];
-  await atomicWrite(statePath(), Buffer.from(`${JSON.stringify(state, null, 2)}\n`));
+  await atomicWrite(statePath(), runtimeStateBytes(state));
   return { ok: true, removed, retainedShared };
 }
 
@@ -2785,7 +3067,7 @@ export async function cleanupHomeProjectInstall(): Promise<{ ok: true; removed: 
   project.updatedAt = new Date().toISOString();
   project.activeRuntime = project.runtimes.length === 1 ? project.runtimes[0] : undefined;
   if (project.runtimes.length === 0 && project.ownedFiles.length === 0) delete state.projects[key];
-  await atomicWrite(statePath(), Buffer.from(`${JSON.stringify(state, null, 2)}\n`));
+  await atomicWrite(statePath(), runtimeStateBytes(state));
   return { ok: true, removed };
 }
 
@@ -2798,6 +3080,7 @@ export async function runtimeDoctor(
   } = {},
 ): Promise<{
   ok: boolean;
+  codexDiscovery?: CodexSkillDiscovery;
   repairs: Array<{ id: string; operation: 'remove'; target: string; applied: boolean }>;
   diagnostics: Array<{
     code: string;
@@ -2821,12 +3104,14 @@ export async function runtimeDoctor(
         installScope: InstallScope;
       }>
     | undefined;
-  const nodeMajor = Number(process.versions.node.split('.')[0]);
+  const supportedNode = supportsCliNodeVersion(process.versions.node);
   diagnostics.push({
     code: 'node-version',
-    status: nodeMajor >= 20 ? 'pass' : 'fail',
-    message: `Node.js ${process.versions.node}`,
-    ...(nodeMajor < 20 ? { fix: 'Install Node.js 20 or newer.' } : {}),
+    status: supportedNode ? 'pass' : 'fail',
+    message: supportedNode
+      ? `Node.js ${process.versions.node}`
+      : cliNodeVersionMessage(process.versions.node),
+    ...(!supportedNode ? { fix: CLI_NODE_REMEDIATION } : {}),
   });
   const state = await loadState();
   const installed = state.projects[projectKey(projectDir)];
@@ -3101,6 +3386,7 @@ export async function runtimeDoctor(
   const managedFileDiagnostic = diagnoseManagedRuntimeFiles(managedFiles, ownershipHash);
   if (managedFileDiagnostic) diagnostics.push(managedFileDiagnostic);
 
+  let codexDiscovery: CodexSkillDiscovery | undefined;
   const codexBundle = state.userBundles?.codex;
   if (
     options.codexCommandRunner ||
@@ -3113,6 +3399,51 @@ export async function runtimeDoctor(
       configuredMode,
       options.codexCommandRunner,
     );
+    codexDiscovery = inspectCodexSkillDiscovery({
+      hostPackageRoot: bundledHostRoot('openai'),
+      projectDir,
+      mode: configuredMode,
+      packageVersion: readOpenPlanrVersion(),
+      ownershipStatePath: statePath(),
+      activePlugin: inspection.installed
+        ? { id: inspection.pluginId, version: inspection.installedVersion }
+        : undefined,
+    });
+    diagnostics.push({
+      code: 'runtime-codex-profile',
+      status: 'pass',
+      message: `Effective Codex profile: ${codexDiscovery.effectiveHome}; ownership: ${statePath()}`,
+    });
+    const stale = codexDiscovery.skills.filter((skill) => skill.resolution === 'stale');
+    const ambiguous = codexDiscovery.skills.filter((skill) => skill.resolution === 'ambiguous');
+    const missing = codexDiscovery.skills.filter((skill) => skill.resolution === 'missing');
+    const unreadable = codexDiscovery.skills.filter((skill) => skill.resolution === 'unreadable');
+    const oldCaches = codexDiscovery.skills.filter((skill) =>
+      skill.copies.some(
+        (copy) => copy.kind === 'plugin-cache' && !copy.current && copy.enabled !== true,
+      ),
+    );
+    if (
+      stale.length ||
+      ambiguous.length ||
+      missing.length ||
+      unreadable.length ||
+      codexDiscovery.issues.length
+    ) {
+      diagnostics.push({
+        code: 'runtime-codex-skill-resolution',
+        status: 'warn',
+        message: `${stale.length} stale skill(s), ${missing.length} missing skill(s), ${unreadable.length} unreadable skill(s), ${ambiguous.length} multiple discovery path(s), ${oldCaches.length} skill(s) with inactive cached copies. CLI package ${codexDiscovery.packageVersion}; per-skill and Protocol versions, paths and closure hashes are in doctor --json. An already-open session may retain earlier skills.`,
+        fix: 'Run `planr setup --runtime codex --dry-run` in this profile, review the installer repair, then restart Codex. Do not delete plugin caches by hand.',
+      });
+    }
+    if (oldCaches.length > 0) {
+      diagnostics.push({
+        code: 'runtime-codex-cache-history',
+        status: 'pass',
+        message: `${oldCaches.length} skill(s) have inactive cached copies. These do not imply enabled duplicates; restart Codex if an open session still shows earlier skills.`,
+      });
+    }
     const directSkillFiles =
       codexBundle?.ownedFiles.filter((file) => pathIsWithin(file.target, codexSkillsRoot()))
         .length ?? 0;
@@ -3214,7 +3545,7 @@ export async function runtimeDoctor(
     }
   }
   const fail = diagnostics.some((item) => item.status === 'fail');
-  return { ok: !fail, diagnostics, repairs };
+  return { ok: !fail, diagnostics, repairs, ...(codexDiscovery ? { codexDiscovery } : {}) };
 }
 
 export async function clearRuntimeStateForTests(root: string): Promise<void> {

@@ -17,7 +17,7 @@
   <a href="https://www.npmjs.com/package/openplanr"><img alt="npm version" src="https://img.shields.io/npm/v/openplanr?style=flat-square&labelColor=08080C&color=237A72&label=openplanr"></a>
   <a href="https://www.npmjs.com/package/openplanr"><img alt="npm downloads" src="https://img.shields.io/npm/dm/openplanr?style=flat-square&labelColor=08080C&color=237A72"></a>
   <a href="https://github.com/openplanr/OpenPlanr/actions/workflows/ci.yml"><img alt="Workspace CI" src="https://img.shields.io/github/actions/workflow/status/openplanr/OpenPlanr/ci.yml?branch=main&style=flat-square&labelColor=08080C&color=237A72&label=CI"></a>
-  <a href="packages/cli/package.json"><img alt="Node.js 20 or later" src="https://img.shields.io/node/v/openplanr?style=flat-square&labelColor=08080C&color=237A72"></a>
+  <a href="packages/cli/package.json"><img alt="Supported Node.js versions" src="https://img.shields.io/node/v/openplanr?style=flat-square&labelColor=08080C&color=237A72"></a>
   <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-237A72?style=flat-square&labelColor=08080C"></a>
 </p>
 
@@ -74,7 +74,7 @@ separate steps that you invoke.
 
 Alternatives: `npx openplanr@latest setup` without a global install, or
 `curl -fsSL https://openplanr.dev/install.sh | sh` (`irm https://openplanr.dev/install.ps1 | iex`
-on Windows). OpenPlanr requires Node.js 20 or later. The
+on Windows). OpenPlanr requires a supported Node.js version (see [package metadata](packages/cli/package.json)). The
 [getting started guide](docs/getting-started.md) covers scopes, what setup writes, and how to
 undo it.
 
