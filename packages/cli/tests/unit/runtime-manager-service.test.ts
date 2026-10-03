@@ -27,11 +27,13 @@ import {
   classifyComponentDrift,
   cleanupHomeProjectInstall,
   inspectProjectContext,
+  installedRuntimeScopes,
   previewHomeProjectCleanup,
   previewSetup as previewRuntimeSetup,
   removeRuntime,
   rollbackRuntime,
   runtimeDoctor,
+  runtimeRoot,
   type SetupOptions,
 } from '../../src/services/runtime-manager-service.js';
 import { resolvePipelinePackageRoot } from '../helpers/pipeline-package-root.js';
@@ -52,6 +54,7 @@ const previewSetup = (options: SetupOptions) => previewRuntimeSetup(setupOptions
 let root: string;
 let projectDir: string;
 let userHome: string;
+let previousCodexHome: string | undefined;
 const workspaceRoot = fileURLToPath(new URL('../../../../', import.meta.url));
 const cliVersion = JSON.parse(
   readFileSync(join(workspaceRoot, 'packages', 'cli', 'package.json'), 'utf8'),
@@ -98,6 +101,8 @@ const canonicalProjectKey = (directory: string) =>
   createHash('sha256').update(realpathSync(directory)).digest('hex').slice(0, 16);
 
 beforeEach(() => {
+  previousCodexHome = process.env.CODEX_HOME;
+  delete process.env.CODEX_HOME;
   root = mkdtempSync(join(tmpdir(), 'openplanr-runtime-'));
   projectDir = join(root, 'project');
   userHome = join(root, 'home');
@@ -109,6 +114,8 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  if (previousCodexHome === undefined) delete process.env.CODEX_HOME;
+  else process.env.CODEX_HOME = previousCodexHome;
   delete process.env.OPENPLANR_HOME;
   delete process.env.OPENPLANR_PIPELINE_ROOT;
   rmSync(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
@@ -2125,6 +2132,55 @@ describe('applySetup rollback on plugin failure', () => {
     }
     expect(readFileSync(external, 'utf8')).toBe('{"external":true}\n');
   });
+  it.each(['adapters/claude-code.json', 'state.json'])(
+    'preserves concurrent %s bytes before any automatic restore',
+    async (relativeTarget) => {
+      const target = join(userHome, '.planr', 'runtime', relativeTarget);
+      const concurrent = Buffer.from('{"concurrentEdit":true}\n');
+      let currentTargets = new Map<string, Buffer | null>();
+      let changed = false;
+      const runner: ClaudeCommandRunner = (args) => {
+        if (args[0] === '--version') return { status: 0, stdout: '2.1.0\n', stderr: '' };
+        if (args[1] === 'marketplace' && args[2] === 'list')
+          return { status: 0, stdout: '[]', stderr: '' };
+        if (args[1] === 'list') return { status: 0, stdout: '[]', stderr: '' };
+        if (!changed) {
+          writeFileSync(target, concurrent);
+          const backupRoot = join(userHome, '.planr', 'backups', canonicalProjectKey(projectDir));
+          const [stamp] = readdirSync(backupRoot);
+          const manifest = JSON.parse(
+            readFileSync(join(backupRoot, stamp, 'migration-manifest.json'), 'utf8'),
+          ) as { files: Array<{ target: string }> };
+          currentTargets = new Map(
+            manifest.files.map((entry) => [
+              entry.target,
+              existsSync(entry.target) ? readFileSync(entry.target) : null,
+            ]),
+          );
+          changed = true;
+        }
+        return { status: 1, stdout: '', stderr: 'simulated marketplace outage' };
+      };
+      await expect(
+        applySetup({
+          projectDir,
+          cliVersion,
+          runtime: 'claude-code',
+          scope: 'user',
+          claudeCommandRunner: runner,
+        }),
+      ).rejects.toMatchObject({
+        code: 'E_SETUP_ROLLBACK_FAILED',
+        recovery: expect.stringContaining('backups'),
+      });
+      expect(changed).toBe(true);
+      expect(readFileSync(target)).toEqual(concurrent);
+      for (const [file, bytes] of currentTargets) {
+        expect(existsSync(file), file).toBe(bytes !== null);
+        if (bytes) expect(readFileSync(file), file).toEqual(bytes);
+      }
+    },
+  );
 });
 
 // The non-guided `setup` preview must report what it skipped and why, not only in
@@ -2227,5 +2283,327 @@ describe('classifyComponentDrift', () => {
     expect(
       classifyComponentDrift({ cliDrift: false, componentDrift: true, incompatibleDrift: false }),
     ).toEqual({ drift: true, genuineDrift: false, upgradeOnlyDrift: false, status: 'fail' });
+  });
+});
+
+describe('native Codex profile ownership', () => {
+  it('installs and removes alternate profile skills without retiring the default profile', async () => {
+    const options = {
+      projectDir,
+      cliVersion,
+      runtime: 'codex' as const,
+      scope: 'user' as const,
+      skillMode: 'direct' as const,
+    };
+    await applySetup(options);
+    const defaultState = join(userHome, '.planr', 'runtime', 'state.json');
+    const defaultSkill = join(userHome, '.codex', 'skills', 'design', 'SKILL.md');
+    const originalBundle = JSON.parse(readFileSync(defaultState, 'utf8')).userBundles.codex;
+    const originalSkill = readFileSync(defaultSkill);
+    const nativeHome = join(root, 'ada');
+    process.env.CODEX_HOME = nativeHome;
+    const preview = await previewSetup(options);
+    expect(
+      preview.actions
+        .filter((action) => action.runtime === 'codex' && action.scope === 'user')
+        .every((action) => !action.target.includes('/.codex/skills/')),
+    ).toBe(true);
+    await applySetup(options);
+    expect(readFileSync(join(nativeHome, 'skills', 'design', 'SKILL.md'))).toEqual(originalSkill);
+    expect(JSON.parse(readFileSync(defaultState, 'utf8')).userBundles.codex).toEqual(
+      originalBundle,
+    );
+    await removeRuntime('codex', projectDir);
+    expect(existsSync(join(nativeHome, 'skills', 'design', 'SKILL.md'))).toBe(false);
+    expect(readFileSync(defaultSkill)).toEqual(originalSkill);
+    expect(JSON.parse(readFileSync(defaultState, 'utf8')).userBundles.codex).toEqual(
+      originalBundle,
+    );
+  });
+  it('uses one record for alternate profile paths referring to the same canonical home', async () => {
+    const nativeHome = join(root, 'ada');
+    const alias = join(root, 'ada-alias');
+    mkdirSync(nativeHome, { recursive: true });
+    symlinkSync(nativeHome, alias, 'dir');
+    const options = {
+      projectDir,
+      cliVersion,
+      runtime: 'codex' as const,
+      scope: 'user' as const,
+      skillMode: 'direct' as const,
+    };
+    process.env.CODEX_HOME = nativeHome;
+    await applySetup(options);
+    process.env.CODEX_HOME = alias;
+    const preview = await previewSetup(options);
+    expect(preview.actions.every((action) => action.operation === 'unchanged')).toBe(true);
+  });
+});
+
+describe('Codex profile and named update custody', () => {
+  const stateFile = () => join(userHome, '.planr', 'runtime', 'state.json');
+  const state = () => JSON.parse(readFileSync(stateFile(), 'utf8'));
+  function anotherProject(name: string) {
+    const directory = join(root, name);
+    mkdirSync(join(directory, '.planr'), { recursive: true });
+    writeFileSync(join(directory, '.planr', 'config.json'), '{}\n');
+    return directory;
+  }
+  it('keeps Claude ownership visible while an alternate Codex profile installs and removes its bundle', async () => {
+    await applySetup({ projectDir, cliVersion, runtimes: ['claude-code', 'codex'], scope: 'user' });
+    const before = state();
+    const sharedRoot = runtimeRoot();
+    const originalFiles = new Map<string, Buffer>(
+      before.userBundles['claude-code'].ownedFiles.map((file: { target: string }) => [
+        file.target,
+        readFileSync(file.target),
+      ]),
+    );
+    const alternateProject = anotherProject('alternate');
+    process.env.CODEX_HOME = join(root, 'ada');
+    expect(runtimeRoot()).toBe(sharedRoot);
+    expect(await installedRuntimeScopes(alternateProject)).toContainEqual(
+      expect.objectContaining({ runtime: 'claude-code', scope: 'user' }),
+    );
+    await applySetup({ projectDir: alternateProject, cliVersion, runtime: 'codex', scope: 'user' });
+    expect(state().userBundles['claude-code']).toEqual(before.userBundles['claude-code']);
+    expect(state().userBundles.codex).toEqual(before.userBundles.codex);
+    await removeRuntime('codex', alternateProject);
+    expect(existsSync(join(root, 'ada', 'skills', 'design', 'SKILL.md'))).toBe(false);
+    expect(state().userBundles.codex).toEqual(before.userBundles.codex);
+    for (const [target, bytes] of originalFiles) expect(readFileSync(target)).toEqual(bytes);
+    expect(await installedRuntimeScopes(alternateProject)).toContainEqual(
+      expect.objectContaining({ runtime: 'claude-code', scope: 'user' }),
+    );
+  });
+  it('diagnoses and repairs a missing support file in the selected profile without touching other agents', async () => {
+    await applySetup({ projectDir, cliVersion, runtimes: ['claude-code', 'codex'], scope: 'user' });
+    const defaultBundles = state().userBundles;
+    const alternateProject = anotherProject('alternate');
+    process.env.CODEX_HOME = join(root, 'ada');
+    await applySetup({ projectDir: alternateProject, cliVersion, runtime: 'codex', scope: 'user' });
+    const support = join(
+      realpathSync(join(root, 'ada')),
+      'skills',
+      'design',
+      'references',
+      'craft.md',
+    );
+    const original = readFileSync(support);
+    rmSync(support);
+    const codexCommandRunner = (args: string[]) => ({
+      status: 0,
+      stdout:
+        args[0] === '--version'
+          ? 'codex 0.159.1'
+          : args[1] === 'marketplace'
+            ? '{"marketplaces":[]}'
+            : '[]',
+      stderr: '',
+    });
+    const diagnosis = await runtimeDoctor(alternateProject, { codexCommandRunner });
+    expect(diagnosis.codexDiscovery).toMatchObject({
+      effectiveHome: realpathSync(join(root, 'ada')),
+      mode: 'direct',
+      ownershipStatePath: stateFile(),
+    });
+    expect(
+      diagnosis.codexDiscovery?.skills.find((skill) => skill.skillId === 'planr-design')
+        ?.resolution,
+    ).toBe('stale');
+    expect(
+      diagnosis.diagnostics.find((entry) => entry.code === 'runtime-codex-skill-resolution'),
+    ).toMatchObject({ status: 'warn' });
+    const options = {
+      projectDir: alternateProject,
+      cliVersion,
+      runtime: 'codex' as const,
+      scope: 'user' as const,
+      preserveExistingScopes: true,
+      replaceManaged: true,
+    };
+    expect(
+      (await previewSetup(options)).actions.find((action) => action.target === support)?.operation,
+    ).toBe('create');
+    await applySetup(options);
+    expect(readFileSync(support)).toEqual(original);
+    expect(state().userBundles).toEqual(defaultBundles);
+    const repaired = await runtimeDoctor(alternateProject, { codexCommandRunner });
+    expect(
+      repaired.codexDiscovery?.skills.find((skill) => skill.skillId === 'planr-design')?.resolution,
+    ).toBe('current');
+  });
+  it('rejects a profile bundle claiming another profile target before removal', async () => {
+    await applySetup({ projectDir, cliVersion, runtime: 'codex', scope: 'user' });
+    const defaultBundle = state().userBundles.codex;
+    const alternateProject = anotherProject('alternate');
+    process.env.CODEX_HOME = join(root, 'ada');
+    await applySetup({ projectDir: alternateProject, cliVersion, runtime: 'codex', scope: 'user' });
+    const recorded = state();
+    const profile = Object.values(recorded.codexProfiles)[0] as {
+      bundle: { ownedFiles: unknown[] };
+    };
+    profile.bundle.ownedFiles.push(defaultBundle.ownedFiles[0]);
+    writeFileSync(stateFile(), `${JSON.stringify(recorded)}\n`);
+    const before = readFileSync(stateFile());
+    const target = defaultBundle.ownedFiles[0].target;
+    const bytes = readFileSync(target);
+    await expect(removeRuntime('codex', alternateProject)).rejects.toMatchObject({
+      code: 'E_RUNTIME_STATE_INVALID',
+    });
+    expect(readFileSync(stateFile())).toEqual(before);
+    expect(readFileSync(target)).toEqual(bytes);
+  });
+  it('uses the shared setup lock across Codex profiles before writing anything', async () => {
+    await applySetup({ projectDir, cliVersion, runtime: 'codex', scope: 'user' });
+    const original = readFileSync(stateFile());
+    const lock = join(runtimeRoot(), 'setup.lock');
+    writeFileSync(lock, 'owned competing setup\n');
+    process.env.CODEX_HOME = join(root, 'ada');
+    await expect(
+      applySetup({ projectDir, cliVersion, runtime: 'codex', scope: 'user' }),
+    ).rejects.toMatchObject({ code: 'E_SETUP_BUSY' });
+    expect(readFileSync(stateFile())).toEqual(original);
+    expect(readFileSync(lock, 'utf8')).toBe('owned competing setup\n');
+    expect(existsSync(join(root, 'ada', 'skills'))).toBe(false);
+  });
+  it('rolls back only the selected profile while preserving the default Codex and Claude bundles', async () => {
+    await applySetup({ projectDir, cliVersion, runtimes: ['claude-code', 'codex'], scope: 'user' });
+    const before = state();
+    const alternateProject = anotherProject('alternate');
+    process.env.CODEX_HOME = join(root, 'ada');
+    const installed = await applySetup({
+      projectDir: alternateProject,
+      cliVersion,
+      runtime: 'codex',
+      scope: 'user',
+    });
+    await rollbackRuntime(alternateProject, installed.backupDir);
+    expect(state().userBundles).toEqual(before.userBundles);
+    expect(existsSync(join(root, 'ada', 'skills', 'design', 'SKILL.md'))).toBe(false);
+    expect(
+      readFileSync(join(userHome, '.codex', 'skills', 'design', 'SKILL.md'), 'utf8'),
+    ).toContain('Design');
+  });
+  it('preserves saved plugin mode and mixed scopes while updating only Codex in a multi-agent project', async () => {
+    await applySetup({
+      projectDir,
+      cliVersion,
+      runtimes: ['claude-code', 'codex', 'cursor'],
+      scope: 'both',
+      skillMode: 'unified-plugin',
+    });
+    const before = state();
+    const project = before.projects[canonicalProjectKey(projectDir)];
+    const untouched = new Map<string, Buffer>(
+      project.ownedFiles
+        .filter((file: { runtime: string }) => ['claude-code', 'cursor'].includes(file.runtime))
+        .map((file: { target: string }) => [file.target, readFileSync(file.target)]),
+    );
+    const options = {
+      projectDir,
+      cliVersion,
+      runtime: 'codex' as const,
+      scope: 'user' as const,
+      preserveExistingScopes: true,
+    };
+    const preview = await previewSetup(options);
+    expect(preview.runtimes).toEqual(['codex']);
+    expect(preview.runtimeScopes.codex).toBe('both');
+    expect(preview.skillModes.codex).toBe('unified-plugin');
+    expect(preview.actions.every((action) => ['core', 'codex'].includes(action.runtime))).toBe(
+      true,
+    );
+    expect(preview.runtimeOperations.every((operation) => operation.runtime === 'codex')).toBe(
+      true,
+    );
+    await applySetup(options);
+    const after = state();
+    expect(after.userBundles['claude-code']).toEqual(before.userBundles['claude-code']);
+    expect(after.projects[canonicalProjectKey(projectDir)].runtimes).toEqual(project.runtimes);
+    expect(after.projects[canonicalProjectKey(projectDir)].runtimeScopes).toEqual(
+      project.runtimeScopes,
+    );
+    const lock = JSON.parse(readFileSync(join(projectDir, '.planr', 'runtime-lock.json'), 'utf8'));
+    expect(lock.adapters.map((adapter: { runtime: string }) => adapter.runtime)).toEqual(
+      project.runtimes,
+    );
+    expect(lock.skillModes.codex).toBe('unified-plugin');
+    for (const [target, bytes] of untouched) expect(readFileSync(target)).toEqual(bytes);
+  });
+  it('honors an explicit user scope and retires only the named agent project files with exact rollback', async () => {
+    await applySetup({
+      projectDir,
+      cliVersion,
+      runtimes: ['claude-code', 'codex', 'cursor'],
+      scope: 'both',
+      skillMode: 'unified-plugin',
+    });
+    const before = state();
+    const project = before.projects[canonicalProjectKey(projectDir)];
+    const originals = new Map<string, Buffer>(
+      project.ownedFiles.map((file: { target: string }) => [
+        file.target,
+        readFileSync(file.target),
+      ]),
+    );
+    const options = {
+      projectDir,
+      cliVersion,
+      runtime: 'codex' as const,
+      scope: 'user' as const,
+      preserveExistingScopes: true,
+      overrideExistingScope: true,
+    };
+    const preview = await previewSetup(options);
+    expect(preview.runtimes).toEqual(['codex']);
+    expect(preview.runtimeScopes).toMatchObject({
+      codex: 'user',
+      'claude-code': 'both',
+      cursor: 'project',
+    });
+    expect(preview.skillModes.codex).toBe('unified-plugin');
+    const retired = preview.actions.filter((action) => action.operation === 'retire');
+    expect(retired.length).toBeGreaterThan(0);
+    expect(
+      retired.every((action) => action.runtime === 'codex' && action.scope === 'project'),
+    ).toBe(true);
+    const result = await applySetup(options);
+    expect(state().projects[canonicalProjectKey(projectDir)].runtimeScopes.codex).toBe('user');
+    for (const action of retired) expect(existsSync(action.target)).toBe(false);
+    for (const file of project.ownedFiles.filter((file: { runtime: string }) =>
+      ['claude-code', 'cursor'].includes(file.runtime),
+    ))
+      expect(readFileSync(file.target)).toEqual(originals.get(file.target));
+    await rollbackRuntime(projectDir, result.backupDir);
+    expect(state().projects[canonicalProjectKey(projectDir)]).toEqual(project);
+    for (const [target, bytes] of originals) expect(readFileSync(target)).toEqual(bytes);
+  });
+  it('refuses an explicit scope narrowing before writes when a managed project file was modified', async () => {
+    await applySetup({
+      projectDir,
+      cliVersion,
+      runtimes: ['codex', 'cursor'],
+      scope: 'both',
+      skillMode: 'unified-plugin',
+    });
+    const file = state().projects[canonicalProjectKey(projectDir)].ownedFiles.find(
+      (file: { runtime: string; kind: string }) => file.runtime === 'codex' && file.kind === 'file',
+    );
+    const changed = Buffer.concat([readFileSync(file.target), Buffer.from('\nhand edit\n')]);
+    writeFileSync(file.target, changed);
+    const originalState = readFileSync(stateFile());
+    const options = {
+      projectDir,
+      cliVersion,
+      runtime: 'codex' as const,
+      scope: 'user' as const,
+      preserveExistingScopes: true,
+      overrideExistingScope: true,
+    };
+    await expect(previewSetup(options)).rejects.toMatchObject({ code: 'E_MIGRATION_CONFLICT' });
+    await expect(applySetup(options)).rejects.toMatchObject({ code: 'E_MIGRATION_CONFLICT' });
+    expect(readFileSync(file.target)).toEqual(changed);
+    expect(readFileSync(stateFile())).toEqual(originalState);
   });
 });
