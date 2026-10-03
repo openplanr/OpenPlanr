@@ -27,6 +27,7 @@
     "rules": "deterministic-preserved",
     "runtime": "deterministic-preserved",
     "search": "deterministic-preserved",
+    "server": "deterministic-preserved",
     "setup": "deterministic-preserved",
     "spec": "deterministic-preserved",
     "sprint": "deterministic-preserved",

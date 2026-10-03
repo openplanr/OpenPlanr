@@ -14,7 +14,7 @@ function walk(root) {
     )) {
       const path = join(directory, entry.name);
       if (entry.isDirectory()) visit(path);
-      else if (entry.isFile() && /\.(?:mjs|mts)$/u.test(entry.name)) files.push(path);
+      else if (entry.isFile() && /\.(?:mjs|mts|tsx)$/u.test(entry.name)) files.push(path);
     }
   };
   visit(root);
@@ -56,7 +56,14 @@ export function checkPackageBoundaries(
         const containment = relative(absoluteRoot, target);
         if (containment.startsWith('..') || isAbsolute(containment)) {
           violations.push(`${label} escapes package root`);
-        } else if (!existsSync(target)) {
+        } else if (
+          !existsSync(target) &&
+          !(
+            file.endsWith('.mts') &&
+            target.endsWith('.js') &&
+            existsSync(`${target.slice(0, -3)}.tsx`)
+          )
+        ) {
           violations.push(`${label} does not resolve`);
         }
         continue;

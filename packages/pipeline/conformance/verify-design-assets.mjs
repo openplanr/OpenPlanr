@@ -70,15 +70,14 @@ log('OpenPlanr design-asset conformance (SPEC-015)\n');
 // 1 — orchestration files present
 log('orchestration:');
 for (const rel of [
-  'procedures/design-step0-preflight.md',
-  'procedures/design-step1-clarify.md',
-  'procedures/design-detect-nudge.md',
+  'procedures/design-loop-step0-context.md',
+  'procedures/design-loop-step1-gate.md',
+  'procedures/design-loop-step3-board.md',
   'lib/design/index.mjs',
   'lib/design/tokens.mjs',
   'lib/design/lint.mjs',
   'lib/design/design-system.mjs',
   'lib/design/contrast.mjs',
-  'procedures/design-system-generate.md',
   'templates/design-system/tokens.css.tpl',
   'templates/design-system/manifest.json.tpl',
   'templates/design-system/brand.md.tpl',
@@ -90,6 +89,10 @@ for (const rel of [
 // 2 — the retired template renderer is not shipped
 log('\nretired template renderer:');
 for (const rel of [
+  'procedures/design-step0-preflight.md',
+  'procedures/design-step1-clarify.md',
+  'procedures/design-system-generate.md',
+  'procedures/design-detect-nudge.md',
   'procedures/design-step2-generate.md',
   'procedures/design-step3-spec-and-handoff.md',
   'procedures/design-review-loop.md',
@@ -150,10 +153,10 @@ try {
 
 // 3b — front-loaded app context (v0.15.1)
 log('\napp context (v0.15.1):');
-const preflight = join(root, 'procedures/design-step0-preflight.md');
+const preflight = join(root, 'procedures/design-loop-step0-context.md');
 assert(
   fileHas(preflight, 'APP_CTX') && fileHas(preflight, 'VIEWPORT_W'),
-  'preflight A.3.5 front-loads APP_CTX + VIEWPORT_W (read the project once, up front)',
+  'design-loop context binds APP_CTX + VIEWPORT_W once',
 );
 
 // 3c — token scale + deterministic linter (v0.16.0)
@@ -230,10 +233,10 @@ assert(
   ),
   'linter WARNS raw-color usage (prefer a token)',
 );
-const preflightDoc = readFileSync(join(root, 'procedures/design-step0-preflight.md'), 'utf-8');
+const preflightDoc = readFileSync(join(root, 'procedures/design-loop-step0-context.md'), 'utf-8');
 assert(
-  /A\.3\.6/.test(preflightDoc) && /design system/i.test(preflightDoc),
-  'preflight A.3.6 no-system gate present (generate / existing / describe)',
+  /Missing design system/.test(preflightDoc) && /design system/i.test(preflightDoc),
+  'design-loop context handles missing design systems without a retired generator',
 );
 
 // 4 — manifest schema vs golden fixtures

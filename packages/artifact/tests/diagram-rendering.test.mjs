@@ -499,7 +499,17 @@ test('graph rendering preserves semantic groups, annotations, and emphasis in th
   assert.equal(rendered.scene.notes.length, 1);
   assert.equal(rendered.scene.groups[0].emphasis, 'secondary');
   assert.equal(rendered.scene.notes[0].emphasis, 'primary');
-  assert.equal(rendered.quality.status, 'pass');
+  // The retained straight annotation connector crosses another node; the report must disclose it.
+  assert.equal(rendered.quality.status, 'warning');
+  assert.equal(
+    rendered.quality.checks.find((check) => check.id === 'annotation-connector-overlap').status,
+    'warning',
+  );
+  assert.ok(
+    rendered.quality.checks
+      .filter((check) => check.status !== 'pass')
+      .every((check) => check.id === 'annotation-connector-overlap'),
+  );
   assert.match(rendered.svg, /data-group-id="delivery-group"/u);
   assert.match(rendered.svg, /data-annotation-id="decision-note"/u);
   assert.match(rendered.svg, /data-target-id="review"/u);
@@ -612,7 +622,14 @@ test('dependency graphs use topology-aware layers and route branches, fan-in, an
   for (const direction of ['left-right', 'right-left', 'top-down', 'bottom-up']) {
     const document = dependencyFlowchart(direction);
     const rendered = renderDiagramOutputs(document);
-    assert.equal(rendered.quality.status, 'pass', direction);
+    assert.ok(['pass', 'warning'].includes(rendered.quality.status), direction);
+    // Dense dependencies can cross. Measured readability warnings remain visible,
+    // while source, label and geometry failures are never accepted.
+    assert.ok(
+      rendered.quality.checks
+        .filter((check) => check.status !== 'pass')
+        .every((check) => check.id === 'crossings'),
+    );
     assert.equal(rendered.quality.checks.find(({ id }) => id === 'node-overlap').status, 'pass');
     assert.equal(
       rendered.quality.checks.find(({ id }) => id === 'edge-node-overlap').status,
@@ -711,7 +728,8 @@ test('a small cycle keeps its single-band layout and layered graphs that cannot 
   const rendered = renderDiagramOutputs(directedRing(8));
   assert.equal(rendered.quality.status, 'pass');
   assert.equal(rendered.scene.width, 2672);
-  assert.equal(rendered.scene.height, 448);
+  // Renderer 1.5 routes the return edge without the former unused detour.
+  assert.equal(rendered.scene.height, 360);
   assert.equal(new Set(rendered.scene.boxes.map(({ y }) => y)).size, 1);
   const leaves = Array.from({ length: 120 }, (_, index) => ({
     id: `leaf-${index + 1}`,
@@ -1432,5 +1450,140 @@ test('abandoned staging cleanup is bounded and Mermaid active content is rejecte
   await assert.rejects(
     async () => importMermaid('flowchart LR\nA --> B\nclick A "https://example.com"'),
     (error) => error?.code === DIAGRAM_ERROR_CODES.MERMAID_INVALID,
+  );
+});
+
+test('quality counts bend crossings and label obstructions instead of reporting zero', () => {
+  const document = connectedFlowchart('measured-collisions');
+  const rendered = renderDiagramSvg(document),
+    svg = rendered.svg,
+    scene = structuredClone(rendered.scene);
+  scene.edges = [
+    {
+      id: 'cross-a',
+      from: 'a',
+      to: 'b',
+      routePoints: [
+        [300, 300],
+        [500, 300],
+        [500, 500],
+      ],
+    },
+    {
+      id: 'cross-b',
+      from: 'c',
+      to: 'd',
+      routePoints: [
+        [400, 400],
+        [600, 200],
+      ],
+    },
+  ];
+  scene.boxes = [];
+  scene.labelBounds = [{ id: 'cross-b', x: 350, y: 288, width: 60, height: 24 }];
+  const quality = createRenderQualityReport(document, {
+    scene,
+    png: { width: scene.width, height: scene.height, byteLength: 1 },
+    svgValidation: validateDiagramSvg(svg),
+  });
+  assert.match(
+    quality.checks.find((check) => check.id === 'crossings').message,
+    /1 estimated crossings/,
+  );
+  assert.equal(quality.checks.find((check) => check.id === 'edge-label-overlap').status, 'fail');
+});
+test('full-width and joined emoji wrapping preserves complete graphemes and actual theme contrast', () => {
+  const wide = '设计画布连接流程'.repeat(5),
+    family = '👩‍👩‍👧‍👦'.repeat(24);
+  const document = connectedFlowchart('unicode-width');
+  document.nodes[0].label = wide;
+  document.nodes[1].label = family;
+  const rendered = renderDiagramOutputs(createDiagramDocument(document));
+  assert.equal(rendered.scene.boxes[0].lines.join(''), wide);
+  assert.equal(rendered.scene.boxes[1].lines.join(''), family);
+  for (const line of rendered.scene.boxes[1].lines)
+    assert.equal(line.replaceAll('👩‍👩‍👧‍👦', ''), '');
+  assert.ok(rendered.scene.boxes[0].lines.length > 1);
+  assert.ok(rendered.scene.boxes[1].lines.length > 1);
+  assert.ok(
+    rendered.quality.checks.find((check) => check.id === 'contrast').message.includes('4.'),
+  );
+});
+
+test('quality reports measured group/lane titles and annotation connector collisions', () => {
+  const document = connectedFlowchart('title-note-collisions');
+  const rendered = renderDiagramOutputs(document),
+    scene = structuredClone(rendered.scene);
+  scene.groups = [
+    {
+      id: 'group-title',
+      label: 'Group title',
+      x: 300,
+      y: 280,
+      width: 200,
+      height: 150,
+      titleOffset: 18,
+    },
+  ];
+  scene.lanes = [
+    { id: 'lane-title', label: 'Lane title', x: 300, y: 380, width: 200, height: 150 },
+  ];
+  scene.edges = [
+    {
+      id: 'first',
+      from: 'a',
+      to: 'b',
+      routePoints: [
+        [300, 300],
+        [500, 300],
+      ],
+    },
+    {
+      id: 'second',
+      from: 'c',
+      to: 'd',
+      routePoints: [
+        [300, 400],
+        [500, 400],
+      ],
+    },
+  ];
+  scene.boxes = [{ id: 'unrelated', x: 500, y: 150, width: 100, height: 100 }];
+  scene.labelBounds = [{ id: 'label', x: 480, y: 288, width: 60, height: 24 }];
+  scene.notes = [
+    {
+      id: 'note-node',
+      targetId: 'target',
+      anchorX: 350,
+      anchorY: 200,
+      x: 700,
+      y: 180,
+      width: 100,
+      height: 40,
+    },
+    {
+      id: 'note-label',
+      targetId: 'target',
+      anchorX: 350,
+      anchorY: 300,
+      x: 700,
+      y: 280,
+      width: 100,
+      height: 40,
+    },
+  ];
+  const quality = createRenderQualityReport(document, {
+    scene,
+    png: rendered.png,
+    svgValidation: validateDiagramSvg(rendered.svg),
+  });
+  assert.match(
+    quality.checks.find((check) => check.id === 'edge-title-overlap').message,
+    /^2 connection paths/,
+  );
+  assert.equal(quality.checks.find((check) => check.id === 'edge-title-overlap').status, 'warning');
+  assert.match(
+    quality.checks.find((check) => check.id === 'annotation-connector-overlap').message,
+    /^2 annotation connectors/,
   );
 });

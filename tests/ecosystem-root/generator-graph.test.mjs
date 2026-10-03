@@ -6,6 +6,7 @@ import { GENERATOR_STEPS, resolveGeneratorPlan } from '../../scripts/generate-al
 const expectedOrder = [
   'diagram-review-font',
   'typescript-sources',
+  'artifact-sandbox-guards',
   'skill-role-host-adapters',
   'protocol-catalogs',
   'protocol-public-projection',
@@ -60,4 +61,13 @@ test('write plan selects the canonical dashboard build-and-copy boundary', () =>
   );
   assert.equal(dashboard.status, 'run');
   assert.equal(dashboard.script, 'scripts/dashboard/build-dashboard-assets.mjs');
+});
+
+test('compiled guards are prepared before either skill or browser consumers', () => {
+  const plan = resolveGeneratorPlan('write');
+  const guards = plan.findIndex(({ id }) => id === 'artifact-sandbox-guards');
+  assert.ok(guards > plan.findIndex(({ id }) => id === 'typescript-sources'));
+  for (const consumer of ['skill-role-host-adapters', 'artifact-shell', 'design-studio'])
+    assert.ok(guards < plan.findIndex(({ id }) => id === consumer), consumer);
+  assert.deepEqual(plan[guards].arguments, ['--guards-only']);
 });

@@ -1,3 +1,4 @@
+import { resolveArtifactHtml } from '@openplanr/artifact/artifact-sources.mjs';
 import { renderPlanrMark } from '@openplanr/artifact/ui/renderers.mjs';
 import { embedJson, escapeHtml } from './escape.mjs';
 
@@ -85,6 +86,7 @@ function toolbar(document) {
   </div>
   <div class="planr-segment design-view-picker" role="group" aria-label="Design view">${['canvas', 'prototype', 'walkthrough'].map((view) => iconButton(view[0].toUpperCase() + view.slice(1), view, `data-design-view="${view}" aria-pressed="${document.defaultView === view}"`)).join('')}</div>
   <div class="design-toolbar-trailing">
+    <span class="design-preview-state" role="status" data-design-preview-state>Loading preview</span>
     <span class="design-save-state" role="status" aria-live="polite" data-design-save-state>Loading studio</span>
     ${iconButton('Review', 'right', 'data-planr-action="feedback" data-planr-review-label="Review" aria-controls="planr-review-rail" aria-expanded="true"', 'planr-toolbar-action design-review-toggle')}
     ${iconButton('Share design', 'share', 'data-planr-action="share" aria-haspopup="dialog"', 'planr-toolbar-action design-share')}
@@ -99,6 +101,9 @@ function navigator(document) {
   <div class="design-nav-title"><strong>Screens <span>${document.screenOrder.length}</span></strong>${iconButton('Close screens', 'left', 'data-design-toggle-nav aria-controls="design-navigator" aria-expanded="true"', 'design-nav-close')}</div>
   <label class="design-field" for="design-variant">Direction<select id="design-variant" data-design-variant>${document.variants.map((variant) => `<option value="${escapeHtml(variant.id)}"${variant.status !== 'ready' ? ' disabled' : ''}>${escapeHtml(variant.label)}${variant.status === 'failed' ? ' — unavailable' : ''}</option>`).join('')}</select></label>
   ${document.variants.filter(({ status }) => status === 'ready').length > 1 ? `<label class="design-compare"><input type="checkbox" data-design-compare> Compare directions</label>` : ''}
+  <label class="design-field design-screen-search">Find a screen<input type="search" data-design-screen-search placeholder="Search screens" aria-label="Search screens"></label>
+  ${document.flows?.length ? `<label class="design-field">Journey<select data-design-screen-group aria-label="Filter screens by journey"><option value="">All screens</option>${document.flows.map((flow) => `<option value="${escapeHtml(flow.id)}">${escapeHtml(flow.title)}</option>`).join('')}</select></label>` : ''}
+  <p data-design-search-empty hidden>No screens match this search.</p>
   <div class="design-screen-list">${document.screenOrder
     .map((screenId, index) => {
       const screen = document.screens.find(({ id }) => id === screenId);
@@ -123,9 +128,9 @@ function designNotes(document) {
 
 function stageDetails(document) {
   return `<div class="design-stage-context"><div><strong data-design-screen-title>${escapeHtml(document.screens.find(({ id }) => id === document.screenOrder[0]).title)}</strong><span data-design-stage-description>Every screen, one connected design</span></div><div class="design-stage-actions">${designNotes(document)}<label class="design-frame-picker">Frame<select aria-label="Responsive frame" data-design-frame>${document.frames.map((frame) => `<option value="${escapeHtml(frame.id)}">${escapeHtml(frame.label)} · ${frame.width} × ${frame.height}</option>`).join('')}</select></label></div></div>
-	  <div class="design-canvas-tools" role="group" aria-label="Canvas controls"><div class="planr-segment design-interaction-picker" role="group" aria-label="Review mode">${iconButton('Interact', 'pointer', 'data-planr-mode="interact" aria-pressed="true" aria-keyshortcuts="I"')}${iconButton('Annotate', 'comment', 'data-planr-mode="comment" aria-pressed="false" aria-keyshortcuts="C"')}</div><span></span>${button('−', 'data-design-zoom="out" aria-label="Zoom out"')}${button('100%', 'data-design-zoom="reset" aria-label="Reset zoom"')}${button('+', 'data-design-zoom="in" aria-label="Zoom in"')}<span></span>${button('Fit', 'data-design-fit aria-label="Fit all visible artboards"')}${button('Pan', 'data-design-pan aria-pressed="false" aria-label="Pan canvas" aria-keyshortcuts="H Space" title="Pan canvas (H). Hold Space to pan temporarily; Escape returns to Interact."')}</div>
+	  <div class="design-canvas-tools" role="group" aria-label="Canvas controls"><div class="planr-segment design-interaction-picker" role="group" aria-label="Review mode">${iconButton('Interact', 'pointer', 'data-planr-mode="interact" aria-pressed="true" aria-keyshortcuts="I"')}${iconButton('Annotate', 'comment', 'data-planr-mode="comment" aria-pressed="false" aria-keyshortcuts="C"')}</div><span></span>${button('−', 'data-design-zoom="out" aria-label="Zoom out"')}${button('100%', 'data-design-zoom="reset" aria-label="Reset zoom"')}${button('+', 'data-design-zoom="in" aria-label="Zoom in"')}<span></span>${button('100%', 'data-design-actual-size aria-label="Inspect screen at actual size" aria-pressed="false"')}${button('Focus', 'data-design-focus aria-label="Focus on the preview"')}${button('Fit', 'data-design-fit aria-label="Fit all visible artboards"')}${button('Pan', 'data-design-pan aria-pressed="false" aria-label="Pan canvas" aria-keyshortcuts="H Space" title="Pan canvas (H). Hold Space to pan temporarily; Escape returns to Interact."')}</div>
   <div class="design-walkthrough-caption" hidden><div><span data-design-step></span><h2 data-design-narrative-title></h2><p data-design-narrative></p></div><div>${button('Previous', 'data-design-step-change="-1"')}${button('Next', 'data-design-step-change="1"')}</div></div>
-  <div class="design-notice" role="status" aria-live="polite" hidden></div>`;
+  <div class="design-notice" role="status" aria-live="polite" hidden><span data-design-notice-message></span><button type="button" data-design-dismiss-notice aria-label="Dismiss notification" title="Dismiss notification"><span aria-hidden="true">×</span></button></div>`;
 }
 
 function directionDetails() {
@@ -160,7 +165,13 @@ export function renderDesignStudioMarkup(
     contextDigest = null,
     fingerprints = [],
   } = {},
-  { stageRuntimeUrl = './artifact-review-stage.js', renderShell, style = '', runtime = '' } = {},
+  {
+    stageRuntimeUrl = './artifact-review-stage.js',
+    renderShell,
+    style = '',
+    runtime = '',
+    lazySources = false,
+  } = {},
 ) {
   if (!document || !envelope)
     throw new TypeError('Design studio requires a design document and artifact envelope.');
@@ -177,9 +188,9 @@ export function renderDesignStudioMarkup(
   }
   const activeEntry = entries.find(
     ({ variantId, screenId, frameId }) =>
-      variantId === document.selectedVariant &&
-      screenId === document.screenOrder[0] &&
-      frameId === document.frames[0].id,
+      variantId === (state?.variantId ?? document.selectedVariant) &&
+      screenId === (state?.screenId ?? document.screenOrder[0]) &&
+      frameId === (state?.frameId ?? document.frames[0].id),
   );
   if (!activeEntry)
     throw new TypeError('Design studio requires the selected direction and first screen/frame.');
@@ -200,7 +211,10 @@ export function renderDesignStudioMarkup(
       .filter(
         (artifact) =>
           artifact.kind !== 'html' ||
-          /\bdata-(?:design|planr)-static(?:\s|=|>)/u.test(artifact.html || ''),
+          (!lazySources &&
+            /\bdata-(?:design|planr)-static(?:\s|=|>)/u.test(
+              resolveArtifactHtml(envelope, artifact),
+            )),
       )
       .map((artifact) => artifact.id),
   };
@@ -225,6 +239,7 @@ export function renderDesignStudioMarkup(
   // local forms. Navigation still stays blocked by the artifact-owned
   // form-action 'none' CSP and rejection of action/formaction/target attributes;
   // generic artifact viewers retain their stricter allow-scripts sandbox.
+  html = html.replace('class="planr-shell"', 'class="planr-shell" data-planr-frame-budget="3"');
   html = html.replace(
     /(<iframe\b[^>]*\bsandbox=")allow-scripts(")/g,
     '$1allow-scripts allow-forms$2',

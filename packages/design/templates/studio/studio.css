@@ -644,6 +644,9 @@
 	cursor: default;
 }
 .design-notice {
+	display: flex;
+	align-items: center;
+	gap: 12px;
 	position: absolute;
 	inset: 70px 20px auto;
 	z-index: 30;
@@ -654,6 +657,37 @@
 	padding: 10px 13px;
 	box-shadow: 0 4px 18px #0001;
 	font-size: 11px;
+}
+.design-notice[hidden] {
+	display: none;
+}
+.design-notice [data-design-notice-message] {
+	flex: 1;
+	min-width: 0;
+	overflow-wrap: anywhere;
+}
+.design-notice [data-design-dismiss-notice] {
+	flex: none;
+	display: grid;
+	place-items: center;
+	width: 28px;
+	height: 28px;
+	padding: 0;
+	border: 0;
+	border-radius: 4px;
+	background: transparent;
+	color: var(--planr-color-text-muted);
+	font: inherit;
+	font-size: 20px;
+	cursor: pointer;
+}
+.design-notice [data-design-dismiss-notice]:hover {
+	background: var(--planr-color-chrome);
+	color: var(--planr-color-text);
+}
+.design-notice [data-design-dismiss-notice]:focus-visible {
+	outline: 2px solid var(--planr-color-primary);
+	outline-offset: 2px;
 }
 [data-design-studio] .planr-review-rail {
 	display: flex;
@@ -1102,3 +1136,10 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 
 [data-planr-frame-budget] iframe[data-planr-artifact-frame]:not([data-planr-frame-state="ready"]) { visibility:hidden; }
 [data-design-screen-loading="true"] .planr-artifact-panel { pointer-events:none; }
+
+/* Focused inspection keeps authored pixels and native product scrolling. */
+[data-design-studio] .planr-shell[data-design-inspection-scale="actual"]:not([data-design-view="canvas"]) .planr-stage-scroll { overflow: auto; }
+.design-preview-state { color: var(--planr-color-text-muted); font-size: 10px; white-space: nowrap; }
+.design-preview-state[data-status="error"], .design-preview-state[data-status="invalid"] { color: var(--planr-color-error, #ef8888); }
+.design-screen[hidden] { display: none; }
+.design-screen-search input { min-width: 0; width: 100%; background: var(--planr-color-panel); border: 1px solid var(--planr-color-rule); border-radius: var(--planr-radius-small); padding: 6px 7px; color: var(--planr-color-text); font-size: 11px; }

@@ -13,7 +13,7 @@
   <a href="https://www.npmjs.com/package/openplanr"><img alt="npm version" src="https://img.shields.io/npm/v/openplanr?style=flat-square&labelColor=08080C&color=237A72&label=openplanr"></a>
   <a href="https://www.npmjs.com/package/openplanr"><img alt="npm downloads" src="https://img.shields.io/npm/dm/openplanr?style=flat-square&labelColor=08080C&color=237A72"></a>
   <a href="https://github.com/openplanr/OpenPlanr/actions/workflows/ci.yml"><img alt="Workspace CI" src="https://img.shields.io/github/actions/workflow/status/openplanr/OpenPlanr/ci.yml?branch=main&style=flat-square&labelColor=08080C&color=237A72&label=CI"></a>
-  <a href="https://nodejs.org"><img alt="Node.js 20 or later" src="https://img.shields.io/node/v/openplanr?style=flat-square&labelColor=08080C&color=237A72"></a>
+  <a href="https://nodejs.org"><img alt="Supported Node.js versions" src="https://img.shields.io/node/v/openplanr?style=flat-square&labelColor=08080C&color=237A72"></a>
   <a href="https://github.com/openplanr/OpenPlanr/blob/main/LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-237A72?style=flat-square&labelColor=08080C"></a>
 </p>
 
@@ -33,7 +33,7 @@ planr --version
 
 Also available as `openplanr` and `opr`. Alternatives: `npx openplanr@latest setup`, or
 the installers `curl -fsSL https://openplanr.dev/install.sh | sh` and
-`irm https://openplanr.dev/install.ps1 | iex`. Requires Node.js 20 or later.
+`irm https://openplanr.dev/install.ps1 | iex`. Requires a supported Node.js version (see [package metadata](package.json)).
 
 ## Quick start
 

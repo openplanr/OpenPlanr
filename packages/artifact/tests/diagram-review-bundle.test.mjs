@@ -109,3 +109,36 @@ test('feedback contracts reject incomplete coordinates, whitespace, secrets-shap
   assert.throws(() => assertDiagramReviewFeedback(object));
   assert.equal(accessed, false);
 });
+
+test('versioned authored reviews retain the explicit palette without a white canvas wrapper', async (t) => {
+  const { compileDiagramCommand } = await import('../lib/artifact/diagram/authoring/index.mjs');
+  const { normalizeDiagramPresentation, assertVersionedDiagramReviewBundle } = await import(
+    '@openplanr/protocol/studio-presentation-contracts'
+  );
+  const original = makeBundle('process', { source: true });
+  original.document.annotations[0].text = 'Note';
+  sealBundle(original);
+  const before = JSON.stringify(original);
+  for (const theme of ['light', 'dark']) {
+    const result = compileDiagramCommand(
+      original,
+      { type: 'set-studio-presentation', presentation: normalizeDiagramPresentation({ theme }) },
+      { transactionId: `palette-${theme}` },
+    );
+    assert.equal(result.ok, true);
+    const file = join(await root(t), `${theme}.json`);
+    const bytes = JSON.stringify(result.bundle);
+    await writeFile(file, bytes);
+    const review = await prepareDiagramShareBundle(file);
+    assertVersionedDiagramReviewBundle(review);
+    assert.equal(review.schemaVersion, '1.1.0');
+    assert.equal(review.colorScheme, theme);
+    assert.equal(review.presentation.theme, theme);
+    assert.deepEqual(review.authored.studioPresentation, result.bundle.studioPresentation);
+    assert.equal(review.authored.originalSource, null);
+    assert.equal(review.authored.sourceMap, null);
+    assert.ok(!/<rect[^>]*(?:width="100%"|data-canvas-background)/.test(review.scene.svg));
+    assert.equal(await readFile(file, 'utf8'), bytes);
+  }
+  assert.equal(JSON.stringify(original), before);
+});

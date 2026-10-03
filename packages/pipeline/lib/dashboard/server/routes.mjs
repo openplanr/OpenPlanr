@@ -28,6 +28,7 @@ import {
   handleEvents,
   handleGraph,
   handleHealth,
+  handleLifecycle,
   handleMeta,
   handleNode,
   handleStaticAsset,
@@ -60,6 +61,8 @@ export const DASHBOARD_ROUTES = Object.freeze(
       family: 'command',
     },
     { method: 'GET', match: path('/health'), handle: handleHealth },
+    { method: 'GET', match: path('/internal/v1/health'), handle: handleLifecycle },
+    { method: 'POST', match: path('/internal/v1/shutdown'), handle: handleLifecycle },
     {
       method: 'GET',
       match: path('/api/planning/graph'),
@@ -159,6 +162,7 @@ export async function handleDashboardRequest(dashboard, req, res) {
     assertLoopbackRequest(req, {
       port: req.socket.localPort,
       mutating: req.method !== 'GET' && req.method !== 'HEAD',
+      internal: ['/internal/v1/health', '/internal/v1/shutdown'].includes(url.pathname),
       hosts: ['127.0.0.1', 'localhost'],
     });
     const context = {

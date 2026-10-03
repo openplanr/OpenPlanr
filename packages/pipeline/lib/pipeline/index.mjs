@@ -1,40 +1,42 @@
+export { bundleArtifact } from '../artifact/bundle.mjs';
+export { decodeArtifactFragment, encodeArtifactFragment } from '../artifact/codec.mjs';
+export { decryptArtifactPayload, encryptArtifactPayload } from '../artifact/crypto.mjs';
+export { createArtifactEnvelope } from '../artifact/envelope.mjs';
+export { importArtifactReview } from '../artifact/import.mjs';
 export {
   appendLiveRoomEvent,
-  bundleArtifact,
   commitLiveReviewRoom,
-  createArtifactEnvelope,
   createLiveReviewRoom,
   createLiveRoomClient,
-  createLiveRoomDescriptor,
   createLiveRoomEvent,
   createLiveRoomEventFromReviewChange,
-  createLiveRoomSigner,
-  createReviewLink,
-  createReviewLinkPreview,
-  createSignedLiveRoomEvent,
-  decodeArtifactFragment,
-  decodeReviewLink,
-  decryptArtifactPayload,
   decryptLiveRoomEvent,
-  encodeArtifactFragment,
-  encryptArtifactPayload,
   encryptLiveRoomEvent,
   exportLiveRoomRecoveryBundle,
-  exportLiveRoomSignerSecret,
   hydrateLiveReviewRoom,
-  importArtifactReview,
   importLiveRoomRecoveryBundle,
-  importLiveRoomSignerSecret,
-  mergeArtifactFeedback,
   prepareLiveReviewRoom,
   recoverLiveReviewRoom,
   reduceLiveRoomEvents,
   reduceResilientSignedLiveRoomEvents,
   reduceSignedLiveRoomEvents,
+} from '../artifact/live-room.mjs';
+export {
+  createLiveRoomDescriptor,
+  createLiveRoomSigner,
+  createSignedLiveRoomEvent,
+  exportLiveRoomSignerSecret,
+  importLiveRoomSignerSecret,
   verifyLiveRoomEventChain,
   verifySignedLiveRoomEvent,
-} from '../artifact/index.mjs';
+} from '../artifact/live-room-integrity.mjs';
+export { mergeArtifactFeedback } from '../artifact/merge.mjs';
 export { exportArtifactReviewSession, startArtifactReview } from '../artifact/review-server.mjs';
+export {
+  createReviewLink,
+  createReviewLinkPreview,
+  decodeReviewLink,
+} from '../artifact/share-client.mjs';
 export {
   assertProtocolArtifact,
   listProtocolSchemas,

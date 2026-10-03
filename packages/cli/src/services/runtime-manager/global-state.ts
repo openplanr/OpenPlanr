@@ -29,6 +29,14 @@ export interface RuntimeState {
       }
     >
   >;
+  /** Alternate native homes share transactions but retain their own Codex user bundle. */
+  codexProfiles?: Record<
+    string,
+    {
+      home: string;
+      bundle?: NonNullable<RuntimeState['userBundles']>['codex'];
+    }
+  >;
   projects: Record<
     string,
     {
@@ -41,6 +49,7 @@ export interface RuntimeState {
       commandPrefix?: CommandPrefix;
       activeRuntime?: RuntimeId;
       skillModes?: Partial<Record<RuntimeId, SkillInstallMode>>;
+      codexHome?: string;
       ownedFiles: OwnedFile[];
     }
   >;

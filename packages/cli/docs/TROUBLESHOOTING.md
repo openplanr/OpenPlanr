@@ -33,7 +33,7 @@ actually selected it. A selected runtime that disappears remains a warning.
 
 ## Runtime setup and migration
 
-- `E_NODE_VERSION`: install Node.js 20 or newer; the installer never changes Node.
+- `E_NODE_VERSION`: install a supported Node.js version (see [package metadata](../package.json)); the installer never changes Node.
 - `E_PROJECT_CONTEXT_REQUIRED`: change into a Git or initialized OpenPlanr
   project before selecting project scope, or use `--scope user`.
 - `E_RUNTIME_AMBIGUOUS`: pass `--runtime` or set a project default.

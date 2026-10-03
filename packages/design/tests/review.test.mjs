@@ -5,8 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import { setTimeout as delay } from 'node:timers/promises';
-
-import { digestArtifactEnvelope } from '@openplanr/artifact/envelope.mjs';
+import { digestArtifactEnvelope, resolveArtifactHtml } from '@openplanr/artifact/envelope.mjs';
 import { acquireStartLock } from '@openplanr/artifact/internal/server-util.mjs';
 import { createArtifactReview } from '@openplanr/artifact/review.mjs';
 import {
@@ -15,13 +14,9 @@ import {
   prepareDesignDocument,
   renderDesignDocument,
 } from '../lib/design/document.mjs';
-import {
-  readDesignFeedback,
-  resolveDesignPins,
-  saveDesignState,
-  startDesignReview,
-} from '../lib/design/review.mjs';
+import { readDesignFeedback, resolveDesignPins, saveDesignState } from '../lib/design/review.mjs';
 import { designFixture } from './design-fixture.mjs';
+import { fetch, startDesignReview } from './studio-http-fixture.mjs';
 
 async function fixture(t) {
   const root = mkdtempSync(join(tmpdir(), 'openplanr-review-test-'));
@@ -188,8 +183,8 @@ test('revisions reject stale review writes and keep earlier pins visibly marked 
   const staleWrite = await mutate(session, 'review', { review });
   assert.equal(
     staleWrite.status,
-    400,
-    'the artifact API retains its existing invalid-review response',
+    409,
+    'a stale review reports a conflict without replacing feedback',
   );
   const pins = readDesignFeedback(context.file, context.env).pins;
   assert.equal(pins[0].stale, true);
@@ -309,5 +304,8 @@ test('prepared authored snapshots remain consistent when editable sources change
     prepared.sourceContents.get('source/screen-1.html').toString('utf8'),
     /12 active tasks/u,
   );
-  assert.match(prepared.envelope.artifacts[0].html, /12 active tasks/u);
+  assert.match(
+    resolveArtifactHtml(prepared.envelope, prepared.envelope.artifacts[0]),
+    /12 active tasks/u,
+  );
 });

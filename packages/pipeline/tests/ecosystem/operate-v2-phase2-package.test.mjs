@@ -1,16 +1,16 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { after, test } from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { installedDependencyClosure } from '../../../../tests/support/dependency-closure.mjs';
 import { OPERATE_RUNTIME_CONTRACT_KINDS } from '../../lib/protocol/loader.mjs';
 import {
   checkOperateRuntimePurity,
   packOperateV2DevelopmentSnapshot,
 } from '../../scripts/check-operate-runtime-purity.mjs';
-import { resolveWorkspaceDependencyRoot } from '../helpers/workspace-dependency.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const temporaryRoot = mkdtempSync(join(tmpdir(), 'planr-operate-v2-phase2-package-'));
@@ -74,15 +74,27 @@ test('Phase 2 packed consumer uses only declared v2 exports for Assignment, Revi
   mkdirSync(installRoot, { recursive: true });
   mkdirSync(dependencyRoot, { recursive: true });
   const localDependencies = {};
-  for (const dependency of ['@noble/hashes', 'entities', 'esbuild', 'pako', 'parse5']) {
-    const dependencyRootPath = resolveWorkspaceDependencyRoot(dependency);
-    const [dependencyPack] = JSON.parse(
-      runNpm(['pack', '--ignore-scripts', '--json', '--pack-destination', dependencyRoot], {
-        cwd: dependencyRootPath,
-      }).stdout,
-    );
-    localDependencies[dependency] = `file:${join(dependencyRoot, dependencyPack.filename)}`;
-  }
+  const manifest = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
+  const closure = installedDependencyClosure(Object.keys(manifest.dependencies), {
+    from: join(root, 'package.json'),
+  });
+  const dependencyPacks = JSON.parse(
+    runNpm([
+      'pack',
+      '--ignore-scripts',
+      '--offline',
+      '--json',
+      '--pack-destination',
+      dependencyRoot,
+      ...closure.map(({ root }) => root),
+    ]).stdout,
+  );
+  assert.deepEqual(
+    dependencyPacks.map(({ name }) => name).sort(),
+    closure.map(({ name }) => name).sort(),
+  );
+  for (const dependency of dependencyPacks)
+    localDependencies[dependency.name] = `file:${join(dependencyRoot, dependency.filename)}`;
   writeFileSync(
     join(installRoot, 'package.json'),
     JSON.stringify({

@@ -47,6 +47,23 @@ const { ink, teal, tealOnLight, paper } = OPENPLANR_BRAND_TOKENS;
 const AA_TEXT = 4.5;
 const AA_GRAPHIC = 3;
 
+// This historical fixture has a straight annotation connector crossing a node.
+// Palette assertions must retain that measured warning, while all other checks pass.
+function assertBrandFixtureQuality(quality, mode) {
+  assert.equal(quality.status, 'warning', mode);
+  assert.deepEqual(
+    quality.checks
+      .filter(({ status }) => status !== 'pass')
+      .map(({ id, status }) => ({ id, status })),
+    [{ id: 'annotation-connector-overlap', status: 'warning' }],
+    mode,
+  );
+  assert.match(
+    quality.checks.find(({ id }) => id === 'annotation-connector-overlap').message,
+    /^1 annotation connectors/,
+  );
+}
+
 /** Opaque colour a fill shows over a background at the given alpha. */
 function composite(fill, background, alpha) {
   const over = parseColor(fill);
@@ -165,7 +182,7 @@ test('the brand theme renders each mode with its own palette and only auto carri
     const rendered = renderDiagramOutputs(brandDocument(mode));
     assert.equal(rendered.theme.id, 'openplanr', mode);
     assert.equal(rendered.theme.mode, mode);
-    assert.equal(rendered.quality.status, 'pass', mode);
+    assertBrandFixtureQuality(rendered.quality, mode);
     assert.ok(
       rendered.svg.includes(
         `<rect width="${rendered.scene.width}" height="${rendered.scene.height}" fill="${expected.background}"/>`,
@@ -223,7 +240,7 @@ test('the brand theme sets node titles apart and sizes type for a README column'
     ),
   });
   const rendered = renderDiagramOutputs(titled);
-  assert.equal(rendered.quality.status, 'pass');
+  assertBrandFixtureQuality(rendered.quality, 'light');
   const first = brandFixture.nodes[0];
   assert.match(
     rendered.svg,

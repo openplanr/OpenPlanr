@@ -207,12 +207,18 @@ The following limits are enforced before rendering or sharing:
 
 - 1,000 unique input files.
 - 100 MiB total decoded input and 100 MiB generated HTML.
-- For sharing, 10 MiB uncompressed and 5 MiB compressed or encrypted payload.
+- Legacy inline sharing: 10 MiB uncompressed and 5 MiB compressed or encrypted payload.
+- Resource workspace sharing: 100 MiB unique HTML and 128 MiB decoded resources plus catalog, using bounded staged chunks.
 - 8,000 characters for fragment transport.
 
 Remote resources, traversal, symlink escape, unresolved or dynamic imports,
 forms, navigation targets, absolute machine paths, repository remotes,
-environment references, and recognized secrets fail closed.
+environment references, and recognized secrets fail closed. Credential screening covers
+private-key headers, AWS access IDs, GitHub, OpenAI/Anthropic and Slack token formats,
+and complete credential assignment literals. Ordinary variable names and explicit
+mock/documentation placeholders do not count as credentials; a recognizable token
+format is still rejected inside a placeholder. Supply known `sensitiveValues` for
+project-specific secrets. This screening is not a complete secret audit.
 
 Artifact HTML runs in an opaque-origin iframe with exactly
 `sandbox="allow-scripts"`. The complete HTML/CSS/JavaScript dependency graph is

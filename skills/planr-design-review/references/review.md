@@ -86,3 +86,15 @@ are relative to the original element; viewport-normalized coordinates refer to
 the captured product frame, never the canvas camera. Missing original mappings
 are explicitly stale and must not be guessed. Exporting is read-only and does not
 approve a handoff, accept a change request, or resolve pins.
+
+
+## Import downloaded feedback
+
+Use the utility's explicit feedback import operation from [utilities.md](utilities.md)
+to reconcile a downloaded JSON export with the canonical local ledger. Inspect
+first, bind the import to the current render revision and preserve the downloaded
+file. An import merges comments and replies under the same lock as Studio saves;
+it does not replace an entire ledger or change an owner decision. Review stale
+feedback before confirming its import and keep it bound to its original screen,
+frame and anchor. Missing historical bundles or conflicting identities must be
+repaired explicitly. Legacy `.feedback/notes.json` remains separate and untouched.

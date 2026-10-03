@@ -254,9 +254,9 @@ test('a real package version operation regenerates current runtime projections w
     return result.stdout;
   };
   try {
-    // Copy current tracked source bytes, including the generator under test;
-    // no private planning files, sibling checkout, or Git history is required.
-    const files = run('git', ['ls-files', '-z'], root)
+    // Copy current public source bytes, including new files in the change under
+    // test; ignored planning files, sibling checkouts and Git history stay out.
+    const files = run('git', ['ls-files', '--cached', '--others', '--exclude-standard', '-z'], root)
       .split('\0')
       .filter((path) => path && existsSync(join(root, path)));
     for (const path of files) {

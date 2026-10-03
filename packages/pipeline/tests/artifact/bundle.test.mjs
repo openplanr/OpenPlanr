@@ -1013,3 +1013,52 @@ test('remote-asset rejection is attribute-scoped, so URL-shaped prose survives',
     });
   }
 });
+
+test('publication screening rejects actual credential literals without rejecting source expressions or mock placeholders', async (t) => {
+  const recognized = [
+    `ghp_${'A'.repeat(36)}`,
+    `github_pat_${'B'.repeat(32)}`,
+    `sk-proj-${'C'.repeat(32)}`,
+    `sk-ant-${'D'.repeat(32)}`,
+    `xoxb-${'1'.repeat(24)}`,
+    `AKIA${'E'.repeat(16)}`,
+    '-----BEGIN OPENSSH PRIVATE KEY-----',
+    'const clientSecret = "synthetic credential with spaces!";',
+    '{"accessToken":"synthetic-credential-value-123456"}',
+    'API_KEY=synthetic-credential-value-123456',
+    'TOKEN=never-return-token\nCLIENT_SECRET=synthetic-credential-value-123456',
+  ];
+  for (const [index, value] of recognized.entries()) {
+    await t.test(`credential case ${index + 1}`, async () => {
+      const root = fixture();
+      write(root, 'index.html', `<pre>${value}</pre>`);
+      await assert.rejects(bundleArtifact('index.html', { root }), (error) => {
+        assert.equal(error.code, ARTIFACT_ERROR_CODES.REDACTION);
+        assert.ok(!error.message.includes(value));
+        return true;
+      });
+    });
+  }
+  const allowed = [
+    'const secret = readArtifactSecretInput(inputPath);',
+    'const token = provider.credentials.accessToken;',
+    'const accessToken = "never-return-token";',
+    'const token = "mock-access-token";',
+    'const apiKey = "your-api-key-here";',
+    'const password = "placeholder-password";',
+    'const secret = "example-value-for-documentation";',
+  ];
+  for (const [index, value] of allowed.entries()) {
+    await t.test(`source or placeholder case ${index + 1}`, async () => {
+      const root = fixture();
+      write(root, 'index.html', `<pre>${value}</pre>`);
+      assert.ok((await bundleArtifact('index.html', { root })).html.includes(value));
+    });
+  }
+  const root = fixture();
+  write(root, 'index.html', `<pre>const token = "example-ghp_${'A'.repeat(36)}";</pre>`);
+  await assert.rejects(
+    bundleArtifact('index.html', { root }),
+    expectCode(ARTIFACT_ERROR_CODES.REDACTION),
+  );
+});

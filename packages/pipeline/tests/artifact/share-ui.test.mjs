@@ -1345,3 +1345,52 @@ test('real browser share receipt is explicit, focus-safe, upload-safe, and visua
   assert.equal(await roomPage.locator('[data-planr-share-dialog]').isHidden(), true);
   await roomContext.close();
 });
+
+test('v3 live room custody retains the exact encrypted recovery and rejects a mixed read capability', async () => {
+  const { prepareLiveReviewRoom, exportLiveRoomRecoveryBundle } = await import(
+    '../../lib/artifact/live-room.mjs'
+  );
+  const prepared = await prepareLiveReviewRoom(
+    createArtifactEnvelope({ artifacts: [fixtureArtifact()] }),
+  );
+  const recovery = await exportLiveRoomRecoveryBundle(prepared);
+  let saved;
+  const credential = await establishArtifactOwnerCustody({
+    prepareOwnerCustody: () => ({ prepared, recovery }),
+    saveOwnerCustody: (file) => {
+      saved = file;
+      return true;
+    },
+  });
+  assert.equal(credential, prepared);
+  assert.equal(prepared.protocolVersion, '3.0.0');
+  assert.deepEqual(JSON.parse(saved.serialized), recovery);
+  assert.equal(recovery.body.readCapability.length, 43);
+  await assert.rejects(
+    establishArtifactOwnerCustody({
+      prepareOwnerCustody: () => ({
+        prepared,
+        recovery: { ...recovery, body: { ...recovery.body, readCapability: 'A'.repeat(43) } },
+      }),
+      saveOwnerCustody: () => {
+        throw Error('invalid recovery must not be saved');
+      },
+    }),
+    { code: 'E_ARTIFACT_SHARE_OWNER_CUSTODY_INVALID' },
+  );
+});
+
+test('hosted v3 rooms preserve authenticated read capability and reject ambiguous fragment fields', () => {
+  const id = 'r'.repeat(24),
+    key = 'k'.repeat(43),
+    read = 'r'.repeat(43),
+    write = 'w'.repeat(43);
+  const url = `https://share.openplanr.dev/r/${id}#k=${key}&r=${read}&w=${write}`;
+  const parsed = parseHostedArtifactLocation(url);
+  assert.equal(parsed.ok, true);
+  assert.equal(parsed.readCapability, read);
+  assert.equal(parsed.write, write);
+  for (const suffix of [`&r=${read}`, '&unexpected=value', `&o=${'o'.repeat(43)}`])
+    assert.equal(parseHostedArtifactLocation(url + suffix).ok, false);
+  assert.equal(parseHostedArtifactLocation(url.replace(`&r=${read}`, '')).ok, true);
+});

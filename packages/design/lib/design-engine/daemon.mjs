@@ -10,7 +10,9 @@
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import {
   chmodSync,
+  closeSync,
   existsSync,
+  fsyncSync,
   lstatSync,
   mkdirSync,
   openSync,
@@ -29,9 +31,12 @@ import {
 } from '@openplanr/artifact/bridge.mjs';
 import {
   digestArtifactEnvelope,
+  MAX_ARTIFACT_HTML_BYTES,
+  resolveArtifactHtml,
   validateArtifactEnvelope,
   validateArtifactReview,
 } from '@openplanr/artifact/envelope.mjs';
+import { assertSharingSecurityContract } from '@openplanr/protocol/sharing-security-contracts';
 import { MIME } from '../design/mime-types.mjs';
 import { resolveContainedRealPath, serveStaticFile } from '../design/path-util.mjs';
 import { DESIGN_BOARD_ENVELOPE_FILE, DESIGN_BOARD_SOURCES_FILE } from './board.mjs';
@@ -48,9 +53,12 @@ import {
 } from './feedback.mjs';
 import { daemonDir } from './paths.mjs';
 import {
+  acquireStartLock,
   assertLoopbackRequest,
   closeHttpServer,
   listenLoopback,
+  readJsonState,
+  readPrivateJsonState,
   readRequestBody,
   writePrivateJsonState,
 } from './server-util.mjs';
@@ -70,7 +78,7 @@ export {
  * daemon running stale code and restart it instead of reusing it forever. A
  * daemon started before this field existed reports no version → treated as stale.
  */
-export const DAEMON_VERSION = 6;
+export const DAEMON_VERSION = 8;
 
 /** Cap on a request body (bytes) — a feedback round is small; this bounds memory per request. */
 const MAX_BODY_SIZE = 5_000_000;
@@ -105,6 +113,13 @@ function readControlToken(env = process.env) {
 function ensureStateDir(env) {
   const stateDir = daemonDir(env);
   mkdirSync(stateDir, { recursive: true, mode: 0o700 });
+  const info = lstatSync(stateDir);
+  if (
+    !info.isDirectory() ||
+    info.isSymbolicLink() ||
+    (process.platform !== 'win32' && info.uid !== process.getuid())
+  )
+    throw new Error('The design daemon state directory is unsafe; existing state was preserved.');
   if (process.platform !== 'win32') chmodSync(stateDir, 0o700);
   return stateDir;
 }
@@ -243,13 +258,19 @@ export function createDaemon({ env = process.env, fetchImpl = globalThis.fetch }
   const stateDir = daemonDir(env);
   const controlToken = ensureControlToken(env);
   const registryPath = join(stateDir, 'boards.json');
+  const instanceId = randomBytes(16).toString('base64url');
+  const startedAt = new Date().toISOString();
+  let boundPort = null;
+  let ownedInstance = null;
+  let closing = false;
+  let closePromise;
 
   const loadRegistry = () => readRegistry(registryPath);
   const saveRegistry = (r) => writePrivateJsonState(registryPath, r);
 
   // Startup hygiene: prune the registry so it never serves a vanished dir or a
   // legacy entry that predates capability tokens (which would leak across projects).
-  (() => {
+  const prepareRegistry = () => {
     let reg;
     try {
       reg = loadRegistry();
@@ -268,7 +289,7 @@ export function createDaemon({ env = process.env, fetchImpl = globalThis.fetch }
       }
     }
     if (changed) saveRegistry(reg);
-  })();
+  };
 
   const reloadGen = new Map(); // boardId → counter
   const bridgeNonces = new Map(); // boardId → opaque-origin bridge capability
@@ -380,7 +401,7 @@ export function createDaemon({ env = process.env, fetchImpl = globalThis.fetch }
         if (extname(source.src).toLowerCase() !== expected) continue;
         const resolved = resolveContainedRealPath(dir, source.src).realPath;
         const entry = statSync(resolved);
-        if (!entry.isFile() || entry.size > 100 * 1024 * 1024) continue;
+        if (!entry.isFile() || entry.size > MAX_ARTIFACT_HTML_BYTES) continue;
         seen.add(source.artifactId);
         sources.push({
           artifactId: source.artifactId,
@@ -489,7 +510,13 @@ export function createDaemon({ env = process.env, fetchImpl = globalThis.fetch }
       writeFileSync(pendingPath, `${JSON.stringify({ pins: [], authors: [] }, null, 2)}\n`);
     });
 
-  const server = createServer(async (req, res) => {
+  const pendingRequests = new Set();
+  const server = createServer((req, res) => {
+    const request = handleRequest(req, res);
+    pendingRequests.add(request);
+    void request.finally(() => pendingRequests.delete(request));
+  });
+  async function handleRequest(req, res) {
     try {
       const url = new URL(req.url, 'http://localhost');
       const internal = hasControlToken(req, controlToken);
@@ -499,10 +526,24 @@ export function createDaemon({ env = process.env, fetchImpl = globalThis.fetch }
         internal,
       });
       const parts = url.pathname.split('/').filter(Boolean);
+      if (
+        closing &&
+        req.method !== 'GET' &&
+        req.method !== 'HEAD' &&
+        url.pathname !== '/internal/v1/shutdown'
+      )
+        return json(res, 503, { error: 'daemon shutdown is draining existing requests' });
 
       if (req.method === 'GET' && url.pathname === '/health') {
         if (!internal) return json(res, 403, { error: 'daemon control authentication required' });
-        const health = { ok: true, kind: DAEMON_KIND, pid: process.pid, version: DAEMON_VERSION };
+        const health = {
+          ok: true,
+          kind: DAEMON_KIND,
+          instanceId,
+          pid: process.pid,
+          version: DAEMON_VERSION,
+          startedAt,
+        };
         // Identity must survive a bad registry so ensureDaemon restarts this daemon, not orphans it.
         try {
           health.boards = Object.keys(loadRegistry()).length;
@@ -510,6 +551,21 @@ export function createDaemon({ env = process.env, fetchImpl = globalThis.fetch }
           health.registryError = error.message;
         }
         return json(res, 200, health);
+      }
+
+      if (req.method === 'POST' && url.pathname === '/internal/v1/shutdown') {
+        if (!internal) return json(res, 403, { error: 'daemon control authentication required' });
+        const body = JSON.parse(await readRequestBody(req, { maxBytes: 256, encoding: 'utf8' }));
+        if (!body || Object.keys(body).length !== 1 || body.instanceId !== instanceId)
+          return json(res, 409, { error: 'daemon instance changed' });
+        closing = true;
+        res.once('finish', () => {
+          void closeOwnedDaemon().catch(() => {
+            process.stderr.write('The design daemon stopped without a durable shutdown receipt.\n');
+          });
+        });
+        json(res, 200, { ok: true, instanceId, status: 'stopping' });
+        return;
       }
 
       if (req.method === 'GET' && url.pathname === '/') {
@@ -631,30 +687,54 @@ export function createDaemon({ env = process.env, fetchImpl = globalThis.fetch }
             });
           }
           if (req.method === 'POST' && parts[3] === 'pastes') {
-            const value = JSON.parse((await readBody(req)) || '{}');
-            const allowed = ['schemaVersion', 'operation', 'iv', 'ciphertext', 'ttl'];
-            if (
-              !value ||
-              typeof value !== 'object' ||
-              Array.isArray(value) ||
-              Object.keys(value).some((key) => !allowed.includes(key)) ||
-              value.schemaVersion !== '1.0.0' ||
-              value.operation !== 'create' ||
-              !['1d', '7d', '30d'].includes(value.ttl) ||
-              typeof value.iv !== 'string' ||
-              typeof value.ciphertext !== 'string'
-            ) {
+            const value = JSON.parse(
+              (await readRequestBody(req, { maxBytes: 8 * 1024 * 1024, encoding: 'utf8' })) || '{}',
+            );
+            const v2 = value?.schemaVersion === '2.0.0';
+            const allowed = [
+              'schemaVersion',
+              'operation',
+              'iv',
+              'ciphertext',
+              'ttl',
+              ...(v2 ? ['id', 'creationId'] : []),
+            ];
+            const custody = req.headers['x-openplanr-paste-custody'];
+            try {
+              if (v2) {
+                assertSharingSecurityContract(value, 'artifact-paste-v2');
+                if (typeof custody !== 'string' || !/^[A-Za-z0-9_-]{43}$/.test(custody))
+                  throw new TypeError('missing custody');
+              } else if (
+                !value ||
+                typeof value !== 'object' ||
+                Array.isArray(value) ||
+                Object.keys(value).some((key) => !allowed.includes(key)) ||
+                value.schemaVersion !== '1.0.0' ||
+                value.operation !== 'create' ||
+                !['1d', '7d', '30d'].includes(value.ttl) ||
+                typeof value.iv !== 'string' ||
+                typeof value.ciphertext !== 'string'
+              )
+                throw new TypeError('invalid paste');
+            } catch {
               return json(res, 400, { error: 'invalid encrypted paste request' });
             }
             if (typeof fetchImpl !== 'function')
               return json(res, 503, { error: 'share service unavailable' });
             try {
-              const remote = await fetchImpl('https://share.openplanr.dev/api/v1/pastes', {
-                method: 'POST',
-                headers: { 'content-type': 'application/json' },
-                body: JSON.stringify(Object.fromEntries(allowed.map((key) => [key, value[key]]))),
-                redirect: 'error',
-              });
+              const remote = await fetchImpl(
+                `https://share.openplanr.dev/api/${v2 ? 'v2' : 'v1'}/pastes`,
+                {
+                  method: 'POST',
+                  headers: {
+                    'content-type': 'application/json',
+                    ...(v2 ? { 'x-openplanr-paste-custody': custody } : {}),
+                  },
+                  body: JSON.stringify(Object.fromEntries(allowed.map((key) => [key, value[key]]))),
+                  redirect: 'error',
+                },
+              );
               const body = await remote
                 .json()
                 .catch(() => ({ error: 'share service returned malformed JSON' }));
@@ -861,7 +941,7 @@ export function createDaemon({ env = process.env, fetchImpl = globalThis.fetch }
           const address = server.address();
           const port = typeof address === 'object' && address ? address.port : 0;
           const prepared = prepareArtifactDocument({
-            html: artifact.html,
+            html: resolveArtifactHtml(envelope, artifact),
             artifactId: artifact.id,
             nonce,
             parentOrigin: `http://127.0.0.1:${port}`,
@@ -918,17 +998,80 @@ export function createDaemon({ env = process.env, fetchImpl = globalThis.fetch }
       }
       return json(res, 500, { error: String(err.message ?? err) });
     }
-  });
+  }
 
+  function closeOwnedDaemon() {
+    if (closePromise) return closePromise;
+    closing = true;
+    closePromise = (async () => {
+      const unlock = await acquireStartLock(join(stateDir, 'startup.lock'));
+      try {
+        // No new mutating handler can enter after closing is set. Finish handlers
+        // that were already reading a body before waiting for their board saves.
+        await Promise.allSettled([...pendingRequests]);
+        await Promise.allSettled([...mutex.values()]);
+        await closeHttpServer(server);
+        if (!ownedInstance) return;
+        const path = join(stateDir, 'instance.json');
+        const current = readPrivateJsonState(path, { maxBytes: 4096 });
+        if (current?.instanceId === instanceId) {
+          writePrivateJsonState(path, { ...current, status: 'stopped' });
+          syncPrivateState(path);
+        }
+      } finally {
+        unlock();
+      }
+      if (!ownedInstance) return;
+      // Publish this last, after startup-lock cleanup. Its identity survives a
+      // replacement listener, and repeated close calls share the same promise.
+      const receiptPath = stoppedInstancePath(env, instanceId);
+      writePrivateJsonState(receiptPath, { ...ownedInstance, status: 'stopped' });
+      syncPrivateState(receiptPath);
+    })().catch((error) => {
+      // Explicitly repaired startup custody can be retried while this listener
+      // still owns its socket. Closed instances never repeat filesystem writes.
+      if (server.listening) closePromise = undefined;
+      throw error;
+    });
+    return closePromise;
+  }
   return {
     server,
-    /** Start on 127.0.0.1; port 0 = ephemeral. Persists the port for discovery. */
-    async listen(port = 0) {
-      const actual = await listenLoopback(server, port);
-      writeFileSync(join(stateDir, 'port'), String(actual));
-      return actual;
+    instanceId,
+    get reused() {
+      return !server.listening && boundPort !== null;
     },
-    close: () => closeHttpServer(server),
+    /** Serialize discovery and publication of one owned listener across processes. */
+    async listen(port = 0) {
+      const unlock = await acquireStartLock(join(stateDir, 'startup.lock'));
+      try {
+        const running = await findRunningDaemon({ env, fetchImpl });
+        if (running) {
+          if (running.version !== DAEMON_VERSION || running.registryError || !running.instanceId)
+            throw daemonNeedsRestart(running);
+          boundPort = running.port;
+          return running.port;
+        }
+        prepareRegistry();
+        const actual = await listenLoopback(server, port);
+        boundPort = actual;
+        ownedInstance = {
+          kind: DAEMON_KIND,
+          instanceId,
+          pid: process.pid,
+          port: actual,
+          startedAt,
+          version: DAEMON_VERSION,
+          status: 'running',
+        };
+        writePrivateJsonState(join(stateDir, 'instance.json'), ownedInstance);
+        writeFileSync(join(stateDir, 'port'), String(actual), { mode: 0o600 });
+        return actual;
+      } finally {
+        unlock();
+      }
+    },
+    close: closeOwnedDaemon,
   };
 }
 
@@ -965,6 +1108,9 @@ export async function findRunningDaemon({ env = process.env, fetchImpl = fetch }
           pid: health.pid,
           version: health.version,
           registryError: typeof health.registryError === 'string' ? health.registryError : null,
+          ...(verifiedInstance(env, health, port)
+            ? { instanceId: health.instanceId, startedAt: health.startedAt }
+            : {}),
         };
       }
     }
@@ -974,28 +1120,104 @@ export async function findRunningDaemon({ env = process.env, fetchImpl = fetch }
   return null;
 }
 
-/**
- * Kill a running daemon process (identified by findRunningDaemon). Best-effort:
- * sends SIGTERM, waits 200ms for the OS to release the listener.
- * Safe to call with null/undefined running.
- */
-export async function killRunningDaemon(running) {
-  if (
-    !running ||
-    running.authenticated !== true ||
-    running.kind !== DAEMON_KIND ||
-    !Number.isSafeInteger(running.pid) ||
-    running.pid <= 0 ||
-    running.pid === process.pid
-  )
-    return false;
+function verifiedInstance(env, health, port) {
+  const path = join(daemonDir(env), 'instance.json');
   try {
-    process.kill(running.pid);
+    const info = lstatSync(path);
+    if (
+      !info.isFile() ||
+      info.isSymbolicLink() ||
+      info.size > 4096 ||
+      (process.platform !== 'win32' && (info.uid !== process.getuid() || info.mode & 0o077))
+    )
+      return false;
+    const value = readJsonState(path);
+    return (
+      /^[A-Za-z0-9_-]{22}$/u.test(health.instanceId ?? '') &&
+      value?.kind === DAEMON_KIND &&
+      value.instanceId === health.instanceId &&
+      value.port === port &&
+      value.pid === health.pid &&
+      value.version === health.version &&
+      value.status === 'running'
+    );
   } catch {
     return false;
   }
-  await new Promise((r) => setTimeout(r, 200));
-  return true;
+}
+
+export function daemonNeedsRestart(running) {
+  const error = new Error(
+    running?.instanceId
+      ? `A design daemon needs a restart. Run planr server stop ${running.instanceId}, then launch daemon --serve again.`
+      : 'A legacy design daemon is still running. Stop its original tracked background task, then launch daemon --serve again. Existing daemon and board tokens were preserved.',
+  );
+  error.code = 'E_DESIGN_DAEMON_RESTART_REQUIRED';
+  return error;
+}
+
+function stoppedInstancePath(env, instanceId) {
+  return join(daemonDir(env), `stopped-${instanceId}.json`);
+}
+
+function syncPrivateState(path) {
+  const fd = openSync(path, 'r');
+  try {
+    fsyncSync(fd);
+  } finally {
+    closeSync(fd);
+  }
+  if (process.platform === 'win32') return;
+  const directory = openSync(dirname(path), 'r');
+  try {
+    fsyncSync(directory);
+  } finally {
+    closeSync(directory);
+  }
+}
+
+function hasStoppedInstanceReceipt(env, running) {
+  try {
+    const receipt = readPrivateJsonState(stoppedInstancePath(env, running.instanceId), {
+      maxBytes: 4096,
+    });
+    return (
+      receipt?.kind === DAEMON_KIND &&
+      receipt.instanceId === running.instanceId &&
+      receipt.pid === running.pid &&
+      receipt.port === running.port &&
+      receipt.version === running.version &&
+      receipt.startedAt === running.startedAt &&
+      receipt.status === 'stopped'
+    );
+  } catch {
+    // Missing, malformed or unsafe state cannot certify completed shutdown.
+    return false;
+  }
+}
+
+/** Explicit shutdown requires fresh authenticated health and exact private instance custody. */
+export async function killRunningDaemon(running, { env = process.env, fetchImpl = fetch } = {}) {
+  if (!running?.instanceId || running.authenticated !== true || running.kind !== DAEMON_KIND)
+    return false;
+  const current = await findRunningDaemon({ env, fetchImpl });
+  if (!current || current.instanceId !== running.instanceId || current.port !== running.port)
+    return false;
+  const response = await fetchImpl(`http://127.0.0.1:${current.port}/internal/v1/shutdown`, {
+    method: 'POST',
+    headers: { ...daemonControlHeaders(env), 'content-type': 'application/json' },
+    body: JSON.stringify({ instanceId: current.instanceId }),
+    signal: AbortSignal.timeout(3000),
+  });
+  if (!response.ok) return false;
+  const receipt = await response.json();
+  if (receipt?.ok !== true || receipt.instanceId !== current.instanceId) return false;
+  const deadline = Date.now() + 3000;
+  while (Date.now() < deadline) {
+    if (hasStoppedInstanceReceipt(env, current)) return true;
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+  return false;
 }
 
 // CLI entry: `node daemon.mjs --serve [port]`
@@ -1006,7 +1228,13 @@ if (
 ) {
   const portArg = Number(process.argv[process.argv.indexOf('--serve') + 1]) || 0;
   const daemon = createDaemon();
-  daemon.listen(portArg).then((port) => {
-    process.stderr.write(`DAEMON_PORT: ${port}\n`);
-  });
+  daemon
+    .listen(portArg)
+    .then((port) => {
+      process.stderr.write(`DAEMON_PORT: ${port}\n`);
+    })
+    .catch((error) => {
+      process.stderr.write(`${error.message}\n`);
+      process.exitCode = 1;
+    });
 }

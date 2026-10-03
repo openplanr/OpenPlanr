@@ -11,9 +11,11 @@
  * ~/.planr/credentials.json on first access; entries other tools keep there stay.
  */
 
+import { planrHome } from '../../lib/planr-home.mjs';
 import { logger } from '../utils/logger.js';
 import type { CredentialSource } from './credential-backends.js';
 import { encryptedFileBackend, keychainBackend, legacyBackend } from './credential-backends.js';
+import { withCredentialWriteLock } from './credential-write-lock.js';
 
 // ---------------------------------------------------------------------------
 // Env-var access (explicit allowlist — avoids dynamic process.env lookups)
@@ -64,23 +66,30 @@ export async function migrateCredentials(): Promise<boolean> {
   migrationDone = true;
 
   try {
-    if (!(await legacyBackend.exists())) return false;
+    await legacyBackend.prepareHome();
+    return await withCredentialWriteLock(
+      planrHome(),
+      async () => {
+        const credentials = await legacyBackend.loadAllPrepared();
+        if (Object.keys(credentials).length === 0) return false;
+        const owned = Object.keys(credentials).filter(isCliCredential);
+        const others = Object.fromEntries(
+          Object.entries(credentials).filter(([provider]) => !isCliCredential(provider)),
+        );
+        if (owned.length === 0 && Object.keys(others).length > 0) return false;
 
-    const credentials = await legacyBackend.loadAll();
-    const owned = Object.keys(credentials).filter(isCliCredential);
-    const others = Object.fromEntries(
-      Object.entries(credentials).filter(([provider]) => !isCliCredential(provider)),
+        // Migrate each key to the best available backend
+        for (const provider of owned) {
+          await saveCredential(provider, credentials[provider]);
+        }
+
+        // Rewrite the plaintext file only after all keys migrated successfully
+        await legacyBackend.keepOnly(others);
+        return owned.length > 0;
+      },
+      15000,
+      'legacy',
     );
-    if (owned.length === 0 && Object.keys(others).length > 0) return false;
-
-    // Migrate each key to the best available backend
-    for (const provider of owned) {
-      await saveCredential(provider, credentials[provider]);
-    }
-
-    // Rewrite the plaintext file only after all keys migrated successfully
-    await legacyBackend.keepOnly(others);
-    return owned.length > 0;
   } catch (err) {
     logger.debug('Credential migration failed', err);
     // Migration failed — reset flag so it retries next time

@@ -17,9 +17,10 @@ import {
   prepareDesignDocument,
   renderDesignDocument,
 } from '../lib/design/document.mjs';
-import { saveDesignState, startDesignReview } from '../lib/design/review.mjs';
+import { saveDesignState } from '../lib/design/review.mjs';
 import { designUtility, verifyDesignDocument } from '../lib/design/utility.mjs';
 import { designFixture } from './design-fixture.mjs';
+import { fetch, startDesignReview } from './studio-http-fixture.mjs';
 
 const json = (path) => JSON.parse(readFileSync(path, 'utf8'));
 const payload = (html) =>

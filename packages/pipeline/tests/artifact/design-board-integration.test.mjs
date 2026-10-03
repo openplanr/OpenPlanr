@@ -359,3 +359,177 @@ test('real board restores every round and export control on the shared shell', {
     await browser.close();
   }
 });
+
+test('real board reports corrupted embedded state before mounting authored frames or writing feedback', {
+  skip: runBrowser ? false : 'browser-gated',
+  timeout: 60_000,
+}, async () => {
+  const { launchBrowser } = await import('../../../../tests/support/browser-launcher.mjs');
+  const { base, id, sessionDir } = await fixture();
+  const boardUrl = `${base}/boards/${encodeURIComponent(id)}/`;
+  const browser = await launchBrowser({ engine: 'chromium' });
+  try {
+    for (const elementId of ['planr-artifact-stage-payload', 'planr-artifact-review-state']) {
+      const context = await browser.newContext();
+      const page = await context.newPage();
+      const writes = [];
+      page.on('request', (request) => {
+        if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method()))
+          writes.push(request.url());
+      });
+      await page.route(boardUrl, async (route) => {
+        const response = await route.fetch();
+        const original = await response.text();
+        const pattern = new RegExp(
+          `(<script\\b[^>]*\\bid="${elementId}"[^>]*>)[\\s\\S]*?(<\\/script>)`,
+          'u',
+        );
+        const body = original.replace(pattern, '$1{ private-corrupted-board-content$2');
+        assert.notEqual(body, original, `The actual served board contains ${elementId}.`);
+        await route.fulfill({ response, body });
+      });
+      await page.goto(boardUrl);
+      const status = page.locator('[data-planr-slot="status"][role="alert"][data-error]');
+      await status.waitFor();
+      assert.match(
+        await status.textContent(),
+        new RegExp(`embedded ${elementId} is not valid JSON`, 'u'),
+      );
+      assert.doesNotMatch(await status.textContent(), /private-corrupted-board-content/u);
+      assert.equal(await page.locator('.planr-shell[data-planr-initialization-error]').count(), 1);
+      assert.deepEqual(
+        await page.locator('[data-planr-artifact-frame]').evaluateAll((frames) =>
+          frames.map((frame) => ({
+            src: frame.getAttribute('src'),
+            srcdoc: frame.getAttribute('srcdoc'),
+          })),
+        ),
+        [
+          { src: null, srcdoc: null },
+          { src: null, srcdoc: null },
+        ],
+        'Server-rendered frame placeholders never receive authored content.',
+      );
+      assert.equal(await page.locator('[data-planr-bridge-trusted="true"]').count(), 0);
+      assert.deepEqual(writes, []);
+      assert.equal(existsSync(join(sessionDir, 'feedback.json')), false);
+      assert.equal(existsSync(join(sessionDir, 'feedback-pending.json')), false);
+      await context.close();
+    }
+  } finally {
+    await browser.close();
+  }
+});
+
+test('served board pins switch supports Enter and Space while durable open counts ignore thread filters', {
+  skip: runBrowser ? false : 'browser-gated',
+  timeout: 60_000,
+}, async () => {
+  const { launchBrowser } = await import('../../../../tests/support/browser-launcher.mjs');
+  const { base, id, envelope } = await fixture();
+  const boardBase = `${base}/boards/${encodeURIComponent(id)}/`;
+  const review = createArtifactReview({
+    reviewId: 'pin-toggle-counts',
+    reviewOf: digestArtifactEnvelope(envelope),
+    decision: 'pending',
+    overall: '',
+    pins: ['open', 'addressed', 'resolved'].map((status, index) => ({
+      id: `count-${index}`,
+      author: { id: 'count-reviewer', name: 'Morgan' },
+      artifactId: index === 1 ? 'B' : 'A',
+      variant: index === 1 ? 'B' : 'A',
+      region: { x: 0.2, y: 0.3, w: 0, h: 0 },
+      viewport: { width: 1440, height: 900 },
+      intent: 'question',
+      status,
+      comment: `Count fixture ${status}`,
+      replies: [],
+      createdAt: '2026-07-14T19:00:00.000Z',
+      updatedAt: '2026-07-14T19:00:00.000Z',
+    })),
+  });
+  const saved = await fetch(`${boardBase}api/artifact-review`, {
+    method: 'PUT',
+    headers: { origin: base, 'content-type': 'application/json' },
+    body: JSON.stringify({ review }),
+  });
+  assert.equal(saved.status, 200);
+  const browser = await launchBrowser({ engine: 'chromium' });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+    const errors = [];
+    page.on('pageerror', (error) => errors.push(error.message));
+    await page.goto(boardBase);
+    const toggle = page.getByRole('switch', { name: 'Pins', exact: true });
+    await toggle.waitFor();
+    assert.equal(await page.getByRole('switch').count(), 1);
+    assert.equal(await toggle.getAttribute('aria-checked'), 'true');
+    const metric = page.locator('[data-planr-metric="open"]');
+    await metric.filter({ hasText: '2 open' }).waitFor();
+    for (const key of ['Enter', 'Space']) {
+      await page.locator('[data-planr-pins-toggle]').focus();
+      await page.keyboard.press(key);
+      await page.getByRole('switch', { name: 'Pins hidden', exact: true }).waitFor();
+      assert.equal(
+        await page.locator('[data-planr-pins-toggle]').getAttribute('aria-checked'),
+        'false',
+      );
+      assert.equal(
+        await page
+          .locator('[data-planr-annotation-layer]')
+          .evaluateAll((layers) => layers.length > 0 && layers.every((layer) => layer.hidden)),
+        true,
+      );
+      assert.equal(await metric.textContent(), '2 open');
+      await page.keyboard.press(key);
+      await page.getByRole('switch', { name: 'Pins', exact: true }).waitFor();
+      assert.equal(
+        await page.locator('[data-planr-pins-toggle]').getAttribute('aria-checked'),
+        'true',
+      );
+      assert.equal(
+        await page
+          .locator('[data-planr-annotation-layer]')
+          .evaluateAll((layers) => layers.length > 0 && layers.every((layer) => !layer.hidden)),
+        true,
+      );
+    }
+    for (const [filter, count] of [
+      ['resolved', 1],
+      ['none', 0],
+      ['all', 3],
+    ]) {
+      await page.evaluate(
+        (filter) =>
+          window.__openPlanrArtifactStage.review.setPresentation({
+            filterPin:
+              filter === 'all' ? null : (pin) => filter === 'resolved' && pin.status === 'resolved',
+          }),
+        filter,
+      );
+      assert.equal(
+        await page.locator('[data-planr-slot="feedback-rail"] .planr-thread').count(),
+        count,
+      );
+      assert.equal(
+        await metric.textContent(),
+        '2 open',
+        'The durable open count does not shrink to the visible subset.',
+      );
+      assert.equal(await page.locator('[data-planr-metric="total"]').textContent(), '3');
+    }
+    await page.evaluate(() => {
+      const rail = window.__openPlanrArtifactStage.review;
+      const review = rail.getReview();
+      rail.replaceReview({
+        ...review,
+        pins: review.pins.map((pin) => ({ ...pin, status: 'resolved' })),
+      });
+    });
+    assert.equal(await metric.textContent(), '0 open');
+    assert.equal(await page.locator('[data-planr-metric="total"]').textContent(), '3');
+    assert.deepEqual(errors, []);
+  } finally {
+    await browser.close();
+  }
+});

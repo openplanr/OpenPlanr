@@ -1,3 +1,4 @@
+// @ts-check
 import {
   COLLECTIONS,
   clone,
@@ -88,6 +89,7 @@ export function affectedState(before, after, semantic, presentation) {
 }
 
 /** Identity-keyed user changes; derived digest/basis fields are deliberately omitted. */
+/** @type {typeof import('./index.d.mts').diffDiagramBundles} */
 export function diffDiagramBundles(before, after) {
   for (const bundle of [before, after]) {
     const checked = validateAuthoringBundle(bundle);
@@ -95,7 +97,9 @@ export function diffDiagramBundles(before, after) {
   }
   if (before.diagramId !== after.diagramId)
     return failure('$.diagramId', 'diagram-id', 'Diff requires snapshots of the same diagram.');
+  /** @type {import('./index.d.mts').DiagramFieldChange[]} */
   const semantic = [];
+  /** @type {import('./index.d.mts').DiagramFieldChange[]} */
   const presentation = [];
   for (const collection of COLLECTIONS)
     records(before.document[collection], after.document[collection], collection, 'id', semantic);
@@ -123,6 +127,23 @@ export function diffDiagramBundles(before, after) {
       presentation,
       [field],
     );
+  if (
+    !same(
+      (before.schemaVersion === '1.1.0' ? before.studioPresentation : null) ?? null,
+      (after.schemaVersion === '1.1.0' ? after.studioPresentation : null) ?? null,
+    )
+  )
+    presentation.push({
+      collection: 'studio-presentation',
+      elementId: null,
+      path: [],
+      before: /** @type {import('./index.d.mts').DiagramJsonValue} */ (
+        clone((before.schemaVersion === '1.1.0' ? before.studioPresentation : null) ?? null)
+      ),
+      after: /** @type {import('./index.d.mts').DiagramJsonValue} */ (
+        clone((after.schemaVersion === '1.1.0' ? after.studioPresentation : null) ?? null)
+      ),
+    });
   return {
     ok: true,
     semantic,
@@ -164,7 +185,13 @@ export function inverseDependencies(bundle, impact) {
           parent: parents.get(elementId) ?? null,
         }),
       };
-    const { from, to, targetId, members } = entry.value;
+    const from = entry.collection === 'relations' ? entry.value.from : undefined;
+    const to = entry.collection === 'relations' ? entry.value.to : undefined;
+    const targetId = entry.collection === 'annotations' ? entry.value.targetId : undefined;
+    const members =
+      entry.collection === 'groups' || entry.collection === 'lanes'
+        ? entry.value.members
+        : undefined;
     return {
       elementId,
       value: clone({

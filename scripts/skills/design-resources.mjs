@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { readdirSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { basename, dirname, join, relative, resolve, sep } from 'node:path';
@@ -62,12 +63,13 @@ export async function buildDesignSkillResources({
   const root = resolve(repoRoot ?? fileURLToPath(new URL('../..', import.meta.url)));
   const entry = resolve(root, entrypoint);
   const require = createRequire(resolve(root, 'packages/artifact/package.json'));
-  const { build } = require('esbuild');
+  const { build, transformSync } = require('esbuild');
   const logical = (absolute) => relative(root, absolute).split(sep).join('/');
   // The stage and studio runtimes are untracked outputs of later generator steps, so they
   // are rendered from source here instead of read from disk.
   const stageRuntimePath = resolve(root, 'packages/artifact/templates/artifact-review-stage.js');
   const studioRuntimePath = resolve(root, 'packages/design/templates/studio/studio.js');
+  const browserInputs = [];
   const renderedAssets = new Map([
     [
       stageRuntimePath,
@@ -79,7 +81,10 @@ export async function buildDesignSkillResources({
     [
       studioRuntimePath,
       Buffer.from(
-        renderDesignStudioRuntimeAsset({ projectRoot: resolve(root, 'packages/design') }),
+        renderDesignStudioRuntimeAsset({
+          projectRoot: resolve(root, 'packages/design'),
+          onInputs: (inputs) => browserInputs.push(...inputs),
+        }),
         'utf8',
       ),
     ],
@@ -100,8 +105,13 @@ export async function buildDesignSkillResources({
     ].map((name) => resolve(root, `packages/protocol/schemas/v1.9.0/${name}.schema.json`)),
     ...files(resolve(root, 'packages/protocol/schemas/v1.10.0')),
     ...files(resolve(root, 'packages/protocol/schemas/v1.11.0')),
+    ...files(resolve(root, 'packages/protocol/schemas/v1.16.0')),
+    // Additive v1.17 schemas enter this utility through bundled JSON/contracts.
+    // Keep only raw schema files actually read by its filesystem schema loader.
     resolve(root, 'packages/protocol/registries/artifact-theme.json'),
+    resolve(root, 'packages/artifact/lib/artifact/ui/studio-shell.css'),
     resolve(root, 'packages/protocol/package.json'),
+    resolve(root, 'packages/design/package.json'),
     stageRuntimePath,
     studioRuntimePath,
     ...files(resolve(root, 'packages/design/templates/studio')),
@@ -128,6 +138,11 @@ export async function buildDesignSkillResources({
                 'import.meta.url',
                 `new URL(${JSON.stringify(`./runtime/${logical(path)}`)}, import.meta.url).href`,
               );
+            contents = contents.replace(
+              /import\.meta\.resolve\(\s*['"]@openplanr\/artifact\/([^'"]+)['"]\s*\)/gu,
+              (_match, asset) =>
+                `new URL(${JSON.stringify(`./runtime/packages/artifact/lib/artifact/${asset}`)}, import.meta.url).href`,
+            );
             // These are asset lookups, not JS dependencies; Node package resolution
             // cannot be used once the utility is moved away from node_modules. A module
             // compiled from TypeScript names its local require `require2`.
@@ -201,6 +216,7 @@ export async function buildDesignSkillResources({
     }
   if (unresolved.length)
     throw new Error(`Design utility has external runtime dependencies: ${unresolved.join(', ')}`);
+  const contents = new Map(result.outputFiles.map((file) => [logical(file.path), file.text]));
   const names = new Map();
   for (const key of kept) {
     if (dirname(key) !== CHUNK_OUTDIR) throw new Error(`Design chunk ${key} is not flat.`);
@@ -214,19 +230,27 @@ export async function buildDesignSkillResources({
       .map(({ id }) => id);
     const stem = owners.length
       ? owners.join('-')
-      : basename(chunkInputs[0])
-          .replace(/\.[^.]+$/u, '')
-          .replace(/[^a-z0-9]+/giu, '-');
+      : chunkInputs.length === 0
+        ? `generated-${createHash('sha256').update(contents.get(key)).digest('hex').slice(0, 16)}`
+        : basename(chunkInputs[0])
+            .replace(/\.[^.]+$/u, '')
+            .replace(/[^a-z0-9]+/giu, '-');
     names.set(key, `design-${stem.toLowerCase()}.mjs`);
   }
   if (new Set(names.values()).size !== names.size)
     throw new Error(`Design chunk names collide: ${[...names.values()].join(', ')}`);
-  const contents = new Map(result.outputFiles.map((file) => [logical(file.path), file.text]));
   const scripts = kept.map((key) => {
     let text = contents.get(key);
     for (const [from, to] of names) text = text.replaceAll(`./${basename(from)}`, `./${to}`);
     if (/chunk-[A-Z0-9]{8}\.mjs/u.test(text))
       throw new Error(`Design chunk ${names.get(key)} still imports a hashed chunk name.`);
+    if (Buffer.byteLength(text, 'utf8') >= MAX_RESOURCE_BYTES)
+      text = transformSync(text, {
+        loader: 'js',
+        target: 'es2022',
+        minify: true,
+        legalComments: 'inline',
+      }).code;
     return {
       path: `scripts/${names.get(key)}`,
       kind: 'script',
@@ -254,15 +278,53 @@ export async function buildDesignSkillResources({
       bytes: readFileSync(resolve(root, `packages/protocol/schemas/v1.10.0/${name}.schema.json`)),
     })),
   ];
-  for (const absolute of [...new Set(assetPaths)].sort())
-    resources.push({
-      path: `scripts/runtime/${logical(absolute)}`,
-      kind: absolute.endsWith('.schema.json') ? 'schema' : 'asset',
-      executable: false,
-      bytes: renderedAssets.get(absolute) ?? readFileSync(absolute),
-    });
+  for (const absolute of [...new Set(assetPaths)].sort()) {
+    const path = `scripts/runtime/${logical(absolute)}`;
+    const bytes = renderedAssets.get(absolute) ?? readFileSync(absolute);
+    // Portable React stays a single classic script at execution. Directory installers
+    // store that same script in bounded fragments and the canonical reader joins it.
+    if (
+      [studioRuntimePath, stageRuntimePath].includes(absolute) &&
+      bytes.length >= MAX_RESOURCE_BYTES
+    ) {
+      const parts = [],
+        runtimeName = basename(absolute);
+      for (let offset = 0; offset < bytes.length; ) {
+        let end = Math.min(bytes.length, offset + 128 * 1024);
+        while (end < bytes.length && (bytes[end] & 0xc0) === 0x80) end -= 1;
+        const part = bytes.subarray(offset, end),
+          name = `${runtimeName}.part-${String(parts.length + 1).padStart(3, '0')}`;
+        parts.push({ name, sha256: createHash('sha256').update(part).digest('hex') });
+        resources.push({
+          path: `${path.slice(0, -runtimeName.length)}${name}`,
+          kind: 'asset',
+          executable: false,
+          bytes: part,
+        });
+        offset = end;
+      }
+      resources.push({
+        path: `${path}.parts.json`,
+        kind: 'asset',
+        executable: false,
+        bytes: resourceBytes(
+          JSON.stringify({
+            schemaVersion: '1.0.0',
+            sha256: createHash('sha256').update(bytes).digest('hex'),
+            parts,
+          }) + '\n',
+        ),
+      });
+    } else
+      resources.push({
+        path,
+        kind: absolute.endsWith('.schema.json') ? 'schema' : 'asset',
+        executable: false,
+        bytes,
+      });
+  }
   const dependencyRoots = new Set();
-  for (const path of bundledInputs) {
+  for (const path of [...bundledInputs, ...browserInputs]) {
     const normalized = path.replaceAll('\\', '/');
     const marker = normalized.lastIndexOf('node_modules/');
     if (marker === -1) continue;
@@ -270,22 +332,30 @@ export async function buildDesignSkillResources({
     const packageName = tail[0].startsWith('@') ? tail.slice(0, 2).join('/') : tail[0];
     dependencyRoots.add(resolve(root, normalized.slice(0, marker), 'node_modules', packageName));
   }
+  const noticeBlocks = [];
   for (const directory of [...dependencyRoots].sort()) {
     const manifest = JSON.parse(readFileSync(join(directory, 'package.json'), 'utf8'));
     const licenses = readdirSync(directory)
       .filter((name) => /^(?:license|copying)(?:\.|$)/iu.test(name))
       .sort();
-    if (!licenses.length)
+    const licenseFallback =
+      manifest.name === 'react-remove-scroll-bar' && manifest.version === '2.3.8'
+        ? resolve(root, 'scripts/skills/third-party/react-remove-scroll-bar-2.3.8-LICENSE.txt')
+        : null;
+    if (!licenses.length && !licenseFallback)
       throw new Error(`Bundled dependency ${manifest.name} has no packaged license text.`);
-    resources.push({
-      path: `scripts/runtime/notices/${manifest.name.replaceAll('/', '__')}.txt`,
-      kind: 'asset',
-      executable: false,
-      bytes: resourceBytes(
-        `${manifest.name}@${manifest.version}\n\n${licenses.map((name) => readFileSync(join(directory, name), 'utf8')).join('\n\n')}`,
-      ),
-    });
+    noticeBlocks.push(
+      `${manifest.name}@${manifest.version}\n\n${licenseFallback ? readFileSync(licenseFallback, 'utf8') : licenses.map((name) => readFileSync(join(directory, name), 'utf8')).join('\n\n')}`,
+    );
   }
+  // Every bundled dependency retains its complete notice. A single bounded document
+  // avoids duplicating 77 separate files in each standalone skill of a directory plugin.
+  resources.push({
+    path: 'scripts/runtime/notices/THIRD_PARTY_NOTICES.txt',
+    kind: 'asset',
+    executable: false,
+    bytes: resourceBytes(noticeBlocks.join('\n\n----------------\n\n')),
+  });
   const oversized = resources.filter(({ bytes }) => bytes.length >= MAX_RESOURCE_BYTES);
   if (oversized.length)
     throw new Error(

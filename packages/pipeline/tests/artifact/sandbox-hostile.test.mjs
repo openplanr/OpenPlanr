@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterEach, test } from 'node:test';
+import { test } from 'node:test';
 
 import {
   ARTIFACT_BRIDGE_CHANNEL,
@@ -31,17 +31,8 @@ if (process.env.PLANR_REQUIRE_BROWSER === '1' && !runBrowser) {
   throw new Error('PLANR_REQUIRE_BROWSER requires the hostile artifact browser test to run.');
 }
 
-const homes = new Set();
-
-afterEach(async () => {
-  await closeArtifactReviewServers();
-  for (const home of homes) rmSync(home, { recursive: true, force: true });
-  homes.clear();
-});
-
 function isolatedEnv() {
   const home = mkdtempSync(join(tmpdir(), 'planr-hostile-browser-'));
-  homes.add(home);
   return { ...process.env, PLANR_HOME: home };
 }
 
@@ -350,6 +341,8 @@ function mainArtifactHtml(probeUrl) {
     const results={};const record=(key,value)=>{results[key]=String(value);document.body.dataset[key]=String(value)};
     addEventListener('message',event=>{if(event.data?.type==='bridge.challenge'){record('challengeNonce',Object.hasOwn(event.data,'nonce'));record('challengeKeys',Object.keys(event.data).sort().join(','))}});
     document.querySelector('#dynamic').addEventListener('click',()=>{const count=document.querySelector('#count');count.textContent=String(Number(count.textContent)+1)});
+    try{Reflect.construct(Object,[],Worker);record('workerConstructable',true)}catch(error){record('workerConstructable',error.name)}
+    if(typeof SharedWorker==='function'){try{Reflect.construct(Object,[],SharedWorker);record('sharedWorkerConstructable',true)}catch(error){record('sharedWorkerConstructable',error.name)}}else record('sharedWorkerConstructable','unsupported');
     try{parent.document;record('parent','open')}catch(error){record('parent',error.name)}
     try{localStorage.setItem('x','1');record('localStorage','open')}catch(error){record('localStorage',error.name)}
     try{sessionStorage.setItem('x','1');record('sessionStorage','open')}catch(error){record('sessionStorage',error.name)}
@@ -429,12 +422,30 @@ test('real browser keeps dynamic artifacts useful while hostile capabilities fai
 }, async (t) => {
   const { launchBrowser } = await import('../../../../tests/support/browser-launcher.mjs');
   const probe = await startProbe();
+  const env = isolatedEnv();
   let browser, context, review;
   t.after(async () => {
-    await review?.close().catch(() => {});
-    await context?.close();
-    await browser?.close();
-    await probe.close();
+    try {
+      await context?.close();
+    } finally {
+      try {
+        await browser?.close();
+      } finally {
+        try {
+          await review?.close();
+        } finally {
+          try {
+            await closeArtifactReviewServers();
+          } finally {
+            try {
+              await probe.close();
+            } finally {
+              rmSync(env.PLANR_HOME, { recursive: true, force: true });
+            }
+          }
+        }
+      }
+    }
   });
   browser = await launchBrowser();
   context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
@@ -457,7 +468,6 @@ test('real browser keeps dynamic artifacts useful while hostile capabilities fai
     ],
     viewer: { mode: 'variants', activeArtifactId: 'main' },
   });
-  const env = isolatedEnv();
   review = await startArtifactReview({
     envelope,
     env,
@@ -486,6 +496,17 @@ test('real browser keeps dynamic artifacts useful while hostile capabilities fai
   assert.equal(await mainFrameElement.getAttribute('aria-busy'), null);
 
   const main = page.frameLocator('[data-planr-artifact-frame="main"]');
+  assert.equal(
+    await main.locator('body').getAttribute('data-worker-constructable'),
+    'true',
+    'the sandbox Worker replacement remains a JavaScript constructor',
+  );
+  assert.ok(
+    ['true', 'unsupported'].includes(
+      await main.locator('body').getAttribute('data-shared-worker-constructable'),
+    ),
+    'an available SharedWorker replacement remains a JavaScript constructor',
+  );
   await main.locator('#dynamic').click();
   assert.equal(
     await main.locator('#count').textContent(),

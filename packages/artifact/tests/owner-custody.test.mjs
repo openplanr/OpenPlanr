@@ -15,8 +15,10 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 import {
   ensurePrivateDirectory,
+  ownerCustodyLocation,
   readCustody,
   resolveRecoveryOutputPath,
+  withOwnerCustody,
   writeCustody,
 } from '../lib/artifact/owner-custody.mjs';
 
@@ -117,5 +119,80 @@ test('private-file faults preserve caller labels and do not expose malformed rec
     (error) =>
       error.code === 'E_OWNER_CUSTODY_INVALID' &&
       error.message === 'Design owner custody is invalid.',
+  );
+});
+
+test('default diagram custody uses canonical temp HOME and migrates exact legacy records under locks without overwrite', async (t) => {
+  const root = fixture(t),
+    home = join(root, 'home'),
+    project = join(root, 'project');
+  mkdirSync(home, { mode: 0o700 });
+  mkdirSync(project, { mode: 0o700 });
+  mkdirSync(join(project, '.git'));
+  const input = {
+    sourceRoot: project,
+    sourceId: 'checkout',
+    namespace: 'diagram-shares',
+    options: { env: { HOME: home } },
+    label: 'Diagram',
+    allowMissing: true,
+  };
+  const location = ownerCustodyLocation(input);
+  assert.equal(location.root, join(home, '.planr', 'diagram-shares'));
+  assert.ok(location.legacyPath.startsWith(join(home, '.openplanr', 'diagram-shares')));
+  ensurePrivateDirectory(join(home, '.openplanr', 'diagram-shares'));
+  writeCustody(location.legacyPath, record);
+  const results = await Promise.all(
+    Array.from({ length: 4 }, () =>
+      withOwnerCustody(location, { format, label: 'Diagram' }, async ({ record: saved }) => saved),
+    ),
+  );
+  for (const result of results) assert.deepEqual(result, record);
+  assert.deepEqual(readCustody(location.path, { format }), record);
+  assert.equal(statSync(location.root).mode & 0o777, 0o700);
+  assert.equal(statSync(location.path).mode & 0o777, 0o600);
+  const newer = { ...record, custody: { newer: true } };
+  writeCustody(location.path, newer);
+  assert.deepEqual(
+    await withOwnerCustody(location, { format }, async ({ record: saved }) => saved),
+    newer,
+  );
+  for (const options of [
+    { env: { HOME: home, PLANR_HOME: join(root, 'override') } },
+    { env: { HOME: home }, custodyRoot: join(root, 'explicit') },
+  ]) {
+    const overridden = ownerCustodyLocation({ ...input, options });
+    assert.equal(overridden.legacyPath, null);
+  }
+});
+
+test('malformed and dangling legacy diagram custody stay actionable and cannot become new ownership', async (t) => {
+  const root = fixture(t),
+    home = join(root, 'home'),
+    project = join(root, 'project');
+  mkdirSync(home, { mode: 0o700 });
+  mkdirSync(project, { mode: 0o700 });
+  const location = ownerCustodyLocation({
+    sourceRoot: project,
+    sourceId: 'bad',
+    namespace: 'diagram-shares',
+    options: { env: { HOME: home } },
+    allowMissing: true,
+  });
+  ensurePrivateDirectory(join(home, '.openplanr', 'diagram-shares'));
+  writeFileSync(location.legacyPath, '{bad', { mode: 0o600 });
+  await assert.rejects(
+    withOwnerCustody(location, { format }, async () => {
+      throw new Error('Must not create ownership');
+    }),
+    (error) => error.code === 'E_OWNER_CUSTODY_INVALID',
+  );
+  rmSync(location.legacyPath);
+  symlinkSync(join(root, 'missing'), location.legacyPath);
+  await assert.rejects(
+    withOwnerCustody(location, { format }, async () => {
+      throw new Error('Must not create ownership');
+    }),
+    (error) => error.code === 'E_OWNER_CUSTODY_INVALID',
   );
 });

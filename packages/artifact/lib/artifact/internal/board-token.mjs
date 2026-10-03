@@ -13,11 +13,19 @@
  */
 
 import { randomBytes, timingSafeEqual } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import {
+  closeSync,
+  constants,
+  fstatSync,
+  lstatSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+} from 'node:fs';
 import { join, resolve } from 'node:path';
 
 import { daemonDir } from './paths.mjs';
-import { writePrivateJsonState } from './server-util.mjs';
+import { acquireStartLockSync, writePrivateJsonState } from './server-util.mjs';
 
 /** A valid token: lowercase hex, ≥16 chars (we mint 24 = 96 bits). */
 const TOKEN_RE = /^[a-f0-9]{16,}$/;
@@ -85,30 +93,54 @@ export function ensureBoardToken(dir, { env = process.env } = {}) {
   const stateDir = daemonDir(env);
   const store = join(stateDir, 'tokens.json');
   const key = resolve(dir);
-
-  let bytes;
+  mkdirSync(stateDir, { recursive: true, mode: 0o700 });
+  const directory = lstatSync(stateDir);
+  if (
+    !directory.isDirectory() ||
+    directory.isSymbolicLink() ||
+    (process.platform !== 'win32' && (directory.uid !== process.getuid() || directory.mode & 0o077))
+  )
+    throw unreadableTokenStore(store, 'private directory custody is unsafe');
+  const unlock = acquireStartLockSync(join(stateDir, 'tokens.lock'));
   try {
-    bytes = readFileSync(store);
-  } catch (error) {
-    if (error?.code !== 'ENOENT') throw unreadableTokenStore(store, error.code, error);
-  }
-  let tokens = {};
-  if (bytes) {
+    let bytes;
     try {
-      tokens = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
-    } catch {
-      // A parse message quotes the file, which holds other boards' tokens.
-      throw unreadableTokenStore(store, 'it is not valid JSON');
+      const fd = openSync(store, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+      try {
+        const entry = fstatSync(fd);
+        if (
+          !entry.isFile() ||
+          entry.size > 4 * 1024 * 1024 ||
+          (process.platform !== 'win32' && (entry.uid !== process.getuid() || entry.mode & 0o077))
+        )
+          throw unreadableTokenStore(store, 'private file custody is unsafe');
+        bytes = readFileSync(fd);
+      } finally {
+        closeSync(fd);
+      }
+    } catch (error) {
+      if (error?.code !== 'ENOENT') throw unreadableTokenStore(store, error.code, error);
     }
-  }
-  if (!tokens || typeof tokens !== 'object' || Array.isArray(tokens))
-    throw unreadableTokenStore(store, 'expected an object mapping board directories to tokens');
-  if (TOKEN_RE.test(tokens[key] || '')) return tokens[key];
+    let tokens = {};
+    if (bytes) {
+      try {
+        tokens = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
+      } catch {
+        // A parse message quotes the file, which holds other boards' tokens.
+        throw unreadableTokenStore(store, 'it is not valid JSON');
+      }
+    }
+    if (!tokens || typeof tokens !== 'object' || Array.isArray(tokens))
+      throw unreadableTokenStore(store, 'expected an object mapping board directories to tokens');
+    if (TOKEN_RE.test(tokens[key] || '')) return tokens[key];
 
-  const token = mintCapabilityToken({ bytes: 12, encoding: 'hex' });
-  tokens[key] = token;
-  writePrivateJsonState(store, tokens);
-  return token;
+    const token = mintCapabilityToken({ bytes: 12, encoding: 'hex' });
+    tokens[key] = token;
+    writePrivateJsonState(store, tokens);
+    return token;
+  } finally {
+    unlock();
+  }
 }
 
 /**
