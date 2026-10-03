@@ -83,6 +83,13 @@ async function observeNavigation(page, steps, expectedScreen, { cancelToView = n
           samples.push({
             elapsed: performance.now() - started,
             mode,
+            visibility: document.visibilityState,
+            animationTimes: transitionAnimations.map((animation) => ({
+              currentTime: animation.currentTime,
+              startTime: animation.startTime,
+              playState: animation.playState,
+              pending: animation.pending,
+            })),
             painted: painted.length,
             visible: visible.length,
             frameCount: document.querySelectorAll('.planr-artifact-panel').length,
@@ -176,7 +183,17 @@ function assertContinuousTransition(result, label, { animated = true } = {}) {
   }
   const running = result.samples.filter((sample) => sample.mode === 'running');
   if (animated) {
-    assert.ok(running.length >= 2, `${label}: transition has a visible intermediate animation`);
+    assert.ok(
+      running.length >= 2,
+      `${label}: transition has a visible intermediate animation; ${JSON.stringify(
+        result.samples.map(({ elapsed, mode, visibility, animationTimes }) => ({
+          elapsed,
+          mode,
+          visibility,
+          animationTimes,
+        })),
+      )}`,
+    );
     assert.ok(
       running.some((sample) => sample.motionDuration >= 200),
       `${label}: motion is not an abrupt swap`,
