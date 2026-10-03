@@ -6,8 +6,8 @@ import test from 'node:test';
 import { pathToFileURL } from 'node:url';
 import { browserEngine, launchBrowser } from '../../../tests/support/browser-launcher.mjs';
 import { renderDesignDocument } from '../lib/design/document.mjs';
-import { startDesignReview } from '../lib/design/review.mjs';
 import { designFixture } from './design-fixture.mjs';
+import { startDesignReview } from './studio-http-fixture.mjs';
 
 const engine = browserEngine();
 const selectors = {

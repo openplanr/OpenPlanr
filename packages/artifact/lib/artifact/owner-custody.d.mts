@@ -5,6 +5,7 @@ export interface OwnerCustodyOptions {
 export interface OwnerCustodyLocation {
   root: string;
   path: string;
+  legacyPath?: string | null;
 }
 export interface OwnerCustodyRecord {
   kind: string;

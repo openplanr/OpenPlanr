@@ -2,7 +2,10 @@
 
 `planr doctor` is the user-facing health check. The pipeline package also
 provides `npm run doctor --workspace=planr-pipeline` for source and package
-diagnostics. The default check does not mutate files.
+diagnostics. The default check does not mutate files. The CLI also reports the number of
+healthy owned local dashboards and Studios. Inspect them with `planr server list
+--json`; request an authenticated stop with `planr server stop <instance>`.
+Unreachable or legacy unowned processes are never killed from a port/PID guess.
 
 Use the root conformance and generated-asset checks alongside Doctor when
 validating workspace-wide compatibility.

@@ -14,7 +14,7 @@ const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '.
 export const DECLARED_EXPORT_PACKAGES = Object.freeze(['packages/artifact', 'packages/pipeline']);
 
 const posix = (path) => path.split(sep).join('/');
-const isTypeScriptSource = (path) => path.endsWith('.mts') && !path.endsWith('.d.mts');
+const isTypeScriptSource = (path) => /\.(?:mts|tsx)$/u.test(path) && !path.endsWith('.d.mts');
 
 function typedExports(packageRoot) {
   const manifest = JSON.parse(readFileSync(resolve(packageRoot, 'package.json'), 'utf8'));

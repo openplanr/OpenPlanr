@@ -324,16 +324,21 @@ test('an open drawer keeps host controls outside the editor reachable', options,
   assert.equal(await focusIn(outline), true);
 
   const back = page.getByRole('button', { name: 'Back to project', exact: true });
+  // macOS WebKit uses Option-Tab to include every clickable control.
+  const tabKey =
+    process.platform === 'darwin' && page.context().browser().browserType().name() === 'webkit'
+      ? 'Alt+Tab'
+      : 'Tab';
   await back.focus();
   assert.equal(await focusIn(back), true, 'Focus stays on a host control');
-  await page.keyboard.press('Tab');
+  await page.keyboard.press(tabKey);
   assert.equal(
     await focusIn(page.getByRole('button', { name: 'Switch theme', exact: true })),
     true,
     'Tab moves between host controls',
   );
   assert.equal(await outline.getAttribute('aria-hidden'), 'false', 'The drawer stays open');
-  await page.keyboard.press('Tab');
+  await page.keyboard.press(tabKey);
   assert.equal(await focusIn(outline), true, 'Entering the editor lands in the open drawer');
 });
 
@@ -354,17 +359,13 @@ test('two editors in one document keep unique ids and independent drawers', opti
       },
     });
   });
-  // Marker ids inside the drawing come from the shared renderer and repeat when one diagram is
-  // drawn twice; the chrome ids are the editor's own.
   const ids = await page.evaluate(() =>
-    [...document.querySelectorAll('[id]')]
-      .filter((node) => !node.closest('[data-editor-svg]'))
-      .map((node) => node.id),
+    [...document.querySelectorAll('[id]')].map((node) => node.id),
   );
   assert.equal(
     new Set(ids).size,
     ids.length,
-    `Every chrome id is unique; duplicates: ${ids.filter((id, index) => ids.indexOf(id) !== index).join(', ')}`,
+    `Every chrome and drawing id is unique; duplicates: ${ids.filter((id, index) => ids.indexOf(id) !== index).join(', ')}`,
   );
   assert.equal(await page.locator('#host-editor #diagram-outline-panel').count(), 1);
   assert.equal(await page.locator('#second-editor #diagram-2-outline-panel').count(), 1);
@@ -562,3 +563,159 @@ test('invalid host configuration fails with a specific error', options, async (t
   assert.match(messages[4], /^TypeError: Host saveLabel must be a function/u);
   assert.match(messages[5], /^TypeError: Host action share uses an unknown icon: rocket/u);
 });
+
+test(
+  'read-only More focuses the first enabled choice and Escape restores the trigger',
+  options,
+  async (t) => {
+    const page = await hostedFixture(t, { capabilities: { read: true, write: false } });
+    const trigger = page.getByRole('button', { name: 'More', exact: true });
+    const menu = page.getByRole('menu', { name: 'Diagram options', exact: true });
+    const source = page.getByRole('menuitem', { name: 'Mermaid copies', exact: true });
+    await trigger.click();
+    await menu.waitFor();
+    assert.equal(await menu.locator('[data-action="layout"]').isDisabled(), true);
+    assert.equal(await source.evaluate((node) => node === document.activeElement), true);
+    await page.keyboard.press('End');
+    assert.equal(
+      await page
+        .getByRole('menuitem', { name: 'Export JSON', exact: true })
+        .evaluate((node) => node === document.activeElement),
+      true,
+    );
+    await page.keyboard.press('Home');
+    assert.equal(await source.evaluate((node) => node === document.activeElement), true);
+    await page.keyboard.press('Escape');
+    await menu.waitFor({ state: 'hidden' });
+    assert.equal(await trigger.evaluate((node) => node === document.activeElement), true);
+    await page.keyboard.press('ArrowDown');
+    assert.equal(await source.evaluate((node) => node === document.activeElement), true);
+    await page.keyboard.press('Escape');
+    await menu.waitFor({ state: 'hidden' });
+    await page.getByRole('tab', { name: 'Revisions', exact: true }).click();
+    await page.getByText('Revision 8 · Latest save').waitFor();
+  },
+);
+
+test(
+  'More with all choices disabled keeps native focus and Escape on its trigger',
+  options,
+  async (t) => {
+    const page = await hostedFixture(t);
+    const trigger = page.getByRole('button', { name: 'More', exact: true });
+    const menu = page.getByRole('menu', { name: 'Diagram options', exact: true });
+    await page.locator('[role="menuitem"]').evaluateAll((items) => {
+      for (const item of items) item.disabled = true;
+    });
+    await trigger.click();
+    await menu.waitFor();
+    assert.equal(await trigger.evaluate((node) => node === document.activeElement), true);
+    await page.keyboard.press('Escape');
+    await menu.waitFor({ state: 'hidden' });
+    assert.equal(await trigger.evaluate((node) => node === document.activeElement), true);
+    await page.keyboard.press('ArrowUp');
+    assert.equal(await menu.isVisible(), true);
+    assert.equal(await trigger.evaluate((node) => node === document.activeElement), true);
+    await page.keyboard.press('Escape');
+    await menu.waitFor({ state: 'hidden' });
+    assert.equal(await trigger.evaluate((node) => node === document.activeElement), true);
+  },
+);
+
+test(
+  'More skips CSS-hidden choices even when they retain layout rectangles',
+  options,
+  async (t) => {
+    const page = await hostedFixture(t);
+    const trigger = page.getByRole('button', { name: 'More', exact: true });
+    const menu = page.getByRole('menu', { name: 'Diagram options', exact: true });
+    const layout = page.locator('[role="menuitem"][data-action="layout"]');
+    for (const visibility of ['hidden', 'collapse']) {
+      await layout.evaluate((node, value) => {
+        node.style.visibility = value;
+      }, visibility);
+      await trigger.click();
+      await menu.waitFor();
+      assert.equal(
+        await layout.evaluate((node) => node.getClientRects().length > 0),
+        true,
+        'CSS visibility leaves the hidden choice in layout',
+      );
+      assert.equal(
+        await page
+          .getByRole('menuitem', { name: 'Mermaid copies', exact: true })
+          .evaluate((node) => node === document.activeElement),
+        true,
+      );
+      await page.keyboard.press('Escape');
+      await menu.waitFor({ state: 'hidden' });
+      assert.equal(await trigger.evaluate((node) => node === document.activeElement), true);
+    }
+  },
+);
+
+test(
+  'menu navigation handles a focused choice becoming unavailable without skipping the last choice',
+  options,
+  async (t) => {
+    const page = await hostedFixture(t);
+    const trigger = page.getByRole('button', { name: 'More', exact: true });
+    const menu = page.getByRole('menu', { name: 'Diagram options', exact: true });
+    const layout = page.getByRole('menuitem', { name: 'Auto layout…', exact: true });
+    const last = page.getByRole('menuitem', { name: 'Export JSON', exact: true });
+    const first = page.getByRole('menuitem', { name: 'Mermaid copies', exact: true });
+    await trigger.click();
+    await menu.waitFor();
+    assert.equal(await layout.evaluate((node) => node === document.activeElement), true);
+    await layout.evaluate((node) => node.setAttribute('aria-disabled', 'true'));
+    assert.equal(
+      await layout.evaluate((node) => node === document.activeElement),
+      true,
+      'ARIA eligibility can change without native focus moving',
+    );
+    await page.keyboard.press('ArrowUp');
+    assert.equal(
+      await last.evaluate((node) => node === document.activeElement),
+      true,
+      'ArrowUp selects the last eligible choice after the old focus becomes ineligible',
+    );
+    await last.evaluate((node) => node.setAttribute('aria-disabled', 'true'));
+    await page.keyboard.press('ArrowDown');
+    assert.equal(
+      await first.evaluate((node) => node === document.activeElement),
+      true,
+      'ArrowDown selects the first eligible choice',
+    );
+    await menu.locator('[role="menuitem"]').evaluateAll((items) => {
+      for (const item of items) item.setAttribute('aria-disabled', 'true');
+    });
+    await page.keyboard.press('ArrowUp');
+    assert.equal(
+      await trigger.evaluate((node) => node === document.activeElement),
+      true,
+      'No eligible choice returns focus to More',
+    );
+    await page.keyboard.press('Escape');
+    await menu.waitFor({ state: 'hidden' });
+    assert.equal(await trigger.evaluate((node) => node === document.activeElement), true);
+    for (const key of ['ArrowDown', 'Home', 'End']) {
+      await page.locator('[role="menuitem"]').evaluateAll((items) => {
+        for (const item of items) item.removeAttribute('aria-disabled');
+      });
+      await trigger.click();
+      await menu.waitFor();
+      assert.equal(await layout.evaluate((node) => node === document.activeElement), true);
+      await menu.locator('[role="menuitem"]').evaluateAll((items) => {
+        for (const item of items) item.setAttribute('aria-disabled', 'true');
+      });
+      await page.keyboard.press(key);
+      assert.equal(
+        await trigger.evaluate((node) => node === document.activeElement),
+        true,
+        key + ' returns now-ineligible focus to More',
+      );
+      await page.keyboard.press('Escape');
+      await menu.waitFor({ state: 'hidden' });
+    }
+  },
+);

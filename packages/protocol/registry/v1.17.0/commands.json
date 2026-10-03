@@ -1,0 +1,88 @@
+{
+  "kind": "command-catalog-extension",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.17.0",
+  "documentVersion": "1.0.0",
+  "digestAlgorithm": "sha256",
+  "canonicalization": "rfc8785",
+  "baseProtocolVersion": "1.5.0",
+  "commands": [
+    {
+      "commandId": "cli-server",
+      "argv": [
+        "server"
+      ],
+      "lifecycle": "active",
+      "ownerPackage": "openplanr",
+      "surface": "cli-root",
+      "authorityClass": "read-only-local-discovery",
+      "machineJson": true,
+      "source": {
+        "path": "packages/cli/src/cli/commands/server.ts",
+        "digest": "sha256:de9ed3d18d1a7a477802063ae2c49384ec026733ddbbff8a303b448addd6ae1d"
+      },
+      "testRefs": [
+        "packages/cli/tests/unit/server-command.test.ts"
+      ]
+    },
+    {
+      "commandId": "cli-server-list",
+      "argv": [
+        "server",
+        "list"
+      ],
+      "lifecycle": "active",
+      "ownerPackage": "openplanr",
+      "surface": "cli-subcommand",
+      "authorityClass": "read-only-local-discovery",
+      "machineJson": true,
+      "source": {
+        "path": "packages/cli/src/cli/commands/server.ts",
+        "digest": "sha256:de9ed3d18d1a7a477802063ae2c49384ec026733ddbbff8a303b448addd6ae1d"
+      },
+      "testRefs": [
+        "packages/cli/tests/unit/server-command.test.ts"
+      ]
+    },
+    {
+      "commandId": "cli-server-stop",
+      "argv": [
+        "server",
+        "stop"
+      ],
+      "lifecycle": "active",
+      "ownerPackage": "openplanr",
+      "surface": "cli-subcommand",
+      "authorityClass": "authenticated-local-instance",
+      "machineJson": true,
+      "source": {
+        "path": "packages/cli/src/cli/commands/server.ts",
+        "digest": "sha256:de9ed3d18d1a7a477802063ae2c49384ec026733ddbbff8a303b448addd6ae1d"
+      },
+      "testRefs": [
+        "packages/cli/tests/unit/server-command.test.ts"
+      ]
+    },
+    {
+      "commandId": "cli-artifact-share-resume",
+      "argv": [
+        "artifact",
+        "share",
+        "--resume"
+      ],
+      "lifecycle": "active",
+      "ownerPackage": "openplanr",
+      "surface": "cli-subcommand",
+      "authorityClass": "saved-private-paste-operation",
+      "machineJson": true,
+      "source": {
+        "path": "packages/cli/src/cli/commands/artifact.ts",
+        "digest": "sha256:e1a9f83fb437e9199599518cc23e9a2a30b9498c45fa4e402fa02067ae9cf65d"
+      },
+      "testRefs": [
+        "packages/cli/tests/unit/artifact-paste-custody.test.ts"
+      ]
+    }
+  ],
+  "documentDigest": "sha256:6fbdd0fe48f4128e82b11208b8c08a4dcbda43c0b5a3e4874e6d03f4c774132c"
+}

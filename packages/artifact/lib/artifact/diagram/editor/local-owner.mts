@@ -1,11 +1,11 @@
 import { readFileSync } from 'node:fs';
 import type { IncomingMessage } from 'node:http';
 import { join } from 'node:path';
+import type { DiagramAuthoringProfile } from '@openplanr/protocol/diagram-authoring-contracts';
 import type {
-  DiagramAuthoringBundle,
-  DiagramAuthoringProfile,
-  DiagramEditTransaction,
-} from '@openplanr/protocol/diagram-authoring-contracts';
+  VersionedDiagramAuthoringBundle as DiagramAuthoringBundle,
+  VersionedDiagramEditTransaction as DiagramEditTransaction,
+} from '@openplanr/protocol/studio-presentation-contracts';
 import { embedJson, escapeHtml } from '../../internal/escape.mjs';
 import { readRequestBody } from '../../internal/server-util.mjs';
 import { createArtifactReviewServer } from '../../review-server.mjs';

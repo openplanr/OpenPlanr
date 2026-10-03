@@ -14,6 +14,7 @@ import { deepFreeze } from '@openplanr/protocol/canonical-json';
 import { ARTIFACT_ERROR_CODES, PipelineError } from '@openplanr/protocol/errors';
 import {
   createArtifactEnvelope,
+  createSharedArtifactEnvelope,
   digestArtifactEnvelope,
   validateArtifactEnvelope,
   validateArtifactReview,
@@ -147,7 +148,10 @@ export function createArtifactReviewEnvelope(envelope, review) {
       { localDigest: digest, reviewDigest: normalized.reviewOf },
     );
   }
-  const result = createArtifactEnvelope({
+  const createEnvelope =
+    envelope.schemaVersion === '1.1.0' ? createSharedArtifactEnvelope : createArtifactEnvelope;
+  const result = createEnvelope({
+    ...(envelope.sources ? { sources: envelope.sources } : {}),
     artifacts: envelope.artifacts,
     viewer: envelope.viewer,
     review: normalized,

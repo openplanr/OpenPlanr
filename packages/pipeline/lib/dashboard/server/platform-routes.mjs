@@ -117,12 +117,22 @@ export function handleBootstrap({ dashboard, req, res }) {
   return undefined;
 }
 
-export function handleHealth({ res }) {
+export function handleLifecycle(context) {
+  return context.dashboard.lifecycle.handle(context);
+}
+
+export function handleHealth({ dashboard, res }) {
   return json(res, 200, {
     ok: true,
     kind: DASHBOARD_SERVER_KIND,
     version: readPackageVersion(),
     pid: process.pid,
+    ...(dashboard?.lifecycle
+      ? {
+          instanceId: dashboard.lifecycle.health().instanceId,
+          binding: dashboard.lifecycle.health().binding,
+        }
+      : {}),
   });
 }
 

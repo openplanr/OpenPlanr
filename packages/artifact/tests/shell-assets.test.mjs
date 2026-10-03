@@ -1,20 +1,54 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
 import { ARTIFACT_SHELL_ASSET_PATHS } from '../lib/artifact/ui/shell.mjs';
 import {
+  ARTIFACT_SANDBOX_GUARDS_PATH,
   ARTIFACT_SHELL_ASSET_BUDGETS,
   ARTIFACT_SHELL_BUNDLE_BANNER,
   renderArtifactShellAssets,
+  runArtifactShellGenerator,
 } from '../scripts/generate-artifact-shell.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const assets = renderArtifactShellAssets();
 const manifest = JSON.parse(assets[ARTIFACT_SHELL_ASSET_PATHS.manifest]);
 const bundlePaths = manifest.assets.map(({ path }) => path).filter((path) => path.endsWith('.js'));
+
+test('guard preparation refreshes stale executable inputs without generating consumers', (t) => {
+  const projectRoot = mkdtempSync(join(tmpdir(), 'openplanr-guard-inputs-'));
+  t.after(() => rmSync(projectRoot, { recursive: true, force: true }));
+  const sourceRoot = join(projectRoot, 'lib/artifact/ui/sandbox');
+  mkdirSync(sourceRoot, { recursive: true });
+  for (const name of ['worker', 'frame', 'host'])
+    writeFileSync(
+      join(sourceRoot, `${name}-guard.mjs`),
+      `(() => { 'use strict'; globalThis.${name}GuardVersion = 1; })();\n`,
+    );
+  const generate = (check = false) =>
+    runArtifactShellGenerator({
+      projectRoot,
+      argv: ['--guards-only', ...(check ? ['--check'] : [])],
+    });
+  assert.deepEqual(generate().written, [ARTIFACT_SANDBOX_GUARDS_PATH]);
+  generate(true);
+  writeFileSync(
+    join(sourceRoot, 'frame-guard.mjs'),
+    "(() => { 'use strict'; globalThis.frameGuardVersion = 2; })();\n",
+  );
+  assert.throws(() => generate(true), { code: 'E_ARTIFACT_SHELL_DRIFT' });
+  assert.deepEqual(generate().written, [ARTIFACT_SANDBOX_GUARDS_PATH]);
+  generate(true);
+  assert.match(
+    readFileSync(join(projectRoot, ARTIFACT_SANDBOX_GUARDS_PATH), 'utf8'),
+    /frameGuardVersion = 2/u,
+  );
+  assert.equal(existsSync(join(projectRoot, 'templates')), false);
+});
 
 test('the committed shell asset manifest matches the rendered assets', () => {
   assert.equal(
@@ -57,7 +91,7 @@ test('browser bundles name their generator and keep third-party license headers'
   }
   assert.match(
     assets['templates/design/design-board-adapter.js'],
-    /^\s*\/\*! pako 2\.1\.0 https:\/\/github\.com\/nodeca\/pako @license \(MIT AND Zlib\) \*\/$/m,
+    /\/\*! pako 2\.1\.0 https:\/\/github\.com\/nodeca\/pako @license \(MIT AND Zlib\) \*\//u,
     'the pako license header travels inside the bundle',
   );
 });

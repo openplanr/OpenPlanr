@@ -27,6 +27,14 @@ export const GENERATOR_STEPS = Object.freeze([
     required: true,
     candidates: Object.freeze([command('scripts/typescript/compile-sources.mjs', [], ['--check'])]),
   }),
+  // Guards are executable resource inputs to both skill bundles and browser shells.
+  Object.freeze({
+    id: 'artifact-sandbox-guards',
+    required: true,
+    candidates: Object.freeze([
+      command('packages/artifact/scripts/generate-artifact-shell.mjs', ['--guards-only']),
+    ]),
+  }),
   Object.freeze({
     id: 'skill-role-host-adapters',
     required: true,

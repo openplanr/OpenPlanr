@@ -5,6 +5,7 @@
  * Markup comes from `renderers.mjs`; browser behavior from the `stage.mjs` bundle it references.
  */
 
+import { readFileSync } from 'node:fs';
 import { digestArtifactEnvelope } from '../envelope.mjs';
 import { embedJson, escapeHtml } from '../internal/escape.mjs';
 import { ARTIFACT_ANNOTATION_CSS, ARTIFACT_ANNOTATION_MOBILE_CSS } from './annotation-styles.mjs';
@@ -25,7 +26,11 @@ interface ShellDocumentOptions {
 /** A shell document's input: the model's input plus the envelope fields the review state reads. */
 interface ShellDocumentInput extends ArtifactShellInput {
   envelope?:
-    | (NonNullable<ArtifactShellInput['envelope']> & { schemaVersion?: unknown; review?: unknown })
+    | (NonNullable<ArtifactShellInput['envelope']> & {
+        schemaVersion?: unknown;
+        sources?: unknown;
+        review?: unknown;
+      })
     | null;
 }
 
@@ -43,7 +48,9 @@ export const ARTIFACT_SHELL_ASSET_PATHS = Object.freeze({
  * validated theme registry variables rendered by tokens.mjs; font sizes stay literal, and this
  * source deliberately contains no copied color literals.
  */
-export const ARTIFACT_SHELL_CSS = `
+export const ARTIFACT_SHELL_CSS =
+  readFileSync(new URL('./studio-shell.css', import.meta.url), 'utf8') +
+  `
 * { box-sizing: border-box; }
 html, body { width: 100%; height: 100%; margin: 0; }
 body {
@@ -913,6 +920,7 @@ export function renderArtifactShellDocument(
     schemaVersion: '1.0.0',
     reviewOf: digestArtifactEnvelope({
       schemaVersion: input.envelope?.schemaVersion ?? '1.0.0',
+      ...(input.envelope?.sources ? { sources: input.envelope.sources } : {}),
       artifacts: input.envelope?.artifacts ?? [],
       viewer: input.envelope?.viewer ?? input.viewer ?? {},
     }),

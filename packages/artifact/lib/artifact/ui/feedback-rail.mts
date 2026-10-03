@@ -421,15 +421,28 @@ function normalizeRegion(region: PinInput['region']) {
   if (!region || typeof region !== 'object' || Array.isArray(region)) {
     invalid('pin.region must be an object.');
   }
-  const unit = (value: unknown, label: string) => {
+  const finite = (value: unknown, label: string) => {
     if (typeof value !== 'number' || !Number.isFinite(value)) invalid(`${label} must be finite.`);
-    return Math.round(Math.min(1, Math.max(0, value)) * 1_000_000) / 1_000_000;
+    return value as number;
   };
-  const x = unit(region.x, 'pin.region.x');
-  const y = unit(region.y, 'pin.region.y');
-  const w = Math.round(Math.min(unit(region.w, 'pin.region.w'), 1 - x) * 1_000_000) / 1_000_000;
-  const h = Math.round(Math.min(unit(region.h, 'pin.region.h'), 1 - y) * 1_000_000) / 1_000_000;
-  return { x, y, w, h };
+  const x = finite(region.x, 'pin.region.x');
+  const y = finite(region.y, 'pin.region.y');
+  const w = finite(region.w, 'pin.region.w');
+  const h = finite(region.h, 'pin.region.h');
+  // Persisted geometry is immutable; rounding valid coordinates would change its identity.
+  if (x >= 0 && y >= 0 && w >= 0 && h >= 0 && x + w <= 1 && y + h <= 1) {
+    return { x, y, w, h };
+  }
+  const unit = (value: number) =>
+    Math.round(Math.min(1, Math.max(0, value)) * 1_000_000) / 1_000_000;
+  const boundedX = unit(x);
+  const boundedY = unit(y);
+  return {
+    x: boundedX,
+    y: boundedY,
+    w: Math.round(Math.min(unit(w), 1 - boundedX) * 1_000_000) / 1_000_000,
+    h: Math.round(Math.min(unit(h), 1 - boundedY) * 1_000_000) / 1_000_000,
+  };
 }
 
 function normalizeViewport(viewport: PinInput['viewport']) {

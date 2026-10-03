@@ -1,5 +1,5 @@
 import type { DiagramEditorTool } from './diagram-editor-canvas.mjs';
-import { focusable } from './diagram-editor-dom.mjs';
+import { focusable, visibleMenuItems } from './diagram-editor-dom.mjs';
 import type { DiagramEditorContext } from './diagram-editor-regions.mjs';
 
 export interface DiagramEditorKeyboard {
@@ -130,16 +130,24 @@ export function createEditorKeyboard(ctx: DiagramEditorContext): DiagramEditorKe
     if (event.target === moreButton && ['ArrowDown', 'ArrowUp'].includes(event.key)) {
       event.preventDefault();
       chrome.setOverflow(true);
-      const items = [...moreMenu.querySelectorAll<HTMLElement>('[role="menuitem"]')];
-      (event.key === 'ArrowUp' ? items.at(-1) : items[0])?.focus();
+      const items = visibleMenuItems(moreMenu);
+      ((event.key === 'ArrowUp' ? items.at(-1) : items[0]) ?? moreButton).focus({
+        preventScroll: true,
+      });
       return true;
     }
     if (chrome.overflowOpen() && event.target.matches?.('[role="menuitem"]')) {
-      const items = [...moreMenu.querySelectorAll<HTMLElement>('[role="menuitem"]:not(:disabled)')],
+      const items = visibleMenuItems(moreMenu),
         index = items.indexOf(event.target);
+      if (!items.length && ['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
+        event.preventDefault();
+        moreButton.focus({ preventScroll: true });
+        return true;
+      }
       let next = -1;
-      if (event.key === 'ArrowDown') next = (index + 1) % items.length;
-      if (event.key === 'ArrowUp') next = (index - 1 + items.length) % items.length;
+      if (event.key === 'ArrowDown') next = index < 0 ? 0 : (index + 1) % items.length;
+      if (event.key === 'ArrowUp')
+        next = index < 0 ? items.length - 1 : (index - 1 + items.length) % items.length;
       if (event.key === 'Home') next = 0;
       if (event.key === 'End') next = items.length - 1;
       if (next >= 0) {
@@ -263,6 +271,7 @@ export function createEditorKeyboard(ctx: DiagramEditorContext): DiagramEditorKe
       return;
     }
     if (shortcut.type === 'tool') {
+      // biome-ignore lint/correctness/useHookAtTopLevel: This imperative editor command selects a tool; it is not a React hook.
       commands.useTool(shortcut.tool, state);
       return;
     }

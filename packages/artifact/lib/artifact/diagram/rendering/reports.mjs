@@ -1,6 +1,7 @@
 import { withDocumentDigest } from '@openplanr/protocol/canonical-json';
 import { assertProtocolArtifact } from '@openplanr/protocol/contracts';
 
+import { contrastRatio } from '../../internal/contrast.mjs';
 import { planDiagramQuality } from '../readability.mjs';
 import {
   CONTAINER_TITLE_BAND,
@@ -10,6 +11,8 @@ import {
   routesMerge,
   SHARED_SEGMENT_LENGTH,
 } from './layout.mjs';
+import { measureDiagramText } from './text.mjs';
+import { diagramMetrics, resolveDiagramTheme } from './theme.mjs';
 
 function finalize(kind, value) {
   const report = withDocumentDigest(value);
@@ -147,6 +150,106 @@ function segmentEntersBox([x1, y1], [x2, y2], box) {
   return low <= high;
 }
 
+/** Count intersections, including bends, while excluding shared endpoint ports. */
+function edgeCrossingCount(scene) {
+  const paths = scene.edges.map(edgePoints);
+  const cross = (a, b) => a[0] * b[1] - a[1] * b[0];
+  let count = 0;
+  for (let left = 0; left < paths.length; left++)
+    for (let right = left + 1; right < paths.length; right++) {
+      const intersections = new Set();
+      for (let i = 1; i < paths[left].length; i++)
+        for (let j = 1; j < paths[right].length; j++) {
+          const a = paths[left][i - 1],
+            b = paths[left][i],
+            c = paths[right][j - 1],
+            d = paths[right][j];
+          const ab = [b[0] - a[0], b[1] - a[1]],
+            cd = [d[0] - c[0], d[1] - c[1]],
+            ac = [c[0] - a[0], c[1] - a[1]];
+          const denominator = cross(ab, cd);
+          if (Math.abs(denominator) < 1e-7) continue;
+          const t = cross(ac, cd) / denominator,
+            u = cross(ac, ab) / denominator;
+          if (t < -1e-7 || t > 1 + 1e-7 || u < -1e-7 || u > 1 + 1e-7) continue;
+          const endpoint = (value, index, path) =>
+            (Math.abs(value) < 1e-7 && index === 1) ||
+            (Math.abs(value - 1) < 1e-7 && index === path.length - 1);
+          if (endpoint(t, i, paths[left]) && endpoint(u, j, paths[right])) continue;
+          intersections.add(`${(a[0] + t * ab[0]).toFixed(4)},${(a[1] + t * ab[1]).toFixed(4)}`);
+        }
+      count += intersections.size;
+    }
+  return count;
+}
+
+function measuredThemeContrast(document, scene) {
+  const theme = resolveDiagramTheme(document.theme);
+  const paletteRatio = (palette) => {
+    const pairs = [
+      [palette.foreground, palette.surface],
+      [palette.foreground, palette.background],
+    ];
+    if (scene.labelBounds?.length) pairs.push([palette.muted, palette.background]);
+    if (
+      scene.boxes.some((box) => box.titleLines !== undefined && box.lines.length > box.titleLines)
+    )
+      pairs.push([palette.muted, palette.surface]);
+    if (scene.groups?.length || scene.lanes?.length)
+      pairs.push([palette.border, palette.background]);
+    if (scene.phases?.length || (scene.groups ?? []).some((frame) => frame.emphasis))
+      pairs.push([palette.accent, palette.background]);
+    return Math.min(
+      ...pairs.map(([foreground, background]) => contrastRatio(foreground, background) ?? 0),
+    );
+  };
+  return Math.min(paletteRatio(theme), ...(theme.dark ? [paletteRatio(theme.dark)] : []));
+}
+function edgeLabelCollisionCount(scene) {
+  return scene.edges.filter((edge) => {
+    const points = edgePoints(edge);
+    return points
+      .slice(1)
+      .some((end, index) =>
+        (scene.labelBounds ?? []).some(
+          (label) => label.id !== edge.id && segmentEntersBox(points[index], end, label),
+        ),
+      );
+  }).length;
+}
+
+function containerTitleBounds(document, scene) {
+  const metrics = diagramMetrics(resolveDiagramTheme(document.theme)).container;
+  return [...(scene.groups ?? []), ...(scene.lanes ?? [])].map((frame) => ({
+    x: frame.x + (frame.titleOffset ?? 20),
+    y: frame.y + 27 - metrics.size,
+    width: measureDiagramText(frame.label, metrics),
+    height: metrics.size * 1.4,
+  }));
+}
+function edgeTitleCollisionCount(document, scene) {
+  const titles = containerTitleBounds(document, scene);
+  return scene.edges.filter((edge) => {
+    const points = edgePoints(edge);
+    return points
+      .slice(1)
+      .some((end, index) => titles.some((title) => segmentEntersBox(points[index], end, title)));
+  }).length;
+}
+function noteConnectorCollisionCount(document, scene) {
+  const titles = containerTitleBounds(document, scene);
+  return (scene.notes ?? []).filter((note) => {
+    if (!Number.isFinite(note.anchorX) || !Number.isFinite(note.anchorY)) return false;
+    const start = [note.anchorX, note.anchorY],
+      end = [note.x, note.y + note.height / 2];
+    return (
+      scene.boxes.some((box) => box.id !== note.targetId && segmentEntersBox(start, end, box)) ||
+      (scene.labelBounds ?? []).some((label) => segmentEntersBox(start, end, label)) ||
+      titles.some((title) => segmentEntersBox(start, end, title))
+    );
+  }).length;
+}
+
 function clippedGeometry(scene) {
   const rectangles = [
     ...scene.boxes,
@@ -230,7 +333,8 @@ export function createRenderQualityReport(document, { scene, png, svgValidation 
   const clipped = clippedGeometry(scene);
   const planned = planDiagramQuality(document, {
     clipped,
-    contrastRatio: svgValidation.contrastRatio ?? 21,
+    crossings: edgeCrossingCount(scene),
+    contrastRatio: measuredThemeContrast(document, scene),
   });
   const overlapCount = labelOverlapCount(scene);
   const nodeOverlap = nodeOverlapCount(scene);
@@ -254,8 +358,32 @@ export function createRenderQualityReport(document, { scene, png, svgValidation 
         scene.boxes.some((box) => segmentEntersBox(points[index], point, box)),
       );
   }).length;
+  const edgeLabels = edgeLabelCollisionCount(scene);
+  const edgeTitles = edgeTitleCollisionCount(document, scene);
+  const noteConnectors = noteConnectorCollisionCount(document, scene);
   const checks = [
     ...planned.checks,
+    {
+      id: 'edge-title-overlap',
+      status: edgeTitles ? 'warning' : 'pass',
+      message: edgeTitles
+        ? `${edgeTitles} connection paths cross a measured group or lane title; adjust their route.`
+        : 'Connection paths keep clear of measured group and lane titles.',
+    },
+    {
+      id: 'annotation-connector-overlap',
+      status: noteConnectors ? 'warning' : 'pass',
+      message: noteConnectors
+        ? `${noteConnectors} annotation connectors cross a node, relation label or container title; adjust their placement.`
+        : 'Annotation connectors keep clear of unrelated nodes, relation labels and container titles.',
+    },
+    {
+      id: 'edge-label-overlap',
+      status: edgeLabels ? 'fail' : 'pass',
+      message: edgeLabels
+        ? `${edgeLabels} connection paths obscure unrelated relation labels.`
+        : 'Connection paths keep clear of unrelated relation labels.',
+    },
     {
       id: 'svg-validated',
       status: svgValidation.ok ? 'pass' : 'fail',

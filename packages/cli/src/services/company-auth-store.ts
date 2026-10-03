@@ -1,9 +1,14 @@
 import { createHash, randomUUID } from 'node:crypto';
-import { chmod, link, lstat, mkdir, open, readFile, rename, unlink } from 'node:fs/promises';
-import os from 'node:os';
+import { link, lstat, mkdir, open, readFile, rename, unlink } from 'node:fs/promises';
+import { homedir } from 'node:os';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
+import { planrHome } from '../../lib/planr-home.mjs';
 import { CompanySyncError, releasedLock } from './company-common.js';
+import {
+  assertPrivateCredentialDirectory,
+  migratePrivateCredentialHome,
+} from './credential-home.js';
 
 export type StoredCredentialSource = 'keychain' | 'encrypted-file';
 export interface CompanyCredentialStore {
@@ -17,23 +22,68 @@ export interface CompanyCredentialStore {
 
 /** Private metadata only. Token material stays in the existing credential service. */
 export class CompanyAuthStore {
-  constructor(readonly directory = path.join(os.homedir(), '.planr', 'company-auth')) {}
+  readonly directory: string;
+  private readonly legacyDirectory: string | undefined;
+  private readonly explicitDirectory: boolean;
+
+  constructor(directory?: string) {
+    this.explicitDirectory = directory !== undefined;
+    this.directory = directory ?? path.join(planrHome(), 'company-auth');
+    this.legacyDirectory =
+      directory === undefined ? path.join(homedir(), '.planr', 'company-auth') : undefined;
+  }
+
+  private async migrate(origin: string): Promise<void> {
+    if (
+      !this.legacyDirectory ||
+      path.resolve(this.legacyDirectory) === path.resolve(this.directory)
+    )
+      return;
+    const name = path.basename(this.recordPath(origin));
+    const old = new CompanyAuthStore(this.legacyDirectory);
+    try {
+      await lstat(path.join(old.directory, name));
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return;
+      throw new CompanySyncError(
+        'E_COMPANY_AUTH_STORE',
+        'Previous sign-in metadata is unavailable. Existing files were preserved.',
+        { cause: error },
+      );
+    }
+    try {
+      await old.locked(() =>
+        migratePrivateCredentialHome(this.directory, old.directory, [name], 'legacy'),
+      );
+    } catch (error) {
+      throw new CompanySyncError(
+        'E_COMPANY_AUTH_STORE',
+        'Previous sign-in metadata is unsafe or incomplete. Existing files were preserved.',
+        { cause: error },
+      );
+    }
+  }
 
   private async prepare(): Promise<void> {
     const parent = path.dirname(this.directory);
     await mkdir(parent, { recursive: true, mode: 0o700 });
-    for (const directory of [parent, this.directory]) {
+    // An explicit store can live under a shared temporary or otherwise protected parent.
+    // Its own custody leaf remains private; the default home must be private too.
+    const directories = this.explicitDirectory ? [this.directory] : [parent, this.directory];
+    for (const directory of directories) {
       await mkdir(directory, { mode: 0o700 }).catch((error: NodeJS.ErrnoException) => {
         if (error.code !== 'EEXIST') throw error;
       });
-      const info = await lstat(directory);
-      if (!info.isDirectory() || info.isSymbolicLink())
+      try {
+        await assertPrivateCredentialDirectory(directory);
+      } catch (error) {
         throw new CompanySyncError(
           'E_COMPANY_AUTH_STORE',
-          'Authentication storage must be a private directory without symbolic links.',
+          'Authentication storage must be a private directory without symbolic links. Existing files were preserved.',
+          { cause: error },
         );
+      }
     }
-    await chmod(this.directory, 0o700);
   }
 
   private recordPath(origin: string): string {
@@ -42,6 +92,7 @@ export class CompanyAuthStore {
 
   async read(origin: string): Promise<unknown | undefined> {
     await this.prepare();
+    await this.migrate(origin);
     const file = this.recordPath(origin);
     try {
       const info = await lstat(file);

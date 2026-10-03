@@ -6,8 +6,8 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 import { launchBrowser } from '../../../tests/support/browser-launcher.mjs';
 import { renderDesignDocument } from '../lib/design/document.mjs';
-import { startDesignReview } from '../lib/design/review.mjs';
 import { designFixture } from './design-fixture.mjs';
+import { fetch, startDesignReview } from './studio-http-fixture.mjs';
 
 test('camera movement preserves artboard geometry and quiet personal saves while review edits retain save status', {
   timeout: 45000,
@@ -128,8 +128,17 @@ test('camera movement preserves artboard geometry and quiet personal saves while
       studio.setView('prototype');
       studio.setView('walkthrough');
       studio.setView('canvas');
-      await studio.flush();
     });
+    await page.waitForFunction(() => {
+      const studio = window.__openPlanrDesignStudio;
+      const stage = window.__openPlanrArtifactStage;
+      return (
+        studio.getState().screenId === 'screen-2' &&
+        !document.querySelector('[data-design-screen-loading]') &&
+        stage.getFrame(stage.getState().activeArtifactId).dataset.planrFrameState === 'ready'
+      );
+    });
+    await page.evaluate(() => window.__openPlanrDesignStudio.flush());
     assert.deepEqual(
       await page.evaluate(() => window.saveChanges),
       [],

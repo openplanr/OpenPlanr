@@ -16,7 +16,7 @@ import {
   createArtifactEnvelope,
   exportLiveRoomRecoveryBundle,
   importLiveRoomRecoveryBundle,
-  prepareLiveReviewRoom,
+  prepareLiveReviewRoom as prepareVersionedLiveReviewRoom,
 } from 'planr-pipeline';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -31,6 +31,10 @@ import {
   writeArtifactSecretExport,
 } from '../../src/services/artifact-pipeline-service.js';
 
+const prepareLiveReviewRoom = (
+  envelope: Parameters<typeof prepareVersionedLiveReviewRoom>[0],
+  options: Record<string, unknown> = {},
+) => prepareVersionedLiveReviewRoom(envelope, { ...options, protocolVersion: '2.0.0' });
 const tempDirs: string[] = [];
 const secret: ArtifactSecretBundle = {
   schemaVersion: '1.0.0',
