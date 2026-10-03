@@ -115,6 +115,12 @@ export function invokeProcess(executable, args, options = {}) {
       spawnedResolve = resolve;
     });
     let stopping = null;
+    // Observe termination immediately, then report its outcome after streams drain.
+    const observeTermination = (work) =>
+      work.then(
+        () => ({ failed: false }),
+        (error) => ({ failed: true, error }),
+      );
     let settled = false;
     const finish = (error, value) => {
       if (settled) return;
@@ -126,13 +132,15 @@ export function invokeProcess(executable, args, options = {}) {
     };
     const stop = (error) => {
       failure ??= error;
-      stopping ??= (async () => {
-        if (!(await spawned)) return;
-        await launchWork;
-        if (!Number.isSafeInteger(child.pid) || child.pid < 1) return;
-        const leader = identity ?? (await processIdentity(child.pid));
-        if (leader) await terminateProcessGroup({ ...leader, pgid: child.pid });
-      })();
+      stopping ??= observeTermination(
+        (async () => {
+          if (!(await spawned)) return;
+          await launchWork;
+          if (!Number.isSafeInteger(child.pid) || child.pid < 1) return;
+          const leader = identity ?? (await processIdentity(child.pid));
+          if (leader) await terminateProcessGroup({ ...leader, pgid: child.pid });
+        })(),
+      );
       // Drain after cancellation so an engine waiting on a full pipe can exit.
       child.stdout.resume();
     };
@@ -208,15 +216,19 @@ export function invokeProcess(executable, args, options = {}) {
       });
     } else child.stderr.resume();
     child.on('exit', () => {
-      stopping ??= launchWork.then(() => (identity ? terminateProcessGroup(identity) : undefined));
+      stopping ??= observeTermination(
+        launchWork.then(() => (identity ? terminateProcessGroup(identity) : undefined)),
+      );
     });
     child.on('close', (code, exitSignal) => {
       void (async () => {
         await launchWork;
         await lineWork;
         await consumeLines(decoder.end(), true);
-        if (stopping) await stopping;
-        else if (identity) await terminateProcessGroup(identity);
+        if (stopping) {
+          const outcome = await stopping;
+          if (outcome.failed) throw outcome.error;
+        } else if (identity) await terminateProcessGroup(identity);
         const output = Buffer.concat([...stdout, ...stderr]).toString('utf8');
         if (failure) {
           failure.details = {
