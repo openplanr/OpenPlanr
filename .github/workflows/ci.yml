@@ -384,11 +384,11 @@ jobs:
         run: npm run test:runtime-integrity
 
   compatibility:
-    name: Node ${{ matrix.node }} supported-runtime verification
+    name: Node ${{ matrix.node }} contributor verification
     strategy:
       fail-fast: false
       matrix:
-        node: [20, 22]
+        node: [22, 24]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -440,7 +440,7 @@ jobs:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
         with:
-          node-version: ${{ matrix.node }}
+          node-version: 24
           cache: npm
       - name: Install the root lockfile
         run: npm ci
@@ -454,6 +454,10 @@ jobs:
         run: tar -xzmf "$RUNNER_TEMP/build-outputs.tgz"
       - name: Verify generated custody
         run: npm run check:generated
+      - name: Select the published-package consumer runtime
+        uses: actions/setup-node@v5
+        with:
+          node-version: ${{ matrix.node }}
       - name: Pack and install only public compatibility packages
         run: npm run verify:packed:strict
       - name: Verify landing owner-terminal custody on supported runtimes
