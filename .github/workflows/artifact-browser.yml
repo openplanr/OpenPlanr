@@ -40,8 +40,8 @@ jobs:
           && !startsWith(github.head_ref, 'dependabot/npm_and_yarn/')
           && '["chromium"]' || '["chromium", "firefox", "webkit"]') }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 20
           cache: npm
@@ -70,7 +70,7 @@ jobs:
           PLANR_STUDIO_IDENTITY_EVIDENCE: ${{ runner.temp }}/studio-identity-${{ matrix.browser }}
       - name: Retain native Studio identity evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: studio-identity-${{ matrix.browser }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/studio-identity-${{ matrix.browser }}
