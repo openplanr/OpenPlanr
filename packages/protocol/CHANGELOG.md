@@ -1,5 +1,12 @@
 # @openplanr/protocol
 
+## 0.9.0
+### Minor Changes
+
+- 390d731: Add planr-delegate to the canonical skill catalog for explicit second-agent implementation requests. Ordinary implementation and native parallel roles remain host-native Ship; agent review requests do not trigger implementation delegation. No frozen adapter protocol or public command is changed.
+- f27d487: Make local Design Studio previews load selected screens with bounded frames, phase diagnostics and retry. Share authored sources across responsive views, support protected Studio routes and exact service lifecycle, preserve durable feedback and explicit offline imports, and add screen search, actual-size inspection and navigation links. Keep legacy artifact contracts and hosted publication limits compatible.
+- 036f395: Add versioned contracts for shared-source designs, resumable encrypted resources, company publication references, isolated preview messages, authenticated review rooms and diagram presentation. Keep historical schemas and readers unchanged. These additive contracts define the formats; hosted services and Studio clients adopt them in subsequent changes.
+
 ## 0.8.0
 ### Minor Changes
 

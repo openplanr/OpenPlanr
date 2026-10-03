@@ -1,5 +1,29 @@
 # Changelog
 
+## 2.2640.7
+### Patch Changes
+
+- 390d731: New backlog items now end with the supported closing command `planr backlog update <id> --status closed` instead of nonexistent close/promote commands.
+- 390d731: Show concise company sign-in and sign-out confirmations, with a simple logout instruction when a sign-in already exists. Keep detailed results available through `--json` and retain recovery warnings.
+- 390d731: Bundle the opt-in implementation delegation preview for native Claude Code, Codex and Cursor. Disclose the destination before sending required context, retain exact-session correction and recover final reports. Cursor requires explicit trust in its inherited native configuration; Claude and Codex keep their isolated execution policies. Ordinary Ship remains host-native, and no public delegate CLI command is added.
+  
+  Prepare dependencies before focused scratch checks, preserve verification evidence and show phase timings. Serialize checkout-lock recovery and use journaled, conflict-safe integration that preserves concurrent edits. Validate relative test paths and metadata size before source writes, retain concrete error causes, and expose explicit worktree cleanup.
+- f27d487: Make Design Studio notifications dismissible, keep repeated dismissed sync warnings closed, and clear save warnings after a successful retry while preserving unsaved drafts.
+- f27d487: Make local Design Studio previews load selected screens with bounded frames, phase diagnostics and retry. Share authored sources across responsive views, support protected Studio routes and exact service lifecycle, preserve durable feedback and explicit offline imports, and add screen search, actual-size inspection and navigation links. Keep legacy artifact contracts and hosted publication limits compatible.
+- 390d731: Display rendered diagram shapes directly on the studio canvas, remove the white page and shadow, and strengthen neutral shape fills while preserving saved geometry and export bytes.
+- 390d731: Preserve saved skill discovery and installation scopes during doctor repair, reconcile stale managed Codex plugin registrations through native commands, and show grouped repair previews with exact JSON evidence and host restart guidance.
+  
+  Retire the managed Codex plugin when switching both user and project scopes to project skills, while preserving global plugins during project-only setup.
+- 390d731: Use native Claude Code, Codex and Cursor execution for delegation, with optional profiles, plain summaries, focused independent verification and safe owned-worktree cleanup.
+  
+  Allow source expressions and explicit dummy values in delegation context while retaining credential file and token detection.
+  
+  Honor explicit Claude configuration during dispatch and continuation, and safely integrate into linked worktrees on a different filesystem from Git metadata.
+- f27d487: Share large designs through resumable, authenticated resource uploads and load only the selected view's resources. Use one compact Studio header with accessible menus, colorful artifact labels, stable canvas mounts and dismissible notices. Preserve drafts and exact feedback retries across interruption, offline use and concurrent tabs. Add separate room read, write and management capabilities, owned server lifecycle commands, safe company publication recovery, a versioned diagram palette and measured text and connector quality diagnostics. Existing saved revisions remain readable; hosted services must adopt the new formats before new clients create them.
+  
+  CLI credentials and company sign-in metadata now honor `PLANR_HOME`. When the selected home has no prior record, private legacy files are copied without changing the originals; existing destination records stay authoritative. Migration receipts prevent deleted records from being imported again. Unsafe or incomplete records require recovery rather than being treated as absent.
+- 390d731: Simplify setup around OpenPlanr skills, show installation destinations and backed-up file replacements, and provide scope-aware recovery guidance without changing existing installation IDs or flags. Project-only Codex setup preserves the existing global plugin configuration.
+
 ## 2.2640.6
 ### Patch Changes
 

@@ -3,7 +3,7 @@
   "schemaVersion": "2.0.0",
   "protocolVersion": "1.8.0",
   "plugin": "planr",
-  "version": "2.2640.6",
+  "version": "2.2640.7",
   "skillRoot": "./skills/",
   "canonicalSkillCount": 28,
   "compatibilityAliasCount": 0,
@@ -642,7 +642,7 @@
         },
         {
           "path": "skills/design/scripts/runtime/packages/design/package.json",
-          "digest": "sha256:102a971e8f71bec8b50fcd39fc8bcac766559c9d495a6c45f7cb37c02488e4f6"
+          "digest": "sha256:3ece346e425a0a824c0494accbb9b22182337f927bf19cbe4e2167425016f326"
         },
         {
           "path": "skills/design/scripts/runtime/packages/design/templates/studio/enhancements.css",
@@ -706,7 +706,7 @@
         },
         {
           "path": "skills/design/scripts/runtime/packages/protocol/package.json",
-          "digest": "sha256:d722b19f60b289fb72906cf27a6518f8483f6d5640dc40456e050d89fced8b09"
+          "digest": "sha256:a44b3547324fdb26d0fd1f3552edfef10385febb0a21fb7ee1859e65e80b1b78"
         },
         {
           "path": "skills/design/scripts/runtime/packages/protocol/registries/artifact-theme.json",
@@ -943,7 +943,7 @@
         },
         {
           "path": "skills/design-loop/scripts/runtime/packages/design/package.json",
-          "digest": "sha256:102a971e8f71bec8b50fcd39fc8bcac766559c9d495a6c45f7cb37c02488e4f6"
+          "digest": "sha256:3ece346e425a0a824c0494accbb9b22182337f927bf19cbe4e2167425016f326"
         },
         {
           "path": "skills/design-loop/scripts/runtime/packages/design/templates/studio/enhancements.css",
@@ -1007,7 +1007,7 @@
         },
         {
           "path": "skills/design-loop/scripts/runtime/packages/protocol/package.json",
-          "digest": "sha256:d722b19f60b289fb72906cf27a6518f8483f6d5640dc40456e050d89fced8b09"
+          "digest": "sha256:a44b3547324fdb26d0fd1f3552edfef10385febb0a21fb7ee1859e65e80b1b78"
         },
         {
           "path": "skills/design-loop/scripts/runtime/packages/protocol/registries/artifact-theme.json",
@@ -1244,7 +1244,7 @@
         },
         {
           "path": "skills/design-review/scripts/runtime/packages/design/package.json",
-          "digest": "sha256:102a971e8f71bec8b50fcd39fc8bcac766559c9d495a6c45f7cb37c02488e4f6"
+          "digest": "sha256:3ece346e425a0a824c0494accbb9b22182337f927bf19cbe4e2167425016f326"
         },
         {
           "path": "skills/design-review/scripts/runtime/packages/design/templates/studio/enhancements.css",
@@ -1308,7 +1308,7 @@
         },
         {
           "path": "skills/design-review/scripts/runtime/packages/protocol/package.json",
-          "digest": "sha256:d722b19f60b289fb72906cf27a6518f8483f6d5640dc40456e050d89fced8b09"
+          "digest": "sha256:a44b3547324fdb26d0fd1f3552edfef10385febb0a21fb7ee1859e65e80b1b78"
         },
         {
           "path": "skills/design-review/scripts/runtime/packages/protocol/registries/artifact-theme.json",
@@ -1683,7 +1683,7 @@
         },
         {
           "path": "skills/plan/scripts/runtime/packages/design/package.json",
-          "digest": "sha256:102a971e8f71bec8b50fcd39fc8bcac766559c9d495a6c45f7cb37c02488e4f6"
+          "digest": "sha256:3ece346e425a0a824c0494accbb9b22182337f927bf19cbe4e2167425016f326"
         },
         {
           "path": "skills/plan/scripts/runtime/packages/design/templates/studio/enhancements.css",
@@ -1747,7 +1747,7 @@
         },
         {
           "path": "skills/plan/scripts/runtime/packages/protocol/package.json",
-          "digest": "sha256:d722b19f60b289fb72906cf27a6518f8483f6d5640dc40456e050d89fced8b09"
+          "digest": "sha256:a44b3547324fdb26d0fd1f3552edfef10385febb0a21fb7ee1859e65e80b1b78"
         },
         {
           "path": "skills/plan/scripts/runtime/packages/protocol/registries/artifact-theme.json",
