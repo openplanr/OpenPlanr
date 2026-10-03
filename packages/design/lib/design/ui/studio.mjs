@@ -172,6 +172,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
     frameDemandTimer = null;
   let failedSelection = null;
   let frameDemandKey = '';
+  let frameDemandGeneration = 0;
   let queuedSelection = null;
   let noteScreenId = null;
   let notesReturnFocus = null;
@@ -872,9 +873,11 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
   function scheduleFrameDemand() {
     if (!stage?.frameBudget || destroyed) return;
     clearTimeout(frameDemandTimer);
+    const generation = frameDemandGeneration;
     frameDemandTimer = setTimeout(() => {
       if (
         destroyed ||
+        generation !== frameDemandGeneration ||
         !readyReported ||
         pendingScreen ||
         walkthroughTransition ||
@@ -909,7 +912,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       if (key === frameDemandKey) return;
       frameDemandKey = key;
       void stage
-        .ensureFrames(ids)
+        .ensureFrames(ids, () => !destroyed && generation === frameDemandGeneration)
         .then(updateFramePlaceholders)
         .catch((error) => {
           if (!destroyed && error.name !== 'AbortError') {
@@ -1646,6 +1649,10 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       if (dirty || reviewDirty) void flush();
     });
     listen(window, 'beforeunload', (event) => {
+      // A canceled navigation keeps ready frames; only retire background demand.
+      clearTimeout(frameDemandTimer);
+      frameDemandGeneration += 1;
+      frameDemandKey = '';
       storeDraft();
       storeReviewDraft();
       if ((contentDirty || reviewDirty) && (options.stateUrl || options.saveState || reviewUrl())) {
