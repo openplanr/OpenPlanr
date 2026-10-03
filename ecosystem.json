@@ -72,7 +72,7 @@
       "version": "0.8.0",
       "path": "packages/protocol",
       "publication": "public",
-      "manifestDigest": "sha256:d722b19f60b289fb72906cf27a6518f8483f6d5640dc40456e050d89fced8b09"
+      "manifestDigest": "sha256:80e92c312a13a69800e611cf6f6f9e3de75dac1f6927a1226a2dfded685d34fd"
     },
     "operate": {
       "package": "@openplanr/operate",
@@ -346,7 +346,7 @@
     ],
     "generatedAssets": {
       "path": "adapters/manifests/generated-assets.json",
-      "digest": "sha256:3dad3f658fb4b81670a7a4ef299b43b6ff3ab925b95d1cb43b9855021f89d575",
+      "digest": "sha256:8b0ee07b5d614678e0a67675b8ea32bd3673761e28acb7d83a3c03a7bea3417d",
       "count": 2095
     }
   },
