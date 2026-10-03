@@ -6,22 +6,27 @@ import { renderPrototypeStateBootstrap } from '../lib/artifact/ui/prototype-stat
 import { bundleBrowserEntry } from '../scripts/generate-artifact-shell.mjs';
 
 async function waitForAliasRestore(view, count = 1) {
-  await view.locator('body').evaluate((_element, count) => {
-    if (window.aliasCount >= count) return;
-    return new Promise((resolve) => {
-      const onRestore = (event) => {
-        if (
-          event.source !== parent ||
-          event.data?.type !== 'fixture:restore' ||
-          window.aliasCount < count
-        )
-          return;
-        removeEventListener('message', onRestore);
-        resolve();
-      };
-      addEventListener('message', onRestore);
+  const body = await view.locator('body').elementHandle();
+  const frame = await body.ownerFrame();
+  try {
+    await frame.waitForFunction((expected) => window.aliasCount >= expected, count, {
+      timeout: 8000,
     });
-  }, count);
+  } catch (error) {
+    const observed = await frame.evaluate(() => ({
+      aliasCount: window.aliasCount,
+      sessionFields: Object.keys(window.__OPENPLANR_PROTOTYPE_STATE__?.get() ?? {}),
+      formLengths: [...document.querySelectorAll('input')].map(({ id, value }) => ({
+        id,
+        length: value.length,
+      })),
+    }));
+    throw new Error(`Alias restore ${count} did not arrive: ${JSON.stringify(observed)}`, {
+      cause: error,
+    });
+  } finally {
+    await body.dispose();
+  }
 }
 
 test('opaque prototype forms and bounded session state survive frame eviction', {
@@ -775,6 +780,7 @@ test('unsupported alias promotion preserves valid local form custody and can rec
   const browser = await launchBrowser();
   t.after(() => browser.close());
   const page = await browser.newPage();
+  page.setDefaultTimeout(8000);
   const origin = `http://127.0.0.1:${server.address().port}`;
   await page.goto(origin);
   const html = `<!doctype html><script>${renderPrototypeStateBootstrap({ screenId: 'form', viewId: 'form', parentOrigin: origin, nonce: 'f'.repeat(43) })}</script><input id="question"><input id="other"><input id="padding"><script>window.aliasCount=0;addEventListener('message',event=>{if(event.source===parent&&event.data?.type==='fixture:restore'){document.getElementById('question').value=event.data.state.question??'';aliasCount++}})</script>`;
