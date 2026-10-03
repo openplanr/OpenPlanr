@@ -40,11 +40,42 @@ input. That restore replaced the local snapshot, and the next captured update
 then replaced the host's shared snapshot. Waiting longer for a test assertion
 would not recover the lost value.
 
-The correction is under independent data-integrity review. Review includes input
-before the first configured legacy-field restore, explicit reset, view recreation,
-message ordering, bounded metadata and compatibility with older bootstraps.
-Final owning generation, repository regressions, successful packed CI and fresh
-private adoption remain required before the corrected candidate is accepted.
+The relay now orders state changes per authenticated frame generation, merges only
+changed session keys and the current view's form fields, and acknowledges accepted
+updates. The bootstrap keeps bounded local edits until acknowledgement, rejects
+stale restores and preserves native input before legacy aliases are configured.
+Reset and form-capture failures retain the same bounded custody rules.
+
+The full owning Design suite then exposed a distinct reload defect that the
+recreated-frame probes missed. Standard Studio reuses the iframe, WindowProxy and
+frozen nonce after eviction, while the new bootstrap starts its sequence at zero.
+A previous document's acknowledgement could therefore stall restoration.
+
+The host now exposes its authenticated load-challenge generation only after the
+exact challenge acknowledgement. Each bootstrap has an ephemeral document ID;
+restores target that document. Generation retirement resets sequence custody
+without permitting a known modern channel to downgrade to a stripped legacy
+message. Old hosts and genuinely old bootstraps retain their existing semantics.
+Legacy alias companions are withheld until the current document is bound, so an
+old configuration request cannot overwrite its native fields.
+
+Independent review found and corrected both the stripped-message transition and
+premature-alias cases. The retained native test sends old payloads from the
+current child and asserts the sender check passed before testing generation
+rejection. The original reused-frame migration keeps its eight-second restore
+deadline and asserts the same iframe, window and nonce with a changed
+authenticated generation.
+
+The corrected source passed eleven direct relay units, five hosted bridge units,
+27 prototype browser cases and the original sandbox checks. The actual standard
+Studio migration passed twenty attempts per engine under concurrent load, with
+no retries. Refined native replay checks passed in all three engines. The original
+synthetic 93-screen/five-frame, room, outbox and complex hosted journeys passed
+against the explicitly recorded source overlay and predecessor dependencies.
+
+Owning generation, full repository regressions, successful packed CI and fresh
+private adoption are tracked separately. Earlier source-overlay and predecessor
+package results do not certify the final consumer candidate.
 
 No test uses customer content. Native diagnostics and temporary source-overlay
 checks are distinguished from a successful packaged consumer journey. The legacy

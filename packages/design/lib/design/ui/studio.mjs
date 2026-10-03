@@ -1889,6 +1889,9 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
           viewId: entry.artifactId,
           window: stage.getFrame(entry.artifactId)?.contentWindow ?? null,
           nonce: stage.getFrame(entry.artifactId)?.__openPlanrBridge?.getPrototypeNonce?.() ?? null,
+          generation: stage
+            .getFrame(entry.artifactId)
+            ?.__openPlanrBridge?.getPrototypeGeneration?.(),
           aliases: options.prototypeStateAliases?.[entry.screenId],
         })),
     });
@@ -1908,6 +1911,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
             viewId: entry.artifactId,
             window: frame.contentWindow,
             nonce,
+            generation: frame.__openPlanrBridge?.getPrototypeGeneration?.(),
             aliases: options.prototypeStateAliases?.[entry.screenId],
           });
       }

@@ -71,6 +71,7 @@ type GuardAttachInput = {
         navigationAttempts = 0,
         failedClosed = false;
       let inertSource = '';
+      let prototypeGeneration: string | null = null;
       let pendingChallenge: { id: string; timer: ReturnType<typeof setTimeout> } | null = null;
       let measuredLayout: { width: number; height: number } | null = null;
       let viewportGesturesEnabled = false,
@@ -115,6 +116,7 @@ type GuardAttachInput = {
       const originalPointerEvents = frame.style.pointerEvents;
       const originalInert = frame.inert;
       const quarantine = (active: boolean) => {
+        if (active) prototypeGeneration = null;
         frame.inert = active ? true : originalInert;
         frame.style.pointerEvents = active ? 'none' : originalPointerEvents;
         if (active) frame.setAttribute('aria-busy', 'true');
@@ -160,6 +162,7 @@ type GuardAttachInput = {
             own(data, 'requestId') !== pendingChallenge.id
           )
             return;
+          prototypeGeneration = pendingChallenge.id;
           clearTimeout(pendingChallenge.timer);
           pendingChallenge = null;
           trustedLoad = true;
@@ -528,6 +531,7 @@ type GuardAttachInput = {
       Object.defineProperty(frame, '__openPlanrBridge', {
         value: Object.freeze({
           getPrototypeNonce: () => (trustedLoad && !disposed ? config.nonce : null),
+          getPrototypeGeneration: () => (trustedLoad && !disposed ? prototypeGeneration : null),
           setViewportGestures: (enabled: boolean) => {
             if (typeof enabled !== 'boolean' || disposed) return false;
             if (enabled === viewportGesturesEnabled) return true;

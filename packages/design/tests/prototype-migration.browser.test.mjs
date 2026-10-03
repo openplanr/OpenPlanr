@@ -105,6 +105,13 @@ test('standard Studio preserves seven legacy prototype fields and explicitly bou
     );
   await waitForSelection('screen-1', 'desktop');
   const originalFrameSource = await firstElement.getAttribute('src');
+  await page.evaluate((id) => {
+    window.originalPrototypeFrame = __openPlanrArtifactStage.getFrame(id);
+    window.originalPrototypeWindow = originalPrototypeFrame.contentWindow;
+    window.originalPrototypeNonce = originalPrototypeFrame.__openPlanrBridge.getPrototypeNonce();
+    window.originalPrototypeGeneration =
+      originalPrototypeFrame.__openPlanrBridge.getPrototypeGeneration();
+  }, firstId);
   assert.ok(originalFrameSource?.startsWith('blob:'), 'The original authored document is loaded');
   for (const field of fields) await first.locator(`#${field}`).fill(`Edited ${field}`);
   await first.locator('#password').fill('Private field excluded');
@@ -163,6 +170,19 @@ test('standard Studio preserves seven legacy prototype fields and explicitly bou
     await firstElement.getAttribute('src'),
     originalFrameSource,
     'The evicted authored document is remounted with a new source URL',
+  );
+  assert.deepEqual(
+    await page.evaluate((id) => {
+      const frame = __openPlanrArtifactStage.getFrame(id);
+      return {
+        sameFrame: frame === originalPrototypeFrame,
+        sameWindow: frame.contentWindow === originalPrototypeWindow,
+        sameNonce: frame.__openPlanrBridge.getPrototypeNonce() === originalPrototypeNonce,
+        freshGeneration:
+          frame.__openPlanrBridge.getPrototypeGeneration() !== originalPrototypeGeneration,
+      };
+    }, firstId),
+    { sameFrame: true, sameWindow: true, sameNonce: true, freshGeneration: true },
   );
   const remounted = await (await firstElement.elementHandle()).contentFrame();
   assert.ok(remounted, 'The remounted authored document has a browser frame');
