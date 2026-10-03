@@ -11,6 +11,8 @@ coverage/
 *.log
 *.tgz
 release/
+# The handwritten release facade is source, rather than a publication output.
+!/packages/pipeline/lib/release/
 .env
 .env.*
 !.env.example
@@ -19,9 +21,6 @@ release/
 .migration/
 
 # Runtime and private planning state are never repository inputs.
-.planr/runtime/
-.planr/operate/
-.planr/artifacts/
 .planr/
 .cursor/
 AGENTS.md
@@ -42,14 +41,7 @@ CLAUDE.md
 /evaluation/skills/design-workflow-results.json
 /evaluation/skills/design-workflow-results.md
 
-# Internal product planning and staging verification records.
-/docs/research/branded-review-studio.md
-/docs/research/design-workflow-restoration.md
-/docs/research/permanent-design-review-verification.md
-/docs/research/team-review-studio-evidence.json
-/docs/research/team-review-studio-verification.md
-
-# Private repository preparation and historical verification evidence.
+# Private repository preparation, product research, and verification evidence.
 /.claude/
 /docs/verification/
 /docs/research/
@@ -74,68 +66,7 @@ CLAUDE.md
 /packages/pipeline/fixtures/diagram/
 /packages/pipeline/gallery/diagram/
 /packages/pipeline/references/diagram/
-/packages/pipeline/registry/v1.5.0/
-/packages/pipeline/registry/v1.7.0/
-/skills/planr-design/scripts/runtime/
-/skills/planr-design/schemas/
-/skills/planr-design-loop/scripts/runtime/
-/skills/planr-design-loop/schemas/
-/skills/planr-design-review/scripts/runtime/
-/skills/planr-design-review/schemas/
-/skills/planr-plan/scripts/runtime/
-/skills/planr-plan/schemas/
 /packages/pipeline/THIRD_PARTY-DIAGRAM-NOTICES.md
-/packages/pipeline/lib/dashboard/closed-json-contract.mjs
-/packages/pipeline/lib/dashboard/generated/operate-schema-token-codec.mjs
-/packages/pipeline/lib/dashboard/operate-experience-audit-display-contract.d.mts
-/packages/pipeline/lib/dashboard/operate-experience-audit-display-contract.mjs
-/packages/pipeline/lib/dashboard/operate-experience-display-contract.d.mts
-/packages/pipeline/lib/dashboard/operate-experience-display-contract.mjs
-/packages/pipeline/lib/dashboard/operate-experience-surface-contract.d.mts
-/packages/pipeline/lib/dashboard/operate-experience-surface-contract.mjs
-/packages/pipeline/lib/dashboard/operate-review-contract.d.mts
-/packages/pipeline/lib/dashboard/operate-review-contract.mjs
-/packages/pipeline/lib/dashboard/operate-review-display-workspace-contract.d.mts
-/packages/pipeline/lib/dashboard/operate-review-display-workspace-contract.mjs
-/packages/pipeline/lib/dashboard/operate-review-payload-safety.d.mts
-/packages/pipeline/lib/dashboard/operate-review-payload-safety.mjs
-/packages/pipeline/lib/dashboard/operate-review-workspace-projection-v2.d.mts
-/packages/pipeline/lib/protocol/canonical-json.mjs
-/packages/pipeline/lib/protocol/contracts.mjs
-/packages/pipeline/lib/protocol/design-contracts.mjs
-/packages/pipeline/lib/protocol/design-handoff-contracts.d.mts
-/packages/pipeline/lib/protocol/design-handoff-contracts.mjs
-/packages/pipeline/lib/protocol/design-publication-contracts.d.mts
-/packages/pipeline/lib/protocol/design-publication-contracts.mjs
-/packages/pipeline/lib/protocol/diagram-contracts.mjs
-/packages/pipeline/lib/protocol/enterprise-contracts.d.mts
-/packages/pipeline/lib/protocol/enterprise-contracts.mjs
-/packages/pipeline/lib/protocol/errors.mjs
-/packages/pipeline/lib/protocol/generated/contract-catalog-v2.mjs
-/packages/pipeline/lib/protocol/generated/diagram-registries.mjs
-/packages/pipeline/lib/protocol/jcs.mjs
-/packages/pipeline/lib/protocol/json-schema.mjs
-/packages/pipeline/lib/protocol/live-evidence-v2.mjs
-/packages/pipeline/lib/protocol/operate-experience-live-patch.mjs
-/packages/pipeline/lib/protocol/operating-planning-contracts.mjs
-/packages/pipeline/lib/protocol/planning-contracts.mjs
-/packages/pipeline/lib/protocol/review-experience-contracts.mjs
-/packages/pipeline/lib/protocol/skill-source-contracts.mjs
-/packages/pipeline/lib/protocol/workspace-contracts.mjs
-/packages/pipeline/registry/adapters.json
-/packages/pipeline/registry/artifact-theme.json
-/packages/pipeline/registry/evaluation-graders.json
-/packages/pipeline/registry/evaluation-host-profiles.json
-/packages/pipeline/registry/frozen-commands.json
-/packages/pipeline/registry/landing-operations.json
-/packages/pipeline/registry/landing-workflows.json
-/packages/pipeline/registry/live-evidence-providers.json
-/packages/pipeline/registry/operate-v2-contracts.json
-/packages/pipeline/registry/professional-skills.json
-/packages/pipeline/registry/roles.json
-/packages/pipeline/registry/ship-review-specialists.json
-/packages/pipeline/registry/v1.6.0/diagram-grammars.json
-/packages/pipeline/registry/v1.6.0/diagram-semantic-patterns.json
 /packages/pipeline/scripts/generate-artifact-shell.mjs
 /packages/pipeline/templates/artifact-review-preview.html
 /packages/pipeline/templates/artifact-review-shell.html
@@ -144,32 +75,72 @@ CLAUDE.md
 /packages/pipeline/templates/diagram-owner.js
 /packages/pipeline/templates/diagram-studio.js
 /packages/pipeline/templates/studio/
+
+# Protocol copies use this namespace; the loader and handwritten type seams stay versioned.
+/packages/pipeline/lib/protocol/*.mjs
+/packages/pipeline/lib/protocol/*.d.mts
+/packages/pipeline/lib/protocol/generated/*.mjs
+!/packages/pipeline/lib/protocol/loader.mjs
+!/packages/pipeline/lib/protocol/live-evidence-v2.d.mts
+
+# Registry copies are generated; the package inventory and legacy skill catalogs are canonical.
+/packages/pipeline/registry/*.json
+!/packages/pipeline/registry/generated-skill-assets.json
+/packages/pipeline/registry/v*/
+!/packages/pipeline/registry/v1.6.0/
+/packages/pipeline/registry/v1.6.0/*
+!/packages/pipeline/registry/v1.6.0/skill-host-profiles.json
+!/packages/pipeline/registry/v1.6.0/skill-modules.json
+!/packages/pipeline/registry/v1.6.0/skill-routing.json
+
+# Projected dashboard contracts coexist with handwritten readers and server modules.
+/packages/pipeline/lib/dashboard/closed-json-contract.mjs
+/packages/pipeline/lib/dashboard/generated/operate-schema-token-codec.mjs
+/packages/pipeline/lib/dashboard/operate-*-contract.mjs
+/packages/pipeline/lib/dashboard/operate-*-contract.d.mts
+/packages/pipeline/lib/dashboard/operate-review-payload-safety.mjs
+/packages/pipeline/lib/dashboard/operate-review-payload-safety.d.mts
+/packages/pipeline/lib/dashboard/operate-review-workspace-projection-v2.d.mts
+
+# Shared Design resources are copies; skill instructions and other scripts remain versioned.
+/skills/planr-design/scripts/runtime/
+/skills/planr-design/schemas/
+/skills/planr-design-loop/scripts/runtime/
+/skills/planr-design-loop/schemas/
+/skills/planr-design-review/scripts/runtime/
+/skills/planr-design-review/schemas/
+/skills/planr-plan/scripts/runtime/
+/skills/planr-plan/schemas/
 /skills/planr-design-loop/scripts/design*.mjs
 /skills/planr-design-review/scripts/design*.mjs
 /skills/planr-design/scripts/design*.mjs
 /skills/planr-plan/scripts/design*.mjs
-/packages/pipeline/lib/protocol/diagram-authoring-contracts.mjs
-/packages/pipeline/lib/protocol/diagram-authoring-contracts.d.mts
-/packages/pipeline/lib/protocol/diagram-review-contracts.mjs
-/packages/pipeline/lib/protocol/diagram-review-contracts.d.mts
-/packages/pipeline/lib/protocol/canonical-json.d.mts
-/packages/pipeline/lib/protocol/browser-contracts.mjs
-/packages/pipeline/lib/protocol/browser-contracts.d.mts
-/packages/pipeline/lib/protocol/generated/legacy-diagram-schema.mjs
-/packages/pipeline/registry/v1.13.0/diagram-authoring-capabilities.json
-/packages/pipeline/registry/v1.14.0/artifact-theme.json
 
-# esbuild bundles written by packages/artifact/scripts/generate-artifact-shell.mjs; the
-# reviewed contract is lib/artifact/ui/generated/artifact-shell-assets.json.
+# esbuild bundles; reviewed integrity manifests remain versioned beside their sources.
 /packages/artifact/templates/*.js
 /packages/artifact/templates/design/*.js
+/packages/design/templates/studio/studio.js
 
-# Compiled by scripts/typescript/compile-sources.mjs from the .mts beside each file.
+# Typed authoring stays visible; only compiler-emitted .mjs/.d.mts siblings are ignored.
 /packages/artifact/lib/artifact/diagram/editor/*.mjs
 /packages/artifact/lib/artifact/diagram/editor/*.d.mts
 /packages/artifact/lib/artifact/ui/*.mjs
 /packages/artifact/lib/artifact/ui/*.d.mts
+/packages/artifact/lib/artifact/ui/sandbox/*.mjs
+/packages/artifact/lib/artifact/ui/sandbox/*.d.mts
+# These guards remain handwritten until their separate typed-source migration.
+!/packages/artifact/lib/artifact/ui/sandbox/frame-guard.mjs
+!/packages/artifact/lib/artifact/ui/sandbox/host-guard.mjs
+!/packages/artifact/lib/artifact/ui/sandbox/worker-guard.mjs
+/packages/design/lib/design/ui/studio-chrome.mjs
+/packages/design/lib/design/ui/studio-chrome.d.mts
+/packages/artifact/lib/artifact/internal/credential-writer.mjs
+/packages/artifact/lib/artifact/internal/credential-writer.d.mts
+/packages/artifact/lib/artifact/internal/runtime-asset.mjs
+/packages/artifact/lib/artifact/internal/runtime-asset.d.mts
 
-# esbuild bundle written by packages/design/scripts/generate-design-studio.mjs from
-# packages/design/lib/design/ui; the pipeline projection manifest records its digest.
-/packages/design/templates/studio/studio.js
+# CLI copies come from the canonical credential writer and Protocol limits leaf.
+/packages/cli/lib/credential-writer.mjs
+/packages/cli/lib/credential-writer.d.mts
+/packages/cli/lib/resource-limits.mjs
+/packages/cli/lib/resource-limits.d.mts

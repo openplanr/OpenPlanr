@@ -31,7 +31,7 @@
     },
     {
       "path": "dist/plugins/claude/openplanr/.openplanr-content.json",
-      "digest": "sha256:eb0b42f854c71e3ba80a362418a850c0469fef804a8750d462884c463d9ba54a",
+      "digest": "sha256:0825d437617384b3e8d03128dd6a58c2098a8c0a7b9d9c2e540a6804c75eadcf",
       "generated": true
     },
     {
@@ -81,7 +81,7 @@
     },
     {
       "path": "dist/plugins/claude/openplanr/README.md",
-      "digest": "sha256:8097f25f21e41a78d3b85841d65f20d198ce881de7bb0972c64f1eacdeeea82e",
+      "digest": "sha256:fc9b01f1cddf9d2b8f3c5ba8cc23603a46786a8c294dc61eafd62e114b56ec1f",
       "generated": true
     },
     {
@@ -5256,7 +5256,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/claude/openplanr/.openplanr-content.json",
-      "digest": "sha256:eb0b42f854c71e3ba80a362418a850c0469fef804a8750d462884c463d9ba54a",
+      "digest": "sha256:0825d437617384b3e8d03128dd6a58c2098a8c0a7b9d9c2e540a6804c75eadcf",
       "generated": true
     },
     {
@@ -5306,7 +5306,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/claude/openplanr/README.md",
-      "digest": "sha256:8097f25f21e41a78d3b85841d65f20d198ce881de7bb0972c64f1eacdeeea82e",
+      "digest": "sha256:fc9b01f1cddf9d2b8f3c5ba8cc23603a46786a8c294dc61eafd62e114b56ec1f",
       "generated": true
     },
     {

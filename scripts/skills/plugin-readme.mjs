@@ -23,12 +23,10 @@ export function countReadmeWords(markdown) {
     .filter((token) => /[\p{L}\p{N}]/u.test(token)).length;
 }
 
-/** Renders the Claude plugin README from its template with the generator's own totals. */
-export function renderClaudePluginReadme({ repoRoot, skillCount, roleCount, pluginVersion }) {
+/** Renders the Claude plugin README without duplicating inventory counts in public prose. */
+export function renderClaudePluginReadme({ repoRoot, pluginVersion }) {
   const readme = readFileSync(resolve(repoRoot, CLAUDE_PLUGIN_README_TEMPLATE), 'utf8')
     .replace(/\r\n/gu, '\n')
-    .replaceAll('{{SKILL_COUNT}}', String(skillCount))
-    .replaceAll('{{ROLE_COUNT}}', String(roleCount))
     .replaceAll('{{PLUGIN_VERSION}}', pluginVersion);
   const unresolved = readme.match(/\{\{[A-Z0-9_]+\}\}/gu);
   if (unresolved) {

@@ -1,7 +1,7 @@
 # OpenPlanr for Claude Code
 
-OpenPlanr closes the loop from intent to delivery. This plugin adds {{SKILL_COUNT}} skills and
-{{ROLE_COUNT}} role agents that plan, design, build, review, and operate from durable context in
+OpenPlanr closes the loop from intent to delivery. This plugin adds skills and specialist
+agents that plan, design, build, review, and operate from durable context in
 your repository. Specifications, user stories, tasks, and provenance live under `.planr/` in your
 repository, reviewed and versioned like code.
 
