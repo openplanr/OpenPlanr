@@ -19,6 +19,8 @@ import { fileURLToPath } from 'node:url';
 const scriptRoot = dirname(fileURLToPath(import.meta.url));
 const workspaceRoot = resolve(scriptRoot, '..', '..');
 const PROJECTION_MANIFEST_DIRECTORY = 'lib/generated/domain-projections';
+const ARTIFACT_ASSET_MANIFEST =
+  'packages/artifact/lib/artifact/ui/generated/artifact-shell-assets.json';
 
 const DOMAIN_PROJECTIONS = Object.freeze({
   operate: Object.freeze([
@@ -277,10 +279,30 @@ function atomicWrite(path, bytes, mode) {
 
 // A TypeScript source ships as the .mjs and .d.mts compiled beside it. Shipping the source
 // too would let a consumer's compiler resolve `./x.mjs` to `x.mts` and check it as its own.
-const isTypeScriptSource = (path) => path.endsWith('.mts') && !path.endsWith('.d.mts');
+const isTypeScriptSource = (path) => /\.(?:mts|tsx)$/u.test(path) && !path.endsWith('.d.mts');
+
+// Bundled browser assets already contain their runtime dependencies. Preserve their bytes,
+// including type comments, so the canonical integrity manifest remains authoritative.
+function sealedArtifactAssets() {
+  const manifest = JSON.parse(
+    readFileSync(resolve(workspaceRoot, ARTIFACT_ASSET_MANIFEST), 'utf8'),
+  );
+  if (manifest.sync !== 'byte-for-byte' || !Array.isArray(manifest.assets)) {
+    throw new Error(
+      'Canonical artifact asset manifest must declare byte-for-byte synchronization.',
+    );
+  }
+  return new Map(
+    manifest.assets.map((asset) => [
+      resolve(workspaceRoot, 'packages/artifact', asset.path),
+      asset,
+    ]),
+  );
+}
 
 function collectEntries(domains, targetRoot) {
   const entries = [];
+  const sealedAssets = domains.includes('artifact') ? sealedArtifactAssets() : new Map();
   for (const domain of domains) {
     for (const projection of DOMAIN_PROJECTIONS[domain]) {
       const sourceRoot = resolve(workspaceRoot, projection.source);
@@ -288,7 +310,7 @@ function collectEntries(domains, targetRoot) {
         throw new Error(`Missing canonical source: ${projection.source}`);
       for (const child of walkFiles(sourceRoot)) {
         if (isTypeScriptSource(child)) {
-          const compiled = join(projection.source, child.replace(/\.mts$/u, '.mjs'));
+          const compiled = join(projection.source, child.replace(/\.(?:mts|tsx)$/u, '.mjs'));
           if (!existsSync(resolve(workspaceRoot, compiled)))
             throw new Error(`Missing compiled ${compiled}; run npm run generate first.`);
           continue;
@@ -301,7 +323,18 @@ function collectEntries(domains, targetRoot) {
           throw new Error(`Projection escapes target root: ${targetRelative}`);
         }
         const sourceBytes = readFileSync(sourcePath);
-        const expectedBytes = projectBytes(sourceBytes, targetRelative.split(sep).join('/'));
+        const sealedAsset = sealedAssets.get(sourcePath);
+        if (
+          sealedAsset &&
+          (sourceBytes.length !== sealedAsset.bytes || sha256(sourceBytes) !== sealedAsset.sha256)
+        ) {
+          throw new Error(
+            `Canonical asset ${sealedAsset.path} is stale; run npm run generate first.`,
+          );
+        }
+        const expectedBytes = sealedAsset
+          ? sourceBytes
+          : projectBytes(sourceBytes, targetRelative.split(sep).join('/'));
         entries.push({
           domain,
           source: relative(workspaceRoot, sourcePath).split(sep).join('/'),

@@ -40,3 +40,6 @@ packages/pipeline/THIRD_PARTY-DIAGRAM-NOTICES.md linguist-generated=true
 packages/cli/lib/host-packages/** linguist-generated=true
 docs/generated/** linguist-generated=true
 ecosystem.json linguist-generated=true
+
+# Composed editor styles are generated from diagram-editor-base.css and studio-shell.css.
+packages/artifact/lib/artifact/ui/diagram-editor.css linguist-generated=true

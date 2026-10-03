@@ -10,7 +10,7 @@
     "url": "git+https://github.com/openplanr/OpenPlanr.git"
   },
   "engines": {
-    "node": ">=20.0.0"
+    "node": "^22.13.0 || >=24.0.0"
   },
   "workspaces": [
     "packages/cli",
@@ -75,7 +75,7 @@
   "overrides": {
     "miniflare": {
       "sharp": "0.35.4",
-      "undici": "7.29.0"
+      "undici": "7.29.1"
     }
   }
 }

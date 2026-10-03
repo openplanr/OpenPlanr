@@ -20,6 +20,11 @@ import type { FileHandle } from 'node:fs/promises';
 import { mkdir, open, readFile, rename, rm, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  CLI_NODE_REMEDIATION,
+  cliNodeVersionMessage,
+  supportsCliNodeVersion,
+} from '../../lib/node-runtime.mjs';
 import { planrHome, userHome } from '../../lib/planr-home.mjs';
 import { spliceManagedBlock } from '../utils/splice-managed-block.js';
 import {
@@ -914,12 +919,11 @@ export function listRuntimeAdapters(): AdapterRegistryEntry[] {
 }
 
 function assertNodeVersion(): void {
-  const major = Number(process.versions.node.split('.')[0]);
-  if (major < 20) {
+  if (!supportsCliNodeVersion(process.versions.node)) {
     throw new RuntimeManagerError(
       'E_NODE_VERSION',
-      `Node.js 20 or newer is required; found ${process.versions.node}.`,
-      'Install Node.js 20+ and rerun `planr setup`. OpenPlanr will not modify Node.js for you.',
+      cliNodeVersionMessage(process.versions.node),
+      CLI_NODE_REMEDIATION,
     );
   }
 }
@@ -2821,12 +2825,14 @@ export async function runtimeDoctor(
         installScope: InstallScope;
       }>
     | undefined;
-  const nodeMajor = Number(process.versions.node.split('.')[0]);
+  const supportedNode = supportsCliNodeVersion(process.versions.node);
   diagnostics.push({
     code: 'node-version',
-    status: nodeMajor >= 20 ? 'pass' : 'fail',
-    message: `Node.js ${process.versions.node}`,
-    ...(nodeMajor < 20 ? { fix: 'Install Node.js 20 or newer.' } : {}),
+    status: supportedNode ? 'pass' : 'fail',
+    message: supportedNode
+      ? `Node.js ${process.versions.node}`
+      : cliNodeVersionMessage(process.versions.node),
+    ...(!supportedNode ? { fix: CLI_NODE_REMEDIATION } : {}),
   });
   const state = await loadState();
   const installed = state.projects[projectKey(projectDir)];

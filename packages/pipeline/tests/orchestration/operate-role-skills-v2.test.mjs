@@ -5,6 +5,7 @@ import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import {
   projectedSkillName,
+  renderCursorSkillBody,
   renderNamespacedSkill,
 } from '../../../../scripts/skills/host-invocations.mjs';
 
@@ -128,7 +129,13 @@ test('OpenAI and Claude package canonical role skills while Cursor preserves the
     );
     assert.equal(
       stripCursorFrontmatter(readWorkspace(`dist/plugins/cursor/openplanr/rules/${skillName}.mdc`)),
-      canonical.replace(/^---\n[\s\S]*?\n---\n\n?/u, ''),
+      renderCursorSkillBody(
+        canonical,
+        skillName,
+        JSON.parse(readWorkspace('adapters/manifests/canonical-skills.json'))
+          .skills.find((skill) => skill.id === skillName)
+          .resources.filter(({ hosts }) => hosts.includes('cursor')),
+      ),
       `${skillName}: Cursor projection`,
     );
   }

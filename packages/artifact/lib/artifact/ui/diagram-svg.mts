@@ -221,7 +221,14 @@ export function prepareDiagramSvg(
     return `<${node.tagName} ${fields.join(' ')}>${(node.childNodes ?? []).map((child) => serialize(child, depth + 1)).join('')}</${node.tagName}>`;
   }
   const svg = serialize(root);
-  const order: Record<string, number> = { Section: 0, Group: 1, Item: 2, Connection: 3, Note: 4 };
-  items.sort((a, b) => order[a.kind] - order[b.kind]);
+  const order: Record<string, number> = {
+    Section: 0,
+    Group: 1,
+    Lane: 1,
+    Item: 2,
+    Connection: 3,
+    Note: 4,
+  };
+  items.sort((a, b) => (order[a.kind] ?? 5) - (order[b.kind] ?? 5) || a.id.localeCompare(b.id));
   return { svg, scene: { width: dimensions[2], height: dimensions[3] }, items };
 }

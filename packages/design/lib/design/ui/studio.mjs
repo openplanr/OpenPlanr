@@ -1,4 +1,6 @@
 /** Design presentation composes the artifact stage. Pins remain artifact-owned. */
+import { createPrototypeStateRelay } from '@openplanr/artifact/ui/prototype-state.mjs';
+import { mountDesignChrome, mountDesignPanels } from './studio-chrome.mjs';
 
 /**
  * Mounts the studio for one payload onto a mounted artifact stage.
@@ -52,6 +54,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       compare: Boolean(input.compare),
       navOpen: input.navOpen === undefined ? true : Boolean(input.navOpen),
       reviewOpen: input.reviewOpen === undefined ? true : Boolean(input.reviewOpen),
+      inspectionScale: input.inspectionScale === 'actual' ? 'actual' : 'fit',
       zoom: activeViewport.zoom,
       camera: { x: activeViewport.x, y: activeViewport.y },
       viewports,
@@ -100,10 +103,34 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
     ...(savedDraft?.state ?? {}),
     ...(payload.state ?? {}),
   });
+  function linkedState() {
+    const params = new URLSearchParams(location.hash.slice(1));
+    const linked = {};
+    for (const [key, query] of [
+      ['screenId', 'screen'],
+      ['frameId', 'frame'],
+      ['variantId', 'direction'],
+      ['view', 'view'],
+    ])
+      if (params.has(query)) linked[key] = params.get(query);
+    return linked;
+  }
+  state = normalizeState({ ...state, ...linkedState() });
+  function recordLocation() {
+    const params = new URLSearchParams({
+      screen: state.screenId,
+      frame: state.frameId,
+      direction: state.variantId,
+      view: state.view,
+    });
+    const next = `#${params}`;
+    if (location.hash !== next) history.pushState(null, '', next);
+  }
   let revision = payload.revision;
   let stateVersion = null;
   let stage = null;
   let root = null;
+  let chrome = null;
   let scroll = null;
   let surface = null;
   let grid = null;
@@ -123,7 +150,10 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
   let saving = Promise.resolve();
   let pollTimer = null;
   let noticeTimer = null;
+  let activeNotice = null;
+  const dismissedNotices = new Map();
   let readyReported = false;
+  let readyReporting = false;
   let destroyed = false;
   let panEnabled = false;
   let spacePan = false;
@@ -140,6 +170,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
   let pendingScreen = null,
     screenRequest = 0,
     frameDemandTimer = null;
+  let failedSelection = null;
   let frameDemandKey = '';
   let queuedSelection = null;
   let noteScreenId = null;
@@ -154,21 +185,41 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
 
   function status(message, phase = 'saved') {
     if (destroyed) return;
-    const node = q('[data-design-save-state]');
-    node.textContent = message;
-    node.dataset.status = phase;
+    if (chrome) chrome.update({ saveLabel: message, savePhase: phase });
+    else {
+      const node = q('[data-design-save-state]');
+      node.textContent = message;
+      node.dataset.status = phase;
+    }
   }
 
-  function notice(message, persistent = false) {
-    if (destroyed) return;
+  function hideNotice() {
+    clearTimeout(noticeTimer);
+    const node = q('.design-notice');
+    const restoreFocus = node.contains(document.activeElement);
+    node.hidden = true;
+    activeNotice = null;
+    if (restoreFocus) q(`button[data-design-view="${state.view}"]`)?.focus();
+  }
+
+  function clearNotice(key) {
+    dismissedNotices.delete(key);
+    if (activeNotice?.key === key) hideNotice();
+  }
+
+  function clearFailedSelection() {
+    if (failedSelection) clearNotice(`preview-load:${failedSelection.artifactId}`);
+    failedSelection = null;
+  }
+
+  function notice(message, persistent = false, key = message) {
+    if (destroyed || dismissedNotices.get(key) === message) return;
     const node = q('.design-notice');
     clearTimeout(noticeTimer);
-    node.textContent = message;
+    activeNotice = { key, message, persistent };
+    q('[data-design-notice-message]').textContent = message;
     node.hidden = false;
-    if (!persistent)
-      noticeTimer = setTimeout(() => {
-        node.hidden = true;
-      }, 6000);
+    if (!persistent) noticeTimer = setTimeout(hideNotice, 6000);
   }
 
   function storeDraft() {
@@ -253,6 +304,8 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
           }
           if (result?.stateVersion !== undefined) stateVersion = result.stateVersion;
           if (result?.revision !== undefined) revision = result.revision;
+          clearNotice('personal-save');
+          if (capturedContent) clearNotice('content-save');
           if (capturedSerial === serial) {
             dirty = false;
           }
@@ -279,6 +332,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
                 ? 'This review changed in another window. Your unsaved edits remain in this browser. Reload to read the saved review before applying them again.'
                 : 'Changes could not be saved. Your draft remains in this browser; reconnect to retry.',
             true,
+            capturedContent ? 'content-save' : 'personal-save',
           );
           storeDraft();
         }
@@ -320,6 +374,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ review: captured }),
             });
+          clearNotice('review-save');
           if (capturedSerial === reviewSerial) {
             reviewDirty = false;
             if (!contentDirty) status(reviewUrl() ? 'All changes saved' : 'Saved in this browser');
@@ -330,6 +385,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
           notice(
             `Comments could not be saved: ${error.message} Your draft remains in this browser.`,
             true,
+            'review-save',
           );
           storeReviewDraft();
         }
@@ -448,9 +504,9 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
   function switchView(view, { save = true } = {}) {
     if (!views.includes(view)) throw new TypeError(`Unknown design view: ${view}`);
     if (view === state.view) return;
-    ++screenRequest;
-    pendingScreen = null;
-    delete root.dataset.designScreenLoading;
+    // A view switch changes presentation, not the screen the user requested.
+    // Keep a document load in flight and apply it in the new view when ready.
+    const queued = pendingScreen ? null : queuedSelection;
     finishWalkthroughTransition();
     closeDesignNotes();
     saveViewport();
@@ -462,7 +518,11 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
     const restored = view === 'canvas' && restoreViewport(view);
     render();
     if (!restored) fit({ save: false });
-    if (save) persist();
+    if (queued) selectEntry(queued.entry, { ...queued.settings, save: false });
+    if (save) {
+      persist();
+      recordLocation();
+    }
   }
 
   function defaultPosition(entry, variant) {
@@ -606,8 +666,8 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
           'aria-current',
           button.dataset.designScreen === state.screenId ? 'page' : 'false',
         );
-      q('[data-design-variant]').value = state.variantId;
-      q('[data-design-frame]').value = state.frameId;
+      q('[data-design-variant]').value = failedSelection?.variantId ?? state.variantId;
+      q('[data-design-frame]').value = failedSelection?.frameId ?? state.frameId;
       if (q('[data-design-compare]')) q('[data-design-compare]').checked = state.compare;
       q('[data-design-screen-title]').textContent =
         state.view === 'canvas' ? design.title : screen.title;
@@ -636,6 +696,12 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
         q('[data-design-remix]').value = state.remix[state.variantId] ?? '';
       q('[data-design-pan]').hidden = state.view !== 'canvas';
       for (const control of qa('[data-design-zoom]')) control.hidden = state.view !== 'canvas';
+      q('[data-design-actual-size]').hidden = state.view === 'canvas';
+      q('[data-design-actual-size]').setAttribute(
+        'aria-pressed',
+        String(state.inspectionScale === 'actual'),
+      );
+      root.dataset.designInspectionScale = state.inspectionScale;
       q('.design-canvas-tools').setAttribute(
         'aria-label',
         state.view === 'canvas' ? 'Canvas controls' : 'Screen controls',
@@ -656,7 +722,8 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       q('[data-design-narrative]').textContent =
         screen.description ??
         design.flows?.find((flow) => flow.screens.includes(screen.id))?.title ??
-        design.brief.text;
+        design.brief?.text ??
+        '';
       q('[data-design-step-change="-1"]').disabled = requestedScreen() === design.screenOrder[0];
       q('[data-design-step-change="1"]').disabled = requestedScreen() === design.screenOrder.at(-1);
       for (const item of qa('[data-design-note-screen]'))
@@ -694,6 +761,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       surface.style.height = '100%';
       updatePan();
       renderCamera();
+      chrome?.update({ view: state.view, navOpen: state.navOpen, reviewOpen: stageState.railOpen });
       root.dispatchEvent(new CustomEvent('planr:design-render', { detail: clone(state) }));
     } finally {
       rendering = false;
@@ -720,18 +788,31 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       // its viewport. Scrolling and gestures within the iframe remain native.
       const frame = design.frames.find((item) => item.id === state.frameId);
       const inset = window.innerWidth <= 680 ? 12 : 24;
-      state.zoom = Math.max(
-        0.001,
-        Math.min(
-          1,
-          Math.max(1, scroll.clientWidth - inset * 2) / frame.width,
-          Math.max(1, scroll.clientHeight - inset * 2) / frame.height,
-        ),
-      );
+      state.zoom =
+        state.inspectionScale === 'actual'
+          ? 1
+          : Math.max(
+              0.001,
+              Math.min(
+                1,
+                Math.max(1, scroll.clientWidth - inset * 2) / frame.width,
+                Math.max(1, scroll.clientHeight - inset * 2) / frame.height,
+              ),
+            );
       state.camera = {
-        x: (scroll.clientWidth - frame.width * state.zoom) / 2,
-        y: (scroll.clientHeight - frame.height * state.zoom) / 2,
+        x:
+          state.inspectionScale === 'actual'
+            ? inset
+            : (scroll.clientWidth - frame.width * state.zoom) / 2,
+        y:
+          state.inspectionScale === 'actual'
+            ? inset
+            : (scroll.clientHeight - frame.height * state.zoom) / 2,
       };
+      if (state.inspectionScale === 'actual') {
+        surface.style.width = `${Math.max(scroll.clientWidth, frame.width + inset * 2)}px`;
+        surface.style.height = `${Math.max(scroll.clientHeight, frame.height + inset * 2)}px`;
+      }
       saveViewport();
     }
     const zoom = String(state.zoom);
@@ -935,8 +1016,21 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
     });
   }
 
+  function requestedSelection() {
+    return pendingScreen?.entry ?? queuedSelection?.entry ?? failedSelection ?? state;
+  }
+
+  function requestedEntry(changes = {}) {
+    const requested = requestedSelection();
+    return entryFor(
+      changes.screenId ?? requested.screenId,
+      changes.variantId ?? requested.variantId,
+      changes.frameId ?? requested.frameId,
+    );
+  }
+
   function requestedScreen() {
-    return pendingScreen?.entry.screenId ?? queuedSelection?.entry.screenId ?? state.screenId;
+    return requestedSelection().screenId;
   }
 
   function selectEntry(entry, { save = true, reveal = false, loaded = false } = {}) {
@@ -946,7 +1040,10 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       !loaded &&
       (pendingScreen || !stage.getLoadedArtifactIds().includes(entry.artifactId))
     ) {
+      // The newest load supersedes an older animation's queued selection.
+      queuedSelection = null;
       if (pendingScreen?.entry.artifactId === entry.artifactId) return true;
+      clearFailedSelection();
       const request = ++screenRequest;
       pendingScreen = { entry };
       root.dataset.designScreenLoading = 'true';
@@ -963,15 +1060,19 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
         .catch((error) => {
           if (destroyed || request !== screenRequest || error.name === 'AbortError') return;
           pendingScreen = null;
+          failedSelection = entry;
           delete root.dataset.designScreenLoading;
           notice(
             'This screen could not load. Select it again to retry; your review is preserved.',
             true,
+            `preview-load:${entry.artifactId}`,
           );
+          render();
           updateFramePlaceholders();
         });
       return true;
     }
+    clearFailedSelection();
     const sameFrame = entry.frameId === state.frameId && entry.variantId === state.variantId;
     if (walkthroughTransition && state.view === 'walkthrough' && sameFrame) {
       // Coalesce rapid requests instead of cutting an animation halfway or
@@ -998,11 +1099,15 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
     stage.dispatch({ type: 'set-active', artifactId: entry.artifactId });
     render();
     if (reveal) centerEntry(entry);
-    if (save) persist();
+    if (save) {
+      persist();
+      recordLocation();
+    }
     return true;
   }
 
   function fit({ save = true, selection = null } = {}) {
+    state.inspectionScale = 'fit';
     render();
     if (state.view !== 'canvas') {
       if (save) persist();
@@ -1143,7 +1248,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
           event.altKey ||
           event.ctrlKey ||
           event.metaKey ||
-          document.querySelector('dialog[open]')
+          document.querySelector('dialog[open],[role=dialog][data-state=open]')
         )
           return;
         const key = event.key.toLowerCase();
@@ -1219,6 +1324,17 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
           entries.find((item) => item.artifactId === button.dataset.designLoadFrame),
           { reveal: true },
         );
+      } else if (button.hasAttribute('data-design-actual-size')) {
+        state.inspectionScale = 'actual';
+        render();
+        persist();
+      } else if (button.hasAttribute('data-design-focus')) {
+        state.navOpen = false;
+        state.reviewOpen = false;
+        stage.dispatch({ type: 'set-rail-open', railOpen: false });
+        if (state.view === 'canvas') switchView('prototype');
+        render();
+        persist();
       } else if (button.dataset.designView) {
         switchView(button.dataset.designView);
       } else if (button.hasAttribute('data-design-toggle-nav')) {
@@ -1228,7 +1344,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
         render();
         persist();
       } else if (button.dataset.designScreen) {
-        selectEntry(entryFor(button.dataset.designScreen), {
+        selectEntry(requestedEntry({ screenId: button.dataset.designScreen }), {
           reveal: state.view === 'canvas',
         });
       } else if (button.dataset.designNote) {
@@ -1251,7 +1367,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
           0,
           design.screenOrder.length - 1,
         );
-        selectEntry(entryFor(design.screenOrder[index]));
+        selectEntry(requestedEntry({ screenId: design.screenOrder[index] }));
       } else if (button.dataset.designRating) {
         const rating = Number(button.dataset.designRating);
         state.ratings[state.variantId] = rating;
@@ -1280,10 +1396,10 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       } else if (button.dataset.designExport) void exportArtifact(button.dataset.designExport);
     });
     listen(q('[data-design-variant]'), 'change', (event) =>
-      selectEntry(entryFor(state.screenId, event.target.value)),
+      selectEntry(requestedEntry({ variantId: event.target.value })),
     );
     listen(q('[data-design-frame]'), 'change', (event) => {
-      selectEntry(entryFor(state.screenId, state.variantId, event.target.value), {
+      selectEntry(requestedEntry({ frameId: event.target.value }), {
         reveal: state.view === 'canvas',
       });
     });
@@ -1335,7 +1451,13 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       'pointerdown',
       (event) => {
         const panel = event.target.closest('.planr-artifact-panel');
-        if (event.button === 0 && panel && !panEnabled && !spacePan) {
+        if (
+          event.button === 0 &&
+          panel &&
+          !panEnabled &&
+          !spacePan &&
+          !event.target.closest('[data-design-note]')
+        ) {
           selectEntry(
             entries.find(({ artifactId }) => artifactId === panel.dataset.artifactId),
             { save: false },
@@ -1437,7 +1559,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
         !event.ctrlKey &&
         !event.metaKey &&
         !event.altKey &&
-        !document.querySelector('dialog[open]') &&
+        !document.querySelector('dialog[open],[role=dialog][data-state=open]') &&
         !event.target.closest('button,[data-planr-annotation-layer]')
       ) {
         event.preventDefault();
@@ -1485,7 +1607,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
           0,
           design.screenOrder.length - 1,
         );
-        selectEntry(entryFor(design.screenOrder[index]));
+        selectEntry(requestedEntry({ screenId: design.screenOrder[index] }));
       }
     });
     listen(document, 'keyup', (event) => {
@@ -1535,7 +1657,8 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       // Authored navigation is accepted only from one of this studio's exact
       // sandbox windows, then resolved against the declared screen identities.
       if (
-        event.data?.type !== 'openplanr:design-navigate' ||
+        event.origin !== 'null' ||
+        !['openplanr:design-navigate', 'navigate'].includes(event.data?.type) ||
         typeof event.data.screenId !== 'string'
       )
         return;
@@ -1543,6 +1666,15 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
         ({ artifactId }) => stage.getFrame(artifactId)?.contentWindow === event.source,
       );
       if (!source || !design.screenOrder.includes(event.data.screenId)) return;
+      const nonce = stage.getFrame(source.artifactId)?.__openPlanrBridge?.getPrototypeNonce?.();
+      if (!nonce) return;
+      if (
+        event.data.type === 'navigate' &&
+        (event.data.channel !== nonce ||
+          event.data.viewId !== source.artifactId ||
+          event.data.schemaVersion !== '1.0.0')
+      )
+        return;
       if (
         state.view !== 'canvas' &&
         (source.artifactId !== activeArtifactId || walkthroughTransition)
@@ -1560,7 +1692,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       if (result.revision !== undefined) revision = result.revision;
       if (result.stateVersion !== undefined) stateVersion = result.stateVersion;
       if (result.state && !dirty) {
-        state = normalizeState(result.state);
+        state = normalizeState({ ...result.state, ...linkedState() });
         if (compactViewport) {
           state.navOpen = false;
           state.reviewOpen = false;
@@ -1613,82 +1745,61 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
   }
 
   async function reportReady() {
-    if (readyReported || destroyed) return;
-    const result = await Promise.race([
-      stage.ready,
-      new Promise((resolve) => setTimeout(() => resolve({ status: 'timeout' }), 15000)),
-    ]);
-    if (destroyed) return;
-    const requiredEntries = stage.frameBudget ? [entryFor()] : entries;
-    if (stage.frameBudget) {
-      try {
-        await stage.ensureFrames(requiredEntries.map((entry) => entry.artifactId));
-      } catch {
-        if (!destroyed)
-          notice(
-            'The first screen could not load. Reload to retry; saved feedback remains available.',
-            true,
-          );
-        return;
-      }
-    }
-    const authenticated = Promise.all(
-      requiredEntries.map(({ artifactId }) => {
+    if (readyReported || readyReporting || destroyed) return;
+    readyReporting = true;
+    try {
+      const requiredEntries = [entryFor()];
+      await stage.ensureFrames(requiredEntries.map((entry) => entry.artifactId));
+      if (destroyed) return;
+      const loaded = requiredEntries.filter(({ artifactId }) => {
         const frame = stage.getFrame(artifactId);
-        if (!frame?.__openPlanrBridge || frame.dataset.planrBridgeTrusted === 'true') return true;
-        return new Promise((resolve) =>
-          frame.addEventListener('planr:artifact-bridge-ready', () => resolve(true), {
-            once: true,
-          }),
+        return (
+          (frame?.src?.startsWith('blob:') || Boolean(frame?.srcdoc)) &&
+          frame.dataset.planrFrameState === 'ready' &&
+          frame.dataset.planrArtifactDigest &&
+          (!frame.__openPlanrBridge || frame.dataset.planrBridgeTrusted === 'true')
         );
-      }),
-    );
-    const bridgeReady = await Promise.race([
-      authenticated.then(() => true),
-      new Promise((resolve) => setTimeout(() => resolve(false), 15000)),
-    ]);
-    if (destroyed) return;
-    const loaded = requiredEntries.filter(({ artifactId }) => {
-      const frame = stage.getFrame(artifactId);
-      return (
-        (frame?.src?.startsWith('blob:') || Boolean(frame?.srcdoc)) &&
-        frame.dataset.planrArtifactDigest &&
-        (!frame.__openPlanrBridge || frame.dataset.planrBridgeTrusted === 'true')
-      );
-    });
-    if (result?.status !== 'ready' || !bridgeReady || loaded.length !== requiredEntries.length) {
-      status('Preview failed to load', 'failed');
+      });
+      if (loaded.length !== requiredEntries.length) throw new Error('Preview bridge is not ready.');
+      readyReported = true;
+      render();
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      if (destroyed) return;
+      root.dataset.designReady = 'true';
+      if (!root.dataset.sharedOpening) delete document.documentElement.dataset.designOpening;
+      chrome?.update({ previewLabel: 'Preview ready' });
+      if (!chrome) q('[data-design-preview-state]').textContent = 'Preview ready';
+      if (!contentDirty && !reviewDirty && (!options.stateUrl || stateVersion !== null))
+        status(options.stateUrl ? 'All changes saved' : 'Local preview');
+      const detail = {
+        revision,
+        status: 'ready',
+        artifacts: loaded.map((entry) => entry.artifactId),
+      };
+      root.dispatchEvent(new CustomEvent('planr:design-ready', { bubbles: true, detail }));
+      if (typeof options.onReady === 'function') await options.onReady(detail);
+      if (options.readyUrl) {
+        try {
+          await jsonRequest(options.readyUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(detail),
+          });
+        } catch {
+          status('Server disconnected · local draft', 'disconnected');
+        }
+      }
+    } catch {
+      if (destroyed) return;
+      delete document.documentElement.dataset.designOpening;
+      chrome?.update({ previewLabel: 'Preview unavailable' });
+      if (!chrome) q('[data-design-preview-state]').textContent = 'Preview unavailable';
       notice(
-        'Some design previews did not finish loading. Reload the local review to retry; saved feedback remains available.',
+        'This preview could not load. Use Retry screen; your saved feedback remains available.',
         true,
       );
-      return;
-    }
-    readyReported = true;
-    render();
-    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-    if (destroyed) return;
-    root.dataset.designReady = 'true';
-    if (!root.dataset.sharedOpening) delete document.documentElement.dataset.designOpening;
-    if (!contentDirty && !reviewDirty && (!options.stateUrl || stateVersion !== null))
-      status(options.stateUrl ? 'All changes saved' : 'Ready · local preview');
-    const detail = {
-      revision,
-      status: 'ready',
-      artifacts: loaded.map(({ artifactId }) => artifactId),
-    };
-    root.dispatchEvent(new CustomEvent('planr:design-ready', { bubbles: true, detail }));
-    if (typeof options.onReady === 'function') await options.onReady(detail);
-    if (options.readyUrl) {
-      try {
-        await jsonRequest(options.readyUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(detail),
-        });
-      } catch {
-        status('Preview ready · server disconnected', 'disconnected');
-      }
+    } finally {
+      readyReporting = false;
     }
   }
 
@@ -1699,6 +1810,8 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       return null;
     }
     root = q('.planr-shell');
+    chrome = mountDesignChrome({ root, title: design.title, state });
+    if (chrome) cleanup.push(() => chrome.destroy());
     previousReviewMode = stage.getState().reviewMode;
     activeTool = previousReviewMode === 'comment' ? 'annotate' : 'interact';
     scroll = q('.planr-stage-scroll');
@@ -1767,7 +1880,86 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
     q('[data-design-verification]').textContent = verified
       ? 'Browser inspection complete'
       : 'Browser inspection pending';
+    const prototypeState = createPrototypeStateRelay({
+      contextId: `${design.id}:${payload.revision ?? payload.reviewOf ?? 'local'}`,
+      parentWindow: window,
+      frames: () =>
+        entries.map((entry) => ({
+          screenId: entry.screenId,
+          viewId: entry.artifactId,
+          window: stage.getFrame(entry.artifactId)?.contentWindow ?? null,
+          nonce: stage.getFrame(entry.artifactId)?.__openPlanrBridge?.getPrototypeNonce?.() ?? null,
+          generation: stage
+            .getFrame(entry.artifactId)
+            ?.__openPlanrBridge?.getPrototypeGeneration?.(),
+          aliases: options.prototypeStateAliases?.[entry.screenId],
+        })),
+    });
+    cleanup.push(() => prototypeState.dispose());
     installEvents();
+    listen(q('[data-design-dismiss-notice]'), 'click', () => {
+      if (activeNotice?.persistent) dismissedNotices.set(activeNotice.key, activeNotice.message);
+      hideNotice();
+    });
+    function previewHealth() {
+      for (const entry of entries) {
+        const frame = stage.getFrame(entry.artifactId);
+        const nonce = frame?.__openPlanrBridge?.getPrototypeNonce?.() ?? null;
+        if (nonce)
+          prototypeState.restore({
+            screenId: entry.screenId,
+            viewId: entry.artifactId,
+            window: frame.contentWindow,
+            nonce,
+            generation: frame.__openPlanrBridge?.getPrototypeGeneration?.(),
+            aliases: options.prototypeStateAliases?.[entry.screenId],
+          });
+      }
+      const selected = stage
+        .getFrameDiagnostics?.()
+        .find((item) => item.artifactId === activeArtifactId);
+      const node = q('[data-design-preview-state]');
+      const phase = selected?.status ?? stage.getState().status;
+      const previewLabel =
+        phase === 'ready'
+          ? 'Preview ready'
+          : phase === 'error' || phase === 'invalid'
+            ? 'Preview unavailable'
+            : 'Loading preview';
+      if (chrome) chrome.update({ previewLabel });
+      else node.textContent = previewLabel;
+      node.dataset.status = phase;
+      if (selected)
+        node.title = `${selected.phase} · ${Math.round(selected.elapsedMs ?? 0)} ms${selected.code ? ` · ${selected.code}` : ''}`;
+      if (!readyReported && phase === 'ready') void reportReady();
+    }
+    listen(root, 'planr:artifact-frame-state', previewHealth);
+    listen(root, 'planr:artifact-state', previewHealth);
+    previewHealth();
+    const search = q('[data-design-screen-search]'),
+      group = q('[data-design-screen-group]');
+    function filterScreens() {
+      const term = search.value.trim().toLocaleLowerCase();
+      const flow = design.flows?.find((item) => item.id === group?.value);
+      let count = 0;
+      for (const button of qa('[data-design-screen]')) {
+        button.hidden = !(
+          button.textContent.toLocaleLowerCase().includes(term) &&
+          (!flow || flow.screens.includes(button.dataset.designScreen))
+        );
+        if (!button.hidden) count++;
+      }
+      q('[data-design-search-empty]').hidden = count > 0;
+    }
+    listen(search, 'input', filterScreens);
+    listen(group, 'change', filterScreens);
+    function followLocation() {
+      const next = normalizeState({ ...state, ...linkedState() });
+      if (next.view !== state.view) switchView(next.view, { save: false });
+      selectEntry(entryFor(next.screenId, next.variantId, next.frameId), { save: false });
+    }
+    listen(window, 'popstate', followLocation);
+    listen(window, 'hashchange', followLocation);
     if (stage.frameBudget) {
       listen(root, 'planr:artifact-frame-state', updateFramePlaceholders);
       updateFramePlaceholders();
@@ -1787,6 +1979,24 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
         /* A different render digest must not inherit coordinate pins. */
       }
     }
+    const panelDialogs = mountDesignPanels({
+      root,
+      closePanel(side) {
+        if (side === 'left') state.navOpen = false;
+        else {
+          state.reviewOpen = false;
+          stage.dispatch({ type: 'set-rail-open', railOpen: false });
+        }
+        render();
+        persist();
+        q(
+          side === 'left'
+            ? '.design-toolbar [data-design-toggle-nav]'
+            : '.design-toolbar [data-planr-action=feedback]',
+        )?.focus();
+      },
+    });
+    cleanup.push(() => panelDialogs.destroy());
     const controller = Object.freeze({
       setTool,
       getTool: () => activeTool,
@@ -1795,10 +2005,11 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       getSaveState: () => ({
         dirty: contentDirty || reviewDirty,
         personalPending: dirty && !contentDirty,
+        commentsPending: reviewDirty,
         revision,
         stateVersion,
       }),
-      selectScreen: (screenId) => selectEntry(entryFor(screenId)),
+      selectScreen: (screenId) => selectEntry(requestedEntry({ screenId })),
       selectEntry: (entry) => selectEntry(entry),
       fitSelection: ({ save = true } = {}) => fit({ selection: entryFor(), save }),
       setCamera(camera) {
@@ -1828,6 +2039,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
           'compare',
           'navOpen',
           'reviewOpen',
+          'inspectionScale',
           'zoom',
           'camera',
           'viewports',
@@ -1854,6 +2066,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
         destroyed = true;
         ++screenRequest;
         pendingScreen = null;
+        failedSelection = null;
         clearTimeout(frameDemandTimer);
         clearTimeout(saveTimer);
         clearTimeout(reviewTimer);

@@ -1,9 +1,10 @@
 # The Design Loop Engine
 
-> `/planr:design-loop` (exploration for any target) and
-> `/planr:design-review` (pin-review of an existing artifact) share one engine:
-> `lib/design-engine/` — providers, sessions, a board daemon, a file-handshake feedback
-> protocol, and taste memory. Zero npm dependencies; everything is plain Node ESM.
+> `planr-pipeline design-engine` runs the separate image/SVG exploration loop:
+> providers, sessions, a board daemon, feedback files and taste memory. Its board
+> adapter uses the artifact runtime, including esbuild and parse5. Standard Design,
+> Design Loop and Design Review skills use their packaged Studio utilities; they do
+> not share this engine's provider or file-handshake loop.
 
 ## Architecture
 
@@ -95,7 +96,7 @@ drag = box). In review mode each pin auto-maps to the nearest `<section id>` /
 `resolveProvider({ requested, auth })`: `auto` (the default) → claude-svg, always. openai
 runs only when requested with `--provider openai`; a key in the environment never selects
 it, so nothing is billed unless you asked for openai. Requesting `openai` without a key
-errors and names the setup path (`planr-design setup` or `OPENAI_API_KEY`) plus the $0
+errors and names the setup path (`planr-pipeline design-engine setup` or `OPENAI_API_KEY`) plus the $0
 default. The same opt-in guards the billed vision calls: `check` on a PNG and `taste
 approved|rejected <png>` without attribute flags need `--provider openai` too.
 

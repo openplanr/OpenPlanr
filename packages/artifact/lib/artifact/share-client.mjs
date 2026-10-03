@@ -1,4 +1,6 @@
 import { ARTIFACT_ERROR_CODES, PipelineError } from '@openplanr/protocol/errors';
+import { assertSharingSecurityContract } from '@openplanr/protocol/sharing-security-contracts';
+import { boundedResponseBytes } from './chunked-workspace-client.mjs';
 import {
   ARTIFACT_COMPRESSED_LIMIT,
   ARTIFACT_FRAGMENT_LIMIT,
@@ -9,6 +11,8 @@ import {
   encodeArtifactFragmentDetails,
 } from './codec.mjs';
 import { decryptArtifactPayload, encryptArtifactPayload } from './crypto.mjs';
+import { encodeResourceBytes } from './resource-pack.mjs';
+import { decryptSharingPayload, encryptSharingPayload } from './sharing-crypto-v2.mjs';
 
 export const ARTIFACT_SHARE_BASE_URL = 'https://share.openplanr.dev';
 export const ARTIFACT_SHARE_TTLS = Object.freeze(['1d', '7d', '30d']);
@@ -87,11 +91,13 @@ function validateCiphertext(value, declaredSize) {
 }
 
 function validateCreateRequest(value) {
+  if (value?.schemaVersion === '2.0.0')
+    return Object.freeze({ ...assertSharingSecurityContract(value, 'artifact-paste-v2') });
   if (
     !value ||
     typeof value !== 'object' ||
     Array.isArray(value) ||
-    value.schemaVersion !== '1.0.0' ||
+    !['1.0.0', '2.0.0'].includes(value.schemaVersion) ||
     value.operation !== 'create' ||
     !ARTIFACT_SHARE_TTLS.includes(value.ttl)
   ) {
@@ -116,7 +122,7 @@ function validateCreated(value) {
     !value ||
     typeof value !== 'object' ||
     Array.isArray(value) ||
-    value.schemaVersion !== '1.0.0' ||
+    !['1.0.0', '2.0.0'].includes(value.schemaVersion) ||
     value.operation !== 'created' ||
     !ID_RE.test(value.id ?? '') ||
     !TOKEN_RE.test(value.deletionToken ?? '') ||
@@ -129,7 +135,8 @@ function validateCreated(value) {
     );
   }
   return Object.freeze({
-    schemaVersion: '1.0.0',
+    schemaVersion: value.schemaVersion,
+    ...(value.schemaVersion === '2.0.0' ? { creationId: value.creationId } : {}),
     operation: 'created',
     id: value.id,
     expiresAt: value.expiresAt,
@@ -142,7 +149,7 @@ function validateRead(value) {
     !value ||
     typeof value !== 'object' ||
     Array.isArray(value) ||
-    value.schemaVersion !== '1.0.0' ||
+    !['1.0.0', '2.0.0'].includes(value.schemaVersion) ||
     value.operation !== 'read' ||
     typeof value.expiresAt !== 'string' ||
     !Number.isFinite(Date.parse(value.expiresAt)) ||
@@ -155,10 +162,15 @@ function validateRead(value) {
       'Artifact paste service returned an invalid read response.',
     );
   }
+  if (value.schemaVersion === '2.0.0' && !/^[A-Za-z0-9_-]{43}$/u.test(value.creationId ?? ''))
+    throw shareError(ARTIFACT_ERROR_CODES.PASTE_INVALID, 'Artifact paste context is invalid.');
   validateIv(value.iv);
   validateCiphertext(value.ciphertext, value.size);
   return Object.freeze({
-    schemaVersion: '1.0.0',
+    schemaVersion: value.schemaVersion,
+    ...(value.schemaVersion === '2.0.0'
+      ? { id: safeId(value.id), creationId: value.creationId }
+      : {}),
     operation: 'read',
     iv: value.iv,
     ciphertext: value.ciphertext,
@@ -176,7 +188,11 @@ function safeId(value) {
 
 async function responseJson(response) {
   try {
-    return await response.json();
+    return JSON.parse(
+      new TextDecoder('utf-8', { fatal: true }).decode(
+        await boundedResponseBytes(response, 8 * 1024 * 1024),
+      ),
+    );
   } catch {
     throw shareError(
       ARTIFACT_ERROR_CODES.PASTE_INVALID,
@@ -207,6 +223,7 @@ export function createPasteClient({
         credentials: 'omit',
         redirect: 'error',
         referrerPolicy: 'no-referrer',
+        signal: AbortSignal.timeout(20000),
         ...options,
       });
     } catch (error) {
@@ -220,30 +237,59 @@ export function createPasteClient({
   };
   return Object.freeze({
     baseUrl: base.origin,
-    async create(value) {
+    async create(value, { custodyToken } = {}) {
       const body = validateCreateRequest(value);
       const size = validateCiphertext(body.ciphertext);
+      if (body.schemaVersion === '2.0.0' && !/^[A-Za-z0-9_-]{43}$/u.test(custodyToken ?? ''))
+        throw shareError(
+          ARTIFACT_ERROR_CODES.PASTE_INVALID,
+          'Paste v2 creation requires private custody.',
+        );
       const response = await request(
-        '/api/v1/pastes',
+        body.schemaVersion === '2.0.0' ? '/api/v2/pastes' : '/api/v1/pastes',
         {
           method: 'POST',
-          headers: Object.freeze({ 'content-type': 'application/json' }),
+          headers: Object.freeze({
+            'content-type': 'application/json',
+            ...(body.schemaVersion === '2.0.0'
+              ? { 'x-openplanr-paste-custody': custodyToken }
+              : {}),
+          }),
           body: JSON.stringify(body),
         },
         { operation: 'create', ciphertextBytes: size, ttl: body.ttl },
       );
+      if (body.schemaVersion === '2.0.0' && response?.status === 410)
+        throw shareError(ARTIFACT_ERROR_CODES.PASTE_EXPIRED, 'Saved paste custody has expired.');
+      if (body.schemaVersion === '2.0.0' && [403, 409].includes(response?.status))
+        throw shareError(
+          ARTIFACT_ERROR_CODES.PASTE_INVALID,
+          'Saved paste operation or custody was rejected.',
+        );
       if (!response?.ok) {
         throw shareError(
           ARTIFACT_ERROR_CODES.PASTE_UNAVAILABLE,
           'Artifact paste could not be created.',
         );
       }
-      return validateCreated(await responseJson(response));
+      const created = validateCreated(await responseJson(response));
+      if (
+        body.schemaVersion === '2.0.0' &&
+        (created.schemaVersion !== '2.0.0' ||
+          created.id !== body.id ||
+          created.creationId !== body.creationId ||
+          created.deletionToken !== custodyToken)
+      )
+        throw shareError(
+          ARTIFACT_ERROR_CODES.PASTE_INVALID,
+          'Artifact paste creation receipt differs.',
+        );
+      return created;
     },
-    async get(id) {
+    async get(id, { protocolVersion = '1.0.0' } = {}) {
       const pasteId = safeId(id);
       const response = await request(
-        `/api/v1/pastes/${encodeURIComponent(pasteId)}`,
+        `/api/${protocolVersion === '2.0.0' ? 'v2' : 'v1'}/pastes/${encodeURIComponent(pasteId)}`,
         {
           method: 'GET',
           headers: Object.freeze({ accept: 'application/json' }),
@@ -257,6 +303,14 @@ export function createPasteClient({
         throw shareError(ARTIFACT_ERROR_CODES.PASTE_UNAVAILABLE, 'Artifact paste is unavailable.');
       }
       const value = validateRead(await responseJson(response));
+      if (
+        value.schemaVersion !== protocolVersion ||
+        (protocolVersion === '2.0.0' && value.id !== pasteId)
+      )
+        throw shareError(
+          ARTIFACT_ERROR_CODES.PASTE_INVALID,
+          'Artifact paste read identity differs.',
+        );
       let current;
       try {
         const result = now();
@@ -272,7 +326,9 @@ export function createPasteClient({
       }
       return value;
     },
-    async delete(id, deletionToken) {
+    async delete(id, deletionToken, { protocolVersion = '1.0.0' } = {}) {
+      if (!['1.0.0', '2.0.0'].includes(protocolVersion))
+        throw shareError(ARTIFACT_ERROR_CODES.PASTE_INVALID, 'Unsupported paste protocol.');
       const pasteId = safeId(id);
       if (typeof deletionToken !== 'string' || !TOKEN_RE.test(deletionToken)) {
         throw shareError(
@@ -281,7 +337,7 @@ export function createPasteClient({
         );
       }
       const response = await request(
-        `/api/v1/pastes/${encodeURIComponent(pasteId)}`,
+        `/api/${protocolVersion === '2.0.0' ? 'v2' : 'v1'}/pastes/${encodeURIComponent(pasteId)}`,
         {
           method: 'DELETE',
           headers: Object.freeze({ authorization: `Bearer ${deletionToken}` }),
@@ -342,6 +398,150 @@ export function createReviewLinkPreview(value, options = {}) {
   });
 }
 
+/** A private exact operation, written before the first network mutation. */
+export function assertPreparedArtifactPaste(value) {
+  const names = [
+    'schemaVersion',
+    'kind',
+    'origin',
+    'body',
+    'key',
+    'custodyToken',
+    'fragmentLength',
+    'compressedBytes',
+  ];
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    Array.isArray(value) ||
+    Object.keys(value).length !== names.length ||
+    Object.keys(value).some((name) => !names.includes(name)) ||
+    value.schemaVersion !== '1.0.0' ||
+    value.kind !== 'openplanr-artifact-paste-preparation' ||
+    normalizeBaseUrl(value.origin).origin !== value.origin ||
+    !/^[A-Za-z0-9_-]{43}$/u.test(value.key ?? '') ||
+    !/^[A-Za-z0-9_-]{43}$/u.test(value.custodyToken ?? '') ||
+    value.key === value.custodyToken ||
+    !Number.isSafeInteger(value.fragmentLength) ||
+    value.fragmentLength < 1 ||
+    value.fragmentLength > 8 * 1024 * 1024 ||
+    !Number.isSafeInteger(value.compressedBytes) ||
+    value.compressedBytes < 1 ||
+    value.compressedBytes > ARTIFACT_COMPRESSED_LIMIT
+  )
+    throw shareError(ARTIFACT_ERROR_CODES.PASTE_INVALID, 'Prepared paste custody is invalid.');
+  assertSharingSecurityContract(value.body, 'artifact-paste-v2');
+  if (new Set([value.key, value.custodyToken, value.body.id, value.body.creationId]).size !== 4)
+    throw shareError(
+      ARTIFACT_ERROR_CODES.PASTE_INVALID,
+      'Paste private secrets must differ from public identity.',
+    );
+  return value;
+}
+async function preparePasteBytes(prepared, { baseUrl, ttl }) {
+  const id = encodeResourceBytes(globalThis.crypto.getRandomValues(new Uint8Array(32))),
+    creationId = encodeResourceBytes(globalThis.crypto.getRandomValues(new Uint8Array(32)));
+  const encrypted = await encryptSharingPayload(prepared.compressed, {
+    context: { version: '2.0.0', purpose: 'artifact-paste', objectId: id, recordId: creationId },
+    limit: ARTIFACT_COMPRESSED_LIMIT,
+  });
+  let custodyToken;
+  do {
+    custodyToken = encodeResourceBytes(globalThis.crypto.getRandomValues(new Uint8Array(32)));
+  } while (custodyToken === encrypted.keyFragment);
+  return assertPreparedArtifactPaste({
+    schemaVersion: '1.0.0',
+    kind: 'openplanr-artifact-paste-preparation',
+    origin: normalizeBaseUrl(baseUrl).origin,
+    body: {
+      schemaVersion: '2.0.0',
+      operation: 'create',
+      id,
+      creationId,
+      iv: encrypted.iv,
+      ciphertext: encrypted.ciphertext,
+      ttl,
+    },
+    key: encrypted.keyFragment,
+    custodyToken,
+    fragmentLength: prepared.fragmentLength,
+    compressedBytes: prepared.compressedBytes,
+  });
+}
+export async function prepareArtifactPaste(
+  value,
+  { baseUrl = ARTIFACT_SHARE_BASE_URL, ttl = '7d', ...codecOptions } = {},
+) {
+  if (!ARTIFACT_SHARE_TTLS.includes(ttl))
+    throw shareError(
+      ARTIFACT_ERROR_CODES.PASTE_INVALID,
+      'Artifact paste TTL must be 1d, 7d, or 30d.',
+    );
+  return preparePasteBytes(prepareReviewLink(value, codecOptions), { baseUrl, ttl });
+}
+export async function commitArtifactPaste(prepared, { pasteClient, fetchImpl } = {}) {
+  assertPreparedArtifactPaste(prepared);
+  const plaintext = await decryptSharingPayload(
+    { ...prepared.body, version: '2.0.0' },
+    {
+      key: prepared.key,
+      context: {
+        version: '2.0.0',
+        purpose: 'artifact-paste',
+        objectId: prepared.body.id,
+        recordId: prepared.body.creationId,
+      },
+      limit: ARTIFACT_COMPRESSED_LIMIT,
+    },
+  );
+  if (plaintext.byteLength !== prepared.compressedBytes)
+    throw shareError(
+      ARTIFACT_ERROR_CODES.PASTE_INVALID,
+      'Prepared paste bytes differ from saved custody.',
+    );
+  const client = pasteClient ?? createPasteClient({ baseUrl: prepared.origin, fetchImpl });
+  if (client.baseUrl && normalizeBaseUrl(client.baseUrl).origin !== prepared.origin)
+    throw shareError(
+      ARTIFACT_ERROR_CODES.PASTE_INVALID,
+      'Paste client origin differs from saved custody.',
+    );
+  const created = await client.create(prepared.body, { custodyToken: prepared.custodyToken });
+  if (
+    created.schemaVersion !== '2.0.0' ||
+    created.id !== prepared.body.id ||
+    created.creationId !== prepared.body.creationId ||
+    created.deletionToken !== prepared.custodyToken
+  )
+    throw shareError(
+      ARTIFACT_ERROR_CODES.PASTE_INVALID,
+      'Paste receipt differs from saved custody.',
+    );
+  const url = new globalThis.URL(`/p/${encodeURIComponent(created.id)}`, prepared.origin);
+  url.hash = `k=${prepared.key}&v=2`;
+  if (url.toString().includes(prepared.custodyToken))
+    throw shareError(
+      ARTIFACT_ERROR_CODES.PASTE_INVALID,
+      'Artifact deletion token isolation failed.',
+    );
+  const size = validateCiphertext(prepared.body.ciphertext);
+  return Object.freeze({
+    ok: true,
+    action: 'artifact_review_link_created',
+    transport: 'short',
+    protocolVersion: '2.0.0',
+    uploaded: true,
+    id: created.id,
+    iv: prepared.body.iv,
+    url: url.toString(),
+    fragmentLength: prepared.fragmentLength,
+    compressedBytes: prepared.compressedBytes,
+    ciphertextBytes: size,
+    size,
+    expiresAt: created.expiresAt,
+    deletionToken: prepared.custodyToken,
+  });
+}
+
 export async function createReviewLink(
   value,
   {
@@ -357,6 +557,9 @@ export async function createReviewLink(
     fetchImpl,
     encodeImpl,
     encryptImpl = encryptArtifactPayload,
+    protocolVersion = '2.0.0',
+    onPreparedPaste,
+    preparedPaste,
     crypto,
     ...codecOptions
   } = {},
@@ -417,11 +620,53 @@ export async function createReviewLink(
       'Review the ciphertext size and expiry, then confirm or pass --yes.',
     );
   }
+  if (!['1.0.0', '2.0.0'].includes(protocolVersion))
+    throw new TypeError('Unsupported paste protocol.');
+  if (protocolVersion === '2.0.0') {
+    const custody =
+      preparedPaste ?? (await preparePasteBytes(prepared, { baseUrl: base.origin, ttl }));
+    assertPreparedArtifactPaste(custody);
+    if (custody.origin !== base.origin || custody.body.ttl !== ttl)
+      throw shareError(
+        ARTIFACT_ERROR_CODES.PASTE_INVALID,
+        'Prepared paste service or expiry differs.',
+      );
+    if (preparedPaste) {
+      const actual = await decryptSharingPayload(
+        { ...custody.body, version: '2.0.0' },
+        {
+          key: custody.key,
+          context: {
+            version: '2.0.0',
+            purpose: 'artifact-paste',
+            objectId: custody.body.id,
+            recordId: custody.body.creationId,
+          },
+          limit: ARTIFACT_COMPRESSED_LIMIT,
+        },
+      );
+      if (
+        actual.length !== prepared.compressed.length ||
+        actual.some((byte, index) => byte !== prepared.compressed[index])
+      )
+        throw shareError(
+          ARTIFACT_ERROR_CODES.PASTE_INVALID,
+          'Prepared paste content differs from this artifact.',
+        );
+    }
+    if (typeof onPreparedPaste === 'function') await onPreparedPaste(custody);
+    return commitArtifactPaste(custody, { pasteClient, fetchImpl });
+  }
   const encrypted = await encryptImpl(prepared.compressed, {
     crypto,
     maxEncryptedBytes: ARTIFACT_COMPRESSED_LIMIT,
   });
   const client = pasteClient ?? createPasteClient({ baseUrl: base.origin, fetchImpl });
+  if (client.baseUrl && new URL(client.baseUrl).origin !== base.origin)
+    throw shareError(
+      ARTIFACT_ERROR_CODES.PASTE_INVALID,
+      'Paste client origin differs from the requested service.',
+    );
   const created = await client.create({
     schemaVersion: '1.0.0',
     operation: 'create',
@@ -431,22 +676,21 @@ export async function createReviewLink(
   });
   const url = new globalThis.URL(`/p/${encodeURIComponent(created.id)}`, base);
   url.hash = `k=${encrypted.keyFragment}`;
-  if (url.toString().includes(created.deletionToken)) {
+  if (url.toString().includes(created.deletionToken))
     throw shareError(
       ARTIFACT_ERROR_CODES.PASTE_INVALID,
       'Artifact deletion token isolation failed.',
     );
-  }
   return Object.freeze({
     ok: true,
     action: 'artifact_review_link_created',
-    transport: selectedTransport,
+    transport: 'short',
     uploaded: true,
     id: created.id,
     iv: encrypted.iv,
     url: url.toString(),
     fragmentLength: prepared.fragmentLength,
-    compressedBytes: encrypted.compressedBytes,
+    compressedBytes: prepared.compressedBytes,
     ciphertextBytes: encrypted.encryptedBytes,
     size: encrypted.encryptedBytes,
     expiresAt: created.expiresAt,
@@ -473,20 +717,31 @@ function parseShortLink(source) {
     );
   }
   const match = /^\/p\/([A-Za-z0-9_-]{16,128})\/?$/.exec(url.pathname);
-  const key = /^#k=([A-Za-z0-9_-]{43})$/.exec(url.hash)?.[1];
+  const key = /^#k=([A-Za-z0-9_-]{43})(?:&v=2)?$/.exec(url.hash)?.[1];
   if (!match || !key) {
     throw shareError(
       ARTIFACT_ERROR_CODES.PASTE_INVALID,
       'Artifact encrypted review link is malformed.',
     );
   }
-  return Object.freeze({ origin: url.origin, id: match[1], keyFragment: key });
+  return Object.freeze({
+    origin: url.origin,
+    id: match[1],
+    keyFragment: key,
+    protocolVersion: url.hash.endsWith('&v=2') ? '2.0.0' : '1.0.0',
+  });
 }
 
 /** Async transport adapter designed to be injected directly into the review import. */
 export async function decodeReviewLink(
   source,
-  { pasteClient, fetchImpl, crypto, ...codecOptions } = {},
+  {
+    pasteClient,
+    fetchImpl,
+    crypto,
+    allowedOrigins = [ARTIFACT_SHARE_BASE_URL],
+    ...codecOptions
+  } = {},
 ) {
   if (
     typeof source === 'string' &&
@@ -495,8 +750,34 @@ export async function decodeReviewLink(
     return decodeArtifactFragment(source, codecOptions);
   }
   const link = parseShortLink(source);
+  if (!allowedOrigins.includes(link.origin) && !loopback(new URL(link.origin).hostname))
+    throw shareError(ARTIFACT_ERROR_CODES.PASTE_INVALID, 'Artifact sharing origin is not allowed.');
   const client = pasteClient ?? createPasteClient({ baseUrl: link.origin, fetchImpl });
-  const encrypted = await client.get(link.id);
+  if (client.baseUrl && new URL(client.baseUrl).origin !== link.origin)
+    throw shareError(ARTIFACT_ERROR_CODES.PASTE_INVALID, 'Paste client origin differs.');
+  const encrypted = await client.get(link.id, { protocolVersion: link.protocolVersion });
+  if (link.protocolVersion === '2.0.0') {
+    if (
+      encrypted.schemaVersion !== '2.0.0' ||
+      encrypted.id !== link.id ||
+      !/^[A-Za-z0-9_-]{43}$/u.test(encrypted.creationId ?? '')
+    )
+      throw shareError(ARTIFACT_ERROR_CODES.PASTE_INVALID, 'Paste context differs.');
+    const compressed = await decryptSharingPayload(
+      { version: '2.0.0', iv: encrypted.iv, ciphertext: encrypted.ciphertext },
+      {
+        key: link.keyFragment,
+        context: {
+          version: '2.0.0',
+          purpose: 'artifact-paste',
+          objectId: link.id,
+          recordId: encrypted.creationId,
+        },
+        limit: ARTIFACT_COMPRESSED_LIMIT,
+      },
+    );
+    return decodeCompressedArtifactPayload(compressed, codecOptions).value;
+  }
   const compressed = await decryptArtifactPayload(
     {
       version: 'v1',

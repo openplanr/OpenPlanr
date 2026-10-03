@@ -146,6 +146,7 @@ test('startArtifactReview returns a private tokenized session and serves only me
   assert.match(shell.headers['content-type'], /^text\/html/);
   assert.match(shell.headers['cache-control'], /no-store/);
   assert.equal(shell.headers['referrer-policy'], 'no-referrer');
+  assert.equal(shell.headers['x-robots-tag'], 'noindex, nofollow, noarchive');
   assert.equal(shell.headers['x-content-type-options'], 'nosniff');
   assert.equal(shell.headers['x-dns-prefetch-control'], 'off');
   assert.equal(shell.headers['x-frame-options'], 'DENY');
@@ -460,7 +461,7 @@ test('legacy locks fail closed until explicitly cleared while a foreign occupied
   const cwd = isolatedProject(env);
   const statePath = artifactReviewStatePath(0, env);
   const stateDir = join(env.PLANR_HOME, 'artifact-daemon');
-  mkdirSync(stateDir, { recursive: true });
+  mkdirSync(stateDir, { recursive: true, mode: 0o700 });
   writeFileSync(
     statePath,
     JSON.stringify({
@@ -472,6 +473,7 @@ test('legacy locks fail closed until explicitly cleared while a foreign occupied
       controlToken: 'A'.repeat(43),
       instanceId: 'A'.repeat(22),
     }),
+    { mode: 0o600 },
   );
   const lockPath = join(stateDir, 'start-default.lock');
   writeFileSync(lockPath, JSON.stringify({ pid: 999_999_999, owner: 'dead', createdAt: 0 }));
@@ -502,4 +504,28 @@ test('legacy locks fail closed until explicitly cleared while a foreign occupied
     (error) => error.code === ARTIFACT_ERROR_CODES.PORT_IN_USE,
   );
   assert.equal(foreign.listening, true, 'foreign listener remains alive');
+});
+
+test('private review HTTP surfaces and failures consistently prevent indexing and caching', async () => {
+  const env = isolatedEnv();
+  const review = await startArtifactReview({
+    envelope: envelope(),
+    env,
+    cwd: isolatedProject(env),
+    open: false,
+  });
+  const parts = urlParts(review.url);
+  for (const [path, expected] of [
+    [parts.path, 200],
+    [`${parts.base}runtime.js`, 200],
+    [`${parts.base}artifacts/checkout`, 200],
+    [`${parts.base}missing`, 404],
+    [parts.path.replace(parts.token, 'A'.repeat(43)), 404],
+  ]) {
+    const response = await request(parts.port, path);
+    assert.equal(response.status, expected, path);
+    assert.equal(response.headers['x-robots-tag'], 'noindex, nofollow, noarchive');
+    assert.equal(response.headers['referrer-policy'], 'no-referrer');
+    assert.match(response.headers['cache-control'], /no-store/);
+  }
 });

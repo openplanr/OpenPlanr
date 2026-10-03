@@ -265,10 +265,12 @@ async function collectArtifacts(
   }
 
   const evidence: Array<{ kind: string; label: string; detail?: string }> = [];
-  for (const [, s] of storyMap) {
+  for (const [id, s] of storyMap) {
+    if (scopeEpicId && !usedStoryIds.has(id)) continue;
     evidence.push({ kind: 'story', label: `${s.id}: ${s.title}`, detail: `Status: ${s.status}` });
   }
-  for (const [, t] of taskMap) {
+  for (const [id, t] of taskMap) {
+    if (scopeEpicId && !usedTaskIds.has(id)) continue;
     evidence.push({ kind: 'task', label: `${t.id}: ${t.title}`, detail: `Status: ${t.status}` });
   }
 

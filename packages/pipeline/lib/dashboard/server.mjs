@@ -26,8 +26,7 @@
  */
 
 import { createServer } from 'node:http';
-import { join } from 'node:path';
-
+import { dirname, join } from 'node:path';
 import {
   DASHBOARD_BUILD_ID,
   DASHBOARD_SERVER_KIND,
@@ -36,6 +35,7 @@ import {
   resolveDashboardStaticRoot,
   safeProjectMetadata,
 } from './server/identity.mjs';
+import { createDashboardLifecycle } from './server/lifecycle.mjs';
 import {
   buildOperateExperienceLivePatchV2,
   encodeOperateExperienceCheckpoint,
@@ -330,7 +330,36 @@ export function createDashboardServer({
     return next;
   };
 
+  let closePromise = null;
+  const close = () => {
+    if (closePromise) return closePromise;
+    closePromise = new Promise((done, reject) => {
+      if (watcher) {
+        watcher.stop();
+        watcher = null;
+      }
+      for (const client of sseClients) client.end();
+      sseClients.clear();
+      for (const client of planning.clients) client.res.end();
+      planning.clients.clear();
+      for (const client of operate.clients) client.res.end();
+      operate.clients.clear();
+      server.close((error) => {
+        try {
+          lifecycle.release();
+        } catch (custodyError) {
+          reject(custodyError);
+          return;
+        }
+        if (error && error.code !== 'ERR_SERVER_NOT_RUNNING') reject(error);
+        else done();
+      });
+    });
+    return closePromise;
+  };
+  const lifecycle = createDashboardLifecycle({ projectRoot: dirname(planrDir), watch, close });
   const dashboard = Object.freeze({
+    lifecycle,
     planrDir,
     project,
     planningActorId,
@@ -405,7 +434,8 @@ export function createDashboardServer({
           if (
             existing?.ok === true &&
             existing.kind === DASHBOARD_SERVER_KIND &&
-            existing.version === readPackageVersion()
+            existing.version === readPackageVersion() &&
+            existing.binding === lifecycle.health().binding
           ) {
             reused = true;
             ownerPid =
@@ -422,6 +452,12 @@ export function createDashboardServer({
         throw error;
       }
       const stateDir = dashboardDir(env);
+      try {
+        lifecycle.register(actual, env);
+      } catch (error) {
+        await close();
+        throw error;
+      }
       writePidFile(stateDir, actual);
       writePidFile(stateDir, 'port', actual); // last-bound port for discovery
       // Start live sync unless suppressed by --no-watch. The watcher is
@@ -440,20 +476,7 @@ export function createDashboardServer({
       }
       return actual;
     },
-    close: () =>
-      new Promise((r) => {
-        if (watcher) {
-          watcher.stop();
-          watcher = null;
-        }
-        for (const client of sseClients) client.end();
-        sseClients.clear();
-        for (const client of planning.clients) client.res.end();
-        planning.clients.clear();
-        for (const client of operate.clients) client.res.end();
-        operate.clients.clear();
-        server.close(r);
-      }),
+    close,
   };
 }
 

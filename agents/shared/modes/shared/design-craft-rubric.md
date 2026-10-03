@@ -1,13 +1,10 @@
 # Shared: design-craft rubric (single source of truth)
 
-> Used by the `{{WORKFLOW_PREFIX}}design` generator (`design-step2-generate.md`) **during
-> generation** AND **during the self-review pass**. These are the execution-craft rules that
-> separate a professional UI from an LLM's first draft — the things a senior designer applies
-> automatically. Learned from the UI-UX-Pro-Max skill (MIT) + universal craft, encoded
-> natively so planr stays standalone. (SPEC-015 / v0.15.0.)
+> Shared craft guidance for design authoring and interface review. Preserve the
+> product's existing tokens and components; measure the rendered result.
 
-When designing **for an existing app**, the app's own tokens/components win (see
-`design-step2-generate.md` § C.0). This rubric governs **how** you assemble them.
+For an existing app, the app's own tokens and components govern the design.
+This rubric guides their composition across screens and responsive frames.
 
 ## Spacing & rhythm
 - Use **one spacing scale** — `4 / 8 / 12 / 16 / 24 / 32 / 48 / 64`. Every margin / padding /
@@ -27,7 +24,7 @@ When designing **for an existing app**, the app's own tokens/components win (see
   14–16px, line-height 1.4–1.6. One text alignment per block (don't mix left/center).
 
 ## Color & contrast
-- Pull from the **app's tokens** (§ C.0). Text contrast **≥ 4.5:1** (AA); large text ≥ 3:1.
+- Pull from the **app's tokens**. Text contrast **≥ 4.5:1** (AA); large text ≥ 3:1.
 - Semantic colors consistent (error / warn / success = one hue each, everywhere). Reuse
   tokens — no one-off hex. Avoid AI-cliché gradients (purple→pink) unless the app uses them.
 

@@ -6,6 +6,11 @@ import { dirname, join, resolve } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
+import {
+  createArtifactBridgeNonce,
+  prepareArtifactDocument,
+  renderArtifactParentRuntime,
+} from '../../lib/artifact/bridge.mjs';
 import { createArtifactEnvelope } from '../../lib/artifact/envelope.mjs';
 import { startArtifactReview } from '../../lib/artifact/review-server.mjs';
 import { renderArtifactShellDocument } from '../../lib/artifact/ui/shell.mjs';
@@ -192,6 +197,24 @@ test('document presentation uses authenticated natural sizing, outer scrolling, 
 }, async (t) => {
   const { launchBrowser } = await import('../../../../tests/support/browser-launcher.mjs');
   const home = mkdtempSync(join(tmpdir(), 'planr-document-shell-'));
+  let review;
+  let browser;
+  let context;
+  t.after(async () => {
+    try {
+      await context?.close();
+    } finally {
+      try {
+        await browser?.close();
+      } finally {
+        try {
+          await review?.close();
+        } finally {
+          rmSync(home, { recursive: true, force: true });
+        }
+      }
+    }
+  });
   const artifact = {
     id: 'long-document',
     title: 'Long responsive artifact',
@@ -208,20 +231,14 @@ test('document presentation uses authenticated natural sizing, outer scrolling, 
   const project = join(home, 'project');
   mkdirSync(join(project, '.git'), { recursive: true });
   writeFileSync(join(project, '.git', 'HEAD'), 'ref: refs/heads/main\n');
-  const review = await startArtifactReview({
+  review = await startArtifactReview({
     envelope,
     env: { ...process.env, PLANR_HOME: home },
     cwd: project,
     noOpen: true,
   });
-  const browser = await launchBrowser({ engine: 'chromium' });
-  const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
-  t.after(async () => {
-    await review.close().catch(() => {});
-    await context.close();
-    await browser.close();
-    rmSync(home, { recursive: true, force: true });
-  });
+  browser = await launchBrowser({ engine: 'chromium' });
+  context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
   const page = await context.newPage();
   await page.goto(review.url);
   await page.waitForFunction(
@@ -288,7 +305,9 @@ test('document presentation uses authenticated natural sizing, outer scrolling, 
   assert.ok(scrollOwnership.outer > 0, 'the outer document owns wheel scrolling');
   assert.equal(innerScroll, 0, 'the artifact iframe does not consume wheel scrolling');
 
-  await frame.locator('#grow').click();
+  await frame.locator('#grow').scrollIntoViewIfNeeded();
+  await clickAuthoredControl(page, 'long-document', '#grow');
+  await frame.locator('#dynamic').waitFor();
   await page.waitForFunction(
     (height) => document.documentElement.scrollHeight > height + 400,
     initial.outerHeight,
@@ -372,10 +391,33 @@ async function expectHiddenCanvasChrome(page) {
     assert.equal(await page.locator(selector).count(), 0, `${selector} is absent in document mode`);
 }
 
-async function serve(document, runtime, artifacts = []) {
-  const artifactByPath = new Map(
-    artifacts.map((artifact) => [`/artifact/${encodeURIComponent(artifact.id)}`, artifact.html]),
-  );
+async function serve(document, runtime, artifacts, nonce) {
+  const artifactByPath = new Map();
+  const parentRuntime = renderArtifactParentRuntime({
+    artifactBaseUrl: '/artifact/',
+    stageRuntimeUrl: '/artifact-review-stage.js',
+    nonce,
+  });
+  const instrumentation = `(() => {
+    const options = globalThis.__OPENPLANR_ARTIFACT_STAGE_OPTIONS__;
+    const bridge = options.bridgeClient;
+    globalThis.__OPENPLANR_ARTIFACT_STAGE_OPTIONS__ = {
+      ...options,
+      // This journey explicitly exercises concurrent loading; production defaults stay bounded.
+      frameBudget: null,
+      onState(state) {
+        globalThis.__planrStageState = state;
+        options.onState?.(state);
+      },
+      bridgeClient: {
+        attach(context) {
+          globalThis.__planrBridgeAttachments.push(context.artifact.id);
+          return bridge.attach(context);
+        },
+      },
+    };
+  })();`;
+
   const server = createServer((request, response) => {
     response.setHeader('Cache-Control', 'no-store');
     if (request.url === '/artifact-review-stage.js') {
@@ -383,8 +425,13 @@ async function serve(document, runtime, artifacts = []) {
       response.end(runtime);
       return;
     }
+    if (request.url === '/artifact-parent.js') {
+      response.setHeader('Content-Type', 'text/javascript; charset=utf-8');
+      response.end(parentRuntime + instrumentation);
+      return;
+    }
     if (artifactByPath.has(request.url)) {
-      response.setHeader('Content-Type', 'text/html; charset=utf-8');
+      response.setHeader('Content-Type', 'application/octet-stream');
       response.end(artifactByPath.get(request.url));
       return;
     }
@@ -396,13 +443,87 @@ async function serve(document, runtime, artifacts = []) {
     server.listen(0, '127.0.0.1', resolveListen);
   });
   const address = server.address();
+  try {
+    for (const artifact of artifacts) {
+      const prepared = prepareArtifactDocument({
+        html: artifact.html,
+        artifactId: artifact.id,
+        nonce,
+        parentOrigin: `http://127.0.0.1:${address.port}`,
+      });
+      artifactByPath.set(`/artifact/${encodeURIComponent(artifact.id)}`, prepared.html);
+    }
+  } catch (error) {
+    server.closeAllConnections();
+    await new Promise((resolveClose) => server.close(resolveClose));
+    throw error;
+  }
   return {
     url: `http://127.0.0.1:${address.port}/`,
     close: () =>
-      new Promise((resolveClose, reject) =>
-        server.close((error) => (error ? reject(error) : resolveClose())),
-      ),
+      new Promise((resolveClose, reject) => {
+        server.close((error) => (error ? reject(error) : resolveClose()));
+        server.closeAllConnections();
+      }),
   };
+}
+
+// Remeasure after scroll and layout reach the compositor, then use real pointer input at
+// the transformed iframe coordinates rather than a child locator's unscaled point.
+async function clickAuthoredControl(page, artifactId, selector) {
+  await page.waitForFunction(async (id) => {
+    const frame = document.querySelector(`[data-planr-artifact-frame="${id}"]`);
+    if (!frame || frame.dataset.planrBridgeTrusted !== 'true') return false;
+    const before = frame.getBoundingClientRect();
+    const beforeScroll = scrollY;
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    const after = frame.getBoundingClientRect();
+    return (
+      beforeScroll === scrollY &&
+      ['x', 'y', 'width', 'height'].every((key) => before[key] === after[key])
+    );
+  }, artifactId);
+  const frame = page.locator(`[data-planr-artifact-frame="${artifactId}"]`);
+  assert.equal(await frame.getAttribute('data-planr-bridge-trusted'), 'true');
+  const target = await page
+    .frameLocator(`[data-planr-artifact-frame="${artifactId}"]`)
+    .locator(selector)
+    .evaluate(async (control) => {
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      const rect = control.getBoundingClientRect();
+      const x = rect.x + rect.width / 2;
+      const y = rect.y + rect.height / 2;
+      return { x, y, hit: control.contains(document.elementFromPoint(x, y)) };
+    });
+  assert.equal(target.hit, true, 'the authored control is the real child hit target');
+  const geometry = await frame.evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    return {
+      x: rect.x,
+      y: rect.y,
+      scaleX: rect.width / element.clientWidth,
+      scaleY: rect.height / element.clientHeight,
+    };
+  });
+  const point = {
+    x: geometry.x + target.x * geometry.scaleX,
+    y: geometry.y + target.y * geometry.scaleY,
+  };
+  const hit = await page.evaluate(
+    ({ point, artifactId }) => {
+      const node = document.elementFromPoint(point.x, point.y);
+      return {
+        matches: node?.dataset.planrArtifactFrame === artifactId,
+        point,
+        target: node?.outerHTML.slice(0, 200),
+        viewport: { w: innerWidth, h: innerHeight },
+        scrollY,
+      };
+    },
+    { point, artifactId },
+  );
+  assert.equal(hit.matches, true, JSON.stringify(hit));
+  await page.mouse.click(point.x, point.y);
 }
 
 async function compareSnapshot(name, actual, { PNG, pixelmatch }) {
@@ -444,63 +565,51 @@ test('real browser stage preserves dynamic interaction, comment routing, accessi
   const PNG = pngModule.PNG ?? pngModule.default?.PNG;
   const pixelmatch = pixelmatchModule.default ?? pixelmatchModule;
   const envelope = fixtureEnvelope();
-  const document = renderArtifactShellDocument({
-    envelope,
-    viewer: { mode: 'variants', activeArtifactId: 'checkout' },
-    shell: {
-      title: 'Artifact behavior review',
-      theme: 'light',
-      privacy: 'local',
-      status: 'ready',
-      feedbackCount: 3,
-      railOpen: true,
+  const document = renderArtifactShellDocument(
+    {
+      envelope,
+      viewer: { mode: 'variants', activeArtifactId: 'checkout' },
+      shell: {
+        title: 'Artifact behavior review',
+        theme: 'light',
+        privacy: 'local',
+        status: 'ready',
+        feedbackCount: 3,
+        railOpen: true,
+      },
     },
-  });
+    { stageRuntimeUrl: '/artifact-parent.js' },
+  );
   const runtime = renderArtifactStageRuntimeAsset();
-  const host = await serve(document, runtime, envelope.artifacts);
-  const browser = await launchBrowser({ engine: 'chromium' });
+  const host = await serve(document, runtime, envelope.artifacts, createArtifactBridgeNonce());
+  let browser;
+  let context;
   t.after(async () => {
-    await browser.close();
-    await host.close();
+    try {
+      await context?.close();
+    } finally {
+      try {
+        await browser?.close();
+      } finally {
+        await host.close();
+      }
+    }
   });
+  browser = await launchBrowser({ engine: 'chromium' });
 
-  const context = await browser.newContext({
+  context = await browser.newContext({
     colorScheme: 'light',
     deviceScaleFactor: 1,
     reducedMotion: 'no-preference',
     viewport: { width: 1440, height: 900 },
   });
-  await context.addInitScript(
-    (sources) => {
-      globalThis.__OPENPLANR_ARTIFACT_STAGE_OPTIONS__ = {
-        async resolveArtifactSource(artifact) {
-          const response = await fetch(sources[artifact.id], {
-            cache: 'no-store',
-            credentials: 'same-origin',
-          });
-          if (!response.ok) throw new Error(`Artifact source failed: ${response.status}`);
-          return response.blob();
-        },
-        onState(state) {
-          globalThis.__planrStageState = state;
-        },
-        bridgeClient: {
-          attach({ artifact, frame }) {
-            globalThis.__planrBridgeAttachments.push(artifact.id);
-            frame.dataset.planrBridge = 'attached';
-          },
-        },
-      };
-      globalThis.__planrPointEvents = [];
-      globalThis.__planrBridgeAttachments = [];
-      addEventListener('planr:artifact-point', (event) =>
-        globalThis.__planrPointEvents.push(event.detail),
-      );
-    },
-    Object.fromEntries(
-      envelope.artifacts.map(({ id }) => [id, `${host.url}artifact/${encodeURIComponent(id)}`]),
-    ),
-  );
+  await context.addInitScript(() => {
+    globalThis.__planrPointEvents = [];
+    globalThis.__planrBridgeAttachments = [];
+    addEventListener('planr:artifact-point', (event) =>
+      globalThis.__planrPointEvents.push(event.detail),
+    );
+  });
   const page = await context.newPage();
   const cspScriptViolations = [];
   page.on('console', (message) => {
@@ -536,12 +645,12 @@ test('real browser stage preserves dynamic interaction, comment routing, accessi
   );
 
   const checkout = page.frameLocator('[data-planr-artifact-frame="checkout"]');
-  await checkout.locator('#dynamic').click();
+  await clickAuthoredControl(page, 'checkout', '#dynamic');
   assert.equal(await checkout.locator('#count').textContent(), '1');
   assert.deepEqual(
     cspScriptViolations,
     [],
-    'packaged artifact scripts execute without a CSP violation inside the opaque srcdoc frame',
+    'packaged artifact scripts execute without a CSP violation inside the opaque Blob frame',
   );
   assert.equal(
     await page.locator('[data-planr-artifact-frame="checkout"]').getAttribute('sandbox'),
@@ -662,5 +771,4 @@ test('real browser stage preserves dynamic interaction, comment routing, accessi
     await page.locator('[data-planr-action="feedback"]').getAttribute('aria-expanded'),
     'false',
   );
-  await context.close();
 });

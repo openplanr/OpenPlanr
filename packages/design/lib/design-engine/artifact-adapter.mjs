@@ -20,13 +20,17 @@ import {
 import { basename, extname, isAbsolute, join, resolve } from 'node:path';
 
 import { bundleArtifact } from '@openplanr/artifact/bundle.mjs';
-import { createArtifactEnvelope, digestArtifactEnvelope } from '@openplanr/artifact/envelope.mjs';
+import {
+  createArtifactEnvelope,
+  digestArtifactEnvelope,
+  MAX_ARTIFACT_HTML_BYTES,
+} from '@openplanr/artifact/envelope.mjs';
 import { ARTIFACT_ERROR_CODES, PipelineError } from '@openplanr/protocol/errors';
 import { escapeHtml } from '../design/escape.mjs';
 import { designFeedbackToArtifactReview } from './feedback.mjs';
 
 export const DESIGN_BOARD_MAX_FILES = 1_000;
-export const DESIGN_BOARD_MAX_BYTES = 100 * 1024 * 1024;
+export const DESIGN_BOARD_MAX_BYTES = MAX_ARTIFACT_HTML_BYTES;
 
 const ARTIFACT_ID_RE = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 const MAX_ARTIFACTS = 256;

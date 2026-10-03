@@ -36,6 +36,7 @@ import { basename, join, resolve } from 'node:path';
 import { createInterface } from 'node:readline';
 import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
+import { withCredentialWriteLock } from '@openplanr/artifact/internal/credential-writer.mjs';
 import { parseArgs } from '../design/cli-parser.mjs';
 import { createDesignBoardArtifactEnvelope, discoverVariants } from './artifact-adapter.mjs';
 import { resolveAuth } from './auth.mjs';
@@ -49,13 +50,14 @@ import {
   createDaemon,
   DAEMON_VERSION,
   daemonControlHeaders,
+  daemonNeedsRestart,
   findRunningDaemon,
-  killRunningDaemon,
   openDaemonLog,
 } from './daemon.mjs';
 import {
   ARTIFACT_GITIGNORE,
   credentialsPath,
+  daemonDir,
   planrHome,
   projectDesignsDir,
   sessionDirName,
@@ -64,7 +66,7 @@ import {
 import { contractInstructions, sheetContract, validateSheet } from './providers/claude-svg.mjs';
 import { DEFAULT_PROVIDER, resolveProvider } from './providers/index.mjs';
 import * as openai from './providers/openai.mjs';
-import { writePrivateJsonState } from './server-util.mjs';
+import { acquireStartLock, writePrivateJsonState } from './server-util.mjs';
 import { appendRound, createSession, loadSession, saveSession } from './session.mjs';
 import { detectConflicts, loadProfile, saveProfile, updateTaste } from './taste.mjs';
 
@@ -160,24 +162,32 @@ async function cmdSetup(args) {
     fail(
       `${credsFile} is unreadable (${reason}); it was left unchanged. Repair it or move it aside, then retry.`,
     );
-  let stored;
-  try {
-    stored = readFileSync(credsFile);
-  } catch (error) {
-    if (error?.code !== 'ENOENT') unreadable(error.code);
-  }
-  let creds = {};
-  if (stored) {
-    try {
-      creds = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(stored));
-    } catch {
-      // A parse message quotes the file, which holds API keys.
-      unreadable('not valid JSON');
-    }
-  }
-  if (!creds || typeof creds !== 'object' || Array.isArray(creds)) unreadable('not a JSON object');
-  creds.openai_api_key = key;
-  writePrivateJsonState(credsFile, creds);
+  await withCredentialWriteLock(
+    planrHome(),
+    async () => {
+      let stored;
+      try {
+        stored = readFileSync(credsFile);
+      } catch (error) {
+        if (error?.code !== 'ENOENT') unreadable(error.code);
+      }
+      let creds = {};
+      if (stored) {
+        try {
+          creds = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(stored));
+        } catch {
+          // A parse message quotes the file, which holds API keys.
+          unreadable('not valid JSON');
+        }
+      }
+      if (!creds || typeof creds !== 'object' || Array.isArray(creds))
+        unreadable('not a JSON object');
+      creds.openai_api_key = key;
+      writePrivateJsonState(credsFile, creds);
+    },
+    15000,
+    'legacy',
+  );
   errLine(`✓ key stored in ${credsFile} (0600). It will never be echoed.`);
 
   if (args['no-smoke']) {
@@ -442,7 +452,10 @@ async function cmdCheck(args) {
 
 /** A daemon on this code whose registry reads cleanly; a restart sets an invalid registry aside. */
 const reusableDaemon = (running) =>
-  Boolean(running) && running.version === DAEMON_VERSION && !running.registryError;
+  Boolean(running) &&
+  running.version === DAEMON_VERSION &&
+  !running.registryError &&
+  Boolean(running.instanceId);
 
 /** The daemon log so far, read by position so the child's shared write offset stays put. */
 function readDaemonLog(log) {
@@ -484,28 +497,33 @@ async function waitForDaemonPort(child, daemonPath, log) {
 }
 
 async function ensureDaemon() {
-  const running = await findRunningDaemon();
-  if (reusableDaemon(running)) return running.port;
-  // A daemon is already running but on stale code (older/absent version) — e.g.
-  // it predates the non-enumerating index — or its registry no longer reads. Reusing it
-  // would keep serving the old behaviour or failing every board route, so stop it and spawn
-  // a fresh one. (Rule 14 still holds: the daemon outlives the agent; we only recycle it
-  // across a version change or a registry fault.)
-  await killRunningDaemon(running);
-  const daemonPath = join(here, '..', 'daemon.mjs');
-  // A pipe to this short-lived command would close when it exits, and the daemon's next
-  // stderr write would then fail with EPIPE and stop it, so the daemon writes to a log file.
-  const log = openDaemonLog();
+  const unlock = await acquireStartLock(join(daemonDir(), 'launch.lock'), { timeout: 10000 });
   try {
-    const child = spawn(process.execPath, [daemonPath, '--serve'], {
-      detached: true,
-      stdio: ['ignore', 'ignore', log.fd],
-    });
-    const port = await waitForDaemonPort(child, daemonPath, log);
-    child.unref(); // daemon outlives the agent
-    return port;
+    const running = await findRunningDaemon();
+    if (reusableDaemon(running)) return running.port;
+    // A daemon is already running but on stale code (older/absent version) — e.g.
+    // it predates the non-enumerating index — or its registry no longer reads. Reusing it
+    // would keep serving the old behaviour or failing every board route, so stop it and spawn
+    // a fresh one. (Rule 14 still holds: the daemon outlives the agent; we only recycle it
+    // across a version change or a registry fault.)
+    if (running) throw daemonNeedsRestart(running);
+    const daemonPath = join(here, '..', 'daemon.mjs');
+    // A pipe to this short-lived command would close when it exits, and the daemon's next
+    // stderr write would then fail with EPIPE and stop it, so the daemon writes to a log file.
+    const log = openDaemonLog();
+    try {
+      const child = spawn(process.execPath, [daemonPath, '--serve'], {
+        detached: true,
+        stdio: ['ignore', 'ignore', log.fd],
+      });
+      const port = await waitForDaemonPort(child, daemonPath, log);
+      child.unref(); // daemon outlives the agent
+      return port;
+    } finally {
+      closeSync(log.fd);
+    }
   } finally {
-    closeSync(log.fd);
+    unlock();
   }
 }
 
@@ -533,7 +551,7 @@ async function cmdDaemon(args) {
     out({ ok: true, reused: true, port: running.port });
     return;
   }
-  await killRunningDaemon(running);
+  if (running) throw daemonNeedsRestart(running);
   const port = await createDaemon().listen();
   // The listening server keeps this process alive — run it as a background task so the board
   // outlives the short-lived `board` call. The agent parses this exact line for the port.

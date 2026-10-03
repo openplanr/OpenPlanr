@@ -8,7 +8,7 @@ curl -fsSL https://openplanr.dev/install.sh | sh
 irm https://openplanr.dev/install.ps1 | iex
 ```
 
-The installer requires Node.js 20 or later and never installs or upgrades Node
+The installer requires a supported Node.js version (see [package metadata](../package.json)) and never installs or upgrades Node
 silently. `npm install -g openplanr` is equivalent. Then change into a project and
 run guided setup:
 
@@ -182,7 +182,7 @@ local artifact-review browser runs elsewhere.
 
 ## Windows
 
-The PowerShell installer and the CLI support Node.js 20 or later on Windows. Project paths in
+The PowerShell installer and the CLI support a supported Node.js version (see [package metadata](../package.json)) on Windows. Project paths in
 committed locks and generated rules are repository-relative. Machine-specific
 absolute paths remain in the user runtime state and backups.
 

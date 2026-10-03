@@ -8,8 +8,9 @@ import { createReviewLedger } from '@openplanr/artifact/merge.mjs';
 import { writeArtifactReviewState } from '@openplanr/artifact/review.mjs';
 import { browserEngine, launchBrowser } from '../../../tests/support/browser-launcher.mjs';
 import { atomicJson, currentDesign, renderDesignDocument } from '../lib/design/document.mjs';
-import { designReviewKey, designReviewPath, startDesignReview } from '../lib/design/review.mjs';
+import { designReviewKey, designReviewPath } from '../lib/design/review.mjs';
 import { designFixture } from './design-fixture.mjs';
+import { fetch, startDesignReview } from './studio-http-fixture.mjs';
 
 const engine = browserEngine();
 

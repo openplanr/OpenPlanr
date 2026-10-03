@@ -23,10 +23,33 @@
 ## A.2 — Context gathering (2 rounds max)
 
 Read what exists before asking: the design system (`.planr/design-system/` or
-`input/design-system/` — `resolveDesignSystem` semantics from `design-step0-preflight.md`
-A.3.5), `brand.md`, the spec for a slug target. Ask AT MOST two rounds of focused
+`input/design-system/` — `resolveDesignSystem` with the project root), `brand.md`, the spec for a slug target. Ask AT MOST two rounds of focused
 questions (audience, feel, must-keep elements); a clear brief asks zero. Never start a
 third round — proceed with what you have and say what you assumed.
+
+## A.2.1 — Ground the app context once
+
+Bind `APP_CTX = { APP_SHELL, DESIGN_SYSTEM, COMPONENT_LIB, REF_SCREENS,
+VIEWPORT_W, breakpoints }` before drafting directions:
+
+- Read the existing layout, navigation and content boundaries. Record their paths
+  and dimensions as `APP_SHELL`; use `none` for a standalone target.
+- Resolve `DESIGN_SYSTEM` from the project package, `DESIGN.md`, CSS/Tailwind theme
+  or the supplied brand brief. Preserve its colors, fonts, scale, spacing and radii.
+- Detect `COMPONENT_LIB` from the stack and dependencies; read one or two actual
+  pages as `REF_SCREENS` to establish density and interaction patterns.
+- Bind `VIEWPORT_W` to the product's declared capture viewport or container width.
+  If absent, declare 1440 for desktop web or the product's primary mobile width.
+  Record responsive breakpoints and author each requested frame at its declared size.
+
+### Missing design system
+
+A clear brand brief can supply the context. If a consequential brand decision is
+still missing, ask whether to use an existing system or establish a new direction.
+Use the host's native question surface with chat fallback, reuse earlier answers,
+and record assumptions. Do not invent continuity with an existing product or call
+retired design-system generators. Later phases consume `APP_CTX` without repeating
+unchanged reads.
 
 ## A.3 — Taste read + conflict flagging
 
