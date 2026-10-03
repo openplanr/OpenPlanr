@@ -1,8 +1,11 @@
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import test from 'node:test';
+import { assertPreviewBridgeMessage } from '@openplanr/protocol/sharing-security-contracts';
+import { makeBundle, sealBundle } from '../../../tests/protocol/fixtures/diagram-authoring.mjs';
 import { launchBrowser } from '../../../tests/support/browser-launcher.mjs';
 import { prepareArtifactDocument } from '../lib/artifact/browser-sandbox.mjs';
+import { renderAuthoredDiagramSvg } from '../lib/artifact/diagram/authoring/renderer.mjs';
 
 test('opaque prototypes initialize bounded state before authored scripts and bind navigation', {
   timeout: 30_000,
@@ -187,4 +190,398 @@ test('generated opaque-frame guards preserve worker constructors and controlled 
     }
   }
   assert.deepEqual(externalRequests, []);
+});
+
+test('opt-in review selection toggles in the same opaque document without changing prototype input', {
+  timeout: 30_000,
+}, async (t) => {
+  const server = createServer((_req, res) => {
+    res.setHeader('content-type', 'text/html');
+    res.end('<!doctype html><title>Selection host</title>');
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  t.after(() => new Promise((resolve) => server.close(resolve)));
+  const browser = await launchBrowser();
+  let page;
+  t.after(async () => {
+    try {
+      await page?.close();
+    } finally {
+      await browser.close();
+    }
+  });
+  page = await browser.newPage({ hasTouch: true });
+  const origin = `http://127.0.0.1:${server.address().port}`,
+    nonce = Buffer.alloc(32, 14).toString('base64url');
+  await page.goto(origin);
+  const bundle = makeBundle();
+  bundle.document.annotations = [];
+  bundle.document.accessibility.readingOrder = bundle.document.accessibility.readingOrder.filter(
+    (id) => id !== 'note-a',
+  );
+  bundle.presentation.elements = bundle.presentation.elements.filter(
+    ({ elementId }) => elementId !== 'note-a',
+  );
+  const rendered = renderAuthoredDiagramSvg(sealBundle(bundle));
+  assert.equal(rendered.ok, true);
+  const html =
+    '<!doctype html><form><input id="answer" data-planr-id="answer" name="answer"><button id="choose" type="button" data-planr-id="choice"><span id="nested">Choose</span></button></form><a id="next" href="#next" data-planr-id="next-link" data-design-target="next-screen" style="display:inline-block;margin-top:24px;padding:12px 16px;line-height:20px">Next</a><script>window.choices=0;window.originalInput=document.querySelector("#answer");window.originalButton=document.querySelector("#choose");document.querySelector("#choose").addEventListener("click",()=>window.choices++);addEventListener("message",event=>{if(event.data?.type==="fixture:barrier")parent.postMessage({type:"fixture:barrier",id:event.data.id},"*")});</script>' +
+    rendered.svg +
+    '<script>window.originalSvg=document.querySelector("svg");window.diagramClicks=0;originalSvg.addEventListener("click",()=>window.diagramClicks++);</script>';
+  const documents = [false, true].map(
+    (reviewSelection) =>
+      prepareArtifactDocument({
+        html,
+        artifactId: reviewSelection ? 'selected-view' : 'interact-view',
+        nonce,
+        parentOrigin: origin,
+        allowLocalForms: true,
+        prototypeState: true,
+        screenId: 'test-screen',
+        reviewSelection,
+      }).html,
+  );
+  await page.evaluate(
+    ({ documents, origin }) => {
+      window.messages = [];
+      window.addEventListener('message', (event) => {
+        messages.push({ data: event.data, origin: event.origin });
+      });
+      documents.forEach((html, index) => {
+        const frame = document.createElement('iframe');
+        frame.id = index ? 'selected' : 'interact';
+        frame.sandbox = 'allow-scripts allow-forms';
+        frame.srcdoc = html;
+        document.body.append(frame);
+      });
+      const sibling = document.createElement('iframe');
+      sibling.id = 'sibling';
+      sibling.src = `${origin}/sibling`;
+      document.body.append(sibling);
+    },
+    { documents, origin },
+  );
+  const interact = page.frameLocator('#interact'),
+    selected = page.frameLocator('#selected'),
+    command = {
+      schemaVersion: '1.0.0',
+      type: 'openplanr:review-selection',
+      channel: nonce,
+      viewId: 'selected-view',
+      enabled: true,
+    };
+  let barrier = 0;
+  const control = async (id, commands) => {
+    const token = `control-${++barrier}`;
+    await page.evaluate(
+      ({ id, commands, token }) => {
+        const target = document.getElementById(id).contentWindow;
+        for (const command of commands) target.postMessage(command, '*');
+        target.postMessage({ type: 'fixture:barrier', id: token }, '*');
+      },
+      { id, commands, token },
+    );
+    // A later native message acknowledges delivery order, not selection success.
+    await page.waitForFunction(
+      (token) => messages.some(({ data }) => data.type === 'fixture:barrier' && data.id === token),
+      token,
+      { timeout: 7_000 },
+    );
+  };
+  await interact.locator('#answer').fill('Unopted input');
+  await selected.locator('#answer').fill('Unsaved answer');
+  await selected.locator('[data-element-id="node-a"] tspan').click();
+  assert.equal(await selected.locator('body').evaluate(() => diagramClicks), 1);
+  await selected.locator('#nested').click();
+  assert.equal(
+    await selected.locator('body').evaluate(() => choices),
+    1,
+    'an opted-in frame starts in Interact',
+  );
+  await selected
+    .locator('body')
+    .evaluate(() => __OPENPLANR_PROTOTYPE_STATE__.set({ agreed: true, draft: 'Unsaved session' }));
+  await page.waitForFunction(
+    () =>
+      messages.some(
+        ({ data }) =>
+          data.type === 'openplanr:prototype-state' &&
+          data.viewId === 'selected-view' &&
+          data.state.forms['selected-view']?.answer === 'Unsaved answer' &&
+          data.state.session.agreed === true,
+      ),
+    undefined,
+    { timeout: 7_000 },
+  );
+
+  await control('interact', [{ ...command, viewId: 'interact-view' }]);
+  await interact.locator('#nested').click();
+  assert.equal(await interact.locator('body').evaluate(() => choices), 1);
+  assert.equal(
+    await page.evaluate(() => messages.filter(({ data }) => data.type === 'select').length),
+    0,
+  );
+
+  await page
+    .frameLocator('#sibling')
+    .locator('title')
+    .waitFor({ state: 'attached', timeout: 7_000 });
+  await page
+    .frames()
+    .find((frame) => frame.url().endsWith('/sibling'))
+    .evaluate((command) => {
+      parent.document.querySelector('#selected').contentWindow.postMessage(command, '*');
+    }, command);
+  await control('selected', [
+    { ...command, channel: Buffer.alloc(32, 15).toString('base64url') },
+    { ...command, viewId: 'stale-view' },
+    { ...command, enabled: 'true' },
+    { ...command, fetch: 'https://forged.example.com' },
+  ]);
+  await selected.locator('#nested').click();
+  assert.equal(
+    await selected.locator('body').evaluate(() => choices),
+    2,
+    'forged controls cannot acquire selection',
+  );
+  assert.equal(
+    await page.evaluate(() => messages.filter(({ data }) => data.type === 'select').length),
+    0,
+  );
+
+  await control('selected', [command]);
+  await selected.locator('#nested').click();
+  await page.waitForFunction(() => messages.some(({ data }) => data.type === 'select'), undefined, {
+    timeout: 7_000,
+  });
+  const emitted = await page.evaluate(() => messages.find(({ data }) => data.type === 'select'));
+  assert.equal(emitted.origin, 'null');
+  assert.deepEqual(emitted.data, {
+    schemaVersion: '1.0.0',
+    channel: nonce,
+    type: 'select',
+    viewId: 'selected-view',
+    elementId: 'choice',
+  });
+  assert.equal(assertPreviewBridgeMessage(emitted.data).type, 'select');
+  await selected.locator('[data-element-id="node-a"] tspan').tap();
+  await selected.locator('[data-element-id="edge-a"] tspan').click();
+  await page.waitForFunction(
+    () =>
+      ['node-a', 'edge-a'].every((elementId) =>
+        messages.some(({ data }) => data.type === 'select' && data.elementId === elementId),
+      ),
+    undefined,
+    { timeout: 7_000 },
+  );
+  const diagramSelections = await page.evaluate(() =>
+    messages.filter(
+      ({ data }) => data.type === 'select' && ['node-a', 'edge-a'].includes(data.elementId),
+    ),
+  );
+  assert.deepEqual(
+    diagramSelections.map(({ data, origin }) => {
+      assertPreviewBridgeMessage(data);
+      assert.equal(origin, 'null');
+      assert.equal(data.channel, nonce);
+      return { viewId: data.viewId, elementId: data.elementId };
+    }),
+    [
+      { viewId: 'selected-view', elementId: 'node-a' },
+      { viewId: 'selected-view', elementId: 'edge-a' },
+    ],
+  );
+  assert.equal(await selected.locator('body').evaluate(() => diagramClicks), 1);
+  assert.equal(
+    await selected.locator('body').evaluate(() => choices),
+    2,
+    'selection does not execute authored handlers',
+  );
+  await selected.locator('#next').tap();
+  await page.waitForFunction(
+    () => messages.some(({ data }) => data.type === 'select' && data.elementId === 'next-link'),
+    undefined,
+    { timeout: 7_000 },
+  );
+  assert.equal(
+    await page.evaluate(() => messages.filter(({ data }) => data.type === 'navigate').length),
+    0,
+  );
+  await control('selected', [{ ...command, enabled: false, viewId: 'stale-view' }]);
+  await selected.locator('#nested').click();
+  assert.equal(
+    await selected.locator('body').evaluate(() => choices),
+    2,
+    'a stale disable cannot change the active mode',
+  );
+
+  await control('selected', [{ ...command, enabled: false }]);
+  await selected.locator('#nested').click();
+  await selected.locator('#next').click();
+  await page.waitForFunction(
+    () => messages.some(({ data }) => data.type === 'navigate'),
+    undefined,
+    { timeout: 7_000 },
+  );
+  assert.deepEqual(
+    await selected.locator('body').evaluate(() => ({
+      choices,
+      answer: document.querySelector('#answer').value,
+      inputRetained: document.querySelector('#answer') === originalInput,
+      buttonRetained: document.querySelector('#choose') === originalButton,
+      session: __OPENPLANR_PROTOTYPE_STATE__.get(),
+    })),
+    {
+      choices: 3,
+      answer: 'Unsaved answer',
+      inputRetained: true,
+      buttonRetained: true,
+      session: { agreed: true, draft: 'Unsaved session' },
+    },
+  );
+  await selected.locator('[data-element-id="node-a"] tspan').click();
+  assert.deepEqual(
+    await selected.locator('body').evaluate(() => ({
+      clicks: diagramClicks,
+      retained: document.querySelector('svg') === originalSvg,
+    })),
+    { clicks: 2, retained: true },
+  );
+  assert.equal(
+    await page.locator('#selected').getAttribute('sandbox'),
+    'allow-scripts allow-forms',
+  );
+});
+
+test('Review receives native taps on pure canonical SVG without an authored click listener', {
+  timeout: 30_000,
+}, async (t) => {
+  const server = createServer((_req, res) => {
+    res.setHeader('content-type', 'text/html');
+    res.end('<!doctype html><style>body{margin:0}iframe{width:100%;height:700px;border:0}</style>');
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  t.after(() => new Promise((resolve) => server.close(resolve)));
+  const browser = await launchBrowser();
+  let page;
+  t.after(async () => {
+    try {
+      await page?.close();
+    } finally {
+      await browser.close();
+    }
+  });
+  page = await browser.newPage({ hasTouch: true, viewport: { width: 375, height: 812 } });
+  const origin = `http://127.0.0.1:${server.address().port}`,
+    nonce = Buffer.alloc(32, 18).toString('base64url');
+  await page.goto(origin);
+  const bundle = makeBundle();
+  bundle.document.annotations = [];
+  bundle.document.accessibility.readingOrder = bundle.document.accessibility.readingOrder.filter(
+    (id) => id !== 'note-a',
+  );
+  bundle.presentation.elements = bundle.presentation.elements.filter(
+    ({ elementId }) => elementId !== 'note-a',
+  );
+  const rendered = renderAuthoredDiagramSvg(sealBundle(bundle));
+  assert.equal(rendered.ok, true);
+  const html = prepareArtifactDocument({
+    html: `<!doctype html><style>svg{max-width:100%;height:auto}</style><form><input id="answer" name="answer"></form>${rendered.svg}`,
+    artifactId: 'pure-diagram',
+    nonce,
+    parentOrigin: origin,
+    allowLocalForms: true,
+    prototypeState: true,
+    reviewSelection: true,
+  }).html;
+  await page.evaluate((html) => {
+    window.messages = [];
+    addEventListener('message', (event) =>
+      messages.push({ data: event.data, origin: event.origin }),
+    );
+    const frame = document.createElement('iframe');
+    frame.sandbox = 'allow-scripts allow-forms';
+    frame.srcdoc = html;
+    document.body.append(frame);
+  }, html);
+  const frame = page.frameLocator('iframe');
+  await frame.locator('#answer').fill('Keep this answer');
+  const child = page.frames()[1];
+  await child.evaluate(() => {
+    window.originalSvg = document.querySelector('svg');
+    window.originalSvgMarkup = originalSvg.outerHTML;
+    // Message-only delivery barrier: there is deliberately no authored SVG click listener.
+    addEventListener('message', (event) => {
+      if (event.data?.type === 'fixture:barrier')
+        parent.postMessage({ type: 'fixture:barrier', id: event.data.id }, '*');
+    });
+  });
+  const command = {
+    schemaVersion: '1.0.0',
+    type: 'openplanr:review-selection',
+    channel: nonce,
+    viewId: 'pure-diagram',
+    enabled: true,
+  };
+  let barrier = 0;
+  const control = async (commands) => {
+    const id = `pure-control-${++barrier}`;
+    await page.evaluate(
+      ({ commands, id }) => {
+        const target = document.querySelector('iframe').contentWindow;
+        for (const command of commands) target.postMessage(command, '*');
+        target.postMessage({ type: 'fixture:barrier', id }, '*');
+      },
+      { commands, id },
+    );
+    await page.waitForFunction(
+      (id) => messages.some(({ data }) => data.type === 'fixture:barrier' && data.id === id),
+      id,
+      { timeout: 7_000 },
+    );
+  };
+  const node = frame.locator('[data-element-id="node-a"] tspan');
+  await node.tap();
+  assert.equal(
+    await page.evaluate(() => messages.filter(({ data }) => data.type === 'select').length),
+    0,
+  );
+  await control([{ ...command, viewId: 'stale-view' }]);
+  await node.tap();
+  assert.equal(
+    await page.evaluate(() => messages.filter(({ data }) => data.type === 'select').length),
+    0,
+  );
+  await control([command]);
+  await node.tap();
+  await page.waitForFunction(
+    () => messages.some(({ data }) => data.type === 'select' && data.elementId === 'node-a'),
+    undefined,
+    { timeout: 7_000 },
+  );
+  const selection = await page.evaluate(() => messages.find(({ data }) => data.type === 'select'));
+  assert.equal(selection.origin, 'null');
+  assert.deepEqual(assertPreviewBridgeMessage(selection.data), {
+    schemaVersion: '1.0.0',
+    channel: nonce,
+    type: 'select',
+    viewId: 'pure-diagram',
+    elementId: 'node-a',
+  });
+  await control([{ ...command, enabled: false }]);
+  await node.tap();
+  assert.equal(
+    await page.evaluate(() => messages.filter(({ data }) => data.type === 'select').length),
+    1,
+  );
+  await frame.locator('#answer').fill('Interact remains editable');
+  assert.deepEqual(
+    await child.evaluate(() => ({
+      retained: document.querySelector('svg') === originalSvg,
+      markup: originalSvg.outerHTML === originalSvgMarkup,
+      value: document.querySelector('#answer').value,
+    })),
+    { retained: true, markup: true, value: 'Interact remains editable' },
+  );
+  assert.equal(await page.locator('iframe').getAttribute('sandbox'), 'allow-scripts allow-forms');
 });
