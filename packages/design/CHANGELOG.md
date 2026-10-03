@@ -1,5 +1,23 @@
 # @openplanr/design
 
+## 0.4.0
+### Minor Changes
+
+- f27d487: Make local Design Studio previews load selected screens with bounded frames, phase diagnostics and retry. Share authored sources across responsive views, support protected Studio routes and exact service lifecycle, preserve durable feedback and explicit offline imports, and add screen search, actual-size inspection and navigation links. Keep legacy artifact contracts and hosted publication limits compatible.
+- f27d487: Share large designs through resumable, authenticated resource uploads and load only the selected view's resources. Use one compact Studio header with accessible menus, colorful artifact labels, stable canvas mounts and dismissible notices. Preserve drafts and exact feedback retries across interruption, offline use and concurrent tabs. Add separate room read, write and management capabilities, owned server lifecycle commands, safe company publication recovery, a versioned diagram palette and measured text and connector quality diagnostics. Existing saved revisions remain readable; hosted services must adopt the new formats before new clients create them.
+  
+  CLI credentials and company sign-in metadata now honor `PLANR_HOME`. When the selected home has no prior record, private legacy files are copied without changing the originals; existing destination records stay authoritative. Migration receipts prevent deleted records from being imported again. Unsafe or incomplete records require recovery rather than being treated as absent.
+
+### Patch Changes
+
+- f27d487: Make Design Studio notifications dismissible, keep repeated dismissed sync warnings closed, and clear save warnings after a successful retry while preserving unsaved drafts.
+- Updated dependencies [390d731]
+- Updated dependencies [f27d487]
+- Updated dependencies [f27d487]
+- Updated dependencies [036f395]
+  - @openplanr/protocol@0.9.0
+  - @openplanr/artifact@0.6.0
+
 ## 0.3.9
 ### Patch Changes
 

@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.55.8
+### Patch Changes
+
+- 390d731: Project the opt-in implementation delegation preview to supported hosts while preserving native Ship and native parallel roles. Include complete readable task context, exact-session corrections, pinned helpers, phase timings and explicit cleanup. Native Cursor requires disclosed trusted configuration; Codex command repetition and command-budget limits stop looping turns.
+  
+  Package dependency preparation and focused npm/Node verification before journaled local integration. Serialize checkout-lock recovery, preserve concurrent edits, reject unsafe test selectors and oversized run metadata, and retain actionable onboarding diagnostics.
+- f27d487: Make Design Studio notifications dismissible, keep repeated dismissed sync warnings closed, and clear save warnings after a successful retry while preserving unsaved drafts.
+- f27d487: Make local Design Studio previews load selected screens with bounded frames, phase diagnostics and retry. Share authored sources across responsive views, support protected Studio routes and exact service lifecycle, preserve durable feedback and explicit offline imports, and add screen search, actual-size inspection and navigation links. Keep legacy artifact contracts and hosted publication limits compatible.
+- 390d731: Display rendered diagram shapes directly on the studio canvas, remove the white page and shadow, and strengthen neutral shape fills while preserving saved geometry and export bytes.
+- f27d487: Share large designs through resumable, authenticated resource uploads and load only the selected view's resources. Use one compact Studio header with accessible menus, colorful artifact labels, stable canvas mounts and dismissible notices. Preserve drafts and exact feedback retries across interruption, offline use and concurrent tabs. Add separate room read, write and management capabilities, owned server lifecycle commands, safe company publication recovery, a versioned diagram palette and measured text and connector quality diagnostics. Existing saved revisions remain readable; hosted services must adopt the new formats before new clients create them.
+  
+  CLI credentials and company sign-in metadata now honor `PLANR_HOME`. When the selected home has no prior record, private legacy files are copied without changing the originals; existing destination records stay authoritative. Migration receipts prevent deleted records from being imported again. Unsafe or incomplete records require recovery rather than being treated as absent.
+
 ## 0.55.7
 ### Patch Changes
 
