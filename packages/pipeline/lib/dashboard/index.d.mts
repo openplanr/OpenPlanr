@@ -75,3 +75,24 @@ export interface DashboardServer {
 }
 
 export function startDashboard(options?: DashboardServerOptions): DashboardServer;
+
+/** Healthy instances without their private control credentials. */
+export interface OwnedDashboardInstance {
+  instanceId: string;
+  pid: number;
+  port: number;
+  kind: 'dashboard';
+  projectRoot: string;
+  runtimeRoot: string;
+  startedAt: string;
+  url: string;
+  status: string;
+}
+export function listDashboardServers(options?: {
+  env?: Readonly<Record<string, string | undefined>>;
+  fetchImpl?: typeof fetch;
+}): Promise<OwnedDashboardInstance[]>;
+export function stopDashboardServer(
+  instanceId: string,
+  options?: { env?: Readonly<Record<string, string | undefined>>; fetchImpl?: typeof fetch },
+): Promise<Record<string, unknown>>;

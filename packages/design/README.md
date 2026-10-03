@@ -124,9 +124,51 @@ node lib/design/utility.mjs feedback /path/to/design-document.json --action expo
 Exports do not accept changes or resolve pins. Missing historical mappings remain
 explicitly stale, and the output never includes local sources or access credentials.
 
-### Mobile preview memory
+### Preview loading and responsive coverage
 
-On devices with a coarse primary pointer, the studio starts with the selected preview and keeps a maximum of three live product frames. Walkthrough navigation waits for the target's sandbox bridge before transitioning; the previous screen remains visible while it loads. Canvas keeps unloaded artboards as selectable placeholders and loads nearby/selected screens within the same limit. Screen navigation uses numbered labels instead of browser-generated thumbnails on these devices. Desktop source loading is unchanged.
+Studio starts with the selected screen and keeps at most three live product frames
+on desktop and mobile. Each source/document/bridge phase has diagnostics, a bounded
+load deadline and a retry action. One inactive failure does not block the selected
+screen. Canvas leaves unloaded artboards as selectable placeholders; nearby screens
+load within the same bound. Desktop thumbnails capture only paintable loaded frames.
+Coarse-pointer and narrow devices use numbered navigation to avoid capture overhead.
+
+Protocol 1.16 adds envelope 1.1 and review bundle 1.2. A screen/direction's HTML is
+stored once, while each responsive frame retains its own artifact identity and
+feedback. Local boards support up to 256 shared sources, 4,096 viewport references
+and 100 MiB of canonical HTML. Limits are validated before bundling. Larger designs
+need linked boards. Existing inline envelope and review-bundle contracts remain
+readable and unchanged. Company publication converts to the hosted inline contract
+and retains its existing byte/view limits; local coverage does not expand a hosted
+service budget.
+
+### Local opening, navigation and storage
+
+`open` and `planr artifact open` return the actual `/studio/<design-id>/` address.
+The root redirects to Studio or a design selector. Reopening the same revision and
+configuration reuses the healthy owned service. Use the bundled utility's `studio
+<document> --action status` or `--action stop` to inspect or stop that exact instance;
+shutdown drains pending saves. Stop does not delete the design or feedback.
+
+Local HTTP uses sandboxed srcdoc with an exact parent-origin binding. Portable
+file exports use Blob frames bound to the opaque file origin. Both retain
+`allow-scripts allow-forms` without same-origin authority. Do not serve a file
+export over HTTP or modify its generated script to change origins; use the local
+launcher. Host, Origin, Fetch Metadata and scoped session-cookie checks protect
+short-route APIs. Private review session routes remain supported separately.
+
+Preview health and save health are shown separately. About reports the loaded
+package, renderer, revision, source identity and launch context; readiness is not
+visual certification. Screen search and authored journey filters preserve the
+selected screen. Fit, 100% and focus inspect source typography without rewriting
+it. Non-secret screen/frame/direction/view hashes survive refresh and browser Back.
+
+Pins and reviewer metadata use the canonical review ledger; direction preference
+and arrangement use `.design/studio-state.json`. Saves bind to the current revision
+and state version, and stale concurrent writes return a conflict. Downloaded JSON
+feedback requires an explicit revision-bound import. Imports retain comments,
+replies and original mappings, but never manufacture owner decisions. Historical
+project `.feedback/notes.json` files remain preserved and are not silently adopted.
 
 Evicted product previews restart when reopened; review comments, replies, draft text and personal navigation remain outside those frames. Token authentication, authored sources and published revisions are unaffected. A desktop mobile emulation checks this resource budget but cannot reproduce every physical device's memory pressure.
 

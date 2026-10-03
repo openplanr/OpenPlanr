@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 import {
   projectedSkillName,
+  renderCursorSkillBody,
   renderNamespacedSkill,
 } from '../../../../scripts/skills/host-invocations.mjs';
 
@@ -41,7 +42,13 @@ test('canonical workflows project to all hosts without aliases or generated comm
     assert.ok(canonicalBody, `${skillId}: canonical frontmatter`);
     assert.equal(
       cursorBody(read(`dist/plugins/cursor/openplanr/rules/${skillId}.mdc`)),
-      canonicalBody,
+      renderCursorSkillBody(
+        canonical,
+        skillId,
+        JSON.parse(read('adapters/manifests/canonical-skills.json'))
+          .skills.find((skill) => skill.id === skillId)
+          .resources.filter(({ hosts }) => hosts.includes('cursor')),
+      ),
       `${skillId}: Cursor body parity`,
     );
   }

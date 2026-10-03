@@ -1,4 +1,5 @@
-import type { DiagramAuthoringBundle } from '@openplanr/protocol/diagram-authoring-contracts';
+import type { VersionedDiagramAuthoringBundle as DiagramAuthoringBundle } from '@openplanr/protocol/studio-presentation-contracts';
+
 import type { DiagramCommandResult } from '../authoring/index.mjs';
 import { compileDiagramCommand, validateAuthoringBundle } from '../authoring/index.mjs';
 import {
@@ -57,7 +58,7 @@ export function copyDiagramSelection(
   while (added) {
     added = false;
     for (const note of bundle.document.annotations)
-      if (selected.has(note.targetId) && !selected.has(note.id)) {
+      if (note.targetId !== null && selected.has(note.targetId) && !selected.has(note.id)) {
         selected.add(note.id);
         added = true;
       }
@@ -68,13 +69,17 @@ export function copyDiagramSelection(
   fragment.originalSource = null;
   fragment.sourceMap = null;
   for (const collection of COLLECTIONS)
-    fragment.document[collection] = fragment.document[collection].filter((item: { id: string }) =>
-      selected.has(item.id),
+    fragment.document[collection].splice(
+      0,
+      fragment.document[collection].length,
+      ...(fragment.document[collection].filter((item: { id: string }) =>
+        selected.has(item.id),
+      ) as never[]),
     );
   for (const parent of [...fragment.document.groups, ...fragment.document.lanes])
     parent.members = parent.members.filter((id: string) => selected.has(id));
   for (const note of fragment.document.annotations)
-    if (!selected.has(note.targetId)) note.targetId = null;
+    if (note.targetId === null || !selected.has(note.targetId)) note.targetId = null;
   // biome-ignore format: bundles keep this one-line call; wrapping would change their bytes.
   fragment.document.laneOrder = fragment.document.laneOrder.filter((id: string) => selected.has(id));
   fragment.document.emphasis = fragment.document.emphasis.filter((item: { targetId: string }) =>

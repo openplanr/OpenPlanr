@@ -13,6 +13,7 @@ import {
   type SetupOptions,
   type SetupPreview,
 } from '../../services/runtime-manager-service.js';
+import { listManagedServers } from '../../services/server-lifecycle-service.js';
 import { display, isVerbose, logger } from '../../utils/logger.js';
 
 type Diagnosis = Awaited<ReturnType<typeof runtimeDoctor>>;
@@ -174,12 +175,39 @@ export function registerDoctorCommand(program: Command, cliVersion: string) {
         projectDir,
         opts.fix ? { pipelineRepair: 'preview' } : undefined,
       );
-      const result = opts.fix
+      const repaired = opts.fix
         ? await repairInstallation(projectDir, cliVersion, diagnosis, {
             json: opts.json,
             yes: opts.yes || program.opts().yes,
           })
         : diagnosis;
+      let serverDiagnostic: Diagnosis['diagnostics'][number];
+      let servers = [] as Awaited<ReturnType<typeof listManagedServers>>;
+      try {
+        servers = await listManagedServers();
+        serverDiagnostic = {
+          code: 'owned-local-servers',
+          status: 'pass',
+          message: `${servers.length} owned local service${servers.length === 1 ? '' : 's'} running.`,
+          ...(servers.length
+            ? {
+                fix: 'Use planr server list to inspect them and planr server stop <instance> to stop one.',
+              }
+            : {}),
+        };
+      } catch {
+        serverDiagnostic = {
+          code: 'owned-local-servers',
+          status: 'warn',
+          message: 'Local service discovery is unavailable.',
+          fix: 'Run planr server list for the recovery details.',
+        };
+      }
+      const result = {
+        ...repaired,
+        servers,
+        diagnostics: [...repaired.diagnostics, serverDiagnostic],
+      };
       if (opts.json) display.line(JSON.stringify(result));
       else printDiagnosis(result);
       if (

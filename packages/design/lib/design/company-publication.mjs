@@ -9,11 +9,13 @@ import {
   realpathSync,
 } from 'node:fs';
 import { basename, dirname, extname, isAbsolute, join, relative, resolve } from 'node:path';
+import { createArtifactEnvelope, resolveArtifactHtml } from '@openplanr/artifact/envelope.mjs';
 import { canonicalizeJson, sha256Hex } from '@openplanr/protocol/canonical-json';
 import {
   assertCompanyDesignBundle,
   COMPANY_DESIGN_MAX_BYTES,
 } from '@openplanr/protocol/design-publication-contracts';
+import { LARGE_OBJECT_LIMITS } from '@openplanr/protocol/large-object-contracts';
 import { bundleDesignRevision } from './context.mjs';
 import { prepareDesignDocument } from './document.mjs';
 
@@ -61,7 +63,7 @@ function assertPublicContent(content) {
 }
 
 /** Separate source guard so mutation detection can be exercised deterministically. */
-export function createCompanyDesignSourceReader(file, maxBytes) {
+export function createCompanyDesignSourceReader(file, maxBytes, maxFiles = 256) {
   const selected = resolve(file),
     selectedRoot = dirname(selected),
     root = realpathSync(selectedRoot);
@@ -125,7 +127,7 @@ export function createCompanyDesignSourceReader(file, maxBytes) {
       throw new Error('Company design source changed during preparation. Retry after saving.');
     if (!prior) {
       totalBytes += value.byteLength;
-      if (snapshots.size >= 256 || totalBytes > maxBytes)
+      if (snapshots.size >= maxFiles || totalBytes > maxBytes)
         throw new Error('Company design sources exceed the publication budget.');
       // Inspect source bytes, including scripts that will be omitted, before any
       // of them can become data URLs inside the published HTML.
@@ -148,14 +150,43 @@ export function createCompanyDesignSourceReader(file, maxBytes) {
   return { root, readSource, verify };
 }
 
+/** Keep the hosted contract inline until its server advertises shared-source support. */
+function companyPublicationBundle(prepared, maxBytes) {
+  const bundle = bundleDesignRevision(prepared);
+  if (bundle.envelope.schemaVersion !== '1.1.0') return bundle;
+  let inlineBytes = 0;
+  const artifacts = bundle.envelope.artifacts.map((artifact) => {
+    const html = resolveArtifactHtml(bundle.envelope, artifact);
+    inlineBytes += Buffer.byteLength(html, 'utf8');
+    if (inlineBytes > maxBytes)
+      throw new Error(
+        'Bundled company design exceeds the publication budget. Reduce selected screens, frames, variants or media size.',
+      );
+    return { ...artifact, html };
+  });
+  bundle.envelope = createArtifactEnvelope({ artifacts, viewer: bundle.envelope.viewer });
+  bundle.schemaVersion = '1.1.0';
+  return bundle;
+}
+
 /** No source writes, render cache, network access or script execution. */
 export function prepareCompanyDesignPublication(
   file,
-  { maxBytes = COMPANY_DESIGN_MAX_BYTES } = {},
+  { maxBytes = COMPANY_DESIGN_MAX_BYTES, resourceTransport = false } = {},
 ) {
-  if (!Number.isInteger(maxBytes) || maxBytes < 1 || maxBytes > COMPANY_DESIGN_MAX_BYTES)
-    throw new TypeError('Company design publication budget must be between 1 byte and 1 MiB.');
-  const reader = createCompanyDesignSourceReader(file, maxBytes);
+  if (
+    !Number.isInteger(maxBytes) ||
+    maxBytes < 1 ||
+    maxBytes > (resourceTransport ? LARGE_OBJECT_LIMITS.decodedBytes : COMPANY_DESIGN_MAX_BYTES)
+  )
+    throw new TypeError(
+      `Company design publication budget must be between 1 byte and ${resourceTransport ? 128 : 1} MiB.`,
+    );
+  const reader = createCompanyDesignSourceReader(
+    file,
+    maxBytes,
+    resourceTransport ? LARGE_OBJECT_LIMITS.sources + LARGE_OBJECT_LIMITS.resources + 1 : 256,
+  );
   const document = JSON.parse(reader.readSource(file, process.cwd()).value.toString('utf8'));
   const screenCount = document.screens?.length,
     frameCount = document.frames?.length;
@@ -165,33 +196,35 @@ export function prepareCompanyDesignPublication(
   if (
     !Number.isInteger(screenCount) ||
     screenCount < 1 ||
-    screenCount > 64 ||
+    screenCount > (resourceTransport ? LARGE_OBJECT_LIMITS.sources : 64) ||
     !Number.isInteger(frameCount) ||
     frameCount < 1 ||
     frameCount > 16 ||
     variantCount < 1 ||
     variantCount > 16 ||
-    screenCount * frameCount * variantCount > 256
+    screenCount * frameCount * variantCount > (resourceTransport ? LARGE_OBJECT_LIMITS.views : 256)
   )
     throw new Error(
-      'Company design publication supports up to 64 screens, 16 frames, 16 ready variants and 256 artboards in total.',
+      `Company design publication supports up to ${resourceTransport ? 256 : 64} screens, 16 frames, 16 ready variants and ${resourceTransport ? 4096 : 256} views in total.`,
     );
   const prepared = prepareDesignDocument(file, {
     readSource: reader.readSource,
-    passive: true,
+    passive: !resourceTransport,
     maxBytes,
   });
-  const bundle = bundleDesignRevision(prepared);
+  const bundle = resourceTransport
+    ? bundleDesignRevision(prepared)
+    : companyPublicationBundle(prepared, maxBytes);
   // The existing source-free bundle intentionally excludes authored paths,
   // private manifests, local review storage and source provenance.
   const content = canonicalizeJson(bundle);
   assertPublicContent(content);
   const byteLength = Buffer.byteLength(content, 'utf8');
-  if (byteLength > maxBytes)
+  if (byteLength > (resourceTransport ? maxBytes * 6 : maxBytes))
     throw new Error(
       'Bundled company design exceeds the publication budget. Reduce selected screens, frames, variants or media size.',
     );
-  assertCompanyDesignBundle(bundle);
+  if (!resourceTransport) assertCompanyDesignBundle(bundle);
   const sourceDigests = reader.verify(),
     sourceFiles = Object.keys(sourceDigests);
   return {
@@ -209,8 +242,12 @@ export function prepareCompanyDesignPublication(
         sourceFiles.map((name) => mediaKinds[extname(name).toLowerCase()]).filter(Boolean),
       ),
     ].sort(),
-    warnings: [
-      'Company design previews are passive snapshots. Authored scripts and event handlers are omitted; interactive forms and prototype behavior are not published.',
-    ],
+    warnings: resourceTransport
+      ? [
+          'Prototype content runs in isolated frames. Unsupported behavior is disclosed in the preview.',
+        ]
+      : [
+          'Company design previews are passive snapshots. Authored scripts and event handlers are omitted; interactive forms and prototype behavior are not published.',
+        ],
   };
 }

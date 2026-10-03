@@ -354,6 +354,13 @@ async function buildOutputs() {
     './diagram-review-bundle',
     './diagram-shared-review',
     './diagram-shared-review.css',
+    './studio-shell',
+    './studio-shell.css',
+    './review-outbox',
+    './prototype-state',
+    './resource-pack',
+    './resource-contracts',
+    './browser-sandbox',
     './diagram-sharing',
   ].sort();
   const actualExports = Object.keys(pipelineManifest.exports ?? {}).sort();

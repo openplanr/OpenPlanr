@@ -448,9 +448,15 @@
       "mode": "644"
     },
     {
+      "source": "packages/protocol/registry/v1.17.0/commands.json",
+      "target": "registry/v1.17.0/commands.json",
+      "sha256": "6fab6a3c045d3315e70058ac711e18fa4ab4eb17d3bc335b983f1f1a94607478",
+      "mode": "644"
+    },
+    {
       "source": "packages/protocol/registries/commands.json",
       "target": "registry/v1.5.0/commands.json",
-      "sha256": "e486b08f2d56b185cfd037183061fc1e4ff9c37a714f6986b032b12731c78878",
+      "sha256": "91d0118bf69d3c782ac4642b2a438b93c83b8122030b13fbd425ab6cb45219ea",
       "mode": "644"
     },
     {
@@ -480,7 +486,7 @@
     {
       "source": "packages/protocol/registries/skills.json",
       "target": "registry/v1.5.0/skills.json",
-      "sha256": "13dc34d1e2bab6ba76b91404a91d233f310a265815bdb71b7954be1a02e9e0ab",
+      "sha256": "038f5ec12b804afdde7a90aa3d64b197d403cb852cdee90948aa6234cc0ccac5",
       "mode": "644"
     },
     {

@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * Mermaid flowchart copy interchange: previews certified flowchart source as a sealed authoring
  * bundle with a byte-range source map and fidelity report, and exports a canonical Mermaid copy.
@@ -6,7 +7,7 @@
  */
 
 import { sha256Hex } from '@openplanr/protocol/canonical-json';
-import { validateDiagramAuthoringArtifact } from '@openplanr/protocol/diagram-authoring-contracts';
+import { validateVersionedDiagramAuthoringArtifact as validateDiagramAuthoringArtifact } from '@openplanr/protocol/studio-presentation-contracts';
 import {
   clone,
   inspectPlainData,
@@ -42,7 +43,9 @@ const MERMAID_KEYWORDS = new Set(
 const SEMANTIC_EDIT_LOSS =
   'Semantic content changed after this source correspondence was captured.';
 const ENCODER = new TextEncoder();
+/** @template {string} K @param {K} kind @returns {{kind:K,schemaVersion:'1.0.0',protocolVersion:'1.13.0'}} */
 const meta = (kind) => ({ kind, schemaVersion: '1.0.0', protocolVersion: '1.13.0' });
+/** @returns {import('@openplanr/protocol/diagram-authoring-contracts').DiagramAuthoringDigest} */
 const digest = (text) => `sha256:${sha256Hex(text)}`;
 const idFor = (sourceId) =>
   sourceId
@@ -60,6 +63,7 @@ const issue = (code, severity, line, column, range, message, repair, elementIds 
   repair,
   elementIds,
 });
+/** @returns {{ok:false,sourceModified:false,diagnostics:import('./authoring/index.d.mts').MermaidCopyDiagnostic[]}} */
 const failure = (diagnostic) => ({ ok: false, sourceModified: false, diagnostics: [diagnostic] });
 const plain = (value, fallback) =>
   value === undefined ? fallback : value.startsWith('"') ? JSON.parse(value) : value;
@@ -212,6 +216,7 @@ function placement(elementId, shape, bounds, zIndex, previous) {
 }
 
 /** Pure, bounded preview. The previous bundle and source are never changed. */
+/** @type {typeof import('./authoring/index.d.mts').previewMermaidCopy} */
 export function previewMermaidCopy(source, options = {}) {
   if (
     inspectPlainData(options).length ||
@@ -415,6 +420,15 @@ export function previewMermaidCopy(source, options = {}) {
         );
   };
   const addNode = (node, line) => {
+    if (MERMAID_KEYWORDS.has(node.sourceId.toLowerCase())) {
+      reject(
+        'reserved-source-id',
+        line,
+        'Mermaid reserves this source identifier.',
+        'Rename the node; use a descriptive identifier instead of a Mermaid keyword.',
+      );
+      return null;
+    }
     const id = identity(node.sourceId, line, 'node');
     if (!id) return null;
     if (groups.has(id)) {
@@ -510,6 +524,15 @@ export function previewMermaidCopy(source, options = {}) {
           line,
           'Subgraph needs an explicit bounded ID and plain label.',
           'Use subgraph ID[Label].',
+        );
+        continue;
+      }
+      if (MERMAID_KEYWORDS.has(match[1].toLowerCase())) {
+        reject(
+          'reserved-source-id',
+          line,
+          'Mermaid reserves this subgraph identifier.',
+          'Rename the subgraph to a descriptive identifier.',
         );
         continue;
       }
@@ -698,10 +721,11 @@ export function previewMermaidCopy(source, options = {}) {
   for (const group of groups.values()) {
     const prior = previous?.document.groups.find((item) => item.id === group.id);
     for (const member of prior?.members ?? [])
-      if (previous.document.annotations.some((item) => item.id === member))
+      if (previous?.document.annotations.some((item) => item.id === member))
         group.members.push(member);
   }
   const sourceDigest = digest(source);
+  /** @type {import('@openplanr/protocol/diagram-authoring-contracts').DiagramAuthoringDocument} */
   const document = {
     ...meta('planr-diagram'),
     diagramId,
@@ -730,7 +754,7 @@ export function previewMermaidCopy(source, options = {}) {
       description: previous?.document.accessibility.description ?? '',
       readingOrder: [...nodes.keys()],
     },
-    documentDigest: '',
+    documentDigest: 'sha256:',
   };
   document.annotations = clone(previous?.document.annotations ?? []);
   document.emphasis = clone(previous?.document.emphasis ?? []);
@@ -803,7 +827,7 @@ export function previewMermaidCopy(source, options = {}) {
   });
   const noteElements = document.annotations.map(
     (annotation, i) =>
-      previous.presentation.elements.find((item) => item.elementId === annotation.id) ??
+      previous?.presentation.elements.find((item) => item.elementId === annotation.id) ??
       placement(annotation.id, 'text', { x: 80 + i * 180, y: 560, width: 144, height: 72 }, 3),
   );
   const presentation = {
@@ -819,25 +843,36 @@ export function previewMermaidCopy(source, options = {}) {
     elements: [...groupElements, ...edgeElements, ...nodeElements, ...noteElements],
     presentationDigest: '',
   };
-  const bundle = sealBundle({
-    ...meta('diagram-authoring-bundle'),
-    diagramId,
-    document,
-    presentation,
-    originalSource: { format: 'mermaid', text: source, sourceDigest },
-    sourceMap: {
-      ...meta('diagram-source-map'),
-      diagramId,
-      semanticDigest: '',
-      sourceDigest,
-      sourceByteLength: byteLength,
-      encoding: 'utf-8',
-      parser: { id: 'openplanr-mermaid-copy', version: '1.0.0' },
-      certificationVersion: 'flowchart-copy-v1',
-      entries,
-    },
-    bundleDigest: '',
-  });
+  const bundle = sealBundle(
+    /** @type {import('@openplanr/protocol/studio-presentation-contracts').VersionedDiagramAuthoringBundle} */ (
+      /** @type {unknown} */ ({
+        ...meta('diagram-authoring-bundle'),
+        ...(previous?.schemaVersion === '1.1.0'
+          ? {
+              schemaVersion: '1.1.0',
+              protocolVersion: '1.17.0',
+              studioPresentation: clone(previous.studioPresentation),
+            }
+          : {}),
+        diagramId,
+        document,
+        presentation,
+        originalSource: { format: 'mermaid', text: source, sourceDigest },
+        sourceMap: {
+          ...meta('diagram-source-map'),
+          diagramId,
+          semanticDigest: '',
+          sourceDigest,
+          sourceByteLength: byteLength,
+          encoding: 'utf-8',
+          parser: { id: 'openplanr-mermaid-copy', version: '1.0.0' },
+          certificationVersion: 'flowchart-copy-v1',
+          entries,
+        },
+        bundleDigest: '',
+      })
+    ),
+  );
   const checked = validateAuthoringBundle(bundle);
   if (!checked.ok)
     return {
@@ -855,10 +890,11 @@ export function previewMermaidCopy(source, options = {}) {
         ),
       ),
     };
+  /** @type {import('@openplanr/protocol/diagram-authoring-contracts').DiagramFidelityReport['losses']} */
   const losses = diagnostics
     .filter((item) => item.severity === 'warning')
     .map((item) => ({
-      dimension: 'semantic',
+      dimension: /** @type {const} */ ('semantic'),
       code: item.code,
       elementIds: item.elementIds,
       message: item.message.slice(0, 512),
@@ -867,7 +903,7 @@ export function previewMermaidCopy(source, options = {}) {
     'Mermaid does not encode source coordinates; OpenPlanr generated or reused editable layout.';
   const proposedIds = presentation.elements.map((item) => item.elementId);
   losses.push({
-    dimension: 'presentation',
+    dimension: /** @type {const} */ ('presentation'),
     code: 'generated-layout',
     elementIds: proposedIds,
     message: layoutMessage,
@@ -884,6 +920,7 @@ export function previewMermaidCopy(source, options = {}) {
       proposedIds,
     ),
   );
+  /** @type {import('@openplanr/protocol/diagram-authoring-contracts').DiagramFidelityReport} */
   const fidelity = {
     ...meta('diagram-fidelity-report'),
     diagramId,
@@ -930,6 +967,7 @@ export function previewMermaidCopy(source, options = {}) {
 }
 
 /** Acknowledgement is bound to this exact preview, not to the source name or a prior attempt. */
+/** @type {typeof import('./authoring/index.d.mts').adoptMermaidCopy} */
 export function adoptMermaidCopy(preview, acknowledgement = null) {
   if (inspectPlainData(preview).length)
     return failure(
@@ -1003,6 +1041,7 @@ function sourceIds(bundle) {
 }
 
 /** Canonical Mermaid copy; the complete bundle remains the editable source of truth. */
+/** @type {typeof import('./authoring/index.d.mts').exportMermaidCopy} */
 export function exportMermaidCopy(bundle) {
   const checked = validateAuthoringBundle(bundle);
   if (!checked.ok)
@@ -1201,6 +1240,7 @@ export function exportMermaidCopy(bundle) {
     [],
     'Canonical Mermaid formatting differs from the retained original source bytes.',
   );
+  /** @type {import('@openplanr/protocol/diagram-authoring-contracts').DiagramFidelityReport} */
   const fidelity = {
     ...meta('diagram-fidelity-report'),
     diagramId: bundle.diagramId,

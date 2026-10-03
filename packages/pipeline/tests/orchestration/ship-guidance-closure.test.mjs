@@ -5,7 +5,10 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { renderNamespacedSkill } from '../../../../scripts/skills/host-invocations.mjs';
+import {
+  renderCursorSkillBody,
+  renderNamespacedSkill,
+} from '../../../../scripts/skills/host-invocations.mjs';
 
 const PIPELINE_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const WORKSPACE_ROOT = resolve(PIPELINE_ROOT, '../..');
@@ -125,7 +128,13 @@ test('every host receives the canonical Ship package without compatibility comma
   const cursor = readWorkspace('dist/plugins/cursor/openplanr/rules/planr-ship.mdc');
   assert.equal(
     cursor.replace(/^---\n[\s\S]*?\n---\n\n?/u, ''),
-    canonical.replace(/^---\n[\s\S]*?\n---\n\n?/u, ''),
+    renderCursorSkillBody(
+      canonical,
+      'planr-ship',
+      JSON.parse(readWorkspace('adapters/manifests/canonical-skills.json'))
+        .skills.find((skill) => skill.id === 'planr-ship')
+        .resources.filter(({ hosts }) => hosts.includes('cursor')),
+    ),
   );
 
   const pipelinePackage = JSON.parse(readFileSync(join(PIPELINE_ROOT, 'package.json'), 'utf8'));

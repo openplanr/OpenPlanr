@@ -1,7 +1,11 @@
 import { chmodSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterAll } from 'vitest';
+import { afterAll, expect } from 'vitest';
+import { byteBufferEquality } from '../helpers/byte-buffer-equality.js';
+
+// Byte custody assertions compare exact Buffer lengths and bytes without per-index traversal.
+expect.addEqualityTesters([byteBufferEquality]);
 
 const previousStateRoot = process.env.OPENPLANR_STATE_ROOT;
 const isolatedStateRoot = mkdtempSync(join(tmpdir(), 'openplanr-vitest-state-'));

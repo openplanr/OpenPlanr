@@ -1,11 +1,26 @@
+import {
+  copyUploadSpool,
+  persistUploadSpool,
+  spoolChunkReader,
+} from '@openplanr/artifact/upload-spool.mjs';
 /** Local owner adapter for persistent, encrypted design review workspaces. */
 
-import { existsSync, mkdirSync, realpathSync, writeFileSync } from 'node:fs';
+import {
+  closeSync,
+  existsSync,
+  fsyncSync,
+  linkSync,
+  mkdirSync,
+  openSync,
+  realpathSync,
+  unlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { homedir } from 'node:os';
-import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
+import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { digestArtifactEnvelope } from '@openplanr/artifact/envelope.mjs';
 import { resolveArtifactReviewDestination } from '@openplanr/artifact/import.mjs';
-import { configuredPlanrHome } from '@openplanr/artifact/internal/planr-home.mjs';
+import { configuredPlanrHome, planrHome } from '@openplanr/artifact/internal/planr-home.mjs';
 import { acquireStartLock } from '@openplanr/artifact/internal/server-util.mjs';
 import { createReviewLedger } from '@openplanr/artifact/merge.mjs';
 import {
@@ -35,13 +50,7 @@ export function prepareDesignShareBundle(file) {
 function custodyLocation(file, options = {}, { allowMissing = false } = {}) {
   const current = currentDesign(file);
   const env = options.env ?? process.env;
-  const root = resolve(
-    options.custodyRoot ??
-      join(
-        configuredPlanrHome(env) ?? join(realpathSync(env.HOME || homedir()), '.openplanr'),
-        'design-shares',
-      ),
-  );
+  const root = resolve(options.custodyRoot ?? join(planrHome(env), 'design-shares'));
   let project = current.root;
   for (
     let candidate = current.root;
@@ -66,7 +75,11 @@ function custodyLocation(file, options = {}, { allowMissing = false } = {}) {
     throw new Error(
       'Design owner credentials must be stored outside the project. Set PLANR_HOME to a private user-level directory.',
     );
-  return { root, path, current };
+  const legacyPath =
+    !options.custodyRoot && !configuredPlanrHome(env)
+      ? join(realpathSync(env.HOME || homedir()), '.openplanr', 'design-shares', `${key}.json`)
+      : null;
+  return { root, path, current, legacyPath };
 }
 async function withCustody(file, options, action) {
   const location = custodyLocation(file, options);
@@ -74,6 +87,37 @@ async function withCustody(file, options, action) {
   const unlock = await acquireStartLock(`${location.path}.lock`);
   try {
     let record = readCustody(location.path, { label: 'Design', format: FORMAT });
+    if (!record && location.legacyPath && existsSync(location.legacyPath)) {
+      readCustody(location.legacyPath, { label: 'Design', format: FORMAT });
+      const legacyUnlock = await acquireStartLock(`${location.legacyPath}.lock`);
+      try {
+        const legacy = readCustody(location.legacyPath, { label: 'Design', format: FORMAT });
+        if (legacy && !existsSync(location.path)) {
+          const temporary = `${location.path}.${workspace.newWorkspaceId()}.migration`;
+          const fd = openSync(temporary, 'wx', 0o600);
+          try {
+            writeFileSync(fd, `${JSON.stringify(legacy)}\n`);
+            fsyncSync(fd);
+          } finally {
+            closeSync(fd);
+          }
+          try {
+            linkSync(temporary, location.path);
+            const directory = openSync(location.root, 'r');
+            try {
+              fsyncSync(directory);
+            } finally {
+              closeSync(directory);
+            }
+          } finally {
+            unlinkSync(temporary);
+          }
+        }
+        record = readCustody(location.path, { label: 'Design', format: FORMAT });
+      } finally {
+        legacyUnlock();
+      }
+    }
     return await action({
       ...location,
       record,
@@ -86,11 +130,23 @@ async function withCustody(file, options, action) {
     unlock();
   }
 }
+function uploadOptions(custody, options) {
+  const body =
+    custody.pendingCreate ??
+    (custody.pendingMutation?.action === 'publish' ? custody.pendingMutation.body : null);
+  return {
+    fetchImpl: options.fetchImpl,
+    ...(custody.schemaVersion === '2.0.0' && body
+      ? { readChunk: spoolChunkReader(custody.spoolDirectory, body) }
+      : {}),
+  };
+}
 async function commitMutation(record, save, options) {
   try {
-    return await workspace.commitWorkspaceMutation(record.custody, {
-      fetchImpl: options.fetchImpl,
-    });
+    return await workspace.commitWorkspaceMutation(
+      record.custody,
+      uploadOptions(record.custody, options),
+    );
   } catch (error) {
     if (error.status === 409 && record.custody.pendingMutation) {
       const pending = structuredClone(record.custody.pendingMutation);
@@ -101,7 +157,14 @@ async function commitMutation(record, save, options) {
           fetchImpl: options.fetchImpl,
         });
         if (remote.version > pending.body.expectedVersion) {
-          record.conflictedMutation = { ...pending, localRevision: record.pendingRevision ?? null };
+          record.conflictedMutation = {
+            ...pending,
+            localRevision: record.pendingRevision ?? null,
+            ...(record.custody.spoolDirectory
+              ? { spoolDirectory: record.custody.spoolDirectory }
+              : {}),
+          };
+          delete record.custody.spoolDirectory;
           delete record.custody.pendingMutation;
           delete record.pendingRevision;
           save(record);
@@ -133,7 +196,7 @@ const safeStatus = (record, current) => ({
   ...(record
     ? {
         id: record.custody.id,
-        url: `${record.custody.baseUrl}/d/${encodeURIComponent(record.custody.id)}`,
+        url: workspace.workspaceReviewUrl(record.custody),
         revision: record.custody.currentRevision ?? record.publishedRevision ?? null,
         publishedRevision: record.publishedRevision ?? null,
         hasUpdate:
@@ -158,23 +221,58 @@ const safeStatus = (record, current) => ({
 });
 
 export function getDesignShareStatus(file, options = {}) {
-  const { path, current } = custodyLocation(file, options);
-  return safeStatus(readCustody(path, { label: 'Design', format: FORMAT }), current);
+  const { path, current, legacyPath } = custodyLocation(file, options);
+  const record =
+    readCustody(path, { label: 'Design', format: FORMAT }) ??
+    (legacyPath ? readCustody(legacyPath, { label: 'Design', format: FORMAT }) : null);
+  return safeStatus(record, current);
 }
 export async function shareDesign(file, options = {}) {
-  return withCustody(file, options, async ({ record, current, save }) => {
+  return withCustody(file, options, async ({ record, current, save, root }) => {
     if (record?.deleted)
       throw new Error(
         'This shared review was deleted. Create a new design identity to share a new review.',
       );
     if (!record) {
-      const custody = await workspace.prepareWorkspace(prepareDesignShareBundle(file), {
-        baseUrl:
-          options.baseUrl ??
-          options.env?.OPENPLANR_SHARE_BASE ??
-          process.env.OPENPLANR_SHARE_BASE ??
-          'https://share.openplanr.dev',
-      });
+      let transport = options.transport;
+      if (!transport) {
+        try {
+          await workspace.discoverWorkspaceCapabilities({
+            baseUrl:
+              options.baseUrl ??
+              options.env?.OPENPLANR_SHARE_BASE ??
+              process.env.OPENPLANR_SHARE_BASE ??
+              'https://share.openplanr.dev',
+            fetchImpl: options.fetchImpl,
+          });
+          transport = '2';
+        } catch (error) {
+          if (![404, 426].includes(error.status)) throw error;
+          transport = '1';
+        }
+      }
+      let custody;
+      try {
+        custody = await workspace.prepareWorkspace(prepareDesignShareBundle(file), {
+          transport,
+          baseUrl:
+            options.baseUrl ??
+            options.env?.OPENPLANR_SHARE_BASE ??
+            process.env.OPENPLANR_SHARE_BASE ??
+            'https://share.openplanr.dev',
+        });
+      } catch (error) {
+        if (transport === '1' && error.code === 'E_WORKSPACE_PAYLOAD_TOO_LARGE')
+          throw Object.assign(
+            new Error(
+              'This sharing service needs the bounded resource upload upgrade. Retry after the hosted service is updated; your local work is unchanged.',
+            ),
+            { code: 'E_WORKSPACE_TRANSPORT_UNSUPPORTED', status: 426 },
+          );
+        throw error;
+      }
+      if (custody.schemaVersion === '2.0.0')
+        await persistUploadSpool(custody, join(root, 'uploads'));
       record = {
         schemaVersion: '1.0.0',
         kind: FORMAT,
@@ -188,7 +286,7 @@ export async function shareDesign(file, options = {}) {
       save(record); // Owner authority exists durably before the first network mutation.
     }
     if (record.custody.pendingCreate) {
-      await workspace.commitWorkspace(record.custody, { fetchImpl: options.fetchImpl });
+      await workspace.commitWorkspace(record.custody, uploadOptions(record.custody, options));
       record.publishedRevision = record.pendingRevision;
       record.publishedPresentation = record.pendingPresentation;
       delete record.pendingRevision;
@@ -199,7 +297,7 @@ export async function shareDesign(file, options = {}) {
   });
 }
 export async function publishDesignShare(file, options = {}) {
-  return withCustody(file, options, async ({ record, current, save }) => {
+  return withCustody(file, options, async ({ record, current, save, root }) => {
     if (!record || record.custody.pendingCreate)
       throw new Error('Create the shared review before publishing an update.');
     if (record.deleted || record.revoked)
@@ -215,6 +313,8 @@ export async function publishDesignShare(file, options = {}) {
         'publish',
         prepareDesignShareBundle(file),
       );
+      if (record.custody.schemaVersion === '2.0.0')
+        await persistUploadSpool(record.custody, join(root, 'uploads'));
       record.pendingRevision = current.revision;
       record.pendingPresentation = presentationFingerprint(current);
       save(record);
@@ -231,7 +331,7 @@ export async function publishDesignShare(file, options = {}) {
 export async function manageDesignShare(file, action, options = {}) {
   if (!['rotate', 'pause', 'resume', 'revoke', 'delete', 'access'].includes(action))
     throw new Error('Unknown design sharing action.');
-  return withCustody(file, options, async ({ record, current, save }) => {
+  return withCustody(file, options, async ({ record, current, save, root }) => {
     if (!record || record.custody.pendingCreate) throw new Error('Create the shared review first.');
     if (action === 'access') {
       if (record.revoked || record.deleted) throw new Error('This review is no longer accessible.');
@@ -302,7 +402,17 @@ export async function exportDesignShareRecovery(file, { output, ...options } = {
     if (!record) throw new Error('Create the shared review first.');
     const target = resolve(output);
     mkdirSync(dirname(target), { recursive: true, mode: 0o700 });
-    writeFileSync(target, `${JSON.stringify(record, null, 2)}\n`, { flag: 'wx', mode: 0o600 });
+    const recovery = structuredClone(record);
+    if (
+      record.custody.schemaVersion === '2.0.0' &&
+      (record.custody.pendingCreate || record.custody.pendingMutation?.action === 'publish')
+    ) {
+      const spool = `${target}.upload`;
+      await copyUploadSpool(record.custody, spool);
+      recovery.recoverySpool = basename(spool);
+      recovery.custody.spoolDirectory = spool;
+    }
+    writeFileSync(target, `${JSON.stringify(recovery, null, 2)}\n`, { flag: 'wx', mode: 0o600 });
     return { ok: true, output: target };
   });
 }
@@ -327,7 +437,7 @@ export async function importDesignShareRecovery(file, { input, ...options } = {}
   await workspace.deriveWorkspaceAuthentication(custody.token, custody.id);
   if (!/^[A-Za-z0-9_-]{43}$/u.test(custody.ownerAuth ?? ''))
     throw new Error('Recovery owner capability is invalid.');
-  return withCustody(file, options, async ({ record, current, save }) => {
+  return withCustody(file, options, async ({ record, current, save, root }) => {
     if (recovered.designId !== current.document.id)
       throw new Error('Recovery belongs to a different design.');
     if (
@@ -349,6 +459,23 @@ export async function importDesignShareRecovery(file, { input, ...options } = {}
       if (bundle.design.id !== current.document.id)
         throw new Error('Recovery belongs to a different design.');
     }
+    if (
+      custody.schemaVersion === '2.0.0' &&
+      (custody.pendingCreate || custody.pendingMutation?.action === 'publish')
+    ) {
+      if (recovered.recoverySpool !== `${basename(resolve(input))}.upload`)
+        throw new Error('Pending upload recovery requires its matching binary sidecar.');
+      custody.spoolDirectory = join(dirname(resolve(input)), recovered.recoverySpool);
+      const pending = custody.pendingCreate ?? custody.pendingMutation.body;
+      const destination = join(root, 'uploads', custody.id, pending.operationId);
+      if (existsSync(destination)) {
+        const { spoolChunkReader } = await import('@openplanr/artifact/upload-spool.mjs');
+        const reader = spoolChunkReader(destination, pending);
+        for (const part of pending.manifest.chunks) await reader(part.index);
+      } else await copyUploadSpool(custody, destination);
+      custody.spoolDirectory = destination;
+      delete recovered.recoverySpool;
+    }
     recovered.lastEvent = 0; // A second machine must import the complete feedback history.
     save(recovered);
     return { ...safeStatus(recovered, current), restored: true };
@@ -361,7 +488,7 @@ export async function syncDesignShare(file, options = {}) {
   // Only an existing attachment needs private owner storage validation.
   const location = custodyLocation(file, options, { allowMissing: true });
   if (!existsSync(location.path)) return { ok: true, shared: false, imported: 0 };
-  return withCustody(file, options, async ({ record, current, save }) => {
+  return withCustody(file, options, async ({ record, current, save, root }) => {
     if (!record || record.custody.pendingCreate || record.deleted)
       return { ok: true, shared: Boolean(record), imported: 0 };
     await flushOwnerMetadata(record, save, options);

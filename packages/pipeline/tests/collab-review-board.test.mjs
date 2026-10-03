@@ -757,6 +757,11 @@ const boardRuntime = () =>
   readFileSync(join(here, '..', 'templates/design/design-board-adapter.js'), 'utf8');
 const stageRuntime = () =>
   readFileSync(join(here, '..', 'templates/artifact-review-stage.js'), 'utf8');
+// Structural contracts belong to their projected canonical modules, not bundle formatting.
+const boardAdapterSource = () =>
+  readFileSync(join(here, '..', 'lib/artifact/internal/board-adapter.mjs'), 'utf8');
+const feedbackRailSource = () =>
+  readFileSync(join(here, '..', 'lib/artifact/ui/feedback-rail.mjs'), 'utf8');
 
 test('the board consumes the shared feedback rail and decision primitives once', () => {
   const html = boardHtml();
@@ -1259,13 +1264,17 @@ test('when a client disconnects, the remaining client receives presence:leave', 
 // (Space/Enter operable, aria-checked mirrors visibility) and is the SINGLE show/hide control —
 // when pins are hidden it reads "Pins hidden", so there is NO floating bar over the design.
 
-test('the board ships a keyboard-accessible Show/Hide pins toggle (role=switch + aria-checked)', () => {
-  const html = boardRuntime();
+test('the canonical board adapter declares one Show/Hide pins switch with an announced state', () => {
+  const html = boardAdapterSource();
   assert.ok(
     html.includes('data-planr-pins-toggle'),
     'show/hide pins toggle ships in the domain slot',
   );
-  assert.ok(html.includes('role", "switch"'), 'the toggle is role=switch (keyboard accessible)');
+  assert.match(
+    html,
+    /pinToggle\.setAttribute\(\s*['"]role['"]\s*,\s*['"]switch['"]\s*\)/u,
+    'the native button is a switch',
+  );
   assert.ok(html.includes('aria-checked'), 'aria-checked mirrors pin visibility for AT');
   assert.ok(html.includes('Pins hidden'), 'the toggle itself surfaces the hidden state');
   assert.ok(
@@ -1302,8 +1311,8 @@ test('the board ships every designed no-dead-end state (empty / loading / offlin
     'save/validation errors have an alert surface',
   );
   assert.match(
-    stageRuntime(),
-    /allPins\.filter\(\(\{ status \}\) => status !== "resolved"\)\.length/u,
+    feedbackRailSource(),
+    /allPins\.filter\(\s*\(\s*\{\s*status\s*\}\s*\)\s*=>\s*status\s*!==\s*['"]resolved['"]\s*\)\.length/u,
     'open counts derive from all durable pins, independently of the visible thread filter',
   );
 });

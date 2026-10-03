@@ -13,12 +13,13 @@ import { dirname, extname, isAbsolute, relative, resolve } from 'node:path';
 import { ARTIFACT_ERROR_CODES, PipelineError } from '@openplanr/protocol/errors';
 import { build, transform } from 'esbuild';
 import { parse, parseFragment, serialize } from 'parse5';
-import { digestArtifact, normalizeUtf8Text } from './envelope.mjs';
+import { digestArtifact, MAX_ARTIFACT_HTML_BYTES, normalizeUtf8Text } from './envelope.mjs';
+import { containsCredentialMaterial } from './internal/credential-material.mjs';
 import { isPathContained } from './internal/path-util.mjs';
 
 const DEFAULT_MAX_FILES = 1_000;
-const DEFAULT_MAX_BYTES = 100 * 1024 * 1024;
-const MAX_GENERATED_OUTPUT_BYTES = 100 * 1024 * 1024;
+const DEFAULT_MAX_BYTES = MAX_ARTIFACT_HTML_BYTES;
+const MAX_GENERATED_OUTPUT_BYTES = MAX_ARTIFACT_HTML_BYTES;
 const REMOTE_FETCH_TIMEOUT_MS = 15_000;
 const MAX_REMOTE_REDIRECTS = 5;
 const REMOTE_RE = /^(?:https?:|file:|ftp:|wss?:|\/\/)/i;
@@ -1004,16 +1005,17 @@ class BundleContext {
         pattern: /(?:process\.env|import\.meta\.env|__dirname|__filename)\b/,
         reason: 'machine/environment metadata reference',
       },
-      {
-        pattern: /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/,
-        reason: 'private key material',
-      },
-      { pattern: /\bAKIA[0-9A-Z]{16}\b/, reason: 'access key material' },
     ];
     for (const { pattern, reason, code = ARTIFACT_ERROR_CODES.REDACTION } of forbidden) {
       if (pattern.test(inspected)) {
         throw artifactError(code, `Artifact ${label} contains ${reason}.`);
       }
+    }
+    if (containsCredentialMaterial(inspected)) {
+      throw artifactError(
+        ARTIFACT_ERROR_CODES.REDACTION,
+        `Artifact ${label} contains credential material.`,
+      );
     }
     for (const value of this.sensitiveValues) {
       if (inspected.includes(value)) {

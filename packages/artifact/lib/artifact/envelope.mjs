@@ -1,12 +1,21 @@
 import { createHash } from 'node:crypto';
 import { ARTIFACT_ERROR_CODES, PipelineError } from '@openplanr/protocol/errors';
+import { LARGE_OBJECT_LIMITS } from '@openplanr/protocol/large-object-contracts';
+import {
+  ARTIFACT_MAX_SOURCES,
+  ARTIFACT_MAX_VIEWS,
+  ARTIFACT_SHARED_ENVELOPE_VERSION,
+  resolveArtifactHtml,
+} from './artifact-sources.mjs';
 import { validate } from './internal/schema-loader.mjs';
+
+export { resolveArtifactHtml } from './artifact-sources.mjs';
 
 const textEncoder = new TextEncoder();
 const SHA256_RE = /^[a-f0-9]{64}$/;
 const ID_RE = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 const MAX_ARTIFACTS = 256;
-const MAX_ARTIFACT_HTML_BYTES = 100 * 1024 * 1024;
+export const MAX_ARTIFACT_HTML_BYTES = LARGE_OBJECT_LIMITS.uniqueHtmlBytes;
 const MAX_PINS = 10_000;
 const MAX_REPLIES = 10_000;
 const MAX_PASTE_BYTES = 5 * 1024 * 1024;
@@ -188,6 +197,9 @@ function normalizeViewer(viewer, artifacts) {
 function envelopeWithoutReview(envelope) {
   return {
     schemaVersion: envelope.schemaVersion,
+    ...(envelope.schemaVersion === ARTIFACT_SHARED_ENVELOPE_VERSION
+      ? { sources: envelope.sources }
+      : {}),
     artifacts: envelope.artifacts,
     viewer: envelope.viewer,
   };
@@ -255,7 +267,8 @@ export function validateArtifactReview(review) {
 }
 
 export function validateArtifactEnvelope(envelope) {
-  const issues = validate(envelope, 'artifact-envelope', 'v1.1.0');
+  const shared = envelope?.schemaVersion === ARTIFACT_SHARED_ENVELOPE_VERSION;
+  const issues = validate(envelope, 'artifact-envelope', shared ? 'v1.16.0' : 'v1.1.0');
   if (issues.length > 0) {
     throw new PipelineError(
       ARTIFACT_ERROR_CODES.ENVELOPE_INVALID,
@@ -267,30 +280,42 @@ export function validateArtifactEnvelope(envelope) {
   if (
     !Array.isArray(envelope.artifacts) ||
     envelope.artifacts.length < 1 ||
-    envelope.artifacts.length > MAX_ARTIFACTS
+    envelope.artifacts.length > (shared ? ARTIFACT_MAX_VIEWS : MAX_ARTIFACTS)
   ) {
-    invalid(`Envelope requires 1 through ${MAX_ARTIFACTS} artifacts.`);
+    invalid(
+      `Envelope requires 1 through ${shared ? ARTIFACT_MAX_VIEWS : MAX_ARTIFACTS} artifacts.`,
+    );
   }
   const ids = envelope.artifacts.map(({ id }) => id);
   if (new Set(ids).size !== ids.length) {
     throw new PipelineError(ARTIFACT_ERROR_CODES.ENVELOPE_INVALID, 'Artifact ids must be unique.');
   }
+  const sources = shared ? envelope.sources : envelope.artifacts;
+  if (shared && new Set(sources.map(({ id }) => id)).size !== sources.length) {
+    invalid('Artifact source ids must be unique.');
+  }
   let artifactBytes = 0;
+  for (const source of sources) {
+    assertBoundedString(source.html, `Source ${source.id} HTML`, { min: 1 });
+    artifactBytes += Buffer.byteLength(source.html, 'utf8');
+    if (artifactBytes > MAX_ARTIFACT_HTML_BYTES) {
+      invalid(`Envelope sources exceed ${MAX_ARTIFACT_HTML_BYTES} UTF-8 bytes in total.`);
+    }
+    if (!SHA256_RE.test(source.sha256) || digestArtifact(source.html) !== source.sha256) {
+      invalid(`Artifact source ${source.id} digest is invalid.`);
+    }
+  }
   for (const artifact of envelope.artifacts) {
     assertBoundedString(artifact.id, 'artifact.id', { min: 1, max: 128, pattern: ID_RE });
     assertBoundedString(artifact.title, `Artifact ${artifact.id} title`, { min: 1, max: 512 });
-    assertBoundedString(artifact.html, `Artifact ${artifact.id} HTML`, { min: 1 });
-    artifactBytes += Buffer.byteLength(artifact.html, 'utf8');
-    if (artifactBytes > MAX_ARTIFACT_HTML_BYTES) {
-      invalid(`Envelope artifacts exceed ${MAX_ARTIFACT_HTML_BYTES} UTF-8 bytes in total.`);
-    }
     assertViewport(artifact.viewport, `Artifact ${artifact.id} viewport`);
-    if (!SHA256_RE.test(artifact.sha256) || digestArtifact(artifact.html) !== artifact.sha256) {
-      throw new PipelineError(
-        ARTIFACT_ERROR_CODES.ENVELOPE_INVALID,
-        `Artifact ${artifact.id} digest is invalid.`,
-      );
-    }
+    if (shared) resolveArtifactHtml(envelope, artifact);
+  }
+  if (
+    shared &&
+    new Set(envelope.artifacts.map(({ sourceId }) => sourceId)).size !== sources.length
+  ) {
+    invalid('Every shared artifact source must be referenced by a viewport.');
   }
   assertBoundedString(envelope.viewer.activeArtifactId, 'viewer.activeArtifactId', {
     min: 1,
@@ -348,6 +373,49 @@ export function createArtifactEnvelope({ artifacts, viewer, review } = {}) {
     ...(review ? { review: canonicalObject(review) } : {}),
   };
   return validateArtifactEnvelope(envelope);
+}
+
+/** Create a shared-source envelope without copying HTML for each viewport. Legacy creation is unchanged. */
+export function createSharedArtifactEnvelope({ sources, artifacts, viewer, review } = {}) {
+  if (!Array.isArray(sources) || sources.length < 1 || sources.length > ARTIFACT_MAX_SOURCES) {
+    invalid(`Shared envelope requires 1 through ${ARTIFACT_MAX_SOURCES} sources.`);
+  }
+  if (!Array.isArray(artifacts) || artifacts.length < 1 || artifacts.length > ARTIFACT_MAX_VIEWS) {
+    invalid(`Shared envelope requires 1 through ${ARTIFACT_MAX_VIEWS} viewport references.`);
+  }
+  const normalizedSources = sources.map((source) => {
+    const value = normalizeArtifact({ ...source, title: source?.id });
+    return { id: value.id, kind: value.kind, sha256: value.sha256, html: value.html };
+  });
+  const sourceMap = new Map(normalizedSources.map((source) => [source.id, source]));
+  const normalizedArtifacts = artifacts.map((artifact) => {
+    const source = sourceMap.get(artifact?.sourceId);
+    if (!source) invalid('Artifact viewport references an unknown shared source.');
+    assertBoundedString(artifact.id, 'artifact.id', { min: 1, max: 128, pattern: ID_RE });
+    assertBoundedString(artifact.title, 'artifact.title', { min: 1, max: 512 });
+    if (artifact.sha256 !== undefined && artifact.sha256 !== source.sha256) {
+      invalid('Artifact viewport digest does not match its shared source.');
+    }
+    const colorScheme = artifact.colorScheme ?? 'light';
+    if (!['light', 'dark'].includes(colorScheme))
+      invalid('Artifact viewport color scheme is invalid.');
+    return {
+      id: artifact.id,
+      kind: 'html',
+      title: artifact.title,
+      sourceId: source.id,
+      sha256: source.sha256,
+      viewport: normalizeViewport(artifact.viewport),
+      colorScheme,
+    };
+  });
+  return validateArtifactEnvelope({
+    schemaVersion: ARTIFACT_SHARED_ENVELOPE_VERSION,
+    sources: normalizedSources,
+    artifacts: normalizedArtifacts,
+    viewer: normalizeViewer(viewer, normalizedArtifacts),
+    ...(review ? { review: canonicalObject(review) } : {}),
+  });
 }
 
 export function validateArtifactPaste(paste) {

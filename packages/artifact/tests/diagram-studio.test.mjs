@@ -173,3 +173,21 @@ test('agent handoff preserves semantic targets, fallback coordinates, timestamps
   assert.match(markdown, /2026-09-13T12:01:00Z/);
   assert.match(markdown, /does not authorize execution/);
 });
+
+test('SVG discovery sorts lanes with groups before items and connections deterministically', async () => {
+  const { prepareDiagramSvg } = await import('../lib/artifact/ui/diagram-svg.mjs');
+  const shapes =
+    '<g data-item-id="item"><title>Item</title><rect x="10" y="10" width="20" height="20"/></g><g data-lane-id="lane-z"><title>Lane</title><rect x="0" y="0" width="100" height="100"/></g><g data-group-id="group-a"><title>Group</title><rect x="0" y="0" width="100" height="100"/></g><path data-relation-id="connection" d="M0 0 L20 20"/>';
+  const result = prepareDiagramSvg(
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">${shapes}</svg>`,
+  );
+  assert.deepEqual(
+    result.items.map(({ id, kind }) => [id, kind]),
+    [
+      ['group-a', 'Group'],
+      ['lane-z', 'Lane'],
+      ['item', 'Item'],
+      ['connection', 'Connection'],
+    ],
+  );
+});

@@ -12,7 +12,7 @@ import {
   prepareArtifactDocument,
   renderArtifactParentRuntime,
 } from '@openplanr/artifact/bridge.mjs';
-import { digestArtifactEnvelope } from '@openplanr/artifact/envelope.mjs';
+import { digestArtifactEnvelope, resolveArtifactHtml } from '@openplanr/artifact/envelope.mjs';
 import { resolveArtifactReviewDestination } from '@openplanr/artifact/import.mjs';
 import { acquireStartLock, readRequestBody } from '@openplanr/artifact/internal/server-util.mjs';
 import { createReviewLedger } from '@openplanr/artifact/merge.mjs';
@@ -21,13 +21,17 @@ import {
   withArtifactReviewLock,
   writeArtifactReviewState,
 } from '@openplanr/artifact/review.mjs';
-import { createArtifactReviewServer } from '@openplanr/artifact/review-server.mjs';
+import {
+  createArtifactReviewServer,
+  listArtifactReviewServers,
+} from '@openplanr/artifact/review-server.mjs';
 import { ARTIFACT_ERROR_CODES, PipelineError } from '@openplanr/protocol/errors';
 import { listDesignRevisions, readDesignRevision, reviewDigest } from './context.mjs';
 import { prepareDesignPlanHandoff } from './design-plan-handoff.mjs';
 import {
   atomicJson,
   currentDesign,
+  designRendererRevision,
   designSpecPath,
   hash,
   readJson,
@@ -69,7 +73,43 @@ import {
 } from './share.mjs';
 import { renderDesignStudio } from './studio.mjs';
 
-const VERSION = '1.3.0';
+const VERSION = '1.4.0';
+// Capture the code and asset identity at module load; a live daemon must not
+// present newly installed files as though its cached implementation was updated.
+const PACKAGE_VERSION = JSON.parse(
+  readFileSync(new URL('../../package.json', import.meta.url), 'utf8'),
+).version;
+const MODULE_IDENTITY = hash(
+  JSON.stringify({
+    version: VERSION,
+    renderer: designRendererRevision(),
+    implementation: [
+      startDesignReviewUnlocked,
+      studioRuntimeIdentity,
+      renderDesignStudio,
+      renderArtifactParentRuntime,
+      prepareArtifactDocument,
+      digestArtifactEnvelope,
+      resolveArtifactHtml,
+    ].map((implementation) => hash(Function.prototype.toString.call(implementation))),
+  }),
+);
+function studioRuntimeIdentity(current) {
+  return {
+    packageVersion: PACKAGE_VERSION,
+    moduleIdentity: MODULE_IDENTITY,
+    rendererIdentity: current.rendererRevision,
+    revision: current.revision,
+    artifactDigest: digestArtifactEnvelope(current.envelope),
+    sourceHash: hash(
+      JSON.stringify(
+        (current.envelope.sources ?? current.envelope.artifacts)
+          .map(({ id, sha256 }) => [id, sha256])
+          .sort(([a], [b]) => a.localeCompare(b)),
+      ),
+    ),
+  };
+}
 export const designReviewKey = (document) => `design-${hash(document.id).slice(0, 24)}`;
 export function designReviewPath(file, env = process.env) {
   const { root, document } = currentDesign(file);
@@ -225,6 +265,7 @@ function validateState(value, current) {
     'compare',
     'navOpen',
     'reviewOpen',
+    'inspectionScale',
     'zoom',
     'camera',
     'viewports',
@@ -244,6 +285,8 @@ function validateState(value, current) {
     throw new Error('Unknown studio screen.');
   if (value.frameId && !current.document.frames.some((item) => item.id === value.frameId))
     throw new Error('Unknown studio frame.');
+  if (value.inspectionScale !== undefined && !['fit', 'actual'].includes(value.inspectionScale))
+    throw new Error('Unknown inspection scale.');
   for (const key of ['navOpen', 'reviewOpen'])
     if (value[key] !== undefined && typeof value[key] !== 'boolean')
       throw new Error('Studio panels must use boolean visibility state.');
@@ -508,13 +551,16 @@ async function startDesignReviewUnlocked(
     env = process.env,
     noOpen = true,
     view,
+    sourceTransport = 'srcdoc',
+    frameBudget = 3,
     openUrl,
     fetchImpl = fetch,
     clock = () => new Date(),
   } = {},
 ) {
   let current = currentDesign(file);
-  if (view !== undefined) {
+  const applyInitialView = async () => {
+    if (view === undefined) return;
     const saved = readJson(join(current.root, '.design/studio-state.json'), {
       state: {},
       stateVersion: 0,
@@ -524,38 +570,74 @@ async function startDesignReviewUnlocked(
       revision: current.revision,
       state: { ...saved.state, view },
     });
-  }
+  };
   const stateFile = join(current.root, '.design/server.json');
   const old = readJson(stateFile, null);
-  if (old?.version === VERSION && old.url && /^http:\/\/127\.0\.0\.1:\d+\/r\//u.test(old.url)) {
+  const services = (await listArtifactReviewServers({ env, fetchImpl })).filter(
+    (service) => service.kind === 'design' && service.projectRoot === current.root,
+  );
+  if (old?.url && /^http:\/\/127\.0\.0\.1:\d+\/r\//u.test(old.url)) {
+    let observed;
     try {
       const status = await fetchImpl(`${old.url}api/design-status`, {
         signal: AbortSignal.timeout(700),
       });
       const data = await status.json();
-      if (
-        status.ok &&
-        data.documentId === current.document.id &&
-        (!port || new URL(old.url).port === String(port))
-      ) {
-        if (!noOpen) await openUrl?.(old.url);
-        return {
-          ok: true,
-          url: old.url,
-          sessionId: old.sessionId,
-          reused: true,
-          status: 'loading',
-          revision: current.revision,
-          reviewPath: designReviewPath(file, env),
-        };
-      }
+      if (status.ok && data.documentId === current.document.id) observed = data;
     } catch {
-      /* stale ownership; open a new local server */
+      /* A stopped or stale launcher may be replaced. */
+    }
+    if (observed) {
+      const owned = services.find(
+        (service) =>
+          service.kind === 'design' &&
+          service.projectRoot === current.root &&
+          service.instanceId === old.instanceId &&
+          service.pid === old.pid &&
+          service.port === Number(new URL(old.url).port),
+      );
+      if (!owned)
+        throw new PipelineError(
+          ARTIFACT_ERROR_CODES.LOOPBACK_STATE,
+          'Studio is running outside the current state directory. Stop it from its original session or PLANR_HOME before opening it here.',
+        );
+      if (
+        old.version !== VERSION ||
+        (port && owned.port !== port) ||
+        old.sourceTransport !== sourceTransport ||
+        old.frameBudget !== frameBudget ||
+        Object.entries(studioRuntimeIdentity(current)).some(
+          ([key, value]) => observed.runtimeIdentity?.[key] !== value,
+        )
+      )
+        throw new PipelineError(
+          ARTIFACT_ERROR_CODES.LOOPBACK_STATE,
+          'Studio is already running with different settings or runtime. Stop this design’s Studio, then open it again with the new settings.',
+        );
+      await applyInitialView();
+      if (!noOpen) await openUrl?.(old.studioUrl ?? old.url);
+      return {
+        ok: true,
+        url: old.studioUrl ?? old.url,
+        sessionId: old.sessionId,
+        instanceId: old.instanceId,
+        reused: true,
+        status: observed.status,
+        revision: current.revision,
+        reviewPath: designReviewPath(file, env),
+      };
     }
   }
+  if (services.length)
+    throw new PipelineError(
+      ARTIFACT_ERROR_CODES.LOOPBACK_STATE,
+      'Studio is still running, but its saved session link is unavailable. Stop this design’s owned Studio service, then open it again.',
+    );
+  await applyInitialView();
   let server;
   server = createArtifactReviewServer({
     env,
+    serverMetadata: { kind: 'design', projectRoot: current.root },
     prepareSource: (options) => prepareArtifactDocument({ ...options, allowLocalForms: true }),
     async refreshSession(session) {
       current = currentDesign(file);
@@ -594,6 +676,10 @@ async function startDesignReviewUnlocked(
     },
     renderRuntime({ options, base }) {
       const settings = {
+        runtimeIdentity: {
+          ...studioRuntimeIdentity(current),
+          launchContext: base.startsWith('/studio/') ? 'local Studio' : 'private review',
+        },
         stateUrl: `${base}api/design-state`,
         statusUrl: `${base}api/design-status`,
         readyUrl: `${base}api/design-ready`,
@@ -605,7 +691,7 @@ async function startDesignReviewUnlocked(
         revisionsUrl: `${base}api/design-revisions`,
         reviewExportUrl: `${base}api/design-feedback-export`,
       };
-      return `globalThis.__OPENPLANR_DESIGN_STUDIO_OPTIONS__={...${JSON.stringify(settings)},loadReviewExport:async({scope="all"}={})=>{const r=await fetch(${JSON.stringify(`${base}api/design-feedback-export`)},{method:"POST",headers:{"content-type":"application/json","x-openplanr-design":"1"},body:JSON.stringify({scope})});const value=await r.json();if(!r.ok)throw new Error(value.error||"Review export unavailable");return value},loadExperience:async()=>{const r=await fetch(${JSON.stringify(`${base}api/design-experience`)});if(!r.ok)throw new Error("Review context unavailable");return r.json()},loadReadiness:async()=>{const r=await fetch(${JSON.stringify(`${base}api/design-handoff-readiness`)});const value=await r.json();if(!r.ok)throw new Error(value.error||"Handoff readiness unavailable");return value},loadHandoff:async()=>{const r=await fetch(${JSON.stringify(`${base}api/design-handoff`)});if(!r.ok)throw new Error("Handoff unavailable");return r.json()},updateHandoff:async(input)=>{const r=await fetch(${JSON.stringify(`${base}api/design-handoff`)},{method:"POST",headers:{"content-type":"application/json","x-openplanr-design":"1"},body:JSON.stringify(input)});const value=await r.json();if(!r.ok)throw new Error(value.error||"Could not update handoff");return value},loadImplementationHandoff:async()=>{const r=await fetch(${JSON.stringify(`${base}api/design-implementation-handoff`)});const value=await r.json();if(!r.ok)throw new Error(value.error||"Implementation package unavailable");return value},updateImplementationHandoff:async(input)=>{const r=await fetch(${JSON.stringify(`${base}api/design-implementation-handoff`)},{method:"POST",headers:{"content-type":"application/json","x-openplanr-design":"1"},body:JSON.stringify(input)});const value=await r.json();if(!r.ok)throw new Error(value.error||"Could not update implementation package");return value},listRevisions:async()=>{const r=await fetch(${JSON.stringify(`${base}api/design-revisions`)});if(!r.ok)throw new Error("Revision history unavailable");return r.json()},loadRevision:async(revision)=>{const r=await fetch(${JSON.stringify(`${base}api/design-revisions`)},{method:"POST",headers:{"content-type":"application/json","x-openplanr-design":"1"},body:JSON.stringify({revision})});if(!r.ok)throw new Error("Revision unavailable");return r.json()},exportHtml:async()=>{const r=await fetch(${JSON.stringify(`${base}api/design-export`)});if(!r.ok)throw new Error('Export failed');return r.text()}};\n${renderArtifactParentRuntime({ ...options, adapterRuntimeUrl: `${base}api/design-share-runtime` })}`;
+      return `globalThis.__OPENPLANR_DESIGN_STUDIO_OPTIONS__={...${JSON.stringify(settings)},loadReviewExport:async({scope="all"}={})=>{const r=await fetch(${JSON.stringify(`${base}api/design-feedback-export`)},{method:"POST",headers:{"content-type":"application/json","x-openplanr-design":"1"},body:JSON.stringify({scope})});const value=await r.json();if(!r.ok)throw new Error(value.error||"Review export unavailable");return value},loadExperience:async()=>{const r=await fetch(${JSON.stringify(`${base}api/design-experience`)});if(!r.ok)throw new Error("Review context unavailable");return r.json()},loadReadiness:async()=>{const r=await fetch(${JSON.stringify(`${base}api/design-handoff-readiness`)});const value=await r.json();if(!r.ok)throw new Error(value.error||"Handoff readiness unavailable");return value},loadHandoff:async()=>{const r=await fetch(${JSON.stringify(`${base}api/design-handoff`)});if(!r.ok)throw new Error("Handoff unavailable");return r.json()},updateHandoff:async(input)=>{const r=await fetch(${JSON.stringify(`${base}api/design-handoff`)},{method:"POST",headers:{"content-type":"application/json","x-openplanr-design":"1"},body:JSON.stringify(input)});const value=await r.json();if(!r.ok)throw new Error(value.error||"Could not update handoff");return value},loadImplementationHandoff:async()=>{const r=await fetch(${JSON.stringify(`${base}api/design-implementation-handoff`)});const value=await r.json();if(!r.ok)throw new Error(value.error||"Implementation package unavailable");return value},updateImplementationHandoff:async(input)=>{const r=await fetch(${JSON.stringify(`${base}api/design-implementation-handoff`)},{method:"POST",headers:{"content-type":"application/json","x-openplanr-design":"1"},body:JSON.stringify(input)});const value=await r.json();if(!r.ok)throw new Error(value.error||"Could not update implementation package");return value},listRevisions:async()=>{const r=await fetch(${JSON.stringify(`${base}api/design-revisions`)});if(!r.ok)throw new Error("Revision history unavailable");return r.json()},loadRevision:async(revision,{artifactIds}={})=>{const r=await fetch(${JSON.stringify(`${base}api/design-revisions`)},{method:"POST",headers:{"content-type":"application/json","x-openplanr-design":"1"},body:JSON.stringify({revision,...(artifactIds?{artifactIds}:{})})});if(!r.ok)throw new Error("Revision unavailable");return r.json()},exportHtml:async()=>{const r=await fetch(${JSON.stringify(`${base}api/design-export`)});if(!r.ok)throw new Error('Export failed');return r.text()}};\n${renderArtifactParentRuntime({ ...options, adapterRuntimeUrl: `${base}api/design-share-runtime` })}`;
     },
     async handleSessionRequest({ req, res, segments }) {
       if (segments.length !== 5 || segments[3] !== 'api' || !segments[4].startsWith('design-'))
@@ -806,12 +892,32 @@ async function startDesignReviewUnlocked(
             await syncDesignShare(file, { env, fetchImpl });
             respond(res, 200, exportDesignReview(file, { scope: input.scope ?? 'all', env }));
           } else {
+            if (
+              !input ||
+              typeof input !== 'object' ||
+              Array.isArray(input) ||
+              Object.keys(input).some((key) => !['revision', 'artifactIds'].includes(key)) ||
+              (input.artifactIds !== undefined &&
+                (!Array.isArray(input.artifactIds) ||
+                  input.artifactIds.length < 1 ||
+                  input.artifactIds.length > 2 ||
+                  input.artifactIds.some((id) => typeof id !== 'string') ||
+                  new Set(input.artifactIds).size !== input.artifactIds.length))
+            )
+              throw new Error('Revision comparison requires one or two distinct view IDs.');
             const bundle = readDesignRevision(file, input.revision);
+            // History stays pooled. Prepare isolated bytes only for the selected
+            // comparison views, rather than expanding every viewport reference.
+            const artifacts = (input.artifactIds ?? []).map((id) => {
+              const artifact = bundle.envelope.artifacts.find((item) => item.id === id);
+              if (!artifact) throw new Error('Comparison view does not belong to this revision.');
+              return artifact;
+            });
             const comparisonSources = Object.fromEntries(
-              bundle.envelope.artifacts.map((artifact) => [
+              artifacts.map((artifact) => [
                 artifact.id,
                 prepareArtifactDocument({
-                  html: artifact.html,
+                  html: resolveArtifactHtml(bundle.envelope, artifact),
                   artifactId: artifact.id,
                   nonce: createArtifactBridgeNonce(),
                   parentOrigin: `http://127.0.0.1:${server.port}`,
@@ -820,7 +926,13 @@ async function startDesignReviewUnlocked(
                 }).html,
               ]),
             );
-            respond(res, 200, { ...bundle, comparisonSources });
+            respond(
+              res,
+              200,
+              input.artifactIds
+                ? { revision: bundle.revision, comparisonSources }
+                : { ...bundle, comparisonSources },
+            );
           }
         } else if (route === 'design-share-runtime' && req.method === 'GET') {
           res.writeHead(200, {
@@ -871,6 +983,7 @@ async function startDesignReviewUnlocked(
             revision: current.revision,
             status: ready?.revision === current.revision ? ready.status : 'loading',
             verification: current.verification.status,
+            runtimeIdentity: studioRuntimeIdentity(current),
           });
         } else if (route === 'design-state' && req.method === 'GET') {
           respond(res, 200, {
@@ -884,16 +997,23 @@ async function startDesignReviewUnlocked(
           respond(res, 200, await saveDesignState(file, await readBody(req)));
         } else if (route === 'design-ready' && req.method === 'POST') {
           const value = await readBody(req);
+          const loadedArtifacts = new Set(Array.isArray(value?.artifacts) ? value.artifacts : []);
           if (
             value.revision !== current.revision ||
             value.status !== 'ready' ||
             !Array.isArray(value.artifacts) ||
-            current.entries.some((entry) => !value.artifacts.includes(entry.artifactId))
+            value.artifacts.length === 0 ||
+            loadedArtifacts.size !== value.artifacts.length ||
+            value.artifacts.some((id) => !current.entries.some((entry) => entry.artifactId === id))
           )
-            throw new Error('Browser readiness does not cover every expected design artboard.');
+            throw new Error('Browser readiness must identify loaded design artboards.');
           atomicJson(join(current.root, '.design/browser-ready.json'), {
             status: 'ready',
             revision: current.revision,
+            artifacts: value.artifacts,
+            coverage: current.entries.every((entry) => loadedArtifacts.has(entry.artifactId))
+              ? 'complete'
+              : 'selected',
             checkedAt: new Date().toISOString(),
           });
           respond(res, 200, { ok: true });
@@ -940,25 +1060,34 @@ async function startDesignReviewUnlocked(
         title: current.document.title,
         cwd: current.root,
         reviewKey: designReviewKey(current.document),
+        studioId: current.document.id,
+        sourceTransport,
+        frameBudget,
       }),
     });
     const registration = await registered.json();
     if (!registered.ok)
       throw new Error(`Design review registration failed: ${JSON.stringify(registration)}`);
     const url = `${origin}${registration.path}`;
+    const studioUrl = `${origin}${registration.studioPath}`;
     if (!(await fetchImpl(url)).ok) throw new Error('Design studio document failed to load.');
     atomicJson(stateFile, {
       version: VERSION,
       url,
+      studioUrl,
+      sourceTransport,
+      frameBudget,
       sessionId: registration.sessionId,
       pid: process.pid,
       instanceId: server.instanceId,
+      runtimeIdentity: studioRuntimeIdentity(current),
     });
-    if (!noOpen) await openUrl?.(url);
+    if (!noOpen) await openUrl?.(studioUrl);
     return {
       ok: true,
-      url,
+      url: studioUrl,
       sessionId: registration.sessionId,
+      instanceId: server.instanceId,
       status: 'loading',
       revision: current.revision,
       reviewPath: designReviewPath(file, env),
@@ -995,8 +1124,10 @@ export async function resolveDesignPins(file, { pinIds, summary, env = process.e
             );
           if (
             pin.anchor?.planrId &&
-            !artifact.html.includes(`data-planr-id="${pin.anchor.planrId}"`) &&
-            !artifact.html.includes(`id="${pin.anchor.planrId}"`)
+            !resolveArtifactHtml(current.envelope, artifact).includes(
+              `data-planr-id="${pin.anchor.planrId}"`,
+            ) &&
+            !resolveArtifactHtml(current.envelope, artifact).includes(`id="${pin.anchor.planrId}"`)
           )
             throw new PipelineError(
               ARTIFACT_ERROR_CODES.STALE_REVIEW,

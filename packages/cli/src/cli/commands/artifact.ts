@@ -4,6 +4,7 @@ import type { Command } from 'commander';
 import {
   ArtifactCommandError,
   type ArtifactEnvelope,
+  createArtifactReviewLinkWithSecretCustody,
   createLiveReviewRoomWithSecretCustody,
   loadArtifactPipeline,
   openArtifactSecretUrl,
@@ -55,6 +56,7 @@ interface ShareOptions {
   presentation?: string;
   snapshot?: boolean;
   secretOutput?: string;
+  resume?: string;
 }
 
 interface ImportOptions {
@@ -210,6 +212,14 @@ async function openArtifact(program: Command, file: string, options: OpenOptions
 }
 
 async function shareArtifact(program: Command, file: string, options: ShareOptions): Promise<void> {
+  if (options.resume) {
+    if (options.ttl !== undefined)
+      throw new ArtifactCommandError(
+        'E_ARTIFACT_INPUT_INVALID',
+        'A resumed paste retains its saved expiry; omit --ttl.',
+      );
+    options = { ...options, snapshot: true, short: true };
+  }
   const designInput = resolveInput(program, file);
   if (isDiagramShareFile(designInput)) {
     if (options.ttl !== undefined || options.snapshot || options.short)
@@ -241,7 +251,7 @@ async function shareArtifact(program: Command, file: string, options: ShareOptio
       'Use `planr artifact share <file> --snapshot --short --yes`, or omit both options to create a live room.',
     );
   }
-  if (options.snapshot && options.open === false && !options.secretOutput) {
+  if (options.snapshot && options.open === false && !options.secretOutput && !options.resume) {
     throw new ArtifactCommandError(
       'E_ARTIFACT_SECRET_EXPORT',
       'A non-opened encrypted snapshot requires explicit private secret export.',
@@ -255,7 +265,7 @@ async function shareArtifact(program: Command, file: string, options: ShareOptio
     title: options.title,
     presentation: presentation(options.presentation),
   });
-  const yes = confirmed(program, options.yes);
+  const yes = confirmed(program, options.yes) || Boolean(options.resume);
   if (!options.snapshot) {
     if (
       typeof prepared.api.prepareLiveReviewRoom !== 'function' ||
@@ -352,32 +362,22 @@ async function shareArtifact(program: Command, file: string, options: ShareOptio
       true,
     );
   }
-  const secretReservation = options.secretOutput
-    ? reserveArtifactSecretExport(path.resolve(projectDir(program), options.secretOutput))
-    : undefined;
-  let result: Record<string, unknown>;
-  try {
-    result = await prepared.api.createReviewLink(prepared.envelope, {
+  const result = await createArtifactReviewLinkWithSecretCustody({
+    api: prepared.api,
+    envelope: prepared.envelope,
+    output: options.secretOutput
+      ? path.resolve(projectDir(program), options.secretOutput)
+      : undefined,
+    resume: options.resume ? path.resolve(projectDir(program), options.resume) : undefined,
+    options: {
       baseUrl: process.env.OPENPLANR_SHARE_BASE ?? 'https://share.openplanr.dev',
       short: Boolean(options.short),
       transport: options.short ? 'short' : 'auto',
-      ttl: options.ttl ?? '7d',
+      ...(options.resume ? {} : { ttl: options.ttl ?? '7d' }),
       confirmed: allowShort,
       yes: allowShort,
-    });
-    if (secretReservation) {
-      secretReservation.finalize({
-        schemaVersion: '1.0.0',
-        kind: 'openplanr-artifact-share-secrets',
-        transport: result.transport === 'short' ? 'short' : 'fragment',
-        reviewUrl: String(result.url),
-        ...(result.deletionToken ? { deletionToken: String(result.deletionToken) } : {}),
-      });
-    }
-  } catch (error) {
-    secretReservation?.abort();
-    throw error;
-  }
+    },
+  });
   const url = String(result.url);
   if (options.open !== false) await openArtifactSecretUrl(url);
   const safe = {
@@ -401,7 +401,14 @@ async function shareArtifact(program: Command, file: string, options: ShareOptio
     }
     display.keyValue('Presentation', prepared.presentation);
     if (result.expiresAt) display.keyValue('Expires', String(result.expiresAt));
-    display.keyValue('Private custody', options.secretOutput ? 'exported' : 'browser handoff only');
+    display.keyValue(
+      'Private custody',
+      options.secretOutput
+        ? 'exported'
+        : result.transport === 'short'
+          ? 'saved locally'
+          : 'browser handoff only',
+    );
   }
 }
 
@@ -697,6 +704,7 @@ export function registerArtifactCommand(program: Command): void {
     .option('--json', 'emit machine-readable output', false)
     .option('--yes', 'confirm encrypted upload non-interactively', false)
     .option('--secret-output <path>', 'write capabilities to a new private 0600 file')
+    .option('--resume <private-file>', 'retry the exact saved generic encrypted paste operation')
     .action((file: string, _options: ShareOptions, command: Command) =>
       shareArtifact(program, file, command.optsWithGlobals<ShareOptions>()),
     );

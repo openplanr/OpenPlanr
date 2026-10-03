@@ -1,3 +1,4 @@
+// @ts-check
 import { lstat, readdir, readFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 
@@ -13,7 +14,9 @@ import { layoutDiagram } from '../rendering/layout.mjs';
 import { isDashedRelation } from '../rendering/theme.mjs';
 import { validateAuthoringBundle } from './model.mjs';
 
+/** @template {string} K @param {K} kind @returns {{kind:K,schemaVersion:'1.0.0',protocolVersion:'1.13.0'}} */
 const meta = (kind) => ({ kind, schemaVersion: '1.0.0', protocolVersion: '1.13.0' });
+/** @returns {Extract<import('./migration.d.mts').DiagramMigrationPreview, {ok:false}>} */
 const fail = (code, message, elementIds = []) => ({
   ok: false,
   sourceModified: false,
@@ -21,6 +24,7 @@ const fail = (code, message, elementIds = []) => ({
 });
 const bounds = ({ x, y, width, height }) => ({ x, y, width, height });
 
+/** @returns {import('@openplanr/protocol/diagram-authoring-contracts').DiagramPlacement} */
 function placement(item, shape, zIndex) {
   return {
     elementId: item.id,
@@ -56,10 +60,16 @@ function attachment(box, point) {
     },
     { side: 'left', distance: Math.abs(point.x - box.x), offset: (point.y - box.y) / box.height },
   ].sort((a, b) => a.distance - b.distance);
-  return { side: sides[0].side, offset: Math.max(0, Math.min(1, sides[0].offset)) };
+  return {
+    side: /** @type {import('@openplanr/protocol/diagram-authoring-contracts').DiagramBoundaryAttachment['side']} */ (
+      sides[0].side
+    ),
+    offset: Math.max(0, Math.min(1, sides[0].offset)),
+  };
 }
 
 /** Capture the existing derived placement without changing the legacy document. */
+/** @returns {ReturnType<typeof import('./migration.d.mts').previewLegacyDiagramDocument>} */
 export function previewLegacyDiagramDocument(document) {
   const inspection = inspectLegacyDiagramDocument(document);
   if (!inspection.valid)
@@ -85,9 +95,11 @@ export function previewLegacyDiagramDocument(document) {
   let scene;
   try {
     scene = layoutDiagram(document);
-  } catch (error) {
+  } catch (caughtError) {
+    const error = errorObject(caughtError);
     return fail('legacy-layout-unavailable', error.message);
   }
+  /** @type {import('@openplanr/protocol/diagram-authoring-contracts').DiagramAuthoringDocument} */
   const semantic = {
     ...meta('planr-diagram'),
     diagramId: document.diagramId,
@@ -121,10 +133,10 @@ export function previewLegacyDiagramDocument(document) {
     emphasis: structuredClone(document.emphasis),
     laneOrder: document.lanes.map((lane) => lane.id),
     accessibility: structuredClone(document.accessibility),
-    documentDigest: '',
+    documentDigest: 'sha256:',
   };
   semantic.documentDigest = diagramDocumentDigest(semantic);
-  const boxes = new Map(scene.boxes.map((box) => [box.id, box]));
+  const boxes = new Map(scene.boxes.map((box) => [/** @type {{id:string}} */ (box).id, box]));
   const elements = [
     ...scene.lanes.map((item) => placement(item, 'container', 0)),
     ...scene.groups.map((item) => placement(item, 'container', 1)),
@@ -162,6 +174,7 @@ export function previewLegacyDiagramDocument(document) {
     ...scene.notes.map((item) => placement(item, 'text', 3)),
     ...scene.boxes.map((item) => placement(item, 'rounded-rectangle', 4)),
   ];
+  /** @type {import('@openplanr/protocol/diagram-authoring-contracts').DiagramPresentation} */
   const presentation = {
     ...meta('diagram-presentation'),
     diagramId: document.diagramId,
@@ -170,9 +183,10 @@ export function previewLegacyDiagramDocument(document) {
     layout: structuredClone(document.layout),
     theme: { themeId: 'paper', mode: 'light' },
     elements,
-    presentationDigest: '',
+    presentationDigest: 'sha256:',
   };
   presentation.presentationDigest = diagramPresentationDigest(presentation);
+  /** @type {import('@openplanr/protocol/diagram-authoring-contracts').DiagramAuthoringBundle} */
   const bundle = {
     ...meta('diagram-authoring-bundle'),
     diagramId: document.diagramId,
@@ -180,7 +194,7 @@ export function previewLegacyDiagramDocument(document) {
     presentation,
     originalSource: null,
     sourceMap: null,
-    bundleDigest: '',
+    bundleDigest: 'sha256:',
   };
   bundle.bundleDigest = diagramAuthoringBundleDigest(bundle);
   const validation = validateAuthoringBundle(bundle);
@@ -209,6 +223,7 @@ export function previewLegacyDiagramDocument(document) {
 }
 
 /** Read-only custody check. Unlike inspectDiagram, this never performs recovery. */
+/** @type {typeof import('./migration.d.mts').previewLegacyDiagramMigration} */
 export async function previewLegacyDiagramMigration({ root, slug }) {
   assertDiagramSlug(slug);
   if (typeof root !== 'string' || !root || root.includes('\0'))
@@ -262,7 +277,13 @@ export async function previewLegacyDiagramMigration({ root, slug }) {
       ...preview,
       source: { ...current.manifest.source, manifestDigest: current.manifest.documentDigest },
     };
-  } catch (error) {
+  } catch (caughtError) {
+    const error = errorObject(caughtError);
     return fail('legacy-custody-invalid', error.message);
   }
+}
+
+/** @param {unknown} value @returns {NodeJS.ErrnoException & {exportCode?: string}} */
+function errorObject(value) {
+  return value instanceof Error ? value : new Error(String(value));
 }

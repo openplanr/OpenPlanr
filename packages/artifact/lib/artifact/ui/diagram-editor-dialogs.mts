@@ -1,4 +1,5 @@
-import type { DiagramAuthoringBundle } from '@openplanr/protocol/diagram-authoring-contracts';
+import type { VersionedDiagramAuthoringBundle as DiagramAuthoringBundle } from '@openplanr/protocol/studio-presentation-contracts';
+
 import { compileDiagramCommand, type DiagramCommandResult } from '../diagram/authoring/index.mjs';
 import { elementIndex } from '../diagram/authoring/model.mjs';
 import type { DiagramEditorState } from '../diagram/editor/index.mjs';

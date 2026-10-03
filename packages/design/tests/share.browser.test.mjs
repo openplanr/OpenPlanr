@@ -13,9 +13,11 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 import { launchBrowser } from '../../../tests/support/browser-launcher.mjs';
 import { currentDesign, renderDesignDocument } from '../lib/design/document.mjs';
-import { readDesignFeedback, startDesignReview } from '../lib/design/review.mjs';
+import { readDesignFeedback } from '../lib/design/review.mjs';
 import { manageDesignShare, syncDesignShare } from '../lib/design/share.mjs';
+import { getWorkspace, readWorkspaceEvents } from '../lib/design/workspace-client.mjs';
 import { designFixture } from './design-fixture.mjs';
+import { startDesignReview } from './studio-http-fixture.mjs';
 
 // Companion-service acceptance is explicitly opted into. Ordinary installs have
 // no dependency on the external web source tree or its development tools.
@@ -258,7 +260,54 @@ test('local Share UI publishes a permanent review usable by another browser afte
     .locator('[data-planr-reply-form] textarea')
     .first()
     .fill('The existing interaction works well.');
+  // The prior pin's saved notice can remain visible while this reply is being
+  // signed and durably queued. Bind readiness to this reply's committed event.
+  const reviewUrl = new URL(url);
+  const feedbackAccess = {
+    id: reviewUrl.pathname.split('/').at(-1),
+    baseUrl,
+    token,
+    ...(reviewUrl.searchParams.get('v') === '2' ? { schemaVersion: '2.0.0' } : {}),
+  };
+  await getWorkspace(feedbackAccess);
+  const replyAcknowledgement = recipient.waitForResponse(
+    async (response) => {
+      const request = response.request();
+      const endpoint = new URL(request.url());
+      if (
+        request.method() !== 'POST' ||
+        endpoint.origin !== baseUrl ||
+        !endpoint.pathname.endsWith(`/${feedbackAccess.id}/events`) ||
+        !response.ok()
+      )
+        return false;
+      const prepared = request.postDataJSON();
+      const receipt = await response.json();
+      const committedId = feedbackAccess.schemaVersion === '2.0.0' ? receipt.id : receipt.event?.id;
+      if (
+        committedId !== prepared.id ||
+        !Number.isSafeInteger(receipt.sequence) ||
+        receipt.sequence < 1
+      )
+        return false;
+      const page = await readWorkspaceEvents(feedbackAccess, { after: receipt.sequence - 1 });
+      return page.events.some(
+        (event) =>
+          event.id === committedId &&
+          event.sequence === receipt.sequence &&
+          event.revisionId === feedbackAccess.currentRevision &&
+          event.payload.kind === 'review' &&
+          event.payload.review.pins.some(
+            (pin) =>
+              pin.comment === 'Keep this action visible on small screens.' &&
+              pin.replies.some((reply) => reply.comment === 'The existing interaction works well.'),
+          ),
+      );
+    },
+    { timeout: 15000 },
+  );
   await recipient.getByRole('button', { name: 'Send reply', exact: true }).click();
+  await replyAcknowledgement;
   await recipient.getByText('Feedback saved', { exact: true }).waitFor({ timeout: 15000 });
   await syncDesignShare(file, { env });
   let feedback = readDesignFeedback(file, env);

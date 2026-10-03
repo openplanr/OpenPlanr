@@ -14,13 +14,13 @@ import { tmpdir } from 'node:os';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { after, test } from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { installedDependencyClosure } from '../../../../tests/support/dependency-closure.mjs';
 import { OPERATE_RUNTIME_CONTRACT_KINDS } from '../../lib/protocol/loader.mjs';
 import {
   checkOperateRuntimePurity,
   packOperateV2DevelopmentSnapshot,
 } from '../../scripts/check-operate-runtime-purity.mjs';
 import { PROTECTED_USER_OWNED_PATHS } from '../../scripts/inventory-operate-surfaces.mjs';
-import { resolveWorkspaceDependencyRoot } from '../helpers/workspace-dependency.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const packageVersion = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version;
@@ -241,7 +241,7 @@ function localMarkdownTarget(rawDestination) {
     }
     destination = raw.slice(0, end);
   }
-  destination = destination.replace(/\\([\\`*{}\[\]()#+.!_> -])/g, '$1');
+  destination = destination.replace(/\\([\\`*{}[\]()#+.!_> -])/g, '$1');
   if (
     destination.startsWith('#') ||
     destination.startsWith('//') ||
@@ -476,14 +476,27 @@ test('Operate 2.0 development package installs the clean typed contract without 
   mkdirSync(installRoot, { recursive: true });
   mkdirSync(dependencyRoot, { recursive: true });
   const localDependencies = {};
-  for (const dependency of ['@noble/hashes', 'entities', 'esbuild', 'pako', 'parse5']) {
-    const [dependencyPack] = JSON.parse(
-      runNpm(['pack', '--ignore-scripts', '--json', '--pack-destination', dependencyRoot], {
-        cwd: resolveWorkspaceDependencyRoot(dependency),
-      }).stdout,
-    );
-    localDependencies[dependency] = `file:${join(dependencyRoot, dependencyPack.filename)}`;
-  }
+  const manifest = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
+  const closure = installedDependencyClosure(Object.keys(manifest.dependencies), {
+    from: join(root, 'package.json'),
+  });
+  const dependencyPacks = JSON.parse(
+    runNpm([
+      'pack',
+      '--ignore-scripts',
+      '--offline',
+      '--json',
+      '--pack-destination',
+      dependencyRoot,
+      ...closure.map(({ root }) => root),
+    ]).stdout,
+  );
+  assert.deepEqual(
+    dependencyPacks.map(({ name }) => name).sort(),
+    closure.map(({ name }) => name).sort(),
+  );
+  for (const dependency of dependencyPacks)
+    localDependencies[dependency.name] = `file:${join(dependencyRoot, dependency.filename)}`;
   writeFileSync(
     join(installRoot, 'package.json'),
     JSON.stringify({
