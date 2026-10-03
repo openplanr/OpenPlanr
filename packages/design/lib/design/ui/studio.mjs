@@ -172,6 +172,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
     frameDemandTimer = null;
   let failedSelection = null;
   let frameDemandKey = '';
+  let frameDemandGeneration = 0;
   let queuedSelection = null;
   let noteScreenId = null;
   let notesReturnFocus = null;
@@ -818,7 +819,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
     const zoom = String(state.zoom);
     if (grid.style.getPropertyValue('--design-zoom') !== zoom)
       grid.style.setProperty('--design-zoom', zoom);
-    grid.style.transform = `translate3d(${state.camera.x}px, ${state.camera.y}px, 0) scale(${state.zoom})`;
+    grid.style.transform = `translate(${state.camera.x}px, ${state.camera.y}px) scale(${state.zoom})`;
     // Translate a bounded background layer rather than invalidating inherited
     // properties on the entire shell or repainting its full stage background.
     const pixelRatio = window.devicePixelRatio || 1;
@@ -872,9 +873,11 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
   function scheduleFrameDemand() {
     if (!stage?.frameBudget || destroyed) return;
     clearTimeout(frameDemandTimer);
+    const generation = frameDemandGeneration;
     frameDemandTimer = setTimeout(() => {
       if (
         destroyed ||
+        generation !== frameDemandGeneration ||
         !readyReported ||
         pendingScreen ||
         walkthroughTransition ||
@@ -909,7 +912,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       if (key === frameDemandKey) return;
       frameDemandKey = key;
       void stage
-        .ensureFrames(ids)
+        .ensureFrames(ids, () => !destroyed && generation === frameDemandGeneration)
         .then(updateFramePlaceholders)
         .catch((error) => {
           if (!destroyed && error.name !== 'AbortError') {
@@ -1206,6 +1209,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       const { x, y, deltaY } = event.detail;
       const frame = design.frames.find((item) => item.id === entry.frameId);
       const rect = event.target.getBoundingClientRect();
+      chrome?.update({ exportMenuOpen: false });
       zoomTo(
         state.zoom * Math.exp(-deltaY * 0.004),
         {
@@ -1219,6 +1223,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       if (state.view !== 'canvas') return;
       const entry = entries.find((item) => stage.getFrame(item.artifactId) === event.target);
       if (!entry || panels.get(entry.artifactId)?.hidden) return;
+      chrome?.update({ exportMenuOpen: false });
       state.camera = {
         x: clamp(state.camera.x - event.detail.deltaX, -1e7, 1e7),
         y: clamp(state.camera.y - event.detail.deltaY, -1e7, 1e7),
@@ -1646,6 +1651,10 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       if (dirty || reviewDirty) void flush();
     });
     listen(window, 'beforeunload', (event) => {
+      // A canceled navigation keeps ready frames; only retire background demand.
+      clearTimeout(frameDemandTimer);
+      frameDemandGeneration += 1;
+      frameDemandKey = '';
       storeDraft();
       storeReviewDraft();
       if ((contentDirty || reviewDirty) && (options.stateUrl || options.saveState || reviewUrl())) {
@@ -1680,6 +1689,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
         (source.artifactId !== activeArtifactId || walkthroughTransition)
       )
         return;
+      chrome?.update({ exportMenuOpen: false });
       selectEntry(entryFor(event.data.screenId, source.variantId, source.frameId));
     });
   }

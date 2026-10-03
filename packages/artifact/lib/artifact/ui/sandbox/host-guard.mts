@@ -594,7 +594,7 @@ type GuardAttachInput = {
   ).__OPENPLANR_ARTIFACT_STAGE_OPTIONS__ = Object.freeze({
     sourceTransport: config.sourceTransport,
     ...(config.frameBudget === undefined ? {} : { frameBudget: config.frameBudget }),
-    async resolveArtifactSource(artifact: { id: string }) {
+    async resolveArtifactSource(artifact: { id: string }, context?: { signal?: AbortSignal }) {
       if (config.inlineSources) {
         const sourceId = config.inlineArtifactSources?.[artifact.id];
         const source = Object.hasOwn(config.inlineSources, sourceId ?? '')
@@ -626,6 +626,7 @@ type GuardAttachInput = {
         cache: 'no-store',
         credentials: 'omit',
         referrerPolicy: 'no-referrer',
+        signal: context?.signal,
       });
       if (
         !response.ok ||

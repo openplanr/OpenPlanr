@@ -602,7 +602,7 @@
         },
         {
           "path": "skills/design/scripts/design-sandbox-guards.mjs",
-          "digest": "sha256:225ed960411034485fe081adbf2b3c27741407fb93eede4dcad254b3f64e464d"
+          "digest": "sha256:f079cc28de5815ae4c32ca33602a9d3e2ac83b38626c948c19d80ad0cd1a14b2"
         },
         {
           "path": "skills/design/scripts/design-share.mjs",
@@ -634,11 +634,11 @@
         },
         {
           "path": "skills/design/scripts/runtime/packages/artifact/templates/artifact-review-stage.js.part-003",
-          "digest": "sha256:020f30d9994b95783493582a945037a015f71e05866985e03fe7e9d98a1ded4a"
+          "digest": "sha256:a9e840670eba89b531b044e2405252a26b4327d350d14fa264c2ee00fe4e8a05"
         },
         {
           "path": "skills/design/scripts/runtime/packages/artifact/templates/artifact-review-stage.js.parts.json",
-          "digest": "sha256:25f80ad5effbd4a6545535c0bff1c26bb95ea2793e43ce24b267556f4ed8331a"
+          "digest": "sha256:7f5b7a8c5b5cc10f04579c84c93b7852578c65c1051b289c7ab06bbda8c57dc6"
         },
         {
           "path": "skills/design/scripts/runtime/packages/design/package.json",
@@ -662,7 +662,7 @@
         },
         {
           "path": "skills/design/scripts/runtime/packages/design/templates/studio/studio.css",
-          "digest": "sha256:0dbd4b536d6f62890b8120882fd77c66aaabf5cfe22ee7b3b9fa6a76da21f33d"
+          "digest": "sha256:ecb86a5f5517262f8dc71e518163ca55074404c6823d5f989edad5e9f71293af"
         },
         {
           "path": "skills/design/scripts/runtime/packages/design/templates/studio/studio.js.part-001",
@@ -694,15 +694,15 @@
         },
         {
           "path": "skills/design/scripts/runtime/packages/design/templates/studio/studio.js.part-008",
-          "digest": "sha256:837f73e1d4fcd8374b0d7dc78acd0431fd749b0e4ced6b987adbc136bbce4017"
+          "digest": "sha256:2f03557f7b4bf6d5953dd06114b6dde27f49e6b4d77c812988f8b865d92f3900"
         },
         {
           "path": "skills/design/scripts/runtime/packages/design/templates/studio/studio.js.part-009",
-          "digest": "sha256:79c1bea70010ed5a630c50335a7c53315df79302192cc7efb2a439de2cbb1e60"
+          "digest": "sha256:1b405a0f3f7da5c55b87c94e152be975a74fa9399f457141c51e9cea56d379a1"
         },
         {
           "path": "skills/design/scripts/runtime/packages/design/templates/studio/studio.js.parts.json",
-          "digest": "sha256:df44ac8e2c07ce4835c312bd121a268d5f6b0fbafbca0b8be24ff7f18acde56d"
+          "digest": "sha256:7a26637c80ef499f46d87087bf2588a82dac7c1c67163c6a657a1087760feea1"
         },
         {
           "path": "skills/design/scripts/runtime/packages/protocol/package.json",
@@ -903,7 +903,7 @@
         },
         {
           "path": "skills/design-loop/scripts/design-sandbox-guards.mjs",
-          "digest": "sha256:225ed960411034485fe081adbf2b3c27741407fb93eede4dcad254b3f64e464d"
+          "digest": "sha256:f079cc28de5815ae4c32ca33602a9d3e2ac83b38626c948c19d80ad0cd1a14b2"
         },
         {
           "path": "skills/design-loop/scripts/design-share.mjs",
@@ -935,11 +935,11 @@
         },
         {
           "path": "skills/design-loop/scripts/runtime/packages/artifact/templates/artifact-review-stage.js.part-003",
-          "digest": "sha256:020f30d9994b95783493582a945037a015f71e05866985e03fe7e9d98a1ded4a"
+          "digest": "sha256:a9e840670eba89b531b044e2405252a26b4327d350d14fa264c2ee00fe4e8a05"
         },
         {
           "path": "skills/design-loop/scripts/runtime/packages/artifact/templates/artifact-review-stage.js.parts.json",
-          "digest": "sha256:25f80ad5effbd4a6545535c0bff1c26bb95ea2793e43ce24b267556f4ed8331a"
+          "digest": "sha256:7f5b7a8c5b5cc10f04579c84c93b7852578c65c1051b289c7ab06bbda8c57dc6"
         },
         {
           "path": "skills/design-loop/scripts/runtime/packages/design/package.json",
@@ -963,7 +963,7 @@
         },
         {
           "path": "skills/design-loop/scripts/runtime/packages/design/templates/studio/studio.css",
-          "digest": "sha256:0dbd4b536d6f62890b8120882fd77c66aaabf5cfe22ee7b3b9fa6a76da21f33d"
+          "digest": "sha256:ecb86a5f5517262f8dc71e518163ca55074404c6823d5f989edad5e9f71293af"
         },
         {
           "path": "skills/design-loop/scripts/runtime/packages/design/templates/studio/studio.js.part-001",
@@ -995,15 +995,15 @@
         },
         {
           "path": "skills/design-loop/scripts/runtime/packages/design/templates/studio/studio.js.part-008",
-          "digest": "sha256:837f73e1d4fcd8374b0d7dc78acd0431fd749b0e4ced6b987adbc136bbce4017"
+          "digest": "sha256:2f03557f7b4bf6d5953dd06114b6dde27f49e6b4d77c812988f8b865d92f3900"
         },
         {
           "path": "skills/design-loop/scripts/runtime/packages/design/templates/studio/studio.js.part-009",
-          "digest": "sha256:79c1bea70010ed5a630c50335a7c53315df79302192cc7efb2a439de2cbb1e60"
+          "digest": "sha256:1b405a0f3f7da5c55b87c94e152be975a74fa9399f457141c51e9cea56d379a1"
         },
         {
           "path": "skills/design-loop/scripts/runtime/packages/design/templates/studio/studio.js.parts.json",
-          "digest": "sha256:df44ac8e2c07ce4835c312bd121a268d5f6b0fbafbca0b8be24ff7f18acde56d"
+          "digest": "sha256:7a26637c80ef499f46d87087bf2588a82dac7c1c67163c6a657a1087760feea1"
         },
         {
           "path": "skills/design-loop/scripts/runtime/packages/protocol/package.json",
@@ -1204,7 +1204,7 @@
         },
         {
           "path": "skills/design-review/scripts/design-sandbox-guards.mjs",
-          "digest": "sha256:225ed960411034485fe081adbf2b3c27741407fb93eede4dcad254b3f64e464d"
+          "digest": "sha256:f079cc28de5815ae4c32ca33602a9d3e2ac83b38626c948c19d80ad0cd1a14b2"
         },
         {
           "path": "skills/design-review/scripts/design-share.mjs",
@@ -1236,11 +1236,11 @@
         },
         {
           "path": "skills/design-review/scripts/runtime/packages/artifact/templates/artifact-review-stage.js.part-003",
-          "digest": "sha256:020f30d9994b95783493582a945037a015f71e05866985e03fe7e9d98a1ded4a"
+          "digest": "sha256:a9e840670eba89b531b044e2405252a26b4327d350d14fa264c2ee00fe4e8a05"
         },
         {
           "path": "skills/design-review/scripts/runtime/packages/artifact/templates/artifact-review-stage.js.parts.json",
-          "digest": "sha256:25f80ad5effbd4a6545535c0bff1c26bb95ea2793e43ce24b267556f4ed8331a"
+          "digest": "sha256:7f5b7a8c5b5cc10f04579c84c93b7852578c65c1051b289c7ab06bbda8c57dc6"
         },
         {
           "path": "skills/design-review/scripts/runtime/packages/design/package.json",
@@ -1264,7 +1264,7 @@
         },
         {
           "path": "skills/design-review/scripts/runtime/packages/design/templates/studio/studio.css",
-          "digest": "sha256:0dbd4b536d6f62890b8120882fd77c66aaabf5cfe22ee7b3b9fa6a76da21f33d"
+          "digest": "sha256:ecb86a5f5517262f8dc71e518163ca55074404c6823d5f989edad5e9f71293af"
         },
         {
           "path": "skills/design-review/scripts/runtime/packages/design/templates/studio/studio.js.part-001",
@@ -1296,15 +1296,15 @@
         },
         {
           "path": "skills/design-review/scripts/runtime/packages/design/templates/studio/studio.js.part-008",
-          "digest": "sha256:837f73e1d4fcd8374b0d7dc78acd0431fd749b0e4ced6b987adbc136bbce4017"
+          "digest": "sha256:2f03557f7b4bf6d5953dd06114b6dde27f49e6b4d77c812988f8b865d92f3900"
         },
         {
           "path": "skills/design-review/scripts/runtime/packages/design/templates/studio/studio.js.part-009",
-          "digest": "sha256:79c1bea70010ed5a630c50335a7c53315df79302192cc7efb2a439de2cbb1e60"
+          "digest": "sha256:1b405a0f3f7da5c55b87c94e152be975a74fa9399f457141c51e9cea56d379a1"
         },
         {
           "path": "skills/design-review/scripts/runtime/packages/design/templates/studio/studio.js.parts.json",
-          "digest": "sha256:df44ac8e2c07ce4835c312bd121a268d5f6b0fbafbca0b8be24ff7f18acde56d"
+          "digest": "sha256:7a26637c80ef499f46d87087bf2588a82dac7c1c67163c6a657a1087760feea1"
         },
         {
           "path": "skills/design-review/scripts/runtime/packages/protocol/package.json",
@@ -1643,7 +1643,7 @@
         },
         {
           "path": "skills/plan/scripts/design-sandbox-guards.mjs",
-          "digest": "sha256:225ed960411034485fe081adbf2b3c27741407fb93eede4dcad254b3f64e464d"
+          "digest": "sha256:f079cc28de5815ae4c32ca33602a9d3e2ac83b38626c948c19d80ad0cd1a14b2"
         },
         {
           "path": "skills/plan/scripts/design-share.mjs",
@@ -1675,11 +1675,11 @@
         },
         {
           "path": "skills/plan/scripts/runtime/packages/artifact/templates/artifact-review-stage.js.part-003",
-          "digest": "sha256:020f30d9994b95783493582a945037a015f71e05866985e03fe7e9d98a1ded4a"
+          "digest": "sha256:a9e840670eba89b531b044e2405252a26b4327d350d14fa264c2ee00fe4e8a05"
         },
         {
           "path": "skills/plan/scripts/runtime/packages/artifact/templates/artifact-review-stage.js.parts.json",
-          "digest": "sha256:25f80ad5effbd4a6545535c0bff1c26bb95ea2793e43ce24b267556f4ed8331a"
+          "digest": "sha256:7f5b7a8c5b5cc10f04579c84c93b7852578c65c1051b289c7ab06bbda8c57dc6"
         },
         {
           "path": "skills/plan/scripts/runtime/packages/design/package.json",
@@ -1703,7 +1703,7 @@
         },
         {
           "path": "skills/plan/scripts/runtime/packages/design/templates/studio/studio.css",
-          "digest": "sha256:0dbd4b536d6f62890b8120882fd77c66aaabf5cfe22ee7b3b9fa6a76da21f33d"
+          "digest": "sha256:ecb86a5f5517262f8dc71e518163ca55074404c6823d5f989edad5e9f71293af"
         },
         {
           "path": "skills/plan/scripts/runtime/packages/design/templates/studio/studio.js.part-001",
@@ -1735,15 +1735,15 @@
         },
         {
           "path": "skills/plan/scripts/runtime/packages/design/templates/studio/studio.js.part-008",
-          "digest": "sha256:837f73e1d4fcd8374b0d7dc78acd0431fd749b0e4ced6b987adbc136bbce4017"
+          "digest": "sha256:2f03557f7b4bf6d5953dd06114b6dde27f49e6b4d77c812988f8b865d92f3900"
         },
         {
           "path": "skills/plan/scripts/runtime/packages/design/templates/studio/studio.js.part-009",
-          "digest": "sha256:79c1bea70010ed5a630c50335a7c53315df79302192cc7efb2a439de2cbb1e60"
+          "digest": "sha256:1b405a0f3f7da5c55b87c94e152be975a74fa9399f457141c51e9cea56d379a1"
         },
         {
           "path": "skills/plan/scripts/runtime/packages/design/templates/studio/studio.js.parts.json",
-          "digest": "sha256:df44ac8e2c07ce4835c312bd121a268d5f6b0fbafbca0b8be24ff7f18acde56d"
+          "digest": "sha256:7a26637c80ef499f46d87087bf2588a82dac7c1c67163c6a657a1087760feea1"
         },
         {
           "path": "skills/plan/scripts/runtime/packages/protocol/package.json",

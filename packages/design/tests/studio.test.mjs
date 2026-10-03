@@ -139,6 +139,118 @@ async function mount({
   };
 }
 
+for (const transition of [
+  'normal',
+  'canceled navigation',
+  'persisted return',
+  'queued canceled navigation',
+]) {
+  test(`background frame demand respects ${transition} without retiring ready state`, {
+    timeout: 5000,
+  }, async (t) => {
+    const data = fixture();
+    const sources = [];
+    const app = await mount({
+      data,
+      stageOptions: {
+        frameBudget: 3,
+        resolveArtifactSource(artifact, { frame }) {
+          sources.push(artifact.id);
+          setTimeout(
+            () => frame.dispatchEvent(new frame.ownerDocument.defaultView.Event('load')),
+            0,
+          );
+          return data.envelope.artifacts.find(({ id }) => id === artifact.id).html;
+        },
+      },
+    });
+    const { window, documentNode: document, stage, studio } = app;
+    const root = document.querySelector('.planr-shell');
+    const scheduleTimeout = window.setTimeout.bind(window);
+    const cancelTimeout = window.clearTimeout.bind(window);
+    const demands = new Map();
+    let timerId = 1_000_000;
+    t.after(() => {
+      app.close();
+      window.setTimeout = scheduleTimeout;
+      window.clearTimeout = cancelTimeout;
+    });
+    if (root.dataset.designReady !== 'true')
+      await new Promise((resolve) => {
+        const observer = new window.MutationObserver(() => {
+          if (root.dataset.designReady === 'true') {
+            observer.disconnect();
+            resolve();
+          }
+        });
+        observer.observe(root, { attributes: true, attributeFilter: ['data-design-ready'] });
+      });
+    const activeId = stage.getState().activeArtifactId;
+    const readyFrame = stage.getFrame(activeId);
+    const readyWindow = readyFrame.contentWindow;
+    const readySource = readyFrame.src;
+    const camera = studio.getState().camera;
+    const laterId = designStudioArtifactId('editorial', 'screen-2', 'desktop');
+    assert.equal(sources.includes(laterId), false);
+    const box = { left: 0, top: 0, right: 500, bottom: 500, width: 500, height: 500 };
+    document.querySelector('.planr-stage-scroll').getBoundingClientRect = () => box;
+    for (const entry of data.entries)
+      stage.getPanel(entry.artifactId).getBoundingClientRect = () =>
+        entry.artifactId === laterId ? box : { ...box, left: 10000, right: 10500 };
+    window.setTimeout = (callback, ms, ...args) => {
+      if (ms !== 120) return scheduleTimeout(callback, ms, ...args);
+      const id = ++timerId;
+      demands.set(id, () => callback(...args));
+      return id;
+    };
+    window.clearTimeout = (id) => {
+      if (!demands.delete(id)) cancelTimeout(id);
+    };
+    const runDemand = () => {
+      const scheduled = [...demands.values()];
+      demands.clear();
+      for (const callback of scheduled) callback();
+    };
+    window.dispatchEvent(new window.Event('resize'));
+    assert.ok(demands.size > 0, 'Normal geometry schedules background demand');
+    if (transition !== 'normal') {
+      const before = [...sources];
+      if (transition === 'queued canceled navigation') runDemand();
+      window.dispatchEvent(new window.Event('beforeunload', { cancelable: true }));
+      runDemand();
+      await delay(0);
+      assert.deepEqual(sources, before, 'The scheduled source cannot start after beforeunload');
+      if (transition === 'persisted return') {
+        window.dispatchEvent(new window.PageTransitionEvent('pagehide', { persisted: true }));
+        window.dispatchEvent(new window.PageTransitionEvent('pageshow', { persisted: true }));
+      }
+      assert.equal(window.__openPlanrDesignStudio, studio);
+      assert.equal(stage.getFrame(activeId), readyFrame);
+      assert.equal(readyFrame.contentWindow, readyWindow);
+      assert.equal(readyFrame.src, readySource);
+      assert.deepEqual(studio.getState().camera, camera);
+      assert.equal(root.dataset.designReady, 'true');
+      // Staying in the document or returning from cache still allows a normal
+      // viewport change to demand an unloaded source using the same owners.
+      window.dispatchEvent(new window.Event('resize'));
+    }
+    const ready = new Promise((resolve) =>
+      window.addEventListener('planr:artifact-frame-state', function loaded(event) {
+        if (event.detail.artifactId === laterId && event.detail.status === 'ready') {
+          window.removeEventListener('planr:artifact-frame-state', loaded);
+          resolve();
+        }
+      }),
+    );
+    runDemand();
+    await ready;
+    assert.ok(sources.includes(laterId), 'Later viewport demand resolves the real unloaded source');
+    assert.equal(stage.getFrame(activeId), readyFrame);
+    assert.equal(readyFrame.contentWindow, readyWindow);
+    assert.equal(stage.getState().status, 'ready');
+  });
+}
+
 test('rapid screen, frame, direction and step choices retain the pending identity during real frame loading', {
   timeout: 30_000,
 }, async () => {

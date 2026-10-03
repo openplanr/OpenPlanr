@@ -1,5 +1,5 @@
 import { Dialog, DropdownMenu, Tooltip } from 'radix-ui';
-import { type ComponentPropsWithoutRef, forwardRef, type ReactNode } from 'react';
+import { type ComponentPropsWithoutRef, forwardRef, type ReactNode, useRef } from 'react';
 
 /** Trusted Studio chrome only. Authored frames and canvas controllers own their DOM separately. */
 export type StudioKind = 'design' | 'diagram' | 'artifact';
@@ -121,17 +121,22 @@ export function StudioMenu({
   items,
   className = '',
   triggerAttributes = {},
+  open,
+  onOpenChange,
 }: {
   label: string;
   items: readonly StudioMenuItem[];
   className?: string;
   triggerAttributes?: Record<string, string>;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
+  const trigger = useRef<HTMLButtonElement>(null);
   return (
-    <DropdownMenu.Root>
+    <DropdownMenu.Root modal={false} open={open} onOpenChange={onOpenChange}>
       <span className={`studio-menu ${className}`}>
         <DropdownMenu.Trigger asChild>
-          <StudioButton aria-label={label} title={label} {...triggerAttributes}>
+          <StudioButton aria-label={label} title={label} {...triggerAttributes} ref={trigger}>
             {label}
             <span aria-hidden="true">⌄</span>
           </StudioButton>
@@ -141,6 +146,22 @@ export function StudioMenu({
           align="end"
           sideOffset={8}
           collisionPadding={8}
+          onCloseAutoFocus={(event) => {
+            // Own the deferred return so preserving newer focus cannot leave Radix's
+            // outside-interaction flag stale for the next close.
+            event.preventDefault();
+            const content = event.target as HTMLElement | null;
+            const ownerDocument = content?.ownerDocument;
+            const active = ownerDocument?.activeElement;
+            if (
+              active?.isConnected &&
+              active !== ownerDocument?.body &&
+              active !== ownerDocument?.documentElement &&
+              !content?.contains(active)
+            )
+              return;
+            if (trigger.current?.isConnected) trigger.current.focus();
+          }}
         >
           {items.map((item, index) => (
             <DropdownMenu.Item

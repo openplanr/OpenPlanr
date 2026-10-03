@@ -218,7 +218,8 @@ test('dark default, explicit light and system changes stay personal to the shell
   const value = await mount({ storage: { [`${scope}.welcomed`]: 'true' } });
   try {
     const html = value.document.documentElement;
-    const frame = value.document.querySelector('iframe');
+    const artifactId = value.stage.getState().activeArtifactId;
+    const frame = value.stage.getFrame(artifactId);
     const source = frame.src;
     assert.equal(html.dataset.designTheme, 'dark');
     assert.equal(value.stage.getState().theme, 'dark');
@@ -236,6 +237,11 @@ test('dark default, explicit light and system changes stay personal to the shell
     assert.equal(html.dataset.designTheme, 'light');
     assert.equal(value.stage.getState().theme, 'light');
     assert.equal(value.window.localStorage.getItem('openplanr.design.theme'), 'light');
+    assert.equal(
+      value.stage.getFrame(artifactId),
+      frame,
+      'theme retains the registered frame node',
+    );
     assert.equal(frame.src, source, 'theme does not regenerate or alter authored frames');
     assert.equal(html.dataset.designThemePreference, 'light');
   } finally {

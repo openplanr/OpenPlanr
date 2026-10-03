@@ -391,7 +391,7 @@
 	inset: 0 auto auto 0;
 	display: block;
 	transform-origin: 0 0;
-	will-change: transform;
+	/* The world can span thousands of artboards; avoid forcing one composited surface. */
 }
 [data-design-studio] .planr-artifact-panel {
 	position: absolute;

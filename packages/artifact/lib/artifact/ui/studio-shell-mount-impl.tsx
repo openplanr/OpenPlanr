@@ -19,6 +19,7 @@ export interface DesignChromeState {
   previewLabel: string;
   saveLabel: string;
   savePhase: string;
+  exportMenuOpen?: boolean;
 }
 export interface StudioChromeController {
   update(value: Partial<DesignChromeState>): void;
@@ -48,6 +49,7 @@ export function mountDesignStudioChrome({
     saveLabel: old.querySelector('[data-design-save-state]')?.textContent ?? 'Loading studio',
     savePhase: 'loading',
     ...initial,
+    exportMenuOpen: false,
   };
   const listeners = new Set<() => void>();
   const update = (value: Partial<DesignChromeState>) => {
@@ -147,6 +149,8 @@ export function mountDesignStudioChrome({
               <StudioMenu
                 className="design-export"
                 label="Export"
+                open={current.exportMenuOpen}
+                onOpenChange={(open) => update({ exportMenuOpen: open })}
                 triggerAttributes={{ 'data-studio-export-menu': '' }}
                 items={[
                   {

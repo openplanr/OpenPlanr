@@ -543,6 +543,9 @@ export function createEditorCanvas(ctx: DiagramEditorContext): DiagramEditorCanv
         return;
       }
       drag.active = true;
+      // Respond to the first movement immediately; continuing moves coalesce below.
+      previewDrag();
+      return;
     }
     if (drag.active && !raf) raf = win.requestAnimationFrame(previewDrag);
   }
