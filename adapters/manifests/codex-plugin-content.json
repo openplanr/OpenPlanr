@@ -417,7 +417,7 @@
         },
         {
           "path": "skills/delegate/scripts/adapters/generic.mjs",
-          "digest": "sha256:88dd22bbd59a678e88c80a9f344c8478f6a60a6d8e38109496f4df7ce5488ed8"
+          "digest": "sha256:67c48cf4604d93c23276a0637034c77d7003f4f80b1e00d001c42af3368ead76"
         },
         {
           "path": "skills/delegate/scripts/context.mjs",
