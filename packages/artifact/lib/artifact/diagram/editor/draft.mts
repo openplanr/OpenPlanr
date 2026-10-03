@@ -1,4 +1,8 @@
-import type { DiagramAuthoringBundle } from '@openplanr/protocol/diagram-authoring-contracts';
+import {
+  type VersionedDiagramAuthoringBundle as DiagramAuthoringBundle,
+  normalizeDiagramPresentation,
+} from '@openplanr/protocol/studio-presentation-contracts';
+
 import { processTemplate } from '../../ui/diagram-editor-actions.mjs';
 import { compileDiagramCommand, validateAuthoringBundle } from '../authoring/index.mjs';
 import { clone, failure, sealBundle } from '../authoring/model.mjs';
@@ -85,13 +89,16 @@ export function createDiagramEditorDraft({
   };
   const bundle = sealBundle({
     ...meta('diagram-authoring-bundle'),
+    schemaVersion: '1.1.0',
+    protocolVersion: '1.17.0',
+    studioPresentation: normalizeDiagramPresentation(),
     diagramId,
     document,
     presentation,
     originalSource: null,
     sourceMap: null,
     bundleDigest: '',
-  });
+  } as unknown as DiagramAuthoringBundle);
   const check = validateAuthoringBundle(bundle);
   return check.ok ? { ok: true, bundle } : check;
 }

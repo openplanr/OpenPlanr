@@ -540,7 +540,12 @@ export function planCliUpgrade(reconciliation: UpgradeReconciliation): UpgradePl
     return {
       proceed: false,
       targetCliVersion: null,
-      reason: `OpenPlanr ${installed.cli} is up to date.`,
+      reason:
+        reconciliation.ecosystemSource === 'stale-cache'
+          ? `OpenPlanr ${installed.cli} matches the stale cached compatible set; the latest release could not be checked.`
+          : reconciliation.ecosystemSource === 'cache'
+            ? `OpenPlanr ${installed.cli} matches the recently cached compatible set; the registry was not contacted this time.`
+            : `OpenPlanr ${installed.cli} is up to date.`,
     };
   }
   if (status === 'upgrade-available') {

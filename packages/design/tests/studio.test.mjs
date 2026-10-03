@@ -72,10 +72,17 @@ function fixture({ count = 3, title = 'Fieldwork operations' } = {}) {
   return { document, envelope, entries };
 }
 
-async function mount({ data = fixture(), options = {}, stored = null, experience = false } = {}) {
+async function mount({
+  data = fixture(),
+  options = {},
+  stored = null,
+  experience = false,
+  hash = '',
+  stageOptions = {},
+} = {}) {
   const html = renderDesignStudio(data);
   const dom = new JSDOM(html, {
-    url: 'http://127.0.0.1/review/studio/',
+    url: `http://127.0.0.1/review/studio/${hash}`,
     runScripts: 'outside-only',
     pretendToBeVisual: true,
   });
@@ -105,13 +112,16 @@ async function mount({ data = fixture(), options = {}, stored = null, experience
   const stage = mountArtifactStage({
     document: window.document,
     window,
+    frameBudget: null,
     async resolveArtifactSource(artifact, { frame }) {
       setTimeout(() => frame.dispatchEvent(new window.Event('load')), 0);
       return data.envelope.artifacts.find(({ id }) => id === artifact.id).html;
     },
+    ...stageOptions,
   });
   window.eval(runtime);
   await stage.ready;
+  if (!stage.frameBudget) await stage.ensureFrames(data.entries.map((entry) => entry.artifactId));
   for (let index = 0; index < 20 && !window.__openPlanrDesignStudio; index += 1) await delay(10);
   assert.ok(window.__openPlanrDesignStudio, 'studio boots after artifact stage');
   if (experience) await delay(20);
@@ -127,6 +137,488 @@ async function mount({ data = fixture(), options = {}, stored = null, experience
       window.close();
     },
   };
+}
+
+for (const transition of [
+  'normal',
+  'canceled navigation',
+  'persisted return',
+  'queued canceled navigation',
+]) {
+  test(`background frame demand respects ${transition} without retiring ready state`, {
+    timeout: 5000,
+  }, async (t) => {
+    const data = fixture();
+    const sources = [];
+    const app = await mount({
+      data,
+      stageOptions: {
+        frameBudget: 3,
+        resolveArtifactSource(artifact, { frame }) {
+          sources.push(artifact.id);
+          setTimeout(
+            () => frame.dispatchEvent(new frame.ownerDocument.defaultView.Event('load')),
+            0,
+          );
+          return data.envelope.artifacts.find(({ id }) => id === artifact.id).html;
+        },
+      },
+    });
+    const { window, documentNode: document, stage, studio } = app;
+    const root = document.querySelector('.planr-shell');
+    const scheduleTimeout = window.setTimeout.bind(window);
+    const cancelTimeout = window.clearTimeout.bind(window);
+    const demands = new Map();
+    let timerId = 1_000_000;
+    t.after(() => {
+      app.close();
+      window.setTimeout = scheduleTimeout;
+      window.clearTimeout = cancelTimeout;
+    });
+    if (root.dataset.designReady !== 'true')
+      await new Promise((resolve) => {
+        const observer = new window.MutationObserver(() => {
+          if (root.dataset.designReady === 'true') {
+            observer.disconnect();
+            resolve();
+          }
+        });
+        observer.observe(root, { attributes: true, attributeFilter: ['data-design-ready'] });
+      });
+    const activeId = stage.getState().activeArtifactId;
+    const readyFrame = stage.getFrame(activeId);
+    const readyWindow = readyFrame.contentWindow;
+    const readySource = readyFrame.src;
+    const camera = studio.getState().camera;
+    const laterId = designStudioArtifactId('editorial', 'screen-2', 'desktop');
+    assert.equal(sources.includes(laterId), false);
+    const box = { left: 0, top: 0, right: 500, bottom: 500, width: 500, height: 500 };
+    document.querySelector('.planr-stage-scroll').getBoundingClientRect = () => box;
+    for (const entry of data.entries)
+      stage.getPanel(entry.artifactId).getBoundingClientRect = () =>
+        entry.artifactId === laterId ? box : { ...box, left: 10000, right: 10500 };
+    window.setTimeout = (callback, ms, ...args) => {
+      if (ms !== 120) return scheduleTimeout(callback, ms, ...args);
+      const id = ++timerId;
+      demands.set(id, () => callback(...args));
+      return id;
+    };
+    window.clearTimeout = (id) => {
+      if (!demands.delete(id)) cancelTimeout(id);
+    };
+    const runDemand = () => {
+      const scheduled = [...demands.values()];
+      demands.clear();
+      for (const callback of scheduled) callback();
+    };
+    window.dispatchEvent(new window.Event('resize'));
+    assert.ok(demands.size > 0, 'Normal geometry schedules background demand');
+    if (transition !== 'normal') {
+      const before = [...sources];
+      if (transition === 'queued canceled navigation') runDemand();
+      window.dispatchEvent(new window.Event('beforeunload', { cancelable: true }));
+      runDemand();
+      await delay(0);
+      assert.deepEqual(sources, before, 'The scheduled source cannot start after beforeunload');
+      if (transition === 'persisted return') {
+        window.dispatchEvent(new window.PageTransitionEvent('pagehide', { persisted: true }));
+        window.dispatchEvent(new window.PageTransitionEvent('pageshow', { persisted: true }));
+      }
+      assert.equal(window.__openPlanrDesignStudio, studio);
+      assert.equal(stage.getFrame(activeId), readyFrame);
+      assert.equal(readyFrame.contentWindow, readyWindow);
+      assert.equal(readyFrame.src, readySource);
+      assert.deepEqual(studio.getState().camera, camera);
+      assert.equal(root.dataset.designReady, 'true');
+      // Staying in the document or returning from cache still allows a normal
+      // viewport change to demand an unloaded source using the same owners.
+      window.dispatchEvent(new window.Event('resize'));
+    }
+    const ready = new Promise((resolve) =>
+      window.addEventListener('planr:artifact-frame-state', function loaded(event) {
+        if (event.detail.artifactId === laterId && event.detail.status === 'ready') {
+          window.removeEventListener('planr:artifact-frame-state', loaded);
+          resolve();
+        }
+      }),
+    );
+    runDemand();
+    await ready;
+    assert.ok(sources.includes(laterId), 'Later viewport demand resolves the real unloaded source');
+    assert.equal(stage.getFrame(activeId), readyFrame);
+    assert.equal(readyFrame.contentWindow, readyWindow);
+    assert.equal(stage.getState().status, 'ready');
+  });
+}
+
+test('rapid screen, frame, direction and step choices retain the pending identity during real frame loading', {
+  timeout: 30_000,
+}, async () => {
+  const data = fixture({ count: 5 });
+  data.document.defaultView = 'walkthrough';
+  let hold = false;
+  const queued = [],
+    waiters = [],
+    gates = [];
+  const nextSource = () =>
+    queued.length
+      ? Promise.resolve(queued.shift())
+      : new Promise((resolve) => waiters.push(resolve));
+  const f = await mount({
+    data,
+    stageOptions: {
+      frameBudget: 3,
+      resolveArtifactSource(artifact, { frame }) {
+        const html = data.envelope.artifacts.find(({ id }) => id === artifact.id).html;
+        const release = (resolve) => {
+          const window = frame.ownerDocument.defaultView;
+          setTimeout(() => frame.dispatchEvent(new window.Event('load')), 0);
+          resolve(html);
+        };
+        if (!hold) return new Promise(release);
+        return new Promise((resolve) => {
+          let released = false;
+          const gate = {
+            artifactId: artifact.id,
+            release() {
+              if (released) return;
+              released = true;
+              release(resolve);
+            },
+            loaded: new Promise((resolve) =>
+              frame.addEventListener('load', resolve, { once: true }),
+            ),
+          };
+          gates.push(gate);
+          if (waiters.length) waiters.shift()(gate);
+          else queued.push(gate);
+        });
+      },
+    },
+  });
+  try {
+    hold = true;
+    const { documentNode: document, window, studio } = f;
+    document.querySelector('[data-design-screen="screen-2"]').click();
+    const first = await nextSource();
+    assert.equal(first.artifactId, designStudioArtifactId('editorial', 'screen-2', 'desktop'));
+    assert.equal(studio.getState().screenId, 'screen-1', 'The first source is still held');
+    const frame = document.querySelector('[data-design-frame]');
+    frame.value = 'mobile';
+    frame.dispatchEvent(new window.Event('change'));
+    const direction = document.querySelector('[data-design-variant]');
+    direction.value = 'compact';
+    direction.dispatchEvent(new window.Event('change'));
+    document.querySelector('[data-design-screen="screen-3"]').click();
+    document.querySelector('[data-design-step-change="1"]').click();
+    document.body.dispatchEvent(
+      new window.KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }),
+    );
+    const settled = new Promise((resolve) => {
+      const observer = new window.MutationObserver(() => {
+        if (!document.querySelector('[data-design-screen-loading]')) {
+          observer.disconnect();
+          resolve();
+        }
+      });
+      observer.observe(document.documentElement, {
+        attributes: true,
+        subtree: true,
+        attributeFilter: ['data-design-screen-loading'],
+      });
+    });
+    for (let index = 0; index < 5; index++) {
+      const gate = index === 0 ? first : await nextSource();
+      gate.release();
+      await gate.loaded;
+    }
+    await settled;
+    assert.deepEqual(
+      Object.fromEntries(
+        ['screenId', 'variantId', 'frameId'].map((key) => [key, studio.getState()[key]]),
+      ),
+      { screenId: 'screen-3', variantId: 'compact', frameId: 'mobile' },
+      'Every subsequent UI choice changes only the requested dimension',
+    );
+    assert.equal(
+      f.stage.getState().activeArtifactId,
+      designStudioArtifactId('compact', 'screen-3', 'mobile'),
+    );
+    assert.ok(f.stage.getLoadedArtifactIds().length <= 3);
+  } finally {
+    hold = false;
+    for (const gate of gates) gate.release();
+    f.close();
+  }
+});
+
+test('walkthrough queued steps preserve the requested screen when frame and direction change', async () => {
+  const f = await mount({ data: fixture({ count: 5 }) });
+  try {
+    const { documentNode: document, window, studio } = f;
+    studio.setView('walkthrough');
+    document.querySelector('[data-design-screen="screen-2"]').click();
+    assert.ok(document.querySelector('[data-design-transition]'));
+    document.querySelector('[data-design-step-change="1"]').click();
+    document.querySelector('[data-design-step-change="1"]').click();
+    const frame = document.querySelector('[data-design-frame]');
+    frame.value = 'mobile';
+    frame.dispatchEvent(new window.Event('change'));
+    assert.equal(
+      studio.getState().screenId,
+      'screen-4',
+      'Changing the frame preserves the queued screen',
+    );
+    const direction = document.querySelector('[data-design-variant]');
+    direction.value = 'compact';
+    direction.dispatchEvent(new window.Event('change'));
+    document.body.dispatchEvent(
+      new window.KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }),
+    );
+    assert.deepEqual(
+      Object.fromEntries(
+        ['screenId', 'variantId', 'frameId'].map((key) => [key, studio.getState()[key]]),
+      ),
+      { screenId: 'screen-5', variantId: 'compact', frameId: 'mobile' },
+    );
+  } finally {
+    f.close();
+  }
+});
+
+test('finishing an older walkthrough animation cannot replace a newer pending frame choice', {
+  timeout: 30_000,
+}, async () => {
+  const data = fixture();
+  data.document.defaultView = 'walkthrough';
+  const mobileId = designStudioArtifactId('editorial', 'screen-3', 'mobile');
+  let hold = false,
+    releaseSource,
+    sourceStarted;
+  const heldSource = new Promise((resolve) => {
+    sourceStarted = resolve;
+  });
+  const f = await mount({
+    data,
+    stageOptions: {
+      frameBudget: 3,
+      async resolveArtifactSource(artifact, { frame }) {
+        if (hold && artifact.id === mobileId) {
+          await new Promise((resolve) => {
+            releaseSource = resolve;
+            sourceStarted();
+          });
+        }
+        const window = frame.ownerDocument.defaultView;
+        setTimeout(() => frame.dispatchEvent(new window.Event('load')), 0);
+        return data.envelope.artifacts.find(({ id }) => id === artifact.id).html;
+      },
+    },
+  });
+  try {
+    await f.stage.ensureFrames(
+      data.document.screenOrder.map((screenId) =>
+        designStudioArtifactId('editorial', screenId, 'desktop'),
+      ),
+    );
+    const { documentNode: document, window, studio } = f;
+    const animations = [];
+    const shell = document.querySelector('.planr-shell');
+    let started;
+    const animationStarted = new Promise((resolve) => {
+      started = resolve;
+    });
+    window.Element.prototype.animate = (_frames, options) => {
+      let finish;
+      const finished = new Promise((resolve) => {
+        finish = resolve;
+      });
+      animations.push({ finish, options });
+      started();
+      return { finished, cancel: finish };
+    };
+    document.querySelector('[data-design-screen="screen-2"]').click();
+    await animationStarted;
+    assert.equal(shell.dataset.designTransition, 'running');
+    assert.equal(
+      animations[0].options.duration,
+      220,
+      'The normal walkthrough animation is retained',
+    );
+    document.querySelector('[data-design-screen="screen-3"]').click();
+    assert.equal(
+      studio.getState().screenId,
+      'screen-2',
+      'The desktop request is queued behind the animation',
+    );
+    hold = true;
+    const frame = document.querySelector('[data-design-frame]');
+    frame.value = 'mobile';
+    frame.dispatchEvent(new window.Event('change'));
+    await heldSource;
+    const transitionEnded = new Promise((resolve) => {
+      const observer = new window.MutationObserver(() => {
+        if (!document.querySelector('[data-design-transition]')) {
+          observer.disconnect();
+          resolve();
+        }
+      });
+      observer.observe(shell, {
+        attributes: true,
+        attributeFilter: ['data-design-transition'],
+      });
+    });
+    for (const animation of animations) animation.finish();
+    await transitionEnded;
+    assert.ok(
+      document.querySelector('[data-design-screen-loading]'),
+      'The newer mobile source remains pending after the old animation finishes',
+    );
+    const settled = new Promise((resolve) => {
+      const observer = new window.MutationObserver(() => {
+        if (!document.querySelector('[data-design-screen-loading]')) {
+          observer.disconnect();
+          resolve();
+        }
+      });
+      observer.observe(shell, {
+        attributes: true,
+        attributeFilter: ['data-design-screen-loading'],
+      });
+    });
+    releaseSource();
+    await settled;
+    assert.equal(studio.getState().screenId, 'screen-3');
+    assert.equal(
+      studio.getState().frameId,
+      'mobile',
+      'The newest pending frame is not replaced by the older queued desktop',
+    );
+    assert.equal(f.stage.getState().activeArtifactId, mobileId);
+    assert.ok(f.stage.getLoadedArtifactIds().length <= 3);
+  } finally {
+    hold = false;
+    releaseSource?.();
+    f.close();
+  }
+});
+
+for (const nextChoice of ['same screen', 'direction after mode change', 'explicit history']) {
+  test(`failed preview choices retain exact retry identity through ${nextChoice}`, {
+    timeout: 30_000,
+  }, async () => {
+    const data = fixture();
+    data.document.defaultView = 'prototype';
+    const desktopId = designStudioArtifactId('editorial', 'screen-2', 'desktop');
+    const mobileId = designStudioArtifactId('editorial', 'screen-2', 'mobile');
+    const sourceRequests = [];
+    let rejectMobileOnce = false;
+    const f = await mount({
+      data,
+      stageOptions: {
+        frameBudget: 3,
+        async resolveArtifactSource(artifact, { frame }) {
+          sourceRequests.push(artifact.id);
+          if (rejectMobileOnce && artifact.id === mobileId) {
+            rejectMobileOnce = false;
+            throw new Error('Synthetic source unavailable once');
+          }
+          const window = frame.ownerDocument.defaultView;
+          setTimeout(() => frame.dispatchEvent(new window.Event('load')), 0);
+          return data.envelope.artifacts.find(({ id }) => id === artifact.id).html;
+        },
+      },
+    });
+    try {
+      const { documentNode: document, window, studio } = f;
+      const shell = document.querySelector('.planr-shell');
+      const waitForDom = (predicate) => {
+        if (predicate()) return Promise.resolve();
+        return new Promise((resolve) => {
+          const observer = new window.MutationObserver(() => {
+            if (!predicate()) return;
+            observer.disconnect();
+            resolve();
+          });
+          observer.observe(shell, { attributes: true, childList: true, subtree: true });
+        });
+      };
+      const selected = (screenId, frameId, variantId = 'editorial') => {
+        const state = studio.getState();
+        return (
+          !shell.hasAttribute('data-design-screen-loading') &&
+          state.screenId === screenId &&
+          state.frameId === frameId &&
+          state.variantId === variantId
+        );
+      };
+      document.querySelector('[data-design-screen="screen-2"]').click();
+      await waitForDom(() => selected('screen-2', 'desktop'));
+      assert.equal(f.stage.getState().activeArtifactId, desktopId);
+      rejectMobileOnce = true;
+      const framePicker = document.querySelector('[data-design-frame]');
+      framePicker.value = 'mobile';
+      framePicker.dispatchEvent(new window.Event('change'));
+      const notice = document.querySelector('.design-notice');
+      await waitForDom(() => !notice.hidden && !shell.hasAttribute('data-design-screen-loading'));
+      assert.equal(studio.getState().screenId, 'screen-2');
+      assert.equal(
+        studio.getState().frameId,
+        'desktop',
+        'A failed preview does not replace the committed frame',
+      );
+      assert.equal(f.stage.getState().activeArtifactId, desktopId);
+      assert.equal(framePicker.value, 'mobile', 'The picker identifies the failed choice');
+      assert.equal(f.stage.getFrame(mobileId).dataset.planrFrameState, 'error');
+      assert.match(notice.textContent, /Select it again to retry/);
+      const failedRequests = sourceRequests.filter((id) => id === mobileId).length;
+      if (nextChoice === 'same screen') {
+        document.querySelector('[data-design-screen="screen-2"]').click();
+        await f.stage.ensureFrames([desktopId]);
+        assert.equal(
+          sourceRequests.filter((id) => id === mobileId).length,
+          failedRequests + 1,
+          'The same-screen retry loads the failed mobile source',
+        );
+        await waitForDom(() => selected('screen-2', 'mobile'));
+        assert.equal(f.stage.getState().activeArtifactId, mobileId);
+      } else if (nextChoice === 'direction after mode change') {
+        studio.setView('walkthrough');
+        assert.equal(
+          framePicker.value,
+          'mobile',
+          'A mode change preserves the failed frame choice',
+        );
+        const directionPicker = document.querySelector('[data-design-variant]');
+        directionPicker.value = 'compact';
+        directionPicker.dispatchEvent(new window.Event('change'));
+        await f.stage.ensureFrames([desktopId]);
+        const compactMobileId = designStudioArtifactId('compact', 'screen-2', 'mobile');
+        assert.ok(
+          sourceRequests.includes(compactMobileId),
+          'A new direction composes with the failed frame',
+        );
+        await waitForDom(() => selected('screen-2', 'mobile', 'compact'));
+        assert.equal(f.stage.getState().activeArtifactId, compactMobileId);
+      } else {
+        window.location.hash = '#screen=screen-1&frame=desktop&direction=editorial&view=prototype';
+        await waitForDom(() => selected('screen-1', 'desktop'));
+        assert.equal(framePicker.value, 'desktop', 'History selects its explicit frame');
+        assert.equal(notice.hidden, true, 'History clears the obsolete failed-preview notice');
+        document.querySelector('[data-design-screen="screen-2"]').click();
+        await waitForDom(() => selected('screen-2', 'desktop'));
+        assert.equal(
+          sourceRequests.filter((id) => id === mobileId).length,
+          failedRequests,
+          'A new choice does not retry an obsolete failed frame',
+        );
+      }
+      assert.equal(notice.hidden, true);
+      assert.ok(f.stage.getLoadedArtifactIds().length <= 3);
+    } finally {
+      f.close();
+    }
+  });
 }
 
 test('Notes dismisses without losing context and restores keyboard focus', async () => {
@@ -446,6 +938,7 @@ test('walkthroughs do not truncate beyond eight screens and reject unknown navig
     app.studio.setView('walkthrough');
     for (let index = 1; index < 12; index += 1)
       app.documentNode.querySelector('[data-design-step-change="1"]').click();
+    await delay(500);
     assert.equal(app.studio.getState().screenId, 'screen-12');
     assert.equal(app.documentNode.querySelector('[data-design-step]').textContent, 'Step 12 of 12');
     assert.equal(app.documentNode.querySelector('[data-design-step-change="1"]').disabled, true);
@@ -550,6 +1043,149 @@ test('save failure keeps an unsaved draft visible and never reports success', as
     assert.equal(draft.unsaved, true);
     assert.equal(draft.state.ratings.editorial, 2);
     assert.match(app.documentNode.querySelector('.design-notice').textContent, /another window/);
+  } finally {
+    app.close();
+  }
+});
+
+test('personal sync notices dismiss without losing the draft and stay dismissed until recovery', async () => {
+  let failing = true;
+  const saves = [];
+  const app = await mount({
+    options: {
+      savePersonalState: async (state) => {
+        saves.push(state);
+        if (failing) throw new Error('offline');
+        return { stateVersion: saves.length };
+      },
+      saveState: async () => {
+        throw Object.assign(new Error('conflict'), { conflict: true });
+      },
+    },
+  });
+  try {
+    const document = app.documentNode;
+    const notice = document.querySelector('.design-notice');
+    const dismiss = notice.querySelector('[data-design-dismiss-notice]');
+    app.studio.setView('prototype');
+    await app.studio.flush();
+    assert.equal(notice.hidden, false);
+    assert.match(notice.textContent, /Canvas preferences could not be synchronized/);
+    assert.equal(dismiss.getAttribute('aria-label'), 'Dismiss notification');
+    dismiss.focus();
+    dismiss.click();
+    assert.equal(notice.hidden, true);
+    assert.equal(
+      document.activeElement,
+      document.querySelector('button[data-design-view="prototype"]'),
+    );
+    assert.equal(app.studio.getSaveState().personalPending, true);
+    const draft = () =>
+      JSON.parse(app.window.localStorage.getItem('openplanr.design-studio.fieldwork'));
+    assert.equal(draft().personalPending, true);
+    assert.equal(draft().state.view, 'prototype');
+
+    app.studio.setView('walkthrough');
+    await app.studio.flush();
+    assert.equal(notice.hidden, true, 'the same failed sync cannot reopen a dismissed notice');
+    assert.equal(draft().state.view, 'walkthrough');
+    failing = false;
+    await app.studio.flush();
+    assert.equal(app.studio.getSaveState().personalPending, false);
+    assert.equal(draft().personalPending, false);
+    failing = true;
+    app.studio.setView('prototype');
+    await app.studio.flush();
+    assert.equal(notice.hidden, false, 'a new failure after recovery is shown');
+    dismiss.click();
+
+    document.querySelector('[data-design-rating="2"]').click();
+    await app.studio.flush();
+    assert.equal(
+      notice.hidden,
+      false,
+      'a dismissed preference warning never hides a review conflict',
+    );
+    assert.match(notice.textContent, /another window/);
+    dismiss.click();
+    assert.equal(app.studio.getSaveState().dirty, true);
+    assert.equal(draft().unsaved, true);
+    assert.equal(draft().state.ratings.editorial, 2);
+    assert.equal(document.querySelector('[data-design-save-state]').textContent, 'Save conflict');
+  } finally {
+    app.close();
+  }
+});
+
+test('successful preference retry clears the visible failure notice', async () => {
+  let failing = true;
+  const app = await mount({
+    options: {
+      savePersonalState: async () => {
+        if (failing) throw new Error('offline');
+        return { stateVersion: 1 };
+      },
+    },
+  });
+  try {
+    app.studio.setView('prototype');
+    await app.studio.flush();
+    const notice = app.documentNode.querySelector('.design-notice');
+    assert.equal(notice.hidden, false);
+    failing = false;
+    await app.studio.flush();
+    assert.equal(notice.hidden, true);
+    assert.equal(app.studio.getSaveState().personalPending, false);
+  } finally {
+    app.close();
+  }
+});
+
+test('dismissing a comment-save failure keeps the unsaved review and retry clears it', async () => {
+  const app = await mount({ options: { reviewUrl: '/review' } });
+  let failing = true;
+  app.window.fetch = async () => ({
+    ok: !failing,
+    status: failing ? 503 : 200,
+    json: async () => (failing ? { message: 'Unavailable' } : {}),
+  });
+  try {
+    app.stage.review.setIdentity({ name: 'Rae' });
+    app.stage.review.dispatch({
+      type: 'add-pin',
+      pin: {
+        artifactId: app.entries[0].artifactId,
+        viewport: { width: 1280, height: 800 },
+        region: { x: 0.2, y: 0.3, w: 0, h: 0 },
+        intent: 'improve',
+        comment: 'Clarify the next action.',
+      },
+    });
+    await app.studio.flush();
+    const notice = app.documentNode.querySelector('.design-notice');
+    assert.equal(notice.hidden, false);
+    assert.match(notice.textContent, /Comments could not be saved/);
+    notice.querySelector('[data-design-dismiss-notice]').click();
+    const draft = JSON.parse(
+      app.window.localStorage.getItem('openplanr.design-studio.fieldwork.review'),
+    );
+    assert.equal(draft.unsaved, true);
+    assert.equal(draft.review.pins[0].comment, 'Clarify the next action.');
+    assert.equal(app.studio.getSaveState().dirty, true);
+    assert.equal(
+      app.documentNode.querySelector('[data-design-save-state]').textContent,
+      'Comments unsaved',
+    );
+    await app.studio.flush();
+    assert.equal(notice.hidden, true);
+    failing = false;
+    await app.studio.flush();
+    assert.equal(app.studio.getSaveState().dirty, false);
+    assert.equal(
+      JSON.parse(app.window.localStorage.getItem('openplanr.design-studio.fieldwork.review'))
+        .unsaved,
+      false,
+    );
   } finally {
     app.close();
   }
@@ -832,5 +1468,61 @@ test('owner handoff keeps source quotes immutable and requires saving refinement
     assert.equal(find('Approve handoff').disabled, true);
   } finally {
     value.close();
+  }
+});
+
+test('search and journey filtering retain the selected screen without altering source frames', async () => {
+  const data = fixture({ count: 12 });
+  data.document.flows = [
+    { id: 'review', title: 'Review journey', screens: ['screen-2', 'screen-3'] },
+  ];
+  const f = await mount({ data });
+  try {
+    const search = f.documentNode.querySelector('[data-design-screen-search]');
+    const group = f.documentNode.querySelector('[data-design-screen-group]');
+    search.value = 'Screen 2';
+    search.dispatchEvent(new f.window.Event('input'));
+    assert.deepEqual(
+      [...f.documentNode.querySelectorAll('[data-design-screen]')]
+        .filter((e) => !e.hidden)
+        .map((e) => e.dataset.designScreen),
+      ['screen-2'],
+    );
+    group.value = 'review';
+    group.dispatchEvent(new f.window.Event('change'));
+    assert.equal(f.documentNode.querySelector('[data-design-search-empty]').hidden, true);
+    search.value = 'no match';
+    search.dispatchEvent(new f.window.Event('input'));
+    assert.equal(f.documentNode.querySelector('[data-design-search-empty]').hidden, false);
+    assert.equal(f.studio.getState().screenId, 'screen-1');
+    assert.equal(f.documentNode.querySelectorAll('iframe').length, data.entries.length);
+  } finally {
+    f.close();
+  }
+});
+
+test('actual size and focus preserve source geometry while non-secret deep links restore selection', async () => {
+  const f = await mount({ hash: '#screen=screen-2&frame=mobile&direction=compact&view=prototype' });
+  try {
+    assert.equal(f.studio.getState().screenId, 'screen-2');
+    assert.equal(f.studio.getState().frameId, 'mobile');
+    assert.equal(f.studio.getState().variantId, 'compact');
+    f.documentNode.querySelector('[data-design-actual-size]').click();
+    assert.equal(f.studio.getState().zoom, 1);
+    assert.equal(f.studio.getState().inspectionScale, 'actual');
+    f.documentNode.querySelector('[data-design-focus]').click();
+    assert.equal(f.studio.getState().navOpen, false);
+    assert.equal(f.studio.getState().reviewOpen, false);
+    f.documentNode.querySelector('[data-design-screen="screen-3"]').click();
+    assert.match(f.window.location.hash, /screen=screen-3/);
+    assert.doesNotMatch(f.window.location.hash, /token|capability|auth/);
+    f.window.history.back();
+    await delay(40);
+    assert.equal(f.studio.getState().screenId, 'screen-2');
+    assert.equal(f.studio.getState().frameId, 'mobile');
+    f.documentNode.querySelector('[data-design-fit]').click();
+    assert.equal(f.studio.getState().inspectionScale, 'fit');
+  } finally {
+    f.close();
   }
 });

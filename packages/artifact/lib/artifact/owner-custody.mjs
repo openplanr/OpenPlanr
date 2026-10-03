@@ -4,6 +4,7 @@ import {
   closeSync,
   existsSync,
   fsyncSync,
+  linkSync,
   lstatSync,
   mkdirSync,
   openSync,
@@ -36,7 +37,7 @@ export function ownerCustodyLocation({
   const root = resolve(
     options.custodyRoot ??
       join(
-        configuredPlanrHome(env) ?? join(realpathSync(env.HOME || homedir()), '.openplanr'),
+        configuredPlanrHome(env) ?? join(realpathSync(env.HOME || homedir()), '.planr'),
         namespace,
       ),
   );
@@ -59,7 +60,11 @@ export function ownerCustodyLocation({
     throw custodyError(
       `${label} owner credentials must be stored outside the project. Set PLANR_HOME to a private user-level directory.`,
     );
-  return { root, path };
+  const legacyPath =
+    !options.custodyRoot && !configuredPlanrHome(env)
+      ? join(realpathSync(env.HOME || homedir()), '.openplanr', namespace, basename(path))
+      : null;
+  return { root, path, legacyPath };
 }
 
 export async function withOwnerCustody(location, { label = 'Owner', format }, action) {
@@ -67,6 +72,42 @@ export async function withOwnerCustody(location, { label = 'Owner', format }, ac
   const unlock = await acquireStartLock(`${location.path}.lock`);
   try {
     let record = readCustody(location.path, { label, format });
+    if (!record && location.legacyPath && pathExists(location.legacyPath)) {
+      // Check custody before creating a lock beside it, then check again while both locks are held.
+      readCustody(location.legacyPath, { label, format });
+      const legacyUnlock = await acquireStartLock(`${location.legacyPath}.lock`);
+      try {
+        const legacy = readCustody(location.legacyPath, { label, format });
+        if (legacy && !pathExists(location.path)) {
+          const temp = `${location.path}.${randomBytes(8).toString('hex')}.migration`;
+          const fd = openSync(temp, 'wx', 0o600);
+          try {
+            writeFileSync(fd, `${JSON.stringify(legacy)}\n`);
+            fsyncSync(fd);
+          } finally {
+            closeSync(fd);
+          }
+          try {
+            try {
+              linkSync(temp, location.path);
+            } catch (error) {
+              if (error.code !== 'EEXIST') throw error;
+            }
+            const directory = openSync(location.root, 'r');
+            try {
+              fsyncSync(directory);
+            } finally {
+              closeSync(directory);
+            }
+          } finally {
+            unlinkSync(temp);
+          }
+        }
+        record = readCustody(location.path, { label, format });
+      } finally {
+        legacyUnlock();
+      }
+    }
     return await action({
       ...location,
       record,
@@ -80,9 +121,18 @@ export async function withOwnerCustody(location, { label = 'Owner', format }, ac
   }
 }
 
+function pathExists(path) {
+  try {
+    lstatSync(path);
+    return true;
+  } catch (error) {
+    if (error.code === 'ENOENT') return false;
+    throw error;
+  }
+}
 function assertDirectoryAncestry(root, label) {
   for (let path = root; dirname(path) !== path; path = dirname(path)) {
-    if (existsSync(path) && lstatSync(path).isSymbolicLink())
+    if (pathExists(path) && lstatSync(path).isSymbolicLink())
       throw custodyError(`${label} custody directory must not contain symbolic links.`);
   }
 }
@@ -91,7 +141,7 @@ function assertPrivateFile(path, label) {
   if (
     !stat.isFile() ||
     stat.isSymbolicLink() ||
-    (process.platform !== 'win32' && stat.mode & 0o077)
+    (process.platform !== 'win32' && (stat.mode & 0o077 || stat.uid !== process.getuid()))
   )
     throw custodyError(
       `${label} owner custody must be a private 0600 file.`,
@@ -116,7 +166,9 @@ function assertPrivateDirectory(root, label, recoveryOutput = false) {
   if (
     !stat.isDirectory() ||
     stat.isSymbolicLink() ||
-    (!recoveryOutput && process.platform !== 'win32' && stat.mode & 0o077)
+    (!recoveryOutput &&
+      process.platform !== 'win32' &&
+      (stat.mode & 0o077 || stat.uid !== process.getuid()))
   )
     throw custodyError(`${label} custody must use a private local directory.`);
 }
@@ -132,7 +184,7 @@ export function readCustody(path, { label = 'Owner', format, recoveryInput = fal
     path = realpathSync(path);
   }
   assertDirectoryAncestry(dirname(path), label);
-  if (!existsSync(path)) return null;
+  if (!pathExists(path)) return null;
   assertPrivateDirectory(dirname(path), label, recoveryInput);
   assertPrivateFile(path, label);
   let record;

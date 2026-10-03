@@ -1,3 +1,4 @@
+// @ts-check
 import { constants } from 'node:fs';
 import {
   lstat,
@@ -12,7 +13,7 @@ import {
 } from 'node:fs/promises';
 import { basename, isAbsolute, join, resolve, sep } from 'node:path';
 
-import { validateDiagramAuthoringArtifact } from '@openplanr/protocol/diagram-authoring-contracts';
+import { validateVersionedDiagramAuthoringArtifact as validateDiagramAuthoringArtifact } from '@openplanr/protocol/studio-presentation-contracts';
 import { digestBytes, jsonBytes } from '../custody/bytes.mjs';
 import { renderDiagramHtml } from '../rendering/html.mjs';
 import { inspectDiagramPng, renderDiagramPng } from '../rendering/png.mjs';
@@ -21,23 +22,26 @@ import { snapshot, validateAuthoringBundle } from './model.mjs';
 import { renderAuthoredDiagramSvg } from './renderer.mjs';
 
 const MAX_FILE_BYTES = 64 * 1024 * 1024;
+/** @returns {import('./exports.d.mts').AuthoredDiagramExportFailure} */
 const fail = (code, detail, path = '$exports') => ({
   ok: false,
   code,
   diagnostics: [{ path, rule: code, detail }],
 });
+/** @returns {never} */
 const abort = (code, detail) => {
-  const error = new Error(detail);
-  error.exportCode = code;
+  const error = Object.assign(new Error(detail), { exportCode: code });
   throw error;
 };
 const sameVersion = (left, right) => left?.id === right.id && left?.version === right.version;
+/** @template {string} K @param {K} kind @returns {{kind:K,schemaVersion:'1.0.0',protocolVersion:'1.13.0'}} */
 const meta = (kind) => ({ kind, schemaVersion: '1.0.0', protocolVersion: '1.13.0' });
 
 async function info(path) {
   try {
     return await lstat(path);
-  } catch (error) {
+  } catch (caughtError) {
+    const error = errorObject(caughtError);
     if (error.code === 'ENOENT') return null;
     throw error;
   }
@@ -67,7 +71,8 @@ async function directory(root, relativePath, create = false) {
     if (!status && create) {
       try {
         await mkdir(path);
-      } catch (error) {
+      } catch (caughtError) {
+        const error = errorObject(caughtError);
         if (error.code !== 'EEXIST') throw error;
       }
       status = await info(path);
@@ -94,12 +99,14 @@ async function flushDirectory(path) {
   try {
     handle = await open(path, constants.O_RDONLY);
     await handle.sync();
-  } catch (error) {
-    if (!['EINVAL', 'ENOTSUP', 'EISDIR', 'EPERM'].includes(error.code)) throw error;
+  } catch (caughtError) {
+    const error = errorObject(caughtError);
+    if (!['EINVAL', 'ENOTSUP', 'EISDIR', 'EPERM'].includes(error.code ?? '')) throw error;
   } finally {
     await handle?.close();
   }
 }
+/** @returns {{ok:true,bundle:import('./index.d.mts').DiagramAuthoringBundle,slug:string,rendered:import('./renderer.d.mts').AuthoredDiagramSvgResult,theme:{id:string,version:string},relativeDirectory:string,bundleBytes:Buffer}|import('./exports.d.mts').AuthoredDiagramExportFailure} */
 function prepare(bundle, options) {
   const checked = validateAuthoringBundle(bundle);
   if (!checked.ok) return { ...checked, code: 'invalid-bundle' };
@@ -118,7 +125,7 @@ function prepare(bundle, options) {
     Reflect.ownKeys(options).some(
       (key) =>
         typeof key !== 'string' ||
-        !Object.hasOwn(Object.getOwnPropertyDescriptor(options, key), 'value'),
+        !Object.hasOwn(Object.getOwnPropertyDescriptor(options, key) ?? {}, 'value'),
     )
   )
     return fail('invalid-options', 'Export options must contain only explicit data properties.');
@@ -147,6 +154,7 @@ function prepare(bundle, options) {
     bundleBytes: jsonBytes(bundle),
   };
 }
+/** @param {import('@openplanr/protocol/diagram-authoring-contracts').DiagramFidelityReport['targetFormat']} targetFormat @returns {import('@openplanr/protocol/diagram-authoring-contracts').DiagramFidelityReport} */
 function fidelity(bundle, targetFormat) {
   return {
     ...meta('diagram-fidelity-report'),
@@ -194,6 +202,7 @@ function reviewHtml(bundle, rendered) {
     { theme: rendered.theme },
   ).replace('</body>', `${reportSection(bundle, rendered)}</body>`);
 }
+/** @returns {Promise<import('./exports.d.mts').VerifiedAuthoredDiagramExports|import('./exports.d.mts').AuthoredDiagramExportFailure>} */
 async function verifyDirectory(root, bundle, prepared) {
   const target = await directory(root, prepared.relativeDirectory);
   if (!target)
@@ -284,12 +293,14 @@ async function verifyDirectory(root, bundle, prepared) {
  * rerasterization. The manifest is not a signature: replacing both a PNG and its
  * declared digest requires an independently trusted transport manifest to detect.
  */
+/** @type {typeof import('./exports.d.mts').verifyAuthoredDiagramExports} */
 export async function verifyAuthoredDiagramExports(bundle, options) {
   try {
     const prepared = prepare(bundle, options);
     if (!prepared.ok) return prepared;
     return await verifyDirectory(await workspace(options.root), prepared.bundle, prepared);
-  } catch (error) {
+  } catch (caughtError) {
+    const error = errorObject(caughtError);
     return fail(
       error.exportCode ?? 'export-verification-failed',
       'The complete export set could not be verified safely.',
@@ -303,6 +314,7 @@ export async function verifyAuthoredDiagramExports(bundle, options) {
  * not reclaimed automatically: confirm no exporter is active, verify any complete
  * snapshot outputs, then explicitly recover only that operation's lock/stage.
  */
+/** @type {typeof import('./exports.d.mts').exportAuthoredDiagram} */
 export async function exportAuthoredDiagram(bundle, options) {
   try {
     return await stageAuthoredDiagramExports(bundle, options);
@@ -313,6 +325,7 @@ export async function exportAuthoredDiagram(bundle, options) {
     );
   }
 }
+/** @returns {Promise<import('./exports.d.mts').AuthoredDiagramExportResult|import('./exports.d.mts').AuthoredDiagramExportFailure>} */
 async function stageAuthoredDiagramExports(bundle, options) {
   let stage, lock, lockPath;
   try {
@@ -326,7 +339,7 @@ async function stageAuthoredDiagramExports(bundle, options) {
       return verified.ok
         ? {
             ...verified,
-            status: 'unchanged',
+            status: /** @type {const} */ ('unchanged'),
             scene: prepared.rendered.scene,
             theme: prepared.rendered.theme,
           }
@@ -353,25 +366,26 @@ async function stageAuthoredDiagramExports(bundle, options) {
       ['diagram.png', png],
       ['review.html', Buffer.from(reviewHtml(bundle, rendered))],
     ]);
-    const formats = {
+    const formats = /** @type {const} */ ({
       'diagram.svg': ['image/svg+xml', 'svg'],
       'diagram.png': ['image/png', 'png'],
       'review.html': ['text/html', 'html'],
-    };
+    });
+    /** @type {import('@openplanr/protocol/diagram-authoring-contracts').DiagramAuthoringManifest} */
     const manifest = {
       ...meta('diagram-manifest'),
       diagramId: bundle.diagramId,
       basis: snapshot(bundle),
       bundle: {
         path: `${prepared.relativeDirectory}/snapshot.planr-diagram-bundle.json`,
-        transportDigest: digestBytes(prepared.bundleBytes),
+        transportDigest: /** @type {`sha256:${string}`} */ (digestBytes(prepared.bundleBytes)),
       },
       renderer: rendered.renderer,
       theme: prepared.theme,
       outputs: Object.entries(formats).map(([name, [mediaType, format]]) => ({
         path: `${prepared.relativeDirectory}/${name}`,
         mediaType,
-        transportDigest: digestBytes(files.get(name)),
+        transportDigest: /** @type {`sha256:${string}`} */ (digestBytes(files.get(name))),
         fidelity: fidelity(bundle, format),
       })),
     };
@@ -394,7 +408,12 @@ async function stageAuthoredDiagramExports(bundle, options) {
     if (await directory(root, prepared.relativeDirectory)) {
       const verified = await verifyDirectory(root, bundle, prepared);
       return verified.ok
-        ? { ...verified, status: 'unchanged', scene: rendered.scene, theme: rendered.theme }
+        ? {
+            ...verified,
+            status: /** @type {const} */ ('unchanged'),
+            scene: rendered.scene,
+            theme: rendered.theme,
+          }
         : verified;
     }
     stage = await mkdtemp(join(parent, `.${name}.stage-`));
@@ -418,14 +437,15 @@ async function stageAuthoredDiagramExports(bundle, options) {
     await flushDirectory(parent);
     return {
       ok: true,
-      status: 'created',
+      status: /** @type {const} */ ('created'),
       directory: join(parent, name),
       manifest,
       scene: rendered.scene,
       quality: rendered.quality,
       theme: rendered.theme,
     };
-  } catch (error) {
+  } catch (caughtError) {
+    const error = errorObject(caughtError);
     return fail(
       error.exportCode ?? (error.code === 'EEXIST' ? 'exports-busy' : 'export-failed'),
       error.exportCode
@@ -437,7 +457,8 @@ async function stageAuthoredDiagramExports(bundle, options) {
     if (stage) {
       try {
         await rm(stage, { recursive: true, force: true });
-      } catch (error) {
+      } catch (caughtError) {
+        const error = errorObject(caughtError);
         cleanupError = error;
       }
     }
@@ -445,26 +466,36 @@ async function stageAuthoredDiagramExports(bundle, options) {
       let held;
       try {
         held = await lock.stat();
-      } catch (error) {
+      } catch (caughtError) {
+        const error = errorObject(caughtError);
         cleanupError ??= error;
       }
       try {
         await lock.close();
-      } catch (error) {
+      } catch (caughtError) {
+        const error = errorObject(caughtError);
         cleanupError ??= error;
       }
       // Retain the lock if staging cleanup is uncertain. Never delete a replaced lock.
       if (!cleanupError) {
         try {
+          if (!held || !lockPath)
+            abort('export-cleanup-pending', 'Export lock status is unavailable.');
           const current = await info(lockPath);
           if (current && (current.ino !== held.ino || current.dev !== held.dev))
             abort('export-cleanup-pending', 'Export lock ownership changed during cleanup.');
           if (current) await unlink(lockPath);
-        } catch (error) {
+        } catch (caughtError) {
+          const error = errorObject(caughtError);
           cleanupError = error;
         }
       }
     }
     if (cleanupError) throw cleanupError;
   }
+}
+
+/** @param {unknown} value @returns {NodeJS.ErrnoException & {exportCode?: string}} */
+function errorObject(value) {
+  return value instanceof Error ? value : new Error(String(value));
 }

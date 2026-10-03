@@ -8,15 +8,17 @@ import { pathToFileURL } from 'node:url';
 import { renderArtifactParentRuntime } from '@openplanr/artifact/bridge.mjs';
 import { createArtifactEnvelope } from '@openplanr/artifact/envelope.mjs';
 import { createArtifactReviewServer } from '@openplanr/artifact/review-server.mjs';
-import { launchBrowser } from '../../../tests/support/browser-launcher.mjs';
+import { browserEngine, launchBrowser } from '../../../tests/support/browser-launcher.mjs';
 import { currentDesign, renderDesignDocument } from '../lib/design/document.mjs';
-import { readDesignFeedback, startDesignReview } from '../lib/design/review.mjs';
+import { readDesignFeedback } from '../lib/design/review.mjs';
 import {
   createDesignStudioEntries,
   designStudioArtifactId,
   renderDesignStudio,
 } from '../lib/design/studio.mjs';
 import { designFixture as writeDesignFixture } from './design-fixture.mjs';
+import { fetch, startDesignReview } from './studio-http-fixture.mjs';
+import { readyPrototypeFrame, settleStudioChrome } from './studio-readiness.mjs';
 
 test('native local submit requires allow-forms even when form navigation is denied by CSP', {
   timeout: 15000,
@@ -173,7 +175,7 @@ test('browser studio boots through the protected artifact server and supports a 
     });
     assert.equal(response.status, 201);
     const session = await response.json();
-    browser = await launchBrowser({ engine: 'chromium' });
+    browser = await launchBrowser({ engine: browserEngine() });
     const page = await browser.newPage({
       viewport: { width: 1600, height: 1050 },
       deviceScaleFactor: 1,
@@ -182,7 +184,7 @@ test('browser studio boots through the protected artifact server and supports a 
     page.setDefaultNavigationTimeout(30000);
     const errors = [];
     const consoleErrors = [];
-    page.on('pageerror', (error) => errors.push(error.message));
+    page.on('pageerror', (error) => errors.push(error.stack));
     page.on('console', (message) => {
       if (message.type() === 'error') consoleErrors.push(message.text());
     });
@@ -190,7 +192,7 @@ test('browser studio boots through the protected artifact server and supports a 
       waitUntil: 'domcontentloaded',
       timeout: 30_000,
     });
-    await page.waitForSelector('[data-design-ready="true"]');
+    await page.waitForSelector('[data-design-ready="true"]', { timeout: 15000 });
     // Runtime mounting replaces current threads; stale feedback must survive in
     // the same rail, outside that runtime-owned slot, including after reload.
     assert.equal(await page.locator('[data-design-stale-pin="earlier-pin"]').isVisible(), true);
@@ -198,8 +200,8 @@ test('browser studio boots through the protected artifact server and supports a 
       await page.locator('[data-planr-slot="feedback-rail"] [data-design-stale-pin]').count(),
       0,
     );
-    await page.reload();
-    await page.waitForSelector('[data-design-ready="true"]');
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await page.waitForSelector('[data-design-ready="true"]', { timeout: 15000 });
     assert.match(
       await page.locator('[data-design-stale-pin="earlier-pin"]').innerText(),
       /Clarify the earlier action/,
@@ -207,7 +209,7 @@ test('browser studio boots through the protected artifact server and supports a 
     await page
       .waitForFunction(
         () =>
-          [...document.querySelectorAll('iframe')].every(
+          [...document.querySelectorAll('iframe[src], iframe[srcdoc]')].every(
             (frame) => frame.dataset.planrBridgeTrusted === 'true',
           ),
         null,
@@ -309,10 +311,11 @@ test('browser studio boots through the protected artifact server and supports a 
         frame.top < viewport.bottom
       );
     });
+    await settleStudioChrome(page);
     assert.ok(
-      (await page
+      await page
         .locator('.planr-stage-scroll')
-        .evaluate((node) => node.getBoundingClientRect().height)) > 800,
+        .evaluate((node) => node.getBoundingClientRect().height >= innerHeight - 100),
       'presentation stage fills the fullscreen shell',
     );
     await page.getByRole('button', { name: 'Exit presentation', exact: true }).click();
@@ -339,6 +342,9 @@ test('browser studio boots through the protected artifact server and supports a 
         beforePresentation[key],
         `Presentation restores ${key}`,
       );
+    await page.waitForFunction(
+      () => document.querySelector('.design-tools-menu > summary') === document.activeElement,
+    );
     assert.equal(
       await page
         .locator('.design-tools-menu > summary')
@@ -467,8 +473,18 @@ test('browser studio boots through the protected artifact server and supports a 
       true,
     );
     // Use the mobile artboard marker, which remains outside the open popover.
-    await page.locator('[data-design-note="overview"]:visible').last().click();
-    await page.locator('[data-design-note="overview"]:visible').last().click();
+    const mobileNote = page.locator(
+      `[data-artifact-id="${data.entries.find((entry) => entry.screenId === 'overview' && entry.frameId === 'mobile' && entry.variantId === 'calm').artifactId}"] [data-design-note="overview"]`,
+    );
+    const notedFrame = await page.evaluate(() => window.__openPlanrDesignStudio.getState().frameId);
+    await mobileNote.click();
+    await page.waitForSelector('[data-design-notes][open]');
+    assert.equal(
+      await page.evaluate(() => window.__openPlanrDesignStudio.getState().frameId),
+      notedFrame,
+      'opening guidance does not activate or move an inactive artboard under the pointer',
+    );
+    await mobileNote.click();
     assert.equal(await page.locator('[data-design-notes]').getAttribute('open'), null);
     await page.locator('[data-design-notes] > summary').focus();
     await page.keyboard.press('Enter');
@@ -522,8 +538,8 @@ test('browser studio boots through the protected artifact server and supports a 
       animations: 'disabled',
     });
     await page.evaluate(() => window.__openPlanrDesignStudio.flush());
-    await page.reload();
-    await page.waitForSelector('[data-design-ready="true"]');
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await page.waitForSelector('[data-design-ready="true"]', { timeout: 15000 });
     assert.deepEqual(
       await page.evaluate(
         (artifactId) => ({
@@ -559,9 +575,14 @@ test('browser studio boots through the protected artifact server and supports a 
       'Unavailable',
     );
     await page.locator('[data-planr-share-close]').click();
-    const originalSources = await page
-      .locator('iframe')
-      .evaluateAll((frames) => frames.map((frame) => frame.src));
+    await page.evaluate(() => {
+      window.reviewedFrameNodes = [...document.querySelectorAll('.planr-artifact-panel')].map(
+        (panel) => ({
+          id: panel.dataset.artifactId,
+          frame: window.__openPlanrArtifactStage.getFrame(panel.dataset.artifactId),
+        }),
+      );
+    });
 
     await page.locator('[data-design-view="prototype"]').click();
     await page.screenshot({
@@ -577,7 +598,14 @@ test('browser studio boots through the protected artifact server and supports a 
     );
     // Playwright's frame locator adds the iframe offset but omits the ancestor
     // scale. A real mouse click uses the preview's displayed viewport geometry.
+    await page.locator('[data-design-frame]').selectOption('desktop');
+    await page.locator('[data-design-screen="overview"]').click();
+    await page.waitForFunction(
+      () => window.__openPlanrDesignStudio.getState().screenId === 'overview',
+    );
     const iframe = page.locator(`[data-planr-artifact-frame="${first.artifactId}"]`);
+    await iframe.waitFor();
+    await readyPrototypeFrame(page, first.artifactId);
     const frameBounds = await iframe.boundingBox();
     const buttonBounds = await page
       .frameLocator(`[data-planr-artifact-frame="${first.artifactId}"]`)
@@ -619,12 +647,23 @@ test('browser studio boots through the protected artifact server and supports a 
     });
     await page.locator('[data-design-view="walkthrough"]').click();
     await page.locator('[data-design-step-change="1"]').click();
+    await page.waitForFunction(
+      () => window.__openPlanrDesignStudio.getState().screenId === 'confirmed',
+    );
     assert.match(await page.locator('[data-design-step]').textContent(), /Step 3 of 3/);
     assert.equal(await page.locator('.planr-annotation-layer [data-planr-pin-id]').count(), 1);
-    assert.deepEqual(
-      await page.locator('iframe').evaluateAll((frames) => frames.map((frame) => frame.src)),
-      originalSources,
+    assert.equal(
+      await page.evaluate(() =>
+        window.reviewedFrameNodes.every(
+          ({ id, frame }) => frame && window.__openPlanrArtifactStage.getFrame(id) === frame,
+        ),
+      ),
+      true,
+      'presentation reuses artboard DOM while sources load within the budget',
     );
+    assert.ok((await page.locator('iframe[src], iframe[srcdoc]').count()) <= 3);
+    assert.ok((await page.locator('.planr-artifact-panel iframe').count()) <= 3);
+    assert.ok((await page.evaluate(() => window.length)) <= 3);
     // The out-of-process iframe paints after its hidden panel becomes visible;
     // wait for the compositor before capturing the visual review evidence.
     await page.waitForTimeout(150);
@@ -636,11 +675,11 @@ test('browser studio boots through the protected artifact server and supports a 
     await page.locator('[data-design-rating="4"]').click();
     await page.evaluate(() => window.__openPlanrDesignStudio.flush());
     const htmlDownload = page.waitForEvent('download');
-    await page.locator('.design-export summary').click();
+    await page.locator('[data-studio-export-menu]').click();
     await page.locator('[data-design-export="html"]').click();
     assert.match((await htmlDownload).suggestedFilename(), /\.html$/);
-    await page.reload();
-    await page.waitForSelector('[data-design-ready="true"]');
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await page.waitForSelector('[data-design-ready="true"]', { timeout: 15000 });
     assert.equal(
       await page.evaluate(() => window.__openPlanrDesignStudio.getState().ratings.calm),
       4,
@@ -697,6 +736,10 @@ test('browser studio boots through the protected artifact server and supports a 
     assert.equal(await page.locator('[data-design-notes]').getAttribute('open'), null);
     await page.getByRole('button', { name: 'Screens', exact: true }).click();
     await page.getByRole('button', { name: 'Close screens', exact: true }).click();
+    await page.waitForFunction(
+      () => document.querySelector('[data-design-toggle-nav]') === document.activeElement,
+    );
+    await page.waitForFunction(() => document.activeElement?.matches('[data-design-toggle-nav]'));
     assert.equal(
       await page
         .getByRole('button', { name: 'Screens', exact: true })
@@ -715,6 +758,9 @@ test('browser studio boots through the protected artifact server and supports a 
       'Keep these compact review controls.',
     );
     await page.getByRole('button', { name: 'Close review', exact: true }).click();
+    await page.waitForFunction(
+      () => document.querySelector('[data-planr-action=feedback]') === document.activeElement,
+    );
     assert.equal(
       await page
         .getByRole('button', { name: 'Review', exact: true })
@@ -732,7 +778,7 @@ test('browser studio boots through the protected artifact server and supports a 
 test('journey-start thumbnails capture later screens when they become visible without retrying on camera motion', {
   timeout: 30000,
 }, async () => {
-  const browser = await launchBrowser({ engine: 'chromium' });
+  const browser = await launchBrowser({ engine: browserEngine() });
   try {
     for (const view of ['walkthrough', 'prototype']) {
       const temporary = await mkdtemp(join(tmpdir(), 'openplanr-journey-thumbnails-'));
@@ -769,7 +815,7 @@ test('journey-start thumbnails capture later screens when they become visible wi
           waitUntil: 'domcontentloaded',
           timeout: 30_000,
         });
-        await page.waitForSelector('[data-design-ready="true"]');
+        await page.waitForSelector('[data-design-ready="true"]', { timeout: 15000 });
         await page.waitForSelector('[data-design-screen="overview"] .design-thumbnail img');
         const basis = await page.evaluate(() => {
           const { view, variantId, frameId } = window.__openPlanrDesignStudio.getState();
@@ -781,7 +827,15 @@ test('journey-start thumbnails capture later screens when they become visible wi
           0,
           'hidden journey frames retain a placeholder until paintable',
         );
-        const iframeCount = await page.locator('iframe').count();
+        const iframeCount = await page.evaluate(() => {
+          window.thumbnailFrameNodes = [...document.querySelectorAll('.planr-artifact-panel')].map(
+            (panel) => ({
+              id: panel.dataset.artifactId,
+              frame: window.__openPlanrArtifactStage.getFrame(panel.dataset.artifactId),
+            }),
+          );
+          return window.thumbnailFrameNodes.length;
+        });
         const failingArtifact = data.entries.find(
           (item) =>
             item.screenId === 'confirmed' &&
@@ -789,20 +843,29 @@ test('journey-start thumbnails capture later screens when they become visible wi
             item.frameId === basis.frameId,
         ).artifactId;
         await page.evaluate((id) => {
-          const frame = [...document.querySelectorAll('iframe')].find(
-            (frame) => frame.dataset.planrArtifactFrame === id,
-          );
+          const frame = window.__openPlanrArtifactStage.getFrame(id);
           window.thumbnailFailureAttempts = 0;
-          Object.defineProperty(frame, '__openPlanrBridge', {
-            configurable: true,
-            value: {
-              ...frame.__openPlanrBridge,
-              thumbnail: async () => {
-                window.thumbnailFailureAttempts++;
-                throw new Error('Capture unavailable');
+          const failCapture = () =>
+            Object.defineProperty(frame, '__openPlanrBridge', {
+              configurable: true,
+              value: {
+                ...frame.__openPlanrBridge,
+                thumbnail: async () => {
+                  window.thumbnailFailureAttempts++;
+                  throw new Error('Capture unavailable');
+                },
               },
-            },
-          });
+            });
+          // Hidden previews load on demand. Install the fault after their bridge
+          // exists and before the selected screen schedules a thumbnail.
+          if (frame.dataset.planrFrameState === 'ready') failCapture();
+          else
+            document
+              .querySelector('.planr-shell')
+              .addEventListener('planr:artifact-frame-state', (event) => {
+                if (event.detail.artifactId === id && event.detail.status === 'ready')
+                  failCapture();
+              });
         }, failingArtifact);
         await page.locator('[data-design-screen="assignment"]').click();
         await page.waitForSelector('[data-design-screen="assignment"] .design-thumbnail img');
@@ -832,11 +895,18 @@ test('journey-start thumbnails capture later screens when they become visible wi
         await page.locator('[data-design-screen="assignment"]').click();
         await page.locator('[data-design-screen="confirmed"]').click();
         await page.waitForFunction(() => window.thumbnailFailureAttempts === 2);
+        assert.equal(await page.locator('.planr-artifact-panel').count(), iframeCount);
         assert.equal(
-          await page.locator('iframe').count(),
-          iframeCount,
-          'captures reuse the original frames',
+          await page.evaluate(() =>
+            window.thumbnailFrameNodes.every(
+              ({ id, frame }) => frame && window.__openPlanrArtifactStage.getFrame(id) === frame,
+            ),
+          ),
+          true,
+          'captures reuse the original registry frame nodes',
         );
+        assert.ok((await page.locator('.planr-artifact-panel iframe').count()) <= 3);
+        assert.ok((await page.evaluate(() => window.length)) <= 3);
       } finally {
         await page.close();
         await server.close();
@@ -866,16 +936,16 @@ test('generated portable HTML and the public design review composition preserve 
   let browser;
   let review;
   try {
-    browser = await launchBrowser({ engine: 'chromium' });
+    browser = await launchBrowser({ engine: browserEngine() });
     const page = await browser.newPage({
       viewport: { width: 1600, height: 1050 },
     });
     page.setDefaultTimeout(8000);
     page.setDefaultNavigationTimeout(30000);
     const errors = [];
-    page.on('pageerror', (error) => errors.push(error.message));
+    page.on('pageerror', (error) => errors.push(error.stack));
     await page.goto(pathToFileURL(result.views.canvas).href);
-    await page.waitForSelector('[data-design-ready="true"]');
+    await page.waitForSelector('[data-design-ready="true"]', { timeout: 15000 });
     assert.equal(await page.locator('.planr-artifact-panel:visible').count(), 6);
     const first = current.entries.find(
       (entry) =>
@@ -935,14 +1005,15 @@ test('generated portable HTML and the public design review composition preserve 
     );
     assert.equal(
       await page.locator('iframe[data-planr-bridge-trusted="true"]').count(),
-      current.entries.length,
+      await page.locator('iframe[src], iframe[srcdoc]').count(),
     );
+    assert.ok((await page.locator('iframe[src], iframe[srcdoc]').count()) <= 3);
 
     review = await startDesignReview(file, {
       env: { ...process.env, PLANR_HOME: temporary },
     });
     await page.goto(review.url);
-    await page.waitForSelector('[data-design-ready="true"]');
+    await page.waitForSelector('[data-design-ready="true"]', { timeout: 15000 });
     await page.locator('[data-design-variant]').selectOption('B');
     await page.locator('[data-design-rating="5"]').click();
     await page.locator('[data-design-select-direction]').click();
@@ -964,8 +1035,8 @@ test('generated portable HTML and the public design review composition preserve 
       readDesignFeedback(file, { ...process.env, PLANR_HOME: temporary }).pins.length,
       1,
     );
-    await page.reload();
-    await page.waitForSelector('[data-design-ready="true"]');
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await page.waitForSelector('[data-design-ready="true"]', { timeout: 15000 });
     assert.equal(
       await page.evaluate(() => window.__openPlanrDesignStudio.getState().selectedVariant),
       'B',
@@ -977,10 +1048,10 @@ test('generated portable HTML and the public design review composition preserve 
       env: { ...process.env, PLANR_HOME: temporary },
     });
     await page.goto(review.url);
-    await page.waitForSelector('[data-design-ready="true"]');
+    await page.waitForSelector('[data-design-ready="true"]', { timeout: 15000 });
     assert.equal(await page.locator('.planr-annotation-layer [data-planr-pin-id]').count(), 1);
     const download = page.waitForEvent('download');
-    await page.locator('.design-export summary').click();
+    await page.locator('[data-studio-export-menu]').click();
     await page.locator('[data-design-export="png"]').click();
     const png = await download;
     assert.match(png.suggestedFilename(), /\.png$/);

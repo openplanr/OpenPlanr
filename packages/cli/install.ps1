@@ -7,12 +7,12 @@ $ErrorActionPreference = 'Stop'
 
 $node = Get-Command node -ErrorAction SilentlyContinue
 if (-not $node) {
-  throw 'E_NODE_NOT_FOUND: OpenPlanr requires Node.js 20 or newer. Install Node.js and rerun; it is never installed silently.'
+  throw 'E_NODE_NOT_FOUND: OpenPlanr requires Node.js ^20.19.0 || ^22.13.0 || >=23.5.0. Install Node.js and rerun; it is never installed silently.'
 }
 
-$nodeMajor = [int]((& node -p "process.versions.node.split('.')[0]").Trim())
-if ($nodeMajor -lt 20) {
-  throw "E_NODE_VERSION: OpenPlanr requires Node.js 20+; found $(& node --version)."
+& node -e 'const version = process.versions.node; const [major, minor, patch] = version.replace(/^v/u, String()).split(String.fromCharCode(46)).map(Number); process.exit(/^v?(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/u.test(version) && [major, minor, patch].every(Number.isSafeInteger) && ((major === 20 && minor >= 19) || (major === 22 && minor >= 13) || (major === 23 && minor >= 5) || major > 23) ? 0 : 1)'
+if ($LASTEXITCODE -ne 0) {
+  throw "E_NODE_VERSION: OpenPlanr requires Node.js ^20.19.0 || ^22.13.0 || >=23.5.0; found $(& node --version)."
 }
 
 $installArgs = @('install', '--global', '--no-audit', '--no-fund', '--loglevel=error')

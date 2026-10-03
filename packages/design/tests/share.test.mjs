@@ -17,7 +17,7 @@ import { test } from 'node:test';
 import { launchBrowser } from '../../../tests/support/browser-launcher.mjs';
 import { contrastRatio } from '../lib/design/contrast.mjs';
 import { renderDesignDocument } from '../lib/design/document.mjs';
-import { readDesignFeedback, startDesignReview } from '../lib/design/review.mjs';
+import { readDesignFeedback } from '../lib/design/review.mjs';
 import {
   exportDesignShareRecovery,
   getDesignShareStatus,
@@ -35,6 +35,7 @@ import {
   prepareWorkspaceEvent,
 } from '../lib/design/workspace-client.mjs';
 import { designFixture } from './design-fixture.mjs';
+import { fetch, startDesignReview } from './studio-http-fixture.mjs';
 
 async function fixture(t) {
   const outer = realpathSync(mkdtempSync(join(tmpdir(), 'planr-design-share-')));
@@ -43,6 +44,7 @@ async function fixture(t) {
   const { file } = designFixture(root);
   await renderDesignDocument(file);
   const options = {
+    transport: '1', // This fixture covers preserved legacy transport behavior.
     custodyRoot: join(outer, 'private'),
     env: { ...process.env, PLANR_HOME: join(outer, 'home') },
     baseUrl: 'https://share.test',
@@ -55,6 +57,8 @@ async function fixture(t) {
     failAfter: false,
   };
   options.fetchImpl = async (url, init = {}) => {
+    if (new URL(url).pathname === '/.well-known/openplanr-sharing')
+      return new Response(null, { status: 404 });
     const path = new URL(url).pathname.split('/').filter(Boolean),
       route = path[4];
     const body = init.body ? JSON.parse(init.body) : null;
@@ -421,6 +425,11 @@ test('Share design completes in the real browser without generic missing-handler
       new URL(url).origin === options.baseUrl ? options.fetchImpl(url, init) : fetch(url, init),
   });
   t.after(() => session.close());
+  assert.equal(
+    (await fetch(`${session.url}api/design-share`, { credentials: 'omit' })).status,
+    404,
+    'The local owner Share API still rejects requests without its scoped browser capability',
+  );
   const browser = await launchBrowser({ engine: 'chromium' });
   t.after(() => browser.close());
   const page = await browser.newPage();

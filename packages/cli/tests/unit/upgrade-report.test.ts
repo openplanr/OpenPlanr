@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   firstSentence,
   printNextSteps,
+  printReconciliationStatus,
   printReleaseNotes,
   printUpgradeReport,
   wrapText,
@@ -133,4 +134,24 @@ describe('printUpgradeReport', () => {
       '  Then restart Claude Code and check with `planr upgrade status`.',
     );
   });
+});
+
+describe('upgrade metadata freshness', () => {
+  it.each(['cache', 'stale-cache'] as const)(
+    'does not turn %s alignment into latest-release confirmation',
+    (ecosystemSource) => {
+      printReconciliationStatus({
+        status: 'aligned',
+        installed: { cli: '2.2640.6', skills: null, pipeline: null },
+        published: null,
+        ecosystemSource,
+      });
+      const report = printed.join('\n');
+      expect(report).toContain('cached compatible set');
+      expect(report).not.toContain('freshly checked');
+      expect(report).not.toContain('up to date');
+      if (ecosystemSource === 'stale-cache')
+        expect(report).toContain('latest release is not confirmed');
+    },
+  );
 });

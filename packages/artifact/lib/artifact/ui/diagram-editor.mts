@@ -1,12 +1,11 @@
-import {
-  type DiagramAuthoringBundle,
-  getDiagramAuthoringCapability,
-} from '@openplanr/protocol/diagram-authoring-contracts';
+import { getDiagramAuthoringCapability } from '@openplanr/protocol/diagram-authoring-contracts';
+import type { VersionedDiagramAuthoringBundle as DiagramAuthoringBundle } from '@openplanr/protocol/studio-presentation-contracts';
 import type {
   DiagramEditorEvent,
   DiagramEditorSession,
   DiagramEditorState,
 } from '../diagram/editor/index.mjs';
+import { readEditorState } from '../diagram/editor/session-view.mjs';
 import { createEditorCanvas } from './diagram-editor-canvas.mjs';
 import { createEditorChrome, createEditorLayout } from './diagram-editor-chrome.mjs';
 import { createEditorCommands } from './diagram-editor-commands.mjs';
@@ -22,6 +21,7 @@ import { createEditorKeyboard } from './diagram-editor-keyboard.mjs';
 import { createEditorOutline } from './diagram-editor-outline.mjs';
 import type { DiagramEditorContext } from './diagram-editor-regions.mjs';
 import { renderEditorControls, renderEditorSkeleton } from './diagram-editor-template.mjs';
+import { mountDiagramEditorChrome } from './studio-shell-mount.mjs';
 
 /** Every icon the editor can render; hosts may use any of them on actions and panels. */
 export type DiagramEditorIconName =
@@ -89,11 +89,11 @@ export interface DiagramEditorHostAction {
   }): void;
 }
 
-/** A right-panel tab owned by the host, mounted the first time it opens. `properties` and `review` are reserved ids. */
+/** A right-panel tab owned by the host, mounted the first time it opens. `properties`, `review`, `outline`, `shapes`, `more`, `canvas` and `inspector` are reserved ids. */
 export interface DiagramEditorHostPanel {
   id: string;
   label: string;
-  /** Checked against the icon set at mount; the tab itself renders the label only. */
+  /** Checked against the icon set at mount and rendered alongside its tab label. */
   icon?: DiagramEditorIconName;
   hidden?: (state: DiagramEditorState) => boolean;
   mount(options: {
@@ -149,7 +149,6 @@ export function mountDiagramEditor({ root, session, host = {} }: MountOptions): 
   mountCount += 1;
   const idPrefix = mountCount === 1 ? ID_PREFIX : `${ID_PREFIX}-${mountCount}`;
   const scopedId = (name: string) => `${idPrefix}-${name}`;
-  const mode = 'edit';
   let disposed = false,
     resizeFrame = 0,
     lastAnnouncement = '',
@@ -193,7 +192,6 @@ export function mountDiagramEditor({ root, session, host = {} }: MountOptions): 
   };
   // The capability lookup returns null for a missing grammar id, as when access changed.
   const editable = (state: DiagramEditorState) =>
-    mode === 'edit' &&
     !layout.compact() &&
     state.capabilities.read &&
     state.capabilities.write &&
@@ -220,10 +218,9 @@ export function mountDiagramEditor({ root, session, host = {} }: MountOptions): 
     config,
     dom,
     layout,
-    mode,
     scopedId,
     isDisposed: () => disposed,
-    current: () => session.getState(),
+    current: () => readEditorState(session),
     displayed,
     editable,
     readOnly,
@@ -256,6 +253,7 @@ export function mountDiagramEditor({ root, session, host = {} }: MountOptions): 
   dialogs = createEditorDialogs(ctx);
   commands = createEditorCommands(ctx);
   const keyboard = createEditorKeyboard(ctx);
+  const reactChrome = mountDiagramEditorChrome(ctx);
 
   const scheduleResize = () => {
     if (disposed || resizeFrame) return;
@@ -269,6 +267,7 @@ export function mountDiagramEditor({ root, session, host = {} }: MountOptions): 
   const onSession = (event: DiagramEditorEvent) => {
     if (disposed) return;
     canvas.draw(event);
+    reactChrome.update();
   };
   const unsubscribe = session.subscribe(onSession);
   const onColorScheme = () => {
@@ -301,6 +300,7 @@ export function mountDiagramEditor({ root, session, host = {} }: MountOptions): 
       resize?.disconnect();
       win.cancelAnimationFrame(resizeFrame);
       win.cancelAnimationFrame(announcementFrame);
+      reactChrome.destroy();
       inspector.dispose();
       dialogs.dispose();
       shell.removeEventListener('click', commands.click);
@@ -339,6 +339,7 @@ export function mountDiagramEditor({ root, session, host = {} }: MountOptions): 
     refreshHost() {
       if (disposed) return;
       chrome.render(ctx.current(), { force: true });
+      reactChrome.update();
     },
     getState() {
       return session.getState();

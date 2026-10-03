@@ -7,8 +7,8 @@ import { test } from 'node:test';
 import { pathToFileURL } from 'node:url';
 import { browserEngine, launchBrowser } from '../../../tests/support/browser-launcher.mjs';
 import { renderDesignDocument } from '../lib/design/document.mjs';
-import { startDesignReview } from '../lib/design/review.mjs';
 import { designFixture } from './design-fixture.mjs';
+import { startDesignReview } from './studio-http-fixture.mjs';
 
 const engine = browserEngine();
 
@@ -50,7 +50,12 @@ async function observeNavigation(page, steps, expectedScreen, { cancelToView = n
       const artboardBaseline = artboardGeometry(
         document.querySelector('.planr-artifact-panel:not([hidden])'),
       );
-      const frameCount = document.querySelectorAll('.planr-artifact-panel iframe').length;
+      const stage = window.__openPlanrArtifactStage;
+      const frames = [...document.querySelectorAll('.planr-artifact-panel')].map((panel) => ({
+        id: panel.dataset.artifactId,
+        frame: stage.getFrame(panel.dataset.artifactId),
+      }));
+      const frameCount = frames.length;
       const samples = [];
       let complete = false;
       let stable = 0;
@@ -61,6 +66,7 @@ async function observeNavigation(page, steps, expectedScreen, { cancelToView = n
           const visible = [...document.querySelectorAll('.planr-artifact-panel:not([hidden])')];
           const painted = visible.filter((panel) => {
             const frame = panel.querySelector('iframe');
+            if (!frame) return false;
             const rect = frame.getBoundingClientRect();
             const style = getComputedStyle(frame);
             return (
@@ -77,9 +83,20 @@ async function observeNavigation(page, steps, expectedScreen, { cancelToView = n
           samples.push({
             elapsed: performance.now() - started,
             mode,
+            visibility: document.visibilityState,
+            animationTimes: transitionAnimations.map((animation) => ({
+              currentTime: animation.currentTime,
+              startTime: animation.startTime,
+              playState: animation.playState,
+              pending: animation.pending,
+            })),
             painted: painted.length,
             visible: visible.length,
-            frameCount: document.querySelectorAll('.planr-artifact-panel iframe').length,
+            frameCount: document.querySelectorAll('.planr-artifact-panel').length,
+            sameFrames: frames.every(({ id, frame }) => frame && stage.getFrame(id) === frame),
+            connectedFrames: document.querySelectorAll('.planr-artifact-panel iframe').length,
+            windows: window.length,
+            frameBudget: stage.frameBudget,
             opacity: painted.reduce(
               (sum, panel) => sum + Number(getComputedStyle(panel.querySelector('iframe')).opacity),
               0,
@@ -131,7 +148,16 @@ function assertContinuousTransition(result, label, { animated = true } = {}) {
     assert.equal(
       sample.frameCount,
       result.frameCount,
-      `${label}: transitions do not create additional live product frames`,
+      `${label}: transitions retain every logical artboard host`,
+    );
+    assert.equal(sample.sameFrames, true, `${label}: transitions reuse registered frame nodes`);
+    assert.ok(
+      sample.connectedFrames <= sample.frameBudget,
+      `${label}: attached previews remain bounded`,
+    );
+    assert.ok(
+      sample.windows <= sample.frameBudget,
+      `${label}: native preview contexts remain bounded`,
     );
     assert.ok(
       sample.outgoing <= 1,
@@ -157,7 +183,17 @@ function assertContinuousTransition(result, label, { animated = true } = {}) {
   }
   const running = result.samples.filter((sample) => sample.mode === 'running');
   if (animated) {
-    assert.ok(running.length >= 2, `${label}: transition has a visible intermediate animation`);
+    assert.ok(
+      running.length >= 2,
+      `${label}: transition has a visible intermediate animation; ${JSON.stringify(
+        result.samples.map(({ elapsed, mode, visibility, animationTimes }) => ({
+          elapsed,
+          mode,
+          visibility,
+          animationTimes,
+        })),
+      )}`,
+    );
     assert.ok(
       running.some((sample) => sample.motionDuration >= 200),
       `${label}: motion is not an abrupt swap`,
@@ -218,17 +254,26 @@ test(`walkthrough navigation stays painted, preserves product state and handles 
       await page.keyboard.press('Enter');
       await first.getByRole('button', { name: 'Saved', exact: true }).waitFor();
       await page.evaluate(() => {
-        window.__walkthroughFrames = [
-          ...document.querySelectorAll('.planr-artifact-panel iframe'),
-        ].map((frame) => ({
-          frame,
-          window: frame.contentWindow,
-          src: frame.getAttribute('src'),
-          srcdoc: frame.getAttribute('srcdoc'),
-          loads: 0,
-        }));
+        window.__walkthroughFrames = [...document.querySelectorAll('.planr-artifact-panel')].map(
+          (panel) => {
+            const id = panel.dataset.artifactId;
+            const frame = window.__openPlanrArtifactStage.getFrame(id);
+            return {
+              id,
+              frame,
+              window: frame.contentWindow,
+              src: frame.getAttribute('src'),
+              srcdoc: frame.getAttribute('srcdoc'),
+              loads: 0,
+            };
+          },
+        );
         for (const record of window.__walkthroughFrames)
-          record.frame.addEventListener('load', () => record.loads++);
+          record.frame.addEventListener('load', () => {
+            // Reattaching a dormant frame creates an empty context before its authored source.
+            if (record.frame.hasAttribute('src') || record.frame.hasAttribute('srcdoc'))
+              record.loads++;
+          });
       });
 
       assertContinuousTransition(await observeNavigation(page, [1], 'screen-2'), `${host}/next`);
@@ -277,25 +322,42 @@ test(`walkthrough navigation stays painted, preserves product state and handles 
         `${host}/reduced motion`,
         { animated: false },
       );
-      assert.deepEqual(
-        await page.evaluate(() =>
-          window.__walkthroughFrames.map((record) => ({
-            sameNode: record.frame.isConnected,
-            sameWindow: record.frame.contentWindow === record.window,
-            sameSource:
-              record.frame.getAttribute('src') === record.src &&
-              record.frame.getAttribute('srcdoc') === record.srcdoc,
-            loads: record.loads,
-          })),
-        ),
-        Array.from({ length: 4 }, () => ({
-          sameNode: true,
-          sameWindow: true,
-          sameSource: true,
-          loads: 0,
+      const documents = await page.evaluate(() =>
+        window.__walkthroughFrames.map((record) => ({
+          sameNode: window.__openPlanrArtifactStage.getFrame(record.id) === record.frame,
+          connected: record.frame.isConnected,
+          sameWindow: record.frame.contentWindow === record.window,
+          initiallyLoaded: Boolean(record.src || record.srcdoc),
+          sameSource:
+            record.frame.getAttribute('src') === record.src &&
+            record.frame.getAttribute('srcdoc') === record.srcdoc,
+          loads: record.loads,
         })),
-        `${host}: transitions preserve existing iframe identities without cloning or reloading`,
       );
+      for (const document of documents) {
+        assert.equal(document.sameNode, true, `${host}: navigation keeps each artboard node`);
+        if (document.initiallyLoaded) {
+          assert.equal(document.sameWindow, true, `${host}: retained product context stays stable`);
+          assert.equal(document.sameSource, true, `${host}: retained product sources stay intact`);
+          assert.equal(
+            document.loads,
+            0,
+            `${host}: returning to a retained screen never reloads it`,
+          );
+        } else {
+          assert.ok(document.loads <= 1, `${host}: a new screen loads on demand only once`);
+          assert.equal(
+            document.sameWindow,
+            document.loads === 0,
+            `${host}: newly attached previews receive a fresh context`,
+          );
+          assert.equal(
+            document.connected,
+            document.loads > 0,
+            `${host}: untouched previews remain detached`,
+          );
+        }
+      }
       const evidence = process.env.OPENPLANR_WALKTHROUGH_EVIDENCE_DIR;
       if (evidence) {
         mkdirSync(evidence, { recursive: true });

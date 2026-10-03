@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { accessSync, constants, existsSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -32,16 +32,58 @@ const executable: Record<RuntimeId, string> = {
   cursor: 'cursor',
 };
 
+function availableFile(file: string, mode: number): boolean {
+  try {
+    if (!statSync(file).isFile()) return false;
+    accessSync(file, mode);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function windowsDirectories(searchPath: string): string[] {
+  const directories: string[] = [];
+  let start = 0;
+  while (start <= searchPath.length) {
+    const quote = searchPath[start];
+    const quoted = quote === '"' || quote === "'";
+    const closing = quoted ? searchPath.indexOf(quote, start + 1) : start;
+    const separator = searchPath.indexOf(';', closing < 0 ? searchPath.length : closing);
+    const end = separator < 0 ? searchPath.length : separator;
+    let directory = searchPath.slice(start, end);
+    if (quoted) directory = directory.slice(1);
+    if (directory.endsWith('"') || directory.endsWith("'")) directory = directory.slice(0, -1);
+    directories.push(directory);
+    if (separator < 0) break;
+    start = separator + 1;
+  }
+  return directories;
+}
+
 function detectCommand(command: string): boolean {
-  // The same `OPENPLANR_CLAUDE_BIN` stand-in the Claude plugin inspection runs.
+  // Discovery establishes presence; the native invocation owns health and permissions.
   const claudeOverride = command === 'claude' ? process.env.OPENPLANR_CLAUDE_BIN?.trim() : '';
-  const result = claudeOverride
-    ? spawnSync(process.execPath, [claudeOverride, '--version'], {
-        encoding: 'utf8',
-        windowsHide: true,
-      })
-    : spawnSync(command, ['--version'], { encoding: 'utf8', windowsHide: true });
-  return !result.error && result.status === 0;
+  if (claudeOverride) return availableFile(path.resolve(claudeOverride), constants.R_OK);
+
+  const windows = process.platform === 'win32';
+  const searchPath = process.env.PATH ?? (windows ? process.env.Path : undefined);
+  if (searchPath === undefined) return false;
+  const extensions = windows
+    ? (process.env.PATHEXT ?? '.COM;.EXE;.BAT;.CMD')
+        .split(';')
+        .map((extension) => extension.trim())
+        .filter((extension) => /^\.[a-z\d]+$/iu.test(extension))
+    : [''];
+  const directories = windows ? windowsDirectories(searchPath) : searchPath.split(path.delimiter);
+  return directories.some((directory) =>
+    extensions.some((extension) =>
+      availableFile(
+        path.resolve(directory || '.', `${command}${extension}`),
+        windows ? constants.F_OK : constants.X_OK,
+      ),
+    ),
+  );
 }
 
 /** Owns project and installed-runtime discovery without mutating setup state. */

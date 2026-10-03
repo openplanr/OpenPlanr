@@ -1,7 +1,5 @@
-import type {
-  DiagramAuthoringBundle,
-  DiagramFidelityReport,
-} from '@openplanr/protocol/diagram-authoring-contracts';
+import type { DiagramFidelityReport } from '@openplanr/protocol/diagram-authoring-contracts';
+import type { VersionedDiagramAuthoringBundle as DiagramAuthoringBundle } from '@openplanr/protocol/studio-presentation-contracts';
 import {
   adoptMermaidCopy,
   exportMermaidCopy,

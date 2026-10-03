@@ -11,8 +11,8 @@ import {
   playwright,
 } from '../../../tests/support/browser-launcher.mjs';
 import { renderDesignDocument } from '../lib/design/document.mjs';
-import { startDesignReview } from '../lib/design/review.mjs';
 import { designFixture } from './design-fixture.mjs';
+import { startDesignReview } from './studio-http-fixture.mjs';
 
 const engine = browserEngine();
 const loadedSelector = '.planr-artifact-panel iframe[src], .planr-artifact-panel iframe[srcdoc]';
@@ -35,6 +35,44 @@ async function settled(page, screenId, frameId = 'desktop') {
   assert.ok(
     result >= 1 && result <= 3,
     `At most three authored documents are live, received ${result}`,
+  );
+}
+
+async function frameRegistry(page, { capture = false } = {}) {
+  return page.evaluate((capture) => {
+    const stage = window.__openPlanrArtifactStage;
+    const panels = [...document.querySelectorAll('.planr-artifact-panel')];
+    if (capture)
+      window.__mobileFrames = panels.map((panel) => ({
+        id: panel.dataset.artifactId,
+        frame: stage.getFrame(panel.dataset.artifactId),
+      }));
+    return {
+      count: panels.length,
+      retained: window.__mobileFrames.every(
+        ({ id, frame }) => frame && stage.getFrame(id) === frame,
+      ),
+      connected: panels.filter((panel) => stage.getFrame(panel.dataset.artifactId).isConnected)
+        .length,
+      windows: window.length,
+    };
+  }, capture);
+}
+
+function assertFrameRegistry(result, host) {
+  assert.equal(result.count, 14, `${host}: every artboard retains its host`);
+  assert.equal(
+    result.retained,
+    true,
+    `${host}: navigation retains all fourteen registry frame nodes`,
+  );
+  assert.ok(
+    result.connected >= 1 && result.connected <= 3,
+    `${host}: connected frames stay bounded`,
+  );
+  assert.ok(
+    result.windows >= 1 && result.windows <= 3,
+    `${host}: native preview contexts stay bounded`,
   );
 }
 
@@ -180,11 +218,7 @@ test(`mobile reviews demand-load bounded product documents and remain usable (${
         1,
         `${host}: startup loads only the selected product document`,
       );
-      assert.equal(
-        await page.locator('.planr-artifact-panel iframe').count(),
-        14,
-        'unloaded artboards retain their stable frames',
-      );
+      assertFrameRegistry(await frameRegistry(page, { capture: true }), host);
       await focusedGeometry(page);
       const first = await productFrame(page);
       await first.getByRole('textbox', { name: 'Workspace name' }).fill('Mobile reviewer');
@@ -242,7 +276,7 @@ test(`mobile reviews demand-load bounded product documents and remain usable (${
       assert.equal(await draft.inputValue(), 'Keep this mobile annotation draft.');
       await page.getByRole('button', { name: 'Close new comment', exact: true }).tap();
 
-      await page.locator('[data-design-view="canvas"]').tap();
+      await page.getByRole('button', { name: 'Canvas', exact: true }).tap();
       await page.evaluate(() => window.__openPlanrDesignStudio.fit());
       await page.waitForFunction(() =>
         [...document.querySelectorAll('[data-design-load-frame]')].some(
@@ -271,7 +305,7 @@ test(`mobile reviews demand-load bounded product documents and remain usable (${
           !document.querySelector('[data-design-screen-loading]')
         );
       });
-      await page.locator('[data-design-view="prototype"]').tap();
+      await page.getByRole('button', { name: 'Prototype', exact: true }).tap();
       await focusedGeometry(page);
       await page.setViewportSize({ width: 844, height: 390 });
       await focusedGeometry(page);
@@ -287,6 +321,7 @@ test(`mobile reviews demand-load bounded product documents and remain usable (${
         await page.evaluate(() => window.__mobileFramePeak <= 3),
         `${host}: transitions and demand loading never exceed the document budget`,
       );
+      assertFrameRegistry(await frameRegistry(page), host);
       const evidence = process.env.OPENPLANR_MOBILE_EVIDENCE_DIR;
       if (evidence) {
         mkdirSync(evidence, { recursive: true });
@@ -312,9 +347,17 @@ test(`mobile reviews demand-load bounded product documents and remain usable (${
     await desktop.locator('[data-design-ready="true"]').waitFor();
     assert.equal(
       await desktop.locator(loadedSelector).count(),
-      14,
-      'desktop retains its existing eager product-frame behavior',
+      1,
+      'desktop also opens only the selected authored document',
     );
+    assertFrameRegistry(await frameRegistry(desktop, { capture: true }), 'desktop');
+    assert.equal(await desktop.evaluate(() => window.__openPlanrArtifactStage.frameBudget), 3);
+    for (const screenId of ['screen-7', 'screen-1']) {
+      await desktop.evaluate((id) => window.__openPlanrDesignStudio.selectScreen(id), screenId);
+      await settled(desktop, screenId);
+      await focusedGeometry(desktop);
+      assertFrameRegistry(await frameRegistry(desktop), 'desktop');
+    }
     await desktop.close();
   } finally {
     await browser?.close();

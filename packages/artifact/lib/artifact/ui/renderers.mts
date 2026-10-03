@@ -1,3 +1,7 @@
+import { resolveArtifactPresentation } from './presentation.mjs';
+
+export { resolveArtifactPresentation } from './presentation.mjs';
+
 import { embedJson, escapeHtml } from '../internal/escape.mjs';
 
 export const ARTIFACT_SHELL_STATES = Object.freeze([
@@ -117,15 +121,6 @@ function viewportDimension(value: unknown, fallback: number) {
 }
 
 /** Resolve runtime presentation without mutating or upgrading stored envelopes. */
-export function resolveArtifactPresentation(
-  value: unknown,
-  { mode = 'single', artifactCount = 1 }: { mode?: string; artifactCount?: number } = {},
-): ArtifactPresentation {
-  // includes accepts only its element type and does not narrow; a listed value is a presentation.
-  // biome-ignore format: bundles keep this one-line statement; wrapping would change their bytes.
-  if (ARTIFACT_PRESENTATIONS.includes(value as ArtifactPresentation)) return value as ArtifactPresentation;
-  return artifactCount > 1 || mode === 'variants' || mode === 'split' ? 'canvas' : 'document';
-}
 
 function normalizeArtifact(value: ShellArtifactInput | null | undefined, index: number) {
   const artifact: ShellArtifactInput = value && typeof value === 'object' ? value : {};

@@ -535,6 +535,7 @@ test(
       'save-state',
       'undo',
       'redo',
+      'save-state', // React palette menu precedes the preserved action controls.
       'properties',
       'save',
       'host-action',
@@ -1077,13 +1078,65 @@ test(
     const unchanged = await drawing(page, 'node-b').elementHandle();
     const before = await read();
     const revisions = (await store.history()).length;
+    // Hold browser frames to observe the first response, coalescing and release separately.
+    const holdFrames = () =>
+      page.evaluate(() => {
+        const request = window.requestAnimationFrame,
+          cancel = window.cancelAnimationFrame,
+          pending = new Map();
+        let next = 1_000_000;
+        window.requestAnimationFrame = (callback) => {
+          const id = next++;
+          pending.set(id, callback);
+          return id;
+        };
+        window.cancelAnimationFrame = (id) => {
+          if (!pending.delete(id)) cancel.call(window, id);
+        };
+        window.dragFrames = {
+          pending: () => pending.size,
+          flush() {
+            const callbacks = [...pending.values()];
+            pending.clear();
+            for (const callback of callbacks) callback(performance.now());
+          },
+          restore() {
+            window.requestAnimationFrame = request;
+            window.cancelAnimationFrame = cancel;
+            for (const callback of pending.values()) request.call(window, callback);
+            delete window.dragFrames;
+          },
+        };
+      });
+    const pendingFrames = () => page.evaluate(() => window.dragFrames.pending());
+    const restoreFrames = () => page.evaluate(() => window.dragFrames.restore());
     await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2);
     await page.mouse.down();
-    await page.mouse.move(target.x + target.width / 2 + 70, target.y + target.height / 2 + 40, {
-      steps: 8,
-    });
-    await page.keyboard.press('Escape');
-    await page.mouse.up();
+    await holdFrames();
+    try {
+      await page.mouse.move(target.x + target.width / 2 + 16, target.y + target.height / 2 + 16);
+      const first = await drawing(page, 'node-a').boundingBox();
+      assert.ok(
+        first.x > target.x && first.y > target.y,
+        `The first drag response is immediate: ${JSON.stringify({ target, first })}`,
+      );
+      assert.equal(await pendingFrames(), 0, 'The first response does not wait for a frame');
+      await page.mouse.move(target.x + target.width / 2 + 32, target.y + target.height / 2 + 24);
+      await page.mouse.move(target.x + target.width / 2 + 48, target.y + target.height / 2 + 32);
+      assert.equal(await pendingFrames(), 1, 'Continuing moves share one pending frame');
+      assert.deepEqual(await drawing(page, 'node-a').boundingBox(), first);
+      await page.evaluate(() => window.dragFrames.flush());
+      const latest = await drawing(page, 'node-a').boundingBox();
+      assert.ok(latest.x > first.x && latest.y > first.y, 'The frame renders the latest move');
+      await page.mouse.move(target.x + target.width / 2 + 70, target.y + target.height / 2 + 40);
+      assert.equal(await pendingFrames(), 1);
+      await page.keyboard.press('Escape');
+      await page.mouse.up();
+      assert.equal(await pendingFrames(), 0, 'Cancellation discards the pending frame');
+      assert.deepEqual(await drawing(page, 'node-a').boundingBox(), target);
+    } finally {
+      await restoreFrames();
+    }
     await settle(page);
     assert.equal(
       await page.getByRole('button', { name: 'Save diagram', exact: true }).isDisabled(),
@@ -1093,10 +1146,23 @@ test(
     assert.equal((await store.history()).length, revisions);
     await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2);
     await page.mouse.down();
-    await page.mouse.move(target.x + target.width / 2 + 80, target.y + target.height / 2 + 50, {
-      steps: 8,
-    });
-    await page.mouse.up();
+    await holdFrames();
+    try {
+      await page.mouse.move(target.x + target.width / 2 + 80, target.y + target.height / 2 + 50, {
+        steps: 8,
+      });
+      const preview = await drawing(page, 'node-a').boundingBox();
+      assert.equal(await pendingFrames(), 1);
+      await page.mouse.up();
+      const released = await drawing(page, 'node-a').boundingBox();
+      assert.ok(
+        released.x > preview.x && released.y > preview.y,
+        'Pointer release flushes the final move before committing',
+      );
+      assert.equal(await pendingFrames(), 0);
+    } finally {
+      await restoreFrames();
+    }
     await settle(page);
     await save(page);
     const moved = await read();
@@ -1729,9 +1795,10 @@ test(
   'a selected connector is traced in the accent along its route, with or without a label or bends',
   options,
   async (t) => {
-    const { page } = await fixture(t);
+    const { page, read } = await fixture(t);
     await page.getByRole('button', { name: 'Use process template', exact: true }).click();
     await settle(page);
+    await save(page);
     const contrast = (foreground, background) => {
       const luminance = (color) =>
         color
@@ -1746,10 +1813,9 @@ test(
     // Every accent stroke that runs the length of the connector's drawn route, in screen pixels.
     const traces = () =>
       page.locator('[data-editor-svg]').evaluate((svg, id) => {
-        const shell = svg.closest('.planr-diagram-editor');
         const probe = document.createElement('span');
-        probe.style.color = getComputedStyle(shell).getPropertyValue('--de-primary');
-        shell.append(probe);
+        probe.style.color = getComputedStyle(svg).getPropertyValue('--de-primary');
+        svg.closest('.planr-diagram-editor').append(probe);
         const accent = getComputedStyle(probe).color;
         probe.remove();
         const connector = svg.querySelector(`[data-element-id="${id}"]`);
@@ -1783,6 +1849,10 @@ test(
           canvas: getComputedStyle(svg.closest('.de-canvas')).backgroundColor,
           accent,
           arrowhead: getComputedStyle(connector.querySelector('marker path')).fill,
+          handles: [...svg.querySelectorAll('.de-bend-handle')].map((handle) => ({
+            fill: getComputedStyle(handle).fill,
+            stroke: getComputedStyle(handle).stroke,
+          })),
           traces: along.map(({ node, box, style }) => ({
             width: Number.parseFloat(style.strokeWidth) * box.scale,
             dash: style.strokeDasharray,
@@ -1793,10 +1863,21 @@ test(
         };
       }, id);
     const assertTraced = async (state) => {
+      const saved = await read();
+      assert.equal(saved.schemaVersion, '1.1.0');
+      const accent =
+        saved.studioPresentation.theme === 'dark' ? 'rgb(94, 234, 212)' : 'rgb(35, 122, 114)';
+      const surface =
+        saved.studioPresentation.theme === 'dark' ? 'rgb(32, 43, 48)' : 'rgb(223, 232, 232)';
       for (const colorScheme of ['light', 'dark']) {
         await page.emulateMedia({ colorScheme });
         await settle(page);
         const measured = await traces();
+        assert.equal(measured.accent, accent, `${state}, ${colorScheme}: saved palette accent`);
+        for (const handle of measured.handles) {
+          assert.deepEqual(handle, { fill: surface, stroke: accent });
+          assert.ok(contrast(handle.stroke, handle.fill) >= 3, 'A bend handle reaches 3:1');
+        }
         assert.equal(
           measured.selected,
           'true',
@@ -1839,7 +1920,28 @@ test(
     await settle(page);
     await page.getByRole('button', { name: 'Add bend', exact: true }).click();
     await settle(page);
+    await save(page);
     await assertTraced('Labelled with bends');
+
+    const original = await read();
+    for (const palette of ['Dark', 'Light']) {
+      await page.emulateMedia({ colorScheme: palette === 'Dark' ? 'light' : 'dark' });
+      await page.locator('[data-studio-palette-menu]').click();
+      await page.getByRole('menuitem', { name: palette, exact: true }).click();
+      await save(page);
+      const saved = await read();
+      assert.deepEqual(saved.document, original.document, 'Palette changes retain semantics');
+      assert.deepEqual(
+        saved.presentation,
+        original.presentation,
+        'Palette changes retain geometry',
+      );
+      await page.reload();
+      await page.locator('[data-editor-svg]').waitFor();
+      await page.locator(`[data-action="select-id"][data-id="${id}"]`).click();
+      await settle(page);
+      await assertTraced(`${palette} palette after reload`);
+    }
 
     await page.getByRole('treeitem', { name: 'Process', exact: true }).click();
     await settle(page);
@@ -1985,8 +2087,26 @@ test(
           dimensions.scrollWidth <= dimensions.width,
           `${colorScheme} ${viewport.width}px must not overflow`,
         );
+        const coveredControls = await page.locator('.studio-toolbar').evaluate((toolbar) =>
+          [...toolbar.querySelectorAll('button')]
+            .filter((button) => button.checkVisibility())
+            .filter((button) => {
+              const bounds = button.getBoundingClientRect();
+              const hit = document.elementFromPoint(
+                bounds.x + bounds.width / 2,
+                bounds.y + bounds.height / 2,
+              );
+              return !hit || !button.contains(hit);
+            })
+            .map((button) => button.getAttribute('aria-label') ?? button.textContent),
+        );
+        assert.deepEqual(
+          coveredControls,
+          [],
+          `${colorScheme} ${viewport.width}px toolbar controls must receive pointer input`,
+        );
         if (viewport.width === 1440) {
-          assert.ok(dimensions.canvas.top <= 56, `Top chrome is ${dimensions.canvas.top}px`);
+          assert.ok(dimensions.canvas.top <= 60, `Top chrome is ${dimensions.canvas.top}px`);
           assert.ok(
             dimensions.canvas.width / dimensions.width >= 0.6,
             `1440px canvas occupies ${dimensions.canvas.width / dimensions.width}`,
@@ -2144,5 +2264,70 @@ test(
       [node('Start'), node('Process'), null],
     );
     assert.equal(await drawing(page, relation.id).locator('text').count(), 0, 'No label is drawn');
+  },
+);
+
+test(
+  'React palette menu persists canvas and drawing colors against opposite OS themes without altering legacy geometry',
+  options,
+  async (t) => {
+    const original = makeBundle('process');
+    const { page, read } = await fixture(t, { bundle: original });
+    assert.equal(
+      await page.locator('.planr-diagram-editor').getAttribute('data-studio-framework'),
+      'react',
+    );
+    assert.equal(await page.locator('.studio-type-badge').textContent(), 'Diagram');
+    for (const expected of [
+      {
+        name: 'Dark',
+        theme: 'dark',
+        os: 'light',
+        canvas: 'rgb(8, 8, 12)',
+        text: '#f5f7f7',
+        connector: '#94a3b8',
+      },
+      {
+        name: 'Light',
+        theme: 'light',
+        os: 'dark',
+        canvas: 'rgb(245, 247, 247)',
+        text: '#08080c',
+        connector: '#475569',
+      },
+    ]) {
+      await page.emulateMedia({ colorScheme: expected.os });
+      await page.locator('[data-studio-palette-menu]').click();
+      await page.getByRole('menuitem', { name: expected.name, exact: true }).click();
+      await page.locator('.de-save-state[data-state="unsaved"]').waitFor();
+      await save(page);
+      const saved = await read();
+      assert.equal(saved.schemaVersion, '1.1.0');
+      assert.equal(saved.studioPresentation.theme, expected.theme);
+      assert.deepEqual(saved.document, original.document);
+      assert.deepEqual(saved.presentation, original.presentation);
+      await page.reload();
+      await page.locator('[data-editor-svg]').waitFor();
+      await settle(page);
+      assert.deepEqual(
+        await page.evaluate(() => ({
+          canvas: getComputedStyle(document.querySelector('.de-canvas')).backgroundColor,
+          text: document.querySelector('[data-element-id="node-a"] text').getAttribute('fill'),
+          connector: document
+            .querySelector('[data-element-id="edge-a"] > path')
+            .getAttribute('stroke'),
+          wrapper: document.querySelectorAll('[data-editor-svg] > [data-canvas-background]').length,
+        })),
+        { canvas: expected.canvas, text: expected.text, connector: expected.connector, wrapper: 0 },
+      );
+      await page.locator('[data-studio-palette-menu]').click();
+      assert.equal(
+        await page
+          .getByRole('menuitem', { name: `${expected.name} · Selected`, exact: true })
+          .count(),
+        1,
+      );
+      await page.keyboard.press('Escape');
+    }
   },
 );

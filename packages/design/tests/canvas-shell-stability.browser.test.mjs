@@ -6,8 +6,9 @@ import test from 'node:test';
 import { pathToFileURL } from 'node:url';
 import { browserEngine, launchBrowser } from '../../../tests/support/browser-launcher.mjs';
 import { renderDesignDocument } from '../lib/design/document.mjs';
-import { startDesignReview } from '../lib/design/review.mjs';
 import { designFixture } from './design-fixture.mjs';
+import { startDesignReview } from './studio-http-fixture.mjs';
+import { settleStudioChrome } from './studio-readiness.mjs';
 
 const engine = browserEngine();
 
@@ -52,11 +53,9 @@ async function assertHeaderPixels(page, before, after, details) {
     },
     [before.toString('base64'), after.toString('base64')],
   );
-  // Chromium can rerasterize a few antialiased SVG edge pixels without changing
-  // the shell: a captured failure differed at 8/60,000 pixels by at most 4/255.
-  // Both caps are required; meaningful color changes or repaint areas still fail.
-  const allowedPixels = Math.floor(width * height * 0.0002);
-  if (sameSize && changedPixels <= allowedPixels && maxChannelDifference <= 4) return;
+  // Compare decoded pixels strictly; PNG encoding metadata can differ without a paint change.
+  const allowedPixels = 0;
+  if (sameSize && changedPixels === 0) return;
   const evidence = await mkdtemp(join(tmpdir(), 'openplanr-header-mismatch-'));
   await Promise.all([
     writeFile(join(evidence, 'before.png'), before),
@@ -205,6 +204,9 @@ test(`canvas zoom preserves shell geometry, minimap focus and frame identity (${
             target: animation.effect?.target?.className,
           })),
         }));
+      const pointerTarget = await page.locator('.planr-stage-scroll').boundingBox();
+      await page.mouse.move(pointerTarget.x + 8, pointerTarget.y + 20);
+      await settleStudioChrome(page);
       const stateBefore = await headerState();
       const headerBefore = await page.screenshot({ clip: headerClip });
       for (const action of ['in', 'in', 'out', 'out'])
@@ -216,6 +218,8 @@ test(`canvas zoom preserves shell geometry, minimap focus and frame identity (${
       await page.evaluate(
         () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
       );
+      await page.mouse.move(pointerTarget.x + 8, pointerTarget.y + 20);
+      await settleStudioChrome(page);
       const headerAfter = await page.screenshot({ clip: headerClip });
       const stateAfter = await headerState();
       assert.equal(stateAfter.markup, stateBefore.markup, 'Zoom preserves header controls');

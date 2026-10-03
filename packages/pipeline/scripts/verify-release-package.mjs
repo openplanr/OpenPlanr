@@ -99,7 +99,15 @@ function pack(destination, cache) {
 }
 
 function installedPackageRoot(packageName) {
-  let currentDirectory = dirname(packageRequire.resolve(packageName));
+  let entryPath;
+  try {
+    entryPath = packageRequire.resolve(`${packageName}/package.json`);
+  } catch (error) {
+    if (error.code !== 'ERR_PACKAGE_PATH_NOT_EXPORTED' && error.code !== 'MODULE_NOT_FOUND')
+      throw error;
+    entryPath = packageRequire.resolve(packageName);
+  }
+  let currentDirectory = dirname(entryPath);
   const filesystemRoot = parse(currentDirectory).root;
   while (currentDirectory !== filesystemRoot) {
     const manifestPath = join(currentDirectory, 'package.json');

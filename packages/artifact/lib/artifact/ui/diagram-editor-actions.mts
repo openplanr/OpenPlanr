@@ -1,17 +1,19 @@
 import type {
   DiagramAppearance,
-  DiagramAuthoringBundle,
   DiagramAuthoringNode,
   DiagramAuthoringNodeKind,
   DiagramBounds,
   DiagramEditOperation,
-  DiagramEditTransaction,
   DiagramGeometry,
   DiagramGeometryLocks,
   DiagramPlacement,
   DiagramSemanticEntry,
   DiagramSemanticUpdate,
 } from '@openplanr/protocol/diagram-authoring-contracts';
+import type {
+  VersionedDiagramAuthoringBundle as DiagramAuthoringBundle,
+  VersionedDiagramEditTransaction as DiagramEditTransaction,
+} from '@openplanr/protocol/studio-presentation-contracts';
 import {
   compileDiagramCommand,
   type DiagramCommand,
@@ -249,6 +251,7 @@ export function propertyTransaction(
   { semantic, geometry, appearance }: DiagramPropertyChanges,
 ): DiagramEditTransaction {
   const entry = elementIndex(bundle.document).get(id);
+  if (!entry) throw new Error('The selected element is no longer in this diagram.');
   // Every object in a validated bundle has a placement.
   // biome-ignore format: bundles keep this one-line call; wrapping would change their bytes.
   const current = bundle.presentation.elements.find((item) => item.elementId === id) as DiagramPlacement;
@@ -439,6 +442,7 @@ export function laneArrangementCommand(
     cross = Math.max(cross, bounds[horizontal ? 'height' : 'width']);
   }
   const after = clone(before);
+  if (!after.bounds || !before.bounds) throw new Error('The selected container has no bounds.');
   after.bounds.width = Math.max(240, horizontal ? x - before.bounds.x - 16 : cross + 48);
   after.bounds.height = Math.max(160, horizontal ? cross + 72 : y - before.bounds.y - 16);
   changes.set(laneId, { elementId: laneId, before, after });

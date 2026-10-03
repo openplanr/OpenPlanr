@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import {
   HOST_PLUGIN_NAME,
   projectedSkillName,
+  renderCursorSkillBody,
   renderNamespacedSkill,
 } from './host-invocations.mjs';
 
@@ -117,6 +118,17 @@ if (JSON.stringify(cursorRules) !== JSON.stringify([...skillIds].sort())) {
 }
 
 for (const skill of canonical.skills) {
+  const cursorPath = `dist/plugins/cursor/openplanr/rules/${skill.id}.mdc`;
+  const cursorBody = read(cursorPath).replace(/^---[\s\S]*?---\s*/u, '');
+  const expected = renderCursorSkillBody(
+    read(skill.entrypoint),
+    skill.id,
+    skill.resources.filter(({ hosts }) => hosts.includes('cursor')),
+  );
+  if (cursorBody !== expected)
+    throw new Error(
+      `cursor/${skill.id} does not preserve its resource-aware canonical projection.`,
+    );
   for (const resource of skill.resources.filter(({ hosts }) => hosts.includes('cursor'))) {
     const installed = join(root, 'dist/plugins/cursor/openplanr/rules', skill.id, resource.path);
     const original = join(root, 'skills', skill.id, resource.path);

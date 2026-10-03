@@ -4,6 +4,7 @@ import type {
   ExecuteCliHalfUpgradeResult,
   ReleaseNoteSection,
   UpgradeNextStep,
+  UpgradeReconciliation,
 } from './upgrade-service.js';
 
 export type ReleaseNotesMode = 'highlights' | 'full';
@@ -106,4 +107,32 @@ export function printUpgradeReport(
   if (result.releaseNotesError) logger.warn(result.releaseNotesError);
   printReleaseNotes(result.releaseNotes, result.installedVersion, mode);
   printNextSteps(result.nextSteps, result.nextStepsError);
+}
+
+/** Cached compatibility evidence is useful, but is never a fresh latest-release check. */
+export function printReconciliationStatus(result: UpgradeReconciliation): void {
+  if (result.ecosystemSource === 'stale-cache') {
+    logger.warn(
+      'The registry could not be reached. Results use stale cached release metadata; the latest release is not confirmed.',
+    );
+  } else if (result.ecosystemSource === 'cache') {
+    logger.info(
+      'Results use recently cached release metadata; the registry was not contacted this time.',
+    );
+  }
+  if (result.status === 'unknown') {
+    logger.warn(
+      'Published release metadata is unavailable; installed compatibility could not be judged.',
+    );
+  } else if (result.status === 'upgrade-available') {
+    logger.info(
+      'An upgrade is available in the release metadata; the installed components are still mutually compatible.',
+    );
+  } else if (result.status === 'incompatible') {
+    logger.warn('The installed components are on mutually incompatible versions.');
+  } else if (result.ecosystemSource === 'network') {
+    logger.success('The installed components match the freshly checked published compatible set.');
+  } else {
+    logger.info('The installed components match the cached compatible set.');
+  }
 }

@@ -1,0 +1,7 @@
+{
+  "scope": "Final erased non-null to type-cast source cleanup only",
+  "guards": 3,
+  "bytes": 47063,
+  "sha256": "aeca2ef30920fb142e784419dbc9eb44316914ac05992bb99b3ebe8ee6be3aaa",
+  "equal": true
+}

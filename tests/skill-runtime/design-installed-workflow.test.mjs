@@ -14,6 +14,7 @@ import {
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import test from 'node:test';
+import { resolveArtifactHtml } from '../../packages/artifact/lib/artifact/artifact-sources.mjs';
 import { digestArtifactEnvelope } from '../../packages/artifact/lib/artifact/envelope.mjs';
 import { createArtifactReview } from '../../packages/artifact/lib/artifact/review.mjs';
 import {
@@ -192,8 +193,17 @@ async function open(script, directory, file) {
       }
     });
   });
+  const shell = await fetch(result.url);
+  assert.equal(shell.status, 200, 'short-route launch establishes its browser session');
+  const cookie = shell.headers.get('set-cookie')?.split(';')[0];
+  assert.ok(cookie, 'local Studio session is protected by its scoped cookie');
   return {
     ...result,
+    request(relativePath, options = {}) {
+      const headers = new Headers(options.headers);
+      headers.set('cookie', cookie);
+      return fetch(new URL(relativePath, result.url), { ...options, headers });
+    },
     async close() {
       if (child.exitCode === null) {
         const closed = once(child, 'exit');
@@ -287,7 +297,9 @@ test('standalone and suite design skills render authored journeys with complete 
       assert.equal(record.document.screens.at(-1).id, source.document.screens.at(-1).id);
       if (index === 2)
         assert.ok(
-          record.envelope.artifacts.every(({ html }) => html.includes(pixel.toString('base64'))),
+          record.envelope.artifacts.every((artifact) =>
+            resolveArtifactHtml(record.envelope, artifact).includes(pixel.toString('base64')),
+          ),
           'image-reference bytes remain exact',
         );
       for (const view of ['canvas', 'prototype', 'walkthrough']) {
@@ -352,11 +364,11 @@ test('installed review retains pins, selection and arrangement across restart, s
     const record = json(join(dirname(rendered.artifact), 'render.json'));
     session = await open(script, directory, source.path);
     assert.equal(session.status, 'loading', 'HTTP health must not claim browser inspection');
-    assert.equal((await fetch(session.url)).status, 200);
-    assert.equal((await fetch(`${session.url}stage.js`)).status, 200);
+    assert.equal((await session.request('')).status, 200);
+    assert.equal((await session.request('stage.js')).status, 200);
     const origin = new URL(session.url).origin;
     const update = async (route, value) =>
-      fetch(`${session.url}api/${route}`, {
+      session.request(`api/${route}`, {
         method: 'PUT',
         headers: { origin, 'content-type': 'application/json' },
         body: JSON.stringify(value),
@@ -496,6 +508,16 @@ test('design runtime bundling and release archives preserve binary assets withou
       `portable Design and Plan resources include ${name}`,
     );
   }
+  for (const sourcePath of [
+    'packages/design/package.json',
+    'packages/protocol/schemas/v1.16.0/artifact-envelope.schema.json',
+    'packages/protocol/schemas/v1.16.0/design-review-bundle.schema.json',
+  ]) {
+    const portablePath = `scripts/runtime/${sourcePath}`;
+    const resource = resources.find(({ path }) => path === portablePath);
+    assert.ok(resource, `portable Design resources include ${sourcePath}`);
+    assert.deepEqual(resourceBytes(resource.bytes), readFileSync(join(root, sourcePath)));
+  }
   const binary = Buffer.from([0, 255, 128, 13, 10, 193, 240, 159, 255, 0]);
   const entries = [
     ...resources.map(({ path, bytes }) => ({
@@ -529,6 +551,38 @@ test('design runtime bundling and release archives preserve binary assets withou
       .toString('utf8')
       .matchAll(/from "\.\/([^"]+)"/gu))
       assert.ok(scripts.has(`scripts/${imported}`), `${path} imports shipped ${imported}`);
+});
+
+test('portable Design renders 93 shared sources into 465 viewport references outside the checkout', async () => {
+  const directory = realpathSync(mkdtempSync(join(tmpdir(), 'openplanr-design-pooled-')));
+  try {
+    const resources = await buildDesignSkillResources({ repoRoot: root });
+    const installed = join(directory, 'installed');
+    for (const { path, bytes } of resources) write(join(installed, path), resourceBytes(bytes));
+    const source = fixture(directory, { screens: 93 });
+    source.document.frames = Array.from({ length: 5 }, (_, index) => ({
+      id: `viewport-${index + 1}`,
+      label: `Viewport ${index + 1}`,
+      width: 390 + index * 240,
+      height: 800,
+    }));
+    write(source.path, JSON.stringify(source.document));
+    const rendered = run(join(installed, 'scripts/design.mjs'), directory, ['render', source.path]);
+    const { envelope } = json(join(dirname(rendered.artifact), 'render.json'));
+    assert.equal(envelope.schemaVersion, '1.1.0');
+    assert.equal(envelope.sources.length, 93);
+    assert.equal(envelope.artifacts.length, 465);
+    assert.equal(new Set(envelope.artifacts.map(({ id }) => id)).size, 465);
+    assert.ok(envelope.artifacts.every(({ sourceId, html }) => sourceId && html === undefined));
+    const sourceIds = new Set(envelope.sources.map(({ id }) => id));
+    assert.ok(envelope.artifacts.every(({ sourceId }) => sourceIds.has(sourceId)));
+    assert.equal(
+      envelope.artifacts.filter(({ sourceId }) => sourceId === envelope.sources[0].id).length,
+      5,
+    );
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
 });
 
 test('every installed design helper loads its split modules outside the source checkout', () => {

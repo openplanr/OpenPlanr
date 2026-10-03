@@ -1,5 +1,6 @@
 import { assertDiagramSvg } from '../accessibility.mjs';
 import { layoutDiagram } from './layout.mjs';
+import { measureDiagramText } from './text.mjs';
 import {
   DIAGRAM_PALETTE_KEYS,
   diagramMetrics,
@@ -103,7 +104,7 @@ function renderLane(lane, theme, metrics) {
 function renderPhase(phase, theme, metrics) {
   const { size, knockout, glyph } = metrics.phase;
   const backdrop = knockout
-    ? `<rect x="${phase.x1 - 6}" y="${phase.y - 10 - size}" width="${coordinate([...phase.label].length * glyph + 12)}" height="${size + 6}" fill="${theme.background}"/>`
+    ? `<rect x="${phase.x1 - 6}" y="${phase.y - 10 - size}" width="${coordinate(measureDiagramText(phase.label.toUpperCase(), { size, glyph, letterSpacing: 1.2 }) + 12)}" height="${size + 6}" fill="${theme.background}"/>`
     : '';
   return `<g data-phase-id="${escapeXml(phase.id)}">${backdrop}<text x="${phase.x1}" y="${phase.y - 10}" font-family="${theme.fontFamily}" font-size="${metrics.phase.size}" font-weight="700" letter-spacing="1.2" fill="${theme.accent}">${escapeXml(phase.label.toUpperCase())}</text><line x1="${phase.x1}" y1="${phase.y}" x2="${phase.x2}" y2="${phase.y}" stroke="${theme.border}" stroke-width="1" opacity="0.28"/></g>`;
 }
