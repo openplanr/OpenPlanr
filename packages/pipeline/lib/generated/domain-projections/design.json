@@ -421,7 +421,7 @@
     {
       "source": "packages/design/templates/studio/studio.js",
       "target": "templates/studio/studio.js",
-      "sha256": "3dfd60a9e54706d26f9baa61faa1de770d77042867bb8effe70ca31dccb9be55",
+      "sha256": "103e9115dbb11d3b02fce995c2b3a487caeae51cc3e35eac25b17ce8eee68160",
       "mode": "644"
     }
   ]

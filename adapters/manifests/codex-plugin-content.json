@@ -694,15 +694,15 @@
         },
         {
           "path": "skills/design/scripts/runtime/packages/design/templates/studio/studio.js.part-008",
-          "digest": "sha256:0ebd28b7d483c1d491a711a137cfa42b76f5754b70ccab64665b948297083e52"
+          "digest": "sha256:2f03557f7b4bf6d5953dd06114b6dde27f49e6b4d77c812988f8b865d92f3900"
         },
         {
           "path": "skills/design/scripts/runtime/packages/design/templates/studio/studio.js.part-009",
-          "digest": "sha256:c4c7abdeceb11efd28f6432ce982e64f206d4ade94b126ad7d5dfdfb66069a82"
+          "digest": "sha256:1cd87c19da8181954eb6592f251c19ab8db7fe6bae9a600b41124ede994ddaf0"
         },
         {
           "path": "skills/design/scripts/runtime/packages/design/templates/studio/studio.js.parts.json",
-          "digest": "sha256:461e3892058245f0c467c4619a79bcb479d418b8c5b3f7d719ce1dec56da5300"
+          "digest": "sha256:8e1af7e5974e2c9a722cbf2f8baa66e5fd740a252a3c01460660e0c35f657a43"
         },
         {
           "path": "skills/design/scripts/runtime/packages/protocol/package.json",
@@ -995,15 +995,15 @@
         },
         {
           "path": "skills/design-loop/scripts/runtime/packages/design/templates/studio/studio.js.part-008",
-          "digest": "sha256:0ebd28b7d483c1d491a711a137cfa42b76f5754b70ccab64665b948297083e52"
+          "digest": "sha256:2f03557f7b4bf6d5953dd06114b6dde27f49e6b4d77c812988f8b865d92f3900"
         },
         {
           "path": "skills/design-loop/scripts/runtime/packages/design/templates/studio/studio.js.part-009",
-          "digest": "sha256:c4c7abdeceb11efd28f6432ce982e64f206d4ade94b126ad7d5dfdfb66069a82"
+          "digest": "sha256:1cd87c19da8181954eb6592f251c19ab8db7fe6bae9a600b41124ede994ddaf0"
         },
         {
           "path": "skills/design-loop/scripts/runtime/packages/design/templates/studio/studio.js.parts.json",
-          "digest": "sha256:461e3892058245f0c467c4619a79bcb479d418b8c5b3f7d719ce1dec56da5300"
+          "digest": "sha256:8e1af7e5974e2c9a722cbf2f8baa66e5fd740a252a3c01460660e0c35f657a43"
         },
         {
           "path": "skills/design-loop/scripts/runtime/packages/protocol/package.json",
@@ -1296,15 +1296,15 @@
         },
         {
           "path": "skills/design-review/scripts/runtime/packages/design/templates/studio/studio.js.part-008",
-          "digest": "sha256:0ebd28b7d483c1d491a711a137cfa42b76f5754b70ccab64665b948297083e52"
+          "digest": "sha256:2f03557f7b4bf6d5953dd06114b6dde27f49e6b4d77c812988f8b865d92f3900"
         },
         {
           "path": "skills/design-review/scripts/runtime/packages/design/templates/studio/studio.js.part-009",
-          "digest": "sha256:c4c7abdeceb11efd28f6432ce982e64f206d4ade94b126ad7d5dfdfb66069a82"
+          "digest": "sha256:1cd87c19da8181954eb6592f251c19ab8db7fe6bae9a600b41124ede994ddaf0"
         },
         {
           "path": "skills/design-review/scripts/runtime/packages/design/templates/studio/studio.js.parts.json",
-          "digest": "sha256:461e3892058245f0c467c4619a79bcb479d418b8c5b3f7d719ce1dec56da5300"
+          "digest": "sha256:8e1af7e5974e2c9a722cbf2f8baa66e5fd740a252a3c01460660e0c35f657a43"
         },
         {
           "path": "skills/design-review/scripts/runtime/packages/protocol/package.json",
@@ -1735,15 +1735,15 @@
         },
         {
           "path": "skills/plan/scripts/runtime/packages/design/templates/studio/studio.js.part-008",
-          "digest": "sha256:0ebd28b7d483c1d491a711a137cfa42b76f5754b70ccab64665b948297083e52"
+          "digest": "sha256:2f03557f7b4bf6d5953dd06114b6dde27f49e6b4d77c812988f8b865d92f3900"
         },
         {
           "path": "skills/plan/scripts/runtime/packages/design/templates/studio/studio.js.part-009",
-          "digest": "sha256:c4c7abdeceb11efd28f6432ce982e64f206d4ade94b126ad7d5dfdfb66069a82"
+          "digest": "sha256:1cd87c19da8181954eb6592f251c19ab8db7fe6bae9a600b41124ede994ddaf0"
         },
         {
           "path": "skills/plan/scripts/runtime/packages/design/templates/studio/studio.js.parts.json",
-          "digest": "sha256:461e3892058245f0c467c4619a79bcb479d418b8c5b3f7d719ce1dec56da5300"
+          "digest": "sha256:8e1af7e5974e2c9a722cbf2f8baa66e5fd740a252a3c01460660e0c35f657a43"
         },
         {
           "path": "skills/plan/scripts/runtime/packages/protocol/package.json",
