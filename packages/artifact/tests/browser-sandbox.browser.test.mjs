@@ -452,3 +452,136 @@ test('opt-in review selection toggles in the same opaque document without changi
     'allow-scripts allow-forms',
   );
 });
+
+test('Review receives native taps on pure canonical SVG without an authored click listener', {
+  timeout: 30_000,
+}, async (t) => {
+  const server = createServer((_req, res) => {
+    res.setHeader('content-type', 'text/html');
+    res.end('<!doctype html><style>body{margin:0}iframe{width:100%;height:700px;border:0}</style>');
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  t.after(() => new Promise((resolve) => server.close(resolve)));
+  const browser = await launchBrowser();
+  let page;
+  t.after(async () => {
+    try {
+      await page?.close();
+    } finally {
+      await browser.close();
+    }
+  });
+  page = await browser.newPage({ hasTouch: true, viewport: { width: 375, height: 812 } });
+  const origin = `http://127.0.0.1:${server.address().port}`,
+    nonce = Buffer.alloc(32, 18).toString('base64url');
+  await page.goto(origin);
+  const bundle = makeBundle();
+  bundle.document.annotations = [];
+  bundle.document.accessibility.readingOrder = bundle.document.accessibility.readingOrder.filter(
+    (id) => id !== 'note-a',
+  );
+  bundle.presentation.elements = bundle.presentation.elements.filter(
+    ({ elementId }) => elementId !== 'note-a',
+  );
+  const rendered = renderAuthoredDiagramSvg(sealBundle(bundle));
+  assert.equal(rendered.ok, true);
+  const html = prepareArtifactDocument({
+    html: `<!doctype html><style>svg{max-width:100%;height:auto}</style><form><input id="answer" name="answer"></form>${rendered.svg}`,
+    artifactId: 'pure-diagram',
+    nonce,
+    parentOrigin: origin,
+    allowLocalForms: true,
+    prototypeState: true,
+    reviewSelection: true,
+  }).html;
+  await page.evaluate((html) => {
+    window.messages = [];
+    addEventListener('message', (event) =>
+      messages.push({ data: event.data, origin: event.origin }),
+    );
+    const frame = document.createElement('iframe');
+    frame.sandbox = 'allow-scripts allow-forms';
+    frame.srcdoc = html;
+    document.body.append(frame);
+  }, html);
+  const frame = page.frameLocator('iframe');
+  await frame.locator('#answer').fill('Keep this answer');
+  const child = page.frames()[1];
+  await child.evaluate(() => {
+    window.originalSvg = document.querySelector('svg');
+    window.originalSvgMarkup = originalSvg.outerHTML;
+    // Message-only delivery barrier: there is deliberately no authored SVG click listener.
+    addEventListener('message', (event) => {
+      if (event.data?.type === 'fixture:barrier')
+        parent.postMessage({ type: 'fixture:barrier', id: event.data.id }, '*');
+    });
+  });
+  const command = {
+    schemaVersion: '1.0.0',
+    type: 'openplanr:review-selection',
+    channel: nonce,
+    viewId: 'pure-diagram',
+    enabled: true,
+  };
+  let barrier = 0;
+  const control = async (commands) => {
+    const id = `pure-control-${++barrier}`;
+    await page.evaluate(
+      ({ commands, id }) => {
+        const target = document.querySelector('iframe').contentWindow;
+        for (const command of commands) target.postMessage(command, '*');
+        target.postMessage({ type: 'fixture:barrier', id }, '*');
+      },
+      { commands, id },
+    );
+    await page.waitForFunction(
+      (id) => messages.some(({ data }) => data.type === 'fixture:barrier' && data.id === id),
+      id,
+      { timeout: 7_000 },
+    );
+  };
+  const node = frame.locator('[data-element-id="node-a"] tspan');
+  await node.tap();
+  assert.equal(
+    await page.evaluate(() => messages.filter(({ data }) => data.type === 'select').length),
+    0,
+  );
+  await control([{ ...command, viewId: 'stale-view' }]);
+  await node.tap();
+  assert.equal(
+    await page.evaluate(() => messages.filter(({ data }) => data.type === 'select').length),
+    0,
+  );
+  await control([command]);
+  await node.tap();
+  await page.waitForFunction(
+    () => messages.some(({ data }) => data.type === 'select' && data.elementId === 'node-a'),
+    undefined,
+    { timeout: 7_000 },
+  );
+  const selection = await page.evaluate(() => messages.find(({ data }) => data.type === 'select'));
+  assert.equal(selection.origin, 'null');
+  assert.deepEqual(assertPreviewBridgeMessage(selection.data), {
+    schemaVersion: '1.0.0',
+    channel: nonce,
+    type: 'select',
+    viewId: 'pure-diagram',
+    elementId: 'node-a',
+  });
+  await control([{ ...command, enabled: false }]);
+  await node.tap();
+  assert.equal(
+    await page.evaluate(() => messages.filter(({ data }) => data.type === 'select').length),
+    1,
+  );
+  await frame.locator('#answer').fill('Interact remains editable');
+  assert.deepEqual(
+    await child.evaluate(() => ({
+      retained: document.querySelector('svg') === originalSvg,
+      markup: originalSvg.outerHTML === originalSvgMarkup,
+      value: document.querySelector('#answer').value,
+    })),
+    { retained: true, markup: true, value: 'Interact remains editable' },
+  );
+  assert.equal(await page.locator('iframe').getAttribute('sandbox'), 'allow-scripts allow-forms');
+});

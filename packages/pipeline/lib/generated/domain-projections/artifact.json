@@ -373,7 +373,7 @@
     {
       "source": "packages/artifact/lib/artifact/browser-sandbox.mjs",
       "target": "lib/artifact/browser-sandbox.mjs",
-      "sha256": "6b2ebd46dbec22adbac32edd86a776b6bdaf71212b9a68fad1f6ccddc08e21f9",
+      "sha256": "5877f3231242775b7281964da949fa98208675f40be9a283b65d66672942adcb",
       "mode": "644"
     },
     {

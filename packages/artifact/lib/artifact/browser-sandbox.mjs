@@ -294,6 +294,12 @@ function installPreviewNavigation(contract) {
   const trustedParent = parent,
     post = trustedParent.postMessage.bind(trustedParent),
     NativeElement = Element,
+    svgRoots = [],
+    svgClick = () => {},
+    addListener = EventTarget.prototype.addEventListener,
+    removeListener = EventTarget.prototype.removeEventListener,
+    queryAll = Document.prototype.querySelectorAll,
+    query = NativeElement.prototype.querySelector,
     closest = NativeElement.prototype.closest,
     attribute = NativeElement.prototype.getAttribute,
     preventDefault = Event.prototype.preventDefault,
@@ -326,6 +332,21 @@ function installPreviewNavigation(contract) {
       )
         return;
       selectionEnabled = fields.enabled.value;
+      for (const svg of svgRoots) removeListener.call(svg, 'click', svgClick);
+      svgRoots.length = 0;
+      if (selectionEnabled)
+        for (const svg of queryAll.call(document, 'svg')) {
+          if (
+            !attribute.call(svg, 'data-planr-id') &&
+            !attribute.call(svg, 'data-element-id') &&
+            !query.call(svg, '[data-planr-id],[data-element-id]')
+          )
+            continue;
+          // WebKit synthesizes native SVG taps only with a direct click listener.
+          // The document capture handler still validates and sends the selection.
+          addListener.call(svg, 'click', svgClick);
+          svgRoots.push(svg);
+        }
     });
   document.addEventListener(
     'click',

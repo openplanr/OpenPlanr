@@ -25,6 +25,7 @@ const options = {
 
 function preparedFrame(t, overrides = {}) {
   const messages = [],
+    svgListeners = [],
     errors = [],
     parent = {
       postMessage: (data, origin) => messages.push({ data: structuredClone(data), origin }),
@@ -39,6 +40,14 @@ function preparedFrame(t, overrides = {}) {
     virtualConsole: console,
     beforeParse(window) {
       Object.defineProperty(window, 'parent', { value: parent });
+      for (const method of ['addEventListener', 'removeEventListener']) {
+        const native = window.EventTarget.prototype[method];
+        window.EventTarget.prototype[method] = function (type, listener, options) {
+          if (type === 'click' && this instanceof window.SVGElement)
+            svgListeners.push({ method, target: this, listener });
+          return native.call(this, type, listener, options);
+        };
+      }
       // JSDOM has no layout hit-testing; selection uses the actual clicked DOM ancestor.
       window.document.elementFromPoint = () => null;
       window.URL.createObjectURL = URL.createObjectURL;
@@ -65,7 +74,7 @@ function preparedFrame(t, overrides = {}) {
       }),
     );
   const selections = () => messages.filter(({ data }) => data.type === 'select');
-  return { window, parent, messages, command, send, selections };
+  return { window, parent, messages, command, send, selections, svgListeners };
 }
 
 test('selection is opt-in and begins disabled, preserving native authored handlers and form state', (t) => {
@@ -298,4 +307,52 @@ test('selection reads canonical authored SVG node and connector identity without
   click(nodeChild);
   assert.equal(frame.window.diagramClicks, 6, 'disabling selection restores native handlers');
   assert.equal(document.querySelector('svg'), svg);
+});
+
+test('authenticated Review owns and releases only native SVG click eligibility', (t) => {
+  const html =
+    '<!doctype html><svg id="diagram" xmlns="http://www.w3.org/2000/svg"><g data-element-id="node-a"><rect width="100" height="50"/></g></svg><svg id="decoration" xmlns="http://www.w3.org/2000/svg"><rect width="10" height="10"/></svg>';
+  for (const reviewSelection of [false, true]) {
+    const frame = preparedFrame(t, { reviewSelection, prototypeState: false, html }),
+      svg = frame.window.document.querySelector('#diagram'),
+      original = svg.outerHTML;
+    assert.deepEqual(frame.svgListeners, [], 'Interact adds no direct SVG click listener');
+    frame.send({ ...frame.command, channel: 'forged-channel' });
+    assert.deepEqual(
+      frame.svgListeners,
+      [],
+      'forged mode controls cannot change native eligibility',
+    );
+    frame.send();
+    if (!reviewSelection) {
+      assert.deepEqual(frame.svgListeners, [], 'legacy preparation remains unchanged');
+      continue;
+    }
+    assert.equal(frame.svgListeners.length, 1);
+    const owned = frame.svgListeners[0];
+    assert.equal(owned.method, 'addEventListener');
+    assert.equal(owned.target, svg, 'decorative SVG has no Review listener');
+    frame.send({ ...frame.command, enabled: false, viewId: 'stale-view' });
+    assert.equal(frame.svgListeners.length, 1, 'forged disable cannot release eligibility');
+    let authoredClicks = 0;
+    const authored = () => authoredClicks++;
+    svg.addEventListener('click', authored);
+    frame.send({ ...frame.command, enabled: false });
+    assert.deepEqual(frame.svgListeners.at(-1), { ...owned, method: 'removeEventListener' });
+    const target = svg.querySelector('rect');
+    target.dispatchEvent(new frame.window.MouseEvent('click', { bubbles: true, cancelable: true }));
+    assert.equal(authoredClicks, 1, 'Interact preserves the authored listener');
+    assert.deepEqual(frame.selections(), []);
+    assert.equal(svg.outerHTML, original, 'eligibility never changes canonical SVG markup');
+    assert.equal(frame.window.document.querySelector('#diagram'), svg);
+    frame.send();
+    frame.send();
+    target.dispatchEvent(new frame.window.MouseEvent('click', { bubbles: true, cancelable: true }));
+    assert.equal(frame.selections().length, 1, 'repeated mode controls emit one closed selection');
+    assert.equal(authoredClicks, 1, 'Review suppresses authored clicks');
+    assertPreviewBridgeMessage(frame.selections()[0].data);
+    frame.send({ ...frame.command, enabled: false });
+    target.dispatchEvent(new frame.window.MouseEvent('click', { bubbles: true, cancelable: true }));
+    assert.equal(authoredClicks, 2, 'repeated toggles release only the owned listener');
+  }
 });
