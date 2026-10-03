@@ -413,7 +413,7 @@
         },
         {
           "path": "skills/delegate/scripts/adapters/codex.mjs",
-          "digest": "sha256:2751b7da45baddbf217cca5673c4bce8d5d627828f2bee42008c60a5740afd41"
+          "digest": "sha256:4f77b6afcfe8614eef8a4b45a1c003391cb788321ce7d487062542934e4694fd"
         },
         {
           "path": "skills/delegate/scripts/adapters/generic.mjs",
