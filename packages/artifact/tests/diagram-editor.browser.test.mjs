@@ -1078,13 +1078,65 @@ test(
     const unchanged = await drawing(page, 'node-b').elementHandle();
     const before = await read();
     const revisions = (await store.history()).length;
+    // Hold browser frames to observe the first response, coalescing and release separately.
+    const holdFrames = () =>
+      page.evaluate(() => {
+        const request = window.requestAnimationFrame,
+          cancel = window.cancelAnimationFrame,
+          pending = new Map();
+        let next = 1_000_000;
+        window.requestAnimationFrame = (callback) => {
+          const id = next++;
+          pending.set(id, callback);
+          return id;
+        };
+        window.cancelAnimationFrame = (id) => {
+          if (!pending.delete(id)) cancel.call(window, id);
+        };
+        window.dragFrames = {
+          pending: () => pending.size,
+          flush() {
+            const callbacks = [...pending.values()];
+            pending.clear();
+            for (const callback of callbacks) callback(performance.now());
+          },
+          restore() {
+            window.requestAnimationFrame = request;
+            window.cancelAnimationFrame = cancel;
+            for (const callback of pending.values()) request.call(window, callback);
+            delete window.dragFrames;
+          },
+        };
+      });
+    const pendingFrames = () => page.evaluate(() => window.dragFrames.pending());
+    const restoreFrames = () => page.evaluate(() => window.dragFrames.restore());
     await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2);
     await page.mouse.down();
-    await page.mouse.move(target.x + target.width / 2 + 70, target.y + target.height / 2 + 40, {
-      steps: 8,
-    });
-    await page.keyboard.press('Escape');
-    await page.mouse.up();
+    await holdFrames();
+    try {
+      await page.mouse.move(target.x + target.width / 2 + 16, target.y + target.height / 2 + 16);
+      const first = await drawing(page, 'node-a').boundingBox();
+      assert.ok(
+        first.x > target.x && first.y > target.y,
+        `The first drag response is immediate: ${JSON.stringify({ target, first })}`,
+      );
+      assert.equal(await pendingFrames(), 0, 'The first response does not wait for a frame');
+      await page.mouse.move(target.x + target.width / 2 + 32, target.y + target.height / 2 + 24);
+      await page.mouse.move(target.x + target.width / 2 + 48, target.y + target.height / 2 + 32);
+      assert.equal(await pendingFrames(), 1, 'Continuing moves share one pending frame');
+      assert.deepEqual(await drawing(page, 'node-a').boundingBox(), first);
+      await page.evaluate(() => window.dragFrames.flush());
+      const latest = await drawing(page, 'node-a').boundingBox();
+      assert.ok(latest.x > first.x && latest.y > first.y, 'The frame renders the latest move');
+      await page.mouse.move(target.x + target.width / 2 + 70, target.y + target.height / 2 + 40);
+      assert.equal(await pendingFrames(), 1);
+      await page.keyboard.press('Escape');
+      await page.mouse.up();
+      assert.equal(await pendingFrames(), 0, 'Cancellation discards the pending frame');
+      assert.deepEqual(await drawing(page, 'node-a').boundingBox(), target);
+    } finally {
+      await restoreFrames();
+    }
     await settle(page);
     assert.equal(
       await page.getByRole('button', { name: 'Save diagram', exact: true }).isDisabled(),
@@ -1094,10 +1146,23 @@ test(
     assert.equal((await store.history()).length, revisions);
     await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2);
     await page.mouse.down();
-    await page.mouse.move(target.x + target.width / 2 + 80, target.y + target.height / 2 + 50, {
-      steps: 8,
-    });
-    await page.mouse.up();
+    await holdFrames();
+    try {
+      await page.mouse.move(target.x + target.width / 2 + 80, target.y + target.height / 2 + 50, {
+        steps: 8,
+      });
+      const preview = await drawing(page, 'node-a').boundingBox();
+      assert.equal(await pendingFrames(), 1);
+      await page.mouse.up();
+      const released = await drawing(page, 'node-a').boundingBox();
+      assert.ok(
+        released.x > preview.x && released.y > preview.y,
+        'Pointer release flushes the final move before committing',
+      );
+      assert.equal(await pendingFrames(), 0);
+    } finally {
+      await restoreFrames();
+    }
     await settle(page);
     await save(page);
     const moved = await read();
