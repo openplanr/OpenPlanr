@@ -95,8 +95,8 @@ export function runTestFileInOwnerPty(testFile, { choices = [], env = {}, testNa
   const testPath = testFile instanceof URL ? fileURLToPath(testFile) : testFile;
   const nodeArguments = [
     process.execPath,
-    '--test',
-    '--test-isolation=none',
+    // Direct node:test execution retains the owner PTY on every supported Node
+    // version; the isolation flag is unavailable on Node 20 and experimental on 22.
     '--test-reporter=tap',
     ...(testNamePattern ? ['--test-name-pattern', testNamePattern] : []),
     resolve(testPath),

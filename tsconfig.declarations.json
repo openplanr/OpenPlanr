@@ -23,6 +23,7 @@
     "forceConsistentCasingInFileNames": true
   },
   "include": [
+    "packages/cli/lib/node-runtime.mjs",
     "packages/artifact/lib/artifact/ui/**/*.mjs",
     "packages/artifact/lib/artifact/diagram/authoring/**/*.mjs",
     "packages/artifact/lib/artifact/diagram/source-map.mjs",

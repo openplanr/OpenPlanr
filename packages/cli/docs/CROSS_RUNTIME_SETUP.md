@@ -8,7 +8,7 @@ curl -fsSL https://openplanr.dev/install.sh | sh
 irm https://openplanr.dev/install.ps1 | iex
 ```
 
-The installer requires Node.js 20 or later and never installs or upgrades Node
+The installer requires a supported Node.js version (see [package metadata](../package.json)) and never installs or upgrades Node
 silently. `npm install -g openplanr` is equivalent. Then change into a project and
 run guided setup:
 
@@ -182,7 +182,7 @@ local artifact-review browser runs elsewhere.
 
 ## Windows
 
-The PowerShell installer and the CLI support Node.js 20 or later on Windows. Project paths in
+The PowerShell installer and the CLI support a supported Node.js version (see [package metadata](../package.json)) on Windows. Project paths in
 committed locks and generated rules are repository-relative. Machine-specific
 absolute paths remain in the user runtime state and backups.
 
@@ -204,3 +204,39 @@ absolute paths remain in the user runtime state and backups.
 - Doctor redacts secrets and only fixes owned files after preview.
 - Provenance is append-only. Recovery requires an explicit event rather than
   fabricated history.
+
+### Codex profiles and installed skill evidence
+
+Setup, runtime updates, removal and doctor use the effective `CODEX_HOME` (default
+`~/.codex`). One shared ownership file, setup lock and transaction backup tree keep
+Claude and Cursor records stable. Its private profile index retains each alternate
+Codex user bundle separately, keyed by the canonical native home. The historical
+default-profile bundle stays in place. A repair in one profile
+cannot retire another profile's direct skills. Run the command with the same
+`CODEX_HOME` as the Codex session you want to configure.
+
+`planr doctor --json` includes `codexDiscovery`: the effective profile, configuration
+and ownership paths, saved discovery mode, and each installed OpenPlanr skill's
+entrypoint, complete source hash, skill version and Protocol version. The CLI/host
+package version is a separate field. Missing support files change the source hash,
+even when `SKILL.md` and its version are unchanged. Multiple discovery paths are
+reported without claiming which one an already-open Codex session loaded. Disabled
+or historical plugin cache copies are evidence of previous installations, not
+proof of enabled duplicate skills.
+
+Use `planr setup --runtime codex --dry-run` or `planr doctor --fix` to preview
+installer-owned repairs in that profile. Review the changes and restart Codex to
+reload its skills. Do not manually delete native plugin caches. Unknown files and
+hand edits retain the existing ownership/conflict protections.
+
+`planr upgrade status` labels its release-metadata source. `stale-cache` means the
+registry request failed and a previous result was reused; compatibility with that
+cached set does not confirm the latest release. `cache` means recently cached
+metadata was used without a new registry request. Only `network` is a fresh check.
+
+`planr runtime update <agent>` refreshes only the named agent, retaining its saved
+scope and Codex discovery mode. An explicit `--scope` changes that agent's scope;
+the preview includes any retirement of unchanged managed project files and keeps
+their exact backup for rollback. Shared project lock records and other agents' owned
+files remain present. To deliberately change a Codex mode, use `planr setup` with
+`--skill-mode` and review its transition preview.

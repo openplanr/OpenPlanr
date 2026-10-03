@@ -113,7 +113,7 @@ describe('the CLI pipeline pin tracks the pipeline it is released against', () =
 
     expect(workflow).toContain('node-version: 24');
     expect(workflow).toContain('run: npm test');
-    expect(workflow).toContain('node: [20, 22]');
+    expect(workflow).toContain('node: [22, 24]');
     expect(workflow).toContain('run: npm run test:focused');
     expect(workflow).toContain('run: npm ci');
     expect(workflow).toContain('run: npm run check:generated');
