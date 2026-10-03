@@ -121,14 +121,18 @@ export function StudioMenu({
   items,
   className = '',
   triggerAttributes = {},
+  open,
+  onOpenChange,
 }: {
   label: string;
   items: readonly StudioMenuItem[];
   className?: string;
   triggerAttributes?: Record<string, string>;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
   return (
-    <DropdownMenu.Root>
+    <DropdownMenu.Root modal={false} open={open} onOpenChange={onOpenChange}>
       <span className={`studio-menu ${className}`}>
         <DropdownMenu.Trigger asChild>
           <StudioButton aria-label={label} title={label} {...triggerAttributes}>
@@ -141,6 +145,11 @@ export function StudioMenu({
           align="end"
           sideOffset={8}
           collisionPadding={8}
+          onCloseAutoFocus={(event) => {
+            // Opaque-frame interaction does not reach Radix's outside-event listener.
+            const active = (event.target as HTMLElement | null)?.ownerDocument.activeElement;
+            if (active?.tagName === 'IFRAME' && active.isConnected) event.preventDefault();
+          }}
         >
           {items.map((item, index) => (
             <DropdownMenu.Item

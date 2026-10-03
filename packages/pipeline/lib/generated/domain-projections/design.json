@@ -361,7 +361,7 @@
     {
       "source": "packages/design/lib/design/ui/studio.mjs",
       "target": "lib/design/ui/studio.mjs",
-      "sha256": "3c72152f6b733496f02e4164ecad1d94f3cc91523dd9cde648fea94feffeac35",
+      "sha256": "f254e4db6138e7e838eeec80dff128c549a39782765601537695818cbd9a0bd6",
       "mode": "644"
     },
     {
@@ -421,7 +421,7 @@
     {
       "source": "packages/design/templates/studio/studio.js",
       "target": "templates/studio/studio.js",
-      "sha256": "a76513390d4bce2dcf7c7ee16ed1c692e21a92fb5a678dc9955edcbc6cafb6fc",
+      "sha256": "3dfd60a9e54706d26f9baa61faa1de770d77042867bb8effe70ca31dccb9be55",
       "mode": "644"
     }
   ]

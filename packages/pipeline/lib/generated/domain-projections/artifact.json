@@ -1471,7 +1471,7 @@
     {
       "source": "packages/artifact/lib/artifact/ui/generated/artifact-shell-assets.json",
       "target": "lib/artifact/ui/generated/artifact-shell-assets.json",
-      "sha256": "587c6797f7eac7418ed0198c5bcacc5f45737e7b9da4fcc9a65d4700ef0809d1",
+      "sha256": "95a685e27d70a9ffd055c85cdb338f0eed48a6c38f57816c829acd88e6185bbc",
       "mode": "644"
     },
     {
@@ -1669,25 +1669,25 @@
     {
       "source": "packages/artifact/lib/artifact/ui/studio-shell-components.d.mts",
       "target": "lib/artifact/ui/studio-shell-components.d.mts",
-      "sha256": "ac9574d663324a004256f7742717579bf8553f5ad655114e4905a5983d80b8e1",
+      "sha256": "abb43f071ce8dca9f969764f1158638fb2b5222b800bd5fdc3d776362453ad3d",
       "mode": "644"
     },
     {
       "source": "packages/artifact/lib/artifact/ui/studio-shell-components.mjs",
       "target": "lib/artifact/ui/studio-shell-components.mjs",
-      "sha256": "f8595915c87be764fc472b82650994a0df326931f2115e249261c06a943dde31",
+      "sha256": "e98abab96f6376f86c2c9d50979377085eb9a5a639807bef3dc5a6e4e74f1238",
       "mode": "644"
     },
     {
       "source": "packages/artifact/lib/artifact/ui/studio-shell-mount-impl.d.mts",
       "target": "lib/artifact/ui/studio-shell-mount-impl.d.mts",
-      "sha256": "8557cdf42777f05c5c548f103e5568cc6bf8f16761efa3ce073b6578d82b0b0f",
+      "sha256": "9a5bc78f6515e139c603f5575b8c7624bdc847ddd51126c1158fcea4afd69a11",
       "mode": "644"
     },
     {
       "source": "packages/artifact/lib/artifact/ui/studio-shell-mount-impl.mjs",
       "target": "lib/artifact/ui/studio-shell-mount-impl.mjs",
-      "sha256": "5340a6117ab6e3f6c2e5cf33eb88a94f2a7b2e52a594aaff97144198bda84769",
+      "sha256": "db6517bb03b6fb8c4e99fd98ef8cd08c7a30c160a5bde5fe8af59c0b817c64c2",
       "mode": "644"
     },
     {
@@ -2023,13 +2023,13 @@
     {
       "source": "packages/artifact/templates/diagram-owner.js",
       "target": "templates/diagram-owner.js",
-      "sha256": "7cdb1d0a9640a41098d2c82a803a712d99b1213002e10322868d55e14bc8608b",
+      "sha256": "673f821d0b269f2cad668effdbf0bc755582bd94166e4dc29a7e2840d57904d1",
       "mode": "644"
     },
     {
       "source": "packages/artifact/templates/diagram-studio.js",
       "target": "templates/diagram-studio.js",
-      "sha256": "e64ac649314f0026b9e26eb097b431fcab9e201f688b9349ef9590680c329be9",
+      "sha256": "451c8d1d7e87026a2333bad0239c7b86f4f4f57f69ab83689ce6d0cafc03ffb8",
       "mode": "644"
     },
     {

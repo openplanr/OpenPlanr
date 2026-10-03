@@ -1209,6 +1209,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       const { x, y, deltaY } = event.detail;
       const frame = design.frames.find((item) => item.id === entry.frameId);
       const rect = event.target.getBoundingClientRect();
+      chrome?.update({ exportMenuOpen: false });
       zoomTo(
         state.zoom * Math.exp(-deltaY * 0.004),
         {
@@ -1222,6 +1223,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
       if (state.view !== 'canvas') return;
       const entry = entries.find((item) => stage.getFrame(item.artifactId) === event.target);
       if (!entry || panels.get(entry.artifactId)?.hidden) return;
+      chrome?.update({ exportMenuOpen: false });
       state.camera = {
         x: clamp(state.camera.x - event.detail.deltaX, -1e7, 1e7),
         y: clamp(state.camera.y - event.detail.deltaY, -1e7, 1e7),
@@ -1687,6 +1689,7 @@ export function mountDesignStudio({ payload, stage: artifactStage }) {
         (source.artifactId !== activeArtifactId || walkthroughTransition)
       )
         return;
+      chrome?.update({ exportMenuOpen: false });
       selectEntry(entryFor(event.data.screenId, source.variantId, source.frameId));
     });
   }
