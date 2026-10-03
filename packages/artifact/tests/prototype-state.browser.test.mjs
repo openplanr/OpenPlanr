@@ -5,6 +5,30 @@ import { launchBrowser } from '../../../tests/support/browser-launcher.mjs';
 import { renderPrototypeStateBootstrap } from '../lib/artifact/ui/prototype-state.mjs';
 import { bundleBrowserEntry } from '../scripts/generate-artifact-shell.mjs';
 
+async function waitForAliasRestore(view, count = 1) {
+  const body = await view.locator('body').elementHandle();
+  const frame = await body.ownerFrame();
+  try {
+    await frame.waitForFunction((expected) => window.aliasCount >= expected, count, {
+      timeout: 8000,
+    });
+  } catch (error) {
+    const observed = await frame.evaluate(() => ({
+      aliasCount: window.aliasCount,
+      sessionFields: Object.keys(window.__OPENPLANR_PROTOTYPE_STATE__?.get() ?? {}),
+      formLengths: [...document.querySelectorAll('input')].map(({ id, value }) => ({
+        id,
+        length: value.length,
+      })),
+    }));
+    throw new Error(`Alias restore ${count} did not arrive: ${JSON.stringify(observed)}`, {
+      cause: error,
+    });
+  } finally {
+    await body.dispose();
+  }
+}
+
 test('opaque prototype forms and bounded session state survive frame eviction', {
   timeout: 30_000,
 }, async (t) => {
@@ -368,36 +392,12 @@ test('late legacy alias messages cannot replace seven edited fields after a cano
   await page.evaluate(() => {
     for (const data of saved) frame.contentWindow.postMessage(data, '*');
   });
-  await view.locator('body').evaluate(
-    () =>
-      window.aliasCount ||
-      new Promise((resolve) =>
-        addEventListener(
-          'message',
-          (event) => {
-            if (event.data?.type === 'fixture:restore') resolve();
-          },
-          { once: true },
-        ),
-      ),
-  );
+  await waitForAliasRestore(view);
   for (const key of keys) await view.locator(`#${key}`).fill(`Edited ${key}`);
   await page.evaluate(() => {
     for (const data of saved) frame.contentWindow.postMessage(data, '*');
   });
-  await view.locator('body').evaluate(
-    () =>
-      window.aliasCount >= 2 ||
-      new Promise((resolve) =>
-        addEventListener(
-          'message',
-          (event) => {
-            if (event.data?.type === 'fixture:restore') resolve();
-          },
-          { once: true },
-        ),
-      ),
-  );
+  await waitForAliasRestore(view, 2);
   for (const key of keys) assert.equal(await view.locator(`#${key}`).inputValue(), `Edited ${key}`);
   const session = await view.locator('body').evaluate(() => __OPENPLANR_PROTOTYPE_STATE__.get());
   for (const key of keys) assert.equal(session[key], `Edited ${key}`);
@@ -575,19 +575,7 @@ test('first delayed alias configuration promotes earlier native input even after
     frame.contentWindow.postMessage(saved[1], '*');
   }, inputSequence);
   await view.locator('body').evaluate(() => window.nextRestore);
-  await view.locator('body').evaluate(
-    () =>
-      window.aliasCount ||
-      new Promise((resolve) =>
-        addEventListener(
-          'message',
-          (event) => {
-            if (event.data?.type === 'fixture:restore') resolve();
-          },
-          { once: true },
-        ),
-      ),
-  );
+  await waitForAliasRestore(view);
   assert.equal(await view.locator('#question').inputValue(), 'Typed before configuration');
   assert.equal(
     await view.locator('body').evaluate(() => __OPENPLANR_PROTOTYPE_STATE__.get().question),
@@ -765,19 +753,7 @@ test('reset and newer explicit API keys retire pre-configuration native alias ed
           '*',
         );
     }, action);
-    await view.locator('body').evaluate(
-      () =>
-        window.aliasCount ||
-        new Promise((resolve) =>
-          addEventListener(
-            'message',
-            (event) => {
-              if (event.data?.type === 'fixture:restore') resolve();
-            },
-            { once: true },
-          ),
-        ),
-    );
+    await waitForAliasRestore(view);
     assert.deepEqual(
       await view.locator('body').evaluate(() => __OPENPLANR_PROTOTYPE_STATE__.get()),
       action !== 'set' ? {} : { question: 'Newer explicit API' },
@@ -804,6 +780,7 @@ test('unsupported alias promotion preserves valid local form custody and can rec
   const browser = await launchBrowser();
   t.after(() => browser.close());
   const page = await browser.newPage();
+  page.setDefaultTimeout(8000);
   const origin = `http://127.0.0.1:${server.address().port}`;
   await page.goto(origin);
   const html = `<!doctype html><script>${renderPrototypeStateBootstrap({ screenId: 'form', viewId: 'form', parentOrigin: origin, nonce: 'f'.repeat(43) })}</script><input id="question"><input id="other"><input id="padding"><script>window.aliasCount=0;addEventListener('message',event=>{if(event.source===parent&&event.data?.type==='fixture:restore'){document.getElementById('question').value=event.data.state.question??'';aliasCount++}})</script>`;
@@ -847,19 +824,7 @@ test('unsupported alias promotion preserves valid local form custody and can rec
   await page.evaluate(() => {
     for (const data of saved) frame.contentWindow.postMessage(data, '*');
   });
-  await view.locator('body').evaluate(
-    () =>
-      window.aliasCount ||
-      new Promise((resolve) =>
-        addEventListener(
-          'message',
-          (event) => {
-            if (event.data?.type === 'fixture:restore') resolve();
-          },
-          { once: true },
-        ),
-      ),
-  );
+  await waitForAliasRestore(view);
   assert.equal(
     await view.locator('#question').inputValue(),
     'q'.repeat(4000),
@@ -876,19 +841,7 @@ test('unsupported alias promotion preserves valid local form custody and can rec
     frame.contentWindow.postMessage({ ...saved[0], revision: 1 }, '*');
     frame.contentWindow.postMessage(saved[1], '*');
   });
-  await view.locator('body').evaluate(
-    () =>
-      window.aliasCount >= 2 ||
-      new Promise((resolve) =>
-        addEventListener(
-          'message',
-          (event) => {
-            if (event.data?.type === 'fixture:restore') resolve();
-          },
-          { once: true },
-        ),
-      ),
-  );
+  await waitForAliasRestore(view, 2);
   assert.equal(await view.locator('#question').inputValue(), 'q'.repeat(4000));
   assert.equal(
     await view.locator('body').evaluate(() => __OPENPLANR_PROTOTYPE_STATE__.get().question),
