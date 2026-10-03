@@ -114,6 +114,50 @@ afterEach(() => {
   rmSync(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
 });
 
+describe('runtime Node.js diagnostics', () => {
+  it.each(['20.18.9', '21.7.0', '22.12.9', '23.4.9'])(
+    'rejects setup for %s without creating installation custody and reports the same doctor failure',
+    async (version) => {
+      const descriptor = Object.getOwnPropertyDescriptor(process.versions, 'node');
+      try {
+        Object.defineProperty(process.versions, 'node', { value: version });
+        await expect(previewSetup({ projectDir, cliVersion, minimal: true })).rejects.toMatchObject(
+          {
+            code: 'E_NODE_VERSION',
+          },
+        );
+        expect(existsSync(join(userHome, '.planr', 'runtime', 'state.json'))).toBe(false);
+        const doctor = await runtimeDoctor(projectDir);
+        expect(doctor.diagnostics.find((entry) => entry.code === 'node-version')).toMatchObject({
+          status: 'fail',
+          message: expect.stringContaining(version),
+          fix: expect.stringContaining('Install a supported Node.js version'),
+        });
+      } finally {
+        if (descriptor) Object.defineProperty(process.versions, 'node', descriptor);
+      }
+    },
+  );
+  it.each(['20.19.0', '22.13.0', '23.5.0', '24.0.0'])(
+    'uses the same accepted branch for setup and doctor on %s',
+    async (version) => {
+      const descriptor = Object.getOwnPropertyDescriptor(process.versions, 'node');
+      try {
+        Object.defineProperty(process.versions, 'node', { value: version });
+        await expect(
+          previewSetup({ projectDir, cliVersion, minimal: true }),
+        ).resolves.toMatchObject({ ok: true });
+        const doctor = await runtimeDoctor(projectDir);
+        expect(doctor.diagnostics.find((entry) => entry.code === 'node-version')).toMatchObject({
+          status: 'pass',
+        });
+      } finally {
+        if (descriptor) Object.defineProperty(process.versions, 'node', descriptor);
+      }
+    },
+  );
+});
+
 describe('runtime setup', () => {
   it.each(['codex', 'claude-code'] as const)(
     'does not write setup state when %s native plugin inspection fails',
