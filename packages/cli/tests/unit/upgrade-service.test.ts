@@ -336,6 +336,7 @@ describe('reconcileInstalledTuple', () => {
     expect(later.ecosystemSource).toBe('stale-cache');
     expect(later.status).toBe('aligned');
     expect(later.published?.cli.version).toBe(cliVersion);
+    expect(planCliUpgrade(later).reason).toContain('latest release could not be checked');
   });
 
   it('reads a local file source (the e2e override) without any network', async () => {

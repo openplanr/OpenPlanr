@@ -1,20 +1,19 @@
 import type {
-  DiagramAuthoringBundle,
   DiagramAuthoringContainer,
   DiagramAuthoringValidationError,
   DiagramBounds,
   DiagramEditOperation,
-  DiagramEditTransaction,
   DiagramFidelityReport,
   DiagramPlacement,
   DiagramSemanticEntry,
 } from '@openplanr/protocol/diagram-authoring-contracts';
+import type {
+  VersionedDiagramAuthoringBundle as DiagramAuthoringBundle,
+  VersionedDiagramEditTransaction as DiagramEditTransaction,
+} from '@openplanr/protocol/studio-presentation-contracts';
 
-export type {
-  DiagramAuthoringBundle,
-  DiagramAuthoringValidationError,
-  DiagramEditTransaction,
-} from '@openplanr/protocol/diagram-authoring-contracts';
+export type { DiagramAuthoringValidationError } from '@openplanr/protocol/diagram-authoring-contracts';
+export type { DiagramAuthoringBundle, DiagramEditTransaction };
 
 export type DiagramJsonValue =
   | null
@@ -45,7 +44,8 @@ export interface DiagramFieldChange {
     | 'document'
     | 'elements'
     | 'presentation'
-    | 'source-map';
+    | 'source-map'
+    | 'studio-presentation';
   elementId: string | null;
   path: string[];
   before: DiagramJsonValue;
@@ -102,6 +102,10 @@ export type DiagramCommand =
   | {
       type: 'appearance';
       changes: Extract<DiagramEditOperation, { type: 'set-appearance-locks' }>['changes'];
+    }
+  | {
+      type: 'set-studio-presentation';
+      presentation: import('@openplanr/protocol/studio-presentation-contracts').DiagramPresentation;
     }
   | { type: 'reparent'; ids: string[]; parentId: string | null; index?: number }
   | {

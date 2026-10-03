@@ -1,12 +1,18 @@
 import assert from 'node:assert/strict';
+import { mkdtempSync, realpathSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { test } from 'node:test';
 import { deflateRawSync } from 'node:zlib';
+import { digestArtifactEnvelope } from '@openplanr/artifact/envelope.mjs';
 import { canonicalizeJson, sha256Hex } from '@openplanr/protocol/canonical-json';
 import {
   assertWorkspaceContract,
   DESIGN_REVIEW_BUNDLE_SCHEMA,
   DESIGN_WORKSPACE_EVENT_SCHEMA,
 } from '@openplanr/protocol/workspace-contracts';
+import { bundleDesignRevision } from '../lib/design/context.mjs';
+import { prepareDesignDocument } from '../lib/design/document.mjs';
 import {
   appendWorkspaceEvent,
   canonicalWorkspacePublicKey,
@@ -27,6 +33,7 @@ import {
   workspaceEnvelopeDigest,
   workspaceReviewUrl,
 } from '../lib/design/workspace-client.mjs';
+import { designFixture } from './design-fixture.mjs';
 
 const bundle = () => ({
   schemaVersion: '1.0.0',
@@ -182,6 +189,42 @@ test('sharing stores repeated pages and shared blocks once and restores them byt
   assert.deepEqual(opened.envelope.artifacts, value.envelope.artifacts);
 });
 
+test('shared-source Design bundles use packing v2 and retain source-bound encrypted revision identity', async (t) => {
+  const root = mkdtempSync(join(realpathSync(tmpdir()), 'planr-workspace-pool-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const { file } = designFixture(root, {
+    frames: Array.from({ length: 5 }, (_, index) => ({
+      id: `frame-${index + 1}`,
+      label: `Frame ${index + 1}`,
+      width: 390 + index * 240,
+      height: 800,
+    })),
+  });
+  const value = bundleDesignRevision(prepareDesignDocument(file));
+  assert.equal(value.schemaVersion, '1.2.0');
+  assert.equal(value.envelope.schemaVersion, '1.1.0');
+  assert.equal(value.envelope.sources.length, 2);
+  assert.equal(value.envelope.artifacts.length, 10);
+  const packed = await packDesignReviewBundle(value);
+  assert.equal(packed.version, 2);
+  assert.equal(canonicalizeJson(await unpackDesignReviewBundle(packed)), canonicalizeJson(value));
+  await assert.rejects(unpackDesignReviewBundle(packed, { maxBytes: 64 }), /size limit/);
+  assert.equal(workspaceEnvelopeDigest(value.envelope), digestArtifactEnvelope(value.envelope));
+  const changed = structuredClone(value.envelope);
+  changed.sources[0].html += '<!-- new revision -->';
+  assert.notEqual(workspaceEnvelopeDigest(changed), workspaceEnvelopeDigest(value.envelope));
+
+  const custody = await prepareWorkspace(value);
+  const server = service(custody);
+  await commitWorkspace(custody, server);
+  const access = { id: custody.id, baseUrl: custody.baseUrl, token: custody.token };
+  await getWorkspace(access, server);
+  const opened = await decryptWorkspaceRevision(access, access.currentRevision, server);
+  assert.deepEqual(opened.envelope, value.envelope);
+  assert.deepEqual(opened.entries, value.entries);
+  assert.equal(opened.reviewOf, digestArtifactEnvelope(value.envelope));
+});
+
 test('a bundle shared before packing still opens unchanged', async () => {
   const value = bundle();
   assert.equal(await unpackDesignReviewBundle(value), value);
@@ -212,7 +255,7 @@ test('packed shares that expand too far or reference missing blocks are refused'
     ),
     /size limit/,
   );
-  await assert.rejects(unpackDesignReviewBundle({ ...packed, version: 2 }), /unsupported packing/);
+  await assert.rejects(unpackDesignReviewBundle({ ...packed, version: 3 }), /unsupported packing/);
 });
 
 test('rotation preserves prior revisions and prevents old tokens from future access', async () => {

@@ -1,3 +1,4 @@
+// @ts-check
 import { inverseDependencies } from './diff.mjs';
 import {
   appearanceFields,
@@ -12,12 +13,14 @@ import {
   same,
   sealBundle,
   semanticFields,
+  setStudioPresentation,
   snapshot,
   validateAuthoringBundle,
 } from './model.mjs';
 import { applyOperation, previewDiagramTransaction } from './transactions.mjs';
 
 function record(bundle, change) {
+  if (change.collection === 'studio-presentation') return bundle.studioPresentation ?? null;
   if (change.collection === 'source-map') return bundle.sourceMap;
   if (change.collection === 'document') return bundle.document;
   if (change.collection === 'presentation') return bundle.presentation;
@@ -32,6 +35,10 @@ function record(bundle, change) {
 const atPath = (value, path) => path.reduce((current, key) => current?.[key], value);
 function restoreChange(bundle, change, positions, emphasisOrder) {
   if (!change.path.length) {
+    if (change.collection === 'studio-presentation') {
+      setStudioPresentation(bundle, change.before);
+      return;
+    }
     if (change.collection === 'source-map') {
       bundle.sourceMap = clone(change.before);
       return;
@@ -111,6 +118,7 @@ function validateInverse(value) {
           'elements',
           'presentation',
           'source-map',
+          'studio-presentation',
         ].includes(change.collection) ||
         (change.elementId !== null && typeof change.elementId !== 'string') ||
         !Array.isArray(change.path) ||
@@ -144,6 +152,7 @@ function validateInverse(value) {
   return [];
 }
 
+/** @returns {{ok:true,transaction:import('@openplanr/protocol/studio-presentation-contracts').VersionedDiagramEditTransaction}|import('./index.d.mts').DiagramKernelFailure} */
 function compileCompensation(current, target, inverse, transactionId) {
   const working = clone(current);
   const operations = [];
@@ -194,7 +203,10 @@ function compileCompensation(current, target, inverse, transactionId) {
       type: 'insert-elements',
       elements: inserted.map(([, entry]) => ({
         collection: entry.collection,
-        value: { ...clone(entry.value), ...(entry.value.members ? { members: [] } : {}) },
+        value: {
+          ...clone(entry.value),
+          ...(entry.collection === 'groups' || entry.collection === 'lanes' ? { members: [] } : {}),
+        },
       })),
       presentation: inserted.map(([id]) => clone(targetPlacements.get(id))),
       positions: inserted.map(([id, entry]) => ({
@@ -208,6 +220,8 @@ function compileCompensation(current, target, inverse, transactionId) {
   const workingEntries = elementIndex(working.document);
   for (const [id, entry] of targetEntries) {
     const currentEntry = workingEntries.get(id);
+    if (!currentEntry)
+      throw new TypeError('Compensating transaction is missing an expected semantic element.');
     if (
       !same(
         semanticFields(entry.collection, currentEntry.value),
@@ -289,25 +303,41 @@ function compileCompensation(current, target, inverse, transactionId) {
       before: clone(working.sourceMap),
       after: clone(target.sourceMap),
     });
+  if (!same(working.studioPresentation ?? null, target.studioPresentation ?? null))
+    add({
+      type: 'set-studio-presentation',
+      before: clone(working.studioPresentation ?? null),
+      after: clone(target.studioPresentation ?? null),
+    });
   if (diagnostics.length) return { ok: false, diagnostics };
   if (!operations.length)
     return failure('$.inverse', 'no-change', 'This inverse has no remaining content change.');
   return {
     ok: true,
-    transaction: {
-      kind: 'diagram-edit-transaction',
-      schemaVersion: '1.0.0',
-      protocolVersion: '1.13.0',
-      diagramId: current.diagramId,
-      transactionId,
-      base: snapshot(current),
-      operations,
-      undoOf: inverse.transactionId,
-    },
+    transaction:
+      /** @type {import('@openplanr/protocol/studio-presentation-contracts').VersionedDiagramEditTransaction} */ ({
+        kind: 'diagram-edit-transaction',
+        schemaVersion:
+          current.schemaVersion === '1.1.0' ||
+          operations.some((op) => op.type === 'set-studio-presentation')
+            ? '1.1.0'
+            : '1.0.0',
+        protocolVersion:
+          current.schemaVersion === '1.1.0' ||
+          operations.some((op) => op.type === 'set-studio-presentation')
+            ? '1.17.0'
+            : '1.13.0',
+        diagramId: current.diagramId,
+        transactionId,
+        base: snapshot(current),
+        operations,
+        undoOf: inverse.transactionId,
+      }),
   };
 }
 
 /** Rebase a compensating edit only after its changed fields and dependencies match. */
+/** @type {typeof import('./index.d.mts').createConditionalInverse} */
 export function createConditionalInverse(current, inverse, options) {
   const checked = validateAuthoringBundle(current);
   if (!checked.ok) return checked;

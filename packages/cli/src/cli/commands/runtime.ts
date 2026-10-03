@@ -43,7 +43,7 @@ export function registerRuntimeCommand(program: Command, cliVersion: string) {
       .option('--dry-run', 'preview without writing', false)
       .option('--yes', 'apply without confirmation', false)
       .option('--json', 'machine-readable output', false)
-      .action(async (runtimeId, opts) => {
+      .action(async (runtimeId, opts, command: Command) => {
         const projectDir = program.opts().projectDir as string;
         const options = {
           projectDir,
@@ -52,7 +52,12 @@ export function registerRuntimeCommand(program: Command, cliVersion: string) {
           scope: opts.scope as InstallScope,
           version: opts.version as string | undefined,
           dryRun: Boolean(opts.dryRun),
-          merge: true,
+          ...(operation === 'update'
+            ? {
+                preserveExistingScopes: true,
+                overrideExistingScope: command.getOptionValueSource('scope') !== 'default',
+              }
+            : { merge: true }),
         };
         const preview = await previewSetup(options);
         const approved = Boolean(opts.yes || program.opts().yes);

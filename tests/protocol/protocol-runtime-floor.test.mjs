@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 import test from 'node:test';
@@ -133,12 +133,24 @@ test('clean generation bootstraps metadata without ambient generated inputs or e
       filter: (path) => !['node_modules', '.git', 'projections'].includes(basename(path)),
     });
     cpSync(join(root, 'skills'), join(directory, 'skills'), { recursive: true });
+    // The additive command registry binds these exact CLI-owned source bytes.
+    // Keep the production generator fail-closed on missing prerequisites.
+    const commandDirectory = 'packages/cli/src/cli/commands';
+    mkdirSync(join(directory, commandDirectory), { recursive: true });
+    for (const filename of ['server.ts', 'artifact.ts'])
+      cpSync(join(root, commandDirectory, filename), join(directory, commandDirectory, filename));
     const generated = join(copy, metadataPath);
     const expected = readFileSync(join(protocol, metadataPath));
     rmSync(generated);
     const executable = node20 || process.execPath;
     execFileSync(executable, ['scripts/generate-protocol-assets.mjs'], { cwd: copy });
     assert.deepEqual(readFileSync(generated), expected);
+    const commandRegistry = 'registry/v1.17.0/commands.json';
+    assert.deepEqual(
+      readFileSync(join(copy, commandRegistry)),
+      readFileSync(join(protocol, commandRegistry)),
+      'cold generation retains the exact CLI source identities',
+    );
     const poison = "throw new Error('UNTRUSTED_GENERATED_MODULE_EXECUTED');\n";
     writeFileSync(generated, poison);
     const check = spawnSync(executable, ['scripts/generate-protocol-assets.mjs', '--check'], {
@@ -152,6 +164,18 @@ test('clean generation bootstraps metadata without ambient generated inputs or e
     execFileSync(executable, ['scripts/generate-protocol-assets.mjs'], { cwd: copy });
     assert.deepEqual(readFileSync(generated), expected);
     execFileSync(executable, ['scripts/generate-protocol-assets.mjs', '--check'], { cwd: copy });
+    rmSync(join(directory, commandDirectory, 'server.ts'));
+    const missingSource = spawnSync(
+      executable,
+      ['scripts/generate-protocol-assets.mjs', '--check'],
+      {
+        cwd: copy,
+        encoding: 'utf8',
+      },
+    );
+    assert.equal(missingSource.status, 1);
+    assert.match(missingSource.stderr, /ENOENT/);
+    assert.match(missingSource.stderr, /commands\/server\.ts/);
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }

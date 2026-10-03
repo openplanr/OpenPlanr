@@ -152,6 +152,8 @@ test('Changesets versions the actual pending notes, updates exact pins, and gene
   try {
     const rootManifest = readJson(join(root, 'package.json'));
     writeFileSync(join(directory, 'package.json'), JSON.stringify(rootManifest));
+    // npm workspace discovery uses the repository's canonical lockfile.
+    cpSync(join(root, 'package-lock.json'), join(directory, 'package-lock.json'));
     for (const [path, manifest] of readManifests()) {
       mkdirSync(join(directory, path), { recursive: true });
       writeFileSync(join(directory, path, 'package.json'), JSON.stringify(manifest));
@@ -174,7 +176,7 @@ test('Changesets versions the actual pending notes, updates exact pins, and gene
         symlinkSync(dependencies, join(directory, path, 'node_modules'), 'dir');
     }
     run('git', ['init', '--initial-branch=main', '--quiet']);
-    run('git', ['add', 'package.json', 'packages', 'apps', '.changeset']);
+    run('git', ['add', 'package.json', 'package-lock.json', 'packages', 'apps', '.changeset']);
     run('git', [
       '-c',
       'user.name=Release test',
@@ -254,9 +256,9 @@ test('a real package version operation regenerates current runtime projections w
     return result.stdout;
   };
   try {
-    // Copy current tracked source bytes, including the generator under test;
-    // no private planning files, sibling checkout, or Git history is required.
-    const files = run('git', ['ls-files', '-z'], root)
+    // Copy current public source bytes, including new files in the change under
+    // test; ignored planning files, sibling checkouts and Git history stay out.
+    const files = run('git', ['ls-files', '--cached', '--others', '--exclude-standard', '-z'], root)
       .split('\0')
       .filter((path) => path && existsSync(join(root, path)));
     for (const path of files) {

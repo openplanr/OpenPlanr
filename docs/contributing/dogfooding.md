@@ -3,8 +3,8 @@
 Use this guide to build OpenPlanr from source, install the skills it generates into
 your own coding agent, and verify that what you built is what runs.
 
-OpenPlanr requires Node.js 20 or later. CI verifies Node.js 20, 22, and 24;
-contributors use Node.js 24 (`.nvmrc`).
+Use Node.js 24 (`.nvmrc`) for development. Supported versions are declared in
+[package metadata](../../package.json); CI verifies published packages on their supported Node.js 20, 22, and 24 lines.
 
 ## Build
 

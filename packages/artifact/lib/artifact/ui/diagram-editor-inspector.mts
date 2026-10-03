@@ -1,6 +1,7 @@
-import type { DiagramEditTransaction } from '@openplanr/protocol/diagram-authoring-contracts';
+import type { VersionedDiagramEditTransaction as DiagramEditTransaction } from '@openplanr/protocol/studio-presentation-contracts';
+
 import type { DiagramEditorState } from '../diagram/editor/index.mjs';
-import { button, element } from './diagram-editor-dom.mjs';
+import { button, element, icon } from './diagram-editor-dom.mjs';
 import { renderDiagramProperties } from './diagram-editor-properties.mjs';
 import type { DiagramEditorContext } from './diagram-editor-regions.mjs';
 
@@ -152,16 +153,17 @@ export function createEditorInspector(ctx: DiagramEditorContext): DiagramEditorI
     ];
     for (const [name, id, action] of tabs) {
       const selected = rightTab === id;
-      rightTabs.append(
-        button(doc, name, action, {
-          id: ctx.scopedId(id + '-tab'),
-          role: 'tab',
-          'aria-controls': ctx.scopedId(id + '-pane'),
-          'aria-selected': String(selected),
-          tabindex: selected ? '0' : '-1',
-          'data-tab': id,
-        }),
-      );
+      const tab = button(doc, name, action, {
+        id: ctx.scopedId(id + '-tab'),
+        role: 'tab',
+        'aria-controls': ctx.scopedId(id + '-pane'),
+        'aria-selected': String(selected),
+        tabindex: selected ? '0' : '-1',
+        'data-tab': id,
+      });
+      const hostIcon = config.panels.find((panel) => panel.id === id)?.icon;
+      if (hostIcon) tab.prepend(icon(doc, hostIcon));
+      rightTabs.append(tab);
     }
     setRightTab(rightTab);
     const selectionKey = state.view.selection.join('|'),

@@ -54,7 +54,7 @@ test('AES-256-GCM matches the fixed v1 vector and authenticated context', async 
     compressedBytes: 29,
     encryptedBytes: 45,
   });
-  assert.equal(Object.prototype.hasOwnProperty.call(encrypted, 'key'), false);
+  assert.equal(Object.hasOwn(encrypted, 'key'), false);
   assert.equal(
     bytesToBase64Url(
       await decryptArtifactPayload({ version: 'v1', iv, ciphertext }, { keyFragment: key }),
@@ -116,17 +116,16 @@ test('paste client reconstructs a ciphertext-only allowlisted request', async ()
   const client = createPasteClient({
     fetchImpl: async (url, options) => {
       seen.push({ url, options });
-      return {
-        ok: true,
-        status: 201,
-        json: async () => ({
+      return Response.json(
+        {
           schemaVersion: '1.0.0',
           operation: 'created',
           id: pasteId,
           expiresAt,
           deletionToken,
-        }),
-      };
+        },
+        { status: 201 },
+      );
     },
     onRequest: (value) => telemetry.push(value),
   });
@@ -209,6 +208,7 @@ test('8,000 stays local while 8,001 requires consent before crypto or fetch', as
         { ok: true },
         {
           transport: 'short',
+          protocolVersion: '1.0.0',
           ttl: 'forever',
           encodeImpl: encodedAt(400),
           confirmShort: async () => {
@@ -229,6 +229,7 @@ test('forced short links isolate the key and deletion token', async () => {
     { ok: true },
     {
       transport: 'short',
+      protocolVersion: '1.0.0',
       encodeImpl: encodedAt(400),
       confirmShort: async (value) => {
         preview = value;
@@ -303,6 +304,7 @@ test('fragment and encrypted short review links decode through one transport ada
   };
   const short = await createReviewLink(value, {
     transport: 'short',
+    protocolVersion: '1.0.0',
     shortConsent: true,
     pasteClient: client,
   });
@@ -312,7 +314,10 @@ test('fragment and encrypted short review links decode through one transport ada
 
 test('paste reads sanitize expiry, missing, and network failures', async () => {
   const get = async (response, now = () => new Date('2026-07-20T12:00:00.000Z')) => {
-    const client = createPasteClient({ fetchImpl: async () => response, now });
+    const client = createPasteClient({
+      fetchImpl: async () => Response.json(await response.json(), { status: response.status }),
+      now,
+    });
     return client.get(pasteId);
   };
   await assert.rejects(
@@ -364,18 +369,14 @@ test('short-link GET paths never include the fragment key', async () => {
   const client = createPasteClient({
     fetchImpl: async (url) => {
       urls.push(url);
-      return {
-        ok: true,
-        status: 200,
-        json: async () => ({
-          schemaVersion: '1.0.0',
-          operation: 'read',
-          iv,
-          ciphertext: encrypted.ciphertext,
-          expiresAt,
-          size: encrypted.encryptedBytes,
-        }),
-      };
+      return Response.json({
+        schemaVersion: '1.0.0',
+        operation: 'read',
+        iv,
+        ciphertext: encrypted.ciphertext,
+        expiresAt,
+        size: encrypted.encryptedBytes,
+      });
     },
     now: () => new Date('2026-07-20T12:00:00.000Z'),
   });

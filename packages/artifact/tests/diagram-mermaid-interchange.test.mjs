@@ -351,7 +351,7 @@ test('copy export escapes click, href, quotes and brackets so its preview reads 
   );
 });
 
-test('keyword node IDs are renamed in export so its own preview accepts the copy', () => {
+test('legacy keyword node IDs are renamed in export so its own preview accepts the copy', () => {
   for (const keyword of [
     'click',
     'href',
@@ -366,9 +366,13 @@ test('keyword node IDs are renamed in export so its own preview accepts the copy
     'LINKSTYLE',
   ]) {
     const id = keyword.toLowerCase();
-    const first = preview(`flowchart TB\n${keyword}[Label]\nA[One]\nA --> ${keyword}\n`);
+    const first = preview(`flowchart TB\nLegacy[Label]\nA[One]\nA --> Legacy\n`);
     assert.equal(first.ok, true, `${keyword}: ${JSON.stringify(first.diagnostics)}`);
-    const reversed = structuredClone(first.bundle);
+    const reversed = JSON.parse(
+      JSON.stringify(first.bundle)
+        .replaceAll('"legacy"', JSON.stringify(id))
+        .replaceAll('"Legacy"', JSON.stringify(keyword)),
+    );
     reversed.document.relations[0].from = id;
     reversed.document.relations[0].to = 'a';
     const copy = exportMermaidCopy(sealBundle(reversed));
@@ -438,4 +442,16 @@ test('real Chromium and Node run the same pure converter without providers or fe
     await browser.close();
   }
   assert.equal(Object.hasOwn(nodeResult.bundle, 'repositoryLink'), false);
+});
+
+test('new Mermaid imports reject reserved node and subgraph identities', () => {
+  for (const source of [
+    'flowchart TB\nend[Done]',
+    'flowchart TB\nA --> class[Done]',
+    'flowchart TB\nsubgraph direction[Group]\nA[One]\nend',
+  ]) {
+    const result = preview(source);
+    assert.equal(result.ok, false);
+    assert.ok(result.diagnostics.some(({ code }) => code === 'reserved-source-id'));
+  }
 });

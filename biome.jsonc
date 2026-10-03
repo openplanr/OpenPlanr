@@ -22,6 +22,8 @@
       "!**/generated",
       "!**/dist",
       "!**/vendor",
+      "!packages/artifact/lib/artifact/ui/diagram-editor.css",
+      "!packages/artifact/lib/artifact/ui/studio-shell.css",
       "!packages/cli/lib/host-packages",
       "!packages/cli/lib/integrations.mjs",
       "!packages/cli/lib/integrations.d.mts",

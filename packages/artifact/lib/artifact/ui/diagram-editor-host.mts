@@ -1,10 +1,23 @@
-import type { DiagramAuthoringBundle } from '@openplanr/protocol/diagram-authoring-contracts';
+import type { VersionedDiagramAuthoringBundle as DiagramAuthoringBundle } from '@openplanr/protocol/studio-presentation-contracts';
+import type { ReactNode } from 'react';
+
 import type { DiagramEditorSession, DiagramEditorState } from '../diagram/editor/index.mjs';
 import type { DiagramEditorHostAction, DiagramEditorHostPanel } from './diagram-editor.mjs';
 import { hasIcon } from './diagram-editor-dom.mjs';
+import type { StudioMenuItem } from './studio-shell.mjs';
+
+/** A host may render this content through a portal in its existing React tree. */
+export interface DiagramEditorChromeMount {
+  container: HTMLElement;
+  content: ReactNode;
+}
 
 /** What a host shell passes to mountDiagramEditor. */
 export interface DiagramEditorHostOptions {
+  /** Mount chrome in the host's existing React root. Return an idempotent release.
+   * Omit to use the editor's synchronous standalone React root. The canvas remains imperative.
+   */
+  mountChrome?: (options: DiagramEditorChromeMount) => () => void;
   /** Re-read a verified owner revision after a rejected stale save. */
   readCurrent?: () => Promise<DiagramAuthoringBundle>;
   /** Optional real reviewer adapter. Local-only pages show a truthful unavailable state. */
@@ -29,6 +42,9 @@ export interface DiagramEditorHostOptions {
   brand?: boolean;
   /** Follow the host's theme instead of the operating system. */
   colorScheme?: 'light' | 'dark' | null;
+  /** Trusted host controls mounted in the single canonical toolbar. */
+  toolbarControls?: HTMLElement;
+  exportActions?: StudioMenuItem[];
   actions?: DiagramEditorHostAction[];
   panels?: DiagramEditorHostPanel[];
 }
@@ -58,7 +74,15 @@ const DEFAULT_LABELS = Object.freeze({
   readOnly: 'Read only',
 });
 const HOST_ID = /^[a-z][a-z0-9-]{0,39}$/u;
-const RESERVED_PANELS = new Set(['properties', 'review']);
+const RESERVED_PANELS = new Set([
+  'properties',
+  'review',
+  'outline',
+  'shapes',
+  'more',
+  'canvas',
+  'inspector',
+]);
 
 function hostLabels(labels: DiagramEditorHostOptions['labels'] = {}): DiagramEditorLabels {
   if (!labels || typeof labels !== 'object' || Array.isArray(labels))
@@ -121,6 +145,8 @@ export function colorSchemeOf(value: unknown): DiagramEditorColorScheme {
 
 /** Validate the host options once, in a fixed order, before anything is mounted. */
 export function readHostOptions(host: DiagramEditorHostOptions): DiagramEditorHostConfig {
+  if (host.mountChrome !== undefined && typeof host.mountChrome !== 'function')
+    throw new TypeError('Host mountChrome must be a function.');
   if (host.review !== undefined && typeof host.review !== 'boolean')
     throw new TypeError('Host review must be true or false.');
   if (host.saveLabel !== undefined && typeof host.saveLabel !== 'function')

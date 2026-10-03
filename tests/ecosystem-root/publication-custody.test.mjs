@@ -14,6 +14,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { load } from 'js-yaml';
 
 const repository = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 
@@ -141,6 +142,58 @@ test('every isolated packed CI runner installs the declared Protocol browser dep
     browser > 0 && proof > browser,
     'Packed CI must install its own browser before consumer execution',
   );
+});
+
+test('CI prepares contributor tooling before switching to published consumer runtimes', () => {
+  const workflow = (name) =>
+    load(readFileSync(join(repository, '.github/workflows', name), 'utf8'));
+  const setups = (job) =>
+    job.steps.flatMap((step, index) =>
+      step.uses?.startsWith('actions/setup-node@')
+        ? [{ index, version: String(step.with['node-version']) }]
+        : [],
+    );
+  for (const [name, id] of [
+    ['dashboard-browser.yml', 'browser-tests'],
+    ['artifact-browser.yml', 'hostile-sandbox'],
+  ]) {
+    assert.deepEqual(
+      setups(workflow(name).jobs[id]).map(({ version }) => version),
+      ['24'],
+      name,
+    );
+  }
+  const ci = workflow('ci.yml');
+  assert.deepEqual(ci.jobs.compatibility.strategy.matrix.node, [22, 24]);
+  assert.match(ci.jobs.compatibility.name, /contributor/u);
+  for (const job of [ci.jobs['packed-public-packages'], workflow('release-proof.yml').jobs.proof]) {
+    assert.deepEqual(job.strategy.matrix.node, [20, 22, 24]);
+    const runtime = setups(job);
+    assert.deepEqual(
+      runtime.map(({ version }) => version),
+      ['24', `\${{ matrix.node }}`],
+    );
+    const switchAt = runtime[1].index;
+    const install = job.steps.findIndex((step) => step.run?.trim() === 'npm ci');
+    const proof = job.steps.findIndex(
+      (step) => step.run?.trim() === 'npm run verify:packed:strict',
+    );
+    assert.ok(install > runtime[0].index && install < switchAt);
+    assert.ok(proof > switchAt);
+    for (const [index, step] of job.steps.entries()) {
+      if (/npm run (?:generate|build|test:focused|verify)(?:\s|$)/u.test(step.run ?? ''))
+        assert.ok(index < switchAt, 'Contributor commands must precede the consumer runtime');
+    }
+  }
+  const contributorChecks = JSON.parse(readFileSync(join(repository, 'package.json'), 'utf8'))
+    .scripts.verify.split(' && ')
+    .filter((command) => command !== 'npm run verify:packed:strict');
+  const release = workflow('release-proof.yml').jobs.proof;
+  const preparation = release.steps
+    .slice(0, setups(release)[1].index)
+    .flatMap((step) => (step.run ?? '').split('\n').map((line) => line.trim()));
+  for (const command of contributorChecks)
+    assert.ok(preparation.includes(command), `Release proof retains ${command} before the switch`);
 });
 
 function pipelineFixture() {

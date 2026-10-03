@@ -1,5 +1,7 @@
+import { createChunkedWorkspaceClient } from '@openplanr/artifact/chunked-workspace-client.mjs';
 import { createEncryptedWorkspaceClient } from '@openplanr/artifact/encrypted-workspace-client.mjs';
 import { canonicalizeJson, sha256Hex } from '@openplanr/protocol/canonical-json';
+import { assertArtifactEnvelopeMetadata } from '@openplanr/protocol/large-object-contracts';
 import {
   assertDesignReviewBundle,
   assertDesignReviewMetadata,
@@ -59,6 +61,13 @@ async function inflateRaw(bytes, limit) {
  * deflates. A design at three frame sizes otherwise carries every page three times.
  */
 export async function packDesignReviewBundle(bundle) {
+  if (bundle.envelope?.schemaVersion === '1.1.0')
+    return {
+      kind: PACKED_BUNDLE_KIND,
+      version: 2,
+      data: encodeWorkspaceBytes(await deflateRaw(encoder.encode(JSON.stringify(bundle)))),
+    };
+
   const pages = [];
   const pageIndex = new Map();
   const blocks = [];
@@ -100,8 +109,14 @@ export async function packDesignReviewBundle(bundle) {
 /** The bundle a packed share holds, or `value` unchanged when it was shared unpacked. */
 export async function unpackDesignReviewBundle(value, { maxBytes = PACKED_BUNDLE_MAX_BYTES } = {}) {
   if (value?.kind !== PACKED_BUNDLE_KIND) return value;
-  if (value.version !== 1 || typeof value.data !== 'string')
+  if (![1, 2].includes(value.version) || typeof value.data !== 'string')
     throw new Error('The shared design uses an unsupported packing.');
+  if (value.version === 2) {
+    const bundle = JSON.parse(
+      decoder.decode(await inflateRaw(decodeWorkspaceBytes(value.data), maxBytes)),
+    );
+    return assertDesignReviewBundle(bundle);
+  }
   const { bundle, artifactPages, pages, blocks } = JSON.parse(
     decoder.decode(await inflateRaw(decodeWorkspaceBytes(value.data), maxBytes)),
   );
@@ -167,6 +182,7 @@ const client = createEncryptedWorkspaceClient({
     sha256Hex(
       canonicalizeJson({
         schemaVersion: envelope.schemaVersion,
+        ...(envelope.schemaVersion === '1.1.0' ? { sources: envelope.sources } : {}),
         artifacts: envelope.artifacts,
         viewer: envelope.viewer,
       }),
@@ -180,24 +196,80 @@ export const {
   newWorkspaceToken,
   newWorkspaceId,
   normalizeWorkspaceBase,
-  workspaceReviewUrl,
   deriveWorkspaceAuthentication,
   canonicalWorkspacePublicKey,
   createWorkspaceSigner,
   signWorkspaceValue,
   verifyWorkspaceSignature,
   workspaceEnvelopeDigest,
-  prepareWorkspace,
-  commitWorkspace,
-  getWorkspace,
-  listWorkspaceRevisions,
-  decryptWorkspaceRevision,
-  prepareWorkspaceMutation,
-  commitWorkspaceMutation,
-  publishWorkspace,
-  rotateWorkspace,
-  manageWorkspace,
-  prepareWorkspaceEvent,
-  appendWorkspaceEvent,
-  readWorkspaceEvents,
 } = client;
+
+const chunked = createChunkedWorkspaceClient({
+  legacy: client,
+  domain: 'openplanr-design-workspace/v1',
+  apiPath: DESIGN_WORKSPACE_API,
+  assertBundle: assertDesignReviewBundle,
+  assertFeedback: (payload) => {
+    if (['category', 'disposition'].includes(payload.kind)) assertDesignReviewMetadata(payload);
+    if (
+      !['review', 'direction', 'category', 'disposition'].includes(payload.kind) ||
+      typeof payload.author !== 'string' ||
+      !payload.author.trim() ||
+      payload.author.length > 160
+    )
+      throw new TypeError('Invalid design feedback.');
+    return payload;
+  },
+  digestInput: (bundle) => bundle.envelope,
+});
+export const discoverWorkspaceCapabilities = chunked.capabilities;
+export const prepareChunkedWorkspace = chunked.prepareWorkspace;
+export const openWorkspaceRevision = chunked.openRevision;
+export const prepareWorkspace = (bundle, options = {}) =>
+  options.transport === '2'
+    ? chunked.prepareWorkspace(bundle, options)
+    : client.prepareWorkspace(bundle, options);
+export const commitWorkspace = (access, ...args) =>
+  (access.schemaVersion === '2.0.0' ? chunked : client).commitWorkspace(access, ...args);
+export const getWorkspace = (access, ...args) =>
+  (access.schemaVersion === '2.0.0' ? chunked : client).getWorkspace(access, ...args);
+export const listWorkspaceRevisions = (access, ...args) =>
+  (access.schemaVersion === '2.0.0' ? chunked : client).listWorkspaceRevisions(access, ...args);
+export const decryptWorkspaceRevision = (access, ...args) =>
+  (access.schemaVersion === '2.0.0' ? chunked : client).decryptWorkspaceRevision(access, ...args);
+export const prepareWorkspaceMutation = (access, ...args) =>
+  (access.schemaVersion === '2.0.0' ? chunked : client).prepareWorkspaceMutation(access, ...args);
+export const commitWorkspaceMutation = (access, ...args) =>
+  (access.schemaVersion === '2.0.0' ? chunked : client).commitWorkspaceMutation(access, ...args);
+export const prepareWorkspaceEvent = (access, ...args) =>
+  (access.schemaVersion === '2.0.0' ? chunked : client).prepareWorkspaceEvent(access, ...args);
+export const appendWorkspaceEvent = (access, ...args) =>
+  (access.schemaVersion === '2.0.0' ? chunked : client).appendWorkspaceEvent(access, ...args);
+export const readWorkspaceEvents = (access, ...args) =>
+  (access.schemaVersion === '2.0.0' ? chunked : client).readWorkspaceEvents(access, ...args);
+export const publishWorkspace = (access, bundle, options) =>
+  access.schemaVersion !== '2.0.0'
+    ? client.publishWorkspace(access, bundle, options)
+    : prepareWorkspaceMutation(access, 'publish', bundle).then(() =>
+        commitWorkspaceMutation(access, options),
+      );
+export const rotateWorkspace = (access, options) =>
+  access.schemaVersion !== '2.0.0'
+    ? client.rotateWorkspace(access, options)
+    : prepareWorkspaceMutation(access, 'rotate').then(() =>
+        commitWorkspaceMutation(access, options),
+      );
+export const manageWorkspace = (access, action, options) =>
+  access.schemaVersion !== '2.0.0'
+    ? client.manageWorkspace(access, action, options)
+    : prepareWorkspaceMutation(access, action).then(() => commitWorkspaceMutation(access, options));
+
+export const workspaceReviewUrl = (access) =>
+  `${client.workspaceReviewUrl(access)}${access.schemaVersion === '2.0.0' ? '?v=2' : ''}`;
+
+/** Validate source-free lazy review metadata without fabricating HTML or a digest. */
+export function assertDesignReviewBundleMetadata(value) {
+  assertDesignReviewBundle(value);
+  assertArtifactEnvelopeMetadata(value.envelope);
+  return value;
+}

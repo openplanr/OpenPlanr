@@ -7,11 +7,16 @@
 
 import { randomBytes } from 'node:crypto';
 import {
+  closeSync,
+  constants,
   existsSync,
+  fstatSync,
   lstatSync,
   mkdirSync,
+  openSync,
   readdirSync,
   readFileSync,
+  readSync,
   renameSync,
   rmSync,
   writeFileSync,
@@ -41,6 +46,56 @@ export function readJsonState(path) {
     return value && typeof value === 'object' && !Array.isArray(value) ? value : null;
   } catch {
     return null;
+  }
+}
+
+/** Read bounded owner state; absence alone is null, unsafe or malformed custody is retained. */
+export function readPrivateJsonState(path, { maxBytes = 16_384 } = {}) {
+  let fd;
+  const unsafe = () =>
+    codedError('E_PRIVATE_STATE_INVALID', 'Private owner state is unsafe or malformed.');
+  try {
+    const directory = lstatSync(dirname(path));
+    if (
+      !directory.isDirectory() ||
+      directory.isSymbolicLink() ||
+      (process.platform !== 'win32' &&
+        (directory.mode & 0o077 || directory.uid !== process.getuid()))
+    )
+      throw unsafe();
+    fd = openSync(
+      path,
+      constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0),
+    );
+    const before = fstatSync(fd);
+    if (
+      !before.isFile() ||
+      before.size < 2 ||
+      before.size > maxBytes ||
+      (process.platform !== 'win32' && (before.mode & 0o077 || before.uid !== process.getuid()))
+    )
+      throw unsafe();
+    const bytes = Buffer.alloc(before.size);
+    for (let offset = 0; offset < bytes.length; ) {
+      const count = readSync(fd, bytes, offset, bytes.length - offset, offset);
+      if (!count) throw unsafe();
+      offset += count;
+    }
+    const after = fstatSync(fd);
+    if (
+      after.size !== before.size ||
+      after.mtimeMs !== before.mtimeMs ||
+      after.ctimeMs !== before.ctimeMs
+    )
+      throw unsafe();
+    const value = JSON.parse(bytes.toString('utf8'));
+    if (!value || typeof value !== 'object' || Array.isArray(value)) throw unsafe();
+    return value;
+  } catch (error) {
+    if (error.code === 'ENOENT') return null;
+    throw unsafe();
+  } finally {
+    if (fd !== undefined) closeSync(fd);
   }
 }
 
@@ -283,7 +338,7 @@ const wait = (milliseconds) => new Promise((resolveWait) => setTimeout(resolveWa
  * Acquire a cross-process startup lock. Only a dead owner's lock is removed;
  * an alive but slow owner is allowed to finish or the waiter times out.
  */
-export async function acquireStartLock(
+function* startLockSteps(
   path,
   {
     timeout = 5_000,
@@ -291,7 +346,7 @@ export async function acquireStartLock(
     pid = process.pid,
     now = () => Date.now(),
     isAlive = isProcessAlive,
-    waitImpl = wait,
+    readRecord = (recordPath) => readFileSync(recordPath, 'utf8'),
   } = {},
 ) {
   mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
@@ -336,7 +391,15 @@ export async function acquireStartLock(
       if (!info.isFile() || info.isSymbolicLink() || info.size > 1024) {
         throw codedError('E_START_LOCK_UNSAFE', `Startup lock record is unsafe: ${entry}`);
       }
-      const value = readJsonState(entryPath);
+      let value;
+      try {
+        value = JSON.parse(readRecord(entryPath));
+      } catch (error) {
+        // A writer may finish between stat and read. Only absence is benign;
+        // malformed records must remain actionable instead of looking unlocked.
+        if (error?.code === 'ENOENT') continue;
+        throw codedError('E_START_LOCK_UNSAFE', `Startup lock record cannot be read: ${entry}`);
+      }
       if (
         value?.pid !== Number(match[1]) ||
         value?.owner !== match[2] ||
@@ -376,11 +439,46 @@ export async function acquireStartLock(
           if (current?.owner === owner && current?.pid === pid) rmSync(recordPath, { force: true });
         };
       }
-      await waitImpl(poll);
+      yield poll;
     }
     throw codedError('E_START_LOCK_TIMEOUT', `Timed out waiting for startup lock: ${path}`);
   } catch (error) {
     rmSync(recordPath, { force: true });
     throw error;
   }
+}
+
+/** Async and synchronous callers share exactly the same owned writer protocol. */
+export async function acquireStartLock(path, options = {}) {
+  const steps = startLockSteps(path, options);
+  let step = steps.next();
+  while (!step.done) {
+    try {
+      await (options.waitImpl ?? wait)(step.value);
+    } catch (error) {
+      steps.throw(error);
+      throw error;
+    }
+    step = steps.next();
+  }
+  return step.value;
+}
+
+/** Bounded blocking driver for existing synchronous capability-store APIs. */
+export function acquireStartLockSync(path, options = {}) {
+  const steps = startLockSteps(path, options);
+  const waitSync =
+    options.waitImpl ??
+    ((milliseconds) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, milliseconds));
+  let step = steps.next();
+  while (!step.done) {
+    try {
+      waitSync(step.value);
+    } catch (error) {
+      steps.throw(error);
+      throw error;
+    }
+    step = steps.next();
+  }
+  return step.value;
 }

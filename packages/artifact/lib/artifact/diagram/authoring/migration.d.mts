@@ -1,7 +1,5 @@
-import type {
-  DiagramAuthoringBundle,
-  DiagramAuthoringDigest,
-} from '@openplanr/protocol/diagram-authoring-contracts';
+import type { DiagramAuthoringDigest } from '@openplanr/protocol/diagram-authoring-contracts';
+import type { VersionedDiagramAuthoringBundle as DiagramAuthoringBundle } from '@openplanr/protocol/studio-presentation-contracts';
 export interface DiagramMigrationDiagnostic {
   code?: string;
   message?: string;

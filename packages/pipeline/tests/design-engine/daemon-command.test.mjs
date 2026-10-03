@@ -78,7 +78,7 @@ function boardFixture(t) {
   const env = { ...process.env, PLANR_HOME: home };
   const children = [];
   t.after(async () => {
-    await killRunningDaemon(await findRunningDaemon({ env }));
+    await killRunningDaemon(await findRunningDaemon({ env }), { env });
     for (const child of children) if (child.exitCode === null && !child.signalCode) child.kill();
     rmSync(home, { recursive: true, force: true });
     rmSync(boardDir, { recursive: true, force: true });
@@ -109,7 +109,7 @@ async function startDaemonProcess({ env, children }) {
   return { child, port, exited };
 }
 
-test('board replaces a daemon whose registry turned invalid instead of starting a second one', async (t) => {
+test('board preserves a running daemon with invalid registry until explicit owned shutdown', async (t) => {
   const fixture = boardFixture(t);
   const first = await startDaemonProcess(fixture);
   const regPath = join(fixture.stateDir, 'boards.json');
@@ -124,10 +124,15 @@ test('board replaces a daemon whose registry turned invalid instead of starting 
     identified.registryError,
   );
 
+  await assert.rejects(runCli(['board', '--dir', fixture.boardDir], fixture.env), (error) =>
+    error.stderr.includes(`planr server stop ${identified.instanceId}`),
+  );
+  assert.equal(first.child.exitCode, null, 'the original tracked daemon survives');
+  assert.equal(readFileSync(regPath, 'utf8'), truncated, 'unreadable registry was preserved');
+  assert.equal(await killRunningDaemon(identified, { env: fixture.env }), true);
+  await first.exited;
   const board = await runCli(['board', '--dir', fixture.boardDir], fixture.env);
-  const stopped = await Promise.race([first.exited, delay(5000, 'running', { ref: false })]);
-  assert.deepEqual(stopped, [null, 'SIGTERM'], 'board stopped the first daemon');
-  assert.notEqual(board.port, first.port, 'board registered on a fresh daemon');
+  assert.notEqual(board.port, first.port, 'explicit shutdown permits a fresh daemon');
 
   const preserved = readdirSync(fixture.stateDir).filter((name) =>
     name.startsWith('boards.json.corrupt-'),
@@ -140,6 +145,7 @@ test('board replaces a daemon whose registry turned invalid instead of starting 
 test('board fails at once with the daemon exit code and error when the daemon cannot start', async (t) => {
   const fixture = boardFixture(t);
   const regPath = join(fixture.stateDir, 'boards.json');
+  mkdirSync(fixture.stateDir, { recursive: true, mode: 0o700 });
   mkdirSync(regPath, { recursive: true });
 
   await assert.rejects(
@@ -164,7 +170,7 @@ test('board fails at once with the daemon exit code and error when the daemon ca
 
 test('board relays the daemon notice that sets an invalid registry aside', async (t) => {
   const fixture = boardFixture(t);
-  mkdirSync(fixture.stateDir, { recursive: true });
+  mkdirSync(fixture.stateDir, { recursive: true, mode: 0o700 });
   const regPath = join(fixture.stateDir, 'boards.json');
   writeFileSync(regPath, '["legacy-slug"]\n');
 
@@ -218,7 +224,10 @@ test('a respawned daemon keeps the previous daemon log', async (t) => {
   assert.ok(firstLog.startsWith(`DAEMON_PORT: ${first.port}\n`), firstLog);
   if (process.platform !== 'win32') assert.equal(statSync(logPath).mode & 0o777, 0o600);
 
-  assert.equal(await killRunningDaemon(await findRunningDaemon({ env: fixture.env })), true);
+  assert.equal(
+    await killRunningDaemon(await findRunningDaemon({ env: fixture.env }), { env: fixture.env }),
+    true,
+  );
   const second = await runCli(['board', '--dir', fixture.boardDir], fixture.env);
   assert.notEqual(second.port, first.port);
   assert.equal(readFileSync(`${logPath}.1`, 'utf8'), firstLog);

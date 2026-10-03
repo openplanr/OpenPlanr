@@ -1,4 +1,5 @@
-import type { DiagramAuthoringBundle } from '@openplanr/protocol/diagram-authoring-contracts';
+import type { VersionedDiagramAuthoringBundle as DiagramAuthoringBundle } from '@openplanr/protocol/studio-presentation-contracts';
+
 import {
   type DiagramFieldChange,
   type DiagramJsonValue,
@@ -159,6 +160,7 @@ export function mountDiagramConflicts({ root, session, onClose = () => {}, onErr
       confirmation.hidden = true;
       adopt.focus();
     } else if (action === 'confirm-current') {
+      // biome-ignore lint/correctness/useHookAtTopLevel: This imperative session operation replaces the revision; it is not a React hook.
       const result = session.useAuthoritative();
       if (result.ok) onClose();
       else onError(result);

@@ -89,9 +89,9 @@ let input='';process.stdin.on('data',chunk=>input+=chunk);process.stdin.on('end'
   else emit({type:'result',subtype:'error',is_error:true,session_id:id,result:'Permission requires approval',errors:['Permission requires approval'],permission_denials:[{tool_name:'Bash'}]});
   return;
  }
- if(mode==='readonly-command'||mode==='readonly-summary') {
+ if(mode==='readonly-command'||mode==='readonly-summary'||mode==='readonly-capability') {
   if(mode==='readonly-command')emit({type:'item.completed',item:{type:'command_execution',command:'write source.txt',aggregated_output:'Read-only file system',exit_code:1}});
-  emit({type:'item.completed',item:{type:'agent_message',text:mode==='readonly-summary'?'Implementation is blocked by read-only access.':'Native turn finished.'}});
+  emit({type:'item.completed',item:{type:'agent_message',text:mode==='readonly-summary'?'Implementation is blocked by read-only access.':mode==='readonly-capability'?'Read the request and all required mirror files. Implementation is blocked: this session permits only filesystem reads and forbids permission escalation.':'Native turn finished.'}});
   emit({type:'turn.completed',usage:{input_tokens:10,output_tokens:3}});
   return;
  }
@@ -106,7 +106,7 @@ let input='';process.stdin.on('data',chunk=>input+=chunk);process.stdin.on('end'
  fs.writeFileSync('source.txt',resume?'corrected\\n':'implemented\\n');
  if(mode==='no-terminal')return;
  const finish=()=>{
- if(kind==='codex') { if(mode!=='no-summary')emit({type:'item.completed',item:{type:'agent_message',text:'Plain native summary.'}});emit({type:'turn.completed',usage:{input_tokens:10,output_tokens:3}}); }
+ if(kind==='codex') { if(mode!=='no-summary')emit({type:'item.completed',item:{type:'agent_message',text:mode==='past-readonly'?'Implementation is complete. A previous session permitted only filesystem reads.':'Plain native summary.'}});emit({type:'turn.completed',usage:{input_tokens:10,output_tokens:3}}); }
  else { if(kind==='cursor')emit({type:'assistant',session_id:id,message:{content:[{type:'text',text:'Plain native summary.'}]}});emit({type:'result',subtype:'success',is_error:false,session_id:id,result:mode==='no-summary'?'':'Plain native summary.'}); }
  };
  if(mode==='slow')setTimeout(finish,450);else finish();
@@ -334,7 +334,7 @@ test('native permission denial remains actionable and continues the same session
   assert.equal(resumed.record.backendSessionId, denied.record.backendSessionId);
 });
 
-for (const mode of ['readonly-command', 'readonly-summary']) {
+for (const mode of ['readonly-command', 'readonly-summary', 'readonly-capability']) {
   test(`Codex completed native turn with ${mode} remains actionable`, async (t) => {
     const f = await fixture(t, 'codex', mode);
     const prepared = await f.prepare();
@@ -356,6 +356,22 @@ for (const mode of ['readonly-command', 'readonly-summary']) {
     assert.equal(resumed.record.backendSessionId, denied.record.backendSessionId);
   });
 }
+
+test('Codex completed work is not blocked by a historical read-only mention', async (t) => {
+  const f = await fixture(t, 'codex', 'past-readonly');
+  const prepared = await f.prepare();
+  const result = await dispatchDelegateRun({
+    runId: prepared.runId,
+    runDirectory: f.runDirectory,
+    env: f.env,
+  });
+  assert.equal(result.status, 'completed');
+  assert.equal(result.record.diagnostic, null);
+  assert.equal(
+    await readFile(join(prepared.record.worktreePath, 'source.txt'), 'utf8'),
+    'implemented\n',
+  );
+});
 
 test('native silence has no default deadline; an explicit deadline retains worktree and session', async (t) => {
   const slow = await fixture(t, 'codex', 'slow');

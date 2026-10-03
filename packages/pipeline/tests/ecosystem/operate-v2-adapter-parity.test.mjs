@@ -5,6 +5,7 @@ import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import {
   projectedSkillName,
+  renderCursorSkillBody,
   renderNamespacedSkill,
 } from '../../../../scripts/skills/host-invocations.mjs';
 import { BUSINESS_EXECUTIVE_SKILL_BINDINGS } from '../../lib/operate/contracts/role-skills.mjs';
@@ -110,8 +111,31 @@ test('Cursor rules preserve canonical Operate bodies and deterministic resources
 
   for (const skillId of OPERATE_SKILL_IDS) {
     const manifest = readJson(`skills/${skillId}/openplanr.skill.json`);
-    const cursorRule = readWorkspace(`dist/plugins/cursor/openplanr/rules/${skillId}.mdc`);
-    assert.equal(skillBody(cursorRule), skillBody(readWorkspace(`skills/${skillId}/SKILL.md`)));
+    const rulePath = join(WORKSPACE_ROOT, `dist/plugins/cursor/openplanr/rules/${skillId}.mdc`);
+    const cursorRule = readFileSync(rulePath, 'utf8');
+    assert.equal(
+      skillBody(cursorRule),
+      renderCursorSkillBody(
+        readWorkspace(`skills/${skillId}/SKILL.md`),
+        skillId,
+        manifest.resources,
+      ),
+    );
+    const cursorResources = new Set(
+      manifest.resources.filter(({ hosts }) => hosts.includes('cursor')).map(({ path }) => path),
+    );
+    for (const [, target] of cursorRule.matchAll(/\]\(([^)]+)\)/gu)) {
+      const [resourcePath] = target.split(/[?#]/u, 1);
+      if (!resourcePath.startsWith(`${skillId}/`)) continue;
+      assert.ok(
+        cursorResources.has(resourcePath.slice(skillId.length + 1)),
+        `${skillId}: declared ${target}`,
+      );
+      assert.ok(
+        existsSync(resolve(dirname(rulePath), resourcePath)),
+        `${skillId}: resolved ${target}`,
+      );
+    }
     assert.ok(cursorManifest.rules.includes(`rules/${skillId}.mdc`));
 
     for (const resource of manifest.resources.filter(

@@ -204,6 +204,31 @@
     "./diagram-sharing": {
       "types": "./lib/artifact/diagram/share.d.mts",
       "import": "./lib/artifact/diagram/share.mjs"
+    },
+    "./studio-shell": {
+      "types": "./lib/artifact/ui/studio-shell.d.mts",
+      "import": "./lib/artifact/ui/studio-shell.mjs"
+    },
+    "./studio-shell.css": "./lib/artifact/ui/studio-shell.css",
+    "./review-outbox": {
+      "types": "./lib/artifact/ui/review-outbox.d.mts",
+      "import": "./lib/artifact/ui/review-outbox.mjs"
+    },
+    "./prototype-state": {
+      "types": "./lib/artifact/ui/prototype-state.d.mts",
+      "import": "./lib/artifact/ui/prototype-state.mjs"
+    },
+    "./resource-pack": {
+      "types": "./lib/artifact/resource-pack.d.mts",
+      "import": "./lib/artifact/resource-pack.mjs"
+    },
+    "./browser-sandbox": {
+      "types": "./lib/artifact/browser-sandbox.d.mts",
+      "import": "./lib/artifact/browser-sandbox.mjs"
+    },
+    "./resource-contracts": {
+      "types": "./lib/protocol/large-object-contracts.d.mts",
+      "import": "./lib/protocol/large-object-contracts.mjs"
     }
   },
   "bin": {
@@ -253,13 +278,17 @@
     "provenance": true
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=20.19.0"
   },
   "dependencies": {
     "@noble/hashes": "1.8.0",
+    "@types/react": "19.2.18",
     "esbuild": "0.28.1",
     "pako": "2.1.0",
-    "parse5": "8.0.1"
+    "parse5": "8.0.1",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "radix-ui": "1.6.7"
   },
   "optionalDependencies": {
     "@expo-google-fonts/inter": "0.4.2",

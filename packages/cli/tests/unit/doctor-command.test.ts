@@ -11,8 +11,10 @@ import {
   runtimeDoctor,
   type SetupPreview,
 } from '../../src/services/runtime-manager-service.js';
+import { listManagedServers } from '../../src/services/server-lifecycle-service.js';
 import { display, logger } from '../../src/utils/logger.js';
 
+vi.mock('../../src/services/server-lifecycle-service.js', () => ({ listManagedServers: vi.fn() }));
 vi.mock('../../src/services/interactive-state.js', () => ({ isNonInteractive: vi.fn() }));
 vi.mock('../../src/services/prompt-service.js', () => ({ promptConfirm: vi.fn() }));
 vi.mock('../../src/services/runtime-manager-service.js', () => ({
@@ -40,6 +42,7 @@ async function doctor(...args: string[]) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(listManagedServers).mockResolvedValue([]);
   process.exitCode = 0;
   vi.mocked(isNonInteractive).mockReturnValue(false);
   vi.mocked(promptConfirm).mockResolvedValue(true);
@@ -74,6 +77,22 @@ beforeEach(() => {
 });
 
 describe('doctor repair command', () => {
+  it('reports owned servers without stopping them or revealing control credentials', async () => {
+    vi.mocked(listManagedServers).mockResolvedValue([
+      { instanceId: 'a'.repeat(22), pid: 123, port: 7474, kind: 'dashboard', status: 'running' },
+    ]);
+    await doctor('--json');
+    const value = JSON.parse(String(vi.mocked(display.line).mock.calls[0][0]));
+    expect(value.servers).toHaveLength(1);
+    expect(value.diagnostics).toContainEqual(
+      expect.objectContaining({
+        code: 'owned-local-servers',
+        status: 'pass',
+        message: '1 owned local service running.',
+      }),
+    );
+  });
+
   it('reports native inspection failures without applying a partial repair', async () => {
     preview.runtimeDiagnostics = [
       {
@@ -93,7 +112,9 @@ describe('doctor repair command', () => {
     expect(JSON.parse(vi.mocked(display.line).mock.calls.at(-1)?.[0] ?? '{}')).toMatchObject({
       ok: false,
       repairsApplied: false,
-      diagnostics: [{ code: 'runtime-codex-repair', status: 'fail' }],
+      diagnostics: expect.arrayContaining([
+        expect.objectContaining({ code: 'runtime-codex-repair', status: 'fail' }),
+      ]),
     });
     expect(logger.success).not.toHaveBeenCalled();
     expect(process.exitCode).toBe(1);

@@ -5,6 +5,11 @@ import { dirname, join, resolve } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
+import {
+  createArtifactBridgeNonce,
+  prepareArtifactDocument,
+  renderArtifactParentRuntime,
+} from '../../lib/artifact/bridge.mjs';
 import { createArtifactEnvelope, validateArtifactReview } from '../../lib/artifact/envelope.mjs';
 import {
   anchorRegionToViewportRegion,
@@ -357,7 +362,7 @@ function dynamicArtifact(id, title, colorScheme = 'light') {
     html: `<!doctype html>
 <html data-artifact="${id}"><head><meta charset="utf-8"><style>
 *{box-sizing:border-box}body{margin:0;min-height:900px;display:grid;place-items:center;background:${colorScheme === 'dark' ? '#11131a' : '#f8fafc'};color:${colorScheme === 'dark' ? '#f4f4fa' : '#171722'};font-family:system-ui,sans-serif}main{width:600px;padding:52px;border:1px solid #738096;border-radius:24px;background:${colorScheme === 'dark' ? '#1d1f2a' : '#fff'};box-shadow:0 24px 80px #0002}small{font:12px ui-monospace,monospace;letter-spacing:.08em}h1{font-size:46px;line-height:1.05;margin:18px 0}button{min-height:44px;padding:0 18px;border:0;border-radius:10px;background:#087f73;color:white;font:700 15px system-ui;cursor:pointer}
-</style></head><body><main data-planr-id="${id}-screen"><small>${id.toUpperCase()} · DYNAMIC HTML</small><h1>${title}</h1><button id="dynamic" type="button">Interactions <span id="count">0</span></button></main><script>document.querySelector('#dynamic').addEventListener('click',()=>{const n=document.querySelector('#count');n.textContent=String(Number(n.textContent)+1);document.documentElement.dataset.interacted='true'});</script></body></html>`,
+</style></head><body><main data-planr-screen="${id}" data-planr-id="${id}-screen"><small>${id.toUpperCase()} · DYNAMIC HTML</small><h1>${title}</h1><button id="dynamic" type="button">Interactions <span id="count">0</span></button></main><script>document.querySelector('#dynamic').addEventListener('click',()=>{const n=document.querySelector('#count');n.textContent=String(Number(n.textContent)+1);document.documentElement.dataset.interacted='true'});</script></body></html>`,
   };
 }
 
@@ -371,10 +376,37 @@ function fixtureEnvelope() {
   });
 }
 
-async function serve(document, runtime, artifacts) {
-  const artifactByPath = new Map(
-    artifacts.map((artifact) => [`/artifact/${encodeURIComponent(artifact.id)}`, artifact.html]),
-  );
+async function serve(document, runtime, artifacts, nonce) {
+  const artifactByPath = new Map();
+  const parentRuntime = renderArtifactParentRuntime({
+    artifactBaseUrl: '/artifact/',
+    stageRuntimeUrl: '/artifact-review-stage.js',
+    nonce,
+  });
+  const instrumentation = `(() => {
+    const options = globalThis.__OPENPLANR_ARTIFACT_STAGE_OPTIONS__;
+    const bridge = options.bridgeClient;
+    const fixture = globalThis.__planrReviewFixture;
+    globalThis.__OPENPLANR_ARTIFACT_STAGE_OPTIONS__ = {
+      ...options,
+      review: fixture.review,
+      bridgeClient: {
+        attach(context) {
+          const detach = bridge.attach(context);
+          const authenticated = context.frame.__openPlanrBridge;
+          // Readiness still uses the real nonce-bound bridge. Only anchor failure modes are injected.
+          Object.defineProperty(context.frame, '__openPlanrBridge', {
+            configurable: true,
+            value: Object.freeze({
+              ...authenticated,
+              hitTest: (x, y) => fixture.hitTest(context.artifact, authenticated, x, y),
+            }),
+          });
+          return detach;
+        },
+      },
+    };
+  })();`;
   const server = createServer((request, response) => {
     response.setHeader('Cache-Control', 'no-store');
     if (request.url === '/artifact-review-stage.js') {
@@ -382,8 +414,13 @@ async function serve(document, runtime, artifacts) {
       response.end(runtime);
       return;
     }
+    if (request.url === '/artifact-parent.js') {
+      response.setHeader('Content-Type', 'text/javascript; charset=utf-8');
+      response.end(parentRuntime + instrumentation);
+      return;
+    }
     if (artifactByPath.has(request.url)) {
-      response.setHeader('Content-Type', 'text/html; charset=utf-8');
+      response.setHeader('Content-Type', 'application/octet-stream');
       response.end(artifactByPath.get(request.url));
       return;
     }
@@ -395,13 +432,71 @@ async function serve(document, runtime, artifacts) {
     server.listen(0, '127.0.0.1', resolveListen);
   });
   const address = server.address();
+  try {
+    for (const artifact of artifacts) {
+      const prepared = prepareArtifactDocument({
+        html: artifact.html,
+        artifactId: artifact.id,
+        nonce,
+        parentOrigin: `http://127.0.0.1:${address.port}`,
+      });
+      artifactByPath.set(`/artifact/${encodeURIComponent(artifact.id)}`, prepared.html);
+    }
+  } catch (error) {
+    server.closeAllConnections();
+    await new Promise((resolveClose) => server.close(resolveClose));
+    throw error;
+  }
   return {
     url: `http://127.0.0.1:${address.port}/`,
     close: () =>
-      new Promise((resolveClose, reject) =>
-        server.close((error) => (error ? reject(error) : resolveClose())),
-      ),
+      new Promise((resolveClose, reject) => {
+        server.close((error) => (error ? reject(error) : resolveClose()));
+        server.closeAllConnections();
+      }),
   };
+}
+
+async function waitForArtifactReady(page, artifactId) {
+  await page.waitForFunction((id) => {
+    const state = globalThis.__openPlanrArtifactStage?.getState();
+    const frame = document.querySelector(`[data-planr-artifact-frame="${id}"]`);
+    return (
+      state?.status === 'ready' &&
+      state.activeArtifactId === id &&
+      frame?.dataset.planrBridgeTrusted === 'true'
+    );
+  }, artifactId);
+}
+
+// Use real pointer input at the transformed iframe coordinates. Playwright's cross-frame
+// locator hit test uses the unscaled point for these opaque canvas frames.
+async function clickAuthoredControl(page, artifactId, selector) {
+  const frame = page.locator(`[data-planr-artifact-frame="${artifactId}"]`);
+  assert.equal(await frame.getAttribute('data-planr-bridge-trusted'), 'true');
+  const target = await page
+    .frameLocator(`[data-planr-artifact-frame="${artifactId}"]`)
+    .locator(selector)
+    .evaluate((control) => {
+      const rect = control.getBoundingClientRect();
+      const x = rect.x + rect.width / 2;
+      const y = rect.y + rect.height / 2;
+      return { x, y, hit: control.contains(document.elementFromPoint(x, y)) };
+    });
+  assert.equal(target.hit, true, 'the authored control is the real child hit target');
+  const geometry = await frame.evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    return {
+      x: rect.x,
+      y: rect.y,
+      scaleX: rect.width / element.clientWidth,
+      scaleY: rect.height / element.clientHeight,
+    };
+  });
+  await page.mouse.click(
+    geometry.x + target.x * geometry.scaleX,
+    geometry.y + target.y * geometry.scaleY,
+  );
 }
 
 async function compareSnapshot(name, actual, { PNG, pixelmatch }) {
@@ -440,91 +535,78 @@ test('real browser review supports dynamic artifacts, comments, threads, decisio
   const PNG = pngModule.PNG ?? pngModule.default?.PNG;
   const pixelmatch = pixelmatchModule.default ?? pixelmatchModule;
   const envelope = fixtureEnvelope();
-  const document = renderArtifactShellDocument({
-    envelope,
-    viewer: { mode: 'variants', activeArtifactId: 'checkout' },
-    shell: {
-      title: 'Artifact review interactions',
-      theme: 'light',
-      privacy: 'local',
-      status: 'ready',
-      railOpen: true,
+  const document = renderArtifactShellDocument(
+    {
+      envelope,
+      viewer: { mode: 'variants', activeArtifactId: 'checkout' },
+      shell: {
+        title: 'Artifact review interactions',
+        theme: 'light',
+        privacy: 'local',
+        status: 'ready',
+        railOpen: true,
+      },
     },
-  });
+    { stageRuntimeUrl: '/artifact-parent.js' },
+  );
   const runtime = renderArtifactStageRuntimeAsset();
-  const host = await serve(document, runtime, envelope.artifacts);
-  const browser = await launchBrowser({ engine: 'chromium' });
+  const host = await serve(document, runtime, envelope.artifacts, createArtifactBridgeNonce());
+  let browser;
+  let context;
   t.after(async () => {
-    await browser.close();
-    await host.close();
+    try {
+      await context?.close();
+    } finally {
+      try {
+        await browser?.close();
+      } finally {
+        await host.close();
+      }
+    }
   });
+  browser = await launchBrowser({ engine: 'chromium' });
 
-  const context = await browser.newContext({
+  context = await browser.newContext({
     colorScheme: 'light',
     deviceScaleFactor: 1,
     reducedMotion: 'reduce',
     viewport: { width: 1440, height: 900 },
   });
-  await context.addInitScript(
-    ({ sources }) => {
-      let id = 0;
-      let minute = 0;
-      globalThis.__planrReviewEvents = [];
-      globalThis.__planrSelections = [];
-      globalThis.__planrAnchorMode = 'normal';
-      addEventListener('planr:artifact-review-change', (event) => {
-        globalThis.__planrReviewEvents.push(event.detail);
-      });
-      addEventListener('planr:artifact-review-select', (event) => {
-        globalThis.__planrSelections.push(event.detail);
-      });
-      globalThis.__OPENPLANR_ARTIFACT_STAGE_OPTIONS__ = {
-        async resolveArtifactSource(artifact) {
-          const response = await fetch(sources[artifact.id], { cache: 'no-store' });
-          if (!response.ok) throw new Error(`Artifact source failed: ${response.status}`);
-          return response.blob();
+  await context.addInitScript(() => {
+    let id = 0;
+    let minute = 0;
+    globalThis.__planrReviewEvents = [];
+    globalThis.__planrSelections = [];
+    globalThis.__planrAnchorMode = 'normal';
+    addEventListener('planr:artifact-review-change', (event) => {
+      globalThis.__planrReviewEvents.push(event.detail);
+    });
+    addEventListener('planr:artifact-review-select', (event) => {
+      globalThis.__planrSelections.push(event.detail);
+    });
+    globalThis.__planrReviewFixture = {
+      async hitTest(artifact, bridge, x, y) {
+        if (globalThis.__planrAnchorMode === 'null') return null;
+        if (globalThis.__planrAnchorMode === 'error') throw new Error('bridge unavailable');
+        if (globalThis.__planrAnchorMode === 'timeout') {
+          return new Promise((resolve) =>
+            setTimeout(() => resolve({ planrId: 'late-anchor', screen: artifact.id }), 1_200),
+          );
+        }
+        return bridge.hitTest(x, y);
+      },
+      review: {
+        createId(kind) {
+          id += 1;
+          return `${kind}-${String(id).padStart(3, '0')}`;
         },
-        bridgeClient: {
-          attach({ artifact, frame }) {
-            frame.__openPlanrBridge = {
-              async hitTest() {
-                if (globalThis.__planrAnchorMode === 'null') return null;
-                if (globalThis.__planrAnchorMode === 'error') throw new Error('bridge unavailable');
-                if (globalThis.__planrAnchorMode === 'timeout') {
-                  return new Promise((resolve) =>
-                    setTimeout(
-                      () =>
-                        resolve({
-                          planrId: 'late-anchor',
-                          screen: artifact.id,
-                        }),
-                      1_200,
-                    ),
-                  );
-                }
-                return { planrId: `${artifact.id}-screen`, screen: artifact.id };
-              },
-            };
-          },
+        now() {
+          minute += 1;
+          return `2026-07-14T18:${String(minute).padStart(2, '0')}:00.000Z`;
         },
-        review: {
-          createId(kind) {
-            id += 1;
-            return `${kind}-${String(id).padStart(3, '0')}`;
-          },
-          now() {
-            minute += 1;
-            return `2026-07-14T18:${String(minute).padStart(2, '0')}:00.000Z`;
-          },
-        },
-      };
-    },
-    {
-      sources: Object.fromEntries(
-        envelope.artifacts.map(({ id }) => [id, `${host.url}artifact/${encodeURIComponent(id)}`]),
-      ),
-    },
-  );
+      },
+    };
+  });
 
   const page = await context.newPage();
   await page.goto(host.url);
@@ -533,7 +615,7 @@ test('real browser review supports dynamic artifacts, comments, threads, decisio
   );
 
   const checkoutFrame = page.frameLocator('[data-planr-artifact-frame="checkout"]');
-  await checkoutFrame.locator('#dynamic').click();
+  await clickAuthoredControl(page, 'checkout', '#dynamic');
   assert.equal(await checkoutFrame.locator('#count').textContent(), '1');
 
   await page.locator('[data-planr-mode="comment"]').click();
@@ -602,6 +684,15 @@ test('real browser review supports dynamic artifacts, comments, threads, decisio
   assert.ok(await page.evaluate(() => globalThis.__planrSelections.length >= 1));
 
   const replyForm = firstThread.locator('[data-planr-reply-form]');
+  const replyToggle = firstThread.locator('[data-planr-reply-toggle]');
+  assert.equal(await replyToggle.getAttribute('aria-expanded'), 'false');
+  await replyToggle.focus();
+  await page.keyboard.press('Enter');
+  assert.equal(await replyToggle.getAttribute('aria-expanded'), 'true');
+  assert.equal(
+    await replyForm.locator('textarea').evaluate((element) => document.activeElement === element),
+    true,
+  );
   const hostileReply =
     '<svg onload="globalThis.__replyXss=true"> Confirmed in the responsive state.';
   await replyForm.locator('textarea').fill(hostileReply);
@@ -614,6 +705,7 @@ test('real browser review supports dynamic artifacts, comments, threads, decisio
     () => globalThis.__openPlanrArtifactStage.review.getReview().pins[0].replies.length === 1,
   );
   assert.equal(await firstThread.locator('.planr-reply').count(), 1);
+  assert.equal(await replyToggle.getAttribute('aria-expanded'), 'false');
   assert.equal(
     await firstThread
       .locator('.planr-reply')
@@ -696,12 +788,24 @@ test('real browser review supports dynamic artifacts, comments, threads, decisio
   );
 
   await page.locator('[data-artifact-id="insights"][role="tab"]').click();
+  await waitForArtifactReady(page, 'insights');
   await page.evaluate(() => {
     globalThis.__planrAnchorMode = 'null';
   });
   const insightsLayer = page.locator('[data-planr-annotation-layer="insights"]');
   const insightsBounds = await insightsLayer.boundingBox();
   assert.ok(insightsBounds);
+  assert.equal(await insightsLayer.getAttribute('aria-disabled'), 'false');
+  assert.equal(
+    await insightsLayer.evaluate((layer) => {
+      const rect = layer.getBoundingClientRect();
+      return (
+        document.elementFromPoint(rect.x + rect.width * 0.72, rect.y + rect.height * 0.66) === layer
+      );
+    }),
+    true,
+    'the reverse drag begins on the visible annotation surface',
+  );
   await page.mouse.move(
     insightsBounds.x + insightsBounds.width * 0.72,
     insightsBounds.y + insightsBounds.height * 0.66,
@@ -713,10 +817,14 @@ test('real browser review supports dynamic artifacts, comments, threads, decisio
     { steps: 4 },
   );
   await page.mouse.up();
-  const regionComposer = page.locator(
-    '[data-planr-annotation-layer="insights"] [data-planr-annotation-composer]',
-  );
+  const regionComposer = page.getByRole('dialog', { name: 'Add artifact comment' });
   await regionComposer.waitFor();
+  assert.equal(
+    await page.evaluate(
+      () => globalThis.__openPlanrArtifactAnnotations.snapshotDraft()?.artifactId,
+    ),
+    'insights',
+  );
   await regionComposer.locator('[data-planr-intent="question"]').click();
   await regionComposer
     .locator('[data-planr-composer-comment]')
@@ -769,6 +877,7 @@ test('real browser review supports dynamic artifacts, comments, threads, decisio
 
   // A late bridge result is ignored after the draft's artifact is hidden.
   await page.locator('[data-artifact-id="checkout"][role="tab"]').click();
+  await waitForArtifactReady(page, 'checkout');
   await page.evaluate(() => {
     globalThis.__planrAnchorMode = 'timeout';
   });
@@ -780,6 +889,7 @@ test('real browser review supports dynamic artifacts, comments, threads, decisio
   );
   await page.locator('[data-planr-annotation-composer]').waitFor();
   await page.locator('[data-artifact-id="insights"][role="tab"]').click();
+  await waitForArtifactReady(page, 'insights');
   await page.waitForTimeout(900);
   assert.equal(await page.locator('[data-planr-annotation-composer]').count(), 0);
   assert.equal(
@@ -789,6 +899,7 @@ test('real browser review supports dynamic artifacts, comments, threads, decisio
 
   // Rejected anchor lookups also keep valid coordinate-only review state.
   await page.locator('[data-artifact-id="checkout"][role="tab"]').click();
+  await waitForArtifactReady(page, 'checkout');
   await page.evaluate(() => {
     globalThis.__planrAnchorMode = 'error';
   });
@@ -859,5 +970,4 @@ test('real browser review supports dynamic artifacts, comments, threads, decisio
     emitted,
     await page.evaluate(() => globalThis.__openPlanrArtifactStage.review.getReview()),
   );
-  await context.close();
 });

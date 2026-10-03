@@ -1,3 +1,4 @@
+// @ts-check
 import {
   clone,
   descendants,
@@ -23,6 +24,7 @@ const overlaps = (a, b, gap = 0) =>
   a.x + a.width + gap > b.x &&
   a.y < b.y + b.height + gap &&
   a.y + a.height + gap > b.y;
+/** @returns {{ok:true}|import('./index.d.mts').DiagramKernelFailure} */
 function check(bundle, options, keys) {
   const checked = validateAuthoringBundle(bundle);
   if (!checked.ok) return checked;
@@ -59,16 +61,19 @@ function preview(bundle, changes, transactionId) {
       'no-change',
       'The selected objects already have the requested geometry.',
     );
-  return previewDiagramTransaction(bundle, {
-    kind: 'diagram-edit-transaction',
-    schemaVersion: '1.0.0',
-    protocolVersion: '1.13.0',
-    diagramId: bundle.diagramId,
-    transactionId,
-    base: snapshot(bundle),
-    undoOf: null,
-    operations: [{ type: 'set-geometry', changes }],
-  });
+  return previewDiagramTransaction(
+    bundle,
+    /** @type {import('@openplanr/protocol/studio-presentation-contracts').VersionedDiagramEditTransaction} */ ({
+      kind: 'diagram-edit-transaction',
+      schemaVersion: bundle.schemaVersion === '1.1.0' ? '1.1.0' : '1.0.0',
+      protocolVersion: bundle.schemaVersion === '1.1.0' ? '1.17.0' : '1.13.0',
+      diagramId: bundle.diagramId,
+      transactionId,
+      base: snapshot(bundle),
+      undoOf: null,
+      operations: [{ type: 'set-geometry', changes }],
+    }),
+  );
 }
 function translate(geometry, dx, dy) {
   const after = clone(geometry);
@@ -86,6 +91,7 @@ function translate(geometry, dx, dy) {
 }
 
 /** Explicit scoped packing; it never resizes objects or invokes global layout. */
+/** @type {typeof import('./layout.d.mts').previewAutomaticLayout} */
 export function previewAutomaticLayout(bundle, options) {
   const checked = check(bundle, options, ['targetIds', 'transactionId', 'gap', 'columns']);
   if (!checked.ok) return checked;
@@ -111,7 +117,7 @@ export function previewAutomaticLayout(bundle, options) {
   const byId = elementIndex(bundle.document),
     parents = parentIndex(bundle.document);
   const placements = new Map(bundle.presentation.elements.map((value) => [value.elementId, value]));
-  if (options.targetIds.some((id) => byId.get(id).collection === 'relations'))
+  if (options.targetIds.some((id) => byId.get(id)?.collection === 'relations'))
     return failure(
       '$.options.targetIds',
       'layout-target',
@@ -132,7 +138,7 @@ export function previewAutomaticLayout(bundle, options) {
   for (const id of roots) {
     const closure = descendants(bundle.document, [id]);
     closureById.set(id, closure);
-    const locked = closure.filter((member) => placements.get(member).locks.position);
+    const locked = closure.filter((member) => placementOf(placements, member).locks.position);
     if (locked.length) lockedIds.push(...locked);
     else movable.push(id);
   }
@@ -159,7 +165,7 @@ export function previewAutomaticLayout(bundle, options) {
   const occupied = [];
   let collisionChecks = 0;
   for (const [parentId, ids] of groups) {
-    const frame = parentId ? placements.get(parentId).bounds : null;
+    const frame = parentId ? boundsOf(placements, parentId) : null;
     const selectedClosure = new Set(ids.flatMap((id) => closureById.get(id)));
     const ancestors = new Set();
     for (const id of ids) {
@@ -175,8 +181,8 @@ export function previewAutomaticLayout(bundle, options) {
           value.bounds && !selectedClosure.has(value.elementId) && !ancestors.has(value.elementId),
       )
       .map((value) => value.bounds);
-    const width = Math.max(...ids.map((id) => placements.get(id).bounds.width));
-    const height = Math.max(...ids.map((id) => placements.get(id).bounds.height));
+    const width = Math.max(...ids.map((id) => boundsOf(placements, id).width));
+    const height = Math.max(...ids.map((id) => boundsOf(placements, id).height));
     const availableColumns = frame
       ? Math.max(1, Math.floor((frame.width + gap) / (width + gap)))
       : 32;
@@ -185,8 +191,8 @@ export function previewAutomaticLayout(bundle, options) {
       availableColumns,
     );
     const origin = {
-      x: Math.min(...ids.map((id) => placements.get(id).bounds.x)),
-      y: Math.min(...ids.map((id) => placements.get(id).bounds.y)),
+      x: Math.min(...ids.map((id) => boundsOf(placements, id).x)),
+      y: Math.min(...ids.map((id) => boundsOf(placements, id).y)),
     };
     if (frame) {
       origin.x = Math.max(frame.x, Math.min(origin.x, frame.x + frame.width - width));
@@ -198,7 +204,7 @@ export function previewAutomaticLayout(bundle, options) {
     let slot = 0;
     const maximumSlots = Math.min(100000, Math.max(256, ids.length * 64));
     for (const id of ordered) {
-      const old = placements.get(id).bounds;
+      const old = boundsOf(placements, id);
       let proposed;
       while (slot < maximumSlots) {
         const column = slot % columns,
@@ -238,7 +244,7 @@ export function previewAutomaticLayout(bundle, options) {
   }
   const changes = [];
   for (const [id, delta] of deltas) {
-    const before = geometryFields(placements.get(id)),
+    const before = geometryFields(placementOf(placements, id)),
       after = translate(before, delta.dx, delta.dy);
     if (!same(before, after)) changes.push({ elementId: id, before, after });
   }
@@ -246,7 +252,7 @@ export function previewAutomaticLayout(bundle, options) {
     const from = deltas.get(relation.from),
       to = deltas.get(relation.to);
     if (!from || !to || !same(from, to)) continue;
-    const before = geometryFields(placements.get(relation.id)),
+    const before = geometryFields(placementOf(placements, relation.id)),
       after = translate(before, from.dx, from.dy);
     if (!same(before, after)) changes.push({ elementId: relation.id, before, after });
   }
@@ -262,19 +268,34 @@ export function previewAutomaticLayout(bundle, options) {
 }
 
 /** Drop only explicitly selected connector routing intent; label anchors survive. */
+/** @type {typeof import('./layout.d.mts').previewResetRoute} */
 export function previewResetRoute(bundle, options) {
   const checked = check(bundle, options, ['targetIds', 'transactionId']);
   if (!checked.ok) return checked;
   const byId = elementIndex(bundle.document);
-  if (options.targetIds.some((id) => byId.get(id).collection !== 'relations'))
+  if (options.targetIds.some((id) => byId.get(id)?.collection !== 'relations'))
     return failure('$.options.targetIds', 'route-target', 'Reset route selects connectors only.');
   const placements = new Map(bundle.presentation.elements.map((value) => [value.elementId, value]));
   const changes = options.targetIds.flatMap((elementId) => {
-    const before = geometryFields(placements.get(elementId));
+    const before = geometryFields(placementOf(placements, elementId));
     const after = clone(before);
+    if (!after.route) throw new TypeError('A connector must have a saved route.');
     after.route.mode = 'automatic';
     after.route.points = [];
     return same(before, after) ? [] : [{ elementId, before, after }];
   });
   return preview(bundle, changes, options.transactionId);
+}
+
+/** @param {Map<string,import('@openplanr/protocol/diagram-authoring-contracts').DiagramPlacement>} placements @param {string} id */
+function placementOf(placements, id) {
+  const value = placements.get(id);
+  if (!value) throw new TypeError('A validated diagram placement is missing.');
+  return value;
+}
+/** @param {Map<string,import('@openplanr/protocol/diagram-authoring-contracts').DiagramPlacement>} placements @param {string} id */
+function boundsOf(placements, id) {
+  const bounds = placementOf(placements, id).bounds;
+  if (!bounds) throw new TypeError('A bounded layout target needs bounds.');
+  return bounds;
 }

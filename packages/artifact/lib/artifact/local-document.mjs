@@ -5,6 +5,7 @@ import { readFileSync, realpathSync, statSync } from 'node:fs';
 import { dirname, extname, isAbsolute, relative, resolve } from 'node:path';
 import { Script } from 'node:vm';
 import { parse, parseFragment, serialize } from 'parse5';
+import { MAX_ARTIFACT_HTML_BYTES } from './envelope.mjs';
 
 const MIME = {
   '.png': 'image/png',
@@ -59,7 +60,7 @@ export function bundleLocalDocument({
   source,
   sharedStyles = [],
   screenId,
-  maxBytes = 100 * 1024 * 1024,
+  maxBytes = MAX_ARTIFACT_HTML_BYTES,
   readSource,
   passive = false,
 }) {

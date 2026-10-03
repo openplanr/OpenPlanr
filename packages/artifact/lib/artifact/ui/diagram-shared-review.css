@@ -1,18 +1,17 @@
 @import "./generated/artifact-theme.css";
 @import "./diagram-studio.css";
 @import "./diagram-editor.css";
+@import "./studio-shell.css";
 .diagram-shared-review {
   position: relative;
   height: 100%;
   min-height: 480px;
   overflow: hidden;
-  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--planr-font-body);
   --planr-toolbar-height: 60px;
   --planr-color-border: var(--planr-color-rule);
   --planr-color-canvas: var(--planr-color-stage);
   --planr-color-accent: var(--planr-color-primary);
-  --planr-font-body: Inter, ui-sans-serif, system-ui, sans-serif;
-  --planr-font-display: Inter, ui-sans-serif, system-ui, sans-serif;
 }
 .diagram-shared-review .diagram-shell {
   height: 100%;
