@@ -28,6 +28,30 @@ const RUNNER_SETUP = /^(?:npm ci|npm exec --workspace=\S+ -- playwright install\
 const RESTORE = /^tar -xzmf "\$RUNNER_TEMP\/build-outputs\.tgz"$/u;
 const MATRIX_EXPRESSION = /\$\{\{\s*matrix\.([\w-]+)\s*\}\}/gu;
 const NODE_AXIS = /^\$\{\{\s*matrix\.([\w-]+)\s*\}\}$/u;
+const CONSUMER_NODE_TEST = /^node --test(?:\s+[\w./=-]+)*$/u;
+const CONTRIBUTOR_NODE_RANGE = JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf8'))
+  .engines.node;
+
+/** The local command runner needs the contributor runtime, even for a consumer CI job. */
+export function assertContributorRuntime(version) {
+  const actual = /^v?(\d+)\.(\d+)\.(\d+)$/u.exec(version);
+  const accepted = CONTRIBUTOR_NODE_RANGE.split('||').some((branch) => {
+    const required = /^(\^|>=)([1-9]\d*)\.(\d+)\.(\d+)$/u.exec(branch.trim());
+    if (!required) throw new Error(`Unsupported contributor Node range: ${CONTRIBUTOR_NODE_RANGE}`);
+    if (!actual) return false;
+    const current = actual.slice(1).map(Number);
+    const minimum = required.slice(2).map(Number);
+    if (![...current, ...minimum].every(Number.isSafeInteger)) return false;
+    const difference =
+      current.map((part, index) => part - minimum[index]).find((part) => part !== 0) ?? 0;
+    return difference >= 0 && (required[1] === '>=' || current[0] === minimum[0]);
+  });
+  if (!accepted)
+    throw new Error(
+      `verify:ci requires contributor Node.js ${CONTRIBUTOR_NODE_RANGE}; found ${version}. ` +
+        'Use a supported contributor runtime. CI verifies installed public packages separately.',
+    );
+}
 
 /**
  * Derives the local run of every Workspace CI job on one Node major version.
@@ -75,12 +99,42 @@ function uploadsBuildOutputs(step) {
 }
 
 function setupNodeVersion(id, job) {
-  const setups = job.steps.filter((step) => step.uses?.startsWith('actions/setup-node@'));
-  const version = setups[0]?.with?.['node-version'];
-  if (setups.length !== 1 || version === undefined) {
-    throw new Error(`${id} must set node-version in exactly one setup-node step`);
-  }
-  return String(version);
+  const setups = job.steps.flatMap((step, index) =>
+    step.uses?.startsWith('actions/setup-node@') ? [{ ...step, index }] : [],
+  );
+  if (setups.length === 1 && setups[0].with?.['node-version'] !== undefined)
+    return String(setups[0].with['node-version']);
+  const [preparation, consumer] = setups;
+  const version = String(consumer?.with?.['node-version']);
+  const axis = NODE_AXIS.exec(version)?.[1];
+  const install = job.steps.findIndex((step) => step.run?.trim() === 'npm ci');
+  const restore = job.steps.findIndex((step) => RESTORE.test(step.run?.trim() ?? ''));
+  const proof = job.steps.findIndex((step) => step.run?.trim() === 'npm run verify:packed:strict');
+  const consumerCommands = job.steps
+    .slice((consumer?.index ?? job.steps.length) + 1)
+    .filter((step) => step.run !== undefined)
+    .map((step) => step.run.trim());
+  if (
+    id !== 'packed-public-packages' ||
+    setups.length !== 2 ||
+    String(preparation.with?.['node-version']) !== '24' ||
+    !axis ||
+    !Array.isArray(job.strategy?.matrix?.[axis]) ||
+    !(
+      preparation.index < install &&
+      install < consumer.index &&
+      restore > install &&
+      restore < consumer.index &&
+      proof > consumer.index
+    ) ||
+    consumerCommands.some(
+      (command) => command !== 'npm run verify:packed:strict' && !CONSUMER_NODE_TEST.test(command),
+    )
+  )
+    throw new Error(
+      `${id} must use one setup-node step or the explicit contributor-to-consumer packed setup`,
+    );
+  return version;
 }
 
 function requireKnownKeys(label, object, known) {
@@ -183,6 +237,11 @@ function planInstance(id, job, matrix, producer) {
   return {
     name: substitute(job.name ?? id, matrix, `${where} name`),
     node: substitute(setupNodeVersion(id, job), matrix, `${where} node-version`),
+    preparationNode: substitute(
+      job.steps.find((step) => step.uses?.startsWith('actions/setup-node@')).with['node-version'],
+      matrix,
+      `${where} preparation node-version`,
+    ),
     matrix,
     consumer: steps.some(({ role }) => role === 'restore'),
     steps: steps
@@ -271,6 +330,11 @@ function runJob(job, plan, state) {
   for (const instance of job.instances) {
     const label = `${job.id}: ${instance.name}`;
     console.log(`\n=== ${label} ===`);
+    if (instance.preparationNode !== instance.node)
+      console.log(
+        `CI prepares on Node ${instance.preparationNode}, then executes packages on Node ${instance.node}; ` +
+          `this local replay uses ${process.version} for every command.`,
+      );
     const startedAt = Date.now();
     const prepare =
       job.consumer && !state.prepared
@@ -284,6 +348,9 @@ function runJob(job, plan, state) {
     const failure = runSteps([...prepare, ...instance.steps]);
     state.results.push({
       label,
+      preparationNode: instance.preparationNode,
+      consumerNode: instance.node,
+      localNode: process.versions.node,
       status: failure ? 'failed' : 'passed',
       seconds: Math.round((Date.now() - startedAt) / 1000),
       failure,
@@ -299,7 +366,13 @@ function printList(plan, nodeMajor) {
     if (job.instances.length === 0) {
       console.log(`${job.id.padEnd(28)} (${notOnThisNode(job, nodeMajor)})`);
     }
-    for (const instance of job.instances) console.log(`${job.id.padEnd(28)} ${instance.name}`);
+    for (const instance of job.instances) {
+      const preparation =
+        instance.preparationNode === instance.node
+          ? ''
+          : ` (CI preparation Node ${instance.preparationNode}; package execution Node ${instance.node})`;
+      console.log(`${job.id.padEnd(28)} ${instance.name}${preparation}`);
+    }
   }
 }
 
@@ -317,6 +390,7 @@ function printSummary(results, startedAt) {
 }
 
 function main(args) {
+  assertContributorRuntime(process.versions.node);
   const nodeMajor = Number(process.versions.node.split('.')[0]);
   const plan = planLocalCi(load(readFileSync(resolve(root, WORKFLOW_PATH), 'utf8')), nodeMajor);
   if (args.includes('--list')) {

@@ -26,14 +26,13 @@ while [ "$#" -gt 0 ]; do
 done
 
 if ! command -v node >/dev/null 2>&1; then
-  printf '%s\n' 'E_NODE_NOT_FOUND: OpenPlanr requires Node.js 20 or newer.' >&2
+  printf '%s\n' 'E_NODE_NOT_FOUND: OpenPlanr requires Node.js ^20.19.0 || ^22.13.0 || >=23.5.0.' >&2
   printf '%s\n' 'Install Node.js, then rerun this installer. Node.js is never installed silently.' >&2
   exit 1
 fi
 
-NODE_MAJOR=$(node -p 'process.versions.node.split(".")[0]')
-if [ "$NODE_MAJOR" -lt 20 ]; then
-  printf '%s\n' "E_NODE_VERSION: OpenPlanr requires Node.js 20+; found $(node --version)." >&2
+if ! node -e 'const version = process.versions.node; const [major, minor, patch] = version.replace(/^v/u, String()).split(String.fromCharCode(46)).map(Number); process.exit(/^v?(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/u.test(version) && [major, minor, patch].every(Number.isSafeInteger) && ((major === 20 && minor >= 19) || (major === 22 && minor >= 13) || (major === 23 && minor >= 5) || major > 23) ? 0 : 1)'; then
+  printf '%s\n' "E_NODE_VERSION: OpenPlanr requires Node.js ^20.19.0 || ^22.13.0 || >=23.5.0; found $(node --version)." >&2
   exit 1
 fi
 

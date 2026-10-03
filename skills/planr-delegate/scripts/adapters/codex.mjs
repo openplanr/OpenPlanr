@@ -109,7 +109,7 @@ async function execute({
   });
   if (
     blockedByPermission ||
-    /(?:implementation|editing|writing) is blocked by .*read.only|(?:cannot|unable to) (?:write|edit).*read.only/iu.test(
+    /(?:implementation|editing|writing) is blocked[^.\n]{0,180}(?:read.only|only filesystem reads)|(?:cannot|unable to) (?:write|edit)[^.\n]{0,180}read.only/iu.test(
       summary,
     )
   ) {

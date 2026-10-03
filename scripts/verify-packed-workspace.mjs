@@ -14,6 +14,11 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import {
+  cliNodeVersionMessage,
+  supportsCliNodeVersion,
+} from '../packages/cli/lib/node-runtime.mjs';
+
 import { createInstalledExportProbePlan } from '../packages/cli/scripts/package-contract.mjs';
 import {
   PACKED_WORKSPACE_DIAGRAM_GRAMMAR_COUNT,
@@ -1306,12 +1311,8 @@ function main() {
     const nodeExecutable = process.env.OPENPLANR_NODE_EXECUTABLE || process.execPath;
     const npmExecutable = process.env.OPENPLANR_NPM_EXECUTABLE || 'npm';
     const nodeVersion = successfulCommand(nodeExecutable, ['--version']).trim();
-    const nodeMajor = Number.parseInt(nodeVersion.replace(/^v/u, '').split('.')[0], 10);
-    if (!Number.isInteger(nodeMajor) || nodeMajor < 20) {
-      throw new ProofFailure(
-        'E_NODE_VERSION_UNSUPPORTED',
-        'Packed proof requires Node.js 20 or newer.',
-      );
+    if (!supportsCliNodeVersion(nodeVersion)) {
+      throw new ProofFailure('E_NODE_VERSION_UNSUPPORTED', cliNodeVersionMessage(nodeVersion));
     }
     const npmVersion = successfulCommand(npmExecutable, ['--version']).trim();
     report.environment = {

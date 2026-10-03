@@ -15,6 +15,13 @@ export interface ArtifactDocumentOptions {
   trustedParentOrigin?: string;
   screenId?: string;
   prototypeState?: boolean;
+  /** Opt in to a parent/window/origin/nonce/view-bound selection toggle; starts disabled.
+   * Requires an artifactId of at most 128 characters, matching Protocol view identity.
+   * The closed control is {schemaVersion:'1.0.0',type:'openplanr:review-selection',
+   * channel:nonce,viewId:artifactId,enabled:boolean}. Selection reads data-planr-id
+   * or canonical Diagram data-element-id anchors. Interact keeps native events.
+   */
+  reviewSelection?: boolean;
 }
 export interface ArtifactExecutionCopy {
   readonly html: string;

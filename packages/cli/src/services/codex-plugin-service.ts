@@ -3,8 +3,8 @@ import { existsSync, lstatSync, readdirSync, readFileSync, realpathSync } from '
 import path from 'node:path';
 import { parse } from 'smol-toml';
 import { z } from 'zod';
-import { userHome } from '../../lib/planr-home.mjs';
 import { parseExternalJson } from '../utils/external-json.js';
+import { effectiveCodexHome } from './runtime-manager/codex-discovery.js';
 
 export type CodexCommandRunner = (args: string[]) => {
   status: number | null;
@@ -100,10 +100,7 @@ function installedRows(value: z.infer<typeof pluginListSchema>) {
 
 /** Native marketplace listings can omit enabled registrations whose old identity was retired. */
 function configuredPluginRows(): z.infer<typeof installedRowSchema>[] {
-  const configPath = path.join(
-    process.env.CODEX_HOME || path.join(userHome(), '.codex'),
-    'config.toml',
-  );
+  const configPath = path.join(effectiveCodexHome(), 'config.toml');
   if (!existsSync(configPath)) return [];
   let config: Record<string, unknown>;
   try {
@@ -147,7 +144,7 @@ function pluginPayloadCurrent(
     return undefined;
   const packaged = path.join(hostPackageRoot, relativeSource);
   if (!existsSync(packaged)) return undefined;
-  const nativeHome = process.env.CODEX_HOME || path.join(userHome(), '.codex');
+  const nativeHome = effectiveCodexHome();
   const cache = path.join(nativeHome, 'plugins', 'cache', marketplaceName, HOST_PLUGIN_NAME);
   const cached = existsSync(path.join(cache, version))
     ? path.join(cache, version)

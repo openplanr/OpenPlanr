@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { load } from 'js-yaml';
-import { planLocalCi } from '../../../../scripts/run-ci-parity.mjs';
+import { assertContributorRuntime, planLocalCi } from '../../../../scripts/run-ci-parity.mjs';
 
 const root = fileURLToPath(new URL('../../../../', import.meta.url));
 const workflow = load(readFileSync(resolve(root, '.github/workflows/ci.yml'), 'utf8'));
@@ -78,9 +78,49 @@ test('a Node-matrix job runs once, on this Node when CI covers it and otherwise 
   assert.deepEqual(nodesFor(22, 'packed-public-packages'), ['22']);
   assert.deepEqual(nodesFor(22, 'compatibility'), ['22']);
   assert.deepEqual(nodesFor(24, 'packed-public-packages'), ['24']);
-  assert.deepEqual(nodesFor(24, 'compatibility'), []);
+  assert.deepEqual(nodesFor(24, 'compatibility'), ['24']);
   assert.deepEqual(nodesFor(26, 'packed-public-packages'), ['24']);
   assert.deepEqual(nodesFor(20, 'quality'), ['24']);
+});
+
+test('packed jobs distinguish contributor preparation from the selected consumer runtime', () => {
+  const packed = planLocalCi(workflow, 22).jobs.find((job) => job.id === 'packed-public-packages');
+  assert.equal(packed.instances[0].preparationNode, '24');
+  assert.equal(packed.instances[0].node, '22');
+  for (const mutate of [
+    (job) => {
+      job.steps.find((step) => step.uses?.startsWith('actions/setup-node@')).with['node-version'] =
+        20;
+    },
+    (job) => {
+      job.steps.push({ uses: 'actions/setup-node@v5', with: { 'node-version': 24 } });
+    },
+    (job) => {
+      job.steps.push({ run: 'npm run build' });
+    },
+    (job) => {
+      job.steps.push({ run: 'node --test test.mjs && npm run build' });
+    },
+    (job) => {
+      const index = job.steps.findLastIndex((step) => step.uses?.startsWith('actions/setup-node@'));
+      job.steps[index].with['node-version'] = `\${{ matrix.unknown }}`;
+    },
+  ]) {
+    const changed = structuredClone(workflow);
+    mutate(changed.jobs['packed-public-packages']);
+    assert.throws(() => planLocalCi(changed, 22), /explicit contributor-to-consumer packed setup/u);
+  }
+  const unknown = structuredClone(workflow);
+  unknown.jobs['unknown-packed-job'] = unknown.jobs['packed-public-packages'];
+  delete unknown.jobs['packed-public-packages'];
+  assert.throws(() => planLocalCi(unknown, 22), /explicit contributor-to-consumer packed setup/u);
+});
+
+test('local parity execution requires the repository contributor floor', () => {
+  for (const version of ['22.13.0', '22.23.2', '24.0.0', '26.0.0'])
+    assert.doesNotThrow(() => assertContributorRuntime(version));
+  for (const version of ['20.20.2', '22.12.9', '23.5.0', '25.0.0', '24.0.0-rc.1'])
+    assert.throws(() => assertContributorRuntime(version), /Use a supported contributor runtime/u);
 });
 
 test('a CI step the local run cannot reproduce fails the plan instead of being dropped', () => {
