@@ -1,8 +1,8 @@
 import type {
-  DiagramAuthoringBundle,
   DiagramBounds,
   DiagramPlacement,
 } from '@openplanr/protocol/diagram-authoring-contracts';
+import type { VersionedDiagramAuthoringBundle as DiagramAuthoringBundle } from '@openplanr/protocol/studio-presentation-contracts';
 import type { DiagramCommand } from '../diagram/authoring/index.mjs';
 import { clone, elementIndex, geometryFields } from '../diagram/authoring/model.mjs';
 import {
@@ -108,6 +108,8 @@ export function createEditorCanvas(ctx: DiagramEditorContext): DiagramEditorCanv
   const elementNodes = new Map<string, SVGElement>(),
     renderSignatures = new Map<string, string>();
   let renderedDigest = '',
+    renderedOrder = '',
+    renderedCanvasPalette: 'light' | 'dark' | null = null,
     drag: Drag | null = null,
     raf = 0,
     tempPan = false;
@@ -173,7 +175,10 @@ export function createEditorCanvas(ctx: DiagramEditorContext): DiagramEditorCanv
     const byId = elementIndex(bundle.document),
       placements = new Map(bundle.presentation.elements.map((entry) => [entry.elementId, entry]));
     const theme = editorTheme(bundle),
-      palette = authoredDiagramPalette(theme),
+      palette = authoredDiagramPalette(
+        theme,
+        bundle.schemaVersion === '1.1.0' ? bundle.studioPresentation : undefined,
+      ),
       emphasis = new Map(bundle.document.emphasis.map((entry) => [entry.targetId, entry.level]));
     const selection = new Set(state.view.selection);
     const forceAll =
@@ -195,66 +200,97 @@ export function createEditorCanvas(ctx: DiagramEditorContext): DiagramEditorCanv
       const entry = bundle.presentation.elements[order],
         id = entry.elementId;
       const source = byId.get(id);
-      const signature = JSON.stringify([
-        source,
-        entry,
-        emphasis.get(id) ?? null,
-        theme,
-        source?.collection === 'relations'
-          ? [placements.get(source.value.from), placements.get(source.value.to)]
-          : null,
-      ]);
-      if (
-        !elementNodes.has(id) ||
-        ((affected.has(id) || forceAll) && renderSignatures.get(id) !== signature)
-      ) {
-        const scene = resolveDiagramSceneElement(
-          byId.get(id),
+      if (!source) continue;
+      if (!elementNodes.has(id) || affected.has(id) || forceAll) {
+        const signature = JSON.stringify([
+          source,
           entry,
-          placements,
-          order,
           emphasis.get(id) ?? null,
-        );
-        const xml = parser.parseFromString(
-          '<svg xmlns="' +
-            SVG +
-            '">' +
-            renderAuthoredSceneElement(scene, palette, bundle.diagramId) +
-            '</svg>',
-          'image/svg+xml',
-        );
-        const rendered = xml.documentElement.firstElementChild;
-        if (!rendered) throw new TypeError(`Element ${id} rendered no SVG markup.`);
-        // An image/svg+xml document holds SVG elements.
-        const replacement = doc.importNode(rendered as SVGElement, true);
-        replacement.setAttribute('tabindex', '-1');
-        replacement.setAttribute('role', 'img');
-        const old = elementNodes.get(id);
-        if (old) old.replaceWith(replacement);
-        else world.append(replacement);
-        elementNodes.set(id, replacement);
-        renderSignatures.set(id, signature);
+          theme,
+          (bundle.schemaVersion === '1.1.0' ? bundle.studioPresentation : undefined) ?? null,
+          source?.collection === 'relations'
+            ? [placements.get(source.value.from), placements.get(source.value.to)]
+            : null,
+        ]);
+        if (!elementNodes.has(id) || renderSignatures.get(id) !== signature) {
+          const scene = resolveDiagramSceneElement(
+            source,
+            entry,
+            placements,
+            order,
+            emphasis.get(id) ?? null,
+          );
+          const xml = parser.parseFromString(
+            '<svg xmlns="' +
+              SVG +
+              '">' +
+              renderAuthoredSceneElement(
+                scene,
+                palette,
+                `${ctx.scopedId('drawing')}-${bundle.diagramId}`,
+              ) +
+              '</svg>',
+            'image/svg+xml',
+          );
+          const rendered = xml.documentElement.firstElementChild;
+          if (!rendered) throw new TypeError(`Element ${id} rendered no SVG markup.`);
+          // An image/svg+xml document holds SVG elements.
+          const replacement = doc.importNode(rendered as SVGElement, true);
+          replacement.setAttribute('tabindex', '-1');
+          replacement.setAttribute('role', 'img');
+          const old = elementNodes.get(id);
+          if (old) old.replaceWith(replacement);
+          else world.append(replacement);
+          elementNodes.set(id, replacement);
+          renderSignatures.set(id, signature);
+        }
       }
       // The branch above rendered every element that had no node.
       const node = elementNodes.get(id) as SVGElement;
       // A connector is named by its endpoints, so its name can change without a redraw.
       const name = displayName(byId, id);
       if (node.getAttribute('aria-label') !== name) node.setAttribute('aria-label', name);
-      node.dataset.selected = String(selection.has(id));
-      node.classList.toggle('de-selected', selection.has(id));
-      if (source?.collection === 'relations') traceRoute(node, selection.has(id), camera.scale);
+      const selected = selection.has(id);
+      const selectionChanged = node.dataset.selected !== String(selected);
+      if (selectionChanged) node.dataset.selected = String(selected);
+      if (node.classList.contains('de-selected') !== selected)
+        node.classList.toggle('de-selected', selected);
+      if (
+        source?.collection === 'relations' &&
+        (selectionChanged || selected || affected.has(id) || forceAll)
+      )
+        traceRoute(node, selected, camera.scale);
     }
     // Keep stable primitives; reordering moves only nodes whose source order changed.
     if (event.type === 'content' || event.type === 'refresh' || forceAll) {
-      const ordered = [...bundle.presentation.elements].sort(
-        (a, b) =>
-          a.zIndex - b.zIndex ||
-          bundle.presentation.elements.indexOf(a) - bundle.presentation.elements.indexOf(b),
-      );
-      for (const entry of ordered) world.append(elementNodes.get(entry.elementId) as SVGElement);
+      const ordered = bundle.presentation.elements
+        .map((entry, index) => ({ entry, index }))
+        .sort((a, b) => a.entry.zIndex - b.entry.zIndex || a.index - b.index);
+      const orderStamp = JSON.stringify(ordered.map(({ entry }) => entry.elementId));
+      if (forceAll || renderedOrder !== orderStamp) {
+        for (const { entry } of ordered)
+          world.append(elementNodes.get(entry.elementId) as SVGElement);
+        renderedOrder = orderStamp;
+      }
     }
     renderedDigest = bundle.bundleDigest;
     shell.dataset.diagramTheme = theme;
+    const canvasPalette = bundle.schemaVersion === '1.1.0' ? bundle.studioPresentation.theme : null;
+    if (renderedCanvasPalette !== canvasPalette) {
+      renderedCanvasPalette = canvasPalette;
+      if (canvasPalette) {
+        stage.style.backgroundColor = palette.background;
+        stage.style.backgroundImage = `radial-gradient(color-mix(in srgb, ${palette.border} 24%, transparent) 0.8px, transparent 0.8px)`;
+        // Drawn selection and handles share the saved canvas palette; host chrome owns its theme.
+        svg.style.setProperty('--de-primary', palette.accent);
+        svg.style.setProperty('--de-panel', palette.fills.surface);
+      } else {
+        stage.style.removeProperty('background-color');
+        stage.style.removeProperty('background-image');
+        svg.style.removeProperty('--de-primary');
+        svg.style.removeProperty('--de-panel');
+      }
+    }
     renderOverlays(state, bundle, selection);
     ctx.chrome.render(state);
   }
@@ -452,10 +488,12 @@ export function createEditorCanvas(ctx: DiagramEditorContext): DiagramEditorCanv
         before = geometryFields(place as DiagramPlacement),
         after = clone(before);
       if (drag.type === 'resize') {
+        if (!before.bounds || !after.bounds) return;
         after.bounds.width = Math.max(24, Math.round(before.bounds.width + dx));
         after.bounds.height = Math.max(24, Math.round(before.bounds.height + dy));
       }
       if (drag.type === 'bend') {
+        if (!after.route) return;
         const points = drag.originPoints,
           target = points[drag.index];
         if (!target) return;

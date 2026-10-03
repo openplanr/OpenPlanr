@@ -12,7 +12,10 @@ export function renderDiagramOutputs(document) {
   const { svg, scene } = renderDiagramSvg(document, { theme });
   const png = renderDiagramPng(svg, { theme });
   const html = renderDiagramHtml(document, svg, { theme });
-  const svgValidation = validateDiagramSvg(svg);
+  const svgValidation = validateDiagramSvg(svg, {
+    foreground: theme.foreground,
+    background: theme.background,
+  });
   const quality = createRenderQualityReport(document, { scene, png, svgValidation });
   return Object.freeze({ html, png, quality, scene, svg, theme });
 }

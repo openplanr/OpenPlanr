@@ -1,6 +1,7 @@
 import { constants } from 'node:fs';
 import { open } from 'node:fs/promises';
-import { assertDiagramReviewBundle } from '@openplanr/protocol/diagram-review-contracts';
+import { LARGE_OBJECT_LIMITS } from '@openplanr/protocol/large-object-contracts';
+import { assertVersionedDiagramReviewBundle } from '@openplanr/protocol/studio-presentation-contracts';
 import { prepareDiagramSvg } from '../ui/diagram-svg.mjs';
 import { sealBundle, validateAuthoringBundle } from './authoring/model.mjs';
 import { renderAuthoredDiagramSvg } from './authoring/renderer.mjs';
@@ -87,6 +88,9 @@ async function projectDiagramShareBundle(file) {
       diagramId: source.diagramId,
       document: structuredClone(source.document),
       presentation: structuredClone(source.presentation),
+      ...(source.studioPresentation
+        ? { studioPresentation: structuredClone(source.studioPresentation) }
+        : {}),
       originalSource: null,
       sourceMap: null,
       bundleDigest: source.bundleDigest,
@@ -97,14 +101,19 @@ async function projectDiagramShareBundle(file) {
     const viewBox = rendered.scene.viewBox;
     bundle = {
       kind: 'openplanr-diagram-review-bundle',
-      schemaVersion: '1.0.0',
+      schemaVersion: source.studioPresentation ? '1.1.0' : '1.0.0',
+      ...(source.studioPresentation
+        ? { presentation: structuredClone(source.studioPresentation) }
+        : {}),
       diagramId: source.diagramId,
       title: source.document.title,
       source: { kind: 'authoring', digest: source.bundleDigest },
       rendering: { ...rendered.renderer, fontFamily: 'Inter' },
       summary: source.document.summary,
       grammar: source.document.grammar.id,
-      colorScheme: source.presentation.theme.themeId === 'paper' ? 'light' : 'dark',
+      colorScheme:
+        source.studioPresentation?.theme ??
+        (source.presentation.theme.themeId === 'paper' ? 'light' : 'dark'),
       scene: {
         svg: drawing.svg,
         width: rendered.scene.width,
@@ -155,8 +164,11 @@ async function projectDiagramShareBundle(file) {
     fail(
       'Share a verified diagram manifest or authored bundle, rather than a generated HTML wrapper.',
     );
-  assertDiagramReviewBundle(bundle);
-  if (new TextEncoder().encode(JSON.stringify(bundle)).byteLength + 16 > 5 * 1024 * 1024)
+  assertVersionedDiagramReviewBundle(bundle);
+  if (
+    new TextEncoder().encode(JSON.stringify(bundle)).byteLength + 16 >
+    LARGE_OBJECT_LIMITS.decodedBytes
+  )
     fail('The native diagram review exceeds the encrypted sharing limit.', {
       code: 'E_DIAGRAM_REVIEW_TOO_LARGE',
       status: 413,

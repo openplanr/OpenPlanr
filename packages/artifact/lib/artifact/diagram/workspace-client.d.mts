@@ -30,3 +30,21 @@ export const manageWorkspace: Client['manageWorkspace'];
 export const prepareWorkspaceEvent: Client['prepareWorkspaceEvent'];
 export const appendWorkspaceEvent: Client['appendWorkspaceEvent'];
 export const readWorkspaceEvents: Client['readWorkspaceEvents'];
+
+export declare function discoverWorkspaceCapabilities(options?: {
+  baseUrl?: string;
+  fetchImpl?: typeof fetch;
+}): Promise<Record<string, unknown>>;
+export declare const prepareChunkedWorkspace: Client['prepareWorkspace'];
+export declare function openWorkspaceRevision(
+  access: Parameters<Client['getWorkspace']>[0],
+  revisionId?: string,
+  options?: { fetchImpl?: typeof fetch },
+): Promise<{
+  catalog: unknown;
+  bundle: unknown;
+  loadSource(id: string): Promise<string>;
+  loadView(id: string): Promise<unknown>;
+  loadBundle(): Promise<DiagramReviewBundle>;
+  dispose(): void;
+}>;

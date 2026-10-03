@@ -6,7 +6,6 @@ import type { Command } from 'commander';
 import type { StakeholderReportType } from '../../models/types.js';
 import { loadConfig } from '../../services/config-service.js';
 import { buildStakeholderReportContext } from '../../services/context-pack-service.js';
-import { logger } from '../../utils/logger.js';
 
 function parseReportType(raw: string): StakeholderReportType {
   const s = raw.toLowerCase().trim();
@@ -47,7 +46,7 @@ export function registerContextCommand(program: Command) {
         });
 
         process.stdout.write(`${JSON.stringify(ctx, null, 2)}\n`);
-        logger.dim(`context: ${ctx.evidence.length} evidence items`);
+        process.stderr.write(`context: ${ctx.evidence.length} evidence items\n`);
       },
     );
 }

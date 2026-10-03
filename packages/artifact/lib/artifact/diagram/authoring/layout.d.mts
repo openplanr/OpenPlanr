@@ -1,4 +1,5 @@
-import type { DiagramAuthoringBundle } from '@openplanr/protocol/diagram-authoring-contracts';
+import type { VersionedDiagramAuthoringBundle as DiagramAuthoringBundle } from '@openplanr/protocol/studio-presentation-contracts';
+
 import type { DiagramPreviewResult } from './index.mjs';
 
 export interface DiagramAutomaticLayoutOptions {

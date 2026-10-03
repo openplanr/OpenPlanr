@@ -6,7 +6,7 @@ import { dirname, join, resolve } from 'node:path';
 import { after, test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import { resolveWorkspaceDependencyRoot } from '../helpers/workspace-dependency.mjs';
+import { installedDependencyClosure } from '../../../../tests/support/dependency-closure.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const packageVersion = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version;
@@ -94,23 +94,34 @@ test(`packed ${packageVersion} package contains the portable artifact release bo
   mkdirSync(installRoot, { recursive: true });
   mkdirSync(dependencyRoot, { recursive: true });
   const localDependencies = {};
-  for (const dependency of [
-    '@expo-google-fonts/inter',
-    '@noble/hashes',
-    '@resvg/resvg-js',
-    resvgPlatformPackage(),
-    'entities',
-    'esbuild',
-    'pako',
-    'parse5',
-  ]) {
-    const [dependencyPack] = JSON.parse(
-      runNpm(['pack', '--ignore-scripts', '--json', '--pack-destination', dependencyRoot], {
-        cwd: resolveWorkspaceDependencyRoot(dependency),
-      }).stdout,
-    );
-    localDependencies[dependency] = `file:${join(dependencyRoot, dependencyPack.filename)}`;
-  }
+  const manifest = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
+  const artifactManifest = JSON.parse(readFileSync(join(root, '../artifact/package.json'), 'utf8'));
+  assert.equal(manifest.dependencies['@types/react'], '19.2.18');
+  assert.equal(
+    artifactManifest.dependencies['@types/react'],
+    manifest.dependencies['@types/react'],
+  );
+  const closure = installedDependencyClosure(
+    [
+      ...Object.keys(manifest.dependencies),
+      ...Object.keys(manifest.optionalDependencies),
+      resvgPlatformPackage(),
+    ],
+    { from: join(root, 'package.json') },
+  );
+  const dependencyPacks = JSON.parse(
+    runNpm([
+      'pack',
+      '--ignore-scripts',
+      '--json',
+      '--pack-destination',
+      dependencyRoot,
+      ...closure.map(({ root }) => root),
+    ]).stdout,
+  );
+  assert.equal(dependencyPacks.length, closure.length);
+  for (const dependency of dependencyPacks)
+    localDependencies[dependency.name] = `file:${join(dependencyRoot, dependency.filename)}`;
   writeFileSync(
     join(installRoot, 'package.json'),
     JSON.stringify({
@@ -137,6 +148,15 @@ test(`packed ${packageVersion} package contains the portable artifact release bo
   );
 
   const packageRoot = join(installRoot, 'node_modules', 'planr-pipeline');
+  const installedManifest = JSON.parse(readFileSync(join(packageRoot, 'package.json'), 'utf8'));
+  const installedReactTypes = JSON.parse(
+    readFileSync(join(installRoot, 'node_modules/@types/react/package.json'), 'utf8'),
+  );
+  assert.equal(
+    installedManifest.dependencies['@types/react'],
+    manifest.dependencies['@types/react'],
+  );
+  assert.equal(installedReactTypes.version, installedManifest.dependencies['@types/react']);
   const installedBin = join(packageRoot, 'bin', 'planr-pipeline.mjs');
   const binSmoke = run(process.execPath, [installedBin, '--help'], { cwd: installRoot });
   assert.match(binSmoke.stdout, /planr-pipeline/);

@@ -1,11 +1,18 @@
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
+import { readRuntimeAsset as readDesignRuntimeAsset } from '@openplanr/artifact/internal/runtime-asset.mjs';
 import { renderArtifactShellDocument } from '@openplanr/artifact/ui/shell.mjs';
 import { renderDesignStudioMarkup } from './studio-render.mjs';
 
 export { DESIGN_STUDIO_ASSETS, DESIGN_STUDIO_VERSION } from './studio-render.mjs';
 
 const templateRoot = new URL('../../templates/studio/', import.meta.url);
+
+export { readDesignRuntimeAsset };
+
+export function readDesignStudioRuntime() {
+  return readDesignRuntimeAsset(new URL('studio.js', templateRoot)).toString('utf8');
+}
 
 /** Stable review identities are independent of presentation and render revision. */
 export function designStudioArtifactId(variantId, screenId, frameId) {
@@ -51,10 +58,16 @@ export function renderDesignStudio(input = {}, options = {}) {
     {
       ...options,
       renderShell: renderArtifactShellDocument,
-      style: ['studio.css', 'enhancements.css', 'handoff-center.css']
-        .map((file) => readFileSync(new URL(file, templateRoot), 'utf8'))
-        .join('\n'),
-      runtime: readFileSync(new URL('studio.js', templateRoot), 'utf8'),
+      style:
+        readFileSync(
+          new URL(import.meta.resolve('@openplanr/artifact/ui/studio-shell.css')),
+          'utf8',
+        ) +
+        '\n' +
+        ['studio.css', 'enhancements.css', 'handoff-center.css']
+          .map((file) => readFileSync(new URL(file, templateRoot), 'utf8'))
+          .join('\n'),
+      runtime: readDesignStudioRuntime(),
     },
   );
 }

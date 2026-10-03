@@ -13,6 +13,7 @@
     "noEmit": true,
     "strict": true,
     "noImplicitAny": false,
+    "jsx": "react-jsx",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "target": "ES2022",
@@ -22,8 +23,13 @@
     "forceConsistentCasingInFileNames": true
   },
   "include": [
+    "packages/cli/lib/node-runtime.mjs",
     "packages/artifact/lib/artifact/ui/**/*.mjs",
+    "packages/artifact/lib/artifact/diagram/authoring/**/*.mjs",
+    "packages/artifact/lib/artifact/diagram/source-map.mjs",
     "packages/artifact/lib/**/*.mts",
+    "packages/artifact/lib/**/*.tsx",
+    "packages/design/lib/**/*.mts",
     "packages/protocol/src/**/*.mjs"
   ],
   "exclude": ["**/generated/**", "**/*.d.mts"]

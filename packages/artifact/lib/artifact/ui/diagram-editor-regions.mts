@@ -1,4 +1,5 @@
-import type { DiagramAuthoringBundle } from '@openplanr/protocol/diagram-authoring-contracts';
+import type { VersionedDiagramAuthoringBundle as DiagramAuthoringBundle } from '@openplanr/protocol/studio-presentation-contracts';
+
 import type { DiagramEditorSession, DiagramEditorState } from '../diagram/editor/index.mjs';
 import type { DiagramEditorCanvas } from './diagram-editor-canvas.mjs';
 import type { DiagramEditorChrome, DiagramEditorLayout } from './diagram-editor-chrome.mjs';
@@ -18,7 +19,6 @@ export interface DiagramEditorContext {
   readonly config: DiagramEditorHostConfig;
   readonly dom: DiagramEditorDom;
   readonly layout: DiagramEditorLayout;
-  readonly mode: 'edit';
   scopedId(name: string): string;
   isDisposed(): boolean;
   current(): DiagramEditorState;

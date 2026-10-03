@@ -13,8 +13,9 @@
     return node;
   };
   async function request(action) {
+    // Short Studio routes require their scoped owner cookie; it stays on this origin.
     const response = await fetch(options.shareUrl, {
-      method: action ? 'POST' : 'GET', cache: 'no-store', credentials: 'omit', referrerPolicy: 'no-referrer',
+      method: action ? 'POST' : 'GET', cache: 'no-store', credentials: 'same-origin', referrerPolicy: 'no-referrer',
       ...(action ? { headers: { 'content-type': 'application/json', 'x-openplanr-design': '1' }, body: JSON.stringify({ action }) } : {}),
     });
     const value = await response.json();

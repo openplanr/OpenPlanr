@@ -4,6 +4,7 @@ import { runPendingMigrations } from '../../services/migration-registry.js';
 import { promptConfirm } from '../../services/prompt-service.js';
 import {
   printNextSteps,
+  printReconciliationStatus,
   printUpgradeReport,
   type ReleaseNotesMode,
 } from '../../services/upgrade-report.js';
@@ -51,20 +52,10 @@ export function registerUpgradeCommand(program: Command, _cliVersion: string) {
         }
         if (result.published) {
           display.keyValue('Published CLI', result.published.cli.version);
-          display.keyValue('Published skills', result.published.skills.version);
+          display.keyValue('Published host package', result.published.skills.version);
           display.keyValue('Published pipeline', result.published.pipeline.version);
         }
-        if (result.status === 'unknown') {
-          logger.warn(
-            'The published compatibility manifest is unavailable (offline); the tuple could not be judged.',
-          );
-        } else if (result.status === 'upgrade-available') {
-          logger.info('An upgrade is available; the installed tuple is still mutually compatible.');
-        } else if (result.status === 'incompatible') {
-          logger.warn('The installed components are on mutually incompatible versions.');
-        } else {
-          logger.success('The installed tuple matches the published compatible set.');
-        }
+        printReconciliationStatus(result);
         if (nextSteps.length > 0) printNextSteps(nextSteps);
       }
 

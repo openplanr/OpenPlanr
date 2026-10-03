@@ -25,36 +25,31 @@ checks.
 
 ---
 
-## Optional Design Sub-Phase (`/planr:design`, before PO)
+## Design before planning
 
-A feature can carry **design intent** into the PO Phase so it decomposes real UI tasks
-instead of degrading to a Tech-only ship. Two ways intent arrives:
+OpenPlanr's Design and Design Loop skills produce an editable design document,
+source screens, immutable rendered revisions and an implementation `design-spec.md`.
+The standard Design Studio shows Canvas, Prototype and Walkthrough from that same
+document. Switching modes preserves working state; it does not regenerate screens.
+The trusted React interface hosts sandboxed authored content and shares the artifact
+review, feedback and export controllers.
 
-- **Mockups** — drop `*.png` and `designer-agent` extracts a `design-spec.md` during `/plan`
-  (the original path; unchanged).
-- **Generation** — run `/planr:design {slug}` **before** `/plan`. It generates a
-  visual artifact in one of three formats and authors `design-spec.md` directly:
+Use Design Loop to compare directions and record the selected one. Local feedback
+stays local until the user requests sharing. Encrypted review links and company
+publication use staged resource uploads; published revisions remain immutable.
+The separate `planr-pipeline design-engine` image/SVG exploration loop still supports
+variant generation and taste memory. It is not the standard Studio renderer.
 
-  | Format | Output | Substrate |
-  |--------|--------|-----------|
-  | prototype | one interactive screen (`finalized.html`) | vanilla + Pretext |
-  | walkthrough | multi-screen gallery, grouped sidebar (anchor ≤8 / lazy >8 screens) | vanilla + Pretext |
-  | canvas | Figma-like board of artboards (`canvas.html`, export + view-only) | vendored React |
+Planning can consume `design-spec.md` or existing mockups. Design intent produces
+one UI task and one technical task per story; a story without UI has one task.
+Planning and implementation remain separate user invocations. Selecting a design
+does not authorize publication, deployment or starting Ship.
 
+```text
+Brief + existing product → Design document → Studio review → Selected design-spec.md
+                                                               ↓
+                                     Plan → stories + tasks → review → Ship
 ```
-  spec (no PNG)  ──/design──▶  design/{finalized.html|canvas.html} + design-spec.md
-                                            │
-                                            ▼  (R2: design-spec.md OR PNG ⇒ UI task)
-                               /plan ──▶ US + UI task + Tech task  ──▶ optional review ──▶ /ship
-```
-
-The format is chosen by a clarification prompt with a **recommended default** computed from
-the screen count (`lib/design/recommend-format.mjs`); supplying `--format … --from …` skips
-the prompt for CI. `design-spec.md` has **one writer per run** (PNGs → `designer-agent`,
-otherwise the generator). `/design` is a standalone command whose output `/plan`
-can consume; `/plan` prints a one-line nudge when UI intent is detected but no
-design exists. Tested core lives in `lib/design/` (escaping, screen resolver, format
-rule, manifest); conformance in `conformance/verify-design-assets.mjs` + `tests/design/`.
 
 ---
 

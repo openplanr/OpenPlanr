@@ -1,3 +1,4 @@
+// @ts-check
 import {
   clone,
   geometryFields,
@@ -8,7 +9,7 @@ import {
   snapshot,
   validateAuthoringBundle,
 } from './model.mjs';
-import { previewDiagramTransaction } from './transactions.mjs';
+import { previewDiagramTransaction, previewDiagramTransactionForEditor } from './transactions.mjs';
 
 const collections = ['nodes', 'relations', 'groups', 'lanes', 'annotations'];
 const fields = {
@@ -20,6 +21,7 @@ const fields = {
   resize: ['id', 'bounds'],
   geometry: ['changes'],
   appearance: ['changes'],
+  'set-studio-presentation': ['presentation'],
   reparent: ['ids', 'parentId', 'index'],
   group: ['group', 'ids', 'placement', 'parentId'],
   ungroup: ['ids'],
@@ -29,6 +31,7 @@ const fields = {
   delete: ['ids', 'confirmedImpact'],
   cancel: [],
 };
+/** @returns {import('./index.d.mts').DiagramKernelFailure} */
 const fail = (rule, detail, path = '$command') => ({
   ok: false,
   diagnostics: [{ path, rule, detail }],
@@ -45,6 +48,7 @@ const documentFields = (doc) =>
     audience: doc.audience,
     accessibility: doc.accessibility,
   });
+/** @param {unknown} condition @param {string} message @returns {asserts condition} */
 function requireValue(condition, message) {
   if (!condition) throw new TypeError(message);
 }
@@ -94,14 +98,19 @@ function roots(bundle, ids) {
     return true;
   });
 }
+/** @returns {Extract<import('@openplanr/protocol/diagram-authoring-contracts').DiagramEditOperation,{type:'set-membership-order'}>} */
 const membershipOp = (before, after) => ({ type: 'set-membership-order', before, after });
-const semanticOp = (item, after) => ({
-  type: 'update-semantics',
-  collection: item.collection,
-  elementId: item.value.id,
-  before: semanticFields(item.collection, item.value),
-  after,
-});
+/** @param {import('@openplanr/protocol/diagram-authoring-contracts').DiagramSemanticEntry} item
+ * @param {Record<string, unknown>} after
+ * @returns {import('@openplanr/protocol/diagram-authoring-contracts').DiagramSemanticUpdate} */
+const semanticOp = (item, after) =>
+  /** @type {import('@openplanr/protocol/diagram-authoring-contracts').DiagramSemanticUpdate} */ ({
+    type: 'update-semantics',
+    collection: item.collection,
+    elementId: item.value.id,
+    before: semanticFields(item.collection, item.value),
+    after,
+  });
 function translate(geometry, dx, dy) {
   const next = clone(geometry);
   if (next.bounds) {
@@ -138,6 +147,7 @@ function reparent(bundle, ids, parentId, index) {
     container.members = container.members.filter((id) => !chosen.includes(id));
   if (parent) {
     const container = [...after.groups, ...after.lanes].find((item) => item.id === parentId);
+    requireValue(container, 'The selected parent is missing.');
     const offset = index === undefined ? container.members.length : index;
     requireValue(
       Number.isInteger(offset) && offset >= 0 && offset <= container.members.length,
@@ -182,6 +192,7 @@ function removal(bundle, ids, ungroup = false) {
   for (const container of [...after.groups, ...after.lanes])
     container.members = removed.has(container.id) ? [] : container.members.flatMap(retain);
   // Removed lanes remain in the temporary membership state until the removal op.
+  /** @type {import('@openplanr/protocol/diagram-authoring-contracts').DiagramEditOperation[]} */
   const operations = [membershipOp(before, after)];
   const readingOrderIds = bundle.document.accessibility.readingOrder.filter((id) =>
     removed.has(id),
@@ -321,6 +332,7 @@ function duplicate(bundle, command) {
       ...translate(geometryFields(item), dx, dy),
       elementId: idMap[item.elementId],
     }));
+  /** @type {import('@openplanr/protocol/diagram-authoring-contracts').DiagramEditOperation[]} */
   const operations = [{ type: 'insert-elements', elements, presentation }];
   // Explicit order and emphasis are separate semantics, not inferred from array indexes.
   const before = membershipState(bundle.document);
@@ -371,9 +383,35 @@ function duplicate(bundle, command) {
 }
 
 /** Compile one completed gesture. Callers retain previews until their adapter acknowledges a save. */
-export function compileDiagramCommand(bundle, command, options = {}) {
-  const validation = validateAuthoringBundle(bundle);
+/** @type {typeof import('./index.d.mts').compileDiagramCommand} */
+export const compileDiagramCommand = compilePublicCommand;
+/** @overload
+ * @param {import('./index.d.mts').DiagramAuthoringBundle} bundle
+ * @param {{type:'cancel'}} command
+ * @param {import('./index.d.mts').DiagramTransactionIdentity} [options]
+ * @returns {{ok:true,cancelled:true,transaction:null}|import('./index.d.mts').DiagramKernelFailure}
+ */
+/** @overload
+ * @param {import('./index.d.mts').DiagramAuthoringBundle} bundle
+ * @param {import('./index.d.mts').DiagramCommand} command
+ * @param {import('./index.d.mts').DiagramTransactionIdentity} options
+ * @returns {import('./index.d.mts').DiagramCommandResult}
+ */
+/** @param {unknown} bundle @param {unknown} command @param {unknown} [options]
+ * @returns {import('./index.d.mts').DiagramCommandResult} */
+function compilePublicCommand(bundle, command, options = {}) {
+  return compileCommand(bundle, command, options, false);
+}
+/** Internal session path; public compile and session snapshots remain detached and mutable. */
+/** @type {(bundle:import('./index.d.mts').DiagramAuthoringBundle, command:import('./index.d.mts').DiagramCommand, options?:import('./index.d.mts').DiagramTransactionIdentity) => import('./index.d.mts').DiagramCommandResult} */
+export const compileDiagramCommandForEditor = (bundle, command, options) =>
+  compileCommand(bundle, command, options === undefined ? {} : options, true);
+/** @param {unknown} inputBundle @param {boolean} privateResult
+ * @returns {import('./index.d.mts').DiagramCommandResult} */
+function compileCommand(inputBundle, command, options, privateResult) {
+  const validation = validateAuthoringBundle(inputBundle);
   if (!validation.ok) return validation;
+  const bundle = /** @type {import('./index.d.mts').DiagramAuthoringBundle} */ (inputBundle);
   const diagnostics = [...inspectPlainData(command, ['$.idMap']), ...inspectPlainData(options)];
   if (diagnostics.length) return { ok: false, diagnostics };
   if (
@@ -393,7 +431,9 @@ export function compileDiagramCommand(bundle, command, options = {}) {
   )
     return fail('options', 'Only a caller-supplied transactionId is accepted.', '$options');
   if (command.type === 'cancel') return { ok: true, cancelled: true, transaction: null };
-  let operations, disclosures;
+  /** @type {import('@openplanr/protocol/studio-presentation-contracts').DiagramEditTransactionV11['operations']} */
+  let operations;
+  let disclosures;
   try {
     switch (command.type) {
       case 'create':
@@ -410,8 +450,13 @@ export function compileDiagramCommand(bundle, command, options = {}) {
       case 'reconnect': {
         const item = entry(bundle, command.id);
         requireValue(item, 'The edited element is missing.');
-        const before = semanticFields(item.collection, item.value),
-          after = clone(before);
+        const before = semanticFields(
+            /** @type {import('@openplanr/protocol/diagram-authoring-contracts').DiagramSemanticEntry['collection']} */ (
+              item.collection
+            ),
+            item.value,
+          ),
+          after = /** @type {Record<string,unknown>} */ (clone(before));
         if (command.type === 'rename') {
           requireValue(typeof command.label === 'string', 'The label must be text.');
           if (item.collection === 'annotations') after.text = command.label;
@@ -471,6 +516,19 @@ export function compileDiagramCommand(bundle, command, options = {}) {
         break;
       case 'appearance':
         operations = [{ type: 'set-appearance-locks', changes: clone(command.changes) }];
+        break;
+      case 'set-studio-presentation':
+        requireValue(
+          command.presentation && typeof command.presentation === 'object',
+          'Choose a versioned studio presentation.',
+        );
+        operations = [
+          {
+            type: 'set-studio-presentation',
+            before: clone(bundle.schemaVersion === '1.1.0' ? bundle.studioPresentation : null),
+            after: clone(command.presentation),
+          },
+        ];
         break;
       case 'reparent':
         operations = [reparent(bundle, command.ids, command.parentId, command.index)];
@@ -550,26 +608,36 @@ export function compileDiagramCommand(bundle, command, options = {}) {
       default:
         return fail('command', 'Unknown diagram command.');
     }
-    operations = operations.filter(
-      (op) => !Object.hasOwn(op, 'before') || !same(op.before, op.after),
-    );
+    operations = operations.filter((op) => !('before' in op) || !same(op.before, op.after));
     if (!operations.length) return { ok: true, changed: false, transaction: null };
-    const transaction = {
-      kind: 'diagram-edit-transaction',
-      schemaVersion: '1.0.0',
-      protocolVersion: '1.13.0',
-      transactionId: options.transactionId,
-      diagramId: bundle.diagramId,
-      base: snapshot(bundle),
-      operations,
-      undoOf: null,
-    };
-    const result = previewDiagramTransaction(bundle, transaction);
+    const versioned =
+      bundle.schemaVersion === '1.1.0' || command.type === 'set-studio-presentation';
+    const transaction =
+      /** @type {import('@openplanr/protocol/studio-presentation-contracts').VersionedDiagramEditTransaction} */ ({
+        kind: 'diagram-edit-transaction',
+        schemaVersion: versioned ? '1.1.0' : '1.0.0',
+        protocolVersion: versioned ? '1.17.0' : '1.13.0',
+        transactionId: /** @type {{transactionId:string}} */ (options).transactionId,
+        diagramId: bundle.diagramId,
+        base: snapshot(bundle),
+        operations,
+        undoOf: null,
+      });
+    const result = (privateResult ? previewDiagramTransactionForEditor : previewDiagramTransaction)(
+      bundle,
+      transaction,
+    );
     return disclosures ? { ...result, disclosures } : result;
-  } catch (error) {
+  } catch (caughtError) {
+    const error = errorObject(caughtError);
     return fail(
       'command-value',
       error instanceof TypeError ? error.message : 'The command cannot be compiled.',
     );
   }
+}
+
+/** @param {unknown} value @returns {NodeJS.ErrnoException & {exportCode?: string}} */
+function errorObject(value) {
+  return value instanceof Error ? value : new Error(String(value));
 }

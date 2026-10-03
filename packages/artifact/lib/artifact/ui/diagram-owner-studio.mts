@@ -1,7 +1,5 @@
-import type {
-  DiagramAuthoringBundle,
-  DiagramAuthoringProfile,
-} from '@openplanr/protocol/diagram-authoring-contracts';
+import type { DiagramAuthoringProfile } from '@openplanr/protocol/diagram-authoring-contracts';
+import type { VersionedDiagramAuthoringBundle as DiagramAuthoringBundle } from '@openplanr/protocol/studio-presentation-contracts';
 import { createDiagramEditorDraft } from '../diagram/editor/draft.mjs';
 import { createDiagramEditorRecovery } from '../diagram/editor/recovery.mjs';
 import {

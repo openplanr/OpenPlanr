@@ -27,18 +27,21 @@ import {
 import { createServer } from 'node:http';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { planrHome } from '../../lib/planr-home.mjs';
 import { isDesignDocumentFile, prepareDesignArtifact } from './design-artifact-service.js';
 import { isDiagramManifestFile, prepareDiagramArtifact } from './diagram-artifact-service.js';
 import { resolvePipelinePackage } from './pipeline-package-service.js';
 
 export interface ArtifactEnvelope {
   schemaVersion: string;
+  sources?: Array<{ id: string; kind: 'html'; sha256: string; html: string }>;
   artifacts: Array<{
     id: string;
     kind: 'html';
     title: string;
     sha256: string;
-    html: string;
+    html?: string;
+    sourceId?: string;
     viewport: { width: number; height: number };
     colorScheme: 'light' | 'dark';
   }>;
@@ -72,7 +75,7 @@ export interface LiveRoomCreateResult extends Record<string, unknown> {
   readonly ownerSigner: unknown;
 }
 
-export interface PreparedLiveRoomCreate extends Record<string, unknown> {
+export interface LegacyPreparedLiveRoomCreate extends Record<string, unknown> {
   schemaVersion: '1.0.0';
   kind: 'openplanr-live-room-preparation';
   protocolVersion: '2.0.0';
@@ -87,7 +90,7 @@ export interface PreparedLiveRoomCreate extends Record<string, unknown> {
   readonly ownerSigner: unknown;
 }
 
-export interface LiveRoomRecoveryBundle extends Record<string, unknown> {
+export interface LegacyLiveRoomRecoveryBundle extends Record<string, unknown> {
   schemaVersion: '1.0.0';
   kind: 'openplanr-live-room-recovery';
   protocolVersion: '2.0.0';
@@ -102,6 +105,42 @@ export interface LiveRoomRecoveryBundle extends Record<string, unknown> {
   ownerSigner: Record<string, unknown>;
 }
 
+export type PreparedLiveRoomCreate =
+  | LegacyPreparedLiveRoomCreate
+  | (Omit<LegacyPreparedLiveRoomCreate, 'protocolVersion' | 'reviewOf'> & {
+      protocolVersion: '3.0.0';
+      reviewCommitment: string;
+    });
+export interface LiveRoomV3RecoveryBundle extends Record<string, unknown> {
+  schemaVersion: '2.0.0';
+  kind: 'openplanr-live-room-recovery';
+  origin: string;
+  body: Record<string, unknown>;
+  key: string;
+  reviewOf: string;
+  inputDigest: string;
+  ownerSigner: Record<string, unknown>;
+}
+export type LiveRoomRecoveryBundle = LegacyLiveRoomRecoveryBundle | LiveRoomV3RecoveryBundle;
+
+export interface PreparedArtifactPaste {
+  schemaVersion: '1.0.0';
+  kind: 'openplanr-artifact-paste-preparation';
+  origin: string;
+  body: {
+    schemaVersion: '2.0.0';
+    operation: 'create';
+    id: string;
+    creationId: string;
+    iv: string;
+    ciphertext: string;
+    ttl: '1d' | '7d' | '30d';
+  };
+  key: string;
+  custodyToken: string;
+  fragmentLength: number;
+  compressedBytes: number;
+}
 export interface ArtifactSecretBundle {
   schemaVersion: '1.0.0';
   kind: 'openplanr-artifact-share-secrets';
@@ -115,6 +154,10 @@ export interface ArtifactSecretBundle {
 }
 
 export interface ArtifactPipelineApi {
+  resolveArtifactHtml?: (
+    envelope: ArtifactEnvelope,
+    artifact: string | ArtifactEnvelope['artifacts'][number],
+  ) => string;
   bundleArtifact(options: { entry: string; root: string }): Promise<ArtifactBundle>;
   createArtifactEnvelope(options: {
     artifacts: Array<{
@@ -150,7 +193,7 @@ export interface ArtifactPipelineApi {
   importLiveRoomRecoveryBundle?: (
     value: LiveRoomRecoveryBundle,
     options?: Record<string, unknown>,
-  ) => Promise<LiveRoomRecoveryBundle>;
+  ) => Promise<PreparedLiveRoomCreate & { ownerSigner: Record<string, unknown> }>;
   commitLiveReviewRoom?: (
     prepared: PreparedLiveRoomCreate,
     options?: Record<string, unknown>,
@@ -233,7 +276,17 @@ export function loadArtifactPipeline(): Promise<ArtifactPipelineApi> {
         'Run `npm install -g openplanr@latest` to install the compatible pipeline.',
       );
     }
-    return value as ArtifactPipelineApi;
+    // The reviewed pipeline root surface stays frozen. The packaged artifact module
+    // supplies additive source resolution without adding root exports.
+    const envelopeRuntime = await import(
+      pathToFileURL(path.join(pipeline.root, 'lib', 'artifact', 'envelope.mjs')).href
+    );
+    return {
+      ...value,
+      ...(typeof envelopeRuntime.resolveArtifactHtml === 'function'
+        ? { resolveArtifactHtml: envelopeRuntime.resolveArtifactHtml }
+        : {}),
+    } as ArtifactPipelineApi;
   })();
   return cachedApi;
 }
@@ -251,6 +304,23 @@ function artifactId(file: string, root: string): string {
   return `${slug}-${suffix}`;
 }
 
+function artifactBundleHtml(api: ArtifactPipelineApi, envelope: ArtifactEnvelope): string {
+  const distinctSources = new Map(
+    envelope.artifacts.map((artifact) => [artifact.sourceId ?? artifact.id, artifact]),
+  );
+  return [...distinctSources.values()]
+    .map((artifact) => {
+      if (api.resolveArtifactHtml) return api.resolveArtifactHtml(envelope, artifact);
+      if (typeof artifact.html === 'string') return artifact.html;
+      throw new ArtifactCommandError(
+        'E_PIPELINE_ARTIFACT_UNSUPPORTED',
+        'The installed workflow package cannot read shared artifact sources.',
+        'Update OpenPlanr to use this design revision.',
+      );
+    })
+    .join('\n');
+}
+
 export async function prepareArtifactEnvelope(options: {
   file: string;
   root: string;
@@ -263,73 +333,108 @@ export async function prepareArtifactEnvelope(options: {
   artifactId: string;
   presentation: 'document' | 'canvas';
 }> {
-  const api = await loadArtifactPipeline();
   const file = path.resolve(options.file);
+  try {
+    if (!lstatSync(file).isFile())
+      throw new ArtifactCommandError(
+        'E_ARTIFACT_INPUT',
+        `Choose a saved artifact file: ${file}`,
+        'Render or save the artifact first, then open its file.',
+      );
+  } catch (error) {
+    if (error instanceof ArtifactCommandError) throw error;
+    const code = (error as NodeJS.ErrnoException).code;
+    throw new ArtifactCommandError(
+      'E_ARTIFACT_INPUT',
+      code === 'ENOENT'
+        ? `The artifact file is missing: ${file}`
+        : `The artifact file cannot be read: ${file}`,
+      'Render or save the artifact first, then retry with its readable file.',
+    );
+  }
+  const api = await loadArtifactPipeline();
   const root = path.resolve(options.root);
-  if (isDesignDocumentFile(file)) {
-    const envelope = await prepareDesignArtifact(file);
-    const html = envelope.artifacts.map((artifact) => artifact.html).join('\n');
-    return {
-      api,
-      envelope,
-      artifactId: envelope.viewer.activeArtifactId,
-      presentation: 'canvas',
-      bundle: {
-        html,
-        sha256: createHash('sha256').update(html).digest('hex'),
-        bytes: Buffer.byteLength(html),
-        fileCount: envelope.artifacts.length,
-        remoteAssetCount: 0,
-      } as ArtifactBundle,
-    };
+  try {
+    if (isDesignDocumentFile(file)) {
+      const envelope = await prepareDesignArtifact(file);
+      const html = artifactBundleHtml(api, envelope);
+      return {
+        api,
+        envelope,
+        artifactId: envelope.viewer.activeArtifactId,
+        presentation: 'canvas',
+        bundle: {
+          html,
+          sha256: createHash('sha256').update(html).digest('hex'),
+          bytes: Buffer.byteLength(html),
+          fileCount: envelope.artifacts.length,
+          remoteAssetCount: 0,
+        } as ArtifactBundle,
+      };
+    }
+    if (isDiagramManifestFile(file)) {
+      const envelope = await prepareDiagramArtifact(file);
+      const html = artifactBundleHtml(api, envelope);
+      return {
+        api,
+        envelope,
+        artifactId: envelope.viewer.activeArtifactId,
+        presentation: 'canvas',
+        bundle: {
+          html,
+          sha256: createHash('sha256').update(html).digest('hex'),
+          bytes: Buffer.byteLength(html),
+          inputBytes: Buffer.byteLength(html),
+          fileCount: envelope.artifacts.length,
+          remoteAssetCount: 0,
+        },
+      };
+    }
+    const bundle = await api.bundleArtifact({ entry: file, root });
+    const id = artifactId(file, root);
+    const presentation = options.presentation === 'canvas' ? 'canvas' : 'document';
+    const envelope = api.createArtifactEnvelope({
+      artifacts: [
+        {
+          id,
+          title: options.title?.trim() || path.basename(file, path.extname(file)),
+          html: bundle.html,
+          viewport: { width: 1440, height: 900 },
+          colorScheme: 'light',
+        },
+      ],
+      ...(options.presentation === 'auto' || options.presentation === undefined
+        ? {}
+        : {
+            viewer: {
+              mode: 'single' as const,
+              activeArtifactId: id,
+              presentation: options.presentation,
+            },
+          }),
+    });
+    return { api, envelope, bundle, artifactId: id, presentation };
+  } catch (error) {
+    if (error instanceof ArtifactCommandError) throw error;
+    const failure = error as NodeJS.ErrnoException;
+    if (['ENOENT', 'ENOTDIR', 'EISDIR', 'EACCES', 'EPERM', 'ELOOP'].includes(failure.code ?? '')) {
+      const input = typeof failure.path === 'string' ? path.resolve(failure.path) : file;
+      throw new ArtifactCommandError(
+        'E_ARTIFACT_INPUT',
+        failure.code === 'ENOENT'
+          ? `The artifact file is missing: ${input}`
+          : `The artifact file cannot be read: ${input}`,
+        'Render or save the artifact, check its read permissions, then retry with its readable file.',
+      );
+    }
+    throw error;
   }
-  if (isDiagramManifestFile(file)) {
-    const envelope = await prepareDiagramArtifact(file);
-    const html = envelope.artifacts.map((artifact) => artifact.html).join('\n');
-    return {
-      api,
-      envelope,
-      artifactId: envelope.viewer.activeArtifactId,
-      presentation: 'canvas',
-      bundle: {
-        html,
-        sha256: createHash('sha256').update(html).digest('hex'),
-        bytes: Buffer.byteLength(html),
-        inputBytes: Buffer.byteLength(html),
-        fileCount: envelope.artifacts.length,
-        remoteAssetCount: 0,
-      },
-    };
-  }
-  const bundle = await api.bundleArtifact({ entry: file, root });
-  const id = artifactId(file, root);
-  const presentation = options.presentation === 'canvas' ? 'canvas' : 'document';
-  const envelope = api.createArtifactEnvelope({
-    artifacts: [
-      {
-        id,
-        title: options.title?.trim() || path.basename(file, path.extname(file)),
-        html: bundle.html,
-        viewport: { width: 1440, height: 900 },
-        colorScheme: 'light',
-      },
-    ],
-    ...(options.presentation === 'auto' || options.presentation === undefined
-      ? {}
-      : {
-          viewer: {
-            mode: 'single' as const,
-            activeArtifactId: id,
-            presentation: options.presentation,
-          },
-        }),
-  });
-  return { api, envelope, bundle, artifactId: id, presentation };
 }
 
 export function withoutArtifactReview(envelope: ArtifactEnvelope): ArtifactEnvelope {
   return {
     schemaVersion: envelope.schemaVersion,
+    ...(envelope.sources ? { sources: structuredClone(envelope.sources) } : {}),
     artifacts: structuredClone(envelope.artifacts),
     viewer: structuredClone(envelope.viewer),
   };
@@ -449,10 +554,11 @@ export async function openArtifactSecretUrl(
 }
 
 const SECRET_FILE_LIMIT = 1024 * 1024;
+const ROOM_V3_RECOVERY_FILE_LIMIT = 8 * 1024 * 1024;
 
 export interface ArtifactSecretExportReservation {
   readonly output: string;
-  finalize(value: ArtifactSecretBundle | LiveRoomRecoveryBundle): void;
+  finalize(value: ArtifactSecretBundle | LiveRoomRecoveryBundle | PreparedArtifactPaste): void;
   abort(): void;
   revoke(): void;
 }
@@ -467,7 +573,8 @@ function secretExportError(message: string, fix?: string): ArtifactCommandError 
 }
 
 function serializeArtifactSecretExport(
-  value: ArtifactSecretBundle | LiveRoomRecoveryBundle,
+  value: ArtifactSecretBundle | LiveRoomRecoveryBundle | PreparedArtifactPaste,
+  maxBytes = SECRET_FILE_LIMIT,
 ): Buffer {
   let json: string | undefined;
   try {
@@ -479,7 +586,7 @@ function serializeArtifactSecretExport(
     throw secretExportError('Artifact secret export could not be serialized safely.');
   }
   const serialized = Buffer.from(`${json}\n`, 'utf8');
-  if (serialized.byteLength > SECRET_FILE_LIMIT) {
+  if (serialized.byteLength > maxBytes) {
     throw secretExportError('Artifact secret export exceeds its bounded size.');
   }
   return serialized;
@@ -516,7 +623,12 @@ function writeAllAt(descriptor: number, bytes: Buffer, position: number): void {
  * chmod to 0600 is the atomic visibility boundary, and every byte is written
  * through the descriptor opened with O_EXCL/O_NOFOLLOW during reservation.
  */
-export function reserveArtifactSecretExport(output: string): ArtifactSecretExportReservation {
+export function reserveArtifactSecretExport(
+  output: string,
+  { maxBytes = SECRET_FILE_LIMIT }: { maxBytes?: number } = {},
+): ArtifactSecretExportReservation {
+  if (![SECRET_FILE_LIMIT, ROOM_V3_RECOVERY_FILE_LIMIT].includes(maxBytes))
+    throw secretExportError('Unsupported private recovery size bound.');
   if (!output || output === '-') {
     throw secretExportError(
       'Secret export requires a named file; stdout is not a safe secret sink.',
@@ -537,8 +649,8 @@ export function reserveArtifactSecretExport(output: string): ArtifactSecretExpor
     if (!info.isFile()) throw new Error('not a regular file');
     identity = { dev: info.dev, ino: info.ino };
     fchmodSync(descriptor, 0o000);
-    writeAllAt(descriptor, randomBytes(SECRET_FILE_LIMIT), 0);
-    ftruncateSync(descriptor, SECRET_FILE_LIMIT);
+    writeAllAt(descriptor, randomBytes(maxBytes), 0);
+    ftruncateSync(descriptor, maxBytes);
     fsyncSync(descriptor);
     fchmodSync(descriptor, 0o600);
     fchmodSync(descriptor, 0o000);
@@ -592,11 +704,11 @@ export function reserveArtifactSecretExport(output: string): ArtifactSecretExpor
 
   return Object.freeze({
     output: target,
-    finalize(value: ArtifactSecretBundle | LiveRoomRecoveryBundle): void {
+    finalize(value: ArtifactSecretBundle | LiveRoomRecoveryBundle | PreparedArtifactPaste): void {
       if (state !== 'reserved' || descriptor === undefined || !identity) {
         throw secretExportError('Artifact secret export reservation is no longer active.');
       }
-      const serialized = serializeArtifactSecretExport(value);
+      const serialized = serializeArtifactSecretExport(value, maxBytes);
       try {
         if (!sameFile(target, identity)) throw new Error('secret sink identity changed');
         writeAllAt(descriptor, serialized, 0);
@@ -664,6 +776,71 @@ function assertLiveRoomRecoveryBundle(
   value: LiveRoomRecoveryBundle,
   prepared: PreparedLiveRoomCreate,
 ): LiveRoomRecoveryBundle {
+  if (value?.schemaVersion === '2.0.0') {
+    const allowed = [
+      'schemaVersion',
+      'kind',
+      'origin',
+      'body',
+      'key',
+      'reviewOf',
+      'inputDigest',
+      'ownerSigner',
+    ];
+    const body = value.body;
+    const ownerKey = body?.ownerKey as Record<string, unknown> | undefined;
+    if (
+      value.kind !== 'openplanr-live-room-recovery' ||
+      Object.keys(value).length !== allowed.length ||
+      Object.keys(value).some((key) => !allowed.includes(key)) ||
+      prepared.protocolVersion !== '3.0.0' ||
+      body?.schemaVersion !== '3.0.0' ||
+      body.roomId !== prepared.roomId ||
+      body.ttl !== prepared.ttl ||
+      body.reviewCommitment !== prepared.reviewCommitment ||
+      typeof value.key !== 'string' ||
+      !/^[A-Za-z0-9_-]{43}$/.test(value.key) ||
+      !/^[a-f0-9]{64}$/.test(value.reviewOf) ||
+      !/^[a-f0-9]{64}$/.test(value.inputDigest) ||
+      !ownerKey ||
+      JSON.stringify(ownerKey) !== JSON.stringify(prepared.ownerKey)
+    )
+      throw secretExportError('Live review v3 recovery custody has an unsupported shape.');
+    const signer = value.ownerSigner;
+    const signerNames = [
+      'schemaVersion',
+      'kind',
+      'role',
+      'algorithm',
+      'keyId',
+      'publicKey',
+      'privateKey',
+    ];
+    if (
+      !signer ||
+      Object.keys(signer).length !== signerNames.length ||
+      Object.keys(signer).some((key) => !signerNames.includes(key)) ||
+      signer.schemaVersion !== '1.0.0' ||
+      signer.kind !== 'openplanr-live-room-signer' ||
+      signer.role !== 'owner' ||
+      signer.algorithm !== ownerKey.algorithm ||
+      signer.keyId !== ownerKey.keyId ||
+      signer.publicKey !== ownerKey.value ||
+      typeof signer.privateKey !== 'string' ||
+      !/^[A-Za-z0-9_-]{64,1024}$/.test(signer.privateKey)
+    )
+      throw secretExportError('Live review v3 recovery signer has an unsupported shape.');
+    const urls = roomV3RecoveryUrls(value);
+    if (
+      urls.reviewUrl !== prepared.url ||
+      urls.ownerUrl !== prepared.ownerUrl ||
+      urls.manageUrl !== prepared.manageUrl
+    )
+      throw secretExportError('Live review v3 recovery URLs differ from the saved preparation.');
+    return value;
+  }
+  if (prepared.protocolVersion !== '2.0.0')
+    throw secretExportError('Live review recovery protocol differs.');
   const allowed = new Set([
     'schemaVersion',
     'kind',
@@ -828,7 +1005,9 @@ export async function createLiveReviewRoomWithSecretCustody(options: {
     );
   }
 
-  const reservation = reserveArtifactSecretExport(options.output);
+  const reservation = reserveArtifactSecretExport(options.output, {
+    maxBytes: ROOM_V3_RECOVERY_FILE_LIMIT,
+  });
   let custodyDurable = false;
   try {
     const prepared = await api.prepareLiveReviewRoom(options.envelope, {
@@ -841,7 +1020,9 @@ export async function createLiveReviewRoomWithSecretCustody(options: {
     );
     assertImportedRecoverySigner(
       (await api.importLiveRoomRecoveryBundle(recovery)).ownerSigner,
-      recovery.ownerKey,
+      recovery.schemaVersion === '2.0.0'
+        ? (recovery.body.ownerKey as Record<string, unknown>)
+        : recovery.ownerKey,
     );
     assertLiveRoomSecretCapacity(options.baseUrl, recovery.ownerSigner);
     reservation.finalize(recovery);
@@ -852,8 +1033,9 @@ export async function createLiveReviewRoomWithSecretCustody(options: {
     } catch (firstError) {
       const first = firstError as { code?: unknown; details?: { effect?: unknown } };
       if (
-        first.code === 'E_ARTIFACT_ROOM_CREATE_AMBIGUOUS' &&
-        first.details?.effect === 'ambiguous'
+        (first.code === 'E_ARTIFACT_ROOM_CREATE_AMBIGUOUS' &&
+          first.details?.effect === 'ambiguous') ||
+        first.code === 'E_ROOM_CREATE_AMBIGUOUS'
       ) {
         try {
           return await api.commitLiveReviewRoom(prepared, { baseUrl: options.baseUrl });
@@ -885,6 +1067,286 @@ export async function createLiveReviewRoomWithSecretCustody(options: {
   }
 }
 
+function roomV3RecoveryUrls(value: LiveRoomV3RecoveryBundle) {
+  const body = value.body;
+  const origin = new URL(value.origin);
+  const loopback = ['localhost', '127.0.0.1', '[::1]'].includes(origin.hostname);
+  if (
+    origin.origin !== value.origin ||
+    origin.username ||
+    origin.password ||
+    origin.pathname !== '/' ||
+    origin.search ||
+    origin.hash ||
+    (origin.protocol !== 'https:' && !(origin.protocol === 'http:' && loopback)) ||
+    typeof body?.roomId !== 'string' ||
+    !/^[A-Za-z0-9_-]{16,128}$/.test(body.roomId) ||
+    typeof value.key !== 'string' ||
+    !/^[A-Za-z0-9_-]{43}$/.test(value.key)
+  )
+    throw secretExportError('Live review v3 recovery URL custody is invalid.');
+  const capabilities = [
+    'readCapability',
+    'reviewerCapability',
+    'ownerCapability',
+    'manageCapability',
+  ].map((key) => body[key]);
+  if (
+    capabilities.some((item) => typeof item !== 'string' || !/^[A-Za-z0-9_-]{43}$/.test(item)) ||
+    new Set(capabilities).size !== 4
+  )
+    throw secretExportError('Live review v3 recovery authorities are invalid.');
+  const prefix = `${value.origin}/r/${body.roomId}#k=${value.key}&r=${body.readCapability}`;
+  return {
+    reviewUrl: `${prefix}&w=${body.reviewerCapability}`,
+    ownerUrl: `${prefix}&o=${body.ownerCapability}`,
+    manageUrl: `${prefix}&m=${body.manageCapability}`,
+  };
+}
+function projectRoomV3Recovery(value: LiveRoomV3RecoveryBundle): ArtifactSecretBundle {
+  const urls = roomV3RecoveryUrls(value);
+  const normalized = assertLiveRoomRecoveryBundle(value, {
+    schemaVersion: '1.0.0',
+    kind: 'openplanr-live-room-preparation',
+    protocolVersion: '3.0.0',
+    id: String(value.body.roomId),
+    roomId: String(value.body.roomId),
+    ttl: String(value.body.ttl),
+    reviewCommitment: String(value.body.reviewCommitment),
+    ownerKey: value.body.ownerKey as Record<string, unknown>,
+    url: urls.reviewUrl,
+    ownerUrl: urls.ownerUrl,
+    manageUrl: urls.manageUrl,
+    ownerSigner: null,
+  });
+  const projected: ArtifactSecretBundle = {
+    schemaVersion: '1.0.0',
+    kind: 'openplanr-artifact-share-secrets',
+    transport: 'live-room',
+    ...urls,
+    ownerSigner: value.ownerSigner,
+  };
+  Object.defineProperty(projected, 'recovery', {
+    enumerable: false,
+    value: Object.freeze(structuredClone(normalized)),
+  });
+  return Object.freeze(projected);
+}
+
+export function artifactPasteCustodyRoot(env: NodeJS.ProcessEnv = process.env): string {
+  return path.resolve(
+    env.PLANR_ARTIFACT_PASTE_CUSTODY_ROOT?.trim() ||
+      env.OPENPLANR_ARTIFACT_PASTE_CUSTODY_ROOT?.trim() ||
+      path.join(planrHome(env), 'artifact-pastes'),
+  );
+}
+function ensurePrivatePasteRoot(root: string): void {
+  mkdirSync(root, { recursive: true, mode: 0o700 });
+  const stat = lstatSync(root);
+  if (
+    !stat.isDirectory() ||
+    stat.isSymbolicLink() ||
+    (process.platform !== 'win32' && ((stat.mode & 0o077) !== 0 || stat.uid !== process.getuid?.()))
+  )
+    throw secretExportError('Artifact paste custody requires an owned private directory.');
+}
+function validatePreparedPaste(value: unknown): PreparedArtifactPaste {
+  const item = value as PreparedArtifactPaste;
+  const names = [
+    'schemaVersion',
+    'kind',
+    'origin',
+    'body',
+    'key',
+    'custodyToken',
+    'fragmentLength',
+    'compressedBytes',
+  ];
+  const bodyNames = ['schemaVersion', 'operation', 'id', 'creationId', 'iv', 'ciphertext', 'ttl'];
+  const token = /^[A-Za-z0-9_-]{43}$/;
+  let origin: URL;
+  try {
+    origin = new URL(item?.origin);
+  } catch {
+    throw secretExportError('Prepared paste origin is invalid.');
+  }
+  if (
+    !item ||
+    typeof item !== 'object' ||
+    Array.isArray(item) ||
+    Object.keys(item).length !== names.length ||
+    Object.keys(item).some((name) => !names.includes(name)) ||
+    item.kind !== 'openplanr-artifact-paste-preparation' ||
+    item.schemaVersion !== '1.0.0' ||
+    origin.origin !== item.origin ||
+    origin.username ||
+    origin.password ||
+    !['https:', 'http:'].includes(origin.protocol) ||
+    (origin.protocol === 'http:' &&
+      !['localhost', '127.0.0.1', '[::1]'].includes(origin.hostname)) ||
+    !token.test(item.key) ||
+    !token.test(item.custodyToken) ||
+    item.key === item.custodyToken ||
+    !Number.isSafeInteger(item.fragmentLength) ||
+    item.fragmentLength < 1 ||
+    item.fragmentLength > 8 * 1024 * 1024 ||
+    !Number.isSafeInteger(item.compressedBytes) ||
+    item.compressedBytes < 1 ||
+    item.compressedBytes > 5 * 1024 * 1024
+  )
+    throw secretExportError('Prepared paste custody has an unsupported shape.');
+  const body = item.body;
+  if (
+    !body ||
+    typeof body !== 'object' ||
+    Array.isArray(body) ||
+    Object.keys(body).length !== bodyNames.length ||
+    Object.keys(body).some((name) => !bodyNames.includes(name)) ||
+    body.schemaVersion !== '2.0.0' ||
+    body.operation !== 'create' ||
+    !token.test(body.id) ||
+    !token.test(body.creationId) ||
+    !/^[A-Za-z0-9_-]{16}$/.test(body.iv) ||
+    typeof body.ciphertext !== 'string' ||
+    !/^[A-Za-z0-9_-]+$/.test(body.ciphertext) ||
+    Buffer.from(body.ciphertext, 'base64url').toString('base64url') !== body.ciphertext ||
+    Buffer.from(body.ciphertext, 'base64url').length < 16 ||
+    Buffer.from(body.ciphertext, 'base64url').length > 5 * 1024 * 1024 ||
+    !['1d', '7d', '30d'].includes(body.ttl)
+  )
+    throw secretExportError('Prepared paste request has an unsupported shape.');
+  if (new Set([item.key, item.custodyToken, body.id, body.creationId]).size !== 4)
+    throw secretExportError('Paste private secrets must differ from public identity.');
+  return item;
+}
+export function readPreparedArtifactPasteRecovery(input: string): PreparedArtifactPaste {
+  let descriptor: number | undefined;
+  try {
+    descriptor = openSync(input, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+    const stat = fstatSync(descriptor);
+    if (
+      !stat.isFile() ||
+      stat.size > ROOM_V3_RECOVERY_FILE_LIMIT ||
+      (process.platform !== 'win32' &&
+        ((stat.mode & 0o077) !== 0 || stat.uid !== process.getuid?.()))
+    )
+      throw new Error('unsafe file');
+    const bytes = readFileSync(descriptor);
+    return validatePreparedPaste(
+      JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)),
+    );
+  } catch {
+    throw new ArtifactCommandError(
+      'E_ARTIFACT_SECRET_INPUT',
+      'Paste recovery must be valid bounded JSON in an owned private regular file.',
+    );
+  } finally {
+    if (descriptor !== undefined) closeSync(descriptor);
+  }
+}
+export async function createArtifactReviewLinkWithSecretCustody({
+  api,
+  envelope,
+  options = {},
+  output,
+  resume,
+  custodyRoot = artifactPasteCustodyRoot(),
+}: {
+  api: ArtifactPipelineApi;
+  envelope: ArtifactEnvelope;
+  options?: Record<string, unknown>;
+  output?: string;
+  resume?: string;
+  custodyRoot?: string;
+}): Promise<Record<string, unknown>> {
+  let prepared = resume ? readPreparedArtifactPasteRecovery(resume) : undefined;
+  if (prepared && options.ttl !== undefined && options.ttl !== prepared.body.ttl)
+    throw new ArtifactCommandError(
+      'E_ARTIFACT_INPUT_INVALID',
+      'A resumed paste must retain its saved expiry.',
+    );
+  const effective = {
+    ...options,
+    ...(prepared
+      ? { short: true, transport: 'short', ttl: prepared.body.ttl, preparedPaste: prepared }
+      : {}),
+  };
+  const explicit = output
+    ? reserveArtifactSecretExport(output, { maxBytes: ROOM_V3_RECOVERY_FILE_LIMIT })
+    : undefined;
+  let saved = false,
+    recoveryPath = resume;
+  try {
+    if (prepared && explicit) {
+      explicit.finalize(prepared);
+      saved = true;
+    }
+    const requestOptions = {
+      ...effective,
+      ...(!prepared
+        ? {
+            onPreparedPaste: (value: unknown) => {
+              prepared = validatePreparedPaste(value);
+              ensurePrivatePasteRoot(custodyRoot);
+              recoveryPath = path.join(custodyRoot, `${prepared.body.id}.json`);
+              const durable = reserveArtifactSecretExport(recoveryPath, {
+                maxBytes: ROOM_V3_RECOVERY_FILE_LIMIT,
+              });
+              durable.finalize(prepared);
+              if (explicit) {
+                explicit.finalize(prepared);
+                saved = true;
+              }
+            },
+          }
+        : {}),
+    };
+    let result: Record<string, unknown>;
+    try {
+      result = await api.createReviewLink(envelope, requestOptions);
+    } catch (error) {
+      if (
+        !prepared ||
+        !['E_ARTIFACT_SHARE_NETWORK', 'E_ARTIFACT_PASTE_UNAVAILABLE'].includes(
+          (error as { code?: string })?.code ?? '',
+        )
+      )
+        throw error;
+      result = await api.createReviewLink(envelope, {
+        ...effective,
+        short: true,
+        transport: 'short',
+        ttl: prepared.body.ttl,
+        preparedPaste: prepared,
+      });
+    }
+    if (explicit && !saved)
+      explicit.finalize({
+        schemaVersion: '1.0.0',
+        kind: 'openplanr-artifact-share-secrets',
+        transport: result.transport === 'short' ? 'short' : 'fragment',
+        reviewUrl: String(result.url),
+        ...(result.deletionToken ? { deletionToken: String(result.deletionToken) } : {}),
+      });
+    return result;
+  } catch (error) {
+    explicit?.abort();
+    if (
+      prepared &&
+      recoveryPath &&
+      ['E_ARTIFACT_SHARE_NETWORK', 'E_ARTIFACT_PASTE_UNAVAILABLE'].includes(
+        (error as { code?: string })?.code ?? '',
+      )
+    )
+      throw new ArtifactCommandError(
+        'E_ARTIFACT_PASTE_UPLOAD_AMBIGUOUS',
+        'Encrypted paste publication was interrupted; its exact private operation is saved.',
+        `Rerun the same artifact share command with --snapshot --short --resume ${recoveryPath}.`,
+      );
+    throw error;
+  }
+}
+
 function parseSecretBundle(source: string): ArtifactSecretBundle {
   let value: unknown;
   try {
@@ -895,9 +1357,39 @@ function parseSecretBundle(source: string): ArtifactSecretBundle {
       'Artifact secret input is not valid JSON.',
     );
   }
+  if ((value as { kind?: unknown })?.kind === 'openplanr-artifact-paste-preparation') {
+    let prepared: PreparedArtifactPaste;
+    try {
+      prepared = validatePreparedPaste(value);
+    } catch {
+      throw new ArtifactCommandError(
+        'E_ARTIFACT_SECRET_INPUT',
+        'Artifact secret input has an unsupported paste recovery shape.',
+      );
+    }
+    const url = new URL(`/p/${prepared.body.id}`, prepared.origin);
+    url.hash = `k=${prepared.key}&v=2`;
+    return {
+      schemaVersion: '1.0.0',
+      kind: 'openplanr-artifact-share-secrets',
+      transport: 'short',
+      reviewUrl: url.toString(),
+      deletionToken: prepared.custodyToken,
+    };
+  }
   const recovery = value as Partial<LiveRoomRecoveryBundle>;
   if (recovery?.kind === 'openplanr-live-room-recovery') {
-    let normalized: LiveRoomRecoveryBundle;
+    if (recovery.schemaVersion === '2.0.0') {
+      try {
+        return projectRoomV3Recovery(recovery as LiveRoomV3RecoveryBundle);
+      } catch {
+        throw new ArtifactCommandError(
+          'E_ARTIFACT_SECRET_INPUT',
+          'Artifact secret input has an unsupported v3 recovery shape.',
+        );
+      }
+    }
+    let normalized: LegacyLiveRoomRecoveryBundle;
     try {
       normalized = assertLiveRoomRecoveryBundle(recovery as LiveRoomRecoveryBundle, {
         schemaVersion: '1.0.0',
@@ -912,7 +1404,7 @@ function parseSecretBundle(source: string): ArtifactSecretBundle {
         ownerUrl: String(recovery.ownerUrl),
         manageUrl: String(recovery.manageUrl),
         ownerSigner: null,
-      });
+      }) as LegacyLiveRoomRecoveryBundle;
     } catch {
       throw new ArtifactCommandError(
         'E_ARTIFACT_SECRET_INPUT',
@@ -1071,7 +1563,7 @@ export function readArtifactSecretInput(input: string): ArtifactSecretBundle {
   try {
     descriptor = openSync(input, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
     const info = fstatSync(descriptor);
-    if (!info.isFile() || info.size > SECRET_FILE_LIMIT || (info.mode & 0o077) !== 0) {
+    if (!info.isFile() || info.size > ROOM_V3_RECOVERY_FILE_LIMIT || (info.mode & 0o077) !== 0) {
       throw new ArtifactCommandError(
         'E_ARTIFACT_SECRET_INPUT',
         'Artifact secret input must be a bounded regular file without group or world permissions.',
@@ -1109,12 +1601,17 @@ export async function verifyLiveRoomRecoveryCustody(
   }
   const descriptor = room.descriptor as Record<string, unknown> | undefined;
   const descriptorOwnerKey = descriptor?.ownerKey as Record<string, unknown> | undefined;
-  const expectedOwnerKey = recovery.ownerKey;
+  const expectedOwnerKey = (
+    recovery.schemaVersion === '2.0.0' ? recovery.body.ownerKey : recovery.ownerKey
+  ) as Record<string, unknown>;
   const keyNames = ['algorithm', 'encoding', 'keyId', 'value'];
   if (
     !descriptor ||
-    descriptor.roomId !== recovery.roomId ||
-    descriptor.reviewOf !== recovery.reviewOf ||
+    descriptor.roomId !==
+      (recovery.schemaVersion === '2.0.0' ? recovery.body.roomId : recovery.roomId) ||
+    (recovery.schemaVersion === '2.0.0'
+      ? descriptor.reviewCommitment !== recovery.body.reviewCommitment
+      : descriptor.reviewOf !== recovery.reviewOf) ||
     room.reviewOf !== recovery.reviewOf ||
     !descriptorOwnerKey ||
     keyNames.some((key) => descriptorOwnerKey[key] !== expectedOwnerKey[key])

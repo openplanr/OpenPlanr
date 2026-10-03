@@ -128,10 +128,6 @@ CLAUDE.md
 /packages/artifact/lib/artifact/ui/*.d.mts
 /packages/artifact/lib/artifact/ui/sandbox/*.mjs
 /packages/artifact/lib/artifact/ui/sandbox/*.d.mts
-# These guards remain handwritten until their separate typed-source migration.
-!/packages/artifact/lib/artifact/ui/sandbox/frame-guard.mjs
-!/packages/artifact/lib/artifact/ui/sandbox/host-guard.mjs
-!/packages/artifact/lib/artifact/ui/sandbox/worker-guard.mjs
 /packages/design/lib/design/ui/studio-chrome.mjs
 /packages/design/lib/design/ui/studio-chrome.d.mts
 /packages/artifact/lib/artifact/internal/credential-writer.mjs

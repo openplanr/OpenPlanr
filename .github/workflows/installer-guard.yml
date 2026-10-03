@@ -1,0 +1,26 @@
+name: Windows installer guard
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: ['**']
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+
+jobs:
+  powershell-guard:
+    name: Windows PowerShell 5.1 installer runtime guard
+    runs-on: windows-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - name: Check the actual installer guard without package installation
+        shell: powershell
+        run: ./packages/cli/tests/fixtures/installer-node-guard.ps1

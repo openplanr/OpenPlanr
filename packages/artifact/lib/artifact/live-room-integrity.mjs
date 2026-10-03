@@ -616,7 +616,7 @@ function assertSemanticPayload(kind, payload, reviewOf) {
   assertSemanticReview(payload.review, reviewOf);
 }
 
-function normalizeSemanticEvent(value) {
+export function normalizeSemanticEvent(value) {
   assertExactKeys(
     value,
     ['schemaVersion', 'eventId', 'roomId', 'reviewOf', 'kind', 'createdAt', 'payload'],

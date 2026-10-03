@@ -115,3 +115,12 @@ It rejects source overrides, private workspace imports, missing exports, and
 missing schema references. Run `npm run verify:packed:strict` at the workspace
 root after generation and build; install Chromium with
 `npm exec --workspace=@openplanr/protocol -- playwright install chromium` first.
+
+## Shared artifact sources
+
+Protocol 1.16 adds a shared-source artifact envelope (`schemaVersion: "1.1.0"`)
+and a Design review bundle (`schemaVersion: "1.2.0"`). Each HTML source is stored
+once; viewport records reference its stable ID and digest. The envelope supports
+256 sources and 4,096 views, while the existing inline envelope and Design review
+bundle schemas remain unchanged. These local/portable contracts do not expand
+existing hosted publication capabilities or encrypted transport byte budgets.

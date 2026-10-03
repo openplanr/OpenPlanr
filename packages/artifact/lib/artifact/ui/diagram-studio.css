@@ -1,4 +1,5 @@
 .diagram-shell {
+  container-type: inline-size;
   display: grid;
   grid-template-rows: var(--planr-toolbar-height) minmax(0, 1fr);
   height: 100dvh;
@@ -474,6 +475,9 @@
   z-index: 8;
 }
 .diagram-canvas-tools {
+  max-width: calc(100% - 16px);
+  flex-wrap: wrap;
+  justify-content: center;
   position: absolute;
   left: 50%;
   bottom: 26px;
@@ -489,6 +493,9 @@
   white-space: nowrap;
 }
 .diagram-canvas-tools > div {
+  min-width: 0;
+  flex-wrap: wrap;
+  justify-content: center;
   display: flex;
   border-right: 1px solid var(--planr-color-rule);
   padding-right: 6px;
@@ -570,78 +577,88 @@
 .diagram-shell[data-present="true"] .diagram-canvas-status {
   display: none;
 }
-@media (max-width: 1000px) {
-  .diagram-save {
-    display: none;
-  }
-  .diagram-shell {
-    --diagram-outline-width: 200px;
-  }
+
+.diagram-shell[data-studio-density="narrow"] .diagram-save {
+  display: none;
 }
-@media (max-width: 700px) {
-  .diagram-shell {
-    --diagram-outline-width: 0px;
-  }
-  .diagram-toolbar {
-    padding: 0 8px;
-    gap: 6px;
-  }
-  .diagram-subtitle {
-    display: none;
-  }
-  .diagram-toolbar .planr-title-block strong {
-    max-width: 38vw;
-    font-size: 12px;
-  }
-  .diagram-header-actions {
-    gap: 4px;
-  }
-  .diagram-toolbar .planr-toolbar-action {
-    padding: 0 8px;
-    font-size: 11px;
-  }
-  .diagram-toolbar [data-action="present"] {
-    display: none;
-  }
-  .diagram-outline {
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    z-index: 25;
-    width: min(280px, 85vw);
-    box-shadow: 8px 0 30px #182c3825;
-  }
-  .diagram-shell[data-outline-open="false"] .diagram-outline {
-    display: none;
-  }
-  .diagram-shell[data-planr-rail-open="true"] .diagram-canvas {
-    margin: 0;
-  }
-  .diagram-shell .planr-review-rail {
-    width: min(340px, 94vw);
-    z-index: 26;
-  }
-  .diagram-canvas-tools {
-    gap: 2px;
-    padding: 4px;
-    bottom: max(24px, env(safe-area-inset-bottom));
-    max-width: calc(100% - 16px);
-  }
-  .diagram-canvas-tools button {
-    padding: 8px;
-    font-size: 11px;
-    min-height: 42px;
-  }
-  .diagram-canvas-tools > div {
-    padding-right: 2px;
-  }
-  .diagram-shell input,
-  .diagram-shell textarea,
-  .diagram-shell select {
-    font-size: 16px;
-  }
+
+.diagram-shell[data-studio-density="narrow"] {
+  --diagram-outline-width: 200px;
 }
+
+.diagram-shell[data-studio-layout="compact"] {
+  --diagram-outline-width: 0px;
+}
+
+.diagram-shell[data-studio-layout="compact"] .diagram-toolbar {
+  padding: 0 8px;
+  gap: 6px;
+}
+
+.diagram-shell[data-studio-layout="compact"] .diagram-subtitle {
+  display: none;
+}
+
+.diagram-shell[data-studio-layout="compact"] .diagram-toolbar .planr-title-block strong {
+  max-width: 38cqw;
+  font-size: 12px;
+}
+
+.diagram-shell[data-studio-layout="compact"] .diagram-header-actions {
+  gap: 4px;
+}
+
+.diagram-shell[data-studio-layout="compact"] .diagram-toolbar .planr-toolbar-action {
+  padding: 0 8px;
+  font-size: 11px;
+}
+
+.diagram-shell[data-studio-layout="compact"] .diagram-outline {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 25;
+  width: min(280px, 85%);
+  box-shadow: 8px 0 30px #182c3825;
+}
+
+.diagram-shell[data-studio-layout="compact"][data-outline-open="false"] .diagram-outline {
+  display: none;
+}
+
+.diagram-shell[data-studio-layout="compact"][data-planr-rail-open="true"] .diagram-canvas {
+  margin: 0;
+}
+
+.diagram-shell[data-studio-layout="compact"] .planr-review-rail {
+  width: min(340px, 94%);
+  z-index: 26;
+}
+
+.diagram-shell[data-studio-layout="compact"] .diagram-canvas-tools {
+  gap: 2px;
+  padding: 4px;
+  bottom: max(24px, env(safe-area-inset-bottom));
+  max-width: calc(100% - 16px);
+}
+
+.diagram-shell[data-studio-layout="compact"] .diagram-canvas-tools button {
+  padding: 8px;
+  font-size: 11px;
+  min-height: 42px;
+}
+
+.diagram-shell[data-studio-layout="compact"] .diagram-canvas-tools > div {
+  padding-right: 2px;
+}
+
+.diagram-shell[data-studio-layout="compact"] input,
+.diagram-shell[data-studio-layout="compact"] textarea,
+.diagram-shell[data-studio-layout="compact"] select {
+  font-size: 16px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .diagram-shell * {
     animation: none !important;
@@ -660,13 +677,16 @@
   display: block;
   color: var(--planr-color-danger);
 }
-@media (max-width: 1000px) {
-  .diagram-save[data-failed="true"] {
-    position: absolute;
-    top: 72px;
-    right: 12px;
-    padding: 8px;
-    background: var(--planr-color-panel);
-    border: 1px solid var(--planr-color-danger);
-  }
+
+.diagram-shell[data-studio-density="narrow"] .diagram-save[data-failed="true"] {
+  position: absolute;
+  top: 72px;
+  right: 12px;
+  padding: 8px;
+  background: var(--planr-color-panel);
+  border: 1px solid var(--planr-color-danger);
+}
+
+.diagram-shell[data-planr-review-mode="inspect"] .diagram-canvas {
+  cursor: default;
 }

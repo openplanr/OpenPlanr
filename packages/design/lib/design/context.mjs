@@ -87,7 +87,7 @@ export function bundleDesignRevision(current, state = {}) {
   const context = current.reviewContext ?? emptyReviewContext(document);
   return {
     kind: 'openplanr-design-review-bundle',
-    schemaVersion: '1.1.0',
+    schemaVersion: current.envelope.schemaVersion === '1.1.0' ? '1.2.0' : '1.1.0',
     design: {
       ...pick(document, [
         'id',

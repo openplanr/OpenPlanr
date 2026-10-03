@@ -1,3 +1,4 @@
+// @ts-check
 export { adoptMermaidCopy, exportMermaidCopy, previewMermaidCopy } from '../source-map.mjs';
 export { compileDiagramCommand } from './commands.mjs';
 export { diffDiagramBundles } from './diff.mjs';

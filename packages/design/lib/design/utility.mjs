@@ -13,6 +13,7 @@ import {
   renderDesignDocument,
   standaloneDesignHtml,
 } from './document.mjs';
+import { importDesignFeedback } from './feedback-import.mjs';
 import { readDesignHandoff, updateDesignHandoff } from './handoff.mjs';
 import {
   exportDesignReview,
@@ -30,6 +31,7 @@ import {
   shareDesign,
   syncDesignShare,
 } from './share.mjs';
+import { manageDesignStudio } from './studio-lifecycle.mjs';
 
 export { auditDesignPage, auditRenderedScreen } from './browser-audit.mjs';
 
@@ -135,7 +137,7 @@ export async function designUtility(
   if (argv.length === 0 || argv[0] === '--help' || argv[0] === 'help') {
     const help = {
       usage:
-        'design.mjs inspect|validate|render|open|export|feedback|verify|share|publish|sync|manage|handoff <design-document.json>',
+        'design.mjs inspect|validate|render|open|studio|export|feedback|verify|share|publish|sync|manage|handoff <design-document.json>',
       flags: [
         '--json',
         '--no-open',
@@ -145,8 +147,10 @@ export async function designUtility(
         '--scope current|all',
         '--output <path>',
         '--report <browser-report.json>',
-        '--action inspect|export|select|resolve|rotate|pause|resume|revoke|delete|recovery|restore',
-        '--input <private recovery file>',
+        '--action inspect|export|import|select|resolve|rotate|pause|resume|revoke|delete|recovery|restore|status|stop',
+        '--input <private recovery or feedback JSON file>',
+        '--revision <current-render-revision>',
+        '--allow-stale',
         '--variant <id>',
         '--pins <id,id>',
         '--summary <text>',
@@ -163,6 +167,7 @@ export async function designUtility(
       'validate',
       'render',
       'open',
+      'studio',
       'export',
       'feedback',
       'verify',
@@ -175,7 +180,7 @@ export async function designUtility(
     !input
   )
     throw new Error(
-      'Usage: design.mjs inspect|validate|render|open|export|feedback|verify|share|publish|sync|manage|handoff <design-document.json> [--json] [--no-open] [--view canvas|prototype|walkthrough]',
+      'Usage: design.mjs inspect|validate|render|open|studio|export|feedback|verify|share|publish|sync|manage|handoff <design-document.json> [--json] [--no-open] [--view canvas|prototype|walkthrough]',
     );
   const flags = {};
   for (let i = 0; i < args.length; i++) {
@@ -191,20 +196,30 @@ export async function designUtility(
         'port',
         'report',
         'action',
+        'instance-id',
         'pins',
         'summary',
         'variant',
         'input',
         'scope',
+        'revision',
+        'allow-stale',
       ].includes(key)
     )
       throw new Error(`Unknown option: ${args[i]}`);
-    flags[key] = ['json', 'no-open'].includes(key) ? true : args[++i];
+    flags[key] = ['json', 'no-open', 'allow-stale'].includes(key) ? true : args[++i];
   }
   if (flags.view && !['canvas', 'prototype', 'walkthrough'].includes(flags.view))
     throw new Error('View must be canvas, prototype, or walkthrough.');
   const file = resolve(input);
   let result;
+  if (command === 'studio')
+    result = await manageDesignStudio(file, {
+      action: flags.action,
+      instanceId: flags['instance-id'],
+      env,
+      fetchImpl,
+    });
   if (command === 'handoff') {
     const action = flags.action ?? 'inspect';
     if (action === 'inspect') result = readDesignHandoff(file);
@@ -255,6 +270,8 @@ export async function designUtility(
       view: flags.view,
       noOpen: Boolean(flags['no-open']),
       openUrl,
+      env,
+      fetchImpl,
     });
     const close = result.close;
     if (close) {
@@ -288,9 +305,16 @@ export async function designUtility(
     result = verifyDesignDocument(file, readJson(resolve(flags.report)));
   }
   if (command === 'feedback') {
-    await syncDesignShare(file, { env, fetchImpl });
     const action = flags.action ?? 'inspect';
-    if (action === 'inspect') result = readDesignFeedback(file, env);
+    if (action !== 'import') await syncDesignShare(file, { env, fetchImpl });
+    if (action === 'import')
+      result = await importDesignFeedback(file, {
+        input: flags.input,
+        revision: flags.revision,
+        allowStale: Boolean(flags['allow-stale']),
+        env,
+      });
+    else if (action === 'inspect') result = readDesignFeedback(file, env);
     else if (action === 'export') {
       const format = flags.format ?? 'json',
         scope = flags.scope ?? 'all';
@@ -344,7 +368,7 @@ export async function designUtility(
         tastePath: result.tastePath,
         revision: current.revision,
       };
-    } else throw new Error('Feedback action must be inspect, export, select, or resolve.');
+    } else throw new Error('Feedback action must be inspect, export, import, select, or resolve.');
   }
   stdout(result);
   return result;

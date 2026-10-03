@@ -7,9 +7,10 @@
 
 import { existsSync, lstatSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { createServer } from 'node:http';
-import { dirname, join } from 'node:path';
+import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ARTIFACT_ERROR_CODES, PipelineError } from '@openplanr/protocol/errors';
+import { resolveArtifactHtml } from './artifact-sources.mjs';
 import {
   createArtifactBridgeNonce,
   prepareArtifactDocument,
@@ -17,6 +18,7 @@ import {
 } from './bridge.mjs';
 import {
   digestArtifactEnvelope,
+  MAX_ARTIFACT_HTML_BYTES,
   validateArtifactEnvelope,
   validateArtifactReview,
 } from './envelope.mjs';
@@ -27,6 +29,7 @@ import {
   timingSafeTokenEqual,
 } from './internal/board-token.mjs';
 import { planrHome } from './internal/paths.mjs';
+import { readRuntimeAsset } from './internal/runtime-asset.mjs';
 import {
   acquireStartLock,
   assertLoopbackRequest,
@@ -34,7 +37,7 @@ import {
   LOOPBACK_HOST,
   listenLoopback,
   probeLoopbackJson,
-  readJsonState,
+  readPrivateJsonState,
   readRequestBody,
   writePrivateJsonState,
 } from './internal/server-util.mjs';
@@ -51,12 +54,14 @@ import { renderArtifactShellDocument } from './ui/shell.mjs';
 const here = dirname(fileURLToPath(import.meta.url));
 const STAGE_RUNTIME_PATH = join(here, '..', '..', 'templates', 'artifact-review-stage.js');
 
-export const ARTIFACT_REVIEW_SERVER_VERSION = 1;
+export const ARTIFACT_REVIEW_SERVER_VERSION = 2;
 export const ARTIFACT_REVIEW_SERVER_KIND = 'artifact-review';
-// Registration JSON carries the whole envelope. JSON escaping at most doubles
-// HTML without rare control characters, so this covers the 100 MiB engine
-// limit and stays under V8's 512 MiB string cap.
-export const ARTIFACT_REVIEW_MAX_CONTROL_BYTES = 256 * 1024 * 1024;
+// Legacy registration reserves space for ordinary JSON escaping and review state,
+// rounded to a 64 MiB control window. Large hosted publications use resource chunks.
+const CONTROL_WINDOW_BYTES = 64 * 1024 * 1024;
+export const ARTIFACT_REVIEW_MAX_CONTROL_BYTES =
+  Math.ceil((MAX_ARTIFACT_HTML_BYTES * 2 + REVIEW_STATE_MAX_BYTES) / CONTROL_WINDOW_BYTES) *
+  CONTROL_WINDOW_BYTES;
 export const ARTIFACT_REVIEW_MAX_STATE_BYTES = REVIEW_STATE_MAX_BYTES;
 
 const SESSION_ID_BYTES = 16;
@@ -65,6 +70,8 @@ const SESSION_TOKEN_BYTES = 32;
 const MAX_URL_BYTES = 4_096;
 const TITLE_LIMIT = 512;
 const THEME_VALUES = new Set(['auto', 'light', 'dark']);
+const STUDIO_ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/u;
+const SOURCE_TRANSPORTS = new Set(['blob', 'srcdoc']);
 const localServers = new Map();
 
 // No frame-ancestors: each blob: artifact frame inherits this policy, and WebKit applies an
@@ -146,7 +153,7 @@ export async function exportArtifactReviewSession(
   let names = [];
   try {
     names = readdirSync(directory)
-      .filter((name) => /^state-(?:default|\d+)\.json$/.test(name))
+      .filter((name) => /^(?:instance-[A-Za-z0-9_-]{22}|state-(?:default|\d+))\.json$/u.test(name))
       .sort();
   } catch (error) {
     if (error?.code !== 'ENOENT') {
@@ -158,15 +165,12 @@ export async function exportArtifactReviewSession(
   }
   for (const name of names) {
     const statePath = join(directory, name);
-    let entry;
-    try {
-      entry = lstatSync(statePath);
-    } catch {
+    const state = readReviewServerState(statePath);
+    if (
+      !validState(state, 0, { allowLegacy: true }) ||
+      !(await stateIsHealthy(state, fetchImpl, { allowLegacy: true }))
+    )
       continue;
-    }
-    if (!entry.isFile() || entry.isSymbolicLink()) continue;
-    const state = readJsonState(statePath);
-    if (!validState(state, 0) || !(await stateIsHealthy(state, fetchImpl))) continue;
     let response;
     try {
       response = await fetchImpl(
@@ -215,6 +219,10 @@ function statusForError(error) {
     return 403;
   if (error?.code === ARTIFACT_ERROR_CODES.LOOPBACK_STATE) return 503;
   if (error?.code === ARTIFACT_ERROR_CODES.REVIEW_WRITE) return 500;
+  if (
+    [ARTIFACT_ERROR_CODES.STALE_REVIEW, ARTIFACT_ERROR_CODES.MERGE_CONFLICT].includes(error?.code)
+  )
+    return 409;
   if (error instanceof SyntaxError || error instanceof PipelineError) return 400;
   return 500;
 }
@@ -371,7 +379,32 @@ function normalizeRegistration(value) {
       'Artifact review storage key is invalid.',
     );
   }
-  return { envelope, title, theme, cwd, ...(reviewKey ? { reviewKey } : {}) };
+  const { studioId, sourceTransport, frameBudget } = value;
+  if (studioId !== undefined && (typeof studioId !== 'string' || !STUDIO_ID.test(studioId)))
+    throw artifactError(ARTIFACT_ERROR_CODES.REQUEST_INVALID, 'Local Studio id is invalid.');
+  if (sourceTransport !== undefined && !SOURCE_TRANSPORTS.has(sourceTransport))
+    throw artifactError(
+      ARTIFACT_ERROR_CODES.REQUEST_INVALID,
+      'Artifact source transport must be blob or srcdoc.',
+    );
+  if (
+    frameBudget !== undefined &&
+    (!Number.isInteger(frameBudget) || frameBudget < 1 || frameBudget > 8)
+  )
+    throw artifactError(
+      ARTIFACT_ERROR_CODES.REQUEST_INVALID,
+      'Artifact frame budget must be 1 through 8.',
+    );
+  return {
+    envelope,
+    title,
+    theme,
+    cwd,
+    ...(reviewKey ? { reviewKey } : {}),
+    ...(studioId ? { studioId } : {}),
+    ...(sourceTransport ? { sourceTransport } : {}),
+    ...(frameBudget === undefined ? {} : { frameBudget }),
+  };
 }
 
 function assertReviewStateSize(ledger) {
@@ -435,6 +468,13 @@ function queueSessionReviewWrite(session, review) {
     return withArtifactReviewLock(session.reviewPath, () => {
       const durable =
         readArtifactReviewState(session.reviewPath, { allowMissing: true }) ?? session.reviewState;
+      // A second session can advance the revision after this request was queued.
+      // Validate under the durable lock rather than accepting obsolete feedback.
+      if (review.reviewOf !== durable.currentReviewOf)
+        throw artifactError(
+          ARTIFACT_ERROR_CODES.STALE_REVIEW,
+          'The artifact changed. Reload before submitting feedback.',
+        );
       const next = mergeReviewLedger(durable, review, { stale: false });
       assertReviewStateSize(next);
       writeArtifactReviewState(session.reviewPath, next);
@@ -481,6 +521,44 @@ function publicBase(session) {
   return `/r/${session.id}/${session.capability}/`;
 }
 
+function studioBase(session) {
+  return session.studioId ? `/studio/${encodeURIComponent(session.studioId)}/` : null;
+}
+
+function studioCookieName(session) {
+  return `openplanr_studio_${session.id}`;
+}
+
+function studioCookieMatches(req, session) {
+  const name = `${studioCookieName(session)}=`;
+  const values = String(req.headers.cookie ?? '')
+    .split(';')
+    .map((value) => value.trim())
+    .filter((value) => value.startsWith(name));
+  return values.length === 1 && sessionMatches(session, values[0].slice(name.length));
+}
+
+function escapeHtml(value) {
+  return String(value).replace(
+    /[&<>"']/gu,
+    (character) =>
+      ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;',
+      })[character],
+  );
+}
+
+function renderStudioSelection(sessions) {
+  const links = sessions
+    .map((session) => `<li><a href="${studioBase(session)}">${escapeHtml(session.title)}</a></li>`)
+    .join('');
+  return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>OpenPlanr Studio</title><style>body{font:16px system-ui;margin:48px;max-width:720px;color:#172a2a;background:#f6f9f8}a{color:#16776f}li{margin:16px 0}</style><h1>OpenPlanr Studio</h1><p>Choose an open design.</p><ul>${links}</ul></html>`;
+}
+
 function shellEnvelope(session) {
   const candidates = session.reviewState.reviews
     .filter(
@@ -496,6 +574,7 @@ function shellEnvelope(session) {
   const review = candidates.at(-1);
   return {
     schemaVersion: session.envelope.schemaVersion,
+    ...(session.envelope.sources ? { sources: session.envelope.sources } : {}),
     artifacts: session.envelope.artifacts,
     viewer: session.envelope.viewer,
     ...(review ? { review } : {}),
@@ -523,6 +602,7 @@ export function createArtifactReviewServer({
   handleSessionRequest,
   refreshSession,
   prepareSource,
+  serverMetadata,
 } = {}) {
   if (!isCapabilityToken(controlToken, { bytes: CONTROL_TOKEN_BYTES })) {
     throw artifactError(
@@ -536,7 +616,20 @@ export function createArtifactReviewServer({
       'Artifact review instance id is invalid.',
     );
   }
+  if (
+    serverMetadata !== undefined &&
+    (!serverMetadata ||
+      !['artifact', 'design', 'diagram'].includes(serverMetadata.kind) ||
+      typeof serverMetadata.projectRoot !== 'string' ||
+      !isAbsolute(serverMetadata.projectRoot))
+  )
+    throw artifactError(ARTIFACT_ERROR_CODES.LOOPBACK_STATE, 'Local server metadata is invalid.');
+  const instanceStatePath = serverMetadata
+    ? join(reviewStateDir(env), `instance-${instanceId}.json`)
+    : null;
   const sessions = new Map();
+  const pendingStudioIds = new Set();
+  const pendingMutations = new Set();
   const ownerSessions = new Map();
   let port = null;
   let closePromise = null;
@@ -544,7 +637,7 @@ export function createArtifactReviewServer({
   let activeRequests = 0;
   let draining = false;
   let emptyTimer = null;
-  const stageRuntime = () => readFileSync(STAGE_RUNTIME_PATH, 'utf8');
+  const stageRuntime = () => readRuntimeAsset(STAGE_RUNTIME_PATH).toString('utf8');
   const idle = () =>
     sessions.size === 0 &&
     ownerSessions.size === 0 &&
@@ -568,6 +661,7 @@ export function createArtifactReviewServer({
   const server = createServer(async (req, res) => {
     activeRequests += 1;
     let requestFinished = false;
+    let finishMutation;
     const finishRequest = () => {
       if (requestFinished) return;
       requestFinished = true;
@@ -580,10 +674,14 @@ export function createArtifactReviewServer({
     try {
       if (port === null)
         throw artifactError(ARTIFACT_ERROR_CODES.LOOPBACK_STATE, 'Artifact server is not ready.');
-      const { segments, trailingSlash } = parseRequestPath(req.url);
+      let { segments, trailingSlash } = parseRequestPath(req.url);
       const internal = segments[0] === 'internal';
       const mutating = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method);
-      assertLoopbackRequest(req, { port, mutating, internal });
+      const { expectedOrigin: parentOrigin } = assertLoopbackRequest(req, {
+        port,
+        mutating,
+        internal,
+      });
 
       if (req.method === 'GET' && segments.length === 1 && segments[0] === 'health') {
         sendJson(res, 200, serverHealth(instanceId), { head });
@@ -593,6 +691,14 @@ export function createArtifactReviewServer({
       if (internal) {
         if (!timingSafeTokenEqual(bearerToken(req), controlToken)) {
           sendJson(res, 403, { ok: false, error: 'forbidden' });
+          return;
+        }
+        if (req.method === 'POST' && segments.join('/') === 'internal/v1/shutdown') {
+          draining = true;
+          sendJson(res, 200, { ok: true, instanceId, status: 'stopping' });
+          queueMicrotask(() => {
+            controller.close().catch(() => {});
+          });
           return;
         }
         if (req.method === 'POST' && segments.join('/') === 'internal/v1/sessions') {
@@ -613,6 +719,7 @@ export function createArtifactReviewServer({
             );
           }
           pendingRegistrations += 1;
+          let pendingStudioId;
           try {
             let body;
             try {
@@ -633,8 +740,28 @@ export function createArtifactReviewServer({
                 'Artifact review server is restarting.',
               );
             }
+            if (
+              registration.studioId &&
+              (pendingStudioIds.has(registration.studioId) ||
+                [...sessions.values()].some(
+                  (session) => session.studioId === registration.studioId,
+                ))
+            )
+              throw artifactError(
+                ARTIFACT_ERROR_CODES.MERGE_CONFLICT,
+                'This local Studio is already open. Reuse its URL or close it before starting another session.',
+              );
+            if (registration.studioId) {
+              pendingStudioId = registration.studioId;
+              pendingStudioIds.add(pendingStudioId);
+            }
             const id = mintCapabilityToken({ bytes: SESSION_ID_BYTES });
             const reviewState = await initializeSessionReview(registration, env);
+            if (draining)
+              throw artifactError(
+                ARTIFACT_ERROR_CODES.LOOPBACK_STATE,
+                'Artifact review server is restarting.',
+              );
             const session = {
               ...registration,
               id,
@@ -651,8 +778,10 @@ export function createArtifactReviewServer({
               sessionId: id,
               capability: session.capability,
               path: publicBase(session),
+              ...(session.studioId ? { studioPath: studioBase(session) } : {}),
             });
           } finally {
+            if (pendingStudioId) pendingStudioIds.delete(pendingStudioId);
             pendingRegistrations -= 1;
           }
           return;
@@ -736,6 +865,64 @@ export function createArtifactReviewServer({
         }
         notFound(res, { head });
         return;
+      }
+
+      // Short Studio URLs are an explicitly registered, local-owner presentation.
+      // A top-level navigation issues an HttpOnly per-design session capability;
+      // all assets and API calls still require it and exact Host/Origin checks.
+      const studios = [...sessions.values()].filter((session) => session.studioId);
+      if (segments.length === 0 && studios.length && ['GET', 'HEAD'].includes(req.method)) {
+        send(res, 303, '', { location: '/studio' }, { head });
+        return;
+      }
+      let studioSession = null;
+      if (segments[0] === 'studio') {
+        if (!['GET', 'HEAD'].includes(req.method) && segments.length < 3) {
+          notFound(res, { head });
+          return;
+        }
+        if (segments.length === 1 && ['GET', 'HEAD'].includes(req.method)) {
+          if (studios.length === 1)
+            send(res, 303, '', { location: studioBase(studios[0]) }, { head });
+          else if (studios.length > 1)
+            send(
+              res,
+              200,
+              renderStudioSelection(studios),
+              {
+                ...parentHeaders(),
+                'content-type': 'text/html; charset=utf-8',
+              },
+              { head },
+            );
+          else notFound(res, { head });
+          return;
+        }
+        studioSession = studios.find((session) => session.studioId === segments[1]);
+        if (!studioSession || draining) {
+          notFound(res, { head });
+          return;
+        }
+        const base = studioBase(studioSession);
+        if (segments.length === 2 && ['GET', 'HEAD'].includes(req.method)) {
+          if (!trailingSlash) {
+            send(res, 308, '', { location: base }, { head });
+            return;
+          }
+          const destination = String(req.headers['sec-fetch-dest'] ?? '').toLowerCase();
+          if (destination && destination !== 'document') {
+            notFound(res, { head });
+            return;
+          }
+          res.setHeader(
+            'set-cookie',
+            `${studioCookieName(studioSession)}=${studioSession.capability}; Path=${base}; HttpOnly; SameSite=Strict`,
+          );
+        } else if (!studioCookieMatches(req, studioSession)) {
+          notFound(res, { head });
+          return;
+        }
+        segments = ['r', studioSession.id, studioSession.capability, ...segments.slice(2)];
       }
 
       // Owner authority is registered only by a trusted in-process adapter. It
@@ -829,8 +1016,18 @@ export function createArtifactReviewServer({
         notFound(res, { head });
         return;
       }
-      const base = publicBase(session);
-      const parentOrigin = `http://${LOOPBACK_HOST}:${port}`;
+      if (mutating) {
+        let complete;
+        const pending = new Promise((resolveMutation) => {
+          complete = resolveMutation;
+        });
+        pendingMutations.add(pending);
+        finishMutation = () => {
+          pendingMutations.delete(pending);
+          complete();
+        };
+      }
+      const base = studioSession ? studioBase(session) : publicBase(session);
       // Trusted in-process presentation adapters. Authored artifact content never
       // provides these functions; storage, authentication and sandboxing stay here.
       await refreshSession?.(session);
@@ -952,9 +1149,17 @@ export function createArtifactReviewServer({
 
       if (segments.length === 4 && segments[3] === 'runtime.js') {
         const options = {
-          artifactBaseUrl: `${base}artifacts/`,
+          // Sources retain credential-free capability requests on both routes.
+          artifactBaseUrl: `${publicBase(session)}artifacts/`,
           stageRuntimeUrl: `${base}stage.js`,
           nonce: session.bridgeNonce,
+          parentOrigin,
+          // Opaque srcdoc inherits the parent URL as baseURI. Keep capability
+          // URLs on blob transport so authored source cannot read that URL.
+          ...(session.sourceTransport
+            ? { sourceTransport: studioSession ? session.sourceTransport : 'blob' }
+            : {}),
+          ...(session.frameBudget === undefined ? {} : { frameBudget: session.frameBudget }),
         };
         const runtime = renderRuntime
           ? await renderRuntime({ options, session, base })
@@ -998,7 +1203,7 @@ export function createArtifactReviewServer({
           return;
         }
         const sourceOptions = {
-          html: artifact.html,
+          html: resolveArtifactHtml(session.envelope, artifact),
           artifactId: artifact.id,
           nonce: session.bridgeNonce,
           parentOrigin,
@@ -1034,6 +1239,8 @@ export function createArtifactReviewServer({
           ? error.toJSON()
           : { ok: false, error: status === 500 ? 'internal error' : error.message };
       sendJson(res, status, value, { head });
+    } finally {
+      finishMutation?.();
     }
   });
   server.maxHeadersCount = 64;
@@ -1041,7 +1248,7 @@ export function createArtifactReviewServer({
   server.requestTimeout = 15_000;
   server.keepAliveTimeout = 2_000;
 
-  return Object.freeze({
+  const controller = Object.freeze({
     server,
     controlToken,
     instanceId,
@@ -1090,6 +1297,29 @@ export function createArtifactReviewServer({
     async listen(requestedPort = 0) {
       if (port !== null) return port;
       port = await listenLoopback(server, requestedPort);
+      if (instanceStatePath) {
+        try {
+          writePrivateJsonState(instanceStatePath, {
+            schemaVersion: '1.0.0',
+            kind: ARTIFACT_REVIEW_SERVER_KIND,
+            serverVersion: ARTIFACT_REVIEW_SERVER_VERSION,
+            pid: process.pid,
+            port,
+            instanceId,
+            controlToken,
+            startedAt: new Date().toISOString(),
+            serviceKind: serverMetadata.kind,
+            projectRoot: serverMetadata.projectRoot,
+            ...(serverMetadata.kind === 'design'
+              ? { url: `http://${LOOPBACK_HOST}:${port}/studio` }
+              : {}),
+          });
+        } catch (error) {
+          await closeHttpServer(server);
+          port = null;
+          throw error;
+        }
+      }
       return port;
     },
     async close() {
@@ -1098,22 +1328,36 @@ export function createArtifactReviewServer({
       if (emptyTimer) clearTimeout(emptyTimer);
       emptyTimer = null;
       closePromise = (async () => {
+        const pendingReviews = [
+          ...pendingMutations,
+          ...[...sessions.values()].map((session) => session.writeQueue),
+        ];
         sessions.clear();
         const pendingOwners = [...ownerSessions.values()].flatMap((owner) => [...owner.pending]);
         ownerSessions.clear();
-        await Promise.allSettled(pendingOwners);
+        await Promise.allSettled([...pendingReviews, ...pendingOwners]);
         await closeHttpServer(server);
+        if (instanceStatePath) {
+          const state = readReviewServerState(instanceStatePath);
+          if (
+            state?.instanceId === instanceId &&
+            timingSafeTokenEqual(state.controlToken, controlToken)
+          )
+            rmSync(instanceStatePath, { force: true });
+        }
       })();
       return closePromise;
     },
   });
+  return controller;
 }
 
-function validState(value, requestedPort) {
+function validState(value, requestedPort, { allowLegacy = false } = {}) {
   return (
     value?.schemaVersion === '1.0.0' &&
     value.kind === ARTIFACT_REVIEW_SERVER_KIND &&
-    value.serverVersion === ARTIFACT_REVIEW_SERVER_VERSION &&
+    (value.serverVersion === ARTIFACT_REVIEW_SERVER_VERSION ||
+      (allowLegacy && value.serverVersion === 1)) &&
     Number.isInteger(value.pid) &&
     value.pid > 0 &&
     Number.isInteger(value.port) &&
@@ -1125,13 +1369,27 @@ function validState(value, requestedPort) {
   );
 }
 
-async function stateIsHealthy(state, fetchImpl) {
-  if (!validState(state, 0)) return false;
+function readReviewServerState(path) {
+  try {
+    const state = readPrivateJsonState(path);
+    if (state !== null && !validState(state, 0, { allowLegacy: true })) throw new Error();
+    return state;
+  } catch {
+    throw artifactError(
+      ARTIFACT_ERROR_CODES.LOOPBACK_STATE,
+      'Local Studio owner state is unsafe or malformed. The original record was preserved.',
+      'Run planr doctor and recover the owner record before starting or stopping this service.',
+    );
+  }
+}
+
+async function stateIsHealthy(state, fetchImpl, { allowLegacy = false } = {}) {
+  if (!validState(state, 0, { allowLegacy })) return false;
   const health = await probeLoopbackJson(state.port, '/health', { fetchImpl });
   return (
     health?.ok === true &&
     health.kind === ARTIFACT_REVIEW_SERVER_KIND &&
-    health.version === ARTIFACT_REVIEW_SERVER_VERSION &&
+    health.version === state.serverVersion &&
     health.pid === state.pid &&
     health.instanceId === state.instanceId
   );
@@ -1143,23 +1401,30 @@ async function cleanupOwnedDescriptor(descriptor, { force = false } = {}) {
   try {
     await descriptor.reviewServer.close();
   } finally {
-    const current = readJsonState(descriptor.statePath);
-    if (
-      current?.pid === process.pid &&
-      timingSafeTokenEqual(current.controlToken, descriptor.state.controlToken) &&
-      current.instanceId === descriptor.state.instanceId
-    ) {
-      rmSync(descriptor.statePath, { force: true });
+    try {
+      const current = readReviewServerState(descriptor.statePath);
+      if (
+        current?.pid === process.pid &&
+        timingSafeTokenEqual(current.controlToken, descriptor.state.controlToken) &&
+        current.instanceId === descriptor.state.instanceId
+      ) {
+        rmSync(descriptor.statePath, { force: true });
+      }
+    } finally {
+      if (localServers.get(descriptor.statePath) === descriptor)
+        localServers.delete(descriptor.statePath);
+      descriptor.resolveClosed?.();
     }
-    if (localServers.get(descriptor.statePath) === descriptor) {
-      localServers.delete(descriptor.statePath);
-    }
-    descriptor.resolveClosed?.();
   }
   return true;
 }
 
-async function ensureArtifactReviewServer({ port = 0, env = process.env, fetchImpl = fetch } = {}) {
+async function ensureArtifactReviewServer({
+  port = 0,
+  env = process.env,
+  fetchImpl = fetch,
+  cwd = process.cwd(),
+} = {}) {
   if (!Number.isInteger(port) || port < 0 || port > 65_535) {
     throw artifactError(
       ARTIFACT_ERROR_CODES.LOOPBACK_BIND,
@@ -1173,9 +1438,26 @@ async function ensureArtifactReviewServer({ port = 0, env = process.env, fetchIm
 
   const release = await acquireStartLock(stateLockPath(port, env));
   try {
-    const existing = readJsonState(statePath);
+    const existing = readReviewServerState(statePath);
     if (validState(existing, port) && (await stateIsHealthy(existing, fetchImpl))) {
       return Object.freeze({ statePath, state: existing, local: false });
+    }
+    if (existing) {
+      // Retain exact custody even when a health response is unavailable. A failed
+      // probe cannot authorize destroying the prior service/session reference.
+      const legacyPath = join(reviewStateDir(env), `instance-${existing.instanceId}.json`);
+      const retained = readReviewServerState(legacyPath);
+      if (
+        retained &&
+        (retained.instanceId !== existing.instanceId ||
+          retained.pid !== existing.pid ||
+          !timingSafeTokenEqual(retained.controlToken, existing.controlToken))
+      )
+        throw artifactError(
+          ARTIFACT_ERROR_CODES.LOOPBACK_STATE,
+          'An existing review owner record conflicts with retained session custody.',
+        );
+      writePrivateJsonState(legacyPath, existing);
     }
     rmSync(statePath, { force: true });
     const controlToken = mintCapabilityToken({ bytes: CONTROL_TOKEN_BYTES });
@@ -1189,6 +1471,7 @@ async function ensureArtifactReviewServer({ port = 0, env = process.env, fetchIm
       controlToken,
       instanceId,
       env,
+      serverMetadata: { kind: 'artifact', projectRoot: resolve(cwd) },
       onEmpty: async () => {
         await cleanupOwnedDescriptor(descriptor);
       },
@@ -1288,12 +1571,23 @@ export async function startArtifactReview({
   cwd = process.cwd(),
   fetchImpl = fetch,
   openUrl,
+  studioId,
+  sourceTransport,
+  frameBudget,
 } = {}) {
-  const normalized = normalizeRegistration({ envelope, title, theme, cwd });
+  const normalized = normalizeRegistration({
+    envelope,
+    title,
+    theme,
+    cwd,
+    studioId,
+    sourceTransport,
+    frameBudget,
+  });
   let descriptor;
   let registration;
   for (let attempt = 0; attempt < 2; attempt += 1) {
-    descriptor = await ensureArtifactReviewServer({ port, env, fetchImpl });
+    descriptor = await ensureArtifactReviewServer({ port, env, fetchImpl, cwd });
     try {
       registration = await controlRequest(descriptor, '/internal/v1/sessions', {
         method: 'POST',
@@ -1355,6 +1649,9 @@ export async function startArtifactReview({
     host: LOOPBACK_HOST,
     port: descriptor.state.port,
     url,
+    ...(registration.studioPath
+      ? { studioUrl: `http://${LOOPBACK_HOST}:${descriptor.state.port}${registration.studioPath}` }
+      : {}),
     noOpen: Boolean(noOpen),
     shouldOpen,
     opened,
@@ -1442,4 +1739,60 @@ export async function closeArtifactReviewServers() {
 
 export function artifactReviewServerStateExists(port = 0, env = process.env) {
   return existsSync(artifactReviewStatePath(port, env));
+}
+
+async function discoveredArtifactServers({ env, fetchImpl }) {
+  let names;
+  try {
+    names = readdirSync(reviewStateDir(env));
+  } catch (error) {
+    if (error.code === 'ENOENT') return [];
+    throw error;
+  }
+  const live = new Map();
+  for (const name of names.sort()) {
+    if (!/^(?:instance-[A-Za-z0-9_-]{22}|state-(?:default|\d+))\.json$/u.test(name)) continue;
+    const path = join(reviewStateDir(env), name);
+    const state = readReviewServerState(path);
+    if (!validState(state, 0) || !(await stateIsHealthy(state, fetchImpl))) continue;
+    if (!live.has(state.instanceId) || name.startsWith('instance-'))
+      live.set(state.instanceId, state);
+  }
+  return [...live.values()];
+}
+
+/** List healthy local review services without returning control capabilities. */
+export async function listArtifactReviewServers({ env = process.env, fetchImpl = fetch } = {}) {
+  const servers = await discoveredArtifactServers({ env, fetchImpl });
+  return servers.map(({ instanceId, pid, port, startedAt, serviceKind, projectRoot, url }) => ({
+    instanceId,
+    pid,
+    port,
+    startedAt,
+    kind: serviceKind ?? 'artifact',
+    ...(projectRoot ? { projectRoot } : {}),
+    ...(url ? { url } : {}),
+    status: 'running',
+  }));
+}
+
+/** Stop exactly the healthy service owning this instance, never signal an unrelated PID. */
+export async function stopArtifactReviewServer(
+  instanceId,
+  { env = process.env, fetchImpl = fetch } = {},
+) {
+  if (!safeSessionId(instanceId))
+    throw artifactError(
+      ARTIFACT_ERROR_CODES.SESSION_NOT_FOUND,
+      'Local Studio service was not found.',
+    );
+  const states = await discoveredArtifactServers({ env, fetchImpl });
+  const state = states.find((value) => value.instanceId === instanceId);
+  if (!state)
+    throw artifactError(
+      ARTIFACT_ERROR_CODES.SESSION_NOT_FOUND,
+      'Local Studio service is stopped or unavailable.',
+      'Open the design again to start a new service.',
+    );
+  return controlRequest({ state }, '/internal/v1/shutdown', { method: 'POST', fetchImpl });
 }

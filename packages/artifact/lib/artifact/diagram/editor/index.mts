@@ -1,5 +1,9 @@
 export { mountDiagramEditor } from '../../ui/diagram-editor.mjs';
 export type {
+  DiagramEditorChromeMount,
+  DiagramEditorHostOptions,
+} from '../../ui/diagram-editor-host.mjs';
+export type {
   DiagramSourcePanelController,
   DiagramSourcePanelOptions,
 } from '../../ui/diagram-source-panel.mjs';

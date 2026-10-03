@@ -21,8 +21,9 @@ import {
   renderDesignDocument,
 } from '../lib/design/document.mjs';
 import { readDesignHandoff, updateDesignHandoff } from '../lib/design/handoff.mjs';
-import { designReviewPath, startDesignReview } from '../lib/design/review.mjs';
+import { designReviewPath } from '../lib/design/review.mjs';
 import { designFixture } from './design-fixture.mjs';
+import { fetch, startDesignReview } from './studio-http-fixture.mjs';
 
 function fixture(t) {
   const root = mkdtempSync(join(tmpdir(), 'planr-experience-'));
