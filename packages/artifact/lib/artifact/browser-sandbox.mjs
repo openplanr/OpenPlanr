@@ -263,6 +263,7 @@ function artifactGuardAndBridgeSource({
   nonce,
   parentOrigin,
   prototypeState = false,
+  reviewSelection = false,
   screenId = artifactId,
 }) {
   const contract = JSON.stringify({
@@ -272,29 +273,89 @@ function artifactGuardAndBridgeSource({
     nonce,
     parentOrigin,
     ...(prototypeState ? { screenId } : {}),
+    ...(reviewSelection ? { reviewSelection: true } : {}),
   }).replace(/</gu, '\\u003c');
 
   const guard = fillFrameGuard({
-    __PLANR_SANDBOX_CONTRACT__: prototypeState ? '__openplanrPrototypeContract' : contract,
+    __PLANR_SANDBOX_CONTRACT__:
+      prototypeState || reviewSelection ? '__openplanrPrototypeContract' : contract,
     '__PLANR_SANDBOX_BRIDGE_TOOLS__;': renderArtifactBridgeToolsSource(),
     __PLANR_SANDBOX_WORKER_GUARD__: JSON.stringify(ARTIFACT_WORKER_GUARD_SOURCE),
     ...SANDBOX_GUARD_LIMITS,
   });
-  if (!prototypeState) return guard;
+  if (!prototypeState && !reviewSelection) return guard;
   // Serialize the contract once: pooled sources replace exactly this artifactId.
-  return `(function(__openplanrPrototypeContract){${guard};(${renderPrototypeStateInstaller()})(__openplanrPrototypeContract.screenId,__openplanrPrototypeContract.artifactId,__openplanrPrototypeContract.parentOrigin === 'null' ? '*' : __openplanrPrototypeContract.parentOrigin,__openplanrPrototypeContract.nonce);(${installPreviewNavigation.toString()})(__openplanrPrototypeContract);})(${contract});`;
+  const prototypeInstaller = prototypeState
+    ? `(${renderPrototypeStateInstaller()})(__openplanrPrototypeContract.screenId,__openplanrPrototypeContract.artifactId,__openplanrPrototypeContract.parentOrigin === 'null' ? '*' : __openplanrPrototypeContract.parentOrigin,__openplanrPrototypeContract.nonce);`
+    : '';
+  return `(function(__openplanrPrototypeContract){${guard};${prototypeInstaller}(${installPreviewNavigation.toString()})(__openplanrPrototypeContract);})(${contract});`;
 }
 function installPreviewNavigation(contract) {
-  const post = parent.postMessage.bind(parent);
+  const trustedParent = parent,
+    post = trustedParent.postMessage.bind(trustedParent),
+    NativeElement = Element,
+    closest = NativeElement.prototype.closest,
+    attribute = NativeElement.prototype.getAttribute,
+    preventDefault = Event.prototype.preventDefault,
+    stopImmediatePropagation = Event.prototype.stopImmediatePropagation,
+    descriptors = Object.getOwnPropertyDescriptors,
+    prototype = Object.getPrototypeOf,
+    objectPrototype = Object.prototype,
+    keys = Reflect.ownKeys;
+  let selectionEnabled = false;
+  if (contract.reviewSelection === true)
+    addEventListener('message', (event) => {
+      if (event.source !== trustedParent || event.origin !== contract.parentOrigin) return;
+      const data = event.data;
+      if (!data || typeof data !== 'object') return;
+      const dataPrototype = prototype(data);
+      if (dataPrototype !== objectPrototype && dataPrototype !== null) return;
+      const fields = descriptors(data),
+        allowed = ['schemaVersion', 'type', 'channel', 'viewId', 'enabled'];
+      if (
+        keys(fields).length !== allowed.length ||
+        allowed.some((key) => !fields[key]?.enumerable || !('value' in fields[key]))
+      )
+        return;
+      if (
+        fields.schemaVersion.value !== '1.0.0' ||
+        fields.type.value !== 'openplanr:review-selection' ||
+        fields.channel.value !== contract.nonce ||
+        fields.viewId.value !== contract.artifactId ||
+        typeof fields.enabled.value !== 'boolean'
+      )
+        return;
+      selectionEnabled = fields.enabled.value;
+    });
   document.addEventListener(
     'click',
     (event) => {
-      const target =
-        event.target instanceof Element
-          ? event.target.closest(
-              '[data-design-target],[data-planr-navigate],[data-design-navigate]',
-            )
-          : null;
+      if (!(event.target instanceof NativeElement)) return;
+      if (selectionEnabled) {
+        const target = closest.call(event.target, '[data-planr-id],[data-element-id]'),
+          elementId = target
+            ? (attribute.call(target, 'data-planr-id') ?? attribute.call(target, 'data-element-id'))
+            : null;
+        if (!elementId || !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(elementId)) return;
+        preventDefault.call(event);
+        stopImmediatePropagation.call(event);
+        post(
+          {
+            schemaVersion: '1.0.0',
+            channel: contract.nonce,
+            type: 'select',
+            viewId: contract.artifactId,
+            elementId,
+          },
+          contract.parentOrigin === 'null' ? '*' : contract.parentOrigin,
+        );
+        return;
+      }
+      if (!contract.screenId) return;
+      const target = closest.call(
+        event.target,
+        '[data-design-target],[data-planr-navigate],[data-design-navigate]',
+      );
       if (!target) return;
       const screenId =
         target.getAttribute('data-design-target') ||
@@ -332,6 +393,7 @@ export function prepareArtifactDocument({
   trustedParentOrigin,
   screenId = artifactId,
   prototypeState = false,
+  reviewSelection = false,
 } = {}) {
   if (typeof html !== 'string' || html.length === 0) {
     throw pipelineError(ARTIFACT_ERROR_CODES.SANDBOX_POLICY, 'Artifact HTML is required.');
@@ -342,6 +404,16 @@ export function prepareArtifactDocument({
   if (!isCapabilityToken(nonce)) {
     throw pipelineError(ARTIFACT_ERROR_CODES.SANDBOX_POLICY, 'Artifact bridge nonce is invalid.');
   }
+  if (typeof reviewSelection !== 'boolean')
+    throw pipelineError(
+      ARTIFACT_ERROR_CODES.SANDBOX_POLICY,
+      'Artifact review selection option must be a boolean.',
+    );
+  if (reviewSelection && artifactId.length > 128)
+    throw pipelineError(
+      ARTIFACT_ERROR_CODES.SANDBOX_POLICY,
+      'Review selection requires an artifact view id of at most 128 characters.',
+    );
   if (prototypeState && (typeof screenId !== 'string' || !ID_RE.test(screenId)))
     throw pipelineError(
       ARTIFACT_ERROR_CODES.SANDBOX_POLICY,
@@ -402,7 +474,14 @@ export function prepareArtifactDocument({
   setAttr(bridge, 'nonce', scriptNonce);
   bridge.childNodes = [
     createText(
-      artifactGuardAndBridgeSource({ artifactId, nonce, parentOrigin, prototypeState, screenId }),
+      artifactGuardAndBridgeSource({
+        artifactId,
+        nonce,
+        parentOrigin,
+        prototypeState,
+        reviewSelection,
+        screenId,
+      }),
       bridge,
     ),
   ];

@@ -367,13 +367,13 @@
     {
       "source": "packages/artifact/lib/artifact/browser-sandbox.d.mts",
       "target": "lib/artifact/browser-sandbox.d.mts",
-      "sha256": "bfb02274283836278198e34de10f31e48893ba38ee00c169bf248ae1dc63b5b0",
+      "sha256": "4487d55f70aefba796917a8033f7e0fc003767d86fa49c621248d803110e3457",
       "mode": "644"
     },
     {
       "source": "packages/artifact/lib/artifact/browser-sandbox.mjs",
       "target": "lib/artifact/browser-sandbox.mjs",
-      "sha256": "e264b24361a7397249f3e7866fa6589f9b4dae4a2de5b69fb5bcc7d87a17b811",
+      "sha256": "6b2ebd46dbec22adbac32edd86a776b6bdaf71212b9a68fad1f6ccddc08e21f9",
       "mode": "644"
     },
     {
