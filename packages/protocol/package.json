@@ -136,7 +136,7 @@
   },
   "devDependencies": {
     "esbuild": "0.28.1",
-    "miniflare": "4.20260708.1",
+    "miniflare": "5.20261001.0-alpha",
     "playwright": "1.61.1",
     "typescript": "6.0.2"
   }
