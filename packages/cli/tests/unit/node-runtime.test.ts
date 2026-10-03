@@ -84,7 +84,7 @@ describe('installed Node.js support', () => {
     );
     const root = resolve('../..');
     expect(JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).engines.node).toBe(
-      '^22.13.0 || >=24.0.0',
+      '^22.13.0 || ^24.0.0 || >=26.0.0',
     );
     for (const name of ['artifact', 'design', 'pipeline']) {
       expect(

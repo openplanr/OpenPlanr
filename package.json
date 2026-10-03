@@ -10,7 +10,7 @@
     "url": "git+https://github.com/openplanr/OpenPlanr.git"
   },
   "engines": {
-    "node": "^22.13.0 || >=24.0.0"
+    "node": "^22.13.0 || ^24.0.0 || >=26.0.0"
   },
   "workspaces": [
     "packages/cli",
@@ -62,7 +62,7 @@
     "version-packages:ci": "changeset version && node scripts/release-train/cli-version.mjs && node scripts/release-train/sync-lockfile.mjs && npm run generate"
   },
   "devDependencies": {
-    "@changesets/cli": "^2.30.0",
+    "@changesets/cli": "^3.0.3",
     "@types/node": "25.9.8",
     "@vitest/coverage-v8": "4.1.11",
     "husky": "^9.1.7",
