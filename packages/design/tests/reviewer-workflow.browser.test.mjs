@@ -8,8 +8,9 @@ import { createReviewLedger } from '@openplanr/artifact/merge.mjs';
 import { writeArtifactReviewState } from '@openplanr/artifact/review.mjs';
 import { browserEngine, launchBrowser } from '../../../tests/support/browser-launcher.mjs';
 import { atomicJson, currentDesign, renderDesignDocument } from '../lib/design/document.mjs';
-import { designReviewKey, designReviewPath, startDesignReview } from '../lib/design/review.mjs';
+import { designReviewKey, designReviewPath } from '../lib/design/review.mjs';
 import { designFixture } from './design-fixture.mjs';
+import { startDesignReview } from './studio-http-fixture.mjs';
 
 const engine = browserEngine();
 const thread = (page, id) => page.locator(`.planr-thread[data-planr-pin-id="${id}"]`);
@@ -281,17 +282,17 @@ test(`reviewer workflow stays focused, compact and usable with large discussions
       assert.equal(await reply.isVisible(), true);
       await reply.focus();
       await reply.evaluate((value) => value.setSelectionRange(5, 9));
-      await page.evaluate(() => {
+      await page.evaluate((audience) => {
         const api = window.__openPlanrArtifactStage.review,
           value = structuredClone(api.getState().review);
         value.pins[1].replies.push({
-          id: 'incoming',
+          id: `incoming-${audience}`,
           author: { name: 'Sam' },
           comment: 'An incoming reply',
           createdAt: '2026-09-11T12:00:00Z',
         });
         api.replaceReview(value);
-      });
+      }, audience);
       assert.equal(await reply.inputValue(), 'Keep my unfinished reply.');
       assert.deepEqual(
         await reply.evaluate((value) => [
@@ -404,6 +405,21 @@ test(`reviewer workflow stays focused, compact and usable with large discussions
         assert.ok(
           (await page.locator('[data-planr-pin-id]').count()) > pinsBefore,
           'the saved comment stays visible when category sync is queued',
+        );
+        const savedLedger = JSON.parse(await readFile(designReviewPath(file, env), 'utf8'));
+        const savedReview = savedLedger.reviews.find(
+          ({ review }) => review.reviewId === 'local-review',
+        ).review;
+        assert.ok(
+          savedReview.pins.some(
+            ({ comment }) => comment === 'Keep the saved comment visible while its type retries.',
+          ),
+          'the comment is durable before the category-only sync failure is announced',
+        );
+        assert.deepEqual(
+          savedReview.pins.find(({ id }) => id === 'pin-001').region,
+          pins.find(({ id }) => id === 'pin-001').region,
+          'saving another comment preserves the original pin location exactly',
         );
         assert.equal(
           await page

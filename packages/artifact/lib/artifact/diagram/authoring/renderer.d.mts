@@ -1,8 +1,11 @@
 import type {
   DiagramAppearance,
-  DiagramAuthoringBundle,
   DiagramAuthoringValidationError,
 } from '@openplanr/protocol/diagram-authoring-contracts';
+import type {
+  VersionedDiagramAuthoringBundle as DiagramAuthoringBundle,
+  DiagramPresentation,
+} from '@openplanr/protocol/studio-presentation-contracts';
 import type {
   AuthoredDiagramScene,
   AuthoredDiagramSceneElement,
@@ -10,8 +13,8 @@ import type {
 } from './scene.mjs';
 
 export interface AuthoredDiagramTheme {
-  id: 'paper' | 'slate' | 'midnight';
-  version: '1.0.0';
+  id: 'paper' | 'slate' | 'midnight' | 'openplanr-brand-v2';
+  version: '1.0.0' | '2.0.0';
   background: string;
   surface: string;
   foreground: string;
@@ -30,7 +33,7 @@ export interface AuthoredDiagramSvgResult {
   svg: string;
   scene: AuthoredDiagramScene;
   quality: DiagramSceneQuality;
-  renderer: { id: 'openplanr-authored-svg'; version: '1.0.0' };
+  renderer: { id: 'openplanr-authored-svg'; version: '1.1.0' };
   theme: AuthoredDiagramTheme;
   diagnostics: [];
 }
@@ -48,11 +51,12 @@ export interface AuthoredDiagramRenderFailure {
 }
 export declare const AUTHORED_DIAGRAM_RENDERER: Readonly<{
   id: 'openplanr-authored-svg';
-  version: '1.0.0';
+  version: '1.1.0';
 }>;
 /** Internal renderer palette shared by static output and the live editor. */
 export declare function authoredDiagramPalette(
-  themeId?: AuthoredDiagramTheme['id'],
+  themeId?: 'paper' | 'slate' | 'midnight',
+  presentation?: DiagramPresentation,
 ): AuthoredDiagramTheme;
 /** Render one resolved scene element as an SVG fragment at its saved geometry. */
 export declare function renderAuthoredSceneElement(
@@ -62,5 +66,5 @@ export declare function renderAuthoredSceneElement(
 ): string;
 export declare function renderAuthoredDiagramSvg(
   bundle: DiagramAuthoringBundle,
-  options?: { theme?: 'paper' | 'slate' | 'midnight' },
+  options?: { theme?: 'paper' | 'slate' | 'midnight'; presentation?: DiagramPresentation },
 ): AuthoredDiagramSvgResult | AuthoredDiagramRenderFailure;

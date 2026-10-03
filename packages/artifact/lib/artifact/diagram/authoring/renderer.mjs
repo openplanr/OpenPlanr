@@ -1,3 +1,5 @@
+// @ts-check
+import { assertDiagramPresentation } from '@openplanr/protocol/studio-presentation-contracts';
 import { validateDiagramSvg } from '../accessibility.mjs';
 import { escapeXml } from '../rendering/svg.mjs';
 import { DIAGRAM_THEME } from '../rendering/theme.mjs';
@@ -6,8 +8,9 @@ import { resolveDiagramScene } from './scene.mjs';
 
 export const AUTHORED_DIAGRAM_RENDERER = Object.freeze({
   id: 'openplanr-authored-svg',
-  version: '1.0.0',
+  version: '1.1.0',
 });
+/** @type {Record<'paper'|'slate'|'midnight',import('./renderer.d.mts').AuthoredDiagramTheme>} */
 const palettes = {
   paper: {
     ...DIAGRAM_THEME,
@@ -72,7 +75,43 @@ const palettes = {
   },
 };
 /** Internal renderer palette shared by static output and the live editor. */
-export function authoredDiagramPalette(themeId = 'paper') {
+/** @type {typeof import('./renderer.d.mts').authoredDiagramPalette} */
+export function authoredDiagramPalette(themeId = 'paper', presentation) {
+  if (presentation) {
+    assertDiagramPresentation(presentation);
+    const dark = presentation.theme === 'dark';
+    return {
+      ...DIAGRAM_THEME,
+      id: presentation.palette,
+      version: '2.0.0',
+      fontFamily: presentation.fontFamily,
+      background: dark ? '#08080c' : '#f5f7f7',
+      foreground: dark ? '#f5f7f7' : '#08080c',
+      border: dark ? '#94a3b8' : '#475569',
+      accent: dark ? '#5eead4' : '#237a72',
+      muted: dark ? '#cbd5e1' : '#475569',
+      success: dark ? '#86efac' : '#166534',
+      warning: dark ? '#fde68a' : '#854d0e',
+      danger: dark ? '#fca5a5' : '#b91c1c',
+      fills: dark
+        ? {
+            surface: '#202b30',
+            accent: '#163e3a',
+            success: '#164434',
+            warning: '#4a3818',
+            danger: '#54252a',
+            transparent: 'none',
+          }
+        : {
+            surface: '#dfe8e8',
+            accent: '#bfebe4',
+            success: '#c7e6d1',
+            warning: '#f7e3b4',
+            danger: '#f3cccc',
+            transparent: 'none',
+          },
+    };
+  }
   const theme = palettes[themeId] ?? palettes.paper;
   return { ...theme, fills: { ...theme.fills } };
 }
@@ -125,6 +164,7 @@ function text(element, theme) {
       : '';
   return `${background}<text aria-label="${escapeXml(element.label)}" text-anchor="${anchor}" font-family="${theme.fontFamily}" font-size="${fontSize}" font-weight="${element.emphasis === 'primary' ? 700 : element.emphasis === 'muted' ? 400 : 500}" fill="${theme.foreground}">${lines.map((line, index) => `<tspan x="${svgNumber(x)}" y="${svgNumber(baseline + index * lineHeight)}">${escapeXml(line)}</tspan>`).join('')}</text>`;
 }
+/** @type {typeof import('./renderer.d.mts').renderAuthoredSceneElement} */
 export function renderAuthoredSceneElement(element, theme, diagramId) {
   const attributes = `data-element-id="${escapeXml(element.id)}" data-collection="${element.collection}" data-semantic-kind="${escapeXml(element.kind)}" data-shape="${element.appearance.shape}" data-z-index="${element.zIndex}"${element.emphasis ? ` data-emphasis="${element.emphasis}"` : ''}`;
   if (element.collection !== 'relations')
@@ -143,13 +183,14 @@ export function renderAuthoredSceneElement(element, theme, diagramId) {
       : element.appearance.strokeStyle === 'dotted'
         ? ' stroke-dasharray="2 4" stroke-linecap="round"'
         : '';
-  const path = element.points
+  const path = (element.points ?? [])
     .map((point, index) => `${index === 0 ? 'M' : 'L'} ${svgNumber(point.x)} ${svgNumber(point.y)}`)
     .join(' ');
   return `<g ${attributes} data-direction="${element.direction}">${markerDefinition}<path d="${path}" fill="none" stroke="${color}" stroke-width="${element.appearance.strokeWidth}"${dash}${start}${end}/>${text(element, theme)}</g>`;
 }
 
 /** Render only at saved coordinates and saved text sizes; quality never resizes data. */
+/** @type {typeof import('./renderer.d.mts').renderAuthoredDiagramSvg} */
 export function renderAuthoredDiagramSvg(bundle, options = {}) {
   const optionDiagnostics = inspectPlainData(options);
   if (optionDiagnostics.length)
@@ -158,7 +199,7 @@ export function renderAuthoredDiagramSvg(bundle, options = {}) {
     !options ||
     typeof options !== 'object' ||
     Array.isArray(options) ||
-    Object.keys(options).some((key) => key !== 'theme') ||
+    Object.keys(options).some((key) => !['theme', 'presentation'].includes(key)) ||
     (options.theme !== undefined && !Object.hasOwn(palettes, options.theme))
   )
     return {
@@ -168,6 +209,23 @@ export function renderAuthoredDiagramSvg(bundle, options = {}) {
         { path: '$.options', rule: 'theme', detail: 'Choose the paper, slate or midnight theme.' },
       ],
     };
+  if (options.presentation) {
+    try {
+      assertDiagramPresentation(options.presentation);
+    } catch {
+      return {
+        ok: false,
+        code: 'invalid-options',
+        diagnostics: [
+          {
+            path: '$.options.presentation',
+            rule: 'presentation',
+            detail: 'Choose a versioned OpenPlanr presentation.',
+          },
+        ],
+      };
+    }
+  }
   const resolved = resolveDiagramScene(bundle);
   if (!resolved.ok) return resolved;
   const { scene } = resolved,
@@ -175,15 +233,21 @@ export function renderAuthoredDiagramSvg(bundle, options = {}) {
   if (['no-visible-content', 'focused-output-required', 'invalid'].includes(quality.status))
     return {
       ok: false,
-      code: quality.status === 'invalid' ? 'invalid-geometry' : quality.status,
+      code:
+        quality.status === 'no-visible-content' || quality.status === 'focused-output-required'
+          ? quality.status
+          : 'invalid-geometry',
       scene,
       quality,
       diagnostics: quality.diagnostics,
     };
-  const theme = {
-    ...palettes[options.theme ?? bundle.presentation.theme.themeId],
-    fills: { ...palettes[options.theme ?? bundle.presentation.theme.themeId].fills },
-  };
+  const presentation =
+    options.presentation ??
+    (bundle.schemaVersion === '1.1.0' ? bundle.studioPresentation : undefined);
+  const theme = authoredDiagramPalette(
+    options.theme ?? bundle.presentation.theme.themeId,
+    presentation,
+  );
   const titleId = `${bundle.diagramId}-title`,
     descriptionId = `${bundle.diagramId}-description`;
   const viewBox = scene.viewBox;
@@ -191,7 +255,11 @@ export function renderAuthoredDiagramSvg(bundle, options = {}) {
     `<svg xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="${titleId} ${descriptionId}" viewBox="${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}" width="${scene.width}" height="${scene.height}">`,
     `<title id="${titleId}">${escapeXml(bundle.document.accessibility.title || bundle.document.title || 'Diagram')}</title>`,
     `<desc id="${descriptionId}">${escapeXml(bundle.document.accessibility.description || bundle.document.summary || 'An authored diagram.')}</desc>`,
-    `<rect x="${viewBox.x}" y="${viewBox.y}" width="${viewBox.width}" height="${viewBox.height}" fill="${theme.background}"/>`,
+    ...(presentation
+      ? []
+      : [
+          `<rect x="${viewBox.x}" y="${viewBox.y}" width="${viewBox.width}" height="${viewBox.height}" fill="${theme.background}"/>`,
+        ]),
     ...scene.elements.map((element) =>
       renderAuthoredSceneElement(element, theme, bundle.diagramId),
     ),

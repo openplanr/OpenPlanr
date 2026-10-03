@@ -44,12 +44,14 @@ import {
   buildSkillSourceRegistriesV17,
   buildSkillSourceSchemasV17,
 } from './skill-source-definitions-v17.mjs';
+import { buildStudioCommandRegistry } from './studio-command-definitions.mjs';
 
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const check = process.argv.includes('--check');
 const refreshPreservation = process.argv.includes('--refresh-preservation-baseline');
 const json = (value) => `${JSON.stringify(value, null, 2)}\n`;
 const expected = new Map();
+expected.set('registry/v1.17.0/commands.json', json(buildStudioCommandRegistry()));
 
 for (const [name, value] of buildSchemas()) expected.set(`schemas/v1.5.0/${name}`, json(value));
 for (const [name, value] of buildRegistries()) expected.set(`registries/${name}`, json(value));

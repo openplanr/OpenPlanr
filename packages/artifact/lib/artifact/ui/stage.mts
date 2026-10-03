@@ -1,3 +1,7 @@
+import { resolveArtifactPresentation } from './presentation.mjs';
+
+export { resolveArtifactPresentation } from './presentation.mjs';
+
 /**
  * Artifact review stage: loads sandboxed artifact frames, reduces view, review-mode, zoom, rail and
  * theme state, and mounts the feedback rail, annotations, share dialog and hosted viewer.
@@ -6,6 +10,7 @@
  */
 
 import { clientSelectionToNormalized, mountArtifactAnnotations } from './annotations.mjs';
+import { createDurablePasteShare } from './durable-paste-share.mjs';
 import { type ArtifactReviewInput, mountArtifactFeedbackRail } from './feedback-rail.mjs';
 import { mountHostedArtifactViewer } from './hosted-viewer.mjs';
 import { mountArtifactShareDialog } from './share-dialog.mjs';
@@ -18,6 +23,7 @@ export const ARTIFACT_STAGE_EVENTS = Object.freeze({
   point: 'planr:artifact-point',
   region: 'planr:artifact-region',
   layout: 'planr:artifact-layout',
+  frameState: 'planr:artifact-frame-state',
 });
 
 export const ARTIFACT_STAGE_LIMITS = Object.freeze({
@@ -27,6 +33,8 @@ export const ARTIFACT_STAGE_LIMITS = Object.freeze({
   zoomStep: 10,
   maxDocumentWidth: 16_384,
   maxDocumentHeight: 262_144,
+  defaultFrameBudget: 3,
+  frameLoadTimeoutMs: 15_000,
 });
 
 const VIEW_MODES = Object.freeze(['single', 'variants', 'split']);
@@ -161,6 +169,18 @@ interface FrameLoad {
   requireTrust?: boolean;
   sourceUrl?: string;
 }
+/** A bounded diagnostic snapshot; it never contains artifact HTML or bridge credentials. */
+export interface ArtifactFrameDiagnostic {
+  readonly artifactId: string;
+  readonly status: string;
+  readonly phase: 'source' | 'document' | 'bridge' | 'ready' | 'error' | 'unloaded';
+  readonly failedPhase?: string;
+  readonly startedAt: number;
+  readonly elapsedMs: number;
+  readonly attempt: number;
+  readonly transport: string;
+  readonly code?: string;
+}
 /** The embedded review state: the artifact digest and any saved review. */
 interface ReviewConfig {
   reviewOf?: string;
@@ -172,6 +192,10 @@ interface StageOptions {
   window?: StageWindow;
   resolveArtifactSource?: ResolveArtifactSource;
   sourceTransport?: string;
+  /** Live document limit. Null keeps an explicit eager host, with deadlines and bridge trust. */
+  frameBudget?: number | null;
+  /** Deadline includes source preparation, document load and authenticated bridge readiness. */
+  frameLoadTimeoutMs?: number;
   bridgeClient?: StageBridgeClient | null;
   onState?: (state: ArtifactStageState) => void;
   review?: Parameters<typeof mountArtifactFeedbackRail>[0];
@@ -266,17 +290,6 @@ function comparisonIdFor(
 function normalizeViewMode(value: unknown, artifactCount: number) {
   if (artifactCount < 2) return 'single';
   return member(value, VIEW_MODES, 'variants');
-}
-
-export function resolveArtifactPresentation(
-  value: unknown,
-  { viewMode = 'single', artifactCount = 1 }: { viewMode?: string; artifactCount?: number } = {},
-) {
-  // includes accepts only its element type; a listed value is a presentation.
-  if (PRESENTATIONS.includes(value as string)) return value as string;
-  return artifactCount > 1 || viewMode === 'variants' || viewMode === 'split'
-    ? 'canvas'
-    : 'document';
 }
 
 export function createArtifactStageState(
@@ -504,6 +517,8 @@ export function mountArtifactStage({
   window = document?.defaultView as StageWindow,
   resolveArtifactSource,
   sourceTransport = 'blob',
+  frameBudget: requestedFrameBudget,
+  frameLoadTimeoutMs = ARTIFACT_STAGE_LIMITS.frameLoadTimeoutMs,
   bridgeClient,
   onState,
   review: reviewOptions = {},
@@ -514,6 +529,19 @@ export function mountArtifactStage({
   // The hoisted functions below cannot see the null check that follows.
   const root = document.querySelector('.planr-shell') as HTMLElement;
   if (!root) return null;
+  const initializationError = (
+    globalThis as typeof globalThis & { __OPENPLANR_ARTIFACT_STAGE_INITIALIZATION_ERROR__?: string }
+  ).__OPENPLANR_ARTIFACT_STAGE_INITIALIZATION_ERROR__;
+  if (initializationError) {
+    const status = root.querySelector('[data-planr-slot="status"]');
+    if (status) {
+      status.textContent = initializationError;
+      status.setAttribute('data-error', '');
+      status.setAttribute('role', 'alert');
+    }
+    root.setAttribute('data-planr-initialization-error', '');
+    return null;
+  }
   if (!['blob', 'srcdoc'].includes(sourceTransport)) {
     throw new TypeError('Artifact source transport must be blob or srcdoc.');
   }
@@ -553,12 +581,32 @@ export function mountArtifactStage({
   );
   const documentLayouts = new Map<string, Readonly<{ width: number; height: number }>>();
   const cleanup: Array<() => void> = [];
-  // Trusted presentation hosts may opt into a bounded set of live documents.
-  // The artifact contract remains metadata-only and eager hosts are unchanged.
-  const frameBudget = root.dataset.planrFrameBudget === '3' ? 3 : null;
+  // Load the active document first. Hosts can explicitly retain eager loading,
+  // but its source, document and bridge stages have the same bounded deadline.
+  const frameBudget =
+    requestedFrameBudget === undefined
+      ? Number(root.dataset.planrFrameBudget || ARTIFACT_STAGE_LIMITS.defaultFrameBudget)
+      : requestedFrameBudget;
+  if (
+    frameBudget !== null &&
+    (!Number.isInteger(frameBudget) || frameBudget < 1 || frameBudget > 8)
+  ) {
+    throw new RangeError(
+      'Artifact frame budget must be between 1 and 8, or null for eager loading.',
+    );
+  }
+  if (
+    !Number.isInteger(frameLoadTimeoutMs) ||
+    frameLoadTimeoutMs < 1 ||
+    frameLoadTimeoutMs > 120_000
+  ) {
+    throw new RangeError('Artifact frame load timeout must be between 1 and 120000 milliseconds.');
+  }
+  const frameDiagnostics = new Map<string, ArtifactFrameDiagnostic>();
   const frameLoads = new Map<string, FrameLoad>();
   let frameUse = 0;
   let frameQueue: Promise<unknown> = Promise.resolve();
+  let activationGeneration = 0;
   let disposed = false;
   for (const frame of frames.values()) frame.dataset.planrFrameState = 'unloaded';
 
@@ -592,7 +640,9 @@ export function mountArtifactStage({
     const addCommentButton = document.querySelector<HTMLButtonElement>('[data-planr-action="add-comment"]');
     const themeButton = document.querySelector('[data-planr-action="theme"]');
     const statusSlot = document.querySelector('[data-planr-slot="status"]');
-    const metadata = document.querySelector('.planr-title-block > span');
+    const metadata = document.querySelector(
+      '.planr-toolbar:not([data-studio-react-chrome]) .planr-title-block > span',
+    );
     const breadcrumb = document.querySelector('.planr-stage-heading > span:first-child');
     const activeArtifact = stageArtifactById(state, state.activeArtifactId);
 
@@ -659,7 +709,7 @@ export function mountArtifactStage({
         `${isPrimary ? 'Primary' : 'Comparison'} artifact: ${artifact?.title ?? id}`,
       );
       const frame = frames.get(id);
-      const frameReady = frameBudget === null || frame?.dataset.planrFrameState === 'ready';
+      const frameReady = frame?.dataset.planrFrameState === 'ready';
       const annotationLayer = panel.querySelector<HTMLElement>('[data-planr-annotation-layer]');
       if (frame) {
         frame.tabIndex =
@@ -688,6 +738,7 @@ export function mountArtifactStage({
       }
     }
     updateStatus(document, state);
+    renderFrameLoadingStatus();
     if (typeof onState === 'function') {
       try {
         onState(state);
@@ -698,10 +749,46 @@ export function mountArtifactStage({
     if (announce) emit(root, window, ARTIFACT_STAGE_EVENTS.change, state);
   }
 
+  function renderFrameLoadingStatus() {
+    const activeDiagnostic = frameDiagnostics.get(state.activeArtifactId);
+    const statusPanel = document.querySelector<HTMLElement>('.planr-stage-status');
+    if (!statusPanel || !activeDiagnostic) return;
+    const detail = statusPanel.querySelector('p');
+    if (detail && state.status === 'loading') {
+      const copy = {
+        source: 'Preparing the selected screen.',
+        document: 'Loading the selected screen.',
+        bridge: 'Connecting the selected screen to the review.',
+      };
+      detail.textContent =
+        copy[activeDiagnostic.phase as keyof typeof copy] ?? 'Loading the selected screen.';
+    }
+    if (detail && state.status === 'invalid' && activeDiagnostic.status === 'error') {
+      detail.textContent = `The selected screen did not finish its ${activeDiagnostic.failedPhase ?? 'preview'} step. Retry to load it again; saved feedback remains available.`;
+    }
+    let retry = statusPanel.querySelector<HTMLButtonElement>('[data-planr-action="retry-frame"]');
+    if (!retry) {
+      retry = document.createElement('button');
+      retry.className = 'planr-toolbar-action';
+      retry.dataset.planrAction = 'retry-frame';
+      retry.textContent = 'Retry screen';
+      statusPanel.querySelector('div')?.append(retry);
+    }
+    retry.hidden = state.status !== 'invalid' || activeDiagnostic.status !== 'error';
+  }
+
   function dispatch(action: ArtifactStageAction, { announce = true }: { announce?: boolean } = {}) {
     const previous = state;
     state = reduceArtifactStageState(state, action);
-    if (state !== previous) render({ announce });
+    if (state !== previous) {
+      render({ announce });
+      if (
+        ['set-active', 'set-comparison', 'set-view-mode'].includes(action.type) &&
+        typeof resolveArtifactSource === 'function'
+      ) {
+        readyPromise = activateVisibleFrames();
+      }
+    }
     return state;
   }
 
@@ -767,6 +854,9 @@ export function mountArtifactStage({
           .querySelector('[data-planr-action="more"]')
           ?.setAttribute('aria-expanded', 'false');
         shareController?.open?.();
+        break;
+      case 'retry-frame':
+        void retryFrames([state.activeArtifactId]);
         break;
       case 'theme':
         dispatch({ type: 'cycle-theme' });
@@ -960,6 +1050,8 @@ export function mountArtifactStage({
   const controller = Object.freeze({
     frameBudget,
     ensureFrames,
+    retryFrames,
+    getFrameDiagnostics: () => [...frameDiagnostics.values()],
     getLoadedArtifactIds: () =>
       [...frameLoads].filter(([, record]) => record.status === 'ready').map(([id]) => id),
     getState: () => state,
@@ -1012,12 +1104,33 @@ export function mountArtifactStage({
     stageController: controller,
     reviewController: feedbackController,
   });
+  const durablePasteShare =
+    shareOptions.createShare && shareOptions.resumePreparedShare
+      ? createDurablePasteShare({
+          scope: () => ({
+            workspaceId: window.location.pathname,
+            revisionId: reviewConfig.reviewOf ?? 'unknown-revision',
+            actorId: 'local-paste-owner',
+          }),
+          create: (request: Parameters<NonNullable<typeof shareOptions.createShare>>[0]) =>
+            (shareOptions.createShare as NonNullable<typeof shareOptions.createShare>)(request),
+          commit: shareOptions.resumePreparedShare,
+          indexedDB: window.indexedDB,
+        })
+      : null;
+  if (durablePasteShare) cleanup.push(() => durablePasteShare.close());
   shareController = mountArtifactShareDialog({
     document,
     window,
     root,
     stageController: controller,
     ...shareOptions,
+    ...(durablePasteShare
+      ? {
+          createShare: (request: Parameters<NonNullable<typeof shareOptions.createShare>>[0]) =>
+            durablePasteShare.run(request),
+        }
+      : {}),
   });
   hostedController = mountHostedArtifactViewer({
     document,
@@ -1035,15 +1148,49 @@ export function mountArtifactStage({
     return error;
   }
 
-  function frameStatus(artifactId: string, status: string) {
+  function frameStatus(
+    artifactId: string,
+    status: string,
+    phase: ArtifactFrameDiagnostic['phase'],
+    failure?: { failedPhase?: string; code?: string },
+  ) {
     const frame = frames.get(artifactId);
-    if (frame) frame.dataset.planrFrameState = status;
-    if (!disposed) emit(root, window, 'planr:artifact-frame-state', { artifactId, status });
+    if (frame) {
+      frame.dataset.planrFrameState = status;
+      frame.dataset.planrFramePhase = phase;
+    }
+    const previous = frameDiagnostics.get(artifactId);
+    const now = window.performance.now();
+    const starting = status === 'loading' && phase === 'source';
+    const startedAt = starting ? now : (previous?.startedAt ?? now);
+    const diagnostic = Object.freeze({
+      artifactId,
+      status,
+      phase,
+      startedAt,
+      elapsedMs: Math.max(0, Math.round(now - startedAt)),
+      attempt: (previous?.attempt ?? 0) + (starting ? 1 : 0),
+      transport: sourceTransport,
+      ...failure,
+    });
+    frameDiagnostics.set(artifactId, diagnostic);
+    if (!disposed) {
+      emit(root, window, ARTIFACT_STAGE_EVENTS.frameState, diagnostic);
+      if (artifactId === state.activeArtifactId) render();
+    }
   }
 
   function releaseFrame(
     artifactId: string,
-    { status = 'unloaded', error = cancelledFrame() }: { status?: string; error?: unknown } = {},
+    {
+      status = 'unloaded',
+      error = cancelledFrame(),
+      failure,
+    }: {
+      status?: string;
+      error?: unknown;
+      failure?: { failedPhase?: string; code?: string };
+    } = {},
   ) {
     const record = frameLoads.get(artifactId);
     if (!record) return;
@@ -1074,7 +1221,7 @@ export function mountArtifactStage({
       panel.style.removeProperty('--planr-document-width');
       panel.style.removeProperty('--planr-document-height');
     }
-    frameStatus(artifactId, status);
+    frameStatus(artifactId, status, status as ArtifactFrameDiagnostic['phase'], failure);
   }
 
   function assignArtifactSource(artifact: StageArtifact) {
@@ -1113,15 +1260,21 @@ export function mountArtifactStage({
     frameLoads.set(artifact.id, record);
     const current = () => !disposed && !record.cancelled && frameLoads.get(artifact.id) === record;
     const fail = (error: unknown) => {
-      if (current()) releaseFrame(artifact.id, { status: 'error', error });
+      if (current())
+        releaseFrame(artifact.id, {
+          status: 'error',
+          error,
+          failure: {
+            failedPhase: frameDiagnostics.get(artifact.id)?.phase ?? 'source',
+            code: (error as Coded)?.code ?? 'E_ARTIFACT_FRAME_LOAD',
+          },
+        });
     };
-    const timer =
-      frameBudget === null
-        ? null
-        : window.setTimeout(
-            () => fail(new Error(`Artifact frame did not finish loading: ${artifact.id}`)),
-            15000,
-          );
+    const timer = window.setTimeout(() => {
+      const error: Coded = new Error(`Artifact frame did not finish loading: ${artifact.id}`);
+      error.code = 'E_ARTIFACT_FRAME_TIMEOUT';
+      fail(error);
+    }, frameLoadTimeoutMs);
     let loaded = false;
     const ready = () => {
       if (
@@ -1132,22 +1285,24 @@ export function mountArtifactStage({
         return;
       record.status = 'ready';
       record.unlisten();
-      frameStatus(artifact.id, 'ready');
+      frameStatus(artifact.id, 'ready', 'ready');
       record.resolve(artifact.id);
     };
     const onLoad = () => {
       loaded = true;
+      if (record.requireTrust && frame.dataset.planrBridgeTrusted !== 'true') {
+        frameStatus(artifact.id, 'loading', 'bridge');
+      }
       ready();
     };
     const onError = () => fail(new Error(`Artifact frame failed: ${artifact.id}`));
-    // clearTimeout ignores the null timer of an unbudgeted stage.
     record.unlisten = () => {
-      window.clearTimeout(timer as number);
+      window.clearTimeout(timer);
       frame.removeEventListener('load', onLoad);
       frame.removeEventListener('error', onError);
       frame.removeEventListener('planr:artifact-bridge-ready', ready);
     };
-    frameStatus(artifact.id, 'loading');
+    frameStatus(artifact.id, 'loading', 'source');
     if (!current()) return record.promise;
     // Source preparation can be asynchronous; it cannot revive an evicted frame.
     // Frames load only after the stage checked that resolveArtifactSource is a function.
@@ -1178,13 +1333,14 @@ export function mountArtifactStage({
           getState: () => state,
         });
         if (typeof detach === 'function') record.detach = detach;
-        record.requireTrust = frameBudget !== null;
+        record.requireTrust = true;
       }
       // Bridge load handlers quarantine each navigation before we check trust.
       frame.addEventListener('load', onLoad);
       frame.addEventListener('error', onError);
       frame.addEventListener('planr:artifact-bridge-ready', ready);
       frame.dataset.planrArtifactDigest = artifact.sha256;
+      frameStatus(artifact.id, 'loading', 'document');
       if (sourceTransport === 'srcdoc') {
         // Trusted hosts may choose srcdoc to avoid WebKit applying inherited
         // frame-ancestors rules to blob navigations. The existing opaque sandbox
@@ -1213,8 +1369,8 @@ export function mountArtifactStage({
     return record.promise;
   }
 
-  function ensureFrames(artifactIds: readonly string[]) {
-    if (disposed) return Promise.reject(cancelledFrame());
+  function ensureFrames(artifactIds: readonly string[], isCurrent = () => true) {
+    if (disposed || !isCurrent()) return Promise.reject(cancelledFrame());
     if (
       !Array.isArray(artifactIds) ||
       artifactIds.some((id) => typeof id !== 'string' || !frames.has(id))
@@ -1232,9 +1388,10 @@ export function mountArtifactStage({
     if (frameBudget === null)
       return Promise.all(requested.map((id) => assignArtifactSource(stageArtifactById(state, id) as StageArtifact)));
     const run = async () => {
-      if (disposed) throw cancelledFrame();
+      // A selection may be replaced while its demand waits behind another load.
+      if (disposed || !isCurrent()) throw cancelledFrame();
       for (const id of requested) {
-        if (disposed) throw cancelledFrame();
+        if (disposed || !isCurrent()) throw cancelledFrame();
         if (!frameLoads.has(id)) {
           while (frameLoads.size >= frameBudget) {
             const candidates = [...frameLoads]
@@ -1253,33 +1410,92 @@ export function mountArtifactStage({
     return result;
   }
 
+  function frameIsReady(id: string) {
+    const frame = frames.get(id);
+    return (
+      frame?.dataset.planrFrameState === 'ready' &&
+      (!frame.__openPlanrBridge || frame.dataset.planrBridgeTrusted === 'true')
+    );
+  }
+
+  function setSelectionStatus(status: string, selection: string, generation: number) {
+    if (
+      disposed ||
+      generation !== activationGeneration ||
+      visibleArtifactIds(state).join('|') !== selection
+    )
+      return;
+    state = reduceArtifactStageState(state, { type: 'set-status', status });
+    render({ announce: true });
+  }
+
+  function cancelInactiveLoads(ids: readonly string[]) {
+    for (const [id, record] of frameLoads) {
+      if (record.status === 'loading' && !ids.includes(id)) releaseFrame(id);
+    }
+  }
+
+  async function activateVisibleFrames() {
+    const generation = ++activationGeneration;
+    const isCurrent = () => generation === activationGeneration;
+    const ids = visibleArtifactIds(state);
+    const selection = ids.join('|');
+    if (ids.length === 0) return state;
+    // Selection changes must not sit behind an inactive source/handshake timeout.
+    cancelInactiveLoads(ids);
+    if (ids.every(frameIsReady)) {
+      setSelectionStatus('ready', selection, generation);
+      return state;
+    }
+    setSelectionStatus('loading', selection, generation);
+    try {
+      await ensureFrames(ids, isCurrent);
+      setSelectionStatus('ready', selection, generation);
+    } catch (error) {
+      const status =
+        (error as Coded)?.code === 'E_ARTIFACT_BROWSER_UNSUPPORTED'
+          ? 'unsupported-browser'
+          : 'invalid';
+      setSelectionStatus(status, selection, generation);
+    }
+    return state;
+  }
+
+  function retryFrames(artifactIds = visibleArtifactIds(state)) {
+    if (!Array.isArray(artifactIds) || artifactIds.some((id) => !frames.has(id))) {
+      return Promise.reject(new TypeError('Requested artifact frames must be known artifact IDs.'));
+    }
+    for (const id of artifactIds) releaseFrame(id);
+    if (artifactIds.some((id) => visibleArtifactIds(state).includes(id))) {
+      readyPromise = activateVisibleFrames();
+      return readyPromise;
+    }
+    return ensureFrames(artifactIds);
+  }
+
   if (state.status === 'ready' && state.artifacts.length > 0) {
     if (typeof resolveArtifactSource !== 'function') {
-      state = reduceArtifactStageState(state, { type: 'set-status', status: 'loading' });
+      frameStatus(state.activeArtifactId, 'loading', 'source');
+      frameStatus(state.activeArtifactId, 'error', 'error', {
+        failedPhase: 'source',
+        code: 'E_ARTIFACT_SOURCE_UNAVAILABLE',
+      });
+      state = reduceArtifactStageState(state, { type: 'set-status', status: 'invalid' });
       render();
       readyPromise = Promise.resolve(state);
     } else {
       state = reduceArtifactStageState(state, { type: 'set-status', status: 'loading' });
       render();
-      readyPromise = (
-        frameBudget === null
-          ? Promise.all(state.artifacts.map(assignArtifactSource))
-          : ensureFrames([state.activeArtifactId])
-      )
-        .then(() => {
-          if (disposed) return state;
-          state = reduceArtifactStageState(state, { type: 'set-status', status: 'ready' });
-          render({ announce: true });
-          return state;
-        })
-        .catch((error) => {
-          if (disposed) return state;
-          const status =
-            error?.code === 'E_ARTIFACT_BROWSER_UNSUPPORTED' ? 'unsupported-browser' : 'invalid';
-          state = reduceArtifactStageState(state, { type: 'set-status', status });
-          render({ announce: true });
-          return state;
-        });
+      readyPromise = activateVisibleFrames();
+      if (frameBudget === null) {
+        // Explicit eager hosts still settle each inactive load independently.
+        // A failed inactive screen cannot block or invalidate the selected one.
+        void Promise.allSettled(
+          state.artifacts
+            .filter(({ id }) => id !== state.activeArtifactId)
+            .map(assignArtifactSource),
+        );
+      }
     }
   }
   return controller;

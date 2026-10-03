@@ -3,8 +3,8 @@ import { createRequire } from 'node:module';
 import { dirname, resolve, sep } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-
 import { checkPackageBoundaries } from '../../../scripts/domains/boundary-check.mjs';
+import { installedDependencyClosure } from '../../../tests/support/dependency-closure.mjs';
 
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -16,6 +16,7 @@ test('Artifact never imports design, pipeline, CLI, or conformance code', () => 
         /^node:/u,
         /^@openplanr\/protocol(?:\/|$)/u,
         /^(?:@resvg\/resvg-js|esbuild|pako|parse5)$/u,
+        /^(?:react|react-dom|radix-ui)(?:\/|$)/u,
       ],
     }),
     [],
@@ -34,6 +35,7 @@ test('diagram authoring has a closed browser-safe Artifact and Protocol import g
       'diagram/rendering/layout.mjs',
       'diagram/rendering/svg.mjs',
       'diagram/rendering/theme.mjs',
+      'diagram/rendering/text.mjs',
       'diagram/accessibility.mjs',
       'diagram/source-map.mjs',
       'diagram/errors.mjs',
@@ -90,6 +92,9 @@ test('portable editor bundles without filesystem, Design, hosted identity or Nod
     target: 'es2022',
     logLevel: 'silent',
   });
+  const browserDependencies = installedDependencyClosure(['react', 'react-dom', 'radix-ui'], {
+    from: new URL('../package.json', import.meta.url),
+  }).map(({ root }) => root);
   for (const [file, input] of Object.entries(result.metafile.inputs)) {
     assert.doesNotMatch(
       file,
@@ -98,7 +103,8 @@ test('portable editor bundles without filesystem, Design, hosted identity or Nod
     );
     assert.ok(
       resolve(root, file).startsWith(packageRoot + sep) ||
-        resolve(root, file).startsWith(resolve(packageRoot, '../protocol') + sep),
+        resolve(root, file).startsWith(resolve(packageRoot, '../protocol') + sep) ||
+        browserDependencies.some((directory) => resolve(root, file).startsWith(directory + sep)),
       file,
     );
     for (const dependency of input.imports)

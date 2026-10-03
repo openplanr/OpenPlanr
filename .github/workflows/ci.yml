@@ -63,6 +63,13 @@ jobs:
             echo "$sensitive"
             exit 1
           fi
+      - name: Pack exact public candidates for linked private Studio verification
+        run: node scripts/release-train/pack-studio-candidate.mjs "$RUNNER_TEMP/studio-public-candidate"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: studio-public-candidate
+          path: ${{ runner.temp }}/studio-public-candidate/
+          if-no-files-found: error
       - uses: actions/upload-artifact@v4
         with:
           name: build-outputs
@@ -150,6 +157,8 @@ jobs:
       - name: Restore the generated runtime from the build job
         run: tar -xzmf "$RUNNER_TEMP/build-outputs.tgz"
       - name: Test protocol, operate, artifact, integrations, skill runtime, and dashboard
+        env:
+          PLANR_BROWSER_TESTS: 1
         run: |
           npm test --workspace=@openplanr/protocol
           npm test --workspace=@openplanr/operate
@@ -375,11 +384,11 @@ jobs:
         run: npm run test:runtime-integrity
 
   compatibility:
-    name: Node ${{ matrix.node }} supported-runtime verification
+    name: Node ${{ matrix.node }} contributor verification
     strategy:
       fail-fast: false
       matrix:
-        node: [20, 22]
+        node: [22, 24]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -431,7 +440,7 @@ jobs:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
         with:
-          node-version: ${{ matrix.node }}
+          node-version: 24
           cache: npm
       - name: Install the root lockfile
         run: npm ci
@@ -445,5 +454,15 @@ jobs:
         run: tar -xzmf "$RUNNER_TEMP/build-outputs.tgz"
       - name: Verify generated custody
         run: npm run check:generated
+      - name: Select the published-package consumer runtime
+        uses: actions/setup-node@v5
+        with:
+          node-version: ${{ matrix.node }}
       - name: Pack and install only public compatibility packages
         run: npm run verify:packed:strict
+      - name: Verify landing owner-terminal custody on supported runtimes
+        run: >-
+          node --test --test-concurrency=1
+          packages/pipeline/tests/pipeline/landing.test.mjs
+          packages/pipeline/tests/pipeline/landing-adversarial.test.mjs
+          packages/pipeline/tests/pipeline/landing-packed-install.test.mjs

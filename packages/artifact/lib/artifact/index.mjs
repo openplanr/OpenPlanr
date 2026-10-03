@@ -39,9 +39,11 @@ export {
   canonicalEnvelopeBytes,
   canonicalSerialize,
   createArtifactEnvelope,
+  createSharedArtifactEnvelope,
   digestArtifact,
   digestArtifactEnvelope,
   normalizeUtf8Text,
+  resolveArtifactHtml,
   sha256Hex,
   validateArtifactEnvelope,
   validateArtifactPaste,
@@ -94,6 +96,8 @@ export {
   verifyLiveRoomEventChain,
   verifySignedLiveRoomEvent,
 } from './live-room-integrity.mjs';
+export * from './live-room-v3.mjs';
+export { commitLiveRoomV3Management, prepareLiveRoomV3Management } from './live-room-v3.mjs';
 export {
   ARTIFACT_REVIEW_STATE_KIND,
   ARTIFACT_REVIEW_STATE_VERSION,
@@ -104,6 +108,7 @@ export {
   mergeReviewLedger,
   validateReviewLedger,
 } from './merge.mjs';
+export * from './resource-pack.mjs';
 export {
   createArtifactReview,
   createArtifactReviewEnvelope,
@@ -119,10 +124,13 @@ export {
 export {
   ARTIFACT_SHARE_BASE_URL,
   ARTIFACT_SHARE_TTLS,
+  assertPreparedArtifactPaste,
+  commitArtifactPaste,
   createPasteClient,
   createReviewLink,
   createReviewLinkPreview,
   decodeReviewLink,
+  prepareArtifactPaste,
   prepareReviewLink,
   selectReviewLinkTransport,
 } from './share-client.mjs';

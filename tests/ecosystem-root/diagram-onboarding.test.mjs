@@ -65,8 +65,9 @@ test('the documented planr-diagram lint, preview, and evaluation journey passes'
 
 test('public onboarding states the supported Node.js line once and links the diagram guide', () => {
   const statement =
-    /OpenPlanr requires Node\.js 20 or later\. CI verifies Node\.js 20, 22, and 24;\s+contributors\s+use Node\.js 24 \(`\.nvmrc`\)\./u;
-  assert.match(read('README.md'), /OpenPlanr requires Node\.js 20 or later\./u);
+    /Use Node\.js 24 \(`\.nvmrc`\) for development\. Supported versions are declared in\s+\[package metadata\]\([^\n)]*package\.json\); CI verifies published packages on their supported Node\.js 20, 22, and 24 lines\./u;
+  assert.match(read('README.md'), /requires a supported Node\.js version/u);
+  assert.match(read('README.md'), /packages\/cli\/package\.json/u);
   assert.match(read('README.md'), /docs\/diagrams\/authoring\.md/u);
   assert.match(read('README.md'), /docs\/diagrams\/planning-artifacts\/planning-artifacts\.svg/u);
   for (const path of [

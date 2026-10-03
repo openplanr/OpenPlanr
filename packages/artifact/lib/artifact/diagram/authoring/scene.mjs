@@ -1,4 +1,6 @@
+// @ts-check
 import { wrapDiagramLabel } from '../rendering/layout.mjs';
+import { diagramGraphemes } from '../rendering/text.mjs';
 import { MAX_DIAGRAM_SCENE_EXTENT } from '../rendering/theme.mjs';
 import { clone, elementIndex, same, snapshot, validateAuthoringBundle } from './model.mjs';
 
@@ -6,6 +8,7 @@ export const AUTHORED_SCENE_ITEM_BUDGET = 256;
 export const AUTHORED_MINIMUM_FONT_SIZE = 12;
 const PADDING = 32;
 const MAX_GEOMETRY_CHECKS = 100000;
+/** @param {string} rule @param {string} detail @param {string[]} [elementIds] @param {'error'|'warning'} [severity] @returns {import('./scene.d.mts').DiagramSceneDiagnostic} */
 const issue = (rule, detail, elementIds = [], severity = 'error') => ({
   path: '$.presentation',
   rule,
@@ -18,6 +21,7 @@ const overlaps = (a, b) =>
 const epsilon = 1e-7;
 
 /** A saved side/offset is a boundary intent, resolved against the visible shape. */
+/** @type {typeof import('./scene.d.mts').resolveShapeAttachment} */
 export function resolveShapeAttachment(bounds, shape, attachment) {
   const { x, y, width, height } = bounds;
   const cx = x + width / 2,
@@ -132,14 +136,16 @@ function midpoint(points) {
 }
 // Conservative text estimate. No canvas/font loading or platform measurement occurs.
 const textWidth = (text, size) =>
-  [...text].reduce(
+  diagramGraphemes(text).reduce(
     (width, character) =>
       width +
-      (character.codePointAt(0) > 0x2e7f
+      (/[\u1100-\u115f\u2329\u232a\u2e80-\ua4cf\uac00-\ud7a3\uf900-\ufaff\ufe10-\ufe19\ufe30-\ufe6f\uff01-\uff60\uffe0-\uffe6]|\p{Extended_Pictographic}|\p{Regional_Indicator}/u.test(
+        character,
+      )
         ? 1
-        : /[MW@#%]/u.test(character)
+        : /^[MW@#%]/u.test(character)
           ? 0.9
-          : /[il.,' ]/u.test(character)
+          : /^[il.,' ]/u.test(character)
             ? 0.32
             : 0.62) *
         size,
@@ -162,7 +168,11 @@ function resolveText(element, diagnostics) {
     (element.bounds ? shapeWidth : Math.min(280, Math.max(72, textWidth(label, size) + 16)));
   let lines;
   try {
-    lines = wrapDiagramLabel(label, Math.max(1, Math.floor(available / (size * 0.62))));
+    lines = wrapDiagramLabel(label, Math.max(1, Math.floor(available / (size * 0.62))), {
+      size,
+      glyph: size * 0.62,
+      wrapGlyph: size * 0.62,
+    });
   } catch {
     diagnostics.push(
       issue(
@@ -186,7 +196,7 @@ function resolveText(element, diagnostics) {
   let bounds;
   if (anchor) bounds = { x: anchor.x, y: anchor.y, width: anchor.width, height };
   else if (element.bounds) {
-    const width = shapeWidth;
+    const width = shapeWidth ?? element.bounds.width;
     bounds = {
       x: element.bounds.x + (element.bounds.width - width) / 2,
       y: container ? element.bounds.y + 8 : element.bounds.y + (element.bounds.height - height) / 2,
@@ -430,6 +440,7 @@ function inspectGeometry(elements, diagnostics) {
 }
 
 /** Internal shared geometry for rendering and the editor index; inputs are validated. */
+/** @type {typeof import('./scene.d.mts').resolveDiagramSceneElement} */
 export function resolveDiagramSceneElement(
   entry,
   placement,
@@ -439,13 +450,16 @@ export function resolveDiagramSceneElement(
   diagnostics = [],
 ) {
   const { collection, value } = entry;
+  /** @type {import('./scene.d.mts').AuthoredDiagramSceneElement} */
   const element = {
+    text: null,
+    lines: [],
     id: value.id,
     collection,
     semantic: clone(value),
-    kind: value.kind ?? collection,
-    label: value.label ?? value.text ?? '',
-    description: value.description ?? '',
+    kind: 'kind' in value ? value.kind : collection,
+    label: 'label' in value ? (value.label ?? '') : 'text' in value ? value.text : '',
+    description: 'description' in value ? (value.description ?? '') : '',
     bounds: clone(placement.bounds),
     savedLabel: clone(placement.label),
     zIndex: placement.zIndex,
@@ -469,8 +483,8 @@ export function resolveDiagramSceneElement(
     element.routePoints = element.points.map(({ x, y }) => [x, y]);
     element.x1 = element.points[0].x;
     element.y1 = element.points[0].y;
-    element.x2 = element.points.at(-1).x;
-    element.y2 = element.points.at(-1).y;
+    element.x2 = element.points.at(-1)?.x;
+    element.y2 = element.points.at(-1)?.y;
     element.labelBounds = element.text?.bounds ?? null;
     element.labelLines = element.lines;
   }
@@ -478,6 +492,7 @@ export function resolveDiagramSceneElement(
 }
 
 /** Resolve one immutable bundle without relayout or writes to authored geometry. */
+/** @type {typeof import('./scene.d.mts').resolveDiagramScene} */
 export function resolveDiagramScene(bundle) {
   const checked = validateAuthoringBundle(bundle);
   if (!checked.ok) return { ok: false, code: 'invalid-bundle', diagnostics: checked.diagnostics };
@@ -488,7 +503,9 @@ export function resolveDiagramScene(bundle) {
   const elements = bundle.presentation.elements
     .map((placement, order) =>
       resolveDiagramSceneElement(
-        byId.get(placement.elementId),
+        /** @type {import('@openplanr/protocol/diagram-authoring-contracts').DiagramSemanticEntry} */ (
+          byId.get(placement.elementId)
+        ),
         placement,
         placements,
         order,
@@ -566,6 +583,7 @@ export function resolveDiagramScene(bundle) {
         'warning',
       ),
     );
+  /** @type {import('./scene.d.mts').AuthoredDiagramScene} */
   const scene = {
     kind: 'diagram-authored-scene',
     schemaVersion: '1.0.0',
@@ -580,9 +598,9 @@ export function resolveDiagramScene(bundle) {
     lanes: elements.filter((element) => element.collection === 'lanes'),
     edges: elements.filter((element) => element.collection === 'relations'),
     notes: elements.filter((element) => element.collection === 'annotations'),
-    labelBounds: elements
-      .filter((element) => element.text)
-      .map((element) => ({ id: element.id, ...element.text.bounds })),
+    labelBounds: elements.flatMap((element) =>
+      element.text ? [{ id: element.id, ...element.text.bounds }] : [],
+    ),
     quality: { status, diagnostics: diagnostics.slice(0, 128) },
   };
   return { ok: true, scene, diagnostics: [] };

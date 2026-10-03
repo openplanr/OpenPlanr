@@ -1,22 +1,64 @@
-import {
-  diagramDocumentDigest,
-  validateDiagramEditTransaction,
-} from '@openplanr/protocol/diagram-authoring-contracts';
+// @ts-check
+import { diagramDocumentDigest } from '@openplanr/protocol/diagram-authoring-contracts';
+import { validateVersionedDiagramAuthoringArtifact } from '@openplanr/protocol/studio-presentation-contracts';
 import { diffDiagramBundles, inverseDependencies, sourceMapChanges } from './diff.mjs';
 import {
   appearanceFields,
   clone,
+  createSealedAuthoringSnapshot,
   diagnostic,
   elementIndex,
   failure,
   geometryFields,
+  isAuthoringSnapshot,
   membershipState,
   same,
-  sealBundle,
   semanticFields,
+  setStudioPresentation,
   snapshot,
   validateAuthoringBundle,
 } from './model.mjs';
+
+/** @type {WeakMap<object, import('@openplanr/protocol/studio-presentation-contracts').VersionedDiagramAuthoringBundle>} */
+const previewSnapshots = new WeakMap();
+/** The editor adopts this private proof; public preview bundles remain detached and mutable.
+ * @param {unknown} preview
+ */
+export function validatedPreviewSnapshot(preview) {
+  return preview && typeof preview === 'object' ? (previewSnapshots.get(preview) ?? null) : null;
+}
+
+function transactionDraft(bundle, transaction) {
+  if (!isAuthoringSnapshot(bundle)) return clone(bundle);
+  const document = { ...bundle.document };
+  for (const collection of ['nodes', 'relations', 'groups', 'lanes', 'annotations', 'emphasis'])
+    document[collection] = [...bundle.document[collection]];
+  document.laneOrder = [...bundle.document.laneOrder];
+  const presentation = { ...bundle.presentation, elements: [...bundle.presentation.elements] };
+  const changedPlacements = new Set();
+  for (const op of transaction.operations) {
+    if (op.type === 'set-geometry' || op.type === 'set-appearance')
+      for (const change of op.changes) changedPlacements.add(change.elementId);
+    if (
+      op.type === 'update-semantics' &&
+      ['nodes', 'relations', 'groups', 'lanes', 'annotations'].includes(op.collection)
+    ) {
+      const index = document[op.collection].findIndex((item) => item.id === op.elementId);
+      if (index >= 0) document[op.collection][index] = clone(document[op.collection][index]);
+    }
+    if (op.type === 'update-semantics' && op.collection === 'emphasis')
+      document.emphasis = document.emphasis.map((item) =>
+        item.targetId === op.elementId ? clone(item) : item,
+      );
+    if (op.type === 'set-membership-order')
+      for (const collection of ['groups', 'lanes'])
+        document[collection] = document[collection].map(clone);
+  }
+  presentation.elements = presentation.elements.map((item) =>
+    changedPlacements.has(item.elementId) ? clone(item) : item,
+  );
+  return { ...bundle, document, presentation };
+}
 
 function precondition(actual, expected, path, diagnostics) {
   if (same(actual, expected)) return true;
@@ -33,7 +75,10 @@ export function applyOperation(bundle, op, path, diagnostics) {
   const document = bundle.document;
   const entries = elementIndex(document);
   const placements = new Map(bundle.presentation.elements.map((value) => [value.elementId, value]));
-  if (op.type === 'insert-elements') {
+  if (op.type === 'set-studio-presentation') {
+    if (precondition(bundle.studioPresentation ?? null, op.before, path, diagnostics))
+      setStudioPresentation(bundle, op.after);
+  } else if (op.type === 'insert-elements') {
     for (const { value } of op.elements)
       if (entries.has(value.id))
         diagnostics.push(diagnostic(path, 'duplicate-id', `Element ${value.id} already exists.`));
@@ -180,8 +225,16 @@ export function applyOperation(bundle, op, path, diagnostics) {
         );
         return;
       }
-      for (const value of op.after[collection])
-        entries.get(value.id).value.members = clone(value.members);
+      for (const value of op.after[collection]) {
+        const container = entries.get(value.id);
+        if (!container || (container.collection !== 'groups' && container.collection !== 'lanes')) {
+          diagnostics.push(
+            diagnostic(path, 'containment-reference', 'Membership refers to a missing container.'),
+          );
+          return;
+        }
+        container.value.members = clone(value.members);
+      }
     }
     document.laneOrder = clone(op.after.laneOrder);
   } else {
@@ -242,7 +295,11 @@ function containmentIssues(before, after) {
   );
   const diagnostics = [];
   for (const parent of [...after.document.groups, ...after.document.lanes]) {
-    const old = oldEntries.get(parent.id)?.value;
+    const oldEntry = oldEntries.get(parent.id);
+    const old =
+      oldEntry?.collection === 'groups' || oldEntry?.collection === 'lanes'
+        ? oldEntry.value
+        : undefined;
     const bounds = placements.get(parent.id)?.bounds;
     const oldBounds = oldPlacements.get(parent.id)?.bounds;
     const childrenChanged = parent.members.some(
@@ -292,7 +349,8 @@ function resolveIncidentRoutes(before, after) {
   const placements = new Map(after.presentation.elements.map((value) => [value.elementId, value]));
   const changes = [];
   for (const relation of after.document.relations) {
-    const old = oldEntries.get(relation.id)?.value;
+    const oldEntry = oldEntries.get(relation.id);
+    const old = oldEntry?.collection === 'relations' ? oldEntry.value : undefined;
     const placement = placements.get(relation.id);
     if (placement?.route?.mode !== 'manual') continue;
     const from = placements.get(relation.from)?.bounds;
@@ -309,6 +367,7 @@ function resolveIncidentRoutes(before, after) {
       continue;
     const geometry = geometryFields(placement);
     const route = geometry.route;
+    if (!route) continue;
     const start = attachmentPoint(from, route.from);
     const end = attachmentPoint(to, route.to);
     if (route.strategy === 'straight') route.points = [start, end];
@@ -318,6 +377,7 @@ function resolveIncidentRoutes(before, after) {
       const resolved = [points[0]];
       for (let index = 1; index < points.length; index++) {
         const previous = resolved.at(-1);
+        if (!previous) throw new TypeError('A manual route must have a start point.');
         const next = points[index];
         if (previous.x !== next.x && previous.y !== next.y) {
           // Retain authored bends; an attachment extension may add a short elbow.
@@ -353,12 +413,27 @@ function derivedSourceMap(before, after) {
 }
 
 /** Validate exact bases and before-values, apply on a private value, then validate once. */
-export function previewDiagramTransaction(bundle, transaction) {
+/** @type {typeof import('./index.d.mts').previewDiagramTransaction} */
+export const previewDiagramTransaction = (bundle, transaction) =>
+  previewTransaction(bundle, transaction, false);
+/** Internal session path; the session copies every public return. */
+/** @type {typeof import('./index.d.mts').previewDiagramTransaction} */
+export const previewDiagramTransactionForEditor = (bundle, transaction) =>
+  previewTransaction(bundle, transaction, true);
+/** @param {import('./index.d.mts').DiagramAuthoringBundle} bundle
+ * @param {import('./index.d.mts').DiagramEditTransaction} transaction
+ * @param {boolean} privateResult
+ * @returns {import('./index.d.mts').DiagramPreviewResult}
+ */
+function previewTransaction(bundle, transaction, privateResult) {
   const checked = validateAuthoringBundle(bundle);
   if (!checked.ok) return checked;
   let diagnostics;
   try {
-    diagnostics = validateDiagramEditTransaction(transaction);
+    diagnostics = validateVersionedDiagramAuthoringArtifact(
+      'diagram-edit-transaction',
+      transaction,
+    );
   } catch {
     return failure('$', 'plain-data', 'Transaction could not be inspected as inert JSON data.');
   }
@@ -380,7 +455,7 @@ export function previewDiagramTransaction(bundle, transaction) {
         'duplicate-id',
         'Inserted identities must be fresh even when the same transaction removes an existing element.',
       );
-  const next = clone(bundle);
+  const next = transactionDraft(bundle, transaction);
   const canonicalTransaction = clone(transaction);
   for (const [index, op] of transaction.operations.entries()) {
     applyOperation(next, op, `$.operations[${index}]`, diagnostics);
@@ -390,7 +465,7 @@ export function previewDiagramTransaction(bundle, transaction) {
   if (
     routes.some(
       (change) =>
-        next.presentation.elements.find((value) => value.elementId === change.elementId).locks
+        next.presentation.elements.find((value) => value.elementId === change.elementId)?.locks
           .route,
     )
   )
@@ -401,11 +476,16 @@ export function previewDiagramTransaction(bundle, transaction) {
     );
   if (routes.length) {
     // Endpoints are derived from node bounds. No node geometry is changed here.
-    for (const change of routes)
-      Object.assign(
-        next.presentation.elements.find((value) => value.elementId === change.elementId),
-        change.after,
+    for (const change of routes) {
+      const index = next.presentation.elements.findIndex(
+        (value) => value.elementId === change.elementId,
       );
+      if (index >= 0)
+        next.presentation.elements[index] = {
+          ...next.presentation.elements[index],
+          ...change.after,
+        };
+    }
     canonicalTransaction.operations.push({ type: 'set-geometry', changes: routes });
   }
   if (
@@ -437,13 +517,18 @@ export function previewDiagramTransaction(bundle, transaction) {
       'basis',
       'The updated source map must identify the resulting semantic document.',
     );
-  const sealed = sealBundle(next);
+  const finalCheck = createSealedAuthoringSnapshot(next, bundle);
+  if (!finalCheck.ok) return finalCheck;
+  const sealed = finalCheck.bundle;
   diagnostics.push(...containmentIssues(bundle, sealed));
-  const finalCheck = validateAuthoringBundle(sealed);
-  diagnostics.push(...finalCheck.diagnostics);
-  diagnostics.push(...validateDiagramEditTransaction(canonicalTransaction));
+  diagnostics.push(
+    ...validateVersionedDiagramAuthoringArtifact('diagram-edit-transaction', canonicalTransaction),
+  );
   if (diagnostics.length) return { ok: false, diagnostics };
-  const diff = diffDiagramBundles(bundle, sealed);
+  if (!finalCheck.ok) return finalCheck;
+  const finalBundle = finalCheck.bundle;
+  const diff = diffDiagramBundles(bundle, finalBundle);
+  if (!diff.ok) return diff;
   const positions = [];
   const finalIds = elementIndex(sealed.document);
   for (const [id, entry] of elementIndex(bundle.document))
@@ -455,9 +540,10 @@ export function previewDiagramTransaction(bundle, transaction) {
           (value) => value.elementId === id,
         ),
       });
-  return {
+  /** @type {import('./index.d.mts').DiagramEditPreview} */
+  const result = {
     ok: true,
-    bundle: sealed,
+    bundle: privateResult ? finalBundle : clone(finalBundle),
     transaction: canonicalTransaction,
     diff: { semantic: diff.semantic, presentation: diff.presentation },
     impact: diff.impact,
@@ -474,4 +560,6 @@ export function previewDiagramTransaction(bundle, transaction) {
       emphasisOrder: bundle.document.emphasis.map((value) => value.targetId),
     },
   };
+  previewSnapshots.set(result, finalBundle);
+  return result;
 }

@@ -2,7 +2,7 @@ import { DIAGRAM_ERROR_CODES, diagramFail } from '../errors.mjs';
 
 export const DIAGRAM_RENDERER = Object.freeze({
   id: 'openplanr-semantic-svg-resvg',
-  version: '1.4.0',
+  version: '1.5.0',
 });
 
 export const DIAGRAM_THEME = Object.freeze({

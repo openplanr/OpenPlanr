@@ -328,7 +328,11 @@ test('live room creation encrypts the compressed envelope bytes', async () => {
     artifacts: [{ id: 'artifact', title: 'Artifact', html: '<!doctype html><p>private</p>' }],
   });
 
-  const result = await createLiveRoomClient({ fetchImpl }).create({ envelope, ttl: '7d' });
+  const result = await createLiveRoomClient({ fetchImpl }).create({
+    envelope,
+    ttl: '7d',
+    protocolVersion: '2.0.0',
+  });
 
   assert.equal(result.action, 'artifact_live_room_created');
   assert.equal(request.schemaVersion, '2.0.0');
@@ -349,7 +353,7 @@ test('one prepared creation survives a lost response and exact retry without rot
   const envelope = createArtifactEnvelope({
     artifacts: [{ id: 'artifact', title: 'Artifact', html: '<p>retry-safe</p>' }],
   });
-  const prepared = await prepareLiveReviewRoom(envelope, { ttl: '7d' });
+  const prepared = await prepareLiveReviewRoom(envelope, { ttl: '7d', protocolVersion: '2.0.0' });
   const recovery = await exportLiveRoomRecoveryBundle(prepared);
   const requests = [];
   let dropped = true;
@@ -440,7 +444,7 @@ test('one prepared creation survives a lost response and exact retry without rot
   assert.equal(recoveredRoom.descriptor.roomId, prepared.roomId);
   assert.equal(recoveredRoom.ownerSigner.keyId, prepared.ownerKey.keyId);
 
-  const rejected = await prepareLiveReviewRoom(envelope, { ttl: '7d' });
+  const rejected = await prepareLiveReviewRoom(envelope, { ttl: '7d', protocolVersion: '2.0.0' });
   await assert.rejects(
     () =>
       commitLiveReviewRoom(rejected, {
@@ -467,7 +471,7 @@ test('legacy rooms hydrate as readable and permanently non-mutable', async () =>
     return new Response('{}');
   };
   const preparedClient = createLiveRoomClient({ fetchImpl: createFetch });
-  await assert.rejects(() => preparedClient.create({ envelope }), {
+  await assert.rejects(() => preparedClient.create({ envelope, protocolVersion: '2.0.0' }), {
     code: 'E_ARTIFACT_ROOM_CREATE_AMBIGUOUS',
   });
   assert.equal(typeof createRequest.ciphertext, 'string');

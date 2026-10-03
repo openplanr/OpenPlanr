@@ -256,6 +256,20 @@ export function mountDesignEnhancements({ payload, studio: designStudio, stage: 
       node('div', 'OpenPlanr · Design review', { class: 'design-eyebrow' }),
       node('h3', design.title),
     );
+    const identity = (globalThis.__OPENPLANR_DESIGN_STUDIO_OPTIONS__ ?? {}).runtimeIdentity;
+    if (identity) {
+      const details = node('details', null, { class: 'design-runtime-identity' });
+      details.append(node('summary', 'Runtime details'));
+      for (const [label, value] of [
+        ['Design package', identity.packageVersion],
+        ['Launch', identity.launchContext],
+        ['Renderer', identity.rendererIdentity],
+        ['Revision', identity.revision],
+        ['Source hash', identity.sourceHash],
+      ])
+        if (value) details.append(node('p', `${label}: ${value}`));
+      content.append(details);
+    }
     const brief = experience?.reviewContext?.brief || payload.reviewContext?.brief;
     content.append(
       node(
@@ -654,7 +668,7 @@ export function mountDesignEnhancements({ payload, studio: designStudio, stage: 
   function installThumbnails() {
     // Phones use numbered navigation: styled DOM/SVG captures can briefly
     // multiply the memory occupied by a live product document.
-    if (stage.frameBudget) return;
+    if (window.matchMedia?.('(pointer:coarse), (max-width:680px)').matches) return;
     const cache = new Map(),
       queue = [],
       queued = new Set();
@@ -836,6 +850,7 @@ export function mountDesignEnhancements({ payload, studio: designStudio, stage: 
   function installComposerCategory() {
     let pending = null,
       saving = false,
+      failed = false,
       retry;
     const outbox = read(`categories.${revision()}`, {});
     const available = () =>
@@ -847,6 +862,8 @@ export function mountDesignEnhancements({ payload, studio: designStudio, stage: 
       try {
         // The server finds a comment only in the saved review, so a new one must be saved first.
         await studio.flush();
+        if (studio.getSaveState().commentsPending)
+          throw new Error('Comment persistence is pending.');
         for (const [pinId, category] of Object.entries(outbox)) {
           const body = {
             action: 'category',
@@ -867,14 +884,24 @@ export function mountDesignEnhancements({ payload, studio: designStudio, stage: 
           write(`categories.${revision()}`, outbox);
           updateFilters();
         }
+        if (failed) announce('Comment and type saved.');
+        failed = false;
       } catch {
+        failed = true;
         announce(
-          'Comment saved. Its type is waiting to sync. Retry when your connection is available.',
+          studio.getSaveState().commentsPending
+            ? 'Comment is not saved yet. Your draft remains in this browser. Retry to save the comment and its type.'
+            : 'Comment saved. Its type is waiting to sync. Retry when your connection is available.',
           true,
         );
       } finally {
         saving = false;
-        if (retry) retry.hidden = !Object.keys(outbox).length;
+        if (retry) {
+          retry.hidden = !Object.keys(outbox).length;
+          retry.textContent = studio.getSaveState().commentsPending
+            ? 'Retry comment save'
+            : 'Retry pending categories';
+        }
       }
     };
     on(root, 'planr:artifact-annotation-draft', () => {
@@ -1562,7 +1589,8 @@ export function mountDesignEnhancements({ payload, studio: designStudio, stage: 
         return;
       }
       chrome = state();
-      focusBeforePresentation = document.activeElement;
+      // Safari does not focus a clicked button; restore to the invoking menu control.
+      focusBeforePresentation = presentation;
       root.dataset.designPresentation = 'true';
       inspector(false);
       studio.setPanels({ navOpen: false, reviewOpen: false }, { save: false });
@@ -2003,10 +2031,13 @@ export function mountDesignEnhancements({ payload, studio: designStudio, stage: 
       content.append(button('Retry', history));
     }
   }
-  async function loadRevision(id) {
+  async function loadRevision(id, artifactIds) {
     return options().loadRevision
-      ? options().loadRevision(id)
-      : request('loadRevision', 'revisionsUrl', { revision: id });
+      ? options().loadRevision(id, { artifactIds })
+      : request('loadRevision', 'revisionsUrl', {
+          revision: id,
+          ...(artifactIds ? { artifactIds } : {}),
+        });
   }
   function screenDifferences(before, after) {
     const ids = [...new Set([...before, ...after].map((item) => item.screenId))];
@@ -2174,8 +2205,14 @@ export function mountDesignEnhancements({ payload, studio: designStudio, stage: 
             (item) => item.id === selectedEntry.artifactId,
           );
           let source = bundle.comparisonSources?.[artifact.id];
-          if (!source && typeof options().prepareComparisonSource === 'function')
-            source = await options().prepareComparisonSource({ artifact, revision: id });
+          if (!source) {
+            if (typeof options().prepareComparisonSource === 'function')
+              source = await options().prepareComparisonSource({ artifact, revision: id });
+            else {
+              const selected = await loadRevision(id, [artifact.id]);
+              source = selected.comparisonSources?.[artifact.id];
+            }
+          }
           if (attempt !== renderSerial || !dialog.isConnected) return;
           if (typeof source !== 'string') {
             card.append(

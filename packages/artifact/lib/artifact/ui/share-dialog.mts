@@ -5,6 +5,8 @@
  * Encryption and upload run in injected host handlers (`share-client.mjs` for design boards).
  */
 
+import { assertLiveRoomV3RecoveryMatchesPreparation } from '../live-room.mjs';
+
 export const ARTIFACT_SHARE_FRAGMENT_LIMIT = 8_000;
 
 export const ARTIFACT_SHARE_TTLS = Object.freeze({
@@ -32,6 +34,7 @@ const LIVE_ROOM_KEY_ID_RE = /^sha256:[a-f0-9]{64}$/;
 const LIVE_ROOM_REVIEW_RE = /^[a-f0-9]{64}$/;
 const BASE64URL_RE = /^[A-Za-z0-9_-]+$/;
 const OWNER_SECRET_MAX_BYTES = 64 * 1024;
+const ROOM_RECOVERY_MAX_BYTES = 8 * 1024 * 1024;
 
 /** A share link lifetime. */
 export type ArtifactShareTtl = keyof typeof ARTIFACT_SHARE_TTLS;
@@ -74,7 +77,8 @@ interface PreparedRoom {
   protocolVersion: string;
   id: string;
   roomId: string;
-  reviewOf: string;
+  reviewOf?: string;
+  reviewCommitment?: string;
   ttl: string;
   ownerKey: OwnerKey;
   url: string;
@@ -84,11 +88,28 @@ interface PreparedRoom {
 }
 /** A prepared room's recovery bundle, which carries the owner secret. */
 interface RoomRecovery extends Omit<PreparedRoom, 'ownerSigner'> {
+  schemaVersion: '1.0.0';
+  ownerSigner: OwnerSecret;
+}
+/** V3 custody binds the exact signed encrypted request before its first effect. */
+interface RoomRecoveryV3 {
+  schemaVersion: '2.0.0';
+  kind: 'openplanr-live-room-recovery';
+  origin: string;
+  body: Record<string, unknown>;
+  key: string;
+  reviewOf: string;
+  inputDigest: string;
   ownerSigner: OwnerSecret;
 }
 /** A host's owner custody: a prepared room and its recovery bundle, or a signer and its secret. */
 type OwnerCustodyInput =
-  | { prepared: PreparedRoom; recovery: RoomRecovery; signer?: undefined; secret?: undefined }
+  | {
+      prepared: PreparedRoom;
+      recovery: RoomRecovery | RoomRecoveryV3;
+      signer?: undefined;
+      secret?: undefined;
+    }
   | { signer: OwnerSigner; secret: OwnerSecret; prepared?: undefined; recovery?: undefined };
 /** What room creation binds: the prepared room, or else the owner signer, which has no `kind`. */
 type OwnerCredential = PreparedRoom | (OwnerSigner & { kind?: undefined; ownerSigner?: undefined });
@@ -171,6 +192,8 @@ type ShareCreation = Readonly<{
   confirmed: boolean;
   prepared?: PreparedRoom;
   ownerSigner?: OwnerSigner;
+  onPreparedPaste?: (prepared: unknown) => Promise<void>;
+  preparedPaste?: unknown;
 }>;
 type PrepareShare = (request: SharePreparation) => Awaitable<SharePreviewInput | null>;
 type PrepareOwnerCustody = (
@@ -183,6 +206,7 @@ export interface ArtifactShareHandlers {
   prepareOwnerCustody?: PrepareOwnerCustody;
   saveOwnerCustody?: (file: CustodyFile) => Awaitable<CustodySaved>;
   createShare?: CreateShare;
+  resumePreparedShare?: (prepared: unknown) => Awaitable<ShareCreated | null>;
   supportedTransports?: readonly ArtifactShareTransport[];
 }
 /** The stage fields the dialog reads: the review it shares. */
@@ -281,6 +305,8 @@ function parseLiveResultUrl(value: string, capability: string) {
   }
   const fields = new URLSearchParams(url.hash.slice(1));
   const keys = [...fields.keys()];
+  const authenticatedRead = fields.has('r');
+  const expected = ['k', capability, ...(authenticatedRead ? ['r'] : [])];
   const roomId = /^\/r\/([A-Za-z0-9_-]{16,128})\/?$/.exec(url.pathname)?.[1];
   if (
     url.username ||
@@ -289,10 +315,11 @@ function parseLiveResultUrl(value: string, capability: string) {
     (url.protocol !== 'https:' && !(url.protocol === 'http:' && exactLoopback(url.hostname))) ||
     !roomId ||
     !LIVE_ROOM_ID_RE.test(roomId) ||
-    keys.length !== 2 ||
+    keys.length !== expected.length ||
     !keys.includes('k') ||
     !keys.includes(capability) ||
-    keys.some((key) => !['k', capability].includes(key) || fields.getAll(key).length !== 1) ||
+    keys.some((key) => !expected.includes(key) || fields.getAll(key).length !== 1) ||
+    (authenticatedRead && !LIVE_ROOM_SECRET_RE.test(fields.get('r') ?? '')) ||
     !LIVE_ROOM_SECRET_RE.test(fields.get('k') ?? '') ||
     !LIVE_ROOM_SECRET_RE.test(fields.get(capability) ?? '')
   ) {
@@ -306,6 +333,7 @@ function parseLiveResultUrl(value: string, capability: string) {
     pathname: url.pathname.replace(/\/$/, ''),
     key: fields.get('k'),
     capability: fields.get(capability),
+    readCapability: fields.get('r'),
   });
 }
 
@@ -320,6 +348,8 @@ function validateLiveResultUrls({ url, ownerUrl, manageUrl }: LiveResultUrls) {
     reviewer.pathname !== management.pathname ||
     reviewer.key !== owner.key ||
     reviewer.key !== management.key ||
+    reviewer.readCapability !== owner.readCapability ||
+    reviewer.readCapability !== management.readCapability ||
     new Set([reviewer.capability, owner.capability, management.capability]).size !== 3
   ) {
     throw new ArtifactShareUiError(
@@ -332,6 +362,56 @@ function validateLiveResultUrls({ url, ownerUrl, manageUrl }: LiveResultUrls) {
 function normalizeOwnerCustody(value: OwnerCustodyInput | null | undefined): OwnerCustody {
   if (record(value?.prepared) && record(value?.recovery)) {
     const { prepared, recovery } = value;
+    if (prepared.protocolVersion === '3.0.0') {
+      try {
+        assertLiveRoomV3RecoveryMatchesPreparation(prepared, recovery);
+      } catch {
+        throw new ArtifactShareUiError(
+          'E_ARTIFACT_SHARE_OWNER_CUSTODY_INVALID',
+          'Live room recovery custody does not match its prepared creation.',
+        );
+      }
+      validateLiveResultUrls(prepared);
+      if (recovery.schemaVersion !== '2.0.0')
+        throw new ArtifactShareUiError(
+          'E_ARTIFACT_SHARE_OWNER_CUSTODY_INVALID',
+          'Live room recovery version is invalid.',
+        );
+      const signerCustody = normalizeOwnerCustody({
+        signer: prepared.ownerSigner,
+        secret: recovery.ownerSigner,
+      });
+      if (
+        JSON.stringify(prepared.ownerKey) !==
+        JSON.stringify({
+          algorithm: signerCustody.signer.algorithm,
+          encoding: signerCustody.signer.encoding,
+          keyId: signerCustody.signer.keyId,
+          value: signerCustody.signer.value ?? signerCustody.signer.publicKey,
+        })
+      )
+        throw new ArtifactShareUiError(
+          'E_ARTIFACT_SHARE_OWNER_CUSTODY_INVALID',
+          'Live room recovery owner key does not match its prepared signer.',
+        );
+      const serialized = `${JSON.stringify(recovery, null, 2)}\n`;
+      if (new TextEncoder().encode(serialized).byteLength > ROOM_RECOVERY_MAX_BYTES)
+        throw new ArtifactShareUiError(
+          'E_ARTIFACT_SHARE_OWNER_CUSTODY_INVALID',
+          'Live room recovery bundle exceeds its bounded export size.',
+        );
+      return Object.freeze({
+        credential: prepared,
+        signer: signerCustody.signer,
+        serialized,
+        filename: `openplanr-live-room-recovery-${prepared.roomId.slice(0, 12)}.json`,
+      });
+    }
+    if (recovery.schemaVersion !== '1.0.0')
+      throw new ArtifactShareUiError(
+        'E_ARTIFACT_SHARE_OWNER_CUSTODY_INVALID',
+        'Live room recovery version is invalid.',
+      );
     if (
       !exactKeys(prepared, [
         'schemaVersion',

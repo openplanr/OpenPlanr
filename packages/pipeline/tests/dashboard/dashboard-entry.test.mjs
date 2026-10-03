@@ -29,8 +29,12 @@ function staticImportGraph(entry) {
   return [...seen].map((file) => relative(PIPELINE_ROOT, file));
 }
 
-test('planr-pipeline/dashboard exposes only startDashboard, which the package root does not', () => {
-  assert.deepEqual(Object.keys(dashboardEntry), ['startDashboard']);
+test('planr-pipeline/dashboard exposes its lifecycle beside startDashboard without loading the package root', () => {
+  assert.deepEqual(Object.keys(dashboardEntry), [
+    'listDashboardServers',
+    'startDashboard',
+    'stopDashboardServer',
+  ]);
   assert.equal(dashboardEntry.startDashboard, createDashboardServer);
   assert.equal(Object.hasOwn(packageRoot, 'startDashboard'), false);
 });

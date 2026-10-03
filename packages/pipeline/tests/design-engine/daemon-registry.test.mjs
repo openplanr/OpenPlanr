@@ -19,7 +19,7 @@ import {
   daemonControlHeaders,
 } from '../../lib/design-engine/daemon.mjs';
 
-test('daemon startup prunes legacy + dead boards, keeps live tokenized ones', () => {
+test('daemon startup prunes legacy + dead boards, keeps live tokenized ones', async () => {
   const home = mkdtempSync(join(tmpdir(), 'planr-reg-home-'));
   const liveDir = mkdtempSync(join(tmpdir(), 'planr-reg-live-'));
   const env = { PLANR_HOME: home };
@@ -42,8 +42,10 @@ test('daemon startup prunes legacy + dead boards, keeps live tokenized ones', ()
   );
 
   try {
-    // The prune runs synchronously inside createDaemon (no listen needed).
-    createDaemon({ env });
+    // Registry hygiene occurs after serialized ownership of the startup.
+    const daemon = createDaemon({ env });
+    await daemon.listen();
+    await daemon.close();
     const reg = JSON.parse(readFileSync(regPath, 'utf-8'));
     assert.deepEqual(
       Object.keys(reg),
@@ -121,11 +123,11 @@ for (const [label, bytes, reason] of [
   });
 }
 
-test('daemon startup fails, naming the registry, when it cannot read it', (t) => {
+test('daemon startup fails, naming the registry, when it cannot read it', async (t) => {
   const { env, regPath } = isolatedState(t);
   mkdirSync(regPath);
-  assert.throws(
-    () => createDaemon({ env }),
+  await assert.rejects(
+    () => createDaemon({ env }).listen(),
     (error) => error.message.startsWith(`Cannot read the design board registry ${regPath}: `),
   );
   assert.ok(statSync(regPath).isDirectory(), 'the unreadable registry is left in place');
@@ -151,13 +153,15 @@ test('a registry corrupted while the daemon runs fails requests and is left unto
     headers: daemonControlHeaders(env),
   });
   assert.equal(health.status, 200, 'health still identifies the daemon');
-  const { registryError, ...identity } = await health.json();
+  const { registryError, instanceId, startedAt, ...identity } = await health.json();
   assert.deepEqual(identity, {
     ok: true,
     kind: 'openplanr-design-daemon',
     pid: process.pid,
     version: DAEMON_VERSION,
   });
+  assert.match(instanceId, /^[A-Za-z0-9_-]{22}$/u);
+  assert.ok(Number.isFinite(Date.parse(startedAt)));
   assert.ok(registryError.startsWith(invalid), registryError);
   assert.equal(readFileSync(regPath, 'utf8'), truncated);
 });

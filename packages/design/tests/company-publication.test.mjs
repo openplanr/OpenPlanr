@@ -19,6 +19,7 @@ import {
   prepareCompanyDesignPublication,
 } from '../lib/design/company-publication.mjs';
 import { emptyReviewContext } from '../lib/design/context.mjs';
+import { prepareDesignDocument } from '../lib/design/document.mjs';
 import { designFixture } from './design-fixture.mjs';
 
 function fixture(t, options) {
@@ -48,6 +49,54 @@ test('publishes all screens, frames and ready variants deterministically without
   assert.ok(!first.content.includes(root));
   assert.ok(!first.content.includes('source/screen-1.html'));
   assertCompanyDesignBundle(first.bundle);
+});
+
+test('company publication converts shared local sources to the frozen inline hosted contract', (t) => {
+  const { file } = fixture(t, { count: 2, variants: 2 });
+  const local = prepareDesignDocument(file, { passive: true });
+  assert.equal(local.envelope.schemaVersion, '1.1.0');
+  assert.equal(local.envelope.sources.length, 4);
+  assert.equal(local.envelope.artifacts.length, 8);
+  const publication = prepareCompanyDesignPublication(file);
+  assert.equal(publication.bundle.schemaVersion, '1.1.0');
+  assert.equal(publication.bundle.envelope.schemaVersion, '1.0.0');
+  assert(!Object.hasOwn(publication.bundle.envelope, 'sources'));
+  assert.equal(publication.bundle.envelope.artifacts.length, 8);
+  assert(
+    publication.bundle.envelope.artifacts.every(
+      (artifact) => typeof artifact.html === 'string' && !Object.hasOwn(artifact, 'sourceId'),
+    ),
+  );
+  assertCompanyDesignBundle(publication.bundle);
+  assert.equal(local.envelope.schemaVersion, '1.1.0');
+});
+
+test('shared local boards cannot silently expand the hosted artboard or byte budget', (t) => {
+  const { root, file, document } = fixture(t, { count: 1 });
+  const source = join(root, 'source/screen-1.html');
+  writeFileSync(
+    source,
+    readFileSync(source, 'utf8').replace('</main>', `<p>${'x'.repeat(100000)}</p></main>`),
+  );
+  document.frames = Array.from({ length: 16 }, (_, i) => ({
+    id: `frame${i}`,
+    label: `Frame ${i}`,
+    width: 1440,
+    height: 1024,
+  }));
+  save(file, document);
+  assert.equal(prepareDesignDocument(file, { passive: true }).envelope.sources.length, 1);
+  assert.throws(() => prepareCompanyDesignPublication(file), /publication budget/);
+  document.variants = Array.from({ length: 16 }, (_, i) => ({
+    id: `variant${i}`,
+    label: `Variant ${i}`,
+    status: 'ready',
+  }));
+  document.selectedVariant = 'variant0';
+  document.screens.push({ ...document.screens[0], id: 'another-screen' });
+  document.screenOrder.push('another-screen');
+  save(file, document);
+  assert.throws(() => prepareCompanyDesignPublication(file), /256 views/);
 });
 
 test('company preparation never reads untrusted local render cache state', (t) => {

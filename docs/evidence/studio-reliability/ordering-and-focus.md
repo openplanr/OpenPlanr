@@ -1,0 +1,169 @@
+# Hosted state and editor focus regressions
+
+The exact `fab1c6b9` candidate passed public CI and cold private adoption. A later
+native hosted stress run passed 58 of 60 attempts and exposed two genuine
+prototype-state losses. Earlier passing suites remain predecessor evidence;
+they do not certify the corrected candidate or hosted release.
+
+## Editor menu focus
+
+Opening the diagram's More menu could focus a disabled or CSS-hidden item. On
+native WebKit this left focus on the document body, so Escape did not close the
+menu and the menu intercepted a later Revisions click. A second reproduction
+showed ArrowUp selecting the wrong item after the focused choice became disabled.
+
+The menu now selects rendered, operable choices using the item's owning document.
+Click and arrow opening share that selection. Changed eligibility chooses the
+appropriate first or last item, an empty menu returns focus to its trigger, and
+closing restores the connected More button. Canvas and host keyboard ownership
+are unchanged.
+
+The independent source review and native edge probes passed in Chromium, Firefox
+and WebKit. After adoption, the complete editor-host suite passed 15 tests per
+engine: Google Chrome in 17.972 seconds, Firefox in 21.448 seconds and WebKit in
+11.038 seconds. The four focused unit regressions also passed. Recorded source,
+compiled module, stylesheet, manifest and lock hashes stayed unchanged during
+the native runs.
+
+One original WebKit suite attempt retained a host-controls Tab failure. A native
+diagnostic reproduced ordinary Tab skipping plain buttons on both the hosted
+page and a bare page without an editor; the editor did not prevent the key.
+Native Option-Tab reached the host button and then the open drawer. The test now
+uses that macOS WebKit shortcut, as the existing Studio contrast test does;
+other platforms retain Tab. Both original focus assertions and deadlines remain.
+The failed run is retained separately from the subsequent complete passing run.
+
+## Prototype state
+
+Passive native traces showed a queued empty restore arriving after a newer local
+input. That restore replaced the local snapshot, and the next captured update
+then replaced the host's shared snapshot. Waiting longer for a test assertion
+would not recover the lost value.
+
+The relay now orders state changes per authenticated frame generation, merges only
+changed session keys and the current view's form fields, and acknowledges accepted
+updates. The bootstrap keeps bounded local edits until acknowledgement, rejects
+stale restores and preserves native input before legacy aliases are configured.
+Reset and form-capture failures retain the same bounded custody rules.
+
+The full owning Design suite then exposed a distinct reload defect that the
+recreated-frame probes missed. Standard Studio reuses the iframe, WindowProxy and
+frozen nonce after eviction, while the new bootstrap starts its sequence at zero.
+A previous document's acknowledgement could therefore stall restoration.
+
+The host now exposes its authenticated load-challenge generation only after the
+exact challenge acknowledgement. Each bootstrap has an ephemeral document ID;
+restores target that document. Generation retirement resets sequence custody
+without permitting a known modern channel to downgrade to a stripped legacy
+message. Old hosts and genuinely old bootstraps retain their existing semantics.
+Legacy alias companions are withheld until the current document is bound, so an
+old configuration request cannot overwrite its native fields.
+
+Independent review found and corrected both the stripped-message transition and
+premature-alias cases. The retained native test sends old payloads from the
+current child and asserts the sender check passed before testing generation
+rejection. The original reused-frame migration keeps its eight-second restore
+deadline and asserts the same iframe, window and nonce with a changed
+authenticated generation.
+
+The corrected source passed eleven direct relay units, five hosted bridge units,
+27 prototype browser cases and the original sandbox checks. The actual standard
+Studio migration passed twenty attempts per engine under concurrent load, with
+no retries. Refined native replay checks passed in all three engines. The original
+synthetic 93-screen/five-frame, room, outbox and complex hosted journeys passed
+against the explicitly recorded source overlay and predecessor dependencies.
+
+Owning generation, full repository regressions, successful packed CI and fresh
+private adoption are tracked separately. Earlier source-overlay and predecessor
+package results do not certify the final consumer candidate.
+
+No test uses customer content. Native diagnostics and temporary source-overlay
+checks are distinguished from a successful packaged consumer journey. The legacy
+room expiry transition and service deployment remain separate acceptance steps.
+
+## Compact artifact identity and presentation contrast
+
+The final interface pass reproduced missing artifact identity at phone width:
+Design and Diagram viewers hid both title and type; authoring hid the type. The
+single shared header now preserves the complete type label and a readable
+truncated title. Its existing groups may wrap on narrow phones or enlarged text,
+with the canvas and rails following its actual height. Normal desktop and tablet
+headers retain their compact height. No controller, draft or canvas mount is
+replaced by this stylesheet change.
+
+The same native visual pass confirmed that presentation navigation inherited
+light arrows on native white button faces in dark mode. Foreground and background
+now use the existing theme tokens together; measured active chapter contrast is
+at least 16.65:1 across the recorded presentation cases.
+
+The frozen proposal's four actual-mount regressions passed Chrome, Firefox and
+WebKit, covering 288 measured width/theme/text-size combinations. Text stress
+scales computed toolbar text to 200%; it is not a claim of browser page-zoom
+coverage. Tests retain full badge glyph extent, title truncation, native
+menu/Escape focus, rail placement, actual authoring camera and stable viewer
+DOM/drafts. The regression is wired into the existing browser certification job.
+
+Original phone and contrast failures remain recorded. The first new fixture
+waited for every page animation and timed out on unrelated hidden transitions
+in Firefox and WebKit. Its corrected readiness observes the visible measured
+toolbar and stable geometry/colors within the original seven-second native
+budget; no animation is disabled and the original ninety-second test deadline
+and layout assertions remain. Independent generated-asset regression and owning
+package verification are recorded separately before final candidate adoption.
+The first full owning Artifact suite exposed two additional regressions: the
+authoring canvas began at 61 pixels and the generated review shell exceeded its
+existing raw-byte budget. The stylesheet now places the same visible separator
+inside the toolbar border-box and consolidates repeated React-scoped rules. The
+normal desktop canvas starts at 60 pixels; enlarged phone text may still wrap
+naturally. That precompiler consolidation measured 68,387 bytes against the unchanged 68,608-byte
+limit, and its gzip size also remains within its original budget.
+
+A separate generated-source review replayed the unchanged complete editor and
+host files plus the identity regression in Chrome, Firefox and WebKit: 159 native
+cases and 12 shell tests passed, with no skips. It also measured the retained
+separator and 288 identity layouts. Original budgets, assertions, deadlines and
+controller code stayed unchanged. The original 61-pixel and oversized-shell
+failures, and the consolidation's intermediate title-cascade failure, remain
+retained. This source review is distinct from final CI archives and cold private
+consumer acceptance.
+
+The subsequent full owning focused workflow retained a genuine installed-DOM
+compatibility failure: the parser rejected native CSS nesting. The existing
+source compiler now lowers the readable shared stylesheet to flat, portable CSS
+at its original exported path before shell, skill and package generation. Normal
+source checking detects stale or missing CSS, and the required focused runner
+includes actual parser, emitted-output and source-drift regressions. The readable
+source retains the accepted styles; only derived output is compacted.
+
+Independent replay passed the actual installed 93-source/five-frame workflow,
+51 installed/parser checks, 17 compiler/ownership/shell checks and 159 native
+editor, host and identity cases across Chrome, Firefox and WebKit, without
+skips. The original parser failure remains retained. Missing browser, CLI-build
+and peer-Git prerequisites are recorded separately from product failures. Normal
+owning generation, final CI archives and cold consumer acceptance remain
+separate gates; generated dependency-path labels from isolated proposals are
+never transferred into the owning candidate.
+
+## Platform font metrics at the tablet boundary
+
+Fresh CI at `d9df77bb` found the same diagram header wrapping at 681 pixels in
+the supporting-package job and Chrome, Firefox and WebKit certification. Its
+83-pixel height failed the original 60-pixel compact-header assertion. The
+Workspace run passed its other 22 jobs; no archive from that failed run was
+adopted. All original engine logs and the native failing geometry are retained.
+
+An ordinary native Verdana fallback reproduced the same wrap locally. The
+correction changes only the diagram action gap to 4 pixels between 681 and 960
+pixels. Full action labels, the complete type badge and useful title truncation
+remain; phone/enlarged-text wrapping and controller mounts are unchanged. A
+new native fallback-font case extends the existing actual-mount fixture without
+changing any earlier assertion or wait. CI now retains engine-specific layout
+observations and screenshots even after failure.
+
+The frozen proposal passed 162 native editor, host and identity cases across
+Chrome, Firefox and WebKit, with no skips, including the new fallback-font
+regression. Compiler, ownership and shell checks passed 17 cases; normal
+generation and its read-only check passed all 15 stages. The resulting shell
+measured 68,544 raw bytes and 13,024 gzip bytes within the unchanged budgets.
+Independent source reviews, owning generation/checks and fresh successful CI
+archives remain separate from this isolated evidence.

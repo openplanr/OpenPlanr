@@ -11,8 +11,8 @@ import {
   playwright,
 } from '../../../tests/support/browser-launcher.mjs';
 import { renderDesignDocument } from '../lib/design/document.mjs';
-import { startDesignReview } from '../lib/design/review.mjs';
 import { designFixture } from './design-fixture.mjs';
+import { startDesignReview } from './studio-http-fixture.mjs';
 
 const engine = browserEngine();
 const loadedSelector = '.planr-artifact-panel iframe[src], .planr-artifact-panel iframe[srcdoc]';
@@ -242,7 +242,7 @@ test(`mobile reviews demand-load bounded product documents and remain usable (${
       assert.equal(await draft.inputValue(), 'Keep this mobile annotation draft.');
       await page.getByRole('button', { name: 'Close new comment', exact: true }).tap();
 
-      await page.locator('[data-design-view="canvas"]').tap();
+      await page.getByRole('button', { name: 'Canvas', exact: true }).tap();
       await page.evaluate(() => window.__openPlanrDesignStudio.fit());
       await page.waitForFunction(() =>
         [...document.querySelectorAll('[data-design-load-frame]')].some(
@@ -271,7 +271,7 @@ test(`mobile reviews demand-load bounded product documents and remain usable (${
           !document.querySelector('[data-design-screen-loading]')
         );
       });
-      await page.locator('[data-design-view="prototype"]').tap();
+      await page.getByRole('button', { name: 'Prototype', exact: true }).tap();
       await focusedGeometry(page);
       await page.setViewportSize({ width: 844, height: 390 });
       await focusedGeometry(page);
@@ -312,9 +312,21 @@ test(`mobile reviews demand-load bounded product documents and remain usable (${
     await desktop.locator('[data-design-ready="true"]').waitFor();
     assert.equal(
       await desktop.locator(loadedSelector).count(),
-      14,
-      'desktop retains its existing eager product-frame behavior',
+      1,
+      'desktop also opens only the selected authored document',
     );
+    assert.equal(await desktop.locator('.planr-artifact-panel iframe').count(), 14);
+    assert.equal(await desktop.evaluate(() => window.__openPlanrArtifactStage.frameBudget), 3);
+    for (const screenId of ['screen-7', 'screen-1']) {
+      await desktop.evaluate((id) => window.__openPlanrDesignStudio.selectScreen(id), screenId);
+      await settled(desktop, screenId);
+      await focusedGeometry(desktop);
+      assert.equal(
+        await desktop.locator('.planr-artifact-panel iframe').count(),
+        14,
+        'desktop navigation retains every artboard while loading bounded sources',
+      );
+    }
     await desktop.close();
   } finally {
     await browser?.close();

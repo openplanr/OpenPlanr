@@ -938,12 +938,29 @@ export type ArtifactEnvelopeViewer = {
   activeArtifactId: string;
   presentation?: 'document' | 'canvas';
 };
-export type ArtifactEnvelope = {
+export type ArtifactInlineEnvelope = {
   schemaVersion: '1.0.0';
   artifacts: ArtifactEnvelopeArtifact[];
   viewer: ArtifactEnvelopeViewer;
   review?: ArtifactReview;
 };
+export type ArtifactSharedEnvelopeSource = {
+  id: string;
+  kind: 'html';
+  sha256: string;
+  html: string;
+};
+export type ArtifactSharedEnvelopeArtifact = Omit<ArtifactEnvelopeArtifact, 'html'> & {
+  sourceId: string;
+};
+export type ArtifactSharedEnvelope = {
+  schemaVersion: '1.1.0';
+  sources: ArtifactSharedEnvelopeSource[];
+  artifacts: ArtifactSharedEnvelopeArtifact[];
+  viewer: ArtifactEnvelopeViewer;
+  review?: ArtifactReview;
+};
+export type ArtifactEnvelope = ArtifactInlineEnvelope | ArtifactSharedEnvelope;
 export type ArtifactEnvelopeArtifactInput = {
   readonly id: string;
   readonly title: string;
@@ -960,6 +977,17 @@ export type ArtifactEnvelopeInput = {
     readonly presentation?: 'document' | 'canvas';
   } | null;
   readonly review?: ArtifactReview | null;
+};
+
+export type ArtifactSharedEnvelopeInput = Omit<ArtifactEnvelopeInput, 'artifacts'> & {
+  readonly sources: readonly {
+    readonly id: string;
+    readonly html: string;
+    readonly sha256?: string;
+  }[];
+  readonly artifacts: readonly (Omit<ArtifactEnvelopeArtifactInput, 'html'> & {
+    readonly sourceId: string;
+  })[];
 };
 
 export type ArtifactRemoteAssetResponse = {
@@ -1576,7 +1604,7 @@ export function bundleArtifact(
   options: ArtifactBundleOptions & ({ entry: string } | { file: string }),
 ): Promise<ArtifactBundle>;
 
-export function createArtifactEnvelope(input: ArtifactEnvelopeInput): ArtifactEnvelope;
+export function createArtifactEnvelope(input: ArtifactEnvelopeInput): ArtifactInlineEnvelope;
 
 export function createReviewLink(
   value: object,
