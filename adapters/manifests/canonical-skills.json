@@ -1507,7 +1507,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:225ed960411034485fe081adbf2b3c27741407fb93eede4dcad254b3f64e464d"
+          "digest": "sha256:f079cc28de5815ae4c32ca33602a9d3e2ac83b38626c948c19d80ad0cd1a14b2"
         },
         {
           "path": "scripts/design-share.mjs",
@@ -1603,7 +1603,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:3106759999d771cd4c2c9fe49b224694291db556c46896a25c497a77b3f8e9cc"
+          "digest": "sha256:a9e840670eba89b531b044e2405252a26b4327d350d14fa264c2ee00fe4e8a05"
         },
         {
           "path": "scripts/runtime/packages/artifact/templates/artifact-review-stage.js.parts.json",
@@ -1615,7 +1615,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:aaaf43dbcf8fd25d14ebf32fed431f8ef812d550dce46cc10617fe622a1a5969"
+          "digest": "sha256:7f5b7a8c5b5cc10f04579c84c93b7852578c65c1051b289c7ab06bbda8c57dc6"
         },
         {
           "path": "scripts/runtime/packages/design/package.json",
@@ -2393,7 +2393,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:225ed960411034485fe081adbf2b3c27741407fb93eede4dcad254b3f64e464d"
+          "digest": "sha256:f079cc28de5815ae4c32ca33602a9d3e2ac83b38626c948c19d80ad0cd1a14b2"
         },
         {
           "path": "scripts/design-share.mjs",
@@ -2489,7 +2489,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:3106759999d771cd4c2c9fe49b224694291db556c46896a25c497a77b3f8e9cc"
+          "digest": "sha256:a9e840670eba89b531b044e2405252a26b4327d350d14fa264c2ee00fe4e8a05"
         },
         {
           "path": "scripts/runtime/packages/artifact/templates/artifact-review-stage.js.parts.json",
@@ -2501,7 +2501,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:aaaf43dbcf8fd25d14ebf32fed431f8ef812d550dce46cc10617fe622a1a5969"
+          "digest": "sha256:7f5b7a8c5b5cc10f04579c84c93b7852578c65c1051b289c7ab06bbda8c57dc6"
         },
         {
           "path": "scripts/runtime/packages/design/package.json",
@@ -3279,7 +3279,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:225ed960411034485fe081adbf2b3c27741407fb93eede4dcad254b3f64e464d"
+          "digest": "sha256:f079cc28de5815ae4c32ca33602a9d3e2ac83b38626c948c19d80ad0cd1a14b2"
         },
         {
           "path": "scripts/design-share.mjs",
@@ -3375,7 +3375,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:3106759999d771cd4c2c9fe49b224694291db556c46896a25c497a77b3f8e9cc"
+          "digest": "sha256:a9e840670eba89b531b044e2405252a26b4327d350d14fa264c2ee00fe4e8a05"
         },
         {
           "path": "scripts/runtime/packages/artifact/templates/artifact-review-stage.js.parts.json",
@@ -3387,7 +3387,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:aaaf43dbcf8fd25d14ebf32fed431f8ef812d550dce46cc10617fe622a1a5969"
+          "digest": "sha256:7f5b7a8c5b5cc10f04579c84c93b7852578c65c1051b289c7ab06bbda8c57dc6"
         },
         {
           "path": "scripts/runtime/packages/design/package.json",
@@ -4472,7 +4472,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:225ed960411034485fe081adbf2b3c27741407fb93eede4dcad254b3f64e464d"
+          "digest": "sha256:f079cc28de5815ae4c32ca33602a9d3e2ac83b38626c948c19d80ad0cd1a14b2"
         },
         {
           "path": "scripts/design-share.mjs",
@@ -4568,7 +4568,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:3106759999d771cd4c2c9fe49b224694291db556c46896a25c497a77b3f8e9cc"
+          "digest": "sha256:a9e840670eba89b531b044e2405252a26b4327d350d14fa264c2ee00fe4e8a05"
         },
         {
           "path": "scripts/runtime/packages/artifact/templates/artifact-review-stage.js.parts.json",
@@ -4580,7 +4580,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:aaaf43dbcf8fd25d14ebf32fed431f8ef812d550dce46cc10617fe622a1a5969"
+          "digest": "sha256:7f5b7a8c5b5cc10f04579c84c93b7852578c65c1051b289c7ab06bbda8c57dc6"
         },
         {
           "path": "scripts/runtime/packages/design/package.json",

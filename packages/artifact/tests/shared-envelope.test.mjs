@@ -66,6 +66,52 @@ function portable(template, refs) {
   return realm.__OPENPLANR_ARTIFACT_STAGE_OPTIONS__;
 }
 
+test('parent source fetch preserves request restrictions and cancels with its owning signal', async () => {
+  const requests = [];
+  const releases = [];
+  const realm = {
+    Blob,
+    document: { createElement: () => ({}), head: { append() {} } },
+    fetch(url, options) {
+      requests.push({ url, options });
+      return new Promise((resolve, reject) => {
+        options.signal?.addEventListener('abort', () => reject(options.signal.reason), {
+          once: true,
+        });
+        releases.push(() =>
+          resolve({
+            ok: true,
+            headers: new Headers({ 'content-type': 'application/octet-stream' }),
+            arrayBuffer: async () => new TextEncoder().encode('<main>Original source</main>'),
+          }),
+        );
+      });
+    },
+  };
+  runInNewContext(
+    renderArtifactParentRuntime({
+      nonce: createArtifactBridgeNonce(),
+      artifactBaseUrl: '/artifacts/',
+      stageRuntimeUrl: '/stage.js',
+    }),
+    realm,
+  );
+  const resolver = realm.__OPENPLANR_ARTIFACT_STAGE_OPTIONS__.resolveArtifactSource;
+  const legacy = resolver({ id: 'screen-0' });
+  releases.shift()();
+  assert.equal(await (await legacy).text(), '<main>Original source</main>');
+  const owner = new AbortController();
+  const pending = resolver({ id: 'screen-1' }, { signal: owner.signal });
+  assert.equal(requests[1].options.signal, owner.signal);
+  assert.equal(requests[1].url, '/artifacts/screen-1');
+  assert.equal(requests[1].options.cache, 'no-store');
+  assert.equal(requests[1].options.credentials, 'omit');
+  assert.equal(requests[1].options.referrerPolicy, 'no-referrer');
+  const cancelled = assert.rejects(pending, { name: 'AbortError' });
+  owner.abort();
+  await cancelled;
+});
+
 test('saved reviews retain the shared envelope source pool and immutable identity', () => {
   const envelope = board(1, 5);
   const review = createArtifactReview({ reviewOf: digestArtifactEnvelope(envelope) });

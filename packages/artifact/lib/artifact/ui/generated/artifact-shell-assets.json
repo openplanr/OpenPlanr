@@ -59,8 +59,8 @@
     },
     {
       "path": "templates/artifact-review-stage.js",
-      "bytes": 350281,
-      "sha256": "77664ae55ae6b725ccc5bc6ccf3de629a0c73e82dd90968f3cfb6116bff68764",
+      "bytes": 350410,
+      "sha256": "762bcae15b5066f5b08263aab0f45592352f362b54dc08ea90cc090afc9bf59a",
       "budget": {
         "bytes": 450560,
         "gzipBytes": 96256

@@ -38,6 +38,44 @@ async function settled(page, screenId, frameId = 'desktop') {
   );
 }
 
+async function frameRegistry(page, { capture = false } = {}) {
+  return page.evaluate((capture) => {
+    const stage = window.__openPlanrArtifactStage;
+    const panels = [...document.querySelectorAll('.planr-artifact-panel')];
+    if (capture)
+      window.__mobileFrames = panels.map((panel) => ({
+        id: panel.dataset.artifactId,
+        frame: stage.getFrame(panel.dataset.artifactId),
+      }));
+    return {
+      count: panels.length,
+      retained: window.__mobileFrames.every(
+        ({ id, frame }) => frame && stage.getFrame(id) === frame,
+      ),
+      connected: panels.filter((panel) => stage.getFrame(panel.dataset.artifactId).isConnected)
+        .length,
+      windows: window.length,
+    };
+  }, capture);
+}
+
+function assertFrameRegistry(result, host) {
+  assert.equal(result.count, 14, `${host}: every artboard retains its host`);
+  assert.equal(
+    result.retained,
+    true,
+    `${host}: navigation retains all fourteen registry frame nodes`,
+  );
+  assert.ok(
+    result.connected >= 1 && result.connected <= 3,
+    `${host}: connected frames stay bounded`,
+  );
+  assert.ok(
+    result.windows >= 1 && result.windows <= 3,
+    `${host}: native preview contexts stay bounded`,
+  );
+}
+
 async function productFrame(page) {
   return (
     await page.locator('.planr-artifact-panel:not([hidden]) iframe').elementHandle()
@@ -180,11 +218,7 @@ test(`mobile reviews demand-load bounded product documents and remain usable (${
         1,
         `${host}: startup loads only the selected product document`,
       );
-      assert.equal(
-        await page.locator('.planr-artifact-panel iframe').count(),
-        14,
-        'unloaded artboards retain their stable frames',
-      );
+      assertFrameRegistry(await frameRegistry(page, { capture: true }), host);
       await focusedGeometry(page);
       const first = await productFrame(page);
       await first.getByRole('textbox', { name: 'Workspace name' }).fill('Mobile reviewer');
@@ -287,6 +321,7 @@ test(`mobile reviews demand-load bounded product documents and remain usable (${
         await page.evaluate(() => window.__mobileFramePeak <= 3),
         `${host}: transitions and demand loading never exceed the document budget`,
       );
+      assertFrameRegistry(await frameRegistry(page), host);
       const evidence = process.env.OPENPLANR_MOBILE_EVIDENCE_DIR;
       if (evidence) {
         mkdirSync(evidence, { recursive: true });
@@ -315,17 +350,13 @@ test(`mobile reviews demand-load bounded product documents and remain usable (${
       1,
       'desktop also opens only the selected authored document',
     );
-    assert.equal(await desktop.locator('.planr-artifact-panel iframe').count(), 14);
+    assertFrameRegistry(await frameRegistry(desktop, { capture: true }), 'desktop');
     assert.equal(await desktop.evaluate(() => window.__openPlanrArtifactStage.frameBudget), 3);
     for (const screenId of ['screen-7', 'screen-1']) {
       await desktop.evaluate((id) => window.__openPlanrDesignStudio.selectScreen(id), screenId);
       await settled(desktop, screenId);
       await focusedGeometry(desktop);
-      assert.equal(
-        await desktop.locator('.planr-artifact-panel iframe').count(),
-        14,
-        'desktop navigation retains every artboard while loading bounded sources',
-      );
+      assertFrameRegistry(await frameRegistry(desktop), 'desktop');
     }
     await desktop.close();
   } finally {

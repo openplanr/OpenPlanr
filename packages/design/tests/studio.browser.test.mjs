@@ -576,7 +576,12 @@ test('browser studio boots through the protected artifact server and supports a 
     );
     await page.locator('[data-planr-share-close]').click();
     await page.evaluate(() => {
-      window.reviewedFrameNodes = [...document.querySelectorAll('iframe')];
+      window.reviewedFrameNodes = [...document.querySelectorAll('.planr-artifact-panel')].map(
+        (panel) => ({
+          id: panel.dataset.artifactId,
+          frame: window.__openPlanrArtifactStage.getFrame(panel.dataset.artifactId),
+        }),
+      );
     });
 
     await page.locator('[data-design-view="prototype"]').click();
@@ -648,11 +653,17 @@ test('browser studio boots through the protected artifact server and supports a 
     assert.match(await page.locator('[data-design-step]').textContent(), /Step 3 of 3/);
     assert.equal(await page.locator('.planr-annotation-layer [data-planr-pin-id]').count(), 1);
     assert.equal(
-      await page.evaluate(() => window.reviewedFrameNodes.every((frame) => frame.isConnected)),
+      await page.evaluate(() =>
+        window.reviewedFrameNodes.every(
+          ({ id, frame }) => frame && window.__openPlanrArtifactStage.getFrame(id) === frame,
+        ),
+      ),
       true,
       'presentation reuses artboard DOM while sources load within the budget',
     );
     assert.ok((await page.locator('iframe[src], iframe[srcdoc]').count()) <= 3);
+    assert.ok((await page.locator('.planr-artifact-panel iframe').count()) <= 3);
+    assert.ok((await page.evaluate(() => window.length)) <= 3);
     // The out-of-process iframe paints after its hidden panel becomes visible;
     // wait for the compositor before capturing the visual review evidence.
     await page.waitForTimeout(150);
@@ -767,7 +778,7 @@ test('browser studio boots through the protected artifact server and supports a 
 test('journey-start thumbnails capture later screens when they become visible without retrying on camera motion', {
   timeout: 30000,
 }, async () => {
-  const browser = await launchBrowser({ engine: 'chromium' });
+  const browser = await launchBrowser({ engine: browserEngine() });
   try {
     for (const view of ['walkthrough', 'prototype']) {
       const temporary = await mkdtemp(join(tmpdir(), 'openplanr-journey-thumbnails-'));
@@ -816,7 +827,15 @@ test('journey-start thumbnails capture later screens when they become visible wi
           0,
           'hidden journey frames retain a placeholder until paintable',
         );
-        const iframeCount = await page.locator('iframe').count();
+        const iframeCount = await page.evaluate(() => {
+          window.thumbnailFrameNodes = [...document.querySelectorAll('.planr-artifact-panel')].map(
+            (panel) => ({
+              id: panel.dataset.artifactId,
+              frame: window.__openPlanrArtifactStage.getFrame(panel.dataset.artifactId),
+            }),
+          );
+          return window.thumbnailFrameNodes.length;
+        });
         const failingArtifact = data.entries.find(
           (item) =>
             item.screenId === 'confirmed' &&
@@ -824,9 +843,7 @@ test('journey-start thumbnails capture later screens when they become visible wi
             item.frameId === basis.frameId,
         ).artifactId;
         await page.evaluate((id) => {
-          const frame = [...document.querySelectorAll('iframe')].find(
-            (frame) => frame.dataset.planrArtifactFrame === id,
-          );
+          const frame = window.__openPlanrArtifactStage.getFrame(id);
           window.thumbnailFailureAttempts = 0;
           const failCapture = () =>
             Object.defineProperty(frame, '__openPlanrBridge', {
@@ -878,11 +895,18 @@ test('journey-start thumbnails capture later screens when they become visible wi
         await page.locator('[data-design-screen="assignment"]').click();
         await page.locator('[data-design-screen="confirmed"]').click();
         await page.waitForFunction(() => window.thumbnailFailureAttempts === 2);
+        assert.equal(await page.locator('.planr-artifact-panel').count(), iframeCount);
         assert.equal(
-          await page.locator('iframe').count(),
-          iframeCount,
-          'captures reuse the original frames',
+          await page.evaluate(() =>
+            window.thumbnailFrameNodes.every(
+              ({ id, frame }) => frame && window.__openPlanrArtifactStage.getFrame(id) === frame,
+            ),
+          ),
+          true,
+          'captures reuse the original registry frame nodes',
         );
+        assert.ok((await page.locator('.planr-artifact-panel iframe').count()) <= 3);
+        assert.ok((await page.evaluate(() => window.length)) <= 3);
       } finally {
         await page.close();
         await server.close();

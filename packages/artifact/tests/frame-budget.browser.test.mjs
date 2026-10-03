@@ -15,6 +15,120 @@ import { renderArtifactShellDocument } from '../lib/artifact/ui/shell.mjs';
 const enabled = process.env.PLANR_BROWSER_TESTS === '1';
 const rootPath = fileURLToPath(new URL('../../../', import.meta.url));
 
+test('native selection cancellation and reload close unfinished owned source requests', {
+  skip: !enabled,
+  timeout: 30000,
+}, async (t) => {
+  const browser = await launchBrowser();
+  let server;
+  t.after(async () => {
+    await browser.close();
+    if (server) {
+      server.closeAllConnections();
+      await new Promise((resolve) => server.close(resolve));
+    }
+  });
+  const nonce = createArtifactBridgeNonce();
+  const envelope = createArtifactEnvelope({
+    artifacts: [0, 1, 2].map((i) => ({
+      id: `screen-${i}`,
+      title: `Screen ${i}`,
+      html: `<main>Screen ${i}</main>`,
+    })),
+    viewer: { mode: 'single', activeArtifactId: 'screen-0' },
+  });
+  const bundle = await build({
+    stdin: {
+      resolveDir: rootPath,
+      contents: `import './packages/artifact/lib/artifact/ui/stage.mjs';queueMicrotask(()=>{window.fixture={stage:window.__openPlanrArtifactStage};fixture.stage.ready.then(()=>fixture.ready=true)});`,
+    },
+    bundle: true,
+    write: false,
+    platform: 'browser',
+    format: 'iife',
+  });
+  let origin;
+  const held = [];
+  const arrivals = [];
+  server = createServer((req, res) => {
+    if (req.url === '/stage.js') {
+      res.setHeader('content-type', 'application/javascript');
+      res.end(bundle.outputFiles[0].text);
+      return;
+    }
+    if (req.url === '/artifact/screen-1') {
+      let resolveClosed;
+      const record = { closed: new Promise((resolve) => (resolveClosed = resolve)) };
+      held.push(record);
+      res.once('close', () => resolveClosed());
+      arrivals.shift()?.();
+      return;
+    }
+    if (req.url.startsWith('/artifact/')) {
+      const artifact = envelope.artifacts.find(({ id }) => `/artifact/${id}` === req.url);
+      res.setHeader('content-type', 'application/octet-stream');
+      res.end(
+        prepareArtifactDocument({
+          html: artifact.html,
+          artifactId: artifact.id,
+          nonce,
+          parentOrigin: origin,
+        }).html,
+      );
+      return;
+    }
+    const html = renderArtifactShellDocument(
+      { envelope },
+      { stageRuntimeUrl: '/unused.js' },
+    ).replace(
+      '<script src="/unused.js" defer></script>',
+      `<script>${renderArtifactParentRuntime({ artifactBaseUrl: '/artifact/', stageRuntimeUrl: '/stage.js', nonce })}</script>`,
+    );
+    res.setHeader('content-type', 'text/html');
+    res.end(html);
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  origin = `http://127.0.0.1:${server.address().port}`;
+  const page = await browser.newPage();
+  const errors = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  await page.goto(origin);
+  await page.waitForFunction(() => window.fixture?.ready);
+  const firstRequest = new Promise((resolve) => arrivals.push(resolve));
+  await page.evaluate(() => {
+    fixture.pending = fixture.stage.ensureFrames(['screen-1']).then(
+      () => 'unexpected-success',
+      (error) => error.name,
+    );
+  });
+  await page.waitForFunction(
+    () => fixture.stage.getFrame('screen-1').dataset.planrFramePhase === 'source',
+  );
+  await firstRequest;
+  await page.evaluate(() => fixture.stage.dispatch({ type: 'set-active', artifactId: 'screen-2' }));
+  assert.equal(await page.evaluate(() => fixture.pending), 'AbortError');
+  await page.waitForFunction(
+    () => fixture.stage.getFrame('screen-2').dataset.planrFrameState === 'ready',
+  );
+  assert.equal(held.length, 1);
+  await held[0].closed;
+  const reloadRequest = new Promise((resolve) => arrivals.push(resolve));
+  await page.evaluate(() => {
+    fixture.pending = fixture.stage.ensureFrames(['screen-1']).catch((error) => error.name);
+  });
+  await page.waitForFunction(
+    () => fixture.stage.getFrame('screen-1').dataset.planrFramePhase === 'source',
+  );
+  await reloadRequest;
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => window.fixture?.ready);
+  assert.equal(held.length, 2);
+  await held[1].closed;
+  assert.deepEqual(await page.evaluate(() => fixture.stage.getLoadedArtifactIds()), ['screen-0']);
+  assert.equal(await page.locator('iframe').count(), 1);
+  assert.deepEqual(errors, []);
+});
+
 for (const transport of ['blob', 'srcdoc']) {
   test(`phone-sized ${transport} frame pool stays bounded through authenticated navigation and disposal`, {
     skip: !enabled,

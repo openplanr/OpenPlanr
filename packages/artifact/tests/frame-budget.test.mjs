@@ -300,6 +300,81 @@ test('destroy cancels source preparation and queued demand without reviving a do
   );
 });
 
+test('leaving a document cancels pending and queued sources without a late revival', async (t) => {
+  let resolveSource;
+  const f = fixture(t, {
+    resolver: (artifact) =>
+      artifact.id === 'screen-1'
+        ? new Promise((resolve) => {
+            resolveSource = resolve;
+          })
+        : '<main>Loaded</main>',
+  });
+  await f.finish('screen-0');
+  await f.stage.ready;
+  const pending = f.stage.ensureFrames(['screen-1']);
+  const queued = f.stage.ensureFrames(['screen-2']);
+  const cancelled = Promise.all([
+    assert.rejects(pending, { name: 'AbortError' }),
+    assert.rejects(queued, { name: 'AbortError' }),
+  ]);
+  await flush();
+  const signal = f.sourceRequests.at(-1).signal;
+  let aborts = 0;
+  signal.addEventListener('abort', () => aborts++);
+  f.dom.window.dispatchEvent(new f.dom.window.PageTransitionEvent('pagehide'));
+  assert.equal(signal.aborted, true);
+  assert.equal(aborts, 1);
+  assert.equal(f.document.querySelectorAll('iframe').length, 0);
+  resolveSource('<main>Too late</main>');
+  await cancelled;
+  await flush();
+  assert.deepEqual(
+    f.sourceRequests.map(({ id }) => id),
+    ['screen-0', 'screen-1'],
+  );
+  assert.deepEqual(f.stage.getLoadedArtifactIds(), []);
+  assert.equal(f.stage.getFrame('screen-1').isConnected, false);
+  assert.equal(f.stage.getFrame('screen-1').hasAttribute('srcdoc'), false);
+  assert.equal(f.attachments.length, 1);
+  f.dom.window.dispatchEvent(new f.dom.window.PageTransitionEvent('pagehide'));
+  f.stage.destroy();
+  assert.equal(aborts, 1, 'Repeated cleanup cannot abort another owner or revive a source');
+});
+
+test('persisted pagehide preserves ready window state and unfinished source custody', async (t) => {
+  let resolveSource;
+  const f = fixture(t, {
+    resolver: (artifact) =>
+      artifact.id === 'screen-1'
+        ? new Promise((resolve) => {
+            resolveSource = resolve;
+          })
+        : '<main>Loaded</main>',
+  });
+  await f.finish('screen-0');
+  await f.stage.ready;
+  const frame = f.stage.getFrame('screen-0');
+  const activeWindow = frame.contentWindow;
+  const bridge = frame.__openPlanrBridge;
+  const source = frame.srcdoc;
+  const pending = f.stage.ensureFrames(['screen-1']);
+  await flush();
+  const signal = f.sourceRequests.at(-1).signal;
+  f.dom.window.dispatchEvent(new f.dom.window.PageTransitionEvent('pagehide', { persisted: true }));
+  assert.equal(signal.aborted, false);
+  assert.equal(frame.isConnected, true);
+  assert.equal(frame.contentWindow, activeWindow);
+  assert.equal(frame.__openPlanrBridge, bridge);
+  assert.equal(frame.srcdoc, source);
+  assert.deepEqual(f.detachments, []);
+  resolveSource('<main>Resume</main>');
+  await f.finish('screen-1');
+  await pending;
+  assert.equal(f.stage.getFrame('screen-1').dataset.planrFrameState, 'ready');
+  assert.equal(frame.contentWindow, activeWindow);
+});
+
 test('failed sources release their slot and retry with a new authenticated bridge', async (t) => {
   let fail = true;
   const f = fixture(t, {

@@ -1065,6 +1065,13 @@ export function mountArtifactStage({
   let annotationController: Annotations | null = null;
   let shareController: ShareDialog | null = null;
   let hostedController: HostedViewer | null = null;
+  function disposeStage() {
+    if (disposed) return true;
+    disposed = true;
+    for (const id of [...frameLoads.keys()]) releaseFrame(id);
+    for (const remove of cleanup.splice(0)) remove();
+    return true;
+  }
   const controller = Object.freeze({
     frameBudget,
     ensureFrames,
@@ -1097,13 +1104,15 @@ export function mountArtifactStage({
         (shareController as ShareDialog).destroy?.();
         return false;
       }
-      disposed = true;
-      for (const id of [...frameLoads.keys()]) releaseFrame(id);
-      for (const remove of cleanup.splice(0)) remove();
-      return true;
+      return disposeStage();
     },
   });
   publishArtifactStage(window, controller);
+  listen<PageTransitionEvent>(window, 'pagehide', (event) => {
+    // A cached document keeps its frames and state. An actual exit retires its
+    // owned sources even when explicit user disposal would protect a share.
+    if (!event.persisted) disposeStage();
+  });
 
   feedbackController = mountArtifactFeedbackRail({
     document,
