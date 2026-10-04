@@ -1,5 +1,38 @@
 # Changelog
 
+## 0.55.9
+
+### Patch Changes
+
+- 06e419f: Block Delegate runs when inspected routing conflicts with a pinned destination,
+  and show safe native failure details, observed tool progress and live elapsed time.
+  Local metadata checks use bounded authenticated reads without generating requests
+  or loading models. Preview reports the actual context inventory and profile changes.
+  
+  Accept runner actions on the command line or in stdin JSON. Allow explicit cleanup
+  of unchanged, never-started owned runs while retaining edits, sessions and recovery
+  evidence.
+- 9ff2e13: Ship complete, readable browser scripts in skill packages instead of arbitrary
+  byte fragments. Verify that executable resources parse independently and retain
+  offline behavior, source provenance and compatibility with older packages.
+- db8c0b9: Skill cards and summaries consistently use OpenPlanr branding and clearly report
+  completed work, useful deliverables, checks and remaining action. Activation
+  descriptions come from each skill's frontmatter. Setup and doctor accept recorded
+  skill discovery modes through an additive runtime-lock contract while preserving
+  legacy locks and native namespaces.
+- 78e1dd3: Share operational Design and review-validation resources within native skill
+  suites and keep standalone downloads self-contained. Plan carries only its
+  planning and handoff-inspection dependencies. Generated-output cleanup preserves
+  modified and unknown files across upgrades and branch changes. Maintainer guides
+  remain in the source workspace rather than the installed pipeline package.
+- e3f5d5c: Keep project skill integrations small by resolving exact verified runtime resources
+  from the OpenPlanr home. Native plugins retain their complete runtime in one package.
+  Setup, upgrades and doctor share the same ownership checks and preserve modified
+  files, concurrent edits and retained runtime resources during recovery.
+  
+  Use host-neutral stack overrides with legacy compatibility. Improve installed
+  invocation guidance, local Delegate profile discovery and concise result summaries.
+
 ## 0.55.8
 
 ### Patch Changes
