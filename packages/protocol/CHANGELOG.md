@@ -1,5 +1,15 @@
 # @openplanr/protocol
 
+## 0.10.0
+
+### Minor Changes
+
+- db8c0b9: Skill cards and summaries consistently use OpenPlanr branding and clearly report
+  completed work, useful deliverables, checks and remaining action. Activation
+  descriptions come from each skill's frontmatter. Setup and doctor accept recorded
+  skill discovery modes through an additive runtime-lock contract while preserving
+  legacy locks and native namespaces.
+
 ## 0.9.0
 
 ### Minor Changes

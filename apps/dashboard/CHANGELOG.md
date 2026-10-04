@@ -1,5 +1,12 @@
 # @openplanr/dashboard-app
 
+## 0.1.14
+
+### Patch Changes
+
+- Updated dependencies [db8c0b9]
+  - @openplanr/protocol@0.10.0
+
 ## 0.1.13
 
 ### Patch Changes
