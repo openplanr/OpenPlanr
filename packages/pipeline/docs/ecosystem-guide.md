@@ -36,8 +36,8 @@ adapter projections. Generate it from the repository root and use
 ## Drift Rule
 
 When behavior crosses domains, update the canonical owner first and regenerate
-its projections. The current owner map is in `docs/ownership-map.md`; release
-order and audit commands are in `docs/release-checklist.md`.
+its projections. Maintainer ownership and release guides live in the source workspace under
+`docs/maintainers/pipeline/` and are excluded from the runtime package.
 
 ## Guided interaction
 

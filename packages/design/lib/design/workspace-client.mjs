@@ -18,7 +18,14 @@ import {
   DESIGN_WORKSPACE_VERSION,
 } from '@openplanr/protocol/workspace-contracts';
 
-export const DESIGN_SHARE_BASE_URL = 'https://share.openplanr.dev';
+import { DESIGN_SHARE_BASE_URL, DESIGN_SHARE_REVIEW_PATH } from './workspace-address.mjs';
+
+export {
+  DESIGN_SHARE_BASE_URL,
+  normalizeWorkspaceBase,
+  workspaceReviewUrl,
+} from './workspace-address.mjs';
+
 const encoder = new TextEncoder();
 const decoder = new TextDecoder('utf-8', { fatal: true });
 const PACKED_BUNDLE_KIND = 'openplanr-design-review-bundle-packed';
@@ -155,7 +162,7 @@ export async function unpackDesignReviewBundle(value, { maxBytes = PACKED_BUNDLE
 const client = createEncryptedWorkspaceClient({
   domain: 'openplanr-design-workspace/v1',
   apiPath: DESIGN_WORKSPACE_API,
-  reviewPath: '/d',
+  reviewPath: DESIGN_SHARE_REVIEW_PATH,
   label: 'Design',
   defaultBaseUrl: DESIGN_SHARE_BASE_URL,
   version: DESIGN_WORKSPACE_VERSION,
@@ -195,7 +202,6 @@ export const {
   decodeWorkspaceBytes,
   newWorkspaceToken,
   newWorkspaceId,
-  normalizeWorkspaceBase,
   deriveWorkspaceAuthentication,
   canonicalWorkspacePublicKey,
   createWorkspaceSigner,
@@ -263,9 +269,6 @@ export const manageWorkspace = (access, action, options) =>
   access.schemaVersion !== '2.0.0'
     ? client.manageWorkspace(access, action, options)
     : prepareWorkspaceMutation(access, action).then(() => commitWorkspaceMutation(access, options));
-
-export const workspaceReviewUrl = (access) =>
-  `${client.workspaceReviewUrl(access)}${access.schemaVersion === '2.0.0' ? '?v=2' : ''}`;
 
 /** Validate source-free lazy review metadata without fabricating HTML or a digest. */
 export function assertDesignReviewBundleMetadata(value) {

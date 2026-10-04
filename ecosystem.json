@@ -67,7 +67,7 @@
       "version": "0.55.8",
       "path": "packages/pipeline",
       "publication": "public",
-      "manifestDigest": "sha256:6471c1496bacbb6b2148638b14f9bb71f56982648b47e7faf173ad8913d6afc7"
+      "manifestDigest": "sha256:7fb48833337ea88997ef8ff17a3b6bbf8226bef6a2657918c6403d7fd87b4708"
     },
     "protocol": {
       "package": "@openplanr/protocol",
@@ -250,7 +250,7 @@
     },
     "skills": {
       "path": "packages/protocol/registries/skills.json",
-      "digest": "sha256:038f5ec12b804afdde7a90aa3d64b197d403cb852cdee90948aa6234cc0ccac5",
+      "digest": "sha256:0ca75df96a3ae23c484dac980e5f0319687f0e10e72567d25dff329285ec86d2",
       "count": 28,
       "ids": [
         "planr-artifact",
@@ -348,8 +348,8 @@
     ],
     "generatedAssets": {
       "path": "adapters/manifests/generated-assets.json",
-      "digest": "sha256:755ce1e0b43e27ad45eea19b69ea55255ff1bd04def7568d74e7db70b79da537",
-      "count": 2551
+      "digest": "sha256:9f887727ab89435c0aa6ce1be34345705e9a5cbc28aa7dbc1bb2a7b077ac0f38",
+      "count": 1460
     }
   },
   "schemas": {

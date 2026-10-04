@@ -3797,7 +3797,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "lifecycle": "active",
         "authorityClass": "planning-write",
         "source": "skills/planr-design/openplanr.skill.json",
-        "sourceDigest": "sha256:ec92eb75c02a10d5e4c93111fb70a43b3be601cfcebaa17c66de1cd24959d180",
+        "sourceDigest": "sha256:18a3e492864a1d0ed5227c94dac44ab5036bf0c097c42c9041724c9e12885806",
         "triggerPolicy": {
           "include": [
             "Create an initial product design direction",
@@ -3858,7 +3858,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "lifecycle": "active",
         "authorityClass": "planning-write",
         "source": "skills/planr-design-loop/openplanr.skill.json",
-        "sourceDigest": "sha256:8223853a5f7a694a49e36ccb5edab6c9463d0c9920530704efec4168d6fde061",
+        "sourceDigest": "sha256:64432f601c7dda65611e6ddc13d0945a225e5a7af0b184d747efcca0680e11e0",
         "triggerPolicy": {
           "include": [
             "Explore multiple design directions or variants",
@@ -3919,7 +3919,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "lifecycle": "active",
         "authorityClass": "review-evidence",
         "source": "skills/planr-design-review/openplanr.skill.json",
-        "sourceDigest": "sha256:d17f27c71a5c181d7519e41d63e49a8a34eca2ab3a878bb191feb5c82a46182b",
+        "sourceDigest": "sha256:ab16699e533ea9f9f7aa6503df32b9ca0788536fccb147de055c0804b08b3fca",
         "triggerPolicy": {
           "include": [
             "Review or critique an existing OpenPlanr design",
@@ -4352,7 +4352,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "lifecycle": "active",
         "authorityClass": "planning-write",
         "source": "skills/planr-plan/openplanr.skill.json",
-        "sourceDigest": "sha256:c72a19eb0ace1fb491547f8c2e232954c0f03ee0d7624e9658c3223c4c2afafe",
+        "sourceDigest": "sha256:8012e81c2354967ef5b7a3709935d72e1117281d009df87a3e6be04ad9ed6782",
         "triggerPolicy": {
           "include": [
             "Decompose a specification into user stories and implementation tasks",
@@ -4845,7 +4845,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
       }
     ],
     "compatibilityAliases": [],
-    "documentDigest": "sha256:99d986439e069b46c6a0a96d18cfd5734fa879a2fbb71266219d8688e137df0c"
+    "documentDigest": "sha256:678e03d2e76bd025055cd02bbc65bfb08909f07e1f0ed959f969297517cdf962"
   },
   "outputs.json": {
     "kind": "output-catalog",

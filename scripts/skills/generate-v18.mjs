@@ -25,7 +25,12 @@ import {
 import { linkSkillProjection } from '../../packages/skill-runtime/src/linker/index.mjs';
 import { renderOpenAiSkillMetadata } from '../../packages/skill-runtime/src/packaging/index.mjs';
 import { CLI_GENERATED_RESOURCES } from './cli-resources.mjs';
-import { buildDesignSkillResources, DESIGN_SKILL_IDS } from './design-resources.mjs';
+import {
+  buildDesignSkillResources,
+  buildPlanSkillResources,
+  DESIGN_SKILL_IDS,
+} from './design-resources.mjs';
+import { readHistoricalCustody } from './historical-custody.mjs';
 import {
   HOST_PLUGIN_NAME,
   namespacedInvocation,
@@ -41,7 +46,13 @@ import {
   PLUGIN_LICENSE,
 } from './plugin-metadata.mjs';
 import { renderClaudePluginReadme } from './plugin-readme.mjs';
+import { syncGeneratedOutputs } from './projection-custody.mjs';
 import { resourceBytes } from './resource-bytes.mjs';
+import {
+  resourceFootprint,
+  suiteLocalResources,
+  suiteSharedResources,
+} from './suite-resources.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const option = process.argv[2];
@@ -59,6 +70,25 @@ if (mode === 'write') {
   writeFileSync(resolve(root, 'skills/registry.json'), `${JSON.stringify(registry, null, 2)}\n`);
 }
 const skillIds = registry.skills.map(({ skillId }) => skillId);
+const historicalCustody = readHistoricalCustody({ root });
+const priorCanonicalPath = resolve(root, 'adapters/manifests/canonical-skills.json');
+const priorCanonical = existsSync(priorCanonicalPath)
+  ? JSON.parse(readFileSync(priorCanonicalPath, 'utf8'))
+  : { skills: [] };
+if (!Array.isArray(priorCanonical.skills))
+  throw new Error('Malformed prior canonical skill manifest.');
+const priorCanonicalResourceDigests = [
+  ...historicalCustody.resources,
+  ...priorCanonical.skills.flatMap(({ id, resources }) =>
+    resources.map(({ path, digest }) => ({ target: `skills/${id}/${path}`, sha256: digest })),
+  ),
+];
+if (historicalCustody.unavailable.length > 0) {
+  process.stderr.write(
+    'Historical generated custody is unavailable in this checkout; unknown or modified old files will be preserved.\n',
+  );
+}
+
 const outputs = new Map();
 const tracked = new Set();
 const executable = new Set();
@@ -151,75 +181,80 @@ const sharedSkillResources = Object.freeze([
   ]),
 ]);
 
+const sourceProjections = new Map(
+  sharedSkillResources.map(({ source, destination }) => [
+    destination,
+    readFileSync(resolve(root, source)),
+  ]),
+);
+const sourceExecutables = new Set(
+  sharedSkillResources.filter(({ executable }) => executable).map(({ destination }) => destination),
+);
 for (const row of registry.skills) {
-  const bytes = renderOpenAiSkillMetadata({
-    skillId: row.skillId,
-    description: row.description,
-  });
-  const destinationPath = `skills/${row.skillId}/agents/openai.yaml`;
-  const destination = resolve(root, destinationPath);
-  if (mode === 'write') {
-    mkdirSync(dirname(destination), { recursive: true });
-    writeFileSync(destination, bytes, { mode: 0o644 });
-  } else if (
-    !existsSync(destination) ||
-    readFileSync(destination, 'utf8').replace(/\r\n/gu, '\n') !== bytes
-  ) {
-    throw new Error(`${destinationPath} drifted from the canonical skill registry.`);
-  }
+  sourceProjections.set(
+    `skills/${row.skillId}/agents/openai.yaml`,
+    Buffer.from(
+      renderOpenAiSkillMetadata({
+        skillId: row.skillId,
+        description: row.description,
+      }),
+    ),
+  );
 }
-
-for (const resource of sharedSkillResources) {
-  const source = readFileSync(resolve(root, resource.source));
-  const destination = resolve(root, resource.destination);
-  if (mode === 'write') {
-    mkdirSync(dirname(destination), { recursive: true });
-    writeFileSync(destination, source, { mode: resource.executable ? 0o755 : 0o644 });
-    if (resource.executable) chmodSync(destination, 0o755);
-  } else if (!existsSync(destination) || !readFileSync(destination).equals(source)) {
-    throw new Error(`${resource.destination} drifted from ${resource.source}.`);
-  }
-}
+syncGeneratedOutputs({
+  root,
+  scope: 'source-projections',
+  outputs: sourceProjections,
+  executable: sourceExecutables,
+  ownedRoots: ['skills', 'packages/cli/lib', 'agents/shared/modes/shared'],
+  bootstrap: [
+    ...priorCanonicalResourceDigests.filter(({ target }) => sourceProjections.has(target)),
+    ...historicalCustody.copies,
+  ],
+  mode,
+  // These directories also contain canonical hand-written resources owned by other generators.
+  completeRoots: false,
+});
 
 const designResources = await buildDesignSkillResources({ repoRoot: root });
+const planResources = await buildPlanSkillResources({ repoRoot: root });
 for (const skillId of [...DESIGN_SKILL_IDS, 'planr-plan']) {
+  const resources = skillId === 'planr-plan' ? planResources : designResources;
   const manifestPath = resolve(root, `skills/${skillId}/openplanr.skill.json`);
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
   const expectedResources = [
     ...manifest.resources.filter(
       ({ path }) =>
-        !designResources.some((resource) => resource.path === path) &&
+        !path.startsWith('schemas/') &&
         (!path.startsWith('scripts/') ||
           (skillId === 'planr-plan' && path === 'scripts/planning-ids.mjs')),
     ),
-    ...designResources.map(({ bytes: _bytes, ...resource }) => ({
+    ...resources.map(({ bytes: _bytes, ...resource }) => ({
       ...resource,
       hosts: manifest.hosts,
     })),
   ];
   const expectedManifest = `${JSON.stringify({ ...manifest, resources: expectedResources }, null, 2)}\n`;
+  syncGeneratedOutputs({
+    root,
+    scope: `canonical-runtime-${skillId}`,
+    outputs: new Map(resources.map(({ path, bytes }) => [`skills/${skillId}/${path}`, bytes])),
+    executable: new Set(
+      resources
+        .filter(({ executable }) => executable)
+        .map(({ path }) => `skills/${skillId}/${path}`),
+    ),
+    ownedRoots: [`skills/${skillId}/scripts`, `skills/${skillId}/schemas`],
+    bootstrap: priorCanonicalResourceDigests,
+    mode,
+    preservePaths: new Set(
+      skillId === 'planr-plan' ? ['skills/planr-plan/scripts/planning-ids.mjs'] : [],
+    ),
+  });
+  // Retirements are proven before changing the declaration that describes the new closure.
   if (mode === 'write') writeFileSync(manifestPath, expectedManifest);
   else if (readFileSync(manifestPath, 'utf8') !== expectedManifest)
     throw new Error(`${skillId} runtime resource declarations drifted.`);
-  const expectedPaths = new Set(designResources.map(({ path }) => path));
-  for (const path of listRegularFiles(resolve(root, `skills/${skillId}/scripts`), {
-    relativeTo: resolve(root, `skills/${skillId}`),
-  })) {
-    if (expectedPaths.has(path)) continue;
-    if (skillId === 'planr-plan' && path === 'scripts/planning-ids.mjs') continue;
-    if (mode === 'write') rmSync(resolve(root, `skills/${skillId}/${path}`));
-    else throw new Error(`${skillId} has obsolete runtime asset ${path}.`);
-  }
-  for (const resource of designResources) {
-    const destination = resolve(root, `skills/${skillId}/${resource.path}`);
-    if (mode === 'write') {
-      mkdirSync(dirname(destination), { recursive: true });
-      writeFileSync(destination, resource.bytes);
-      chmodSync(destination, resource.executable ? 0o755 : 0o644);
-    } else if (!existsSync(destination) || !readFileSync(destination).equals(resource.bytes)) {
-      throw new Error(`${skillId}/${resource.path} runtime resource drifted.`);
-    }
-  }
 }
 
 function json(value) {
@@ -237,10 +272,14 @@ function add(path, bytes, { checkedIn = false, isExecutable = false } = {}) {
   if (isExecutable) executable.add(path);
 }
 
-function copySkillResource(packageInfo, resource, destinationRoot) {
-  const path = `${destinationRoot}/${resource.path}`;
-  add(path, readFileSync(resource.absolute), { isExecutable: resource.executable });
-  return path;
+function addSharedResources(packageInfo, host, pluginRoot, skillRoot) {
+  for (const resource of suiteSharedResources(packageInfo, host, skillRoot)) {
+    const path = `${pluginRoot}/${resource.path}`;
+    if (outputs.has(path)) {
+      if (!outputs.get(path).equals(resource.bytes) || executable.has(path) !== resource.executable)
+        throw new Error(`Shared suite closure differs between canonical skills: ${path}`);
+    } else add(path, resource.bytes, { isExecutable: resource.executable });
+  }
 }
 
 function hostResources(packageInfo, host) {
@@ -309,14 +348,27 @@ for (const row of registry.skills) {
     digest: sha256Bytes(readFileSync(absolute)),
   }));
 
-  for (const [host, destination] of [
-    ['codex', `dist/plugins/openai/openplanr/skills/${hostSkillName}`],
-    ['claude-code', `dist/plugins/claude/openplanr/skills/${hostSkillName}`],
+  for (const [host, pluginRoot] of [
+    ['codex', 'dist/plugins/openai/openplanr'],
+    ['claude-code', 'dist/plugins/claude/openplanr'],
   ]) {
+    const skillRoot = `skills/${hostSkillName}`;
+    const destination = `${pluginRoot}/${skillRoot}`;
     add(`${destination}/SKILL.md`, renderNamespacedSkill(packageInfo.markdown, row.skillId));
-    // The OpenAI package verifier reads the build manifest; Claude never does.
-    if (host === 'codex') add(`${destination}/openplanr.skill.json`, json(packageInfo.manifest));
-    for (const resource of hostResources(packageInfo, host)) {
+    const localResources = suiteLocalResources(packageInfo, host, skillRoot);
+    // The native suite declaration lists local files; its complete closure is owned by
+    // the exhaustive package content inventory, rather than a standalone skill directory.
+    if (host === 'codex')
+      add(
+        `${destination}/openplanr.skill.json`,
+        json({
+          ...packageInfo.manifest,
+          resources: localResources.map(
+            ({ absolute: _absolute, bytes: _bytes, ...resource }) => resource,
+          ),
+        }),
+      );
+    for (const resource of localResources) {
       if (host === 'codex' && resource.path === 'agents/openai.yaml') {
         add(
           `${destination}/${resource.path}`,
@@ -326,10 +378,12 @@ for (const row of registry.skills) {
             invocation: namespacedInvocation(row.skillId, 'codex'),
           }),
         );
-      } else {
-        copySkillResource(packageInfo, resource, destination);
-      }
+      } else
+        add(`${destination}/${resource.path}`, resource.bytes, {
+          isExecutable: resource.executable,
+        });
     }
+    addSharedResources(packageInfo, host, pluginRoot, skillRoot);
   }
 
   const cursorBody = renderCursorSkillBody(
@@ -337,15 +391,19 @@ for (const row of registry.skills) {
     row.skillId,
     hostResources(packageInfo, 'cursor'),
   );
+  const cursorPluginRoot = 'dist/plugins/cursor/openplanr';
+  const cursorSkillRoot = `rules/${row.skillId}`;
   add(
-    `dist/plugins/cursor/openplanr/rules/${row.skillId}.mdc`,
+    `${cursorPluginRoot}/rules/${row.skillId}.mdc`,
     `---\ndescription: ${JSON.stringify(parsed.fields.description)}\nalwaysApply: false\n---\n\n${cursorBody}`,
   );
-  for (const resource of hostResources(packageInfo, 'cursor').filter(
+  for (const resource of suiteLocalResources(packageInfo, 'cursor', cursorSkillRoot).filter(
     ({ path }) => !path.startsWith('agents/'),
-  )) {
-    copySkillResource(packageInfo, resource, `dist/plugins/cursor/openplanr/rules/${row.skillId}`);
-  }
+  ))
+    add(`${cursorPluginRoot}/${cursorSkillRoot}/${resource.path}`, resource.bytes, {
+      isExecutable: resource.executable,
+    });
+  addSharedResources(packageInfo, 'cursor', cursorPluginRoot, cursorSkillRoot);
 
   skillRows.push({
     id: row.skillId,
@@ -454,6 +512,7 @@ for (const [host, prefix] of [
   ['claude-code', 'dist/plugins/claude/openplanr/'],
   ['cursor', 'dist/plugins/cursor/openplanr/'],
 ]) {
+  add(`${prefix}LICENSE`, readFileSync(resolve(root, 'LICENSE')));
   const files = [...outputs.entries()]
     .filter(([path]) => path.startsWith(prefix))
     .map(([path, bytes]) => ({
@@ -654,6 +713,31 @@ add(
   { checkedIn: true },
 );
 
+const footprint = {
+  kind: 'openplanr-skill-footprint',
+  schemaVersion: '1.0.0',
+  canonical: registry.skills.map((row) => {
+    const packageInfo = readStandardSkillPackage({ repoRoot: root, registryRow: row });
+    return {
+      skillId: row.skillId,
+      ...resourceFootprint([
+        { bytes: Buffer.from(packageInfo.markdown) },
+        { bytes: readFileSync(resolve(packageInfo.skillDir, 'openplanr.skill.json')) },
+        ...packageInfo.resources.map(({ absolute }) => ({ bytes: readFileSync(absolute) })),
+      ]),
+    };
+  }),
+  suites: ['openai', 'claude', 'cursor'].map((host) => ({
+    host,
+    ...resourceFootprint(
+      [...outputs]
+        .filter(([path]) => path.startsWith(`dist/plugins/${host}/openplanr/`))
+        .map(([path, bytes]) => ({ path, bytes })),
+    ),
+  })),
+};
+add('adapters/manifests/skill-footprint.json', json(footprint), { checkedIn: true });
+
 const generatedAssets = [...outputs.entries()]
   .map(([path, bytes]) => ({
     path,
@@ -713,26 +797,38 @@ function write(path, bytes) {
   if (executable.has(path)) chmodSync(destination, 0o755);
 }
 
-function actualFiles(generatedRoot) {
-  return listRegularFiles(resolve(root, generatedRoot), { relativeTo: root });
-}
+const generatedOutput = (path) =>
+  generatedRoots.some((rootPath) => path.startsWith(`${rootPath}/`));
+const priorAssetPath = resolve(root, 'adapters/manifests/generated-assets.json');
+const priorAssets = existsSync(priorAssetPath)
+  ? JSON.parse(readFileSync(priorAssetPath, 'utf8')).assets
+  : [];
+if (!Array.isArray(priorAssets)) throw new Error('Malformed prior generated skill asset manifest.');
+syncGeneratedOutputs({
+  root,
+  scope: 'suite-projections',
+  outputs: new Map([...outputs].filter(([path]) => generatedOutput(path))),
+  executable,
+  ownedRoots: generatedRoots,
+  bootstrap: [
+    ...historicalCustody.suite,
+    ...priorAssets.map(({ path, digest }) => ({ target: path, sha256: digest })),
+  ].filter(({ target }) => generatedOutput(target)),
+  mode,
+});
 
 if (mode === 'write') {
-  for (const generatedRoot of generatedRoots) {
-    const path = resolve(root, generatedRoot);
-    if (existsSync(path)) rmSync(path, { recursive: true });
-  }
   for (const [path, bytes] of [...outputs.entries()].sort(([left], [right]) =>
     left.localeCompare(right),
-  ))
-    write(path, bytes);
+  )) {
+    if (!generatedOutput(path)) write(path, bytes);
+  }
   process.stdout.write(
     `Generated ${skillRows.length} standard skills and ${roleRows.length} Claude agents.\n`,
   );
 } else {
   const drift = [];
-  const expectedPaths = [...outputs.keys()].sort();
-  for (const path of expectedPaths) {
+  for (const path of [...outputs.keys()].filter((path) => !generatedOutput(path)).sort()) {
     const absolute = resolve(root, path);
     if (!existsSync(absolute)) drift.push({ path, reason: 'missing' });
     else if (lstatSync(absolute).isSymbolicLink()) drift.push({ path, reason: 'symlink' });
@@ -741,12 +837,6 @@ if (mode === 'write') {
     else if (executable.has(path) !== ((lstatSync(absolute).mode & 0o111) !== 0))
       drift.push({ path, reason: 'mode' });
   }
-  const expectedGenerated = expectedPaths.filter((path) =>
-    generatedRoots.some((rootPath) => path.startsWith(`${rootPath}/`)),
-  );
-  const actualGenerated = generatedRoots.flatMap(actualFiles).sort();
-  for (const path of actualGenerated.filter((path) => !expectedGenerated.includes(path)))
-    drift.push({ path, reason: 'extra' });
   if (drift.length > 0) throw new Error(`Generated skill assets drifted:\n${json(drift)}`);
   process.stdout.write(
     `Checked ${skillRows.length} standard skills and ${roleRows.length} Claude agents.\n`,

@@ -13,7 +13,6 @@ import {
   renderArtifactParentRuntime,
 } from '@openplanr/artifact/bridge.mjs';
 import { digestArtifactEnvelope, resolveArtifactHtml } from '@openplanr/artifact/envelope.mjs';
-import { resolveArtifactReviewDestination } from '@openplanr/artifact/import.mjs';
 import { acquireStartLock, readRequestBody } from '@openplanr/artifact/internal/server-util.mjs';
 import { createReviewLedger } from '@openplanr/artifact/merge.mjs';
 import {
@@ -37,7 +36,7 @@ import {
   readJson,
   standaloneDesignHtml,
 } from './document.mjs';
-
+import { designReviewKey, designReviewPath, readDesignFeedback } from './feedback-reader.mjs';
 import {
   readDesignExperience,
   readDesignHandoff,
@@ -72,6 +71,8 @@ import {
   syncDesignShare,
 } from './share.mjs';
 import { renderDesignStudio } from './studio.mjs';
+
+export { designReviewKey, designReviewPath, readDesignFeedback } from './feedback-reader.mjs';
 
 const VERSION = '1.4.0';
 // Capture the code and asset identity at module load; a live daemon must not
@@ -110,55 +111,6 @@ function studioRuntimeIdentity(current) {
     ),
   };
 }
-export const designReviewKey = (document) => `design-${hash(document.id).slice(0, 24)}`;
-export function designReviewPath(file, env = process.env) {
-  const { root, document } = currentDesign(file);
-  return resolveArtifactReviewDestination({
-    cwd: root,
-    env,
-    artifactId: designReviewKey(document),
-  }).path;
-}
-export function readDesignFeedback(file, env = process.env) {
-  const current = currentDesign(file);
-  const ledger = readArtifactReviewState(designReviewPath(file, env), {
-    allowMissing: true,
-  });
-  const digest = digestArtifactEnvelope(current.envelope);
-  const pins = (ledger?.reviews ?? []).flatMap((entry) =>
-    entry.review.pins.map((pin) => {
-      const target = current.entries.find((item) => item.artifactId === pin.artifactId);
-      const screen = target && current.document.screens.find((item) => item.id === target.screenId);
-      const anchorMissing =
-        pin.anchor?.planrId &&
-        screen?.anchors?.length &&
-        !screen.anchors.includes(pin.anchor.planrId) &&
-        pin.anchor.planrId !== screen.id;
-      return {
-        ...pin,
-        reviewId: entry.review.reviewId,
-        reviewOf: entry.review.reviewOf,
-        ...(entry.review.reviewId.startsWith('shared-')
-          ? { revisionId: entry.review.reviewId.slice(7) }
-          : {}),
-        stale: entry.stale || entry.review.reviewOf !== digest || !target || Boolean(anchorMissing),
-        ...(target ? { screenId: target.screenId, variantId: target.variantId } : {}),
-      };
-    }),
-  );
-  return {
-    revision: current.revision,
-    reviewPath: designReviewPath(file, env),
-    pins,
-    state: readJson(join(current.root, '.design/studio-state.json'), {
-      state: {},
-      stateVersion: 0,
-    }).state,
-    ledger,
-    shared: readJson(join(current.root, '.design/shared-feedback.json'), null),
-  };
-}
-
 /** Deterministic projection of the local ledger, using original immutable sources. */
 export function exportDesignReview(file, { scope = 'all', env = process.env } = {}) {
   if (!['all', 'current'].includes(scope))

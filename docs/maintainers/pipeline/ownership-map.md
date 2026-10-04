@@ -41,7 +41,7 @@ projection.
 
 ## Skill Certification Boundary
 
-The skill evaluation laboratory (`docs/skill-evaluation.md`) supersedes the frozen catalog record's
+The skill evaluation laboratory (`skill-evaluation.md`) supersedes the frozen catalog record's
 ad-hoc skill, host, and canary checking **for measurement and certification
 only**. What a skill-host pair must demonstrate, how it is measured, and what
 verdict that produces are owned here.
@@ -62,7 +62,7 @@ release, publish, deploy, promotion, or activation authority.
 2. Add or update its focused check.
 3. Run `npm run generate` from the workspace root.
 4. Run `npm run check:generated`, focused tests, and `planr doctor --strict`.
-5. Follow `docs/release-checklist.md` only for a separately scheduled release.
+5. Follow `release-checklist.md` only for a separately scheduled release.
 
 ## Current Protocol Decision
 

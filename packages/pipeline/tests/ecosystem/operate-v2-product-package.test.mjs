@@ -29,7 +29,6 @@ test('product package has complete public assets and no private or workspace cus
   for (const path of [
     'conformance/verify-operate-v2-product-experience.mjs',
     'conformance/verify-unified-dashboard-absence.mjs',
-    'docs/unified-dashboard-migration.md',
     'lib/dashboard/resolve-packaged-dashboard-root.mjs',
     'lib/dashboard/server.mjs',
   ])

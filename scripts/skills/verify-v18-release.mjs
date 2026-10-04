@@ -6,6 +6,8 @@ import { join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { readDeterministicZip } from '../../packages/skill-runtime/src/packaging/index.mjs';
+import { verifyStandaloneSkillEntries } from './standalone-resources.mjs';
+import { verifySuiteResources } from './suite-verification.mjs';
 
 const root = resolve(fileURLToPath(new URL('../..', import.meta.url)));
 const releaseRoot = resolve(root, 'release');
@@ -13,6 +15,25 @@ const index = JSON.parse(readFileSync(join(releaseRoot, 'release-index.json'), '
 const registry = JSON.parse(readFileSync(join(root, 'skills/registry.json'), 'utf8'));
 const expectedSkillCount = registry.skills.length;
 const digest = (bytes) => `sha256:${createHash('sha256').update(bytes).digest('hex')}`;
+const hostProducts = new Map([
+  ['openplanr-openai', { directory: 'openai', resourceHost: 'codex' }],
+  ['openplanr-claude', { directory: 'claude', resourceHost: 'claude-code' }],
+  ['openplanr-cursor', { directory: 'cursor', resourceHost: 'cursor' }],
+]);
+const expectedProducts = new Set([
+  ...registry.skills.map(({ skillId }) => skillId),
+  ...hostProducts.keys(),
+]);
+const actualProducts = new Set(index.products.map(({ productId }) => productId));
+if (
+  actualProducts.size !== index.products.length ||
+  actualProducts.size !== expectedProducts.size ||
+  [...actualProducts].some((id) => !expectedProducts.has(id)) ||
+  index.productCount !== expectedProducts.size
+)
+  throw new Error(
+    'Release index must contain exactly the canonical skills and complete host suites.',
+  );
 if (
   index.canonicalSkillCount !== expectedSkillCount ||
   index.compatibilityAliasCount !== 0 ||
@@ -27,6 +48,8 @@ for (const product of index.products) {
   if (digest(archive) !== product.archiveDigest)
     throw new Error(`${product.productId} archive digest drifted.`);
   const extracted = readDeterministicZip(archive);
+  if (extracted.some(({ path }) => !path.startsWith(`${product.productId}/`)))
+    throw new Error(`${product.productId} archive uses an unexpected product root.`);
   const directory = join(releaseRoot, product.directory);
   const installedFiles = [];
   const visit = (current) => {
@@ -41,6 +64,41 @@ for (const product of index.products) {
   const archiveByPath = new Map(
     extracted.map((entry) => [entry.path.split('/').slice(1).join('/'), entry]),
   );
+  const registryRow = registry.skills.find(({ skillId }) => skillId === product.productId);
+  if (registryRow) {
+    verifyStandaloneSkillEntries({
+      repoRoot: root,
+      registryRow,
+      entries: [...archiveByPath].map(([path, entry]) => ({ ...entry, path })),
+    });
+  } else {
+    const host = hostProducts.get(product.productId);
+    const contentPath = '.openplanr-content.json';
+    const canonicalContent = readFileSync(
+      join(root, 'dist/plugins', host.directory, 'openplanr', contentPath),
+    );
+    if (!archiveByPath.get(contentPath)?.bytes.equals(canonicalContent))
+      throw new Error(`${product.productId} does not bind the current complete suite inventory.`);
+    const content = JSON.parse(canonicalContent);
+    if (archiveByPath.size !== content.files.length + 1)
+      throw new Error(`${product.productId} suite archive has missing or extra files.`);
+    for (const { path, digest: expectedDigest } of content.files) {
+      const entry = archiveByPath.get(path);
+      if (!entry || digest(entry.bytes) !== expectedDigest)
+        throw new Error(`${product.productId}/${path} differs from the declared suite closure.`);
+    }
+    for (const row of registry.skills)
+      verifySuiteResources({
+        repoRoot: root,
+        registryRow: row,
+        host: host.resourceHost,
+        pluginRoot: directory,
+        skillRoot:
+          host.directory === 'cursor'
+            ? `rules/${row.skillId}`
+            : `skills/${row.skillId.slice('planr-'.length)}`,
+      });
+  }
   for (const absolute of installedFiles) {
     const path = relative(directory, absolute).split(sep).join('/');
     const archived = archiveByPath.get(path);

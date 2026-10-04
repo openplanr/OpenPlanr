@@ -29,7 +29,6 @@ const npmCache = join(temporaryRoot, 'npm-cache');
 
 const DASHBOARD_PROTOCOL_CUSTODY = Object.freeze([
   'conformance/verify-unified-dashboard-absence.mjs',
-  'docs/unified-dashboard-migration.md',
   'lib/dashboard/resolve-packaged-dashboard-root.mjs',
   'schemas/v1.2.0/dashboard-bootstrap.schema.json',
 ]);

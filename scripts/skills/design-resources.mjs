@@ -59,7 +59,10 @@ export async function buildDesignSkillResources({
   repoRoot,
   entrypoint = 'packages/design/lib/design/utility.mjs',
   extraAssets = [],
+  profile = 'design',
 } = {}) {
+  if (!['design', 'plan'].includes(profile)) throw new Error(`Unknown runtime profile: ${profile}`);
+  const includesStudio = profile === 'design';
   const root = resolve(repoRoot ?? fileURLToPath(new URL('../..', import.meta.url)));
   const entry = resolve(root, entrypoint);
   const require = createRequire(resolve(root, 'packages/artifact/package.json'));
@@ -70,53 +73,65 @@ export async function buildDesignSkillResources({
   const stageRuntimePath = resolve(root, 'packages/artifact/templates/artifact-review-stage.js');
   const studioRuntimePath = resolve(root, 'packages/design/templates/studio/studio.js');
   const browserInputs = [];
-  const renderedAssets = new Map([
-    [
-      stageRuntimePath,
-      Buffer.from(
-        renderArtifactStageRuntimeAsset({ projectRoot: resolve(root, 'packages/artifact') }),
-        'utf8',
-      ),
-    ],
-    [
-      studioRuntimePath,
-      Buffer.from(
-        renderDesignStudioRuntimeAsset({
-          projectRoot: resolve(root, 'packages/design'),
-          onInputs: (inputs) => browserInputs.push(...inputs),
-        }),
-        'utf8',
-      ),
-    ],
-  ]);
-  const assetPaths = [
-    resolve(root, 'packages/protocol/schemas/v1.0.0/design-manifest.schema.json'),
-    ...['artifact-envelope', 'artifact-review', 'artifact-paste'].map((name) =>
-      resolve(root, `packages/protocol/schemas/v1.1.0/${name}.schema.json`),
-    ),
-    resolve(root, 'packages/protocol/schemas/v1.14.0/artifact-theme.schema.json'),
-    resolve(root, 'packages/protocol/schemas/v1.9.0/design-document.schema.json'),
-    ...[
-      'design-review-workspace',
-      'design-workspace-create',
-      'design-workspace-revision',
-      'design-workspace-event',
-      'design-review-bundle',
-    ].map((name) => resolve(root, `packages/protocol/schemas/v1.9.0/${name}.schema.json`)),
-    ...files(resolve(root, 'packages/protocol/schemas/v1.10.0')),
-    ...files(resolve(root, 'packages/protocol/schemas/v1.11.0')),
-    ...files(resolve(root, 'packages/protocol/schemas/v1.16.0')),
-    // Additive v1.17 schemas enter this utility through bundled JSON/contracts.
-    // Keep only raw schema files actually read by its filesystem schema loader.
-    resolve(root, 'packages/protocol/registries/artifact-theme.json'),
-    resolve(root, 'packages/artifact/lib/artifact/ui/studio-shell.css'),
-    resolve(root, 'packages/protocol/package.json'),
-    resolve(root, 'packages/design/package.json'),
-    stageRuntimePath,
-    studioRuntimePath,
-    ...files(resolve(root, 'packages/design/templates/studio')),
-    ...extraAssets.map((path) => resolve(root, path)),
-  ];
+  const renderedAssets = new Map(
+    includesStudio
+      ? [
+          [
+            stageRuntimePath,
+            Buffer.from(
+              renderArtifactStageRuntimeAsset({ projectRoot: resolve(root, 'packages/artifact') }),
+              'utf8',
+            ),
+          ],
+          [
+            studioRuntimePath,
+            Buffer.from(
+              renderDesignStudioRuntimeAsset({
+                projectRoot: resolve(root, 'packages/design'),
+                onInputs: (inputs) => browserInputs.push(...inputs),
+              }),
+              'utf8',
+            ),
+          ],
+        ]
+      : [],
+  );
+  const assetPaths = includesStudio
+    ? [
+        resolve(root, 'packages/protocol/schemas/v1.0.0/design-manifest.schema.json'),
+        ...['artifact-envelope', 'artifact-review', 'artifact-paste'].map((name) =>
+          resolve(root, `packages/protocol/schemas/v1.1.0/${name}.schema.json`),
+        ),
+        resolve(root, 'packages/protocol/schemas/v1.14.0/artifact-theme.schema.json'),
+        resolve(root, 'packages/protocol/schemas/v1.9.0/design-document.schema.json'),
+        ...[
+          'design-review-workspace',
+          'design-workspace-create',
+          'design-workspace-revision',
+          'design-workspace-event',
+          'design-review-bundle',
+        ].map((name) => resolve(root, `packages/protocol/schemas/v1.9.0/${name}.schema.json`)),
+        ...files(resolve(root, 'packages/protocol/schemas/v1.10.0')),
+        ...files(resolve(root, 'packages/protocol/schemas/v1.11.0')),
+        ...files(resolve(root, 'packages/protocol/schemas/v1.16.0')),
+        // Additive v1.17 schemas enter this utility through bundled JSON/contracts.
+        // Keep only raw schema files actually read by its filesystem schema loader.
+        resolve(root, 'packages/protocol/registries/artifact-theme.json'),
+        resolve(root, 'packages/protocol/package.json'),
+        ...[
+          resolve(root, 'packages/artifact/lib/artifact/ui/studio-shell.css'),
+          resolve(root, 'packages/design/package.json'),
+          stageRuntimePath,
+          studioRuntimePath,
+          ...files(resolve(root, 'packages/design/templates/studio')),
+        ],
+        ...extraAssets.map((path) => resolve(root, path)),
+      ]
+    : [
+        resolve(root, 'packages/protocol/package.json'),
+        resolve(root, 'packages/protocol/schemas/v1.1.0/artifact-review.schema.json'),
+        ...extraAssets.map((path) => resolve(root, path)),
+      ];
   const options = {
     absWorkingDir: root,
     bundle: true,
@@ -162,7 +177,11 @@ export async function buildDesignSkillResources({
       },
     ],
   };
-  const closure = await build({ ...options, entryPoints: [entry], outfile: 'design.mjs' });
+  const closure = await build({
+    ...options,
+    entryPoints: [entry],
+    outfile: `${CHUNK_OUTDIR}/design.mjs`,
+  });
   const closureInputs = Object.keys(closure.metafile.inputs);
   // Without compiled output esbuild falls back to TypeScript sources, which the
   // `.mjs`-only rewrite above skips, leaving package lookups that fail once installed.
@@ -171,25 +190,34 @@ export async function buildDesignSkillResources({
     throw new Error(
       `Design utility bundles TypeScript sources; run node scripts/typescript/compile-sources.mjs first: ${typescript.join(', ')}`,
     );
-  const boundaries = CHUNK_BOUNDARIES.map(([id, suffix]) => {
-    const matches = closureInputs.filter((path) => path === suffix || path.endsWith(`/${suffix}`));
-    if (matches.length !== 1)
-      throw new Error(
-        `Design chunk boundary ${suffix} matched ${matches.length} bundle inputs; update CHUNK_BOUNDARIES.`,
-      );
-    return { id, input: matches[0] };
-  });
-  const result = await build({
-    ...options,
-    entryPoints: [
-      { in: entry, out: 'design' },
-      ...boundaries.map(({ id, input }) => ({ in: resolve(root, input), out: `boundary-${id}` })),
-    ],
-    splitting: true,
-    outdir: CHUNK_OUTDIR,
-    outExtension: { '.js': '.mjs' },
-    chunkNames: 'chunk-[hash]',
-  });
+  const boundaries = includesStudio
+    ? CHUNK_BOUNDARIES.map(([id, suffix]) => {
+        const matches = closureInputs.filter(
+          (path) => path === suffix || path.endsWith(`/${suffix}`),
+        );
+        if (matches.length !== 1)
+          throw new Error(
+            `Design chunk boundary ${suffix} matched ${matches.length} bundle inputs; update CHUNK_BOUNDARIES.`,
+          );
+        return { id, input: matches[0] };
+      })
+    : [];
+  const result = includesStudio
+    ? await build({
+        ...options,
+        entryPoints: [
+          { in: entry, out: 'design' },
+          ...boundaries.map(({ id, input }) => ({
+            in: resolve(root, input),
+            out: `boundary-${id}`,
+          })),
+        ],
+        splitting: true,
+        outdir: CHUNK_OUTDIR,
+        outExtension: { '.js': '.mjs' },
+        chunkNames: 'chunk-[hash]',
+      })
+    : closure;
   const dependencyPaths = Object.keys(result.metafile.inputs);
   const forbidden = dependencyPaths.filter((path) =>
     /(?:design-engine\/providers|node_modules\/(?:esbuild|@esbuild|openai|@anthropic-ai|@resvg)\/)/u.test(
@@ -258,7 +286,15 @@ export async function buildDesignSkillResources({
       bytes: resourceBytes(text),
     };
   });
-  const bundledInputs = [...new Set(kept.flatMap((key) => Object.keys(outputs[key].inputs)))];
+  const bundledInputs = [
+    ...new Set(
+      kept.flatMap((key) =>
+        Object.entries(outputs[key].inputs)
+          .filter(([_path, data]) => data.bytesInOutput > 0)
+          .map(([path]) => path),
+      ),
+    ),
+  ];
   const resources = [
     ...scripts.sort((a, b) =>
       a.executable === b.executable ? a.path.localeCompare(b.path) : a.executable ? -1 : 1,
@@ -349,7 +385,7 @@ export async function buildDesignSkillResources({
     );
   }
   // Every bundled dependency retains its complete notice. A single bounded document
-  // avoids duplicating 77 separate files in each standalone skill of a directory plugin.
+  // avoids repeating individual notice files in each standalone skill of a directory plugin.
   resources.push({
     path: 'scripts/runtime/notices/THIRD_PARTY_NOTICES.txt',
     kind: 'asset',
@@ -362,4 +398,13 @@ export async function buildDesignSkillResources({
       `Design resources reach the ${MAX_RESOURCE_BYTES}-byte directory review limit: ${oversized.map(({ path, bytes }) => `${path} (${bytes.length} B)`).join(', ')}`,
     );
   return resources;
+}
+
+/** Plan consumes an existing handoff; it has no reason to carry Studio templates or controls. */
+export function buildPlanSkillResources({ repoRoot } = {}) {
+  return buildDesignSkillResources({
+    repoRoot,
+    entrypoint: 'packages/design/lib/design/plan-handoff-utility.mjs',
+    profile: 'plan',
+  });
 }

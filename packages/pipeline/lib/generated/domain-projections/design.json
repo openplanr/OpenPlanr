@@ -155,9 +155,15 @@
       "mode": "644"
     },
     {
+      "source": "packages/design/lib/design/document-state.mjs",
+      "target": "lib/design/document-state.mjs",
+      "sha256": "dc01dc1c6adce0a859e5062fbe9eac9f90e3941678c9984544e00b92e42f233c",
+      "mode": "644"
+    },
+    {
       "source": "packages/design/lib/design/document.mjs",
       "target": "lib/design/document.mjs",
-      "sha256": "ef3c3effdd0bdb561c4f017727f0abd4be412b62028a78048c89cc1eb95858ab",
+      "sha256": "1d55c2b4518f06862fa799d620810a6c72eec95d33b7a62bab6854437667de29",
       "mode": "644"
     },
     {
@@ -170,6 +176,24 @@
       "source": "packages/design/lib/design/feedback-import.mjs",
       "target": "lib/design/feedback-import.mjs",
       "sha256": "7c0a120c2c55ea54f65bd9e32b4109929acdd2293d2d6635ebd6cbc7cc705022",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design/feedback-reader.mjs",
+      "target": "lib/design/feedback-reader.mjs",
+      "sha256": "745f7843690b72e6d21264754db976baee88b84c2577012cab3f9f94fbb27954",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design/handoff-format.mjs",
+      "target": "lib/design/handoff-format.mjs",
+      "sha256": "8478d84f4c5584e00ecc505d7b06f19a84da198e4106d9d10b38ceb767229539",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design/handoff-reader.mjs",
+      "target": "lib/design/handoff-reader.mjs",
+      "sha256": "eca6836d64b3aedf2fe6136781c13441ce260bcf595ba98f4a45127955562b45",
       "mode": "644"
     },
     {
@@ -199,7 +223,7 @@
     {
       "source": "packages/design/lib/design/handoff.mjs",
       "target": "lib/design/handoff.mjs",
-      "sha256": "c67a08e49bc0ce94e3b19fc9be3f600bfd427d558d1726e4d9e85f0f6082912c",
+      "sha256": "c4e384b22f493cc66140b0e6b8c9a9bc730f902c369afebe5fd9bddff2c91cf8",
       "mode": "644"
     },
     {
@@ -269,6 +293,12 @@
       "mode": "644"
     },
     {
+      "source": "packages/design/lib/design/plan-handoff-utility.mjs",
+      "target": "lib/design/plan-handoff-utility.mjs",
+      "sha256": "bf98190e678c5d8cc9ff3da262076c42dccab5e0ce116f71faf25d97e751d699",
+      "mode": "644"
+    },
+    {
       "source": "packages/design/lib/design/recommend-format.mjs",
       "target": "lib/design/recommend-format.mjs",
       "sha256": "63acf64d0fee350039e2e5bd3300ff40c0e9647bfad398f5923fefc5985522f5",
@@ -283,7 +313,7 @@
     {
       "source": "packages/design/lib/design/review.mjs",
       "target": "lib/design/review.mjs",
-      "sha256": "252073bf4dbb577e213ed322ab6d206659075581734bf85ac687d14216e5c4fa",
+      "sha256": "4758043e7b07f30095f40db7ec769a5d2e903cc7546805f01e2b9bc1b49a301e",
       "mode": "644"
     },
     {
@@ -299,9 +329,15 @@
       "mode": "644"
     },
     {
+      "source": "packages/design/lib/design/share-status.mjs",
+      "target": "lib/design/share-status.mjs",
+      "sha256": "3dbfa92ce2bc143e7baecc1cdebc5796c5516e587f593b16cb1d82d58b64582f",
+      "mode": "644"
+    },
+    {
       "source": "packages/design/lib/design/share.mjs",
       "target": "lib/design/share.mjs",
-      "sha256": "1007aa5012991b9ded95b3844a4bf94a19ac0fcee219592c8283caa9a07fd369",
+      "sha256": "18c50aaadeba78e1a597fd1247848e5831adb52b82e78af0fd310f3d23569534",
       "mode": "644"
     },
     {
@@ -367,7 +403,7 @@
     {
       "source": "packages/design/lib/design/utility.mjs",
       "target": "lib/design/utility.mjs",
-      "sha256": "1af8e386d37ef6669bbf017b73c0cdba7eb6fb4a6fa15863cc27da32f3e4421c",
+      "sha256": "c22e6f8a829e38a80b60e57ebe681c4d1b1a97e7facc7bf49d2cbe505ef49b21",
       "mode": "644"
     },
     {
@@ -377,9 +413,15 @@
       "mode": "644"
     },
     {
+      "source": "packages/design/lib/design/workspace-address.mjs",
+      "target": "lib/design/workspace-address.mjs",
+      "sha256": "d879ce142eedbc513d4f705681e63521006618492e64d5e9c387d396d6e06c7c",
+      "mode": "644"
+    },
+    {
       "source": "packages/design/lib/design/workspace-client.mjs",
       "target": "lib/design/workspace-client.mjs",
-      "sha256": "d42af9219b644853752082d66175976defb309a15429cf62fb236b9af29e37a1",
+      "sha256": "6ce8580fa0ef916b9ad0cbdd8210ad11550f34b7ecebeeb4dc5acda7e133af17",
       "mode": "644"
     },
     {

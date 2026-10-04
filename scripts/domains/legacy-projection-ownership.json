@@ -1,0 +1,121 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "openplanr-legacy-projection-ownership",
+  "description": "One-time migration evidence from historical generated manifests. New retirements use the checkout ownership ledger.",
+  "entries": [
+    {
+      "owner": "design",
+      "target": "lib/design-engine/canvas-wrap.mjs",
+      "sha256": "a7beba5dc47b1455a1f06b3baae1e0cc1a50fce529d9253833b1fe4fa441eadb",
+      "commit": "3bcf95502d1bfa2b93a13cb223093ffc1a6ddeca"
+    },
+    {
+      "owner": "design",
+      "target": "lib/design-engine/canvas-wrap.mjs",
+      "sha256": "c511e32d5f23afca6b9b18fbf6364da9e2c087346ac51da07183f694871f20b5",
+      "commit": "1675e1e57ae2873c09a7db7775c498f6a8ee4d6c"
+    },
+    {
+      "owner": "design",
+      "target": "lib/design-engine/canvas-wrap.mjs",
+      "sha256": "c8acfd3fc24f9a8c2530a2205e0ccdaac5d0d26db8615158a6cdbca088c2295d",
+      "commit": "504bce46ed17380decc188b09837b0173448619e"
+    },
+    {
+      "owner": "design",
+      "target": "templates/design/canvas-shell.html",
+      "sha256": "d24ac6bc33053dbc69b4f5ed6005c0cb8f4c582a5616fcac80cd58b530d1d0e5",
+      "commit": "504bce46ed17380decc188b09837b0173448619e"
+    },
+    {
+      "owner": "design",
+      "target": "templates/design/DesignCanvas.jsx",
+      "sha256": "27617a3f6553c2c4d6a492b57fab0b97bf5a9844ea1c87f8d26b8e49ffd69c54",
+      "commit": "504bce46ed17380decc188b09837b0173448619e"
+    },
+    {
+      "owner": "design",
+      "target": "templates/design/prototype-shell.html",
+      "sha256": "e3f8d42dc4d1846ca3f676bc1c232554d2ef8408fd50ae89b032873e8194f2cb",
+      "commit": "504bce46ed17380decc188b09837b0173448619e"
+    },
+    {
+      "owner": "design",
+      "target": "templates/design/README.md",
+      "sha256": "35190739f080dd4c950d72cdf98ddb06a4ff4ef993ea2f3facd45cbc64771588",
+      "commit": "3bcf95502d1bfa2b93a13cb223093ffc1a6ddeca"
+    },
+    {
+      "owner": "design",
+      "target": "templates/design/README.md",
+      "sha256": "9dfdcda4bf4d97d3dce787cf783e10cb988e27cc18809c592bcc06508232b800",
+      "commit": "504bce46ed17380decc188b09837b0173448619e"
+    },
+    {
+      "owner": "design",
+      "target": "templates/design/vendor/DesignCanvas.js",
+      "sha256": "7612fd76df23b99bf0527cc366001646ae9852c5d19d198ff7fab68d3ce32209",
+      "commit": "504bce46ed17380decc188b09837b0173448619e"
+    },
+    {
+      "owner": "design",
+      "target": "templates/design/vendor/fetch-vendor.mjs",
+      "sha256": "f040d51a3284a9daa7331a220822b1fb58dfb2ca4523bb2b83344d279bdfe30d",
+      "commit": "504bce46ed17380decc188b09837b0173448619e"
+    },
+    {
+      "owner": "design",
+      "target": "templates/design/vendor/pretext.js",
+      "sha256": "c85e755d86d33718e66978d18a2733eb5d11cf44747f58846bd390ed0d6f24e7",
+      "commit": "504bce46ed17380decc188b09837b0173448619e"
+    },
+    {
+      "owner": "design",
+      "target": "templates/design/vendor/react-dom.production.min.js",
+      "sha256": "35f4f974f4b2bcd44da73963347f8952e341f83909e4498227d4e26b98f66f0d",
+      "commit": "504bce46ed17380decc188b09837b0173448619e"
+    },
+    {
+      "owner": "design",
+      "target": "templates/design/vendor/react.production.min.js",
+      "sha256": "d949f1c3687aedadcedac85261865f29b17cd273997e7f6b2bfc53b2f9d4c4dd",
+      "commit": "504bce46ed17380decc188b09837b0173448619e"
+    },
+    {
+      "owner": "design",
+      "target": "templates/design/walkthrough-shell.html",
+      "sha256": "7630f80e73c6dc147b44bca6695caed94afe5c8a537c5b7bb04c13b1fb4583a4",
+      "commit": "504bce46ed17380decc188b09837b0173448619e"
+    },
+    {
+      "owner": "design",
+      "target": "templates/design/walkthrough-shell.html",
+      "sha256": "bccf59f399e317e16f10431897fad95e883f3b1156afaf0b91e667a923c76175",
+      "commit": "3bcf95502d1bfa2b93a13cb223093ffc1a6ddeca"
+    },
+    {
+      "owner": "design",
+      "target": "templates/studio/enhancements.js",
+      "sha256": "482167abecf8276c6a167872a17e22431102bf5e7459cd228cf4cf55b2a2491f",
+      "commit": "ef2349817f94d2c830d1c24abf7ebdbccfc8d778"
+    },
+    {
+      "owner": "design",
+      "target": "templates/studio/enhancements.js",
+      "sha256": "8f2eea1ed15762799c999745ccfd8f340183ddb12c91fc8224e09ce7ca7e2c97",
+      "commit": "8adfbbfb43345148510c6a8a71ce04a772b439f3"
+    },
+    {
+      "owner": "design",
+      "target": "templates/studio/enhancements.js",
+      "sha256": "e967e9a622018a3bfdd52751ecfa6e842dbbf1922f573f3395a2bf29ca028589",
+      "commit": "2a2d22f04f883e84100bcbc8924ca4a7958846d2"
+    },
+    {
+      "owner": "design",
+      "target": "templates/studio/handoff-center.js",
+      "sha256": "012f648cf3936be649ac5f4935412a91489c8f90e076400dc19fbc6ebbf38b21",
+      "commit": "2a2d22f04f883e84100bcbc8924ca4a7958846d2"
+    }
+  ]
+}

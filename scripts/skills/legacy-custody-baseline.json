@@ -1,0 +1,82 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "openplanr-legacy-generated-custody",
+  "commit": "b06d1facadbf00a62ebeace6d1cad5052c6a4ed9",
+  "manifests": [
+    {
+      "path": "adapters/manifests/canonical-skills.json",
+      "sha256": "5f17350ee61a886febca592219c927c216e7a3f33a2f45e9c6c90b11f6e213fa"
+    },
+    {
+      "path": "adapters/manifests/generated-assets.json",
+      "sha256": "755ce1e0b43e27ad45eea19b69ea55255ff1bd04def7568d74e7db70b79da537"
+    }
+  ],
+  "copies": [
+    {
+      "path": "packages/artifact/lib/artifact/internal/planr-home.d.mts",
+      "sha256": "b99d4a98f23217c46db26870e3e0525e111cb2ee2f01d513e5549611db055cff",
+      "targets": ["packages/cli/lib/planr-home.d.mts"]
+    },
+    {
+      "path": "packages/artifact/lib/artifact/internal/planr-home.mjs",
+      "sha256": "32a969be4b0e96eee72d2e336ad71863874785358a9945a502e9f38f06def6c0",
+      "targets": ["packages/cli/lib/planr-home.mjs"]
+    },
+    {
+      "path": "packages/design/references/design-spec-template.md",
+      "sha256": "27f56097c80534593ac58fae670a179378727b6fbf050b4ebc8cf8b750a1fadd",
+      "targets": ["agents/shared/modes/shared/design-spec-template.md"]
+    },
+    {
+      "path": "packages/integrations/src/portable-sync.d.mts",
+      "sha256": "4606e0778fdccc51b77d5ef41ba912480fec7466324d6832e291cef5ce07950d",
+      "targets": ["packages/cli/lib/integrations.d.mts"]
+    },
+    {
+      "path": "packages/integrations/src/portable-sync.mjs",
+      "sha256": "005397d703d8df70f346a789d15c665a44329449418b39e807bb0dff927153da",
+      "targets": ["packages/cli/lib/integrations.mjs"]
+    },
+    {
+      "path": "packages/protocol/schemas/v1.18.0/runtime-lock.schema.json",
+      "sha256": "7a1409cbaf8ac98aad7739bfc7d89ad50669df60f18174bc61bb4def45255aa3",
+      "targets": ["packages/cli/lib/runtime-lock.schema.json"]
+    },
+    {
+      "path": "packages/protocol/src/json-schema.d.mts",
+      "sha256": "fea18a1aa1531b403c5119b0debdc6cc042f3b0c854b33052a9f8892c731e0b4",
+      "targets": ["packages/cli/lib/json-schema.d.mts"]
+    },
+    {
+      "path": "packages/protocol/src/json-schema.mjs",
+      "sha256": "3ef52ce3d821952b13a2ebbbb52cb70c2147a708be82cc5c61f009a90dc48a36",
+      "targets": ["packages/cli/lib/json-schema.mjs"]
+    },
+    {
+      "path": "packages/protocol/src/large-object-limits.d.mts",
+      "sha256": "4be027e389ede1e42ec0108f641f4e33fcb9b702a9a583e5ed4ceecf4b12727a",
+      "targets": ["packages/cli/lib/resource-limits.d.mts"]
+    },
+    {
+      "path": "packages/protocol/src/large-object-limits.mjs",
+      "sha256": "2d0d04ac6ad37ab7bfaa64c777ca9820fe84ab5d86d80cece06f67edecb10f74",
+      "targets": ["packages/cli/lib/resource-limits.mjs"]
+    },
+    {
+      "path": "packages/skill-runtime/src/errors.mjs",
+      "sha256": "6c02fdf441b22fc101a764c928bb0e98fa0a93a602183463c44adc3f8e1d7f79",
+      "targets": ["packages/cli/lib/skill-runtime/errors.mjs"]
+    },
+    {
+      "path": "packages/skill-runtime/src/operate-review-contract.mjs",
+      "sha256": "76de44f9fda5444ad5b4805ae16b21221cde19a99669140ea7a6f032f383edcd",
+      "targets": ["packages/cli/lib/skill-runtime/operate-review-contract.mjs"]
+    },
+    {
+      "path": "packages/skill-runtime/src/operate-review-note.mjs",
+      "sha256": "10fd0d90e5ec8674a9df0b4dabcb44c0c90ca63a72ea42194d69d365034c94aa",
+      "targets": ["packages/cli/lib/skill-runtime/operate-review-note.mjs"]
+    }
+  ]
+}

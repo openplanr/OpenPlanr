@@ -889,7 +889,7 @@
     {
       "source": "packages/artifact/lib/artifact/encrypted-workspace-client.mjs",
       "target": "lib/artifact/encrypted-workspace-client.mjs",
-      "sha256": "a9fad8be910b64cd28aa051193139b945ad4efc0286eeb12bbf1a91591bca5e4",
+      "sha256": "220e63c73400f06c0940a2dcd52602490a3ce148b97ced1c52ae6d71fb0d403f",
       "mode": "644"
     },
     {
@@ -1010,6 +1010,12 @@
       "source": "packages/artifact/lib/artifact/internal/server-util.mjs",
       "target": "lib/artifact/internal/server-util.mjs",
       "sha256": "c3b86a46130645f36cc14f72fbc90aac78a0018601b7d2c589a3842bb0418f81",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/internal/workspace-address.mjs",
+      "target": "lib/artifact/internal/workspace-address.mjs",
+      "sha256": "c267c8ce5e27bc8aa9f8c28c0fad1697b20cc62c8b0e8953e088fc23df356cda",
       "mode": "644"
     },
     {
