@@ -828,7 +828,7 @@ test('frontmatter handling matches the markdown-v1 catalog shape and renders clo
     expectedName: 'planr-status',
   });
   assert.equal(parsed.fields.name, 'planr-status');
-  assert.ok(parsed.body.startsWith('# Planr Status'));
+  assert.ok(parsed.body.startsWith('# OpenPlanr Status'));
   const block = renderFrontmatterBlock([
     ['name', 'planr-demo-compose'],
     ['description', 'Composed demo skill fixture.'],

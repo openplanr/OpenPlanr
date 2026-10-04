@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { CLI_GENERATED_RESOURCES } from '../../scripts/skills/cli-resources.mjs';
 import { renderTypeScriptOutputs } from '../../scripts/typescript/compile-sources.mjs';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
@@ -42,10 +43,7 @@ const projectionOutputs = projectionManifests.flatMap((path) =>
 const generatedOutputs = new Set([
   ...compilerOutputs,
   ...projectionOutputs,
-  'packages/cli/lib/credential-writer.mjs',
-  'packages/cli/lib/credential-writer.d.mts',
-  'packages/cli/lib/resource-limits.mjs',
-  'packages/cli/lib/resource-limits.d.mts',
+  ...CLI_GENERATED_RESOURCES.map(({ destination }) => destination),
 ]);
 const copiedNamespaces = [
   // Domain copies are output namespaces, including obsolete local remnants.

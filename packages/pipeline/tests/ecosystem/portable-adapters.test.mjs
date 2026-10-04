@@ -55,7 +55,7 @@ test('Operate clients dispatch lens skills without foreign runtime paths', () =>
     ['skills/planr-operate/SKILL.md', /name: planr-operate/u],
     ['dist/plugins/openai/openplanr/skills/operate/SKILL.md', /name: operate/u],
     ['dist/plugins/claude/openplanr/skills/operate/SKILL.md', /name: operate/u],
-    ['dist/plugins/cursor/openplanr/rules/planr-operate.mdc', /^# Operate$/mu],
+    ['dist/plugins/cursor/openplanr/rules/planr-operate.mdc', /^# OpenPlanr Operate$/mu],
   ];
   for (const [relativePath, identity] of clients) {
     const bytes = readFileSync(join(root, relativePath), 'utf8');

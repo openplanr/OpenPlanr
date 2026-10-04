@@ -56,7 +56,10 @@ for (const [surface, entrypoint, helper] of surfaces) {
       guidance,
       /If credentials are unavailable, complete local reconciliation\s+and report only the external step that could not run/,
     );
-    assert.match(guidance, /Return aligned, locally repairable, conflict, and unavailable counts/);
+    assert.match(
+      guidance.replace(/\s+/gu, ' '),
+      /Summarize aligned, locally repairable, conflict and unavailable counts/u,
+    );
     assert.match(guidance, /Local and GitHub work never require the OpenPlanr CLI/);
     assert.match(guidance, /planr linear sync --dry-run/);
     assert.doesNotMatch(guidance, /procedures\/sync-workflow\.md|commands\/sync\.md/);

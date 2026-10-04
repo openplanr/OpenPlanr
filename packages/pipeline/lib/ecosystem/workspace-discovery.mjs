@@ -9,7 +9,8 @@ export const ECOSYSTEM_REPOSITORIES = {
     label: 'planr-pipeline',
     aliases: ['planr-pipeline'],
     remoteNames: ['planr-pipeline'],
-    signature: '.claude-plugin/plugin.json',
+    signature: 'package.json',
+    packageName: 'planr-pipeline',
   },
   marketplace: {
     label: 'marketplace',
@@ -148,8 +149,11 @@ function childDirectories(workspaceRoot) {
   }
 }
 
-function hasSignature(repoRoot, signature) {
-  return existsSync(join(repoRoot, signature));
+function hasSignature(repoRoot, definition) {
+  return (
+    existsSync(join(repoRoot, definition.signature)) &&
+    (!definition.packageName || readPackageJson(repoRoot)?.name === definition.packageName)
+  );
 }
 
 function resolveByAlias(workspaceRoot, definition) {
@@ -159,7 +163,7 @@ function resolveByAlias(workspaceRoot, definition) {
       children.find((path) => basename(path) === alias) ??
       children.find((path) => basename(path).toLowerCase() === alias.toLowerCase()) ??
       join(workspaceRoot, alias);
-    if (hasSignature(candidate, definition.signature)) {
+    if (hasSignature(candidate, definition)) {
       return { path: candidate, method: 'alias' };
     }
   }
@@ -172,7 +176,7 @@ function resolveByRemote(candidates, definition) {
     const matches = readRemoteUrls(candidate).some((url) =>
       expected.has(remoteRepositoryName(url)),
     );
-    if (matches && hasSignature(candidate, definition.signature)) {
+    if (matches && hasSignature(candidate, definition)) {
       return { path: candidate, method: 'git-remote' };
     }
   }
@@ -219,7 +223,7 @@ export function discoverEcosystemRepositories({ pipelineRoot, workspaceRoot } = 
 
   const repositories = {};
   for (const [key, definition] of Object.entries(ECOSYSTEM_REPOSITORIES)) {
-    if (key === 'pipeline' && hasSignature(resolvedPipelineRoot, definition.signature)) {
+    if (key === 'pipeline' && hasSignature(resolvedPipelineRoot, definition)) {
       repositories[key] = { path: resolvedPipelineRoot, method: 'current-repo' };
       continue;
     }
