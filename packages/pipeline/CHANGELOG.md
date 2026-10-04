@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.55.8
+
+### Patch Changes
+
+- 390d731: Project native Claude Code, Codex and Cursor delegation to supported hosts while preserving host-native Ship and native parallel roles. The selected CLI owns investigation, implementation, checks and correction through its normal trusted configuration and permission controls. The parent owns scope, independent review, acceptance and integration. New native runs do not impose command-count or repetition limits and have no hard deadline unless one is explicitly selected.
+  
+  Keep complete readable context, exact-session continuation, dependency preparation, focused independent verification evidence and phase timings. Preserve concurrent edits through locked, journaled integration and retain actionable onboarding and permission diagnostics. Retained legacy runs keep their pinned helper behavior; generic adapters remain experimental under their existing protocol.
+- f27d487: Make Design Studio notifications dismissible, keep repeated dismissed sync warnings closed, and clear save warnings after a successful retry while preserving unsaved drafts.
+- f27d487: Make local Design Studio previews load selected screens with bounded frames, phase diagnostics and retry. Share authored sources across responsive views, support protected Studio routes and exact service lifecycle, preserve durable feedback and explicit offline imports, and add screen search, actual-size inspection and navigation links. Keep legacy artifact contracts and hosted publication limits compatible.
+- 390d731: Display rendered diagram shapes directly on the studio canvas, remove the white page and shadow, and strengthen neutral shape fills while preserving saved geometry and export bytes.
+- f27d487: Share large designs through resumable, authenticated resource uploads and load only the selected view's resources. Use one compact Studio header with accessible menus, colorful artifact labels, stable canvas mounts and dismissible notices. Preserve drafts and exact feedback retries across interruption, offline use and concurrent tabs. Add separate room read, write and management capabilities, owned server lifecycle commands, safe company publication recovery, a versioned diagram palette and measured text and connector quality diagnostics. Existing saved revisions remain readable; hosted services must adopt the new formats before new clients create them.
+  
+  CLI credentials and company sign-in metadata now honor `PLANR_HOME`. When the selected home has no prior record, private legacy files are copied without changing the originals; existing destination records stay authoritative. Migration receipts prevent deleted records from being imported again. Unsafe or incomplete records require recovery rather than being treated as absent.
+  
+  Trusted preview hosts can opt into review selection without remounting the authored prototype or interrupting its local form state, including canonical Diagram element targets. Native taps on passive Diagram SVG select elements while Review is enabled; returning to Interact restores authored behavior.
+  
+  Keep large canvases responsive across browsers while preserving layout, camera controls and preview state.
+- bd60e33: Correct supported Node.js versions to match the installed production dependencies. The CLI now checks support before loading prompt modules and gives an actionable error in startup, setup, doctor, and installers. Pipeline, Artifact, and Design declare their parser's Node.js 20.19 minimum. Standalone Protocol retains its Node.js 20 import contract.
+
 ## 0.55.7
 ### Patch Changes
 
