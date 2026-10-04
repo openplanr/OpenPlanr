@@ -4,7 +4,7 @@ description: Review an OpenPlanr plan for product, engineering, design, and deve
 license: MIT
 ---
 
-# Planr Plan Review
+# OpenPlanr Plan Review
 
 Give the plan a senior, practical review. Read the plan, its repository context,
 and the decisions it depends on. Use only the review lenses relevant to the
@@ -37,3 +37,9 @@ Then report:
 
 Return the useful findings directly. Revisit the review when the user asks or
 the plan materially changes.
+
+Link the reviewed plan and locate each actionable finding. State what was
+inspected and any material evidence gap; a source review is not a passing test
+run. Omit empty categories and raw agent transcripts. Expand findings when their
+impact needs explanation, without requiring a fixed chat layout or a corrective
+review just for wording.

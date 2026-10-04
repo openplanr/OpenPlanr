@@ -12,3 +12,11 @@ Return one concise human rendering backed by these five machine fields:
 Do not add receipts, digests, proof ledgers, fixed review loops, or approval
 narration. Mention evidence only when it is the natural result of a command or
 test the user needs to understand.
+
+The chat summary is a concise view of these fields, not another machine
+contract. Lead with the achieved behavior, group clickable changes by purpose,
+and distinguish passed, failed and unexecuted checks. A completed change with
+missing verification must say it is unverified. For partial or blocked work,
+retain what succeeded and identify the blocker, impact and smallest recovery
+step. Keep long file inventories and private diagnostics in the existing
+results. Different wording or layout never triggers an execution or correction.

@@ -379,5 +379,13 @@
     "conformance:design": "node conformance/verify-design-assets.mjs",
     "conformance:design-handoff": "node conformance/verify-design-handoff-contracts.mjs",
     "conformance:ci": "npm run conformance:native-dispatch && npm run conformance:governed-landing && npm run conformance:design-handoff"
-  }
+  },
+  "keywords": [
+    "openplanr",
+    "planr",
+    "pipeline",
+    "agent-skills",
+    "planning",
+    "delivery"
+  ]
 }

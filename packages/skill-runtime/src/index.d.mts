@@ -231,6 +231,7 @@ export declare function readContributionGraph(options: {
 }): Record<string, unknown>;
 export declare function readSkillSourceRegistry(options: {
   repoRoot: string;
+  verifyDescriptions?: boolean;
 }): Record<string, unknown>;
 export declare function validateContributionGraph(
   manifests: unknown,

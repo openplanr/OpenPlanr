@@ -4,7 +4,7 @@ description: Turn a Protocol-compatible specification or product intent into sch
 license: MIT
 ---
 
-# Planr Plan
+# OpenPlanr Plan
 
 Turn a decision-complete specification or clear product request into
 implementation-ready stories and tasks. Perform the reasoning in this active
@@ -103,14 +103,20 @@ plan or invoke another phase.
 
 ## Return
 
-- **Outcome:** what is implementation-ready.
-- **Mode:** the planning layout used.
-- **Inputs:** repository context and role lenses used.
-- **Artifacts:** every story and task path.
-- **Issues:** only unresolved inputs or material assumptions, or `none`.
+Lead with what is implementation-ready. Keep full story/task inventories and
+acceptance mappings in the planning artifacts; link their index or parent story
+instead of repeating every path in chat.
+
+- **Outcome:** the ready scope and story/task counts, or what remains partial or blocked.
+- **Artifacts:** clickable specification, story and task links grouped by purpose.
+- **Checks:** frontmatter, ID and acceptance coverage checks actually performed.
+- **Issues:** unresolved inputs or material assumptions, with their impact and recovery step; omit when empty.
 - **Next:** the exact ready task selector and a copy-ready host-native
   invocation such as `$planr-ship T-NNN` (Codex/ChatGPT) or
   `/planr-ship T-NNN` (Claude Code).
+
+Mention the planning layout or consulted lenses only when they explain a material
+choice. Different summary wording never requires another planning run.
 
 When the OpenPlanr dashboard is running, the planned graph is browsable at
 `#/board`; open one story at `#/detail/<US-###>`.

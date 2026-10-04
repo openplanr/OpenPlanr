@@ -6,6 +6,7 @@ import { dirname, resolve } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
+import { buildRuntimeLockSchemasV118 } from '../../packages/protocol/scripts/runtime-lock-definitions-v118.mjs';
 import { LARGE_OBJECT_SCHEMAS } from '../../packages/protocol/src/large-object-contracts.mjs';
 import {
   PROTOCOL_V16_CONTRACT_FILES,
@@ -78,6 +79,7 @@ test('catalog, schema, role, skill, and adapter membership is exact', () => {
     'v1.15.0': 6,
     'v1.16.0': 2,
     'v1.17.0': Object.keys(LARGE_OBJECT_SCHEMAS).length,
+    'v1.18.0': buildRuntimeLockSchemasV118().size,
   };
   assert.equal(ecosystem.protocol.current, '1.8.0');
   assert.ok(ecosystem.protocol.additiveVersions.includes('1.13.0'));

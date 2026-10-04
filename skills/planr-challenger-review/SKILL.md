@@ -5,7 +5,7 @@ license: MIT
 allowed-tools: "Read, Grep, Glob, Edit(./.planr/operate/**)"
 ---
 
-# Challenger review (`independent-challenge`)
+# OpenPlanr Challenger Review
 
 Test only claims that could change a decision. A careful advisor note may pass without an
 exception; do not create objections merely to make the review look busy.
@@ -82,5 +82,11 @@ node "<skill-root>/scripts/validate-note.mjs" "<absolute-output-path>" --profile
 
 Use diagnostics when useful and report any remaining structural issue.
 
-Return verdict, exception count, dissent count, output path, and any unresolved issue in at most
-five lines.
+## Return
+
+Lead with the verdict and strongest established exception or surviving decision.
+Link the output note and summarize exception/dissent counts, the evidence actually
+consulted and any quality check performed. Keep the full challenge in the note;
+identify incomplete context or unresolved dissent with its impact and resolution
+action. Preserve the durable note shape and omit empty chat sections. Different
+wording never requires another review or corrective run.

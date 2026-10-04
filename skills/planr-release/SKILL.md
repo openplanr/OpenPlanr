@@ -4,7 +4,7 @@ description: Choose and maintain a product's versioning scheme, classify shipped
 license: MIT
 ---
 
-# Planr Release
+# OpenPlanr Release
 
 Two jobs: pick the right version number, and tell users what changed in language they care about. Both fall out of correctly classifying what shipped, so classification comes first and everything else follows from it.
 
@@ -155,11 +155,19 @@ Core rules, expanded in the reference:
 
 ## Return
 
+Lead with what was prepared locally or actually released. Preparing notes or
+versions is not publication. Link the durable notes, summarize checks actually
+performed, and name any incomplete step with its impact and recovery action.
+
 - **Version:** current and proposed versions, scheme, and bump rationale.
 - **Included:** user-visible changes in the release window.
 - **Notes:** the release-note text or changed changelog path.
 - **Checks:** release verification performed and results.
 - **Next:** the one remaining local or external release action, or `none`.
+
+Keep the complete release window in the notes rather than repeating its commit
+inventory. Omit empty sections in the human summary; different wording does not
+require a second version bump or release action.
 
 ## Long-term health
 

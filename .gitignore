@@ -140,3 +140,9 @@ CLAUDE.md
 /packages/cli/lib/credential-writer.d.mts
 /packages/cli/lib/resource-limits.mjs
 /packages/cli/lib/resource-limits.d.mts
+
+# Operate validators are projected from the canonical skill runtime.
+/packages/cli/lib/skill-runtime/*.mjs
+/packages/cli/lib/json-schema.mjs
+/packages/cli/lib/json-schema.d.mts
+/packages/cli/lib/runtime-lock.schema.json

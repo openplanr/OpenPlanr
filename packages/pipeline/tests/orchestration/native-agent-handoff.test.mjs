@@ -161,8 +161,11 @@ test('ordinary SHIP surfaces a stale runtime lock as a diagnostic', () => {
   writeFileSync(
     join(contextRoot, '.planr', 'runtime-lock.json'),
     JSON.stringify({
+      schemaVersion: '1.0.0',
+      generatedAt: '2026-10-04T10:00:00Z',
+      manifestDigest: `sha256:${'a'.repeat(64)}`,
       protocolVersion: '1.0.0',
-      components: { pipeline: '0.1.0' },
+      components: { cli: '2.2640.7', pipeline: '0.1.0', skills: '2.2640.7' },
       adapters: [],
     }),
   );

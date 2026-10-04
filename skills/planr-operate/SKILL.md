@@ -4,7 +4,7 @@ description: "Run a focused operating review across seven executive lenses and p
 license: MIT
 ---
 
-# Operate
+# OpenPlanr Operate
 
 Run one useful operating review, not a ceremony. Build shared context once, fan out the five
 executive advisors, use the Challenger to test material claims, and let the Chair synthesize the
@@ -171,8 +171,15 @@ node "<skill-root>/scripts/validate-note.mjs" "<absolute-board-report-path>" --p
 Use their diagnostics as editing help. Include unresolved structural problems under `Issues` with
 their impact and next action while preserving the useful parts of the report.
 
-Return the absolute `board-report.md` path, overall signal, decision count, action count, and a
-one-line issues summary.
+## Return
+
+Lead with the grounded overall signal and most consequential decision or missing
+evidence. Link `board-report.md`, summarize decision/action counts and the review
+coverage actually completed, and name any unavailable or unsynthesized lens.
+Keep the full decision queue, source inventories and diagnostic output in their
+existing artifacts. Include unresolved issues with their impact and next action,
+omitting empty chat sections. Preserve the durable report contract; different
+summary wording never requires another review or corrective run.
 
 When the OpenPlanr dashboard is running, the operating cycle is browsable at
 `#/operate/cycles/<id>`, the completed review index at `#/operate/cycles`, and the latest

@@ -2,7 +2,7 @@ import { existsSync, lstatSync, readdirSync, readFileSync } from 'node:fs';
 import { isAbsolute, relative, resolve, sep } from 'node:path';
 
 import { validateProtocolArtifact } from '@openplanr/protocol/contracts';
-
+import { parseMarkdownAsset } from './compiler/render-primitives.mjs';
 import { SkillRuntimeError } from './errors.mjs';
 
 export { SkillRuntimeError } from './errors.mjs';
@@ -159,7 +159,7 @@ function readJson(path) {
   return JSON.parse(readFileSync(path, 'utf8'));
 }
 
-export function readSkillSourceRegistry({ repoRoot }) {
+export function readSkillSourceRegistry({ repoRoot, verifyDescriptions = false }) {
   const root = resolve(repoRoot);
   const registry = readJson(resolve(root, 'skills/registry.json'));
   if (
@@ -203,10 +203,27 @@ export function readSkillSourceRegistry({ repoRoot }) {
     resolveRegularFile(root, row.source, `source for ${row.skillId}`);
     resolveRegularFile(root, row.baseline, `baseline for ${row.skillId}`);
   }
+  const skills = registry.skills.map((row) => {
+    if (registry.sourceFormat !== 'package-v1') return Object.freeze({ ...row });
+    const entrypoint = resolveRegularFile(root, `skills/${row.skillId}/SKILL.md`);
+    const { fields } = parseMarkdownAsset(readFileSync(entrypoint, 'utf8'), {
+      expectedName: row.skillId,
+    });
+    if (verifyDescriptions && row.description !== fields.description) {
+      fail(
+        'E_SKILL_DESCRIPTION_DRIFT',
+        `${row.skillId} registry description drifted from SKILL.md.`,
+        {
+          source: `skills/${row.skillId}/SKILL.md`,
+        },
+      );
+    }
+    return Object.freeze({ ...row, description: fields.description });
+  });
   return Object.freeze({
     ...registry,
     aliases: Object.freeze((registry.aliases ?? []).map((alias) => Object.freeze({ ...alias }))),
-    skills: Object.freeze(registry.skills.map((row) => Object.freeze({ ...row }))),
+    skills: Object.freeze(skills),
   });
 }
 

@@ -20,6 +20,7 @@ import type { FileHandle } from 'node:fs/promises';
 import { mkdir, open, readFile, rename, rm, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { validateJson } from '../../lib/json-schema.mjs';
 import {
   CLI_NODE_REMEDIATION,
   cliNodeVersionMessage,
@@ -78,6 +79,15 @@ export type { RuntimeId } from './runtime-manager/inventory.js';
 export type RuntimeChoice = RuntimeId | 'auto' | 'all';
 export { classifyComponentDrift } from './runtime-manager/doctor.js';
 export type { InstallScope, SkillInstallMode } from './runtime-manager/global-state.js';
+
+const runtimeLockSchema = JSON.parse(
+  readFileSync(new URL('../../lib/runtime-lock.schema.json', import.meta.url), 'utf8'),
+);
+
+// Setup and global help remain available when the optional pipeline package is absent.
+function validateRuntimeLockContract(value: unknown) {
+  return validateJson(value, runtimeLockSchema);
+}
 
 interface FileAction {
   runtime: RuntimeId | 'core';
@@ -1285,7 +1295,8 @@ function buildRuntimeLock(
         existing.manifestDigest === manifestDigest &&
         existing.protocolVersion === registry.protocolVersion &&
         JSON.stringify(existing.components) === JSON.stringify(components) &&
-        JSON.stringify(existing.adapters) === JSON.stringify(adapters)
+        JSON.stringify(existing.adapters) === JSON.stringify(adapters) &&
+        validateRuntimeLockContract(existing).length === 0
       ) {
         return readFileSync(lockPath);
       }
@@ -1293,21 +1304,24 @@ function buildRuntimeLock(
       // Invalid locks are replaced after backup during setup.
     }
   }
-  return Buffer.from(
-    `${JSON.stringify(
-      {
-        schemaVersion: '1.0.0',
-        generatedAt: new Date().toISOString(),
-        manifestDigest,
-        protocolVersion: registry.protocolVersion,
-        components,
-        adapters,
-        skillModes,
-      },
-      null,
-      2,
-    )}\n`,
-  );
+  const lock = {
+    schemaVersion: '1.0.0',
+    generatedAt: new Date().toISOString(),
+    manifestDigest,
+    protocolVersion: registry.protocolVersion,
+    components,
+    adapters,
+    skillModes,
+  };
+  const errors = validateRuntimeLockContract(lock);
+  if (errors.length) {
+    throw new RuntimeManagerError(
+      'E_RUNTIME_LOCK_INVALID',
+      `Generated runtime lock does not match the supported contract: ${errors[0].path} ${errors[0].detail}`,
+      'Reinstall the OpenPlanr CLI or regenerate its bundled runtime adapters.',
+    );
+  }
+  return Buffer.from(`${JSON.stringify(lock, null, 2)}\n`);
 }
 
 function buildActions(
@@ -3276,6 +3290,13 @@ export async function runtimeDoctor(
         adapters?: RuntimeLockAdapter[];
         skillModes?: Partial<Record<RuntimeId, SkillInstallMode>>;
       };
+      const errors = validateRuntimeLockContract(value);
+      if (errors.length) {
+        throw new RuntimeManagerError(
+          'E_RUNTIME_LOCK_INVALID',
+          'Project runtime lock does not match the supported contract.',
+        );
+      }
       lockedAdapters = value.adapters;
       const cliVersion = readOpenPlanrVersion();
       const cliDrift = value.components?.cli !== cliVersion;
@@ -3337,7 +3358,7 @@ export async function runtimeDoctor(
       diagnostics.push({
         code: 'runtime-lock-invalid',
         status: 'fail',
-        message: 'Project runtime lock is not valid JSON',
+        message: 'Project runtime lock is not valid JSON or does not match the supported contract',
         fix: 'Run `planr setup --scope project` after reviewing the existing lock.',
       });
     }

@@ -6,7 +6,7 @@
   "inputs": [
     {
       "path": "adapters/manifests/generated-assets.json",
-      "digest": "sha256:747306d1f2af03de30375d578fa7bfb38e8f86e3050ddbd6403802ea74ebed49"
+      "digest": "sha256:755ce1e0b43e27ad45eea19b69ea55255ff1bd04def7568d74e7db70b79da537"
     },
     {
       "path": "apps/dashboard/package.json",
@@ -42,7 +42,7 @@
     },
     {
       "path": "packages/pipeline/package.json",
-      "digest": "sha256:ed91ea005ebf419c69557ed74572b3da4f28e838ce7a60b233461d403db4f3bf"
+      "digest": "sha256:6471c1496bacbb6b2148638b14f9bb71f56982648b47e7faf173ad8913d6afc7"
     },
     {
       "path": "packages/protocol/package.json",
@@ -50,7 +50,7 @@
     },
     {
       "path": "packages/protocol/registries/commands.json",
-      "digest": "sha256:3b954999daab81a43782369888e65c7f98e361ef26e8805ff26b6aaade5e8200"
+      "digest": "sha256:8918825a207c210c3b8af37dcc96749ecf69c37bd02573aa686f3ce6329ddb1f"
     },
     {
       "path": "packages/protocol/registries/output-paths.json",
@@ -102,11 +102,127 @@
     },
     {
       "path": "scripts/marketplace/generate-ecosystem.mjs",
-      "digest": "sha256:75da2c460afcd63d0a4c5ca4c6b7aff8f43d82a74c64e31061e559bd00b4e86b"
+      "digest": "sha256:a0db4a87a5c4ac593aa96c016fd13373f6d95cad0897649c41db98dd85f98a42"
     },
     {
       "path": "scripts/marketplace/openplanr-ecosystem.schema.json",
-      "digest": "sha256:921d798707b0de77a25f7d43245865cf1bfd2eccf4cdfc67e86664519fbb13f3"
+      "digest": "sha256:0ac7b733b21f8c817ebb215f4b50544cc980a89f13b5f033ab1da7f16d27467c"
+    },
+    {
+      "path": "skills/planr-artifact/SKILL.md",
+      "digest": "sha256:f1e8d2719427c2e9565a82698eed53994da437676bcd8c3734a50f52090417be"
+    },
+    {
+      "path": "skills/planr-browser-qa/SKILL.md",
+      "digest": "sha256:fc8d122a89459321b0328f3437aded5c8e9a882d3db9b8a6eca5105b31d1d888"
+    },
+    {
+      "path": "skills/planr-ceo-review/SKILL.md",
+      "digest": "sha256:b32f4af72eeea04556441e9fb6cf6538c169cf3caee1605bc3000271944439e8"
+    },
+    {
+      "path": "skills/planr-chair-review/SKILL.md",
+      "digest": "sha256:2077f0ce15fef1f99aabcd35bcd04549324c2d6a47db7609c1edd4de715f1681"
+    },
+    {
+      "path": "skills/planr-challenger-review/SKILL.md",
+      "digest": "sha256:8a144b7738268d904f4c122b357ca640e7c8a9e21193fdf7eaed26758002f347"
+    },
+    {
+      "path": "skills/planr-cmo-review/SKILL.md",
+      "digest": "sha256:d4997975cbe0dff35abf641461df79fefaf7b7541d877147f93026a00565454e"
+    },
+    {
+      "path": "skills/planr-coo-review/SKILL.md",
+      "digest": "sha256:0e2a68abfe9df64e0efe14277790858b31609448897235021acf5601fce54748"
+    },
+    {
+      "path": "skills/planr-cpo-review/SKILL.md",
+      "digest": "sha256:da2b8a054f9b888377aebe59cbee61aa1a199d3d633350dfa18fe0b0fb0fdf4c"
+    },
+    {
+      "path": "skills/planr-cto-review/SKILL.md",
+      "digest": "sha256:e32aa4ce50ad0b947d3723b9d33c77049feb945d4a95ef830fe8f727dcbd8c4b"
+    },
+    {
+      "path": "skills/planr-dashboard/SKILL.md",
+      "digest": "sha256:c34b53355e7b8c565534c9ae2343b29312b8d7bcc9bb6cc72ab4dada0d4591b2"
+    },
+    {
+      "path": "skills/planr-delegate/SKILL.md",
+      "digest": "sha256:ff144348d8f7c8df4080f0c137f3163ae30a25a7f9a389d267c6875347ec9ae7"
+    },
+    {
+      "path": "skills/planr-design-loop/SKILL.md",
+      "digest": "sha256:1b741868e5a5ca01b52bbd7d8af3c0424fc9f6f9efc081211f463bc37c6b75ff"
+    },
+    {
+      "path": "skills/planr-design-review/SKILL.md",
+      "digest": "sha256:f0dac82f8626e4c83abfd7f47fe2dbafddba4dc7a7ebcfae4aa51225454f9594"
+    },
+    {
+      "path": "skills/planr-design/SKILL.md",
+      "digest": "sha256:edd9799d15991ea7757e8ff0828c70a6bc5cf558cca3b4c11932874d383fb853"
+    },
+    {
+      "path": "skills/planr-diagram/SKILL.md",
+      "digest": "sha256:201db5c2d96041138e3017ffd78ee9dbf09070853b47a295a31c8c3fb819ef7c"
+    },
+    {
+      "path": "skills/planr-doctor/SKILL.md",
+      "digest": "sha256:5368902f43821853d3ae55cb23b907ab3fbcd23a28012c2dc8ecbbd694575471"
+    },
+    {
+      "path": "skills/planr-investigate/SKILL.md",
+      "digest": "sha256:9779c19e56fa08b9eb1572c80a23a0a663025d5b3a81f2b9f351670b9e54b3c1"
+    },
+    {
+      "path": "skills/planr-land/SKILL.md",
+      "digest": "sha256:06d04a20f05f5bab613357256bc7af709e5eb1435867832fa9b24547ac857c27"
+    },
+    {
+      "path": "skills/planr-openplanr/SKILL.md",
+      "digest": "sha256:748417fec791072b8b47aff9bc672f9f965b975bd6153f42f11f4976054b87ee"
+    },
+    {
+      "path": "skills/planr-operate/SKILL.md",
+      "digest": "sha256:acdf3fb3516b9f1ff26f360d3d5ffcff271935ebac5d3d19384d0d33563c5ba1"
+    },
+    {
+      "path": "skills/planr-plan-review/SKILL.md",
+      "digest": "sha256:2b50906b46f9ac650d8a17c6f106f5be6502566d64dffbc8d537d2011dde52fa"
+    },
+    {
+      "path": "skills/planr-plan/SKILL.md",
+      "digest": "sha256:28597e1374f16e10bff6972a3166d0575ce6144e4d1d58bae7fceba2b1545da2"
+    },
+    {
+      "path": "skills/planr-release/SKILL.md",
+      "digest": "sha256:650c84fc062afd62f0435efb4865cf7aed3b10a7f77ef5ac941847e10da9b79d"
+    },
+    {
+      "path": "skills/planr-ship/SKILL.md",
+      "digest": "sha256:ff2f2811cb9e588bb48fb3e4a8471402b10945bc75599271e005b4547071dd0c"
+    },
+    {
+      "path": "skills/planr-spec/SKILL.md",
+      "digest": "sha256:040841d2b63504fd4ad9e07222ba0356cdd3084045fbb70f665bb043e4d006fa"
+    },
+    {
+      "path": "skills/planr-sprint/SKILL.md",
+      "digest": "sha256:44fe839dc90143809866d9ed8fefb6fbe1aca09a2b0e1ff7a964376f64ce717a"
+    },
+    {
+      "path": "skills/planr-status/SKILL.md",
+      "digest": "sha256:12f20dddbb382b72eeda55bdf036393b0bee1a9bcecc7be30ec53ed24e62a432"
+    },
+    {
+      "path": "skills/planr-sync/SKILL.md",
+      "digest": "sha256:dd758dfe6e080fb5b0360bc7708b2948dbf77e819eaf01633f5ec5208b5f6ee4"
+    },
+    {
+      "path": "skills/registry.json",
+      "digest": "sha256:7bddebcbfda9a6c3281768e9240b82ae1eae61fcab0956aa4176bbb935853d87"
     }
   ],
   "outputs": [
@@ -120,7 +236,7 @@
     },
     {
       "path": "adapters/manifests/codex-plugin-content.json",
-      "digest": "sha256:9f84a294ab667626dd3c437ac52a018bcccb92d11628a570dabd677d83d449a9"
+      "digest": "sha256:95ce8aac0098d4efe704bc43da6e7df102fd37b192e04a0a8659187c586ce95b"
     },
     {
       "path": "docs/generated/adapters.md",
@@ -136,11 +252,7 @@
     },
     {
       "path": "ecosystem.json",
-      "digest": "sha256:e0a03cb1a7a89ebe303d402baa0846d3886d1303fa26ad608142a698aa3e4afc"
-    },
-    {
-      "path": "packages/pipeline/.claude-plugin/plugin.json",
-      "digest": "sha256:406b3b8b2f1539958ab44e4ac4166a1c0ff16eabd625a9e1939a58d6987bace5"
+      "digest": "sha256:799cb5267cd362aa55db36464c9f51221bd960a187948b8257524ca0fd777d54"
     }
   ]
 }

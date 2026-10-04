@@ -4,7 +4,7 @@ description: Design a polished product interface through adaptive consultation, 
 license: MIT
 ---
 
-# Planr Design
+# OpenPlanr Design
 
 Develop one strong direction in the active host session, grounded in the product
 and its visual language. Deliver editable local source, a working review studio,
@@ -74,3 +74,12 @@ screens, preserve reviewer intent, and let the owner approve the refined handoff
 After approval, **Continue to Plan** is one explicit owner action that returns a
 host-native `/planr:plan` or `$planr:plan` invocation bound to the exact package.
 It does not write planning files, dispatch an agent, change Git, or start Ship.
+
+## Return
+
+Lead with the selected direction and whether the handoff is ready, partial or
+unverified. Link the Studio, editable document/source and specification by purpose.
+Summarize actual browser/quality checks and unresolved decisions; keep the screen
+inventory and detailed evidence in the handoff. Give a next action only when
+needed. Preserve machine artifacts and native outputs; a different chat layout
+never requires another render or corrective run.

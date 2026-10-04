@@ -32,7 +32,8 @@
       "1.14.0",
       "1.15.0",
       "1.16.0",
-      "1.17.0"
+      "1.17.0",
+      "1.18.0"
     ],
     "supportedReaders": [
       "1.0.x",
@@ -49,6 +50,7 @@
       "1.15.x",
       "1.16.x",
       "1.17.x",
+      "1.18.x",
       "2.0.x"
     ]
   },
@@ -65,7 +67,7 @@
       "version": "0.55.8",
       "path": "packages/pipeline",
       "publication": "public",
-      "manifestDigest": "sha256:ed91ea005ebf419c69557ed74572b3da4f28e838ce7a60b233461d403db4f3bf"
+      "manifestDigest": "sha256:6471c1496bacbb6b2148638b14f9bb71f56982648b47e7faf173ad8913d6afc7"
     },
     "protocol": {
       "package": "@openplanr/protocol",
@@ -145,7 +147,7 @@
   "catalogs": {
     "commands": {
       "path": "packages/protocol/registries/commands.json",
-      "digest": "sha256:3b954999daab81a43782369888e65c7f98e361ef26e8805ff26b6aaade5e8200",
+      "digest": "sha256:8918825a207c210c3b8af37dcc96749ecf69c37bd02573aa686f3ce6329ddb1f",
       "rootCommands": 39,
       "pipelineMachineLeaves": 31,
       "frozenClaudeDocuments": 8,
@@ -346,7 +348,7 @@
     ],
     "generatedAssets": {
       "path": "adapters/manifests/generated-assets.json",
-      "digest": "sha256:747306d1f2af03de30375d578fa7bfb38e8f86e3050ddbd6403802ea74ebed49",
+      "digest": "sha256:755ce1e0b43e27ad45eea19b69ea55255ff1bd04def7568d74e7db70b79da537",
       "count": 2551
     }
   },
@@ -367,7 +369,7 @@
       "count": 3
     },
     "additive": {
-      "count": 103,
+      "count": 104,
       "byVersion": {
         "v1.5.0": 13,
         "v1.6.0": 19,
@@ -377,10 +379,11 @@
         "v1.14.0": 1,
         "v1.15.0": 6,
         "v1.16.0": 2,
-        "v1.17.0": 33
+        "v1.17.0": 33,
+        "v1.18.0": 1
       }
     },
-    "total": 304
+    "total": 305
   },
   "registries": {
     "preserved": {

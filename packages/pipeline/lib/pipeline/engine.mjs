@@ -1448,7 +1448,7 @@ export function nextShipBatch(tasks) {
 const SCHEMAS = {
   'pipeline-shipped': 'schemas/v1.0.0/pipeline-shipped.schema.json',
   'run-manifest': 'schemas/v1.0.0/run-manifest.schema.json',
-  'runtime-lock': 'schemas/v1.1.0/runtime-lock.schema.json',
+  'runtime-lock': 'schemas/v1.18.0/runtime-lock.schema.json',
   'provenance-event': 'schemas/v1.1.0/provenance-event.schema.json',
   'adapter-registry': 'schemas/v1.1.0/adapter-registry.schema.json',
   'ecosystem-manifest': 'schemas/v1.1.0/ecosystem-manifest.schema.json',

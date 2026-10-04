@@ -4,7 +4,7 @@ description: Audit OpenPlanr planning artifacts for graph and protocol drift. Us
 license: MIT
 ---
 
-# Planr Sync
+# OpenPlanr Sync
 
 Reconcile local planning artifacts and, when requested, GitHub or Linear state.
 Reason about conflicts in this active session; deterministic mapping and GitHub
@@ -34,8 +34,15 @@ reconciliation, and push remote changes only when the request asks for external
 synchronization. If credentials are unavailable, complete local reconciliation
 and report only the external step that could not run.
 
-Return aligned, locally repairable, conflict, and unavailable counts; changed
-paths or remote identifiers; and the single most useful next action.
+## Return
+
+Lead with what is aligned, repaired or still blocked. Summarize aligned, locally
+repairable, conflict and unavailable counts; link changed paths or remote items
+by purpose. State what was actually validated or synchronized and distinguish
+local success from an unavailable remote step. Give each material conflict its
+impact and recovery action, with one most useful next step. Keep full mapping
+and diagnostics in their existing records. Different chat wording never causes
+a second synchronization or a corrective run.
 
 When the OpenPlanr dashboard is running, the reconciled graph is browsable at
 `#/overview` and recent changes at `#/activity`. This is navigation only.

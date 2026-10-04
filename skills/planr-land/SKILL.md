@@ -4,7 +4,7 @@ description: Assess release readiness and prepare or inspect an OpenPlanr landin
 license: MIT
 ---
 
-# Planr Land
+# OpenPlanr Land
 
 Use this skill after implementation and relevant checks are complete, when the
 user wants to assess readiness or prepare a clear landing sequence.
@@ -27,6 +27,13 @@ user wants to assess readiness or prepare a clear landing sequence.
 
 When the OpenPlanr dashboard is running, readiness context is browsable at its
 `#/overview` and `#/list` views. This is navigation only.
+
+Lead with readiness and link any prepared landing record. Summarize checks that
+actually passed and name missing verification; prepared commands are not executed
+effects. Keep a long command sequence in the linked record and show the next
+action in chat. Omit empty blockers, preserve useful partial preparation, and
+give the smallest recovery step when blocked. The human summary does not create
+a new result format or require a rerun for different wording.
 
 This skill prepares and inspects the sequence; it does not perform merge,
 publication, or deployment effects. When a local command fails, report the

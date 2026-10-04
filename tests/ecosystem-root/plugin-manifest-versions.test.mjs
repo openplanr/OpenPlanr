@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
@@ -52,8 +52,7 @@ test('repository and host plugin manifests share one identity', () => {
   }
 });
 
-test('the pipeline plugin manifest carries the pipeline package version', () => {
-  const manifest = json('packages/pipeline/.claude-plugin/plugin.json');
-  assert.equal(manifest.name, 'planr-pipeline');
-  assert.equal(manifest.version, pipelineVersion);
+test('the pipeline is a package consumer of the unified plugin, not another plugin', () => {
+  assert.equal(existsSync(resolve(root, 'packages/pipeline/.claude-plugin/plugin.json')), false);
+  assert.equal(json('packages/pipeline/package.json').name, 'planr-pipeline');
 });

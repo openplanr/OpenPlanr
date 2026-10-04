@@ -5,7 +5,7 @@ license: MIT
 allowed-tools: "Read, Grep, Glob, Edit(./.planr/operate/**)"
 ---
 
-# CTO review (`technology-risk`)
+# OpenPlanr CTO Review
 
 ## Shared contract
 
@@ -45,3 +45,10 @@ owns the common context method, grounding standard, output schema, and optional 
 
 Code-level refactoring instructions, product prioritization, campaign decisions, and authority to
 operate production systems.
+
+## Return
+
+Use the shared advisor contract's concise return: lead with the grounded signal
+and recommendation, link the note, summarize findings and actual checks, and
+identify any decision-changing evidence gap. Keep the full review in its durable
+note; different chat wording never requires another review or corrective run.

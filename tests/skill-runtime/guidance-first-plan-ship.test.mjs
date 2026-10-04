@@ -19,7 +19,10 @@ test('Plan defines Protocol 1.7 decomposition and an exact non-chaining Ship han
 
 test('Ship guides local completion without process machinery', () => {
   const ship = read('skills/planr-ship/SKILL.md');
-  assert.match(ship, /^# Planr Ship\s+\n\s*Produce an implementation-complete local repository/mu);
+  assert.match(
+    ship,
+    /^# OpenPlanr Ship\s+\n\s*Produce an implementation-complete local repository/mu,
+  );
   assert.match(
     ship,
     /task Test Requirements.*repository instructions.*package and task-runner.*CI and pre-commit/isu,
@@ -41,7 +44,7 @@ test('Ship guides local completion without process machinery', () => {
   );
   assert.match(
     ship,
-    /Return the existing five fields:[\s\S]*Outcome[\s\S]*Task[\s\S]*Changed[\s\S]*Checks[\s\S]*Issues/u,
+    /existing five fields[\s\S]*Outcome[\s\S]*Task[\s\S]*Changed[\s\S]*Checks[\s\S]*Issues/u,
   );
   assert.match(ship, /Ordinary\s+Ship stays host-native/iu);
   assert.match(

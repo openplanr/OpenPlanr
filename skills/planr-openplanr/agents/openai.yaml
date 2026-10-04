@@ -1,5 +1,5 @@
 interface:
-  display_name: "Planr Openplanr"
+  display_name: "OpenPlanr Router"
   short_description: "Route a planning, specification, delivery, delegation, design…"
   default_prompt: "Use $planr-openplanr to route a planning, specification, delivery, delegation, design, review, diagram, release, or operating request to the best OpenPlanr skill. Use when the right skill is unclear or the request spans several."
 policy:

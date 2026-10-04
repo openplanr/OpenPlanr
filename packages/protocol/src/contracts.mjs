@@ -98,7 +98,11 @@ const foundationPaths = {
   task: { '1.0.0': 'schemas/v1.0.0/task.schema.json', '1.7.0': v17Schema('task') },
   'pipeline-shipped': { '1.0.0': 'schemas/v1.0.0/pipeline-shipped.schema.json' },
   'run-manifest': { '1.0.0': 'schemas/v1.0.0/run-manifest.schema.json' },
-  'runtime-lock': { '1.1.0': 'schemas/v1.1.0/runtime-lock.schema.json' },
+  // The lock body's protocolVersion names adapter compatibility, not this contract version.
+  'runtime-lock': {
+    '1.1.0': 'schemas/v1.1.0/runtime-lock.schema.json',
+    '1.18.0': 'schemas/v1.18.0/runtime-lock.schema.json',
+  },
   'provenance-event': { '1.1.0': 'schemas/v1.1.0/provenance-event.schema.json' },
   'ship-closure': { '1.1.0': 'schemas/v1.1.0/ship-closure.schema.json' },
   'professional-specification': {
@@ -1114,6 +1118,8 @@ function compareProtocolVersions(left, right) {
 
 function inferredVersion(kind, value, explicitVersion) {
   if (explicitVersion) return explicitVersion;
+  // A lock records adapter compatibility; its protocolVersion is not a schema envelope version.
+  if (kind === 'runtime-lock') return '1.18.0';
   if (typeof value?.protocolVersion === 'string') return value.protocolVersion;
   if (explicitProtocolVersionKinds.has(kind)) {
     throw new PipelineError(

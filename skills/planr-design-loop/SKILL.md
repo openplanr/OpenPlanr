@@ -4,7 +4,7 @@ description: Compare three materially different product design directions in a l
 license: MIT
 ---
 
-# Planr Design Loop
+# OpenPlanr Design Loop
 
 Help the user choose and refine a direction through a real comparison board.
 Generate three alternatives by default; honor an explicit requested count.
@@ -56,3 +56,12 @@ semantic command subprocess, runtime downloads or global CLI are required.
 For company reviews and implementation handoff, follow
 [team-review.md](references/team-review.md). Keep review guidance outside product
 screens, preserve reviewer intent, and let the owner approve the refined handoff.
+
+## Return
+
+Lead with the comparison result or the direction still awaiting selection. Link
+the working Studio and editable sources, plus the selected specification when
+ready. Summarize the meaningful tradeoffs, actual checks and any unverified or
+failed previews. Keep screen inventories, pins and ratings in their existing
+artifacts; show the next selection or recovery action only when needed. Never
+infer a winner from incomplete feedback or rerender just for summary wording.
