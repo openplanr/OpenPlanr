@@ -33,10 +33,8 @@ function fixture() {
     join(repository, 'scripts/prepare-publication.mjs'),
     join(root, 'scripts/prepare-publication.mjs'),
   );
-  copyFileSync(
-    join(repository, 'scripts/skills/cli-resources.mjs'),
-    join(root, 'scripts/skills/cli-resources.mjs'),
-  );
+  for (const helper of ['cli-resources.mjs', 'plugin-artifact-validation.mjs'])
+    copyFileSync(join(repository, 'scripts/skills', helper), join(root, 'scripts/skills', helper));
   writeFileSync(
     join(root, 'package.json'),
     JSON.stringify({
@@ -146,6 +144,10 @@ function cliFixture() {
     writeFileSync(join(f.root, source), expected[source]);
     writeFileSync(join(f.root, destination), expected[source]);
   }
+  const plugin = join(cli, 'lib/host-packages/claude/openplanr');
+  mkdirSync(join(plugin, '.claude-plugin'), { recursive: true });
+  writeFileSync(join(plugin, '.claude-plugin/plugin.json'), '{"name":"planr"}\n');
+  writeFileSync(join(plugin, 'README.md'), '# OpenPlanr\n');
   // Deterministic tracked checkers stand in for compilation and projection.
   // An ignored output cannot justify its own admission into a release archive.
   const compiler = `import assert from 'node:assert/strict'; import { readFileSync } from 'node:fs';
@@ -166,7 +168,7 @@ for (const {source,destination} of CLI_GENERATED_RESOURCES) assert.deepEqual(rea
   );
   execFileSync('git', ['add', '.'], { cwd: f.root });
   execFileSync('git', ['commit', '-qm', 'Declare compiled CLI projections'], { cwd: f.root });
-  return { ...f, cli };
+  return { ...f, cli, plugin };
 }
 
 function prepareCli(f, environment = {}) {
@@ -190,6 +192,29 @@ test('publication includes compiled CLI helpers and their declarations', () => {
       assert.ok(files.includes(`package/${destination.slice('packages/cli/'.length)}\n`));
   } finally {
     rmSync(f.temporary, { recursive: true, force: true });
+  }
+});
+
+test('publication applies the Directory file preflight to the packed Claude plugin', () => {
+  for (const [change, error] of [
+    [
+      (plugin) => writeFileSync(join(plugin, 'large.js'), 'x'.repeat(256 * 1024)),
+      /Plugin artifact validation failed:[\s\S]*text-size: large\.js/u,
+    ],
+    [
+      (plugin) => rmSync(join(plugin, '.claude-plugin'), { recursive: true }),
+      /missing its bundled Claude plugin/u,
+    ],
+  ]) {
+    const f = cliFixture();
+    try {
+      change(f.plugin);
+      const result = prepareCli(f);
+      assert.notEqual(result.status, 0);
+      assert.match(result.stderr, error);
+    } finally {
+      rmSync(f.temporary, { recursive: true, force: true });
+    }
   }
 });
 

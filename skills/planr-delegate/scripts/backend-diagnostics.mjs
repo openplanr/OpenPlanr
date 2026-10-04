@@ -5,9 +5,13 @@ import { AdapterError, validateDestination } from './adapters/generic.mjs';
 
 async function localProbeToken(profile, env, cwd) {
   const sources = [{ source: 'parent environment', env }];
-  if (profile.kind === 'claude')
+  const names = ['LM_STUDIO_API_KEY', 'LM_API_TOKEN'];
+  // Only Claude routing confirmed to this local origin may present its Anthropic token.
+  if (profile.kind === 'claude') {
     sources.push(...(await readClaudeSettingsEnvironment(profile, env, cwd)));
-  for (const name of ['LM_STUDIO_API_KEY', 'LM_API_TOKEN', 'ANTHROPIC_AUTH_TOKEN']) {
+    names.push('ANTHROPIC_AUTH_TOKEN');
+  }
+  for (const name of names) {
     const candidates = sources.filter(
       (source) => source.env[name] !== undefined && source.env[name] !== '',
     );

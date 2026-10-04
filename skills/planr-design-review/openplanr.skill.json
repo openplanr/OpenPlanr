@@ -144,7 +144,7 @@
       ]
     },
     {
-      "path": "scripts/design-artifact-sources.mjs",
+      "path": "scripts/design-chunked-workspace-client.mjs",
       "kind": "script",
       "executable": false,
       "hosts": [
@@ -155,7 +155,7 @@
       ]
     },
     {
-      "path": "scripts/design-bounded-json-data.mjs",
+      "path": "scripts/design-compression.mjs",
       "kind": "script",
       "executable": false,
       "hosts": [
@@ -177,29 +177,18 @@
       ]
     },
     {
+      "path": "scripts/design-encrypted-workspace-client.mjs",
+      "kind": "script",
+      "executable": false,
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ]
+    },
+    {
       "path": "scripts/design-entities.mjs",
-      "kind": "script",
-      "executable": false,
-      "hosts": [
-        "claude-code",
-        "codex",
-        "chatgpt",
-        "cursor"
-      ]
-    },
-    {
-      "path": "scripts/design-escape.mjs",
-      "kind": "script",
-      "executable": false,
-      "hosts": [
-        "claude-code",
-        "codex",
-        "chatgpt",
-        "cursor"
-      ]
-    },
-    {
-      "path": "scripts/design-generated-b0798298053515fd.mjs",
       "kind": "script",
       "executable": false,
       "hosts": [
@@ -221,7 +210,18 @@
       ]
     },
     {
-      "path": "scripts/design-pako-esm.mjs",
+      "path": "scripts/design-loopback-server.mjs",
+      "kind": "script",
+      "executable": false,
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ]
+    },
+    {
+      "path": "scripts/design-owner-custody.mjs",
       "kind": "script",
       "executable": false,
       "hosts": [
@@ -254,7 +254,7 @@
       ]
     },
     {
-      "path": "scripts/design-planr-home.mjs",
+      "path": "scripts/design-resource-pack.mjs",
       "kind": "script",
       "executable": false,
       "hosts": [
@@ -266,6 +266,28 @@
     },
     {
       "path": "scripts/design-review.mjs",
+      "kind": "script",
+      "executable": false,
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ]
+    },
+    {
+      "path": "scripts/design-runtime-home.mjs",
+      "kind": "script",
+      "executable": false,
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ]
+    },
+    {
+      "path": "scripts/design-runtime-support-5cb7531bede8.mjs",
       "kind": "script",
       "executable": false,
       "hosts": [
@@ -288,6 +310,61 @@
     },
     {
       "path": "scripts/design-share.mjs",
+      "kind": "script",
+      "executable": false,
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ]
+    },
+    {
+      "path": "scripts/design-shared-artifact-support-dependencies-design-support-protocol-contracts-3d9b1a86.mjs",
+      "kind": "script",
+      "executable": false,
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ]
+    },
+    {
+      "path": "scripts/design-shared-artifact-support-protocol-contracts-ea2cd15e.mjs",
+      "kind": "script",
+      "executable": false,
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ]
+    },
+    {
+      "path": "scripts/design-shared-protocol-contracts-31a760fc.mjs",
+      "kind": "script",
+      "executable": false,
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ]
+    },
+    {
+      "path": "scripts/design-shared-protocol-contracts-75a938cc.mjs",
+      "kind": "script",
+      "executable": false,
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ]
+    },
+    {
+      "path": "scripts/design-upload-spool.mjs",
       "kind": "script",
       "executable": false,
       "hosts": [
@@ -342,7 +419,95 @@
       ]
     },
     {
-      "path": "scripts/runtime/packages/artifact/templates/artifact-review-stage.js",
+      "path": "scripts/runtime/packages/artifact/templates/artifact-review-stage.js.sources.json",
+      "kind": "asset",
+      "executable": false,
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ]
+    },
+    {
+      "path": "scripts/runtime/packages/artifact/templates/artifact-review-stage.js.sources/01-module-runtime.js",
+      "kind": "asset",
+      "executable": false,
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ]
+    },
+    {
+      "path": "scripts/runtime/packages/artifact/templates/artifact-review-stage.js.sources/02-artifact-review-ui.js",
+      "kind": "asset",
+      "executable": false,
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ]
+    },
+    {
+      "path": "scripts/runtime/packages/artifact/templates/artifact-review-stage.js.sources/03-protocol-contracts.js",
+      "kind": "asset",
+      "executable": false,
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ]
+    },
+    {
+      "path": "scripts/runtime/packages/artifact/templates/artifact-review-stage.js.sources/04-compression.js",
+      "kind": "asset",
+      "executable": false,
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ]
+    },
+    {
+      "path": "scripts/runtime/packages/artifact/templates/artifact-review-stage.js.sources/05-artifact-sharing.js",
+      "kind": "asset",
+      "executable": false,
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ]
+    },
+    {
+      "path": "scripts/runtime/packages/artifact/templates/artifact-review-stage.js.sources/06-artifact-review-ui.js",
+      "kind": "asset",
+      "executable": false,
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ]
+    },
+    {
+      "path": "scripts/runtime/packages/artifact/templates/artifact-review-stage.js.sources/07-artifact-sharing.js",
+      "kind": "asset",
+      "executable": false,
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ]
+    },
+    {
+      "path": "scripts/runtime/packages/artifact/templates/artifact-review-stage.js.sources/08-artifact-review-ui.js",
       "kind": "asset",
       "executable": false,
       "hosts": [
@@ -419,7 +584,194 @@
       ]
     },
     {
-      "path": "scripts/runtime/packages/design/templates/studio/studio.js",
+      "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources.json",
+      "kind": "asset",
+      "executable": false,
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ]
+    },
+    {
+      "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/01-module-runtime.js",
+      "kind": "asset",
+      "executable": false,
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ]
+    },
+    {
+      "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/02-react.js",
+      "kind": "asset",
+      "executable": false,
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ]
+    },
+    {
+      "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/03-react-dom-client-fiber-foundations.js",
+      "kind": "asset",
+      "executable": false,
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ]
+    },
+    {
+      "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/04-react-dom-client-reconciliation-hooks.js",
+      "kind": "asset",
+      "executable": false,
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ]
+    },
+    {
+      "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/05-react-dom-client-render-phases.js",
+      "kind": "asset",
+      "executable": false,
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ]
+    },
+    {
+      "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/06-react-dom-client-commit-effects.js",
+      "kind": "asset",
+      "executable": false,
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ]
+    },
+    {
+      "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/07-react-dom-client-work-loop-scheduling.js",
+      "kind": "asset",
+      "executable": false,
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ]
+    },
+    {
+      "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/08-react-dom-client-dom-events-properties-hydration.js",
+      "kind": "asset",
+      "executable": false,
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ]
+    },
+    {
+      "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/09-react-dom-client-public-roots.js",
+      "kind": "asset",
+      "executable": false,
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ]
+    },
+    {
+      "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/10-react.js",
+      "kind": "asset",
+      "executable": false,
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ]
+    },
+    {
+      "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/11-artifact-review-ui.js",
+      "kind": "asset",
+      "executable": false,
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ]
+    },
+    {
+      "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/12-design-review-experience.js",
+      "kind": "asset",
+      "executable": false,
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ]
+    },
+    {
+      "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/13-studio-shell.js",
+      "kind": "asset",
+      "executable": false,
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ]
+    },
+    {
+      "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/14-interface-primitives.js",
+      "kind": "asset",
+      "executable": false,
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ]
+    },
+    {
+      "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/15-interface-primitives.js",
+      "kind": "asset",
+      "executable": false,
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ]
+    },
+    {
+      "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/16-studio-shell.js",
+      "kind": "asset",
+      "executable": false,
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ]
+    },
+    {
+      "path": "scripts/runtime/packages/design/templates/studio/studio.js.sources/17-design-studio.js",
       "kind": "asset",
       "executable": false,
       "hosts": [

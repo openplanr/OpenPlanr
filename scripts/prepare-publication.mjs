@@ -14,6 +14,10 @@ import {
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CLI_GENERATED_RESOURCES } from './skills/cli-resources.mjs';
+import {
+  assertDirectoryEntries,
+  readDirectoryEntries,
+} from './skills/plugin-artifact-validation.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const targets = {
@@ -148,12 +152,19 @@ for (const entry of archive.files) {
   }
 }
 // Check the archive itself: ignored build outputs can change while npm packs.
-if (generatedFiles.size) {
+if (generatedFiles.size || name === 'openplanr') {
   const extracted = mkdtempSync(join(output, 'inspect-'));
   try {
     execFileSync('tar', ['-xzf', join(output, archive.filename), '-C', extracted], {
       stdio: 'pipe',
     });
+    if (name === 'openplanr') {
+      // The bundled Claude plugin is installed from these packed bytes.
+      const plugin = join(extracted, 'package', 'lib/host-packages/claude/openplanr');
+      if (!existsSync(join(plugin, '.claude-plugin/plugin.json')))
+        throw new Error('Packed CLI is missing its bundled Claude plugin');
+      assertDirectoryEntries(readDirectoryEntries(plugin));
+    }
     for (const [file, digest] of generatedFiles) {
       const candidate = join(extracted, 'package', file);
       if (

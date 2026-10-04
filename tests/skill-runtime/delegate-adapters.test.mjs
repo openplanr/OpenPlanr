@@ -230,6 +230,33 @@ test('local backend preflight distinguishes unreachable, visible and absent sele
   assert.equal(visible.loadStatus, 'unverified');
 });
 
+test('non-Claude local probes never inspect or forward an ambient Anthropic token', async () => {
+  for (const kind of ['codex', 'cursor', 'generic', undefined]) {
+    const headers = [];
+    const fetchImpl = async (url, options) => {
+      headers.push(options.headers?.Authorization ?? null);
+      return new Response(JSON.stringify({ data: [{ id: 'local-test' }] }));
+    };
+    const profile = { kind, destination: local, argv: ['--model', 'local-test'] };
+    const ambient = await inspectLocalBackend(profile, {
+      fetchImpl,
+      env: { ANTHROPIC_AUTH_TOKEN: 'unrelated-anthropic-token' },
+    });
+    assert.equal(ambient.modelStatus, 'visible', String(kind));
+    assert.ok(headers.length > 0 && headers.every((header) => header === null), String(kind));
+    headers.length = 0;
+    const scoped = await inspectLocalBackend(profile, {
+      fetchImpl,
+      env: { ANTHROPIC_AUTH_TOKEN: 'unrelated-anthropic-token', LM_API_TOKEN: 'local-token' },
+    });
+    assert.ok(
+      headers.every((header) => header === 'Bearer local-token'),
+      String(kind),
+    );
+    assert.equal(JSON.stringify([ambient, scoped]).includes('token'), false, String(kind));
+  }
+});
+
 test('profile loader rejects permissive records and symlink substitution', async () => {
   const f = await fixture();
   await enrollProfile(declaration(f), { directory: f.directory });
