@@ -3797,7 +3797,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "lifecycle": "active",
         "authorityClass": "planning-write",
         "source": "skills/planr-design/openplanr.skill.json",
-        "sourceDigest": "sha256:b563114d18f191657426cb60907d491d65798d7a5a90b8e6d65b0382b89e8985",
+        "sourceDigest": "sha256:6196621ea482c001603f5c534f3252343b1b5bd7f58900b8e701a8f9dad8a0ae",
         "triggerPolicy": {
           "include": [
             "Create an initial product design direction",
@@ -3858,7 +3858,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "lifecycle": "active",
         "authorityClass": "planning-write",
         "source": "skills/planr-design-loop/openplanr.skill.json",
-        "sourceDigest": "sha256:370e6b26df32900486d036d0e69ded53854184b42ba234d2b41d83e7da22fc6f",
+        "sourceDigest": "sha256:8b5212522270530f542f1755c717f46b6a34a1fa74b4b8f35d95adb1447ea195",
         "triggerPolicy": {
           "include": [
             "Explore multiple design directions or variants",
@@ -3919,7 +3919,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "lifecycle": "active",
         "authorityClass": "review-evidence",
         "source": "skills/planr-design-review/openplanr.skill.json",
-        "sourceDigest": "sha256:1a99bac28897c5c2fd071c921a2514ffb7ead88799caaf39e7d10374c5f90bae",
+        "sourceDigest": "sha256:7577eeeccd24bf2fe1a34b91c30994b9f304e2fd1de63d7ec633f48eb89a9721",
         "triggerPolicy": {
           "include": [
             "Review or critique an existing OpenPlanr design",
@@ -4845,7 +4845,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
       }
     ],
     "compatibilityAliases": [],
-    "documentDigest": "sha256:ea44528c70b437f7c4653df4e588cb3be2670c71003b7e7fd3e025ebd3b72d54"
+    "documentDigest": "sha256:9dc90fb383f6a5717537e90b05ba00fac8bbbcf97bbc8e5e276bb48aa4965a1a"
   },
   "outputs.json": {
     "kind": "output-catalog",

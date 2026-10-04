@@ -34,3 +34,16 @@ Archive verification checks canonical closures, licenses, content inventories an
 offline helper execution. Native discovery tests separately record supported
 invocations, namespace limitations and collisions; a readable package is not proof
 that a host's interactive picker ranks or dispatches it correctly.
+
+Executable assets ship as complete, independently parseable JavaScript. Do not
+split scripts at byte offsets or minify a resource merely to fall below a platform
+review threshold. Legacy fragment readers remain available for older installations;
+new projections preserve complete canonical renderer output and its notices.
+
+Claude's local plugin validation checks manifest syntax and supported fields. It
+does not establish Directory security or policy clearance. The
+[Directory pre-submission checklist](https://claude.com/docs/plugins/pre-submission-checklist)
+defines separate rejection limits and reviewer holds. Record the exact submitted
+archive, executable resources, tool grants, credential and network boundaries, and
+external review result. Large readable source can require manual review; packaging
+verification must not promise removal of a platform warning.

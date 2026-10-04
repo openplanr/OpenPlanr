@@ -12,12 +12,16 @@ import {
   rmSync,
   writeFileSync,
 } from 'node:fs';
+import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import test from 'node:test';
+import { Script } from 'node:vm';
 import { resolveArtifactHtml } from '../../packages/artifact/lib/artifact/artifact-sources.mjs';
 import { digestArtifactEnvelope } from '../../packages/artifact/lib/artifact/envelope.mjs';
 import { createArtifactReview } from '../../packages/artifact/lib/artifact/review.mjs';
+import { renderArtifactStageRuntimeAsset } from '../../packages/artifact/scripts/generate-artifact-shell.mjs';
+import { renderDesignStudioRuntimeAsset } from '../../packages/design/scripts/generate-design-studio.mjs';
 import { readSkillSourceRegistry } from '../../packages/skill-runtime/src/catalog.mjs';
 import {
   createDeterministicZip,
@@ -541,8 +545,29 @@ test('design runtime bundling and release archives preserve binary assets withou
     resources.length < 200,
     'portable closure fits the frozen skill-package resource limit',
   );
-  for (const { path, bytes } of resources)
-    assert.ok(bytes.length < 256 * 1024, `${path} stays under the plugin directory's file limit`);
+  const { transformSync } = createRequire(join(root, 'packages/artifact/package.json'))('esbuild');
+  for (const { path, bytes } of resources) {
+    assert.doesNotMatch(path, /\.part-\d+|\.parts\.json$/u, `${path} is complete source`);
+    if (/\.(?:mjs|js)$/u.test(path))
+      assert.doesNotThrow(() => transformSync(bytes.toString('utf8'), { loader: 'js' }), path);
+  }
+  for (const [path, render, projectRoot] of [
+    [
+      'scripts/runtime/packages/artifact/templates/artifact-review-stage.js',
+      renderArtifactStageRuntimeAsset,
+      'packages/artifact',
+    ],
+    [
+      'scripts/runtime/packages/design/templates/studio/studio.js',
+      renderDesignStudioRuntimeAsset,
+      'packages/design',
+    ],
+  ]) {
+    const bytes = resources.find((resource) => resource.path === path)?.bytes;
+    assert.ok(bytes, `${path} ships the complete browser asset`);
+    assert.deepEqual(bytes, Buffer.from(render({ projectRoot: join(root, projectRoot) })));
+    assert.doesNotThrow(() => new Script(bytes.toString('utf8')), path);
+  }
   assert.deepEqual(
     resources.filter(({ executable }) => executable).map(({ path }) => path),
     ['scripts/design.mjs'],

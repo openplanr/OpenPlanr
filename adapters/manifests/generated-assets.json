@@ -6,7 +6,7 @@
   "assets": [
     {
       "path": "adapters/manifests/canonical-skills.json",
-      "digest": "sha256:a91f596a864c8cd5bc05c8e00386817cfb183ecc1a95a4406611c3a34ab05a56",
+      "digest": "sha256:ed6e0a6aedffcb939ae27902e48bfaea8963febe36f4569d31e97a745c47fbd1",
       "generated": false
     },
     {
@@ -16,7 +16,7 @@
     },
     {
       "path": "adapters/manifests/skill-footprint.json",
-      "digest": "sha256:d2eb47363592650219c1ecbde437f6cafc6c9e237e82939d8b47fe6902cabaa9",
+      "digest": "sha256:316efe014cad2c3d04a485230bce2cb60b2af75af6dada623a01706d9574580b",
       "generated": false
     },
     {
@@ -36,7 +36,7 @@
     },
     {
       "path": "dist/plugins/claude/openplanr/.openplanr-content.json",
-      "digest": "sha256:53e90c960e61531799bbb86cb72877f0f214e5398acb39fafb1c5f92615e6d07",
+      "digest": "sha256:69d74c5771e33c7998494b63d4479003d56e655d860f53078f040295cf54729e",
       "generated": true
     },
     {
@@ -315,23 +315,8 @@
       "generated": true
     },
     {
-      "path": "dist/plugins/claude/openplanr/runtime/design/scripts/runtime/packages/artifact/templates/artifact-review-stage.js.part-001",
-      "digest": "sha256:dd7007ab48e823f90e89ab2028946400282689bc42b99fd8c770a9e3c82a207e",
-      "generated": true
-    },
-    {
-      "path": "dist/plugins/claude/openplanr/runtime/design/scripts/runtime/packages/artifact/templates/artifact-review-stage.js.part-002",
-      "digest": "sha256:e062973ae0a83bd31b188cb373e7a65c4d34b7dcee79cf400554b880ff6db63f",
-      "generated": true
-    },
-    {
-      "path": "dist/plugins/claude/openplanr/runtime/design/scripts/runtime/packages/artifact/templates/artifact-review-stage.js.part-003",
-      "digest": "sha256:a9e840670eba89b531b044e2405252a26b4327d350d14fa264c2ee00fe4e8a05",
-      "generated": true
-    },
-    {
-      "path": "dist/plugins/claude/openplanr/runtime/design/scripts/runtime/packages/artifact/templates/artifact-review-stage.js.parts.json",
-      "digest": "sha256:7f5b7a8c5b5cc10f04579c84c93b7852578c65c1051b289c7ab06bbda8c57dc6",
+      "path": "dist/plugins/claude/openplanr/runtime/design/scripts/runtime/packages/artifact/templates/artifact-review-stage.js",
+      "digest": "sha256:762bcae15b5066f5b08263aab0f45592352f362b54dc08ea90cc090afc9bf59a",
       "generated": true
     },
     {
@@ -365,53 +350,8 @@
       "generated": true
     },
     {
-      "path": "dist/plugins/claude/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js.part-001",
-      "digest": "sha256:10c64b560b5b6056cd7433b1494ace2bde3351bbccd9a4e8810bd3822b0c82da",
-      "generated": true
-    },
-    {
-      "path": "dist/plugins/claude/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js.part-002",
-      "digest": "sha256:187d37519817c3d390cdbc97379521ad349a35f61b5673803501fb91550734aa",
-      "generated": true
-    },
-    {
-      "path": "dist/plugins/claude/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js.part-003",
-      "digest": "sha256:3e26d42f504b21fa3fa606e55b45a43c0e4c01e0f389bfb8e2b753644ee6061e",
-      "generated": true
-    },
-    {
-      "path": "dist/plugins/claude/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js.part-004",
-      "digest": "sha256:f3b54cacf2df86cc7546bafb128a0a46b802779d63fea03d969db4346391b371",
-      "generated": true
-    },
-    {
-      "path": "dist/plugins/claude/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js.part-005",
-      "digest": "sha256:3ec27695260a73ecc81503e578f230a1048459f2a1cbbe2521662ef25b6a17aa",
-      "generated": true
-    },
-    {
-      "path": "dist/plugins/claude/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js.part-006",
-      "digest": "sha256:ee8d775fd0e97c74172f540c83412900b4e73a62188c23fd2b162fc0e82bbcdc",
-      "generated": true
-    },
-    {
-      "path": "dist/plugins/claude/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js.part-007",
-      "digest": "sha256:3bdf4a1f9bfdc8bd12c2eec50772a32b092262834be23e93333f79bdfd41bb67",
-      "generated": true
-    },
-    {
-      "path": "dist/plugins/claude/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js.part-008",
-      "digest": "sha256:2f03557f7b4bf6d5953dd06114b6dde27f49e6b4d77c812988f8b865d92f3900",
-      "generated": true
-    },
-    {
-      "path": "dist/plugins/claude/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js.part-009",
-      "digest": "sha256:1b405a0f3f7da5c55b87c94e152be975a74fa9399f457141c51e9cea56d379a1",
-      "generated": true
-    },
-    {
-      "path": "dist/plugins/claude/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js.parts.json",
-      "digest": "sha256:7a26637c80ef499f46d87087bf2588a82dac7c1c67163c6a657a1087760feea1",
+      "path": "dist/plugins/claude/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js",
+      "digest": "sha256:24745f5b2327275efa2cb904652c4451b16a6893d4284e375a3ce986d909f49e",
       "generated": true
     },
     {
@@ -1261,7 +1201,7 @@
     },
     {
       "path": "dist/plugins/cursor/openplanr/.openplanr-content.json",
-      "digest": "sha256:0722f50e34f375f923438161149ca01761f05766d5e71435334b2e528acd5b78",
+      "digest": "sha256:d77128234a727320ed650adc28eeaa4772f215287fa67cccffb15ba2c681b36c",
       "generated": true
     },
     {
@@ -2055,23 +1995,8 @@
       "generated": true
     },
     {
-      "path": "dist/plugins/cursor/openplanr/runtime/design/scripts/runtime/packages/artifact/templates/artifact-review-stage.js.part-001",
-      "digest": "sha256:dd7007ab48e823f90e89ab2028946400282689bc42b99fd8c770a9e3c82a207e",
-      "generated": true
-    },
-    {
-      "path": "dist/plugins/cursor/openplanr/runtime/design/scripts/runtime/packages/artifact/templates/artifact-review-stage.js.part-002",
-      "digest": "sha256:e062973ae0a83bd31b188cb373e7a65c4d34b7dcee79cf400554b880ff6db63f",
-      "generated": true
-    },
-    {
-      "path": "dist/plugins/cursor/openplanr/runtime/design/scripts/runtime/packages/artifact/templates/artifact-review-stage.js.part-003",
-      "digest": "sha256:a9e840670eba89b531b044e2405252a26b4327d350d14fa264c2ee00fe4e8a05",
-      "generated": true
-    },
-    {
-      "path": "dist/plugins/cursor/openplanr/runtime/design/scripts/runtime/packages/artifact/templates/artifact-review-stage.js.parts.json",
-      "digest": "sha256:7f5b7a8c5b5cc10f04579c84c93b7852578c65c1051b289c7ab06bbda8c57dc6",
+      "path": "dist/plugins/cursor/openplanr/runtime/design/scripts/runtime/packages/artifact/templates/artifact-review-stage.js",
+      "digest": "sha256:762bcae15b5066f5b08263aab0f45592352f362b54dc08ea90cc090afc9bf59a",
       "generated": true
     },
     {
@@ -2105,53 +2030,8 @@
       "generated": true
     },
     {
-      "path": "dist/plugins/cursor/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js.part-001",
-      "digest": "sha256:10c64b560b5b6056cd7433b1494ace2bde3351bbccd9a4e8810bd3822b0c82da",
-      "generated": true
-    },
-    {
-      "path": "dist/plugins/cursor/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js.part-002",
-      "digest": "sha256:187d37519817c3d390cdbc97379521ad349a35f61b5673803501fb91550734aa",
-      "generated": true
-    },
-    {
-      "path": "dist/plugins/cursor/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js.part-003",
-      "digest": "sha256:3e26d42f504b21fa3fa606e55b45a43c0e4c01e0f389bfb8e2b753644ee6061e",
-      "generated": true
-    },
-    {
-      "path": "dist/plugins/cursor/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js.part-004",
-      "digest": "sha256:f3b54cacf2df86cc7546bafb128a0a46b802779d63fea03d969db4346391b371",
-      "generated": true
-    },
-    {
-      "path": "dist/plugins/cursor/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js.part-005",
-      "digest": "sha256:3ec27695260a73ecc81503e578f230a1048459f2a1cbbe2521662ef25b6a17aa",
-      "generated": true
-    },
-    {
-      "path": "dist/plugins/cursor/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js.part-006",
-      "digest": "sha256:ee8d775fd0e97c74172f540c83412900b4e73a62188c23fd2b162fc0e82bbcdc",
-      "generated": true
-    },
-    {
-      "path": "dist/plugins/cursor/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js.part-007",
-      "digest": "sha256:3bdf4a1f9bfdc8bd12c2eec50772a32b092262834be23e93333f79bdfd41bb67",
-      "generated": true
-    },
-    {
-      "path": "dist/plugins/cursor/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js.part-008",
-      "digest": "sha256:2f03557f7b4bf6d5953dd06114b6dde27f49e6b4d77c812988f8b865d92f3900",
-      "generated": true
-    },
-    {
-      "path": "dist/plugins/cursor/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js.part-009",
-      "digest": "sha256:1b405a0f3f7da5c55b87c94e152be975a74fa9399f457141c51e9cea56d379a1",
-      "generated": true
-    },
-    {
-      "path": "dist/plugins/cursor/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js.parts.json",
-      "digest": "sha256:7a26637c80ef499f46d87087bf2588a82dac7c1c67163c6a657a1087760feea1",
+      "path": "dist/plugins/cursor/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js",
+      "digest": "sha256:24745f5b2327275efa2cb904652c4451b16a6893d4284e375a3ce986d909f49e",
       "generated": true
     },
     {
@@ -2321,7 +2201,7 @@
     },
     {
       "path": "dist/plugins/openai/openplanr/.openplanr-content.json",
-      "digest": "sha256:279d26f86c1be05e3a1aa12beab521190974f085c72b2a169d8ab5db4e787947",
+      "digest": "sha256:450775a62b43d69d90324978b59fd32ad3de04cd14c32f1355af610a5daf6394",
       "generated": true
     },
     {
@@ -2420,23 +2300,8 @@
       "generated": true
     },
     {
-      "path": "dist/plugins/openai/openplanr/runtime/design/scripts/runtime/packages/artifact/templates/artifact-review-stage.js.part-001",
-      "digest": "sha256:dd7007ab48e823f90e89ab2028946400282689bc42b99fd8c770a9e3c82a207e",
-      "generated": true
-    },
-    {
-      "path": "dist/plugins/openai/openplanr/runtime/design/scripts/runtime/packages/artifact/templates/artifact-review-stage.js.part-002",
-      "digest": "sha256:e062973ae0a83bd31b188cb373e7a65c4d34b7dcee79cf400554b880ff6db63f",
-      "generated": true
-    },
-    {
-      "path": "dist/plugins/openai/openplanr/runtime/design/scripts/runtime/packages/artifact/templates/artifact-review-stage.js.part-003",
-      "digest": "sha256:a9e840670eba89b531b044e2405252a26b4327d350d14fa264c2ee00fe4e8a05",
-      "generated": true
-    },
-    {
-      "path": "dist/plugins/openai/openplanr/runtime/design/scripts/runtime/packages/artifact/templates/artifact-review-stage.js.parts.json",
-      "digest": "sha256:7f5b7a8c5b5cc10f04579c84c93b7852578c65c1051b289c7ab06bbda8c57dc6",
+      "path": "dist/plugins/openai/openplanr/runtime/design/scripts/runtime/packages/artifact/templates/artifact-review-stage.js",
+      "digest": "sha256:762bcae15b5066f5b08263aab0f45592352f362b54dc08ea90cc090afc9bf59a",
       "generated": true
     },
     {
@@ -2470,53 +2335,8 @@
       "generated": true
     },
     {
-      "path": "dist/plugins/openai/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js.part-001",
-      "digest": "sha256:10c64b560b5b6056cd7433b1494ace2bde3351bbccd9a4e8810bd3822b0c82da",
-      "generated": true
-    },
-    {
-      "path": "dist/plugins/openai/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js.part-002",
-      "digest": "sha256:187d37519817c3d390cdbc97379521ad349a35f61b5673803501fb91550734aa",
-      "generated": true
-    },
-    {
-      "path": "dist/plugins/openai/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js.part-003",
-      "digest": "sha256:3e26d42f504b21fa3fa606e55b45a43c0e4c01e0f389bfb8e2b753644ee6061e",
-      "generated": true
-    },
-    {
-      "path": "dist/plugins/openai/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js.part-004",
-      "digest": "sha256:f3b54cacf2df86cc7546bafb128a0a46b802779d63fea03d969db4346391b371",
-      "generated": true
-    },
-    {
-      "path": "dist/plugins/openai/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js.part-005",
-      "digest": "sha256:3ec27695260a73ecc81503e578f230a1048459f2a1cbbe2521662ef25b6a17aa",
-      "generated": true
-    },
-    {
-      "path": "dist/plugins/openai/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js.part-006",
-      "digest": "sha256:ee8d775fd0e97c74172f540c83412900b4e73a62188c23fd2b162fc0e82bbcdc",
-      "generated": true
-    },
-    {
-      "path": "dist/plugins/openai/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js.part-007",
-      "digest": "sha256:3bdf4a1f9bfdc8bd12c2eec50772a32b092262834be23e93333f79bdfd41bb67",
-      "generated": true
-    },
-    {
-      "path": "dist/plugins/openai/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js.part-008",
-      "digest": "sha256:2f03557f7b4bf6d5953dd06114b6dde27f49e6b4d77c812988f8b865d92f3900",
-      "generated": true
-    },
-    {
-      "path": "dist/plugins/openai/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js.part-009",
-      "digest": "sha256:1b405a0f3f7da5c55b87c94e152be975a74fa9399f457141c51e9cea56d379a1",
-      "generated": true
-    },
-    {
-      "path": "dist/plugins/openai/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js.parts.json",
-      "digest": "sha256:7a26637c80ef499f46d87087bf2588a82dac7c1c67163c6a657a1087760feea1",
+      "path": "dist/plugins/openai/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js",
+      "digest": "sha256:24745f5b2327275efa2cb904652c4451b16a6893d4284e375a3ce986d909f49e",
       "generated": true
     },
     {
@@ -3671,7 +3491,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/claude/openplanr/.openplanr-content.json",
-      "digest": "sha256:53e90c960e61531799bbb86cb72877f0f214e5398acb39fafb1c5f92615e6d07",
+      "digest": "sha256:69d74c5771e33c7998494b63d4479003d56e655d860f53078f040295cf54729e",
       "generated": true
     },
     {
@@ -3950,23 +3770,8 @@
       "generated": true
     },
     {
-      "path": "packages/cli/lib/host-packages/claude/openplanr/runtime/design/scripts/runtime/packages/artifact/templates/artifact-review-stage.js.part-001",
-      "digest": "sha256:dd7007ab48e823f90e89ab2028946400282689bc42b99fd8c770a9e3c82a207e",
-      "generated": true
-    },
-    {
-      "path": "packages/cli/lib/host-packages/claude/openplanr/runtime/design/scripts/runtime/packages/artifact/templates/artifact-review-stage.js.part-002",
-      "digest": "sha256:e062973ae0a83bd31b188cb373e7a65c4d34b7dcee79cf400554b880ff6db63f",
-      "generated": true
-    },
-    {
-      "path": "packages/cli/lib/host-packages/claude/openplanr/runtime/design/scripts/runtime/packages/artifact/templates/artifact-review-stage.js.part-003",
-      "digest": "sha256:a9e840670eba89b531b044e2405252a26b4327d350d14fa264c2ee00fe4e8a05",
-      "generated": true
-    },
-    {
-      "path": "packages/cli/lib/host-packages/claude/openplanr/runtime/design/scripts/runtime/packages/artifact/templates/artifact-review-stage.js.parts.json",
-      "digest": "sha256:7f5b7a8c5b5cc10f04579c84c93b7852578c65c1051b289c7ab06bbda8c57dc6",
+      "path": "packages/cli/lib/host-packages/claude/openplanr/runtime/design/scripts/runtime/packages/artifact/templates/artifact-review-stage.js",
+      "digest": "sha256:762bcae15b5066f5b08263aab0f45592352f362b54dc08ea90cc090afc9bf59a",
       "generated": true
     },
     {
@@ -4000,53 +3805,8 @@
       "generated": true
     },
     {
-      "path": "packages/cli/lib/host-packages/claude/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js.part-001",
-      "digest": "sha256:10c64b560b5b6056cd7433b1494ace2bde3351bbccd9a4e8810bd3822b0c82da",
-      "generated": true
-    },
-    {
-      "path": "packages/cli/lib/host-packages/claude/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js.part-002",
-      "digest": "sha256:187d37519817c3d390cdbc97379521ad349a35f61b5673803501fb91550734aa",
-      "generated": true
-    },
-    {
-      "path": "packages/cli/lib/host-packages/claude/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js.part-003",
-      "digest": "sha256:3e26d42f504b21fa3fa606e55b45a43c0e4c01e0f389bfb8e2b753644ee6061e",
-      "generated": true
-    },
-    {
-      "path": "packages/cli/lib/host-packages/claude/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js.part-004",
-      "digest": "sha256:f3b54cacf2df86cc7546bafb128a0a46b802779d63fea03d969db4346391b371",
-      "generated": true
-    },
-    {
-      "path": "packages/cli/lib/host-packages/claude/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js.part-005",
-      "digest": "sha256:3ec27695260a73ecc81503e578f230a1048459f2a1cbbe2521662ef25b6a17aa",
-      "generated": true
-    },
-    {
-      "path": "packages/cli/lib/host-packages/claude/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js.part-006",
-      "digest": "sha256:ee8d775fd0e97c74172f540c83412900b4e73a62188c23fd2b162fc0e82bbcdc",
-      "generated": true
-    },
-    {
-      "path": "packages/cli/lib/host-packages/claude/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js.part-007",
-      "digest": "sha256:3bdf4a1f9bfdc8bd12c2eec50772a32b092262834be23e93333f79bdfd41bb67",
-      "generated": true
-    },
-    {
-      "path": "packages/cli/lib/host-packages/claude/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js.part-008",
-      "digest": "sha256:2f03557f7b4bf6d5953dd06114b6dde27f49e6b4d77c812988f8b865d92f3900",
-      "generated": true
-    },
-    {
-      "path": "packages/cli/lib/host-packages/claude/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js.part-009",
-      "digest": "sha256:1b405a0f3f7da5c55b87c94e152be975a74fa9399f457141c51e9cea56d379a1",
-      "generated": true
-    },
-    {
-      "path": "packages/cli/lib/host-packages/claude/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js.parts.json",
-      "digest": "sha256:7a26637c80ef499f46d87087bf2588a82dac7c1c67163c6a657a1087760feea1",
+      "path": "packages/cli/lib/host-packages/claude/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js",
+      "digest": "sha256:24745f5b2327275efa2cb904652c4451b16a6893d4284e375a3ce986d909f49e",
       "generated": true
     },
     {
@@ -4896,7 +4656,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/cursor/openplanr/.openplanr-content.json",
-      "digest": "sha256:0722f50e34f375f923438161149ca01761f05766d5e71435334b2e528acd5b78",
+      "digest": "sha256:d77128234a727320ed650adc28eeaa4772f215287fa67cccffb15ba2c681b36c",
       "generated": true
     },
     {
@@ -5690,23 +5450,8 @@
       "generated": true
     },
     {
-      "path": "packages/cli/lib/host-packages/cursor/openplanr/runtime/design/scripts/runtime/packages/artifact/templates/artifact-review-stage.js.part-001",
-      "digest": "sha256:dd7007ab48e823f90e89ab2028946400282689bc42b99fd8c770a9e3c82a207e",
-      "generated": true
-    },
-    {
-      "path": "packages/cli/lib/host-packages/cursor/openplanr/runtime/design/scripts/runtime/packages/artifact/templates/artifact-review-stage.js.part-002",
-      "digest": "sha256:e062973ae0a83bd31b188cb373e7a65c4d34b7dcee79cf400554b880ff6db63f",
-      "generated": true
-    },
-    {
-      "path": "packages/cli/lib/host-packages/cursor/openplanr/runtime/design/scripts/runtime/packages/artifact/templates/artifact-review-stage.js.part-003",
-      "digest": "sha256:a9e840670eba89b531b044e2405252a26b4327d350d14fa264c2ee00fe4e8a05",
-      "generated": true
-    },
-    {
-      "path": "packages/cli/lib/host-packages/cursor/openplanr/runtime/design/scripts/runtime/packages/artifact/templates/artifact-review-stage.js.parts.json",
-      "digest": "sha256:7f5b7a8c5b5cc10f04579c84c93b7852578c65c1051b289c7ab06bbda8c57dc6",
+      "path": "packages/cli/lib/host-packages/cursor/openplanr/runtime/design/scripts/runtime/packages/artifact/templates/artifact-review-stage.js",
+      "digest": "sha256:762bcae15b5066f5b08263aab0f45592352f362b54dc08ea90cc090afc9bf59a",
       "generated": true
     },
     {
@@ -5740,53 +5485,8 @@
       "generated": true
     },
     {
-      "path": "packages/cli/lib/host-packages/cursor/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js.part-001",
-      "digest": "sha256:10c64b560b5b6056cd7433b1494ace2bde3351bbccd9a4e8810bd3822b0c82da",
-      "generated": true
-    },
-    {
-      "path": "packages/cli/lib/host-packages/cursor/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js.part-002",
-      "digest": "sha256:187d37519817c3d390cdbc97379521ad349a35f61b5673803501fb91550734aa",
-      "generated": true
-    },
-    {
-      "path": "packages/cli/lib/host-packages/cursor/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js.part-003",
-      "digest": "sha256:3e26d42f504b21fa3fa606e55b45a43c0e4c01e0f389bfb8e2b753644ee6061e",
-      "generated": true
-    },
-    {
-      "path": "packages/cli/lib/host-packages/cursor/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js.part-004",
-      "digest": "sha256:f3b54cacf2df86cc7546bafb128a0a46b802779d63fea03d969db4346391b371",
-      "generated": true
-    },
-    {
-      "path": "packages/cli/lib/host-packages/cursor/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js.part-005",
-      "digest": "sha256:3ec27695260a73ecc81503e578f230a1048459f2a1cbbe2521662ef25b6a17aa",
-      "generated": true
-    },
-    {
-      "path": "packages/cli/lib/host-packages/cursor/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js.part-006",
-      "digest": "sha256:ee8d775fd0e97c74172f540c83412900b4e73a62188c23fd2b162fc0e82bbcdc",
-      "generated": true
-    },
-    {
-      "path": "packages/cli/lib/host-packages/cursor/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js.part-007",
-      "digest": "sha256:3bdf4a1f9bfdc8bd12c2eec50772a32b092262834be23e93333f79bdfd41bb67",
-      "generated": true
-    },
-    {
-      "path": "packages/cli/lib/host-packages/cursor/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js.part-008",
-      "digest": "sha256:2f03557f7b4bf6d5953dd06114b6dde27f49e6b4d77c812988f8b865d92f3900",
-      "generated": true
-    },
-    {
-      "path": "packages/cli/lib/host-packages/cursor/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js.part-009",
-      "digest": "sha256:1b405a0f3f7da5c55b87c94e152be975a74fa9399f457141c51e9cea56d379a1",
-      "generated": true
-    },
-    {
-      "path": "packages/cli/lib/host-packages/cursor/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js.parts.json",
-      "digest": "sha256:7a26637c80ef499f46d87087bf2588a82dac7c1c67163c6a657a1087760feea1",
+      "path": "packages/cli/lib/host-packages/cursor/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js",
+      "digest": "sha256:24745f5b2327275efa2cb904652c4451b16a6893d4284e375a3ce986d909f49e",
       "generated": true
     },
     {
@@ -5956,7 +5656,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/openai/openplanr/.openplanr-content.json",
-      "digest": "sha256:279d26f86c1be05e3a1aa12beab521190974f085c72b2a169d8ab5db4e787947",
+      "digest": "sha256:450775a62b43d69d90324978b59fd32ad3de04cd14c32f1355af610a5daf6394",
       "generated": true
     },
     {
@@ -6055,23 +5755,8 @@
       "generated": true
     },
     {
-      "path": "packages/cli/lib/host-packages/openai/openplanr/runtime/design/scripts/runtime/packages/artifact/templates/artifact-review-stage.js.part-001",
-      "digest": "sha256:dd7007ab48e823f90e89ab2028946400282689bc42b99fd8c770a9e3c82a207e",
-      "generated": true
-    },
-    {
-      "path": "packages/cli/lib/host-packages/openai/openplanr/runtime/design/scripts/runtime/packages/artifact/templates/artifact-review-stage.js.part-002",
-      "digest": "sha256:e062973ae0a83bd31b188cb373e7a65c4d34b7dcee79cf400554b880ff6db63f",
-      "generated": true
-    },
-    {
-      "path": "packages/cli/lib/host-packages/openai/openplanr/runtime/design/scripts/runtime/packages/artifact/templates/artifact-review-stage.js.part-003",
-      "digest": "sha256:a9e840670eba89b531b044e2405252a26b4327d350d14fa264c2ee00fe4e8a05",
-      "generated": true
-    },
-    {
-      "path": "packages/cli/lib/host-packages/openai/openplanr/runtime/design/scripts/runtime/packages/artifact/templates/artifact-review-stage.js.parts.json",
-      "digest": "sha256:7f5b7a8c5b5cc10f04579c84c93b7852578c65c1051b289c7ab06bbda8c57dc6",
+      "path": "packages/cli/lib/host-packages/openai/openplanr/runtime/design/scripts/runtime/packages/artifact/templates/artifact-review-stage.js",
+      "digest": "sha256:762bcae15b5066f5b08263aab0f45592352f362b54dc08ea90cc090afc9bf59a",
       "generated": true
     },
     {
@@ -6105,53 +5790,8 @@
       "generated": true
     },
     {
-      "path": "packages/cli/lib/host-packages/openai/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js.part-001",
-      "digest": "sha256:10c64b560b5b6056cd7433b1494ace2bde3351bbccd9a4e8810bd3822b0c82da",
-      "generated": true
-    },
-    {
-      "path": "packages/cli/lib/host-packages/openai/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js.part-002",
-      "digest": "sha256:187d37519817c3d390cdbc97379521ad349a35f61b5673803501fb91550734aa",
-      "generated": true
-    },
-    {
-      "path": "packages/cli/lib/host-packages/openai/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js.part-003",
-      "digest": "sha256:3e26d42f504b21fa3fa606e55b45a43c0e4c01e0f389bfb8e2b753644ee6061e",
-      "generated": true
-    },
-    {
-      "path": "packages/cli/lib/host-packages/openai/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js.part-004",
-      "digest": "sha256:f3b54cacf2df86cc7546bafb128a0a46b802779d63fea03d969db4346391b371",
-      "generated": true
-    },
-    {
-      "path": "packages/cli/lib/host-packages/openai/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js.part-005",
-      "digest": "sha256:3ec27695260a73ecc81503e578f230a1048459f2a1cbbe2521662ef25b6a17aa",
-      "generated": true
-    },
-    {
-      "path": "packages/cli/lib/host-packages/openai/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js.part-006",
-      "digest": "sha256:ee8d775fd0e97c74172f540c83412900b4e73a62188c23fd2b162fc0e82bbcdc",
-      "generated": true
-    },
-    {
-      "path": "packages/cli/lib/host-packages/openai/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js.part-007",
-      "digest": "sha256:3bdf4a1f9bfdc8bd12c2eec50772a32b092262834be23e93333f79bdfd41bb67",
-      "generated": true
-    },
-    {
-      "path": "packages/cli/lib/host-packages/openai/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js.part-008",
-      "digest": "sha256:2f03557f7b4bf6d5953dd06114b6dde27f49e6b4d77c812988f8b865d92f3900",
-      "generated": true
-    },
-    {
-      "path": "packages/cli/lib/host-packages/openai/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js.part-009",
-      "digest": "sha256:1b405a0f3f7da5c55b87c94e152be975a74fa9399f457141c51e9cea56d379a1",
-      "generated": true
-    },
-    {
-      "path": "packages/cli/lib/host-packages/openai/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js.parts.json",
-      "digest": "sha256:7a26637c80ef499f46d87087bf2588a82dac7c1c67163c6a657a1087760feea1",
+      "path": "packages/cli/lib/host-packages/openai/openplanr/runtime/design/scripts/runtime/packages/design/templates/studio/studio.js",
+      "digest": "sha256:24745f5b2327275efa2cb904652c4451b16a6893d4284e375a3ce986d909f49e",
       "generated": true
     },
     {
