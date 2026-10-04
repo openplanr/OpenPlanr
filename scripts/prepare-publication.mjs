@@ -13,6 +13,7 @@ import {
 } from 'node:fs';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { CLI_GENERATED_RESOURCES } from './skills/cli-resources.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const targets = {
@@ -63,6 +64,29 @@ const tracked = new Set(
 // All other published bytes must have a reviewed source entry in Git.
 const generatedPrefixes = name === 'openplanr' ? ['dist/', 'lib/host-packages/'] : [];
 const generatedFiles = new Map();
+if (name === 'openplanr') {
+  // Derive expected bytes from tracked inputs, not the ignored output's own hash.
+  // Keep those bytes in custody through packing without exempting all of lib/.
+  const { renderTypeScriptOutputs } = await import('./typescript/compile-sources.mjs');
+  const compiled = renderTypeScriptOutputs({ root });
+  execFileSync(process.execPath, ['scripts/skills/generate-v18.mjs', '--check'], {
+    cwd: root,
+    stdio: 'pipe',
+  });
+  for (const { source, destination } of CLI_GENERATED_RESOURCES) {
+    if (!Object.hasOwn(compiled, source) && !tracked.has(source))
+      throw new Error(`Generated package input has no reviewed owner: ${source}`);
+    const expected = Object.hasOwn(compiled, source)
+      ? Buffer.from(compiled[source])
+      : readFileSync(join(root, source));
+    if (!readFileSync(join(root, destination)).equals(expected))
+      throw new Error(`Generated package bytes changed: ${destination}`);
+    generatedFiles.set(
+      relative(join(root, targets[name]), join(root, destination)).split(sep).join('/'),
+      createHash('sha256').update(expected).digest('hex'),
+    );
+  }
+}
 if (name === 'planr-pipeline') {
   // Recompute expected output from tracked owners before trusting any generated
   // manifest. A broad lib/ exemption would accidentally admit ignored source.
