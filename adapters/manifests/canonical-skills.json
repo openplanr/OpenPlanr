@@ -1807,7 +1807,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:88139e79af1584931c121a36538a68a2dd6144acf8aa662b890ea8fa8b66f122"
+          "digest": "sha256:a33f15eb7ca18b8f5789b108f15d387d19e3e62d9b63751af6cb23763a7c37ff"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/enhancements.css",
@@ -2095,7 +2095,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:b393c8687105e56c6c7a353580848b008c744cf98124d6c6e1f7c0f7cab0d02d"
+          "digest": "sha256:56f591a876dc8b58d3f5af0a9a69573aedd57e9099d1d20bff05a80f7e455afa"
         },
         {
           "path": "scripts/runtime/packages/protocol/registries/artifact-theme.json",
@@ -2969,7 +2969,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:88139e79af1584931c121a36538a68a2dd6144acf8aa662b890ea8fa8b66f122"
+          "digest": "sha256:a33f15eb7ca18b8f5789b108f15d387d19e3e62d9b63751af6cb23763a7c37ff"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/enhancements.css",
@@ -3257,7 +3257,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:b393c8687105e56c6c7a353580848b008c744cf98124d6c6e1f7c0f7cab0d02d"
+          "digest": "sha256:56f591a876dc8b58d3f5af0a9a69573aedd57e9099d1d20bff05a80f7e455afa"
         },
         {
           "path": "scripts/runtime/packages/protocol/registries/artifact-theme.json",
@@ -4131,7 +4131,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:88139e79af1584931c121a36538a68a2dd6144acf8aa662b890ea8fa8b66f122"
+          "digest": "sha256:a33f15eb7ca18b8f5789b108f15d387d19e3e62d9b63751af6cb23763a7c37ff"
         },
         {
           "path": "scripts/runtime/packages/design/templates/studio/enhancements.css",
@@ -4419,7 +4419,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:b393c8687105e56c6c7a353580848b008c744cf98124d6c6e1f7c0f7cab0d02d"
+          "digest": "sha256:56f591a876dc8b58d3f5af0a9a69573aedd57e9099d1d20bff05a80f7e455afa"
         },
         {
           "path": "scripts/runtime/packages/protocol/registries/artifact-theme.json",
@@ -5228,7 +5228,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:b393c8687105e56c6c7a353580848b008c744cf98124d6c6e1f7c0f7cab0d02d"
+          "digest": "sha256:56f591a876dc8b58d3f5af0a9a69573aedd57e9099d1d20bff05a80f7e455afa"
         },
         {
           "path": "scripts/runtime/packages/protocol/schemas/v1.1.0/artifact-review.schema.json",
