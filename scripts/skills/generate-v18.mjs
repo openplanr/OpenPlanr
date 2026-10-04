@@ -24,6 +24,7 @@ import {
 } from '../../packages/skill-runtime/src/compiler/index.mjs';
 import { linkSkillProjection } from '../../packages/skill-runtime/src/linker/index.mjs';
 import { renderOpenAiSkillMetadata } from '../../packages/skill-runtime/src/packaging/index.mjs';
+import { CLI_GENERATED_RESOURCES } from './cli-resources.mjs';
 import { buildDesignSkillResources, DESIGN_SKILL_IDS } from './design-resources.mjs';
 import {
   HOST_PLUGIN_NAME,
@@ -112,16 +113,7 @@ const sharedSkillResources = Object.freeze([
     destination: 'packages/cli/lib/planr-home.d.mts',
     executable: false,
   },
-  ...['mjs', 'd.mts'].map((extension) => ({
-    source: `packages/protocol/src/large-object-limits.${extension}`,
-    destination: `packages/cli/lib/resource-limits.${extension}`,
-    executable: false,
-  })),
-  ...['mjs', 'd.mts'].map((extension) => ({
-    source: `packages/artifact/lib/artifact/internal/credential-writer.${extension}`,
-    destination: `packages/cli/lib/credential-writer.${extension}`,
-    executable: false,
-  })),
+  ...CLI_GENERATED_RESOURCES,
   ...operateAdvisorDestinations.map((skillId) => ({
     source: 'skills/shared/operate-advisor-contract.md',
     destination: `skills/${skillId}/references/operate-advisor-contract.md`,
