@@ -36,6 +36,27 @@ The same skills ship for Codex and Cursor through the `openplanr` package.
 - Skills call the `planr` CLI, bundled Node.js scripts, `git`, and the GitHub CLI (`gh`). They
   read and write files in your repository.
 - The planning dashboard and local artifact reviews bind to loopback only.
+- Bundled scripts are readable JavaScript. The design studio and review stage pages ship as
+  readable source files; the local review server joins them after checking their recorded
+  SHA-256 digests, without downloading or decoding code.
+- OpenPlanr does not harvest unrelated credentials or send native agent credentials to OpenPlanr
+  services. Coding-agent runs you request and local model checks use the configured
+  authentication described below.
+- Sharing a design or diagram review creates owner access keys for that review and stores them,
+  readable only by you, in `design-shares` or `diagram-shares` under `~/.planr` (or
+  `PLANR_HOME`; earlier installs used `~/.openplanr`). Design reviews and handoffs read the
+  record locally to show an existing share's link and status. The keys are sent only to the
+  review address stored with them, without cookies or redirects, when you share, update, sync
+  or export feedback, hand off, revoke, or recover that review. Recovery reads only the file
+  path you give.
+- While a local design studio page is visible, it syncs a review you shared before every 15
+  seconds. This pulls published team feedback and finishes delivering previously queued
+  review metadata; it never publishes local design changes.
+- When you ask `delegate` to run another coding agent, that agent's own CLI runs with its normal
+  sign-in, environment, model routing, and trusted hooks or plugins. Checking a profile that
+  uses a local model server reads its model list from that server's address, sending
+  `LM_STUDIO_API_KEY` or `LM_API_TOKEN` if set, or, for Claude Code confirmed to route to that
+  same address, its configured `ANTHROPIC_AUTH_TOKEN`. Tokens are never saved or reported.
 - Only when you ask:
   - `sync` reconciles planning files with GitHub Issues through `gh` (writes need `--apply`),
     or with Linear through your Linear connector or the `planr linear` CLI, which keeps its own

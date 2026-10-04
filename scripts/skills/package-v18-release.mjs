@@ -6,6 +6,7 @@ import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { createDeterministicZip } from '../../packages/skill-runtime/src/packaging/index.mjs';
+import { assertDirectoryEntries, readDirectoryEntries } from './plugin-artifact-validation.mjs';
 import { syncSkillRelease } from './release-custody.mjs';
 import { buildStandaloneSkillEntries } from './standalone-resources.mjs';
 
@@ -46,6 +47,18 @@ function entries(directory) {
   }));
 }
 
+// Validate the exact Claude package with bounded reads,
+// and no oversized, linked or special entry reaches the archive.
+function directoryEntries(directory) {
+  const inspected = readDirectoryEntries(directory);
+  assertDirectoryEntries(inspected);
+  return inspected.map(({ path, bytes, mode }) => ({
+    path,
+    bytes,
+    mode: (mode & 0o111) !== 0 ? 0o755 : 0o644,
+  }));
+}
+
 const tree = new Map();
 function add(path, bytes, fileMode = 0o644) {
   if (tree.has(path)) throw new Error(`Duplicate release path: ${path}`);
@@ -57,7 +70,9 @@ function addProduct({
   kind,
   host,
   source,
-  sourceEntries = entries(resolve(root, source)),
+  sourceEntries = id === 'openplanr-claude'
+    ? directoryEntries(resolve(root, source))
+    : entries(resolve(root, source)),
   destination,
 }) {
   for (const entry of sourceEntries) add(`${destination}/${entry.path}`, entry.bytes, entry.mode);

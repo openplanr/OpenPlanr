@@ -238,7 +238,23 @@ for (const transport of ['blob', 'srcdoc']) {
       window.firstWindow = window.firstFrame.contentWindow;
     });
     const firstProduct = page.frameLocator('[data-planr-artifact-frame="screen-0"]');
-    await firstProduct.getByRole('button', { name: 'Product action' }).click();
+    // Locator clicks ignore the stage's scale transform and miss inside srcdoc frames.
+    const target = await firstProduct
+      .getByRole('button', { name: 'Product action' })
+      .evaluate((button) => {
+        const box = button.getBoundingClientRect();
+        return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+      });
+    const tap = await page.evaluate(({ x, y }) => {
+      const frame = fixture.stage.getFrame('screen-0');
+      const box = frame.getBoundingClientRect();
+      const scale = box.width / frame.offsetWidth;
+      return {
+        x: box.x + (frame.clientLeft + x) * scale,
+        y: box.y + (frame.clientTop + y) * scale,
+      };
+    }, target);
+    await page.touchscreen.tap(tap.x, tap.y);
     await page.evaluate(() => {
       fixture.stage.dispatch({ type: 'set-review-mode', reviewMode: 'comment' });
       fixture.stage.dispatch({ type: 'set-review-mode', reviewMode: 'interact' });

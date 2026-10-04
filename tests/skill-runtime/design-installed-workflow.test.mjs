@@ -19,6 +19,7 @@ import test from 'node:test';
 import { Script } from 'node:vm';
 import { resolveArtifactHtml } from '../../packages/artifact/lib/artifact/artifact-sources.mjs';
 import { digestArtifactEnvelope } from '../../packages/artifact/lib/artifact/envelope.mjs';
+import { readRuntimeAsset } from '../../packages/artifact/lib/artifact/internal/runtime-asset.mjs';
 import { createArtifactReview } from '../../packages/artifact/lib/artifact/review.mjs';
 import { renderArtifactStageRuntimeAsset } from '../../packages/artifact/scripts/generate-artifact-shell.mjs';
 import { renderDesignStudioRuntimeAsset } from '../../packages/design/scripts/generate-design-studio.mjs';
@@ -548,25 +549,38 @@ test('design runtime bundling and release archives preserve binary assets withou
   const { transformSync } = createRequire(join(root, 'packages/artifact/package.json'))('esbuild');
   for (const { path, bytes } of resources) {
     assert.doesNotMatch(path, /\.part-\d+|\.parts\.json$/u, `${path} is complete source`);
+    assert.ok(bytes.length < 256 * 1024, `${path} is ${bytes.length} bytes`);
     if (/\.(?:mjs|js)$/u.test(path))
       assert.doesNotThrow(() => transformSync(bytes.toString('utf8'), { loader: 'js' }), path);
   }
-  for (const [path, render, projectRoot] of [
-    [
-      'scripts/runtime/packages/artifact/templates/artifact-review-stage.js',
-      renderArtifactStageRuntimeAsset,
-      'packages/artifact',
-    ],
-    [
-      'scripts/runtime/packages/design/templates/studio/studio.js',
-      renderDesignStudioRuntimeAsset,
-      'packages/design',
-    ],
-  ]) {
-    const bytes = resources.find((resource) => resource.path === path)?.bytes;
-    assert.ok(bytes, `${path} ships the complete browser asset`);
-    assert.deepEqual(bytes, Buffer.from(render({ projectRoot: join(root, projectRoot) })));
-    assert.doesNotThrow(() => new Script(bytes.toString('utf8')), path);
+  const installed = mkdtempSync(join(tmpdir(), 'openplanr-runtime-sources-'));
+  try {
+    for (const { path, bytes } of resources) write(join(installed, path), bytes);
+    for (const [path, render] of [
+      [
+        'scripts/runtime/packages/artifact/templates/artifact-review-stage.js',
+        () =>
+          renderArtifactStageRuntimeAsset({
+            projectRoot: join(root, 'packages/artifact'),
+            compact: false,
+          }),
+      ],
+      [
+        'scripts/runtime/packages/design/templates/studio/studio.js',
+        () => renderDesignStudioRuntimeAsset({ projectRoot: join(root, 'packages/design') }),
+      ],
+    ]) {
+      assert.ok(
+        !resources.some((resource) => resource.path === path),
+        `${path} ships as readable units`,
+      );
+      assert.ok(resources.some((resource) => resource.path === `${path}.sources.json`));
+      const bytes = readRuntimeAsset(join(installed, path));
+      assert.deepEqual(bytes, Buffer.from(render()));
+      assert.doesNotThrow(() => new Script(bytes.toString('utf8')), path);
+    }
+  } finally {
+    rmSync(installed, { recursive: true, force: true });
   }
   assert.deepEqual(
     resources.filter(({ executable }) => executable).map(({ path }) => path),
@@ -633,7 +647,10 @@ test('Plan carries only handoff inspection and rejects authoring operations offl
   const directory = realpathSync(mkdtempSync(join(tmpdir(), 'openplanr-plan-handoff-only-')));
   try {
     const resources = await buildPlanSkillResources({ repoRoot: root });
-    assert.equal(resources.filter(({ kind }) => kind === 'script').length, 1);
+    assert.deepEqual(
+      resources.filter(({ kind }) => kind === 'script').map(({ path }) => path),
+      ['scripts/design.mjs', 'scripts/design-protocol-contracts.mjs'],
+    );
     assert.ok(
       resources.every(({ path }) => !/templates|\.css$|artifact-shell|design-share/u.test(path)),
     );

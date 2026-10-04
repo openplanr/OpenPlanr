@@ -18,7 +18,7 @@ function runtimeGroup(skillId, path) {
   if (DESIGN_SKILL_IDS.includes(skillId) && path.startsWith('scripts/')) return 'design';
   if (
     skillId === 'planr-plan' &&
-    (path === 'scripts/design.mjs' || path.startsWith('scripts/runtime/'))
+    (/^scripts\/design(?:-[a-z0-9-]+)?\.mjs$/u.test(path) || path.startsWith('scripts/runtime/'))
   )
     return 'plan';
   if (OPERATE_SKILL_IDS.has(skillId) && path.startsWith('scripts/')) return 'operate';

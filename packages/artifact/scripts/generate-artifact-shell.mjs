@@ -193,12 +193,20 @@ export function bundleBrowserEntry(
   return output.endsWith('\n') ? output : `${output}\n`;
 }
 
-/** Bundle the browser-neutral stage controller into one deterministic asset. */
-export function renderArtifactStageRuntimeAsset({ projectRoot = root } = {}) {
+/**
+ * Bundle the browser-neutral stage controller into one deterministic asset.
+ * `compact: false` renders the same program with readable whitespace and syntax.
+ */
+export function renderArtifactStageRuntimeAsset({
+  projectRoot = root,
+  compact = true,
+  onInputs,
+} = {}) {
   return bundleBrowserEntry('lib/artifact/ui/stage.mjs', {
-    compact: true,
+    compact,
     globalName: 'OpenPlanrArtifactStage',
     projectRoot,
+    onInputs,
   });
 }
 

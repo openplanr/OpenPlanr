@@ -684,13 +684,12 @@ describe('complete design company publication', () => {
       height: 900,
     }));
     await writeFile(design.file, JSON.stringify(design.document));
-    const { randomBytes } = await import('node:crypto');
     for (let index = 1; index <= 93; index++) {
       const file = path.join(directory, `source/screen-${index}.html`);
-      await writeFile(
-        file,
-        (await readFile(file, 'utf8')) + `<pre>${randomBytes(18000).toString('base64')}</pre>`,
-      );
+      const payload = Array.from({ length: 600 }, (_, block) =>
+        hash(`company-publication-${index}-${block}`),
+      ).join('');
+      await writeFile(file, (await readFile(file, 'utf8')) + `<pre>${payload}</pre>`);
     }
     const initial = await previewDesign('.planr/designs/large/design-document.json');
     expect(initial.preview.byteLength).toBeGreaterThan(1024 * 1024);

@@ -67,6 +67,17 @@
       ]
     },
     {
+      "path": "scripts/design-protocol-contracts.mjs",
+      "kind": "script",
+      "executable": false,
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ]
+    },
+    {
       "path": "schemas/design-document.schema.json",
       "kind": "schema",
       "executable": false,

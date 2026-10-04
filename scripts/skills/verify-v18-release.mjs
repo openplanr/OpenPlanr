@@ -6,6 +6,7 @@ import { join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { readDeterministicZip } from '../../packages/skill-runtime/src/packaging/index.mjs';
+import { assertDirectoryEntries, readDirectoryEntries } from './plugin-artifact-validation.mjs';
 import { verifyStandaloneSkillEntries } from './standalone-resources.mjs';
 import { verifySuiteResources } from './suite-verification.mjs';
 
@@ -64,6 +65,10 @@ for (const product of index.products) {
   const archiveByPath = new Map(
     extracted.map((entry) => [entry.path.split('/').slice(1).join('/'), entry]),
   );
+  if (product.productId === 'openplanr-claude') {
+    assertDirectoryEntries([...archiveByPath].map(([path, entry]) => ({ ...entry, path })));
+    assertDirectoryEntries(readDirectoryEntries(directory));
+  }
   const registryRow = registry.skills.find(({ skillId }) => skillId === product.productId);
   if (registryRow) {
     verifyStandaloneSkillEntries({

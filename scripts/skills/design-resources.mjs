@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { renderArtifactStageRuntimeAsset } from '../../packages/artifact/scripts/generate-artifact-shell.mjs';
 import { renderDesignStudioRuntimeAsset } from '../../packages/design/scripts/generate-design-studio.mjs';
 import { resourceBytes } from './resource-bytes.mjs';
+import { splitRuntimeAssetSources } from './runtime-sources.mjs';
 
 export const DESIGN_SKILL_IDS = Object.freeze([
   'planr-design',
@@ -16,8 +17,9 @@ export const DESIGN_SKILL_IDS = Object.freeze([
 
 /**
  * Operational and dependency modules keep useful standalone source boundaries.
- * Match bundle inputs so hoisted and nested installations resolve alike. Large
- * readable sources may require Directory review; never slice code to avoid it.
+ * Match bundle inputs so hoisted and nested installations resolve alike. Keep
+ * compression, transport and local custody inspectable as different modules.
+ * These are source boundaries, never arbitrary byte slices.
  */
 const CHUNK_BOUNDARIES = Object.freeze([
   ['parse5-parser', 'node_modules/parse5/dist/parser/index.js'],
@@ -29,9 +31,82 @@ const CHUNK_BOUNDARIES = Object.freeze([
   ['share', 'packages/design/lib/design/share.mjs'],
   ['handoff', 'packages/design/lib/design/handoff.mjs'],
   ['document', 'packages/design/lib/design/document.mjs'],
+  ['compression', 'node_modules/pako/dist/pako.esm.mjs'],
+  ['resource-pack', 'packages/artifact/lib/artifact/resource-pack.mjs'],
+  ['chunked-workspace-client', 'packages/artifact/lib/artifact/chunked-workspace-client.mjs'],
+  ['encrypted-workspace-client', 'packages/artifact/lib/artifact/encrypted-workspace-client.mjs'],
+  ['owner-custody', 'packages/artifact/lib/artifact/owner-custody.mjs'],
+  ['upload-spool', 'packages/artifact/lib/artifact/upload-spool.mjs'],
+  ['runtime-home', 'packages/artifact/lib/artifact/internal/planr-home.mjs'],
+  ['loopback-server', 'packages/artifact/lib/artifact/internal/server-util.mjs'],
+]);
+
+// Plan's boundaries include only its read-only dependencies. Using a complete
+// server or sharing client as an extra entrypoint would retain unused authority.
+const PLAN_CHUNK_BOUNDARIES = Object.freeze([
+  ['protocol-contracts', 'packages/protocol/src/large-object-contracts.mjs'],
 ]);
 
 const CHUNK_OUTDIR = 'design-bundle';
+
+function sharedChunkStem(inputs, contents) {
+  if (inputs.length === 0)
+    return `runtime-support-${createHash('sha256').update(contents).digest('hex').slice(0, 12)}`;
+  const domains = new Set();
+  for (const input of inputs) {
+    if (/(?:^|\/)packages\/protocol\//u.test(input)) domains.add('protocol-contracts');
+    else if (/(?:^|\/)packages\/artifact\//u.test(input)) domains.add('artifact-support');
+    else if (/(?:^|\/)packages\/design\//u.test(input)) domains.add('design-support');
+    else if (/(?:^|\/)node_modules\//u.test(input)) domains.add('dependencies');
+    else throw new Error(`Design shared module has an undeclared source domain: ${input}`);
+  }
+  // A domain states the whole chunk's responsibility; the input-identity suffix
+  // disambiguates separate chunks without pretending the first input owns them.
+  const identity = createHash('sha256').update(inputs.join('\n')).digest('hex').slice(0, 8);
+  return `shared-${[...domains].sort().join('-')}-${identity}`;
+}
+
+/**
+ * Names the closure imports from `target`, or null when an importer needs the whole module.
+ * A boundary entry that re-exports only these keeps tree shaking intact.
+ */
+function importedBindings(ts, root, inputs, target) {
+  const names = new Set();
+  for (const [importer, { imports }] of Object.entries(inputs)) {
+    const records = imports.filter(({ path }) => path === target);
+    if (!records.length) continue;
+    if (records.some(({ kind }) => kind !== 'import-statement')) return null;
+    const specifiers = new Set(records.map(({ original }) => original));
+    const source = ts.createSourceFile(
+      importer,
+      readFileSync(resolve(root, importer), 'utf8'),
+      ts.ScriptTarget.Latest,
+      false,
+      ts.ScriptKind.JS,
+    );
+    for (const statement of source.statements) {
+      if (
+        !(ts.isImportDeclaration(statement) || ts.isExportDeclaration(statement)) ||
+        !statement.moduleSpecifier ||
+        !specifiers.has(statement.moduleSpecifier.text)
+      )
+        continue;
+      const bindings = ts.isImportDeclaration(statement)
+        ? statement.importClause?.namedBindings
+        : statement.exportClause;
+      if (ts.isImportDeclaration(statement) && statement.importClause?.name) names.add('default');
+      if (!bindings) {
+        if (ts.isExportDeclaration(statement) || statement.importClause?.name === undefined)
+          return null;
+        continue;
+      }
+      if (!ts.isNamedImports(bindings) && !ts.isNamedExports(bindings)) return null;
+      for (const element of bindings.elements)
+        names.add((element.propertyName ?? element.name).text);
+    }
+  }
+  return names.size ? [...names].sort() : null;
+}
 
 function files(directory) {
   return readdirSync(directory, { withFileTypes: true })
@@ -67,29 +142,35 @@ export async function buildDesignSkillResources({
   const { build } = require('esbuild');
   const logical = (absolute) => relative(root, absolute).split(sep).join('/');
   // The stage and studio runtimes are untracked outputs of later generator steps, so they
-  // are rendered from source here instead of read from disk.
+  // are rendered from source here instead of read from disk. Skills ship them as readable
+  // statement units; the readable stage is the same program without whitespace compaction.
   const stageRuntimePath = resolve(root, 'packages/artifact/templates/artifact-review-stage.js');
   const studioRuntimePath = resolve(root, 'packages/design/templates/studio/studio.js');
   const browserInputs = [];
-  const renderedAssets = new Map(
+  const collectInputs = (inputs) => browserInputs.push(...inputs);
+  const sourceAssets = new Map(
     includesStudio
       ? [
           [
             stageRuntimePath,
-            Buffer.from(
-              renderArtifactStageRuntimeAsset({ projectRoot: resolve(root, 'packages/artifact') }),
-              'utf8',
-            ),
+            {
+              packageRoot: resolve(root, 'packages/artifact'),
+              text: renderArtifactStageRuntimeAsset({
+                projectRoot: resolve(root, 'packages/artifact'),
+                compact: false,
+                onInputs: collectInputs,
+              }),
+            },
           ],
           [
             studioRuntimePath,
-            Buffer.from(
-              renderDesignStudioRuntimeAsset({
+            {
+              packageRoot: resolve(root, 'packages/design'),
+              text: renderDesignStudioRuntimeAsset({
                 projectRoot: resolve(root, 'packages/design'),
-                onInputs: (inputs) => browserInputs.push(...inputs),
+                onInputs: collectInputs,
               }),
-              'utf8',
-            ),
+            },
           ],
         ]
       : [],
@@ -188,34 +269,54 @@ export async function buildDesignSkillResources({
     throw new Error(
       `Design utility bundles TypeScript sources; run node scripts/typescript/compile-sources.mjs first: ${typescript.join(', ')}`,
     );
-  const boundaries = includesStudio
-    ? CHUNK_BOUNDARIES.map(([id, suffix]) => {
-        const matches = closureInputs.filter(
-          (path) => path === suffix || path.endsWith(`/${suffix}`),
+  const ts = createRequire(resolve(root, 'package.json'))('typescript');
+  const boundaries = (includesStudio ? CHUNK_BOUNDARIES : PLAN_CHUNK_BOUNDARIES).map(
+    ([id, suffix]) => {
+      const matches = closureInputs.filter(
+        (path) => path === suffix || path.endsWith(`/${suffix}`),
+      );
+      if (matches.length !== 1)
+        throw new Error(
+          `Design chunk boundary ${suffix} matched ${matches.length} bundle inputs; update CHUNK_BOUNDARIES.`,
         );
-        if (matches.length !== 1)
-          throw new Error(
-            `Design chunk boundary ${suffix} matched ${matches.length} bundle inputs; update CHUNK_BOUNDARIES.`,
-          );
-        return { id, input: matches[0] };
-      })
-    : [];
-  const result = includesStudio
-    ? await build({
-        ...options,
-        entryPoints: [
-          { in: entry, out: 'design' },
-          ...boundaries.map(({ id, input }) => ({
-            in: resolve(root, input),
-            out: `boundary-${id}`,
-          })),
-        ],
-        splitting: true,
-        outdir: CHUNK_OUTDIR,
-        outExtension: { '.js': '.mjs' },
-        chunkNames: 'chunk-[hash]',
-      })
-    : closure;
+      const bindings = importedBindings(ts, root, closure.metafile.inputs, matches[0]);
+      return { id, input: matches[0], bindings };
+    },
+  );
+  const result = await build({
+    ...options,
+    entryPoints: [
+      { in: entry, out: 'design' },
+      ...boundaries.map(({ id, input, bindings }) => ({
+        in: bindings ? `planr-boundary:${id}` : resolve(root, input),
+        out: `boundary-${id}`,
+      })),
+    ],
+    plugins: [
+      ...options.plugins,
+      {
+        name: 'narrow-design-boundaries',
+        setup(buildApi) {
+          buildApi.onResolve({ filter: /^planr-boundary:/ }, ({ path }) => ({
+            path: path.slice('planr-boundary:'.length),
+            namespace: 'planr-boundary',
+          }));
+          buildApi.onLoad({ filter: /.*/, namespace: 'planr-boundary' }, ({ path }) => {
+            const { input, bindings } = boundaries.find(({ id }) => id === path);
+            return {
+              contents: `export { ${bindings.join(', ')} } from ${JSON.stringify(resolve(root, input))};\n`,
+              loader: 'js',
+              resolveDir: root,
+            };
+          });
+        },
+      },
+    ],
+    splitting: true,
+    outdir: CHUNK_OUTDIR,
+    outExtension: { '.js': '.mjs' },
+    chunkNames: 'chunk-[hash]',
+  });
   const dependencyPaths = Object.keys(result.metafile.inputs);
   const forbidden = dependencyPaths.filter((path) =>
     /(?:design-engine\/providers|node_modules\/(?:esbuild|@esbuild|openai|@anthropic-ai|@resvg)\/)/u.test(
@@ -254,13 +355,7 @@ export async function buildDesignSkillResources({
     const owners = boundaries
       .filter(({ input }) => chunkInputs.includes(input))
       .map(({ id }) => id);
-    const stem = owners.length
-      ? owners.join('-')
-      : chunkInputs.length === 0
-        ? `generated-${createHash('sha256').update(contents.get(key)).digest('hex').slice(0, 16)}`
-        : basename(chunkInputs[0])
-            .replace(/\.[^.]+$/u, '')
-            .replace(/[^a-z0-9]+/giu, '-');
+    const stem = owners.length ? owners.join('-') : sharedChunkStem(chunkInputs, contents.get(key));
     names.set(key, `design-${stem.toLowerCase()}.mjs`);
   }
   if (new Set(names.values()).size !== names.size)
@@ -307,7 +402,30 @@ export async function buildDesignSkillResources({
   ];
   for (const absolute of [...new Set(assetPaths)].sort()) {
     const path = `scripts/runtime/${logical(absolute)}`;
-    const bytes = renderedAssets.get(absolute) ?? readFileSync(absolute);
+    const sourceAsset = sourceAssets.get(absolute);
+    if (sourceAsset) {
+      const { manifest, files: units } = splitRuntimeAssetSources({
+        asset: basename(absolute),
+        text: sourceAsset.text,
+        packageRoot: sourceAsset.packageRoot,
+        repoRoot: root,
+      });
+      resources.push({
+        path: `${path}.sources.json`,
+        kind: 'asset',
+        executable: false,
+        bytes: resourceBytes(manifest),
+      });
+      for (const unit of units)
+        resources.push({
+          path: `${dirname(path)}/${unit.path}`,
+          kind: 'asset',
+          executable: false,
+          bytes: unit.bytes,
+        });
+      continue;
+    }
+    const bytes = readFileSync(absolute);
     // Preserve the full source asset. The shared suite stores it once, while
     // standalone downloads retain a complete offline closure and its provenance.
     resources.push({
