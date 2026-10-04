@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { lstatSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -683,10 +683,72 @@ describe('upgradeNextSteps', () => {
     expect(steps).toEqual([]);
   });
 
-  it('turns unreadable runtime state into a doctor step instead of failing', async () => {
-    // A runtime root outside the user's home fails the custody check setup itself applies.
+  it.each(['missing', 'valid'] as const)(
+    'accepts a supported OpenPlanr home outside the native home with %s runtime state',
+    async (state) => {
+      process.env.PLANR_HOME = join(root, 'elsewhere', '.planr');
+      try {
+        if (state === 'valid') {
+          const runtimeRoot = join(process.env.PLANR_HOME, 'runtime');
+          await mkdir(runtimeRoot, { recursive: true });
+          writeFileSync(
+            join(runtimeRoot, 'state.json'),
+            JSON.stringify({ schemaVersion: '2.0.0', projects: {}, userBundles: {} }),
+          );
+        }
+        const steps = await upgradeNextSteps(root, {
+          claudeCommandRunner: makeRunner({ available: false }),
+        });
+        expect(steps).toEqual([]);
+      } finally {
+        delete process.env.PLANR_HOME;
+      }
+    },
+  );
+
+  it.each([
+    ['malformed JSON', '{invalid', 'Runtime ownership state is invalid'],
+    [
+      'invalid ownership identity',
+      JSON.stringify({ schemaVersion: '2.0.0', projects: [] }),
+      'Runtime ownership state identity is invalid',
+    ],
+  ])(
+    'turns %s into a doctor step without changing the invalid bytes',
+    async (_label, content, detail) => {
+      process.env.PLANR_HOME = join(root, 'elsewhere', '.planr');
+      try {
+        const runtimeRoot = join(process.env.PLANR_HOME, 'runtime');
+        await mkdir(runtimeRoot, { recursive: true });
+        const statePath = join(runtimeRoot, 'state.json');
+        writeFileSync(statePath, content);
+        const steps = await upgradeNextSteps(root, {
+          claudeCommandRunner: makeRunner({ available: false }),
+        });
+        expect(steps).toEqual([
+          {
+            host: 'OpenPlanr',
+            command: 'planr doctor',
+            detail: expect.stringContaining(detail),
+          },
+        ]);
+        expect(readFileSync(statePath, 'utf8')).toBe(content);
+      } finally {
+        delete process.env.PLANR_HOME;
+      }
+    },
+  );
+
+  it('turns symbolic runtime state into a doctor step without following or replacing it', async () => {
     process.env.PLANR_HOME = join(root, 'elsewhere', '.planr');
     try {
+      const runtimeRoot = join(process.env.PLANR_HOME, 'runtime');
+      await mkdir(runtimeRoot, { recursive: true });
+      const ownerState = join(root, 'owner-state.json');
+      const original = JSON.stringify({ schemaVersion: '2.0.0', projects: {}, userBundles: {} });
+      writeFileSync(ownerState, original);
+      const statePath = join(runtimeRoot, 'state.json');
+      symlinkSync(ownerState, statePath);
       const steps = await upgradeNextSteps(root, {
         claudeCommandRunner: makeRunner({ available: false }),
       });
@@ -694,9 +756,11 @@ describe('upgradeNextSteps', () => {
         {
           host: 'OpenPlanr',
           command: 'planr doctor',
-          detail: expect.stringContaining('leaves its approved root'),
+          detail: expect.stringContaining('traverses symbolic component'),
         },
       ]);
+      expect(readFileSync(ownerState, 'utf8')).toBe(original);
+      expect(lstatSync(statePath).isSymbolicLink()).toBe(true);
     } finally {
       delete process.env.PLANR_HOME;
     }

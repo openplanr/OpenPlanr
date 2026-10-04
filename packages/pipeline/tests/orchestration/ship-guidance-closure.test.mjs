@@ -25,7 +25,13 @@ test('Ship is an in-session implementation workflow with a clear Land boundary',
   assert.match(skill, /Do not\s+delegate implementation to a command-line or model subprocess/u);
   assert.match(skill, /host's read, edit, shell, browser, and test capabilities/u);
   assert.match(skill, /inside this session/u);
-  assert.match(skill, /Next: planr-land/u);
+  const guidance = skill.replace(/\s+/gu, ' ');
+  assert.match(
+    guidance,
+    /Suggest `planr-land` only when a landing step remains in the requested workflow/u,
+  );
+  assert.match(guidance, /Do not add a next action when the requested scope is fulfilled/u);
+  assert.doesNotMatch(skill, /^\s*(?:-\s*)?Next:\s*planr-land\s*$/mu);
   assert.doesNotMatch(skill, FORBIDDEN_DELEGATION);
   assert.doesNotMatch(skill, RETIRED_GOVERNANCE);
 });

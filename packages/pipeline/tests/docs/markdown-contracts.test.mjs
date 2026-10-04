@@ -95,7 +95,13 @@ test('runtime compatibility schema stays valid without leaking release machinery
   const ship = readWorkspace('skills/planr-ship/SKILL.md');
   assert.deepEqual(schema.properties.qa_gate_status.enum, ['passed', 'failed', 'skipped']);
   assert.doesNotMatch(ship, /qa_gate_status:|compatibility manifest|receipt|digest/iu);
-  assert.match(ship, /Next: planr-land/u);
+  const guidance = ship.replace(/\s+/gu, ' ');
+  assert.match(
+    guidance,
+    /Suggest `planr-land` only when a landing step remains in the requested workflow/u,
+  );
+  assert.match(guidance, /Do not add a next action when the requested scope is fulfilled/u);
+  assert.doesNotMatch(ship, /^\s*(?:-\s*)?Next:\s*planr-land\s*$/mu);
 });
 
 test('Claude role agents inherit the host model and are generated only for Claude', () => {
