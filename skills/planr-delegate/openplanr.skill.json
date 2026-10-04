@@ -3,7 +3,7 @@
   "schemaVersion": "1.0.0",
   "protocolVersion": "1.8.0",
   "skillId": "planr-delegate",
-  "skillVersion": "0.1.0",
+  "skillVersion": "0.1.1",
   "entrypoint": "SKILL.md",
   "hosts": [
     "claude-code",

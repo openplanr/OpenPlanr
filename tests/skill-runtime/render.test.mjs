@@ -35,3 +35,16 @@ test('host token rendering substitutes only values used by the selected asset', 
   assert.equal(renderHostTokens('{{WORKFLOW_PREFIX}}ship\n', 'codex'), '$planr-ship\n');
   assert.equal(renderHostTokens('no tokens\n', 'cursor'), 'no tokens\n');
 });
+
+test('stack roots use canonical project storage and only selected host legacy fallbacks', () => {
+  for (const [host, legacy] of [
+    ['claude-code', '.claude/stacks'],
+    ['codex', '.codex/stacks'],
+    ['cursor', '.cursor/stacks'],
+  ]) {
+    assert.equal(
+      renderHostTokens('{{PROJECT_STACKS_ROOT}} → {{LEGACY_PROJECT_STACKS_ROOT}}\n', host),
+      `.planr/stacks → ${legacy}\n`,
+    );
+  }
+});

@@ -147,6 +147,9 @@ test('Ship implementation roles deterministically recover task and parent contex
   assert.match(shared, /input\/tech\/stack\.md/u);
   assert.match(shared, /\{\{PIPELINE_PACKAGE_ROOT\}\}\/stacks\/<logical-path>/u);
   assert.match(shared, /\{\{PROJECT_STACKS_ROOT\}\}\/<logical-path>/u);
+  assert.match(shared, /\{\{LEGACY_PROJECT_STACKS_ROOT\}\}\/<logical-path>/u);
+  assert.match(shared, /\.openplanr\/stacks\/<logical-path>/u);
+  assert.match(shared, /report the conflict without mixing or rewriting/iu);
   assert.match(shared, /project-local stack file overrides the installed default/iu);
   assert.match(shared, /Outcome.*completed, partial, or blocked/isu);
   assert.match(shared, /Issues.*always include/isu);

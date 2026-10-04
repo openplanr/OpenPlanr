@@ -52,7 +52,8 @@ test('Ship guides local completion without process machinery', () => {
     /explicitly asks another coding agent to implement,[\s\S]*hand off to `planr-delegate`/iu,
   );
   assert.match(ship, /plain Ship never launches its helper/u);
-  assert.match(ship, /Next: planr-land/u);
+  assert.match(ship, /Suggest `planr-land` only when a landing step remains/u);
+  assert.match(ship, /Do not add a next action when the requested scope is fulfilled/u);
 });
 
 test('Ship package is host-native, locally scoped, and excludes remote effects', () => {

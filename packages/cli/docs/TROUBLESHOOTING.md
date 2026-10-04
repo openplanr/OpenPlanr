@@ -35,7 +35,8 @@ actually selected it. A selected runtime that disappears remains a warning.
 
 - `E_NODE_VERSION`: install a supported Node.js version (see [package metadata](../package.json)); the installer never changes Node.
 - `E_PROJECT_CONTEXT_REQUIRED`: change into a Git or initialized OpenPlanr
-  project before selecting project scope, or use `--scope user`.
+  project before selecting project scope. Use `--scope user` only for an integration
+  that supports it; Cursor requires a valid project.
 - `E_RUNTIME_AMBIGUOUS`: pass `--runtime` or set a project default.
 - `E_LOCK_INCOMPATIBLE`: run the exact `planr runtime update ...` command shown.
 - `E_MIGRATION_CONFLICT`: a managed file changed after setup; preview, preserve
@@ -245,3 +246,23 @@ with:
 - the command or skill invocation and the full output
 - `planr --version` and `planr doctor --json` (doctor redacts secrets; check anyway)
 - the host and its version, your operating system, and `node --version`
+
+
+## Thin skill installation recovery
+
+Direct and project discovery entries refer to an exact runtime package in the
+selected `PLANR_HOME` (default `~/.planr`). Keep that cache available when working
+offline, and regenerate local entries with setup when moving machines or changing
+homes. Native plugin packages and downloaded standalone skills remain complete.
+
+Run `planr doctor --json` to distinguish discovery metadata drift from a missing
+or changed package closure. `planr doctor --fix` uses the same preview, backup,
+ownership checks and transaction as setup. It preserves the saved scope and
+Codex mode. `planr runtime update <agent>` updates only that agent.
+
+A partially copied exact cache can resume from the installed CLI. Modified cache
+bytes, edited discovery entries and unknown files are preserved as conflicts;
+inspect them instead of deleting the cache or relaxing ownership checks. Retained
+packages are not cleaned up during repair. If a concurrent edit prevents rollback,
+the edit and migration backup remain available and the error names the affected
+paths.

@@ -19,7 +19,7 @@
       "id": "planr-backend",
       "source": "agents/dev/planr-backend/AGENT.md",
       "path": "dist/plugins/claude/openplanr/agents/planr-backend.md",
-      "digest": "sha256:8290dfdefd47d7d766676bc78c8f83a96a63c69ff35ee63a41464ae45da81a9d"
+      "digest": "sha256:61210f2c0829c2836e41c47ad62f3a1954f5a970f5b3bdf3fa34d1c8f9430c77"
     },
     {
       "id": "planr-database",
@@ -55,7 +55,7 @@
       "id": "planr-frontend",
       "source": "agents/dev/planr-frontend/AGENT.md",
       "path": "dist/plugins/claude/openplanr/agents/planr-frontend.md",
-      "digest": "sha256:35191c25e3cd2c1aad4791db5b244088801a1e5c14de0531f4f8856cd9bb67f2"
+      "digest": "sha256:7c622e1e2c94227ca8816a6173d00c633378cddd009df4d529ddc76fd7cf4cb1"
     },
     {
       "id": "planr-qa",

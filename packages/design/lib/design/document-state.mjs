@@ -101,7 +101,7 @@ export function currentDesign(file, { recoverPublication = true } = {}) {
       lstatSync(join(root, '.design/publication.json'));
       throw Object.assign(
         new Error(
-          'An interrupted design publication needs recovery. Open or inspect it with the Design utility, then retry Plan handoff inspection.',
+          'Design publication state is pending or needs recovery. Finish or recover it with the Design utility; repair or restore an invalid .design/publication.json before retrying Plan handoff inspection.',
         ),
         { code: 'E_DESIGN_PUBLICATION_PENDING', statusCode: 409 },
       );

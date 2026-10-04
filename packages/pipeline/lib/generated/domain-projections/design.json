@@ -157,7 +157,7 @@
     {
       "source": "packages/design/lib/design/document-state.mjs",
       "target": "lib/design/document-state.mjs",
-      "sha256": "dc01dc1c6adce0a859e5062fbe9eac9f90e3941678c9984544e00b92e42f233c",
+      "sha256": "2c6e4a1b9f2e90689df978896138afcff6cd3ad2f7a3daa931ba40e8016a624e",
       "mode": "644"
     },
     {

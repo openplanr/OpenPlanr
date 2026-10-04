@@ -52,9 +52,10 @@ test('diagram contributor onboarding names every authoring and drift operation',
 });
 
 test('the documented planr-diagram lint, preview, and evaluation journey passes', () => {
+  const { skillVersion } = JSON.parse(read('skills/planr-diagram/openplanr.skill.json'));
   for (const [script, expected] of [
-    ['scripts/skills/lint.mjs', 'lint ok: planr-diagram@1.1.0'],
-    ['scripts/skills/preview.mjs', 'preview ok: planr-diagram@1.1.0'],
+    ['scripts/skills/lint.mjs', `lint ok: planr-diagram@${skillVersion}`],
+    ['scripts/skills/preview.mjs', `preview ok: planr-diagram@${skillVersion}`],
     ['scripts/skills/evaluate.mjs', 'evaluate ok: planr-diagram'],
   ]) {
     const result = run(script, 'skills/planr-diagram');

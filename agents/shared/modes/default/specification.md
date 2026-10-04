@@ -47,7 +47,11 @@ names retain their established feature-local layout.
    a. Read its `ActiveStackFiles` entries in declared order.
    b. For each entry, load the installed default from
       `{{PIPELINE_PACKAGE_ROOT}}/stacks/...` first, then load the matching
-      `{{PROJECT_STACKS_ROOT}}/...` file when present. The project file overrides
+      `{{PROJECT_STACKS_ROOT}}/...` file when present. If absent, use the selected
+      runtime's `{{LEGACY_PROJECT_STACKS_ROOT}}/...`, then `.openplanr/stacks/...`.
+      Do not select a runtime from a stack path or read another host's stack.
+      When project sources differ, report the conflict and use this precedence
+      without mixing or rewriting them. The project file overrides
       the installed file on a filename collision.
    c. Apply the resulting folder, naming, framework, testing, and integration
       conventions when selecting task paths. If a declared stack file cannot be

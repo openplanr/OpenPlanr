@@ -4,6 +4,7 @@ import path from 'node:path';
 import { parse } from 'smol-toml';
 import { userHome } from '../../../lib/planr-home.mjs';
 import type { SkillInstallMode } from './global-state.js';
+import { inspectRuntimeLocator, inspectRuntimePackage } from './runtime-package.js';
 
 function canonicalPath(directory: string): string {
   const resolved = path.resolve(directory);
@@ -29,6 +30,7 @@ type SkillCopy = Readonly<{
   protocolVersion: string | null;
   packageVersion: string | null;
   sourceHash: string | null;
+  packageDigest?: string;
   current: boolean;
   enabled?: boolean;
   issue?: string;
@@ -76,13 +78,32 @@ function readCopy(
   skillId: string,
   packageVersion: string | null,
   enabled?: boolean,
+  verifiedPackages = new Map<string, string>(),
 ): Omit<SkillCopy, 'current'> | null {
   const entrypoint = path.join(directory, 'SKILL.md');
   if (!existsSync(entrypoint)) return null;
   try {
     if (!lstatSync(directory).isDirectory() || lstatSync(directory).isSymbolicLink())
       throw new Error('Skill root is not a regular directory.');
-    const completeHash = sourceHash(directory);
+    const locator = inspectRuntimeLocator(directory, verifiedPackages);
+    let packageDigest = locator?.packageDigest;
+    const suiteRoot = path.dirname(path.dirname(directory));
+    const inventory = path.join(suiteRoot, '.openplanr-content.json');
+    if (!locator && existsSync(inventory)) {
+      packageDigest = `sha256:${createHash('sha256').update(readFileSync(inventory)).digest('hex')}`;
+      if (verifiedPackages.get(suiteRoot) !== packageDigest) {
+        inspectRuntimePackage(
+          suiteRoot,
+          path.join(suiteRoot, '.inspection-only'),
+          'openai',
+          packageVersion ?? 'unknown',
+        );
+        verifiedPackages.set(suiteRoot, packageDigest);
+      }
+    }
+    const completeHash = sourceHash(
+      locator ? path.dirname(path.join(locator.sourceRoot, locator.entryPath)) : directory,
+    );
     const metadataPath = path.join(directory, 'openplanr.skill.json');
     const metadata = existsSync(metadataPath)
       ? (JSON.parse(readFileSync(metadataPath, 'utf8')) as Record<string, unknown>)
@@ -94,8 +115,9 @@ function readCopy(
       skillVersion: typeof metadata.skillVersion === 'string' ? metadata.skillVersion : null,
       protocolVersion:
         typeof metadata.protocolVersion === 'string' ? metadata.protocolVersion : null,
-      packageVersion,
+      packageVersion: locator?.packageVersion ?? packageVersion,
       sourceHash: completeHash,
+      ...(packageDigest ? { packageDigest } : {}),
       ...(enabled === undefined ? {} : { enabled }),
     };
   } catch {
@@ -200,15 +222,23 @@ function inspectSkill(
   bundledDirectory: string,
   roots: DiscoveryRoot[],
   packageVersion: string,
+  verifiedPackages: Map<string, string>,
 ): CodexSkillDiscovery['skills'][number] {
   const name = path.basename(bundledDirectory).replace(/^planr-/u, '');
   const skillId = `planr-${name}`;
-  const bundled = readCopy(bundledDirectory, 'bundled', skillId, packageVersion);
+  const bundled = readCopy(
+    bundledDirectory,
+    'bundled',
+    skillId,
+    packageVersion,
+    undefined,
+    verifiedPackages,
+  );
   const candidates = [
     bundled,
     ...roots.flatMap(({ root, kind, version, enabled }) =>
       [name, `planr-${name}`].map((alias) =>
-        readCopy(path.join(root, alias), kind, skillId, version, enabled),
+        readCopy(path.join(root, alias), kind, skillId, version, enabled, verifiedPackages),
       ),
     ),
   ];
@@ -220,7 +250,11 @@ function inspectSkill(
     )
     .map((copy) => ({
       ...copy,
-      current: Boolean(copy.sourceHash && copy.sourceHash === bundled?.sourceHash),
+      current: Boolean(
+        copy.sourceHash &&
+          copy.sourceHash === bundled?.sourceHash &&
+          (!copy.packageDigest || copy.packageDigest === bundled?.packageDigest),
+      ),
     }));
   const active = copies.filter(
     (copy) => copy.kind !== 'bundled' && (copy.kind !== 'plugin-cache' || copy.enabled === true),
@@ -235,6 +269,7 @@ function inspectSkill(
 
 /** Reports actual copies; it cannot claim which skill an already-open host session loaded. */
 export function inspectCodexSkillDiscovery(input: DiscoveryInput): CodexSkillDiscovery {
+  const verifiedPackages = new Map<string, string>();
   const effectiveHome = effectiveCodexHome();
   const configurationPath = path.join(effectiveHome, 'config.toml');
   const issues: string[] = [];
@@ -258,7 +293,7 @@ export function inspectCodexSkillDiscovery(input: DiscoveryInput): CodexSkillDis
     packageVersion: input.packageVersion,
     sessionResolution: 'restart-required-to-confirm',
     skills: bundledDirectories.map((directory) =>
-      inspectSkill(directory, roots, input.packageVersion),
+      inspectSkill(directory, roots, input.packageVersion, verifiedPackages),
     ),
     issues,
   };

@@ -28,6 +28,8 @@ would materially change the review. Otherwise state the assumption and continue.
 ## Output
 
 Lead with one verdict: `ready`, `ready with improvements`, or `needs revision`.
+Use `needs revision` when a must-fix issue remains; reserve `ready with improvements`
+for nonblocking changes.
 Then report:
 
 1. Must fix — only issues that would make the implementation wrong or unsafe.

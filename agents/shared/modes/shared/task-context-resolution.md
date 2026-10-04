@@ -26,7 +26,12 @@ mode-specific file defines how to resolve its path and parent artifacts.
      `frontend/nextjs.md` or `database/prisma.md`);
    - read the installed default at
      `{{PIPELINE_PACKAGE_ROOT}}/stacks/<logical-path>` when present;
-   - then read `{{PROJECT_STACKS_ROOT}}/<logical-path>` when present.
+   - then read `{{PROJECT_STACKS_ROOT}}/<logical-path>` when present; otherwise
+     use `{{LEGACY_PROJECT_STACKS_ROOT}}/<logical-path>` for the selected runtime,
+     then `.openplanr/stacks/<logical-path>` as the final legacy fallback.
+     Do not infer the active runtime from a stack path or read a different host's
+     directory. When multiple project sources differ, use the first source in
+     this order and report the conflict without mixing or rewriting their bytes.
 
    The project-local stack file overrides the installed default on a collision.
    Existing project code and configuration remain the primary reference for how

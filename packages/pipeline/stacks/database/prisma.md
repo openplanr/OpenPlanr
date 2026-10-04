@@ -3,7 +3,7 @@
 > **Category:** database
 > **Version:** 5.x / 6.x
 > **Docs:** https://www.prisma.io/docs
-> **Created:** Template — copy to `.claude/stacks/database/prisma.md` in your project to override.
+> **Created:** Template — copy to `.planr/stacks/database/prisma.md` in your project to override.
 
 ---
 

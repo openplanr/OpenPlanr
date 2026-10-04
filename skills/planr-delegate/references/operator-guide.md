@@ -9,10 +9,23 @@ streaming and exact continuation. Authenticate with the selected CLI's normal
 login flow; OpenPlanr does not copy authentication tokens into its records.
 Terminal-less hosts return an actionable unsupported-host diagnostic.
 
-Native selection order is explicit engine/profile, saved choice, sole installed
-engine, then a question if ambiguous. Missing CLIs are not installed automatically.
-A provider hidden behind native configuration is shown as **native-managed**.
-Do not infer local inference from a profile name or invent an endpoint.
+Keep selection precedence: explicit engine/profile, saved choice, a sole
+compatible native choice, then a question when the engine or profile remains
+ambiguous. Without an explicit or saved selection, run `probe` with the repository
+root and present both native defaults and saved profile choices. Group by engine
+if the host limits question options, then ask for its default or saved profile.
+Do not omit local-model profiles or manufacture duplicate aliases.
+
+Label each choice with its engine, profile and configured model (or native default),
+readiness and effective destination when the probe exposes it. Distinguish recorded
+profile configuration from the effective result in this host's environment. A
+provider hidden behind native configuration is **native-managed**; that does not
+verify local inference. Do not infer routing from a name, a previously recorded
+origin, or a probe in another host. If the user requests local execution and routing
+is unknown or inconsistent, show the diagnostic and resolve the native configuration
+before dispatch. Do not silently switch to a cloud default. Unavailable profiles
+remain visible with their exact recovery action. Missing CLIs are not installed
+automatically, and discovery does not establish that a backend is ready.
 
 ## Prepare a run
 
@@ -77,5 +90,9 @@ Experimental generic adapters retain their versioned enrollment/protocol.
 Local server/model/authentication probes are diagnostic and send no task content.
 Template failures require fixing the backend itself. OpenPlanr does not rewrite
 messages/templates, load models automatically or silently change providers.
+When changing a local model, use the exact model ID advertised by that backend;
+a GGUF filename or display label is not automatically its request ID. Apply an
+explicit model override only to this run through the existing native options;
+rewrite or enroll a saved profile only when the user requests it.
 
 If a native CLI uses read-only permissions for non-interactive runs, delegation reports attention rather than enabling writes. Resolve access in that CLI’s own configuration or explicitly authorized exact-session invocation, then continue the recorded session. Model summaries are never sufficient evidence of implementation.

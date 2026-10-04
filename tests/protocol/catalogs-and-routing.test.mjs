@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
@@ -144,11 +145,23 @@ test('catalog floors classify commands, skills, rules, and Class A-D outputs', (
     'planr-cto-review',
   ]) {
     const skill = skills.skills.find((candidate) => candidate.skillId === skillId);
-    assert.equal(skill.skillVersion, '2.0.0', skillId);
+    const manifest = JSON.parse(
+      readFileSync(
+        new URL(`../../skills/${skillId}/openplanr.skill.json`, import.meta.url),
+        'utf8',
+      ),
+    );
+    assert.equal(skill.skillVersion, manifest.skillVersion, skillId);
     assert.equal(skill.contracts.outputs[0].version, '2.0.0', skillId);
   }
   const operate = skills.skills.find(({ skillId }) => skillId === 'planr-operate');
-  assert.equal(operate.skillVersion, '2.1.0');
+  const operateManifest = JSON.parse(
+    readFileSync(
+      new URL('../../skills/planr-operate/openplanr.skill.json', import.meta.url),
+      'utf8',
+    ),
+  );
+  assert.equal(operate.skillVersion, operateManifest.skillVersion);
   assert.equal(operate.contracts.outputs[0].version, '2.0.0');
   assert.deepEqual(skills.compatibilityAliases, []);
 
