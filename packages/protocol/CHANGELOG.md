@@ -1,5 +1,13 @@
 # @openplanr/protocol
 
+## 0.10.1
+
+### Patch Changes
+
+- 5c51ad8: Improve offline Studio and review runtime packaging while preserving existing designs and installations. Verify packaged files before publication and restore the previous package if an update fails.
+  
+  Use profile-specific authentication for local model diagnostics.
+
 ## 0.10.0
 
 ### Minor Changes

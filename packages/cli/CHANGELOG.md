@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.2640.9
+
+### Patch Changes
+
+- 5c51ad8: Improve offline Studio and review runtime packaging while preserving existing designs and installations. Verify packaged files before publication and restore the previous package if an update fails.
+  
+  Use profile-specific authentication for local model diagnostics.
+
 ## 2.2640.8
 
 ### Patch Changes

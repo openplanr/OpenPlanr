@@ -1,5 +1,12 @@
 # @openplanr/skill-runtime
 
+## 0.2.14
+
+### Patch Changes
+
+- Updated dependencies [5c51ad8]
+  - @openplanr/protocol@0.10.1
+
 ## 0.2.13
 
 ### Patch Changes
