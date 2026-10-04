@@ -1606,7 +1606,7 @@
           "digest": "sha256:1a1dd09e283b5790a222160d0694e81267ee0037b280ab8960de42a8f28c961f"
         },
         {
-          "path": "scripts/runtime/packages/artifact/templates/artifact-review-stage.js.part-001",
+          "path": "scripts/runtime/packages/artifact/templates/artifact-review-stage.js",
           "kind": "asset",
           "executable": false,
           "hosts": [
@@ -1615,43 +1615,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:dd7007ab48e823f90e89ab2028946400282689bc42b99fd8c770a9e3c82a207e"
-        },
-        {
-          "path": "scripts/runtime/packages/artifact/templates/artifact-review-stage.js.part-002",
-          "kind": "asset",
-          "executable": false,
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "digest": "sha256:e062973ae0a83bd31b188cb373e7a65c4d34b7dcee79cf400554b880ff6db63f"
-        },
-        {
-          "path": "scripts/runtime/packages/artifact/templates/artifact-review-stage.js.part-003",
-          "kind": "asset",
-          "executable": false,
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "digest": "sha256:a9e840670eba89b531b044e2405252a26b4327d350d14fa264c2ee00fe4e8a05"
-        },
-        {
-          "path": "scripts/runtime/packages/artifact/templates/artifact-review-stage.js.parts.json",
-          "kind": "asset",
-          "executable": false,
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "digest": "sha256:7f5b7a8c5b5cc10f04579c84c93b7852578c65c1051b289c7ab06bbda8c57dc6"
+          "digest": "sha256:762bcae15b5066f5b08263aab0f45592352f362b54dc08ea90cc090afc9bf59a"
         },
         {
           "path": "scripts/runtime/packages/design/package.json",
@@ -1726,7 +1690,7 @@
           "digest": "sha256:ecb86a5f5517262f8dc71e518163ca55074404c6823d5f989edad5e9f71293af"
         },
         {
-          "path": "scripts/runtime/packages/design/templates/studio/studio.js.part-001",
+          "path": "scripts/runtime/packages/design/templates/studio/studio.js",
           "kind": "asset",
           "executable": false,
           "hosts": [
@@ -1735,115 +1699,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:10c64b560b5b6056cd7433b1494ace2bde3351bbccd9a4e8810bd3822b0c82da"
-        },
-        {
-          "path": "scripts/runtime/packages/design/templates/studio/studio.js.part-002",
-          "kind": "asset",
-          "executable": false,
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "digest": "sha256:187d37519817c3d390cdbc97379521ad349a35f61b5673803501fb91550734aa"
-        },
-        {
-          "path": "scripts/runtime/packages/design/templates/studio/studio.js.part-003",
-          "kind": "asset",
-          "executable": false,
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "digest": "sha256:3e26d42f504b21fa3fa606e55b45a43c0e4c01e0f389bfb8e2b753644ee6061e"
-        },
-        {
-          "path": "scripts/runtime/packages/design/templates/studio/studio.js.part-004",
-          "kind": "asset",
-          "executable": false,
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "digest": "sha256:f3b54cacf2df86cc7546bafb128a0a46b802779d63fea03d969db4346391b371"
-        },
-        {
-          "path": "scripts/runtime/packages/design/templates/studio/studio.js.part-005",
-          "kind": "asset",
-          "executable": false,
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "digest": "sha256:3ec27695260a73ecc81503e578f230a1048459f2a1cbbe2521662ef25b6a17aa"
-        },
-        {
-          "path": "scripts/runtime/packages/design/templates/studio/studio.js.part-006",
-          "kind": "asset",
-          "executable": false,
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "digest": "sha256:ee8d775fd0e97c74172f540c83412900b4e73a62188c23fd2b162fc0e82bbcdc"
-        },
-        {
-          "path": "scripts/runtime/packages/design/templates/studio/studio.js.part-007",
-          "kind": "asset",
-          "executable": false,
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "digest": "sha256:3bdf4a1f9bfdc8bd12c2eec50772a32b092262834be23e93333f79bdfd41bb67"
-        },
-        {
-          "path": "scripts/runtime/packages/design/templates/studio/studio.js.part-008",
-          "kind": "asset",
-          "executable": false,
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "digest": "sha256:2f03557f7b4bf6d5953dd06114b6dde27f49e6b4d77c812988f8b865d92f3900"
-        },
-        {
-          "path": "scripts/runtime/packages/design/templates/studio/studio.js.part-009",
-          "kind": "asset",
-          "executable": false,
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "digest": "sha256:1b405a0f3f7da5c55b87c94e152be975a74fa9399f457141c51e9cea56d379a1"
-        },
-        {
-          "path": "scripts/runtime/packages/design/templates/studio/studio.js.parts.json",
-          "kind": "asset",
-          "executable": false,
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "digest": "sha256:7a26637c80ef499f46d87087bf2588a82dac7c1c67163c6a657a1087760feea1"
+          "digest": "sha256:24745f5b2327275efa2cb904652c4451b16a6893d4284e375a3ce986d909f49e"
         },
         {
           "path": "scripts/runtime/packages/protocol/package.json",
@@ -2528,7 +2384,7 @@
           "digest": "sha256:1a1dd09e283b5790a222160d0694e81267ee0037b280ab8960de42a8f28c961f"
         },
         {
-          "path": "scripts/runtime/packages/artifact/templates/artifact-review-stage.js.part-001",
+          "path": "scripts/runtime/packages/artifact/templates/artifact-review-stage.js",
           "kind": "asset",
           "executable": false,
           "hosts": [
@@ -2537,43 +2393,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:dd7007ab48e823f90e89ab2028946400282689bc42b99fd8c770a9e3c82a207e"
-        },
-        {
-          "path": "scripts/runtime/packages/artifact/templates/artifact-review-stage.js.part-002",
-          "kind": "asset",
-          "executable": false,
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "digest": "sha256:e062973ae0a83bd31b188cb373e7a65c4d34b7dcee79cf400554b880ff6db63f"
-        },
-        {
-          "path": "scripts/runtime/packages/artifact/templates/artifact-review-stage.js.part-003",
-          "kind": "asset",
-          "executable": false,
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "digest": "sha256:a9e840670eba89b531b044e2405252a26b4327d350d14fa264c2ee00fe4e8a05"
-        },
-        {
-          "path": "scripts/runtime/packages/artifact/templates/artifact-review-stage.js.parts.json",
-          "kind": "asset",
-          "executable": false,
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "digest": "sha256:7f5b7a8c5b5cc10f04579c84c93b7852578c65c1051b289c7ab06bbda8c57dc6"
+          "digest": "sha256:762bcae15b5066f5b08263aab0f45592352f362b54dc08ea90cc090afc9bf59a"
         },
         {
           "path": "scripts/runtime/packages/design/package.json",
@@ -2648,7 +2468,7 @@
           "digest": "sha256:ecb86a5f5517262f8dc71e518163ca55074404c6823d5f989edad5e9f71293af"
         },
         {
-          "path": "scripts/runtime/packages/design/templates/studio/studio.js.part-001",
+          "path": "scripts/runtime/packages/design/templates/studio/studio.js",
           "kind": "asset",
           "executable": false,
           "hosts": [
@@ -2657,115 +2477,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:10c64b560b5b6056cd7433b1494ace2bde3351bbccd9a4e8810bd3822b0c82da"
-        },
-        {
-          "path": "scripts/runtime/packages/design/templates/studio/studio.js.part-002",
-          "kind": "asset",
-          "executable": false,
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "digest": "sha256:187d37519817c3d390cdbc97379521ad349a35f61b5673803501fb91550734aa"
-        },
-        {
-          "path": "scripts/runtime/packages/design/templates/studio/studio.js.part-003",
-          "kind": "asset",
-          "executable": false,
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "digest": "sha256:3e26d42f504b21fa3fa606e55b45a43c0e4c01e0f389bfb8e2b753644ee6061e"
-        },
-        {
-          "path": "scripts/runtime/packages/design/templates/studio/studio.js.part-004",
-          "kind": "asset",
-          "executable": false,
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "digest": "sha256:f3b54cacf2df86cc7546bafb128a0a46b802779d63fea03d969db4346391b371"
-        },
-        {
-          "path": "scripts/runtime/packages/design/templates/studio/studio.js.part-005",
-          "kind": "asset",
-          "executable": false,
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "digest": "sha256:3ec27695260a73ecc81503e578f230a1048459f2a1cbbe2521662ef25b6a17aa"
-        },
-        {
-          "path": "scripts/runtime/packages/design/templates/studio/studio.js.part-006",
-          "kind": "asset",
-          "executable": false,
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "digest": "sha256:ee8d775fd0e97c74172f540c83412900b4e73a62188c23fd2b162fc0e82bbcdc"
-        },
-        {
-          "path": "scripts/runtime/packages/design/templates/studio/studio.js.part-007",
-          "kind": "asset",
-          "executable": false,
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "digest": "sha256:3bdf4a1f9bfdc8bd12c2eec50772a32b092262834be23e93333f79bdfd41bb67"
-        },
-        {
-          "path": "scripts/runtime/packages/design/templates/studio/studio.js.part-008",
-          "kind": "asset",
-          "executable": false,
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "digest": "sha256:2f03557f7b4bf6d5953dd06114b6dde27f49e6b4d77c812988f8b865d92f3900"
-        },
-        {
-          "path": "scripts/runtime/packages/design/templates/studio/studio.js.part-009",
-          "kind": "asset",
-          "executable": false,
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "digest": "sha256:1b405a0f3f7da5c55b87c94e152be975a74fa9399f457141c51e9cea56d379a1"
-        },
-        {
-          "path": "scripts/runtime/packages/design/templates/studio/studio.js.parts.json",
-          "kind": "asset",
-          "executable": false,
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "digest": "sha256:7a26637c80ef499f46d87087bf2588a82dac7c1c67163c6a657a1087760feea1"
+          "digest": "sha256:24745f5b2327275efa2cb904652c4451b16a6893d4284e375a3ce986d909f49e"
         },
         {
           "path": "scripts/runtime/packages/protocol/package.json",
@@ -3450,7 +3162,7 @@
           "digest": "sha256:1a1dd09e283b5790a222160d0694e81267ee0037b280ab8960de42a8f28c961f"
         },
         {
-          "path": "scripts/runtime/packages/artifact/templates/artifact-review-stage.js.part-001",
+          "path": "scripts/runtime/packages/artifact/templates/artifact-review-stage.js",
           "kind": "asset",
           "executable": false,
           "hosts": [
@@ -3459,43 +3171,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:dd7007ab48e823f90e89ab2028946400282689bc42b99fd8c770a9e3c82a207e"
-        },
-        {
-          "path": "scripts/runtime/packages/artifact/templates/artifact-review-stage.js.part-002",
-          "kind": "asset",
-          "executable": false,
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "digest": "sha256:e062973ae0a83bd31b188cb373e7a65c4d34b7dcee79cf400554b880ff6db63f"
-        },
-        {
-          "path": "scripts/runtime/packages/artifact/templates/artifact-review-stage.js.part-003",
-          "kind": "asset",
-          "executable": false,
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "digest": "sha256:a9e840670eba89b531b044e2405252a26b4327d350d14fa264c2ee00fe4e8a05"
-        },
-        {
-          "path": "scripts/runtime/packages/artifact/templates/artifact-review-stage.js.parts.json",
-          "kind": "asset",
-          "executable": false,
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "digest": "sha256:7f5b7a8c5b5cc10f04579c84c93b7852578c65c1051b289c7ab06bbda8c57dc6"
+          "digest": "sha256:762bcae15b5066f5b08263aab0f45592352f362b54dc08ea90cc090afc9bf59a"
         },
         {
           "path": "scripts/runtime/packages/design/package.json",
@@ -3570,7 +3246,7 @@
           "digest": "sha256:ecb86a5f5517262f8dc71e518163ca55074404c6823d5f989edad5e9f71293af"
         },
         {
-          "path": "scripts/runtime/packages/design/templates/studio/studio.js.part-001",
+          "path": "scripts/runtime/packages/design/templates/studio/studio.js",
           "kind": "asset",
           "executable": false,
           "hosts": [
@@ -3579,115 +3255,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:10c64b560b5b6056cd7433b1494ace2bde3351bbccd9a4e8810bd3822b0c82da"
-        },
-        {
-          "path": "scripts/runtime/packages/design/templates/studio/studio.js.part-002",
-          "kind": "asset",
-          "executable": false,
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "digest": "sha256:187d37519817c3d390cdbc97379521ad349a35f61b5673803501fb91550734aa"
-        },
-        {
-          "path": "scripts/runtime/packages/design/templates/studio/studio.js.part-003",
-          "kind": "asset",
-          "executable": false,
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "digest": "sha256:3e26d42f504b21fa3fa606e55b45a43c0e4c01e0f389bfb8e2b753644ee6061e"
-        },
-        {
-          "path": "scripts/runtime/packages/design/templates/studio/studio.js.part-004",
-          "kind": "asset",
-          "executable": false,
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "digest": "sha256:f3b54cacf2df86cc7546bafb128a0a46b802779d63fea03d969db4346391b371"
-        },
-        {
-          "path": "scripts/runtime/packages/design/templates/studio/studio.js.part-005",
-          "kind": "asset",
-          "executable": false,
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "digest": "sha256:3ec27695260a73ecc81503e578f230a1048459f2a1cbbe2521662ef25b6a17aa"
-        },
-        {
-          "path": "scripts/runtime/packages/design/templates/studio/studio.js.part-006",
-          "kind": "asset",
-          "executable": false,
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "digest": "sha256:ee8d775fd0e97c74172f540c83412900b4e73a62188c23fd2b162fc0e82bbcdc"
-        },
-        {
-          "path": "scripts/runtime/packages/design/templates/studio/studio.js.part-007",
-          "kind": "asset",
-          "executable": false,
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "digest": "sha256:3bdf4a1f9bfdc8bd12c2eec50772a32b092262834be23e93333f79bdfd41bb67"
-        },
-        {
-          "path": "scripts/runtime/packages/design/templates/studio/studio.js.part-008",
-          "kind": "asset",
-          "executable": false,
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "digest": "sha256:2f03557f7b4bf6d5953dd06114b6dde27f49e6b4d77c812988f8b865d92f3900"
-        },
-        {
-          "path": "scripts/runtime/packages/design/templates/studio/studio.js.part-009",
-          "kind": "asset",
-          "executable": false,
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "digest": "sha256:1b405a0f3f7da5c55b87c94e152be975a74fa9399f457141c51e9cea56d379a1"
-        },
-        {
-          "path": "scripts/runtime/packages/design/templates/studio/studio.js.parts.json",
-          "kind": "asset",
-          "executable": false,
-          "hosts": [
-            "claude-code",
-            "codex",
-            "chatgpt",
-            "cursor"
-          ],
-          "digest": "sha256:7a26637c80ef499f46d87087bf2588a82dac7c1c67163c6a657a1087760feea1"
+          "digest": "sha256:24745f5b2327275efa2cb904652c4451b16a6893d4284e375a3ce986d909f49e"
         },
         {
           "path": "scripts/runtime/packages/protocol/package.json",

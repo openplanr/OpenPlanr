@@ -9,6 +9,7 @@ import {
   rmSync,
   writeFileSync,
 } from 'node:fs';
+import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import test from 'node:test';
@@ -145,18 +146,24 @@ test('the Claude plugin ships a directory-ready README and discovery metadata', 
   );
 });
 
-test('the Claude plugin stays within the plugin directory limits', () => {
+test('the Claude plugin ships independently parseable source and scoped tool grants', () => {
   const pluginRoot = resolve(root, 'dist/plugins/claude/openplanr');
   const files = readdirSync(pluginRoot, { recursive: true, withFileTypes: true })
     .filter((entry) => entry.isFile())
     .map((entry) => join(entry.parentPath, entry.name));
-  assert.ok(files.length <= 512, `${files.length} files; the directory reviews more than 512`);
-  for (const file of files)
-    if (!/\.(?:png|jpe?g|gif|webp|svg|woff2?|ttf|otf)$/u.test(file))
-      assert.ok(
-        readFileSync(file).length < 256 * 1024,
-        `${file} reaches the directory's 256 KiB per-file review limit`,
-      );
+  const { transformSync } = createRequire(resolve(root, 'packages/artifact/package.json'))(
+    'esbuild',
+  );
+  for (const file of files) {
+    assert.doesNotMatch(file, /\.part-\d+|\.parts\.json$/u, 'new releases ship complete source');
+    assert.doesNotMatch(
+      file,
+      /\.(?:wasm|node|bin|pyc|dylib|dll|exe)$/u,
+      'no executable binary payload',
+    );
+    if (/\.(?:mjs|js)$/u.test(file))
+      assert.doesNotThrow(() => transformSync(readFileSync(file, 'utf8'), { loader: 'js' }), file);
+  }
   for (const skillId of skillIds) {
     const skill = read(
       `dist/plugins/claude/openplanr/skills/${projectedSkillName(skillId)}/SKILL.md`,

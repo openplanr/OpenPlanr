@@ -342,40 +342,7 @@
       ]
     },
     {
-      "path": "scripts/runtime/packages/artifact/templates/artifact-review-stage.js.part-001",
-      "kind": "asset",
-      "executable": false,
-      "hosts": [
-        "claude-code",
-        "codex",
-        "chatgpt",
-        "cursor"
-      ]
-    },
-    {
-      "path": "scripts/runtime/packages/artifact/templates/artifact-review-stage.js.part-002",
-      "kind": "asset",
-      "executable": false,
-      "hosts": [
-        "claude-code",
-        "codex",
-        "chatgpt",
-        "cursor"
-      ]
-    },
-    {
-      "path": "scripts/runtime/packages/artifact/templates/artifact-review-stage.js.part-003",
-      "kind": "asset",
-      "executable": false,
-      "hosts": [
-        "claude-code",
-        "codex",
-        "chatgpt",
-        "cursor"
-      ]
-    },
-    {
-      "path": "scripts/runtime/packages/artifact/templates/artifact-review-stage.js.parts.json",
+      "path": "scripts/runtime/packages/artifact/templates/artifact-review-stage.js",
       "kind": "asset",
       "executable": false,
       "hosts": [
@@ -452,106 +419,7 @@
       ]
     },
     {
-      "path": "scripts/runtime/packages/design/templates/studio/studio.js.part-001",
-      "kind": "asset",
-      "executable": false,
-      "hosts": [
-        "claude-code",
-        "codex",
-        "chatgpt",
-        "cursor"
-      ]
-    },
-    {
-      "path": "scripts/runtime/packages/design/templates/studio/studio.js.part-002",
-      "kind": "asset",
-      "executable": false,
-      "hosts": [
-        "claude-code",
-        "codex",
-        "chatgpt",
-        "cursor"
-      ]
-    },
-    {
-      "path": "scripts/runtime/packages/design/templates/studio/studio.js.part-003",
-      "kind": "asset",
-      "executable": false,
-      "hosts": [
-        "claude-code",
-        "codex",
-        "chatgpt",
-        "cursor"
-      ]
-    },
-    {
-      "path": "scripts/runtime/packages/design/templates/studio/studio.js.part-004",
-      "kind": "asset",
-      "executable": false,
-      "hosts": [
-        "claude-code",
-        "codex",
-        "chatgpt",
-        "cursor"
-      ]
-    },
-    {
-      "path": "scripts/runtime/packages/design/templates/studio/studio.js.part-005",
-      "kind": "asset",
-      "executable": false,
-      "hosts": [
-        "claude-code",
-        "codex",
-        "chatgpt",
-        "cursor"
-      ]
-    },
-    {
-      "path": "scripts/runtime/packages/design/templates/studio/studio.js.part-006",
-      "kind": "asset",
-      "executable": false,
-      "hosts": [
-        "claude-code",
-        "codex",
-        "chatgpt",
-        "cursor"
-      ]
-    },
-    {
-      "path": "scripts/runtime/packages/design/templates/studio/studio.js.part-007",
-      "kind": "asset",
-      "executable": false,
-      "hosts": [
-        "claude-code",
-        "codex",
-        "chatgpt",
-        "cursor"
-      ]
-    },
-    {
-      "path": "scripts/runtime/packages/design/templates/studio/studio.js.part-008",
-      "kind": "asset",
-      "executable": false,
-      "hosts": [
-        "claude-code",
-        "codex",
-        "chatgpt",
-        "cursor"
-      ]
-    },
-    {
-      "path": "scripts/runtime/packages/design/templates/studio/studio.js.part-009",
-      "kind": "asset",
-      "executable": false,
-      "hosts": [
-        "claude-code",
-        "codex",
-        "chatgpt",
-        "cursor"
-      ]
-    },
-    {
-      "path": "scripts/runtime/packages/design/templates/studio/studio.js.parts.json",
+      "path": "scripts/runtime/packages/design/templates/studio/studio.js",
       "kind": "asset",
       "executable": false,
       "hosts": [

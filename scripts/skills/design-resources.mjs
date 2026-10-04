@@ -14,12 +14,10 @@ export const DESIGN_SKILL_IDS = Object.freeze([
   'planr-design-review',
 ]);
 
-/** The Claude plugin directory holds any non-image file of 256 KiB or more for manual review. */
-const MAX_RESOURCE_BYTES = 256 * 1024;
-
 /**
- * Modules split into their own files so no part of the helper reaches MAX_RESOURCE_BYTES.
- * Matched against the bundle's inputs, so hoisted and nested installs resolve alike.
+ * Operational and dependency modules keep useful standalone source boundaries.
+ * Match bundle inputs so hoisted and nested installations resolve alike. Large
+ * readable sources may require Directory review; never slice code to avoid it.
  */
 const CHUNK_BOUNDARIES = Object.freeze([
   ['parse5-parser', 'node_modules/parse5/dist/parser/index.js'],
@@ -66,7 +64,7 @@ export async function buildDesignSkillResources({
   const root = resolve(repoRoot ?? fileURLToPath(new URL('../..', import.meta.url)));
   const entry = resolve(root, entrypoint);
   const require = createRequire(resolve(root, 'packages/artifact/package.json'));
-  const { build, transformSync } = require('esbuild');
+  const { build } = require('esbuild');
   const logical = (absolute) => relative(root, absolute).split(sep).join('/');
   // The stage and studio runtimes are untracked outputs of later generator steps, so they
   // are rendered from source here instead of read from disk.
@@ -272,13 +270,6 @@ export async function buildDesignSkillResources({
     for (const [from, to] of names) text = text.replaceAll(`./${basename(from)}`, `./${to}`);
     if (/chunk-[A-Z0-9]{8}\.mjs/u.test(text))
       throw new Error(`Design chunk ${names.get(key)} still imports a hashed chunk name.`);
-    if (Buffer.byteLength(text, 'utf8') >= MAX_RESOURCE_BYTES)
-      text = transformSync(text, {
-        loader: 'js',
-        target: 'es2022',
-        minify: true,
-        legalComments: 'inline',
-      }).code;
     return {
       path: `scripts/${names.get(key)}`,
       kind: 'script',
@@ -317,47 +308,14 @@ export async function buildDesignSkillResources({
   for (const absolute of [...new Set(assetPaths)].sort()) {
     const path = `scripts/runtime/${logical(absolute)}`;
     const bytes = renderedAssets.get(absolute) ?? readFileSync(absolute);
-    // Portable React stays a single classic script at execution. Directory installers
-    // store that same script in bounded fragments and the canonical reader joins it.
-    if (
-      [studioRuntimePath, stageRuntimePath].includes(absolute) &&
-      bytes.length >= MAX_RESOURCE_BYTES
-    ) {
-      const parts = [],
-        runtimeName = basename(absolute);
-      for (let offset = 0; offset < bytes.length; ) {
-        let end = Math.min(bytes.length, offset + 128 * 1024);
-        while (end < bytes.length && (bytes[end] & 0xc0) === 0x80) end -= 1;
-        const part = bytes.subarray(offset, end),
-          name = `${runtimeName}.part-${String(parts.length + 1).padStart(3, '0')}`;
-        parts.push({ name, sha256: createHash('sha256').update(part).digest('hex') });
-        resources.push({
-          path: `${path.slice(0, -runtimeName.length)}${name}`,
-          kind: 'asset',
-          executable: false,
-          bytes: part,
-        });
-        offset = end;
-      }
-      resources.push({
-        path: `${path}.parts.json`,
-        kind: 'asset',
-        executable: false,
-        bytes: resourceBytes(
-          JSON.stringify({
-            schemaVersion: '1.0.0',
-            sha256: createHash('sha256').update(bytes).digest('hex'),
-            parts,
-          }) + '\n',
-        ),
-      });
-    } else
-      resources.push({
-        path,
-        kind: absolute.endsWith('.schema.json') ? 'schema' : 'asset',
-        executable: false,
-        bytes,
-      });
+    // Preserve the full source asset. The shared suite stores it once, while
+    // standalone downloads retain a complete offline closure and its provenance.
+    resources.push({
+      path,
+      kind: absolute.endsWith('.schema.json') ? 'schema' : 'asset',
+      executable: false,
+      bytes,
+    });
   }
   const dependencyRoots = new Set();
   for (const path of [...bundledInputs, ...browserInputs]) {
@@ -392,11 +350,6 @@ export async function buildDesignSkillResources({
     executable: false,
     bytes: resourceBytes(noticeBlocks.join('\n\n----------------\n\n')),
   });
-  const oversized = resources.filter(({ bytes }) => bytes.length >= MAX_RESOURCE_BYTES);
-  if (oversized.length)
-    throw new Error(
-      `Design resources reach the ${MAX_RESOURCE_BYTES}-byte directory review limit: ${oversized.map(({ path, bytes }) => `${path} (${bytes.length} B)`).join(', ')}`,
-    );
   return resources;
 }
 
