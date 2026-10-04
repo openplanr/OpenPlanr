@@ -115,24 +115,25 @@ Raw prompts, artifact bodies, credentials, and secrets are rejected or removed.
 
 Spec, Plan, Review, Design, Operate, and ordinary Ship remain work of the active
 host agent. A user may explicitly ask a second coding agent to implement one
-coherent task; only then does the router select `planr-delegate`. Its packaged
-local helper builds a private context capsule and an isolated writable worktree.
-Before dispatch, the orchestrator shows the selected files, writable repository,
-enrolled profile, and effective data destination. The delegated agent implements;
-the active agent handles questions, reviews observed changes, runs independent
-checks, and integrates an uncommitted local diff. A profile name does not prove
-local inference, and a worktree is not a security sandbox.
+coherent task; only then does the router select `planr-delegate`. OpenPlanr prepares
+a readable context capsule and an owned worktree. The native Claude Code, Codex or
+Cursor CLI owns its tools, permissions, authentication and configuration.
 
-This opt-in handoff is separate from ordinary `planr-ship`; neither a plain Ship
-request nor a Plan result launches another model process. The opt-in preview supports
-local Claude Code and Codex hosts with a terminal and explicitly enrolled trusted
-profiles. On first use, the skill previews the chosen engine's effective destination
-and model without task content, guides private enrollment when needed, then
-continues the same request. It never loads a model or changes provider settings
-silently. Provider/model compatibility is verified per implementation and correction
-journey, not inferred from a model list. See [delegation](delegation.md) for the
-preview's supported execution boundary, recovery and limitations. Landing and
-publication require separate authorization.
+Fresh native runs use normal signed-in authentication and need no profile
+enrollment or renewal. Optional saved profiles select a model or existing
+configuration. Before dispatch, the orchestrator shows the engine, model, context,
+working directory and effective destination or native-managed routing. A profile
+name does not prove local inference, and a worktree is not a security sandbox.
+Trusted native hooks, plugins and MCP servers can have additional effects.
+
+The delegated agent implements; the active agent handles questions, reviews
+observed changes, runs independent checks and integrates accepted changes as an
+uncommitted local diff. This explicit handoff is separate from ordinary Ship;
+neither a plain Ship request nor a Plan result launches another model process.
+The skill never loads a model or changes provider settings silently. Compatibility
+is verified for the actual implementation and correction journey, rather than
+inferred from a model list. See [delegation](delegation.md) for recovery and
+execution boundaries. Landing and publication require separate authorization.
 
 ## Effect boundary
 

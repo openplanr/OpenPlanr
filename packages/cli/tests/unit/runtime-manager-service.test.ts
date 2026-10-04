@@ -18,7 +18,7 @@ import {
 } from 'node:fs';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
-import { join, relative, resolve, sep } from 'node:path';
+import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { validateProtocolArtifact } from 'planr-pipeline/protocol';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -206,7 +206,11 @@ describe('runtime setup', () => {
     const preview = await previewSetup(options);
     expect(preview.runtimeOperations).toEqual([]);
     expect(preview.runtimeDiagnostics).toEqual([]);
-    expect(preview.actions.every((action) => action.scope === 'project')).toBe(true);
+    expect(
+      preview.actions
+        .filter((action) => action.runtime !== 'core')
+        .every((action) => action.scope === 'project'),
+    ).toBe(true);
     await applySetup(options);
     expect(nativeCalls).toEqual([]);
     expect(existsSync(join(projectDir, '.agents', 'skills', 'plan', 'SKILL.md'))).toBe(true);
@@ -500,7 +504,7 @@ describe('runtime setup', () => {
     },
   );
 
-  it('retains independent user plugin and project-rule modes without changing a healthy lock', async () => {
+  it('retains saved user and project modes while replacing duplicate discovery with project policy', async () => {
     await applySetup({
       projectDir,
       cliVersion,
@@ -532,7 +536,7 @@ describe('runtime setup', () => {
     expect(preview.projectSkillModes?.codex).toBe('project-rule');
     expect(preview.runtimeScopes.codex).toBe('project');
     expect(preview.userScopeRuntimes).toEqual(['codex']);
-    expect(preview.actions.every((action) => action.operation === 'unchanged')).toBe(true);
+    expect(preview.actions.some((action) => action.operation === 'retire')).toBe(true);
     const userMarker = join(userHome, '.planr', 'runtime', 'adapters', 'codex.json');
     unlinkSync(userMarker);
     await applySetup(repair);
@@ -569,7 +573,9 @@ describe('runtime setup', () => {
     });
     expect(
       installed.actions.every(
-        (action) => action.scope === 'project' && action.operation !== 'retire',
+        (action) =>
+          (action.scope === 'project' || action.runtime === 'core') &&
+          action.operation !== 'retire',
       ),
     ).toBe(true);
     expect(readFileSync(target).equals(before)).toBe(true);
@@ -583,7 +589,8 @@ describe('runtime setup', () => {
     });
     expect(repair.skillModes.codex).toBe('direct');
     expect(repair.projectSkillModes?.codex).toBe('project-rule');
-    expect(repair.actions.every((action) => action.operation === 'unchanged')).toBe(true);
+    expect(repair.actions.some((action) => action.operation === 'retire')).toBe(true);
+    expect(readFileSync(target).equals(before)).toBe(true);
   });
 
   it('rejects a symlinked runtime-backup parent without writing external bytes', async () => {
@@ -713,7 +720,14 @@ describe('runtime setup', () => {
   it('installs and audits the complete Codex host package', async () => {
     await applySetup({ projectDir, cliVersion, runtime: 'codex', scope: 'user' });
     const expectedNames = readdirSync(bundledOpenAiSkillsRoot).sort();
-    const expectedAssets = regularFiles(bundledOpenAiSkillsRoot);
+    const expectedAssets = regularFiles(join(userHome, '.codex', 'skills'));
+    const locator = JSON.parse(
+      readFileSync(join(userHome, '.codex', 'skills', 'design', 'openplanr.install.json'), 'utf8'),
+    );
+    expect(regularFiles(locator.sourceRoot).length).toBeGreaterThan(expectedAssets.length);
+    expect(readFileSync(join(locator.sourceRoot, locator.entryPath))).toEqual(
+      readFileSync(join(bundledOpenAiSkillsRoot, 'design', 'SKILL.md')),
+    );
     const installedNames = readdirSync(join(userHome, '.codex', 'skills')).sort();
     const canonicalSkills = JSON.parse(
       readFileSync(join(workspaceRoot, 'skills', 'registry.json'), 'utf8'),
@@ -1913,15 +1927,7 @@ describe('runtime setup', () => {
       scope: 'project',
     });
     const firstAsset = join(projectDir, '.cursor', 'rules', 'openplanr', 'planr-artifact.mdc');
-    const lateAsset = join(
-      projectDir,
-      '.cursor',
-      'rules',
-      'openplanr',
-      'planr-ship',
-      'references',
-      'result-contract.md',
-    );
+    const lateAsset = join(projectDir, '.cursor', 'rules', 'openplanr', 'planr-ship.mdc');
     writeFileSync(lateAsset, '# user changed this generated file\n');
 
     await expect(removeRuntime('cursor', projectDir)).rejects.toMatchObject({
@@ -1953,13 +1959,17 @@ describe('canonical host package naming', () => {
       userBundles?: { codex?: { commandPrefix?: string } };
     };
 
-  it('installs short Codex skills byte-identically with no canonical-name duplicates', async () => {
+  it('installs short Codex discovery entries pointing to byte-identical cached sources', async () => {
     await applySetup({ projectDir, cliVersion, runtime: 'codex', scope: 'user' });
 
     expect(existsSync(codexSkill('plan'))).toBe(true);
     expect(existsSync(codexSkill('planr-plan'))).toBe(false);
     const source = readFileSync(join(bundledOpenAiSkillsRoot, 'plan', 'SKILL.md'));
-    expect(readFileSync(codexSkill('plan'))).toEqual(source);
+    const locator = JSON.parse(
+      readFileSync(join(userHome, '.codex', 'skills', 'plan', 'openplanr.install.json'), 'utf8'),
+    );
+    expect(readFileSync(join(locator.sourceRoot, locator.entryPath))).toEqual(source);
+    expect(readFileSync(codexSkill('plan'), 'utf8')).toContain(locator.sourceRoot);
     expect(readState().userBundles?.codex?.commandPrefix).toBe('bare');
   });
 
@@ -2114,7 +2124,7 @@ describe('applySetup rollback on plugin failure', () => {
     expect(error).toBeDefined();
     expect(error?.code).toBe('E_CLAUDE_PLUGIN_UPDATE_FAILED');
     // ...and it states plainly what was restored, naming the exact path.
-    expect(error?.recovery).toContain('Restored 2 file(s) to their exact pre-setup bytes');
+    expect(error?.recovery).toMatch(/Restored \d+ file\(s\) to their exact pre-setup bytes/u);
     expect(error?.recovery).toContain(marker);
 
     // The one owned file written before the failure was created fresh, so the restore
@@ -2430,8 +2440,7 @@ describe('Codex profile and named update custody', () => {
       realpathSync(join(root, 'ada')),
       'skills',
       'design',
-      'references',
-      'craft.md',
+      'openplanr.skill.json',
     );
     const original = readFileSync(support);
     rmSync(support);
@@ -2454,7 +2463,7 @@ describe('Codex profile and named update custody', () => {
     expect(
       diagnosis.codexDiscovery?.skills.find((skill) => skill.skillId === 'planr-design')
         ?.resolution,
-    ).toBe('stale');
+    ).toBe('unreadable');
     expect(
       diagnosis.diagnostics.find((entry) => entry.code === 'runtime-codex-skill-resolution'),
     ).toMatchObject({ status: 'warn' });
@@ -2649,5 +2658,164 @@ describe('Codex profile and named update custody', () => {
     await expect(applySetup(options)).rejects.toMatchObject({ code: 'E_MIGRATION_CONFLICT' });
     expect(readFileSync(file.target)).toEqual(changed);
     expect(readFileSync(stateFile())).toEqual(originalState);
+  });
+});
+
+describe('thin project installations', () => {
+  it.each(['claude-code', 'codex'] as const)(
+    'keeps user-only %s native packages complete without an unused home cache',
+    async (runtime) => {
+      const result = await applySetup({
+        projectDir,
+        cliVersion,
+        runtime,
+        scope: 'user',
+        manageExternalRuntimes: false,
+        ...(runtime === 'codex' ? { skillMode: 'unified-plugin' as const } : {}),
+      });
+      expect(result.actions.some((action) => action.target.includes('/runtime/packages/'))).toBe(
+        false,
+      );
+      expect(existsSync(join(userHome, '.planr', 'runtime', 'packages'))).toBe(false);
+    },
+  );
+  it.each(['claude-code', 'codex', 'cursor'] as const)(
+    'diagnoses a missing full runtime closure behind %s thin discovery',
+    async (runtime) => {
+      const result = await applySetup({
+        projectDir,
+        cliVersion,
+        runtime,
+        scope: 'project',
+        manageExternalRuntimes: false,
+        ...(runtime === 'codex' ? { skillMode: 'direct' as const } : {}),
+      });
+      const support = result.actions.find(
+        (action) => action.target.includes('/runtime/packages/') && action.target.endsWith('.mjs'),
+      );
+      expect(support).toBeDefined();
+      if (!support) throw new Error('No packaged support file was installed.');
+      unlinkSync(support.target);
+      const diagnosed = await runtimeDoctor(projectDir);
+      expect(
+        diagnosed.diagnostics.find((entry) => entry.code === 'runtime-package-custody')?.status,
+      ).toBe('fail');
+      await applySetup({
+        projectDir,
+        cliVersion,
+        runtime,
+        scope: 'project',
+        manageExternalRuntimes: false,
+        ...(runtime === 'codex' ? { skillMode: 'direct' as const } : {}),
+      });
+      expect(
+        (await runtimeDoctor(projectDir)).diagnostics.find(
+          (entry) => entry.code === 'runtime-package-custody',
+        )?.status,
+      ).toBe('pass');
+    },
+  );
+  it.each(['claude-code', 'codex', 'cursor'] as const)(
+    'resolves every %s project resource from an exact offline package',
+    async (runtime) => {
+      const options = {
+        projectDir,
+        cliVersion,
+        runtime,
+        scope: 'project' as const,
+        manageExternalRuntimes: false,
+        ...(runtime === 'codex' ? { skillMode: 'direct' as const } : {}),
+      };
+      const applied = await applySetup(options);
+      const projectActions = applied.actions.filter((action) => action.scope === 'project');
+      expect(
+        projectActions.every(
+          (action) => !/\/(?:schemas|scripts|references)\//u.test(action.target),
+        ),
+      ).toBe(true);
+      const cacheFiles = applied.actions.filter(
+        (action) => action.runtime === 'core' && action.scope === 'user',
+      );
+      expect(cacheFiles.length).toBeGreaterThan(projectActions.length);
+      expect(
+        cacheFiles.every((action) => action.target.includes(`${sep}runtime${sep}packages${sep}`)),
+      ).toBe(true);
+      if (runtime === 'claude-code') {
+        let referenceCount = 0;
+        for (const file of regularFiles(join(projectDir, '.claude', 'agents'))) {
+          const markdown = readFileSync(file, 'utf8');
+          expect(markdown).not.toContain('${CLAUDE_PLUGIN_ROOT}');
+          const references = [...markdown.matchAll(/(?:`|\s)(\/[^\s`]+\/references\/[^\s`]+)/gu)];
+          referenceCount += references.length;
+          for (const reference of references) {
+            for (const mode of ['default', 'spec-driven']) {
+              const resolved = reference[1].replaceAll('${MODE}', mode);
+              expect(existsSync(resolved.includes('*') ? dirname(resolved) : resolved)).toBe(true);
+            }
+          }
+        }
+        expect(referenceCount).toBeGreaterThan(0);
+      }
+      expect(
+        (await previewSetup(options)).actions.every((action) => action.operation === 'unchanged'),
+      ).toBe(true);
+    },
+  );
+  it('keeps a single Codex discovery source for both scope', async () => {
+    await applySetup({
+      projectDir,
+      cliVersion,
+      runtime: 'codex',
+      scope: 'both',
+      skillMode: 'direct',
+      manageExternalRuntimes: false,
+    });
+    expect(existsSync(join(userHome, '.codex', 'skills', 'plan', 'SKILL.md'))).toBe(true);
+    expect(existsSync(join(projectDir, '.agents', 'skills', 'plan', 'SKILL.md'))).toBe(false);
+    expect(
+      JSON.parse(readFileSync(join(projectDir, '.planr', 'runtime-policy', 'codex.json'), 'utf8')),
+    ).toMatchObject({ discovery: 'user', mode: 'direct' });
+  });
+  it('writes through the actual CLI with an explicit Planr home and native profile outside the user home', () => {
+    const cliRequire = createRequire(import.meta.url);
+    const explicitHome = join(root, 'explicit-planr-home');
+    const profile = join(root, 'explicit-codex-home');
+    const environment = {
+      ...process.env,
+      PLANR_HOME: explicitHome,
+      CODEX_HOME: profile,
+      OPENPLANR_HOME: '',
+      PATH: '',
+    };
+    const args = [
+      '--import',
+      cliRequire.resolve('tsx/esm'),
+      join(workspaceRoot, 'packages/cli/src/cli/index.ts'),
+      '--project-dir',
+      projectDir,
+      'setup',
+      '--runtime',
+      'codex',
+      '--scope',
+      'project',
+      '--skill-mode',
+      'direct',
+      '--yes',
+      '--json',
+    ];
+    const result = JSON.parse(
+      execFileSync(process.execPath, args, { env: environment, encoding: 'utf8' }),
+    );
+    expect(result.ok).toBe(true);
+    expect(result.runtimeOperations).toEqual([]);
+    expect(existsSync(join(explicitHome, 'runtime', 'state.json'))).toBe(true);
+    expect(existsSync(join(profile, 'config.toml'))).toBe(false);
+    const previewArgs = [...args.slice(0, -2), '--dry-run', '--json'];
+    const preview = JSON.parse(
+      execFileSync(process.execPath, previewArgs, { env: environment, encoding: 'utf8' }),
+    );
+    expect(
+      preview.actions.every((action: { operation: string }) => action.operation === 'unchanged'),
+    ).toBe(true);
   });
 });

@@ -3,7 +3,7 @@
 > **Category:** backend
 > **Version:** 10.x
 > **Docs:** https://docs.nestjs.com
-> **Created:** Template — copy to `.claude/stacks/backend/nestjs.md` in your project to override.
+> **Created:** Template — copy to `.planr/stacks/backend/nestjs.md` in your project to override.
 
 ---
 

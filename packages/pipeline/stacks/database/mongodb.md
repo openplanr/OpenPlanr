@@ -3,7 +3,7 @@
 > **Category:** database
 > **Version:** 7.x
 > **Docs:** https://www.mongodb.com/docs/
-> **Created:** Template — copy to `.claude/stacks/database/mongodb.md` in your project to override.
+> **Created:** Template — copy to `.planr/stacks/database/mongodb.md` in your project to override.
 
 ---
 

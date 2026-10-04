@@ -10,7 +10,6 @@ import { PipelineError } from './errors.mjs';
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const TASK_FILE = /^(?:T-|task-).*\.md$/iu;
 const MAX_CONTEXT_FILES = 500;
-const STACK_HOST_ROOTS = Object.freeze(['.claude', '.codex', '.cursor']);
 
 /** Returns the trimmed body of one `## Heading` section, or '' when absent. */
 function section(markdown, heading) {
@@ -353,7 +352,13 @@ function logicalStackPath(path) {
     marker >= 0
       ? normalized.slice(marker + '/stacks/'.length)
       : normalized.replace(/^(?:stacks\/|\.?(?:claude|codex|cursor)\/stacks\/)/u, '');
-  if (!logical || logical.startsWith('/') || logical.split('/').includes('..')) return null;
+  if (
+    !logical ||
+    logical.startsWith('/') ||
+    /^[A-Za-z]:/u.test(logical) ||
+    logical.split('/').some((part) => !part || part === '.' || part === '..')
+  )
+    return null;
   return logical;
 }
 
@@ -369,12 +374,6 @@ function stackHostRoot(runtime) {
   );
 }
 
-function declaredStackHostRoot(path) {
-  const normalized = String(path).split('\\').join('/').replace(/^\.\//u, '');
-  const match = /^(\.(?:claude|codex|cursor))\/stacks\//u.exec(normalized);
-  return match?.[1] ?? null;
-}
-
 function projectDefaultStackHostRoot(projectRoot, readFile) {
   const config = readOptional(join(projectRoot, '.planr', 'config.json'), readFile);
   if (config === null) return null;
@@ -385,19 +384,8 @@ function projectDefaultStackHostRoot(projectRoot, readFile) {
   }
 }
 
-function selectStackHostRoot({ projectRoot, declared, runtime, readFile }) {
-  const selected = stackHostRoot(runtime) ?? projectDefaultStackHostRoot(projectRoot, readFile);
-  if (selected) return selected;
-
-  const declaredHosts = unique(declared.map(declaredStackHostRoot));
-  if (declaredHosts.length === 1) return declaredHosts[0];
-  if (declaredHosts.length > 1) return null;
-
-  const logicalPaths = declared.map(logicalStackPath).filter(Boolean);
-  const hostsWithOverrides = STACK_HOST_ROOTS.filter((hostRoot) =>
-    logicalPaths.some((logical) => existsSync(join(projectRoot, hostRoot, 'stacks', logical))),
-  );
-  return hostsWithOverrides.length === 1 ? hostsWithOverrides[0] : null;
+function selectStackHostRoot({ projectRoot, runtime, readFile }) {
+  return stackHostRoot(runtime) ?? projectDefaultStackHostRoot(projectRoot, readFile);
 }
 
 function stackContext({ projectRoot, readFile, runtime }) {
@@ -420,14 +408,25 @@ function stackContext({ projectRoot, readFile, runtime }) {
       startingPoints.push(`Installed stack conventions: planr-pipeline/stacks/${logical}`);
     }
 
-    if (!hostRoot) continue;
-    const override = join(projectRoot, hostRoot, 'stacks', logical);
-    const overrideBytes = readOptional(override, readFile);
-    if (overrideBytes === null) continue;
+    const candidates = [
+      join(projectRoot, '.planr', 'stacks', logical),
+      ...(hostRoot ? [join(projectRoot, hostRoot, 'stacks', logical)] : []),
+      join(projectRoot, '.openplanr', 'stacks', logical),
+    ].flatMap((path) => {
+      const bytes = readOptional(path, readFile);
+      return bytes === null ? [] : [{ path, bytes }];
+    });
+    const selected = candidates[0];
+    if (!selected) continue;
     architecture.push(
-      `Project stack override (${logical}, takes precedence): ${compact(overrideBytes)}`,
+      `Project stack override (${logical}, takes precedence): ${compact(selected.bytes)}`,
     );
-    startingPoints.push(`Project stack override: ${displayPath(projectRoot, override)}`);
+    startingPoints.push(`Project stack override: ${displayPath(projectRoot, selected.path)}`);
+    const differing = candidates.slice(1).filter(({ bytes }) => bytes !== selected.bytes);
+    if (differing.length)
+      startingPoints.push(
+        `Stack override conflict (${logical}): using ${displayPath(projectRoot, selected.path)}; different legacy sources remain unchanged: ${differing.map(({ path }) => displayPath(projectRoot, path)).join(', ')}.`,
+      );
   }
   return { architecture, startingPoints };
 }

@@ -3,7 +3,7 @@
   "schemaVersion": "1.0.0",
   "protocolVersion": "1.8.0",
   "skillId": "planr-cmo-review",
-  "skillVersion": "2.0.0",
+  "skillVersion": "2.0.1",
   "entrypoint": "SKILL.md",
   "hosts": [
     "claude-code",
@@ -16,31 +16,56 @@
     {
       "path": "references/operate-advisor-contract.md",
       "kind": "reference",
-      "hosts": ["claude-code", "codex", "chatgpt", "cursor"],
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ],
       "executable": false
     },
     {
       "path": "scripts/validate-note.mjs",
       "kind": "script",
-      "hosts": ["claude-code", "codex", "chatgpt", "cursor"],
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ],
       "executable": true
     },
     {
       "path": "scripts/operate-review-note.mjs",
       "kind": "script",
-      "hosts": ["claude-code", "codex", "chatgpt", "cursor"],
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ],
       "executable": false
     },
     {
       "path": "scripts/operate-review-contract.mjs",
       "kind": "script",
-      "hosts": ["claude-code", "codex", "chatgpt", "cursor"],
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ],
       "executable": false
     },
     {
       "path": "scripts/errors.mjs",
       "kind": "script",
-      "hosts": ["claude-code", "codex", "chatgpt", "cursor"],
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ],
       "executable": false
     },
     {

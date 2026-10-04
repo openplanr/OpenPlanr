@@ -87,8 +87,43 @@ Installing or updating one adapter is additive: it keeps every other managed
 adapter and preserves each adapter's existing scope. For example, adding Codex
 at user scope does not widen an existing project-only Cursor installation.
 
-Setup installs the bundled OpenPlanr skills and supporting assets for the selected
-coding agents. `planr doctor` reports managed-file drift and runtime availability.
+Setup installs the bundled OpenPlanr skills for the selected coding agents.
+`planr doctor` reports managed-file drift and runtime availability.
+
+### Exact runtime packages and thin project entries
+
+Setup verifies the complete generated host package against its content inventory.
+Integrations with thin entries retain those exact bytes under
+`~/.planr/runtime/packages/<host>/<version>/<content-digest>/`. Set `PLANR_HOME`
+to relocate OpenPlanr's runtime state, package cache and backups together; supported
+legacy home overrides remain readable. `CODEX_HOME` independently selects Codex's
+native profile, not OpenPlanr's package cache.
+
+Direct and project integrations contain native discovery metadata plus a small
+loader. Instructions, schemas, scripts and shared support stay in the exact cached
+package. Loaders resolve from that package offline; they do not search for a global
+CLI, download a substitute or silently select another version. Project Claude role
+agents resolve every bundled reference from the same package. Native plugin
+packages and standalone skill archives remain complete. User-only native plugin
+installs do not create an unused duplicate home cache.
+
+Machine-specific loaders and locators are local installation outputs. Regenerate
+them with setup on each machine instead of sharing absolute cache paths in Git.
+Project policy and runtime locks keep portable version and digest records. An
+unchanged managed full-copy installation converts transactionally to thin entries;
+unknown or edited files cause a conflict and are preserved. Old exact package
+versions are retained, including those needed by existing runs. Setup does not
+collect or remove historical runtime packages.
+
+Use `--dry-run --verbose` to inspect both local discovery writes and cache writes.
+A repeat setup shows unchanged operations. Doctor verifies the pinned full closure,
+so missing or changed shared support is visible even when a skill entry is intact.
+An interrupted copy with missing bytes can resume from the same reviewed package;
+changed bytes in an immutable cache are preserved and reported for inspection.
+Package staging lives outside the closed package tree, so an interrupted staged
+copy cannot pollute its inventory. Orphan staging is retained. Unknown temporary
+files left in a discovery directory after a hard interruption require inspection;
+repair does not guess that arbitrary files are safe to delete.
 
 ## Codex skill modes
 
@@ -96,19 +131,32 @@ The wizard uses product names; existing `--skill-mode` values remain compatible:
 
 - **OpenPlanr plugin** (`unified-plugin`, recommended): one `planr` plugin registered through Codex's plugin
   marketplace; skills are invoked as `$planr:<skill>`.
-- **Individual skills** (`direct`): skills and their support files installed under
-  `~/.codex/skills/<name>/`, invoked by their installed names, such as `$planr-spec`.
-- **Project skills** (`project-rule`): skills and their support files installed under
+- **Individual skills** (`direct`): short discovery entries installed under the
+  effective `CODEX_HOME/skills/<name>/` at user scope or `.agents/skills/<name>/`
+  at project scope, invoked by bare names such as `$spec`.
+- **Project skills** (`project-rule`): short discovery entries installed under
   `.agents/skills/` in the current project only.
 
 Every installed asset is digest-verified. Switching from individual Codex skills
 to the plugin backs up and removes only the recorded OpenPlanr-owned files from
 `~/.codex/skills/`. Modified or unknown content is preserved and reported as a
 conflict. The plugin comes from the installed CLI; it is not downloaded from an
-unrelated marketplace. Selecting both scopes also installs project skills.
+unrelated marketplace. For plugin or direct user discovery, selecting both
+scopes adds project policy pointing to that discovery instead of duplicate skills.
+An existing saved project-only choice remains recorded for later scope changes.
 Guided setup asks once to confirm the listed replacement and apply setup. For
 non-interactive use, review `--dry-run --verbose`, then add `--replace-managed`.
 Use `planr runtime rollback` to restore the previous file state.
+
+## Project stack overrides
+
+Place shared project stack conventions under `.planr/stacks/` and list their
+logical paths in `input/tech/stack.md`'s `ActiveStackFiles`. Installed defaults
+remain available. For each logical path, project resolution uses `.planr/stacks/`
+first, then the selected runtime's legacy `.claude/stacks/`, `.codex/stacks/` or
+`.cursor/stacks/`, then `.openplanr/stacks/`. A foreign host's folder never selects
+a runtime implicitly. Different legacy bytes produce a conflict diagnostic;
+resolution does not mix or overwrite them.
 
 ## Operate cycles
 
@@ -183,8 +231,9 @@ local artifact-review browser runs elsewhere.
 ## Windows
 
 The PowerShell installer and the CLI support a supported Node.js version (see [package metadata](../package.json)) on Windows. Project paths in
-committed locks and generated rules are repository-relative. Machine-specific
-absolute paths remain in the user runtime state and backups.
+committed runtime locks and project policy are path-free. Thin discovery entries
+contain machine-specific cache paths and must be regenerated locally. Ownership
+state and backups remain in the selected OpenPlanr home.
 
 ## Security
 
@@ -217,9 +266,10 @@ cannot retire another profile's direct skills. Run the command with the same
 
 `planr doctor --json` includes `codexDiscovery`: the effective profile, configuration
 and ownership paths, saved discovery mode, and each installed OpenPlanr skill's
-entrypoint, complete source hash, skill version and Protocol version. The CLI/host
-package version is a separate field. Missing support files change the source hash,
-even when `SKILL.md` and its version are unchanged. Multiple discovery paths are
+entrypoint, complete source hash, skill version and Protocol version. Thin entries
+also pin the complete package inventory digest; shared support is verified against
+that inventory. The CLI/host package version is a separate field. Missing support
+files invalidate the closure even when `SKILL.md` and its version are unchanged. Multiple discovery paths are
 reported without claiming which one an already-open Codex session loaded. Disabled
 or historical plugin cache copies are evidence of previous installations, not
 proof of enabled duplicate skills.

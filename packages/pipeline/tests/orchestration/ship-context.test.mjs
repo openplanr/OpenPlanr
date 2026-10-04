@@ -36,7 +36,7 @@ execFileSync(
 );
 after(() => rmSync(projectRoot, { recursive: true, force: true }));
 
-const request = { projectRoot, feature: 'legacy-plan' };
+const request = { projectRoot, feature: 'legacy-plan', runtime: 'codex' };
 
 test('a planned feature builds a valid envelope from its own artifacts', () => {
   const envelope = assertContextEnvelope(buildShipContext(request));
@@ -500,6 +500,65 @@ test('a qualified default selector loads only the matching duplicate task contex
     assert.match(requirements, /US-002\/T-001 implementation: Implement US-002 marker/u);
     assert.doesNotMatch(requirements, /US-001\/T-001|Implement US-001 marker/u);
     assert.match(envelope.startingPoints.join('\n'), /Tasks in scope: US-002\/T-001/u);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('canonical stacks win while differing active legacy overlays are diagnosed and preserved', () => {
+  const root = materializeLegacyPlanningFixture();
+  const sources = [
+    ['.planr', '# Canonical\nUse portable boundaries.\n'],
+    ['.codex', '# Active legacy\nUse selected legacy boundaries.\n'],
+    ['.openplanr', '# Legacy OpenPlanr\nUse older boundaries.\n'],
+    ['.claude', '# Foreign host\nForeign content must not enter context.\n'],
+  ];
+  try {
+    for (const [directory, bytes] of sources) {
+      mkdirSync(join(root, directory, 'stacks', 'backend'), { recursive: true });
+      writeFileSync(join(root, directory, 'stacks', 'backend', 'nestjs.md'), bytes);
+    }
+    const options = { projectRoot: root, feature: 'legacy-plan', runtime: 'codex' };
+    const canonical = buildPlanContext(options);
+    assert.match(canonical.architecture.join('\n'), /Use portable boundaries/u);
+    assert.doesNotMatch(
+      canonical.architecture.join('\n'),
+      /selected legacy|older boundaries|Foreign content/u,
+    );
+    assert.match(
+      canonical.startingPoints.join('\n'),
+      /Stack override conflict.*\.codex.*\.openplanr/u,
+    );
+    rmSync(join(root, '.planr', 'stacks'), { recursive: true });
+    assert.match(
+      buildPlanContext(options).architecture.join('\n'),
+      /Use selected legacy boundaries/u,
+    );
+    rmSync(join(root, '.codex', 'stacks'), { recursive: true });
+    assert.match(buildPlanContext(options).architecture.join('\n'), /Use older boundaries/u);
+    assert.equal(
+      readFileSync(join(root, '.openplanr', 'stacks', 'backend', 'nestjs.md'), 'utf8'),
+      sources[2][1],
+    );
+    assert.equal(
+      readFileSync(join(root, '.claude', 'stacks', 'backend', 'nestjs.md'), 'utf8'),
+      sources[3][1],
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('a lone declared foreign host never becomes the selected runtime implicitly', () => {
+  const root = materializeLegacyPlanningFixture();
+  try {
+    const configPath = join(root, '.planr', 'config.json');
+    const config = JSON.parse(readFileSync(configPath, 'utf8'));
+    delete config.defaultAgent;
+    writeFileSync(configPath, JSON.stringify(config));
+    const context = buildPlanContext({ projectRoot: root, feature: 'legacy-plan' });
+    assert.doesNotMatch(context.architecture.join('\n'), /pure injectable services/u);
+    assert.doesNotMatch(context.startingPoints.join('\n'), /Project stack override/u);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

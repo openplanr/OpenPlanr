@@ -77,7 +77,7 @@ Ship artifacts after this separate invocation.
 
 ## Return
 
-Render the existing five fields concisely for the user. Lead with the achieved
+Summarize the existing five fields concisely where relevant. Lead with the achieved
 behavior, link material changes by purpose, and summarize actual verification.
 Retain complete file inventories and command diagnostics in their existing
 results instead of reproducing them in chat.
@@ -88,13 +88,14 @@ results instead of reproducing them in chat.
 - **Checks:** command, `passed`, `failed`, or `not-run`, plus a concise result.
 - **Issues:** problem, impact, and next action, or `none`.
 
-Keep the five machine fields unchanged. A human summary may omit empty issues,
+Keep the five machine fields unchanged. A human summary may omit empty or unavailable fields,
 but must make partial, blocked or unverified work clear and give the smallest
 recovery action. Preserve native transcripts; never require another execution
 or correction just to change summary wording.
 
-For a completed outcome, append `Next: planr-land` to the human summary. It is
-presentation guidance, not a sixth machine field.
+Suggest `planr-land` only when a landing step remains in the requested workflow.
+Do not add a next action when the requested scope is fulfilled. This guidance
+does not add a sixth machine field.
 
 When the OpenPlanr dashboard is running, the shipped work is browsable at
 `#/detail/<T-###>` and the board at `#/board`. This is navigation only.

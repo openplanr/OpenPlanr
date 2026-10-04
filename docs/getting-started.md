@@ -42,7 +42,7 @@ planr setup --runtime claude --scope user
 | --- | --- | --- |
 | Claude Code | `planr setup --runtime claude --scope user` | A generated local marketplace and the unified `planr` plugin, registered with Claude Code |
 | Codex | `planr setup --runtime codex --scope user --skill-mode unified-plugin` | The unified `planr` plugin, registered through Codex's plugin marketplace |
-| Cursor | `planr setup --runtime cursor --scope project` | One `.mdc` rule per skill under `.cursor/rules/` in the project |
+| Cursor | `planr setup --runtime cursor --scope project` | Thin `.mdc` discovery rules under `.cursor/rules/openplanr/` |
 | Everything | `planr setup --runtime all --scope both` | All of the above |
 
 User scope installs once per machine and is the default; project scope installs into
@@ -51,7 +51,13 @@ separately (`--skill-mode direct`, invoked by bare name such as `$spec`) or as p
 rules (`--skill-mode project-rule`). Project writes need a Git worktree
 or an initialized `.planr/` project; setup never treats your home directory as a
 project. Existing files are backed up byte for byte under `~/.planr/backups/`, and
-only OpenPlanr-managed marker blocks are ever replaced.
+only OpenPlanr-managed marker blocks are ever replaced. Direct and project skill
+entries read an exact cached package under `~/.planr/runtime/packages/`; they do
+not copy the runtime's schemas and scripts into your repository. `PLANR_HOME`
+relocates that cache and OpenPlanr state; `CODEX_HOME` selects the native Codex
+profile independently. Both scope reuses user discovery with project policy
+rather than installing the same Claude or Codex skills twice. Regenerate local
+loaders on each machine instead of committing their absolute cache paths.
 
 In Claude Code you can install the same plugin from the public OpenPlanr marketplace
 instead of `planr setup --runtime claude`. Use one path, not both:
@@ -113,9 +119,15 @@ Plan and ship are separate steps. The agent never chains them on its own.
 
 ```bash
 planr doctor            # installation, adapters, and project health
+planr doctor --fix      # preview and repair owned installation drift
 planr sync              # validate and repair cross-references between artifacts
 planr upgrade status    # compare the installed CLI and plugin with the published set
 ```
+
+`planr runtime update codex` refreshes only that agent and keeps its saved scope
+and discovery mode. Repairs preserve user edits, other agents, native profiles
+and retained runs. Cursor integration requires a valid project; user scope is
+not a supported recovery alternative.
 
 When a skill misbehaves, start with `planr doctor --json` and the
 [troubleshooting guide](../packages/cli/docs/TROUBLESHOOTING.md).

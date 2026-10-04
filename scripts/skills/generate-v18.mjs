@@ -1,14 +1,6 @@
 #!/usr/bin/env node
 
-import {
-  chmodSync,
-  existsSync,
-  lstatSync,
-  mkdirSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from 'node:fs';
+import { chmodSync, existsSync, lstatSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -432,7 +424,8 @@ const roleRows = roleSources
       .replaceAll('{{WORKFLOW_PREFIX}}', `/${HOST_PLUGIN_NAME}:`)
       .replaceAll('{{AGENTS_ROOT}}', '${CLAUDE_PLUGIN_ROOT}/references/agents')
       .replaceAll('{{PIPELINE_PACKAGE_ROOT}}', '${CLAUDE_PLUGIN_ROOT}/references/pipeline')
-      .replaceAll('{{PROJECT_STACKS_ROOT}}', '.openplanr/stacks');
+      .replaceAll('{{PROJECT_STACKS_ROOT}}', '.planr/stacks')
+      .replaceAll('{{LEGACY_PROJECT_STACKS_ROOT}}', '.claude/stacks');
     const name = /^name:\s*([^\n]+)$/mu.exec(bytes)?.[1]?.replace(/["']/gu, '').trim();
     if (!name || !EXPECTED_ROLE_IDS.includes(name))
       throw new Error(`Invalid role identity in ${source}.`);
@@ -447,7 +440,8 @@ for (const source of listRegularFiles(resolve(root, 'agents/shared'), { relative
     .replaceAll('{{WORKFLOW_PREFIX}}', `/${HOST_PLUGIN_NAME}:`)
     .replaceAll('{{AGENTS_ROOT}}', '${CLAUDE_PLUGIN_ROOT}/references/agents')
     .replaceAll('{{PIPELINE_PACKAGE_ROOT}}', '${CLAUDE_PLUGIN_ROOT}/references/pipeline')
-    .replaceAll('{{PROJECT_STACKS_ROOT}}', '.openplanr/stacks');
+    .replaceAll('{{PROJECT_STACKS_ROOT}}', '.planr/stacks')
+    .replaceAll('{{LEGACY_PROJECT_STACKS_ROOT}}', '.claude/stacks');
   add(`dist/plugins/claude/openplanr/references/${source}`, bytes);
 }
 for (const source of listRegularFiles(resolve(root, 'packages/pipeline/stacks'), {

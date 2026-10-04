@@ -16,8 +16,17 @@ Ordinary implementation remains with `planr-ship`.
 Resolve [runner.mjs](scripts/runner.mjs) from this installed skill. Call it through
 Node with one JSON object on stdin. `probe` discovers Node 20+, Git, installed
 CLIs and optional profiles; an OpenPlanr checkout or public CLI command is not
-needed. Reuse normal signed-in authentication. Honor an explicit engine/profile,
-then a saved choice or the sole installed engine; ask only when ambiguous.
+needed. Reuse normal signed-in authentication. Preserve selection precedence:
+explicit engine/profile, saved choice, then a sole compatible native choice; ask
+when the remaining engine or profile choice is ambiguous. Without an explicit or
+saved selection, show the available native defaults and saved profiles returned
+by `probe` for this repository. Include the engine, profile/model, readiness and
+verified local/cloud destination or native-managed routing. If the host's chooser
+cannot show all choices, ask for the engine first and its profile next; never drop
+saved local-model choices. Distinguish recorded configuration from effective probe
+results, and show unavailable profiles with their recovery action. A name does not
+prove local routing. For an explicit local request, confirm effective routing
+before dispatch; never silently substitute cloud execution.
 Native runs need no enrollment or renewal. See [onboarding](references/operator-guide.md)
 for private helper inputs and optional model/configuration profiles. Read the
 [adapter contract](references/adapter-protocol.md) when diagnosing native CLI compatibility.

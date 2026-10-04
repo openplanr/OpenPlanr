@@ -44,6 +44,8 @@ test('mode guidance loads stack, design, and database context deterministically'
       projectIndex > packageIndex,
       `${path}: project override must load after package default`,
     );
+    assert.match(guidance, /\{\{LEGACY_PROJECT_STACKS_ROOT\}\}\/\.\.\./u, path);
+    assert.match(guidance, /report the conflict.*precedence/isu, path);
     assert.match(guidance, /project file overrides\s+the installed file/iu, path);
     assert.match(guidance, /design-spec\.md/iu, path);
     assert.match(guidance, /\.png/iu, path);

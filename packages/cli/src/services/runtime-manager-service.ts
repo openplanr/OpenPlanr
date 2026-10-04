@@ -7,7 +7,7 @@
  */
 
 import { spawnSync } from 'node:child_process';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import {
   existsSync,
   constants as fsConstants,
@@ -16,8 +16,16 @@ import {
   readFileSync,
   realpathSync,
 } from 'node:fs';
-import type { FileHandle } from 'node:fs/promises';
-import { mkdir, open, readFile, rename, rm, unlink, writeFile } from 'node:fs/promises';
+import {
+  type FileHandle,
+  mkdir,
+  open,
+  readFile,
+  rename,
+  rm,
+  unlink,
+  writeFile,
+} from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { validateJson } from '../../lib/json-schema.mjs';
@@ -74,6 +82,15 @@ import {
   listInstalledRuntimeAdapters,
   type RuntimeId,
 } from './runtime-manager/inventory.js';
+import {
+  inspectRuntimeLocator,
+  inspectRuntimePackage,
+  inspectThinRule,
+  type RuntimePackage,
+  runtimeLocator,
+  thinDiscoveryMetadata,
+  thinSkillEntry,
+} from './runtime-manager/runtime-package.js';
 
 export type { RuntimeId } from './runtime-manager/inventory.js';
 export type RuntimeChoice = RuntimeId | 'auto' | 'all';
@@ -96,7 +113,7 @@ interface FileAction {
   content: Buffer;
   kind: 'file' | 'managed-block';
   marker?: string;
-  custody?: 'professional-skill';
+  custody?: 'professional-skill' | 'runtime-package';
   description: string;
 }
 
@@ -289,6 +306,16 @@ function codexSkillsRoot(): string {
   return path.join(effectiveCodexHome(), 'skills');
 }
 
+/** Explicit OpenPlanr homes may be outside the native user's home; custody starts at their real existing boundary. */
+function planrCustodyAnchor(): string {
+  const configured = path.resolve(planrHome());
+  if (pathIsWithin(configured, userHome())) return userHome();
+  let boundary = configured;
+  while (!existsSync(boundary) && path.dirname(boundary) !== boundary)
+    boundary = path.dirname(boundary);
+  return boundary;
+}
+
 function backupsRoot(): string {
   return path.join(planrHome(), 'backups');
 }
@@ -378,7 +405,7 @@ function assertMutableOwnedTarget(target: string, projectDir: string, code: stri
     assertApprovedTargetCustody(
       target,
       runtimeRoot(),
-      userHome(),
+      planrCustodyAnchor(),
       code,
       'Global runtime ownership',
     );
@@ -420,7 +447,13 @@ function assertBackupDirectoryCustody(
       'Select only the exact project backup created by OpenPlanr.',
     );
   }
-  assertApprovedTargetCustody(directory, approvedRoot, userHome(), code, 'Runtime backup');
+  assertApprovedTargetCustody(
+    directory,
+    approvedRoot,
+    planrCustodyAnchor(),
+    code,
+    'Runtime backup',
+  );
   if (requireExisting) {
     let metadata: ReturnType<typeof lstatSync>;
     try {
@@ -589,7 +622,13 @@ function assertClosedBackupTree(
   );
   const actualFiles = new Set<string>();
   const walk = (current: string): void => {
-    assertApprovedTargetCustody(current, directory, userHome(), code, 'Runtime backup tree');
+    assertApprovedTargetCustody(
+      current,
+      directory,
+      planrCustodyAnchor(),
+      code,
+      'Runtime backup tree',
+    );
     for (const entry of readdirSync(current, { withFileTypes: true })) {
       const absolute = path.join(current, entry.name);
       const metadata = lstatSync(absolute);
@@ -691,7 +730,7 @@ function assertUserOwnedTarget(
     assertApprovedTargetCustody(
       file.target,
       approvedRoot,
-      userHome(),
+      planrCustodyAnchor(),
       code,
       'Global runtime ownership',
     );
@@ -1121,33 +1160,71 @@ function duplicateClaudePluginDiagnostic(inspection: ClaudePluginInspection): {
   };
 }
 
-function bundledSkillAssets(runtime: RuntimeId): BundledHostAsset[] {
-  if (runtime === 'cursor') {
-    const rulesRoot = path.join(bundledHostRoot('cursor'), 'openplanr', 'rules');
-    return inventoryRegularFiles(rulesRoot).map((absolutePath) => {
-      const relativePath = path.relative(rulesRoot, absolutePath);
-      const first = relativePath.split(path.sep)[0];
-      const skillId = first.endsWith('.mdc') ? first.slice(0, -'.mdc'.length) : first;
-      return {
+function bundledRuntimePackage(runtime: RuntimeId, inspectInstalled = false): RuntimePackage {
+  const host = runtime === 'claude-code' ? 'claude' : runtime === 'codex' ? 'openai' : 'cursor';
+  try {
+    return inspectRuntimePackage(
+      path.join(bundledHostRoot(host), 'openplanr'),
+      path.join(runtimeRoot(), 'packages'),
+      host,
+      readRegistry().pluginVersion,
+      inspectInstalled,
+    );
+  } catch (cause) {
+    throw new RuntimeManagerError(
+      'E_RUNTIME_PACKAGE_INVALID',
+      `The exact ${runtime} runtime package could not be verified: ${cause instanceof Error ? cause.message : String(cause)}`,
+      'Preserve changed cached files and reinstall the reviewed CLI package; setup never rewrites an immutable runtime.',
+    );
+  }
+}
+
+function bundledSkillAssets(
+  runtime: RuntimeId,
+  runtimePackage = bundledRuntimePackage(runtime),
+): BundledHostAsset[] {
+  const assets: BundledHostAsset[] = [];
+  const rootName = runtime === 'cursor' ? 'rules' : 'skills';
+  for (const file of runtimePackage.files) {
+    const segments = file.relativePath.split('/');
+    if (segments[0] !== rootName) continue;
+    if (runtime === 'cursor') {
+      if (segments.length !== 2 || !segments[1].endsWith('.mdc')) continue;
+      const skillId = segments[1].slice(0, -'.mdc'.length);
+      assets.push({
+        skillId,
+        targetName: skillId,
+        relativePath: segments[1],
+        content: thinSkillEntry(file.content, runtimeLocator(runtimePackage, file.relativePath)),
+      });
+      continue;
+    }
+    const [, skillId, ...relative] = segments;
+    const relativePath = relative.join('/');
+    if (relativePath === 'SKILL.md') {
+      const locator = runtimeLocator(runtimePackage, file.relativePath);
+      assets.push({
         skillId,
         targetName: skillId,
         relativePath,
-        content: readFileSync(absolutePath),
-      };
-    });
+        content: thinSkillEntry(file.content, locator),
+      });
+      assets.push({
+        skillId,
+        targetName: skillId,
+        relativePath: 'openplanr.install.json',
+        content: Buffer.from(`${JSON.stringify(locator, null, 2)}\n`),
+      });
+    } else if (relativePath === 'openplanr.skill.json' || relativePath === 'agents/openai.yaml') {
+      assets.push({
+        skillId,
+        targetName: skillId,
+        relativePath,
+        content: thinDiscoveryMetadata(relativePath, file.content),
+      });
+    }
   }
-  const host = runtime === 'claude-code' ? 'claude' : 'openai';
-  const skillsRoot = path.join(bundledHostRoot(host), 'openplanr', 'skills');
-  return inventoryRegularFiles(skillsRoot).map((absolutePath) => {
-    const sourcePath = path.relative(skillsRoot, absolutePath);
-    const [skillId, ...segments] = sourcePath.split(path.sep);
-    return {
-      skillId,
-      targetName: skillId,
-      relativePath: segments.join(path.sep),
-      content: readFileSync(absolutePath),
-    };
-  });
+  return assets;
 }
 
 function actionBytes(action: FileAction): Buffer {
@@ -1351,9 +1428,29 @@ function buildActions(
       adapter.installScopes.includes('user');
     const installProject =
       (scope === 'project' || scope === 'both') && adapter.installScopes.includes('project');
+    const userDiscovery =
+      installUser &&
+      (runtime === 'claude-code' ||
+        (runtime === 'codex' && skillInstallMode(runtime, options) !== 'project-rule'));
+    const usesThinEntries =
+      (installProject && !userDiscovery) ||
+      (installUser && runtime === 'codex' && skillInstallMode(runtime, options) === 'direct');
     let skillAssets: BundledHostAsset[];
+    let runtimePackage: RuntimePackage;
     try {
-      skillAssets = bundledSkillAssets(runtime);
+      runtimePackage = bundledRuntimePackage(runtime, usesThinEntries);
+      for (const file of usesThinEntries ? runtimePackage.files : []) {
+        actions.push({
+          runtime: 'core',
+          scope: 'user',
+          target: path.join(runtimePackage.root, file.relativePath),
+          content: file.content,
+          kind: 'file',
+          custody: 'runtime-package',
+          description: `Retain exact ${runtime} runtime package ${file.relativePath}`,
+        });
+      }
+      skillAssets = bundledSkillAssets(runtime, runtimePackage);
     } catch (cause) {
       throw new RuntimeManagerError(
         'E_SKILL_DISTRIBUTION_INVALID',
@@ -1404,6 +1501,20 @@ function buildActions(
     }
 
     if (installProject) {
+      if (userDiscovery) {
+        actions.push({
+          runtime,
+          scope: 'project',
+          target: path.join(options.projectDir, '.planr', 'runtime-policy', `${runtime}.json`),
+          content: Buffer.from(
+            `${JSON.stringify({ schemaVersion: '1.0.0', runtime, discovery: 'user', mode: skillInstallMode(runtime, options), packageDigest: runtimePackage.digest, packageVersion: runtimePackage.version }, null, 2)}\n`,
+          ),
+          kind: 'file',
+          custody: 'professional-skill',
+          description: `Bind project policy to the existing ${runtime} user discovery`,
+        });
+        continue;
+      }
       if (runtime === 'codex') {
         for (const asset of skillAssets) {
           actions.push({
@@ -1465,8 +1576,14 @@ function buildActions(
             runtime,
             scope: 'project',
             target: path.join(options.projectDir, '.claude', 'agents', relativePath),
-            content: readFileSync(absolutePath),
+            content: Buffer.from(
+              readFileSync(absolutePath, 'utf8').replaceAll(
+                '${CLAUDE_PLUGIN_ROOT}',
+                runtimePackage.root,
+              ),
+            ),
             kind: 'file',
+            custody: 'professional-skill',
             description: `Install project Claude role agent ${relativePath}`,
           });
         }
@@ -1585,17 +1702,26 @@ function planScopeRetirements(
   runtimes: RuntimeId[],
   actions: FileAction[],
 ): FileAction[] {
-  if (!options.overrideExistingScope || options.scope !== 'user' || !project) return [];
+  if (!project) return [];
   const retainedTargets = new Set(actions.map((action) => action.target));
   const candidates = project.ownedFiles.filter(
     (file) =>
       !retainedTargets.has(file.target) &&
       (runtimes.includes(file.runtime as RuntimeId) ||
-        (file.runtime === 'core' && file.target.endsWith('runtime-lock.json'))),
+        (file.runtime === 'core' &&
+          options.overrideExistingScope &&
+          options.scope === 'user' &&
+          file.target.endsWith('runtime-lock.json'))),
   );
   return candidates.flatMap((file) => {
     assertMutableOwnedTarget(file.target, options.projectDir, 'E_MIGRATION_CONFLICT');
     if (!existsSync(file.target)) return [];
+    const metadata = lstatSync(file.target);
+    if (metadata.isSymbolicLink() || !metadata.isFile())
+      throw new RuntimeManagerError(
+        'E_MIGRATION_CONFLICT',
+        `Refusing non-file managed retirement target ${file.target}.`,
+      );
     const content = readFileSync(file.target);
     if (ownershipHash(content, file.kind, file.marker) !== file.hash)
       throw new RuntimeManagerError(
@@ -1608,7 +1734,7 @@ function planScopeRetirements(
         ...file,
         scope: 'project' as const,
         content,
-        description: 'Retire the previously managed project installation after a scope change',
+        description: 'Retire an unchanged managed copy superseded by the exact runtime package',
       },
     ];
   });
@@ -1748,7 +1874,7 @@ async function loadState(): Promise<RuntimeState> {
   assertApprovedTargetCustody(
     statePath(),
     runtimeRoot(),
-    userHome(),
+    planrCustodyAnchor(),
     'E_RUNTIME_STATE_INVALID',
     'Runtime ownership state',
   );
@@ -1774,11 +1900,58 @@ async function resolveCommandPrefix(options: SetupOptions): Promise<CommandPrefi
   return skillInstallMode('codex', options) === 'direct' ? 'bare' : 'namespaced';
 }
 
-async function atomicWrite(target: string, content: Buffer): Promise<void> {
+async function atomicWrite(
+  target: string,
+  content: Buffer,
+  verifyCurrent?: () => void,
+): Promise<void> {
   await mkdir(path.dirname(target), { recursive: true });
-  const temp = `${target}.${process.pid}.tmp`;
-  await writeFile(temp, content, { mode: 0o600 });
-  await rename(temp, target);
+  verifyCurrent?.();
+  const stagedPackage = immutableRuntimeTarget(target);
+  const stagingRoot = path.join(runtimeRoot(), 'setup-staging');
+  if (stagedPackage) {
+    assertApprovedTargetCustody(
+      stagingRoot,
+      runtimeRoot(),
+      planrCustodyAnchor(),
+      'E_MIGRATION_CONFLICT',
+      'Runtime package staging',
+    );
+    await mkdir(stagingRoot, { recursive: true });
+  }
+  const temp = stagedPackage
+    ? path.join(stagingRoot, `${randomUUID()}.tmp`)
+    : `${target}.${process.pid}.tmp`;
+  const verifyStaging = () => {
+    if (stagedPackage)
+      assertApprovedTargetCustody(
+        temp,
+        runtimeRoot(),
+        planrCustodyAnchor(),
+        'E_MIGRATION_CONFLICT',
+        'Runtime package staging',
+      );
+  };
+  let staged = false;
+  try {
+    verifyStaging();
+    await writeFile(temp, content, { mode: 0o600, flag: 'wx' });
+    staged = true;
+    verifyCurrent?.();
+    verifyStaging();
+    await rename(temp, target);
+    staged = false;
+  } finally {
+    if (staged) {
+      verifyStaging();
+      await unlink(temp);
+    }
+  }
+}
+
+/** Immutable packages are retained beyond discovery rollback, including pins held by other projects or runs. */
+function immutableRuntimeTarget(target: string): boolean {
+  return pathIsWithin(target, path.join(runtimeRoot(), 'packages'));
 }
 
 async function createBackup(
@@ -1842,7 +2015,7 @@ async function createBackup(
   assertApprovedTargetCustody(
     manifestPath,
     dir,
-    userHome(),
+    planrCustodyAnchor(),
     'E_BACKUP_FAILED',
     'Runtime backup manifest',
   );
@@ -1898,6 +2071,7 @@ async function restoreBackup(
   const restoreBytes = new Map<string, Buffer>();
   for (const entry of manifest.files) {
     assertMutableOwnedTarget(entry.target, manifest.projectDir, 'E_RUNTIME_STATE_INVALID');
+    if (immutableRuntimeTarget(entry.target)) continue;
     assertRestoreTargetIdentity(entry, retiredTargets);
     if (entry.existed) {
       restoreBytes.set(
@@ -1913,6 +2087,12 @@ async function restoreBackup(
   }
   const restored: string[] = [];
   for (const entry of [...manifest.files].reverse()) {
+    if (immutableRuntimeTarget(entry.target)) continue;
+    const verifyCurrent = () => {
+      assertMutableOwnedTarget(entry.target, manifest.projectDir, 'E_RUNTIME_STATE_INVALID');
+      assertRestoreTargetIdentity(entry, retiredTargets);
+    };
+    verifyCurrent();
     if (entry.existed && entry.backup) {
       const bytes = restoreBytes.get(entry.target);
       if (!bytes)
@@ -1922,7 +2102,7 @@ async function restoreBackup(
         );
       await mkdir(path.dirname(entry.target), { recursive: true });
       assertMutableOwnedTarget(entry.target, manifest.projectDir, 'E_RUNTIME_STATE_INVALID');
-      await atomicWrite(entry.target, bytes);
+      await atomicWrite(entry.target, bytes, verifyCurrent);
     } else if (existsSync(entry.target)) {
       await unlink(entry.target);
     }
@@ -2041,7 +2221,7 @@ export async function previewSetup(options: SetupOptions): Promise<SetupPreview>
         );
       }
       if (
-        mode !== 'project-rule' &&
+        mode === 'unified-plugin' &&
         !['user', 'both'].includes(codexScope) &&
         !options.userScopeRuntimes?.includes('codex')
       ) {
@@ -2059,7 +2239,12 @@ export async function previewSetup(options: SetupOptions): Promise<SetupPreview>
     : undefined;
   const actions = buildActions(options, runtimes, runtimeScopes, retainedProject);
   assertActionCustody(actions, options.projectDir);
-  const scopeRetirements = planScopeRetirements(options, retainedProject, runtimes, actions);
+  const scopeRetirements = planScopeRetirements(
+    options,
+    (await loadState()).projects[projectKey(options.projectDir)],
+    runtimes,
+    actions,
+  );
   const retiredProjectRules = planRetiredCursorProjectRules(
     options.projectDir,
     runtimes,
@@ -2286,7 +2471,7 @@ export async function applySetup(options: SetupOptions): Promise<
   assertApprovedTargetCustody(
     runtimeRoot(),
     runtimeRoot(),
-    userHome(),
+    planrCustodyAnchor(),
     'E_MIGRATION_CONFLICT',
     'Global runtime root',
   );
@@ -2313,7 +2498,7 @@ export async function applySetup(options: SetupOptions): Promise<
     assertActionCustody(actions, options.projectDir);
     const scopeRetirements = planScopeRetirements(
       options,
-      retainedProject,
+      state.projects[projectKey(options.projectDir)],
       preview.runtimes,
       actions,
     );
@@ -2354,6 +2539,19 @@ export async function applySetup(options: SetupOptions): Promise<
         'Review planr setup --dry-run, then rerun with --replace-managed to replace only OpenPlanr-owned content.',
       );
     }
+    const expectedTargets = new Map(
+      actions.map((action) => {
+        if (!existsSync(action.target)) return [action.target, null] as const;
+        const metadata = lstatSync(action.target);
+        if (metadata.isSymbolicLink() || !metadata.isFile())
+          throw new RuntimeManagerError(
+            'E_MIGRATION_CONFLICT',
+            `Managed target is no longer a regular file: ${action.target}.`,
+            'Preserve the changed target and inspect it before rerunning setup.',
+          );
+        return [action.target, hash(readFileSync(action.target))] as const;
+      }),
+    );
     const changed = actions.filter((action) => operationFor(action) !== 'unchanged');
     const retirementActions: FileAction[] = transition.retired.map((file) => ({
       runtime: file.runtime,
@@ -2396,8 +2594,36 @@ export async function applySetup(options: SetupOptions): Promise<
     try {
       const owned: OwnedFile[] = [];
       for (const action of actions) {
+        const verifyCurrent = () => {
+          assertMutableOwnedTarget(action.target, options.projectDir, 'E_MIGRATION_CONFLICT');
+          const targetExists = existsSync(action.target);
+          const currentMetadata = targetExists ? lstatSync(action.target) : undefined;
+          if (
+            (targetExists && (currentMetadata?.isSymbolicLink() || !currentMetadata?.isFile())) ||
+            (targetExists ? hash(readFileSync(action.target)) : null) !==
+              expectedTargets.get(action.target)
+          )
+            throw new RuntimeManagerError(
+              'E_MIGRATION_CONFLICT',
+              `Managed bytes changed during setup: ${action.target}.`,
+              'The concurrent edit was preserved; inspect it before rerunning setup.',
+            );
+        };
+        verifyCurrent();
         const content = actionBytes(action);
-        if (operationFor(action) !== 'unchanged') await atomicWrite(action.target, content);
+        if (
+          action.custody === 'runtime-package' &&
+          existsSync(action.target) &&
+          !readFileSync(action.target).equals(content)
+        ) {
+          throw new RuntimeManagerError(
+            'E_MIGRATION_CONFLICT',
+            `Immutable runtime bytes changed during setup: ${action.target}.`,
+            'Preserve the changed cache; rerun with the reviewed package after resolving its custody.',
+          );
+        }
+        if (operationFor(action) !== 'unchanged')
+          await atomicWrite(action.target, content, verifyCurrent);
         if (hash(readFileSync(action.target)) !== hash(content)) {
           throw new RuntimeManagerError(
             'E_SETUP_VERIFY_FAILED',
@@ -2418,6 +2644,19 @@ export async function applySetup(options: SetupOptions): Promise<
       for (const retired of transition.retired) {
         assertUserOwnedTarget(retired, 'codex', 'E_RUNTIME_STATE_INVALID');
         if (existsSync(retired.target)) {
+          const metadata = lstatSync(retired.target);
+          if (
+            metadata.isSymbolicLink() ||
+            !metadata.isFile() ||
+            ownershipHash(readFileSync(retired.target), retired.kind, retired.marker) !==
+              retired.hash
+          ) {
+            throw new RuntimeManagerError(
+              'E_MIGRATION_CONFLICT',
+              `Managed Codex bytes changed during retirement: ${retired.target}.`,
+              'The concurrent edit was preserved. Inspect it before rerunning setup.',
+            );
+          }
           await unlink(retired.target);
           retiredTargets.add(retired.target);
         }
@@ -2426,6 +2665,8 @@ export async function applySetup(options: SetupOptions): Promise<
         assertMutableOwnedTarget(retired.target, options.projectDir, 'E_MIGRATION_CONFLICT');
         if (
           !existsSync(retired.target) ||
+          lstatSync(retired.target).isSymbolicLink() ||
+          !lstatSync(retired.target).isFile() ||
           hash(readFileSync(retired.target)) !== hash(retired.content)
         )
           throw new RuntimeManagerError(
@@ -2437,7 +2678,20 @@ export async function applySetup(options: SetupOptions): Promise<
           const content = Buffer.from(
             removeManagedBlock(retired.content.toString('utf8'), retired.marker ?? 'runtime'),
           );
-          await atomicWrite(retired.target, content);
+          await atomicWrite(retired.target, content, () => {
+            assertMutableOwnedTarget(retired.target, options.projectDir, 'E_MIGRATION_CONFLICT');
+            if (
+              !existsSync(retired.target) ||
+              lstatSync(retired.target).isSymbolicLink() ||
+              !lstatSync(retired.target).isFile() ||
+              hash(readFileSync(retired.target)) !== hash(retired.content)
+            )
+              throw new RuntimeManagerError(
+                'E_MIGRATION_CONFLICT',
+                `Managed project bytes changed during scope retirement: ${retired.target}.`,
+                'The concurrent edit was preserved; inspect the retained backup before retrying.',
+              );
+          });
           const entry = backup.manifest.files.find(
             (candidate) => candidate.target === retired.target,
           );
@@ -2519,7 +2773,7 @@ export async function applySetup(options: SetupOptions): Promise<
       assertApprovedTargetCustody(
         backupManifestPath,
         backup.dir,
-        userHome(),
+        planrCustodyAnchor(),
         'E_RUNTIME_STATE_INVALID',
         'Runtime backup manifest',
       );
@@ -2674,7 +2928,7 @@ export async function rollbackRuntime(
       assertApprovedTargetCustody(
         manifestPath,
         directory,
-        userHome(),
+        planrCustodyAnchor(),
         'E_RUNTIME_STATE_INVALID',
         'Runtime backup manifest',
       ),
@@ -2770,6 +3024,7 @@ export async function rollbackRuntime(
       .filter((entry) => {
         const bundleRuntime = bundleRuntimeByTarget.get(path.resolve(entry.target));
         return (
+          immutableRuntimeTarget(entry.target) ||
           (bundleRuntime !== undefined && otherProjectUsesUserRuntime(bundleRuntime)) ||
           Object.entries(state.projects).some(
             ([otherKey, otherProject]) =>
@@ -2801,6 +3056,23 @@ export async function rollbackRuntime(
       retainedShared.push(entry.target);
       continue;
     }
+    const verifyCurrent = () => {
+      assertMutableOwnedTarget(entry.target, projectDir, 'E_RUNTIME_STATE_INVALID');
+      const present = existsSync(entry.target);
+      const metadata = present ? lstatSync(entry.target) : undefined;
+      if (
+        (present && (metadata?.isSymbolicLink() || !metadata?.isFile())) ||
+        (entry.afterHash
+          ? !present || hash(readFileSync(entry.target)) !== entry.afterHash
+          : present)
+      )
+        throw new RuntimeManagerError(
+          'E_MIGRATION_CONFLICT',
+          `Concurrent bytes prevent runtime rollback: ${entry.target}.`,
+          'The current file was preserved; compare the retained backup before retrying.',
+        );
+    };
+    verifyCurrent();
     if (entry.existed && entry.backup) {
       const bytes = restoreBytes.get(entry.target);
       if (!bytes)
@@ -2808,9 +3080,7 @@ export async function rollbackRuntime(
           'E_RUNTIME_STATE_INVALID',
           'Backup preflight lost validated bytes.',
         );
-      await mkdir(path.dirname(entry.target), { recursive: true });
-      assertMutableOwnedTarget(entry.target, projectDir, 'E_RUNTIME_STATE_INVALID');
-      await atomicWrite(entry.target, bytes);
+      await atomicWrite(entry.target, bytes, verifyCurrent);
     } else if (existsSync(entry.target)) {
       await unlink(entry.target);
     }
@@ -3406,6 +3676,33 @@ export async function runtimeDoctor(
   ];
   const managedFileDiagnostic = diagnoseManagedRuntimeFiles(managedFiles, ownershipHash);
   if (managedFileDiagnostic) diagnostics.push(managedFileDiagnostic);
+  const verifiedPackages = new Map<string, string>();
+  const closureFailures: string[] = [];
+  for (const file of managedFiles) {
+    try {
+      if (path.basename(file.target) === 'openplanr.install.json')
+        inspectRuntimeLocator(path.dirname(file.target), verifiedPackages);
+      else if (file.runtime === 'cursor' && file.target.endsWith('.mdc'))
+        inspectThinRule(file.target, verifiedPackages);
+    } catch (cause) {
+      closureFailures.push(
+        `${file.target}: ${cause instanceof Error ? cause.message : String(cause)}`,
+      );
+    }
+  }
+  if (verifiedPackages.size || closureFailures.length)
+    diagnostics.push({
+      code: 'runtime-package-custody',
+      status: closureFailures.length ? 'fail' : 'pass',
+      message: closureFailures.length
+        ? `Pinned runtime package verification failed: ${closureFailures.join('; ')}`
+        : 'Pinned runtime packages match their complete content inventories',
+      ...(closureFailures.length
+        ? {
+            fix: 'Run `planr doctor --fix` to preview exact-package repair; preserve modified cache bytes for inspection.',
+          }
+        : {}),
+    });
 
   let codexDiscovery: CodexSkillDiscovery | undefined;
   const codexBundle = state.userBundles?.codex;

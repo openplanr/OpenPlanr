@@ -37,7 +37,7 @@
   "skills": [
     {
       "id": "planr-artifact",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "source": "skills/planr-artifact/openplanr.skill.json",
       "entrypoint": "skills/planr-artifact/SKILL.md",
       "description": "Open, share, import, or export an OpenPlanr diagram, design, or HTML artifact review. Use when feedback must move between a local artifact and its review board.",
@@ -119,7 +119,7 @@
     },
     {
       "id": "planr-browser-qa",
-      "version": "2.0.0",
+      "version": "2.0.1",
       "source": "skills/planr-browser-qa/openplanr.skill.json",
       "entrypoint": "skills/planr-browser-qa/SKILL.md",
       "description": "Run practical browser-backed QA against real routes, forms, viewports, accessibility, console, and network behavior. Use for UI, authentication, session, navigation, or browser-network changes.",
@@ -156,7 +156,7 @@
     },
     {
       "id": "planr-ceo-review",
-      "version": "2.0.0",
+      "version": "2.0.1",
       "source": "skills/planr-ceo-review/openplanr.skill.json",
       "entrypoint": "skills/planr-ceo-review/SKILL.md",
       "description": "Produce a grounded strategy and finance review for an Operate cycle. Use when direction, runway, margin, investment, or cost of delay needs a CEO lens.",
@@ -253,7 +253,7 @@
     },
     {
       "id": "planr-chair-review",
-      "version": "2.0.0",
+      "version": "2.0.1",
       "source": "skills/planr-chair-review/openplanr.skill.json",
       "entrypoint": "skills/planr-chair-review/SKILL.md",
       "description": "Synthesize an Operate cycle into a prioritized decision queue and action plan. Use after specialist reviews when leadership needs one coherent brief.",
@@ -338,7 +338,7 @@
     },
     {
       "id": "planr-challenger-review",
-      "version": "2.0.0",
+      "version": "2.0.1",
       "source": "skills/planr-challenger-review/openplanr.skill.json",
       "entrypoint": "skills/planr-challenger-review/SKILL.md",
       "description": "Challenge an Operate cycle's claims, alternatives, downside, and confidence. Use when assumptions or executive consensus need an independent stress test.",
@@ -423,7 +423,7 @@
     },
     {
       "id": "planr-cmo-review",
-      "version": "2.0.0",
+      "version": "2.0.1",
       "source": "skills/planr-cmo-review/openplanr.skill.json",
       "entrypoint": "skills/planr-cmo-review/SKILL.md",
       "description": "Produce a grounded market and growth review for an Operate cycle. Use when acquisition, positioning, demand, retention, or missing measurement needs a CMO lens.",
@@ -520,7 +520,7 @@
     },
     {
       "id": "planr-coo-review",
-      "version": "2.0.0",
+      "version": "2.0.1",
       "source": "skills/planr-coo-review/openplanr.skill.json",
       "entrypoint": "skills/planr-coo-review/SKILL.md",
       "description": "Produce a grounded operations and customer-health review for an Operate cycle. Use when readiness, service delivery, capacity, or customer health needs a COO lens.",
@@ -617,7 +617,7 @@
     },
     {
       "id": "planr-cpo-review",
-      "version": "2.0.0",
+      "version": "2.0.1",
       "source": "skills/planr-cpo-review/openplanr.skill.json",
       "entrypoint": "skills/planr-cpo-review/SKILL.md",
       "description": "Produce a grounded product and activation review for an Operate cycle. Use when customer value, activation, prioritization, or adoption needs a CPO lens.",
@@ -714,7 +714,7 @@
     },
     {
       "id": "planr-cto-review",
-      "version": "2.0.0",
+      "version": "2.0.1",
       "source": "skills/planr-cto-review/openplanr.skill.json",
       "entrypoint": "skills/planr-cto-review/SKILL.md",
       "description": "Produce a grounded technology and delivery-risk review for an Operate cycle. Use when architecture, reliability, security, or execution risk needs a CTO lens.",
@@ -811,7 +811,7 @@
     },
     {
       "id": "planr-dashboard",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "source": "skills/planr-dashboard/openplanr.skill.json",
       "entrypoint": "skills/planr-dashboard/SKILL.md",
       "description": "Start or inspect the loopback-only OpenPlanr planning dashboard. Use when the user wants to view local planning or Operate state in the browser.",
@@ -857,11 +857,11 @@
     },
     {
       "id": "planr-delegate",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "source": "skills/planr-delegate/openplanr.skill.json",
       "entrypoint": "skills/planr-delegate/SKILL.md",
       "description": "Coordinate an explicitly requested implementation with Claude Code, Codex or Cursor, then independently review and integrate its observed changes. Use when the user asks another coding agent to implement.",
-      "sourceDigest": "sha256:ff144348d8f7c8df4080f0c137f3163ae30a25a7f9a389d267c6875347ec9ae7",
+      "sourceDigest": "sha256:7af3dc5b802809fc26feb28113e6570df56466323b331638ea5200599e9e94ad",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -919,7 +919,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:e8c0984fa8224855d8cb15c78e7163c122447f4060f87c2714e3513c4498bdf6"
+          "digest": "sha256:dc4753788846e0da1b5bda2d8264242b0d201d8946983f941c618a724d24a4a1"
         },
         {
           "path": "references/run-handoff.md",
@@ -1241,7 +1241,7 @@
     },
     {
       "id": "planr-design",
-      "version": "2.1.0",
+      "version": "2.1.1",
       "source": "skills/planr-design/openplanr.skill.json",
       "entrypoint": "skills/planr-design/SKILL.md",
       "description": "Design a polished product interface through adaptive consultation, a shared canvas/prototype/walkthrough studio, and an implementation-ready specification. Use for a new design or an existing interface that needs a coherent direction.",
@@ -1447,7 +1447,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:0e2c61b4a37b7657fa99267e84d75cb653b9a0a5e7d56ab896a95f6a3b32bca9"
+          "digest": "sha256:f52d890c7b7d9d59029d8588d648dfd3734f319f63aaf397e52643c5197eee7f"
         },
         {
           "path": "scripts/design-generated-b0798298053515fd.mjs",
@@ -2163,7 +2163,7 @@
     },
     {
       "id": "planr-design-loop",
-      "version": "2.0.0",
+      "version": "2.0.1",
       "source": "skills/planr-design-loop/openplanr.skill.json",
       "entrypoint": "skills/planr-design-loop/SKILL.md",
       "description": "Compare three materially different product design directions in a live review studio, collect pins and ratings, and develop the selected direction. Use for visual alternatives, comparison or a remix.",
@@ -2369,7 +2369,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:0e2c61b4a37b7657fa99267e84d75cb653b9a0a5e7d56ab896a95f6a3b32bca9"
+          "digest": "sha256:f52d890c7b7d9d59029d8588d648dfd3734f319f63aaf397e52643c5197eee7f"
         },
         {
           "path": "scripts/design-generated-b0798298053515fd.mjs",
@@ -3085,7 +3085,7 @@
     },
     {
       "id": "planr-design-review",
-      "version": "2.1.0",
+      "version": "2.1.1",
       "source": "skills/planr-design-review/openplanr.skill.json",
       "entrypoint": "skills/planr-design-review/SKILL.md",
       "description": "Review and revise an existing product design using stable board pins and scoped browser-verified changes. Use for focused improvements while preserving unrelated screens and feedback.",
@@ -3291,7 +3291,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:0e2c61b4a37b7657fa99267e84d75cb653b9a0a5e7d56ab896a95f6a3b32bca9"
+          "digest": "sha256:f52d890c7b7d9d59029d8588d648dfd3734f319f63aaf397e52643c5197eee7f"
         },
         {
           "path": "scripts/design-generated-b0798298053515fd.mjs",
@@ -4007,7 +4007,7 @@
     },
     {
       "id": "planr-diagram",
-      "version": "1.1.0",
+      "version": "1.1.1",
       "source": "skills/planr-diagram/openplanr.skill.json",
       "entrypoint": "skills/planr-diagram/SKILL.md",
       "description": "Create, edit, inspect, verify, or rerender professional offline diagrams. Use for architecture, process, sequence, data, state, or relationship visuals from intent or source.",
@@ -4106,7 +4106,7 @@
     },
     {
       "id": "planr-doctor",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "source": "skills/planr-doctor/openplanr.skill.json",
       "entrypoint": "skills/planr-doctor/SKILL.md",
       "description": "Diagnose OpenPlanr CLI, pipeline, runtime-adapter, installation, and lock health. Use when setup, discovery, versions, generated assets, or runtime behavior seems wrong.",
@@ -4172,7 +4172,7 @@
     },
     {
       "id": "planr-investigate",
-      "version": "2.0.0",
+      "version": "2.0.1",
       "source": "skills/planr-investigate/openplanr.skill.json",
       "entrypoint": "skills/planr-investigate/SKILL.md",
       "description": "Diagnose a bug, regression, error, or unexplained behavior and optionally implement a bounded fix. Use for root-cause investigation, not planned feature delivery.",
@@ -4209,7 +4209,7 @@
     },
     {
       "id": "planr-land",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "source": "skills/planr-land/openplanr.skill.json",
       "entrypoint": "skills/planr-land/SKILL.md",
       "description": "Assess release readiness and prepare or inspect an OpenPlanr landing sequence. Use after implementation and checks are complete, before merge, publication, or deployment.",
@@ -4255,7 +4255,7 @@
     },
     {
       "id": "planr-openplanr",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "source": "skills/planr-openplanr/openplanr.skill.json",
       "entrypoint": "skills/planr-openplanr/SKILL.md",
       "description": "Route a planning, specification, delivery, delegation, design, review, diagram, release, or operating request to the best OpenPlanr skill. Use when the right skill is unclear or the request spans several.",
@@ -4292,7 +4292,7 @@
     },
     {
       "id": "planr-operate",
-      "version": "2.1.0",
+      "version": "2.1.1",
       "source": "skills/planr-operate/openplanr.skill.json",
       "entrypoint": "skills/planr-operate/SKILL.md",
       "description": "Run a focused operating review across seven executive lenses and produce a decision and action brief. Use for periodic product or company-level leadership review.",
@@ -4386,7 +4386,7 @@
     },
     {
       "id": "planr-plan",
-      "version": "1.2.0",
+      "version": "1.2.1",
       "source": "skills/planr-plan/openplanr.skill.json",
       "entrypoint": "skills/planr-plan/SKILL.md",
       "description": "Turn a Protocol-compatible specification or product intent into schema-compatible OpenPlanr stories and implementation tasks. Use for planning and decomposition, not implementation.",
@@ -4448,7 +4448,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:ccd22ad871e889b7cdf55864d1e7e8686d2e2c0926c7e9bf530d26191dcbdc21"
+          "digest": "sha256:ddb94f35e04be606c4fbaa38a4eec4f0f81bd9fdfa8657c42fd44cb986ffa7ba"
         },
         {
           "path": "schemas/design-document.schema.json",
@@ -4541,11 +4541,11 @@
     },
     {
       "id": "planr-plan-review",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "source": "skills/planr-plan-review/openplanr.skill.json",
       "entrypoint": "skills/planr-plan-review/SKILL.md",
       "description": "Review an OpenPlanr plan for product, engineering, design, and developer-experience problems. Use after planning and before implementation to improve the plan.",
-      "sourceDigest": "sha256:2b50906b46f9ac650d8a17c6f106f5be6502566d64dffbc8d537d2011dde52fa",
+      "sourceDigest": "sha256:f1799c576de99b01923a6ad4e3c4c62f0144fb226cf0026f7aa78b1a6182e5e3",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -4576,7 +4576,7 @@
     },
     {
       "id": "planr-release",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "source": "skills/planr-release/openplanr.skill.json",
       "entrypoint": "skills/planr-release/SKILL.md",
       "description": "Choose and maintain a product's versioning scheme, classify shipped changes, and write user-facing changelogs or release notes. Use for SemVer or CalVer decisions, version bumps, release cadence, and preparing a versioned release after landing.",
@@ -4685,11 +4685,11 @@
     },
     {
       "id": "planr-ship",
-      "version": "1.2.0",
+      "version": "1.2.1",
       "source": "skills/planr-ship/openplanr.skill.json",
       "entrypoint": "skills/planr-ship/SKILL.md",
       "description": "Implement an OpenPlanr plan, specification, task, or clearly stated request end to end in the current repository. Use when the user asks to build, implement, fix, finish, or ship local work.",
-      "sourceDigest": "sha256:ff2f2811cb9e588bb48fb3e4a8471402b10945bc75599271e005b4547071dd0c",
+      "sourceDigest": "sha256:4a2a029a2a3557a621da8816c6905d7cfc19921da9ca74516838a2aff9f94245",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -4757,7 +4757,7 @@
     },
     {
       "id": "planr-spec",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "source": "skills/planr-spec/openplanr.skill.json",
       "entrypoint": "skills/planr-spec/SKILL.md",
       "description": "Shape vague product or engineering intent into a clear, measurable Protocol-compatible specification grounded in the current repository. Use when requirements need clarification before planning or implementation.",
@@ -4804,7 +4804,7 @@
     },
     {
       "id": "planr-sprint",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "source": "skills/planr-sprint/openplanr.skill.json",
       "entrypoint": "skills/planr-sprint/SKILL.md",
       "description": "Refine every open backlog item against the code and the calendar, refute the picks, and select a sprint that fits capacity and the release cut. Use before a cut or sprint; not for decomposing one specification or reporting status.",
@@ -4886,7 +4886,7 @@
     },
     {
       "id": "planr-status",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "source": "skills/planr-status/openplanr.skill.json",
       "entrypoint": "skills/planr-status/SKILL.md",
       "description": "Inspect project delivery or one feature's pipeline status without changing state. Use when the user asks what is done, pending, blocked, or next.",
@@ -4932,7 +4932,7 @@
     },
     {
       "id": "planr-sync",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "source": "skills/planr-sync/openplanr.skill.json",
       "entrypoint": "skills/planr-sync/SKILL.md",
       "description": "Audit OpenPlanr planning artifacts for graph and protocol drift. Use when statuses, references, schemas, or generated planning views may be inconsistent.",

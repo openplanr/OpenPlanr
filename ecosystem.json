@@ -147,7 +147,7 @@
   "catalogs": {
     "commands": {
       "path": "packages/protocol/registries/commands.json",
-      "digest": "sha256:8918825a207c210c3b8af37dcc96749ecf69c37bd02573aa686f3ce6329ddb1f",
+      "digest": "sha256:b36beec6603f3a7e3a046eb9e70044af6364c77e5681f4d60c4f32377ab7eec6",
       "rootCommands": 39,
       "pipelineMachineLeaves": 31,
       "frozenClaudeDocuments": 8,
@@ -250,7 +250,7 @@
     },
     "skills": {
       "path": "packages/protocol/registries/skills.json",
-      "digest": "sha256:0ca75df96a3ae23c484dac980e5f0319687f0e10e72567d25dff329285ec86d2",
+      "digest": "sha256:b33adf58674f022618cf83d535a9268a7ff9d6bf7c19cfbd7268b47bd5ec69a3",
       "count": 28,
       "ids": [
         "planr-artifact",
@@ -348,7 +348,7 @@
     ],
     "generatedAssets": {
       "path": "adapters/manifests/generated-assets.json",
-      "digest": "sha256:9f887727ab89435c0aa6ce1be34345705e9a5cbc28aa7dbc1bb2a7b077ac0f38",
+      "digest": "sha256:3e6517ef0a92f540d7adbcab8ca19e9724ab4c0fb45bc9aa84cb9de6d219d7f8",
       "count": 1460
     }
   },
