@@ -2,11 +2,21 @@ import { serializeYamlScalar } from '../compiler/index.mjs';
 import { SkillRuntimeError } from '../errors.mjs';
 
 const MAX_SHORT_DESCRIPTION = 64;
+const DISPLAY_LABELS = new Map([
+  ['planr', 'OpenPlanr'],
+  ['ceo', 'CEO'],
+  ['cto', 'CTO'],
+  ['cpo', 'CPO'],
+  ['cmo', 'CMO'],
+  ['coo', 'COO'],
+  ['qa', 'QA'],
+]);
 
 function displayName(skillId) {
+  if (skillId === 'planr-openplanr') return 'OpenPlanr Router';
   return skillId
     .split('-')
-    .map((part) => (part === 'planr' ? 'Planr' : part.charAt(0).toUpperCase() + part.slice(1)))
+    .map((part) => DISPLAY_LABELS.get(part) ?? part.charAt(0).toUpperCase() + part.slice(1))
     .join(' ');
 }
 

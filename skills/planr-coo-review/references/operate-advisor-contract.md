@@ -107,5 +107,12 @@ When available, the following command can report structural issues:
 node "<skill-root>/scripts/validate-note.mjs" "<absolute-output-path>" --profile advisor --contract-version 2.0.0
 ```
 
-Treat its diagnostics as editing guidance and report any unresolved structural issue. Return
-signal, finding count, recommendation, output path, and any unresolved issue in at most five lines.
+Treat its diagnostics as editing guidance and report any unresolved structural issue.
+
+Lead the chat return with the grounded signal and principal recommendation. Link
+the output note, summarize the finding count, and state the evidence reviewed and
+any quality check actually performed. Keep full findings and source inventories
+in the durable note. For insufficient context, identify the decision-changing
+gap and smallest useful next step without inventing a recommendation. Preserve
+the note contract, omit empty chat sections, and never require another review
+or corrective run solely for different summary wording.

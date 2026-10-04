@@ -27,7 +27,7 @@ test('Codex metadata is concise, quoted, implicitly discoverable, and explicitly
     description:
       'Review an example workflow with precise, actionable recommendations. Use when the user asks for an example review.',
   });
-  assert.match(metadata, /display_name: "Planr Example"/u);
+  assert.match(metadata, /display_name: "OpenPlanr Example"/u);
   assert.match(metadata, /short_description: ".{25,64}"/u);
   assert.match(metadata, /default_prompt: "Use \$planr-example to /u);
   assert.match(metadata, /allow_implicit_invocation: true/u);
@@ -41,6 +41,37 @@ test('Codex metadata accepts a short namespaced plugin invocation', () => {
     invocation: '$planr:example',
   });
   assert.match(metadata, /default_prompt: "Use \$planr:example to review an example\."/u);
+});
+
+test('skill cards use product branding and preserve role acronyms without changing invocation', () => {
+  for (const [skillId, label] of [
+    ['planr-ceo-review', 'OpenPlanr CEO Review'],
+    ['planr-cto-review', 'OpenPlanr CTO Review'],
+    ['planr-cpo-review', 'OpenPlanr CPO Review'],
+    ['planr-cmo-review', 'OpenPlanr CMO Review'],
+    ['planr-coo-review', 'OpenPlanr COO Review'],
+    ['planr-browser-qa', 'OpenPlanr Browser QA'],
+    ['planr-openplanr', 'OpenPlanr Router'],
+  ]) {
+    const invocation = `$planr:${skillId.slice('planr-'.length)}`;
+    const metadata = renderOpenAiSkillMetadata({
+      skillId,
+      description: 'Review the selected context.',
+      invocation,
+    });
+    assert.ok(metadata.includes(`display_name: "${label}"`), skillId);
+    assert.ok(metadata.includes(`Use ${invocation} to review the selected context.`), skillId);
+    assert.match(metadata, /allow_implicit_invocation: true/u);
+  }
+});
+
+test('metadata preserves unbranded skill identities, including object property names', () => {
+  const metadata = renderOpenAiSkillMetadata({
+    skillId: 'constructor-review',
+    description: 'Review a constructor.',
+  });
+  assert.match(metadata, /display_name: "Constructor Review"/u);
+  assert.match(metadata, /default_prompt: "Use \$constructor-review to review a constructor\."/u);
 });
 
 test('deterministic ZIPs are byte-stable, sorted, readable, and corruption-aware', () => {

@@ -133,13 +133,16 @@ function cliFixture() {
   const expected = Object.fromEntries(
     CLI_GENERATED_RESOURCES.map(({ source }) => [
       source,
-      source.endsWith('.d.mts')
-        ? 'export declare const value: string;\n'
-        : 'export const value = "reviewed";\n',
+      source.endsWith('.json')
+        ? '{"type":"object","additionalProperties":false}\n'
+        : source.endsWith('.d.mts')
+          ? 'export declare const value: string;\n'
+          : 'export const value = "reviewed";\n',
     ]),
   );
   for (const { source, destination } of CLI_GENERATED_RESOURCES) {
     mkdirSync(dirname(join(f.root, source)), { recursive: true });
+    mkdirSync(dirname(join(f.root, destination)), { recursive: true });
     writeFileSync(join(f.root, source), expected[source]);
     writeFileSync(join(f.root, destination), expected[source]);
   }

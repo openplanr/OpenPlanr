@@ -4,7 +4,7 @@ description: Coordinate an explicitly requested implementation with Claude Code,
 license: MIT
 ---
 
-# Planr Delegate
+# OpenPlanr Delegate
 
 Delegate one coherent repository scope through the user's installed native CLI.
 The delegate owns investigation, implementation, build/test and correction. The
@@ -67,3 +67,13 @@ Successful native integration removes only the owned worktree unless retention w
 requested. Failed/interrupted worktrees remain available. `status` recovers the
 report after cleanup. Planning updates are report-only. Commit, landing, publication
 and deployment remain separately authorized actions.
+
+## Return
+
+Lead with the observed integration outcome, or the partial result and attention
+state. Render the saved five-field report concisely: link material changes and
+the recoverable report, summarize independent checks, and label native-agent
+claims separately. Name any blocker, impact and exact-session recovery action.
+Keep full inventories, private diagnostics and native transcripts in their existing
+records. Preserve the report fields; plain text or different summary wording
+never requires a corrective delegate turn.

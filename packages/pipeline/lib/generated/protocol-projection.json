@@ -132,7 +132,7 @@
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/contracts.mjs",
       "target": "lib/protocol/contracts.mjs",
-      "sha256": "4ff7e93c0dd27ec7b8cdb676a364fe002958fd3cd5884f71d33ba29a9d4f9603",
+      "sha256": "54cef977472b1f8ab05b1bf4bcc240296607f78ad8fa678830f60669afd3018b",
       "mode": "644"
     },
     {
@@ -456,7 +456,7 @@
     {
       "source": "packages/protocol/registries/commands.json",
       "target": "registry/v1.5.0/commands.json",
-      "sha256": "3b954999daab81a43782369888e65c7f98e361ef26e8805ff26b6aaade5e8200",
+      "sha256": "8918825a207c210c3b8af37dcc96749ecf69c37bd02573aa686f3ce6329ddb1f",
       "mode": "644"
     },
     {
@@ -1201,6 +1201,12 @@
       "source": "packages/protocol/schemas/v1.17.0/workspace-rotation-v2.schema.json",
       "target": "schemas/v1.17.0/workspace-rotation-v2.schema.json",
       "sha256": "7546c25f4f831e51de6597ee8ca79e08865fe0460ab2f9e0c37f14bc825df3c6",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.18.0/runtime-lock.schema.json",
+      "target": "schemas/v1.18.0/runtime-lock.schema.json",
+      "sha256": "7a1409cbaf8ac98aad7739bfc7d89ad50669df60f18174bc61bb4def45255aa3",
       "mode": "644"
     },
     {

@@ -20,6 +20,7 @@ import {
 } from 'node:fs';
 import { dirname, relative, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { buildRuntimeLockSchemasV118 } from '../../packages/protocol/scripts/runtime-lock-definitions-v118.mjs';
 import { DIAGRAM_AUTHORING_CONTRACT_FILES } from '../../packages/protocol/src/diagram-authoring-contracts.mjs';
 import { validateJson } from '../../packages/protocol/src/json-schema.mjs';
 import { LARGE_OBJECT_SCHEMAS } from '../../packages/protocol/src/large-object-contracts.mjs';
@@ -31,6 +32,7 @@ import {
   PROTOCOL_V17_REGISTRIES,
   PROTOCOL_V18_CONTRACT_FILES,
 } from '../../packages/protocol/src/skill-source-contracts.mjs';
+import { readSkillSourceRegistry } from '../../packages/skill-runtime/src/catalog.mjs';
 import { validateWorkspaceManifests } from '../lib/workspace-release-policy.mjs';
 import { PLUGIN_AUTHOR, PLUGIN_DESCRIPTION, PLUGIN_LICENSE } from '../skills/plugin-metadata.mjs';
 
@@ -461,6 +463,7 @@ async function buildOutputs() {
       'v1.15.0',
       'v1.16.0',
       'v1.17.0',
+      'v1.18.0',
       'v2.0.0',
     ].map((version) => [
       version,
@@ -536,6 +539,12 @@ async function buildOutputs() {
     'E_ECOSYSTEM_SCHEMA_SUCCESSORS_117',
     'Protocol 1.17 Studio and sharing schema count drifted.',
   );
+  assertEqual(
+    schemaCounts['v1.18.0'],
+    buildRuntimeLockSchemasV118().size,
+    'E_ECOSYSTEM_SCHEMA_SUCCESSORS_118',
+    'Protocol 1.18 runtime-lock schema count drifted.',
+  );
   const additiveSchemaCount =
     schemaCounts['v1.5.0'] +
     schemaCounts['v1.6.0'] +
@@ -545,7 +554,8 @@ async function buildOutputs() {
     schemaCounts['v1.14.0'] +
     schemaCounts['v1.15.0'] +
     schemaCounts['v1.16.0'] +
-    schemaCounts['v1.17.0'];
+    schemaCounts['v1.17.0'] +
+    schemaCounts['v1.18.0'];
   const legacyRegistryPaths = listFiles('packages/protocol/registry').filter(
     (path) => path.endsWith('.json') && !path.includes('/registry/v1.17.0/'),
   );
@@ -672,6 +682,7 @@ async function buildOutputs() {
         '1.15.0',
         '1.16.0',
         '1.17.0',
+        '1.18.0',
       ],
       supportedReaders: [
         '1.0.x',
@@ -688,6 +699,7 @@ async function buildOutputs() {
         '1.15.x',
         '1.16.x',
         '1.17.x',
+        '1.18.x',
         '2.0.x',
       ],
     },
@@ -778,6 +790,7 @@ async function buildOutputs() {
           'v1.15.0': schemaCounts['v1.15.0'],
           'v1.16.0': schemaCounts['v1.16.0'],
           'v1.17.0': schemaCounts['v1.17.0'],
+          'v1.18.0': schemaCounts['v1.18.0'],
         },
       },
       total: schemaPaths.length,
@@ -884,20 +897,14 @@ async function buildOutputs() {
       },
     ],
   };
-  const sourceSkillRegistry = readJson('skills/registry.json');
+  const sourceSkillRegistry = readSkillSourceRegistry({ repoRoot });
 
   const adapterDoc = renderAdapterDoc(ecosystem);
   const ecosystemDoc = renderEcosystemDoc(ecosystem);
   const skillCatalogDoc = renderSkillCatalog(sourceSkillRegistry, codexPluginContent);
-  // The pipeline plugin manifest keeps its hand-maintained metadata; only its version is derived.
-  const pipelinePlugin = {
-    ...readJson('packages/pipeline/.claude-plugin/plugin.json'),
-    version: components.pipeline.version,
-  };
   const outputsMap = new Map([
     ['ecosystem.json', ecosystemJson],
     ['.claude-plugin/plugin.json', stableJson(plugin)],
-    ['packages/pipeline/.claude-plugin/plugin.json', stableJson(pipelinePlugin)],
     ['.claude-plugin/marketplace.json', stableJson(marketplace)],
     ['adapters/manifests/codex-plugin-content.json', stableJson(codexPluginContent)],
     ['docs/generated/adapters.md', adapterDoc],
@@ -913,6 +920,8 @@ async function buildOutputs() {
       'scripts/marketplace/generate-ecosystem.mjs',
       ecosystemSchemaPath,
       'scripts/lib/workspace-release-policy.mjs',
+      'skills/registry.json',
+      ...sourceSkillRegistry.skills.map(({ skillId }) => `skills/${skillId}/SKILL.md`),
       'conformance/packed-surface-baseline.json',
       'packages/protocol/src/semver.mjs',
       'package.json',

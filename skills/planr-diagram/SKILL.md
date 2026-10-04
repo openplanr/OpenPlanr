@@ -4,7 +4,7 @@ description: Create, edit, inspect, verify, or rerender professional offline dia
 license: MIT
 ---
 
-# Planr Diagram
+# OpenPlanr Diagram
 
 Use the public `planr diagram` surface for deterministic validation, rendering,
 fidelity reporting, and source custody. Do not reproduce renderer or manifest
@@ -116,5 +116,12 @@ locally and explicitly publishes a revision with `planr artifact publish
 <manifest-or-bundle>` without treating it as execution authority. Verify the
 actual hosted canvas, font readiness and revision before claiming it is correct.
 
-Report the selected grammar, manifest path, emitted files, validation status,
-editable source, fidelity or omissions, and the clearest next action.
+## Return
+
+Lead with the created, edited or inspected diagram and its selected grammar.
+Link the Studio or preview, manifest and editable source by purpose. Summarize
+validation and visual checks actually performed; identify any unverified view,
+fidelity omission or drift and its impact. Keep the full emitted-file inventory
+and quality diagnostics in their existing records. Give the clearest next or
+recovery action only when needed. Different chat wording never requires another
+render or changes to historical artifacts.

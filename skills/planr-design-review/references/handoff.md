@@ -76,7 +76,12 @@ review handoff.
   starts Plan, Ship, an agent, a Git write, publication, release or deployment.
 
 Return concise links to the studio, document/source, specification and quality
-result. State the selected direction and any decisions still open. Plan can read
+result. Lead with the selected direction and whether the handoff is ready,
+partial or unverified. State the checks actually performed and any decisions
+still open; keep full inventories and diagnostics in their existing artifacts.
+When blocked, preserve the usable local result and name the smallest recovery
+step. The chat summary is not a new machine contract, and different wording
+never requires a render or correction. Plan can read
 the specification and selected sources to create UI tasks; it must not re-extract
 an authored specification from preview pixels. Stop at the handoff. Starting Plan,
 Ship, external sharing, publication or deployment needs that user request.

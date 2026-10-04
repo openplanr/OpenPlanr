@@ -4,7 +4,7 @@ description: Open, share, import, or export an OpenPlanr diagram, design, or HTM
 license: MIT
 ---
 
-# Planr Artifact
+# OpenPlanr Artifact
 
 Use the deterministic `planr artifact` utility when it is installed. Never
 relaunch the active coding agent from inside this skill.
@@ -62,3 +62,13 @@ For explicitly configured company workspaces, read
 [company-review.md](references/company-review.md) before selective publication,
 company review, or local proposal application. This pre-release route has
 separate permissions and storage from encrypted token shares.
+
+## Return
+
+Lead with what was opened, shared, imported or exported and the confirmed revision
+or session. Link the actual review URL or exported file; never print capability
+tokens or private owner credentials. Distinguish successful service operations
+from preparation and browser verification from validation alone. For partial or
+blocked work, name the remaining step and exact retry or recovery action, retaining
+the useful local result. Keep detailed diagnostics in their existing records;
+different summary wording never repeats a publish or import operation.

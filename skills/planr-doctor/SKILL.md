@@ -4,7 +4,7 @@ description: Diagnose OpenPlanr CLI, pipeline, runtime-adapter, installation, an
 license: MIT
 ---
 
-# Planr Doctor
+# OpenPlanr Doctor
 
 Run `planr doctor` with the requested flags. Prefer `--json` for diagnosis.
 Preview every repair; package installation, version changes, provenance recovery,
@@ -59,3 +59,12 @@ attempted.
 
 For the longer walkthrough, JSON output shape, and reporting format, read the
 [upgrade guide](references/upgrade.md).
+
+## Return
+
+Lead with the diagnosed or repaired state. Summarize actual changes, linking
+relevant files and showing before/after versions only for components that moved.
+State which health checks were executed and what remains unverified. For a
+partial repair or blocker, retain successful work and show the exact recovery
+command or missing decision. Do not repeat long logs or claim that an attempted
+repair succeeded. Different summary wording never causes another repair.

@@ -3,7 +3,7 @@ name: planr-browser-qa
 description: "Run practical browser-backed QA against real routes, forms, viewports, accessibility, console, and network behavior. Use for UI, authentication, session, navigation, or browser-network changes."
 ---
 
-# Planr Browser QA
+# OpenPlanr Browser QA
 
 Exercise the real browser surface directly and return useful findings from the current request and
 repository context.
@@ -27,8 +27,16 @@ inferred. Never persist credentials, cookies, or session secrets.
 
 ## Return
 
+Lead with the observed result. Link relevant browser evidence and expand only
+actionable findings; keep long console/network logs in the report. Report checks
+not exercised as unverified, with the missing capability and smallest recovery
+action. A passing subset must not imply that the entire application passed.
+
 - **Outcome:** pass, issues-found, or blocked, with one sentence.
 - **Coverage:** routes, journeys, viewports, and checks actually exercised.
 - **Findings:** prioritized reproducible problems with path or UI location and expected behavior.
 - **Fixes:** changed files and verification, or none.
 - **Issues:** missing capability or unresolved risk, or none.
+
+Omit empty categories in the human summary and preserve the actual browser
+evidence. Different summary wording never requires another browser run.

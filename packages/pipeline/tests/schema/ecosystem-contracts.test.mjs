@@ -5,6 +5,7 @@ import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import { validate } from '../../conformance/json-schema-validate.mjs';
+import { validateProtocolArtifact } from '../../lib/pipeline/engine.mjs';
 
 const root = fileURLToPath(new URL('../..', import.meta.url));
 const readJson = (path) => JSON.parse(readFileSync(join(root, path), 'utf8'));
@@ -97,6 +98,15 @@ test('runtime lock validates and rejects an unknown field', () => {
   };
   assert.deepEqual(validate(lock, schema('runtime-lock')), []);
   assert.ok(validate({ ...lock, machinePath: '/tmp/private' }, schema('runtime-lock')).length > 0);
+  assert.deepEqual(validateProtocolArtifact('runtime-lock', lock), []);
+  assert.deepEqual(
+    validateProtocolArtifact('runtime-lock', { ...lock, skillModes: { codex: 'direct' } }),
+    [],
+  );
+  assert.ok(
+    validateProtocolArtifact('runtime-lock', { ...lock, skillModes: { codex: 'plugin' } }).length >
+      0,
+  );
 });
 
 test('ecosystem manifest expresses independent versions and capability levels', () => {

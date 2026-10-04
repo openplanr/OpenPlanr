@@ -4,7 +4,7 @@ description: Route a planning, specification, delivery, delegation, design, revi
 license: MIT
 ---
 
-# OpenPlanr router
+# OpenPlanr Router
 
 Decide which OpenPlanr skill owns the request, say which one and why in one
 line, then invoke it. Invoke a skill by its host name: the skill id without the
@@ -53,3 +53,12 @@ Claude Code and `$planr:plan` in Codex). Do not perform the routed work here.
   without invoking a skill.
 - Ask one concise question only when two candidate skills would produce
   materially different work.
+
+## Return
+
+Announce the selected skill and its purpose once, then let that skill return the
+achieved result, deliverable links, actual verification and any next action.
+Do not duplicate its final summary or include raw routing transcripts. If routing
+is blocked, state the unresolved choice or unavailable skill and the smallest
+recovery action. Keep existing identifiers and native invocations; summary
+wording never triggers a second invocation.

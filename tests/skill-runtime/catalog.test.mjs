@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { dirname, resolve } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-
+import { readSkillSourceRegistry } from '../../packages/skill-runtime/src/catalog.mjs';
 import {
   assertSafeRelativePath,
   EXPECTED_ROLE_IDS,
@@ -14,6 +15,44 @@ import {
 } from '../../packages/skill-runtime/src/index.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
+
+test('frontmatter owns descriptions and stale projections fail before resource generation', () => {
+  const fixture = mkdtempSync(resolve(tmpdir(), 'skill-description-'));
+  try {
+    mkdirSync(resolve(fixture, 'skills/planr-fixture'), { recursive: true });
+    writeFileSync(resolve(fixture, 'skills/planr-fixture/openplanr.skill.json'), '{}\n');
+    writeFileSync(
+      resolve(fixture, 'skills/planr-fixture/SKILL.md'),
+      '---\nname: planr-fixture\ndescription: Current activation intent.\n---\n\n# Fixture\n',
+    );
+    writeFileSync(
+      resolve(fixture, 'skills/registry.json'),
+      JSON.stringify({
+        kind: 'openplanr-skill-source-registry',
+        schemaVersion: '1.0.0',
+        sourceFormat: 'package-v1',
+        skills: [
+          {
+            skillId: 'planr-fixture',
+            source: 'skills/planr-fixture/openplanr.skill.json',
+            baseline: 'skills/planr-fixture/SKILL.md',
+            description: 'Obsolete intent.',
+          },
+        ],
+      }),
+    );
+    assert.equal(
+      readSkillSourceRegistry({ repoRoot: fixture }).skills[0].description,
+      'Current activation intent.',
+    );
+    assert.throws(
+      () => readSkillSourceRegistry({ repoRoot: fixture, verifyDescriptions: true }),
+      (error) => error.code === 'E_SKILL_DESCRIPTION_DRIFT',
+    );
+  } finally {
+    rmSync(fixture, { recursive: true, force: true });
+  }
+});
 
 test('contribution graph matches the canonical packages, zero aliases or commands, and nine roles', () => {
   const graph = readContributionGraph({ repoRoot: root });

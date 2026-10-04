@@ -4,7 +4,7 @@ description: Shape vague product or engineering intent into a clear, measurable 
 license: MIT
 ---
 
-# Planr Spec
+# OpenPlanr Spec
 
 Shape vague product or engineering intent into a decision-complete
 specification inside this active coding session. Do not invoke a planning CLI or
@@ -45,9 +45,16 @@ model-backed CLI.
 
 ## Return
 
-- **Outcome:** what the specification now defines.
-- **Artifact:** the saved path, or `not saved` for an explicitly inline result.
-- **Decisions:** locked decisions and grounded defaults.
+Lead with what is ready, then use concise links and the checks actually performed.
+If the specification is partial or blocked, name the missing decision and its impact.
+
+- **Outcome:** what the specification now defines and whether it is ready for Plan.
+- **Artifact:** a clickable saved path, or `not saved` for an explicitly inline result.
+- **Decisions:** only consequential locked choices and grounded defaults; keep the full record in the specification.
+- **Checks:** acceptance coverage and validation actually completed, including any unavailable check.
 - **Open question:** only a decision that still changes the product; omit when
   none remains.
 - **Next:** a copy-ready host-native `planr-plan` invocation for the saved spec.
+
+The summary is a human view of the specification, not another schema or a reason
+to rerun a completed operation for different wording.

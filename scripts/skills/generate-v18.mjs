@@ -54,7 +54,10 @@ const mode = option.slice(2);
 const cliPackage = JSON.parse(readFileSync(resolve(root, 'packages/cli/package.json'), 'utf8'));
 const pluginVersion = cliPackage.version;
 const repositoryUrl = cliPackage.repository.url.replace(/^git\+/u, '').replace(/\.git$/u, '');
-const registry = readSkillSourceRegistry({ repoRoot: root });
+const registry = readSkillSourceRegistry({ repoRoot: root, verifyDescriptions: mode === 'check' });
+if (mode === 'write') {
+  writeFileSync(resolve(root, 'skills/registry.json'), `${JSON.stringify(registry, null, 2)}\n`);
+}
 const skillIds = registry.skills.map(({ skillId }) => skillId);
 const outputs = new Map();
 const tracked = new Set();

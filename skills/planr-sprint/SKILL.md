@@ -4,7 +4,7 @@ description: Refine every open backlog item against the code and the calendar, r
 license: MIT
 ---
 
-# Planr Sprint
+# OpenPlanr Sprint
 
 Backlog refinement followed by sprint selection. **Refine** reads every open
 item in full and judges it against the default branch and the calendar.
@@ -159,17 +159,25 @@ leftovers the next run carries.
 
 ## Return
 
+Lead with what was proposed or actually applied. Link the sprint, refinement note
+and JSON; keep full bucket rows and refuted picks in those artifacts rather than
+repeating the backlog in chat. Summarize the selection and checks that justify it,
+and identify incomplete evidence or blocked inputs with their recovery action.
+
 - **Outcome:** `proposed` (sprint written, nothing else changed) or `applied`
   (status changes written on approval), plus capacity used vs available in
   engineer-days.
 - **Sprint:** the sprint id and path, and the cut it targets.
-- **Buckets:** four lists, one line per row: `ID · title · effort · why`.
-  In-progress rows sit under their batch heading in execution order. Blocked
-  rows carry the blocker and the unblocking question. Close-or-demote rows carry
-  the evidence.
-- **Refuted:** every pick a refuter changed, with the lens and the change.
+- **Buckets:** counts for the four buckets, the selected batches in execution
+  order, and the most consequential blocked or close-or-demote decision.
+- **Refuted:** material changes to the selection, with their evidence or capacity rationale.
+- **Checks:** code/calendar evidence and refutation lenses actually completed.
 - **Issues:** degraded inputs, items that could not be read or judged, defaults
   taken, or `none`.
+- **Next:** the pending write-back choice or next useful action, only when needed.
+
+The note and JSON remain complete and unchanged in shape. Omit empty chat sections;
+different summary wording never causes another sprint creation or write-back.
 
 `planr status` shows the active sprint with its cut and progress; the dashboard
 (`planr-dashboard`) renders the sprint from the same frontmatter and checkboxes.

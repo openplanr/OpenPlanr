@@ -20,6 +20,7 @@ import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { validateProtocolArtifact } from 'planr-pipeline/protocol';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { ClaudeCommandRunner } from '../../src/services/claude-plugin-service.js';
 import {
@@ -90,7 +91,7 @@ const bundledAdapterRegistry = JSON.parse(
     join(workspaceRoot, 'packages', 'cli', 'lib', 'host-packages', 'adapter-registry.json'),
     'utf8',
   ),
-) as { pluginVersion: string };
+) as { pluginVersion: string; protocolVersion: string };
 function regularFiles(directory: string): string[] {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const target = join(directory, entry.name);
@@ -1095,6 +1096,11 @@ describe('runtime setup', () => {
     expect(agents).toBe('# Hand-written policy\n');
     expect(existsSync(join(userHome, '.codex', 'skills', 'ship', 'SKILL.md'))).toBe(true);
     const lock = JSON.parse(readFileSync(join(projectDir, '.planr', 'runtime-lock.json'), 'utf8'));
+    expect(validateProtocolArtifact('runtime-lock', lock, { protocolVersion: '1.18.0' })).toEqual(
+      [],
+    );
+    expect(lock.protocolVersion).toBe(bundledAdapterRegistry.protocolVersion);
+    expect(lock.skillModes).toEqual({ codex: 'direct' });
     expect(lock.components).toEqual({
       cli: cliVersion,
       pipeline: pipelineVersion,
@@ -1141,6 +1147,44 @@ describe('runtime setup', () => {
       status: 'fail',
       fix: 'Run `planr runtime update all --scope project`.',
     });
+  });
+
+  it('reports unsupported recorded discovery modes before accepting a matching lock digest', async () => {
+    await applySetup({ projectDir, cliVersion, runtime: 'codex', scope: 'project' });
+    const lockPath = join(projectDir, '.planr', 'runtime-lock.json');
+    const lock = JSON.parse(readFileSync(lockPath, 'utf8'));
+    lock.skillModes.codex = 'unsupported';
+    lock.manifestDigest = `sha256:${createHash('sha256')
+      .update(
+        JSON.stringify({
+          protocol: lock.protocolVersion,
+          pipelineVersion: lock.components.pipeline,
+          adapters: lock.adapters,
+          skillModes: lock.skillModes,
+        }),
+      )
+      .digest('hex')}`;
+    writeFileSync(lockPath, `${JSON.stringify(lock, null, 2)}\n`);
+
+    const doctor = await runtimeDoctor(projectDir);
+    expect(doctor.diagnostics.find((item) => item.code === 'runtime-lock-invalid')).toMatchObject({
+      status: 'fail',
+    });
+    expect(doctor.diagnostics.find((item) => item.code === 'runtime-lock')).toBeUndefined();
+  });
+
+  it('keeps supported discovery modes in runtime lock digest verification', async () => {
+    await applySetup({ projectDir, cliVersion, runtime: 'codex', scope: 'project' });
+    const lockPath = join(projectDir, '.planr', 'runtime-lock.json');
+    const lock = JSON.parse(readFileSync(lockPath, 'utf8'));
+    lock.skillModes.codex = 'direct';
+    writeFileSync(lockPath, `${JSON.stringify(lock, null, 2)}\n`);
+
+    const doctor = await runtimeDoctor(projectDir);
+    expect(doctor.diagnostics.find((item) => item.code === 'lock-drift')).toMatchObject({
+      status: 'fail',
+    });
+    expect(doctor.diagnostics.find((item) => item.code === 'runtime-lock-invalid')).toBeUndefined();
   });
 
   it('previews, applies, and diagnoses the managed Claude plugin release set', async () => {

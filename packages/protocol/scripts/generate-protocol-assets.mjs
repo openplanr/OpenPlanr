@@ -38,6 +38,7 @@ import {
 import { buildDiagramRegistries, buildDiagramSchemas } from './diagram-definitions.mjs';
 import { buildPlanningSchemas } from './planning-definitions.mjs';
 import { buildRegistries, buildSchemas } from './protocol-definitions.mjs';
+import { buildRuntimeLockSchemasV118 } from './runtime-lock-definitions-v118.mjs';
 import { buildSkillPackageSchemasV18 } from './skill-package-definitions-v18.mjs';
 import { buildSkillSourceSchemas } from './skill-source-definitions.mjs';
 import {
@@ -73,6 +74,8 @@ for (const [name, value] of buildSkillSourceRegistriesV17())
   expected.set(`registries/${name}`, json(value));
 for (const [name, value] of buildSkillPackageSchemasV18())
   expected.set(`schemas/v1.8.0/${name}`, json(value));
+for (const [name, value] of buildRuntimeLockSchemasV118())
+  expected.set(`schemas/v1.18.0/${name}`, json(value));
 expected.set('schemas/v1.9.0/design-document.schema.json', json(DESIGN_DOCUMENT_SCHEMA));
 for (const [name, value] of Object.entries(DESIGN_WORKSPACE_SCHEMAS))
   expected.set(`schemas/v1.9.0/${name}.schema.json`, json(value));
@@ -310,7 +313,8 @@ function walk(root, prefix = '') {
 }
 
 const originalSchemaFiles = walk(join(packageRoot, 'schemas')).filter(
-  ({ key }) => !/^v1\.(?:[5-9]|10|11|12|13|14|15|16|17)\.0\//u.test(key) && key.endsWith('.json'),
+  ({ key }) =>
+    !/^v1\.(?:[5-9]|10|11|12|13|14|15|16|17|18)\.0\//u.test(key) && key.endsWith('.json'),
 );
 const originalRegistryFiles = walk(join(packageRoot, 'registry')).filter(
   ({ key }) => !key.startsWith('v1.17.0/') && key.endsWith('.json'),

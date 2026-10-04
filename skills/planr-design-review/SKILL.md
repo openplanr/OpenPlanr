@@ -4,7 +4,7 @@ description: Review and revise an existing product design using stable board pin
 license: MIT
 ---
 
-# Planr Design Review
+# OpenPlanr Design Review
 
 Improve the existing design in this active host session, retaining the user's
 intent and recorded feedback.
@@ -55,3 +55,12 @@ screens, preserve reviewer intent, and let the owner approve the refined handoff
 Only an explicit **Continue to Plan** action may return the host-native Plan
 invocation for the current approved package. Preparing or approving a package
 does not write planning files, dispatch an agent, change Git, or start Ship.
+
+## Return
+
+Lead with what changed and which feedback is resolved. Link the current Studio,
+editable sources and updated specification by purpose. Summarize checks actually
+run on affected screens, and distinguish checked changes from unverified ones.
+Keep full pin inventories in the review record; name stale or unresolved pins
+with their impact and next action. Preserve the prior revision and machine
+records; different summary wording never triggers a corrective render.

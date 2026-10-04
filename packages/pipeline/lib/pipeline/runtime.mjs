@@ -5,6 +5,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { planrHome } from '../artifact/internal/planr-home.mjs';
+import { validateProtocolArtifact } from '../protocol/contracts.mjs';
 import { PipelineError } from './errors.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -57,6 +58,14 @@ export function validateRuntimeLock(projectRoot, runtimeId) {
     throw new PipelineError(
       'E_LOCK_INVALID',
       `Could not parse ${lockPath}: ${error.message}`,
+      'Review the lock, then run `planr setup --scope project`.',
+    );
+  }
+  const errors = validateProtocolArtifact('runtime-lock', lock, { protocolVersion: '1.18.0' });
+  if (errors.length) {
+    throw new PipelineError(
+      'E_LOCK_INVALID',
+      `Runtime lock does not match the supported contract: ${errors[0].path} ${errors[0].detail}`,
       'Review the lock, then run `planr setup --scope project`.',
     );
   }

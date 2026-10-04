@@ -108,32 +108,21 @@ chore(planr): refine backlog for SPRINT-NNN
 
 ## Example chat return
 
-```
-Outcome:  proposed · 5.8 of 6 engineer-days used · SPRINT-004 (cut 25 Sep)
-Sprint:   .planr/sprints/SPRINT-004-cut-25-sep-2026.md
+Use a short human summary with clickable artifact links. This example is not an
+additional schema or a fixed layout:
 
-In progress (execution order)
-  VM read session · 0.5d
-    BL-345  CRM callback silent since 10 Sep, 39 applications stuck at Received
-    BL-348  rag-api cannot reach the department API (+ missing api key)
-  PR 1 · MUVi Apply · 1d
-    BL-282  self-healing where clause
-    BL-229  write-side GUID check only (rest 9 Oct)
-  PR 2 · Connect residuals · 0.75d
-    BL-360, BL-364, BL-368, BL-056 (D3 only)
-  Ops readiness · 1.5d   ·   QT-194 the cut · 0.5d
+> **Sprint proposed.** SPRINT-004 uses 5.8 of 6 engineer-days for the 25 September cut.
+> **Artifacts:** link the sprint, refinement note and JSON using their actual paths.
+> **Selection:** callback repair, two implementation batches, operations readiness and the cut.
+> **Checks:** code evidence, capacity and user-impact review completed; one stale pick removed.
+> **Remaining:** 14 items planned next, 31 blocked and 42 proposed for closure or demotion; details stay in the note.
+> **Next:** resolve the write-back choice before applying status changes.
 
-Plan next (9 Oct)   BL-224, BL-043, BL-283, BL-014, BL-349 code, …   (14 items)
-Blocked             BL-167 partner: Dynamics id for Austrian Matura?
-                    BL-272 team: which English tests carry a score?   (31 items)
-Close or demote     BL-295 done by #569 · BL-327 done by #590 · BL-197 P1 dead 14 Sep …  (42 items)
-
-Refuted   BL-342 evidence: no server actions in muvi-apply, dropped
-          BL-229 impact: no applicant hit this month, split
-          BL-295 evidence: delivered 8 Sep, moved to close
-Issues    none
-Next      approve write-back: planr sprint apply SPRINT-004 --yes --commit
-```
+For refine-only runs, link the refinement outputs without inventing a sprint.
+For partial evidence or blocked write-back, retain the useful proposal and state
+what remains unverified and the smallest recovery action. Keep full bucket rows,
+refutations and exact machine fields in the durable outputs. Different wording
+never causes another creation or write-back.
 
 ## Hand-written fallback
 

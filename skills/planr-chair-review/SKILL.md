@@ -5,7 +5,7 @@ license: MIT
 allowed-tools: "Read, Grep, Glob, Edit(./.planr/operate/**)"
 ---
 
-# Chair synthesis (`chair`)
+# OpenPlanr Chair Review
 
 Turn the available advisor and Challenger notes into a concise decision and action brief. Do not
 repeat their repository searches or invent an absent lens.
@@ -97,5 +97,11 @@ node "<skill-root>/scripts/validate-note.mjs" "<absolute-output-path>" --profile
 
 Use diagnostics to improve the note when useful and report any remaining structural issue.
 
-Return overall signal, decision count, action count, output path, and any unresolved issue in at
-most five lines.
+## Return
+
+Lead with the grounded overall signal and principal decision. Link the output
+note and summarize decision/action counts, the lenses actually consulted and any
+quality check performed. Keep the full queue and source references in the note.
+If coverage or synthesis is incomplete, say so with its impact and next action;
+omit empty chat sections. Preserve the durable note shape. Different wording
+never requires another synthesis or corrective run.

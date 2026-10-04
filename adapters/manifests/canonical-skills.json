@@ -41,7 +41,7 @@
       "source": "skills/planr-artifact/openplanr.skill.json",
       "entrypoint": "skills/planr-artifact/SKILL.md",
       "description": "Open, share, import, or export an OpenPlanr diagram, design, or HTML artifact review. Use when feedback must move between a local artifact and its review board.",
-      "sourceDigest": "sha256:66bebf72dfa7f2a52c4bc0f146c6240290414b47383fdce4dc1526720935b9a3",
+      "sourceDigest": "sha256:f1e8d2719427c2e9565a82698eed53994da437676bcd8c3734a50f52090417be",
       "resources": [
         {
           "path": "references/design-sharing.md",
@@ -75,7 +75,7 @@
             "chatgpt"
           ],
           "executable": false,
-          "digest": "sha256:d2b3d02608b9fad29802553632990d360442f36d513c18b91d25bf7e35098b4d"
+          "digest": "sha256:ba9c66643472c3ad90aafa804f50289234767ccec6a5f197ff00caf28d0174a8"
         },
         {
           "path": "references/diagram-sharing.md",
@@ -123,7 +123,7 @@
       "source": "skills/planr-browser-qa/openplanr.skill.json",
       "entrypoint": "skills/planr-browser-qa/SKILL.md",
       "description": "Run practical browser-backed QA against real routes, forms, viewports, accessibility, console, and network behavior. Use for UI, authentication, session, navigation, or browser-network changes.",
-      "sourceDigest": "sha256:6ea1abe6cc81b04d0418ec5ea354920e10a765685403c492f9a7a282dab69de2",
+      "sourceDigest": "sha256:fc8d122a89459321b0328f3437aded5c8e9a882d3db9b8a6eca5105b31d1d888",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -133,7 +133,7 @@
             "chatgpt"
           ],
           "executable": false,
-          "digest": "sha256:279fc7eb01347c3f7dbdf3fb8e5a6ceccf48f68b7754c0eb5ccd5dd5298f781b"
+          "digest": "sha256:82e88b3696976b13d6112a7d7c2bac25773c5fb39a685138759a2d7e261847ee"
         }
       ],
       "contracts": {
@@ -160,7 +160,7 @@
       "source": "skills/planr-ceo-review/openplanr.skill.json",
       "entrypoint": "skills/planr-ceo-review/SKILL.md",
       "description": "Produce a grounded strategy and finance review for an Operate cycle. Use when direction, runway, margin, investment, or cost of delay needs a CEO lens.",
-      "sourceDigest": "sha256:a228d0fe04af6ce97d131772602fd571b4de1649ce8417eb9d15ba1834de0798",
+      "sourceDigest": "sha256:b32f4af72eeea04556441e9fb6cf6538c169cf3caee1605bc3000271944439e8",
       "resources": [
         {
           "path": "references/operate-advisor-contract.md",
@@ -172,7 +172,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:490d5f7aa09232ca93765844cb2dfe78bcb719b90697e72d0adcfa76d58290fd"
+          "digest": "sha256:467c4437430f656d37827c9035b7e3dec324735e1c7ac080776141a2e305e534"
         },
         {
           "path": "scripts/validate-note.mjs",
@@ -230,7 +230,7 @@
             "chatgpt"
           ],
           "executable": false,
-          "digest": "sha256:5190a72d65aec08421042c88744f97c8c0b6854400a2bae8eae32d3d942620b0"
+          "digest": "sha256:c969a938c9e74e7dbb27ec80390d3e6ae5b83d66149cba41a05b19b01b96ff46"
         }
       ],
       "contracts": {
@@ -257,7 +257,7 @@
       "source": "skills/planr-chair-review/openplanr.skill.json",
       "entrypoint": "skills/planr-chair-review/SKILL.md",
       "description": "Synthesize an Operate cycle into a prioritized decision queue and action plan. Use after specialist reviews when leadership needs one coherent brief.",
-      "sourceDigest": "sha256:ca4e392fd2956e1774aba3acf9bd9329002071b77fba7dbc22a5942e4ce6d8c6",
+      "sourceDigest": "sha256:2077f0ce15fef1f99aabcd35bcd04549324c2d6a47db7609c1edd4de715f1681",
       "resources": [
         {
           "path": "scripts/validate-note.mjs",
@@ -315,7 +315,7 @@
             "chatgpt"
           ],
           "executable": false,
-          "digest": "sha256:3d4ce7cc43feb47341a82a3abffc7391e918c2133585138fda5bc7ba8856b901"
+          "digest": "sha256:104c2bed0c2647e0a1b48231dbff5f7f1b3cbe1b33e7a81f92bff8ac61ba209b"
         }
       ],
       "contracts": {
@@ -342,7 +342,7 @@
       "source": "skills/planr-challenger-review/openplanr.skill.json",
       "entrypoint": "skills/planr-challenger-review/SKILL.md",
       "description": "Challenge an Operate cycle's claims, alternatives, downside, and confidence. Use when assumptions or executive consensus need an independent stress test.",
-      "sourceDigest": "sha256:96a003b534fa6abd33d0cde8f0afc8fb1f00731673ff37a32a7408becd9ff3fd",
+      "sourceDigest": "sha256:8a144b7738268d904f4c122b357ca640e7c8a9e21193fdf7eaed26758002f347",
       "resources": [
         {
           "path": "scripts/validate-note.mjs",
@@ -400,7 +400,7 @@
             "chatgpt"
           ],
           "executable": false,
-          "digest": "sha256:1d6a08b97e5378e7a9fba722adf089bfa6e56d44ef0a53bdbfa567e2c4beae7a"
+          "digest": "sha256:222f9f7ae01d6f58a6d4ff04fc6085b489b5143851e82638fadeead889f4022c"
         }
       ],
       "contracts": {
@@ -427,7 +427,7 @@
       "source": "skills/planr-cmo-review/openplanr.skill.json",
       "entrypoint": "skills/planr-cmo-review/SKILL.md",
       "description": "Produce a grounded market and growth review for an Operate cycle. Use when acquisition, positioning, demand, retention, or missing measurement needs a CMO lens.",
-      "sourceDigest": "sha256:af9b66b962acede5411ad3d4f30601e597024d8614f1ce49fb5017832a5a5886",
+      "sourceDigest": "sha256:d4997975cbe0dff35abf641461df79fefaf7b7541d877147f93026a00565454e",
       "resources": [
         {
           "path": "references/operate-advisor-contract.md",
@@ -439,7 +439,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:490d5f7aa09232ca93765844cb2dfe78bcb719b90697e72d0adcfa76d58290fd"
+          "digest": "sha256:467c4437430f656d37827c9035b7e3dec324735e1c7ac080776141a2e305e534"
         },
         {
           "path": "scripts/validate-note.mjs",
@@ -497,7 +497,7 @@
             "chatgpt"
           ],
           "executable": false,
-          "digest": "sha256:da6d4da72156db8eb35de5ce73a32f6e5a3efd181a22f1027b71fb8152085481"
+          "digest": "sha256:5aaf42dcfb2cba5a289679ade575371f66d77095600af7eee220f1658dd0345f"
         }
       ],
       "contracts": {
@@ -524,7 +524,7 @@
       "source": "skills/planr-coo-review/openplanr.skill.json",
       "entrypoint": "skills/planr-coo-review/SKILL.md",
       "description": "Produce a grounded operations and customer-health review for an Operate cycle. Use when readiness, service delivery, capacity, or customer health needs a COO lens.",
-      "sourceDigest": "sha256:c8d43f05ec81b184d2d6eb8ee346bb7763ae747a0cfa32ee8b949df482f08f70",
+      "sourceDigest": "sha256:0e2a68abfe9df64e0efe14277790858b31609448897235021acf5601fce54748",
       "resources": [
         {
           "path": "references/operate-advisor-contract.md",
@@ -536,7 +536,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:490d5f7aa09232ca93765844cb2dfe78bcb719b90697e72d0adcfa76d58290fd"
+          "digest": "sha256:467c4437430f656d37827c9035b7e3dec324735e1c7ac080776141a2e305e534"
         },
         {
           "path": "scripts/validate-note.mjs",
@@ -594,7 +594,7 @@
             "chatgpt"
           ],
           "executable": false,
-          "digest": "sha256:8566a642d6031303d9fb273dd3c45ea3a3fcbf1369ee0c8f5e6e8d088e0fb2f8"
+          "digest": "sha256:eeba9f2e1dac858ff346d4ec76f7418729f3c5d64ee8dab1a1fc09fe9bcdb67c"
         }
       ],
       "contracts": {
@@ -621,7 +621,7 @@
       "source": "skills/planr-cpo-review/openplanr.skill.json",
       "entrypoint": "skills/planr-cpo-review/SKILL.md",
       "description": "Produce a grounded product and activation review for an Operate cycle. Use when customer value, activation, prioritization, or adoption needs a CPO lens.",
-      "sourceDigest": "sha256:37645030d23fd3ccbe55642afdbd62ccc82704cc6e088f8afe3d1fb6031e2781",
+      "sourceDigest": "sha256:da2b8a054f9b888377aebe59cbee61aa1a199d3d633350dfa18fe0b0fb0fdf4c",
       "resources": [
         {
           "path": "references/operate-advisor-contract.md",
@@ -633,7 +633,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:490d5f7aa09232ca93765844cb2dfe78bcb719b90697e72d0adcfa76d58290fd"
+          "digest": "sha256:467c4437430f656d37827c9035b7e3dec324735e1c7ac080776141a2e305e534"
         },
         {
           "path": "scripts/validate-note.mjs",
@@ -691,7 +691,7 @@
             "chatgpt"
           ],
           "executable": false,
-          "digest": "sha256:2fd983404dff6affde2fcc79824b0db8711ecb2def918f3ec7f5383628ef9adc"
+          "digest": "sha256:b3a5549b8fd5b40320c69979ad38e48c7a179c7684c3d3e2bd5bba5410f8336f"
         }
       ],
       "contracts": {
@@ -718,7 +718,7 @@
       "source": "skills/planr-cto-review/openplanr.skill.json",
       "entrypoint": "skills/planr-cto-review/SKILL.md",
       "description": "Produce a grounded technology and delivery-risk review for an Operate cycle. Use when architecture, reliability, security, or execution risk needs a CTO lens.",
-      "sourceDigest": "sha256:f1a9f6a4597508e7c7f2749f186e94b23a1a61a82e5bfd8e18c23e56695b5299",
+      "sourceDigest": "sha256:e32aa4ce50ad0b947d3723b9d33c77049feb945d4a95ef830fe8f727dcbd8c4b",
       "resources": [
         {
           "path": "references/operate-advisor-contract.md",
@@ -730,7 +730,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:490d5f7aa09232ca93765844cb2dfe78bcb719b90697e72d0adcfa76d58290fd"
+          "digest": "sha256:467c4437430f656d37827c9035b7e3dec324735e1c7ac080776141a2e305e534"
         },
         {
           "path": "scripts/validate-note.mjs",
@@ -788,7 +788,7 @@
             "chatgpt"
           ],
           "executable": false,
-          "digest": "sha256:e9b7abdc6f596284863a3ac1aa3d0c1060eb996c7ef2fa07b009630f1fa53b4b"
+          "digest": "sha256:f49024c7f63da1b173973032bb09bcb0433f134907d3e55ba2edb2bcb2628847"
         }
       ],
       "contracts": {
@@ -815,7 +815,7 @@
       "source": "skills/planr-dashboard/openplanr.skill.json",
       "entrypoint": "skills/planr-dashboard/SKILL.md",
       "description": "Start or inspect the loopback-only OpenPlanr planning dashboard. Use when the user wants to view local planning or Operate state in the browser.",
-      "sourceDigest": "sha256:e2a9f224b48cd271c6ca0cd8e6868b344181ca2131f7dc0fb7a2ae8babf426b0",
+      "sourceDigest": "sha256:c34b53355e7b8c565534c9ae2343b29312b8d7bcc9bb6cc72ab4dada0d4591b2",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -825,7 +825,7 @@
             "chatgpt"
           ],
           "executable": false,
-          "digest": "sha256:f9b3720f7186c0ab616a8c443471f6dc2b18ad3b923a0d7b0ce812fdf5415715"
+          "digest": "sha256:e964f6213c63ad44b541351195a1328c7762b4ae49d4de4b505a43b3f9c4b707"
         }
       ],
       "contracts": {
@@ -861,7 +861,7 @@
       "source": "skills/planr-delegate/openplanr.skill.json",
       "entrypoint": "skills/planr-delegate/SKILL.md",
       "description": "Coordinate an explicitly requested implementation with Claude Code, Codex or Cursor, then independently review and integrate its observed changes. Use when the user asks another coding agent to implement.",
-      "sourceDigest": "sha256:78e72ab2bda33d6d9652bef7f05d57150c726985d24c7aafdaff15a1a2e3f2b8",
+      "sourceDigest": "sha256:ff144348d8f7c8df4080f0c137f3163ae30a25a7f9a389d267c6875347ec9ae7",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -871,7 +871,7 @@
             "chatgpt"
           ],
           "executable": false,
-          "digest": "sha256:274e79b6a4b671bc7110b46ac23bbcd7918766750f4b80671864b61c4fe03c43"
+          "digest": "sha256:e4265d522b9eb5c1770366c1cecef111e5d7f6a605b712681ee806ecfef16bac"
         },
         {
           "path": "references/adapter-protocol.md",
@@ -1245,7 +1245,7 @@
       "source": "skills/planr-design/openplanr.skill.json",
       "entrypoint": "skills/planr-design/SKILL.md",
       "description": "Design a polished product interface through adaptive consultation, a shared canvas/prototype/walkthrough studio, and an implementation-ready specification. Use for a new design or an existing interface that needs a coherent direction.",
-      "sourceDigest": "sha256:a8554f6ac7fcbe6760153f34ab18d533ff4ff36d3556dad55687b3c3b6d33aab",
+      "sourceDigest": "sha256:edd9799d15991ea7757e8ff0828c70a6bc5cf558cca3b4c11932874d383fb853",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -1255,7 +1255,7 @@
             "chatgpt"
           ],
           "executable": false,
-          "digest": "sha256:7f8935f312ec6d5ca2731b821fbaa8f51ab72db7bd2d2314f5387314391972be"
+          "digest": "sha256:6c7c552bfea93702edc0cab604ab048988582c2ffa8b6d7da2f5967a83f90833"
         },
         {
           "path": "references/craft.md",
@@ -1327,7 +1327,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:238ef2f458c84e0c7832ad7267d79cb234390c5a1016b636dba04fe0e7304774"
+          "digest": "sha256:9030e05be6220f59a5bfbc52b836850b0d63845d0fc0f138b66c895d8903d3cf"
         },
         {
           "path": "references/review.md",
@@ -2131,7 +2131,7 @@
       "source": "skills/planr-design-loop/openplanr.skill.json",
       "entrypoint": "skills/planr-design-loop/SKILL.md",
       "description": "Compare three materially different product design directions in a live review studio, collect pins and ratings, and develop the selected direction. Use for visual alternatives, comparison or a remix.",
-      "sourceDigest": "sha256:920bac7dd1cbca34ac8e497b006b918fb6787c0fbece3275244b67388f42a4f6",
+      "sourceDigest": "sha256:1b741868e5a5ca01b52bbd7d8af3c0424fc9f6f9efc081211f463bc37c6b75ff",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -2141,7 +2141,7 @@
             "chatgpt"
           ],
           "executable": false,
-          "digest": "sha256:8765218feab3b8f26df56a2bd20a9053933db706a397de3a1aca68f8e98f3b8a"
+          "digest": "sha256:12c5bdc9254913db00a6ed494ffa912c7fe71ae634222c523c91ca564507d00c"
         },
         {
           "path": "references/craft.md",
@@ -2213,7 +2213,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:238ef2f458c84e0c7832ad7267d79cb234390c5a1016b636dba04fe0e7304774"
+          "digest": "sha256:9030e05be6220f59a5bfbc52b836850b0d63845d0fc0f138b66c895d8903d3cf"
         },
         {
           "path": "references/review.md",
@@ -3017,7 +3017,7 @@
       "source": "skills/planr-design-review/openplanr.skill.json",
       "entrypoint": "skills/planr-design-review/SKILL.md",
       "description": "Review and revise an existing product design using stable board pins and scoped browser-verified changes. Use for focused improvements while preserving unrelated screens and feedback.",
-      "sourceDigest": "sha256:1c4e6e8dcb750bb20c04b2b05fb433fe6866bc4fb5554cb82fa357077d27c242",
+      "sourceDigest": "sha256:f0dac82f8626e4c83abfd7f47fe2dbafddba4dc7a7ebcfae4aa51225454f9594",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -3027,7 +3027,7 @@
             "chatgpt"
           ],
           "executable": false,
-          "digest": "sha256:6a8ccbf7cbcec373e0eb4e883c3467fc58ce090f7f4b31bc1fd84aa355335d3b"
+          "digest": "sha256:25e282952020459858eb69a51f57cad6a8ef1c769df7f7ed320744688596868e"
         },
         {
           "path": "references/craft.md",
@@ -3099,7 +3099,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:238ef2f458c84e0c7832ad7267d79cb234390c5a1016b636dba04fe0e7304774"
+          "digest": "sha256:9030e05be6220f59a5bfbc52b836850b0d63845d0fc0f138b66c895d8903d3cf"
         },
         {
           "path": "references/review.md",
@@ -3903,7 +3903,7 @@
       "source": "skills/planr-diagram/openplanr.skill.json",
       "entrypoint": "skills/planr-diagram/SKILL.md",
       "description": "Create, edit, inspect, verify, or rerender professional offline diagrams. Use for architecture, process, sequence, data, state, or relationship visuals from intent or source.",
-      "sourceDigest": "sha256:898211dd84cbc0718aa34c6624a5fc6e3dfd998e5d9094c0d166ca32efbc95fd",
+      "sourceDigest": "sha256:201db5c2d96041138e3017ffd78ee9dbf09070853b47a295a31c8c3fb819ef7c",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -3913,7 +3913,7 @@
             "chatgpt"
           ],
           "executable": false,
-          "digest": "sha256:891982dbce770b2696f10cd10f2216f19158ed6b3cd93ea730bb1c571c299d23"
+          "digest": "sha256:470a4d969a7a9299a1fe50f3e1c125ee7d6b02c2c0a7d1ea83cc58c2517ff01d"
         },
         {
           "path": "references/diagram-document.md",
@@ -4002,7 +4002,7 @@
       "source": "skills/planr-doctor/openplanr.skill.json",
       "entrypoint": "skills/planr-doctor/SKILL.md",
       "description": "Diagnose OpenPlanr CLI, pipeline, runtime-adapter, installation, and lock health. Use when setup, discovery, versions, generated assets, or runtime behavior seems wrong.",
-      "sourceDigest": "sha256:84dddcffefbbec17014cbe7d9fe04e2a7a2e48ff66d26d283bf941dcbc83346f",
+      "sourceDigest": "sha256:5368902f43821853d3ae55cb23b907ab3fbcd23a28012c2dc8ecbbd694575471",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -4012,7 +4012,7 @@
             "chatgpt"
           ],
           "executable": false,
-          "digest": "sha256:ec8585684492a8236ac4204cf2018f187d79c1cb09fd461a105c6add641633c3"
+          "digest": "sha256:0b3f6461fc17e7d2068a85f053279974ddf79095d37c62a6a1a66ccfea1e9d84"
         },
         {
           "path": "references/upgrade.md",
@@ -4068,7 +4068,7 @@
       "source": "skills/planr-investigate/openplanr.skill.json",
       "entrypoint": "skills/planr-investigate/SKILL.md",
       "description": "Diagnose a bug, regression, error, or unexplained behavior and optionally implement a bounded fix. Use for root-cause investigation, not planned feature delivery.",
-      "sourceDigest": "sha256:2662dc8f9cf6543ad84a96c5d579bbbb8a811ec43205e2ebd69a609a5b59ae2a",
+      "sourceDigest": "sha256:9779c19e56fa08b9eb1572c80a23a0a663025d5b3a81f2b9f351670b9e54b3c1",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -4078,7 +4078,7 @@
             "chatgpt"
           ],
           "executable": false,
-          "digest": "sha256:9721f87645dc04c628742432f206930d5f38d63589acffa4edcc4a244100d55e"
+          "digest": "sha256:6a19c75f6c6c54d786fbae97a8b8916274ff32f0ebc4847d37db38ebdbfe04fb"
         }
       ],
       "contracts": {
@@ -4105,7 +4105,7 @@
       "source": "skills/planr-land/openplanr.skill.json",
       "entrypoint": "skills/planr-land/SKILL.md",
       "description": "Assess release readiness and prepare or inspect an OpenPlanr landing sequence. Use after implementation and checks are complete, before merge, publication, or deployment.",
-      "sourceDigest": "sha256:1dc60de633c11f05b28684d07073b12423a5da700a8bd16e19ec289698c00be9",
+      "sourceDigest": "sha256:06d04a20f05f5bab613357256bc7af709e5eb1435867832fa9b24547ac857c27",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -4115,7 +4115,7 @@
             "chatgpt"
           ],
           "executable": false,
-          "digest": "sha256:e21f4a1bb306904285482f09be68574dbf479e2f5ae818a2a5f8f707821a9647"
+          "digest": "sha256:e5da6d1b365580a4b75c5c06bda4097f0fc1d2531e58c4681e8bbdf09656d79e"
         }
       ],
       "contracts": {
@@ -4151,7 +4151,7 @@
       "source": "skills/planr-openplanr/openplanr.skill.json",
       "entrypoint": "skills/planr-openplanr/SKILL.md",
       "description": "Route a planning, specification, delivery, delegation, design, review, diagram, release, or operating request to the best OpenPlanr skill. Use when the right skill is unclear or the request spans several.",
-      "sourceDigest": "sha256:0b5acc4478291f668bd016b3a6c36ea43c31bce3384771f52d17239f2fb6d827",
+      "sourceDigest": "sha256:748417fec791072b8b47aff9bc672f9f965b975bd6153f42f11f4976054b87ee",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -4161,7 +4161,7 @@
             "chatgpt"
           ],
           "executable": false,
-          "digest": "sha256:e51a82f202894bf304f3d33585de3a708950d59c6ccdcbfa72b7239a8268df07"
+          "digest": "sha256:f21a7a59c2a4067b850d3815dd169a9e3ab09755475227000150cfab993a5936"
         }
       ],
       "contracts": {
@@ -4188,7 +4188,7 @@
       "source": "skills/planr-operate/openplanr.skill.json",
       "entrypoint": "skills/planr-operate/SKILL.md",
       "description": "Run a focused operating review across seven executive lenses and produce a decision and action brief. Use for periodic product or company-level leadership review.",
-      "sourceDigest": "sha256:86c4a22a0f8584ae502af67c9426f81797a4095a4b2dd229086610a9ba72645e",
+      "sourceDigest": "sha256:acdf3fb3516b9f1ff26f360d3d5ffcff271935ebac5d3d19384d0d33563c5ba1",
       "resources": [
         {
           "path": "scripts/validate-note.mjs",
@@ -4246,7 +4246,7 @@
             "chatgpt"
           ],
           "executable": false,
-          "digest": "sha256:c050b1b817f2b4ff90a11982225a0a828d0cb38eb07172fd8949725bca050541"
+          "digest": "sha256:d7e7c98b64d056129c64a88293bac840feb821ced0f2a3047feee5cd62400754"
         }
       ],
       "contracts": {
@@ -4282,7 +4282,7 @@
       "source": "skills/planr-plan/openplanr.skill.json",
       "entrypoint": "skills/planr-plan/SKILL.md",
       "description": "Turn a Protocol-compatible specification or product intent into schema-compatible OpenPlanr stories and implementation tasks. Use for planning and decomposition, not implementation.",
-      "sourceDigest": "sha256:eb92df1829191cc3423bf6063f36247126838f7098ccc593ddae20692651e94d",
+      "sourceDigest": "sha256:28597e1374f16e10bff6972a3166d0575ce6144e4d1d58bae7fceba2b1545da2",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -4292,7 +4292,7 @@
             "chatgpt"
           ],
           "executable": false,
-          "digest": "sha256:a09da2633cf93b2da6695a1275ab9e4ddc90b6af90346edc03ab177c5493c441"
+          "digest": "sha256:b96b754b6babf789867259d541a1f14427bedf3915f9d76d3c16a356dcd5a356"
         },
         {
           "path": "references/artifact-contract.md",
@@ -5085,7 +5085,7 @@
       "source": "skills/planr-plan-review/openplanr.skill.json",
       "entrypoint": "skills/planr-plan-review/SKILL.md",
       "description": "Review an OpenPlanr plan for product, engineering, design, and developer-experience problems. Use after planning and before implementation to improve the plan.",
-      "sourceDigest": "sha256:d168347e76edda7bec993684aa40eee7b05ad4d9389f4487263e39100d9f1623",
+      "sourceDigest": "sha256:2b50906b46f9ac650d8a17c6f106f5be6502566d64dffbc8d537d2011dde52fa",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -5095,7 +5095,7 @@
             "chatgpt"
           ],
           "executable": false,
-          "digest": "sha256:b133c39cb392500ba380bd4474f0dffe058565de716b8847e25825dc12dee65d"
+          "digest": "sha256:10e80a67947be6c801dc63cc83cd1f47e08f583113b7e89349cb909897036f2f"
         }
       ],
       "contracts": {
@@ -5120,7 +5120,7 @@
       "source": "skills/planr-release/openplanr.skill.json",
       "entrypoint": "skills/planr-release/SKILL.md",
       "description": "Choose and maintain a product's versioning scheme, classify shipped changes, and write user-facing changelogs or release notes. Use for SemVer or CalVer decisions, version bumps, release cadence, and preparing a versioned release after landing.",
-      "sourceDigest": "sha256:895f351be282b5176c65801d97a9fc40fd7b1473d772548d4d456010469a0027",
+      "sourceDigest": "sha256:650c84fc062afd62f0435efb4865cf7aed3b10a7f77ef5ac941847e10da9b79d",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -5130,7 +5130,7 @@
             "chatgpt"
           ],
           "executable": false,
-          "digest": "sha256:86b13c3db2c15f56d7da7bb76102fdf0c61ad736061b2beca6f1b6cd1edf3acd"
+          "digest": "sha256:0ff705c27c563fd92d1135a1c42de8ddedc007b81a5c8363f74dfb499cda4384"
         },
         {
           "path": "references/schemes.md",
@@ -5229,7 +5229,7 @@
       "source": "skills/planr-ship/openplanr.skill.json",
       "entrypoint": "skills/planr-ship/SKILL.md",
       "description": "Implement an OpenPlanr plan, specification, task, or clearly stated request end to end in the current repository. Use when the user asks to build, implement, fix, finish, or ship local work.",
-      "sourceDigest": "sha256:a0f26b0dbec2efd0e61b14072baa277e76b52c07cc25cea0cd7d5614df76c9c5",
+      "sourceDigest": "sha256:ff2f2811cb9e588bb48fb3e4a8471402b10945bc75599271e005b4547071dd0c",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -5239,7 +5239,7 @@
             "chatgpt"
           ],
           "executable": false,
-          "digest": "sha256:747d79bd846bf85ddac4c923b7abe2f6fe9c3a0939e6ecd19d37dac373da1e7f"
+          "digest": "sha256:c72113d049f4f3edbbb5a4dace9edf19f3622c3ea157421ca03c67dcf3bc375f"
         },
         {
           "path": "references/result-contract.md",
@@ -5251,7 +5251,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:89da8867331e54a4b7474072450039c32614afdecd84108afd46acdd0cc4436a"
+          "digest": "sha256:41097451aaa44f7b56a3473fa3ec7921d3fe22fccaede46b873aaae790d0a53a"
         },
         {
           "path": "references/design-lineage.md",
@@ -5301,7 +5301,7 @@
       "source": "skills/planr-spec/openplanr.skill.json",
       "entrypoint": "skills/planr-spec/SKILL.md",
       "description": "Shape vague product or engineering intent into a clear, measurable Protocol-compatible specification grounded in the current repository. Use when requirements need clarification before planning or implementation.",
-      "sourceDigest": "sha256:e398052f18942980e79f7553c3412a703dcec19237cacc71ca50ce32196b9a0d",
+      "sourceDigest": "sha256:040841d2b63504fd4ad9e07222ba0356cdd3084045fbb70f665bb043e4d006fa",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -5311,7 +5311,7 @@
             "chatgpt"
           ],
           "executable": false,
-          "digest": "sha256:47aeb76bf4da61b8d294f6ee8c987d14fccad0ca3f330531ff4cc835f477af21"
+          "digest": "sha256:4f6e1a1d582e0fcce160de7ec78f8d19bd39d9004590ec05e4743c72afa0b1a1"
         },
         {
           "path": "references/specification-contract.md",
@@ -5348,7 +5348,7 @@
       "source": "skills/planr-sprint/openplanr.skill.json",
       "entrypoint": "skills/planr-sprint/SKILL.md",
       "description": "Refine every open backlog item against the code and the calendar, refute the picks, and select a sprint that fits capacity and the release cut. Use before a cut or sprint; not for decomposing one specification or reporting status.",
-      "sourceDigest": "sha256:c37b13626a03721223646948ee0cd19a288768b5de7a1e73c4144c193362d40e",
+      "sourceDigest": "sha256:44fe839dc90143809866d9ed8fefb6fbe1aca09a2b0e1ff7a964376f64ce717a",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -5358,7 +5358,7 @@
             "chatgpt"
           ],
           "executable": false,
-          "digest": "sha256:c93b319cbf650ff571031e8ab7117b593afca7e516519eed1449115971c1e1b2"
+          "digest": "sha256:117798d89531c77666ec0ab8e3228332176717296abdd69f9e391593a24569ec"
         },
         {
           "path": "references/refinement-contract.md",
@@ -5382,7 +5382,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:fc9620515dd2cfa1ecf9319c949bc491c620de9450e33f4e2ce08483023333c2"
+          "digest": "sha256:b2b583dd7de321f11236caefd7dc69a84dffdf16797fb7a86a8c493689073830"
         },
         {
           "path": "schemas/refinement.schema.json",
@@ -5430,7 +5430,7 @@
       "source": "skills/planr-status/openplanr.skill.json",
       "entrypoint": "skills/planr-status/SKILL.md",
       "description": "Inspect project delivery or one feature's pipeline status without changing state. Use when the user asks what is done, pending, blocked, or next.",
-      "sourceDigest": "sha256:dbe87eff44eb493ddf8e003d10ef41178fcf1e1e93e3171ca5c44f295638f639",
+      "sourceDigest": "sha256:12f20dddbb382b72eeda55bdf036393b0bee1a9bcecc7be30ec53ed24e62a432",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -5440,7 +5440,7 @@
             "chatgpt"
           ],
           "executable": false,
-          "digest": "sha256:dd228026450478875ec07c40c7ea943058a3987464ad8832e85da013df6e2868"
+          "digest": "sha256:a9b84c422fb918329e7819a3a8dd74e609aaad8965842d23cc53d62815331181"
         }
       ],
       "contracts": {
@@ -5476,7 +5476,7 @@
       "source": "skills/planr-sync/openplanr.skill.json",
       "entrypoint": "skills/planr-sync/SKILL.md",
       "description": "Audit OpenPlanr planning artifacts for graph and protocol drift. Use when statuses, references, schemas, or generated planning views may be inconsistent.",
-      "sourceDigest": "sha256:d221d3afd1ee109efcab194fb33c4340856f513c9bc96de513e5758d23ebb2fb",
+      "sourceDigest": "sha256:dd758dfe6e080fb5b0360bc7708b2948dbf77e819eaf01633f5ec5208b5f6ee4",
       "resources": [
         {
           "path": "scripts/sync.mjs",
@@ -5498,7 +5498,7 @@
             "chatgpt"
           ],
           "executable": false,
-          "digest": "sha256:6624a8611b32ca9e5a8104761d235a8b8fd60255b355e36f5af1f4cf4d40b27f"
+          "digest": "sha256:820080827c8a5ec0e4cd621a887c22d1046c34dbc3eaac16b725ad39638354e6"
         }
       ],
       "contracts": {
